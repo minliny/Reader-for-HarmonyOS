@@ -24,8 +24,8 @@
 | 9 | HOS-1A-002 | HOS-1A | DONE | HarmonyOS project scaffold + BUILD SUCCESSFUL |
 | 10 | HOS-1A-003 | HOS-1A | DONE | AppScope & entry module config refine |
 | 11 | HOS-1A-004 | HOS-1A | DONE | EntryAbility + Navigation shell |
-| 12 | HOS-1A-005 | HOS-1A | READY | Theme & resource baseline |
-| 13 | HOS-2A-001 | HOS-2A | BLOCKED | Core public API full audit |
+| 12 | HOS-1A-005 | HOS-1A | DONE | Theme & resource baseline |
+| 13 | HOS-2A-001 | HOS-2A | READY | Core public API full audit |
 | 14 | HOS-2A-002 | HOS-2A | BLOCKED | DTO boundary extraction |
 | 15 | HOS-2A-003 | HOS-2A | BLOCKED | Bridge alternatives evaluation |
 | 16 | HOS-2A-004 | HOS-2A | BLOCKED | Bridge decision matrix |
@@ -92,12 +92,13 @@
 
 | Status | Count |
 |--------|-------|
-| DONE | 11 |
+| DONE | 12 |
 | READY | 1 |
-| BLOCKED | 11 |
+| BLOCKED | 10 |
 | PENDING | 44 |
 
-**Next READY task**: HOS-1A-005 (Theme & resource baseline)
+**Next READY task**: HOS-2A-001 (Core public API full audit)
+**HOS-1A complete**: App Shell Baseline DONE. Foundation moving to HOS-2A bridge strategy.
 **First headless task**: HOS-2B-001 (after HOS-2A completes)
 
 ---

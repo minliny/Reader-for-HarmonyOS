@@ -2,55 +2,55 @@
   "color": [
     {
       "name": "start_window_background",
-      "value": "#FFFFFF"
-    },
-    {
-      "name": "color_primary",
-      "value": "#007AFF"
-    },
-    {
-      "name": "color_primary_dark",
-      "value": "#0A84FF"
-    },
-    {
-      "name": "color_background",
-      "value": "#F5F5F5"
-    },
-    {
-      "name": "color_surface",
-      "value": "#FFFFFF"
-    },
-    {
-      "name": "color_text_primary",
       "value": "#1A1A1A"
     },
     {
+      "name": "color_primary",
+      "value": "#0A84FF"
+    },
+    {
+      "name": "color_primary_dark",
+      "value": "#409CFF"
+    },
+    {
+      "name": "color_background",
+      "value": "#1A1A1A"
+    },
+    {
+      "name": "color_surface",
+      "value": "#2C2C2C"
+    },
+    {
+      "name": "color_text_primary",
+      "value": "#E5E5E5"
+    },
+    {
       "name": "color_text_secondary",
-      "value": "#999999"
+      "value": "#8E8E93"
     },
     {
       "name": "color_text_hint",
-      "value": "#BBBBBB"
+      "value": "#636366"
     },
     {
       "name": "color_text_disabled",
-      "value": "#CCCCCC"
+      "value": "#48484A"
     },
     {
       "name": "color_divider",
-      "value": "#F0F0F0"
+      "value": "#38383A"
     },
     {
       "name": "color_shadow",
-      "value": "#10000000"
+      "value": "#30000000"
     },
     {
       "name": "color_tab_active",
-      "value": "#007AFF"
+      "value": "#0A84FF"
     },
     {
       "name": "color_tab_inactive",
-      "value": "#999999"
+      "value": "#8E8E93"
     }
   ]
 }
