@@ -23,8 +23,8 @@
 | 8 | HOS-1A-001 | HOS-1A | DONE | DevEco Studio / SDK env setup |
 | 9 | HOS-1A-002 | HOS-1A | DONE | HarmonyOS project scaffold + BUILD SUCCESSFUL |
 | 10 | HOS-1A-003 | HOS-1A | DONE | AppScope & entry module config refine |
-| 11 | HOS-1A-004 | HOS-1A | READY | EntryAbility + Navigation shell |
-| 12 | HOS-1A-005 | HOS-1A | BLOCKED | Theme & resource baseline |
+| 11 | HOS-1A-004 | HOS-1A | DONE | EntryAbility + Navigation shell |
+| 12 | HOS-1A-005 | HOS-1A | READY | Theme & resource baseline |
 | 13 | HOS-2A-001 | HOS-2A | BLOCKED | Core public API full audit |
 | 14 | HOS-2A-002 | HOS-2A | BLOCKED | DTO boundary extraction |
 | 15 | HOS-2A-003 | HOS-2A | BLOCKED | Bridge alternatives evaluation |
@@ -92,12 +92,12 @@
 
 | Status | Count |
 |--------|-------|
-| DONE | 10 |
+| DONE | 11 |
 | READY | 1 |
-| BLOCKED | 12 |
+| BLOCKED | 11 |
 | PENDING | 44 |
 
-**Next READY task**: HOS-1A-004 (EntryAbility + Navigation shell)
+**Next READY task**: HOS-1A-005 (Theme & resource baseline)
 **First headless task**: HOS-2B-001 (after HOS-2A completes)
 
 ---

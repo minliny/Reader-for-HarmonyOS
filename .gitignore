@@ -1,4 +1,5 @@
 .DS_Store
+.claude/scheduled_tasks*
 node_modules/
 oh_modules/
 **/build/
