@@ -1,0 +1,12 @@
+{
+  "string": [
+    {
+      "name": "app_name",
+      "value": "Reader"
+    },
+    {
+      "name": "module_desc",
+      "value": "Reader for HarmonyOS"
+    }
+  ]
+}

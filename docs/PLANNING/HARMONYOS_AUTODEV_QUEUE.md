@@ -18,9 +18,10 @@
 | 5 | HOS-0A-005 | HOS-0A | DONE | Loop command creation |
 | 6 | HOS-0A-006 | HOS-0A | DONE | Blockers & decisions doc finalize |
 | 7 | HOS-0A-007 | HOS-0A | DONE | CLAUDE.md project config |
-| 8 | HOS-1A-001 | HOS-1A | PARTIAL_DONE | DevEco Studio / SDK env setup |
-| 9 | HOS-1A-002 | HOS-1A | BLOCKED | HarmonyOS project scaffold |
-| 10 | HOS-1A-003 | HOS-1A | BLOCKED | AppScope & entry module |
+| 8 | HOS-1A-001 | HOS-1A | DONE | DevEco Studio / SDK env setup |
+| 9 | HOS-1A-002 | HOS-1A | DONE | HarmonyOS project scaffold |
+| 9.1 | HOS-1A-002b | HOS-1A | DONE | Build verification (BUILD SUCCESSFUL) |
+| 10 | HOS-1A-003 | HOS-1A | READY | AppScope & entry module config |
 | 11 | HOS-1A-004 | HOS-1A | BLOCKED | EntryAbility + navigation shell |
 | 12 | HOS-1A-005 | HOS-1A | BLOCKED | Theme & resource baseline |
 | 13 | HOS-2A-001 | HOS-2A | BLOCKED | Core public API full audit |

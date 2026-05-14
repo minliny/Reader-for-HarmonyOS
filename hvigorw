@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# hvigorw - HarmonyOS build wrapper
+# Invokes the DevEco Studio bundled hvigor
+
+DEVECO_HVIGOR="/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw"
+
+if [ ! -f "$DEVECO_HVIGOR" ]; then
+  echo "ERROR: DevEco Studio hvigorw not found at $DEVECO_HVIGOR"
+  echo "Install DevEco Studio or set HVIGOR_PATH"
+  exit 1
+fi
+
+exec "$DEVECO_HVIGOR" "$@"
