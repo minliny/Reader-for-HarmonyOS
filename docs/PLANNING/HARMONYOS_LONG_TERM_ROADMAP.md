@@ -1,22 +1,34 @@
 # HarmonyOS Long-Term Development Roadmap
 
-**Date**: 2026-05-14
-**Reader-Core Ref**: HEAD `5b199ff` (Phase 2 ACTIVE: P2.J1 done, P2.I1 done)
+**Date**: 2026-05-15
+**Reader-Core Ref**: HEAD `784e98d` (Phase 3 ACTIVE: P2 complete, P3.A1 done)
 
 ## Phase Overview
 
+### Foundation Loop (app shell + UI + DTOs)
+
 | Stage | Name | Status | Prerequisites | Output |
 |-------|------|--------|---------------|--------|
-| HOS-0A | Baseline Audit / Repo Freeze | **READY** | None | Audit docs, blocker register |
-| HOS-1A | App Shell Baseline | **BLOCKED** | HOS-0A + DevEco Studio + ohpm/hvigor | Min Stage Model app shell |
-| HOS-2A | Core Bridge Strategy | **BLOCKED** | HOS-0A + HOS-D001 decision | Bridge decision doc + DTO schema |
-| HOS-3A | Bookshelf MVP | **BLOCKED** | HOS-1A + HOS-2A | Bookshelf UI with mock data |
-| HOS-4A | Search Integration | **BLOCKED** | HOS-2A + bridge ready | Search UI wired to Core DTOs |
-| HOS-5A | TOC / Content Flow | **BLOCKED** | HOS-2A + bridge ready | Reader content flow |
-| HOS-6A | Local Book Import | **BLOCKED** | HOS-2A + filepicker API | Local book import UI |
-| HOS-7A | Sync / WebDAV | **PENDING** | HOS-2A + bridge + Core Phase 2 done | Sync UI + adapter |
-| HOS-8A | Adapter Protocol | **PENDING** | HOS-2A + bridge ready | Platform adapters |
-| HOS-9A | Release / QA | **PENDING** | All above | Release gate + matrix |
+| HOS-0A | Baseline Audit | **DONE** | None | Audit docs |
+| HOS-1A | App Shell Baseline | **PARTIAL** (003 READY) | DevEco + ohpm/hvigor | Buildable app shell |
+| HOS-2A | Core Bridge Strategy | **BLOCKED** | HOS-1A + HOS-D001 | Bridge docs + DTO schema |
+| HOS-3A | Bookshelf MVP | **BLOCKED** | HOS-1A + HOS-2A | Bookshelf UI (mock) |
+| HOS-4A | Search DTO | **PENDING** | HOS-2A | Search DTO mirror |
+| HOS-5A | TOC/Content DTO | **PENDING** | HOS-2A | TOC/Content DTO mirror |
+| HOS-6A | Import DTO | **PENDING** | HOS-2A | Import DTO mirror |
+
+### Headless Capability Loop (non-UI domain services)
+
+| Stage | Name | Status | Prerequisites | Output |
+|-------|------|--------|---------------|--------|
+| HOS-2B | Bridge Runtime | **PENDING** | HOS-2A + Core access | Local HTTP bridge |
+| HOS-3B | Bookshelf Domain | **PENDING** | HOS-2A DTOs + 2B/fixture | Real bookshelf data layer |
+| HOS-4B | Search Domain | **PENDING** | HOS-2B bridge or fixture | Real search service |
+| HOS-5B | TOC/Content Domain | **PENDING** | HOS-2B bridge or fixture | Real TOC/content services |
+| HOS-6B | Import Domain | **PENDING** | HOS-3B + HOS-2B | TXT parser port + import pipeline |
+| HOS-7B | Sync Domain | **PENDING** | HOS-3B + HOS-2B | Sync contracts + local sync |
+| HOS-8B | Platform Adapters | **PENDING** | HOS-1A complete | HTTP/Storage/File adapters |
+| HOS-9B | QA / Release Gates | **PENDING** | All B-stages | Test infra + matrix + build gate |
 
 ---
 

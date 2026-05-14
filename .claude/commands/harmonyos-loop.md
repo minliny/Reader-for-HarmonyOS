@@ -25,21 +25,34 @@ git rev-parse --short HEAD
 Read these files (do not skip):
 - `docs/PLANNING/HARMONYOS_AUTODEV_QUEUE.md` — task queue
 - `docs/PLANNING/HARMONYOS_BLOCKERS_AND_DECISIONS.md` — blockers + decisions
+- `docs/PLANNING/HARMONYOS_HEADLESS_CAPABILITY_PLAN.md` — headless capability plan
 - `docs/PLANNING/HARMONYOS_LOOP_STATE.yml` — loop state (update if exists)
 
 ### 3. Find First READY Task
 Scan the task queue for the first task with `Status: READY`.
 - If none: report all BLOCKED/PENDING reasons and **STOP**.
 - If a BLOCKED_BY_DECISION task is blocking the chain: report the decision needed.
+- If a BLOCKED_BY_BRIDGE_RUNTIME task is found: check if HOS-2B (bridge runtime) is complete. If bridge available, mark READY. If not, report and skip to next available task.
 
 ## Task Selection Priority
 
+**Foundation Loop** (app shell + UI + DTOs):
 1. HOS-0A tasks (alphabetically: 001 → 002 → ... → 007)
 2. HOS-1A tasks
 3. HOS-2A tasks
-4. HOS-3A through HOS-9A in stage order
+4. HOS-3A through HOS-6A in stage order
 
-Within each stage, execute in task ID order.
+**Headless Capability Loop** (non-UI domain services + adapters + QA):
+5. HOS-2B tasks (bridge runtime)
+6. HOS-3B tasks (bookshelf domain)
+7. HOS-4B tasks (search domain)
+8. HOS-5B tasks (TOC/content domain)
+9. HOS-6B tasks (import domain)
+10. HOS-7B tasks (sync domain)
+11. HOS-8B tasks (platform adapters)
+12. HOS-9B tasks (QA gates)
+
+Foundation tasks execute first. Headless tasks execute once their Foundation prerequisites are met.
 
 ## Execution Rules
 
@@ -155,18 +168,29 @@ If a task requires a user decision (HOS-D001 through HOS-D008):
 | DONE | Completed successfully |
 | BLOCKED | Missing prerequisite (task, env, or decision) |
 | BLOCKED_BY_DECISION | Waiting for user decision |
+| BLOCKED_BY_BRIDGE_RUNTIME | Waiting for HOS-2B bridge runtime |
 | PENDING | Planned but prerequisites not yet met |
 | ENV_BLOCKED | Build tools missing |
+| CONTRACT_ONLY | Contract defined, implementation deferred |
 | FAILED | Last execution failed |
 
 ## Quick Reference: Stage Dependencies
 
 ```
-HOS-0A (planning) ── READY (no deps)
-  └── HOS-1A (app shell) ── BLOCKED (needs SDK)
-       └── HOS-2A (bridge) ── BLOCKED (needs HOS-0A + decision)
-            └── HOS-3A (bookshelf) ── BLOCKED (needs HOS-1A + HOS-2A)
-                 └── HOS-4A/5A/6A ── BLOCKED
-                      └── HOS-7A/8A ── PENDING (Core deps ready, bridge needed)
-                           └── HOS-9A ── PENDING
+Foundation Loop:
+HOS-0A (planning) ── DONE (no deps)
+  └── HOS-1A (app shell) ── PARTIAL (003 READY)
+       └── HOS-2A (bridge strategy) ── BLOCKED (needs 1A complete)
+            └── HOS-3A (bookshelf UI) ── BLOCKED
+                 └── HOS-4A/5A/6A ── PENDING
+
+Headless Capability Loop (parallel to Foundation):
+HOS-2B (bridge runtime) ── PENDING (needs 2A + Core repo access)
+  ├── HOS-3B (bookshelf domain) ── PENDING (needs 2A DTOs + 2B bridge or fixture)
+  ├── HOS-4B (search domain) ── PENDING (BLOCKED_BY_BRIDGE_RUNTIME)
+  ├── HOS-5B (TOC/content domain) ── PENDING (BLOCKED_BY_BRIDGE_RUNTIME)
+  ├── HOS-6B (import domain) ── PENDING (needs 3B + 2B)
+  ├── HOS-7B (sync domain) ── PENDING (needs 3B + 2B)
+  ├── HOS-8B (platform adapters) ── PENDING (needs 1A complete)
+  └── HOS-9B (QA gates) ── PENDING (needs all B-stages)
 ```
