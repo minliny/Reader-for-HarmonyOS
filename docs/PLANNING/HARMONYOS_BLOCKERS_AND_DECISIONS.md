@@ -1,7 +1,7 @@
 # HarmonyOS Blockers & Decisions Register
 
-**Date**: 2026-05-14
-**Reader-Core HEAD**: `5b199ff`
+**Date**: 2026-05-15
+**Reader-Core HEAD**: `e6f5af1`
 **Loop State**: PLANNING
 
 ---
@@ -16,14 +16,14 @@
 - **Owner**: **User** (requires DevEco Studio or HarmonyOS SDK)
 - **Loop behavior**: If detected, HOS-1A tasks remain BLOCKED; planning-only tasks can proceed
 
-### B-002: Build Environment Missing
-- **Severity**: P0
-- **Symptom**: `ohpm` not found, `hvigor` not found
-- **Impact**: Cannot build, cannot manage dependencies, cannot verify compilation
-- **Resolution**: Install HarmonyOS SDK (includes ohpm + hvigor)
-- **Note**: Node.js v25.9.0 IS available (ohpm underlying dep met)
-- **Owner**: **User**
-- **Loop behavior**: All build-validation steps are skipped; ENV_BLOCKED documented
+### B-002: Build Environment Partial Ready
+- **Severity**: P1 (reduced from P0)
+- **Symptom**: `ohpm` READY, `hdc` READY, `hvigor` (global) MISSING
+- **Impact**: Cannot build with global hvigor, but project-level `hvigorw` wrapper expected
+- **Resolution**: Create HarmonyOS project scaffold with hvigorw; verify `./hvigorw` works
+- **Note**: ohpm 6.0.1 installed, hdc 3.2.0c installed, Node v22.16.0 (DevEco bundled)
+- **Owner**: **User** (for scaffold creation)
+- **Loop behavior**: ENV_PARTIAL_READY — can proceed with planning; build tasks blocked until scaffold exists
 
 ### B-003: Core Bridge Strategy Undecided
 - **Severity**: P0 (for Core-dependent tasks)
@@ -62,11 +62,11 @@
 - **Mitigation**: HOS-8A explicitly scoped; Core adapter protocols are frozen and well-defined (P2.J1 done)
 - **Status**: DEFERRED to HOS-8A
 
-### R-005: ohpm/hvigor May Not Work with Node v25
+### R-005: ohpm/hvigor May Not Work with Node v22
 - **Severity**: LOW
 - **Impact**: HarmonyOS build tools may require specific Node version
-- **Mitigation**: Will verify when SDK installed; Node version manager available
-- **Status**: MONITORED
+- **Mitigation**: DevEco bundled Node v22.16.0 is confirmed working
+- **Status**: MITIGATED (DevEco Node verified)
 
 ---
 

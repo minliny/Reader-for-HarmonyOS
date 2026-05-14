@@ -1,6 +1,6 @@
 # HarmonyOS Baseline Audit
 
-**Date**: 2026-05-14
+**Date**: 2026-05-15
 **Audit Type**: Full Baseline Freeze
 **Audited By**: Automated Baseline Audit Script
 
@@ -11,7 +11,7 @@
 | Path | `/Users/minliny/Documents/Reader for HarmonyOS` |
 | Git Toplevel | `/Users/minliny/Documents/Reader for HarmonyOS` |
 | Branch | `main` |
-| HEAD | `d38c645` |
+| HEAD | `393b2ab` |
 | Remote | `https://github.com/minliny/Reader-for-HarmonyOS.git` |
 | Working Tree | clean |
 | Commits | 2 (initial + planning baseline) |
@@ -24,6 +24,7 @@
 |------|---------|
 | `oh-package.json5` | **MISSING** |
 | `hvigorfile.ts` | **MISSING** |
+| `hvigorw` | **MISSING** (expected in scaffold) |
 | `build-profile.json5` | **MISSING** |
 | `AppScope/app.json5` | **MISSING** |
 | `entry/src/main/module.json5` | **MISSING** |
@@ -64,13 +65,15 @@
 
 | Tool | Status | Version |
 |------|--------|---------|
-| `ohpm` | **NOT_FOUND** | — |
-| `hvigor` | **NOT_FOUND** | — |
-| `node` | FOUND | v25.9.0 |
-| `npm` | FOUND | 11.12.1 |
+| `ohpm` | **READY** | 6.0.1 |
+| `hdc` | **READY** | 3.2.0c |
+| `hvigor` (global) | **MISSING** | — |
+| `hvigorw` (project) | EXPECTED in scaffold | — |
+| `node` | FOUND | v22.16.0 (DevEco bundled) |
+| `npm` | FOUND | 10.9.8 |
 | `java` | FOUND | OpenJDK 17 |
 
-**Status**: ENV_BLOCKED — ohpm and hvigor are required for HarmonyOS project build and not installed.
+**Status**: ENV_PARTIAL_READY — ohpm and hdc are ready. Global hvigor is missing but project-level hvigorw wrapper is expected. HarmonyOS scaffold still needed.
 
 ## 4. Reader-Core Adjacency
 
@@ -78,12 +81,12 @@
 |-------|-------|
 | Path | `/Users/minliny/Documents/Reader-Core` |
 | Exists? | **YES** |
-| HEAD | `5b199ff` |
+| HEAD | `e6f5af1` |
 | Latest commit | `feat: add Sync/WebDAV implementation baseline (P2.I1)` |
 | Language | Swift 5.9 |
 | Platforms | iOS 15+, macOS 13+ |
 | Tests | 115 test files, ~1300+ tests |
-| Phase | Phase 1 CLOSED, Phase 2 ACTIVE |
+| Phase | Phase 2 CLOSED (verified 2026-05-15) |
 
 ### Reader-Core Module Structure
 
@@ -139,7 +142,7 @@ Core/Sources/
 | ID | Risk | Severity | Status |
 |----|------|----------|--------|
 | B-001 | No HarmonyOS project scaffold | **P0 BLOCKER** | Requires DevEco Studio |
-| B-002 | ohpm/hvigor not installed | **P0 BLOCKER** | Requires HarmonyOS SDK |
+| B-002 | ohpm now READY, hdc now READY, global hvigor missing (project wrapper expected) | **P1 MEDIUM** | Partial unblock possible |
 | B-003 | Core bridge strategy undecided | **P0 BLOCKER** | Requires user decision |
 | R-001 | Swift ↔ ArkTS language barrier | P1 HIGH | Bridge decision will resolve |
 | R-002 | Core Phase 2 timing (TXT/EPUB) | P1 MEDIUM | Only affects HOS-6A enhance |

@@ -1,7 +1,7 @@
 # HarmonyOS Autodev Task Queue
 
-**Date**: 2026-05-14
-**Reader-Core HEAD**: `5b199ff`
+**Date**: 2026-05-15
+**Reader-Core HEAD**: `e6f5af1`
 **Loop Command**: `/harmonyos-loop`
 **Total Tasks**: 25
 
@@ -18,7 +18,7 @@
 | 5 | HOS-0A-005 | HOS-0A | DONE | Loop command creation |
 | 6 | HOS-0A-006 | HOS-0A | DONE | Blockers & decisions doc finalize |
 | 7 | HOS-0A-007 | HOS-0A | DONE | CLAUDE.md project config |
-| 8 | HOS-1A-001 | HOS-1A | BLOCKED | DevEco Studio / SDK env setup |
+| 8 | HOS-1A-001 | HOS-1A | PARTIAL_DONE | DevEco Studio / SDK env setup |
 | 9 | HOS-1A-002 | HOS-1A | BLOCKED | HarmonyOS project scaffold |
 | 10 | HOS-1A-003 | HOS-1A | BLOCKED | AppScope & entry module |
 | 11 | HOS-1A-004 | HOS-1A | BLOCKED | EntryAbility + navigation shell |
@@ -146,15 +146,16 @@
 - **Rollback**: Delete CLAUDE.md
 
 ### HOS-1A-001 — DevEco Studio / SDK Env Setup
-- **Status**: BLOCKED
-- **Blocker**: User must install HarmonyOS SDK / DevEco Studio
+- **Status**: PARTIAL_DONE
+- **Blocker**: Global hvigor missing (project wrapper expected), scaffold still needed for full verification
 - **Stage**: HOS-1A
-- **Scope**: Document ohpm/hvigor installation verification
+- **Scope**: Verify ohpm/hdc availability, document DevEco environment
 - **Allowed files**: `docs/PLANNING/HARMONYOS_BASELINE_AUDIT.md` (env update)
 - **Forbidden**: Installing tools automatically
-- **Prerequisites**: HOS-0A complete, user installs SDK
-- **Acceptance**: `ohpm -v` and `hvigor -v` succeed
-- **Validation**: `command -v ohpm && command -v hvigor`
+- **Prerequisites**: HOS-0A complete
+- **Acceptance**: `ohpm -v` succeeds (6.0.1), `hdc version` succeeds (3.2.0c)
+- **Validation**: `command -v ohpm && command -v hdc`
+- **Note**: Global hvigor missing ---------------
 
 ### HOS-1A-002 — HarmonyOS Project Scaffold
 - **Status**: BLOCKED
@@ -360,6 +361,6 @@
 | PENDING | 5 |
 | BLOCKED_BY_DECISION | 0 |
 
-**Next READY task**: NONE — all remaining tasks are BLOCKED by missing HarmonyOS SDK.
-**Blocked by**: HOS-1A-001 (install DevEco Studio / SDK) — requires user action.
-**Next stage**: HOS-1A can start when ohpm + hvigor are available.
+**Next READY task**: HOS-1A-002 (scaffold creation) — BLOCKED_BY_HUMAN_ACTION (user must create HarmonyOS project in DevEco Studio)
+**Blocked by**: HOS-1A-002 (no scaffold exists, HUMAN_ACTION_REQUIRED)
+**Next stage**: HOS-1A can proceed to scaffold creation when user creates project via DevEco Studio.

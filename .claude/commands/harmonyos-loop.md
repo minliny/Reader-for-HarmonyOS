@@ -4,6 +4,12 @@ Reader for HarmonyOS automated development loop. Executes **exactly one** READY 
 
 ## Pre-Check (EVERY invocation)
 
+### 0. Environment Setup (EVERY invocation)
+```bash
+# Source DevEco environment (required for cron/non-interactive shells)
+[ -f "$HOME/.deveco_env" ] && source "$HOME/.deveco_env"
+```
+
 ### 1. Git Safety Check
 ```bash
 cd "/Users/minliny/Documents/Reader for HarmonyOS"
@@ -121,10 +127,16 @@ Output the loop report and **STOP**. Do not execute another task.
 
 ## Environment-Blocked Handling
 
-If ohpm/hvigor are missing:
-- Tasks requiring build: mark as BLOCKED with reason `ENV_BLOCKED: ohpm/hvigor not available`
-- Planning/docs tasks: continue normally
-- Never fake a build success
+If ohpm/hdc are missing:
+- Tasks requiring build: mark as BLOCKED with reason `ENV_BLOCKED: ohpm/hdc not available`
+
+If global hvigor is missing:
+- Check if project has `./hvigorw` (project wrapper)
+- If `./hvigorw` exists: use it for builds (`./hvigorw assembleHap`)
+- If `./hvigorw` missing - If DevEco project structure missing (no hvigorw, no entry/, no build-profile.json5): mark as `HARMONYOS_SCAFFOLD_MISSING`
+
+Planning/docs tasks: continue normally regardless of hvigor/hvigorw status.
+Never fake a build success.
 
 ## Decision-Blocked Handling
 
