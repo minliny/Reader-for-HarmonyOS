@@ -1,0 +1,65 @@
+# Reader for HarmonyOS — Loop State
+# Auto-generated baseline audit state
+
+loop:
+  name: "Reader for HarmonyOS Autodev"
+  phase: "PLANNING"
+  status: "HOS_PLANNING_READY"
+  generated: "2026-05-14"
+
+environment:
+  node: "v25.9.0"
+  ohpm: "NOT_FOUND"
+  hvigor: "NOT_FOUND"
+  platform: "macOS (Darwin 25.4.0)"
+
+repo:
+  path: "/Users/minliny/Documents/Reader for HarmonyOS"
+  branch: "main"
+  remote: "https://github.com/minliny/Reader-for-HarmonyOS.git"
+  head: "bf8ecbf"
+  working_tree: "clean (untracked .DS_Store)"
+  has_harmonyos_project: false
+  has_ets_files: false
+  has_build_config: false
+
+reader_core:
+  path: "/Users/minliny/Documents/Reader-Core"
+  head: "4347bbb"
+  phase: "Phase 1 CLOSED, Phase 2 STARTING"
+  frozen_symbols: 73
+  services_available:
+    - DefaultSearchService
+    - DefaultTOCService
+    - DefaultContentService
+  services_missing:
+    - TXT Parser (P2.H1)
+    - EPUB Parser (P2.H2)
+    - Sync/WebDAV (P2.I1)
+    - Adapter Protocol impl (P2.J1)
+  locked:
+    - JS Runtime (S26.6)
+    - WebView Runtime
+
+task_queue:
+  ready:
+    - HOS-0A  # Project Baseline Audit
+  blocked:
+    - HOS-1A  # blocked_by: HOS-0A, DevEnv
+    - HOS-2A  # blocked_by: HOS-0A, HOS-D001
+    - HOS-3A  # blocked_by: HOS-1A, HOS-2A
+    - HOS-4A  # blocked_by: HOS-2A, Core SearchService bridge
+    - HOS-5A  # blocked_by: HOS-2A, Core TOC/Content bridge
+    - HOS-6A  # blocked_by: HOS-2A, Core LocalBook bridge
+  pending:
+    - HOS-7A  # blocked_by: Core Phase 2 P2.I1
+    - HOS-8A  # blocked_by: Core Phase 2 P2.J1
+    - HOS-9A  # blocked_by: All above
+
+decisions_required:
+  - HOS-D001  # Bridge strategy
+  - HOS-D002  # Project scaffold method
+  - HOS-D003  # DTO schema sharing
+  - HOS-D004  # UI framework approach
+
+next_action: "HOS-0A — Project Baseline Audit (requires DevEco Studio or HarmonyOS SDK)"
