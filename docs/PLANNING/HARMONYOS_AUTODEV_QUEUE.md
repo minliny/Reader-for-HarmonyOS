@@ -22,8 +22,8 @@
 | 7 | HOS-0A-007 | HOS-0A | DONE | CLAUDE.md project config |
 | 8 | HOS-1A-001 | HOS-1A | DONE | DevEco Studio / SDK env setup |
 | 9 | HOS-1A-002 | HOS-1A | DONE | HarmonyOS project scaffold + BUILD SUCCESSFUL |
-| 10 | HOS-1A-003 | HOS-1A | READY | AppScope & entry module config refine |
-| 11 | HOS-1A-004 | HOS-1A | BLOCKED | EntryAbility + Navigation shell |
+| 10 | HOS-1A-003 | HOS-1A | DONE | AppScope & entry module config refine |
+| 11 | HOS-1A-004 | HOS-1A | READY | EntryAbility + Navigation shell |
 | 12 | HOS-1A-005 | HOS-1A | BLOCKED | Theme & resource baseline |
 | 13 | HOS-2A-001 | HOS-2A | BLOCKED | Core public API full audit |
 | 14 | HOS-2A-002 | HOS-2A | BLOCKED | DTO boundary extraction |
@@ -92,13 +92,13 @@
 
 | Status | Count |
 |--------|-------|
-| DONE | 9 |
+| DONE | 10 |
 | READY | 1 |
-| BLOCKED | 13 |
+| BLOCKED | 12 |
 | PENDING | 44 |
 
-**Next READY task**: HOS-1A-003 (foundation loop)
-**First headless READY**: HOS-2B-001 (after HOS-2A completes)
+**Next READY task**: HOS-1A-004 (EntryAbility + Navigation shell)
+**First headless task**: HOS-2B-001 (after HOS-2A completes)
 
 ---
 
