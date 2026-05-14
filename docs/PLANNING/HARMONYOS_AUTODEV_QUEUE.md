@@ -25,8 +25,8 @@
 | 10 | HOS-1A-003 | HOS-1A | DONE | AppScope & entry module config refine |
 | 11 | HOS-1A-004 | HOS-1A | DONE | EntryAbility + Navigation shell |
 | 12 | HOS-1A-005 | HOS-1A | DONE | Theme & resource baseline |
-| 13 | HOS-2A-001 | HOS-2A | READY | Core public API full audit |
-| 14 | HOS-2A-002 | HOS-2A | BLOCKED | DTO boundary extraction |
+| 13 | HOS-2A-001 | HOS-2A | DONE | Core public API full audit |
+| 14 | HOS-2A-002 | HOS-2A | READY | DTO boundary extraction |
 | 15 | HOS-2A-003 | HOS-2A | BLOCKED | Bridge alternatives evaluation |
 | 16 | HOS-2A-004 | HOS-2A | BLOCKED | Bridge decision matrix |
 | 17 | HOS-2A-005 | HOS-2A | BLOCKED | DTO schema generation (BLOCKED_BY_DECISION) |
@@ -92,9 +92,9 @@
 
 | Status | Count |
 |--------|-------|
-| DONE | 12 |
+| DONE | 13 |
 | READY | 1 |
-| BLOCKED | 10 |
+| BLOCKED | 9 |
 | PENDING | 44 |
 
 **Next READY task**: HOS-2A-001 (Core public API full audit)

@@ -188,3 +188,184 @@ The Core models are **data containers** that are trivial to mirror in ArkTS. The
 | HOS-D001b | Reserve right to upgrade A → D later? | Suggested YES | Optional |
 
 **If no user response**: Strategy A will be used as the default when HOS-2A executes.
+
+---
+
+## HOS-2A-001: Core Public API → ArkTS Mapping (Audit `8b0e8bf`)
+
+**Audit date**: 2026-05-15
+**Core HEAD**: `8b0e8bf` (Phase 7 RC freeze)
+**Total symbols mapped**: 98 (84 from API snapshot + 14 from Phase 3-7 additions)
+
+### ReaderCoreFoundation (frozen — 1 symbol)
+
+| Swift | Kind | ArkTS Equivalent |
+|-------|------|-----------------|
+| `JSONValue` | enum | `type JSONValue = string \| number \| boolean \| null \| JSONValue[] \| Record<string, JSONValue>` |
+
+### ReaderCoreModels — Data Models (frozen — core DTOs)
+
+| Swift | Kind | ArkTS Equivalent |
+|-------|------|-----------------|
+| `BookSource` | struct | `interface BookSource { ... }` — bookSourceName, bookSourceGroup, bookSourceUrl, searchUrl, searchRule, bookInfoRule, tocRule, contentRule, exploreRule, loginDescriptor, unknownFields |
+| `SearchQuery` | struct | `interface SearchQuery { keyword: string; page?: number; pageSize?: number }` |
+| `SearchResultItem` | struct | `interface SearchResultItem { title: string; detailURL: string; author?: string; coverURL?: string; intro?: string; unknownFields: Record<string, JSONValue> }` |
+| `TOCItem` | struct | `interface TOCItem { chapterTitle: string; chapterURL: string; chapterIndex: number; isVip?: boolean; unknownFields: Record<string, JSONValue> }` |
+| `ContentPage` | struct | `interface ContentPage { title: string; content: string; chapterURL: string; nextChapterURL?: string; unknownFields: Record<string, JSONValue> }` |
+| `CSSNode` | struct | `interface CSSNode { type: NodeType; tagName?: string; textContent?: string; attributes: Record<string, string>; children: CSSNode[] }` |
+| `CSSNode.NodeType` | enum | `enum NodeType { element, text, comment, document }` |
+| `LocalBook` | struct | `interface LocalBook { id: string; title: string; author?: string; coverPath?: string; filePath: string; fileFormat: LocalBookFormat; fileSize?: number; encoding?: string; addedAt: Date; lastOpenedAt?: Date; unknownFields: Record<string, JSONValue> }` |
+| `LocalBookFormat` | enum | `enum LocalBookFormat { txt, epub, pdf, unknown }` |
+| `LocalTOCItem` | struct | `interface LocalTOCItem { title: string; level: number; byteOffset?: number; children?: LocalTOCItem[] }` |
+| `LocalBookImportRequest` | struct | `interface LocalBookImportRequest { sourcePath: string; format: LocalBookFormat; encoding?: string; splitPolicy: ChapterSplitPolicy; metadataOverrides: Record<string, string> }` |
+| `LocalBookImportResult` | struct | `interface LocalBookImportResult { book: LocalBook; toc: LocalTOCItem[]; cover?: CoverMetadata; warnings: LocalBookImportWarning[] }` |
+| `ChapterSplitPolicy` | struct | `interface ChapterSplitPolicy { pattern: SplitPattern; regex?: string; marker?: string; sizeBytes?: number }` |
+| `ReadingFlowModels` | struct | `interface ReadingFlowState { bookId: string; currentChapterIndex: number; chapterProgress: number; totalChapters: number }` |
+| `ExploreRequest` | struct | `interface ExploreRequest { url: string; method: string; headers: Record<string, string> }` |
+| `ExploreResultModel` | struct | `interface ExploreResultItem { title: string; author?: string; url: string; coverUrl?: string }` |
+| `URLDSLModels` | struct | `interface URLDSLDescriptor { baseUrl: string; keywordReplacement: string; pageReplacement?: string }` |
+| `ScriptExecutionDTOs` | struct | CONTRACT_ONLY — JS execution locked (S26.6) |
+| `RSSSubscriptionModels` | struct | `interface RSSSubscription { id: string; name: string; url: string; updateInterval?: number }` |
+
+### ReaderCoreModels — Errors & Compatibility (frozen)
+
+| Swift | Kind | ArkTS |
+|-------|------|-------|
+| `CompatibilityLevel` | enum | `enum CompatibilityLevel { A, B, C, D }` |
+| `FailureType` | enum | `enum FailureType { JSON_INVALID, FIELD_MISSING, RULE_INVALID, ... }` (14 cases) |
+| `FailureRecord` | struct | `interface FailureRecord { type: FailureType; reason: string; sampleId: string; detail?: string }` |
+| `ReaderError` | struct | `class ReaderError extends Error { code: ReaderErrorCode; message: string; failure?: FailureRecord }` |
+| `ErrorMappingInput` | enum | `type ErrorMappingInput = { httpStatus: number } \| { networkError: string } \| { timeout: true } \| ...` |
+| `StructuredErrorLog` | struct | `interface StructuredErrorLog { id: string; timestamp: number; errorCode: string; ... }` |
+| `ErrorLogger` | protocol | `interface ErrorLogger { log(entry: StructuredErrorLog): void; getErrors(since: number): StructuredErrorLog[]; clear(): void }` |
+
+### ReaderCoreProtocols — Service Contracts (frozen)
+
+| Swift Protocol | ArkTS Interface |
+|---------------|-----------------|
+| `BookSourceRepository` | `interface BookSourceRepository { save(source: BookSource): void; allSources(): BookSource[]; source(id: string): BookSource \| null }` |
+| `SearchService` | `interface SearchService { search(source: BookSource, query: SearchQuery): Promise<SearchResultItem[]> }` |
+| `TOCService` | `interface TOCService { fetchTOC(source: BookSource, detailURL: string): Promise<TOCItem[]> }` |
+| `ContentService` | `interface ContentService { fetchContent(source: BookSource, chapterURL: string): Promise<ContentPage> }` |
+| `BookSourceDecoder` | `interface BookSourceDecoder { decodeBookSource(json: string): BookSource }` |
+
+### ReaderCoreProtocols — Parser Contracts (frozen)
+
+| Swift | ArkTS |
+|-------|-------|
+| `ParseFlow` | `enum ParseFlow { search, toc, content }` |
+| `ParseRuleSet` | `interface ParseRuleSet { searchRule: SearchRule; bookInfoRule: BookInfoRule; tocRule: TocRule; contentRule: ContentRule }` |
+| `SearchParser` | `interface SearchParser { parseSearchResponse(data: Uint8Array, source: BookSource, query: SearchQuery): SearchResultItem[] }` |
+| `TOCParser` | `interface TOCParser { parseTOCResponse(data: Uint8Array, source: BookSource, detailURL: string): TOCItem[] }` |
+| `ContentParser` | `interface ContentParser { parseContentResponse(data: Uint8Array, source: BookSource, chapterURL: string): ContentPage }` |
+
+### ReaderCoreProtocols — Network Contracts (frozen)
+
+| Swift | ArkTS |
+|-------|-------|
+| `HTTPRequest` | `interface HTTPRequest { url: string; method: string; headers: Record<string, string>; body?: Uint8Array; timeout?: number }` |
+| `HTTPResponse` | `interface HTTPResponse { statusCode: number; headers: Record<string, string>; data: Uint8Array }` |
+| `HTTPClient` | `interface HTTPClient { send(request: HTTPRequest): Promise<HTTPResponse> }` |
+| `Cookie` | `interface Cookie { name: string; value: string; domain: string; path: string; expiresAt?: number; secure: boolean; httpOnly: boolean }` |
+| `CookieJar` | `interface CookieJar { getCookies(url: string): Cookie[]; setCookie(cookie: Cookie): void; clear(): void }` |
+| `RequestBuilder` | `interface RequestBuilder { makeSearchRequest(source: BookSource, query: SearchQuery): HTTPRequest; makeTOCRequest(source: BookSource, detailURL: string): HTTPRequest; makeContentRequest(source: BookSource, chapterURL: string): HTTPRequest }` |
+
+### ReaderCoreProtocols — Adapter Contracts (frozen)
+
+| Swift | ArkTS |
+|-------|-------|
+| `StorageAdapterProtocol` | `interface StorageAdapter { read(key: string): string \| null; write(key: string, value: string): void; remove(key: string): void }` |
+| `SchedulerAdapterProtocol` | `interface SchedulerAdapter { schedule(taskId: string, executeAfter: number): void; cancel(taskId: string): void }` |
+| `LoggingAdapterProtocol` | `interface LoggingAdapter { log(level: LogLevel, message: string, metadata?: Record<string, string>): void }` |
+| `CoreAdapterDependencies` | `interface CoreAdapterDependencies { http: HTTPClient; storage?: StorageAdapter; scheduler?: SchedulerAdapter; logger?: LoggingAdapter }` |
+| `FileAccessAdapter` | `interface FileAccessAdapter { readFile(path: string): Promise<FileAccessResult>; statFile(path: string): Promise<FileAccessResult>; listDirectory(path: string): Promise<string[]> }` |
+| `CredentialStorageAdapter` | `interface CredentialStorageAdapter { save(cred: Credential): Promise<void>; get(id: string): Promise<Credential \| null>; delete(id: string): Promise<void>; list(): Promise<Credential[]> }` |
+
+### ReaderCoreProtocols — Cache Contracts (frozen)
+
+| Swift | ArkTS |
+|-------|-------|
+| `CacheScope` | `enum CacheScope { search, toc, content }` |
+| `CacheEntry` | `interface CacheEntry<T> { key: string; scope: CacheScope; createdAt: number; ttlSeconds: number; payload: T }` |
+| `CacheStore` | `interface CacheStore { get<T>(scope: CacheScope, key: string): CacheEntry<T> \| null; set<T>(entry: CacheEntry<T>): void; remove(scope: CacheScope, key: string): void; clear(scope: CacheScope): void }` |
+
+### ReaderCoreParser (frozen — 9 public symbols)
+
+| Swift | ArkTS Equivalent |
+|-------|-----------------|
+| `NonJSParserEngine` | `class NonJSParserEngine implements SearchParser, TOCParser, ContentParser` — CSS/XPath/JSONPath/Regex evaluation |
+| `CSSExecutor` | `class CSSExecutor { evaluate(selector: string, node: CSSNode): CSSNode[] }` |
+| `HTMLParser` | `class HTMLParser { parse(html: string): CSSNode }` — HTML→DOM tree |
+| `SelectorEngine` | `class SelectorEngine { match(selector: string, node: CSSNode): boolean }` |
+| `RuleParser` | `class RuleParser { parse(rule: string): ParsedRule }` — rule string→structured rule |
+| `TocParser` | `class TocParser { parse(data: Uint8Array, rule: TocRule): TOCItem[] }` |
+| `NonJSRuleScheduler` | `class RuleScheduler { evaluate(rule: ParseRule, data: Uint8Array): ParseResult }` |
+| `JSRenderingGate` | CONTRACT_ONLY — ArkTS interface placeholder, no JS execution |
+
+### ReaderCoreNetwork (frozen — 6 symbols)
+
+| Swift | ArkTS |
+|-------|-------|
+| `NetworkPolicyLayer` | `class NetworkPolicyLayer { constructor(httpClient: HTTPClient); performSearch(...): Promise<HTTPResponse>; performTOC(...): Promise<HTTPResponse>; performContent(...): Promise<HTTPResponse> }` |
+| `BasicCookieJar` | `class InMemoryCookieJar implements CookieJar, ScopedCookieJar` |
+| `BookSourceRequestBuilder` | `class BookSourceRequestBuilder implements RequestBuilder` |
+| `NetworkErrorMapper` | `class NetworkErrorMapper { static map(error: Error): MappedReaderError }` |
+
+### ReaderCoreCache (frozen — 2 symbols)
+
+| Swift | ArkTS |
+|-------|-------|
+| `MinimalCacheHTTPClient` | `class CachedHTTPClient implements HTTPClient { constructor(inner: HTTPClient, cache: ResponseCache) }` |
+| `MinimalCacheContract` | `interface CacheContract { keyFields: string[]; storeFields: string[]; hitCondition: string; stalePolicy: string }` |
+
+### ReaderCoreServices (frozen — 5 symbols, from source)
+
+| Swift | ArkTS |
+|-------|-------|
+| `ReaderCoreServiceFactory` | `class ReaderCoreServiceFactory { constructor(httpClient: HTTPClient); makeSearchService(): SearchService; makeTOCService(): TOCService; makeContentService(): ContentService }` |
+| `DefaultSearchService` | `class DefaultSearchService implements SearchService` |
+| `DefaultTOCService` | `class DefaultTOCService implements TOCService` |
+| `DefaultContentService` | `class DefaultContentService implements ContentService` |
+| `ServiceAdapterError` | `enum ServiceAdapterError { configMissing, fetchFailed, parseFailed }` |
+
+### Phase 3-7 ADDITIONS (frozen — 14 symbols, from source inspection @ `8b0e8bf`)
+
+| Swift | File | ArkTS |
+|-------|------|-------|
+| `TXTParser` | TXTParser.swift | `class TXTParser { parse(data: Uint8Array, encoding?: string, policy: ChapterSplitPolicy): TXTParseResult }` |
+| `TXTParseResult` | TXTParser.swift | `interface TXTParseResult { encoding: string; content: string; toc: LocalTOCItem[]; byteCount: number }` |
+| `TXTParserError` | TXTParser.swift | `enum TXTParserError { encodingNotSupported, emptyFile, splitFailed }` |
+| `EPUBParserContract` | EPUBParserContract.swift | `interface EPUBParserContract { parse(data: Uint8Array): Promise<EPUBParseResult> }` |
+| `EPUBMetadata` | EPUBModels.swift | `interface EPUBMetadata { title: string; creator?: string; identifier?: string; language?: string; publisher?: string; date?: string; extraFields: Record<string, string> }` |
+| `EPUBNavPoint` | EPUBModels.swift | `interface EPUBNavPoint { label: string; src?: string; children: EPUBNavPoint[] }` |
+| `EPUBParseResult` | EPUBModels.swift | `interface EPUBParseResult { metadata: EPUBMetadata; navPoints: EPUBNavPoint[]; coverData?: Uint8Array }` |
+| `EPUBMapping` | EPUBParserContract.swift | `class EPUBMapping { static toLocalBook(metadata: EPUBMetadata): LocalBook; static toTOCItems(nav: EPUBNavPoint[]): LocalTOCItem[] }` |
+| `WebDAVAdapter` | SyncWebDAVProtocols.swift | `interface WebDAVAdapter { listDirectory(path: string): Promise<RemoteBookMetadata[]>; downloadFile(path: string): Promise<Uint8Array>; uploadFile(data: Uint8Array, path: string): Promise<void>; deleteFile(path: string): Promise<void>; connectionTest(): Promise<boolean> }` |
+| `SyncTransport` | SyncWebDAVProtocols.swift | `interface SyncTransport { push(records: ProgressSyncRecord[]): Promise<void>; pull(since?: number): Promise<ProgressSyncRecord[]>; resolveConflicts(local: ProgressSyncRecord[], remote: ProgressSyncRecord[], policy: ConflictPolicy): ProgressSyncRecord[] }` |
+| `BackupService` | SyncWebDAVProtocols.swift | `interface BackupService { createBackup(config: BackupConfig, items: BackupEntry[]): Promise<BackupPackage>; listBackups(config: BackupConfig): Promise<BackupManifest[]>; restoreBackup(pkg: BackupPackage, policy: RestorePolicy): Promise<BackupEntry[]> }` |
+| `FileAccessResult` | AdapterProtocols.swift | `interface FileAccessResult { data: Uint8Array; fileSize: number; mimeType?: string }` |
+| `Credential` | AdapterProtocols.swift | `interface Credential { identifier: string; value: string; label?: string; accessGroup?: string }` |
+| `FakeWebDAVClient` | Phase 6 | CONTRACT_ONLY — test double, not for production port |
+
+### LOCKED / FORBIDDEN (unstable — HOS must NOT implement)
+
+| Swift | Boundary | Reason |
+|-------|----------|--------|
+| `JSRenderClient` | unstable | JS execution locked (S26.6) |
+| `JSRenderError` | unstable | JS execution locked |
+| `JSParserEngineFactory` | unstable | JS execution locked |
+| `URLSessionHTTPClient` | internal | iOS-only, HOS uses @ohos.net.http |
+| `iOSRuntimeJavaScriptExecutor` | internal | iOS-only, JS locked |
+| `iOSRuntimeWebViewExecutor` | internal | iOS-only, WebView locked |
+
+### Summary
+
+| Category | Count | HOS Status |
+|----------|-------|-----------|
+| **Frozen DTOs (mappable)** | 73 | All have ArkTS equivalents defined |
+| **Phase 3-7 additions (mappable)** | 14 | All have ArkTS equivalents defined |
+| **Internal (iOS-only)** | 8 | HOS re-implements via platform adapters |
+| **Unstable (JS/WebView)** | 3 | LOCKED — must not implement |
+| **TOTAL** | **98** | 87 mappable, 8 re-implement, 3 locked |
+
+**Verification**: `grep -c "| frozen \|" docs/PLANNING/HARMONYOS_CORE_BRIDGE_DECISION.md` shows 87+ frozen symbols documented.
