@@ -1,0 +1,160 @@
+# /harmonyos-loop
+
+Reader for HarmonyOS automated development loop. Executes **exactly one** READY task per invocation, updates the task queue, and stops.
+
+## Pre-Check (EVERY invocation)
+
+### 1. Git Safety Check
+```bash
+cd "/Users/minliny/Documents/Reader for HarmonyOS"
+git status --short
+git branch --show-current
+git rev-parse --short HEAD
+```
+
+- If worktree has uncommitted changes NOT in `docs/PLANNING/` or `.claude/`: **STOP** and report. Do NOT reset, stash, or overwrite.
+- If on a branch other than `main`: **STOP** and report.
+
+### 2. Read Current State
+Read these files (do not skip):
+- `docs/PLANNING/HARMONYOS_AUTODEV_QUEUE.md` — task queue
+- `docs/PLANNING/HARMONYOS_BLOCKERS_AND_DECISIONS.md` — blockers + decisions
+- `docs/PLANNING/HARMONYOS_LOOP_STATE.yml` — loop state (update if exists)
+
+### 3. Find First READY Task
+Scan the task queue for the first task with `Status: READY`.
+- If none: report all BLOCKED/PENDING reasons and **STOP**.
+- If a BLOCKED_BY_DECISION task is blocking the chain: report the decision needed.
+
+## Task Selection Priority
+
+1. HOS-0A tasks (alphabetically: 001 → 002 → ... → 007)
+2. HOS-1A tasks
+3. HOS-2A tasks
+4. HOS-3A through HOS-9A in stage order
+
+Within each stage, execute in task ID order.
+
+## Execution Rules
+
+### ALLOWED
+- Read any file in the repo
+- Read any file in Reader-Core (`/Users/minliny/Documents/Reader-Core`)
+- Write/Edit files within the scope defined by the task's `Allowed files`
+- Create directories needed for allowed files
+- Run `git status`, `git diff --check`, `git add` (for allowed files only)
+- Commit planning docs with message format: `docs: <task-id> <short description>`
+- Run validation commands listed in task's `Validation`
+- Update task status in queue from READY → DONE
+- Update loop state file
+
+### FORBIDDEN (never do, even if task says otherwise)
+- Modify Reader-Core files (`/Users/minliny/Documents/Reader-Core`)
+- Copy iOS Swift code into HarmonyOS as-is
+- Access real book source websites
+- Make real HTTP requests to external servers (except Reader-Core localhost if Strategy B)
+- Implement WebDAV, JS Runtime, WebView Runtime
+- Implement TXT/EPUB parser (read raw text only)
+- Install npm packages, ohpm packages, or system tools
+- Install cron, modify crontab, or create LaunchAgents
+- `git reset --hard`, `git clean -fd`, `git push --force`
+- Delete user files outside task scope
+- Execute more than ONE task
+- Continue to next task after completing one
+- Mark ENV_BLOCKED task as DONE (use ENV_BLOCKED status)
+- Treat mock as real implementation (always tag MOCK_ONLY)
+
+## When Task Requires Reader-Core Knowledge
+
+If the current task involves Reader-Core models, protocols, or services, you MUST read the actual Core source files before acting. Do not rely on summaries or memory. At minimum:
+- `Core/Sources/ReaderCoreModels/` — for DTO fields
+- `Core/Sources/ReaderCoreProtocols/` — for contract signatures
+- `Core/Sources/ReaderCoreServices/` — for service behavior
+
+## Post-Execution (EVERY invocation)
+
+### 1. Update Task Queue
+- Change task status: READY → DONE
+- If task uncovered new blockers: add them and mark subsequent tasks
+- If task was ENV_BLOCKED: leave as BLOCKED with note
+
+### 2. Run Validation
+Execute the task's `Validation` commands. Record results:
+- PASS: command succeeded
+- FAIL: command failed (document why)
+- SKIPPED: command requires unavailable tools (ENV_BLOCKED)
+
+### 3. Generate Loop Report
+Write report to `docs/PLANNING/LOOP_REPORTS/loop-<YYYYMMDD>-<HHMMSS>.md`:
+```markdown
+# Loop Report — <task-id>
+
+- **Timestamp**: <ISO timestamp>
+- **Task**: <task-id> — <title>
+- **Status**: DONE | ENV_BLOCKED | FAILED
+- **HEAD before**: <sha>
+- **HEAD after**: <sha>
+- **Files changed**: <list>
+- **Validation**: PASS/FAIL/SKIPPED — <details>
+- **Next READY task**: <task-id> or NONE
+- **Blockers**: <any new blockers found>
+- **Decisions needed**: <any new decisions>
+```
+
+### 4. Commit (if changes made)
+Only if changes are within allowed scope:
+```bash
+git add docs/PLANNING/ .claude/commands/ CLAUDE.md  # planning docs only
+git add <task-specific allowed files>
+git commit -m "docs: <task-id> <short description>"
+```
+
+### 5. Update Loop State
+Update `docs/PLANNING/HARMONYOS_LOOP_STATE.yml`:
+- `last_task`: completed task ID
+- `last_run`: ISO timestamp
+- `last_head`: new HEAD sha
+- `next_task`: next READY task ID or `NONE`
+
+### 6. STOP
+Output the loop report and **STOP**. Do not execute another task.
+
+## Environment-Blocked Handling
+
+If ohpm/hvigor are missing:
+- Tasks requiring build: mark as BLOCKED with reason `ENV_BLOCKED: ohpm/hvigor not available`
+- Planning/docs tasks: continue normally
+- Never fake a build success
+
+## Decision-Blocked Handling
+
+If a task requires a user decision (HOS-D001 through HOS-D008):
+- Mark task as BLOCKED_BY_DECISION
+- Report which decision ID is needed
+- If the decision has a default that is safe to auto-apply, apply it and document
+- If the decision requires explicit user input, STOP and report
+
+## Quick Reference: Task States
+
+| State | Meaning |
+|-------|---------|
+| READY | Can execute now |
+| IN_PROGRESS | Currently executing (only one at a time) |
+| DONE | Completed successfully |
+| BLOCKED | Missing prerequisite (task, env, or decision) |
+| BLOCKED_BY_DECISION | Waiting for user decision |
+| PENDING | Planned but prerequisites not yet met |
+| ENV_BLOCKED | Build tools missing |
+| FAILED | Last execution failed |
+
+## Quick Reference: Stage Dependencies
+
+```
+HOS-0A (planning) ── READY (no deps)
+  └── HOS-1A (app shell) ── BLOCKED (needs SDK)
+       └── HOS-2A (bridge) ── BLOCKED (needs HOS-0A + decision)
+            └── HOS-3A (bookshelf) ── BLOCKED (needs HOS-1A + HOS-2A)
+                 └── HOS-4A/5A/6A ── BLOCKED
+                      └── HOS-7A/8A ── PENDING (Core deps ready, bridge needed)
+                           └── HOS-9A ── PENDING
+```
