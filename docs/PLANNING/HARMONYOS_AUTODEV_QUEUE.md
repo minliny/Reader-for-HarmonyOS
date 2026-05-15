@@ -67,8 +67,8 @@
 | 47 | HOS-5B-004 | HOS-5B | DONE | TOC/Content fixture tests |
 | 48 | HOS-5B-005 | HOS-5B | DONE | TOC/Content domain smoke validation |
 | 49 | HOS-6B-001 | HOS-6B | DONE | LocalBookImportRequest/Result ArkTS models |
-| 50 | HOS-6B-002 | HOS-6B | READY | TXT parser ArkTS port (from Core TXTParser.swift) |
-| 51 | HOS-6B-003 | HOS-6B | PENDING | EPUB parser adapter contract |
+| 50 | HOS-6B-002 | HOS-6B | DONE | TXT parser ArkTS port (from Core TXTParser.swift) |
+| 51 | HOS-6B-003 | HOS-6B | READY | EPUB parser adapter contract |
 | 52 | HOS-6B-004 | HOS-6B | PENDING | Import pipeline (meta → parse → store) |
 | 53 | HOS-6B-005 | HOS-6B | PENDING | Import fixture tests (TXT samples) |
 | 54 | HOS-6B-006 | HOS-6B | PENDING | Import domain smoke validation |
