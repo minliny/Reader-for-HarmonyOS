@@ -64,8 +64,8 @@
 | 44 | HOS-5B-001 | HOS-5B | DONE | TOCService (fetch + parse + cache) |
 | 45 | HOS-5B-002 | HOS-5B | DONE | ContentService (fetch + parse + cache) |
 | 46 | HOS-5B-003 | HOS-5B | DONE | ReadingFlowStateMachine |
-| 47 | HOS-5B-004 | HOS-5B | READY | TOC/Content fixture tests |
-| 48 | HOS-5B-005 | HOS-5B | PENDING | TOC/Content domain smoke validation |
+| 47 | HOS-5B-004 | HOS-5B | DONE | TOC/Content fixture tests |
+| 48 | HOS-5B-005 | HOS-5B | READY | TOC/Content domain smoke validation |
 | 49 | HOS-6B-001 | HOS-6B | PENDING | LocalBookImportRequest/Result ArkTS models |
 | 50 | HOS-6B-002 | HOS-6B | PENDING | TXT parser ArkTS port (from Core TXTParser.swift) |
 | 51 | HOS-6B-003 | HOS-6B | PENDING | EPUB parser adapter contract |
