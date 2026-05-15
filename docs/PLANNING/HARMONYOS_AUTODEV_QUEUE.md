@@ -84,7 +84,7 @@
 | 64 | HOS-9B-001 | HOS-9B | DONE | Fixture test infrastructure |
 | 65 | HOS-9B-002 | HOS-9B | DONE | Capability matrix + boundary compliance |
 | 66 | HOS-9B-003 | HOS-9B | DONE | Build gate + release checklist |
-| 67 | HOS-9B-004 | HOS-9B | READY | Headless loop closure report |
+| 67 | HOS-9B-004 | HOS-9B | DONE | Headless loop closure report |
 
 ---
 
