@@ -69,8 +69,8 @@
 | 49 | HOS-6B-001 | HOS-6B | DONE | LocalBookImportRequest/Result ArkTS models |
 | 50 | HOS-6B-002 | HOS-6B | DONE | TXT parser ArkTS port (from Core TXTParser.swift) |
 | 51 | HOS-6B-003 | HOS-6B | DONE | EPUB parser adapter contract |
-| 52 | HOS-6B-004 | HOS-6B | READY | Import pipeline (meta → parse → store) |
-| 53 | HOS-6B-005 | HOS-6B | PENDING | Import fixture tests (TXT samples) |
+| 52 | HOS-6B-004 | HOS-6B | DONE | Import pipeline (meta → parse → store) |
+| 53 | HOS-6B-005 | HOS-6B | READY | Import fixture tests (TXT samples) |
 | 54 | HOS-6B-006 | HOS-6B | PENDING | Import domain smoke validation |
 | 55 | HOS-7B-001 | HOS-7B | PENDING | SyncWebDAV ArkTS models |
 | 56 | HOS-7B-002 | HOS-7B | PENDING | WebDAVAdapter contract + BackupService contract |
