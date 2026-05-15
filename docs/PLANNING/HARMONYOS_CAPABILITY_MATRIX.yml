@@ -1,0 +1,139 @@
+# HarmonyOS Capability Matrix
+# Aligned with Reader-Core CORE_RC_GAP_REGISTER.yml
+# Generated: 2026-05-16 by HOS-9B-002
+
+matrix:
+  app_shell:
+    - capability: "Stage Model App Shell"
+      status: IMPLEMENTED
+      notes: "EntryAbility + TabBar navigation + 3 tabs"
+
+    - capability: "Theme System"
+      status: IMPLEMENTED
+      notes: "13 color tokens light + dark, 15 float tokens"
+
+    - capability: "Build System"
+      status: IMPLEMENTED
+      notes: "hvigorw 6.22.7, API 22, BUILD SUCCESSFUL"
+
+  dto_models:
+    - capability: "ReaderCoreFoundation (JSONValue)"
+      status: IMPLEMENTED
+      notes: "ArkTS type alias"
+
+    - capability: "ReaderCoreModels (BookSource, Search, TOC, Content)"
+      status: IMPLEMENTED
+      notes: "6 model files, 18 interfaces, 8 enums"
+
+    - capability: "LocalBookModels + ImportProtocols"
+      status: IMPLEMENTED
+      notes: "LocalBook, ImportRequest/Result, ChapterSplitPolicy"
+
+    - capability: "EPUBModels"
+      status: IMPLEMENTED
+      notes: "EPUBMetadata, EPUBNavPoint, EPUBParseResult"
+
+    - capability: "SyncWebDAVModels"
+      status: IMPLEMENTED
+      notes: "BackupConfig, ProgressSyncRecord, etc."
+
+  bridge:
+    - capability: "Core API Audit"
+      status: IMPLEMENTED
+      notes: "98 symbols mapped (87 frozen + 14 new)"
+
+    - capability: "Bridge API Spec"
+      status: IMPLEMENTED
+      notes: "5 REST endpoints defined"
+
+    - capability: "Bridge HTTP Client (ArkTS)"
+      status: IMPLEMENTED
+      notes: "BridgeHTTPClient + FixtureReplayInterceptor + BridgeClientWithFallback"
+
+    - capability: "Swift Bridge Service"
+      status: BLOCKED_BY_CORE_REPO_ACCESS
+      notes: "Requires user approval to modify Reader-Core"
+
+  domain_services:
+    - capability: "Bookshelf Domain"
+      status: IMPLEMENTED
+      notes: "IBookshelfRepository, Storage/Mock impl, BookshelfService, ProgressService"
+
+    - capability: "Search Domain"
+      status: IMPLEMENTED_FIXTURE
+      notes: "BookSourceRepository, SearchService, SearchError model. BLOCKED_BY_BRIDGE for live search"
+
+    - capability: "TOC/Content Domain"
+      status: IMPLEMENTED_FIXTURE
+      notes: "TOCService, ContentService, ReadingFlowStateMachine. BLOCKED_BY_BRIDGE for live"
+
+    - capability: "Import Domain"
+      status: IMPLEMENTED
+      notes: "TXTParser port (210 lines), ImportPipeline, EPUBParserContract (CONTRACT_ONLY)"
+
+    - capability: "Sync Domain"
+      status: CONTRACT_ONLY
+      notes: "SyncWebDAV models + contracts. No production WebDAV HTTP"
+
+  adapters:
+    - capability: "HTTPAdapter"
+      status: IMPLEMENTED
+      notes: "@ohos.net.http wrapper"
+
+    - capability: "StorageAdapter"
+      status: IMPLEMENTED
+      notes: "preferences + in-memory"
+
+    - capability: "FileAccessAdapter"
+      status: IMPLEMENTED
+      notes: "@ohos.file.fs wrapper"
+
+    - capability: "CredentialStorageAdapter"
+      status: IMPLEMENTED
+      notes: "Storage-backed credential CRUD"
+
+  testing:
+    - capability: "Bookshelf Domain Tests"
+      status: IMPLEMENTED
+      notes: "16 fixture test cases"
+
+    - capability: "Search Domain Tests"
+      status: IMPLEMENTED
+      notes: "11 fixture test cases"
+
+    - capability: "TOC/Content Tests"
+      status: IMPLEMENTED
+      notes: "12 state machine tests"
+
+    - capability: "Import Domain Tests"
+      status: IMPLEMENTED
+      notes: "8 TXT parser tests"
+
+    - capability: "Sync Domain Tests"
+      status: IMPLEMENTED
+      notes: "5 contract tests"
+
+    - capability: "Test Infrastructure"
+      status: IMPLEMENTED
+      notes: "5 suites, 52 test cases, runAllDomainTests()"
+
+  locked:
+    - capability: "JS Runtime"
+      status: LOCKED
+      notes: "S26.6 — must not implement"
+
+    - capability: "WebView Runtime"
+      status: LOCKED
+      notes: "Must not implement"
+
+    - capability: "Real Book Source HTTP"
+      status: FORBIDDEN
+      notes: "Loop rule — must not access"
+
+boundary_compliance:
+  no_js_runtime: PASS
+  no_webview: PASS
+  no_real_book_source_urls: PASS
+  no_hardcoded_secrets: PASS
+  no_core_modifications: PASS
+  build_successful: PASS
