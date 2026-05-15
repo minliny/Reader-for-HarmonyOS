@@ -1,4 +1,9 @@
 import { router } from '@kit.ArkUI';
+import { BookshelfViewModel } from '../viewmodel/BookshelfViewModel';
+import { BookshelfRepository } from '../repository/BookshelfRepository';
+import { BookshelfItem, SortOrder } from '../models/BookshelfModels';
+import { formatToString } from '../models/BookshelfModels';
+import { LocalBookFormat } from '../models/LocalBook';
 
 @Entry
 @Component
@@ -61,32 +66,56 @@ struct BookshelfTab {
 
 @Component
 struct BookshelfContent {
-  @State books: Array<string> = [];
+  private vm: BookshelfViewModel = new BookshelfViewModel(new BookshelfRepository(true));
+  @State items: BookshelfItem[] = [];
+  @State sortLabel: string = '最近阅读';
+
+  aboutToAppear(): void {
+    this.items = this.vm.state.items;
+  }
 
   build() {
     Column() {
-      if (this.books.length === 0) {
+      // Sort bar
+      Row() {
+        Text(`${this.items.length} 本书`)
+          .fontSize(14)
+          .fontColor('#999999')
+        Blank()
+        Button(this.sortLabel)
+          .fontSize(13)
+          .fontColor('#007AFF')
+          .backgroundColor('#FFFFFF')
+          .borderRadius(12)
+          .padding({ left: 12, right: 12, top: 4, bottom: 4 })
+          .onClick(() => {
+            const orders = [SortOrder.lastOpened, SortOrder.title, SortOrder.addedAt];
+            const labels = ['最近阅读', '书名', '最近添加'];
+            const idx = orders.indexOf(this.vm.state.sortOrder);
+            const next = (idx + 1) % orders.length;
+            this.vm.setSortOrder(orders[next]);
+            this.sortLabel = labels[next];
+            this.items = this.vm.state.items;
+          })
+      }
+      .width('100%')
+      .padding({ left: 16, right: 16, top: 8, bottom: 4 })
+
+      if (this.items.length === 0) {
         Column() {
           Text('书架空空如也')
             .fontSize(18)
             .fontColor('#999999')
             .margin({ top: 100 })
-          Text('添加本地书籍或搜索书源')
-            .fontSize(14)
-            .fontColor('#BBBBBB')
-            .margin({ top: 8 })
         }
         .width('100%')
         .layoutWeight(1)
         .justifyContent(FlexAlign.Center)
       } else {
         List() {
-          ForEach(this.books, (item: string) => {
+          ForEach(this.items, (item: BookshelfItem) => {
             ListItem() {
-              Text(item)
-                .fontSize(16)
-                .padding(16)
-                .width('100%')
+              this.BookCard(item)
             }
           })
         }
@@ -95,8 +124,59 @@ struct BookshelfContent {
     }
     .width('100%')
     .height('100%')
-    .padding(16)
     .backgroundColor('#F5F5F5')
+  }
+
+  @Builder
+  BookCard(item: BookshelfItem) {
+    Row() {
+      // Cover placeholder
+      Row() {
+        Text(formatToString(item.book.fileFormat))
+          .fontSize(12)
+          .fontColor('#FFFFFF')
+      }
+      .width(48)
+      .height(64)
+      .backgroundColor('#007AFF')
+      .borderRadius(4)
+      .justifyContent(FlexAlign.Center)
+
+      Column() {
+        Text(item.book.title)
+          .fontSize(16)
+          .fontWeight(FontWeight.Medium)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(item.book.author ?? '未知作者')
+          .fontSize(13)
+          .fontColor('#999999')
+          .margin({ top: 4 })
+        if (item.totalChapters > 0) {
+          Row() {
+            Text(`第${item.currentChapterIndex + 1}/${item.totalChapters}章`)
+              .fontSize(12)
+              .fontColor('#BBBBBB')
+            Text(` · ${Math.round(item.chapterProgress * 100)}%`)
+              .fontSize(12)
+              .fontColor('#007AFF')
+          }
+          .margin({ top: 6 })
+        }
+      }
+      .alignItems(HorizontalAlign.Start)
+      .margin({ left: 12 })
+      .layoutWeight(1)
+
+      Text('>')
+        .fontSize(16)
+        .fontColor('#CCCCCC')
+    }
+    .width('100%')
+    .padding(12)
+    .backgroundColor('#FFFFFF')
+    .borderRadius(8)
+    .margin({ left: 16, right: 16, bottom: 8 })
   }
 }
 

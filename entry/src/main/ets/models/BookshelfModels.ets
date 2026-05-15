@@ -61,5 +61,5 @@ export function formatToString(format: LocalBookFormat): string {
 
 export function filterMatchesFormat(filter: FilterCriteria, format: LocalBookFormat): boolean {
   if (filter === FilterCriteria.all) return true;
-  return filter === format;
+  return filter as string === format as string;
 }

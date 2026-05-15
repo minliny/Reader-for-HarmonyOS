@@ -33,8 +33,8 @@
 | 18 | HOS-3A-001 | HOS-3A | DONE | Bookshelf local model contract |
 | 19 | HOS-3A-002 | HOS-3A | DONE | Bookshelf mock repository |
 | 20 | HOS-3A-003 | HOS-3A | DONE | Bookshelf ViewModel |
-| 21 | HOS-3A-004 | HOS-3A | READY | Bookshelf minimal page |
-| 22 | HOS-3A-005 | HOS-3A | BLOCKED | Bookshelf smoke validation |
+| 21 | HOS-3A-004 | HOS-3A | DONE | Bookshelf minimal page |
+| 22 | HOS-3A-005 | HOS-3A | READY | Bookshelf smoke validation |
 | 23 | HOS-4A-001 | HOS-4A | PENDING | Search DTO ArkTS mirror |
 | 24 | HOS-5A-001 | HOS-5A | PENDING | TOC/Content DTO ArkTS mirror |
 | 25 | HOS-6A-001 | HOS-6A | PENDING | LocalBook import DTO mirror |

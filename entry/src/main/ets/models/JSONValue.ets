@@ -1,8 +1,3 @@
 // Mirrors ReaderCoreFoundation JSONValue
-export type JSONValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JSONValue[]
-  | Record<string, JSONValue>;
+// ArkTS does not support recursive type aliases, so we use Record<string, Object>
+export type JSONValue = Record<string, Object>;

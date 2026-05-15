@@ -114,7 +114,10 @@ export class BookshelfRepository {
     for (const book of MOCK_BOOKS) {
       this.books.set(book.id, book);
     }
-    for (const [id, item] of Object.entries(MOCK_PROGRESS)) {
+    const keys = Object.keys(MOCK_PROGRESS);
+    for (let i = 0; i < keys.length; i++) {
+      const id = keys[i];
+      const item = MOCK_PROGRESS[id];
       this.progress.set(id, item);
     }
   }
