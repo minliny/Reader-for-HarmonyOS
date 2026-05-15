@@ -78,8 +78,8 @@
 | 58 | HOS-7B-004 | HOS-7B | DONE | Sync domain contract tests |
 | 59 | HOS-8B-001 | HOS-8B | DONE | HTTPAdapter (@ohos.net.http wrapper) |
 | 60 | HOS-8B-002 | HOS-8B | DONE | StorageAdapter (@ohos.data.preferences) |
-| 61 | HOS-8B-003 | HOS-8B | READY | FileAccessAdapter (@ohos.file.fs wrapper) |
-| 62 | HOS-8B-004 | HOS-8B | PENDING | CredentialStorageAdapter |
+| 61 | HOS-8B-003 | HOS-8B | DONE | FileAccessAdapter (@ohos.file.fs wrapper) |
+| 62 | HOS-8B-004 | HOS-8B | READY | CredentialStorageAdapter |
 | 63 | HOS-8B-005 | HOS-8B | PENDING | Adapter integration smoke tests |
 | 64 | HOS-9B-001 | HOS-9B | PENDING | Fixture test infrastructure |
 | 65 | HOS-9B-002 | HOS-9B | PENDING | Capability matrix + boundary compliance |
