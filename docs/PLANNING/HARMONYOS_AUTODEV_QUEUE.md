@@ -81,8 +81,8 @@
 | 61 | HOS-8B-003 | HOS-8B | DONE | FileAccessAdapter (@ohos.file.fs wrapper) |
 | 62 | HOS-8B-004 | HOS-8B | DONE | CredentialStorageAdapter |
 | 63 | HOS-8B-005 | HOS-8B | DONE | Adapter integration smoke tests |
-| 64 | HOS-9B-001 | HOS-9B | READY | Fixture test infrastructure |
-| 65 | HOS-9B-002 | HOS-9B | PENDING | Capability matrix + boundary compliance |
+| 64 | HOS-9B-001 | HOS-9B | DONE | Fixture test infrastructure |
+| 65 | HOS-9B-002 | HOS-9B | READY | Capability matrix + boundary compliance |
 | 66 | HOS-9B-003 | HOS-9B | PENDING | Build gate + release checklist |
 | 67 | HOS-9B-004 | HOS-9B | PENDING | Headless loop closure report |
 
