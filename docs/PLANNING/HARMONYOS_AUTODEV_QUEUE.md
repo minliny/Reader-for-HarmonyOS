@@ -29,8 +29,8 @@
 | 14 | HOS-2A-002 | HOS-2A | DONE | DTO boundary extraction |
 | 15 | HOS-2A-003 | HOS-2A | DONE | Bridge alternatives evaluation |
 | 16 | HOS-2A-004 | HOS-2A | DONE | Bridge decision matrix |
-| 17 | HOS-2A-005 | HOS-2A | READY | DTO schema generation |
-| 18 | HOS-3A-001 | HOS-3A | BLOCKED | Bookshelf local model contract |
+| 17 | HOS-2A-005 | HOS-2A | DONE | DTO schema generation |
+| 18 | HOS-3A-001 | HOS-3A | READY | Bookshelf local model contract |
 | 19 | HOS-3A-002 | HOS-3A | BLOCKED | Bookshelf mock repository |
 | 20 | HOS-3A-003 | HOS-3A | BLOCKED | Bookshelf ViewModel |
 | 21 | HOS-3A-004 | HOS-3A | BLOCKED | Bookshelf minimal page |
@@ -97,8 +97,8 @@
 | BLOCKED | 9 |
 | PENDING | 44 |
 
-**Next READY task**: HOS-2A-001 (Core public API full audit)
-**HOS-1A complete**: App Shell Baseline DONE. Foundation moving to HOS-2A bridge strategy.
+**Next READY task**: HOS-3A-001 (Bookshelf local model contract)
+**HOS-2A complete**: Bridge strategy done. All decisions resolved. DTOs generated.
 **First headless task**: HOS-2B-001 (after HOS-2A completes)
 
 ---
