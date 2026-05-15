@@ -35,8 +35,8 @@
 | 20 | HOS-3A-003 | HOS-3A | DONE | Bookshelf ViewModel |
 | 21 | HOS-3A-004 | HOS-3A | DONE | Bookshelf minimal page |
 | 22 | HOS-3A-005 | HOS-3A | DONE | Bookshelf smoke validation |
-| 23 | HOS-4A-001 | HOS-4A | READY | Search DTO ArkTS mirror |
-| 24 | HOS-5A-001 | HOS-5A | PENDING | TOC/Content DTO ArkTS mirror |
+| 23 | HOS-4A-001 | HOS-4A | DONE | Search DTO ArkTS mirror |
+| 24 | HOS-5A-001 | HOS-5A | READY | TOC/Content DTO ArkTS mirror |
 | 25 | HOS-6A-001 | HOS-6A | PENDING | LocalBook import DTO mirror |
 
 ### Headless Capability Loop (HOS-2B → HOS-9B)
