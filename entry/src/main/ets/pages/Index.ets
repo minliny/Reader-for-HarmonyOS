@@ -1,6 +1,6 @@
 import { router } from '@kit.ArkUI';
 import { BookshelfViewModel } from '../viewmodel/BookshelfViewModel';
-import { BookshelfRepository } from '../repository/BookshelfRepository';
+import { MockBookshelfRepository } from '../repository/BookshelfRepository';
 import { BookshelfItem, SortOrder } from '../models/BookshelfModels';
 import { formatToString } from '../models/BookshelfModels';
 import { LocalBookFormat } from '../models/LocalBook';
@@ -66,7 +66,7 @@ struct BookshelfTab {
 
 @Component
 struct BookshelfContent {
-  private vm: BookshelfViewModel = new BookshelfViewModel(new BookshelfRepository(true));
+  private vm: BookshelfViewModel = new BookshelfViewModel(new MockBookshelfRepository(true));
   @State items: BookshelfItem[] = [];
   @State sortLabel: string = '最近阅读';
 

@@ -1,8 +1,140 @@
-// BookshelfRepository — in-memory store with mock data (MOCK_ONLY)
+// BookshelfRepository — interface + preferences-backed + in-memory mock
 import { LocalBook, LocalBookFormat } from '../models/LocalBook';
 import { BookshelfItem } from '../models/BookshelfModels';
 
+// MARK: - Repository Interface
+
+export interface IBookshelfRepository {
+  getAll(): LocalBook[];
+  getById(id: string): LocalBook | undefined;
+  add(book: LocalBook): boolean;
+  update(book: LocalBook): boolean;
+  remove(id: string): boolean;
+  exists(id: string): boolean;
+  count(): number;
+  getProgress(bookId: string): BookshelfItem | undefined;
+  getAllProgress(): BookshelfItem[];
+  updateProgress(bookId: string, chapterIndex: number, chapterProgress: number, totalChapters: number): boolean;
+  deleteProgress(bookId: string): void;
+  getUnread(): LocalBook[];
+}
+
+// MARK: - Storage-backed Repository (serializes to JSON string via adapter)
+
+export interface IStorageAdapter {
+  read(key: string): string | null;
+  write(key: string, value: string): void;
+  remove(key: string): void;
+}
+
+const KEY_BOOKS = 'reader_books';
+const KEY_PROGRESS = 'reader_progress';
+
+export class StorageBookshelfRepository implements IBookshelfRepository {
+  private books: Map<string, LocalBook> = new Map();
+  private progress: Map<string, BookshelfItem> = new Map();
+  private storage: IStorageAdapter;
+  private initialized: boolean = false;
+
+  constructor(storage: IStorageAdapter) {
+    this.storage = storage;
+  }
+
+  initialize(): void {
+    try {
+      const booksJson = this.storage.read(KEY_BOOKS);
+      if (booksJson) {
+        const books: LocalBook[] = JSON.parse(booksJson);
+        for (const b of books) {
+          this.books.set(b.id, b);
+        }
+      }
+      const progressJson = this.storage.read(KEY_PROGRESS);
+      if (progressJson) {
+        const progressMap: Record<string, BookshelfItem> = JSON.parse(progressJson);
+        const keys = Object.keys(progressMap);
+        for (let i = 0; i < keys.length; i++) {
+          this.progress.set(keys[i], progressMap[keys[i]]);
+        }
+      }
+    } catch (_e) {
+      // First run: empty store
+    }
+    this.initialized = true;
+  }
+
+  private saveToStore(): void {
+    this.storage.write(KEY_BOOKS, JSON.stringify(this.getAll()));
+    const progressObj: Record<string, BookshelfItem> = {};
+    const entries = this.progress.entries();
+    let entry = entries.next();
+    while (!entry.done) {
+      progressObj[entry.value[0]] = entry.value[1];
+      entry = entries.next();
+    }
+    this.storage.write(KEY_PROGRESS, JSON.stringify(progressObj));
+  }
+
+  getAll(): LocalBook[] { return Array.from(this.books.values()); }
+  getById(id: string): LocalBook | undefined { return this.books.get(id); }
+
+  add(book: LocalBook): boolean {
+    if (this.books.has(book.id)) { return false; }
+    this.books.set(book.id, book);
+    this.saveToStore();
+    return true;
+  }
+  update(book: LocalBook): boolean {
+    if (!this.books.has(book.id)) { return false; }
+    this.books.set(book.id, book);
+    this.saveToStore();
+    return true;
+  }
+  remove(id: string): boolean {
+    if (!this.books.has(id)) { return false; }
+    this.books.delete(id);
+    this.progress.delete(id);
+    this.saveToStore();
+    return true;
+  }
+  exists(id: string): boolean { return this.books.has(id); }
+  count(): number { return this.books.size; }
+
+  getProgress(bookId: string): BookshelfItem | undefined { return this.progress.get(bookId); }
+  getAllProgress(): BookshelfItem[] { return Array.from(this.progress.values()); }
+
+  updateProgress(bookId: string, chapterIndex: number, chapterProgress: number, totalChapters: number): boolean {
+    const book = this.books.get(bookId);
+    if (!book) { return false; }
+    const lastOpenedAt = Date.now();
+    const item: BookshelfItem = { book, currentChapterIndex: chapterIndex, chapterProgress, totalChapters, lastOpenedAt };
+    this.progress.set(bookId, item);
+    book.lastOpenedAt = lastOpenedAt;
+    this.books.set(bookId, book);
+    this.saveToStore();
+    return true;
+  }
+  deleteProgress(bookId: string): void {
+    this.progress.delete(bookId);
+    this.saveToStore();
+  }
+  getUnread(): LocalBook[] {
+    const readIds: Set<string> = new Set();
+    const entries = this.progress.entries();
+    let entry = entries.next();
+    while (!entry.done) {
+      readIds.add(entry.value[0]);
+      entry = entries.next();
+    }
+    return this.getAll().filter(b => !readIds.has(b.id));
+  }
+}
+
+// MARK: - In-Memory Mock Repository (for testing/dev)
+
 const MOCK_BOOKS: LocalBook[] = [
+
+// MARK: - In-Memory Mock Repository (for testing/dev)
   {
     id: 'mock-001',
     title: '三体',
@@ -100,7 +232,7 @@ const MOCK_PROGRESS: Record<string, BookshelfItem> = {
   'mock-006': { book: MOCK_BOOKS[5], currentChapterIndex: 8, chapterProgress: 0.50, totalChapters: 24, lastOpenedAt: 1715616000000 },
 };
 
-export class BookshelfRepository {
+export class MockBookshelfRepository implements IBookshelfRepository {
   private books: Map<string, LocalBook> = new Map();
   private progress: Map<string, BookshelfItem> = new Map();
 

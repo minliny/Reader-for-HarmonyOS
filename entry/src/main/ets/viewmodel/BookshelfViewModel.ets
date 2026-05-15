@@ -1,5 +1,5 @@
 // BookshelfViewModel — connects BookshelfRepository to UI state
-import { BookshelfRepository } from '../repository/BookshelfRepository';
+import { IBookshelfRepository, MockBookshelfRepository } from '../repository/BookshelfRepository';
 import { LocalBook } from '../models/LocalBook';
 import {
   BookshelfItem,
@@ -13,10 +13,10 @@ import {
 
 @Observed
 export class BookshelfViewModel {
-  private repository: BookshelfRepository;
+  private repository: IBookshelfRepository;
   state: BookshelfState;
 
-  constructor(repository: BookshelfRepository = new BookshelfRepository(true)) {
+  constructor(repository: IBookshelfRepository = new MockBookshelfRepository(true)) {
     this.repository = repository;
     this.state = defaultBookshelfState();
     this.loadBooks();
