@@ -39,6 +39,20 @@ export class BridgeResponseError extends Error {
   }
 }
 
+export class BridgeTimeoutError extends Error {
+  constructor(timeoutMs: number) {
+    super(`Bridge request timed out after ${timeoutMs}ms`);
+    this.name = 'BridgeTimeoutError';
+  }
+}
+
+export class BridgeParseError extends Error {
+  constructor(endpoint: string, detail: string) {
+    super(`Failed to parse bridge response from ${endpoint}: ${detail}`);
+    this.name = 'BridgeParseError';
+  }
+}
+
 export class BridgeHTTPClient {
   private baseUrl: string;
   private timeout: number;
