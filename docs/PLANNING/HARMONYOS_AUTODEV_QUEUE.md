@@ -54,8 +54,8 @@
 | 34 | HOS-3B-003 | HOS-3B | DONE | Book CRUD service |
 | 35 | HOS-3B-004 | HOS-3B | DONE | Reading progress metadata service |
 | 36 | HOS-3B-005 | HOS-3B | DONE | Bookshelf domain fixture tests |
-| 37 | HOS-3B-006 | HOS-3B | READY | Bookshelf domain smoke validation |
-| 38 | HOS-4B-001 | HOS-4B | PENDING | BookSource ArkTS model (field-complete) |
+| 37 | HOS-3B-006 | HOS-3B | DONE | Bookshelf domain smoke validation |
+| 38 | HOS-4B-001 | HOS-4B | READY | BookSource ArkTS model (field-complete) |
 | 39 | HOS-4B-002 | HOS-4B | PENDING | BookSourceRepository (add/list/remove) |
 | 40 | HOS-4B-003 | HOS-4B | PENDING | SearchService (request build + parse) |
 | 41 | HOS-4B-004 | HOS-4B | PENDING | Search error model & fallback |
