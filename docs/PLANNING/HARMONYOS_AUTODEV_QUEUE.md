@@ -75,8 +75,8 @@
 | 55 | HOS-7B-001 | HOS-7B | DONE | SyncWebDAV ArkTS models |
 | 56 | HOS-7B-002 | HOS-7B | DONE | WebDAVAdapter contract + BackupService contract |
 | 57 | HOS-7B-003 | HOS-7B | DONE | ProgressSyncService (local) |
-| 58 | HOS-7B-004 | HOS-7B | READY | Sync domain contract tests |
-| 59 | HOS-8B-001 | HOS-8B | PENDING | HTTPAdapter (@ohos.net.http wrapper) |
+| 58 | HOS-7B-004 | HOS-7B | DONE | Sync domain contract tests |
+| 59 | HOS-8B-001 | HOS-8B | READY | HTTPAdapter (@ohos.net.http wrapper) |
 | 60 | HOS-8B-002 | HOS-8B | PENDING | StorageAdapter (@ohos.data.preferences) |
 | 61 | HOS-8B-003 | HOS-8B | PENDING | FileAccessAdapter (@ohos.file.fs wrapper) |
 | 62 | HOS-8B-004 | HOS-8B | PENDING | CredentialStorageAdapter |
