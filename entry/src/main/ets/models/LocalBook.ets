@@ -50,3 +50,25 @@ export interface CoverMetadata {
   height?: number;
   format?: string;
 }
+
+// Import models (mirrors Core ImportProtocols.swift)
+export interface LocalBookImportRequest {
+  sourcePath: string;
+  format: LocalBookFormat;
+  encoding?: string;
+  splitPolicy: ChapterSplitPolicy;
+  metadataOverrides: Record<string, string>;
+}
+
+export interface LocalBookImportResult {
+  book: LocalBook;
+  toc: LocalTOCItem[];
+  cover?: CoverMetadata;
+  warnings: LocalBookImportWarning[];
+}
+
+export interface LocalBookImportWarning {
+  code: string;
+  message: string;
+  context?: Record<string, string>;
+}
