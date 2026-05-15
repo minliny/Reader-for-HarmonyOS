@@ -43,8 +43,8 @@
 
 | # | ID | Stage | Status | Title |
 |---|-----|-------|--------|-------|
-| 26 | HOS-2B-001 | HOS-2B | READY | Bridge API contract spec |
-| 27 | HOS-2B-002 | HOS-2B | PENDING | Swift bridge service executable |
+| 26 | HOS-2B-001 | HOS-2B | DONE | Bridge API contract spec |
+| 27 | HOS-2B-002 | HOS-2B | READY | Swift bridge service executable |
 | 28 | HOS-2B-003 | HOS-2B | PENDING | Bridge HTTP client (ArkTS) |
 | 29 | HOS-2B-004 | HOS-2B | PENDING | Fixture replay interceptor |
 | 30 | HOS-2B-005 | HOS-2B | PENDING | Bridge health check & error model |
