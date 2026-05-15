@@ -46,8 +46,8 @@
 | 26 | HOS-2B-001 | HOS-2B | DONE | Bridge API contract spec |
 | 27 | HOS-2B-002 | HOS-2B | BLOCKED_BY_CORE_REPO_ACCESS | Swift bridge service executable |
 | 28 | HOS-2B-003 | HOS-2B | DONE | Bridge HTTP client (ArkTS) |
-| 29 | HOS-2B-004 | HOS-2B | READY | Fixture replay interceptor |
-| 30 | HOS-2B-005 | HOS-2B | PENDING | Bridge health check & error model |
+| 29 | HOS-2B-004 | HOS-2B | DONE | Fixture replay interceptor |
+| 30 | HOS-2B-005 | HOS-2B | READY | Bridge health check & error model |
 | 31 | HOS-2B-006 | HOS-2B | PENDING | Bridge smoke validation |
 | 32 | HOS-3B-001 | HOS-3B | PENDING | LocalBook ArkTS model (field-complete) |
 | 33 | HOS-3B-002 | HOS-3B | PENDING | BookshelfRepository (preferences-backed) |
