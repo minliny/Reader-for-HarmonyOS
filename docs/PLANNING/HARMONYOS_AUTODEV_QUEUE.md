@@ -37,13 +37,13 @@
 | 22 | HOS-3A-005 | HOS-3A | DONE | Bookshelf smoke validation |
 | 23 | HOS-4A-001 | HOS-4A | DONE | Search DTO ArkTS mirror |
 | 24 | HOS-5A-001 | HOS-5A | DONE | TOC/Content DTO ArkTS mirror |
-| 25 | HOS-6A-001 | HOS-6A | READY | LocalBook import DTO mirror |
+| 25 | HOS-6A-001 | HOS-6A | DONE | LocalBook import DTO mirror |
 
 ### Headless Capability Loop (HOS-2B → HOS-9B)
 
 | # | ID | Stage | Status | Title |
 |---|-----|-------|--------|-------|
-| 26 | HOS-2B-001 | HOS-2B | PENDING | Bridge API contract spec |
+| 26 | HOS-2B-001 | HOS-2B | READY | Bridge API contract spec |
 | 27 | HOS-2B-002 | HOS-2B | PENDING | Swift bridge service executable |
 | 28 | HOS-2B-003 | HOS-2B | PENDING | Bridge HTTP client (ArkTS) |
 | 29 | HOS-2B-004 | HOS-2B | PENDING | Fixture replay interceptor |
@@ -97,8 +97,8 @@
 | BLOCKED | 9 |
 | PENDING | 44 |
 
-**Next READY task**: HOS-3A-001 (Bookshelf local model contract)
-**HOS-2A complete**: Bridge strategy done. All decisions resolved. DTOs generated.
+**Next READY task**: HOS-2B-001 (Bridge API contract spec)
+**Foundation Loop COMPLETE**: HOS-0A through HOS-6A all done. Headless Capability Loop starting.
 **First headless task**: HOS-2B-001 (after HOS-2A completes)
 
 ---
