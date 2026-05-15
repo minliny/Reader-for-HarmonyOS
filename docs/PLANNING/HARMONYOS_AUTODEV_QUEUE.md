@@ -51,8 +51,8 @@
 | 31 | HOS-2B-006 | HOS-2B | DONE | Bridge smoke validation |
 | 32 | HOS-3B-001 | HOS-3B | DONE | LocalBook ArkTS model (field-complete) |
 | 33 | HOS-3B-002 | HOS-3B | DONE | BookshelfRepository (storage-backed) |
-| 34 | HOS-3B-003 | HOS-3B | READY | Book CRUD service |
-| 35 | HOS-3B-004 | HOS-3B | PENDING | Reading progress metadata service |
+| 34 | HOS-3B-003 | HOS-3B | DONE | Book CRUD service |
+| 35 | HOS-3B-004 | HOS-3B | READY | Reading progress metadata service |
 | 36 | HOS-3B-005 | HOS-3B | PENDING | Bookshelf domain fixture tests |
 | 37 | HOS-3B-006 | HOS-3B | PENDING | Bookshelf domain smoke validation |
 | 38 | HOS-4B-001 | HOS-4B | PENDING | BookSource ArkTS model (field-complete) |
