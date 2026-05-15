@@ -244,15 +244,64 @@ Strategy B provides real Core capabilities in 3 days vs 12 days for Strategy A.
 
 **Rejected**: Strategy C (FFI) is not viable until Huawei demonstrates Swift runtime support on HarmonyOS.
 
-## Decision Required
+## HOS-2A-004: Final Decision Matrix
 
-| ID | Question | Default | Urgency |
-|----|----------|---------|---------|
-| HOS-D001 | Which bridge strategy? | **A** (recommended) | Before HOS-2A can proceed |
-| HOS-D001a | Allow Strategy B as dev accelerator? | Suggested YES | Optional |
-| HOS-D001b | Reserve right to upgrade A → D later? | Suggested YES | Optional |
+### Decision Register (RESOLVED)
 
-**If no user response**: Strategy A will be used as the default when HOS-2A executes.
+| ID | Decision | Resolution | Rationale |
+|----|----------|-----------|-----------|
+| HOS-D001 | Bridge strategy | **Dual: A (production) + B (dev)** | B provides real Core in 3 days; A for on-device |
+| HOS-D001a | Allow Strategy B as dev accelerator | **YES** | Blocks all headless services without it |
+| HOS-D001b | Reserve right to upgrade A→D | **YES (deferred)** | Only if drift becomes problem at HOS-9B |
+| HOS-D002 | Scaffold method | **Manual CLI** (done) | Project already built via CLI |
+| HOS-D003 | DTO schema format | **Manual (Strategy A)** | No tooling overhead; 47 DTOs are straightforward |
+| HOS-D004 | UI framework | **MVVM + ArkUI** | Consistent with existing scaffold |
+| HOS-D005 | Allow mock layer | **YES (MOCK_ONLY tagged)** | Fixture fallback when bridge unavailable |
+| HOS-D006 | Install cron | **NO** | Durable cron already installed (87a7cb2f) |
+| HOS-D007 | Auto-commit planning | **YES** | All 16 commits so far are planning/source |
+| HOS-D008 | Build-less file creation | **YES** | Validated by subsequent build task |
+
+### Strategy Applicability Matrix
+
+| Stage | Strategy | Why |
+|-------|----------|-----|
+| HOS-1A (app shell) | Native ArkTS | No Core dependency |
+| HOS-2A (bridge strategy) | Docs only | Planning phase |
+| HOS-2B (bridge runtime) | **Strategy B** | Build Swift REST server + ArkTS HTTP client |
+| HOS-3A (bookshelf UI) | Native ArkTS + mock | UI-only, no real data |
+| HOS-3B (bookshelf domain) | **Strategy A** + fixture | DTO mirror + preferences storage |
+| HOS-4B (search domain) | **Strategy B (live) + fixture (offline)** | Real search via bridge, fixture for CI |
+| HOS-5B (TOC/content domain) | **Strategy B (live) + fixture (offline)** | Real content via bridge |
+| HOS-6B (import domain) | **Strategy A** | TXT parser port to ArkTS |
+| HOS-7B (sync domain) | **Strategy A (contract) + B (test)** | ArkTS contracts + bridge for validation |
+| HOS-8B (platform adapters) | Native ArkTS | @ohos.* APIs |
+| HOS-9B (QA gates) | Both | Cross-validate A output against B output |
+
+### Gating Criteria
+
+| Gate | Condition | Action if fail |
+|------|-----------|---------------|
+| Bridge available | `curl localhost:8899/health` returns 200 | Fallback to fixture replay |
+| DTO drift detected | HOS-9B cross-validation fails | Flag for manual sync, don't block |
+| Parser output mismatch | ArkTS TXTParser ≠ Core TXTParser | Halt HOS-6B, investigate |
+| Build fails | `./hvigorw assembleHap` non-zero | Halt loop, report |
+
+### Auto-Decision Policy (for Loop)
+
+The loop is authorized to:
+1. **Use Strategy B** (local HTTP bridge) for HOS-2B tasks — building Swift REST server + ArkTS client
+2. **Use Strategy A** (manual DTO mirror) for HOS-3B through HOS-8B domain tasks
+3. **Use fixture replay** when bridge is unavailable (offline mode)
+4. **Skip** HOS-2B-002 (Swift bridge executable) if Core repo access not granted — mark BLOCKED_BY_CORE_REPO_ACCESS
+5. **Proceed** with HOS-3B through HOS-8B using only fixture data if bridge never materializes
+
+The loop is NOT authorized to:
+1. Modify Reader-Core without explicit user permission
+2. Access real book source websites
+3. Implement JS/WebView runtime
+4. Deploy production credentials or signing configs
+
+**All HOS-D001 through HOS-D008 decisions are now RESOLVED. HOS-2A-005 (BLOCKED_BY_DECISION) can be unblocked.**
 
 ---
 
