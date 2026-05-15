@@ -71,8 +71,8 @@
 | 51 | HOS-6B-003 | HOS-6B | DONE | EPUB parser adapter contract |
 | 52 | HOS-6B-004 | HOS-6B | DONE | Import pipeline (meta → parse → store) |
 | 53 | HOS-6B-005 | HOS-6B | DONE | Import fixture tests (TXT samples) |
-| 54 | HOS-6B-006 | HOS-6B | READY | Import domain smoke validation |
-| 55 | HOS-7B-001 | HOS-7B | PENDING | SyncWebDAV ArkTS models |
+| 54 | HOS-6B-006 | HOS-6B | DONE | Import domain smoke validation |
+| 55 | HOS-7B-001 | HOS-7B | READY | SyncWebDAV ArkTS models |
 | 56 | HOS-7B-002 | HOS-7B | PENDING | WebDAVAdapter contract + BackupService contract |
 | 57 | HOS-7B-003 | HOS-7B | PENDING | ProgressSyncService (local) |
 | 58 | HOS-7B-004 | HOS-7B | PENDING | Sync domain contract tests |
