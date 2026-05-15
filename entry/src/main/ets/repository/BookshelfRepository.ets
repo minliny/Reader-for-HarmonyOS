@@ -1,0 +1,216 @@
+// BookshelfRepository — in-memory store with mock data (MOCK_ONLY)
+import { LocalBook, LocalBookFormat } from '../models/LocalBook';
+import { BookshelfItem } from '../models/BookshelfModels';
+
+const MOCK_BOOKS: LocalBook[] = [
+  {
+    id: 'mock-001',
+    title: '三体',
+    author: '刘慈欣',
+    coverPath: '',
+    filePath: '/books/santi.txt',
+    fileFormat: LocalBookFormat.txt,
+    fileSize: 2048000,
+    encoding: 'utf-8',
+    addedAt: 1715702400000,
+    lastOpenedAt: 1715788800000,
+    unknownFields: {}
+  },
+  {
+    id: 'mock-002',
+    title: '活着',
+    author: '余华',
+    coverPath: '',
+    filePath: '/books/huozhe.epub',
+    fileFormat: LocalBookFormat.epub,
+    fileSize: 512000,
+    encoding: 'utf-8',
+    addedAt: 1715616000000,
+    lastOpenedAt: 1715875200000,
+    unknownFields: {}
+  },
+  {
+    id: 'mock-003',
+    title: '百年孤独',
+    author: '加西亚·马尔克斯',
+    coverPath: '',
+    filePath: '/books/bainiangudu.txt',
+    fileFormat: LocalBookFormat.txt,
+    fileSize: 3072000,
+    encoding: 'utf-8',
+    addedAt: 1715529600000,
+    unknownFields: {}
+  },
+  {
+    id: 'mock-004',
+    title: '围城',
+    author: '钱钟书',
+    coverPath: '',
+    filePath: '/books/weicheng.pdf',
+    fileFormat: LocalBookFormat.pdf,
+    fileSize: 4096000,
+    encoding: 'utf-8',
+    addedAt: 1715443200000,
+    lastOpenedAt: 1715702400000,
+    unknownFields: {}
+  },
+  {
+    id: 'mock-005',
+    title: '红楼梦',
+    author: '曹雪芹',
+    coverPath: '',
+    filePath: '/books/hongloumeng.epub',
+    fileFormat: LocalBookFormat.epub,
+    fileSize: 8192000,
+    encoding: 'utf-8',
+    addedAt: 1715356800000,
+    unknownFields: {}
+  },
+  {
+    id: 'mock-006',
+    title: '1984',
+    author: 'George Orwell',
+    coverPath: '',
+    filePath: '/books/1984.txt',
+    fileFormat: LocalBookFormat.txt,
+    fileSize: 1024000,
+    encoding: 'utf-8',
+    addedAt: 1715270400000,
+    lastOpenedAt: 1715616000000,
+    unknownFields: {}
+  },
+  {
+    id: 'mock-007',
+    title: '小王子',
+    author: 'Antoine de Saint-Exupéry',
+    coverPath: '',
+    filePath: '/books/xiaowangzi.epub',
+    fileFormat: LocalBookFormat.epub,
+    fileSize: 256000,
+    encoding: 'utf-8',
+    addedAt: 1715184000000,
+    unknownFields: {}
+  }
+];
+
+const MOCK_PROGRESS: Record<string, BookshelfItem> = {
+  'mock-001': { book: MOCK_BOOKS[0], currentChapterIndex: 12, chapterProgress: 0.35, totalChapters: 34, lastOpenedAt: 1715788800000 },
+  'mock-002': { book: MOCK_BOOKS[1], currentChapterIndex: 5, chapterProgress: 0.80, totalChapters: 12, lastOpenedAt: 1715875200000 },
+  'mock-004': { book: MOCK_BOOKS[3], currentChapterIndex: 1, chapterProgress: 0.10, totalChapters: 9, lastOpenedAt: 1715702400000 },
+  'mock-006': { book: MOCK_BOOKS[5], currentChapterIndex: 8, chapterProgress: 0.50, totalChapters: 24, lastOpenedAt: 1715616000000 },
+};
+
+export class BookshelfRepository {
+  private books: Map<string, LocalBook> = new Map();
+  private progress: Map<string, BookshelfItem> = new Map();
+
+  constructor(useMockData: boolean = true) {
+    if (useMockData) {
+      this.seedMockData();
+    }
+  }
+
+  private seedMockData(): void {
+    for (const book of MOCK_BOOKS) {
+      this.books.set(book.id, book);
+    }
+    for (const [id, item] of Object.entries(MOCK_PROGRESS)) {
+      this.progress.set(id, item);
+    }
+  }
+
+  // Book CRUD
+
+  getAll(): LocalBook[] {
+    return Array.from(this.books.values());
+  }
+
+  getById(id: string): LocalBook | undefined {
+    return this.books.get(id);
+  }
+
+  add(book: LocalBook): boolean {
+    if (this.books.has(book.id)) {
+      return false;
+    }
+    this.books.set(book.id, book);
+    return true;
+  }
+
+  update(book: LocalBook): boolean {
+    if (!this.books.has(book.id)) {
+      return false;
+    }
+    this.books.set(book.id, book);
+    return true;
+  }
+
+  remove(id: string): boolean {
+    if (!this.books.has(id)) {
+      return false;
+    }
+    this.books.delete(id);
+    this.progress.delete(id);
+    return true;
+  }
+
+  exists(id: string): boolean {
+    return this.books.has(id);
+  }
+
+  count(): number {
+    return this.books.size;
+  }
+
+  // Reading progress
+
+  getProgress(bookId: string): BookshelfItem | undefined {
+    return this.progress.get(bookId);
+  }
+
+  getAllProgress(): BookshelfItem[] {
+    // Return bookshelf items for books being read (have progress)
+    return Array.from(this.progress.values());
+  }
+
+  updateProgress(bookId: string, chapterIndex: number, chapterProgress: number, totalChapters: number): boolean {
+    const book = this.books.get(bookId);
+    if (!book) {
+      return false;
+    }
+    const lastOpenedAt = Date.now();
+    const item: BookshelfItem = { book, currentChapterIndex: chapterIndex, chapterProgress, totalChapters, lastOpenedAt };
+    this.progress.set(bookId, item);
+
+    // Update lastOpenedAt on the book
+    book.lastOpenedAt = lastOpenedAt;
+    this.books.set(bookId, book);
+    return true;
+  }
+
+  deleteProgress(bookId: string): void {
+    this.progress.delete(bookId);
+  }
+
+  // Query helpers
+
+  getSorted(sortBy: string = 'lastOpened'): BookshelfItem[] {
+    const items = this.getAllProgress();
+    switch (sortBy) {
+      case 'title':
+        return items.sort((a, b) => a.book.title.localeCompare(b.book.title));
+      case 'author':
+        return items.sort((a, b) => (a.book.author ?? '').localeCompare(b.book.author ?? ''));
+      case 'addedAt':
+        return items.sort((a, b) => b.book.addedAt - a.book.addedAt);
+      case 'lastOpened':
+      default:
+        return items.sort((a, b) => (b.lastOpenedAt ?? 0) - (a.lastOpenedAt ?? 0));
+    }
+  }
+
+  getUnread(): LocalBook[] {
+    const readIds = new Set(this.progress.keys());
+    return this.getAll().filter(b => !readIds.has(b.id));
+  }
+}
