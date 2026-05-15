@@ -61,8 +61,8 @@
 | 41 | HOS-4B-004 | HOS-4B | DONE | Search error model & fallback |
 | 42 | HOS-4B-005 | HOS-4B | DONE | Search fixture tests (offline HTML) |
 | 43 | HOS-4B-006 | HOS-4B | DONE | Search domain smoke validation |
-| 44 | HOS-5B-001 | HOS-5B | READY | TOCService (fetch + parse + cache) |
-| 45 | HOS-5B-002 | HOS-5B | PENDING | ContentService (fetch + parse + cache) |
+| 44 | HOS-5B-001 | HOS-5B | DONE | TOCService (fetch + parse + cache) |
+| 45 | HOS-5B-002 | HOS-5B | READY | ContentService (fetch + parse + cache) |
 | 46 | HOS-5B-003 | HOS-5B | PENDING | ReadingFlowStateMachine |
 | 47 | HOS-5B-004 | HOS-5B | PENDING | TOC/Content fixture tests |
 | 48 | HOS-5B-005 | HOS-5B | PENDING | TOC/Content domain smoke validation |
