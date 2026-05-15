@@ -163,6 +163,71 @@ The Core models are **data containers** that are trivial to mirror in ArkTS. The
 | Schema tooling setup | N/A | 3-5 days |
 | **Total** | **14-21 days** | **16-24 days** |
 
+## HOS-2A-003: Quantitative Evaluation Against DTO Boundary
+
+**Based on**: HOS-2A-002 classification (47 DTOs, 26 protocols, 16 logic, 3 locked, 3 internal, 3 utility)
+
+### Per-Category Score (1=worst, 5=best)
+
+| Category | Count | Strategy A | Strategy B | Strategy C | Strategy D |
+|----------|-------|-----------|-----------|-----------|-----------|
+| **DTOs** (data structs) | 47 | 4 — manual mirror, straightforward | 3 — needs JSON serde | 2 — FFI for every struct | 5 — auto-generated |
+| **Protocols** (interfaces) | 26 | 3 — manual re-impl | 5 — Core handles | 4 — FFI calls Core | 3 — manual re-impl |
+| **Logic** (parser, network) | 16 | 2 — full port needed (~2200 lines) | 5 — Core executes | 5 — Core executes | 2 — full port needed |
+| **Locked** (JS/WebView) | 3 | N/A (don't implement) | N/A | N/A | N/A |
+| **Internal** (iOS) | 3 | 4 — native HOS APIs | 3 — not applicable | 2 — not applicable | 4 — native HOS APIs |
+| **Utility** (mapping) | 3 | 3 — manual port | 4 — Core provides | 4 — Core provides | 3 — manual port |
+
+### Weighted Score (weight: DTO×2, Protocol×3, Logic×4, Internal×1, Utility×1)
+
+| Strategy | DTO (47×2) | Protocol (26×3) | Logic (16×4) | Internal (3×1) | Utility (3×1) | **Total** |
+|----------|-----------|-----------------|-------------|----------------|--------------|-----------|
+| A (DTORegen) | 4×94=376 | 3×78=234 | 2×64=128 | 4×3=12 | 3×3=9 | **759** |
+| B (HTTPBridge) | 3×94=282 | 5×78=390 | 5×64=320 | 3×3=9 | 4×3=12 | **1013** |
+| C (FFI/NAPI) | 2×94=188 | 4×78=312 | 5×64=320 | 2×3=6 | 4×3=12 | **838** |
+| D (Schema) | 5×94=470 | 3×78=234 | 2×64=128 | 4×3=12 | 3×3=9 | **853** |
+
+### Analysis
+
+- **Strategy B (HTTP Bridge) scores highest** because logic and protocol categories are weighted heavily (16 logic classes × weight 4). Full Core execution without porting is its key advantage.
+- **Strategy D (Schema) leads on DTOs** (auto-generation) but loses on logic (still needs porting).
+- **Strategy A is most practical for production** but loses points on logic porting effort.
+- **Strategy C is not viable**: Swift FFI on HarmonyOS has no proven path.
+
+### Dual-Strategy Recommendation
+
+**Primary (Production)**: Strategy A — DTO mirroring + ArkTS re-implementation for on-device use.
+**Auxiliary (Development)**: Strategy B — Local HTTP bridge for real Core data during development and testing.
+
+This gives:
+- Production: on-device capable, native performance (Strategy A)
+- Development: real Core data, no logic duplication, fast iteration (Strategy B)
+- Headless tests: fixture replay when bridge unavailable
+
+### Effort Breakdown (Strategy A)
+
+| Component | Count | Effort |
+|-----------|-------|--------|
+| DTO interfaces (manual) | 47 | 2 days |
+| Protocol interfaces | 26 | 1 day |
+| Logic port: Parser (NonJS, CSS, HTML, TXT) | 6 classes | 5 days |
+| Logic port: Network (PolicyLayer, RequestBuilder) | 4 classes | 2 days |
+| Logic port: Services (Search/TOC/Content) | 3 classes | 1 day |
+| Logic port: Cache + DI | 3 classes | 1 day |
+| **Total** | | **12 days** |
+
+### Effort Breakdown (Strategy B)
+
+| Component | Effort |
+|-----------|--------|
+| Swift REST server wrapper | 1 day |
+| ArkTS BridgeHTTPClient | 1 day |
+| Fixture replay interceptor | 0.5 day |
+| Health check + error model | 0.5 day |
+| **Total** | **3 days** |
+
+Strategy B provides real Core capabilities in 3 days vs 12 days for Strategy A.
+
 ## Recommendation
 
 **Recommended**: **Strategy A (DTO Regeneration + Re-implementation)** as the default starting point, with an option to upgrade to **Strategy D** later if drift becomes a problem.

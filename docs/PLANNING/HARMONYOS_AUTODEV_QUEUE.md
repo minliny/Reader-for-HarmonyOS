@@ -27,8 +27,8 @@
 | 12 | HOS-1A-005 | HOS-1A | DONE | Theme & resource baseline |
 | 13 | HOS-2A-001 | HOS-2A | DONE | Core public API full audit |
 | 14 | HOS-2A-002 | HOS-2A | DONE | DTO boundary extraction |
-| 15 | HOS-2A-003 | HOS-2A | READY | Bridge alternatives evaluation |
-| 16 | HOS-2A-004 | HOS-2A | BLOCKED | Bridge decision matrix |
+| 15 | HOS-2A-003 | HOS-2A | DONE | Bridge alternatives evaluation |
+| 16 | HOS-2A-004 | HOS-2A | READY | Bridge decision matrix |
 | 17 | HOS-2A-005 | HOS-2A | BLOCKED | DTO schema generation (BLOCKED_BY_DECISION) |
 | 18 | HOS-3A-001 | HOS-3A | BLOCKED | Bookshelf local model contract |
 | 19 | HOS-3A-002 | HOS-3A | BLOCKED | Bookshelf mock repository |
