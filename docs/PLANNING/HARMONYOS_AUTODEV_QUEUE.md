@@ -73,8 +73,8 @@
 | 53 | HOS-6B-005 | HOS-6B | DONE | Import fixture tests (TXT samples) |
 | 54 | HOS-6B-006 | HOS-6B | DONE | Import domain smoke validation |
 | 55 | HOS-7B-001 | HOS-7B | DONE | SyncWebDAV ArkTS models |
-| 56 | HOS-7B-002 | HOS-7B | READY | WebDAVAdapter contract + BackupService contract |
-| 57 | HOS-7B-003 | HOS-7B | PENDING | ProgressSyncService (local) |
+| 56 | HOS-7B-002 | HOS-7B | DONE | WebDAVAdapter contract + BackupService contract |
+| 57 | HOS-7B-003 | HOS-7B | READY | ProgressSyncService (local) |
 | 58 | HOS-7B-004 | HOS-7B | PENDING | Sync domain contract tests |
 | 59 | HOS-8B-001 | HOS-8B | PENDING | HTTPAdapter (@ohos.net.http wrapper) |
 | 60 | HOS-8B-002 | HOS-8B | PENDING | StorageAdapter (@ohos.data.preferences) |
