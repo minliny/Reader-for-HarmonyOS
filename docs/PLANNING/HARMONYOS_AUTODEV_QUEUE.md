@@ -86,6 +86,20 @@
 | 66 | HOS-9B-003 | HOS-9B | DONE | Build gate + release checklist |
 | 67 | HOS-9B-004 | HOS-9B | DONE | Headless loop closure report |
 
+### Validation / RC Hardening (HOS-10)
+
+| # | ID | Stage | Status | Title |
+|---|-----|-------|--------|-------|
+| 68 | HOS-10A-001 | HOS-10A | READY | Bridge health smoke from HarmonyOS |
+| 69 | HOS-10A-002 | HOS-10A | PENDING | Bridge host configuration |
+| 70 | HOS-10A-003 | HOS-10A | PENDING | TXTParser cross-validation |
+| 71 | HOS-10A-004 | HOS-10A | PENDING | Search bridge cross-validation |
+| 72 | HOS-10A-005 | HOS-10A | PENDING | TOC/Content bridge cross-validation |
+| 73 | HOS-10A-006 | HOS-10A | PENDING | Capability matrix upgrade gate |
+| 74 | HOS-10B-001 | HOS-10B | PENDING | Simulator deployment smoke |
+| 75 | HOS-10B-002 | HOS-10B | PENDING | Device/network documentation |
+| 76 | HOS-10C-001 | HOS-10C | PENDING | Signing/release readiness plan |
+
 ---
 
 ## Task Status Summary
@@ -93,13 +107,13 @@
 | Status | Count |
 |--------|-------|
 | DONE | 67 |
-| READY | 0 |
+| READY | 1 |
 | BLOCKED | 0 |
-| PENDING | 0 |
+| PENDING | 8 |
 
-**All tasks complete. Loop finished.**
-**Foundation Loop COMPLETE**: HOS-0A through HOS-6A all done. Headless Capability Loop starting.
-**First headless task**: HOS-2B-001 (after HOS-2A completes)
+**Next READY task**: HOS-10A-001 (Bridge health smoke)
+**Mode**: VALIDATION ONLY — no feature development, no UI expansion
+
 
 ---
 
@@ -609,3 +623,73 @@ HOS-4A-001 through HOS-6A-001: Single DTO mirror tasks.
 - **Prerequisites**: HOS-9B-003
 - **Acceptance**: Complete closure report
 - **Validation**: Report exists with all sections
+
+---
+
+## HOS-10 Validation / RC Hardening Task Details
+
+### HOS-10A-001 — Bridge Health Smoke from HarmonyOS
+- **Status**: READY | **Stage**: HOS-10A
+- **Scope**: Verify BridgeHTTPClient.health() reaches Core /health. DTO decode. If localhost unreachable, document HOST_NETWORK_BLOCKED.
+- **Allowed files**: `entry/src/main/ets/services/`, `entry/src/main/ets/__tests__/`, `docs/PLANNING/`
+- **Forbidden**: No UI, no new features, no real book sources
+- **Acceptance**: health() returns {status:"ok"} or HOST_NETWORK_BLOCKED documented
+- **Validation**: Health check test exists
+
+### HOS-10A-002 — Bridge Host Configuration
+- **Status**: PENDING | **Stage**: HOS-10A
+- **Scope**: Ensure BridgeHTTPClient baseUrl configurable. Document: localhost, LAN IP, simulator host alias. No hardcoded production URLs.
+- **Allowed files**: `entry/src/main/ets/services/BridgeHTTPClient.ets`, `docs/PLANNING/`
+- **Forbidden**: No production URLs, no secrets
+- **Prerequisites**: HOS-10A-001
+- **Acceptance**: baseUrl configurable, host config doc updated
+
+### HOS-10A-003 — TXTParser Cross-Validation
+- **Status**: PENDING | **Stage**: HOS-10A
+- **Scope**: Same TXT input → ArkTS TXTParser vs Core POST /parse/txt. Compare chapters, titles, encoding, byteCount.
+- **Allowed files**: `entry/src/main/ets/parser/`, `entry/src/main/ets/__tests__/`, `samples/`
+- **Forbidden**: No Core modification, no real book files
+- **Prerequisites**: HOS-10A-001
+- **Acceptance**: Comparison report. Match → VERIFIED_DEV. Mismatch → LOCAL_FALLBACK_EXPERIMENTAL.
+
+### HOS-10A-004 — Search Bridge Cross-Validation
+- **Status**: PENDING | **Stage**: HOS-10A
+- **Scope**: Same BookSource+SearchQuery → BridgeHTTPClient.search() + fixture. DTO decode, error model, empty result.
+- **Allowed files**: `entry/src/main/ets/services/SearchService.ets`, `entry/src/main/ets/__tests__/`
+- **Forbidden**: No real book source websites
+- **Prerequisites**: HOS-10A-001
+
+### HOS-10A-005 — TOC/Content Bridge Cross-Validation
+- **Status**: PENDING | **Stage**: HOS-10A
+- **Scope**: Verify TOCItem[]/ContentPage DTO decode from bridge. Cache, error fallback.
+- **Allowed files**: `entry/src/main/ets/services/TOCService.ets`, `entry/src/main/ets/services/ContentService.ets`, `entry/src/main/ets/__tests__/`
+- **Forbidden**: No real book source websites
+- **Prerequisites**: HOS-10A-001
+
+### HOS-10A-006 — Capability Matrix Upgrade Gate
+- **Status**: PENDING | **Stage**: HOS-10A
+- **Scope**: Only cross-validated capabilities upgrade to VERIFIED_DEV. PRODUCTION_READY requires VERIFIED_DEV + simulator + signing.
+- **Allowed files**: `docs/PLANNING/HARMONYOS_CAPABILITY_MATRIX.yml`
+- **Forbidden**: No unverified status upgrades
+- **Prerequisites**: HOS-10A-003, HOS-10A-004, HOS-10A-005
+
+### HOS-10B-001 — Simulator Deployment Smoke
+- **Status**: PENDING | **Stage**: HOS-10B
+- **Scope**: Build HAP, deploy to emulator. Verify app starts. If no emulator: ENV_BLOCKED.
+- **Allowed files**: Build configs, `docs/PLANNING/`
+- **Forbidden**: No UI changes
+- **Prerequisites**: HOS-10A-006
+
+### HOS-10B-002 — Device/Network Documentation
+- **Status**: PENDING | **Stage**: HOS-10B
+- **Scope**: Document localhost vs emulator networking. Mac host IP. No secrets.
+- **Allowed files**: `docs/PLANNING/HARMONYOS_BRIDGE_API_SPEC.md`
+- **Forbidden**: No hardcoded IPs, no secrets
+- **Prerequisites**: HOS-10B-001
+
+### HOS-10C-001 — Signing/Release Readiness Plan
+- **Status**: PENDING | **Stage**: HOS-10C
+- **Scope**: Signing config plan, profile/permission checklist. PLAN ONLY.
+- **Allowed files**: `docs/PLANNING/HARMONYOS_RELEASE_CHECKLIST.md`
+- **Forbidden**: No actual signing configs, no secrets
+- **Prerequisites**: HOS-10B-002

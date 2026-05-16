@@ -147,6 +147,22 @@ matrix:
       status: FORBIDDEN
       notes: "Loop rule — must not access"
 
+validation_gate:
+  - gate: "HOS-10A-001 Bridge health smoke"
+    status: PENDING
+  - gate: "HOS-10A-003 TXTParser cross-validation"
+    status: PENDING
+  - gate: "HOS-10A-004 Search cross-validation"
+    status: PENDING
+  - gate: "HOS-10A-005 TOC/Content cross-validation"
+    status: PENDING
+  - gate: "HOS-10A-006 Matrix upgrade gate"
+    status: PENDING
+  - gate: "HOS-10B-001 Simulator smoke"
+    status: PENDING
+  - gate: "HOS-10C-001 Release readiness plan"
+    status: PENDING
+
 boundary_compliance:
   no_js_runtime: PASS
   no_webview: PASS
@@ -154,3 +170,5 @@ boundary_compliance:
   no_hardcoded_secrets: PASS
   no_core_modifications: PASS
   build_successful: PASS
+  no_ui_expansion: PASS
+  no_production_ready_without_evidence: PASS

@@ -52,7 +52,19 @@ Scan the task queue for the first task with `Status: READY`.
 11. HOS-8B tasks (platform adapters)
 12. HOS-9B tasks (QA gates)
 
-Foundation tasks execute first. Headless tasks execute once their Foundation prerequisites are met.
+## CURRENT MODE: VALIDATION ONLY
+
+Feature development (HOS-0A through HOS-9B) is **CLOSED**. All 67 feature tasks DONE.
+Only **HOS-10 Validation/RC Hardening** tasks are eligible for execution.
+DO NOT create new feature tasks. DO NOT expand pages/. DO NOT add UI.
+
+## Task Selection Priority (Validation Mode)
+
+1. HOS-10A tasks (bridge cross-validation): 001 → 002 → ... → 006
+2. HOS-10B tasks (simulator + network): 001 → 002
+3. HOS-10C tasks (release readiness): 001
+
+Foundation/Headless tasks are CLOSED. Do not re-execute them.
 
 ## SCOPE HARD CONSTRAINTS (effective immediately)
 
