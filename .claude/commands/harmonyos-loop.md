@@ -54,6 +54,46 @@ Scan the task queue for the first task with `Status: READY`.
 
 Foundation tasks execute first. Headless tasks execute once their Foundation prerequisites are met.
 
+## SCOPE HARD CONSTRAINTS (effective immediately)
+
+These constraints override all task definitions. No task may violate them.
+
+### CURRENT PHASE: BRIDGE_BLOCKED
+- **HOS-2B-002 (Swift bridge) is NOT complete.**
+- Until bridge is done, all capabilities that depend on it are LOCAL_FALLBACK / FIXTURE_MODE only.
+- **NO capability may be marked PRODUCTION_READY until bridge cross-validation passes.**
+
+### FORBIDDEN (UI scope)
+- **Do NOT create new pages/** files. Existing shell placeholders may stay.
+- **Do NOT add @Entry, @Component, @Builder, or @State to any new code.**
+- **Do NOT expand existing page placeholders** beyond the current placeholder text.
+- **Do NOT add UI components, layouts, themes, or visual polish.**
+- **Do NOT add ViewModel files that bind to UI pages.** Existing BookshelfViewModel is SHELL_ONLY_PLACEHOLDER.
+- **Do NOT wire services/repository to UI components.**
+
+### ALLOWED (headless scope)
+- **models/**: DTO interfaces, enums, type definitions
+- **repository/**: Data access layer (no UI imports)
+- **services/**: Business logic (no UI imports, no @State/@Component)
+- **adapters/**: Platform wrappers (@ohos.* APIs)
+- **parser/**: TXT/EPUB parsing logic (mark as LOCAL_FALLBACK until bridge validated)
+- **__tests__/**: Headless domain validators
+- **docs/PLANNING/**: Planning documents, capability matrices, reports
+
+### CAPABILITY STATUS RULES
+- DTO mirroring → mark CONTRACT_ONLY (types exist, no execution)
+- Fixture-based search/TOC/content → mark FIXTURE_MODE (not production)
+- Mock repositories → mark MOCK_ONLY
+- Bridge client without server → mark BRIDGE_BLOCKED
+- TXTParser ArkTS port → mark LOCAL_FALLBACK_EXPERIMENTAL
+- WebDAV/Sync contracts → mark CONTRACT_ONLY
+- UI-bound ViewModel → mark SHELL_ONLY_PLACEHOLDER
+
+### BRIDGE GATE
+- Until HOS-2B-002 is complete and cross-validation passes, all headless services remain in FIXTURE_MODE.
+- Next READY task after bridge is HOS-2B-002. If BLOCKED, loop should report and stop.
+- No new tasks should be created that assume bridge is available.
+
 ## Execution Rules
 
 ### ALLOWED

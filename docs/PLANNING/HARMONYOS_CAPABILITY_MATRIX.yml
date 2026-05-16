@@ -47,8 +47,8 @@ matrix:
       notes: "5 REST endpoints defined"
 
     - capability: "Bridge HTTP Client (ArkTS)"
-      status: IMPLEMENTED
-      notes: "BridgeHTTPClient + FixtureReplayInterceptor + BridgeClientWithFallback"
+      status: BRIDGE_CLIENT_ONLY
+      notes: "BridgeHTTPClient + FixtureReplayInterceptor + BridgeClientWithFallback. NO SERVER — all operations fall back to fixture mode."
 
     - capability: "Swift Bridge Service"
       status: BLOCKED_BY_CORE_REPO_ACCESS
@@ -56,20 +56,20 @@ matrix:
 
   domain_services:
     - capability: "Bookshelf Domain"
-      status: IMPLEMENTED
-      notes: "IBookshelfRepository, Storage/Mock impl, BookshelfService, ProgressService"
+      status: HEADLESS_ONLY
+      notes: "IBookshelfRepository, Storage/Mock impl, BookshelfService, ProgressService. ViewModel demoted to SHELL_ONLY_PLACEHOLDER."
 
     - capability: "Search Domain"
-      status: IMPLEMENTED_FIXTURE
-      notes: "BookSourceRepository, SearchService, SearchError model. BLOCKED_BY_BRIDGE for live search"
+      status: BRIDGE_BLOCKED
+      notes: "BookSourceRepository, SearchService, SearchError model. All search operations are FIXTURE_MODE until bridge server exists."
 
     - capability: "TOC/Content Domain"
-      status: IMPLEMENTED_FIXTURE
-      notes: "TOCService, ContentService, ReadingFlowStateMachine. BLOCKED_BY_BRIDGE for live"
+      status: BRIDGE_BLOCKED
+      notes: "TOCService, ContentService, ReadingFlowStateMachine. All operations are FIXTURE_MODE until bridge server exists."
 
     - capability: "Import Domain"
-      status: IMPLEMENTED
-      notes: "TXTParser port (210 lines), ImportPipeline, EPUBParserContract (CONTRACT_ONLY)"
+      status: LOCAL_FALLBACK_EXPERIMENTAL
+      notes: "TXTParser is an ArkTS re-implementation NOT cross-validated against Core TXTParser. ImportPipeline uses local parser only. Marked BRIDGE_BLOCKED for production."
 
     - capability: "Sync Domain"
       status: CONTRACT_ONLY
@@ -116,6 +116,23 @@ matrix:
     - capability: "Test Infrastructure"
       status: IMPLEMENTED
       notes: "5 suites, 52 test cases, runAllDomainTests()"
+
+  ui_scope:
+    - capability: "App Shell (Tabs + Navigation)"
+      status: SHELL_ONLY
+      notes: "Index.ets has Tabs + 3 placeholder tabs. BookshelfContent demoted to simple placeholder."
+
+    - capability: "Bookshelf Page"
+      status: PLACEHOLDER
+      notes: "Inline in Index.ets. ViewModel binding, book cards, sort toggle REMOVED. Awaiting bridge."
+
+    - capability: "Search Page"
+      status: SHELL_ONLY
+      notes: "Placeholder with TextInput. No service binding."
+
+    - capability: "Settings Page"
+      status: SHELL_ONLY
+      notes: "Static placeholder with stage references."
 
   locked:
     - capability: "JS Runtime"

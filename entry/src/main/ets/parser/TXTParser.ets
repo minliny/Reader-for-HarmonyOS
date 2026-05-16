@@ -1,5 +1,9 @@
-// TXTParser — ArkTS port of Core TXTParser.swift (H002)
-// Clean-room implementation: follows Core logic, ArkTS-native APIs
+// TXTParser — LOCAL_FALLBACK_EXPERIMENTAL
+// STATUS: BRIDGE_BLOCKED — awaiting HOS-2B-002 Swift bridge validation.
+// This is an ArkTS re-implementation following Core TXTParser.swift logic.
+// NOT production-ready until cross-validated against Core TXTParser output.
+// Core TXTParser.swift is the authoritative implementation.
+// Demote to LOCAL_FALLBACK if bridge is never built.
 import { util } from '@kit.ArkTS';
 import { LocalTOCItem, ChapterSplitPolicy, SplitPattern } from '../models/LocalBook';
 

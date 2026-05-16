@@ -1,4 +1,6 @@
-// BookshelfViewModel — connects BookshelfRepository to UI state
+// BookshelfViewModel — SHELL_ONLY_PLACEHOLDER
+// DO NOT bind to UI pages until bridge service (HOS-2B-002) is complete.
+// Currently unlinked from Index.ets. Use BookshelfService for headless operations.
 import { IBookshelfRepository, MockBookshelfRepository } from '../repository/BookshelfRepository';
 import { LocalBook } from '../models/LocalBook';
 import {

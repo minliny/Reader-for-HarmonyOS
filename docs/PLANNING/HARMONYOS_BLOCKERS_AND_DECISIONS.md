@@ -8,31 +8,32 @@
 
 ## P0 Blockers (prevents any code execution)
 
-### B-001: No HarmonyOS Project Scaffold
+### B-001/B-002: RESOLVED
+- Project scaffold created, BUILD SUCCESSFUL. ohpm 6.0.1, hvigorw 6.22.7, hdc 3.2.0c.
+
+### B-003: RESOLVED
+- Bridge strategy decided: dual Strategy A (production DTO regen) + B (local HTTP dev bridge).
+
+### B-004: Bridge Service Missing — All Capabilities Blocked
 - **Severity**: P0
-- **Symptom**: 0 `.ets` files, 0 build configs, no `entry/` module
-- **Impact**: Cannot write or build any ArkTS code
-- **Resolution**: Create HarmonyOS project via DevEco Studio or CLI scaffold
-- **Owner**: **User** (requires DevEco Studio or HarmonyOS SDK)
-- **Loop behavior**: If detected, HOS-1A tasks remain BLOCKED; planning-only tasks can proceed
+- **Symptom**: HOS-2B-002 (Swift bridge executable) is BLOCKED_BY_CORE_REPO_ACCESS. No bridge server exists.
+- **Impact**: ALL headless services operate in FIXTURE_MODE only. Search/TOC/Content/Import cannot execute real operations.
+- **Resolution**: User grants Core repo write access → build Swift bridge → cross-validate TXTParser + services.
+- **Loop behavior**: HOS-2B-002 remains BLOCKED. No task may be marked PRODUCTION_READY until bridge is built and cross-validation passes.
 
-### B-002: Build Environment Partial Ready
-- **Severity**: P1 (reduced from P0)
-- **Symptom**: `ohpm` READY, `hdc` READY, `hvigor` (global) MISSING
-- **Impact**: Cannot build with global hvigor, but project-level `hvigorw` wrapper expected
-- **Resolution**: Create HarmonyOS project scaffold with hvigorw; verify `./hvigorw` works
-- **Note**: ohpm 6.0.1 installed, hdc 3.2.0c installed, Node v22.16.0 (DevEco bundled)
-- **Owner**: **User** (for scaffold creation)
-- **Loop behavior**: ENV_PARTIAL_READY — can proceed with planning; build tasks blocked until scaffold exists
+### B-005: UI Scope Overreach Detected (CORRECTED)
+- **Severity**: P0 (corrected 2026-05-16)
+- **Symptom**: Index.ets contained full BookshelfContent component with ViewModel binding, book cards, sort toggle, and reading progress display (264 lines). BookshelfViewModel had @Observed UI state management (155 lines).
+- **Impact**: UI development was advancing as if bridge were complete. Violates headless-only scope.
+- **Resolution (applied)**: BookshelfContent demoted to simple placeholder. ViewModel demoted to SHELL_ONLY_PLACEHOLDER. Loop command updated with hard UI constraints.
+- **Loop behavior**: pages/ is FROZEN. No new UI components. No ViewModel-page binding.
 
-### B-003: Core Bridge Strategy Undecided
-- **Severity**: P0 (for Core-dependent tasks)
-- **Symptom**: Reader-Core is Swift, HarmonyOS is ArkTS — no interop
-- **Impact**: All HOS-3A through HOS-8A tasks blocked
-- **Resolution**: User selects bridge strategy (HOS-D001)
-- **Default**: Strategy A (DTO Regeneration) if user does not respond
-- **Owner**: **User** (with default fallback)
-- **Loop behavior**: If unresolved, Core-dependent tasks stay BLOCKED; planning/docs tasks can proceed with Strategy A assumption documented
+### B-006: Core Boundary Risk — TXTParser ArkTS Port
+- **Severity**: P0
+- **Symptom**: TXTParser.ets (184 lines) is an ArkTS re-implementation following Core TXTParser.swift logic. Not cross-validated against Core output.
+- **Impact**: Risk of divergent behavior between Core and ArkTS TXT parsers. Import results may differ from Core expectations.
+- **Resolution**: Mark TXTParser as LOCAL_FALLBACK_EXPERIMENTAL. Cross-validate against Core TXTParser after HOS-2B-002 is built. Do not claim production readiness.
+- **Loop behavior**: TXTParser.ets stays LOCAL_FALLBACK_EXPERIMENTAL indefinitely unless bridge cross-validation is completed.
 
 ---
 
