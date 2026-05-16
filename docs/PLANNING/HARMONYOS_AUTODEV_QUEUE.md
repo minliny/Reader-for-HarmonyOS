@@ -90,8 +90,8 @@
 
 | # | ID | Stage | Status | Title |
 |---|-----|-------|--------|-------|
-| 68 | HOS-10A-001 | HOS-10A | READY | Bridge health smoke from HarmonyOS |
-| 69 | HOS-10A-002 | HOS-10A | PENDING | Bridge host configuration |
+| 68 | HOS-10A-001 | HOS-10A | DONE | Bridge health smoke (HEADLESS_SMOKE_ONLY) |
+| 69 | HOS-10A-002 | HOS-10A | READY | Bridge host configuration |
 | 70 | HOS-10A-003 | HOS-10A | PENDING | TXTParser cross-validation |
 | 71 | HOS-10A-004 | HOS-10A | PENDING | Search bridge cross-validation |
 | 72 | HOS-10A-005 | HOS-10A | PENDING | TOC/Content bridge cross-validation |
@@ -106,12 +106,12 @@
 
 | Status | Count |
 |--------|-------|
-| DONE | 67 |
+| DONE | 68 |
 | READY | 1 |
 | BLOCKED | 0 |
-| PENDING | 8 |
+| PENDING | 7 |
 
-**Next READY task**: HOS-10A-001 (Bridge health smoke)
+**Next READY task**: HOS-10A-002 (Bridge host configuration)
 **Mode**: VALIDATION ONLY — no feature development, no UI expansion
 
 
