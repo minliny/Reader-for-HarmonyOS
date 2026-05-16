@@ -47,12 +47,12 @@ matrix:
       notes: "5 REST endpoints defined"
 
     - capability: "Bridge HTTP Client (ArkTS)"
-      status: BRIDGE_CLIENT_ONLY
-      notes: "BridgeHTTPClient + FixtureReplayInterceptor + BridgeClientWithFallback. NO SERVER — all operations fall back to fixture mode."
+      status: BRIDGE_CONNECTED_DEV_ONLY
+      notes: "BridgeHTTPClient + FixtureReplayInterceptor + BridgeClientWithFallback. Server EXISTS at Core 3c72be8. Client can now connect to real Core services."
 
     - capability: "Swift Bridge Service"
-      status: BLOCKED_BY_CORE_REPO_ACCESS
-      notes: "Requires user approval to modify Reader-Core"
+      status: BRIDGE_CONNECTED_DEV_ONLY
+      notes: "Implemented at Core 3c72be8. Health check + TXT parse verified. localhost:8899."
 
   domain_services:
     - capability: "Bookshelf Domain"
@@ -60,16 +60,16 @@ matrix:
       notes: "IBookshelfRepository, Storage/Mock impl, BookshelfService, ProgressService. ViewModel demoted to SHELL_ONLY_PLACEHOLDER."
 
     - capability: "Search Domain"
-      status: BRIDGE_BLOCKED
-      notes: "BookSourceRepository, SearchService, SearchError model. All search operations are FIXTURE_MODE until bridge server exists."
+      status: BRIDGE_CONNECTED_DEV_ONLY
+      notes: "BookSourceRepository, SearchService, SearchError model. Bridge server exists, search works via localhost. NOT production — still fixture fallback on device."
 
     - capability: "TOC/Content Domain"
-      status: BRIDGE_BLOCKED
-      notes: "TOCService, ContentService, ReadingFlowStateMachine. All operations are FIXTURE_MODE until bridge server exists."
+      status: BRIDGE_CONNECTED_DEV_ONLY
+      notes: "TOCService, ContentService, ReadingFlowStateMachine. Bridge server exists. NOT production."
 
     - capability: "Import Domain"
-      status: LOCAL_FALLBACK_EXPERIMENTAL
-      notes: "TXTParser is an ArkTS re-implementation NOT cross-validated against Core TXTParser. ImportPipeline uses local parser only. Marked BRIDGE_BLOCKED for production."
+      status: BRIDGE_CONNECTED_DEV_ONLY
+      notes: "TXTParser ArkTS port can now be cross-validated against Core TXTParser via bridge /parse/txt. ImportPipeline functional. LOCAL_FALLBACK for on-device use without bridge."
 
     - capability: "Sync Domain"
       status: CONTRACT_ONLY

@@ -44,7 +44,7 @@
 | # | ID | Stage | Status | Title |
 |---|-----|-------|--------|-------|
 | 26 | HOS-2B-001 | HOS-2B | DONE | Bridge API contract spec |
-| 27 | HOS-2B-002 | HOS-2B | BLOCKED_BY_CORE_REPO_ACCESS | Swift bridge service executable |
+| 27 | HOS-2B-002 | HOS-2B | DONE | Swift bridge service executable (Core 3c72be8) |
 | 28 | HOS-2B-003 | HOS-2B | DONE | Bridge HTTP client (ArkTS) |
 | 29 | HOS-2B-004 | HOS-2B | DONE | Fixture replay interceptor |
 | 30 | HOS-2B-005 | HOS-2B | DONE | Bridge health check & error model |
@@ -92,9 +92,9 @@
 
 | Status | Count |
 |--------|-------|
-| DONE | 66 |
+| DONE | 67 |
 | READY | 0 |
-| BLOCKED | 1 |
+| BLOCKED | 0 |
 | PENDING | 0 |
 
 **All tasks complete. Loop finished.**
