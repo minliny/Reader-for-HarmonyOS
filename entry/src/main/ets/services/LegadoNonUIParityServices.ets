@@ -4,7 +4,7 @@
 import { boundedChecksum } from '../adapters/FeedParserAdapter';
 import { CookieCredentialBoundaryAdapter } from '../adapters/CookieCredentialBoundaryAdapter';
 import { LocalBookFormat } from '../models/LocalBook';
-import { ContentType, TOCItem, VIPStatus } from '../models/ContentModels';
+import { ContentPage, ContentType, TOCItem, VIPStatus } from '../models/ContentModels';
 import { SearchResultItem, BookInfoItem } from '../models/SearchModels';
 import { BackupConfig, BackupManifest, BackupPackage, ConflictPolicy, ProgressSyncRecord, RestorePolicy } from '../models/SyncModels';
 
@@ -226,7 +226,7 @@ export class CleanRoomSourceChainRuntime {
       { chapterTitle: 'Chapter 1', chapterURL: 'fixture://chapter/1', chapterIndex: 0, isVip: false, unknownFields: {} },
       { chapterTitle: 'Chapter 2', chapterURL: 'fixture://chapter/2', chapterIndex: 1, isVip: false, unknownFields: {} }
     ];
-    const content = {
+    const content: ContentPage = {
       title: toc[0].chapterTitle,
       content: 'redacted chapter content',
       chapterURL: toc[0].chapterURL,
@@ -259,7 +259,7 @@ export class LocalBookFormatCoverageAdapter {
   buildEvidence(): LocalBookFormatEvidence {
     const detected = [
       this.detect(bytes('plain text chapter'), 'book.txt'),
-      this.detect(bytes('PK\003\004fixture'), 'book.epub'),
+      this.detect(bytes('PK\x03\x04fixture'), 'book.epub'),
       this.detect(bytes('%PDF-1.7 fixture'), 'book.pdf'),
       this.detect(bytes('BOOKMOBI fixture'), 'book.mobi'),
       this.detect(bytes('UMD fixture'), 'book.umd'),
@@ -414,7 +414,7 @@ export class HeadlessTTSRuntime {
       playbackState: 'paused-after-buffer',
       progressPercent: 33,
       httpTTSRequestRedacted: credential.redactedAuditEntry.indexOf('REDACTED') !== -1,
-      rawCredentialValueExported: credential.rawExportDenied === false,
+      rawCredentialValueExported: !credential.rawExportDenied,
       checksum: boundedChecksum(`${queue.length}|33|${credential.referenceId}`)
     };
   }

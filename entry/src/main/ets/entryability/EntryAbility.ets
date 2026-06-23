@@ -1,12 +1,19 @@
 import { UIAbility, Want, AbilityConstant } from '@kit.AbilityKit';
 import { window } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { readerRuntimeNetworkConfig } from '../services/RuntimeNetworkConfig';
 
 const TAG = 'EntryAbility';
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+    readerRuntimeNetworkConfig.applyLaunchParameters(want.parameters);
     hilog.info(0x0000, TAG, 'Ability onCreate');
+  }
+
+  onNewWant(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+    readerRuntimeNetworkConfig.applyLaunchParameters(want.parameters);
+    hilog.info(0x0000, TAG, 'Ability onNewWant');
   }
 
   onDestroy(): void {

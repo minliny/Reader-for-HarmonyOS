@@ -23,6 +23,58 @@ export interface BridgeError {
   context?: Record<string, string>;
 }
 
+interface BridgeSearchPayload {
+  source: BookSource;
+  query: SearchQuery;
+}
+
+interface BridgeTOCPayload {
+  source: BookSource;
+  detailURL: string;
+}
+
+interface BridgeContentPayload {
+  source: BookSource;
+  chapterURL: string;
+}
+
+interface BridgeTXTPayload {
+  dataBase64: string;
+  encoding?: string;
+  policy?: ChapterSplitPolicy;
+}
+
+interface BridgeSearchResponse {
+  results: SearchResultItem[];
+  error?: BridgeError;
+}
+
+interface BridgeTOCResponse {
+  items: TOCItem[];
+  error?: BridgeError;
+}
+
+interface BridgeContentResponse extends ContentPage {
+  error?: BridgeError;
+}
+
+export interface BridgeTXTTOCItem {
+  title: string;
+  level: number;
+  byteOffset: number;
+}
+
+export interface BridgeTXTParseResult {
+  encoding: string;
+  content: string;
+  toc: BridgeTXTTOCItem[];
+  byteCount: number;
+}
+
+interface BridgeTXTParseResponse extends BridgeTXTParseResult {
+  error?: BridgeError;
+}
+
 export class BridgeConnectionError extends Error {
   constructor(message: string) {
     super(`Bridge connection failed: ${message}`);
@@ -65,52 +117,73 @@ export class BridgeHTTPClient {
   }
 
   async health(): Promise<BridgeHealth> {
-    const resp = await this.httpClient.request(`${this.baseUrl}/health`, {
-      method: http.RequestMethod.GET,
-      connectTimeout: 5000,
-      readTimeout: 5000
-    });
-    return JSON.parse(resp.result as string) as BridgeHealth;
+    try {
+      const resp = await this.httpClient.request(`${this.baseUrl}/health`, {
+        method: http.RequestMethod.GET,
+        connectTimeout: 5000,
+        readTimeout: 5000
+      });
+      return JSON.parse(resp.result as string) as BridgeHealth;
+    } catch (e) {
+      throw new BridgeConnectionError(JSON.stringify(e));
+    }
   }
 
   async search(source: BookSource, query: SearchQuery): Promise<SearchResultItem[]> {
-    const resp = await this.post('/search', { source, query });
-    const data = JSON.parse(resp.result as string);
+    const payload: BridgeSearchPayload = {
+      source: source,
+      query: query
+    };
+    const resp = await this.post('/search', payload);
+    const data: BridgeSearchResponse = JSON.parse(resp.result as string) as BridgeSearchResponse;
     if (data.error) {
       const err = data.error as BridgeError;
       throw new BridgeResponseError(err.code, err.message);
     }
-    return data.results as SearchResultItem[];
+    return data.results;
   }
 
   async fetchTOC(source: BookSource, detailURL: string): Promise<TOCItem[]> {
-    const resp = await this.post('/toc', { source, detailURL });
-    const data = JSON.parse(resp.result as string);
+    const payload: BridgeTOCPayload = {
+      source: source,
+      detailURL: detailURL
+    };
+    const resp = await this.post('/toc', payload);
+    const data: BridgeTOCResponse = JSON.parse(resp.result as string) as BridgeTOCResponse;
     if (data.error) {
       const err = data.error as BridgeError;
       throw new BridgeResponseError(err.code, err.message);
     }
-    return data.items as TOCItem[];
+    return data.items;
   }
 
   async fetchContent(source: BookSource, chapterURL: string): Promise<ContentPage> {
-    const resp = await this.post('/content', { source, chapterURL });
-    const data = JSON.parse(resp.result as string);
+    const payload: BridgeContentPayload = {
+      source: source,
+      chapterURL: chapterURL
+    };
+    const resp = await this.post('/content', payload);
+    const data: BridgeContentResponse = JSON.parse(resp.result as string) as BridgeContentResponse;
     if (data.error) {
       const err = data.error as BridgeError;
       throw new BridgeResponseError(err.code, err.message);
     }
-    return data as ContentPage;
+    return data;
   }
 
-  async parseTXT(dataBase64: string, encoding?: string, policy?: ChapterSplitPolicy): Promise<Record<string, Object>> {
-    const resp = await this.post('/parse/txt', { dataBase64, encoding, policy });
-    const data = JSON.parse(resp.result as string);
+  async parseTXT(dataBase64: string, encoding?: string, policy?: ChapterSplitPolicy): Promise<BridgeTXTParseResult> {
+    const payload: BridgeTXTPayload = {
+      dataBase64: dataBase64,
+      encoding: encoding,
+      policy: policy
+    };
+    const resp = await this.post('/parse/txt', payload);
+    const data: BridgeTXTParseResponse = JSON.parse(resp.result as string) as BridgeTXTParseResponse;
     if (data.error) {
       const err = data.error as BridgeError;
       throw new BridgeResponseError(err.code, err.message);
     }
-    return data as Record<string, Object>;
+    return data;
   }
 
   private async post(path: string, body: Object): Promise<http.HttpResponse> {

@@ -9,6 +9,13 @@
   "description": "Reader for HarmonyOS",
   "repository": {},
   "license": "ISC",
+  "scripts": {
+    "smoke:device-runtime": "bash scripts/run_device_runtime_smoke.sh",
+    "ci:device-runtime": "bash scripts/run_device_runtime_smoke.sh && python3 scripts/validate_device_runtime_smoke_artifact.py artifacts/device-runtime-smoke/latest/device_runtime_smoke_summary.json",
+    "ci:device-runtime:validate": "python3 scripts/validate_device_runtime_smoke_artifact.py artifacts/device-runtime-smoke/latest/device_runtime_smoke_summary.json",
+    "ci:device-runtime:validate-fail": "python3 scripts/validate_device_runtime_smoke_fail_artifact.py artifacts/device-runtime-smoke/latest/device_runtime_smoke_summary.json",
+    "validate:gap-matrix": "python3 scripts/validate_harmonyos_core_legado_gap_matrix.py"
+  },
   "dependencies": {
     "@ohos/hvigor": "6.22.7",
     "@ohos/hvigor-ohos-plugin": "6.22.7"

@@ -57,13 +57,19 @@ export class ProgressService {
   // Get all books being actively read (have progress data)
   getActiveBooks(): ReadingProgress[] {
     const items = this.repo.getAllProgress();
-    return items.map(item => ({
-      bookId: item.book.id,
-      currentChapterIndex: item.currentChapterIndex,
-      chapterProgress: item.chapterProgress,
-      totalChapters: item.totalChapters,
-      lastOpenedAt: item.lastOpenedAt ?? item.book.addedAt
-    }));
+    const result: ReadingProgress[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const progress: ReadingProgress = {
+        bookId: item.book.id,
+        currentChapterIndex: item.currentChapterIndex,
+        chapterProgress: item.chapterProgress,
+        totalChapters: item.totalChapters,
+        lastOpenedAt: item.lastOpenedAt ?? item.book.addedAt
+      };
+      result.push(progress);
+    }
+    return result;
   }
 
   // Get recently read books, sorted by lastOpenedAt

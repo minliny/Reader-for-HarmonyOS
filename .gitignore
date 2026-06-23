@@ -6,3 +6,4 @@ oh_modules/
 .cache/
 local.properties
 .hvigor/
+artifacts/

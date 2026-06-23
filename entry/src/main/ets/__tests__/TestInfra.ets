@@ -9,6 +9,8 @@ import { runCoreAdapterEvidenceTests } from './CoreAdapterEvidenceValidator';
 import { runCoreAdapterFirstBatchEvidenceTests } from './CoreAdapterFirstBatchEvidenceValidator';
 import { runCoreAdapterCompleteEvidenceTests } from './CoreAdapterCompleteEvidenceValidator';
 import { runNonUIParityEvidenceTests } from './NonUIParityEvidenceValidator';
+import { runExternalClosureEvidenceTests } from './ExternalClosureEvidenceValidator';
+import { runHomeDashboardTests } from './HomeDashboardValidator';
 
 export interface TestSuiteResult {
   suite: string;
@@ -25,6 +27,9 @@ export function runAllDomainTests(): TestSuiteResult[] {
 
   const search = runSearchDomainTests();
   results.push({ suite: 'Search', passed: search.passed, failed: search.failed, total: search.results.length });
+
+  const homeDashboard = runHomeDashboardTests();
+  results.push({ suite: 'Home Dashboard', passed: homeDashboard.passed, failed: homeDashboard.failed, total: homeDashboard.results.length });
 
   const tocContent = runTOCContentDomainTests();
   results.push({ suite: 'TOC/Content', passed: tocContent.passed, failed: tocContent.failed, total: tocContent.results.length });
@@ -46,6 +51,9 @@ export function runAllDomainTests(): TestSuiteResult[] {
 
   const nonUIParityEvidence = runNonUIParityEvidenceTests();
   results.push({ suite: 'Legado Non-UI Parity Evidence', passed: nonUIParityEvidence.passed, failed: nonUIParityEvidence.failed, total: nonUIParityEvidence.results.length });
+
+  const externalClosureEvidence = runExternalClosureEvidenceTests();
+  results.push({ suite: 'External Closure Evidence', passed: externalClosureEvidence.passed, failed: externalClosureEvidence.failed, total: externalClosureEvidence.results.length });
 
   return results;
 }

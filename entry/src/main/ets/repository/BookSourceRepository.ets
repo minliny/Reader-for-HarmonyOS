@@ -28,7 +28,7 @@ export class BookSourceRepository {
   }
 
   private saveToStore(): void {
-    const arr = this.getAll();
+    const arr = this.getAllSources();
     this.storage.write(KEY_SOURCES, JSON.stringify(arr));
   }
 
@@ -69,7 +69,7 @@ export class BookSourceRepository {
   // Import from JSON string (e.g., Legado-format book source JSON)
   importFromJSON(json: string): number {
     try {
-      const parsed = JSON.parse(json);
+      const parsed = JSON.parse(json) as BookSource[] | BookSource;
       const arr: BookSource[] = Array.isArray(parsed) ? parsed : [parsed];
       let added = 0;
       for (let i = 0; i < arr.length; i++) {

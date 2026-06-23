@@ -1,0 +1,239 @@
+{
+  "schemaVersion": "harmonyos-core-legado-gap-matrix.v1",
+  "updatedAt": "2026-06-23",
+  "comparisonTarget": "local Legado repository capability surface",
+  "scope": "HarmonyOS app plus Reader-Core public package and evidence contracts",
+  "topline": "Reader-Core compatibility semantics are no longer the largest active gap. The largest remaining gaps are HarmonyOS productization plus the current fail-closed external nativeHTTP/corpus device CI result.",
+  "cleanRoom": {
+    "maintained": true,
+    "externalGPLCodeCopied": false,
+    "legadoSourceCopiedTranslatedOrAdapted": false,
+    "compatLevelDefinitionsChanged": false
+  },
+  "latestDeviceRuntimeCI": {
+    "artifact": "artifacts/device-runtime-smoke/20260623T141611Z/device_runtime_smoke_summary.json",
+    "passed": false,
+    "currentFailure": "external nativeHTTP FAIL 0 and Corpus FAIL with network_error/corpus_error after app-level proxy application reported app:on; device-local LocalHTTP reports PASS 2xx, LocalFeed reports PASS rss:1, DataStore reports PASS v75:3, LocalBook reports PASS epub:1, ReaderShell reports PASS fixture in the home layout, SourceMgmt reports PASS fixture in the settings layout, and Headless reports PASS fixture with Download PASS 2/2, TTS PASS q:3, WebDAV PASS sync, FileToken PASS opaque, and DBMig PASS v75:32; hostNetworkProbe observed directHttps=tls_error proxyHttps=tls_error proxyHttp=http_5xx",
+    "failClosedValidator": "scripts/validate_device_runtime_smoke_fail_artifact.py",
+    "failClosedValidationCommand": "npm run ci:device-runtime:validate-fail",
+    "historicalPassArtifact": "artifacts/device-runtime-smoke/20260623T111857Z/device_runtime_smoke_summary.json",
+    "historicalPassIsCurrentGate": false,
+    "hostNetworkProbe": {
+      "executed": true,
+      "directHttpsClass": "tls_error",
+      "proxyHttpsClass": "tls_error",
+      "proxyHttpClass": "http_5xx"
+    },
+    "deviceLocalHTTPProbe": {
+      "configured": true,
+      "serverStarted": true,
+      "serverReachable": true,
+      "passedInRuntimePanel": true
+    },
+    "deviceLocalFeedProbe": {
+      "configured": true,
+      "fixtureServed": true,
+      "serverReachable": true,
+      "passedInRuntimePanel": true
+    },
+    "deviceDataStoreProbe": {
+      "configured": true,
+      "schemaVersion": 75,
+      "migrationStepCount": 32,
+      "recordCount": 3,
+      "passedInRuntimePanel": true
+    },
+    "deviceLocalBookProbe": {
+      "configured": true,
+      "format": "epub",
+      "tocCount": 1,
+      "bookshelfCount": 1,
+      "permissionHandoff": true,
+      "passedInRuntimePanel": true
+    },
+    "deviceReaderUISmoke": {
+      "configured": true,
+      "mode": "fixture",
+      "tocCount": 12,
+      "passedInHomeLayout": true
+    },
+    "deviceSourceManagementSmoke": {
+      "configured": true,
+      "mode": "fixture",
+      "sourceCount": 3,
+      "enabledCount": 2,
+      "debugPassed": true,
+      "redacted": true,
+      "passedInSettingsLayout": true
+    },
+    "deviceHeadlessServiceDemo": {
+      "configured": true,
+      "mode": "fixture",
+      "downloadPassed": true,
+      "downloadCompletedCount": 2,
+      "downloadScheduledCount": 2,
+      "ttsPassed": true,
+      "ttsQueuedSegments": 3,
+      "webdavPassed": true,
+      "fileTokenPassed": true,
+      "databaseMigrationPassed": true,
+      "schemaVersion": 75,
+      "migrationStepCount": 32,
+      "redacted": true,
+      "passedInRuntimePanel": true
+    }
+  },
+  "nonUIBoundary": {
+    "localCodeOwnedMeasuredComplete": true,
+    "uiAndPageBehaviorExcluded": true,
+    "deviceExecutorClaimedByNonUIBundle": false,
+    "externalNetworkClaimedByNonUIBundle": false
+  },
+  "documentationDriftGuards": [
+    {
+      "id": "home_dashboard_device_execution_superseded",
+      "path": "docs/PLANNING/HARMONYOS_HOME_DASHBOARD_LOCAL_BINDING_REPORT.md",
+      "requiredTokens": [
+        "Later on 2026-06-23 HarmonyOS emulator targets became available",
+        "SUPERSEDED_BY_DEVICE_SMOKE",
+        "HARMONYOS_DEVICE_RUNTIME_EXECUTION_REPORT.md",
+        "20260623T141611Z"
+      ],
+      "rejectedTokens": [
+        "Device/simulator execution | NOT_EXECUTED",
+        "deviceExecutorUsed=false"
+      ]
+    }
+  ],
+  "scopeExclusions": [
+    "Legado GPL implementation code reuse",
+    "UI/page behavior parity from the local non-UI bundle and headless demo",
+    "raw URL/cookie/credential/session/response-body export",
+    "production HarmonyOS signing and release distribution",
+    "production platform database implementation",
+    "full Legado reader shell, source management UI, RSS UI, TTS playback UI/media session, download UI/background worker, and WebDAV UI/production client"
+  ],
+  "rows": [
+    {
+      "id": "source_rules_static_parsing",
+      "status": "CORE_SEMANTICS_BROADLY_CLOSED",
+      "owner": "Reader-Core",
+      "currentEvidence": "Core rule models, CSS/XPath/JSONPath/template URL chain semantics, source import contracts, metadata, expected, and matrix evidence are present in the current Reader-Core worktree.",
+      "legadoGap": "Remaining confidence gap is broad authorized real-source regression and unknown long-tail rules, not the base source-rule model.",
+      "evidence": [
+        "Reader-Core:docs/PLANNING/LEGADO_FULL_CAPABILITY_GAP_AUDIT_2026-06-23.md",
+        "Reader-Core:samples/metadata/p1_parser/recovery1_static_parser_jsonpath_template_url_chain_metadata.json",
+        "Reader-Core:samples/expected/p1_parser/recovery1_static_parser_jsonpath_template_url_chain_expected.json",
+        "Reader-Core:samples/matrix/p1_parser/recovery1_static_parser_jsonpath_template_url_chain_matrix.json"
+      ],
+      "nextProofRequired": "Run broader authorized real-source replay and bind any new parser edge to metadata, expected, matrix, and regression."
+    },
+    {
+      "id": "js_webview_cookie_session",
+      "status": "PARTIAL_DEVICE_VERIFIED_CURRENT_EXTERNAL_NATIVE_HTTP_CORPUS_FAIL",
+      "owner": "Reader-Core contracts plus HarmonyOS platform adapter",
+      "currentEvidence": "Core imports platform-runtime evidence; HarmonyOS runtime panel reached LocalHTTP, LocalFeed, DataStore, LocalBook, ArkWeb, Cookie, Session, JS, and Secure PASS in the latest CI artifact, but external nativeHTTP and Corpus are still FAIL; hostNetworkProbe is recorded as classes only and does not export raw URL/body/cookie/session data.",
+      "legadoGap": "Not Legado-grade dynamic source coverage: default parser-chain JS enable policy, long-tail host bindings, broad live-source coverage, login UX, and current external nativeHTTP/corpus PASS are still missing.",
+      "evidence": [
+        "docs/PLANNING/HARMONYOS_DEVICE_RUNTIME_CI_GATE.md",
+        "docs/PLANNING/HARMONYOS_DEVICE_RUNTIME_EXECUTION_REPORT.md",
+        "artifacts/device-runtime-smoke/20260623T141611Z/device_runtime_smoke_summary.json"
+      ],
+      "nextProofRequired": "Fix current external nativeHTTP/corpus CI failure and then add redacted login/cookie/session source-chain evidence."
+    },
+    {
+      "id": "core_release_gate",
+      "status": "GOVERNANCE_APPLIED_NOT_PRODUCT_PARITY",
+      "owner": "Reader-Core governance",
+      "currentEvidence": "Reader-Core root gate application evidence records production_release pass and closed blockers; HarmonyOS consumes that evidence and does not mutate Core root artifacts.",
+      "legadoGap": "Release gate pass is a governance state, not proof that the full Legado Android product surface exists on HarmonyOS.",
+      "evidence": [
+        "Reader-Core:RECOVERY-25_ROOT_GATE_APPLICATION_20260623.json",
+        "docs/PLANNING/HARMONYOS_CAPABILITY_MATRIX.yml"
+      ],
+      "nextProofRequired": "Keep Core root gate application evidence separate from HarmonyOS product runtime, signing, and release evidence."
+    },
+    {
+      "id": "harmonyos_runtime_ci",
+      "status": "CURRENT_CI_EXTERNAL_NATIVE_HTTP_CORPUS_FAIL",
+      "owner": "HarmonyOS platform adapter",
+      "currentEvidence": "npm run ci:device-runtime builds, installs, starts EntryAbility, polls pidof and the home panel until the app is reachable, starts device-local HTTP/RSS/local-book fixtures, captures JSON/JUnit/layout/screenshot artifacts, injects proxy-aware launch config, applies app-level proxy, records hostNetworkProbe classes, and validates fail-closed offline. Latest run proves LocalHTTP PASS 2xx, LocalFeed PASS rss:1, DataStore PASS v75:3, LocalBook PASS epub:1, ReaderShell PASS fixture in the home layout, SourceMgmt PASS fixture in the settings layout, and Headless PASS fixture with Download PASS 2/2, TTS PASS q:3, WebDAV PASS sync, FileToken PASS opaque, and DBMig PASS v75:32, but still fails external nativeHTTP/corpus.",
+      "legadoGap": "The former one-off smoke gap is reduced to a repeatable CI gate. LocalHTTP proves adapter-level device-to-host 2xx, LocalFeed proves device-local RSS fetch plus parse on the emulator, DataStore proves preferences-backed schema/migration/record smoke, LocalBook proves a device-visible EPUB fixture plus opaque permission handoff smoke, ReaderShell proves a fixture-bound reader preview home layout, SourceMgmt proves a fixture-bound source management/debug summary, and Headless proves fixture-bound download/TTS/WebDAV/file-token/DB migration service seams. Runtime parity cannot be claimed until the latest gate reports PASS for external nativeHTTP and corpus while preserving all local, headless, ArkWeb, cookie/session, JS, and secure-storage evidence.",
+      "evidence": [
+        "scripts/run_device_runtime_smoke.sh",
+        "scripts/validate_device_runtime_smoke_artifact.py",
+        "artifacts/device-runtime-smoke/20260623T141611Z/device_runtime_smoke_summary.json"
+      ],
+      "nextProofRequired": "Produce a latest CI artifact with external nativeHTTP and Corpus PASS, preserving LocalHTTP PASS 2xx, LocalFeed PASS rss:1, DataStore PASS v75:3, LocalBook PASS epub:1, ReaderShell PASS fixture, SourceMgmt PASS fixture, Headless PASS fixture, and matching layout tokens without raw value export."
+    },
+    {
+      "id": "local_books",
+      "status": "DEVICE_LOCAL_BOOK_FILETOKEN_SMOKE_READER_UI_GAP",
+      "owner": "Reader-Core plus HarmonyOS file/import adapters",
+      "currentEvidence": "TXT, EPUB, PDF, MOBI/AZW3, UMD, HTML, and unknown format detection boundaries are measured in the clean-room non-UI bundle. Latest HarmonyOS device-runtime CI artifact also records LocalBook PASS epub:1 and deviceLocalBookProbe configured/format=epub/tocCount=1/bookshelfCount=1/permissionHandoff=true/passedInRuntimePanel=true from a device-visible EPUB fixture, plus deviceHeadlessServiceDemo FileToken PASS opaque for raw-path redaction and unsupported-format mapping.",
+      "legadoGap": "Legado has complete file import flows and reader UI depth; HarmonyOS still needs real-file corpus coverage, file-picker permission-token UX, rendering depth, and reader integration. The LocalBook/FileToken smoke is not real-file corpus parity and is not reader UI parity.",
+      "evidence": [
+        "docs/core-platform-adapter/HARMONYOS_LEGADO_NON_UI_PARITY_EVIDENCE_REPORT.md",
+        "docs/PLANNING/HARMONYOS_CAPABILITY_MATRIX.yml",
+        "artifacts/device-runtime-smoke/20260623T141611Z/device_runtime_smoke_summary.json",
+        "scripts/run_device_runtime_smoke.sh"
+      ],
+      "nextProofRequired": "Run authorized real-file corpus import on device, bind file-picker permission-token UX, and prove reader rendering/navigation integration without raw local path export while preserving FileToken PASS opaque."
+    },
+    {
+      "id": "rss_explore",
+      "status": "DEVICE_LOCAL_FEED_SMOKE_EXTERNAL_LIVE_GAP",
+      "owner": "Reader-Core parser/runtime plus HarmonyOS host UI",
+      "currentEvidence": "Clean-room RSS/Atom/JSON Feed fixture parser evidence exists; latest HarmonyOS device-runtime CI artifact fetches a device-local RSS fixture through nativeHTTP and the runtime panel reports LocalFeed PASS rss:1 with deviceLocalFeedProbe metadata redacted.",
+      "legadoGap": "Need external live feed execution, subscription management UI, cookie/login feed handling, JS-rendered feed handling, and background refresh.",
+      "evidence": [
+        "docs/PLANNING/HARMONYOS_CAPABILITY_MATRIX.yml",
+        "docs/core-platform-adapter/HARMONYOS_LEGADO_NON_UI_PARITY_EVIDENCE_REPORT.md",
+        "artifacts/device-runtime-smoke/20260623T141611Z/device_runtime_smoke_summary.json",
+        "scripts/run_device_runtime_smoke.sh"
+      ],
+      "nextProofRequired": "Add authorized external live feed smoke plus feed subscription UI evidence and background refresh contract evidence."
+    },
+    {
+      "id": "data_layer",
+      "status": "DEVICE_DATASTORE_HEADLESS_DBMIG_SMOKE_PRODUCTION_DB_GAP",
+      "owner": "HarmonyOS host app",
+      "currentEvidence": "The non-UI bundle records 21 Legado-like entity names, DAO contract names, migration-step boundaries, and redacted durable-record evidence. Latest HarmonyOS device-runtime CI artifact records DataStore PASS v75:3 and deviceDataStoreProbe configured/schemaVersion=75/migrationStepCount=32/recordCount=3/passedInRuntimePanel=true from a preferences-backed write/reopen smoke, and deviceHeadlessServiceDemo records DBMig PASS v75:32 for the full v43->v75 migration boundary demo.",
+      "legadoGap": "Legado has a production Room database and DAOs; HarmonyOS still needs a production persistence store, full migrations applied to the production store, query/transaction behavior, and failure recovery. The DataStore/DBMig smoke is device/headless persistence evidence, not Room parity.",
+      "evidence": [
+        "docs/core-platform-adapter/HARMONYOS_LEGADO_NON_UI_PARITY_EVIDENCE_REPORT.md",
+        "artifacts/device-runtime-smoke/20260623T141611Z/device_runtime_smoke_summary.json",
+        "scripts/run_device_runtime_smoke.sh"
+      ],
+      "nextProofRequired": "Implement and validate the HarmonyOS production datastore/migration layer without claiming Core ownership of platform DB; preserve DataStore PASS v75:3 and DBMig PASS v75:32 as smoke prerequisites."
+    },
+    {
+      "id": "ui_host_services",
+      "status": "READER_PREVIEW_SOURCE_MGMT_SMOKE_MAJOR_PRODUCT_GAP",
+      "owner": "HarmonyOS host app",
+      "currentEvidence": "HarmonyOS has app shell, local bookshelf/search/settings smoke, a local service-bound home dashboard, latest device-runtime CI home layout contains ReaderShell PASS fixture plus deviceReaderUISmoke configured/mode=fixture/tocCount=12/passedInHomeLayout=true, and latest settings layout contains SourceMgmt PASS fixture plus deviceSourceManagementSmoke configured/mode=fixture/sourceCount=3/enabledCount=2/debugPassed=true/redacted=true/passedInSettingsLayout=true.",
+      "legadoGap": "Legado includes full reader shell depth, live source debugger, RSS UI, download UI, TTS playback UI, WebDAV UI, local web/server, settings depth, and background services. The ReaderShell fixture preview is not full reader rendering/navigation parity, SourceMgmt fixture evidence is not live source debugger parity, and the headless demo does not close product UI parity.",
+      "evidence": [
+        "docs/PLANNING/HARMONYOS_HOME_DASHBOARD_LOCAL_BINDING_REPORT.md",
+        "docs/PLANNING/HARMONYOS_CAPABILITY_MATRIX.yml",
+        "artifacts/device-runtime-smoke/20260623T141611Z/device_runtime_smoke_summary.json",
+        "scripts/run_device_runtime_smoke.sh"
+      ],
+      "nextProofRequired": "Promote reader preview to full reader rendering/navigation proof, promote SourceMgmt fixture to a live source debugger workflow, then build product RSS, download UI, TTS playback UI, and WebDAV UI workflows on top of the existing device headless demo evidence."
+    },
+    {
+      "id": "webdav_backup_tts_download",
+      "status": "DEVICE_HEADLESS_SERVICE_DEMO_PRODUCTION_GAP",
+      "owner": "HarmonyOS host services plus platform adapters",
+      "currentEvidence": "The non-UI bundle measures WebDAV backup/restore envelope behavior, download/cache scheduling, and TTS/HTTP TTS queue and credential-redaction boundaries. Latest device-runtime CI now records deviceHeadlessServiceDemo configured=true mode=fixture passedInRuntimePanel=true with Download PASS 2/2, TTS PASS q:3, WebDAV PASS sync, FileToken PASS opaque, DBMig PASS v75:32, and redacted=true.",
+      "legadoGap": "Need production WebDAV client/server execution, backup/restore UX, background download jobs, native/HTTP TTS playback, notifications, and media-session integration. The device headless demo is a temporary fixture closure, not production service parity.",
+      "evidence": [
+        "docs/core-platform-adapter/HARMONYOS_LEGADO_NON_UI_PARITY_EVIDENCE_REPORT.md",
+        "docs/PLANNING/HARMONYOS_DEVICE_RUNTIME_EXECUTION_REPORT.md",
+        "artifacts/device-runtime-smoke/20260623T141611Z/device_runtime_smoke_summary.json",
+        "scripts/run_device_runtime_smoke.sh"
+      ],
+      "nextProofRequired": "Replace the fixture demo with production WebDAV HTTP, background download worker evidence, native/HTTP TTS playback and media-session proof, while keeping redacted credentials and deviceHeadlessServiceDemo regression tokens."
+    }
+  ]
+}

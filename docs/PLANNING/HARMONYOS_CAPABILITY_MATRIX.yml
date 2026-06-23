@@ -57,7 +57,7 @@ matrix:
   domain_services:
     - capability: "Bookshelf Domain"
       status: HEADLESS_ONLY
-      notes: "IBookshelfRepository, Storage/Mock impl, BookshelfService, ProgressService. ViewModel demoted to SHELL_ONLY_PLACEHOLDER."
+      notes: "IBookshelfRepository, Storage/Mock impl, BookshelfService, ProgressService. HomeDashboardService exposes a local UI snapshot over this domain without external network or device execution."
 
     - capability: "Search Domain"
       status: BRIDGE_CONNECTED_DEV_ONLY
@@ -77,8 +77,8 @@ matrix:
 
   adapters:
     - capability: "HTTPAdapter"
-      status: HEADLESS_MEASURED
-      notes: "@ohos.net.http wrapper exists; INTERNET permission declared; complete Core evidence supplies device-ready nativeHTTP executor shape with local fallback validation"
+      status: DEVICE_NATIVE_HTTP_CI_CURRENT_FAIL
+      notes: "@ohos.net.http wrapper exists, INTERNET permission is declared, runtime proxy injection now applies both app-level proxy and request-level fallback through smoke launch parameters, and latest CI gate 20260623T141611Z proves device-local LocalHTTP PASS 2xx through the same native adapter. Historical runtime smoke 20260623T111857Z reported external nativeHTTP PASS 2xx with raw body omitted, but latest CI gate still reports external nativeHTTP FAIL 0 with runtimeNetwork.proxyAppLevelApplied=true, hostNetworkProbe directHttps=tls_error/proxyHttps=tls_error/proxyHttp=http_5xx, and diag:native:network_error local:none feed:none store:none book:none proxy:env:<hash>:7890:app:on corpus:corpus_error."
 
     - capability: "StorageAdapter"
       status: IMPLEMENTED
@@ -89,16 +89,16 @@ matrix:
       notes: "@ohos.file.fs wrapper exists; complete Core evidence adds opaque permission-token handoff and denied-permission mapping without exporting raw token values"
 
     - capability: "CredentialStorageAdapter"
-      status: HEADLESS_MEASURED
-      notes: "Opaque reference/redaction/revoke/raw-export-denied evidence included in complete runtime evidence. Production secure-storage entitlement smoke still belongs to device governance"
+      status: DEVICE_SECURE_STORAGE_ENTITLEMENT_VERIFIED
+      notes: "HUKS-backed secure-storage entitlement runner is wired into the Settings runtime panel using @kit.UniversalKeystoreKit generate/exist/export-denied/delete flow; evidence records only alias checksum/status and no raw key material or credential values."
 
     - capability: "FeedParserAdapter"
-      status: PARTIAL_MEASURED
-      notes: "Clean-room RSS/Atom/JSON Feed local fixture parser evidence exported; no live network or JS-rendered feed execution"
+      status: DEVICE_LOCAL_FEED_SMOKE
+      notes: "Clean-room RSS/Atom/JSON Feed local fixture parser evidence exported; latest device-runtime CI 20260623T141611Z fetches a device-local RSS fixture through nativeHTTP and records LocalFeed PASS rss:1 plus deviceLocalFeedProbe metadata. External live feed, subscription UI, cookie/login feed, JS-rendered feed, and background refresh remain open."
 
     - capability: "Cookie/Credential Boundary Evidence"
-      status: HEADLESS_MEASURED
-      notes: "Checksum-only cookie and credential references; complete runtime evidence verifies ArkWeb/nativeHTTP cookie-store mirror shape with raw values redacted"
+      status: DEVICE_COOKIE_SESSION_VERIFIED
+      notes: "Checksum-only cookie and credential references; WebCookieManager config/fetch/save executed on emulator, cookie/session panel reported PASS, and raw cookie/session values remain unexported."
 
     - capability: "Core Platform Adapter Evidence Export"
       status: HEADLESS_MEASURED_COMPLETE
@@ -110,28 +110,28 @@ matrix:
       notes: "Adds harmonyos_legado_non_ui_parity_001 covering source full-chain fixture runtime, versioned data schema boundary, multiformat local-book detection, WebDAV backup/restore, download/cache scheduler, TTS boundary, content processing, source/search/progress persistence, secure-storage redaction, and local debug transport. UI is excluded."
 
     - capability: "Persistent Database Schema Boundary"
-      status: LOCAL_CODE_OWNED_MEASURED
-      notes: "VersionedReaderDataStore binds 21 Legado-like non-UI entity names, DAO contract names, migration steps from v43 to v75, source/search/progress/bookmark/cache/rule-sub durable record evidence, and redacted checksums."
+      status: DEVICE_DATASTORE_HEADLESS_DBMIG_SMOKE_PRODUCTION_DB_GAP
+      notes: "VersionedReaderDataStore binds 21 Legado-like non-UI entity names, DAO contract names, migration steps from v43 to v75, source/search/progress/bookmark/cache/rule-sub durable record evidence, and redacted checksums. Latest device-runtime CI 20260623T141611Z also records DataStore PASS v75:3 and deviceDataStoreProbe schemaVersion=75/migrationStepCount=32/recordCount=3/passedInRuntimePanel=true from a preferences-backed write/reopen smoke, plus deviceHeadlessServiceDemo DBMig PASS v75:32. This is not Room/DAO production parity."
 
     - capability: "Real Source Full Chain Fixture Runtime"
       status: LOCAL_CODE_OWNED_MEASURED
       notes: "CleanRoomSourceChainRuntime exercises search -> detail -> TOC -> content with failure classification and redacted evidence. External network and real source corpus remain evidence-bound, not default validation."
 
     - capability: "Local Book Multiformat Boundary"
-      status: LOCAL_CODE_OWNED_MEASURED
-      notes: "LocalBookFormatCoverageAdapter detects TXT, EPUB, PDF, MOBI/AZW3, UMD, HTML, and unknown format mapping without exporting raw local file paths."
+      status: DEVICE_LOCAL_BOOK_FILETOKEN_SMOKE_READER_UI_GAP
+      notes: "LocalBookFormatCoverageAdapter detects TXT, EPUB, PDF, MOBI/AZW3, UMD, HTML, and unknown format mapping without exporting raw local file paths. Latest device-runtime CI 20260623T141611Z also records LocalBook PASS epub:1 and deviceLocalBookProbe configured/format=epub/tocCount=1/bookshelfCount=1/permissionHandoff=true/passedInRuntimePanel=true from a device-visible EPUB fixture and opaque permission handoff smoke, plus deviceHeadlessServiceDemo FileToken PASS opaque. Real-file corpus, file-picker permission-token UX, reader rendering, and reader integration remain open."
 
     - capability: "WebDAV Backup/Restore Boundary"
-      status: LOCAL_CODE_OWNED_MEASURED
-      notes: "MemoryWebDAVBackupRuntime covers connection, upload/download, conflict resolution, restore policy, opaque backup envelope, and raw-body redaction. Production WebDAV server execution remains runtime evidence-bound."
+      status: DEVICE_HEADLESS_DEMO_SMOKE
+      notes: "MemoryWebDAVBackupRuntime covers connection, upload/download, conflict resolution, restore policy, opaque backup envelope, and raw-body redaction. Latest device-runtime CI records deviceHeadlessServiceDemo WebDAV PASS sync. Production WebDAV HTTP/client execution remains open."
 
     - capability: "Download Cache Scheduler"
-      status: LOCAL_CODE_OWNED_MEASURED
-      notes: "DownloadCacheScheduler covers queue scheduling, completion, retry classification, cache hit, and raw content redaction."
+      status: DEVICE_HEADLESS_DEMO_SMOKE
+      notes: "DownloadCacheScheduler covers queue scheduling, completion, retry classification, cache hit, and raw content redaction. Latest device-runtime CI records deviceHeadlessServiceDemo Download PASS 2/2. Production background download worker remains open."
 
     - capability: "TTS/HTTP TTS Boundary"
-      status: LOCAL_CODE_OWNED_MEASURED
-      notes: "HeadlessTTSRuntime covers segment queue/progress and HTTP TTS credential redaction. Real audio playback remains platform service work."
+      status: DEVICE_HEADLESS_DEMO_SMOKE
+      notes: "HeadlessTTSRuntime covers segment queue/progress and HTTP TTS credential redaction. Latest device-runtime CI records deviceHeadlessServiceDemo TTS PASS q:3. Real audio playback and media-session integration remain platform service work."
 
     - capability: "Content Processing Rules"
       status: LOCAL_CODE_OWNED_MEASURED
@@ -142,12 +142,41 @@ matrix:
       notes: "LocalDebugTransportRuntime binds local HTTP/WebSocket debug event contract without exporting raw payloads."
 
     - capability: "Device Runtime Execution Replacement"
-      status: READY_NOT_EXECUTED
-      notes: "NonUIParityEvidence keeps HarmonyOS device runtime, platform CI stability, and platform-executed evidence upgrade as READY_NOT_EXECUTED until deviceExecutorUsed=true is produced by a real device/simulator runner."
+      status: CI_GATE_IMPLEMENTED_CURRENT_NATIVE_HTTP_FAIL
+      notes: "HarmonyOS now has a repeatable CI gate for the runtime panel, a home-layout reader preview smoke, a settings-layout source management smoke, and a temporary headless service demo. Latest artifact artifacts/device-runtime-smoke/20260623T141611Z fail-closed after device install/start/pidof/home-panel polling succeeded, home layout contained ReaderShell PASS fixture and TOC 12, settings layout contained SourceMgmt PASS fixture, 启用 2/3, 规则 search+detail+toc+content, DEBUG fixture, and redacted:true, device-local LocalHTTP returned PASS 2xx, device-local RSS returned LocalFeed PASS rss:1, DataStore returned PASS v75:3, LocalBook returned PASS epub:1, Headless returned PASS fixture, Download returned PASS 2/2, TTS returned PASS q:3, WebDAV returned PASS sync, FileToken returned PASS opaque, DBMig returned PASS v75:32, and proxy-aware launch config plus app-level proxy were applied, but external nativeHTTP reported FAIL 0 and Corpus reported FAIL with diag:native:network_error local:none feed:none store:none book:none proxy:env:<hash>:7890:app:on corpus:corpus_error. Host network probe is classified only as directHttps=tls_error, proxyHttps=tls_error, proxyHttp=http_5xx. Earlier one-off smoke artifact 20260623T111857Z recorded nativeHTTP PASS 2xx and Corpus PASS, but that is not treated as current CI pass."
 
     - capability: "Real Corpus And Release Governance"
-      status: EXTERNAL_REQUIRED
-      notes: "Authorized real corpus benchmark, product governance approval, and Reader-Core production_release root gate application remain external/manual and are not faked by local validation."
+      status: PARTIAL_HISTORICAL_MEASURED_CURRENT_CI_FAIL
+      notes: "Authorized public-domain corpus live execution has historical device runtime PASS evidence in artifacts/device-runtime-smoke/20260623T111857Z, but the latest CI gate artifacts/device-runtime-smoke/20260623T141611Z reports Corpus FAIL with external nativeHTTP network_error and hostNetworkProbe classes only. Product governance for additional external targets remains explicit/manual. Reader-Core root gate application is tracked separately as CORE_ROOT_GATE_APPLIED_PASS."
+
+  external_closure:
+    - capability: "Emulator Toolchain Preflight"
+      status: MEASURED_PASS
+      notes: "DevEco Studio, hdc, and Emulator binaries are present. Local preflight observed hdc targets empty and recorded the missing virtual-device instance blocker."
+
+    - capability: "Emulator Instance Start"
+      status: MEASURED_PASS
+      notes: "DevEco-created HarmonyOS virtual device is visible through hdc as 127.0.0.1:5555 on 2026-06-23."
+
+    - capability: "Device Runtime Runner Preflight"
+      status: CI_GATE_IMPLEMENTED_FAIL_CLOSED
+      notes: "CI gate npm run ci:device-runtime wraps scripts/run_device_runtime_smoke.sh plus offline PASS artifact validation. It builds, installs, starts module entry, checks hdc command output for hidden failures, starts device-local HTTP/RSS/local-book fixtures, polls pidof before layout capture, polls the home panel for bookshelf and ReaderShell tokens, polls the Settings runtime panel, writes redacted JSON/JUnit artifacts, records runtimeNetwork proxy mode/source/host-hash/port/endpoint-rewrite/listen-scope/local-port-reachability/app-level-proxy-observation plus hostNetworkProbe, deviceLocalHTTPProbe, deviceLocalFeedProbe, deviceDataStoreProbe, deviceLocalBookProbe, deviceReaderUISmoke, deviceSourceManagementSmoke, and deviceHeadlessServiceDemo class output, and updates artifacts/device-runtime-smoke/latest. npm run ci:device-runtime:validate-fail validates the current fail-closed latest artifact. Latest 5557 run fail-closed on external nativeHTTP FAIL 0 while LocalHTTP reports PASS 2xx, LocalFeed reports PASS rss:1, DataStore reports PASS v75:3, LocalBook reports PASS epub:1, ReaderShell reports PASS fixture with TOC 12 in the home layout, SourceMgmt reports PASS fixture with 启用 2/3 in the settings layout, and Headless reports PASS fixture with Download PASS 2/2, TTS PASS q:3, WebDAV PASS sync, FileToken PASS opaque, and DBMig PASS v75:32."
+
+    - capability: "Authorized Corpus Runner Preflight"
+      status: MEASURED_PASS
+      notes: "Redacted target descriptors, authorization flags, failure taxonomy, and source-backed diff artifact shape are ready. Live corpus execution remains explicit-network execution, not default validation."
+
+    - capability: "Authorized Corpus Live Execution"
+      status: CURRENT_CI_FAILING_CORPUS
+      notes: "Historical runtime smoke 20260623T111857Z executed a redacted public-domain corpus chain and reported Corpus PASS with no raw URL/body export. Latest CI gate 20260623T141611Z reports Corpus FAIL with diag:native:network_error local:none feed:none store:none book:none proxy:env:<hash>:7890:app:on corpus:corpus_error and hostNetworkProbe directHttps=tls_error/proxyHttps=tls_error/proxyHttp=http_5xx."
+
+    - capability: "Release Governance Preflight"
+      status: MEASURED_PASS
+      notes: "Evidence intake, product approval packet, candidate root gate export, manual application verification, and final consistency shapes are ready; HarmonyOS still cannot mutate Reader-Core production_release."
+
+    - capability: "Core Root Gate Manual Application"
+      status: CORE_ROOT_GATE_APPLIED_PASS
+      notes: "Reader-Core RECOVERY-25_ROOT_GATE_APPLICATION_20260623.json records production_release pass, production_release_unlocked_after=true, blocker_count_after=0. HarmonyOS still does not mutate Core root artifacts; it only consumes the applied evidence."
 
   testing:
     - capability: "Bookshelf Domain Tests"
@@ -172,7 +201,19 @@ matrix:
 
     - capability: "Test Infrastructure"
       status: IMPLEMENTED
-      notes: "5 suites, 52 test cases, runAllDomainTests()"
+      notes: "runAllDomainTests() aggregates domain, adapter evidence, non-UI parity, external closure, and home dashboard validators"
+
+    - capability: "Home Dashboard Tests"
+      status: IMPLEMENTED
+      notes: "HomeDashboardValidator validates local bookshelf rows, active/unread counts, format labels, progress labels, fixture-bound reader preview fields, and fixture-bound source management fields without external network or live source execution"
+
+    - capability: "HarmonyOS Device App Shell Smoke"
+      status: MEASURED_PASS
+      notes: "entry-default-unsigned.hap installed on emulator API 22; EntryAbility started foreground with pid 6018; bookshelf and search layout dumps contained expected local service-bound text."
+
+    - capability: "HarmonyOS Device Runtime Smoke"
+      status: CURRENT_CI_FAILING_NATIVE_HTTP
+      notes: "Latest npm run ci:device-runtime artifact artifacts/device-runtime-smoke/20260623T141611Z/device_runtime_smoke_summary.json records status FAIL: deviceExecutorUsed=true, externalNetworkUsed=true, runtimeNetwork.proxyEnabled=true, proxyEndpointRewrittenForEmulator=true, proxyListenScope=unlisted-reachable, proxyLocalPortReachable=true, proxyAppLevelApplied=true, hostNetworkProbe directHttps=tls_error/proxyHttps=tls_error/proxyHttp=http_5xx, deviceReaderUISmoke configured/mode=fixture/tocCount=12/passedInHomeLayout=true, deviceSourceManagementSmoke configured/mode=fixture/sourceCount=3/enabledCount=2/debugPassed=true/redacted=true/passedInSettingsLayout=true, deviceHeadlessServiceDemo configured/mode=fixture/downloadPassed=true/ttsPassed=true/webdavPassed=true/fileTokenPassed=true/databaseMigrationPassed=true/schemaVersion=75/migrationStepCount=32/redacted=true/passedInRuntimePanel=true, deviceLocalHTTPProbe started/reachable, deviceLocalFeedProbe configured/served/reachable, deviceDataStoreProbe configured/schemaVersion=75/migrationStepCount=32/recordCount=3/passedInRuntimePanel=true, deviceLocalBookProbe configured/format=epub/tocCount=1/bookshelfCount=1/permissionHandoff=true/passedInRuntimePanel=true, home layout contained ReaderShell PASS fixture/TOC 12, settings layout contained SourceMgmt PASS fixture/启用 2/3/redacted:true, LocalHTTP reached PASS 2xx, LocalFeed reached PASS rss:1, DataStore reached PASS v75:3, LocalBook reached PASS epub:1, Headless reached PASS fixture, Download reached PASS 2/2, TTS reached PASS q:3, WebDAV reached PASS sync, FileToken reached PASS opaque, DBMig reached PASS v75:32, and ArkWeb/Cookie/Session/JS/Secure reached PASS, but external nativeHTTP remains FAIL 0 and Corpus remains FAIL. Last-known non-CI smoke pass remains artifacts/device-runtime-smoke/20260623T111857Z."
 
     - capability: "Core Adapter First Batch Evidence"
       status: PARTIAL_MEASURED
@@ -186,31 +227,47 @@ matrix:
       status: IMPLEMENTED
       notes: "NonUIParityEvidenceValidator validates local code-owned non-UI parity closure, redaction, clean-room flags, no fake device execution, and Core root gate boundary."
 
+    - capability: "External Closure Evidence"
+      status: IMPLEMENTED
+      notes: "ExternalClosureEvidenceValidator validates emulator provisioning audit, authorized corpus runner preflight, device runtime runner readiness, secure-storage entitlement evidence, release governance preflight, authorized redacted external network execution, and no Core root mutation."
+
+    - capability: "HarmonyOS + Core Legado Gap Matrix"
+      status: CURRENT_SNAPSHOT_VALIDATED
+      notes: "docs/PLANNING/HARMONYOS_CORE_LEGADO_CAPABILITY_GAP_MATRIX.json plus scripts/validate_harmonyos_core_legado_gap_matrix.py records nine capability domains, clean-room flags, latest device-runtime CI artifact 20260623T141611Z, app-level proxy evidence, hostNetworkProbe classes, deviceReaderUISmoke ReaderShell PASS fixture/TOC 12 evidence, deviceSourceManagementSmoke SourceMgmt PASS fixture/启用 2/3 evidence, deviceHeadlessServiceDemo Headless PASS fixture/Download PASS 2/2/TTS PASS q:3/WebDAV PASS sync/FileToken PASS opaque/DBMig PASS v75:32 evidence, deviceLocalHTTPProbe PASS evidence, deviceLocalFeedProbe PASS rss:1 evidence, deviceDataStoreProbe PASS v75:3 evidence, deviceLocalBookProbe PASS epub:1 evidence, fail-closed artifact validator binding, and preserves the current external nativeHTTP/corpus CI failure instead of treating it as runtime parity."
+
   ui_scope:
     - capability: "App Shell (Tabs + Navigation)"
-      status: SHELL_ONLY
-      notes: "Index.ets has Tabs + 3 placeholder tabs. BookshelfContent demoted to simple placeholder."
+      status: DEVICE_SMOKE_VERIFIED
+      notes: "Index.ets keeps Tabs navigation and binds bookshelf/search tabs to HomeDashboardService over clean-room local services and fixture fallback; device smoke verified foreground EntryAbility on emulator."
 
     - capability: "Bookshelf Page"
-      status: PLACEHOLDER
-      notes: "Inline in Index.ets. ViewModel binding, book cards, sort toggle REMOVED. Awaiting bridge."
+      status: DEVICE_SMOKE_VERIFIED
+      notes: "Index.ets and BookshelfPage.ets render local bookshelf rows, active/unread counts, filter chips, format labels, and progress labels from HomeDashboardService; emulator layout contained 藏书/在读/未读/三体."
 
     - capability: "Search Page"
-      status: SHELL_ONLY
-      notes: "Placeholder with TextInput. No service binding."
+      status: DEVICE_FIXTURE_SEARCH_VERIFIED
+      notes: "Index.ets and SearchPage.ets call HomeDashboardService.search through SearchService bridge/fixture fallback; emulator layout contained FIXTURE, 三体全集, 三体II, 刘慈欣. Live external source execution remains separate."
+
+    - capability: "Reader Preview Panel"
+      status: DEVICE_FIXTURE_READER_PREVIEW_VERIFIED
+      notes: "Index.ets renders a fixture-bound ReaderShell preview from HomeDashboardService; latest device-runtime home layout contained 阅读器, ReaderShell PASS fixture, 章节 6/12, 正文, and TOC 12. This is not full reader rendering/navigation parity."
+
+    - capability: "Source Management Panel"
+      status: DEVICE_FIXTURE_SOURCE_MGMT_VERIFIED
+      notes: "Index.ets renders fixture-bound source management evidence from BookSourceRepository; latest device-runtime settings layout contained SourceMgmt PASS fixture, 启用 2/3, 规则 search+detail+toc+content, DEBUG fixture, and redacted:true. This is not live source debugger parity."
 
     - capability: "Settings Page"
-      status: SHELL_ONLY
-      notes: "Static placeholder with stage references."
+      status: DEVICE_FIXTURE_SETTINGS_VERIFIED
+      notes: "Settings tab includes fixture-bound SourceMgmt, local import, WebDAV contract, and runtime evidence panels. No external live source, production WebDAV, release signing, or full settings-depth parity is claimed."
 
   locked:
     - capability: "JS Runtime"
-      status: DEVICE_READY_MEASURED
-      notes: "Local planning lock removed. Complete evidence adds authorized JS execution through the runtimeHost seam; local validation uses fallback executor and does not pretend a device Web component ran"
+      status: DEVICE_RUNTIME_VERIFIED
+      notes: "Settings runtime panel used ArkWeb runJavaScript over rawfile DOM on emulator and reported JS PASS. Raw response/cookie/session values remain redacted."
 
     - capability: "WebView Runtime"
-      status: DEVICE_READY_MEASURED
-      notes: "Local planning lock removed. Complete evidence adds ArkWeb DOM executor bridge shape; device ArkWeb executor can replace fallback executor without schema changes"
+      status: DEVICE_RUNTIME_VERIFIED
+      notes: "Settings runtime panel embedded ArkWeb Web component loading runtime_smoke.html on emulator and reported ArkWeb PASS."
 
     - capability: "Real Book Source HTTP"
       status: AUTHORIZED_EVIDENCE_BOUND
@@ -239,6 +296,6 @@ boundary_compliance:
   no_hardcoded_secrets: PASS
   no_core_modifications: PASS
   build_successful: PASS
-  no_ui_expansion: PASS
+  no_unverified_ui_expansion: PASS
   no_production_ready_without_evidence: PASS
   no_reader_core_root_gate_mutation: PASS

@@ -1,9 +1,9 @@
 // FixtureReplayInterceptor — offline fixture fallback when bridge unavailable
 // Returns pre-recorded JSON fixtures. Tagged FIXTURE_REPLAY in responses.
-import { BridgeHTTPClient, BridgeHealth, BridgeConnectionError } from './BridgeHTTPClient';
+import { BridgeHTTPClient, BridgeHealth, BridgeTXTParseResult, BridgeTXTTOCItem } from './BridgeHTTPClient';
 import { BookSource } from '../models/BookSource';
 import { SearchQuery, SearchResultItem } from '../models/SearchModels';
-import { TOCItem, ContentPage } from '../models/ContentModels';
+import { TOCItem, ContentPage, ContentType, VIPStatus } from '../models/ContentModels';
 import { ChapterSplitPolicy } from '../models/LocalBook';
 
 const FIXTURE_TAG = 'FIXTURE_REPLAY';
@@ -44,22 +44,32 @@ const CONTENT_FIXTURES: Record<string, ContentPage> = {
     content: '在中国，任何超脱飞扬的思想都会砰然坠地的，现实的引力太沉重了...',
     chapterURL: 'fixture://ch/1',
     nextChapterURL: 'fixture://ch/2',
-    contentType: 'text',
-    vipStatus: 'free',
+    contentType: ContentType.text,
+    vipStatus: VIPStatus.free,
     unknownFields: {}
   }
 };
 
-const TXT_PARSE_FIXTURES: Record<string, Record<string, Object>> = {
-  'default': {
-    encoding: 'utf-8',
-    content: '第一章\n这是测试内容...\n第二章\n更多内容...',
-    toc: [
-      { title: '第一章', level: 1, byteOffset: 0 },
-      { title: '第二章', level: 1, byteOffset: 100 }
-    ],
-    byteCount: 200
-  }
+const TXT_TOC_FIRST: BridgeTXTTOCItem = {
+  title: '第一章',
+  level: 1,
+  byteOffset: 0
+};
+
+const TXT_TOC_SECOND: BridgeTXTTOCItem = {
+  title: '第二章',
+  level: 1,
+  byteOffset: 100
+};
+
+const DEFAULT_TXT_PARSE_FIXTURE: BridgeTXTParseResult = {
+  encoding: 'utf-8',
+  content: '第一章\n这是测试内容...\n第二章\n更多内容...',
+  toc: [
+    TXT_TOC_FIRST,
+    TXT_TOC_SECOND
+  ],
+  byteCount: 200
 };
 
 export class FixtureReplayInterceptor {
@@ -107,8 +117,8 @@ export class FixtureReplayInterceptor {
     return this.tagFixture(page);
   }
 
-  async parseTXT(dataBase64: string, encoding?: string, policy?: ChapterSplitPolicy): Promise<Record<string, Object>> {
-    const result = TXT_PARSE_FIXTURES['default'];
+  async parseTXT(dataBase64: string, encoding?: string, policy?: ChapterSplitPolicy): Promise<BridgeTXTParseResult> {
+    const result: BridgeTXTParseResult = DEFAULT_TXT_PARSE_FIXTURE;
     return this.tagFixture(result);
   }
 
@@ -177,7 +187,7 @@ export class BridgeClientWithFallback {
     }
   }
 
-  async parseTXT(dataBase64: string, encoding?: string, policy?: ChapterSplitPolicy): Promise<Record<string, Object>> {
+  async parseTXT(dataBase64: string, encoding?: string, policy?: ChapterSplitPolicy): Promise<BridgeTXTParseResult> {
     if (this.useFixture) return this.fixture.parseTXT(dataBase64, encoding, policy);
     try {
       return await this.bridge.parseTXT(dataBase64, encoding, policy);

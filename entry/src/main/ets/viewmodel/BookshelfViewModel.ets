@@ -1,6 +1,5 @@
-// BookshelfViewModel — SHELL_ONLY_PLACEHOLDER
-// DO NOT bind to UI pages until bridge service (HOS-2B-002) is complete.
-// Currently unlinked from Index.ets. Use BookshelfService for headless operations.
+// BookshelfViewModel — legacy headless helper kept unlinked from UI pages.
+// Current shell pages bind through HomeDashboardService for local snapshot evidence.
 import { IBookshelfRepository, MockBookshelfRepository } from '../repository/BookshelfRepository';
 import { LocalBook } from '../models/LocalBook';
 import {

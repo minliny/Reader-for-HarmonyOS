@@ -47,7 +47,7 @@ export class FeedParserAdapter {
   }
 
   private parseRSS(input: string): FeedParseResult {
-    const channel = this.first(input, '<channel', '</channel>') ?? input;
+    const channel = this.firstRaw(input, '<channel', '</channel>') ?? input;
     const items = this.blocks(channel, '<item', '</item>');
     const entries: FeedEntry[] = [];
     const categories = this.values(channel, 'category');
@@ -171,13 +171,18 @@ export class FeedParserAdapter {
   }
 
   private first(input: string, open: string, close: string): string | null {
+    const raw = this.firstRaw(input, open, close);
+    return raw === null ? null : this.clean(raw);
+  }
+
+  private firstRaw(input: string, open: string, close: string): string | null {
     const start = input.indexOf(open);
     if (start < 0) { return null; }
     const tagEnd = input.indexOf('>', start);
     if (tagEnd < 0) { return null; }
     const end = input.indexOf(close, tagEnd + 1);
     if (end < 0) { return null; }
-    return this.clean(input.substring(tagEnd + 1, end));
+    return input.substring(tagEnd + 1, end);
   }
 
   private value(input: string, tag: string): string {
