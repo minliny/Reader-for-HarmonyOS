@@ -5,6 +5,10 @@ import { runSearchDomainTests } from './SearchDomainValidator';
 import { runTOCContentDomainTests } from './TOCContentDomainValidator';
 import { runImportDomainTests } from './ImportDomainValidator';
 import { runSyncDomainTests } from './SyncDomainValidator';
+import { runCoreAdapterEvidenceTests } from './CoreAdapterEvidenceValidator';
+import { runCoreAdapterFirstBatchEvidenceTests } from './CoreAdapterFirstBatchEvidenceValidator';
+import { runCoreAdapterCompleteEvidenceTests } from './CoreAdapterCompleteEvidenceValidator';
+import { runNonUIParityEvidenceTests } from './NonUIParityEvidenceValidator';
 
 export interface TestSuiteResult {
   suite: string;
@@ -30,6 +34,18 @@ export function runAllDomainTests(): TestSuiteResult[] {
 
   const sync = runSyncDomainTests();
   results.push({ suite: 'Sync', passed: sync.passed, failed: sync.failed, total: sync.results.length });
+
+  const coreAdapterEvidence = runCoreAdapterEvidenceTests();
+  results.push({ suite: 'Core Adapter Evidence', passed: coreAdapterEvidence.passed, failed: coreAdapterEvidence.failed, total: coreAdapterEvidence.results.length });
+
+  const coreAdapterFirstBatchEvidence = runCoreAdapterFirstBatchEvidenceTests();
+  results.push({ suite: 'Core Adapter First Batch Evidence', passed: coreAdapterFirstBatchEvidence.passed, failed: coreAdapterFirstBatchEvidence.failed, total: coreAdapterFirstBatchEvidence.results.length });
+
+  const coreAdapterCompleteEvidence = runCoreAdapterCompleteEvidenceTests();
+  results.push({ suite: 'Core Adapter Complete Evidence', passed: coreAdapterCompleteEvidence.passed, failed: coreAdapterCompleteEvidence.failed, total: coreAdapterCompleteEvidence.results.length });
+
+  const nonUIParityEvidence = runNonUIParityEvidenceTests();
+  results.push({ suite: 'Legado Non-UI Parity Evidence', passed: nonUIParityEvidence.passed, failed: nonUIParityEvidence.failed, total: nonUIParityEvidence.results.length });
 
   return results;
 }

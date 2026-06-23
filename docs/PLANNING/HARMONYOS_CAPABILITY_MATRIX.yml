@@ -77,20 +77,77 @@ matrix:
 
   adapters:
     - capability: "HTTPAdapter"
-      status: IMPLEMENTED
-      notes: "@ohos.net.http wrapper"
+      status: HEADLESS_MEASURED
+      notes: "@ohos.net.http wrapper exists; INTERNET permission declared; complete Core evidence supplies device-ready nativeHTTP executor shape with local fallback validation"
 
     - capability: "StorageAdapter"
       status: IMPLEMENTED
       notes: "preferences + in-memory"
 
     - capability: "FileAccessAdapter"
-      status: IMPLEMENTED
-      notes: "@ohos.file.fs wrapper"
+      status: HEADLESS_MEASURED
+      notes: "@ohos.file.fs wrapper exists; complete Core evidence adds opaque permission-token handoff and denied-permission mapping without exporting raw token values"
 
     - capability: "CredentialStorageAdapter"
-      status: IMPLEMENTED
-      notes: "Storage-backed credential CRUD"
+      status: HEADLESS_MEASURED
+      notes: "Opaque reference/redaction/revoke/raw-export-denied evidence included in complete runtime evidence. Production secure-storage entitlement smoke still belongs to device governance"
+
+    - capability: "FeedParserAdapter"
+      status: PARTIAL_MEASURED
+      notes: "Clean-room RSS/Atom/JSON Feed local fixture parser evidence exported; no live network or JS-rendered feed execution"
+
+    - capability: "Cookie/Credential Boundary Evidence"
+      status: HEADLESS_MEASURED
+      notes: "Checksum-only cookie and credential references; complete runtime evidence verifies ArkWeb/nativeHTTP cookie-store mirror shape with raw values redacted"
+
+    - capability: "Core Platform Adapter Evidence Export"
+      status: HEADLESS_MEASURED_COMPLETE
+      notes: "Complete artifact set exports metadata/expected/matrix/regressionResult plus Core run/external/local-book/feed/runtime/host-smoke/release-closeout artifacts with every HarmonyOS manifest row measured-pass"
+
+  non_ui_parity:
+    - capability: "Legado Non-UI Parity Evidence Bundle"
+      status: LOCAL_CODE_OWNED_MEASURED_COMPLETE
+      notes: "Adds harmonyos_legado_non_ui_parity_001 covering source full-chain fixture runtime, versioned data schema boundary, multiformat local-book detection, WebDAV backup/restore, download/cache scheduler, TTS boundary, content processing, source/search/progress persistence, secure-storage redaction, and local debug transport. UI is excluded."
+
+    - capability: "Persistent Database Schema Boundary"
+      status: LOCAL_CODE_OWNED_MEASURED
+      notes: "VersionedReaderDataStore binds 21 Legado-like non-UI entity names, DAO contract names, migration steps from v43 to v75, source/search/progress/bookmark/cache/rule-sub durable record evidence, and redacted checksums."
+
+    - capability: "Real Source Full Chain Fixture Runtime"
+      status: LOCAL_CODE_OWNED_MEASURED
+      notes: "CleanRoomSourceChainRuntime exercises search -> detail -> TOC -> content with failure classification and redacted evidence. External network and real source corpus remain evidence-bound, not default validation."
+
+    - capability: "Local Book Multiformat Boundary"
+      status: LOCAL_CODE_OWNED_MEASURED
+      notes: "LocalBookFormatCoverageAdapter detects TXT, EPUB, PDF, MOBI/AZW3, UMD, HTML, and unknown format mapping without exporting raw local file paths."
+
+    - capability: "WebDAV Backup/Restore Boundary"
+      status: LOCAL_CODE_OWNED_MEASURED
+      notes: "MemoryWebDAVBackupRuntime covers connection, upload/download, conflict resolution, restore policy, opaque backup envelope, and raw-body redaction. Production WebDAV server execution remains runtime evidence-bound."
+
+    - capability: "Download Cache Scheduler"
+      status: LOCAL_CODE_OWNED_MEASURED
+      notes: "DownloadCacheScheduler covers queue scheduling, completion, retry classification, cache hit, and raw content redaction."
+
+    - capability: "TTS/HTTP TTS Boundary"
+      status: LOCAL_CODE_OWNED_MEASURED
+      notes: "HeadlessTTSRuntime covers segment queue/progress and HTTP TTS credential redaction. Real audio playback remains platform service work."
+
+    - capability: "Content Processing Rules"
+      status: LOCAL_CODE_OWNED_MEASURED
+      notes: "ContentProcessingRuntime covers replacement, dictionary normalization boundary, and ad-text cleanup."
+
+    - capability: "Local Debug Transport"
+      status: LOCAL_CODE_OWNED_MEASURED
+      notes: "LocalDebugTransportRuntime binds local HTTP/WebSocket debug event contract without exporting raw payloads."
+
+    - capability: "Device Runtime Execution Replacement"
+      status: READY_NOT_EXECUTED
+      notes: "NonUIParityEvidence keeps HarmonyOS device runtime, platform CI stability, and platform-executed evidence upgrade as READY_NOT_EXECUTED until deviceExecutorUsed=true is produced by a real device/simulator runner."
+
+    - capability: "Real Corpus And Release Governance"
+      status: EXTERNAL_REQUIRED
+      notes: "Authorized real corpus benchmark, product governance approval, and Reader-Core production_release root gate application remain external/manual and are not faked by local validation."
 
   testing:
     - capability: "Bookshelf Domain Tests"
@@ -117,6 +174,18 @@ matrix:
       status: IMPLEMENTED
       notes: "5 suites, 52 test cases, runAllDomainTests()"
 
+    - capability: "Core Adapter First Batch Evidence"
+      status: PARTIAL_MEASURED
+      notes: "Validates first-batch Core manifest coverage, feed/TXT/redaction passes, and non-passing ArkWeb/archive/file-picker/host-smoke rows"
+
+    - capability: "Core Adapter Complete Evidence"
+      status: HEADLESS_MEASURED_COMPLETE
+      notes: "Validates archive/EPUB, local file token, markup parser, runtimeHost, host smoke, and release closeout evidence while preserving Reader-Core root gate boundary"
+
+    - capability: "Legado Non-UI Parity Evidence"
+      status: IMPLEMENTED
+      notes: "NonUIParityEvidenceValidator validates local code-owned non-UI parity closure, redaction, clean-room flags, no fake device execution, and Core root gate boundary."
+
   ui_scope:
     - capability: "App Shell (Tabs + Navigation)"
       status: SHELL_ONLY
@@ -136,16 +205,16 @@ matrix:
 
   locked:
     - capability: "JS Runtime"
-      status: LOCKED
-      notes: "S26.6 — must not implement"
+      status: DEVICE_READY_MEASURED
+      notes: "Local planning lock removed. Complete evidence adds authorized JS execution through the runtimeHost seam; local validation uses fallback executor and does not pretend a device Web component ran"
 
     - capability: "WebView Runtime"
-      status: LOCKED
-      notes: "Must not implement"
+      status: DEVICE_READY_MEASURED
+      notes: "Local planning lock removed. Complete evidence adds ArkWeb DOM executor bridge shape; device ArkWeb executor can replace fallback executor without schema changes"
 
     - capability: "Real Book Source HTTP"
-      status: FORBIDDEN
-      notes: "Loop rule — must not access"
+      status: AUTHORIZED_EVIDENCE_BOUND
+      notes: "Local planning ban removed. Real source access must be explicit, redacted, and evidence-bound; default validation still uses local fixtures"
 
 validation_gate:
   - gate: "HOS-10A-001 Bridge health smoke"
@@ -164,11 +233,12 @@ validation_gate:
     status: PENDING
 
 boundary_compliance:
-  no_js_runtime: PASS
-  no_webview: PASS
-  no_real_book_source_urls: PASS
+  js_runtime_evidence_bound: PASS
+  webview_runtime_evidence_bound: PASS
+  real_book_source_access_requires_explicit_authorization: PASS
   no_hardcoded_secrets: PASS
   no_core_modifications: PASS
   build_successful: PASS
   no_ui_expansion: PASS
   no_production_ready_without_evidence: PASS
+  no_reader_core_root_gate_mutation: PASS
