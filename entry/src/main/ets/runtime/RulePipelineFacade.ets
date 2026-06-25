@@ -87,15 +87,15 @@ export class RulePipelineFacade {
   private evaluateJSONPath(request: RulePipelineRequest): RulePipelineResult {
     // 简化 JSONPath：支持 $.field.subfield 点路径
     try {
-      const obj = JSON.parse(request.input);
+      const obj: Record<string, Object> = JSON.parse(request.input) as Record<string, Object>;
       const path = request.ruleExpression.replace(/^\$\.?/, '');
       const parts = path.split('.');
-      let current: Object = obj;
+      let current: Record<string, Object> = obj;
       for (let i = 0; i < parts.length; i++) {
         const key = parts[i];
         if (key.length === 0) { continue; }
-        if (current instanceof Object && current.hasOwnProperty(key)) {
-          current = (current as Record<string, Object>)[key];
+        if (current[key] !== undefined && current[key] !== null) {
+          current = current[key] as Record<string, Object>;
         } else {
           return { values: [], matchedCount: 0, diagnostics: [`jsonpath miss at:${key}`] };
         }
@@ -110,13 +110,13 @@ export class RulePipelineFacade {
   private evaluateTemplate(request: RulePipelineRequest): RulePipelineResult {
     // 简化 template：{{field}} 替换
     try {
-      const obj = JSON.parse(request.input);
+      const obj: Record<string, Object> = JSON.parse(request.input) as Record<string, Object>;
       let result = request.ruleExpression;
       const keys = Object.keys(obj);
       for (let i = 0; i < keys.length; i++) {
         const key = keys[i];
         const placeholder = `{{${key}}}`;
-        const value = String((obj as Record<string, Object>)[key]);
+        const value = String(obj[key]);
         while (result.indexOf(placeholder) !== -1) {
           result = result.replace(placeholder, value);
         }

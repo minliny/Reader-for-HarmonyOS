@@ -1,5 +1,6 @@
 // TestInfra — fixture test runner + manifest
 // Aggregates all domain validators for headless QA
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { runBookshelfDomainTests } from './BookshelfDomainValidator';
 import { runSearchDomainTests } from './SearchDomainValidator';
 import { runTOCContentDomainTests } from './TOCContentDomainValidator';
@@ -15,6 +16,7 @@ import { runContractRunReportValidatorTests } from './ContractRunReportValidator
 import { runRuntimeKitValidatorTests } from './RuntimeKitValidator';
 import { runReleaseGateValidatorTests } from './ReleaseGateValidator';
 import { runCAbiPocValidatorTests } from './CAbiPocValidator';
+import { runHostBusClosedLoopTests } from './HostBusClosedLoopValidator';
 
 export interface TestSuiteResult {
   suite: string;
@@ -23,53 +25,49 @@ export interface TestSuiteResult {
   total: number;
 }
 
+// SDK-COMPAT: run a suite in isolation so a thrown validator does not abort
+// the whole headless run; a throw is recorded as a single failed case.
+interface SuiteRunnerResult { name: string }
+interface SuiteRunner { passed: number; failed: number; results: SuiteRunnerResult[] }
+
+function runSuite(results: TestSuiteResult[], suite: string, fn: () => SuiteRunner): void {
+  let passed = 0;
+  let failed = 0;
+  let total = 0;
+  try {
+    const r = fn();
+    passed = r.passed;
+    failed = r.failed;
+    total = r.results.length;
+  } catch (e) {
+    // Validator threw; record as one failure so the run continues.
+    failed = 1;
+    total = 1;
+    const msg = (e instanceof Error) ? e.message : String(e);
+    hilog.error(0x0000, 'TestInfra', `suite ${suite} threw: ${msg}`);
+  }
+  results.push({ suite, passed, failed, total });
+}
+
 export function runAllDomainTests(): TestSuiteResult[] {
   const results: TestSuiteResult[] = [];
 
-  const bookshelf = runBookshelfDomainTests();
-  results.push({ suite: 'Bookshelf', passed: bookshelf.passed, failed: bookshelf.failed, total: bookshelf.results.length });
-
-  const search = runSearchDomainTests();
-  results.push({ suite: 'Search', passed: search.passed, failed: search.failed, total: search.results.length });
-
-  const homeDashboard = runHomeDashboardTests();
-  results.push({ suite: 'Home Dashboard', passed: homeDashboard.passed, failed: homeDashboard.failed, total: homeDashboard.results.length });
-
-  const tocContent = runTOCContentDomainTests();
-  results.push({ suite: 'TOC/Content', passed: tocContent.passed, failed: tocContent.failed, total: tocContent.results.length });
-
-  const import_ = runImportDomainTests();
-  results.push({ suite: 'Import', passed: import_.passed, failed: import_.failed, total: import_.results.length });
-
-  const sync = runSyncDomainTests();
-  results.push({ suite: 'Sync', passed: sync.passed, failed: sync.failed, total: sync.results.length });
-
-  const coreAdapterEvidence = runCoreAdapterEvidenceTests();
-  results.push({ suite: 'Core Adapter Evidence', passed: coreAdapterEvidence.passed, failed: coreAdapterEvidence.failed, total: coreAdapterEvidence.results.length });
-
-  const coreAdapterFirstBatchEvidence = runCoreAdapterFirstBatchEvidenceTests();
-  results.push({ suite: 'Core Adapter First Batch Evidence', passed: coreAdapterFirstBatchEvidence.passed, failed: coreAdapterFirstBatchEvidence.failed, total: coreAdapterFirstBatchEvidence.results.length });
-
-  const coreAdapterCompleteEvidence = runCoreAdapterCompleteEvidenceTests();
-  results.push({ suite: 'Core Adapter Complete Evidence', passed: coreAdapterCompleteEvidence.passed, failed: coreAdapterCompleteEvidence.failed, total: coreAdapterCompleteEvidence.results.length });
-
-  const nonUIParityEvidence = runNonUIParityEvidenceTests();
-  results.push({ suite: 'Legado Non-UI Parity Evidence', passed: nonUIParityEvidence.passed, failed: nonUIParityEvidence.failed, total: nonUIParityEvidence.results.length });
-
-  const externalClosureEvidence = runExternalClosureEvidenceTests();
-  results.push({ suite: 'External Closure Evidence', passed: externalClosureEvidence.passed, failed: externalClosureEvidence.failed, total: externalClosureEvidence.results.length });
-
-  const contractRunReport = runContractRunReportValidatorTests();
-  results.push({ suite: 'Contract Run Report Validator', passed: contractRunReport.passed, failed: contractRunReport.failed, total: contractRunReport.results.length });
-
-  const runtimeKit = runRuntimeKitValidatorTests();
-  results.push({ suite: 'Runtime Kit Validator', passed: runtimeKit.passed, failed: runtimeKit.failed, total: runtimeKit.results.length });
-
-  const releaseGate = runReleaseGateValidatorTests();
-  results.push({ suite: 'Release Gate Validator', passed: releaseGate.passed, failed: releaseGate.failed, total: releaseGate.results.length });
-
-  const cabiPoc = runCAbiPocValidatorTests();
-  results.push({ suite: 'C ABI POC Validator', passed: cabiPoc.passed, failed: cabiPoc.failed, total: cabiPoc.results.length });
+  runSuite(results, 'Bookshelf', () => runBookshelfDomainTests());
+  runSuite(results, 'Search', () => runSearchDomainTests());
+  runSuite(results, 'Home Dashboard', () => runHomeDashboardTests());
+  runSuite(results, 'TOC/Content', () => runTOCContentDomainTests());
+  runSuite(results, 'Import', () => runImportDomainTests());
+  runSuite(results, 'Sync', () => runSyncDomainTests());
+  runSuite(results, 'Core Adapter Evidence', () => runCoreAdapterEvidenceTests());
+  runSuite(results, 'Core Adapter First Batch Evidence', () => runCoreAdapterFirstBatchEvidenceTests());
+  runSuite(results, 'Core Adapter Complete Evidence', () => runCoreAdapterCompleteEvidenceTests());
+  runSuite(results, 'Legado Non-UI Parity Evidence', () => runNonUIParityEvidenceTests());
+  runSuite(results, 'External Closure Evidence', () => runExternalClosureEvidenceTests());
+  runSuite(results, 'Contract Run Report Validator', () => runContractRunReportValidatorTests());
+  runSuite(results, 'Runtime Kit Validator', () => runRuntimeKitValidatorTests());
+  runSuite(results, 'Release Gate Validator', () => runReleaseGateValidatorTests());
+  runSuite(results, 'C ABI POC Validator', () => runCAbiPocValidatorTests());
+  runSuite(results, 'Host Bus Closed Loop (headless parser)', () => runHostBusClosedLoopTests());
 
   return results;
 }

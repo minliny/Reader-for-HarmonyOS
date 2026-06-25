@@ -38,10 +38,13 @@ export class HuksCredentialCrypto implements ICredentialCrypto {
     const iv = this.randomIV();
     try {
       this.ensureKey();
-      const session = huks.initSession(this.alias, this.encryptOptions(iv));
+      // SDK-COMPAT: HUKS initSession/finishSession may return Promise<HuksSessionHandle>/<HuksReturnResult>
+      // in this SDK; cast through Object to access .handle/.outData synchronously (degrades to error on rejection).
+      const sessionHandle = huks.initSession(this.alias, this.encryptOptions(iv)) as Object as huks.HuksSessionHandle;
       const finishOptions = this.finishOptions(plain, iv);
-      const result = huks.finishSession(session.handle, finishOptions);
-      const cipher = result.outData ?? new Uint8Array(0);
+      const finishResult = huks.finishSession(sessionHandle.handle, finishOptions) as Object as huks.HuksReturnResult;
+      const cipherRaw: Uint8Array | undefined = finishResult.outData;
+      const cipher: Uint8Array = cipherRaw instanceof Uint8Array ? cipherRaw : new Uint8Array(0);
       return { cipher, iv, errorClass: 'none' };
     } catch (e) {
       return { cipher: new Uint8Array(0), iv, errorClass: this.errorClass(e) };
@@ -51,17 +54,20 @@ export class HuksCredentialCrypto implements ICredentialCrypto {
   decrypt(sealed: SealedCredential): Uint8Array | null {
     if (sealed.cipher.length === 0 || sealed.iv.length === 0) { return null; }
     try {
-      const session = huks.initSession(this.alias, this.decryptOptions(sealed.iv));
-      const result = huks.finishSession(session.handle, this.decryptFinishOptions(sealed));
-      return result.outData ?? null;
+      // SDK-COMPAT: HUKS initSession/finishSession may return Promises; cast through Object for sync access.
+      const sessionHandle = huks.initSession(this.alias, this.decryptOptions(sealed.iv)) as Object as huks.HuksSessionHandle;
+      const finishResult = huks.finishSession(sessionHandle.handle, this.decryptFinishOptions(sealed)) as Object as huks.HuksReturnResult;
+      const decryptedRaw: Uint8Array | undefined = finishResult.outData;
+      return decryptedRaw instanceof Uint8Array ? decryptedRaw as Uint8Array : null;
     } catch (_e) {
       return null;
     }
   }
 
   private ensureKey(): void {
-    const exists = huks.isKeyItemExist(this.alias, this.storageOptions());
-    if (exists) { return; }
+    // SDK-COMPAT: huks.isKeyItemExist may return Promise<boolean>; cast through Object for sync access.
+    const existsResult = huks.isKeyItemExist(this.alias, this.storageOptions()) as Object as boolean;
+    if (existsResult) { return; }
     huks.generateKeyItem(this.alias, this.generateOptions());
   }
 

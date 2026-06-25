@@ -155,17 +155,25 @@ export function buildHarmonyOSCompleteEvidenceBundle(
     externalGPLCodeCopied: false,
     legadoSourceCopied: false
   };
-  return {
-    ...first,
-    sampleId: 'harmonyos_adapter_complete_evidence_001',
-    completeSampleId: 'harmonyos_adapter_complete_evidence_001',
-    ciArtifactId,
-    localEvidence,
-    runReport,
+  // SDK-COMPAT: ArkTS disallows spread on non-array; manually expand and override fields.
+  const completeBundle: HarmonyOSCompleteEvidenceBundle = {
+    sampleId: first.sampleId,
+    platformFamily: first.platformFamily,
+    runnerIdentifier: first.runnerIdentifier,
+    platformRepository: first.platformRepository,
+    platformCommit: first.platformCommit,
+    ciJobId: first.ciJobId,
+    ciArtifactId: ciArtifactId,
+    caseBundle: first.caseBundle,
+    runReport: runReport,
+    executedCaseIDs: first.executedCaseIDs,
     exportedRunReportArtifactId: 'harmonyos-complete-contract-run-report-001',
-    runtimeHostEvidence: runtime,
-    hostSmokeEvidence: hostSmoke,
-    releaseCloseoutEvidence: releaseCloseout,
+    localEvidence: localEvidence,
+    requiredP2LocalBookMatrixIDs: first.requiredP2LocalBookMatrixIDs,
+    requiredP2RSSMatrixIDs: first.requiredP2RSSMatrixIDs,
+    requiredRuntimeEvidenceIDs: first.requiredRuntimeEvidenceIDs,
+    requiredHostSmokeEvidenceIDs: first.requiredHostSmokeEvidenceIDs,
+    unsupportedReaderMarkers: first.unsupportedReaderMarkers,
     canEnterPlatformEvidenceGate: allCasesPassed,
     canEnterLocalBookPlatformGate: true,
     canEnterFeedParserPlatformGate: true,
@@ -180,22 +188,38 @@ export function buildHarmonyOSCompleteEvidenceBundle(
     externalNetworkUsed: false,
     cleanRoomMaintained: true,
     externalGPLCodeCopied: false,
-    legadoSourceCopied: false
+    legadoSourceCopied: false,
+    completeSampleId: 'harmonyos_adapter_complete_evidence_001',
+    runtimeHostEvidence: runtime,
+    hostSmokeEvidence: hostSmoke,
+    releaseCloseoutEvidence: releaseCloseout
   };
+  return completeBundle;
 }
 
 export function buildHarmonyOSCompleteArtifactSet(bundle?: HarmonyOSCompleteEvidenceBundle): HarmonyOSCompleteArtifactSet {
   const resolved = bundle ?? buildHarmonyOSCompleteEvidenceBundle();
   const base = buildHarmonyOSFirstBatchArtifactSet(resolved);
-  return {
-    ...base,
+  // SDK-COMPAT: ArkTS disallows spread on non-array; manually copy all fields.
+  const artifactSet: HarmonyOSCompleteArtifactSet = {
+    metadata: base.metadata,
+    expected: base.expected,
+    matrix: base.matrix,
+    regressionResult: base.regressionResult,
+    platformAdapterContractRunReport: base.platformAdapterContractRunReport,
+    platformAdapterExternalExecution: base.platformAdapterExternalExecution,
+    localBookPlatformExecution: base.localBookPlatformExecution,
+    feedParserPlatformExecution: base.feedParserPlatformExecution,
+    platformRuntimeCI: base.platformRuntimeCI,
+    hostAppIntegrationSmokeReport: base.hostAppIntegrationSmokeReport,
     releaseEvidenceCloseout: JSON.stringify(resolved.releaseCloseoutEvidence)
   };
+  return artifactSet;
 }
 
 function cloneEvidence(evidence: LocalAdapterEvidenceCase[]): LocalAdapterEvidenceCase[] {
-  return evidence.map((item: LocalAdapterEvidenceCase) => {
-    return {
+  return evidence.map((item: LocalAdapterEvidenceCase): LocalAdapterEvidenceCase => {
+    const cloned: LocalAdapterEvidenceCase = {
       caseID: item.caseID,
       evidenceID: item.evidenceID,
       kind: item.kind,
@@ -212,6 +236,7 @@ function cloneEvidence(evidence: LocalAdapterEvidenceCase[]): LocalAdapterEviden
       externalGPLCodeCopied: item.externalGPLCodeCopied,
       legadoSourceCopied: item.legadoSourceCopied
     };
+    return cloned;
   });
 }
 

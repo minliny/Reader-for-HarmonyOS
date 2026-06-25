@@ -16,12 +16,14 @@ export function runSyncDomainTests(): TR {
   r.assert(ConflictPolicy.keepBoth === 'keepBoth', 'keepBoth value');
 
   // 2. Progress record shape
-  const record = { bookId:'b1', currentChapterIndex:3, chapterProgress:0.5, totalChapters:10, lastOpenedAt:Date.now(), updatedAt:Date.now() };
+  interface ProgressRecord { bookId: string; currentChapterIndex: number; chapterProgress: number; totalChapters: number; lastOpenedAt: number; updatedAt: number; }
+  const record: ProgressRecord = { bookId:'b1', currentChapterIndex:3, chapterProgress:0.5, totalChapters:10, lastOpenedAt:Date.now(), updatedAt:Date.now() };
   r.assert(record.bookId === 'b1', 'record has bookId');
   r.assert(record.chapterProgress === 0.5, 'record has progress');
 
   // 3. Backup config shape
-  const config = { name:'test', remotePath:'/backup', includeProgress:true, includeBooks:true, autoBackup:false };
+  interface BackupConfig { name: string; remotePath: string; includeProgress: boolean; includeBooks: boolean; autoBackup: boolean; }
+  const config: BackupConfig = { name:'test', remotePath:'/backup', includeProgress:true, includeBooks:true, autoBackup:false };
   r.assert(config.name === 'test', 'config has name');
   r.assert(config.autoBackup === false, 'config autoBackup false');
 

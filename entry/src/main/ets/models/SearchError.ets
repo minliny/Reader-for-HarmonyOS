@@ -24,7 +24,10 @@ export class SearchError extends Error {
   }
 
   static configMissing(field: string, sourceName?: string): SearchError {
-    return new SearchError(SearchErrorCode.CONFIG_MISSING, `Missing config: ${field}`, sourceName, { field });
+    // SDK-COMPAT: build Record explicitly to satisfy arkts-no-untyped-obj-literals.
+    const ctx: Record<string, string> = {} as Record<string, string>;
+    ctx['field'] = field;
+    return new SearchError(SearchErrorCode.CONFIG_MISSING, `Missing config: ${field}`, sourceName, ctx);
   }
 
   static networkError(detail: string, sourceName?: string): SearchError {
@@ -52,10 +55,9 @@ export class SearchError extends Error {
   }
 
   toRecord(): Record<string, string> {
-    const r: Record<string, string> = {
-      code: this.code,
-      message: this.message
-    };
+    const r: Record<string, string> = {} as Record<string, string>;
+    r['code'] = this.code;
+    r['message'] = this.message;
     if (this.sourceName) { r['sourceName'] = this.sourceName; }
     if (this.context) {
       const keys = Object.keys(this.context);

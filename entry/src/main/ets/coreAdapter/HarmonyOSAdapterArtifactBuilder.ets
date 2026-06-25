@@ -198,7 +198,13 @@ function createMatrixDocument(report: HarmonyOSAdapterContractReport): ArtifactM
 function createRegressionResultDocument(
   report: HarmonyOSAdapterContractReport
 ): ArtifactRegressionResultDocument {
-  const artifactSet = {
+  interface TempArtifactSet {
+    metadata: string;
+    expected: string;
+    matrix: string;
+    regressionResult: string;
+  }
+  const artifactSet: TempArtifactSet = {
     metadata: JSON.stringify(createMetadataDocument(report)),
     expected: JSON.stringify(createExpectedDocument(report)),
     matrix: JSON.stringify(createMatrixDocument(report)),

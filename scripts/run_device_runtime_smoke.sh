@@ -121,6 +121,23 @@ target_ready() {
   grep -F "$TARGET" "$file" | grep -Fv "Offline" | grep -Fv "unknown" | grep -Fv "Unknown" >/dev/null
 }
 
+# Classify the hdc target into an evidence tier. A loopback TCP target
+# (127.0.0.1 / localhost) is a HarmonyOS emulator -> "simulator". Any other
+# target (a real device serial, USB id, or non-loopback TCP address attached
+# via `hdc tconn`) is "device". This tier is recorded in the summary JSON so
+# simulator and real-device evidence are never conflated; callers/reporters
+# MUST treat the two tiers as distinct (see
+# docs/CORE_ADAPTER_EVIDENCE_TIERS.md). NOTE: port alone is NOT a reliable
+# signal — a real device can be reached over TCP at any port via `hdc tconn`.
+derive_tier() {
+  local t="$1"
+  if [[ "$t" =~ ^(127\.|localhost) ]]; then
+    printf 'simulator'
+  else
+    printf 'device'
+  fi
+}
+
 require_ready_target() {
   local file="$1"
   if ! grep -Fq "$TARGET" "$file"; then
@@ -697,6 +714,8 @@ write_summary() {
     printf '    "dirty": %s\n' "$(repo_dirty)"
     printf '  },\n'
     printf '  "target": "%s",\n' "$(json_escape "$TARGET")"
+    printf '  "tier": "%s",\n' "$(derive_tier "$TARGET")"
+    printf '  "tierReason": "%s",\n' "$(json_escape "loopback/tcp target -> simulator; device serial/usb -> device; see derive_tier")"
     printf '  "bundle": "%s",\n' "$(json_escape "$BUNDLE")"
     printf '  "module": "%s",\n' "$(json_escape "$MODULE")"
     printf '  "ability": "%s",\n' "$(json_escape "$ABILITY")"
@@ -791,7 +810,7 @@ write_summary() {
     printf '  "rawSessionTokenExported": false,\n'
     printf '  "rawResponseBodyExported": false,\n'
     printf '  "readerCoreRootArtifactsMutated": false,\n'
-    printf '  "requiredRuntimeTokens": ["nativeHTTP", "LocalHTTP", "LocalFeed", "DataStore", "LocalBook", "SourceMgmt PASS fixture", "启用 2/3", "规则 search+detail+toc+content", "DEBUG fixture", "redacted:true", "Headless", "PASS fixture", "Download", "PASS 2/2", "TTS", "PASS q:3", "WebDAV", "PASS sync", "FileToken", "PASS opaque", "DBMig", "PASS v75:32", "PASS 2xx", "PASS rss:1", "PASS v75:3", "PASS epub:1", "ArkWeb", "Cookie", "Session", "JS", "Secure", "Corpus", "raw:false"],\n'
+    printf '  "requiredRuntimeTokens": ["nativeHTTP", "LocalHTTP", "LocalFeed", "DataStore", "LocalBook", "SourceMgmt PASS fixture", "启用 2/3", "规则 search+detail+toc+content", "DEBUG fixture", "redacted:true", "Headless", "PASS fixture", "Download", "PASS 2/2", "TTS", "PASS q:3", "WebDAV", "PASS sync", "FileToken", "PASS opaque", "DBMig", "PASS v75:32", "PASS 2xx", "PASS rss:1", "PASS v75:3", "PASS epub:1", "HostBus", "PASS op:", "ArkWeb", "Cookie", "Session", "JS", "Secure", "Corpus", "raw:false"],\n'
     printf '  "artifacts": {\n'
     printf '    "homeLayout": "%s",\n' "$(json_escape "$HOME_LAYOUT")"
     printf '    "runtimeLayout": "%s",\n' "$(json_escape "$RUNTIME_LAYOUT")"
@@ -850,6 +869,7 @@ runtime_panel_settled() {
     grep -Fq "DataStore" "$file" &&
     grep -Fq "LocalBook" "$file" &&
     grep -Fq "Headless" "$file" &&
+    grep -Fq "HostBus" "$file" &&
     grep -Fq "Corpus" "$file" &&
     ! grep -Fq "RUNNING" "$file"
 }
@@ -990,6 +1010,8 @@ require_token "$RUNTIME_LAYOUT" "Session"
 require_token "$RUNTIME_LAYOUT" "JS"
 require_token "$RUNTIME_LAYOUT" "Secure"
 require_token "$RUNTIME_LAYOUT" "Corpus"
+require_token "$RUNTIME_LAYOUT" "HostBus"
+require_token "$RUNTIME_LAYOUT" "PASS op:"
 require_token "$RUNTIME_LAYOUT" "raw:false"
 reject_token "$RUNTIME_LAYOUT" "FAIL"
 reject_token "$RUNTIME_LAYOUT" "RUNNING"

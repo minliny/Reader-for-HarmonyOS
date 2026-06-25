@@ -32,6 +32,17 @@ import {
   harmonyOSUnsupportedCapabilityIDs
 } from './HarmonyOSCorePlatformManifest';
 
+// SDK-COMPAT: helper to build Record<string, Object> artifacts without untyped
+// object literals (arkts-no-untyped-obj-literals). Each pair is [key, value].
+function artifact(pairs: Array<[string, Object]>): Record<string, Object> {
+  const r: Record<string, Object> = {} as Record<string, Object>;
+  for (let i = 0; i < pairs.length; i++) {
+    const p: [string, Object] = pairs[i];
+    r[p[0]] = p[1];
+  }
+  return r;
+}
+
 export enum CoreCaseStatus {
   passed = 'passed',
   failed = 'failed',
@@ -642,124 +653,126 @@ function featureKeysPassed(evidence: LocalAdapterEvidenceCase[], required: strin
 }
 
 function buildMetadataArtifact(bundle: FirstBatchEvidenceBundle): Record<string, Object> {
-  return {
-    sampleId: bundle.sampleId,
-    artifactType: 'metadata',
-    platformFamily: bundle.platformFamily,
-    runnerIdentifier: bundle.runnerIdentifier,
-    platformRepository: bundle.platformRepository,
-    platformCommit: bundle.platformCommit,
-    ciJobId: bundle.ciJobId,
-    ciArtifactId: bundle.ciArtifactId,
-    requiredCaseCount: bundle.caseBundle.caseVectors.length,
-    localEvidenceCaseCount: bundle.localEvidence.length,
-    requiredEvidenceArtifacts: bundle.caseBundle.requiredEvidenceArtifacts,
-    requiredRuntimeEvidenceIDs: bundle.requiredRuntimeEvidenceIDs,
-    unsupportedReaderMarkers: bundle.unsupportedReaderMarkers,
-    externalNetworkUsed: false,
-    cleanRoomMaintained: true,
-    externalGPLCodeCopied: false,
-    legadoSourceCopied: false
-  };
+  return artifact([
+    ['sampleId', bundle.sampleId],
+    ['artifactType', 'metadata'],
+    ['platformFamily', bundle.platformFamily],
+    ['runnerIdentifier', bundle.runnerIdentifier],
+    ['platformRepository', bundle.platformRepository],
+    ['platformCommit', bundle.platformCommit],
+    ['ciJobId', bundle.ciJobId],
+    ['ciArtifactId', bundle.ciArtifactId],
+    ['requiredCaseCount', bundle.caseBundle.caseVectors.length],
+    ['localEvidenceCaseCount', bundle.localEvidence.length],
+    ['requiredEvidenceArtifacts', bundle.caseBundle.requiredEvidenceArtifacts],
+    ['requiredRuntimeEvidenceIDs', bundle.requiredRuntimeEvidenceIDs],
+    ['unsupportedReaderMarkers', bundle.unsupportedReaderMarkers],
+    ['externalNetworkUsed', false],
+    ['cleanRoomMaintained', true],
+    ['externalGPLCodeCopied', false],
+    ['legadoSourceCopied', false]
+  ] as Array<[string, Object]>);
 }
 
 function buildExpectedArtifact(bundle: FirstBatchEvidenceBundle): Record<string, Object> {
-  return {
-    sampleId: bundle.sampleId,
-    artifactType: 'expected',
-    expectedResult: {
-      firstBatchCanEnterPlatformEvidenceGate: bundle.canEnterPlatformEvidenceGate,
-      measuredFeedParserCanEnterFeedGate: bundle.canEnterFeedParserPlatformGate,
-      localBookGateStillBlockedByArchiveAndFilePicker: !bundle.canEnterLocalBookPlatformGate,
-      runtimeGateStillBlockedByArkWebSessionCookieMirror: !bundle.canEnterPlatformRuntimeCIGate,
-      hostAppSmokeStillUnsupported: !bundle.canEnterHostAppSmokeGate,
-      externalNetworkUsed: false,
-      rawMaterialExported: false,
-      unsupportedReaderMarkersPreserved: bundle.unsupportedReaderMarkers,
-      newGlobalFailureTaxonomyAdded: false
-    },
-    failureReasonBound: bundle.canEnterPlatformEvidenceGate ?
+  const expectedResult: Record<string, Object> = artifact([
+    ['firstBatchCanEnterPlatformEvidenceGate', bundle.canEnterPlatformEvidenceGate],
+    ['measuredFeedParserCanEnterFeedGate', bundle.canEnterFeedParserPlatformGate],
+    ['localBookGateStillBlockedByArchiveAndFilePicker', !bundle.canEnterLocalBookPlatformGate],
+    ['runtimeGateStillBlockedByArkWebSessionCookieMirror', !bundle.canEnterPlatformRuntimeCIGate],
+    ['hostAppSmokeStillUnsupported', !bundle.canEnterHostAppSmokeGate],
+    ['externalNetworkUsed', false],
+    ['rawMaterialExported', false],
+    ['unsupportedReaderMarkersPreserved', bundle.unsupportedReaderMarkers],
+    ['newGlobalFailureTaxonomyAdded', false]
+  ] as Array<[string, Object]>);
+  return artifact([
+    ['sampleId', bundle.sampleId],
+    ['artifactType', 'expected'],
+    ['expectedResult', expectedResult],
+    ['failureReasonBound', bundle.canEnterPlatformEvidenceGate ?
       'HarmonyOS complete evidence bundle marks every Core manifest feature measured-pass through bounded platform/headless fixture evidence while preserving redaction and clean-room flags.' :
-      'First HarmonyOS batch adds measured local-fixture feed/TXT/redaction evidence while preserving fail-closed statuses for ArkWeb, session, file-picker, archive, markup, and host smoke work.',
-    cleanRoomMaintained: true,
-    externalGPLCodeCopied: false,
-    legadoSourceCopied: false
-  };
+      'First HarmonyOS batch adds measured local-fixture feed/TXT/redaction evidence while preserving fail-closed statuses for ArkWeb, session, file-picker, archive, markup, and host smoke work.'],
+    ['cleanRoomMaintained', true],
+    ['externalGPLCodeCopied', false],
+    ['legadoSourceCopied', false]
+  ] as Array<[string, Object]>);
 }
 
 function buildMatrixArtifact(bundle: FirstBatchEvidenceBundle): Record<string, Object> {
-  return {
-    sampleId: bundle.sampleId,
-    artifactType: 'matrix',
-    matrixId: 'harmonyos_adapter_first_batch_matrix',
-    status: 'partial_measured',
-    rows: bundle.localEvidence.map((evidenceCase: LocalAdapterEvidenceCase) => {
-      return {
-        caseId: evidenceCase.caseID,
-        capability: `${evidenceCase.kind}:${evidenceCase.featureID}`,
-        statusAfter: evidenceCase.localStatus,
-        coreStatus: evidenceCase.coreStatus,
-        artifactId: evidenceCase.artifactId,
-        matrixIds: evidenceCase.matrixIds,
-        expectedChange: evidenceCase.diagnostic,
-        checksum: evidenceCase.checksum,
-        rawMaterialExported: evidenceCase.rawMaterialExported
-      };
-    }),
-    cleanRoomMaintained: true,
-    externalGPLCodeCopied: false,
-    legadoSourceCopied: false
-  };
+  const rows: Record<string, Object>[] = bundle.localEvidence.map((evidenceCase: LocalAdapterEvidenceCase): Record<string, Object> => {
+    return artifact([
+      ['caseId', evidenceCase.caseID],
+      ['capability', `${evidenceCase.kind}:${evidenceCase.featureID}`],
+      ['statusAfter', evidenceCase.localStatus],
+      ['coreStatus', evidenceCase.coreStatus],
+      ['artifactId', evidenceCase.artifactId],
+      ['matrixIds', evidenceCase.matrixIds],
+      ['expectedChange', evidenceCase.diagnostic],
+      ['checksum', evidenceCase.checksum],
+      ['rawMaterialExported', evidenceCase.rawMaterialExported]
+    ] as Array<[string, Object]>);
+  });
+  return artifact([
+    ['sampleId', bundle.sampleId],
+    ['artifactType', 'matrix'],
+    ['matrixId', 'harmonyos_adapter_first_batch_matrix'],
+    ['status', 'partial_measured'],
+    ['rows', rows],
+    ['cleanRoomMaintained', true],
+    ['externalGPLCodeCopied', false],
+    ['legadoSourceCopied', false]
+  ] as Array<[string, Object]>);
 }
 
 function buildRegressionArtifact(bundle: FirstBatchEvidenceBundle): Record<string, Object> {
-  return {
-    sampleId: bundle.sampleId,
-    artifactType: 'regressionResult',
-    regressionResult: 'first_batch_local_fixture_evidence_generated',
-    measuredPassCount: countLocalStatus(bundle.localEvidence, LocalEvidenceStatus.measuredPass),
-    envBlockedCount: countLocalStatus(bundle.localEvidence, LocalEvidenceStatus.envBlocked),
-    unsupportedCount: countLocalStatus(bundle.localEvidence, LocalEvidenceStatus.unsupported),
-    notExecutedCount: countLocalStatus(bundle.localEvidence, LocalEvidenceStatus.notExecuted),
-    acceptedByCoreRunReport: bundle.canEnterPlatformEvidenceGate,
-    externalNetworkUsed: bundle.externalNetworkUsed,
-    platformRuntimeSmokeExecuted: bundle.canEnterPlatformRuntimeCIGate,
-    cleanRoomMaintained: true,
-    externalGPLCodeCopied: false,
-    legadoSourceCopied: false
-  };
+  return artifact([
+    ['sampleId', bundle.sampleId],
+    ['artifactType', 'regressionResult'],
+    ['regressionResult', 'first_batch_local_fixture_evidence_generated'],
+    ['measuredPassCount', countLocalStatus(bundle.localEvidence, LocalEvidenceStatus.measuredPass)],
+    ['envBlockedCount', countLocalStatus(bundle.localEvidence, LocalEvidenceStatus.envBlocked)],
+    ['unsupportedCount', countLocalStatus(bundle.localEvidence, LocalEvidenceStatus.unsupported)],
+    ['notExecutedCount', countLocalStatus(bundle.localEvidence, LocalEvidenceStatus.notExecuted)],
+    ['acceptedByCoreRunReport', bundle.canEnterPlatformEvidenceGate],
+    ['externalNetworkUsed', bundle.externalNetworkUsed],
+    ['platformRuntimeSmokeExecuted', bundle.canEnterPlatformRuntimeCIGate],
+    ['cleanRoomMaintained', true],
+    ['externalGPLCodeCopied', false],
+    ['legadoSourceCopied', false]
+  ] as Array<[string, Object]>);
 }
 
 function buildExternalExecutionArtifact(bundle: FirstBatchEvidenceBundle): Record<string, Object> {
-  return {
-    evidenceId: 'harmonyos.firstBatch.externalExecution',
-    platformFamily: bundle.platformFamily,
-    platformRepository: bundle.platformRepository,
-    platformCommit: bundle.platformCommit,
-    ciJobId: bundle.ciJobId,
-    ciArtifactId: bundle.ciArtifactId,
-    caseBundle: bundle.caseBundle,
-    runReport: bundle.runReport,
-    executedCaseIDs: bundle.executedCaseIDs,
-    exportedRunReportArtifactId: bundle.exportedRunReportArtifactId,
-    redactedAuditTrail: [
+  return artifact([
+    ['evidenceId', 'harmonyos.firstBatch.externalExecution'],
+    ['platformFamily', bundle.platformFamily],
+    ['platformRepository', bundle.platformRepository],
+    ['platformCommit', bundle.platformCommit],
+    ['ciJobId', bundle.ciJobId],
+    ['ciArtifactId', bundle.ciArtifactId],
+    ['caseBundle', bundle.caseBundle],
+    ['runReport', bundle.runReport],
+    ['executedCaseIDs', bundle.executedCaseIDs],
+    ['exportedRunReportArtifactId', bundle.exportedRunReportArtifactId],
+    ['redactedAuditTrail', [
       'platform_external_execution bundle:harmonyos-adapter-first-batch-case-bundle values:REDACTED',
       'platform_external_execution report:reader-core.harmonyos.adapter.contract-runner values:REDACTED',
       'platform_external_execution ci_artifact:REDACTED'
-    ],
-    canEnterPlatformEvidenceGate: bundle.canEnterPlatformEvidenceGate,
-    externalNetworkUsed: false,
-    cleanRoomMaintained: true,
-    externalGPLCodeCopied: false,
-    legadoSourceCopied: false
-  };
+    ]],
+    ['canEnterPlatformEvidenceGate', bundle.canEnterPlatformEvidenceGate],
+    ['externalNetworkUsed', false],
+    ['cleanRoomMaintained', true],
+    ['externalGPLCodeCopied', false],
+    ['legadoSourceCopied', false]
+  ] as Array<[string, Object]>);
 }
 
 function buildLocalBookExecutionArtifact(bundle: FirstBatchEvidenceBundle): Record<string, Object> {
-  return {
-    evidenceId: 'harmonyos.firstBatch.localBookExecution',
-    platformFamily: bundle.platformFamily,
-    requiredLocalBookFeatureKeys: [
+  return artifact([
+    ['evidenceId', 'harmonyos.firstBatch.localBookExecution'],
+    ['platformFamily', bundle.platformFamily],
+    ['requiredLocalBookFeatureKeys', [
       'archive:epub.zip',
       'archive:localbook.archive',
       'archive:safe-entry-path',
@@ -773,12 +786,12 @@ function buildLocalBookExecutionArtifact(bundle: FirstBatchEvidenceBundle): Reco
       'textEncodingDetector:txt.utf8',
       'textEncodingDetector:txt.gb18030',
       'textEncodingDetector:txt.fallback'
-    ],
-    passedLocalBookFeatureKeys: passedKeys(bundle.localEvidence, [AdapterKind.archive, AdapterKind.localFileAccess, AdapterKind.textEncodingDetector]),
-    requiredP2LocalBookMatrixIDs: bundle.requiredP2LocalBookMatrixIDs,
-    localBookAdapterArtifactId: 'harmonyos-first-batch-local-book-platform-execution-001',
-    canEnterLocalBookPlatformAdapterEvidenceGate: bundle.canEnterLocalBookPlatformGate,
-    redactedAuditTrail: bundle.canEnterLocalBookPlatformGate ?
+    ]],
+    ['passedLocalBookFeatureKeys', passedKeys(bundle.localEvidence, [AdapterKind.archive, AdapterKind.localFileAccess, AdapterKind.textEncodingDetector])],
+    ['requiredP2LocalBookMatrixIDs', bundle.requiredP2LocalBookMatrixIDs],
+    ['localBookAdapterArtifactId', 'harmonyos-first-batch-local-book-platform-execution-001'],
+    ['canEnterLocalBookPlatformAdapterEvidenceGate', bundle.canEnterLocalBookPlatformGate],
+    ['redactedAuditTrail', bundle.canEnterLocalBookPlatformGate ?
       [
         'local_book_platform_execution archive_epub_file_picker_markup:MEASURED_PASS values:REDACTED',
         'local_book_platform_execution raw_file_paths_and_permission_tokens:REDACTED'
@@ -786,71 +799,71 @@ function buildLocalBookExecutionArtifact(bundle: FirstBatchEvidenceBundle): Reco
       [
         'local_book_platform_execution text_detector:MEASURED_PASS values:REDACTED',
         'local_book_platform_execution archive_file_picker:NOT_EXECUTED values:REDACTED'
-      ],
-    externalNetworkUsed: false,
-    cleanRoomMaintained: true,
-    externalGPLCodeCopied: false,
-    legadoSourceCopied: false
-  };
+      ]],
+    ['externalNetworkUsed', false],
+    ['cleanRoomMaintained', true],
+    ['externalGPLCodeCopied', false],
+    ['legadoSourceCopied', false]
+  ] as Array<[string, Object]>);
 }
 
 function buildFeedParserExecutionArtifact(bundle: FirstBatchEvidenceBundle): Record<string, Object> {
-  return {
-    evidenceId: 'harmonyos.firstBatch.feedParserExecution',
-    platformFamily: bundle.platformFamily,
-    requiredFeedFeatureIDs: ['rss', 'atom', 'json-feed', 'feed-pagination-metadata', 'cookie-login-diagnostic'],
-    passedFeedFeatureIDs: passedFeatureIDs(bundle.localEvidence, AdapterKind.feedParser),
-    requiredP2RSSMatrixIDs: bundle.requiredP2RSSMatrixIDs,
-    feedParserArtifactId: 'harmonyos-first-batch-feed-parser-platform-execution-001',
-    canEnterRSSPlatformAdapterEvidenceGate: bundle.canEnterFeedParserPlatformGate,
-    redactedAuditTrail: [
+  return artifact([
+    ['evidenceId', 'harmonyos.firstBatch.feedParserExecution'],
+    ['platformFamily', bundle.platformFamily],
+    ['requiredFeedFeatureIDs', ['rss', 'atom', 'json-feed', 'feed-pagination-metadata', 'cookie-login-diagnostic']],
+    ['passedFeedFeatureIDs', passedFeatureIDs(bundle.localEvidence, AdapterKind.feedParser)],
+    ['requiredP2RSSMatrixIDs', bundle.requiredP2RSSMatrixIDs],
+    ['feedParserArtifactId', 'harmonyos-first-batch-feed-parser-platform-execution-001'],
+    ['canEnterRSSPlatformAdapterEvidenceGate', bundle.canEnterFeedParserPlatformGate],
+    ['redactedAuditTrail', [
       'feed_parser_platform_execution rss_atom_json:MEASURED_PASS values:REDACTED',
       'feed_parser_platform_execution cookie_login:diagnostic_only values:REDACTED'
-    ],
-    externalNetworkUsed: false,
-    cleanRoomMaintained: true,
-    externalGPLCodeCopied: false,
-    legadoSourceCopied: false
-  };
+    ]],
+    ['externalNetworkUsed', false],
+    ['cleanRoomMaintained', true],
+    ['externalGPLCodeCopied', false],
+    ['legadoSourceCopied', false]
+  ] as Array<[string, Object]>);
 }
 
 function buildPlatformRuntimeCIArtifact(bundle: FirstBatchEvidenceBundle): Record<string, Object> {
   const supplied = suppliedRuntimeEvidenceIDs(bundle);
   const missing = missingRuntimeEvidenceIDs(bundle, supplied);
-  return {
-    evidenceId: 'harmonyos.firstBatch.platformRuntimeCI',
-    platformFamily: bundle.platformFamily,
-    sourceEvidenceKind: 'platform_runtime_ci',
-    requiredRuntimeEvidenceIDs: bundle.requiredRuntimeEvidenceIDs,
-    suppliedRuntimeEvidenceIDs: supplied,
-    missingRuntimeEvidenceIDs: missing,
-    canEnterReleaseEvidenceIntake: bundle.canEnterPlatformRuntimeCIGate,
-    redactedAuditEntry: bundle.canEnterPlatformRuntimeCIGate ?
+  return artifact([
+    ['evidenceId', 'harmonyos.firstBatch.platformRuntimeCI'],
+    ['platformFamily', bundle.platformFamily],
+    ['sourceEvidenceKind', 'platform_runtime_ci'],
+    ['requiredRuntimeEvidenceIDs', bundle.requiredRuntimeEvidenceIDs],
+    ['suppliedRuntimeEvidenceIDs', supplied],
+    ['missingRuntimeEvidenceIDs', missing],
+    ['canEnterReleaseEvidenceIntake', bundle.canEnterPlatformRuntimeCIGate],
+    ['redactedAuditEntry', bundle.canEnterPlatformRuntimeCIGate ?
       'platform_runtime_ci complete_runtime_host_fixture values:REDACTED' :
-      'platform_runtime_ci partial_redaction_boundary values:REDACTED',
-    externalNetworkUsed: false,
-    cleanRoomMaintained: true,
-    externalGPLCodeCopied: false,
-    legadoSourceCopied: false
-  };
+      'platform_runtime_ci partial_redaction_boundary values:REDACTED'],
+    ['externalNetworkUsed', false],
+    ['cleanRoomMaintained', true],
+    ['externalGPLCodeCopied', false],
+    ['legadoSourceCopied', false]
+  ] as Array<[string, Object]>);
 }
 
 function buildHostAppSmokeArtifact(bundle: FirstBatchEvidenceBundle): Record<string, Object> {
-  return {
-    evidenceId: 'harmonyos.firstBatch.hostAppIntegrationSmokeReport',
-    platformFamily: bundle.platformFamily,
-    requiredEvidenceIDs: bundle.requiredHostSmokeEvidenceIDs,
-    passedEvidenceIDs: bundle.canEnterHostAppSmokeGate ? bundle.requiredHostSmokeEvidenceIDs : [],
-    unsupportedReaderMarkers: bundle.unsupportedReaderMarkers,
-    canEnterHostAppEvidenceGate: bundle.canEnterHostAppSmokeGate,
-    redactedAuditEntry: bundle.canEnterHostAppSmokeGate ?
+  return artifact([
+    ['evidenceId', 'harmonyos.firstBatch.hostAppIntegrationSmokeReport'],
+    ['platformFamily', bundle.platformFamily],
+    ['requiredEvidenceIDs', bundle.requiredHostSmokeEvidenceIDs],
+    ['passedEvidenceIDs', bundle.canEnterHostAppSmokeGate ? bundle.requiredHostSmokeEvidenceIDs : []],
+    ['unsupportedReaderMarkers', bundle.unsupportedReaderMarkers],
+    ['canEnterHostAppEvidenceGate', bundle.canEnterHostAppSmokeGate],
+    ['redactedAuditEntry', bundle.canEnterHostAppSmokeGate ?
       'host_app_integration_smoke_report MEASURED_PASS values:REDACTED' :
-      'host_app_integration_smoke_report NOT_EXECUTED values:REDACTED',
-    externalNetworkUsed: false,
-    cleanRoomMaintained: true,
-    externalGPLCodeCopied: false,
-    legadoSourceCopied: false
-  };
+      'host_app_integration_smoke_report NOT_EXECUTED values:REDACTED'],
+    ['externalNetworkUsed', false],
+    ['cleanRoomMaintained', true],
+    ['externalGPLCodeCopied', false],
+    ['legadoSourceCopied', false]
+  ] as Array<[string, Object]>);
 }
 
 function suppliedRuntimeEvidenceIDs(bundle: FirstBatchEvidenceBundle): string[] {

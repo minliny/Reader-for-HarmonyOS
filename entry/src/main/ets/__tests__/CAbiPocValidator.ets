@@ -121,18 +121,26 @@ export function runCAbiPocValidatorTests(): TestRunner {
   const mod = createPocSimulatedModule();
   const versionStr = mod.reader_core_version();
   r.assert(versionStr.length > 0, 'version string non-empty');
-  const versionObj = JSON.parse(versionStr);
-  r.assert(versionObj.abiVersion === 1, 'version abiVersion 1');
-  r.assert(versionObj.coreVersion === 'simulated-poc', 'version coreVersion simulated-poc');
+  let versionObj: Record<string, Object>;
+  try {
+    versionObj = JSON.parse(versionStr) as Record<string, Object>;
+  } catch (_e) {
+    r.assert(false, 'version JSON parse failed');
+    return r;
+  }
+  r.assert(versionObj['abiVersion'] === 1, 'version abiVersion 1');
+  r.assert(versionObj['coreVersion'] === 'simulated-poc', 'version coreVersion simulated-poc');
 
   // ---------- 模拟模块: apply_replace_rules ----------
-  const request: ReplaceRulesRequest = {
-    content: '广告内容[img]123[/img]',
-    rules: [
-      { id: 'r1', pattern: '广告', replacement: '', isRegex: false },
-      { id: 'r2', pattern: '\\[img\\]\\d+\\[/img\\]', replacement: '[图片]', isRegex: true }
-    ]
-  };
+  // SDK-COMPAT: declare an explicit interface for replace-rule test fixtures.
+  interface ReplaceRuleFixture { id: string; pattern: string; replacement: string; isRegex: boolean }
+  const r1: ReplaceRuleFixture = { id: 'r1', pattern: '广告', replacement: '', isRegex: false };
+  const r2: ReplaceRuleFixture = { id: 'r2', pattern: '\\[img\\]\\d+\\[/img\\]', replacement: '[图片]', isRegex: true };
+  const replaceRules: ReplaceRuleFixture[] = [r1, r2];
+  const requestFields: Record<string, Object> = {} as Record<string, Object>;
+  requestFields['content'] = '广告内容[img]123[/img]';
+  requestFields['rules'] = replaceRules;
+  const request: ReplaceRulesRequest = requestFields as Object as ReplaceRulesRequest;
   const replaceResult = mod.reader_core_apply_replace_rules(JSON.stringify(request));
   r.assert(replaceResult.errorCode === ReaderCoreError.OK, 'replace rules OK');
   r.assert(replaceResult.jsonResponse !== null, 'replace rules response non-null');
@@ -147,12 +155,14 @@ export function runCAbiPocValidatorTests(): TestRunner {
   r.assert(invalidResult.jsonResponse === null, 'replace rules invalid JSON null response');
 
   // ---------- 模拟模块: parse_rule_chain ----------
-  const chainRequest: RuleChainRequest = {
-    rules: [
-      { kind: 'css', expression: '.body', input: '<p class="body">Text</p>' },
-      { kind: 'regex', expression: '\\d+', input: 'abc123' }
-    ]
-  };
+  // SDK-COMPAT: declare an explicit interface for chain-rule test fixtures.
+  interface ChainRuleFixture { kind: string; expression: string; input: string }
+  const c1: ChainRuleFixture = { kind: 'css', expression: '.body', input: '<p class="body">Text</p>' };
+  const c2: ChainRuleFixture = { kind: 'regex', expression: '\\d+', input: 'abc123' };
+  const chainRules: ChainRuleFixture[] = [c1, c2];
+  const chainRequestFields: Record<string, Object> = {} as Record<string, Object>;
+  chainRequestFields['rules'] = chainRules;
+  const chainRequest: RuleChainRequest = chainRequestFields as Object as RuleChainRequest;
   const chainResult = mod.reader_core_parse_rule_chain(JSON.stringify(chainRequest));
   r.assert(chainResult.errorCode === ReaderCoreError.OK, 'rule chain OK');
   r.assert(chainResult.jsonResponse !== null, 'rule chain response non-null');
@@ -172,10 +182,12 @@ export function runCAbiPocValidatorTests(): TestRunner {
 
   // ---------- 安全约束验证 ----------
   // ABI 层不应有网络/文件/cookie/credential 接口
-  r.assert(!('reader_core_http_get' in mod), 'abi no http_get');
-  r.assert(!('reader_core_file_read' in mod), 'abi no file_read');
-  r.assert(!('reader_core_cookie_get' in mod), 'abi no cookie_get');
-  r.assert(!('reader_core_credential_get' in mod), 'abi no credential_get');
+  // SDK-COMPAT: ArkTS disallows "in" operator; use property access via Record<string, Object>.
+  const modRecord: Record<string, Object> = mod as Object as Record<string, Object>;
+  r.assert(!(modRecord['reader_core_http_get'] !== undefined && modRecord['reader_core_http_get'] !== null), 'abi no http_get');
+  r.assert(!(modRecord['reader_core_file_read'] !== undefined && modRecord['reader_core_file_read'] !== null), 'abi no file_read');
+  r.assert(!(modRecord['reader_core_cookie_get'] !== undefined && modRecord['reader_core_cookie_get'] !== null), 'abi no cookie_get');
+  r.assert(!(modRecord['reader_core_credential_get'] !== undefined && modRecord['reader_core_credential_get'] !== null), 'abi no credential_get');
 
   return r;
 }

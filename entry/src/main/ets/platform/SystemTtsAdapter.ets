@@ -28,6 +28,19 @@ export interface SystemTtsSpeakRequest {
 
 const TTS_ENGINE_ID = 'reader-harmonyos-system-tts';
 
+// SDK-COMPAT: SpeakListener implementation as a top-level class (ArkTS forbids
+// constructor parameter properties and untyped object literals with methods).
+class TtsListener implements textToSpeech.SpeakListener {
+  private outer: SystemTtsAdapter;
+  constructor(outer: SystemTtsAdapter) { this.outer = outer; }
+  onStart(requestId: string, response: textToSpeech.StartResponse): void { this.outer.onTtsStart(); }
+  onProgress(requestId: string, audio: ArrayBuffer, response: Object): void { /* audio consumed by platform */ }
+  onFinish(requestId: string, response: Object): void { this.outer.onTtsFinish(); }
+  onComplete(requestId: string, response: Object): void { this.outer.onTtsFinish(); }
+  onStop(requestId: string, response: Object): void { this.outer.onTtsFinish(); }
+  onError(requestId: string, errorCode: number, errorMessage: string): void { this.outer.onTtsError(); }
+}
+
 export class SystemTtsAdapter {
   private ttsEngine: textToSpeech.TextToSpeechEngine | null = null;
   private state: SystemTtsState = 'idle';
@@ -40,17 +53,18 @@ export class SystemTtsAdapter {
   async ensureEngine(): Promise<boolean> {
     if (this.ttsEngine !== null) { return true; }
     try {
-      const extraParam: Record<string, Object> = {
-        style: 'interaction',
-        locate: 'zh-CN',
-        name: TTS_ENGINE_ID
-      };
-      const initParams: textToSpeech.CreateEngineParams = {
-        language: 'zh-CN',
-        person: 0,
-        online: 1,
-        extraParams: extraParam
-      };
+      // SDK-COMPAT: build params via typed records to satisfy arkts-no-untyped-obj-literals.
+      const extraParam: Record<string, Object> = {} as Record<string, Object>;
+      extraParam['style'] = 'interaction';
+      extraParam['locate'] = 'zh-CN';
+      extraParam['name'] = TTS_ENGINE_ID;
+      // SDK-COMPAT: build via Record then cast to satisfy arkts-no-untyped-obj-literals.
+      const initFields: Record<string, Object> = {} as Record<string, Object>;
+      initFields['language'] = 'zh-CN';
+      initFields['person'] = 0;
+      initFields['online'] = 1;
+      initFields['extraParams'] = extraParam;
+      const initParams: textToSpeech.CreateEngineParams = initFields as Object as textToSpeech.CreateEngineParams;
       this.ttsEngine = await textToSpeech.createEngine(initParams);
       this.state = 'idle';
       return this.ttsEngine !== null;
@@ -77,29 +91,19 @@ export class SystemTtsAdapter {
     this.currentChecksum = boundedChecksum(`tts:${request.utterance.length}`);
     this.state = 'preparing';
     try {
-      const speakParams: textToSpeech.SpeakParams = {
-        requestId: this.boundedRequestId(),
-        extraParams: {
-          speed: request.speechRate ?? 1,
-          volume: request.volume ?? 1,
-          pitch: 1
-        } as Record<string, Object>
-      };
-      const listener: textToSpeech.SpeakListener = {
-        onStart: (requestId: string, response: textToSpeech.StartResponse) => {
-          this.state = 'speaking';
-        },
-        onProgress: (requestId: string, audio: ArrayBuffer, response: textToSpeech.ProgressResponse) => {
-          // Audio buffer is consumed by the platform; not exported.
-        },
-        onFinish: (requestId: string, response: textToSpeech.FinishResponse) => {
-          this.state = 'idle';
-        },
-        onError: (requestId: string, errorCode: number, errorMessage: string) => {
-          this.state = 'error';
-        }
-      };
-      this.ttsEngine.setSpeakListener(listener);
+      // SDK-COMPAT: build params via typed records to satisfy arkts-no-untyped-obj-literals.
+      const speakExtra: Record<string, Object> = {} as Record<string, Object>;
+      speakExtra['speed'] = request.speechRate ?? 1;
+      speakExtra['volume'] = request.volume ?? 1;
+      speakExtra['pitch'] = 1;
+      // SDK-COMPAT: build via Record then cast to satisfy arkts-no-untyped-obj-literals.
+      const speakFields: Record<string, Object> = {} as Record<string, Object>;
+      speakFields['requestId'] = this.boundedRequestId();
+      speakFields['extraParams'] = speakExtra;
+      const speakParams: textToSpeech.SpeakParams = speakFields as Object as textToSpeech.SpeakParams;
+      // SDK-COMPAT: setSpeakListener renamed to setListener; SpeakListener requires onComplete/onStop.
+      const listener: textToSpeech.SpeakListener = new TtsListener(this);
+      this.ttsEngine.setListener(listener);
       await this.ttsEngine.speak(request.utterance, speakParams);
       return {
         engineReady: true,
@@ -175,4 +179,9 @@ export class SystemTtsAdapter {
     if (text.length === 0) { return 'unknown'; }
     return 'tts_error';
   }
+
+  // SDK-COMPAT: listener callbacks exposed for the inner TtsListener class.
+  onTtsStart(): void { this.state = 'speaking'; }
+  onTtsFinish(): void { this.state = 'idle'; }
+  onTtsError(): void { this.state = 'error'; }
 }

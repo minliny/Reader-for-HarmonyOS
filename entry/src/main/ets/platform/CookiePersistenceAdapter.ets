@@ -43,12 +43,13 @@ const COOKIE_STORE_KEY = 'reader_harmonyos_persisted_cookies';
 export class CookiePersistenceAdapter {
   private crypto: ICredentialCrypto;
   private store: Map<string, PersistedCookieRecord>;
-  private cookieManager: typeof webview.WebCookieManager;
+  private cookieManager: Object;
 
   constructor(crypto?: ICredentialCrypto) {
     this.crypto = crypto ?? new PlaintextCredentialCrypto();
     this.store = new Map<string, PersistedCookieRecord>();
-    this.cookieManager = webview.WebCookieManager;
+    // SDK-COMPAT: webview.WebCookieManager is a class used as a namespace; store as Object.
+    this.cookieManager = webview.WebCookieManager as Object;
   }
 
   /**
@@ -61,7 +62,10 @@ export class CookiePersistenceAdapter {
     let errorClass = 'none';
     try {
       const cookieUrl = `https://${domain}/`;
-      const raw: string = this.cookieManager.fetchCookieSync(cookieUrl);
+      // SDK-COMPAT: cookieManager methods are accessed via a function-typed record (ArkTS no-call-signatures).
+      const managerFns = this.cookieManager as Record<string, (url: string) => string>;
+      const fetchFn: (url: string) => string = managerFns['fetchCookieSync'];
+      const raw: string = fetchFn(cookieUrl);
       const mirrors = this.parseCookieHeader(raw, domain);
       for (let i = 0; i < mirrors.length; i++) {
         const mirror = mirrors[i];
@@ -116,7 +120,10 @@ export class CookiePersistenceAdapter {
         }
         const value = this.decodeValue(plain);
         const cookieValue = `${record.name}=${value}; Secure=${record.secure ? 'true' : 'false'}; HttpOnly=${record.httpOnly ? 'true' : 'false'}`;
-        this.cookieManager.configCookieSync(cookieUrl, cookieValue, false);
+        // SDK-COMPAT: configCookieSync has a 3-arg signature; type the record accordingly.
+        const managerConfigFns = this.cookieManager as Record<string, (url: string, value: string, includeHttp: boolean) => void>;
+        const configFn: (url: string, value: string, includeHttp: boolean) => void = managerConfigFns['configCookieSync'];
+        configFn(cookieUrl, cookieValue, false);
         restored++;
       });
     } catch (e) {

@@ -19,14 +19,14 @@ export interface CBZParserContract {
   parse(data: Uint8Array): Promise<CBZParseResult>;
 }
 
-const IMAGE_EXTENSIONS: Record<string, string> = {
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  png: 'image/png',
-  gif: 'image/gif',
-  webp: 'image/webp',
-  bmp: 'image/bmp'
-};
+const IMAGE_EXTENSIONS: Record<string, string> = {} as Record<string, string>;
+// SDK-COMPAT: initialize Record<string, string> entry by entry
+IMAGE_EXTENSIONS['jpg'] = 'image/jpeg';
+IMAGE_EXTENSIONS['jpeg'] = 'image/jpeg';
+IMAGE_EXTENSIONS['png'] = 'image/png';
+IMAGE_EXTENSIONS['gif'] = 'image/gif';
+IMAGE_EXTENSIONS['webp'] = 'image/webp';
+IMAGE_EXTENSIONS['bmp'] = 'image/bmp';
 
 export function cbzImageMediaType(path: string): string | null {
   const dot = path.lastIndexOf('.');

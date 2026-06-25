@@ -37,6 +37,11 @@ const TARGET_SCHEMA: StoreSchema = {
   migrationStepCount: 32
 };
 
+export interface StoreMigrationResult {
+  migrated: boolean;
+  steps: number;
+}
+
 export class StoreFacade {
   private schema: StoreSchema;
   private kvStore: Map<string, string> = new Map();
@@ -61,13 +66,14 @@ export class StoreFacade {
     this.kvStore.delete(key);
   }
 
-  migrate(fromVersion: number, toVersion: number): { migrated: boolean; steps: number } {
+  migrate(fromVersion: number, toVersion: number): StoreMigrationResult {
     // 简化 migration：记录步数差
+    const result: StoreMigrationResult = { migrated: false, steps: 0 };
     if (fromVersion >= toVersion) {
-      return { migrated: false, steps: 0 };
+      return result;
     }
     const steps = toVersion - fromVersion;
-    return { migrated: true, steps };
+    return { migrated: true, steps } as StoreMigrationResult;
   }
 
   buildStageReport(): StoreStageReport {

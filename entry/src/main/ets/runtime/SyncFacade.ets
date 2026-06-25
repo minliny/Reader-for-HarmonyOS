@@ -24,6 +24,16 @@ export interface BackupEntry {
   payload: string;
 }
 
+export interface SyncPushResult {
+  pushed: number;
+  redacted: boolean;
+}
+
+export interface BackupCreateResult {
+  envelope: string;
+  count: number;
+}
+
 export interface SyncStageReport extends RuntimeStageReport {
   facadeIdentifier: 'SyncFacade';
   stageName: 'sync';
@@ -39,9 +49,10 @@ export class SyncFacade {
     this.webdav = new WebDavClientAdapter();
   }
 
-  push(records: SyncRecord[]): { pushed: number; redacted: boolean } {
+  push(records: SyncRecord[]): SyncPushResult {
     // 实际 WebDAV PUT 由 WebDavClientAdapter 处理，这里只做 DTO 编排
-    return { pushed: records.length, redacted: true };
+    const result: SyncPushResult = { pushed: records.length, redacted: true };
+    return result;
   }
 
   pull(since: number): SyncRecord[] {
@@ -61,11 +72,12 @@ export class SyncFacade {
     return Array.from(merged.values());
   }
 
-  createBackup(entries: BackupEntry[]): { envelope: string; count: number } {
-    return {
+  createBackup(entries: BackupEntry[]): BackupCreateResult {
+    const result: BackupCreateResult = {
       envelope: `backup:envelope:REDACTED:count:${entries.length}`,
       count: entries.length
     };
+    return result;
   }
 
   buildStageReport(): SyncStageReport {

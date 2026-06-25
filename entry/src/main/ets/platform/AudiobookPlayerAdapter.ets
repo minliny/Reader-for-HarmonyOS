@@ -55,7 +55,8 @@ export class AudiobookPlayerAdapter {
       this.player = await media.createAVPlayer();
       this.currentTrack = track;
       this.state = 'idle';
-      this.player.src = track.src;
+      // SDK-COMPAT: AVPlayer.url is the correct property name in this SDK; assign directly.
+      this.player.url = track.src;
       this.player.loop = false;
       this.player.on('stateChange', (state: string, reason: media.StateChangeReason) => {
         this.state = this.mapState(state);

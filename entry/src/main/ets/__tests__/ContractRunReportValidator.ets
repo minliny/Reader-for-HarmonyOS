@@ -105,10 +105,19 @@ export function runContractRunReportValidatorTests(): TestRunner {
 
   // ---------- fail-closed: 缺 artifact ----------
   const missingArtifactBundle = buildHarmonyOSCompleteEvidenceBundle();
+  const baseArtifacts1 = buildHarmonyOSCompleteArtifactSet(missingArtifactBundle);
   const emptyArtifacts: HarmonyOSCompleteArtifactSet = {
-    ...buildHarmonyOSCompleteArtifactSet(missingArtifactBundle),
     metadata: '',
-    expected: ''
+    expected: '',
+    matrix: baseArtifacts1.matrix,
+    regressionResult: baseArtifacts1.regressionResult,
+    platformAdapterContractRunReport: baseArtifacts1.platformAdapterContractRunReport,
+    platformAdapterExternalExecution: baseArtifacts1.platformAdapterExternalExecution,
+    localBookPlatformExecution: baseArtifacts1.localBookPlatformExecution,
+    feedParserPlatformExecution: baseArtifacts1.feedParserPlatformExecution,
+    platformRuntimeCI: baseArtifacts1.platformRuntimeCI,
+    hostAppIntegrationSmokeReport: baseArtifacts1.hostAppIntegrationSmokeReport,
+    releaseEvidenceCloseout: baseArtifacts1.releaseEvidenceCloseout
   };
   const missingArtifactValidation = validateContractRunReportFailClosed(missingArtifactBundle.runReport, emptyArtifacts, manifest);
   r.assert(missingArtifactValidation.accepted === false, 'fail-closed on missing artifacts');
@@ -132,7 +141,8 @@ export function runContractRunReportValidatorTests(): TestRunner {
   const failedCaseReport = cloneRunReport(exportResult.runReport);
   for (let i = 0; i < failedCaseReport.caseResults.length; i++) {
     if (failedCaseReport.caseResults[i].kind === AdapterKind.archive && failedCaseReport.caseResults[i].featureID === 'epub.zip') {
-      failedCaseReport.caseResults[i] = { ...failedCaseReport.caseResults[i], status: CoreCaseStatus.failed };
+      const orig = failedCaseReport.caseResults[i];
+      failedCaseReport.caseResults[i] = { kind: orig.kind, featureID: orig.featureID, status: CoreCaseStatus.failed, evidenceID: orig.evidenceID, redactedSummary: orig.redactedSummary };
       break;
     }
   }
@@ -145,7 +155,8 @@ export function runContractRunReportValidatorTests(): TestRunner {
   const unsupportedCaseReport = cloneRunReport(exportResult.runReport);
   for (let i = 0; i < unsupportedCaseReport.caseResults.length; i++) {
     if (unsupportedCaseReport.caseResults[i].kind === AdapterKind.runtimeHost && unsupportedCaseReport.caseResults[i].featureID === 'arkWeb') {
-      unsupportedCaseReport.caseResults[i] = { ...unsupportedCaseReport.caseResults[i], status: CoreCaseStatus.unsupported };
+      const orig2 = unsupportedCaseReport.caseResults[i];
+      unsupportedCaseReport.caseResults[i] = { kind: orig2.kind, featureID: orig2.featureID, status: CoreCaseStatus.unsupported, evidenceID: orig2.evidenceID, redactedSummary: orig2.redactedSummary };
       break;
     }
   }
@@ -207,8 +218,12 @@ export function runContractRunReportValidatorTests(): TestRunner {
 
   // ---------- fail-closed: unsafe content (localhost bridge 引用) ----------
   const unsafeReport = cloneRunReport(exportResult.runReport);
+  const origUnsafe = unsafeReport.caseResults[0];
   unsafeReport.caseResults[0] = {
-    ...unsafeReport.caseResults[0],
+    kind: origUnsafe.kind,
+    featureID: origUnsafe.featureID,
+    status: origUnsafe.status,
+    evidenceID: origUnsafe.evidenceID,
     redactedSummary: 'localhost:8899 bridge reference leaked'
   };
   const unsafeValidation = validateContractRunReportFailClosed(unsafeReport, buildHarmonyOSCompleteArtifactSet(), manifest);
@@ -234,13 +249,16 @@ function cloneRunReport(report: CoreRunReport): CoreRunReport {
     runnerIdentifier: report.runnerIdentifier,
     manifestPlatformFamily: report.manifestPlatformFamily,
     manifestRunnerIdentifier: report.manifestRunnerIdentifier,
-    caseResults: report.caseResults.map((c: CoreCaseResult) => ({
-      kind: c.kind,
-      featureID: c.featureID,
-      status: c.status,
-      evidenceID: c.evidenceID,
-      redactedSummary: c.redactedSummary
-    })),
+    caseResults: report.caseResults.map((c: CoreCaseResult): CoreCaseResult => {
+      const result: CoreCaseResult = {
+        kind: c.kind,
+        featureID: c.featureID,
+        status: c.status,
+        evidenceID: c.evidenceID,
+        redactedSummary: c.redactedSummary
+      };
+      return result;
+    }),
     evidenceArtifacts: report.evidenceArtifacts.slice(),
     hostOwnedCapabilityIDs: report.hostOwnedCapabilityIDs.slice(),
     unsupportedCapabilityIDs: report.unsupportedCapabilityIDs.slice(),

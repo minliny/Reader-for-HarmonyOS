@@ -4,7 +4,27 @@
 // 本文件为 NAPI 绑定骨架，不包含实际 native module 加载（POC 阶段）。
 //
 // 硬性门槛: 只有 Toolchain/ABI/Memory/Threading/Security/CI 全部通过才能进入主线。
-import readerCoreNapi from 'libreader_core_napi.so';
+import readerCoreNapiRaw from 'libreader_core_napi.so';
+
+// SDK-COMPAT: native .so module is an untyped ESObject at the ArkTS layer.
+// Suppress ArkTS no-any-unknown for this boundary cast with an explicit object type.
+declare interface ReaderCoreNapiRaw {
+  abiVersion(): number;
+  pingSmoke(): string;
+  sendJsonCommand(command: string): string;
+  createRuntime(config: object): ESObject;
+  sendCommand(handle: ESObject, command: string): void;
+  cancelRequest(handle: ESObject, requestId: number): void;
+  readEvent(handle: ESObject, timeoutMs: number): string | null;
+  pendingEventCount(handle: ESObject): number;
+  completeHostRequest(handle: ESObject, operationId: number, result: object, requestId?: number): void;
+  failHostRequest(handle: ESObject, operationId: number, error: object, requestId?: number): void;
+  releaseRuntime(handle: ESObject): void;
+  hostSmoke(): string;
+}
+
+// SDK-COMPAT: the .so default export is an untyped napi module; cast through Object.
+const readerCoreNapi: ReaderCoreNapiRaw = readerCoreNapiRaw as Object as ReaderCoreNapiRaw;
 
 // MARK: - ABI 版本与错误码（镜像 reader_core.h）
 
@@ -37,14 +57,16 @@ export function readerCoreErrorName(code: ReaderCoreError): string {
 
 // MARK: - 请求/响应 DTO
 
+export interface ReplaceRule {
+  id: string;
+  pattern: string;
+  replacement: string;
+  isRegex: boolean;
+}
+
 export interface ReplaceRulesRequest {
   content: string;
-  rules: Array<{
-    id: string;
-    pattern: string;
-    replacement: string;
-    isRegex: boolean;
-  }>;
+  rules: ReplaceRule[];
 }
 
 export interface ReplaceRulesResponse {
@@ -53,29 +75,43 @@ export interface ReplaceRulesResponse {
   error: string | null;
 }
 
+export interface RuleChainEntry {
+  kind: 'css' | 'xpath' | 'jsonpath' | 'template' | 'regex';
+  expression: string;
+  input: string;
+}
+
 export interface RuleChainRequest {
-  rules: Array<{
-    kind: 'css' | 'xpath' | 'jsonpath' | 'template' | 'regex';
-    expression: string;
-    input: string;
-  }>;
+  rules: RuleChainEntry[];
+}
+
+export interface RuleChainResultEntry {
+  values: string[];
+  matchedCount: number;
+  diagnostics: string[];
 }
 
 export interface RuleChainResponse {
-  results: Array<{
-    values: string[];
-    matchedCount: number;
-    diagnostics: string[];
-  }>;
+  results: RuleChainResultEntry[];
   error: string | null;
 }
 
 // MARK: - NAPI 绑定接口（POC 骨架）
 
+export interface ReplaceRulesNapiResult {
+  errorCode: ReaderCoreError;
+  jsonResponse: string | null;
+}
+
+export interface RuleChainNapiResult {
+  errorCode: ReaderCoreError;
+  jsonResponse: string | null;
+}
+
 export interface ReaderCoreNapiModule {
   reader_core_version(): string;
-  reader_core_apply_replace_rules(jsonRequest: string): { errorCode: ReaderCoreError; jsonResponse: string | null };
-  reader_core_parse_rule_chain(jsonRequest: string): { errorCode: ReaderCoreError; jsonResponse: string | null };
+  reader_core_apply_replace_rules(jsonRequest: string): ReplaceRulesNapiResult;
+  reader_core_parse_rule_chain(jsonRequest: string): RuleChainNapiResult;
   reader_core_free(ptr: number): void;
 }
 
@@ -219,7 +255,13 @@ function asObject(value: Object): object | null {
 }
 
 export function sendJsonCommand(method: string, params: object, requestId: number = 1): ReaderCoreProtocolResponse {
-  const command = JSON.stringify({ protocolVersion: 1, requestId, method, params });
+  // SDK-COMPAT: build command JSON via a typed record to satisfy arkts-no-untyped-obj-literals.
+  const commandObj: Record<string, Object> = {} as Record<string, Object>;
+  commandObj['protocolVersion'] = 1;
+  commandObj['requestId'] = requestId;
+  commandObj['method'] = method;
+  commandObj['params'] = params;
+  const command = JSON.stringify(commandObj);
   try {
     const raw = readerCoreNapi.sendJsonCommand(command);
     return parseProtocolResponse(raw, null);
@@ -247,9 +289,9 @@ function parseProtocolResponse(raw: string, bridgeError: string | null): ReaderC
       raw, error: bridgeError
     };
   }
-  let parsed: ESObject;
+  let parsed: Record<string, Object>;
   try {
-    parsed = JSON.parse(raw);
+    parsed = JSON.parse(raw) as Record<string, Object>;
   } catch (e) {
     return {
       ok: false, type: '', requestId: 0, data: null,
@@ -267,7 +309,7 @@ function parseProtocolResponse(raw: string, bridgeError: string | null): ReaderC
     };
   }
   if (type === 'error') {
-    const err = parsed['error'];
+    const err: Record<string, Object> = parsed['error'] as Record<string, Object>;
     return {
       ok: false, type, requestId, data: null,
       errorCode: (err['code'] ?? null) as string | null,
@@ -303,11 +345,11 @@ export interface ReaderCoreInfo {
 }
 
 export function getCoreInfo(): ReaderCoreInfo {
-  const resp = sendJsonCommand('core.info', {}, 1);
+  const resp = sendJsonCommand('core.info', {} as Record<string, Object>, 1);
   if (resp.error !== null || !resp.ok || resp.data === null) {
     return { abiVersion: 0, protocolVersion: 0, buildVersion: '', capabilities: [], raw: resp.raw, error: resp.error ?? `core.info did not return a result (type=${resp.type})` };
   }
-  const data = resp.data as ESObject;
+  const data = resp.data as Record<string, Object>;
   const capabilities: string[] = [];
   const caps = data['capabilities'];
   if (caps instanceof Array) {
@@ -334,11 +376,11 @@ export interface ReaderRuntimePingResult {
 }
 
 export function pingRuntime(): ReaderRuntimePingResult {
-  const resp = sendJsonCommand('runtime.ping', {}, 2);
+  const resp = sendJsonCommand('runtime.ping', {} as Record<string, Object>, 2);
   if (resp.error !== null || !resp.ok || resp.data === null) {
     return { pong: false, method: '', raw: resp.raw, error: resp.error ?? `runtime.ping did not return a result (type=${resp.type})` };
   }
-  const data = resp.data as ESObject;
+  const data = resp.data as Record<string, Object>;
   return {
     pong: (data['pong'] ?? false) as boolean,
     method: (data['method'] ?? '') as string,
@@ -358,7 +400,7 @@ export interface ReaderUnknownMethodError {
 }
 
 export function sendUnknownMethod(): ReaderUnknownMethodError {
-  const resp = sendJsonCommand('definitely.not.a.method', {}, 3);
+  const resp = sendJsonCommand('definitely.not.a.method', {} as Record<string, Object>, 3);
   return {
     isError: resp.type === 'error',
     type: resp.type,
@@ -383,7 +425,13 @@ export interface ReaderHostSmokeResult {
 }
 
 export function runHostSmokeShape(): ReaderHostSmokeResult {
-  const resp = sendJsonCommand('runtime.hostSmoke', { capability: 'host.smoke.echo', params: { url: 'https://example.invalid' } }, 4);
+  // SDK-COMPAT: build params via typed records to satisfy arkts-no-untyped-obj-literals.
+  const innerParams: Record<string, Object> = {} as Record<string, Object>;
+  innerParams['url'] = 'https://example.invalid';
+  const outerParams: Record<string, Object> = {} as Record<string, Object>;
+  outerParams['capability'] = 'host.smoke.echo';
+  outerParams['params'] = innerParams;
+  const resp = sendJsonCommand('runtime.hostSmoke', outerParams, 4);
   if (resp.error !== null) {
     return { isHostRequest: false, capability: null, operationId: null, paramsEcho: null, raw: resp.raw, error: resp.error };
   }
@@ -391,7 +439,7 @@ export function runHostSmokeShape(): ReaderHostSmokeResult {
   // and hostCapability/hostOperationId are populated when type === 'host.request'.
   let paramsEcho: string | null = null;
   try {
-    const parsed: ESObject = JSON.parse(resp.raw);
+    const parsed: Record<string, Object> = JSON.parse(resp.raw) as Record<string, Object>;
     const p = parsed['params'];
     if (p !== undefined && p !== null) {
       paramsEcho = JSON.stringify(p);
@@ -409,17 +457,201 @@ export function runHostSmokeShape(): ReaderHostSmokeResult {
   };
 }
 
+// MARK: - Persistent runtime + closed-loop host bus
+//
+// The native module now also exposes a persistent-runtime API (createRuntime /
+// releaseRuntime / sendCommand / cancelRequest / readEvent / pendingEventCount
+// / completeHostRequest / failHostRequest) backed by a thread-safe event queue
+// and a stable Core runtime handle. This closes the host bus: Core emits
+// host.request, the host replies via host.complete/host.error, and Core emits
+// the final result event. The one-shot sendJsonCommand path above is retained
+// for the legacy POC validator; new code should use ReaderCoreRuntime +
+// runHostSmokeClosedLoop.
+
+// Opaque runtime handle returned by createRuntime. Treated as an external ES
+// value; do not inspect its shape — pass it straight back to the native API.
+export type ReaderCoreRuntimeHandle = ESObject;
+
+export interface ReaderCoreRuntimeOptions {
+  config?: object;  // optional Core config JSON (defaults to {})
+}
+
+export class ReaderCoreRuntime {
+  private readonly handle: ReaderCoreRuntimeHandle;
+  private released = false;
+
+  private constructor(handle: ReaderCoreRuntimeHandle) {
+    this.handle = handle;
+  }
+
+  static create(options?: ReaderCoreRuntimeOptions): ReaderCoreRuntime {
+    const config: object = options && options.config !== undefined ? options.config : ({} as Record<string, Object>);
+    const handle: ESObject = readerCoreNapi.createRuntime(config);
+    return new ReaderCoreRuntime(handle);
+  }
+
+  // Send a JSON command to Core. Returns the raw status (0 on success); a
+  // non-zero value or thrown error indicates an rc_runtime_send failure.
+  sendCommand(method: string, params: object, requestId: number): void {
+    this.assertNotReleased();
+    // SDK-COMPAT: build command JSON via a typed record to satisfy arkts-no-untyped-obj-literals.
+    const commandObj: Record<string, Object> = {} as Record<string, Object>;
+    commandObj['protocolVersion'] = 1;
+    commandObj['requestId'] = requestId;
+    commandObj['method'] = method;
+    commandObj['params'] = params;
+    const command = JSON.stringify(commandObj);
+    readerCoreNapi.sendCommand(this.handle, command);
+  }
+
+  // Cancel an in-flight request by requestId. Idempotent.
+  cancelRequest(requestId: number): void {
+    this.assertNotReleased();
+    readerCoreNapi.cancelRequest(this.handle, requestId);
+  }
+
+  // Poll one event from the queue. Returns null on timeout (no event). A
+  // timeoutMs of 0 returns immediately if the queue is empty.
+  readEvent(timeoutMs: number = 0): string | null {
+    this.assertNotReleased();
+    const event = readerCoreNapi.readEvent(this.handle, timeoutMs);
+    if (event === null || event === undefined) { return null; }
+    return event as string;
+  }
+
+  pendingEventCount(): number {
+    this.assertNotReleased();
+    return readerCoreNapi.pendingEventCount(this.handle) as number;
+  }
+
+  // Reply to a host.request with host.complete. operationId comes from the
+  // host.request event; result must be a JSON object. requestId is optional —
+  // if omitted the native layer mints a fresh host-response requestId.
+  completeHostRequest(operationId: number, result: object, requestId?: number): void {
+    this.assertNotReleased();
+    if (requestId !== undefined) {
+      readerCoreNapi.completeHostRequest(this.handle, operationId, result, requestId);
+    } else {
+      readerCoreNapi.completeHostRequest(this.handle, operationId, result);
+    }
+  }
+
+  // Reply to a host.request with host.error. error must be a JSON object.
+  failHostRequest(operationId: number, error: object, requestId?: number): void {
+    this.assertNotReleased();
+    if (requestId !== undefined) {
+      readerCoreNapi.failHostRequest(this.handle, operationId, error, requestId);
+    } else {
+      readerCoreNapi.failHostRequest(this.handle, operationId, error);
+    }
+  }
+
+  release(): void {
+    if (this.released) { return; }
+    this.released = true;
+    try {
+      readerCoreNapi.releaseRuntime(this.handle);
+    } catch (_e) {
+      // Best-effort teardown; the native finalizer also reclaims on GC.
+    }
+  }
+
+  private assertNotReleased(): void {
+    if (this.released) { throw new Error('ReaderCoreRuntime already released'); }
+  }
+}
+
+// Closed-loop host smoke: native creates a runtime, sends runtime.hostSmoke,
+// captures the host.request event, extracts operationId, replies via
+// host.complete, and returns BOTH the host.request event and the completion
+// event. This proves the full host.request -> host.complete round trip through
+// the real C ABI on a persistent runtime (NOT just shape capture).
+export interface ReaderHostSmokeClosedLoopResult {
+  hasHostRequest: boolean;       // host.request event captured
+  hasCompletion: boolean;        // final result/error event captured after host.complete
+  hostOperationId: number | null;
+  completionType: string | null; // "result" | "error" — expected "result"
+  completionOk: boolean;         // true when completion is a result with the echoed payload
+  raw: string;                   // full native payload {hostRequest, completion}
+  error: string | null;
+}
+
+export function parseHostSmokePayload(raw: string): ReaderHostSmokeClosedLoopResult {
+  let parsed: Record<string, Object>;
+  try {
+    parsed = JSON.parse(raw) as Record<string, Object>;
+  } catch (e) {
+    return { hasHostRequest: false, hasCompletion: false, hostOperationId: null,
+      completionType: null, completionOk: false, raw, error: `hostSmoke payload parse failed: ${e}` };
+  }
+  const hostRequestField = parsed['hostRequest'] ?? null;
+  const completionField = parsed['completion'] ?? null;
+  if (hostRequestField === null || hostRequestField === undefined ||
+      completionField === null || completionField === undefined) {
+    return { hasHostRequest: false, hasCompletion: false, hostOperationId: null,
+      completionType: null, completionOk: false, raw, error: 'hostSmoke payload missing hostRequest/completion' };
+  }
+
+  // SDK-COMPAT: native HostSmoke embeds the event JSON inline, so after the
+  // outer parse hostRequest/completion may already be objects; if they are
+  // strings (canned fixture), parse them. asObject normalises both paths.
+  let hostReq: Record<string, Object>;
+  let completion: Record<string, Object>;
+  try {
+    hostReq = typeof hostRequestField === 'string' ?
+      (JSON.parse(hostRequestField as string) as Record<string, Object>) :
+      (hostRequestField as Record<string, Object>);
+    completion = typeof completionField === 'string' ?
+      (JSON.parse(completionField as string) as Record<string, Object>) :
+      (completionField as Record<string, Object>);
+  } catch (e) {
+    return { hasHostRequest: false, hasCompletion: false, hostOperationId: null,
+      completionType: null, completionOk: false, raw, error: `hostSmoke event parse failed: ${e}` };
+  }
+
+  const hostType = (hostReq['type'] ?? '') as string;
+  const completionType = (completion['type'] ?? '') as string;
+  const operationId = (hostReq['operationId'] ?? null) as number | null;
+  const completionData = completion['data'];
+  const completionOk = completionType === 'result' && completionData !== null && completionData !== undefined;
+
+  return {
+    hasHostRequest: hostType === 'host.request',
+    hasCompletion: completionType === 'result' || completionType === 'error',
+    hostOperationId: operationId,
+    completionType,
+    completionOk,
+    raw,
+    error: null
+  };
+}
+
+export function runHostSmokeClosedLoop(): ReaderHostSmokeClosedLoopResult {
+  let raw: string;
+  try {
+    raw = readerCoreNapi.hostSmoke() as string;
+  } catch (e) {
+    return { hasHostRequest: false, hasCompletion: false, hostOperationId: null,
+      completionType: null, completionOk: false, raw: '', error: `native hostSmoke threw: ${e}` };
+  }
+  return parseHostSmokePayload(raw);
+}
+
 // MARK: - 模拟绑定（POC 阶段，不加载真实 native module）
 
 export function createPocSimulatedModule(): ReaderCoreNapiModule {
-  return {
+  // SDK-COMPAT: build via a class instance to avoid arkts-no-untyped-obj-literals.
+  class SimulatedModule implements ReaderCoreNapiModule {
     reader_core_version(): string {
-      return JSON.stringify({ abiVersion: READER_CORE_ABI_VERSION, coreVersion: 'simulated-poc' });
-    },
-    reader_core_apply_replace_rules(jsonRequest: string): { errorCode: ReaderCoreError; jsonResponse: string | null } {
+      const verObj: Record<string, Object> = {} as Record<string, Object>;
+      verObj['abiVersion'] = READER_CORE_ABI_VERSION;
+      verObj['coreVersion'] = 'simulated-poc';
+      return JSON.stringify(verObj);
+    }
+    reader_core_apply_replace_rules(jsonRequest: string): ReplaceRulesNapiResult {
       try {
-        const request: ReplaceRulesRequest = JSON.parse(jsonRequest);
-        let result = request.content;
+        const request: ReplaceRulesRequest = JSON.parse(jsonRequest) as ReplaceRulesRequest;
+        let result: string = request.content;
         let appliedCount = 0;
         for (let i = 0; i < request.rules.length; i++) {
           const rule = request.rules[i];
@@ -436,26 +668,33 @@ export function createPocSimulatedModule(): ReaderCoreNapiModule {
           }
         }
         const response: ReplaceRulesResponse = { result, appliedCount, error: null };
-        return { errorCode: ReaderCoreError.OK, jsonResponse: JSON.stringify(response) };
+        const rv: ReplaceRulesNapiResult = { errorCode: ReaderCoreError.OK, jsonResponse: JSON.stringify(response) };
+        return rv;
       } catch (e) {
-        return { errorCode: ReaderCoreError.INVALID_JSON, jsonResponse: null };
+        const rv: ReplaceRulesNapiResult = { errorCode: ReaderCoreError.INVALID_JSON, jsonResponse: null };
+        return rv;
       }
-    },
-    reader_core_parse_rule_chain(jsonRequest: string): { errorCode: ReaderCoreError; jsonResponse: string | null } {
+    }
+    reader_core_parse_rule_chain(jsonRequest: string): RuleChainNapiResult {
       try {
-        const request: RuleChainRequest = JSON.parse(jsonRequest);
-        const results = request.rules.map(rule => {
+        const request: RuleChainRequest = JSON.parse(jsonRequest) as RuleChainRequest;
+        const results: RuleChainResultEntry[] = request.rules.map((rule: RuleChainEntry): RuleChainResultEntry => {
           // 简化: POC 模拟，不实际调用 Core
-          return { values: [], matchedCount: 0, diagnostics: [`simulated:${rule.kind}`] };
+          const entry: RuleChainResultEntry = { values: [], matchedCount: 0, diagnostics: [`simulated:${rule.kind}`] };
+          return entry;
         });
         const response: RuleChainResponse = { results, error: null };
-        return { errorCode: ReaderCoreError.OK, jsonResponse: JSON.stringify(response) };
+        const rv: RuleChainNapiResult = { errorCode: ReaderCoreError.OK, jsonResponse: JSON.stringify(response) };
+        return rv;
       } catch (e) {
-        return { errorCode: ReaderCoreError.INVALID_JSON, jsonResponse: null };
+        const rv: RuleChainNapiResult = { errorCode: ReaderCoreError.INVALID_JSON, jsonResponse: null };
+        return rv;
       }
-    },
+    }
     reader_core_free(_ptr: number): void {
       // 模拟: 无操作
     }
-  };
+  }
+  const simulatedModule: ReaderCoreNapiModule = new SimulatedModule();
+  return simulatedModule;
 }
