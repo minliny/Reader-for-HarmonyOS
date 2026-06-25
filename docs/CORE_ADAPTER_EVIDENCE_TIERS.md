@@ -1,6 +1,6 @@
 # Reader for HarmonyOS — Core Adapter Evidence Tiers
 
-Branch: `codex/harmony-napi-runtime`
+Branch: `codex/harmony-real-device-evidence`
 Date: 2026-06-25
 Scope: ArkTS / Node-API host adapter that drives Rust Reader-Core, and its contract evidence.
 
@@ -58,19 +58,21 @@ Scope: ArkTS / Node-API host adapter that drives Rust Reader-Core, and its contr
 1. ~~native `hostSmoke()` 真实 host bus round-trip 执行~~ — **本轮已完成**（HostBus pill `PASS op:1`）。
 2. 把 `CAbiPocValidator` 的真 native 路径放在 simulator tier 执行，归档 summary。
 
-### 3. 真机 (real device) — 无证据
+### 3. 真机 (real device) — 无证据 / preflight BLOCKED
 
 **Proven:** 无（no evidence yet）。
 
 **State:**
 - `docs/HARMONYOS_NAPI_RUNTIME_SMOKE_REPORT.md`（2026-06-24）：`hdc list targets` → `[Empty]`，无设备连接。ArkTS validator 编译进模块图但 **未在任何 device/simulator 执行**。
+- `scripts/preflight_real_device_runtime_smoke.sh`（2026-06-25）：新增可重复真机前置检查。当前机器 `hdc list targets` 返回 `[Empty]`，默认 HAP 为 `entry-default-unsigned.hap`，`build-profile.json5` 的 `signingConfigs` 为空；preflight 写入 `artifacts/real-device-preflight/latest/real_device_preflight_summary.json`，状态为 `BLOCKED`。这不是 runtime PASS，也不是 real-device evidence。
 - `entry/src/main/ets/coreAdapter/HarmonyOSReleaseGate.ets` 列出 device-evidence required 项：`nativeHTTP.evidence`、`arkWeb.evidence`、`cookie.session.evidence`、`huks.evidence`、`rdb.evidence`、`webdav.evidence`、`tts.evidence`——当前只有 fixture/local 证据，标记 missing。
 - `HarmonyOSNonUIParityEvidenceRunner` / `HarmonyOSFirstBatchEvidenceRunner` 把 ArkWeb / JS bridge / file-picker / HUKS / cookie 等标为 `envBlocked` / `readyNotExecuted`，显式不伪造 device 执行。
 
 **Next（real-device lane）:**
-1. 接真机（`hdc` target 为设备 serial），重跑 `scripts/run_device_runtime_smoke.sh`，summary 应显示 `tier: "device"`。
-2. 逐项补 `HarmonyOSReleaseGate` 的 device-evidence：nativeHTTP → arkWeb → cookie/session → HUKS → RDB → WebDAV → TTS。
-3. 在签名 HAP 上跑 `captureHarmonyNapiSmokeArtifact`（见 Reader-Core-Native `bindings/harmony/README.md`），与本地 OHOS/Harmony build evidence 一起归档，归档时标注 tier=real-device。
+1. 接真机（`hdc` target 为设备 serial / USB id / 非 loopback TCP），运行 `scripts/preflight_real_device_runtime_smoke.sh`，状态必须为 `READY`。
+2. 用签名 HAP 重跑 `scripts/run_device_runtime_smoke.sh`，summary 应显示 `tier: "device"`。
+3. 逐项补 `HarmonyOSReleaseGate` 的 device-evidence：nativeHTTP → arkWeb → cookie/session → HUKS → RDB → WebDAV → TTS。
+4. 在签名 HAP 上跑 `captureHarmonyNapiSmokeArtifact`（见 Reader-Core-Native `bindings/harmony/README.md`），与本地 OHOS/Harmony build evidence 一起归档，归档时标注 tier=real-device。
 
 ## Adapter gap — ArkTS/Node-API host adapter
 
@@ -158,6 +160,7 @@ $ JAVA_HOME="/Applications/DevEco-Studio.app/Contents/jbr/Contents/Home" \
 - `entry/src/main/ets/__tests__/TestInfra.ets`：注册 `Host Bus Closed Loop (headless parser)` suite。
 - Compile + package 验证通过：`hvigorw assembleHap` BUILD SUCCESSFUL；打包 `.so` 含全部新导出与 `host.complete`/`host.error` command 串。
 - 本报告：建立三级 evidence 现状基线，记录 adapter gap 与 backlog。
+- `scripts/preflight_real_device_runtime_smoke.sh` + `docs/HARMONYOS_REAL_DEVICE_PREFLIGHT_RUNBOOK.md`：新增 real-device preflight/runbook，明确无真机或未签名 HAP 时必须 `BLOCKED`/nonzero，不得把 simulator 当真机。
 
 ## 未改动的边界（守约）
 

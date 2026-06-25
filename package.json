@@ -10,6 +10,7 @@
   "repository": {},
   "license": "ISC",
   "scripts": {
+    "preflight:real-device": "bash scripts/preflight_real_device_runtime_smoke.sh",
     "smoke:device-runtime": "bash scripts/run_device_runtime_smoke.sh",
     "ci:device-runtime": "bash scripts/run_device_runtime_smoke.sh && python3 scripts/validate_device_runtime_smoke_artifact.py artifacts/device-runtime-smoke/latest/device_runtime_smoke_summary.json",
     "ci:device-runtime:validate": "python3 scripts/validate_device_runtime_smoke_artifact.py artifacts/device-runtime-smoke/latest/device_runtime_smoke_summary.json",
