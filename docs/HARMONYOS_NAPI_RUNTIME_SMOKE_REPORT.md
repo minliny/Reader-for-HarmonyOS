@@ -1,36 +1,54 @@
 # HarmonyOS NAPI Runtime Smoke Report
 
 Branch: `codex/harmony-napi-runtime`
-Date: 2026-06-24
 Core branch: `origin/codex/core-protocol-runtime`
+Last updated: 2026-06-25 (originally 2026-06-24)
+
+> 本报告按三级 evidence 标注：**headless** / **模拟器 (simulator)** / **真机 (real device)**。
+> 某级暂无证据时写 "no evidence yet"，不得含糊暗示。三级定义与最新状态以
+> `docs/CORE_ADAPTER_EVIDENCE_TIERS.md` 为准；若冲突以该文档为准。
 
 ## Scope
 
-First-version HarmonyOS NAPI module + ArkTS bridge wiring the Reader-Core-Native
-C ABI JSON protocol. This is a **HAP/package-level** smoke. No device or
-simulator was connected (`hdc list targets` → `[Empty]`), so this report does
-NOT claim device-real runtime, ArkWeb, session, or device-CI passage.
+HarmonyOS NAPI module + ArkTS bridge wiring the Reader-Core-Native C ABI JSON
+protocol. The 2026-06-24 baseline was a **HAP/package-level** smoke (no device or
+simulator connected). As of 2026-06-25 the smoke has been executed on the
+HarmonyOS emulator (simulator tier) and via a headless entry path; the
+real-device tier remains **no evidence yet**. This report does NOT claim
+device-real runtime, ArkWeb, session, or device-CI passage.
 
 ## What was wired
 
 ### NAPI layer (`entry/src/main/cpp/reader_napi.cpp`)
 
 Calls the Reader-Core C ABI (`rc_abi_version`, `rc_runtime_create`,
-`rc_runtime_send`, `rc_runtime_destroy`) over the JSON protocol. Exports:
+`rc_runtime_send`, `rc_runtime_cancel`, `rc_runtime_destroy`) over the JSON
+protocol. The 2026-06-24 baseline exported `abiVersion` / `pingSmoke` /
+`sendJsonCommand` (one-shot, first-event, no persistent runtime). The 2026-06-25
+round added a persistent-runtime + thread-safe event queue + host-bus closed-loop
+surface, aligned to the Reader-Core-Native `bindings/harmony` reference (ABI-only,
+no Core edits). Current exports:
 
 - `abiVersion()` — `rc_abi_version()`
 - `pingSmoke()` — legacy `core.ping` convenience (kept for the FFI/Harmony smoke
   binaries and the POC validator)
-- `sendJsonCommand(command: string): string` — generic JSON-protocol entry:
-  creates a fresh runtime, sends one reader-command, returns the JSON of the
-  first event Core emits back (result / error / host.request)
+- `sendJsonCommand(command: string): string` — generic one-shot JSON-protocol entry
+- `createRuntime(config?)` / `releaseRuntime(handle)` — persistent runtime handle
+- `sendCommand(handle, cmd)` — send JSON command to a persistent runtime
+- `cancelRequest(handle, requestId)` — `rc_runtime_cancel`, idempotent
+- `readEvent(handle, timeoutMs?)` / `pendingEventCount(handle)` — poll the
+  thread-safe event queue
+- `completeHostRequest(handle, opId, result, requestId?)` — send `host.complete`
+  JSON command via `rc_runtime_send`
+- `failHostRequest(handle, opId, error, requestId?)` — send `host.error` JSON command
+- `hostSmoke()` — closed-loop host bus smoke (create → `runtime.hostSmoke` → capture
+  `host.request` → `host.complete` → capture final result)
+- `lifecycleSmoke(iterations?)` — repeated create/ping/destroy, worker-join check
 
 The `.so` is built from `libreader_core.a` (Reader-Core-Native OHOS staticlib)
 and linked against `libace_napi.z.so` + `libc++_shared.so`.
 
 ### ArkTS bridge (`entry/src/main/ets/cabi/ReaderCoreNapiBridge.ets`)
-
-Exposes a clean API on top of `sendJsonCommand`:
 
 - `getCoreInfo()` → `core.info` structured result
 - `pingRuntime()` → `runtime.ping` structured result (`pong`, `method`)
@@ -38,70 +56,104 @@ Exposes a clean API on top of `sendJsonCommand`:
 - `sendUnknownMethod()` → unknown-method structured error
 - `runHostSmokeShape()` → `runtime.hostSmoke` host.request shape verification
 - `runReaderCoreNativeSmoke()` → toolchain + ABI smoke (legacy `core.ping`)
+- `ReaderCoreRuntime` class — persistent-runtime wrapper (`create` / `sendCommand`
+  / `cancelRequest` / `readEvent` / `pendingEventCount` / `completeHostRequest` /
+  `failHostRequest` / `release`)
+- `runHostSmokeClosedLoop()` — calls native `hostSmoke()`, parses
+  `{hostRequest, completion}`, verifies host.request + final-result closed loop
+- `parseHostSmokePayload(raw)` — pure-function parser factored out for headless
+  testing with canned payloads (no `.so` dependency)
 
-### Validator (`entry/src/main/ets/__tests__/CAbiPocValidator.ets`)
+### Validators (`entry/src/main/ets/__tests__/`)
 
-Asserts, through the real NAPI → C ABI → Rust runtime path:
+- `CAbiPocValidator.ets` — asserts through the real NAPI → C ABI → Rust runtime
+  path: `core.info` shape, `runtime.ping` pong, unknown-method `UNKNOWN_METHOD`
+  error, `runtime.hostSmoke` `host.request` event with echoed capability
+  (`host.smoke.echo`), non-null `operationId`, echoed params.
+- `HostBusClosedLoopValidator.ets` (new 2026-06-25, **HEADLESS tier**) — feeds
+  canned payloads to `parseHostSmokePayload`: well-formed closed loop
+  (operationId=7), `host.error` path, missing completion / missing hostRequest /
+  non-JSON top-level / non-JSON inner event all rejected.
 
-- `core.info` returns a structured result with `abiVersion=1`,
-  `protocolVersion=1`, non-empty `buildVersion`, and capabilities including
-  `core.info`, `runtime.ping`, `runtime.hostSmoke`
-- `runtime.ping` returns `pong=true`, `method="runtime.ping"`
-- unknown method (`definitely.not.a.method`) returns a structured error with
-  `code="UNKNOWN_METHOD"` and a non-empty message
-- `runtime.hostSmoke` emits a `host.request` event with the echoed capability
-  (`host.smoke.echo`), a non-null `operationId`, and the echoed params
-- the existing POC gate still marks `toolchain`/`abi` as ready while keeping
-  `memory`/`threading`/`ci` blocked
+## Three-tier evidence status
+
+| Tier | Smoke coverage | Status |
+|------|----------------|--------|
+| headless | `parseHostSmokePayload` closed-loop parsing + malformed rejection (`HostBusClosedLoopValidator`); `assembleHap` compile + package | ✅ PASS (718P/4F of 722 across 16 suites; 4 failures are pre-existing fixture issues) |
+| 模拟器 (simulator) | native `hostSmoke()` real `host.request` → `host.complete` round-trip via `HostBus` pill; `CAbiPocValidator` real native path | ✅ PASS (runtime smoke 20260625T094901Z, `tier: simulator`, `HostBus` pill `PASS op:1`) |
+| 真机 (real device) | signed HAP `captureHarmonyNapiSmokeArtifact` on physical device | ⏳ no evidence yet (no physical device this session) |
+
+Headless entry: `EntryAbility.ets` detects `want.parameters['readerHeadlessTest']
+=== '1'` → `TestInfra.runAllDomainTests()` → emits `HEADLESS_TEST_JSON` via hilog
+→ `terminateSelf()`. Invoked on emulator `127.0.0.1:5555` via
+`aa start --ps readerHeadlessTest 1`; artifact
+`artifacts/headless-test/20260625T093220Z/` → 718P 4F / 722.
+
+Simulator runtime smoke: `scripts/run_device_runtime_smoke.sh` derives
+`tier: "simulator"` for loopback targets; `RuntimeDeviceEvidencePanel` `HostBus`
+pill calls `runHostSmokeClosedLoop()`; layout shows `HostBus` pill = `PASS op:1`
+(operationId=1 passes through). Artifact
+`artifacts/device-runtime-smoke/20260625T094901Z/` → `status: PASS`.
 
 ## Verification
 
 ```
-$ DEVECO_SDK_HOME="/Applications/DevEco-Studio.app/Contents" ./hvigorw assembleHap --no-daemon
-> hvigor Finished :entry:default@BuildNativeWithNinja... after 889 ms
-> hvigor Finished :entry:default@CompileArkTS... after 8 s 422 ms
-> hvigor Finished :entry:default@PackageHap... after 828 ms
-> hvigor BUILD SUCCESSFUL in 3 s 608 ms
+$ JAVA_HOME="/Applications/DevEco-Studio.app/Contents/jbr/Contents/Home" \
+  DEVECO_SDK_HOME="/Applications/DevEco-Studio.app/Contents" ./hvigorw assembleHap --no-daemon
+> hvigor Finished :entry:default@BuildNativeWithNinja...
+> hvigor Finished :entry:default@CompileArkTS...
+> hvigor Finished :entry:default@PackageHap...
+> hvigor BUILD SUCCESSFUL
 ```
 
-```
-$ unzip -l entry/build/default/outputs/default/entry-default-unsigned.hap | rg "libreader_core_napi.so|libc\+\+_shared.so"
-   492488  06-24 2026  libs/arm64-v8a/libreader_core_napi.so
-  1262248  06-24 2026  libs/arm64-v8a/libc++_shared.so
-```
+Packaged `libreader_core_napi.so` (4255104 bytes, extracted from HAP) contains
+all 13 export names (`strings`-verified: `abiVersion` / `createRuntime` /
+`releaseRuntime` / `sendCommand` / `cancelRequest` / `readEvent` /
+`pendingEventCount` / `completeHostRequest` / `failHostRequest` / `pingSmoke` /
+`hostSmoke` / `lifecycleSmoke` / `sendJsonCommand`) plus the `host.complete` /
+`host.error` command strings and Core protocol validation strings (e.g.
+`host.complete operationId must be greater than 0`,
+`host.error error must be a JSON object`), confirming the `.so` was rebuilt from
+the current C++ source and links the real Rust runtime.
 
-The packaged `libreader_core_napi.so` exports `RegisterReaderCoreNapiModule`
-and links the Rust std condition-variable timed-wait path used by the
-`sendJsonCommand` event-capture loop, confirming the `.so` was rebuilt from the
-current C++ source and drives the real C ABI.
+This is **compile + package** tier evidence. Runtime execution (`hostSmoke()`
+actually closing the `host.request` → `host.complete` round-trip) is proven at
+the simulator tier (see above), not at the real-device tier.
 
-```
-$ git diff --check -- entry/build-profile.json5 entry/src/main/cpp entry/src/main/ets/cabi entry/src/main/ets/__tests__/CAbiPocValidator.ets
-(exit 0, no whitespace/conflict issues)
-```
+## Capability gate status
 
-## Capability gate status (unchanged posture)
-
-| Gate              | Status        | Evidence                                   |
-|-------------------|---------------|--------------------------------------------|
-| toolchain         | PASS          | `.so` built and packaged into HAP          |
-| native ABI smoke  | PASS          | `abiVersion=1`, `runtime.ping`/`core.ping` |
-| core.info shape   | PASS (pkg)    | structured result via NAPI → C ABI         |
-| unknown method    | PASS (pkg)    | structured `UNKNOWN_METHOD` error          |
-| host-smoke shape  | PASS (pkg)    | `host.request` event shape verified        |
-| memory            | BLOCKED       | ownership not verified on a real device    |
-| threading         | BLOCKED       | safety not verified on a real device       |
-| security          | gated (decl)  | no http/file/cookie/credential ABI surface |
-| CI / device       | NOT MEASURED  | no device/simulator connected              |
-| ArkWeb / session  | NOT MEASURED  | out of scope for this smoke                |
+| Gate              | Status          | Tier      | Evidence                                            |
+|-------------------|-----------------|-----------|-----------------------------------------------------|
+| toolchain         | PASS            | headless  | `.so` built and packaged into HAP                   |
+| native ABI smoke  | PASS            | simulator | `abiVersion=1`, `runtime.ping`/`core.ping` executed |
+| core.info shape   | PASS            | simulator | structured result via NAPI → C ABI, executed        |
+| unknown method    | PASS            | simulator | structured `UNKNOWN_METHOD` error, executed         |
+| host-smoke shape  | PASS            | simulator | `host.request` event shape + closed loop `PASS op:1`|
+| host-bus closed loop | PASS         | simulator | `host.request` → `host.complete` round-trip         |
+| host-bus parser   | PASS            | headless  | `HostBusClosedLoopValidator` 21P/0F                 |
+| memory            | BLOCKED         | —         | ownership not verified on a real device             |
+| threading         | BLOCKED         | —         | safety not verified on a real device                |
+| security          | gated (decl)    | —         | no http/file/cookie/credential ABI surface          |
+| CI / device       | NOT MEASURED    | —         | no real device connected this session               |
+| ArkWeb / session  | NOT MEASURED    | —         | out of scope for this smoke                         |
 
 ## Not verified (still blocked)
 
-- **Device-real runtime**: `hdc list targets` returned `[Empty]`. The ArkTS
-  validator was compiled into the module graph but was NOT executed on a device
-  or simulator. The structured-result/error assertions above are proven at
-  compile + package level only.
+- **Real-device runtime**: no physical device this session (`hdc list targets`
+  returned `[Empty]` at report time). Simulator PASS is labeled simulator; it is
+  NOT promoted to device tier. The structured-result/error/host-bus assertions
+  are proven at headless + simulator tiers only.
 - **Memory ownership**, **threading safety**: still BLOCKED pending real-device
   evidence.
 - **CI / device gate**: NOT MEASURED.
 - **ArkWeb / session / device runtime**: NOT claimed as passing.
+
+## Next (real-device lane)
+
+1. Connect a physical device (`hdc` target = device serial, not loopback), re-run
+   `scripts/run_device_runtime_smoke.sh`; summary should show `tier: "device"`.
+2. Run `captureHarmonyNapiSmokeArtifact` (see Reader-Core-Native
+   `bindings/harmony/README.md`) on a signed HAP; archive the formatted artifact
+   output labeled `tier=real-device`.
+3. Backfill `HarmonyOSReleaseGate` device-evidence items: nativeHTTP → arkWeb →
+   cookie/session → HUKS → RDB → WebDAV → TTS.
