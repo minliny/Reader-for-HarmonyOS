@@ -24,7 +24,9 @@ export interface ExternalClosureArtifactSet {
   matrix: string;
   deviceProvisioningAudit: string;
   authorizedCorpusPreflight: string;
+  authorizedCorpusLiveExecutionEvidence: string;
   runtimeDeviceRunnerPreflight: string;
+  secureStorageEntitlementEvidence: string;
   releaseGovernancePreflight: string;
   regressionResult: string;
 }

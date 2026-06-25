@@ -154,5 +154,12 @@ function countRows(rows: NonUIParityEvidenceRow[]): Record<string, number> {
     if (item.status === NonUIParityStatus.externalRequired) { external++; }
     if (item.status === NonUIParityStatus.blocked) { blocked++; }
   }
-  return { p0, p1, p2, ready, external, blocked };
+  const result: Record<string, number> = {} as Record<string, number>;
+  result['p0'] = p0;
+  result['p1'] = p1;
+  result['p2'] = p2;
+  result['ready'] = ready;
+  result['external'] = external;
+  result['blocked'] = blocked;
+  return result;
 }

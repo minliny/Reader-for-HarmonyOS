@@ -29,12 +29,19 @@ export class ImportPipeline {
     // Detect encoding if not provided
     let encoding = opts.encoding ?? this.detectEncoding(data);
     if (opts.encoding && encoding !== opts.encoding) {
-      warnings.push({ code: 'ENCODING_FALLBACK', message: `Fell back from ${opts.encoding} to ${encoding}`,
-        context: { detected: encoding, requested: opts.encoding! } });
+      const ctx: Record<string, string> = {};
+      ctx['detected'] = encoding;
+      ctx['requested'] = opts.encoding!;
+      const warning: LocalBookImportWarning = {
+        code: 'ENCODING_FALLBACK',
+        message: `Fell back from ${opts.encoding} to ${encoding}`,
+        context: ctx
+      };
+      warnings.push(warning);
     }
 
     // Parse content
-    const policy = opts.splitPolicy ?? { pattern: SplitPattern.auto };
+    const policy: ChapterSplitPolicy = opts.splitPolicy ?? { pattern: SplitPattern.auto };
     let toc: LocalTOCItem[] = [];
     let content = '';
     let book: LocalBook | null = null;
@@ -45,11 +52,12 @@ export class ImportPipeline {
       content = result.content;
       encoding = result.encoding;
 
-      book = {
+      const newBook: LocalBook = {
         id: '', title: filePath.split('/').pop()?.replace(/\.[^.]+$/, '') ?? 'Unknown',
         filePath, fileFormat: format, fileSize: result.byteCount,
         encoding: result.encoding, addedAt: Date.now(), unknownFields: {}
       };
+      book = newBook;
     } else if (format === LocalBookFormat.epub && this.epubParser) {
       try {
         const epubResult = await this.epubParser.parse(data);
@@ -58,12 +66,18 @@ export class ImportPipeline {
         book.addedAt = Date.now();
         toc = EPUBMapping.toTOCItems(epubResult.navPoints);
       } catch (_e) {
-        return { book: this.emptyBook(filePath, format), toc: [], warnings:
-          [{ code: 'EPUB_PARSE_FAILED', message: 'EPUB parsing not available (adapter scope)' }] };
+        const failWarning: LocalBookImportWarning = { code: 'EPUB_PARSE_FAILED', message: 'EPUB parsing not available (adapter scope)' };
+        const failResult: LocalBookImportResult = {
+          book: this.emptyBook(filePath, format),
+          toc: [],
+          warnings: [failWarning]
+        };
+        return failResult;
       }
     } else {
       book = this.emptyBook(filePath, format);
-      warnings.push({ code: 'FORMAT_NOT_SUPPORTED', message: `Format ${format} not supported` });
+      const formatWarning: LocalBookImportWarning = { code: 'FORMAT_NOT_SUPPORTED', message: `Format ${format} not supported` };
+      warnings.push(formatWarning);
     }
 
     // Apply metadata overrides
@@ -78,15 +92,17 @@ export class ImportPipeline {
       if (added) {
         book.id = added.id;
       } else {
-        warnings.push({ code: 'DUPLICATE', message: 'Book already exists in bookshelf' });
+        const dupWarning: LocalBookImportWarning = { code: 'DUPLICATE', message: 'Book already exists in bookshelf' };
+        warnings.push(dupWarning);
       }
     }
 
-    return {
+    const importResult: LocalBookImportResult = {
       book: book ?? this.emptyBook(filePath, format),
       toc,
       warnings
     };
+    return importResult;
   }
 
   // Duplicate detection
@@ -98,6 +114,30 @@ export class ImportPipeline {
       if (fileSize !== undefined && b.fileSize === fileSize) { return true; }
     }
     return false;
+  }
+
+  /**
+   * Import a file selected via the platform file picker. The display name is
+   * used as the source path (raw URIs are not persisted); format is inferred
+   * from the extension. Falls back to LocalBookFormat.unknown for unrecognized
+   * extensions so the import path remains bounded.
+   */
+  async importPicked(displayName: string, data: Uint8Array, mimeType: string, options?: ImportOptions): Promise<LocalBookImportResult> {
+    const format = this.inferFormat(displayName, mimeType);
+    const sandboxPath = `sandbox://picked/${displayName}`;
+    return this.importFile(sandboxPath, format, data, options);
+  }
+
+  private inferFormat(displayName: string, mimeType: string): LocalBookFormat {
+    const ext = displayName.split('.').pop()?.toLowerCase();
+    if (ext === 'txt') { return LocalBookFormat.txt; }
+    if (ext === 'epub') { return LocalBookFormat.epub; }
+    if (ext === 'cbz') { return LocalBookFormat.cbz; }
+    if (ext === 'html' || ext === 'htm') { return LocalBookFormat.html; }
+    if (ext === 'pdf') { return LocalBookFormat.pdf; }
+    if (mimeType.indexOf('text/plain') === 0) { return LocalBookFormat.txt; }
+    if (mimeType.indexOf('application/epub') === 0) { return LocalBookFormat.epub; }
+    return LocalBookFormat.unknown;
   }
 
   private detectEncoding(data: Uint8Array): string {

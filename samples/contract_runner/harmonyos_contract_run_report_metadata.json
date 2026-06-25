@@ -1,0 +1,40 @@
+{
+  "sampleId": "harmonyos_contract_run_report_001",
+  "artifactType": "metadata",
+  "platformFamily": "HarmonyOS",
+  "runnerIdentifier": "reader-core.harmonyos.adapter.contract-runner",
+  "exporterIdentifier": "reader-core.harmonyos.adapter.contract-runner.exporter",
+  "adr": "docs/architecture/HARMONYOS_RUNTIME_TRACK_ADR.md",
+  "productionRuntime": "arkts_core_compatible",
+  "devBridgeReleaseCapable": false,
+  "requiredEvidenceArtifacts": ["metadata", "expected", "matrix", "regressionResult"],
+  "adapterKindsCovered": ["archive", "localFileAccess", "markupParser", "feedParser", "textEncodingDetector", "runtimeHost"],
+  "coreManifestRequirements": [
+    {"kind": "archive", "requiredFeatureIDs": ["epub.zip", "localbook.archive", "safe-entry-path", "opf-manifest-baseline"]},
+    {"kind": "localFileAccess", "requiredFeatureIDs": ["localbook.file-picker-handoff", "permission-token", "permission-denied-mapping"]},
+    {"kind": "markupParser", "requiredFeatureIDs": ["html.css", "html.xpath", "xml.xpath", "attribute-extraction"]},
+    {"kind": "feedParser", "requiredFeatureIDs": ["rss", "atom", "json-feed", "feed-pagination-metadata", "cookie-login-diagnostic"]},
+    {"kind": "textEncodingDetector", "requiredFeatureIDs": ["txt.bom", "txt.utf8", "txt.gb18030", "txt.fallback"]},
+    {"kind": "runtimeHost", "requiredFeatureIDs": ["arkWeb", "nativeHTTP", "cookieStore", "sessionPersistence", "javascript", "snapshotWrite"]}
+  ],
+  "hostOwnedCapabilityIDs": [
+    "harmonyos.host.bookshelf",
+    "harmonyos.host.reader-shell",
+    "harmonyos.host.file-picker",
+    "harmonyos.host.download-service",
+    "harmonyos.host.tts",
+    "harmonyos.host.notifications",
+    "harmonyos.host.app-database"
+  ],
+  "unsupportedCapabilityIDs": [
+    "harmonyos.reader.readium-equivalent",
+    "harmonyos.reader.full-epub-shell",
+    "harmonyos.reader.pdf",
+    "harmonyos.reader.cbz",
+    "harmonyos.sync.legado-equivalent"
+  ],
+  "externalNetworkUsed": false,
+  "cleanRoomMaintained": true,
+  "externalGPLCodeCopied": false,
+  "legadoSourceCopied": false
+}

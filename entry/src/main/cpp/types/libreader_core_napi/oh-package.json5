@@ -1,0 +1,6 @@
+{
+  "name": "libreader_core_napi.so",
+  "types": "./Index.d.ts",
+  "version": "1.0.0",
+  "description": "Reader Core Native HarmonyOS NAPI smoke module."
+}

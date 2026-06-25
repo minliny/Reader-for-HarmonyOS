@@ -1,7 +1,9 @@
 // SearchDomainValidator — fixture-based search domain validation
 import { BookSourceRepository } from '../repository/BookSourceRepository';
+import { IStorageAdapter } from '../repository/BookshelfRepository';
 import { BookSource } from '../models/BookSource';
 import { SearchError, SearchErrorCode } from '../models/SearchError';
+import { JSONValue } from '../models/JSONValue';
 
 interface TestResult { name: string; passed: boolean; error?: string; }
 
@@ -18,7 +20,7 @@ class TestRunner {
 }
 
 // In-memory storage for testing
-class MemoryStorage {
+class MemoryStorage implements IStorageAdapter {
   private data: Map<string, string> = new Map();
   read(key: string): string | null { return this.data.get(key) ?? null; }
   write(key: string, value: string): void { this.data.set(key, value); }
@@ -33,14 +35,15 @@ export function runSearchDomainTests(): TestRunner {
   const repo = new BookSourceRepository(storage);
   repo.initialize();
 
-  const sampleSource: BookSource = {
-    bookSourceName: 'Test Source',
-    bookSourceUrl: 'https://test.example.com',
-    searchUrl: 'https://test.example.com/search?key={{key}}',
-    enabled: true,
-    weight: 100,
-    unknownFields: {}
-  };
+  // SDK-COMPAT: build via Record then cast through unknown to satisfy arkts-no-structural-typing.
+  const sampleSourceFields: Record<string, Object> = {} as Record<string, Object>;
+  sampleSourceFields['bookSourceName'] = 'Test Source';
+  sampleSourceFields['bookSourceUrl'] = 'https://test.example.com';
+  sampleSourceFields['searchUrl'] = 'https://test.example.com/search?key={{key}}';
+  sampleSourceFields['enabled'] = true;
+  sampleSourceFields['weight'] = 100;
+  sampleSourceFields['unknownFields'] = {} as Record<string, JSONValue>;
+  const sampleSource: BookSource = sampleSourceFields as Object as BookSource;
 
   // 1. Add source
   r.assert(repo.addSource(sampleSource), 'addSource succeeds');

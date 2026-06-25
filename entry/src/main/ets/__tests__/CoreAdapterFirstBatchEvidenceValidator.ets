@@ -55,6 +55,16 @@ export function runCoreAdapterFirstBatchEvidenceTests(): TestRunner {
   r.assert(hasLocalStatus(bundle, AdapterKind.textEncodingDetector, 'txt.fallback', LocalEvidenceStatus.measuredPass), 'TXT fallback detector evidence measured');
 
   r.assert(hasCoreStatus(bundle, AdapterKind.archive, 'epub.zip', CoreCaseStatus.failed), 'archive stays non-passing until real adapter exists');
+  r.assert(hasLocalStatus(bundle, AdapterKind.archive, 'deflate-zlib', LocalEvidenceStatus.measuredPass), 'deflate-zlib fixture evidence measured via ZipArchiveAdapter');
+  r.assert(hasLocalStatus(bundle, AdapterKind.archive, 'cbz', LocalEvidenceStatus.measuredPass), 'cbz fixture evidence measured via CBZParserAdapter');
+  r.assert(hasLocalStatus(bundle, AdapterKind.localFileAccess, 'file-picker', LocalEvidenceStatus.envBlocked), 'file-picker is ENV_BLOCKED until device/simulator execution');
+  r.assert(hasLocalStatus(bundle, AdapterKind.runtimeHost, 'encrypted-credential', LocalEvidenceStatus.measuredPass), 'encrypted-credential fixture round-trip evidence measured');
+  r.assert(hasLocalStatus(bundle, AdapterKind.runtimeHost, 'system-tts', LocalEvidenceStatus.measuredPass), 'system-tts fixture evidence measured');
+  r.assert(hasLocalStatus(bundle, AdapterKind.runtimeHost, 'webdav-client', LocalEvidenceStatus.measuredPass), 'webdav-client fixture evidence measured');
+  r.assert(hasLocalStatus(bundle, AdapterKind.runtimeHost, 'cookie-persistence', LocalEvidenceStatus.measuredPass), 'cookie-persistence fixture round-trip evidence measured');
+  r.assert(hasLocalStatus(bundle, AdapterKind.runtimeHost, 'audiobook-player', LocalEvidenceStatus.measuredPass), 'audiobook-player fixture evidence measured');
+  r.assert(hasLocalStatus(bundle, AdapterKind.runtimeHost, 'pdf-render', LocalEvidenceStatus.measuredPass), 'pdf-render fixture evidence measured');
+  r.assert(hasLocalStatus(bundle, AdapterKind.runtimeHost, 'http-tts', LocalEvidenceStatus.measuredPass), 'http-tts contract-only evidence measured');
   r.assert(hasCoreStatus(bundle, AdapterKind.localFileAccess, 'permission-token', CoreCaseStatus.failed), 'file permission token stays non-passing until host picker smoke exists');
   r.assert(hasLocalStatus(bundle, AdapterKind.runtimeHost, 'arkWeb', LocalEvidenceStatus.envBlocked), 'ArkWeb case is ENV_BLOCKED, not passed');
   r.assert(hasLocalStatus(bundle, AdapterKind.runtimeHost, 'nativeHTTP', LocalEvidenceStatus.envBlocked), 'native HTTP case is ENV_BLOCKED until runtime request execution');

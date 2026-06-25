@@ -1,0 +1,105 @@
+{
+  "matrixId": "harmonyos_contract_run_report_matrix",
+  "sampleId": "harmonyos_contract_run_report_001",
+  "rows": [
+    {
+      "capability": "HARMONYOS_CONTRACT_RUN_REPORT_CORE_GATE_ACCEPTANCE",
+      "statusBefore": "harmonyos_runner_output_without_core_gate_shape",
+      "statusAfter": "measured_pass",
+      "failureReason": "HarmonyOS contract runner output had no Core-owned shape for accepting runner results against harmonyOSReference manifest.",
+      "expectedChange": "HarmonyOSContractRunReportExporter outputs ReaderCorePlatformAdapterContractRunReport JSON accepted by Core canBeAcceptedByCoreGate when manifest identity, required features, evidence artifacts, and clean-room flags match.",
+      "testFilter": "ContractRunReportValidator/runContractRunReportValidatorTests:validation_accepted_on_clean_bundle"
+    },
+    {
+      "capability": "HARMONYOS_CONTRACT_RUN_REPORT_FAIL_CLOSED_MISSING_ARTIFACTS",
+      "statusBefore": "runner_could_skip_required_artifacts",
+      "statusAfter": "measured_pass",
+      "failureReason": "Contract runner evidence must fail closed when required metadata, expected, matrix, or regressionResult artifacts are missing or empty.",
+      "expectedChange": "Missing or empty required evidence artifacts make validateContractRunReportFailClosed return accepted=false with missing_evidence_artifacts violation.",
+      "testFilter": "ContractRunReportValidator/runContractRunReportValidatorTests:fail_closed_on_missing_artifacts"
+    },
+    {
+      "capability": "HARMONYOS_CONTRACT_RUN_REPORT_FAIL_CLOSED_MISSING_REQUIRED_FEATURES",
+      "statusBefore": "runner_could_skip_required_features",
+      "statusAfter": "measured_pass",
+      "failureReason": "Contract runner evidence must fail closed when any Core manifest required feature is missing from caseResults.",
+      "expectedChange": "Missing required features make validateContractRunReportFailClosed return accepted=false with missing_required_features violation.",
+      "testFilter": "ContractRunReportValidator/runContractRunReportValidatorTests:fail_closed_on_missing_required_feature"
+    },
+    {
+      "capability": "HARMONYOS_CONTRACT_RUN_REPORT_FAIL_CLOSED_FAILED_CASES",
+      "statusBefore": "runner_could_export_failed_cases_as_pass",
+      "statusAfter": "measured_pass",
+      "failureReason": "Contract runner evidence must fail closed when any caseResult has status failed.",
+      "expectedChange": "Failed cases make validateContractRunReportFailClosed return accepted=false with failed_cases_present violation.",
+      "testFilter": "ContractRunReportValidator/runContractRunReportValidatorTests:fail_closed_on_failed_case"
+    },
+    {
+      "capability": "HARMONYOS_CONTRACT_RUN_REPORT_FAIL_CLOSED_UNSUPPORTED_REQUIRED_CASES",
+      "statusBefore": "runner_could_mark_required_features_unsupported",
+      "statusAfter": "measured_pass",
+      "failureReason": "Contract runner evidence must fail closed when any required feature case has status unsupported.",
+      "expectedChange": "Unsupported required cases make validateContractRunReportFailClosed return accepted=false with unsupported_required_cases violation.",
+      "testFilter": "ContractRunReportValidator/runContractRunReportValidatorTests:fail_closed_on_unsupported_required_case"
+    },
+    {
+      "capability": "HARMONYOS_CONTRACT_RUN_REPORT_FAIL_CLOSED_UNSUPPORTED_DISGUISED_AS_PASS",
+      "statusBefore": "unsupported_capability_could_be_disguised_as_pass",
+      "statusAfter": "measured_pass",
+      "failureReason": "Contract runner evidence must fail closed when an unsupportedCapabilityID appears as a passed caseResult.",
+      "expectedChange": "Unsupported markers disguised as pass trigger unsafe_content_exported or unsupported_disguised_as_pass violation.",
+      "testFilter": "ContractRunReportValidator/runContractRunReportValidatorTests:unsupported_capability_ids_preserved"
+    },
+    {
+      "capability": "HARMONYOS_CONTRACT_RUN_REPORT_FAIL_CLOSED_CLEAN_ROOM_VIOLATION",
+      "statusBefore": "runner_could_export_dirty_clean_room_flags",
+      "statusAfter": "measured_pass",
+      "failureReason": "Contract runner evidence must fail closed when cleanRoomMaintained is false, externalGPLCodeCopied is true, or legadoSourceCopied is true.",
+      "expectedChange": "Dirty clean-room flags make validateContractRunReportFailClosed return accepted=false with clean_room_violation, gpl_code_copied, or legado_source_copied violation.",
+      "testFilter": "ContractRunReportValidator/runContractRunReportValidatorTests:fail_closed_on_cleanRoomMaintained_false"
+    },
+    {
+      "capability": "HARMONYOS_CONTRACT_RUN_REPORT_FAIL_CLOSED_EXTERNAL_NETWORK",
+      "statusBefore": "runner_could_claim_external_network",
+      "statusAfter": "measured_pass",
+      "failureReason": "Contract runner evidence must fail closed when externalNetworkUsed is true, because Core external execution gate requires no external network.",
+      "expectedChange": "externalNetworkUsed=true makes validateContractRunReportFailClosed return accepted=false with external_network_used violation.",
+      "testFilter": "ContractRunReportValidator/runContractRunReportValidatorTests:fail_closed_on_externalNetworkUsed_true"
+    },
+    {
+      "capability": "HARMONYOS_CONTRACT_RUN_REPORT_FAIL_CLOSED_UNSAFE_CONTENT",
+      "statusBefore": "runner_could_leak_localhost_bridge_or_sensitive_tokens",
+      "statusAfter": "measured_pass",
+      "failureReason": "Contract runner evidence must fail closed when runReport or artifacts contain localhost:8899 bridge references, raw cookies, credentials, tokens, or HTML bodies.",
+      "expectedChange": "Unsafe content makes validateContractRunReportFailClosed return accepted=false with unsafe_content_exported violation.",
+      "testFilter": "ContractRunReportValidator/runContractRunReportValidatorTests:fail_closed_on_unsafe_content_localhost_bridge"
+    },
+    {
+      "capability": "HARMONYOS_CONTRACT_RUN_REPORT_MANIFEST_RUNNER_MATCH",
+      "statusBefore": "runner_identity_could_drift_from_manifest",
+      "statusAfter": "measured_pass",
+      "failureReason": "Contract runner evidence must fail closed when platformFamily or runnerIdentifier does not match manifest.",
+      "expectedChange": "Runner mismatch makes validateContractRunReportFailClosed return accepted=false with manifest_runner_mismatch violation.",
+      "testFilter": "ContractRunReportValidator/runContractRunReportValidatorTests:fail_closed_on_runner_mismatch"
+    },
+    {
+      "capability": "HARMONYOS_CONTRACT_RUN_REPORT_UNSUPPORTED_MARKERS_PRESERVED",
+      "statusBefore": "unsupported_reader_markers_not_bound_to_run_report",
+      "statusAfter": "measured_pass",
+      "failureReason": "HarmonyOS MVP must distinguish required baseline adapter passes from explicitly unsupported reader-stack parity.",
+      "expectedChange": "HarmonyOS run reports pass required adapter features while preserving unsupported Readium/PDF/CBZ/sync markers as unsupportedCapabilityIDs.",
+      "testFilter": "ContractRunReportValidator/runContractRunReportValidatorTests:unsupported_capability_ids_preserved"
+    },
+    {
+      "capability": "HARMONYOS_CONTRACT_RUN_REPORT_DEV_BRIDGE_EXCLUDED",
+      "statusBefore": "localhost_bridge_could_be_mistaken_for_production",
+      "statusAfter": "measured_pass",
+      "failureReason": "HOS-ADR-001: localhost Swift bridge is dev-only, no auth/TLS/rate limit, must not be release-capable or enter Core release gate.",
+      "expectedChange": "Contract runner exporter excludes localhost bridge evidence; devBridgeReleaseCapable=false in metadata; unsafe content detector flags any localhost:8899 reference.",
+      "testFilter": "ContractRunReportValidator/runContractRunReportValidatorTests:fail_closed_on_unsafe_content_localhost_bridge"
+    }
+  ],
+  "cleanRoomMaintained": true,
+  "externalGPLCodeCopied": false,
+  "legadoSourceCopied": false
+}

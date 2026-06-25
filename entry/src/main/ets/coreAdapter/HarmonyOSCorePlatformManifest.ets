@@ -17,11 +17,11 @@ export function harmonyOSManifestRequirements(): HarmonyOSManifestRequirement[] 
   return [
     {
       kind: AdapterKind.archive,
-      requiredFeatureIDs: ['epub.zip', 'localbook.archive', 'safe-entry-path', 'opf-manifest-baseline']
+      requiredFeatureIDs: ['epub.zip', 'localbook.archive', 'safe-entry-path', 'opf-manifest-baseline', 'deflate-zlib', 'cbz']
     },
     {
       kind: AdapterKind.localFileAccess,
-      requiredFeatureIDs: ['localbook.file-picker-handoff', 'permission-token', 'permission-denied-mapping']
+      requiredFeatureIDs: ['localbook.file-picker-handoff', 'permission-token', 'permission-denied-mapping', 'file-picker']
     },
     {
       kind: AdapterKind.markupParser,
@@ -37,7 +37,7 @@ export function harmonyOSManifestRequirements(): HarmonyOSManifestRequirement[] 
     },
     {
       kind: AdapterKind.runtimeHost,
-      requiredFeatureIDs: ['arkWeb', 'nativeHTTP', 'cookieStore', 'sessionPersistence', 'javascript', 'snapshotWrite']
+      requiredFeatureIDs: ['arkWeb', 'nativeHTTP', 'cookieStore', 'sessionPersistence', 'javascript', 'snapshotWrite', 'encrypted-credential', 'system-tts', 'webdav-client', 'cookie-persistence', 'audiobook-player', 'pdf-render', 'http-tts']
     }
   ];
 }

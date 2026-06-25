@@ -1,4 +1,6 @@
 import { webview } from '@kit.ArkWeb';
+import { router } from '@kit.ArkUI';
+import { ArkWebPlatformAdapter } from '../platform/ArkWebPlatformAdapter';
 import {
   HomeBookRow,
   HomeReaderPreviewSnapshot,
@@ -23,6 +25,7 @@ import {
   runLegadoNonUIParityLocalClosure
 } from '../services/LegadoNonUIParityServices';
 import { SearchMode } from '../services/SearchService';
+import { runHostSmokeClosedLoop, ReaderHostSmokeClosedLoopResult } from '../cabi/ReaderCoreNapiBridge';
 
 @Entry
 @Component
@@ -317,6 +320,9 @@ struct BookRow {
     .padding(12)
     .backgroundColor('#FFFFFF')
     .borderRadius(8)
+    .onClick(() => {
+      router.pushUrl({ url: 'pages/ReaderPage' });
+    })
   }
 }
 
@@ -542,7 +548,7 @@ struct SourceManagementPanel {
 
 @Component
 struct RuntimeDeviceEvidencePanel {
-  private controller: webview.WebviewController = new webview.WebviewController();
+  private arkWebAdapter: ArkWebPlatformAdapter = new ArkWebPlatformAdapter(new webview.WebviewController());
   @State nativeHTTP: string = 'RUNNING';
   @State localHTTP: string = 'RUNNING';
   @State localFeed: string = 'RUNNING';
@@ -560,6 +566,7 @@ struct RuntimeDeviceEvidencePanel {
   @State js: string = 'RUNNING';
   @State secure: string = 'RUNNING';
   @State corpus: string = 'RUNNING';
+  @State hostBus: string = 'RUNNING';
   @State checksum: string = 'pending';
   @State raw: string = 'raw:false';
   @State diagnostic: string = 'diag:pending';
@@ -642,21 +649,30 @@ struct RuntimeDeviceEvidencePanel {
     this.corpus = corpusSnapshot.fullChainPassed && !corpusSnapshot.rawURLExported &&
       !corpusSnapshot.rawResponseBodyExported && !corpusSnapshot.rawCredentialValueExported ? 'PASS' : 'FAIL';
     this.diagnostic = `${this.diagnostic} corpus:${corpusSnapshot.errorClass}`;
+
+    // Host bus closed-loop: native hostSmoke() exercises host.request -> host.complete round-trip
+    try {
+      const hostResult: ReaderHostSmokeClosedLoopResult = runHostSmokeClosedLoop();
+      if (hostResult.error !== null) {
+        this.hostBus = `FAIL ${hostResult.error.substring(0, 20)}`;
+      } else if (hostResult.hasHostRequest && hostResult.hasCompletion && hostResult.completionOk) {
+        this.hostBus = `PASS op:${hostResult.hostOperationId ?? '?'}`;
+      } else {
+        this.hostBus = `FAIL req:${hostResult.hasHostRequest} cmp:${hostResult.hasCompletion} ok:${hostResult.completionOk}`;
+      }
+    } catch (e) {
+      this.hostBus = 'FAIL native';
+    }
   }
 
   private runArkWebJavaScript(): void {
-    this.controller.runJavaScript('document.title')
-      .then((title: string) => {
-        this.arkWeb = title.indexOf('Reader Runtime Smoke') !== -1 ? 'PASS' : 'FAIL';
+    this.arkWebAdapter.probePage('.runtime-item')
+      .then((result) => {
+        this.arkWeb = result.title.indexOf('Reader Runtime Smoke') !== -1 ? 'PASS' : 'FAIL';
+        this.js = result.scriptResult.indexOf('2') !== -1 ? 'PASS' : 'FAIL';
       })
       .catch((_e: Error) => {
         this.arkWeb = 'FAIL';
-      });
-    this.controller.runJavaScript('document.querySelectorAll(".runtime-item").length.toString()')
-      .then((count: string) => {
-        this.js = count.indexOf('2') !== -1 ? 'PASS' : 'FAIL';
-      })
-      .catch((_e: Error) => {
         this.js = 'FAIL';
       });
   }
@@ -712,6 +728,7 @@ struct RuntimeDeviceEvidencePanel {
         RuntimePill({ label: 'WebDAV', value: this.webdav })
         RuntimePill({ label: 'FileToken', value: this.fileToken })
         RuntimePill({ label: 'DBMig', value: this.dbMigration })
+        RuntimePill({ label: 'HostBus', value: this.hostBus })
       }
       .width('100%')
       .margin({ top: 8 })
@@ -732,7 +749,7 @@ struct RuntimeDeviceEvidencePanel {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .margin({ top: 4 })
 
-      Web({ src: $rawfile('runtime_smoke.html'), controller: this.controller })
+      Web({ src: $rawfile('runtime_smoke.html'), controller: this.arkWebAdapter.getController() })
         .width('100%')
         .height(64)
         .javaScriptAccess(true)

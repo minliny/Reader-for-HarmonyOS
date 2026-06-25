@@ -3,6 +3,7 @@
     "pages/Index",
     "pages/BookshelfPage",
     "pages/SearchPage",
-    "pages/SettingsPage"
+    "pages/SettingsPage",
+    "pages/ReaderPage"
   ]
 }

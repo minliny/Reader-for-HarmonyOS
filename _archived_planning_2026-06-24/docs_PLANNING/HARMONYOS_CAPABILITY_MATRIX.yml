@@ -1,6 +1,45 @@
 # HarmonyOS Capability Matrix
 # Aligned with Reader-Core CORE_RC_GAP_REGISTER.yml
 # Generated: 2026-05-16 by HOS-9B-002
+# Updated: 2026-06-24 by HOS-ADR-001 (runtime track freeze)
+#
+# Ownership boundary (frozen by HOS-ADR-001):
+#   Reader-Core owns: contracts, DTOs, compatibility semantics, failure taxonomy,
+#                     metadata/expected/matrix gate接收逻辑
+#   HarmonyOS owns:   ArkTS runtime implementation, native HTTP, ArkWeb,
+#                     HUKS/SecurityKit, RDB/Preferences, TTS/audio, PDF/pagination,
+#                     file permission lifecycle
+#
+# Runtime track decision (frozen by HOS-ADR-001):
+#   productionRuntime: arkts_core_compatible
+#   devBridge: localhost_swift_bridge_dev_only  (release_capable: false, 硬约束)
+#   optionalTrack: c_abi_napi_poc
+#
+# 硬约束: 任何 release_capable: false 的能力不得进入发布包，不计入 Core release gate 证据。
+
+ownership_boundary:
+  reader_core_owns:
+    - "contracts"
+    - "DTOs"
+    - "compatibility semantics"
+    - "failure taxonomy"
+    - "metadata_expected_matrix_gate"
+  harmonyos_owns:
+    - "ArkTS runtime implementation"
+    - "native HTTP"
+    - "ArkWeb"
+    - "HUKS/SecurityKit"
+    - "RDB/Preferences"
+    - "TTS/audio"
+    - "PDF/pagination"
+    - "file permission lifecycle"
+
+runtime_track:
+  production_runtime: "arkts_core_compatible"
+  dev_bridge: "localhost_swift_bridge_dev_only"
+  dev_bridge_release_capable: false
+  optional_track: "c_abi_napi_poc"
+  adr: "docs/architecture/HARMONYOS_RUNTIME_TRACK_ADR.md"
 
 matrix:
   app_shell:
@@ -38,21 +77,26 @@ matrix:
       notes: "BackupConfig, ProgressSyncRecord, etc."
 
   bridge:
+    # HOS-ADR-001 硬约束: bridge 全部 release_capable: false，不进入发布包，不计入 Core release gate。
     - capability: "Core API Audit"
       status: IMPLEMENTED
-      notes: "98 symbols mapped (87 frozen + 14 new)"
+      release_capable: false
+      notes: "98 symbols mapped (87 frozen + 14 new). Audit only, not runtime."
 
     - capability: "Bridge API Spec"
       status: IMPLEMENTED
-      notes: "5 REST endpoints defined"
+      release_capable: false
+      notes: "5 REST endpoints defined. Dev-only spec."
 
     - capability: "Bridge HTTP Client (ArkTS)"
       status: BRIDGE_CONNECTED_DEV_ONLY
-      notes: "BridgeHTTPClient + FixtureReplayInterceptor + BridgeClientWithFallback. Server EXISTS at Core 3c72be8. Client can now connect to real Core services."
+      release_capable: false
+      notes: "BridgeHTTPClient + FixtureReplayInterceptor + BridgeClientWithFallback. Server EXISTS at Core 3c72be8. Client can now connect to real Core services. HOS-ADR-001: dev-only, 不进入发布包，不计入 Core release gate 证据。"
 
     - capability: "Swift Bridge Service"
       status: BRIDGE_CONNECTED_DEV_ONLY
-      notes: "Implemented at Core 3c72be8. Health check + TXT parse verified. localhost:8899."
+      release_capable: false
+      notes: "Implemented at Core 3c72be8. Health check + TXT parse verified. localhost:8899. HOS-ADR-001: localhost dev bridge, 无 auth/TLS/rate limit, 永不 release-capable。"
 
   domain_services:
     - capability: "Bookshelf Domain"
