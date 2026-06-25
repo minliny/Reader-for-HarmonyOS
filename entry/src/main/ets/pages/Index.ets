@@ -1,4 +1,6 @@
 import { webview } from '@kit.ArkWeb';
+import { router } from '@kit.ArkUI';
+import { ArkWebPlatformAdapter } from '../platform/ArkWebPlatformAdapter';
 import {
   HomeBookRow,
   HomeReaderPreviewSnapshot,
@@ -317,6 +319,9 @@ struct BookRow {
     .padding(12)
     .backgroundColor('#FFFFFF')
     .borderRadius(8)
+    .onClick(() => {
+      router.pushUrl({ url: 'pages/ReaderPage' });
+    })
   }
 }
 
@@ -542,7 +547,7 @@ struct SourceManagementPanel {
 
 @Component
 struct RuntimeDeviceEvidencePanel {
-  private controller: webview.WebviewController = new webview.WebviewController();
+  private arkWebAdapter: ArkWebPlatformAdapter = new ArkWebPlatformAdapter(new webview.WebviewController());
   @State nativeHTTP: string = 'RUNNING';
   @State localHTTP: string = 'RUNNING';
   @State localFeed: string = 'RUNNING';
@@ -645,18 +650,13 @@ struct RuntimeDeviceEvidencePanel {
   }
 
   private runArkWebJavaScript(): void {
-    this.controller.runJavaScript('document.title')
-      .then((title: string) => {
-        this.arkWeb = title.indexOf('Reader Runtime Smoke') !== -1 ? 'PASS' : 'FAIL';
+    this.arkWebAdapter.probePage('.runtime-item')
+      .then((result) => {
+        this.arkWeb = result.title.indexOf('Reader Runtime Smoke') !== -1 ? 'PASS' : 'FAIL';
+        this.js = result.scriptResult.indexOf('2') !== -1 ? 'PASS' : 'FAIL';
       })
       .catch((_e: Error) => {
         this.arkWeb = 'FAIL';
-      });
-    this.controller.runJavaScript('document.querySelectorAll(".runtime-item").length.toString()')
-      .then((count: string) => {
-        this.js = count.indexOf('2') !== -1 ? 'PASS' : 'FAIL';
-      })
-      .catch((_e: Error) => {
         this.js = 'FAIL';
       });
   }
@@ -732,7 +732,7 @@ struct RuntimeDeviceEvidencePanel {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .margin({ top: 4 })
 
-      Web({ src: $rawfile('runtime_smoke.html'), controller: this.controller })
+      Web({ src: $rawfile('runtime_smoke.html'), controller: this.arkWebAdapter.getController() })
         .width('100%')
         .height(64)
         .javaScriptAccess(true)

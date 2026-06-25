@@ -1,6 +1,8 @@
 // EPUBParserContract — ArkTS port of Core EPUBParserContract.swift + EPUBModels.swift
 // CONTRACT_ONLY — ZIP/XML parsing is adapter scope (HOS-8B)
-import { LocalBook, LocalTOCItem } from '../models/LocalBook';
+import { LocalBook, LocalBookFormat, LocalTOCItem } from '../models/LocalBook';
+
+import { JSONValue } from '../models/JSONValue';
 
 export interface EPUBMetadata {
   title: string;
@@ -29,17 +31,25 @@ export interface EPUBParserContract {
   parse(data: Uint8Array): Promise<EPUBParseResult>;
 }
 
+interface EPUBExtraValue {
+  value: string;
+}
+
 // Mapping utilities (mirrors Core EPUBMapping)
 export class EPUBMapping {
+  private static wrap(value: string): EPUBExtraValue {
+    return { value: value };
+  }
+
   static toLocalBook(metadata: EPUBMetadata): LocalBook {
     const extra: Record<string, Object> = {};
-    if (metadata.identifier) { extra['epub:identifier'] = { 'value': metadata.identifier }; }
-    if (metadata.language) { extra['epub:language'] = { 'value': metadata.language }; }
-    if (metadata.publisher) { extra['epub:publisher'] = { 'value': metadata.publisher }; }
-    if (metadata.date) { extra['epub:date'] = { 'value': metadata.date }; }
+    if (metadata.identifier) { extra['epub:identifier'] = EPUBMapping.wrap(metadata.identifier); }
+    if (metadata.language) { extra['epub:language'] = EPUBMapping.wrap(metadata.language); }
+    if (metadata.publisher) { extra['epub:publisher'] = EPUBMapping.wrap(metadata.publisher); }
+    if (metadata.date) { extra['epub:date'] = EPUBMapping.wrap(metadata.date); }
     const keys = Object.keys(metadata.extraFields);
     for (let i = 0; i < keys.length; i++) {
-      extra[`epub:${keys[i]}`] = { 'value': metadata.extraFields[keys[i]] };
+      extra[`epub:${keys[i]}`] = EPUBMapping.wrap(metadata.extraFields[keys[i]]);
     }
 
     return {
@@ -47,15 +57,15 @@ export class EPUBMapping {
       title: metadata.title,
       author: metadata.creator,
       filePath: '',
-      fileFormat: 'epub',
+      fileFormat: LocalBookFormat.epub,
       encoding: 'utf-8',
       addedAt: Date.now(),
-      unknownFields: extra as Record<string, import('../models/JSONValue').JSONValue>
+      unknownFields: extra as Record<string, JSONValue>
     };
   }
 
   static toTOCItems(navPoints: EPUBNavPoint[]): LocalTOCItem[] {
-    return navPoints.map(nav => ({
+    return navPoints.map((nav: EPUBNavPoint): LocalTOCItem => ({
       title: nav.label,
       level: 1,
       children: nav.children.length > 0 ? EPUBMapping.toTOCItems(nav.children) : undefined

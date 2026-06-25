@@ -11,6 +11,10 @@ import { runCoreAdapterCompleteEvidenceTests } from './CoreAdapterCompleteEviden
 import { runNonUIParityEvidenceTests } from './NonUIParityEvidenceValidator';
 import { runExternalClosureEvidenceTests } from './ExternalClosureEvidenceValidator';
 import { runHomeDashboardTests } from './HomeDashboardValidator';
+import { runContractRunReportValidatorTests } from './ContractRunReportValidator';
+import { runRuntimeKitValidatorTests } from './RuntimeKitValidator';
+import { runReleaseGateValidatorTests } from './ReleaseGateValidator';
+import { runCAbiPocValidatorTests } from './CAbiPocValidator';
 
 export interface TestSuiteResult {
   suite: string;
@@ -54,6 +58,18 @@ export function runAllDomainTests(): TestSuiteResult[] {
 
   const externalClosureEvidence = runExternalClosureEvidenceTests();
   results.push({ suite: 'External Closure Evidence', passed: externalClosureEvidence.passed, failed: externalClosureEvidence.failed, total: externalClosureEvidence.results.length });
+
+  const contractRunReport = runContractRunReportValidatorTests();
+  results.push({ suite: 'Contract Run Report Validator', passed: contractRunReport.passed, failed: contractRunReport.failed, total: contractRunReport.results.length });
+
+  const runtimeKit = runRuntimeKitValidatorTests();
+  results.push({ suite: 'Runtime Kit Validator', passed: runtimeKit.passed, failed: runtimeKit.failed, total: runtimeKit.results.length });
+
+  const releaseGate = runReleaseGateValidatorTests();
+  results.push({ suite: 'Release Gate Validator', passed: releaseGate.passed, failed: releaseGate.failed, total: releaseGate.results.length });
+
+  const cabiPoc = runCAbiPocValidatorTests();
+  results.push({ suite: 'C ABI POC Validator', passed: cabiPoc.passed, failed: cabiPoc.failed, total: cabiPoc.results.length });
 
   return results;
 }

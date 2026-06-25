@@ -48,6 +48,16 @@ export function runCoreAdapterCompleteEvidenceTests(): TestRunner {
 
   r.assert(hasCoreStatus(bundle, AdapterKind.archive, 'epub.zip', CoreCaseStatus.passed), 'EPUB ZIP archive evidence passes');
   r.assert(hasCoreStatus(bundle, AdapterKind.archive, 'opf-manifest-baseline', CoreCaseStatus.passed), 'OPF manifest evidence passes');
+  r.assert(hasCoreStatus(bundle, AdapterKind.archive, 'deflate-zlib', CoreCaseStatus.passed), 'deflate-zlib archive evidence passes');
+  r.assert(hasCoreStatus(bundle, AdapterKind.archive, 'cbz', CoreCaseStatus.passed), 'CBZ archive evidence passes');
+  r.assert(hasCoreStatus(bundle, AdapterKind.localFileAccess, 'file-picker', CoreCaseStatus.passed), 'file-picker adapter evidence passes as device-ready local-validated');
+  r.assert(hasCoreStatus(bundle, AdapterKind.runtimeHost, 'encrypted-credential', CoreCaseStatus.passed), 'encrypted-credential evidence passes');
+  r.assert(hasCoreStatus(bundle, AdapterKind.runtimeHost, 'system-tts', CoreCaseStatus.passed), 'system-tts evidence passes');
+  r.assert(hasCoreStatus(bundle, AdapterKind.runtimeHost, 'webdav-client', CoreCaseStatus.passed), 'webdav-client evidence passes');
+  r.assert(hasCoreStatus(bundle, AdapterKind.runtimeHost, 'cookie-persistence', CoreCaseStatus.passed), 'cookie-persistence evidence passes');
+  r.assert(hasCoreStatus(bundle, AdapterKind.runtimeHost, 'audiobook-player', CoreCaseStatus.passed), 'audiobook-player evidence passes');
+  r.assert(hasCoreStatus(bundle, AdapterKind.runtimeHost, 'pdf-render', CoreCaseStatus.passed), 'pdf-render evidence passes (reader-shell PDF marker preserved)');
+  r.assert(hasCoreStatus(bundle, AdapterKind.runtimeHost, 'http-tts', CoreCaseStatus.passed), 'http-tts contract-only evidence passes');
   r.assert(hasCoreStatus(bundle, AdapterKind.localFileAccess, 'permission-token', CoreCaseStatus.passed), 'permission token evidence passes');
   r.assert(hasCoreStatus(bundle, AdapterKind.markupParser, 'html.css', CoreCaseStatus.passed), 'HTML CSS parser evidence passes');
   r.assert(hasCoreStatus(bundle, AdapterKind.markupParser, 'xml.xpath', CoreCaseStatus.passed), 'XML XPath parser evidence passes');

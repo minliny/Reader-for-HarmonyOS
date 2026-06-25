@@ -6,6 +6,7 @@ export enum LocalBookFormat {
   epub = 'epub',
   pdf = 'pdf',
   html = 'html',
+  cbz = 'cbz',
   unknown = 'unknown'
 }
 

@@ -1,0 +1,41 @@
+{
+  "sampleId": "harmonyos_contract_run_report_001",
+  "artifactType": "expected",
+  "expectedResult": {
+    "platformFamily": "HarmonyOS",
+    "runnerIdentifier": "reader-core.harmonyos.adapter.contract-runner",
+    "manifestMatchesRunner": true,
+    "evidenceArtifactsComplete": true,
+    "requiredEvidenceArtifactCount": 4,
+    "coreManifestRequirementCount": 6,
+    "allRequiredFeaturesPassed": true,
+    "failedCaseCount": 0,
+    "unsupportedRequiredCaseCount": 0,
+    "unsupportedDisguisedAsPassCount": 0,
+    "unsupportedCapabilityIDsPreserved": true,
+    "hostOwnedCapabilityIDsPreserved": true,
+    "cleanRoomMaintained": true,
+    "externalGPLCodeCopied": false,
+    "legadoSourceCopied": false,
+    "externalNetworkUsed": false,
+    "canBeAcceptedByCoreGate": true,
+    "devBridgeReleaseCapable": false,
+    "rawCookieValuesExported": false,
+    "rawCredentialValuesExported": false,
+    "rawSessionTokensExported": false,
+    "permissionTokenValuesExported": false,
+    "localhostBridgeReferenceLeaked": false
+  },
+  "expectedProperties": [
+    "HarmonyOS contract runner 输出 Core 期望的统一 ReaderCorePlatformAdapterContractRunReport JSON。",
+    "Core 只导入 redacted run report，不导入 raw cookie/credential/token/localhost bridge 引用。",
+    "缺 artifact、缺 required feature、把 unsupported 能力伪装成 pass，都必须 fail-closed。",
+    "manifest identity、required features、evidence artifacts、clean-room flags 全部匹配才能通过 Core gate。",
+    "HarmonyOS baseline run reports 可以 pass required adapter features 同时保留 unsupported Readium/PDF/CBZ/sync markers。",
+    "localhost bridge 不计入本验收口，release_capable: false (HOS-ADR-001)。"
+  ],
+  "failureReasonBound": "Without this binding, HarmonyOS contract runner output could be either ignored by Core release intake or over-applied to unrelated release blockers, or localhost bridge evidence could be mistaken for production runtime evidence.",
+  "cleanRoomMaintained": true,
+  "externalGPLCodeCopied": false,
+  "legadoSourceCopied": false
+}

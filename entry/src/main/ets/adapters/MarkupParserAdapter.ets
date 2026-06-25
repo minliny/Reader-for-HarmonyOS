@@ -163,7 +163,7 @@ export class MarkupParserAdapter {
 
   private parseAttributes(source: string): Record<string, string> {
     const attrs: Record<string, string> = {};
-    const regex = new RegExp('([A-Za-z_:][-A-Za-z0-9_:.]*)(?:\\s*=\\s*(\"([^\"]*)\"|\\'([^\\']*)\\'|([^\\s\"\\'>/]+)))?', 'g');
+    const regex = new RegExp('([A-Za-z_:][-A-Za-z0-9_:.]*)(?:\\s*=\\s*("([^"]*)"|\'([^\']*)\'|([^\\s"\'>/]+)))?', 'g');
     let match = regex.exec(source);
     while (match !== null) {
       const key = match[1].toLowerCase();

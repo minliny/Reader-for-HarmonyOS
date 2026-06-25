@@ -7,3 +7,4 @@ oh_modules/
 local.properties
 .hvigor/
 artifacts/
+entry/.cxx/

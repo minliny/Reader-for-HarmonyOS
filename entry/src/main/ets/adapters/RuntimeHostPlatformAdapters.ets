@@ -149,12 +149,15 @@ export class RuntimeHostEvidenceRunner {
     if (!this.authorization.allowNativeHTTP || !this.authorization.allowSnapshotWrite || !this.authorization.allowCookieMirror || !this.authorization.allowSessionPersistence) {
       return deniedRuntimeEvidence(this.authorization, this.deviceExecutorReady, this.deviceExecutorUsed);
     }
-    const httpResult = await this.httpExecutor.request({
+    const requestHeaders: Record<string, string> = {};
+    requestHeaders['accept'] = 'application/json';
+    const httpRequest: HTTPRequest = {
       url: 'fixture://runtime/native-http',
       method: 'GET',
-      headers: { accept: 'application/json' },
+      headers: requestHeaders,
       timeout: 1000
-    });
+    };
+    const httpResult = await this.httpExecutor.request(httpRequest);
     const arkWebResult = await this.arkWebExecutor.execute(
       '<html><head><title>Runtime Fixture</title></head><body><p class="item">One</p><p class="item">Two</p></body></html>',
       '.item',
@@ -294,6 +297,26 @@ export function runtimeHostDeviceExecutorReadyEvidence(): RuntimeHostEvidence {
   evidence.deviceExecutorUsed = false;
   evidence.authorizationAudit = redactedAuthorizationAudit(defaultRuntimeAuthorization());
   return evidence;
+}
+
+/**
+ * Build a RuntimeHostEvidenceRunner whose ArkWeb executor is backed by a real
+ * ArkWebDeviceBridge (e.g. ArkWebPlatformAdapter). The bridge is wrapped in an
+ * AuthorizedArkWebDeviceExecutor so authorization is enforced. Callers that
+ * have a live WebviewController can inject ArkWebPlatformAdapter here to make
+ * the device-executor path truly bindable instead of falling back to the
+ * fixture executor.
+ */
+export function runtimeHostEvidenceRunnerWithDeviceBridge(
+  bridge: ArkWebDeviceBridge,
+  authorization?: RuntimeExecutionAuthorization,
+  httpExecutor?: RuntimeHTTPExecutor,
+  deviceExecutorReady: boolean = true,
+  deviceExecutorUsed: boolean = false
+): RuntimeHostEvidenceRunner {
+  const auth = authorization ?? defaultRuntimeAuthorization();
+  const arkWebExecutor = new AuthorizedArkWebDeviceExecutor(bridge, auth);
+  return new RuntimeHostEvidenceRunner(httpExecutor, arkWebExecutor, auth, deviceExecutorReady, deviceExecutorUsed);
 }
 
 function deniedRuntimeEvidence(authorization: RuntimeExecutionAuthorization, deviceExecutorReady: boolean, deviceExecutorUsed: boolean): RuntimeHostEvidence {
