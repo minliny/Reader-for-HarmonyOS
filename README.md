@@ -47,6 +47,54 @@ CI artifacts include `device_runtime_smoke_summary.json`,
 screenshot, and the hdc/hvigor log. The offline validator re-checks summary
 flags, layout tokens, redaction fields, and checksums.
 
+## Real Device Runtime Evidence
+
+The real-device lane is intentionally separate from the emulator/default smoke.
+It rejects loopback targets (`127.0.0.1:*` / `localhost:*`) and unsigned HAP
+paths before install/start evidence can be recorded:
+
+```bash
+npm run smoke:real-device
+```
+
+Provide either an already signed HAP:
+
+```bash
+HARMONYOS_REAL_DEVICE_TARGET=<physical-hdc-target> \
+HARMONYOS_REAL_DEVICE_HAP_PATH=<signed-hap-path> \
+npm run smoke:real-device
+```
+
+Or provide signing material so the runner can build a signed HAP first:
+
+```bash
+HARMONYOS_REAL_DEVICE_TARGET=<physical-hdc-target> \
+HARMONYOS_SIGNING_STORE_FILE=<path-to-p12> \
+HARMONYOS_SIGNING_STORE_PASSWORD=<redacted> \
+HARMONYOS_SIGNING_KEY_ALIAS=<key-alias> \
+HARMONYOS_SIGNING_KEY_PASSWORD=<redacted> \
+HARMONYOS_SIGNING_PROFILE=<path-to-p7b> \
+npm run smoke:real-device
+```
+
+Optional signing inputs:
+
+- `HARMONYOS_SIGNING_CERT_PATH=<path-to-cer>`
+- `HARMONYOS_SIGNING_SIGN_ALG=SHA256withECDSA`
+- `HARMONYOS_USE_EXISTING_SIGNING_CONFIG=true` to use a local
+  `build-profile.json5` signing config instead of environment-patching it.
+
+The signed-HAP helper writes only redacted metadata and hashes:
+
+```bash
+npm run build:signed-hap
+```
+
+Real-device evidence is accepted only when
+`scripts/validate_real_device_runtime_smoke_artifact.py` passes against a
+`device_runtime_smoke_summary.json` whose `tier` is `"device"` and whose runtime
+layout contains the `HostBus` / `PASS op:` closed-loop tokens.
+
 ## HarmonyOS + Core vs Legado Gap Matrix
 
 The current capability gap snapshot is tracked in:

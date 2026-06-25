@@ -8,3 +8,5 @@ local.properties
 .hvigor/
 artifacts/
 entry/.cxx/
+.harmony-signing/
+signing.local.json5

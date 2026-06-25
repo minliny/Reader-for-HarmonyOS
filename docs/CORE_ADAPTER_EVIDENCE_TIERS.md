@@ -1,6 +1,6 @@
 # Reader for HarmonyOS — Core Adapter Evidence Tiers
 
-Branch: `codex/harmony-real-device-evidence`
+Branch: `codex/harmony-signed-device-runtime`
 Date: 2026-06-25
 Scope: ArkTS / Node-API host adapter that drives Rust Reader-Core, and its contract evidence.
 
@@ -14,7 +14,7 @@ Scope: ArkTS / Node-API host adapter that drives Rust Reader-Core, and its contr
 |------|------|----------|
 | headless | 无设备/模拟器：纯 ArkTS/TS fixture 逻辑测试、contract shape 校验、artifact manifest 哈希 | 不依赖 `libreader_core_napi.so`、不依赖 `hdc` |
 | 模拟器 (simulator) | HarmonyOS emulator（`hdc` target 为 loopback `127.0.0.1` / `localhost`） | `scripts/run_device_runtime_smoke.sh` 现在写入 `tier: "simulator"` |
-| 真机 (real device) | 物理 device（`hdc` target 为设备 serial / USB id / 非 loopback TCP） | 同脚本写入 `tier: "device"` |
+| 真机 (real device) | 物理 device（`hdc` target 为设备 serial / USB id / 非 loopback TCP） | `scripts/run_real_device_runtime_evidence.sh` 包装签名 HAP、preflight、runtime smoke 与真机 validator；nested runtime summary 写入 `tier: "device"` |
 
 `tier` 由 `scripts/run_device_runtime_smoke.sh` 的 `derive_tier()` 从 target 派生（loopback → simulator；其余 → device），写入 `device_runtime_smoke_summary.json`。port 单独不可靠——真机经 `hdc tconn <ip>:5555` 也能走 TCP，故只认 loopback。
 
@@ -65,12 +65,13 @@ Scope: ArkTS / Node-API host adapter that drives Rust Reader-Core, and its contr
 **State:**
 - `docs/HARMONYOS_NAPI_RUNTIME_SMOKE_REPORT.md`（2026-06-24）：`hdc list targets` → `[Empty]`，无设备连接。ArkTS validator 编译进模块图但 **未在任何 device/simulator 执行**。
 - `scripts/preflight_real_device_runtime_smoke.sh`（2026-06-25）：新增可重复真机前置检查。当前机器 `hdc list targets` 返回 `[Empty]`，默认 HAP 为 `entry-default-unsigned.hap`，`build-profile.json5` 的 `signingConfigs` 为空；preflight 写入 `artifacts/real-device-preflight/latest/real_device_preflight_summary.json`，状态为 `BLOCKED`。这不是 runtime PASS，也不是 real-device evidence。
+- `scripts/build_signed_hap.sh` + `scripts/run_real_device_runtime_evidence.sh`（2026-06-25）：本分支新增签名 HAP 构建入口与真机 evidence wrapper。wrapper 会拒绝 loopback target/unsigned HAP，先跑 preflight，再用 `HARMONYOS_REQUIRE_REAL_DEVICE=true` 和 `HARMONYOS_REQUIRE_SIGNED_HAP=true` 跑 runtime smoke，最后用 `scripts/validate_real_device_runtime_smoke_artifact.py` 要求 `tier: "device"`。当前机器因无真机/无签名材料仍为 `BLOCKED`。
 - `entry/src/main/ets/coreAdapter/HarmonyOSReleaseGate.ets` 列出 device-evidence required 项：`nativeHTTP.evidence`、`arkWeb.evidence`、`cookie.session.evidence`、`huks.evidence`、`rdb.evidence`、`webdav.evidence`、`tts.evidence`——当前只有 fixture/local 证据，标记 missing。
 - `HarmonyOSNonUIParityEvidenceRunner` / `HarmonyOSFirstBatchEvidenceRunner` 把 ArkWeb / JS bridge / file-picker / HUKS / cookie 等标为 `envBlocked` / `readyNotExecuted`，显式不伪造 device 执行。
 
 **Next（real-device lane）:**
-1. 接真机（`hdc` target 为设备 serial / USB id / 非 loopback TCP），运行 `scripts/preflight_real_device_runtime_smoke.sh`，状态必须为 `READY`。
-2. 用签名 HAP 重跑 `scripts/run_device_runtime_smoke.sh`，summary 应显示 `tier: "device"`。
+1. 接真机（`hdc` target 为设备 serial / USB id / 非 loopback TCP），提供签名 HAP 或 `HARMONYOS_SIGNING_*`，运行 `scripts/run_real_device_runtime_evidence.sh`，preflight 状态必须为 `READY`。
+2. nested `scripts/run_device_runtime_smoke.sh` summary 应显示 `tier: "device"`，并通过 `scripts/validate_real_device_runtime_smoke_artifact.py`。
 3. 逐项补 `HarmonyOSReleaseGate` 的 device-evidence：nativeHTTP → arkWeb → cookie/session → HUKS → RDB → WebDAV → TTS。
 4. 在签名 HAP 上跑 `captureHarmonyNapiSmokeArtifact`（见 Reader-Core-Native `bindings/harmony/README.md`），与本地 OHOS/Harmony build evidence 一起归档，归档时标注 tier=real-device。
 
@@ -161,6 +162,9 @@ $ JAVA_HOME="/Applications/DevEco-Studio.app/Contents/jbr/Contents/Home" \
 - Compile + package 验证通过：`hvigorw assembleHap` BUILD SUCCESSFUL；打包 `.so` 含全部新导出与 `host.complete`/`host.error` command 串。
 - 本报告：建立三级 evidence 现状基线，记录 adapter gap 与 backlog。
 - `scripts/preflight_real_device_runtime_smoke.sh` + `docs/HARMONYOS_REAL_DEVICE_PREFLIGHT_RUNBOOK.md`：新增 real-device preflight/runbook，明确无真机或未签名 HAP 时必须 `BLOCKED`/nonzero，不得把 simulator 当真机。
+- `scripts/build_signed_hap.sh`：新增签名 HAP 构建脚本，支持本地 existing signing config 或 `HARMONYOS_SIGNING_*` env patch，默认构建后恢复 `build-profile.json5`，只在 ignored artifacts 中记录 redacted summary/hash。
+- `scripts/run_real_device_runtime_evidence.sh`：新增真机 evidence wrapper，强制非 loopback target + 非 unsigned HAP，串联 signed-HAP、preflight、runtime smoke、real-device validator。
+- `scripts/validate_real_device_runtime_smoke_artifact.py`：新增真机专用 validator；`scripts/validate_device_runtime_smoke_artifact.py` 同步校验 `tier` 和 `HostBus` / `PASS op:` token。
 
 ## 未改动的边界（守约）
 

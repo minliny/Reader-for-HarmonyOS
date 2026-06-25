@@ -43,6 +43,8 @@ REQUIRED_RUNTIME_TOKENS = [
     "PASS rss:1",
     "PASS v75:3",
     "PASS epub:1",
+    "HostBus",
+    "PASS op:",
     "ArkWeb",
     "Cookie",
     "Session",
@@ -187,6 +189,17 @@ def validate(summary_path: Path) -> None:
         fail(f"status is not PASS: {summary.get('status')}")
     if summary.get("failure") not in ("", None):
         fail("failure field is not empty")
+    target = summary.get("target")
+    if not isinstance(target, str) or target == "":
+        fail("target must be non-empty string")
+    tier = summary.get("tier")
+    if tier not in ("simulator", "device"):
+        fail(f"tier must be simulator or device: {tier}")
+    if target.startswith("127.") or target.startswith("localhost"):
+        if tier != "simulator":
+            fail("loopback target must be simulator tier")
+    elif tier != "device":
+        fail("non-loopback target must be device tier")
 
     gate = summary.get("ciGate", {})
     if gate.get("name") != "harmonyos_device_runtime_ci":
@@ -398,6 +411,8 @@ def validate(summary_path: Path) -> None:
         fail("runtimeLayout must prove device datastore smoke separately")
     if "LocalBook" not in runtime_text or "PASS epub:1" not in runtime_text:
         fail("runtimeLayout must prove device local-book import smoke separately")
+    if "HostBus" not in runtime_text or "PASS op:" not in runtime_text:
+        fail("runtimeLayout must prove HostBus closed-loop smoke separately")
     reject_tokens(runtime_text, REJECTED_RUNTIME_TOKENS, "runtimeLayout")
 
     for path in [screenshot, log_file, junit]:
