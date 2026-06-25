@@ -728,11 +728,6 @@ struct RuntimeDeviceEvidencePanel {
         RuntimePill({ label: 'WebDAV', value: this.webdav })
         RuntimePill({ label: 'FileToken', value: this.fileToken })
         RuntimePill({ label: 'DBMig', value: this.dbMigration })
-      }
-      .width('100%')
-      .margin({ top: 8 })
-
-      Row() {
         RuntimePill({ label: 'HostBus', value: this.hostBus })
       }
       .width('100%')
