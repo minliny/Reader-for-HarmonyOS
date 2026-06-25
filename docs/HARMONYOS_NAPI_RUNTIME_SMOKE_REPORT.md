@@ -1,6 +1,6 @@
 # HarmonyOS NAPI Runtime Smoke Report
 
-Branch: `codex/harmony-napi-runtime`
+Branch: `codex/harmony-real-device-evidence`
 Core branch: `origin/codex/core-protocol-runtime`
 Last updated: 2026-06-25 (originally 2026-06-24)
 
@@ -81,7 +81,7 @@ and linked against `libace_napi.z.so` + `libc++_shared.so`.
 |------|----------------|--------|
 | headless | `parseHostSmokePayload` closed-loop parsing + malformed rejection (`HostBusClosedLoopValidator`); `assembleHap` compile + package | ✅ PASS (718P/4F of 722 across 16 suites; 4 failures are pre-existing fixture issues) |
 | 模拟器 (simulator) | native `hostSmoke()` real `host.request` → `host.complete` round-trip via `HostBus` pill; `CAbiPocValidator` real native path | ✅ PASS (runtime smoke 20260625T094901Z, `tier: simulator`, `HostBus` pill `PASS op:1`) |
-| 真机 (real device) | signed HAP `captureHarmonyNapiSmokeArtifact` on physical device | ⏳ no evidence yet (no physical device this session) |
+| 真机 (real device) | signed HAP `captureHarmonyNapiSmokeArtifact` on physical device + `scripts/run_device_runtime_smoke.sh` summary `tier: "device"` | ⏳ no evidence yet (`scripts/preflight_real_device_runtime_smoke.sh` returned `BLOCKED`: no `hdc` target; default HAP unsigned; no `signingConfigs`) |
 
 Headless entry: `EntryAbility.ets` detects `want.parameters['readerHeadlessTest']
 === '1'` → `TestInfra.runAllDomainTests()` → emits `HEADLESS_TEST_JSON` via hilog
@@ -143,6 +143,12 @@ the simulator tier (see above), not at the real-device tier.
   returned `[Empty]` at report time). Simulator PASS is labeled simulator; it is
   NOT promoted to device tier. The structured-result/error/host-bus assertions
   are proven at headless + simulator tiers only.
+- **Real-device preflight**: `scripts/preflight_real_device_runtime_smoke.sh`
+  is now the repeatable gate before real-device smoke. It checks `hdc`,
+  target tier, HAP/signing config, packaged `libreader_core_napi.so` tokens, and
+  HostBus smoke entrypoints, then writes
+  `artifacts/real-device-preflight/latest/real_device_preflight_summary.json`.
+  On this machine the status is `BLOCKED`, not PASS.
 - **Memory ownership**, **threading safety**: still BLOCKED pending real-device
   evidence.
 - **CI / device gate**: NOT MEASURED.
@@ -151,9 +157,11 @@ the simulator tier (see above), not at the real-device tier.
 ## Next (real-device lane)
 
 1. Connect a physical device (`hdc` target = device serial, not loopback), re-run
-   `scripts/run_device_runtime_smoke.sh`; summary should show `tier: "device"`.
-2. Run `captureHarmonyNapiSmokeArtifact` (see Reader-Core-Native
+   `scripts/preflight_real_device_runtime_smoke.sh`; status must be `READY`.
+2. Re-run `scripts/run_device_runtime_smoke.sh`; summary should show
+   `tier: "device"`.
+3. Run `captureHarmonyNapiSmokeArtifact` (see Reader-Core-Native
    `bindings/harmony/README.md`) on a signed HAP; archive the formatted artifact
    output labeled `tier=real-device`.
-3. Backfill `HarmonyOSReleaseGate` device-evidence items: nativeHTTP → arkWeb →
+4. Backfill `HarmonyOSReleaseGate` device-evidence items: nativeHTTP → arkWeb →
    cookie/session → HUKS → RDB → WebDAV → TTS.
