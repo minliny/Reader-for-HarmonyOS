@@ -51,9 +51,11 @@ Scope: ArkTS / Node-API host adapter that drives Rust Reader-Core, and its contr
 **Fixed（本轮）:**
 - `scripts/run_device_runtime_smoke.sh` 现在派生并写入 `tier` + `tierReason`。今后所有 `127.0.0.1:*` / `localhost:*` run 会被标记 `tier: "simulator"`，不再与真机混淆。
 - `runtime_layout.json` 出现字面 `FAIL` 的根因已修复（layout dump 失败时写入了非 JSON 内容），2026-06-25 re-run 已 PASS。
+- ✅ **HostBus pill 已加入 runtime panel 并在 simulator tier 验证 PASS**（2026-06-25T09:49Z）：`Index.ets` 的 `RuntimeDeviceEvidencePanel` 新增 `HostBus` pill，调用 `runHostSmokeClosedLoop()` → native `hostSmoke()` 真实执行 `host.request` → `host.complete` 闭环。runtime smoke PASS，layout 中 `HostBus` pill = `PASS op:1`（operationId=1 穿透），`requiredRuntimeTokens` 含 `HostBus` + `PASS op:`，`runtime_panel_settled()` 等 `HostBus` 字样现身。
+- ✅ `parseHostSmokePayload` 修复：兼容 native HostSmoke 内联 JSON（`hostRequest`/`completion` 为对象）与 canned fixture（字符串）两种形态。
 
 **Next（simulator lane）:**
-1. native `hostSmoke()` 真实 host bus round-trip 执行（目前 compile + package 就绪，native export 就绪，但未在 simulator tier 专门执行 hostSmoke 端到端测试）。
+1. ~~native `hostSmoke()` 真实 host bus round-trip 执行~~ — **本轮已完成**（HostBus pill `PASS op:1`）。
 2. 把 `CAbiPocValidator` 的真 native 路径放在 simulator tier 执行，归档 summary。
 
 ### 3. 真机 (real device) — 无证据
@@ -129,7 +131,7 @@ $ JAVA_HOME="/Applications/DevEco-Studio.app/Contents/jbr/Contents/Home" \
 | Tier | host bus 闭环证据 | 状态 |
 |------|------|------|
 | headless | `parseHostSmokePayload` 闭环解析 + 各类 malformed 拒收（`HostBusClosedLoopValidator`） | ✅ compile + 解析逻辑 headless 覆盖 |
-| 模拟器 (simulator) | native `hostSmoke()` 真实 round-trip 执行 | ⏳ 待跑（runtime smoke 已 PASS，hostSmoke 端到端测试尚未专门执行） |
+| 模拟器 (simulator) | native `hostSmoke()` 真实 round-trip 执行 | ✅ PASS（HostBus pill `PASS op:1`，runtime smoke 20260625T094901Z） |
 | 真机 (real device) | native `hostSmoke()` + 签名 HAP | ⏳ 待跑（需 `hdc` + 真机） |
 
 > ABI 约束：app 侧 `native/reader_core_abi/include/reader_core.h` 是 vendored 副本，须与 Reader-Core-Native 上游 `include/reader_core.h` 同步。若 host adapter 需要上游未暴露的 ABI 符号，记入下表，**不得私改 ABI**（那是 `c-abi-stable-boundary-goal` 的领地）。
