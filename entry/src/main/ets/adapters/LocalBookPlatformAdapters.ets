@@ -1,3 +1,8 @@
+/**
+ * @deprecated S6: fixture-based service, retained as fallback. Production path
+ * routes through Rust Core via ReaderCoreClient/BookApi/SourceApi. Will be
+ * removed in S7 once Rust Core E2E is proven on real device.
+ */
 // LocalBookPlatformAdapters - clean-room HarmonyOS local-book adapter evidence.
 
 import { EPUBMetadata, EPUBNavPoint, EPUBParseResult, EPUBParserContract } from '../parser/EPUBParserContract';

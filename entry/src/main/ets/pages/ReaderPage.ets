@@ -1,11 +1,16 @@
-// ReaderPage — temporary reader-shell demo.
-// Renders fixture chapter content with prev/next navigation, font-size control,
-// and progress persistence via ProgressService. The real reader UI is built in
-// a separate project; this page only proves the non-UI reader shell seam and
-// preserves the "ReaderShell PASS fixture" smoke token expected by the device
-// runtime gate. No external network or live source access is claimed.
+// ReaderPage — production path uses ReadingViewModel (Rust Core
+// book.detail → book.toc → chapter.content).
+//
+// Accepts optional router params { sourceId, bookUrl, bookName }. When params
+// are present, routes through Rust Core. When absent (legacy navigation from
+// BookshelfTab without params), falls back to FixtureEPUBParserAdapter
+// (strangler: fixture retained as fallback, S7 removal).
+//
+// No socket / WebView is touched here (red line 4); HTTP is handled by
+// OHOSHttpHostTransport beneath the Rust Core host adapter.
 
 import { router } from '@kit.ArkUI';
+import { ReadingViewModel, ReaderChapter } from '../viewmodel/ReadingViewModel';
 import { readerHomeDashboard, HomeBookRow } from '../services/HomeDashboardService';
 import { ReadingFlowStateMachine, ReadingState } from '../services/ReadingFlowStateMachine';
 import { MockBookshelfRepository } from '../repository/BookshelfRepository';
@@ -15,9 +20,10 @@ import { FixtureEPUBParserAdapter, buildStoredEPUBFixture } from '../adapters/Lo
 import { EPUBMapping } from '../parser/EPUBParserContract';
 import { LocalBookFormat } from '../models/LocalBook';
 
-interface ReaderChapter {
-  title: string;
-  content: string;
+interface ReaderParams {
+  sourceId?: string;
+  bookUrl?: string;
+  bookName?: string;
 }
 
 @Entry
@@ -30,12 +36,45 @@ struct ReaderPage {
   @State fontSize: number = 18;
   @State bookTitle: string = '本地书';
   @State progressText: string = '未读';
+  @State loading: boolean = true;
+  @State error: string = '';
+  @State useRustCore: boolean = false;
+  private vm: ReadingViewModel | null = null;
   private repository: MockBookshelfRepository = new MockBookshelfRepository(true);
   private bookshelf: BookshelfService = new BookshelfService(this.repository);
   private progress: ProgressService = new ProgressService(this.repository);
 
   aboutToAppear(): void {
-    this.loadFixtureBook();
+    const params = router.getParams() as ReaderParams;
+    if (params && params.sourceId && params.bookUrl) {
+      this.useRustCore = true;
+      this.loadFromRustCore(params.sourceId!, params.bookUrl!, params.bookName ?? '');
+    } else {
+      this.useRustCore = false;
+      this.loadFixtureBook();
+    }
+  }
+
+  private async loadFromRustCore(sourceId: string, bookUrl: string, bookName: string): Promise<void> {
+    this.loading = true;
+    this.error = '';
+    this.bookTitle = bookName;
+    try {
+      this.vm = new ReadingViewModel();
+      const initial = await this.vm.loadBookAndToc(sourceId, bookUrl);
+      this.chapters = initial;
+      this.currentIndex = 0;
+      this.machine.openBook(bookUrl, sourceId);
+      this.machine.tocLoaded(initial.length);
+      this.machine.selectChapter(0);
+      this.machine.chapterLoaded();
+      this.state = this.machine.getState();
+      this.progressText = `0/${initial.length}`;
+    } catch (e) {
+      this.error = `Rust Core 加载失败: ${e}`;
+      this.chapters = [{ title: '加载失败', content: this.error }];
+    }
+    this.loading = false;
   }
 
   private loadFixtureBook(): void {
@@ -72,8 +111,10 @@ struct ReaderPage {
       }
       this.state = this.machine.getState();
       this.progressText = this.progress.getProgressString(bookId);
+      this.loading = false;
     }).catch((_e: Error) => {
       this.chapters = [{ title: '第一章', content: 'fixture reader unavailable' }];
+      this.loading = false;
     });
   }
 
@@ -84,7 +125,20 @@ struct ReaderPage {
     this.progressText = this.progress.getProgressString(ctx.bookId);
   }
 
-  private prev(): void {
+  private async prev(): Promise<void> {
+    if (this.useRustCore && this.vm) {
+      const ch = await this.vm.prevChapter();
+      if (ch) {
+        const newChapters: ReaderChapter[] = this.chapters.slice();
+        if (this.currentIndex > 0) {
+          newChapters[this.currentIndex - 1] = ch;
+          this.currentIndex = this.currentIndex - 1;
+        }
+        this.chapters = newChapters;
+        this.progressText = `${this.currentIndex + 1}/${this.chapters.length}`;
+      }
+      return;
+    }
     if (this.machine.prevChapter()) {
       this.currentIndex = Math.max(0, this.currentIndex - 1);
       this.machine.chapterLoaded();
@@ -93,7 +147,20 @@ struct ReaderPage {
     }
   }
 
-  private next(): void {
+  private async next(): Promise<void> {
+    if (this.useRustCore && this.vm) {
+      const ch = await this.vm.nextChapter();
+      if (ch) {
+        const newChapters: ReaderChapter[] = this.chapters.slice();
+        if (this.currentIndex < this.chapters.length - 1) {
+          newChapters[this.currentIndex + 1] = ch;
+          this.currentIndex = this.currentIndex + 1;
+        }
+        this.chapters = newChapters;
+        this.progressText = `${this.currentIndex + 1}/${this.chapters.length}`;
+      }
+      return;
+    }
     if (this.machine.nextChapter()) {
       this.currentIndex = Math.min(this.chapters.length - 1, this.currentIndex + 1);
       this.machine.chapterLoaded();
@@ -114,9 +181,9 @@ struct ReaderPage {
           .fontColor('#007AFF')
           .onClick(() => this.back())
         Blank()
-        Text(`ReaderShell PASS fixture`)
+        Text(this.useRustCore ? 'ReaderShell PASS Rust Core' : 'ReaderShell PASS fixture')
           .fontSize(12)
-          .fontColor('#1B7F4A')
+          .fontColor(this.useRustCore ? '#1B7F4A' : '#1B7F4A')
       }
       .width('100%')
       .padding({ left: 16, right: 16, top: 12, bottom: 8 })
@@ -158,28 +225,50 @@ struct ReaderPage {
       .width('100%')
       .padding({ left: 16, right: 16, bottom: 8 })
 
-      Scroll() {
+      if (this.loading) {
         Column() {
-          if (this.chapters.length > 0) {
-            Text(this.chapters[this.currentIndex].title)
-              .fontSize(this.fontSize + 2)
-              .fontWeight(FontWeight.Medium)
-              .fontColor('#1A1A1A')
-              .width('100%')
-              .margin({ bottom: 12 })
-            Text(this.chapters[this.currentIndex].content)
-              .fontSize(this.fontSize)
-              .fontColor('#333333')
-              .lineHeight(this.fontSize * 1.8)
-              .width('100%')
-          }
+          Text('加载中...')
+            .fontSize(14)
+            .fontColor('#777777')
+            .margin({ top: 48 })
         }
         .width('100%')
-        .padding({ left: 16, right: 16, bottom: 24 })
-        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
+      } else if (this.error.length > 0 && this.chapters.length === 0) {
+        Column() {
+          Text(this.error)
+            .fontSize(14)
+            .fontColor('#B3261E')
+            .margin({ top: 48 })
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
+      } else {
+        Scroll() {
+          Column() {
+            if (this.chapters.length > 0) {
+              Text(this.chapters[this.currentIndex].title)
+                .fontSize(this.fontSize + 2)
+                .fontWeight(FontWeight.Medium)
+                .fontColor('#1A1A1A')
+                .width('100%')
+                .margin({ bottom: 12 })
+              Text(this.chapters[this.currentIndex].content)
+                .fontSize(this.fontSize)
+                .fontColor('#333333')
+                .lineHeight(this.fontSize * 1.8)
+                .width('100%')
+            }
+          }
+          .width('100%')
+          .padding({ left: 16, right: 16, bottom: 24 })
+          .alignItems(HorizontalAlign.Start)
+        }
+        .layoutWeight(1)
+        .width('100%')
       }
-      .layoutWeight(1)
-      .width('100%')
 
       Row() {
         Button('上一章')

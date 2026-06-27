@@ -1,3 +1,7 @@
+// SearchPage — standalone page (kept for direct navigation / tests).
+// Production path uses SearchViewModel (Rust Core 'book.search' via BookApi).
+// Legacy readerHomeDashboard fixture retained as fallback (S7 removal).
+import { SearchViewModel, SearchRow } from '../viewmodel/SearchViewModel';
 import { HomeSearchRow, readerHomeDashboard } from '../services/HomeDashboardService';
 import { SearchMode } from '../services/SearchService';
 
@@ -5,19 +9,58 @@ import { SearchMode } from '../services/SearchService';
 @Component
 struct SearchPage {
   @State keyword: string = '三体';
-  @State results: HomeSearchRow[] = [];
+  @State results: SearchRow[] = [];
   @State mode: string = '';
   @State error: string = '';
+  @State searching: boolean = false;
+  @State useRustCore: boolean = true;
+  private vm: SearchViewModel | null = null;
 
   aboutToAppear() {
     this.runSearch();
   }
 
   private async runSearch(): Promise<void> {
-    const snapshot = await readerHomeDashboard.search(this.keyword);
-    this.results = snapshot.rows;
-    this.mode = snapshot.mode === SearchMode.FIXTURE ? 'FIXTURE' : snapshot.mode;
-    this.error = snapshot.error ?? '';
+    this.searching = true;
+    this.error = '';
+    try {
+      this.vm = new SearchViewModel();
+      const rows = await this.vm.search(this.keyword);
+      if (rows.length > 0) {
+        this.results = rows;
+        this.mode = 'Rust Core';
+        this.useRustCore = true;
+      } else {
+        // Strangler fallback: Rust Core returned empty, surface legacy fixture.
+        const snapshot = await readerHomeDashboard.search(this.keyword);
+        this.results = this.toRows(snapshot.rows);
+        this.mode = snapshot.mode === SearchMode.FIXTURE ? 'FIXTURE' : snapshot.mode;
+        this.useRustCore = false;
+        this.error = snapshot.error ?? '';
+      }
+    } catch (e) {
+      const snapshot = await readerHomeDashboard.search(this.keyword);
+      this.results = this.toRows(snapshot.rows);
+      this.mode = snapshot.mode === SearchMode.FIXTURE ? 'FIXTURE' : snapshot.mode;
+      this.useRustCore = false;
+      this.error = `Rust Core 异常,回退 fixture: ${e}`;
+    }
+    this.searching = false;
+  }
+
+  private toRows(rows: HomeSearchRow[]): SearchRow[] {
+    const out: SearchRow[] = [];
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      out.push({
+        title: r.title,
+        author: r.author,
+        detailURL: r.detailURL,
+        intro: r.intro,
+        sourceId: ''
+      });
+    }
+    return out;
   }
 
   build() {
@@ -50,7 +93,7 @@ struct SearchPage {
       Row() {
         Text(this.mode)
           .fontSize(12)
-          .fontColor('#777777')
+          .fontColor(this.useRustCore ? '#1B7F4A' : '#777777')
         Blank()
         Text(this.results.length.toString())
           .fontSize(12)
@@ -59,14 +102,19 @@ struct SearchPage {
       .width('100%')
       .margin({ bottom: 8 })
 
-      if (this.error.length > 0 && this.results.length === 0) {
+      if (this.searching) {
+        Text('搜索中')
+          .fontSize(14)
+          .fontColor('#777777')
+          .margin({ top: 24 })
+      } else if (this.error.length > 0 && this.results.length === 0) {
         Text(this.error)
           .fontSize(14)
           .fontColor('#B3261E')
           .margin({ top: 24 })
       } else {
         List({ space: 8 }) {
-          ForEach(this.results, (item: HomeSearchRow) => {
+          ForEach(this.results, (item: SearchRow) => {
             ListItem() {
               Column() {
                 Text(item.title)
@@ -93,7 +141,7 @@ struct SearchPage {
               .backgroundColor('#FFFFFF')
               .borderRadius(8)
             }
-          }, (item: HomeSearchRow) => item.detailURL)
+          }, (item: SearchRow) => item.detailURL)
         }
         .layoutWeight(1)
         .width('100%')

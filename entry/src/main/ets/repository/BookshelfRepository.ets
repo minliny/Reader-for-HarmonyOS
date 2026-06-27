@@ -1,3 +1,8 @@
+/**
+ * @deprecated S6: fixture-based service, retained as fallback. Production path
+ * routes through Rust Core via ReaderCoreClient/BookApi/SourceApi. Will be
+ * removed in S7 once Rust Core E2E is proven on real device.
+ */
 // BookshelfRepository — interface + preferences-backed + in-memory mock
 import { LocalBook, LocalBookFormat } from '../models/LocalBook';
 import { BookshelfItem } from '../models/BookshelfModels';

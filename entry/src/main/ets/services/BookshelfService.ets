@@ -1,3 +1,8 @@
+/**
+ * @deprecated S6: fixture-based service, retained as fallback. Production path
+ * routes through Rust Core via ReaderCoreClient/BookApi/SourceApi. Will be
+ * removed in S7 once Rust Core E2E is proven on real device.
+ */
 // BookshelfService — validated CRUD operations wrapping IBookshelfRepository
 import { IBookshelfRepository } from '../repository/BookshelfRepository';
 import { LocalBook, LocalBookFormat } from '../models/LocalBook';

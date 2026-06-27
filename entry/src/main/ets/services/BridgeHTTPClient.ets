@@ -1,3 +1,8 @@
+/**
+ * @deprecated S6: fixture-based service, retained as fallback. Production path
+ * routes through Rust Core via ReaderCoreClient/BookApi/SourceApi. Will be
+ * removed in S7 once Rust Core E2E is proven on real device.
+ */
 // BridgeHTTPClient — ArkTS client for local Core bridge (localhost:8899)
 // Strategy B: development accelerator for real Core data
 import { http } from '@kit.NetworkKit';

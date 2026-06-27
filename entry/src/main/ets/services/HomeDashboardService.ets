@@ -1,3 +1,8 @@
+/**
+ * @deprecated S6: fixture-based service, retained as fallback. Production path
+ * routes through Rust Core via ReaderCoreClient/BookApi/SourceApi. Will be
+ * removed in S7 once Rust Core E2E is proven on real device.
+ */
 // HomeDashboardService - local app-facing composition for shell pages.
 // Uses clean-room local services and fixture fallback; no external network or device execution is claimed.
 import { IStorageAdapter, MockBookshelfRepository } from '../repository/BookshelfRepository';
@@ -21,6 +26,8 @@ export interface HomeBookRow {
   progressPercent: number;
   lastOpenedAt: number;
   isReading: boolean;
+  // S6: optional sourceId for Rust Core routing (empty when fixture).
+  sourceId?: string;
 }
 
 export interface HomeBookshelfSnapshot {
@@ -35,6 +42,8 @@ export interface HomeSearchRow {
   author: string;
   detailURL: string;
   intro: string;
+  // S6: optional sourceId for Rust Core routing (empty when fixture).
+  sourceId?: string;
 }
 
 export interface HomeSearchSnapshot {

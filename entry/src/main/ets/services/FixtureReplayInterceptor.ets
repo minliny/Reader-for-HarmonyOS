@@ -1,3 +1,8 @@
+/**
+ * @deprecated S6: fixture-based service, retained as fallback. Production path
+ * routes through Rust Core via ReaderCoreClient/BookApi/SourceApi. Will be
+ * removed in S7 once Rust Core E2E is proven on real device.
+ */
 // FixtureReplayInterceptor — offline fixture fallback when bridge unavailable
 // Returns pre-recorded JSON fixtures. Tagged FIXTURE_REPLAY in responses.
 import { BridgeHTTPClient, BridgeHealth, BridgeTXTParseResult, BridgeTXTTOCItem } from './BridgeHTTPClient';

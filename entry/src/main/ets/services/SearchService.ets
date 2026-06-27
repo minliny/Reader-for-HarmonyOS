@@ -1,3 +1,8 @@
+/**
+ * @deprecated S6: fixture-based service, retained as fallback. Production path
+ * routes through Rust Core via ReaderCoreClient/BookApi/SourceApi. Will be
+ * removed in S7 once Rust Core E2E is proven on real device.
+ */
 // SearchService — search orchestration with bridge/fixture fallback
 // BLOCKED_BY_BRIDGE_RUNTIME for live search execution
 import { BookSource } from '../models/BookSource';

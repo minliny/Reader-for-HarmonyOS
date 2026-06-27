@@ -26,6 +26,24 @@ import {
 } from '../services/LegadoNonUIParityServices';
 import { SearchMode } from '../services/SearchService';
 import { runHostSmokeClosedLoop, ReaderHostSmokeClosedLoopResult } from '../cabi/ReaderCoreNapiBridge';
+import { BookshelfViewModel, BookshelfRow } from '../viewmodel/BookshelfViewModel';
+import { SearchViewModel } from '../viewmodel/SearchViewModel';
+import { ImportBookSourceViewModel, ImportState } from '../viewmodel/ImportBookSourceViewModel';
+import { runRustCoreEndToEndTests, RustCoreE2EResult } from '../__tests__/RustCoreEndToEndValidator';
+
+interface ReaderNavParams {
+  sourceId: string;
+  bookUrl: string;
+  bookName: string;
+}
+
+interface SearchRowData {
+  title: string;
+  author: string;
+  detailURL: string;
+  intro: string;
+  sourceId: string;
+}
 
 @Entry
 @Component
@@ -104,18 +122,60 @@ struct BookshelfContent {
   @State activeBooks: number = 0;
   @State unreadBooks: number = 0;
   @State filter: string = 'all';
+  @State useRustCore: boolean = false;
+  @State rustError: string = '';
+  private bookshelfVm: BookshelfViewModel | null = null;
 
   aboutToAppear() {
     this.reload();
   }
 
-  private reload(): void {
+  private async reload(): Promise<void> {
+    // Strangler: try Rust Core 'bookshelf.list' first, fallback to fixture.
+    try {
+      this.bookshelfVm = new BookshelfViewModel();
+      const rustRows = await this.bookshelfVm.loadBooks();
+      if (rustRows.length > 0) {
+        this.rows = this.toHomeBookRows(rustRows);
+        this.totalBooks = rustRows.length;
+        this.activeBooks = rustRows.filter((r: BookshelfRow) => r.isReading).length;
+        this.unreadBooks = this.totalBooks - this.activeBooks;
+        this.useRustCore = true;
+        this.rustError = '';
+        this.readerPreview = readerHomeDashboard.getReaderPreviewSnapshot();
+        return;
+      }
+    } catch (e) {
+      this.rustError = `Rust Core 异常: ${e}`;
+    }
+    // Fallback: legacy fixture
     const snapshot = readerHomeDashboard.getBookshelfSnapshot();
     this.rows = snapshot.rows;
     this.totalBooks = snapshot.totalBooks;
     this.activeBooks = snapshot.activeBooks;
     this.unreadBooks = snapshot.unreadBooks;
+    this.useRustCore = false;
     this.readerPreview = readerHomeDashboard.getReaderPreviewSnapshot();
+  }
+
+  private toHomeBookRows(rows: BookshelfRow[]): HomeBookRow[] {
+    const out: HomeBookRow[] = [];
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      const row: HomeBookRow = {
+        id: r.id,
+        title: r.title,
+        author: r.author,
+        format: r.format,
+        progressText: r.progressText,
+        progressPercent: 0,
+        lastOpenedAt: 0,
+        isReading: r.isReading,
+        sourceId: r.sourceId
+      };
+      out.push(row);
+    }
+    return out;
   }
 
   private visibleRows(): HomeBookRow[] {
@@ -321,7 +381,20 @@ struct BookRow {
     .backgroundColor('#FFFFFF')
     .borderRadius(8)
     .onClick(() => {
-      router.pushUrl({ url: 'pages/ReaderPage' });
+      const sid = this.item.sourceId ?? '';
+      if (sid.length > 0 && this.item.id.length > 0) {
+        const navParams: ReaderNavParams = {
+          sourceId: sid,
+          bookUrl: this.item.id,
+          bookName: this.item.title
+        };
+        router.pushUrl({
+          url: 'pages/ReaderPage',
+          params: navParams
+        });
+      } else {
+        router.pushUrl({ url: 'pages/ReaderPage' });
+      }
     })
   }
 }
@@ -333,6 +406,8 @@ struct SearchTab {
   @State mode: string = '';
   @State error: string = '';
   @State searching: boolean = false;
+  @State useRustCore: boolean = false;
+  private searchVm: SearchViewModel | null = null;
 
   aboutToAppear() {
     this.runSearch();
@@ -340,11 +415,44 @@ struct SearchTab {
 
   private async runSearch(): Promise<void> {
     this.searching = true;
+    this.error = '';
+    // Strangler: try Rust Core 'book.search' first, fallback to fixture.
+    try {
+      this.searchVm = new SearchViewModel();
+      const rustRows = await this.searchVm.search(this.keyword);
+      if (rustRows.length > 0) {
+        this.rows = this.toHomeSearchRows(rustRows);
+        this.mode = 'Rust Core';
+        this.useRustCore = true;
+        this.searching = false;
+        return;
+      }
+    } catch (e) {
+      this.error = `Rust Core 异常: ${e}`;
+    }
+    // Fallback: legacy fixture
     const snapshot = await readerHomeDashboard.search(this.keyword);
     this.rows = snapshot.rows;
     this.mode = snapshot.mode === SearchMode.FIXTURE ? 'FIXTURE' : snapshot.mode;
+    this.useRustCore = false;
     this.error = snapshot.error ?? '';
     this.searching = false;
+  }
+
+  private toHomeSearchRows(rows: SearchRowData[]): HomeSearchRow[] {
+    const out: HomeSearchRow[] = [];
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      const row: HomeSearchRow = {
+        title: r.title,
+        author: r.author,
+        detailURL: r.detailURL,
+        intro: r.intro,
+        sourceId: r.sourceId
+      };
+      out.push(row);
+    }
+    return out;
   }
 
   build() {
@@ -447,6 +555,20 @@ struct SearchRow {
     .padding(12)
     .backgroundColor('#FFFFFF')
     .borderRadius(8)
+    .onClick(() => {
+      const sid = this.item.sourceId ?? '';
+      if (sid.length > 0 && this.item.detailURL.length > 0) {
+        const navParams: ReaderNavParams = {
+          sourceId: sid,
+          bookUrl: this.item.detailURL,
+          bookName: this.item.title
+        };
+        router.pushUrl({
+          url: 'pages/ReaderPage',
+          params: navParams
+        });
+      }
+    })
   }
 }
 
@@ -456,6 +578,8 @@ struct SettingsTab {
     Navigation() {
       Column() {
         SourceManagementPanel()
+        ImportBookSourcePanel()
+        RustCoreE2ETestPanel()
         SettingsItem({ label: '本地导入', hint: 'local fixture' })
         SettingsItem({ label: 'WebDAV 同步', hint: 'contract' })
         RuntimeDeviceEvidencePanel()
@@ -472,6 +596,96 @@ struct SettingsTab {
     }
     .title('设置')
     .titleMode(NavigationTitleMode.Mini)
+  }
+}
+
+@Component
+struct ImportBookSourcePanel {
+  @State sourceJson: string = '';
+  @State importing: boolean = false;
+  @State importMessage: string = '';
+  @State importSuccess: boolean = false;
+  @State showPanel: boolean = false;
+  private vm: ImportBookSourceViewModel | null = null;
+
+  aboutToAppear() {
+    this.vm = new ImportBookSourceViewModel();
+  }
+
+  private async doImport(): Promise<void> {
+    if (this.vm === null) {
+      return;
+    }
+    this.importing = true;
+    this.importMessage = '';
+    const state: ImportState = await this.vm.importBookSource(this.sourceJson);
+    this.importing = false;
+    this.importSuccess = state.success;
+    this.importMessage = state.success ? '导入成功' : `导入失败: ${state.error}`;
+  }
+
+  build() {
+    Column() {
+      Row() {
+        Text('导入书源')
+          .fontSize(16)
+          .fontColor('#1A1A1A')
+          .fontWeight(FontWeight.Medium)
+          .layoutWeight(1)
+        Text(this.importSuccess ? 'Rust Core OK' : 'Rust Core')
+          .fontSize(12)
+          .fontColor(this.importSuccess ? '#1B7F4A' : '#999999')
+      }
+      .width('100%')
+      .onClick(() => {
+        this.showPanel = !this.showPanel;
+      })
+
+      if (this.showPanel) {
+        Column() {
+          Text('粘贴 Legado 书源 JSON:')
+            .fontSize(13)
+            .fontColor('#666666')
+            .margin({ bottom: 6 })
+          TextArea({ placeholder: '[{ "bookSourceUrl": "https://...", "bookSourceName": "...", ... }]', text: this.sourceJson })
+            .width('100%')
+            .height(120)
+            .backgroundColor('#F8F8F8')
+            .borderRadius(8)
+            .padding(8)
+            .fontSize(12)
+            .onChange((value: string) => {
+              this.sourceJson = value;
+            })
+
+          Row() {
+            Button(this.importing ? '导入中...' : '导入')
+              .height(36)
+              .backgroundColor('#007AFF')
+              .fontColor('#FFFFFF')
+              .enabled(!this.importing && this.sourceJson.trim().length > 0)
+              .onClick(() => {
+                this.doImport();
+              })
+            Blank()
+            if (this.importMessage.length > 0) {
+              Text(this.importMessage)
+                .fontSize(12)
+                .fontColor(this.importSuccess ? '#1B7F4A' : '#B3261E')
+            }
+          }
+          .width('100%')
+          .margin({ top: 8 })
+        }
+        .width('100%')
+        .margin({ top: 12 })
+      }
+    }
+    .width('100%')
+    .padding(16)
+    .backgroundColor('#FFFFFF')
+    .borderRadius(8)
+    .margin({ bottom: 8 })
   }
 }
 
@@ -537,6 +751,95 @@ struct SourceManagementPanel {
       }
       .width('100%')
       .margin({ top: 6 })
+    }
+    .width('100%')
+    .padding(16)
+    .backgroundColor('#FFFFFF')
+    .borderRadius(8)
+    .margin({ bottom: 8 })
+  }
+}
+
+@Component
+struct RustCoreE2ETestPanel {
+  @State running: boolean = false;
+  @State resultText: string = '';
+  @State resultPassed: number = 0;
+  @State resultFailed: number = 0;
+  @State tier: string = '';
+
+  private async runE2E(): Promise<void> {
+    this.running = true;
+    this.resultText = '运行中...';
+    try {
+      const result: RustCoreE2EResult = await runRustCoreEndToEndTests();
+      this.resultPassed = result.runner.passed;
+      this.resultFailed = result.runner.failed;
+      this.tier = result.tier;
+      const lines: string[] = [];
+      lines.push(`Tier: ${result.tier}`);
+      lines.push(`Summary: ${result.runner.summary()}`);
+      lines.push(`Search results: ${result.searchResults.length}`);
+      if (result.book) {
+        lines.push(`Book: ${result.book.name} / ${result.book.author}`);
+      }
+      lines.push(`Chapters: ${result.chapters.length}`);
+      lines.push(`Content[0..60]: ${result.firstChapterContent.substring(0, 60)}`);
+      for (let i = 0; i < result.runner.results.length; i++) {
+        const tr = result.runner.results[i];
+        const status = tr.passed ? 'PASS' : 'FAIL';
+        lines.push(`  [${status}] ${tr.name}${tr.error ? ' :: ' + tr.error : ''}`);
+      }
+      this.resultText = lines.join('\n');
+    } catch (e) {
+      this.resultText = `E2E 异常: ${e}`;
+      this.resultFailed = 1;
+    }
+    this.running = false;
+  }
+
+  build() {
+    Column() {
+      Row() {
+        Text('Rust Core E2E 测试')
+          .fontSize(16)
+          .fontColor('#1A1A1A')
+          .fontWeight(FontWeight.Medium)
+          .layoutWeight(1)
+        Text(this.running ? '运行中' : (this.resultFailed === 0 && this.resultPassed > 0 ? 'PASS' : '待运行'))
+          .fontSize(12)
+          .fontColor(this.resultFailed === 0 && this.resultPassed > 0 ? '#1B7F4A' : '#999999')
+      }
+      .width('100%')
+      .onClick(() => {
+        if (!this.running) {
+          this.runE2E();
+        }
+      })
+
+      if (this.resultText.length > 0) {
+        Scroll() {
+          Text(this.resultText)
+            .fontSize(11)
+            .fontColor('#555555')
+            .fontFamily('monospace')
+            .width('100%')
+            .textAlign(TextAlign.Start)
+        }
+        .width('100%')
+        .height(200)
+        .margin({ top: 8 })
+        .backgroundColor('#F8F8F8')
+        .borderRadius(8)
+        .padding(8)
+      }
+
+      if (this.tier.length > 0) {
+        Text(`证据分层: ${this.tier} (simulator ≠ real device)`)
+          .fontSize(10)
+          .fontColor('#999999')
+          .margin({ top: 4 })
+      }
     }
     .width('100%')
     .padding(16)
