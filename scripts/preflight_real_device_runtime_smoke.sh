@@ -4,7 +4,16 @@ set -uo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HDC_BIN="${HDC_BIN:-hdc}"
 TARGET="${HARMONYOS_REAL_DEVICE_TARGET:-${HARMONYOS_DEVICE_TARGET:-}}"
-HAP_PATH="${HARMONYOS_REAL_DEVICE_HAP_PATH:-${HARMONYOS_HAP_PATH:-$ROOT_DIR/entry/build/default/outputs/default/entry-default-unsigned.hap}}"
+HAP_PATH_SOURCE="default-unsigned"
+if [[ -n "${HARMONYOS_REAL_DEVICE_HAP_PATH:-}" ]]; then
+  HAP_PATH="$HARMONYOS_REAL_DEVICE_HAP_PATH"
+  HAP_PATH_SOURCE="HARMONYOS_REAL_DEVICE_HAP_PATH"
+elif [[ -n "${HARMONYOS_HAP_PATH:-}" ]]; then
+  HAP_PATH="$HARMONYOS_HAP_PATH"
+  HAP_PATH_SOURCE="HARMONYOS_HAP_PATH"
+else
+  HAP_PATH="$ROOT_DIR/entry/build/default/outputs/default/entry-default-unsigned.hap"
+fi
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 OUT_DIR="${HARMONYOS_REAL_DEVICE_PREFLIGHT_OUT:-$ROOT_DIR/artifacts/real-device-preflight/$STAMP}"
 LATEST_DIR="$ROOT_DIR/artifacts/real-device-preflight/latest"
@@ -182,12 +191,17 @@ fi
 repo_signing_configured=true
 if grep -Eq '"signingConfigs"[[:space:]]*:[[:space:]]*\[[[:space:]]*\]' "$ROOT_DIR/build-profile.json5" 2>/dev/null; then
   repo_signing_configured=false
-  add_blocker "build-profile.json5 has empty signingConfigs; a signed real-device HAP is not configured in this repo"
+  if [[ "$HAP_PATH_SOURCE" == "default-unsigned" ]]; then
+    add_blocker "build-profile.json5 has empty signingConfigs and no explicit signed HAP path was provided"
+  else
+    log "NOTE: build-profile.json5 has empty signingConfigs; using explicit HAP candidate from $HAP_PATH_SOURCE"
+  fi
 fi
 
 hap_exists=false
 hap_zip_ok=false
 hap_signed_name=true
+hap_signed_candidate=false
 hap_size=0
 hap_sha256="missing"
 hap_napi_path=""
@@ -202,6 +216,8 @@ if [[ -f "$HAP_PATH" ]]; then
   if [[ "$(basename "$HAP_PATH" | tr '[:upper:]' '[:lower:]')" == *unsigned* ]]; then
     hap_signed_name=false
     add_blocker "HAP artifact name indicates unsigned output: $HAP_PATH"
+  else
+    hap_signed_candidate=true
   fi
   if command -v unzip >/dev/null 2>&1; then
     log "+ unzip -l $HAP_PATH"
@@ -311,10 +327,12 @@ generated_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   printf '  },\n'
   printf '  "hap": {\n'
   printf '    "path": "%s",\n' "$(json_escape "$HAP_PATH")"
+  printf '    "pathSource": "%s",\n' "$(json_escape "$HAP_PATH_SOURCE")"
   printf '    "exists": %s,\n' "$(bool_json "$hap_exists")"
   printf '    "zipReadable": %s,\n' "$(bool_json "$hap_zip_ok")"
   printf '    "repoSigningConfigured": %s,\n' "$(bool_json "$repo_signing_configured")"
   printf '    "signedNameCheck": %s,\n' "$(bool_json "$hap_signed_name")"
+  printf '    "signedCandidate": %s,\n' "$(bool_json "$hap_signed_candidate")"
   printf '    "sizeBytes": %s,\n' "$hap_size"
   printf '    "sha256": "%s",\n' "$(json_escape "$hap_sha256")"
   printf '    "napiLibraryPath": "%s",\n' "$(json_escape "$hap_napi_path")"

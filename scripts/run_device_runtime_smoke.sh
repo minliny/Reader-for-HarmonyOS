@@ -7,6 +7,8 @@ BUNDLE="${HARMONYOS_BUNDLE:-com.reader.harmonyos}"
 MODULE="${HARMONYOS_MODULE:-entry}"
 ABILITY="${HARMONYOS_ABILITY:-EntryAbility}"
 HDC_BIN="${HDC_BIN:-hdc}"
+REQUIRE_REAL_DEVICE="${HARMONYOS_REQUIRE_REAL_DEVICE:-false}"
+REQUIRE_SIGNED_HAP="${HARMONYOS_REQUIRE_SIGNED_HAP:-false}"
 CLICK_X="${HARMONYOS_RUNTIME_PANEL_CLICK_X:-1060}"
 CLICK_Y="${HARMONYOS_RUNTIME_PANEL_CLICK_Y:-230}"
 RUNTIME_WAIT_SECONDS="${HARMONYOS_RUNTIME_WAIT_SECONDS:-240}"
@@ -135,6 +137,26 @@ derive_tier() {
     printf 'simulator'
   else
     printf 'device'
+  fi
+}
+
+truthy() {
+  [[ "$1" == "1" || "$1" == "true" || "$1" == "TRUE" || "$1" == "yes" ]]
+}
+
+require_real_device_policy() {
+  if truthy "$REQUIRE_REAL_DEVICE" && [[ "$(derive_tier "$TARGET")" != "device" ]]; then
+    failure="HARMONYOS_REQUIRE_REAL_DEVICE is set but target '$TARGET' is simulator tier"
+    log "$failure"
+    return 1
+  fi
+}
+
+require_signed_hap_policy() {
+  if truthy "$REQUIRE_SIGNED_HAP" && [[ "$(basename "$HAP_PATH" | tr '[:upper:]' '[:lower:]')" == *unsigned* ]]; then
+    failure="HARMONYOS_REQUIRE_SIGNED_HAP is set but HAP path indicates unsigned output: $HAP_PATH"
+    log "$failure"
+    return 1
   fi
 }
 
@@ -927,6 +949,8 @@ wait_for_home_panel() {
 
 log "HarmonyOS device runtime smoke started at $STAMP"
 log "target=$TARGET bundle=$BUNDLE out=$OUT_DIR"
+require_real_device_policy
+require_signed_hap_policy
 detect_runtime_proxy
 log "runtime proxy mode=$RUNTIME_PROXY_MODE enabled=$runtime_proxy_enabled source=$runtime_proxy_source hostHash=$runtime_proxy_host_hash port=$runtime_proxy_device_port rewritten=$runtime_proxy_endpoint_rewritten listenScope=$runtime_proxy_listen_scope localPortReachable=$runtime_proxy_local_port_reachable"
 run_host_network_probe

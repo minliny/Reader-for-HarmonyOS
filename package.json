@@ -10,10 +10,13 @@
   "repository": {},
   "license": "ISC",
   "scripts": {
+    "build:signed-hap": "bash scripts/build_signed_hap.sh",
     "preflight:real-device": "bash scripts/preflight_real_device_runtime_smoke.sh",
+    "smoke:real-device": "bash scripts/run_real_device_runtime_evidence.sh",
     "smoke:device-runtime": "bash scripts/run_device_runtime_smoke.sh",
     "ci:device-runtime": "bash scripts/run_device_runtime_smoke.sh && python3 scripts/validate_device_runtime_smoke_artifact.py artifacts/device-runtime-smoke/latest/device_runtime_smoke_summary.json",
     "ci:device-runtime:validate": "python3 scripts/validate_device_runtime_smoke_artifact.py artifacts/device-runtime-smoke/latest/device_runtime_smoke_summary.json",
+    "ci:real-device:validate": "python3 scripts/validate_real_device_runtime_smoke_artifact.py artifacts/real-device-runtime/latest/device-runtime-smoke/device_runtime_smoke_summary.json",
     "ci:device-runtime:validate-fail": "python3 scripts/validate_device_runtime_smoke_fail_artifact.py artifacts/device-runtime-smoke/latest/device_runtime_smoke_summary.json",
     "validate:gap-matrix": "python3 scripts/validate_harmonyos_core_legado_gap_matrix.py"
   },
