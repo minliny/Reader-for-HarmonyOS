@@ -2,6 +2,7 @@ import { UIAbility, Want, AbilityConstant } from '@kit.AbilityKit';
 import { window } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { readerRuntimeNetworkConfig } from '../services/RuntimeNetworkConfig';
+import { ReaderCoreClient } from '../api/ReaderCoreClient';
 import { runAllDomainTests, summarizeResults, TestSuiteResult } from '../__tests__/TestInfra';
 
 const TAG = 'EntryAbility';
@@ -24,6 +25,13 @@ interface HeadlessTestSummary {
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     readerRuntimeNetworkConfig.applyLaunchParameters(want.parameters);
+    // S6: boot Rust Core + HostAdapter (http.execute capability) at app launch.
+    try {
+      ReaderCoreClient.init();
+      hilog.info(0x0000, TAG, 'ReaderCoreClient initialized (Rust Core + HostAdapter)');
+    } catch (e) {
+      hilog.error(0x0000, TAG, `ReaderCoreClient init failed: ${e}`);
+    }
     hilog.info(0x0000, TAG, 'Ability onCreate');
 
     if (want.parameters?.[HEADLESS_TEST_FLAG] === '1') {
