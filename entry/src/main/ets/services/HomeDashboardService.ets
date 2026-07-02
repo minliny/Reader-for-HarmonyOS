@@ -26,6 +26,8 @@ export interface HomeBookRow {
   progressPercent: number;
   lastOpenedAt: number;
   isReading: boolean;
+  chapterTitle?: string;
+  contentPreview?: string;
   // S6: optional sourceId for Rust Core routing (empty when fixture).
   sourceId?: string;
 }
@@ -54,6 +56,7 @@ export interface HomeSearchSnapshot {
 
 export interface HomeReaderPreviewSnapshot {
   mode: string;
+  bookId?: string;
   bookTitle: string;
   author: string;
   chapterTitle: string;
@@ -125,6 +128,7 @@ export class HomeDashboardService {
     const books = this.bookshelfService.listAll();
     const rows: HomeBookRow[] = [];
     let activeBooks = 0;
+    const readerPreview = this.getReaderPreviewSnapshot();
 
     for (let i = 0; i < books.length; i++) {
       const book = books[i];
@@ -143,6 +147,10 @@ export class HomeDashboardService {
         lastOpenedAt: book.lastOpenedAt ?? book.addedAt,
         isReading
       };
+      if (book.id === readerPreview.bookId) {
+        row.chapterTitle = readerPreview.chapterTitle;
+        row.contentPreview = readerPreview.contentPreview;
+      }
       rows.push(row);
     }
 
@@ -164,6 +172,7 @@ export class HomeDashboardService {
     const progressPercent = progress ? Math.round(progress.chapterProgress * 100) : 0;
     const snapshot: HomeReaderPreviewSnapshot = {
       mode: 'FIXTURE',
+      bookId,
       bookTitle: book ? book.title : '本地书',
       author: book?.author ?? '未知作者',
       chapterTitle: '第一章 疯狂年代',

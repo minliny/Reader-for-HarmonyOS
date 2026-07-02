@@ -33,6 +33,7 @@ struct BookshelfContent {
   @State rows: HomeBookRow[] = [];
   @State readerPreview: HomeReaderPreviewSnapshot = {
     mode: 'FIXTURE',
+    bookId: '',
     bookTitle: '',
     author: '',
     chapterTitle: '',
@@ -274,9 +275,9 @@ struct BookCoverTile {
     target.sourceId = this.item.sourceId ?? '';
     target.bookTitle = this.item.title;
     target.author = this.item.author;
-    target.chapterTitle = '';
+    target.chapterTitle = this.item.chapterTitle ?? '';
     target.progressText = this.item.progressText;
-    target.contentPreview = '';
+    target.contentPreview = this.item.contentPreview ?? '';
     target.sourceRoute = ReaderRoute.bookshelf;
     target.entryKind = 'cover';
     this.onReaderEntry(target);
@@ -374,9 +375,9 @@ struct BookRow {
     target.sourceId = this.item.sourceId ?? '';
     target.bookTitle = this.item.title;
     target.author = this.item.author;
-    target.chapterTitle = '';
+    target.chapterTitle = this.item.chapterTitle ?? '';
     target.progressText = this.item.progressText;
-    target.contentPreview = '';
+    target.contentPreview = this.item.contentPreview ?? '';
     target.sourceRoute = ReaderRoute.bookshelf;
     target.entryKind = 'cover';
     this.onReaderEntry(target);

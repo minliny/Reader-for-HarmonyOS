@@ -37,6 +37,9 @@ export function runHomeDashboardTests(): TestRunner {
   r.assert(reader.bookTitle.length > 0, 'reader preview exposes book title');
   r.assert(reader.chapterTitle.indexOf('第一章') !== -1, 'reader preview exposes chapter title');
   r.assert(reader.contentPreview.length > 0, 'reader preview exposes content preview');
+  r.assert(snapshot.rows.some((row: HomeBookRow) => row.id === reader.bookId &&
+    (row.chapterTitle ?? '').length > 0 &&
+    (row.contentPreview ?? '').length > 0), 'bookshelf cover entry carries reader context');
   r.assert(reader.tocCount > 0, 'reader preview exposes TOC count');
   r.assert(reader.progressPercent >= 0, 'reader preview exposes progress percent');
   r.assert(sourceMgmt.mode === 'FIXTURE', 'source management is fixture-bound');

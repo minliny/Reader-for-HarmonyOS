@@ -317,7 +317,29 @@ export class ReaderUiReducer {
     return ReaderUiReducer.syncContractFields(next);
   }
 
+  static toggleReaderSessionPlaying(state: ReaderUiState): ReaderUiState {
+    if (state.activeSession.kind === 'none') {
+      return state;
+    }
+    const next = ReaderUiReducer.clone(state);
+    next.activeSession = ReaderUiReducer.session(state.activeSession.kind, !state.activeSession.playing);
+    next.motion = ReaderUiReducer.motion(
+      ReaderMotionId.readerSessionCapsuleUpdate,
+      state.readerPresentationRoute,
+      state.readerPresentationRoute,
+      state.readerPresentationRoute,
+      'session-toggle',
+      state.motion.sequence + 1,
+      ReaderMotion.durationReaderSession(state.reducedMotion),
+      ReaderMotionId.readerSessionControlSpaceUpdate
+    );
+    return ReaderUiReducer.syncContractFields(next);
+  }
+
   static stopReaderSession(state: ReaderUiState): ReaderUiState {
+    if (state.activeSession.kind === 'none') {
+      return state;
+    }
     const next = ReaderUiReducer.clone(state);
     next.activeSession = new ReaderActiveSessionState();
     next.motion = ReaderUiReducer.motion(

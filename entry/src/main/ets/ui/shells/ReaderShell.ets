@@ -9,6 +9,7 @@ export struct ReaderShell {
   onDismissControls: () => void = () => {};
   onToggleReducedMotion: (enabled: boolean) => void = (_enabled: boolean) => {};
   onStartSession: (kind: string) => void = (_kind: string) => {};
+  onToggleSession: () => void = () => {};
   onStopSession: () => void = () => {};
   onOpenPresentation: (route: string) => void = (_route: string) => {};
   onToggleMore: () => void = () => {};
@@ -22,6 +23,7 @@ export struct ReaderShell {
       onDismissControls: this.onDismissControls,
       onToggleReducedMotion: this.onToggleReducedMotion,
       onStartSession: this.onStartSession,
+      onToggleSession: this.onToggleSession,
       onStopSession: this.onStopSession,
       onOpenPresentation: this.onOpenPresentation,
       onToggleMore: this.onToggleMore,

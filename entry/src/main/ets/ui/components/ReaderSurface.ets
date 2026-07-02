@@ -12,6 +12,7 @@ export struct ImmersiveReaderSurface {
   onDismissControls: () => void = () => {};
   onToggleReducedMotion: (enabled: boolean) => void = (_enabled: boolean) => {};
   onStartSession: (kind: string) => void = (_kind: string) => {};
+  onToggleSession: () => void = () => {};
   onStopSession: () => void = () => {};
   onOpenPresentation: (route: string) => void = (_route: string) => {};
   onToggleMore: () => void = () => {};
@@ -89,6 +90,9 @@ export struct ImmersiveReaderSurface {
       if (this.uiState.readerMode === ReaderMode.immersive) {
         this.ImmersiveInfoLayer()
         this.ImmersiveTapZones()
+        if (this.uiState.activeSession.capsuleVisible) {
+          this.SessionCapsuleOverlay()
+        }
         this.TextSelectionLayer()
       }
 
@@ -98,6 +102,7 @@ export struct ImmersiveReaderSurface {
           onDismiss: this.onDismissControls,
           onBack: this.onBack,
           onStartSession: this.onStartSession,
+          onToggleSession: this.onToggleSession,
           onStopSession: this.onStopSession,
           onOpenPresentation: this.onOpenPresentation,
           onToggleMore: this.onToggleMore,
@@ -189,14 +194,10 @@ export struct ImmersiveReaderSurface {
           .lineHeight(ReaderTypography.immersiveInfoLineHeight)
           .fontColor('#766C61')
         Blank()
-        if (this.uiState.activeSession.capsuleVisible) {
-          this.SessionCapsule()
-        } else {
-          Text('')
-            .fontSize(ReaderTypography.immersiveInfoFontSize)
-            .lineHeight(ReaderTypography.immersiveInfoLineHeight)
-            .fontColor('#766C61')
-        }
+        Text('')
+          .fontSize(ReaderTypography.immersiveInfoFontSize)
+          .lineHeight(ReaderTypography.immersiveInfoLineHeight)
+          .fontColor('#766C61')
       }
       .width('100%')
     }
@@ -242,6 +243,26 @@ export struct ImmersiveReaderSurface {
   }
 
   @Builder
+  SessionCapsuleOverlay() {
+    Column() {
+      Blank()
+      Row() {
+        Blank()
+        this.SessionCapsule()
+      }
+      .width('100%')
+    }
+    .width('100%')
+    .height('100%')
+    .padding({
+      left: ReaderTypography.immersiveInfoHorizontal,
+      right: ReaderTypography.immersiveInfoHorizontal,
+      bottom: ReaderTypography.immersiveInfoBottom
+    })
+    .hitTestBehavior(HitTestMode.Transparent)
+  }
+
+  @Builder
   SessionCapsule() {
     Row() {
       Text(this.uiState.activeSession.label)
@@ -255,12 +276,13 @@ export struct ImmersiveReaderSurface {
         .fontSize(12)
         .fontColor('#FFFFFF')
         .margin({ left: 10 })
-        .onClick(() => this.onStopSession())
+        .onClick(() => this.onToggleSession())
     }
     .height(34)
     .padding({ left: 12, right: 12 })
     .backgroundColor('#4A3327')
     .borderRadius(8)
+    .accessibilityText(`阅读会话胶囊 ${this.uiState.activeSession.kind} ${this.uiState.activeSession.statusText}`)
     .animation({ duration: ReaderMotion.durationReaderSession(this.uiState.reducedMotion), curve: Curve.EaseOut })
   }
 }

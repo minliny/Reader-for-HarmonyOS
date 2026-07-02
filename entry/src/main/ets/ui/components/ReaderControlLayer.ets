@@ -10,6 +10,7 @@ export struct ReaderControlLayer {
   onDismiss: () => void = () => {};
   onBack: () => void = () => {};
   onStartSession: (kind: string) => void = (_kind: string) => {};
+  onToggleSession: () => void = () => {};
   onStopSession: () => void = () => {};
   onOpenPresentation: (route: string) => void = (_route: string) => {};
   onToggleMore: () => void = () => {};
@@ -130,6 +131,25 @@ export struct ReaderControlLayer {
 
   private dockRight(): number {
     return this.isCompactLandscape() ? 16 : 24;
+  }
+
+  private isActiveSession(kind: string): boolean {
+    return this.uiState.activeSession.kind === kind;
+  }
+
+  private sessionActionLabel(kind: string, inactiveLabel: string): string {
+    if (!this.isActiveSession(kind)) {
+      return inactiveLabel;
+    }
+    return this.uiState.activeSession.playing ? '暂停' : '继续';
+  }
+
+  private activateOrToggleSession(kind: string): void {
+    if (this.isActiveSession(kind)) {
+      this.onToggleSession();
+      return;
+    }
+    this.onStartSession(kind);
   }
 
   build() {
@@ -493,6 +513,11 @@ export struct ReaderControlLayer {
         .fontColor('#2F6373')
         .margin({ left: 8 })
         .layoutWeight(1)
+      Text(this.uiState.activeSession.playing ? '暂停' : '继续')
+        .fontSize(12)
+        .fontColor('#2F6373')
+        .margin({ right: 14 })
+        .onClick(() => this.onToggleSession())
       Text('停止')
         .fontSize(12)
         .fontColor('#2F6373')
@@ -613,7 +638,10 @@ export struct ReaderControlLayer {
     Column() {
       Row() {
         ControlAction({ label: '上一章' })
-        ControlAction({ label: '开始', onPress: () => this.onStartSession('autoPage') })
+        ControlAction({
+          label: this.sessionActionLabel('autoPage', '开始'),
+          onPress: () => this.activateOrToggleSession('autoPage')
+        })
         ControlAction({ label: '下一章' })
       }
       .width('100%')
@@ -699,7 +727,10 @@ export struct ReaderControlLayer {
     Column() {
       Row() {
         ControlAction({ label: '上一句' })
-        ControlAction({ label: this.uiState.activeSession.kind === 'tts' ? '暂停' : '开始朗读', onPress: () => this.onStartSession('tts') })
+        ControlAction({
+          label: this.sessionActionLabel('tts', '开始朗读'),
+          onPress: () => this.activateOrToggleSession('tts')
+        })
         ControlAction({ label: '下一句' })
       }
       .width('100%')

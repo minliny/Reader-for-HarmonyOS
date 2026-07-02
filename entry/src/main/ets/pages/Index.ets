@@ -50,6 +50,10 @@ struct Index {
     this.applyUiState(ReaderUiReducer.startReaderSession(this.uiState, kind));
   }
 
+  private toggleReaderSession(): void {
+    this.applyUiState(ReaderUiReducer.toggleReaderSessionPlaying(this.uiState));
+  }
+
   private stopReaderSession(): void {
     this.applyUiState(ReaderUiReducer.stopReaderSession(this.uiState));
   }
@@ -96,6 +100,7 @@ struct Index {
           onDismissControls: () => this.hideReaderControls(),
           onToggleReducedMotion: (enabled: boolean) => this.setReducedMotion(enabled),
           onStartSession: (kind: string) => this.startReaderSession(kind),
+          onToggleSession: () => this.toggleReaderSession(),
           onStopSession: () => this.stopReaderSession(),
           onOpenPresentation: (route: string) => this.openReaderPresentation(route),
           onToggleMore: () => this.toggleReaderMore(),
