@@ -161,6 +161,11 @@ export class ReaderUiState {
   activeReaderModule: string = ReaderModuleType.none;
   activeQuickPanel: string = ReaderQuickPanelType.none;
   activeTab: string = ReaderMainTab.bookshelf;
+  bookshelfView: string = 'cover';
+  bookshelfGroup: string = '全部';
+  bookshelfSort: string = '最近更新';
+  bookshelfFilter: string = '全部';
+  bookshelfFilterOpen: boolean = false;
   routeStack: string[] = [ReaderRoute.bookshelf];
   backStack: string[] = [ReaderRoute.bookshelf];
   readerContext: ReaderContext = new ReaderContext();
@@ -258,6 +263,7 @@ export class ReaderUiReducer {
     next.readerPresentationRoute = ReaderRoute.immersiveReading;
     next.routeStack = [next.route];
     next.overlay = new ReaderOverlayState();
+    next.bookshelfFilterOpen = false;
     next.activeSession = new ReaderActiveSessionState();
     next.focusState = ReaderUiReducer.focus('main-tab', 'none');
     next.motion = ReaderUiReducer.motion(
@@ -282,6 +288,7 @@ export class ReaderUiReducer {
     next.routeStack = [sourceRoute, ReaderRoute.immersiveReading];
     next.readerContext = ReaderUiReducer.contextFromTarget(target, sourceRoute);
     next.overlay = new ReaderOverlayState();
+    next.bookshelfFilterOpen = false;
     next.activeSession = new ReaderActiveSessionState();
     next.focusState = ReaderUiReducer.focus('reader-body', 'bookshelf');
     next.entryRequestId = state.entryRequestId + 1;
@@ -411,6 +418,7 @@ export class ReaderUiReducer {
     next.overlay = willOpen ?
       ReaderUiReducer.overlay('bookshelf-more', true, 'bookshelf-more-menu', 'bookshelf-more-button') :
       new ReaderOverlayState();
+    next.bookshelfFilterOpen = false;
     next.focusState = willOpen ?
       ReaderUiReducer.focus('bookshelf-more-menu', 'bookshelf-more-button') :
       ReaderUiReducer.focus('bookshelf-more-button', 'bookshelf-more-menu');
@@ -439,6 +447,88 @@ export class ReaderUiReducer {
       state.route,
       state.route,
       'bookshelf-more-close',
+      state.motion.sequence + 1,
+      ReaderMotion.durationOverlay(state.reducedMotion)
+    );
+    return ReaderUiReducer.syncContractFields(next);
+  }
+
+  static setBookshelfView(state: ReaderUiState, view: string): ReaderUiState {
+    const next = ReaderUiReducer.clone(state);
+    const nextView = view === 'list' ? 'list' : 'cover';
+    next.bookshelfView = nextView;
+    next.motion = ReaderUiReducer.motion(
+      ReaderMotionId.bookshelfViewSwitch,
+      state.bookshelfView,
+      nextView,
+      nextView,
+      'bookshelf-view-switch',
+      state.motion.sequence + 1,
+      ReaderMotion.durationTabSwitch(state.reducedMotion)
+    );
+    return ReaderUiReducer.syncContractFields(next);
+  }
+
+  static toggleBookshelfFilter(state: ReaderUiState): ReaderUiState {
+    const next = ReaderUiReducer.clone(state);
+    const willOpen = !(state.overlayState.isOpen && state.overlayState.kind === 'bookshelf-filter');
+    next.bookshelfFilterOpen = willOpen;
+    next.overlay = willOpen ?
+      ReaderUiReducer.overlay('bookshelf-filter', true, 'bookshelf-filter-popover', 'bookshelf-filter-button') :
+      new ReaderOverlayState();
+    next.focusState = willOpen ?
+      ReaderUiReducer.focus('bookshelf-filter-popover', 'bookshelf-filter-button') :
+      ReaderUiReducer.focus('bookshelf-filter-button', 'bookshelf-filter-popover');
+    next.motion = ReaderUiReducer.motion(
+      willOpen ? ReaderMotionId.dropdownMenuExpand : ReaderMotionId.dropdownMenuCollapse,
+      state.route,
+      state.route,
+      state.route,
+      willOpen ? 'bookshelf-filter-open' : 'bookshelf-filter-close',
+      state.motion.sequence + 1,
+      ReaderMotion.durationOverlay(state.reducedMotion)
+    );
+    return ReaderUiReducer.syncContractFields(next);
+  }
+
+  static closeBookshelfFilter(state: ReaderUiState): ReaderUiState {
+    if (!(state.overlayState.isOpen && state.overlayState.kind === 'bookshelf-filter')) {
+      return state;
+    }
+    const next = ReaderUiReducer.clone(state);
+    next.bookshelfFilterOpen = false;
+    next.overlay = new ReaderOverlayState();
+    next.focusState = ReaderUiReducer.focus('bookshelf-filter-button', 'bookshelf-filter-popover');
+    next.motion = ReaderUiReducer.motion(
+      ReaderMotionId.dropdownMenuCollapse,
+      state.route,
+      state.route,
+      state.route,
+      'bookshelf-filter-close',
+      state.motion.sequence + 1,
+      ReaderMotion.durationOverlay(state.reducedMotion)
+    );
+    return ReaderUiReducer.syncContractFields(next);
+  }
+
+  static setBookshelfFilterOption(state: ReaderUiState, kind: string, value: string): ReaderUiState {
+    const next = ReaderUiReducer.clone(state);
+    if (kind === 'group') {
+      next.bookshelfGroup = value;
+    } else if (kind === 'sort') {
+      next.bookshelfSort = value;
+    } else if (kind === 'filter') {
+      next.bookshelfFilter = value;
+    }
+    next.bookshelfFilterOpen = true;
+    next.overlay = ReaderUiReducer.overlay('bookshelf-filter', true, 'bookshelf-filter-popover', 'bookshelf-filter-button');
+    next.focusState = ReaderUiReducer.focus('bookshelf-filter-popover', 'bookshelf-filter-button');
+    next.motion = ReaderUiReducer.motion(
+      ReaderMotionId.dropdownOptionSelect,
+      state.route,
+      state.route,
+      state.route,
+      `bookshelf-filter-${kind}`,
       state.motion.sequence + 1,
       ReaderMotion.durationOverlay(state.reducedMotion)
     );
@@ -675,6 +765,11 @@ export class ReaderUiReducer {
     next.activeReaderModule = state.activeReaderModule;
     next.activeQuickPanel = state.activeQuickPanel;
     next.activeTab = state.activeTab;
+    next.bookshelfView = state.bookshelfView;
+    next.bookshelfGroup = state.bookshelfGroup;
+    next.bookshelfSort = state.bookshelfSort;
+    next.bookshelfFilter = state.bookshelfFilter;
+    next.bookshelfFilterOpen = state.bookshelfFilterOpen;
     next.routeStack = state.routeStack.slice();
     next.backStack = state.backStack.slice();
     next.readerContext = ReaderUiReducer.cloneReaderContext(state.readerContext);

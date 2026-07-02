@@ -6,6 +6,7 @@ export class ReaderMotionId {
   static readonly appRoutePush: string = 'app.route.push';
   static readonly appRoutePop: string = 'app.route.pop';
   static readonly appRouteReplace: string = 'app.route.replace';
+  static readonly bookshelfViewSwitch: string = 'bookshelf.view.switch';
   static readonly readerEntryCoverToImmersive: string = 'reader.entry.coverToImmersive';
   static readonly readerEntryActionToImmersive: string = 'reader.entry.actionToImmersive';
   static readonly readerControlShow: string = 'reader.control.show';

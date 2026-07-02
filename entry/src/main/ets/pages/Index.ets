@@ -78,6 +78,22 @@ struct Index {
     this.applyUiState(ReaderUiReducer.closeBookshelfMore(this.uiState));
   }
 
+  private setBookshelfView(view: string): void {
+    this.applyUiState(ReaderUiReducer.setBookshelfView(this.uiState, view));
+  }
+
+  private toggleBookshelfFilter(): void {
+    this.applyUiState(ReaderUiReducer.toggleBookshelfFilter(this.uiState));
+  }
+
+  private closeBookshelfFilter(): void {
+    this.applyUiState(ReaderUiReducer.closeBookshelfFilter(this.uiState));
+  }
+
+  private setBookshelfFilterOption(kind: string, value: string): void {
+    this.applyUiState(ReaderUiReducer.setBookshelfFilterOption(this.uiState, kind, value));
+  }
+
   private toggleReaderBrightnessAuto(): void {
     this.applyUiState(ReaderUiReducer.toggleReaderBrightnessAuto(this.uiState));
   }
@@ -93,6 +109,10 @@ struct Index {
     }
     if (this.uiState.overlayState.isOpen && this.uiState.overlayState.kind === 'bookshelf-more') {
       this.closeBookshelfMore();
+      return true;
+    }
+    if (this.uiState.overlayState.isOpen && this.uiState.overlayState.kind === 'bookshelf-filter') {
+      this.closeBookshelfFilter();
       return true;
     }
     if (this.uiState.readerPresentationRoute !== ReaderRoute.immersiveReading) {
@@ -136,7 +156,10 @@ struct Index {
           onReaderEntry: (target: ReaderEntryTarget) => this.enterReader(target),
           onToggleReducedMotion: (enabled: boolean) => this.setReducedMotion(enabled),
           onToggleBookshelfMore: () => this.toggleBookshelfMore(),
-          onCloseBookshelfMore: () => this.closeBookshelfMore()
+          onCloseBookshelfMore: () => this.closeBookshelfMore(),
+          onSetBookshelfView: (view: string) => this.setBookshelfView(view),
+          onToggleBookshelfFilter: () => this.toggleBookshelfFilter(),
+          onSelectBookshelfFilterOption: (kind: string, value: string) => this.setBookshelfFilterOption(kind, value)
         })
       }
     }

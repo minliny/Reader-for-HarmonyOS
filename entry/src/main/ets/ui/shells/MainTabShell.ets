@@ -16,6 +16,9 @@ export struct MainTabShell {
   onToggleReducedMotion: (enabled: boolean) => void = (_enabled: boolean) => {};
   onToggleBookshelfMore: () => void = () => {};
   onCloseBookshelfMore: () => void = () => {};
+  onSetBookshelfView: (view: string) => void = (_view: string) => {};
+  onToggleBookshelfFilter: () => void = () => {};
+  onSelectBookshelfFilterOption: (kind: string, value: string) => void = (_kind: string, _value: string) => {};
 
   build() {
     if (ReaderAdaptive.isNavRail(this.uiState.adaptive)) {
@@ -32,7 +35,10 @@ export struct MainTabShell {
           onReaderEntry: this.onReaderEntry,
           onToggleReducedMotion: this.onToggleReducedMotion,
           onToggleBookshelfMore: this.onToggleBookshelfMore,
-          onCloseBookshelfMore: this.onCloseBookshelfMore
+          onCloseBookshelfMore: this.onCloseBookshelfMore,
+          onSetBookshelfView: this.onSetBookshelfView,
+          onToggleBookshelfFilter: this.onToggleBookshelfFilter,
+          onSelectBookshelfFilterOption: this.onSelectBookshelfFilterOption
         })
           .layoutWeight(1)
       }
@@ -47,7 +53,10 @@ export struct MainTabShell {
           onReaderEntry: this.onReaderEntry,
           onToggleReducedMotion: this.onToggleReducedMotion,
           onToggleBookshelfMore: this.onToggleBookshelfMore,
-          onCloseBookshelfMore: this.onCloseBookshelfMore
+          onCloseBookshelfMore: this.onCloseBookshelfMore,
+          onSetBookshelfView: this.onSetBookshelfView,
+          onToggleBookshelfFilter: this.onToggleBookshelfFilter,
+          onSelectBookshelfFilterOption: this.onSelectBookshelfFilterOption
         })
 
         Column() {
@@ -74,6 +83,9 @@ struct MainTabContentHost {
   onToggleReducedMotion: (enabled: boolean) => void = (_enabled: boolean) => {};
   onToggleBookshelfMore: () => void = () => {};
   onCloseBookshelfMore: () => void = () => {};
+  onSetBookshelfView: (view: string) => void = (_view: string) => {};
+  onToggleBookshelfFilter: () => void = () => {};
+  onSelectBookshelfFilterOption: (kind: string, value: string) => void = (_kind: string, _value: string) => {};
 
   build() {
     Column() {
@@ -91,7 +103,10 @@ struct MainTabContentHost {
           uiState: this.uiState,
           onReaderEntry: this.onReaderEntry,
           onToggleMore: this.onToggleBookshelfMore,
-          onCloseMore: this.onCloseBookshelfMore
+          onCloseMore: this.onCloseBookshelfMore,
+          onSetView: this.onSetBookshelfView,
+          onToggleFilter: this.onToggleBookshelfFilter,
+          onSelectFilterOption: this.onSelectBookshelfFilterOption
         })
       }
     }

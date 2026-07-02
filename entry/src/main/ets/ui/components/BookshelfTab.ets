@@ -12,6 +12,11 @@ class BookshelfDemoBook {
   coverKey: string = '';
 }
 
+class BookshelfBookWithIndex {
+  book: BookshelfDemoBook = new BookshelfDemoBook();
+  index: number = 0;
+}
+
 class BookshelfDemoFixture {
   static books(): BookshelfDemoBook[] {
     return [
@@ -113,13 +118,19 @@ export struct BookshelfTab {
   onReaderEntry: (target: ReaderEntryTarget) => void = (_target: ReaderEntryTarget) => {};
   onToggleMore: () => void = () => {};
   onCloseMore: () => void = () => {};
+  onSetView: (view: string) => void = (_view: string) => {};
+  onToggleFilter: () => void = () => {};
+  onSelectFilterOption: (kind: string, value: string) => void = (_kind: string, _value: string) => {};
 
   build() {
     BookshelfContent({
       uiState: this.uiState,
       onReaderEntry: this.onReaderEntry,
       onToggleMore: this.onToggleMore,
-      onCloseMore: this.onCloseMore
+      onCloseMore: this.onCloseMore,
+      onSetView: this.onSetView,
+      onToggleFilter: this.onToggleFilter,
+      onSelectFilterOption: this.onSelectFilterOption
     })
   }
 }
@@ -130,6 +141,9 @@ struct BookshelfContent {
   onReaderEntry: (target: ReaderEntryTarget) => void = (_target: ReaderEntryTarget) => {};
   onToggleMore: () => void = () => {};
   onCloseMore: () => void = () => {};
+  onSetView: (view: string) => void = (_view: string) => {};
+  onToggleFilter: () => void = () => {};
+  onSelectFilterOption: (kind: string, value: string) => void = (_kind: string, _value: string) => {};
   private books: BookshelfDemoBook[] = BookshelfDemoFixture.books();
 
   private openBook(book: BookshelfDemoBook, entryKind: string): void {
@@ -164,12 +178,17 @@ struct BookshelfContent {
             })
 
             BookshelfShelfSection({
-              books: this.books,
+              books: this.visibleBooks(),
+              uiState: this.uiState,
+              isListView: this.uiState.bookshelfView === 'list',
               columnsTemplate: this.columnsTemplate(),
               columnsGap: this.columnsGap(),
               coverHeight: this.coverHeight(),
               onOpenBook: (book: BookshelfDemoBook) => this.openBook(book, 'cover'),
-              reducedMotion: this.uiState.reducedMotion
+              reducedMotion: this.uiState.reducedMotion,
+              onSetView: this.onSetView,
+              onToggleFilter: this.onToggleFilter,
+              onSelectFilterOption: this.onSelectFilterOption
             })
           }
           .width('100%')
@@ -240,6 +259,89 @@ struct BookshelfContent {
     const contentWidth = Math.max(240, this.uiState.adaptive.widthVp - this.contentSidePadding() * 2);
     const columnWidth = Math.max(76, (contentWidth - this.columnsGap() * (columns - 1)) / columns);
     return Math.round(columnWidth * 1.5);
+  }
+
+  private visibleBooks(): BookshelfDemoBook[] {
+    const normalized: BookshelfBookWithIndex[] = [];
+    for (let index = 0; index < this.books.length; index++) {
+      const book = this.books[index];
+      if (this.matchesGroup(book, index) && this.matchesFilter(book)) {
+        const item = new BookshelfBookWithIndex();
+        item.book = book;
+        item.index = index;
+        normalized.push(item);
+      }
+    }
+
+    if (this.uiState.bookshelfSort === '阅读进度') {
+      normalized.sort((left: BookshelfBookWithIndex, right: BookshelfBookWithIndex): number => {
+        const progressDiff = this.bookProgressValue(right.book) - this.bookProgressValue(left.book);
+        return progressDiff !== 0 ? progressDiff : left.index - right.index;
+      });
+    } else if (this.uiState.bookshelfSort === '书名') {
+      normalized.sort((left: BookshelfBookWithIndex, right: BookshelfBookWithIndex): number => {
+        const textDiff = this.compareText(left.book.title, right.book.title);
+        return textDiff !== 0 ? textDiff : left.index - right.index;
+      });
+    } else if (this.uiState.bookshelfSort === '作者') {
+      normalized.sort((left: BookshelfBookWithIndex, right: BookshelfBookWithIndex): number => {
+        const textDiff = this.compareText(left.book.author, right.book.author);
+        return textDiff !== 0 ? textDiff : left.index - right.index;
+      });
+    }
+
+    return normalized.map((item: BookshelfBookWithIndex): BookshelfDemoBook => item.book);
+  }
+
+  private matchesGroup(book: BookshelfDemoBook, index: number): boolean {
+    if (this.uiState.bookshelfGroup === '全部') {
+      return true;
+    }
+    return this.bookGroup(book, index) === this.uiState.bookshelfGroup;
+  }
+
+  private bookGroup(book: BookshelfDemoBook, index: number): string {
+    if (book.author.indexOf('本地') >= 0 ||
+      book.author.indexOf('离线') >= 0 ||
+      book.author.indexOf('导入') >= 0 ||
+      book.author.indexOf('文档') >= 0) {
+      return '本地书';
+    }
+    if (index < 4 ||
+      book.author.indexOf('书源') >= 0 ||
+      book.author.indexOf('同步') >= 0 ||
+      book.title.indexOf('灯塔与雾') >= 0) {
+      return '追更';
+    }
+    return '默认';
+  }
+
+  private matchesFilter(book: BookshelfDemoBook): boolean {
+    if (this.uiState.bookshelfFilter === '未读') {
+      return this.bookProgressValue(book) < 20;
+    }
+    if (this.uiState.bookshelfFilter === '已完结') {
+      return book.title.indexOf('三体') >= 0 || book.title.indexOf('人间词话') >= 0;
+    }
+    if (this.uiState.bookshelfFilter === '更新失败') {
+      return book.title.indexOf('长标题测试') >= 0 ||
+        book.title.indexOf('灯塔与雾') >= 0 ||
+        book.author.indexOf('书源同步') >= 0;
+    }
+    return true;
+  }
+
+  private bookProgressValue(book: BookshelfDemoBook): number {
+    const normalized = book.progress.replace('%', '');
+    const value = Number(normalized);
+    return value >= 0 ? value : 0;
+  }
+
+  private compareText(left: string, right: string): number {
+    if (left === right) {
+      return 0;
+    }
+    return left > right ? 1 : -1;
   }
 }
 
@@ -473,41 +575,92 @@ struct ContinueReadingCard {
 @Component
 struct BookshelfShelfSection {
   @Prop books: BookshelfDemoBook[];
+  @Prop uiState: ReaderUiState;
+  @Prop isListView: boolean = false;
   @Prop columnsTemplate: string = '1fr 1fr 1fr';
   @Prop columnsGap: number = 30;
   @Prop coverHeight: number = 150;
   @Prop reducedMotion: boolean = false;
   onOpenBook: (book: BookshelfDemoBook) => void = (_book: BookshelfDemoBook) => {};
+  onSetView: (view: string) => void = (_view: string) => {};
+  onToggleFilter: () => void = () => {};
+  onSelectFilterOption: (kind: string, value: string) => void = (_kind: string, _value: string) => {};
+
+  private stableSectionMinHeight(): number {
+    if (ReaderAdaptive.isNavRail(this.uiState.adaptive)) {
+      return 520;
+    }
+    return 560;
+  }
 
   build() {
-    Column() {
-      BookshelfSectionHeader()
+    Stack({ alignContent: Alignment.TopEnd }) {
+      Column() {
+        BookshelfSectionHeader({
+          uiState: this.uiState,
+          onSetView: this.onSetView,
+          onToggleFilter: this.onToggleFilter
+        })
 
-      Grid() {
-        ForEach(this.books, (book: BookshelfDemoBook) => {
-          GridItem() {
-            BookshelfBookCard({
-              book,
-              coverHeight: this.coverHeight,
-              reducedMotion: this.reducedMotion,
-              onOpenBook: this.onOpenBook
-            })
+        if (this.isListView) {
+          Column() {
+            ForEach(this.books, (book: BookshelfDemoBook) => {
+              BookshelfBookListRow({
+                book,
+                onOpenBook: this.onOpenBook,
+                reducedMotion: this.reducedMotion
+              })
+            }, (book: BookshelfDemoBook) => book.id)
           }
-        }, (book: BookshelfDemoBook) => book.id)
+          .width('100%')
+        } else {
+          Grid() {
+            ForEach(this.books, (book: BookshelfDemoBook) => {
+              GridItem() {
+                BookshelfBookCard({
+                  book,
+                  coverHeight: this.coverHeight,
+                  reducedMotion: this.reducedMotion,
+                  onOpenBook: this.onOpenBook
+                })
+              }
+            }, (book: BookshelfDemoBook) => book.id)
+          }
+          .columnsTemplate(this.columnsTemplate)
+          .columnsGap(this.columnsGap)
+          .rowsGap(16)
+          .width('100%')
+          .scrollBar(BarState.Off)
+        }
       }
-      .columnsTemplate(this.columnsTemplate)
-      .columnsGap(this.columnsGap)
-      .rowsGap(16)
       .width('100%')
-      .scrollBar(BarState.Off)
+
+      if (this.uiState.bookshelfFilterOpen) {
+        BookshelfFilterPopover({
+          uiState: this.uiState,
+          onSelectFilterOption: this.onSelectFilterOption
+        })
+      }
     }
     .width('100%')
+    .constraintSize({ minHeight: this.stableSectionMinHeight() })
     .margin({ top: 8 })
   }
 }
 
 @Component
 struct BookshelfSectionHeader {
+  @Prop uiState: ReaderUiState;
+  onSetView: (view: string) => void = (_view: string) => {};
+  onToggleFilter: () => void = () => {};
+
+  private filterActive(): boolean {
+    return this.uiState.bookshelfFilterOpen ||
+      this.uiState.bookshelfGroup !== '全部' ||
+      this.uiState.bookshelfSort !== '最近更新' ||
+      this.uiState.bookshelfFilter !== '全部';
+  }
+
   build() {
     Row() {
       Text('我的书架')
@@ -521,15 +674,20 @@ struct BookshelfSectionHeader {
         BookshelfShelfActionButton({
           iconName: 'bookshelf_icon_grid_primary',
           accessibilityLabel: '封面视图',
-          active: true
+          active: this.uiState.bookshelfView !== 'list',
+          onPress: () => this.onSetView('cover')
         })
         BookshelfShelfActionButton({
           iconName: 'bookshelf_icon_list_dark',
-          accessibilityLabel: '列表视图'
+          accessibilityLabel: '列表视图',
+          active: this.uiState.bookshelfView === 'list',
+          onPress: () => this.onSetView('list')
         })
         BookshelfShelfActionButton({
           iconName: 'bookshelf_icon_filter_dark',
-          accessibilityLabel: '书架筛选：全部，最近更新，全部'
+          accessibilityLabel: `书架筛选：${this.uiState.bookshelfGroup}，${this.uiState.bookshelfSort}，${this.uiState.bookshelfFilter}`,
+          active: this.filterActive(),
+          onPress: this.onToggleFilter
         })
         BookshelfShelfActionButton({
           iconName: 'bookshelf_icon_gear_dark',
@@ -550,6 +708,7 @@ struct BookshelfShelfActionButton {
   @Prop iconName: string = '';
   @Prop accessibilityLabel: string = '';
   @Prop active: boolean = false;
+  onPress: () => void = () => {};
 
   build() {
     Row() {
@@ -563,6 +722,137 @@ struct BookshelfShelfActionButton {
     .margin({ left: 8 })
     .backgroundColor(this.active ? '#E8F0EE' : '#00000000')
     .accessibilityText(this.accessibilityLabel)
+    .onClick(() => this.onPress())
+  }
+}
+
+@Component
+struct BookshelfFilterPopover {
+  @Prop uiState: ReaderUiState;
+  onSelectFilterOption: (kind: string, value: string) => void = (_kind: string, _value: string) => {};
+
+  build() {
+    Column() {
+      BookshelfFilterGroup({
+        title: '分组',
+        kind: 'group',
+        currentValue: this.uiState.bookshelfGroup,
+        optionA: '全部',
+        optionB: '默认',
+        optionC: '本地书',
+        optionD: '追更',
+        onSelectFilterOption: this.onSelectFilterOption
+      })
+      BookshelfFilterGroup({
+        title: '排序',
+        kind: 'sort',
+        currentValue: this.uiState.bookshelfSort,
+        optionA: '最近更新',
+        optionB: '阅读进度',
+        optionC: '书名',
+        optionD: '作者',
+        onSelectFilterOption: this.onSelectFilterOption
+      })
+      BookshelfFilterGroup({
+        title: '筛选',
+        kind: 'filter',
+        currentValue: this.uiState.bookshelfFilter,
+        optionA: '全部',
+        optionB: '未读',
+        optionC: '已完结',
+        optionD: '更新失败',
+        onSelectFilterOption: this.onSelectFilterOption
+      })
+    }
+    .width(286)
+    .padding({ left: 10, right: 10, top: 10, bottom: 10 })
+    .margin({ top: 42 })
+    .backgroundColor('#FAFFFCF8')
+    .border({ width: 1, color: '#70B4A697' })
+    .borderRadius(14)
+    .shadow({ radius: 30, color: '#295242301F', offsetX: 0, offsetY: 14 })
+    .zIndex(18)
+    .accessibilityText('书架排序与筛选选项')
+  }
+}
+
+@Component
+struct BookshelfFilterGroup {
+  @Prop title: string = '';
+  @Prop kind: string = '';
+  @Prop currentValue: string = '';
+  @Prop optionA: string = '';
+  @Prop optionB: string = '';
+  @Prop optionC: string = '';
+  @Prop optionD: string = '';
+  onSelectFilterOption: (kind: string, value: string) => void = (_kind: string, _value: string) => {};
+
+  build() {
+    Column() {
+      Text(this.title)
+        .fontSize(11)
+        .lineHeight(12.1)
+        .fontWeight(FontWeight.Bolder)
+        .fontColor('#7F756A')
+        .width('100%')
+
+      Flex({ wrap: FlexWrap.Wrap }) {
+        BookshelfFilterChip({
+          label: this.optionA,
+          active: this.currentValue === this.optionA,
+          onPress: () => this.onSelectFilterOption(this.kind, this.optionA)
+        })
+        BookshelfFilterChip({
+          label: this.optionB,
+          active: this.currentValue === this.optionB,
+          onPress: () => this.onSelectFilterOption(this.kind, this.optionB)
+        })
+        BookshelfFilterChip({
+          label: this.optionC,
+          active: this.currentValue === this.optionC,
+          onPress: () => this.onSelectFilterOption(this.kind, this.optionC)
+        })
+        BookshelfFilterChip({
+          label: this.optionD,
+          active: this.currentValue === this.optionD,
+          onPress: () => this.onSelectFilterOption(this.kind, this.optionD)
+        })
+      }
+      .width('100%')
+      .margin({ top: 7 })
+    }
+    .width('100%')
+    .margin({ bottom: 10 })
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
+struct BookshelfFilterChip {
+  @Prop label: string = '';
+  @Prop active: boolean = false;
+  onPress: () => void = () => {};
+
+  build() {
+    Row() {
+      Text(this.label)
+        .fontSize(11)
+        .fontWeight(FontWeight.Bolder)
+        .fontColor(this.active ? '#FFFFFF' : '#3F372F')
+        .textAlign(TextAlign.Center)
+        .maxLines(1)
+    }
+      .height(30)
+      .constraintSize({ minWidth: 52 })
+      .padding({ left: 10, right: 10 })
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+      .backgroundColor(this.active ? '#2F6373' : '#B8EEE8DF')
+      .border({ width: 1, color: this.active ? '#2F6373' : '#6BB4A697' })
+      .borderRadius(15)
+      .margin({ right: 6, bottom: 6 })
+      .accessibilityText(`${this.label}${this.active ? '，当前选中' : ''}`)
+      .onClick(() => this.onPress())
   }
 }
 
@@ -604,6 +894,55 @@ struct BookshelfBookCard {
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
+    .animation({ duration: ReaderMotion.durationTabPress(this.reducedMotion), curve: Curve.EaseOut })
+  }
+}
+
+@Component
+struct BookshelfBookListRow {
+  @Prop book: BookshelfDemoBook;
+  @Prop reducedMotion: boolean = false;
+  onOpenBook: (book: BookshelfDemoBook) => void = (_book: BookshelfDemoBook) => {};
+
+  build() {
+    Row() {
+      BookshelfCover({
+        coverKey: this.book.coverKey,
+        widthValue: 48,
+        heightValue: 72,
+        radius: 6
+      })
+        .margin({ right: 10 })
+
+      Column() {
+        Text(this.book.title)
+          .fontSize(15)
+          .fontFamily('Songti SC')
+          .fontWeight(FontWeight.Medium)
+          .fontColor('#201B16')
+          .lineHeight(18.3)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
+
+        Text(this.book.author)
+          .fontSize(12)
+          .fontColor('#7F756A')
+          .lineHeight(15)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
+          .margin({ top: 2 })
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+    }
+    .width('100%')
+    .height(72)
+    .alignItems(VerticalAlign.Center)
+    .margin({ bottom: 10 })
+    .accessibilityText(`打开 ${this.book.title}`)
+    .onClick(() => this.onOpenBook(this.book))
     .animation({ duration: ReaderMotion.durationTabPress(this.reducedMotion), curve: Curve.EaseOut })
   }
 }
