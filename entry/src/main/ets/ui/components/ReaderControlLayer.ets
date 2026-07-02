@@ -134,8 +134,8 @@ export struct ReaderControlLayer {
 
   build() {
     Stack({ alignContent: Alignment.Top }) {
-      this.ControlTopBar()
       this.ControlDismissZone()
+      this.ControlTopBar()
 
       if (this.isFullPresentation()) {
         this.ReaderFullHost()
@@ -159,7 +159,9 @@ export struct ReaderControlLayer {
       .width('100%')
       .height('100%')
       .backgroundColor('#00000000')
-      .hitTestBehavior(HitTestMode.None)
+      .hitTestBehavior(HitTestMode.Block)
+      .onClick(() => this.onDismiss())
+      .accessibilityText('阅读控制层外部关闭热区')
   }
 
   @Builder
@@ -279,7 +281,7 @@ export struct ReaderControlLayer {
         .margin({ right: 8 })
 
         Column() {
-          Text(this.uiState.readerContext.bookTitle.length > 0 ? this.uiState.readerContext.bookTitle : '阅读中')
+          Text(this.uiState.readerContext.bookTitle)
             .fontSize(ReaderTypography.topBarTitleFontSize)
             .fontWeight(FontWeight.Medium)
             .fontColor('#2B241D')
@@ -741,9 +743,7 @@ export struct ReaderControlLayer {
   FullDirectoryPanel() {
     Column() {
       this.TocPanel()
-      ModuleRow({ title: '第四章 回声', detail: '未读' })
-      ModuleRow({ title: '第五章 远方', detail: '未读' })
-      ModuleRow({ title: '第六章 归途', detail: '未读' })
+      ModuleRow({ title: '目录状态', detail: '未接入真实目录列表' })
     }
     .width('100%')
   }
@@ -939,6 +939,7 @@ struct ControlAction {
     .borderRadius(8)
     .margin({ right: 8 })
     .onClick(() => this.onPress())
+    .accessibilityText(`ReaderControlAction ${this.label}`)
   }
 }
 
@@ -974,6 +975,7 @@ struct ModuleNavItem {
     .borderRadius(12)
     .margin({ right: 4 })
     .onClick(() => this.onPress())
+    .accessibilityText(`ReaderModuleNav ${this.label}; selected=${this.selected}`)
   }
 }
 
