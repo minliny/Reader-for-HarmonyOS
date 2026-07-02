@@ -111,11 +111,15 @@ class BookshelfDemoFixture {
 export struct BookshelfTab {
   @Prop uiState: ReaderUiState;
   onReaderEntry: (target: ReaderEntryTarget) => void = (_target: ReaderEntryTarget) => {};
+  onToggleMore: () => void = () => {};
+  onCloseMore: () => void = () => {};
 
   build() {
     BookshelfContent({
       uiState: this.uiState,
-      onReaderEntry: this.onReaderEntry
+      onReaderEntry: this.onReaderEntry,
+      onToggleMore: this.onToggleMore,
+      onCloseMore: this.onCloseMore
     })
   }
 }
@@ -124,6 +128,8 @@ export struct BookshelfTab {
 struct BookshelfContent {
   @Prop uiState: ReaderUiState;
   onReaderEntry: (target: ReaderEntryTarget) => void = (_target: ReaderEntryTarget) => {};
+  onToggleMore: () => void = () => {};
+  onCloseMore: () => void = () => {};
   private books: BookshelfDemoBook[] = BookshelfDemoFixture.books();
 
   private openBook(book: BookshelfDemoBook, entryKind: string): void {
@@ -143,38 +149,52 @@ struct BookshelfContent {
   }
 
   build() {
-    Column() {
-      BookshelfTopBar()
+    Stack() {
+      Column() {
+        BookshelfTopBar({
+          onToggleMore: this.onToggleMore
+        })
 
-      Scroll() {
-        Column() {
-          ContinueReadingCard({
-            book: this.books[0],
-            onOpenCover: (book: BookshelfDemoBook) => this.openBook(book, 'cover'),
-            onOpenAction: (book: BookshelfDemoBook) => this.openBook(book, 'action')
-          })
+        Scroll() {
+          Column() {
+            ContinueReadingCard({
+              book: this.books[0],
+              onOpenCover: (book: BookshelfDemoBook) => this.openBook(book, 'cover'),
+              onOpenAction: (book: BookshelfDemoBook) => this.openBook(book, 'action')
+            })
 
-          BookshelfShelfSection({
-            books: this.books,
-            columnsTemplate: this.columnsTemplate(),
-            columnsGap: this.columnsGap(),
-            coverHeight: this.coverHeight(),
-            onOpenBook: (book: BookshelfDemoBook) => this.openBook(book, 'cover'),
-            reducedMotion: this.uiState.reducedMotion
+            BookshelfShelfSection({
+              books: this.books,
+              columnsTemplate: this.columnsTemplate(),
+              columnsGap: this.columnsGap(),
+              coverHeight: this.coverHeight(),
+              onOpenBook: (book: BookshelfDemoBook) => this.openBook(book, 'cover'),
+              reducedMotion: this.uiState.reducedMotion
+            })
+          }
+          .width('100%')
+          .padding({
+            left: this.contentSidePadding(),
+            right: this.contentSidePadding(),
+            top: 8,
+            bottom: ReaderAdaptive.isNavRail(this.uiState.adaptive) ? 24 : 122
           })
         }
         .width('100%')
-        .padding({
-          left: this.contentSidePadding(),
-          right: this.contentSidePadding(),
-          top: 8,
-          bottom: ReaderAdaptive.isNavRail(this.uiState.adaptive) ? 24 : 122
-        })
+        .layoutWeight(1)
+        .scrollBar(BarState.Off)
+        .edgeEffect(EdgeEffect.None)
       }
       .width('100%')
-      .layoutWeight(1)
-      .scrollBar(BarState.Off)
-      .edgeEffect(EdgeEffect.None)
+      .height('100%')
+      .backgroundColor('#F4EFE8')
+
+      if (this.uiState.overlayState.isOpen && this.uiState.overlayState.kind === 'bookshelf-more') {
+        BookshelfMoreLayer({
+          onClose: this.onCloseMore,
+          reducedMotion: this.uiState.reducedMotion
+        })
+      }
     }
     .width('100%')
     .height('100%')
@@ -225,6 +245,8 @@ struct BookshelfContent {
 
 @Component
 struct BookshelfTopBar {
+  onToggleMore: () => void = () => {};
+
   build() {
     Row() {
       Text('书架')
@@ -243,7 +265,8 @@ struct BookshelfTopBar {
         })
         BookshelfTopActionButton({
           iconName: 'reader_icon_more_dark',
-          accessibilityLabel: '更多'
+          accessibilityLabel: '更多',
+          onPress: this.onToggleMore
         })
       }
       .justifyContent(FlexAlign.End)
@@ -259,6 +282,7 @@ struct BookshelfTopBar {
 struct BookshelfTopActionButton {
   @Prop iconName: string = '';
   @Prop accessibilityLabel: string = '';
+  onPress: () => void = () => {};
 
   build() {
     Row() {
@@ -271,6 +295,109 @@ struct BookshelfTopActionButton {
     .margin({ left: 18 })
     .borderRadius(22)
     .accessibilityText(this.accessibilityLabel)
+    .onClick(() => this.onPress())
+  }
+}
+
+@Component
+struct BookshelfMoreLayer {
+  @Prop reducedMotion: boolean = false;
+  onClose: () => void = () => {};
+
+  build() {
+    Stack({ alignContent: Alignment.TopEnd }) {
+      Column()
+        .width('100%')
+        .height('100%')
+        .backgroundColor('#1F1B172E')
+        .hitTestBehavior(HitTestMode.Block)
+        .onClick(() => this.onClose())
+        .accessibilityText('关闭书架更多操作')
+
+      Column() {
+        Text('书架更多操作')
+          .fontSize(15)
+          .lineHeight(18)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#201B16')
+          .width('100%')
+          .margin({ bottom: 2 })
+
+        BookshelfMoreMenuItem({
+          iconName: 'ui_icon_check_dark',
+          title: '批量管理',
+          detail: '选择多本书后移动或删除'
+        })
+        BookshelfMoreMenuItem({
+          iconName: 'bookshelf_icon_people_dark',
+          title: '分组管理',
+          detail: '编辑书架分组与归属'
+        })
+        BookshelfMoreMenuItem({
+          iconName: 'bookshelf_icon_book_open_dark',
+          title: '本地书导入',
+          detail: '导入本地文件到书架'
+        })
+      }
+      .width(238)
+      .padding({ left: 12, right: 12, top: 12, bottom: 12 })
+      .margin({ top: 89, right: 18 })
+      .backgroundColor('#FFFCF8')
+      .border({ width: 1, color: '#D8CCBC' })
+      .borderRadius(14)
+      .shadow({ radius: 22, color: '#1F1B172E', offsetX: 0, offsetY: 10 })
+      .hitTestBehavior(HitTestMode.Block)
+      .accessibilityText('书架更多操作')
+    }
+    .width('100%')
+    .height('100%')
+    .zIndex(30)
+    .animation({ duration: ReaderMotion.durationOverlay(this.reducedMotion), curve: Curve.EaseOut })
+  }
+}
+
+@Component
+struct BookshelfMoreMenuItem {
+  @Prop iconName: string = '';
+  @Prop title: string = '';
+  @Prop detail: string = '';
+
+  build() {
+    Row() {
+      BookshelfIcon({ iconName: this.iconName, iconSize: 24 })
+        .width(24)
+        .height(24)
+        .margin({ right: 10 })
+
+      Column() {
+        Text(this.title)
+          .fontSize(13)
+          .lineHeight(16.25)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#3C352F')
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
+
+        Text(this.detail)
+          .fontSize(11)
+          .lineHeight(13.2)
+          .fontColor('#7F756A')
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
+          .margin({ top: 2 })
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+    }
+    .width('100%')
+    .height(48)
+    .padding({ left: 8, right: 8 })
+    .alignItems(VerticalAlign.Center)
+    .borderRadius(8)
+    .margin({ top: 8 })
+    .accessibilityText(`${this.title} ${this.detail}`)
   }
 }
 
@@ -559,6 +686,21 @@ struct BookshelfIcon {
         .objectFit(ImageFit.Contain)
     } else if (this.iconName === 'bookshelf_icon_grid_primary') {
       Image($r('app.media.bookshelf_icon_grid_primary'))
+        .width(this.iconSize)
+        .height(this.iconSize)
+        .objectFit(ImageFit.Contain)
+    } else if (this.iconName === 'ui_icon_check_dark') {
+      Image($r('app.media.ui_icon_check_dark'))
+        .width(this.iconSize)
+        .height(this.iconSize)
+        .objectFit(ImageFit.Contain)
+    } else if (this.iconName === 'bookshelf_icon_people_dark') {
+      Image($r('app.media.bookshelf_icon_people_dark'))
+        .width(this.iconSize)
+        .height(this.iconSize)
+        .objectFit(ImageFit.Contain)
+    } else if (this.iconName === 'bookshelf_icon_book_open_dark') {
+      Image($r('app.media.bookshelf_icon_book_open_dark'))
         .width(this.iconSize)
         .height(this.iconSize)
         .objectFit(ImageFit.Contain)

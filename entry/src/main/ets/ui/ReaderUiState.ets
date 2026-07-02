@@ -405,6 +405,46 @@ export class ReaderUiReducer {
     return ReaderUiReducer.syncContractFields(next);
   }
 
+  static toggleBookshelfMore(state: ReaderUiState): ReaderUiState {
+    const next = ReaderUiReducer.clone(state);
+    const willOpen = !(state.overlayState.isOpen && state.overlayState.kind === 'bookshelf-more');
+    next.overlay = willOpen ?
+      ReaderUiReducer.overlay('bookshelf-more', true, 'bookshelf-more-menu', 'bookshelf-more-button') :
+      new ReaderOverlayState();
+    next.focusState = willOpen ?
+      ReaderUiReducer.focus('bookshelf-more-menu', 'bookshelf-more-button') :
+      ReaderUiReducer.focus('bookshelf-more-button', 'bookshelf-more-menu');
+    next.motion = ReaderUiReducer.motion(
+      willOpen ? ReaderMotionId.dropdownMenuExpand : ReaderMotionId.dropdownMenuCollapse,
+      state.route,
+      state.route,
+      state.route,
+      willOpen ? 'bookshelf-more-open' : 'bookshelf-more-close',
+      state.motion.sequence + 1,
+      ReaderMotion.durationOverlay(state.reducedMotion)
+    );
+    return ReaderUiReducer.syncContractFields(next);
+  }
+
+  static closeBookshelfMore(state: ReaderUiState): ReaderUiState {
+    if (!(state.overlayState.isOpen && state.overlayState.kind === 'bookshelf-more')) {
+      return state;
+    }
+    const next = ReaderUiReducer.clone(state);
+    next.overlay = new ReaderOverlayState();
+    next.focusState = ReaderUiReducer.focus('bookshelf-more-button', 'bookshelf-more-menu');
+    next.motion = ReaderUiReducer.motion(
+      ReaderMotionId.dropdownMenuCollapse,
+      state.route,
+      state.route,
+      state.route,
+      'bookshelf-more-close',
+      state.motion.sequence + 1,
+      ReaderMotion.durationOverlay(state.reducedMotion)
+    );
+    return ReaderUiReducer.syncContractFields(next);
+  }
+
   static startReaderSession(state: ReaderUiState, kind: string): ReaderUiState {
     const next = ReaderUiReducer.clone(state);
     const previousKind = state.activeSession.kind;

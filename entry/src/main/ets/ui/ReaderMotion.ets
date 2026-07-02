@@ -31,6 +31,10 @@ export class ReaderMotionId {
   static readonly motionInterruptCancel: string = 'motion.interrupt.cancel';
   static readonly motionInterruptRedirect: string = 'motion.interrupt.redirect';
   static readonly motionInterruptCompleteThenReplace: string = 'motion.interrupt.completeThenReplace';
+  static readonly dropdownMenuExpand: string = 'dropdown.menu.expand';
+  static readonly dropdownMenuCollapse: string = 'dropdown.menu.collapse';
+  static readonly dropdownOptionPress: string = 'dropdown.option.press';
+  static readonly dropdownOptionSelect: string = 'dropdown.option.select';
 }
 
 export class ReaderMotionSnapshot {

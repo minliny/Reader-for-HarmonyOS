@@ -14,6 +14,8 @@ export struct MainTabShell {
   onSelectTab: (tab: string) => void = (_tab: string) => {};
   onReaderEntry: (target: ReaderEntryTarget) => void = (_target: ReaderEntryTarget) => {};
   onToggleReducedMotion: (enabled: boolean) => void = (_enabled: boolean) => {};
+  onToggleBookshelfMore: () => void = () => {};
+  onCloseBookshelfMore: () => void = () => {};
 
   build() {
     if (ReaderAdaptive.isNavRail(this.uiState.adaptive)) {
@@ -28,7 +30,9 @@ export struct MainTabShell {
         MainTabContentHost({
           uiState: this.uiState,
           onReaderEntry: this.onReaderEntry,
-          onToggleReducedMotion: this.onToggleReducedMotion
+          onToggleReducedMotion: this.onToggleReducedMotion,
+          onToggleBookshelfMore: this.onToggleBookshelfMore,
+          onCloseBookshelfMore: this.onCloseBookshelfMore
         })
           .layoutWeight(1)
       }
@@ -41,7 +45,9 @@ export struct MainTabShell {
         MainTabContentHost({
           uiState: this.uiState,
           onReaderEntry: this.onReaderEntry,
-          onToggleReducedMotion: this.onToggleReducedMotion
+          onToggleReducedMotion: this.onToggleReducedMotion,
+          onToggleBookshelfMore: this.onToggleBookshelfMore,
+          onCloseBookshelfMore: this.onCloseBookshelfMore
         })
 
         Column() {
@@ -66,6 +72,8 @@ struct MainTabContentHost {
   @Prop uiState: ReaderUiState;
   onReaderEntry: (target: ReaderEntryTarget) => void = (_target: ReaderEntryTarget) => {};
   onToggleReducedMotion: (enabled: boolean) => void = (_enabled: boolean) => {};
+  onToggleBookshelfMore: () => void = () => {};
+  onCloseBookshelfMore: () => void = () => {};
 
   build() {
     Column() {
@@ -81,7 +89,9 @@ struct MainTabContentHost {
       } else {
         BookshelfTab({
           uiState: this.uiState,
-          onReaderEntry: this.onReaderEntry
+          onReaderEntry: this.onReaderEntry,
+          onToggleMore: this.onToggleBookshelfMore,
+          onCloseMore: this.onCloseBookshelfMore
         })
       }
     }
