@@ -23,13 +23,13 @@ export struct ImmersiveReaderSurface {
   }
 
   private bodyPadding(): Padding {
-    if (this.uiState.adaptive.widthVp < 360) {
-      return { left: 24, right: 24, top: ReaderTypography.bodyTopInsetCompact, bottom: 48 };
-    }
-    if (this.uiState.adaptive.readerContentMode === 'single') {
-      return { left: 32, right: 32, top: ReaderTypography.bodyTopInset, bottom: 48 };
-    }
-    return { left: 44, right: 44, top: ReaderTypography.bodyTopInsetWide, bottom: 56 };
+    const sideInset = this.uiState.adaptive.widthVp < 360 ? 28 : ReaderTypography.bodySideInset;
+    return {
+      left: sideInset,
+      right: sideInset,
+      top: ReaderTypography.bodyTopInset,
+      bottom: ReaderTypography.bodyBottomInset
+    };
   }
 
   private contentParagraphs(): string[] {
@@ -90,9 +90,7 @@ export struct ImmersiveReaderSurface {
       if (this.uiState.readerMode === ReaderMode.immersive) {
         this.ImmersiveInfoLayer()
         this.ImmersiveTapZones()
-        if (this.uiState.activeSession.capsuleVisible) {
-          this.SessionCapsuleOverlay()
-        }
+        this.ImmersiveFooterStatusLayer()
         this.TextSelectionLayer()
       }
 
@@ -149,6 +147,7 @@ export struct ImmersiveReaderSurface {
           .lineHeight(ReaderTypography.bodyLineHeight())
           .width('100%')
           .textAlign(TextAlign.Start)
+          .textIndent(ReaderTypography.bodyParagraphIndent)
           .margin({ bottom: ReaderTypography.bodyParagraphGap })
       }, (paragraph: string) => paragraph)
       Blank()
@@ -187,19 +186,6 @@ export struct ImmersiveReaderSurface {
       .width('100%')
 
       Blank()
-
-      Row() {
-        Text(this.currentProgress())
-          .fontSize(ReaderTypography.immersiveInfoFontSize)
-          .lineHeight(ReaderTypography.immersiveInfoLineHeight)
-          .fontColor('#766C61')
-        Blank()
-        Text('')
-          .fontSize(ReaderTypography.immersiveInfoFontSize)
-          .lineHeight(ReaderTypography.immersiveInfoLineHeight)
-          .fontColor('#766C61')
-      }
-      .width('100%')
     }
     .width('100%')
     .height('100%')
@@ -243,14 +229,30 @@ export struct ImmersiveReaderSurface {
   }
 
   @Builder
-  SessionCapsuleOverlay() {
+  ImmersiveFooterStatusLayer() {
     Column() {
       Blank()
       Row() {
+        Text(this.currentProgress())
+          .fontSize(ReaderTypography.immersiveInfoFontSize)
+          .lineHeight(ReaderTypography.immersiveInfoLineHeight)
+          .fontColor('#766C61')
         Blank()
-        this.SessionCapsule()
+        Row() {
+          Text('')
+            .fontSize(ReaderTypography.immersiveInfoFontSize)
+            .lineHeight(ReaderTypography.immersiveInfoLineHeight)
+            .fontColor('#766C61')
+          if (this.uiState.activeSession.capsuleVisible) {
+            this.SessionCapsule()
+          }
+        }
+        .height(24)
+        .alignItems(VerticalAlign.Center)
+        .justifyContent(FlexAlign.End)
       }
       .width('100%')
+      .alignItems(VerticalAlign.Center)
     }
     .width('100%')
     .height('100%')
@@ -265,24 +267,83 @@ export struct ImmersiveReaderSurface {
   @Builder
   SessionCapsule() {
     Row() {
+      if (this.uiState.activeSession.kind === 'tts') {
+        this.SessionVoiceIcon()
+      } else {
+        this.SessionCountdownDot()
+      }
       Text(this.uiState.activeSession.label)
-        .fontSize(12)
-        .fontColor('#F7EFE4')
-      Text(this.uiState.activeSession.statusText)
-        .fontSize(12)
-        .fontColor('#D7C6AA')
-        .margin({ left: 8 })
-      Text(this.uiState.activeSession.playing ? '暂停' : '继续')
-        .fontSize(12)
-        .fontColor('#FFFFFF')
-        .margin({ left: 10 })
-        .onClick(() => this.onToggleSession())
+        .fontSize(10)
+        .fontWeight(FontWeight.Bold)
+        .fontColor('#4A4036')
+        .textAlign(TextAlign.Center)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .layoutWeight(1)
+      this.SessionControlButton()
     }
-    .height(34)
-    .padding({ left: 12, right: 12 })
-    .backgroundColor('#4A3327')
-    .borderRadius(8)
+    .width(this.uiState.activeSession.kind === 'autoPage' ? 96 : 94)
+    .height(24)
+    .padding({ left: 5, right: 5 })
+    .alignItems(VerticalAlign.Center)
+    .backgroundColor('#D1FFFAF4')
+    .borderColor('#38766C61')
+    .borderWidth(1)
+    .borderRadius(999)
+    .margin({ left: 5 })
+    .shadow({ radius: 8, color: '#12463423', offsetX: 0, offsetY: 3 })
     .accessibilityText(`阅读会话胶囊 ${this.uiState.activeSession.kind} ${this.uiState.activeSession.statusText}`)
     .animation({ duration: ReaderMotion.durationReaderSession(this.uiState.reducedMotion), curve: Curve.EaseOut })
+  }
+
+  @Builder
+  SessionCountdownDot() {
+    Text('8')
+      .width(18)
+      .height(16)
+      .fontSize(8)
+      .fontWeight(FontWeight.Bold)
+      .fontColor('#FFFFFF')
+      .textAlign(TextAlign.Center)
+      .backgroundColor('#274F66')
+      .borderRadius(8)
+      .margin({ right: 4 })
+  }
+
+  @Builder
+  SessionVoiceIcon() {
+    Image($r('app.media.reader_icon_tts_white'))
+      .width(16)
+      .height(16)
+      .objectFit(ImageFit.Contain)
+      .padding(2.5)
+      .backgroundColor('#274F66')
+      .borderRadius(8)
+      .margin({ right: 4 })
+  }
+
+  @Builder
+  SessionControlButton() {
+    Button() {
+      if (this.uiState.activeSession.playing) {
+        Image($r('app.media.reader_icon_pause_white'))
+          .width(8)
+          .height(8)
+          .objectFit(ImageFit.Contain)
+      } else {
+        Image($r('app.media.reader_icon_play_white'))
+          .width(8)
+          .height(8)
+          .objectFit(ImageFit.Contain)
+      }
+    }
+    .width(16)
+    .height(16)
+    .padding(0)
+    .backgroundColor('#274F66')
+    .borderRadius(8)
+    .margin({ left: 4 })
+    .onClick(() => this.onToggleSession())
+    .accessibilityText(this.uiState.activeSession.playing ? '暂停自动翻页' : '继续自动翻页')
   }
 }

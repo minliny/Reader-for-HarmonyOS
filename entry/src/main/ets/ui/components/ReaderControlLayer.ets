@@ -60,6 +60,54 @@ export struct ReaderControlLayer {
     return this.uiState.readerContext.progressText;
   }
 
+  private progressPercent(): number {
+    const parsed = Number.parseFloat(this.progressText().replace('%', ''));
+    if (!Number.isFinite(parsed)) {
+      return 80;
+    }
+    return Math.max(0, Math.min(100, parsed));
+  }
+
+  private progressFillWidth(): string {
+    return `${this.progressPercent()}%`;
+  }
+
+  private chapterCountText(): string {
+    return '共 12 章';
+  }
+
+  private chapterStepSize(): number {
+    if (this.uiState.activeSession.capsuleVisible) {
+      return 28;
+    }
+    return this.isCompactLandscape() ? 30 : 34;
+  }
+
+  private chapterControlMinHeight(): number {
+    if (this.uiState.activeSession.capsuleVisible) {
+      return 28;
+    }
+    return this.isCompactLandscape() ? 34 : 52;
+  }
+
+  private controlMainGap(): number {
+    return this.uiState.activeSession.capsuleVisible ? 5 : this.isCompactLandscape() ? 4 : 6;
+  }
+
+  private actionPanelHeight(): number {
+    if (this.uiState.activeSession.capsuleVisible) {
+      return this.isCompactLandscape() ? 48 : 50;
+    }
+    return this.isCompactLandscape() ? 58 : 75.5;
+  }
+
+  private chapterPanelHeight(): number {
+    if (this.uiState.activeSession.capsuleVisible) {
+      return this.isCompactLandscape() ? 56 : 64;
+    }
+    return this.isCompactLandscape() ? 86 : 108.5;
+  }
+
   private hasChapterTitle(): boolean {
     return this.chapterTitle().length > 0;
   }
@@ -284,12 +332,7 @@ export struct ReaderControlLayer {
     Column() {
       Row() {
         Row() {
-          Text('‹')
-            .fontSize(ReaderTypography.topBarBackFontSize)
-            .fontWeight(FontWeight.Bold)
-            .fontColor('#1F1A15')
-            .textAlign(TextAlign.Center)
-            .width('100%')
+          ReaderControlIcon({ icon: 'back', tone: 'dark', iconSize: 24 })
         }
         .width(44)
         .height(42)
@@ -305,7 +348,7 @@ export struct ReaderControlLayer {
             .fontSize(ReaderTypography.topBarTitleFontSize)
             .fontWeight(FontWeight.Medium)
             .fontColor('#2B241D')
-            .lineHeight(18)
+            .lineHeight(ReaderTypography.topBarTitleLineHeight)
             .textAlign(TextAlign.Start)
             .width('100%')
             .maxLines(1)
@@ -344,12 +387,7 @@ export struct ReaderControlLayer {
         .margin({ right: 8 })
 
         Row() {
-          Text('⋯')
-            .fontSize(ReaderTypography.topBarMoreFontSize)
-            .fontWeight(FontWeight.Bold)
-            .fontColor('#1F1A15')
-            .textAlign(TextAlign.Center)
-            .width('100%')
+          ReaderControlIcon({ icon: 'more', tone: 'dark', iconSize: 22 })
         }
         .width(34)
         .height(42)
@@ -536,15 +574,29 @@ export struct ReaderControlLayer {
   @Builder
   ReaderControlMain() {
     Column() {
-      Row() {
-        ControlAction({ label: '搜索', onPress: () => this.onOpenPresentation(ReaderRoute.contentSearch) })
-        ControlAction({ label: '自动翻页', onPress: () => this.onOpenPresentation(ReaderRoute.autoPage) })
-        ControlAction({ label: '内容替换', onPress: () => this.onOpenPresentation(ReaderRoute.contentReplacement) })
+      Row({ space: 8 }) {
+        ControlAction({
+          label: '搜索',
+          icon: 'reader-content-search',
+          endGap: 0,
+          onPress: () => this.onOpenPresentation(ReaderRoute.contentSearch)
+        })
+        ControlAction({
+          label: '自动翻页',
+          icon: 'reader-auto-page',
+          endGap: 0,
+          onPress: () => this.onOpenPresentation(ReaderRoute.autoPage)
+        })
+        ControlAction({
+          label: '替换',
+          icon: 'reader-content-replace',
+          endGap: 0,
+          onPress: () => this.onOpenPresentation(ReaderRoute.contentReplacement)
+        })
       }
       .width('100%')
-      .layoutWeight(0.82)
-      .constraintSize({ minHeight: this.isCompactLandscape() ? 58 : 70 })
-      .padding({ left: 8, right: 8, top: 8, bottom: 8 })
+      .height(this.actionPanelHeight())
+      .padding({ left: 8, right: 8, top: 9, bottom: 9 })
       .backgroundColor('#FFFCF8')
       .borderColor('#D6CABC')
       .borderWidth(1)
@@ -552,49 +604,91 @@ export struct ReaderControlLayer {
 
       Column() {
         Row() {
-          Text('上一章')
-            .fontSize(ReaderTypography.chapterStepFontSize)
-            .fontColor('#3F372F')
-          Text(this.chapterTitle())
-            .fontSize(ReaderTypography.chapterTitleFontSize)
-            .lineHeight(16.25)
-            .fontColor('#332C25')
-            .textAlign(TextAlign.Center)
-            .layoutWeight(1)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-          Text('下一章')
-            .fontSize(ReaderTypography.chapterStepFontSize)
-            .fontColor('#3F372F')
+          ChapterStepButton({
+            icon: 'chevron-left',
+            stepSize: this.chapterStepSize(),
+            disabled: false,
+            accessibilityLabel: '上一章'
+          })
+          Column() {
+            Text(this.chapterTitle())
+              .fontSize(ReaderTypography.chapterTitleFontSize)
+              .lineHeight(16.25)
+              .fontWeight(FontWeight.Bold)
+              .fontColor('#332C25')
+              .textAlign(TextAlign.Center)
+              .width('100%')
+              .maxLines(this.uiState.activeSession.capsuleVisible ? 1 : 2)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+          }
+          .layoutWeight(1)
+          .constraintSize({ minHeight: 34 })
+          .justifyContent(FlexAlign.Center)
+          .alignItems(HorizontalAlign.Center)
+          .padding({ left: 8, right: 8 })
+
+          ChapterStepButton({
+            icon: 'chevron',
+            stepSize: this.chapterStepSize(),
+            disabled: false,
+            accessibilityLabel: '下一章'
+          })
         }
         .width('100%')
-        .margin({ bottom: 10 })
+        .height(this.chapterControlMinHeight())
+        .alignItems(VerticalAlign.Center)
+        .margin({ bottom: this.uiState.activeSession.capsuleVisible ? 3 : 6 })
 
         Row() {
           Text(this.progressText())
             .fontSize(ReaderTypography.progressLabelFontSize)
+            .lineHeight(ReaderTypography.progressLabelFontSize)
             .fontColor('#766C61')
-          Column()
-            .height(4)
+            .textAlign(TextAlign.End)
+          Stack({ alignContent: Alignment.TopStart }) {
+            Column()
+              .width('100%')
+              .height(5)
+              .backgroundColor('#E1D6CA')
+              .borderRadius(999)
+              .margin({ top: 12 })
+            Column()
+              .width(this.progressFillWidth())
+              .height(5)
+              .backgroundColor('#2379A4')
+              .borderRadius(999)
+              .margin({ top: 12 })
+            Column()
+              .width(12)
+              .height(12)
+              .backgroundColor('#FFFAF4')
+              .borderColor('#2379A4')
+              .borderWidth(3)
+              .borderRadius(999)
+              .shadow({ radius: 8, color: '#38226584', offsetX: 0, offsetY: 4 })
+              .margin({ top: 8, left: Math.max(0, this.progressPercent() - 2).toString() + '%' })
+          }
+          .height(30)
             .layoutWeight(1)
-            .backgroundColor('#E7DED2')
-            .borderRadius(2)
-            .margin({ left: 10, right: 10 })
-          Text('')
+            .margin({ left: 6, right: 6 })
+          Text(this.chapterCountText())
             .fontSize(ReaderTypography.progressLabelFontSize)
+            .lineHeight(ReaderTypography.progressLabelFontSize)
             .fontColor('#766C61')
+            .textAlign(TextAlign.Start)
         }
         .width('100%')
+        .height(30)
+        .alignItems(VerticalAlign.Center)
       }
       .width('100%')
-      .layoutWeight(1.18)
-      .constraintSize({ minHeight: this.isCompactLandscape() ? 86 : 96 })
       .padding({ left: 10, right: 10, top: 9, bottom: 9 })
       .backgroundColor('#FFFCF8')
       .borderColor('#D6CABC')
       .borderWidth(1)
       .borderRadius(8)
-      .margin({ top: 6 })
+      .height(this.chapterPanelHeight())
+      .margin({ top: this.controlMainGap() })
     }
     .width('100%')
     .height('100%')
@@ -838,41 +932,43 @@ export struct ReaderControlLayer {
   @Builder
   FixedBrightnessRail() {
     Column() {
-      Text('亮')
-        .fontSize(ReaderTypography.actionLabelFontSize)
-        .fontColor('#4D382A')
-        .fontWeight(FontWeight.Bold)
+      ReaderControlIcon({ icon: 'sun', tone: 'primary', iconSize: 20 })
 
       Stack({ alignContent: Alignment.Bottom }) {
         Column()
           .width(8)
           .height(this.railTrackHeight())
-          .backgroundColor('#E7DED2')
+          .backgroundColor('#E1D6CA')
           .borderRadius(4)
         Column()
           .width(8)
           .height(Math.round(this.railTrackHeight() * 0.72))
-          .backgroundColor('#2F6373')
+          .backgroundColor('#2379A4')
           .borderRadius(4)
       }
-      .width(18)
+      .width(8)
       .height(this.railTrackHeight())
 
       Text('A')
-        .fontSize(ReaderTypography.actionLabelFontSize)
-        .fontColor('#4D382A')
-        .fontWeight(FontWeight.Bold)
+        .fontSize(13)
+        .fontColor('#2B241D')
+        .fontWeight(FontWeight.Regular)
         .textAlign(TextAlign.Center)
         .width(24)
-        .height(22)
+        .height(20)
+        .backgroundColor('#DBFAF4EC')
+        .borderColor('#57B4A697')
+        .borderWidth(1)
+        .borderRadius(999)
+        .shadow({ radius: 8, color: '#0F5D4833', offsetX: 0, offsetY: 2 })
     }
     .width(this.railWidth())
     .height(this.railHeight())
     .padding({ top: this.isCompactLandscape() ? 8 : 12, bottom: this.isCompactLandscape() ? 8 : 12 })
     .justifyContent(FlexAlign.SpaceBetween)
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor('#FFFAF4')
-    .borderColor('#D6CABC')
+    .backgroundColor('#D1FFFAF4')
+    .borderColor('#57B4A697')
     .borderWidth(1)
     .borderRadius(Math.round(this.railWidth() / 2))
     .margin({
@@ -886,21 +982,25 @@ export struct ReaderControlLayer {
     Row() {
       ModuleNavItem({
         label: '目录',
+        icon: 'reader-module-directory',
         selected: this.uiState.activeReaderModule === ReaderModuleType.directory,
         onPress: () => this.onOpenPresentation(this.uiState.readerPresentationRoute === ReaderRoute.tocBookmarks ? ReaderRoute.readerControl : ReaderRoute.tocBookmarks)
       })
       ModuleNavItem({
         label: '朗读',
+        icon: 'reader-module-tts',
         selected: this.uiState.activeReaderModule === ReaderModuleType.tts,
         onPress: () => this.onOpenPresentation(this.uiState.readerPresentationRoute === ReaderRoute.tts ? ReaderRoute.readerControl : ReaderRoute.tts)
       })
       ModuleNavItem({
         label: '界面',
+        icon: 'reader-module-appearance',
         selected: this.uiState.activeReaderModule === ReaderModuleType.appearance,
         onPress: () => this.onOpenPresentation(this.uiState.readerPresentationRoute === ReaderRoute.readerAppearance ? ReaderRoute.readerControl : ReaderRoute.readerAppearance)
       })
       ModuleNavItem({
         label: '设置',
+        icon: 'reader-module-settings',
         selected: this.uiState.activeReaderModule === ReaderModuleType.settings,
         onPress: () => this.onOpenPresentation(this.uiState.readerPresentationRoute === ReaderRoute.readerSettings ? ReaderRoute.readerControl : ReaderRoute.readerSettings)
       })
@@ -950,17 +1050,24 @@ struct MoreMenuItem {
 @Component
 struct ControlAction {
   @Prop label: string = '';
+  @Prop icon: string = '';
+  @Prop endGap: number = 8;
   onPress: () => void = () => {};
 
   build() {
     Column() {
+      if (this.icon.length > 0) {
+        ReaderControlIcon({ icon: this.icon, tone: 'action', iconSize: 24 })
+      }
       Text(this.label)
         .fontSize(ReaderTypography.actionLabelFontSize)
+        .lineHeight(13)
         .fontWeight(FontWeight.Bold)
         .fontColor('#2B251F')
         .textAlign(TextAlign.Center)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .margin({ top: this.icon.length > 0 ? 6 : 0 })
     }
     .height('100%')
     .layoutWeight(1)
@@ -968,29 +1075,56 @@ struct ControlAction {
     .alignItems(HorizontalAlign.Center)
     .backgroundColor('#FFFFFF')
     .borderRadius(8)
-    .margin({ right: 8 })
+    .margin({ right: this.endGap })
     .onClick(() => this.onPress())
     .accessibilityText(`ReaderControlAction ${this.label}`)
   }
 }
 
 @Component
+struct ChapterStepButton {
+  @Prop icon: string = '';
+  @Prop stepSize: number = 34;
+  @Prop disabled: boolean = false;
+  @Prop accessibilityLabel: string = '';
+
+  build() {
+    Row() {
+      ReaderControlIcon({ icon: this.icon, tone: 'chapter', iconSize: 20 })
+    }
+    .width(this.stepSize)
+    .height(this.stepSize)
+    .justifyContent(FlexAlign.Center)
+    .alignItems(VerticalAlign.Center)
+    .backgroundColor('#C2EEE6DB')
+    .borderRadius(999)
+    .opacity(this.disabled ? 0.42 : 1)
+    .accessibilityText(this.accessibilityLabel)
+  }
+}
+
+@Component
 struct ModuleNavItem {
   @Prop label: string = '';
+  @Prop icon: string = '';
   @Prop selected: boolean = false;
   onPress: () => void = () => {};
 
   build() {
     Column() {
-      Text(this.label.substring(0, 1))
-        .fontSize(ReaderTypography.moduleNavIconTextSize)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(this.selected ? '#FFFFFF' : '#2379A4')
-        .textAlign(TextAlign.Center)
+      Row() {
+        ReaderControlIcon({
+          icon: this.icon,
+          tone: this.selected ? 'white' : 'primary',
+          iconSize: 24
+        })
+      }
         .width(42)
         .height(42)
         .backgroundColor(this.selected ? '#2F6373' : '#EAF3F7')
         .borderRadius(21)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
       Text(this.label)
         .fontSize(ReaderTypography.moduleNavLabelFontSize)
         .fontWeight(FontWeight.Bold)
@@ -1007,6 +1141,101 @@ struct ModuleNavItem {
     .margin({ right: 4 })
     .onClick(() => this.onPress())
     .accessibilityText(`ReaderModuleNav ${this.label}; selected=${this.selected}`)
+  }
+}
+
+@Component
+struct ReaderControlIcon {
+  @Prop icon: string = '';
+  @Prop tone: string = 'dark';
+  @Prop iconSize: number = 24;
+
+  build() {
+    if (this.icon === 'back') {
+      Image($r('app.media.reader_icon_back_dark'))
+        .width(this.iconSize)
+        .height(this.iconSize)
+        .objectFit(ImageFit.Contain)
+    } else if (this.icon === 'more') {
+      Image($r('app.media.reader_icon_more_dark'))
+        .width(this.iconSize)
+        .height(this.iconSize)
+        .objectFit(ImageFit.Contain)
+    } else if (this.icon === 'sun') {
+      Image($r('app.media.reader_icon_sun_primary'))
+        .width(this.iconSize)
+        .height(this.iconSize)
+        .objectFit(ImageFit.Contain)
+    } else if (this.icon === 'chevron-left') {
+      Image($r('app.media.reader_icon_chevron_left_chapter'))
+        .width(this.iconSize)
+        .height(this.iconSize)
+        .objectFit(ImageFit.Contain)
+    } else if (this.icon === 'chevron') {
+      Image($r('app.media.reader_icon_chevron_chapter'))
+        .width(this.iconSize)
+        .height(this.iconSize)
+        .objectFit(ImageFit.Contain)
+    } else if (this.icon === 'reader-content-search') {
+      Image($r('app.media.reader_icon_reader_content_search_action'))
+        .width(this.iconSize)
+        .height(this.iconSize)
+        .objectFit(ImageFit.Contain)
+    } else if (this.icon === 'reader-auto-page') {
+      Image($r('app.media.reader_icon_reader_auto_page_action'))
+        .width(this.iconSize)
+        .height(this.iconSize)
+        .objectFit(ImageFit.Contain)
+    } else if (this.icon === 'reader-content-replace') {
+      Image($r('app.media.reader_icon_reader_content_replace_action'))
+        .width(this.iconSize)
+        .height(this.iconSize)
+        .objectFit(ImageFit.Contain)
+    } else if (this.icon === 'reader-module-directory' && this.tone === 'white') {
+      Image($r('app.media.reader_icon_reader_module_directory_white'))
+        .width(this.iconSize)
+        .height(this.iconSize)
+        .objectFit(ImageFit.Contain)
+    } else if (this.icon === 'reader-module-directory') {
+      Image($r('app.media.reader_icon_reader_module_directory_primary'))
+        .width(this.iconSize)
+        .height(this.iconSize)
+        .objectFit(ImageFit.Contain)
+    } else if (this.icon === 'reader-module-tts' && this.tone === 'white') {
+      Image($r('app.media.reader_icon_reader_module_tts_white'))
+        .width(this.iconSize)
+        .height(this.iconSize)
+        .objectFit(ImageFit.Contain)
+    } else if (this.icon === 'reader-module-tts') {
+      Image($r('app.media.reader_icon_reader_module_tts_primary'))
+        .width(this.iconSize)
+        .height(this.iconSize)
+        .objectFit(ImageFit.Contain)
+    } else if (this.icon === 'reader-module-appearance' && this.tone === 'white') {
+      Image($r('app.media.reader_icon_reader_module_appearance_white'))
+        .width(this.iconSize)
+        .height(this.iconSize)
+        .objectFit(ImageFit.Contain)
+    } else if (this.icon === 'reader-module-appearance') {
+      Image($r('app.media.reader_icon_reader_module_appearance_primary'))
+        .width(this.iconSize)
+        .height(this.iconSize)
+        .objectFit(ImageFit.Contain)
+    } else if (this.icon === 'reader-module-settings' && this.tone === 'white') {
+      Image($r('app.media.reader_icon_reader_module_settings_white'))
+        .width(this.iconSize)
+        .height(this.iconSize)
+        .objectFit(ImageFit.Contain)
+    } else if (this.icon === 'reader-module-settings') {
+      Image($r('app.media.reader_icon_reader_module_settings_primary'))
+        .width(this.iconSize)
+        .height(this.iconSize)
+        .objectFit(ImageFit.Contain)
+    } else {
+      Blank()
+        .width(this.iconSize)
+        .height(this.iconSize)
+    }
   }
 }
 
