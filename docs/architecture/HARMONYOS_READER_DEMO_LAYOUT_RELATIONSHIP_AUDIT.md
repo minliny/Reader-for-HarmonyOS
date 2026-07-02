@@ -184,14 +184,22 @@ sheet 内部局部变量：
 | 章节控制列 | `34px / 1fr / 34px` |
 | progress 行 | `auto / 1fr / auto` |
 
-有运行中 session 时：
+### 5.5 运行中 session 的控制层上方胶囊
+
+当前 demo 不再把 running space 插入 `BottomControlPanel` 的内容流。控制层打开且存在朗读/自动翻页 session 时，复用沉浸态 session capsule 的视觉结构，并由 `ReaderControlSessionHost` 锚在 bottom sheet 上方：
 
 | 区域 | 约束 |
 |---|---|
-| RunningSpace | 高 `44px` |
-| rows | `44px` + 快捷动作最小 `50px` + 章节进度最小 `64px` |
-| gap | `5px` |
-| RunningSpace 列 | `30px / 1fr / 30px` |
+| ReaderControlSessionHost | `position: absolute`，`right: 24px` |
+| bottom | `18px + 330px + 8px`，即 sheet 顶部上方 `8px` |
+| capsule | 高约 `26px`，宽约 `110px` |
+| 关系 | 不占用 `BottomControlPanel` 高度，不推动 QuickActions / ChapterPanel |
+
+ArkUI 约束：
+
+- 运行胶囊是 session 的第二个锚点，不是另一个运行控制器。
+- 打开控制层时，沉浸底部信息层消失，胶囊重锚到控制层上方。
+- `BottomControlPanel` 的快捷动作区和章节进度区高度不因 session 存在而改变。
 
 ArkUI 约束：
 

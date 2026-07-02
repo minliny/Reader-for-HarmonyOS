@@ -100,8 +100,8 @@
 | 目录模块条目 | `reader.chapter.jump` | 同 full 目录 | module sheet 消失，回沉浸 | ReadingSurface 更新到目标章节 |
 | TTS 播放 toggle | `reader.session.tts.start` | `readerTtsSession=true`，TTS playing；关闭 autoPage session；replace `immersive-reading` | 控制结构消失，沉浸底部出现 TTS capsule | TTS 与自动翻页互斥 |
 | 自动翻页 toggle | `reader.session.autoPage.start` | `readerAutoPageSession=true`，autoPage on；关闭 TTS session；replace `immersive-reading` | 控制结构消失，沉浸底部出现自动翻页 capsule | TTS 与自动翻页互斥 |
-| capsule 暂停/继续 | `reader.session.capsule.control.press/toggle` | session playing 状态变化 | 只更新 capsule 或 control running space | 不改变 route |
-| session 运行时打开控制层 | `reader.session.controlSpace.enter/update/exit` | route 可到 `reader`，session 仍存在 | `BottomControlPanel` 顶部插入 running space | session capsule 和 control space 是同一 session 的两种呈现 |
+| capsule 暂停/继续 | `reader.session.capsule.control.press/toggle` | session playing 状态变化 | 只更新沉浸胶囊或控制层上方胶囊 | 不改变 route |
+| session 运行时打开控制层 | `reader.session.controlSpace.enter/update/exit` | route 可到 `reader`，session 仍存在 | `ReaderControlSessionHost` 在 bottom sheet 上方显示同一个 session capsule | 不在 `BottomControlPanel` 内插入状态条；session capsule 和 control space 是同一 session 的两种锚点 |
 | 亮度 rail 拖动 | `slider.drag.start/update/release` | `readerBrightness`、`readerBrightnessAuto=false` | 只更新 Rail thumb 和 dim layer | 亮度条固定竖向，不能变成普通横向设置行 |
 | 自动亮度按钮 | `toggle.switch` | `readerBrightnessAuto` toggle | 只更新 Rail 按钮 active 和 dim state | 不改变 route/mode |
 | 章节上一章/下一章 | `reader.chapter.jump` | chapter index、progress、page index、turn direction | ReadingTextLayer 替换，控制结构保留 | 禁用态不触发 |
@@ -152,7 +152,8 @@ HarmonyOS 侧单一 UI state 至少需要这些字段，才能解释 route、ses
 | `ReaderImmersiveOverlay` | `ImmersiveInfoLayer + TapZones` | `ReaderContext`、`activeSession`、`readerMode` | open control、page prev/next、capsule toggle |
 | `ReaderTopBar` | `ReaderTopBar + MoreMenu` | `ReaderContext`、`overlayState` | exit、sourceSwitch、more toggle、utility route |
 | `ReaderBottomSheetHost` | `BottomSheetHost` | `readerMode`、`activeReaderModule`、`activeQuickPanel`、`asyncResult` | route/module/quick/full actions |
-| `ReaderControlPanel` | `BottomControlPanel` | `ReaderContext`、`activeSession` | quick promote、chapter jump、progress drag |
+| `ReaderControlPanel` | `BottomControlPanel` | `ReaderContext`、章节/页码状态 | quick promote、chapter jump、progress drag |
+| `ReaderControlSessionHost` | 控制层上方 session capsule 锚点 | `activeSession`、`readerMode` | pause/resume；打开控制层时重锚，不新增 route |
 | `ReaderModulePanel` | directory/tts/appearance/settings module | `activeReaderModule`、`ReaderContext`、`activeSession` | module setting、session start、chapter jump |
 | `ReaderQuickPanel` | search/auto-page/replace quick | `activeQuickPanel`、`ReaderContext` | close、search result、autoPage start、replace rule toggle |
 | `ReaderBrightnessRail` | `BrightnessRail` | `brightness`、`readerBrightnessAuto` | brightness drag、auto toggle |

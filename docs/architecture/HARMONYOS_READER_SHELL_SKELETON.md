@@ -66,7 +66,7 @@ ReaderShell 当前拆成以下 ArkUI 原生结构：
 - `BookCachePanel`、`DebugInfoPanel`：更多菜单后续承接页骨架。
 - `BrightnessRail`：亮度控制结构钩子。
 - `ReaderModuleNav`：目录 / 朗读 / 界面 / 设置模块导航。
-- `ControlSpace`：自动翻页或朗读运行时，控制层内运行空间。
+- `ReaderControlSessionHost`：自动翻页或朗读运行时，控制层上方的 session 胶囊锚点。
 
 ## Route 和 Presentation 边界
 

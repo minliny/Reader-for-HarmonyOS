@@ -9,6 +9,8 @@ export class ReaderContext {
   author: string = '';
   chapterTitle: string = '';
   progressText: string = '';
+  pageLabel: string = '';
+  totalChapters: number = 128;
   contentPreview: string = '';
   sourceRoute: string = ReaderRoute.bookshelf;
   entryKind: string = 'cover';
@@ -21,6 +23,8 @@ export class ReaderEntryTarget {
   author: string = '';
   chapterTitle: string = '';
   progressText: string = '';
+  pageLabel: string = '';
+  totalChapters: number = 128;
   contentPreview: string = '';
   sourceRoute: string = ReaderRoute.bookshelf;
   entryKind: string = 'cover';
@@ -37,8 +41,69 @@ export class ReaderActiveSessionState {
   kind: string = 'none';
   playing: boolean = false;
   capsuleVisible: boolean = false;
+  controlSpaceVisible: boolean = false;
+  countdown: number = 0;
+  motionKey: string = 'inactive';
   label: string = '';
   statusText: string = '';
+}
+
+export class ReaderTypographyState {
+  fontSize: number = 18;
+  lineHeightRatio: number = 1.96;
+  paragraphGap: number = 16;
+  letterSpacing: number = 0;
+  fontFamily: string = 'serif';
+}
+
+export class ReaderPageSpaceState {
+  topMargin: number = 72;
+  sideMargin: number = 32;
+  paragraphIndent: number = 2;
+  texture: string = 'paper';
+}
+
+export class ReaderBrightnessState {
+  value: number = 100;
+  auto: boolean = false;
+}
+
+export class ReaderThemeState {
+  value: string = 'paper';
+  scheme: string = 'day';
+  paperStart: string = '#FBF4E9';
+  paperEnd: string = '#EFE2D0';
+  ink: string = '#2B241D';
+  controlSurface: string = '#FFFAF4';
+  controlPanel: string = '#FFFCF8';
+  controlLine: string = '#D6CABC';
+  action: string = '#2F6373';
+}
+
+export class ReaderSettingsState {
+  autoPage: boolean = false;
+  volumePage: boolean = true;
+  pageAnimation: string = '平滑';
+  keepScreenOn: boolean = true;
+  statusInfo: boolean = true;
+  hapticFeedback: boolean = false;
+  cacheNext: boolean = true;
+  tapMode: string = '左右区域';
+  landscapeLock: boolean = false;
+}
+
+export class ReaderTtsState {
+  playing: boolean = false;
+  speed: string = '1.0x';
+  voice: string = '清晰女声';
+  scope: string = '当前章节';
+  timer: string = '15 分钟';
+  sentenceIndex: number = 1;
+}
+
+export class ReaderPaginationState {
+  pageIndex: number = 0;
+  pageCount: number = 1;
 }
 
 export class ReaderFocusState {
@@ -103,6 +168,13 @@ export class ReaderUiState {
   overlayState: ReaderOverlayState = new ReaderOverlayState();
   focusState: ReaderFocusState = new ReaderFocusState();
   activeSession: ReaderActiveSessionState = new ReaderActiveSessionState();
+  readerTheme: ReaderThemeState = new ReaderThemeState();
+  readerTypography: ReaderTypographyState = new ReaderTypographyState();
+  readerPageSpace: ReaderPageSpaceState = new ReaderPageSpaceState();
+  readerBrightness: ReaderBrightnessState = new ReaderBrightnessState();
+  readerSettings: ReaderSettingsState = new ReaderSettingsState();
+  readerTts: ReaderTtsState = new ReaderTtsState();
+  readerPagination: ReaderPaginationState = new ReaderPaginationState();
   asyncResult: ReaderAsyncResultState = new ReaderAsyncResultState();
   motion: ReaderMotionState = new ReaderMotionState();
   motionInterrupt: string = '';
@@ -137,6 +209,44 @@ export class ReaderUiReducer {
     }
     const next = ReaderUiReducer.clone(state);
     next.adaptive = adaptive;
+    return ReaderUiReducer.syncContractFields(next);
+  }
+
+  static setReaderBrightness(state: ReaderUiState, value: number): ReaderUiState {
+    const next = ReaderUiReducer.clone(state);
+    next.readerBrightness.value = ReaderUiReducer.clamp(value, 0, 100);
+    next.readerBrightness.auto = false;
+    next.motion = ReaderUiReducer.motion(
+      ReaderMotionId.readerBrightnessUpdate,
+      state.readerPresentationRoute,
+      state.readerPresentationRoute,
+      state.readerPresentationRoute,
+      'brightness-update',
+      state.motion.sequence + 1,
+      ReaderMotion.durationOverlay(state.reducedMotion)
+    );
+    return ReaderUiReducer.syncContractFields(next);
+  }
+
+  static adjustReaderBrightness(state: ReaderUiState, delta: number): ReaderUiState {
+    return ReaderUiReducer.setReaderBrightness(state, state.readerBrightness.value + delta);
+  }
+
+  static toggleReaderBrightnessAuto(state: ReaderUiState): ReaderUiState {
+    const next = ReaderUiReducer.clone(state);
+    next.readerBrightness.auto = !state.readerBrightness.auto;
+    if (next.readerBrightness.auto) {
+      next.readerBrightness.value = 100;
+    }
+    next.motion = ReaderUiReducer.motion(
+      ReaderMotionId.readerBrightnessAutoToggle,
+      state.readerPresentationRoute,
+      state.readerPresentationRoute,
+      state.readerPresentationRoute,
+      'brightness-auto-toggle',
+      state.motion.sequence + 1,
+      ReaderMotion.durationOverlay(state.reducedMotion)
+    );
     return ReaderUiReducer.syncContractFields(next);
   }
 
@@ -302,6 +412,8 @@ export class ReaderUiReducer {
     next.overlay = new ReaderOverlayState();
     next.focusState = ReaderUiReducer.focus('reader-body', 'reader-control');
     next.activeSession = ReaderUiReducer.session(kind, true);
+    next.readerSettings.autoPage = kind === 'autoPage';
+    next.readerTts.playing = kind === 'tts';
     next.motion = ReaderUiReducer.motion(
       kind === 'tts' ? ReaderMotionId.readerSessionTtsStart : ReaderMotionId.readerSessionAutoPageStart,
       state.readerPresentationRoute,
@@ -322,7 +434,9 @@ export class ReaderUiReducer {
       return state;
     }
     const next = ReaderUiReducer.clone(state);
-    next.activeSession = ReaderUiReducer.session(state.activeSession.kind, !state.activeSession.playing);
+    next.activeSession = ReaderUiReducer.session(state.activeSession.kind, !state.activeSession.playing, state.activeSession.countdown);
+    next.readerSettings.autoPage = next.activeSession.kind === 'autoPage' && next.activeSession.playing;
+    next.readerTts.playing = next.activeSession.kind === 'tts' && next.activeSession.playing;
     next.motion = ReaderUiReducer.motion(
       ReaderMotionId.readerSessionCapsuleUpdate,
       state.readerPresentationRoute,
@@ -342,6 +456,8 @@ export class ReaderUiReducer {
     }
     const next = ReaderUiReducer.clone(state);
     next.activeSession = new ReaderActiveSessionState();
+    next.readerSettings.autoPage = false;
+    next.readerTts.playing = false;
     next.motion = ReaderUiReducer.motion(
       ReaderMotionId.readerSessionCapsuleExit,
       state.readerPresentationRoute,
@@ -411,6 +527,8 @@ export class ReaderUiReducer {
     context.author = target.author;
     context.chapterTitle = target.chapterTitle;
     context.progressText = target.progressText;
+    context.pageLabel = target.pageLabel;
+    context.totalChapters = target.totalChapters;
     context.contentPreview = target.contentPreview;
     context.sourceRoute = sourceRoute;
     context.entryKind = target.entryKind;
@@ -433,7 +551,7 @@ export class ReaderUiReducer {
     return focus;
   }
 
-  private static session(kind: string, playing: boolean): ReaderActiveSessionState {
+  private static session(kind: string, playing: boolean, countdown: number = -1): ReaderActiveSessionState {
     const session = new ReaderActiveSessionState();
     session.kind = kind;
     session.playing = playing;
@@ -441,11 +559,25 @@ export class ReaderUiReducer {
     if (kind === 'tts') {
       session.label = '朗读';
       session.statusText = playing ? '朗读中' : '已暂停';
+      session.countdown = 0;
+      session.motionKey = playing ? 'tts-playing' : 'tts-paused';
     } else if (kind === 'autoPage') {
       session.label = '自动翻页';
       session.statusText = playing ? '运行中' : '已暂停';
+      session.countdown = countdown >= 0 ? countdown : 8;
+      session.motionKey = playing ? 'auto-page-running' : 'auto-page-paused';
     }
     return session;
+  }
+
+  private static clamp(value: number, min: number, max: number): number {
+    if (value < min) {
+      return min;
+    }
+    if (value > max) {
+      return max;
+    }
+    return value;
   }
 
   private static asyncResult(requestId: number, status: string, targetRoute: string): ReaderAsyncResultState {
@@ -505,13 +637,20 @@ export class ReaderUiReducer {
     next.activeTab = state.activeTab;
     next.routeStack = state.routeStack.slice();
     next.backStack = state.backStack.slice();
-    next.readerContext = state.readerContext;
-    next.overlay = state.overlay;
-    next.overlayState = state.overlayState;
-    next.focusState = state.focusState;
-    next.activeSession = state.activeSession;
-    next.asyncResult = state.asyncResult;
-    next.motion = state.motion;
+    next.readerContext = ReaderUiReducer.cloneReaderContext(state.readerContext);
+    next.overlay = ReaderUiReducer.cloneOverlay(state.overlay);
+    next.overlayState = ReaderUiReducer.cloneOverlay(state.overlayState);
+    next.focusState = ReaderUiReducer.cloneFocus(state.focusState);
+    next.activeSession = ReaderUiReducer.cloneSession(state.activeSession);
+    next.readerTheme = ReaderUiReducer.cloneTheme(state.readerTheme);
+    next.readerTypography = ReaderUiReducer.cloneTypography(state.readerTypography);
+    next.readerPageSpace = ReaderUiReducer.clonePageSpace(state.readerPageSpace);
+    next.readerBrightness = ReaderUiReducer.cloneBrightness(state.readerBrightness);
+    next.readerSettings = ReaderUiReducer.cloneSettings(state.readerSettings);
+    next.readerTts = ReaderUiReducer.cloneTts(state.readerTts);
+    next.readerPagination = ReaderUiReducer.clonePagination(state.readerPagination);
+    next.asyncResult = ReaderUiReducer.cloneAsyncResult(state.asyncResult);
+    next.motion = ReaderUiReducer.cloneMotion(state.motion);
     next.motionInterrupt = state.motionInterrupt;
     next.reducedMotion = state.reducedMotion;
     next.entryRequestId = state.entryRequestId;
@@ -529,8 +668,159 @@ export class ReaderUiReducer {
     state.readerMode = ReaderUiReducer.readerModeForPresentation(state.readerPresentationRoute);
     state.activeReaderModule = ReaderUiReducer.readerModuleForPresentation(state.readerPresentationRoute);
     state.activeQuickPanel = ReaderUiReducer.readerQuickPanelForPresentation(state.readerPresentationRoute);
+    ReaderUiReducer.syncSessionControlSpace(state);
     state.motionInterrupt = state.motion.interruptPolicy;
     return state;
+  }
+
+  private static syncSessionControlSpace(state: ReaderUiState): void {
+    const mode = state.readerMode;
+    const controlVisible = state.activeSession.kind !== 'none' && (
+      mode === ReaderMode.control ||
+        mode === ReaderMode.module ||
+        mode === ReaderMode.quick ||
+        mode === ReaderMode.loading
+    );
+    state.activeSession.controlSpaceVisible = controlVisible;
+    state.activeSession.capsuleVisible = state.activeSession.kind !== 'none' && !controlVisible;
+  }
+
+  private static cloneReaderContext(context: ReaderContext): ReaderContext {
+    const next = new ReaderContext();
+    next.bookId = context.bookId;
+    next.sourceId = context.sourceId;
+    next.bookTitle = context.bookTitle;
+    next.author = context.author;
+    next.chapterTitle = context.chapterTitle;
+    next.progressText = context.progressText;
+    next.pageLabel = context.pageLabel;
+    next.totalChapters = context.totalChapters;
+    next.contentPreview = context.contentPreview;
+    next.sourceRoute = context.sourceRoute;
+    next.entryKind = context.entryKind;
+    return next;
+  }
+
+  private static cloneOverlay(overlay: ReaderOverlayState): ReaderOverlayState {
+    const next = new ReaderOverlayState();
+    next.kind = overlay.kind;
+    next.isOpen = overlay.isOpen;
+    next.focusOwner = overlay.focusOwner;
+    next.focusReturn = overlay.focusReturn;
+    return next;
+  }
+
+  private static cloneFocus(focus: ReaderFocusState): ReaderFocusState {
+    const next = new ReaderFocusState();
+    next.owner = focus.owner;
+    next.returnTo = focus.returnTo;
+    return next;
+  }
+
+  private static cloneSession(session: ReaderActiveSessionState): ReaderActiveSessionState {
+    const next = new ReaderActiveSessionState();
+    next.kind = session.kind;
+    next.playing = session.playing;
+    next.capsuleVisible = session.capsuleVisible;
+    next.controlSpaceVisible = session.controlSpaceVisible;
+    next.countdown = session.countdown;
+    next.motionKey = session.motionKey;
+    next.label = session.label;
+    next.statusText = session.statusText;
+    return next;
+  }
+
+  private static cloneTheme(theme: ReaderThemeState): ReaderThemeState {
+    const next = new ReaderThemeState();
+    next.value = theme.value;
+    next.scheme = theme.scheme;
+    next.paperStart = theme.paperStart;
+    next.paperEnd = theme.paperEnd;
+    next.ink = theme.ink;
+    next.controlSurface = theme.controlSurface;
+    next.controlPanel = theme.controlPanel;
+    next.controlLine = theme.controlLine;
+    next.action = theme.action;
+    return next;
+  }
+
+  private static cloneTypography(typography: ReaderTypographyState): ReaderTypographyState {
+    const next = new ReaderTypographyState();
+    next.fontSize = typography.fontSize;
+    next.lineHeightRatio = typography.lineHeightRatio;
+    next.paragraphGap = typography.paragraphGap;
+    next.letterSpacing = typography.letterSpacing;
+    next.fontFamily = typography.fontFamily;
+    return next;
+  }
+
+  private static clonePageSpace(pageSpace: ReaderPageSpaceState): ReaderPageSpaceState {
+    const next = new ReaderPageSpaceState();
+    next.topMargin = pageSpace.topMargin;
+    next.sideMargin = pageSpace.sideMargin;
+    next.paragraphIndent = pageSpace.paragraphIndent;
+    next.texture = pageSpace.texture;
+    return next;
+  }
+
+  private static cloneBrightness(brightness: ReaderBrightnessState): ReaderBrightnessState {
+    const next = new ReaderBrightnessState();
+    next.value = brightness.value;
+    next.auto = brightness.auto;
+    return next;
+  }
+
+  private static cloneSettings(settings: ReaderSettingsState): ReaderSettingsState {
+    const next = new ReaderSettingsState();
+    next.autoPage = settings.autoPage;
+    next.volumePage = settings.volumePage;
+    next.pageAnimation = settings.pageAnimation;
+    next.keepScreenOn = settings.keepScreenOn;
+    next.statusInfo = settings.statusInfo;
+    next.hapticFeedback = settings.hapticFeedback;
+    next.cacheNext = settings.cacheNext;
+    next.tapMode = settings.tapMode;
+    next.landscapeLock = settings.landscapeLock;
+    return next;
+  }
+
+  private static cloneTts(tts: ReaderTtsState): ReaderTtsState {
+    const next = new ReaderTtsState();
+    next.playing = tts.playing;
+    next.speed = tts.speed;
+    next.voice = tts.voice;
+    next.scope = tts.scope;
+    next.timer = tts.timer;
+    next.sentenceIndex = tts.sentenceIndex;
+    return next;
+  }
+
+  private static clonePagination(pagination: ReaderPaginationState): ReaderPaginationState {
+    const next = new ReaderPaginationState();
+    next.pageIndex = pagination.pageIndex;
+    next.pageCount = pagination.pageCount;
+    return next;
+  }
+
+  private static cloneAsyncResult(result: ReaderAsyncResultState): ReaderAsyncResultState {
+    const next = new ReaderAsyncResultState();
+    next.requestId = result.requestId;
+    next.status = result.status;
+    next.targetRoute = result.targetRoute;
+    return next;
+  }
+
+  private static cloneMotion(motion: ReaderMotionState): ReaderMotionState {
+    const next = new ReaderMotionState();
+    next.activeMotionId = motion.activeMotionId;
+    next.appMotionId = motion.appMotionId;
+    next.from = motion.from;
+    next.to = motion.to;
+    next.finalState = motion.finalState;
+    next.interruptPolicy = motion.interruptPolicy;
+    next.sequence = motion.sequence;
+    next.durationMs = motion.durationMs;
+    return next;
   }
 
   private static readerModeForPresentation(route: string): string {

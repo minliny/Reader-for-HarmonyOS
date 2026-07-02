@@ -16,65 +16,268 @@ export struct MainTabShell {
   onToggleReducedMotion: (enabled: boolean) => void = (_enabled: boolean) => {};
 
   build() {
-    Tabs({
-      barPosition: ReaderAdaptive.isNavRail(this.uiState.adaptive) ? BarPosition.Start : BarPosition.End,
-      index: this.currentTab
-    }) {
-      TabContent() {
+    if (ReaderAdaptive.isNavRail(this.uiState.adaptive)) {
+      Row() {
+        MainTabNav({
+          uiState: this.uiState,
+          isRail: true,
+          onSelectTab: this.onSelectTab
+        })
+          .margin({ left: 16, right: 18 })
+
+        MainTabContentHost({
+          uiState: this.uiState,
+          onReaderEntry: this.onReaderEntry,
+          onToggleReducedMotion: this.onToggleReducedMotion
+        })
+          .layoutWeight(1)
+      }
+      .width('100%')
+      .height('100%')
+      .alignItems(VerticalAlign.Center)
+      .backgroundColor('#F4EFE8')
+    } else {
+      Stack({ alignContent: Alignment.Bottom }) {
+        MainTabContentHost({
+          uiState: this.uiState,
+          onReaderEntry: this.onReaderEntry,
+          onToggleReducedMotion: this.onToggleReducedMotion
+        })
+
+        Column() {
+          MainTabNav({
+            uiState: this.uiState,
+            isRail: false,
+            onSelectTab: this.onSelectTab
+          })
+        }
+        .width('100%')
+        .padding({ left: 14, right: 14, bottom: 14 })
+      }
+      .width('100%')
+      .height('100%')
+      .backgroundColor('#F4EFE8')
+    }
+  }
+}
+
+@Component
+struct MainTabContentHost {
+  @Prop uiState: ReaderUiState;
+  onReaderEntry: (target: ReaderEntryTarget) => void = (_target: ReaderEntryTarget) => {};
+  onToggleReducedMotion: (enabled: boolean) => void = (_enabled: boolean) => {};
+
+  build() {
+    Column() {
+      if (this.uiState.activeTab === ReaderMainTab.discover) {
+        DiscoverTab()
+      } else if (this.uiState.activeTab === ReaderMainTab.rss) {
+        RssTab()
+      } else if (this.uiState.activeTab === ReaderMainTab.settings) {
+        SettingsTab({
+          uiState: this.uiState,
+          onToggleReducedMotion: this.onToggleReducedMotion
+        })
+      } else {
         BookshelfTab({
           uiState: this.uiState,
           onReaderEntry: this.onReaderEntry
         })
       }
-      .tabBar(this.TabBuilder(ReaderMainTab.label(ReaderMainTab.bookshelf), ReaderMainTab.bookshelf))
+    }
+    .width('100%')
+    .height('100%')
+    .animation({ duration: ReaderMotion.durationTabSwitch(this.uiState.reducedMotion), curve: Curve.EaseOut })
+  }
+}
 
-      TabContent() {
-        DiscoverTab()
-      }
-      .tabBar(this.TabBuilder(ReaderMainTab.label(ReaderMainTab.discover), ReaderMainTab.discover))
+@Component
+struct MainTabNav {
+  @Prop uiState: ReaderUiState;
+  @Prop isRail: boolean = false;
+  onSelectTab: (tab: string) => void = (_tab: string) => {};
 
-      TabContent() {
-        RssTab()
-      }
-      .tabBar(this.TabBuilder(ReaderMainTab.label(ReaderMainTab.rss), ReaderMainTab.rss))
-
-      TabContent() {
-        SettingsTab({
-          uiState: this.uiState,
-          onToggleReducedMotion: this.onToggleReducedMotion
+  build() {
+    if (this.isRail) {
+      Column() {
+        MainTabNavItem({
+          tabType: ReaderMainTab.bookshelf,
+          tabLabel: ReaderMainTab.label(ReaderMainTab.bookshelf),
+          isActive: this.uiState.activeTab === ReaderMainTab.bookshelf,
+          isRail: true,
+          reducedMotion: this.uiState.reducedMotion,
+          onSelectTab: this.onSelectTab
+        })
+        MainTabNavItem({
+          tabType: ReaderMainTab.discover,
+          tabLabel: ReaderMainTab.label(ReaderMainTab.discover),
+          isActive: this.uiState.activeTab === ReaderMainTab.discover,
+          isRail: true,
+          reducedMotion: this.uiState.reducedMotion,
+          onSelectTab: this.onSelectTab
+        })
+        MainTabNavItem({
+          tabType: ReaderMainTab.rss,
+          tabLabel: ReaderMainTab.label(ReaderMainTab.rss),
+          isActive: this.uiState.activeTab === ReaderMainTab.rss,
+          isRail: true,
+          reducedMotion: this.uiState.reducedMotion,
+          onSelectTab: this.onSelectTab
+        })
+        MainTabNavItem({
+          tabType: ReaderMainTab.settings,
+          tabLabel: ReaderMainTab.label(ReaderMainTab.settings),
+          isActive: this.uiState.activeTab === ReaderMainTab.settings,
+          isRail: true,
+          reducedMotion: this.uiState.reducedMotion,
+          onSelectTab: this.onSelectTab
         })
       }
-      .tabBar(this.TabBuilder(ReaderMainTab.label(ReaderMainTab.settings), ReaderMainTab.settings))
-    }
-    .vertical(ReaderAdaptive.isNavRail(this.uiState.adaptive))
-    .barWidth(ReaderAdaptive.isNavRail(this.uiState.adaptive) ? 88 : '100%')
-    .barHeight(ReaderAdaptive.isNavRail(this.uiState.adaptive) ? '100%' : 64)
-    .barMode(BarMode.Fixed)
-    .animation({ duration: ReaderMotion.durationTabSwitch(this.uiState.reducedMotion), curve: Curve.EaseOut })
-    .onChange((index: number) => {
-      this.onSelectTab(ReaderMainTab.at(index));
-    })
-  }
-
-  @Builder
-  TabBuilder(title: string, tab: string) {
-    Column() {
-      Text(title)
-        .fontSize(ReaderAdaptive.isNavRail(this.uiState.adaptive) ? 13 : 14)
-        .fontColor(this.uiState.activeTab === tab ? '#007AFF' : '#999999')
-      if (this.uiState.activeTab === tab) {
-        Circle({ width: 4, height: 4 })
-          .fill('#007AFF')
-          .margin({ top: 2 })
+      .width(82)
+      .padding(8)
+      .backgroundColor('#E6FFFCF8')
+      .border({ width: 1, color: '#D8CCBC' })
+      .borderRadius(24)
+      .shadow({ radius: 14, color: '#34261A1F', offsetX: 0, offsetY: 5 })
+    } else {
+      Row() {
+        MainTabNavItem({
+          tabType: ReaderMainTab.bookshelf,
+          tabLabel: ReaderMainTab.label(ReaderMainTab.bookshelf),
+          isActive: this.uiState.activeTab === ReaderMainTab.bookshelf,
+          reducedMotion: this.uiState.reducedMotion,
+          onSelectTab: this.onSelectTab
+        })
+        MainTabNavItem({
+          tabType: ReaderMainTab.discover,
+          tabLabel: ReaderMainTab.label(ReaderMainTab.discover),
+          isActive: this.uiState.activeTab === ReaderMainTab.discover,
+          reducedMotion: this.uiState.reducedMotion,
+          onSelectTab: this.onSelectTab
+        })
+        MainTabNavItem({
+          tabType: ReaderMainTab.rss,
+          tabLabel: ReaderMainTab.label(ReaderMainTab.rss),
+          isActive: this.uiState.activeTab === ReaderMainTab.rss,
+          reducedMotion: this.uiState.reducedMotion,
+          onSelectTab: this.onSelectTab
+        })
+        MainTabNavItem({
+          tabType: ReaderMainTab.settings,
+          tabLabel: ReaderMainTab.label(ReaderMainTab.settings),
+          isActive: this.uiState.activeTab === ReaderMainTab.settings,
+          reducedMotion: this.uiState.reducedMotion,
+          onSelectTab: this.onSelectTab
+        })
       }
+      .width('100%')
+      .height(68)
+      .padding({ left: 8, right: 8, top: 7, bottom: 7 })
+      .backgroundColor('#E6FFFCF8')
+      .border({ width: 1, color: '#D8CCBC' })
+      .borderRadius(24)
+      .shadow({ radius: 14, color: '#34261A1F', offsetX: 0, offsetY: 5 })
     }
-    .width(ReaderAdaptive.isNavRail(this.uiState.adaptive) ? 88 : '100%')
-    .height(ReaderAdaptive.isNavRail(this.uiState.adaptive) ? 64 : 56)
+  }
+}
+
+@Component
+struct MainTabNavItem {
+  @Prop tabType: string = '';
+  @Prop tabLabel: string = '';
+  @Prop isActive: boolean = false;
+  @Prop isRail: boolean = false;
+  @Prop reducedMotion: boolean = false;
+  onSelectTab: (tab: string) => void = (_tab: string) => {};
+
+  build() {
+    Column() {
+      Row() {
+        MainTabIcon({
+          tabType: this.tabType,
+          isActive: this.isActive
+        })
+      }
+      .width(this.isRail ? 32 : 30)
+      .height(this.isRail ? 32 : 30)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+      .borderRadius(this.isRail ? 16 : 15)
+
+      Text(this.tabLabel)
+        .fontSize(11)
+        .fontWeight(FontWeight.Bolder)
+        .fontColor(this.isActive ? '#FFFAF4' : '#756F69')
+        .lineHeight(this.isRail ? 16 : 18)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .layoutWeight(this.isRail ? 0 : 1)
+    .width(this.isRail ? 66 : '100%')
+    .height(this.isRail ? 58 : 54)
     .justifyContent(FlexAlign.Center)
-    .padding({ top: 6, bottom: 6 })
-    .animation({ duration: ReaderMotion.durationTabSelect(this.uiState.reducedMotion), curve: Curve.EaseOut })
-    .onClick(() => {
-      this.onSelectTab(tab);
-    })
+    .alignItems(HorizontalAlign.Center)
+    .backgroundColor(this.isActive ? '#274F66' : '#00000000')
+    .borderRadius(24)
+    .margin({ bottom: this.isRail ? 6 : 0 })
+    .animation({ duration: ReaderMotion.durationTabSelect(this.reducedMotion), curve: Curve.EaseOut })
+    .accessibilityText(`主导航 ${this.tabLabel}`)
+    .onClick(() => this.onSelectTab(this.tabType))
+  }
+}
+
+@Component
+struct MainTabIcon {
+  @Prop tabType: string = '';
+  @Prop isActive: boolean = false;
+
+  build() {
+    if (this.tabType === ReaderMainTab.discover) {
+      if (this.isActive) {
+        Image($r('app.media.main_tab_icon_discover_active'))
+          .width(24)
+          .height(24)
+          .objectFit(ImageFit.Contain)
+      } else {
+        Image($r('app.media.main_tab_icon_discover_muted'))
+          .width(24)
+          .height(24)
+          .objectFit(ImageFit.Contain)
+      }
+    } else if (this.tabType === ReaderMainTab.rss) {
+      if (this.isActive) {
+        Image($r('app.media.main_tab_icon_rss_active'))
+          .width(24)
+          .height(24)
+          .objectFit(ImageFit.Contain)
+      } else {
+        Image($r('app.media.main_tab_icon_rss_muted'))
+          .width(24)
+          .height(24)
+          .objectFit(ImageFit.Contain)
+      }
+    } else if (this.tabType === ReaderMainTab.settings) {
+      if (this.isActive) {
+        Image($r('app.media.main_tab_icon_settings_active'))
+          .width(24)
+          .height(24)
+          .objectFit(ImageFit.Contain)
+      } else {
+        Image($r('app.media.main_tab_icon_settings_muted'))
+          .width(24)
+          .height(24)
+          .objectFit(ImageFit.Contain)
+      }
+    } else if (this.isActive) {
+      Image($r('app.media.main_tab_icon_bookshelf_active'))
+        .width(24)
+        .height(24)
+        .objectFit(ImageFit.Contain)
+    } else {
+      Image($r('app.media.main_tab_icon_bookshelf_muted'))
+        .width(24)
+        .height(24)
+        .objectFit(ImageFit.Contain)
+    }
   }
 }

@@ -31,6 +31,7 @@ ReaderShell / readerFrame
   ReaderOverlayHost / readerOverlayHost
     沉浸态：ImmersiveInfoLayer + TextSelectionLayer + ImmersiveTapZones
     非沉浸态：ReaderTopBar + MoreMenu（可选）
+    有运行中 session 且控制层打开：ReaderControlSessionHost
     BottomSheetHost
       reader / quick / module / loading / full / utility 的面板主体
     ReaderModuleNav
@@ -105,10 +106,10 @@ ReaderShell / readerFrame
 ```text
 ReaderOverlayHost
   ReaderTopBar
+  ReaderControlSessionHost（有运行中 session 时，锚在控制层上方）
   BottomSheetHost / fd-reader-sheet
     Grabber
     BottomControlPanel
-      RunningSpace（有 session 时）
       QuickActions（三个快捷动作）
       ChapterPanel（上一章 / 当前章节 / 下一章 + 章节进度）
     BrightnessRail
@@ -119,6 +120,7 @@ ReaderOverlayHost
 关键点：
 
 - 顶部阅读栏不是底部面板的一部分。
+- `ReaderControlSessionHost` 不是 `BottomControlPanel` 的一行。它承载同一个自动翻页/朗读运行胶囊，在控制层打开时从沉浸底部信息层重锚到 bottom sheet 上方。
 - `BottomControlPanel`、`ReaderModulePanel`、`ReaderQuickPanel`、`ReaderLoadingPanel` 互斥替换同一个 bottom sheet 主体区域。
 - 亮度 Rail 是 bottom sheet 内的右侧固定竖向 rail，右侧占位由 `--reader-quick-rail-width` 和 `--reader-quick-rail-gap` 预留。
 - 章节进度是横向 progress，亮度是右侧竖向 slider；二者不是同一行，也不互相替代。

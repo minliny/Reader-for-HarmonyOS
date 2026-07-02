@@ -17,19 +17,31 @@ export struct ImmersiveReaderSurface {
   onOpenPresentation: (route: string) => void = (_route: string) => {};
   onToggleMore: () => void = () => {};
   onCloseMore: () => void = () => {};
+  onToggleBrightnessAuto: () => void = () => {};
+  onAdjustBrightness: (delta: number) => void = (_delta: number) => {};
 
   private contentText(): string {
     return this.uiState.readerContext.contentPreview;
   }
 
   private bodyPadding(): Padding {
-    const sideInset = this.uiState.adaptive.widthVp < 360 ? 28 : ReaderTypography.bodySideInset;
+    const sideInset = this.uiState.adaptive.widthVp < 360 ?
+      Math.min(28, this.uiState.readerPageSpace.sideMargin) :
+      this.uiState.readerPageSpace.sideMargin;
     return {
       left: sideInset,
       right: sideInset,
-      top: ReaderTypography.bodyTopInset,
+      top: this.uiState.readerPageSpace.topMargin,
       bottom: ReaderTypography.bodyBottomInset
     };
+  }
+
+  private bodyLineHeight(): number {
+    return Math.round(this.uiState.readerTypography.fontSize * this.uiState.readerTypography.lineHeightRatio);
+  }
+
+  private brightnessDimOpacity(): number {
+    return Math.max(0, Math.min(0.56, (100 - this.uiState.readerBrightness.value) / 140));
   }
 
   private contentParagraphs(): string[] {
@@ -63,6 +75,13 @@ export struct ImmersiveReaderSurface {
 
   private currentProgress(): string {
     return this.uiState.readerContext.progressText;
+  }
+
+  private currentPageLabel(): string {
+    if (this.uiState.readerContext.pageLabel.length > 0) {
+      return this.uiState.readerContext.pageLabel;
+    }
+    return `${this.uiState.readerPagination.pageIndex + 1} / ${this.uiState.readerPagination.pageCount}`;
   }
 
   private currentInfoText(): string {
@@ -104,13 +123,15 @@ export struct ImmersiveReaderSurface {
           onStopSession: this.onStopSession,
           onOpenPresentation: this.onOpenPresentation,
           onToggleMore: this.onToggleMore,
-          onCloseMore: this.onCloseMore
+          onCloseMore: this.onCloseMore,
+          onToggleBrightnessAuto: this.onToggleBrightnessAuto,
+          onAdjustBrightness: this.onAdjustBrightness
         })
       }
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F1E8D8')
+    .backgroundColor(this.uiState.readerTheme.paperEnd)
     .animation({ duration: ReaderMotion.durationReaderEntry(this.uiState.reducedMotion), curve: Curve.EaseOut })
   }
 
@@ -119,7 +140,7 @@ export struct ImmersiveReaderSurface {
     Column()
       .width('100%')
       .height('100%')
-      .backgroundColor('#F1E8D8')
+      .backgroundColor(this.uiState.readerTheme.paperEnd)
   }
 
   @Builder
@@ -130,8 +151,8 @@ export struct ImmersiveReaderSurface {
           .fontSize(ReaderTypography.bodyTitleFontSize)
           .lineHeight(ReaderTypography.bodyTitleLineHeight)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#2B241D')
-          .fontFamily(ReaderTypography.readerFontFamily)
+          .fontColor(this.uiState.readerTheme.ink)
+          .fontFamily(this.uiState.readerTypography.fontFamily)
           .textAlign(TextAlign.Center)
           .width('100%')
           .maxLines(1)
@@ -140,22 +161,22 @@ export struct ImmersiveReaderSurface {
       }
       ForEach(this.contentParagraphs(), (paragraph: string) => {
         Text(this.readingParagraphText(paragraph))
-          .fontSize(ReaderTypography.bodyFontSize)
-          .fontColor('#2B241D')
-          .fontFamily(ReaderTypography.readerFontFamily)
+          .fontSize(this.uiState.readerTypography.fontSize)
+          .fontColor(this.uiState.readerTheme.ink)
+          .fontFamily(this.uiState.readerTypography.fontFamily)
           .fontWeight(FontWeight.Regular)
-          .lineHeight(ReaderTypography.bodyLineHeight())
+          .lineHeight(this.bodyLineHeight())
           .width('100%')
           .textAlign(TextAlign.Start)
-          .textIndent(ReaderTypography.bodyParagraphIndent)
-          .margin({ bottom: ReaderTypography.bodyParagraphGap })
+          .textIndent(this.uiState.readerTypography.fontSize * this.uiState.readerPageSpace.paragraphIndent)
+          .margin({ bottom: this.uiState.readerTypography.paragraphGap })
       }, (paragraph: string) => paragraph)
       Blank()
     }
     .width(ReaderAdaptive.readerBodyWidth(this.uiState.adaptive))
     .height('100%')
     .padding(this.bodyPadding())
-    .backgroundColor('#FFF9EE')
+    .backgroundColor(this.uiState.readerTheme.paperStart)
     .borderRadius(this.uiState.adaptive.readerContentMode === 'single' ? 0 : 8)
   }
 
@@ -164,7 +185,9 @@ export struct ImmersiveReaderSurface {
     Column()
       .width('100%')
       .height('100%')
-      .backgroundColor('#00000000')
+      .backgroundColor('#000000')
+      .opacity(this.brightnessDimOpacity())
+      .hitTestBehavior(HitTestMode.None)
   }
 
   @Builder
@@ -239,7 +262,7 @@ export struct ImmersiveReaderSurface {
           .fontColor('#766C61')
         Blank()
         Row() {
-          Text('')
+          Text(this.currentPageLabel())
             .fontSize(ReaderTypography.immersiveInfoFontSize)
             .lineHeight(ReaderTypography.immersiveInfoLineHeight)
             .fontColor('#766C61')
@@ -298,7 +321,7 @@ export struct ImmersiveReaderSurface {
 
   @Builder
   SessionCountdownDot() {
-    Text('8')
+    Text(this.uiState.activeSession.countdown.toString())
       .width(18)
       .height(16)
       .fontSize(8)

@@ -70,6 +70,14 @@ struct Index {
     this.applyUiState(ReaderUiReducer.closeReaderMore(this.uiState));
   }
 
+  private toggleReaderBrightnessAuto(): void {
+    this.applyUiState(ReaderUiReducer.toggleReaderBrightnessAuto(this.uiState));
+  }
+
+  private adjustReaderBrightness(delta: number): void {
+    this.applyUiState(ReaderUiReducer.adjustReaderBrightness(this.uiState, delta));
+  }
+
   onBackPress(): boolean {
     if (this.uiState.overlayState.isOpen && this.uiState.overlayState.kind === 'reader-more') {
       this.closeReaderMore();
@@ -104,7 +112,9 @@ struct Index {
           onStopSession: () => this.stopReaderSession(),
           onOpenPresentation: (route: string) => this.openReaderPresentation(route),
           onToggleMore: () => this.toggleReaderMore(),
-          onCloseMore: () => this.closeReaderMore()
+          onCloseMore: () => this.closeReaderMore(),
+          onToggleBrightnessAuto: () => this.toggleReaderBrightnessAuto(),
+          onAdjustBrightness: (delta: number) => this.adjustReaderBrightness(delta)
         })
       } else {
         MainTabShell({

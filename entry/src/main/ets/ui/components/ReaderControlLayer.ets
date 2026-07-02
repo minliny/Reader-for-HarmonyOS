@@ -15,6 +15,8 @@ export struct ReaderControlLayer {
   onOpenPresentation: (route: string) => void = (_route: string) => {};
   onToggleMore: () => void = () => {};
   onCloseMore: () => void = () => {};
+  onToggleBrightnessAuto: () => void = () => {};
+  onAdjustBrightness: (delta: number) => void = (_delta: number) => {};
 
   private isFullPresentation(): boolean {
     return this.uiState.readerMode === ReaderMode.full || this.uiState.readerMode === ReaderMode.utility;
@@ -73,38 +75,27 @@ export struct ReaderControlLayer {
   }
 
   private chapterCountText(): string {
-    return '共 12 章';
+    const total = this.uiState.readerContext.totalChapters;
+    return total > 0 ? `共 ${total} 章` : '共 -- 章';
   }
 
   private chapterStepSize(): number {
-    if (this.uiState.activeSession.capsuleVisible) {
-      return 28;
-    }
     return this.isCompactLandscape() ? 30 : 34;
   }
 
   private chapterControlMinHeight(): number {
-    if (this.uiState.activeSession.capsuleVisible) {
-      return 28;
-    }
     return this.isCompactLandscape() ? 34 : 52;
   }
 
   private controlMainGap(): number {
-    return this.uiState.activeSession.capsuleVisible ? 5 : this.isCompactLandscape() ? 4 : 6;
+    return this.isCompactLandscape() ? 4 : 6;
   }
 
   private actionPanelHeight(): number {
-    if (this.uiState.activeSession.capsuleVisible) {
-      return this.isCompactLandscape() ? 48 : 50;
-    }
     return this.isCompactLandscape() ? 58 : 75.5;
   }
 
   private chapterPanelHeight(): number {
-    if (this.uiState.activeSession.capsuleVisible) {
-      return this.isCompactLandscape() ? 56 : 64;
-    }
     return this.isCompactLandscape() ? 86 : 108.5;
   }
 
@@ -181,6 +172,26 @@ export struct ReaderControlLayer {
     return this.isCompactLandscape() ? 16 : 24;
   }
 
+  private controlSessionHostBottom(): number {
+    return this.sheetBottom() + this.sheetHeight() + 8;
+  }
+
+  private controlSessionHostRight(): number {
+    return this.isBottomSheetMode() ? 24 : this.dockRight() + 2;
+  }
+
+  private controlSessionHostLeft(): number {
+    return Math.max(0, this.uiState.adaptive.widthVp - this.controlSessionHostRight() - 110);
+  }
+
+  private controlSessionHostTop(): number {
+    return Math.max(0, this.uiState.adaptive.heightVp - this.controlSessionHostBottom() - 26);
+  }
+
+  private brightnessFillHeight(): number {
+    return Math.round(this.railTrackHeight() * this.uiState.readerBrightness.value / 100);
+  }
+
   private isActiveSession(kind: string): boolean {
     return this.uiState.activeSession.kind === kind;
   }
@@ -208,6 +219,9 @@ export struct ReaderControlLayer {
       if (this.isFullPresentation()) {
         this.ReaderFullHost()
       } else {
+        if (this.uiState.activeSession.controlSpaceVisible) {
+          this.ReaderControlSessionHost()
+        }
         this.ReaderCompactDock()
       }
 
@@ -428,7 +442,7 @@ export struct ReaderControlLayer {
         MoreMenuItem({ title: '刷新目录', detail: '更新章节目录和缓存状态' })
         MoreMenuItem({ title: '打开来源页', detail: '查看当前书源详情' })
         MoreMenuItem({ title: '复制本章链接', detail: '复制当前章节来源地址' })
-        MoreMenuItem({ title: '书籍缓存', detail: '管理缓存状态', onPress: () => this.onOpenPresentation(ReaderRoute.readerBookCache) })
+        MoreMenuItem({ title: '书籍缓存', detail: '管理当前书籍缓存', onPress: () => this.onOpenPresentation(ReaderRoute.readerBookCache) })
         MoreMenuItem({ title: '调试信息', detail: '打开阅读调试信息', onPress: () => this.onOpenPresentation(ReaderRoute.readerDebugInfo) })
       }
       .width(214)
@@ -447,10 +461,6 @@ export struct ReaderControlLayer {
   @Builder
   CompactControlPanel() {
     Column() {
-      if (this.uiState.activeSession.capsuleVisible) {
-        this.ControlSpace()
-      }
-
       if (this.uiState.readerMode === ReaderMode.control) {
         this.ReaderControlMain()
       } else if (this.isQuickPresentation()) {
@@ -541,34 +551,90 @@ export struct ReaderControlLayer {
   }
 
   @Builder
-  ControlSpace() {
+  ReaderControlSessionHost() {
     Row() {
-      Text(this.uiState.activeSession.label)
-        .fontSize(12)
-        .fontColor('#2D3940')
-      Text(this.uiState.activeSession.statusText)
-        .fontSize(9)
-        .fontColor('#2F6373')
-        .margin({ left: 8 })
-        .layoutWeight(1)
-      Text(this.uiState.activeSession.playing ? '暂停' : '继续')
-        .fontSize(12)
-        .fontColor('#2F6373')
-        .margin({ right: 14 })
-        .onClick(() => this.onToggleSession())
-      Text('停止')
-        .fontSize(12)
-        .fontColor('#2F6373')
-        .onClick(() => this.onStopSession())
+      this.SessionCapsule()
     }
-    .width('100%')
-    .height(38)
-    .padding({ left: 12, right: 12 })
-    .backgroundColor('#E7F0F2')
-    .borderColor('#B8CED5')
+    .width(110)
+    .height(26)
+    .justifyContent(FlexAlign.End)
+    .alignItems(VerticalAlign.Center)
+    .hitTestBehavior(HitTestMode.Block)
+    .position({ x: this.controlSessionHostLeft(), y: this.controlSessionHostTop() })
+    .zIndex(34)
+  }
+
+  @Builder
+  SessionCapsule() {
+    Row({ space: 5 }) {
+      if (this.uiState.activeSession.kind === 'tts') {
+        this.SessionVoiceIcon()
+      } else {
+        this.SessionCountdownDot()
+      }
+      Text(this.uiState.activeSession.label)
+        .fontSize(10)
+        .fontColor('#F6FAFA')
+        .fontWeight(FontWeight.Medium)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .layoutWeight(1)
+      this.SessionControlButton()
+    }
+    .width(this.uiState.activeSession.kind === 'autoPage' ? 102 : 96)
+    .height(24)
+    .padding({ left: 5, right: 4 })
+    .backgroundColor('#2F6373')
+    .borderColor('#FFFFFFB8')
     .borderWidth(1)
+    .borderRadius(999)
+    .shadow({ radius: 12, color: '#24364233', offsetX: 0, offsetY: 4 })
+    .accessibilityText(`控制层运行胶囊 ${this.uiState.activeSession.label} ${this.uiState.activeSession.statusText}`)
+  }
+
+  @Builder
+  SessionCountdownDot() {
+    Text(this.uiState.activeSession.countdown.toString())
+      .fontSize(10)
+      .fontWeight(FontWeight.Bold)
+      .fontColor('#2F6373')
+      .textAlign(TextAlign.Center)
+      .width(16)
+      .height(16)
+      .backgroundColor('#F6FAFA')
+      .borderRadius(8)
+  }
+
+  @Builder
+  SessionVoiceIcon() {
+    Row() {
+      ReaderControlIcon({ icon: 'tts-white', tone: 'white', iconSize: 11 })
+    }
+    .width(16)
+    .height(16)
+    .justifyContent(FlexAlign.Center)
+    .alignItems(VerticalAlign.Center)
+    .backgroundColor('#4A7A88')
     .borderRadius(8)
-    .margin({ bottom: 12 })
+  }
+
+  @Builder
+  SessionControlButton() {
+    Row() {
+      ReaderControlIcon({
+        icon: this.uiState.activeSession.playing ? 'pause-white' : 'play-white',
+        tone: 'white',
+        iconSize: 9
+      })
+    }
+    .width(17)
+    .height(17)
+    .justifyContent(FlexAlign.Center)
+    .alignItems(VerticalAlign.Center)
+    .backgroundColor('#FFFFFF2A')
+    .borderRadius(9)
+    .onClick(() => this.onToggleSession())
+    .accessibilityText(this.uiState.activeSession.playing ? '暂停当前阅读会话' : '继续当前阅读会话')
   }
 
   @Builder
@@ -618,7 +684,7 @@ export struct ReaderControlLayer {
               .fontColor('#332C25')
               .textAlign(TextAlign.Center)
               .width('100%')
-              .maxLines(this.uiState.activeSession.capsuleVisible ? 1 : 2)
+              .maxLines(2)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
           }
           .layoutWeight(1)
@@ -637,7 +703,7 @@ export struct ReaderControlLayer {
         .width('100%')
         .height(this.chapterControlMinHeight())
         .alignItems(VerticalAlign.Center)
-        .margin({ bottom: this.uiState.activeSession.capsuleVisible ? 3 : 6 })
+        .margin({ bottom: 6 })
 
         Row() {
           Text(this.progressText())
@@ -740,7 +806,7 @@ export struct ReaderControlLayer {
       }
       .width('100%')
       .margin({ top: 12 })
-      ModuleRow({ title: '翻页速度', detail: '8 秒' })
+      ModuleRow({ title: '翻页速度', detail: `${this.uiState.activeSession.countdown > 0 ? this.uiState.activeSession.countdown : 8} 秒` })
       ModuleRow({ title: '翻页方式', detail: '连续' })
     }
     .width('100%')
@@ -828,10 +894,10 @@ export struct ReaderControlLayer {
         ControlAction({ label: '下一句' })
       }
       .width('100%')
-      ModuleRow({ title: '语速', detail: '1.0x' })
-      ModuleRow({ title: '音色', detail: '系统女声' })
-      ModuleRow({ title: '范围', detail: '当前章节' })
-      ModuleRow({ title: '定时', detail: '不开启' })
+      ModuleRow({ title: '语速', detail: this.uiState.readerTts.speed })
+      ModuleRow({ title: '音色', detail: this.uiState.readerTts.voice })
+      ModuleRow({ title: '范围', detail: this.uiState.readerTts.scope })
+      ModuleRow({ title: '定时', detail: this.uiState.readerTts.timer })
     }
     .width('100%')
   }
@@ -839,9 +905,9 @@ export struct ReaderControlLayer {
   @Builder
   AppearancePanel() {
     Column() {
-      ModuleRow({ title: '阅读主题', detail: '纸张' })
-      ModuleRow({ title: '字号', detail: '19fp' })
-      ModuleRow({ title: '行距', detail: '34vp' })
+      ModuleRow({ title: '阅读主题', detail: this.uiState.readerTheme.value })
+      ModuleRow({ title: '字号', detail: `${this.uiState.readerTypography.fontSize}fp` })
+      ModuleRow({ title: '行距', detail: `${Math.round(this.uiState.readerTypography.fontSize * this.uiState.readerTypography.lineHeightRatio)}vp` })
       Row() {
         SegmentItem({ label: '宋体', selected: true })
         SegmentItem({ label: '黑体', selected: false })
@@ -855,11 +921,11 @@ export struct ReaderControlLayer {
   @Builder
   ReaderSettingsPanel() {
     Column() {
-      ToggleRow({ title: '自动翻页', checked: this.uiState.activeSession.kind === 'autoPage' })
-      ModuleRow({ title: '点击翻页方式', detail: '左右热区' })
-      ToggleRow({ title: '音量键翻页', checked: false })
-      ModuleRow({ title: '翻页动画', detail: this.uiState.reducedMotion ? '关闭' : '覆盖' })
-      ToggleRow({ title: '屏幕常亮', checked: false })
+      ToggleRow({ title: '自动翻页', checked: this.uiState.readerSettings.autoPage })
+      ModuleRow({ title: '点击翻页方式', detail: this.uiState.readerSettings.tapMode })
+      ToggleRow({ title: '音量键翻页', checked: this.uiState.readerSettings.volumePage })
+      ModuleRow({ title: '翻页动画', detail: this.uiState.reducedMotion ? '关闭' : this.uiState.readerSettings.pageAnimation })
+      ToggleRow({ title: '屏幕常亮', checked: this.uiState.readerSettings.keepScreenOn })
     }
     .width('100%')
   }
@@ -877,8 +943,8 @@ export struct ReaderControlLayer {
   FullTtsPanel() {
     Column() {
       this.TtsPanel()
-      ModuleRow({ title: '朗读范围', detail: '当前章节' })
-      ModuleRow({ title: '定时关闭', detail: '30 分钟' })
+      ModuleRow({ title: '朗读范围', detail: this.uiState.readerTts.scope })
+      ModuleRow({ title: '定时关闭', detail: this.uiState.readerTts.timer })
     }
     .width('100%')
   }
@@ -887,10 +953,10 @@ export struct ReaderControlLayer {
   FullAppearancePanel() {
     Column() {
       this.AppearancePanel()
-      ModuleRow({ title: '上边距', detail: '72vp' })
-      ModuleRow({ title: '左右边距', detail: '32vp' })
-      ModuleRow({ title: '段首缩进', detail: '2 字' })
-      ModuleRow({ title: '纹理', detail: '纸张' })
+      ModuleRow({ title: '上边距', detail: `${this.uiState.readerPageSpace.topMargin}vp` })
+      ModuleRow({ title: '左右边距', detail: `${this.uiState.readerPageSpace.sideMargin}vp` })
+      ModuleRow({ title: '段首缩进', detail: `${this.uiState.readerPageSpace.paragraphIndent} 字` })
+      ModuleRow({ title: '纹理', detail: this.uiState.readerPageSpace.texture })
     }
     .width('100%')
   }
@@ -899,9 +965,9 @@ export struct ReaderControlLayer {
   FullSettingsPanel() {
     Column() {
       this.ReaderSettingsPanel()
-      ToggleRow({ title: '横屏锁定', checked: false })
-      ToggleRow({ title: '页脚进度信息', checked: true })
-      ToggleRow({ title: '自动缓存后续章节', checked: false })
+      ToggleRow({ title: '横屏锁定', checked: this.uiState.readerSettings.landscapeLock })
+      ToggleRow({ title: '页脚进度信息', checked: this.uiState.readerSettings.statusInfo })
+      ToggleRow({ title: '自动缓存后续章节', checked: this.uiState.readerSettings.cacheNext })
     }
     .width('100%')
   }
@@ -942,7 +1008,7 @@ export struct ReaderControlLayer {
           .borderRadius(4)
         Column()
           .width(8)
-          .height(Math.round(this.railTrackHeight() * 0.72))
+          .height(this.brightnessFillHeight())
           .backgroundColor('#2379A4')
           .borderRadius(4)
       }
@@ -951,16 +1017,18 @@ export struct ReaderControlLayer {
 
       Text('A')
         .fontSize(13)
-        .fontColor('#2B241D')
         .fontWeight(FontWeight.Regular)
         .textAlign(TextAlign.Center)
         .width(24)
         .height(20)
-        .backgroundColor('#DBFAF4EC')
-        .borderColor('#57B4A697')
+        .backgroundColor(this.uiState.readerBrightness.auto ? '#2F6373' : '#DBFAF4EC')
+        .fontColor(this.uiState.readerBrightness.auto ? '#FFFFFF' : '#2B241D')
+        .borderColor(this.uiState.readerBrightness.auto ? '#2F6373' : '#57B4A697')
         .borderWidth(1)
         .borderRadius(999)
         .shadow({ radius: 8, color: '#0F5D4833', offsetX: 0, offsetY: 2 })
+        .onClick(() => this.onToggleBrightnessAuto())
+        .accessibilityText(this.uiState.readerBrightness.auto ? '关闭自动亮度' : '开启自动亮度')
     }
     .width(this.railWidth())
     .height(this.railHeight())
@@ -1163,6 +1231,21 @@ struct ReaderControlIcon {
         .objectFit(ImageFit.Contain)
     } else if (this.icon === 'sun') {
       Image($r('app.media.reader_icon_sun_primary'))
+        .width(this.iconSize)
+        .height(this.iconSize)
+        .objectFit(ImageFit.Contain)
+    } else if (this.icon === 'play-white') {
+      Image($r('app.media.reader_icon_play_white'))
+        .width(this.iconSize)
+        .height(this.iconSize)
+        .objectFit(ImageFit.Contain)
+    } else if (this.icon === 'pause-white') {
+      Image($r('app.media.reader_icon_pause_white'))
+        .width(this.iconSize)
+        .height(this.iconSize)
+        .objectFit(ImageFit.Contain)
+    } else if (this.icon === 'tts-white') {
+      Image($r('app.media.reader_icon_tts_white'))
         .width(this.iconSize)
         .height(this.iconSize)
         .objectFit(ImageFit.Contain)

@@ -1,131 +1,389 @@
-import { SectionHeader } from './SharedComponents';
+import { ReaderUiIcon } from './SharedComponents';
 
-interface RssFeedItem {
-  source: string;
-  title: string;
-  summary: string;
-  time: string;
-  unread: boolean;
+class RssSourceItem {
+  name: string = '';
+  group: string = '';
+  unread: number = 0;
+  status: string = '';
+  tone: string = '';
+  enabled: boolean = true;
+  categories: number = 0;
+  articleStyle: string = '';
+  rule: string = '';
+}
+
+class RssArticleItem {
+  title: string = '';
+  source: string = '';
+  time: string = '';
+  group: string = '';
+  desc: string = '';
+  unread: boolean = false;
+  starred: boolean = false;
 }
 
 @Component
 export struct RssTab {
-  @State feeds: RssFeedItem[] = [
-    {
-      source: '少数派',
-      title: '本周值得读的长文章',
-      summary: '应用、效率和数字生活精选。',
-      time: '12 分钟前',
-      unread: true
-    },
-    {
-      source: '机核',
-      title: '从桌游到互动叙事',
-      summary: '关于规则、世界观和阅读体验的专题。',
-      time: '1 小时前',
-      unread: true
-    },
-    {
-      source: 'The Margins',
-      title: 'Independent publishing notes',
-      summary: '电子书制作、排版和发行观察。',
-      time: '昨天',
-      unread: false
-    }
+  private sources: RssSourceItem[] = [
+    { name: 'GitHub Releases', group: '开源项目', unread: 6, status: '正常', tone: 'good', enabled: true, categories: 3, articleStyle: '列表', rule: '默认 RSS' },
+    { name: '阅读器版本讨论', group: '社区', unread: 12, status: '有更新', tone: 'good', enabled: true, categories: 4, articleStyle: '图文', rule: '自定义列表' },
+    { name: '书源维护公告', group: '维护', unread: 2, status: '需登录', tone: 'warn', enabled: true, categories: 2, articleStyle: '紧凑', rule: '正文规则' },
+    { name: '本地系统通知', group: '系统', unread: 0, status: '暂停', tone: 'muted', enabled: false, categories: 1, articleStyle: '列表', rule: '单 URL' }
+  ];
+  private articles: RssArticleItem[] = [
+    { title: 'Reader UI 前端输入件更新说明', source: 'GitHub Releases', time: '10:18', group: '开源项目', desc: '新增发现页状态路由、阅读控制层响应式约束，并补充 RSS 页面结构规划。', unread: true, starred: true },
+    { title: '订阅源规则解析失败排查', source: '书源维护公告', time: '09:52', group: '维护', desc: '部分订阅源返回 HTML 而不是 XML，已建议检查 Cookie、登录态和正文提取规则。', unread: true, starred: false },
+    { title: 'Legado 订阅源配置经验整理', source: '阅读器版本讨论', time: '昨天', group: '社区', desc: '社区整理了单 URL 源、分类入口、文章样式和 WebView 正文处理的常见配置方式。', unread: true, starred: false }
   ];
 
   build() {
-    Navigation() {
+    Column() {
+      RssTopBar({ enabledCount: 3 })
+
       Scroll() {
         Column() {
-          SectionHeader({ title: 'RSS', detail: '订阅更新' })
-          RssSummaryCard({ unreadCount: this.feeds.filter((item: RssFeedItem) => item.unread).length })
-          ForEach(this.feeds, (item: RssFeedItem) => {
-            RssFeedCard({ item })
-          }, (item: RssFeedItem) => `${item.source}-${item.title}`)
+          RssSearchEntry()
+          RssModeRow()
+          RssSourceOverview({ sources: this.sources })
+          RssArticleSection({ articles: this.articles })
         }
         .width('100%')
-        .padding(16)
+        .padding({ left: 15, right: 15, top: 8, bottom: 122 })
       }
       .width('100%')
-      .height('100%')
-      .backgroundColor('#F5F5F5')
+      .layoutWeight(1)
+      .scrollBar(BarState.Off)
     }
-    .title('RSS')
-    .titleMode(NavigationTitleMode.Mini)
+    .width('100%')
+    .height('100%')
+    .backgroundColor('#F4EFE8')
   }
 }
 
 @Component
-struct RssSummaryCard {
-  @Prop unreadCount: number = 0;
+struct RssTopBar {
+  @Prop enabledCount: number = 0;
 
   build() {
     Row() {
-      Column() {
-        Text('未读')
-          .fontSize(12)
-          .fontColor('#666666')
-        Text(this.unreadCount.toString())
-          .fontSize(26)
-          .fontWeight(FontWeight.Bold)
-          .fontColor('#1A1A1A')
-          .margin({ top: 4 })
-      }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
+      Text('RSS')
+        .fontSize(29)
+        .fontWeight(FontWeight.Bold)
+        .fontFamily('serif')
+        .fontColor('#201B16')
+        .layoutWeight(1)
 
-      Text('全部订阅')
-        .fontSize(13)
-        .fontColor('#007AFF')
+      Row() {
+        Circle({ width: 8, height: 8 })
+          .fill('#2E7D68')
+        Column() {
+          Text(`${this.enabledCount} 个启用源`)
+            .fontSize(11)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#201B16')
+            .maxLines(1)
+          Text('· 10:18 更新')
+            .fontSize(10)
+            .fontColor('#756F69')
+            .maxLines(1)
+        }
+        .margin({ left: 6, right: 6 })
+        ReaderUiIcon({ iconName: 'refresh', tone: 'primary', iconSize: 18 })
+      }
+      .height(36)
+      .padding({ left: 12, right: 12 })
+      .alignItems(VerticalAlign.Center)
+      .backgroundColor('#FFFCF8')
+      .border({ width: 1, color: '#D8CCBC' })
+      .borderRadius(18)
+      .margin({ right: 8 })
+
+      Row() {
+        ReaderUiIcon({ iconName: 'list', tone: 'primary', iconSize: 18 })
+        Text('管理')
+          .fontSize(12)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#274F66')
+          .margin({ left: 5 })
+      }
+      .height(36)
+      .padding({ left: 12, right: 12 })
+      .alignItems(VerticalAlign.Center)
+      .backgroundColor('#FFFCF8')
+      .border({ width: 1, color: '#D8CCBC' })
+      .borderRadius(18)
     }
     .width('100%')
-    .padding(16)
-    .backgroundColor('#FFFFFF')
-    .borderRadius(8)
-    .margin({ bottom: 12 })
+    .height(62)
+    .padding({ left: 20, right: 20, top: 6 })
+    .alignItems(VerticalAlign.Center)
   }
 }
 
 @Component
-struct RssFeedCard {
-  @Prop item: RssFeedItem;
+struct RssSearchEntry {
+  build() {
+    Row() {
+      ReaderUiIcon({ iconName: 'search', tone: 'muted', iconSize: 18 })
+      Text('搜索订阅源、文章标题或分组')
+        .fontSize(13)
+        .fontColor('#756F69')
+        .fontWeight(FontWeight.Bold)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .margin({ left: 8 })
+    }
+    .width('100%')
+    .height(42)
+    .padding({ left: 12, right: 12 })
+    .alignItems(VerticalAlign.Center)
+    .backgroundColor('#FFFCF8')
+    .border({ width: 1, color: '#D8CCBC' })
+    .borderRadius(21)
+    .shadow({ radius: 10, color: '#34261A14', offsetX: 0, offsetY: 3 })
+  }
+}
+
+@Component
+struct RssModeRow {
+  private modes: string[] = ['源列表', '全部', '收藏', '规则订阅'];
+
+  build() {
+    Row() {
+      ForEach(this.modes, (mode: string) => {
+        Text(mode)
+          .height(30)
+          .padding({ left: 10, right: 10 })
+          .fontSize(12)
+          .fontWeight(FontWeight.Bolder)
+          .fontColor(mode === '源列表' ? '#FFFFFF' : '#564D44')
+          .textAlign(TextAlign.Center)
+          .backgroundColor(mode === '源列表' ? '#366179' : '#D6EEE8DF')
+          .borderRadius(15)
+          .margin({ right: 6 })
+      }, (mode: string) => mode)
+    }
+    .width('100%')
+    .margin({ top: 7, bottom: 7 })
+  }
+}
+
+@Component
+struct RssSourceOverview {
+  @Prop sources: RssSourceItem[] = [];
 
   build() {
     Column() {
       Row() {
-        Text(this.item.source)
-          .fontSize(13)
-          .fontColor(this.item.unread ? '#007AFF' : '#777777')
+        Text('订阅源')
+          .fontSize(15)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#201B16')
           .layoutWeight(1)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-        Text(this.item.time)
-          .fontSize(12)
-          .fontColor('#999999')
+        RssSmallPill({ label: '导入', iconName: 'upload' })
+        RssSmallPill({ label: '新建', iconName: 'add' })
       }
       .width('100%')
+      .height(44)
+      .padding({ left: 10, right: 10 })
+      .alignItems(VerticalAlign.Center)
+      .backgroundColor('#FFFCF8')
+      .border({ width: 1, color: '#4DB4A697' })
+      .borderRadius(8)
 
-      Text(this.item.title)
-        .fontSize(16)
-        .fontWeight(this.item.unread ? FontWeight.Medium : FontWeight.Regular)
-        .fontColor('#1A1A1A')
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .margin({ top: 8 })
+      Row() {
+        Text('筛选')
+          .fontSize(12)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#756F69')
+        Text('全部')
+          .height(28)
+          .padding({ left: 10, right: 10 })
+          .fontSize(12)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#FFFFFF')
+          .backgroundColor('#366179')
+          .borderRadius(14)
+          .margin({ left: 8 })
+        Text('开源项目')
+          .height(28)
+          .padding({ left: 10, right: 10 })
+          .fontSize(12)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#564D44')
+          .backgroundColor('#D6EEE8DF')
+          .borderRadius(14)
+          .margin({ left: 6 })
+      }
+      .width('100%')
+      .margin({ top: 8 })
 
-      Text(this.item.summary)
-        .fontSize(13)
-        .fontColor('#666666')
-        .lineHeight(20)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .margin({ top: 6 })
+      Column() {
+        ForEach(this.sources, (source: RssSourceItem, index: number) => {
+          RssSourceRow({ source, topDivider: index > 0 })
+        }, (source: RssSourceItem) => source.name)
+      }
+      .width('100%')
+      .backgroundColor('#FFFCF8')
+      .border({ width: 1, color: '#4DB4A697' })
+      .borderRadius(8)
+      .clip(true)
+      .margin({ top: 8 })
     }
     .width('100%')
-    .padding(16)
-    .backgroundColor('#FFFFFF')
-    .borderRadius(8)
-    .margin({ bottom: 8 })
+  }
+}
+
+@Component
+struct RssSmallPill {
+  @Prop label: string = '';
+  @Prop iconName: string = '';
+
+  build() {
+    Row() {
+      ReaderUiIcon({ iconName: this.iconName, tone: 'muted', iconSize: 15 })
+      Text(this.label)
+        .fontSize(11)
+        .fontWeight(FontWeight.Bolder)
+        .fontColor('#554C43')
+        .margin({ left: 5 })
+    }
+    .height(30)
+    .padding({ left: 9, right: 9 })
+    .alignItems(VerticalAlign.Center)
+    .backgroundColor('#D6EEE8DF')
+    .borderRadius(15)
+    .margin({ left: 6 })
+  }
+}
+
+@Component
+struct RssSourceRow {
+  @Prop source: RssSourceItem;
+  @Prop topDivider: boolean = false;
+
+  build() {
+    Row() {
+      Row() {
+        ReaderUiIcon({ iconName: 'rss', tone: this.source.enabled ? 'primary' : 'muted', iconSize: 18 })
+      }
+      .width(32)
+      .height(32)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+      .backgroundColor('#1F366179')
+      .borderRadius(16)
+
+      Column() {
+        Text(this.source.name)
+          .fontSize(13)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#201B16')
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(`${this.source.group} · ${this.source.categories} 个入口 · ${this.source.articleStyle} · ${this.source.rule}`)
+          .fontSize(10)
+          .fontColor('#756F69')
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .margin({ top: 3 })
+      }
+      .layoutWeight(1)
+      .margin({ left: 8, right: 8 })
+
+      Text(this.source.unread.toString())
+        .fontSize(16)
+        .fontWeight(FontWeight.Bold)
+        .fontColor('#274F66')
+        .width(28)
+        .textAlign(TextAlign.Center)
+
+      Circle({ width: 8, height: 8 })
+        .fill(this.source.tone === 'warn' ? '#F48B13' : this.source.tone === 'muted' ? '#A9A199' : '#2E7D68')
+    }
+    .width('100%')
+    .height(62)
+    .padding({ left: 10, right: 10, top: 9, bottom: 9 })
+    .alignItems(VerticalAlign.Center)
+    .opacity(this.source.enabled ? 1 : 0.62)
+    .border({ width: { top: this.topDivider ? 1 : 0 }, color: '#33B4A697' })
+  }
+}
+
+@Component
+struct RssArticleSection {
+  @Prop articles: RssArticleItem[] = [];
+
+  build() {
+    Column() {
+      Row() {
+        Text('最近未读')
+          .fontSize(15)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#201B16')
+          .layoutWeight(1)
+        RssSmallPill({ label: '查看全部', iconName: 'list' })
+      }
+      .width('100%')
+      .height(38)
+      .alignItems(VerticalAlign.Center)
+      .margin({ top: 8 })
+
+      Column() {
+        ForEach(this.articles, (article: RssArticleItem, index: number) => {
+          RssArticleRow({ article, topDivider: index > 0 })
+        }, (article: RssArticleItem) => article.title)
+      }
+      .width('100%')
+      .backgroundColor('#FFFCF8')
+      .border({ width: 1, color: '#4DB4A697' })
+      .borderRadius(8)
+      .clip(true)
+    }
+    .width('100%')
+  }
+}
+
+@Component
+struct RssArticleRow {
+  @Prop article: RssArticleItem;
+  @Prop topDivider: boolean = false;
+
+  build() {
+    Row() {
+      Circle({ width: 8, height: 8 })
+        .fill(this.article.unread ? '#366179' : '#C8BDB0')
+        .margin({ right: 8 })
+
+      Column() {
+        Text(this.article.title)
+          .fontSize(14)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#201B16')
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(`${this.article.source} · ${this.article.time} · ${this.article.group}`)
+          .fontSize(10)
+          .fontColor('#756F69')
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .margin({ top: 4 })
+        Text(this.article.desc)
+          .fontSize(12)
+          .fontColor('#5C554D')
+          .lineHeight(17)
+          .maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .margin({ top: 4 })
+      }
+      .layoutWeight(1)
+
+      ReaderUiIcon({ iconName: this.article.starred ? 'bookmark' : 'chevron', tone: 'muted', iconSize: 18 })
+    }
+    .width('100%')
+    .height(88)
+    .padding({ left: 12, right: 12, top: 10, bottom: 10 })
+    .alignItems(VerticalAlign.Top)
+    .border({ width: { top: this.topDivider ? 1 : 0 }, color: '#33B4A697' })
   }
 }

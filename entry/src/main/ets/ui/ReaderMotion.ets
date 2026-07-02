@@ -14,6 +14,11 @@ export class ReaderMotionId {
   static readonly readerModuleSwitch: string = 'reader.module.switch';
   static readonly readerQuickPromote: string = 'reader.quick.promote';
   static readonly readerPanelExpand: string = 'reader.panel.expand';
+  static readonly readerPageTurnNext: string = 'reader.page.turn.next';
+  static readonly readerPageTurnPrev: string = 'reader.page.turn.prev';
+  static readonly readerChapterJump: string = 'reader.chapter.jump';
+  static readonly readerBrightnessUpdate: string = 'reader.brightness.update';
+  static readonly readerBrightnessAutoToggle: string = 'reader.brightness.auto.toggle';
   static readonly readerSessionAutoPageStart: string = 'reader.session.autoPage.start';
   static readonly readerSessionTtsStart: string = 'reader.session.tts.start';
   static readonly readerSessionCapsuleEnter: string = 'reader.session.capsule.enter';
@@ -25,6 +30,7 @@ export class ReaderMotionId {
   static readonly readerSessionControlSpaceExit: string = 'reader.session.controlSpace.exit';
   static readonly motionInterruptCancel: string = 'motion.interrupt.cancel';
   static readonly motionInterruptRedirect: string = 'motion.interrupt.redirect';
+  static readonly motionInterruptCompleteThenReplace: string = 'motion.interrupt.completeThenReplace';
 }
 
 export class ReaderMotionSnapshot {
@@ -37,9 +43,19 @@ export class ReaderMotionSnapshot {
   durationReaderEntry: number = 240;
   durationReaderControl: number = 160;
   durationReaderSession: number = 160;
+  durationRunningSpace: number = 160;
+  durationCapsuleEnter: number = 180;
+  durationCapsuleControl: number = 90;
+  durationCapsuleTick: number = 120;
+  durationPageTurn: number = 220;
+  durationPanel: number = 220;
   durationOverlay: number = 200;
   durationInterruptSettle: number = 80;
   readerEntryY: number = 12;
+  runningSpaceY: number = 8;
+  capsuleY: number = 6;
+  runningSpaceDockScale: number = 1;
+  capsuleControlPressScale: number = 0.96;
   coverPressScale: number = 0.98;
 }
 
@@ -55,9 +71,19 @@ export class ReaderMotion {
       snapshot.durationReaderEntry = 0;
       snapshot.durationReaderControl = 0;
       snapshot.durationReaderSession = 0;
+      snapshot.durationRunningSpace = 0;
+      snapshot.durationCapsuleEnter = 0;
+      snapshot.durationCapsuleControl = 0;
+      snapshot.durationCapsuleTick = 0;
+      snapshot.durationPageTurn = 0;
+      snapshot.durationPanel = 0;
       snapshot.durationOverlay = 0;
       snapshot.durationInterruptSettle = 0;
       snapshot.readerEntryY = 0;
+      snapshot.runningSpaceY = 0;
+      snapshot.capsuleY = 0;
+      snapshot.runningSpaceDockScale = 1;
+      snapshot.capsuleControlPressScale = 1;
       snapshot.coverPressScale = 1;
     }
     return snapshot;
@@ -89,6 +115,22 @@ export class ReaderMotion {
 
   static durationReaderSession(reducedMotion: boolean): number {
     return ReaderMotion.snapshot(reducedMotion).durationReaderSession;
+  }
+
+  static durationRunningSpace(reducedMotion: boolean): number {
+    return ReaderMotion.snapshot(reducedMotion).durationRunningSpace;
+  }
+
+  static durationCapsuleControl(reducedMotion: boolean): number {
+    return ReaderMotion.snapshot(reducedMotion).durationCapsuleControl;
+  }
+
+  static durationPageTurn(reducedMotion: boolean): number {
+    return ReaderMotion.snapshot(reducedMotion).durationPageTurn;
+  }
+
+  static durationPanel(reducedMotion: boolean): number {
+    return ReaderMotion.snapshot(reducedMotion).durationPanel;
   }
 
   static durationRoute(reducedMotion: boolean): number {

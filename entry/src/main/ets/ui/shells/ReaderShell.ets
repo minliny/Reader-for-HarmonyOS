@@ -14,6 +14,8 @@ export struct ReaderShell {
   onOpenPresentation: (route: string) => void = (_route: string) => {};
   onToggleMore: () => void = () => {};
   onCloseMore: () => void = () => {};
+  onToggleBrightnessAuto: () => void = () => {};
+  onAdjustBrightness: (delta: number) => void = (_delta: number) => {};
 
   build() {
     ImmersiveReaderSurface({
@@ -27,7 +29,9 @@ export struct ReaderShell {
       onStopSession: this.onStopSession,
       onOpenPresentation: this.onOpenPresentation,
       onToggleMore: this.onToggleMore,
-      onCloseMore: this.onCloseMore
+      onCloseMore: this.onCloseMore,
+      onToggleBrightnessAuto: this.onToggleBrightnessAuto,
+      onAdjustBrightness: this.onAdjustBrightness
     })
   }
 }
