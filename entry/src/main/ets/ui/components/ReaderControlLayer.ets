@@ -768,60 +768,258 @@ export struct ReaderControlLayer {
 
   @Builder
   QuickActionPanel() {
-    Column() {
-      Row() {
-        Text(ReaderRoute.readerPresentationLabel(this.uiState.readerPresentationRoute))
-          .fontSize(ReaderTypography.moduleHeaderTitleFontSize)
-          .fontWeight(FontWeight.Medium)
-          .fontColor('#332C25')
-          .layoutWeight(1)
-        Text('关闭')
-          .fontSize(ReaderTypography.topBarButtonFontSize)
-          .fontColor('#2F6373')
-          .onClick(() => this.onOpenPresentation(ReaderRoute.readerControl))
+    if (this.uiState.activeQuickPanel === ReaderQuickPanelType.autoPage) {
+      Column() {
+        this.AutoPageQuickPanel()
       }
       .width('100%')
+      .height('100%')
+      .padding({ left: 10, right: 10, top: 10, bottom: 10 })
+      .backgroundColor('#FFFCF8')
+      .borderColor('#D6CABC')
+      .borderWidth(1)
+      .borderRadius(8)
+    } else {
+      Column() {
+        Row() {
+          Text(ReaderRoute.readerPresentationLabel(this.uiState.readerPresentationRoute))
+            .fontSize(ReaderTypography.moduleHeaderTitleFontSize)
+            .fontWeight(FontWeight.Medium)
+            .fontColor('#332C25')
+            .layoutWeight(1)
+          Text('关闭')
+            .fontSize(ReaderTypography.topBarButtonFontSize)
+            .fontColor('#2F6373')
+            .onClick(() => this.onOpenPresentation(ReaderRoute.readerControl))
+        }
+        .width('100%')
 
-      if (this.uiState.activeQuickPanel === ReaderQuickPanelType.autoPage) {
-        this.AutoPageQuickPanel()
-      } else if (this.uiState.activeQuickPanel === ReaderQuickPanelType.search) {
-        this.ContentSearchPanel()
-      } else {
-        this.ContentReplacementPanel()
+        if (this.uiState.activeQuickPanel === ReaderQuickPanelType.search) {
+          this.ContentSearchPanel()
+        } else {
+          this.ContentReplacementPanel()
+        }
       }
+      .width('100%')
+      .height('100%')
+      .padding({ left: 10, right: 10, top: 10, bottom: 10 })
+      .backgroundColor('#FFFCF8')
+      .borderColor('#D6CABC')
+      .borderWidth(1)
+      .borderRadius(8)
     }
-    .width('100%')
-    .height('100%')
-    .padding({ left: 10, right: 10, top: 10, bottom: 10 })
-    .backgroundColor('#FFFCF8')
-    .borderColor('#D6CABC')
-    .borderWidth(1)
-    .borderRadius(8)
   }
 
   @Builder
   AutoPageQuickPanel() {
     Column() {
       Row() {
-        ControlAction({ label: '上一章' })
-        ControlAction({
-          label: this.sessionActionLabel('autoPage', '开始'),
-          onPress: () => this.activateOrToggleSession('autoPage')
-        })
-        ControlAction({ label: '下一章' })
+        Row() {
+          ReaderControlIcon({ icon: 'back', tone: 'primary', iconSize: 12 })
+          Text('返回')
+            .fontSize(10)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#2F6373')
+            .lineHeight(10)
+            .margin({ left: 4 })
+        }
+        .height(24)
+        .padding({ left: 9, right: 9 })
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+        .borderColor('#B82F6373')
+        .borderWidth(1)
+        .borderRadius(8)
+        .backgroundColor('#6BFFFCF8')
+        .onClick(() => this.onOpenPresentation(ReaderRoute.readerControl))
+        .accessibilityText('返回阅读控制首页')
+
+        Blank()
+
+        Text('停止自动翻页')
+          .height(24)
+          .padding({ left: 9, right: 9 })
+          .fontSize(10)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#2F6373')
+          .textAlign(TextAlign.Center)
+          .borderColor('#B82F6373')
+          .borderWidth(1)
+          .borderRadius(8)
+          .backgroundColor('#6BFFFCF8')
+          .opacity(this.isActiveSession('autoPage') ? 1 : 0.78)
+          .onClick(() => this.onStopSession())
+          .accessibilityText('停止自动翻页')
       }
       .width('100%')
-      .margin({ top: 12 })
-      ModuleRow({ title: '翻页速度', detail: `${this.uiState.activeSession.countdown > 0 ? this.uiState.activeSession.countdown : 8} 秒` })
-      ModuleRow({ title: '翻页方式', detail: '连续' })
+      .height(24)
+      .alignItems(VerticalAlign.Center)
+
+      Row() {
+        this.AutoPageChapterButton('上一章', 'chevron-left')
+        this.AutoPageToggleButton()
+        this.AutoPageChapterButton('下一章', 'chevron')
+      }
+      .width('100%')
+      .height(this.isCompactLandscape() ? 56 : 64)
+      .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+      .alignItems(VerticalAlign.Center)
+      .backgroundColor('#9EFFFCF8')
+      .borderColor('#57B4A697')
+      .borderWidth(1)
+      .borderRadius(8)
+      .margin({ top: 5 })
+
+      Row() {
+        Text('翻页速度')
+          .fontSize(12)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#172632')
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .layoutWeight(1)
+
+        Row() {
+          this.AutoPageSpeedButton('-')
+          Text(`${this.autoPageCountdown()} 秒`)
+            .width(46)
+            .fontSize(15)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#172632')
+            .textAlign(TextAlign.Center)
+          this.AutoPageSpeedButton('+')
+        }
+        .height(24)
+        .alignItems(VerticalAlign.Center)
+      }
+      .width('100%')
+      .height(this.isCompactLandscape() ? 30 : 32)
+      .padding({ left: 6, right: 6 })
+      .alignItems(VerticalAlign.Center)
+      .backgroundColor('#C7FFF8EF')
+      .borderColor('#57B4A697')
+      .borderWidth(1)
+      .borderRadius(8)
+      .margin({ top: 5 })
+
+      Row() {
+        this.AutoPageModeButton('连续', true)
+        this.AutoPageModeButton('单页', false)
+      }
+      .width('100%')
+      .height(this.isCompactLandscape() ? 28 : 28)
+      .padding(3)
+      .backgroundColor('#7AFFFCF8')
+      .borderColor('#57B4A697')
+      .borderWidth(1)
+      .borderRadius(8)
+      .margin({ top: 5 })
     }
     .width('100%')
     .height('100%')
-    .padding({ left: 10, right: 10, top: 10, bottom: 10 })
-    .backgroundColor('#FFFCF8')
-    .borderColor('#D6CABC')
-    .borderWidth(1)
-    .borderRadius(8)
+  }
+
+  private autoPageCountdown(): number {
+    if (this.uiState.activeSession.kind === 'autoPage' && this.uiState.activeSession.countdown > 0) {
+      return this.uiState.activeSession.countdown;
+    }
+    return 8;
+  }
+
+  @Builder
+  AutoPageChapterButton(label: string, icon: string) {
+    Column() {
+      Row() {
+        ReaderControlIcon({ icon, tone: 'chapter', iconSize: this.isCompactLandscape() ? 12 : 14 })
+        ReaderControlIcon({ icon, tone: 'chapter', iconSize: this.isCompactLandscape() ? 12 : 14 })
+          .margin({ left: -7 })
+      }
+      .width(this.isCompactLandscape() ? 30 : 34)
+      .height(this.isCompactLandscape() ? 26 : 30)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+      .backgroundColor('#80FFFCF8')
+      .borderColor('#57B4A697')
+      .borderWidth(1)
+      .borderRadius(8)
+
+      Text(label)
+        .fontSize(this.isCompactLandscape() ? 9 : 10)
+        .fontWeight(FontWeight.Bold)
+        .fontColor('#332C25')
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .margin({ top: 3 })
+    }
+    .width(this.isCompactLandscape() ? 44 : 46)
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+    .accessibilityText(label)
+  }
+
+  @Builder
+  AutoPageToggleButton() {
+    Column() {
+      Row() {
+        ReaderControlIcon({
+          icon: this.uiState.activeSession.kind === 'autoPage' && this.uiState.activeSession.playing ? 'pause-white' : 'play-white',
+          tone: 'white',
+          iconSize: this.isCompactLandscape() ? 15 : 16
+        })
+      }
+      .width(this.isCompactLandscape() ? 36 : 38)
+      .height(this.isCompactLandscape() ? 36 : 38)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+      .backgroundColor('#274F66')
+      .borderRadius(999)
+
+      Text('自动翻页')
+        .fontSize(this.isCompactLandscape() ? 10 : 12)
+        .fontWeight(FontWeight.Bold)
+        .fontColor('#172632')
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .margin({ top: 4 })
+    }
+    .layoutWeight(1)
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+    .backgroundColor(this.isActiveSession('autoPage') ? '#0F2F6373' : '#00000000')
+    .onClick(() => this.activateOrToggleSession('autoPage'))
+    .accessibilityText(this.isActiveSession('autoPage') ? '暂停或继续自动翻页' : '开始自动翻页')
+  }
+
+  @Builder
+  AutoPageSpeedButton(label: string) {
+    Text(label)
+      .width(24)
+      .height(24)
+      .fontSize(18)
+      .fontWeight(FontWeight.Bold)
+      .fontColor('#142534')
+      .textAlign(TextAlign.Center)
+      .backgroundColor('#A8FFFCF8')
+      .borderColor('#57B4A697')
+      .borderWidth(1)
+      .borderRadius(999)
+      .accessibilityText(label === '-' ? '减慢自动翻页' : '加快自动翻页')
+  }
+
+  @Builder
+  AutoPageModeButton(label: string, active: boolean) {
+    Text(label)
+      .layoutWeight(1)
+      .height('100%')
+      .fontSize(12)
+      .fontWeight(FontWeight.Bold)
+      .fontColor(active ? '#FFFFFF' : '#172632')
+      .textAlign(TextAlign.Center)
+      .backgroundColor(active ? '#274F66' : '#00000000')
+      .borderRadius(6)
+      .accessibilityText(`${label}${active ? '，当前选中' : ''}`)
   }
 
   @Builder
