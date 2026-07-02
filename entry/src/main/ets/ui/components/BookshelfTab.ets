@@ -185,7 +185,7 @@ struct BookshelfContent {
     if (this.uiState.adaptive.widthVp >= 840) {
       return 24;
     }
-    return 15;
+    return 20;
   }
 
   private columnsTemplate(): string {
