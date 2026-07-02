@@ -94,86 +94,18 @@ export struct ReaderControlLayer {
     return this.uiState.activeSession.capsuleVisible ? 5 : this.isCompactLandscape() ? 4 : 6;
   }
 
-  private controlSpaceHeight(): number {
-    return this.isCompactLandscape() ? 40 : 44;
-  }
-
   private actionPanelHeight(): number {
     if (this.uiState.activeSession.capsuleVisible) {
-      return this.isCompactLandscape() ? 48 : 58;
+      return this.isCompactLandscape() ? 48 : 50;
     }
     return this.isCompactLandscape() ? 58 : 75.5;
   }
 
   private chapterPanelHeight(): number {
     if (this.uiState.activeSession.capsuleVisible) {
-      return this.isCompactLandscape() ? 56 : 80;
+      return this.isCompactLandscape() ? 56 : 64;
     }
     return this.isCompactLandscape() ? 86 : 108.5;
-  }
-
-  private actionPanelPadding(): number {
-    if (this.uiState.activeSession.capsuleVisible || this.isCompactLandscape()) {
-      return 5;
-    }
-    return 8;
-  }
-
-  private actionPanelTopPadding(): number {
-    if (this.uiState.activeSession.capsuleVisible || this.isCompactLandscape()) {
-      return 5;
-    }
-    return 9;
-  }
-
-  private actionItemGap(): number {
-    return this.uiState.activeSession.capsuleVisible || this.isCompactLandscape() ? 5 : 8;
-  }
-
-  private actionIconSize(): number {
-    return this.uiState.activeSession.capsuleVisible || this.isCompactLandscape() ? 16 : 24;
-  }
-
-  private actionLabelFontSize(): number {
-    return this.uiState.activeSession.capsuleVisible || this.isCompactLandscape() ? 10 : ReaderTypography.actionLabelFontSize;
-  }
-
-  private actionLabelGap(): number {
-    return this.uiState.activeSession.capsuleVisible || this.isCompactLandscape() ? 3 : 6;
-  }
-
-  private chapterPanelHorizontalPadding(): number {
-    return this.uiState.activeSession.capsuleVisible || this.isCompactLandscape() ? 7 : 10;
-  }
-
-  private chapterPanelVerticalPadding(): number {
-    return this.uiState.activeSession.capsuleVisible || this.isCompactLandscape() ? 5 : 9;
-  }
-
-  private chapterTitleFontSize(): number {
-    return this.uiState.activeSession.capsuleVisible || this.isCompactLandscape() ? 11 : ReaderTypography.chapterTitleFontSize;
-  }
-
-  private progressRowHeight(): number {
-    return this.uiState.activeSession.capsuleVisible ? 22 : 30;
-  }
-
-  private progressTrackTop(): number {
-    return this.uiState.activeSession.capsuleVisible ? 9 : 12;
-  }
-
-  private progressThumbTop(): number {
-    return this.uiState.activeSession.capsuleVisible ? 5 : 8;
-  }
-
-  private sessionStatusText(): string {
-    if (this.uiState.activeSession.kind === 'autoPage' && this.uiState.activeSession.playing) {
-      return '8 秒后翻页';
-    }
-    if (this.uiState.activeSession.kind === 'tts' && this.uiState.activeSession.playing) {
-      return '正在朗读';
-    }
-    return this.uiState.activeSession.statusText;
   }
 
   private hasChapterTitle(): boolean {
@@ -515,6 +447,10 @@ export struct ReaderControlLayer {
   @Builder
   CompactControlPanel() {
     Column() {
+      if (this.uiState.activeSession.capsuleVisible) {
+        this.ControlSpace()
+      }
+
       if (this.uiState.readerMode === ReaderMode.control) {
         this.ReaderControlMain()
       } else if (this.isQuickPresentation()) {
@@ -606,128 +542,61 @@ export struct ReaderControlLayer {
 
   @Builder
   ControlSpace() {
-    Row({ space: 6 }) {
-      Row() {
-        if (this.uiState.activeSession.kind === 'tts') {
-          ReaderControlIcon({ icon: 'reader-module-tts', tone: 'primary', iconSize: 15 })
-        } else {
-          Text('8')
-            .width(22)
-            .height(22)
-            .fontSize(11)
-            .lineHeight(11)
-            .fontWeight(FontWeight.Bold)
-            .fontColor('#FFFFFF')
-            .textAlign(TextAlign.Center)
-            .backgroundColor('#2F6373')
-            .borderRadius(999)
-        }
-      }
-      .width(28)
-      .height(28)
-      .justifyContent(FlexAlign.Center)
-      .alignItems(VerticalAlign.Center)
-      .backgroundColor('#C7FFFFFF')
-      .borderRadius(999)
-
-      Column() {
-        Text(this.uiState.activeSession.label)
-          .fontSize(12)
-          .lineHeight(13.2)
-          .fontWeight(FontWeight.Bold)
-          .fontColor('#2D3940')
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-        Text(this.sessionStatusText())
-          .fontSize(9)
-          .lineHeight(9.9)
-          .fontWeight(FontWeight.Bold)
-          .fontColor('#2F6373')
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .margin({ top: 1 })
-      }
-      .layoutWeight(1)
-      .justifyContent(FlexAlign.Center)
-      .alignItems(HorizontalAlign.Start)
-
-      Row() {
-        if (this.uiState.activeSession.playing) {
-          Image($r('app.media.reader_icon_pause_white'))
-            .width(12)
-            .height(12)
-            .objectFit(ImageFit.Contain)
-        } else {
-          Image($r('app.media.reader_icon_play_white'))
-            .width(12)
-            .height(12)
-            .objectFit(ImageFit.Contain)
-        }
-      }
-      .width(28)
-      .height(28)
-      .justifyContent(FlexAlign.Center)
-      .alignItems(VerticalAlign.Center)
-      .backgroundColor('#2F6373')
-      .borderRadius(999)
-      .onClick(() => this.onToggleSession())
-      .accessibilityText(this.uiState.activeSession.playing ? '暂停自动翻页' : '继续自动翻页')
+    Row() {
+      Text(this.uiState.activeSession.label)
+        .fontSize(12)
+        .fontColor('#2D3940')
+      Text(this.uiState.activeSession.statusText)
+        .fontSize(9)
+        .fontColor('#2F6373')
+        .margin({ left: 8 })
+        .layoutWeight(1)
+      Text(this.uiState.activeSession.playing ? '暂停' : '继续')
+        .fontSize(12)
+        .fontColor('#2F6373')
+        .margin({ right: 14 })
+        .onClick(() => this.onToggleSession())
+      Text('停止')
+        .fontSize(12)
+        .fontColor('#2F6373')
+        .onClick(() => this.onStopSession())
     }
     .width('100%')
-    .height(this.controlSpaceHeight())
-    .padding({ left: 7, right: 7, top: 5, bottom: 5 })
-    .backgroundColor('#172F6373')
-    .borderColor('#472F6373')
+    .height(38)
+    .padding({ left: 12, right: 12 })
+    .backgroundColor('#E7F0F2')
+    .borderColor('#B8CED5')
     .borderWidth(1)
     .borderRadius(8)
-    .margin({ bottom: this.controlMainGap() })
-    .accessibilityText(`阅读运行中控制 ${this.uiState.activeSession.label} ${this.sessionStatusText()}`)
+    .margin({ bottom: 12 })
   }
 
   @Builder
   ReaderControlMain() {
     Column() {
-      if (this.uiState.activeSession.capsuleVisible) {
-        this.ControlSpace()
-      }
-
-      Row({ space: this.actionItemGap() }) {
+      Row({ space: 8 }) {
         ControlAction({
           label: '搜索',
           icon: 'reader-content-search',
-          iconSize: this.actionIconSize(),
-          labelFontSize: this.actionLabelFontSize(),
-          labelGap: this.actionLabelGap(),
           endGap: 0,
           onPress: () => this.onOpenPresentation(ReaderRoute.contentSearch)
         })
         ControlAction({
           label: '自动翻页',
           icon: 'reader-auto-page',
-          iconSize: this.actionIconSize(),
-          labelFontSize: this.actionLabelFontSize(),
-          labelGap: this.actionLabelGap(),
           endGap: 0,
           onPress: () => this.onOpenPresentation(ReaderRoute.autoPage)
         })
         ControlAction({
           label: '替换',
           icon: 'reader-content-replace',
-          iconSize: this.actionIconSize(),
-          labelFontSize: this.actionLabelFontSize(),
-          labelGap: this.actionLabelGap(),
           endGap: 0,
           onPress: () => this.onOpenPresentation(ReaderRoute.contentReplacement)
         })
       }
       .width('100%')
       .height(this.actionPanelHeight())
-      .padding({
-        left: this.actionPanelPadding(),
-        right: this.actionPanelPadding(),
-        top: this.actionPanelTopPadding(),
-        bottom: this.actionPanelPadding()
-      })
+      .padding({ left: 8, right: 8, top: 9, bottom: 9 })
       .backgroundColor('#FFFCF8')
       .borderColor('#D6CABC')
       .borderWidth(1)
@@ -743,7 +612,7 @@ export struct ReaderControlLayer {
           })
           Column() {
             Text(this.chapterTitle())
-              .fontSize(this.chapterTitleFontSize())
+              .fontSize(ReaderTypography.chapterTitleFontSize)
               .lineHeight(16.25)
               .fontWeight(FontWeight.Bold)
               .fontColor('#332C25')
@@ -753,7 +622,7 @@ export struct ReaderControlLayer {
               .textOverflow({ overflow: TextOverflow.Ellipsis })
           }
           .layoutWeight(1)
-          .constraintSize({ minHeight: this.uiState.activeSession.capsuleVisible ? 28 : 34 })
+          .constraintSize({ minHeight: 34 })
           .justifyContent(FlexAlign.Center)
           .alignItems(HorizontalAlign.Center)
           .padding({ left: 8, right: 8 })
@@ -782,13 +651,13 @@ export struct ReaderControlLayer {
               .height(5)
               .backgroundColor('#E1D6CA')
               .borderRadius(999)
-              .margin({ top: this.progressTrackTop() })
+              .margin({ top: 12 })
             Column()
               .width(this.progressFillWidth())
               .height(5)
               .backgroundColor('#2379A4')
               .borderRadius(999)
-              .margin({ top: this.progressTrackTop() })
+              .margin({ top: 12 })
             Column()
               .width(12)
               .height(12)
@@ -797,9 +666,9 @@ export struct ReaderControlLayer {
               .borderWidth(3)
               .borderRadius(999)
               .shadow({ radius: 8, color: '#38226584', offsetX: 0, offsetY: 4 })
-              .margin({ top: this.progressThumbTop(), left: Math.max(0, this.progressPercent() - 2).toString() + '%' })
+              .margin({ top: 8, left: Math.max(0, this.progressPercent() - 2).toString() + '%' })
           }
-          .height(this.progressRowHeight())
+          .height(30)
             .layoutWeight(1)
             .margin({ left: 6, right: 6 })
           Text(this.chapterCountText())
@@ -809,16 +678,11 @@ export struct ReaderControlLayer {
             .textAlign(TextAlign.Start)
         }
         .width('100%')
-        .height(this.progressRowHeight())
+        .height(30)
         .alignItems(VerticalAlign.Center)
       }
       .width('100%')
-      .padding({
-        left: this.chapterPanelHorizontalPadding(),
-        right: this.chapterPanelHorizontalPadding(),
-        top: this.chapterPanelVerticalPadding(),
-        bottom: this.chapterPanelVerticalPadding()
-      })
+      .padding({ left: 10, right: 10, top: 9, bottom: 9 })
       .backgroundColor('#FFFCF8')
       .borderColor('#D6CABC')
       .borderWidth(1)
@@ -1187,26 +1051,23 @@ struct MoreMenuItem {
 struct ControlAction {
   @Prop label: string = '';
   @Prop icon: string = '';
-  @Prop iconSize: number = 24;
-  @Prop labelFontSize: number = ReaderTypography.actionLabelFontSize;
-  @Prop labelGap: number = 6;
   @Prop endGap: number = 8;
   onPress: () => void = () => {};
 
   build() {
     Column() {
       if (this.icon.length > 0) {
-        ReaderControlIcon({ icon: this.icon, tone: 'action', iconSize: this.iconSize })
+        ReaderControlIcon({ icon: this.icon, tone: 'action', iconSize: 24 })
       }
       Text(this.label)
-        .fontSize(this.labelFontSize)
-        .lineHeight(this.labelFontSize + 2)
+        .fontSize(ReaderTypography.actionLabelFontSize)
+        .lineHeight(13)
         .fontWeight(FontWeight.Bold)
         .fontColor('#2B251F')
         .textAlign(TextAlign.Center)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .margin({ top: this.icon.length > 0 ? this.labelGap : 0 })
+        .margin({ top: this.icon.length > 0 ? 6 : 0 })
     }
     .height('100%')
     .layoutWeight(1)
