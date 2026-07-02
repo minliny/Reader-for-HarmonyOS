@@ -535,17 +535,21 @@ export struct ReaderControlLayer {
 
   @Builder
   SheetGrabber() {
-    Row() {
-      Column()
-        .width(42)
-        .height(4)
-        .backgroundColor('#B9AD9F')
-        .borderRadius(2)
+    Stack({ alignContent: Alignment.Top }) {
+      Row() {
+        Column()
+          .width(42)
+          .height(4)
+          .backgroundColor('#B9AD9F')
+          .borderRadius(2)
+      }
+      .width('100%')
+      .height(4)
+      .justifyContent(FlexAlign.Center)
+      .margin({ top: 9 })
     }
     .width('100%')
     .height(24)
-    .justifyContent(FlexAlign.Center)
-    .margin({ top: 9 })
     .onClick(() => this.onOpenPresentation(this.fullTargetRoute()))
     .accessibilityText('展开完整控制页')
   }
