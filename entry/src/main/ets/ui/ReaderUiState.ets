@@ -440,10 +440,10 @@ export class ReaderUiReducer {
     session.capsuleVisible = kind !== 'none';
     if (kind === 'tts') {
       session.label = '朗读';
-      session.statusText = playing ? '朗读中' : '已暂停';
+      session.statusText = playing ? '正在朗读' : '已暂停';
     } else if (kind === 'autoPage') {
       session.label = '自动翻页';
-      session.statusText = playing ? '运行中' : '已暂停';
+      session.statusText = playing ? '8 秒后翻页' : '已暂停';
     }
     return session;
   }
