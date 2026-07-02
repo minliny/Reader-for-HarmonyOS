@@ -578,21 +578,23 @@ export struct ReaderControlLayer {
       }
       Text(this.uiState.activeSession.label)
         .fontSize(10)
-        .fontColor('#F6FAFA')
-        .fontWeight(FontWeight.Medium)
+        .fontColor('#4A4036')
+        .fontWeight(FontWeight.Bold)
+        .textAlign(TextAlign.Center)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .layoutWeight(1)
       this.SessionControlButton()
     }
-    .width(this.uiState.activeSession.kind === 'autoPage' ? 102 : 96)
+    .width(this.uiState.activeSession.kind === 'autoPage' ? 96 : 94)
     .height(24)
-    .padding({ left: 5, right: 4 })
-    .backgroundColor('#2F6373')
-    .borderColor('#FFFFFFB8')
+    .padding({ left: 5, right: 5 })
+    .alignItems(VerticalAlign.Center)
+    .backgroundColor('#EBFFFCF8')
+    .borderColor('#38766C61')
     .borderWidth(1)
     .borderRadius(999)
-    .shadow({ radius: 12, color: '#24364233', offsetX: 0, offsetY: 4 })
+    .shadow({ radius: 12, color: '#1F000000', offsetX: 0, offsetY: 4 })
     .accessibilityText(`控制层运行胶囊 ${this.uiState.activeSession.label} ${this.uiState.activeSession.statusText}`)
   }
 
@@ -601,11 +603,11 @@ export struct ReaderControlLayer {
     Text(this.uiState.activeSession.countdown.toString())
       .fontSize(10)
       .fontWeight(FontWeight.Bold)
-      .fontColor('#2F6373')
+      .fontColor('#FFFFFF')
       .textAlign(TextAlign.Center)
       .width(16)
       .height(16)
-      .backgroundColor('#F6FAFA')
+      .backgroundColor('#274F66')
       .borderRadius(8)
   }
 
@@ -618,7 +620,7 @@ export struct ReaderControlLayer {
     .height(16)
     .justifyContent(FlexAlign.Center)
     .alignItems(VerticalAlign.Center)
-    .backgroundColor('#4A7A88')
+    .backgroundColor('#274F66')
     .borderRadius(8)
   }
 
@@ -635,7 +637,7 @@ export struct ReaderControlLayer {
     .height(17)
     .justifyContent(FlexAlign.Center)
     .alignItems(VerticalAlign.Center)
-    .backgroundColor('#FFFFFF2A')
+    .backgroundColor('#274F66')
     .borderRadius(9)
     .onClick(() => this.onToggleSession())
     .accessibilityText(this.uiState.activeSession.playing ? '暂停当前阅读会话' : '继续当前阅读会话')
