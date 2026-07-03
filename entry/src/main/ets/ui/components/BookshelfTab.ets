@@ -196,7 +196,7 @@ struct BookshelfContent {
             left: this.contentSidePadding(),
             right: this.contentSidePadding(),
             top: 8,
-            bottom: ReaderAdaptive.isNavRail(this.uiState.adaptive) ? 24 : 122
+            bottom: ReaderAdaptive.isNavRail(this.uiState.adaptive) ? 24 : 116
           })
         }
         .width('100%')
@@ -206,7 +206,7 @@ struct BookshelfContent {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor('#F4EFE8')
+      .backgroundColor('#FFF8F4')
 
       if (this.uiState.overlayState.isOpen && this.uiState.overlayState.kind === 'bookshelf-more') {
         BookshelfMoreLayer({
@@ -217,14 +217,14 @@ struct BookshelfContent {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F4EFE8')
+    .backgroundColor('#FFF8F4')
   }
 
   private contentSidePadding(): number {
     if (this.uiState.adaptive.widthVp >= 840) {
       return 24;
     }
-    return 20;
+    return 19;
   }
 
   private columnsTemplate(): string {
@@ -374,7 +374,7 @@ struct BookshelfTopBar {
       .justifyContent(FlexAlign.End)
     }
     .width('100%')
-    .height(62)
+    .height(58)
     .padding({ left: 20, right: 20, top: 6 })
     .alignItems(VerticalAlign.Center)
   }
@@ -565,10 +565,10 @@ struct ContinueReadingCard {
     .height(100)
     .padding({ left: 16, right: 16, top: 3, bottom: 3 })
     .alignItems(VerticalAlign.Center)
-    .backgroundColor('#FFFCF7')
-    .border({ width: 1, color: '#D8CCBC' })
-    .borderRadius(12)
-    .shadow({ radius: 14, color: '#34261A1F', offsetX: 0, offsetY: 5 })
+    .backgroundColor('#E6FFFCF8')
+    .border({ width: 1, color: '#C1C7CD' })
+    .borderRadius(8)
+    .shadow({ radius: 26, color: '#1A594632', offsetX: 0, offsetY: 8 })
   }
 }
 
@@ -869,7 +869,7 @@ struct BookshelfBookCard {
         coverKey: this.book.coverKey,
         widthValue: '100%',
         heightValue: this.coverHeight,
-        radius: 10
+        radius: 8
       })
         .onClick(() => this.onOpenBook(this.book))
 
@@ -992,8 +992,8 @@ struct BookshelfCover {
     .height(this.heightValue)
     .borderRadius(this.radius)
     .clip(true)
-    .backgroundColor('#FFFCF7')
-    .shadow({ radius: 14, color: '#34261A24', offsetX: 0, offsetY: 5 })
+    .backgroundColor('#E6FFFCF8')
+    .shadow({ radius: 26, color: '#1A594632', offsetX: 0, offsetY: 8 })
   }
 }
 

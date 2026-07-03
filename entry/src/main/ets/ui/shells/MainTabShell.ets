@@ -45,7 +45,7 @@ export struct MainTabShell {
       .width('100%')
       .height('100%')
       .alignItems(VerticalAlign.Center)
-      .backgroundColor('#F4EFE8')
+      .backgroundColor('#FFF8F4')
     } else {
       Stack({ alignContent: Alignment.Bottom }) {
         MainTabContentHost({
@@ -71,7 +71,7 @@ export struct MainTabShell {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor('#F4EFE8')
+      .backgroundColor('#FFF8F4')
     }
   }
 }
@@ -161,9 +161,9 @@ struct MainTabNav {
       .width(82)
       .padding(8)
       .backgroundColor('#E6FFFCF8')
-      .border({ width: 1, color: '#D8CCBC' })
+      .border({ width: 1, color: '#C1C7CD' })
       .borderRadius(24)
-      .shadow({ radius: 14, color: '#34261A1F', offsetX: 0, offsetY: 5 })
+      .shadow({ radius: 26, color: '#1A594632', offsetX: 0, offsetY: 8 })
     } else {
       Row() {
         MainTabNavItem({
@@ -199,9 +199,9 @@ struct MainTabNav {
       .height(68)
       .padding({ left: 8, right: 8, top: 7, bottom: 7 })
       .backgroundColor('#E6FFFCF8')
-      .border({ width: 1, color: '#D8CCBC' })
+      .border({ width: 1, color: '#C1C7CD' })
       .borderRadius(24)
-      .shadow({ radius: 14, color: '#34261A1F', offsetX: 0, offsetY: 5 })
+      .shadow({ radius: 26, color: '#1A594632', offsetX: 0, offsetY: 8 })
     }
   }
 }
