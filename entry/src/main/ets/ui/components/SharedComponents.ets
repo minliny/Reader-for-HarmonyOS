@@ -57,6 +57,8 @@ export struct ReaderUiIcon {
       } else {
         Image($r('app.media.ui_icon_search_dark')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
       }
+    } else if (this.iconName === 'filter') {
+      Image($r('app.media.bookshelf_icon_filter_dark')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
     } else if (this.iconName === 'check') {
       if (this.tone === 'primary') {
         Image($r('app.media.ui_icon_check_primary')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)

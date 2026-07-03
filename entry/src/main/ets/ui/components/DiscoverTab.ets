@@ -1,4 +1,4 @@
-import { MainTabTitleBar, ReaderUiIcon } from './SharedComponents';
+import { ReaderUiIcon } from './SharedComponents';
 
 class DiscoverBookItem {
   title: string = '';
@@ -12,8 +12,7 @@ class DiscoverBookItem {
 
 @Component
 export struct DiscoverTab {
-  private entries: string[] = ['排行榜', '畅销', '分类', '完本', '最新', '新书', '书单'];
-  private filters: string[] = ['关键词', '男频', '女频'];
+  private entries: string[] = ['排行榜', '分类', '完本', '最新', '书单'];
   private books: DiscoverBookItem[] = [
     {
       title: '长夜余火',
@@ -64,15 +63,16 @@ export struct DiscoverTab {
 
   build() {
     Column() {
-      MainTabTitleBar({ title: '发现' })
+      DiscoverTopBar()
 
       Scroll() {
         Column() {
           DiscoverSourceBar()
           DiscoverEntryRow({ entries: this.entries })
-          DiscoverFilterRow({ filters: this.filters })
+          DiscoverFilterRow()
           Text('排行榜')
             .fontSize(15)
+            .lineHeight(18.75)
             .fontWeight(FontWeight.Bold)
             .fontColor('#201B16')
             .width('100%')
@@ -81,7 +81,7 @@ export struct DiscoverTab {
           DiscoverBookList({ books: this.books })
         }
         .width('100%')
-        .padding({ left: 15, right: 15, top: 8, bottom: 122 })
+        .padding({ left: 19, right: 19, top: 8, bottom: 116 })
       }
       .width('100%')
       .layoutWeight(1)
@@ -89,7 +89,38 @@ export struct DiscoverTab {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F4EFE8')
+    .backgroundColor('#FFF8F4')
+  }
+}
+
+@Component
+struct DiscoverTopBar {
+  build() {
+    Row() {
+      Text('发现')
+        .fontSize(29)
+        .fontWeight(FontWeight.Medium)
+        .fontFamily('Songti SC')
+        .fontColor('#201B16')
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .layoutWeight(1)
+
+      Row() {
+        ReaderUiIcon({ iconName: 'refresh', tone: 'dark', iconSize: 24 })
+      }
+      .width(44)
+      .height(44)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+      .borderRadius(22)
+      .accessibilityText('刷新')
+    }
+    .width('100%')
+    .height(58)
+    .padding({ left: 20, right: 20, top: 6 })
+    .margin({ top: 9 })
+    .alignItems(VerticalAlign.Center)
   }
 }
 
@@ -110,31 +141,36 @@ struct DiscoverSourceBar {
       Column() {
         Text('优书网')
           .fontSize(15)
+          .lineHeight(18)
           .fontWeight(FontWeight.Bold)
           .fontColor('#201B16')
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-        Text('排行榜 · 热门')
+          .width('100%')
+        Text('默认分组 · 已启用发现 · 120ms')
           .fontSize(11)
           .fontColor('#756F69')
           .fontWeight(FontWeight.Medium)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .margin({ top: 3 })
+          .width('100%')
       }
       .layoutWeight(1)
       .margin({ left: 10, right: 10 })
+      .alignItems(HorizontalAlign.Start)
 
       ReaderUiIcon({ iconName: 'chevron', tone: 'muted', iconSize: 18 })
+        .rotate({ angle: 90 })
     }
     .width('100%')
     .height(58)
     .padding({ left: 12, right: 12, top: 10, bottom: 10 })
     .alignItems(VerticalAlign.Center)
-    .backgroundColor('#FFFCF8')
+    .backgroundColor('#EBFFFCF8')
     .border({ width: 1, color: '#5CB4A697' })
     .borderRadius(8)
-    .shadow({ radius: 12, color: '#34261A18', offsetX: 0, offsetY: 4 })
+    .shadow({ radius: 26, color: '#1A594632', offsetX: 0, offsetY: 8 })
   }
 }
 
@@ -160,37 +196,54 @@ struct DiscoverEntryRow {
 
 @Component
 struct DiscoverFilterRow {
-  @Prop filters: string[] = [];
-
   build() {
-    Column() {
+    Row() {
       Row() {
-        ForEach(this.filters, (filter: string) => {
-          DiscoverChip({
-            label: filter,
-            active: filter === '关键词',
-            compact: true,
-            mutedActive: true
-          })
-        }, (filter: string) => filter)
-        DiscoverChip({ label: '排序：人气', compact: true, mutedActive: true })
+        ReaderUiIcon({ iconName: 'filter', tone: 'dark', iconSize: 16 })
+        Text('筛选')
+          .fontSize(12)
+          .fontWeight(FontWeight.Bolder)
+          .fontColor('#3F372F')
+          .margin({ left: 7 })
+
         Blank()
-        Row() {
-          ReaderUiIcon({ iconName: 'check', tone: 'white', iconSize: 13 })
-          Text('应用')
-            .fontSize(12)
-            .fontWeight(FontWeight.Bolder)
-            .fontColor('#FFFFFF')
-        }
-        .height(34)
-        .padding({ left: 10, right: 10 })
-        .justifyContent(FlexAlign.Center)
-        .alignItems(VerticalAlign.Center)
-        .backgroundColor('#366179')
-        .borderRadius(6)
+
+        Text('男频 · 人气')
+          .fontSize(11)
+          .fontWeight(FontWeight.Bolder)
+          .fontColor('#756F69')
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+        ReaderUiIcon({ iconName: 'chevron', tone: 'dark', iconSize: 14 })
+          .rotate({ angle: 90 })
+          .margin({ left: 7 })
       }
-      .width('100%')
+      .layoutWeight(1)
+      .height(34)
+      .padding({ left: 10, right: 10 })
       .alignItems(VerticalAlign.Center)
+      .backgroundColor('#E6FFFCF8')
+      .border({ width: 1, color: '#7AB4A697' })
+      .borderRadius(8)
+
+      Row() {
+        ReaderUiIcon({ iconName: 'check', tone: 'white', iconSize: 13 })
+        Text('应用')
+          .fontSize(12)
+          .fontWeight(FontWeight.Bolder)
+          .fontColor('#FFFFFF')
+          .margin({ left: 4 })
+      }
+      .width(70)
+      .height(34)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+      .backgroundColor('#366179')
+      .border({ width: 1, color: '#C72D5D76' })
+      .borderRadius(8)
+      .shadow({ radius: 14, color: '#38315F78', offsetX: 0, offsetY: 7 })
+      .margin({ left: 7 })
     }
     .width('100%')
     .margin({ top: 7, bottom: 7 })
@@ -260,9 +313,10 @@ struct DiscoverBookRow {
           .fontSize(15)
           .fontWeight(FontWeight.Bold)
           .fontColor('#201B16')
-          .lineHeight(19)
+          .lineHeight(18.75)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
         Text(`${this.book.author} · ${this.book.kind}`)
           .fontSize(11)
           .fontColor('#756F69')
@@ -270,6 +324,7 @@ struct DiscoverBookRow {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .margin({ top: 4 })
+          .width('100%')
         Text(this.book.latest)
           .fontSize(11)
           .fontColor('#274F66')
@@ -277,16 +332,19 @@ struct DiscoverBookRow {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .margin({ top: 4 })
+          .width('100%')
         Text(this.book.intro)
           .fontSize(12)
           .fontColor('#5C554D')
-          .lineHeight(17)
+          .lineHeight(17.4)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .margin({ top: 4 })
+          .width('100%')
       }
       .layoutWeight(1)
       .margin({ left: 11 })
+      .alignItems(HorizontalAlign.Start)
     }
     .width('100%')
     .height(108)
