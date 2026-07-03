@@ -376,6 +376,7 @@ struct BookshelfTopBar {
     .width('100%')
     .height(58)
     .padding({ left: 20, right: 20, top: 6 })
+    .margin({ top: 9 })
     .alignItems(VerticalAlign.Center)
   }
 }
@@ -551,13 +552,13 @@ struct ContinueReadingCard {
       .margin({ left: 14, right: 14 })
 
       Text('阅读')
-        .width(74)
+        .width(82)
         .height(40)
         .fontSize(13)
         .fontWeight(FontWeight.Bolder)
         .fontColor('#FFFFFF')
         .textAlign(TextAlign.Center)
-        .backgroundColor('#2F6373')
+        .backgroundColor('#366179')
         .borderRadius(20)
         .onClick(() => this.onOpenAction(this.book))
     }
@@ -720,7 +721,7 @@ struct BookshelfShelfActionButton {
     .alignItems(VerticalAlign.Center)
     .borderRadius(17)
     .margin({ left: 8 })
-    .backgroundColor(this.active ? '#E8F0EE' : '#00000000')
+    .backgroundColor('#00000000')
     .accessibilityText(this.accessibilityLabel)
     .onClick(() => this.onPress())
   }
