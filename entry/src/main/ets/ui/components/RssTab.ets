@@ -48,7 +48,7 @@ export struct RssTab {
           RssArticleSection({ articles: this.articles })
         }
         .width('100%')
-        .padding({ left: 15, right: 15, top: 8, bottom: 122 })
+        .padding({ left: 20, right: 20, top: 8, bottom: 116 })
       }
       .width('100%')
       .layoutWeight(1)
@@ -191,32 +191,8 @@ struct RssSourceOverview {
       .border({ width: 1, color: '#4DB4A697' })
       .borderRadius(8)
 
-      Row() {
-        Text('筛选')
-          .fontSize(12)
-          .fontWeight(FontWeight.Bold)
-          .fontColor('#756F69')
-        Text('全部')
-          .height(28)
-          .padding({ left: 10, right: 10 })
-          .fontSize(12)
-          .fontWeight(FontWeight.Bold)
-          .fontColor('#FFFFFF')
-          .backgroundColor('#366179')
-          .borderRadius(14)
-          .margin({ left: 8 })
-        Text('开源项目')
-          .height(28)
-          .padding({ left: 10, right: 10 })
-          .fontSize(12)
-          .fontWeight(FontWeight.Bold)
-          .fontColor('#564D44')
-          .backgroundColor('#D6EEE8DF')
-          .borderRadius(14)
-          .margin({ left: 6 })
-      }
-      .width('100%')
-      .margin({ top: 8 })
+      RssFilterControl()
+        .margin({ top: 8 })
 
       Column() {
         ForEach(this.sources, (source: RssSourceItem, index: number) => {
@@ -258,6 +234,40 @@ struct RssSmallPill {
 }
 
 @Component
+struct RssFilterControl {
+  build() {
+    Row() {
+      ReaderUiIcon({ iconName: 'filter', tone: 'dark', iconSize: 16 })
+      Text('筛选')
+        .fontSize(12)
+        .fontWeight(FontWeight.Bolder)
+        .fontColor('#3F372F')
+        .margin({ left: 7 })
+
+      Blank()
+
+      Text('全部')
+        .fontSize(11)
+        .fontWeight(FontWeight.Bolder)
+        .fontColor('#756F69')
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+      ReaderUiIcon({ iconName: 'chevron', tone: 'dark', iconSize: 14 })
+        .rotate({ angle: 90 })
+        .margin({ left: 7 })
+    }
+    .width('100%')
+    .height(34)
+    .padding({ left: 10, right: 10 })
+    .alignItems(VerticalAlign.Center)
+    .backgroundColor('#E6FFFCF8')
+    .border({ width: 1, color: '#7AB4A697' })
+    .borderRadius(8)
+  }
+}
+
+@Component
 struct RssSourceRow {
   @Prop source: RssSourceItem;
   @Prop topDivider: boolean = false;
@@ -277,19 +287,25 @@ struct RssSourceRow {
       Column() {
         Text(this.source.name)
           .fontSize(13)
+          .lineHeight(16)
           .fontWeight(FontWeight.Bold)
           .fontColor('#201B16')
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
         Text(`${this.source.group} · ${this.source.categories} 个入口 · ${this.source.articleStyle} · ${this.source.rule}`)
           .fontSize(10)
+          .lineHeight(13)
           .fontColor('#756F69')
+          .fontWeight(FontWeight.Medium)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .margin({ top: 3 })
+          .width('100%')
       }
       .layoutWeight(1)
       .margin({ left: 8, right: 8 })
+      .alignItems(HorizontalAlign.Start)
 
       Text(this.source.unread.toString())
         .fontSize(16)
@@ -357,26 +373,32 @@ struct RssArticleRow {
 
       Column() {
         Text(this.article.title)
-          .fontSize(14)
+          .fontSize(13)
+          .lineHeight(16)
           .fontWeight(FontWeight.Bold)
           .fontColor('#201B16')
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
         Text(`${this.article.source} · ${this.article.time} · ${this.article.group}`)
           .fontSize(10)
+          .lineHeight(13)
           .fontColor('#756F69')
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .margin({ top: 4 })
+          .width('100%')
         Text(this.article.desc)
-          .fontSize(12)
+          .fontSize(11)
           .fontColor('#5C554D')
-          .lineHeight(17)
+          .lineHeight(16)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .margin({ top: 4 })
+          .margin({ top: 5 })
+          .width('100%')
       }
       .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
 
       ReaderUiIcon({ iconName: this.article.starred ? 'bookmark' : 'chevron', tone: 'muted', iconSize: 18 })
     }
