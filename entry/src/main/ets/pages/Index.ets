@@ -132,7 +132,7 @@ struct Index {
 
   build() {
     Column() {
-      if (this.uiState.route === ReaderRoute.immersiveReading) {
+      if (this.uiState.route.id === ReaderRoute.immersiveReading) {
         ReaderShell({
           uiState: this.uiState,
           onBack: () => this.popRoute(),

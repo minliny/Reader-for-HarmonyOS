@@ -1,6 +1,27 @@
 import { ReaderMainTab, ReaderRoute } from './ReaderRouteMapping';
 import { ReaderMotion, ReaderMotionId } from './ReaderMotion';
 import { ReaderAdaptive, ReaderAdaptiveState } from './ReaderAdaptive';
+// Phase 1.2: Contract接入 — 导入契约 UiState 接口及关联类型
+import {
+  UiState as UiStateContract,
+  RouteRef,
+  BookshelfUiState,
+  DiscoverUiState,
+  ReaderUiStateContract,
+  SettingsUiState,
+  MotionUiState,
+  FirstOpenUiState,
+  PageState,
+  MainTab as ContractMainTab,
+  ReaderMode as ContractReaderMode,
+  Overlay as ContractOverlay,
+  ActiveSession as ContractActiveSession,
+  UiError
+} from '../contract';
+
+// ─── Phase 1.2: 契约 UiState 派生对象的本地实现 ───
+// 这些类对应契约 UiState schema 中的 6 个派生对象字段。
+// Reducer 应通过它们操作契约字段,而不是用 readerTheme/readerTypography 等本地字段。
 
 export class ReaderContext {
   bookId: string = '';
@@ -153,11 +174,41 @@ export class ReaderQuickPanelType {
   static readonly replace: string = 'replace';
 }
 
+// Phase 1.2: 契约 UiState 接入说明
+// ReaderUiState 类**不直接 implements UiStateContract**,因为 ArkTS 严格类型检查要求
+// 字段类型完全匹配契约的 literal union type(如 ReaderMode/Overlay/ActiveSession),
+// 而本地 Reducer 用 string 操作以保持兼容。改为提供 toContract() 转换方法导出契约类型。
+// 当 Reducer 完成迁移后(Phase 3),可直接 implements 契约。
 export class ReaderUiState {
-  route: string = ReaderRoute.bookshelf;
+  // ─── 契约 UiState 9 个核心字段（Phase 1.2,本地镜像）───
+  // 这些字段对应契约 UiState 的 9 个核心字段,但本地用 string 镜像以兼容现有 Reducer。
+  // toContract() 方法将它们转换为契约要求的 literal union type。
+  route: RouteRef = { id: ReaderRoute.bookshelf };
+  tab: ContractMainTab = 'bookshelf';
+  readerMode: string = ReaderMode.immersive;   // 契约 ReaderMode,本地 string 镜像
+  overlay?: string;                             // 契约 Overlay,本地 string 镜像
+  activeSession?: string;                       // 契约 ActiveSession,本地 string 镜像
+  focusTarget?: string;
+  loading: boolean = false;
+  error?: UiError;
+  reducedMotion: boolean = false;
+  pageState?: PageState;
+
+  // ─── 契约 UiState 6 个派生对象（Phase 1.2）───
+  bookshelf?: BookshelfUiState;
+  discover?: DiscoverUiState;
+  reader?: ReaderUiStateContract;
+  settings?: SettingsUiState;
+  motion?: MotionUiState;
+  firstOpen?: FirstOpenUiState;
+
+  // ─── 本地兼容字段（@deprecated,Phase 3 迁移后删除）───
+  // 这些字段是 v1 阶段越界塞入的,不属于契约 UiState。
+  // 现有 Reducer 和 4 个 UI 组件仍依赖它们,Phase 3 会逐步迁移到契约字段或 DomainState。
   currentRoute: string = ReaderRoute.bookshelf;
+  routeStack: string[] = [ReaderRoute.bookshelf];
+  backStack: string[] = [ReaderRoute.bookshelf];
   readerPresentationRoute: string = ReaderRoute.immersiveReading;
-  readerMode: string = ReaderMode.immersive;
   activeReaderModule: string = ReaderModuleType.none;
   activeQuickPanel: string = ReaderQuickPanelType.none;
   activeTab: string = ReaderMainTab.bookshelf;
@@ -166,28 +217,67 @@ export class ReaderUiState {
   bookshelfSort: string = '最近更新';
   bookshelfFilter: string = '全部';
   bookshelfFilterOpen: boolean = false;
-  routeStack: string[] = [ReaderRoute.bookshelf];
-  backStack: string[] = [ReaderRoute.bookshelf];
   readerContext: ReaderContext = new ReaderContext();
-  overlay: ReaderOverlayState = new ReaderOverlayState();
-  overlayState: ReaderOverlayState = new ReaderOverlayState();
+  overlayState: ReaderOverlayState = new ReaderOverlayState();  // 本地 overlay 状态对象
   focusState: ReaderFocusState = new ReaderFocusState();
-  activeSession: ReaderActiveSessionState = new ReaderActiveSessionState();
+  activeSessionState: ReaderActiveSessionState = new ReaderActiveSessionState();  // 本地 session 状态对象
+  /** @deprecated Phase 1.5: 颜色应直接用 $r('app.color.reader_ds_color_xxx')。Phase 3 删除。 */
   readerTheme: ReaderThemeState = new ReaderThemeState();
+  /** @deprecated Phase 1.5: 字号/间距应直接用 ReaderTypography 静态常量。Phase 3 删除。 */
   readerTypography: ReaderTypographyState = new ReaderTypographyState();
-  readerPageSpace: ReaderPageSpaceState = new ReaderPageSpaceState();
-  readerBrightness: ReaderBrightnessState = new ReaderBrightnessState();
-  readerSettings: ReaderSettingsState = new ReaderSettingsState();
-  readerTts: ReaderTtsState = new ReaderTtsState();
-  readerPagination: ReaderPaginationState = new ReaderPaginationState();
-  asyncResult: ReaderAsyncResultState = new ReaderAsyncResultState();
-  motion: ReaderMotionState = new ReaderMotionState();
+  readerPageSpace: ReaderPageSpaceState = new ReaderPageSpaceState();      // 本地:应迁到 DomainState
+  readerBrightness: ReaderBrightnessState = new ReaderBrightnessState();  // 本地:应迁到 DomainState
+  readerSettings: ReaderSettingsState = new ReaderSettingsState();        // 本地:应迁到 DomainState
+  readerTts: ReaderTtsState = new ReaderTtsState();                       // 本地:应迁到 DomainState
+  readerPagination: ReaderPaginationState = new ReaderPaginationState();  // 本地:应迁到 DomainState
+  asyncResult: ReaderAsyncResultState = new ReaderAsyncResultState();     // 本地:应迁到 DomainState
+  motionState: ReaderMotionState = new ReaderMotionState();               // 本地 motion 状态对象
   motionInterrupt: string = '';
-  reducedMotion: boolean = false;
   entryRequestId: number = 0;
   adaptive: ReaderAdaptiveState = ReaderAdaptive.initialState();
+
+  // ─── Phase 1.2: 转换为契约 UiState 对象 ───
+  // 当需要与契约层交互时(如序列化、跨模块传递),调用此方法获得符合契约的 UiState。
+  toContract(): UiStateContract {
+    const result: UiStateContract = {
+      route: this.route,
+      tab: this.tab,
+      readerMode: this.readerMode as ContractReaderMode,
+      overlay: this.overlay as ContractOverlay | undefined,
+      activeSession: this.activeSession as ContractActiveSession | undefined,
+      focusTarget: this.focusTarget,
+      loading: this.loading,
+      error: this.error,
+      reducedMotion: this.reducedMotion,
+      pageState: this.pageState,
+      bookshelf: this.bookshelf,
+      discover: this.discover,
+      reader: this.reader,
+      settings: this.settings,
+      motion: this.motion,
+      firstOpen: this.firstOpen
+    };
+    return result;
+  }
 }
 
+// ─── Phase 3.1: Reducer 契约边界说明 ───
+// Reducer 只管 UiState 9 个契约字段:
+//   route / tab / readerMode / overlay / activeSession / focusTarget / loading / error / reducedMotion
+//   (+ pageState + 6 派生对象 bookshelf/discover/reader/settings/motion/firstOpen)
+//
+// 下列本地字段属于 DomainState,应通过 ViewModel + Core JSON 协议加载,不应由 Reducer 修改:
+//   - readerContext (书籍元数据:书名/作者/章节/进度) ← Core.book.detail/toc/content
+//   - readerPageSpace (页面布局) ← Core.settings.read
+//   - readerBrightness (亮度) ← HostAdapter.brightness
+//   - readerSettings (阅读设置) ← Core.settings.read
+//   - readerTts (TTS 状态) ← Core.tts.start/stop
+//   - readerPagination (分页) ← Core.content.paginate
+//   - asyncResult (异步结果) ← ViewModel awaitResult
+//   - bookshelfView/bookshelfGroup/bookshelfSort/bookshelfFilter (书架视图偏好) ← Core.preferences
+//
+// Phase 3 Slice 1-6 将逐步把这些越界方法迁到 ViewModel/DomainState reducer。
+// 当前为兼容旧 UI 暂时保留,但标记 @deprecated。
 export class ReaderUiReducer {
   static initialState(): ReaderUiState {
     return new ReaderUiState();
@@ -196,13 +286,13 @@ export class ReaderUiReducer {
   static setReducedMotion(state: ReaderUiState, enabled: boolean): ReaderUiState {
     const next = ReaderUiReducer.clone(state);
     next.reducedMotion = enabled;
-    next.motion = ReaderUiReducer.motion(
+    next.motionState = ReaderUiReducer.motion(
       ReaderMotionId.motionInterruptCancel,
-      state.route,
-      state.route,
-      state.route,
+      state.route.id,
+      state.route.id,
+      state.route.id,
       'reduced-motion-toggle',
-      state.motion.sequence + 1,
+      state.motionState.sequence + 1,
       ReaderMotion.durationInterruptSettle(enabled)
     );
     return ReaderUiReducer.syncContractFields(next);
@@ -217,39 +307,42 @@ export class ReaderUiReducer {
     return ReaderUiReducer.syncContractFields(next);
   }
 
+  /** @deprecated Phase 3.1: 越界 - readerBrightness 是 DomainState,应通过 HostAdapter 管理。Slice 3 迁移。 */
   static setReaderBrightness(state: ReaderUiState, value: number): ReaderUiState {
     const next = ReaderUiReducer.clone(state);
     next.readerBrightness.value = ReaderUiReducer.clamp(value, 0, 100);
     next.readerBrightness.auto = false;
-    next.motion = ReaderUiReducer.motion(
+    next.motionState = ReaderUiReducer.motion(
       ReaderMotionId.readerBrightnessUpdate,
       state.readerPresentationRoute,
       state.readerPresentationRoute,
       state.readerPresentationRoute,
       'brightness-update',
-      state.motion.sequence + 1,
+      state.motionState.sequence + 1,
       ReaderMotion.durationOverlay(state.reducedMotion)
     );
     return ReaderUiReducer.syncContractFields(next);
   }
 
+  /** @deprecated Phase 3.1: 越界 - 同 setReaderBrightness。 */
   static adjustReaderBrightness(state: ReaderUiState, delta: number): ReaderUiState {
     return ReaderUiReducer.setReaderBrightness(state, state.readerBrightness.value + delta);
   }
 
+  /** @deprecated Phase 3.1: 越界 - readerBrightness.auto 是 DomainState。Slice 3 迁移。 */
   static toggleReaderBrightnessAuto(state: ReaderUiState): ReaderUiState {
     const next = ReaderUiReducer.clone(state);
     next.readerBrightness.auto = !state.readerBrightness.auto;
     if (next.readerBrightness.auto) {
       next.readerBrightness.value = 100;
     }
-    next.motion = ReaderUiReducer.motion(
+    next.motionState = ReaderUiReducer.motion(
       ReaderMotionId.readerBrightnessAutoToggle,
       state.readerPresentationRoute,
       state.readerPresentationRoute,
       state.readerPresentationRoute,
       'brightness-auto-toggle',
-      state.motion.sequence + 1,
+      state.motionState.sequence + 1,
       ReaderMotion.durationOverlay(state.reducedMotion)
     );
     return ReaderUiReducer.syncContractFields(next);
@@ -257,49 +350,50 @@ export class ReaderUiReducer {
 
   static selectTab(state: ReaderUiState, tab: string): ReaderUiState {
     const next = ReaderUiReducer.clone(state);
-    const previousRoute = state.route;
+    const previousRoute = state.route.id;
     next.activeTab = tab;
-    next.route = ReaderRoute.rootForTab(tab);
+    next.route = { id: ReaderRoute.rootForTab(tab) };
     next.readerPresentationRoute = ReaderRoute.immersiveReading;
-    next.routeStack = [next.route];
-    next.overlay = new ReaderOverlayState();
+    next.routeStack = [next.route.id];
+    next.overlayState = new ReaderOverlayState();
     next.bookshelfFilterOpen = false;
-    next.activeSession = new ReaderActiveSessionState();
+    next.activeSessionState = new ReaderActiveSessionState();
     next.focusState = ReaderUiReducer.focus('main-tab', 'none');
-    next.motion = ReaderUiReducer.motion(
-      state.activeTab === tab ? ReaderMotionId.tabItemSelect : ReaderMotionId.tabItemSwitch,
+    next.motionState = ReaderUiReducer.motion(
+      state.activeTab === tab ? ReaderMotionId.tabItemSelect : ReaderMotionId.tabSwitch,
       previousRoute,
-      next.route,
-      next.route,
+      next.route.id,
+      next.route.id,
       'latest-tab-wins',
-      state.motion.sequence + 1,
+      state.motionState.sequence + 1,
       ReaderMotion.durationTabSwitch(state.reducedMotion),
       state.activeTab === tab ? '' : ReaderMotionId.appTabSwitch
     );
     return ReaderUiReducer.syncContractFields(next);
   }
 
+  /** @deprecated Phase 3.1: 越界 - readerContext 是 DomainState,应由 ReadingViewModel.loadBookAndToc 加载。Slice 1 迁移。 */
   static pushReaderEntry(state: ReaderUiState, target: ReaderEntryTarget): ReaderUiState {
     const next = ReaderUiReducer.clone(state);
     const sourceRoute = target.sourceRoute.length > 0 ? target.sourceRoute : ReaderRoute.rootForTab(state.activeTab);
     next.activeTab = ReaderRoute.tabForRoute(sourceRoute, state.activeTab);
-    next.route = ReaderRoute.immersiveReading;
+    next.route = { id: ReaderRoute.immersiveReading };
     next.readerPresentationRoute = ReaderRoute.immersiveReading;
     next.routeStack = [sourceRoute, ReaderRoute.immersiveReading];
     next.readerContext = ReaderUiReducer.contextFromTarget(target, sourceRoute);
-    next.overlay = new ReaderOverlayState();
+    next.overlayState = new ReaderOverlayState();
     next.bookshelfFilterOpen = false;
-    next.activeSession = new ReaderActiveSessionState();
+    next.activeSessionState = new ReaderActiveSessionState();
     next.focusState = ReaderUiReducer.focus('reader-body', 'bookshelf');
     next.entryRequestId = state.entryRequestId + 1;
     next.asyncResult = ReaderUiReducer.asyncResult(next.entryRequestId, 'completed', ReaderRoute.immersiveReading);
-    next.motion = ReaderUiReducer.motion(
+    next.motionState = ReaderUiReducer.motion(
       target.entryKind === 'action' ? ReaderMotionId.readerEntryActionToImmersive : ReaderMotionId.readerEntryCoverToImmersive,
       sourceRoute,
       ReaderRoute.immersiveReading,
       ReaderRoute.immersiveReading,
       'latest-entry-wins',
-      state.motion.sequence + 1,
+      state.motionState.sequence + 1,
       ReaderMotion.durationReaderEntry(state.reducedMotion),
       ReaderMotionId.appRoutePush
     );
@@ -309,15 +403,15 @@ export class ReaderUiReducer {
   static showReaderControls(state: ReaderUiState): ReaderUiState {
     const next = ReaderUiReducer.clone(state);
     next.readerPresentationRoute = ReaderRoute.readerControl;
-    next.overlay = ReaderUiReducer.overlay('reader-control', true, 'reader-control', 'reader-body');
+    next.overlayState = ReaderUiReducer.overlay('reader-control', true, 'reader-control', 'reader-body');
     next.focusState = ReaderUiReducer.focus('reader-control', 'reader-body');
-    next.motion = ReaderUiReducer.motion(
+    next.motionState = ReaderUiReducer.motion(
       ReaderMotionId.readerControlShow,
       state.readerPresentationRoute,
       ReaderRoute.readerControl,
       ReaderRoute.readerControl,
       'presentation-replace',
-      state.motion.sequence + 1,
+      state.motionState.sequence + 1,
       ReaderMotion.durationReaderControl(state.reducedMotion),
       ReaderMotionId.appRouteReplace
     );
@@ -327,15 +421,15 @@ export class ReaderUiReducer {
   static hideReaderControls(state: ReaderUiState): ReaderUiState {
     const next = ReaderUiReducer.clone(state);
     next.readerPresentationRoute = ReaderRoute.immersiveReading;
-    next.overlay = new ReaderOverlayState();
+    next.overlayState = new ReaderOverlayState();
     next.focusState = ReaderUiReducer.focus('reader-body', 'reader-control');
-    next.motion = ReaderUiReducer.motion(
+    next.motionState = ReaderUiReducer.motion(
       ReaderMotionId.readerControlHide,
       state.readerPresentationRoute,
       ReaderRoute.immersiveReading,
       ReaderRoute.immersiveReading,
       'presentation-replace',
-      state.motion.sequence + 1,
+      state.motionState.sequence + 1,
       ReaderMotion.durationReaderControl(state.reducedMotion),
       ReaderMotionId.appRouteReplace
     );
@@ -354,19 +448,19 @@ export class ReaderUiReducer {
     const next = ReaderUiReducer.clone(state);
     next.readerPresentationRoute = route;
     if (route === ReaderRoute.immersiveReading) {
-      next.overlay = new ReaderOverlayState();
+      next.overlayState = new ReaderOverlayState();
       next.focusState = ReaderUiReducer.focus('reader-body', 'reader-control');
     } else {
-      next.overlay = ReaderUiReducer.overlay('reader-control', true, route, 'reader-body');
+      next.overlayState = ReaderUiReducer.overlay('reader-control', true, route, 'reader-body');
       next.focusState = ReaderUiReducer.focus(route, 'reader-body');
     }
-    next.motion = ReaderUiReducer.motion(
+    next.motionState = ReaderUiReducer.motion(
       ReaderUiReducer.readerPresentationMotionId(route),
       state.readerPresentationRoute,
       route,
       route,
       'reader-presentation-replace',
-      state.motion.sequence + 1,
+      state.motionState.sequence + 1,
       ReaderMotion.durationRoute(state.reducedMotion)
     );
     return ReaderUiReducer.syncContractFields(next);
@@ -375,19 +469,19 @@ export class ReaderUiReducer {
   static toggleReaderMore(state: ReaderUiState): ReaderUiState {
     const next = ReaderUiReducer.clone(state);
     const willOpen = !(state.overlayState.isOpen && state.overlayState.kind === 'reader-more');
-    next.overlay = willOpen ?
+    next.overlayState = willOpen ?
       ReaderUiReducer.overlay('reader-more', true, 'reader-more', state.readerPresentationRoute) :
       ReaderUiReducer.overlay('reader-control', true, state.readerPresentationRoute, 'reader-body');
     next.focusState = willOpen ?
       ReaderUiReducer.focus('reader-more', state.readerPresentationRoute) :
       ReaderUiReducer.focus(state.readerPresentationRoute, 'reader-more');
-    next.motion = ReaderUiReducer.motion(
+    next.motionState = ReaderUiReducer.motion(
       willOpen ? ReaderMotionId.motionInterruptRedirect : ReaderMotionId.motionInterruptCancel,
       state.readerPresentationRoute,
       state.readerPresentationRoute,
       state.readerPresentationRoute,
       willOpen ? 'reader-more-open' : 'reader-more-close',
-      state.motion.sequence + 1,
+      state.motionState.sequence + 1,
       ReaderMotion.durationOverlay(state.reducedMotion)
     );
     return ReaderUiReducer.syncContractFields(next);
@@ -398,15 +492,15 @@ export class ReaderUiReducer {
       return state;
     }
     const next = ReaderUiReducer.clone(state);
-    next.overlay = ReaderUiReducer.overlay('reader-control', true, state.readerPresentationRoute, 'reader-body');
+    next.overlayState = ReaderUiReducer.overlay('reader-control', true, state.readerPresentationRoute, 'reader-body');
     next.focusState = ReaderUiReducer.focus(state.readerPresentationRoute, 'reader-more');
-    next.motion = ReaderUiReducer.motion(
+    next.motionState = ReaderUiReducer.motion(
       ReaderMotionId.motionInterruptCancel,
       state.readerPresentationRoute,
       state.readerPresentationRoute,
       state.readerPresentationRoute,
       'reader-more-close',
-      state.motion.sequence + 1,
+      state.motionState.sequence + 1,
       ReaderMotion.durationOverlay(state.reducedMotion)
     );
     return ReaderUiReducer.syncContractFields(next);
@@ -415,20 +509,20 @@ export class ReaderUiReducer {
   static toggleBookshelfMore(state: ReaderUiState): ReaderUiState {
     const next = ReaderUiReducer.clone(state);
     const willOpen = !(state.overlayState.isOpen && state.overlayState.kind === 'bookshelf-more');
-    next.overlay = willOpen ?
+    next.overlayState = willOpen ?
       ReaderUiReducer.overlay('bookshelf-more', true, 'bookshelf-more-menu', 'bookshelf-more-button') :
       new ReaderOverlayState();
     next.bookshelfFilterOpen = false;
     next.focusState = willOpen ?
       ReaderUiReducer.focus('bookshelf-more-menu', 'bookshelf-more-button') :
       ReaderUiReducer.focus('bookshelf-more-button', 'bookshelf-more-menu');
-    next.motion = ReaderUiReducer.motion(
+    next.motionState = ReaderUiReducer.motion(
       willOpen ? ReaderMotionId.dropdownMenuExpand : ReaderMotionId.dropdownMenuCollapse,
-      state.route,
-      state.route,
-      state.route,
+      state.route.id,
+      state.route.id,
+      state.route.id,
       willOpen ? 'bookshelf-more-open' : 'bookshelf-more-close',
-      state.motion.sequence + 1,
+      state.motionState.sequence + 1,
       ReaderMotion.durationOverlay(state.reducedMotion)
     );
     return ReaderUiReducer.syncContractFields(next);
@@ -439,31 +533,32 @@ export class ReaderUiReducer {
       return state;
     }
     const next = ReaderUiReducer.clone(state);
-    next.overlay = new ReaderOverlayState();
+    next.overlayState = new ReaderOverlayState();
     next.focusState = ReaderUiReducer.focus('bookshelf-more-button', 'bookshelf-more-menu');
-    next.motion = ReaderUiReducer.motion(
+    next.motionState = ReaderUiReducer.motion(
       ReaderMotionId.dropdownMenuCollapse,
-      state.route,
-      state.route,
-      state.route,
+      state.route.id,
+      state.route.id,
+      state.route.id,
       'bookshelf-more-close',
-      state.motion.sequence + 1,
+      state.motionState.sequence + 1,
       ReaderMotion.durationOverlay(state.reducedMotion)
     );
     return ReaderUiReducer.syncContractFields(next);
   }
 
+  /** @deprecated Phase 3.1: 越界 - bookshelfView 是 Core.preferences 域。Slice 2 迁移。 */
   static setBookshelfView(state: ReaderUiState, view: string): ReaderUiState {
     const next = ReaderUiReducer.clone(state);
     const nextView = view === 'list' ? 'list' : 'cover';
     next.bookshelfView = nextView;
-    next.motion = ReaderUiReducer.motion(
+    next.motionState = ReaderUiReducer.motion(
       ReaderMotionId.bookshelfViewSwitch,
       state.bookshelfView,
       nextView,
       nextView,
       'bookshelf-view-switch',
-      state.motion.sequence + 1,
+      state.motionState.sequence + 1,
       ReaderMotion.durationTabSwitch(state.reducedMotion)
     );
     return ReaderUiReducer.syncContractFields(next);
@@ -473,19 +568,19 @@ export class ReaderUiReducer {
     const next = ReaderUiReducer.clone(state);
     const willOpen = !(state.overlayState.isOpen && state.overlayState.kind === 'bookshelf-filter');
     next.bookshelfFilterOpen = willOpen;
-    next.overlay = willOpen ?
+    next.overlayState = willOpen ?
       ReaderUiReducer.overlay('bookshelf-filter', true, 'bookshelf-filter-popover', 'bookshelf-filter-button') :
       new ReaderOverlayState();
     next.focusState = willOpen ?
       ReaderUiReducer.focus('bookshelf-filter-popover', 'bookshelf-filter-button') :
       ReaderUiReducer.focus('bookshelf-filter-button', 'bookshelf-filter-popover');
-    next.motion = ReaderUiReducer.motion(
+    next.motionState = ReaderUiReducer.motion(
       willOpen ? ReaderMotionId.dropdownMenuExpand : ReaderMotionId.dropdownMenuCollapse,
-      state.route,
-      state.route,
-      state.route,
+      state.route.id,
+      state.route.id,
+      state.route.id,
       willOpen ? 'bookshelf-filter-open' : 'bookshelf-filter-close',
-      state.motion.sequence + 1,
+      state.motionState.sequence + 1,
       ReaderMotion.durationOverlay(state.reducedMotion)
     );
     return ReaderUiReducer.syncContractFields(next);
@@ -497,20 +592,21 @@ export class ReaderUiReducer {
     }
     const next = ReaderUiReducer.clone(state);
     next.bookshelfFilterOpen = false;
-    next.overlay = new ReaderOverlayState();
+    next.overlayState = new ReaderOverlayState();
     next.focusState = ReaderUiReducer.focus('bookshelf-filter-button', 'bookshelf-filter-popover');
-    next.motion = ReaderUiReducer.motion(
+    next.motionState = ReaderUiReducer.motion(
       ReaderMotionId.dropdownMenuCollapse,
-      state.route,
-      state.route,
-      state.route,
+      state.route.id,
+      state.route.id,
+      state.route.id,
       'bookshelf-filter-close',
-      state.motion.sequence + 1,
+      state.motionState.sequence + 1,
       ReaderMotion.durationOverlay(state.reducedMotion)
     );
     return ReaderUiReducer.syncContractFields(next);
   }
 
+  /** @deprecated Phase 3.1: 越界 - bookshelfGroup/Sort/Filter 是 Core.preferences 域。Slice 2 迁移。 */
   static setBookshelfFilterOption(state: ReaderUiState, kind: string, value: string): ReaderUiState {
     const next = ReaderUiReducer.clone(state);
     if (kind === 'group') {
@@ -521,36 +617,37 @@ export class ReaderUiReducer {
       next.bookshelfFilter = value;
     }
     next.bookshelfFilterOpen = true;
-    next.overlay = ReaderUiReducer.overlay('bookshelf-filter', true, 'bookshelf-filter-popover', 'bookshelf-filter-button');
+    next.overlayState = ReaderUiReducer.overlay('bookshelf-filter', true, 'bookshelf-filter-popover', 'bookshelf-filter-button');
     next.focusState = ReaderUiReducer.focus('bookshelf-filter-popover', 'bookshelf-filter-button');
-    next.motion = ReaderUiReducer.motion(
+    next.motionState = ReaderUiReducer.motion(
       ReaderMotionId.dropdownOptionSelect,
-      state.route,
-      state.route,
-      state.route,
+      state.route.id,
+      state.route.id,
+      state.route.id,
       `bookshelf-filter-${kind}`,
-      state.motion.sequence + 1,
+      state.motionState.sequence + 1,
       ReaderMotion.durationOverlay(state.reducedMotion)
     );
     return ReaderUiReducer.syncContractFields(next);
   }
 
+  /** @deprecated Phase 3.1: 越界 - readerSettings.autoPage/readerTts.playing 是 DomainState。Slice 4 迁移。 */
   static startReaderSession(state: ReaderUiState, kind: string): ReaderUiState {
     const next = ReaderUiReducer.clone(state);
-    const previousKind = state.activeSession.kind;
+    const previousKind = state.activeSessionState.kind;
     next.readerPresentationRoute = ReaderRoute.immersiveReading;
-    next.overlay = new ReaderOverlayState();
+    next.overlayState = new ReaderOverlayState();
     next.focusState = ReaderUiReducer.focus('reader-body', 'reader-control');
-    next.activeSession = ReaderUiReducer.session(kind, true);
+    next.activeSessionState = ReaderUiReducer.session(kind, true);
     next.readerSettings.autoPage = kind === 'autoPage';
     next.readerTts.playing = kind === 'tts';
-    next.motion = ReaderUiReducer.motion(
+    next.motionState = ReaderUiReducer.motion(
       kind === 'tts' ? ReaderMotionId.readerSessionTtsStart : ReaderMotionId.readerSessionAutoPageStart,
       state.readerPresentationRoute,
       ReaderRoute.immersiveReading,
       ReaderRoute.immersiveReading,
       'session-mutual-exclusive',
-      state.motion.sequence + 1,
+      state.motionState.sequence + 1,
       ReaderMotion.durationReaderSession(state.reducedMotion),
       previousKind !== 'none' && previousKind !== kind ?
         ReaderMotionId.readerSessionCapsuleSwitch :
@@ -559,42 +656,44 @@ export class ReaderUiReducer {
     return ReaderUiReducer.syncContractFields(next);
   }
 
+  /** @deprecated Phase 3.1: 越界 - readerSettings.autoPage/readerTts.playing 是 DomainState。Slice 4 迁移。 */
   static toggleReaderSessionPlaying(state: ReaderUiState): ReaderUiState {
-    if (state.activeSession.kind === 'none') {
+    if (state.activeSessionState.kind === 'none') {
       return state;
     }
     const next = ReaderUiReducer.clone(state);
-    next.activeSession = ReaderUiReducer.session(state.activeSession.kind, !state.activeSession.playing, state.activeSession.countdown);
-    next.readerSettings.autoPage = next.activeSession.kind === 'autoPage' && next.activeSession.playing;
-    next.readerTts.playing = next.activeSession.kind === 'tts' && next.activeSession.playing;
-    next.motion = ReaderUiReducer.motion(
+    next.activeSessionState = ReaderUiReducer.session(state.activeSessionState.kind, !state.activeSessionState.playing, state.activeSessionState.countdown);
+    next.readerSettings.autoPage = next.activeSessionState.kind === 'autoPage' && next.activeSessionState.playing;
+    next.readerTts.playing = next.activeSessionState.kind === 'tts' && next.activeSessionState.playing;
+    next.motionState = ReaderUiReducer.motion(
       ReaderMotionId.readerSessionCapsuleUpdate,
       state.readerPresentationRoute,
       state.readerPresentationRoute,
       state.readerPresentationRoute,
       'session-toggle',
-      state.motion.sequence + 1,
+      state.motionState.sequence + 1,
       ReaderMotion.durationReaderSession(state.reducedMotion),
       ReaderMotionId.readerSessionControlSpaceUpdate
     );
     return ReaderUiReducer.syncContractFields(next);
   }
 
+  /** @deprecated Phase 3.1: 越界 - readerSettings.autoPage/readerTts.playing 是 DomainState。Slice 4 迁移。 */
   static stopReaderSession(state: ReaderUiState): ReaderUiState {
-    if (state.activeSession.kind === 'none') {
+    if (state.activeSessionState.kind === 'none') {
       return state;
     }
     const next = ReaderUiReducer.clone(state);
-    next.activeSession = new ReaderActiveSessionState();
+    next.activeSessionState = new ReaderActiveSessionState();
     next.readerSettings.autoPage = false;
     next.readerTts.playing = false;
-    next.motion = ReaderUiReducer.motion(
+    next.motionState = ReaderUiReducer.motion(
       ReaderMotionId.readerSessionCapsuleExit,
       state.readerPresentationRoute,
       state.readerPresentationRoute,
       state.readerPresentationRoute,
       'session-stop',
-      state.motion.sequence + 1,
+      state.motionState.sequence + 1,
       ReaderMotion.durationReaderSession(state.reducedMotion)
     );
     return ReaderUiReducer.syncContractFields(next);
@@ -608,16 +707,16 @@ export class ReaderUiReducer {
     } else {
       stack[stack.length - 1] = route;
     }
-    next.route = route;
+    next.route = { id: route };
     next.routeStack = stack;
     next.activeTab = ReaderRoute.tabForRoute(route, state.activeTab);
-    next.motion = ReaderUiReducer.motion(
+    next.motionState = ReaderUiReducer.motion(
       ReaderMotionId.appRouteReplace,
-      state.route,
+      state.route.id,
       route,
       route,
       'replace-current-route',
-      state.motion.sequence + 1,
+      state.motionState.sequence + 1,
       ReaderMotion.durationRoute(state.reducedMotion)
     );
     return ReaderUiReducer.syncContractFields(next);
@@ -631,19 +730,19 @@ export class ReaderUiReducer {
     const stack = state.routeStack.slice(0, state.routeStack.length - 1);
     const targetRoute = stack[stack.length - 1];
     next.routeStack = stack;
-    next.route = targetRoute;
+    next.route = { id: targetRoute };
     next.readerPresentationRoute = ReaderRoute.immersiveReading;
     next.activeTab = ReaderRoute.tabForRoute(targetRoute, state.activeTab);
-    next.overlay = new ReaderOverlayState();
-    next.activeSession = new ReaderActiveSessionState();
+    next.overlayState = new ReaderOverlayState();
+    next.activeSessionState = new ReaderActiveSessionState();
     next.focusState = ReaderUiReducer.focus('source-page', 'reader-body');
-    next.motion = ReaderUiReducer.motion(
+    next.motionState = ReaderUiReducer.motion(
       ReaderMotionId.appRoutePop,
-      state.route,
+      state.route.id,
       targetRoute,
       targetRoute,
       'return-to-source',
-      state.motion.sequence + 1,
+      state.motionState.sequence + 1,
       ReaderMotion.durationRoute(state.reducedMotion)
     );
     return ReaderUiReducer.syncContractFields(next);
@@ -758,10 +857,31 @@ export class ReaderUiReducer {
 
   private static clone(state: ReaderUiState): ReaderUiState {
     const next = new ReaderUiState();
-    next.route = state.route;
+    // 契约字段
+    const routeRef: RouteRef = {
+      id: state.route.id,
+      params: state.route.params,
+      stack: state.route.stack
+    };
+    next.route = routeRef;
+    next.tab = state.tab;
+    next.readerMode = state.readerMode;
+    next.overlay = state.overlay;
+    next.activeSession = state.activeSession;
+    next.focusTarget = state.focusTarget;
+    next.loading = state.loading;
+    next.error = state.error ? { code: state.error.code, message: state.error.message, retryable: state.error.retryable } : undefined;
+    next.reducedMotion = state.reducedMotion;
+    next.pageState = state.pageState;
+    next.bookshelf = state.bookshelf;
+    next.discover = state.discover;
+    next.reader = state.reader;
+    next.settings = state.settings;
+    next.motion = state.motion;
+    next.firstOpen = state.firstOpen;
+    // 本地兼容字段
     next.currentRoute = state.currentRoute;
     next.readerPresentationRoute = state.readerPresentationRoute;
-    next.readerMode = state.readerMode;
     next.activeReaderModule = state.activeReaderModule;
     next.activeQuickPanel = state.activeQuickPanel;
     next.activeTab = state.activeTab;
@@ -773,10 +893,9 @@ export class ReaderUiReducer {
     next.routeStack = state.routeStack.slice();
     next.backStack = state.backStack.slice();
     next.readerContext = ReaderUiReducer.cloneReaderContext(state.readerContext);
-    next.overlay = ReaderUiReducer.cloneOverlay(state.overlay);
     next.overlayState = ReaderUiReducer.cloneOverlay(state.overlayState);
     next.focusState = ReaderUiReducer.cloneFocus(state.focusState);
-    next.activeSession = ReaderUiReducer.cloneSession(state.activeSession);
+    next.activeSessionState = ReaderUiReducer.cloneSession(state.activeSessionState);
     next.readerTheme = ReaderUiReducer.cloneTheme(state.readerTheme);
     next.readerTypography = ReaderUiReducer.cloneTypography(state.readerTypography);
     next.readerPageSpace = ReaderUiReducer.clonePageSpace(state.readerPageSpace);
@@ -785,39 +904,41 @@ export class ReaderUiReducer {
     next.readerTts = ReaderUiReducer.cloneTts(state.readerTts);
     next.readerPagination = ReaderUiReducer.clonePagination(state.readerPagination);
     next.asyncResult = ReaderUiReducer.cloneAsyncResult(state.asyncResult);
-    next.motion = ReaderUiReducer.cloneMotion(state.motion);
+    next.motionState = ReaderUiReducer.cloneMotion(state.motionState);
     next.motionInterrupt = state.motionInterrupt;
-    next.reducedMotion = state.reducedMotion;
     next.entryRequestId = state.entryRequestId;
     next.adaptive = state.adaptive;
     return next;
   }
 
   private static syncContractFields(state: ReaderUiState): ReaderUiState {
-    state.currentRoute = state.route;
+    state.currentRoute = state.route.id;
     state.backStack = state.routeStack.slice();
-    state.overlayState = state.overlay;
-    if (state.route !== ReaderRoute.immersiveReading) {
+    // 同步契约 overlay 字符串和本地 overlayState 对象
+    state.overlay = state.overlayState.isOpen && state.overlayState.kind !== 'none' ? state.overlayState.kind : undefined;
+    if (state.route.id !== ReaderRoute.immersiveReading) {
       state.readerPresentationRoute = ReaderRoute.immersiveReading;
     }
     state.readerMode = ReaderUiReducer.readerModeForPresentation(state.readerPresentationRoute);
     state.activeReaderModule = ReaderUiReducer.readerModuleForPresentation(state.readerPresentationRoute);
     state.activeQuickPanel = ReaderUiReducer.readerQuickPanelForPresentation(state.readerPresentationRoute);
     ReaderUiReducer.syncSessionControlSpace(state);
-    state.motionInterrupt = state.motion.interruptPolicy;
+    // 同步契约 activeSession 字符串和本地 activeSessionState 对象
+    state.activeSession = state.activeSessionState.kind !== 'none' ? state.activeSessionState.kind : undefined;
+    state.motionInterrupt = state.motionState.interruptPolicy;
     return state;
   }
 
   private static syncSessionControlSpace(state: ReaderUiState): void {
     const mode = state.readerMode;
-    const controlVisible = state.activeSession.kind !== 'none' && (
+    const controlVisible = state.activeSessionState.kind !== 'none' && (
       mode === ReaderMode.control ||
         mode === ReaderMode.module ||
         mode === ReaderMode.quick ||
         mode === ReaderMode.loading
     );
-    state.activeSession.controlSpaceVisible = controlVisible;
-    state.activeSession.capsuleVisible = state.activeSession.kind !== 'none' && !controlVisible;
+    state.activeSessionState.controlSpaceVisible = controlVisible;
+    state.activeSessionState.capsuleVisible = state.activeSessionState.kind !== 'none' && !controlVisible;
   }
 
   private static cloneReaderContext(context: ReaderContext): ReaderContext {

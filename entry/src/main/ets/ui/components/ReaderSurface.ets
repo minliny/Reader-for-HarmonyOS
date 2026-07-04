@@ -266,7 +266,7 @@ export struct ImmersiveReaderSurface {
             .fontSize(ReaderTypography.immersiveInfoFontSize)
             .lineHeight(ReaderTypography.immersiveInfoLineHeight)
             .fontColor('#766C61')
-          if (this.uiState.activeSession.capsuleVisible) {
+          if (this.uiState.activeSessionState.capsuleVisible) {
             this.SessionCapsule()
           }
         }
@@ -290,12 +290,12 @@ export struct ImmersiveReaderSurface {
   @Builder
   SessionCapsule() {
     Row() {
-      if (this.uiState.activeSession.kind === 'tts') {
+      if (this.uiState.activeSessionState.kind === 'tts') {
         this.SessionVoiceIcon()
       } else {
         this.SessionCountdownDot()
       }
-      Text(this.uiState.activeSession.label)
+      Text(this.uiState.activeSessionState.label)
         .fontSize(10)
         .fontWeight(FontWeight.Bold)
         .fontColor('#4A4036')
@@ -305,7 +305,7 @@ export struct ImmersiveReaderSurface {
         .layoutWeight(1)
       this.SessionControlButton()
     }
-    .width(this.uiState.activeSession.kind === 'autoPage' ? 96 : 94)
+    .width(this.uiState.activeSessionState.kind === 'autoPage' ? 96 : 94)
     .height(24)
     .padding({ left: 5, right: 5 })
     .alignItems(VerticalAlign.Center)
@@ -315,13 +315,13 @@ export struct ImmersiveReaderSurface {
     .borderRadius(999)
     .margin({ left: 5 })
     .shadow({ radius: 8, color: '#12463423', offsetX: 0, offsetY: 3 })
-    .accessibilityText(`阅读会话胶囊 ${this.uiState.activeSession.kind} ${this.uiState.activeSession.statusText}`)
+    .accessibilityText(`阅读会话胶囊 ${this.uiState.activeSessionState.kind} ${this.uiState.activeSessionState.statusText}`)
     .animation({ duration: ReaderMotion.durationReaderSession(this.uiState.reducedMotion), curve: Curve.EaseOut })
   }
 
   @Builder
   SessionCountdownDot() {
-    Text(this.uiState.activeSession.countdown.toString())
+    Text(this.uiState.activeSessionState.countdown.toString())
       .width(18)
       .height(16)
       .fontSize(8)
@@ -348,7 +348,7 @@ export struct ImmersiveReaderSurface {
   @Builder
   SessionControlButton() {
     Button() {
-      if (this.uiState.activeSession.playing) {
+      if (this.uiState.activeSessionState.playing) {
         Image($r('app.media.reader_icon_pause_white'))
           .width(8)
           .height(8)
@@ -367,6 +367,6 @@ export struct ImmersiveReaderSurface {
     .borderRadius(8)
     .margin({ left: 4 })
     .onClick(() => this.onToggleSession())
-    .accessibilityText(this.uiState.activeSession.playing ? '暂停自动翻页' : '继续自动翻页')
+    .accessibilityText(this.uiState.activeSessionState.playing ? '暂停自动翻页' : '继续自动翻页')
   }
 }

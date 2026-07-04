@@ -1,56 +1,22 @@
 {
   "color": [
-    {
-      "name": "start_window_background",
-      "value": "#1A1A1A"
-    },
-    {
-      "name": "color_primary",
-      "value": "#0A84FF"
-    },
-    {
-      "name": "color_primary_dark",
-      "value": "#409CFF"
-    },
-    {
-      "name": "color_background",
-      "value": "#1A1A1A"
-    },
-    {
-      "name": "color_surface",
-      "value": "#2C2C2C"
-    },
-    {
-      "name": "color_text_primary",
-      "value": "#E5E5E5"
-    },
-    {
-      "name": "color_text_secondary",
-      "value": "#8E8E93"
-    },
-    {
-      "name": "color_text_hint",
-      "value": "#636366"
-    },
-    {
-      "name": "color_text_disabled",
-      "value": "#48484A"
-    },
-    {
-      "name": "color_divider",
-      "value": "#38383A"
-    },
-    {
-      "name": "color_shadow",
-      "value": "#30000000"
-    },
-    {
-      "name": "color_tab_active",
-      "value": "#0A84FF"
-    },
-    {
-      "name": "color_tab_inactive",
-      "value": "#8E8E93"
-    }
+    { "name": "start_window_background", "value": "#FFFFF8F4" },
+
+    { "name": "reader_ds_color_paper",            "value": "#FFFFF8F4" },
+    { "name": "reader_ds_color_paper_bright",     "value": "#FFFFF8F1" },
+    { "name": "reader_ds_color_surface",          "value": "#E0FFFFFF" },
+    { "name": "reader_ds_color_surface_soft",     "value": "#B8FFFCF8" },
+    { "name": "reader_ds_color_ink",              "value": "#FF1F1B17" },
+    { "name": "reader_ds_color_control_ink",      "value": "#FF41484C" },
+    { "name": "reader_ds_color_muted",            "value": "#FF756F69" },
+    { "name": "reader_ds_color_border",           "value": "#FFC1C7CD" },
+    { "name": "reader_ds_color_primary",          "value": "#FF366179" },
+    { "name": "reader_ds_color_primary_dark",     "value": "#FF274F66" },
+    { "name": "reader_ds_color_accent",           "value": "#FFF48B13" },
+    { "name": "reader_ds_color_bottom_bar_bg",    "value": "#FFFBF2EB" },
+    { "name": "reader_ds_color_floating_control_bg",     "value": "#FFFBF2EB" },
+    { "name": "reader_ds_color_floating_control_bg_alt", "value": "#FFEAE1DA" },
+    { "name": "reader_ds_color_meta_bg",          "value": "#FFF5ECE6" },
+    { "name": "reader_ds_color_rss_unread",       "value": "#FF2F6F93" }
   ]
 }

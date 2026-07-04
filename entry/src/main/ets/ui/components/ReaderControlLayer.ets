@@ -193,14 +193,14 @@ export struct ReaderControlLayer {
   }
 
   private isActiveSession(kind: string): boolean {
-    return this.uiState.activeSession.kind === kind;
+    return this.uiState.activeSessionState.kind === kind;
   }
 
   private sessionActionLabel(kind: string, inactiveLabel: string): string {
     if (!this.isActiveSession(kind)) {
       return inactiveLabel;
     }
-    return this.uiState.activeSession.playing ? '暂停' : '继续';
+    return this.uiState.activeSessionState.playing ? '暂停' : '继续';
   }
 
   private activateOrToggleSession(kind: string): void {
@@ -219,7 +219,7 @@ export struct ReaderControlLayer {
       if (this.isFullPresentation()) {
         this.ReaderFullHost()
       } else {
-        if (this.uiState.activeSession.controlSpaceVisible) {
+        if (this.uiState.activeSessionState.controlSpaceVisible) {
           this.ReaderControlSessionHost()
         }
         this.ReaderCompactDock()
@@ -571,12 +571,12 @@ export struct ReaderControlLayer {
   @Builder
   SessionCapsule() {
     Row({ space: 5 }) {
-      if (this.uiState.activeSession.kind === 'tts') {
+      if (this.uiState.activeSessionState.kind === 'tts') {
         this.SessionVoiceIcon()
       } else {
         this.SessionCountdownDot()
       }
-      Text(this.uiState.activeSession.label)
+      Text(this.uiState.activeSessionState.label)
         .fontSize(10)
         .fontColor('#4A4036')
         .fontWeight(FontWeight.Bold)
@@ -586,7 +586,7 @@ export struct ReaderControlLayer {
         .layoutWeight(1)
       this.SessionControlButton()
     }
-    .width(this.uiState.activeSession.kind === 'autoPage' ? 96 : 94)
+    .width(this.uiState.activeSessionState.kind === 'autoPage' ? 96 : 94)
     .height(24)
     .padding({ left: 5, right: 5 })
     .alignItems(VerticalAlign.Center)
@@ -595,12 +595,12 @@ export struct ReaderControlLayer {
     .borderWidth(1)
     .borderRadius(999)
     .shadow({ radius: 12, color: '#1F000000', offsetX: 0, offsetY: 4 })
-    .accessibilityText(`控制层运行胶囊 ${this.uiState.activeSession.label} ${this.uiState.activeSession.statusText}`)
+    .accessibilityText(`控制层运行胶囊 ${this.uiState.activeSessionState.label} ${this.uiState.activeSessionState.statusText}`)
   }
 
   @Builder
   SessionCountdownDot() {
-    Text(this.uiState.activeSession.countdown.toString())
+    Text(this.uiState.activeSessionState.countdown.toString())
       .fontSize(10)
       .fontWeight(FontWeight.Bold)
       .fontColor('#FFFFFF')
@@ -628,7 +628,7 @@ export struct ReaderControlLayer {
   SessionControlButton() {
     Row() {
       ReaderControlIcon({
-        icon: this.uiState.activeSession.playing ? 'pause-white' : 'play-white',
+        icon: this.uiState.activeSessionState.playing ? 'pause-white' : 'play-white',
         tone: 'white',
         iconSize: 9
       })
@@ -640,7 +640,7 @@ export struct ReaderControlLayer {
     .backgroundColor('#274F66')
     .borderRadius(9)
     .onClick(() => this.onToggleSession())
-    .accessibilityText(this.uiState.activeSession.playing ? '暂停当前阅读会话' : '继续当前阅读会话')
+    .accessibilityText(this.uiState.activeSessionState.playing ? '暂停当前阅读会话' : '继续当前阅读会话')
   }
 
   @Builder
@@ -920,8 +920,8 @@ export struct ReaderControlLayer {
   }
 
   private autoPageCountdown(): number {
-    if (this.uiState.activeSession.kind === 'autoPage' && this.uiState.activeSession.countdown > 0) {
-      return this.uiState.activeSession.countdown;
+    if (this.uiState.activeSessionState.kind === 'autoPage' && this.uiState.activeSessionState.countdown > 0) {
+      return this.uiState.activeSessionState.countdown;
     }
     return 8;
   }
@@ -963,7 +963,7 @@ export struct ReaderControlLayer {
     Column() {
       Row() {
         ReaderControlIcon({
-          icon: this.uiState.activeSession.kind === 'autoPage' && this.uiState.activeSession.playing ? 'pause-white' : 'play-white',
+          icon: this.uiState.activeSessionState.kind === 'autoPage' && this.uiState.activeSessionState.playing ? 'pause-white' : 'play-white',
           tone: 'white',
           iconSize: this.isCompactLandscape() ? 15 : 16
         })
@@ -1191,7 +1191,7 @@ export struct ReaderControlLayer {
   @Builder
   DebugInfoPanel() {
     Column() {
-      ModuleRow({ title: '当前路由', detail: this.uiState.route })
+      ModuleRow({ title: '当前路由', detail: this.uiState.route.id })
       ModuleRow({ title: 'Reader presentation', detail: this.uiState.readerPresentationRoute })
       ModuleRow({ title: '当前章节', detail: this.chapterTitle() })
       ModuleRow({ title: '分页状态', detail: '骨架占位' })

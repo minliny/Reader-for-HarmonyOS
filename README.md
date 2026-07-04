@@ -1,5 +1,66 @@
 # Reader-for-HarmonyOS
 
+Reader for HarmonyOS is the ArkUI native host app for the Reader multi-end architecture.
+
+## Current architecture role
+
+This repo owns the HarmonyOS native experience in the Contract-first Native UI Architecture.
+
+Primary shared plan:
+
+```text
+docs/frontend-complete-app/CONTRACT_FIRST_NATIVE_UI_PLAN.md
+```
+
+Reader UI remains the upstream contract/schema/codegen source; this repo keeps a local development copy under `docs/frontend-complete-app/`.
+
+Architecture direction:
+
+```text
+Reader UI Contract
+  -> generated ArkTS route / state / event / motion / token / view-state types
+
+Reader for HarmonyOS
+  -> ArkUI Native UI
+  -> ArkTS reducer/store
+  -> Reader-Core-Native NAPI bridge
+  -> HarmonyOS Host Adapter
+
+Reader-Core-Native
+  -> business source of truth
+```
+
+This repo owns:
+
+- ArkUI rendering and HarmonyOS native interaction quality.
+- Stage Model lifecycle, adaptive layout, fold posture, accessibility, and device proof.
+- ArkTS reducer/store for `navigation`、`readerMode`、`overlay`、`activeSession`、
+  `focusTarget`、`loading/error`、`async guard`、`reducedMotion`。
+- Reader-Core-Native NAPI bridge and ArkTS DTO mapping.
+- HarmonyOS Host Adapter for native HTTP、ArkWeb、Cookie、file/storage、credential、
+  SystemTts、permission、notification and background task flows.
+- Simulator and real-device evidence for shared slices.
+
+This repo does not own:
+
+- Book/source parsing business rules.
+- Canonical reading progress and sync conflict strategy.
+- Reader UI Contract schema/codegen source.
+- iOS or Android reducer behavior.
+
+Modification direction:
+
+- Consume Reader UI Contract generated ArkTS types when schema/codegen lands.
+- Keep durable UI state in ArkTS reducer/store, not inside monolithic ArkUI pages.
+- Keep drag offset, layout measurement, pressed state and accessibility focus as local visual state only.
+- Route Core-owned operations through Reader-Core-Native NAPI bridge.
+- Route HTTP/ArkWeb/Cookie/file/TTS/permission/background abilities through Host Adapter.
+- Split large reader surfaces into stable shell slots driven by `ViewState`.
+
+Frontend complete-app development entry:
+
+- `docs/frontend-complete-app/README.md`
+
 ## Device Runtime Smoke
 
 Run the repeatable emulator/device runtime smoke from the repo root:
