@@ -7,14 +7,12 @@ from pathlib import Path
 
 REQUIRED_HOME_TOKENS = [
     "书架",
-    "藏书",
-    "在读",
-    "未读",
-    "阅读器",
-    "ReaderShell PASS fixture",
-    "章节",
-    "正文",
-    "TOC",
+    "我的书架",
+    "继续阅读",
+    "阅读",
+    "发现",
+    "RSS",
+    "设置",
 ]
 REQUIRED_RUNTIME_TOKENS = [
     "nativeHTTP",

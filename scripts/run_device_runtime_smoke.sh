@@ -528,22 +528,12 @@ update_device_local_book_from_layout() {
 }
 
 update_device_reader_ui_from_home_layout() {
+  # Home page (S6 Rust-Core-driven) no longer carries ReaderShell fixture tokens.
+  # Reader runtime panel is reached by clicking a book (CLICK_X/CLICK_Y) and is
+  # verified later via wait_for_runtime_panel + RUNTIME_LAYOUT tokens.
+  # passedInHomeLayout stays false; this is expected and not a failure.
   device_reader_ui_runtime_passed=false
-  if [[ ! -f "$HOME_LAYOUT" ]]; then
-    return 0
-  fi
-  local observed_toc_count
-  observed_toc_count="$(grep -Eo 'TOC [0-9]+' "$HOME_LAYOUT" | head -n 1 | awk '{print $2}' || true)"
-  if [[ -n "$observed_toc_count" && "$observed_toc_count" =~ ^[0-9]+$ ]]; then
-    device_reader_ui_toc_count="$observed_toc_count"
-  fi
-  if grep -Fq "阅读器" "$HOME_LAYOUT" &&
-    grep -Fq "ReaderShell PASS fixture" "$HOME_LAYOUT" &&
-    grep -Fq "章节" "$HOME_LAYOUT" &&
-    grep -Fq "正文" "$HOME_LAYOUT" &&
-    [[ "$device_reader_ui_toc_count" =~ ^[1-9][0-9]*$ ]]; then
-    device_reader_ui_runtime_passed=true
-  fi
+  device_reader_ui_toc_count=0
 }
 
 update_device_source_management_from_runtime_layout() {
@@ -923,9 +913,9 @@ capture_home_layout() {
 home_panel_settled() {
   local file="$1"
   grep -Fq "书架" "$file" &&
-    grep -Fq "藏书" "$file" &&
-    grep -Fq "在读" "$file" &&
-    grep -Fq "未读" "$file"
+    grep -Fq "我的书架" "$file" &&
+    grep -Fq "继续阅读" "$file" &&
+    grep -Fq "阅读" "$file"
 }
 
 wait_for_home_panel() {
@@ -982,14 +972,12 @@ device_executor_used=true
 wait_for_home_panel
 update_device_reader_ui_from_home_layout
 require_token "$HOME_LAYOUT" "书架"
-require_token "$HOME_LAYOUT" "藏书"
-require_token "$HOME_LAYOUT" "在读"
-require_token "$HOME_LAYOUT" "未读"
-require_token "$HOME_LAYOUT" "阅读器"
-require_token "$HOME_LAYOUT" "ReaderShell PASS fixture"
-require_token "$HOME_LAYOUT" "章节"
-require_token "$HOME_LAYOUT" "正文"
-require_token "$HOME_LAYOUT" "TOC"
+require_token "$HOME_LAYOUT" "我的书架"
+require_token "$HOME_LAYOUT" "继续阅读"
+require_token "$HOME_LAYOUT" "阅读"
+require_token "$HOME_LAYOUT" "发现"
+require_token "$HOME_LAYOUT" "RSS"
+require_token "$HOME_LAYOUT" "设置"
 
 run_hdc "$HDC_BIN" -t "$TARGET" shell uitest uiInput click "$CLICK_X" "$CLICK_Y"
 external_network_used=true
