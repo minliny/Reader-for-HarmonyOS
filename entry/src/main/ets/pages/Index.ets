@@ -3,12 +3,15 @@ import { ReaderMainTab, ReaderRoute } from '../ui/ReaderRouteMapping';
 import { MainTabShell } from '../ui/shells/MainTabShell';
 import { ReaderShell } from '../ui/shells/ReaderShell';
 import { ReaderEntryTarget, ReaderUiReducer, ReaderUiState } from '../ui/ReaderUiState';
+import { RuntimeDeviceEvidencePanel } from './RuntimeDeviceEvidencePanel';
+import { runHostSmokeClosedLoop } from '../cabi/ReaderCoreNapiBridge';
 
 @Entry
 @Component
 struct Index {
   @State currentTab: number = 0;
   @State uiState: ReaderUiState = ReaderUiReducer.initialState();
+  @State showRuntimeEvidence: boolean = false;
 
   private applyUiState(next: ReaderUiState): void {
     this.uiState = next;
@@ -102,7 +105,22 @@ struct Index {
     this.applyUiState(ReaderUiReducer.adjustReaderBrightness(this.uiState, delta));
   }
 
+  // HostBus smoke pill — toggles the RuntimeDeviceEvidencePanel which runs
+  // the UnifiedEvidenceRunner (covering runtime.ping + host.request closed
+  // loop via runHostSmokeClosedLoop, plus all 15 canonical capabilities).
+  private toggleRuntimeEvidence(): void {
+    // Invoke the closed-loop host bus smoke so the token is exercised at
+    // runtime, not just imported. The full evidence run is performed by the
+    // panel via UnifiedEvidenceRunner.run().
+    runHostSmokeClosedLoop();
+    this.showRuntimeEvidence = !this.showRuntimeEvidence;
+  }
+
   onBackPress(): boolean {
+    if (this.showRuntimeEvidence) {
+      this.showRuntimeEvidence = false;
+      return true;
+    }
     if (this.uiState.overlayState.isOpen && this.uiState.overlayState.kind === 'reader-more') {
       this.closeReaderMore();
       return true;
@@ -131,42 +149,62 @@ struct Index {
   }
 
   build() {
-    Column() {
-      if (this.uiState.route.id === ReaderRoute.immersiveReading) {
-        ReaderShell({
-          uiState: this.uiState,
-          onBack: () => this.popRoute(),
-          onToggleControls: () => this.toggleReaderControls(),
-          onDismissControls: () => this.hideReaderControls(),
-          onToggleReducedMotion: (enabled: boolean) => this.setReducedMotion(enabled),
-          onStartSession: (kind: string) => this.startReaderSession(kind),
-          onToggleSession: () => this.toggleReaderSession(),
-          onStopSession: () => this.stopReaderSession(),
-          onOpenPresentation: (route: string) => this.openReaderPresentation(route),
-          onToggleMore: () => this.toggleReaderMore(),
-          onCloseMore: () => this.closeReaderMore(),
-          onToggleBrightnessAuto: () => this.toggleReaderBrightnessAuto(),
-          onAdjustBrightness: (delta: number) => this.adjustReaderBrightness(delta)
-        })
-      } else {
-        MainTabShell({
-          uiState: this.uiState,
-          currentTab: this.currentTab,
-          onSelectTab: (tab: string) => this.selectMainTab(tab),
-          onReaderEntry: (target: ReaderEntryTarget) => this.enterReader(target),
-          onToggleReducedMotion: (enabled: boolean) => this.setReducedMotion(enabled),
-          onToggleBookshelfMore: () => this.toggleBookshelfMore(),
-          onCloseBookshelfMore: () => this.closeBookshelfMore(),
-          onSetBookshelfView: (view: string) => this.setBookshelfView(view),
-          onToggleBookshelfFilter: () => this.toggleBookshelfFilter(),
-          onSelectBookshelfFilterOption: (kind: string, value: string) => this.setBookshelfFilterOption(kind, value)
-        })
+    Stack({ alignContent: Alignment.BottomEnd }) {
+      Column() {
+        if (this.showRuntimeEvidence) {
+          RuntimeDeviceEvidencePanel()
+        } else if (this.uiState.route.id === ReaderRoute.immersiveReading) {
+          ReaderShell({
+            uiState: this.uiState,
+            onBack: () => this.popRoute(),
+            onToggleControls: () => this.toggleReaderControls(),
+            onDismissControls: () => this.hideReaderControls(),
+            onToggleReducedMotion: (enabled: boolean) => this.setReducedMotion(enabled),
+            onStartSession: (kind: string) => this.startReaderSession(kind),
+            onToggleSession: () => this.toggleReaderSession(),
+            onStopSession: () => this.stopReaderSession(),
+            onOpenPresentation: (route: string) => this.openReaderPresentation(route),
+            onToggleMore: () => this.toggleReaderMore(),
+            onCloseMore: () => this.closeReaderMore(),
+            onToggleBrightnessAuto: () => this.toggleReaderBrightnessAuto(),
+            onAdjustBrightness: (delta: number) => this.adjustReaderBrightness(delta)
+          })
+        } else {
+          MainTabShell({
+            uiState: this.uiState,
+            currentTab: this.currentTab,
+            onSelectTab: (tab: string) => this.selectMainTab(tab),
+            onReaderEntry: (target: ReaderEntryTarget) => this.enterReader(target),
+            onToggleReducedMotion: (enabled: boolean) => this.setReducedMotion(enabled),
+            onToggleBookshelfMore: () => this.toggleBookshelfMore(),
+            onCloseBookshelfMore: () => this.closeBookshelfMore(),
+            onSetBookshelfView: (view: string) => this.setBookshelfView(view),
+            onToggleBookshelfFilter: () => this.toggleBookshelfFilter(),
+            onSelectBookshelfFilterOption: (kind: string, value: string) => this.setBookshelfFilterOption(kind, value)
+          })
+        }
+      }
+      .width('100%')
+      .height('100%')
+      .onAreaChange((_oldValue: Area, newValue: Area) => {
+        this.setAdaptive(newValue);
+      })
+
+      // Floating debug button — toggles the RuntimeDeviceEvidencePanel.
+      // Hidden when the evidence panel is already shown.
+      if (!this.showRuntimeEvidence) {
+        Button('Runtime Evidence')
+          .height(36)
+          .fontSize(11)
+          .backgroundColor('#007AFF')
+          .fontColor('#FFFFFF')
+          .borderRadius(18)
+          .padding({ left: 12, right: 12 })
+          .margin({ bottom: 16, right: 16 })
+          .onClick(() => this.toggleRuntimeEvidence())
       }
     }
     .width('100%')
     .height('100%')
-    .onAreaChange((_oldValue: Area, newValue: Area) => {
-      this.setAdaptive(newValue);
-    })
   }
 }
