@@ -18,7 +18,9 @@
     "ci:device-runtime:validate": "python3 scripts/validate_device_runtime_smoke_artifact.py artifacts/device-runtime-smoke/latest/device_runtime_smoke_summary.json",
     "ci:real-device:validate": "python3 scripts/validate_real_device_runtime_smoke_artifact.py artifacts/real-device-runtime/latest/device-runtime-smoke/device_runtime_smoke_summary.json",
     "ci:device-runtime:validate-fail": "python3 scripts/validate_device_runtime_smoke_fail_artifact.py artifacts/device-runtime-smoke/latest/device_runtime_smoke_summary.json",
-    "validate:gap-matrix": "python3 scripts/validate_harmonyos_core_legado_gap_matrix.py"
+    "validate:gap-matrix": "python3 scripts/validate_harmonyos_core_legado_gap_matrix.py",
+    "validate:reader-ui-contract": "node scripts/verify_reader_ui_contract_drift.mjs",
+    "validate:frontend-slice1": "node scripts/validate_frontend_slice1_headless.mjs"
   },
   "dependencies": {
     "@ohos/hvigor": "6.22.7",

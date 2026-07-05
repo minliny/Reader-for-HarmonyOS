@@ -289,4 +289,7 @@ export class ReaderMotion {
   static durationInterruptSettle(reducedMotion: boolean): number {
     return ReaderMotion.snapshot(reducedMotion).durationInterruptSettle;
   }
+  static durationLoadingSpin(reducedMotion: boolean): number {
+    return ReaderMotion.snapshot(reducedMotion).durationLoadingSpin;
+  }
 }

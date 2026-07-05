@@ -91,11 +91,212 @@ function transformViewState(source) {
   );
 }
 
+function findRecordRegistry(source, registryName, recordType) {
+  const marker = `export const ${registryName}: ${recordType} = `;
+  const markerIndex = source.indexOf(marker);
+  if (markerIndex < 0) {
+    throw new Error(`Missing generated registry marker: ${registryName}`);
+  }
+  const openIndex = source.indexOf("{", markerIndex + marker.length);
+  if (openIndex < 0) {
+    throw new Error(`Missing opening registry brace: ${registryName}`);
+  }
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = openIndex; i < source.length; i++) {
+    const ch = source[i];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (ch === "\\") {
+        escaped = true;
+      } else if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === "{") depth++;
+    if (ch === "}") {
+      depth--;
+      if (depth === 0) {
+        const endIndex = i + 1;
+        const semicolonIndex = source.indexOf(";", endIndex);
+        return {
+          before: source.slice(0, markerIndex),
+          body: source.slice(openIndex + 1, i),
+          after: source.slice(semicolonIndex + 1)
+        };
+      }
+    }
+  }
+  throw new Error(`Could not parse generated registry: ${registryName}`);
+}
+
+function parseRecordEntries(body) {
+  const entries = [];
+  let i = 0;
+
+  function skipWhitespaceAndCommas() {
+    while (i < body.length && (/[\s,]/).test(body[i])) i++;
+  }
+
+  function readString() {
+    if (body[i] !== '"') {
+      throw new Error(`Expected quoted registry key near: ${body.slice(i, i + 24)}`);
+    }
+    i++;
+    let value = "";
+    while (i < body.length) {
+      const ch = body[i];
+      if (ch === "\\") {
+        value += ch + body[i + 1];
+        i += 2;
+        continue;
+      }
+      if (ch === '"') {
+        i++;
+        return value;
+      }
+      value += ch;
+      i++;
+    }
+    throw new Error("Unterminated registry key");
+  }
+
+  function readObjectLiteral() {
+    if (body[i] !== "{") {
+      throw new Error(`Expected object literal near: ${body.slice(i, i + 24)}`);
+    }
+    const start = i;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    for (; i < body.length; i++) {
+      const ch = body[i];
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+        } else if (ch === "\\") {
+          escaped = true;
+        } else if (ch === '"') {
+          inString = false;
+        }
+        continue;
+      }
+      if (ch === '"') {
+        inString = true;
+        continue;
+      }
+      if (ch === "{") depth++;
+      if (ch === "}") {
+        depth--;
+        if (depth === 0) {
+          i++;
+          return body.slice(start, i);
+        }
+      }
+    }
+    throw new Error("Unterminated registry object literal");
+  }
+
+  while (i < body.length) {
+    skipWhitespaceAndCommas();
+    if (i >= body.length) break;
+    const key = readString();
+    skipWhitespaceAndCommas();
+    if (body[i] !== ":") {
+      throw new Error(`Expected colon after registry key: ${key}`);
+    }
+    i++;
+    skipWhitespaceAndCommas();
+    const value = readObjectLiteral();
+    entries.push({ key, value });
+  }
+
+  return entries;
+}
+
+function indentBlock(block, spaces) {
+  const prefix = " ".repeat(spaces);
+  return block.split("\n").map((line) => `${prefix}${line}`).join("\n");
+}
+
+function transformRegistryForArkTS(source, config) {
+  const registry = findRecordRegistry(source, config.registryName, config.recordType);
+  const entries = parseRecordEntries(registry.body);
+  const interfaceBlock = [
+    `export interface ${config.interfaceName} {`,
+    ...entries.map((entry) => `  "${entry.key}": ${config.valueType};`),
+    "}",
+    ""
+  ].join("\n");
+  const arrayBlock = [
+    `export const ${config.arrayName}: ${config.valueType}[] = [`,
+    entries.map((entry) => indentBlock(entry.value, 2)).join(",\n"),
+    "];",
+    ""
+  ].join("\n");
+  const registryBlock = [
+    `export const ${config.registryName}: ${config.interfaceName} = {`,
+    entries.map((entry, index) => `  "${entry.key}": ${config.arrayName}[${index}]`).join(",\n"),
+    "};",
+    ""
+  ].join("\n");
+  const lookupBlock = config.lookupBlock(config);
+  return `${registry.before}${interfaceBlock}${arrayBlock}${registryBlock}${lookupBlock}`;
+}
+
+function transformMotion(source) {
+  return transformRegistryForArkTS(source, {
+    registryName: "motionSpecRegistry",
+    recordType: "Record<MotionId, Motion>",
+    interfaceName: "MotionSpecRegistry",
+    arrayName: "motionSpecs",
+    valueType: "Motion",
+    lookupBlock: () => `export function getMotionSpec(id: MotionId): Motion | undefined {
+  for (let i = 0; i < motionSpecs.length; i++) {
+    if (motionSpecs[i].id === id) {
+      return motionSpecs[i];
+    }
+  }
+  return undefined;
+}
+`
+  });
+}
+
+function transformToken(source) {
+  return transformRegistryForArkTS(source, {
+    registryName: "tokenRegistry",
+    recordType: "Record<string, Token>",
+    interfaceName: "TokenRegistry",
+    arrayName: "tokens",
+    valueType: "Token",
+    lookupBlock: () => `export function getToken(name: string): Token | undefined {
+  for (let i = 0; i < tokens.length; i++) {
+    if (tokens[i].name === name) {
+      return tokens[i];
+    }
+  }
+  return undefined;
+}
+`
+  });
+}
+
 function expectedContractFile(fileName) {
   const source = readFile(path.join(sourceDir, fileName));
   let transformed = source;
   if (fileName === "UiState.ets") transformed = transformUiState(transformed);
   if (fileName === "Route.ets") transformed = transformRoute(transformed);
+  if (fileName === "Motion.ets") transformed = transformMotion(transformed);
+  if (fileName === "Token.ets") transformed = transformToken(transformed);
   if (fileName === "ViewState.ets") transformed = transformViewState(transformed);
   return withSyncHeader(fileName, transformed);
 }

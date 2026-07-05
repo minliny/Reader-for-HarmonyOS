@@ -634,22 +634,23 @@ export class ReaderUiReducer {
   /** @deprecated Phase 3.1: 越界 - readerSettings.autoPage/readerTts.playing 是 DomainState。Slice 4 迁移。 */
   static startReaderSession(state: ReaderUiState, kind: string): ReaderUiState {
     const next = ReaderUiReducer.clone(state);
+    const normalizedKind = ReaderUiReducer.normalizeSessionKind(kind);
     const previousKind = state.activeSessionState.kind;
     next.readerPresentationRoute = ReaderRoute.immersiveReading;
     next.overlayState = new ReaderOverlayState();
     next.focusState = ReaderUiReducer.focus('reader-body', 'reader-control');
-    next.activeSessionState = ReaderUiReducer.session(kind, true);
-    next.readerSettings.autoPage = kind === 'autoPage';
-    next.readerTts.playing = kind === 'tts';
+    next.activeSessionState = ReaderUiReducer.session(normalizedKind, true);
+    next.readerSettings.autoPage = normalizedKind === 'autoPage';
+    next.readerTts.playing = normalizedKind === 'tts';
     next.motionState = ReaderUiReducer.motion(
-      kind === 'tts' ? ReaderMotionId.readerSessionTtsStart : ReaderMotionId.readerSessionAutoPageStart,
+      normalizedKind === 'tts' ? ReaderMotionId.readerSessionTtsStart : ReaderMotionId.readerSessionAutoPageStart,
       state.readerPresentationRoute,
       ReaderRoute.immersiveReading,
       ReaderRoute.immersiveReading,
       'session-mutual-exclusive',
       state.motionState.sequence + 1,
       ReaderMotion.durationReaderSession(state.reducedMotion),
-      previousKind !== 'none' && previousKind !== kind ?
+      previousKind !== 'none' && previousKind !== normalizedKind ?
         ReaderMotionId.readerSessionCapsuleSwitch :
         ReaderMotionId.readerSessionCapsuleEnter
     );
@@ -695,6 +696,98 @@ export class ReaderUiReducer {
       'session-stop',
       state.motionState.sequence + 1,
       ReaderMotion.durationReaderSession(state.reducedMotion)
+    );
+    return ReaderUiReducer.syncContractFields(next);
+  }
+
+  static openOverlay(state: ReaderUiState, kind: string, triggerId: string): ReaderUiState {
+    const next = ReaderUiReducer.clone(state);
+    const previousKind = state.overlayState.kind;
+    const focusReturn = triggerId.length > 0 ? triggerId : 'reader.control.handle';
+    next.overlayState = ReaderUiReducer.overlay(kind, true, kind, focusReturn);
+    next.focusState = ReaderUiReducer.focus(kind, focusReturn);
+    next.motionState = ReaderUiReducer.motion(
+      ReaderUiReducer.overlayEnterMotionId(kind),
+      previousKind,
+      kind,
+      kind,
+      previousKind !== 'none' && previousKind !== kind ? 'overlay-mutex-complete-then-replace' : 'overlay-open',
+      state.motionState.sequence + 1,
+      ReaderMotion.durationOverlay(state.reducedMotion),
+      previousKind !== 'none' && previousKind !== kind ? ReaderMotionId.motionInterruptCompleteThenReplace : ''
+    );
+    return ReaderUiReducer.syncContractFields(next);
+  }
+
+  static closeOverlay(state: ReaderUiState): ReaderUiState {
+    if (!state.overlayState.isOpen || state.overlayState.kind === 'none') {
+      return state;
+    }
+    const next = ReaderUiReducer.clone(state);
+    const previousKind = state.overlayState.kind;
+    const returnTarget = state.overlayState.focusReturn.length > 0 ? state.overlayState.focusReturn : 'reader.control.handle';
+    next.overlayState = new ReaderOverlayState();
+    next.focusState = ReaderUiReducer.focus(returnTarget, previousKind);
+    next.motionState = ReaderUiReducer.motion(
+      ReaderUiReducer.overlayExitMotionId(previousKind),
+      previousKind,
+      'none',
+      'none',
+      'overlay-focus-restore',
+      state.motionState.sequence + 1,
+      ReaderMotion.durationOverlay(state.reducedMotion),
+      ReaderMotionId.motionInterruptCancel
+    );
+    return ReaderUiReducer.syncContractFields(next);
+  }
+
+  static beginAsyncIntent(state: ReaderUiState, requestId: number, targetRoute: string): ReaderUiState {
+    const next = ReaderUiReducer.clone(state);
+    next.entryRequestId = requestId;
+    next.asyncResult = ReaderUiReducer.asyncResult(requestId, 'loading', targetRoute);
+    next.loading = true;
+    next.pageState = 'loading';
+    next.motionState = ReaderUiReducer.motion(
+      ReaderMotionId.stateLoadingInline,
+      state.route.id,
+      targetRoute,
+      targetRoute,
+      'latest-intent-loading',
+      state.motionState.sequence + 1,
+      ReaderMotion.durationLoadingSpin(state.reducedMotion),
+      ReaderMotionId.motionInterruptRedirect
+    );
+    return ReaderUiReducer.syncContractFields(next);
+  }
+
+  static completeAsyncIntent(state: ReaderUiState, requestId: number, targetRoute: string): ReaderUiState {
+    if (state.asyncResult.requestId !== requestId) {
+      return state;
+    }
+    const next = ReaderUiReducer.clone(state);
+    next.asyncResult = ReaderUiReducer.asyncResult(requestId, 'completed', targetRoute);
+    next.loading = false;
+    next.pageState = 'default';
+    if (targetRoute.length > 0) {
+      const stack = state.routeStack.slice();
+      if (stack.length === 0) {
+        stack.push(targetRoute);
+      } else {
+        stack[stack.length - 1] = targetRoute;
+      }
+      next.routeStack = stack;
+      next.route = { id: targetRoute };
+      next.activeTab = ReaderRoute.tabForRoute(targetRoute, state.activeTab);
+    }
+    next.motionState = ReaderUiReducer.motion(
+      ReaderMotionId.motionInterruptCompleteThenReplace,
+      state.route.id,
+      targetRoute,
+      targetRoute,
+      'latest-intent-complete',
+      state.motionState.sequence + 1,
+      ReaderMotion.durationInterruptSettle(state.reducedMotion),
+      ReaderMotionId.appRouteReplace
     );
     return ReaderUiReducer.syncContractFields(next);
   }
@@ -797,6 +890,43 @@ export class ReaderUiReducer {
       session.motionKey = playing ? 'auto-page-running' : 'auto-page-paused';
     }
     return session;
+  }
+
+  private static normalizeSessionKind(kind: string): string {
+    if (kind === 'auto-page') {
+      return 'autoPage';
+    }
+    if (kind === 'tts' || kind === 'autoPage') {
+      return kind;
+    }
+    return 'none';
+  }
+
+  private static contractSessionKind(kind: string): string | undefined {
+    if (kind === 'tts') {
+      return 'tts';
+    }
+    if (kind === 'autoPage' || kind === 'auto-page') {
+      return 'auto-page';
+    }
+    if (kind === 'reading') {
+      return 'reading';
+    }
+    return undefined;
+  }
+
+  private static overlayEnterMotionId(kind: string): string {
+    if (kind === 'dialog') {
+      return ReaderMotionId.overlayDialogEnter;
+    }
+    return ReaderMotionId.overlaySheetEnter;
+  }
+
+  private static overlayExitMotionId(kind: string): string {
+    if (kind === 'dialog') {
+      return ReaderMotionId.overlayDialogExit;
+    }
+    return ReaderMotionId.overlaySheetExit;
   }
 
   private static clamp(value: number, min: number, max: number): number {
@@ -914,6 +1044,7 @@ export class ReaderUiReducer {
   private static syncContractFields(state: ReaderUiState): ReaderUiState {
     state.currentRoute = state.route.id;
     state.backStack = state.routeStack.slice();
+    state.tab = state.activeTab as ContractMainTab;
     // 同步契约 overlay 字符串和本地 overlayState 对象
     state.overlay = state.overlayState.isOpen && state.overlayState.kind !== 'none' ? state.overlayState.kind : undefined;
     if (state.route.id !== ReaderRoute.immersiveReading) {
@@ -924,7 +1055,8 @@ export class ReaderUiReducer {
     state.activeQuickPanel = ReaderUiReducer.readerQuickPanelForPresentation(state.readerPresentationRoute);
     ReaderUiReducer.syncSessionControlSpace(state);
     // 同步契约 activeSession 字符串和本地 activeSessionState 对象
-    state.activeSession = state.activeSessionState.kind !== 'none' ? state.activeSessionState.kind : undefined;
+    state.activeSession = ReaderUiReducer.contractSessionKind(state.activeSessionState.kind);
+    state.focusTarget = state.focusState.owner !== 'none' ? state.focusState.owner : undefined;
     state.motionInterrupt = state.motionState.interruptPolicy;
     return state;
   }

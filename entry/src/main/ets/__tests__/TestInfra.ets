@@ -17,6 +17,7 @@ import { runRuntimeKitValidatorTests } from './RuntimeKitValidator';
 import { runReleaseGateValidatorTests } from './ReleaseGateValidator';
 import { runCAbiPocValidatorTests } from './CAbiPocValidator';
 import { runHostBusClosedLoopTests } from './HostBusClosedLoopValidator';
+import { runAppShellReducerTests } from './AppShellReducerValidator';
 
 export interface TestSuiteResult {
   suite: string;
@@ -68,6 +69,7 @@ export function runAllDomainTests(): TestSuiteResult[] {
   runSuite(results, 'Release Gate Validator', () => runReleaseGateValidatorTests());
   runSuite(results, 'C ABI POC Validator', () => runCAbiPocValidatorTests());
   runSuite(results, 'Host Bus Closed Loop (headless parser)', () => runHostBusClosedLoopTests());
+  runSuite(results, 'Frontend Slice 0/1 AppShell Reducer', () => runAppShellReducerTests());
 
   return results;
 }
