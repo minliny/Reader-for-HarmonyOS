@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "headless-test.v1",
+  "proofName": "HostRouterDispatchProof (router end-to-end wiring)",
+  "tier": "ROUTER DISPATCH (DevEco headless on physical device)",
+  "device": "7GL0226317009033",
+  "bundleName": "reader.minliny.testpackage",
+  "abilityName": "EntryAbility",
+  "trigger": "hdc shell aa start -b reader.minliny.testpackage -a EntryAbility --ps readerHeadlessTest 1",
+  "ranAt": "2026-07-06T11:43:34.254Z",
+  "status": "PASS",
+  "proofSuite": {
+    "suite": "Host Router Dispatch Proof (router end-to-end wiring)",
+    "passed": 33,
+    "failed": 0,
+    "total": 33
+  },
+  "fullRunSummary": {
+    "totalPassed": 826,
+    "totalFailed": 4,
+    "totalTests": 830,
+    "note": "4 failures are pre-existing (Import 1 + Core Adapter Complete 1 + Release Gate 2), unrelated to this proof"
+  },
+  "verificationScope": [
+    "init: ReaderCoreClient.init() loads NAPI + registers all 6 handlers",
+    "register: http.execute / cookie.get / cookie.set / webview.evaluateJavaScript / media.download / anti_bot.challenge registered in HostAdapter (6 cases)",
+    "dispatch: each lane handler reached (not 'unsupported capability') — 6 cases",
+    "dispatch: each lane success reply has result / error reply has code+message — 12 cases",
+    "stub: webview.evaluateJavaScript returns NOT_IMPLEMENTED (ArkWebViewExecutor stub)",
+    "stub: media.download returns error with 'not implemented' message (ArkMediaDownloadExecutor stub)",
+    "stub: anti_bot.challenge returns NOT_IMPLEMENTED (ArkAntiBotExecutor stub)",
+    "roundtrip: cookie.set via router dispatch returns stored=true",
+    "roundtrip: cookie.get via router dispatch returns the proof cookie set by cookie.set",
+    "roundtrip: cookie value matches 'router-dispatch'"
+  ],
+  "strictnessFixes": [
+    "WebViewExecutorError extends Error (was plain class, 2 arkts-limited-throw errors fixed)",
+    "AntiBotExecutorError extends Error (was plain class, 2 arkts-limited-throw errors fixed)",
+    "OHOSHTTPHostTransport.ets:145 throw e wrapped as Error (1 arkts-limited-throw error fixed)",
+    "HttpExecuteHandler.ets:35 finalUrl undefined guard (1 undefined-not-Object error fixed)",
+    "WebViewEvaluateJavaScriptHandler.ets:311 value as Object direct cast (1 null-as-Object error fixed)"
+  ],
+  "canEnterMainline": "still false (memoryOwned/threadingSafe/ciGreen hardcoded false — this proof verifies router dispatch path only, not full mainline gates)",
+  "notClaimed": [
+    "real ArkWeb execution (stub returns NOT_IMPLEMENTED)",
+    "real @ohos.net.http for media/anti_bot (stub returns NOT_IMPLEMENTED)",
+    "real Core host.request emission through NAPI readEvent -> parseEvent -> handleHostRequest (proof exercises adapter.dispatch directly)",
+    "App-level UI reading chain (Phase 4)"
+  ]
+}

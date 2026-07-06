@@ -69,17 +69,18 @@ export interface WebViewExecutor {
 //   not yet wired) — Core should fail-closed via HostCapabilityManifest
 // - execution_failed: ArkWeb ran but the script/parse failed (retryable case-by-case)
 //
-// Plain class (not extending Error) for ArkTS safety; instance checks use
+// Extends Error to satisfy arkts-limited-throw (SDK 6.0 strict mode requires
+// `throw` operands to be Error subclasses). Instance checks still use
 // `instanceof WebViewExecutorError`.
-export class WebViewExecutorError {
+export class WebViewExecutorError extends Error {
   readonly kind: string;
-  readonly message: string;
   readonly timeoutMillis?: number;
   readonly cause?: string;
 
   private constructor(kind: string, message: string, timeoutMillis?: number, cause?: string) {
+    super(message);
     this.kind = kind;
-    this.message = message;
+    this.name = 'WebViewExecutorError';
     this.timeoutMillis = timeoutMillis;
     this.cause = cause;
   }
@@ -306,12 +307,9 @@ export function makeWebViewEvaluateJavaScriptHandler(executor: WebViewExecutor):
       const evalResult: WebViewEvaluationResult = await executor.evaluate(evalRequest);
       // SDK-COMPAT: build result via typed record to satisfy arkts-no-untyped-obj-literals.
       const result: Record<string, Object> = {} as Record<string, Object>;
-      const evalValue = evalResult.value;
-      if (evalValue === undefined || evalValue === null) {
-        result['value'] = null;
-      } else {
-        result['value'] = evalValue as Object;
-      }
+      // value type is `Object | string | number | boolean | null`; direct cast
+      // satisfies arkts strict mode (no null-as-Object conversion needed).
+      result['value'] = evalResult.value as Object;
       if (evalResult.finalUrl !== undefined && evalResult.finalUrl !== null) {
         result['finalUrl'] = evalResult.finalUrl as Object;
       }

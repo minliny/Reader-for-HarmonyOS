@@ -19,6 +19,7 @@ import { runCAbiPocValidatorTests } from './CAbiPocValidator';
 import { runHostBusClosedLoopTests } from './HostBusClosedLoopValidator';
 import { runAppShellReducerTests } from './AppShellReducerValidator';
 import { runHostLoginCookieProofTests } from './HostLoginCookieProof';
+import { runHostRouterDispatchProofTests } from './HostRouterDispatchProof';
 
 export interface TestSuiteResult {
   suite: string;
@@ -100,6 +101,7 @@ async function runAsyncSuite(results: TestSuiteResult[], suite: string, fn: () =
 export async function runAllAsyncDomainTests(): Promise<TestSuiteResult[]> {
   const results: TestSuiteResult[] = [];
   await runAsyncSuite(results, 'Host Login Cookie Proof (login_cookie lane)', () => runHostLoginCookieProofTests());
+  await runAsyncSuite(results, 'Host Router Dispatch Proof (router end-to-end wiring)', () => runHostRouterDispatchProofTests());
   return results;
 }
 

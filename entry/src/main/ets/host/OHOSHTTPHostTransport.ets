@@ -141,8 +141,9 @@ export class OHOSHTTPHostTransport implements HostTransport {
             redirects: []
           } as HostHttpResponse;
         }
-        // Other errors propagate.
-        throw e;
+        // Other errors propagate. Wrap in Error to satisfy arkts-limited-throw
+        // (SDK 6.0 strict mode requires throw operands to be Error subclasses).
+        throw e instanceof Error ? e : new Error(String(e));
       }
       const headers = this.parseHeaders(resp.header);
       const charsetHint = this.extractCharset(headers);

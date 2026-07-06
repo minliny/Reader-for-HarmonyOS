@@ -32,7 +32,11 @@ export function makeHttpExecuteHandler(transport: HostTransport): CapabilityHand
       result['status'] = resp.status;
       result['headers'] = resp.headers;
       result['body'] = resp.body;
-      result['finalUrl'] = resp.finalUrl;
+      // finalUrl is `string | undefined`; guard undefined to satisfy
+      // arkts-no-untyped-obj-literals (undefined not assignable to Object).
+      if (resp.finalUrl !== undefined) {
+        result['finalUrl'] = resp.finalUrl;
+      }
       result['charsetHint'] = resp.charsetHint ?? '';
       const cookies = extractCookies(resp.headers);
       if (cookies.length > 0) {

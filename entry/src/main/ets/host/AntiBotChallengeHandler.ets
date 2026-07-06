@@ -72,16 +72,17 @@ export interface AntiBotExecutor {
 // - not_implemented: host cannot serve anti_bot fetch (ArkAntiBotExecutor stub)
 // - network: transport failure (retryable)
 //
-// Plain class (not extending Error) for ArkTS safety; instance checks use
+// Extends Error to satisfy arkts-limited-throw (SDK 6.0 strict mode requires
+// `throw` operands to be Error subclasses). Instance checks still use
 // `instanceof AntiBotExecutorError`.
-export class AntiBotExecutorError {
+export class AntiBotExecutorError extends Error {
   readonly kind: string;
-  readonly message: string;
   readonly cause?: string;
 
   private constructor(kind: string, message: string, cause?: string) {
+    super(message);
     this.kind = kind;
-    this.message = message;
+    this.name = 'AntiBotExecutorError';
     this.cause = cause;
   }
 
