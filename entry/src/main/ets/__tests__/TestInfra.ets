@@ -23,6 +23,7 @@ import { runHostRouterDispatchProofTests } from './HostRouterDispatchProof';
 import { runHostCoreEventRoundTripProofTests } from './HostCoreEventRoundTripProof';
 import { runHostWebViewRealExecutorProofTests } from './HostWebViewRealExecutorProof';
 import { runHostMediaRealDownloadProofTests } from './HostMediaRealDownloadProof';
+import { runHostHttpCookieRealNetworkProofTests } from './HostHttpCookieRealNetworkProof';
 
 export interface TestSuiteResult {
   suite: string;
@@ -108,6 +109,7 @@ export async function runAllAsyncDomainTests(): Promise<TestSuiteResult[]> {
   await runAsyncSuite(results, 'Host Core Event Round-Trip Proof (NAPI readEvent → parseEvent → handleHostRequest → complete/fail → result)', () => runHostCoreEventRoundTripProofTests());
   await runAsyncSuite(results, 'Host WebView Real Executor Proof (Phase 2: real ArkWeb attempt, REQUIRES_UI_CONTEXT in headless)', () => runHostWebViewRealExecutorProofTests());
   await runAsyncSuite(results, 'Host Media Real Download Proof (real @ohos.net.http + sha256, Phase 2)', () => runHostMediaRealDownloadProofTests());
+  await runAsyncSuite(results, 'Host HTTP/Cookie Real Network Proof (real @ohos.net.http + InMemoryCookieStore, Phase 2)', () => runHostHttpCookieRealNetworkProofTests());
   return results;
 }
 

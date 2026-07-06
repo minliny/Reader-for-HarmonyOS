@@ -1,0 +1,15 @@
+{
+  "suite": "Host HTTP/Cookie Real Network Proof",
+  "date": "2026-07-06",
+  "device": "7GL0226317009033",
+  "tier": "REAL EXECUTOR (Phase 2)",
+  "total": 18,
+  "passed": 18,
+  "failed": 0,
+  "lanes": ["http.execute", "cookie.set", "cookie.get"],
+  "real_network": true,
+  "real_urls": ["https://www.w3.org/Icons/w3c_main.png", "https://www.w3.org/"],
+  "invalid_tld": "https://example.invalid/http-cookie-real-network-proof",
+  "canEnterMainline": false,
+  "notes": "Real @ohos.net.http GET + production InMemoryCookieStore round-trip. Error case uses .invalid TLD (RFC 6761) for deterministic DNS failure. Cookie round-trip verifies host-owned cookie jar wiring (charter §4 Core/Host boundary). 18 assertions across 10 documented test cases (some cases carry multiple sub-assertions: http.success/body/finalUrl/headers, http.error/errorCode/errorMessage, cookie.match name/value/domain)."
+}
