@@ -10,3 +10,15 @@ artifacts/
 entry/.cxx/
 .harmony-signing/
 signing.local.json5
+
+# IDE / tooling local config (user-specific, not for git)
+.idea/
+.clang-tidy
+.clangd
+.appanalyzer/
+
+# Build profile backup (local only)
+build-profile.json5.bak
+
+# Local signing materials (private keys + signed haps — never commit)
+signing/
