@@ -20,11 +20,21 @@
 // rather than factored into HostBus.ets, because HostBus.ets is a placeholder
 // in the S6 wiring (its logic lives in ReaderCoreClient.awaitResult for the
 // production path). Inlining keeps HostRuntime self-contained.
+//
+// Capability registration (login_cookie lane parity with Android / iOS):
+//   - http.execute -> makeHttpExecuteHandler(transport)
+//   - cookie.get   -> makeCookieGetHandler(cookieStore)
+//   - cookie.set   -> makeCookieSetHandler(cookieStore)
+// The CookieStore defaults to InMemoryCookieStore (hermetic); production code
+// can inject an ArkWeb-backed store once that lands.
 
 import { ReaderCoreRuntime } from '../cabi/ReaderCoreNapiBridge';
 import { HostAdapter } from './HostAdapter';
 import { HostTransport } from './HostTransport';
 import { makeHttpExecuteHandler } from './HttpExecuteHandler';
+import { makeCookieGetHandler } from './CookieGetHandler';
+import { makeCookieSetHandler } from './CookieSetHandler';
+import { CookieStore, InMemoryCookieStore } from './CookieStore';
 import { HostReply } from './HostReply';
 import { replyResultObject, replyErrorObject } from './HostReplyCodec';
 
@@ -40,16 +50,20 @@ const HOST_RESPONSE_REQUEST_ID_BASE = 9000000000000;
 export class HostRuntime {
   private runtime: ReaderCoreRuntime;
   private adapter: HostAdapter;
+  private cookieStore: CookieStore;
   private pending: Map<number, PendingWaiter> = new Map<number, PendingWaiter>();
   private nextHostResponseRequestId: number = HOST_RESPONSE_REQUEST_ID_BASE;
   private loopRunning: boolean = false;
   private loopTimerId: number = -1;
   private pollMs: number = 50;
 
-  constructor(runtime: ReaderCoreRuntime, transport: HostTransport) {
+  constructor(runtime: ReaderCoreRuntime, transport: HostTransport, cookieStore?: CookieStore) {
     this.runtime = runtime;
     this.adapter = new HostAdapter();
+    this.cookieStore = cookieStore ?? new InMemoryCookieStore();
     this.adapter.register('http.execute', makeHttpExecuteHandler(transport));
+    this.adapter.register('cookie.get', makeCookieGetHandler(this.cookieStore));
+    this.adapter.register('cookie.set', makeCookieSetHandler(this.cookieStore));
   }
 
   get coreRuntime(): ReaderCoreRuntime {
@@ -58,6 +72,10 @@ export class HostRuntime {
 
   get hostAdapter(): HostAdapter {
     return this.adapter;
+  }
+
+  get hostCookieStore(): CookieStore {
+    return this.cookieStore;
   }
 
   // Start a polling event loop. Polls every pollMs for Core events.

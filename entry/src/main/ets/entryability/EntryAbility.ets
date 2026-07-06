@@ -3,7 +3,7 @@ import { window } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { readerRuntimeNetworkConfig } from '../services/RuntimeNetworkConfig';
 import { ReaderCoreClient } from '../api/ReaderCoreClient';
-import { runAllDomainTests, summarizeResults, TestSuiteResult } from '../__tests__/TestInfra';
+import { runAllDomainTests, runAllAsyncDomainTests, summarizeResults, TestSuiteResult } from '../__tests__/TestInfra';
 
 const TAG = 'EntryAbility';
 const HEADLESS_TEST_FLAG = 'readerHeadlessTest';
@@ -36,31 +36,39 @@ export default class EntryAbility extends UIAbility {
 
     if (want.parameters?.[HEADLESS_TEST_FLAG] === '1') {
       hilog.info(0x0000, TAG, 'HEADLESS_TEST_MODE detected, running validators');
-      try {
-        const results: TestSuiteResult[] = runAllDomainTests();
-        const report: string = summarizeResults(results);
-        hilog.info(0x0000, TAG, `HEADLESS_TEST_REPORT ${report.replace(/\n/g, ' | ')}`);
+      const abilityContext = this.context;
+      // Run sync + async validators, then report + terminate. Async IIFE so
+      // Promise-returning suites (HostLoginCookieProof) are awaited before
+      // terminateSelf — the sync suite is unaffected.
+      (async () => {
+        try {
+          const syncResults: TestSuiteResult[] = runAllDomainTests();
+          const asyncResults: TestSuiteResult[] = await runAllAsyncDomainTests();
+          const results: TestSuiteResult[] = syncResults.concat(asyncResults);
+          const report: string = summarizeResults(results);
+          hilog.info(0x0000, TAG, `HEADLESS_TEST_REPORT ${report.replace(/\n/g, ' | ')}`);
 
-        const totalPassed: number = results.reduce((sum: number, r: TestSuiteResult) => sum + r.passed, 0);
-        const totalFailed: number = results.reduce((sum: number, r: TestSuiteResult) => sum + r.failed, 0);
-        const totalTests: number = results.reduce((sum: number, r: TestSuiteResult) => sum + r.total, 0);
-        const status: string = totalFailed === 0 ? 'PASS' : 'FAIL';
+          const totalPassed: number = results.reduce((sum: number, r: TestSuiteResult) => sum + r.passed, 0);
+          const totalFailed: number = results.reduce((sum: number, r: TestSuiteResult) => sum + r.failed, 0);
+          const totalTests: number = results.reduce((sum: number, r: TestSuiteResult) => sum + r.total, 0);
+          const status: string = totalFailed === 0 ? 'PASS' : 'FAIL';
 
-        const summary: HeadlessTestSummary = {
-          schemaVersion: 'headless-test.v1',
-          status,
-          generatedAt: new Date().toISOString(),
-          summary: { passed: totalPassed, failed: totalFailed, total: totalTests } as HeadlessTestSummaryFields,
-          suites: results
-        };
-        const json: string = JSON.stringify(summary);
-        hilog.info(0x0000, TAG, `HEADLESS_TEST_JSON ${json}`);
-        hilog.info(0x0000, TAG, `HEADLESS_TEST_MODE ${status}`);
-      } catch (e) {
-        const errMsg = (e instanceof Error) ? e.message : String(e);
-        hilog.error(0x0000, TAG, `HEADLESS_TEST_MODE error: ${errMsg}`);
-      }
-      this.context.terminateSelf();
+          const summary: HeadlessTestSummary = {
+            schemaVersion: 'headless-test.v1',
+            status,
+            generatedAt: new Date().toISOString(),
+            summary: { passed: totalPassed, failed: totalFailed, total: totalTests } as HeadlessTestSummaryFields,
+            suites: results
+          };
+          const json: string = JSON.stringify(summary);
+          hilog.info(0x0000, TAG, `HEADLESS_TEST_JSON ${json}`);
+          hilog.info(0x0000, TAG, `HEADLESS_TEST_MODE ${status}`);
+        } catch (e) {
+          const errMsg = (e instanceof Error) ? e.message : String(e);
+          hilog.error(0x0000, TAG, `HEADLESS_TEST_MODE error: ${errMsg}`);
+        }
+        abilityContext.terminateSelf();
+      })();
       return;
     }
   }

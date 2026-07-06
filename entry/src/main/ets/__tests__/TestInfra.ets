@@ -18,6 +18,7 @@ import { runReleaseGateValidatorTests } from './ReleaseGateValidator';
 import { runCAbiPocValidatorTests } from './CAbiPocValidator';
 import { runHostBusClosedLoopTests } from './HostBusClosedLoopValidator';
 import { runAppShellReducerTests } from './AppShellReducerValidator';
+import { runHostLoginCookieProofTests } from './HostLoginCookieProof';
 
 export interface TestSuiteResult {
   suite: string;
@@ -71,6 +72,34 @@ export function runAllDomainTests(): TestSuiteResult[] {
   runSuite(results, 'Host Bus Closed Loop (headless parser)', () => runHostBusClosedLoopTests());
   runSuite(results, 'Frontend Slice 0/1 AppShell Reducer', () => runAppShellReducerTests());
 
+  return results;
+}
+
+// Async suite runner for validators that exercise Promise-returning handlers
+// (e.g. HostLoginCookieProof). Mirrors runSuite but awaits the async fn.
+async function runAsyncSuite(results: TestSuiteResult[], suite: string, fn: () => Promise<SuiteRunner>): Promise<void> {
+  let passed = 0;
+  let failed = 0;
+  let total = 0;
+  try {
+    const r = await fn();
+    passed = r.passed;
+    failed = r.failed;
+    total = r.results.length;
+  } catch (e) {
+    failed = 1;
+    total = 1;
+    const msg = (e instanceof Error) ? e.message : String(e);
+    hilog.error(0x0000, 'TestInfra', `async suite ${suite} threw: ${msg}`);
+  }
+  results.push({ suite, passed, failed, total });
+}
+
+// Async aggregator: runs validators that return Promise<TestRunner>. Called
+// by EntryAbility after runAllDomainTests() so the sync suite is unaffected.
+export async function runAllAsyncDomainTests(): Promise<TestSuiteResult[]> {
+  const results: TestSuiteResult[] = [];
+  await runAsyncSuite(results, 'Host Login Cookie Proof (login_cookie lane)', () => runHostLoginCookieProofTests());
   return results;
 }
 

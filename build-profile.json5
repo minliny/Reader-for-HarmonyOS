@@ -1,6 +1,20 @@
 {
   "app": {
-    "signingConfigs": [],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "/Users/minliny/.ohos/config/default_Reader-for-HarmonyOS_fB0QDzbOHY5o534drkAKgT3UOwg41Wj4thH02nplmmM=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001BA14CA491EEB7E9C16637604213EA9629786027FB68B21847C2A2105D3DB1FE101C5E7FE84644B0",
+          "profile": "/Users/minliny/.ohos/config/default_Reader-for-HarmonyOS_fB0QDzbOHY5o534drkAKgT3UOwg41Wj4thH02nplmmM=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "/Users/minliny/.ohos/config/default_Reader-for-HarmonyOS_fB0QDzbOHY5o534drkAKgT3UOwg41Wj4thH02nplmmM=.p12",
+          "storePassword": "0000001B5F35B99FFA78AE10A96D34C015C4FA5D3ACA29FACEF2E8DA6AC6AF34C43ACF892B1E04525BCD2F"
+        }
+      }
+    ],
     "products": [
       {
         "name": "default",
@@ -23,6 +37,21 @@
       {
         "name": "release"
       }
+    ],
+    "capabilities": [
+      {
+        "bundleName": "reader.minliny.testpackage",
+        "config": [
+          {
+            "name": "Push Kit",
+            "capability": "com.huawei.service.push.base_service"
+          },
+          {
+            "name": "Device status detection",
+            "capability": "com.huawei.service.device_security.device_verify"
+          }
+        ]
+      }
     ]
   },
   "modules": [
@@ -32,7 +61,9 @@
       "targets": [
         {
           "name": "default",
-          "applyToProducts": ["default"]
+          "applyToProducts": [
+            "default"
+          ]
         }
       ]
     }
