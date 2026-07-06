@@ -228,8 +228,9 @@ export async function runHostRouterDispatchProofTests(): Promise<TestRunner> {
   // param validation layer).
   //   - webview.evaluateJavaScript → ArkWebViewExecutor attempts loadUrl/loadData
   //     → platform throws (no Web component) → handler returns code=REQUIRES_UI_CONTEXT
-  //   - media.download → ArkMediaDownloadExecutor throws Error("not implemented")
-  //     → handler returns code=INTERNAL (message contains "not implemented")
+  //   - media.download → ArkMediaDownloadExecutor (Phase 2 real executor) throws
+  //     network error for .invalid URL → handler returns code=INTERNAL
+  //     (message contains "network error" or "media.download failed")
   //   - anti_bot.challenge → ArkAntiBotExecutor throws notImplemented
   //     → handler returns code=NOT_IMPLEMENTED
   {
@@ -248,15 +249,23 @@ export async function runHostRouterDispatchProofTests(): Promise<TestRunner> {
       'media.download',
       buildParamsForLane('media.download')
     );
+    // media.download now uses the REAL ArkMediaDownloadExecutor (Phase 2).
+    // For .invalid URL, the real executor throws a network error (DNS failure),
+    // which the handler wraps as code=INTERNAL. The stub executor (pre-Phase 2)
+    // threw "not implemented". Accept either message to support both paths.
     r.assert(
       !mediaReply.ok,
-      'stub: media.download returns error (executor not implemented)',
+      'executor: media.download returns error (real executor network error or stub)',
       `expected error, got ok=${mediaReply.ok}`
     );
     if (!mediaReply.ok) {
+      const msg = mediaReply.message ?? '';
+      const isStubError = typeof msg === 'string' && msg.indexOf('not implemented') !== -1;
+      const isNetworkError = typeof msg === 'string' &&
+        (msg.indexOf('network') !== -1 || msg.indexOf('media.download failed') !== -1);
       r.assert(
-        mediaReply.message !== undefined && (mediaReply.message as string).indexOf('not implemented') !== -1,
-        'stub: media.download error message mentions not implemented',
+        isStubError || isNetworkError,
+        'executor: media.download error mentions not implemented (stub) or network (real executor)',
         `message=${mediaReply.message}`
       );
     }
