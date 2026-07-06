@@ -18,6 +18,8 @@
 // media.download handlers.
 import { CapabilityHandler } from './CapabilityHandler';
 import { HostReply, hostReplySuccess, hostReplyError } from './HostReply';
+import { http } from '@kit.NetworkKit';
+import { cryptoFramework } from '@kit.CryptoArchitectureKit';
 
 export const MEDIA_DOWNLOAD_CAPABILITY = 'media.download';
 
@@ -88,14 +90,154 @@ export class StubMediaDownloadExecutor implements MediaDownloadExecutor {
   }
 }
 
-// ArkMediaDownloadExecutor — production placeholder. Throws not_implemented
-// because real media download requires @ohos.net.http + filesystem cache +
-// sha256 hashing. The handler/router proof uses StubMediaDownloadExecutor; the
-// device-headless/App tier (real media.download L1-L5) will wire a live
-// backend in a future increment.
+// ArkMediaDownloadExecutor — production executor (Phase 2). Uses @ohos.net.http
+// to download media content and @kit.CryptoArchitectureKit for SHA-256 hashing.
+// Mirrors OHOSHTTPHostTransport's @ohos.net.http usage pattern (http.createHttp
+// → client.request → resp handling → client.destroy in finally).
+//
+// Tier: REAL EXECUTOR. Replaces the device-headless beta stub with real network
+// I/O. The handler catches executor throws and wraps them as structured
+// HostReply errors (code=INTERNAL). Non-2xx/304 responses are returned as
+// MediaDownloadResult with the actual statusCode (caller decides how to handle
+// 4xx/5xx); network failures throw Error.
+//
+// Per charter §4 / §10.2: Host owns real HTTP/TLS — Core only produces request
+// descriptors, never opens sockets. ArkMediaDownloadExecutor is the media.download
+// execution path in the HarmonyOS host layer.
+//
+// canEnterMainline remains false — this is executor layer, not App-level.
+// In-memory download (no tempPath) — the executor does not have cacheDir access;
+// tempPath is left undefined. Future increments can wire a cacheDir via the
+// constructor (mirrors DownloadAdapter pattern).
 export class ArkMediaDownloadExecutor implements MediaDownloadExecutor {
-  async execute(_request: MediaDownloadRequest): Promise<MediaDownloadResult> {
-    throw new Error('ArkMediaDownloadExecutor not implemented — device-headless beta');
+  async execute(request: MediaDownloadRequest): Promise<MediaDownloadResult> {
+    const client = http.createHttp();
+    try {
+      // Build headers — copy request.headers (don't mutate the original), then
+      // add Range / If-None-Match / If-Modified-Since as conditional headers.
+      const headers: Record<string, string> = {} as Record<string, string>;
+      if (request.headers !== undefined && request.headers !== null) {
+        const srcKeys = Object.keys(request.headers);
+        for (let i = 0; i < srcKeys.length; i++) {
+          const k = srcKeys[i];
+          headers[k] = request.headers[k];
+        }
+      }
+      if (request.rangeStart !== undefined) {
+        const end = request.rangeEnd !== undefined ? String(request.rangeEnd) : '';
+        headers['Range'] = `bytes=${request.rangeStart}-${end}`;
+      }
+      if (request.ifNoneMatch !== undefined) {
+        headers['If-None-Match'] = request.ifNoneMatch;
+      }
+      if (request.ifModifiedSince !== undefined) {
+        headers['If-Modified-Since'] = request.ifModifiedSince;
+      }
+
+      const method = (request.method ?? 'GET').toUpperCase();
+      const timeout = request.timeoutMillis ?? 30000;
+      const options: http.HttpRequestOptions = {
+        method: method === 'HEAD' ? http.RequestMethod.HEAD : http.RequestMethod.GET,
+        header: headers,
+        expectDataType: http.HttpDataType.ARRAY_BUFFER,
+        connectTimeout: timeout,
+        readTimeout: timeout
+      } as http.HttpRequestOptions;
+
+      let resp: http.HttpResponse;
+      try {
+        resp = await client.request(request.url, options);
+      } catch (e) {
+        // Network/DNS/timeout error. Wrap as Error to satisfy
+        // arkts-limited-throw. Handler catches and wraps as INTERNAL.
+        const msg = e instanceof Error ? (e as Error).message : String(e);
+        throw new Error(`media.download network error: ${msg}`);
+      }
+
+      const statusCode = resp.responseCode;
+      const respHeaders = this.parseHeaders(resp.header);
+      const contentType = respHeaders['Content-Type'] ?? respHeaders['content-type'] ?? '';
+      const etag = respHeaders['ETag'] ?? respHeaders['etag'] ?? undefined;
+      const contentLengthStr = respHeaders['Content-Length'] ?? respHeaders['content-length'] ?? '';
+      const contentLength = contentLengthStr.length > 0 ? parseInt(contentLengthStr, 10) : undefined;
+
+      // Extract body bytes. ARRAY_BUFFER should return ArrayBuffer, but handle
+      // all possible result types for robustness (mirrors OHOSHTTPHostTransport
+      // normalizeResult but keeps bytes rather than converting to string).
+      let bodyBytes: Uint8Array = new Uint8Array(0);
+      const result = resp.result;
+      if (result !== undefined && result !== null) {
+        if (result instanceof ArrayBuffer) {
+          bodyBytes = new Uint8Array(result);
+        } else if (typeof result === 'string') {
+          bodyBytes = this.stringToBytes(result as string);
+        } else {
+          // Object — JSON.stringify fallback (shouldn't happen for ARRAY_BUFFER).
+          const json = JSON.stringify(result);
+          bodyBytes = this.stringToBytes(json);
+        }
+      }
+
+      // Enforce maxBytes cap (throws if exceeded — handler wraps as INTERNAL).
+      if (request.maxBytes !== undefined && bodyBytes.length > request.maxBytes) {
+        throw new Error(
+          `media.download exceeded maxBytes: ${bodyBytes.length} > ${request.maxBytes}`
+        );
+      }
+
+      // Compute SHA-256 of downloaded bytes via @kit.CryptoArchitectureKit.
+      const sha256 = this.computeSha256(bodyBytes);
+      const resourceId = `media-${sha256.substring(0, 16)}`;
+
+      return {
+        resourceId: resourceId,
+        statusCode: statusCode,
+        contentType: contentType.length > 0 ? contentType : undefined,
+        contentLength: contentLength,
+        etag: etag,
+        byteLength: bodyBytes.length,
+        sha256: sha256,
+        fromCache: false,
+        finalUrl: request.url
+      } as MediaDownloadResult;
+    } finally {
+      client.destroy();
+    }
+  }
+
+  private parseHeaders(header: Object): Record<string, string> {
+    const result: Record<string, string> = {};
+    if (!header) { return result; }
+    const keys = Object.keys(header);
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      const v = (header as Record<string, Object>)[k];
+      result[k] = Array.isArray(v) ? (v as string[]).join(', ') : String(v);
+    }
+    return result;
+  }
+
+  private computeSha256(bytes: Uint8Array): string {
+    const md = cryptoFramework.createMd('SHA256');
+    md.updateSync({ data: bytes } as cryptoFramework.DataBlob);
+    const digest = md.digestSync();
+    let hex = '';
+    for (let i = 0; i < digest.data.length; i++) {
+      const b = digest.data[i];
+      hex += (b < 16 ? '0' : '') + b.toString(16);
+    }
+    return hex;
+  }
+
+  private stringToBytes(s: string): Uint8Array {
+    // Encode string as bytes (ASCII-safe, mirrors LegadoNonUIParityServices
+    // bytes() helper). Used only as a fallback when @ohos.net.http returns a
+    // string result instead of the requested ARRAY_BUFFER.
+    const output = new Uint8Array(s.length);
+    for (let i = 0; i < s.length; i++) {
+      output[i] = s.charCodeAt(i) & 0xff;
+    }
+    return output;
   }
 }
 

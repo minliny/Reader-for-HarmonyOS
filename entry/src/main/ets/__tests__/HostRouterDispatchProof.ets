@@ -220,13 +220,14 @@ export async function runHostRouterDispatchProofTests(): Promise<TestRunner> {
     }
   }
 
-  // ---------- Step 4: Verify stub executors return structured errors ----------
-  // The webview / media / anti_bot lanes use ArkXxxExecutor stubs that throw
-  // notImplemented. The handlers catch the stub error and return a structured
-  // HostReply error. This proves the dispatch reaches the executor (not just
-  // the handler's param validation layer).
-  //   - webview.evaluateJavaScript → ArkWebViewExecutor throws notImplemented
-  //     → handler returns code=NOT_IMPLEMENTED
+  // ---------- Step 4: Verify executors return structured errors ----------
+  // The webview lane now uses the REAL ArkWebViewExecutor (Phase 2) which
+  // attempts ArkWeb calls and returns REQUIRES_UI_CONTEXT in headless mode
+  // (no Web component bound). The media / anti_bot lanes still use stubs.
+  // This proves the dispatch reaches the executor (not just the handler's
+  // param validation layer).
+  //   - webview.evaluateJavaScript → ArkWebViewExecutor attempts loadUrl/loadData
+  //     → platform throws (no Web component) → handler returns code=REQUIRES_UI_CONTEXT
   //   - media.download → ArkMediaDownloadExecutor throws Error("not implemented")
   //     → handler returns code=INTERNAL (message contains "not implemented")
   //   - anti_bot.challenge → ArkAntiBotExecutor throws notImplemented
@@ -237,9 +238,9 @@ export async function runHostRouterDispatchProofTests(): Promise<TestRunner> {
       buildParamsForLane('webview.evaluateJavaScript')
     );
     r.assert(
-      !webviewReply.ok && webviewReply.code === 'NOT_IMPLEMENTED',
-      'stub: webview.evaluateJavaScript returns NOT_IMPLEMENTED',
-      `expected NOT_IMPLEMENTED, got code=${webviewReply.code} message=${webviewReply.message}`
+      !webviewReply.ok && webviewReply.code === 'REQUIRES_UI_CONTEXT',
+      'executor: webview.evaluateJavaScript returns REQUIRES_UI_CONTEXT (real ArkWeb executor, headless mode)',
+      `expected REQUIRES_UI_CONTEXT, got code=${webviewReply.code} message=${webviewReply.message}`
     );
   }
   {

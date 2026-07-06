@@ -21,6 +21,8 @@ import { runAppShellReducerTests } from './AppShellReducerValidator';
 import { runHostLoginCookieProofTests } from './HostLoginCookieProof';
 import { runHostRouterDispatchProofTests } from './HostRouterDispatchProof';
 import { runHostCoreEventRoundTripProofTests } from './HostCoreEventRoundTripProof';
+import { runHostWebViewRealExecutorProofTests } from './HostWebViewRealExecutorProof';
+import { runHostMediaRealDownloadProofTests } from './HostMediaRealDownloadProof';
 
 export interface TestSuiteResult {
   suite: string;
@@ -104,6 +106,8 @@ export async function runAllAsyncDomainTests(): Promise<TestSuiteResult[]> {
   await runAsyncSuite(results, 'Host Login Cookie Proof (login_cookie lane)', () => runHostLoginCookieProofTests());
   await runAsyncSuite(results, 'Host Router Dispatch Proof (router end-to-end wiring)', () => runHostRouterDispatchProofTests());
   await runAsyncSuite(results, 'Host Core Event Round-Trip Proof (NAPI readEvent → parseEvent → handleHostRequest → complete/fail → result)', () => runHostCoreEventRoundTripProofTests());
+  await runAsyncSuite(results, 'Host WebView Real Executor Proof (Phase 2: real ArkWeb attempt, REQUIRES_UI_CONTEXT in headless)', () => runHostWebViewRealExecutorProofTests());
+  await runAsyncSuite(results, 'Host Media Real Download Proof (real @ohos.net.http + sha256, Phase 2)', () => runHostMediaRealDownloadProofTests());
   return results;
 }
 
