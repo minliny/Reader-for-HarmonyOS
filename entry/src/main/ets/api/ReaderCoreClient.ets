@@ -8,24 +8,67 @@
 // events itself. This avoids the race the original plan acknowledged between
 // a separate HostRuntime event loop and awaitResult polling. S6 accepts serial
 // business requests; S7 needs a proper event multiplexer for concurrency.
+//
+// Host capability registration (production router wiring — 3/3 lane parity with
+// Android / iOS and with the non-production HostRuntime.ets):
+//   - http.execute                → makeHttpExecuteHandler(transport)  [login_cookie]
+//   - cookie.get / cookie.set     → makeCookieGet/SetHandler(cookieStore)  [login_cookie]
+//   - webview.evaluateJavaScript  → makeWebViewEvaluateJavaScriptHandler(ArkWebViewExecutor stub)  [webview_render]
+//   - media.download              → makeMediaDownloadHandler(ArkMediaDownloadExecutor stub)  [media_download]
+//   - anti_bot.challenge          → AntiBotChallengeHandler adapter (ArkAntiBotExecutor stub)  [anti_bot]
+//
+// Executors for webview / media / anti_bot remain stubs (notImplemented) — this
+// wiring makes the production router dispatch path complete so a Core host.request
+// for these lanes reaches the handler. Real device-headless execution requires
+// DevEco Studio + simulator/device (canEnterMainline=false — see
+// HostRouterDispatchProof.ets header).
 import { ReaderCoreRuntime } from '../cabi/ReaderCoreNapiBridge';
 import { HostAdapter } from '../host/HostAdapter';
 import { HostTransport } from '../host/HostTransport';
 import { OHOSHTTPHostTransport } from '../host/OHOSHTTPHostTransport';
 import { makeHttpExecuteHandler } from '../host/HttpExecuteHandler';
-import { HostReply } from '../host/HostReply';
+import { makeCookieGetHandler } from '../host/CookieGetHandler';
+import { makeCookieSetHandler } from '../host/CookieSetHandler';
+import { CookieStore, InMemoryCookieStore } from '../host/CookieStore';
+import { makeWebViewEvaluateJavaScriptHandler, ArkWebViewExecutor } from '../host/WebViewEvaluateJavaScriptHandler';
+import { makeMediaDownloadHandler, ArkMediaDownloadExecutor } from '../host/MediaDownloadHandler';
+import { AntiBotChallengeHandler, ArkAntiBotExecutor, AntiBotChallengeDetector } from '../host/AntiBotChallengeHandler';
+import { CapabilityHandler } from '../host/CapabilityHandler';
+import { HostReply, hostReplyError } from '../host/HostReply';
+
+// Capability string for the anti_bot lane coordinator. anti_bot is a HostLane
+// (not a HostCapability) in Core — it composes http.execute + cookie + challenge
+// detection. This string is the routing key the HostAdapter uses to dispatch
+// anti_bot challenge requests; Core does not emit this capability directly
+// (the lane coordinator is host-side), but registering it makes the router
+// dispatch path complete for the anti_bot lane.
+const ANTI_BOT_CHALLENGE_CAPABILITY = 'anti_bot.challenge';
 
 export class ReaderCoreClient {
   private runtime: ReaderCoreRuntime;
   private adapter: HostAdapter;
+  private cookieStore: CookieStore;
   private nextRequestId: number = 1;
   private static INSTANCE: ReaderCoreClient | null = null;
 
   private constructor() {
     this.runtime = ReaderCoreRuntime.create();
     this.adapter = new HostAdapter();
+    this.cookieStore = new InMemoryCookieStore();
     const transport: HostTransport = new OHOSHTTPHostTransport();
+    // login_cookie lane: http.execute + cookie.get + cookie.set
     this.adapter.register('http.execute', makeHttpExecuteHandler(transport));
+    this.adapter.register('cookie.get', makeCookieGetHandler(this.cookieStore));
+    this.adapter.register('cookie.set', makeCookieSetHandler(this.cookieStore));
+    // webview_render lane: webview.evaluateJavaScript (ArkWebViewExecutor stub)
+    this.adapter.register('webview.evaluateJavaScript', makeWebViewEvaluateJavaScriptHandler(new ArkWebViewExecutor()));
+    // media_download lane: media.download (ArkMediaDownloadExecutor stub)
+    this.adapter.register('media.download', makeMediaDownloadHandler(new ArkMediaDownloadExecutor()));
+    // anti_bot lane: anti_bot.challenge (ArkAntiBotExecutor stub — lane coordinator adapter)
+    this.adapter.register(
+      ANTI_BOT_CHALLENGE_CAPABILITY,
+      makeAntiBotChallengeCapabilityHandler(new ArkAntiBotExecutor(), new AntiBotChallengeDetector())
+    );
   }
 
   static init(): ReaderCoreClient {
@@ -44,6 +87,19 @@ export class ReaderCoreClient {
 
   static isInitialized(): boolean {
     return ReaderCoreClient.INSTANCE !== null;
+  }
+
+  // Read-only access to the HostAdapter for router-dispatch proofs. Production
+  // dispatch flows through handleHostRequest → adapter.dispatch (the same
+  // adapter exposed here). Mirrors HostRuntime.hostAdapter getter.
+  get hostAdapter(): HostAdapter {
+    return this.adapter;
+  }
+
+  // Read-only access to the CookieStore for proofs that need to verify
+  // cookie.get / cookie.set side effects via the router dispatch path.
+  get hostCookieStore(): CookieStore {
+    return this.cookieStore;
   }
 
   // Send a JSON command to Core and return the requestId for awaitResult.
@@ -170,6 +226,39 @@ export class ReaderCoreClient {
     this.runtime.release();
     ReaderCoreClient.INSTANCE = null;
   }
+}
+
+// Adapter: wraps AntiBotChallengeHandler.handle into a CapabilityHandler so the
+// anti_bot lane can be routed through HostAdapter like the other lanes. anti_bot
+// is a lane coordinator (not a single Core HostCapability — see
+// AntiBotChallengeHandler.ets header), so this adapter extracts url / headers /
+// cookieJarId from params and delegates to AntiBotChallengeHandler.handle.
+// Mirrors the makeXxxHandler factory pattern (makeHttpExecuteHandler,
+// makeCookieGetHandler, makeWebViewEvaluateJavaScriptHandler,
+// makeMediaDownloadHandler) but kept module-local because the anti_bot handler
+// is a lane coordinator (not a Core HostCapability).
+function makeAntiBotChallengeCapabilityHandler(
+  executor: ArkAntiBotExecutor,
+  detector: AntiBotChallengeDetector
+): CapabilityHandler {
+  const handler: AntiBotChallengeHandler = new AntiBotChallengeHandler(executor, detector);
+  const capabilityHandler: CapabilityHandler = async (params: Record<string, Object>): Promise<HostReply> => {
+    const urlValue = params['url'];
+    if (typeof urlValue !== 'string' || (urlValue as string).length === 0) {
+      return hostReplyError('INVALID_ARGUMENT', 'anti_bot.challenge requires non-empty url', false);
+    }
+    const url = urlValue as string;
+    const headersValue = params['headers'];
+    let headers: Record<string, string> = {} as Record<string, string>;
+    if (headersValue !== null && headersValue !== undefined && typeof headersValue === 'object') {
+      headers = headersValue as Record<string, string>;
+    }
+    const cookieJarIdValue = params['cookieJarId'];
+    const cookieJarId: string | undefined =
+      typeof cookieJarIdValue === 'string' ? cookieJarIdValue as string : undefined;
+    return handler.handle(url, headers, cookieJarId);
+  };
+  return capabilityHandler;
 }
 
 interface CoreError {
