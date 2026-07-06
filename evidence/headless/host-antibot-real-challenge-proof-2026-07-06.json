@@ -1,0 +1,11 @@
+{
+  "suite": "Host AntiBot Real Challenge Proof (Phase 2)",
+  "date": "2026-07-06",
+  "device": "7GL0226317009033",
+  "tier": "device-headless",
+  "total": 22,
+  "passed": 22,
+  "failed": 0,
+  "canEnterMainline": false,
+  "notes": "Real ArkAntiBotExecutor (replacing alpha stub) with @ohos.net.http. UA/Referer injection, fail-closed challenge detection. URLs: example.com (200 OK), httpbin.org/headers (echo), example.invalid (DNS fail). Detector classification verified via StubAntiBotExecutor (NONE/CLOUDFLARE_JS/UNSUPPORTED). canEnterMainline=false — executor layer proof, not App-level."
+}

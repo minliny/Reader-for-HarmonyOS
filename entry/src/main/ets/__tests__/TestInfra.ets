@@ -24,6 +24,10 @@ import { runHostCoreEventRoundTripProofTests } from './HostCoreEventRoundTripPro
 import { runHostWebViewRealExecutorProofTests } from './HostWebViewRealExecutorProof';
 import { runHostMediaRealDownloadProofTests } from './HostMediaRealDownloadProof';
 import { runHostHttpCookieRealNetworkProofTests } from './HostHttpCookieRealNetworkProof';
+import { runHostAntiBotRealChallengeProofTests } from './HostAntiBotRealChallengeProof';
+import { runHostMediaMultiResourceProofTests } from './HostMediaMultiResourceProof';
+import { runHostWebViewP0HeadlessFailClosedProofTests } from './HostWebViewP0HeadlessFailClosedProof';
+import { runAppLevelReadingChainProofTests } from './AppLevelReadingChainProof';
 
 export interface TestSuiteResult {
   suite: string;
@@ -110,6 +114,10 @@ export async function runAllAsyncDomainTests(): Promise<TestSuiteResult[]> {
   await runAsyncSuite(results, 'Host WebView Real Executor Proof (Phase 2: real ArkWeb attempt, REQUIRES_UI_CONTEXT in headless)', () => runHostWebViewRealExecutorProofTests());
   await runAsyncSuite(results, 'Host Media Real Download Proof (real @ohos.net.http + sha256, Phase 2)', () => runHostMediaRealDownloadProofTests());
   await runAsyncSuite(results, 'Host HTTP/Cookie Real Network Proof (real @ohos.net.http + InMemoryCookieStore, Phase 2)', () => runHostHttpCookieRealNetworkProofTests());
+  await runAsyncSuite(results, 'Host AntiBot Real Challenge Proof (real @ohos.net.http + fail-closed detection, Phase 2)', () => runHostAntiBotRealChallengeProofTests());
+  await runAsyncSuite(results, 'Host Media Multi-Resource Proof (real PNG/HTML/large download, Phase 2)', () => runHostMediaMultiResourceProofTests());
+  await runAsyncSuite(results, 'Host WebView P0 Headless Fail-Closed Proof (REQUIRES_UI_CONTEXT, Phase 2)', () => runHostWebViewP0HeadlessFailClosedProofTests());
+  await runAsyncSuite(results, 'App-Level Reading Chain Proof (source.import -> book.search -> book.detail -> book.toc -> chapter.content, Phase 2 Core commands chain)', () => runAppLevelReadingChainProofTests());
   return results;
 }
 

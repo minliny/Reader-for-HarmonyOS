@@ -16,6 +16,11 @@
 //     requires @ohos.file.fs + FilePicker UI + DevEco Studio emulator —
 //     pending device proof, out of scope for this increment.
 //
+//     Phase 2 step 4b note: real file picker / sandbox authorization is
+//     deferred to Phase 4 App-tier. In headless mode there is no file picker
+//     UI (use app sandbox pre-placed files). The existing TXT proof via text
+//     field is sufficient for headless tier — no new file proof created.
+//
 // (3) Mirrors iOS LocalBookCoreImportBridgeTests pattern: TXT input with
 //     "Chapter 1\nBody\nChapter 2\nMore" → 2 chapters detected by the Auto
 //     heuristic's is_english_chapter detector (txt.rs:333).

@@ -27,6 +27,7 @@
 // ArkAntiBotExecutor + persistent cookie jar + cf_clearance/__jsluid
 // cookie lifecycle.
 import { HostReply, hostReplySuccess, hostReplyError } from './HostReply';
+import { http } from '@kit.NetworkKit';
 
 export const ANTI_BOT_LANE = 'anti_bot';
 export const CHALLENGE_REQUIRED_CODE = 'CHALLENGE_REQUIRED';
@@ -131,14 +132,131 @@ export class StubAntiBotExecutor implements AntiBotExecutor {
   }
 }
 
-// ArkAntiBotExecutor — production placeholder. Throws not_implemented because
-// real anti_bot fetch requires @ohos.net.http + persistent cookie store +
-// cf_clearance/__jsluid cookie lifecycle. The handler/router proof uses
-// StubAntiBotExecutor; the device-headless/App tier (real anti_bot L1-L5)
-// will wire a live backend in a future increment.
+// ArkAntiBotExecutor — production executor backed by @ohos.net.http.
+//
+// Phase 2 (this increment): real HTTP fetch + UA/Referer headers + fail-closed
+// challenge detection. Mirrors OHOSHTTPHostTransport's @ohos.net.http usage
+// pattern (http.createHttp -> client.request -> resp handling -> client.destroy
+// in finally). Does NOT solve challenges — returns the raw response so the
+// AntiBotChallengeDetector can classify it (NONE = clean, CLOUDFLARE_JS/
+// SLIDER_CAPTCHA/RECAPTCHA_V2/UNSUPPORTED = fail-closed ChallengeRequired).
+//
+// Cookie jar integration: the cookieJarId parameter is accepted but cookie
+// persistence is deferred to beta (the InMemoryCookieStore is owned by
+// ReaderCoreClient's cookie.get/set handlers; anti_bot cookie lifecycle
+// management requires cross-handler coordination that is out of scope for
+// this increment). The executor passes through cookies via Cookie header
+// if provided in the headers map.
+//
+// Per charter section 4 / 10.2: Host owns real HTTP/TLS — Core only produces
+// request descriptors. ArkAntiBotExecutor is the anti_bot lane execution
+// path in the HarmonyOS host layer.
+//
+// canEnterMainline remains false — this is executor layer, not App-level.
+// Real anti_bot source L1-L5 (cf_clearance/__jsluid cookie lifecycle) requires
+// persistent cookie jar + challenge solver (Phase 4/5).
 export class ArkAntiBotExecutor implements AntiBotExecutor {
-  async fetch(_url: string, _headers: Record<string, string>, _cookieJarId?: string): Promise<AntiBotHttpResponse> {
-    throw AntiBotExecutorError.notImplemented();
+  private defaultTimeout: number;
+
+  constructor(defaultTimeout: number = 30000) {
+    this.defaultTimeout = defaultTimeout;
+  }
+
+  async fetch(url: string, headers: Record<string, string>, _cookieJarId?: string): Promise<AntiBotHttpResponse> {
+    const client = http.createHttp();
+    try {
+      // Build headers — copy caller headers, inject defaults for UA/Referer
+      // if not already present. Fail-closed: always send a UA (some anti-bot
+      // systems reject requests without one).
+      const mergedHeaders: Record<string, string> = {} as Record<string, string>;
+      const srcKeys = Object.keys(headers);
+      for (let i = 0; i < srcKeys.length; i++) {
+        const k = srcKeys[i];
+        mergedHeaders[k] = headers[k];
+      }
+      if (this.getHeaderCI(mergedHeaders, 'User-Agent').length === 0) {
+        mergedHeaders['User-Agent'] = 'Mozilla/5.0 (Linux; Android 12; Reader) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36';
+      }
+      if (this.getHeaderCI(mergedHeaders, 'Referer').length === 0) {
+        // Derive Referer from URL origin (best-effort — some anti-bot systems
+        // require a same-origin Referer).
+        try {
+          const origin = this.extractOrigin(url);
+          if (origin.length > 0) {
+            mergedHeaders['Referer'] = origin;
+          }
+        } catch (_e) {
+          // URL parse failed — skip Referer (fail-open on this header).
+        }
+      }
+
+      const options: http.HttpRequestOptions = {
+        method: http.RequestMethod.GET,
+        header: mergedHeaders,
+        expectDataType: http.HttpDataType.STRING,
+        connectTimeout: this.defaultTimeout,
+        readTimeout: this.defaultTimeout
+      } as http.HttpRequestOptions;
+
+      let resp: http.HttpResponse;
+      try {
+        resp = await client.request(url, options);
+      } catch (e) {
+        const msg = e instanceof Error ? (e as Error).message : String(e);
+        throw AntiBotExecutorError.network(msg);
+      }
+
+      const respHeaders = this.parseHeaders(resp.header);
+      const body = this.normalizeResult(resp.result);
+      return {
+        statusCode: resp.responseCode,
+        body: body,
+        headers: respHeaders,
+        finalUrl: url
+      } as AntiBotHttpResponse;
+    } finally {
+      client.destroy();
+    }
+  }
+
+  private getHeaderCI(headers: Record<string, string>, name: string): string {
+    const keys = Object.keys(headers);
+    for (let i = 0; i < keys.length; i++) {
+      if (keys[i].toLowerCase() === name.toLowerCase()) {
+        return headers[keys[i]];
+      }
+    }
+    return '';
+  }
+
+  private extractOrigin(url: string): string {
+    const schemeEnd = url.indexOf('://');
+    if (schemeEnd <= 0) { return ''; }
+    const afterScheme = url.substring(schemeEnd + 3);
+    const slashIdx = afterScheme.indexOf('/');
+    const host = slashIdx >= 0 ? afterScheme.substring(0, slashIdx) : afterScheme;
+    return url.substring(0, schemeEnd + 3) + host + '/';
+  }
+
+  private parseHeaders(header: Object): Record<string, string> {
+    const result: Record<string, string> = {};
+    if (!header) { return result; }
+    const keys = Object.keys(header);
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      const v = (header as Record<string, Object>)[k];
+      result[k] = Array.isArray(v) ? (v as string[]).join(', ') : String(v);
+    }
+    return result;
+  }
+
+  private normalizeResult(result: string | Object | ArrayBuffer): string {
+    if (typeof result === 'string') { return result; }
+    if (result instanceof ArrayBuffer) {
+      return String.fromCharCode(...new Uint8Array(result));
+    }
+    if (result === undefined || result === null) { return ''; }
+    return JSON.stringify(result);
   }
 }
 
