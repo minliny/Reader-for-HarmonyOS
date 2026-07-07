@@ -7,7 +7,7 @@ export class DemoViewState {
   static componentsFor(routeId: string): string[] {
     switch (routeId) {
       case 'bookshelf':
-        return ['ShelfChipGroup', 'ContinueReadingCard', 'ShelfSectionHeader', 'BookGrid'];
+        return ['ContinueReadingCard', 'BookshelfShelfSection'];
       case 'bookshelf-empty':
         return ['Empty'];
       case 'discover':

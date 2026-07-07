@@ -1,53 +1,20 @@
-// BookshelfComponents — P0 bookshelf demo components, ported 1:1 from
-// frontend-demo/styles/00-foundation.css (.fd-continue-card / .fd-book-grid /
-// .fd-book-card / .fd-book-cover-frame / .fd-chip-row / .fd-section-head).
-// All sizes are demo vp values (lint allows plain numbers); colors via tokens.
+// BookshelfComponents — bookshelf skeleton ported from render-runtime.js
+// mainTabBookshelf() DOM: .fd-continue-card → .fd-bookshelf-shelf-section
+// (wrapper, gap 10: .fd-section-head [h2 + 4 view-action buttons] + .fd-book-grid).
+// NO ShelfChipGroup on bookshelf (the chips were invented, not in demo).
 import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
-import { SpacingTokens } from '../../contract/generated/DimensionTokens';
 import { ReaderTypography } from '../tokens/ReaderTypography';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 
-// .fd-chip-row: flex wrap, gap 8, min-height 34. Chips: min 56×34, padding 0 12,
-// pill, surface bg, ink 14/700; active = primary bg / on-primary.
-@Component
-export struct ShelfChipGroup {
-  private chips: string[] = ['全部', '在读', '已读', '本地'];
-  private active: string = '全部';
-
-  build() {
-    Row() {
-      ForEach(this.chips, (c: string) => {
-        Text(c)
-          .fontSize(14)
-          .fontWeight(700)
-          .fontColor(c === this.active ? DemoAliasTokens.onPrimary : ColorTokens.ink)
-          .backgroundColor(c === this.active ? ColorTokens.primary : DemoAliasTokens.surface)
-          .borderRadius(DemoAliasTokens.radiusPill)
-          .padding({ left: 12, right: 12, top: 8, bottom: 8 })
-          .height(34)
-          .margin({ right: 8 })
-          .onClick(() => ReaderUiStore.dispatch({ type: 'set-page-state', pageState: 'default' }))
-      }, (c: string) => c)
-    }
-    .width('100%')
-    .height(34)
-  }
-}
-
-// .fd-continue-card: grid 62px 1fr 82px; gap 14; min-height 100; padding 10 16;
-// border 1 border; radius-md(8); surface bg; soft-shadow.
-//   cover: 62px, aspect-ratio 2/3, radius-sm(6).
-//   label (h2 "继续阅读"): sans 13/900 primary.
-//   title (strong): serif 20, line-clamp 2.
-//   author: muted 14, line-clamp 2.
-//   action button (.fd-continue-action-button): min 74×40, padding 0 14, pill,
-//     primary bg, on-primary 13/800.
+// .fd-continue-card: grid 62px 1fr 82px; gap 14; min-height 100; padding 10 16.
+//   cover (.fd-continue-cover-button): 62px, aspect 2/3, radius-sm, clickable.
+//   div: h2 "继续阅读" (13/900 primary) + strong (serif 20) + span author (14 muted).
+//   button (.fd-continue-action-button) "阅读": min 74×40, pill, primary, 13/800.
 @Component
 export struct ContinueReadingCard {
   build() {
     Row() {
-      // cover (62px, aspect 2/3)
       Stack() {
         Image($r('app.media.bookshelf_cover_three_body'))
           .width('100%').height('100%')
@@ -57,8 +24,8 @@ export struct ContinueReadingCard {
       .aspectRatio(2 / 3)
       .borderRadius(DemoAliasTokens.radiusSm)
       .backgroundColor(ColorTokens.metaBg)
+      .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' }))
 
-      // content: label + title + author
       Column() {
         Text('继续阅读')
           .fontSize(13)
@@ -84,8 +51,7 @@ export struct ContinueReadingCard {
       .layoutWeight(1)
       .margin({ left: 14, right: 14 })
 
-      // action button (min 74×40, pill, primary)
-      Text('续读')
+      Text('阅读')
         .fontSize(13)
         .fontWeight(800)
         .fontColor(DemoAliasTokens.onPrimary)
@@ -104,8 +70,9 @@ export struct ContinueReadingCard {
   }
 }
 
-// .fd-section-head: flex space-between, gap 12, min-height 38. h2 15px.
-//   button (more): 34×34 circle, transparent bg, muted.
+// .fd-section-head.fd-bookshelf-section-head: flex space-between, gap 12,
+//   min-height 38. h2 "我的书架" 15/700. view-actions: 4 buttons (grid/list/
+//   filter/gear), each 34×34 circle with 20×20 fd-small-icon.
 @Component
 export struct ShelfSectionHeader {
   build() {
@@ -115,16 +82,33 @@ export struct ShelfSectionHeader {
         .fontWeight(700)
         .fontColor(ColorTokens.ink)
       Blank()
-      Image($r('app.media.reader_icon_more_dark'))
-        .width(34).height(34)
+      Row() {
+        Image($r('app.media.reader_icon_more_dark')).width(20).height(20)
+        Image($r('app.media.reader_icon_more_dark')).width(20).height(20).margin({ left: 8 })
+        Image($r('app.media.reader_icon_more_dark')).width(20).height(20).margin({ left: 8 })
+        Image($r('app.media.bookshelf_icon_gear_dark')).width(20).height(20).margin({ left: 8 })
+      }
     }
     .width('100%')
     .height(38)
+    .alignItems(VerticalAlign.Center)
   }
 }
 
-// .fd-book-cover-frame: width 100%, aspect-ratio 2/3, radius-md(8), surface bg,
-// soft-shadow. img fills (object-fit cover).
+// .fd-bookshelf-shelf-section: grid, gap 10 — wrapper for section head + grid.
+@Component
+export struct BookshelfShelfSection {
+  build() {
+    Column() {
+      ShelfSectionHeader()
+      BookGrid()
+        .margin({ top: 10 })
+    }
+    .width('100%')
+  }
+}
+
+// .fd-book-cover-frame: width 100%, aspect 2/3, radius-md(8), surface, soft-shadow.
 @Component
 export struct BookCover {
   build() {
@@ -141,8 +125,7 @@ export struct BookCover {
   }
 }
 
-// .fd-book-card (cover mode): grid, align-content start, gap 6.
-//   cover (100%, aspect 2/3) → title (serif 15, line-clamp 2) → meta (12 muted).
+// .fd-book-card (cover mode): grid, gap 6. cover + strong (serif 15) + span (12 muted).
 @Component
 export struct BookCard {
   @Prop title: string = '三体';
@@ -170,8 +153,7 @@ export struct BookCard {
   }
 }
 
-// .fd-book-grid: grid-template-columns repeat(3, 1fr); gap 16px 30px.
-// Renders 3 demo BookCards.
+// .fd-book-grid: repeat(3, 1fr); gap 16px 30px.
 @Component
 export struct BookGrid {
   private books: Array<[string, string]> = [
@@ -192,5 +174,30 @@ export struct BookGrid {
     .rowsGap(16)
     .columnsGap(30)
     .width('100%')
+  }
+}
+
+// .fd-chip-row — NOT used on bookshelf (kept for other routes that may use chips).
+@Component
+export struct ShelfChipGroup {
+  private chips: string[] = ['全部', '在读', '已读', '本地'];
+  private active: string = '全部';
+
+  build() {
+    Row() {
+      ForEach(this.chips, (c: string) => {
+        Text(c)
+          .fontSize(14)
+          .fontWeight(700)
+          .fontColor(c === this.active ? DemoAliasTokens.onPrimary : ColorTokens.ink)
+          .backgroundColor(c === this.active ? ColorTokens.primary : DemoAliasTokens.surface)
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .padding({ left: 12, right: 12, top: 8, bottom: 8 })
+          .height(34)
+          .margin({ right: 8 })
+      }, (c: string) => c)
+    }
+    .width('100%')
+    .height(34)
   }
 }

@@ -20,7 +20,12 @@ export struct LibraryShell {
         }
         .layoutWeight(1)
         .align(Alignment.Top)
-        .padding({ left: SpacingTokens.screenPadding, right: SpacingTokens.screenPadding })
+        .padding({
+          top: 8,
+          left: SpacingTokens.safeAreaHorizontal + 3,
+          right: SpacingTokens.safeAreaHorizontal + 3,
+          bottom: 112,
+        })
         .backgroundColor(ColorTokens.paper)
       }
       .width('100%')

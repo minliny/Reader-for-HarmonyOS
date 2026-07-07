@@ -15,11 +15,17 @@ export struct ReadingBackgroundLayer {
   }
 }
 
-// .fd-ir-reading-layer: inset 72 32 48. h1 (chapter): reader-font-size+5 (23),
-//   centered. p: reader-font-size (18), line-height 1.96, text-indent 2em,
-//   max-width 31ch, serif.
+// .fd-ir-reading-layer: inset 72 32 48. h1 (chapter, first page): +5px serif,
+//   centered. p: reader-font-size (18) line-height 1.96 text-indent 2em, gap
+//   paragraph-gap (16) between paragraphs.
 @Component
 export struct ReadingTextFlow {
+  private paragraphs: string[] = [
+    '汪淼盯着面前的纳米丝，想象着它在宏观尺度上的形态。它细如蛛丝，却能切断合金，这便是三体人送给地球的第一个礼物。',
+    '叶文洁当年的选择，像一条看不见的线，从雷达峰延伸到此刻的每一个角落。她按下发射键的那一刻，人类的命运被永远改写了。',
+    '宇宙曾经是一片死寂的荒漠，直到那条信息被发出，直到那个回复被接收。在那之后的每一个夜晚，星空都不再是原来的星空。'
+  ];
+
   build() {
     Scroll() {
       Column() {
@@ -31,13 +37,15 @@ export struct ReadingTextFlow {
           .textAlign(TextAlign.Center)
           .width('100%')
           .margin({ bottom: 24 })
-        Text('汪淼盯着面前的纳米丝，想象着它在宏观尺度上的形态。叶文洁当年的选择，像一条看不见的线，从雷达峰延伸到此刻的每一个角落。宇宙曾经是一片死寂的荒漠，直到那条信息被发出，直到那个回复被接收。')
-          .fontSize(18)
-          .fontColor(ColorTokens.ink)
-          .fontFamily(ReaderTypography.serifFamily())
-          .lineHeight(18 * 1.96)
-          .textIndent(2 * 18)
-          .maxLines(20)
+        ForEach(this.paragraphs, (p: string, i: number) => {
+          Text(p)
+            .fontSize(18)
+            .fontColor(ColorTokens.ink)
+            .fontFamily(ReaderTypography.serifFamily())
+            .lineHeight(18 * 1.96)
+            .textIndent(2 * 18)
+            .margin({ bottom: 16 })
+        }, (p: string, i: number) => `${i}`)
       }
       .padding({ top: 72, left: 32, right: 32, bottom: 48 })
       .alignItems(HorizontalAlign.Start)
@@ -48,23 +56,43 @@ export struct ReadingTextFlow {
   }
 }
 
-// .fd-ir-info-layer: inset 26 24 22, grid 1fr/1fr, 12px sans, color #766c61 (~muted).
+// .fd-ir-info-layer: inset 26 24 22, 4-corner overlay (top-left book·chapter,
+//   top-right time, bottom-left progress, bottom-right page label). 12px sans
+//   muted. pointer-events none (taps pass through to TapZones).
 @Component
 export struct ReadingInfoLayer {
   build() {
-    Row() {
-      Text('第一章 科学边界')
-        .fontSize(12)
-        .fontColor(ColorTokens.muted)
-        .fontFamily(ReaderTypography.sansFamily())
+    Column() {
+      Row() {
+        Text('示例书 · 第一章 科学边界')
+          .fontSize(12)
+          .fontColor(ColorTokens.muted)
+          .fontFamily(ReaderTypography.sansFamily())
+          .layoutWeight(1)
+        Text('13:50')
+          .fontSize(12)
+          .fontColor(ColorTokens.muted)
+          .fontFamily(ReaderTypography.sansFamily())
+      }
+      .width('100%')
       Blank()
-      Text('42%')
-        .fontSize(12)
-        .fontColor(ColorTokens.muted)
-        .fontFamily(ReaderTypography.sansFamily())
+      Row() {
+        Text('38%')
+          .fontSize(12)
+          .fontColor(ColorTokens.muted)
+          .fontFamily(ReaderTypography.sansFamily())
+          .layoutWeight(1)
+        Text('第 1 / 10 页')
+          .fontSize(12)
+          .fontColor(ColorTokens.muted)
+          .fontFamily(ReaderTypography.sansFamily())
+      }
+      .width('100%')
     }
     .width('100%')
+    .height('100%')
     .padding({ top: 26, left: 24, right: 24, bottom: 22 })
+    .hitTestBehavior(HitTestMode.None)
   }
 }
 

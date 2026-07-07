@@ -58,7 +58,7 @@ export struct AppTopBar {
         .layoutWeight(1)
       Row() {
         Image($r('app.media.bookshelf_icon_search_dark')).width(24).height(24)
-        Image($r('app.media.bookshelf_icon_gear_dark')).width(24).height(24).margin({ left: 18 })
+        Image($r('app.media.reader_icon_more_dark')).width(24).height(24).margin({ left: 18 })
       }
       .alignItems(VerticalAlign.Center)
     }
@@ -132,7 +132,7 @@ export struct BottomNav {
     .width('100%')
     .height(SizeTokens.mainNavHeight)
     .padding({ top: 7, bottom: 7, left: 8, right: 8 })
-    .margin({ left: 14, right: 14 })
+    .margin({ left: 14, right: 14, bottom: 14 })
     .border({ width: 1, color: ColorTokens.border })
     .borderRadius(DemoAliasTokens.radiusXl)
     .backgroundColor(DemoAliasTokens.surface)

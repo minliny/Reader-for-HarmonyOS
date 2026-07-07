@@ -1,9 +1,9 @@
 // MainTabShell — 5-slot shell for the 4 main tabs (bookshelf / discover / rss / settings).
-// Slots: topArea (AppTopBar) · content (ViewStateRenderer) · tabNav (BottomNav) ·
-// overlayHost (OverlayHost) · stateHost (StateHost).
-// Overlays and page-state layers hang off shell slots, never inside page components.
+// Skeleton ported from frontend-demo: .fd-phone-content (grid, gap 8, padding
+// 8 / safeAreaH+3 / mainNav+safeBottom+34) + .fd-main-nav (absolute, floats at
+// bottom: safeAreaBottom, left/right: safeAreaHorizontal-2).
 import { ColorTokens } from '../../contract/generated/ColorTokens';
-import { SpacingTokens, ZIndexTokens } from '../../contract/generated/DimensionTokens';
+import { SpacingTokens, SizeTokens, ZIndexTokens } from '../../contract/generated/DimensionTokens';
 import { AppTopBar, BottomNav } from '../components/SharedComponents';
 import { ViewStateRenderer } from '../components/ViewStateRenderer';
 import { OverlayHost } from '../slots/OverlayHost';
@@ -15,6 +15,7 @@ export struct MainTabShell {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
+      // content layer: top bar + scrollable body (.fd-phone-content)
       Column() {
         AppTopBar()
         Scroll() {
@@ -22,13 +23,30 @@ export struct MainTabShell {
         }
         .layoutWeight(1)
         .align(Alignment.Top)
-        .padding({ left: SpacingTokens.screenPadding, right: SpacingTokens.screenPadding })
+        .padding({
+          top: 8,
+          left: SpacingTokens.safeAreaHorizontal + 3,
+          right: SpacingTokens.safeAreaHorizontal + 3,
+          bottom: SizeTokens.mainNavHeight + SpacingTokens.safeAreaBottom + 34,
+        })
         .backgroundColor(ColorTokens.paper)
-        BottomNav()
       }
       .width('100%')
       .height('100%')
       .zIndex(ZIndexTokens.content)
+
+      // floating main nav (.fd-main-nav: absolute, bottom safeAreaBottom,
+      // left/right safeAreaHorizontal-2). Blank fills the top so the nav sits at
+      // the bottom; hitTestBehavior Transparent lets taps pass through to content.
+      Column() {
+        Blank()
+          .layoutWeight(1)
+        BottomNav()
+      }
+      .width('100%')
+      .height('100%')
+      .zIndex(ZIndexTokens.mainNav)
+      .hitTestBehavior(HitTestMode.Transparent)
 
       OverlayHost()
         .zIndex(ZIndexTokens.overlay)

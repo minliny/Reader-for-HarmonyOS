@@ -3,7 +3,7 @@
 // pass fixture props; Phase 1 demo components render self-contained fixture content.
 import { DemoViewState } from '../fixtures/DemoViewState';
 import { AppTopBar, BackTopBar, BottomNav, Loading, Empty, ErrorState, Offline } from './SharedComponents';
-import { ShelfChipGroup, ContinueReadingCard, ShelfSectionHeader, BookCard, BookCover, BookGrid } from './BookshelfComponents';
+import { ShelfChipGroup, ContinueReadingCard, ShelfSectionHeader, BookCard, BookCover, BookGrid, BookshelfShelfSection } from './BookshelfComponents';
 import { BookTitleAuthor, DirectoryPreview, BookIntro, ReadButton, AddToShelfButton } from './BookDetailComponents';
 import { ReadingBackgroundLayer, ReadingTextFlow, ReadingInfoLayer, TapZones } from './ReaderComponents';
 import { SettingsSection, SettingsListItem } from './SettingsComponents';
@@ -17,7 +17,10 @@ export struct ViewStateRenderer {
   build() {
     Column() {
       ForEach(DemoViewState.componentsFor(this.routeId), (type: string, idx: number) => {
-        this.renderComponent(type)
+        Column() {
+          this.renderComponent(type)
+        }
+        .margin({ bottom: 8 })
       }, (type: string, idx: number) => `${type}-${idx}`)
     }
     .width('100%')
@@ -51,6 +54,8 @@ export struct ViewStateRenderer {
       BookCover()
     } else if (type === 'BookGrid') {
       BookGrid()
+    } else if (type === 'BookshelfShelfSection') {
+      BookshelfShelfSection()
     } else if (type === 'BookTitleAuthor') {
       BookTitleAuthor()
     } else if (type === 'DirectoryPreview') {
