@@ -413,3 +413,83 @@ export struct ReaderSettingsPanel {
     }
   }
 }
+
+// ── Search panel (.reader-search-overlay, quick-action variant) ────────────
+//   header (搜索 / 共 N 处结果) + field + 清除 + result list + nav buttons.
+//   Ported from reader-search-overlay-v2.html.
+@Component
+export struct ReaderSearchPanel {
+  private results: string[] = ['信号', '信号源', '信号强度'];
+
+  build() {
+    ReaderOverlayPanel({ panelHeight: 420 }) {
+      ReaderPanelHeader({ title: '搜索', meta: '共 3 处结果' })
+      Row() {
+        TextInput({ placeholder: '搜索内容' })
+          .layoutWeight(1)
+          .height(42)
+          .fontSize(14)
+          .fontColor(ColorTokens.ink)
+          .backgroundColor(ColorTokens.floatingControlBgAlt)
+          .borderRadius(DemoAliasTokens.radiusLg)
+          .border({ width: 1, color: ColorTokens.border })
+        ReaderActionButton({ label: '清除' })
+      }.width('100%')
+      Scroll() {
+        Column({ space: 8 }) {
+          ForEach(this.results, (r: string, i: number) => {
+            ReaderListRow({ title: r, detail: `第 ${i + 1} 段` })
+          }, (r: string, i: number) => `${r}-${i}`)
+        }
+      }.layoutWeight(1).align(Alignment.Top)
+      Row() {
+        ReaderActionButton({ label: '上一个结果' })
+        ReaderActionButton({ label: '下一个结果', primary: true })
+      }.width('100%')
+    }
+  }
+}
+
+// ── Replace panel (.reader-replace-overlay, quick-action variant) ──────────
+//   header (内容替换 / 匹配规则 N 条) + current book + rule list (toggles) +
+//   apply / cancel / restore. Ported from reader-replace-overlay-v2.html.
+@Component
+export struct ReaderReplacePanel {
+  build() {
+    ReaderOverlayPanel({ panelHeight: 440 }) {
+      ReaderPanelHeader({ title: '内容替换', meta: '匹配规则 3 条' })
+      ReaderListRow({ title: '三体', detail: '当前书籍' })
+      Column({ space: 8 }) {
+        ReaderSettingRow({ name: '替换"信号"为"信号源"', toggle: true })
+        ReaderSettingRow({ name: '替换"地球"为"星球"', toggle: true })
+        ReaderSettingRow({ name: '去除广告段落', toggle: true })
+      }.width('100%')
+      Row() {
+        ReaderActionButton({ label: '应用', primary: true })
+        ReaderActionButton({ label: '取消', dismiss: true })
+        ReaderActionButton({ label: '恢复原文' })
+      }.width('100%')
+    }
+  }
+}
+
+// ── Auto-scroll panel (.reader-auto-scroll-overlay, quick-action variant) ─
+//   header (自动翻页 / 状态) + start/pause/stop + speed list-item + slider +
+//   翻页方式 segmented. Ported from reader-auto-scroll-overlay-v2.html.
+@Component
+export struct ReaderAutoScrollPanel {
+  build() {
+    ReaderOverlayPanel({ panelHeight: 420 }) {
+      ReaderPanelHeader({ title: '自动翻页', meta: '状态：未开启' })
+      Row() {
+        ReaderActionButton({ label: '开始', primary: true })
+        ReaderActionButton({ label: '暂停' })
+        ReaderActionButton({ label: '停止', dismiss: true })
+      }.width('100%')
+      ReaderListRow({ title: '翻页速度', detail: '中速 · 适合连续阅读' })
+      ReaderSlider()
+      Text('翻页方式').fontSize(13).fontWeight(700).fontColor(ColorTokens.controlInk)
+      SegmentedControl({ options: ['滚动', '点击翻页', '连续滚动'] })
+    }
+  }
+}

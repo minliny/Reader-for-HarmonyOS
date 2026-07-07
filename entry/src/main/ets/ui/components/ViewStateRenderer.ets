@@ -7,7 +7,7 @@ import { AppTopBar, BackTopBar, BottomNav, Loading, Empty, ErrorState, Offline,
 import { ContinueReadingCard, BookshelfShelfSection, ShelfChipGroup, ShelfSectionHeader, BookCard, BookCover, BookGrid } from './BookshelfComponents';
 import { BookHero, BookSummaryCard, BookChapterList } from './BookDetailComponents';
 import { ReadingBackgroundLayer, ReadingTextFlow, ReadingInfoLayer, TapZones, ReaderBase } from './ReaderComponents';
-import { ReaderBottomBar, ReaderDirectoryPanel, ReaderAppearancePanel, ReaderTtsPanel, ReaderSettingsPanel } from './ReaderOverlayComponents';
+import { ReaderBottomBar, ReaderDirectoryPanel, ReaderAppearancePanel, ReaderTtsPanel, ReaderSettingsPanel, ReaderSearchPanel, ReaderReplacePanel, ReaderAutoScrollPanel } from './ReaderOverlayComponents';
 import { SettingsHomeSection, SettingsSection, SettingsListItem } from './SettingsComponents';
 import { DiscoverSourceBar, DiscoverEntryRow, DiscoverFilterTrigger, DiscoverListHead, DiscoverBookList } from './DiscoverComponents';
 import { RssSearchEntry, RssModeRow, RssSourceOverview, RssArticleSection } from './RssComponents';
@@ -107,6 +107,12 @@ export struct ViewStateRenderer {
       ReaderTtsPanel()
     } else if (component.type === 'ReaderSettingsPanel') {
       ReaderSettingsPanel()
+    } else if (component.type === 'ReaderSearchPanel') {
+      ReaderSearchPanel()
+    } else if (component.type === 'ReaderReplacePanel') {
+      ReaderReplacePanel()
+    } else if (component.type === 'ReaderAutoScrollPanel') {
+      ReaderAutoScrollPanel()
     } else if (component.type === 'SettingsHomeSection') {
       SettingsHomeSection()
     } else if (component.type === 'SettingsSection') {

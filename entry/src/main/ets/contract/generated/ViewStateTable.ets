@@ -651,6 +651,84 @@ export class ViewStateTable {
     ]
   },
   {
+    "routeId": "reader-search-overlay-v2",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderSearchPanel",
+        "id": "search-panel",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader-replace-overlay-v2",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderReplacePanel",
+        "id": "replace-panel",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader-auto-scroll-overlay-v2",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderAutoScrollPanel",
+        "id": "auto-scroll-panel",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
     "routeId": "bookshelf",
     "pageState": "cover-mode",
     "components": [
