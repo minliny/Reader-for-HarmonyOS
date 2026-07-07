@@ -7,10 +7,14 @@ export type ReaderMode = 'default' | 'loading' | 'empty' | 'error' | 'offline' |
 export type PageState =
   | '' | 'default' | 'loading' | 'empty' | 'error' | 'offline' | 'permission'
   | 'cover-mode' | 'list-mode' | 'shelf-empty' | 'refreshing' | 'no-subscription' | 'no-unread';
+// Overlay = generic transient overlays only. Reader overlays (directory /
+// appearance / tts / settings / search / replace / auto-scroll / night-state /
+// reader-control) are ROUTES now (Batch 1) — not this field. Retired kinds
+// removed; kept: source-switch (live) + the generic transient kinds for
+// future Batch 2+ overlays.
 export type Overlay =
-  | '' | 'settings' | 'reader-control' | 'directory' | 'tts' | 'appearance' | 'auto-page'
-  | 'content-search' | 'content-replacement' | 'source-switch' | 'book-action'
-  | 'sort-filter' | 'group-management' | 'local-import' | 'dialog' | 'sheet' | 'toast';
+  | '' | 'source-switch' | 'book-action' | 'sort-filter' | 'group-management'
+  | 'local-import' | 'dialog' | 'sheet' | 'toast';
 export type ActiveSession = '' | 'reading' | 'tts' | 'auto-page';
 
 export interface ReaderError {

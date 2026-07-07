@@ -1,9 +1,9 @@
-// OverlayHost — shell slot for generic overlays (dropdown / sheet / toast).
-// Reader control is rendered by ReaderShell as a bottom dock, not by this generic
-// centered overlay host.
-// Reads `overlay` from AppStorage. Appear/disappear uses the motion-duration overlay token
-// (centralized here, never animateTo in pages). Backdrop derived from ColorTokens.ink + opacity
-// (no raw hex).
+// OverlayHost — shell slot for generic transient overlays (dropdown / sheet /
+// toast / source-switch). Reader overlays are routes now (Batch 1) — they do
+// NOT come through here; they render via ViewStateRenderer(stack) as the
+// reader route's body. Reads `overlay` from AppStorage. Appear/disappear uses
+// the motion-duration overlay token (centralized here, never animateTo in
+// pages). Backdrop derived from ColorTokens.ink + opacity (no raw hex).
 import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { SpacingTokens, RadiusTokens } from '../../contract/generated/DimensionTokens';
 import { MotionDurationTokens } from '../../contract/generated/MotionTokens';
@@ -15,7 +15,7 @@ export struct OverlayHost {
   @StorageProp('reader.overlay') overlayKind: string = '';
 
   build() {
-    if (this.overlayKind !== '' && this.overlayKind !== 'reader-control') {
+    if (this.overlayKind !== '') {
       Stack() {
         Column()
           .width('100%').height('100%')
@@ -49,14 +49,11 @@ export struct OverlayHost {
 
   private overlayLabel(): string {
     switch (this.overlayKind) {
-      case 'reader-control': return '阅读控制层';
-      case 'directory': return '目录';
-      case 'appearance': return '外观';
-      case 'tts': return '朗读';
-      case 'settings': return '设置';
-      case 'content-search': return '内容搜索';
-      case 'content-replacement': return '内容替换';
       case 'source-switch': return '换源';
+      case 'book-action': return '书籍操作';
+      case 'sort-filter': return '排序筛选';
+      case 'group-management': return '分组管理';
+      case 'local-import': return '本地导入';
       default: return '浮层';
     }
   }
