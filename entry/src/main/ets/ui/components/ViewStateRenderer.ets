@@ -3,7 +3,7 @@
 // pass fixture props; Phase 1 demo components render self-contained fixture content.
 import { DemoViewState } from '../fixtures/DemoViewState';
 import { AppTopBar, BackTopBar, BottomNav, Loading, Empty, ErrorState, Offline } from './SharedComponents';
-import { ShelfChipGroup, ContinueReadingCard, ShelfSectionHeader, BookCard, BookCover } from './BookshelfComponents';
+import { ShelfChipGroup, ContinueReadingCard, ShelfSectionHeader, BookCard, BookCover, BookGrid } from './BookshelfComponents';
 import { BookTitleAuthor, DirectoryPreview, BookIntro, ReadButton, AddToShelfButton } from './BookDetailComponents';
 import { ReadingBackgroundLayer, ReadingTextFlow, ReadingInfoLayer, TapZones } from './ReaderComponents';
 import { SettingsSection, SettingsListItem } from './SettingsComponents';
@@ -49,6 +49,8 @@ export struct ViewStateRenderer {
       BookCard()
     } else if (type === 'BookCover') {
       BookCover()
+    } else if (type === 'BookGrid') {
+      BookGrid()
     } else if (type === 'BookTitleAuthor') {
       BookTitleAuthor()
     } else if (type === 'DirectoryPreview') {
