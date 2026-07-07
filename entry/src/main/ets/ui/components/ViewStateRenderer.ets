@@ -3,12 +3,12 @@
 // pass fixture props; Phase 1 demo components render self-contained fixture content.
 import { DemoViewState } from '../fixtures/DemoViewState';
 import { AppTopBar, BackTopBar, BottomNav, Loading, Empty, ErrorState, Offline } from './SharedComponents';
-import { ShelfChipGroup, ContinueReadingCard, ShelfSectionHeader, BookCard, BookCover, BookGrid, BookshelfShelfSection } from './BookshelfComponents';
-import { BookTitleAuthor, DirectoryPreview, BookIntro, ReadButton, AddToShelfButton } from './BookDetailComponents';
+import { ContinueReadingCard, BookshelfShelfSection, ShelfChipGroup, ShelfSectionHeader, BookCard, BookCover, BookGrid } from './BookshelfComponents';
+import { BookHero, BookSummaryCard, BookChapterList } from './BookDetailComponents';
 import { ReadingBackgroundLayer, ReadingTextFlow, ReadingInfoLayer, TapZones } from './ReaderComponents';
-import { SettingsSection, SettingsListItem } from './SettingsComponents';
-import { SearchEntry, SourceTypeSegment, CurrentSourceCard, SourceCategoryChips, DiscoveryContentCard, SourceStatusBar } from './DiscoverComponents';
-import { SubscriptionSummaryCard, FeedStatusChips, FeedSourceChips, RssEntryItem, UnreadIndicator } from './RssComponents';
+import { SettingsHomeSection, SettingsSection, SettingsListItem } from './SettingsComponents';
+import { DiscoverSourceBar, DiscoverEntryRow, DiscoverFilterTrigger, DiscoverListHead, DiscoverBookList } from './DiscoverComponents';
+import { RssSearchEntry, RssModeRow, RssSourceOverview, RssArticleSection } from './RssComponents';
 
 @Component
 export struct ViewStateRenderer {
@@ -42,30 +42,16 @@ export struct ViewStateRenderer {
       ErrorState()
     } else if (type === 'Offline') {
       Offline()
-    } else if (type === 'ShelfChipGroup') {
-      ShelfChipGroup()
     } else if (type === 'ContinueReadingCard') {
       ContinueReadingCard()
-    } else if (type === 'ShelfSectionHeader') {
-      ShelfSectionHeader()
-    } else if (type === 'BookCard') {
-      BookCard()
-    } else if (type === 'BookCover') {
-      BookCover()
-    } else if (type === 'BookGrid') {
-      BookGrid()
     } else if (type === 'BookshelfShelfSection') {
       BookshelfShelfSection()
-    } else if (type === 'BookTitleAuthor') {
-      BookTitleAuthor()
-    } else if (type === 'DirectoryPreview') {
-      DirectoryPreview()
-    } else if (type === 'BookIntro') {
-      BookIntro()
-    } else if (type === 'ReadButton') {
-      ReadButton()
-    } else if (type === 'AddToShelfButton') {
-      AddToShelfButton()
+    } else if (type === 'BookHero') {
+      BookHero()
+    } else if (type === 'BookSummaryCard') {
+      BookSummaryCard()
+    } else if (type === 'BookChapterList') {
+      BookChapterList()
     } else if (type === 'ReadingBackgroundLayer') {
       ReadingBackgroundLayer()
     } else if (type === 'ReadingTextFlow') {
@@ -74,32 +60,30 @@ export struct ViewStateRenderer {
       ReadingInfoLayer()
     } else if (type === 'TapZones') {
       TapZones()
+    } else if (type === 'SettingsHomeSection') {
+      SettingsHomeSection()
     } else if (type === 'SettingsSection') {
       SettingsSection()
     } else if (type === 'SettingsListItem') {
       SettingsListItem()
-    } else if (type === 'SearchEntry') {
-      SearchEntry()
-    } else if (type === 'SourceTypeSegment') {
-      SourceTypeSegment()
-    } else if (type === 'CurrentSourceCard') {
-      CurrentSourceCard()
-    } else if (type === 'SourceCategoryChips') {
-      SourceCategoryChips()
-    } else if (type === 'DiscoveryContentCard') {
-      DiscoveryContentCard()
-    } else if (type === 'SourceStatusBar') {
-      SourceStatusBar()
-    } else if (type === 'SubscriptionSummaryCard') {
-      SubscriptionSummaryCard()
-    } else if (type === 'FeedStatusChips') {
-      FeedStatusChips()
-    } else if (type === 'FeedSourceChips') {
-      FeedSourceChips()
-    } else if (type === 'RssEntryItem') {
-      RssEntryItem()
-    } else if (type === 'UnreadIndicator') {
-      UnreadIndicator()
+    } else if (type === 'DiscoverSourceBar') {
+      DiscoverSourceBar()
+    } else if (type === 'DiscoverEntryRow') {
+      DiscoverEntryRow()
+    } else if (type === 'DiscoverFilterTrigger') {
+      DiscoverFilterTrigger()
+    } else if (type === 'DiscoverListHead') {
+      DiscoverListHead()
+    } else if (type === 'DiscoverBookList') {
+      DiscoverBookList()
+    } else if (type === 'RssSearchEntry') {
+      RssSearchEntry()
+    } else if (type === 'RssModeRow') {
+      RssModeRow()
+    } else if (type === 'RssSourceOverview') {
+      RssSourceOverview()
+    } else if (type === 'RssArticleSection') {
+      RssArticleSection()
     } else {
       Empty()
     }

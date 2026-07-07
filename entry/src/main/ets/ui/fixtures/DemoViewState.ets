@@ -12,15 +12,14 @@ export class DemoViewState {
         return ['Empty'];
       case 'discover':
       case 'discover-home':
-        return ['SearchEntry', 'SourceTypeSegment', 'CurrentSourceCard',
-          'SourceCategoryChips', 'DiscoveryContentCard', 'SourceStatusBar'];
+        return ['DiscoverSourceBar', 'DiscoverEntryRow', 'DiscoverFilterTrigger',
+          'DiscoverListHead', 'DiscoverBookList'];
       case 'rss':
-        return ['SubscriptionSummaryCard', 'FeedStatusChips', 'FeedSourceChips',
-          'RssEntryItem', 'RssEntryItem'];
+        return ['RssSearchEntry', 'RssModeRow', 'RssSourceOverview', 'RssArticleSection'];
       case 'settings':
-        return ['SettingsSection', 'SettingsListItem', 'SettingsListItem', 'SettingsListItem'];
+        return ['SettingsHomeSection'];
       case 'book-detail':
-        return ['BookTitleAuthor', 'DirectoryPreview', 'BookIntro', 'ReadButton', 'AddToShelfButton'];
+        return ['BookHero', 'BookSummaryCard', 'BookChapterList'];
       case 'reader':
       case 'immersive-reading':
       case 'reader_content':
