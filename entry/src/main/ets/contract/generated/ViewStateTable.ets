@@ -7,7 +7,6 @@ import { RouteId } from './RouteTable';
 export interface ViewStateProps {
   author?: string;
   bookId?: string;
-  chapterTitle?: string;
   color?: string;
   destructive?: boolean;
   filter?: string;
@@ -15,7 +14,6 @@ export interface ViewStateProps {
   label?: string;
   message?: string;
   overlayType?: string;
-  paragraphs?: string[];
   placeholder?: string;
   progress?: number;
   query?: string;
@@ -477,32 +475,11 @@ export class ViewStateTable {
     "pageState": "default",
     "components": [
       {
-        "type": "ReadingBackgroundLayer",
-        "id": "reading-bg",
+        "type": "ReaderBase",
+        "id": "reader-base",
         "props": {
           "theme": "paper"
         },
-        "children": []
-      },
-      {
-        "type": "ReadingTextFlow",
-        "id": "reading-text",
-        "props": {
-          "chapterTitle": "第一章",
-          "paragraphs": []
-        },
-        "children": []
-      },
-      {
-        "type": "ReadingInfoLayer",
-        "id": "reading-info",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "TapZones",
-        "id": "tap-zones",
-        "props": {},
         "children": []
       }
     ]
@@ -512,8 +489,8 @@ export class ViewStateTable {
     "pageState": "loading",
     "components": [
       {
-        "type": "ReadingBackgroundLayer",
-        "id": "reading-bg",
+        "type": "ReaderBase",
+        "id": "reader-base",
         "props": {
           "theme": "paper"
         },
@@ -532,8 +509,8 @@ export class ViewStateTable {
     "pageState": "offline",
     "components": [
       {
-        "type": "ReadingBackgroundLayer",
-        "id": "reading-bg",
+        "type": "ReaderBase",
+        "id": "reader-base",
         "props": {
           "theme": "paper"
         },
@@ -550,114 +527,47 @@ export class ViewStateTable {
     ]
   },
   {
-    "routeId": "reader",
+    "routeId": "control-layer-base-v2",
     "pageState": "default",
     "components": [
       {
-        "type": "ReadingBackgroundLayer",
-        "id": "reading-bg",
+        "type": "ReaderBase",
+        "id": "reader-base",
         "props": {
           "theme": "paper"
         },
         "children": []
       },
       {
-        "type": "ReadingTextFlow",
-        "id": "reading-text",
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
         "props": {},
-        "children": []
-      },
-      {
-        "type": "Overlay",
-        "id": "reader-control-overlay",
-        "props": {
-          "overlayType": "reader-control"
-        },
         "children": []
       }
     ]
   },
   {
-    "routeId": "reader",
+    "routeId": "reader-directory-overlay-v2",
     "pageState": "default",
     "components": [
       {
-        "type": "ReadingBackgroundLayer",
-        "id": "reading-bg",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "ReadingTextFlow",
-        "id": "reading-text",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "Overlay",
-        "id": "directory-overlay",
+        "type": "ReaderBase",
+        "id": "reader-base",
         "props": {
-          "overlayType": "directory"
-        },
-        "children": [
-          {
-            "type": "ListRow",
-            "id": "directory-list",
-            "props": {},
-            "children": []
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "routeId": "reader",
-    "pageState": "default",
-    "components": [
-      {
-        "type": "ReadingBackgroundLayer",
-        "id": "reading-bg",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "ReadingTextFlow",
-        "id": "reading-text",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "Overlay",
-        "id": "tts-overlay",
-        "props": {
-          "overlayType": "tts"
+          "theme": "paper"
         },
         "children": []
-      }
-    ]
-  },
-  {
-    "routeId": "reader",
-    "pageState": "default",
-    "components": [
+      },
       {
-        "type": "ReadingBackgroundLayer",
-        "id": "reading-bg",
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
         "props": {},
         "children": []
       },
       {
-        "type": "ReadingTextFlow",
-        "id": "reading-text",
+        "type": "ReaderDirectoryPanel",
+        "id": "directory-panel",
         "props": {},
-        "children": []
-      },
-      {
-        "type": "Overlay",
-        "id": "appearance-overlay",
-        "props": {
-          "overlayType": "appearance"
-        },
         "children": []
       }
     ]

@@ -118,20 +118,16 @@ export struct ReadingInfoLayer {
   }
 }
 
-// .fd-immersive-hotzone: prev 26% / center 48% / next 26%. Center toggles control.
+// .fd-immersive-hotzone: prev 26% / center 48% / next 26%. Center opens the
+// control layer (route-push control-layer-base-v2); prev pops back.
 @Component
 export struct TapZones {
-  @StorageProp('reader.overlay') overlayKind: string = '';
-
   build() {
     Row() {
       Column().width('26%').height('100%')
         .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
       Column().width('48%').height('100%')
-        .onClick(() => {
-          const next: '' | 'reader-control' = this.overlayKind === 'reader-control' ? '' : 'reader-control';
-          ReaderUiStore.dispatch({ type: 'set-overlay', overlay: next });
-        })
+        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'control-layer-base-v2' }))
       Column().width('26%').height('100%')
     }
     .width('100%')
@@ -324,6 +320,30 @@ export struct SessionCapsule {
       .border({ width: 1, color: ColorTokens.border })
       .position({ x: 24, y: this.safeAreaTop + 14 })
     }
+  }
+}
+
+// ReaderBase — factored reading base (background + text + info + tap zones +
+// session capsule). Composite used by every reader route's view-state body so
+// the base is declared once in the contract, not repeated per overlay route.
+// theme prop: 'paper' (default) | 'night' (night-theme wiring lands in Batch 1
+// step 3 / D11; for now every route renders paper).
+@Component
+export struct ReaderBase {
+  @Prop theme: string = 'paper';
+
+  build() {
+    Stack() {
+      ReadingBackgroundLayer()
+      ReadingTextFlow()
+      ReadingInfoLayer()
+      TapZones()
+      SessionCapsule()
+    }
+    .width('100%')
+    .height('100%')
+    .expandSafeArea([SafeAreaType.SYSTEM, SafeAreaType.CUTOUT],
+      [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END])
   }
 }
 

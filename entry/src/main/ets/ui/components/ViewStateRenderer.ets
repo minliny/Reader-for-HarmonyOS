@@ -6,7 +6,8 @@ import { AppTopBar, BackTopBar, BottomNav, Loading, Empty, ErrorState, Offline,
   DemoButton, Input, ListRow, DemoList, Card, Content, FormSection, FilterBar, Overlay } from './SharedComponents';
 import { ContinueReadingCard, BookshelfShelfSection, ShelfChipGroup, ShelfSectionHeader, BookCard, BookCover, BookGrid } from './BookshelfComponents';
 import { BookHero, BookSummaryCard, BookChapterList } from './BookDetailComponents';
-import { ReadingBackgroundLayer, ReadingTextFlow, ReadingInfoLayer, TapZones } from './ReaderComponents';
+import { ReadingBackgroundLayer, ReadingTextFlow, ReadingInfoLayer, TapZones, ReaderBase } from './ReaderComponents';
+import { ReaderBottomBar, ReaderDirectoryPanel } from './ReaderOverlayComponents';
 import { SettingsHomeSection, SettingsSection, SettingsListItem } from './SettingsComponents';
 import { DiscoverSourceBar, DiscoverEntryRow, DiscoverFilterTrigger, DiscoverListHead, DiscoverBookList } from './DiscoverComponents';
 import { RssSearchEntry, RssModeRow, RssSourceOverview, RssArticleSection } from './RssComponents';
@@ -19,18 +20,32 @@ import { ProgressBar, BookTitleAuthor, SourceStatus, ReadButton, DirectoryPrevie
 export struct ViewStateRenderer {
   @StorageProp('reader.routeId') routeId: string = 'bookshelf';
   @StorageProp('reader.pageState') pageState: string = 'default';
+  // 'column' (default — scrollable pages) | 'stack' (reader layered body, where
+  // components are absolutely positioned over the reading base rather than
+  // laid out vertically).
+  @Prop layoutMode: string = 'column';
 
   build() {
-    Column() {
-      ForEach(ViewStateTable.bodyComponentsFor(this.routeId, this.pageState), (component: ViewStateComponent, idx: number) => {
-        Column() {
+    if (this.layoutMode === 'stack') {
+      Stack() {
+        ForEach(ViewStateTable.bodyComponentsFor(this.routeId, this.pageState), (component: ViewStateComponent, idx: number) => {
           this.renderComponent(component)
-        }
-        .margin({ bottom: 8 })
-      }, (component: ViewStateComponent, idx: number) => `${component.id}-${component.type}-${idx}`)
+        }, (component: ViewStateComponent, idx: number) => `${component.id}-${component.type}-${idx}`)
+      }
+      .width('100%')
+      .height('100%')
+    } else {
+      Column() {
+        ForEach(ViewStateTable.bodyComponentsFor(this.routeId, this.pageState), (component: ViewStateComponent, idx: number) => {
+          Column() {
+            this.renderComponent(component)
+          }
+          .margin({ bottom: 8 })
+        }, (component: ViewStateComponent, idx: number) => `${component.id}-${component.type}-${idx}`)
+      }
+      .width('100%')
+      .height('100%')
     }
-    .width('100%')
-    .height('100%')
   }
 
   private textOr(value: string | undefined, fallback: string): string {
@@ -80,6 +95,12 @@ export struct ViewStateRenderer {
       ReadingInfoLayer()
     } else if (component.type === 'TapZones') {
       TapZones()
+    } else if (component.type === 'ReaderBase') {
+      ReaderBase({ theme: this.textOr(component.props.theme, 'paper') })
+    } else if (component.type === 'ReaderBottomBar') {
+      ReaderBottomBar()
+    } else if (component.type === 'ReaderDirectoryPanel') {
+      ReaderDirectoryPanel()
     } else if (component.type === 'SettingsHomeSection') {
       SettingsHomeSection()
     } else if (component.type === 'SettingsSection') {
