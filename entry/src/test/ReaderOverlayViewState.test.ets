@@ -102,5 +102,48 @@ export default function ReaderOverlayViewStateTests(): void {
       expect(countOccurrences(all, 'ReadingBackgroundLayer')).assertEqual(0);
       expect(countOccurrences(all, 'TapZones')).assertEqual(0);
     });
+
+    // ── Remaining bottom-function panels (Step 3) ─────────────────────────
+    it('appearanceOverlayResolvesBespoke', 0, () => {
+      expect(RouteTable.shellOf('reader-appearance-overlay-v2')).assertEqual('ReaderShell');
+      const body = ViewStateTable.bodyComponentsFor('reader-appearance-overlay-v2', 'default');
+      expect(body.length > 0).assertTrue();
+      const types = topTypes(body);
+      expect(types[0]).assertEqual('ReaderBase');
+      expect(types[1]).assertEqual('ReaderBottomBar');
+      expect(types[2]).assertEqual('ReaderAppearancePanel');
+      const all: string[] = [];
+      collectTypes(body, all);
+      expect(countOccurrences(all, 'ReaderBase')).assertEqual(1);
+      expect(countOccurrences(all, 'Overlay')).assertEqual(0);
+    });
+
+    it('ttsOverlayResolvesBespoke', 0, () => {
+      expect(RouteTable.shellOf('reader-tts-overlay-v2')).assertEqual('ReaderShell');
+      const body = ViewStateTable.bodyComponentsFor('reader-tts-overlay-v2', 'default');
+      expect(body.length > 0).assertTrue();
+      const types = topTypes(body);
+      expect(types[0]).assertEqual('ReaderBase');
+      expect(types[1]).assertEqual('ReaderBottomBar');
+      expect(types[2]).assertEqual('ReaderTtsPanel');
+      const all: string[] = [];
+      collectTypes(body, all);
+      expect(countOccurrences(all, 'ReaderBase')).assertEqual(1);
+      expect(countOccurrences(all, 'Overlay')).assertEqual(0);
+    });
+
+    it('settingsOverlayResolvesBespoke', 0, () => {
+      expect(RouteTable.shellOf('reader-settings-overlay-v2')).assertEqual('ReaderShell');
+      const body = ViewStateTable.bodyComponentsFor('reader-settings-overlay-v2', 'default');
+      expect(body.length > 0).assertTrue();
+      const types = topTypes(body);
+      expect(types[0]).assertEqual('ReaderBase');
+      expect(types[1]).assertEqual('ReaderBottomBar');
+      expect(types[2]).assertEqual('ReaderSettingsPanel');
+      const all: string[] = [];
+      collectTypes(body, all);
+      expect(countOccurrences(all, 'ReaderBase')).assertEqual(1);
+      expect(countOccurrences(all, 'Overlay')).assertEqual(0);
+    });
   });
 }

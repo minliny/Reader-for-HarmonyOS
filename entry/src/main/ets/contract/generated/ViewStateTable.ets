@@ -573,6 +573,84 @@ export class ViewStateTable {
     ]
   },
   {
+    "routeId": "reader-appearance-overlay-v2",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderAppearancePanel",
+        "id": "appearance-panel",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader-tts-overlay-v2",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderTtsPanel",
+        "id": "tts-panel",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader-settings-overlay-v2",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderSettingsPanel",
+        "id": "settings-panel",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
     "routeId": "bookshelf",
     "pageState": "cover-mode",
     "components": [

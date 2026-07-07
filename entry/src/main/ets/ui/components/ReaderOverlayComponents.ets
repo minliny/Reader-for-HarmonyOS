@@ -48,13 +48,16 @@ export struct ReaderSettingRow {
   @Prop name: string = '';
   @Prop value: string = '';
   @Prop disclosure: boolean = false;
+  @Prop toggle: boolean = false;
 
   build() {
     Row() {
       Text(this.name)
         .fontSize(14).fontWeight(600).fontColor(ColorTokens.controlInk)
         .layoutWeight(1)
-      if (this.value !== '') {
+      if (this.toggle) {
+        ToggleSwitch()
+      } else if (this.value !== '') {
         Text(this.value)
           .fontSize(12).fontColor(ColorTokens.muted)
       }
@@ -317,6 +320,96 @@ export struct ReaderDirectoryPanel {
       }
       .layoutWeight(1)
       .align(Alignment.Top)
+    }
+  }
+}
+
+// ── Appearance panel (.reader-appearance-overlay) ──────────────────────────
+//   3 groups (文字 / 段落 / 界面), each: group-title + setting-items (value |
+//   disclosure). Ported from reader-appearance-overlay-v2.html.
+@Component
+export struct ReaderAppearancePanel {
+  build() {
+    ReaderOverlayPanel({ panelHeight: 480 }) {
+      ReaderPanelHeader({ title: '界面', meta: '外观设置' })
+      // group: 文字
+      Column({ space: 8 }) {
+        Text('文字').fontSize(13).fontWeight(700).fontColor(ColorTokens.controlInk)
+        ReaderSettingRow({ name: '字号', value: '18', disclosure: true })
+        ReaderSettingRow({ name: '字体', value: '思源宋体', disclosure: true })
+        ReaderSettingRow({ name: '行距', value: '1.96' })
+      }.alignItems(HorizontalAlign.Start).width('100%')
+      // group: 段落
+      Column({ space: 8 }) {
+        Text('段落').fontSize(13).fontWeight(700).fontColor(ColorTokens.controlInk)
+        ReaderSettingRow({ name: '段间距', value: '16' })
+        ReaderSettingRow({ name: '缩进', value: '2em' })
+      }.alignItems(HorizontalAlign.Start).width('100%')
+      // group: 界面
+      Column({ space: 8 }) {
+        Text('界面').fontSize(13).fontWeight(700).fontColor(ColorTokens.controlInk)
+        ReaderSettingRow({ name: '翻页方式', value: '滑动', disclosure: true })
+        ReaderSettingRow({ name: '背景', value: '纸张', disclosure: true })
+      }.alignItems(HorizontalAlign.Start).width('100%')
+    }
+  }
+}
+
+// ── TTS panel (.reader-tts-overlay) ────────────────────────────────────────
+//   panel-header (朗读 / 正在朗读) + main control (暂停/停止) + progress
+//   slider + voice param rows. Ported from reader-tts-overlay-v2.html.
+@Component
+export struct ReaderTtsPanel {
+  build() {
+    ReaderOverlayPanel({ panelHeight: 460 }) {
+      ReaderPanelHeader({ title: '朗读', meta: '正在朗读' })
+      // 主播放控制
+      Column({ space: 8 }) {
+        Text('主播放控制').fontSize(13).fontWeight(700).fontColor(ColorTokens.controlInk)
+        Row() {
+          ReaderActionButton({ label: '暂停', primary: true })
+          ReaderActionButton({ label: '停止', dismiss: true })
+        }.width('100%')
+      }.alignItems(HorizontalAlign.Start).width('100%')
+      // progress
+      Column({ space: 6 }) {
+        Row() {
+          Text('00:38').fontSize(12).fontColor(ColorTokens.muted).layoutWeight(1)
+          Text('08:12').fontSize(12).fontColor(ColorTokens.muted)
+        }.width('100%')
+        ReaderSlider()
+      }.alignItems(HorizontalAlign.Start).width('100%')
+      // 朗读参数
+      Column({ space: 8 }) {
+        Text('朗读参数').fontSize(13).fontWeight(700).fontColor(ColorTokens.controlInk)
+        ReaderSettingRow({ name: '语速', value: '1.0x' })
+        ReaderSettingRow({ name: '音量', value: '80%' })
+        ReaderSettingRow({ name: '定时关闭', value: '关闭', disclosure: true })
+        ReaderSettingRow({ name: '朗读音色', value: '普通话 · 女声', disclosure: true })
+      }.alignItems(HorizontalAlign.Start).width('100%')
+    }
+  }
+}
+
+// ── Settings panel (.reader-settings-overlay) ──────────────────────────────
+//   panel-header (设置 / 阅读行为) + setting-list: value rows + switch rows.
+//   Ported from reader-settings-overlay-v2.html.
+@Component
+export struct ReaderSettingsPanel {
+  build() {
+    ReaderOverlayPanel({ panelHeight: 480 }) {
+      ReaderPanelHeader({ title: '设置', meta: '阅读行为' })
+      Column({ space: 8 }) {
+        ReaderSettingRow({ name: '屏幕方向', value: '竖屏', disclosure: true })
+        ReaderSettingRow({ name: '屏幕超时', value: '5 分钟', disclosure: true })
+        ReaderSettingRow({ name: '单双页', value: '单页', disclosure: true })
+        ReaderSettingRow({ name: '进度条行为', value: '拖动', disclosure: true })
+        ReaderSettingRow({ name: '隐藏状态栏', toggle: true })
+        ReaderSettingRow({ name: '文字两端对齐', toggle: true })
+        ReaderSettingRow({ name: '文字底部对齐', toggle: true })
+        ReaderSettingRow({ name: '音量键翻页', toggle: true })
+        ReaderSettingRow({ name: '单手翻页', toggle: true })
+      }.width('100%')
     }
   }
 }
