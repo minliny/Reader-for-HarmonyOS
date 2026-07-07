@@ -20,8 +20,7 @@ export class DemoViewState {
       case 'settings':
         return ['SettingsSection', 'SettingsListItem', 'SettingsListItem', 'SettingsListItem'];
       case 'book-detail':
-        return ['BookCover', 'BookTitleAuthor', 'DirectoryPreview',
-          'BookIntro', 'ReadButton', 'AddToShelfButton'];
+        return ['BookTitleAuthor', 'DirectoryPreview', 'BookIntro', 'ReadButton', 'AddToShelfButton'];
       case 'reader':
       case 'immersive-reading':
       case 'reader_content':
