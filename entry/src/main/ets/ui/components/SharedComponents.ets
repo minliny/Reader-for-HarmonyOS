@@ -132,7 +132,6 @@ export struct BottomNav {
     .width('100%')
     .height(SizeTokens.mainNavHeight)
     .padding({ top: 7, bottom: 7, left: 8, right: 8 })
-    .margin({ left: 14, right: 14, bottom: 14 })
     .border({ width: 1, color: ColorTokens.border })
     .borderRadius(DemoAliasTokens.radiusXl)
     .backgroundColor(DemoAliasTokens.surface)

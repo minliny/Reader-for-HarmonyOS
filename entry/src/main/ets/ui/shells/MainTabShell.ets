@@ -38,6 +38,8 @@ export struct MainTabShell {
       // floating main nav (.fd-main-nav: absolute, bottom safeAreaBottom,
       // left/right safeAreaHorizontal-2). Blank fills the top so the nav sits at
       // the bottom; hitTestBehavior Transparent lets taps pass through to content.
+      // Inset (14px sides/bottom) is on this wrapper's padding so the nav width
+      // = screen - 28 (width('100%') + margin would overflow, not inset).
       Column() {
         Blank()
           .layoutWeight(1)
@@ -45,6 +47,7 @@ export struct MainTabShell {
       }
       .width('100%')
       .height('100%')
+      .padding({ left: 14, right: 14, bottom: 14 })
       .zIndex(ZIndexTokens.mainNav)
       .hitTestBehavior(HitTestMode.Transparent)
 
