@@ -6,6 +6,7 @@ import ShellSlotTests from './ShellSlot.test';
 import BookshelfViewStateTests from './BookshelfViewState.test';
 import ReaderOverlayViewStateTests from './ReaderOverlayViewState.test';
 import ReaderOverlayDispatchTests from './ReaderOverlayDispatch.test';
+import ReaderEffectsTests from './ReaderEffects.test';
 import HostSmokeTest from '../main/ets/host/tests/HostSmoke.test.ets';
 
 export default function testsuit(): void {
@@ -16,5 +17,6 @@ export default function testsuit(): void {
   BookshelfViewStateTests();
   ReaderOverlayViewStateTests();
   ReaderOverlayDispatchTests();
+  ReaderEffectsTests();
   HostSmokeTest();
 }

@@ -178,8 +178,10 @@ export class ReaderEffects {
       : '';
     const latestMatch = html.match(/最新章节[：:]\s*<a[^>]*>([^<]+)<\/a>/);
     const latestChapter = latestMatch !== null ? latestMatch[1].trim() : '';
-    // First chapter link: <a href="/book/xxx/yyy.html"> — full relative path.
-    const chapterLinkMatch = html.match(/<a[^>]*href="(\/book\/[^"]+\/[^"]+\.html)"/);
+    // Strip the latest-chapter section so its link is not mistaken for the
+    // first TOC entry, then find the first chapter link.
+    const htmlForChapterLink = html.replace(/最新章节[：:]\s*<a[^>]*>[^<]+<\/a>/, '');
+    const chapterLinkMatch = htmlForChapterLink.match(/<a[^>]*href="(\/book\/[^"]+\/[^"]+\.html)"/);
     const chapterListUrl = chapterLinkMatch !== null ? chapterLinkMatch[1] : '';
     return {
       bookId: bookId,
