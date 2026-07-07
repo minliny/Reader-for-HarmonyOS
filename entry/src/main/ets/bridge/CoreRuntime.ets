@@ -21,6 +21,11 @@ import {
   type ReaderCoreHostRequestEvent,
 } from './core/sdk/reader_core';
 import { HostCapabilityRegistry, HostDispatcher } from '../host';
+import {
+  HostCapabilityManifest,
+  type HostCapabilityAvailabilityResolver,
+} from '../host/HostCapabilityManifest';
+import type { HostCapability } from '../host/types';
 import { HttpHostAdapter } from '../host/adapters/HttpHostAdapter';
 import { CoreHostAdapter } from '../host/adapters/CoreHostAdapter';
 import { CookieHostAdapter } from '../host/adapters/CookieHostAdapter';
@@ -88,6 +93,10 @@ export class CoreRuntime {
   private runtime: ReaderCoreRuntime;
   private registry: HostCapabilityRegistry;
   private dispatcher: HostDispatcher;
+  // Single declarative source of truth for capability routing/requirements/
+  // device-evidence status. Built after adapters so the availability resolver
+  // can query live adapter nullness + registry membership.
+  private manifest: HostCapabilityManifest;
   // Phase 3 — Core closed-set adapters (registered with HostCapabilityRegistry).
   private httpAdapter: HttpHostAdapter;
   private coreAdapter: CoreHostAdapter;
@@ -168,6 +177,77 @@ export class CoreRuntime {
 
     // 5. Register Phase 3 adapter handlers against the registry.
     this.registerHandlers();
+
+    // 6. Build the capability manifest. The resolver answers "is this
+    // capability reachable right now?" by checking the registry (for
+    // registry-routed caps) or the corresponding adapter getter (for
+    // reducer-direct caps). This is the single queryable source of truth
+    // for Reducer feature gating and for the [HostManifest] hilog broadcast.
+    this.manifest = new HostCapabilityManifest(this.buildAvailabilityResolver());
+  }
+
+  private buildAvailabilityResolver(): HostCapabilityAvailabilityResolver {
+    // Captures `this` — must be called after adapters are constructed.
+    return (capability: HostCapability): boolean => {
+      switch (capability) {
+        // Registry-routed (Phase 3 closed set): available iff registered.
+        case 'host.smoke.echo':
+        case 'http.execute':
+        case 'cookie.get':
+        case 'cookie.set':
+        case 'webview.evaluateJavaScript':
+        case 'file.read':
+        case 'file.write':
+        case 'cache.get':
+        case 'cache.put':
+        case 'log.emit':
+        case 'time.now':
+        case 'system.info':
+        case 'persistence.get':
+        case 'persistence.put':
+        case 'media.download':
+          return this.registry.has(capability);
+        // Reducer-direct — always-constructed adapters.
+        case 'http.cancel':
+        case 'cookie.clear':
+        case 'webview.open':
+        case 'webview.close':
+        case 'webview.evaluate':
+        case 'clipboard.copy':
+        case 'clipboard.paste':
+        case 'tts.system.start':
+        case 'tts.system.stop':
+        case 'tts.system.pause':
+        case 'tts.system.resume':
+        case 'background.schedule':
+        case 'background.cancel':
+          return true;
+        // Reducer-direct — nullable adapters (need UIAbilityContext).
+        case 'file.delete':
+        case 'storage.path':
+          return this.fileAdapter !== null;
+        case 'credential.get':
+        case 'credential.set':
+        case 'credential.delete':
+          return this.credentialAdapter !== null;
+        case 'permission.request':
+        case 'permission.check':
+          return this.permissionAdapter !== null;
+        case 'notification.show':
+        case 'notification.cancel':
+          return this.notificationAdapter !== null;
+        case 'share.invoke':
+          return this.shareAdapter !== null;
+        case 'device.screen.keep-on':
+        case 'device.screen.release':
+          return this.screenAdapter !== null;
+        // Unimplemented.
+        case 'device.vibrate':
+          return false;
+        default:
+          return false;
+      }
+    };
   }
 
   private registerHandlers(): void {
@@ -282,6 +362,10 @@ export class CoreRuntime {
     }
     CoreRuntime.instance = new CoreRuntime(config);
     console.info('[CoreRuntime] init success');
+    // Broadcast the capability manifest to hilog so hdc can harvest it as
+    // device-executed evidence of which capabilities are wired up. This is a
+    // read-only declaration; it does not execute any capability.
+    CoreRuntime.instance.broadcastManifest();
     return CoreRuntime.instance;
   }
 
@@ -322,6 +406,28 @@ export class CoreRuntime {
 
   getRegistry(): HostCapabilityRegistry {
     return this.registry;
+  }
+
+  getCapabilityManifest(): HostCapabilityManifest {
+    return this.manifest;
+  }
+
+  /**
+   * Broadcast the capability manifest to hilog. Emits one summary line plus
+   * one detail line per capability, all under the [HostManifest] tag so
+   * `hdc shell hilog | grep HostManifest` harvests the full picture.
+   *
+   * This is declaration-only evidence: it proves the manifest was built and
+   * which adapters are reachable at init time. It does NOT prove any
+   * capability actually works — that requires per-capability device evidence
+   * (Phase 7 of the host integration roadmap).
+   */
+  private broadcastManifest(): void {
+    console.info(`[HostManifest] summary ${this.manifest.toSummaryLine()}`);
+    const detailLines = this.manifest.toDetailLines();
+    for (const line of detailLines) {
+      console.info(`[HostManifest] ${line}`);
+    }
   }
 
   getHttpAdapter(): HttpHostAdapter {

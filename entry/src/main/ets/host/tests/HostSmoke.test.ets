@@ -178,6 +178,66 @@ export default function HostSmokeTest(): void {
       }
     });
 
+    // ── Layer A: HostCapabilityManifest structure & availability ──
+    // Locks the manifest as the single source of truth for capability
+    // routing/requirements. Drift in counts catches new capabilities that
+    // were added to the union but not described here.
+
+    it('manifest_covers_all_declared_capabilities', 0, () => {
+      const core = CoreRuntime.createForTest(makeStubNativeModule(), {});
+      const manifest = core.getCapabilityManifest();
+      // 15 Core closed-set + 26 UI-Contract-only = 41 total.
+      expect(manifest.all().length).assertEqual(41);
+    });
+
+    it('manifest_registry_count_matches_core_closed_set', 0, () => {
+      const core = CoreRuntime.createForTest(makeStubNativeModule(), {});
+      const manifest = core.getCapabilityManifest();
+      // 15 Core closed-set capabilities are registry-routed.
+      expect(manifest.registeredWithRegistry().length).assertEqual(15);
+    });
+
+    it('manifest_marks_device_vibrate_as_unimplemented', 0, () => {
+      const core = CoreRuntime.createForTest(makeStubNativeModule(), {});
+      const manifest = core.getCapabilityManifest();
+      const unimpl = manifest.unimplemented();
+      expect(unimpl.length).assertEqual(1);
+      expect(unimpl[0]).assertEqual('device.vibrate');
+      // Unimplemented is never available, regardless of resolver.
+      expect(manifest.isAvailable('device.vibrate')).assertFalse();
+    });
+
+    it('manifest_availability_reflects_runtime_adapters', 0, () => {
+      // Without context (unit-test env):
+      //  - registry-routed caps that need no context ARE available
+      //  - file.read/file.write are NOT registered (no FileHostAdapter)
+      //  - screen/notification/etc. are null (no UIAbilityContext)
+      const core = CoreRuntime.createForTest(makeStubNativeModule(), {});
+      const manifest = core.getCapabilityManifest();
+      expect(manifest.isAvailable('http.execute')).assertTrue();
+      expect(manifest.isAvailable('host.smoke.echo')).assertTrue();
+      expect(manifest.isAvailable('cache.get')).assertTrue();
+      // file.* require a context — not available here.
+      expect(manifest.isAvailable('file.read')).assertFalse();
+      expect(manifest.isAvailable('file.write')).assertFalse();
+      expect(manifest.isAvailable('file.delete')).assertFalse();
+      // UIAbilityContext-dependent caps — not available here.
+      expect(manifest.isAvailable('device.screen.keep-on')).assertFalse();
+      expect(manifest.isAvailable('notification.show')).assertFalse();
+      expect(manifest.isAvailable('share.invoke')).assertFalse();
+      // Always-constructed adapters — available.
+      expect(manifest.isAvailable('clipboard.copy')).assertTrue();
+      expect(manifest.isAvailable('tts.system.start')).assertTrue();
+      expect(manifest.isAvailable('background.schedule')).assertTrue();
+    });
+
+    it('manifest_summary_line_is_nonempty', 0, () => {
+      const core = CoreRuntime.createForTest(makeStubNativeModule(), {});
+      const line = core.getCapabilityManifest().toSummaryLine();
+      expect(line.startsWith('total=')).assertTrue();
+      expect(line.indexOf('deviceVerified=0') >= 0).assertTrue();
+    });
+
     // ── Layer B: runtime — live NAPI round-trip ──
     // These MUST fail (not skip) when no device CoreRuntime is present.
     // A skip-as-pass is the bug being corrected here.

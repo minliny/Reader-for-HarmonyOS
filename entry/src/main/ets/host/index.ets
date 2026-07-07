@@ -6,3 +6,10 @@ export { HostCapabilityRegistry } from './HostCapabilityRegistry';
 export { HostDispatcher } from './HostDispatcher';
 export type { HostDispatcherConfig } from './HostDispatcher';
 export type { HostCapabilityHandler } from './HostCapabilityRegistry';
+export { HostCapabilityManifest } from './HostCapabilityManifest';
+export type {
+  HostCapabilityDescriptor,
+  HostCapabilitySource,
+  HostCapabilityDispatch,
+  HostCapabilityAvailabilityResolver,
+} from './HostCapabilityManifest';
