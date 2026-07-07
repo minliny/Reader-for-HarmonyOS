@@ -6,10 +6,22 @@
 // BookshelfTab without params), falls back to FixtureEPUBParserAdapter
 // (strangler: fixture retained as fallback, S7 removal).
 //
-// No socket / WebView is touched here (red line 4); HTTP is handled by
+// Host capability wiring (Task 3):
+//   - media: chapter content may contain <img src="..."> tags; URLs are
+//     extracted and rendered via ArkUI Image (real network stack). Routing
+//     through the media.download handler for caching/hashing is a future
+//     increment (acknowledged here so the path is traceable).
+//   - webview: when chapter.content fails with a WebView-related error
+//     (JS-rendered source), falls back to a Web component bound to a
+//     webview.WebviewController loading the chapter URL.
+//   - http/cookie: already wired via Task 2 (Core command → http.execute →
+//     OHOSHTTPHostTransport).
+//
+// No socket is touched here (red line 4); HTTP is handled by
 // OHOSHttpHostTransport beneath the Rust Core host adapter.
 
 import { router } from '@kit.ArkUI';
+import { webview } from '@kit.ArkWeb';
 import { ReadingViewModel, ReaderChapter } from '../viewmodel/ReadingViewModel';
 import { readerHomeDashboard, HomeBookRow } from '../services/HomeDashboardService';
 import { ReadingFlowStateMachine, ReadingState } from '../services/ReadingFlowStateMachine';
@@ -42,15 +54,23 @@ struct ReaderPage {
   @State tocTitles: string[] = [];
   @State showTocPanel: boolean = false;
   @State realIndex: number = 0;
+  // Task 3 — media: image URLs extracted from chapter content <img src="...">
+  @State imageUrls: string[] = [];
+  // Task 3 — webview: fallback for JS-rendered sources
+  @State useWebViewFallback: boolean = false;
+  @State webViewUrl: string = '';
   private vm: ReadingViewModel | null = null;
   private repository: MockBookshelfRepository = new MockBookshelfRepository(true);
   private bookshelf: BookshelfService = new BookshelfService(this.repository);
   private progress: ProgressService = new ProgressService(this.repository);
+  private webController: webview.WebviewController = new webview.WebviewController();
+  private cachedBookUrl: string = '';
 
   aboutToAppear(): void {
     const params = router.getParams() as ReaderParams;
     if (params && params.sourceId && params.bookUrl) {
       this.useRustCore = true;
+      this.cachedBookUrl = params.bookUrl!;
       this.loadFromRustCore(params.sourceId!, params.bookUrl!, params.bookName ?? '');
     } else {
       this.useRustCore = false;
@@ -62,6 +82,8 @@ struct ReaderPage {
     this.loading = true;
     this.error = '';
     this.bookTitle = bookName;
+    this.useWebViewFallback = false;
+    this.imageUrls = [];
     try {
       this.vm = new ReadingViewModel();
       const initial = await this.vm.loadBookAndToc(sourceId, bookUrl);
@@ -76,6 +98,10 @@ struct ReaderPage {
       this.machine.chapterLoaded();
       this.state = this.machine.getState();
       this.progressText = `0/${total}`;
+      // Extract images / detect WebView fallback from the first chapter content.
+      if (initial.length > 0) {
+        this.updateContentState(initial[0].content);
+      }
     } catch (e) {
       this.error = `Rust Core 加载失败: ${e}`;
       this.chapters = [{ title: '加载失败', content: this.error }];
@@ -133,6 +159,49 @@ struct ReaderPage {
     this.progressText = this.progress.getProgressString(ctx.bookId);
   }
 
+  // Task 3 — media: extract <img src="..."> URLs from chapter content.
+  // Only absolute http(s) URLs are rendered; relative URLs require base-URL
+  // resolution which is deferred to a future increment. The ArkUI Image
+  // component uses the real network stack (satisfies "media resources go
+  // through real network"). Routing through the media.download host handler
+  // for caching/hashing is a future increment.
+  private extractImageUrls(content: string): string[] {
+    const urls: string[] = [];
+    const regex = new RegExp('<img\\s+[^>]*src=["\']([^"\']+)["\'][^>]*>', 'gi');
+    let match = regex.exec(content);
+    while (match !== null) {
+      if (match.length >= 2) {
+        const url = match[1];
+        if (url.indexOf('http://') === 0 || url.indexOf('https://') === 0) {
+          urls.push(url);
+        }
+      }
+      match = regex.exec(content);
+    }
+    return urls;
+  }
+
+  // Task 3 — webview: detect when Core returns a WebView-related error,
+  // indicating the source requires JS rendering (webview.evaluateJavaScript).
+  private isWebViewRequired(content: string): boolean {
+    const lower = content.toLowerCase();
+    return lower.indexOf('webview') >= 0 ||
+      lower.indexOf('requires_ui_context') >= 0 ||
+      lower.indexOf('evaluatejavascript') >= 0;
+  }
+
+  // Update image URLs and WebView fallback flag from the loaded chapter content.
+  private updateContentState(content: string): void {
+    this.imageUrls = this.extractImageUrls(content);
+    if (this.isWebViewRequired(content)) {
+      this.useWebViewFallback = true;
+      const chapterUrl = this.vm ? this.vm.getCurrentChapterUrl() : '';
+      this.webViewUrl = chapterUrl.length > 0 ? chapterUrl : this.cachedBookUrl;
+    } else {
+      this.useWebViewFallback = false;
+    }
+  }
+
   private async prev(): Promise<void> {
     if (this.useRustCore && this.vm) {
       const ch = await this.vm.prevChapter();
@@ -141,6 +210,7 @@ struct ReaderPage {
         this.currentIndex = 0;
         this.realIndex = Math.max(this.realIndex - 1, 0);
         this.progressText = `${this.realIndex + 1}/${this.tocTitles.length}`;
+        this.updateContentState(ch.content);
       }
       return;
     }
@@ -160,6 +230,7 @@ struct ReaderPage {
         this.currentIndex = 0;
         this.realIndex = Math.min(this.realIndex + 1, this.tocTitles.length - 1);
         this.progressText = `${this.realIndex + 1}/${this.tocTitles.length}`;
+        this.updateContentState(ch.content);
       }
       return;
     }
@@ -183,6 +254,7 @@ struct ReaderPage {
       this.currentIndex = 0;
       this.realIndex = index;
       this.progressText = `${index + 1}/${this.tocTitles.length}`;
+      this.updateContentState(content);
       this.loading = false;
     } else {
       this.currentIndex = index;
@@ -237,6 +309,18 @@ struct ReaderPage {
           .fontSize(13)
           .fontColor('#555555')
         Blank()
+        if (this.useWebViewFallback) {
+          Text('WebView fallback')
+            .fontSize(11)
+            .fontColor('#B8860B')
+            .margin({ right: 8 })
+        }
+        if (this.imageUrls.length > 0) {
+          Text(`media:img×${this.imageUrls.length}`)
+            .fontSize(11)
+            .fontColor('#1B7F4A')
+            .margin({ right: 8 })
+        }
         Text(`字号 ${this.fontSize}`)
           .fontSize(13)
           .fontColor('#555555')
@@ -297,6 +381,24 @@ struct ReaderPage {
         .width('100%')
         .layoutWeight(1)
         .justifyContent(FlexAlign.Center)
+      } else if (this.useWebViewFallback) {
+        // Task 3 — webview: JS-rendered source fallback. The Web component
+        // loads the chapter URL using the real ArkWeb runtime; the controller
+        // is bound so webview.evaluateJavaScript host requests can target it.
+        Column() {
+          Text(`WebView 渲染中: ${this.webViewUrl}`)
+            .fontSize(12)
+            .fontColor('#B8860B')
+            .margin({ top: 8, bottom: 8 })
+          Web({ src: this.webViewUrl, controller: this.webController })
+            .width('100%')
+            .layoutWeight(1)
+            .javaScriptAccess(true)
+            .domStorageAccess(true)
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .padding({ left: 16, right: 16 })
       } else {
         Scroll() {
           Column() {
@@ -312,6 +414,20 @@ struct ReaderPage {
                 .fontColor('#333333')
                 .lineHeight(this.fontSize * 1.8)
                 .width('100%')
+              // Task 3 — media: render <img> URLs extracted from chapter content.
+              // ArkUI Image uses the real network stack. Routing through the
+              // media.download host handler for caching/hashing is a future
+              // increment.
+              if (this.imageUrls.length > 0) {
+                ForEach(this.imageUrls, (url: string, index: number) => {
+                  Image(url)
+                    .width('100%')
+                    .height(220)
+                    .objectFit(ImageFit.Contain)
+                    .borderRadius(8)
+                    .margin({ top: 12 })
+                }, (url: string, index: number) => `${index}-${url}`)
+              }
             }
           }
           .width('100%')

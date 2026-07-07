@@ -106,4 +106,13 @@ export class ReadingViewModel {
     }
     return out;
   }
+
+  // Returns the URL of the chapter at the current index, or '' if unavailable.
+  // Used by ReaderPage's WebView fallback to load JS-rendered chapter pages.
+  getCurrentChapterUrl(): string {
+    if (this.currentIndex >= 0 && this.currentIndex < this.chapters.length) {
+      return this.chapters[this.currentIndex].url;
+    }
+    return '';
+  }
 }
