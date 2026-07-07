@@ -7,7 +7,7 @@ import { AppTopBar, BackTopBar, BottomNav, Loading, Empty, ErrorState, Offline,
 import { ContinueReadingCard, BookshelfShelfSection, ShelfChipGroup, ShelfSectionHeader, BookCard, BookCover, BookGrid } from './BookshelfComponents';
 import { BookHero, BookSummaryCard, BookChapterList } from './BookDetailComponents';
 import { ReadingBackgroundLayer, ReadingTextFlow, ReadingInfoLayer, TapZones, ReaderBase } from './ReaderComponents';
-import { ReaderBottomBar, ReaderDirectoryPanel, ReaderAppearancePanel, ReaderTtsPanel, ReaderSettingsPanel, ReaderSearchPanel, ReaderReplacePanel, ReaderAutoScrollPanel, FloatingQuickActions, FloatingPageControl } from './ReaderOverlayComponents';
+import { ReaderBottomBar, ReaderDirectoryPanel, ReaderAppearancePanel, ReaderTtsPanel, ReaderSettingsPanel, ReaderSearchPanel, ReaderReplacePanel, ReaderAutoScrollPanel, FloatingQuickActions, FloatingPageControl, FloatingBrightness, NightToast } from './ReaderOverlayComponents';
 import { SettingsHomeSection, SettingsSection, SettingsListItem } from './SettingsComponents';
 import { DiscoverSourceBar, DiscoverEntryRow, DiscoverFilterTrigger, DiscoverListHead, DiscoverBookList } from './DiscoverComponents';
 import { RssSearchEntry, RssModeRow, RssSourceOverview, RssArticleSection } from './RssComponents';
@@ -103,6 +103,10 @@ export struct ViewStateRenderer {
       FloatingQuickActions()
     } else if (component.type === 'FloatingPageControl') {
       FloatingPageControl()
+    } else if (component.type === 'FloatingBrightness') {
+      FloatingBrightness()
+    } else if (component.type === 'NightToast') {
+      NightToast()
     } else if (component.type === 'ReaderDirectoryPanel') {
       ReaderDirectoryPanel()
     } else if (component.type === 'ReaderAppearancePanel') {

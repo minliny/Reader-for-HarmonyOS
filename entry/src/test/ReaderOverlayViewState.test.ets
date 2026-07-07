@@ -58,9 +58,10 @@ export default function ReaderOverlayViewStateTests(): void {
       const body = ViewStateTable.bodyComponentsFor('control-layer-base-v2', 'default');
       const types = topTypes(body);
       expect(types[0]).assertEqual('ReaderBase');
-      expect(types[1]).assertEqual('FloatingQuickActions');
-      expect(types[2]).assertEqual('FloatingPageControl');
-      expect(types[3]).assertEqual('ReaderBottomBar');
+      expect(types[1]).assertEqual('FloatingBrightness');
+      expect(types[2]).assertEqual('FloatingQuickActions');
+      expect(types[3]).assertEqual('FloatingPageControl');
+      expect(types[4]).assertEqual('ReaderBottomBar');
     });
 
     it('directoryOverlayBodyIsBaseBarAndDirectoryPanel', 0, () => {
@@ -183,6 +184,25 @@ export default function ReaderOverlayViewStateTests(): void {
       expect(types[2]).assertEqual('FloatingPageControl');
       expect(types[3]).assertEqual('ReaderBottomBar');
       expect(types[4]).assertEqual('ReaderAutoScrollPanel');
+    });
+
+    // ── Night state (Step 3c-2) — themed base + toast, no panel ────────────
+    it('nightStateResolvesBespoke', 0, () => {
+      expect(RouteTable.shellOf('reader-night-state-v2')).assertEqual('ReaderShell');
+      const body = ViewStateTable.bodyComponentsFor('reader-night-state-v2', 'default');
+      expect(body.length > 0).assertTrue();
+      const types = topTypes(body);
+      expect(types[0]).assertEqual('ReaderBase');
+      expect(types[1]).assertEqual('FloatingBrightness');
+      expect(types[2]).assertEqual('FloatingQuickActions');
+      expect(types[3]).assertEqual('FloatingPageControl');
+      expect(types[4]).assertEqual('ReaderBottomBar');
+      expect(types[5]).assertEqual('NightToast');
+      // themed night: ReaderBase carries theme=night.
+      expect(body[0].props.theme === 'night').assertTrue();
+      const all: string[] = [];
+      collectTypes(body, all);
+      expect(countOccurrences(all, 'Overlay')).assertEqual(0);
     });
   });
 }

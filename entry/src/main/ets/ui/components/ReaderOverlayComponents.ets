@@ -554,3 +554,53 @@ export struct ReaderAutoScrollPanel {
     }
   }
 }
+
+// ── Floating brightness (.reader-floating-brightness) ────────────────────
+//   Vertical pill rail at left-center: brightness icon + 4px vertical track
+//   (fill %) + chevron. The brightness_auto icon asset is TBD — placeholder
+//   icon for now. Positioned left-center via align(Start) + offset x:12.
+@Component
+export struct FloatingBrightness {
+  @State value: number = 40;
+
+  build() {
+    Column({ space: 16 }) {
+      Image($r('app.media.reader_icon_more_dark')).width(22).height(22)
+      Stack({ alignContent: Alignment.Bottom }) {
+        Column().width(4).height('100%').borderRadius(DemoAliasTokens.radiusPill)
+          .backgroundColor(ColorTokens.border)
+        Column().width(4).height(`${this.value}%`).borderRadius(DemoAliasTokens.radiusPill)
+          .backgroundColor(ColorTokens.primary)
+      }
+      .width(4).layoutWeight(1)
+      Image($r('app.media.ui_icon_chevron_dark')).width(20).height(20)
+    }
+    .width(40).height(256).padding({ top: 16, bottom: 16 })
+    .justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
+    .backgroundColor(ColorTokens.floatingControlBg)
+    .border({ width: 1, color: ColorTokens.border })
+    .borderRadius(DemoAliasTokens.radiusPill)
+    .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
+    .align(Alignment.Start)
+    .offset({ x: 12 })
+  }
+}
+
+// ── Night toast (.reader-night-toast) ─────────────────────────────────────
+//   Transient pill "已切换夜间模式", positioned above the quick-actions row.
+//   Uses night-theme tokens (floatingControlBgAltNight / controlInkNight) —
+//   only meaningful on the night-state route where ReaderBase is themed night.
+@Component
+export struct NightToast {
+  build() {
+    Text('已切换夜间模式')
+      .fontSize(13).fontColor(ColorTokens.controlInkNight)
+      .padding({ left: 14, right: 14, top: 8, bottom: 8 })
+      .backgroundColor(ColorTokens.floatingControlBgAltNight)
+      .border({ width: 1, color: ColorTokens.border })
+      .borderRadius(DemoAliasTokens.radiusPill)
+      .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
+      .align(Alignment.Bottom)
+      .offset({ y: -(SizeTokens.bottomBarHeight + 152) })
+  }
+}

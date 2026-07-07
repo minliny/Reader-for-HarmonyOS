@@ -18,11 +18,13 @@ import { SafeAreaAdapter } from '../adapters/SafeAreaAdapter';
 import { ReaderTypography } from '../tokens/ReaderTypography';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 
-// .fd-ir-background-layer: full-bleed paper bg.
+// .fd-ir-background-layer: full-bleed paper bg (night theme -> paperNight).
 @Component
 export struct ReadingBackgroundLayer {
+  @Prop theme: string = 'paper';
+
   build() {
-    Column().width('100%').height('100%').backgroundColor(ColorTokens.paper)
+    Column().width('100%').height('100%').backgroundColor(this.theme === 'night' ? ColorTokens.paperNight : ColorTokens.paper)
       .expandSafeArea([SafeAreaType.SYSTEM, SafeAreaType.CUTOUT],
         [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END])
   }
@@ -34,6 +36,7 @@ export struct ReadingBackgroundLayer {
 @Component
 export struct ReadingTextFlow {
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
+  @Prop theme: string = 'paper';
 
   private paragraphs: string[] = [
     '汪淼盯着面前的纳米丝，想象着它在宏观尺度上的形态。它细如蛛丝，却能切断合金，这便是三体人送给地球的第一个礼物。',
@@ -41,13 +44,17 @@ export struct ReadingTextFlow {
     '宇宙曾经是一片死寂的荒漠，直到那条信息被发出，直到那个回复被接收。在那之后的每一个夜晚，星空都不再是原来的星空。'
   ];
 
+  private inkColor(): string {
+    return this.theme === 'night' ? ColorTokens.inkNight : ColorTokens.ink;
+  }
+
   build() {
     Scroll() {
       Column() {
         Text('第一章 科学边界')
           .fontSize(23)
           .fontWeight(700)
-          .fontColor(ColorTokens.ink)
+          .fontColor(this.inkColor())
           .fontFamily(ReaderTypography.serifFamily())
           .textAlign(TextAlign.Center)
           .width('100%')
@@ -55,7 +62,7 @@ export struct ReadingTextFlow {
         ForEach(this.paragraphs, (p: string, i: number) => {
           Text(p)
             .fontSize(18)
-            .fontColor(ColorTokens.ink)
+            .fontColor(this.inkColor())
             .fontFamily(ReaderTypography.serifFamily())
             .lineHeight(18 * 1.96)
             .textIndent(2 * 18)
@@ -67,7 +74,7 @@ export struct ReadingTextFlow {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(ColorTokens.paper)
+    .backgroundColor(this.theme === 'night' ? ColorTokens.paperNight : ColorTokens.paper)
     .expandSafeArea([SafeAreaType.SYSTEM, SafeAreaType.CUTOUT],
       [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END])
   }
@@ -80,18 +87,23 @@ export struct ReadingTextFlow {
 export struct ReadingInfoLayer {
   @StorageProp(SafeAreaAdapter.K_TOP) safeAreaTop: number = SafeAreaAdapter.DEFAULT_TOP;
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
+  @Prop theme: string = 'paper';
+
+  private mutedColor(): string {
+    return this.theme === 'night' ? ColorTokens.controlInkNight : ColorTokens.muted;
+  }
 
   build() {
     Column() {
       Row() {
         Text('示例书 · 第一章 科学边界')
           .fontSize(12)
-          .fontColor(ColorTokens.muted)
+          .fontColor(this.mutedColor())
           .fontFamily(ReaderTypography.sansFamily())
           .layoutWeight(1)
         Text('13:50')
           .fontSize(12)
-          .fontColor(ColorTokens.muted)
+          .fontColor(this.mutedColor())
           .fontFamily(ReaderTypography.sansFamily())
       }
       .width('100%')
@@ -99,12 +111,12 @@ export struct ReadingInfoLayer {
       Row() {
         Text('38%')
           .fontSize(12)
-          .fontColor(ColorTokens.muted)
+          .fontColor(this.mutedColor())
           .fontFamily(ReaderTypography.sansFamily())
           .layoutWeight(1)
         Text('第 1 / 10 页')
           .fontSize(12)
-          .fontColor(ColorTokens.muted)
+          .fontColor(this.mutedColor())
           .fontFamily(ReaderTypography.sansFamily())
       }
       .width('100%')
@@ -334,9 +346,9 @@ export struct ReaderBase {
 
   build() {
     Stack() {
-      ReadingBackgroundLayer()
-      ReadingTextFlow()
-      ReadingInfoLayer()
+      ReadingBackgroundLayer({ theme: this.theme })
+      ReadingTextFlow({ theme: this.theme })
+      ReadingInfoLayer({ theme: this.theme })
       TapZones()
       SessionCapsule()
     }

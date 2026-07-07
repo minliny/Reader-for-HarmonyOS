@@ -19,4 +19,9 @@ export class ColorTokens {
   static readonly floatingControlBgAlt: string = '#FFEAE1DA';
   static readonly metaBg: string = '#FFF5ECE6';
   static readonly rssUnread: string = '#FF2F6F93';
+  static readonly paperNight: string = '#FF181F22';
+  static readonly inkNight: string = '#FFD8CCC4';
+  static readonly controlInkNight: string = '#FFD7E1E5';
+  static readonly primaryNight: string = '#FF8FB6CA';
+  static readonly floatingControlBgAltNight: string = '#FF2B3B43';
 }

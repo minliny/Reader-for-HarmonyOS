@@ -67,6 +67,26 @@
     {
       "name": "reader_ds_color_rss_unread",
       "value": "#FF2F6F93"
+    },
+    {
+      "name": "reader_ds_color_paper_night",
+      "value": "#FF181F22"
+    },
+    {
+      "name": "reader_ds_color_ink_night",
+      "value": "#FFD8CCC4"
+    },
+    {
+      "name": "reader_ds_color_control_ink_night",
+      "value": "#FFD7E1E5"
+    },
+    {
+      "name": "reader_ds_color_primary_night",
+      "value": "#FF8FB6CA"
+    },
+    {
+      "name": "reader_ds_color_floating_control_bg_alt_night",
+      "value": "#FF2B3B43"
     }
   ]
 }

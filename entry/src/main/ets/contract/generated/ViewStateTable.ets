@@ -539,6 +539,12 @@ export class ViewStateTable {
         "children": []
       },
       {
+        "type": "FloatingBrightness",
+        "id": "floating-brightness",
+        "props": {},
+        "children": []
+      },
+      {
         "type": "FloatingQuickActions",
         "id": "floating-quick-actions",
         "props": {},
@@ -771,6 +777,50 @@ export class ViewStateTable {
       {
         "type": "ReaderAutoScrollPanel",
         "id": "auto-scroll-panel",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader-night-state-v2",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "night"
+        },
+        "children": []
+      },
+      {
+        "type": "FloatingBrightness",
+        "id": "floating-brightness",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "FloatingQuickActions",
+        "id": "floating-quick-actions",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "FloatingPageControl",
+        "id": "floating-page-control",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "NightToast",
+        "id": "night-toast",
         "props": {},
         "children": []
       }
