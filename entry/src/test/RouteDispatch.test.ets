@@ -50,5 +50,38 @@ export default function RouteDispatchTests(): void {
       expect(replaced.routeId).assertEqual('reader');
       expect(replaced.stack.length).assertEqual(pushed.stack.length);
     });
+    it('reducerPushResetsPageStateToDefault', 0, () => {
+      const s = DemoUiState.initial();
+      const loading = ReaderReducer.setPageState(s, 'loading');
+      const pushed = ReaderReducer.push(loading, 'book-detail');
+      expect(pushed.pageState).assertEqual('default');
+    });
+    it('reducerPopResetsPageStateToDefault', 0, () => {
+      const s = DemoUiState.initial();
+      const loading = ReaderReducer.setPageState(s, 'loading');
+      const pushed = ReaderReducer.push(loading, 'book-detail');
+      const setError = ReaderReducer.setPageState(pushed, 'error');
+      const popped = ReaderReducer.pop(setError);
+      expect(popped.pageState).assertEqual('default');
+    });
+    it('reducerReplaceResetsPageStateToDefault', 0, () => {
+      const s = DemoUiState.initial();
+      const loading = ReaderReducer.setPageState(s, 'loading');
+      const pushed = ReaderReducer.push(loading, 'book-detail');
+      const replaced = ReaderReducer.replace(pushed, 'reader');
+      expect(replaced.pageState).assertEqual('default');
+    });
+    it('reducerSwitchTabResetsPageStateToDefault', 0, () => {
+      const s = DemoUiState.initial();
+      const loading = ReaderReducer.setPageState(s, 'loading');
+      const after = ReaderReducer.switchTab(loading, 'discover');
+      expect(after.pageState).assertEqual('default');
+    });
+    it('reducerSetOverlayPreservesPageState', 0, () => {
+      const s = DemoUiState.initial();
+      const loading = ReaderReducer.setPageState(s, 'loading');
+      const withOverlay = ReaderReducer.setOverlay(loading, 'source-switch');
+      expect(withOverlay.pageState).assertEqual('loading');
+    });
   });
 }

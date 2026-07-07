@@ -165,5 +165,176 @@ test('view-state fixture has no duplicate (routeId, pageState) keys', () => {
   assert.equal(dups.length, 0, `duplicate (routeId,pageState) entries (componentsFor shadows all but the first): ${dups.join(', ')}`);
 });
 
+// ── 7. Normalized page → ViewState coverage guard ─────────────────────────
+// The 44 normalized HTML pages (Reader UI/docs/ui-handoff/normalized-html/)
+// are the 1:1 migration target. Each MUST have a ViewState entry OR an
+// aliasFor declaration. PENDING_NORMALIZED is the explicit allowlist of pages
+// not yet covered; it MUST shrink as later phases add ViewState/aliases and
+// MUST be empty before declaring full migration. A page missing from both
+// coverage AND PENDING_NORMALIZED is a hard FAIL (regression / scope gap).
+const ROUTES_JSON = readJson('route.fixtures.json');
+const VIEW_STATES_JSON = readJson('view-state.fixtures.json');
+const VS_ROUTE_IDS = new Set(VIEW_STATES_JSON.map((v) => v.routeId));
+const ALIAS_MAP = new Map(ROUTES_JSON.filter((r) => r.aliasFor).map((r) => [r.id, r.aliasFor]));
+
+// normalized HTML filename (without .html) -> expected RouteId
+const NORMALIZED_PAGES = [
+  ['app-shell', 'app-shell'],
+  ['main-tabs', 'main-tabs'],
+  ['bookshelf-cover-mode', 'bookshelf-cover-mode'],
+  ['bookshelf-list-mode', 'bookshelf-list-mode'],
+  ['bookshelf-empty', 'bookshelf-empty'],
+  ['bookshelf-group-management', 'bookshelf-group-management'],
+  ['bookshelf-book-more-menu', 'bookshelf-book-more-menu'],
+  ['local-book-import', 'local-import'],
+  ['search-home', 'search-home'],
+  ['search-results', 'search-results'],
+  ['search-loading', 'search-loading'],
+  ['search-empty', 'search-empty'],
+  ['search-error', 'search-error'],
+  ['book-detail', 'book-detail'],
+  ['book-detail-toc-preview', 'book-detail-toc-preview'],
+  ['source-switch-results', 'source-switch-results'],
+  ['source-management-list', 'source-management'],
+  ['source-detail', 'source-detail'],
+  ['source-add', 'source-add'],
+  ['source-edit', 'source-edit'],
+  ['source-import', 'source-import-options'],
+  ['source-test-result', 'source-test-result'],
+  ['source-disabled-error', 'source-management'],
+  ['discover-home', 'discover-home'],
+  ['rss-list', 'rss'],
+  ['rss-detail', 'rss-detail'],
+  ['rss-subscription-management', 'rss-subscription-management'],
+  ['rss-empty', 'rss-empty'],
+  ['rss-error', 'rss-error'],
+  ['global-settings', 'global-settings'],
+  ['reading-settings-entry', 'reading-settings-entry'],
+  ['source-settings-entry', 'source-settings-entry'],
+  ['sync-settings-entry', 'sync-settings-entry'],
+  ['about-version', 'about-version'],
+  ['webdav-config', 'webdav-config'],
+  ['backup-settings', 'backup-settings'],
+  ['progress-sync-status', 'progress-sync-status'],
+  ['remote-webdav-books', 'remote-webdav-books'],
+  ['sync-error', 'sync-error'],
+  ['global-loading', 'global-loading'],
+  ['global-empty', 'global-empty'],
+  ['global-error', 'global-error'],
+  ['offline-state', 'offline-state'],
+  ['permission-required', 'permission-required'],
+];
+
+// Pages acknowledged as not-yet-migrated. Remove a page here ONLY when it has
+// a ViewState entry or aliasFor declaration. Must be empty before full migration.
+// NOTE: keys are pageName (first element of NORMALIZED_PAGES tuple), NOT routeId.
+const PENDING_NORMALIZED = new Set([
+  'bookshelf-cover-mode', 'bookshelf-list-mode', 'bookshelf-group-management',
+  'bookshelf-book-more-menu', 'local-book-import',
+  'search-loading', 'search-error', 'book-detail-toc-preview',
+  'source-management-list', 'source-disabled-error', 'source-add', 'source-edit',
+  'source-import', 'source-test-result',
+  'rss-subscription-management', 'rss-empty', 'rss-error',
+  'global-settings', 'reading-settings-entry', 'source-settings-entry',
+  'sync-settings-entry', 'about-version',
+  'backup-settings', 'progress-sync-status', 'remote-webdav-books',
+  'global-loading', 'global-empty', 'global-error', 'offline-state',
+  'permission-required',
+]);
+
+test('normalized 44 pages each have ViewState or alias or are in PENDING allowlist', () => {
+  const missing = [];
+  for (const [pageName, routeId] of NORMALIZED_PAGES) {
+    const hasVs = VS_ROUTE_IDS.has(routeId);
+    const hasAlias = ALIAS_MAP.has(routeId);
+    const isPending = PENDING_NORMALIZED.has(pageName);
+    if (!hasVs && !hasAlias && !isPending) {
+      missing.push(`${pageName} -> ${routeId}`);
+    }
+  }
+  assert.equal(missing.length, 0,
+    `normalized pages with no ViewState, no alias, and not in PENDING allowlist (add coverage or add to PENDING): ${missing.join(', ')}`);
+});
+
+test('PENDING_NORMALIZED allowlist contains no already-covered pages (stale entries must be removed)', () => {
+  const stale = [];
+  for (const [pageName, routeId] of NORMALIZED_PAGES) {
+    if (!PENDING_NORMALIZED.has(pageName)) continue;
+    const hasVs = VS_ROUTE_IDS.has(routeId);
+    const hasAlias = ALIAS_MAP.has(routeId);
+    if (hasVs || hasAlias) stale.push(`${pageName} -> ${routeId}`);
+  }
+  assert.equal(stale.length, 0,
+    `PENDING_NORMALIZED has pages now covered (remove them from the allowlist): ${stale.join(', ')}`);
+});
+
+test('normalized page count is 44', () => {
+  assert.equal(NORMALIZED_PAGES.length, 44, `expected 44 normalized pages, got ${NORMALIZED_PAGES.length}`);
+});
+
+// ── 8. Scaffold-only ViewState guard ──────────────────────────────────────
+// A route whose body components are ALL generic placeholders (FormSection, List,
+// Card, Overlay, Input, Button, Content, FilterBar, DemoList, ListRow, Loading,
+// Empty, ErrorState, Offline, Error) is "scaffold-only" — it compiles and
+// renders, but is NOT a 1:1 demo page migration. Such routes must be listed in
+// SCAFFOLD_ALLOWED so they are not silently counted as migrated. As later
+// phases replace scaffold bodies with bespoke components, routes are removed
+// from SCAFFOLD_ALLOWED.
+const SCAFFOLD_TYPES = new Set([
+  'FormSection', 'List', 'Card', 'Overlay', 'Input', 'Button', 'Content',
+  'FilterBar', 'DemoList', 'ListRow', 'Loading', 'Empty', 'ErrorState',
+  'Offline', 'Error', 'BackTopBar', 'AppTopBar', 'BottomNav',
+]);
+
+// Routes allowed to be scaffold-only (not yet 1:1 migrated). Must shrink over
+// time. Shell-owned bars (AppTopBar/BackTopBar/BottomNav) are excluded from
+// body via bodyComponentsFor, so a page with only bars + scaffold is scaffold-only.
+const SCAFFOLD_ALLOWED = new Set([
+  'app-shell', 'bookshelf-empty', 'book-detail', 'state-offline', 'state-error',
+  'search-home', 'search-results', 'search-empty', 'source-detail',
+  'rss-all', 'rss-detail', 'rss-original', 'restore-running', 'restore-result',
+  'sync-backup', 'sync-error', 'webdav-config',
+]);
+
+test('ViewState routes that are scaffold-only are listed in SCAFFOLD_ALLOWED', () => {
+  const scaffoldOnly = [];
+  const coveredRouteIds = new Set();
+  for (const v of VIEW_STATES_JSON) coveredRouteIds.add(v.routeId);
+  for (const routeId of coveredRouteIds) {
+    // Use the generated table's bodyComponentsFor logic: filter shell bars.
+    let components = [];
+    for (const entry of VIEW_STATES_JSON) {
+      if (entry.routeId !== routeId) continue;
+      components = entry.components || [];
+      break;
+    }
+    const body = components.filter((c) => !['AppTopBar', 'BackTopBar', 'BottomNav'].includes(c.type));
+    if (body.length === 0) continue; // shell-only (e.g. main-tabs) — not a page
+    const hasBespoke = body.some((c) => !SCAFFOLD_TYPES.has(c.type));
+    if (!hasBespoke && !SCAFFOLD_ALLOWED.has(routeId)) {
+      scaffoldOnly.push(routeId);
+    }
+  }
+  assert.equal(scaffoldOnly.length, 0,
+    `routes with scaffold-only ViewState not in SCAFFOLD_ALLOWED (replace with bespoke components or add to SCAFFOLD_ALLOWED): ${scaffoldOnly.join(', ')}`);
+});
+
+test('SCAFFOLD_ALLOWED contains no routes that now have bespoke components (stale entries)', () => {
+  const stale = [];
+  for (const routeId of SCAFFOLD_ALLOWED) {
+    let components = [];
+    for (const entry of VIEW_STATES_JSON) {
+      if (entry.routeId !== routeId) continue;
+      components = entry.components || [];
+      break;
+    }
+    const body = components.filter((c) => !['AppTopBar', 'BackTopBar', 'BottomNav'].includes(c.type));
+    const hasBespoke = body.some((c) => !SCAFFOLD_TYPES.has(c.type));
+    if (hasBespoke) stale.push(routeId);
+  }
+  assert.equal(stale.length, 0,
+    `SCAFFOLD_ALLOWED has routes now with bespoke components (remove them): ${stale.join(', ')}`);
+});
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

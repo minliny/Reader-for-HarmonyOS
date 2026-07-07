@@ -2,7 +2,7 @@
 // Source: Reader UI/contracts/fixtures/*.json (read-only contract).
 // Re-run `npm run gen:contracts` after any contract change.
 
-import { RouteId } from './RouteTable';
+import { RouteId, RouteTable } from './RouteTable';
 
 export interface ViewStateProps {
   author?: string;
@@ -1055,36 +1055,10 @@ export class ViewStateTable {
     "pageState": "default",
     "components": [
       {
-        "type": "Overlay",
-        "id": "source-switch-overlay",
-        "props": {
-          "overlayType": "source-switch"
-        },
-        "children": [
-          {
-            "type": "List",
-            "id": "source-switch-results-list",
-            "props": {},
-            "children": [
-              {
-                "type": "ListRow",
-                "id": "source-switch-src-001",
-                "props": {
-                  "title": "源 A"
-                },
-                "children": []
-              },
-              {
-                "type": "ListRow",
-                "id": "source-switch-src-002",
-                "props": {
-                  "title": "源 B"
-                },
-                "children": []
-              }
-            ]
-          }
-        ]
+        "type": "SourceSwitchResultsPanel",
+        "id": "source-switch-results-panel",
+        "props": {},
+        "children": []
       }
     ]
   },
@@ -1264,16 +1238,28 @@ export class ViewStateTable {
   }
 ];
 
+  // Resolve components for (routeId, pageState). Falls back to:
+  //   1. same-route 'default' pageState entry
+  //   2. RouteTable.aliasOf(routeId) -> that route's (pageState, then default)
+  //   3. empty array (caller renders nothing)
+  // Alias chain depth capped at 4 to guard against accidental cycles.
   static componentsFor(routeId: string, pageState: string): ViewStateComponent[] {
-    let fallback: ViewStateComponent[] = [];
-    for (const entry of ViewStateTable.ENTRIES) {
-      if (entry.routeId !== routeId) continue;
-      if (entry.pageState === pageState) return entry.components;
-      if (entry.pageState === 'default' || fallback.length === 0) {
-        fallback = entry.components;
+    let current: string = routeId;
+    for (let depth = 0; depth < 5; depth++) {
+      let fallback: ViewStateComponent[] = [];
+      for (const entry of ViewStateTable.ENTRIES) {
+        if (entry.routeId !== current) continue;
+        if (entry.pageState === pageState) return entry.components;
+        if (entry.pageState === 'default' || fallback.length === 0) {
+          fallback = entry.components;
+        }
       }
+      if (fallback.length > 0) return fallback;
+      const next: string | null = RouteTable.aliasOf(current);
+      if (next === null || next === current) break;
+      current = next;
     }
-    return fallback;
+    return [];
   }
 
   static bodyComponentsFor(routeId: string, pageState: string): ViewStateComponent[] {

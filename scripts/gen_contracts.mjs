@@ -214,7 +214,15 @@ function genRouteTable() {
   const shellUnion = shells.map((s) => `'${s}'`).join(' | ');
   const shellCases = ROUTES.map((r) => `      case '${r.id}': return '${r.shell}';`).join('\n');
   const mainTabCases = ROUTES.filter((r) => r.mainTab).map((r) => `      case '${r.id}': return '${r.mainTab}';`).join('\n');
-  return `${HEADER}\nexport type RouteId = ${idUnion};\nexport type ShellId = ${shellUnion};\n\nexport class RouteTable {\n  static shellOf(id: string): ShellId {\n    switch (id) {\n${shellCases}\n      default: return 'FlowShell';\n    }\n  }\n\n  static mainTabOf(id: string): string | null {\n    switch (id) {\n${mainTabCases}\n      default: return null;\n    }\n  }\n}\n`;
+  // aliasFor: a route may declare aliasFor to reuse another route's ViewState
+  // (e.g. discover-home aliases discover). aliasOf resolves one hop; the
+  // ViewStateTable.componentsFor loop follows the chain (depth-capped).
+  const aliasCases = ROUTES.filter((r) => r.aliasFor)
+    .map((r) => `      case '${r.id}': return '${r.aliasFor}';`).join('\n');
+  const aliasMethod = aliasCases
+    ? `\n  static aliasOf(id: string): string | null {\n    switch (id) {\n${aliasCases}\n      default: return null;\n    }\n  }`
+    : '\n  static aliasOf(id: string): string | null { return null; }';
+  return `${HEADER}\nexport type RouteId = ${idUnion};\nexport type ShellId = ${shellUnion};\n\nexport class RouteTable {\n  static shellOf(id: string): ShellId {\n    switch (id) {\n${shellCases}\n      default: return 'FlowShell';\n    }\n  }\n\n  static mainTabOf(id: string): string | null {\n    switch (id) {\n${mainTabCases}\n      default: return null;\n    }\n  }${aliasMethod}\n}\n`;
 }
 
 // ── ViewStateTable.ets ────────────────────────────────────────────────────
@@ -273,7 +281,7 @@ function genViewStateTable() {
   const propsIface = `export interface ViewStateProps {\n${propLines.join('\n')}\n}`;
   const body = JSON.stringify(entries, null, 2);
   return `${HEADER}
-import { RouteId } from './RouteTable';
+import { RouteId, RouteTable } from './RouteTable';
 
 ${propsIface}
 
@@ -293,16 +301,28 @@ export interface ViewStateEntry {
 export class ViewStateTable {
   static readonly ENTRIES: ViewStateEntry[] = ${body};
 
+  // Resolve components for (routeId, pageState). Falls back to:
+  //   1. same-route 'default' pageState entry
+  //   2. RouteTable.aliasOf(routeId) -> that route's (pageState, then default)
+  //   3. empty array (caller renders nothing)
+  // Alias chain depth capped at 4 to guard against accidental cycles.
   static componentsFor(routeId: string, pageState: string): ViewStateComponent[] {
-    let fallback: ViewStateComponent[] = [];
-    for (const entry of ViewStateTable.ENTRIES) {
-      if (entry.routeId !== routeId) continue;
-      if (entry.pageState === pageState) return entry.components;
-      if (entry.pageState === 'default' || fallback.length === 0) {
-        fallback = entry.components;
+    let current: string = routeId;
+    for (let depth = 0; depth < 5; depth++) {
+      let fallback: ViewStateComponent[] = [];
+      for (const entry of ViewStateTable.ENTRIES) {
+        if (entry.routeId !== current) continue;
+        if (entry.pageState === pageState) return entry.components;
+        if (entry.pageState === 'default' || fallback.length === 0) {
+          fallback = entry.components;
+        }
       }
+      if (fallback.length > 0) return fallback;
+      const next: string | null = RouteTable.aliasOf(current);
+      if (next === null || next === current) break;
+      current = next;
     }
-    return fallback;
+    return [];
   }
 
   static bodyComponentsFor(routeId: string, pageState: string): ViewStateComponent[] {

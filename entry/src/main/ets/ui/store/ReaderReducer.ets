@@ -65,72 +65,72 @@ export class ReaderReducer {
   static push(state: ReaderUiState, id: RouteId): ReaderUiState {
     const entry: RouteEntry = { id: id };
     const stack: RouteEntry[] = [...state.stack, entry];
-    return ReaderReducer.clone(state, id, state.tab, '', stack);
+    return ReaderReducer.clone(state, id, state.tab, '', stack, 'default');
   }
 
   static pop(state: ReaderUiState): ReaderUiState {
     if (state.stack.length <= 1) return state;
     const stack = state.stack.slice(0, -1);
     const top = stack[stack.length - 1];
-    return ReaderReducer.clone(state, top.id, state.tab, '', stack);
+    return ReaderReducer.clone(state, top.id, state.tab, '', stack, 'default');
   }
 
   static replace(state: ReaderUiState, id: RouteId): ReaderUiState {
     if (state.stack.length === 0) return ReaderReducer.push(state, id);
     const stack = state.stack.slice(0, -1);
     stack.push({ id: id });
-    return ReaderReducer.clone(state, id, state.tab, '', stack);
+    return ReaderReducer.clone(state, id, state.tab, '', stack, 'default');
   }
 
   static switchTab(state: ReaderUiState, tab: MainTab): ReaderUiState {
     const root = tabRoot(tab);
     const stack: RouteEntry[] = [{ id: root }];
-    return ReaderReducer.clone(state, root, tab, '', stack);
+    return ReaderReducer.clone(state, root, tab, '', stack, 'default');
   }
 
   static setOverlay(state: ReaderUiState, overlay: Overlay): ReaderUiState {
-    return ReaderReducer.clone(state, state.routeId, state.tab, overlay, state.stack);
+    return ReaderReducer.clone(state, state.routeId, state.tab, overlay, state.stack, state.pageState);
   }
 
   static setPageState(state: ReaderUiState, pageState: PageState): ReaderUiState {
-    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack);
-    next.pageState = pageState;
-    return next;
+    return ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, pageState);
   }
 
   static setReaderMode(state: ReaderUiState, mode: ReaderMode): ReaderUiState {
-    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack);
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
     next.readerMode = mode;
     return next;
   }
 
   static setReducedMotion(state: ReaderUiState, enabled: boolean): ReaderUiState {
-    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack);
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
     next.reducedMotion = enabled;
     return next;
   }
 
   static setLoading(state: ReaderUiState, loading: boolean): ReaderUiState {
-    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack);
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
     next.loading = loading;
     return next;
   }
 
   static setError(state: ReaderUiState, error: ReaderError | null): ReaderUiState {
-    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack);
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
     next.error = error;
     return next;
   }
 
   static firstOpenDone(state: ReaderUiState): ReaderUiState {
-    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack);
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
     next.firstOpenPlayed = true;
     next.loading = false;
     return next;
   }
 
   // Build a new ReaderUiState with routeId/tab/overlay/stack overridden; other fields copied.
-  private static clone(s: ReaderUiState, routeId: RouteId, tab: MainTab, overlay: Overlay, stack: RouteEntry[]): ReaderUiState {
+  // pageState is explicit so route navigation starts each page from its default
+  // state instead of leaking loading/error/empty from the previous route.
+  private static clone(s: ReaderUiState, routeId: RouteId, tab: MainTab, overlay: Overlay, stack: RouteEntry[], pageState: PageState): ReaderUiState {
     return {
       routeId: routeId,
       tab: tab,
@@ -141,7 +141,7 @@ export class ReaderReducer {
       loading: s.loading,
       error: s.error,
       reducedMotion: s.reducedMotion,
-      pageState: s.pageState,
+      pageState: pageState,
       firstOpenPlayed: s.firstOpenPlayed,
       stack: stack,
     };

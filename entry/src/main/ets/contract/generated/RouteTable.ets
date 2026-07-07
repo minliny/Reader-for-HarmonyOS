@@ -225,4 +225,10 @@ export class RouteTable {
       default: return null;
     }
   }
+  static aliasOf(id: string): string | null {
+    switch (id) {
+      case 'discover-home': return 'discover';
+      default: return null;
+    }
+  }
 }

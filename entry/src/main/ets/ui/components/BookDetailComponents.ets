@@ -35,7 +35,7 @@ export struct BookHero {
         Row() {
           Text('书源：').fontSize(12).fontColor(ColorTokens.muted)
           Text('默认书源').fontSize(12).fontColor(ColorTokens.primaryDark)
-            .onClick(() => ReaderUiStore.dispatch({ type: 'set-overlay', overlay: 'source-switch' }))
+            .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'source-switch-results' }))
         }
         .margin({ top: 4 })
       }
