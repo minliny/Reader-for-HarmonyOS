@@ -16,6 +16,26 @@ function routeTitle(routeId: string): string {
   }
 }
 
+// Title for secondary routes rendered inside BackTopBar (LibraryShell / SettingsShell).
+// Hard-coding '书籍详情' here would mislabel every settings-secondary page.
+function secondaryRouteTitle(routeId: string): string {
+  switch (routeId) {
+    case 'book-detail': return '书籍详情';
+    case 'book-directory': return '目录';
+    case 'book-search':
+    case 'search-home': return '搜索';
+    case 'source-management': return '书源管理';
+    case 'source-detail': return '书源详情';
+    case 'source-edit': return '编辑书源';
+    case 'webdav-config': return 'WebDAV';
+    case 'sync-backup': return '备份与同步';
+    case 'restore-scopes': return '恢复范围';
+    case 'about-feedback': return '关于';
+    case 'rss-subscription-management': return '订阅管理';
+    default: return '';
+  }
+}
+
 @Component
 export struct AppTopBar {
   @StorageProp('reader.routeId') routeId: string = 'bookshelf';
@@ -51,12 +71,14 @@ export struct AppTopBar {
 
 @Component
 export struct BackTopBar {
+  @StorageProp('reader.routeId') routeId: string = 'book-detail';
+
   build() {
     Row() {
       Image($r('app.media.reader_icon_back_dark'))
         .width(24).height(24)
         .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
-      Text('书籍详情')
+      Text(secondaryRouteTitle(this.routeId))
         .fontSize(ReaderTypography.topBarTitle().fontSize)
         .fontColor(ColorTokens.ink)
         .fontWeight(ReaderTypography.topBarTitle().fontWeight)
