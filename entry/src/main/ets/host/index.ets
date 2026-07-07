@@ -1,0 +1,8 @@
+// host — barrel export for Host scheduling layer (Phase 2).
+// Re-exports Phase 1 types plus HostCapabilityRegistry and HostDispatcher.
+
+export * from './types';
+export { HostCapabilityRegistry } from './HostCapabilityRegistry';
+export { HostDispatcher } from './HostDispatcher';
+export type { HostDispatcherConfig } from './HostDispatcher';
+export type { HostCapabilityHandler } from './HostCapabilityRegistry';

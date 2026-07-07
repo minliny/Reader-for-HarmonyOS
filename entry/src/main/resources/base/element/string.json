@@ -7,6 +7,10 @@
     {
       "name": "module_desc",
       "value": "Reader for HarmonyOS"
+    },
+    {
+      "name": "reason_keep_background_running",
+      "value": "Allows TTS playback and background downloads to continue when the app is in the background."
     }
   ]
 }
