@@ -441,9 +441,11 @@ export default class EntryAbility extends UIAbility {
         console.info(`[LocalBook] step=4b epub written path=${epubFilePath}`);
 
         // Step 5: zlib.decompressFile — extract EPUB (ZIP) to a directory.
+        // zlib.decompressFile requires the output directory to already exist
+        // (BusinessError 900002 if it doesn't), so create it first.
         const epubExtractDir = localBookDir + '/sample.epub.extracted';
-        // Best-effort cleanup of previous extraction (rmdirSync only works on empty dirs).
         try { fs.rmdirSync(epubExtractDir); } catch (e) { /* may not exist or non-empty */ }
+        fs.mkdirSync(epubExtractDir, true);
         const epubOptions: zlib.Options = {
           pathSeparatorStrategy: zlib.PathSeparatorStrategy.PATH_SEPARATOR_STRATEGY_REPLACE_BACKSLASH,
         };

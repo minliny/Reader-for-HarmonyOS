@@ -77,6 +77,10 @@ export class FileHostAdapter {
   async write(event: HostFileWriteRequest): Promise<HostFileWriteResponse> {
     const resolvedPath = this.resolvePath(event.path);
     try {
+      // Ensure parent directory exists — fs.openSync only creates the file,
+      // not intermediate directories. This makes file.write robust for paths
+      // like cache://rss/feed.xml where the 'rss' subdir doesn't exist yet.
+      this.ensureParentDir(resolvedPath);
       const file = fs.openSync(
         resolvedPath,
         fs.OpenMode.CREATE | fs.OpenMode.WRITE_ONLY | fs.OpenMode.TRUNC
@@ -120,6 +124,20 @@ export class FileHostAdapter {
       return this.context.cacheDir + '/' + path.substring(CACHE_PREFIX.length);
     }
     return path;
+  }
+
+  private ensureParentDir(filePath: string): void {
+    const lastSlash = filePath.lastIndexOf('/');
+    if (lastSlash <= 0) {
+      return; // no parent dir to create
+    }
+    const parentDir = filePath.substring(0, lastSlash);
+    try {
+      fs.mkdirSync(parentDir, true);
+    } catch (e) {
+      // dir may already exist — ignore; the subsequent openSync will surface
+      // real permission/path errors.
+    }
   }
 
   private mapError(e: Object, originalPath: string): HostError {

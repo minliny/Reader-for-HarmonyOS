@@ -40,6 +40,11 @@ export class HttpHostAdapter {
       method: method,
       header: request.headers,
       expectDataType: http.HttpDataType.STRING,
+      // Default timeouts: 15s connect + 15s read. Prevents indefinite hangs
+      // when a source is unreachable (e.g. yodu.org behind GFW). Callers that
+      // need longer can override via request.timeoutMs if the contract grows.
+      connectTimeout: 15000,
+      readTimeout: 15000,
     };
     if (request.body !== undefined) {
       options.extraData = request.body;
