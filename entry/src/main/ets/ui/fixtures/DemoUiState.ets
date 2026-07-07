@@ -17,6 +17,10 @@ export class DemoUiState {
       pageState: 'cover-mode',
       firstOpenPlayed: true,
       stack: [{ id: 'bookshelf' }],
+      searchQuery: '',
+      searchResults: [],
+      currentBook: null,
+      chapterContent: [],
     };
   }
 }

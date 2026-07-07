@@ -40,6 +40,13 @@ export interface ReaderUiState {
   pageState: PageState;
   firstOpenPlayed: boolean;
   stack: RouteEntry[];
+  // Minimal visible reading chain data fields (Phase 2 extension).
+  // Hold real data fetched via Host HTTP, replacing hardcoded fixtures in
+  // components. Durable UI state — owned by reducer, not page components.
+  searchQuery: string;
+  searchResults: SearchResultEntry[];
+  currentBook: BookDetail | null;
+  chapterContent: string[];
 }
 
 // UiEvent is a tagged record; the reducer switches on `type` and reads the relevant
@@ -55,4 +62,40 @@ export interface UiEvent {
   enabled?: boolean;
   loading?: boolean;
   error?: ReaderError | null;
+  // Minimal visible reading chain event fields.
+  query?: string;
+  searchResults?: SearchResultEntry[];
+  book?: BookDetail | null;
+  chapterParagraphs?: string[];
+  bookId?: string;
+  chapterId?: string;
+}
+
+// ── Minimal visible reading chain data types ──
+export interface SearchResultEntry {
+  title: string;
+  author: string;
+  bookId: string;
+  sourceName: string;
+  sourceUrl: string;
+  latestChapter?: string;
+}
+
+export interface BookDetail {
+  bookId: string;
+  title: string;
+  author: string;
+  coverUrl?: string;
+  summary: string;
+  sourceName: string;
+  sourceUrl: string;
+  latestChapter: string;
+  chapterListUrl: string;
+}
+
+export interface ChapterContent {
+  bookId: string;
+  chapterId: string;
+  title: string;
+  paragraphs: string[];
 }

@@ -1,10 +1,11 @@
 // ReaderUiStore — AppStorage bridge over the reducer.
 // Holds the canonical UiState; on dispatch, reduces and writes primitive fields to
 // AppStorage so any component can subscribe via @StorageProp / @StorageLink.
-import { ReaderUiState, UiEvent } from './ReaderUiState';
+import { ReaderUiState, UiEvent, SearchResultEntry, BookDetail } from './ReaderUiState';
 import { ReaderReducer } from './ReaderReducer';
 import { DemoUiState } from '../fixtures/DemoUiState';
 import { ReaderThemeState } from '../tokens/ReaderThemeState';
+import { ReaderEffects } from './ReaderEffects';
 
 export class ReaderUiStore {
   private static readonly K_ROUTE = 'reader.routeId';
@@ -21,6 +22,10 @@ export class ReaderUiStore {
   private static readonly K_STACK_DEPTH = 'reader.stackDepth';
   private static readonly K_FIRST_OPEN = 'reader.firstOpenPlayed';
   private static readonly K_LAST_OP = 'reader.lastOp';
+  static readonly K_SEARCH_QUERY: string = 'reader.searchQuery';
+  static readonly K_SEARCH_RESULTS: string = 'reader.searchResults';
+  static readonly K_CURRENT_BOOK: string = 'reader.currentBook';
+  static readonly K_CHAPTER_CONTENT: string = 'reader.chapterContent';
 
   private static state: ReaderUiState;
 
@@ -34,6 +39,10 @@ export class ReaderUiStore {
   static dispatch(event: UiEvent): void {
     ReaderUiStore.state = ReaderReducer.reduce(ReaderUiStore.state, event);
     ReaderUiStore.writeAll();
+    // Async effect intercept: search-submit / book-detail-load / chapter-load
+    // fire Host HTTP. The synchronous reducer pass already applied loading=true;
+    // the effect dispatches success/failure back into the reducer when done.
+    ReaderEffects.maybeRun(event);
     AppStorage.setOrCreate<string>(ReaderUiStore.K_LAST_OP, event.type);
     ReaderThemeState.setReducedMotion(ReaderUiStore.state.reducedMotion);
   }
@@ -57,5 +66,9 @@ export class ReaderUiStore {
     AppStorage.setOrCreate<boolean>(ReaderUiStore.K_RETRYABLE, s.error !== null ? s.error.retryable : false);
     AppStorage.setOrCreate<number>(ReaderUiStore.K_STACK_DEPTH, s.stack.length);
     AppStorage.setOrCreate<boolean>(ReaderUiStore.K_FIRST_OPEN, s.firstOpenPlayed);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_SEARCH_QUERY, s.searchQuery);
+    AppStorage.setOrCreate<SearchResultEntry[]>(ReaderUiStore.K_SEARCH_RESULTS, s.searchResults);
+    AppStorage.setOrCreate<BookDetail | null>(ReaderUiStore.K_CURRENT_BOOK, s.currentBook);
+    AppStorage.setOrCreate<string[]>(ReaderUiStore.K_CHAPTER_CONTENT, s.chapterContent);
   }
 }

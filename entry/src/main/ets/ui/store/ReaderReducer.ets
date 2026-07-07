@@ -2,7 +2,7 @@
 // No side effects. ArkTS forbids object spread (arkts-no-spread), so each method builds a
 // new ReaderUiState literal field-by-field (array spread is still allowed).
 import { RouteId } from '../../contract/generated/RouteTable';
-import { ReaderUiState, UiEvent, MainTab, Overlay, PageState, ReaderMode, RouteEntry, ReaderError } from './ReaderUiState';
+import { ReaderUiState, UiEvent, MainTab, Overlay, PageState, ReaderMode, RouteEntry, ReaderError, SearchResultEntry, BookDetail } from './ReaderUiState';
 
 function tabRoot(tab: MainTab): RouteId {
   switch (tab) {
@@ -57,6 +57,32 @@ export class ReaderReducer {
       }
       case 'first-open-done':
         return ReaderReducer.firstOpenDone(state);
+      case 'search-submit': {
+        const q = event.query ?? '';
+        return ReaderReducer.setSearchQuery(state, q);
+      }
+      case 'search-start':
+        return ReaderReducer.setLoading(state, true);
+      case 'search-success': {
+        const results = event.searchResults ?? [];
+        return ReaderReducer.setSearchResults(state, results);
+      }
+      case 'search-failure': {
+        const err: ReaderError = event.error ?? { code: 'SEARCH_FAILED', message: 'search failed', retryable: false };
+        return ReaderReducer.setError(state, err);
+      }
+      case 'book-detail-load':
+        return ReaderReducer.setLoading(state, true);
+      case 'book-detail-success': {
+        const book = event.book ?? null;
+        return ReaderReducer.setCurrentBook(state, book);
+      }
+      case 'chapter-load':
+        return ReaderReducer.setLoading(state, true);
+      case 'chapter-success': {
+        const paras = event.chapterParagraphs ?? [];
+        return ReaderReducer.setChapterContent(state, paras);
+      }
       default:
         return state;
     }
@@ -127,6 +153,42 @@ export class ReaderReducer {
     return next;
   }
 
+  static setSearchQuery(state: ReaderUiState, query: string): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    next.searchQuery = query;
+    next.loading = true;
+    next.pageState = 'loading';
+    next.error = null;
+    return next;
+  }
+
+  static setSearchResults(state: ReaderUiState, results: SearchResultEntry[]): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    next.searchResults = results;
+    next.loading = false;
+    next.pageState = results.length === 0 ? 'empty' : 'default';
+    next.error = null;
+    return next;
+  }
+
+  static setCurrentBook(state: ReaderUiState, book: BookDetail | null): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    next.currentBook = book;
+    next.loading = false;
+    next.pageState = 'default';
+    next.error = null;
+    return next;
+  }
+
+  static setChapterContent(state: ReaderUiState, paragraphs: string[]): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    next.chapterContent = paragraphs;
+    next.loading = false;
+    next.readerMode = 'default';
+    next.error = null;
+    return next;
+  }
+
   // Build a new ReaderUiState with routeId/tab/overlay/stack overridden; other fields copied.
   // pageState is explicit so route navigation starts each page from its default
   // state instead of leaking loading/error/empty from the previous route.
@@ -144,6 +206,10 @@ export class ReaderReducer {
       pageState: pageState,
       firstOpenPlayed: s.firstOpenPlayed,
       stack: stack,
+      searchQuery: s.searchQuery,
+      searchResults: s.searchResults,
+      currentBook: s.currentBook,
+      chapterContent: s.chapterContent,
     };
   }
 }
