@@ -1,108 +1,15 @@
-import { UIAbility, Want, AbilityConstant } from '@kit.AbilityKit';
-import { window } from '@kit.ArkUI';
-import { hilog } from '@kit.PerformanceAnalysisKit';
-import { readerRuntimeNetworkConfig } from '../services/RuntimeNetworkConfig';
-import { ReaderCoreClient } from '../api/ReaderCoreClient';
-import { runAllDomainTests, runAllAsyncDomainTests, summarizeResults, TestSuiteResult } from '../__tests__/TestInfra';
-
-const TAG = 'EntryAbility';
-const HEADLESS_TEST_FLAG = 'readerHeadlessTest';
-
-interface HeadlessTestSummaryFields {
-  passed: number;
-  failed: number;
-  total: number;
-}
-
-interface HeadlessTestSummary {
-  schemaVersion: string;
-  status: string;
-  generatedAt: string;
-  summary: HeadlessTestSummaryFields;
-  suites: TestSuiteResult[];
-}
+// EntryAbility — Stage model entry. Initializes the UiStore (which seeds AppStorage)
+// before the page loads, then loads the single @Entry page that hosts RouteRenderer.
+import UIAbility from '@ohos.app.ability.UIAbility';
+import window from '@ohos.window';
+import { ReaderUiStore } from '../ui/store/ReaderUiStore';
 
 export default class EntryAbility extends UIAbility {
-  onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
-    readerRuntimeNetworkConfig.applyLaunchParameters(want.parameters);
-    // S6: boot Rust Core + HostAdapter (http.execute capability) at app launch.
-    try {
-      ReaderCoreClient.init();
-      hilog.info(0x0000, TAG, 'ReaderCoreClient initialized (Rust Core + HostAdapter)');
-    } catch (e) {
-      hilog.error(0x0000, TAG, `ReaderCoreClient init failed: ${e}`);
-    }
-    hilog.info(0x0000, TAG, 'Ability onCreate');
-
-    if (want.parameters?.[HEADLESS_TEST_FLAG] === '1') {
-      hilog.info(0x0000, TAG, 'HEADLESS_TEST_MODE detected, running validators');
-      const abilityContext = this.context;
-      // Run sync + async validators, then report + terminate. Async IIFE so
-      // Promise-returning suites (HostLoginCookieProof) are awaited before
-      // terminateSelf — the sync suite is unaffected.
-      (async () => {
-        try {
-          const syncResults: TestSuiteResult[] = runAllDomainTests();
-          const asyncResults: TestSuiteResult[] = await runAllAsyncDomainTests();
-          const results: TestSuiteResult[] = syncResults.concat(asyncResults);
-          const report: string = summarizeResults(results);
-          hilog.info(0x0000, TAG, `HEADLESS_TEST_REPORT ${report.replace(/\n/g, ' | ')}`);
-
-          const totalPassed: number = results.reduce((sum: number, r: TestSuiteResult) => sum + r.passed, 0);
-          const totalFailed: number = results.reduce((sum: number, r: TestSuiteResult) => sum + r.failed, 0);
-          const totalTests: number = results.reduce((sum: number, r: TestSuiteResult) => sum + r.total, 0);
-          const status: string = totalFailed === 0 ? 'PASS' : 'FAIL';
-
-          const summary: HeadlessTestSummary = {
-            schemaVersion: 'headless-test.v1',
-            status,
-            generatedAt: new Date().toISOString(),
-            summary: { passed: totalPassed, failed: totalFailed, total: totalTests } as HeadlessTestSummaryFields,
-            suites: results
-          };
-          const json: string = JSON.stringify(summary);
-          hilog.info(0x0000, TAG, `HEADLESS_TEST_JSON ${json}`);
-          hilog.info(0x0000, TAG, `HEADLESS_TEST_MODE ${status}`);
-        } catch (e) {
-          const errMsg = (e instanceof Error) ? e.message : String(e);
-          hilog.error(0x0000, TAG, `HEADLESS_TEST_MODE error: ${errMsg}`);
-        }
-        abilityContext.terminateSelf();
-      })();
-      return;
-    }
-  }
-
-  onNewWant(want: Want, launchParam: AbilityConstant.LaunchParam): void {
-    readerRuntimeNetworkConfig.applyLaunchParameters(want.parameters);
-    hilog.info(0x0000, TAG, 'Ability onNewWant');
-  }
-
-  onDestroy(): void {
-    hilog.info(0x0000, TAG, 'Ability onDestroy');
+  onCreate(): void {
+    ReaderUiStore.init();
   }
 
   onWindowStageCreate(windowStage: window.WindowStage): void {
-    hilog.info(0x0000, TAG, 'Ability onWindowStageCreate');
-
-    windowStage.loadContent('pages/Index', (err) => {
-      if (err.code) {
-        hilog.error(0x0000, TAG, `Failed to load content: ${JSON.stringify(err)}`);
-        return;
-      }
-      hilog.info(0x0000, TAG, 'WindowStage content loaded');
-    });
-  }
-
-  onWindowStageDestroy(): void {
-    hilog.info(0x0000, TAG, 'Ability onWindowStageDestroy');
-  }
-
-  onForeground(): void {
-    hilog.info(0x0000, TAG, 'Ability onForeground');
-  }
-
-  onBackground(): void {
-    hilog.info(0x0000, TAG, 'Ability onBackground');
+    windowStage.loadContent('pages/Index');
   }
 }

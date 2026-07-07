@@ -6,21 +6,14 @@
     "buildTool": "hvigor",
     "directoryLevel": "project"
   },
-  "description": "Reader for HarmonyOS",
+  "description": "Reader for HarmonyOS — ArkUI native host (Phase 1 UI skeleton, contract-driven)",
   "repository": {},
   "license": "ISC",
   "scripts": {
-    "build:signed-hap": "bash scripts/build_signed_hap.sh",
-    "preflight:real-device": "bash scripts/preflight_real_device_runtime_smoke.sh",
-    "smoke:real-device": "bash scripts/run_real_device_runtime_evidence.sh",
-    "smoke:device-runtime": "bash scripts/run_device_runtime_smoke.sh",
-    "ci:device-runtime": "bash scripts/run_device_runtime_smoke.sh && python3 scripts/validate_device_runtime_smoke_artifact.py artifacts/device-runtime-smoke/latest/device_runtime_smoke_summary.json",
-    "ci:device-runtime:validate": "python3 scripts/validate_device_runtime_smoke_artifact.py artifacts/device-runtime-smoke/latest/device_runtime_smoke_summary.json",
-    "ci:real-device:validate": "python3 scripts/validate_real_device_runtime_smoke_artifact.py artifacts/real-device-runtime/latest/device-runtime-smoke/device_runtime_smoke_summary.json",
-    "ci:device-runtime:validate-fail": "python3 scripts/validate_device_runtime_smoke_fail_artifact.py artifacts/device-runtime-smoke/latest/device_runtime_smoke_summary.json",
-    "validate:gap-matrix": "python3 scripts/validate_harmonyos_core_legado_gap_matrix.py",
-    "validate:reader-ui-contract": "node scripts/verify_reader_ui_contract_drift.mjs",
-    "validate:frontend-slice1": "node scripts/validate_frontend_slice1_headless.mjs"
+    "gen:contracts": "node scripts/gen_contracts.mjs",
+    "lint:tokens": "node scripts/lint_tokens.mjs",
+    "build": "hvigorw assembleHap --no-daemon",
+    "test": "hvigorw test --no-daemon"
   },
   "dependencies": {
     "@ohos/hvigor": "6.22.7",

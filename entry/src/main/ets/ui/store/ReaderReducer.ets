@@ -1,168 +1,149 @@
-import { PageState } from '../../contract';
-import { ReaderMainTab, ReaderRoute } from '../ReaderRouteMapping';
-import { ReaderEntryTarget, ReaderUiReducer, ReaderUiState } from '../ReaderUiState';
+// ReaderReducer — pure function reduce(state, event) -> new state.
+// No side effects. ArkTS forbids object spread (arkts-no-spread), so each method builds a
+// new ReaderUiState literal field-by-field (array spread is still allowed).
+import { RouteId } from '../../contract/generated/RouteTable';
+import { ReaderUiState, UiEvent, MainTab, Overlay, PageState, ReaderMode, RouteEntry, ReaderError } from './ReaderUiState';
 
-export type ReaderReducerEventType =
-  'app.firstOpen.enter' |
-  'tab.select' |
-  'reader.entry' |
-  'pageState.set' |
-  'reducedMotion.set' |
-  'overlay.open' |
-  'overlay.close' |
-  'session.start' |
-  'session.stop' |
-  'async.begin' |
-  'async.complete';
-
-export interface ReaderReducerEvent {
-  type: ReaderReducerEventType;
-  tab?: string;
-  pageState?: PageState;
-  reducedMotion?: boolean;
-  target?: ReaderEntryTarget;
-  overlayKind?: string;
-  triggerId?: string;
-  sessionKind?: string;
-  requestId?: number;
-  targetRoute?: string;
+function tabRoot(tab: MainTab): RouteId {
+  switch (tab) {
+    case 'bookshelf': return 'bookshelf';
+    case 'discover': return 'discover';
+    case 'rss': return 'rss';
+    case 'settings': return 'settings';
+    default: return 'bookshelf';
+  }
 }
 
 export class ReaderReducer {
-  static initialState(): ReaderUiState {
-    return ReaderUiReducer.initialState();
+  static reduce(state: ReaderUiState, event: UiEvent): ReaderUiState {
+    switch (event.type) {
+      case 'route-push': {
+        const id = event.id;
+        return id !== undefined ? ReaderReducer.push(state, id) : state;
+      }
+      case 'route-pop':
+        return ReaderReducer.pop(state);
+      case 'route-replace': {
+        const id = event.id;
+        return id !== undefined ? ReaderReducer.replace(state, id) : state;
+      }
+      case 'switch-tab': {
+        const tab = event.tab;
+        return tab !== undefined ? ReaderReducer.switchTab(state, tab) : state;
+      }
+      case 'set-overlay': {
+        const o = event.overlay;
+        return o !== undefined ? ReaderReducer.setOverlay(state, o) : state;
+      }
+      case 'set-page-state': {
+        const p = event.pageState;
+        return p !== undefined ? ReaderReducer.setPageState(state, p) : state;
+      }
+      case 'set-reader-mode': {
+        const m = event.mode;
+        return m !== undefined ? ReaderReducer.setReaderMode(state, m) : state;
+      }
+      case 'toggle-reduced-motion': {
+        const e = event.enabled;
+        return e !== undefined ? ReaderReducer.setReducedMotion(state, e) : state;
+      }
+      case 'set-loading': {
+        const l = event.loading;
+        return l !== undefined ? ReaderReducer.setLoading(state, l) : state;
+      }
+      case 'set-error': {
+        const err = event.error !== undefined ? event.error : null;
+        return ReaderReducer.setError(state, err);
+      }
+      case 'first-open-done':
+        return ReaderReducer.firstOpenDone(state);
+      default:
+        return state;
+    }
   }
 
-  static reduce(state: ReaderUiState, event: ReaderReducerEvent): ReaderUiState {
-    if (event.type === 'tab.select') {
-      return ReaderReducer.selectTab(state, event.tab ?? ReaderMainTab.bookshelf);
-    }
-    if (event.type === 'reader.entry' && event.target) {
-      return ReaderReducer.enterReader(state, event.target);
-    }
-    if (event.type === 'pageState.set') {
-      return ReaderReducer.setPageState(state, event.pageState ?? 'default');
-    }
-    if (event.type === 'reducedMotion.set') {
-      return ReaderReducer.setReducedMotion(state, event.reducedMotion === true);
-    }
-    if (event.type === 'app.firstOpen.enter') {
-      return ReaderReducer.markFirstOpenPlayed(state);
-    }
-    if (event.type === 'overlay.open') {
-      return ReaderReducer.openOverlay(state, event.overlayKind ?? 'sheet', event.triggerId ?? 'reader.control.handle');
-    }
-    if (event.type === 'overlay.close') {
-      return ReaderReducer.closeOverlay(state);
-    }
-    if (event.type === 'session.start') {
-      return ReaderReducer.startSession(state, event.sessionKind ?? 'tts');
-    }
-    if (event.type === 'session.stop') {
-      return ReaderReducer.stopSession(state);
-    }
-    if (event.type === 'async.begin') {
-      return ReaderReducer.beginAsyncIntent(state, event.requestId ?? 0, event.targetRoute ?? state.route.id);
-    }
-    if (event.type === 'async.complete') {
-      return ReaderReducer.completeAsyncIntent(state, event.requestId ?? 0, event.targetRoute ?? state.route.id);
-    }
-    return state;
+  static push(state: ReaderUiState, id: RouteId): ReaderUiState {
+    const entry: RouteEntry = { id: id };
+    const stack: RouteEntry[] = [...state.stack, entry];
+    return ReaderReducer.clone(state, id, state.tab, '', stack);
   }
 
-  static selectTab(state: ReaderUiState, tab: string): ReaderUiState {
-    return ReaderUiReducer.selectTab(state, tab);
+  static pop(state: ReaderUiState): ReaderUiState {
+    if (state.stack.length <= 1) return state;
+    const stack = state.stack.slice(0, -1);
+    const top = stack[stack.length - 1];
+    return ReaderReducer.clone(state, top.id, state.tab, '', stack);
   }
 
-  static enterReader(state: ReaderUiState, target: ReaderEntryTarget): ReaderUiState {
-    return ReaderUiReducer.pushReaderEntry(state, target);
+  static replace(state: ReaderUiState, id: RouteId): ReaderUiState {
+    if (state.stack.length === 0) return ReaderReducer.push(state, id);
+    const stack = state.stack.slice(0, -1);
+    stack.push({ id: id });
+    return ReaderReducer.clone(state, id, state.tab, '', stack);
   }
 
-  static setReducedMotion(state: ReaderUiState, enabled: boolean): ReaderUiState {
-    return ReaderUiReducer.setReducedMotion(state, enabled);
+  static switchTab(state: ReaderUiState, tab: MainTab): ReaderUiState {
+    const root = tabRoot(tab);
+    const stack: RouteEntry[] = [{ id: root }];
+    return ReaderReducer.clone(state, root, tab, '', stack);
+  }
+
+  static setOverlay(state: ReaderUiState, overlay: Overlay): ReaderUiState {
+    return ReaderReducer.clone(state, state.routeId, state.tab, overlay, state.stack);
   }
 
   static setPageState(state: ReaderUiState, pageState: PageState): ReaderUiState {
-    const next = ReaderReducer.copyAppShellState(state);
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack);
     next.pageState = pageState;
-    next.loading = pageState === 'loading';
-    next.error = pageState === 'error' ? { code: 'APP_SHELL_ERROR', message: 'AppShell state layer error', retryable: true } : undefined;
     return next;
   }
 
-  static openOverlay(state: ReaderUiState, kind: string, triggerId: string): ReaderUiState {
-    return ReaderUiReducer.openOverlay(state, kind, triggerId);
-  }
-
-  static closeOverlay(state: ReaderUiState): ReaderUiState {
-    return ReaderUiReducer.closeOverlay(state);
-  }
-
-  static startSession(state: ReaderUiState, kind: string): ReaderUiState {
-    return ReaderUiReducer.startReaderSession(state, kind);
-  }
-
-  static stopSession(state: ReaderUiState): ReaderUiState {
-    return ReaderUiReducer.stopReaderSession(state);
-  }
-
-  static beginAsyncIntent(state: ReaderUiState, requestId: number, targetRoute: string): ReaderUiState {
-    return ReaderUiReducer.beginAsyncIntent(state, requestId, targetRoute);
-  }
-
-  static completeAsyncIntent(state: ReaderUiState, requestId: number, targetRoute: string): ReaderUiState {
-    return ReaderUiReducer.completeAsyncIntent(state, requestId, targetRoute);
-  }
-
-  static markFirstOpenPlayed(state: ReaderUiState): ReaderUiState {
-    const next = ReaderReducer.copyAppShellState(state);
-    next.firstOpen = { hasPlayed: true, motionTimer: 0 };
+  static setReaderMode(state: ReaderUiState, mode: ReaderMode): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack);
+    next.readerMode = mode;
     return next;
   }
 
-  static mainTabs(): string[] {
-    return ReaderMainTab.all.slice();
+  static setReducedMotion(state: ReaderUiState, enabled: boolean): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack);
+    next.reducedMotion = enabled;
+    return next;
   }
 
-  private static copyAppShellState(state: ReaderUiState): ReaderUiState {
-    const next = new ReaderUiState();
-    next.route = {
-      id: state.route.id,
-      params: state.route.params,
-      stack: state.route.stack
+  static setLoading(state: ReaderUiState, loading: boolean): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack);
+    next.loading = loading;
+    return next;
+  }
+
+  static setError(state: ReaderUiState, error: ReaderError | null): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack);
+    next.error = error;
+    return next;
+  }
+
+  static firstOpenDone(state: ReaderUiState): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack);
+    next.firstOpenPlayed = true;
+    next.loading = false;
+    return next;
+  }
+
+  // Build a new ReaderUiState with routeId/tab/overlay/stack overridden; other fields copied.
+  private static clone(s: ReaderUiState, routeId: RouteId, tab: MainTab, overlay: Overlay, stack: RouteEntry[]): ReaderUiState {
+    return {
+      routeId: routeId,
+      tab: tab,
+      readerMode: s.readerMode,
+      overlay: overlay,
+      activeSession: s.activeSession,
+      focusTarget: s.focusTarget,
+      loading: s.loading,
+      error: s.error,
+      reducedMotion: s.reducedMotion,
+      pageState: s.pageState,
+      firstOpenPlayed: s.firstOpenPlayed,
+      stack: stack,
     };
-    next.tab = state.tab;
-    next.readerMode = state.readerMode;
-    next.overlay = state.overlay;
-    next.activeSession = state.activeSession;
-    next.focusTarget = state.focusTarget;
-    next.loading = state.loading;
-    next.error = state.error ? { code: state.error.code, message: state.error.message, retryable: state.error.retryable } : undefined;
-    next.reducedMotion = state.reducedMotion;
-    next.pageState = state.pageState;
-    next.bookshelf = state.bookshelf;
-    next.discover = state.discover;
-    next.reader = state.reader;
-    next.settings = state.settings;
-    next.motion = state.motion;
-    next.firstOpen = state.firstOpen;
-
-    next.currentRoute = state.route.id;
-    next.activeTab = state.activeTab;
-    next.routeStack = state.routeStack.slice();
-    next.backStack = state.backStack.slice();
-    next.readerPresentationRoute = state.readerPresentationRoute;
-    next.bookshelfView = state.bookshelfView;
-    next.bookshelfGroup = state.bookshelfGroup;
-    next.bookshelfSort = state.bookshelfSort;
-    next.bookshelfFilter = state.bookshelfFilter;
-    next.bookshelfFilterOpen = state.bookshelfFilterOpen;
-    next.motionState = state.motionState;
-    next.motionInterrupt = state.motionInterrupt;
-    next.entryRequestId = state.entryRequestId;
-    next.adaptive = state.adaptive;
-    return next;
   }
 }
-
-export { ReaderEntryTarget, ReaderUiState, ReaderRoute, ReaderMainTab };

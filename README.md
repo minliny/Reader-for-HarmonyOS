@@ -1,175 +1,57 @@
-# Reader-for-HarmonyOS
+# Reader for HarmonyOS
 
-Reader for HarmonyOS is the ArkUI native host app for the Reader multi-end architecture.
+ArkUI (ArkTS / Stage Model, API 22) native host for the Reader multi-end architecture.
 
-## Current architecture role
+**Phase 1: UI skeleton.** Renders the Reader UI Contract as ArkUI shells, driven by contract fixtures / demo state. No real Core integration in this phase.
 
-This repo owns the HarmonyOS native experience in the Contract-first Native UI Architecture.
+## Architecture (Phase 1)
 
-Primary shared plan:
-
-```text
-docs/frontend-complete-app/CONTRACT_FIRST_NATIVE_UI_PLAN.md
+```
+Reader UI Contract  (read-only source of truth)
+  /Users/minliny/Documents/Reader UI/contracts
+      token / route / motion / motion-policy / ui-state / view-state
+            │
+            ▼  scripts/gen_contracts.mjs  (codegen, idempotent)
+  contract/generated/*.ets  +  resources/.../color.json
+            │
+            ▼
+  TokenAdapter  →  color.json / ReaderTypography / ReaderThemeState / motion
+  RouteRenderer →  RouteId → Shell → PageState
+  MainTabShell / ReaderShell / LibraryShell / SettingsShell / FlowShell  (explicit slots)
+  ReaderMotionResolver → MotionSpecRegistry → MotionAdapter  (no ad-hoc animateTo)
+  ArkTS reducer/store (UiState) + ViewState fixtures
 ```
 
-Reader UI remains the upstream contract/schema/codegen source; this repo keeps a local development copy under `docs/frontend-complete-app/`.
+State ownership: `UiState` (reducer-held) → `ViewState` (reducer-produced, UI-rendered). DomainState (Core) is untouched in Phase 1.
 
-Architecture direction:
-
-```text
-Reader UI Contract
-  -> generated ArkTS route / state / event / motion / token / view-state types
-
-Reader for HarmonyOS
-  -> ArkUI Native UI
-  -> ArkTS reducer/store
-  -> Reader-Core-Native NAPI bridge
-  -> HarmonyOS Host Adapter
-
-Reader-Core-Native
-  -> business source of truth
-```
-
-This repo owns:
-
-- ArkUI rendering and HarmonyOS native interaction quality.
-- Stage Model lifecycle, adaptive layout, fold posture, accessibility, and device proof.
-- ArkTS reducer/store for `navigation`、`readerMode`、`overlay`、`activeSession`、
-  `focusTarget`、`loading/error`、`async guard`、`reducedMotion`。
-- Reader-Core-Native NAPI bridge and ArkTS DTO mapping.
-- HarmonyOS Host Adapter for native HTTP、ArkWeb、Cookie、file/storage、credential、
-  SystemTts、permission、notification and background task flows.
-- Simulator and real-device evidence for shared slices.
-
-This repo does not own:
-
-- Book/source parsing business rules.
-- Canonical reading progress and sync conflict strategy.
-- Reader UI Contract schema/codegen source.
-- iOS or Android reducer behavior.
-
-Modification direction:
-
-- Consume Reader UI Contract generated ArkTS types when schema/codegen lands.
-- Keep durable UI state in ArkTS reducer/store, not inside monolithic ArkUI pages.
-- Keep drag offset, layout measurement, pressed state and accessibility focus as local visual state only.
-- Route Core-owned operations through Reader-Core-Native NAPI bridge.
-- Route HTTP/ArkWeb/Cookie/file/TTS/permission/background abilities through Host Adapter.
-- Split large reader surfaces into stable shell slots driven by `ViewState`.
-
-Frontend complete-app development entry:
-
-- `docs/frontend-complete-app/README.md`
-
-## Device Runtime Smoke
-
-Run the repeatable emulator/device runtime smoke from the repo root:
+## Build & verify
 
 ```bash
-npm run smoke:device-runtime
+npm run gen:contracts     # regenerate contract bindings (idempotent; re-run when contracts change)
+npm run build             # hvigorw assembleHap — pure ArkTS HAP, no native compile
+npm run test              # hypium unit tests (token / route / motion / shell-slot)
+npm run lint:tokens       # no raw #hex / Npx outside contract/generated/
 ```
 
-Run the CI-consumable gate:
+Toolchain (DevEco-Studio): `hvigorw` / `ohpm` / `node` / `hdc` must be on PATH.
 
-```bash
-npm run ci:device-runtime
+## Layout
+
+```
+entry/src/main/ets/
+  contract/generated/   # codegen output (ColorTokens, RouteTable, MotionSpecTable, ...)
+  ui/tokens/             # ReaderToken, ReaderTypography, ReaderThemeState
+  ui/adapters/           # TokenAdapter, MotionAdapter
+  ui/motion/             # MotionSpecRegistry, ReaderMotionResolver
+  ui/router/             # RouteStack, ShellHost, RouteRenderer
+  ui/shells/             # MainTabShell, ReaderShell, LibraryShell, SettingsShell, FlowShell
+  ui/slots/              # OverlayHost, StateHost, TopStatusArea
+  ui/store/              # ReaderUiState, ReaderReducer, ReaderUiStore
+  ui/fixtures/           # DemoUiState, DemoViewState (from contract fixtures)
+  ui/components/         # ViewStateRenderer + P0 demo components
+  entryability/          # EntryAbility (Stage model)
+  pages/                 # Index (@Entry)
+  font/                  # Noto Serif CJK SC
 ```
 
-Validate the current fail-closed runtime artifact without treating it as a pass:
-
-```bash
-npm run ci:device-runtime:validate-fail
-```
-
-Defaults:
-
-- target: `127.0.0.1:5555`
-- bundle: `com.reader.harmonyos`
-- module: `entry`
-- runtime wait: `240` seconds, polled every `5` seconds
-- runtime proxy: `HARMONYOS_RUNTIME_PROXY_MODE=auto` detects host proxy env;
-  set `off` to disable or `HARMONYOS_RUNTIME_PROXY_HOST/PORT` to override
-- output: `artifacts/device-runtime-smoke/<utc-timestamp>/`
-- latest pointer: `artifacts/device-runtime-smoke/latest`
-
-The runner builds the HAP, installs and starts the app through `hdc`, dumps the
-home layout, opens the Settings runtime panel, polls the runtime layout until it
-settles, captures a runtime-panel screenshot, and fails unless the runtime layout
-contains `nativeHTTP`, `PASS 2xx`, `ArkWeb`, `Cookie`, `Session`, `JS`,
-`Secure`, `Corpus`, and `raw:false` with no `FAIL` or `RUNNING` token. The
-generated summary is redacted and records no raw URL, cookie, credential,
-session, or response body material. When a runtime proxy is injected for an
-emulator smoke, the summary records only proxy mode/source, host hashes, port,
-endpoint rewrite status, listen-scope classification, local port reachability,
-and whether the runtime panel confirmed app-level proxy application.
-
-CI artifacts include `device_runtime_smoke_summary.json`,
-`device_runtime_smoke.junit.xml`, home/runtime layout dumps, a runtime-panel
-screenshot, and the hdc/hvigor log. The offline validator re-checks summary
-flags, layout tokens, redaction fields, and checksums.
-
-## Real Device Runtime Evidence
-
-The real-device lane is intentionally separate from the emulator/default smoke.
-It rejects loopback targets (`127.0.0.1:*` / `localhost:*`) and unsigned HAP
-paths before install/start evidence can be recorded:
-
-```bash
-npm run smoke:real-device
-```
-
-Provide either an already signed HAP:
-
-```bash
-HARMONYOS_REAL_DEVICE_TARGET=<physical-hdc-target> \
-HARMONYOS_REAL_DEVICE_HAP_PATH=<signed-hap-path> \
-npm run smoke:real-device
-```
-
-Or provide signing material so the runner can build a signed HAP first:
-
-```bash
-HARMONYOS_REAL_DEVICE_TARGET=<physical-hdc-target> \
-HARMONYOS_SIGNING_STORE_FILE=<path-to-p12> \
-HARMONYOS_SIGNING_STORE_PASSWORD=<redacted> \
-HARMONYOS_SIGNING_KEY_ALIAS=<key-alias> \
-HARMONYOS_SIGNING_KEY_PASSWORD=<redacted> \
-HARMONYOS_SIGNING_PROFILE=<path-to-p7b> \
-npm run smoke:real-device
-```
-
-Optional signing inputs:
-
-- `HARMONYOS_SIGNING_CERT_PATH=<path-to-cer>`
-- `HARMONYOS_SIGNING_SIGN_ALG=SHA256withECDSA`
-- `HARMONYOS_USE_EXISTING_SIGNING_CONFIG=true` to use a local
-  `build-profile.json5` signing config instead of environment-patching it.
-
-The signed-HAP helper writes only redacted metadata and hashes:
-
-```bash
-npm run build:signed-hap
-```
-
-Real-device evidence is accepted only when
-`scripts/validate_real_device_runtime_smoke_artifact.py` passes against a
-`device_runtime_smoke_summary.json` whose `tier` is `"device"` and whose runtime
-layout contains the `HostBus` / `PASS op:` closed-loop tokens.
-
-## HarmonyOS + Core vs Legado Gap Matrix
-
-The current capability gap snapshot is tracked in:
-
-```bash
-docs/PLANNING/HARMONYOS_CORE_LEGADO_CAPABILITY_GAP_MATRIX.json
-```
-
-Validate it with:
-
-```bash
-npm run validate:gap-matrix
-```
-
-The validator checks the clean-room flags, the nine tracked capability domains,
-the latest device-runtime CI artifact, and the rule that the current
-nativeHTTP/corpus failure is not treated as a runtime parity pass.
+See `CLAUDE.md` for rules. Phase 2 (page families) follows once the skeleton builds and routes are verified.

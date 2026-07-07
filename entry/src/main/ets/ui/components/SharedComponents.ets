@@ -1,206 +1,184 @@
+// SharedComponents — P0 demo components shared across shells.
+// All values come from generated tokens / ReaderTypography. No raw hex or px.
+import { ColorTokens } from '../../contract/generated/ColorTokens';
+import { SpacingTokens, SizeTokens, RadiusTokens } from '../../contract/generated/DimensionTokens';
+import { ReaderTypography } from '../tokens/ReaderTypography';
+import { ReaderUiStore } from '../store/ReaderUiStore';
+
+function routeTitle(routeId: string): string {
+  switch (routeId) {
+    case 'bookshelf': return '书架';
+    case 'discover': return '发现';
+    case 'rss': return 'RSS';
+    case 'settings': return '设置';
+    case 'book-detail': return '书籍详情';
+    default: return '';
+  }
+}
+
 @Component
-export struct MainTabTitleBar {
-  @Prop title: string = '';
+export struct AppTopBar {
+  @StorageProp('reader.routeId') routeId: string = 'bookshelf';
+  @StorageProp('reader.stackDepth') stackDepth: number = 1;
 
   build() {
     Row() {
-      Text(this.title)
-        .fontSize(29)
-        .fontWeight(FontWeight.Bold)
-        .fontFamily('serif')
-        .fontColor('#201B16')
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .layoutWeight(1)
+      if (this.stackDepth > 1) {
+        Image($r('app.media.reader_icon_back_dark'))
+          .width(24).height(24)
+          .margin({ left: SpacingTokens.sm })
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
+      }
+      Text(routeTitle(this.routeId))
+        .fontSize(ReaderTypography.topBarTitle().fontSize)
+        .fontColor(ColorTokens.ink)
+        .fontWeight(ReaderTypography.topBarTitle().fontWeight)
+        .margin({ left: SpacingTokens.sm })
+      Blank()
+      Image($r('app.media.bookshelf_icon_search_dark'))
+        .width(22).height(22)
+        .margin({ right: SpacingTokens.sm })
+      Image($r('app.media.bookshelf_icon_gear_dark'))
+        .width(22).height(22)
+        .margin({ right: SpacingTokens.sm })
     }
     .width('100%')
-    .height(62)
-    .padding({ left: 20, right: 20, top: 6 })
-    .alignItems(VerticalAlign.Center)
+    .height(SizeTokens.topBarHeight)
+    .padding({ left: SpacingTokens.sm, right: SpacingTokens.sm })
+    .backgroundColor(ColorTokens.paper)
   }
 }
 
 @Component
-export struct ReaderUiIcon {
-  @Prop iconName: string = '';
-  @Prop tone: string = 'dark';
-  @Prop iconSize: number = 20;
-
+export struct BackTopBar {
   build() {
-    if (this.iconName === 'source-stack') {
-      if (this.tone === 'primary') {
-        Image($r('app.media.ui_icon_source_stack_primary')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'white') {
-        Image($r('app.media.ui_icon_source_stack_white')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'muted') {
-        Image($r('app.media.ui_icon_source_stack_muted')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else {
-        Image($r('app.media.ui_icon_source_stack_dark')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      }
-    } else if (this.iconName === 'chevron') {
-      if (this.tone === 'primary') {
-        Image($r('app.media.ui_icon_chevron_primary')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'white') {
-        Image($r('app.media.ui_icon_chevron_white')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'muted') {
-        Image($r('app.media.ui_icon_chevron_muted')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else {
-        Image($r('app.media.ui_icon_chevron_dark')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      }
-    } else if (this.iconName === 'search') {
-      if (this.tone === 'primary') {
-        Image($r('app.media.ui_icon_search_primary')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'white') {
-        Image($r('app.media.ui_icon_search_white')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'muted') {
-        Image($r('app.media.ui_icon_search_muted')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else {
-        Image($r('app.media.ui_icon_search_dark')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      }
-    } else if (this.iconName === 'filter') {
-      Image($r('app.media.bookshelf_icon_filter_dark')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-    } else if (this.iconName === 'check') {
-      if (this.tone === 'primary') {
-        Image($r('app.media.ui_icon_check_primary')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'white') {
-        Image($r('app.media.ui_icon_check_white')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'muted') {
-        Image($r('app.media.ui_icon_check_muted')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else {
-        Image($r('app.media.ui_icon_check_dark')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      }
-    } else if (this.iconName === 'rss') {
-      if (this.tone === 'primary') {
-        Image($r('app.media.ui_icon_rss_primary')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'white') {
-        Image($r('app.media.ui_icon_rss_white')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'muted') {
-        Image($r('app.media.ui_icon_rss_muted')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else {
-        Image($r('app.media.ui_icon_rss_dark')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      }
-    } else if (this.iconName === 'upload') {
-      if (this.tone === 'primary') {
-        Image($r('app.media.ui_icon_upload_primary')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'white') {
-        Image($r('app.media.ui_icon_upload_white')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'muted') {
-        Image($r('app.media.ui_icon_upload_muted')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else {
-        Image($r('app.media.ui_icon_upload_dark')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      }
-    } else if (this.iconName === 'add') {
-      if (this.tone === 'primary') {
-        Image($r('app.media.ui_icon_add_primary')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'white') {
-        Image($r('app.media.ui_icon_add_white')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'muted') {
-        Image($r('app.media.ui_icon_add_muted')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else {
-        Image($r('app.media.ui_icon_add_dark')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      }
-    } else if (this.iconName === 'list') {
-      if (this.tone === 'primary') {
-        Image($r('app.media.ui_icon_list_primary')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'white') {
-        Image($r('app.media.ui_icon_list_white')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'muted') {
-        Image($r('app.media.ui_icon_list_muted')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else {
-        Image($r('app.media.ui_icon_list_dark')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      }
-    } else if (this.iconName === 'bookmark') {
-      if (this.tone === 'primary') {
-        Image($r('app.media.ui_icon_bookmark_primary')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'white') {
-        Image($r('app.media.ui_icon_bookmark_white')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'muted') {
-        Image($r('app.media.ui_icon_bookmark_muted')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else {
-        Image($r('app.media.ui_icon_bookmark_dark')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      }
-    } else if (this.iconName === 'gear') {
-      if (this.tone === 'primary') {
-        Image($r('app.media.ui_icon_gear_primary')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'white') {
-        Image($r('app.media.ui_icon_gear_white')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'muted') {
-        Image($r('app.media.ui_icon_gear_muted')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else {
-        Image($r('app.media.ui_icon_gear_dark')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      }
-    } else if (this.iconName === 'bookshelf') {
-      if (this.tone === 'primary') {
-        Image($r('app.media.ui_icon_bookshelf_primary')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'white') {
-        Image($r('app.media.ui_icon_bookshelf_white')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'muted') {
-        Image($r('app.media.ui_icon_bookshelf_muted')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else {
-        Image($r('app.media.ui_icon_bookshelf_dark')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      }
-    } else if (this.iconName === 'sync') {
-      if (this.tone === 'primary') {
-        Image($r('app.media.ui_icon_sync_primary')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'white') {
-        Image($r('app.media.ui_icon_sync_white')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'muted') {
-        Image($r('app.media.ui_icon_sync_muted')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else {
-        Image($r('app.media.ui_icon_sync_dark')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      }
-    } else if (this.iconName === 'info') {
-      if (this.tone === 'primary') {
-        Image($r('app.media.ui_icon_info_primary')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'white') {
-        Image($r('app.media.ui_icon_info_white')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'muted') {
-        Image($r('app.media.ui_icon_info_muted')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else {
-        Image($r('app.media.ui_icon_info_dark')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      }
-    } else if (this.iconName === 'refresh') {
-      if (this.tone === 'primary') {
-        Image($r('app.media.ui_icon_refresh_primary')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'white') {
-        Image($r('app.media.ui_icon_refresh_white')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'muted') {
-        Image($r('app.media.ui_icon_refresh_muted')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else {
-        Image($r('app.media.ui_icon_refresh_dark')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      }
-    } else {
-      if (this.tone === 'primary') {
-        Image($r('app.media.ui_icon_source_primary')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'white') {
-        Image($r('app.media.ui_icon_source_white')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else if (this.tone === 'muted') {
-        Image($r('app.media.ui_icon_source_muted')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      } else {
-        Image($r('app.media.ui_icon_source_dark')).width(this.iconSize).height(this.iconSize).objectFit(ImageFit.Contain)
-      }
+    Row() {
+      Image($r('app.media.reader_icon_back_dark'))
+        .width(24).height(24)
+        .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
+      Text('书籍详情')
+        .fontSize(ReaderTypography.topBarTitle().fontSize)
+        .fontColor(ColorTokens.ink)
+        .fontWeight(ReaderTypography.topBarTitle().fontWeight)
+        .margin({ left: SpacingTokens.sm })
+      Blank()
+      Image($r('app.media.reader_icon_more_dark'))
+        .width(22).height(22)
+    }
+    .width('100%')
+    .height(SizeTokens.topBarHeight)
+    .padding({ left: SpacingTokens.md, right: SpacingTokens.md })
+    .backgroundColor(ColorTokens.paper)
+  }
+}
+
+type TabKind = 'bookshelf' | 'discover' | 'rss' | 'settings';
+
+@Component
+export struct BottomNav {
+  @StorageProp('reader.tab') tab: string = 'bookshelf';
+
+  private iconFor(tab: TabKind, active: boolean): Resource {
+    switch (tab) {
+      case 'bookshelf':
+        return active ? $r('app.media.main_tab_icon_bookshelf_active') : $r('app.media.main_tab_icon_bookshelf_muted');
+      case 'discover':
+        return active ? $r('app.media.main_tab_icon_discover_active') : $r('app.media.main_tab_icon_discover_muted');
+      case 'rss':
+        return active ? $r('app.media.main_tab_icon_rss_active') : $r('app.media.main_tab_icon_rss_muted');
+      case 'settings':
+        return active ? $r('app.media.main_tab_icon_settings_active') : $r('app.media.main_tab_icon_settings_muted');
+      default:
+        return $r('app.media.main_tab_icon_bookshelf_muted');
     }
   }
+
+  build() {
+    Row() {
+      this.tabItem('bookshelf', '书架')
+      this.tabItem('discover', '发现')
+      this.tabItem('rss', 'RSS')
+      this.tabItem('settings', '设置')
+    }
+    .width('100%')
+    .height(SizeTokens.bottomBarHeight)
+    .padding({ left: SpacingTokens.sm, right: SpacingTokens.sm })
+    .backgroundColor(ColorTokens.bottomBarBg)
+  }
+
+  @Builder tabItem(tab: TabKind, label: string) {
+    Column() {
+      Image(this.iconFor(tab, this.tab === tab)).width(24).height(24)
+      Text(label)
+        .fontSize(10)
+        .fontColor(this.tab === tab ? ColorTokens.primary : ColorTokens.muted)
+        .margin({ top: 2 })
+    }
+    .layoutWeight(1)
+    .onClick(() => ReaderUiStore.dispatch({ type: 'switch-tab', tab: tab }))
+  }
 }
 
 @Component
-export struct SectionHeader {
-  @Prop title: string = '';
-  @Prop detail: string = '';
+export struct Loading {
+  build() {
+    Column() {
+      LoadingProgress().color(ColorTokens.primary).width(40).height(40)
+    }
+    .width('100%').height('100%')
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+  }
+}
+
+@Component
+export struct Empty {
+  build() {
+    Column() {
+      Text('书架为空')
+        .fontSize(ReaderTypography.sectionTitle().fontSize)
+        .fontColor(ColorTokens.muted)
+    }
+    .width('100%').height('100%')
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+  }
+}
+
+@Component
+export struct ErrorState {
+  @StorageProp('reader.errorMessage') message: string = '网络异常';
 
   build() {
     Column() {
-      Text(this.title)
-        .fontSize(22)
-        .fontWeight(FontWeight.Bold)
-        .fontColor('#1A1A1A')
-      Text(this.detail)
-        .fontSize(13)
-        .fontColor('#666666')
-        .margin({ top: 4 })
+      Text(this.message)
+        .fontSize(ReaderTypography.sectionTitle().fontSize)
+        .fontColor(ColorTokens.ink)
+      Text('重试')
+        .fontSize(ReaderTypography.bookMeta().fontSize)
+        .fontColor(ColorTokens.primary)
+        .margin({ top: SpacingTokens.md })
+        .padding({ left: SpacingTokens.lg, right: SpacingTokens.lg, top: SpacingTokens.xs, bottom: SpacingTokens.xs })
+        .borderRadius(RadiusTokens.control)
+        .backgroundColor(ColorTokens.metaBg)
+        .onClick(() => ReaderUiStore.dispatch({ type: 'set-loading', loading: false }))
     }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-    .margin({ bottom: 12 })
+    .width('100%').height('100%')
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+  }
+}
+
+@Component
+export struct Offline {
+  build() {
+    Column() {
+      Text('离线')
+        .fontSize(ReaderTypography.sectionTitle().fontSize)
+        .fontColor(ColorTokens.muted)
+    }
+    .width('100%').height('100%')
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
   }
 }

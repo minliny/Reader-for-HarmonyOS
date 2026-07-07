@@ -1,28 +1,25 @@
-// MainTabShell — 5-slot shell for the 4 main tabs (bookshelf / discover / rss / settings).
-// Slots: topArea (AppTopBar) · content (ViewStateRenderer) · tabNav (BottomNav) ·
-// overlayHost (OverlayHost) · stateHost (StateHost).
-// Overlays and page-state layers hang off shell slots, never inside page components.
+// SettingsShell — shell for settings secondary pages (source-management, webdav-config, …).
+// Slots: topArea (BackTopBar) · content (ViewStateRenderer) · overlayHost · stateHost.
 import { ColorTokens } from '../../contract/generated/ColorTokens';
-import { AppTopBar, BottomNav } from '../components/SharedComponents';
+import { BackTopBar } from '../components/SharedComponents';
 import { ViewStateRenderer } from '../components/ViewStateRenderer';
 import { OverlayHost } from '../slots/OverlayHost';
 import { StateHost } from '../slots/StateHost';
 
 @Component
-export struct MainTabShell {
-  static readonly SLOT_NAMES: string[] = ['topArea', 'content', 'tabNav', 'overlayHost', 'stateHost'];
+export struct SettingsShell {
+  static readonly SLOT_NAMES: string[] = ['topArea', 'content', 'overlayHost', 'stateHost'];
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       Column() {
-        AppTopBar()
+        BackTopBar()
         Scroll() {
           ViewStateRenderer()
         }
         .layoutWeight(1)
         .align(Alignment.Top)
         .backgroundColor(ColorTokens.paper)
-        BottomNav()
       }
       .width('100%')
       .height('100%')

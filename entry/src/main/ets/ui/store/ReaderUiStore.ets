@@ -1,58 +1,61 @@
-import { ReaderEntryTarget, ReaderMainTab, ReaderReducer, ReaderReducerEvent, ReaderUiState } from './ReaderReducer';
+// ReaderUiStore — AppStorage bridge over the reducer.
+// Holds the canonical UiState; on dispatch, reduces and writes primitive fields to
+// AppStorage so any component can subscribe via @StorageProp / @StorageLink.
+import { ReaderUiState, UiEvent } from './ReaderUiState';
+import { ReaderReducer } from './ReaderReducer';
+import { DemoUiState } from '../fixtures/DemoUiState';
+import { ReaderThemeState } from '../tokens/ReaderThemeState';
 
 export class ReaderUiStore {
-  private state: ReaderUiState = ReaderReducer.initialState();
+  private static readonly K_ROUTE = 'reader.routeId';
+  private static readonly K_TAB = 'reader.tab';
+  private static readonly K_OVERLAY = 'reader.overlay';
+  private static readonly K_PAGE_STATE = 'reader.pageState';
+  private static readonly K_READER_MODE = 'reader.readerMode';
+  private static readonly K_ACTIVE_SESSION = 'reader.activeSession';
+  private static readonly K_LOADING = 'reader.loading';
+  private static readonly K_REDUCED_MOTION = 'reader.reducedMotion';
+  private static readonly K_ERROR_CODE = 'reader.errorCode';
+  private static readonly K_ERROR_MESSAGE = 'reader.errorMessage';
+  private static readonly K_RETRYABLE = 'reader.retryable';
+  private static readonly K_STACK_DEPTH = 'reader.stackDepth';
+  private static readonly K_FIRST_OPEN = 'reader.firstOpenPlayed';
+  private static readonly K_LAST_OP = 'reader.lastOp';
 
-  snapshot(): ReaderUiState {
-    return this.state;
+  private static state: ReaderUiState;
+
+  static init(): void {
+    ReaderUiStore.state = DemoUiState.initial();
+    ReaderThemeState.init();
+    ReaderUiStore.writeAll();
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_LAST_OP, '');
   }
 
-  dispatch(event: ReaderReducerEvent): ReaderUiState {
-    this.state = ReaderReducer.reduce(this.state, event);
-    return this.state;
+  static dispatch(event: UiEvent): void {
+    ReaderUiStore.state = ReaderReducer.reduce(ReaderUiStore.state, event);
+    ReaderUiStore.writeAll();
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_LAST_OP, event.type);
+    ReaderThemeState.setReducedMotion(ReaderUiStore.state.reducedMotion);
   }
 
-  selectTab(tab: string): ReaderUiState {
-    return this.dispatch({ type: 'tab.select', tab });
+  static snapshot(): ReaderUiState {
+    return ReaderUiStore.state;
   }
 
-  enterReader(target: ReaderEntryTarget): ReaderUiState {
-    return this.dispatch({ type: 'reader.entry', target });
-  }
-
-  setReducedMotion(enabled: boolean): ReaderUiState {
-    return this.dispatch({ type: 'reducedMotion.set', reducedMotion: enabled });
-  }
-
-  markFirstOpenPlayed(): ReaderUiState {
-    return this.dispatch({ type: 'app.firstOpen.enter' });
-  }
-
-  openOverlay(kind: string, triggerId: string): ReaderUiState {
-    return this.dispatch({ type: 'overlay.open', overlayKind: kind, triggerId });
-  }
-
-  closeOverlay(): ReaderUiState {
-    return this.dispatch({ type: 'overlay.close' });
-  }
-
-  startSession(kind: string): ReaderUiState {
-    return this.dispatch({ type: 'session.start', sessionKind: kind });
-  }
-
-  stopSession(): ReaderUiState {
-    return this.dispatch({ type: 'session.stop' });
-  }
-
-  beginAsyncIntent(requestId: number, targetRoute: string): ReaderUiState {
-    return this.dispatch({ type: 'async.begin', requestId, targetRoute });
-  }
-
-  completeAsyncIntent(requestId: number, targetRoute: string): ReaderUiState {
-    return this.dispatch({ type: 'async.complete', requestId, targetRoute });
-  }
-
-  tabOrder(): string[] {
-    return ReaderMainTab.all.slice();
+  private static writeAll(): void {
+    const s = ReaderUiStore.state;
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_ROUTE, s.routeId);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_TAB, s.tab);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_OVERLAY, s.overlay);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_PAGE_STATE, s.pageState);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_READER_MODE, s.readerMode);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_ACTIVE_SESSION, s.activeSession);
+    AppStorage.setOrCreate<boolean>(ReaderUiStore.K_LOADING, s.loading);
+    AppStorage.setOrCreate<boolean>(ReaderUiStore.K_REDUCED_MOTION, s.reducedMotion);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_ERROR_CODE, s.error !== null ? s.error.code : '');
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_ERROR_MESSAGE, s.error !== null ? s.error.message : '');
+    AppStorage.setOrCreate<boolean>(ReaderUiStore.K_RETRYABLE, s.error !== null ? s.error.retryable : false);
+    AppStorage.setOrCreate<number>(ReaderUiStore.K_STACK_DEPTH, s.stack.length);
+    AppStorage.setOrCreate<boolean>(ReaderUiStore.K_FIRST_OPEN, s.firstOpenPlayed);
   }
 }

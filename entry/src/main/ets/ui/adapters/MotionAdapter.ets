@@ -1,122 +1,54 @@
-import { getMotionSpec, Motion, MotionId } from '../../contract';
-import { ReaderMotion, ReaderMotionId } from '../ReaderMotion';
-
-export interface ArkMotionSpec {
-  motionId: string;
-  durationMs: number;
-  curve: string;
-  interruptPolicy: string;
-  primitive: string;
-}
+// MotionAdapter — the ONLY place that calls animateTo.
+// Resolves a motionId → MotionSpec (duration/easing/reducedMotionPolicy) and runs the
+// state mutation inside animateTo. Pages/components must NEVER call animateTo directly;
+// they declare intent via ReaderMotionResolver and hand the motionId here.
+import { MotionSpec } from '../../contract/generated/MotionSpecTable';
+import { MotionSpecRegistry } from '../motion/MotionSpecRegistry';
 
 export class MotionAdapter {
-  static p0MotionIds(): string[] {
-    return [
-      ReaderMotionId.appFirstOpenEnter,
-      ReaderMotionId.appRoutePushForward,
-      ReaderMotionId.appRoutePopBackward,
-      ReaderMotionId.appRouteReplace,
-      ReaderMotionId.bookshelfViewSwitch,
-      ReaderMotionId.tabItemSelect,
-      ReaderMotionId.tabSwitch,
-      ReaderMotionId.readerSessionTtsStart,
-      ReaderMotionId.readerSessionAutoPageStart,
-      ReaderMotionId.readerSessionCapsuleEnter,
-      ReaderMotionId.readerSessionCapsuleSwitch,
-      ReaderMotionId.readerSessionCapsuleExit,
-      ReaderMotionId.overlaySheetEnter,
-      ReaderMotionId.overlaySheetExit,
-      ReaderMotionId.overlayDialogEnter,
-      ReaderMotionId.overlayDialogExit,
-      ReaderMotionId.stateLoadingInline,
-      ReaderMotionId.motionInterruptCancel,
-      ReaderMotionId.motionInterruptRedirect,
-      ReaderMotionId.motionInterruptCompleteThenReplace
-    ];
+  // Apply by motionId. `event` mutates the animatable state (opacity / offset / scale).
+  static apply(motionId: string, reducedMotion: boolean, event: () => void): void {
+    const spec = MotionSpecRegistry.byId(motionId);
+    if (spec === undefined) {
+      event();
+      return;
+    }
+    MotionAdapter.applySpec(spec, reducedMotion, event);
   }
 
-  static resolve(motionId: MotionId | string, reducedMotion: boolean): ArkMotionSpec {
-    return {
-      motionId,
-      durationMs: MotionAdapter.duration(motionId, reducedMotion),
-      curve: MotionAdapter.curve(motionId),
-      interruptPolicy: MotionAdapter.interruptPolicy(motionId),
-      primitive: MotionAdapter.primitive(motionId)
-    };
+  // Apply when the caller already holds the resolved MotionSpec.
+  static applySpec(spec: MotionSpec, reducedMotion: boolean, event: () => void): void {
+    if (MotionAdapter.shouldSkipAnimation(spec, reducedMotion)) {
+      event();
+      return;
+    }
+    const duration = MotionAdapter.durationFor(spec, reducedMotion);
+    if (duration <= 0) {
+      event();
+      return;
+    }
+    animateTo({ duration: duration, curve: MotionAdapter.curveFor(spec.easing) }, event);
   }
 
-  static tabSwitch(reducedMotion: boolean): ArkMotionSpec {
-    return MotionAdapter.resolve(ReaderMotionId.tabSwitch, reducedMotion);
+  // Reduced-motion policy: zeroDuration → 0ms ; keepDirectManipulation → gesture-driven (no animateTo).
+  static shouldSkipAnimation(spec: MotionSpec, reducedMotion: boolean): boolean {
+    if (!reducedMotion) return false;
+    return spec.reducedMotionPolicy === 'keepDirectManipulation';
   }
 
-  static firstOpen(reducedMotion: boolean): ArkMotionSpec {
-    return MotionAdapter.resolve(ReaderMotionId.appFirstOpenEnter, reducedMotion);
+  static durationFor(spec: MotionSpec, reducedMotion: boolean): number {
+    if (reducedMotion && spec.reducedMotionPolicy === 'zeroDuration') return 0;
+    return spec.durationMs;
   }
 
-  static generatedSpec(motionId: MotionId | string): Motion | undefined {
-    return getMotionSpec(motionId as MotionId);
-  }
-
-  static duration(motionId: MotionId | string, reducedMotion: boolean): number {
-    if (reducedMotion) {
-      return 0;
+  // Map CSS easing token value → ArkUI Curve enum.
+  static curveFor(easing: string): Curve {
+    switch (easing) {
+      case 'ease': return Curve.Ease;
+      case 'ease-in': return Curve.EaseIn;
+      case 'ease-out': return Curve.EaseOut;
+      case 'ease-in-out': return Curve.EaseInOut;
+      default: return Curve.EaseInOut;
     }
-    const spec = MotionAdapter.generatedSpec(motionId);
-    if (spec) {
-      return spec.durationMs;
-    }
-    return ReaderMotion.durationRoute(false);
-  }
-
-  private static curve(motionId: MotionId | string): string {
-    const spec = MotionAdapter.generatedSpec(motionId);
-    if (spec) {
-      return spec.easing;
-    }
-    return 'ease-in-out';
-  }
-
-  private static interruptPolicy(motionId: MotionId | string): string {
-    if (motionId === ReaderMotionId.tabItemSelect) {
-      return 'cancel-when-same-tab';
-    }
-    if (motionId === ReaderMotionId.tabSwitch) {
-      return 'latest-tab-wins';
-    }
-    if (motionId === ReaderMotionId.motionInterruptCancel ||
-      motionId === ReaderMotionId.motionInterruptRedirect ||
-      motionId === ReaderMotionId.motionInterruptCompleteThenReplace) {
-      return motionId;
-    }
-    if (motionId === ReaderMotionId.overlaySheetEnter ||
-      motionId === ReaderMotionId.overlayDialogEnter) {
-      return 'overlay-mutex';
-    }
-    if (motionId === ReaderMotionId.readerSessionTtsStart ||
-      motionId === ReaderMotionId.readerSessionAutoPageStart ||
-      motionId === ReaderMotionId.readerSessionCapsuleSwitch) {
-      return 'session-mutual-exclusive';
-    }
-    return 'completeThenReplace';
-  }
-
-  private static primitive(motionId: MotionId | string): string {
-    if (motionId === ReaderMotionId.stateLoadingInline) {
-      return 'ArkUI LoadingProgress';
-    }
-    if (motionId === ReaderMotionId.overlaySheetEnter ||
-      motionId === ReaderMotionId.overlaySheetExit) {
-      return 'ArkUI sheet transition';
-    }
-    if (motionId === ReaderMotionId.overlayDialogEnter ||
-      motionId === ReaderMotionId.overlayDialogExit) {
-      return 'ArkUI dialog transition';
-    }
-    if (motionId === ReaderMotionId.appRoutePushForward ||
-      motionId === ReaderMotionId.appRoutePopBackward ||
-      motionId === ReaderMotionId.appRouteReplace) {
-      return 'ArkUI router transition';
-    }
-    return 'ArkUI animateTo';
   }
 }
