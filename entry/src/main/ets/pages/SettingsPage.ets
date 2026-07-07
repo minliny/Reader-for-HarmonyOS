@@ -3,6 +3,8 @@
 // 'source.import'). Legacy settings items retained as fixtures (S7 removal).
 import { ImportBookSourceViewModel, ImportState } from '../viewmodel/ImportBookSourceViewModel';
 
+const PRESET_SOURCE_JSON = '{"bookSourceName":"速读谷吧（优）","bookSourceUrl":"https://www.sudugu.org","bookSourceType":0,"enabled":true,"enabledExplore":false,"exploreUrl":"","loginUrl":"","searchUrl":"https://www.sudugu.org/i/sor.aspx?key={{key}}","ruleSearch":{"bookList":"class.bookList > div","name":"a@text","author":"span.author@text","bookUrl":"a@href","coverUrl":"img@src","kind":"span.kind@text","lastChapter":"span.lastChapter@text","checkKeyWord":"1"},"ruleBookInfo":{"name":"h1@text","author":"span.author@text","coverUrl":"img.cover@src","intro":"div.intro@text","tocUrl":"a.read@href","kind":"span.kind@text","lastChapter":"span.lastChapter@text"},"ruleToc":{"chapterList":"div.chapterList > a","chapterName":"@text","chapterUrl":"@href","isVip":"class.vip@text","isPay":"class.pay@text"},"ruleContent":{"content":"div.content@html","nextContentUrl":"a.next@href"}}';
+
 @Entry
 @Component
 struct SettingsPage {
@@ -17,13 +19,14 @@ struct SettingsPage {
     this.vm = new ImportBookSourceViewModel();
   }
 
-  private async doImport(): Promise<void> {
+  private async doImport(jsonOverride?: string): Promise<void> {
     if (this.vm === null) {
       return;
     }
     this.importing = true;
     this.importMessage = '';
-    const state: ImportState = await this.vm.importBookSource(this.sourceJson);
+    const json: string = jsonOverride ?? this.sourceJson;
+    const state: ImportState = await this.vm.importBookSource(json);
     this.importing = false;
     this.importSuccess = state.success;
     this.importMessage = state.success ? '导入成功' : `导入失败: ${state.error}`;
@@ -55,6 +58,13 @@ struct SettingsPage {
 
         if (this.showImportPanel) {
           Column() {
+            Button('导入预置书源（速读谷吧）')
+              .type(ButtonType.Capsule)
+              .width('100%')
+              .margin({ top: 12, bottom: 8 })
+              .onClick(() => {
+                this.doImport(PRESET_SOURCE_JSON);
+              })
             Text('粘贴 Legado 书源 JSON:')
               .fontSize(13)
               .fontColor('#666666')

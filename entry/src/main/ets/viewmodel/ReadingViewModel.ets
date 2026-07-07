@@ -95,4 +95,15 @@ export class ReadingViewModel {
   get totalChapters(): number {
     return this.chapters.length;
   }
+
+  // Exposes full TOC chapter titles for the ReaderPage TOC panel.
+  // loadBookAndToc only returns the first chapter's content; this getter lets
+  // the UI render the complete chapter list without re-fetching.
+  getTocTitles(): string[] {
+    const out: string[] = [];
+    for (let i = 0; i < this.chapters.length; i++) {
+      out.push(this.chapters[i].title);
+    }
+    return out;
+  }
 }

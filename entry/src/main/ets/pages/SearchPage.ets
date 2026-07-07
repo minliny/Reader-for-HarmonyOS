@@ -4,6 +4,7 @@
 import { SearchViewModel, SearchRow } from '../viewmodel/SearchViewModel';
 import { HomeSearchRow, readerHomeDashboard } from '../services/HomeDashboardService';
 import { SearchMode } from '../services/SearchService';
+import { router } from '@kit.ArkUI';
 
 @Entry
 @Component
@@ -140,6 +141,16 @@ struct SearchPage {
               .padding(12)
               .backgroundColor('#FFFFFF')
               .borderRadius(8)
+              .onClick(() => {
+                router.pushUrl({
+                  url: 'pages/ReaderPage',
+                  params: {
+                    sourceId: item.sourceId,
+                    bookUrl: item.detailURL,
+                    bookName: item.title
+                  }
+                });
+              })
             }
           }, (item: SearchRow) => item.detailURL)
         }

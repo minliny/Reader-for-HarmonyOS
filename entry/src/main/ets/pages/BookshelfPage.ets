@@ -3,6 +3,7 @@
 // Legacy readerHomeDashboard fixture retained as fallback (S7 removal).
 import { BookshelfViewModel, BookshelfRow } from '../viewmodel/BookshelfViewModel';
 import { HomeBookRow, readerHomeDashboard } from '../services/HomeDashboardService';
+import { router } from '@kit.ArkUI';
 
 @Entry
 @Component
@@ -61,6 +62,28 @@ struct BookshelfPage {
         .fontWeight(FontWeight.Bold)
         .fontColor('#1A1A1A')
         .margin({ top: 16, bottom: 16 })
+
+      Row() {
+        Button('搜索')
+          .layoutWeight(1)
+          .height(40)
+          .backgroundColor('#007AFF')
+          .fontColor('#FFFFFF')
+          .onClick(() => {
+            router.pushUrl({ url: 'pages/SearchPage' });
+          })
+        Blank().width(12)
+        Button('设置')
+          .layoutWeight(1)
+          .height(40)
+          .backgroundColor('#6A6F7A')
+          .fontColor('#FFFFFF')
+          .onClick(() => {
+            router.pushUrl({ url: 'pages/SettingsPage' });
+          })
+      }
+      .width('100%')
+      .margin({ bottom: 12 })
 
       Row() {
         Text(this.useRustCore ? 'Rust Core' : 'FIXTURE')

@@ -39,6 +39,9 @@ struct ReaderPage {
   @State loading: boolean = true;
   @State error: string = '';
   @State useRustCore: boolean = false;
+  @State tocTitles: string[] = [];
+  @State showTocPanel: boolean = false;
+  @State realIndex: number = 0;
   private vm: ReadingViewModel | null = null;
   private repository: MockBookshelfRepository = new MockBookshelfRepository(true);
   private bookshelf: BookshelfService = new BookshelfService(this.repository);
@@ -64,12 +67,15 @@ struct ReaderPage {
       const initial = await this.vm.loadBookAndToc(sourceId, bookUrl);
       this.chapters = initial;
       this.currentIndex = 0;
+      this.realIndex = 0;
+      this.tocTitles = this.vm.getTocTitles();
+      const total: number = this.tocTitles.length > 0 ? this.tocTitles.length : initial.length;
       this.machine.openBook(bookUrl, sourceId);
-      this.machine.tocLoaded(initial.length);
+      this.machine.tocLoaded(total);
       this.machine.selectChapter(0);
       this.machine.chapterLoaded();
       this.state = this.machine.getState();
-      this.progressText = `0/${initial.length}`;
+      this.progressText = `0/${total}`;
     } catch (e) {
       this.error = `Rust Core 加载失败: ${e}`;
       this.chapters = [{ title: '加载失败', content: this.error }];
@@ -99,6 +105,7 @@ struct ReaderPage {
         chapters.push({ title: navTitles[i], content: bodies[i % bodies.length] });
       }
       this.chapters = chapters;
+      this.tocTitles = navTitles;
       this.machine.openBook(bookId, 'fixture://reader');
       this.machine.tocLoaded(chapters.length);
       this.machine.selectChapter(0);
@@ -111,6 +118,7 @@ struct ReaderPage {
       }
       this.state = this.machine.getState();
       this.progressText = this.progress.getProgressString(bookId);
+      this.realIndex = this.currentIndex;
       this.loading = false;
     }).catch((_e: Error) => {
       this.chapters = [{ title: '第一章', content: 'fixture reader unavailable' }];
@@ -129,13 +137,10 @@ struct ReaderPage {
     if (this.useRustCore && this.vm) {
       const ch = await this.vm.prevChapter();
       if (ch) {
-        const newChapters: ReaderChapter[] = this.chapters.slice();
-        if (this.currentIndex > 0) {
-          newChapters[this.currentIndex - 1] = ch;
-          this.currentIndex = this.currentIndex - 1;
-        }
-        this.chapters = newChapters;
-        this.progressText = `${this.currentIndex + 1}/${this.chapters.length}`;
+        this.chapters = [ch];
+        this.currentIndex = 0;
+        this.realIndex = Math.max(this.realIndex - 1, 0);
+        this.progressText = `${this.realIndex + 1}/${this.tocTitles.length}`;
       }
       return;
     }
@@ -151,13 +156,10 @@ struct ReaderPage {
     if (this.useRustCore && this.vm) {
       const ch = await this.vm.nextChapter();
       if (ch) {
-        const newChapters: ReaderChapter[] = this.chapters.slice();
-        if (this.currentIndex < this.chapters.length - 1) {
-          newChapters[this.currentIndex + 1] = ch;
-          this.currentIndex = this.currentIndex + 1;
-        }
-        this.chapters = newChapters;
-        this.progressText = `${this.currentIndex + 1}/${this.chapters.length}`;
+        this.chapters = [ch];
+        this.currentIndex = 0;
+        this.realIndex = Math.min(this.realIndex + 1, this.tocTitles.length - 1);
+        this.progressText = `${this.realIndex + 1}/${this.tocTitles.length}`;
       }
       return;
     }
@@ -165,6 +167,26 @@ struct ReaderPage {
       this.currentIndex = Math.min(this.chapters.length - 1, this.currentIndex + 1);
       this.machine.chapterLoaded();
       this.state = this.machine.getState();
+      this.saveProgress();
+    }
+  }
+
+  private async jumpToChapter(index: number): Promise<void> {
+    if (index < 0 || index >= this.tocTitles.length) {
+      return;
+    }
+    this.showTocPanel = false;
+    if (this.useRustCore && this.vm) {
+      this.loading = true;
+      const content = await this.vm.loadChapter(index);
+      this.chapters = [{ title: this.tocTitles[index], content }];
+      this.currentIndex = 0;
+      this.realIndex = index;
+      this.progressText = `${index + 1}/${this.tocTitles.length}`;
+      this.loading = false;
+    } else {
+      this.currentIndex = index;
+      this.realIndex = index;
       this.saveProgress();
     }
   }
@@ -184,6 +206,13 @@ struct ReaderPage {
         Text(this.useRustCore ? 'ReaderShell PASS Rust Core' : 'ReaderShell PASS fixture')
           .fontSize(12)
           .fontColor(this.useRustCore ? '#1B7F4A' : '#1B7F4A')
+        Button('目录')
+          .fontSize(12)
+          .height(28)
+          .margin({ left: 8 })
+          .onClick(() => {
+            this.showTocPanel = !this.showTocPanel;
+          })
       }
       .width('100%')
       .padding({ left: 16, right: 16, top: 12, bottom: 8 })
@@ -204,7 +233,7 @@ struct ReaderPage {
       .padding({ left: 16, right: 16, bottom: 8 })
 
       Row() {
-        Text(`章节 ${this.currentIndex + 1}/${this.chapters.length}`)
+        Text(`章节 ${this.realIndex + 1}/${this.tocTitles.length > 0 ? this.tocTitles.length : this.chapters.length}`)
           .fontSize(13)
           .fontColor('#555555')
         Blank()
@@ -224,6 +253,29 @@ struct ReaderPage {
       }
       .width('100%')
       .padding({ left: 16, right: 16, bottom: 8 })
+
+      if (this.showTocPanel) {
+        List() {
+          ForEach(this.tocTitles, (title: string, index: number) => {
+            ListItem() {
+              Text(title)
+                .fontSize(14)
+                .fontColor(index === this.realIndex ? '#007AFF' : '#333333')
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+                .padding(12)
+                .width('100%')
+            }
+            .onClick(() => {
+              this.jumpToChapter(index);
+            })
+          }, (title: string, index: number) => `${index}-${title}`)
+        }
+        .width('100%')
+        .height('50%')
+        .backgroundColor('#FFFFFF')
+        .border({ width: { top: 0.5, bottom: 0.5 }, color: '#E0E0E0' })
+      }
 
       if (this.loading) {
         Column() {
