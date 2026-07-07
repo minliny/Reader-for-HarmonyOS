@@ -1,7 +1,11 @@
-// SharedComponents — P0 demo components shared across shells.
-// All values come from generated tokens / ReaderTypography. No raw hex or px.
+// SharedComponents — shell components ported 1:1 from frontend-demo
+// (styles/00-foundation.css .fd-top-bar / .fd-back-bar / .fd-main-nav +
+// styles/01-shell-layout.css). State components (Loading/Empty/Error/Offline)
+// remain P0 stubs pending their own port. All values are demo vp (lint allows
+// plain numbers); colors via tokens.
 import { ColorTokens } from '../../contract/generated/ColorTokens';
-import { SpacingTokens, SizeTokens, RadiusTokens } from '../../contract/generated/DimensionTokens';
+import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
+import { SpacingTokens, SizeTokens } from '../../contract/generated/DimensionTokens';
 import { ReaderTypography } from '../tokens/ReaderTypography';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 
@@ -36,39 +40,36 @@ function secondaryRouteTitle(routeId: string): string {
   }
 }
 
+// .fd-top-bar: flex space-between, min-height 58, padding 6 20 0, ink.
+//   h1: serif 29/700, nowrap ellipsis. top-actions: flex gap 18, 44×44 icon-buttons.
 @Component
 export struct AppTopBar {
   @StorageProp('reader.routeId') routeId: string = 'bookshelf';
-  @StorageProp('reader.stackDepth') stackDepth: number = 1;
 
   build() {
     Row() {
-      if (this.stackDepth > 1) {
-        Image($r('app.media.reader_icon_back_dark'))
-          .width(24).height(24)
-          .margin({ left: SpacingTokens.sm })
-          .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
-      }
       Text(routeTitle(this.routeId))
-        .fontSize(ReaderTypography.topBarTitle().fontSize)
+        .fontSize(29)
+        .fontWeight(700)
         .fontColor(ColorTokens.ink)
-        .fontWeight(ReaderTypography.topBarTitle().fontWeight)
-        .margin({ left: SpacingTokens.sm })
-      Blank()
-      Image($r('app.media.bookshelf_icon_search_dark'))
-        .width(22).height(22)
-        .margin({ right: SpacingTokens.sm })
-      Image($r('app.media.bookshelf_icon_gear_dark'))
-        .width(22).height(22)
-        .margin({ right: SpacingTokens.sm })
+        .fontFamily(ReaderTypography.serifFamily())
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .layoutWeight(1)
+      Row() {
+        Image($r('app.media.bookshelf_icon_search_dark')).width(24).height(24)
+        Image($r('app.media.bookshelf_icon_gear_dark')).width(24).height(24).margin({ left: 18 })
+      }
+      .alignItems(VerticalAlign.Center)
     }
     .width('100%')
     .height(SizeTokens.topBarHeight)
-    .padding({ left: SpacingTokens.sm, right: SpacingTokens.sm })
-    .backgroundColor(ColorTokens.paper)
+    .padding({ top: 6, left: 20, right: 20, bottom: 0 })
   }
 }
 
+// .fd-back-bar: grid 44px 1fr 44px, gap 10, min-height 58, padding 6 20 0, ink.
+//   back button + more: 44×44 circle (.fd-icon-button). h1: serif 24/700.
 @Component
 export struct BackTopBar {
   @StorageProp('reader.routeId') routeId: string = 'book-detail';
@@ -79,23 +80,29 @@ export struct BackTopBar {
         .width(24).height(24)
         .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
       Text(secondaryRouteTitle(this.routeId))
-        .fontSize(ReaderTypography.topBarTitle().fontSize)
+        .fontSize(24)
+        .fontWeight(700)
         .fontColor(ColorTokens.ink)
-        .fontWeight(ReaderTypography.topBarTitle().fontWeight)
-        .margin({ left: SpacingTokens.sm })
-      Blank()
+        .fontFamily(ReaderTypography.serifFamily())
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .layoutWeight(1)
+        .margin({ left: 10, right: 10 })
       Image($r('app.media.reader_icon_more_dark'))
-        .width(22).height(22)
+        .width(24).height(24)
     }
     .width('100%')
     .height(SizeTokens.topBarHeight)
-    .padding({ left: SpacingTokens.md, right: SpacingTokens.md })
-    .backgroundColor(ColorTokens.paper)
+    .padding({ top: 6, left: 20, right: 20, bottom: 0 })
   }
 }
 
 type TabKind = 'bookshelf' | 'discover' | 'rss' | 'settings';
 
+// .fd-main-nav: 4-col grid, min-height 68, padding 7 8, border 1 border,
+//   radius-xl(24), surface bg, soft-shadow. Floats (margin 14 horizontal).
+// .fd-main-nav-item: grid-rows 30px 18px, gap 3, icon-shell 30×30 circle,
+//   label 11/800. is-active: primaryDark bg, on-primary.
 @Component
 export struct BottomNav {
   @StorageProp('reader.tab') tab: string = 'bookshelf';
@@ -123,20 +130,34 @@ export struct BottomNav {
       this.tabItem('settings', '设置')
     }
     .width('100%')
-    .height(SizeTokens.bottomBarHeight)
-    .padding({ left: SpacingTokens.sm, right: SpacingTokens.sm })
-    .backgroundColor(ColorTokens.bottomBarBg)
+    .height(SizeTokens.mainNavHeight)
+    .padding({ top: 7, bottom: 7, left: 8, right: 8 })
+    .margin({ left: 14, right: 14 })
+    .border({ width: 1, color: ColorTokens.border })
+    .borderRadius(DemoAliasTokens.radiusXl)
+    .backgroundColor(DemoAliasTokens.surface)
+    .shadow({ radius: 26, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 8 })
   }
 
   @Builder tabItem(tab: TabKind, label: string) {
     Column() {
-      Image(this.iconFor(tab, this.tab === tab)).width(24).height(24)
+      Stack() {
+        Image(this.iconFor(tab, this.tab === tab)).width(24).height(24)
+      }
+      .width(30).height(30)
+      .borderRadius(DemoAliasTokens.radiusPill)
       Text(label)
-        .fontSize(10)
-        .fontColor(this.tab === tab ? ColorTokens.primary : ColorTokens.muted)
-        .margin({ top: 2 })
+        .fontSize(11)
+        .fontWeight(800)
+        .fontColor(this.tab === tab ? DemoAliasTokens.onPrimary : ColorTokens.muted)
+        .margin({ top: 3 })
     }
     .layoutWeight(1)
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+    .borderRadius(DemoAliasTokens.radiusXl)
+    .backgroundColor(this.tab === tab ? ColorTokens.primaryDark : ColorTokens.paper)
     .onClick(() => ReaderUiStore.dispatch({ type: 'switch-tab', tab: tab }))
   }
 }
@@ -181,7 +202,7 @@ export struct ErrorState {
         .fontColor(ColorTokens.primary)
         .margin({ top: SpacingTokens.md })
         .padding({ left: SpacingTokens.lg, right: SpacingTokens.lg, top: SpacingTokens.xs, bottom: SpacingTokens.xs })
-        .borderRadius(RadiusTokens.control)
+        .borderRadius(DemoAliasTokens.radiusPill)
         .backgroundColor(ColorTokens.metaBg)
         .onClick(() => ReaderUiStore.dispatch({ type: 'set-loading', loading: false }))
     }
