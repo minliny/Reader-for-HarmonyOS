@@ -58,7 +58,9 @@ export default function ReaderOverlayViewStateTests(): void {
       const body = ViewStateTable.bodyComponentsFor('control-layer-base-v2', 'default');
       const types = topTypes(body);
       expect(types[0]).assertEqual('ReaderBase');
-      expect(types[1]).assertEqual('ReaderBottomBar');
+      expect(types[1]).assertEqual('FloatingQuickActions');
+      expect(types[2]).assertEqual('FloatingPageControl');
+      expect(types[3]).assertEqual('ReaderBottomBar');
     });
 
     it('directoryOverlayBodyIsBaseBarAndDirectoryPanel', 0, () => {
@@ -147,13 +149,18 @@ export default function ReaderOverlayViewStateTests(): void {
     });
 
     // ── Quick-action panels (Step 3b) ──────────────────────────────────────
+    //   Quick-action overlays show floating quick-actions + page-control
+    //   alongside the panel (per normalized-html), so body =
+    //   [ReaderBase, FloatingQuickActions, FloatingPageControl, ReaderBottomBar, <Panel>].
     it('searchOverlayResolvesBespoke', 0, () => {
       expect(RouteTable.shellOf('reader-search-overlay-v2')).assertEqual('ReaderShell');
       const body = ViewStateTable.bodyComponentsFor('reader-search-overlay-v2', 'default');
       const types = topTypes(body);
       expect(types[0]).assertEqual('ReaderBase');
-      expect(types[1]).assertEqual('ReaderBottomBar');
-      expect(types[2]).assertEqual('ReaderSearchPanel');
+      expect(types[1]).assertEqual('FloatingQuickActions');
+      expect(types[2]).assertEqual('FloatingPageControl');
+      expect(types[3]).assertEqual('ReaderBottomBar');
+      expect(types[4]).assertEqual('ReaderSearchPanel');
     });
 
     it('replaceOverlayResolvesBespoke', 0, () => {
@@ -161,8 +168,10 @@ export default function ReaderOverlayViewStateTests(): void {
       const body = ViewStateTable.bodyComponentsFor('reader-replace-overlay-v2', 'default');
       const types = topTypes(body);
       expect(types[0]).assertEqual('ReaderBase');
-      expect(types[1]).assertEqual('ReaderBottomBar');
-      expect(types[2]).assertEqual('ReaderReplacePanel');
+      expect(types[1]).assertEqual('FloatingQuickActions');
+      expect(types[2]).assertEqual('FloatingPageControl');
+      expect(types[3]).assertEqual('ReaderBottomBar');
+      expect(types[4]).assertEqual('ReaderReplacePanel');
     });
 
     it('autoScrollOverlayResolvesBespoke', 0, () => {
@@ -170,8 +179,10 @@ export default function ReaderOverlayViewStateTests(): void {
       const body = ViewStateTable.bodyComponentsFor('reader-auto-scroll-overlay-v2', 'default');
       const types = topTypes(body);
       expect(types[0]).assertEqual('ReaderBase');
-      expect(types[1]).assertEqual('ReaderBottomBar');
-      expect(types[2]).assertEqual('ReaderAutoScrollPanel');
+      expect(types[1]).assertEqual('FloatingQuickActions');
+      expect(types[2]).assertEqual('FloatingPageControl');
+      expect(types[3]).assertEqual('ReaderBottomBar');
+      expect(types[4]).assertEqual('ReaderAutoScrollPanel');
     });
   });
 }

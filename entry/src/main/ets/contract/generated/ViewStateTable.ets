@@ -539,6 +539,18 @@ export class ViewStateTable {
         "children": []
       },
       {
+        "type": "FloatingQuickActions",
+        "id": "floating-quick-actions",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "FloatingPageControl",
+        "id": "floating-page-control",
+        "props": {},
+        "children": []
+      },
+      {
         "type": "ReaderBottomBar",
         "id": "reader-bottom-bar",
         "props": {},
@@ -663,6 +675,18 @@ export class ViewStateTable {
         "children": []
       },
       {
+        "type": "FloatingQuickActions",
+        "id": "floating-quick-actions",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "FloatingPageControl",
+        "id": "floating-page-control",
+        "props": {},
+        "children": []
+      },
+      {
         "type": "ReaderBottomBar",
         "id": "reader-bottom-bar",
         "props": {},
@@ -689,6 +713,18 @@ export class ViewStateTable {
         "children": []
       },
       {
+        "type": "FloatingQuickActions",
+        "id": "floating-quick-actions",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "FloatingPageControl",
+        "id": "floating-page-control",
+        "props": {},
+        "children": []
+      },
+      {
         "type": "ReaderBottomBar",
         "id": "reader-bottom-bar",
         "props": {},
@@ -712,6 +748,18 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
+        "children": []
+      },
+      {
+        "type": "FloatingQuickActions",
+        "id": "floating-quick-actions",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "FloatingPageControl",
+        "id": "floating-page-control",
+        "props": {},
         "children": []
       },
       {

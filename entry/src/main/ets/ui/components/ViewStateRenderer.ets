@@ -7,7 +7,7 @@ import { AppTopBar, BackTopBar, BottomNav, Loading, Empty, ErrorState, Offline,
 import { ContinueReadingCard, BookshelfShelfSection, ShelfChipGroup, ShelfSectionHeader, BookCard, BookCover, BookGrid } from './BookshelfComponents';
 import { BookHero, BookSummaryCard, BookChapterList } from './BookDetailComponents';
 import { ReadingBackgroundLayer, ReadingTextFlow, ReadingInfoLayer, TapZones, ReaderBase } from './ReaderComponents';
-import { ReaderBottomBar, ReaderDirectoryPanel, ReaderAppearancePanel, ReaderTtsPanel, ReaderSettingsPanel, ReaderSearchPanel, ReaderReplacePanel, ReaderAutoScrollPanel } from './ReaderOverlayComponents';
+import { ReaderBottomBar, ReaderDirectoryPanel, ReaderAppearancePanel, ReaderTtsPanel, ReaderSettingsPanel, ReaderSearchPanel, ReaderReplacePanel, ReaderAutoScrollPanel, FloatingQuickActions, FloatingPageControl } from './ReaderOverlayComponents';
 import { SettingsHomeSection, SettingsSection, SettingsListItem } from './SettingsComponents';
 import { DiscoverSourceBar, DiscoverEntryRow, DiscoverFilterTrigger, DiscoverListHead, DiscoverBookList } from './DiscoverComponents';
 import { RssSearchEntry, RssModeRow, RssSourceOverview, RssArticleSection } from './RssComponents';
@@ -99,6 +99,10 @@ export struct ViewStateRenderer {
       ReaderBase({ theme: this.textOr(component.props.theme, 'paper') })
     } else if (component.type === 'ReaderBottomBar') {
       ReaderBottomBar()
+    } else if (component.type === 'FloatingQuickActions') {
+      FloatingQuickActions()
+    } else if (component.type === 'FloatingPageControl') {
+      FloatingPageControl()
     } else if (component.type === 'ReaderDirectoryPanel') {
       ReaderDirectoryPanel()
     } else if (component.type === 'ReaderAppearancePanel') {

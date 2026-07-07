@@ -211,11 +211,72 @@ export struct ToggleSwitch {
   }
 }
 
+// ── Floating quick actions (.reader-floating-quick-actions) ──────────────
+//   Row of quick-action circles centered horizontally, floating above the
+//   page-control pill. Each circle route-pushes its overlay route:
+//     search → reader-search-overlay-v2, replace → reader-replace-overlay-v2,
+//     auto → reader-auto-scroll-overlay-v2, night → reader-night-state-v2
+//   (night lands in Step 3c-part2; circle renders now, route-pushes once the
+//   route has a fixture). Circles are 48px, gap 20.
+@Component
+export struct FloatingQuickActions {
+  private items: Array<[string, string, string]> = [
+    ['search', 'reader_icon_reader_content_search_action', 'reader-search-overlay-v2'],
+    ['replace', 'reader_icon_reader_content_replace_action', 'reader-replace-overlay-v2'],
+    ['auto', 'reader_icon_reader_auto_page_action', 'reader-auto-scroll-overlay-v2'],
+    ['night', 'reader_icon_more_dark', 'reader-night-state-v2'],
+  ];
+
+  build() {
+    Row({ space: 20 }) {
+      ForEach(this.items, (it: [string, string, string]) => {
+        Column() {
+          Image($r(`app.media.${it[1]}`)).width(24).height(24)
+        }
+        .width(48).height(48)
+        .justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
+        .backgroundColor(ColorTokens.floatingControlBg)
+        .border({ width: 1, color: ColorTokens.border })
+        .borderRadius(DemoAliasTokens.radiusPill)
+        .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
+        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: it[2] as RouteId }))
+      }, (it: [string, string, string]) => it[0])
+    }
+    .align(Alignment.Bottom)
+    .offset({ y: -(SizeTokens.bottomBarHeight + 80) })
+  }
+}
+
+// ── Floating page control (.reader-floating-page-control) ─────────────────
+//   Pill (prev + progress track + next), centered, floating just above the
+//   bottom bar. Progress is a 4px track with a 25% fill + 16px thumb.
+@Component
+export struct FloatingPageControl {
+  build() {
+    Row() {
+      Image($r('app.media.reader_icon_chevron_left_chapter')).width(24).height(24)
+        .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
+      Stack({ alignContent: Alignment.Start }) {
+        Column().width('100%').height(4).borderRadius(DemoAliasTokens.radiusPill)
+          .backgroundColor(ColorTokens.border)
+        Column().width('25%').height(4).borderRadius(DemoAliasTokens.radiusPill)
+          .backgroundColor(ColorTokens.primary)
+      }
+      .layoutWeight(1).height(4).margin({ left: 16, right: 16 })
+      Image($r('app.media.reader_icon_chevron_chapter')).width(24).height(24)
+    }
+    .width(342).height(52).padding({ left: 24, right: 24 })
+    .justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center)
+    .backgroundColor(ColorTokens.floatingControlBg)
+    .border({ width: 1, color: ColorTokens.border })
+    .borderRadius(DemoAliasTokens.radiusPill)
+    .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
+    .align(Alignment.Bottom)
+    .offset({ y: -(SizeTokens.bottomBarHeight + 18) })
+  }
+}
+
 // ── Control bottom bar (.reader-control-bottom-bar) ───────────────────────
-//   4 items (目录/外观/朗读/设置), icon + label, pinned to the bottom of the
-//   reader Stack. Each route-pushes its overlay route (route-driven). Bottom
-//   safe-area padding. NOTE: only reader-directory-overlay-v2 has a fixture
-//   today (slice); the other three route-push to routes Batch 1 step 3 fills.
 @Component
 export struct ReaderBottomBar {
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
