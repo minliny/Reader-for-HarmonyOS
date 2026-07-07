@@ -12,6 +12,7 @@ import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
 import { SpacingTokens } from '../../contract/generated/DimensionTokens';
 import { ReaderTypography } from '../tokens/ReaderTypography';
 import { ReaderUiStore } from '../store/ReaderUiStore';
+import { SearchResultEntry, BookDetail } from '../store/ReaderUiState';
 
 // ── Bookshelf / book ───────────────────────────────────────────────────────
 
@@ -63,6 +64,7 @@ export struct SourceStatus {
 @Component
 export struct ReadButton {
   @Prop label: string = '开始阅读';
+  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
 
   build() {
     Text(this.label)
@@ -70,7 +72,14 @@ export struct ReadButton {
       .backgroundColor(ColorTokens.primary)
       .borderRadius(DemoAliasTokens.radiusPill)
       .height(40).padding({ left: 18, right: 18 })
-      .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' }))
+      .onClick(() => {
+        // If we have a real chapter URL from the detail page, load it before
+        // entering the reader so ReadingTextFlow shows real content.
+        if (this.currentBook !== null && this.currentBook.chapterListUrl.length > 0) {
+          ReaderUiStore.dispatch({ type: 'chapter-load', chapterId: this.currentBook.chapterListUrl });
+        }
+        ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' });
+      })
   }
 }
 
@@ -347,15 +356,23 @@ export struct QuickEntryGrid {
 export struct SearchInputBox {
   @Prop query: string = '';
   @Prop placeholder: string = '搜索书名/作者';
+  @State queryText: string = '';
 
   build() {
     Row() {
       Image($r('app.media.bookshelf_icon_search_dark')).width(20).height(20)
-      TextInput({ text: this.query, placeholder: this.placeholder })
+      TextInput({ text: this.queryText, placeholder: this.placeholder })
         .fontSize(ReaderTypography.bookMeta().fontSize).fontColor(ColorTokens.ink)
         .backgroundColor(ColorTokens.metaBg).borderRadius(DemoAliasTokens.radiusSm)
         .height(40).padding({ left: SpacingTokens.md, right: SpacingTokens.md })
         .layoutWeight(1).margin({ left: 8 })
+        .onChange((v: string) => { this.queryText = v; })
+        .onSubmit(() => {
+          const q = this.queryText.trim();
+          if (q.length > 0) {
+            ReaderUiStore.dispatch({ type: 'search-submit', query: q });
+          }
+        })
     }
     .width('100%').alignItems(VerticalAlign.Center)
   }
@@ -395,15 +412,59 @@ export struct GroupSelector {
 
 @Component
 export struct SearchHistoryList {
+  @StorageProp('reader.searchResults') searchResults: SearchResultEntry[] = [];
   private history: string[] = ['三体', '刘慈欣', '球状闪电'];
   build() {
+    if (this.searchResults.length > 0) {
+      SearchResultsPanel({ results: this.searchResults })
+    } else {
+      Column() {
+        Text('搜索历史').fontSize(13).fontWeight(900).fontColor(ColorTokens.ink).margin({ bottom: 6 })
+        ForEach(this.history, (h: string, i: number) => {
+          Text(h).fontSize(13).fontColor(ColorTokens.controlInk)
+            .width('100%').padding({ top: 8, bottom: 8 })
+            .border(i > 0 ? { width: { top: 1 }, color: ColorTokens.border } : { width: 0 })
+            .onClick(() => {
+              ReaderUiStore.dispatch({ type: 'search-submit', query: h });
+            })
+        }, (h: string, i: number) => `${h}-${i}`)
+      }
+      .width('100%').alignItems(HorizontalAlign.Start)
+    }
+  }
+}
+
+// SearchResultsPanel — renders live search results from reader.searchResults.
+// Tap a result → dispatch book-detail-load (effect fires Host HTTP) + route-push
+// book-detail so the detail page shows its loading state immediately.
+@Component
+export struct SearchResultsPanel {
+  @Prop results: SearchResultEntry[];
+
+  build() {
     Column() {
-      Text('搜索历史').fontSize(13).fontWeight(900).fontColor(ColorTokens.ink).margin({ bottom: 6 })
-      ForEach(this.history, (h: string, i: number) => {
-        Text(h).fontSize(13).fontColor(ColorTokens.controlInk)
-          .width('100%').padding({ top: 8, bottom: 8 })
-          .border(i > 0 ? { width: { top: 1 }, color: ColorTokens.border } : { width: 0 })
-      }, (h: string, i: number) => `${h}-${i}`)
+      Text(`搜索结果（${this.results.length}）`).fontSize(13).fontWeight(900)
+        .fontColor(ColorTokens.ink).margin({ bottom: 6 })
+      ForEach(this.results, (r: SearchResultEntry, i: number) => {
+        Row() {
+          Column() {
+            Text(r.title).fontSize(15).fontWeight(600).fontColor(ColorTokens.ink)
+            Row() {
+              Text(r.author).fontSize(12).fontColor(ColorTokens.muted)
+              Text(` · ${r.sourceName}`).fontSize(12).fontColor(ColorTokens.muted)
+            }.margin({ top: 2 })
+          }
+          .alignItems(HorizontalAlign.Start).layoutWeight(1)
+          Text('详情').fontSize(12).fontColor(ColorTokens.primary)
+        }
+        .width('100%').padding({ top: 10, bottom: 10 })
+        .alignItems(VerticalAlign.Center)
+        .border(i > 0 ? { width: { top: 1 }, color: ColorTokens.border } : { width: 0 })
+        .onClick(() => {
+          ReaderUiStore.dispatch({ type: 'book-detail-load', bookId: r.bookId });
+          ReaderUiStore.dispatch({ type: 'route-push', id: 'book-detail' });
+        })
+      }, (r: SearchResultEntry, i: number) => `${r.bookId}-${i}`)
     }
     .width('100%').alignItems(HorizontalAlign.Start)
   }

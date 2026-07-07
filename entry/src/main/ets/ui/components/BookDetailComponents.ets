@@ -6,11 +6,14 @@ import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
 import { ReaderTypography } from '../tokens/ReaderTypography';
 import { ReaderUiStore } from '../store/ReaderUiStore';
+import { BookDetail } from '../store/ReaderUiState';
 
 // .fd-book-hero.fd-book-detail-hero: card — img cover (left) + .fd-book-identity
 //   (h2 title + p author + dl facts + inline source row).
 @Component
 export struct BookHero {
+  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
+
   build() {
     Row() {
       Image($r('app.media.bookshelf_cover_three_body'))
@@ -18,23 +21,25 @@ export struct BookHero {
         .objectFit(ImageFit.Cover)
         .borderRadius(DemoAliasTokens.radiusSm)
       Column() {
-        Text('三体')
+        Text(this.currentBook !== null ? this.currentBook.title : '三体')
           .fontSize(20)
           .fontWeight(700)
           .fontColor(ColorTokens.ink)
           .fontFamily(ReaderTypography.serifFamily())
-        Text('刘慈欣')
+        Text(this.currentBook !== null ? this.currentBook.author : '刘慈欣')
           .fontSize(14)
           .fontColor(ColorTokens.muted)
           .margin({ top: 4 })
         Row() {
           Text('最新：').fontSize(12).fontColor(ColorTokens.muted)
-          Text('第3部').fontSize(12).fontColor(ColorTokens.ink)
+          Text(this.currentBook !== null && this.currentBook.latestChapter.length > 0
+            ? this.currentBook.latestChapter : '第3部').fontSize(12).fontColor(ColorTokens.ink)
         }
         .margin({ top: 6 })
         Row() {
           Text('书源：').fontSize(12).fontColor(ColorTokens.muted)
-          Text('默认书源').fontSize(12).fontColor(ColorTokens.primaryDark)
+          Text(this.currentBook !== null ? this.currentBook.sourceName : '默认书源')
+            .fontSize(12).fontColor(ColorTokens.primaryDark)
             .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'source-switch-results' }))
         }
         .margin({ top: 4 })
@@ -56,13 +61,17 @@ export struct BookHero {
 // .fd-book-summary-card: card — h2 "简介" 15 + p 13 muted line-clamp 4 (1.65).
 @Component
 export struct BookSummaryCard {
+  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
+
   build() {
     Column() {
       Text('简介')
         .fontSize(15)
         .fontWeight(700)
         .fontColor(ColorTokens.ink)
-      Text('文化大革命如火如荼地进行，叶文洁在雷达峰向宇宙发出了人类第一条信息。这是一个关于宇宙黑暗森林的故事，关于人类文明的命运与抉择。')
+      Text(this.currentBook !== null && this.currentBook.summary.length > 0
+        ? this.currentBook.summary
+        : '文化大革命如火如荼地进行，叶文洁在雷达峰向宇宙发出了人类第一条信息。这是一个关于宇宙黑暗森林的故事，关于人类文明的命运与抉择。')
         .fontSize(13)
         .fontColor(ColorTokens.muted)
         .lineHeight(13 * 1.65)
@@ -84,6 +93,7 @@ export struct BookSummaryCard {
 //   "完整目录" button) + chapter rows (span title, min 52, border-top).
 @Component
 export struct BookChapterList {
+  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
   private chapters: string[] = ['第一章 科学边界', '第二章 疯狂年代', '第三章 红岸之一'];
 
   build() {
@@ -114,7 +124,16 @@ export struct BookChapterList {
         .padding({ top: 10, bottom: 10 })
         .border(i > 0 ? { width: { top: 1 }, color: ColorTokens.border } : { width: 0 })
         .alignItems(VerticalAlign.Center)
-        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' }))
+        .onClick(() => {
+          // If we have a real chapter URL from the detail page, load it;
+          // otherwise fall back to fixture reader route.
+          if (this.currentBook !== null && this.currentBook.chapterListUrl.length > 0 && i === 0) {
+            ReaderUiStore.dispatch({ type: 'chapter-load', chapterId: this.currentBook.chapterListUrl });
+            ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' });
+          } else {
+            ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' });
+          }
+        })
       }, (c: string, i: number) => `${c}-${i}`)
     }
     .width('100%')

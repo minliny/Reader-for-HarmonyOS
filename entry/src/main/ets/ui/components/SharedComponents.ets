@@ -58,6 +58,7 @@ export struct AppTopBar {
         .layoutWeight(1)
       Row() {
         Image($r('app.media.bookshelf_icon_search_dark')).width(24).height(24)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'book-search' }))
         Image($r('app.media.reader_icon_more_dark')).width(24).height(24).margin({ left: 18 })
       }
       .alignItems(VerticalAlign.Center)

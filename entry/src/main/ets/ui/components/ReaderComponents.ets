@@ -42,9 +42,10 @@ export struct ReadingBackgroundLayer {
 @Component
 export struct ReadingTextFlow {
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
+  @StorageProp('reader.chapterContent') chapterContent: string[] = [];
   @Prop theme: string = 'paper';
 
-  private paragraphs: string[] = [
+  private fixtureParagraphs: string[] = [
     '汪淼盯着面前的纳米丝，想象着它在宏观尺度上的形态。它细如蛛丝，却能切断合金，这便是三体人送给地球的第一个礼物。',
     '叶文洁当年的选择，像一条看不见的线，从雷达峰延伸到此刻的每一个角落。她按下发射键的那一刻，人类的命运被永远改写了。',
     '宇宙曾经是一片死寂的荒漠，直到那条信息被发出，直到那个回复被接收。在那之后的每一个夜晚，星空都不再是原来的星空。'
@@ -52,6 +53,12 @@ export struct ReadingTextFlow {
 
   private inkColor(): string {
     return this.theme === 'night' ? ColorTokens.inkNight : ColorTokens.ink;
+  }
+
+  // Use real chapter content from the reducer when available; fall back to
+  // fixture paragraphs so the reader page still renders in demo flows.
+  private paragraphs(): string[] {
+    return this.chapterContent.length > 0 ? this.chapterContent : this.fixtureParagraphs;
   }
 
   build() {
@@ -65,7 +72,7 @@ export struct ReadingTextFlow {
           .textAlign(TextAlign.Center)
           .width('100%')
           .margin({ bottom: 24 })
-        ForEach(this.paragraphs, (p: string, i: number) => {
+        ForEach(this.paragraphs(), (p: string, i: number) => {
           Text(p)
             .fontSize(18)
             .fontColor(this.inkColor())
