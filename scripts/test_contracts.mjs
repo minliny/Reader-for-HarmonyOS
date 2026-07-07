@@ -287,28 +287,32 @@ const SCAFFOLD_TYPES = new Set([
 ]);
 
 // Routes allowed to be scaffold-only (not yet 1:1 migrated). Must shrink over
-// time. Shell-owned bars (AppTopBar/BackTopBar/BottomNav) are excluded from
-// body via bodyComponentsFor, so a page with only bars + scaffold is scaffold-only.
+// time. State pages (loading/empty/error/offline) are legitimately scaffold-only.
 const SCAFFOLD_ALLOWED = new Set([
-  'app-shell', 'bookshelf-empty', 'book-detail', 'state-offline', 'state-error',
-  'search-home', 'search-results', 'search-empty', 'source-detail',
+  'app-shell', 'bookshelf-empty', 'search-empty', 'state-offline', 'state-error',
+  'search-home', 'search-results', 'source-detail',
   'rss-all', 'rss-detail', 'rss-original', 'restore-running', 'restore-result',
   'sync-backup', 'sync-error', 'webdav-config',
 ]);
+
+// Aggregate ALL body components across every pageState entry for a route.
+// A route is scaffold-only only if EVERY pageState entry's body is all scaffold.
+function routeBodyComponents(routeId) {
+  const all = [];
+  for (const entry of VIEW_STATES_JSON) {
+    if (entry.routeId !== routeId) continue;
+    const body = (entry.components || []).filter((c) => !['AppTopBar', 'BackTopBar', 'BottomNav'].includes(c.type));
+    all.push(...body);
+  }
+  return all;
+}
 
 test('ViewState routes that are scaffold-only are listed in SCAFFOLD_ALLOWED', () => {
   const scaffoldOnly = [];
   const coveredRouteIds = new Set();
   for (const v of VIEW_STATES_JSON) coveredRouteIds.add(v.routeId);
   for (const routeId of coveredRouteIds) {
-    // Use the generated table's bodyComponentsFor logic: filter shell bars.
-    let components = [];
-    for (const entry of VIEW_STATES_JSON) {
-      if (entry.routeId !== routeId) continue;
-      components = entry.components || [];
-      break;
-    }
-    const body = components.filter((c) => !['AppTopBar', 'BackTopBar', 'BottomNav'].includes(c.type));
+    const body = routeBodyComponents(routeId);
     if (body.length === 0) continue; // shell-only (e.g. main-tabs) — not a page
     const hasBespoke = body.some((c) => !SCAFFOLD_TYPES.has(c.type));
     if (!hasBespoke && !SCAFFOLD_ALLOWED.has(routeId)) {
@@ -322,13 +326,7 @@ test('ViewState routes that are scaffold-only are listed in SCAFFOLD_ALLOWED', (
 test('SCAFFOLD_ALLOWED contains no routes that now have bespoke components (stale entries)', () => {
   const stale = [];
   for (const routeId of SCAFFOLD_ALLOWED) {
-    let components = [];
-    for (const entry of VIEW_STATES_JSON) {
-      if (entry.routeId !== routeId) continue;
-      components = entry.components || [];
-      break;
-    }
-    const body = components.filter((c) => !['AppTopBar', 'BackTopBar', 'BottomNav'].includes(c.type));
+    const body = routeBodyComponents(routeId);
     const hasBespoke = body.some((c) => !SCAFFOLD_TYPES.has(c.type));
     if (hasBespoke) stale.push(routeId);
   }
