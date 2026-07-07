@@ -58,7 +58,7 @@ export struct SettingsHomeSection {
         .width('100%')
         .margin({ left: 12, top: 9, bottom: 5 })
       ForEach(this.rows, (r: [string, string], i: number) => {
-        SettingsNavRow({ label: r[0], route: r[1] })
+        SettingsNavRow({ label: r[0], route: r[1] as RouteId })
       }, (r: [string, string], i: number) => `${r[0]}-${i}`)
     }
     .width('100%')
