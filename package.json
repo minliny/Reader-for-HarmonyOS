@@ -9,11 +9,14 @@
   "description": "Reader for HarmonyOS — ArkUI native host (Phase 1 UI skeleton, contract-driven)",
   "repository": {},
   "license": "ISC",
-  "scripts": {
+ "scripts": {
     "gen:contracts": "node scripts/gen_contracts.mjs",
     "lint:tokens": "node scripts/lint_tokens.mjs",
     "build": "hvigorw assembleHap --no-daemon",
-    "test": "hvigorw test --no-daemon"
+    "test": "node scripts/test.mjs",
+    "test:device": "node scripts/test.mjs",
+    "test:raw": "hvigorw test --no-daemon",
+    "evidence": "node scripts/collect_device_evidence.mjs"
   },
   "dependencies": {
     "@ohos/hvigor": "6.22.7",

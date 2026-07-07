@@ -27,7 +27,11 @@ export struct RouteRenderer {
   @StorageProp('reader.routeId') @Watch('onRouteChange') routeId: string = 'bookshelf';
   @StorageProp('reader.lastOp') lastOp: string = '';
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
-  @State private displayedRouteId: string = 'bookshelf';
+  // displayedRouteId is the motion-delayed route used to pick the shell. It is
+  // shared via AppStorage (reader.displayedRouteId) so ViewStateRenderer (and any
+  // other body component) reads the SAME value the shell is rendered for — no
+  // "old shell renders new route body" mis-frame during the transition.
+  @StorageLink('reader.displayedRouteId') private displayedRouteId: string = 'bookshelf';
 
   onRouteChange(): void {
     const op = operationFor(this.lastOp);

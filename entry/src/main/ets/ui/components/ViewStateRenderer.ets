@@ -18,7 +18,11 @@ import { ProgressBar, BookTitleAuthor, SourceStatus, ReadButton, DirectoryPrevie
 
 @Component
 export struct ViewStateRenderer {
-  @StorageProp('reader.routeId') routeId: string = 'bookshelf';
+  // Read reader.displayedRouteId (the motion-delayed value RouteRenderer uses
+  // to pick the shell) — NOT reader.routeId (the immediate target). This keeps
+  // shell + body in sync during route transitions (no mis-frame where the old
+  // shell renders the new route body).
+  @StorageProp('reader.displayedRouteId') routeId: string = 'bookshelf';
   @StorageProp('reader.pageState') pageState: string = 'default';
   // 'column' (default — scrollable pages) | 'stack' (reader layered body, where
   // components are absolutely positioned over the reading base rather than

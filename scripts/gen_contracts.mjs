@@ -232,9 +232,13 @@ function normalizeComponent(c) {
 // props (e.g. viewMode) flow through without hand-editing the generator.
 //
 // BASELINE_PROPS covers props the renderer reads even when no fixture sets
-// them (e.g. ProgressBar.progress defaults to 0.42 inside ViewStateRenderer).
+// them (e.g. ProgressBar.progress defaults to 0.42 inside ViewStateRenderer;
+// DemoButton.destructive is read for every Button). Without these, removing the
+// only fixture that sets a prop would drop it from ViewStateProps and break the
+// renderer's unconditional read.
 const BASELINE_PROPS = {
   progress: 'number',
+  destructive: 'boolean',
 };
 
 function collectPropTypes(viewStates) {

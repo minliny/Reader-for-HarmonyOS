@@ -38,13 +38,13 @@ test('TokenRegistry coverage count matches fixture count', () => {
   const active = TOKENS.filter((t) => t.deprecated !== true);
   assert.equal(active.length, TOKENS.length, 'token count mismatch');
 });
-test('ColorTokens contains all 16 colors as ARGB', () => {
+test('ColorTokens contains all colors as ARGB', () => {
   const src = read(path.join(GEN, 'ColorTokens.ets'));
   const colors = TOKENS.filter((t) => t.category === 'color');
-  assert.equal(colors.length, 16);
+  assert.equal(colors.length, 21, `expected 21 color tokens, got ${colors.length}`);
   // Every color token value resolves to an #AARRGGBB (8 hex) entry.
   const argbCount = (src.match(/#[0-9A-F]{8}/g) || []).length;
-  assert.ok(argbCount >= 16, `expected ≥16 ARGB colors, got ${argbCount}`);
+  assert.ok(argbCount >= 21, `expected ≥21 ARGB colors, got ${argbCount}`);
 });
 test('color.json has all color tokens + start_window_background', () => {
   const j = JSON.parse(read(path.join(REPO, 'entry/src/main/resources/base/element/color.json')));
@@ -106,7 +106,9 @@ test('resolve tabSwitch/mainTabShell → tab.switch', () => {
   assert.equal(resolvePolicy({ operation: 'tabSwitch', containerRole: 'mainTabShell' }), 'tab.switch');
 });
 
-// ── 4. Shell slot discipline: MainTabShell + ReaderShell each declare 5 slots ──
+// ── 4. Shell slot discipline: MainTabShell declares 5 slots; ReaderShell is a
+//      thin 3-slot shell post-Batch-1 (content / overlayHost / stateHost — the
+//      reading base + overlay panels come from ViewStateTable, not shell slots).
 test('MainTabShell declares 5 named slots', () => {
   const src = read(path.join(SHELLS, 'MainTabShell.ets'));
   const m = src.match(/SLOT_NAMES:\s*string\[\]\s*=\s*\[([^\]]*)\]/);
@@ -115,13 +117,13 @@ test('MainTabShell declares 5 named slots', () => {
   assert.equal(slots.length, 5, `expected 5 slots, got ${slots.length}`);
   assert.deepEqual(slots, ['topArea', 'content', 'tabNav', 'overlayHost', 'stateHost']);
 });
-test('ReaderShell declares 5 named slots', () => {
+test('ReaderShell declares 3 named slots', () => {
   const src = read(path.join(SHELLS, 'ReaderShell.ets'));
   const m = src.match(/SLOT_NAMES:\s*string\[\]\s*=\s*\[([^\]]*)\]/);
   assert.ok(m, 'SLOT_NAMES not found');
   const slots = m[1].split(',').map((s) => s.trim().replace(/'/g, '')).filter(Boolean);
-  assert.equal(slots.length, 5, `expected 5 slots, got ${slots.length}`);
-  assert.deepEqual(slots, ['readingSurface', 'readerOverlayHost', 'bottomSheetHost', 'readerModuleNav', 'readerStateHost']);
+  assert.equal(slots.length, 3, `expected 3 slots, got ${slots.length}`);
+  assert.deepEqual(slots, ['content', 'overlayHost', 'stateHost']);
 });
 test('Overlays/state hang off shell slots, not pages (OverlayHost + StateHost are slot components)', () => {
   assert.ok(fs.existsSync(path.join(REPO, 'entry/src/main/ets/ui/slots/OverlayHost.ets')));
@@ -133,6 +135,34 @@ test('Overlays/state hang off shell slots, not pages (OverlayHost + StateHost ar
     assert.ok(!src.includes('OverlayHost') && !src.includes('StateHost'),
       `${f} imports a shell slot component — slots must not leak into pages`);
   }
+});
+
+// ── 5. ViewStateTable ↔ ViewStateRenderer: every component type used in the
+//      table is mapped by the renderer — no unknown type silently falls back to
+//      Empty() (which would mask contract drift).
+test('ViewStateTable component types are all mapped by ViewStateRenderer', () => {
+  const vsTableSrc = read(path.join(GEN, 'ViewStateTable.ets'));
+  const vsRendererSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/ViewStateRenderer.ets'));
+  // "type": "X" only appears in the JSON entry bodies (the TS interface uses
+  // `type: string` without quotes), so this captures exactly the used types.
+  const used = new Set([...vsTableSrc.matchAll(/"type":\s*"([^"]+)"/g)].map((m) => m[1]));
+  const mapped = new Set([...vsRendererSrc.matchAll(/component\.type === '([^']+)'/g)].map((m) => m[1]));
+  const unmapped = [...used].filter((t) => !mapped.has(t));
+  assert.equal(unmapped.length, 0,
+    `unmapped component types (would silently Empty() in ViewStateRenderer): ${unmapped.join(', ')}`);
+});
+
+// ── 6. No duplicate (routeId, pageState) keys in the view-state fixture ──
+test('view-state fixture has no duplicate (routeId, pageState) keys', () => {
+  const VS = readJson('view-state.fixtures.json');
+  const seen = new Map();
+  const dups = [];
+  for (const e of VS) {
+    const k = `${e.routeId}/${e.pageState}`;
+    if (seen.has(k)) dups.push(k);
+    seen.set(k, true);
+  }
+  assert.equal(dups.length, 0, `duplicate (routeId,pageState) entries (componentsFor shadows all but the first): ${dups.join(', ')}`);
 });
 
 console.log(`\n${pass} passed, ${fail} failed`);
