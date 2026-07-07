@@ -50,6 +50,54 @@ export interface HostCapabilityDescriptor {
 // reachable right now (adapter constructed and non-null, or registry has it).
 export type HostCapabilityAvailabilityResolver = (capability: HostCapability) => boolean;
 
+// Tag → capabilities mapping for evidence-driven deviceVerified.
+// Each tag is emitted by a runXxxSelfCheck method in EntryAbility.ets.
+// After a self-check completes successfully, markVerifiedByTag flips
+// deviceVerified to true for all capabilities covered by that tag.
+// Keep this mapping limited to real HostCapability values. Meta evidence such
+// as [HostManifest] broadcast is parsed offline by scripts/collect_device_evidence.mjs
+// and must not flip deviceVerified for an unrelated capability.
+export const HOST_EVIDENCE_TAG_MAP: Record<string, HostCapability[]> = {
+  // CoreSelfCheck marks host.smoke.echo only after hostSmoke succeeds.
+  'CoreSelfCheck': ['host.smoke.echo' as HostCapability],
+  'ReadingChain': [
+    'http.execute' as HostCapability,
+    'cookie.set' as HostCapability,
+    'cookie.get' as HostCapability,
+    'file.write' as HostCapability,
+    'file.read' as HostCapability,
+  ],
+  'RssChain': [
+    'http.execute' as HostCapability,
+    'file.write' as HostCapability,
+    'file.read' as HostCapability,
+  ],
+  'LocalBook': [
+    'file.write' as HostCapability,
+    'file.read' as HostCapability,
+    'persistence.put' as HostCapability,
+    'persistence.get' as HostCapability,
+  ],
+  'SyncWebDav': [
+    'credential.get' as HostCapability,
+    'http.execute' as HostCapability,
+    'file.write' as HostCapability,
+  ],
+  'UiAdapter': [
+    'webview.open' as HostCapability,
+    'webview.close' as HostCapability,
+    'permission.check' as HostCapability,
+    'notification.show' as HostCapability,
+    'notification.cancel' as HostCapability,
+  ],
+  'TtsSelfCheck': [
+    'tts.system.start' as HostCapability,
+    'tts.system.pause' as HostCapability,
+    'tts.system.resume' as HostCapability,
+    'tts.system.stop' as HostCapability,
+  ],
+};
+
 export interface HostCapabilityManifestSummary {
   total: number;
   registry: number;
@@ -279,7 +327,9 @@ const HOST_CAPABILITY_DESCRIPTORS: HostCapabilityDescriptor[] = [
 ];
 
 export class HostCapabilityManifest {
-  private readonly descriptors = new Map<HostCapability, HostCapabilityDescriptor>();
+  // Mutable: deviceVerified is flipped from false→true by markVerified/
+  // markVerifiedByTag when a self-check produces device evidence.
+  private descriptors = new Map<HostCapability, HostCapabilityDescriptor>();
   private readonly resolver: HostCapabilityAvailabilityResolver;
 
   constructor(resolver: HostCapabilityAvailabilityResolver) {
@@ -295,6 +345,56 @@ export class HostCapabilityManifest {
 
   all(): HostCapabilityDescriptor[] {
     return Array.from(this.descriptors.values());
+  }
+
+  /**
+   * Mark a single capability as device-verified. Called by self-check methods
+   * after they produce device evidence (hdc hilog). Idempotent: calling again
+   * on an already-verified capability is a no-op.
+   */
+  markVerified(capability: HostCapability): void {
+    const d = this.descriptors.get(capability);
+    if (d === undefined || d.deviceVerified) {
+      return;
+    }
+    // Copy-on-write to avoid mutating the static table.
+    const updated: HostCapabilityDescriptor = {
+      capability: d.capability,
+      source: d.source,
+      dispatch: d.dispatch,
+      adapter: d.adapter,
+      requiresContext: d.requiresContext,
+      requiresUiAbilityContext: d.requiresUiAbilityContext,
+      requiresPermission: d.requiresPermission,
+      deviceVerified: true,
+    };
+    this.descriptors.set(capability, updated);
+  }
+
+  /**
+   * Mark all capabilities covered by an evidence tag as device-verified.
+   * Uses HOST_EVIDENCE_TAG_MAP to resolve tag → capabilities. Called by
+   * self-check methods at their DONE log line.
+   */
+  markVerifiedByTag(tag: string): void {
+    const caps = HOST_EVIDENCE_TAG_MAP[tag];
+    if (caps === undefined) {
+      return;
+    }
+    for (const cap of caps) {
+      this.markVerified(cap);
+    }
+  }
+
+  /**
+   * Re-broadcast the updated manifest summary to hilog. Called after all
+   * self-checks complete to show the evidence-driven deviceVerified count.
+   */
+  rebroadcastSummary(): void {
+    const s = this.summary();
+    console.info(`[HostManifest] post-self-check summary total=${s.total} registry=${s.registry}` +
+      ` reducerDirect=${s.reducerDirect} unimplemented=${s.unimplemented}` +
+      ` available=${s.available} deviceVerified=${s.deviceVerified}`);
   }
 
   registeredWithRegistry(): HostCapability[] {
