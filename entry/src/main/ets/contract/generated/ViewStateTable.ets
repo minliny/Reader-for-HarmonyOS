@@ -26,6 +26,7 @@ export interface ViewStateProps {
   theme?: string;
   title?: string;
   unread?: number;
+  viewMode?: string;
 }
 
 export interface ViewStateComponent {
@@ -71,7 +72,7 @@ export class ViewStateTable {
   },
   {
     "routeId": "bookshelf",
-    "pageState": "cover-mode",
+    "pageState": "default",
     "components": [
       {
         "type": "AppTopBar",
@@ -82,52 +83,70 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "ShelfChipGroup",
-        "id": "shelf-chips",
-        "props": {
-          "selected": "all"
-        },
-        "children": []
-      },
-      {
         "type": "ContinueReadingCard",
         "id": "continue-reading",
         "props": {
           "bookId": "bk-001",
-          "title": "示例书"
+          "title": "三体",
+          "author": "刘慈欣"
         },
         "children": []
       },
       {
-        "type": "ShelfSectionHeader",
-        "id": "shelf-header",
+        "type": "BookshelfShelfSection",
+        "id": "bookshelf-shelf-section",
         "props": {
-          "title": "我的书架"
-        },
-        "children": []
-      },
-      {
-        "type": "BookCard",
-        "id": "book-1",
-        "props": {
-          "bookId": "bk-001",
-          "title": "示例书",
-          "author": "示例作者"
+          "title": "我的书架",
+          "viewMode": "cover"
         },
         "children": [
           {
-            "type": "BookCover",
-            "id": "",
-            "props": {},
+            "type": "ShelfSectionHeader",
+            "id": "shelf-header",
+            "props": {
+              "title": "我的书架",
+              "viewMode": "cover"
+            },
             "children": []
           },
           {
-            "type": "ProgressBar",
-            "id": "",
+            "type": "BookGrid",
+            "id": "book-grid",
             "props": {
-              "progress": 0.42
+              "viewMode": "cover"
             },
-            "children": []
+            "children": [
+              {
+                "type": "BookCard",
+                "id": "book-1",
+                "props": {
+                  "bookId": "bk-001",
+                  "title": "三体",
+                  "author": "刘慈欣"
+                },
+                "children": []
+              },
+              {
+                "type": "BookCard",
+                "id": "book-2",
+                "props": {
+                  "bookId": "bk-002",
+                  "title": "基地",
+                  "author": "阿西莫夫"
+                },
+                "children": []
+              },
+              {
+                "type": "BookCard",
+                "id": "book-3",
+                "props": {
+                  "bookId": "bk-003",
+                  "title": "球状闪电",
+                  "author": "刘慈欣"
+                },
+                "children": []
+              }
+            ]
           }
         ]
       },

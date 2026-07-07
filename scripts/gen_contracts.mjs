@@ -227,39 +227,51 @@ function normalizeComponent(c) {
   };
 }
 
+// Collect every prop key used across all view-state components, mapped to its
+// ArkTS type. Drives the generated ViewStateProps interface so new fixture
+// props (e.g. viewMode) flow through without hand-editing the generator.
+//
+// BASELINE_PROPS covers props the renderer reads even when no fixture sets
+// them (e.g. ProgressBar.progress defaults to 0.42 inside ViewStateRenderer).
+const BASELINE_PROPS = {
+  progress: 'number',
+};
+
+function collectPropTypes(viewStates) {
+  const types = new Map(Object.entries(BASELINE_PROPS));
+  const visit = (c) => {
+    const props = c.props || {};
+    for (const k of Object.keys(props)) {
+      const v = props[k];
+      let t;
+      if (Array.isArray(v)) t = 'string[]';
+      else if (typeof v === 'number') t = 'number';
+      else if (typeof v === 'boolean') t = 'boolean';
+      else t = 'string';
+      // Conflicting types across fixtures → widen to string.
+      if (types.has(k) && types.get(k) !== t) t = 'string';
+      types.set(k, t);
+    }
+    (c.children || []).forEach(visit);
+  };
+  viewStates.forEach((v) => (v.components || []).forEach(visit));
+  return types;
+}
+
 function genViewStateTable() {
   const entries = VIEW_STATES.map((v) => ({
     routeId: v.routeId,
     pageState: v.pageState,
     components: (v.components || []).map(normalizeComponent),
   }));
+  const propTypes = collectPropTypes(VIEW_STATES);
+  const propLines = [...propTypes.keys()].sort().map((k) => `  ${k}?: ${propTypes.get(k)};`);
+  const propsIface = `export interface ViewStateProps {\n${propLines.join('\n')}\n}`;
   const body = JSON.stringify(entries, null, 2);
   return `${HEADER}
 import { RouteId } from './RouteTable';
 
-export interface ViewStateProps {
-  author?: string;
-  bookId?: string;
-  chapterTitle?: string;
-  color?: string;
-  destructive?: boolean;
-  filter?: string;
-  html?: string;
-  label?: string;
-  message?: string;
-  overlayType?: string;
-  paragraphs?: string[];
-  placeholder?: string;
-  progress?: number;
-  query?: string;
-  retryable?: boolean;
-  rssId?: string;
-  selected?: string;
-  sources?: number;
-  theme?: string;
-  title?: string;
-  unread?: number;
-}
+${propsIface}
 
 export interface ViewStateComponent {
   type: string;

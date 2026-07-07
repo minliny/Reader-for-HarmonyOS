@@ -3,6 +3,7 @@ import TokenCoverageTests from './TokenCoverage.test';
 import RouteDispatchTests from './RouteDispatch.test';
 import MotionResolverTests from './MotionResolver.test';
 import ShellSlotTests from './ShellSlot.test';
+import BookshelfViewStateTests from './BookshelfViewState.test';
 import HostSmokeTest from '../main/ets/host/tests/HostSmoke.test.ets';
 
 export default function testsuit(): void {
@@ -10,5 +11,6 @@ export default function testsuit(): void {
   RouteDispatchTests();
   MotionResolverTests();
   ShellSlotTests();
+  BookshelfViewStateTests();
   HostSmokeTest();
 }
