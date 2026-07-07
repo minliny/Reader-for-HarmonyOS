@@ -1,89 +1,194 @@
-// ViewStateRenderer — maps a DemoViewState component type string → @Component.
-// The single place that knows how to render a view-state component type. Phase 2 will
-// pass fixture props; Phase 1 demo components render self-contained fixture content.
-import { DemoViewState } from '../fixtures/DemoViewState';
-import { AppTopBar, BackTopBar, BottomNav, Loading, Empty, ErrorState, Offline } from './SharedComponents';
+// ViewStateRenderer — renders generated ViewStateTable component trees.
+// Shell-owned components (top bars / bottom nav) are filtered by ViewStateTable;
+// this renderer owns body components and simple recursive container children.
+import { ViewStateComponent, ViewStateTable } from '../../contract/generated/ViewStateTable';
+import { AppTopBar, BackTopBar, BottomNav, Loading, Empty, ErrorState, Offline,
+  DemoButton, Input, ListRow, DemoList, Card, Content, FormSection, FilterBar, Overlay } from './SharedComponents';
 import { ContinueReadingCard, BookshelfShelfSection, ShelfChipGroup, ShelfSectionHeader, BookCard, BookCover, BookGrid } from './BookshelfComponents';
 import { BookHero, BookSummaryCard, BookChapterList } from './BookDetailComponents';
 import { ReadingBackgroundLayer, ReadingTextFlow, ReadingInfoLayer, TapZones } from './ReaderComponents';
 import { SettingsHomeSection, SettingsSection, SettingsListItem } from './SettingsComponents';
 import { DiscoverSourceBar, DiscoverEntryRow, DiscoverFilterTrigger, DiscoverListHead, DiscoverBookList } from './DiscoverComponents';
 import { RssSearchEntry, RssModeRow, RssSourceOverview, RssArticleSection } from './RssComponents';
+import { ProgressBar, BookTitleAuthor, SourceStatus, ReadButton, DirectoryPreview, BookIntro, ConfigEntry,
+  SearchEntry, SourceTypeSegment, CurrentSourceCard, SourceCategoryChips, DiscoveryContentCard, SourceStatusBar,
+  SubscriptionSummaryCard, FeedStatusChips, FeedSourceChips, RssEntryItem, UnreadIndicator,
+  LocalOverviewCard, QuickEntryGrid, SearchInputBox, ScopeSelector, GroupSelector, SearchHistoryList } from './ContractComponents';
 
 @Component
 export struct ViewStateRenderer {
   @StorageProp('reader.routeId') routeId: string = 'bookshelf';
+  @StorageProp('reader.pageState') pageState: string = 'default';
 
   build() {
     Column() {
-      ForEach(DemoViewState.componentsFor(this.routeId), (type: string, idx: number) => {
+      ForEach(ViewStateTable.bodyComponentsFor(this.routeId, this.pageState), (component: ViewStateComponent, idx: number) => {
         Column() {
-          this.renderComponent(type)
+          this.renderComponent(component)
         }
         .margin({ bottom: 8 })
-      }, (type: string, idx: number) => `${type}-${idx}`)
+      }, (component: ViewStateComponent, idx: number) => `${component.id}-${component.type}-${idx}`)
     }
     .width('100%')
     .height('100%')
   }
 
-  @Builder renderComponent(type: string) {
-    if (type === 'AppTopBar') {
+  private textOr(value: string | undefined, fallback: string): string {
+    return value !== undefined && value !== '' ? value : fallback;
+  }
+
+  private numOr(value: number | undefined, fallback: number): number {
+    return value !== undefined ? value : fallback;
+  }
+
+  @Builder renderChildren(children: ViewStateComponent[]) {
+    ForEach(children, (child: ViewStateComponent, idx: number) => {
+      this.renderComponent(child)
+    }, (child: ViewStateComponent, idx: number) => `${child.id}-${child.type}-${idx}`)
+  }
+
+  @Builder renderComponent(component: ViewStateComponent) {
+    if (component.type === 'AppTopBar') {
       AppTopBar()
-    } else if (type === 'BackTopBar') {
+    } else if (component.type === 'BackTopBar') {
       BackTopBar()
-    } else if (type === 'BottomNav') {
+    } else if (component.type === 'BottomNav') {
       BottomNav()
-    } else if (type === 'Loading') {
+    } else if (component.type === 'Loading') {
       Loading()
-    } else if (type === 'Empty') {
-      Empty()
-    } else if (type === 'ErrorState') {
+    } else if (component.type === 'Empty') {
+      Empty({ message: this.textOr(component.props.message, '书架为空') })
+    } else if (component.type === 'ErrorState') {
       ErrorState()
-    } else if (type === 'Offline') {
+    } else if (component.type === 'Offline') {
       Offline()
-    } else if (type === 'ContinueReadingCard') {
-      ContinueReadingCard()
-    } else if (type === 'BookshelfShelfSection') {
+    } else if (component.type === 'ContinueReadingCard') {
+      ContinueReadingCard({ title: this.textOr(component.props.title, '示例书') })
+    } else if (component.type === 'BookshelfShelfSection') {
       BookshelfShelfSection()
-    } else if (type === 'BookHero') {
+    } else if (component.type === 'BookHero') {
       BookHero()
-    } else if (type === 'BookSummaryCard') {
+    } else if (component.type === 'BookSummaryCard') {
       BookSummaryCard()
-    } else if (type === 'BookChapterList') {
+    } else if (component.type === 'BookChapterList') {
       BookChapterList()
-    } else if (type === 'ReadingBackgroundLayer') {
+    } else if (component.type === 'ReadingBackgroundLayer') {
       ReadingBackgroundLayer()
-    } else if (type === 'ReadingTextFlow') {
+    } else if (component.type === 'ReadingTextFlow') {
       ReadingTextFlow()
-    } else if (type === 'ReadingInfoLayer') {
+    } else if (component.type === 'ReadingInfoLayer') {
       ReadingInfoLayer()
-    } else if (type === 'TapZones') {
+    } else if (component.type === 'TapZones') {
       TapZones()
-    } else if (type === 'SettingsHomeSection') {
+    } else if (component.type === 'SettingsHomeSection') {
       SettingsHomeSection()
-    } else if (type === 'SettingsSection') {
+    } else if (component.type === 'SettingsSection') {
       SettingsSection()
-    } else if (type === 'SettingsListItem') {
+    } else if (component.type === 'SettingsListItem') {
       SettingsListItem()
-    } else if (type === 'DiscoverSourceBar') {
+    } else if (component.type === 'DiscoverSourceBar') {
       DiscoverSourceBar()
-    } else if (type === 'DiscoverEntryRow') {
+    } else if (component.type === 'DiscoverEntryRow') {
       DiscoverEntryRow()
-    } else if (type === 'DiscoverFilterTrigger') {
+    } else if (component.type === 'DiscoverFilterTrigger') {
       DiscoverFilterTrigger()
-    } else if (type === 'DiscoverListHead') {
+    } else if (component.type === 'DiscoverListHead') {
       DiscoverListHead()
-    } else if (type === 'DiscoverBookList') {
+    } else if (component.type === 'DiscoverBookList') {
       DiscoverBookList()
-    } else if (type === 'RssSearchEntry') {
+    } else if (component.type === 'RssSearchEntry') {
       RssSearchEntry()
-    } else if (type === 'RssModeRow') {
+    } else if (component.type === 'RssModeRow') {
       RssModeRow()
-    } else if (type === 'RssSourceOverview') {
+    } else if (component.type === 'RssSourceOverview') {
       RssSourceOverview()
-    } else if (type === 'RssArticleSection') {
+    } else if (component.type === 'RssArticleSection') {
       RssArticleSection()
+    } else if (component.type === 'Button') {
+      DemoButton({ label: this.textOr(component.props.label, '操作'), destructive: component.props.destructive === true })
+    } else if (component.type === 'Input') {
+      Input({ placeholder: this.textOr(component.props.placeholder, '输入...') })
+    } else if (component.type === 'ListRow') {
+      ListRow({ title: this.textOr(component.props.title, '列表项') })
+    } else if (component.type === 'List') {
+      if (component.children.length > 0) {
+        Column() {
+          this.renderChildren(component.children)
+        }
+        .width('100%')
+      } else {
+        DemoList()
+      }
+    } else if (component.type === 'Card') {
+      Card({ title: this.textOr(component.props.title, '卡片标题'), subtitle: this.textOr(component.props.author, '卡片摘要') })
+    } else if (component.type === 'Content') {
+      Content({ text: this.textOr(component.props.message, this.textOr(component.props.html, '正文内容')) })
+    } else if (component.type === 'FormSection') {
+      FormSection({ title: this.textOr(component.props.title, '表单分组') })
+    } else if (component.type === 'FilterBar') {
+      FilterBar()
+    } else if (component.type === 'Overlay') {
+      Overlay()
+    } else if (component.type === 'Error') {
+      ErrorState()
+    } else if (component.type === 'ShelfChipGroup') {
+      ShelfChipGroup()
+    } else if (component.type === 'ShelfSectionHeader') {
+      ShelfSectionHeader({ title: this.textOr(component.props.title, '我的书架') })
+    } else if (component.type === 'BookCard') {
+      BookCard({ title: this.textOr(component.props.title, '三体'), author: this.textOr(component.props.author, '刘慈欣') })
+    } else if (component.type === 'BookCover') {
+      BookCover()
+    } else if (component.type === 'BookGrid') {
+      BookGrid()
+    } else if (component.type === 'ProgressBar') {
+      ProgressBar({ progress: this.numOr(component.props.progress, 0.42) })
+    } else if (component.type === 'BookTitleAuthor') {
+      BookTitleAuthor({ title: this.textOr(component.props.title, '三体'), author: this.textOr(component.props.author, '刘慈欣') })
+    } else if (component.type === 'SourceStatus') {
+      SourceStatus()
+    } else if (component.type === 'ReadButton') {
+      ReadButton({ label: this.textOr(component.props.label, '开始阅读') })
+    } else if (component.type === 'DirectoryPreview') {
+      DirectoryPreview()
+    } else if (component.type === 'BookIntro') {
+      BookIntro()
+    } else if (component.type === 'ConfigEntry') {
+      ConfigEntry()
+    } else if (component.type === 'SearchEntry') {
+      SearchEntry()
+    } else if (component.type === 'SourceTypeSegment') {
+      SourceTypeSegment()
+    } else if (component.type === 'CurrentSourceCard') {
+      CurrentSourceCard()
+    } else if (component.type === 'SourceCategoryChips') {
+      SourceCategoryChips()
+    } else if (component.type === 'DiscoveryContentCard') {
+      DiscoveryContentCard()
+    } else if (component.type === 'SourceStatusBar') {
+      SourceStatusBar()
+    } else if (component.type === 'SubscriptionSummaryCard') {
+      SubscriptionSummaryCard({ sources: this.numOr(component.props.sources, 25), unread: this.numOr(component.props.unread, 28) })
+    } else if (component.type === 'FeedStatusChips') {
+      FeedStatusChips()
+    } else if (component.type === 'FeedSourceChips') {
+      FeedSourceChips()
+    } else if (component.type === 'RssEntryItem') {
+      RssEntryItem({ title: this.textOr(component.props.title, 'AI 周报') })
+    } else if (component.type === 'UnreadIndicator') {
+      UnreadIndicator()
+    } else if (component.type === 'LocalOverviewCard') {
+      LocalOverviewCard()
+    } else if (component.type === 'QuickEntryGrid') {
+      QuickEntryGrid()
+    } else if (component.type === 'SearchInputBox') {
+      SearchInputBox({ query: this.textOr(component.props.query, ''), placeholder: this.textOr(component.props.placeholder, '搜索书名/作者') })
+    } else if (component.type === 'ScopeSelector') {
+      ScopeSelector()
+    } else if (component.type === 'GroupSelector') {
+      GroupSelector()
+    } else if (component.type === 'SearchHistoryList') {
+      SearchHistoryList()
     } else {
       Empty()
     }

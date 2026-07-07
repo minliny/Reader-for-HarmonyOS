@@ -32,7 +32,9 @@ Read these files (do not skip):
 Scan the task queue for the first task with `Status: READY`.
 - If none: report all BLOCKED/PENDING reasons and **STOP**.
 - If a BLOCKED_BY_DECISION task is blocking the chain: report the decision needed.
-- If a BLOCKED_BY_BRIDGE_RUNTIME task is found: check if HOS-2B (bridge runtime) is complete. If bridge available, mark READY. If not, report and skip to next available task.
+- If an older task row says it is waiting for bridge runtime, re-triage it under
+  CURRENT MODE. Bridge work is open; only measured missing prerequisites may
+  block the task.
 
 ## Task Selection Priority
 
@@ -52,59 +54,62 @@ Scan the task queue for the first task with `Status: READY`.
 11. HOS-8B tasks (platform adapters)
 12. HOS-9B tasks (QA gates)
 
-## CURRENT MODE: VALIDATION ONLY
+## CURRENT MODE: FEATURE + INTEGRATION OPEN
 
-Feature development (HOS-0A through HOS-9B) is **CLOSED**. All 67 feature tasks DONE.
-Only **HOS-10 Validation/RC Hardening** tasks are eligible for execution.
-DO NOT create new feature tasks. DO NOT expand pages/. DO NOT add UI.
+Feature development is open for Core bridge, Host Adapter, WebView/JS runtime, WebDAV/sync, HTTP, cookie, media download, auth/login, and device evidence work. Validation/RC hardening remains valid, but it no longer blocks feature work.
+New feature tasks may be created when they are scoped, clean-room, evidence-bound, and tied to Reader UI Contract / Reader-Core-Native boundaries.
+UI changes are allowed when required for auth/login, WebView capability proof, Core bridge evidence, route integration, or production Host Adapter workflows.
 
-## Task Selection Priority (Validation Mode)
+## Task Selection Priority
 
-1. HOS-10A tasks (bridge cross-validation): 001 → 002 → ... → 006
-2. HOS-10B tasks (simulator + network): 001 → 002
-3. HOS-10C tasks (release readiness): 001
+1. Core bridge and NAPI tasks.
+2. Host Adapter capability tasks: HTTP, cookie, WebView, JS runtime, media download, WebDAV/sync, auth/login, anti-bot.
+3. Device evidence tasks on attached HarmonyOS targets.
+4. UI route integration required by auth/login, WebView, reader, and source workflows.
+5. Validation/RC hardening tasks.
 
-Foundation/Headless tasks are CLOSED. Do not re-execute them.
+Foundation/headless tasks may be re-executed when needed to validate new bridge, adapter, or device evidence work.
 
 ## SCOPE HARD CONSTRAINTS (effective immediately)
 
 These constraints override all task definitions. No task may violate them.
 
-### CURRENT PHASE: BRIDGE_BLOCKED
-- **HOS-2B-002 (Swift bridge) is NOT complete.**
-- Until bridge is done, all capabilities that depend on it are LOCAL_FALLBACK / FIXTURE_MODE only.
-- **NO capability may be marked PRODUCTION_READY until bridge cross-validation passes.**
+### CURRENT PHASE: BRIDGE + HOST ADAPTER IMPLEMENTATION OPEN
+- HOS-2B-002 no longer blocks feature work.
+- Bridge work should target the selected HarmonyOS bridge design, preferably NAPI + Reader-Core-Native C ABI unless a task documents a better option.
+- Capabilities may move beyond LOCAL_FALLBACK / FIXTURE_MODE once implemented and validated with headless and device evidence.
+- A capability may be marked PRODUCTION_READY only after measured validation passes; do not claim readiness from fixtures alone.
 
-### FORBIDDEN (UI scope)
-- **Do NOT create new pages/** files. Existing shell placeholders may stay.
-- **Do NOT add @Entry, @Component, @Builder, or @State to any new code.**
-- **Do NOT expand existing page placeholders** beyond the current placeholder text.
-- **Do NOT add UI components, layouts, themes, or visual polish.**
-- **Do NOT add ViewModel files that bind to UI pages.** Existing BookshelfViewModel is SHELL_ONLY_PLACEHOLDER.
-- **Do NOT wire services/repository to UI components.**
+### UI SCOPE
+- New pages, components, builders, state holders, ViewModels, services, and repository wiring are allowed when required by Core bridge, Host Adapter, auth/login, WebView, source, reader, import, sync, or evidence workflows.
+- UI state must still flow through reducer/store and ViewState where applicable.
+- Avoid unrelated visual polish that is not tied to a validated product workflow.
 
-### ALLOWED (headless scope)
+### ALLOWED (headless + integration scope)
 - **models/**: DTO interfaces, enums, type definitions
 - **repository/**: Data access layer (no UI imports)
-- **services/**: Business logic (no UI imports, no @State/@Component)
+- **services/**: Business logic
 - **adapters/**: Platform wrappers (@ohos.* APIs)
-- **parser/**: TXT/EPUB parsing logic (mark as LOCAL_FALLBACK until bridge validated)
+- **parser/**: TXT/EPUB parsing logic
+- **bridge/** and native sources: NAPI/Core bridge implementation
+- **webview/**, **http/**, **cookie/**, **auth/**, **sync/**, **media/**, **antibot/**: Host Adapter implementations and tests
+- **pages/** and UI modules: production workflow UI needed for auth/login, WebView, source, reader, import, sync, and evidence
 - **__tests__/**: Headless domain validators
 - **docs/PLANNING/**: Planning documents, capability matrices, reports
 
 ### CAPABILITY STATUS RULES
-- DTO mirroring → mark CONTRACT_ONLY (types exist, no execution)
-- Fixture-based search/TOC/content → mark FIXTURE_MODE (not production)
-- Mock repositories → mark MOCK_ONLY
-- Bridge client without server → mark BRIDGE_BLOCKED
-- TXTParser ArkTS port → mark LOCAL_FALLBACK_EXPERIMENTAL
-- WebDAV/Sync contracts → mark CONTRACT_ONLY
-- UI-bound ViewModel → mark SHELL_ONLY_PLACEHOLDER
+- DTO mirroring → mark CONTRACT_ONLY until execution is implemented.
+- Fixture-based search/TOC/content → mark FIXTURE_MODE until real Core/Host execution passes.
+- Mock repositories → mark MOCK_ONLY.
+- Bridge client/server partial implementation → mark BRIDGE_PARTIAL until cross-validation passes.
+- TXT/EPUB parser ArkTS port → mark LOCAL_FALLBACK_EXPERIMENTAL until validated against corpus/device evidence.
+- WebDAV/Sync contracts → may progress to IMPLEMENTED / DEVICE_PROVEN once real Host Adapter tests pass.
+- UI-bound ViewModel → may be production if reducer/store/ViewState ownership and device proof are satisfied.
 
 ### BRIDGE GATE
-- Until HOS-2B-002 is complete and cross-validation passes, all headless services remain in FIXTURE_MODE.
-- Next READY task after bridge is HOS-2B-002. If BLOCKED, loop should report and stop.
-- No new tasks should be created that assume bridge is available.
+- Bridge work is now allowed.
+- Headless services may move out of FIXTURE_MODE only after real Core/Host execution is measured.
+- Tasks may create bridge-dependent work, but each task must declare whether it is CONTRACT_ONLY, IMPLEMENTED, DEVICE_READY, DEVICE_PROVEN, or PRODUCTION_READY.
 
 ## Execution Rules
 
@@ -122,11 +127,9 @@ These constraints override all task definitions. No task may violate them.
 ### FORBIDDEN (never do, even if task says otherwise)
 - Modify Reader-Core files (`/Users/minliny/Documents/Reader-Core`)
 - Copy iOS Swift code into HarmonyOS as-is
-- Access real book source websites
-- Make real HTTP requests to external servers (except Reader-Core localhost if Strategy B)
-- Implement WebDAV, JS Runtime, WebView Runtime
-- Implement TXT/EPUB parser (read raw text only)
-- Install npm packages, ohpm packages, or system tools
+- Copy Android/Kotlin code into HarmonyOS as-is
+- Fake network, device, cookie, source, login, or release-gate success
+- Persist or commit real credentials, session cookies, tokens, or private account data
 - Install cron, modify crontab, or create LaunchAgents
 - `git reset --hard`, `git clean -fd`, `git push --force`
 - Delete user files outside task scope
@@ -220,7 +223,7 @@ If a task requires a user decision (HOS-D001 through HOS-D008):
 | DONE | Completed successfully |
 | BLOCKED | Missing prerequisite (task, env, or decision) |
 | BLOCKED_BY_DECISION | Waiting for user decision |
-| BLOCKED_BY_BRIDGE_RUNTIME | Waiting for HOS-2B bridge runtime |
+| LEGACY_BRIDGE_WAIT | Historical bridge-runtime wait label; re-triage under CURRENT MODE |
 | PENDING | Planned but prerequisites not yet met |
 | ENV_BLOCKED | Build tools missing |
 | CONTRACT_ONLY | Contract defined, implementation deferred |
@@ -229,20 +232,20 @@ If a task requires a user decision (HOS-D001 through HOS-D008):
 ## Quick Reference: Stage Dependencies
 
 ```
-Foundation Loop:
-HOS-0A (planning) ── DONE (no deps)
-  └── HOS-1A (app shell) ── PARTIAL (003 READY)
-       └── HOS-2A (bridge strategy) ── BLOCKED (needs 1A complete)
-            └── HOS-3A (bookshelf UI) ── BLOCKED
-                 └── HOS-4A/5A/6A ── PENDING
+Feature + Integration Loop (current):
+HOS-2B (Core bridge / NAPI runtime) ── OPEN
+HOS-8B (Host Adapter capabilities) ── OPEN
+  ├── HTTP / Cookie / WebView / JS runtime ── OPEN
+  ├── WebDAV / Sync / Media / Auth / Login ── OPEN
+  └── Device evidence ── OPEN when a target is attached
 
-Headless Capability Loop (parallel to Foundation):
-HOS-2B (bridge runtime) ── PENDING (needs 2A + Core repo access)
-  ├── HOS-3B (bookshelf domain) ── PENDING (needs 2A DTOs + 2B bridge or fixture)
-  ├── HOS-4B (search domain) ── PENDING (BLOCKED_BY_BRIDGE_RUNTIME)
-  ├── HOS-5B (TOC/content domain) ── PENDING (BLOCKED_BY_BRIDGE_RUNTIME)
-  ├── HOS-6B (import domain) ── PENDING (needs 3B + 2B)
-  ├── HOS-7B (sync domain) ── PENDING (needs 3B + 2B)
-  ├── HOS-8B (platform adapters) ── PENDING (needs 1A complete)
-  └── HOS-9B (QA gates) ── PENDING (needs all B-stages)
+Foundation Loop (may proceed in parallel):
+HOS-1A (app shell) ── PARTIAL
+HOS-2A (bridge strategy) ── OPEN for refinement, not a blocker
+HOS-3A+ (bookshelf / reader / source / sync UI) ── OPEN when tied to bridge,
+  Host Adapter, auth/login, WebView, source, reader, import, sync, or evidence workflows
+
+Historical blocked / bridge-wait labels in older planning rows
+must not be used as blockers after CURRENT MODE became FEATURE + INTEGRATION OPEN.
+Only current environment, explicit user decision, or measured missing prerequisite can block a task.
 ```

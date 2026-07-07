@@ -1,4 +1,6 @@
-// OverlayHost — shell slot for overlays (dropdown / sheet / toast / reader-control panel).
+// OverlayHost — shell slot for generic overlays (dropdown / sheet / toast).
+// Reader control is rendered by ReaderShell as a bottom dock, not by this generic
+// centered overlay host.
 // Reads `overlay` from AppStorage. Appear/disappear uses the motion-duration overlay token
 // (centralized here, never animateTo in pages). Backdrop derived from ColorTokens.ink + opacity
 // (no raw hex).
@@ -13,7 +15,7 @@ export struct OverlayHost {
   @StorageProp('reader.overlay') overlayKind: string = '';
 
   build() {
-    if (this.overlayKind !== '') {
+    if (this.overlayKind !== '' && this.overlayKind !== 'reader-control') {
       Stack() {
         Column()
           .width('100%').height('100%')

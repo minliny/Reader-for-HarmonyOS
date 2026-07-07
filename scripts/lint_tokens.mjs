@@ -27,6 +27,11 @@ function walk(dir) {
         // Skip comment-only lines.
         const trimmed = line.trim();
         if (trimmed.startsWith('//')) return;
+        // Per-line opt-out for system-layer values that are not design tokens
+        // (e.g. the transparent system-bar color in SafeAreaAdapter). Mark the
+        // line with `// lint:allow` and a reason; this stays narrow — only design
+        // tokens are meant to flow through TokenAdapter / contract/generated/.
+        if (trimmed.includes('// lint:allow')) return;
         if (HEX.test(line)) offenders.push(`${path.relative(ETS, p)}:${i + 1} raw hex: ${line.trim()}`);
         if (PX.test(line)) offenders.push(`${path.relative(ETS, p)}:${i + 1} raw px: ${line.trim()}`);
       });

@@ -73,7 +73,8 @@ export struct SettingsHomeSection {
 // Legacy: SettingsSection + SettingsListItem (kept for compatibility, unused on home).
 @Component
 export struct SettingsSection {
-  private label: string = '通用';
+  @Prop label: string = '通用';
+
   build() {
     Text(this.label).fontSize(13).fontWeight(900).fontColor(ColorTokens.ink).margin({ left: 12, top: 9, bottom: 5 })
   }

@@ -1,7 +1,7 @@
 // gen_contracts.mjs — generate ArkTS contract bindings + color.json from Reader UI Contract fixtures.
 // Idempotent: re-run produces identical output. Safe to re-run whenever contracts change.
 //
-// Source (read-only): ../Reader UI/contracts/fixtures/{token,route,motion,motion-policy}.json
+// Source (read-only): ../Reader UI/contracts/fixtures/{token,route,motion,motion-policy,view-state}.json
 //   (override with READER_UI_CONTRACTS env var pointing at the fixtures dir)
 // Output:
 //   entry/src/main/ets/contract/generated/{ColorTokens,DimensionTokens,TextConstraintTokens,TypeTokens,MotionTokens,ShadowTokens,RouteTable,MotionSpecTable,MotionPolicyTable}.ets
@@ -41,6 +41,7 @@ const TOKENS = readJson('token.fixtures.json');
 const ROUTES = readJson('route.fixtures.json');
 const MOTIONS = readJson('motion.fixtures.json');
 const POLICIES = readJson('motion-policy.fixtures.json');
+const VIEW_STATES = readJson('view-state.fixtures.json');
 
 function ensureDir(d) { fs.mkdirSync(d, { recursive: true }); }
 ensureDir(OUT_ETS);
@@ -216,6 +217,86 @@ function genRouteTable() {
   return `${HEADER}\nexport type RouteId = ${idUnion};\nexport type ShellId = ${shellUnion};\n\nexport class RouteTable {\n  static shellOf(id: string): ShellId {\n    switch (id) {\n${shellCases}\n      default: return 'FlowShell';\n    }\n  }\n\n  static mainTabOf(id: string): string | null {\n    switch (id) {\n${mainTabCases}\n      default: return null;\n    }\n  }\n}\n`;
 }
 
+// ── ViewStateTable.ets ────────────────────────────────────────────────────
+function normalizeComponent(c) {
+  return {
+    type: c.type,
+    id: c.id || '',
+    props: c.props || {},
+    children: (c.children || []).map(normalizeComponent),
+  };
+}
+
+function genViewStateTable() {
+  const entries = VIEW_STATES.map((v) => ({
+    routeId: v.routeId,
+    pageState: v.pageState,
+    components: (v.components || []).map(normalizeComponent),
+  }));
+  const body = JSON.stringify(entries, null, 2);
+  return `${HEADER}
+import { RouteId } from './RouteTable';
+
+export interface ViewStateProps {
+  author?: string;
+  bookId?: string;
+  chapterTitle?: string;
+  color?: string;
+  destructive?: boolean;
+  filter?: string;
+  html?: string;
+  label?: string;
+  message?: string;
+  overlayType?: string;
+  paragraphs?: string[];
+  placeholder?: string;
+  progress?: number;
+  query?: string;
+  retryable?: boolean;
+  rssId?: string;
+  selected?: string;
+  sources?: number;
+  theme?: string;
+  title?: string;
+  unread?: number;
+}
+
+export interface ViewStateComponent {
+  type: string;
+  id: string;
+  props: ViewStateProps;
+  children: ViewStateComponent[];
+}
+
+export interface ViewStateEntry {
+  routeId: RouteId;
+  pageState: string;
+  components: ViewStateComponent[];
+}
+
+export class ViewStateTable {
+  static readonly ENTRIES: ViewStateEntry[] = ${body};
+
+  static componentsFor(routeId: string, pageState: string): ViewStateComponent[] {
+    let fallback: ViewStateComponent[] = [];
+    for (const entry of ViewStateTable.ENTRIES) {
+      if (entry.routeId !== routeId) continue;
+      if (entry.pageState === pageState) return entry.components;
+      if (entry.pageState === 'default' || fallback.length === 0) {
+        fallback = entry.components;
+      }
+    }
+    return fallback;
+  }
+
+  static bodyComponentsFor(routeId: string, pageState: string): ViewStateComponent[] {
+    return ViewStateTable.componentsFor(routeId, pageState).filter((component: ViewStateComponent) =>
+      component.type !== 'AppTopBar' && component.type !== 'BackTopBar' && component.type !== 'BottomNav');
+  }
+}
+`;
+}
+
 // ── MotionSpecTable.ets ──────────────────────────────────────────────────
 function genMotionSpecTable() {
   const iface = `export interface MotionSpecTokens { durationToken: string; easingToken: string; }\nexport interface MotionSpec {\n  id: string;\n  durationMs: number;\n  easing: string;\n  implementationKind: string;\n  containerRole: string;\n  operation: string;\n  visualPattern: string;\n  interruptPolicy: string;\n  reducedMotionPolicy: string;\n  tokens: MotionSpecTokens;\n  guardRules: string[];\n}`;
@@ -284,6 +365,7 @@ writeEts('MotionTokens.ets', genMotionTokens());
 writeEts('ShadowTokens.ets', genShadowTokens());
 writeEts('TokenRegistry.ets', genTokenRegistry());
 writeEts('RouteTable.ets', genRouteTable());
+writeEts('ViewStateTable.ets', genViewStateTable());
 writeEts('MotionSpecTable.ets', genMotionSpecTable());
 writeEts('MotionPolicyTable.ets', genMotionPolicyTable());
 writeEts('DemoAliasTokens.ets', genDemoAliasTokens());
@@ -294,4 +376,4 @@ fs.writeFileSync(path.join(OUT_RES_DARK, 'color.json'), colorJson.dark);
 console.log('  wrote entry/src/main/resources/dark/element/color.json');
 
 console.log(`\nDone. Contracts: ${CONTRACTS_DIR}`);
-console.log(`Tokens: ${TOKENS.length} | Routes: ${ROUTES.length} | Motions: ${MOTIONS.length} | Policies: ${POLICIES.filter((p) => p && p.id).length}`);
+console.log(`Tokens: ${TOKENS.length} | Routes: ${ROUTES.length} | ViewStates: ${VIEW_STATES.length} | Motions: ${MOTIONS.length} | Policies: ${POLICIES.filter((p) => p && p.id).length}`);

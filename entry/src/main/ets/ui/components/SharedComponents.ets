@@ -175,9 +175,11 @@ export struct Loading {
 
 @Component
 export struct Empty {
+  @Prop message: string = '书架为空';
+
   build() {
     Column() {
-      Text('书架为空')
+      Text(this.message)
         .fontSize(ReaderTypography.sectionTitle().fontSize)
         .fontColor(ColorTokens.muted)
     }
@@ -220,6 +222,187 @@ export struct Offline {
         .fontColor(ColorTokens.muted)
     }
     .width('100%').height('100%')
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+  }
+}
+
+// --- Generic view-state components (contract ComponentType enum) ---
+// Phase 1 renderers for the generic component types used across secondary flow
+// pages (search / rss / source / sync). They consume simple fixture props such as
+// labels, messages and titles while richer child layout stays in ViewStateRenderer.
+// Struct names that collide with
+// ArkUI built-ins (Button, List) are prefixed with Demo; the contract type string
+// ('Button' / 'List') is what DemoViewState cites, and ViewStateRenderer maps it.
+@Component
+export struct DemoButton {
+  @Prop label: string = '操作';
+  @Prop destructive: boolean = false;
+
+  build() {
+    Text(this.label)
+      .fontSize(ReaderTypography.actionLabel().fontSize)
+      .fontWeight(700)
+      .fontColor(ColorTokens.paper)
+      .backgroundColor(ColorTokens.primary)
+      .padding({ left: SpacingTokens.lg, right: SpacingTokens.lg, top: SpacingTokens.sm, bottom: SpacingTokens.sm })
+      .borderRadius(DemoAliasTokens.radiusPill)
+  }
+}
+
+@Component
+export struct Input {
+  @Prop placeholder: string = '输入...';
+
+  build() {
+    TextInput({ placeholder: this.placeholder })
+      .fontSize(ReaderTypography.bookMeta().fontSize)
+      .fontColor(ColorTokens.ink)
+      .backgroundColor(ColorTokens.metaBg)
+      .borderRadius(DemoAliasTokens.radiusSm)
+      .height(44)
+      .padding({ left: SpacingTokens.md, right: SpacingTokens.md })
+  }
+}
+
+@Component
+export struct ListRow {
+  @Prop title: string = '列表项';
+
+  build() {
+    Row() {
+      Text(this.title)
+        .fontSize(ReaderTypography.bookMeta().fontSize)
+        .fontColor(ColorTokens.ink)
+        .layoutWeight(1)
+      Text('›')
+        .fontSize(20)
+        .fontColor(ColorTokens.muted)
+    }
+    .width('100%')
+    .height(56)
+    .padding({ left: 20, right: 20 })
+    .alignItems(VerticalAlign.Center)
+  }
+}
+
+@Component
+export struct DemoList {
+  build() {
+    Column() {
+      ListRow()
+      ListRow()
+      ListRow()
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
+export struct Card {
+  @Prop title: string = '卡片标题';
+  @Prop subtitle: string = '卡片摘要';
+
+  build() {
+    Column() {
+      Text(this.title)
+        .fontSize(ReaderTypography.sectionTitle().fontSize)
+        .fontColor(ColorTokens.ink)
+      Text(this.subtitle)
+        .fontSize(ReaderTypography.bookMeta().fontSize)
+        .fontColor(ColorTokens.muted)
+        .margin({ top: SpacingTokens.xs })
+    }
+    .width('100%')
+    .padding(SpacingTokens.md)
+    .borderRadius(DemoAliasTokens.radiusLg)
+    .backgroundColor(DemoAliasTokens.surface)
+  }
+}
+
+@Component
+export struct Content {
+  @Prop text: string = '正文内容';
+
+  build() {
+    Text(this.text)
+      .fontSize(ReaderTypography.readerBody().fontSize)
+      .fontColor(ColorTokens.ink)
+      .width('100%')
+      .padding({ left: 20, right: 20 })
+  }
+}
+
+@Component
+export struct FormSection {
+  @Prop title: string = '表单分组';
+
+  build() {
+    Column() {
+      Text(this.title)
+        .fontSize(ReaderTypography.sectionTitle().fontSize)
+        .fontColor(ColorTokens.ink)
+      Row() {
+        Text('字段')
+          .fontSize(ReaderTypography.bookMeta().fontSize)
+          .fontColor(ColorTokens.muted)
+          .layoutWeight(1)
+        Text('值')
+          .fontSize(ReaderTypography.bookMeta().fontSize)
+          .fontColor(ColorTokens.ink)
+      }
+      .width('100%')
+      .height(48)
+      .margin({ top: SpacingTokens.sm })
+      .alignItems(VerticalAlign.Center)
+    }
+    .width('100%')
+    .padding({ left: 20, right: 20, top: SpacingTokens.sm, bottom: SpacingTokens.sm })
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
+export struct FilterBar {
+  build() {
+    Row() {
+      Text('全部')
+        .fontSize(13).fontWeight(700)
+        .fontColor(ColorTokens.paper)
+        .backgroundColor(ColorTokens.primary)
+        .padding({ left: SpacingTokens.md, right: SpacingTokens.md, top: SpacingTokens.xs, bottom: SpacingTokens.xs })
+        .borderRadius(DemoAliasTokens.radiusPill)
+      Text('男频')
+        .fontSize(13)
+        .fontColor(ColorTokens.muted)
+        .padding({ left: SpacingTokens.md, right: SpacingTokens.md, top: SpacingTokens.xs, bottom: SpacingTokens.xs })
+      Text('女频')
+        .fontSize(13)
+        .fontColor(ColorTokens.muted)
+        .padding({ left: SpacingTokens.md, right: SpacingTokens.md, top: SpacingTokens.xs, bottom: SpacingTokens.xs })
+    }
+    .width('100%')
+    .padding({ left: 20, right: 20 })
+  }
+}
+
+@Component
+export struct Overlay {
+  build() {
+    Column() {
+      Column() {
+        Text('覆盖层')
+          .fontSize(ReaderTypography.sectionTitle().fontSize)
+          .fontColor(ColorTokens.ink)
+      }
+      .width('100%')
+      .padding(SpacingTokens.lg)
+      .backgroundColor(ColorTokens.paper)
+      .borderRadius(DemoAliasTokens.radiusXl)
+    }
+    .width('100%')
+    .height('100%')
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
   }

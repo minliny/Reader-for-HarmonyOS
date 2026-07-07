@@ -13,6 +13,8 @@ import { ReaderUiStore } from '../store/ReaderUiStore';
 //   button (.fd-continue-action-button) "阅读": min 74×40, pill, primary, 13/800.
 @Component
 export struct ContinueReadingCard {
+  @Prop title: string = '示例书';
+
   build() {
     Row() {
       Stack() {
@@ -32,7 +34,7 @@ export struct ContinueReadingCard {
           .fontWeight(900)
           .fontColor(ColorTokens.primary)
           .fontFamily(ReaderTypography.sansFamily())
-        Text('示例书')
+        Text(this.title)
           .fontSize(20)
           .fontWeight(700)
           .fontColor(ColorTokens.ink)
@@ -75,9 +77,11 @@ export struct ContinueReadingCard {
 //   filter/gear), each 34×34 circle with 20×20 fd-small-icon.
 @Component
 export struct ShelfSectionHeader {
+  @Prop title: string = '我的书架';
+
   build() {
     Row() {
-      Text('我的书架')
+      Text(this.title)
         .fontSize(15)
         .fontWeight(700)
         .fontColor(ColorTokens.ink)
