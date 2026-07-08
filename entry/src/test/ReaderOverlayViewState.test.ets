@@ -54,12 +54,14 @@ export default function ReaderOverlayViewStateTests(): void {
     });
 
     // ── Body shape: bespoke components, not generic Overlay ───────────────
-    it('controlLayerBodyIsReaderBaseAndBottomBar', 0, () => {
+    it('controlLayerBodyIsReaderBaseFloatingControlsAndBottomBar', 0, () => {
       const body = ViewStateTable.bodyComponentsFor('control-layer-base-v2', 'default');
       const types = topTypes(body);
       expect(types[0]).assertEqual('ReaderBase');
-      expect(types[1]).assertEqual('ReaderControlSheet');
-      expect(types[2]).assertEqual('ReaderBottomBar');
+      expect(types[1]).assertEqual('FloatingBrightness');
+      expect(types[2]).assertEqual('FloatingQuickActions');
+      expect(types[3]).assertEqual('FloatingPageControl');
+      expect(types[4]).assertEqual('ReaderBottomBar');
     });
 
     it('directoryOverlayBodyIsBaseBarAndDirectoryPanel', 0, () => {

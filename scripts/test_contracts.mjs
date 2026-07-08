@@ -206,36 +206,31 @@ test('reader overlay panels keep normalized handoff visible copy', () => {
 test('reader control layer uses top-area structure instead of immersive info chrome', () => {
   const reader = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderComponents.ets'));
   assert.ok(reader.includes('export struct ReaderTopArea'), 'control-layer routes need the normalized reader-top-area component');
-  assert.ok(reader.includes("Text('长夜余火')"), 'reader top area must show the normalized book title');
-  assert.ok(reader.includes("Text('第 32 章 雨夜 · 优书网')"), 'reader top area must show the normalized chapter/source line');
-  assert.ok(reader.includes("Text('换源')"), 'reader top area must expose the source switch action');
-  assert.ok(reader.includes("return this.controlLayer() ? '雨夜' : '第一章 科学边界'"),
-    'control-layer reading surface must show the normalized chapter title, not the book title');
-  assert.ok(reader.includes('.textAlign(TextAlign.Center)'),
-    'control-layer reading title must keep the demo centered reader layout');
-  assert.ok(reader.includes('.textIndent(2 * 18)'),
-    'control-layer paragraphs must keep the demo first-line indent');
-  assert.ok(!reader.includes("return this.controlLayer() ? '深空信号'"),
-    'control-layer body title must not duplicate the top-area book title');
-  assert.ok(!reader.includes('textAlign(this.controlLayer() ? TextAlign.Start'),
-    'control-layer title must not switch to a bespoke left-aligned layout');
-  assert.ok(!reader.includes('textIndent(this.controlLayer() ? 0'),
-    'control-layer paragraphs must not drop the demo indent');
-  assert.ok(!reader.includes("Text('第一章：阿长与《山海经》')"), 'reader top area must not split into a detached chapter meta row');
-  assert.ok(!reader.includes("Text('本地书籍')"), 'reader top area must not split into a detached source chip');
+  assert.ok(reader.includes("Text('深空信号')"), 'reader top area must show the normalized book title');
+  assert.ok(reader.includes("Text('第一章：阿长与《山海经》')"), 'reader top area must expose the normalized chapter meta row');
+  assert.ok(reader.includes("Text('本地书籍')"), 'reader top area must expose the normalized source chip');
+  assert.ok(reader.includes("return this.controlLayer() ? '深空信号' : '第一章 科学边界'"),
+    'control-layer reading surface must show the normalized content title');
+  assert.ok(reader.includes('.textAlign(this.controlLayer() ? TextAlign.Start : TextAlign.Center)'),
+    'control-layer title must use normalized left-aligned content layout');
+  assert.ok(reader.includes('.textIndent(this.controlLayer() ? 0 : 2 * 18)'),
+    'control-layer paragraphs must not keep immersive reader first-line indent');
+  assert.ok(reader.includes('top: this.controlLayer() ? 128 : 72'),
+    'control-layer body must leave space for normalized top bar and meta row');
+  assert.ok(reader.includes('bottom: this.controlLayer() ? 230 + this.safeAreaBottom : 48 + this.safeAreaBottom'),
+    'control-layer body must reserve space for floating controls');
+  assert.ok(!reader.includes("Text('长夜余火')"), 'control layer must not use stale live-demo book title');
+  assert.ok(!reader.includes("Text('第 32 章 雨夜 · 优书网')"), 'control layer must not use stale live-demo chapter/source line');
   assert.ok(reader.includes("return this.routeId !== 'reader'"), 'ReaderBase must branch between immersive reader and control-layer chrome');
   assert.ok(reader.includes('ReaderTopArea()'), 'control-layer branch must render ReaderTopArea');
   assert.ok(reader.includes('ReadingInfoLayer({ theme: this.theme })'), 'plain reader branch keeps immersive corner info');
-  assert.ok(reader.includes('top: this.controlLayer() ? 100 : 72'),
-    'control-layer body must add only native top-area clearance, not a bespoke large offset');
-  assert.ok(reader.includes('bottom: 48 + this.safeAreaBottom'), 'control-layer body must keep the demo reader bottom inset');
   const baseStart = reader.indexOf('export struct ReaderBase');
   const base = reader.slice(baseStart);
   assert.ok(base.indexOf('ReaderTopArea()') < base.indexOf('ReadingInfoLayer({ theme: this.theme })'),
     'ReaderBase should prefer top-area chrome for control routes, then fall back to immersive info for plain reader');
 });
 
-test('reader control route fixture uses one bottom sheet, not detached floating controls', () => {
+test('reader control route fixture uses normalized floating controls, not legacy bottom sheet', () => {
   const VS = readJson('view-state.fixtures.json');
   const src = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderOverlayComponents.ets'));
   const byRoute = (routeId) => {
@@ -245,28 +240,22 @@ test('reader control route fixture uses one bottom sheet, not detached floating 
   };
   assert.deepEqual(
     byRoute('control-layer-base-v2'),
-    ['ReaderBase', 'ReaderControlSheet', 'ReaderBottomBar'],
-    'control-layer-base-v2 must mirror demo bottom sheet + module nav structure'
+    ['ReaderBase', 'FloatingBrightness', 'FloatingQuickActions', 'FloatingPageControl', 'ReaderBottomBar'],
+    'control-layer-base-v2 must mirror normalized floating controls + bottom bar structure'
   );
-  const sheetStart = src.indexOf('export struct ReaderControlSheet');
-  const sheetEnd = src.indexOf('// Legacy contract compatibility', sheetStart);
-  const sheetSrc = src.slice(sheetStart, sheetEnd);
-  assert.ok(sheetSrc.includes('private readonly dockMaxWidth: number = 365'),
-    'control sheet host must use the demo 365/390 width ratio');
-  assert.ok(sheetSrc.includes('private readonly sheetHeight: number = 330'),
-    'control sheet host must reserve the demo sheet/nav background height');
-  assert.ok(sheetSrc.includes('private readonly controlTop: number = 28'),
-    'control sheet main area must start at the demo grabber clearance');
-  assert.ok(sheetSrc.includes('private readonly moduleReserve: number = 111'),
-    'control sheet main area must reserve the module-nav band inside the host');
-  assert.ok(sheetSrc.includes('return this.sheetHeight - this.controlTop - this.moduleReserve'),
-    'control sheet main height must be derived from demo sheet dimensions');
-  assert.ok(sheetSrc.includes(".width('94%')"),
-    'control sheet host must stay wider than the module nav');
-  assert.ok(sheetSrc.includes('.height(this.sheetHeight)'),
-    'control sheet host height must use the shared demo constant');
-  assert.ok(!sheetSrc.includes('readerModuleNavHeight - 1'),
-    'control sheet host must share the bottom anchor with the module nav, not float above it');
+  assert.equal(byRoute('control-layer-base-v2').includes('ReaderControlSheet'), false,
+    'control-layer-base-v2 must not render the stale bottom sheet component');
+  assert.ok(src.includes('export struct FloatingBrightness'), 'control layer must render the brightness rail as a detached component');
+  assert.ok(src.includes('export struct FloatingQuickActions'), 'control layer must render quick actions as a detached component');
+  assert.ok(src.includes('export struct FloatingPageControl'), 'control layer must render page control as a detached component');
+  assert.ok(src.includes('.position({ x: 12, y: 294 })'), 'brightness rail must sit at normalized left-center coordinates');
+  assert.ok(src.includes("Image($r('app.media.reader_icon_sun_primary')).width(22).height(22)"),
+    'brightness rail must not use a generic more icon placeholder');
+  assert.ok(src.includes('.margin({ bottom: this.safeAreaBottom + 148 })'), 'quick actions must use normalized bottom anchor');
+  assert.ok(src.includes('.margin({ bottom: this.safeAreaBottom + 86 })'), 'page control must use normalized bottom anchor');
+  assert.ok(src.includes('.height(SizeTokens.bottomBarHeight + this.safeAreaBottom)'), 'bottom bar must be full-width 68vp plus safe area');
+  assert.ok(!src.includes("if (this.routeId === 'control-layer-base-v2') {\n      ReaderControlSheet()"),
+    'FloatingQuickActions must not proxy back to ReaderControlSheet');
   for (const routeId of ['reader-search-overlay-v2', 'reader-replace-overlay-v2', 'reader-auto-scroll-overlay-v2']) {
     const types = byRoute(routeId);
     assert.equal(types.includes('FloatingQuickActions'), false, `${routeId} must not render detached quick actions`);

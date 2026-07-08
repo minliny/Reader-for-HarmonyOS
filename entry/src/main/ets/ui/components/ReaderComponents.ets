@@ -56,7 +56,11 @@ export struct ReadingTextFlow {
     '通讯台的指示灯已经闪烁了三个标准时。在这片被称为“寂静航线”的星域里，通常除了背景辐射的白噪音，什么也听不到。艾伦揉了揉干涩的眼睛，盯着那个代表未知频段的跳动波形。',
     '“这不是随机的脉冲星信号，”领航员索菲亚走到他身后，指着屏幕边缘的傅里叶变换图谱，“看这里的周期性间断，它有明显的结构，像是一种原始的二进制。”',
     '空间站外，恒星的光芒被一层稀薄的星云物质过滤，呈现出一种黯淡的铁锈红。船舱内的维生系统发出平缓的嗡嗡声，与屏幕上跳动的波形形成了一种奇异的共振。',
-    '“求救信号。”艾伦打断了她，手指在控制台的触控板上快速滑过，试图锁定信号源的坐标。'
+    '那声音起初像是冰层断裂的脆响，随后逐渐演变成一种低沉的、仿佛是在水下敲击金属的节奏。每敲击三次，就会有一次长达十秒的绝对静默。',
+    '“三短，一长静默……”索菲亚的脸色变了，“在旧地球时代的航海通讯里，这是……”',
+    '“求救信号。”艾伦打断了她，手指在控制台的触控板上快速滑过，试图锁定信号源的坐标。“但问题是，这个波段是我们在五十年前就已经淘汰的军用加密频道。而且，坐标指向的是——”',
+    '他咽了一口唾沫，看着屏幕上解析出的星图坐标。',
+    '“指向的是我们母星系的方向。可那里，在四十年前的大坍缩中，就已经什么都不剩了。”'
   ];
 
   private inkColor(): string {
@@ -68,44 +72,49 @@ export struct ReadingTextFlow {
   }
 
   private title(): string {
-    return this.controlLayer() ? '雨夜' : '第一章 科学边界';
+    return this.controlLayer() ? '深空信号' : '第一章 科学边界';
   }
 
   // Use real chapter content from the reducer when available; fall back to
   // fixture paragraphs so the reader page still renders in demo flows.
   private paragraphs(): string[] {
+    if (this.controlLayer()) {
+      return this.controlParagraphs;
+    }
     if (this.chapterContent.length > 0) {
       return this.chapterContent;
     }
-    return this.controlLayer() ? this.controlParagraphs : this.immersiveParagraphs;
+    return this.immersiveParagraphs;
   }
 
   build() {
     Scroll() {
       Column() {
         Text(this.title())
-          .fontSize(23)
+          .fontSize(this.controlLayer() ? 28 : 23)
           .fontWeight(700)
           .fontColor(this.inkColor())
           .fontFamily(ReaderTypography.serifFamily())
-          .textAlign(TextAlign.Center)
+          .lineHeight(this.controlLayer() ? 36 : 28)
+          .textAlign(this.controlLayer() ? TextAlign.Start : TextAlign.Center)
           .width('100%')
-          .margin({ bottom: 24 })
+          .margin({ bottom: this.controlLayer() ? 32 : 24 })
         ForEach(this.paragraphs(), (p: string, i: number) => {
           Text(p)
             .fontSize(18)
             .fontColor(this.inkColor())
             .fontFamily(ReaderTypography.serifFamily())
-            .lineHeight(18 * 1.96)
-            .textIndent(2 * 18)
-            .margin({ bottom: 16 })
+            .lineHeight(this.controlLayer() ? 18 * 1.72 : 18 * 1.96)
+            .textIndent(this.controlLayer() ? 0 : 2 * 18)
+            .textAlign(TextAlign.Start)
+            .margin({ bottom: this.controlLayer() ? 24 : 16 })
         }, (p: string, i: number) => `${i}`)
       }
       .padding({
-        top: this.controlLayer() ? 100 : 72,
-        left: 32,
-        right: 32,
-        bottom: 48 + this.safeAreaBottom,
+        top: this.controlLayer() ? 128 : 72,
+        left: this.controlLayer() ? 24 : 32,
+        right: this.controlLayer() ? 24 : 32,
+        bottom: this.controlLayer() ? 230 + this.safeAreaBottom : 48 + this.safeAreaBottom,
       })
       .alignItems(HorizontalAlign.Start)
     }
@@ -169,63 +178,79 @@ export struct ReadingInfoLayer {
 }
 
 // .reader-top-area: top control chrome shown on control-layer and overlay
-// routes. Mirrors demo .fd-reader-top: one rounded floating card with back,
-// title/source, source switch, and more. The plain reader route keeps
-// ReadingInfoLayer instead.
+// routes. Mirrors normalized HTML: a full-width 56vp top bar plus a 48vp meta
+// row. The plain reader route keeps ReadingInfoLayer instead.
 @Component
 export struct ReaderTopArea {
   @StorageProp(SafeAreaAdapter.K_TOP) safeAreaTop: number = SafeAreaAdapter.DEFAULT_TOP;
 
   build() {
     Stack({ alignContent: Alignment.Top }) {
-      Row({ space: 8 }) {
-        Image($r('app.media.reader_icon_back_dark'))
-          .width(28)
-          .height(28)
-          .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
+      Column() {
+        Row() {
+          Row() {
+            Image($r('app.media.reader_icon_back_dark'))
+              .width(28)
+              .height(28)
+              .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
+          }
+          .width(40)
+          .justifyContent(FlexAlign.Start)
+          .alignItems(VerticalAlign.Center)
 
-        Column({ space: 4 }) {
-          Text('长夜余火')
-            .fontSize(16)
-            .fontWeight(700)
+          Text('深空信号')
+            .fontSize(18)
+            .fontWeight(600)
             .fontColor(ColorTokens.controlInk)
             .fontFamily(ReaderTypography.sansFamily())
+            .textAlign(TextAlign.Center)
+            .layoutWeight(1)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-          Text('第 32 章 雨夜 · 优书网')
-            .fontSize(12)
-            .fontColor(ColorTokens.muted)
-            .fontFamily(ReaderTypography.sansFamily())
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-        .layoutWeight(1)
-        .alignItems(HorizontalAlign.Start)
 
-        Row({ space: 4 }) {
-          Image($r('app.media.reader_icon_source_switch_dark')).width(18).height(18)
-          Text('换源')
-            .fontSize(12)
-            .fontWeight(800)
+          Row({ space: 16 }) {
+            Image($r('app.media.ui_icon_refresh_dark')).width(24).height(24)
+            Image($r('app.media.reader_icon_source_switch_dark'))
+              .width(24)
+              .height(24)
+              .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'source-switch-results' }))
+            Image($r('app.media.reader_icon_more_dark')).width(24).height(24)
+          }
+          .width(112)
+          .justifyContent(FlexAlign.End)
+          .alignItems(VerticalAlign.Center)
+        }
+        .width('100%')
+        .height(56)
+        .padding({ left: 16, right: 16 })
+        .backgroundColor(ColorTokens.surface)
+        .border({ width: { bottom: 1 }, color: ColorTokens.border })
+
+        Row() {
+          Text('第一章：阿长与《山海经》')
+            .fontSize(14)
             .fontColor(ColorTokens.controlInk)
             .fontFamily(ReaderTypography.sansFamily())
+            .layoutWeight(1)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Text('本地书籍')
+            .fontSize(12)
+            .fontWeight(600)
+            .fontColor(ColorTokens.primary)
+            .fontFamily(ReaderTypography.sansFamily())
+            .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+            .backgroundColor(ColorTokens.floatingControlBgAlt)
+            .borderRadius(DemoAliasTokens.radiusPill)
         }
-        .width(62)
-        .height(42)
-        .justifyContent(FlexAlign.Center)
-        .alignItems(VerticalAlign.Center)
-        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'source-switch-results' }))
-
-        Image($r('app.media.reader_icon_more_dark')).width(24).height(24)
+        .width('100%')
+        .height(48)
+        .padding({ left: 16, right: 16 })
+        .backgroundColor(ColorTokens.metaBg)
+        .border({ width: { bottom: 1 }, color: ColorTokens.border })
       }
-      .width('92%')
-      .height(54)
-      .padding({ left: 12, right: 12 })
-      .margin({ top: this.safeAreaTop + 18 })
-      .backgroundColor(ColorTokens.floatingControlBg)
-      .border({ width: 1, color: ColorTokens.border })
-      .borderRadius(DemoAliasTokens.radiusXl)
-      .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
+      .width('100%')
+      .margin({ top: this.safeAreaTop })
     }
     .width('100%')
     .height('100%')

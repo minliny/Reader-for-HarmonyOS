@@ -393,11 +393,12 @@ export struct ReaderControlSheet {
   }
 }
 
-// Legacy contract compatibility. Older generated tables used
-// FloatingQuickActions for the control route; render the real control sheet
-// there, and keep the old quick row for any stale non-control references.
+// ── Floating quick actions (.reader-floating-quick-actions) ───────────────
+//   Four 48vp circular icon buttons centered above the page-control pill.
+//   No visible labels; semantics are carried by route actions.
 @Component
 export struct FloatingQuickActions {
+  @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
   @StorageProp('reader.displayedRouteId') routeId: string = 'control-layer-base-v2';
 
   private items(): Array<[string, string, string]> {
@@ -412,29 +413,25 @@ export struct FloatingQuickActions {
   }
 
   build() {
-    if (this.routeId === 'control-layer-base-v2') {
-      ReaderControlSheet()
-    } else {
-      Stack({ alignContent: Alignment.Bottom }) {
-        Row({ space: 20 }) {
-          ForEach(this.items(), (it: [string, string, string]) => {
-            Column() {
-              Image($r(`app.media.${it[1]}`)).width(24).height(24)
-            }
-            .width(48).height(48)
-            .justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
-            .backgroundColor(ColorTokens.floatingControlBg)
-            .border({ width: 1, color: ColorTokens.border })
-            .borderRadius(DemoAliasTokens.radiusPill)
-            .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
-            .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: it[2] as RouteId }))
-          }, (it: [string, string, string]) => it[0])
-        }
-        .margin({ bottom: SizeTokens.readerModuleNavHeight + 116 })
+    Stack({ alignContent: Alignment.Bottom }) {
+      Row({ space: 20 }) {
+        ForEach(this.items(), (it: [string, string, string]) => {
+          Column() {
+            Image($r(`app.media.${it[1]}`)).width(24).height(24)
+          }
+          .width(48).height(48)
+          .justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
+          .backgroundColor(ColorTokens.floatingControlBg)
+          .border({ width: 1, color: ColorTokens.border })
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: it[2] as RouteId }))
+        }, (it: [string, string, string]) => it[0])
       }
-      .width('100%')
-      .height('100%')
+      .margin({ bottom: this.safeAreaBottom + 148 })
     }
+    .width('100%')
+    .height('100%')
   }
 }
 
@@ -443,45 +440,44 @@ export struct FloatingQuickActions {
 //   bottom bar. Progress is a 4px track with a 25% fill + 16px thumb.
 @Component
 export struct FloatingPageControl {
-  @StorageProp('reader.displayedRouteId') routeId: string = 'control-layer-base-v2';
+  @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
 
   build() {
-    if (this.routeId !== 'control-layer-base-v2') {
-      Stack({ alignContent: Alignment.Bottom }) {
-        Row() {
-          Image($r('app.media.reader_icon_chevron_left_chapter')).width(24).height(24)
-            .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
-          Stack({ alignContent: Alignment.Start }) {
-            Column().width('100%').height(4).borderRadius(DemoAliasTokens.radiusPill)
-              .backgroundColor(ColorTokens.border)
-            Column().width('25%').height(4).borderRadius(DemoAliasTokens.radiusPill)
-              .backgroundColor(ColorTokens.primary)
-          }
-          .layoutWeight(1).height(4).margin({ left: 16, right: 16 })
-          Image($r('app.media.reader_icon_chevron_chapter')).width(24).height(24)
+    Stack({ alignContent: Alignment.Bottom }) {
+      Row() {
+        Image($r('app.media.reader_icon_chevron_left_chapter')).width(24).height(24)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
+        Stack({ alignContent: Alignment.Start }) {
+          Column().width('100%').height(4).borderRadius(DemoAliasTokens.radiusPill)
+            .backgroundColor(ColorTokens.border)
+          Column().width('25%').height(4).borderRadius(DemoAliasTokens.radiusPill)
+            .backgroundColor(ColorTokens.primary)
+          Column().width(16).height(16).borderRadius(DemoAliasTokens.radiusPill)
+            .backgroundColor(ColorTokens.primary)
+            .border({ width: 2, color: ColorTokens.floatingControlBg })
+            .margin({ left: '25%' })
         }
-        .width(342).height(52).padding({ left: 24, right: 24 })
-        .justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center)
-        .backgroundColor(ColorTokens.floatingControlBg)
-        .border({ width: 1, color: ColorTokens.border })
-        .borderRadius(DemoAliasTokens.radiusPill)
-        .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
-        .margin({ bottom: SizeTokens.readerModuleNavHeight + 54 })
+        .layoutWeight(1).height(24).margin({ left: 16, right: 16 })
+        Image($r('app.media.reader_icon_chevron_chapter')).width(24).height(24)
       }
-      .width('100%')
-      .height('100%')
+      .width(342).height(52).padding({ left: 24, right: 24 })
+      .justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center)
+      .backgroundColor(ColorTokens.floatingControlBg)
+      .border({ width: 1, color: ColorTokens.border })
+      .borderRadius(DemoAliasTokens.radiusPill)
+      .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
+      .margin({ bottom: this.safeAreaBottom + 86 })
     }
+    .width('100%')
+    .height('100%')
   }
 }
 
-// ── Module nav (.fd-reader-module-nav) ────────────────────────────────────
+// ── Control bottom bar (.reader-control-bottom-bar) ───────────────────────
 @Component
 export struct ReaderBottomBar {
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
   @StorageProp('reader.displayedRouteId') routeId: string = 'control-layer-base-v2';
-
-  private readonly dockMaxWidth: number = 340;
-  private readonly dockRight: number = 24;
 
   private items: Array<[string, string, string]> = [
     ['directory', '目录', 'reader-directory-overlay-v2'],
@@ -514,45 +510,30 @@ export struct ReaderBottomBar {
   }
 
   build() {
-    Stack({ alignContent: Alignment.BottomEnd }) {
-      Column() {
-        Row({ space: 4 }) {
-          ForEach(this.items, (it: [string, string, string]) => {
-            Column({ space: 4 }) {
-              Column() {
-                Image(this.moduleIcon(it[0])).width(26).height(26)
-              }
-              .width(42)
-              .height(42)
-              .justifyContent(FlexAlign.Center)
-              .alignItems(HorizontalAlign.Center)
-              .backgroundColor(this.active(it[0]) ? ColorTokens.primaryDark : ColorTokens.floatingControlBgAlt)
-              .borderRadius(DemoAliasTokens.radiusPill)
-              Text(it[1])
-                .fontSize(12)
-                .fontWeight(800)
-                .fontColor(this.active(it[0]) ? ColorTokens.primaryDark : ColorTokens.controlInk)
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-            }
-            .layoutWeight(1)
-            .height('100%')
-            .justifyContent(FlexAlign.Center)
-            .alignItems(HorizontalAlign.Center)
-            .borderRadius(DemoAliasTokens.radiusLg)
-            .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: it[2] as RouteId }))
-          }, (it: [string, string, string]) => it[2])
-        }
-        .width('100%')
-        .height(SizeTokens.readerModuleNavHeight)
-        .padding({ left: 8, right: 8, top: 8, bottom: 8 })
-        .backgroundColor(ColorTokens.paperBright)
-        .border({ width: 1, color: ColorTokens.border })
-        .borderRadius(DemoAliasTokens.radiusLg)
+    Stack({ alignContent: Alignment.Bottom }) {
+      Row({ space: 4 }) {
+        ForEach(this.items, (it: [string, string, string]) => {
+          Column({ space: 4 }) {
+            Image(this.moduleIcon(it[0])).width(26).height(26)
+            Text(it[1])
+              .fontSize(12)
+              .fontWeight(500)
+              .fontColor(ColorTokens.controlInk)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+          }
+          .layoutWeight(1)
+          .height(56)
+          .justifyContent(FlexAlign.Center)
+          .alignItems(HorizontalAlign.Center)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: it[2] as RouteId }))
+        }, (it: [string, string, string]) => it[2])
       }
-      .width('90%')
-      .constraintSize({ maxWidth: this.dockMaxWidth })
-      .margin({ right: this.dockRight, bottom: this.safeAreaBottom + 32 })
+      .width('100%')
+      .height(SizeTokens.bottomBarHeight + this.safeAreaBottom)
+      .padding({ left: 8, right: 8, bottom: this.safeAreaBottom })
+      .backgroundColor(ColorTokens.bottomBarBg)
+      .border({ width: { top: 1 }, color: ColorTokens.border })
     }
     .width('100%')
     .height('100%')
@@ -816,7 +797,7 @@ export struct ReaderAutoScrollPanel {
 // ── Floating brightness (.reader-floating-brightness) ────────────────────
 //   Vertical pill rail at left-center: brightness icon + 4px vertical track
 //   (fill %) + chevron. The brightness_auto icon asset is TBD — placeholder
-//   icon for now. Positioned left-center via align(Start) + offset x:12.
+//   icon for now. Positioned left-center using the normalized 390x844 frame.
 @Component
 export struct FloatingBrightness {
   @State value: number = 40;
@@ -824,7 +805,7 @@ export struct FloatingBrightness {
   build() {
     Stack({ alignContent: Alignment.Start }) {
       Column({ space: 16 }) {
-        Image($r('app.media.reader_icon_more_dark')).width(22).height(22)
+        Image($r('app.media.reader_icon_sun_primary')).width(22).height(22)
         Stack({ alignContent: Alignment.Bottom }) {
           Column().width(4).height('100%').borderRadius(DemoAliasTokens.radiusPill)
             .backgroundColor(ColorTokens.border)
@@ -840,7 +821,7 @@ export struct FloatingBrightness {
       .border({ width: 1, color: ColorTokens.border })
       .borderRadius(DemoAliasTokens.radiusPill)
       .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
-      .margin({ left: 12 })
+      .position({ x: 12, y: 294 })
     }
     .width('100%')
     .height('100%')
