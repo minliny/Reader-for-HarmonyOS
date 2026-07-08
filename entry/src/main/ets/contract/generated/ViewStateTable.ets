@@ -2263,24 +2263,14 @@ export class ViewStateTable {
         "type": "BackTopBar",
         "id": "topbar",
         "props": {
-          "title": "反馈"
+          "title": "关于与反馈"
         },
         "children": []
       },
       {
-        "type": "Content",
-        "id": "feedback-hint",
-        "props": {
-          "message": "通过 Issue 或邮件提交反馈。"
-        },
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "feedback-submit",
-        "props": {
-          "label": "提交反馈"
-        },
+        "type": "AboutFeedbackPage",
+        "id": "about-feedback-page",
+        "props": {},
         "children": []
       }
     ]
@@ -2933,32 +2923,15 @@ export class ViewStateTable {
         "type": "BackTopBar",
         "id": "topbar",
         "props": {
-          "title": "发现书源批量"
+          "title": "发现源管理"
         },
         "children": []
       },
       {
-        "type": "List",
-        "id": "bulk-list",
+        "type": "DiscoverSourceBulkPage",
+        "id": "discover-source-bulk-page",
         "props": {},
-        "children": [
-          {
-            "type": "ListRow",
-            "id": "bulk-1",
-            "props": {
-              "title": "书源 1"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "bulk-2",
-            "props": {
-              "title": "书源 2"
-            },
-            "children": []
-          }
-        ]
+        "children": []
       }
     ]
   },
@@ -2975,10 +2948,13 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "Empty",
+        "type": "DiscoverStatePage",
         "id": "discover-empty",
         "props": {
-          "message": "暂无发现内容"
+          "variant": "empty",
+          "title": "当前没有启用发现的书源",
+          "message": "启用发现后，可以在这里浏览书源提供的排行榜、分类和书单。",
+          "action": "去书源管理"
         },
         "children": []
       },
@@ -3005,9 +2981,14 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "ErrorState",
+        "type": "DiscoverStatePage",
         "id": "discover-error-state",
-        "props": {},
+        "props": {
+          "variant": "error",
+          "title": "发现入口解析失败",
+          "message": "当前入口返回异常，已保留上一批缓存结果。你可以重试、刷新入口、编辑源或切换书源。",
+          "action": "重试"
+        },
         "children": []
       },
       {
@@ -3033,9 +3014,13 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "Loading",
+        "type": "DiscoverStatePage",
         "id": "discover-loading",
-        "props": {},
+        "props": {
+          "variant": "loading",
+          "title": "正在加载发现内容",
+          "message": "正在从启用发现的书源获取排行榜和分类入口。"
+        },
         "children": []
       },
       {
@@ -3061,10 +3046,13 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "Empty",
+        "type": "DiscoverStatePage",
         "id": "discover-no-results",
         "props": {
-          "message": "未找到相关内容"
+          "variant": "no-results",
+          "title": "当前条件没有发现结果",
+          "message": "可以重置筛选、切换入口，或刷新当前书源。",
+          "action": "重置筛选"
         },
         "children": []
       },

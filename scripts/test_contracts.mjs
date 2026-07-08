@@ -253,12 +253,18 @@ test('reader control route fixture uses one bottom sheet, not detached floating 
   const sheetSrc = src.slice(sheetStart, sheetEnd);
   assert.ok(sheetSrc.includes('private readonly dockMaxWidth: number = 365'),
     'control sheet host must use the demo 365/390 width ratio');
+  assert.ok(sheetSrc.includes('private readonly sheetHeight: number = 330'),
+    'control sheet host must reserve the demo sheet/nav background height');
+  assert.ok(sheetSrc.includes('private readonly controlTop: number = 28'),
+    'control sheet main area must start at the demo grabber clearance');
+  assert.ok(sheetSrc.includes('private readonly moduleReserve: number = 111'),
+    'control sheet main area must reserve the module-nav band inside the host');
+  assert.ok(sheetSrc.includes('return this.sheetHeight - this.controlTop - this.moduleReserve'),
+    'control sheet main height must be derived from demo sheet dimensions');
   assert.ok(sheetSrc.includes(".width('94%')"),
     'control sheet host must stay wider than the module nav');
-  assert.ok(sheetSrc.includes('.height(330)'),
-    'control sheet host must reserve the demo sheet/nav background height');
-  assert.ok(sheetSrc.includes('bottom: 111'),
-    'control sheet main area must reserve the module-nav band inside the host');
+  assert.ok(sheetSrc.includes('.height(this.sheetHeight)'),
+    'control sheet host height must use the shared demo constant');
   assert.ok(!sheetSrc.includes('readerModuleNavHeight - 1'),
     'control sheet host must share the bottom anchor with the module nav, not float above it');
   for (const routeId of ['reader-search-overlay-v2', 'reader-replace-overlay-v2', 'reader-auto-scroll-overlay-v2']) {
@@ -405,6 +411,16 @@ test('discover/rss horizontal chip rows hide native scroll indicators', () => {
   for (const file of ['DiscoverComponents.ets', 'RssComponents.ets']) {
     const src = read(path.join(REPO, 'entry/src/main/ets/ui/components', file));
     assert.ok(src.includes('.scrollBar(BarState.Off)'), `${file} must hide native horizontal Scroll bars`);
+  }
+});
+
+test('discover source bulk route is reachable and owns fixed actions', () => {
+  const discoverSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/DiscoverComponents.ets'));
+  const settingsShellSrc = read(path.join(REPO, 'entry/src/main/ets/ui/shells/SettingsShell.ets'));
+  assert.ok(discoverSrc.includes("id: 'discover-source-bulk'"), 'DiscoverSourceBar must route-push source bulk management');
+  assert.ok(settingsShellSrc.includes("this.routeId === 'discover-source-bulk'"), 'SettingsShell must gate source bulk fixed actions by route');
+  for (const label of ['启用', '禁用', '刷新']) {
+    assert.ok(settingsShellSrc.includes(`label: '${label}'`), `discover-source-bulk fixed action missing ${label}`);
   }
 });
 
@@ -704,9 +720,6 @@ const SCAFFOLD_ALLOWED = new Set([
   // All 53 normalized handoff pages have now been moved out of this allowlist;
   // entries below are non-normalized contract routes that are still scaffold.
   // Phase 2-4: simple list/content/form pages where scaffold is the correct shape.
-  'about-feedback',
-  'discover-source-bulk', 'discover-empty', 'discover-error', 'discover-loading',
-  'discover-no-results',
 ]);
 
 // Aggregate ALL body components across every pageState entry for a route.

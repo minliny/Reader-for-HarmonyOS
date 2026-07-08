@@ -221,6 +221,13 @@ export struct ReaderControlSheet {
 
   private readonly dockMaxWidth: number = 365;
   private readonly dockRight: number = 12;
+  private readonly sheetHeight: number = 330;
+  private readonly controlTop: number = 28;
+  private readonly moduleReserve: number = 111;
+  private readonly sheetPaddingX: number = 12;
+  private readonly railWidth: number = 38;
+  private readonly railGap: number = 14;
+  private readonly quickHeight: number = 76;
 
   private quickActions: Array<[string, string, string]> = [
     ['搜索', 'reader_icon_reader_content_search_action', 'reader-search-overlay-v2'],
@@ -232,16 +239,25 @@ export struct ReaderControlSheet {
     return this.safeAreaBottom + 32;
   }
 
+  private controlHeight(): number {
+    return this.sheetHeight - this.controlTop - this.moduleReserve;
+  }
+
+  private chapterHeight(): number {
+    return this.controlHeight() - this.quickHeight - 6;
+  }
+
   build() {
     Stack({ alignContent: Alignment.BottomEnd }) {
       Column() {
-        Stack({ alignContent: Alignment.Top }) {
+        Stack({ alignContent: Alignment.TopStart }) {
           Column()
             .width(42)
             .height(4)
             .borderRadius(DemoAliasTokens.radiusPill)
             .backgroundColor(ColorTokens.muted)
-            .margin({ top: 9 })
+            .margin({ top: 9, left: '50%' })
+            .translate({ x: -21 })
 
           Row({ space: 14 }) {
             Column({ space: 6 }) {
@@ -260,12 +276,12 @@ export struct ReaderControlSheet {
                   .height(70)
                   .justifyContent(FlexAlign.Center)
                   .alignItems(HorizontalAlign.Center)
-                  .backgroundColor(ColorTokens.floatingControlBg)
+                  .backgroundColor(ColorTokens.surfaceSoft)
                   .borderRadius(DemoAliasTokens.radiusLg)
                   .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: item[2] as RouteId }))
                 }, (item: [string, string, string]) => item[2])
               }
-              .height(76)
+              .height(this.quickHeight)
               .padding({ left: 8, right: 8, top: 9, bottom: 9 })
               .border({ width: 1, color: ColorTokens.border })
               .borderRadius(DemoAliasTokens.radiusLg)
@@ -317,7 +333,7 @@ export struct ReaderControlSheet {
                 .height(30)
                 .alignItems(VerticalAlign.Center)
               }
-              .layoutWeight(1)
+              .height(this.chapterHeight())
               .padding({ left: 10, right: 10, top: 9, bottom: 9 })
               .border({ width: 1, color: ColorTokens.border })
               .borderRadius(DemoAliasTokens.radiusLg)
@@ -347,7 +363,7 @@ export struct ReaderControlSheet {
                 .fontWeight(800)
                 .fontColor(ColorTokens.primary)
             }
-            .width(38)
+            .width(this.railWidth)
             .height('100%')
             .padding({ top: 12, bottom: 12 })
             .justifyContent(FlexAlign.Center)
@@ -356,14 +372,16 @@ export struct ReaderControlSheet {
             .borderRadius(DemoAliasTokens.radiusLg)
           }
           .width('100%')
-          .height('100%')
-          .padding({ left: 12, right: 12, top: 28, bottom: 111 })
+          .height(this.controlHeight())
+          .padding({ left: this.sheetPaddingX, right: this.sheetPaddingX })
+          .margin({ top: this.controlTop })
         }
         .width('100%')
-        .height(330)
+        .height(this.sheetHeight)
+        .clip(true)
         .border({ width: 1, color: ColorTokens.border })
         .borderRadius(22)
-        .backgroundColor(ColorTokens.floatingControlBg)
+        .backgroundColor(ColorTokens.paperBright)
         .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
       }
       .width('94%')
@@ -528,7 +546,7 @@ export struct ReaderBottomBar {
         .width('100%')
         .height(SizeTokens.readerModuleNavHeight)
         .padding({ left: 8, right: 8, top: 8, bottom: 8 })
-        .backgroundColor(ColorTokens.floatingControlBg)
+        .backgroundColor(ColorTokens.paperBright)
         .border({ width: 1, color: ColorTokens.border })
         .borderRadius(DemoAliasTokens.radiusLg)
       }

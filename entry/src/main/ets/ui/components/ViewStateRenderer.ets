@@ -12,7 +12,8 @@ import { SourceSwitchResultsPanel, SourceImportPreviewPage, SourceGroupsPage, So
   SourceDebugRunningPage, SourceDebugResultPage, SourceDebugContentLogPage, SourceCodeViewPage, SourceLogsPage,
   SourceDeleteConfirmPage } from './LibraryComponents';
 import { SettingsHomeSection, SettingsSection, SettingsListItem } from './SettingsComponents';
-import { DiscoverSourceBar, DiscoverEntryRow, DiscoverFilterTrigger, DiscoverListHead, DiscoverBookList } from './DiscoverComponents';
+import { DiscoverSourceBar, DiscoverEntryRow, DiscoverFilterTrigger, DiscoverListHead, DiscoverBookList,
+  DiscoverStatePage, DiscoverSourceBulkPage } from './DiscoverComponents';
 import { RssSearchEntry, RssModeRow, RssSourceOverview, RssArticleSection,
   RssAllPage, RssOriginalPage, RssRefreshingPage, RssOriginalBrowserPage,
   RssFavoriteGroupsPage, RssSourceGroupsPage, RssSourceImportPage } from './RssComponents';
@@ -21,7 +22,7 @@ import { AppShellStructure, MainTabsStructure, SearchHomePage, SearchResultsPage
   SourceSettingsEntryPage, SourceTestResultPage, WebDavConfigPage, SyncSettingsEntryPage, SyncBackupPage,
   SyncErrorPage, SyncProgressPage, RestoreConfirmPage, RestoreProgressPage, RestoreConflictPage, RestoreResultPage,
   RemoteWebDavBooksPage, RssDetailPage, RssEmptyState, RssErrorState, GlobalStatePage,
-  OfflineStatePage, PermissionRequiredPage, AboutVersionPage, LocalBookImportPage, ReadingSettingsEntryPage,
+  OfflineStatePage, PermissionRequiredPage, AboutVersionPage, AboutFeedbackPage, LocalBookImportPage, ReadingSettingsEntryPage,
   BookMoreMenuPage, BookGroupManagementPage, SourceFormPage, GlobalSettingsPage, BackupSettingsPage,
   RssSubscriptionManagementPage, GroupManagementPage, BookBatchManagementPage, BookDirectoryPage } from './StructuralPageComponents';
 import { ProgressBar, BookTitleAuthor, SourceStatus, ReadButton, DirectoryPreview, BookIntro, ConfigEntry,
@@ -210,6 +211,15 @@ export struct ViewStateRenderer {
       DiscoverListHead()
     } else if (component.type === 'DiscoverBookList') {
       DiscoverBookList()
+    } else if (component.type === 'DiscoverStatePage') {
+      DiscoverStatePage({
+        variant: this.textOr(component.props.variant, 'empty'),
+        title: this.textOr(component.props.title, '当前没有启用发现的书源'),
+        message: this.textOr(component.props.message, '启用发现后，可以在这里浏览书源提供的排行榜、分类和书单。'),
+        action: this.textOr(component.props.action, ''),
+      })
+    } else if (component.type === 'DiscoverSourceBulkPage') {
+      DiscoverSourceBulkPage()
     } else if (component.type === 'RssSearchEntry') {
       RssSearchEntry()
     } else if (component.type === 'RssModeRow') {
@@ -363,6 +373,8 @@ export struct ViewStateRenderer {
         title: this.textOr(component.props.title, 'Reader'),
         version: this.textOr(component.props.version, '0.1.0'),
       })
+    } else if (component.type === 'AboutFeedbackPage') {
+      AboutFeedbackPage()
     } else if (component.type === 'LocalBookImportPage') {
       LocalBookImportPage()
     } else if (component.type === 'ReadingSettingsEntryPage') {

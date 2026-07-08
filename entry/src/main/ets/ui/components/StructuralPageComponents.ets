@@ -1472,6 +1472,33 @@ export struct AboutVersionPage {
 }
 
 @Component
+export struct AboutFeedbackPage {
+  private rows: RowEntry[] = [
+    { title: '检查更新', detail: '已是最新', chip: '' },
+    { title: '源码仓库', detail: 'Reader 多端前端与 Core 仓库', chip: '' },
+    { title: '开源许可', detail: '查看第三方依赖与许可文本', chip: '' },
+    { title: '参与贡献', detail: '提交问题、反馈体验或参与适配', chip: '' },
+  ];
+
+  build() {
+    Column() {
+      SectionTitle({ title: '项目信息' })
+      ForEach(this.rows, (entry: RowEntry, idx: number) => {
+        StructureRow({
+          title: entry.title,
+          detail: entry.detail,
+          chip: entry.chip,
+          showChevron: entry.title !== '检查更新',
+        })
+          .margin({ top: idx === 0 ? 10 : 8 })
+      }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
 export struct LocalBookImportPage {
   build() {
     Column() {
