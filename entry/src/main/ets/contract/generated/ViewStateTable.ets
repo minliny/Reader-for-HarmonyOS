@@ -8,7 +8,6 @@ export interface ViewStateProps {
   action?: string;
   author?: string;
   bookId?: string;
-  color?: string;
   destructive?: boolean;
   filter?: string;
   label?: string;
@@ -17,7 +16,6 @@ export interface ViewStateProps {
   progress?: number;
   query?: string;
   retryable?: boolean;
-  rssId?: string;
   selected?: string;
   sources?: number;
   subtitle?: string;
@@ -221,40 +219,32 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "SearchEntry",
-        "id": "discover-search",
+        "type": "DiscoverSourceBar",
+        "id": "discover-source-bar",
         "props": {},
         "children": []
       },
       {
-        "type": "SourceTypeSegment",
-        "id": "source-type",
-        "props": {
-          "selected": "all"
-        },
-        "children": []
-      },
-      {
-        "type": "CurrentSourceCard",
-        "id": "current-source",
+        "type": "DiscoverEntryRow",
+        "id": "discover-entry-row",
         "props": {},
         "children": []
       },
       {
-        "type": "SourceCategoryChips",
-        "id": "source-category",
+        "type": "DiscoverFilterTrigger",
+        "id": "discover-filter",
         "props": {},
         "children": []
       },
       {
-        "type": "DiscoveryContentCard",
-        "id": "discovery-content",
+        "type": "DiscoverListHead",
+        "id": "discover-list-head",
         "props": {},
         "children": []
       },
       {
-        "type": "SourceStatusBar",
-        "id": "source-status",
+        "type": "DiscoverBookList",
+        "id": "discover-book-list",
         "props": {},
         "children": []
       },
@@ -281,47 +271,28 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "SubscriptionSummaryCard",
-        "id": "rss-summary",
-        "props": {
-          "sources": 12,
-          "unread": 28
-        },
+        "type": "RssSearchEntry",
+        "id": "rss-search",
+        "props": {},
         "children": []
       },
       {
-        "type": "FeedStatusChips",
-        "id": "feed-status",
-        "props": {
-          "selected": "all"
-        },
+        "type": "RssModeRow",
+        "id": "rss-mode-row",
+        "props": {},
         "children": []
       },
       {
-        "type": "FeedSourceChips",
-        "id": "feed-source",
-        "props": {
-          "selected": "all"
-        },
+        "type": "RssSourceOverview",
+        "id": "rss-source-overview",
+        "props": {},
         "children": []
       },
       {
-        "type": "RssEntryItem",
-        "id": "rss-entry-1",
-        "props": {
-          "rssId": "rss-001",
-          "title": "示例条目"
-        },
-        "children": [
-          {
-            "type": "UnreadIndicator",
-            "id": "",
-            "props": {
-              "color": "#2F6F93"
-            },
-            "children": []
-          }
-        ]
+        "type": "RssArticleSection",
+        "id": "rss-article-section",
+        "props": {},
+        "children": []
       },
       {
         "type": "BottomNav",

@@ -247,6 +247,8 @@ function normalizeComponent(c) {
 const BASELINE_PROPS = {
   progress: 'number',
   destructive: 'boolean',
+  sources: 'number',
+  unread: 'number',
 };
 
 function collectPropTypes(viewStates) {

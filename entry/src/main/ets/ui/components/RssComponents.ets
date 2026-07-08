@@ -49,6 +49,7 @@ export struct RssModeRow {
       }
     }
     .scrollable(ScrollDirection.Horizontal)
+    .scrollBar(BarState.Off)
     .width('100%')
   }
 }

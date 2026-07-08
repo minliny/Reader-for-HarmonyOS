@@ -302,6 +302,64 @@ test('book-detail uses the demo detail composite body, not a standalone cover', 
   );
 });
 
+test('discover/rss main tabs use bespoke demo component trees, not generic contract scaffolds', () => {
+  const VS = readJson('view-state.fixtures.json');
+  const expected = new Map([
+    ['discover/default', [
+      'AppTopBar',
+      'DiscoverSourceBar',
+      'DiscoverEntryRow',
+      'DiscoverFilterTrigger',
+      'DiscoverListHead',
+      'DiscoverBookList',
+      'BottomNav',
+    ]],
+    ['rss/default', [
+      'AppTopBar',
+      'RssSearchEntry',
+      'RssModeRow',
+      'RssSourceOverview',
+      'RssArticleSection',
+      'BottomNav',
+    ]],
+  ]);
+  const forbidden = new Map([
+    ['discover/default', [
+      'SearchEntry',
+      'SourceTypeSegment',
+      'CurrentSourceCard',
+      'SourceCategoryChips',
+      'DiscoveryContentCard',
+      'SourceStatusBar',
+    ]],
+    ['rss/default', [
+      'SubscriptionSummaryCard',
+      'FeedStatusChips',
+      'FeedSourceChips',
+      'RssEntryItem',
+      'UnreadIndicator',
+    ]],
+  ]);
+
+  for (const [key, types] of expected.entries()) {
+    const [routeId, pageState] = key.split('/');
+    const entry = VS.find((e) => e.routeId === routeId && e.pageState === pageState);
+    assert.ok(entry, `${key} fixture missing`);
+    const actual = entry.components.map((c) => c.type);
+    assert.deepEqual(actual, types, `${key} must stay aligned with frontend-demo main tab DOM`);
+    for (const type of forbidden.get(key) ?? []) {
+      assert.equal(actual.includes(type), false, `${key} must not regress to generic ${type}`);
+    }
+  }
+});
+
+test('discover/rss horizontal chip rows hide native scroll indicators', () => {
+  for (const file of ['DiscoverComponents.ets', 'RssComponents.ets']) {
+    const src = read(path.join(REPO, 'entry/src/main/ets/ui/components', file));
+    assert.ok(src.includes('.scrollBar(BarState.Off)'), `${file} must hide native horizontal Scroll bars`);
+  }
+});
+
 test('normalized state copy stays aligned with handoff HTML', () => {
   const VS = readJson('view-state.fixtures.json');
   const cases = [

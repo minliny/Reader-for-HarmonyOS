@@ -65,6 +65,7 @@ export struct DiscoverEntryRow {
       }
     }
     .scrollable(ScrollDirection.Horizontal)
+    .scrollBar(BarState.Off)
     .width('100%')
   }
 }
