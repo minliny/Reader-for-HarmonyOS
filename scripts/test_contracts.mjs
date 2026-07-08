@@ -211,15 +211,24 @@ test('reader control layer uses top-area structure instead of immersive info chr
   assert.ok(reader.includes("Text('换源')"), 'reader top area must expose the source switch action');
   assert.ok(reader.includes("return this.controlLayer() ? '雨夜' : '第一章 科学边界'"),
     'control-layer reading surface must show the normalized chapter title, not the book title');
+  assert.ok(reader.includes('.textAlign(TextAlign.Center)'),
+    'control-layer reading title must keep the demo centered reader layout');
+  assert.ok(reader.includes('.textIndent(2 * 18)'),
+    'control-layer paragraphs must keep the demo first-line indent');
   assert.ok(!reader.includes("return this.controlLayer() ? '深空信号'"),
     'control-layer body title must not duplicate the top-area book title');
+  assert.ok(!reader.includes('textAlign(this.controlLayer() ? TextAlign.Start'),
+    'control-layer title must not switch to a bespoke left-aligned layout');
+  assert.ok(!reader.includes('textIndent(this.controlLayer() ? 0'),
+    'control-layer paragraphs must not drop the demo indent');
   assert.ok(!reader.includes("Text('第一章：阿长与《山海经》')"), 'reader top area must not split into a detached chapter meta row');
   assert.ok(!reader.includes("Text('本地书籍')"), 'reader top area must not split into a detached source chip');
   assert.ok(reader.includes("return this.routeId !== 'reader'"), 'ReaderBase must branch between immersive reader and control-layer chrome');
   assert.ok(reader.includes('ReaderTopArea()'), 'control-layer branch must render ReaderTopArea');
   assert.ok(reader.includes('ReadingInfoLayer({ theme: this.theme })'), 'plain reader branch keeps immersive corner info');
-  assert.ok(reader.includes('top: this.controlLayer() ? 128 : 72'), 'control-layer body must reserve top-area space');
-  assert.ok(reader.includes('bottom: (this.controlLayer() ? 380 : 48) + this.safeAreaBottom'), 'control-layer body must reserve bottom sheet/module nav space');
+  assert.ok(reader.includes('top: this.controlLayer() ? 100 : 72'),
+    'control-layer body must add only native top-area clearance, not a bespoke large offset');
+  assert.ok(reader.includes('bottom: 48 + this.safeAreaBottom'), 'control-layer body must keep the demo reader bottom inset');
   const baseStart = reader.indexOf('export struct ReaderBase');
   const base = reader.slice(baseStart);
   assert.ok(base.indexOf('ReaderTopArea()') < base.indexOf('ReadingInfoLayer({ theme: this.theme })'),

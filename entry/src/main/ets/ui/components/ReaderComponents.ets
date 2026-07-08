@@ -84,28 +84,28 @@ export struct ReadingTextFlow {
     Scroll() {
       Column() {
         Text(this.title())
-          .fontSize(this.controlLayer() ? 28 : 23)
+          .fontSize(23)
           .fontWeight(700)
           .fontColor(this.inkColor())
           .fontFamily(ReaderTypography.serifFamily())
-          .textAlign(this.controlLayer() ? TextAlign.Start : TextAlign.Center)
+          .textAlign(TextAlign.Center)
           .width('100%')
-          .margin({ bottom: this.controlLayer() ? 32 : 24 })
+          .margin({ bottom: 24 })
         ForEach(this.paragraphs(), (p: string, i: number) => {
           Text(p)
             .fontSize(18)
             .fontColor(this.inkColor())
             .fontFamily(ReaderTypography.serifFamily())
-            .lineHeight(this.controlLayer() ? 18 * 1.72 : 18 * 1.96)
-            .textIndent(this.controlLayer() ? 0 : 2 * 18)
-            .margin({ bottom: this.controlLayer() ? 24 : 16 })
+            .lineHeight(18 * 1.96)
+            .textIndent(2 * 18)
+            .margin({ bottom: 16 })
         }, (p: string, i: number) => `${i}`)
       }
       .padding({
-        top: this.controlLayer() ? 128 : 72,
-        left: this.controlLayer() ? 24 : 32,
-        right: this.controlLayer() ? 24 : 32,
-        bottom: (this.controlLayer() ? 380 : 48) + this.safeAreaBottom,
+        top: this.controlLayer() ? 100 : 72,
+        left: 32,
+        right: 32,
+        bottom: 48 + this.safeAreaBottom,
       })
       .alignItems(HorizontalAlign.Start)
     }
