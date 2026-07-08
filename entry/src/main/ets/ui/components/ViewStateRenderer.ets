@@ -18,8 +18,9 @@ import { RssSearchEntry, RssModeRow, RssSourceOverview, RssArticleSection,
   RssFavoriteGroupsPage, RssSourceGroupsPage, RssSourceImportPage } from './RssComponents';
 import { AppShellStructure, MainTabsStructure, SearchHomePage, SearchResultsPage, SearchStatePage, BookTocPreviewPage,
   BookshelfEmptyPage, SourceManagementPage, SourceDetailPage, SourceImportOptionsPage, SourceDisabledState,
-  SourceSettingsEntryPage, SourceTestResultPage, WebDavConfigPage, SyncSettingsEntryPage, SyncErrorPage,
-  SyncProgressPage, RemoteWebDavBooksPage, RssDetailPage, RssEmptyState, RssErrorState, GlobalStatePage,
+  SourceSettingsEntryPage, SourceTestResultPage, WebDavConfigPage, SyncSettingsEntryPage, SyncBackupPage,
+  SyncErrorPage, SyncProgressPage, RestoreConfirmPage, RestoreProgressPage, RestoreConflictPage, RestoreResultPage,
+  RemoteWebDavBooksPage, RssDetailPage, RssEmptyState, RssErrorState, GlobalStatePage,
   OfflineStatePage, PermissionRequiredPage, AboutVersionPage, LocalBookImportPage, ReadingSettingsEntryPage,
   BookMoreMenuPage, BookGroupManagementPage, SourceFormPage, GlobalSettingsPage, BackupSettingsPage,
   RssSubscriptionManagementPage } from './StructuralPageComponents';
@@ -291,6 +292,8 @@ export struct ViewStateRenderer {
       WebDavConfigPage()
     } else if (component.type === 'SyncSettingsEntryPage') {
       SyncSettingsEntryPage()
+    } else if (component.type === 'SyncBackupPage') {
+      SyncBackupPage({ variant: this.textOr(component.props.variant, 'default') })
     } else if (component.type === 'GlobalSettingsPage') {
       GlobalSettingsPage()
     } else if (component.type === 'BackupSettingsPage') {
@@ -305,6 +308,14 @@ export struct ViewStateRenderer {
         title: this.textOr(component.props.title, '同步中'),
         progress: this.numOr(component.props.progress, 0.64),
       })
+    } else if (component.type === 'RestoreConfirmPage') {
+      RestoreConfirmPage({ variant: this.textOr(component.props.variant, 'default') })
+    } else if (component.type === 'RestoreProgressPage') {
+      RestoreProgressPage({ variant: this.textOr(component.props.variant, 'default') })
+    } else if (component.type === 'RestoreConflictPage') {
+      RestoreConflictPage()
+    } else if (component.type === 'RestoreResultPage') {
+      RestoreResultPage()
     } else if (component.type === 'RemoteWebDavBooksPage') {
       RemoteWebDavBooksPage()
     } else if (component.type === 'RssDetailPage') {

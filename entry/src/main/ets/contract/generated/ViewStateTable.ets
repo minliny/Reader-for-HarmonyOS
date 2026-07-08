@@ -930,17 +930,9 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "FormSection",
-        "id": "sync-section",
+        "type": "SyncBackupPage",
+        "id": "sync-backup-page",
         "props": {},
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "sync-run",
-        "props": {
-          "label": "立即同步"
-        },
         "children": []
       }
     ]
@@ -958,9 +950,11 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "Loading",
-        "id": "sync-loading",
-        "props": {},
+        "type": "SyncBackupPage",
+        "id": "sync-backup-loading-page",
+        "props": {
+          "variant": "loading"
+        },
         "children": []
       }
     ]
@@ -978,19 +972,9 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "Content",
-        "id": "restore-result-content",
-        "props": {
-          "message": "已恢复 2 项"
-        },
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "restore-result-done",
-        "props": {
-          "label": "完成"
-        },
+        "type": "RestoreResultPage",
+        "id": "restore-result-page",
+        "props": {},
         "children": []
       }
     ]
@@ -1053,9 +1037,11 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "Loading",
-        "id": "restore-running-loading",
-        "props": {},
+        "type": "RestoreProgressPage",
+        "id": "restore-running-page",
+        "props": {
+          "variant": "running"
+        },
         "children": []
       }
     ]
@@ -2396,19 +2382,9 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "Content",
-        "id": "restore-confirm-hint",
-        "props": {
-          "message": "确认从备份恢复？当前数据将被覆盖。"
-        },
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "confirm-restore",
-        "props": {
-          "label": "确认恢复"
-        },
+        "type": "RestoreConfirmPage",
+        "id": "restore-confirm-page",
+        "props": {},
         "children": []
       }
     ]
@@ -2426,17 +2402,9 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "ErrorState",
-        "id": "conflict-error",
+        "type": "RestoreConflictPage",
+        "id": "restore-conflict-page",
         "props": {},
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "resolve-conflict",
-        "props": {
-          "label": "解决冲突"
-        },
         "children": []
       }
     ]
@@ -2454,33 +2422,10 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "List",
-        "id": "preview-list",
-        "props": {},
-        "children": [
-          {
-            "type": "ListRow",
-            "id": "preview-progress",
-            "props": {
-              "title": "阅读进度 · 2 项"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "preview-bookshelf",
-            "props": {
-              "title": "书架 · 12 本"
-            },
-            "children": []
-          }
-        ]
-      },
-      {
-        "type": "Button",
-        "id": "confirm-restore",
+        "type": "RestoreConfirmPage",
+        "id": "restore-preview-page",
         "props": {
-          "label": "确认恢复"
+          "variant": "preview"
         },
         "children": []
       }
@@ -2499,8 +2444,8 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "Loading",
-        "id": "restore-progress-loading",
+        "type": "RestoreProgressPage",
+        "id": "restore-progress-page",
         "props": {},
         "children": []
       }

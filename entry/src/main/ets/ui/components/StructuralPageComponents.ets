@@ -276,6 +276,202 @@ struct ProgressSummaryCard {
   }
 }
 
+interface RestoreStepEntry {
+  title: string;
+  detail: string;
+  chip: string;
+  progress: number;
+  done: boolean;
+  active: boolean;
+}
+
+@Component
+struct SecondaryAction {
+  @Prop label: string = '操作';
+  @Prop primary: boolean = false;
+  @Prop route: RouteId = 'settings';
+
+  build() {
+    Text(this.label)
+      .fontSize(13)
+      .fontWeight(800)
+      .fontColor(this.primary ? DemoAliasTokens.onPrimary : ColorTokens.primaryDark)
+      .height(40)
+      .layoutWeight(1)
+      .padding({ left: 12, right: 12 })
+      .textAlign(TextAlign.Center)
+      .maxLines(1)
+      .textOverflow({ overflow: TextOverflow.Ellipsis })
+      .borderRadius(DemoAliasTokens.radiusPill)
+      .backgroundColor(this.primary ? ColorTokens.primary : ColorTokens.metaBg)
+      .border({ width: this.primary ? 0 : 1, color: ColorTokens.border })
+      .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: this.route }))
+  }
+}
+
+@Component
+struct ActionPair {
+  @Prop left: string = '取消';
+  @Prop right: string = '确认';
+  @Prop leftRoute: RouteId = 'settings';
+  @Prop rightRoute: RouteId = 'settings';
+
+  build() {
+    Row() {
+      SecondaryAction({ label: this.left, route: this.leftRoute })
+      SecondaryAction({ label: this.right, route: this.rightRoute, primary: true })
+        .margin({ left: 10 })
+    }
+    .width('100%')
+  }
+}
+
+@Component
+struct RestoreSummaryGrid {
+  private rows: RowEntry[] = [
+    { title: '备份来源', detail: 'WebDAV · 2026-06-23 08:00', chip: '' },
+    { title: '恢复范围', detail: '书架与分组、阅读进度、设置、书源配置', chip: '' },
+    { title: '预计影响', detail: '128 本书 · 96 条阅读进度 等 4 项', chip: '' },
+    { title: '可回退点', detail: '恢复前自动生成本地快照', chip: '' },
+  ];
+
+  build() {
+    Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween }) {
+      ForEach(this.rows, (entry: RowEntry, idx: number) => {
+        Column() {
+          Text(entry.title)
+            .fontSize(10)
+            .fontColor(ColorTokens.muted)
+          Text(entry.detail)
+            .fontSize(12)
+            .fontWeight(800)
+            .fontColor(ColorTokens.controlInk)
+            .margin({ top: 5 })
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .width('48%')
+        .padding(10)
+        .borderRadius(DemoAliasTokens.radiusMd)
+        .backgroundColor(ColorTokens.metaBg)
+        .margin({ bottom: 8 })
+        .alignItems(HorizontalAlign.Start)
+      }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
+    }
+    .width('100%')
+  }
+}
+
+@Component
+struct RestoreStageRow {
+  @Prop title: string = '';
+  @Prop detail: string = '';
+  @Prop chip: string = '';
+  @Prop progress: number = 0;
+  @Prop done: boolean = false;
+  @Prop active: boolean = false;
+
+  build() {
+    Column() {
+      Row() {
+        Circle()
+          .width(9)
+          .height(9)
+          .fill(this.done || this.active ? ColorTokens.primary : ColorTokens.border)
+        Column() {
+          Text(this.title)
+            .fontSize(13)
+            .fontWeight(800)
+            .fontColor(ColorTokens.controlInk)
+          Text(this.detail)
+            .fontSize(11)
+            .fontColor(ColorTokens.muted)
+            .margin({ top: 4 })
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+        .margin({ left: 10 })
+        HandoffStatusChip({ label: this.chip })
+      }
+      .width('100%')
+      Stack({ alignContent: Alignment.Start }) {
+        Row()
+          .width('100%')
+          .height(4)
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .backgroundColor(ColorTokens.metaBg)
+        Row()
+          .width(`${Math.round(this.progress * 100)}%`)
+          .height(4)
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .backgroundColor(this.active ? ColorTokens.primary : ColorTokens.border)
+      }
+      .width('100%')
+      .height(4)
+      .margin({ top: 9 })
+    }
+    .width('100%')
+    .padding(12)
+    .borderRadius(DemoAliasTokens.radiusMd)
+    .backgroundColor(this.active ? ColorTokens.surfaceSoft : ColorTokens.floatingControlBg)
+    .border({ width: 1, color: this.active ? ColorTokens.primary : ColorTokens.border })
+  }
+}
+
+@Component
+struct SyncBackupRecordRow {
+  @Prop source: string = '';
+  @Prop detail: string = '';
+  @Prop chip: string = '';
+  @Prop groupStart: string = '';
+
+  build() {
+    Column() {
+      if (this.groupStart.length > 0) {
+        Text(this.groupStart)
+          .fontSize(12)
+          .fontWeight(900)
+          .fontColor(ColorTokens.muted)
+          .margin({ bottom: 6 })
+      }
+      Row() {
+        Stack()
+          .width(30)
+          .height(30)
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .backgroundColor(ColorTokens.metaBg)
+        Column() {
+          Text(this.source)
+            .fontSize(13)
+            .fontWeight(850)
+            .fontColor(ColorTokens.controlInk)
+          Text(this.detail)
+            .fontSize(11)
+            .fontColor(ColorTokens.muted)
+            .margin({ top: 4 })
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+        .margin({ left: 10 })
+        HandoffStatusChip({ label: this.chip })
+      }
+      .width('100%')
+      .padding(12)
+      .borderRadius(DemoAliasTokens.radiusMd)
+      .backgroundColor(ColorTokens.floatingControlBg)
+      .border({ width: 1, color: ColorTokens.border })
+      .alignItems(VerticalAlign.Center)
+      .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'restore-confirm' }))
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
 @Component
 struct StatePanel {
   @Prop title: string = '暂无内容';
@@ -649,6 +845,178 @@ export struct SyncSettingsEntryPage {
   build() {
     Column() {
       StructureCard({ title: '同步设置', message: '管理 WebDAV、备份和阅读进度同步。' })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
+export struct SyncBackupPage {
+  @Prop variant: string = 'default';
+  private backups: RowEntry[] = [
+    { title: 'WebDAV', detail: '2026-06-23 08:00 · 完整备份 · 12.8 MB · 书架、进度、设置、书源', chip: '最新' },
+    { title: '本地', detail: '2026-06-23 10:30 · 完整备份 · 本机文件', chip: '本机' },
+    { title: 'WebDAV', detail: '2026-06-21 22:30 · 书架与设置 · 8.6 MB', chip: '局部' },
+    { title: 'WebDAV', detail: '2026-06-16 02:00 · 完整备份 · 历史记录', chip: '历史' },
+  ];
+
+  build() {
+    Column() {
+      if (this.variant === 'loading') {
+        ProgressSummaryCard({ title: '正在同步备份', message: '正在连接 WebDAV 并校验备份目录。', chip: '进行中', progress: 0.42 })
+        RestoreStageRow({ title: '连接 WebDAV', detail: 'https://dav.example.com/reader/backup', chip: '进行中', progress: 0.42, active: true })
+          .margin({ top: 12 })
+      } else {
+        StructureCard({ title: 'WebDAV 配置', message: 'https://dav.example.com/reader/backup · reader@example.com · /ReaderBackup/ReaderAndroid', chip: '已配置' })
+        Row() {
+          SecondaryAction({ label: '测试网络连通性', route: 'sync-backup' })
+          SecondaryAction({ label: '保存配置', route: 'sync-backup', primary: true })
+            .margin({ left: 10 })
+        }
+        .width('100%')
+        .margin({ top: 10 })
+        SectionTitle({ title: '恢复数据' })
+          .margin({ top: 16, bottom: 10 })
+        ForEach(this.backups, (entry: RowEntry, idx: number) => {
+          SyncBackupRecordRow({
+            source: entry.title,
+            detail: entry.detail,
+            chip: entry.chip,
+            groupStart: idx === 0 ? '最近备份' : (idx === 2 ? '历史备份' : ''),
+          })
+            .margin({ bottom: idx === this.backups.length - 1 ? 0 : 8 })
+        }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
+      }
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
+export struct RestoreConfirmPage {
+  @Prop variant: string = 'default';
+  private scopes: RowEntry[] = [
+    { title: '书架与分组', detail: '恢复书架书籍、分组和排序', chip: '128 本书' },
+    { title: '阅读进度', detail: '恢复章节位置和阅读进度', chip: '96 条' },
+    { title: '阅读与 App 设置', detail: '恢复主题、排版和通用设置', chip: '设置' },
+    { title: '书源配置', detail: '恢复书源、分组和启用状态', chip: '12 个书源' },
+  ];
+
+  private titleText(): string {
+    return this.variant === 'preview' ? '恢复预览' : '确认恢复数据';
+  }
+
+  build() {
+    Column() {
+      StructureCard({
+        title: this.titleText(),
+        message: '将使用选中的备份覆盖本机同类数据。恢复前会创建本地快照，取消不会改变当前数据。',
+        chip: '待确认',
+      })
+      RestoreSummaryGrid()
+        .margin({ top: 12 })
+      SectionTitle({ title: '选择恢复范围' })
+        .margin({ top: 14, bottom: 10 })
+      ForEach(this.scopes, (entry: RowEntry, idx: number) => {
+        SwitchRow({ title: entry.title, chip: entry.chip })
+          .margin({ bottom: 8 })
+      }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
+      StructureCard({ title: '覆盖提醒', message: '冲突项会在恢复过程中单独确认，不会静默覆盖。' })
+        .margin({ top: 4, bottom: 12 })
+      ActionPair({ left: '取消', right: '开始恢复', leftRoute: 'sync-backup', rightRoute: 'restore-progress' })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
+export struct RestoreProgressPage {
+  @Prop variant: string = 'default';
+  private steps: RestoreStepEntry[] = [
+    { title: '下载备份', detail: '12.8 MB · WebDAV', chip: '完成', progress: 1, done: true, active: false },
+    { title: '校验文件', detail: 'manifest、hash、版本兼容', chip: '完成', progress: 1, done: true, active: false },
+    { title: '合并数据', detail: '书架 128 本 · 进度 96 条', chip: '进行中', progress: 0.68, done: false, active: true },
+    { title: '写入设置', detail: '等待合并完成', chip: '等待', progress: 0, done: false, active: false },
+  ];
+
+  build() {
+    Column() {
+      ProgressSummaryCard({
+        title: this.variant === 'running' ? '恢复任务运行中' : '正在恢复',
+        message: '当前正在合并书架和阅读进度。离开页面不会中断恢复，完成后会进入结果状态。',
+        chip: '68%',
+        progress: 0.68,
+      })
+      SectionTitle({ title: '恢复阶段' })
+        .margin({ top: 14, bottom: 10 })
+      ForEach(this.steps, (step: RestoreStepEntry, idx: number) => {
+        RestoreStageRow({
+          title: step.title,
+          detail: step.detail,
+          chip: step.chip,
+          progress: step.progress,
+          done: step.done,
+          active: step.active,
+        })
+          .margin({ bottom: 8 })
+      }, (step: RestoreStepEntry, idx: number) => `${step.title}-${idx}`)
+      ActionPair({ left: '处理冲突', right: '查看结果', leftRoute: 'restore-conflict', rightRoute: 'restore-result' })
+        .margin({ top: 4 })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
+export struct RestoreConflictPage {
+  private conflicts: RowEntry[] = [
+    { title: '分组：玄幻连载', detail: '本地 42 本 · 远程 46 本', chip: '使用备份' },
+    { title: '阅读进度：长夜余火', detail: '本地第 32 章 · 远程第 35 章', chip: '远程进度' },
+    { title: '阅读设置：浅色主题', detail: '本地字号 18 · 远程字号 17', chip: '备份设置' },
+  ];
+
+  build() {
+    Column() {
+      StructureCard({ title: '选择冲突处理方式', message: '以下项目本地和备份均有更新。请选择保留本地或使用备份，选择后恢复会继续。', chip: '3 项冲突' })
+      SectionTitle({ title: '冲突列表' })
+        .margin({ top: 14, bottom: 10 })
+      ForEach(this.conflicts, (entry: RowEntry, idx: number) => {
+        StructureRow({ title: entry.title, detail: entry.detail, chip: entry.chip, showChevron: false })
+          .margin({ bottom: 8 })
+      }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
+      ActionPair({ left: '返回进度', right: '应用选择', leftRoute: 'restore-progress', rightRoute: 'restore-result' })
+        .margin({ top: 4 })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
+export struct RestoreResultPage {
+  private results: RowEntry[] = [
+    { title: '书架与分组', detail: '已恢复 128 本书和 12 个分组', chip: '成功' },
+    { title: '阅读进度', detail: '已恢复 96 条进度记录', chip: '成功' },
+    { title: '书源配置', detail: '1 条旧版规则字段不兼容', chip: '跳过' },
+  ];
+
+  build() {
+    Column() {
+      StructureCard({ title: '恢复完成', message: '书架、分组和阅读进度已恢复。1 条书源配置因版本不兼容被跳过，可在日志中查看详情。', chip: '部分成功' })
+      RestoreSummaryGrid()
+        .margin({ top: 12 })
+      SectionTitle({ title: '恢复结果明细' })
+        .margin({ top: 14, bottom: 10 })
+      ForEach(this.results, (entry: RowEntry, idx: number) => {
+        StructureRow({ title: entry.title, detail: entry.detail, chip: entry.chip, showChevron: false })
+          .margin({ bottom: 8 })
+      }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
+      ActionPair({ left: '查看日志', right: '返回同步页', leftRoute: 'sync-backup', rightRoute: 'sync-backup' })
+        .margin({ top: 4 })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)

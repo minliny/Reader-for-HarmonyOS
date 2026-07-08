@@ -461,6 +461,43 @@ test('source tool pages use page-level visual components, not scaffold-only list
   }
 });
 
+test('sync restore pages use page-level visual components, not scaffold-only lists/loading', () => {
+  const VS = readJson('view-state.fixtures.json');
+  const expected = new Map([
+    ['sync-backup/default', ['BackTopBar', 'SyncBackupPage']],
+    ['sync-backup/loading', ['BackTopBar', 'SyncBackupPage']],
+    ['restore-confirm/default', ['BackTopBar', 'RestoreConfirmPage']],
+    ['restore-preview/default', ['BackTopBar', 'RestoreConfirmPage']],
+    ['restore-progress/loading', ['BackTopBar', 'RestoreProgressPage']],
+    ['restore-running/loading', ['BackTopBar', 'RestoreProgressPage']],
+    ['restore-conflict/error', ['BackTopBar', 'RestoreConflictPage']],
+    ['restore-result/default', ['BackTopBar', 'RestoreResultPage']],
+  ]);
+
+  for (const [key, types] of expected.entries()) {
+    const [routeId, pageState] = key.split('/');
+    const entry = VS.find((e) => e.routeId === routeId && e.pageState === pageState);
+    assert.ok(entry, `${key} fixture missing`);
+    const actual = entry.components.map((c) => c.type);
+    assert.deepEqual(actual, types, `${key} must use sync restore page-level visual components`);
+    for (const type of ['FormSection', 'List', 'Content', 'Loading', 'ErrorState', 'Button']) {
+      assert.equal(actual.includes(type), false, `${key} must not regress to scaffold ${type}`);
+    }
+  }
+
+  const structureSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/StructuralPageComponents.ets'));
+  for (const text of [
+    'WebDAV 配置',
+    '恢复数据',
+    '确认恢复数据',
+    '正在恢复',
+    '选择冲突处理方式',
+    '恢复完成',
+  ]) {
+    assert.ok(structureSrc.includes(text), `StructuralPageComponents missing sync restore copy: ${text}`);
+  }
+});
+
 test('normalized state copy stays aligned with handoff HTML', () => {
   const VS = readJson('view-state.fixtures.json');
   const cases = [
@@ -626,15 +663,12 @@ const SCAFFOLD_TYPES = new Set([
 // time. State pages (loading/empty/error/offline) are legitimately scaffold-only.
 const SCAFFOLD_ALLOWED = new Set([
   'state-offline', 'state-error',
-  'restore-running', 'restore-result',
-  'sync-backup',
   // Phase 1: legitimate state pages + simple list/entry pages (scaffold is the
   // correct shape — these are not 1:1 demo migrations of bespoke components).
   // All 53 normalized handoff pages have now been moved out of this allowlist;
   // entries below are non-normalized contract routes that are still scaffold.
   // Phase 2-4: simple list/content/form pages where scaffold is the correct shape.
-  'about-feedback', 'restore-confirm', 'restore-conflict', 'restore-preview',
-  'restore-progress',
+  'about-feedback',
   'discover-source-bulk', 'discover-empty', 'discover-error', 'discover-loading',
   'discover-no-results',
   'group-management', 'book-batch-management', 'book-directory',
