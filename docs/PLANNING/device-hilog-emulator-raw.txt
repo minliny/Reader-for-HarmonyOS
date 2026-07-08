@@ -1,0 +1,126 @@
+07-08 10:01:07.212  1683  1683 W A03d00/JSAPP: [a92ab1af62ad104, 21bb674, 290317] [ContactsData:]ServiceAbility:onRequest ContactsData service insertParam length0 updateParam length0 deleteParam length0 compareCloudAndRawContact  refreshContact backUpBigPhotoFormDistribute mergeContactArgs 
+07-08 10:01:07.212  1683  1683 W A03d00/JSAPP: [a92ab1af62ad104, 21bb674, 290317] [ContactsData:]ServiceAbility:refreshContact is backUpBigPhotoFormDistribute
+07-08 10:01:07.235  1683  1683 W A03d00/JSAPP: [a92ab1af62ad104, ff9c12, 2e32c4a] [ContactsData:]BackUpBigPhotoService bigPhotoFromFile backUpBigPhotoFormDistribute :backUpBigPhotoFormDistribute_new is 1
+07-08 10:01:07.235  1683  1683 W A03d00/JSAPP: [a92ab1af62ad104, ff9c12, 2e32c4a] [ContactsData:]BackUpBigPhotoService bigPhotoFromFile getCloudRawDataList :getCloudRawDataList,offset:0
+07-08 10:01:07.254  1683  1683 E A03d00/JSAPP: [a92ab1af62ad104, 153dcd8, 28e8ede] [ContactsData:]BackUpBigPhotoService bigPhotoFromFile backUpBigPhotoFormDistribute :handleBigPhotoToGroupSandbox fail
+07-08 10:01:08.357  3561  3561 I A03d00/JSAPP: [Ringtone] MyAbilityStage onCreate
+07-08 10:01:10.626  3780  3780 I A03d00/JSAPP: [EntryAbility] probe path=/data/app/el1/bundle/public/reader.minliny.testpackage/libs/arm64/libreader_core_napi.so exists=false
+07-08 10:01:10.627  3780  3780 I A03d00/JSAPP: [EntryAbility] probe path=/data/storage/el1/bundle/reader.minliny.testpackage/libs/arm64/libreader_core_napi.so exists=false
+07-08 10:01:10.627  3780  3780 I A03d00/JSAPP: [EntryAbility] probe path=/data/storage/el1/bundle/reader.minliny.testpackage/entry.hap exists=false
+07-08 10:01:10.627  3780  3780 I A03d00/JSAPP: [EntryAbility] filesDir=/data/storage/el2/base/haps/entry/files
+07-08 10:01:10.627  3780  3780 I A03d00/JSAPP: [EntryAbility] cacheDir=/data/storage/el2/base/haps/entry/cache
+07-08 10:01:10.627  3780  3780 I A03d00/JSAPP: [CoreRuntime] diagnose start: typeof=object | value=object | keys=[] | nativeModule.type=object | nativeModule.value=object | hasCreateRuntime=true
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [CoreRuntime] init success
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest] summary total=41 registry=15 reducerDirect=25 unimplemented=1 available=40 deviceVerified=0
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   host.smoke.echo                  core-closed-set  registry         CoreHostAdapter          reqs=-                    avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   http.execute                     core-closed-set  registry         HttpHostAdapter          reqs=-                    avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   cookie.get                       core-closed-set  registry         CookieHostAdapter        reqs=-                    avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   cookie.set                       core-closed-set  registry         CookieHostAdapter        reqs=-                    avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   webview.evaluateJavaScript       core-closed-set  registry         WebViewHostAdapter       reqs=-                    avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   file.read                        core-closed-set  registry         FileHostAdapter          reqs=ctx                  avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   file.write                       core-closed-set  registry         FileHostAdapter          reqs=ctx                  avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   cache.get                        core-closed-set  registry         CoreHostAdapter          reqs=-                    avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   cache.put                        core-closed-set  registry         CoreHostAdapter          reqs=-                    avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   log.emit                         core-closed-set  registry         CoreHostAdapter          reqs=-                    avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   time.now                         core-closed-set  registry         CoreHostAdapter          reqs=-                    avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   system.info                      core-closed-set  registry         CoreHostAdapter          reqs=-                    avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   persistence.get                  core-closed-set  registry         CoreHostAdapter          reqs=-                    avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   persistence.put                  core-closed-set  registry         CoreHostAdapter          reqs=-                    avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   media.download                   core-closed-set  registry         CoreHostAdapter          reqs=ctx                  avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   http.cancel                      ui-contract-only reducer-direct   HttpHostAdapter          reqs=-                    avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   webview.open                     ui-contract-only reducer-direct   WebViewHostAdapter       reqs=-                    avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   webview.close                    ui-contract-only reducer-direct   WebViewHostAdapter       reqs=-                    avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   webview.evaluate                 ui-contract-only reducer-direct   WebViewHostAdapter       reqs=-                    avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   cookie.clear                     ui-contract-only reducer-direct   CookieHostAdapter        reqs=-                    avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   file.delete                      ui-contract-only reducer-direct   FileHostAdapter          reqs=ctx                  avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   storage.path                     ui-contract-only reducer-direct   FileHostAdapter          reqs=ctx                  avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   credential.get                   ui-contract-only reducer-direct   CredentialHostAdapter    reqs=uiCtx                avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   credential.set                   ui-contract-only reducer-direct   CredentialHostAdapter    reqs=uiCtx                avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   credential.delete                ui-contract-only reducer-direct   CredentialHostAdapter    reqs=uiCtx                avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   tts.system.start                 ui-contract-only reducer-direct   TtsHostAdapter           reqs=ctx                  avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   tts.system.stop                  ui-contract-only reducer-direct   TtsHostAdapter           reqs=ctx                  avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   tts.system.pause                 ui-contract-only reducer-direct   TtsHostAdapter           reqs=ctx                  avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   tts.system.resume                ui-contract-only reducer-direct   TtsHostAdapter           reqs=ctx                  avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   permission.request               ui-contract-only reducer-direct   PermissionHostAdapter    reqs=uiCtx                avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   permission.check                 ui-contract-only reducer-direct   PermissionHostAdapter    reqs=uiCtx                avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   background.schedule              ui-contract-only reducer-direct   BackgroundHostAdapter    reqs=perm:ohos.permission.KEEP_BACKGROUND_RUNNING avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   background.cancel                ui-contract-only reducer-direct   BackgroundHostAdapter    reqs=perm:ohos.permission.KEEP_BACKGROUND_RUNNING avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   notification.show                ui-contract-only reducer-direct   NotificationHostAdapter  reqs=uiCtx                avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   notification.cancel              ui-contract-only reducer-direct   NotificationHostAdapter  reqs=uiCtx                avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   share.invoke                     ui-contract-only reducer-direct   ShareHostAdapter         reqs=uiCtx                avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   clipboard.copy                   ui-contract-only reducer-direct   ClipboardHostAdapter     reqs=-                    avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   clipboard.paste                  ui-contract-only reducer-direct   ClipboardHostAdapter     reqs=-                    avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   device.vibrate                   ui-contract-only unimplemented                             reqs=-                    avail=false verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   device.screen.keep-on            ui-contract-only reducer-direct   ScreenHostAdapter        reqs=uiCtx                avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [HostManifest]   device.screen.release            ui-contract-only reducer-direct   ScreenHostAdapter        reqs=uiCtx                avail=true verified=false
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [EntryAbility] selfCheck=true — running all Host self-checks for device evidence
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [CoreSelfCheck] abiVersion=1
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [ReadingChainUi] start: dispatching search-submit query=斗破
+07-08 10:01:10.629  3780  3780 I A03d00/JSAPP: [ReadingChainUi] before: searchQuery=""
+07-08 10:01:11.326  3780  3780 I A03d00/JSAPP: [UiAdapter] webview.open opened=false profileId=self-check (real eval needs UI Web component)
+07-08 10:01:11.326  3780  3780 I A03d00/JSAPP: [UiAdapter] webview.close closed=false profileId=self-check
+07-08 10:01:11.327  3780  3780 I A03d00/JSAPP: [CoreSelfCheck] ping ok=true
+07-08 10:01:11.327  3780  3780 I A03d00/JSAPP: [TtsSelfCheck] start started=true backend=textReader
+07-08 10:01:11.327  3780  3780 I A03d00/JSAPP: [CoreSelfCheck] coreInfo={"abiVersion":1,"buildVersion":"reader-core-native 0.1.0","capabilities":["core.info","runtime.ping","runtime.hostSmoke","runtime.cancel","runtime.status","runtime.shutdown","runtime.setHostCapabilities","host.complete","host.error","host.bus.v1","http.execute","runtime.config.v1","remote.reading.v1","rss.v1","sync.v1","local_book.v1","bookshelf.v1"],"protocolVersion":1}
+07-08 10:01:11.330  3780  3780 I A03d00/JSAPP: [CoreSelfCheck] hostSmoke type=result data={"capability":"host.smoke.echo","params":{"source":"harmony-sdk"},"status":"ok"}
+07-08 10:01:11.849  3780  3780 I A03d00/JSAPP: [LocalBook] step=1 txt getRawFileContent bytes=975 contentLen=435
+07-08 10:01:11.866  3780  3780 I A03d00/JSAPP: [LocalBook] step=2a file.write path=files://local_book/sample.txt written=true bytes=975
+07-08 10:01:11.867  3780  3780 I A03d00/JSAPP: [LocalBook] step=2b file.read path=files://local_book/sample.txt bytes=975 roundTripMatch=true
+07-08 10:01:11.867  3780  3780 I A03d00/JSAPP: [LocalBook] step=3 persistence round-trip found=true revision=1 valueMatch=true
+07-08 10:01:11.872  3780  3780 I A03d00/JSAPP: [LocalBook] step=4a epub getRawFileContent bytes=1516
+07-08 10:01:11.875  3780  3780 I A03d00/JSAPP: [LocalBook] step=4b epub written path=/data/storage/el2/base/haps/entry/files/local_book/sample.epub
+07-08 10:01:11.877  3780  3780 I A03d00/JSAPP: [UiAdapter] permission.check INTERNET granted=true
+07-08 10:01:11.877  3780  3780 I A03d00/JSAPP: [SyncWebDav] step=1 credential.get url.exists=false user.exists=false password.exists=false
+07-08 10:01:11.877  3780  3780 I A03d00/JSAPP: [SyncWebDav] step=2 SKIP missing webdav.url/webdav.user/webdav.password credential state
+07-08 10:01:11.877  3780  3780 I A03d00/JSAPP: [UiAdapter] permission.check KEEP_BACKGROUND_RUNNING granted=true
+07-08 10:01:11.879  3780  3780 I A03d00/JSAPP: [LocalBook] step=5 epub decompressed to=/data/storage/el2/base/haps/entry/files/local_book/sample.epub.extracted
+07-08 10:01:11.879  3780  3780 I A03d00/JSAPP: [LocalBook] step=6 container.xml bytes=252 opfPath=OEBPS/content.opf
+07-08 10:01:11.879  3780  3780 I A03d00/JSAPP: [LocalBook] step=7 opf bytes=732 title="Host Self-Check EPUB Sample" creator="Reader-for-HarmonyOS"
+07-08 10:01:11.879  3780  3780 I A03d00/JSAPP: [LocalBook] step=8 persistence round-trip found=true revision=1 valueMatch=true
+07-08 10:01:11.879  3780  3780 I A03d00/JSAPP: [LocalBook] DONE txt+epub local_book verified (full XML render is Core/UI job)
+07-08 10:01:12.117  3786  3786 I A03d00/JSAPP: DialogAbilityStage onCreate
+07-08 10:01:12.291  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  UIExtAbility onCreate
+07-08 10:01:12.328  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  stage model
+07-08 10:01:12.328  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  UIExtAbility onSessionCreate bundleName reader.minliny.testpackageuid 20020066
+07-08 10:01:12.364  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  UIExtAbility onForeground
+07-08 10:01:12.527  3780  3780 I A03d00/JSAPP: [ReadingChain] step=1 http.execute status=200 bodyLen=26121 content-type=text/html; charset=UTF-8 finalUrl=https://www.yodu.org/sa/all-%E6%96%97%E7%A0%B4-1.html
+07-08 10:01:12.529  3780  3780 I A03d00/JSAPP: [ReadingChain] step=2 cookie.set+get round-trip cookies=1 sessionId=reading-chain-self-check
+07-08 10:01:12.530  3780  3780 I A03d00/JSAPP: [ReadingChain] step=3a file.write path=cache://reading-chain/yodu-search.html written=true bytes=32137
+07-08 10:01:12.531  3780  3780 I A03d00/JSAPP: [ReadingChain] step=3b file.read path=cache://reading-chain/yodu-search.html bytes=32137 contentLen=26121 roundTripMatch=true
+07-08 10:01:12.531  3780  3780 I A03d00/JSAPP: [ReadingChain] DONE transport+cache verified (extraction is Core's job, webview is Phase 7)
+07-08 10:01:12.647  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  avoidArea: {"visible":true,"leftRect":{"left":0,"top":0,"width":0,"height":0},"topRect":{"left":0,"top":0,"width":1280,"height":136},"rightRect":{"left":0,"top":0,"width":0,"height":0},"bottomRect":{"left":0,"top":0,"width":0,"height":0}}
+07-08 10:01:12.655  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  windowHeight 2832 
+07-08 10:01:12.655  3786  3786 I A03d00/JSAPP:           navigationHeight 98 statusBarHeight 136 
+07-08 10:01:12.655  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  updateApplicationName bundleName: reader.minliny.testpackage
+07-08 10:01:12.666  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  applicationName name : "Reader"
+07-08 10:01:12.666  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  hap label: Reader
+07-08 10:01:12.683  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  fontSizeScale = 1
+07-08 10:01:12.683  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  fontSizeScale = 1
+07-08 10:01:12.688  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  fontSizeScale = 1
+07-08 10:01:12.691  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  fontSizeScale = 1
+07-08 10:01:12.693  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  fontSizeScale = 1
+07-08 10:01:12.694  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  fontSizeScale = 1
+07-08 10:01:12.764  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  fontSizeScale = 1
+07-08 10:01:12.766  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  onSizeChange titleContainerWidth: auto
+07-08 10:01:12.781  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  fontSizeScale = 1
+07-08 10:01:12.781  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  fontSizeScale = 1
+07-08 10:01:12.782  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  updateButtomVisibility 168 112  373
+07-08 10:01:12.790  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  updateStatus-updateButtomVisibility
+07-08 10:01:12.790  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  fontSizeScale = 1
+07-08 10:01:12.790  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  fontSizeScale = 1
+07-08 10:01:12.790  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  updateButtomVisibility 168 112  373
+07-08 10:01:12.791  3780  3780 I A03d00/JSAPP: [ReadingChainUi] poll elapsed=1500ms searchQuery="斗破" results=15 loading=false error=null
+07-08 10:01:12.791  3780  3780 I A03d00/JSAPP: [ReadingChainUi] DONE search-success results=15 first="第一百零八章 退敌"
+07-08 10:01:12.793  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  fontSizeScale = 1
+07-08 10:01:12.793  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  onSizeChange titleContainerWidth: auto
+07-08 10:01:12.795  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  fontSizeScale = 1
+07-08 10:01:12.795  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  fontSizeScale = 1
+07-08 10:01:12.795  3786  3786 I A03d00/JSAPP: NotificationDialog_Service  updateButtomVisibility 168 112  359
+07-08 10:01:14.335  3780  3780 I A03d00/JSAPP: [TtsSelfCheck] pre-pause state=waiting lastPercent=0
+07-08 10:01:14.337  3780  3780 I A03d00/JSAPP: [TtsSelfCheck] pause acknowledged=true
+07-08 10:01:15.340  3780  3780 I A03d00/JSAPP: [TtsSelfCheck] resume acknowledged=true
+07-08 10:01:16.494  3780  3780 I A03d00/JSAPP: [RssChain] error=HostError: Internal error
+07-08 10:01:17.342  3780  3780 I A03d00/JSAPP: [TtsSelfCheck] stop acknowledged=true
+07-08 10:01:17.342  3780  3780 I A03d00/JSAPP: [TtsSelfCheck] shutdown done
+07-08 10:01:41.291  3780  3780 I A03d00/JSAPP: [HostManifest] post-self-check summary total=41 registry=15 reducerDirect=25 unimplemented=1 available=40 deviceVerified=12
+07-08 10:01:41.291  3780  3780 I A03d00/JSAPP: [EntryAbility] self-check evidence drive complete — see [HostManifest] post-self-check line

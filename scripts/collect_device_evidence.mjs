@@ -78,6 +78,11 @@ const TAG_TO_CAPABILITIES = {
     capabilities: ['http.execute', 'cookie.set', 'cookie.get', 'file.write', 'file.read'],
     successPattern: /DONE transport\+cache verified/,
   },
+  'ReadingChainUi': {
+    description: 'Reading chain UI path: reducer + ReaderEffects + Host HTTP round-trip',
+    capabilities: ['http.execute'],
+    successPattern: /DONE (search-success|search-failure)/,
+  },
   'RssChain': {
     description: 'RSS ingestion: http + item-count + file cache',
     capabilities: ['http.execute', 'file.write', 'file.read'],

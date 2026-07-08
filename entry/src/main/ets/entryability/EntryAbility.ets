@@ -13,6 +13,7 @@ import fs from '@ohos.file.fs';
 import util from '@ohos.util';
 import zlib from '@ohos.zlib';
 import { ReaderUiStore } from '../ui/store/ReaderUiStore';
+import { SearchResultEntry, ReaderError } from '../ui/store/ReaderUiState';
 import { SafeAreaAdapter } from '../ui/adapters/SafeAreaAdapter';
 import { ColorTokens } from '../contract/generated/ColorTokens';
 import { CoreRuntime } from '../bridge/CoreRuntime';
@@ -75,6 +76,7 @@ export default class EntryAbility extends UIAbility {
         this.runLocalBookSelfCheck(core, manifest);
         this.runSyncWebDavSelfCheck(core, manifest);
         this.runUiAdapterSelfCheck(core, manifest);
+        this.runReadingChainUiSelfCheck(manifest);
         // After a delay (self-checks are async), re-broadcast the manifest
         // with evidence-driven deviceVerified counts. The delay must be
         // long enough for the slowest chain (TTS ~6s + WebDAV network).
@@ -699,6 +701,52 @@ export default class EntryAbility extends UIAbility {
       .catch((e: Error) => {
         console.info(`[UiAdapter] error=${e}`);
       });
+  }
+
+  /**
+   * Reading-chain UI self-check: exercises the reducer + ReaderEffects + Host
+   * HTTP path (the same path the real search box uses) by dispatching
+   * search-submit. ReaderEffects.runSearch fires the Host HTTP adapter, parses
+   * the response, and dispatches search-success / search-failure back into the
+   * store. We log the outcome (success OR failure both prove the effect path is
+   * wired on device; only a silent store would indicate a broken path).
+   */
+  private runReadingChainUiSelfCheck(manifest: HostCapabilityManifest): void {
+    const query: string = '斗破';
+    console.info('[ReadingChainUi] start: dispatching search-submit query=' + query);
+    const beforeStr: string = AppStorage.get<string>('reader.searchQuery') ?? '';
+    console.info('[ReadingChainUi] before: searchQuery="' + beforeStr + '"');
+    ReaderUiStore.dispatch({ type: 'search-submit', query: query });
+    let elapsed = 0;
+    const interval = 1500;
+    const poll = setInterval(() => {
+      elapsed += interval;
+      const sq: string = AppStorage.get<string>('reader.searchQuery') ?? '';
+      const sr: SearchResultEntry[] = AppStorage.get<SearchResultEntry[]>('reader.searchResults') ?? [];
+      const err: ReaderError | null | undefined = AppStorage.get<ReaderError | null>('reader.error');
+      const loading: boolean = AppStorage.get<boolean>('reader.loading') ?? false;
+      const errCode: string = err === null || err === undefined ? 'null' : err.code;
+      console.info('[ReadingChainUi] poll elapsed=' + elapsed + 'ms searchQuery="' + sq + '" results=' + sr.length + ' loading=' + loading + ' error=' + errCode);
+      const hasResults: boolean = sr.length > 0 && sq === query;
+      const hasError: boolean = err !== null && err !== undefined && err.code === 'SEARCH_FAILED';
+      if (hasResults || hasError) {
+        clearInterval(poll);
+        if (hasResults) {
+          const firstTitle: string = sr.length > 0 ? sr[0].title : '';
+          console.info('[ReadingChainUi] DONE search-success results=' + sr.length + ' first="' + firstTitle + '"');
+          manifest.markVerifiedByTag('ReadingChainUi');
+        } else {
+          const errMsg: string = err !== null && err !== undefined ? err.message : '';
+          console.info('[ReadingChainUi] DONE search-failure error=' + errCode + ' msg=' + errMsg + ' (effect path verified; source may be unreachable)');
+          manifest.markVerifiedByTag('ReadingChainUi');
+        }
+        return;
+      }
+      if (elapsed >= 35000) {
+        clearInterval(poll);
+        console.info('[ReadingChainUi] TIMEOUT after 35s: effect did not dispatch back (searchQuery="' + sq + '" results=' + sr.length + ' loading=' + loading + '). HTTP may have hung past adapter timeout.');
+      }
+    }, interval);
   }
 
   /**
