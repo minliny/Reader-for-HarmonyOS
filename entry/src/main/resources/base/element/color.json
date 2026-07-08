@@ -69,6 +69,14 @@
       "value": "#FF2F6F93"
     },
     {
+      "name": "reader_ds_color_status_good",
+      "value": "#FF338144"
+    },
+    {
+      "name": "reader_ds_color_status_warn",
+      "value": "#FFD7473E"
+    },
+    {
       "name": "reader_ds_color_paper_night",
       "value": "#FF181F22"
     },

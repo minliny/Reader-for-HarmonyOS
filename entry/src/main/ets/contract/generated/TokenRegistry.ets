@@ -23,6 +23,8 @@ export class TokenRegistry {
     { name: '--reader-ds-color-floating-control-bg-alt', category: 'color', value: '#eae1da' },
     { name: '--reader-ds-color-meta-bg', category: 'color', value: '#f5ece6' },
     { name: '--reader-ds-color-rss-unread', category: 'color', value: '#2F6F93' },
+    { name: '--reader-ds-color-status-good', category: 'color', value: '#338144' },
+    { name: '--reader-ds-color-status-warn', category: 'color', value: '#d7473e' },
     { name: '--reader-ds-color-paper-night', category: 'color', value: '#181f22' },
     { name: '--reader-ds-color-ink-night', category: 'color', value: '#d8ccc4' },
     { name: '--reader-ds-color-control-ink-night', category: 'color', value: '#d7e1e5' },

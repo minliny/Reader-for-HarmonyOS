@@ -10,8 +10,8 @@ export default function TokenCoverageTests(): void {
     it('registryHasAllTokens', 0, () => {
       expect(TokenRegistry.ALL.length > 100).assertTrue();
     });
-    it('has21ColorTokens', 0, () => {
-      expect(TokenRegistry.byCategory('color').length).assertEqual(21);
+    it('has23ColorTokens', 0, () => {
+      expect(TokenRegistry.byCategory('color').length).assertEqual(23);
     });
     it('paperTokenResolves', 0, () => {
       expect(TokenRegistry.byName('--reader-ds-color-paper') !== undefined).assertTrue();
