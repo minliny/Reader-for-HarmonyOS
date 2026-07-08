@@ -29,6 +29,7 @@ import {
   type ReaderCoreError,
 } from '../../bridge/core/sdk/reader_core';
 import { type HostCapability } from '../types';
+import { SourceSessionHostStore } from '../adapters/SourceSessionHostStore';
 
 // Stub class that satisfies NativeReaderCoreModule without touching
 // libreader_core_napi.so. ArkTS requires object literals to correspond to a
@@ -70,6 +71,70 @@ export default function HostSmokeTest(): void {
       const core = CoreRuntime.createForTest(makeStubNativeModule(), {});
       expect(core.getRegistry().has('cookie.get')).assertTrue();
       expect(core.getRegistry().has('cookie.set')).assertTrue();
+    });
+
+    it('cookie_session_survives_runtime_adapter_rebuild', 0, async () => {
+      SourceSessionHostStore.resetForTest();
+      const firstRuntime = CoreRuntime.createForTest(makeStubNativeModule(), {});
+      await firstRuntime.getCookieAdapter().set({
+        sessionId: 'same-key-host-proof',
+        cookie: {
+          name: 'session',
+          value: 'abc123',
+          domain: 'example.org',
+          path: '/',
+        },
+      });
+
+      const rebuiltRuntime = CoreRuntime.createForTest(makeStubNativeModule(), {});
+      const response = await rebuiltRuntime.getCookieAdapter().get({
+        sessionId: 'same-key-host-proof',
+        url: 'https://example.org/book/1',
+      });
+      expect(response.cookies.length).assertEqual(1);
+      expect(response.cookies[0].name).assertEqual('session');
+      expect(response.cookies[0].value).assertEqual('abc123');
+    });
+
+    it('source_session_state_survives_runtime_adapter_rebuild', 0, () => {
+      SourceSessionHostStore.resetForTest();
+      const firstRuntime = CoreRuntime.createForTest(makeStubNativeModule(), {});
+      firstRuntime.getSourceSessionStore().setSourceVariable(
+        'src-367',
+        'chapterId',
+        '/book/367/1.html',
+        'same-key-host-proof',
+      );
+      const loginHeaders: Record<string, string> = {};
+      loginHeaders['Cookie'] = 'token=from-login-store';
+      loginHeaders['Authorization'] = 'Bearer local-proof';
+      firstRuntime.getSourceSessionStore().setLoginHeaderMap(
+        'src-342',
+        loginHeaders,
+        'same-key-host-proof',
+      );
+
+      const rebuiltRuntime = CoreRuntime.createForTest(makeStubNativeModule(), {});
+      const variable = rebuiltRuntime.getSourceSessionStore().getSourceVariable(
+        'src-367',
+        'chapterId',
+        'same-key-host-proof',
+      );
+      const missingLogin = rebuiltRuntime.getSourceSessionStore().getLoginHeaderMap(
+        'missing-source',
+        'same-key-host-proof',
+      );
+      const login = rebuiltRuntime.getSourceSessionStore().getLoginHeaderMap(
+        'src-342',
+        'same-key-host-proof',
+      );
+
+      expect(variable).assertEqual('/book/367/1.html');
+      expect(missingLogin.found).assertFalse();
+      expect(Object.keys(missingLogin.headers).length).assertEqual(0);
+      expect(login.found).assertTrue();
+      expect(login.headers['Cookie']).assertEqual('token=from-login-store');
+      expect(login.headers['Authorization']).assertEqual('Bearer local-proof');
     });
 
     it('registry_should_have_webview_capability', 0, () => {

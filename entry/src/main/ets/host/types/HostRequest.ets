@@ -97,6 +97,7 @@ export interface HostHttpRequest {
   maxRedirects?: number;
   usePlatformCookieJar?: boolean;
   sessionId?: string;
+  sourceId?: string;
 }
 
 export interface HostHttpCancelRequest {

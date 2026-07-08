@@ -3,6 +3,8 @@
 export { HttpHostAdapter } from './HttpHostAdapter';
 export { CoreHostAdapter } from './CoreHostAdapter';
 export { CookieHostAdapter } from './CookieHostAdapter';
+export { SourceSessionHostStore } from './SourceSessionHostStore';
+export type { SourceLoginHeaderState } from './SourceSessionHostStore';
 export { WebViewHostAdapter } from './WebViewHostAdapter';
 export { FileHostAdapter } from './FileHostAdapter';
 export { ClipboardHostAdapter } from './ClipboardHostAdapter';

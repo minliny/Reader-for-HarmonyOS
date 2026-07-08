@@ -15,12 +15,14 @@ import http from '@ohos.net.http';
 import {
   HostHttpRequest,
   HostHttpResponse,
+  HostCookieRecord,
   HostError,
   HostErrorWrapper,
   createTransportTimeoutError,
   createTransportDnsError,
   createTransportTlsError,
 } from '../types';
+import { SourceSessionHostStore } from './SourceSessionHostStore';
 
 interface HttpErrorLike {
   code?: number;
@@ -29,16 +31,19 @@ interface HttpErrorLike {
 
 export class HttpHostAdapter {
   private httpClient: http.HttpRequest;
+  private readonly sessionStore: SourceSessionHostStore;
 
-  constructor() {
+  constructor(sessionStore: SourceSessionHostStore = SourceSessionHostStore.shared()) {
     this.httpClient = http.createHttp();
+    this.sessionStore = sessionStore;
   }
 
   async execute(request: HostHttpRequest): Promise<HostHttpResponse> {
     const method = this.mapMethod(request.method);
+    const requestHeaders = this.buildRequestHeaders(request);
     const options: http.HttpRequestOptions = {
       method: method,
-      header: request.headers,
+      header: requestHeaders,
       expectDataType: http.HttpDataType.STRING,
       // Default timeouts: 15s connect + 15s read. Prevents indefinite hangs
       // when a source is unreachable (e.g. yodu.org behind GFW). Callers that
@@ -53,6 +58,7 @@ export class HttpHostAdapter {
     try {
       const response = await this.httpClient.request(request.url, options);
       const headers = this.extractHeaders(response.header);
+      this.captureResponseCookies(request, headers);
       let body = '';
       if (typeof response.result === 'string') {
         body = response.result;
@@ -103,6 +109,32 @@ export class HttpHostAdapter {
     }
   }
 
+  private buildRequestHeaders(request: HostHttpRequest): Record<string, string> {
+    const headers: Record<string, string> = {};
+    if (request.sourceId !== undefined && request.sourceId.length > 0) {
+      const loginState = this.sessionStore.getLoginHeaderMap(request.sourceId, request.sessionId);
+      const loginKeys = Object.keys(loginState.headers);
+      for (let i = 0; i < loginKeys.length; i++) {
+        const key = loginKeys[i];
+        headers[key] = loginState.headers[key];
+      }
+    }
+
+    const requestKeys = Object.keys(request.headers);
+    for (let i = 0; i < requestKeys.length; i++) {
+      const key = requestKeys[i];
+      headers[key] = request.headers[key];
+    }
+
+    if (request.usePlatformCookieJar === true && !this.hasHeader(headers, 'cookie')) {
+      const cookieHeader = this.sessionStore.buildCookieHeader(request.url, request.sessionId);
+      if (cookieHeader.length > 0) {
+        headers['Cookie'] = cookieHeader;
+      }
+    }
+    return headers;
+  }
+
   private extractHeaders(rawHeader: Object): Record<string, string | string[]> {
     const headers: Record<string, string | string[]> = {};
     if (rawHeader === null || rawHeader === undefined) {
@@ -126,6 +158,98 @@ export class HttpHostAdapter {
       }
     }
     return headers;
+  }
+
+  private captureResponseCookies(request: HostHttpRequest, headers: Record<string, string | string[]>): void {
+    const setCookieValues = this.headerValues(headers, 'set-cookie');
+    if (setCookieValues.length === 0) {
+      return;
+    }
+    const fallbackDomain = this.resolveDomain(request.url);
+    for (let i = 0; i < setCookieValues.length; i++) {
+      const parsed = this.parseSetCookie(setCookieValues[i], fallbackDomain);
+      if (parsed !== null) {
+        this.sessionStore.setCookie(parsed, request.sessionId);
+      }
+    }
+  }
+
+  private parseSetCookie(raw: string, fallbackDomain: string | undefined): HostCookieRecord | null {
+    const segments = raw.split(';');
+    if (segments.length === 0) {
+      return null;
+    }
+    const first = segments[0].trim();
+    const eq = first.indexOf('=');
+    if (eq <= 0) {
+      return null;
+    }
+    const cookie: HostCookieRecord = {
+      name: first.substring(0, eq).trim(),
+      value: first.substring(eq + 1).trim(),
+    };
+    if (fallbackDomain !== undefined) {
+      cookie.domain = fallbackDomain;
+    }
+    for (let i = 1; i < segments.length; i++) {
+      const part = segments[i].trim();
+      const partEq = part.indexOf('=');
+      const attrName = (partEq >= 0 ? part.substring(0, partEq) : part).trim().toLowerCase();
+      const attrValue = partEq >= 0 ? part.substring(partEq + 1).trim() : '';
+      if (attrName === 'domain' && attrValue.length > 0) {
+        cookie.domain = attrValue;
+      } else if (attrName === 'path' && attrValue.length > 0) {
+        cookie.path = attrValue;
+      } else if (attrName === 'expires' && attrValue.length > 0) {
+        const expires = Date.parse(attrValue);
+        if (!Number.isNaN(expires)) {
+          cookie.expires = expires;
+        }
+      } else if (attrName === 'secure') {
+        cookie.secure = true;
+      } else if (attrName === 'httponly') {
+        cookie.httpOnly = true;
+      }
+    }
+    return cookie;
+  }
+
+  private headerValues(headers: Record<string, string | string[]>, needle: string): string[] {
+    const values: string[] = [];
+    const keys = Object.keys(headers);
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      if (key.toLowerCase() !== needle) {
+        continue;
+      }
+      const value = headers[key];
+      if (typeof value === 'string') {
+        values.push(value);
+      } else {
+        for (let j = 0; j < value.length; j++) {
+          values.push(value[j]);
+        }
+      }
+    }
+    return values;
+  }
+
+  private hasHeader(headers: Record<string, string>, needle: string): boolean {
+    const keys = Object.keys(headers);
+    for (let i = 0; i < keys.length; i++) {
+      if (keys[i].toLowerCase() === needle) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private resolveDomain(url: string): string | undefined {
+    const match = url.match(/^https?:\/\/([^/:]+)(?::\d+)?(?:\/|$)/);
+    if (match !== null && match.length >= 2) {
+      return match[1];
+    }
+    return undefined;
   }
 
   private mapError(code: number, message: string, url: string): HostError {

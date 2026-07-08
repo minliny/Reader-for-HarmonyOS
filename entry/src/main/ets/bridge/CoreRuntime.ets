@@ -29,6 +29,7 @@ import type { HostCapability } from '../host/types';
 import { HttpHostAdapter } from '../host/adapters/HttpHostAdapter';
 import { CoreHostAdapter } from '../host/adapters/CoreHostAdapter';
 import { CookieHostAdapter } from '../host/adapters/CookieHostAdapter';
+import { SourceSessionHostStore } from '../host/adapters/SourceSessionHostStore';
 import { WebViewHostAdapter } from '../host/adapters/WebViewHostAdapter';
 import { FileHostAdapter } from '../host/adapters/FileHostAdapter';
 import { ClipboardHostAdapter } from '../host/adapters/ClipboardHostAdapter';
@@ -97,6 +98,7 @@ export class CoreRuntime {
   // device-evidence status. Built after adapters so the availability resolver
   // can query live adapter nullness + registry membership.
   private manifest: HostCapabilityManifest;
+  private sourceSessionStore: SourceSessionHostStore;
   // Phase 3 — Core closed-set adapters (registered with HostCapabilityRegistry).
   private httpAdapter: HttpHostAdapter;
   private coreAdapter: CoreHostAdapter;
@@ -139,9 +141,10 @@ export class CoreRuntime {
     });
 
     // 4. Create Host adapters. Phase 3 (Core closed-set):
-    this.httpAdapter = new HttpHostAdapter();
+    this.sourceSessionStore = SourceSessionHostStore.shared();
+    this.httpAdapter = new HttpHostAdapter(this.sourceSessionStore);
     this.coreAdapter = new CoreHostAdapter();
-    this.cookieAdapter = new CookieHostAdapter();
+    this.cookieAdapter = new CookieHostAdapter(this.sourceSessionStore);
     this.webViewAdapter = new WebViewHostAdapter();
     this.fileAdapter = config.context !== undefined
       ? new FileHostAdapter(config.context)
@@ -436,6 +439,10 @@ export class CoreRuntime {
 
   getCoreAdapter(): CoreHostAdapter {
     return this.coreAdapter;
+  }
+
+  getSourceSessionStore(): SourceSessionHostStore {
+    return this.sourceSessionStore;
   }
 
   getCookieAdapter(): CookieHostAdapter {
