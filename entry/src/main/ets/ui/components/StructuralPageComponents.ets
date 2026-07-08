@@ -200,9 +200,10 @@ struct SectionTitle {
 @Component
 struct FormField {
   @Prop placeholder: string = '输入内容';
+  @Prop value: string = '';
 
   build() {
-    TextInput({ placeholder: this.placeholder })
+    TextInput({ text: this.value, placeholder: this.placeholder })
       .fontSize(14)
       .fontColor(ColorTokens.ink)
       .height(42)
@@ -308,7 +309,7 @@ struct StatePanel {
       }
     }
     .width('100%')
-    .constraintSize({ minHeight: 520 })
+    .constraintSize({ minHeight: 640 })
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
     .padding({ left: 12, right: 12, top: 32, bottom: 32 })
@@ -324,6 +325,10 @@ export struct AppShellStructure {
     { title: '发现', detail: '书源发现与分类浏览', chip: '' },
     { title: 'RSS', detail: '订阅与文章阅读', chip: '' },
     { title: '设置', detail: '全局设置、同步与书源', chip: '' },
+    { title: '搜索入口', detail: '按书名、作者与书源搜索', chip: '' },
+    { title: '书源管理入口', detail: '维护搜索、目录与正文规则', chip: '' },
+    { title: '阅读页入口', detail: '进入阅读器与控制层', chip: '' },
+    { title: 'WebDAV / 同步入口', detail: '备份、恢复与阅读进度同步', chip: '' },
   ];
 
   build() {
@@ -417,16 +422,19 @@ export struct SearchStatePage {
 @Component
 export struct BookTocPreviewPage {
   private chapters: RowEntry[] = [
-    { title: '第 1 章 深空来信', detail: '约 12 分钟阅读', chip: '' },
-    { title: '第 2 章 观察者', detail: '约 10 分钟阅读', chip: '' },
-    { title: '第 3 章 低语', detail: '约 14 分钟阅读', chip: '' },
+    { title: '第1章：深空信号', detail: '', chip: '可读' },
+    { title: '第2章：深空信号', detail: '', chip: '可读' },
+    { title: '第3章：深空信号', detail: '', chip: '可读' },
+    { title: '第4章：深空信号', detail: '', chip: '可读' },
+    { title: '第5章：深空信号', detail: '', chip: '可读' },
+    { title: '第6章：深空信号', detail: '', chip: '可读' },
   ];
 
   build() {
     Column() {
       SectionTitle({ title: '目录预览' })
       ForEach(this.chapters, (entry: RowEntry, idx: number) => {
-        StructureRow({ title: entry.title, detail: entry.detail })
+        StructureRow({ title: entry.title, chip: entry.chip, showChevron: false })
           .margin({ top: idx === 0 ? 10 : 8 })
       }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
     }
@@ -557,11 +565,12 @@ export struct SourceDisabledState {
 @Component
 export struct SourceFormPage {
   @Prop action: string = '保存';
+  @Prop editing: boolean = false;
 
   build() {
     Column() {
-      FormField({ placeholder: '书源名称' })
-      FormField({ placeholder: '书源 URL' })
+      FormField({ placeholder: '书源名称', value: this.editing ? '阅读书源 1' : '' })
+      FormField({ placeholder: '书源 URL', value: this.editing ? 'https://example.com' : '' })
         .margin({ top: 10 })
       PrimaryAction({ label: this.action })
         .margin({ top: 10 })

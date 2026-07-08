@@ -237,7 +237,10 @@ export struct ViewStateRenderer {
         action: this.textOr(component.props.action, '查看详情'),
       })
     } else if (component.type === 'SourceFormPage') {
-      SourceFormPage({ action: this.textOr(component.props.action, '保存') })
+      SourceFormPage({
+        action: this.textOr(component.props.action, '保存'),
+        editing: component.id === 'source-edit-page',
+      })
     } else if (component.type === 'SourceSettingsEntryPage') {
       SourceSettingsEntryPage()
     } else if (component.type === 'SourceTestResultPage') {

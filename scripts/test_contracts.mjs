@@ -231,6 +231,24 @@ test('normalized settings/form pages use page-level components, not generic asse
   }
 });
 
+test('structural page visuals keep handoff row counts and copy', () => {
+  const structural = read(path.join(REPO, 'entry/src/main/ets/ui/components/StructuralPageComponents.ets'));
+  for (const text of [
+    '搜索入口',
+    '书源管理入口',
+    '阅读页入口',
+    'WebDAV / 同步入口',
+    '第6章：深空信号',
+    'https://example.com',
+  ]) {
+    assert.ok(structural.includes(text), `StructuralPageComponents missing handoff text: ${text}`);
+  }
+  assert.ok(
+    structural.includes('constraintSize({ minHeight: 640 })'),
+    'StatePanel must match .reader-state-page min-height 640'
+  );
+});
+
 // ── 7. Normalized page → ViewState coverage guard ─────────────────────────
 // The normalized HTML pages (Reader UI/docs/ui-handoff/normalized-html/) are
 // the 1:1 migration target — including 8 reader overlay routes + control-layer-
