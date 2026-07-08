@@ -169,72 +169,63 @@ export struct ReadingInfoLayer {
 }
 
 // .reader-top-area: top control chrome shown on control-layer and overlay
-// routes. The plain reader route keeps ReadingInfoLayer instead.
+// routes. Mirrors demo .fd-reader-top: one rounded floating card with back,
+// title/source, source switch, and more. The plain reader route keeps
+// ReadingInfoLayer instead.
 @Component
 export struct ReaderTopArea {
   @StorageProp(SafeAreaAdapter.K_TOP) safeAreaTop: number = SafeAreaAdapter.DEFAULT_TOP;
 
   build() {
     Stack({ alignContent: Alignment.Top }) {
-      Column() {
-        Row() {
-          Row() {
-            Image($r('app.media.reader_icon_back_dark'))
-              .width(28).height(28)
-              .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
-          }
-          .width(64)
-          .justifyContent(FlexAlign.Start)
-          .alignItems(VerticalAlign.Center)
+      Row({ space: 8 }) {
+        Image($r('app.media.reader_icon_back_dark'))
+          .width(28)
+          .height(28)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
 
+        Column({ space: 4 }) {
           Text('深空信号')
-            .fontSize(18)
-            .fontWeight(600)
+            .fontSize(16)
+            .fontWeight(700)
             .fontColor(ColorTokens.controlInk)
             .fontFamily(ReaderTypography.sansFamily())
-            .textAlign(TextAlign.Center)
-            .layoutWeight(1)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-          Row({ space: 16 }) {
-            Image($r('app.media.ui_icon_refresh_dark')).width(24).height(24)
-            Image($r('app.media.reader_icon_source_switch_dark')).width(24).height(24)
-              .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'source-switch-results' }))
-            Image($r('app.media.reader_icon_more_dark')).width(24).height(24)
-          }
-          .width(96)
-          .justifyContent(FlexAlign.End)
-          .alignItems(VerticalAlign.Center)
-        }
-        .height(56)
-        .padding({ left: 16, right: 16 })
-        .backgroundColor(ColorTokens.surfaceSoft)
-        .border({ width: { bottom: 1 }, color: ColorTokens.border })
-
-        Row() {
-          Text('第一章：阿长与《山海经》')
-            .fontSize(14)
-            .fontColor(ColorTokens.controlInk)
-            .fontFamily(ReaderTypography.sansFamily())
-            .layoutWeight(1)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-          Text('本地书籍')
+          Text('优书网 · 128ms')
             .fontSize(12)
-            .fontWeight(600)
-            .fontColor(ColorTokens.primary)
-            .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-            .backgroundColor(ColorTokens.metaBg)
-            .borderRadius(DemoAliasTokens.radiusPill)
+            .fontColor(ColorTokens.muted)
+            .fontFamily(ReaderTypography.sansFamily())
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
-        .height(48)
-        .padding({ left: 16, right: 16 })
-        .backgroundColor(ColorTokens.metaBg)
-        .border({ width: { bottom: 1 }, color: ColorTokens.border })
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+
+        Row({ space: 4 }) {
+          Image($r('app.media.reader_icon_source_switch_dark')).width(18).height(18)
+          Text('换源')
+            .fontSize(12)
+            .fontWeight(800)
+            .fontColor(ColorTokens.controlInk)
+            .fontFamily(ReaderTypography.sansFamily())
+        }
+        .width(62)
+        .height(42)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'source-switch-results' }))
+
+        Image($r('app.media.reader_icon_more_dark')).width(24).height(24)
       }
-      .width('100%')
-      .padding({ top: this.safeAreaTop })
+      .width('92%')
+      .height(54)
+      .padding({ left: 12, right: 12 })
+      .margin({ top: this.safeAreaTop + 18 })
+      .backgroundColor(ColorTokens.floatingControlBg)
+      .border({ width: 1, color: ColorTokens.border })
+      .borderRadius(DemoAliasTokens.radiusXl)
+      .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
     }
     .width('100%')
     .height('100%')

@@ -207,8 +207,10 @@ test('reader control layer uses top-area structure instead of immersive info chr
   const reader = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderComponents.ets'));
   assert.ok(reader.includes('export struct ReaderTopArea'), 'control-layer routes need the normalized reader-top-area component');
   assert.ok(reader.includes("Text('深空信号')"), 'reader top area must show the normalized book title');
-  assert.ok(reader.includes("Text('第一章：阿长与《山海经》')"), 'reader top area must show the normalized chapter meta row');
-  assert.ok(reader.includes("Text('本地书籍')"), 'reader top area must show the source chip');
+  assert.ok(reader.includes("Text('优书网 · 128ms')"), 'reader top area must show the normalized source line');
+  assert.ok(reader.includes("Text('换源')"), 'reader top area must expose the source switch action');
+  assert.ok(!reader.includes("Text('第一章：阿长与《山海经》')"), 'reader top area must not split into a detached chapter meta row');
+  assert.ok(!reader.includes("Text('本地书籍')"), 'reader top area must not split into a detached source chip');
   assert.ok(reader.includes("return this.routeId !== 'reader'"), 'ReaderBase must branch between immersive reader and control-layer chrome');
   assert.ok(reader.includes('ReaderTopArea()'), 'control-layer branch must render ReaderTopArea');
   assert.ok(reader.includes('ReadingInfoLayer({ theme: this.theme })'), 'plain reader branch keeps immersive corner info');

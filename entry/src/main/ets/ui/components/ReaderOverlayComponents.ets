@@ -219,6 +219,9 @@ export struct ToggleSwitch {
 export struct ReaderControlSheet {
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
 
+  private readonly dockMaxWidth: number = 340;
+  private readonly dockRight: number = 24;
+
   private quickActions: Array<[string, string, string]> = [
     ['搜索', 'reader_icon_reader_content_search_action', 'reader-search-overlay-v2'],
     ['自动翻页', 'reader_icon_reader_auto_page_action', 'reader-auto-scroll-overlay-v2'],
@@ -230,7 +233,7 @@ export struct ReaderControlSheet {
   }
 
   build() {
-    Stack({ alignContent: Alignment.Bottom }) {
+    Stack({ alignContent: Alignment.BottomEnd }) {
       Column() {
         Stack({ alignContent: Alignment.Top }) {
           Column()
@@ -363,8 +366,9 @@ export struct ReaderControlSheet {
         .backgroundColor(ColorTokens.floatingControlBg)
         .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
       }
-      .width('100%')
-      .padding({ left: 12, right: 12, bottom: this.sheetBottom() })
+      .width('90%')
+      .constraintSize({ maxWidth: this.dockMaxWidth })
+      .margin({ right: this.dockRight, bottom: this.sheetBottom() })
     }
     .width('100%')
     .height('100%')
@@ -458,6 +462,9 @@ export struct ReaderBottomBar {
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
   @StorageProp('reader.displayedRouteId') routeId: string = 'control-layer-base-v2';
 
+  private readonly dockMaxWidth: number = 340;
+  private readonly dockRight: number = 24;
+
   private items: Array<[string, string, string]> = [
     ['directory', '目录', 'reader-directory-overlay-v2'],
     ['tts', '朗读', 'reader-tts-overlay-v2'],
@@ -489,7 +496,7 @@ export struct ReaderBottomBar {
   }
 
   build() {
-    Stack({ alignContent: Alignment.Bottom }) {
+    Stack({ alignContent: Alignment.BottomEnd }) {
       Column() {
         Row({ space: 4 }) {
           ForEach(this.items, (it: [string, string, string]) => {
@@ -525,8 +532,9 @@ export struct ReaderBottomBar {
         .border({ width: 1, color: ColorTokens.border })
         .borderRadius(DemoAliasTokens.radiusLg)
       }
-      .width('100%')
-      .padding({ left: 24, right: 24, bottom: this.safeAreaBottom + 32 })
+      .width('90%')
+      .constraintSize({ maxWidth: this.dockMaxWidth })
+      .margin({ right: this.dockRight, bottom: this.safeAreaBottom + 32 })
     }
     .width('100%')
     .height('100%')
