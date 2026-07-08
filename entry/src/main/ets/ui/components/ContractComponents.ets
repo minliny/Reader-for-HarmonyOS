@@ -10,6 +10,7 @@
 import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
 import { SpacingTokens } from '../../contract/generated/DimensionTokens';
+import { RouteId } from '../../contract/generated/RouteTable';
 import { ReaderTypography } from '../tokens/ReaderTypography';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 import { SearchResultEntry, BookDetail } from '../store/ReaderUiState';
@@ -372,17 +373,30 @@ export struct LocalOverviewCard {
 
 @Component
 export struct QuickEntryGrid {
-  private entries: string[] = ['书源管理', '同步备份', '阅读设置', '关于'];
+  private entries: Array<[string, string, RouteId]> = [
+    ['书源管理', 'ui_icon_source_stack_primary', 'source-management'],
+    ['同步备份', 'ui_icon_sync_primary', 'sync-backup'],
+    ['阅读设置', 'reader_icon_reader_module_appearance_primary', 'reading-settings-entry'],
+    ['关于', 'ui_icon_info_primary', 'about-feedback'],
+  ];
+
   build() {
     Grid() {
-      ForEach(this.entries, (e: string, i: number) => {
+      ForEach(this.entries, (e: [string, string, RouteId], i: number) => {
         GridItem() {
           Column() {
-            Stack().width(40).height(40).borderRadius(DemoAliasTokens.radiusPill).backgroundColor(ColorTokens.metaBg)
-            Text(e).fontSize(12).fontColor(ColorTokens.ink).margin({ top: 6 })
+            Stack() {
+              Image($r(`app.media.${e[1]}`)).width(22).height(22)
+            }
+            .width(40)
+            .height(40)
+            .borderRadius(DemoAliasTokens.radiusPill)
+            .backgroundColor(ColorTokens.metaBg)
+            Text(e[0]).fontSize(12).fontColor(ColorTokens.ink).margin({ top: 6 })
           }.alignItems(HorizontalAlign.Center)
         }
-      }, (e: string, i: number) => `${e}-${i}`)
+        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: e[2] }))
+      }, (e: [string, string, RouteId], i: number) => `${e[0]}-${i}`)
     }
     .columnsTemplate('1fr 1fr 1fr 1fr')
     .rowsGap(16).columnsGap(12)
