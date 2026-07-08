@@ -9,6 +9,7 @@ export interface ViewStateProps {
   author?: string;
   bookId?: string;
   destructive?: boolean;
+  filterOpen?: boolean;
   label?: string;
   message?: string;
   mode?: string;
@@ -317,23 +318,9 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "LocalOverviewCard",
-        "id": "local-overview",
+        "type": "SettingsHomePage",
+        "id": "settings-home-page",
         "props": {},
-        "children": []
-      },
-      {
-        "type": "QuickEntryGrid",
-        "id": "quick-entry",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "SettingsSection",
-        "id": "section-general",
-        "props": {
-          "title": "通用"
-        },
         "children": []
       },
       {
@@ -2184,31 +2171,10 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "SettingsSection",
-        "id": "general-section",
-        "props": {
-          "title": "通用"
-        },
-        "children": [
-          {
-            "type": "SettingsListItem",
-            "id": "general-language",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "general-theme",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "general-font",
-            "props": {},
-            "children": []
-          }
-        ]
+        "type": "SettingsGeneralPage",
+        "id": "settings-general-page",
+        "props": {},
+        "children": []
       }
     ]
   },
@@ -2225,34 +2191,10 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "Card",
-        "id": "about-card",
-        "props": {
-          "title": "Reader for HarmonyOS",
-          "subtitle": "多端阅读器 · ArkTS 原生"
-        },
+        "type": "AboutFeedbackPage",
+        "id": "about-page",
+        "props": {},
         "children": []
-      },
-      {
-        "type": "SettingsSection",
-        "id": "about-section",
-        "props": {
-          "title": "信息"
-        },
-        "children": [
-          {
-            "type": "SettingsListItem",
-            "id": "about-version-entry",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "about-feedback-entry",
-            "props": {},
-            "children": []
-          }
-        ]
       }
     ]
   },
@@ -2284,30 +2226,15 @@ export class ViewStateTable {
         "type": "BackTopBar",
         "id": "topbar",
         "props": {
-          "title": "书架搜索设置"
+          "title": "书架与搜索"
         },
         "children": []
       },
       {
-        "type": "SettingsSection",
-        "id": "search-settings-section",
-        "props": {
-          "title": "搜索"
-        },
-        "children": [
-          {
-            "type": "SettingsListItem",
-            "id": "search-default-source",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "search-scope",
-            "props": {},
-            "children": []
-          }
-        ]
+        "type": "BookshelfSearchSettingsPage",
+        "id": "bookshelf-search-settings-page",
+        "props": {},
+        "children": []
       }
     ]
   },
@@ -2428,25 +2355,10 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "SettingsSection",
-        "id": "progress-sync-section",
-        "props": {
-          "title": "同步"
-        },
-        "children": [
-          {
-            "type": "SettingsListItem",
-            "id": "sync-auto",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "sync-interval",
-            "props": {},
-            "children": []
-          }
-        ]
+        "type": "ProgressSyncPage",
+        "id": "progress-sync-page",
+        "props": {},
+        "children": []
       }
     ]
   },
@@ -2458,36 +2370,15 @@ export class ViewStateTable {
         "type": "BackTopBar",
         "id": "topbar",
         "props": {
-          "title": "批量操作"
+          "title": "已选 3 个"
         },
         "children": []
       },
       {
-        "type": "SettingsSection",
-        "id": "batch-section",
-        "props": {
-          "title": "操作"
-        },
-        "children": [
-          {
-            "type": "SettingsListItem",
-            "id": "batch-enable-all",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "batch-disable-all",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "batch-delete",
-            "props": {},
-            "children": []
-          }
-        ]
+        "type": "SourceBatchPage",
+        "id": "source-batch-page",
+        "props": {},
+        "children": []
       }
     ]
   },
@@ -3180,36 +3071,75 @@ export class ViewStateTable {
     "components": [
       {
         "type": "AppTopBar",
-        "id": "topbar",
+        "id": "bookshelf-topbar",
         "props": {
-          "title": "排序筛选"
+          "title": "书架"
         },
         "children": []
       },
       {
-        "type": "SettingsSection",
-        "id": "sort-section",
+        "type": "ContinueReadingCard",
+        "id": "continue-reading",
         "props": {
-          "title": "排序"
+          "bookId": "bk-001",
+          "title": "三体",
+          "author": "刘慈欣"
+        },
+        "children": []
+      },
+      {
+        "type": "BookshelfShelfSection",
+        "id": "bookshelf-shelf-section",
+        "props": {
+          "title": "我的书架",
+          "viewMode": "cover",
+          "filterOpen": true
         },
         "children": [
           {
-            "type": "SettingsListItem",
-            "id": "sort-recent",
-            "props": {},
+            "type": "ShelfSectionHeader",
+            "id": "shelf-header",
+            "props": {
+              "title": "我的书架"
+            },
             "children": []
           },
           {
-            "type": "SettingsListItem",
-            "id": "sort-title",
+            "type": "BookGrid",
+            "id": "book-grid",
             "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "sort-author",
-            "props": {},
-            "children": []
+            "children": [
+              {
+                "type": "BookCard",
+                "id": "book-bk-001",
+                "props": {
+                  "bookId": "bk-001",
+                  "title": "三体",
+                  "author": "刘慈欣"
+                },
+                "children": []
+              },
+              {
+                "type": "BookCard",
+                "id": "book-bk-002",
+                "props": {
+                  "bookId": "bk-002",
+                  "title": "基地",
+                  "author": "阿西莫夫"
+                },
+                "children": []
+              },
+              {
+                "type": "BookCard",
+                "id": "book-bk-003",
+                "props": {
+                  "bookId": "bk-003",
+                  "title": "球状闪电",
+                  "author": "刘慈欣"
+                },
+                "children": []
+              }
+            ]
           }
         ]
       },

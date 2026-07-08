@@ -27,6 +27,16 @@ interface SourceToolLog {
   detail: string;
 }
 
+interface SourceBatchEntry {
+  title: string;
+  domain: string;
+  group: string;
+  status: string;
+  tone: string;
+  enabled: boolean;
+  selected: boolean;
+}
+
 // ── Source item (.reader-source-item) ──────────────────────────────────────
 //   list-title 15/600 + list-detail 12 (muted) + trailing status chip.
 @Component
@@ -249,6 +259,213 @@ struct SourceToolActionButton {
       .borderRadius(DemoAliasTokens.radiusPill)
       .backgroundColor(this.warning ? ColorTokens.accent : (this.primary ? ColorTokens.primary : ColorTokens.metaBg))
       .border({ width: this.primary || this.warning ? 0 : 1, color: ColorTokens.border })
+  }
+}
+
+@Component
+struct SourceBatchCheck {
+  @Prop selected: boolean = false;
+
+  build() {
+    Column() {
+      if (this.selected) {
+        Image($r('app.media.ui_icon_check_white'))
+          .width(13)
+          .height(13)
+      }
+    }
+    .width(26)
+    .height(26)
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+    .borderRadius(DemoAliasTokens.radiusPill)
+    .backgroundColor(this.selected ? ColorTokens.primary : ColorTokens.metaBg)
+    .border({ width: this.selected ? 0 : 1, color: ColorTokens.border })
+  }
+}
+
+@Component
+struct SourceBatchSwitch {
+  @Prop on: boolean = true;
+
+  build() {
+    Row() {
+      if (this.on) {
+        Blank().layoutWeight(1)
+      }
+      Row()
+        .width(18)
+        .height(18)
+        .borderRadius(DemoAliasTokens.radiusPill)
+        .backgroundColor(DemoAliasTokens.surface)
+      if (!this.on) {
+        Blank().layoutWeight(1)
+      }
+    }
+    .width(38)
+    .height(22)
+    .padding(2)
+    .borderRadius(DemoAliasTokens.radiusPill)
+    .backgroundColor(this.on ? ColorTokens.primary : ColorTokens.metaBg)
+  }
+}
+
+@Component
+struct SourceBatchSearchAndFilters {
+  build() {
+    Column() {
+      Row() {
+        Image($r('app.media.ui_icon_search_dark'))
+          .width(20)
+          .height(20)
+        Text('搜索书源名称或域名')
+          .fontSize(13)
+          .fontColor(ColorTokens.muted)
+          .margin({ left: 8 })
+      }
+      .width('100%')
+      .height(42)
+      .padding({ left: 12, right: 12 })
+      .borderRadius(DemoAliasTokens.radiusPill)
+      .backgroundColor(ColorTokens.metaBg)
+      .border({ width: 1, color: ColorTokens.border })
+      .alignItems(VerticalAlign.Center)
+
+      Text('12 个书源 · 8 个启用 · 4 个异常 · 10:30 检测')
+        .fontSize(12)
+        .fontColor(ColorTokens.muted)
+        .margin({ top: 10 })
+
+      Row({ space: 8 }) {
+        SourceToolChip({ label: '全部', tone: 'filled' })
+        SourceToolChip({ label: '已启用' })
+        SourceToolChip({ label: '异常' })
+        SourceToolChip({ label: '未检测' })
+      }
+      .width('100%')
+      .margin({ top: 10 })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
+struct SourceBatchRow {
+  @Prop title: string = '';
+  @Prop domain: string = '';
+  @Prop group: string = '';
+  @Prop status: string = '';
+  @Prop tone: string = 'soft';
+  @Prop sourceEnabled: boolean = true;
+  @Prop selected: boolean = false;
+
+  build() {
+    Row() {
+      SourceBatchCheck({ selected: this.selected })
+      Column() {
+        Text(this.title)
+          .fontSize(14)
+          .fontWeight(850)
+          .fontColor(ColorTokens.ink)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(`${this.domain} · ${this.group}`)
+          .fontSize(11)
+          .fontColor(ColorTokens.muted)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .margin({ top: 4 })
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+      .margin({ left: 10, right: 8 })
+      SourceToolChip({ label: this.status, tone: this.tone })
+      SourceBatchSwitch({ on: this.sourceEnabled })
+        .margin({ left: 8 })
+    }
+    .width('100%')
+    .constraintSize({ minHeight: 58 })
+    .padding({ left: 12, right: 12, top: 10, bottom: 10 })
+    .borderRadius(DemoAliasTokens.radiusMd)
+    .backgroundColor(this.selected ? ColorTokens.surfaceSoft : DemoAliasTokens.surface)
+    .border({ width: 1, color: this.selected ? ColorTokens.primary : ColorTokens.border })
+    .alignItems(VerticalAlign.Center)
+  }
+}
+
+@Component
+export struct SourceBatchPage {
+  private sources: SourceBatchEntry[] = [
+    { title: '起点中文网', domain: 'qidian.com', group: '起点导入', status: '可用', tone: 'soft', enabled: true, selected: true },
+    { title: '笔趣阁', domain: 'biquge.example', group: '玄幻书源', status: '异常', tone: 'warn', enabled: true, selected: true },
+    { title: '本地导入源', domain: 'local.reader', group: '自定义', status: '未检测', tone: 'soft', enabled: false, selected: true },
+    { title: '测试书源', domain: 'test.example', group: '测试书源', status: '可用', tone: 'soft', enabled: true, selected: false },
+  ];
+
+  build() {
+    Column() {
+      Row() {
+        Text('取消')
+          .fontSize(13)
+          .fontWeight(800)
+          .fontColor(ColorTokens.primaryDark)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'source-management' }))
+        Text('已选 3 个')
+          .fontSize(16)
+          .fontWeight(900)
+          .fontColor(ColorTokens.ink)
+          .layoutWeight(1)
+          .textAlign(TextAlign.Center)
+        Text('全选')
+          .fontSize(13)
+          .fontWeight(800)
+          .fontColor(ColorTokens.primaryDark)
+      }
+      .width('100%')
+      .height(38)
+      .alignItems(VerticalAlign.Center)
+
+      SourceBatchSearchAndFilters()
+        .margin({ top: 12 })
+
+      Column() {
+        ForEach(this.sources, (item: SourceBatchEntry, idx: number) => {
+          SourceBatchRow({
+            title: item.title,
+            domain: item.domain,
+            group: item.group,
+            status: item.status,
+            tone: item.tone,
+            sourceEnabled: item.enabled,
+            selected: item.selected,
+          })
+            .margin({ bottom: idx === this.sources.length - 1 ? 0 : 8 })
+        }, (item: SourceBatchEntry, idx: number) => `${item.title}-${idx}`)
+      }
+      .width('100%')
+      .margin({ top: 12 })
+
+      Row() {
+        SourceToolActionButton({ label: '启用' })
+        SourceToolActionButton({ label: '禁用' })
+          .margin({ left: 8 })
+        SourceToolActionButton({ label: '检测' })
+          .margin({ left: 8 })
+      }
+      .width('100%')
+      .margin({ top: 14 })
+
+      Row() {
+        SourceToolActionButton({ label: '分组', primary: true })
+        SourceToolActionButton({ label: '删除', warning: true })
+          .margin({ left: 8 })
+      }
+      .width('100%')
+      .margin({ top: 8 })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
   }
 }
 

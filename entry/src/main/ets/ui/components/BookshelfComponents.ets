@@ -14,6 +14,11 @@ export interface BookEntry {
   author: string;
 }
 
+interface BookshelfFilterOption {
+  label: string;
+  active: boolean;
+}
+
 // A bookId is loadable when it is a real source path (e.g. '/book/123' or a
 // full 'https://...' URL). Fixture ids like 'bk-001' are NOT loadable —
 // BookSourceRegistry.buildDetailUrl would produce an invalid URL. Guard with
@@ -126,7 +131,10 @@ export struct ShelfSectionHeader {
       Blank()
       Row({ space: 8 }) {
         Column() {
-          Image($r('app.media.bookshelf_icon_grid_primary')).width(20).height(20)
+          Image($r('app.media.bookshelf_icon_grid_primary'))
+            .width(20)
+            .height(20)
+            .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'bookshelf-cover-mode' }))
         }
         .width(34).height(34)
         .justifyContent(FlexAlign.Center)
@@ -137,7 +145,10 @@ export struct ShelfSectionHeader {
         .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'bookshelf-cover-mode' }))
 
         Column() {
-          Image($r('app.media.bookshelf_icon_list_dark')).width(20).height(20)
+          Image($r('app.media.bookshelf_icon_list_dark'))
+            .width(20)
+            .height(20)
+            .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'bookshelf-list-mode' }))
         }
         .width(34).height(34)
         .justifyContent(FlexAlign.Center)
@@ -148,7 +159,10 @@ export struct ShelfSectionHeader {
         .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'bookshelf-list-mode' }))
 
         Column() {
-          Image($r('app.media.bookshelf_icon_filter_dark')).width(20).height(20)
+          Image($r('app.media.bookshelf_icon_filter_dark'))
+            .width(20)
+            .height(20)
+            .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'sort-filter' }))
         }
         .width(34).height(34)
         .justifyContent(FlexAlign.Center)
@@ -159,7 +173,10 @@ export struct ShelfSectionHeader {
         .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'sort-filter' }))
 
         Column() {
-          Image($r('app.media.bookshelf_icon_gear_dark')).width(20).height(20)
+          Image($r('app.media.bookshelf_icon_gear_dark'))
+            .width(20)
+            .height(20)
+            .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'bookshelf-search-settings' }))
         }
         .width(34).height(34)
         .justifyContent(FlexAlign.Center)
@@ -182,14 +199,95 @@ export struct ShelfSectionHeader {
 export struct BookshelfShelfSection {
   @Prop title: string = '我的书架';
   @Prop books: BookEntry[] = [];
+  @Prop filterOpen: boolean = false;
 
   build() {
     Column() {
       ShelfSectionHeader({ title: this.title })
+      if (this.filterOpen) {
+        BookshelfFilterPopover()
+          .margin({ top: 10 })
+      }
       BookGrid({ books: this.books })
         .margin({ top: 10 })
     }
     .width('100%')
+  }
+}
+
+@Component
+struct BookshelfFilterGroup {
+  @Prop title: string = '';
+  @Prop options: BookshelfFilterOption[] = [];
+
+  build() {
+    Column() {
+      Text(this.title)
+        .fontSize(12)
+        .fontWeight(900)
+        .fontColor(ColorTokens.ink)
+      Flex({ wrap: FlexWrap.Wrap }) {
+        ForEach(this.options, (option: BookshelfFilterOption, idx: number) => {
+          Text(option.label)
+            .fontSize(12)
+            .fontWeight(800)
+            .fontColor(option.active ? DemoAliasTokens.onPrimary : ColorTokens.primaryDark)
+            .height(30)
+            .padding({ left: 12, right: 12 })
+            .borderRadius(DemoAliasTokens.radiusPill)
+            .backgroundColor(option.active ? ColorTokens.primary : ColorTokens.metaBg)
+            .border({ width: option.active ? 0 : 1, color: ColorTokens.border })
+            .margin({ right: 8, top: 8 })
+        }, (option: BookshelfFilterOption, idx: number) => `${option.label}-${idx}`)
+      }
+      .width('100%')
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
+struct BookshelfFilterPopover {
+  build() {
+    Column() {
+      BookshelfFilterGroup({
+        title: '分组',
+        options: [
+          { label: '全部', active: true },
+          { label: '默认', active: false },
+          { label: '本地书', active: false },
+          { label: '追更', active: false },
+        ],
+      })
+      BookshelfFilterGroup({
+        title: '排序',
+        options: [
+          { label: '最近更新', active: true },
+          { label: '阅读进度', active: false },
+          { label: '书名', active: false },
+          { label: '作者', active: false },
+        ],
+      })
+        .margin({ top: 12 })
+      BookshelfFilterGroup({
+        title: '筛选',
+        options: [
+          { label: '全部', active: true },
+          { label: '未读', active: false },
+          { label: '已完结', active: false },
+          { label: '更新失败', active: false },
+        ],
+      })
+        .margin({ top: 12 })
+    }
+    .width('100%')
+    .padding(14)
+    .borderRadius(DemoAliasTokens.radiusMd)
+    .backgroundColor(DemoAliasTokens.surface)
+    .border({ width: 1, color: ColorTokens.border })
+    .shadow({ radius: 18, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 6 })
+    .alignItems(HorizontalAlign.Start)
   }
 }
 

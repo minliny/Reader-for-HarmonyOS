@@ -10,8 +10,8 @@ import { ReadingBackgroundLayer, ReadingTextFlow, ReadingInfoLayer, TapZones, Re
 import { ReaderControlSheet, ReaderBottomBar, ReaderDirectoryPanel, ReaderAppearancePanel, ReaderTtsPanel, ReaderSettingsPanel, ReaderSearchPanel, ReaderReplacePanel, ReaderAutoScrollPanel, FloatingQuickActions, FloatingPageControl, FloatingBrightness, NightToast } from './ReaderOverlayComponents';
 import { SourceSwitchResultsPanel, SourceImportPreviewPage, SourceGroupsPage, SourceDetectPage, SourceDebugPage,
   SourceDebugRunningPage, SourceDebugResultPage, SourceDebugContentLogPage, SourceCodeViewPage, SourceLogsPage,
-  SourceDeleteConfirmPage, SourceRuleEditPage } from './LibraryComponents';
-import { SettingsHomeSection, SettingsSection, SettingsListItem } from './SettingsComponents';
+  SourceDeleteConfirmPage, SourceRuleEditPage, SourceBatchPage } from './LibraryComponents';
+import { SettingsHomeSection, SettingsHomePage, SettingsGeneralPage, BookshelfSearchSettingsPage, ProgressSyncPage, SettingsSection, SettingsListItem } from './SettingsComponents';
 import { DiscoverSourceBar, DiscoverEntryRow, DiscoverFilterTrigger, DiscoverListHead, DiscoverBookList,
   DiscoverStatePage, DiscoverSourceBulkPage, DiscoverSourceLoginPage, DiscoverRuleTestPage } from './DiscoverComponents';
 import { RssSearchEntry, RssModeRow, RssSourceOverview, RssArticleSection,
@@ -121,7 +121,11 @@ export struct ViewStateRenderer {
     } else if (component.type === 'ContinueReadingCard') {
       ContinueReadingCard({ bookId: this.textOr(component.props.bookId, ''), title: this.textOr(component.props.title, '示例书'), author: this.textOr(component.props.author, '示例作者') })
     } else if (component.type === 'BookshelfShelfSection') {
-      BookshelfShelfSection({ title: this.textOr(component.props.title, '我的书架'), books: this.extractBooks(component.children) })
+      BookshelfShelfSection({
+        title: this.textOr(component.props.title, '我的书架'),
+        books: this.extractBooks(component.children),
+        filterOpen: component.props.filterOpen === true,
+      })
     } else if (component.type === 'BookHero') {
       BookHero()
     } else if (component.type === 'BookSummaryCard') {
@@ -176,6 +180,8 @@ export struct ViewStateRenderer {
       SourceDeleteConfirmPage()
     } else if (component.type === 'SourceRuleEditPage') {
       SourceRuleEditPage()
+    } else if (component.type === 'SourceBatchPage') {
+      SourceBatchPage()
     } else if (component.type === 'ReaderDirectoryPanel') {
       ReaderDirectoryPanel()
     } else if (component.type === 'ReaderAppearancePanel') {
@@ -192,6 +198,14 @@ export struct ViewStateRenderer {
       ReaderAutoScrollPanel()
     } else if (component.type === 'SettingsHomeSection') {
       SettingsHomeSection()
+    } else if (component.type === 'SettingsHomePage') {
+      SettingsHomePage()
+    } else if (component.type === 'SettingsGeneralPage') {
+      SettingsGeneralPage()
+    } else if (component.type === 'BookshelfSearchSettingsPage') {
+      BookshelfSearchSettingsPage()
+    } else if (component.type === 'ProgressSyncPage') {
+      ProgressSyncPage()
     } else if (component.type === 'SettingsSection') {
       if (component.children.length > 0) {
         Column() {

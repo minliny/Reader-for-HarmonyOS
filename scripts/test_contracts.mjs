@@ -509,6 +509,7 @@ test('source tool pages use page-level visual components, not scaffold-only list
     ['source-import-preview/default', ['BackTopBar', 'SourceImportPreviewPage']],
     ['source-groups/default', ['BackTopBar', 'SourceGroupsPage']],
     ['source-detect/default', ['BackTopBar', 'SourceDetectPage']],
+    ['source-batch/default', ['BackTopBar', 'SourceBatchPage']],
     ['source-rule-edit/default', ['BackTopBar', 'SourceRuleEditPage']],
     ['source-edit-debug/default', ['BackTopBar', 'SourceRuleEditPage']],
     ['source-debug/default', ['BackTopBar', 'SourceDebugPage']],
@@ -549,6 +550,8 @@ test('source tool pages use page-level visual components, not scaffold-only list
     '规则版本',
     '解析规则',
     '调测当前模块',
+    '已选 3 个',
+    '搜索书源名称或域名',
   ]) {
     assert.ok(sourceSrc.includes(text), `LibraryComponents missing source tool copy: ${text}`);
   }
@@ -631,6 +634,10 @@ test('normalized settings/form pages use page-level components, not generic asse
     ['book-batch-management/default', ['BackTopBar', 'BookBatchManagementPage']],
     ['book-directory/default', ['BackTopBar', 'BookDirectoryPage']],
     ['rss-subscription-management/default', ['BackTopBar', 'RssSubscriptionManagementPage']],
+    ['settings/default', ['AppTopBar', 'SettingsHomePage', 'BottomNav']],
+    ['settings-general/default', ['BackTopBar', 'SettingsGeneralPage']],
+    ['bookshelf-search-settings/default', ['BackTopBar', 'BookshelfSearchSettingsPage']],
+    ['progress-sync/default', ['BackTopBar', 'ProgressSyncPage']],
     ['source-add/default', ['BackTopBar', 'SourceFormPage']],
     ['source-edit/default', ['BackTopBar', 'SourceFormPage']],
     ['global-settings/default', ['BackTopBar', 'GlobalSettingsPage']],
@@ -645,11 +652,50 @@ test('normalized settings/form pages use page-level components, not generic asse
   }
 });
 
+test('settings and sort-filter page-level components are wired to visual renderers', () => {
+  const VS = readJson('view-state.fixtures.json');
+  const sortFilter = VS.find((e) => e.routeId === 'sort-filter' && e.pageState === 'default');
+  assert.ok(sortFilter, 'sort-filter/default fixture missing');
+  assert.deepEqual(
+    sortFilter.components.map((c) => c.type),
+    ['AppTopBar', 'ContinueReadingCard', 'BookshelfShelfSection', 'BottomNav'],
+    'sort-filter must reuse bookshelf body with filter popover state'
+  );
+  const shelf = sortFilter.components.find((c) => c.type === 'BookshelfShelfSection');
+  assert.equal(shelf.props.filterOpen, true, 'sort-filter must set BookshelfShelfSection.filterOpen=true');
+
+  const settingsSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/SettingsComponents.ets'));
+  for (const text of [
+    "'bookshelf-search-settings'",
+    'SettingsHomePage',
+    'SettingsGeneralPage',
+    'BookshelfSearchSettingsPage',
+    'ProgressSyncPage',
+    'App主题',
+    '书架排序',
+    '阅读进度同步',
+  ]) {
+    assert.ok(settingsSrc.includes(text), `SettingsComponents missing page-level copy/wiring: ${text}`);
+  }
+
+  const bookshelfSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/BookshelfComponents.ets'));
+  for (const text of ['BookshelfFilterPopover', '分组', '最近更新', '更新失败']) {
+    assert.ok(bookshelfSrc.includes(text), `BookshelfComponents missing sort-filter popover copy: ${text}`);
+  }
+
+  const rendererSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/ViewStateRenderer.ets'));
+  for (const type of ['SettingsHomePage', 'SettingsGeneralPage', 'BookshelfSearchSettingsPage', 'ProgressSyncPage', 'SourceBatchPage']) {
+    assert.ok(rendererSrc.includes(`component.type === '${type}'`), `ViewStateRenderer missing ${type}`);
+  }
+  assert.ok(rendererSrc.includes('filterOpen: component.props.filterOpen === true'), 'ViewStateRenderer must pass BookshelfShelfSection.filterOpen');
+});
+
 test('structural page visuals keep handoff row counts and copy', () => {
   const structural = read(path.join(REPO, 'entry/src/main/ets/ui/components/StructuralPageComponents.ets'));
   for (const text of [
     '搜索入口',
     '书源管理入口',
+    '批量管理',
     '阅读页入口',
     'WebDAV / 同步入口',
     '第6章：深空信号',

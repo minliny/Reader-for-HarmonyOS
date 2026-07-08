@@ -952,6 +952,7 @@ export struct BookDirectoryPage {
 @Component
 export struct SourceManagementPage {
   private tools: Array<[string, string, RouteId]> = [
+    ['批量管理', '启用、禁用、检测、分组或删除所选书源', 'source-batch'],
     ['导入预览', '从网络导入书源并处理冲突', 'source-import-preview'],
     ['分组管理', '筛选和批量整理书源', 'source-groups'],
     ['书源检测', '站点、搜索、详情、目录、正文规则检测', 'source-detect'],
