@@ -21,6 +21,7 @@ export interface ViewStateProps {
   rssId?: string;
   selected?: string;
   sources?: number;
+  subtitle?: string;
   theme?: string;
   title?: string;
   unread?: number;
@@ -1231,6 +1232,3091 @@ export class ViewStateTable {
       {
         "type": "Loading",
         "id": "restore-running-loading",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "bookshelf-cover-mode",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "AppTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "书架"
+        },
+        "children": []
+      },
+      {
+        "type": "BookshelfShelfSection",
+        "id": "shelf-section",
+        "props": {
+          "title": "我的书架",
+          "viewMode": "cover"
+        },
+        "children": [
+          {
+            "type": "ShelfSectionHeader",
+            "id": "shelf-header",
+            "props": {
+              "title": "我的书架",
+              "viewMode": "cover"
+            },
+            "children": []
+          },
+          {
+            "type": "BookGrid",
+            "id": "book-grid",
+            "props": {
+              "viewMode": "cover"
+            },
+            "children": [
+              {
+                "type": "BookCard",
+                "id": "book-1",
+                "props": {
+                  "bookId": "bk-001",
+                  "title": "深空信号",
+                  "author": "本地书籍"
+                },
+                "children": []
+              },
+              {
+                "type": "BookCard",
+                "id": "book-2",
+                "props": {
+                  "bookId": "bk-002",
+                  "title": "三体",
+                  "author": "刘慈欣"
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "BottomNav",
+        "id": "bottom-nav",
+        "props": {
+          "selected": "bookshelf"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "bookshelf-list-mode",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "AppTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "书架列表"
+        },
+        "children": []
+      },
+      {
+        "type": "BookshelfShelfSection",
+        "id": "shelf-section",
+        "props": {
+          "title": "我的书架",
+          "viewMode": "list"
+        },
+        "children": [
+          {
+            "type": "ShelfSectionHeader",
+            "id": "shelf-header",
+            "props": {
+              "title": "我的书架",
+              "viewMode": "list"
+            },
+            "children": []
+          },
+          {
+            "type": "List",
+            "id": "book-list",
+            "props": {},
+            "children": [
+              {
+                "type": "ListRow",
+                "id": "book-row-1",
+                "props": {
+                  "title": "深空信号",
+                  "author": "本地书籍"
+                },
+                "children": []
+              },
+              {
+                "type": "ListRow",
+                "id": "book-row-2",
+                "props": {
+                  "title": "三体",
+                  "author": "刘慈欣"
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "BottomNav",
+        "id": "bottom-nav",
+        "props": {
+          "selected": "bookshelf"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "bookshelf-book-more-menu",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "AppTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "书籍更多菜单"
+        },
+        "children": []
+      },
+      {
+        "type": "Card",
+        "id": "book-title-card",
+        "props": {
+          "title": "深空信号",
+          "subtitle": "本地书籍"
+        },
+        "children": []
+      },
+      {
+        "type": "SettingsSection",
+        "id": "more-menu-section",
+        "props": {
+          "title": "操作"
+        },
+        "children": [
+          {
+            "type": "SettingsListItem",
+            "id": "action-detail",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "action-move-group",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "action-cache",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "action-rescan",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "action-remove",
+            "props": {},
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "BottomNav",
+        "id": "bottom-nav",
+        "props": {
+          "selected": "bookshelf"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "bookshelf-group-management",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "分组管理"
+        },
+        "children": []
+      },
+      {
+        "type": "SettingsSection",
+        "id": "group-section",
+        "props": {
+          "title": "分组"
+        },
+        "children": [
+          {
+            "type": "SettingsListItem",
+            "id": "group-default",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "group-scifi",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "group-todo",
+            "props": {},
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "Button",
+        "id": "new-group",
+        "props": {
+          "label": "新建分组"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "local-import",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "导入本地书籍"
+        },
+        "children": []
+      },
+      {
+        "type": "Content",
+        "id": "import-hint",
+        "props": {
+          "message": "支持 txt、epub 和常见文本文件，导入后进入书架。"
+        },
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "pick-file",
+        "props": {
+          "label": "选择文件"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "search-loading",
+    "pageState": "loading",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "搜索中"
+        },
+        "children": []
+      },
+      {
+        "type": "Loading",
+        "id": "search-loading",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "search-error",
+    "pageState": "error",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "搜索错误"
+        },
+        "children": []
+      },
+      {
+        "type": "ErrorState",
+        "id": "search-error-state",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "retry",
+        "props": {
+          "label": "重试"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "book-detail-toc-preview",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "目录预览"
+        },
+        "children": []
+      },
+      {
+        "type": "List",
+        "id": "toc-list",
+        "props": {},
+        "children": [
+          {
+            "type": "ListRow",
+            "id": "ch-1",
+            "props": {
+              "title": "第1章：深空信号"
+            },
+            "children": []
+          },
+          {
+            "type": "ListRow",
+            "id": "ch-2",
+            "props": {
+              "title": "第2章：信号解析"
+            },
+            "children": []
+          },
+          {
+            "type": "ListRow",
+            "id": "ch-3",
+            "props": {
+              "title": "第3章：深空回响"
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "rss-subscription-management",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "订阅管理"
+        },
+        "children": []
+      },
+      {
+        "type": "SettingsSection",
+        "id": "sub-section",
+        "props": {
+          "title": "订阅源"
+        },
+        "children": [
+          {
+            "type": "SettingsListItem",
+            "id": "sub-1",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "sub-2",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "sub-3",
+            "props": {},
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "rss-empty",
+    "pageState": "empty",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "RSS 空状态"
+        },
+        "children": []
+      },
+      {
+        "type": "Empty",
+        "id": "rss-empty",
+        "props": {
+          "message": "暂无订阅"
+        },
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "add-sub",
+        "props": {
+          "label": "添加订阅"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "rss-error",
+    "pageState": "error",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "RSS 错误"
+        },
+        "children": []
+      },
+      {
+        "type": "ErrorState",
+        "id": "rss-error-state",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "retry",
+        "props": {
+          "label": "重试"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "source-management",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "书源管理"
+        },
+        "children": []
+      },
+      {
+        "type": "List",
+        "id": "source-list",
+        "props": {},
+        "children": [
+          {
+            "type": "ListRow",
+            "id": "src-1",
+            "props": {
+              "title": "阅读书源 1"
+            },
+            "children": []
+          },
+          {
+            "type": "ListRow",
+            "id": "src-2",
+            "props": {
+              "title": "阅读书源 2"
+            },
+            "children": []
+          },
+          {
+            "type": "ListRow",
+            "id": "src-3",
+            "props": {
+              "title": "阅读书源 3"
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "source-add",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "添加书源"
+        },
+        "children": []
+      },
+      {
+        "type": "SettingsSection",
+        "id": "form-section",
+        "props": {
+          "title": "书源信息"
+        },
+        "children": []
+      },
+      {
+        "type": "Input",
+        "id": "src-name",
+        "props": {
+          "placeholder": "书源名称"
+        },
+        "children": []
+      },
+      {
+        "type": "Input",
+        "id": "src-url",
+        "props": {
+          "placeholder": "书源 URL"
+        },
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "save",
+        "props": {
+          "label": "保存"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "source-edit",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "编辑书源"
+        },
+        "children": []
+      },
+      {
+        "type": "SettingsSection",
+        "id": "form-section",
+        "props": {
+          "title": "书源信息"
+        },
+        "children": []
+      },
+      {
+        "type": "Input",
+        "id": "src-name",
+        "props": {
+          "placeholder": "书源名称"
+        },
+        "children": []
+      },
+      {
+        "type": "Input",
+        "id": "src-url",
+        "props": {
+          "placeholder": "书源 URL"
+        },
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "save",
+        "props": {
+          "label": "保存修改"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "source-import-options",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "导入书源"
+        },
+        "children": []
+      },
+      {
+        "type": "Content",
+        "id": "import-hint",
+        "props": {
+          "message": "从 URL、剪贴板或本地文件导入。"
+        },
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "pick-method",
+        "props": {
+          "label": "选择导入方式"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "source-test-result",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "书源测试结果"
+        },
+        "children": []
+      },
+      {
+        "type": "List",
+        "id": "test-list",
+        "props": {},
+        "children": [
+          {
+            "type": "ListRow",
+            "id": "rule-search",
+            "props": {
+              "title": "搜索规则"
+            },
+            "children": []
+          },
+          {
+            "type": "ListRow",
+            "id": "rule-toc",
+            "props": {
+              "title": "目录规则"
+            },
+            "children": []
+          },
+          {
+            "type": "ListRow",
+            "id": "rule-content",
+            "props": {
+              "title": "正文规则"
+            },
+            "children": []
+          },
+          {
+            "type": "ListRow",
+            "id": "rule-cover",
+            "props": {
+              "title": "封面规则"
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "global-settings",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "全局设置"
+        },
+        "children": []
+      },
+      {
+        "type": "SettingsSection",
+        "id": "global-section",
+        "props": {
+          "title": "设置入口"
+        },
+        "children": [
+          {
+            "type": "SettingsListItem",
+            "id": "entry-reading",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "entry-source",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "entry-sync",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "entry-webdav",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "entry-backup",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "entry-about",
+            "props": {},
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "reading-settings-entry",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "阅读设置入口"
+        },
+        "children": []
+      },
+      {
+        "type": "Card",
+        "id": "reading-entry-card",
+        "props": {
+          "title": "阅读设置",
+          "subtitle": "进入阅读页内的显示、行为与控制层设置。"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "source-settings-entry",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "书源设置入口"
+        },
+        "children": []
+      },
+      {
+        "type": "Card",
+        "id": "source-entry-card",
+        "props": {
+          "title": "书源设置",
+          "subtitle": "管理搜索、目录和正文规则。"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "sync-settings-entry",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "同步设置入口"
+        },
+        "children": []
+      },
+      {
+        "type": "Card",
+        "id": "sync-entry-card",
+        "props": {
+          "title": "同步设置",
+          "subtitle": "管理 WebDAV、备份和阅读进度同步。"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "about-version",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "关于版本"
+        },
+        "children": []
+      },
+      {
+        "type": "Content",
+        "id": "about-content",
+        "props": {
+          "message": "Reader for HarmonyOS · 版本 1.0.0 · normalized handoff"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "backup-settings",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "备份设置"
+        },
+        "children": []
+      },
+      {
+        "type": "SettingsSection",
+        "id": "backup-section",
+        "props": {
+          "title": "备份"
+        },
+        "children": [
+          {
+            "type": "SettingsListItem",
+            "id": "auto-backup",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "webdav-backup",
+            "props": {},
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "progress-sync-status",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "阅读进度同步"
+        },
+        "children": []
+      },
+      {
+        "type": "Card",
+        "id": "sync-status-card",
+        "props": {
+          "title": "同步正常",
+          "subtitle": "深空信号 · 25% · 刚刚同步"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "remote-webdav-books",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "远程 WebDAV 书籍"
+        },
+        "children": []
+      },
+      {
+        "type": "List",
+        "id": "remote-book-list",
+        "props": {},
+        "children": [
+          {
+            "type": "ListRow",
+            "id": "remote-1",
+            "props": {
+              "title": "远程书籍 1"
+            },
+            "children": []
+          },
+          {
+            "type": "ListRow",
+            "id": "remote-2",
+            "props": {
+              "title": "远程书籍 2"
+            },
+            "children": []
+          },
+          {
+            "type": "ListRow",
+            "id": "remote-3",
+            "props": {
+              "title": "远程书籍 3"
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "global-loading",
+    "pageState": "loading",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "加载中"
+        },
+        "children": []
+      },
+      {
+        "type": "Loading",
+        "id": "global-loading",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "global-empty",
+    "pageState": "empty",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "空状态"
+        },
+        "children": []
+      },
+      {
+        "type": "Empty",
+        "id": "global-empty",
+        "props": {
+          "message": "暂无内容"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "global-error",
+    "pageState": "error",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "错误状态"
+        },
+        "children": []
+      },
+      {
+        "type": "ErrorState",
+        "id": "global-error-state",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "retry",
+        "props": {
+          "label": "重试"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "offline-state",
+    "pageState": "offline",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "离线状态"
+        },
+        "children": []
+      },
+      {
+        "type": "Offline",
+        "id": "offline-state",
+        "props": {
+          "message": "当前离线，可继续阅读已缓存书籍。"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "permission-required",
+    "pageState": "permission",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "需要权限"
+        },
+        "children": []
+      },
+      {
+        "type": "Content",
+        "id": "perm-hint",
+        "props": {
+          "message": "授予权限后可导入本地书籍。"
+        },
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "grant",
+        "props": {
+          "label": "授予权限"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "immersive-reading",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": []
+      },
+      {
+        "type": "ReadingTextFlow",
+        "id": "reading-text-flow",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "TapZones",
+        "id": "tap-zones",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader_content",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": []
+      },
+      {
+        "type": "ReadingTextFlow",
+        "id": "reading-text-flow",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReadingInfoLayer",
+        "id": "reading-info-layer",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "toc-bookmarks",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderDirectoryPanel",
+        "id": "directory-panel",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader-full-font",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderSettingsPanel",
+        "id": "font-settings-panel",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader-full-theme",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderAppearancePanel",
+        "id": "theme-panel",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader-full-theme-edit",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderAppearancePanel",
+        "id": "theme-edit-panel",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader-full-layout",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderSettingsPanel",
+        "id": "layout-panel",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader-full-page-turn",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderSettingsPanel",
+        "id": "page-turn-panel",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader-full-appearance",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderAppearancePanel",
+        "id": "appearance-panel",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader-full-directory",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderDirectoryPanel",
+        "id": "full-directory-panel",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader-full-settings",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderSettingsPanel",
+        "id": "full-settings-panel",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader-full-tts",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderTtsPanel",
+        "id": "full-tts-panel",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader-book-cache",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderSettingsPanel",
+        "id": "cache-panel",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader-debug-info",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderSettingsPanel",
+        "id": "debug-panel",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "settings-general",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "通用设置"
+        },
+        "children": []
+      },
+      {
+        "type": "SettingsSection",
+        "id": "general-section",
+        "props": {
+          "title": "通用"
+        },
+        "children": [
+          {
+            "type": "SettingsListItem",
+            "id": "general-language",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "general-theme",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "general-font",
+            "props": {},
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "about",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "关于"
+        },
+        "children": []
+      },
+      {
+        "type": "Card",
+        "id": "about-card",
+        "props": {
+          "title": "Reader for HarmonyOS",
+          "subtitle": "多端阅读器 · ArkTS 原生"
+        },
+        "children": []
+      },
+      {
+        "type": "SettingsSection",
+        "id": "about-section",
+        "props": {
+          "title": "信息"
+        },
+        "children": [
+          {
+            "type": "SettingsListItem",
+            "id": "about-version-entry",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "about-feedback-entry",
+            "props": {},
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "about-feedback",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "反馈"
+        },
+        "children": []
+      },
+      {
+        "type": "Content",
+        "id": "feedback-hint",
+        "props": {
+          "message": "通过 Issue 或邮件提交反馈。"
+        },
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "feedback-submit",
+        "props": {
+          "label": "提交反馈"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "bookshelf-search-settings",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "书架搜索设置"
+        },
+        "children": []
+      },
+      {
+        "type": "SettingsSection",
+        "id": "search-settings-section",
+        "props": {
+          "title": "搜索"
+        },
+        "children": [
+          {
+            "type": "SettingsListItem",
+            "id": "search-default-source",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "search-scope",
+            "props": {},
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "restore-scopes",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "恢复范围"
+        },
+        "children": []
+      },
+      {
+        "type": "SettingsSection",
+        "id": "restore-scopes-section",
+        "props": {
+          "title": "选择恢复项"
+        },
+        "children": [
+          {
+            "type": "SettingsListItem",
+            "id": "scope-progress",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "scope-bookshelf",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "scope-settings",
+            "props": {},
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "Button",
+        "id": "restore-start",
+        "props": {
+          "label": "开始恢复"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "restore-confirm",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "恢复确认"
+        },
+        "children": []
+      },
+      {
+        "type": "Content",
+        "id": "restore-confirm-hint",
+        "props": {
+          "message": "确认从备份恢复？当前数据将被覆盖。"
+        },
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "confirm-restore",
+        "props": {
+          "label": "确认恢复"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "restore-conflict",
+    "pageState": "error",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "恢复冲突"
+        },
+        "children": []
+      },
+      {
+        "type": "ErrorState",
+        "id": "conflict-error",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "resolve-conflict",
+        "props": {
+          "label": "解决冲突"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "restore-preview",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "恢复预览"
+        },
+        "children": []
+      },
+      {
+        "type": "List",
+        "id": "preview-list",
+        "props": {},
+        "children": [
+          {
+            "type": "ListRow",
+            "id": "preview-progress",
+            "props": {
+              "title": "阅读进度 · 2 项"
+            },
+            "children": []
+          },
+          {
+            "type": "ListRow",
+            "id": "preview-bookshelf",
+            "props": {
+              "title": "书架 · 12 本"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "Button",
+        "id": "confirm-restore",
+        "props": {
+          "label": "确认恢复"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "restore-progress",
+    "pageState": "loading",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "恢复中"
+        },
+        "children": []
+      },
+      {
+        "type": "Loading",
+        "id": "restore-progress-loading",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "progress-sync",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "阅读进度同步"
+        },
+        "children": []
+      },
+      {
+        "type": "SettingsSection",
+        "id": "progress-sync-section",
+        "props": {
+          "title": "同步"
+        },
+        "children": [
+          {
+            "type": "SettingsListItem",
+            "id": "sync-auto",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "sync-interval",
+            "props": {},
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "source-batch",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "批量操作"
+        },
+        "children": []
+      },
+      {
+        "type": "SettingsSection",
+        "id": "batch-section",
+        "props": {
+          "title": "操作"
+        },
+        "children": [
+          {
+            "type": "SettingsListItem",
+            "id": "batch-enable-all",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "batch-disable-all",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "batch-delete",
+            "props": {},
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "source-code-view",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "书源代码"
+        },
+        "children": []
+      },
+      {
+        "type": "Content",
+        "id": "code-content",
+        "props": {
+          "message": "{\n  \"name\": \"示例书源\",\n  \"url\": \"https://example.com\"\n}"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "source-debug",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "书源调试"
+        },
+        "children": []
+      },
+      {
+        "type": "SettingsSection",
+        "id": "debug-section",
+        "props": {
+          "title": "调试步骤"
+        },
+        "children": [
+          {
+            "type": "SettingsListItem",
+            "id": "debug-search",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "debug-toc",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "debug-content",
+            "props": {},
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "Button",
+        "id": "start-debug",
+        "props": {
+          "label": "开始调试"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "source-debug-catalog-result",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "目录调试结果"
+        },
+        "children": []
+      },
+      {
+        "type": "List",
+        "id": "catalog-result-list",
+        "props": {},
+        "children": [
+          {
+            "type": "ListRow",
+            "id": "ch-1",
+            "props": {
+              "title": "第1章 · 通过"
+            },
+            "children": []
+          },
+          {
+            "type": "ListRow",
+            "id": "ch-2",
+            "props": {
+              "title": "第2章 · 通过"
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "source-debug-content-log",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "正文调试日志"
+        },
+        "children": []
+      },
+      {
+        "type": "Content",
+        "id": "content-log",
+        "props": {
+          "message": "[INFO] 正文规则匹配成功\n[INFO] 解析 1200 字"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "source-debug-detail-result",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "详情调试结果"
+        },
+        "children": []
+      },
+      {
+        "type": "Card",
+        "id": "detail-result-card",
+        "props": {
+          "title": "书名：示例书",
+          "subtitle": "作者：示例作者 · 通过"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "source-debug-result",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "调试结果"
+        },
+        "children": []
+      },
+      {
+        "type": "List",
+        "id": "debug-result-list",
+        "props": {},
+        "children": [
+          {
+            "type": "ListRow",
+            "id": "result-search",
+            "props": {
+              "title": "搜索 · 通过"
+            },
+            "children": []
+          },
+          {
+            "type": "ListRow",
+            "id": "result-toc",
+            "props": {
+              "title": "目录 · 通过"
+            },
+            "children": []
+          },
+          {
+            "type": "ListRow",
+            "id": "result-content",
+            "props": {
+              "title": "正文 · 通过"
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "source-debug-running",
+    "pageState": "loading",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "调试中"
+        },
+        "children": []
+      },
+      {
+        "type": "Loading",
+        "id": "debug-running-loading",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "source-debug-search-result",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "搜索调试结果"
+        },
+        "children": []
+      },
+      {
+        "type": "List",
+        "id": "search-result-list",
+        "props": {},
+        "children": [
+          {
+            "type": "ListRow",
+            "id": "result-1",
+            "props": {
+              "title": "示例书 · 刘慈欣"
+            },
+            "children": []
+          },
+          {
+            "type": "ListRow",
+            "id": "result-2",
+            "props": {
+              "title": "三体 · 刘慈欣"
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "source-delete-confirm",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "删除书源"
+        },
+        "children": []
+      },
+      {
+        "type": "Content",
+        "id": "delete-hint",
+        "props": {
+          "message": "确认删除该书源？删除后不可恢复。"
+        },
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "confirm-delete",
+        "props": {
+          "label": "确认删除",
+          "destructive": true
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "source-detect",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "书源检测"
+        },
+        "children": []
+      },
+      {
+        "type": "Loading",
+        "id": "detect-loading",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "source-edit-debug",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "编辑并调试"
+        },
+        "children": []
+      },
+      {
+        "type": "SettingsSection",
+        "id": "edit-debug-form",
+        "props": {
+          "title": "书源信息"
+        },
+        "children": []
+      },
+      {
+        "type": "Input",
+        "id": "edit-name",
+        "props": {
+          "placeholder": "书源名称"
+        },
+        "children": []
+      },
+      {
+        "type": "Input",
+        "id": "edit-url",
+        "props": {
+          "placeholder": "书源 URL"
+        },
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "edit-debug-run",
+        "props": {
+          "label": "保存并调试"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "source-groups",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "书源分组"
+        },
+        "children": []
+      },
+      {
+        "type": "List",
+        "id": "source-groups-list",
+        "props": {},
+        "children": [
+          {
+            "type": "ListRow",
+            "id": "group-default",
+            "props": {
+              "title": "默认分组 · 5 个源"
+            },
+            "children": []
+          },
+          {
+            "type": "ListRow",
+            "id": "group-custom",
+            "props": {
+              "title": "自定义 · 3 个源"
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "source-import-preview",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "导入预览"
+        },
+        "children": []
+      },
+      {
+        "type": "List",
+        "id": "import-preview-list",
+        "props": {},
+        "children": [
+          {
+            "type": "ListRow",
+            "id": "preview-1",
+            "props": {
+              "title": "书源 1 · 有效"
+            },
+            "children": []
+          },
+          {
+            "type": "ListRow",
+            "id": "preview-2",
+            "props": {
+              "title": "书源 2 · 有效"
+            },
+            "children": []
+          },
+          {
+            "type": "ListRow",
+            "id": "preview-3",
+            "props": {
+              "title": "书源 3 · 无效"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "Button",
+        "id": "confirm-import",
+        "props": {
+          "label": "确认导入"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "source-logs",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "书源日志"
+        },
+        "children": []
+      },
+      {
+        "type": "Content",
+        "id": "logs-content",
+        "props": {
+          "message": "[INFO] 搜索请求发送\n[INFO] 响应解析完成\n[WARN] 封面规则未匹配"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "source-rule-edit",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "规则编辑"
+        },
+        "children": []
+      },
+      {
+        "type": "SettingsSection",
+        "id": "rule-section",
+        "props": {
+          "title": "搜索规则"
+        },
+        "children": []
+      },
+      {
+        "type": "Input",
+        "id": "rule-search-url",
+        "props": {
+          "placeholder": "搜索 URL 规则"
+        },
+        "children": []
+      },
+      {
+        "type": "Input",
+        "id": "rule-search-list",
+        "props": {
+          "placeholder": "结果列表规则"
+        },
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "save-rule",
+        "props": {
+          "label": "保存规则"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "discover-rule-test",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "发现规则测试"
+        },
+        "children": []
+      },
+      {
+        "type": "SettingsSection",
+        "id": "rule-test-section",
+        "props": {
+          "title": "测试"
+        },
+        "children": []
+      },
+      {
+        "type": "Input",
+        "id": "test-url",
+        "props": {
+          "placeholder": "测试 URL"
+        },
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "run-test",
+        "props": {
+          "label": "运行测试"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "discover-source-bulk",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "发现书源批量"
+        },
+        "children": []
+      },
+      {
+        "type": "List",
+        "id": "bulk-list",
+        "props": {},
+        "children": [
+          {
+            "type": "ListRow",
+            "id": "bulk-1",
+            "props": {
+              "title": "书源 1"
+            },
+            "children": []
+          },
+          {
+            "type": "ListRow",
+            "id": "bulk-2",
+            "props": {
+              "title": "书源 2"
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "discover-empty",
+    "pageState": "empty",
+    "components": [
+      {
+        "type": "AppTopBar",
+        "id": "discover-topbar",
+        "props": {
+          "title": "发现"
+        },
+        "children": []
+      },
+      {
+        "type": "Empty",
+        "id": "discover-empty",
+        "props": {
+          "message": "暂无发现内容"
+        },
+        "children": []
+      },
+      {
+        "type": "BottomNav",
+        "id": "bottom-nav",
+        "props": {
+          "selected": "discover"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "discover-error",
+    "pageState": "error",
+    "components": [
+      {
+        "type": "AppTopBar",
+        "id": "discover-topbar",
+        "props": {
+          "title": "发现"
+        },
+        "children": []
+      },
+      {
+        "type": "ErrorState",
+        "id": "discover-error-state",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "BottomNav",
+        "id": "bottom-nav",
+        "props": {
+          "selected": "discover"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "discover-loading",
+    "pageState": "loading",
+    "components": [
+      {
+        "type": "AppTopBar",
+        "id": "discover-topbar",
+        "props": {
+          "title": "发现"
+        },
+        "children": []
+      },
+      {
+        "type": "Loading",
+        "id": "discover-loading",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "BottomNav",
+        "id": "bottom-nav",
+        "props": {
+          "selected": "discover"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "discover-no-results",
+    "pageState": "empty",
+    "components": [
+      {
+        "type": "AppTopBar",
+        "id": "discover-topbar",
+        "props": {
+          "title": "发现"
+        },
+        "children": []
+      },
+      {
+        "type": "Empty",
+        "id": "discover-no-results",
+        "props": {
+          "message": "未找到相关内容"
+        },
+        "children": []
+      },
+      {
+        "type": "BottomNav",
+        "id": "bottom-nav",
+        "props": {
+          "selected": "discover"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "rss-refreshing",
+    "pageState": "refreshing",
+    "components": [
+      {
+        "type": "AppTopBar",
+        "id": "rss-topbar",
+        "props": {
+          "title": "RSS"
+        },
+        "children": []
+      },
+      {
+        "type": "Loading",
+        "id": "rss-refreshing",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "BottomNav",
+        "id": "bottom-nav",
+        "props": {
+          "selected": "rss"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "rss-search",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "AppTopBar",
+        "id": "rss-topbar",
+        "props": {
+          "title": "RSS 搜索"
+        },
+        "children": []
+      },
+      {
+        "type": "RssSearchEntry",
+        "id": "rss-search-entry",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "BottomNav",
+        "id": "bottom-nav",
+        "props": {
+          "selected": "rss"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "rss-starred",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "AppTopBar",
+        "id": "rss-topbar",
+        "props": {
+          "title": "RSS 收藏"
+        },
+        "children": []
+      },
+      {
+        "type": "RssArticleSection",
+        "id": "starred-section",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "BottomNav",
+        "id": "bottom-nav",
+        "props": {
+          "selected": "rss"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "rss-original-browser",
+    "pageState": "loading",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "原文"
+        },
+        "children": []
+      },
+      {
+        "type": "Loading",
+        "id": "browser-loading",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "rss-favorite-groups",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "收藏分组"
+        },
+        "children": []
+      },
+      {
+        "type": "List",
+        "id": "favorite-groups-list",
+        "props": {},
+        "children": [
+          {
+            "type": "ListRow",
+            "id": "fav-group-1",
+            "props": {
+              "title": "技术文章 · 12 篇"
+            },
+            "children": []
+          },
+          {
+            "type": "ListRow",
+            "id": "fav-group-2",
+            "props": {
+              "title": "小说连载 · 5 篇"
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "rss-source-groups",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "RSS 源分组"
+        },
+        "children": []
+      },
+      {
+        "type": "List",
+        "id": "source-groups-list",
+        "props": {},
+        "children": [
+          {
+            "type": "ListRow",
+            "id": "src-group-tech",
+            "props": {
+              "title": "技术 · 5 个源"
+            },
+            "children": []
+          },
+          {
+            "type": "ListRow",
+            "id": "src-group-novel",
+            "props": {
+              "title": "小说 · 3 个源"
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "rss-source-add",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "添加 RSS 源"
+        },
+        "children": []
+      },
+      {
+        "type": "SettingsSection",
+        "id": "add-section",
+        "props": {
+          "title": "源信息"
+        },
+        "children": []
+      },
+      {
+        "type": "Input",
+        "id": "rss-name",
+        "props": {
+          "placeholder": "源名称"
+        },
+        "children": []
+      },
+      {
+        "type": "Input",
+        "id": "rss-url",
+        "props": {
+          "placeholder": "Feed URL"
+        },
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "save",
+        "props": {
+          "label": "添加"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "rss-source-edit",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "编辑 RSS 源"
+        },
+        "children": []
+      },
+      {
+        "type": "SettingsSection",
+        "id": "edit-section",
+        "props": {
+          "title": "源信息"
+        },
+        "children": []
+      },
+      {
+        "type": "Input",
+        "id": "rss-name",
+        "props": {
+          "placeholder": "源名称"
+        },
+        "children": []
+      },
+      {
+        "type": "Input",
+        "id": "rss-url",
+        "props": {
+          "placeholder": "Feed URL"
+        },
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "save",
+        "props": {
+          "label": "保存"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "rss-source-import",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "导入 RSS 源"
+        },
+        "children": []
+      },
+      {
+        "type": "Content",
+        "id": "import-hint",
+        "props": {
+          "message": "从 OPML 或 URL 导入。"
+        },
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "pick-method",
+        "props": {
+          "label": "选择导入方式"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "sort-filter",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "AppTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "排序筛选"
+        },
+        "children": []
+      },
+      {
+        "type": "SettingsSection",
+        "id": "sort-section",
+        "props": {
+          "title": "排序"
+        },
+        "children": [
+          {
+            "type": "SettingsListItem",
+            "id": "sort-recent",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "sort-title",
+            "props": {},
+            "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "sort-author",
+            "props": {},
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "BottomNav",
+        "id": "bottom-nav",
+        "props": {
+          "selected": "bookshelf"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "group-management",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "分组管理"
+        },
+        "children": []
+      },
+      {
+        "type": "List",
+        "id": "group-list",
+        "props": {},
+        "children": [
+          {
+            "type": "ListRow",
+            "id": "group-default",
+            "props": {
+              "title": "默认分组 · 12 本"
+            },
+            "children": []
+          },
+          {
+            "type": "ListRow",
+            "id": "group-scifi",
+            "props": {
+              "title": "科幻 · 4 本"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "Button",
+        "id": "new-group",
+        "props": {
+          "label": "新建分组"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "book-batch-management",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "批量管理"
+        },
+        "children": []
+      },
+      {
+        "type": "List",
+        "id": "batch-list",
+        "props": {},
+        "children": [
+          {
+            "type": "ListRow",
+            "id": "book-1",
+            "props": {
+              "title": "深空信号"
+            },
+            "children": []
+          },
+          {
+            "type": "ListRow",
+            "id": "book-2",
+            "props": {
+              "title": "三体"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "Button",
+        "id": "batch-action",
+        "props": {
+          "label": "批量操作"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "book-directory",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "目录"
+        },
+        "children": []
+      },
+      {
+        "type": "List",
+        "id": "directory-list",
+        "props": {},
+        "children": [
+          {
+            "type": "ListRow",
+            "id": "ch-1",
+            "props": {
+              "title": "第1章：深空信号"
+            },
+            "children": []
+          },
+          {
+            "type": "ListRow",
+            "id": "ch-2",
+            "props": {
+              "title": "第2章：信号解析"
+            },
+            "children": []
+          },
+          {
+            "type": "ListRow",
+            "id": "ch-3",
+            "props": {
+              "title": "第3章：深空回响"
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "discover-source-login",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "源登录"
+        },
+        "children": []
+      },
+      {
+        "type": "SettingsSection",
+        "id": "login-section",
+        "props": {
+          "title": "登录"
+        },
+        "children": []
+      },
+      {
+        "type": "Input",
+        "id": "username",
+        "props": {
+          "placeholder": "用户名"
+        },
+        "children": []
+      },
+      {
+        "type": "Input",
+        "id": "password",
+        "props": {
+          "placeholder": "密码"
+        },
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "login",
+        "props": {
+          "label": "登录"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "source-switch",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "topbar",
+        "props": {
+          "title": "换源"
+        },
+        "children": []
+      },
+      {
+        "type": "SourceSwitchResultsPanel",
+        "id": "source-switch-panel",
         "props": {},
         "children": []
       }

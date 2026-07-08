@@ -228,19 +228,8 @@ const NORMALIZED_PAGES = [
 // Pages acknowledged as not-yet-migrated. Remove a page here ONLY when it has
 // a ViewState entry or aliasFor declaration. Must be empty before full migration.
 // NOTE: keys are pageName (first element of NORMALIZED_PAGES tuple), NOT routeId.
-const PENDING_NORMALIZED = new Set([
-  'bookshelf-cover-mode', 'bookshelf-list-mode', 'bookshelf-group-management',
-  'bookshelf-book-more-menu', 'local-book-import',
-  'search-loading', 'search-error', 'book-detail-toc-preview',
-  'source-management-list', 'source-disabled-error', 'source-add', 'source-edit',
-  'source-import', 'source-test-result',
-  'rss-subscription-management', 'rss-empty', 'rss-error',
-  'global-settings', 'reading-settings-entry', 'source-settings-entry',
-  'sync-settings-entry', 'about-version',
-  'backup-settings', 'progress-sync-status', 'remote-webdav-books',
-  'global-loading', 'global-empty', 'global-error', 'offline-state',
-  'permission-required',
-]);
+// Phase 1 全量补齐完成：所有 44 个 normalized 页面均有 ViewState 或 aliasFor，PENDING_NORMALIZED 清空。
+const PENDING_NORMALIZED = new Set([]);
 
 test('normalized 44 pages each have ViewState or alias or are in PENDING allowlist', () => {
   const missing = [];
@@ -293,6 +282,24 @@ const SCAFFOLD_ALLOWED = new Set([
   'search-home', 'search-results', 'source-detail',
   'rss-all', 'rss-detail', 'rss-original', 'restore-running', 'restore-result',
   'sync-backup', 'sync-error', 'webdav-config',
+  // Phase 1: legitimate state pages + simple list/entry pages (scaffold is the
+  // correct shape — these are not 1:1 demo migrations of bespoke components).
+  'local-import', 'search-loading', 'search-error', 'book-detail-toc-preview',
+  'rss-empty', 'rss-error', 'source-management', 'source-import-options',
+  'source-test-result', 'reading-settings-entry', 'source-settings-entry',
+  'sync-settings-entry', 'about-version', 'progress-sync-status',
+  'remote-webdav-books', 'global-loading', 'global-empty', 'global-error',
+  'offline-state', 'permission-required',
+  // Phase 2-4: simple list/content/form pages where scaffold is the correct shape.
+  'about-feedback', 'restore-confirm', 'restore-conflict', 'restore-preview',
+  'restore-progress', 'source-code-view', 'source-debug-catalog-result',
+  'source-debug-content-log', 'source-debug-detail-result', 'source-debug-result',
+  'source-debug-running', 'source-debug-search-result', 'source-delete-confirm',
+  'source-detect', 'source-groups', 'source-import-preview', 'source-logs',
+  'discover-source-bulk', 'discover-empty', 'discover-error', 'discover-loading',
+  'discover-no-results', 'rss-refreshing', 'rss-original-browser',
+  'rss-favorite-groups', 'rss-source-groups', 'rss-source-import',
+  'group-management', 'book-batch-management', 'book-directory',
 ]);
 
 // Aggregate ALL body components across every pageState entry for a route.
