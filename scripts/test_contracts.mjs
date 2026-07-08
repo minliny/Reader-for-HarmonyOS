@@ -182,6 +182,44 @@ test('book-detail uses the demo detail composite body, not a standalone cover', 
   );
 });
 
+test('normalized state copy stays aligned with handoff HTML', () => {
+  const VS = readJson('view-state.fixtures.json');
+  const cases = [
+    ['bookshelf-empty', 'shelf-empty', 'BookshelfEmptyPage', { title: '书架还是空的', message: '导入本地书籍或通过搜索加入书架。' }],
+    ['rss-detail', 'default', 'RssDetailPage', { title: '深空信号更新' }],
+    ['search-loading', 'loading', 'SearchStatePage', { title: '正在搜索', message: '正在从启用书源获取结果。' }],
+    ['search-empty', 'empty', 'SearchStatePage', { title: '没有找到结果', message: '换个关键词或检查书源状态。' }],
+    ['search-error', 'error', 'SearchStatePage', { title: '搜索失败', message: '网络源暂时不可用。', action: '重试' }],
+    ['rss-empty', 'empty', 'RssEmptyState', { title: '暂无订阅', message: '添加 RSS 订阅后查看更新。', action: '添加订阅' }],
+    ['rss-error', 'error', 'RssErrorState', { title: '订阅加载失败', message: '网络异常或订阅源不可访问。', action: '重试' }],
+    ['sync-error', 'error', 'SyncErrorPage', { title: '同步失败', message: 'WebDAV auth error，请重新登录。' }],
+    ['global-loading', 'loading', 'GlobalStatePage', { title: '加载中', message: '正在准备内容。' }],
+    ['global-empty', 'empty', 'GlobalStatePage', { title: '暂无内容', message: '当前列表为空。' }],
+    ['global-error', 'error', 'GlobalStatePage', { title: '出错了', message: '请稍后重试。', action: '重试' }],
+    ['offline-state', 'offline', 'OfflineStatePage', { title: '当前离线', message: '可继续阅读已缓存书籍。' }],
+    ['permission-required', 'permission', 'PermissionRequiredPage', { title: '需要存储权限', message: '授予权限后可导入本地书籍。', action: '授予权限' }],
+    ['about-version', 'default', 'AboutVersionPage', { title: 'Reader for Android', version: '1.0.0' }],
+  ];
+
+  for (const [routeId, pageState, type, expectedProps] of cases) {
+    const entry = VS.find((e) => e.routeId === routeId && e.pageState === pageState);
+    assert.ok(entry, `${routeId}/${pageState} fixture missing`);
+    const component = entry.components.find((c) => c.type === type);
+    assert.ok(component, `${routeId}/${pageState} missing ${type}`);
+    const actual = Object.fromEntries(Object.keys(expectedProps).map((key) => [key, component.props[key]]));
+    assert.deepEqual(actual, expectedProps);
+  }
+});
+
+test('rss subscription management has four subscription rows', () => {
+  const VS = readJson('view-state.fixtures.json');
+  const entry = VS.find((e) => e.routeId === 'rss-subscription-management' && e.pageState === 'default');
+  assert.ok(entry, 'rss-subscription-management/default fixture missing');
+  const section = entry.components.find((c) => c.type === 'SettingsSection');
+  assert.ok(section, 'rss-subscription-management missing SettingsSection');
+  assert.deepEqual(section.children.map((c) => c.id), ['sub-1', 'sub-2', 'sub-3', 'sub-4']);
+});
+
 // ── 7. Normalized page → ViewState coverage guard ─────────────────────────
 // The normalized HTML pages (Reader UI/docs/ui-handoff/normalized-html/) are
 // the 1:1 migration target — including 8 reader overlay routes + control-layer-

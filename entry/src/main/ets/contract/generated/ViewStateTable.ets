@@ -193,8 +193,8 @@ export class ViewStateTable {
         "type": "BookshelfEmptyPage",
         "id": "bookshelf-empty-page",
         "props": {
-          "title": "书架为空",
-          "message": "导入本地书籍或从书源搜索后加入书架。"
+          "title": "书架还是空的",
+          "message": "导入本地书籍或通过搜索加入书架。"
         },
         "children": []
       },
@@ -909,7 +909,7 @@ export class ViewStateTable {
         "type": "RssDetailPage",
         "id": "rss-detail-page",
         "props": {
-          "title": "AI 周报：端侧模型更新"
+          "title": "深空信号更新"
         },
         "children": []
       }
@@ -997,8 +997,8 @@ export class ViewStateTable {
         "id": "search-empty-page",
         "props": {
           "variant": "empty",
-          "title": "暂无结果",
-          "message": "换个关键词或切换书源后重试。"
+          "title": "没有找到结果",
+          "message": "换个关键词或检查书源状态。"
         },
         "children": []
       }
@@ -1132,8 +1132,8 @@ export class ViewStateTable {
         "type": "SyncErrorPage",
         "id": "sync-error-page",
         "props": {
-          "title": "同步冲突",
-          "message": "本地与云端版本不一致，请选择处理方式。"
+          "title": "同步失败",
+          "message": "WebDAV auth error，请重新登录。"
         },
         "children": []
       }
@@ -1475,8 +1475,8 @@ export class ViewStateTable {
         "id": "search-loading-page",
         "props": {
           "variant": "loading",
-          "title": "搜索中",
-          "message": "正在请求书源并整理结果。"
+          "title": "正在搜索",
+          "message": "正在从启用书源获取结果。"
         },
         "children": []
       }
@@ -1500,7 +1500,7 @@ export class ViewStateTable {
         "props": {
           "variant": "error",
           "title": "搜索失败",
-          "message": "网络或书源暂不可用。",
+          "message": "网络源暂时不可用。",
           "action": "重试"
         },
         "children": []
@@ -1565,6 +1565,12 @@ export class ViewStateTable {
             "id": "sub-3",
             "props": {},
             "children": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "sub-4",
+            "props": {},
+            "children": []
           }
         ]
       }
@@ -1587,7 +1593,7 @@ export class ViewStateTable {
         "id": "rss-empty-page",
         "props": {
           "title": "暂无订阅",
-          "message": "添加 RSS 源后会在这里显示最新文章。",
+          "message": "添加 RSS 订阅后查看更新。",
           "action": "添加订阅"
         },
         "children": []
@@ -1610,8 +1616,8 @@ export class ViewStateTable {
         "type": "RssErrorState",
         "id": "rss-error-page",
         "props": {
-          "title": "刷新失败",
-          "message": "订阅源暂时无法访问。",
+          "title": "订阅加载失败",
+          "message": "网络异常或订阅源不可访问。",
           "action": "重试"
         },
         "children": []
@@ -1917,8 +1923,8 @@ export class ViewStateTable {
         "type": "AboutVersionPage",
         "id": "about-version-page",
         "props": {
-          "title": "Reader",
-          "version": "0.1.0"
+          "title": "Reader for Android",
+          "version": "1.0.0"
         },
         "children": []
       }
@@ -2022,7 +2028,7 @@ export class ViewStateTable {
         "props": {
           "variant": "loading",
           "title": "加载中",
-          "message": "正在准备页面内容。"
+          "message": "正在准备内容。"
         },
         "children": []
       }
@@ -2046,7 +2052,7 @@ export class ViewStateTable {
         "props": {
           "variant": "empty",
           "title": "暂无内容",
-          "message": "当前筛选下没有可显示的项目。"
+          "message": "当前列表为空。"
         },
         "children": []
       }
@@ -2069,8 +2075,8 @@ export class ViewStateTable {
         "id": "global-error-page",
         "props": {
           "variant": "error",
-          "title": "出现错误",
-          "message": "页面加载失败，请稍后重试。",
+          "title": "出错了",
+          "message": "请稍后重试。",
           "action": "重试"
         },
         "children": []
@@ -2094,7 +2100,7 @@ export class ViewStateTable {
         "id": "offline-page",
         "props": {
           "title": "当前离线",
-          "message": "检查网络后再继续同步或搜索。"
+          "message": "可继续阅读已缓存书籍。"
         },
         "children": []
       }
@@ -2116,9 +2122,9 @@ export class ViewStateTable {
         "type": "PermissionRequiredPage",
         "id": "permission-page",
         "props": {
-          "title": "需要权限",
-          "message": "授予存储或通知权限后才能继续。",
-          "action": "去授权"
+          "title": "需要存储权限",
+          "message": "授予权限后可导入本地书籍。",
+          "action": "授予权限"
         },
         "children": []
       }
