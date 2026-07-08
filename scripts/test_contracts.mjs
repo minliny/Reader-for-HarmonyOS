@@ -360,6 +360,43 @@ test('discover/rss horizontal chip rows hide native scroll indicators', () => {
   }
 });
 
+test('rss subpages use page-level visual components, not scaffold-only lists/loading', () => {
+  const VS = readJson('view-state.fixtures.json');
+  const expected = new Map([
+    ['rss-all/default', ['BackTopBar', 'RssAllPage']],
+    ['rss-original/default', ['BackTopBar', 'RssOriginalPage']],
+    ['rss-refreshing/refreshing', ['BackTopBar', 'RssRefreshingPage']],
+    ['rss-original-browser/default', ['BackTopBar', 'RssOriginalBrowserPage']],
+    ['rss-favorite-groups/default', ['BackTopBar', 'RssFavoriteGroupsPage']],
+    ['rss-source-groups/default', ['BackTopBar', 'RssSourceGroupsPage']],
+    ['rss-source-import/default', ['BackTopBar', 'RssSourceImportPage']],
+  ]);
+
+  for (const [key, types] of expected.entries()) {
+    const [routeId, pageState] = key.split('/');
+    const entry = VS.find((e) => e.routeId === routeId && e.pageState === pageState);
+    assert.ok(entry, `${key} fixture missing`);
+    const actual = entry.components.map((c) => c.type);
+    assert.deepEqual(actual, types, `${key} must use RSS page-level visual components`);
+    for (const type of ['FilterBar', 'List', 'Content', 'Button', 'Loading']) {
+      assert.equal(actual.includes(type), false, `${key} must not regress to scaffold ${type}`);
+    }
+  }
+
+  const rssSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/RssComponents.ets'));
+  for (const text of [
+    '全部条目',
+    '正在刷新启用订阅源和分类入口',
+    'Reader UI 前端输入件更新说明',
+    '外部浏览器',
+    '技术文章',
+    '开源项目',
+    '选择导入方式',
+  ]) {
+    assert.ok(rssSrc.includes(text), `RssComponents missing RSS subpage copy: ${text}`);
+  }
+});
+
 test('normalized state copy stays aligned with handoff HTML', () => {
   const VS = readJson('view-state.fixtures.json');
   const cases = [
@@ -525,7 +562,7 @@ const SCAFFOLD_TYPES = new Set([
 // time. State pages (loading/empty/error/offline) are legitimately scaffold-only.
 const SCAFFOLD_ALLOWED = new Set([
   'state-offline', 'state-error',
-  'rss-all', 'rss-original', 'restore-running', 'restore-result',
+  'restore-running', 'restore-result',
   'sync-backup',
   // Phase 1: legitimate state pages + simple list/entry pages (scaffold is the
   // correct shape — these are not 1:1 demo migrations of bespoke components).
@@ -538,8 +575,7 @@ const SCAFFOLD_ALLOWED = new Set([
   'source-debug-running', 'source-debug-search-result', 'source-delete-confirm',
   'source-detect', 'source-groups', 'source-import-preview', 'source-logs',
   'discover-source-bulk', 'discover-empty', 'discover-error', 'discover-loading',
-  'discover-no-results', 'rss-refreshing', 'rss-original-browser',
-  'rss-favorite-groups', 'rss-source-groups', 'rss-source-import',
+  'discover-no-results',
   'group-management', 'book-batch-management', 'book-directory',
 ]);
 

@@ -9,7 +9,6 @@ export interface ViewStateProps {
   author?: string;
   bookId?: string;
   destructive?: boolean;
-  filter?: string;
   label?: string;
   message?: string;
   placeholder?: string;
@@ -758,43 +757,18 @@ export class ViewStateTable {
     "pageState": "default",
     "components": [
       {
-        "type": "AppTopBar",
+        "type": "BackTopBar",
         "id": "rss-topbar",
         "props": {
-          "title": "RSS"
+          "title": "全部条目"
         },
         "children": []
       },
       {
-        "type": "FilterBar",
-        "id": "rss-filter",
-        "props": {
-          "filter": "all"
-        },
-        "children": []
-      },
-      {
-        "type": "List",
-        "id": "rss-entry-list",
+        "type": "RssAllPage",
+        "id": "rss-all-page",
         "props": {},
-        "children": [
-          {
-            "type": "ListRow",
-            "id": "rss-entry-001",
-            "props": {
-              "title": "AI 周报"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "rss-entry-002",
-            "props": {
-              "title": "技术日报"
-            },
-            "children": []
-          }
-        ]
+        "children": []
       }
     ]
   },
@@ -822,7 +796,7 @@ export class ViewStateTable {
   },
   {
     "routeId": "rss-original",
-    "pageState": "loading",
+    "pageState": "default",
     "components": [
       {
         "type": "BackTopBar",
@@ -833,8 +807,8 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "Loading",
-        "id": "rss-original-loading",
+        "type": "RssOriginalPage",
+        "id": "rss-original-page",
         "props": {},
         "children": []
       }
@@ -3314,25 +3288,17 @@ export class ViewStateTable {
     "pageState": "refreshing",
     "components": [
       {
-        "type": "AppTopBar",
+        "type": "BackTopBar",
         "id": "rss-topbar",
         "props": {
-          "title": "RSS"
+          "title": "刷新订阅"
         },
         "children": []
       },
       {
-        "type": "Loading",
-        "id": "rss-refreshing",
+        "type": "RssRefreshingPage",
+        "id": "rss-refreshing-page",
         "props": {},
-        "children": []
-      },
-      {
-        "type": "BottomNav",
-        "id": "bottom-nav",
-        "props": {
-          "selected": "rss"
-        },
         "children": []
       }
     ]
@@ -3395,7 +3361,7 @@ export class ViewStateTable {
   },
   {
     "routeId": "rss-original-browser",
-    "pageState": "loading",
+    "pageState": "default",
     "components": [
       {
         "type": "BackTopBar",
@@ -3406,8 +3372,8 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "Loading",
-        "id": "browser-loading",
+        "type": "RssOriginalBrowserPage",
+        "id": "rss-original-browser-page",
         "props": {},
         "children": []
       }
@@ -3426,27 +3392,10 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "List",
-        "id": "favorite-groups-list",
+        "type": "RssFavoriteGroupsPage",
+        "id": "rss-favorite-groups-page",
         "props": {},
-        "children": [
-          {
-            "type": "ListRow",
-            "id": "fav-group-1",
-            "props": {
-              "title": "技术文章 · 12 篇"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "fav-group-2",
-            "props": {
-              "title": "小说连载 · 5 篇"
-            },
-            "children": []
-          }
-        ]
+        "children": []
       }
     ]
   },
@@ -3463,27 +3412,10 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "List",
-        "id": "source-groups-list",
+        "type": "RssSourceGroupsPage",
+        "id": "rss-source-groups-page",
         "props": {},
-        "children": [
-          {
-            "type": "ListRow",
-            "id": "src-group-tech",
-            "props": {
-              "title": "技术 · 5 个源"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "src-group-novel",
-            "props": {
-              "title": "小说 · 3 个源"
-            },
-            "children": []
-          }
-        ]
+        "children": []
       }
     ]
   },
@@ -3592,18 +3524,10 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "Content",
-        "id": "import-hint",
+        "type": "RssSourceImportPage",
+        "id": "rss-source-import-page",
         "props": {
           "message": "从 OPML 或 URL 导入。"
-        },
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "pick-method",
-        "props": {
-          "label": "选择导入方式"
         },
         "children": []
       }

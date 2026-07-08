@@ -11,7 +11,9 @@ import { ReaderControlSheet, ReaderBottomBar, ReaderDirectoryPanel, ReaderAppear
 import { SourceSwitchResultsPanel } from './LibraryComponents';
 import { SettingsHomeSection, SettingsSection, SettingsListItem } from './SettingsComponents';
 import { DiscoverSourceBar, DiscoverEntryRow, DiscoverFilterTrigger, DiscoverListHead, DiscoverBookList } from './DiscoverComponents';
-import { RssSearchEntry, RssModeRow, RssSourceOverview, RssArticleSection } from './RssComponents';
+import { RssSearchEntry, RssModeRow, RssSourceOverview, RssArticleSection,
+  RssAllPage, RssOriginalPage, RssRefreshingPage, RssOriginalBrowserPage,
+  RssFavoriteGroupsPage, RssSourceGroupsPage, RssSourceImportPage } from './RssComponents';
 import { AppShellStructure, MainTabsStructure, SearchHomePage, SearchResultsPage, SearchStatePage, BookTocPreviewPage,
   BookshelfEmptyPage, SourceManagementPage, SourceDetailPage, SourceImportOptionsPage, SourceDisabledState,
   SourceSettingsEntryPage, SourceTestResultPage, WebDavConfigPage, SyncSettingsEntryPage, SyncErrorPage,
@@ -193,6 +195,20 @@ export struct ViewStateRenderer {
       RssSourceOverview()
     } else if (component.type === 'RssArticleSection') {
       RssArticleSection()
+    } else if (component.type === 'RssAllPage') {
+      RssAllPage()
+    } else if (component.type === 'RssOriginalPage') {
+      RssOriginalPage()
+    } else if (component.type === 'RssRefreshingPage') {
+      RssRefreshingPage()
+    } else if (component.type === 'RssOriginalBrowserPage') {
+      RssOriginalBrowserPage()
+    } else if (component.type === 'RssFavoriteGroupsPage') {
+      RssFavoriteGroupsPage()
+    } else if (component.type === 'RssSourceGroupsPage') {
+      RssSourceGroupsPage()
+    } else if (component.type === 'RssSourceImportPage') {
+      RssSourceImportPage()
     } else if (component.type === 'AppShellStructure') {
       AppShellStructure({
         title: this.textOr(component.props.title, 'Reader for Android'),
