@@ -139,6 +139,14 @@ test('Overlays/state hang off shell slots, not pages (OverlayHost + StateHost ar
   }
 });
 
+test('shell top bars read title from ViewStateTable and displayed route', () => {
+  const src = read(path.join(REPO, 'entry/src/main/ets/ui/components/SharedComponents.ets'));
+  assert.ok(src.includes("ViewStateTable.componentsFor(routeId, pageState)"));
+  assert.ok(src.includes("@StorageProp('reader.displayedRouteId') routeId"));
+  assert.ok(!src.includes('function routeTitle('), 'AppTopBar must not use a stale hand-written routeTitle switch');
+  assert.ok(!src.includes('function secondaryRouteTitle('), 'BackTopBar must not use a stale hand-written secondaryRouteTitle switch');
+});
+
 // ── 5. ViewStateTable ↔ ViewStateRenderer: every component type used in the
 //      table is mapped by the renderer — no unknown type silently falls back to
 //      Empty() (which would mask contract drift).

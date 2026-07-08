@@ -6,49 +6,30 @@
 import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
 import { SpacingTokens, SizeTokens } from '../../contract/generated/DimensionTokens';
+import { ViewStateComponent, ViewStateTable } from '../../contract/generated/ViewStateTable';
 import { ReaderTypography } from '../tokens/ReaderTypography';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 
-function routeTitle(routeId: string): string {
-  switch (routeId) {
-    case 'bookshelf': return '书架';
-    case 'discover': return '发现';
-    case 'rss': return 'RSS';
-    case 'settings': return '设置';
-    case 'book-detail': return '书籍详情';
-    default: return '';
+function topBarTitle(routeId: string, pageState: string, kind: string, fallback: string): string {
+  const components: ViewStateComponent[] = ViewStateTable.componentsFor(routeId, pageState);
+  for (const component of components) {
+    if (component.type === kind && component.props.title !== undefined && component.props.title !== '') {
+      return component.props.title;
+    }
   }
-}
-
-// Title for secondary routes rendered inside BackTopBar (LibraryShell / SettingsShell).
-// Hard-coding '书籍详情' here would mislabel every settings-secondary page.
-function secondaryRouteTitle(routeId: string): string {
-  switch (routeId) {
-    case 'book-detail': return '书籍详情';
-    case 'book-directory': return '目录';
-    case 'book-search':
-    case 'search-home': return '搜索';
-    case 'source-management': return '书源管理';
-    case 'source-detail': return '书源详情';
-    case 'source-edit': return '编辑书源';
-    case 'webdav-config': return 'WebDAV';
-    case 'sync-backup': return '备份与同步';
-    case 'restore-scopes': return '恢复范围';
-    case 'about-feedback': return '关于';
-    case 'rss-subscription-management': return '订阅管理';
-    default: return '';
-  }
+  return fallback;
 }
 
 // .fd-top-bar: flex space-between, min-height 58, padding 6 20 0, ink.
 //   h1: serif 29/700, nowrap ellipsis. top-actions: flex gap 18, 44×44 icon-buttons.
 @Component
 export struct AppTopBar {
-  @StorageProp('reader.routeId') routeId: string = 'bookshelf';
+  @StorageProp('reader.displayedRouteId') routeId: string = 'bookshelf';
+  @StorageProp('reader.pageState') pageState: string = 'default';
 
   build() {
     Row() {
-      Text(routeTitle(this.routeId))
+      Text(topBarTitle(this.routeId, this.pageState, 'AppTopBar', ''))
         .fontSize(29)
         .fontWeight(700)
         .fontColor(ColorTokens.ink)
@@ -73,14 +54,15 @@ export struct AppTopBar {
 //   back button + more: 44×44 circle (.fd-icon-button). h1: serif 24/700.
 @Component
 export struct BackTopBar {
-  @StorageProp('reader.routeId') routeId: string = 'book-detail';
+  @StorageProp('reader.displayedRouteId') routeId: string = 'book-detail';
+  @StorageProp('reader.pageState') pageState: string = 'default';
 
   build() {
     Row() {
       Image($r('app.media.reader_icon_back_dark'))
         .width(24).height(24)
         .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
-      Text(secondaryRouteTitle(this.routeId))
+      Text(topBarTitle(this.routeId, this.pageState, 'BackTopBar', ''))
         .fontSize(24)
         .fontWeight(700)
         .fontColor(ColorTokens.ink)
