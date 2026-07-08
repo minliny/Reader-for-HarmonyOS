@@ -125,13 +125,11 @@ export struct BookChapterList {
         .border(i > 0 ? { width: { top: 1 }, color: ColorTokens.border } : { width: 0 })
         .alignItems(VerticalAlign.Center)
         .onClick(() => {
-          // If we have a real chapter URL from the detail page, load it;
-          // otherwise fall back to fixture reader route.
+          // route-push first (resets pageState='default'), then chapter-load
+          // switches pageState='loading' on the reader route.
+          ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' });
           if (this.currentBook !== null && this.currentBook.chapterListUrl.length > 0 && i === 0) {
             ReaderUiStore.dispatch({ type: 'chapter-load', chapterId: this.currentBook.chapterListUrl });
-            ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' });
-          } else {
-            ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' });
           }
         })
       }, (c: string, i: number) => `${c}-${i}`)

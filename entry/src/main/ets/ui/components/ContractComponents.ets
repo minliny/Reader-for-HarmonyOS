@@ -35,13 +35,25 @@ export struct ProgressBar {
 export struct BookTitleAuthor {
   @Prop title: string = '三体';
   @Prop author: string = '刘慈欣';
+  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
+
+  // Prefer real data from the reducer; fall back to the @Prop fixture passed
+  // by ViewStateRenderer so the page still renders in demo flows.
+  private displayTitle(): string {
+    return this.currentBook !== null && this.currentBook.title.length > 0
+      ? this.currentBook.title : this.title;
+  }
+  private displayAuthor(): string {
+    return this.currentBook !== null && this.currentBook.author.length > 0
+      ? this.currentBook.author : this.author;
+  }
 
   build() {
     Column() {
-      Text(this.title)
+      Text(this.displayTitle())
         .fontSize(20).fontWeight(700).fontColor(ColorTokens.ink)
         .fontFamily(ReaderTypography.serifFamily())
-      Text(this.author)
+      Text(this.displayAuthor())
         .fontSize(14).fontColor(ColorTokens.muted)
         .margin({ top: 4 })
     }
@@ -51,10 +63,17 @@ export struct BookTitleAuthor {
 
 @Component
 export struct SourceStatus {
+  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
+
+  private sourceName(): string {
+    return this.currentBook !== null && this.currentBook.sourceName.length > 0
+      ? this.currentBook.sourceName : '默认书源';
+  }
+
   build() {
     Row() {
       Text('书源：').fontSize(12).fontColor(ColorTokens.muted)
-      Text('默认书源').fontSize(12).fontColor(ColorTokens.primaryDark)
+      Text(this.sourceName()).fontSize(12).fontColor(ColorTokens.primaryDark)
         .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'source-switch-results' }))
     }
     .width('100%').alignItems(VerticalAlign.Center)
@@ -73,19 +92,32 @@ export struct ReadButton {
       .borderRadius(DemoAliasTokens.radiusPill)
       .height(40).padding({ left: 18, right: 18 })
       .onClick(() => {
-        // If we have a real chapter URL from the detail page, load it before
-        // entering the reader so ReadingTextFlow shows real content.
+        // route-push first (resets pageState='default'), then chapter-load
+        // switches pageState='loading' so reader/loading ViewState renders.
+        ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' });
         if (this.currentBook !== null && this.currentBook.chapterListUrl.length > 0) {
           ReaderUiStore.dispatch({ type: 'chapter-load', chapterId: this.currentBook.chapterListUrl });
         }
-        ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' });
       })
   }
 }
 
 @Component
 export struct DirectoryPreview {
-  private chapters: string[] = ['第一章 科学边界', '第二章 疯狂年代', '第三章 红岸之一'];
+  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
+  private fixtureChapters: string[] = ['第一章 科学边界', '第二章 疯狂年代', '第三章 红岸之一'];
+
+  // currentBook only carries latestChapter (a single string, not a full TOC).
+  // Show it as the first preview row; keep fixture rows as placeholders for the
+  // rest of the TOC. Real TOC list migration is a later phase.
+  private previewChapters(): string[] {
+    if (this.currentBook !== null && this.currentBook.latestChapter.length > 0) {
+      const rest: string[] = this.fixtureChapters.slice(1);
+      return [this.currentBook.latestChapter].concat(rest);
+    }
+    return this.fixtureChapters;
+  }
+
   build() {
     Column() {
       Row() {
@@ -94,7 +126,7 @@ export struct DirectoryPreview {
         Text('完整目录').fontSize(12).fontColor(ColorTokens.primaryDark)
           .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'book-directory' }))
       }.width('100%').margin({ bottom: 6 })
-      ForEach(this.chapters, (c: string, i: number) => {
+      ForEach(this.previewChapters(), (c: string, i: number) => {
         Text(c).fontSize(13).fontColor(ColorTokens.controlInk)
           .width('100%').padding({ top: 8, bottom: 8 })
           .border(i > 0 ? { width: { top: 1 }, color: ColorTokens.border } : { width: 0 })
@@ -106,10 +138,18 @@ export struct DirectoryPreview {
 
 @Component
 export struct BookIntro {
+  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
+
+  private summary(): string {
+    return this.currentBook !== null && this.currentBook.summary.length > 0
+      ? this.currentBook.summary
+      : '文化大革命如火如荼地进行，叶文洁在雷达峰向宇宙发出了人类第一条信息。';
+  }
+
   build() {
     Column() {
       Text('简介').fontSize(15).fontWeight(700).fontColor(ColorTokens.ink)
-      Text('文化大革命如火如荼地进行，叶文洁在雷达峰向宇宙发出了人类第一条信息。')
+      Text(this.summary())
         .fontSize(13).fontColor(ColorTokens.muted).lineHeight(13 * 1.65)
         .maxLines(4).textOverflow({ overflow: TextOverflow.Ellipsis }).margin({ top: 8 })
     }
@@ -461,8 +501,11 @@ export struct SearchResultsPanel {
         .alignItems(VerticalAlign.Center)
         .border(i > 0 ? { width: { top: 1 }, color: ColorTokens.border } : { width: 0 })
         .onClick(() => {
-          ReaderUiStore.dispatch({ type: 'book-detail-load', bookId: r.bookId });
+          // route-push first (resets pageState='default'), then book-detail-load
+          // switches pageState='loading' so book-detail/loading ViewState renders
+          // the Loading component instead of the fixture body.
           ReaderUiStore.dispatch({ type: 'route-push', id: 'book-detail' });
+          ReaderUiStore.dispatch({ type: 'book-detail-load', bookId: r.bookId });
         })
       }, (r: SearchResultEntry, i: number) => `${r.bookId}-${i}`)
     }

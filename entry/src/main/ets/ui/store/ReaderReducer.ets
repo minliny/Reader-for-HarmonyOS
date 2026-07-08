@@ -72,13 +72,13 @@ export class ReaderReducer {
         return ReaderReducer.setError(state, err);
       }
       case 'book-detail-load':
-        return ReaderReducer.setLoading(state, true);
+        return ReaderReducer.setRouteLoading(state);
       case 'book-detail-success': {
         const book = event.book ?? null;
         return ReaderReducer.setCurrentBook(state, book);
       }
       case 'chapter-load':
-        return ReaderReducer.setLoading(state, true);
+        return ReaderReducer.setRouteLoading(state);
       case 'chapter-success': {
         const paras = event.chapterParagraphs ?? [];
         return ReaderReducer.setChapterContent(state, paras);
@@ -140,6 +140,18 @@ export class ReaderReducer {
     return next;
   }
 
+  // Route-level loading: switch pageState to 'loading' so the route's loading
+  // ViewState (e.g. book-detail/loading → Loading component) renders instead of
+  // the default fixture body. Callers MUST dispatch route-push first, then the
+  // load event, so pageState='loading' lands on the new route rather than being
+  // reset to 'default' by route-push.
+  static setRouteLoading(state: ReaderUiState): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, 'loading');
+    next.loading = true;
+    next.error = null;
+    return next;
+  }
+
   static setError(state: ReaderUiState, error: ReaderError | null): ReaderUiState {
     const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
     next.error = error;
@@ -181,7 +193,7 @@ export class ReaderReducer {
   }
 
   static setChapterContent(state: ReaderUiState, paragraphs: string[]): ReaderUiState {
-    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, 'default');
     next.chapterContent = paragraphs;
     next.loading = false;
     next.readerMode = 'default';

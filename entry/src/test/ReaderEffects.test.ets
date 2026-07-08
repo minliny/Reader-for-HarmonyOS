@@ -186,10 +186,61 @@ export default function ReaderEffectsTests(): void {
       expect(next.chapterContent.length).assertEqual(2);
       expect(next.loading).assertEqual(false);
     });
-    it('chapterLoadSetsLoading', 0, () => {
+    it('chapterLoadSetsLoadingAndPageState', 0, () => {
       const s = DemoUiState.initial();
       const next = ReaderReducer.reduce(s, { type: 'chapter-load', chapterId: '/book/101/ch1.html' });
       expect(next.loading).assertEqual(true);
+      expect(next.pageState).assertEqual('loading');
+      expect(next.error).assertEqual(null);
+    });
+    it('bookDetailLoadSetsLoadingPageState', 0, () => {
+      const s = DemoUiState.initial();
+      const next = ReaderReducer.reduce(s, { type: 'book-detail-load', bookId: '/book/101' });
+      expect(next.loading).assertEqual(true);
+      expect(next.pageState).assertEqual('loading');
+      expect(next.error).assertEqual(null);
+    });
+    it('chapterSuccessResetsPageStateToDefault', 0, () => {
+      const s = DemoUiState.initial();
+      const loading = ReaderReducer.reduce(s, { type: 'chapter-load', chapterId: '/book/101/ch1.html' });
+      expect(loading.pageState).assertEqual('loading');
+      const next = ReaderReducer.reduce(loading, {
+        type: 'chapter-success',
+        chapterParagraphs: ['第一段', '第二段'],
+      });
+      expect(next.loading).assertEqual(false);
+      expect(next.pageState).assertEqual('default');
+      expect(next.chapterContent.length).assertEqual(2);
+    });
+    it('routePushThenBookDetailLoadLandsLoadingOnNewRoute', 0, () => {
+      // Mirrors SearchResultsPanel tap: route-push first, then book-detail-load.
+      // route-push resets pageState='default'; book-detail-load must switch it
+      // back to 'loading' on the new route so book-detail/loading ViewState shows.
+      const s = DemoUiState.initial();
+      const pushed = ReaderReducer.reduce(s, { type: 'route-push', id: 'book-detail' });
+      expect(pushed.routeId).assertEqual('book-detail');
+      expect(pushed.pageState).assertEqual('default');
+      const loading = ReaderReducer.reduce(pushed, { type: 'book-detail-load', bookId: '/book/101' });
+      expect(loading.routeId).assertEqual('book-detail');
+      expect(loading.pageState).assertEqual('loading');
+      expect(loading.loading).assertEqual(true);
+    });
+    it('bookDetailSuccessResetsPageStateToDefault', 0, () => {
+      const s = DemoUiState.initial();
+      const loading = ReaderReducer.reduce(s, { type: 'book-detail-load', bookId: '/book/101' });
+      expect(loading.pageState).assertEqual('loading');
+      const book: BookDetail = {
+        bookId: '/book/101', title: '三体', author: '刘慈欣', summary: '...',
+        sourceName: '有度轻说', sourceUrl: 'https://www.yodu.org',
+        latestChapter: '第三部', chapterListUrl: '/book/101/ch1.html',
+      };
+      const next = ReaderReducer.reduce(loading, { type: 'book-detail-success', book: book });
+      expect(next.loading).assertEqual(false);
+      expect(next.pageState).assertEqual('default');
+      expect(next.currentBook !== null).assertTrue();
+      if (next.currentBook !== null) {
+        expect(next.currentBook.title).assertEqual('三体');
+      }
     });
     it('newFieldsPresentInInitialState', 0, () => {
       const s = DemoUiState.initial();
