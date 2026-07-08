@@ -66,7 +66,7 @@ const TAG_TO_CAPABILITIES = {
     // Post-self-check: deviceVerified>0 (evidence-driven).
     // Both lines prove the manifest is wired and broadcasting; this is meta
     // evidence and does not mark a HostCapability verified by itself.
-    successPattern: /summary total=\d+.*deviceVerified=\d+/,
+    successPattern: /summary total=\d+.*deviceVerified=(?:[1-9]\d*)/,
   },
   'CoreSelfCheck': {
     description: 'Core NAPI runtime ping/coreInfo/hostSmoke',
@@ -81,7 +81,7 @@ const TAG_TO_CAPABILITIES = {
   'ReadingChainUi': {
     description: 'Reading chain UI path: reducer + ReaderEffects + Host HTTP round-trip',
     capabilities: ['http.execute'],
-    successPattern: /DONE (search-success|search-failure)/,
+    successPattern: /DONE search-success/,
   },
   'RssChain': {
     description: 'RSS ingestion: http + item-count + file cache',
@@ -168,10 +168,10 @@ function triggerSelfChecks() {
     console.error(`✗ Failed to launch app: ${launch.stderr || launch.stdout}`);
     return false;
   }
-  console.log('✓ App launched with selfCheck=true. Waiting 25s for self-checks to complete...');
-  // Self-checks are fire-and-forget in onCreate. The longest chain is TTS
-  // (~6s) + network round-trips (WebDAV/HTTP). 25s is a safe upper bound.
-  execSync('sleep 25');
+  console.log('✓ App launched with selfCheck=true. Waiting 35s for self-checks to complete...');
+  // Self-checks are fire-and-forget in onCreate. EntryAbility rebroadcasts the
+  // evidence-driven HostManifest after 30s, so capture after that point.
+  execSync('sleep 35');
   return true;
 }
 
