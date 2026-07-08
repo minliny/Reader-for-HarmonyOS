@@ -10,6 +10,7 @@ export { FileHostAdapter } from './FileHostAdapter';
 export { ClipboardHostAdapter } from './ClipboardHostAdapter';
 export { TtsHostAdapter } from './TtsHostAdapter';
 export { ScreenHostAdapter } from './ScreenHostAdapter';
+export { DeviceHostAdapter } from './DeviceHostAdapter';
 export { NotificationHostAdapter } from './NotificationHostAdapter';
 export { BackgroundHostAdapter } from './BackgroundHostAdapter';
 export { ShareHostAdapter } from './ShareHostAdapter';

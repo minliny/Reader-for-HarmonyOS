@@ -35,6 +35,7 @@ import { FileHostAdapter } from '../host/adapters/FileHostAdapter';
 import { ClipboardHostAdapter } from '../host/adapters/ClipboardHostAdapter';
 import { TtsHostAdapter } from '../host/adapters/TtsHostAdapter';
 import { ScreenHostAdapter } from '../host/adapters/ScreenHostAdapter';
+import { DeviceHostAdapter } from '../host/adapters/DeviceHostAdapter';
 import { NotificationHostAdapter } from '../host/adapters/NotificationHostAdapter';
 import { BackgroundHostAdapter } from '../host/adapters/BackgroundHostAdapter';
 import { ShareHostAdapter } from '../host/adapters/ShareHostAdapter';
@@ -109,6 +110,7 @@ export class CoreRuntime {
   private clipboardAdapter: ClipboardHostAdapter;
   private ttsAdapter: TtsHostAdapter;
   private screenAdapter: ScreenHostAdapter | null;
+  private deviceAdapter: DeviceHostAdapter;
   private notificationAdapter: NotificationHostAdapter | null;
   private backgroundAdapter: BackgroundHostAdapter;
   private shareAdapter: ShareHostAdapter | null;
@@ -159,6 +161,7 @@ export class CoreRuntime {
       ? new TtsHostAdapter(config.context)
       : new TtsHostAdapter();
     this.backgroundAdapter = new BackgroundHostAdapter();
+    this.deviceAdapter = new DeviceHostAdapter();
     if (config.context !== undefined) {
       // The context from EntryAbility is a UIAbilityContext at runtime; cast
       // is safe because EntryAbility passes `this.context` which is
@@ -244,9 +247,8 @@ export class CoreRuntime {
         case 'device.screen.keep-on':
         case 'device.screen.release':
           return this.screenAdapter !== null;
-        // Unimplemented.
         case 'device.vibrate':
-          return false;
+          return this.deviceAdapter !== null;
         default:
           return false;
       }
@@ -472,6 +474,10 @@ export class CoreRuntime {
 
   getScreenAdapter(): ScreenHostAdapter | null {
     return this.screenAdapter;
+  }
+
+  getDeviceAdapter(): DeviceHostAdapter {
+    return this.deviceAdapter;
   }
 
   getNotificationAdapter(): NotificationHostAdapter | null {

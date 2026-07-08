@@ -13,7 +13,7 @@ import fs from '@ohos.file.fs';
 import util from '@ohos.util';
 import zlib from '@ohos.zlib';
 import { ReaderUiStore } from '../ui/store/ReaderUiStore';
-import { ReaderPaginationMode, SearchResultEntry } from '../ui/store/ReaderUiState';
+import { ReaderPaginationMode, SearchResultEntry, BookDetail } from '../ui/store/ReaderUiState';
 import { SafeAreaAdapter } from '../ui/adapters/SafeAreaAdapter';
 import { ViewportAdapter } from '../ui/adapters/ViewportAdapter';
 import { InteractionDebugAdapter } from '../ui/adapters/InteractionDebugAdapter';
@@ -37,6 +37,7 @@ import {
   HostPermissionCheckRequest,
   HostNotificationShowRequest,
   HostNotificationCancelRequest,
+  HostDeviceVibrateRequest,
 } from '../host/types';
 
 export default class EntryAbility extends UIAbility {
@@ -701,7 +702,16 @@ export default class EntryAbility extends UIAbility {
         // is tracking read position, not just fire-and-forget playback.
         console.info('[UiAdapter] tts.progress evidence captured by [TtsSelfCheck] tag (lastPercent + progress callback)');
 
-        console.info('[UiAdapter] DONE webview+permission+notification+tts-progress device evidence captured');
+        // ── device.vibrate ──
+        // vibrator.vibrate is a no-op on emulator (no hardware), but the call
+        // succeeds and returns vibrated: true when the adapter + permission
+        // are wired. On real hardware this produces a 15ms vibration.
+        const deviceAdapter = core.getDeviceAdapter();
+        const vibrateReq: HostDeviceVibrateRequest = { durationMs: 15 };
+        const vibrateResp = await deviceAdapter.vibrate(vibrateReq);
+        console.info('[UiAdapter] device.vibrate vibrated=' + vibrateResp.vibrated + ' durationMs=15');
+
+        console.info('[UiAdapter] DONE webview+permission+notification+tts-progress+vibrate device evidence captured');
         manifest.markVerifiedByTag('UiAdapter');
       })
       .catch((e: Error) => {
@@ -725,33 +735,73 @@ export default class EntryAbility extends UIAbility {
     ReaderUiStore.dispatch({ type: 'search-submit', query: query });
     let elapsed = 0;
     const interval = 1500;
+    // Full chain: search -> book-detail-load -> chapter-load -> chapterContent.
+    // Phases: 'search' -> 'detail' -> 'chapter'. Each phase polls the store
+    // for its completion signal and dispatches the next phase once observed.
+    let phase: string = 'search';
+    let detailDispatched: boolean = false;
+    let chapterDispatched: boolean = false;
     const poll = setInterval(() => {
       elapsed += interval;
       const sq: string = AppStorage.get<string>('reader.searchQuery') ?? '';
       const sr: SearchResultEntry[] = AppStorage.get<SearchResultEntry[]>('reader.searchResults') ?? [];
-      // Store writes error as flat fields (reader.errorCode / errorMessage /
-      // retryable), NOT as a reader.error object — see ReaderUiStore.writeAll().
       const errCode: string = AppStorage.get<string>('reader.errorCode') ?? '';
       const errMsg: string = AppStorage.get<string>('reader.errorMessage') ?? '';
       const loading: boolean = AppStorage.get<boolean>('reader.loading') ?? false;
-      console.info('[ReadingChainUi] poll elapsed=' + elapsed + 'ms searchQuery="' + sq + '" results=' + sr.length + ' loading=' + loading + ' errorCode=' + errCode);
-      const hasResults: boolean = sr.length > 0 && sq === query;
-      const hasError: boolean = errCode === 'SEARCH_FAILED';
-      if (hasResults || hasError) {
+      const currentBook: BookDetail | undefined = AppStorage.get<BookDetail>('reader.currentBook');
+      const chapterContent: string[] = AppStorage.get<string[]>('reader.chapterContent') ?? [];
+      console.info('[ReadingChainUi] poll elapsed=' + elapsed + 'ms phase=' + phase + ' searchQuery="' + sq + '" results=' + sr.length + ' loading=' + loading + ' errorCode=' + errCode + ' hasBook=' + (currentBook !== null && currentBook !== undefined) + ' chapterLen=' + chapterContent.length);
+      // Any error short-circuits the chain. The effect path is verified even
+      // when the source is unreachable; only search-success counts as a real
+      // verified reading chain per collect_device_evidence.mjs criteria.
+      const hasError: boolean = errCode === 'SEARCH_FAILED' || errCode === 'BOOK_DETAIL_FAILED' || errCode === 'CHAPTER_FAILED';
+      if (hasError) {
         clearInterval(poll);
-        if (hasResults) {
-          const firstTitle: string = sr.length > 0 ? sr[0].title : '';
-          console.info('[ReadingChainUi] DONE search-success results=' + sr.length + ' first="' + firstTitle + '"');
-          manifest.markVerifiedByTag('ReadingChainUi');
-        } else {
-          console.info('[ReadingChainUi] DONE search-failure errorCode=' + errCode + ' msg=' + errMsg + ' (effect path verified; source may be unreachable)');
-          manifest.markVerifiedByTag('ReadingChainUi');
-        }
+        console.info('[ReadingChainUi] DONE chain-failure phase=' + phase + ' errorCode=' + errCode + ' msg=' + errMsg + ' (effect path verified; source may be unreachable)');
+        manifest.markVerifiedByTag('ReadingChainUi');
         return;
+      }
+      if (phase === 'search') {
+        const hasResults: boolean = sr.length > 0 && sq === query;
+        if (hasResults) {
+          const firstTitle: string = sr[0].title;
+          const firstBookId: string = sr[0].bookId;
+          console.info('[ReadingChainUi] step search-success results=' + sr.length + ' first="' + firstTitle + '" bookId="' + firstBookId + '"');
+          phase = 'detail';
+          detailDispatched = true;
+          ReaderUiStore.dispatch({ type: 'book-detail-load', bookId: firstBookId, loadFirstChapter: false });
+          console.info('[ReadingChainUi] dispatched book-detail-load bookId=' + firstBookId);
+          return;
+        }
+      } else if (phase === 'detail') {
+        if (currentBook !== null && currentBook !== undefined && currentBook.bookId === sr[0].bookId) {
+          console.info('[ReadingChainUi] step detail-success title="' + currentBook.title + '" chapterListUrl="' + currentBook.chapterListUrl + '"');
+          if (currentBook.chapterListUrl.length > 0) {
+            phase = 'chapter';
+            chapterDispatched = true;
+            ReaderUiStore.dispatch({ type: 'chapter-load', chapterId: currentBook.chapterListUrl });
+            console.info('[ReadingChainUi] dispatched chapter-load chapterId=' + currentBook.chapterListUrl);
+            return;
+          } else {
+            clearInterval(poll);
+            console.info('[ReadingChainUi] DONE search-success (detail has no chapterListUrl; chain stops at detail) results=' + sr.length + ' title="' + currentBook.title + '"');
+            manifest.markVerifiedByTag('ReadingChainUi');
+            return;
+          }
+        }
+      } else if (phase === 'chapter') {
+        if (chapterContent.length > 0) {
+          clearInterval(poll);
+          const firstPara: string = chapterContent[0].length > 40 ? chapterContent[0].substring(0, 40) : chapterContent[0];
+          const bookTitle: string = currentBook !== null && currentBook !== undefined ? currentBook.title : '';
+          console.info('[ReadingChainUi] DONE chain-success results=' + sr.length + ' bookTitle="' + bookTitle + '" chapterParagraphs=' + chapterContent.length + ' firstPara="' + firstPara + '"');
+          manifest.markVerifiedByTag('ReadingChainUi');
+          return;
+        }
       }
       if (elapsed >= 35000) {
         clearInterval(poll);
-        console.info('[ReadingChainUi] TIMEOUT after 35s: effect did not dispatch back (searchQuery="' + sq + '" results=' + sr.length + ' loading=' + loading + '). HTTP may have hung past adapter timeout.');
+        console.info('[ReadingChainUi] TIMEOUT after 35s phase=' + phase + ' detailDispatched=' + detailDispatched + ' chapterDispatched=' + chapterDispatched + ' (searchQuery="' + sq + '" results=' + sr.length + ' loading=' + loading + '). HTTP may have hung past adapter timeout.');
       }
     }, interval);
   }

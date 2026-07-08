@@ -48,6 +48,16 @@
           ],
           "when": "always"
         }
+      },
+      {
+        "name": "ohos.permission.VIBRATE",
+        "reason": "$string:reason_vibrate",
+        "usedScene": {
+          "abilities": [
+            "EntryAbility"
+          ],
+          "when": "always"
+        }
       }
     ]
   }

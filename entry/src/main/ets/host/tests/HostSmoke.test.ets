@@ -262,14 +262,14 @@ export default function HostSmokeTest(): void {
       expect(manifest.registeredWithRegistry().length).assertEqual(15);
     });
 
-    it('manifest_marks_device_vibrate_as_unimplemented', 0, () => {
+    it('manifest_marks_device_vibrate_as_reducer_direct', 0, () => {
       const core = CoreRuntime.createForTest(makeStubNativeModule(), {});
       const manifest = core.getCapabilityManifest();
+      // device.vibrate now has a DeviceHostAdapter (reducer-direct), no longer
+      // unimplemented. Adapter is always present (vibrator needs no context).
       const unimpl = manifest.unimplemented();
-      expect(unimpl.length).assertEqual(1);
-      expect(unimpl[0]).assertEqual('device.vibrate');
-      // Unimplemented is never available, regardless of resolver.
-      expect(manifest.isAvailable('device.vibrate')).assertFalse();
+      expect(unimpl.length).assertEqual(0);
+      expect(manifest.isAvailable('device.vibrate')).assertTrue();
     });
 
     it('manifest_availability_reflects_runtime_adapters', 0, () => {

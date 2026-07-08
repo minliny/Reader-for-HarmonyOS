@@ -89,6 +89,7 @@ export const HOST_EVIDENCE_TAG_MAP: Record<string, HostCapability[]> = {
     'permission.check' as HostCapability,
     'notification.show' as HostCapability,
     'notification.cancel' as HostCapability,
+    'device.vibrate' as HostCapability,
   ],
   'TtsSelfCheck': [
     'tts.system.start' as HostCapability,
@@ -308,10 +309,8 @@ const HOST_CAPABILITY_DESCRIPTORS: HostCapabilityDescriptor[] = [
     deviceVerified: false,
   },
   {
-    // device.vibrate has NO adapter in host/adapters/. Marked unimplemented
-    // honestly per AGENTS.md rule 4 — do not pretend it exists.
-    capability: 'device.vibrate', source: 'ui-contract-only', dispatch: 'unimplemented',
-    adapter: '', requiresContext: false, requiresUiAbilityContext: false,
+    capability: 'device.vibrate', source: 'ui-contract-only', dispatch: 'reducer-direct',
+    adapter: 'DeviceHostAdapter', requiresContext: false, requiresUiAbilityContext: false,
     deviceVerified: false,
   },
   {

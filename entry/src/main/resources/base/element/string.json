@@ -11,6 +11,10 @@
     {
       "name": "reason_keep_background_running",
       "value": "Allows TTS playback and background downloads to continue when the app is in the background."
+    },
+    {
+      "name": "reason_vibrate",
+      "value": "Allows short vibration feedback for reader interactions such as chapter-end and tap zones."
     }
   ]
 }

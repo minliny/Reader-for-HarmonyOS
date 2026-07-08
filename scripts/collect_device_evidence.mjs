@@ -81,7 +81,7 @@ const TAG_TO_CAPABILITIES = {
   'ReadingChainUi': {
     description: 'Reading chain UI path: reducer + ReaderEffects + Host HTTP round-trip',
     capabilities: ['http.execute'],
-    successPattern: /DONE search-success/,
+    successPattern: /DONE (chain-success|search-success)/,
   },
   'RssChain': {
     description: 'RSS ingestion: http + item-count + file cache',
