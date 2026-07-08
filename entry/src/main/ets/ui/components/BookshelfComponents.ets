@@ -124,11 +124,50 @@ export struct ShelfSectionHeader {
         .fontWeight(700)
         .fontColor(ColorTokens.ink)
       Blank()
-      Row() {
-        Image($r('app.media.reader_icon_more_dark')).width(20).height(20)
-        Image($r('app.media.reader_icon_more_dark')).width(20).height(20).margin({ left: 8 })
-        Image($r('app.media.reader_icon_more_dark')).width(20).height(20).margin({ left: 8 })
-        Image($r('app.media.bookshelf_icon_gear_dark')).width(20).height(20).margin({ left: 8 })
+      Row({ space: 8 }) {
+        Column() {
+          Image($r('app.media.bookshelf_icon_grid_primary')).width(20).height(20)
+        }
+        .width(34).height(34)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Center)
+        .borderRadius(DemoAliasTokens.radiusPill)
+        .backgroundColor(ColorTokens.metaBg)
+        .border({ width: 1, color: ColorTokens.primary })
+        .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'bookshelf-cover-mode' }))
+
+        Column() {
+          Image($r('app.media.bookshelf_icon_list_dark')).width(20).height(20)
+        }
+        .width(34).height(34)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Center)
+        .borderRadius(DemoAliasTokens.radiusPill)
+        .backgroundColor(DemoAliasTokens.surface)
+        .border({ width: 1, color: ColorTokens.border })
+        .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'bookshelf-list-mode' }))
+
+        Column() {
+          Image($r('app.media.bookshelf_icon_filter_dark')).width(20).height(20)
+        }
+        .width(34).height(34)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Center)
+        .borderRadius(DemoAliasTokens.radiusPill)
+        .backgroundColor(DemoAliasTokens.surface)
+        .border({ width: 1, color: ColorTokens.border })
+        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'sort-filter' }))
+
+        Column() {
+          Image($r('app.media.bookshelf_icon_gear_dark')).width(20).height(20)
+        }
+        .width(34).height(34)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Center)
+        .borderRadius(DemoAliasTokens.radiusPill)
+        .backgroundColor(DemoAliasTokens.surface)
+        .border({ width: 1, color: ColorTokens.border })
+        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'bookshelf-search-settings' }))
       }
     }
     .width('100%')

@@ -203,6 +203,24 @@ test('reader overlay panels keep normalized handoff visible copy', () => {
   assert.ok(!src.includes("ReaderSettingRow({ name: '替换\\\"信号\\\"为\\\"信号源\\\"'"), 'replace overlay must use handoff rule names');
 });
 
+test('bookshelf section head uses demo view-action icons, not generic more dots', () => {
+  const src = read(path.join(REPO, 'entry/src/main/ets/ui/components/BookshelfComponents.ets'));
+  for (const marker of [
+    'bookshelf_icon_grid_primary',
+    'bookshelf_icon_list_dark',
+    'bookshelf_icon_filter_dark',
+    'bookshelf_icon_gear_dark',
+    "route-replace', id: 'bookshelf-cover-mode'",
+    "route-replace', id: 'bookshelf-list-mode'",
+    "route-push', id: 'sort-filter'",
+    "route-push', id: 'bookshelf-search-settings'",
+  ]) {
+    assert.ok(src.includes(marker), `BookshelfComponents missing section-head action: ${marker}`);
+  }
+  const sectionHead = src.slice(src.indexOf('export struct ShelfSectionHeader'), src.indexOf('// .fd-bookshelf-shelf-section'));
+  assert.ok(!sectionHead.includes('reader_icon_more_dark'), 'bookshelf section head must not render generic more-dot icons');
+});
+
 // ── 5. ViewStateTable ↔ ViewStateRenderer: every component type used in the
 //      table is mapped by the renderer — no unknown type silently falls back to
 //      Empty() (which would mask contract drift).
