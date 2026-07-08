@@ -12,6 +12,18 @@ interface RowEntry {
   chip: string;
 }
 
+interface SelectableBookEntry {
+  title: string;
+  detail: string;
+  group: string;
+  selected: boolean;
+}
+
+interface DirectoryEntry {
+  title: string;
+  marker: string;
+}
+
 @Component
 struct HandoffStatusChip {
   @Prop label: string = '';
@@ -158,6 +170,133 @@ struct PrimaryAction {
       .borderRadius(DemoAliasTokens.radiusPill)
       .backgroundColor(ColorTokens.primary)
       .textAlign(TextAlign.Center)
+  }
+}
+
+@Component
+struct BookshelfToolCover {
+  @Prop selected: boolean = false;
+
+  build() {
+    Stack({ alignContent: Alignment.TopEnd }) {
+      Image($r('app.media.bookshelf_cover_three_body'))
+        .width('100%')
+        .height('100%')
+        .objectFit(ImageFit.Cover)
+      if (this.selected) {
+        Column() {
+          Image($r('app.media.ui_icon_check_white'))
+            .width(13)
+            .height(13)
+        }
+        .width(22)
+        .height(22)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Center)
+        .borderRadius(DemoAliasTokens.radiusPill)
+        .backgroundColor(ColorTokens.primary)
+        .margin({ top: 5, right: 5 })
+      }
+    }
+    .width(46)
+    .aspectRatio(2 / 3)
+    .borderRadius(DemoAliasTokens.radiusSm)
+    .clip(true)
+    .backgroundColor(ColorTokens.metaBg)
+  }
+}
+
+@Component
+struct BookshelfToolBookRow {
+  @Prop title: string = '三体';
+  @Prop detail: string = '刘慈欣';
+  @Prop group: string = '';
+  @Prop selected: boolean = false;
+
+  build() {
+    Row() {
+      BookshelfToolCover({ selected: this.selected })
+      Column() {
+        Text(this.title)
+          .fontSize(15)
+          .fontWeight(700)
+          .fontColor(ColorTokens.ink)
+          .fontFamily(ReaderTypography.serifFamily())
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(this.detail)
+          .fontSize(12)
+          .fontColor(ColorTokens.muted)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .margin({ top: 5 })
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+      .margin({ left: 12, right: 10 })
+
+      if (this.group.length > 0) {
+        HandoffStatusChip({ label: this.group })
+      }
+    }
+    .width('100%')
+    .padding({ left: 12, right: 12, top: 10, bottom: 10 })
+    .borderRadius(DemoAliasTokens.radiusMd)
+    .backgroundColor(DemoAliasTokens.surface)
+    .border({ width: 1, color: this.selected ? ColorTokens.primary : ColorTokens.border })
+    .alignItems(VerticalAlign.Center)
+    .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
+  }
+}
+
+@Component
+struct DirectorySegmentButton {
+  @Prop label: string = '目录';
+  @Prop active: boolean = false;
+
+  build() {
+    Text(this.label)
+      .fontSize(13)
+      .fontWeight(800)
+      .fontColor(this.active ? DemoAliasTokens.onPrimary : ColorTokens.primaryDark)
+      .height(34)
+      .layoutWeight(1)
+      .borderRadius(DemoAliasTokens.radiusPill)
+      .backgroundColor(this.active ? ColorTokens.primary : DemoAliasTokens.surface)
+      .textAlign(TextAlign.Center)
+  }
+}
+
+@Component
+struct DirectoryChapterRow {
+  @Prop title: string = '第一章';
+  @Prop marker: string = '';
+
+  build() {
+    Row() {
+      Text(this.title)
+        .fontSize(14)
+        .fontWeight(600)
+        .fontColor(ColorTokens.controlInk)
+        .layoutWeight(1)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+      if (this.marker.length > 0) {
+        HandoffStatusChip({ label: this.marker })
+      }
+      Image($r('app.media.reader_icon_chevron_chapter'))
+        .width(18)
+        .height(18)
+        .margin({ left: 8 })
+    }
+    .width('100%')
+    .constraintSize({ minHeight: 52 })
+    .padding({ left: 12, right: 12, top: 10, bottom: 10 })
+    .borderRadius(DemoAliasTokens.radiusMd)
+    .backgroundColor(DemoAliasTokens.surface)
+    .border({ width: 1, color: ColorTokens.border })
+    .alignItems(VerticalAlign.Center)
+    .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' }))
   }
 }
 
@@ -695,6 +834,115 @@ export struct BookGroupManagementPage {
       }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
       PrimaryAction({ label: '新建分组' })
         .margin({ top: 12 })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
+export struct GroupManagementPage {
+  private groups: RowEntry[] = [
+    { title: '默认分组', detail: '8 本 · 当前分组', chip: '管理' },
+    { title: '追更', detail: '5 本 · 置顶显示', chip: '管理' },
+    { title: '本地书', detail: '2 本 · 导入书籍', chip: '管理' },
+    { title: '资料', detail: '3 本 · 可重命名', chip: '管理' },
+  ];
+  private assignments: SelectableBookEntry[] = [
+    { title: '三体', detail: '刘慈欣 · 当前分组', group: '默认分组', selected: false },
+    { title: '基地', detail: '阿西莫夫 · 当前分组', group: '追更', selected: false },
+    { title: '球状闪电', detail: '刘慈欣 · 当前分组', group: '本地书', selected: false },
+    { title: '深空信号', detail: '星港 · 当前分组', group: '资料', selected: false },
+  ];
+
+  build() {
+    Column() {
+      SectionTitle({ title: '分组列表' })
+      ForEach(this.groups, (entry: RowEntry, idx: number) => {
+        StructureRow({ title: entry.title, detail: entry.detail, chip: entry.chip, showChevron: false })
+          .margin({ top: idx === 0 ? 10 : 8 })
+      }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
+
+      SectionTitle({ title: '书籍归属' })
+        .margin({ top: 16 })
+      ForEach(this.assignments, (entry: SelectableBookEntry, idx: number) => {
+        BookshelfToolBookRow({
+          title: entry.title,
+          detail: entry.detail,
+          group: entry.group,
+          selected: entry.selected,
+        })
+          .margin({ top: idx === 0 ? 10 : 8 })
+      }, (entry: SelectableBookEntry, idx: number) => `${entry.title}-${idx}`)
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
+export struct BookBatchManagementPage {
+  private selectedBooks: SelectableBookEntry[] = [
+    { title: '三体', detail: '刘慈欣 · 继续阅读', group: '追更', selected: true },
+    { title: '基地', detail: '阿西莫夫 · 第一章', group: '默认分组', selected: true },
+    { title: '球状闪电', detail: '刘慈欣 · 未读', group: '本地书', selected: true },
+    { title: '长夜余火', detail: '爱潜水的乌贼 · 已读', group: '追更', selected: false },
+    { title: '人间词话', detail: '王国维 · 本地导入', group: '资料', selected: false },
+    { title: 'Android 开发笔记', detail: '本地书籍 · 最近导入', group: '资料', selected: false },
+  ];
+
+  build() {
+    Column() {
+      StructureCard({
+        title: '已选 3 本',
+        message: '长按书籍或从更多菜单进入，选择后统一移动分组、删除或取消选择。',
+        chip: '全选',
+      })
+
+      SectionTitle({ title: '书架书籍' })
+        .margin({ top: 14 })
+      ForEach(this.selectedBooks, (entry: SelectableBookEntry, idx: number) => {
+        BookshelfToolBookRow({
+          title: entry.title,
+          detail: entry.detail,
+          group: entry.group,
+          selected: entry.selected,
+        })
+          .margin({ top: idx === 0 ? 10 : 8 })
+      }, (entry: SelectableBookEntry, idx: number) => `${entry.title}-${idx}`)
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
+export struct BookDirectoryPage {
+  private chapters: DirectoryEntry[] = [
+    { title: '第 1 章 科学边界', marker: '当前' },
+    { title: '第 2 章 台球', marker: '' },
+    { title: '第 3 章 射手和农场主', marker: '' },
+    { title: '第 34 章 旧地图', marker: '已缓存' },
+    { title: '第 36 章 灯塔之后', marker: '书签' },
+  ];
+
+  build() {
+    Column() {
+      StructureCard({ title: '三体', message: '刘慈欣 · 共 6 章', chip: '继续阅读' })
+      Row({ space: 8 }) {
+        DirectorySegmentButton({ label: '目录', active: true })
+        DirectorySegmentButton({ label: '书签', active: false })
+      }
+      .width('100%')
+      .padding(4)
+      .borderRadius(DemoAliasTokens.radiusPill)
+      .backgroundColor(ColorTokens.metaBg)
+      .margin({ top: 12 })
+
+      ForEach(this.chapters, (entry: DirectoryEntry, idx: number) => {
+        DirectoryChapterRow({ title: entry.title, marker: entry.marker })
+          .margin({ top: idx === 0 ? 12 : 8 })
+      }, (entry: DirectoryEntry, idx: number) => `${entry.title}-${idx}`)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)

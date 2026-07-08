@@ -73,7 +73,7 @@ export struct MainTabShell {
       .hitTestBehavior(HitTestMode.Transparent)
 
       OverlayHost()
-        .zIndex(ZIndexTokens.overlay)
+        .zIndex(ZIndexTokens.dialog)
       StateHost()
         .zIndex(ZIndexTokens.mainNav)
     }

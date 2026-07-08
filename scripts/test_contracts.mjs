@@ -286,6 +286,27 @@ test('bookshelf section head uses demo view-action icons, not generic more dots'
   assert.ok(!sectionHead.includes('reader_icon_more_dark'), 'bookshelf section head must not render generic more-dot icons');
 });
 
+test('bookshelf top more opens real batch/group actions, not a dead icon', () => {
+  const topBarSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/SharedComponents.ets'));
+  const overlaySrc = read(path.join(REPO, 'entry/src/main/ets/ui/slots/OverlayHost.ets'));
+  assert.ok(topBarSrc.includes("overlay: 'book-action'"), 'bookshelf top more must open book-action overlay');
+  for (const route of ['book-batch-management', 'group-management']) {
+    assert.ok(overlaySrc.includes(`route: '${route}'`), `book-action overlay missing route ${route}`);
+    assert.ok(overlaySrc.includes("type: 'route-push'"), 'book-action overlay must route-push actions');
+  }
+});
+
+test('bookshelf management pages use LibraryShell fixed bottom actions', () => {
+  const shellSrc = read(path.join(REPO, 'entry/src/main/ets/ui/shells/LibraryShell.ets'));
+  const structuralSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/StructuralPageComponents.ets'));
+  for (const text of ['移动分组', '删除所选', '新建分组', '完成']) {
+    assert.ok(shellSrc.includes(text), `LibraryShell fixed action host missing ${text}`);
+  }
+  assert.ok(shellSrc.includes("this.routeId === 'book-batch-management'"), 'LibraryShell must gate batch actions by route');
+  assert.ok(shellSrc.includes("this.routeId === 'group-management'"), 'LibraryShell must gate group actions by route');
+  assert.equal(structuralSrc.includes('ToolBottomActionRow'), false, 'management page actions must not live in scroll content');
+});
+
 // ── 5. ViewStateTable ↔ ViewStateRenderer: every component type used in the
 //      table is mapped by the renderer — no unknown type silently falls back to
 //      Empty() (which would mask contract drift).
@@ -541,6 +562,9 @@ test('normalized settings/form pages use page-level components, not generic asse
   const expected = new Map([
     ['bookshelf-book-more-menu/default', ['AppTopBar', 'BookMoreMenuPage', 'BottomNav']],
     ['bookshelf-group-management/default', ['BackTopBar', 'BookGroupManagementPage']],
+    ['group-management/default', ['BackTopBar', 'GroupManagementPage']],
+    ['book-batch-management/default', ['BackTopBar', 'BookBatchManagementPage']],
+    ['book-directory/default', ['BackTopBar', 'BookDirectoryPage']],
     ['rss-subscription-management/default', ['BackTopBar', 'RssSubscriptionManagementPage']],
     ['source-add/default', ['BackTopBar', 'SourceFormPage']],
     ['source-edit/default', ['BackTopBar', 'SourceFormPage']],
@@ -564,6 +588,9 @@ test('structural page visuals keep handoff row counts and copy', () => {
     '阅读页入口',
     'WebDAV / 同步入口',
     '第6章：深空信号',
+    '已选 3 本',
+    '书籍归属',
+    '第 34 章 旧地图',
     'https://example.com',
   ]) {
     assert.ok(structural.includes(text), `StructuralPageComponents missing handoff text: ${text}`);
@@ -680,7 +707,6 @@ const SCAFFOLD_ALLOWED = new Set([
   'about-feedback',
   'discover-source-bulk', 'discover-empty', 'discover-error', 'discover-loading',
   'discover-no-results',
-  'group-management', 'book-batch-management', 'book-directory',
 ]);
 
 // Aggregate ALL body components across every pageState entry for a route.

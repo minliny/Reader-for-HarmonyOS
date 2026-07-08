@@ -41,12 +41,19 @@ export struct AppTopBar {
         Image($r('app.media.bookshelf_icon_search_dark')).width(24).height(24)
           .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'book-search' }))
         Image($r('app.media.reader_icon_more_dark')).width(24).height(24).margin({ left: 18 })
+          .onClick(() => this.openTopMore())
       }
       .alignItems(VerticalAlign.Center)
     }
     .width('100%')
     .height(SizeTokens.topBarHeight)
-    .padding({ top: 6, left: 20, right: 20, bottom: 0 })
+      .padding({ top: 6, left: 20, right: 20, bottom: 0 })
+  }
+
+  private openTopMore(): void {
+    if (this.routeId === 'bookshelf' || this.routeId === 'bookshelf-cover-mode' || this.routeId === 'bookshelf-list-mode') {
+      ReaderUiStore.dispatch({ type: 'set-overlay', overlay: 'book-action' });
+    }
   }
 }
 

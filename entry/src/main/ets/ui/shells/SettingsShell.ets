@@ -44,7 +44,7 @@ export struct SettingsShell {
       .zIndex(ZIndexTokens.content)
 
       OverlayHost()
-        .zIndex(ZIndexTokens.overlay)
+        .zIndex(ZIndexTokens.dialog)
       StateHost()
         .zIndex(ZIndexTokens.mainNav)
     }

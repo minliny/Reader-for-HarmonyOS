@@ -3390,33 +3390,10 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "List",
-        "id": "group-list",
-        "props": {},
-        "children": [
-          {
-            "type": "ListRow",
-            "id": "group-default",
-            "props": {
-              "title": "默认分组 · 12 本"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "group-scifi",
-            "props": {
-              "title": "科幻 · 4 本"
-            },
-            "children": []
-          }
-        ]
-      },
-      {
-        "type": "Button",
-        "id": "new-group",
+        "type": "GroupManagementPage",
+        "id": "group-management-page",
         "props": {
-          "label": "新建分组"
+          "variant": "group-flow"
         },
         "children": []
       }
@@ -3435,34 +3412,9 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "List",
-        "id": "batch-list",
+        "type": "BookBatchManagementPage",
+        "id": "book-batch-management-page",
         "props": {},
-        "children": [
-          {
-            "type": "ListRow",
-            "id": "book-1",
-            "props": {
-              "title": "深空信号"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "book-2",
-            "props": {
-              "title": "三体"
-            },
-            "children": []
-          }
-        ]
-      },
-      {
-        "type": "Button",
-        "id": "batch-action",
-        "props": {
-          "label": "批量操作"
-        },
         "children": []
       }
     ]
@@ -3475,40 +3427,15 @@ export class ViewStateTable {
         "type": "BackTopBar",
         "id": "topbar",
         "props": {
-          "title": "目录"
+          "title": "书籍目录"
         },
         "children": []
       },
       {
-        "type": "List",
-        "id": "directory-list",
+        "type": "BookDirectoryPage",
+        "id": "book-directory-page",
         "props": {},
-        "children": [
-          {
-            "type": "ListRow",
-            "id": "ch-1",
-            "props": {
-              "title": "第1章：深空信号"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "ch-2",
-            "props": {
-              "title": "第2章：信号解析"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "ch-3",
-            "props": {
-              "title": "第3章：深空回响"
-            },
-            "children": []
-          }
-        ]
+        "children": []
       }
     ]
   },

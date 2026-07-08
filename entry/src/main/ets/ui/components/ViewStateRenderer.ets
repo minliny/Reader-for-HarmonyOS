@@ -23,7 +23,7 @@ import { AppShellStructure, MainTabsStructure, SearchHomePage, SearchResultsPage
   RemoteWebDavBooksPage, RssDetailPage, RssEmptyState, RssErrorState, GlobalStatePage,
   OfflineStatePage, PermissionRequiredPage, AboutVersionPage, LocalBookImportPage, ReadingSettingsEntryPage,
   BookMoreMenuPage, BookGroupManagementPage, SourceFormPage, GlobalSettingsPage, BackupSettingsPage,
-  RssSubscriptionManagementPage } from './StructuralPageComponents';
+  RssSubscriptionManagementPage, GroupManagementPage, BookBatchManagementPage, BookDirectoryPage } from './StructuralPageComponents';
 import { ProgressBar, BookTitleAuthor, SourceStatus, ReadButton, DirectoryPreview, BookIntro, ConfigEntry,
   SearchEntry, SourceTypeSegment, CurrentSourceCard, SourceCategoryChips, DiscoveryContentCard, SourceStatusBar,
   SubscriptionSummaryCard, FeedStatusChips, FeedSourceChips, RssEntryItem, UnreadIndicator,
@@ -267,6 +267,12 @@ export struct ViewStateRenderer {
       })
     } else if (component.type === 'BookGroupManagementPage') {
       BookGroupManagementPage()
+    } else if (component.type === 'GroupManagementPage') {
+      GroupManagementPage()
+    } else if (component.type === 'BookBatchManagementPage') {
+      BookBatchManagementPage()
+    } else if (component.type === 'BookDirectoryPage') {
+      BookDirectoryPage()
     } else if (component.type === 'SourceManagementPage') {
       SourceManagementPage()
     } else if (component.type === 'SourceDetailPage') {

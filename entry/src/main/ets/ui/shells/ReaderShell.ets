@@ -35,11 +35,11 @@ export struct ReaderShell {
         .height('100%')
         .zIndex(ZIndexTokens.content)
 
-      // overlayHost (z=10) — generic transient overlays only (book-action /
+      // overlayHost (dialog layer) — generic transient overlays only (book-action /
       // sort-filter / group-management / …). Reader overlays are NOT here; they
       // are route-driven and render inside the content slot above.
       OverlayHost()
-        .zIndex(ZIndexTokens.overlay)
+        .zIndex(ZIndexTokens.dialog)
 
       // stateHost (z=20) — loading / empty / error / offline page states.
       StateHost()
