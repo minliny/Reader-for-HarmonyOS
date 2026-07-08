@@ -13,7 +13,7 @@ import fs from '@ohos.file.fs';
 import util from '@ohos.util';
 import zlib from '@ohos.zlib';
 import { ReaderUiStore } from '../ui/store/ReaderUiStore';
-import { SearchResultEntry, ReaderError } from '../ui/store/ReaderUiState';
+import { SearchResultEntry } from '../ui/store/ReaderUiState';
 import { SafeAreaAdapter } from '../ui/adapters/SafeAreaAdapter';
 import { ColorTokens } from '../contract/generated/ColorTokens';
 import { CoreRuntime } from '../bridge/CoreRuntime';
@@ -723,12 +723,14 @@ export default class EntryAbility extends UIAbility {
       elapsed += interval;
       const sq: string = AppStorage.get<string>('reader.searchQuery') ?? '';
       const sr: SearchResultEntry[] = AppStorage.get<SearchResultEntry[]>('reader.searchResults') ?? [];
-      const err: ReaderError | null | undefined = AppStorage.get<ReaderError | null>('reader.error');
+      // Store writes error as flat fields (reader.errorCode / errorMessage /
+      // retryable), NOT as a reader.error object — see ReaderUiStore.writeAll().
+      const errCode: string = AppStorage.get<string>('reader.errorCode') ?? '';
+      const errMsg: string = AppStorage.get<string>('reader.errorMessage') ?? '';
       const loading: boolean = AppStorage.get<boolean>('reader.loading') ?? false;
-      const errCode: string = err === null || err === undefined ? 'null' : err.code;
-      console.info('[ReadingChainUi] poll elapsed=' + elapsed + 'ms searchQuery="' + sq + '" results=' + sr.length + ' loading=' + loading + ' error=' + errCode);
+      console.info('[ReadingChainUi] poll elapsed=' + elapsed + 'ms searchQuery="' + sq + '" results=' + sr.length + ' loading=' + loading + ' errorCode=' + errCode);
       const hasResults: boolean = sr.length > 0 && sq === query;
-      const hasError: boolean = err !== null && err !== undefined && err.code === 'SEARCH_FAILED';
+      const hasError: boolean = errCode === 'SEARCH_FAILED';
       if (hasResults || hasError) {
         clearInterval(poll);
         if (hasResults) {
@@ -736,8 +738,7 @@ export default class EntryAbility extends UIAbility {
           console.info('[ReadingChainUi] DONE search-success results=' + sr.length + ' first="' + firstTitle + '"');
           manifest.markVerifiedByTag('ReadingChainUi');
         } else {
-          const errMsg: string = err !== null && err !== undefined ? err.message : '';
-          console.info('[ReadingChainUi] DONE search-failure error=' + errCode + ' msg=' + errMsg + ' (effect path verified; source may be unreachable)');
+          console.info('[ReadingChainUi] DONE search-failure errorCode=' + errCode + ' msg=' + errMsg + ' (effect path verified; source may be unreachable)');
           manifest.markVerifiedByTag('ReadingChainUi');
         }
         return;

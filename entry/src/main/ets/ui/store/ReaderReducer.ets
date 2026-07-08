@@ -153,8 +153,15 @@ export class ReaderReducer {
   }
 
   static setError(state: ReaderUiState, error: ReaderError | null): ReaderUiState {
-    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    // On error: clear loading so loading spinners stop, and switch pageState to
+    // 'error' so the route's error ViewState renders (e.g. book-detail/error,
+    // reader/error, search-error). Without this, a failed book-detail-load /
+    // chapter-load / search-submit would stay on the loading page with the
+    // error only written into state but never surfaced to the UI.
+    const pageState: PageState = error !== null ? 'error' : state.pageState;
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, pageState);
     next.error = error;
+    next.loading = false;
     return next;
   }
 

@@ -7,13 +7,36 @@ import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
 import { ReaderTypography } from '../tokens/ReaderTypography';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 
+// Book entry passed from ViewStateRenderer (extracted from fixture BookCard children).
+export interface BookEntry {
+  bookId: string;
+  title: string;
+  author: string;
+}
+
+// A bookId is loadable when it is a real source path (e.g. '/book/123' or a
+// full 'https://...' URL). Fixture ids like 'bk-001' are NOT loadable —
+// BookSourceRegistry.buildDetailUrl would produce an invalid URL. Guard with
+// this so fixture-only flows just route-push (showing fixture content) while
+// real search-result bookIds trigger the actual Host HTTP load.
+function isLoadableBookId(bookId: string): boolean {
+  return bookId.length > 0 && (bookId.startsWith('/') || bookId.startsWith('http'));
+}
+
 // .fd-continue-card: grid 62px 1fr 82px; gap 14; min-height 100; padding 10 16.
 //   cover (.fd-continue-cover-button): 62px, aspect 2/3, radius-sm, clickable.
 //   div: h2 "继续阅读" (13/900 primary) + strong (serif 20) + span author (14 muted).
 //   button (.fd-continue-action-button) "阅读": min 74×40, pill, primary, 13/800.
+// Click dispatches route-push reader, then — only when bookId is a loadable
+// source path — book-detail-load(bookId, loadFirstChapter) which populates
+// currentBook and then reads the first chapter for the reader route. Fixture
+// ids (bk-001) skip the load and the reader shows its fixture fallback
+// paragraphs.
 @Component
 export struct ContinueReadingCard {
+  @Prop bookId: string = '';
   @Prop title: string = '示例书';
+  @Prop author: string = '示例作者';
 
   build() {
     Row() {
@@ -26,7 +49,7 @@ export struct ContinueReadingCard {
       .aspectRatio(2 / 3)
       .borderRadius(DemoAliasTokens.radiusSm)
       .backgroundColor(ColorTokens.metaBg)
-      .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' }))
+      .onClick(() => this.openReader())
 
       Column() {
         Text('继续阅读')
@@ -42,7 +65,7 @@ export struct ContinueReadingCard {
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .margin({ top: 6 })
-        Text('示例作者')
+        Text(this.author)
           .fontSize(14)
           .fontColor(ColorTokens.muted)
           .maxLines(2)
@@ -61,7 +84,7 @@ export struct ContinueReadingCard {
         .borderRadius(DemoAliasTokens.radiusPill)
         .height(40)
         .padding({ left: 14, right: 14 })
-        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' }))
+        .onClick(() => this.openReader())
     }
     .width('100%')
     .padding({ top: 10, bottom: 10, left: 16, right: 16 })
@@ -69,6 +92,21 @@ export struct ContinueReadingCard {
     .borderRadius(DemoAliasTokens.radiusMd)
     .backgroundColor(DemoAliasTokens.surface)
     .shadow({ radius: 26, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 8 })
+  }
+
+  private openReader(): void {
+    ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' });
+    // Only dispatch book-detail-load when bookId is a loadable source path.
+    // Fixture ids (bk-001) skip the load to avoid invalid URL + stuck loading.
+    // The reader page's ReadingTextFlow falls back to fixture paragraphs when
+    // chapterContent is empty.
+    if (isLoadableBookId(this.bookId)) {
+      ReaderUiStore.dispatch({
+        type: 'book-detail-load',
+        bookId: this.bookId,
+        loadFirstChapter: true,
+      });
+    }
   }
 }
 
@@ -100,12 +138,16 @@ export struct ShelfSectionHeader {
 }
 
 // .fd-bookshelf-shelf-section: grid, gap 10 — wrapper for section head + grid.
+// Accepts title + books from ViewStateRenderer (extracted from fixture children).
 @Component
 export struct BookshelfShelfSection {
+  @Prop title: string = '我的书架';
+  @Prop books: BookEntry[] = [];
+
   build() {
     Column() {
-      ShelfSectionHeader()
-      BookGrid()
+      ShelfSectionHeader({ title: this.title })
+      BookGrid({ books: this.books })
         .margin({ top: 10 })
     }
     .width('100%')
@@ -130,8 +172,14 @@ export struct BookCover {
 }
 
 // .fd-book-card (cover mode): grid, gap 6. cover + strong (serif 15) + span (12 muted).
+// Click dispatches route-push book-detail, then — only when bookId is a
+// loadable source path — book-detail-load(bookId) so the reducer pushes the
+// route first (pageState resets to default), then the load effect fires on the
+// new route (pageState -> loading -> default on success). Fixture ids (bk-001)
+// skip the load; the detail page shows its fixture ViewState body.
 @Component
 export struct BookCard {
+  @Prop bookId: string = '';
   @Prop title: string = '三体';
   @Prop author: string = '刘慈欣';
 
@@ -153,26 +201,40 @@ export struct BookCard {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .alignItems(HorizontalAlign.Start)
-    .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'book-detail' }))
+    .onClick(() => {
+      ReaderUiStore.dispatch({ type: 'route-push', id: 'book-detail' });
+      // Guard: only dispatch book-detail-load when bookId is a loadable source
+      // path. Fixture ids (bk-001) would produce an invalid URL via
+      // BookSourceRegistry.buildDetailUrl and leave the detail page stuck on
+      // loading (reducer sets pageState='loading' but the HTTP fails with a
+      // non-retryable-looking error).
+      if (isLoadableBookId(this.bookId)) {
+        ReaderUiStore.dispatch({ type: 'book-detail-load', bookId: this.bookId });
+      }
+    })
   }
 }
 
 // .fd-book-grid: repeat(3, 1fr); gap 16px 30px.
+// Books come from ViewStateRenderer (extracted from fixture BookCard children).
+// Falls back to demo entries when no books are passed (e.g. standalone usage or
+// fixture missing children) so the grid is never empty.
 @Component
 export struct BookGrid {
-  private books: Array<[string, string]> = [
-    ['三体', '刘慈欣'],
-    ['基地', '阿西莫夫'],
-    ['球状闪电', '刘慈欣'],
+  @Prop books: BookEntry[] = [];
+  private demoBooks: BookEntry[] = [
+    { bookId: 'bk-demo-1', title: '三体', author: '刘慈欣' },
+    { bookId: 'bk-demo-2', title: '基地', author: '阿西莫夫' },
+    { bookId: 'bk-demo-3', title: '球状闪电', author: '刘慈欣' },
   ];
 
   build() {
     Grid() {
-      ForEach(this.books, (b: [string, string], i: number) => {
+      ForEach(this.books.length > 0 ? this.books : this.demoBooks, (b: BookEntry, i: number) => {
         GridItem() {
-          BookCard({ title: b[0], author: b[1] })
+          BookCard({ bookId: b.bookId, title: b.title, author: b.author })
         }
-      }, (b: [string, string], i: number) => `${b[0]}-${i}`)
+      }, (b: BookEntry, i: number) => `${b.bookId}-${b.title}-${i}`)
     }
     .columnsTemplate('1fr 1fr 1fr')
     .rowsGap(16)

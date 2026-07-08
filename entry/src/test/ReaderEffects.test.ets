@@ -150,9 +150,14 @@ export default function ReaderEffectsTests(): void {
       expect(next.searchResults.length).assertEqual(0);
       expect(next.pageState).assertEqual('empty');
     });
-    it('searchFailureSetsError', 0, () => {
+    it('searchFailureSetsErrorAndClearsLoadingAndPageState', 0, () => {
       const s = DemoUiState.initial();
-      const next = ReaderReducer.reduce(s, {
+      // Simulate the real flow: search-submit sets loading+pageState=loading,
+      // then search-failure should clear loading and switch pageState=error.
+      const loading = ReaderReducer.reduce(s, { type: 'search-submit', query: '斗破' });
+      expect(loading.loading).assertEqual(true);
+      expect(loading.pageState).assertEqual('loading');
+      const next = ReaderReducer.reduce(loading, {
         type: 'search-failure',
         error: { code: 'SEARCH_FAILED', message: 'timeout', retryable: true },
       });
@@ -161,6 +166,29 @@ export default function ReaderEffectsTests(): void {
         expect(next.error.code).assertEqual('SEARCH_FAILED');
         expect(next.error.retryable).assertEqual(true);
       }
+      expect(next.loading).assertEqual(false);
+      expect(next.pageState).assertEqual('error');
+    });
+    it('setErrorClearsLoadingAndSwitchesPageStateToError', 0, () => {
+      const s = DemoUiState.initial();
+      const loading = ReaderReducer.setRouteLoading(s);
+      expect(loading.loading).assertEqual(true);
+      expect(loading.pageState).assertEqual('loading');
+      const next = ReaderReducer.setError(loading, { code: 'BOOK_DETAIL_FAILED', message: 'timeout', retryable: true });
+      expect(next.loading).assertEqual(false);
+      expect(next.pageState).assertEqual('error');
+      expect(next.error !== null).assertTrue();
+      if (next.error !== null) {
+        expect(next.error.code).assertEqual('BOOK_DETAIL_FAILED');
+      }
+    });
+    it('setErrorWithNullKeepsPageState', 0, () => {
+      const s = DemoUiState.initial();
+      const errorState = ReaderReducer.setError(s, { code: 'X', message: 'y', retryable: false });
+      expect(errorState.pageState).assertEqual('error');
+      const cleared = ReaderReducer.setError(errorState, null);
+      expect(cleared.pageState).assertEqual('error');
+      expect(cleared.error).assertEqual(null);
     });
     it('bookDetailSuccessSetsCurrentBook', 0, () => {
       const s = DemoUiState.initial();

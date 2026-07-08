@@ -4,7 +4,7 @@
 import { ViewStateComponent, ViewStateTable } from '../../contract/generated/ViewStateTable';
 import { AppTopBar, BackTopBar, BottomNav, Loading, Empty, ErrorState, Offline,
   DemoButton, Input, ListRow, DemoList, Card, Content, FormSection, FilterBar, Overlay } from './SharedComponents';
-import { ContinueReadingCard, BookshelfShelfSection, ShelfChipGroup, ShelfSectionHeader, BookCard, BookCover, BookGrid } from './BookshelfComponents';
+import { ContinueReadingCard, BookshelfShelfSection, ShelfChipGroup, ShelfSectionHeader, BookCard, BookCover, BookGrid, BookEntry } from './BookshelfComponents';
 import { BookHero, BookSummaryCard, BookChapterList } from './BookDetailComponents';
 import { ReadingBackgroundLayer, ReadingTextFlow, ReadingInfoLayer, TapZones, ReaderBase } from './ReaderComponents';
 import { ReaderBottomBar, ReaderDirectoryPanel, ReaderAppearancePanel, ReaderTtsPanel, ReaderSettingsPanel, ReaderSearchPanel, ReaderReplacePanel, ReaderAutoScrollPanel, FloatingQuickActions, FloatingPageControl, FloatingBrightness, NightToast } from './ReaderOverlayComponents';
@@ -12,6 +12,11 @@ import { SourceSwitchResultsPanel } from './LibraryComponents';
 import { SettingsHomeSection, SettingsSection, SettingsListItem } from './SettingsComponents';
 import { DiscoverSourceBar, DiscoverEntryRow, DiscoverFilterTrigger, DiscoverListHead, DiscoverBookList } from './DiscoverComponents';
 import { RssSearchEntry, RssModeRow, RssSourceOverview, RssArticleSection } from './RssComponents';
+import { AppShellStructure, MainTabsStructure, SearchHomePage, SearchResultsPage, SearchStatePage, BookTocPreviewPage,
+  BookshelfEmptyPage, SourceManagementPage, SourceDetailPage, SourceImportOptionsPage, SourceDisabledState,
+  SourceSettingsEntryPage, SourceTestResultPage, WebDavConfigPage, SyncSettingsEntryPage, SyncErrorPage,
+  SyncProgressPage, RemoteWebDavBooksPage, RssDetailPage, RssEmptyState, RssErrorState, GlobalStatePage,
+  OfflineStatePage, PermissionRequiredPage, AboutVersionPage, LocalBookImportPage, ReadingSettingsEntryPage } from './StructuralPageComponents';
 import { ProgressBar, BookTitleAuthor, SourceStatus, ReadButton, DirectoryPreview, BookIntro, ConfigEntry,
   SearchEntry, SourceTypeSegment, CurrentSourceCard, SourceCategoryChips, DiscoveryContentCard, SourceStatusBar,
   SubscriptionSummaryCard, FeedStatusChips, FeedSourceChips, RssEntryItem, UnreadIndicator,
@@ -61,6 +66,29 @@ export struct ViewStateRenderer {
     return value !== undefined ? value : fallback;
   }
 
+  // Extract BookEntry[] from a BookGrid's children (BookCard ViewStateComponents).
+  // Recurses into BookshelfShelfSection children to find the nested BookGrid.
+  private extractBooks(children: ViewStateComponent[]): BookEntry[] {
+    const books: BookEntry[] = [];
+    for (const child of children) {
+      if (child.type === 'BookCard') {
+        const entry: BookEntry = {
+          bookId: this.textOr(child.props.bookId, ''),
+          title: this.textOr(child.props.title, '未命名'),
+          author: this.textOr(child.props.author, '未知作者'),
+        };
+        books.push(entry);
+      } else if (child.type === 'BookGrid' && child.children.length > 0) {
+        // BookGrid's children are BookCard entries — extract them.
+        const nested = this.extractBooks(child.children);
+        for (const n of nested) {
+          books.push(n);
+        }
+      }
+    }
+    return books;
+  }
+
   @Builder renderChildren(children: ViewStateComponent[]) {
     ForEach(children, (child: ViewStateComponent, idx: number) => {
       this.renderComponent(child)
@@ -83,9 +111,9 @@ export struct ViewStateRenderer {
     } else if (component.type === 'Offline') {
       Offline()
     } else if (component.type === 'ContinueReadingCard') {
-      ContinueReadingCard({ title: this.textOr(component.props.title, '示例书') })
+      ContinueReadingCard({ bookId: this.textOr(component.props.bookId, ''), title: this.textOr(component.props.title, '示例书'), author: this.textOr(component.props.author, '示例作者') })
     } else if (component.type === 'BookshelfShelfSection') {
-      BookshelfShelfSection()
+      BookshelfShelfSection({ title: this.textOr(component.props.title, '我的书架'), books: this.extractBooks(component.children) })
     } else if (component.type === 'BookHero') {
       BookHero()
     } else if (component.type === 'BookSummaryCard') {
@@ -152,6 +180,107 @@ export struct ViewStateRenderer {
       RssSourceOverview()
     } else if (component.type === 'RssArticleSection') {
       RssArticleSection()
+    } else if (component.type === 'AppShellStructure') {
+      AppShellStructure({
+        title: this.textOr(component.props.title, 'Reader for Android'),
+        message: this.textOr(component.props.message, '统一承载书架、发现、RSS、设置与阅读页入口。'),
+      })
+    } else if (component.type === 'MainTabsStructure') {
+      MainTabsStructure({
+        title: this.textOr(component.props.title, '主导航'),
+        message: this.textOr(component.props.message, '底部四项：书架、发现、RSS、设置。'),
+      })
+    } else if (component.type === 'SearchHomePage') {
+      SearchHomePage({ placeholder: this.textOr(component.props.placeholder, '搜索书名/作者') })
+    } else if (component.type === 'SearchResultsPage') {
+      SearchResultsPage({ query: this.textOr(component.props.query, '深空信号') })
+    } else if (component.type === 'SearchStatePage') {
+      SearchStatePage({
+        variant: this.textOr(component.props.variant, 'empty'),
+        title: this.textOr(component.props.title, '暂无结果'),
+        message: this.textOr(component.props.message, '换个关键词后重试。'),
+        action: this.textOr(component.props.action, ''),
+      })
+    } else if (component.type === 'BookTocPreviewPage') {
+      BookTocPreviewPage()
+    } else if (component.type === 'BookshelfEmptyPage') {
+      BookshelfEmptyPage({
+        title: this.textOr(component.props.title, '书架为空'),
+        message: this.textOr(component.props.message, '导入本地书籍或从书源搜索后加入书架。'),
+      })
+    } else if (component.type === 'SourceManagementPage') {
+      SourceManagementPage()
+    } else if (component.type === 'SourceDetailPage') {
+      SourceDetailPage({ title: this.textOr(component.props.title, '阅读书源 1') })
+    } else if (component.type === 'SourceImportOptionsPage') {
+      SourceImportOptionsPage()
+    } else if (component.type === 'SourceDisabledState') {
+      SourceDisabledState({
+        title: this.textOr(component.props.title, '书源已停用'),
+        message: this.textOr(component.props.message, '该书源 disabled / error，请在书源详情中修复。'),
+        action: this.textOr(component.props.action, '查看详情'),
+      })
+    } else if (component.type === 'SourceSettingsEntryPage') {
+      SourceSettingsEntryPage()
+    } else if (component.type === 'SourceTestResultPage') {
+      SourceTestResultPage()
+    } else if (component.type === 'WebDavConfigPage') {
+      WebDavConfigPage()
+    } else if (component.type === 'SyncSettingsEntryPage') {
+      SyncSettingsEntryPage()
+    } else if (component.type === 'SyncErrorPage') {
+      SyncErrorPage({
+        title: this.textOr(component.props.title, '同步冲突'),
+        message: this.textOr(component.props.message, '本地与云端版本不一致，请选择处理方式。'),
+      })
+    } else if (component.type === 'SyncProgressPage') {
+      SyncProgressPage({
+        title: this.textOr(component.props.title, '同步中'),
+        progress: this.numOr(component.props.progress, 0.64),
+      })
+    } else if (component.type === 'RemoteWebDavBooksPage') {
+      RemoteWebDavBooksPage()
+    } else if (component.type === 'RssDetailPage') {
+      RssDetailPage({ title: this.textOr(component.props.title, 'AI 周报：端侧模型更新') })
+    } else if (component.type === 'RssEmptyState') {
+      RssEmptyState({
+        title: this.textOr(component.props.title, '暂无订阅'),
+        message: this.textOr(component.props.message, '添加 RSS 源后会在这里显示最新文章。'),
+        action: this.textOr(component.props.action, '添加订阅'),
+      })
+    } else if (component.type === 'RssErrorState') {
+      RssErrorState({
+        title: this.textOr(component.props.title, '刷新失败'),
+        message: this.textOr(component.props.message, '订阅源暂时无法访问。'),
+        action: this.textOr(component.props.action, '重试'),
+      })
+    } else if (component.type === 'GlobalStatePage') {
+      GlobalStatePage({
+        variant: this.textOr(component.props.variant, 'empty'),
+        title: this.textOr(component.props.title, '暂无内容'),
+        message: this.textOr(component.props.message, ''),
+        action: this.textOr(component.props.action, ''),
+      })
+    } else if (component.type === 'OfflineStatePage') {
+      OfflineStatePage({
+        title: this.textOr(component.props.title, '当前离线'),
+        message: this.textOr(component.props.message, '检查网络后再继续同步或搜索。'),
+      })
+    } else if (component.type === 'PermissionRequiredPage') {
+      PermissionRequiredPage({
+        title: this.textOr(component.props.title, '需要权限'),
+        message: this.textOr(component.props.message, '授予存储或通知权限后才能继续。'),
+        action: this.textOr(component.props.action, '去授权'),
+      })
+    } else if (component.type === 'AboutVersionPage') {
+      AboutVersionPage({
+        title: this.textOr(component.props.title, 'Reader'),
+        version: this.textOr(component.props.version, '0.1.0'),
+      })
+    } else if (component.type === 'LocalBookImportPage') {
+      LocalBookImportPage()
+    } else if (component.type === 'ReadingSettingsEntryPage') {
+      ReadingSettingsEntryPage()
     } else if (component.type === 'Button') {
       DemoButton({ label: this.textOr(component.props.label, '操作'), destructive: component.props.destructive === true })
     } else if (component.type === 'Input') {
@@ -170,7 +299,7 @@ export struct ViewStateRenderer {
     } else if (component.type === 'Card') {
       Card({ title: this.textOr(component.props.title, '卡片标题'), subtitle: this.textOr(component.props.author, '卡片摘要') })
     } else if (component.type === 'Content') {
-      Content({ text: this.textOr(component.props.message, this.textOr(component.props.html, '正文内容')) })
+      Content({ text: this.textOr(component.props.message, '正文内容') })
     } else if (component.type === 'FormSection') {
       FormSection({ title: this.textOr(component.props.title, '表单分组') })
     } else if (component.type === 'FilterBar') {
@@ -184,11 +313,11 @@ export struct ViewStateRenderer {
     } else if (component.type === 'ShelfSectionHeader') {
       ShelfSectionHeader({ title: this.textOr(component.props.title, '我的书架') })
     } else if (component.type === 'BookCard') {
-      BookCard({ title: this.textOr(component.props.title, '三体'), author: this.textOr(component.props.author, '刘慈欣') })
+      BookCard({ bookId: this.textOr(component.props.bookId, ''), title: this.textOr(component.props.title, '三体'), author: this.textOr(component.props.author, '刘慈欣') })
     } else if (component.type === 'BookCover') {
       BookCover()
     } else if (component.type === 'BookGrid') {
-      BookGrid()
+      BookGrid({ books: this.extractBooks(component.children) })
     } else if (component.type === 'ProgressBar') {
       ProgressBar({ progress: this.numOr(component.props.progress, 0.42) })
     } else if (component.type === 'BookTitleAuthor') {

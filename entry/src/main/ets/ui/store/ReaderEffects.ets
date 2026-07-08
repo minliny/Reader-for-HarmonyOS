@@ -36,7 +36,7 @@ export class ReaderEffects {
       case 'book-detail-load': {
         const bookId = event.bookId ?? '';
         if (bookId.length > 0) {
-          ReaderEffects.runBookDetail(bookId);
+          ReaderEffects.runBookDetail(bookId, event.loadFirstChapter === true);
         }
         break;
       }
@@ -69,12 +69,18 @@ export class ReaderEffects {
 
   // ── Book detail ───────────────────────────────────────────────────────
   // bookId from search results is a relative path like '/book/123'.
-  static runBookDetail(bookId: string): void {
+  // On success, callers may explicitly request first-chapter loading. This is
+  // for reader-entry flows such as ContinueReadingCard; plain book-detail
+  // navigation must stay on the detail page without starting chapter loading.
+  static runBookDetail(bookId: string, loadFirstChapter: boolean = false): void {
     const source = BookSourceRegistry.getDefault();
     const url = BookSourceRegistry.buildDetailUrl(source, bookId);
     ReaderEffects.httpGet(url).then((html) => {
       const book = ReaderEffects.parseBookDetail(html, bookId, source);
       ReaderUiStore.dispatch({ type: 'book-detail-success', book: book });
+      if (loadFirstChapter && book.chapterListUrl.length > 0) {
+        ReaderUiStore.dispatch({ type: 'chapter-load', chapterId: book.chapterListUrl });
+      }
     }).catch((e: Error) => {
       ReaderUiStore.dispatch({
         type: 'set-error',

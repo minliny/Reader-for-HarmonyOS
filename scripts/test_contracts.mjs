@@ -12,6 +12,8 @@ const GEN = path.join(REPO, 'entry/src/main/ets/contract/generated');
 const SHELLS = path.join(REPO, 'entry/src/main/ets/ui/shells');
 const FIXTURES = process.env.READER_UI_CONTRACTS
   || path.resolve(__dirname, '../../Reader UI/contracts/fixtures');
+const NORMALIZED_HTML_DIR = process.env.READER_UI_NORMALIZED_HTML
+  || path.resolve(__dirname, '../../Reader UI/docs/ui-handoff/normalized-html');
 
 function read(p) { return fs.readFileSync(p, 'utf8'); }
 function readJson(name) { return JSON.parse(read(path.join(FIXTURES, name))); }
@@ -166,72 +168,43 @@ test('view-state fixture has no duplicate (routeId, pageState) keys', () => {
 });
 
 // ── 7. Normalized page → ViewState coverage guard ─────────────────────────
-// The 44 normalized HTML pages (Reader UI/docs/ui-handoff/normalized-html/)
-// are the 1:1 migration target. Each MUST have a ViewState entry OR an
-// aliasFor declaration. PENDING_NORMALIZED is the explicit allowlist of pages
-// not yet covered; it MUST shrink as later phases add ViewState/aliases and
-// MUST be empty before declaring full migration. A page missing from both
-// coverage AND PENDING_NORMALIZED is a hard FAIL (regression / scope gap).
+// The normalized HTML pages (Reader UI/docs/ui-handoff/normalized-html/) are
+// the 1:1 migration target — including 8 reader overlay routes + control-layer-
+// base-v2. Each MUST have a ViewState entry OR an aliasFor declaration.
+// PENDING_NORMALIZED is the explicit allowlist of pages not yet covered; it
+// MUST shrink as later phases add ViewState/aliases and MUST be empty before
+// declaring full migration. A page missing from both coverage AND
+// PENDING_NORMALIZED is a hard FAIL (regression / scope gap).
 const ROUTES_JSON = readJson('route.fixtures.json');
 const VIEW_STATES_JSON = readJson('view-state.fixtures.json');
 const VS_ROUTE_IDS = new Set(VIEW_STATES_JSON.map((v) => v.routeId));
 const ALIAS_MAP = new Map(ROUTES_JSON.filter((r) => r.aliasFor).map((r) => [r.id, r.aliasFor]));
 
-// normalized HTML filename (without .html) -> expected RouteId
-const NORMALIZED_PAGES = [
-  ['app-shell', 'app-shell'],
-  ['main-tabs', 'main-tabs'],
-  ['bookshelf-cover-mode', 'bookshelf-cover-mode'],
-  ['bookshelf-list-mode', 'bookshelf-list-mode'],
-  ['bookshelf-empty', 'bookshelf-empty'],
-  ['bookshelf-group-management', 'bookshelf-group-management'],
-  ['bookshelf-book-more-menu', 'bookshelf-book-more-menu'],
-  ['local-book-import', 'local-import'],
-  ['search-home', 'search-home'],
-  ['search-results', 'search-results'],
-  ['search-loading', 'search-loading'],
-  ['search-empty', 'search-empty'],
-  ['search-error', 'search-error'],
-  ['book-detail', 'book-detail'],
-  ['book-detail-toc-preview', 'book-detail-toc-preview'],
-  ['source-switch-results', 'source-switch-results'],
-  ['source-management-list', 'source-management'],
-  ['source-detail', 'source-detail'],
-  ['source-add', 'source-add'],
-  ['source-edit', 'source-edit'],
-  ['source-import', 'source-import-options'],
-  ['source-test-result', 'source-test-result'],
-  ['source-disabled-error', 'source-management'],
-  ['discover-home', 'discover-home'],
-  ['rss-list', 'rss'],
-  ['rss-detail', 'rss-detail'],
-  ['rss-subscription-management', 'rss-subscription-management'],
-  ['rss-empty', 'rss-empty'],
-  ['rss-error', 'rss-error'],
-  ['global-settings', 'global-settings'],
-  ['reading-settings-entry', 'reading-settings-entry'],
-  ['source-settings-entry', 'source-settings-entry'],
-  ['sync-settings-entry', 'sync-settings-entry'],
-  ['about-version', 'about-version'],
-  ['webdav-config', 'webdav-config'],
-  ['backup-settings', 'backup-settings'],
-  ['progress-sync-status', 'progress-sync-status'],
-  ['remote-webdav-books', 'remote-webdav-books'],
-  ['sync-error', 'sync-error'],
-  ['global-loading', 'global-loading'],
-  ['global-empty', 'global-empty'],
-  ['global-error', 'global-error'],
-  ['offline-state', 'offline-state'],
-  ['permission-required', 'permission-required'],
-];
+// Special filename → routeId mappings (where the normalized HTML filename does
+// not directly match the contract RouteId). All other files map filename = routeId.
+const PAGE_NAME_OVERRIDES = {
+  'local-book-import': 'local-import',
+  'rss-list': 'rss',
+  'source-management-list': 'source-management',
+  'source-import': 'source-import-options',
+  'source-disabled-error': 'source-management',
+};
+
+// Dynamically read the normalized-html directory so the guard stays in sync with
+// the UI repo without manual updates. Each .html file → [pageName, routeId] tuple.
+const NORMALIZED_PAGES = fs.readdirSync(NORMALIZED_HTML_DIR)
+  .filter((f) => f.endsWith('.html'))
+  .map((f) => f.replace(/\.html$/, ''))
+  .sort()
+  .map((pageName) => [pageName, PAGE_NAME_OVERRIDES[pageName] ?? pageName]);
 
 // Pages acknowledged as not-yet-migrated. Remove a page here ONLY when it has
 // a ViewState entry or aliasFor declaration. Must be empty before full migration.
 // NOTE: keys are pageName (first element of NORMALIZED_PAGES tuple), NOT routeId.
-// Phase 1 全量补齐完成：所有 44 个 normalized 页面均有 ViewState 或 aliasFor，PENDING_NORMALIZED 清空。
+// Phase 1 全量补齐完成：所有 normalized 页面均有 ViewState 或 aliasFor，PENDING_NORMALIZED 清空。
 const PENDING_NORMALIZED = new Set([]);
 
-test('normalized 44 pages each have ViewState or alias or are in PENDING allowlist', () => {
+test('normalized pages each have ViewState or alias or are in PENDING allowlist', () => {
   const missing = [];
   for (const [pageName, routeId] of NORMALIZED_PAGES) {
     const hasVs = VS_ROUTE_IDS.has(routeId);
@@ -257,8 +230,21 @@ test('PENDING_NORMALIZED allowlist contains no already-covered pages (stale entr
     `PENDING_NORMALIZED has pages now covered (remove them from the allowlist): ${stale.join(', ')}`);
 });
 
-test('normalized page count is 44', () => {
-  assert.equal(NORMALIZED_PAGES.length, 44, `expected 44 normalized pages, got ${NORMALIZED_PAGES.length}`);
+test('normalized page count matches directory (dynamically read)', () => {
+  assert.ok(NORMALIZED_PAGES.length >= 53,
+    `expected >=53 normalized pages (including reader overlays + control-layer-base-v2), got ${NORMALIZED_PAGES.length}`);
+  // Verify the 8 reader overlays + control-layer-base-v2 are present.
+  const required = [
+    'control-layer-base-v2', 'reader-appearance-overlay-v2',
+    'reader-auto-scroll-overlay-v2', 'reader-directory-overlay-v2',
+    'reader-night-state-v2', 'reader-replace-overlay-v2',
+    'reader-search-overlay-v2', 'reader-settings-overlay-v2',
+    'reader-tts-overlay-v2',
+  ];
+  const pageNames = new Set(NORMALIZED_PAGES.map(([n]) => n));
+  for (const r of required) {
+    assert.ok(pageNames.has(r), `missing required reader overlay page: ${r}`);
+  }
 });
 
 // ── 8. Scaffold-only ViewState guard ──────────────────────────────────────
@@ -278,18 +264,13 @@ const SCAFFOLD_TYPES = new Set([
 // Routes allowed to be scaffold-only (not yet 1:1 migrated). Must shrink over
 // time. State pages (loading/empty/error/offline) are legitimately scaffold-only.
 const SCAFFOLD_ALLOWED = new Set([
-  'app-shell', 'bookshelf-empty', 'search-empty', 'state-offline', 'state-error',
-  'search-home', 'search-results', 'source-detail',
-  'rss-all', 'rss-detail', 'rss-original', 'restore-running', 'restore-result',
-  'sync-backup', 'sync-error', 'webdav-config',
+  'state-offline', 'state-error',
+  'rss-all', 'rss-original', 'restore-running', 'restore-result',
+  'sync-backup',
   // Phase 1: legitimate state pages + simple list/entry pages (scaffold is the
   // correct shape — these are not 1:1 demo migrations of bespoke components).
-  'local-import', 'search-loading', 'search-error', 'book-detail-toc-preview',
-  'rss-empty', 'rss-error', 'source-management', 'source-import-options',
-  'source-test-result', 'reading-settings-entry', 'source-settings-entry',
-  'sync-settings-entry', 'about-version', 'progress-sync-status',
-  'remote-webdav-books', 'global-loading', 'global-empty', 'global-error',
-  'offline-state', 'permission-required',
+  // All 53 normalized handoff pages have now been moved out of this allowlist;
+  // entries below are non-normalized contract routes that are still scaffold.
   // Phase 2-4: simple list/content/form pages where scaffold is the correct shape.
   'about-feedback', 'restore-confirm', 'restore-conflict', 'restore-preview',
   'restore-progress', 'source-code-view', 'source-debug-catalog-result',

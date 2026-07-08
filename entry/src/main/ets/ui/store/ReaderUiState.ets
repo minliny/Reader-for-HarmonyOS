@@ -6,7 +6,10 @@ export type MainTab = 'bookshelf' | 'discover' | 'rss' | 'settings';
 export type ReaderMode = 'default' | 'loading' | 'empty' | 'error' | 'offline' | 'permission';
 export type PageState =
   | '' | 'default' | 'loading' | 'empty' | 'error' | 'offline' | 'permission'
-  | 'cover-mode' | 'list-mode' | 'shelf-empty' | 'refreshing' | 'no-subscription' | 'no-unread';
+  | 'cover-mode' | 'list-mode' | 'shelf-empty' | 'no-cover' | 'long-title'
+  | 'switching-source-type' | 'source-empty' | 'source-unavailable' | 'network-failed'
+  | 'refreshing' | 'no-subscription' | 'no-unread' | 'local-data-loading' | 'no-backup'
+  | 'permission-missing' | 'topbar-action';
 // Overlay = generic transient overlays only. Reader overlays (directory /
 // appearance / tts / settings / search / replace / auto-scroll / night-state /
 // reader-control) are ROUTES now (Batch 1) — not this field. Retired kinds
@@ -69,6 +72,10 @@ export interface UiEvent {
   chapterParagraphs?: string[];
   bookId?: string;
   chapterId?: string;
+  // Only explicit reader-entry flows should chain book-detail-load into
+  // chapter-load. Normal book-detail routes must not leave the detail page
+  // in a chapter loading state.
+  loadFirstChapter?: boolean;
 }
 
 // ── Minimal visible reading chain data types ──

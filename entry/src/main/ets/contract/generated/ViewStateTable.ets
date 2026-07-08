@@ -5,15 +5,14 @@
 import { RouteId, RouteTable } from './RouteTable';
 
 export interface ViewStateProps {
+  action?: string;
   author?: string;
   bookId?: string;
   color?: string;
   destructive?: boolean;
   filter?: string;
-  html?: string;
   label?: string;
   message?: string;
-  overlayType?: string;
   placeholder?: string;
   progress?: number;
   query?: string;
@@ -25,6 +24,8 @@ export interface ViewStateProps {
   theme?: string;
   title?: string;
   unread?: number;
+  variant?: string;
+  version?: string;
   viewMode?: string;
 }
 
@@ -59,6 +60,23 @@ export class ViewStateTable {
     "routeId": "main-tabs",
     "pageState": "default",
     "components": [
+      {
+        "type": "AppTopBar",
+        "id": "app-topbar",
+        "props": {
+          "title": "主标签"
+        },
+        "children": []
+      },
+      {
+        "type": "MainTabsStructure",
+        "id": "main-tabs-structure",
+        "props": {
+          "title": "主导航",
+          "message": "底部四项：书架、发现、RSS、设置。"
+        },
+        "children": []
+      },
       {
         "type": "BottomNav",
         "id": "bottom-nav",
@@ -165,17 +183,18 @@ export class ViewStateTable {
     "components": [
       {
         "type": "AppTopBar",
-        "id": "bookshelf-topbar",
+        "id": "app-topbar",
         "props": {
           "title": "书架"
         },
         "children": []
       },
       {
-        "type": "Empty",
-        "id": "shelf-empty",
+        "type": "BookshelfEmptyPage",
+        "id": "bookshelf-empty-page",
         "props": {
-          "message": "书架为空"
+          "title": "书架为空",
+          "message": "导入本地书籍或从书源搜索后加入书架。"
         },
         "children": []
       },
@@ -909,23 +928,15 @@ export class ViewStateTable {
         "type": "BackTopBar",
         "id": "rss-detail-topbar",
         "props": {
-          "title": "AI 周报"
+          "title": "RSS 详情"
         },
         "children": []
       },
       {
-        "type": "Content",
-        "id": "rss-detail-content",
+        "type": "RssDetailPage",
+        "id": "rss-detail-page",
         "props": {
-          "html": "..."
-        },
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "rss-open-original",
-        "props": {
-          "label": "查看原文"
+          "title": "AI 周报：端侧模型更新"
         },
         "children": []
       }
@@ -964,9 +975,10 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "Input",
-        "id": "search-input",
+        "type": "SearchHomePage",
+        "id": "search-home-page",
         "props": {
+          "query": "",
           "placeholder": "搜索书名/作者"
         },
         "children": []
@@ -986,26 +998,12 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "FilterBar",
-        "id": "search-filter",
-        "props": {},
+        "type": "SearchResultsPage",
+        "id": "search-results-page",
+        "props": {
+          "query": "深空信号"
+        },
         "children": []
-      },
-      {
-        "type": "List",
-        "id": "search-results-list",
-        "props": {},
-        "children": [
-          {
-            "type": "Card",
-            "id": "search-result-001",
-            "props": {
-              "title": "三体",
-              "author": "刘慈欣"
-            },
-            "children": []
-          }
-        ]
       }
     ]
   },
@@ -1014,10 +1012,20 @@ export class ViewStateTable {
     "pageState": "empty",
     "components": [
       {
-        "type": "Empty",
-        "id": "search-empty-state",
+        "type": "BackTopBar",
+        "id": "search-empty-topbar",
         "props": {
-          "message": "无搜索结果"
+          "title": "搜索"
+        },
+        "children": []
+      },
+      {
+        "type": "SearchStatePage",
+        "id": "search-empty-page",
+        "props": {
+          "variant": "empty",
+          "title": "暂无结果",
+          "message": "换个关键词或切换书源后重试。"
         },
         "children": []
       }
@@ -1036,16 +1044,10 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "FormSection",
-        "id": "source-detail-form",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "source-detail-edit",
+        "type": "SourceDetailPage",
+        "id": "source-detail-page",
         "props": {
-          "label": "编辑"
+          "title": "阅读书源 1"
         },
         "children": []
       }
@@ -1149,35 +1151,18 @@ export class ViewStateTable {
         "type": "BackTopBar",
         "id": "sync-error-topbar",
         "props": {
-          "title": "同步冲突"
+          "title": "同步异常"
         },
         "children": []
       },
       {
-        "type": "Error",
-        "id": "sync-error-state",
+        "type": "SyncErrorPage",
+        "id": "sync-error-page",
         "props": {
-          "message": "进度同步冲突",
-          "retryable": true
+          "title": "同步冲突",
+          "message": "本地与云端版本不一致，请选择处理方式。"
         },
         "children": []
-      },
-      {
-        "type": "Overlay",
-        "id": "conflict-dialog",
-        "props": {
-          "overlayType": "dialog"
-        },
-        "children": [
-          {
-            "type": "Button",
-            "id": "conflict-resolve-button",
-            "props": {
-              "label": "解决冲突"
-            },
-            "children": []
-          }
-        ]
       }
     ]
   },
@@ -1194,24 +1179,10 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "FormSection",
-        "id": "webdav-form",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "Input",
-        "id": "webdav-url-input",
+        "type": "WebDavConfigPage",
+        "id": "webdav-config-page",
         "props": {
-          "placeholder": "https://dav.example.com"
-        },
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "webdav-test",
-        "props": {
-          "label": "测试连接"
+          "title": "WebDAV 配置"
         },
         "children": []
       }
@@ -1498,25 +1469,17 @@ export class ViewStateTable {
     "components": [
       {
         "type": "BackTopBar",
-        "id": "topbar",
+        "id": "local-import-topbar",
         "props": {
-          "title": "导入本地书籍"
+          "title": "本地导入"
         },
         "children": []
       },
       {
-        "type": "Content",
-        "id": "import-hint",
+        "type": "LocalBookImportPage",
+        "id": "local-import-page",
         "props": {
-          "message": "支持 txt、epub 和常见文本文件，导入后进入书架。"
-        },
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "pick-file",
-        "props": {
-          "label": "选择文件"
+          "title": "本地导入"
         },
         "children": []
       }
@@ -1528,16 +1491,20 @@ export class ViewStateTable {
     "components": [
       {
         "type": "BackTopBar",
-        "id": "topbar",
+        "id": "search-loading-topbar",
         "props": {
-          "title": "搜索中"
+          "title": "搜索"
         },
         "children": []
       },
       {
-        "type": "Loading",
-        "id": "search-loading",
-        "props": {},
+        "type": "SearchStatePage",
+        "id": "search-loading-page",
+        "props": {
+          "variant": "loading",
+          "title": "搜索中",
+          "message": "正在请求书源并整理结果。"
+        },
         "children": []
       }
     ]
@@ -1548,23 +1515,20 @@ export class ViewStateTable {
     "components": [
       {
         "type": "BackTopBar",
-        "id": "topbar",
+        "id": "search-error-topbar",
         "props": {
-          "title": "搜索错误"
+          "title": "搜索"
         },
         "children": []
       },
       {
-        "type": "ErrorState",
-        "id": "search-error-state",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "retry",
+        "type": "SearchStatePage",
+        "id": "search-error-page",
         "props": {
-          "label": "重试"
+          "variant": "error",
+          "title": "搜索失败",
+          "message": "网络或书源暂不可用。",
+          "action": "重试"
         },
         "children": []
       }
@@ -1576,42 +1540,19 @@ export class ViewStateTable {
     "components": [
       {
         "type": "BackTopBar",
-        "id": "topbar",
+        "id": "book-toc-topbar",
         "props": {
           "title": "目录预览"
         },
         "children": []
       },
       {
-        "type": "List",
-        "id": "toc-list",
-        "props": {},
-        "children": [
-          {
-            "type": "ListRow",
-            "id": "ch-1",
-            "props": {
-              "title": "第1章：深空信号"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "ch-2",
-            "props": {
-              "title": "第2章：信号解析"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "ch-3",
-            "props": {
-              "title": "第3章：深空回响"
-            },
-            "children": []
-          }
-        ]
+        "type": "BookTocPreviewPage",
+        "id": "book-toc-preview-page",
+        "props": {
+          "title": "目录预览"
+        },
+        "children": []
       }
     ]
   },
@@ -1662,25 +1603,19 @@ export class ViewStateTable {
     "components": [
       {
         "type": "BackTopBar",
-        "id": "topbar",
+        "id": "rss-empty-topbar",
         "props": {
-          "title": "RSS 空状态"
+          "title": "RSS"
         },
         "children": []
       },
       {
-        "type": "Empty",
-        "id": "rss-empty",
+        "type": "RssEmptyState",
+        "id": "rss-empty-page",
         "props": {
-          "message": "暂无订阅"
-        },
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "add-sub",
-        "props": {
-          "label": "添加订阅"
+          "title": "暂无订阅",
+          "message": "添加 RSS 源后会在这里显示最新文章。",
+          "action": "添加订阅"
         },
         "children": []
       }
@@ -1692,23 +1627,19 @@ export class ViewStateTable {
     "components": [
       {
         "type": "BackTopBar",
-        "id": "topbar",
+        "id": "rss-error-topbar",
         "props": {
-          "title": "RSS 错误"
+          "title": "RSS"
         },
         "children": []
       },
       {
-        "type": "ErrorState",
-        "id": "rss-error-state",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "retry",
+        "type": "RssErrorState",
+        "id": "rss-error-page",
         "props": {
-          "label": "重试"
+          "title": "刷新失败",
+          "message": "订阅源暂时无法访问。",
+          "action": "重试"
         },
         "children": []
       }
@@ -1720,42 +1651,19 @@ export class ViewStateTable {
     "components": [
       {
         "type": "BackTopBar",
-        "id": "topbar",
+        "id": "source-management-topbar",
         "props": {
           "title": "书源管理"
         },
         "children": []
       },
       {
-        "type": "List",
-        "id": "source-list",
-        "props": {},
-        "children": [
-          {
-            "type": "ListRow",
-            "id": "src-1",
-            "props": {
-              "title": "阅读书源 1"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "src-2",
-            "props": {
-              "title": "阅读书源 2"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "src-3",
-            "props": {
-              "title": "阅读书源 3"
-            },
-            "children": []
-          }
-        ]
+        "type": "SourceManagementPage",
+        "id": "source-management-page",
+        "props": {
+          "title": "书源管理"
+        },
+        "children": []
       }
     ]
   },
@@ -1857,25 +1765,17 @@ export class ViewStateTable {
     "components": [
       {
         "type": "BackTopBar",
-        "id": "topbar",
+        "id": "source-import-topbar",
         "props": {
           "title": "导入书源"
         },
         "children": []
       },
       {
-        "type": "Content",
-        "id": "import-hint",
+        "type": "SourceImportOptionsPage",
+        "id": "source-import-page",
         "props": {
-          "message": "从 URL、剪贴板或本地文件导入。"
-        },
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "pick-method",
-        "props": {
-          "label": "选择导入方式"
+          "title": "导入书源"
         },
         "children": []
       }
@@ -1887,50 +1787,19 @@ export class ViewStateTable {
     "components": [
       {
         "type": "BackTopBar",
-        "id": "topbar",
+        "id": "source-test-topbar",
         "props": {
           "title": "书源测试结果"
         },
         "children": []
       },
       {
-        "type": "List",
-        "id": "test-list",
-        "props": {},
-        "children": [
-          {
-            "type": "ListRow",
-            "id": "rule-search",
-            "props": {
-              "title": "搜索规则"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "rule-toc",
-            "props": {
-              "title": "目录规则"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "rule-content",
-            "props": {
-              "title": "正文规则"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "rule-cover",
-            "props": {
-              "title": "封面规则"
-            },
-            "children": []
-          }
-        ]
+        "type": "SourceTestResultPage",
+        "id": "source-test-page",
+        "props": {
+          "title": "测试结果"
+        },
+        "children": []
       }
     ]
   },
@@ -1999,18 +1868,17 @@ export class ViewStateTable {
     "components": [
       {
         "type": "BackTopBar",
-        "id": "topbar",
+        "id": "reading-settings-topbar",
         "props": {
-          "title": "阅读设置入口"
+          "title": "阅读设置"
         },
         "children": []
       },
       {
-        "type": "Card",
-        "id": "reading-entry-card",
+        "type": "ReadingSettingsEntryPage",
+        "id": "reading-settings-page",
         "props": {
-          "title": "阅读设置",
-          "subtitle": "进入阅读页内的显示、行为与控制层设置。"
+          "title": "阅读设置"
         },
         "children": []
       }
@@ -2022,18 +1890,17 @@ export class ViewStateTable {
     "components": [
       {
         "type": "BackTopBar",
-        "id": "topbar",
+        "id": "source-settings-topbar",
         "props": {
-          "title": "书源设置入口"
+          "title": "书源设置"
         },
         "children": []
       },
       {
-        "type": "Card",
-        "id": "source-entry-card",
+        "type": "SourceSettingsEntryPage",
+        "id": "source-settings-page",
         "props": {
-          "title": "书源设置",
-          "subtitle": "管理搜索、目录和正文规则。"
+          "title": "书源设置"
         },
         "children": []
       }
@@ -2045,18 +1912,17 @@ export class ViewStateTable {
     "components": [
       {
         "type": "BackTopBar",
-        "id": "topbar",
+        "id": "sync-settings-topbar",
         "props": {
-          "title": "同步设置入口"
+          "title": "同步设置"
         },
         "children": []
       },
       {
-        "type": "Card",
-        "id": "sync-entry-card",
+        "type": "SyncSettingsEntryPage",
+        "id": "sync-settings-page",
         "props": {
-          "title": "同步设置",
-          "subtitle": "管理 WebDAV、备份和阅读进度同步。"
+          "title": "同步设置"
         },
         "children": []
       }
@@ -2068,17 +1934,18 @@ export class ViewStateTable {
     "components": [
       {
         "type": "BackTopBar",
-        "id": "topbar",
+        "id": "about-topbar",
         "props": {
-          "title": "关于版本"
+          "title": "关于"
         },
         "children": []
       },
       {
-        "type": "Content",
-        "id": "about-content",
+        "type": "AboutVersionPage",
+        "id": "about-version-page",
         "props": {
-          "message": "Reader for HarmonyOS · 版本 1.0.0 · normalized handoff"
+          "title": "Reader",
+          "version": "0.1.0"
         },
         "children": []
       }
@@ -2125,18 +1992,18 @@ export class ViewStateTable {
     "components": [
       {
         "type": "BackTopBar",
-        "id": "topbar",
+        "id": "sync-progress-topbar",
         "props": {
-          "title": "阅读进度同步"
+          "title": "同步进度"
         },
         "children": []
       },
       {
-        "type": "Card",
-        "id": "sync-status-card",
+        "type": "SyncProgressPage",
+        "id": "sync-progress-page",
         "props": {
-          "title": "同步正常",
-          "subtitle": "深空信号 · 25% · 刚刚同步"
+          "title": "同步中",
+          "progress": 0.64
         },
         "children": []
       }
@@ -2148,42 +2015,19 @@ export class ViewStateTable {
     "components": [
       {
         "type": "BackTopBar",
-        "id": "topbar",
+        "id": "remote-webdav-topbar",
         "props": {
-          "title": "远程 WebDAV 书籍"
+          "title": "远端书籍"
         },
         "children": []
       },
       {
-        "type": "List",
-        "id": "remote-book-list",
-        "props": {},
-        "children": [
-          {
-            "type": "ListRow",
-            "id": "remote-1",
-            "props": {
-              "title": "远程书籍 1"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "remote-2",
-            "props": {
-              "title": "远程书籍 2"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "remote-3",
-            "props": {
-              "title": "远程书籍 3"
-            },
-            "children": []
-          }
-        ]
+        "type": "RemoteWebDavBooksPage",
+        "id": "remote-webdav-books-page",
+        "props": {
+          "title": "远端书籍"
+        },
+        "children": []
       }
     ]
   },
@@ -2193,16 +2037,20 @@ export class ViewStateTable {
     "components": [
       {
         "type": "BackTopBar",
-        "id": "topbar",
+        "id": "global-loading-topbar",
         "props": {
           "title": "加载中"
         },
         "children": []
       },
       {
-        "type": "Loading",
-        "id": "global-loading",
-        "props": {},
+        "type": "GlobalStatePage",
+        "id": "global-loading-page",
+        "props": {
+          "variant": "loading",
+          "title": "加载中",
+          "message": "正在准备页面内容。"
+        },
         "children": []
       }
     ]
@@ -2213,17 +2061,19 @@ export class ViewStateTable {
     "components": [
       {
         "type": "BackTopBar",
-        "id": "topbar",
+        "id": "global-empty-topbar",
         "props": {
           "title": "空状态"
         },
         "children": []
       },
       {
-        "type": "Empty",
-        "id": "global-empty",
+        "type": "GlobalStatePage",
+        "id": "global-empty-page",
         "props": {
-          "message": "暂无内容"
+          "variant": "empty",
+          "title": "暂无内容",
+          "message": "当前筛选下没有可显示的项目。"
         },
         "children": []
       }
@@ -2235,23 +2085,20 @@ export class ViewStateTable {
     "components": [
       {
         "type": "BackTopBar",
-        "id": "topbar",
+        "id": "global-error-topbar",
         "props": {
-          "title": "错误状态"
+          "title": "错误"
         },
         "children": []
       },
       {
-        "type": "ErrorState",
-        "id": "global-error-state",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "retry",
+        "type": "GlobalStatePage",
+        "id": "global-error-page",
         "props": {
-          "label": "重试"
+          "variant": "error",
+          "title": "出现错误",
+          "message": "页面加载失败，请稍后重试。",
+          "action": "重试"
         },
         "children": []
       }
@@ -2263,17 +2110,18 @@ export class ViewStateTable {
     "components": [
       {
         "type": "BackTopBar",
-        "id": "topbar",
+        "id": "offline-topbar",
         "props": {
-          "title": "离线状态"
+          "title": "离线"
         },
         "children": []
       },
       {
-        "type": "Offline",
-        "id": "offline-state",
+        "type": "OfflineStatePage",
+        "id": "offline-page",
         "props": {
-          "message": "当前离线，可继续阅读已缓存书籍。"
+          "title": "当前离线",
+          "message": "检查网络后再继续同步或搜索。"
         },
         "children": []
       }
@@ -2285,25 +2133,19 @@ export class ViewStateTable {
     "components": [
       {
         "type": "BackTopBar",
-        "id": "topbar",
+        "id": "permission-topbar",
         "props": {
-          "title": "需要权限"
+          "title": "权限请求"
         },
         "children": []
       },
       {
-        "type": "Content",
-        "id": "perm-hint",
+        "type": "PermissionRequiredPage",
+        "id": "permission-page",
         "props": {
-          "message": "授予权限后可导入本地书籍。"
-        },
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "grant",
-        "props": {
-          "label": "授予权限"
+          "title": "需要权限",
+          "message": "授予存储或通知权限后才能继续。",
+          "action": "去授权"
         },
         "children": []
       }
@@ -4318,6 +4160,61 @@ export class ViewStateTable {
         "type": "SourceSwitchResultsPanel",
         "id": "source-switch-panel",
         "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "app-shell",
+    "pageState": "default",
+    "components": [
+      {
+        "type": "AppTopBar",
+        "id": "app-topbar",
+        "props": {
+          "title": "应用壳"
+        },
+        "children": []
+      },
+      {
+        "type": "AppShellStructure",
+        "id": "app-shell-structure",
+        "props": {
+          "title": "Reader for Android",
+          "message": "统一承载书架、发现、RSS、设置与阅读页入口。"
+        },
+        "children": []
+      },
+      {
+        "type": "BottomNav",
+        "id": "bottom-nav",
+        "props": {
+          "selected": "bookshelf"
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "source-management",
+    "pageState": "source-unavailable",
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "source-disabled-topbar",
+        "props": {
+          "title": "书源停用错误"
+        },
+        "children": []
+      },
+      {
+        "type": "SourceDisabledState",
+        "id": "source-disabled-page",
+        "props": {
+          "title": "书源已停用",
+          "message": "该书源 disabled / error，请在书源详情中修复。",
+          "action": "查看详情"
+        },
         "children": []
       }
     ]
