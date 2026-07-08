@@ -68,7 +68,7 @@ export struct ReadingTextFlow {
   }
 
   private title(): string {
-    return this.controlLayer() ? '深空信号' : '第一章 科学边界';
+    return this.controlLayer() ? '雨夜' : '第一章 科学边界';
   }
 
   // Use real chapter content from the reducer when available; fall back to
@@ -185,14 +185,14 @@ export struct ReaderTopArea {
           .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
 
         Column({ space: 4 }) {
-          Text('深空信号')
+          Text('长夜余火')
             .fontSize(16)
             .fontWeight(700)
             .fontColor(ColorTokens.controlInk)
             .fontFamily(ReaderTypography.sansFamily())
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-          Text('优书网 · 128ms')
+          Text('第 32 章 雨夜 · 优书网')
             .fontSize(12)
             .fontColor(ColorTokens.muted)
             .fontFamily(ReaderTypography.sansFamily())

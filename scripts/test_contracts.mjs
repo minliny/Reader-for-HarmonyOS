@@ -206,9 +206,13 @@ test('reader overlay panels keep normalized handoff visible copy', () => {
 test('reader control layer uses top-area structure instead of immersive info chrome', () => {
   const reader = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderComponents.ets'));
   assert.ok(reader.includes('export struct ReaderTopArea'), 'control-layer routes need the normalized reader-top-area component');
-  assert.ok(reader.includes("Text('深空信号')"), 'reader top area must show the normalized book title');
-  assert.ok(reader.includes("Text('优书网 · 128ms')"), 'reader top area must show the normalized source line');
+  assert.ok(reader.includes("Text('长夜余火')"), 'reader top area must show the normalized book title');
+  assert.ok(reader.includes("Text('第 32 章 雨夜 · 优书网')"), 'reader top area must show the normalized chapter/source line');
   assert.ok(reader.includes("Text('换源')"), 'reader top area must expose the source switch action');
+  assert.ok(reader.includes("return this.controlLayer() ? '雨夜' : '第一章 科学边界'"),
+    'control-layer reading surface must show the normalized chapter title, not the book title');
+  assert.ok(!reader.includes("return this.controlLayer() ? '深空信号'"),
+    'control-layer body title must not duplicate the top-area book title');
   assert.ok(!reader.includes("Text('第一章：阿长与《山海经》')"), 'reader top area must not split into a detached chapter meta row');
   assert.ok(!reader.includes("Text('本地书籍')"), 'reader top area must not split into a detached source chip');
   assert.ok(reader.includes("return this.routeId !== 'reader'"), 'ReaderBase must branch between immersive reader and control-layer chrome');
@@ -224,6 +228,7 @@ test('reader control layer uses top-area structure instead of immersive info chr
 
 test('reader control route fixture uses one bottom sheet, not detached floating controls', () => {
   const VS = readJson('view-state.fixtures.json');
+  const src = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderOverlayComponents.ets'));
   const byRoute = (routeId) => {
     const entry = VS.find((e) => e.routeId === routeId && e.pageState === 'default');
     assert.ok(entry, `${routeId}/default fixture missing`);
@@ -234,6 +239,19 @@ test('reader control route fixture uses one bottom sheet, not detached floating 
     ['ReaderBase', 'ReaderControlSheet', 'ReaderBottomBar'],
     'control-layer-base-v2 must mirror demo bottom sheet + module nav structure'
   );
+  const sheetStart = src.indexOf('export struct ReaderControlSheet');
+  const sheetEnd = src.indexOf('// Legacy contract compatibility', sheetStart);
+  const sheetSrc = src.slice(sheetStart, sheetEnd);
+  assert.ok(sheetSrc.includes('private readonly dockMaxWidth: number = 365'),
+    'control sheet host must use the demo 365/390 width ratio');
+  assert.ok(sheetSrc.includes(".width('94%')"),
+    'control sheet host must stay wider than the module nav');
+  assert.ok(sheetSrc.includes('.height(330)'),
+    'control sheet host must reserve the demo sheet/nav background height');
+  assert.ok(sheetSrc.includes('bottom: 111'),
+    'control sheet main area must reserve the module-nav band inside the host');
+  assert.ok(!sheetSrc.includes('readerModuleNavHeight - 1'),
+    'control sheet host must share the bottom anchor with the module nav, not float above it');
   for (const routeId of ['reader-search-overlay-v2', 'reader-replace-overlay-v2', 'reader-auto-scroll-overlay-v2']) {
     const types = byRoute(routeId);
     assert.equal(types.includes('FloatingQuickActions'), false, `${routeId} must not render detached quick actions`);

@@ -219,8 +219,8 @@ export struct ToggleSwitch {
 export struct ReaderControlSheet {
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
 
-  private readonly dockMaxWidth: number = 340;
-  private readonly dockRight: number = 24;
+  private readonly dockMaxWidth: number = 365;
+  private readonly dockRight: number = 12;
 
   private quickActions: Array<[string, string, string]> = [
     ['搜索', 'reader_icon_reader_content_search_action', 'reader-search-overlay-v2'],
@@ -229,7 +229,7 @@ export struct ReaderControlSheet {
   ];
 
   private sheetBottom(): number {
-    return this.safeAreaBottom + 32 + SizeTokens.readerModuleNavHeight - 1;
+    return this.safeAreaBottom + 32;
   }
 
   build() {
@@ -265,7 +265,7 @@ export struct ReaderControlSheet {
                   .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: item[2] as RouteId }))
                 }, (item: [string, string, string]) => item[2])
               }
-              .height(88)
+              .height(76)
               .padding({ left: 8, right: 8, top: 9, bottom: 9 })
               .border({ width: 1, color: ColorTokens.border })
               .borderRadius(DemoAliasTokens.radiusLg)
@@ -357,16 +357,16 @@ export struct ReaderControlSheet {
           }
           .width('100%')
           .height('100%')
-          .padding({ left: 12, right: 12, top: 28, bottom: 12 })
+          .padding({ left: 12, right: 12, top: 28, bottom: 111 })
         }
         .width('100%')
-        .height(252)
+        .height(330)
         .border({ width: 1, color: ColorTokens.border })
         .borderRadius(22)
         .backgroundColor(ColorTokens.floatingControlBg)
         .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
       }
-      .width('90%')
+      .width('94%')
       .constraintSize({ maxWidth: this.dockMaxWidth })
       .margin({ right: this.dockRight, bottom: this.sheetBottom() })
     }
