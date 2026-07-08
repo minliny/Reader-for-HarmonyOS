@@ -619,3 +619,129 @@ export struct RssSourceImportPage {
     .width('100%')
   }
 }
+
+@Component
+struct RssEditTabRow {
+  private tabs: string[] = ['基础', '请求', '列表', 'WebView'];
+
+  build() {
+    Scroll() {
+      Row() {
+        ForEach(this.tabs, (tab: string, index: number) => {
+          Text(tab)
+            .fontSize(12)
+            .fontWeight(850)
+            .fontColor(index === 0 ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
+            .height(32)
+            .padding({ left: 12, right: 12 })
+            .borderRadius(DemoAliasTokens.radiusPill)
+            .backgroundColor(index === 0 ? ColorTokens.primary : ColorTokens.metaBg)
+            .margin({ right: 7 })
+        }, (tab: string) => tab)
+      }
+    }
+    .scrollable(ScrollDirection.Horizontal)
+    .scrollBar(BarState.Off)
+    .width('100%')
+  }
+}
+
+@Component
+struct RssEditFieldRow {
+  @Prop group: string = '';
+  @Prop label: string = '';
+  @Prop value: string = '';
+
+  build() {
+    Column() {
+      Text(this.group)
+        .fontSize(10)
+        .fontWeight(800)
+        .fontColor(ColorTokens.muted)
+      Text(this.label)
+        .fontSize(14)
+        .fontWeight(850)
+        .fontColor(ColorTokens.ink)
+        .margin({ top: 4 })
+      Text(this.value)
+        .fontSize(12)
+        .lineHeight(18)
+        .fontColor(ColorTokens.muted)
+        .margin({ top: 5 })
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .width('100%')
+    .padding(12)
+    .borderRadius(DemoAliasTokens.radiusMd)
+    .backgroundColor(ColorTokens.floatingControlBg)
+    .border({ width: 1, color: ColorTokens.border })
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
+export struct RssSourceEditPage {
+  @Prop mode: string = 'edit';
+  private fields: Array<[string, string, string]> = [
+    ['基础', '源名称', 'GitHub Releases'],
+    ['基础', '源地址', 'https://github.com/minliny/Reader-UI/releases.atom'],
+    ['基础', '分组', '开源项目'],
+    ['基础', '分类 URL', 'Releases::/releases.atom && Issues::/issues.atom'],
+    ['请求', '请求头', 'User-Agent: Reader UI'],
+    ['请求', '并发率', '2/1000'],
+    ['列表', '文章列表', '默认 RSS 解析'],
+    ['列表', '下一页', 'PAGE'],
+    ['列表', '标题 / 时间 / 链接', 'title / pubDate / link'],
+    ['WebView', '正文规则', 'content:encoded || article'],
+    ['WebView', '注入 JS / CSS', '图片宽度、夜间样式、跳转拦截'],
+    ['WebView', '白名单 / 黑名单', '过滤广告资源'],
+  ];
+
+  private titleText(): string {
+    return this.mode === 'add' ? '添加 RSS 源' : 'RSS 源编辑';
+  }
+
+  private summaryText(): string {
+    return this.mode === 'add'
+      ? '输入订阅源地址后先测试解析，再保存到当前 RSS 分组。'
+      : '维护订阅源基础信息、列表解析和 WebView 正文规则。';
+  }
+
+  build() {
+    Column() {
+      Column() {
+        Text(this.titleText())
+          .fontSize(17)
+          .fontWeight(850)
+          .fontColor(ColorTokens.ink)
+        Text(this.summaryText())
+          .fontSize(12)
+          .lineHeight(18)
+          .fontColor(ColorTokens.muted)
+          .margin({ top: 7 })
+      }
+      .width('100%')
+      .padding(14)
+      .borderRadius(DemoAliasTokens.radiusLg)
+      .backgroundColor(DemoAliasTokens.surface)
+      .border({ width: 1, color: ColorTokens.border })
+      .shadow({ radius: 26, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 8 })
+      .alignItems(HorizontalAlign.Start)
+
+      RssEditTabRow()
+        .margin({ top: 12 })
+      ForEach(this.fields, (field: [string, string, string], index: number) => {
+        RssEditFieldRow({ group: field[0], label: field[1], value: field[2] })
+          .margin({ top: index === 0 ? 12 : 8 })
+      }, (field: [string, string, string], index: number) => `${field[0]}-${field[1]}-${index}`)
+      RssActionRow({
+        primary: '调试规则',
+        secondary: this.mode === 'add' ? '添加' : '保存',
+      })
+        .margin({ top: 12 })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+}

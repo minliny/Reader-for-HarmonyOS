@@ -756,3 +756,160 @@ export struct SourceDeleteConfirmPage {
     .alignItems(HorizontalAlign.Start)
   }
 }
+
+@Component
+struct SourceRuleModuleTabs {
+  private modules: string[] = ['基本', '搜索', '详情', '目录', '正文', '高级'];
+
+  build() {
+    Scroll() {
+      Row() {
+        ForEach(this.modules, (module: string) => {
+          SourceToolChip({ label: module, tone: module === '正文' ? 'filled' : 'soft' })
+            .margin({ right: 8 })
+        }, (module: string) => module)
+      }
+    }
+    .scrollable(ScrollDirection.Horizontal)
+    .scrollBar(BarState.Off)
+    .width('100%')
+  }
+}
+
+@Component
+struct SourceRuleFieldRow {
+  @Prop label: string = '';
+  @Prop value: string = '';
+
+  build() {
+    Row() {
+      Text(this.label)
+        .fontSize(12)
+        .fontWeight(800)
+        .fontColor(ColorTokens.muted)
+        .width(78)
+      Text(this.value)
+        .fontSize(13)
+        .fontWeight(850)
+        .fontColor(ColorTokens.controlInk)
+        .layoutWeight(1)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+      Image($r('app.media.ui_icon_chevron_muted'))
+        .width(16)
+        .height(16)
+        .margin({ left: 8 })
+    }
+    .width('100%')
+    .padding({ left: 12, right: 12, top: 10, bottom: 10 })
+    .borderRadius(DemoAliasTokens.radiusMd)
+    .backgroundColor(ColorTokens.floatingControlBg)
+    .border({ width: 1, color: ColorTokens.border })
+    .alignItems(VerticalAlign.Center)
+  }
+}
+
+@Component
+struct SourceRuleSection {
+  @Prop title: string = '';
+  @Prop rows: Array<[string, string]> = [];
+
+  build() {
+    Column() {
+      SourceToolSectionTitle({ title: this.title })
+      ForEach(this.rows, (row: [string, string], index: number) => {
+        SourceRuleFieldRow({ label: row[0], value: row[1] })
+          .margin({ top: index === 0 ? 10 : 8 })
+      }, (row: [string, string], index: number) => `${row[0]}-${index}`)
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
+export struct SourceRuleEditPage {
+  private basicRows: Array<[string, string]> = [
+    ['书源名称', '笔趣阁'],
+    ['书源地址', 'https://biquge.example'],
+    ['书源分组', '玄幻书源'],
+    ['启用状态', '已启用'],
+  ];
+  private requestRows: Array<[string, string]> = [
+    ['请求方式', 'GET'],
+    ['字符编码', 'UTF-8'],
+    ['请求头', 'User-Agent / Referer'],
+    ['Cookie', '未启用'],
+  ];
+  private parseRows: Array<[string, string]> = [
+    ['正文页 URL', '{{chapterUrl}}'],
+    ['章节标题', '.chapter-title@text'],
+    ['正文内容', '#content@text'],
+    ['下一页', '.next@href'],
+  ];
+  private postRows: Array<[string, string]> = [
+    ['内容过滤', '.ad, script, style'],
+    ['段落处理', '保留段落换行'],
+    ['净化规则', '去除空行'],
+    ['失败回退', '尝试正文备用规则'],
+  ];
+
+  build() {
+    Column() {
+      SourceToolCard({ title: '笔趣阁', subtitle: '正在编辑：正文规则', chip: '已启用' })
+      SourceRuleModuleTabs()
+        .margin({ top: 12 })
+      Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween }) {
+        ForEach([
+          ['当前模块', '正文'],
+          ['最近调测', '失败 · 0 字'],
+          ['规则版本', 'v3'],
+        ], (item: string[], index: number) => {
+          Column() {
+            Text(item[0])
+              .fontSize(10)
+              .fontWeight(800)
+              .fontColor(ColorTokens.muted)
+            Text(item[1])
+              .fontSize(13)
+              .fontWeight(900)
+              .fontColor(ColorTokens.primaryDark)
+              .margin({ top: 5 })
+          }
+          .width('31%')
+          .padding(10)
+          .borderRadius(DemoAliasTokens.radiusMd)
+          .backgroundColor(ColorTokens.floatingControlBg)
+          .border({ width: 1, color: ColorTokens.border })
+          .alignItems(HorizontalAlign.Start)
+        }, (item: string[], index: number) => `${item[0]}-${index}`)
+      }
+      .width('100%')
+      .margin({ top: 12 })
+
+      SourceRuleSection({ title: '基础配置', rows: this.basicRows })
+        .margin({ top: 14 })
+      SourceRuleSection({ title: '请求配置', rows: this.requestRows })
+        .margin({ top: 14 })
+      SourceRuleSection({ title: '解析规则', rows: this.parseRows })
+        .margin({ top: 14 })
+      SourceRuleSection({ title: '后处理', rows: this.postRows })
+        .margin({ top: 14 })
+      SourceToolCard({
+        title: '当前规则说明',
+        subtitle: '正文规则用于从章节页面中提取正文文本。规则修改后先调测当前模块，确认解析结果正常后再保存。',
+        chip: '说明',
+      })
+        .margin({ top: 14 })
+      Row() {
+        SourceToolActionButton({ label: '保存规则' })
+        SourceToolActionButton({ label: '调测当前模块', primary: true })
+          .margin({ left: 10 })
+      }
+      .width('100%')
+      .margin({ top: 12 })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+}

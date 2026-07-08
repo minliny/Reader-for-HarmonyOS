@@ -245,6 +245,7 @@ function normalizeComponent(c) {
 // only fixture that sets a prop would drop it from ViewStateProps and break the
 // renderer's unconditional read.
 const BASELINE_PROPS = {
+  label: 'string',
   progress: 'number',
   destructive: 'boolean',
   sources: 'number',

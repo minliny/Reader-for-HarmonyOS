@@ -11,6 +11,7 @@ export interface ViewStateProps {
   destructive?: boolean;
   label?: string;
   message?: string;
+  mode?: string;
   placeholder?: string;
   progress?: number;
   query?: string;
@@ -2323,37 +2324,10 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "SettingsSection",
-        "id": "restore-scopes-section",
+        "type": "RestoreConfirmPage",
+        "id": "restore-scopes-page",
         "props": {
-          "title": "选择恢复项"
-        },
-        "children": [
-          {
-            "type": "SettingsListItem",
-            "id": "scope-progress",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "scope-bookshelf",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "scope-settings",
-            "props": {},
-            "children": []
-          }
-        ]
-      },
-      {
-        "type": "Button",
-        "id": "restore-start",
-        "props": {
-          "label": "开始恢复"
+          "variant": "scopes"
         },
         "children": []
       }
@@ -2738,34 +2712,10 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "SettingsSection",
-        "id": "edit-debug-form",
+        "type": "SourceRuleEditPage",
+        "id": "source-edit-debug-page",
         "props": {
-          "title": "书源信息"
-        },
-        "children": []
-      },
-      {
-        "type": "Input",
-        "id": "edit-name",
-        "props": {
-          "placeholder": "书源名称"
-        },
-        "children": []
-      },
-      {
-        "type": "Input",
-        "id": "edit-url",
-        "props": {
-          "placeholder": "书源 URL"
-        },
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "edit-debug-run",
-        "props": {
-          "label": "保存并调试"
+          "variant": "debug"
         },
         "children": []
       }
@@ -2844,35 +2794,9 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "SettingsSection",
-        "id": "rule-section",
-        "props": {
-          "title": "搜索规则"
-        },
-        "children": []
-      },
-      {
-        "type": "Input",
-        "id": "rule-search-url",
-        "props": {
-          "placeholder": "搜索 URL 规则"
-        },
-        "children": []
-      },
-      {
-        "type": "Input",
-        "id": "rule-search-list",
-        "props": {
-          "placeholder": "结果列表规则"
-        },
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "save-rule",
-        "props": {
-          "label": "保存规则"
-        },
+        "type": "SourceRuleEditPage",
+        "id": "source-rule-edit-page",
+        "props": {},
         "children": []
       }
     ]
@@ -2890,27 +2814,9 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "SettingsSection",
-        "id": "rule-test-section",
-        "props": {
-          "title": "测试"
-        },
-        "children": []
-      },
-      {
-        "type": "Input",
-        "id": "test-url",
-        "props": {
-          "placeholder": "测试 URL"
-        },
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "run-test",
-        "props": {
-          "label": "运行测试"
-        },
+        "type": "DiscoverRuleTestPage",
+        "id": "discover-rule-test-page",
+        "props": {},
         "children": []
       }
     ]
@@ -3215,34 +3121,10 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "SettingsSection",
-        "id": "add-section",
+        "type": "RssSourceEditPage",
+        "id": "rss-source-add-page",
         "props": {
-          "title": "源信息"
-        },
-        "children": []
-      },
-      {
-        "type": "Input",
-        "id": "rss-name",
-        "props": {
-          "placeholder": "源名称"
-        },
-        "children": []
-      },
-      {
-        "type": "Input",
-        "id": "rss-url",
-        "props": {
-          "placeholder": "Feed URL"
-        },
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "save",
-        "props": {
-          "label": "添加"
+          "mode": "add"
         },
         "children": []
       }
@@ -3261,34 +3143,10 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "SettingsSection",
-        "id": "edit-section",
+        "type": "RssSourceEditPage",
+        "id": "rss-source-edit-page",
         "props": {
-          "title": "源信息"
-        },
-        "children": []
-      },
-      {
-        "type": "Input",
-        "id": "rss-name",
-        "props": {
-          "placeholder": "源名称"
-        },
-        "children": []
-      },
-      {
-        "type": "Input",
-        "id": "rss-url",
-        "props": {
-          "placeholder": "Feed URL"
-        },
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "save",
-        "props": {
-          "label": "保存"
+          "mode": "edit"
         },
         "children": []
       }
@@ -3440,35 +3298,9 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "SettingsSection",
-        "id": "login-section",
-        "props": {
-          "title": "登录"
-        },
-        "children": []
-      },
-      {
-        "type": "Input",
-        "id": "username",
-        "props": {
-          "placeholder": "用户名"
-        },
-        "children": []
-      },
-      {
-        "type": "Input",
-        "id": "password",
-        "props": {
-          "placeholder": "密码"
-        },
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "login",
-        "props": {
-          "label": "登录"
-        },
+        "type": "DiscoverSourceLoginPage",
+        "id": "discover-source-login-page",
+        "props": {},
         "children": []
       }
     ]

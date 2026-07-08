@@ -10,13 +10,13 @@ import { ReadingBackgroundLayer, ReadingTextFlow, ReadingInfoLayer, TapZones, Re
 import { ReaderControlSheet, ReaderBottomBar, ReaderDirectoryPanel, ReaderAppearancePanel, ReaderTtsPanel, ReaderSettingsPanel, ReaderSearchPanel, ReaderReplacePanel, ReaderAutoScrollPanel, FloatingQuickActions, FloatingPageControl, FloatingBrightness, NightToast } from './ReaderOverlayComponents';
 import { SourceSwitchResultsPanel, SourceImportPreviewPage, SourceGroupsPage, SourceDetectPage, SourceDebugPage,
   SourceDebugRunningPage, SourceDebugResultPage, SourceDebugContentLogPage, SourceCodeViewPage, SourceLogsPage,
-  SourceDeleteConfirmPage } from './LibraryComponents';
+  SourceDeleteConfirmPage, SourceRuleEditPage } from './LibraryComponents';
 import { SettingsHomeSection, SettingsSection, SettingsListItem } from './SettingsComponents';
 import { DiscoverSourceBar, DiscoverEntryRow, DiscoverFilterTrigger, DiscoverListHead, DiscoverBookList,
-  DiscoverStatePage, DiscoverSourceBulkPage } from './DiscoverComponents';
+  DiscoverStatePage, DiscoverSourceBulkPage, DiscoverSourceLoginPage, DiscoverRuleTestPage } from './DiscoverComponents';
 import { RssSearchEntry, RssModeRow, RssSourceOverview, RssArticleSection,
   RssAllPage, RssOriginalPage, RssRefreshingPage, RssOriginalBrowserPage,
-  RssFavoriteGroupsPage, RssSourceGroupsPage, RssSourceImportPage } from './RssComponents';
+  RssFavoriteGroupsPage, RssSourceGroupsPage, RssSourceImportPage, RssSourceEditPage } from './RssComponents';
 import { AppShellStructure, MainTabsStructure, SearchHomePage, SearchResultsPage, SearchStatePage, BookTocPreviewPage,
   BookshelfEmptyPage, SourceManagementPage, SourceDetailPage, SourceImportOptionsPage, SourceDisabledState,
   SourceSettingsEntryPage, SourceTestResultPage, WebDavConfigPage, SyncSettingsEntryPage, SyncBackupPage,
@@ -174,6 +174,8 @@ export struct ViewStateRenderer {
       SourceLogsPage()
     } else if (component.type === 'SourceDeleteConfirmPage') {
       SourceDeleteConfirmPage()
+    } else if (component.type === 'SourceRuleEditPage') {
+      SourceRuleEditPage()
     } else if (component.type === 'ReaderDirectoryPanel') {
       ReaderDirectoryPanel()
     } else if (component.type === 'ReaderAppearancePanel') {
@@ -220,6 +222,10 @@ export struct ViewStateRenderer {
       })
     } else if (component.type === 'DiscoverSourceBulkPage') {
       DiscoverSourceBulkPage()
+    } else if (component.type === 'DiscoverSourceLoginPage') {
+      DiscoverSourceLoginPage()
+    } else if (component.type === 'DiscoverRuleTestPage') {
+      DiscoverRuleTestPage()
     } else if (component.type === 'RssSearchEntry') {
       RssSearchEntry()
     } else if (component.type === 'RssModeRow') {
@@ -242,6 +248,8 @@ export struct ViewStateRenderer {
       RssSourceGroupsPage()
     } else if (component.type === 'RssSourceImportPage') {
       RssSourceImportPage()
+    } else if (component.type === 'RssSourceEditPage') {
+      RssSourceEditPage({ mode: this.textOr(component.props.mode, 'edit') })
     } else if (component.type === 'AppShellStructure') {
       AppShellStructure({
         title: this.textOr(component.props.title, 'Reader for Android'),

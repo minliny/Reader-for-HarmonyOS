@@ -1153,6 +1153,7 @@ export struct RestoreConfirmPage {
   ];
 
   private titleText(): string {
+    if (this.variant === 'scopes') return '恢复范围';
     return this.variant === 'preview' ? '恢复预览' : '确认恢复数据';
   }
 

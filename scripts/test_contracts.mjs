@@ -328,6 +328,13 @@ test('ViewStateTable component types are all mapped by ViewStateRenderer', () =>
     `unmapped component types (would silently Empty() in ViewStateRenderer): ${unmapped.join(', ')}`);
 });
 
+test('ViewStateProps keeps renderer baseline props even when fixtures stop using them', () => {
+  const vsTableSrc = read(path.join(GEN, 'ViewStateTable.ets'));
+  for (const prop of ['label', 'progress', 'destructive', 'sources', 'unread']) {
+    assert.ok(vsTableSrc.includes(`${prop}?:`), `ViewStateProps baseline prop missing: ${prop}`);
+  }
+});
+
 // ── 6. No duplicate (routeId, pageState) keys in the view-state fixture ──
 test('view-state fixture has no duplicate (routeId, pageState) keys', () => {
   const VS = readJson('view-state.fixtures.json');
@@ -424,6 +431,36 @@ test('discover source bulk route is reachable and owns fixed actions', () => {
   }
 });
 
+test('discover source login/rule pages use page-level visual components', () => {
+  const VS = readJson('view-state.fixtures.json');
+  const expected = new Map([
+    ['discover-source-login/default', ['BackTopBar', 'DiscoverSourceLoginPage']],
+    ['discover-rule-test/default', ['BackTopBar', 'DiscoverRuleTestPage']],
+  ]);
+
+  for (const [key, types] of expected.entries()) {
+    const [routeId, pageState] = key.split('/');
+    const entry = VS.find((e) => e.routeId === routeId && e.pageState === pageState);
+    assert.ok(entry, `${key} fixture missing`);
+    const actual = entry.components.map((c) => c.type);
+    assert.deepEqual(actual, types, `${key} must use discover page-level visual components`);
+    for (const type of ['FormSection', 'List', 'Content', 'Button', 'Input', 'SettingsSection']) {
+      assert.equal(actual.includes(type), false, `${key} must not regress to scaffold ${type}`);
+    }
+  }
+
+  const discoverSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/DiscoverComponents.ets'));
+  for (const text of [
+    '轻小说文库',
+    '打开网页登录',
+    '发现规则',
+    '测试入口',
+    '解析到 18 本书',
+  ]) {
+    assert.ok(discoverSrc.includes(text), `DiscoverComponents missing source subpage copy: ${text}`);
+  }
+});
+
 test('rss subpages use page-level visual components, not scaffold-only lists/loading', () => {
   const VS = readJson('view-state.fixtures.json');
   const expected = new Map([
@@ -434,6 +471,8 @@ test('rss subpages use page-level visual components, not scaffold-only lists/loa
     ['rss-favorite-groups/default', ['BackTopBar', 'RssFavoriteGroupsPage']],
     ['rss-source-groups/default', ['BackTopBar', 'RssSourceGroupsPage']],
     ['rss-source-import/default', ['BackTopBar', 'RssSourceImportPage']],
+    ['rss-source-add/default', ['BackTopBar', 'RssSourceEditPage']],
+    ['rss-source-edit/default', ['BackTopBar', 'RssSourceEditPage']],
   ]);
 
   for (const [key, types] of expected.entries()) {
@@ -456,6 +495,9 @@ test('rss subpages use page-level visual components, not scaffold-only lists/loa
     '技术文章',
     '开源项目',
     '选择导入方式',
+    'RSS 源编辑',
+    '源地址',
+    'WebView',
   ]) {
     assert.ok(rssSrc.includes(text), `RssComponents missing RSS subpage copy: ${text}`);
   }
@@ -467,6 +509,8 @@ test('source tool pages use page-level visual components, not scaffold-only list
     ['source-import-preview/default', ['BackTopBar', 'SourceImportPreviewPage']],
     ['source-groups/default', ['BackTopBar', 'SourceGroupsPage']],
     ['source-detect/default', ['BackTopBar', 'SourceDetectPage']],
+    ['source-rule-edit/default', ['BackTopBar', 'SourceRuleEditPage']],
+    ['source-edit-debug/default', ['BackTopBar', 'SourceRuleEditPage']],
     ['source-debug/default', ['BackTopBar', 'SourceDebugPage']],
     ['source-debug-running/loading', ['BackTopBar', 'SourceDebugRunningPage']],
     ['source-debug-result/default', ['BackTopBar', 'SourceDebugResultPage']],
@@ -502,6 +546,9 @@ test('source tool pages use page-level visual components, not scaffold-only list
     '源码查看',
     '错误日志',
     '删除书源？',
+    '规则版本',
+    '解析规则',
+    '调测当前模块',
   ]) {
     assert.ok(sourceSrc.includes(text), `LibraryComponents missing source tool copy: ${text}`);
   }
@@ -513,6 +560,7 @@ test('sync restore pages use page-level visual components, not scaffold-only lis
     ['sync-backup/default', ['BackTopBar', 'SyncBackupPage']],
     ['sync-backup/loading', ['BackTopBar', 'SyncBackupPage']],
     ['restore-confirm/default', ['BackTopBar', 'RestoreConfirmPage']],
+    ['restore-scopes/default', ['BackTopBar', 'RestoreConfirmPage']],
     ['restore-preview/default', ['BackTopBar', 'RestoreConfirmPage']],
     ['restore-progress/loading', ['BackTopBar', 'RestoreProgressPage']],
     ['restore-running/loading', ['BackTopBar', 'RestoreProgressPage']],
@@ -535,6 +583,7 @@ test('sync restore pages use page-level visual components, not scaffold-only lis
   for (const text of [
     'WebDAV 配置',
     '恢复数据',
+    '恢复范围',
     '确认恢复数据',
     '正在恢复',
     '选择冲突处理方式',

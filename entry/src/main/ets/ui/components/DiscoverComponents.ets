@@ -551,3 +551,288 @@ export struct DiscoverSourceBulkPage {
     .alignItems(HorizontalAlign.Start)
   }
 }
+
+@Component
+struct DiscoverSubpageBadge {
+  @Prop label: string = '可用';
+  @Prop tone: string = 'normal';
+
+  build() {
+    Text(this.label)
+      .fontSize(11)
+      .fontWeight(800)
+      .fontColor(this.tone === 'warning' ? ColorTokens.accent : ColorTokens.primaryDark)
+      .height(26)
+      .padding({ left: 10, right: 10 })
+      .borderRadius(DemoAliasTokens.radiusPill)
+      .backgroundColor(ColorTokens.metaBg)
+      .border({ width: 1, color: this.tone === 'warning' ? ColorTokens.accent : ColorTokens.border })
+  }
+}
+
+@Component
+struct DiscoverSubpageHead {
+  @Prop title: string = '';
+  @Prop message: string = '';
+  @Prop badge: string = '';
+  @Prop tone: string = 'normal';
+
+  build() {
+    Row() {
+      Image($r('app.media.ui_icon_source_stack_primary'))
+        .width(32)
+        .height(32)
+      Column() {
+        Text(this.title)
+          .fontSize(17)
+          .fontWeight(850)
+          .fontColor(ColorTokens.ink)
+        Text(this.message)
+          .fontSize(12)
+          .lineHeight(18)
+          .fontColor(ColorTokens.muted)
+          .margin({ top: 5 })
+      }
+      .alignItems(HorizontalAlign.Start)
+      .layoutWeight(1)
+      .margin({ left: 12, right: 10 })
+      if (this.badge.length > 0) {
+        DiscoverSubpageBadge({ label: this.badge, tone: this.tone })
+      }
+    }
+    .width('100%')
+    .padding(14)
+    .borderRadius(DemoAliasTokens.radiusLg)
+    .backgroundColor(ColorTokens.floatingControlBg)
+    .border({ width: 1, color: ColorTokens.border })
+    .alignItems(VerticalAlign.Center)
+  }
+}
+
+@Component
+struct DiscoverLoginInfoRow {
+  @Prop title: string = '';
+  @Prop detail: string = '';
+  @Prop badge: string = '';
+  @Prop tone: string = 'normal';
+  @Prop switchOn: boolean = false;
+
+  build() {
+    Row() {
+      Column() {
+        Text(this.title)
+          .fontSize(14)
+          .fontWeight(800)
+          .fontColor(ColorTokens.ink)
+        Text(this.detail)
+          .fontSize(11)
+          .lineHeight(16)
+          .fontColor(ColorTokens.muted)
+          .margin({ top: 4 })
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+      if (this.switchOn) {
+        Row() {
+          Blank().layoutWeight(1)
+          Row()
+            .width(20)
+            .height(20)
+            .borderRadius(DemoAliasTokens.radiusPill)
+            .backgroundColor(ColorTokens.paper)
+        }
+        .width(42)
+        .height(24)
+        .padding(2)
+        .borderRadius(DemoAliasTokens.radiusPill)
+        .backgroundColor(ColorTokens.primary)
+      } else {
+        DiscoverSubpageBadge({ label: this.badge, tone: this.tone })
+      }
+    }
+    .width('100%')
+    .padding({ left: 12, right: 12, top: 12, bottom: 12 })
+    .borderRadius(DemoAliasTokens.radiusMd)
+    .backgroundColor(DemoAliasTokens.surface)
+    .border({ width: 1, color: ColorTokens.border })
+    .alignItems(VerticalAlign.Center)
+  }
+}
+
+@Component
+struct DiscoverSubpageAction {
+  @Prop label: string = '';
+  @Prop primary: boolean = false;
+
+  build() {
+    Text(this.label)
+      .fontSize(13)
+      .fontWeight(850)
+      .fontColor(this.primary ? DemoAliasTokens.onPrimary : ColorTokens.primaryDark)
+      .height(40)
+      .layoutWeight(1)
+      .textAlign(TextAlign.Center)
+      .borderRadius(DemoAliasTokens.radiusPill)
+      .backgroundColor(this.primary ? ColorTokens.primary : ColorTokens.metaBg)
+      .border({ width: this.primary ? 0 : 1, color: ColorTokens.border })
+  }
+}
+
+@Component
+export struct DiscoverSourceLoginPage {
+  build() {
+    Column() {
+      DiscoverSubpageHead({
+        title: '轻小说文库',
+        message: '该书源的发现入口需要登录态，登录后返回当前入口并刷新列表。',
+        badge: '需登录',
+        tone: 'warning',
+      })
+      DiscoverLoginInfoRow({ title: '登录状态', detail: '未登录 · 最近检测 10:32', badge: '需登录', tone: 'warning' })
+        .margin({ top: 12 })
+      DiscoverLoginInfoRow({ title: '适用范围', detail: '发现入口、详情页、目录页', badge: '当前源' })
+        .margin({ top: 8 })
+      DiscoverLoginInfoRow({ title: 'Cookie 保存', detail: '仅保存在本机书源配置中', switchOn: true })
+        .margin({ top: 8 })
+
+      Row() {
+        DiscoverSubpageAction({ label: '打开网页登录', primary: true })
+        DiscoverSubpageAction({ label: '保存登录信息' })
+          .margin({ left: 8 })
+      }
+      .width('100%')
+      .margin({ top: 12 })
+      DiscoverSubpageAction({ label: '重新检测' })
+        .margin({ top: 8 })
+      Text('返回发现页后，当前书源和当前入口保持不变，只刷新内容列表。')
+        .fontSize(12)
+        .lineHeight(18)
+        .fontColor(ColorTokens.muted)
+        .margin({ top: 12 })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
+struct DiscoverRuleFieldRow {
+  @Prop label: string = '';
+  @Prop value: string = '';
+
+  build() {
+    Row() {
+      Text(this.label)
+        .fontSize(11)
+        .fontWeight(800)
+        .fontColor(ColorTokens.muted)
+        .width(86)
+      Text(this.value)
+        .fontSize(12)
+        .fontWeight(800)
+        .fontColor(ColorTokens.controlInk)
+        .layoutWeight(1)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .width('100%')
+    .padding({ left: 12, right: 12, top: 10, bottom: 10 })
+    .borderRadius(DemoAliasTokens.radiusMd)
+    .backgroundColor(ColorTokens.floatingControlBg)
+    .border({ width: 1, color: ColorTokens.border })
+    .alignItems(VerticalAlign.Center)
+  }
+}
+
+@Component
+struct DiscoverRuleModuleTabs {
+  private modules: string[] = ['基本', '搜索', '详情', '目录', '正文', '发现', '高级'];
+
+  build() {
+    Scroll() {
+      Row() {
+        ForEach(this.modules, (item: string) => {
+          Text(item)
+            .fontSize(12)
+            .fontWeight(850)
+            .fontColor(item === '发现' ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
+            .height(32)
+            .padding({ left: 12, right: 12 })
+            .borderRadius(DemoAliasTokens.radiusPill)
+            .backgroundColor(item === '发现' ? ColorTokens.primary : ColorTokens.metaBg)
+            .margin({ right: 7 })
+        }, (item: string) => item)
+      }
+    }
+    .scrollable(ScrollDirection.Horizontal)
+    .scrollBar(BarState.Off)
+    .width('100%')
+  }
+}
+
+@Component
+export struct DiscoverRuleTestPage {
+  private fields: Array<[string, string]> = [
+    ['exploreUrl', '@js: 首页入口 + 分类入口'],
+    ['bookList', '.result-list li'],
+    ['name', '.book-title@text'],
+    ['author', '.author@text'],
+    ['kind', '.tag@text'],
+    ['intro', '.intro@text'],
+    ['lastChapter', '.last@text'],
+    ['coverUrl', 'img@src'],
+    ['bookUrl', 'a@href'],
+  ];
+
+  build() {
+    Column() {
+      DiscoverSubpageHead({ title: '优书网', message: '正在编辑：发现规则', badge: '已启用发现' })
+      DiscoverRuleModuleTabs()
+        .margin({ top: 12 })
+      ForEach(this.fields, (field: [string, string], index: number) => {
+        DiscoverRuleFieldRow({ label: field[0], value: field[1] })
+          .margin({ top: index === 0 ? 12 : 7 })
+      }, (field: [string, string], index: number) => `${field[0]}-${index}`)
+
+      Column() {
+        Text('测试输入')
+          .fontSize(15)
+          .fontWeight(850)
+          .fontColor(ColorTokens.ink)
+        DiscoverRuleFieldRow({ label: '入口 URL', value: 'https://example.com/rank/allvisit_1.html' })
+          .margin({ top: 10 })
+        DiscoverRuleFieldRow({ label: 'HTML 片段', value: '<li class=\"book\">长夜余火</li>' })
+          .margin({ top: 7 })
+        DiscoverSubpageAction({ label: '测试入口', primary: true })
+          .margin({ top: 10 })
+      }
+      .width('100%')
+      .padding(12)
+      .borderRadius(DemoAliasTokens.radiusLg)
+      .backgroundColor(DemoAliasTokens.surface)
+      .border({ width: 1, color: ColorTokens.border })
+      .margin({ top: 12 })
+      .alignItems(HorizontalAlign.Start)
+
+      Column() {
+        Text('测试结果')
+          .fontSize(15)
+          .fontWeight(850)
+          .fontColor(ColorTokens.ink)
+        DiscoverLoginInfoRow({ title: '生成 5 个入口', detail: '排行榜、分类、完本、最新、书单', badge: '通过' })
+          .margin({ top: 10 })
+        DiscoverLoginInfoRow({ title: '解析到 18 本书', detail: '首条：长夜余火 · 爱潜水的乌贼', badge: '通过' })
+          .margin({ top: 8 })
+      }
+      .width('100%')
+      .padding(12)
+      .borderRadius(DemoAliasTokens.radiusLg)
+      .backgroundColor(DemoAliasTokens.surface)
+      .border({ width: 1, color: ColorTokens.border })
+      .margin({ top: 12 })
+      .alignItems(HorizontalAlign.Start)
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+}
