@@ -4,6 +4,11 @@ import { RouteId } from '../../contract/generated/RouteTable';
 
 export type MainTab = 'bookshelf' | 'discover' | 'rss' | 'settings';
 export type ReaderMode = 'default' | 'loading' | 'empty' | 'error' | 'offline' | 'permission';
+export type ReaderPaginationMode = 'horizontal' | 'vertical';
+export type ReaderFontFamily = 'system' | 'serif' | 'sans' | 'kai' | 'fangsong' | 'mono';
+export type ReaderRenderMetric =
+  | 'fontSize' | 'lineHeight' | 'paragraphGap' | 'letterSpacing'
+  | 'topMargin' | 'sideMargin' | 'bottomMargin' | 'paragraphIndent';
 export type PageState =
   | '' | 'default' | 'loading' | 'empty' | 'error' | 'offline' | 'permission'
   | 'cover-mode' | 'list-mode' | 'shelf-empty' | 'no-cover' | 'long-title'
@@ -34,6 +39,16 @@ export interface ReaderUiState {
   routeId: RouteId;
   tab: MainTab;
   readerMode: ReaderMode;
+  paginationMode: ReaderPaginationMode;
+  fontSize: number;
+  lineHeight: number;
+  paragraphGap: number;
+  letterSpacing: number;
+  fontFamily: ReaderFontFamily;
+  topMargin: number;
+  sideMargin: number;
+  bottomMargin: number;
+  paragraphIndent: number;
   overlay: Overlay;
   activeSession: ActiveSession;
   focusTarget: string;
@@ -62,6 +77,11 @@ export interface UiEvent {
   overlay?: Overlay;
   pageState?: PageState;
   mode?: ReaderMode;
+  paginationMode?: ReaderPaginationMode;
+  readerMetric?: ReaderRenderMetric;
+  value?: number;
+  delta?: number;
+  fontFamily?: ReaderFontFamily;
   enabled?: boolean;
   loading?: boolean;
   error?: ReaderError | null;

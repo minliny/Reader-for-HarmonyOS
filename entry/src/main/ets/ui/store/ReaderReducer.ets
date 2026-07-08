@@ -2,7 +2,7 @@
 // No side effects. ArkTS forbids object spread (arkts-no-spread), so each method builds a
 // new ReaderUiState literal field-by-field (array spread is still allowed).
 import { RouteId } from '../../contract/generated/RouteTable';
-import { ReaderUiState, UiEvent, MainTab, Overlay, PageState, ReaderMode, RouteEntry, ReaderError, SearchResultEntry, BookDetail } from './ReaderUiState';
+import { ReaderUiState, UiEvent, MainTab, Overlay, PageState, ReaderMode, ReaderPaginationMode, ReaderFontFamily, ReaderRenderMetric, RouteEntry, ReaderError, SearchResultEntry, BookDetail } from './ReaderUiState';
 
 function tabRoot(tab: MainTab): RouteId {
   switch (tab) {
@@ -12,6 +12,71 @@ function tabRoot(tab: MainTab): RouteId {
     case 'settings': return 'settings';
     default: return 'bookshelf';
   }
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function roundMetric(value: number, precision: number): number {
+  if (precision === 2) return Math.round(value * 100) / 100;
+  if (precision === 1) return Math.round(value * 10) / 10;
+  return Math.round(value);
+}
+
+function metricMin(metric: ReaderRenderMetric): number {
+  switch (metric) {
+    case 'fontSize': return 14;
+    case 'lineHeight': return 1.4;
+    case 'paragraphGap': return 4;
+    case 'letterSpacing': return 0;
+    case 'topMargin': return 48;
+    case 'sideMargin': return 20;
+    case 'bottomMargin': return 32;
+    case 'paragraphIndent': return 0;
+    default: return 0;
+  }
+}
+
+function metricMax(metric: ReaderRenderMetric): number {
+  switch (metric) {
+    case 'fontSize': return 26;
+    case 'lineHeight': return 2.4;
+    case 'paragraphGap': return 32;
+    case 'letterSpacing': return 2;
+    case 'topMargin': return 96;
+    case 'sideMargin': return 48;
+    case 'bottomMargin': return 96;
+    case 'paragraphIndent': return 3;
+    default: return 100;
+  }
+}
+
+function metricStep(metric: ReaderRenderMetric): number {
+  switch (metric) {
+    case 'fontSize': return 1;
+    case 'lineHeight': return 0.08;
+    case 'paragraphGap': return 2;
+    case 'letterSpacing': return 0.2;
+    case 'topMargin': return 4;
+    case 'sideMargin': return 4;
+    case 'bottomMargin': return 4;
+    case 'paragraphIndent': return 0.5;
+    default: return 1;
+  }
+}
+
+function metricPrecision(metric: ReaderRenderMetric): number {
+  switch (metric) {
+    case 'lineHeight': return 2;
+    case 'letterSpacing': return 1;
+    case 'paragraphIndent': return 1;
+    default: return 0;
+  }
+}
+
+function normalizeMetricValue(metric: ReaderRenderMetric, value: number): number {
+  return roundMetric(clamp(value, metricMin(metric), metricMax(metric)), metricPrecision(metric));
 }
 
 export class ReaderReducer {
@@ -43,6 +108,26 @@ export class ReaderReducer {
         const m = event.mode;
         return m !== undefined ? ReaderReducer.setReaderMode(state, m) : state;
       }
+      case 'set-pagination-mode': {
+        const m = event.paginationMode;
+        return m !== undefined ? ReaderReducer.setPaginationMode(state, m) : state;
+      }
+      case 'step-reader-render-metric': {
+        const metric = event.readerMetric;
+        const delta = event.delta;
+        return metric !== undefined && delta !== undefined ? ReaderReducer.stepReaderRenderMetric(state, metric, delta) : state;
+      }
+      case 'set-reader-render-metric': {
+        const metric = event.readerMetric;
+        const value = event.value;
+        return metric !== undefined && value !== undefined ? ReaderReducer.setReaderRenderMetric(state, metric, value) : state;
+      }
+      case 'set-reader-font-family': {
+        const family = event.fontFamily;
+        return family !== undefined ? ReaderReducer.setReaderFontFamily(state, family) : state;
+      }
+      case 'reset-reader-render-settings':
+        return ReaderReducer.resetReaderRenderSettings(state);
       case 'toggle-reduced-motion': {
         const e = event.enabled;
         return e !== undefined ? ReaderReducer.setReducedMotion(state, e) : state;
@@ -125,6 +210,70 @@ export class ReaderReducer {
   static setReaderMode(state: ReaderUiState, mode: ReaderMode): ReaderUiState {
     const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
     next.readerMode = mode;
+    return next;
+  }
+
+  static setPaginationMode(state: ReaderUiState, mode: ReaderPaginationMode): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    next.paginationMode = mode;
+    return next;
+  }
+
+  static stepReaderRenderMetric(state: ReaderUiState, metric: ReaderRenderMetric, delta: number): ReaderUiState {
+    return ReaderReducer.setReaderRenderMetric(state, metric, ReaderReducer.readerRenderMetricValue(state, metric) + delta * metricStep(metric));
+  }
+
+  static setReaderRenderMetric(state: ReaderUiState, metric: ReaderRenderMetric, value: number): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    const normalized = normalizeMetricValue(metric, value);
+    switch (metric) {
+      case 'fontSize':
+        next.fontSize = normalized;
+        break;
+      case 'lineHeight':
+        next.lineHeight = normalized;
+        break;
+      case 'paragraphGap':
+        next.paragraphGap = normalized;
+        break;
+      case 'letterSpacing':
+        next.letterSpacing = normalized;
+        break;
+      case 'topMargin':
+        next.topMargin = normalized;
+        break;
+      case 'sideMargin':
+        next.sideMargin = normalized;
+        break;
+      case 'bottomMargin':
+        next.bottomMargin = normalized;
+        break;
+      case 'paragraphIndent':
+        next.paragraphIndent = normalized;
+        break;
+      default:
+        break;
+    }
+    return next;
+  }
+
+  static setReaderFontFamily(state: ReaderUiState, family: ReaderFontFamily): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    next.fontFamily = family;
+    return next;
+  }
+
+  static resetReaderRenderSettings(state: ReaderUiState): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    next.fontSize = 18;
+    next.lineHeight = 1.96;
+    next.paragraphGap = 16;
+    next.letterSpacing = 0;
+    next.fontFamily = 'serif';
+    next.topMargin = 72;
+    next.sideMargin = 32;
+    next.bottomMargin = 48;
+    next.paragraphIndent = 2;
     return next;
   }
 
@@ -216,6 +365,16 @@ export class ReaderReducer {
       routeId: routeId,
       tab: tab,
       readerMode: s.readerMode,
+      paginationMode: s.paginationMode,
+      fontSize: s.fontSize,
+      lineHeight: s.lineHeight,
+      paragraphGap: s.paragraphGap,
+      letterSpacing: s.letterSpacing,
+      fontFamily: s.fontFamily,
+      topMargin: s.topMargin,
+      sideMargin: s.sideMargin,
+      bottomMargin: s.bottomMargin,
+      paragraphIndent: s.paragraphIndent,
       overlay: overlay,
       activeSession: s.activeSession,
       focusTarget: s.focusTarget,
@@ -230,5 +389,19 @@ export class ReaderReducer {
       currentBook: s.currentBook,
       chapterContent: s.chapterContent,
     };
+  }
+
+  private static readerRenderMetricValue(state: ReaderUiState, metric: ReaderRenderMetric): number {
+    switch (metric) {
+      case 'fontSize': return state.fontSize;
+      case 'lineHeight': return state.lineHeight;
+      case 'paragraphGap': return state.paragraphGap;
+      case 'letterSpacing': return state.letterSpacing;
+      case 'topMargin': return state.topMargin;
+      case 'sideMargin': return state.sideMargin;
+      case 'bottomMargin': return state.bottomMargin;
+      case 'paragraphIndent': return state.paragraphIndent;
+      default: return 0;
+    }
   }
 }

@@ -13,8 +13,11 @@ import fs from '@ohos.file.fs';
 import util from '@ohos.util';
 import zlib from '@ohos.zlib';
 import { ReaderUiStore } from '../ui/store/ReaderUiStore';
-import { SearchResultEntry } from '../ui/store/ReaderUiState';
+import { ReaderPaginationMode, SearchResultEntry } from '../ui/store/ReaderUiState';
 import { SafeAreaAdapter } from '../ui/adapters/SafeAreaAdapter';
+import { ViewportAdapter } from '../ui/adapters/ViewportAdapter';
+import { InteractionDebugAdapter } from '../ui/adapters/InteractionDebugAdapter';
+import { RouteId, RouteTable } from '../contract/generated/RouteTable';
 import { ColorTokens } from '../contract/generated/ColorTokens';
 import { CoreRuntime } from '../bridge/CoreRuntime';
 import { HostCapabilityManifest } from '../host/HostCapabilityManifest';
@@ -39,12 +42,16 @@ import {
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
     ReaderUiStore.init();
+    const params = want.parameters ?? {};
     // Seed demo fallback insets so the first frame approximates safe-area
     // avoidance before the real window avoid area is measured below.
     AppStorage.setOrCreate<number>(SafeAreaAdapter.K_TOP, SafeAreaAdapter.DEFAULT_TOP);
     AppStorage.setOrCreate<number>(SafeAreaAdapter.K_BOTTOM, SafeAreaAdapter.DEFAULT_BOTTOM);
     AppStorage.setOrCreate<number>(SafeAreaAdapter.K_START, SafeAreaAdapter.DEFAULT_START);
     AppStorage.setOrCreate<number>(SafeAreaAdapter.K_END, SafeAreaAdapter.DEFAULT_END);
+    AppStorage.setOrCreate<number>(ViewportAdapter.K_WIDTH, ViewportAdapter.DEFAULT_WIDTH);
+    AppStorage.setOrCreate<number>(ViewportAdapter.K_HEIGHT, ViewportAdapter.DEFAULT_HEIGHT);
+    this.applyDevelopmentLaunchParameters(want);
 
     // Diagnostic: probe where the NAPI .so might live on device.
     this.probeNativeLibraryLocations();
@@ -64,7 +71,6 @@ export default class EntryAbility extends UIAbility {
       // icon, deep links) do NOT run self-checks — they are for device
       // evidence collection only (see scripts/collect_device_evidence.mjs).
       // To trigger: hdc shell aa start -a EntryAbility -b <pkg> --ps selfCheck true
-      const params = want.parameters ?? {};
       const selfCheckFlag = params['selfCheck'] as string;
       if (selfCheckFlag === 'true') {
         console.info('[EntryAbility] selfCheck=true — running all Host self-checks for device evidence');
@@ -776,9 +782,30 @@ export default class EntryAbility extends UIAbility {
     CoreRuntime.close();
   }
 
+  onNewWant(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
+    this.applyDevelopmentLaunchParameters(want);
+  }
+
+  private applyDevelopmentLaunchParameters(want: Want): void {
+    const params = want.parameters ?? {};
+    AppStorage.setOrCreate<boolean>(InteractionDebugAdapter.K_VISIBLE, params['interactionDebug'] !== 'false');
+    const initialRoute = params[InteractionDebugAdapter.K_INITIAL_ROUTE] as string;
+    if (initialRoute !== undefined && initialRoute !== '' && RouteTable.shellOf(initialRoute) !== null) {
+      ReaderUiStore.dispatch({ type: 'route-replace', id: initialRoute as RouteId });
+      AppStorage.setOrCreate<string>('reader.displayedRouteId', initialRoute);
+      console.info('[EntryAbility] development initialRoute=' + initialRoute);
+    }
+    const paginationMode = params['readerPaginationMode'] as string;
+    if (paginationMode === 'horizontal' || paginationMode === 'vertical') {
+      ReaderUiStore.dispatch({ type: 'set-pagination-mode', paginationMode: paginationMode as ReaderPaginationMode });
+      console.info('[EntryAbility] development readerPaginationMode=' + paginationMode);
+    }
+  }
+
   async onWindowStageCreate(windowStage: window.WindowStage): Promise<void> {
     try {
       const win = await windowStage.getMainWindow();
+      this.applyViewportMetrics();
       // Immersive: window layout extends behind the status / navigation bars.
       await win.setWindowLayoutFullScreen(true);
       // Keep both system bars enabled: non-reader pages own only the status-bar
@@ -795,6 +822,7 @@ export default class EntryAbility extends UIAbility {
       // Publish real device insets (vp) and keep them current on rotation / keyboard.
       this.applyAvoidArea(await win.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM));
       win.on('avoidAreaChange', (data: window.AvoidAreaOptions) => {
+        this.applyViewportMetrics();
         this.applyAvoidArea(data.area);
       });
     } catch (e) {
@@ -825,6 +853,17 @@ export default class EntryAbility extends UIAbility {
       AppStorage.setOrCreate<number>(SafeAreaAdapter.K_END, area.rightRect.width / d);
     } catch (e) {
       // keep previously published / demo-fallback insets
+    }
+  }
+
+  private applyViewportMetrics(): void {
+    try {
+      const dpy = display.getDefaultDisplaySync();
+      const density = dpy.densityPixels;
+      AppStorage.setOrCreate<number>(ViewportAdapter.K_WIDTH, dpy.width / density);
+      AppStorage.setOrCreate<number>(ViewportAdapter.K_HEIGHT, dpy.height / density);
+    } catch (e) {
+      // keep previously published / demo-fallback viewport metrics
     }
   }
 }
