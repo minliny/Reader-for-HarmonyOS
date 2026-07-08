@@ -1330,52 +1330,13 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "Card",
-        "id": "book-title-card",
+        "type": "BookMoreMenuPage",
+        "id": "book-more-menu-page",
         "props": {
           "title": "深空信号",
           "subtitle": "本地书籍"
         },
         "children": []
-      },
-      {
-        "type": "SettingsSection",
-        "id": "more-menu-section",
-        "props": {
-          "title": "操作"
-        },
-        "children": [
-          {
-            "type": "SettingsListItem",
-            "id": "action-detail",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "action-move-group",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "action-cache",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "action-rescan",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "action-remove",
-            "props": {},
-            "children": []
-          }
-        ]
       },
       {
         "type": "BottomNav",
@@ -1400,37 +1361,10 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "SettingsSection",
-        "id": "group-section",
+        "type": "BookGroupManagementPage",
+        "id": "book-group-management-page",
         "props": {
           "title": "分组"
-        },
-        "children": [
-          {
-            "type": "SettingsListItem",
-            "id": "group-default",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "group-scifi",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "group-todo",
-            "props": {},
-            "children": []
-          }
-        ]
-      },
-      {
-        "type": "Button",
-        "id": "new-group",
-        "props": {
-          "label": "新建分组"
         },
         "children": []
       }
@@ -1542,37 +1476,12 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "SettingsSection",
-        "id": "sub-section",
+        "type": "RssSubscriptionManagementPage",
+        "id": "rss-subscription-management-page",
         "props": {
           "title": "订阅源"
         },
-        "children": [
-          {
-            "type": "SettingsListItem",
-            "id": "sub-1",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "sub-2",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "sub-3",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "sub-4",
-            "props": {},
-            "children": []
-          }
-        ]
+        "children": []
       }
     ]
   },
@@ -1659,34 +1568,10 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "SettingsSection",
-        "id": "form-section",
+        "type": "SourceFormPage",
+        "id": "source-add-page",
         "props": {
-          "title": "书源信息"
-        },
-        "children": []
-      },
-      {
-        "type": "Input",
-        "id": "src-name",
-        "props": {
-          "placeholder": "书源名称"
-        },
-        "children": []
-      },
-      {
-        "type": "Input",
-        "id": "src-url",
-        "props": {
-          "placeholder": "书源 URL"
-        },
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "save",
-        "props": {
-          "label": "保存"
+          "action": "保存"
         },
         "children": []
       }
@@ -1705,34 +1590,10 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "SettingsSection",
-        "id": "form-section",
+        "type": "SourceFormPage",
+        "id": "source-edit-page",
         "props": {
-          "title": "书源信息"
-        },
-        "children": []
-      },
-      {
-        "type": "Input",
-        "id": "src-name",
-        "props": {
-          "placeholder": "书源名称"
-        },
-        "children": []
-      },
-      {
-        "type": "Input",
-        "id": "src-url",
-        "props": {
-          "placeholder": "书源 URL"
-        },
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "save",
-        "props": {
-          "label": "保存修改"
+          "action": "保存修改"
         },
         "children": []
       }
@@ -1795,49 +1656,12 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "SettingsSection",
-        "id": "global-section",
+        "type": "GlobalSettingsPage",
+        "id": "global-settings-page",
         "props": {
           "title": "设置入口"
         },
-        "children": [
-          {
-            "type": "SettingsListItem",
-            "id": "entry-reading",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "entry-source",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "entry-sync",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "entry-webdav",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "entry-backup",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "entry-about",
-            "props": {},
-            "children": []
-          }
-        ]
+        "children": []
       }
     ]
   },
@@ -1943,25 +1767,12 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "SettingsSection",
-        "id": "backup-section",
+        "type": "BackupSettingsPage",
+        "id": "backup-settings-page",
         "props": {
           "title": "备份"
         },
-        "children": [
-          {
-            "type": "SettingsListItem",
-            "id": "auto-backup",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "webdav-backup",
-            "props": {},
-            "children": []
-          }
-        ]
+        "children": []
       }
     ]
   },

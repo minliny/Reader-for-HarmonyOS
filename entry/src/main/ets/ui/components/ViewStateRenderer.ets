@@ -16,7 +16,9 @@ import { AppShellStructure, MainTabsStructure, SearchHomePage, SearchResultsPage
   BookshelfEmptyPage, SourceManagementPage, SourceDetailPage, SourceImportOptionsPage, SourceDisabledState,
   SourceSettingsEntryPage, SourceTestResultPage, WebDavConfigPage, SyncSettingsEntryPage, SyncErrorPage,
   SyncProgressPage, RemoteWebDavBooksPage, RssDetailPage, RssEmptyState, RssErrorState, GlobalStatePage,
-  OfflineStatePage, PermissionRequiredPage, AboutVersionPage, LocalBookImportPage, ReadingSettingsEntryPage } from './StructuralPageComponents';
+  OfflineStatePage, PermissionRequiredPage, AboutVersionPage, LocalBookImportPage, ReadingSettingsEntryPage,
+  BookMoreMenuPage, BookGroupManagementPage, SourceFormPage, GlobalSettingsPage, BackupSettingsPage,
+  RssSubscriptionManagementPage } from './StructuralPageComponents';
 import { ProgressBar, BookTitleAuthor, SourceStatus, ReadButton, DirectoryPreview, BookIntro, ConfigEntry,
   SearchEntry, SourceTypeSegment, CurrentSourceCard, SourceCategoryChips, DiscoveryContentCard, SourceStatusBar,
   SubscriptionSummaryCard, FeedStatusChips, FeedSourceChips, RssEntryItem, UnreadIndicator,
@@ -215,6 +217,13 @@ export struct ViewStateRenderer {
         title: this.textOr(component.props.title, '书架为空'),
         message: this.textOr(component.props.message, '导入本地书籍或从书源搜索后加入书架。'),
       })
+    } else if (component.type === 'BookMoreMenuPage') {
+      BookMoreMenuPage({
+        title: this.textOr(component.props.title, '深空信号'),
+        subtitle: this.textOr(component.props.subtitle, '本地书籍'),
+      })
+    } else if (component.type === 'BookGroupManagementPage') {
+      BookGroupManagementPage()
     } else if (component.type === 'SourceManagementPage') {
       SourceManagementPage()
     } else if (component.type === 'SourceDetailPage') {
@@ -227,6 +236,8 @@ export struct ViewStateRenderer {
         message: this.textOr(component.props.message, '该书源 disabled / error，请在书源详情中修复。'),
         action: this.textOr(component.props.action, '查看详情'),
       })
+    } else if (component.type === 'SourceFormPage') {
+      SourceFormPage({ action: this.textOr(component.props.action, '保存') })
     } else if (component.type === 'SourceSettingsEntryPage') {
       SourceSettingsEntryPage()
     } else if (component.type === 'SourceTestResultPage') {
@@ -235,6 +246,10 @@ export struct ViewStateRenderer {
       WebDavConfigPage()
     } else if (component.type === 'SyncSettingsEntryPage') {
       SyncSettingsEntryPage()
+    } else if (component.type === 'GlobalSettingsPage') {
+      GlobalSettingsPage()
+    } else if (component.type === 'BackupSettingsPage') {
+      BackupSettingsPage()
     } else if (component.type === 'SyncErrorPage') {
       SyncErrorPage({
         title: this.textOr(component.props.title, '同步冲突'),
@@ -261,6 +276,8 @@ export struct ViewStateRenderer {
         message: this.textOr(component.props.message, '订阅源暂时无法访问。'),
         action: this.textOr(component.props.action, '重试'),
       })
+    } else if (component.type === 'RssSubscriptionManagementPage') {
+      RssSubscriptionManagementPage()
     } else if (component.type === 'GlobalStatePage') {
       GlobalStatePage({
         variant: this.textOr(component.props.variant, 'empty'),

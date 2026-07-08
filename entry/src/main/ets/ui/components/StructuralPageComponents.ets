@@ -112,6 +112,37 @@ struct StructureRow {
 }
 
 @Component
+struct SwitchRow {
+  @Prop title: string = '条目';
+  @Prop chip: string = '';
+  @Prop switchOn: boolean = true;
+
+  build() {
+    Row() {
+      Text(this.title)
+        .fontSize(14)
+        .fontWeight(600)
+        .fontColor(ColorTokens.controlInk)
+        .layoutWeight(1)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+      if (this.chip.length > 0) {
+        HandoffStatusChip({ label: this.chip })
+      } else {
+        HandoffSwitch({ on: this.switchOn })
+      }
+    }
+    .width('100%')
+    .constraintSize({ minHeight: 48 })
+    .padding({ left: 12, right: 12, top: 10, bottom: 10 })
+    .borderRadius(14)
+    .backgroundColor(ColorTokens.floatingControlBg)
+    .border({ width: 1, color: ColorTokens.border })
+    .alignItems(VerticalAlign.Center)
+  }
+}
+
+@Component
 struct PrimaryAction {
   @Prop label: string = '操作';
 
@@ -418,6 +449,53 @@ export struct BookshelfEmptyPage {
 }
 
 @Component
+export struct BookMoreMenuPage {
+  @Prop title: string = '深空信号';
+  @Prop subtitle: string = '本地书籍';
+  private actions: RowEntry[] = [
+    { title: '详情', detail: '', chip: '' },
+    { title: '移动分组', detail: '', chip: '' },
+    { title: '下载 / 缓存', detail: '', chip: '' },
+    { title: '重新扫描', detail: '', chip: '' },
+    { title: '移出书架', detail: '', chip: '' },
+  ];
+
+  build() {
+    Column() {
+      StructureCard({ title: this.title, message: this.subtitle })
+      ForEach(this.actions, (entry: RowEntry, idx: number) => {
+        StructureRow({ title: entry.title })
+          .margin({ top: idx === 0 ? 12 : 8 })
+      }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
+export struct BookGroupManagementPage {
+  private groups: RowEntry[] = [
+    { title: '默认分组', detail: '', chip: '12 本' },
+    { title: '科幻', detail: '', chip: '4 本' },
+    { title: '待读', detail: '', chip: '7 本' },
+  ];
+
+  build() {
+    Column() {
+      ForEach(this.groups, (entry: RowEntry, idx: number) => {
+        StructureRow({ title: entry.title, chip: entry.chip, showChevron: false })
+          .margin({ bottom: idx === this.groups.length - 1 ? 0 : 8 })
+      }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
+      PrimaryAction({ label: '新建分组' })
+        .margin({ top: 12 })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
 export struct SourceManagementPage {
   private sources: RowEntry[] = [
     { title: '阅读书源 1', detail: '启用 · 搜索 / 目录 / 正文可用', chip: '' },
@@ -477,6 +555,23 @@ export struct SourceDisabledState {
 }
 
 @Component
+export struct SourceFormPage {
+  @Prop action: string = '保存';
+
+  build() {
+    Column() {
+      FormField({ placeholder: '书源名称' })
+      FormField({ placeholder: '书源 URL' })
+        .margin({ top: 10 })
+      PrimaryAction({ label: this.action })
+        .margin({ top: 10 })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
 export struct SourceSettingsEntryPage {
   build() {
     Column() {
@@ -529,6 +624,42 @@ export struct SyncSettingsEntryPage {
   build() {
     Column() {
       StructureCard({ title: '同步设置', message: '管理 WebDAV、备份和阅读进度同步。' })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
+export struct GlobalSettingsPage {
+  private entries: RowEntry[] = [
+    { title: '阅读设置入口', detail: '', chip: '' },
+    { title: '书源设置入口', detail: '', chip: '' },
+    { title: '同步设置入口', detail: '', chip: '' },
+    { title: 'WebDAV 设置入口', detail: '', chip: '' },
+    { title: '备份恢复入口', detail: '', chip: '' },
+    { title: '关于版本', detail: '', chip: '' },
+  ];
+
+  build() {
+    Column() {
+      ForEach(this.entries, (entry: RowEntry, idx: number) => {
+        StructureRow({ title: entry.title })
+          .margin({ bottom: idx === this.entries.length - 1 ? 0 : 8 })
+      }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
+export struct BackupSettingsPage {
+  build() {
+    Column() {
+      SwitchRow({ title: '自动备份', switchOn: true })
+      SwitchRow({ title: '备份到 WebDAV', chip: '已开启' })
+        .margin({ top: 8 })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -620,6 +751,27 @@ export struct RssErrorState {
       StatePanel({ variant: 'error', title: this.title, message: this.message, action: this.action })
     }
     .width('100%')
+  }
+}
+
+@Component
+export struct RssSubscriptionManagementPage {
+  private subscriptions: RowEntry[] = [
+    { title: '订阅源 1', detail: '', chip: '' },
+    { title: '订阅源 2', detail: '', chip: '' },
+    { title: '订阅源 3', detail: '', chip: '' },
+    { title: '订阅源 4', detail: '', chip: '' },
+  ];
+
+  build() {
+    Column() {
+      ForEach(this.subscriptions, (entry: RowEntry, idx: number) => {
+        SwitchRow({ title: entry.title, switchOn: true })
+          .margin({ bottom: idx === this.subscriptions.length - 1 ? 0 : 8 })
+      }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
   }
 }
 

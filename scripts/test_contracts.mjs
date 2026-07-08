@@ -211,13 +211,24 @@ test('normalized state copy stays aligned with handoff HTML', () => {
   }
 });
 
-test('rss subscription management has four subscription rows', () => {
+test('normalized settings/form pages use page-level components, not generic assembly', () => {
   const VS = readJson('view-state.fixtures.json');
-  const entry = VS.find((e) => e.routeId === 'rss-subscription-management' && e.pageState === 'default');
-  assert.ok(entry, 'rss-subscription-management/default fixture missing');
-  const section = entry.components.find((c) => c.type === 'SettingsSection');
-  assert.ok(section, 'rss-subscription-management missing SettingsSection');
-  assert.deepEqual(section.children.map((c) => c.id), ['sub-1', 'sub-2', 'sub-3', 'sub-4']);
+  const expected = new Map([
+    ['bookshelf-book-more-menu/default', ['AppTopBar', 'BookMoreMenuPage', 'BottomNav']],
+    ['bookshelf-group-management/default', ['BackTopBar', 'BookGroupManagementPage']],
+    ['rss-subscription-management/default', ['BackTopBar', 'RssSubscriptionManagementPage']],
+    ['source-add/default', ['BackTopBar', 'SourceFormPage']],
+    ['source-edit/default', ['BackTopBar', 'SourceFormPage']],
+    ['global-settings/default', ['BackTopBar', 'GlobalSettingsPage']],
+    ['backup-settings/default', ['BackTopBar', 'BackupSettingsPage']],
+  ]);
+
+  for (const [key, types] of expected.entries()) {
+    const [routeId, pageState] = key.split('/');
+    const entry = VS.find((e) => e.routeId === routeId && e.pageState === pageState);
+    assert.ok(entry, `${key} fixture missing`);
+    assert.deepEqual(entry.components.map((c) => c.type), types);
+  }
 });
 
 // ── 7. Normalized page → ViewState coverage guard ─────────────────────────
