@@ -214,22 +214,27 @@ export struct ToggleSwitch {
 // ── Floating quick actions (.reader-floating-quick-actions) ──────────────
 //   Row of quick-action circles centered horizontally, floating above the
 //   page-control pill. Each circle route-pushes its overlay route:
-//     search → reader-search-overlay-v2, replace → reader-replace-overlay-v2,
-//     auto → reader-auto-scroll-overlay-v2, night → reader-night-state-v2
-//   (night lands in Step 3c-part2; circle renders now, route-pushes once the
-//   route has a fixture). Circles are 48px, gap 20.
+//     search → reader-search-overlay-v2, auto → reader-auto-scroll-overlay-v2,
+//     replace → reader-replace-overlay-v2, night/day → reader-night-state-v2 /
+//     control-layer-base-v2. Circles are 48px, gap 20.
 @Component
 export struct FloatingQuickActions {
-  private items: Array<[string, string, string]> = [
-    ['search', 'reader_icon_reader_content_search_action', 'reader-search-overlay-v2'],
-    ['replace', 'reader_icon_reader_content_replace_action', 'reader-replace-overlay-v2'],
-    ['auto', 'reader_icon_reader_auto_page_action', 'reader-auto-scroll-overlay-v2'],
-    ['night', 'reader_icon_more_dark', 'reader-night-state-v2'],
-  ];
+  @StorageProp('reader.displayedRouteId') routeId: string = 'control-layer-base-v2';
+
+  private items(): Array<[string, string, string]> {
+    const nightState = this.routeId === 'reader-night-state-v2';
+    return [
+      ['search', 'reader_icon_reader_content_search_action', 'reader-search-overlay-v2'],
+      ['auto', 'reader_icon_reader_auto_page_action', 'reader-auto-scroll-overlay-v2'],
+      ['replace', 'reader_icon_reader_content_replace_action', 'reader-replace-overlay-v2'],
+      ['night', nightState ? 'reader_icon_sun_primary' : 'reader_icon_moon_primary',
+        nightState ? 'control-layer-base-v2' : 'reader-night-state-v2'],
+    ];
+  }
 
   build() {
     Row({ space: 20 }) {
-      ForEach(this.items, (it: [string, string, string]) => {
+      ForEach(this.items(), (it: [string, string, string]) => {
         Column() {
           Image($r(`app.media.${it[1]}`)).width(24).height(24)
         }
@@ -283,8 +288,8 @@ export struct ReaderBottomBar {
 
   private items: Array<[string, string, string]> = [
     ['directory', '目录', 'reader-directory-overlay-v2'],
-    ['appearance', '外观', 'reader-appearance-overlay-v2'],
     ['tts', '朗读', 'reader-tts-overlay-v2'],
+    ['appearance', '界面', 'reader-appearance-overlay-v2'],
     ['settings', '设置', 'reader-settings-overlay-v2'],
   ];
 
@@ -362,25 +367,34 @@ export struct ReaderOverlayPanel {
 //   Picking a chapter route-pops back to control-layer-base-v2.
 @Component
 export struct ReaderDirectoryPanel {
-  private chapters: string[] = [
-    '第一章 科学边界', '第二章 疯狂年代', '第三章 红岸之一', '第四章 宇宙闪烁',
-    '第五章 三体世界', '第六章 三体游戏', '第七章 地球叛军', '第八章 黑暗森林',
+  private tocRows: Array<[string, string]> = [
+    ['第一章：阿长与《山海经》', ''],
+    ['深空信号', '当前阅读 · 书签'],
+    ['第二节：寂静航线', ''],
+    ['未知频段', ''],
+    ['求救信号', '书签'],
+    ['书签：深空信号', '那声音起初像是冰层断裂的脆响 · 25%'],
   ];
 
   build() {
     ReaderOverlayPanel({ panelHeight: 420 }) {
-      ReaderPanelHeader({ title: '目录', meta: '目录书签' })
       SegmentedControl({ options: ['目录', '书签'] })
+      Text('第一本 / 第一卷 /')
+        .fontSize(12).fontColor(ColorTokens.muted)
+        .width('100%')
       Scroll() {
-        Column() {
-          ForEach(this.chapters, (c: string, i: number) => {
-            ReaderListRow({ title: c, detail: i === 0 ? '正文' : '' })
+        Column({ space: 8 }) {
+          ForEach(this.tocRows, (row: [string, string], i: number) => {
+            ReaderListRow({ title: row[0], detail: row[1] })
               .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
-          }, (c: string, i: number) => `${c}-${i}`)
+          }, (row: [string, string], i: number) => `${row[0]}-${i}`)
         }
       }
       .layoutWeight(1)
       .align(Alignment.Top)
+      Text('当前阅读章节：第一章：阿长与《山海经》')
+        .fontSize(12).fontColor(ColorTokens.muted)
+        .width('100%')
     }
   }
 }
@@ -392,25 +406,27 @@ export struct ReaderDirectoryPanel {
 export struct ReaderAppearancePanel {
   build() {
     ReaderOverlayPanel({ panelHeight: 480 }) {
-      ReaderPanelHeader({ title: '界面', meta: '外观设置' })
       // group: 文字
       Column({ space: 8 }) {
         Text('文字').fontSize(13).fontWeight(700).fontColor(ColorTokens.controlInk)
-        ReaderSettingRow({ name: '字号', value: '18', disclosure: true })
-        ReaderSettingRow({ name: '字体', value: '思源宋体', disclosure: true })
-        ReaderSettingRow({ name: '行距', value: '1.96' })
+        ReaderSettingRow({ name: '字体', value: '默认' })
+        ReaderSettingRow({ name: '字号', value: '18' })
+        ReaderSettingRow({ name: '字距', value: '标准' })
+        ReaderSettingRow({ name: '繁简', value: '简体' })
       }.alignItems(HorizontalAlign.Start).width('100%')
       // group: 段落
       Column({ space: 8 }) {
         Text('段落').fontSize(13).fontWeight(700).fontColor(ColorTokens.controlInk)
-        ReaderSettingRow({ name: '段间距', value: '16' })
-        ReaderSettingRow({ name: '缩进', value: '2em' })
+        ReaderSettingRow({ name: '缩进', value: '2 字符' })
+        ReaderSettingRow({ name: '行距', value: '标准' })
+        ReaderSettingRow({ name: '段距', value: '标准' })
       }.alignItems(HorizontalAlign.Start).width('100%')
       // group: 界面
       Column({ space: 8 }) {
         Text('界面').fontSize(13).fontWeight(700).fontColor(ColorTokens.controlInk)
-        ReaderSettingRow({ name: '翻页方式', value: '滑动', disclosure: true })
-        ReaderSettingRow({ name: '背景', value: '纸张', disclosure: true })
+        ReaderSettingRow({ name: '信息', value: '四角信息' })
+        ReaderSettingRow({ name: '翻页动画', value: '覆盖' })
+        ReaderSettingRow({ name: '主题', value: '米色纸张' })
       }.alignItems(HorizontalAlign.Start).width('100%')
     }
   }
@@ -424,6 +440,9 @@ export struct ReaderTtsPanel {
   build() {
     ReaderOverlayPanel({ panelHeight: 460 }) {
       ReaderPanelHeader({ title: '朗读', meta: '正在朗读' })
+      Text('当前章节：第一章：阿长与《山海经》')
+        .fontSize(12).fontColor(ColorTokens.muted)
+        .width('100%')
       // 主播放控制
       Column({ space: 8 }) {
         Text('主播放控制').fontSize(13).fontWeight(700).fontColor(ColorTokens.controlInk)
@@ -443,10 +462,12 @@ export struct ReaderTtsPanel {
       // 朗读参数
       Column({ space: 8 }) {
         Text('朗读参数').fontSize(13).fontWeight(700).fontColor(ColorTokens.controlInk)
-        ReaderSettingRow({ name: '语速', value: '1.0x' })
-        ReaderSettingRow({ name: '音量', value: '80%' })
-        ReaderSettingRow({ name: '定时关闭', value: '关闭', disclosure: true })
-        ReaderSettingRow({ name: '朗读音色', value: '普通话 · 女声', disclosure: true })
+        ReaderListRow({ title: '语速' })
+        ReaderSlider()
+        ReaderListRow({ title: '音量' })
+        ReaderSlider()
+        ReaderSettingRow({ name: '定时关闭', value: '不开启', disclosure: true })
+        ReaderSettingRow({ name: '朗读音色', value: '温和女声', disclosure: true })
       }.alignItems(HorizontalAlign.Start).width('100%')
     }
   }
@@ -480,7 +501,11 @@ export struct ReaderSettingsPanel {
 //   Ported from reader-search-overlay-v2.html.
 @Component
 export struct ReaderSearchPanel {
-  private results: string[] = ['信号', '信号源', '信号强度'];
+  private results: Array<[string, string]> = [
+    ['未知频段的跳动波形', '盯着那个代表未知频段的跳动'],
+    ['不是随机的脉冲星信号', '“这不是随机的脉冲星信号，”领航员索菲亚说'],
+    ['求救信号', '“求救信号。”艾伦打断了她'],
+  ];
 
   build() {
     ReaderOverlayPanel({ panelHeight: 420 }) {
@@ -498,9 +523,9 @@ export struct ReaderSearchPanel {
       }.width('100%')
       Scroll() {
         Column({ space: 8 }) {
-          ForEach(this.results, (r: string, i: number) => {
-            ReaderListRow({ title: r, detail: `第 ${i + 1} 段` })
-          }, (r: string, i: number) => `${r}-${i}`)
+          ForEach(this.results, (r: [string, string], i: number) => {
+            ReaderListRow({ title: r[0], detail: r[1] })
+          }, (r: [string, string], i: number) => `${r[0]}-${i}`)
         }
       }.layoutWeight(1).align(Alignment.Top)
       Row() {
@@ -519,11 +544,11 @@ export struct ReaderReplacePanel {
   build() {
     ReaderOverlayPanel({ panelHeight: 440 }) {
       ReaderPanelHeader({ title: '内容替换', meta: '匹配规则 3 条' })
-      ReaderListRow({ title: '三体', detail: '当前书籍' })
+      ReaderListRow({ title: '当前书籍：深空信号', detail: '仅显示当前书籍匹配到的替换规则' })
       Column({ space: 8 }) {
-        ReaderSettingRow({ name: '替换"信号"为"信号源"', toggle: true })
-        ReaderSettingRow({ name: '替换"地球"为"星球"', toggle: true })
-        ReaderSettingRow({ name: '去除广告段落', toggle: true })
+        ReaderListRow({ title: '净化广告段落', detail: '移除章节中异常推广段' })
+        ReaderListRow({ title: '合并异常断行', detail: '修复不自然换行' })
+        ReaderListRow({ title: '修正常见乱码', detail: '替换缺失或错码字符' })
       }.width('100%')
       Row() {
         ReaderActionButton({ label: '应用', primary: true })
@@ -551,6 +576,9 @@ export struct ReaderAutoScrollPanel {
       ReaderSlider()
       Text('翻页方式').fontSize(13).fontWeight(700).fontColor(ColorTokens.controlInk)
       SegmentedControl({ options: ['滚动', '点击翻页', '连续滚动'] })
+      Text('开启后将在本章内按当前速度推进，不影响下方页内控制条。')
+        .fontSize(12).fontColor(ColorTokens.muted)
+        .width('100%')
     }
   }
 }

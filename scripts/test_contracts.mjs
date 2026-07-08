@@ -147,6 +147,62 @@ test('shell top bars read title from ViewStateTable and displayed route', () => 
   assert.ok(!src.includes('function secondaryRouteTitle('), 'BackTopBar must not use a stale hand-written secondaryRouteTitle switch');
 });
 
+test('reader control chrome follows normalized handoff order and labels', () => {
+  const src = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderOverlayComponents.ets'));
+  const bottomOrder = [
+    "['directory', '目录', 'reader-directory-overlay-v2']",
+    "['tts', '朗读', 'reader-tts-overlay-v2']",
+    "['appearance', '界面', 'reader-appearance-overlay-v2']",
+    "['settings', '设置', 'reader-settings-overlay-v2']",
+  ];
+  let prev = -1;
+  for (const marker of bottomOrder) {
+    const idx = src.indexOf(marker);
+    assert.ok(idx > prev, `reader bottom bar order/label drift: ${marker}`);
+    prev = idx;
+  }
+
+  const quickOrder = [
+    "['search', 'reader_icon_reader_content_search_action', 'reader-search-overlay-v2']",
+    "['auto', 'reader_icon_reader_auto_page_action', 'reader-auto-scroll-overlay-v2']",
+    "['replace', 'reader_icon_reader_content_replace_action', 'reader-replace-overlay-v2']",
+  ];
+  prev = -1;
+  for (const marker of quickOrder) {
+    const idx = src.indexOf(marker);
+    assert.ok(idx > prev, `reader quick action order drift: ${marker}`);
+    prev = idx;
+  }
+  assert.ok(src.includes("reader_icon_moon_primary"), 'paper control layer must expose a night-mode action icon');
+  assert.ok(src.includes("reader_icon_sun_primary"), 'night-state control layer must expose a day-mode action icon');
+  assert.ok(!src.includes("['night', 'reader_icon_more_dark'"), 'night/day action must not use the generic more icon');
+});
+
+test('reader overlay panels keep normalized handoff visible copy', () => {
+  const src = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderOverlayComponents.ets'));
+  for (const text of [
+    '第一本 / 第一卷 /',
+    '书签：深空信号',
+    '当前阅读章节：第一章：阿长与《山海经》',
+    '字体', '默认', '字距', '标准', '繁简', '简体',
+    '缩进', '2 字符', '翻页动画', '覆盖', '主题', '米色纸张',
+    '当前章节：第一章：阿长与《山海经》',
+    '定时关闭', '不开启', '朗读音色', '温和女声',
+    '未知频段的跳动波形',
+    '不是随机的脉冲星信号',
+    '当前书籍：深空信号',
+    '仅显示当前书籍匹配到的替换规则',
+    '净化广告段落',
+    '合并异常断行',
+    '修正常见乱码',
+    '开启后将在本章内按当前速度推进，不影响下方页内控制条。',
+  ]) {
+    assert.ok(src.includes(text), `ReaderOverlayComponents missing handoff text: ${text}`);
+  }
+  assert.ok(!src.includes("ReaderListRow({ title: '三体'"), 'replace overlay must not show the wrong demo book title');
+  assert.ok(!src.includes("ReaderSettingRow({ name: '替换\\\"信号\\\"为\\\"信号源\\\"'"), 'replace overlay must use handoff rule names');
+});
+
 // ── 5. ViewStateTable ↔ ViewStateRenderer: every component type used in the
 //      table is mapped by the renderer — no unknown type silently falls back to
 //      Empty() (which would mask contract drift).
