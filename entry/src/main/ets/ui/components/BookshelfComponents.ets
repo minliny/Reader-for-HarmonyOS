@@ -12,6 +12,7 @@ export interface BookEntry {
   bookId: string;
   title: string;
   author: string;
+  coverKey: string;
 }
 
 interface BookshelfFilterOption {
@@ -28,25 +29,44 @@ function isLoadableBookId(bookId: string): boolean {
   return bookId.length > 0 && (bookId.startsWith('/') || bookId.startsWith('http'));
 }
 
+function bookshelfCoverResource(coverKey: string): Resource {
+  switch (coverKey) {
+    case 'longNight':
+      return $r('app.media.bookshelf_cover_long_night');
+    case 'mysteryLord':
+      return $r('app.media.bookshelf_cover_mystery_lord');
+    case 'brightMoon':
+      return $r('app.media.bookshelf_cover_bright_moon');
+    case 'renjian':
+      return $r('app.media.bookshelf_cover_renjian_cihua');
+    case 'androidNotes':
+      return $r('app.media.bookshelf_cover_android_notes');
+    case 'threeBody':
+    default:
+      return $r('app.media.bookshelf_cover_three_body');
+  }
+}
+
 // .fd-continue-card: grid 62px 1fr 82px; gap 14; min-height 100; padding 10 16.
 //   cover (.fd-continue-cover-button): 62px, aspect 2/3, radius-sm, clickable.
 //   div: h2 "继续阅读" (13/900 primary) + strong (serif 20) + span author (14 muted).
 //   button (.fd-continue-action-button) "阅读": min 74×40, pill, primary, 13/800.
-// Click dispatches route-push reader, then — only when bookId is a loadable
+// Click dispatches route-push immersive-reading, then — only when bookId is a loadable
 // source path — book-detail-load(bookId, loadFirstChapter) which populates
-// currentBook and then reads the first chapter for the reader route. Fixture
+// currentBook and then reads the first chapter for the immersive reader route. Fixture
 // ids (bk-001) skip the load and the reader shows its fixture fallback
 // paragraphs.
 @Component
 export struct ContinueReadingCard {
   @Prop bookId: string = '';
-  @Prop title: string = '示例书';
-  @Prop author: string = '示例作者';
+  @Prop title: string = '长夜余火';
+  @Prop author: string = '爱潜水的乌贼';
+  @Prop coverKey: string = 'longNight';
 
   build() {
     Row() {
       Stack() {
-        Image($r('app.media.bookshelf_cover_three_body'))
+        Image(bookshelfCoverResource(this.coverKey))
           .width('100%').height('100%')
           .objectFit(ImageFit.Cover)
       }
@@ -100,7 +120,7 @@ export struct ContinueReadingCard {
   }
 
   private openReader(): void {
-    ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' });
+    ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' });
     // Only dispatch book-detail-load when bookId is a loadable source path.
     // Fixture ids (bk-001) skip the load to avoid invalid URL + stuck loading.
     // The reader page's ReadingTextFlow falls back to fixture paragraphs when
@@ -294,9 +314,11 @@ struct BookshelfFilterPopover {
 // .fd-book-cover-frame: width 100%, aspect 2/3, radius-md(8), surface, soft-shadow.
 @Component
 export struct BookCover {
+  @Prop coverKey: string = 'threeBody';
+
   build() {
     Stack() {
-      Image($r('app.media.bookshelf_cover_three_body'))
+      Image(bookshelfCoverResource(this.coverKey))
         .width('100%').height('100%')
         .objectFit(ImageFit.Cover)
     }
@@ -317,12 +339,13 @@ export struct BookCover {
 @Component
 export struct BookCard {
   @Prop bookId: string = '';
-  @Prop title: string = '三体';
-  @Prop author: string = '刘慈欣';
+  @Prop title: string = '长夜余火';
+  @Prop author: string = '爱潜水的乌贼';
+  @Prop coverKey: string = 'longNight';
 
   build() {
     Column() {
-      BookCover()
+      BookCover({ coverKey: this.coverKey })
       Text(this.title)
         .fontSize(15)
         .fontWeight(700)
@@ -360,16 +383,16 @@ export struct BookCard {
 export struct BookGrid {
   @Prop books: BookEntry[] = [];
   private demoBooks: BookEntry[] = [
-    { bookId: 'bk-demo-1', title: '三体', author: '刘慈欣' },
-    { bookId: 'bk-demo-2', title: '基地', author: '阿西莫夫' },
-    { bookId: 'bk-demo-3', title: '球状闪电', author: '刘慈欣' },
+    { bookId: 'bk-demo-1', title: '长夜余火', author: '爱潜水的乌贼', coverKey: 'longNight' },
+    { bookId: 'bk-demo-2', title: '诡秘之主', author: '爱潜水的乌贼', coverKey: 'mysteryLord' },
+    { bookId: 'bk-demo-3', title: '明朝那些事儿', author: '当年明月', coverKey: 'brightMoon' },
   ];
 
   build() {
     Grid() {
       ForEach(this.books.length > 0 ? this.books : this.demoBooks, (b: BookEntry, i: number) => {
         GridItem() {
-          BookCard({ bookId: b.bookId, title: b.title, author: b.author })
+          BookCard({ bookId: b.bookId, title: b.title, author: b.author, coverKey: b.coverKey })
         }
       }, (b: BookEntry, i: number) => `${b.bookId}-${b.title}-${i}`)
     }

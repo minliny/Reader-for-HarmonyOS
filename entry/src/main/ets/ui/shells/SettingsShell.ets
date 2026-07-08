@@ -10,6 +10,8 @@ import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
 import { SpacingTokens, ZIndexTokens } from '../../contract/generated/DimensionTokens';
 import { SafeAreaAdapter } from '../adapters/SafeAreaAdapter';
 import { BackTopBar } from '../components/SharedComponents';
+import { ReaderUiStore } from '../store/ReaderUiStore';
+import { RouteId } from '../../contract/generated/RouteTable';
 import { ViewStateRenderer } from '../components/ViewStateRenderer';
 import { OverlayHost } from '../slots/OverlayHost';
 import { StateHost } from '../slots/StateHost';
@@ -18,12 +20,15 @@ import { StateHost } from '../slots/StateHost';
 struct SettingsFixedActionButton {
   @Prop label: string = '操作';
   @Prop variant: string = 'primary';
+  @Prop route: RouteId = 'settings';
 
   private fillColor(): string {
+    if (this.variant === 'danger') return ColorTokens.accent;
     return this.variant === 'secondary' ? DemoAliasTokens.surface : ColorTokens.primary;
   }
 
   private textColor(): string {
+    if (this.variant === 'danger') return DemoAliasTokens.onPrimary;
     return this.variant === 'secondary' ? ColorTokens.primaryDark : DemoAliasTokens.onPrimary;
   }
 
@@ -38,6 +43,7 @@ struct SettingsFixedActionButton {
       .backgroundColor(this.fillColor())
       .border({ width: this.variant === 'secondary' ? 1 : 0, color: ColorTokens.border })
       .textAlign(TextAlign.Center)
+      .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: this.route }))
   }
 }
 
@@ -47,6 +53,20 @@ export struct SettingsShell {
   @StorageProp('reader.displayedRouteId') routeId: string = 'settings';
   @StorageProp(SafeAreaAdapter.K_TOP) safeAreaTop: number = SafeAreaAdapter.DEFAULT_TOP;
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
+
+  private hasFixedActionBar(): boolean {
+    return this.routeId === 'discover-source-bulk'
+      || this.routeId === 'source-management'
+      || this.routeId === 'source-detail';
+  }
+
+  private scrollBottomPadding(): number {
+    return this.hasFixedActionBar() ? 18 : 112 + this.safeAreaBottom;
+  }
+
+  private actionBarHeight(): number {
+    return 62 + this.safeAreaBottom;
+  }
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -61,9 +81,10 @@ export struct SettingsShell {
           top: 8,
           left: SpacingTokens.safeAreaHorizontal + 3,
           right: SpacingTokens.safeAreaHorizontal + 3,
-          bottom: 112 + this.safeAreaBottom,
+          bottom: this.scrollBottomPadding(),
         })
         .backgroundColor(ColorTokens.paper)
+        this.renderBottomActionBar()
       }
       .width('100%')
       .height('100%')
@@ -71,8 +92,6 @@ export struct SettingsShell {
       .expandSafeArea([SafeAreaType.SYSTEM, SafeAreaType.CUTOUT],
         [SafeAreaEdge.TOP, SafeAreaEdge.START, SafeAreaEdge.END])
       .zIndex(ZIndexTokens.content)
-
-      this.renderBottomActionHost()
 
       OverlayHost()
         .zIndex(ZIndexTokens.dialog)
@@ -86,28 +105,50 @@ export struct SettingsShell {
       [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END])
   }
 
-  @Builder renderBottomActionHost() {
+  @Builder renderBottomActionBar() {
     if (this.routeId === 'discover-source-bulk') {
-      Column() {
-        Blank()
+      Row({ space: 10 }) {
+        SettingsFixedActionButton({ label: '启用' })
           .layoutWeight(1)
-        Row({ space: 10 }) {
-          SettingsFixedActionButton({ label: '启用' })
-            .layoutWeight(1)
-          SettingsFixedActionButton({ label: '禁用', variant: 'secondary' })
-            .layoutWeight(1)
-          SettingsFixedActionButton({ label: '刷新', variant: 'secondary' })
-            .layoutWeight(1)
-        }
-        .width('100%')
-        .padding({ left: SpacingTokens.safeAreaHorizontal + 3, right: SpacingTokens.safeAreaHorizontal + 3, top: 10, bottom: this.safeAreaBottom + 10 })
-        .backgroundColor(DemoAliasTokens.surface)
-        .border({ width: { top: 1 }, color: ColorTokens.border })
+        SettingsFixedActionButton({ label: '禁用', variant: 'secondary' })
+          .layoutWeight(1)
+        SettingsFixedActionButton({ label: '刷新', variant: 'secondary' })
+          .layoutWeight(1)
       }
       .width('100%')
-      .height('100%')
+      .height(this.actionBarHeight())
+      .padding({ left: SpacingTokens.safeAreaHorizontal + 3, right: SpacingTokens.safeAreaHorizontal + 3, top: 10, bottom: this.safeAreaBottom + 10 })
+      .backgroundColor(DemoAliasTokens.surface)
+      .border({ width: { top: 1 }, color: ColorTokens.border })
       .zIndex(ZIndexTokens.bottomSheet)
-      .hitTestBehavior(HitTestMode.Transparent)
+    } else if (this.routeId === 'source-management') {
+      Row({ space: 10 }) {
+        SettingsFixedActionButton({ label: '批量管理', variant: 'secondary', route: 'source-batch' })
+          .layoutWeight(1)
+        SettingsFixedActionButton({ label: '新增书源', route: 'source-import-options' })
+          .layoutWeight(1)
+      }
+      .width('100%')
+      .height(this.actionBarHeight())
+      .padding({ left: SpacingTokens.safeAreaHorizontal + 3, right: SpacingTokens.safeAreaHorizontal + 3, top: 10, bottom: this.safeAreaBottom + 10 })
+      .backgroundColor(DemoAliasTokens.surface)
+      .border({ width: { top: 1 }, color: ColorTokens.border })
+      .zIndex(ZIndexTokens.bottomSheet)
+    } else if (this.routeId === 'source-detail') {
+      Row({ space: 10 }) {
+        SettingsFixedActionButton({ label: '检测此源', variant: 'secondary', route: 'source-detect' })
+          .layoutWeight(1)
+        SettingsFixedActionButton({ label: '编辑规则', route: 'source-rule-edit' })
+          .layoutWeight(1)
+        SettingsFixedActionButton({ label: '删除', variant: 'danger', route: 'source-delete-confirm' })
+          .layoutWeight(1)
+      }
+      .width('100%')
+      .height(this.actionBarHeight())
+      .padding({ left: SpacingTokens.safeAreaHorizontal + 3, right: SpacingTokens.safeAreaHorizontal + 3, top: 10, bottom: this.safeAreaBottom + 10 })
+      .backgroundColor(DemoAliasTokens.surface)
+      .border({ width: { top: 1 }, color: ColorTokens.border })
+      .zIndex(ZIndexTokens.bottomSheet)
     }
   }
 }

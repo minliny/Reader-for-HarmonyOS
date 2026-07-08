@@ -21,6 +21,9 @@ struct LibraryFixedActionButton {
   @Prop variant: string = 'primary';
 
   private fillColor(): string {
+    if (this.variant === 'dangerSoft') {
+      return DemoAliasTokens.surface;
+    }
     if (this.variant === 'danger') {
       return ColorTokens.accent;
     }
@@ -31,6 +34,9 @@ struct LibraryFixedActionButton {
   }
 
   private textColor(): string {
+    if (this.variant === 'dangerSoft') {
+      return ColorTokens.accent;
+    }
     return this.variant === 'secondary' ? ColorTokens.primaryDark : DemoAliasTokens.onPrimary;
   }
 
@@ -43,7 +49,7 @@ struct LibraryFixedActionButton {
       .height(42)
       .borderRadius(DemoAliasTokens.radiusPill)
       .backgroundColor(this.fillColor())
-      .border({ width: this.variant === 'secondary' ? 1 : 0, color: ColorTokens.border })
+      .border({ width: this.variant === 'secondary' || this.variant === 'dangerSoft' ? 1 : 0, color: ColorTokens.border })
       .textAlign(TextAlign.Center)
   }
 }
@@ -54,6 +60,21 @@ export struct LibraryShell {
   @StorageProp('reader.displayedRouteId') routeId: string = 'book-detail';
   @StorageProp(SafeAreaAdapter.K_TOP) safeAreaTop: number = SafeAreaAdapter.DEFAULT_TOP;
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
+
+  private hasFixedActionBar(): boolean {
+    return this.routeId === 'book-batch-management'
+      || this.routeId === 'group-management'
+      || this.routeId === 'book-detail'
+      || this.routeId === 'book-detail-toc-preview';
+  }
+
+  private scrollBottomPadding(): number {
+    return this.hasFixedActionBar() ? 18 : 112 + this.safeAreaBottom;
+  }
+
+  private actionBarHeight(): number {
+    return 62 + this.safeAreaBottom;
+  }
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -68,9 +89,10 @@ export struct LibraryShell {
           top: 8,
           left: SpacingTokens.safeAreaHorizontal + 3,
           right: SpacingTokens.safeAreaHorizontal + 3,
-          bottom: 112 + this.safeAreaBottom,
+          bottom: this.scrollBottomPadding(),
         })
         .backgroundColor(ColorTokens.paper)
+        this.renderBottomActionBar()
       }
       .width('100%')
       .height('100%')
@@ -78,8 +100,6 @@ export struct LibraryShell {
       .expandSafeArea([SafeAreaType.SYSTEM, SafeAreaType.CUTOUT],
         [SafeAreaEdge.TOP, SafeAreaEdge.START, SafeAreaEdge.END])
       .zIndex(ZIndexTokens.content)
-
-      this.renderBottomActionHost()
 
       OverlayHost()
         .zIndex(ZIndexTokens.dialog)
@@ -93,47 +113,47 @@ export struct LibraryShell {
       [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END])
   }
 
-  @Builder renderBottomActionHost() {
+  @Builder renderBottomActionBar() {
     if (this.routeId === 'book-batch-management') {
-      Column() {
-        Blank()
+      Row({ space: 10 }) {
+        LibraryFixedActionButton({ label: '移动分组', variant: 'secondary' })
           .layoutWeight(1)
-        Row({ space: 10 }) {
-          LibraryFixedActionButton({ label: '移动分组', variant: 'secondary' })
-            .layoutWeight(1)
-            .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'group-management' }))
-          LibraryFixedActionButton({ label: '删除所选', variant: 'danger' })
-            .layoutWeight(1)
-        }
-        .width('100%')
-        .padding({ left: SpacingTokens.safeAreaHorizontal + 3, right: SpacingTokens.safeAreaHorizontal + 3, top: 10, bottom: this.safeAreaBottom + 10 })
-        .backgroundColor(DemoAliasTokens.surface)
-        .border({ width: { top: 1 }, color: ColorTokens.border })
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'group-management' }))
+        LibraryFixedActionButton({ label: '删除所选', variant: 'danger' })
+          .layoutWeight(1)
       }
       .width('100%')
-      .height('100%')
+      .height(this.actionBarHeight())
+      .padding({ left: SpacingTokens.safeAreaHorizontal + 3, right: SpacingTokens.safeAreaHorizontal + 3, top: 10, bottom: this.safeAreaBottom + 10 })
+      .backgroundColor(DemoAliasTokens.surface)
+      .border({ width: { top: 1 }, color: ColorTokens.border })
       .zIndex(ZIndexTokens.bottomSheet)
-      .hitTestBehavior(HitTestMode.Transparent)
     } else if (this.routeId === 'group-management') {
-      Column() {
-        Blank()
+      Row({ space: 10 }) {
+        LibraryFixedActionButton({ label: '新建分组', variant: 'secondary' })
           .layoutWeight(1)
-        Row({ space: 10 }) {
-          LibraryFixedActionButton({ label: '新建分组', variant: 'secondary' })
-            .layoutWeight(1)
-          LibraryFixedActionButton({ label: '完成' })
-            .layoutWeight(1)
-            .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
-        }
-        .width('100%')
-        .padding({ left: SpacingTokens.safeAreaHorizontal + 3, right: SpacingTokens.safeAreaHorizontal + 3, top: 10, bottom: this.safeAreaBottom + 10 })
-        .backgroundColor(DemoAliasTokens.surface)
-        .border({ width: { top: 1 }, color: ColorTokens.border })
+        LibraryFixedActionButton({ label: '完成' })
+          .layoutWeight(1)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
       }
       .width('100%')
-      .height('100%')
+      .height(this.actionBarHeight())
+      .padding({ left: SpacingTokens.safeAreaHorizontal + 3, right: SpacingTokens.safeAreaHorizontal + 3, top: 10, bottom: this.safeAreaBottom + 10 })
+      .backgroundColor(DemoAliasTokens.surface)
+      .border({ width: { top: 1 }, color: ColorTokens.border })
       .zIndex(ZIndexTokens.bottomSheet)
-      .hitTestBehavior(HitTestMode.Transparent)
+    } else if (this.routeId === 'book-detail' || this.routeId === 'book-detail-toc-preview') {
+      Row({ space: 10 }) {
+        LibraryFixedActionButton({ label: '继续阅读' })
+          .layoutWeight(1)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' }))
+        LibraryFixedActionButton({ label: '移除书架', variant: 'dangerSoft' })
+          .layoutWeight(1)
+      }
+      .width('100%')
+      .height(this.actionBarHeight())
+      .padding({ left: SpacingTokens.safeAreaHorizontal + 3, right: SpacingTokens.safeAreaHorizontal + 3, top: 10, bottom: this.safeAreaBottom + 10 })
+      .zIndex(ZIndexTokens.bottomSheet)
     }
   }
 }

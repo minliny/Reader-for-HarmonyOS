@@ -49,10 +49,9 @@ test('TokenRegistry coverage count matches fixture count', () => {
 test('ColorTokens contains all colors as ARGB', () => {
   const src = read(path.join(GEN, 'ColorTokens.ets'));
   const colors = TOKENS.filter((t) => t.category === 'color');
-  assert.equal(colors.length, 21, `expected 21 color tokens, got ${colors.length}`);
   // Every color token value resolves to an #AARRGGBB (8 hex) entry.
   const argbCount = (src.match(/#[0-9A-F]{8}/g) || []).length;
-  assert.ok(argbCount >= 21, `expected ≥21 ARGB colors, got ${argbCount}`);
+  assert.ok(argbCount >= colors.length, `expected ≥${colors.length} ARGB colors, got ${argbCount}`);
 });
 test('color.json has all color tokens + start_window_background', () => {
   const j = JSON.parse(read(path.join(REPO, 'entry/src/main/resources/base/element/color.json')));
@@ -149,6 +148,10 @@ test('shell top bars read title from ViewStateTable and displayed route', () => 
   const src = read(path.join(REPO, 'entry/src/main/ets/ui/components/SharedComponents.ets'));
   assert.ok(src.includes("ViewStateTable.componentsFor(routeId, pageState)"));
   assert.ok(src.includes("@StorageProp('reader.displayedRouteId') routeId"));
+  assert.ok(src.includes("topBarTitle(this.routeId, this.pageState, 'BackTopBar',"),
+    'BackTopBar must read route titles from generated ViewState');
+  assert.ok(src.includes("topBarTitle(this.routeId, this.pageState, 'AppTopBar', '')"),
+    'BackTopBar must fall back to AppTopBar fixture titles used by LibraryShell routes');
   assert.ok(!src.includes('function routeTitle('), 'AppTopBar must not use a stale hand-written routeTitle switch');
   assert.ok(!src.includes('function secondaryRouteTitle('), 'BackTopBar must not use a stale hand-written secondaryRouteTitle switch');
 });
@@ -194,29 +197,96 @@ test('reader control chrome follows live demo order and labels', () => {
     'control sheet must keep the live demo brightness rail in-sheet');
 });
 
-test('reader overlay panels keep normalized handoff visible copy', () => {
+test('reader overlay panels keep live demo quick-panel and overlay copy', () => {
   const src = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderOverlayComponents.ets'));
   for (const text of [
-    '第一本 / 第一卷 /',
-    '书签：深空信号',
-    '当前阅读章节：第一章：阿长与《山海经》',
-    '字体', '默认', '字距', '标准', '繁简', '简体',
-    '缩进', '2 字符', '翻页动画', '覆盖', '主题', '米色纸张',
-    '当前章节：第一章：阿长与《山海经》',
-    '定时关闭', '不开启', '朗读音色', '温和女声',
-    '未知频段的跳动波形',
-    '不是随机的脉冲星信号',
+    'ReaderModulePanelShell',
+    'ReaderModulePanel',
+    'BrightnessRail',
+    '第 30 章 旧日',
+    '第 31 章 归途',
+    '第 32 章 雨夜',
+    '第 33 章 灯塔',
+    '已缓存',
+    '书签',
+    '阅读主题',
+    '文字排版',
+    '字号',
+    '行距',
+    '系统',
+    '宋体',
+    '黑体',
+    '播放控制',
+    '语速',
+    '1.0x',
+    '音色',
+    '清晰女声',
+    '范围',
+    '当前章节',
+    '定时',
+    '15 分钟',
+    '点击翻页方式',
+    '左右区域',
+    '音量键翻页',
+    '翻页动画',
+    '平滑',
+    '横屏锁定',
+    '屏幕常亮',
+    '页脚进度信息',
+    '触摸反馈',
+    '自动缓存后续章节',
+    'ReaderQuickPanelShell',
+    'ReaderQuickPanel',
+    '第 32 章 雨夜',
+    '雨夜的风格外冷 · 当前结果 1/2',
+    '第 33 章 灯塔',
+    '雨夜之后，远处灯塔亮起 · 结果 2/2',
+    '雨容称呼',
+    '旧称统一',
+    '标点清理',
+    '广告过滤',
+    '停止自动翻页',
+    '上一章',
+    '自动翻页',
+    '下一章',
+    '翻页速度',
+    '8 秒',
+    '连续',
+    '单页',
+  ]) {
+    assert.ok(src.includes(text), `ReaderOverlayComponents missing live demo overlay text: ${text}`);
+  }
+  for (const oldText of [
     '当前书籍：深空信号',
     '仅显示当前书籍匹配到的替换规则',
     '净化广告段落',
     '合并异常断行',
     '修正常见乱码',
+    '状态：未开启',
+    "ReaderActionButton({ label: '开始'",
+    '中速 · 适合连续阅读',
+    "SegmentedControl({ options: ['滚动', '点击翻页', '连续滚动'] })",
     '开启后将在本章内按当前速度推进，不影响下方页内控制条。',
+    '第一本 / 第一卷 /',
+    '第一章：阿长与《山海经》',
+    '当前阅读章节：第一章：阿长与《山海经》',
+    '字体',
+    '繁简',
+    '屏幕方向',
+    '屏幕超时',
+    '单双页',
+    '隐藏状态栏',
+    '文字两端对齐',
+    '文字底部对齐',
+    '单手翻页',
+    '朗读参数',
+    '朗读音色',
+    '温和女声',
   ]) {
-    assert.ok(src.includes(text), `ReaderOverlayComponents missing handoff text: ${text}`);
+    assert.equal(src.includes(oldText), false, `ReaderOverlayComponents must not keep obsolete quick-panel copy: ${oldText}`);
   }
   assert.ok(!src.includes("ReaderListRow({ title: '三体'"), 'replace overlay must not show the wrong demo book title');
-  assert.ok(!src.includes("ReaderSettingRow({ name: '替换\\\"信号\\\"为\\\"信号源\\\"'"), 'replace overlay must use handoff rule names');
+  assert.ok(!src.includes("ReaderSettingRow({ name: '替换\\\"信号\\\"为\\\"信号源\\\"'"), 'replace overlay must use live demo rule names');
 });
 
 test('reader control layer uses live demo top overlay and reading copy', () => {
@@ -225,33 +295,179 @@ test('reader control layer uses live demo top overlay and reading copy', () => {
   assert.ok(reader.includes("Text('长夜余火')"), 'reader top area must show the live demo book title');
   assert.ok(reader.includes("Text('第 32 章 雨夜 · 优书网')"), 'reader top area must expose the live demo source line');
   assert.ok(reader.includes("Text('换源')"), 'reader top area must expose the live demo source-switch action');
+  assert.ok(reader.includes("id: 'source-switch'"), 'reader top source switch must push the live demo source-switch route');
   assert.ok(reader.includes("return '雨夜'"), 'reading surface must show the live demo chapter title');
   assert.ok(reader.includes('雨声在窗外连成一片'), 'reading surface must use live demo reader text');
   assert.ok(reader.includes('.borderRadius(DemoAliasTokens.radiusXl)'), 'reader top area must be one floating rounded live-demo bar');
-  assert.ok(reader.includes('.textAlign(this.controlLayer() ? TextAlign.Start : TextAlign.Center)'),
-    'control-layer title must use live demo left-aligned content layout');
-  assert.ok(reader.includes('.textIndent(this.controlLayer() ? 0 : 2 * 18)'),
-    'control-layer paragraphs must not keep immersive reader first-line indent');
-  assert.ok(reader.includes('top: this.controlLayer() ? this.safeAreaTop + 90 : 72'),
-    'control-layer body must leave space for the live demo top overlay');
-  assert.ok(reader.includes('bottom: this.controlLayer() ? 230 + this.safeAreaBottom : 48 + this.safeAreaBottom'),
-    'control-layer body must reserve space for the live demo control sheet');
+  assert.ok(reader.includes('.textAlign(TextAlign.Center)'),
+    'reader title must stay centered like live demo');
+  const textFlowStart = reader.indexOf('export struct ReadingTextFlow');
+  const textFlowEnd = reader.indexOf('// .fd-ir-info-layer');
+  const textFlow = reader.slice(textFlowStart, textFlowEnd);
+  for (const storageKey of [
+    "@StorageProp('reader.typography.fontSize') fontSize",
+    "@StorageProp('reader.typography.lineHeight') lineHeightRatio",
+    "@StorageProp('reader.typography.paragraphGap') paragraphGap",
+    "@StorageProp('reader.typography.letterSpacing') letterSpacing",
+    "@StorageProp('reader.typography.fontFamily') fontFamily",
+    "@StorageProp('reader.pageSpace.topMargin') topMargin",
+    "@StorageProp('reader.pageSpace.sideMargin') sideMargin",
+    "@StorageProp('reader.pageSpace.bottomMargin') bottomMargin",
+    "@StorageProp('reader.pageSpace.paragraphIndent') paragraphIndent",
+  ]) {
+    assert.ok(reader.includes(storageKey), `reading surface must subscribe to ${storageKey}`);
+  }
+  assert.ok(reader.includes('.fontSize(this.fontSize)'),
+    'reader paragraphs must use the configured reader font size');
+  assert.ok(reader.includes('.lineHeight(this.paragraphLineHeight())'),
+    'reader paragraphs must use the configured reader line height');
+  assert.ok(reader.includes('.letterSpacing(this.letterSpacing)'),
+    'reader paragraphs must use the configured reader letter spacing');
+  assert.ok(reader.includes('.textIndent(this.paragraphIndentValue())'),
+    'reader paragraphs must use the configured first-line indent');
+  assert.ok(reader.includes('.margin({ bottom: this.paragraphGap })'),
+    'reader paragraphs must use the configured paragraph gap');
+  for (const staleLiteral of [
+    '.fontSize(18)',
+    '.lineHeight(18 * 1.96)',
+    '.textIndent(2 * 18)',
+    '.margin({ bottom: 16 })',
+  ]) {
+    assert.ok(!textFlow.includes(staleLiteral), `reading surface must not hard-code ${staleLiteral}`);
+  }
+  assert.ok(reader.includes('private textureLines(): number[]'),
+    'reader background must render the live demo paper texture line layer');
+  assert.ok(reader.includes('.linearGradient({'),
+    'reader background must keep the live demo paper start/end gradient');
+  assert.ok(reader.includes('.position({ x: 0, y: line * 7 })'),
+    'reader texture must keep the live demo 7vp repeating line cadence');
+  assert.ok(!textFlow.includes('.backgroundColor(this.theme ==='),
+    'reading text layer must not cover the dedicated paper texture background');
+  assert.ok(reader.includes("import { ViewportAdapter } from '../adapters/ViewportAdapter'"),
+    'reader control geometry must branch from runtime viewport metrics');
+  assert.ok(reader.includes("import { InteractionDebugAdapter } from '../adapters/InteractionDebugAdapter'"),
+    'reader invisible interaction modules must be visible in development mode');
+  assert.ok(reader.includes("@StorageProp('reader.paginationMode') paginationMode"),
+    'reader body must expose a rendering mode so horizontal and vertical reading are separate layouts');
+  assert.ok(reader.includes('private horizontalPages(): string[][]'),
+    'horizontal page-turn mode must render page-sized bodies instead of one vertical flow');
+  assert.ok(reader.includes('private estimatedParagraphHeight(text: string): number'),
+    'horizontal reader mode must estimate page capacity from text metrics and frame size');
+  assert.ok(reader.includes('this.textLayerHeight()'),
+    'horizontal reader mode must use the configured text frame height when paginating');
+  assert.ok(!textFlow.includes('const pageSize = 2'),
+    'horizontal reader mode must not use the old fixed two-paragraph pages');
+  assert.ok(reader.includes('private verticalReading(): boolean'),
+    'vertical reading mode must keep a dedicated scroll-flow branch');
+  assert.ok(reader.includes('.scrollable(ScrollDirection.Horizontal)'),
+    'horizontal reader mode must use a horizontal scroll/page surface');
+  assert.ok(reader.includes('top: this.textTopInset()'),
+    'reader text top inset must be route-stable instead of control-layer-specific');
+  assert.ok(reader.includes('left: this.textLeftInset()'),
+    'reader text left inset must be route-stable instead of control-layer-specific');
+  assert.ok(reader.includes('right: this.textRightInset()'),
+    'reader text right inset may only branch for wide reader dock coverage');
+  assert.ok(reader.includes('bottom: this.textBottomInset()'),
+    'reader text bottom inset must not reserve bottom sheet space');
+  assert.ok(!reader.includes('controlParagraphs'),
+    'control layer must not render a separate body copy');
+  assert.ok(!reader.includes('if (this.controlLayer()) {\n      return this.controlParagraphs;\n    }'),
+    'control layer must overlay the same chapter body instead of swapping paragraphs');
   assert.ok(!reader.includes("Text('深空信号')"), 'control layer must not use the obsolete handoff book title');
   assert.ok(!reader.includes("Text('第一章：阿长与《山海经》')"), 'control layer must not use the obsolete handoff chapter row');
   assert.ok(!reader.includes("Text('本地书籍')"), 'control layer must not use the obsolete handoff source chip');
   assert.ok(!reader.includes('ColorTokens.metaBg'), 'control layer must not keep the obsolete second meta row');
-  assert.ok(reader.includes("return this.routeId !== 'reader'"), 'ReaderBase must branch between immersive reader and control-layer chrome');
-  assert.ok(reader.includes('ReaderTopArea()'), 'control-layer branch must render ReaderTopArea');
-  assert.ok(reader.includes('ReadingInfoLayer({ theme: this.theme })'), 'plain reader branch keeps immersive corner info');
+  assert.ok(reader.includes("return this.routeId !== 'immersive-reading' && this.routeId !== 'reader_content'"),
+    'ReaderBase must treat reader as control and only immersive routes as immersive');
+  assert.ok(reader.includes('ControlDismissZone()'), 'control-layer branch must render the live demo control dismiss zone');
+  assert.ok(reader.includes('ReadingInfoLayer({ theme: this.theme })'), 'immersive reader branch keeps corner info');
+  assert.ok(reader.includes("route-push', id: 'reader'"),
+    'center tap hot zone must open the live demo reader control route');
+  assert.ok(reader.includes('@StorageProp(InteractionDebugAdapter.K_VISIBLE)'),
+    'immersive tap zones must support development-mode visualization');
+  assert.ok(reader.includes("this.zoneLabel('ControlLayerHotzone')"),
+    'development mode must label the center reader control hot zone with the live demo data-dev-region name');
+  assert.ok(!reader.includes('.hitTestBehavior(HitTestMode.Block)'),
+    'TapZones parent must not block child hot-zone clicks');
+  assert.ok(reader.includes('.zIndex(ZIndexTokens.dialog)'),
+    'immersive tap zones must sit above the reading text layer');
+  const entryAbility = read(path.join(REPO, 'entry/src/main/ets/entryability/EntryAbility.ets'));
+  assert.ok(entryAbility.includes('InteractionDebugAdapter.K_VISIBLE'),
+    'EntryAbility must seed the development interaction visualization flag');
+  assert.ok(entryAbility.includes("params['interactionDebug'] !== 'false'"),
+    'development interaction visualization must be launch-parameter controllable');
+  assert.ok(entryAbility.includes('InteractionDebugAdapter.K_INITIAL_ROUTE'),
+    'development mode must support initialRoute for direct VM visual checks');
+  assert.ok(entryAbility.includes("ReaderUiStore.dispatch({ type: 'route-replace', id: initialRoute as RouteId })"),
+    'initialRoute must enter the normal reducer route pipeline');
+  assert.ok(entryAbility.includes("AppStorage.setOrCreate<string>('reader.displayedRouteId', initialRoute)"),
+    'initialRoute must seed the motion-delayed displayed route before first render');
   const baseStart = reader.indexOf('export struct ReaderBase');
   const base = reader.slice(baseStart);
-  assert.ok(base.indexOf('ReaderTopArea()') < base.indexOf('ReadingInfoLayer({ theme: this.theme })'),
-    'ReaderBase should prefer top-area chrome for control routes, then fall back to immersive info for plain reader');
+  assert.ok(!base.includes('ReaderTopArea()'),
+    'ReaderBase must not own ReaderTopArea; live demo renders it from readerOverlayHost as a sibling overlay');
+});
+
+test('reader text render settings are reducer-backed, not static panel copy', () => {
+  const state = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderUiState.ets'));
+  const reducer = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderReducer.ets'));
+  const store = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderUiStore.ets'));
+  const overlay = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderOverlayComponents.ets'));
+  for (const field of [
+    'fontSize: number',
+    'lineHeight: number',
+    'paragraphGap: number',
+    'letterSpacing: number',
+    'fontFamily: ReaderFontFamily',
+    'topMargin: number',
+    'sideMargin: number',
+    'bottomMargin: number',
+    'paragraphIndent: number',
+  ]) {
+    assert.ok(state.includes(field), `ReaderUiState missing render field ${field}`);
+  }
+  for (const eventType of [
+    "'step-reader-render-metric'",
+    "'set-reader-render-metric'",
+    "'set-reader-font-family'",
+    "'reset-reader-render-settings'",
+  ]) {
+    assert.ok(reducer.includes(eventType), `ReaderReducer missing event ${eventType}`);
+  }
+  for (const key of [
+    "K_FONT_SIZE: string = 'reader.typography.fontSize'",
+    "K_LINE_HEIGHT: string = 'reader.typography.lineHeight'",
+    "K_PARAGRAPH_GAP: string = 'reader.typography.paragraphGap'",
+    "K_LETTER_SPACING: string = 'reader.typography.letterSpacing'",
+    "K_FONT_FAMILY: string = 'reader.typography.fontFamily'",
+    "K_TOP_MARGIN: string = 'reader.pageSpace.topMargin'",
+    "K_SIDE_MARGIN: string = 'reader.pageSpace.sideMargin'",
+    "K_BOTTOM_MARGIN: string = 'reader.pageSpace.bottomMargin'",
+    "K_PARAGRAPH_INDENT: string = 'reader.pageSpace.paragraphIndent'",
+  ]) {
+    assert.ok(store.includes(key), `ReaderUiStore missing AppStorage key ${key}`);
+  }
+  assert.ok(overlay.includes("ReaderUiStore.dispatch({ type: 'step-reader-render-metric'"),
+    'appearance steppers must dispatch render metric changes');
+  assert.ok(overlay.includes("ReaderUiStore.dispatch({ type: 'set-reader-font-family'"),
+    'font choices must dispatch font-family changes');
+  for (const staticCopy of [
+    "ReaderLiveStepperRow({ label: '字号', value: '18' })",
+    "ReaderLiveStepperRow({ label: '行距', value: '1.96'",
+    "ReaderFullStepperRow({ label: '字号', value: '18' })",
+    "ReaderFullStepperRow({ label: '行距', value: '1.96' })",
+    "ReaderFullStepperRow({ label: '段距', value: '16' })",
+    "ReaderFullStepperRow({ label: '侧边距', value: '32' })",
+    "ReaderFullStepperRow({ label: '段首缩进', value: '2em' })",
+  ]) {
+    assert.ok(!overlay.includes(staticCopy), `appearance panels must not keep static copy ${staticCopy}`);
+  }
 });
 
 test('reader control route fixture uses live demo control sheet, not obsolete floating controls', () => {
   const VS = readJson('view-state.fixtures.json');
   const src = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderOverlayComponents.ets'));
+  const readerSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderComponents.ets'));
   const byRoute = (routeId) => {
     const entry = VS.find((e) => e.routeId === routeId && e.pageState === 'default');
     assert.ok(entry, `${routeId}/default fixture missing`);
@@ -259,8 +475,8 @@ test('reader control route fixture uses live demo control sheet, not obsolete fl
   };
   assert.deepEqual(
     byRoute('control-layer-base-v2'),
-    ['ReaderBase', 'ReaderControlSheet', 'ReaderBottomBar'],
-    'control-layer-base-v2 must mirror live demo sheet + bottom bar structure'
+    ['ReaderBase', 'ReaderTopArea', 'ReaderControlSheet', 'ReaderBottomBar'],
+    'control-layer-base-v2 must mirror live demo reader surface + top overlay + sheet + bottom bar structure'
   );
   assert.ok(src.includes('export struct ReaderControlSheet'), 'control layer must render the live demo bottom sheet component');
   assert.equal(src.includes('export struct FloatingBrightness'), false, 'obsolete detached brightness component must be removed');
@@ -268,16 +484,266 @@ test('reader control route fixture uses live demo control sheet, not obsolete fl
   assert.equal(src.includes('export struct FloatingPageControl'), false, 'obsolete detached page control component must be removed');
   assert.ok(src.includes("Image($r('app.media.reader_icon_sun_primary')).width(18).height(18)"),
     'control sheet must keep the live demo brightness rail inside the sheet');
-  assert.ok(src.includes('.borderRadius(22)'), 'control sheet must keep the live demo fd-reader-sheet radius');
-  assert.ok(src.includes('.margin({ right: this.dockRight, bottom: this.sheetBottom() })'),
-    'control sheet must use the live demo dock bottom anchor');
-  assert.ok(src.includes('.height(SizeTokens.bottomBarHeight + this.safeAreaBottom)'), 'bottom bar must be full-width 68vp plus safe area');
+  assert.ok(src.includes('private readonly dockWidth: number = 340'), 'control dock must use the live demo 340vp width');
+  assert.ok(src.includes('private readonly wideSheetHeight: number = 252'), 'control sheet must use the live demo tablet-expanded sheet height');
+  assert.ok(src.includes('private readonly mobileSheetHeight: number = 330'), 'control sheet must use the live demo mobile sheet height');
+  assert.ok(src.includes('private readonly mobileSheetBottom: number = 18'), 'mobile reader sheet must keep the live demo 18vp bottom gap');
+  assert.ok(src.includes('private readonly navHeight: number = 79'), 'module nav must use the live demo dock nav height');
+  assert.ok(src.includes('private readonly wideControlBottom: number = 32'), 'wide control sheet must use the live demo control-mode bottom inset');
+  assert.ok(src.includes('private readonly mobileControlBottom: number = 110'), 'mobile control sheet must reserve the live demo nav area');
+  assert.ok(src.includes('return this.wideControlDock() ? this.dockWidth : Math.max(0, this.viewportWidth - this.mobileSheetInset * 2)'),
+    'control sheet must be 340vp on wide viewports and left/right 12 on mobile');
+  assert.ok(src.includes('bottomLeft: this.wideControlDock() ? 0 : DemoAliasTokens.radiusXl'),
+    'control sheet must attach to nav only on wide viewports');
+  assert.ok(src.includes('.margin({ right: this.sheetRight(), bottom: this.sheetBottom() })'),
+    'control sheet must use responsive live demo bottom anchors');
+  assert.ok(src.includes('topLeft: this.wideControlDock() ? 0 : DemoAliasTokens.radiusLg'),
+    'module nav must attach to sheet only on wide viewports');
+  assert.ok(src.includes('private navBottomValue(): number'),
+    'module nav must branch its bottom anchor by viewport');
+  assert.ok(src.includes('.margin({ right: this.dockRight, bottom: this.navBottomValue() })'),
+    'module nav must use the live demo mobile/wide bottom anchor');
+  assert.ok(src.includes('.zIndex(ZIndexTokens.readerModuleNav)'), 'module nav must render above reader sheets/panels');
+  assert.ok(src.includes('.zIndex(ZIndexTokens.bottomSheet)'), 'reader sheets/panels must use the bottom-sheet layer');
+  assert.ok((src.match(/\.hitTestBehavior\(HitTestMode\.Transparent\)/g) || []).length >= 3,
+    'full-screen reader sheet/nav wrappers must not block each other in hit testing');
+  const controlPredicate = "this.routeId !== 'immersive-reading' && this.routeId !== 'reader_content'";
+  assert.ok(readerSrc.indexOf(controlPredicate) !== readerSrc.lastIndexOf(controlPredicate),
+    'ReadingTextFlow and ReaderBase must use the same immersive-vs-control route predicate');
+  assert.ok(!src.includes('SizeTokens.bottomBarHeight + this.safeAreaBottom'), 'module nav must not regress to the obsolete full-width bottom bar');
+  assert.ok(src.includes('private panelHeightValue(): number'), 'reader overlay panels must derive height from live demo viewport rules');
+  assert.ok(src.includes('return this.wideControlDock() ? 252 : this.mobileSheetHeight'),
+    'reader overlay panels must be 252vp on wide viewports and 330vp on mobile');
+  assert.ok(src.includes('private panelBottomReserve(): number'), 'reader overlay panels must reserve the module nav area');
+  assert.ok(src.includes('.height(this.panelContentHeight())'), 'reader overlay panel content must not render under module nav');
+  assert.ok(!src.includes('ReaderOverlayPanel({ panelHeight'), 'reader overlay panels must not keep obsolete handoff heights');
   for (const routeId of ['control-layer-base-v2', 'reader-search-overlay-v2', 'reader-replace-overlay-v2', 'reader-auto-scroll-overlay-v2']) {
     const types = byRoute(routeId);
     assert.equal(types.includes('FloatingBrightness'), false, `${routeId} must not render detached brightness controls`);
     assert.equal(types.includes('FloatingQuickActions'), false, `${routeId} must not render detached quick actions`);
     assert.equal(types.includes('FloatingPageControl'), false, `${routeId} must not render detached page controls`);
   }
+});
+
+test('reader overlay routes render panel before module nav', () => {
+  const VS = readJson('view-state.fixtures.json');
+  const expected = new Map([
+    ['reader-directory-overlay-v2', 'ReaderDirectoryPanel'],
+    ['reader-appearance-overlay-v2', 'ReaderAppearancePanel'],
+    ['reader-tts-overlay-v2', 'ReaderTtsPanel'],
+    ['reader-settings-overlay-v2', 'ReaderSettingsPanel'],
+    ['reader-search-overlay-v2', 'ReaderSearchPanel'],
+    ['reader-replace-overlay-v2', 'ReaderReplacePanel'],
+    ['reader-auto-scroll-overlay-v2', 'ReaderAutoScrollPanel'],
+  ]);
+
+  for (const [routeId, panelType] of expected) {
+    const entry = VS.find((e) => e.routeId === routeId && e.pageState === 'default');
+    assert.ok(entry, `${routeId}/default fixture missing`);
+    assert.deepEqual(entry.components.map((c) => c.type),
+      ['ReaderBase', 'ReaderTopArea', panelType, 'ReaderBottomBar'],
+      `${routeId} must render bottomSheetHost panel before readerModuleNav so ArkUI wrappers do not cover the nav`);
+  }
+});
+
+test('reader full and utility routes use live demo expanded panels', () => {
+  const VS = readJson('view-state.fixtures.json');
+  const tableSrc = read(path.join(GEN, 'ViewStateTable.ets'));
+  const rendererSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/ViewStateRenderer.ets'));
+  const overlaySrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderOverlayComponents.ets'));
+  const expected = new Map([
+    ['reader-full-directory', 'ReaderFullDirectoryPage'],
+    ['reader-full-tts', 'ReaderFullTtsPage'],
+    ['reader-full-appearance', 'ReaderFullAppearancePage'],
+    ['reader-full-font', 'ReaderFullAppearancePage'],
+    ['reader-full-theme', 'ReaderFullAppearancePage'],
+    ['reader-full-theme-edit', 'ReaderFullAppearancePage'],
+    ['reader-full-layout', 'ReaderFullAppearancePage'],
+    ['reader-full-settings', 'ReaderFullSettingsPage'],
+    ['reader-full-page-turn', 'ReaderFullSettingsPage'],
+    ['reader-book-cache', 'ReaderBookCachePage'],
+    ['reader-debug-info', 'ReaderDebugInfoPage'],
+  ]);
+
+  for (const [routeId, componentType] of expected) {
+    const entry = VS.find((e) => e.routeId === routeId && e.pageState === 'default');
+    assert.ok(entry, `${routeId}/default fixture missing`);
+    assert.deepEqual(entry.components.map((c) => c.type), ['ReaderBase', 'ReaderTopArea', componentType],
+      `${routeId} must render ReaderBase + ReaderTopArea + ${componentType}`);
+    assert.equal(entry.components.some((c) => c.type === 'ReaderBottomBar'), false,
+      `${routeId} must not render ReaderBottomBar`);
+    for (const staleType of ['ReaderDirectoryPanel', 'ReaderAppearancePanel', 'ReaderTtsPanel', 'ReaderSettingsPanel']) {
+      assert.equal(entry.components.some((c) => c.type === staleType), false,
+        `${routeId} must not fall back to module panel ${staleType}`);
+    }
+    assert.ok(tableSrc.includes(`"routeId": "${routeId}"`), `ViewStateTable missing ${routeId}`);
+    assert.ok(tableSrc.includes(`"type": "${componentType}"`), `ViewStateTable missing ${componentType}`);
+  }
+
+  for (const componentType of new Set(expected.values())) {
+    assert.ok(rendererSrc.includes(`component.type === '${componentType}'`),
+      `ViewStateRenderer missing mapping for ${componentType}`);
+  }
+  for (const marker of [
+    'export struct ReaderFullDirectoryPage',
+    'export struct ReaderFullTtsPage',
+    'export struct ReaderFullAppearancePage',
+    'export struct ReaderFullSettingsPage',
+    'export struct ReaderBookCachePage',
+    'export struct ReaderDebugInfoPage',
+    'ReaderFullPanelShell',
+    'ReaderExpandedPanel',
+    'ReaderUtilityPage',
+    '阅读主题',
+    '文字排版',
+    '字距',
+    '页面空间',
+    '段首缩进',
+    '播放控制',
+    '语速',
+    '音色',
+    '朗读范围',
+    '定时关闭',
+    '本书剩余',
+    '书籍缓存',
+    '已缓存章节',
+    '缓存后续章节',
+    '清理本书缓存',
+    '调试信息',
+    '渲染状态',
+    '调试日志',
+    '重新测量分页',
+  ]) {
+    assert.ok(overlaySrc.includes(marker), `ReaderOverlayComponents missing full/utility marker ${marker}`);
+  }
+});
+
+test('development interaction visualization covers reader control modules', () => {
+  const debugSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/InteractionDebugComponents.ets'));
+  const rendererSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/ViewStateRenderer.ets'));
+  const readerSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderComponents.ets'));
+  const overlaySrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderOverlayComponents.ets'));
+  const sourceSwitchSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/SourceSwitchFlowComponents.ets'));
+  const entryAbility = read(path.join(REPO, 'entry/src/main/ets/entryability/EntryAbility.ets'));
+
+  assert.ok(debugSrc.includes('export struct InteractionDebugFrame'),
+    'development mode needs a shared visual frame component');
+  assert.ok(debugSrc.includes('InteractionDebugAdapter.K_VISIBLE'),
+    'debug frames must all read the same launch-controlled visibility flag');
+  assert.ok(debugSrc.includes('.enabled(false)'),
+    'debug overlays must never consume focus/click behavior');
+  assert.ok(debugSrc.includes('.hitTestBehavior(HitTestMode.None)'),
+    'debug overlays must not block underlying interaction modules');
+  assert.ok(debugSrc.includes('export struct InteractionDebugBadge'),
+    'development mode must label generated contract components without changing layout');
+  assert.ok(rendererSrc.includes('InteractionDebugBadge'),
+    'ViewStateRenderer must show generated component ownership in development mode');
+  assert.ok(rendererSrc.includes('renderDebuggedComponent(component, true)'),
+    'stack/reader routes must render development labels over full-frame components');
+  assert.ok(rendererSrc.includes('renderDebuggedComponent(component, false)'),
+    'scroll/page routes must render development labels for body components');
+  assert.ok(rendererSrc.includes('this.renderDebuggedComponent(child, false)'),
+    'nested contract components must keep development labels too');
+  assert.ok(entryAbility.includes("params['interactionDebug'] !== 'false'"),
+    'development mode should be on by default and disableable with interactionDebug=false');
+  assert.ok(entryAbility.includes('onNewWant(want: Want'),
+    'development mode must re-read launch params on hot aa start / VM route switching');
+  assert.ok(entryAbility.includes('applyDevelopmentLaunchParameters(want)'),
+    'development launch parameter parsing should be shared by cold and hot starts');
+  assert.ok(entryAbility.includes('InteractionDebugAdapter.K_INITIAL_ROUTE'),
+    'development mode needs initialRoute for direct overlay/full-page screenshots');
+  assert.ok(entryAbility.includes("params['readerPaginationMode']"),
+    'development mode must allow direct horizontal/vertical reader body screenshots');
+  for (const marker of [
+    'ReadingBackground',
+    'ReadingTextLayer',
+    'ControlDismissZone',
+    'ImmersiveInfoLayer',
+    'ReaderTopBar',
+    'PrevPageHotzone',
+    'ControlLayerHotzone',
+    'NextPageHotzone',
+  ]) {
+    assert.ok(readerSrc.includes(marker), `reader base missing development marker ${marker}`);
+  }
+  for (const marker of [
+    "label: 'back'",
+    "label: 'source'",
+    "label: 'more'",
+  ]) {
+    assert.ok(readerSrc.includes(marker), `reader top bar missing interaction debug marker ${marker}`);
+  }
+  for (const marker of [
+    'BottomControlPanel',
+    'BrightnessRail',
+    'bottomSheetHost',
+    'ReaderQuickPanel',
+    'ReaderModulePanel',
+    'ReaderExpandedPanel',
+    'ReaderUtilityPage',
+    'readerModuleNav',
+  ]) {
+    assert.ok(overlaySrc.includes(marker), `reader overlay/control layer missing development marker ${marker}`);
+  }
+  for (const marker of [
+    "label: 'button'",
+    "label: 'seg'",
+    "label: 'toggle'",
+    "return 'search'",
+    "return 'auto'",
+    "return 'replace'",
+    "label: 'P'",
+    "label: 'N'",
+    "label: 'progress'",
+    "label: 'B'",
+    "return 'dir'",
+    "return 'ui'",
+    "label: 'close'",
+    "label: 'result'",
+  ]) {
+    assert.ok(overlaySrc.includes(marker), `reader overlay/control layer missing interaction debug marker ${marker}`);
+  }
+  for (const marker of [
+    'SOURCE_SWITCH_WINDOW',
+    'SOURCE_ROW',
+    'CLOSE',
+  ]) {
+    assert.ok(sourceSwitchSrc.includes(marker), `source-switch flow missing development marker ${marker}`);
+  }
+});
+
+test('source-switch routes keep the live demo reader-plane inline window', () => {
+  const VS = readJson('view-state.fixtures.json');
+  const componentSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/SourceSwitchFlowComponents.ets'));
+  const rendererSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/ViewStateRenderer.ets'));
+  const runtime = read(LIVE_DEMO_RUNTIME);
+  for (const marker of ['fd-source-reader-continuation', 'fd-source-window-slot', 'fd-source-switch-window', 'fd-source-candidate-row']) {
+    assert.ok(runtime.includes(marker), `live demo runtime missing source-switch marker ${marker}`);
+  }
+  for (const routeId of ['source-switch', 'source-switch-results']) {
+    const entry = VS.find((e) => e.routeId === routeId && e.pageState === 'default');
+    assert.ok(entry, `${routeId}/default fixture missing`);
+    assert.deepEqual(entry.components.map((c) => c.type), ['SourceSwitchFlowPage'],
+      `${routeId} must render the reader-plane source switch flow, not a BackTopBar/List page`);
+  }
+  assert.ok(rendererSrc.includes("component.type === 'SourceSwitchFlowPage'"),
+    'ViewStateRenderer must map SourceSwitchFlowPage');
+  for (const marker of [
+    'ReaderBase()',
+    'ReaderControlSheet()',
+    'ReaderBottomBar()',
+    'SourceSwitchWindow()',
+    "Text('换源')",
+    "Text('按延迟排序')",
+    '优书网',
+    '笔趣阁镜像',
+    '备用线路 B',
+    "route-replace', id: 'reader'",
+  ]) {
+    assert.ok(componentSrc.includes(marker), `SourceSwitchFlowComponents missing live flow marker: ${marker}`);
+  }
+  assert.ok(!componentSrc.includes('BackTopBar('), 'source-switch flow must not render a normal page top bar');
+  assert.ok(!componentSrc.includes('SourceSwitchResultsPanel'), 'source-switch flow must not reuse the obsolete full-screen results panel');
 });
 
 test('bookshelf section head uses demo view-action icons, not generic more dots', () => {
@@ -298,6 +764,37 @@ test('bookshelf section head uses demo view-action icons, not generic more dots'
   assert.ok(!sectionHead.includes('reader_icon_more_dark'), 'bookshelf section head must not render generic more-dot icons');
 });
 
+test('bookshelf route data and covers follow the current live demo fixture', () => {
+  const VS = readJson('view-state.fixtures.json');
+  const src = read(path.join(REPO, 'entry/src/main/ets/ui/components/BookshelfComponents.ets'));
+  const renderer = read(path.join(REPO, 'entry/src/main/ets/ui/components/ViewStateRenderer.ets'));
+  const bookshelf = VS.find((e) => e.routeId === 'bookshelf' && e.pageState === 'default');
+  assert.ok(bookshelf, 'bookshelf/default fixture missing');
+  const continueCard = bookshelf.components.find((c) => c.type === 'ContinueReadingCard');
+  assert.equal(continueCard?.props.title, '长夜余火', 'continue card must use the live demo first book');
+  assert.equal(continueCard?.props.author, '爱潜水的乌贼', 'continue card author must match live demo');
+  assert.equal(continueCard?.props.coverKey, 'longNight', 'continue card cover must match live demo');
+  const shelf = bookshelf.components.find((c) => c.type === 'BookshelfShelfSection');
+  const grid = shelf?.children.find((c) => c.type === 'BookGrid');
+  const cards = grid?.children.filter((c) => c.type === 'BookCard') || [];
+  assert.deepEqual(
+    cards.slice(0, 3).map((c) => [c.props.title, c.props.author, c.props.coverKey]),
+    [
+      ['长夜余火', '爱潜水的乌贼', 'longNight'],
+      ['诡秘之主', '爱潜水的乌贼', 'mysteryLord'],
+      ['明朝那些事儿', '当年明月', 'brightMoon'],
+    ],
+    'bookshelf first row must mirror frontend-demo fixture.js'
+  );
+  for (const marker of ['bookshelf_cover_long_night', 'bookshelf_cover_mystery_lord', 'bookshelf_cover_bright_moon']) {
+    assert.ok(src.includes(marker), `BookshelfComponents missing cover resource ${marker}`);
+  }
+  assert.ok(renderer.includes("coverKey: this.textOr(child.props.coverKey, 'threeBody')"),
+    'ViewStateRenderer must preserve BookGrid child coverKey props');
+  assert.ok(renderer.includes("coverKey: this.textOr(component.props.coverKey, 'longNight')"),
+    'ViewStateRenderer must pass coverKey to ContinueReadingCard/direct BookCard');
+});
+
 test('bookshelf top more opens real batch/group actions, not a dead icon', () => {
   const topBarSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/SharedComponents.ets'));
   const overlaySrc = read(path.join(REPO, 'entry/src/main/ets/ui/slots/OverlayHost.ets'));
@@ -316,6 +813,10 @@ test('bookshelf management pages use LibraryShell fixed bottom actions', () => {
   }
   assert.ok(shellSrc.includes("this.routeId === 'book-batch-management'"), 'LibraryShell must gate batch actions by route');
   assert.ok(shellSrc.includes("this.routeId === 'group-management'"), 'LibraryShell must gate group actions by route');
+  assert.ok(shellSrc.includes('renderBottomActionBar()'), 'LibraryShell fixed actions must be rendered as a bottom action bar');
+  assert.ok(shellSrc.includes('private actionBarHeight(): number'), 'LibraryShell bottom action bar must own its real safe-area height');
+  assert.ok(!shellSrc.includes('renderBottomActionHost'), 'LibraryShell must not use the obsolete full-screen action host');
+  assert.ok(!shellSrc.includes('.hitTestBehavior(HitTestMode.Transparent)'), 'LibraryShell fixed actions must not sit inside a full-screen transparent hit-test layer');
   assert.equal(structuralSrc.includes('ToolBottomActionRow'), false, 'management page actions must not live in scroll content');
 });
 
@@ -356,17 +857,77 @@ test('view-state fixture has no duplicate (routeId, pageState) keys', () => {
 
 test('book-detail uses the demo detail composite body, not a standalone cover', () => {
   const VS = readJson('view-state.fixtures.json');
+  const detailSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/BookDetailComponents.ets'));
+  const shellSrc = read(path.join(REPO, 'entry/src/main/ets/ui/shells/LibraryShell.ets'));
   const detail = VS.find((e) => e.routeId === 'book-detail' && e.pageState === 'default');
   assert.ok(detail, 'book-detail/default fixture missing');
   assert.deepEqual(
     detail.components.map((c) => c.type),
     ['AppTopBar', 'BookHero', 'BookSummaryCard', 'BookChapterList']
   );
+  assert.equal(detail.components[0].props.title, '书籍详情', 'book-detail top bar title must match live demo');
   assert.equal(
     detail.components.some((c) => c.type === 'BookCover'),
     false,
     'book-detail must not render BookCover as a top-level body component'
   );
+  for (const text of ['长夜余火', '爱潜水的乌贼', '第 32 章 雨夜', '书源：', '更换书源', '第 30 章 旧日', '第 33 章 灯塔']) {
+    assert.ok(detailSrc.includes(text), `book-detail live demo content/structure missing ${text}`);
+  }
+  assert.ok(detailSrc.includes("id: 'source-switch'"), 'book-detail source action must push the live demo source-switch route');
+  assert.ok(detailSrc.includes('bookshelf_cover_long_night'), 'book-detail hero must use the live demo long-night cover');
+  assert.ok(detailSrc.includes("Image($r('app.media.ui_icon_list_primary')).width(16).height(16)"),
+    'book-detail complete-directory action must keep the live demo list icon');
+  assert.ok(!detailSrc.includes('reader_icon_more_dark'), 'book-detail chapter rows must not use obsolete more-dot row affordances');
+  for (const text of ['继续阅读', '移除书架', "this.routeId === 'book-detail'", "variant: 'dangerSoft'"]) {
+    assert.ok(shellSrc.includes(text), `book-detail fixed bottom action host missing ${text}`);
+  }
+  assert.ok(shellSrc.includes("ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' })"),
+    'book-detail fixed continue action must route-push immersive-reading like the live demo');
+  assert.ok(shellSrc.includes('bottom: this.scrollBottomPadding()'),
+    'book-detail fixed action bar must not require a full-screen hit-test wrapper for scroll clearance');
+});
+
+test('reader entry route semantics match the live demo immersive-to-control flow', () => {
+  const VS = readJson('view-state.fixtures.json');
+  const readerSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderComponents.ets'));
+  const bookshelfSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/BookshelfComponents.ets'));
+  const detailSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/BookDetailComponents.ets'));
+  const contractSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/ContractComponents.ets'));
+  const shellSrc = read(path.join(REPO, 'entry/src/main/ets/ui/shells/LibraryShell.ets'));
+  const runtime = read(LIVE_DEMO_RUNTIME);
+
+  assert.ok(runtime.includes('reader: { mode: "control" }'),
+    'live demo must keep reader as the control-layer route');
+  assert.ok(runtime.includes('"immersive-reading": { mode: "immersive" }'),
+    'live demo must keep immersive-reading as the immersive route');
+  assert.ok(runtime.includes('data-route="immersive-reading">阅读</button>'),
+    'live demo bookshelf continue action routes to immersive-reading');
+  assert.ok(runtime.includes('data-route="reader"></button>'),
+    'live demo center hotzone routes from immersive-reading to reader');
+
+  const byRoute = (routeId, pageState = 'default') => {
+    const entry = VS.find((e) => e.routeId === routeId && e.pageState === pageState);
+    assert.ok(entry, `${routeId}/${pageState} fixture missing`);
+    return entry.components.map((c) => c.type);
+  };
+  assert.deepEqual(byRoute('reader'), ['ReaderBase', 'ReaderTopArea', 'ReaderControlSheet', 'ReaderBottomBar'],
+    'reader/default must render the live control layer, not the immersive-only body');
+  assert.deepEqual(byRoute('immersive-reading'), ['ReaderBase'],
+    'immersive-reading/default must let ReaderBase own the immersive text/info/tap layers once');
+  assert.deepEqual(byRoute('reader_content'), ['ReaderBase'],
+    'reader_content/default must not duplicate ReaderBase sublayers');
+
+  assert.ok(readerSrc.includes("return this.routeId !== 'immersive-reading' && this.routeId !== 'reader_content'"),
+    'ReaderBase must treat reader as control and only immersive routes as immersive');
+  assert.ok(readerSrc.includes("route-push', id: 'reader'"),
+    'immersive center hotzone must open the live reader control route');
+  for (const src of [bookshelfSrc, detailSrc, contractSrc, shellSrc]) {
+    assert.ok(src.includes("route-push', id: 'immersive-reading'"),
+      'reader entry actions must route to immersive-reading before opening the control layer');
+  }
+  assert.ok(!bookshelfSrc.includes("route-push', id: 'reader'"),
+    'bookshelf continue card must not enter the control route directly');
 });
 
 test('discover/rss main tabs use bespoke demo component trees, not generic contract scaffolds', () => {
@@ -435,6 +996,9 @@ test('discover source bulk route is reachable and owns fixed actions', () => {
   for (const label of ['启用', '禁用', '刷新']) {
     assert.ok(settingsShellSrc.includes(`label: '${label}'`), `discover-source-bulk fixed action missing ${label}`);
   }
+  assert.ok(settingsShellSrc.includes('renderBottomActionBar()'), 'SettingsShell fixed actions must be rendered as a bottom action bar');
+  assert.ok(!settingsShellSrc.includes('renderBottomActionHost'), 'SettingsShell must not use the obsolete full-screen action host');
+  assert.ok(!settingsShellSrc.includes('.hitTestBehavior(HitTestMode.Transparent)'), 'SettingsShell fixed actions must not sit inside a full-screen transparent hit-test layer');
 });
 
 test('discover source login/rule pages use page-level visual components', () => {
@@ -512,8 +1076,13 @@ test('rss subpages use page-level visual components, not scaffold-only lists/loa
 test('source tool pages use page-level visual components, not scaffold-only lists/loading', () => {
   const VS = readJson('view-state.fixtures.json');
   const expected = new Map([
+    ['source-add/default', ['BackTopBar', 'SourceImportOptionsPage']],
+    ['source-edit/default', ['BackTopBar', 'SourceRuleEditPage']],
+    ['source-settings-entry/default', ['BackTopBar', 'SourceManagementPage']],
     ['source-import-preview/default', ['BackTopBar', 'SourceImportPreviewPage']],
+    ['source-import-options/default', ['BackTopBar', 'SourceImportOptionsPage']],
     ['source-groups/default', ['BackTopBar', 'SourceGroupsPage']],
+    ['source-detail/default', ['BackTopBar', 'SourceDetailPage']],
     ['source-detect/default', ['BackTopBar', 'SourceDetectPage']],
     ['source-batch/default', ['BackTopBar', 'SourceBatchPage']],
     ['source-rule-edit/default', ['BackTopBar', 'SourceRuleEditPage']],
@@ -561,6 +1130,64 @@ test('source tool pages use page-level visual components, not scaffold-only list
   ]) {
     assert.ok(sourceSrc.includes(text), `LibraryComponents missing source tool copy: ${text}`);
   }
+
+  const structuralSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/StructuralPageComponents.ets'));
+  for (const text of [
+    'biquge.example · 玄幻书源',
+    '异常 · 最近检测 10:30 · 规则版本 3',
+    '最近检测结果',
+    '失败规则：正文内容规则“#content@text”返回空内容。',
+    '请求方式',
+    '并发限制',
+    'Cookie',
+    '更新时间',
+    '添加书源',
+    '从 URL 拉取书源包',
+    '选择本地 JSON 或 TXT 文件',
+    '解析剪贴板中的书源内容',
+    '进入空白书源编辑页',
+  ]) {
+    assert.ok(structuralSrc.includes(text), `StructuralPageComponents missing live source detail/import copy: ${text}`);
+  }
+  assert.equal(structuralSrc.includes("StructureCard({ title: this.title, message: '搜索、目录、正文规则均正常。'"), false,
+    'source-detail must not regress to the old one-card placeholder');
+  assert.equal(structuralSrc.includes("StatePanel({ title: '导入书源'"), false,
+    'source-import-options must not regress to the old StatePanel placeholder');
+});
+
+test('source-management uses live list-management structure, not old tool hub', () => {
+  const VS = readJson('view-state.fixtures.json');
+  const entry = VS.find((e) => e.routeId === 'source-management' && e.pageState === 'default');
+  assert.ok(entry, 'source-management/default fixture missing');
+  assert.deepEqual(entry.components.map((c) => c.type), ['BackTopBar', 'SourceManagementPage'],
+    'source-management/default must use the source management page-level component');
+
+  const structural = read(path.join(REPO, 'entry/src/main/ets/ui/components/StructuralPageComponents.ets'));
+  for (const text of [
+    '搜索书源名称或域名',
+    '12 个书源 · 8 个启用 · 4 个异常 · 10:30 检测',
+    '全部 · 全部分组',
+    '起点中文网',
+    '笔趣阁',
+    '本地导入源',
+    '纵横中文网',
+  ]) {
+    assert.ok(structural.includes(text), `SourceManagementPage missing live source-management copy: ${text}`);
+  }
+  assert.equal(structural.includes("StructureCard({ title: '书源工具'"), false,
+    'SourceManagementPage must not regress to the old source tool hub card');
+  assert.equal(structural.includes("SectionTitle({ title: '启用书源'"), false,
+    'SourceManagementPage must not regress to the old enabled-source card list');
+
+  const shell = read(path.join(REPO, 'entry/src/main/ets/ui/shells/SettingsShell.ets'));
+  assert.ok(shell.includes("this.routeId === 'source-management'"), 'SettingsShell must reserve fixed actions for source-management');
+  assert.ok(shell.includes("label: '批量管理'"), 'source-management fixed action bar must include batch management');
+  assert.ok(shell.includes("label: '新增书源'"), 'source-management fixed action bar must include add source');
+  assert.ok(shell.includes("route: 'source-import-options'"), 'source-management add action must open the live add-source sheet route');
+  assert.ok(shell.includes("this.routeId === 'source-detail'"), 'SettingsShell must reserve fixed actions for source-detail');
+  for (const label of ["label: '检测此源'", "label: '编辑规则'", "label: '删除'"]) {
+    assert.ok(shell.includes(label), `source-detail fixed action bar missing ${label}`);
+  }
 });
 
 test('sync restore pages use page-level visual components, not scaffold-only lists/loading', () => {
@@ -568,6 +1195,7 @@ test('sync restore pages use page-level visual components, not scaffold-only lis
   const expected = new Map([
     ['sync-backup/default', ['BackTopBar', 'SyncBackupPage']],
     ['sync-backup/loading', ['BackTopBar', 'SyncBackupPage']],
+    ['webdav-config/default', ['BackTopBar', 'SyncBackupPage']],
     ['restore-confirm/default', ['BackTopBar', 'RestoreConfirmPage']],
     ['restore-scopes/default', ['BackTopBar', 'RestoreConfirmPage']],
     ['restore-preview/default', ['BackTopBar', 'RestoreConfirmPage']],
@@ -591,7 +1219,13 @@ test('sync restore pages use page-level visual components, not scaffold-only lis
   const structureSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/StructuralPageComponents.ets'));
   for (const text of [
     'WebDAV 配置',
+    '服务器地址',
+    '同步目录',
+    '测试网络连通性',
+    '保存配置',
     '恢复数据',
+    '最近备份',
+    '历史备份',
     '恢复范围',
     '确认恢复数据',
     '正在恢复',
@@ -644,8 +1278,6 @@ test('normalized settings/form pages use page-level components, not generic asse
     ['settings-general/default', ['BackTopBar', 'SettingsGeneralPage']],
     ['bookshelf-search-settings/default', ['BackTopBar', 'BookshelfSearchSettingsPage']],
     ['progress-sync/default', ['BackTopBar', 'ProgressSyncPage']],
-    ['source-add/default', ['BackTopBar', 'SourceFormPage']],
-    ['source-edit/default', ['BackTopBar', 'SourceFormPage']],
     ['global-settings/default', ['BackTopBar', 'GlobalSettingsPage']],
     ['backup-settings/default', ['BackTopBar', 'BackupSettingsPage']],
   ]);
@@ -701,7 +1333,6 @@ test('structural page visuals keep handoff row counts and copy', () => {
   for (const text of [
     '搜索入口',
     '书源管理入口',
-    '批量管理',
     '阅读页入口',
     'WebDAV / 同步入口',
     '第6章：深空信号',

@@ -8,6 +8,7 @@ export interface ViewStateProps {
   action?: string;
   author?: string;
   bookId?: string;
+  coverKey?: string;
   destructive?: boolean;
   filterOpen?: boolean;
   label?: string;
@@ -103,8 +104,9 @@ export class ViewStateTable {
         "id": "continue-reading",
         "props": {
           "bookId": "bk-001",
-          "title": "三体",
-          "author": "刘慈欣"
+          "title": "长夜余火",
+          "author": "爱潜水的乌贼",
+          "coverKey": "longNight"
         },
         "children": []
       },
@@ -137,8 +139,9 @@ export class ViewStateTable {
                 "id": "book-1",
                 "props": {
                   "bookId": "bk-001",
-                  "title": "三体",
-                  "author": "刘慈欣"
+                  "title": "长夜余火",
+                  "author": "爱潜水的乌贼",
+                  "coverKey": "longNight"
                 },
                 "children": []
               },
@@ -147,8 +150,9 @@ export class ViewStateTable {
                 "id": "book-2",
                 "props": {
                   "bookId": "bk-002",
-                  "title": "基地",
-                  "author": "阿西莫夫"
+                  "title": "诡秘之主",
+                  "author": "爱潜水的乌贼",
+                  "coverKey": "mysteryLord"
                 },
                 "children": []
               },
@@ -157,8 +161,42 @@ export class ViewStateTable {
                 "id": "book-3",
                 "props": {
                   "bookId": "bk-003",
-                  "title": "球状闪电",
-                  "author": "刘慈欣"
+                  "title": "明朝那些事儿",
+                  "author": "当年明月",
+                  "coverKey": "brightMoon"
+                },
+                "children": []
+              },
+              {
+                "type": "BookCard",
+                "id": "book-4",
+                "props": {
+                  "bookId": "bk-004",
+                  "title": "三体",
+                  "author": "刘慈欣",
+                  "coverKey": "threeBody"
+                },
+                "children": []
+              },
+              {
+                "type": "BookCard",
+                "id": "book-5",
+                "props": {
+                  "bookId": "bk-005",
+                  "title": "人间词话",
+                  "author": "王国维",
+                  "coverKey": "renjian"
+                },
+                "children": []
+              },
+              {
+                "type": "BookCard",
+                "id": "book-6",
+                "props": {
+                  "bookId": "bk-006",
+                  "title": "Android 开发笔记",
+                  "author": "本地文档",
+                  "coverKey": "androidNotes"
                 },
                 "children": []
               }
@@ -380,7 +418,9 @@ export class ViewStateTable {
       {
         "type": "AppTopBar",
         "id": "detail-topbar",
-        "props": {},
+        "props": {
+          "title": "书籍详情"
+        },
         "children": []
       },
       {
@@ -398,7 +438,9 @@ export class ViewStateTable {
       {
         "type": "AppTopBar",
         "id": "detail-topbar",
-        "props": {},
+        "props": {
+          "title": "书籍详情"
+        },
         "children": []
       },
       {
@@ -432,6 +474,24 @@ export class ViewStateTable {
           "theme": "paper"
         },
         "children": []
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderControlSheet",
+        "id": "reader-control-sheet",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
+        "props": {},
+        "children": []
       }
     ]
   },
@@ -445,6 +505,12 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
+        "children": []
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
         "children": []
       },
       {
@@ -468,6 +534,12 @@ export class ViewStateTable {
         "children": []
       },
       {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": []
+      },
+      {
         "type": "Offline",
         "id": "reader-offline",
         "props": {
@@ -487,6 +559,12 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
+        "children": []
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
         "children": []
       },
       {
@@ -516,14 +594,20 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "ReaderBottomBar",
-        "id": "reader-bottom-bar",
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
         "props": {},
         "children": []
       },
       {
         "type": "ReaderDirectoryPanel",
         "id": "directory-panel",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
         "props": {},
         "children": []
       }
@@ -542,14 +626,20 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "ReaderBottomBar",
-        "id": "reader-bottom-bar",
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
         "props": {},
         "children": []
       },
       {
         "type": "ReaderAppearancePanel",
         "id": "appearance-panel",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
         "props": {},
         "children": []
       }
@@ -568,14 +658,20 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "ReaderBottomBar",
-        "id": "reader-bottom-bar",
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
         "props": {},
         "children": []
       },
       {
         "type": "ReaderTtsPanel",
         "id": "tts-panel",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
         "props": {},
         "children": []
       }
@@ -594,14 +690,20 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "ReaderBottomBar",
-        "id": "reader-bottom-bar",
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
         "props": {},
         "children": []
       },
       {
         "type": "ReaderSettingsPanel",
         "id": "settings-panel",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
         "props": {},
         "children": []
       }
@@ -620,14 +722,20 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "ReaderBottomBar",
-        "id": "reader-bottom-bar",
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
         "props": {},
         "children": []
       },
       {
         "type": "ReaderSearchPanel",
         "id": "search-panel",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
         "props": {},
         "children": []
       }
@@ -646,14 +754,20 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "ReaderBottomBar",
-        "id": "reader-bottom-bar",
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
         "props": {},
         "children": []
       },
       {
         "type": "ReaderReplacePanel",
         "id": "replace-panel",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
         "props": {},
         "children": []
       }
@@ -672,14 +786,20 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "ReaderBottomBar",
-        "id": "reader-bottom-bar",
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
         "props": {},
         "children": []
       },
       {
         "type": "ReaderAutoScrollPanel",
         "id": "auto-scroll-panel",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
         "props": {},
         "children": []
       }
@@ -695,6 +815,12 @@ export class ViewStateTable {
         "props": {
           "theme": "night"
         },
+        "children": []
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
         "children": []
       },
       {
@@ -887,7 +1013,7 @@ export class ViewStateTable {
         "type": "SourceDetailPage",
         "id": "source-detail-page",
         "props": {
-          "title": "阅读书源 1"
+          "title": "笔趣阁"
         },
         "children": []
       }
@@ -898,8 +1024,8 @@ export class ViewStateTable {
     "pageState": "default",
     "components": [
       {
-        "type": "SourceSwitchResultsPanel",
-        "id": "source-switch-results-panel",
+        "type": "SourceSwitchFlowPage",
+        "id": "source-switch-results-flow",
         "props": {},
         "children": []
       }
@@ -913,7 +1039,7 @@ export class ViewStateTable {
         "type": "BackTopBar",
         "id": "sync-topbar",
         "props": {
-          "title": "同步备份"
+          "title": "同步与备份"
         },
         "children": []
       },
@@ -933,7 +1059,7 @@ export class ViewStateTable {
         "type": "BackTopBar",
         "id": "sync-topbar",
         "props": {
-          "title": "同步备份"
+          "title": "同步与备份"
         },
         "children": []
       },
@@ -996,18 +1122,16 @@ export class ViewStateTable {
     "components": [
       {
         "type": "BackTopBar",
-        "id": "webdav-topbar",
+        "id": "webdav-sync-topbar",
         "props": {
-          "title": "WebDAV"
+          "title": "同步与备份"
         },
         "children": []
       },
       {
-        "type": "WebDavConfigPage",
-        "id": "webdav-config-page",
-        "props": {
-          "title": "WebDAV 配置"
-        },
+        "type": "SyncBackupPage",
+        "id": "webdav-sync-backup-page",
+        "props": {},
         "children": []
       }
     ]
@@ -1075,8 +1199,9 @@ export class ViewStateTable {
                 "id": "book-1",
                 "props": {
                   "bookId": "bk-001",
-                  "title": "深空信号",
-                  "author": "本地书籍"
+                  "title": "长夜余火",
+                  "author": "爱潜水的乌贼",
+                  "coverKey": "longNight"
                 },
                 "children": []
               },
@@ -1085,8 +1210,20 @@ export class ViewStateTable {
                 "id": "book-2",
                 "props": {
                   "bookId": "bk-002",
-                  "title": "三体",
-                  "author": "刘慈欣"
+                  "title": "诡秘之主",
+                  "author": "爱潜水的乌贼",
+                  "coverKey": "mysteryLord"
+                },
+                "children": []
+              },
+              {
+                "type": "BookCard",
+                "id": "book-3",
+                "props": {
+                  "bookId": "bk-003",
+                  "title": "明朝那些事儿",
+                  "author": "当年明月",
+                  "coverKey": "brightMoon"
                 },
                 "children": []
               }
@@ -1142,8 +1279,8 @@ export class ViewStateTable {
                 "type": "ListRow",
                 "id": "book-row-1",
                 "props": {
-                  "title": "深空信号",
-                  "author": "本地书籍"
+                  "title": "长夜余火",
+                  "author": "爱潜水的乌贼"
                 },
                 "children": []
               },
@@ -1151,8 +1288,8 @@ export class ViewStateTable {
                 "type": "ListRow",
                 "id": "book-row-2",
                 "props": {
-                  "title": "三体",
-                  "author": "刘慈欣"
+                  "title": "诡秘之主",
+                  "author": "爱潜水的乌贼"
                 },
                 "children": []
               }
@@ -1416,15 +1553,15 @@ export class ViewStateTable {
         "type": "BackTopBar",
         "id": "topbar",
         "props": {
-          "title": "添加书源"
+          "title": "书源管理"
         },
         "children": []
       },
       {
-        "type": "SourceFormPage",
+        "type": "SourceImportOptionsPage",
         "id": "source-add-page",
         "props": {
-          "action": "保存"
+          "title": "书源管理"
         },
         "children": []
       }
@@ -1438,15 +1575,15 @@ export class ViewStateTable {
         "type": "BackTopBar",
         "id": "topbar",
         "props": {
-          "title": "编辑书源"
+          "title": "规则编辑"
         },
         "children": []
       },
       {
-        "type": "SourceFormPage",
+        "type": "SourceRuleEditPage",
         "id": "source-edit-page",
         "props": {
-          "action": "保存修改"
+          "title": "规则编辑"
         },
         "children": []
       }
@@ -1460,7 +1597,7 @@ export class ViewStateTable {
         "type": "BackTopBar",
         "id": "source-import-topbar",
         "props": {
-          "title": "导入书源"
+          "title": "书源管理"
         },
         "children": []
       },
@@ -1548,15 +1685,15 @@ export class ViewStateTable {
         "type": "BackTopBar",
         "id": "source-settings-topbar",
         "props": {
-          "title": "书源设置"
+          "title": "书源管理"
         },
         "children": []
       },
       {
-        "type": "SourceSettingsEntryPage",
+        "type": "SourceManagementPage",
         "id": "source-settings-page",
         "props": {
-          "title": "书源设置"
+          "title": "书源管理"
         },
         "children": []
       }
@@ -1805,18 +1942,6 @@ export class ViewStateTable {
           "theme": "paper"
         },
         "children": []
-      },
-      {
-        "type": "ReadingTextFlow",
-        "id": "reading-text-flow",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "TapZones",
-        "id": "tap-zones",
-        "props": {},
-        "children": []
       }
     ]
   },
@@ -1831,18 +1956,6 @@ export class ViewStateTable {
           "theme": "paper"
         },
         "children": []
-      },
-      {
-        "type": "ReadingTextFlow",
-        "id": "reading-text-flow",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "ReadingInfoLayer",
-        "id": "reading-info-layer",
-        "props": {},
-        "children": []
       }
     ]
   },
@@ -1856,6 +1969,12 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
+        "children": []
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
         "children": []
       },
       {
@@ -1885,14 +2004,14 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "ReaderBottomBar",
-        "id": "reader-bottom-bar",
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
         "props": {},
         "children": []
       },
       {
-        "type": "ReaderSettingsPanel",
-        "id": "font-settings-panel",
+        "type": "ReaderFullAppearancePage",
+        "id": "font-full-page",
         "props": {},
         "children": []
       }
@@ -1911,14 +2030,14 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "ReaderBottomBar",
-        "id": "reader-bottom-bar",
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
         "props": {},
         "children": []
       },
       {
-        "type": "ReaderAppearancePanel",
-        "id": "theme-panel",
+        "type": "ReaderFullAppearancePage",
+        "id": "theme-full-page",
         "props": {},
         "children": []
       }
@@ -1937,14 +2056,14 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "ReaderBottomBar",
-        "id": "reader-bottom-bar",
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
         "props": {},
         "children": []
       },
       {
-        "type": "ReaderAppearancePanel",
-        "id": "theme-edit-panel",
+        "type": "ReaderFullAppearancePage",
+        "id": "theme-edit-full-page",
         "props": {},
         "children": []
       }
@@ -1963,14 +2082,14 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "ReaderBottomBar",
-        "id": "reader-bottom-bar",
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
         "props": {},
         "children": []
       },
       {
-        "type": "ReaderSettingsPanel",
-        "id": "layout-panel",
+        "type": "ReaderFullAppearancePage",
+        "id": "layout-full-page",
         "props": {},
         "children": []
       }
@@ -1989,14 +2108,14 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "ReaderBottomBar",
-        "id": "reader-bottom-bar",
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
         "props": {},
         "children": []
       },
       {
-        "type": "ReaderSettingsPanel",
-        "id": "page-turn-panel",
+        "type": "ReaderFullSettingsPage",
+        "id": "page-turn-full-page",
         "props": {},
         "children": []
       }
@@ -2015,14 +2134,14 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "ReaderBottomBar",
-        "id": "reader-bottom-bar",
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
         "props": {},
         "children": []
       },
       {
-        "type": "ReaderAppearancePanel",
-        "id": "appearance-panel",
+        "type": "ReaderFullAppearancePage",
+        "id": "appearance-full-page",
         "props": {},
         "children": []
       }
@@ -2041,14 +2160,14 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "ReaderBottomBar",
-        "id": "reader-bottom-bar",
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
         "props": {},
         "children": []
       },
       {
-        "type": "ReaderDirectoryPanel",
-        "id": "full-directory-panel",
+        "type": "ReaderFullDirectoryPage",
+        "id": "directory-full-page",
         "props": {},
         "children": []
       }
@@ -2067,14 +2186,14 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "ReaderBottomBar",
-        "id": "reader-bottom-bar",
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
         "props": {},
         "children": []
       },
       {
-        "type": "ReaderSettingsPanel",
-        "id": "full-settings-panel",
+        "type": "ReaderFullSettingsPage",
+        "id": "settings-full-page",
         "props": {},
         "children": []
       }
@@ -2093,14 +2212,14 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "ReaderBottomBar",
-        "id": "reader-bottom-bar",
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
         "props": {},
         "children": []
       },
       {
-        "type": "ReaderTtsPanel",
-        "id": "full-tts-panel",
+        "type": "ReaderFullTtsPage",
+        "id": "tts-full-page",
         "props": {},
         "children": []
       }
@@ -2119,14 +2238,14 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "ReaderBottomBar",
-        "id": "reader-bottom-bar",
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
         "props": {},
         "children": []
       },
       {
-        "type": "ReaderSettingsPanel",
-        "id": "cache-panel",
+        "type": "ReaderBookCachePage",
+        "id": "cache-page",
         "props": {},
         "children": []
       }
@@ -2145,14 +2264,14 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "ReaderBottomBar",
-        "id": "reader-bottom-bar",
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
         "props": {},
         "children": []
       },
       {
-        "type": "ReaderSettingsPanel",
-        "id": "debug-panel",
+        "type": "ReaderDebugInfoPage",
+        "id": "debug-info-page",
         "props": {},
         "children": []
       }
@@ -3082,8 +3201,9 @@ export class ViewStateTable {
         "id": "continue-reading",
         "props": {
           "bookId": "bk-001",
-          "title": "三体",
-          "author": "刘慈欣"
+          "title": "长夜余火",
+          "author": "爱潜水的乌贼",
+          "coverKey": "longNight"
         },
         "children": []
       },
@@ -3114,8 +3234,9 @@ export class ViewStateTable {
                 "id": "book-bk-001",
                 "props": {
                   "bookId": "bk-001",
-                  "title": "三体",
-                  "author": "刘慈欣"
+                  "title": "长夜余火",
+                  "author": "爱潜水的乌贼",
+                  "coverKey": "longNight"
                 },
                 "children": []
               },
@@ -3124,8 +3245,9 @@ export class ViewStateTable {
                 "id": "book-bk-002",
                 "props": {
                   "bookId": "bk-002",
-                  "title": "基地",
-                  "author": "阿西莫夫"
+                  "title": "诡秘之主",
+                  "author": "爱潜水的乌贼",
+                  "coverKey": "mysteryLord"
                 },
                 "children": []
               },
@@ -3134,8 +3256,9 @@ export class ViewStateTable {
                 "id": "book-bk-003",
                 "props": {
                   "bookId": "bk-003",
-                  "title": "球状闪电",
-                  "author": "刘慈欣"
+                  "title": "明朝那些事儿",
+                  "author": "当年明月",
+                  "coverKey": "brightMoon"
                 },
                 "children": []
               }
@@ -3240,16 +3363,8 @@ export class ViewStateTable {
     "pageState": "default",
     "components": [
       {
-        "type": "BackTopBar",
-        "id": "topbar",
-        "props": {
-          "title": "换源"
-        },
-        "children": []
-      },
-      {
-        "type": "SourceSwitchResultsPanel",
-        "id": "source-switch-panel",
+        "type": "SourceSwitchFlowPage",
+        "id": "source-switch-flow",
         "props": {},
         "children": []
       }

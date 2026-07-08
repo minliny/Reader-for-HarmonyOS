@@ -12,11 +12,45 @@ interface RowEntry {
   chip: string;
 }
 
+interface SyncBackupEntry {
+  source: string;
+  time: string;
+  content: string;
+  group: string;
+  local: boolean;
+}
+
+interface SourceManagementEntry {
+  title: string;
+  meta: string;
+  status: string;
+  tone: string;
+  sourceEnabled: boolean;
+}
+
 interface SelectableBookEntry {
   title: string;
   detail: string;
   group: string;
   selected: boolean;
+}
+
+interface SourceModuleEntry {
+  title: string;
+  status: string;
+  tone: string;
+}
+
+interface SourceInfoEntry {
+  label: string;
+  value: string;
+}
+
+interface SourceImportOptionEntry {
+  title: string;
+  detail: string;
+  route: RouteId;
+  icon: Resource;
 }
 
 interface DirectoryEntry {
@@ -296,7 +330,420 @@ struct DirectoryChapterRow {
     .backgroundColor(DemoAliasTokens.surface)
     .border({ width: 1, color: ColorTokens.border })
     .alignItems(VerticalAlign.Center)
-    .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' }))
+    .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' }))
+  }
+}
+
+@Component
+struct SourceMetricStrip {
+  build() {
+    Text('12 个书源 · 8 个启用 · 4 个异常 · 10:30 检测')
+      .fontSize(12)
+      .fontWeight(700)
+      .fontColor(ColorTokens.muted)
+      .width('100%')
+      .maxLines(1)
+      .textOverflow({ overflow: TextOverflow.Ellipsis })
+      .margin({ top: 8, bottom: 10 })
+  }
+}
+
+@Component
+struct SourceFilterSummaryRow {
+  build() {
+    Row() {
+      Row() {
+        Image($r('app.media.bookshelf_icon_filter_dark'))
+          .width(18)
+          .height(18)
+        Text('筛选')
+          .fontSize(13)
+          .fontWeight(850)
+          .fontColor(ColorTokens.controlInk)
+          .margin({ left: 8 })
+      }
+      .layoutWeight(1)
+      .alignItems(VerticalAlign.Center)
+      Text('全部 · 全部分组')
+        .fontSize(12)
+        .fontWeight(750)
+        .fontColor(ColorTokens.muted)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+      Image($r('app.media.ui_icon_chevron_dark'))
+        .width(18)
+        .height(18)
+        .margin({ left: 6 })
+    }
+    .width('100%')
+    .height(42)
+    .padding({ left: 12, right: 10 })
+    .borderRadius(DemoAliasTokens.radiusMd)
+    .backgroundColor(DemoAliasTokens.surface)
+    .border({ width: 1, color: ColorTokens.border })
+    .alignItems(VerticalAlign.Center)
+  }
+}
+
+@Component
+struct SourceStatusDot {
+  @Prop tone: string = 'good';
+
+  private dotColor(): string {
+    if (this.tone === 'warn') return ColorTokens.statusWarn;
+    if (this.tone === 'muted') return ColorTokens.muted;
+    return ColorTokens.statusGood;
+  }
+
+  build() {
+    Circle()
+      .width(7)
+      .height(7)
+      .fill(this.dotColor())
+  }
+}
+
+@Component
+struct SourceDetectButton {
+  build() {
+    Text('检测')
+      .fontSize(11)
+      .fontWeight(850)
+      .fontColor(ColorTokens.controlInk)
+      .height(28)
+      .padding({ left: 9, right: 9 })
+      .borderRadius(DemoAliasTokens.radiusPill)
+      .backgroundColor(ColorTokens.metaBg)
+      .border({ width: 1, color: ColorTokens.border })
+      .textAlign(TextAlign.Center)
+  }
+}
+
+@Component
+struct SourceManagementRow {
+  @Prop title: string = '起点中文网';
+  @Prop meta: string = 'qidian.com · 起点导入';
+  @Prop tone: string = 'good';
+  @Prop sourceEnabled: boolean = true;
+
+  build() {
+    Row() {
+      Column() {
+        Text(this.title)
+          .fontSize(15)
+          .fontWeight(850)
+          .fontColor(ColorTokens.controlInk)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(this.meta)
+          .fontSize(12)
+          .fontWeight(600)
+          .fontColor(ColorTokens.muted)
+          .margin({ top: 4 })
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+      .margin({ right: 10 })
+
+      Row({ space: 9 }) {
+        SourceStatusDot({ tone: this.tone })
+        SourceDetectButton()
+        HandoffSwitch({ on: this.sourceEnabled })
+      }
+      .alignItems(VerticalAlign.Center)
+    }
+    .width('100%')
+    .height(66)
+    .border({ width: { bottom: 1 }, color: ColorTokens.border })
+    .alignItems(VerticalAlign.Center)
+  }
+}
+
+@Component
+struct SourceEnabledSwitch {
+  @Prop sourceEnabled: boolean = true;
+
+  build() {
+    Row() {
+      if (this.sourceEnabled) {
+        Blank()
+          .layoutWeight(1)
+      }
+      Row()
+        .width(18)
+        .height(18)
+        .borderRadius(DemoAliasTokens.radiusPill)
+        .backgroundColor(ColorTokens.paper)
+        .shadow({ radius: 3, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 1 })
+      if (!this.sourceEnabled) {
+        Blank()
+          .layoutWeight(1)
+      }
+    }
+    .width(38)
+    .height(22)
+    .padding(2)
+    .borderRadius(DemoAliasTokens.radiusPill)
+    .backgroundColor(this.sourceEnabled ? ColorTokens.primary : ColorTokens.metaBg)
+  }
+}
+
+@Component
+struct SourceDetailHeader {
+  @Prop title: string = '笔趣阁';
+
+  build() {
+    Row() {
+      Column() {
+        Text(this.title)
+          .fontSize(16)
+          .fontWeight(900)
+          .fontColor(ColorTokens.ink)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text('biquge.example · 玄幻书源')
+          .fontSize(12)
+          .fontWeight(600)
+          .fontColor(ColorTokens.muted)
+          .margin({ top: 4 })
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+      .margin({ right: 12 })
+      SourceEnabledSwitch({ sourceEnabled: true })
+    }
+    .width('100%')
+    .padding({ left: 14, right: 14, top: 12, bottom: 12 })
+    .borderRadius(DemoAliasTokens.radiusMd)
+    .backgroundColor(DemoAliasTokens.surface)
+    .border({ width: 1, color: ColorTokens.border })
+    .alignItems(VerticalAlign.Center)
+  }
+}
+
+@Component
+struct SourceModuleStatusCard {
+  @Prop title: string = '站点';
+  @Prop status: string = '正常';
+  @Prop tone: string = 'good';
+
+  build() {
+    Row() {
+      Text(this.title)
+        .fontSize(13)
+        .fontWeight(850)
+        .fontColor(ColorTokens.controlInk)
+        .layoutWeight(1)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+      SourceStatusDot({ tone: this.tone })
+        .margin({ right: 6 })
+      Text(this.status)
+        .fontSize(11)
+        .fontWeight(800)
+        .fontColor(ColorTokens.primaryDark)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .width('48%')
+    .height(44)
+    .padding({ left: 12, right: 12 })
+    .borderRadius(DemoAliasTokens.radiusMd)
+    .backgroundColor(ColorTokens.floatingControlBg)
+    .border({ width: 1, color: ColorTokens.border })
+    .alignItems(VerticalAlign.Center)
+    .margin({ bottom: 8 })
+  }
+}
+
+@Component
+struct SourceDetailDetectCard {
+  build() {
+    Column() {
+      Text('最近检测结果')
+        .fontSize(15)
+        .fontWeight(900)
+        .fontColor(ColorTokens.ink)
+      Text('搜索、详情、目录均可解析；正文模块失败。')
+        .fontSize(13)
+        .fontWeight(650)
+        .fontColor(ColorTokens.controlInk)
+        .lineHeight(19)
+        .margin({ top: 8 })
+      Text('失败规则：正文内容规则“#content@text”返回空内容。建议进入规则编辑后调测正文模块。')
+        .fontSize(11)
+        .fontWeight(600)
+        .fontColor(ColorTokens.muted)
+        .lineHeight(17)
+        .margin({ top: 6 })
+    }
+    .width('100%')
+    .padding(14)
+    .borderRadius(DemoAliasTokens.radiusMd)
+    .backgroundColor(ColorTokens.floatingControlBg)
+    .border({ width: 1, color: ColorTokens.border })
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
+struct SourceInfoCard {
+  @Prop label: string = '请求方式';
+  @Prop value: string = 'GET · UTF-8';
+
+  build() {
+    Column() {
+      Text(this.label)
+        .fontSize(10)
+        .fontWeight(700)
+        .fontColor(ColorTokens.muted)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+      Text(this.value)
+        .fontSize(13)
+        .fontWeight(850)
+        .fontColor(ColorTokens.controlInk)
+        .margin({ top: 5 })
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .width('48%')
+    .height(62)
+    .padding(12)
+    .borderRadius(DemoAliasTokens.radiusMd)
+    .backgroundColor(DemoAliasTokens.surface)
+    .border({ width: 1, color: ColorTokens.border })
+    .alignItems(HorizontalAlign.Start)
+    .margin({ bottom: 8 })
+  }
+}
+
+@Component
+struct SourceInlineActionButton {
+  @Prop label: string = '复制书源';
+  @Prop icon: Resource = $r('app.media.ui_icon_source_dark');
+
+  build() {
+    Row() {
+      Image(this.icon)
+        .width(16)
+        .height(16)
+      Text(this.label)
+        .fontSize(12)
+        .fontWeight(850)
+        .fontColor(ColorTokens.primaryDark)
+        .margin({ left: 6 })
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .height(38)
+    .layoutWeight(1)
+    .justifyContent(FlexAlign.Center)
+    .alignItems(VerticalAlign.Center)
+    .borderRadius(DemoAliasTokens.radiusPill)
+    .backgroundColor(ColorTokens.metaBg)
+    .border({ width: 1, color: ColorTokens.border })
+  }
+}
+
+@Component
+struct SourceImportOptionRow {
+  @Prop entry: SourceImportOptionEntry = {
+    title: '网络导入',
+    detail: '从 URL 拉取书源包',
+    route: 'source-import-preview',
+    icon: $r('app.media.ui_icon_upload_dark'),
+  };
+
+  build() {
+    Row() {
+      Image(this.entry.icon)
+        .width(18)
+        .height(18)
+      Column() {
+        Text(this.entry.title)
+          .fontSize(14)
+          .fontWeight(850)
+          .fontColor(ColorTokens.ink)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(this.entry.detail)
+          .fontSize(11)
+          .fontWeight(600)
+          .fontColor(ColorTokens.muted)
+          .margin({ top: 3 })
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+      .margin({ left: 10 })
+      Image($r('app.media.ui_icon_chevron_dark'))
+        .width(18)
+        .height(18)
+    }
+    .width('100%')
+    .height(46)
+    .padding({ left: 14, right: 12 })
+    .border({ width: { bottom: 1 }, color: ColorTokens.border })
+    .alignItems(VerticalAlign.Center)
+    .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: this.entry.route }))
+  }
+}
+
+@Component
+struct SourceImportBottomSheet {
+  private options: SourceImportOptionEntry[] = [
+    { title: '网络导入', detail: '从 URL 拉取书源包', route: 'source-import-preview', icon: $r('app.media.ui_icon_upload_dark') },
+    { title: '本地导入', detail: '选择本地 JSON 或 TXT 文件', route: 'source-import-preview', icon: $r('app.media.ui_icon_source_stack_dark') },
+    { title: '剪贴板导入', detail: '解析剪贴板中的书源内容', route: 'source-import-preview', icon: $r('app.media.ui_icon_source_dark') },
+    { title: '手动新建', detail: '进入空白书源编辑页', route: 'source-rule-edit', icon: $r('app.media.ui_icon_source_primary') },
+  ];
+
+  build() {
+    Column() {
+      Row()
+        .width(42)
+        .height(4)
+        .borderRadius(DemoAliasTokens.radiusPill)
+        .backgroundColor(ColorTokens.border)
+      Text('添加书源')
+        .fontSize(16)
+        .fontWeight(900)
+        .fontColor(ColorTokens.ink)
+        .margin({ top: 8, bottom: 4 })
+      ForEach(this.options, (entry: SourceImportOptionEntry, idx: number) => {
+        SourceImportOptionRow({ entry: entry })
+      }, (entry: SourceImportOptionEntry, idx: number) => `${entry.title}-${idx}`)
+      Text('取消')
+        .fontSize(13)
+        .fontWeight(850)
+        .fontColor(ColorTokens.primaryDark)
+        .width('100%')
+        .height(38)
+        .textAlign(TextAlign.Center)
+        .borderRadius(DemoAliasTokens.radiusPill)
+        .backgroundColor(ColorTokens.metaBg)
+        .border({ width: 1, color: ColorTokens.border })
+        .margin({ top: 8 })
+        .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'source-management' }))
+    }
+    .width('100%')
+    .padding({ left: 16, right: 16, top: 10, bottom: 10 })
+    .borderRadius({
+      topLeft: DemoAliasTokens.radiusXl,
+      topRight: DemoAliasTokens.radiusXl,
+      bottomLeft: DemoAliasTokens.radiusXl,
+      bottomRight: DemoAliasTokens.radiusXl,
+    })
+    .backgroundColor(DemoAliasTokens.surface)
+    .border({ width: 1, color: ColorTokens.border })
+    .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
+    .alignItems(HorizontalAlign.Center)
   }
 }
 
@@ -449,6 +896,134 @@ struct SecondaryAction {
 }
 
 @Component
+struct WebDavInputRow {
+  @Prop title: string = '服务器地址';
+  @Prop value: string = '';
+  @Prop kind: string = 'link';
+
+  private iconResource(): Resource {
+    if (this.kind === 'people') return $r('app.media.bookshelf_icon_people_dark');
+    if (this.kind === 'shield') return $r('app.media.ui_icon_check_dark');
+    if (this.kind === 'folder') return $r('app.media.ui_icon_bookmark_dark');
+    return $r('app.media.ui_icon_source_dark');
+  }
+
+  build() {
+    Row() {
+      Stack() {
+        Image(this.iconResource())
+          .width(17)
+          .height(17)
+      }
+      .width(34)
+      .height(34)
+      .borderRadius(DemoAliasTokens.radiusPill)
+      .backgroundColor(ColorTokens.metaBg)
+
+      Column() {
+        Text(this.title)
+          .fontSize(12)
+          .fontWeight(800)
+          .fontColor(ColorTokens.controlInk)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(this.value)
+          .fontSize(11)
+          .fontWeight(700)
+          .fontColor(ColorTokens.ink)
+          .width('100%')
+          .height(34)
+          .padding({ left: 10, right: 10 })
+          .textAlign(TextAlign.Start)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .borderRadius(DemoAliasTokens.radiusSm)
+          .backgroundColor(ColorTokens.paper)
+          .border({ width: 1, color: ColorTokens.border })
+          .margin({ top: 4 })
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+      .margin({ left: 9 })
+    }
+    .width('100%')
+    .constraintSize({ minHeight: 76 })
+    .padding({ left: 10, right: 10, top: 9, bottom: 9 })
+    .borderRadius(DemoAliasTokens.radiusMd)
+    .backgroundColor(ColorTokens.surfaceSoft)
+    .border({ width: 1, color: ColorTokens.border })
+    .alignItems(VerticalAlign.Center)
+  }
+}
+
+@Component
+struct WebDavSectionAction {
+  @Prop label: string = '测试网络连通性';
+  @Prop kind: string = 'refresh';
+
+  private iconResource(): Resource {
+    return this.kind === 'check' ? $r('app.media.ui_icon_check_primary') : $r('app.media.ui_icon_refresh_primary');
+  }
+
+  build() {
+    Row() {
+      Image(this.iconResource())
+        .width(18)
+        .height(18)
+      Text(this.label)
+        .fontSize(13)
+        .fontWeight(800)
+        .fontColor(ColorTokens.primaryDark)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .margin({ left: 8 })
+    }
+    .layoutWeight(1)
+    .constraintSize({ minHeight: 44 })
+    .justifyContent(FlexAlign.Center)
+    .alignItems(VerticalAlign.Center)
+    .padding({ left: 10, right: 10, top: 8, bottom: 8 })
+    .borderRadius(DemoAliasTokens.radiusMd)
+    .backgroundColor(ColorTokens.metaBg)
+    .border({ width: 1, color: ColorTokens.border })
+  }
+}
+
+@Component
+struct WebDavConfigSection {
+  build() {
+    Column() {
+      Text('WebDAV 配置')
+        .fontSize(15)
+        .fontWeight(900)
+        .fontColor(ColorTokens.ink)
+        .margin({ left: 2, bottom: 5 })
+      WebDavInputRow({ title: '服务器地址', value: 'https://dav.example.com/reader/backup', kind: 'link' })
+      WebDavInputRow({ title: '账号', value: 'reader@example.com', kind: 'people' })
+        .margin({ top: 8 })
+      WebDavInputRow({ title: '密码', value: '••••••••••••••••••••', kind: 'shield' })
+        .margin({ top: 8 })
+      WebDavInputRow({ title: '同步目录', value: '/ReaderBackup/ReaderAndroid', kind: 'folder' })
+        .margin({ top: 8 })
+      Row() {
+        WebDavSectionAction({ label: '测试网络连通性', kind: 'refresh' })
+        WebDavSectionAction({ label: '保存配置', kind: 'check' })
+          .margin({ left: 9 })
+      }
+      .width('100%')
+      .margin({ top: 8 })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+    .padding({ left: 10, right: 10, top: 9, bottom: 10 })
+    .borderRadius(DemoAliasTokens.radiusMd)
+    .backgroundColor(DemoAliasTokens.surface)
+    .border({ width: 1, color: ColorTokens.border })
+    .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
+  }
+}
+
+@Component
 struct ActionPair {
   @Prop left: string = '取消';
   @Prop right: string = '确认';
@@ -562,9 +1137,14 @@ struct RestoreStageRow {
 @Component
 struct SyncBackupRecordRow {
   @Prop source: string = '';
-  @Prop detail: string = '';
-  @Prop chip: string = '';
+  @Prop time: string = '';
+  @Prop content: string = '';
   @Prop groupStart: string = '';
+  @Prop local: boolean = false;
+
+  private iconResource(): Resource {
+    return this.local ? $r('app.media.ui_icon_bookmark_dark') : $r('app.media.ui_icon_sync_dark');
+  }
 
   build() {
     Column() {
@@ -573,12 +1153,16 @@ struct SyncBackupRecordRow {
           .fontSize(12)
           .fontWeight(900)
           .fontColor(ColorTokens.muted)
-          .margin({ bottom: 6 })
+          .margin({ left: 2, bottom: 6 })
       }
       Row() {
-        Stack()
-          .width(30)
-          .height(30)
+        Stack() {
+          Image(this.iconResource())
+            .width(17)
+            .height(17)
+        }
+          .width(34)
+          .height(34)
           .borderRadius(DemoAliasTokens.radiusPill)
           .backgroundColor(ColorTokens.metaBg)
         Column() {
@@ -586,22 +1170,33 @@ struct SyncBackupRecordRow {
             .fontSize(13)
             .fontWeight(850)
             .fontColor(ColorTokens.controlInk)
-          Text(this.detail)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Text(this.time)
             .fontSize(11)
             .fontColor(ColorTokens.muted)
             .margin({ top: 4 })
-            .maxLines(2)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Text(this.content)
+            .fontSize(11)
+            .fontColor(ColorTokens.muted)
+            .margin({ top: 2 })
+            .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
         .margin({ left: 10 })
-        HandoffStatusChip({ label: this.chip })
+        Image($r('app.media.ui_icon_chevron_dark'))
+          .width(18)
+          .height(18)
       }
       .width('100%')
-      .padding(12)
+      .constraintSize({ minHeight: 72 })
+      .padding({ left: 11, right: 11, top: 10, bottom: 10 })
       .borderRadius(DemoAliasTokens.radiusMd)
-      .backgroundColor(ColorTokens.floatingControlBg)
+      .backgroundColor(DemoAliasTokens.surface)
       .border({ width: 1, color: ColorTokens.border })
       .alignItems(VerticalAlign.Center)
       .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'restore-confirm' }))
@@ -951,35 +1546,35 @@ export struct BookDirectoryPage {
 
 @Component
 export struct SourceManagementPage {
-  private tools: Array<[string, string, RouteId]> = [
-    ['批量管理', '启用、禁用、检测、分组或删除所选书源', 'source-batch'],
-    ['导入预览', '从网络导入书源并处理冲突', 'source-import-preview'],
-    ['分组管理', '筛选和批量整理书源', 'source-groups'],
-    ['书源检测', '站点、搜索、详情、目录、正文规则检测', 'source-detect'],
-    ['正文调测', '运行正文模块并查看日志', 'source-debug'],
-  ];
-  private sources: RowEntry[] = [
-    { title: '阅读书源 1', detail: '启用 · 搜索 / 目录 / 正文可用', chip: '' },
-    { title: '阅读书源 2', detail: '启用 · 搜索 / 目录 / 正文可用', chip: '' },
-    { title: '阅读书源 3', detail: '启用 · 搜索 / 目录 / 正文可用', chip: '' },
-    { title: '阅读书源 4', detail: '启用 · 搜索 / 目录 / 正文可用', chip: '' },
-    { title: '阅读书源 5', detail: '启用 · 搜索 / 目录 / 正文可用', chip: '' },
+  private sources: SourceManagementEntry[] = [
+    { title: '起点中文网', meta: 'qidian.com · 起点导入', status: '可用', tone: 'good', sourceEnabled: true },
+    { title: '笔趣阁', meta: 'biquge.example · 玄幻书源', status: '异常', tone: 'warn', sourceEnabled: true },
+    { title: '本地导入源', meta: '本地文件导入 · 自定义', status: '未检测', tone: 'muted', sourceEnabled: false },
+    { title: '测试书源', meta: 'test.example · 测试书源', status: '可用', tone: 'good', sourceEnabled: true },
+    { title: '轻小说文库', meta: 'lightnovel.example · 测试书源', status: '可用', tone: 'good', sourceEnabled: true },
+    { title: '旧规则源', meta: 'old.example · 自定义', status: '异常', tone: 'warn', sourceEnabled: true },
+    { title: '飞卢小说网', meta: 'faloo.com · 玄幻书源', status: '可用', tone: 'good', sourceEnabled: true },
+    { title: '晋江文学城', meta: 'jjwxc.example · 起点导入', status: '可用', tone: 'good', sourceEnabled: true },
+    { title: '纵横中文网', meta: 'zongheng.com · 玄幻书源', status: '未检测', tone: 'muted', sourceEnabled: false },
   ];
 
   build() {
     Column() {
-      StructureCard({ title: '书源工具', message: '导入、分组、检测和调测都从这里进入。' })
-      ForEach(this.tools, (entry: [string, string, RouteId], idx: number) => {
-        StructureRow({ title: entry[0], detail: entry[1] })
-          .margin({ top: idx === 0 ? 12 : 8 })
-          .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: entry[2] }))
-      }, (entry: [string, string, RouteId], idx: number) => `${entry[0]}-${idx}`)
-      SectionTitle({ title: '启用书源' })
-        .margin({ top: 14, bottom: 10 })
-      ForEach(this.sources, (entry: RowEntry, idx: number) => {
-        StructureRow({ title: entry.title, detail: entry.detail, showChevron: false })
-          .margin({ bottom: idx === this.sources.length - 1 ? 0 : 10 })
-      }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
+      SearchBox({ label: '搜索书源名称或域名' })
+      SourceMetricStrip()
+      SourceFilterSummaryRow()
+      Column() {
+        ForEach(this.sources, (entry: SourceManagementEntry, idx: number) => {
+          SourceManagementRow({
+            title: entry.title,
+            meta: entry.meta,
+            tone: entry.tone,
+            sourceEnabled: entry.sourceEnabled,
+          })
+        }, (entry: SourceManagementEntry, idx: number) => `${entry.title}-${idx}`)
+      }
+      .width('100%')
+      .margin({ top: 18 })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -988,11 +1583,52 @@ export struct SourceManagementPage {
 
 @Component
 export struct SourceDetailPage {
-  @Prop title: string = '阅读书源 1';
+  @Prop title: string = '笔趣阁';
+  private modules: SourceModuleEntry[] = [
+    { title: '站点', status: '可访问', tone: 'good' },
+    { title: '搜索', status: '正常', tone: 'good' },
+    { title: '详情', status: '正常', tone: 'good' },
+    { title: '目录', status: '正常', tone: 'good' },
+    { title: '正文', status: '异常', tone: 'warn' },
+    { title: '登录', status: '未启用', tone: 'muted' },
+  ];
+  private info: SourceInfoEntry[] = [
+    { label: '请求方式', value: 'GET · UTF-8' },
+    { label: '并发限制', value: '2 个请求' },
+    { label: 'Cookie', value: '未启用' },
+    { label: '更新时间', value: '今天 10:12' },
+  ];
 
   build() {
     Column() {
-      StructureCard({ title: this.title, message: '搜索、目录、正文规则均正常。', chip: '已启用' })
+      SourceDetailHeader({ title: this.title })
+      Text('异常 · 最近检测 10:30 · 规则版本 3')
+        .fontSize(12)
+        .fontWeight(700)
+        .fontColor(ColorTokens.muted)
+        .margin({ top: 10 })
+      Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween }) {
+        ForEach(this.modules, (entry: SourceModuleEntry, idx: number) => {
+          SourceModuleStatusCard({ title: entry.title, status: entry.status, tone: entry.tone })
+        }, (entry: SourceModuleEntry, idx: number) => `${entry.title}-${idx}`)
+      }
+      .width('100%')
+      .margin({ top: 12 })
+      SourceDetailDetectCard()
+        .margin({ top: 6 })
+      Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween }) {
+        ForEach(this.info, (entry: SourceInfoEntry, idx: number) => {
+          SourceInfoCard({ label: entry.label, value: entry.value })
+        }, (entry: SourceInfoEntry, idx: number) => `${entry.label}-${idx}`)
+      }
+      .width('100%')
+      .margin({ top: 12 })
+      Row({ space: 10 }) {
+        SourceInlineActionButton({ label: '复制书源', icon: $r('app.media.ui_icon_source_dark') })
+        SourceInlineActionButton({ label: '导出书源', icon: $r('app.media.ui_icon_upload_dark') })
+      }
+      .width('100%')
+      .margin({ top: 4 })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -1001,11 +1637,35 @@ export struct SourceDetailPage {
 
 @Component
 export struct SourceImportOptionsPage {
+  private sources: SourceManagementEntry[] = [
+    { title: '起点中文网', meta: 'qidian.com · 起点导入', status: '可用', tone: 'good', sourceEnabled: true },
+    { title: '笔趣阁', meta: 'biquge.example · 玄幻书源', status: '异常', tone: 'warn', sourceEnabled: true },
+    { title: '本地导入源', meta: '本地文件导入 · 自定义', status: '未检测', tone: 'muted', sourceEnabled: false },
+    { title: '测试书源', meta: 'test.example · 测试书源', status: '可用', tone: 'good', sourceEnabled: true },
+  ];
+
   build() {
     Column() {
-      StatePanel({ title: '导入书源', message: '从 URL、剪贴板或本地文件导入。', action: '选择导入方式' })
+      SearchBox({ label: '搜索书源名称或域名' })
+      SourceMetricStrip()
+      SourceFilterSummaryRow()
+      Column() {
+        ForEach(this.sources, (entry: SourceManagementEntry, idx: number) => {
+          SourceManagementRow({
+            title: entry.title,
+            meta: entry.meta,
+            tone: entry.tone,
+            sourceEnabled: entry.sourceEnabled,
+          })
+        }, (entry: SourceManagementEntry, idx: number) => `${entry.title}-${idx}`)
+      }
+      .width('100%')
+      .margin({ top: 14 })
+      SourceImportBottomSheet()
+        .margin({ top: 10 })
     }
     .width('100%')
+    .alignItems(HorizontalAlign.Start)
   }
 }
 
@@ -1073,23 +1733,6 @@ export struct SourceTestResultPage {
 }
 
 @Component
-export struct WebDavConfigPage {
-  build() {
-    Column() {
-      FormField({ placeholder: '服务器地址' })
-      FormField({ placeholder: '用户名' })
-        .margin({ top: 10 })
-      FormField({ placeholder: '密码' })
-        .margin({ top: 10 })
-      PrimaryAction({ label: '登录并测试' })
-        .margin({ top: 10 })
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
-}
-
-@Component
 export struct SyncSettingsEntryPage {
   build() {
     Column() {
@@ -1103,11 +1746,11 @@ export struct SyncSettingsEntryPage {
 @Component
 export struct SyncBackupPage {
   @Prop variant: string = 'default';
-  private backups: RowEntry[] = [
-    { title: 'WebDAV', detail: '2026-06-23 08:00 · 完整备份 · 12.8 MB · 书架、进度、设置、书源', chip: '最新' },
-    { title: '本地', detail: '2026-06-23 10:30 · 完整备份 · 本机文件', chip: '本机' },
-    { title: 'WebDAV', detail: '2026-06-21 22:30 · 书架与设置 · 8.6 MB', chip: '局部' },
-    { title: 'WebDAV', detail: '2026-06-16 02:00 · 完整备份 · 历史记录', chip: '历史' },
+  private backups: SyncBackupEntry[] = [
+    { source: 'WebDAV', time: '2026-06-23 08:00', content: '书架、进度、设置、书源', group: '最近备份', local: false },
+    { source: '本地', time: '2026-06-23 10:30', content: '书架、进度、设置、书源', group: '最近备份', local: true },
+    { source: 'WebDAV', time: '2026-06-21 22:30', content: '书架、分组、设置', group: '历史备份', local: false },
+    { source: 'WebDAV', time: '2026-06-16 02:00', content: '书架、进度、设置、书源', group: '历史备份', local: false },
   ];
 
   build() {
@@ -1117,25 +1760,32 @@ export struct SyncBackupPage {
         RestoreStageRow({ title: '连接 WebDAV', detail: 'https://dav.example.com/reader/backup', chip: '进行中', progress: 0.42, active: true })
           .margin({ top: 12 })
       } else {
-        StructureCard({ title: 'WebDAV 配置', message: 'https://dav.example.com/reader/backup · reader@example.com · /ReaderBackup/ReaderAndroid', chip: '已配置' })
-        Row() {
-          SecondaryAction({ label: '测试网络连通性', route: 'sync-backup' })
-          SecondaryAction({ label: '保存配置', route: 'sync-backup', primary: true })
-            .margin({ left: 10 })
+        WebDavConfigSection()
+        Column() {
+          Text('恢复数据')
+            .fontSize(15)
+            .fontWeight(900)
+            .fontColor(ColorTokens.ink)
+            .margin({ left: 2, bottom: 8 })
+          ForEach(this.backups, (entry: SyncBackupEntry, idx: number) => {
+            SyncBackupRecordRow({
+              source: entry.source,
+              time: entry.time,
+              content: entry.content,
+              local: entry.local,
+              groupStart: idx === 0 || entry.group !== this.backups[idx - 1].group ? entry.group : '',
+            })
+              .margin({ bottom: idx === this.backups.length - 1 ? 0 : 8 })
+          }, (entry: SyncBackupEntry, idx: number) => `${entry.source}-${entry.time}-${idx}`)
         }
         .width('100%')
-        .margin({ top: 10 })
-        SectionTitle({ title: '恢复数据' })
-          .margin({ top: 16, bottom: 10 })
-        ForEach(this.backups, (entry: RowEntry, idx: number) => {
-          SyncBackupRecordRow({
-            source: entry.title,
-            detail: entry.detail,
-            chip: entry.chip,
-            groupStart: idx === 0 ? '最近备份' : (idx === 2 ? '历史备份' : ''),
-          })
-            .margin({ bottom: idx === this.backups.length - 1 ? 0 : 8 })
-        }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
+        .alignItems(HorizontalAlign.Start)
+        .padding({ left: 12, right: 12, top: 9, bottom: 12 })
+        .borderRadius(DemoAliasTokens.radiusMd)
+        .backgroundColor(DemoAliasTokens.surface)
+        .border({ width: 1, color: ColorTokens.border })
+        .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
+        .margin({ top: 12 })
       }
     }
     .width('100%')

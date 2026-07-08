@@ -58,17 +58,19 @@ export default function ReaderOverlayViewStateTests(): void {
       const body = ViewStateTable.bodyComponentsFor('control-layer-base-v2', 'default');
       const types = topTypes(body);
       expect(types[0]).assertEqual('ReaderBase');
-      expect(types[1]).assertEqual('ReaderControlSheet');
-      expect(types[2]).assertEqual('ReaderBottomBar');
-      expect(types.length).assertEqual(3);
+      expect(types[1]).assertEqual('ReaderTopArea');
+      expect(types[2]).assertEqual('ReaderControlSheet');
+      expect(types[3]).assertEqual('ReaderBottomBar');
+      expect(types.length).assertEqual(4);
     });
 
     it('directoryOverlayBodyIsBaseBarAndDirectoryPanel', 0, () => {
       const body = ViewStateTable.bodyComponentsFor('reader-directory-overlay-v2', 'default');
       const types = topTypes(body);
       expect(types[0]).assertEqual('ReaderBase');
-      expect(types[1]).assertEqual('ReaderBottomBar');
+      expect(types[1]).assertEqual('ReaderTopArea');
       expect(types[2]).assertEqual('ReaderDirectoryPanel');
+      expect(types[3]).assertEqual('ReaderBottomBar');
     });
 
     // ── No double-render: ReaderBase appears exactly once ─────────────────
@@ -112,8 +114,9 @@ export default function ReaderOverlayViewStateTests(): void {
       expect(body.length > 0).assertTrue();
       const types = topTypes(body);
       expect(types[0]).assertEqual('ReaderBase');
-      expect(types[1]).assertEqual('ReaderBottomBar');
+      expect(types[1]).assertEqual('ReaderTopArea');
       expect(types[2]).assertEqual('ReaderAppearancePanel');
+      expect(types[3]).assertEqual('ReaderBottomBar');
       const all: string[] = [];
       collectTypes(body, all);
       expect(countOccurrences(all, 'ReaderBase')).assertEqual(1);
@@ -126,8 +129,9 @@ export default function ReaderOverlayViewStateTests(): void {
       expect(body.length > 0).assertTrue();
       const types = topTypes(body);
       expect(types[0]).assertEqual('ReaderBase');
-      expect(types[1]).assertEqual('ReaderBottomBar');
+      expect(types[1]).assertEqual('ReaderTopArea');
       expect(types[2]).assertEqual('ReaderTtsPanel');
+      expect(types[3]).assertEqual('ReaderBottomBar');
       const all: string[] = [];
       collectTypes(body, all);
       expect(countOccurrences(all, 'ReaderBase')).assertEqual(1);
@@ -140,8 +144,9 @@ export default function ReaderOverlayViewStateTests(): void {
       expect(body.length > 0).assertTrue();
       const types = topTypes(body);
       expect(types[0]).assertEqual('ReaderBase');
-      expect(types[1]).assertEqual('ReaderBottomBar');
+      expect(types[1]).assertEqual('ReaderTopArea');
       expect(types[2]).assertEqual('ReaderSettingsPanel');
+      expect(types[3]).assertEqual('ReaderBottomBar');
       const all: string[] = [];
       collectTypes(body, all);
       expect(countOccurrences(all, 'ReaderBase')).assertEqual(1);
@@ -156,8 +161,9 @@ export default function ReaderOverlayViewStateTests(): void {
       const body = ViewStateTable.bodyComponentsFor('reader-search-overlay-v2', 'default');
       const types = topTypes(body);
       expect(types[0]).assertEqual('ReaderBase');
-      expect(types[1]).assertEqual('ReaderBottomBar');
+      expect(types[1]).assertEqual('ReaderTopArea');
       expect(types[2]).assertEqual('ReaderSearchPanel');
+      expect(types[3]).assertEqual('ReaderBottomBar');
     });
 
     it('replaceOverlayResolvesBespoke', 0, () => {
@@ -165,8 +171,9 @@ export default function ReaderOverlayViewStateTests(): void {
       const body = ViewStateTable.bodyComponentsFor('reader-replace-overlay-v2', 'default');
       const types = topTypes(body);
       expect(types[0]).assertEqual('ReaderBase');
-      expect(types[1]).assertEqual('ReaderBottomBar');
+      expect(types[1]).assertEqual('ReaderTopArea');
       expect(types[2]).assertEqual('ReaderReplacePanel');
+      expect(types[3]).assertEqual('ReaderBottomBar');
     });
 
     it('autoScrollOverlayResolvesBespoke', 0, () => {
@@ -174,8 +181,9 @@ export default function ReaderOverlayViewStateTests(): void {
       const body = ViewStateTable.bodyComponentsFor('reader-auto-scroll-overlay-v2', 'default');
       const types = topTypes(body);
       expect(types[0]).assertEqual('ReaderBase');
-      expect(types[1]).assertEqual('ReaderBottomBar');
+      expect(types[1]).assertEqual('ReaderTopArea');
       expect(types[2]).assertEqual('ReaderAutoScrollPanel');
+      expect(types[3]).assertEqual('ReaderBottomBar');
     });
 
     // ── Night state (Step 3c-2) — themed base + toast, no panel ────────────
@@ -185,8 +193,9 @@ export default function ReaderOverlayViewStateTests(): void {
       expect(body.length > 0).assertTrue();
       const types = topTypes(body);
       expect(types[0]).assertEqual('ReaderBase');
-      expect(types[1]).assertEqual('ReaderBottomBar');
-      expect(types[2]).assertEqual('NightToast');
+      expect(types[1]).assertEqual('ReaderTopArea');
+      expect(types[2]).assertEqual('ReaderBottomBar');
+      expect(types[3]).assertEqual('NightToast');
       // themed night: ReaderBase carries theme=night.
       expect(body[0].props.theme === 'night').assertTrue();
       const all: string[] = [];

@@ -94,8 +94,8 @@ export struct ReadButton {
       .height(40).padding({ left: 18, right: 18 })
       .onClick(() => {
         // route-push first (resets pageState='default'), then chapter-load
-        // switches pageState='loading' so reader/loading ViewState renders.
-        ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' });
+        // switches pageState='loading' on the immersive reader route.
+        ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' });
         if (this.currentBook !== null && this.currentBook.chapterListUrl.length > 0) {
           ReaderUiStore.dispatch({ type: 'chapter-load', chapterId: this.currentBook.chapterListUrl });
         }

@@ -69,7 +69,8 @@ export struct BackTopBar {
       Image($r('app.media.reader_icon_back_dark'))
         .width(24).height(24)
         .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
-      Text(topBarTitle(this.routeId, this.pageState, 'BackTopBar', ''))
+      Text(topBarTitle(this.routeId, this.pageState, 'BackTopBar',
+        topBarTitle(this.routeId, this.pageState, 'AppTopBar', '')))
         .fontSize(24)
         .fontWeight(700)
         .fontColor(ColorTokens.ink)

@@ -7,19 +7,23 @@ import { AppTopBar, BackTopBar, BottomNav, Loading, Empty, ErrorState, Offline,
 import { ContinueReadingCard, BookshelfShelfSection, ShelfChipGroup, ShelfSectionHeader, BookCard, BookCover, BookGrid, BookEntry } from './BookshelfComponents';
 import { BookHero, BookSummaryCard, BookChapterList } from './BookDetailComponents';
 import { ReadingBackgroundLayer, ReadingTextFlow, ReadingInfoLayer, TapZones, ReaderBase, ReaderTopArea } from './ReaderComponents';
-import { ReaderControlSheet, ReaderBottomBar, ReaderDirectoryPanel, ReaderAppearancePanel, ReaderTtsPanel, ReaderSettingsPanel, ReaderSearchPanel, ReaderReplacePanel, ReaderAutoScrollPanel, NightToast } from './ReaderOverlayComponents';
+import { ReaderControlSheet, ReaderBottomBar, ReaderDirectoryPanel, ReaderAppearancePanel, ReaderTtsPanel, ReaderSettingsPanel,
+  ReaderFullDirectoryPage, ReaderFullTtsPage, ReaderFullAppearancePage, ReaderFullSettingsPage, ReaderBookCachePage, ReaderDebugInfoPage,
+  ReaderSearchPanel, ReaderReplacePanel, ReaderAutoScrollPanel, NightToast } from './ReaderOverlayComponents';
 import { SourceSwitchResultsPanel, SourceImportPreviewPage, SourceGroupsPage, SourceDetectPage, SourceDebugPage,
   SourceDebugRunningPage, SourceDebugResultPage, SourceDebugContentLogPage, SourceCodeViewPage, SourceLogsPage,
   SourceDeleteConfirmPage, SourceRuleEditPage, SourceBatchPage } from './LibraryComponents';
+import { SourceSwitchFlowPage } from './SourceSwitchFlowComponents';
 import { SettingsHomeSection, SettingsHomePage, SettingsGeneralPage, BookshelfSearchSettingsPage, ProgressSyncPage, SettingsSection, SettingsListItem } from './SettingsComponents';
 import { DiscoverSourceBar, DiscoverEntryRow, DiscoverFilterTrigger, DiscoverListHead, DiscoverBookList,
   DiscoverStatePage, DiscoverSourceBulkPage, DiscoverSourceLoginPage, DiscoverRuleTestPage } from './DiscoverComponents';
 import { RssSearchEntry, RssModeRow, RssSourceOverview, RssArticleSection,
   RssAllPage, RssOriginalPage, RssRefreshingPage, RssOriginalBrowserPage,
   RssFavoriteGroupsPage, RssSourceGroupsPage, RssSourceImportPage, RssSourceEditPage } from './RssComponents';
+import { InteractionDebugBadge } from './InteractionDebugComponents';
 import { AppShellStructure, MainTabsStructure, SearchHomePage, SearchResultsPage, SearchStatePage, BookTocPreviewPage,
   BookshelfEmptyPage, SourceManagementPage, SourceDetailPage, SourceImportOptionsPage, SourceDisabledState,
-  SourceSettingsEntryPage, SourceTestResultPage, WebDavConfigPage, SyncSettingsEntryPage, SyncBackupPage,
+  SourceSettingsEntryPage, SourceTestResultPage, SyncSettingsEntryPage, SyncBackupPage,
   SyncErrorPage, SyncProgressPage, RestoreConfirmPage, RestoreProgressPage, RestoreConflictPage, RestoreResultPage,
   RemoteWebDavBooksPage, RssDetailPage, RssEmptyState, RssErrorState, GlobalStatePage,
   OfflineStatePage, PermissionRequiredPage, AboutVersionPage, AboutFeedbackPage, LocalBookImportPage, ReadingSettingsEntryPage,
@@ -47,7 +51,7 @@ export struct ViewStateRenderer {
     if (this.layoutMode === 'stack') {
       Stack() {
         ForEach(ViewStateTable.bodyComponentsFor(this.routeId, this.pageState), (component: ViewStateComponent, idx: number) => {
-          this.renderComponent(component)
+          this.renderDebuggedComponent(component, true)
         }, (component: ViewStateComponent, idx: number) => `${component.id}-${component.type}-${idx}`)
       }
       .width('100%')
@@ -56,7 +60,7 @@ export struct ViewStateRenderer {
       Column() {
         ForEach(ViewStateTable.bodyComponentsFor(this.routeId, this.pageState), (component: ViewStateComponent, idx: number) => {
           Column() {
-            this.renderComponent(component)
+            this.renderDebuggedComponent(component, false)
           }
           .margin({ bottom: 8 })
         }, (component: ViewStateComponent, idx: number) => `${component.id}-${component.type}-${idx}`)
@@ -84,6 +88,7 @@ export struct ViewStateRenderer {
           bookId: this.textOr(child.props.bookId, ''),
           title: this.textOr(child.props.title, '未命名'),
           author: this.textOr(child.props.author, '未知作者'),
+          coverKey: this.textOr(child.props.coverKey, 'threeBody'),
         };
         books.push(entry);
       } else if (child.type === 'BookGrid' && child.children.length > 0) {
@@ -99,8 +104,40 @@ export struct ViewStateRenderer {
 
   @Builder renderChildren(children: ViewStateComponent[]) {
     ForEach(children, (child: ViewStateComponent, idx: number) => {
-      this.renderComponent(child)
+      this.renderDebuggedComponent(child, false)
     }, (child: ViewStateComponent, idx: number) => `${child.id}-${child.type}-${idx}`)
+  }
+
+  private debugTone(componentType: string): string {
+    if (componentType.indexOf('Panel') >= 0 || componentType.indexOf('Sheet') >= 0 || componentType.indexOf('Overlay') >= 0) {
+      return 'sheet';
+    }
+    if (componentType.indexOf('Button') >= 0 || componentType.indexOf('Nav') >= 0 || componentType.indexOf('Action') >= 0) {
+      return 'action';
+    }
+    if (componentType.indexOf('Page') >= 0 || componentType.indexOf('Shell') >= 0) {
+      return 'route';
+    }
+    return 'module';
+  }
+
+  @Builder renderDebuggedComponent(component: ViewStateComponent, fullFrame: boolean) {
+    if (fullFrame) {
+      Stack({ alignContent: Alignment.TopStart }) {
+        this.renderComponent(component)
+        InteractionDebugBadge({ label: component.type, tone: this.debugTone(component.type) })
+      }
+      .width('100%')
+      .height('100%')
+      .hitTestBehavior(HitTestMode.Transparent)
+    } else {
+      Stack({ alignContent: Alignment.TopStart }) {
+        this.renderComponent(component)
+        InteractionDebugBadge({ label: component.type, tone: this.debugTone(component.type) })
+      }
+      .width('100%')
+      .hitTestBehavior(HitTestMode.Transparent)
+    }
   }
 
   @Builder renderComponent(component: ViewStateComponent) {
@@ -119,7 +156,12 @@ export struct ViewStateRenderer {
     } else if (component.type === 'Offline') {
       Offline()
     } else if (component.type === 'ContinueReadingCard') {
-      ContinueReadingCard({ bookId: this.textOr(component.props.bookId, ''), title: this.textOr(component.props.title, '示例书'), author: this.textOr(component.props.author, '示例作者') })
+      ContinueReadingCard({
+        bookId: this.textOr(component.props.bookId, ''),
+        title: this.textOr(component.props.title, '长夜余火'),
+        author: this.textOr(component.props.author, '爱潜水的乌贼'),
+        coverKey: this.textOr(component.props.coverKey, 'longNight'),
+      })
     } else if (component.type === 'BookshelfShelfSection') {
       BookshelfShelfSection({
         title: this.textOr(component.props.title, '我的书架'),
@@ -152,6 +194,8 @@ export struct ViewStateRenderer {
       NightToast()
     } else if (component.type === 'SourceSwitchResultsPanel') {
       SourceSwitchResultsPanel()
+    } else if (component.type === 'SourceSwitchFlowPage') {
+      SourceSwitchFlowPage()
     } else if (component.type === 'SourceImportPreviewPage') {
       SourceImportPreviewPage()
     } else if (component.type === 'SourceGroupsPage') {
@@ -184,6 +228,18 @@ export struct ViewStateRenderer {
       ReaderTtsPanel()
     } else if (component.type === 'ReaderSettingsPanel') {
       ReaderSettingsPanel()
+    } else if (component.type === 'ReaderFullDirectoryPage') {
+      ReaderFullDirectoryPage()
+    } else if (component.type === 'ReaderFullTtsPage') {
+      ReaderFullTtsPage()
+    } else if (component.type === 'ReaderFullAppearancePage') {
+      ReaderFullAppearancePage()
+    } else if (component.type === 'ReaderFullSettingsPage') {
+      ReaderFullSettingsPage()
+    } else if (component.type === 'ReaderBookCachePage') {
+      ReaderBookCachePage()
+    } else if (component.type === 'ReaderDebugInfoPage') {
+      ReaderDebugInfoPage()
     } else if (component.type === 'ReaderSearchPanel') {
       ReaderSearchPanel()
     } else if (component.type === 'ReaderReplacePanel') {
@@ -320,8 +376,6 @@ export struct ViewStateRenderer {
       SourceSettingsEntryPage()
     } else if (component.type === 'SourceTestResultPage') {
       SourceTestResultPage()
-    } else if (component.type === 'WebDavConfigPage') {
-      WebDavConfigPage()
     } else if (component.type === 'SyncSettingsEntryPage') {
       SyncSettingsEntryPage()
     } else if (component.type === 'SyncBackupPage') {
@@ -430,7 +484,12 @@ export struct ViewStateRenderer {
     } else if (component.type === 'ShelfSectionHeader') {
       ShelfSectionHeader({ title: this.textOr(component.props.title, '我的书架') })
     } else if (component.type === 'BookCard') {
-      BookCard({ bookId: this.textOr(component.props.bookId, ''), title: this.textOr(component.props.title, '三体'), author: this.textOr(component.props.author, '刘慈欣') })
+      BookCard({
+        bookId: this.textOr(component.props.bookId, ''),
+        title: this.textOr(component.props.title, '长夜余火'),
+        author: this.textOr(component.props.author, '爱潜水的乌贼'),
+        coverKey: this.textOr(component.props.coverKey, 'longNight'),
+      })
     } else if (component.type === 'BookCover') {
       BookCover()
     } else if (component.type === 'BookGrid') {
