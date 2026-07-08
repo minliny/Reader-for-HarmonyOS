@@ -490,20 +490,8 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "FloatingBrightness",
-        "id": "reader-floating-brightness",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "FloatingQuickActions",
-        "id": "reader-floating-quick-actions",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "FloatingPageControl",
-        "id": "reader-floating-page-control",
+        "type": "ReaderControlSheet",
+        "id": "reader-control-sheet",
         "props": {},
         "children": []
       },

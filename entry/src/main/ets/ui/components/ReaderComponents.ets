@@ -41,26 +41,26 @@ export struct ReadingBackgroundLayer {
 //   paragraph-gap (16) between paragraphs.
 @Component
 export struct ReadingTextFlow {
+  @StorageProp(SafeAreaAdapter.K_TOP) safeAreaTop: number = SafeAreaAdapter.DEFAULT_TOP;
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
   @StorageProp('reader.displayedRouteId') routeId: string = 'reader';
   @StorageProp('reader.chapterContent') chapterContent: string[] = [];
   @Prop theme: string = 'paper';
 
   private immersiveParagraphs: string[] = [
-    '汪淼盯着面前的纳米丝，想象着它在宏观尺度上的形态。它细如蛛丝，却能切断合金，这便是三体人送给地球的第一个礼物。',
-    '叶文洁当年的选择，像一条看不见的线，从雷达峰延伸到此刻的每一个角落。她按下发射键的那一刻，人类的命运被永远改写了。',
-    '宇宙曾经是一片死寂的荒漠，直到那条信息被发出，直到那个回复被接收。在那之后的每一个夜晚，星空都不再是原来的星空。'
+    '雨声在窗外连成一片，像无数细小的针，密密地刺在玻璃上，汇成一层朦胧的水幕，将城市的灯光晕成模糊的光团。',
+    '他站在窗前，手里握着那封被雨水润湿的信。纸页边角微微卷起，字迹却依旧清晰，像某个迟到许久的答案终于抵达。',
+    '这座城市在夜里显得格外安静，街道尽头偶尔有车灯掠过，又很快被雨幕吞没，只留下短暂而摇晃的光。',
+    '他曾经以为自己已经习惯等待，习惯在没有回音的日子里把所有疑问折起来，塞进抽屉最深处。'
   ];
 
   private controlParagraphs: string[] = [
-    '通讯台的指示灯已经闪烁了三个标准时。在这片被称为“寂静航线”的星域里，通常除了背景辐射的白噪音，什么也听不到。艾伦揉了揉干涩的眼睛，盯着那个代表未知频段的跳动波形。',
-    '“这不是随机的脉冲星信号，”领航员索菲亚走到他身后，指着屏幕边缘的傅里叶变换图谱，“看这里的周期性间断，它有明显的结构，像是一种原始的二进制。”',
-    '空间站外，恒星的光芒被一层稀薄的星云物质过滤，呈现出一种黯淡的铁锈红。船舱内的维生系统发出平缓的嗡嗡声，与屏幕上跳动的波形形成了一种奇异的共振。',
-    '那声音起初像是冰层断裂的脆响，随后逐渐演变成一种低沉的、仿佛是在水下敲击金属的节奏。每敲击三次，就会有一次长达十秒的绝对静默。',
-    '“三短，一长静默……”索菲亚的脸色变了，“在旧地球时代的航海通讯里，这是……”',
-    '“求救信号。”艾伦打断了她，手指在控制台的触控板上快速滑过，试图锁定信号源的坐标。“但问题是，这个波段是我们在五十年前就已经淘汰的军用加密频道。而且，坐标指向的是——”',
-    '他咽了一口唾沫，看着屏幕上解析出的星图坐标。',
-    '“指向的是我们母星系的方向。可那里，在四十年前的大坍缩中，就已经什么都不剩了。”'
+    '雨声在窗外连成一片，像无数细小的针，密密地刺在玻璃上，汇成一层朦胧的水幕，将城市的灯光晕成模糊的光团。',
+    '他站在窗前，手里握着那封被雨水润湿的信。纸页边角微微卷起，字迹却依旧清晰，像某个迟到许久的答案终于抵达。',
+    '这座城市在夜里显得格外安静，街道尽头偶尔有车灯掠过，又很快被雨幕吞没，只留下短暂而摇晃的光。',
+    '他曾经以为自己已经习惯等待，习惯在没有回音的日子里把所有疑问折起来，塞进抽屉最深处。',
+    '可真正看到信上那行字时，他才发现那些被压下去的情绪并没有消失，只是一直在暗处积蓄，等着这一刻重新涌上来。',
+    '远处的灯光像被雾气揉碎，只剩下一团模糊的暖色。也许有些选择，从一开始就注定要在某个雨夜到来。'
   ];
 
   private inkColor(): string {
@@ -72,7 +72,7 @@ export struct ReadingTextFlow {
   }
 
   private title(): string {
-    return this.controlLayer() ? '深空信号' : '第一章 科学边界';
+    return '雨夜';
   }
 
   // Use real chapter content from the reducer when available; fall back to
@@ -111,7 +111,7 @@ export struct ReadingTextFlow {
         }, (p: string, i: number) => `${i}`)
       }
       .padding({
-        top: this.controlLayer() ? 128 : 72,
+        top: this.controlLayer() ? this.safeAreaTop + 90 : 72,
         left: this.controlLayer() ? 24 : 32,
         right: this.controlLayer() ? 24 : 32,
         bottom: this.controlLayer() ? 230 + this.safeAreaBottom : 48 + this.safeAreaBottom,
@@ -143,12 +143,12 @@ export struct ReadingInfoLayer {
   build() {
     Column() {
       Row() {
-        Text('示例书 · 第一章 科学边界')
+        Text('长夜余火 · 第 32 章 雨夜')
           .fontSize(12)
           .fontColor(this.mutedColor())
           .fontFamily(ReaderTypography.sansFamily())
           .layoutWeight(1)
-        Text('13:50')
+        Text('10:30')
           .fontSize(12)
           .fontColor(this.mutedColor())
           .fontFamily(ReaderTypography.sansFamily())
@@ -161,7 +161,7 @@ export struct ReadingInfoLayer {
           .fontColor(this.mutedColor())
           .fontFamily(ReaderTypography.sansFamily())
           .layoutWeight(1)
-        Text('第 1 / 10 页')
+        Text('第 1 / 8 页')
           .fontSize(12)
           .fontColor(this.mutedColor())
           .fontFamily(ReaderTypography.sansFamily())
@@ -177,9 +177,9 @@ export struct ReadingInfoLayer {
   }
 }
 
-// .reader-top-area: top control chrome shown on control-layer and overlay
-// routes. Mirrors normalized HTML: a full-width 56vp top bar plus a 48vp meta
-// row. The plain reader route keeps ReadingInfoLayer instead.
+// .fd-reader-top: top control chrome shown on control-layer and overlay routes.
+// Live demo shape: one floating rounded bar with back, book title/source line,
+// source-switch action, and more. The plain reader route keeps ReadingInfoLayer.
 @Component
 export struct ReaderTopArea {
   @StorageProp(SafeAreaAdapter.K_TOP) safeAreaTop: number = SafeAreaAdapter.DEFAULT_TOP;
@@ -187,7 +187,7 @@ export struct ReaderTopArea {
   build() {
     Stack({ alignContent: Alignment.Top }) {
       Column() {
-        Row() {
+        Row({ space: 8 }) {
           Row() {
             Image($r('app.media.reader_icon_back_dark'))
               .width(28)
@@ -195,62 +195,65 @@ export struct ReaderTopArea {
               .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
           }
           .width(40)
+          .height(42)
           .justifyContent(FlexAlign.Start)
           .alignItems(VerticalAlign.Center)
 
-          Text('深空信号')
-            .fontSize(18)
-            .fontWeight(600)
-            .fontColor(ColorTokens.controlInk)
-            .fontFamily(ReaderTypography.sansFamily())
-            .textAlign(TextAlign.Center)
-            .layoutWeight(1)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Column({ space: 5 }) {
+            Text('长夜余火')
+              .fontSize(16)
+              .fontWeight(700)
+              .fontColor(ColorTokens.controlInk)
+              .fontFamily(ReaderTypography.sansFamily())
+              .maxLines(2)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+            Text('第 32 章 雨夜 · 优书网')
+              .fontSize(12)
+              .fontColor(ColorTokens.muted)
+              .fontFamily(ReaderTypography.sansFamily())
+              .maxLines(2)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+          }
+          .justifyContent(FlexAlign.Center)
+          .alignItems(HorizontalAlign.Start)
+          .layoutWeight(1)
+          .height(42)
 
-          Row({ space: 16 }) {
-            Image($r('app.media.ui_icon_refresh_dark')).width(24).height(24)
+          Row({ space: 4 }) {
             Image($r('app.media.reader_icon_source_switch_dark'))
-              .width(24)
-              .height(24)
-              .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'source-switch-results' }))
+              .width(20)
+              .height(20)
+            Text('换源')
+              .fontSize(12)
+              .fontWeight(800)
+              .fontColor(ColorTokens.controlInk)
+              .fontFamily(ReaderTypography.sansFamily())
+          }
+          .width(62)
+          .height(42)
+          .justifyContent(FlexAlign.Center)
+          .alignItems(VerticalAlign.Center)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'source-switch-results' }))
+
+          Row() {
             Image($r('app.media.reader_icon_more_dark')).width(24).height(24)
           }
-          .width(112)
-          .justifyContent(FlexAlign.End)
+          .width(34)
+          .height(42)
+          .justifyContent(FlexAlign.Center)
           .alignItems(VerticalAlign.Center)
         }
         .width('100%')
-        .height(56)
-        .padding({ left: 16, right: 16 })
-        .backgroundColor(ColorTokens.surface)
-        .border({ width: { bottom: 1 }, color: ColorTokens.border })
-
-        Row() {
-          Text('第一章：阿长与《山海经》')
-            .fontSize(14)
-            .fontColor(ColorTokens.controlInk)
-            .fontFamily(ReaderTypography.sansFamily())
-            .layoutWeight(1)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-          Text('本地书籍')
-            .fontSize(12)
-            .fontWeight(600)
-            .fontColor(ColorTokens.primary)
-            .fontFamily(ReaderTypography.sansFamily())
-            .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-            .backgroundColor(ColorTokens.floatingControlBgAlt)
-            .borderRadius(DemoAliasTokens.radiusPill)
-        }
-        .width('100%')
-        .height(48)
-        .padding({ left: 16, right: 16 })
-        .backgroundColor(ColorTokens.metaBg)
-        .border({ width: { bottom: 1 }, color: ColorTokens.border })
+        .height(54)
+        .padding({ left: 12, right: 12 })
+        .border({ width: 1, color: ColorTokens.border })
+        .borderRadius(DemoAliasTokens.radiusXl)
+        .backgroundColor(DemoAliasTokens.surface)
+        .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
       }
       .width('100%')
-      .margin({ top: this.safeAreaTop })
+      .padding({ left: 14, right: 14 })
+      .margin({ top: this.safeAreaTop + 18 })
     }
     .width('100%')
     .height('100%')

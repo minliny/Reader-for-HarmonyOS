@@ -12,11 +12,17 @@ const GEN = path.join(REPO, 'entry/src/main/ets/contract/generated');
 const SHELLS = path.join(REPO, 'entry/src/main/ets/ui/shells');
 const FIXTURES = process.env.READER_UI_CONTRACTS
   || path.resolve(__dirname, '../../Reader UI/contracts/fixtures');
-const NORMALIZED_HTML_DIR = process.env.READER_UI_NORMALIZED_HTML
-  || path.resolve(__dirname, '../../Reader UI/docs/ui-handoff/normalized-html');
+const FRONTEND_DEMO = process.env.READER_UI_FRONTEND_DEMO
+  || path.resolve(__dirname, '../../Reader UI/frontend-demo');
+const LIVE_DEMO_RUNTIME = path.join(FRONTEND_DEMO, 'render-runtime.js');
 
 function read(p) { return fs.readFileSync(p, 'utf8'); }
 function readJson(name) { return JSON.parse(read(path.join(FIXTURES, name))); }
+function liveDemoRouteTuples() {
+  const runtime = read(LIVE_DEMO_RUNTIME);
+  const routes = [...runtime.matchAll(/case "([^"]+)":/g)].map((m) => m[1]);
+  return [...new Set(routes)].sort().map((routeId) => [routeId, routeId]);
+}
 
 const TOKENS = readJson('token.fixtures.json');
 const ROUTES = readJson('route.fixtures.json');
@@ -147,8 +153,19 @@ test('shell top bars read title from ViewStateTable and displayed route', () => 
   assert.ok(!src.includes('function secondaryRouteTitle('), 'BackTopBar must not use a stale hand-written secondaryRouteTitle switch');
 });
 
-test('reader control chrome follows normalized handoff order and labels', () => {
+test('reader control chrome follows live demo order and labels', () => {
   const src = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderOverlayComponents.ets'));
+  const demo = read(LIVE_DEMO_RUNTIME);
+  for (const marker of [
+    'fd-reader-sheet',
+    'fd-reader-control-main',
+    'fd-reader-actions',
+    'fd-reader-chapter-panel',
+    'fd-brightness-rail',
+  ]) {
+    assert.ok(demo.includes(marker), `live demo runtime missing control marker: ${marker}`);
+  }
+
   const bottomOrder = [
     "['directory', '目录', 'reader-directory-overlay-v2']",
     "['tts', '朗读', 'reader-tts-overlay-v2']",
@@ -163,9 +180,9 @@ test('reader control chrome follows normalized handoff order and labels', () => 
   }
 
   const quickOrder = [
-    "['search', 'reader_icon_reader_content_search_action', 'reader-search-overlay-v2']",
-    "['auto', 'reader_icon_reader_auto_page_action', 'reader-auto-scroll-overlay-v2']",
-    "['replace', 'reader_icon_reader_content_replace_action', 'reader-replace-overlay-v2']",
+    "['搜索', 'reader_icon_reader_content_search_action', 'reader-search-overlay-v2']",
+    "['自动翻页', 'reader_icon_reader_auto_page_action', 'reader-auto-scroll-overlay-v2']",
+    "['替换', 'reader_icon_reader_content_replace_action', 'reader-replace-overlay-v2']",
   ];
   prev = -1;
   for (const marker of quickOrder) {
@@ -173,9 +190,8 @@ test('reader control chrome follows normalized handoff order and labels', () => 
     assert.ok(idx > prev, `reader quick action order drift: ${marker}`);
     prev = idx;
   }
-  assert.ok(src.includes("reader_icon_moon_primary"), 'paper control layer must expose a night-mode action icon');
-  assert.ok(src.includes("reader_icon_sun_primary"), 'night-state control layer must expose a day-mode action icon');
-  assert.ok(!src.includes("['night', 'reader_icon_more_dark'"), 'night/day action must not use the generic more icon');
+  assert.ok(src.includes("Image($r('app.media.reader_icon_sun_primary')).width(18).height(18)"),
+    'control sheet must keep the live demo brightness rail in-sheet');
 });
 
 test('reader overlay panels keep normalized handoff visible copy', () => {
@@ -203,24 +219,27 @@ test('reader overlay panels keep normalized handoff visible copy', () => {
   assert.ok(!src.includes("ReaderSettingRow({ name: '替换\\\"信号\\\"为\\\"信号源\\\"'"), 'replace overlay must use handoff rule names');
 });
 
-test('reader control layer uses top-area structure instead of immersive info chrome', () => {
+test('reader control layer uses live demo top overlay and reading copy', () => {
   const reader = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderComponents.ets'));
-  assert.ok(reader.includes('export struct ReaderTopArea'), 'control-layer routes need the normalized reader-top-area component');
-  assert.ok(reader.includes("Text('深空信号')"), 'reader top area must show the normalized book title');
-  assert.ok(reader.includes("Text('第一章：阿长与《山海经》')"), 'reader top area must expose the normalized chapter meta row');
-  assert.ok(reader.includes("Text('本地书籍')"), 'reader top area must expose the normalized source chip');
-  assert.ok(reader.includes("return this.controlLayer() ? '深空信号' : '第一章 科学边界'"),
-    'control-layer reading surface must show the normalized content title');
+  assert.ok(reader.includes('export struct ReaderTopArea'), 'control-layer routes need the live demo reader-top component');
+  assert.ok(reader.includes("Text('长夜余火')"), 'reader top area must show the live demo book title');
+  assert.ok(reader.includes("Text('第 32 章 雨夜 · 优书网')"), 'reader top area must expose the live demo source line');
+  assert.ok(reader.includes("Text('换源')"), 'reader top area must expose the live demo source-switch action');
+  assert.ok(reader.includes("return '雨夜'"), 'reading surface must show the live demo chapter title');
+  assert.ok(reader.includes('雨声在窗外连成一片'), 'reading surface must use live demo reader text');
+  assert.ok(reader.includes('.borderRadius(DemoAliasTokens.radiusXl)'), 'reader top area must be one floating rounded live-demo bar');
   assert.ok(reader.includes('.textAlign(this.controlLayer() ? TextAlign.Start : TextAlign.Center)'),
-    'control-layer title must use normalized left-aligned content layout');
+    'control-layer title must use live demo left-aligned content layout');
   assert.ok(reader.includes('.textIndent(this.controlLayer() ? 0 : 2 * 18)'),
     'control-layer paragraphs must not keep immersive reader first-line indent');
-  assert.ok(reader.includes('top: this.controlLayer() ? 128 : 72'),
-    'control-layer body must leave space for normalized top bar and meta row');
+  assert.ok(reader.includes('top: this.controlLayer() ? this.safeAreaTop + 90 : 72'),
+    'control-layer body must leave space for the live demo top overlay');
   assert.ok(reader.includes('bottom: this.controlLayer() ? 230 + this.safeAreaBottom : 48 + this.safeAreaBottom'),
-    'control-layer body must reserve space for floating controls');
-  assert.ok(!reader.includes("Text('长夜余火')"), 'control layer must not use stale live-demo book title');
-  assert.ok(!reader.includes("Text('第 32 章 雨夜 · 优书网')"), 'control layer must not use stale live-demo chapter/source line');
+    'control-layer body must reserve space for the live demo control sheet');
+  assert.ok(!reader.includes("Text('深空信号')"), 'control layer must not use the obsolete handoff book title');
+  assert.ok(!reader.includes("Text('第一章：阿长与《山海经》')"), 'control layer must not use the obsolete handoff chapter row');
+  assert.ok(!reader.includes("Text('本地书籍')"), 'control layer must not use the obsolete handoff source chip');
+  assert.ok(!reader.includes('ColorTokens.metaBg'), 'control layer must not keep the obsolete second meta row');
   assert.ok(reader.includes("return this.routeId !== 'reader'"), 'ReaderBase must branch between immersive reader and control-layer chrome');
   assert.ok(reader.includes('ReaderTopArea()'), 'control-layer branch must render ReaderTopArea');
   assert.ok(reader.includes('ReadingInfoLayer({ theme: this.theme })'), 'plain reader branch keeps immersive corner info');
@@ -230,7 +249,7 @@ test('reader control layer uses top-area structure instead of immersive info chr
     'ReaderBase should prefer top-area chrome for control routes, then fall back to immersive info for plain reader');
 });
 
-test('reader control route fixture uses normalized floating controls, not legacy bottom sheet', () => {
+test('reader control route fixture uses live demo control sheet, not obsolete floating controls', () => {
   const VS = readJson('view-state.fixtures.json');
   const src = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderOverlayComponents.ets'));
   const byRoute = (routeId) => {
@@ -240,24 +259,22 @@ test('reader control route fixture uses normalized floating controls, not legacy
   };
   assert.deepEqual(
     byRoute('control-layer-base-v2'),
-    ['ReaderBase', 'FloatingBrightness', 'FloatingQuickActions', 'FloatingPageControl', 'ReaderBottomBar'],
-    'control-layer-base-v2 must mirror normalized floating controls + bottom bar structure'
+    ['ReaderBase', 'ReaderControlSheet', 'ReaderBottomBar'],
+    'control-layer-base-v2 must mirror live demo sheet + bottom bar structure'
   );
-  assert.equal(byRoute('control-layer-base-v2').includes('ReaderControlSheet'), false,
-    'control-layer-base-v2 must not render the stale bottom sheet component');
-  assert.ok(src.includes('export struct FloatingBrightness'), 'control layer must render the brightness rail as a detached component');
-  assert.ok(src.includes('export struct FloatingQuickActions'), 'control layer must render quick actions as a detached component');
-  assert.ok(src.includes('export struct FloatingPageControl'), 'control layer must render page control as a detached component');
-  assert.ok(src.includes('.position({ x: 12, y: 294 })'), 'brightness rail must sit at normalized left-center coordinates');
-  assert.ok(src.includes("Image($r('app.media.reader_icon_sun_primary')).width(22).height(22)"),
-    'brightness rail must not use a generic more icon placeholder');
-  assert.ok(src.includes('.margin({ bottom: this.safeAreaBottom + 148 })'), 'quick actions must use normalized bottom anchor');
-  assert.ok(src.includes('.margin({ bottom: this.safeAreaBottom + 86 })'), 'page control must use normalized bottom anchor');
+  assert.ok(src.includes('export struct ReaderControlSheet'), 'control layer must render the live demo bottom sheet component');
+  assert.equal(src.includes('export struct FloatingBrightness'), false, 'obsolete detached brightness component must be removed');
+  assert.equal(src.includes('export struct FloatingQuickActions'), false, 'obsolete detached quick actions component must be removed');
+  assert.equal(src.includes('export struct FloatingPageControl'), false, 'obsolete detached page control component must be removed');
+  assert.ok(src.includes("Image($r('app.media.reader_icon_sun_primary')).width(18).height(18)"),
+    'control sheet must keep the live demo brightness rail inside the sheet');
+  assert.ok(src.includes('.borderRadius(22)'), 'control sheet must keep the live demo fd-reader-sheet radius');
+  assert.ok(src.includes('.margin({ right: this.dockRight, bottom: this.sheetBottom() })'),
+    'control sheet must use the live demo dock bottom anchor');
   assert.ok(src.includes('.height(SizeTokens.bottomBarHeight + this.safeAreaBottom)'), 'bottom bar must be full-width 68vp plus safe area');
-  assert.ok(!src.includes("if (this.routeId === 'control-layer-base-v2') {\n      ReaderControlSheet()"),
-    'FloatingQuickActions must not proxy back to ReaderControlSheet');
-  for (const routeId of ['reader-search-overlay-v2', 'reader-replace-overlay-v2', 'reader-auto-scroll-overlay-v2']) {
+  for (const routeId of ['control-layer-base-v2', 'reader-search-overlay-v2', 'reader-replace-overlay-v2', 'reader-auto-scroll-overlay-v2']) {
     const types = byRoute(routeId);
+    assert.equal(types.includes('FloatingBrightness'), false, `${routeId} must not render detached brightness controls`);
     assert.equal(types.includes('FloatingQuickActions'), false, `${routeId} must not render detached quick actions`);
     assert.equal(types.includes('FloatingPageControl'), false, `${routeId} must not render detached page controls`);
   }
@@ -701,72 +718,51 @@ test('structural page visuals keep handoff row counts and copy', () => {
   );
 });
 
-// ── 7. Normalized page → ViewState coverage guard ─────────────────────────
-// The normalized HTML pages (Reader UI/docs/ui-handoff/normalized-html/) are
-// the 1:1 migration target — including 8 reader overlay routes + control-layer-
-// base-v2. Each MUST have a ViewState entry OR an aliasFor declaration.
-// PENDING_NORMALIZED is the explicit allowlist of pages not yet covered; it
-// MUST shrink as later phases add ViewState/aliases and MUST be empty before
-// declaring full migration. A page missing from both coverage AND
-// PENDING_NORMALIZED is a hard FAIL (regression / scope gap).
+// ── 7. Live demo route → ViewState coverage guard ──────────────────────────
+// Reader UI/frontend-demo is the route/rendering source. Every route rendered
+// by render-runtime.js must have a ViewState entry OR an aliasFor declaration.
+// PENDING_LIVE_DEMO_ROUTES is the explicit allowlist of routes not yet covered;
+// it MUST be empty before declaring full migration. A route missing from both
+// coverage AND PENDING_LIVE_DEMO_ROUTES is a hard FAIL (regression / scope gap).
 const ROUTES_JSON = readJson('route.fixtures.json');
 const VIEW_STATES_JSON = readJson('view-state.fixtures.json');
 const VS_ROUTE_IDS = new Set(VIEW_STATES_JSON.map((v) => v.routeId));
 const ALIAS_MAP = new Map(ROUTES_JSON.filter((r) => r.aliasFor).map((r) => [r.id, r.aliasFor]));
+const LIVE_DEMO_ROUTES = liveDemoRouteTuples();
 
-// Special filename → routeId mappings (where the normalized HTML filename does
-// not directly match the contract RouteId). All other files map filename = routeId.
-const PAGE_NAME_OVERRIDES = {
-  'local-book-import': 'local-import',
-  'rss-list': 'rss',
-  'source-management-list': 'source-management',
-  'source-import': 'source-import-options',
-  'source-disabled-error': 'source-management',
-};
-
-// Dynamically read the normalized-html directory so the guard stays in sync with
-// the UI repo without manual updates. Each .html file → [pageName, routeId] tuple.
-const NORMALIZED_PAGES = fs.readdirSync(NORMALIZED_HTML_DIR)
-  .filter((f) => f.endsWith('.html'))
-  .map((f) => f.replace(/\.html$/, ''))
-  .sort()
-  .map((pageName) => [pageName, PAGE_NAME_OVERRIDES[pageName] ?? pageName]);
-
-// Pages acknowledged as not-yet-migrated. Remove a page here ONLY when it has
+// Routes acknowledged as not-yet-migrated. Remove a route here ONLY when it has
 // a ViewState entry or aliasFor declaration. Must be empty before full migration.
-// NOTE: keys are pageName (first element of NORMALIZED_PAGES tuple), NOT routeId.
-// Phase 1 全量补齐完成：所有 normalized 页面均有 ViewState 或 aliasFor，PENDING_NORMALIZED 清空。
-const PENDING_NORMALIZED = new Set([]);
+const PENDING_LIVE_DEMO_ROUTES = new Set([]);
 
-test('normalized pages each have ViewState or alias or are in PENDING allowlist', () => {
+test('live demo routes each have ViewState or alias or are in PENDING allowlist', () => {
   const missing = [];
-  for (const [pageName, routeId] of NORMALIZED_PAGES) {
+  for (const [pageName, routeId] of LIVE_DEMO_ROUTES) {
     const hasVs = VS_ROUTE_IDS.has(routeId);
     const hasAlias = ALIAS_MAP.has(routeId);
-    const isPending = PENDING_NORMALIZED.has(pageName);
+    const isPending = PENDING_LIVE_DEMO_ROUTES.has(routeId);
     if (!hasVs && !hasAlias && !isPending) {
       missing.push(`${pageName} -> ${routeId}`);
     }
   }
   assert.equal(missing.length, 0,
-    `normalized pages with no ViewState, no alias, and not in PENDING allowlist (add coverage or add to PENDING): ${missing.join(', ')}`);
+    `live demo routes with no ViewState, no alias, and not in PENDING allowlist (add coverage or add to PENDING): ${missing.join(', ')}`);
 });
 
-test('PENDING_NORMALIZED allowlist contains no already-covered pages (stale entries must be removed)', () => {
+test('PENDING_LIVE_DEMO_ROUTES allowlist contains no already-covered routes (stale entries must be removed)', () => {
   const stale = [];
-  for (const [pageName, routeId] of NORMALIZED_PAGES) {
-    if (!PENDING_NORMALIZED.has(pageName)) continue;
+  for (const [, routeId] of LIVE_DEMO_ROUTES) {
+    if (!PENDING_LIVE_DEMO_ROUTES.has(routeId)) continue;
     const hasVs = VS_ROUTE_IDS.has(routeId);
     const hasAlias = ALIAS_MAP.has(routeId);
-    if (hasVs || hasAlias) stale.push(`${pageName} -> ${routeId}`);
+    if (hasVs || hasAlias) stale.push(routeId);
   }
   assert.equal(stale.length, 0,
-    `PENDING_NORMALIZED has pages now covered (remove them from the allowlist): ${stale.join(', ')}`);
+    `PENDING_LIVE_DEMO_ROUTES has routes now covered (remove them from the allowlist): ${stale.join(', ')}`);
 });
 
-test('normalized page count matches directory (dynamically read)', () => {
-  assert.ok(NORMALIZED_PAGES.length >= 53,
-    `expected >=53 normalized pages (including reader overlays + control-layer-base-v2), got ${NORMALIZED_PAGES.length}`);
+test('live demo route count matches runtime cases (dynamically read)', () => {
+  assert.ok(LIVE_DEMO_ROUTES.length >= 200,
+    `expected >=200 live demo routes (including reader overlays + control-layer-base-v2), got ${LIVE_DEMO_ROUTES.length}`);
   // Verify the 8 reader overlays + control-layer-base-v2 are present.
   const required = [
     'control-layer-base-v2', 'reader-appearance-overlay-v2',
@@ -775,7 +771,7 @@ test('normalized page count matches directory (dynamically read)', () => {
     'reader-search-overlay-v2', 'reader-settings-overlay-v2',
     'reader-tts-overlay-v2',
   ];
-  const pageNames = new Set(NORMALIZED_PAGES.map(([n]) => n));
+  const pageNames = new Set(LIVE_DEMO_ROUTES.map(([n]) => n));
   for (const r of required) {
     assert.ok(pageNames.has(r), `missing required reader overlay page: ${r}`);
   }
@@ -801,8 +797,8 @@ const SCAFFOLD_ALLOWED = new Set([
   'state-offline', 'state-error',
   // Phase 1: legitimate state pages + simple list/entry pages (scaffold is the
   // correct shape — these are not 1:1 demo migrations of bespoke components).
-  // All 53 normalized handoff pages have now been moved out of this allowlist;
-  // entries below are non-normalized contract routes that are still scaffold.
+  // All live demo routes have now been moved out of this allowlist; entries
+  // below are non-demo contract routes that are still scaffold.
   // Phase 2-4: simple list/content/form pages where scaffold is the correct shape.
 ]);
 

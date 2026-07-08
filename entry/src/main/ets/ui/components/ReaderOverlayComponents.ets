@@ -1,16 +1,13 @@
-// ReaderOverlayComponents — shared reader overlay families + control bottom bar.
-// Ported from docs/ui-handoff/normalized-html/*-overlay-v2.html (Batch 1 structure
-// source) + reader-control-layer.css / reader-components.css / reader-design-tokens.css.
+// ReaderOverlayComponents — shared reader overlay families + control layer.
+// Ported from Reader UI/frontend-demo/render-runtime.js and frontend-demo/styles.
 //
 // Route-driven (Batch 1): render as body components of *-overlay-v2 view-state
 // entries via ViewStateRenderer(stack). Colors flow through ColorTokens /
 // DemoAliasTokens; sizes are bare vp (lint_tokens only forbids hex / px-unit
 // strings — bare vp is allowed, same convention as ReaderComponents base structs).
 //
-// Slice scope (Step 2): the content families — panel header, setting/list rows,
-// button row, slider, segmented, toggle. The ReaderOverlayPanel shell + floating
-// controls (brightness / quick-actions / page-control) + night toast land with
-// the routes that use them (Step 3).
+// Slice scope: panel header, setting/list rows, button row, slider, segmented,
+// toggle, the live demo control sheet, bottom bar, and night toast.
 import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
 import { SizeTokens } from '../../contract/generated/DimensionTokens';
@@ -393,86 +390,6 @@ export struct ReaderControlSheet {
   }
 }
 
-// ── Floating quick actions (.reader-floating-quick-actions) ───────────────
-//   Four 48vp circular icon buttons centered above the page-control pill.
-//   No visible labels; semantics are carried by route actions.
-@Component
-export struct FloatingQuickActions {
-  @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
-  @StorageProp('reader.displayedRouteId') routeId: string = 'control-layer-base-v2';
-
-  private items(): Array<[string, string, string]> {
-    const nightState = this.routeId === 'reader-night-state-v2';
-    return [
-      ['search', 'reader_icon_reader_content_search_action', 'reader-search-overlay-v2'],
-      ['auto', 'reader_icon_reader_auto_page_action', 'reader-auto-scroll-overlay-v2'],
-      ['replace', 'reader_icon_reader_content_replace_action', 'reader-replace-overlay-v2'],
-      ['night', nightState ? 'reader_icon_sun_primary' : 'reader_icon_moon_primary',
-        nightState ? 'control-layer-base-v2' : 'reader-night-state-v2'],
-    ];
-  }
-
-  build() {
-    Stack({ alignContent: Alignment.Bottom }) {
-      Row({ space: 20 }) {
-        ForEach(this.items(), (it: [string, string, string]) => {
-          Column() {
-            Image($r(`app.media.${it[1]}`)).width(24).height(24)
-          }
-          .width(48).height(48)
-          .justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
-          .backgroundColor(ColorTokens.floatingControlBg)
-          .border({ width: 1, color: ColorTokens.border })
-          .borderRadius(DemoAliasTokens.radiusPill)
-          .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
-          .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: it[2] as RouteId }))
-        }, (it: [string, string, string]) => it[0])
-      }
-      .margin({ bottom: this.safeAreaBottom + 148 })
-    }
-    .width('100%')
-    .height('100%')
-  }
-}
-
-// ── Floating page control (.reader-floating-page-control) ─────────────────
-//   Pill (prev + progress track + next), centered, floating just above the
-//   bottom bar. Progress is a 4px track with a 25% fill + 16px thumb.
-@Component
-export struct FloatingPageControl {
-  @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
-
-  build() {
-    Stack({ alignContent: Alignment.Bottom }) {
-      Row() {
-        Image($r('app.media.reader_icon_chevron_left_chapter')).width(24).height(24)
-          .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
-        Stack({ alignContent: Alignment.Start }) {
-          Column().width('100%').height(4).borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(ColorTokens.border)
-          Column().width('25%').height(4).borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(ColorTokens.primary)
-          Column().width(16).height(16).borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(ColorTokens.primary)
-            .border({ width: 2, color: ColorTokens.floatingControlBg })
-            .margin({ left: '25%' })
-        }
-        .layoutWeight(1).height(24).margin({ left: 16, right: 16 })
-        Image($r('app.media.reader_icon_chevron_chapter')).width(24).height(24)
-      }
-      .width(342).height(52).padding({ left: 24, right: 24 })
-      .justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center)
-      .backgroundColor(ColorTokens.floatingControlBg)
-      .border({ width: 1, color: ColorTokens.border })
-      .borderRadius(DemoAliasTokens.radiusPill)
-      .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
-      .margin({ bottom: this.safeAreaBottom + 86 })
-    }
-    .width('100%')
-    .height('100%')
-  }
-}
-
 // ── Control bottom bar (.reader-control-bottom-bar) ───────────────────────
 @Component
 export struct ReaderBottomBar {
@@ -791,40 +708,6 @@ export struct ReaderAutoScrollPanel {
         .fontSize(12).fontColor(ColorTokens.muted)
         .width('100%')
     }
-  }
-}
-
-// ── Floating brightness (.reader-floating-brightness) ────────────────────
-//   Vertical pill rail at left-center: brightness icon + 4px vertical track
-//   (fill %) + chevron. The brightness_auto icon asset is TBD — placeholder
-//   icon for now. Positioned left-center using the normalized 390x844 frame.
-@Component
-export struct FloatingBrightness {
-  @State value: number = 40;
-
-  build() {
-    Stack({ alignContent: Alignment.Start }) {
-      Column({ space: 16 }) {
-        Image($r('app.media.reader_icon_sun_primary')).width(22).height(22)
-        Stack({ alignContent: Alignment.Bottom }) {
-          Column().width(4).height('100%').borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(ColorTokens.border)
-          Column().width(4).height(`${this.value}%`).borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(ColorTokens.primary)
-        }
-        .width(4).layoutWeight(1)
-        Image($r('app.media.ui_icon_chevron_dark')).width(20).height(20)
-      }
-      .width(40).height(256).padding({ top: 16, bottom: 16 })
-      .justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
-      .backgroundColor(ColorTokens.floatingControlBg)
-      .border({ width: 1, color: ColorTokens.border })
-      .borderRadius(DemoAliasTokens.radiusPill)
-      .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
-      .position({ x: 12, y: 294 })
-    }
-    .width('100%')
-    .height('100%')
   }
 }
 
