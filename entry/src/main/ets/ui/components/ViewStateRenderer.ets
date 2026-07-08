@@ -159,9 +159,16 @@ export struct ViewStateRenderer {
     } else if (component.type === 'SettingsHomeSection') {
       SettingsHomeSection()
     } else if (component.type === 'SettingsSection') {
-      SettingsSection()
+      if (component.children.length > 0) {
+        Column() {
+          this.renderChildren(component.children)
+        }
+        .width('100%')
+      } else {
+        SettingsSection({ title: this.textOr(component.props.title, '') })
+      }
     } else if (component.type === 'SettingsListItem') {
-      SettingsListItem()
+      SettingsListItem({ itemId: component.id })
     } else if (component.type === 'DiscoverSourceBar') {
       DiscoverSourceBar()
     } else if (component.type === 'DiscoverEntryRow') {
@@ -286,7 +293,10 @@ export struct ViewStateRenderer {
     } else if (component.type === 'Input') {
       Input({ placeholder: this.textOr(component.props.placeholder, '输入...') })
     } else if (component.type === 'ListRow') {
-      ListRow({ title: this.textOr(component.props.title, '列表项') })
+      ListRow({
+        title: this.textOr(component.props.title, '列表项'),
+        detail: this.textOr(component.props.author, this.textOr(component.props.subtitle, '')),
+      })
     } else if (component.type === 'List') {
       if (component.children.length > 0) {
         Column() {
@@ -297,7 +307,7 @@ export struct ViewStateRenderer {
         DemoList()
       }
     } else if (component.type === 'Card') {
-      Card({ title: this.textOr(component.props.title, '卡片标题'), subtitle: this.textOr(component.props.author, '卡片摘要') })
+      Card({ title: this.textOr(component.props.title, '卡片标题'), subtitle: this.textOr(component.props.subtitle, '卡片摘要') })
     } else if (component.type === 'Content') {
       Content({ text: this.textOr(component.props.message, '正文内容') })
     } else if (component.type === 'FormSection') {

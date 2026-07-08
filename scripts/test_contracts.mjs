@@ -167,6 +167,21 @@ test('view-state fixture has no duplicate (routeId, pageState) keys', () => {
   assert.equal(dups.length, 0, `duplicate (routeId,pageState) entries (componentsFor shadows all but the first): ${dups.join(', ')}`);
 });
 
+test('book-detail uses the demo detail composite body, not a standalone cover', () => {
+  const VS = readJson('view-state.fixtures.json');
+  const detail = VS.find((e) => e.routeId === 'book-detail' && e.pageState === 'default');
+  assert.ok(detail, 'book-detail/default fixture missing');
+  assert.deepEqual(
+    detail.components.map((c) => c.type),
+    ['AppTopBar', 'BookHero', 'BookSummaryCard', 'BookChapterList']
+  );
+  assert.equal(
+    detail.components.some((c) => c.type === 'BookCover'),
+    false,
+    'book-detail must not render BookCover as a top-level body component'
+  );
+});
+
 // ── 7. Normalized page → ViewState coverage guard ─────────────────────────
 // The normalized HTML pages (Reader UI/docs/ui-handoff/normalized-html/) are
 // the 1:1 migration target — including 8 reader overlay routes + control-layer-

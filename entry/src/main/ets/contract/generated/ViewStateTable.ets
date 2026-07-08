@@ -444,47 +444,20 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "BookCover",
-        "id": "detail-cover",
+        "type": "BookHero",
+        "id": "detail-hero",
         "props": {},
         "children": []
       },
       {
-        "type": "BookTitleAuthor",
-        "id": "detail-title",
-        "props": {
-          "title": "示例书",
-          "author": "示例作者"
-        },
-        "children": []
-      },
-      {
-        "type": "SourceStatus",
-        "id": "detail-source",
+        "type": "BookSummaryCard",
+        "id": "detail-summary",
         "props": {},
         "children": []
       },
       {
-        "type": "ReadButton",
-        "id": "read-button",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "DirectoryPreview",
-        "id": "detail-toc",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "BookIntro",
-        "id": "detail-intro",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "ConfigEntry",
-        "id": "detail-config",
+        "type": "BookChapterList",
+        "id": "detail-chapters",
         "props": {},
         "children": []
       }

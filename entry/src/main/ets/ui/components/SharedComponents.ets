@@ -242,12 +242,14 @@ export struct DemoButton {
 
   build() {
     Text(this.label)
-      .fontSize(ReaderTypography.actionLabel().fontSize)
+      .fontSize(13)
       .fontWeight(700)
-      .fontColor(ColorTokens.paper)
-      .backgroundColor(ColorTokens.primary)
-      .padding({ left: SpacingTokens.lg, right: SpacingTokens.lg, top: SpacingTokens.sm, bottom: SpacingTokens.sm })
+      .fontColor(DemoAliasTokens.onPrimary)
+      .height(40)
+      .padding({ left: 16, right: 16 })
       .borderRadius(DemoAliasTokens.radiusPill)
+      .backgroundColor(ColorTokens.primary)
+      .textAlign(TextAlign.Center)
   }
 }
 
@@ -257,32 +259,51 @@ export struct Input {
 
   build() {
     TextInput({ placeholder: this.placeholder })
-      .fontSize(ReaderTypography.bookMeta().fontSize)
+      .fontSize(14)
       .fontColor(ColorTokens.ink)
+      .height(42)
+      .padding({ left: 12, right: 12 })
+      .borderRadius(14)
       .backgroundColor(ColorTokens.metaBg)
-      .borderRadius(DemoAliasTokens.radiusSm)
-      .height(44)
-      .padding({ left: SpacingTokens.md, right: SpacingTokens.md })
+      .border({ width: 1, color: ColorTokens.border })
   }
 }
 
 @Component
 export struct ListRow {
   @Prop title: string = '列表项';
+  @Prop detail: string = '';
 
   build() {
     Row() {
-      Text(this.title)
-        .fontSize(ReaderTypography.bookMeta().fontSize)
-        .fontColor(ColorTokens.ink)
-        .layoutWeight(1)
+      Column() {
+        Text(this.title)
+          .fontSize(14)
+          .fontWeight(600)
+          .fontColor(ColorTokens.controlInk)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        if (this.detail.length > 0) {
+          Text(this.detail)
+            .fontSize(12)
+            .fontColor(ColorTokens.muted)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .margin({ top: 4 })
+        }
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
       Text('›')
         .fontSize(20)
-        .fontColor(ColorTokens.muted)
+        .fontColor(ColorTokens.controlInk)
     }
     .width('100%')
-    .height(56)
-    .padding({ left: 20, right: 20 })
+    .constraintSize({ minHeight: 48 })
+    .padding({ left: 12, right: 12, top: 10, bottom: 10 })
+    .border({ width: 1, color: ColorTokens.border })
+    .borderRadius(14)
+    .backgroundColor(ColorTokens.floatingControlBg)
     .alignItems(VerticalAlign.Center)
   }
 }
@@ -308,17 +329,22 @@ export struct Card {
   build() {
     Column() {
       Text(this.title)
-        .fontSize(ReaderTypography.sectionTitle().fontSize)
-        .fontColor(ColorTokens.ink)
+        .fontSize(15)
+        .fontWeight(700)
+        .fontColor(ColorTokens.controlInk)
       Text(this.subtitle)
-        .fontSize(ReaderTypography.bookMeta().fontSize)
+        .fontSize(14)
         .fontColor(ColorTokens.muted)
-        .margin({ top: SpacingTokens.xs })
+        .lineHeight(20)
+        .margin({ top: 8 })
     }
     .width('100%')
-    .padding(SpacingTokens.md)
-    .borderRadius(DemoAliasTokens.radiusLg)
-    .backgroundColor(DemoAliasTokens.surface)
+    .padding(14)
+    .borderRadius(16)
+    .border({ width: 1, color: ColorTokens.border })
+    .backgroundColor(ColorTokens.floatingControlBg)
+    .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
+    .alignItems(HorizontalAlign.Start)
   }
 }
 
@@ -340,27 +366,9 @@ export struct FormSection {
   @Prop title: string = '表单分组';
 
   build() {
-    Column() {
-      Text(this.title)
-        .fontSize(ReaderTypography.sectionTitle().fontSize)
-        .fontColor(ColorTokens.ink)
-      Row() {
-        Text('字段')
-          .fontSize(ReaderTypography.bookMeta().fontSize)
-          .fontColor(ColorTokens.muted)
-          .layoutWeight(1)
-        Text('值')
-          .fontSize(ReaderTypography.bookMeta().fontSize)
-          .fontColor(ColorTokens.ink)
-      }
-      .width('100%')
-      .height(48)
-      .margin({ top: SpacingTokens.sm })
-      .alignItems(VerticalAlign.Center)
-    }
+    Blank()
     .width('100%')
-    .padding({ left: 20, right: 20, top: SpacingTokens.sm, bottom: SpacingTokens.sm })
-    .alignItems(HorizontalAlign.Start)
+    .height(0)
   }
 }
 
