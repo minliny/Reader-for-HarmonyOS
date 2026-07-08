@@ -8,7 +8,9 @@ import { ContinueReadingCard, BookshelfShelfSection, ShelfChipGroup, ShelfSectio
 import { BookHero, BookSummaryCard, BookChapterList } from './BookDetailComponents';
 import { ReadingBackgroundLayer, ReadingTextFlow, ReadingInfoLayer, TapZones, ReaderBase, ReaderTopArea } from './ReaderComponents';
 import { ReaderControlSheet, ReaderBottomBar, ReaderDirectoryPanel, ReaderAppearancePanel, ReaderTtsPanel, ReaderSettingsPanel, ReaderSearchPanel, ReaderReplacePanel, ReaderAutoScrollPanel, FloatingQuickActions, FloatingPageControl, FloatingBrightness, NightToast } from './ReaderOverlayComponents';
-import { SourceSwitchResultsPanel } from './LibraryComponents';
+import { SourceSwitchResultsPanel, SourceImportPreviewPage, SourceGroupsPage, SourceDetectPage, SourceDebugPage,
+  SourceDebugRunningPage, SourceDebugResultPage, SourceDebugContentLogPage, SourceCodeViewPage, SourceLogsPage,
+  SourceDeleteConfirmPage } from './LibraryComponents';
 import { SettingsHomeSection, SettingsSection, SettingsListItem } from './SettingsComponents';
 import { DiscoverSourceBar, DiscoverEntryRow, DiscoverFilterTrigger, DiscoverListHead, DiscoverBookList } from './DiscoverComponents';
 import { RssSearchEntry, RssModeRow, RssSourceOverview, RssArticleSection,
@@ -150,6 +152,26 @@ export struct ViewStateRenderer {
       NightToast()
     } else if (component.type === 'SourceSwitchResultsPanel') {
       SourceSwitchResultsPanel()
+    } else if (component.type === 'SourceImportPreviewPage') {
+      SourceImportPreviewPage()
+    } else if (component.type === 'SourceGroupsPage') {
+      SourceGroupsPage()
+    } else if (component.type === 'SourceDetectPage') {
+      SourceDetectPage()
+    } else if (component.type === 'SourceDebugPage') {
+      SourceDebugPage()
+    } else if (component.type === 'SourceDebugRunningPage') {
+      SourceDebugRunningPage()
+    } else if (component.type === 'SourceDebugResultPage') {
+      SourceDebugResultPage({ variant: this.textOr(component.props.variant, 'search') })
+    } else if (component.type === 'SourceDebugContentLogPage') {
+      SourceDebugContentLogPage()
+    } else if (component.type === 'SourceCodeViewPage') {
+      SourceCodeViewPage()
+    } else if (component.type === 'SourceLogsPage') {
+      SourceLogsPage()
+    } else if (component.type === 'SourceDeleteConfirmPage') {
+      SourceDeleteConfirmPage()
     } else if (component.type === 'ReaderDirectoryPanel') {
       ReaderDirectoryPanel()
     } else if (component.type === 'ReaderAppearancePanel') {

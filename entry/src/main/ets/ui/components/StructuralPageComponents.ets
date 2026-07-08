@@ -2,7 +2,9 @@
 // handoff pages that should not be counted as generic scaffold.
 import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
+import { RouteId } from '../../contract/generated/RouteTable';
 import { ReaderTypography } from '../tokens/ReaderTypography';
+import { ReaderUiStore } from '../store/ReaderUiStore';
 
 interface RowEntry {
   title: string;
@@ -505,6 +507,12 @@ export struct BookGroupManagementPage {
 
 @Component
 export struct SourceManagementPage {
+  private tools: Array<[string, string, RouteId]> = [
+    ['导入预览', '从网络导入书源并处理冲突', 'source-import-preview'],
+    ['分组管理', '筛选和批量整理书源', 'source-groups'],
+    ['书源检测', '站点、搜索、详情、目录、正文规则检测', 'source-detect'],
+    ['正文调测', '运行正文模块并查看日志', 'source-debug'],
+  ];
   private sources: RowEntry[] = [
     { title: '阅读书源 1', detail: '启用 · 搜索 / 目录 / 正文可用', chip: '' },
     { title: '阅读书源 2', detail: '启用 · 搜索 / 目录 / 正文可用', chip: '' },
@@ -515,6 +523,14 @@ export struct SourceManagementPage {
 
   build() {
     Column() {
+      StructureCard({ title: '书源工具', message: '导入、分组、检测和调测都从这里进入。' })
+      ForEach(this.tools, (entry: [string, string, RouteId], idx: number) => {
+        StructureRow({ title: entry[0], detail: entry[1] })
+          .margin({ top: idx === 0 ? 12 : 8 })
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: entry[2] }))
+      }, (entry: [string, string, RouteId], idx: number) => `${entry[0]}-${idx}`)
+      SectionTitle({ title: '启用书源' })
+        .margin({ top: 14, bottom: 10 })
       ForEach(this.sources, (entry: RowEntry, idx: number) => {
         StructureRow({ title: entry.title, detail: entry.detail, showChevron: false })
           .margin({ bottom: idx === this.sources.length - 1 ? 0 : 10 })

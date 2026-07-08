@@ -415,6 +415,52 @@ test('rss subpages use page-level visual components, not scaffold-only lists/loa
   }
 });
 
+test('source tool pages use page-level visual components, not scaffold-only lists/loading', () => {
+  const VS = readJson('view-state.fixtures.json');
+  const expected = new Map([
+    ['source-import-preview/default', ['BackTopBar', 'SourceImportPreviewPage']],
+    ['source-groups/default', ['BackTopBar', 'SourceGroupsPage']],
+    ['source-detect/default', ['BackTopBar', 'SourceDetectPage']],
+    ['source-debug/default', ['BackTopBar', 'SourceDebugPage']],
+    ['source-debug-running/loading', ['BackTopBar', 'SourceDebugRunningPage']],
+    ['source-debug-result/default', ['BackTopBar', 'SourceDebugResultPage']],
+    ['source-debug-search-result/default', ['BackTopBar', 'SourceDebugResultPage']],
+    ['source-debug-detail-result/default', ['BackTopBar', 'SourceDebugResultPage']],
+    ['source-debug-catalog-result/default', ['BackTopBar', 'SourceDebugResultPage']],
+    ['source-debug-content-log/default', ['BackTopBar', 'SourceDebugContentLogPage']],
+    ['source-code-view/default', ['BackTopBar', 'SourceCodeViewPage']],
+    ['source-logs/default', ['BackTopBar', 'SourceLogsPage']],
+    ['source-delete-confirm/default', ['BackTopBar', 'SourceDeleteConfirmPage']],
+  ]);
+
+  for (const [key, types] of expected.entries()) {
+    const [routeId, pageState] = key.split('/');
+    const entry = VS.find((e) => e.routeId === routeId && e.pageState === pageState);
+    assert.ok(entry, `${key} fixture missing`);
+    const actual = entry.components.map((c) => c.type);
+    assert.deepEqual(actual, types, `${key} must use source tool page-level visual components`);
+    for (const type of ['FormSection', 'List', 'Content', 'Button', 'Loading', 'SettingsSection']) {
+      assert.equal(actual.includes(type), false, `${key} must not regress to scaffold ${type}`);
+    }
+  }
+
+  const sourceSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/LibraryComponents.ets'));
+  for (const text of [
+    '网络导入',
+    '分组用于筛选和批量整理书源',
+    '5 项检测 · 4 项通过 · 1 项失败',
+    '正文模块调测',
+    '正在调测正文模块',
+    '搜索模块调测',
+    '正文模块日志',
+    '源码查看',
+    '错误日志',
+    '删除书源？',
+  ]) {
+    assert.ok(sourceSrc.includes(text), `LibraryComponents missing source tool copy: ${text}`);
+  }
+});
+
 test('normalized state copy stays aligned with handoff HTML', () => {
   const VS = readJson('view-state.fixtures.json');
   const cases = [
@@ -588,10 +634,7 @@ const SCAFFOLD_ALLOWED = new Set([
   // entries below are non-normalized contract routes that are still scaffold.
   // Phase 2-4: simple list/content/form pages where scaffold is the correct shape.
   'about-feedback', 'restore-confirm', 'restore-conflict', 'restore-preview',
-  'restore-progress', 'source-code-view', 'source-debug-catalog-result',
-  'source-debug-content-log', 'source-debug-detail-result', 'source-debug-result',
-  'source-debug-running', 'source-debug-search-result', 'source-delete-confirm',
-  'source-detect', 'source-groups', 'source-import-preview', 'source-logs',
+  'restore-progress',
   'discover-source-bulk', 'discover-empty', 'discover-error', 'discover-loading',
   'discover-no-results',
   'group-management', 'book-batch-management', 'book-directory',

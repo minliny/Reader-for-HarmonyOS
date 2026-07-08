@@ -2590,16 +2590,14 @@ export class ViewStateTable {
         "type": "BackTopBar",
         "id": "topbar",
         "props": {
-          "title": "书源代码"
+          "title": "源码查看"
         },
         "children": []
       },
       {
-        "type": "Content",
-        "id": "code-content",
-        "props": {
-          "message": "{\n  \"name\": \"示例书源\",\n  \"url\": \"https://example.com\"\n}"
-        },
+        "type": "SourceCodeViewPage",
+        "id": "source-code-view-page",
+        "props": {},
         "children": []
       }
     ]
@@ -2612,43 +2610,14 @@ export class ViewStateTable {
         "type": "BackTopBar",
         "id": "topbar",
         "props": {
-          "title": "书源调试"
+          "title": "书源调测"
         },
         "children": []
       },
       {
-        "type": "SettingsSection",
-        "id": "debug-section",
-        "props": {
-          "title": "调试步骤"
-        },
-        "children": [
-          {
-            "type": "SettingsListItem",
-            "id": "debug-search",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "debug-toc",
-            "props": {},
-            "children": []
-          },
-          {
-            "type": "SettingsListItem",
-            "id": "debug-content",
-            "props": {},
-            "children": []
-          }
-        ]
-      },
-      {
-        "type": "Button",
-        "id": "start-debug",
-        "props": {
-          "label": "开始调试"
-        },
+        "type": "SourceDebugPage",
+        "id": "source-debug-page",
+        "props": {},
         "children": []
       }
     ]
@@ -2666,27 +2635,12 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "List",
-        "id": "catalog-result-list",
-        "props": {},
-        "children": [
-          {
-            "type": "ListRow",
-            "id": "ch-1",
-            "props": {
-              "title": "第1章 · 通过"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "ch-2",
-            "props": {
-              "title": "第2章 · 通过"
-            },
-            "children": []
-          }
-        ]
+        "type": "SourceDebugResultPage",
+        "id": "source-debug-catalog-result-page",
+        "props": {
+          "variant": "catalog"
+        },
+        "children": []
       }
     ]
   },
@@ -2703,11 +2657,9 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "Content",
-        "id": "content-log",
-        "props": {
-          "message": "[INFO] 正文规则匹配成功\n[INFO] 解析 1200 字"
-        },
+        "type": "SourceDebugContentLogPage",
+        "id": "source-debug-content-log-page",
+        "props": {},
         "children": []
       }
     ]
@@ -2725,11 +2677,10 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "Card",
-        "id": "detail-result-card",
+        "type": "SourceDebugResultPage",
+        "id": "source-debug-detail-result-page",
         "props": {
-          "title": "书名：示例书",
-          "subtitle": "作者：示例作者 · 通过"
+          "variant": "detail"
         },
         "children": []
       }
@@ -2748,35 +2699,12 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "List",
-        "id": "debug-result-list",
-        "props": {},
-        "children": [
-          {
-            "type": "ListRow",
-            "id": "result-search",
-            "props": {
-              "title": "搜索 · 通过"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "result-toc",
-            "props": {
-              "title": "目录 · 通过"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "result-content",
-            "props": {
-              "title": "正文 · 通过"
-            },
-            "children": []
-          }
-        ]
+        "type": "SourceDebugResultPage",
+        "id": "source-debug-result-page",
+        "props": {
+          "variant": "search"
+        },
+        "children": []
       }
     ]
   },
@@ -2793,8 +2721,8 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "Loading",
-        "id": "debug-running-loading",
+        "type": "SourceDebugRunningPage",
+        "id": "source-debug-running-page",
         "props": {},
         "children": []
       }
@@ -2813,27 +2741,12 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "List",
-        "id": "search-result-list",
-        "props": {},
-        "children": [
-          {
-            "type": "ListRow",
-            "id": "result-1",
-            "props": {
-              "title": "示例书 · 刘慈欣"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "result-2",
-            "props": {
-              "title": "三体 · 刘慈欣"
-            },
-            "children": []
-          }
-        ]
+        "type": "SourceDebugResultPage",
+        "id": "source-debug-search-result-page",
+        "props": {
+          "variant": "search"
+        },
+        "children": []
       }
     ]
   },
@@ -2850,20 +2763,9 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "Content",
-        "id": "delete-hint",
-        "props": {
-          "message": "确认删除该书源？删除后不可恢复。"
-        },
-        "children": []
-      },
-      {
-        "type": "Button",
-        "id": "confirm-delete",
-        "props": {
-          "label": "确认删除",
-          "destructive": true
-        },
+        "type": "SourceDeleteConfirmPage",
+        "id": "source-delete-confirm-page",
+        "props": {},
         "children": []
       }
     ]
@@ -2881,8 +2783,8 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "Loading",
-        "id": "detect-loading",
+        "type": "SourceDetectPage",
+        "id": "source-detect-page",
         "props": {},
         "children": []
       }
@@ -2942,32 +2844,15 @@ export class ViewStateTable {
         "type": "BackTopBar",
         "id": "topbar",
         "props": {
-          "title": "书源分组"
+          "title": "分组管理"
         },
         "children": []
       },
       {
-        "type": "List",
-        "id": "source-groups-list",
+        "type": "SourceGroupsPage",
+        "id": "source-groups-page",
         "props": {},
-        "children": [
-          {
-            "type": "ListRow",
-            "id": "group-default",
-            "props": {
-              "title": "默认分组 · 5 个源"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "group-custom",
-            "props": {
-              "title": "自定义 · 3 个源"
-            },
-            "children": []
-          }
-        ]
+        "children": []
       }
     ]
   },
@@ -2979,47 +2864,14 @@ export class ViewStateTable {
         "type": "BackTopBar",
         "id": "topbar",
         "props": {
-          "title": "导入预览"
+          "title": "导入书源"
         },
         "children": []
       },
       {
-        "type": "List",
-        "id": "import-preview-list",
+        "type": "SourceImportPreviewPage",
+        "id": "source-import-preview-page",
         "props": {},
-        "children": [
-          {
-            "type": "ListRow",
-            "id": "preview-1",
-            "props": {
-              "title": "书源 1 · 有效"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "preview-2",
-            "props": {
-              "title": "书源 2 · 有效"
-            },
-            "children": []
-          },
-          {
-            "type": "ListRow",
-            "id": "preview-3",
-            "props": {
-              "title": "书源 3 · 无效"
-            },
-            "children": []
-          }
-        ]
-      },
-      {
-        "type": "Button",
-        "id": "confirm-import",
-        "props": {
-          "label": "确认导入"
-        },
         "children": []
       }
     ]
@@ -3032,16 +2884,14 @@ export class ViewStateTable {
         "type": "BackTopBar",
         "id": "topbar",
         "props": {
-          "title": "书源日志"
+          "title": "错误日志"
         },
         "children": []
       },
       {
-        "type": "Content",
-        "id": "logs-content",
-        "props": {
-          "message": "[INFO] 搜索请求发送\n[INFO] 响应解析完成\n[WARN] 封面规则未匹配"
-        },
+        "type": "SourceLogsPage",
+        "id": "source-logs-page",
+        "props": {},
         "children": []
       }
     ]
