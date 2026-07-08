@@ -211,12 +211,169 @@ export struct ToggleSwitch {
   }
 }
 
-// ── Floating quick actions (.reader-floating-quick-actions) ──────────────
-//   Row of quick-action circles centered horizontally, floating above the
-//   page-control pill. Each circle route-pushes its overlay route:
-//     search → reader-search-overlay-v2, auto → reader-auto-scroll-overlay-v2,
-//     replace → reader-replace-overlay-v2, night/day → reader-night-state-v2 /
-//     control-layer-base-v2. Circles are 48px, gap 20.
+// ── Control sheet (.fd-reader-sheet + .fd-reader-control-main) ────────────
+//   Demo truth for control-layer-base-v2 is one bottom sheet: grabber, 3 quick
+//   action buttons, chapter row, progress row, and a brightness rail. It is not
+//   three detached floating controls.
+@Component
+export struct ReaderControlSheet {
+  @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
+
+  private quickActions: Array<[string, string, string]> = [
+    ['搜索', 'reader_icon_reader_content_search_action', 'reader-search-overlay-v2'],
+    ['自动翻页', 'reader_icon_reader_auto_page_action', 'reader-auto-scroll-overlay-v2'],
+    ['替换', 'reader_icon_reader_content_replace_action', 'reader-replace-overlay-v2'],
+  ];
+
+  private sheetBottom(): number {
+    return this.safeAreaBottom + 32 + SizeTokens.readerModuleNavHeight - 1;
+  }
+
+  build() {
+    Stack({ alignContent: Alignment.Bottom }) {
+      Column() {
+        Stack({ alignContent: Alignment.Top }) {
+          Column()
+            .width(42)
+            .height(4)
+            .borderRadius(DemoAliasTokens.radiusPill)
+            .backgroundColor(ColorTokens.muted)
+            .margin({ top: 9 })
+
+          Row({ space: 14 }) {
+            Column({ space: 6 }) {
+              Row({ space: 8 }) {
+                ForEach(this.quickActions, (item: [string, string, string]) => {
+                  Column({ space: 6 }) {
+                    Image($r(`app.media.${item[1]}`)).width(22).height(22)
+                    Text(item[0])
+                      .fontSize(11)
+                      .fontWeight(800)
+                      .fontColor(ColorTokens.controlInk)
+                      .maxLines(1)
+                      .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  }
+                  .layoutWeight(1)
+                  .height(70)
+                  .justifyContent(FlexAlign.Center)
+                  .alignItems(HorizontalAlign.Center)
+                  .backgroundColor(ColorTokens.floatingControlBg)
+                  .borderRadius(DemoAliasTokens.radiusLg)
+                  .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: item[2] as RouteId }))
+                }, (item: [string, string, string]) => item[2])
+              }
+              .height(88)
+              .padding({ left: 8, right: 8, top: 9, bottom: 9 })
+              .border({ width: 1, color: ColorTokens.border })
+              .borderRadius(DemoAliasTokens.radiusLg)
+              .backgroundColor(ColorTokens.floatingControlBg)
+
+              Column({ space: 8 }) {
+                Row() {
+                  Image($r('app.media.reader_icon_chevron_left_chapter'))
+                    .width(24)
+                    .height(24)
+                    .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
+                  Text('第 32 章 雨夜')
+                    .fontSize(13)
+                    .fontWeight(750)
+                    .fontColor(ColorTokens.controlInk)
+                    .textAlign(TextAlign.Center)
+                    .layoutWeight(1)
+                    .maxLines(2)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  Image($r('app.media.reader_icon_chevron_chapter')).width(24).height(24)
+                }
+                .height(52)
+                .alignItems(VerticalAlign.Center)
+
+                Row({ space: 6 }) {
+                  Text('38%')
+                    .fontSize(9)
+                    .fontColor(ColorTokens.muted)
+                    .fontWeight(700)
+                  Stack({ alignContent: Alignment.Start }) {
+                    Column()
+                      .width('100%')
+                      .height(5)
+                      .borderRadius(DemoAliasTokens.radiusPill)
+                      .backgroundColor(ColorTokens.border)
+                    Column()
+                      .width('38%')
+                      .height(5)
+                      .borderRadius(DemoAliasTokens.radiusPill)
+                      .backgroundColor(ColorTokens.primary)
+                  }
+                  .layoutWeight(1)
+                  .height(22)
+                  Text('共 128 章')
+                    .fontSize(9)
+                    .fontColor(ColorTokens.muted)
+                    .fontWeight(700)
+                }
+                .height(30)
+                .alignItems(VerticalAlign.Center)
+              }
+              .layoutWeight(1)
+              .padding({ left: 10, right: 10, top: 9, bottom: 9 })
+              .border({ width: 1, color: ColorTokens.border })
+              .borderRadius(DemoAliasTokens.radiusLg)
+              .backgroundColor(ColorTokens.floatingControlBg)
+            }
+            .layoutWeight(1)
+            .height('100%')
+
+            Column({ space: 10 }) {
+              Image($r('app.media.reader_icon_sun_primary')).width(18).height(18)
+              Stack({ alignContent: Alignment.Bottom }) {
+                Column()
+                  .width(4)
+                  .height('100%')
+                  .borderRadius(DemoAliasTokens.radiusPill)
+                  .backgroundColor(ColorTokens.border)
+                Column()
+                  .width(4)
+                  .height('42%')
+                  .borderRadius(DemoAliasTokens.radiusPill)
+                  .backgroundColor(ColorTokens.primary)
+              }
+              .width(4)
+              .layoutWeight(1)
+              Text('A')
+                .fontSize(12)
+                .fontWeight(800)
+                .fontColor(ColorTokens.primary)
+            }
+            .width(38)
+            .height('100%')
+            .padding({ top: 12, bottom: 12 })
+            .justifyContent(FlexAlign.Center)
+            .alignItems(HorizontalAlign.Center)
+            .backgroundColor(ColorTokens.floatingControlBg)
+            .borderRadius(DemoAliasTokens.radiusLg)
+          }
+          .width('100%')
+          .height('100%')
+          .padding({ left: 12, right: 12, top: 28, bottom: 12 })
+        }
+        .width('100%')
+        .height(252)
+        .border({ width: 1, color: ColorTokens.border })
+        .borderRadius(22)
+        .backgroundColor(ColorTokens.floatingControlBg)
+        .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
+      }
+      .width('100%')
+      .padding({ left: 12, right: 12, bottom: this.sheetBottom() })
+    }
+    .width('100%')
+    .height('100%')
+  }
+}
+
+// Legacy contract compatibility. Older generated tables used
+// FloatingQuickActions for the control route; render the real control sheet
+// there, and keep the old quick row for any stale non-control references.
 @Component
 export struct FloatingQuickActions {
   @StorageProp('reader.displayedRouteId') routeId: string = 'control-layer-base-v2';
@@ -233,22 +390,29 @@ export struct FloatingQuickActions {
   }
 
   build() {
-    Row({ space: 20 }) {
-      ForEach(this.items(), (it: [string, string, string]) => {
-        Column() {
-          Image($r(`app.media.${it[1]}`)).width(24).height(24)
+    if (this.routeId === 'control-layer-base-v2') {
+      ReaderControlSheet()
+    } else {
+      Stack({ alignContent: Alignment.Bottom }) {
+        Row({ space: 20 }) {
+          ForEach(this.items(), (it: [string, string, string]) => {
+            Column() {
+              Image($r(`app.media.${it[1]}`)).width(24).height(24)
+            }
+            .width(48).height(48)
+            .justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
+            .backgroundColor(ColorTokens.floatingControlBg)
+            .border({ width: 1, color: ColorTokens.border })
+            .borderRadius(DemoAliasTokens.radiusPill)
+            .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
+            .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: it[2] as RouteId }))
+          }, (it: [string, string, string]) => it[0])
         }
-        .width(48).height(48)
-        .justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
-        .backgroundColor(ColorTokens.floatingControlBg)
-        .border({ width: 1, color: ColorTokens.border })
-        .borderRadius(DemoAliasTokens.radiusPill)
-        .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
-        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: it[2] as RouteId }))
-      }, (it: [string, string, string]) => it[0])
+        .margin({ bottom: SizeTokens.readerModuleNavHeight + 116 })
+      }
+      .width('100%')
+      .height('100%')
     }
-    .align(Alignment.Bottom)
-    .offset({ y: -(SizeTokens.bottomBarHeight + 80) })
   }
 }
 
@@ -257,34 +421,42 @@ export struct FloatingQuickActions {
 //   bottom bar. Progress is a 4px track with a 25% fill + 16px thumb.
 @Component
 export struct FloatingPageControl {
+  @StorageProp('reader.displayedRouteId') routeId: string = 'control-layer-base-v2';
+
   build() {
-    Row() {
-      Image($r('app.media.reader_icon_chevron_left_chapter')).width(24).height(24)
-        .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
-      Stack({ alignContent: Alignment.Start }) {
-        Column().width('100%').height(4).borderRadius(DemoAliasTokens.radiusPill)
-          .backgroundColor(ColorTokens.border)
-        Column().width('25%').height(4).borderRadius(DemoAliasTokens.radiusPill)
-          .backgroundColor(ColorTokens.primary)
+    if (this.routeId !== 'control-layer-base-v2') {
+      Stack({ alignContent: Alignment.Bottom }) {
+        Row() {
+          Image($r('app.media.reader_icon_chevron_left_chapter')).width(24).height(24)
+            .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
+          Stack({ alignContent: Alignment.Start }) {
+            Column().width('100%').height(4).borderRadius(DemoAliasTokens.radiusPill)
+              .backgroundColor(ColorTokens.border)
+            Column().width('25%').height(4).borderRadius(DemoAliasTokens.radiusPill)
+              .backgroundColor(ColorTokens.primary)
+          }
+          .layoutWeight(1).height(4).margin({ left: 16, right: 16 })
+          Image($r('app.media.reader_icon_chevron_chapter')).width(24).height(24)
+        }
+        .width(342).height(52).padding({ left: 24, right: 24 })
+        .justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center)
+        .backgroundColor(ColorTokens.floatingControlBg)
+        .border({ width: 1, color: ColorTokens.border })
+        .borderRadius(DemoAliasTokens.radiusPill)
+        .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
+        .margin({ bottom: SizeTokens.readerModuleNavHeight + 54 })
       }
-      .layoutWeight(1).height(4).margin({ left: 16, right: 16 })
-      Image($r('app.media.reader_icon_chevron_chapter')).width(24).height(24)
+      .width('100%')
+      .height('100%')
     }
-    .width(342).height(52).padding({ left: 24, right: 24 })
-    .justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center)
-    .backgroundColor(ColorTokens.floatingControlBg)
-    .border({ width: 1, color: ColorTokens.border })
-    .borderRadius(DemoAliasTokens.radiusPill)
-    .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
-    .align(Alignment.Bottom)
-    .offset({ y: -(SizeTokens.bottomBarHeight + 18) })
   }
 }
 
-// ── Control bottom bar (.reader-control-bottom-bar) ───────────────────────
+// ── Module nav (.fd-reader-module-nav) ────────────────────────────────────
 @Component
 export struct ReaderBottomBar {
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
+  @StorageProp('reader.displayedRouteId') routeId: string = 'control-layer-base-v2';
 
   private items: Array<[string, string, string]> = [
     ['directory', '目录', 'reader-directory-overlay-v2'],
@@ -308,28 +480,56 @@ export struct ReaderBottomBar {
     }
   }
 
+  private active(kind: string): boolean {
+    if (kind === 'directory') return this.routeId === 'reader-directory-overlay-v2';
+    if (kind === 'tts') return this.routeId === 'reader-tts-overlay-v2';
+    if (kind === 'appearance') return this.routeId === 'reader-appearance-overlay-v2';
+    if (kind === 'settings') return this.routeId === 'reader-settings-overlay-v2';
+    return false;
+  }
+
   build() {
-    Row() {
-      ForEach(this.items, (it: [string, string, string]) => {
-        Column() {
-          Image(this.moduleIcon(it[0])).width(26).height(26)
-          Text(it[1])
-            .fontSize(12).fontWeight(500).fontColor(ColorTokens.controlInk)
-            .margin({ top: 4 })
+    Stack({ alignContent: Alignment.Bottom }) {
+      Column() {
+        Row({ space: 4 }) {
+          ForEach(this.items, (it: [string, string, string]) => {
+            Column({ space: 4 }) {
+              Column() {
+                Image(this.moduleIcon(it[0])).width(26).height(26)
+              }
+              .width(42)
+              .height(42)
+              .justifyContent(FlexAlign.Center)
+              .alignItems(HorizontalAlign.Center)
+              .backgroundColor(this.active(it[0]) ? ColorTokens.primaryDark : ColorTokens.floatingControlBgAlt)
+              .borderRadius(DemoAliasTokens.radiusPill)
+              Text(it[1])
+                .fontSize(12)
+                .fontWeight(800)
+                .fontColor(this.active(it[0]) ? ColorTokens.primaryDark : ColorTokens.controlInk)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+            }
+            .layoutWeight(1)
+            .height('100%')
+            .justifyContent(FlexAlign.Center)
+            .alignItems(HorizontalAlign.Center)
+            .borderRadius(DemoAliasTokens.radiusLg)
+            .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: it[2] as RouteId }))
+          }, (it: [string, string, string]) => it[2])
         }
-        .layoutWeight(1)
-        .height(56)
-        .justifyContent(FlexAlign.Center)
-        .alignItems(HorizontalAlign.Center)
-        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: it[2] as RouteId }))
-      }, (it: [string, string, string]) => it[2])
+        .width('100%')
+        .height(SizeTokens.readerModuleNavHeight)
+        .padding({ left: 8, right: 8, top: 8, bottom: 8 })
+        .backgroundColor(ColorTokens.floatingControlBg)
+        .border({ width: 1, color: ColorTokens.border })
+        .borderRadius(DemoAliasTokens.radiusLg)
+      }
+      .width('100%')
+      .padding({ left: 24, right: 24, bottom: this.safeAreaBottom + 32 })
     }
     .width('100%')
-    .height(SizeTokens.bottomBarHeight)
-    .padding({ bottom: this.safeAreaBottom })
-    .backgroundColor(ColorTokens.bottomBarBg)
-    .border({ width: { top: 1 }, color: ColorTokens.border })
-    .align(Alignment.Bottom)
+    .height('100%')
   }
 }
 
@@ -341,22 +541,26 @@ export struct ReaderBottomBar {
 //   declared once.
 @Component
 export struct ReaderOverlayPanel {
+  @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
   @Prop panelHeight: number = 420;
   @BuilderParam content: () => void;
 
   build() {
-    Column({ space: 14 }) {
-      this.content()
+    Stack({ alignContent: Alignment.Bottom }) {
+      Column({ space: 14 }) {
+        this.content()
+      }
+      .width('100%')
+      .height(this.panelHeight)
+      .padding(16)
+      .backgroundColor(ColorTokens.floatingControlBg)
+      .border({ width: 1, color: ColorTokens.border })
+      .borderRadius(22)
+      .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
+      .margin({ bottom: this.safeAreaBottom + 32 + SizeTokens.readerModuleNavHeight - 1 })
     }
     .width('100%')
-    .height(this.panelHeight)
-    .padding(16)
-    .backgroundColor(ColorTokens.floatingControlBg)
-    .border({ width: 1, color: ColorTokens.border })
-    .borderRadius(22)
-    .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
-    .align(Alignment.Bottom)
-    .offset({ y: -(SizeTokens.bottomBarHeight + 14) })
+    .height('100%')
   }
 }
 
@@ -592,25 +796,28 @@ export struct FloatingBrightness {
   @State value: number = 40;
 
   build() {
-    Column({ space: 16 }) {
-      Image($r('app.media.reader_icon_more_dark')).width(22).height(22)
-      Stack({ alignContent: Alignment.Bottom }) {
-        Column().width(4).height('100%').borderRadius(DemoAliasTokens.radiusPill)
-          .backgroundColor(ColorTokens.border)
-        Column().width(4).height(`${this.value}%`).borderRadius(DemoAliasTokens.radiusPill)
-          .backgroundColor(ColorTokens.primary)
+    Stack({ alignContent: Alignment.Start }) {
+      Column({ space: 16 }) {
+        Image($r('app.media.reader_icon_more_dark')).width(22).height(22)
+        Stack({ alignContent: Alignment.Bottom }) {
+          Column().width(4).height('100%').borderRadius(DemoAliasTokens.radiusPill)
+            .backgroundColor(ColorTokens.border)
+          Column().width(4).height(`${this.value}%`).borderRadius(DemoAliasTokens.radiusPill)
+            .backgroundColor(ColorTokens.primary)
+        }
+        .width(4).layoutWeight(1)
+        Image($r('app.media.ui_icon_chevron_dark')).width(20).height(20)
       }
-      .width(4).layoutWeight(1)
-      Image($r('app.media.ui_icon_chevron_dark')).width(20).height(20)
+      .width(40).height(256).padding({ top: 16, bottom: 16 })
+      .justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
+      .backgroundColor(ColorTokens.floatingControlBg)
+      .border({ width: 1, color: ColorTokens.border })
+      .borderRadius(DemoAliasTokens.radiusPill)
+      .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
+      .margin({ left: 12 })
     }
-    .width(40).height(256).padding({ top: 16, bottom: 16 })
-    .justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
-    .backgroundColor(ColorTokens.floatingControlBg)
-    .border({ width: 1, color: ColorTokens.border })
-    .borderRadius(DemoAliasTokens.radiusPill)
-    .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
-    .align(Alignment.Start)
-    .offset({ x: 12 })
+    .width('100%')
+    .height('100%')
   }
 }
 
@@ -621,14 +828,17 @@ export struct FloatingBrightness {
 @Component
 export struct NightToast {
   build() {
-    Text('已切换夜间模式')
-      .fontSize(13).fontColor(ColorTokens.controlInkNight)
-      .padding({ left: 14, right: 14, top: 8, bottom: 8 })
-      .backgroundColor(ColorTokens.floatingControlBgAltNight)
-      .border({ width: 1, color: ColorTokens.border })
-      .borderRadius(DemoAliasTokens.radiusPill)
-      .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
-      .align(Alignment.Bottom)
-      .offset({ y: -(SizeTokens.bottomBarHeight + 152) })
+    Stack({ alignContent: Alignment.Bottom }) {
+      Text('已切换夜间模式')
+        .fontSize(13).fontColor(ColorTokens.controlInkNight)
+        .padding({ left: 14, right: 14, top: 8, bottom: 8 })
+        .backgroundColor(ColorTokens.floatingControlBgAltNight)
+        .border({ width: 1, color: ColorTokens.border })
+        .borderRadius(DemoAliasTokens.radiusPill)
+        .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
+        .margin({ bottom: SizeTokens.bottomBarHeight + 152 })
+    }
+    .width('100%')
+    .height('100%')
   }
 }

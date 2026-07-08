@@ -203,6 +203,42 @@ test('reader overlay panels keep normalized handoff visible copy', () => {
   assert.ok(!src.includes("ReaderSettingRow({ name: '替换\\\"信号\\\"为\\\"信号源\\\"'"), 'replace overlay must use handoff rule names');
 });
 
+test('reader control layer uses top-area structure instead of immersive info chrome', () => {
+  const reader = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderComponents.ets'));
+  assert.ok(reader.includes('export struct ReaderTopArea'), 'control-layer routes need the normalized reader-top-area component');
+  assert.ok(reader.includes("Text('深空信号')"), 'reader top area must show the normalized book title');
+  assert.ok(reader.includes("Text('第一章：阿长与《山海经》')"), 'reader top area must show the normalized chapter meta row');
+  assert.ok(reader.includes("Text('本地书籍')"), 'reader top area must show the source chip');
+  assert.ok(reader.includes("return this.routeId !== 'reader'"), 'ReaderBase must branch between immersive reader and control-layer chrome');
+  assert.ok(reader.includes('ReaderTopArea()'), 'control-layer branch must render ReaderTopArea');
+  assert.ok(reader.includes('ReadingInfoLayer({ theme: this.theme })'), 'plain reader branch keeps immersive corner info');
+  assert.ok(reader.includes('top: this.controlLayer() ? 128 : 72'), 'control-layer body must reserve top-area space');
+  assert.ok(reader.includes('bottom: (this.controlLayer() ? 380 : 48) + this.safeAreaBottom'), 'control-layer body must reserve bottom sheet/module nav space');
+  const baseStart = reader.indexOf('export struct ReaderBase');
+  const base = reader.slice(baseStart);
+  assert.ok(base.indexOf('ReaderTopArea()') < base.indexOf('ReadingInfoLayer({ theme: this.theme })'),
+    'ReaderBase should prefer top-area chrome for control routes, then fall back to immersive info for plain reader');
+});
+
+test('reader control route fixture uses one bottom sheet, not detached floating controls', () => {
+  const VS = readJson('view-state.fixtures.json');
+  const byRoute = (routeId) => {
+    const entry = VS.find((e) => e.routeId === routeId && e.pageState === 'default');
+    assert.ok(entry, `${routeId}/default fixture missing`);
+    return entry.components.map((c) => c.type);
+  };
+  assert.deepEqual(
+    byRoute('control-layer-base-v2'),
+    ['ReaderBase', 'ReaderControlSheet', 'ReaderBottomBar'],
+    'control-layer-base-v2 must mirror demo bottom sheet + module nav structure'
+  );
+  for (const routeId of ['reader-search-overlay-v2', 'reader-replace-overlay-v2', 'reader-auto-scroll-overlay-v2']) {
+    const types = byRoute(routeId);
+    assert.equal(types.includes('FloatingQuickActions'), false, `${routeId} must not render detached quick actions`);
+    assert.equal(types.includes('FloatingPageControl'), false, `${routeId} must not render detached page controls`);
+  }
+});
+
 test('bookshelf section head uses demo view-action icons, not generic more dots', () => {
   const src = read(path.join(REPO, 'entry/src/main/ets/ui/components/BookshelfComponents.ets'));
   for (const marker of [

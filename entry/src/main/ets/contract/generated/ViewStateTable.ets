@@ -532,20 +532,8 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "FloatingBrightness",
-        "id": "floating-brightness",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "FloatingQuickActions",
-        "id": "floating-quick-actions",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "FloatingPageControl",
-        "id": "floating-page-control",
+        "type": "ReaderControlSheet",
+        "id": "reader-control-sheet",
         "props": {},
         "children": []
       },
@@ -674,18 +662,6 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "FloatingQuickActions",
-        "id": "floating-quick-actions",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "FloatingPageControl",
-        "id": "floating-page-control",
-        "props": {},
-        "children": []
-      },
-      {
         "type": "ReaderBottomBar",
         "id": "reader-bottom-bar",
         "props": {},
@@ -709,18 +685,6 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
-      },
-      {
-        "type": "FloatingQuickActions",
-        "id": "floating-quick-actions",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "FloatingPageControl",
-        "id": "floating-page-control",
-        "props": {},
         "children": []
       },
       {
@@ -750,18 +714,6 @@ export class ViewStateTable {
         "children": []
       },
       {
-        "type": "FloatingQuickActions",
-        "id": "floating-quick-actions",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "FloatingPageControl",
-        "id": "floating-page-control",
-        "props": {},
-        "children": []
-      },
-      {
         "type": "ReaderBottomBar",
         "id": "reader-bottom-bar",
         "props": {},
@@ -785,24 +737,6 @@ export class ViewStateTable {
         "props": {
           "theme": "night"
         },
-        "children": []
-      },
-      {
-        "type": "FloatingBrightness",
-        "id": "floating-brightness",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "FloatingQuickActions",
-        "id": "floating-quick-actions",
-        "props": {},
-        "children": []
-      },
-      {
-        "type": "FloatingPageControl",
-        "id": "floating-page-control",
-        "props": {},
         "children": []
       },
       {

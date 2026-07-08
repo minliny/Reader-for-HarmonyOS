@@ -6,8 +6,8 @@ import { AppTopBar, BackTopBar, BottomNav, Loading, Empty, ErrorState, Offline,
   DemoButton, Input, ListRow, DemoList, Card, Content, FormSection, FilterBar, Overlay } from './SharedComponents';
 import { ContinueReadingCard, BookshelfShelfSection, ShelfChipGroup, ShelfSectionHeader, BookCard, BookCover, BookGrid, BookEntry } from './BookshelfComponents';
 import { BookHero, BookSummaryCard, BookChapterList } from './BookDetailComponents';
-import { ReadingBackgroundLayer, ReadingTextFlow, ReadingInfoLayer, TapZones, ReaderBase } from './ReaderComponents';
-import { ReaderBottomBar, ReaderDirectoryPanel, ReaderAppearancePanel, ReaderTtsPanel, ReaderSettingsPanel, ReaderSearchPanel, ReaderReplacePanel, ReaderAutoScrollPanel, FloatingQuickActions, FloatingPageControl, FloatingBrightness, NightToast } from './ReaderOverlayComponents';
+import { ReadingBackgroundLayer, ReadingTextFlow, ReadingInfoLayer, TapZones, ReaderBase, ReaderTopArea } from './ReaderComponents';
+import { ReaderControlSheet, ReaderBottomBar, ReaderDirectoryPanel, ReaderAppearancePanel, ReaderTtsPanel, ReaderSettingsPanel, ReaderSearchPanel, ReaderReplacePanel, ReaderAutoScrollPanel, FloatingQuickActions, FloatingPageControl, FloatingBrightness, NightToast } from './ReaderOverlayComponents';
 import { SourceSwitchResultsPanel } from './LibraryComponents';
 import { SettingsHomeSection, SettingsSection, SettingsListItem } from './SettingsComponents';
 import { DiscoverSourceBar, DiscoverEntryRow, DiscoverFilterTrigger, DiscoverListHead, DiscoverBookList } from './DiscoverComponents';
@@ -132,6 +132,10 @@ export struct ViewStateRenderer {
       TapZones()
     } else if (component.type === 'ReaderBase') {
       ReaderBase({ theme: this.textOr(component.props.theme, 'paper') })
+    } else if (component.type === 'ReaderTopArea') {
+      ReaderTopArea()
+    } else if (component.type === 'ReaderControlSheet') {
+      ReaderControlSheet()
     } else if (component.type === 'ReaderBottomBar') {
       ReaderBottomBar()
     } else if (component.type === 'FloatingQuickActions') {

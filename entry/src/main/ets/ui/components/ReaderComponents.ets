@@ -42,52 +42,77 @@ export struct ReadingBackgroundLayer {
 @Component
 export struct ReadingTextFlow {
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
+  @StorageProp('reader.displayedRouteId') routeId: string = 'reader';
   @StorageProp('reader.chapterContent') chapterContent: string[] = [];
   @Prop theme: string = 'paper';
 
-  private fixtureParagraphs: string[] = [
+  private immersiveParagraphs: string[] = [
     '汪淼盯着面前的纳米丝，想象着它在宏观尺度上的形态。它细如蛛丝，却能切断合金，这便是三体人送给地球的第一个礼物。',
     '叶文洁当年的选择，像一条看不见的线，从雷达峰延伸到此刻的每一个角落。她按下发射键的那一刻，人类的命运被永远改写了。',
     '宇宙曾经是一片死寂的荒漠，直到那条信息被发出，直到那个回复被接收。在那之后的每一个夜晚，星空都不再是原来的星空。'
+  ];
+
+  private controlParagraphs: string[] = [
+    '通讯台的指示灯已经闪烁了三个标准时。在这片被称为“寂静航线”的星域里，通常除了背景辐射的白噪音，什么也听不到。艾伦揉了揉干涩的眼睛，盯着那个代表未知频段的跳动波形。',
+    '“这不是随机的脉冲星信号，”领航员索菲亚走到他身后，指着屏幕边缘的傅里叶变换图谱，“看这里的周期性间断，它有明显的结构，像是一种原始的二进制。”',
+    '空间站外，恒星的光芒被一层稀薄的星云物质过滤，呈现出一种黯淡的铁锈红。船舱内的维生系统发出平缓的嗡嗡声，与屏幕上跳动的波形形成了一种奇异的共振。',
+    '“求救信号。”艾伦打断了她，手指在控制台的触控板上快速滑过，试图锁定信号源的坐标。'
   ];
 
   private inkColor(): string {
     return this.theme === 'night' ? ColorTokens.inkNight : ColorTokens.ink;
   }
 
+  private controlLayer(): boolean {
+    return this.routeId !== 'reader';
+  }
+
+  private title(): string {
+    return this.controlLayer() ? '深空信号' : '第一章 科学边界';
+  }
+
   // Use real chapter content from the reducer when available; fall back to
   // fixture paragraphs so the reader page still renders in demo flows.
   private paragraphs(): string[] {
-    return this.chapterContent.length > 0 ? this.chapterContent : this.fixtureParagraphs;
+    if (this.chapterContent.length > 0) {
+      return this.chapterContent;
+    }
+    return this.controlLayer() ? this.controlParagraphs : this.immersiveParagraphs;
   }
 
   build() {
     Scroll() {
       Column() {
-        Text('第一章 科学边界')
-          .fontSize(23)
+        Text(this.title())
+          .fontSize(this.controlLayer() ? 28 : 23)
           .fontWeight(700)
           .fontColor(this.inkColor())
           .fontFamily(ReaderTypography.serifFamily())
-          .textAlign(TextAlign.Center)
+          .textAlign(this.controlLayer() ? TextAlign.Start : TextAlign.Center)
           .width('100%')
-          .margin({ bottom: 24 })
+          .margin({ bottom: this.controlLayer() ? 32 : 24 })
         ForEach(this.paragraphs(), (p: string, i: number) => {
           Text(p)
             .fontSize(18)
             .fontColor(this.inkColor())
             .fontFamily(ReaderTypography.serifFamily())
-            .lineHeight(18 * 1.96)
-            .textIndent(2 * 18)
-            .margin({ bottom: 16 })
+            .lineHeight(this.controlLayer() ? 18 * 1.72 : 18 * 1.96)
+            .textIndent(this.controlLayer() ? 0 : 2 * 18)
+            .margin({ bottom: this.controlLayer() ? 24 : 16 })
         }, (p: string, i: number) => `${i}`)
       }
-      .padding({ top: 72, left: 32, right: 32, bottom: 48 + this.safeAreaBottom })
+      .padding({
+        top: this.controlLayer() ? 128 : 72,
+        left: this.controlLayer() ? 24 : 32,
+        right: this.controlLayer() ? 24 : 32,
+        bottom: (this.controlLayer() ? 380 : 48) + this.safeAreaBottom,
+      })
       .alignItems(HorizontalAlign.Start)
     }
     .width('100%')
     .height('100%')
     .backgroundColor(this.theme === 'night' ? ColorTokens.paperNight : ColorTokens.paper)
+    .scrollBar(BarState.Off)
     .expandSafeArea([SafeAreaType.SYSTEM, SafeAreaType.CUTOUT],
       [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END])
   }
@@ -140,6 +165,79 @@ export struct ReadingInfoLayer {
     .hitTestBehavior(HitTestMode.None)
     .expandSafeArea([SafeAreaType.SYSTEM, SafeAreaType.CUTOUT],
       [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END])
+  }
+}
+
+// .reader-top-area: top control chrome shown on control-layer and overlay
+// routes. The plain reader route keeps ReadingInfoLayer instead.
+@Component
+export struct ReaderTopArea {
+  @StorageProp(SafeAreaAdapter.K_TOP) safeAreaTop: number = SafeAreaAdapter.DEFAULT_TOP;
+
+  build() {
+    Stack({ alignContent: Alignment.Top }) {
+      Column() {
+        Row() {
+          Row() {
+            Image($r('app.media.reader_icon_back_dark'))
+              .width(28).height(28)
+              .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
+          }
+          .width(64)
+          .justifyContent(FlexAlign.Start)
+          .alignItems(VerticalAlign.Center)
+
+          Text('深空信号')
+            .fontSize(18)
+            .fontWeight(600)
+            .fontColor(ColorTokens.controlInk)
+            .fontFamily(ReaderTypography.sansFamily())
+            .textAlign(TextAlign.Center)
+            .layoutWeight(1)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+          Row({ space: 16 }) {
+            Image($r('app.media.ui_icon_refresh_dark')).width(24).height(24)
+            Image($r('app.media.reader_icon_source_switch_dark')).width(24).height(24)
+              .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'source-switch-results' }))
+            Image($r('app.media.reader_icon_more_dark')).width(24).height(24)
+          }
+          .width(96)
+          .justifyContent(FlexAlign.End)
+          .alignItems(VerticalAlign.Center)
+        }
+        .height(56)
+        .padding({ left: 16, right: 16 })
+        .backgroundColor(ColorTokens.surfaceSoft)
+        .border({ width: { bottom: 1 }, color: ColorTokens.border })
+
+        Row() {
+          Text('第一章：阿长与《山海经》')
+            .fontSize(14)
+            .fontColor(ColorTokens.controlInk)
+            .fontFamily(ReaderTypography.sansFamily())
+            .layoutWeight(1)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Text('本地书籍')
+            .fontSize(12)
+            .fontWeight(600)
+            .fontColor(ColorTokens.primary)
+            .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+            .backgroundColor(ColorTokens.metaBg)
+            .borderRadius(DemoAliasTokens.radiusPill)
+        }
+        .height(48)
+        .padding({ left: 16, right: 16 })
+        .backgroundColor(ColorTokens.metaBg)
+        .border({ width: { bottom: 1 }, color: ColorTokens.border })
+      }
+      .width('100%')
+      .padding({ top: this.safeAreaTop })
+    }
+    .width('100%')
+    .height('100%')
   }
 }
 
@@ -199,14 +297,23 @@ export struct SessionCapsule {
 @Component
 export struct ReaderBase {
   @Prop theme: string = 'paper';
+  @StorageProp('reader.displayedRouteId') routeId: string = 'reader';
+
+  private controlLayer(): boolean {
+    return this.routeId !== 'reader';
+  }
 
   build() {
     Stack() {
       ReadingBackgroundLayer({ theme: this.theme })
       ReadingTextFlow({ theme: this.theme })
-      ReadingInfoLayer({ theme: this.theme })
-      TapZones()
-      SessionCapsule()
+      if (this.controlLayer()) {
+        ReaderTopArea()
+      } else {
+        ReadingInfoLayer({ theme: this.theme })
+        TapZones()
+        SessionCapsule()
+      }
     }
     .width('100%')
     .height('100%')
