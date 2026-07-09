@@ -73,9 +73,14 @@ export struct SettingsShell {
       Column() {
         BackTopBar()
         Scroll() {
-          ViewStateRenderer()
+          Column() {
+            ViewStateRenderer()
+          }
+          .width('100%')
         }
         .layoutWeight(1)
+        .scrollable(ScrollDirection.Vertical)
+        .scrollBar(BarState.Auto)
         .align(Alignment.Top)
         .padding({
           top: 8,
@@ -118,9 +123,15 @@ export struct SettingsShell {
       .width('100%')
       .height(this.actionBarHeight())
       .padding({ left: SpacingTokens.safeAreaHorizontal + 3, right: SpacingTokens.safeAreaHorizontal + 3, top: 10, bottom: this.safeAreaBottom + 10 })
-      .backgroundColor(DemoAliasTokens.surface)
-      .border({ width: { top: 1 }, color: ColorTokens.border })
-      .zIndex(ZIndexTokens.bottomSheet)
+      .linearGradient({
+        angle: 180,
+        colors: [
+          ['rgba(249,240,230,0)', 0],
+          ['rgba(249,240,230,0.96)', 0.42],
+          ['rgba(249,240,230,1)', 1.0]
+        ]
+      })
+      .zIndex(ZIndexTokens.mainNav)
     } else if (this.routeId === 'source-management') {
       Row({ space: 10 }) {
         SettingsFixedActionButton({ label: '批量管理', variant: 'secondary', route: 'source-batch' })
@@ -131,9 +142,15 @@ export struct SettingsShell {
       .width('100%')
       .height(this.actionBarHeight())
       .padding({ left: SpacingTokens.safeAreaHorizontal + 3, right: SpacingTokens.safeAreaHorizontal + 3, top: 10, bottom: this.safeAreaBottom + 10 })
-      .backgroundColor(DemoAliasTokens.surface)
-      .border({ width: { top: 1 }, color: ColorTokens.border })
-      .zIndex(ZIndexTokens.bottomSheet)
+      .linearGradient({
+        angle: 180,
+        colors: [
+          ['rgba(249,240,230,0)', 0],
+          ['rgba(249,240,230,0.96)', 0.42],
+          ['rgba(249,240,230,1)', 1.0]
+        ]
+      })
+      .zIndex(ZIndexTokens.mainNav)
     } else if (this.routeId === 'source-detail') {
       Row({ space: 10 }) {
         SettingsFixedActionButton({ label: '检测此源', variant: 'secondary', route: 'source-detect' })
@@ -146,9 +163,15 @@ export struct SettingsShell {
       .width('100%')
       .height(this.actionBarHeight())
       .padding({ left: SpacingTokens.safeAreaHorizontal + 3, right: SpacingTokens.safeAreaHorizontal + 3, top: 10, bottom: this.safeAreaBottom + 10 })
-      .backgroundColor(DemoAliasTokens.surface)
-      .border({ width: { top: 1 }, color: ColorTokens.border })
-      .zIndex(ZIndexTokens.bottomSheet)
+      .linearGradient({
+        angle: 180,
+        colors: [
+          ['rgba(249,240,230,0)', 0],
+          ['rgba(249,240,230,0.96)', 0.42],
+          ['rgba(249,240,230,1)', 1.0]
+        ]
+      })
+      .zIndex(ZIndexTokens.mainNav)
     }
   }
 }

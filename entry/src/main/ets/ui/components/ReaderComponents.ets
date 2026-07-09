@@ -23,13 +23,16 @@ import { RadiusTokens, ZIndexTokens } from '../../contract/generated/DimensionTo
 import { SafeAreaAdapter } from '../adapters/SafeAreaAdapter';
 import { ViewportAdapter } from '../adapters/ViewportAdapter';
 import { InteractionDebugAdapter } from '../adapters/InteractionDebugAdapter';
+import { MotionAdapter } from '../adapters/MotionAdapter';
 import { ReaderTypography } from '../tokens/ReaderTypography';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 import { InteractionDebugBadge, InteractionDebugFrame } from './InteractionDebugComponents';
+import { ReaderSelectionToolbar } from './ReaderSelectionToolbar';
 
 // .fd-ir-background-layer: full-bleed paper bg (night theme -> paperNight).
 @Component
 export struct ReadingBackgroundLayer {
+  @StorageProp(ViewportAdapter.K_WIDTH) viewportWidth: number = ViewportAdapter.DEFAULT_WIDTH;
   @StorageProp(ViewportAdapter.K_HEIGHT) viewportHeight: number = ViewportAdapter.DEFAULT_HEIGHT;
   @Prop theme: string = 'paper';
 
@@ -50,8 +53,20 @@ export struct ReadingBackgroundLayer {
     return this.theme === 'night' ? 0.026 : 0.034;
   }
 
+  // 夜读星点：11 颗固定相对坐标（视口百分比），近似 B 的
+  // .fd-ir-background-layer::before 星点 radial-gradient 序列。
+  private starPoints(): number[][] {
+    const raw: number[][] = [
+      [0.12, 0.08], [0.28, 0.15], [0.42, 0.06], [0.55, 0.12],
+      [0.68, 0.18], [0.78, 0.09], [0.88, 0.14], [0.35, 0.22],
+      [0.62, 0.25], [0.18, 0.28], [0.82, 0.28]
+    ];
+    return raw.map((p: number[]): number[] => [p[0] * this.viewportWidth, p[1] * this.viewportHeight]);
+  }
+
   build() {
     Stack() {
+      // 纸色 linear-gradient（B L2498）。
       Column()
         .width('100%')
         .height('100%')
@@ -63,6 +78,54 @@ export struct ReadingBackgroundLayer {
             [this.theme === 'night' ? ColorTokens.paperNight : ColorTokens.paper, 100],
           ],
         })
+      // 顶部高光：顶部中心柔光（B L2499 radial-gradient 顶部高光的 linearGradient 近似）。
+      Column()
+        .width('100%')
+        .height('50%')
+        .linearGradient({
+          angle: 180,
+          colors: [
+            [this.theme === 'night' ? 'rgba(60,80,110,0.12)' : 'rgba(255,250,240,0.5)', 0],
+            ['rgba(255,250,240,0)', 1.0],
+          ],
+        })
+      // 四周暗角 vignette：中心透明，四周加深（B L2500 radial-gradient 暗角）。
+      Column()
+        .width('100%')
+        .height('100%')
+        .radialGradient({
+          center: ['50%', '50%'],
+          radius: '75%',
+          colors: [
+            ['rgba(0,0,0,0)', 0.55],
+            [this.theme === 'night' ? 'rgba(0,0,0,0.45)' : 'rgba(89,70,50,0.14)', 1.0],
+          ],
+        })
+      // 夜读极光 signature moment：顶部紫蓝渐变光晕（B L2504-2510 ::before 极光）。
+      if (this.theme === 'night') {
+        Column()
+          .width('100%')
+          .height('45%')
+          .linearGradient({
+            angle: 135,
+            colors: [
+              ['rgba(90,110,160,0.18)', 0],
+              ['rgba(70,90,140,0.12)', 0.3],
+              ['rgba(50,70,120,0.06)', 0.6],
+              ['rgba(0,0,0,0)', 1.0],
+            ],
+          })
+      }
+      // 夜读星点：顶部随机分布的微小光点（B L2511-2521 星点序列）。
+      if (this.theme === 'night') {
+        ForEach(this.starPoints(), (pt: number[]) => {
+          Circle()
+            .width(2)
+            .height(2)
+            .fill('rgba(200,220,255,0.6)')
+            .position({ x: pt[0], y: pt[1] })
+        }, (pt: number[], i: number) => `star-${i}`)
+      }
       ForEach(this.textureLines(), (line: number) => {
         Row()
           .width('100%')
@@ -75,8 +138,8 @@ export struct ReadingBackgroundLayer {
     }
     .width('100%')
     .height('100%')
-      .expandSafeArea([SafeAreaType.SYSTEM, SafeAreaType.CUTOUT],
-        [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END])
+    .expandSafeArea([SafeAreaType.SYSTEM, SafeAreaType.CUTOUT],
+      [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END])
   }
 }
 
@@ -99,7 +162,7 @@ export struct ReadingTextFlow {
   @StorageProp('reader.typography.fontFamily') fontFamily: string = 'serif';
   @StorageProp('reader.pageSpace.topMargin') topMargin: number = 72;
   @StorageProp('reader.pageSpace.sideMargin') sideMargin: number = 32;
-  @StorageProp('reader.pageSpace.bottomMargin') bottomMargin: number = 48;
+  @StorageProp('reader.pageSpace.bottomMargin') bottomMargin: number = 16;
   @StorageProp('reader.pageSpace.paragraphIndent') paragraphIndent: number = 2;
   @Prop theme: string = 'paper';
 
@@ -162,6 +225,14 @@ export struct ReadingTextFlow {
     return this.fontSize * this.lineHeightRatio;
   }
 
+  // ArkUI 实际渲染行高比 fontSize * lineHeightRatio 偏低约 12%
+  //（dumpLayout 实测：4 行占 436px / density 3.5 = 124.5vp，每行 31vp，
+  // 而估算 35.28vp）。分页估算若直接用 paragraphLineHeight 会高估段落高度，
+  // 导致少放段落、底部留白过大。这里乘 0.88 系数补偿。
+  private estimatedLineHeight(): number {
+    return this.paragraphLineHeight() * 0.88;
+  }
+
   private paragraphIndentValue(): number {
     return this.paragraphIndent * this.fontSize;
   }
@@ -177,11 +248,12 @@ export struct ReadingTextFlow {
 
   private estimatedParagraphHeight(text: string): number {
     const lines = Math.max(1, Math.ceil(text.length / this.estimatedCharsPerLine()));
-    return lines * this.paragraphLineHeight() + this.paragraphGap;
+    return lines * this.estimatedLineHeight() + this.paragraphGap;
   }
 
   private firstPageTitleReserve(): number {
-    return this.titleLineHeight() + 24;
+    // 标题用 titleLineHeight 渲染，但估算分页时同样需要补偿实际渲染偏低。
+    return this.titleLineHeight() * 0.88 + 24;
   }
 
   // Use real chapter content from the reducer when available; fall back to
@@ -193,22 +265,88 @@ export struct ReadingTextFlow {
     return this.fallbackParagraphs;
   }
 
+  // 二分法估算能放入 availableHeight 的最大字符数（参照 demo render-runtime.js fitSplitIndex）。
+  // ArkUI 无 DOM 测量 API，用估算高度代替 scrollHeight。
+  private splitParagraphToFit(text: string, availableHeight: number): number {
+    if (availableHeight <= 0) return 0;
+    let low = 1;
+    let high = text.length;
+    let best = 0;
+    while (low <= high) {
+      const middle = Math.floor((low + high) / 2);
+      const candidate = text.slice(0, middle).trim();
+      if (candidate.length === 0) {
+        low = middle + 1;
+        continue;
+      }
+      const candidateHeight = this.estimatedParagraphHeight(candidate);
+      if (candidateHeight <= availableHeight) {
+        best = middle;
+        low = middle + 1;
+      } else {
+        high = middle - 1;
+      }
+    }
+    return best;
+  }
+
   private horizontalPages(): string[][] {
+    // 参照 demo render-runtime.js updateReaderPagination 的分页+分割逻辑。
+    // 当整段放不下时，用二分法分割段落，前半部分填满当前页，后半部分放下一页。
     const pages: string[][] = [];
     const source = this.paragraphs();
     let page: string[] = [];
     let used = this.firstPageTitleReserve();
     const pageHeight = Math.max(this.paragraphLineHeight() * 3, this.textLayerHeight());
-    for (let index = 0; index < source.length; index++) {
-      const paragraph = source[index];
-      const nextHeight = this.estimatedParagraphHeight(paragraph);
-      if (page.length > 0 && used + nextHeight > pageHeight) {
-        pages.push(page);
-        page = [];
-        used = 0;
+
+    let blockIndex = 0;
+    let offset = 0;
+    while (blockIndex < source.length) {
+      const sourceText = source[blockIndex];
+      const remaining = offset === 0 ? sourceText : sourceText.slice(offset);
+      if (remaining.trim().length === 0) {
+        blockIndex += 1;
+        offset = 0;
+        continue;
       }
-      page.push(paragraph);
-      used += nextHeight;
+
+      const nextHeight = this.estimatedParagraphHeight(remaining);
+      if (page.length === 0 || used + nextHeight <= pageHeight) {
+        // 整段能放下
+        page.push(remaining);
+        used += nextHeight;
+        blockIndex += 1;
+        offset = 0;
+      } else {
+        // 整段放不下，尝试分割填满当前页剩余空间
+        const available = Math.max(0, pageHeight - used);
+        const splitIdx = this.splitParagraphToFit(remaining, available);
+        if (splitIdx > 0) {
+          page.push(remaining.slice(0, splitIdx).trim());
+          pages.push(page);
+          page = [];
+          used = 0;
+          offset += splitIdx;
+          // 继续处理剩余部分（不递增 blockIndex）
+        } else if (page.length > 0) {
+          // 当前页有内容但分割失败（剩余空间太小），换页重试
+          pages.push(page);
+          page = [];
+          used = 0;
+        } else {
+          // 当前页空且放不下，强制放1字符避免死循环
+          const forced = remaining.slice(0, 1);
+          page.push(forced);
+          used += this.estimatedParagraphHeight(forced);
+          offset += 1;
+          blockIndex += 0; // 不递增，继续处理剩余
+          // 但如果 forced 已用尽 remaining
+          if (offset >= sourceText.length) {
+            blockIndex += 1;
+            offset = 0;
+          }
+        }
+      }
     }
     if (page.length > 0) {
       pages.push(page);
@@ -217,7 +355,8 @@ export struct ReadingTextFlow {
   }
 
   private textTopInset(): number {
-    const baseTop = this.wideReaderLayout() ? Math.max(this.topMargin, 92) : this.topMargin;
+    // 宽屏下顶部下限从 92 降至 48，增加每页可用文本高度，减少底部留白。
+    const baseTop = this.wideReaderLayout() ? Math.max(this.topMargin, 48) : this.topMargin;
     return this.safeAreaTop + baseTop;
   }
 
@@ -233,8 +372,8 @@ export struct ReadingTextFlow {
   }
 
   private textBottomInset(): number {
-    const baseBottom = this.wideReaderLayout() ? Math.max(this.bottomMargin, 56) : this.bottomMargin;
-    return this.safeAreaBottom + baseBottom;
+    // 底部仅依赖 safeAreaBottom + bottomMargin，避免宽屏下被强制抬高到 56+ 造成底部过远。
+    return this.safeAreaBottom + this.bottomMargin;
   }
 
   private textLayerWidth(): number {
@@ -325,48 +464,66 @@ export struct ReadingTextFlow {
 export struct ReadingInfoLayer {
   @StorageProp(SafeAreaAdapter.K_TOP) safeAreaTop: number = SafeAreaAdapter.DEFAULT_TOP;
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
+  @StorageProp(ViewportAdapter.K_WIDTH) viewportWidth: number = ViewportAdapter.DEFAULT_WIDTH;
+  @StorageProp(ViewportAdapter.K_HEIGHT) viewportHeight: number = ViewportAdapter.DEFAULT_HEIGHT;
   @Prop theme: string = 'paper';
+  @StorageProp('reader.activeSession') activeSession: string = '';
 
   private mutedColor(): string {
     return this.theme === 'night' ? ColorTokens.controlInkNight : ColorTokens.muted;
   }
 
+  // 四角绝对定位锚点：top-left / top-right / bottom-left / bottom-right
+  private cornerLeft(): number {
+    return 24;
+  }
+  private cornerRightX(): number {
+    return this.viewportWidth - 24;
+  }
+  private cornerTopY(): number {
+    return this.safeAreaTop + 26;
+  }
+  private cornerBottomY(): number {
+    return this.viewportHeight - this.safeAreaBottom - 22;
+  }
+  private pageRightOffset(): number {
+    return this.activeSession !== '' ? 100 : 0;
+  }
+
   build() {
     Stack() {
-      Column() {
-        Row() {
-          Text('长夜余火 · 第 32 章 雨夜')
-            .fontSize(12)
-            .fontColor(this.mutedColor())
-            .fontFamily(ReaderTypography.sansFamily())
-            .layoutWeight(1)
-          Text('10:30')
-            .fontSize(12)
-            .fontColor(this.mutedColor())
-            .fontFamily(ReaderTypography.sansFamily())
-        }
-        .width('100%')
-        Blank()
-        Row() {
-          Text('38%')
-            .fontSize(12)
-            .fontColor(this.mutedColor())
-            .fontFamily(ReaderTypography.sansFamily())
-            .layoutWeight(1)
-          Text('第 1 / 8 页')
-            .fontSize(12)
-            .fontColor(this.mutedColor())
-            .fontFamily(ReaderTypography.sansFamily())
-        }
-        .width('100%')
-      }
-      .width('100%')
-      .height('100%')
+      // top-left: book · chapter
+      Text('长夜余火 · 第 32 章 雨夜')
+        .fontSize(12)
+        .fontColor(this.mutedColor())
+        .fontFamily(ReaderTypography.sansFamily())
+        .position({ x: this.cornerLeft(), y: this.cornerTopY() })
+        .markAnchor({ x: 0, y: 0 })
+      // top-right: time
+      Text('10:30')
+        .fontSize(12)
+        .fontColor(this.mutedColor())
+        .fontFamily(ReaderTypography.sansFamily())
+        .position({ x: this.cornerRightX(), y: this.cornerTopY() })
+        .markAnchor({ x: '100%', y: 0 })
+      // bottom-left: progress
+      Text('38%')
+        .fontSize(12)
+        .fontColor(this.mutedColor())
+        .fontFamily(ReaderTypography.sansFamily())
+        .position({ x: this.cornerLeft(), y: this.cornerBottomY() })
+        .markAnchor({ x: 0, y: '100%' })
+      // bottom-right: page label (capsule-aware right offset)
+      Text('第 1 / 8 页')
+        .fontSize(12)
+        .fontColor(this.mutedColor())
+        .fontFamily(ReaderTypography.sansFamily())
+        .position({ x: this.cornerRightX() - this.pageRightOffset(), y: this.cornerBottomY() })
+        .markAnchor({ x: '100%', y: '100%' })
       InteractionDebugFrame({ label: 'ImmersiveInfoLayer', tone: 'module' })
     }
     .width('100%')
     .height('100%')
-    .padding({ top: this.safeAreaTop + 26, left: 24, right: 24, bottom: this.safeAreaBottom + 22 })
     .hitTestBehavior(HitTestMode.None)
     .expandSafeArea([SafeAreaType.SYSTEM, SafeAreaType.CUTOUT],
       [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END])
@@ -547,10 +704,15 @@ export struct TapZones {
 }
 
 // Session capsule — reflects reader.activeSession (reading / tts / auto-page).
+// Batch 1.4: interactive — play/pause control + click-to-expand + countdown.
 @Component
 export struct SessionCapsule {
   @StorageProp('reader.activeSession') activeSession: string = '';
-  @StorageProp(SafeAreaAdapter.K_TOP) safeAreaTop: number = SafeAreaAdapter.DEFAULT_TOP;
+  @StorageProp('reader.ttsSession.playback') ttsPlayback: string = 'idle';
+  @StorageProp('reader.autoPageSession.playing') autoPagePlaying: boolean = false;
+  @StorageProp('reader.autoPageSession.countdownSeconds') countdown: number = 0;
+  @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
+  @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
 
   private sessionLabel(): string {
     switch (this.activeSession) {
@@ -561,19 +723,60 @@ export struct SessionCapsule {
     }
   }
 
+  private isPlaying(): boolean {
+    if (this.activeSession === 'tts') return this.ttsPlayback === 'playing';
+    if (this.activeSession === 'auto-page') return this.autoPagePlaying;
+    return false;
+  }
+
   build() {
     if (this.activeSession !== '') {
-      Row() {
-        Circle().width(6).height(6).fill(ColorTokens.primary)
-        Text(this.sessionLabel())
-          .fontSize(11).fontWeight(700).fontColor(ColorTokens.controlInk)
-          .margin({ left: 6 })
+      Stack({ alignContent: Alignment.BottomEnd }) {
+        Row() {
+          if (this.activeSession === 'tts') {
+            Text('🔊').fontSize(11).margin({ right: 4 })
+          }
+          Circle().width(6).height(6)
+            .fill(this.isPlaying() ? ColorTokens.primary : ColorTokens.muted)
+            .margin({ right: 6 })
+          Text(this.sessionLabel())
+            .fontSize(11).fontWeight(700).fontColor(ColorTokens.controlInk)
+          if (this.activeSession === 'auto-page' && this.countdown > 0) {
+            Text(`${this.countdown}s`)
+              .fontSize(11).fontColor(ColorTokens.accent)
+              .margin({ left: 4 })
+          }
+          Text(this.isPlaying() ? '⏸' : '▶')
+            .fontSize(12)
+            .margin({ left: 6 })
+            .onClick(() => {
+              MotionAdapter.apply('reader.session.capsule.control.press-toggle', this.reducedMotion, () => {
+                if (this.activeSession === 'tts') {
+                  ReaderUiStore.dispatch({ type: 'tts-toggle' });
+                } else if (this.activeSession === 'auto-page') {
+                  ReaderUiStore.dispatch({ type: 'auto-page-toggle' });
+                }
+              });
+            })
+        }
+        .padding({ left: 10, right: 10, top: 5, bottom: 5 })
+        .borderRadius(RadiusTokens.control)
+        .backgroundColor(DemoAliasTokens.surface)
+        .border({ width: 1, color: ColorTokens.border })
+        .onClick(() => {
+          MotionAdapter.apply('reader.session.capsule.update', this.reducedMotion, () => {
+            if (this.activeSession === 'tts') {
+              ReaderUiStore.dispatch({ type: 'route-push', id: 'reader-full-tts' });
+            } else if (this.activeSession === 'auto-page') {
+              ReaderUiStore.dispatch({ type: 'route-push', id: 'reader-full-settings' });
+            }
+          });
+        })
       }
-      .padding({ left: 10, right: 10, top: 5, bottom: 5 })
-      .borderRadius(RadiusTokens.control)
-      .backgroundColor(DemoAliasTokens.surface)
-      .border({ width: 1, color: ColorTokens.border })
-      .position({ x: 24, y: this.safeAreaTop + 14 })
+      .width('100%')
+      .height('100%')
+      .padding({ right: 24, bottom: this.safeAreaBottom + 22 })
+      .hitTestBehavior(HitTestMode.Transparent)
     }
   }
 }
@@ -609,10 +812,12 @@ export struct ReaderBase {
       ReadingTextFlow({ theme: this.theme })
       if (this.controlLayer()) {
         ControlDismissZone()
+        SessionCapsule()
       } else {
         ReadingInfoLayer({ theme: this.theme })
         TapZones()
         SessionCapsule()
+        ReaderSelectionToolbar()
       }
     }
     .width('100%')

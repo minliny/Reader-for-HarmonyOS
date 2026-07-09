@@ -9,6 +9,7 @@ import { SpacingTokens, SizeTokens } from '../../contract/generated/DimensionTok
 import { ViewStateComponent, ViewStateTable } from '../../contract/generated/ViewStateTable';
 import { ReaderTypography } from '../tokens/ReaderTypography';
 import { ReaderUiStore } from '../store/ReaderUiStore';
+import { MotionAdapter } from '../adapters/MotionAdapter';
 
 function topBarTitle(routeId: string, pageState: string, kind: string, fallback: string): string {
   const components: ViewStateComponent[] = ViewStateTable.componentsFor(routeId, pageState);
@@ -97,6 +98,7 @@ type TabKind = 'bookshelf' | 'discover' | 'rss' | 'settings';
 @Component
 export struct BottomNav {
   @StorageProp('reader.tab') tab: string = 'bookshelf';
+  @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
 
   private iconFor(tab: TabKind, active: boolean): Resource {
     switch (tab) {
@@ -148,7 +150,11 @@ export struct BottomNav {
     .alignItems(HorizontalAlign.Center)
     .borderRadius(DemoAliasTokens.radiusXl)
     .backgroundColor(this.tab === tab ? ColorTokens.primaryDark : ColorTokens.paper)
-    .onClick(() => ReaderUiStore.dispatch({ type: 'switch-tab', tab: tab }))
+    .onClick(() => {
+      MotionAdapter.apply('tab.switch', this.reducedMotion, () => {
+        ReaderUiStore.dispatch({ type: 'switch-tab', tab: tab });
+      });
+    })
   }
 }
 

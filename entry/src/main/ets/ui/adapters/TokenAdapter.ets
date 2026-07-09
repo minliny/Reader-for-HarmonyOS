@@ -10,7 +10,7 @@ import { ReaderTypography, Typography } from '../tokens/ReaderTypography';
 export class TokenAdapter {
   // ── Color (dynamic; static use $r('app.color.reader_ds_color_<name>')) ──
   static color(shortName: string): string {
-    const e = TokenRegistry.byName(`--reader-ds-color-${shortName}`);
+    const e = TokenRegistry.byName(`--fd-ds-color-${shortName}`);
     return e ? TokenAdapter.parseArgb(e.value) : '';
   }
 
@@ -32,7 +32,7 @@ export class TokenAdapter {
   }
 
   private static numberToken(prefix: string, shortName: string): number {
-    const e = TokenRegistry.byName(`--reader-ds-${prefix}-${shortName}`);
+    const e = TokenRegistry.byName(`--fd-ds-${prefix}-${shortName}`);
     if (!e) return 0;
     return TokenAdapter.parseNumber(e.value);
   }
@@ -58,7 +58,7 @@ export class TokenAdapter {
 
   // ── Shadow (CSS box-shadow token → ArkUI ShadowOptions) ──
   static shadow(name: string): ShadowOptions {
-    const e = TokenRegistry.byName(`--reader-ds-shadow-${name}`);
+    const e = TokenRegistry.byName(`--fd-ds-shadow-${name}`);
     if (!e) return { radius: 0, color: ColorTokens.ink };
     return TokenAdapter.parseBoxShadow(e.value);
   }

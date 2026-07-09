@@ -14,7 +14,7 @@ export default function TokenCoverageTests(): void {
       expect(TokenRegistry.byCategory('color').length).assertEqual(23);
     });
     it('paperTokenResolves', 0, () => {
-      expect(TokenRegistry.byName('--reader-ds-color-paper') !== undefined).assertTrue();
+      expect(TokenRegistry.byName('--fd-ds-color-paper') !== undefined).assertTrue();
     });
     it('colorTokensAreArgb8', 0, () => {
       expect(ColorTokens.paper.startsWith('#FF')).assertTrue();

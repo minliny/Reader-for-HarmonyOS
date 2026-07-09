@@ -161,7 +161,11 @@ export struct RssArticleSection {
       .margin({ bottom: 6 })
       ForEach(this.articles, (a: [string, string, string], i: number) => {
         Row() {
-          Circle().width(7).height(7).fill(ColorTokens.primary)
+          Stack({ alignContent: Alignment.Center }) {
+            Circle().width(7).height(7).fill(ColorTokens.accent)
+          }
+          .width(10)
+          .height(10)
           Column() {
             Text(a[0])
               .fontSize(13)

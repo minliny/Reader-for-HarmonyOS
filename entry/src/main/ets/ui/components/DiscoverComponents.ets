@@ -3,6 +3,7 @@
 // .fd-filter-control → .fd-discover-list-head → .fd-discover-book-list.
 import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
+import { ZIndexTokens } from '../../contract/generated/DimensionTokens';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 
 interface DiscoverBulkSourceEntry {
@@ -79,33 +80,111 @@ export struct DiscoverEntryRow {
   }
 }
 
-// .fd-filter-trigger: min 34, grid 16/auto/1fr/14, padding 0 10, border, radius-md,
-//   surface-soft, 12/900. filter icon + "筛选" + em (active) + chevron.
+// DiscoverSortPopover — anchored sort selector for the discover filter trigger.
+// Replaces the old cycleSort() behavior with an explicit popover listing all
+// sort options (热门 / 最近更新 / 评分).
 @Component
-export struct DiscoverFilterTrigger {
+struct DiscoverSortPopover {
+  @StorageProp('reader.discoverFilter.sort') discoverSort: string = 'popular';
+  private sortEntries: Array<[string, string]> = [
+    ['热门', 'popular'],
+    ['最近更新', 'recent'],
+    ['评分', 'rating'],
+  ];
+
   build() {
-    Row() {
-      Image($r('app.media.reader_icon_more_dark')).width(16).height(16)
-      Text('筛选')
+    Column() {
+      Text('排序')
         .fontSize(12)
         .fontWeight(900)
-        .fontColor(ColorTokens.controlInk)
-        .margin({ left: 7 })
-      Text('全部 · 最近更新')
-        .fontSize(11)
-        .fontColor(ColorTokens.muted)
-        .margin({ left: 7 })
-        .layoutWeight(1)
-        .textAlign(TextAlign.End)
-      Image($r('app.media.reader_icon_more_dark')).width(14).height(14).margin({ left: 7 })
+        .fontColor(ColorTokens.ink)
+      ForEach(this.sortEntries, (entry: [string, string], idx: number) => {
+        Text(entry[0])
+          .fontSize(12)
+          .fontWeight(800)
+          .fontColor(this.discoverSort === entry[1] ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
+          .height(32)
+          .padding({ left: 12, right: 12 })
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .backgroundColor(this.discoverSort === entry[1] ? ColorTokens.primary : ColorTokens.metaBg)
+          .margin({ top: idx === 0 ? 10 : 6 })
+          .onClick(() => {
+            ReaderUiStore.dispatch({ type: 'set-discover-sort', discoverSort: entry[1] });
+          })
+      }, (entry: [string, string], idx: number) => `${entry[1]}-${idx}`)
     }
     .width('100%')
-    .height(34)
-    .padding({ left: 10, right: 10 })
-    .border({ width: 1, color: ColorTokens.border })
+    .padding(14)
     .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(ColorTokens.metaBg)
-    .alignItems(VerticalAlign.Center)
+    .backgroundColor(DemoAliasTokens.surface)
+    .border({ width: 1, color: ColorTokens.border })
+    .shadow({ radius: 18, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 6 })
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+// .fd-filter-trigger: min 34, grid 16/auto/1fr/14, padding 0 10, border, radius-md,
+//   surface-soft, 12/900. filter icon + "筛选" + em (active) + chevron.
+// Click toggles the DiscoverSortPopover (anchored below the trigger) instead of
+// cycling through sort options silently.
+@Component
+export struct DiscoverFilterTrigger {
+  @Prop filterActiveCount: number = 0;
+  @StorageProp('reader.discoverFilter.sort') discoverSort: string = 'popular';
+  @StorageProp('reader.discoverFilter.filters') discoverFilters: string[] = [];
+  @State popoverOpen: boolean = false;
+
+  private sortLabel(): string {
+    if (this.discoverSort === 'recent') return '最近更新';
+    if (this.discoverSort === 'rating') return '评分';
+    return '热门';
+  }
+
+  build() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Row() {
+        Image($r('app.media.reader_icon_more_dark')).width(16).height(16)
+        Text('筛选')
+          .fontSize(12)
+          .fontWeight(900)
+          .fontColor(ColorTokens.controlInk)
+          .margin({ left: 7 })
+        if (this.discoverFilters.length > 0) {
+          Text(this.discoverFilters.length.toString())
+            .fontSize(10)
+            .fontWeight(800)
+            .fontColor(Color.White)
+            .height(18)
+            .constraintSize({ minWidth: 18 })
+            .padding({ left: 5, right: 5 })
+            .borderRadius(DemoAliasTokens.radiusPill)
+            .backgroundColor(ColorTokens.accent)
+            .textAlign(TextAlign.Center)
+            .margin({ left: 6 })
+        }
+        Text('全部 · ' + this.sortLabel())
+          .fontSize(11)
+          .fontColor(ColorTokens.muted)
+          .margin({ left: 7 })
+          .layoutWeight(1)
+          .textAlign(TextAlign.End)
+        Image($r('app.media.reader_icon_more_dark')).width(14).height(14).margin({ left: 7 })
+      }
+      .width('100%')
+      .height(34)
+      .padding({ left: 10, right: 10 })
+      .border({ width: 1, color: ColorTokens.border })
+      .borderRadius(DemoAliasTokens.radiusMd)
+      .backgroundColor(ColorTokens.metaBg)
+      .alignItems(VerticalAlign.Center)
+      .onClick(() => { this.popoverOpen = !this.popoverOpen; })
+      if (this.popoverOpen) {
+        DiscoverSortPopover()
+          .position({ x: 0, y: 40 })
+          .zIndex(ZIndexTokens.settingsDropdown)
+      }
+    }
+    .width('100%')
   }
 }
 
@@ -356,6 +435,7 @@ export struct DiscoverStatePage {
 struct DiscoverBulkChip {
   @Prop label: string = '筛选';
   @Prop active: boolean = false;
+  onSelect: (label: string) => void = (_label: string) => {};
 
   build() {
     Text(this.label)
@@ -367,6 +447,7 @@ struct DiscoverBulkChip {
       .borderRadius(DemoAliasTokens.radiusPill)
       .backgroundColor(this.active ? ColorTokens.primary : ColorTokens.metaBg)
       .margin({ right: 7 })
+      .onClick(() => this.onSelect(this.label))
   }
 }
 
@@ -474,6 +555,7 @@ struct DiscoverBulkHeadCard {
 @Component
 export struct DiscoverSourceBulkPage {
   private chips: string[] = ['已启用发现', '有发现未启用', '需登录', '异常'];
+  @StorageProp('reader.discoverFilter.filters') discoverFilters: string[] = [];
   private sources: DiscoverBulkSourceEntry[] = [
     { name: '优书网', meta: '默认分组 · 120ms · 已启用发现', badge: '可用', selected: true, tone: 'normal' },
     { name: '起点导入', meta: '正版 · 180ms · 已启用发现', badge: '可用', selected: true, tone: 'normal' },
@@ -481,6 +563,11 @@ export struct DiscoverSourceBulkPage {
     { name: '本地聚合源', meta: '维护中 · 暂停发现', badge: '暂停', selected: false, tone: 'muted' },
     { name: '失效示例源', meta: '解析失败 · exploreUrl 异常', badge: '需处理', selected: false, tone: 'warning' },
   ];
+
+  private chipActive(label: string): boolean {
+    if (this.discoverFilters.length === 0) return label === '已启用发现';
+    return this.discoverFilters.indexOf(label) >= 0;
+  }
 
   build() {
     Column() {
@@ -527,7 +614,13 @@ export struct DiscoverSourceBulkPage {
       Scroll() {
         Row() {
           ForEach(this.chips, (chip: string, index: number) => {
-            DiscoverBulkChip({ label: chip, active: index === 0 })
+            DiscoverBulkChip({
+              label: chip,
+              active: this.chipActive(chip),
+              onSelect: (label: string) => {
+                ReaderUiStore.dispatch({ type: 'set-discover-filter-toggle', discoverFilterToggle: label });
+              },
+            })
           }, (chip: string) => chip)
         }
       }

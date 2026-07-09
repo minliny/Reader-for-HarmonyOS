@@ -57,6 +57,9 @@ export struct ViewStateRenderer {
       .width('100%')
       .height('100%')
     } else {
+      // column 模式：不设置 height，让内容 wrap content，这样 Shell 的 Scroll
+      // 才能检测到内容溢出并启用滚动（设置 height('100%') 会让内容被限制为
+      // 视口高度，无法溢出，Scroll 不滚动）。
       Column() {
         ForEach(ViewStateTable.bodyComponentsFor(this.routeId, this.pageState), (component: ViewStateComponent, idx: number) => {
           Column() {
@@ -66,7 +69,6 @@ export struct ViewStateRenderer {
         }, (component: ViewStateComponent, idx: number) => `${component.id}-${component.type}-${idx}`)
       }
       .width('100%')
-      .height('100%')
     }
   }
 

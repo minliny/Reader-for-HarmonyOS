@@ -67,9 +67,7 @@ export struct OverlayHost {
   }
 
   @Builder renderBookActionSheet() {
-    Column() {
-      Blank()
-        .layoutWeight(1)
+    Stack({ alignContent: Alignment.Bottom }) {
       Column() {
         Text('书架更多操作')
           .fontSize(18)

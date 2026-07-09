@@ -29,9 +29,14 @@ export struct MainTabShell {
       Column() {
         AppTopBar()
         Scroll() {
-          ViewStateRenderer()
+          Column() {
+            ViewStateRenderer()
+          }
+          .width('100%')
         }
         .layoutWeight(1)
+        .scrollable(ScrollDirection.Vertical)
+        .scrollBar(BarState.Auto)
         .align(Alignment.Top)
         .padding({
           top: 8,

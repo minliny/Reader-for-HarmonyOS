@@ -81,9 +81,14 @@ export struct LibraryShell {
       Column() {
         BackTopBar()
         Scroll() {
-          ViewStateRenderer()
+          Column() {
+            ViewStateRenderer()
+          }
+          .width('100%')
         }
         .layoutWeight(1)
+        .scrollable(ScrollDirection.Vertical)
+        .scrollBar(BarState.Auto)
         .align(Alignment.Top)
         .padding({
           top: 8,
@@ -125,9 +130,15 @@ export struct LibraryShell {
       .width('100%')
       .height(this.actionBarHeight())
       .padding({ left: SpacingTokens.safeAreaHorizontal + 3, right: SpacingTokens.safeAreaHorizontal + 3, top: 10, bottom: this.safeAreaBottom + 10 })
-      .backgroundColor(DemoAliasTokens.surface)
-      .border({ width: { top: 1 }, color: ColorTokens.border })
-      .zIndex(ZIndexTokens.bottomSheet)
+      .linearGradient({
+        angle: 180,
+        colors: [
+          ['rgba(249,240,230,0)', 0],
+          ['rgba(249,240,230,0.96)', 0.42],
+          ['rgba(249,240,230,1)', 1.0]
+        ]
+      })
+      .zIndex(ZIndexTokens.mainNav)
     } else if (this.routeId === 'group-management') {
       Row({ space: 10 }) {
         LibraryFixedActionButton({ label: '新建分组', variant: 'secondary' })
@@ -139,9 +150,15 @@ export struct LibraryShell {
       .width('100%')
       .height(this.actionBarHeight())
       .padding({ left: SpacingTokens.safeAreaHorizontal + 3, right: SpacingTokens.safeAreaHorizontal + 3, top: 10, bottom: this.safeAreaBottom + 10 })
-      .backgroundColor(DemoAliasTokens.surface)
-      .border({ width: { top: 1 }, color: ColorTokens.border })
-      .zIndex(ZIndexTokens.bottomSheet)
+      .linearGradient({
+        angle: 180,
+        colors: [
+          ['rgba(249,240,230,0)', 0],
+          ['rgba(249,240,230,0.96)', 0.42],
+          ['rgba(249,240,230,1)', 1.0]
+        ]
+      })
+      .zIndex(ZIndexTokens.mainNav)
     } else if (this.routeId === 'book-detail' || this.routeId === 'book-detail-toc-preview') {
       Row({ space: 10 }) {
         LibraryFixedActionButton({ label: '继续阅读' })
@@ -153,7 +170,15 @@ export struct LibraryShell {
       .width('100%')
       .height(this.actionBarHeight())
       .padding({ left: SpacingTokens.safeAreaHorizontal + 3, right: SpacingTokens.safeAreaHorizontal + 3, top: 10, bottom: this.safeAreaBottom + 10 })
-      .zIndex(ZIndexTokens.bottomSheet)
+      .linearGradient({
+        angle: 180,
+        colors: [
+          ['rgba(249,240,230,0)', 0],
+          ['rgba(249,240,230,0.96)', 0.42],
+          ['rgba(249,240,230,1)', 1.0]
+        ]
+      })
+      .zIndex(ZIndexTokens.mainNav)
     }
   }
 }

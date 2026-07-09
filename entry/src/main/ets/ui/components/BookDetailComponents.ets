@@ -15,6 +15,43 @@ interface ChapterPreviewEntry {
   current: boolean;
 }
 
+interface BookFactEntry {
+  label: string;
+  value: string;
+}
+
+// .fd-book-facts: grid (gap 5, margin-top 10) of label/value rows.
+//   Each row: dt 11px/800 muted (34px) + dd 12px/1.35 ink (1fr).
+@Component
+struct BookFacts {
+  @Prop facts: BookFactEntry[] = [];
+
+  build() {
+    Column({ space: 5 }) {
+      ForEach(this.facts, (f: BookFactEntry) => {
+        Row({ space: 8 }) {
+          Text(f.label)
+            .fontSize(11)
+            .fontWeight(800)
+            .fontColor(ColorTokens.muted)
+            .width(34)
+          Text(f.value)
+            .fontSize(12)
+            .fontColor(ColorTokens.controlInk)
+            .lineHeight(12 * 1.35)
+            .layoutWeight(1)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+      }, (f: BookFactEntry, i: number) => `fact-${i}`)
+    }
+    .width('100%')
+    .margin({ top: 10 })
+  }
+}
+
 // .fd-book-hero.fd-book-detail-hero: card — img cover (left) + .fd-book-identity
 //   (h2 title + p author + dl facts + inline source row).
 @Component
@@ -45,24 +82,16 @@ export struct BookHero {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .margin({ top: 8 })
-        Row({ space: 8 }) {
-          Text('最新')
-            .fontSize(11)
-            .fontWeight(800)
-            .fontColor(ColorTokens.muted)
-            .width(34)
-          Text(this.currentBook !== null && this.currentBook.latestChapter.length > 0
-            ? this.currentBook.latestChapter : '第 32 章 雨夜')
-            .fontSize(12)
-            .fontColor(ColorTokens.ink)
-            .lineHeight(12 * 1.35)
-            .layoutWeight(1)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
-        .margin({ top: 10 })
+        BookFacts({
+          facts: [
+            { label: '最新', value: this.currentBook !== null && this.currentBook.latestChapter.length > 0
+                ? this.currentBook.latestChapter : '第 32 章 雨夜' },
+            { label: '字数', value: '128.4 万' },
+            { label: '状态', value: '连载中' },
+            { label: '来源', value: this.currentBook !== null ? this.currentBook.sourceName : '优书网' },
+            { label: '分类', value: '悬疑 · 推理' }
+          ]
+        })
         Row({ space: 8 }) {
           Text(`书源：${this.currentBook !== null ? this.currentBook.sourceName : '优书网'}`)
             .fontSize(12)
@@ -171,7 +200,7 @@ export struct BookChapterList {
         Row() {
           Text(c.title)
             .fontSize(14)
-            .fontColor(c.current ? ColorTokens.primary : ColorTokens.controlInk)
+            .fontColor(c.current ? ColorTokens.accent : ColorTokens.controlInk)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .layoutWeight(1)

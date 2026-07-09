@@ -5,6 +5,7 @@ import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
 import { RouteId } from '../../contract/generated/RouteTable';
 import { ReaderUiStore } from '../store/ReaderUiStore';
+import { InteractionDebugAdapter } from '../adapters/InteractionDebugAdapter';
 
 interface SettingsRowSpec {
   title: string;
@@ -49,29 +50,48 @@ function settingsRowSpec(itemId: string): SettingsRowSpec {
 //   trailing chevron (fd-small-icon 20).
 @Component
 export struct SettingsNavRow {
-  @Prop label: string = '通用设置';
+  @Prop label: string = '';
+  @Prop subtitle: string = '';
+  @Prop icon: Resource | undefined = undefined;
+  @Prop active: boolean = false;
   @Prop route: RouteId = 'settings-general';
 
   build() {
-    Row() {
-      Stack()
-        .width(30).height(30)
+    Row({ space: 12 }) {
+      if (this.icon !== undefined) {
+        Stack({ alignContent: Alignment.Center }) {
+          Image(this.icon).width(15).height(15)
+        }
+        .width(28)
+        .height(28)
         .borderRadius(DemoAliasTokens.radiusPill)
         .backgroundColor(ColorTokens.metaBg)
-      Text(this.label)
-        .fontSize(13)
-        .fontWeight(800)
-        .fontColor(ColorTokens.ink)
-        .layoutWeight(1)
-        .margin({ left: 10 })
-      Image($r('app.media.reader_icon_more_dark')).width(20).height(20)
+      }
+      Column() {
+        Text(this.label)
+          .fontSize(13)
+          .fontWeight(800)
+          .fontColor(ColorTokens.controlInk)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        if (this.subtitle !== '') {
+          Text(this.subtitle)
+            .fontSize(10)
+            .fontColor(ColorTokens.muted)
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .margin({ top: 2 })
+        }
+      }
+      .alignItems(HorizontalAlign.Start)
+      .layoutWeight(1)
+      Image($r('app.media.ui_icon_chevron_dark')).width(18).height(18).opacity(0.5)
     }
     .width('100%')
-    .height(48)
-    .padding({ left: 14, right: 14 })
+    .height(58)
+    .padding({ left: 12, right: 12 })
     .border({ width: { top: 1 }, color: ColorTokens.border })
     .alignItems(VerticalAlign.Center)
-    .backgroundColor(DemoAliasTokens.surface)
     .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: this.route }))
   }
 }
@@ -98,6 +118,7 @@ export struct SettingsHomeSection {
       ForEach(this.rows, (r: [string, string], i: number) => {
         SettingsNavRow({ label: r[0], route: r[1] as RouteId })
       }, (r: [string, string], i: number) => `${r[0]}-${i}`)
+      SettingsDeveloperRow()
     }
     .width('100%')
     .border({ width: 1, color: ColorTokens.border })
@@ -105,6 +126,56 @@ export struct SettingsHomeSection {
     .backgroundColor(DemoAliasTokens.surface)
     .shadow({ radius: 26, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 8 })
     .alignItems(HorizontalAlign.Start)
+  }
+}
+
+// 开发者选项：开关写入 AppStorage 的 reader.devInteractionVisible，
+// 控制 InteractionDebugFrame / InteractionDebugBadge 的显隐。
+@Component
+struct SettingsDeveloperRow {
+  @StorageProp(InteractionDebugAdapter.K_VISIBLE) devVisible: boolean =
+    InteractionDebugAdapter.DEFAULT_VISIBLE;
+
+  build() {
+    Row({ space: 12 }) {
+      Stack({ alignContent: Alignment.Center }) {
+        Text('D')
+          .fontSize(13)
+          .fontWeight(900)
+          .fontColor(ColorTokens.primaryDark)
+      }
+      .width(28)
+      .height(28)
+      .borderRadius(DemoAliasTokens.radiusPill)
+      .backgroundColor(ColorTokens.metaBg)
+
+      Column() {
+        Text('开发者选项')
+          .fontSize(13)
+          .fontWeight(800)
+          .fontColor(ColorTokens.controlInk)
+          .maxLines(1)
+        Text('显示各模块边框等调试信息')
+          .fontSize(10)
+          .fontColor(ColorTokens.muted)
+          .maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .margin({ top: 2 })
+      }
+      .alignItems(HorizontalAlign.Start)
+      .layoutWeight(1)
+
+      Toggle({ type: ToggleType.Switch, isOn: this.devVisible })
+        .selectedColor(ColorTokens.primary)
+        .onChange((on: boolean) => {
+          AppStorage.setOrCreate(InteractionDebugAdapter.K_VISIBLE, on);
+        })
+    }
+    .width('100%')
+    .height(58)
+    .padding({ left: 12, right: 12 })
+    .border({ width: { top: 1 }, color: ColorTokens.border })
+    .alignItems(VerticalAlign.Center)
   }
 }
 
@@ -145,8 +216,8 @@ struct SettingsMiniSwitch {
         Blank().layoutWeight(1)
       }
       Row()
-        .width(20)
-        .height(20)
+        .width(18)
+        .height(18)
         .borderRadius(DemoAliasTokens.radiusPill)
         .backgroundColor(DemoAliasTokens.surface)
         .shadow({ radius: 3, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 1 })
@@ -154,8 +225,8 @@ struct SettingsMiniSwitch {
         Blank().layoutWeight(1)
       }
     }
-    .width(42)
-    .height(24)
+    .width(38)
+    .height(22)
     .padding(2)
     .borderRadius(DemoAliasTokens.radiusPill)
     .backgroundColor(this.on ? ColorTokens.primary : ColorTokens.metaBg)
@@ -170,13 +241,13 @@ struct SettingsSegment {
     Row({ space: 4 }) {
       ForEach(this.options, (option: SettingsChoiceSpec, idx: number) => {
         Text(option.label)
-          .fontSize(11)
+          .fontSize(10)
           .fontWeight(800)
-          .fontColor(option.active ? DemoAliasTokens.onPrimary : ColorTokens.primaryDark)
-          .height(28)
+          .fontColor(option.active ? ColorTokens.primary : ColorTokens.muted)
+          .height(24)
           .padding({ left: 9, right: 9 })
           .borderRadius(DemoAliasTokens.radiusPill)
-          .backgroundColor(option.active ? ColorTokens.primary : DemoAliasTokens.surface)
+          .backgroundColor(option.active ? Color.White : Color.Transparent)
       }, (option: SettingsChoiceSpec, idx: number) => `${option.label}-${idx}`)
     }
     .padding(3)
@@ -280,7 +351,7 @@ struct SettingsOptionRow {
       }
     }
     .width('100%')
-    .constraintSize({ minHeight: 54 })
+    .constraintSize({ minHeight: 58 })
     .padding({ left: 12, right: 12, top: 10, bottom: 10 })
     .border({ width: { top: 1 }, color: ColorTokens.border })
     .alignItems(VerticalAlign.Center)
