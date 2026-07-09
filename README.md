@@ -51,7 +51,7 @@ entry/src/main/ets/
   ui/components/         # ViewStateRenderer + P0 demo components
   entryability/          # EntryAbility (Stage model)
   pages/                 # Index (@Entry)
-  font/                  # Noto Serif CJK SC
+  resources/rawfile/font/# Noto Serif CJK SC reader font
 ```
 
 See `CLAUDE.md` for rules. Phase 2 (page families) follows once the skeleton builds and routes are verified.
