@@ -209,6 +209,23 @@ export class ReaderReducer {
         const v = event.optionValue;
         return k !== undefined && v !== undefined ? ReaderReducer.setReaderSettingOption(state, k, v) : state;
       }
+      // ── F3 交互连接 cases ──
+      case 'set-reader-setting-option-expanded': {
+        const ek = event.settingOptionExpandedKey;
+        return ek !== undefined ? ReaderReducer.setReaderSettingOptionExpanded(state, ek) : state;
+      }
+      case 'set-reader-theme': {
+        const th = event.theme;
+        return th !== undefined ? ReaderReducer.setReaderTheme(state, th) : state;
+      }
+      case 'auto-page-step-interval': {
+        const d = event.delta;
+        return d !== undefined ? ReaderReducer.stepAutoPageInterval(state, d) : state;
+      }
+      case 'auto-page-set-mode': {
+        const m = event.autoPageMode;
+        return m !== undefined ? ReaderReducer.setAutoPageMode(state, m) : state;
+      }
       // ── Batch 2 reader control cases ──
       case 'chapter-prev':
         // No-op: chapter list / current index not tracked in state yet.
@@ -690,6 +707,7 @@ export class ReaderReducer {
       statusInfo: state.readerToggles.statusInfo,
       hapticFeedback: state.readerToggles.hapticFeedback,
       cacheNext: state.readerToggles.cacheNext,
+      hideStatusBar: state.readerToggles.hideStatusBar,
     };
     switch (key) {
       case 'autoPage':
@@ -712,6 +730,9 @@ export class ReaderReducer {
         break;
       case 'cacheNext':
         toggles.cacheNext = value;
+        break;
+      case 'hideStatusBar':
+        toggles.hideStatusBar = value;
         break;
       default:
         break;
@@ -742,6 +763,42 @@ export class ReaderReducer {
         break;
     }
     next.readerSettingOptions = options;
+    return next;
+  }
+
+  // ── F3: 交互连接 reducer 方法 ──
+
+  // 切换设置项展开/收起。传入 key 与当前展开项相同时收起（''），否则展开该项。
+  static setReaderSettingOptionExpanded(state: ReaderUiState, key: string): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    next.readerSettingExpandedOption = state.readerSettingExpandedOption === key ? '' : key;
+    return next;
+  }
+
+  // 设置阅读主题。
+  static setReaderTheme(state: ReaderUiState, theme: string): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    next.readerTheme = theme;
+    return next;
+  }
+
+  // 调整自动翻页间隔（秒），限制在 3-30 秒范围内。
+  static stepAutoPageInterval(state: ReaderUiState, delta: number): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    const raw = state.autoPageSession.intervalSeconds + delta;
+    const clamped = Math.min(30, Math.max(3, raw));
+    next.autoPageSession = {
+      playing: state.autoPageSession.playing,
+      countdownSeconds: state.autoPageSession.countdownSeconds,
+      intervalSeconds: clamped,
+    };
+    return next;
+  }
+
+  // 设置自动翻页模式（'continuous' | 'single'）。
+  static setAutoPageMode(state: ReaderUiState, mode: string): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    next.autoPageMode = mode;
     return next;
   }
 
@@ -1063,6 +1120,10 @@ export class ReaderReducer {
       appThemeMode: s.appThemeMode,
       coverColumns: s.coverColumns,
       settingsToggles: s.settingsToggles,
+      // F3 交互连接字段 — 浅拷贝（string 不可变，无需重建）。
+      readerTheme: s.readerTheme,
+      readerSettingExpandedOption: s.readerSettingExpandedOption,
+      autoPageMode: s.autoPageMode,
     };
   }
 

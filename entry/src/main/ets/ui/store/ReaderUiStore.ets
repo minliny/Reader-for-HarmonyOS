@@ -57,6 +57,7 @@ export class ReaderUiStore {
   private static readonly K_TOGGLE_STATUS_INFO = 'reader.readerToggles.statusInfo';
   private static readonly K_TOGGLE_HAPTIC = 'reader.readerToggles.hapticFeedback';
   private static readonly K_TOGGLE_CACHE_NEXT = 'reader.readerToggles.cacheNext';
+  private static readonly K_TOGGLE_HIDE_STATUS_BAR = 'reader.readerToggles.hideStatusBar';
   private static readonly K_OPT_PAGE_MODE = 'reader.readerSettingOptions.pageMode';
   private static readonly K_OPT_TAP_MODE = 'reader.readerSettingOptions.tapMode';
   private static readonly K_OPT_PAGE_ANIMATION = 'reader.readerSettingOptions.pageAnimation';
@@ -79,6 +80,10 @@ export class ReaderUiStore {
   private static readonly K_TOGGLE_SHOW_UPDATE_BADGE = 'reader.settingsToggles.showUpdateBadge';
   private static readonly K_TOGGLE_MERGE_SAME_BOOKS = 'reader.settingsToggles.mergeSameBooks';
   private static readonly K_TOGGLE_ENABLE_SEARCH_HISTORY = 'reader.settingsToggles.enableSearchHistory';
+  // ── F3 交互连接 keys ──
+  private static readonly K_READER_THEME = 'reader.readerTheme';
+  private static readonly K_READER_SETTING_EXPANDED_OPTION = 'reader.readerSettingExpandedOption';
+  private static readonly K_AUTO_PAGE_MODE = 'reader.autoPageMode';
 
   private static state: ReaderUiState;
 
@@ -154,6 +159,7 @@ export class ReaderUiStore {
     AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_STATUS_INFO, s.readerToggles.statusInfo);
     AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_HAPTIC, s.readerToggles.hapticFeedback);
     AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_CACHE_NEXT, s.readerToggles.cacheNext);
+    AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_HIDE_STATUS_BAR, s.readerToggles.hideStatusBar);
     AppStorage.setOrCreate<string>(ReaderUiStore.K_OPT_PAGE_MODE, s.readerSettingOptions.pageMode);
     AppStorage.setOrCreate<string>(ReaderUiStore.K_OPT_TAP_MODE, s.readerSettingOptions.tapMode);
     AppStorage.setOrCreate<string>(ReaderUiStore.K_OPT_PAGE_ANIMATION, s.readerSettingOptions.pageAnimation);
@@ -176,5 +182,9 @@ export class ReaderUiStore {
     AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_SHOW_UPDATE_BADGE, s.settingsToggles.showUpdateBadge);
     AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_MERGE_SAME_BOOKS, s.settingsToggles.mergeSameBooks);
     AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_ENABLE_SEARCH_HISTORY, s.settingsToggles.enableSearchHistory);
+    // ── F3 交互连接字段写入 AppStorage ──
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_READER_THEME, s.readerTheme);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_READER_SETTING_EXPANDED_OPTION, s.readerSettingExpandedOption);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_AUTO_PAGE_MODE, s.autoPageMode);
   }
 }

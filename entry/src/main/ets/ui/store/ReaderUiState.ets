@@ -32,7 +32,7 @@ export type TtsTimer = 'off' | '5min' | '10min' | '15min' | '30min' | 'chapterEn
 export type TocMode = 'directory' | 'bookmark';
 export type ReaderToggleKey =
   | 'autoPage' | 'volumePage' | 'landscapeLock' | 'keepScreenOn'
-  | 'statusInfo' | 'hapticFeedback' | 'cacheNext';
+  | 'statusInfo' | 'hapticFeedback' | 'cacheNext' | 'hideStatusBar';
 export type ReaderSettingOptionKey = 'pageMode' | 'tapMode' | 'pageAnimation';
 
 // ── Batch 4 bookshelf/discover/source-switch types ──
@@ -83,6 +83,7 @@ export interface ReaderTogglesMap {
   statusInfo: boolean;
   hapticFeedback: boolean;
   cacheNext: boolean;
+  hideStatusBar: boolean;
 }
 
 export interface ReaderSettingOptionsMap {
@@ -160,6 +161,10 @@ export interface ReaderUiState {
   appThemeMode: string;        // 'system' | 'light' | 'dark'
   coverColumns: number;        // 书架封面列数（1-5）
   settingsToggles: SettingsTogglesMap;
+  // ── F3 交互连接字段 ──
+  readerTheme: string;                    // 阅读主题: 'paper' | 'warm' | 'green' | 'blue'
+  readerSettingExpandedOption: string;    // 当前展开的设置项 key（'' 表示无展开）
+  autoPageMode: string;                   // 自动翻页模式: 'continuous' | 'single'
 }
 
 // UiEvent is a tagged record; the reducer switches on `type` and reads the relevant
@@ -220,6 +225,10 @@ export interface UiEvent {
   settingsKey?: string;            // 设置项 key（appThemeMode / coverColumns / autoCheckUpdate …）
   settingsValue?: string;          // segment 选中值
   settingsToggleValue?: boolean;   // switch 切换值
+  // ── F3 交互连接事件字段 ──
+  settingOptionExpandedKey?: string;      // 设置项展开/收起的 key
+  theme?: string;                         // 阅读主题
+  autoPageMode?: string;                  // 自动翻页模式
 }
 
 // ── Minimal visible reading chain data types ──

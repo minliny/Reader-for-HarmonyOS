@@ -57,11 +57,12 @@ export class DemoUiState {
         statusInfo: true,
         hapticFeedback: true,
         cacheNext: true,
+        hideStatusBar: false,
       },
       readerSettingOptions: {
         pageMode: 'horizontal',
-        tapMode: 'middle',
-        pageAnimation: 'slide',
+        tapMode: '左右区域',
+        pageAnimation: '平滑',
       },
       selection: {
         visible: false,
@@ -90,6 +91,10 @@ export class DemoUiState {
         mergeSameBooks: true,
         enableSearchHistory: true,
       },
+      // ── F3 交互连接默认值 ──
+      readerTheme: 'paper',
+      readerSettingExpandedOption: '',
+      autoPageMode: 'continuous',
     };
   }
 }

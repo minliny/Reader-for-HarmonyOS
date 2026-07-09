@@ -250,7 +250,7 @@ test('reader overlay panels keep live demo quick-panel and overlay copy', () => 
     '自动翻页',
     '下一章',
     '翻页速度',
-    '8 秒',
+    'intervalSeconds',
     '连续',
     '单页',
   ]) {
@@ -280,7 +280,6 @@ test('reader overlay panels keep live demo quick-panel and overlay copy', () => 
     '单手翻页',
     '朗读参数',
     '朗读音色',
-    '温和女声',
   ]) {
     assert.equal(src.includes(oldText), false, `ReaderOverlayComponents must not keep obsolete quick-panel copy: ${oldText}`);
   }
