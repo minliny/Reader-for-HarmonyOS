@@ -2,7 +2,7 @@
 // No side effects. ArkTS forbids object spread (arkts-no-spread), so each method builds a
 // new ReaderUiState literal field-by-field (array spread is still allowed).
 import { RouteId } from '../../contract/generated/RouteTable';
-import { ReaderUiState, UiEvent, MainTab, Overlay, PageState, ReaderMode, ReaderPaginationMode, ReaderFontFamily, ReaderRenderMetric, RouteEntry, ReaderError, SearchResultEntry, BookDetail, ActiveSession, TtsPlaybackState, TtsScope, TtsTimer, TocMode, ReaderToggleKey, ReaderSettingOptionKey, ReaderTogglesMap, ReaderSettingOptionsMap, BookshelfView, BookshelfFilterState, DiscoverFilterState } from './ReaderUiState';
+import { ReaderUiState, UiEvent, MainTab, Overlay, PageState, ReaderMode, ReaderPaginationMode, ReaderFontFamily, ReaderRenderMetric, RouteEntry, ReaderError, SearchResultEntry, BookDetail, ActiveSession, TtsPlaybackState, TtsScope, TtsTimer, TocMode, ReaderToggleKey, ReaderSettingOptionKey, ReaderTogglesMap, ReaderSettingOptionsMap, BookshelfView, BookshelfFilterState, DiscoverFilterState, SettingsTogglesMap } from './ReaderUiState';
 
 function tabRoot(tab: MainTab): RouteId {
   switch (tab) {
@@ -281,6 +281,22 @@ export class ReaderReducer {
       case 'book-action': {
         const a = event.bookAction;
         return a !== undefined ? ReaderReducer.handleBookAction(state, a) : state;
+      }
+      // ── B1 P0 全局设置 segment/stepper/switch cases ──
+      case 'settings-segment-switch': {
+        const key = event.settingsKey;
+        const val = event.settingsValue;
+        return key !== undefined && val !== undefined ? ReaderReducer.switchSettingsSegment(state, key, val) : state;
+      }
+      case 'settings-stepper-change': {
+        const key = event.settingsKey;
+        const delta = event.delta;
+        return key !== undefined && delta !== undefined ? ReaderReducer.stepSettingsStepper(state, key, delta) : state;
+      }
+      case 'settings-switch-toggle': {
+        const key = event.settingsKey;
+        const val = event.settingsToggleValue;
+        return key !== undefined && val !== undefined ? ReaderReducer.toggleSettingsSwitch(state, key, val) : state;
       }
       default:
         return state;
@@ -924,6 +940,61 @@ export class ReaderReducer {
     return next;
   }
 
+  // ── B1 P0 全局设置 segment/stepper/switch reducers ──
+
+  // 切换全局设置中的 segment 选项（当前仅 appThemeMode）。
+  // ArkTS 不支持对象展开，直接写字段。
+  static switchSettingsSegment(state: ReaderUiState, key: string, value: string): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    if (key === 'appThemeMode') {
+      next.appThemeMode = value;
+    }
+    return next;
+  }
+
+  // 步进修改全局设置中的数值项（当前仅 coverColumns，范围 1-5）。
+  static stepSettingsStepper(state: ReaderUiState, key: string, delta: number): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    if (key === 'coverColumns') {
+      const v = state.coverColumns + delta;
+      next.coverColumns = v < 1 ? 1 : (v > 5 ? 5 : v);
+    }
+    return next;
+  }
+
+  // 切换全局设置中的开关项。重建 settingsToggles 对象，按 key 修改对应字段。
+  static toggleSettingsSwitch(state: ReaderUiState, key: string, value: boolean): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    const toggles: SettingsTogglesMap = {
+      autoCheckUpdate: state.settingsToggles.autoCheckUpdate,
+      tapBottomBarToTop: state.settingsToggles.tapBottomBarToTop,
+      showUpdateBadge: state.settingsToggles.showUpdateBadge,
+      mergeSameBooks: state.settingsToggles.mergeSameBooks,
+      enableSearchHistory: state.settingsToggles.enableSearchHistory,
+    };
+    switch (key) {
+      case 'autoCheckUpdate':
+        toggles.autoCheckUpdate = value;
+        break;
+      case 'tapBottomBarToTop':
+        toggles.tapBottomBarToTop = value;
+        break;
+      case 'showUpdateBadge':
+        toggles.showUpdateBadge = value;
+        break;
+      case 'mergeSameBooks':
+        toggles.mergeSameBooks = value;
+        break;
+      case 'enableSearchHistory':
+        toggles.enableSearchHistory = value;
+        break;
+      default:
+        break;
+    }
+    next.settingsToggles = toggles;
+    return next;
+  }
+
   // Toggle a string in an array: if present, remove it; otherwise append it.
   // ArkTS-safe (slice + push, no spread). Returns a new array; the input is
   // not mutated.
@@ -988,6 +1059,10 @@ export class ReaderReducer {
       bookshelfFilter: s.bookshelfFilter,
       discoverFilter: s.discoverFilter,
       sourceSelection: s.sourceSelection,
+      // B1 P0 全局设置字段 — 浅引用拷贝。需要修改的方法必须先重建对象。
+      appThemeMode: s.appThemeMode,
+      coverColumns: s.coverColumns,
+      settingsToggles: s.settingsToggles,
     };
   }
 

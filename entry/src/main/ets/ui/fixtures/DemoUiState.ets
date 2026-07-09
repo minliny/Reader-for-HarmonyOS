@@ -80,6 +80,16 @@ export class DemoUiState {
         sort: 'popular',
       },
       sourceSelection: [],
+      // ── B1 P0 全局设置默认值 ──
+      appThemeMode: 'system',
+      coverColumns: 3,
+      settingsToggles: {
+        autoCheckUpdate: true,
+        tapBottomBarToTop: true,
+        showUpdateBadge: true,
+        mergeSameBooks: true,
+        enableSearchHistory: true,
+      },
     };
   }
 }

@@ -71,6 +71,14 @@ export class ReaderUiStore {
   private static readonly K_DISCOVER_FILTERS = 'reader.discoverFilter.filters';
   private static readonly K_DISCOVER_SORT = 'reader.discoverFilter.sort';
   private static readonly K_SOURCE_SELECTION = 'reader.sourceSelection';
+  // ── B1 P0 全局设置 segment/stepper/switch keys ──
+  private static readonly K_APP_THEME_MODE = 'reader.appThemeMode';
+  private static readonly K_COVER_COLUMNS = 'reader.coverColumns';
+  private static readonly K_TOGGLE_AUTO_CHECK_UPDATE = 'reader.settingsToggles.autoCheckUpdate';
+  private static readonly K_TOGGLE_TAP_BOTTOM_BAR_TO_TOP = 'reader.settingsToggles.tapBottomBarToTop';
+  private static readonly K_TOGGLE_SHOW_UPDATE_BADGE = 'reader.settingsToggles.showUpdateBadge';
+  private static readonly K_TOGGLE_MERGE_SAME_BOOKS = 'reader.settingsToggles.mergeSameBooks';
+  private static readonly K_TOGGLE_ENABLE_SEARCH_HISTORY = 'reader.settingsToggles.enableSearchHistory';
 
   private static state: ReaderUiState;
 
@@ -160,5 +168,13 @@ export class ReaderUiStore {
     AppStorage.setOrCreate<string[]>(ReaderUiStore.K_DISCOVER_FILTERS, s.discoverFilter.filters);
     AppStorage.setOrCreate<string>(ReaderUiStore.K_DISCOVER_SORT, s.discoverFilter.sort);
     AppStorage.setOrCreate<string[]>(ReaderUiStore.K_SOURCE_SELECTION, s.sourceSelection);
+    // ── B1 P0 全局设置字段写入 AppStorage ──
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_APP_THEME_MODE, s.appThemeMode);
+    AppStorage.setOrCreate<number>(ReaderUiStore.K_COVER_COLUMNS, s.coverColumns);
+    AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_AUTO_CHECK_UPDATE, s.settingsToggles.autoCheckUpdate);
+    AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_TAP_BOTTOM_BAR_TO_TOP, s.settingsToggles.tapBottomBarToTop);
+    AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_SHOW_UPDATE_BADGE, s.settingsToggles.showUpdateBadge);
+    AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_MERGE_SAME_BOOKS, s.settingsToggles.mergeSameBooks);
+    AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_ENABLE_SEARCH_HISTORY, s.settingsToggles.enableSearchHistory);
   }
 }

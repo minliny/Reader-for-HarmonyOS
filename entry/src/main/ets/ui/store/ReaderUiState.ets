@@ -38,6 +38,19 @@ export type ReaderSettingOptionKey = 'pageMode' | 'tapMode' | 'pageAnimation';
 // ── Batch 4 bookshelf/discover/source-switch types ──
 export type BookshelfView = 'cover' | 'list';
 
+// ── B1 P0 全局设置 segment/stepper/switch 类型 ──
+export type SettingsToggleKey =
+  | 'autoCheckUpdate' | 'tapBottomBarToTop' | 'showUpdateBadge'
+  | 'mergeSameBooks' | 'enableSearchHistory';
+
+export interface SettingsTogglesMap {
+  autoCheckUpdate: boolean;
+  tapBottomBarToTop: boolean;
+  showUpdateBadge: boolean;
+  mergeSameBooks: boolean;
+  enableSearchHistory: boolean;
+}
+
 export interface BookshelfFilterState {
   view: BookshelfView;
   group: string;
@@ -143,6 +156,10 @@ export interface ReaderUiState {
   bookshelfFilter: BookshelfFilterState;
   discoverFilter: DiscoverFilterState;
   sourceSelection: string[];  // 选中的书源 id 列表
+  // ── B1 P0 全局设置 segment/stepper/switch 字段 ──
+  appThemeMode: string;        // 'system' | 'light' | 'dark'
+  coverColumns: number;        // 书架封面列数（1-5）
+  settingsToggles: SettingsTogglesMap;
 }
 
 // UiEvent is a tagged record; the reducer switches on `type` and reads the relevant
@@ -199,6 +216,10 @@ export interface UiEvent {
   discoverSort?: string;
   sourceId?: string;  // 换源时单个书源 id
   bookAction?: string;  // 'branch' | 'delete'
+  // ── B1 P0 全局设置事件字段 ──
+  settingsKey?: string;            // 设置项 key（appThemeMode / coverColumns / autoCheckUpdate …）
+  settingsValue?: string;          // segment 选中值
+  settingsToggleValue?: boolean;   // switch 切换值
 }
 
 // ── Minimal visible reading chain data types ──
