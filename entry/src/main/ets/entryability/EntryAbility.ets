@@ -14,6 +14,7 @@ import font from '@ohos.font';
 import util from '@ohos.util';
 import zlib from '@ohos.zlib';
 import { ReaderUiStore } from '../ui/store/ReaderUiStore';
+import { ReaderEffects } from '../ui/store/ReaderEffects';
 import { ReaderPaginationMode, SearchResultEntry, BookDetail } from '../ui/store/ReaderUiState';
 import { SafeAreaAdapter } from '../ui/adapters/SafeAreaAdapter';
 import { ViewportAdapter } from '../ui/adapters/ViewportAdapter';
@@ -869,6 +870,7 @@ export default class EntryAbility extends UIAbility {
   async onWindowStageCreate(windowStage: window.WindowStage): Promise<void> {
     try {
       const win = await windowStage.getMainWindow();
+      ReaderEffects.setMainWindow(win);
       this.registerReaderFontsForWindow(win);
       this.applyViewportMetrics();
       // Immersive: window layout extends behind the status / navigation bars.

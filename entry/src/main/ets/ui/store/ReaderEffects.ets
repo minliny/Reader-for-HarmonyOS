@@ -23,12 +23,20 @@ import { BookSourceRegistry, BookSourceTemplate } from './BookSourceRegistry';
 import { CoreRuntime } from '../../bridge/CoreRuntime';
 import { HostHttpRequest } from '../../host/types/HostRequest';
 import type { JsonObject } from '../../bridge/core/sdk/reader_core';
+import window from '@ohos.window';
 
 export class ReaderEffects {
   // Auto-page countdown timer handle. Non-null while the auto-page session is
   // active; cleared on session exit. Stored statically because Effects is a
   // stateless dispatcher — the timer must outlive each maybeRun() call.
   private static autoPageTimerId: number | null = null;
+  // 主窗口引用，由 EntryAbility.onWindowStageCreate 注入。hideStatusBar 等
+  // 需要 window API 的 effect 通过此引用操作系统状态栏，无需 context。
+  private static mainWindow: window.Window | null = null;
+
+  static setMainWindow(win: window.Window): void {
+    ReaderEffects.mainWindow = win;
+  }
 
   // Dispatcher: called by ReaderUiStore.dispatch after the reducer pass.
   // Routes events that need async Host work to their handlers.
@@ -96,8 +104,33 @@ export class ReaderEffects {
         console.info('book-action: ' + (event.bookAction ?? ''));
         break;
       }
+      // ── F3 hideStatusBar effect hook ──
+      case 'set-reader-toggle': {
+        if (event.toggleKey === 'hideStatusBar') {
+          ReaderEffects.applyHideStatusBar(event.toggleValue === true);
+        }
+        break;
+      }
       default:
         break;
+    }
+  }
+
+  // 隐藏/显示系统状态栏。hide=true 时隐藏状态栏（保留导航栏）；
+  // hide=false 时恢复状态栏显示。
+  static async applyHideStatusBar(hide: boolean): Promise<void> {
+    const win = ReaderEffects.mainWindow;
+    if (win === null) {
+      return;
+    }
+    try {
+      if (hide) {
+        await win.setWindowSystemBarEnable(['navigation']);
+      } else {
+        await win.setWindowSystemBarEnable(['status', 'navigation']);
+      }
+    } catch (e) {
+      // 窗口 API 调用失败时静默降级——状态栏切换不影响阅读核心功能。
     }
   }
 
