@@ -127,6 +127,7 @@ export class TokenRegistry {
     { name: '--fd-ds-motion-duration-capsuleTick', category: 'motion-duration', value: '120ms' },
     { name: '--fd-ds-motion-duration-voicePulse', category: 'motion-duration', value: '960ms' },
     { name: '--fd-ds-motion-duration-overlay', category: 'motion-duration', value: '240ms' },
+    { name: '--fd-ds-motion-duration-route', category: 'motion-duration', value: '280ms' },
     { name: '--fd-ds-motion-duration-loadingSpin', category: 'motion-duration', value: '800ms' },
     { name: '--fd-ds-motion-duration-interruptSettle', category: 'motion-duration', value: '80ms' },
     { name: '--fd-ds-motion-duration-viewportReshape', category: 'motion-duration', value: '240ms' },

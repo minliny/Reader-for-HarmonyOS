@@ -38,6 +38,7 @@ export class MotionDurationTokens {
   static readonly capsuleTick: number = 120;
   static readonly voicePulse: number = 960;
   static readonly overlay: number = 240;
+  static readonly route: number = 280;
   static readonly loadingSpin: number = 800;
   static readonly interruptSettle: number = 80;
   static readonly viewportReshape: number = 240;
