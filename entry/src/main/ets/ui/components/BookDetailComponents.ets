@@ -7,6 +7,7 @@ import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
 import { ReaderTypography } from '../tokens/ReaderTypography';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 import { BookDetail } from '../store/ReaderUiState';
+import { MotionAdapter } from '../adapters/MotionAdapter';
 
 interface ChapterPreviewEntry {
   title: string;
@@ -57,6 +58,8 @@ struct BookFacts {
 @Component
 export struct BookHero {
   @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
+  // B1 P0：路由跳转用 MotionAdapter.apply 包裹，motionId 取 LibraryShell 的 app.route.push.forward
+  @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
 
   build() {
     Row({ space: 14 }) {
@@ -82,6 +85,24 @@ export struct BookHero {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .margin({ top: 8 })
+        Row({ space: 8 }) {
+          Text('最新')
+            .fontSize(11)
+            .fontWeight(800)
+            .fontColor(ColorTokens.muted)
+            .width(34)
+          Text(this.currentBook !== null && this.currentBook.latestChapter.length > 0
+            ? this.currentBook.latestChapter : '第 32 章 雨夜')
+            .fontSize(12)
+            .fontColor(ColorTokens.ink)
+            .lineHeight(12 * 1.35)
+            .layoutWeight(1)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+        .margin({ top: 10 })
         BookFacts({
           facts: [
             { label: '最新', value: this.currentBook !== null && this.currentBook.latestChapter.length > 0
@@ -108,7 +129,12 @@ export struct BookHero {
             .borderRadius(DemoAliasTokens.radiusPill)
             .backgroundColor(ColorTokens.surfaceSoft)
             .textAlign(TextAlign.Center)
-            .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'source-switch' }))
+            .onClick(() => {
+              // 更换书源：route-push 到 source-switch，用 LibraryShell 的 push 动效包裹
+              MotionAdapter.apply('app.route.push.forward', this.reducedMotion, () => {
+                ReaderUiStore.dispatch({ type: 'route-push', id: 'source-switch' });
+              });
+            })
         }
         .width('100%')
         .alignItems(VerticalAlign.Center)
@@ -164,6 +190,8 @@ export struct BookSummaryCard {
 @Component
 export struct BookChapterList {
   @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
+  // B1 P0：路由跳转用 MotionAdapter.apply 包裹，motionId 取 LibraryShell 的 app.route.push.forward
+  @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
   private chapters: ChapterPreviewEntry[] = [
     { title: '第 30 章 旧日', cached: true, bookmarked: false, current: false },
     { title: '第 31 章 归途', cached: true, bookmarked: true, current: false },
@@ -191,7 +219,12 @@ export struct BookChapterList {
         .borderRadius(DemoAliasTokens.radiusPill)
         .border({ width: 1, color: ColorTokens.border })
         .alignItems(VerticalAlign.Center)
-        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'book-directory' }))
+        .onClick(() => {
+          // 完整目录：route-push 到 book-directory，用 LibraryShell 的 push 动效包裹
+          MotionAdapter.apply('app.route.push.forward', this.reducedMotion, () => {
+            ReaderUiStore.dispatch({ type: 'route-push', id: 'book-directory' });
+          });
+        })
       }
       .width('100%')
       .height(48)
@@ -234,12 +267,15 @@ export struct BookChapterList {
         .border({ width: { top: 1 }, color: ColorTokens.border })
         .alignItems(VerticalAlign.Center)
         .onClick(() => {
-          // route-push first (resets pageState='default'), then chapter-load
-          // switches pageState='loading' on the immersive reader route.
-          ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' });
-          if (this.currentBook !== null && this.currentBook.chapterListUrl.length > 0 && i === 0) {
-            ReaderUiStore.dispatch({ type: 'chapter-load', chapterId: this.currentBook.chapterListUrl });
-          }
+          // 章节跳转：route-push 到 immersive-reading，用 LibraryShell 的 push 动效包裹
+          MotionAdapter.apply('app.route.push.forward', this.reducedMotion, () => {
+            // route-push first (resets pageState='default'), then chapter-load
+            // switches pageState='loading' on the immersive reader route.
+            ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' });
+            if (this.currentBook !== null && this.currentBook.chapterListUrl.length > 0 && i === 0) {
+              ReaderUiStore.dispatch({ type: 'chapter-load', chapterId: this.currentBook.chapterListUrl });
+            }
+          });
         })
       }, (c: ChapterPreviewEntry, i: number) => `${c.title}-${i}`)
     }

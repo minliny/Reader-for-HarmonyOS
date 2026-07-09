@@ -17,6 +17,7 @@ import { ViewportAdapter } from '../adapters/ViewportAdapter';
 import { ReaderBase, ReaderTopArea } from './ReaderComponents';
 import { ReaderBottomBar, ReaderControlSheet } from './ReaderOverlayComponents';
 import { ReaderUiStore } from '../store/ReaderUiStore';
+import { MotionAdapter } from '../adapters/MotionAdapter';
 import { InteractionDebugFrame } from './InteractionDebugComponents';
 import { ReaderTypography } from '../tokens/ReaderTypography';
 
@@ -101,6 +102,8 @@ struct SourceSwitchCandidateRow {
 
 @Component
 struct SourceSwitchWindow {
+  // B1 P0：关闭换源用 MotionAdapter.apply 包裹，motionId 取 FlowShell 的 source.switch.route.pop
+  @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
   @StorageProp(SafeAreaAdapter.K_TOP) safeAreaTop: number = SafeAreaAdapter.DEFAULT_TOP;
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
   @StorageProp(ViewportAdapter.K_WIDTH) viewportWidth: number = ViewportAdapter.DEFAULT_WIDTH;
@@ -166,7 +169,12 @@ struct SourceSwitchWindow {
             Image($r('app.media.reader_icon_close_dark'))
               .width(24)
               .height(24)
-              .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'reader' as RouteId }))
+              .onClick(() => {
+              // 关闭换源：route-replace 回 reader，用 FlowShell 的 pop 动效包裹
+              MotionAdapter.apply('source.switch.route.pop', this.reducedMotion, () => {
+                ReaderUiStore.dispatch({ type: 'route-replace', id: 'reader' as RouteId });
+              });
+            })
             InteractionDebugFrame({ label: 'CLOSE', tone: 'action' })
           }
           .width(24)

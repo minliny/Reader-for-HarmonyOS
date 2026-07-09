@@ -6,6 +6,7 @@ import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
 import { RouteId } from '../../contract/generated/RouteTable';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 import { InteractionDebugAdapter } from '../adapters/InteractionDebugAdapter';
+import { MotionAdapter } from '../adapters/MotionAdapter';
 
 interface SettingsRowSpec {
   title: string;
@@ -55,6 +56,8 @@ export struct SettingsNavRow {
   @Prop icon: Resource | undefined = undefined;
   @Prop active: boolean = false;
   @Prop route: RouteId = 'settings-general';
+  // B1 P0：路由跳转用 MotionAdapter.apply 包裹，motionId 取 SettingsShell 的 app.route.push.forward
+  @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
 
   build() {
     Row({ space: 12 }) {
@@ -92,7 +95,12 @@ export struct SettingsNavRow {
     .padding({ left: 12, right: 12 })
     .border({ width: { top: 1 }, color: ColorTokens.border })
     .alignItems(VerticalAlign.Center)
-    .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: this.route }))
+    .onClick(() => {
+        // 设置项跳转：route-push 到子页，用 SettingsShell 的 push 动效包裹
+        MotionAdapter.apply('app.route.push.forward', this.reducedMotion, () => {
+          ReaderUiStore.dispatch({ type: 'route-push', id: this.route });
+        });
+      })
   }
 }
 
