@@ -1,5 +1,5 @@
 // SourceSwitchViewState.test — B1 P0 核心接线验证：source-switch 路由的
-// ViewState 渲染、reducer 事件处理、MotionAdapter motionId 解析。
+// ViewState 渲染、reducer 事件处理、MotionAdapter motionId 解析、loading 态。
 import { describe, it, expect } from '@ohos/hypium';
 import { ViewStateTable, ViewStateComponent } from '../main/ets/contract/generated/ViewStateTable';
 import { RouteTable } from '../main/ets/contract/generated/RouteTable';
@@ -60,6 +60,18 @@ export default function SourceSwitchViewStateTests(): void {
       const after = ReaderReducer.reduce(s, { type: 'source-toggle', sourceId: '优书网' });
       const cleared = ReaderReducer.reduce(after, { type: 'source-clear' });
       expect(cleared.sourceSelection.length === 0).assertTrue();
+    });
+
+    // ── Reducer: set-loading → source-switch loading 态 ──
+    it('reducerSetLoadingOnSourceSwitchRoute', 0, () => {
+      const s = DemoUiState.initial();
+      const pushed = ReaderReducer.reduce(s, { type: 'route-push', id: 'source-switch' });
+      expect(pushed.routeId).assertEqual('source-switch');
+      expect(pushed.loading).assertFalse();
+      const loading = ReaderReducer.reduce(pushed, { type: 'set-loading', loading: true });
+      expect(loading.loading).assertTrue();
+      const done = ReaderReducer.reduce(loading, { type: 'set-loading', loading: false });
+      expect(done.loading).assertFalse();
     });
 
     // ── MotionAdapter 解析 motionId ──

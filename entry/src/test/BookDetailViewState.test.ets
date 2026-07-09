@@ -1,5 +1,5 @@
 // BookDetailViewState.test — B1 P0 核心接线验证：book-detail 路由的 ViewState 渲染、
-// reducer 事件处理（book-detail-load / book-detail-success）、LibraryShell motionId 解析。
+// reducer 事件处理（book-detail-load / book-detail-success / set-error / route-pop）、LibraryShell motionId 解析。
 import { describe, it, expect } from '@ohos/hypium';
 import { ViewStateTable, ViewStateComponent } from '../main/ets/contract/generated/ViewStateTable';
 import { RouteTable } from '../main/ets/contract/generated/RouteTable';
@@ -80,6 +80,34 @@ export default function BookDetailViewStateTests(): void {
       const errored = ReaderReducer.reduce(s, { type: 'set-error', error: { code: 'X', message: 'm', retryable: false } });
       const after = ReaderReducer.reduce(errored, { type: 'book-detail-success', book: null });
       expect(after.error).assertNull();
+    });
+
+    // ── Reducer: set-error → pageState='error'（book-detail 加载失败错误态） ──
+    it('reducerBookDetailErrorSetsErrorState', 0, () => {
+      const s = DemoUiState.initial();
+      const pushed = ReaderReducer.reduce(s, { type: 'route-push', id: 'book-detail' });
+      const loading = ReaderReducer.reduce(pushed, { type: 'book-detail-load' });
+      expect(loading.pageState).assertEqual('loading');
+      const errored = ReaderReducer.reduce(loading, {
+        type: 'set-error',
+        error: { code: 'DETAIL_FAILED', message: '加载失败', retryable: true },
+      });
+      expect(errored.loading).assertFalse();
+      expect(errored.pageState).assertEqual('error');
+      expect(errored.error !== null).assertTrue();
+      expect(errored.error!.code).assertEqual('DETAIL_FAILED');
+    });
+
+    // ── Reducer: route-pop → 从 book-detail 返回（back 链路） ──
+    it('reducerRoutePopReturnsFromBookDetail', 0, () => {
+      const s = DemoUiState.initial();
+      expect(s.routeId).assertEqual('bookshelf');
+      const pushed = ReaderReducer.reduce(s, { type: 'route-push', id: 'book-detail' });
+      expect(pushed.routeId).assertEqual('book-detail');
+      expect(pushed.stack.length).assertEqual(2);
+      const popped = ReaderReducer.reduce(pushed, { type: 'route-pop' });
+      expect(popped.routeId).assertEqual('bookshelf');
+      expect(popped.stack.length).assertEqual(1);
     });
 
     // ── MotionAdapter 解析 LibraryShell motionId ──

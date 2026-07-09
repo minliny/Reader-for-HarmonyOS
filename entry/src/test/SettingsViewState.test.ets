@@ -1,5 +1,6 @@
 // SettingsViewState.test — B1 P0 核心接线验证：settings 路由的 ViewState 渲染、
-// 新增 settings reducer 事件（segment/stepper/switch）、SettingsShell motionId 解析。
+// 新增 settings reducer 事件（segment/stepper/switch）、SettingsShell motionId 解析、
+// tab 切换与 close（route-pop）链路。
 import { describe, it, expect } from '@ohos/hypium';
 import { ViewStateTable, ViewStateComponent } from '../main/ets/contract/generated/ViewStateTable';
 import { RouteTable } from '../main/ets/contract/generated/RouteTable';
@@ -108,6 +109,29 @@ export default function SettingsViewStateTests(): void {
       expect(after.settingsToggles.mergeSameBooks).assertFalse();
       expect(after.settingsToggles.autoCheckUpdate).assertTrue();
       expect(after.settingsToggles.enableSearchHistory).assertTrue();
+    });
+
+    // ── Reducer: switch-tab → settings（tab switch 链路） ──
+    it('reducerSwitchTabToSettings', 0, () => {
+      const s = DemoUiState.initial();
+      expect(s.tab).assertEqual('bookshelf');
+      const after = ReaderReducer.reduce(s, { type: 'switch-tab', tab: 'settings' });
+      expect(after.tab).assertEqual('settings');
+      expect(after.routeId).assertEqual('settings');
+      expect(after.stack.length).assertEqual(1);
+      expect(after.stack[0].id).assertEqual('settings');
+    });
+
+    // ── Reducer: route-pop → 从 settings-general 返回（close 链路） ──
+    it('reducerRoutePopReturnsFromSettingsGeneral', 0, () => {
+      const s = DemoUiState.initial();
+      const settingsTab = ReaderReducer.reduce(s, { type: 'switch-tab', tab: 'settings' });
+      const pushed = ReaderReducer.reduce(settingsTab, { type: 'route-push', id: 'settings-general' });
+      expect(pushed.routeId).assertEqual('settings-general');
+      expect(pushed.stack.length).assertEqual(2);
+      const popped = ReaderReducer.reduce(pushed, { type: 'route-pop' });
+      expect(popped.routeId).assertEqual('settings');
+      expect(popped.stack.length).assertEqual(1);
     });
 
     // ── MotionAdapter 解析 SettingsShell motionId ──
