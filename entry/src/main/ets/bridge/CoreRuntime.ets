@@ -521,4 +521,75 @@ export class CoreRuntime {
     const result = await this.runtime.coreInfo();
     return result.data;
   }
+
+  // ── RemoteContentPipeline: book.search / book.detail / book.toc / ───────
+  //    chapter.content. Host prefetches HTML via HttpHostAdapter, then passes
+  //    the response + inline Legado source to Core for parsing. Core uses the
+  //    source rules (ruleSearch / ruleBookInfo / ruleToc / ruleContent) to
+  //    extract structured data. No http.execute round-trip — Path A.
+
+  /**
+   * book.search — parse search results from prefetched HTML using Legado rules.
+   * Returns { sourceId, books: [{ bookId, title, author?, ... }] }.
+   */
+  async bookSearch(html: string, source: JsonObject, keyword: string, page: number = 1): Promise<JsonObject> {
+    const params: JsonObject = {};
+    params['sourceId'] = '';
+    params['searchResponse'] = html;
+    params['source'] = source;
+    params['keyword'] = keyword;
+    params['page'] = page;
+    const result = await this.runtime.request('book.search', params, { timeoutMs: 15000 });
+    return result.data;
+  }
+
+  /**
+   * book.detail — parse book detail metadata from prefetched HTML.
+   * `book` is the base book object (must contain at least bookId).
+   * Returns { sourceId, book: { bookId, title, author, ... }, tocUrl?, variables? }.
+   */
+  async bookDetail(html: string, source: JsonObject, book: JsonObject): Promise<JsonObject> {
+    const params: JsonObject = {};
+    params['sourceId'] = '';
+    params['book'] = book;
+    params['detailResponse'] = html;
+    params['source'] = source;
+    const result = await this.runtime.request('book.detail', params, { timeoutMs: 15000 });
+    return result.data;
+  }
+
+  /**
+   * book.toc — parse table of contents from prefetched HTML.
+   * Returns { sourceId, bookId, toc: [{ index, title, url, variables? }] }.
+   */
+  async bookToc(html: string, source: JsonObject, bookId: string, variables?: JsonObject): Promise<JsonObject> {
+    const params: JsonObject = {};
+    params['sourceId'] = '';
+    params['bookId'] = bookId;
+    params['tocResponse'] = html;
+    params['source'] = source;
+    if (variables !== undefined) {
+      params['variables'] = variables;
+    }
+    const result = await this.runtime.request('book.toc', params, { timeoutMs: 15000 });
+    return result.data;
+  }
+
+  /**
+   * chapter.content — parse chapter body content from prefetched HTML.
+   * Returns { sourceId, bookId, chapterTitle, content (string), via }.
+   */
+  async chapterContent(html: string, source: JsonObject, bookId: string, chapterUrl: string, variables?: JsonObject): Promise<JsonObject> {
+    const params: JsonObject = {};
+    params['sourceId'] = '';
+    params['bookId'] = bookId;
+    params['chapterResponse'] = html;
+    params['source'] = source;
+    params['chapterUrl'] = chapterUrl;
+    if (variables !== undefined) {
+      params['variables'] = variables;
+    }
+    const result = await this.runtime.request('chapter.content', params, { timeoutMs: 15000 });
+    return result.data;
+  }
 }

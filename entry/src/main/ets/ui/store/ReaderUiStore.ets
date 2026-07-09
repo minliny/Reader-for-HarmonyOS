@@ -36,6 +36,41 @@ export class ReaderUiStore {
   static readonly K_SEARCH_RESULTS: string = 'reader.searchResults';
   static readonly K_CURRENT_BOOK: string = 'reader.currentBook';
   static readonly K_CHAPTER_CONTENT: string = 'reader.chapterContent';
+  // ── Batch 1 session/TTS/settings keys ──
+  private static readonly K_TTS_PLAYBACK = 'reader.ttsSession.playback';
+  private static readonly K_TTS_RATE = 'reader.ttsSession.rate';
+  private static readonly K_TTS_VOICE = 'reader.ttsSession.voice';
+  private static readonly K_TTS_SCOPE = 'reader.ttsSession.scope';
+  private static readonly K_TTS_TIMER = 'reader.ttsSession.timer';
+  private static readonly K_TTS_CURRENT_SEGMENT = 'reader.ttsSession.currentSegment';
+  private static readonly K_TTS_TOTAL_SEGMENTS = 'reader.ttsSession.totalSegments';
+  private static readonly K_AUTO_PAGE_PLAYING = 'reader.autoPageSession.playing';
+  private static readonly K_AUTO_PAGE_COUNTDOWN = 'reader.autoPageSession.countdownSeconds';
+  private static readonly K_AUTO_PAGE_INTERVAL = 'reader.autoPageSession.intervalSeconds';
+  private static readonly K_BRIGHTNESS = 'reader.brightness';
+  private static readonly K_BRIGHTNESS_AUTO = 'reader.brightnessAuto';
+  private static readonly K_TOC_MODE = 'reader.tocMode';
+  private static readonly K_TOGGLE_AUTO_PAGE = 'reader.readerToggles.autoPage';
+  private static readonly K_TOGGLE_VOLUME_PAGE = 'reader.readerToggles.volumePage';
+  private static readonly K_TOGGLE_LANDSCAPE_LOCK = 'reader.readerToggles.landscapeLock';
+  private static readonly K_TOGGLE_KEEP_SCREEN_ON = 'reader.readerToggles.keepScreenOn';
+  private static readonly K_TOGGLE_STATUS_INFO = 'reader.readerToggles.statusInfo';
+  private static readonly K_TOGGLE_HAPTIC = 'reader.readerToggles.hapticFeedback';
+  private static readonly K_TOGGLE_CACHE_NEXT = 'reader.readerToggles.cacheNext';
+  private static readonly K_OPT_PAGE_MODE = 'reader.readerSettingOptions.pageMode';
+  private static readonly K_OPT_TAP_MODE = 'reader.readerSettingOptions.tapMode';
+  private static readonly K_OPT_PAGE_ANIMATION = 'reader.readerSettingOptions.pageAnimation';
+  private static readonly K_SELECTION_VISIBLE = 'reader.selection.visible';
+  private static readonly K_SELECTION_ACTION = 'reader.selection.action';
+  private static readonly K_SELECTION_TEXT = 'reader.selection.selectedText';
+  // ── Batch 4 bookshelf/discover/source-switch keys ──
+  private static readonly K_BOOKSHELF_VIEW = 'reader.bookshelfFilter.view';
+  private static readonly K_BOOKSHELF_GROUP = 'reader.bookshelfFilter.group';
+  private static readonly K_BOOKSHELF_SORT = 'reader.bookshelfFilter.sort';
+  private static readonly K_BOOKSHELF_FILTERS = 'reader.bookshelfFilter.filters';
+  private static readonly K_DISCOVER_FILTERS = 'reader.discoverFilter.filters';
+  private static readonly K_DISCOVER_SORT = 'reader.discoverFilter.sort';
+  private static readonly K_SOURCE_SELECTION = 'reader.sourceSelection';
 
   private static state: ReaderUiState;
 
@@ -90,5 +125,40 @@ export class ReaderUiStore {
     AppStorage.setOrCreate<SearchResultEntry[]>(ReaderUiStore.K_SEARCH_RESULTS, s.searchResults);
     AppStorage.setOrCreate<BookDetail | null>(ReaderUiStore.K_CURRENT_BOOK, s.currentBook);
     AppStorage.setOrCreate<string[]>(ReaderUiStore.K_CHAPTER_CONTENT, s.chapterContent);
+    // ── Batch 1 session/TTS/settings fields ──
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_TTS_PLAYBACK, s.ttsSession.playback);
+    AppStorage.setOrCreate<number>(ReaderUiStore.K_TTS_RATE, s.ttsSession.rate);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_TTS_VOICE, s.ttsSession.voice);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_TTS_SCOPE, s.ttsSession.scope);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_TTS_TIMER, s.ttsSession.timer);
+    AppStorage.setOrCreate<number>(ReaderUiStore.K_TTS_CURRENT_SEGMENT, s.ttsSession.currentSegment);
+    AppStorage.setOrCreate<number>(ReaderUiStore.K_TTS_TOTAL_SEGMENTS, s.ttsSession.totalSegments);
+    AppStorage.setOrCreate<boolean>(ReaderUiStore.K_AUTO_PAGE_PLAYING, s.autoPageSession.playing);
+    AppStorage.setOrCreate<number>(ReaderUiStore.K_AUTO_PAGE_COUNTDOWN, s.autoPageSession.countdownSeconds);
+    AppStorage.setOrCreate<number>(ReaderUiStore.K_AUTO_PAGE_INTERVAL, s.autoPageSession.intervalSeconds);
+    AppStorage.setOrCreate<number>(ReaderUiStore.K_BRIGHTNESS, s.brightness);
+    AppStorage.setOrCreate<boolean>(ReaderUiStore.K_BRIGHTNESS_AUTO, s.brightnessAuto);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_TOC_MODE, s.tocMode);
+    AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_AUTO_PAGE, s.readerToggles.autoPage);
+    AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_VOLUME_PAGE, s.readerToggles.volumePage);
+    AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_LANDSCAPE_LOCK, s.readerToggles.landscapeLock);
+    AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_KEEP_SCREEN_ON, s.readerToggles.keepScreenOn);
+    AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_STATUS_INFO, s.readerToggles.statusInfo);
+    AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_HAPTIC, s.readerToggles.hapticFeedback);
+    AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_CACHE_NEXT, s.readerToggles.cacheNext);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_OPT_PAGE_MODE, s.readerSettingOptions.pageMode);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_OPT_TAP_MODE, s.readerSettingOptions.tapMode);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_OPT_PAGE_ANIMATION, s.readerSettingOptions.pageAnimation);
+    AppStorage.setOrCreate<boolean>(ReaderUiStore.K_SELECTION_VISIBLE, s.selection.visible);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_SELECTION_ACTION, s.selection.action);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_SELECTION_TEXT, s.selection.selectedText);
+    // ── Batch 4 bookshelf/discover/source-switch fields ──
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_BOOKSHELF_VIEW, s.bookshelfFilter.view);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_BOOKSHELF_GROUP, s.bookshelfFilter.group);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_BOOKSHELF_SORT, s.bookshelfFilter.sort);
+    AppStorage.setOrCreate<string[]>(ReaderUiStore.K_BOOKSHELF_FILTERS, s.bookshelfFilter.filters);
+    AppStorage.setOrCreate<string[]>(ReaderUiStore.K_DISCOVER_FILTERS, s.discoverFilter.filters);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_DISCOVER_SORT, s.discoverFilter.sort);
+    AppStorage.setOrCreate<string[]>(ReaderUiStore.K_SOURCE_SELECTION, s.sourceSelection);
   }
 }

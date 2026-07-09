@@ -16,7 +16,7 @@ export class DemoUiState {
       fontFamily: 'serif',
       topMargin: 72,
       sideMargin: 32,
-      bottomMargin: 48,
+      bottomMargin: 16,
       paragraphIndent: 2,
       overlay: '',
       activeSession: '',
@@ -31,6 +31,55 @@ export class DemoUiState {
       searchResults: [],
       currentBook: null,
       chapterContent: [],
+      // ── Batch 1 session/TTS/settings defaults ──
+      ttsSession: {
+        playback: 'idle',
+        rate: 1.0,
+        voice: '',
+        scope: 'chapter',
+        timer: 'off',
+        currentSegment: 0,
+        totalSegments: 0,
+      },
+      autoPageSession: {
+        playing: false,
+        countdownSeconds: 0,
+        intervalSeconds: 5,
+      },
+      brightness: 80,
+      brightnessAuto: false,
+      tocMode: 'directory',
+      readerToggles: {
+        autoPage: false,
+        volumePage: false,
+        landscapeLock: false,
+        keepScreenOn: false,
+        statusInfo: true,
+        hapticFeedback: true,
+        cacheNext: true,
+      },
+      readerSettingOptions: {
+        pageMode: 'horizontal',
+        tapMode: 'middle',
+        pageAnimation: 'slide',
+      },
+      selection: {
+        visible: false,
+        action: '',
+        selectedText: '',
+      },
+      // ── Batch 4 bookshelf/discover/source-switch defaults ──
+      bookshelfFilter: {
+        view: 'cover',
+        group: 'all',
+        sort: 'recent',
+        filters: [],
+      },
+      discoverFilter: {
+        filters: [],
+        sort: 'popular',
+      },
+      sourceSelection: [],
     };
   }
 }

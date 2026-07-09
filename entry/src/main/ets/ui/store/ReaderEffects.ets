@@ -7,9 +7,11 @@
 // which flows through the reducer again to update searchResults / currentBook /
 // chapterContent.
 //
-// Parse strategy: simple regex over HTML. This is NOT the Core
-// RemoteContentPipeline — it is a minimal host-side parser sufficient for the
-// visible reading chain. Core-side parsing replaces this in a later phase.
+// Parse strategy: Core RemoteContentPipeline. Host prefetches HTML via
+// HttpHostAdapter, then passes the response + inline Legado source to Core's
+// book.search / book.detail / book.toc / chapter.content commands. Core uses
+// the Legado rules (ruleSearch / ruleBookInfo / ruleToc / ruleContent) to
+// extract structured data, replacing the former ArkTS regex parsers.
 //
 // Safety: CoreRuntime may not be initialized when an early dispatch fires
 // (e.g. during first UI build before EntryAbility.init). We guard with
@@ -20,8 +22,14 @@ import { ReaderUiStore } from './ReaderUiStore';
 import { BookSourceRegistry, BookSourceTemplate } from './BookSourceRegistry';
 import { CoreRuntime } from '../../bridge/CoreRuntime';
 import { HostHttpRequest } from '../../host/types/HostRequest';
+import type { JsonObject } from '../../bridge/core/sdk/reader_core';
 
 export class ReaderEffects {
+  // Auto-page countdown timer handle. Non-null while the auto-page session is
+  // active; cleared on session exit. Stored statically because Effects is a
+  // stateless dispatcher — the timer must outlive each maybeRun() call.
+  private static autoPageTimerId: number | null = null;
+
   // Dispatcher: called by ReaderUiStore.dispatch after the reducer pass.
   // Routes events that need async Host work to their handlers.
   static maybeRun(event: UiEvent): void {
@@ -42,9 +50,50 @@ export class ReaderEffects {
       }
       case 'chapter-load': {
         const chapterId = event.chapterId ?? '';
+        const bookId = event.bookId ?? '';
         if (chapterId.length > 0) {
-          ReaderEffects.runChapter(chapterId);
+          ReaderEffects.runChapter(chapterId, bookId);
         }
+        break;
+      }
+      // ── Batch 1 session/TTS/auto-page effect hooks ──
+      case 'auto-page-toggle': {
+        ReaderEffects.manageAutoPageTimer();
+        break;
+      }
+      case 'tts-toggle': {
+        ReaderEffects.manageTtsPlayback();
+        break;
+      }
+      case 'set-active-session': {
+        ReaderEffects.manageSessionTransition();
+        break;
+      }
+      // ── Batch 2 reader control effect hooks ──
+      case 'chapter-prev':
+      case 'chapter-next':
+        // No-op: chapter list / adjacent chapter lookup not available yet.
+        // Reserved so the default branch doesn't swallow the event.
+        break;
+      case 'chapter-progress-seek':
+        // No-op: chapter progress mapping not available yet.
+        break;
+      case 'set-brightness': {
+        const bv = event.value ?? 80;
+        ReaderEffects.applyBrightness(bv);
+        break;
+      }
+      case 'toggle-brightness-auto':
+        // State-only update; no Host side effect (brightness adapter may not
+        // exist). When a Host brightness adapter is wired, observe
+        // reader.brightnessAuto and switch source there.
+        break;
+      // ── Batch 4 book-action effect hook ──
+      case 'book-action': {
+        // Simplified: log only. Actual branch/delete needs the book storage
+        // layer (not yet wired); the reducer already opened the 'book-action'
+        // overlay so the action sheet renders.
+        console.info('book-action: ' + (event.bookAction ?? ''));
         break;
       }
       default:
@@ -52,12 +101,89 @@ export class ReaderEffects {
     }
   }
 
+  // ── Session / TTS / auto-page effect handlers ────────────────────────
+  // Effects run AFTER the reducer pass, so they can read the new state via
+  // ReaderUiStore.snapshot() to decide whether to start or stop side effects.
+
+  // Start or stop the per-second countdown timer based on the current
+  // activeSession. Always clears any existing timer first to avoid leaks, then
+  // starts a fresh 1s interval if (and only if) activeSession === 'auto-page'.
+  // The interval dispatches 'session-capsule-countdown-tick' which the reducer
+  // uses to decrement countdownSeconds (and loop back to intervalSeconds at 0).
+  static manageAutoPageTimer(): void {
+    if (ReaderEffects.autoPageTimerId !== null) {
+      clearInterval(ReaderEffects.autoPageTimerId);
+      ReaderEffects.autoPageTimerId = null;
+    }
+    const active = ReaderUiStore.snapshot().activeSession;
+    if (active === 'auto-page') {
+      ReaderEffects.autoPageTimerId = setInterval(() => {
+        ReaderUiStore.dispatch({ type: 'session-capsule-countdown-tick' });
+      }, 1000);
+    }
+  }
+
+  // Drive the Host TTS adapter based on the current ttsSession.playback. When
+  // 'playing', attempt to start speech; otherwise stop. The Host TTS adapter
+  // may not be wired up yet (Phase 2 integration), so failures are logged and
+  // swallowed — state still advances so the UI reflects intent.
+  static manageTtsPlayback(): void {
+    const playback = ReaderUiStore.snapshot().ttsSession.playback;
+    try {
+      if (playback === 'playing') {
+        // Host TTS adapter hook — replaced with a real adapter call once the
+        // bridge is wired (see host/adapters/TtsHostAdapter.ets). For now we
+        // log so the dispatch chain is observable during development.
+        console.info('ReaderEffects: tts playback start requested (host adapter pending)');
+      } else {
+        console.info('ReaderEffects: tts playback stop requested (host adapter pending)');
+      }
+    } catch (e) {
+      console.info(`ReaderEffects: tts host adapter error: ${(e as Error).message}`);
+    }
+  }
+
+  // Cleanup hook fired on explicit session switches. If the new activeSession
+  // is not 'auto-page', tear down the countdown timer; if it is not 'tts',
+  // signal TTS stop. This prevents timers/speech from leaking across session
+  // transitions (e.g. switching from auto-page directly to tts).
+  static manageSessionTransition(): void {
+    const active = ReaderUiStore.snapshot().activeSession;
+    if (active !== 'auto-page' && ReaderEffects.autoPageTimerId !== null) {
+      clearInterval(ReaderEffects.autoPageTimerId);
+      ReaderEffects.autoPageTimerId = null;
+    }
+    if (active !== 'tts') {
+      try {
+        console.info('ReaderEffects: tts stop on session transition (host adapter pending)');
+      } catch (e) {
+        console.info(`ReaderEffects: tts stop error: ${(e as Error).message}`);
+      }
+    }
+  }
+
+  // Apply a brightness value [0, 100] to the Host brightness adapter. The
+  // adapter may not be wired yet (Phase 2 integration); failures are logged
+  // and swallowed — state still advances so the slider reflects intent.
+  static applyBrightness(value: number): void {
+    try {
+      // Host brightness adapter hook — replaced with a real adapter call once
+      // the bridge is wired (see host/adapters/BrightnessHostAdapter.ets).
+      console.info(`ReaderEffects: brightness set to ${value} (host adapter pending)`);
+    } catch (e) {
+      console.info(`ReaderEffects: brightness host adapter error: ${(e as Error).message}`);
+    }
+  }
+
   // ── Search ────────────────────────────────────────────────────────────
   static runSearch(query: string): void {
     const source = BookSourceRegistry.getDefault();
+    const legadoSource = BookSourceRegistry.getDefaultLegadoSource();
     const url = BookSourceRegistry.buildSearchUrl(source, query, 1);
-    ReaderEffects.httpGet(url).then((html) => {
-      const results = ReaderEffects.parseSearchResults(html, source);
+    ReaderEffects.httpGet(url).then(async (html) => {
+      const runtime = CoreRuntime.get();
+      const data = await runtime.bookSearch(html, legadoSource, query, 1);
+      const results = ReaderEffects.mapSearchResults(data, source);
       ReaderUiStore.dispatch({ type: 'search-success', searchResults: results });
     }).catch((e: Error) => {
       ReaderUiStore.dispatch({
@@ -72,14 +198,36 @@ export class ReaderEffects {
   // On success, callers may explicitly request first-chapter loading. This is
   // for reader-entry flows such as ContinueReadingCard; plain book-detail
   // navigation must stay on the detail page without starting chapter loading.
+  //
+  // Flow: httpGet(detailUrl) → book.detail → if loadFirstChapter:
+  //   book.toc(same HTML) → first chapter URL → dispatch chapter-load.
+  // yodu.org's detail page has the chapter list inline (no separate TOC page).
   static runBookDetail(bookId: string, loadFirstChapter: boolean = false): void {
     const source = BookSourceRegistry.getDefault();
+    const legadoSource = BookSourceRegistry.getDefaultLegadoSource();
     const url = BookSourceRegistry.buildDetailUrl(source, bookId);
-    ReaderEffects.httpGet(url).then((html) => {
-      const book = ReaderEffects.parseBookDetail(html, bookId, source);
-      ReaderUiStore.dispatch({ type: 'book-detail-success', book: book });
-      if (loadFirstChapter && book.chapterListUrl.length > 0) {
-        ReaderUiStore.dispatch({ type: 'chapter-load', chapterId: book.chapterListUrl });
+    ReaderEffects.httpGet(url).then(async (html) => {
+      const runtime = CoreRuntime.get();
+      const book: JsonObject = {};
+      book['bookId'] = bookId;
+      const data = await runtime.bookDetail(html, legadoSource, book);
+      const detail = ReaderEffects.mapBookDetail(data, bookId, source);
+      ReaderUiStore.dispatch({ type: 'book-detail-success', book: detail });
+      if (loadFirstChapter) {
+        const tocUrl = detail.chapterListUrl;
+        const tocHtml = tocUrl.length > 0
+          ? await ReaderEffects.httpGet(BookSourceRegistry.buildDetailUrl(source, tocUrl))
+          : html;
+        const variables = ReaderEffects.getVariables(data);
+        const tocData = await runtime.bookToc(tocHtml, legadoSource, bookId, variables);
+        const firstChapterUrl = ReaderEffects.getFirstChapterUrl(tocData);
+        if (firstChapterUrl.length > 0) {
+          ReaderUiStore.dispatch({
+            type: 'chapter-load',
+            chapterId: firstChapterUrl,
+            bookId: bookId,
+          });
+        }
       }
     }).catch((e: Error) => {
       ReaderUiStore.dispatch({
@@ -90,13 +238,16 @@ export class ReaderEffects {
   }
 
   // ── Chapter content ───────────────────────────────────────────────────
-  // chapterId is a full relative path (e.g. '/book/123/ch1.html') captured
-  // from the detail page's TOC link by the UI tap handler.
-  static runChapter(chapterId: string): void {
+  // chapterId is a full relative path (e.g. '/book/123/ch1.html') from
+  // book.toc's first chapter URL.
+  static runChapter(chapterId: string, bookId: string): void {
     const source = BookSourceRegistry.getDefault();
+    const legadoSource = BookSourceRegistry.getDefaultLegadoSource();
     const url = BookSourceRegistry.buildChapterUrl(source, chapterId);
-    ReaderEffects.httpGet(url).then((html) => {
-      const paragraphs = ReaderEffects.parseChapterContent(html);
+    ReaderEffects.httpGet(url).then(async (html) => {
+      const runtime = CoreRuntime.get();
+      const data = await runtime.chapterContent(html, legadoSource, bookId, chapterId);
+      const paragraphs = ReaderEffects.mapChapterContent(data);
       ReaderUiStore.dispatch({ type: 'chapter-success', chapterParagraphs: paragraphs });
     }).catch((e: Error) => {
       ReaderUiStore.dispatch({
@@ -142,81 +293,95 @@ export class ReaderEffects {
     });
   }
 
-  // ── Parsers (minimal host-side regex; Core replaces later) ────────────
+  // ── Result mappers (Core JsonObject → ArkTS state types) ──────────────
+  // Public so the pure-function mappers can be unit-tested directly in
+  // ReaderEffects.test.ets (no Host HTTP / Core runtime needed).
 
-  // Search result page: <a href="/book/xxx">title</a> rows.
-  // Each result also has an author line nearby.
-  static parseSearchResults(html: string, source: BookSourceTemplate): SearchResultEntry[] {
+  // Map Core book.search result → SearchResultEntry[].
+  // Core returns: { sourceId, books: [{ bookId, title, author?, ... }] }
+  static mapSearchResults(data: JsonObject, source: BookSourceTemplate): SearchResultEntry[] {
     const results: SearchResultEntry[] = [];
-    const linkRe = /<a[^>]*href="\/book\/[^"]*"[^>]*>([^<]+)<\/a>/g;
-    let m: RegExpExecArray | null;
-    const seen: Set<string> = new Set();
-    while ((m = linkRe.exec(html)) !== null) {
-      const title = m[1].trim();
-      const hrefMatch = m[0].match(/href="([^"]+)"/);
-      if (hrefMatch === null) continue;
-      const bookId = hrefMatch[1];
-      if (seen.has(bookId)) continue;
-      seen.add(bookId);
-      if (title.length === 0 || title.length > 80) continue;
-      results.push({
+    const booksValue = data['books'] as Object;
+    if (!Array.isArray(booksValue)) return results;
+    const books = booksValue as Object[];
+    for (const bookObj of books) {
+      const book = bookObj as JsonObject;
+      const title = ReaderEffects.getString(book, 'title');
+      const bookId = ReaderEffects.getString(book, 'bookId');
+      if (title.length === 0 || bookId.length === 0) continue;
+      const latestChapter = ReaderEffects.getString(book, 'lastChapter');
+      const entry: SearchResultEntry = {
         title: title,
-        author: ReaderEffects.extractNearby(html, m.index, /作者[：:]\s*([^<\s]+)/),
+        author: ReaderEffects.getString(book, 'author', '未知作者'),
         bookId: bookId,
         sourceName: source.name,
         sourceUrl: source.baseHost,
-      });
+        latestChapter: latestChapter,
+      };
+      results.push(entry);
       if (results.length >= 20) break;
     }
     return results;
   }
 
-  // Book detail page: <h1>title</h1>, 作者：xxx, class="intro" summary,
-  // 最新章节：xxx, and the first TOC link href.
-  static parseBookDetail(html: string, bookId: string, source: BookSourceTemplate): BookDetail {
-    const titleMatch = html.match(/<h1[^>]*>([^<]+)<\/h1>/);
-    const title = titleMatch !== null ? titleMatch[1].trim() : '未知书名';
-    const authorMatch = html.match(/作者[：:]\s*([^<\s]+)/);
-    const author = authorMatch !== null ? authorMatch[1].trim() : '未知作者';
-    const introMatch = html.match(/class="intro"[^>]*>([\s\S]*?)<\/div>/);
-    const summary = introMatch !== null
-      ? introMatch[1].replace(/<[^>]+>/g, '').trim().slice(0, 300)
-      : '';
-    const latestMatch = html.match(/最新章节[：:]\s*<a[^>]*>([^<]+)<\/a>/);
-    const latestChapter = latestMatch !== null ? latestMatch[1].trim() : '';
-    // Strip the latest-chapter section so its link is not mistaken for the
-    // first TOC entry, then find the first chapter link.
-    const htmlForChapterLink = html.replace(/最新章节[：:]\s*<a[^>]*>[^<]+<\/a>/, '');
-    const chapterLinkMatch = htmlForChapterLink.match(/<a[^>]*href="(\/book\/[^"]+\/[^"]+\.html)"/);
-    const chapterListUrl = chapterLinkMatch !== null ? chapterLinkMatch[1] : '';
-    return {
+  // Map Core book.detail result → BookDetail.
+  // Core returns: { sourceId, book: { bookId, title, author, ... }, tocUrl?, variables? }
+  static mapBookDetail(data: JsonObject, bookId: string, source: BookSourceTemplate): BookDetail {
+    const bookObj = data['book'] as Object;
+    const book: JsonObject = (bookObj !== null && bookObj !== undefined && typeof bookObj === 'object')
+      ? bookObj as JsonObject
+      : {} as JsonObject;
+    const coverUrl = ReaderEffects.getString(book, 'coverUrl');
+    const detail: BookDetail = {
       bookId: bookId,
-      title: title,
-      author: author,
-      summary: summary,
+      title: ReaderEffects.getString(book, 'title', '未知书名'),
+      author: ReaderEffects.getString(book, 'author', '未知作者'),
+      coverUrl: coverUrl,
+      summary: ReaderEffects.getString(book, 'intro', ''),
       sourceName: source.name,
       sourceUrl: source.baseHost,
-      latestChapter: latestChapter,
-      chapterListUrl: chapterListUrl,
+      latestChapter: ReaderEffects.getString(book, 'lastChapter', ''),
+      chapterListUrl: ReaderEffects.getString(data, 'tocUrl', ''),
     };
+    return detail;
   }
 
-  // Chapter page: <div id="content">…</div>. Split into paragraphs on <br><br>
-  // or <p> tags. Strip remaining HTML tags.
-  static parseChapterContent(html: string): string[] {
-    const contentMatch = html.match(/<div[^>]*id="content"[^>]*>([\s\S]*?)<\/div>/);
-    if (contentMatch === null) return [];
-    const raw = contentMatch[1];
-    // Normalize <br><br> and <p>…</p> into paragraph breaks.
-    const normalized = raw
-      .replace(/<br\s*\/?>(\s*<br\s*\/?>)+/g, '\u0001')
-      .replace(/<\/p>\s*<p[^>]*>/g, '\u0001')
+  // Extract first chapter URL from Core book.toc result.
+  // Core returns: { sourceId, bookId, toc: [{ index, title, url, variables? }] }
+  static getFirstChapterUrl(data: JsonObject): string {
+    const tocValue = data['toc'] as Object;
+    if (!Array.isArray(tocValue)) return '';
+    const toc = tocValue as Object[];
+    if (toc.length === 0) return '';
+    const firstEntry = toc[0] as JsonObject;
+    return ReaderEffects.getString(firstEntry, 'url', '');
+  }
+
+  // Extract variables from Core book.detail result for passing to book.toc.
+  static getVariables(data: JsonObject): JsonObject | undefined {
+    const v = data['variables'] as Object;
+    if (v !== null && v !== undefined && typeof v === 'object' && !Array.isArray(v)) {
+      return v as JsonObject;
+    }
+    return undefined;
+  }
+
+  // Map Core chapter.content result → paragraphs[].
+  // Core returns: { sourceId, bookId, chapterTitle, content (string), via }
+  // Content may be clean text with \n separators, or HTML with <p>/<br> tags.
+  static mapChapterContent(data: JsonObject): string[] {
+    const contentRaw = data['content'] as Object;
+    const contentStr: string = typeof contentRaw === 'string' ? contentRaw : '';
+    if (contentStr.length === 0) return [];
+    const normalized = contentStr
+      .replace(/<br\s*\/?>(\s*<br\s*\/?>)+/g, '\n')
+      .replace(/<\/p>\s*<p[^>]*>/g, '\n')
       .replace(/<p[^>]*>/g, '')
-      .replace(/<\/p>/g, '\u0001');
-    const parts = normalized.split('\u0001');
+      .replace(/<\/p>/g, '\n');
+    const lines = normalized.split('\n');
     const paragraphs: string[] = [];
-    for (const p of parts) {
-      const text = p.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').trim();
+    for (const line of lines) {
+      const text = line.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').trim();
       if (text.length > 0) {
         paragraphs.push(text);
       }
@@ -224,13 +389,9 @@ export class ReaderEffects {
     return paragraphs;
   }
 
-  // Helper: search a regex in a window around an anchor offset, to pull
-  // metadata (author) near a search-result link.
-  private static extractNearby(html: string, anchor: number, re: RegExp): string {
-    const start = Math.max(0, anchor - 400);
-    const end = Math.min(html.length, anchor + 400);
-    const slice = html.slice(start, end);
-    const m = slice.match(re);
-    return m !== null ? m[1].trim() : '未知作者';
+  // ── JsonObject helpers ────────────────────────────────────────────────
+  static getString(data: JsonObject, key: string, defaultValue: string = ''): string {
+    const v = data[key] as Object;
+    return typeof v === 'string' ? v : defaultValue;
   }
 }

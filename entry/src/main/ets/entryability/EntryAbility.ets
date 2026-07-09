@@ -10,6 +10,7 @@ import AbilityConstant from '@ohos.app.ability.AbilityConstant';
 import window from '@ohos.window';
 import display from '@ohos.display';
 import fs from '@ohos.file.fs';
+import font from '@ohos.font';
 import util from '@ohos.util';
 import zlib from '@ohos.zlib';
 import { ReaderUiStore } from '../ui/store/ReaderUiStore';
@@ -42,6 +43,7 @@ import {
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
+    this.registerReaderFonts();
     ReaderUiStore.init();
     const params = want.parameters ?? {};
     // Seed demo fallback insets so the first frame approximates safe-area
@@ -852,9 +854,22 @@ export default class EntryAbility extends UIAbility {
     }
   }
 
+  private registerReaderFonts(): void {
+    try {
+      font.registerFont({
+        familyName: 'Noto Serif CJK SC',
+        familySrc: $rawfile('font/NotoSerifCJKsc-Regular.otf'),
+      });
+      console.info('[EntryAbility] registered Noto Serif CJK SC font');
+    } catch (e) {
+      console.info('[EntryAbility] register Noto Serif CJK SC font failed: ' + e);
+    }
+  }
+
   async onWindowStageCreate(windowStage: window.WindowStage): Promise<void> {
     try {
       const win = await windowStage.getMainWindow();
+      this.registerReaderFontsForWindow(win);
       this.applyViewportMetrics();
       // Immersive: window layout extends behind the status / navigation bars.
       await win.setWindowLayoutFullScreen(true);
@@ -885,6 +900,18 @@ export default class EntryAbility extends UIAbility {
       windowStage.loadContent('pages/Index');
     } catch (e) {
       // fatal: no page to render; nothing to recover to
+    }
+  }
+
+  private registerReaderFontsForWindow(win: window.Window): void {
+    try {
+      win.getUIContext().getFont().registerFont({
+        familyName: 'Noto Serif CJK SC',
+        familySrc: $rawfile('font/NotoSerifCJKsc-Regular.otf'),
+      });
+      console.info('[EntryAbility] registered Noto Serif CJK SC font for UIContext');
+    } catch (e) {
+      console.info('[EntryAbility] register Noto Serif CJK SC font for UIContext failed: ' + e);
     }
   }
 

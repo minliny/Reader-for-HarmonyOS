@@ -25,6 +25,31 @@ export type Overlay =
   | 'local-import' | 'dialog' | 'sheet' | 'toast';
 export type ActiveSession = '' | 'reading' | 'tts' | 'auto-page';
 
+// ── Batch 1 session/TTS/settings types ──
+export type TtsPlaybackState = 'idle' | 'playing' | 'paused';
+export type TtsScope = 'chapter' | 'full';
+export type TtsTimer = 'off' | '5min' | '10min' | '15min' | '30min' | 'chapterEnd';
+export type TocMode = 'directory' | 'bookmark';
+export type ReaderToggleKey =
+  | 'autoPage' | 'volumePage' | 'landscapeLock' | 'keepScreenOn'
+  | 'statusInfo' | 'hapticFeedback' | 'cacheNext';
+export type ReaderSettingOptionKey = 'pageMode' | 'tapMode' | 'pageAnimation';
+
+// ── Batch 4 bookshelf/discover/source-switch types ──
+export type BookshelfView = 'cover' | 'list';
+
+export interface BookshelfFilterState {
+  view: BookshelfView;
+  group: string;
+  sort: string;
+  filters: string[];  // 选中的筛选标签
+}
+
+export interface DiscoverFilterState {
+  filters: string[];
+  sort: string;
+}
+
 export interface ReaderError {
   code: string;
   message: string;
@@ -33,6 +58,46 @@ export interface ReaderError {
 
 export interface RouteEntry {
   id: RouteId;
+}
+
+// ArkTS forbids Record<K, V> aliases as interface field types (warns), so we
+// declare concrete interfaces for the toggle / setting-option maps.
+export interface ReaderTogglesMap {
+  autoPage: boolean;
+  volumePage: boolean;
+  landscapeLock: boolean;
+  keepScreenOn: boolean;
+  statusInfo: boolean;
+  hapticFeedback: boolean;
+  cacheNext: boolean;
+}
+
+export interface ReaderSettingOptionsMap {
+  pageMode: string;
+  tapMode: string;
+  pageAnimation: string;
+}
+
+export interface TtsSessionState {
+  playback: TtsPlaybackState;
+  rate: number;       // 0.5 - 2.0
+  voice: string;      // voice id
+  scope: TtsScope;
+  timer: TtsTimer;
+  currentSegment: number;
+  totalSegments: number;
+}
+
+export interface AutoPageSessionState {
+  playing: boolean;
+  countdownSeconds: number;  // remaining seconds in the current cycle
+  intervalSeconds: number;   // total cycle length
+}
+
+export interface SelectionState {
+  visible: boolean;
+  action: string;
+  selectedText: string;
 }
 
 export interface ReaderUiState {
@@ -65,6 +130,19 @@ export interface ReaderUiState {
   searchResults: SearchResultEntry[];
   currentBook: BookDetail | null;
   chapterContent: string[];
+  // ── Batch 1 session/TTS/settings fields ──
+  ttsSession: TtsSessionState;
+  autoPageSession: AutoPageSessionState;
+  brightness: number;            // 0 - 100
+  brightnessAuto: boolean;
+  tocMode: TocMode;
+  readerToggles: ReaderTogglesMap;
+  readerSettingOptions: ReaderSettingOptionsMap;
+  selection: SelectionState;
+  // ── Batch 4 bookshelf/discover/source-switch fields ──
+  bookshelfFilter: BookshelfFilterState;
+  discoverFilter: DiscoverFilterState;
+  sourceSelection: string[];  // 选中的书源 id 列表
 }
 
 // UiEvent is a tagged record; the reducer switches on `type` and reads the relevant
@@ -96,6 +174,31 @@ export interface UiEvent {
   // chapter-load. Normal book-detail routes must not leave the detail page
   // in a chapter loading state.
   loadFirstChapter?: boolean;
+  // ── Batch 1 session/TTS/settings event fields ──
+  session?: ActiveSession;
+  ttsPlayback?: TtsPlaybackState;
+  ttsRate?: number;
+  ttsVoice?: string;
+  ttsScope?: TtsScope;
+  ttsTimer?: TtsTimer;
+  toggleKey?: ReaderToggleKey;
+  toggleValue?: boolean;
+  optionKey?: ReaderSettingOptionKey;
+  optionValue?: string;
+  countdownSeconds?: number;
+  // ── Batch 2 reader control event fields ──
+  tocMode?: TocMode;
+  // ── Batch 3 selection event fields ──
+  selectionAction?: string;
+  // ── Batch 4 bookshelf/discover/source-switch event fields ──
+  bookshelfView?: BookshelfView;
+  bookshelfGroup?: string;
+  bookshelfSort?: string;
+  bookshelfFilterToggle?: string;  // 要切换的筛选标签
+  discoverFilterToggle?: string;
+  discoverSort?: string;
+  sourceId?: string;  // 换源时单个书源 id
+  bookAction?: string;  // 'branch' | 'delete'
 }
 
 // ── Minimal visible reading chain data types ──
