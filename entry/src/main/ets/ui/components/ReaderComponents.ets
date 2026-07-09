@@ -19,10 +19,11 @@
 // inset.
 import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
-import { RadiusTokens, ZIndexTokens } from '../../contract/generated/DimensionTokens';
+import { SpacingTokens, RadiusTokens, ZIndexTokens } from '../../contract/generated/DimensionTokens';
 import { SafeAreaAdapter } from '../adapters/SafeAreaAdapter';
 import { ViewportAdapter } from '../adapters/ViewportAdapter';
 import { InteractionDebugAdapter } from '../adapters/InteractionDebugAdapter';
+import { TokenAdapter } from '../adapters/TokenAdapter';
 import { MotionAdapter } from '../adapters/MotionAdapter';
 import { ReaderTypography } from '../tokens/ReaderTypography';
 import { ReaderUiStore } from '../store/ReaderUiStore';
@@ -85,8 +86,8 @@ export struct ReadingBackgroundLayer {
         .linearGradient({
           angle: 180,
           colors: [
-            [this.theme === 'night' ? 'rgba(60,80,110,0.12)' : 'rgba(255,250,240,0.5)', 0],
-            ['rgba(255,250,240,0)', 1.0],
+            [this.theme === 'night' ? TokenAdapter.colorWithAlpha(ColorTokens.primaryNight, 0.12) : TokenAdapter.colorWithAlpha(ColorTokens.paperBright, 0.5), 0],
+            [TokenAdapter.colorWithAlpha(ColorTokens.paperBright, 0), 1.0],
           ],
         })
       // 四周暗角 vignette：中心透明，四周加深（B L2500 radial-gradient 暗角）。
@@ -97,8 +98,8 @@ export struct ReadingBackgroundLayer {
           center: ['50%', '50%'],
           radius: '75%',
           colors: [
-            ['rgba(0,0,0,0)', 0.55],
-            [this.theme === 'night' ? 'rgba(0,0,0,0.45)' : 'rgba(89,70,50,0.14)', 1.0],
+            [TokenAdapter.colorWithAlpha(ColorTokens.ink, 0), 0.55],
+            [this.theme === 'night' ? TokenAdapter.colorWithAlpha(ColorTokens.ink, 0.45) : TokenAdapter.colorWithAlpha(ColorTokens.muted, 0.14), 1.0],
           ],
         })
       // 夜读极光 signature moment：顶部紫蓝渐变光晕（B L2504-2510 ::before 极光）。
@@ -109,10 +110,10 @@ export struct ReadingBackgroundLayer {
           .linearGradient({
             angle: 135,
             colors: [
-              ['rgba(90,110,160,0.18)', 0],
-              ['rgba(70,90,140,0.12)', 0.3],
-              ['rgba(50,70,120,0.06)', 0.6],
-              ['rgba(0,0,0,0)', 1.0],
+              [TokenAdapter.colorWithAlpha(ColorTokens.primaryNight, 0.18), 0],
+              [TokenAdapter.colorWithAlpha(ColorTokens.primaryNight, 0.12), 0.3],
+              [TokenAdapter.colorWithAlpha(ColorTokens.primaryNight, 0.06), 0.6],
+              [TokenAdapter.colorWithAlpha(ColorTokens.ink, 0), 1.0],
             ],
           })
       }
@@ -122,7 +123,7 @@ export struct ReadingBackgroundLayer {
           Circle()
             .width(2)
             .height(2)
-            .fill('rgba(200,220,255,0.6)')
+            .fill(TokenAdapter.colorWithAlpha(ColorTokens.primaryNight, 0.6))
             .position({ x: pt[0], y: pt[1] })
         }, (pt: number[], i: number) => `star-${i}`)
       }
@@ -431,7 +432,7 @@ export struct ReadingTextFlow {
               }
               .width(this.textLayerWidth())
               .height('100%')
-              .padding({ right: pageIndex === this.horizontalPages().length - 1 ? 0 : 24 })
+              .padding({ right: pageIndex === this.horizontalPages().length - 1 ? 0 : SpacingTokens.lg })
             }, (page: string[], pageIndex: number) => `${pageIndex}`)
           }
           .height('100%')
@@ -618,7 +619,7 @@ export struct ReaderTopArea {
           }
           .width('100%')
           .height(54)
-          .padding({ left: 12, right: 12 })
+          .padding({ left: SpacingTokens.sm, right: SpacingTokens.sm })
           .border({ width: 1, color: ColorTokens.border })
           .borderRadius(DemoAliasTokens.radiusXl)
           .backgroundColor(DemoAliasTokens.surface)
@@ -629,7 +630,7 @@ export struct ReaderTopArea {
         .height(54)
       }
       .width('100%')
-      .padding({ left: 14, right: 14 })
+      .padding({ left: SpacingTokens.cardPadding, right: SpacingTokens.cardPadding })
       .margin({ top: this.safeAreaTop + 18 })
     }
     .width('100%')
@@ -759,7 +760,7 @@ export struct SessionCapsule {
               });
             })
         }
-        .padding({ left: 10, right: 10, top: 5, bottom: 5 })
+        .padding({ left: SpacingTokens.xs, right: SpacingTokens.xs, top: SpacingTokens.xs, bottom: SpacingTokens.xs })
         .borderRadius(RadiusTokens.control)
         .backgroundColor(DemoAliasTokens.surface)
         .border({ width: 1, color: ColorTokens.border })
@@ -775,7 +776,7 @@ export struct SessionCapsule {
       }
       .width('100%')
       .height('100%')
-      .padding({ right: 24, bottom: this.safeAreaBottom + 22 })
+      .padding({ right: SpacingTokens.lg, bottom: this.safeAreaBottom + SpacingTokens.lg })
       .hitTestBehavior(HitTestMode.Transparent)
     }
   }

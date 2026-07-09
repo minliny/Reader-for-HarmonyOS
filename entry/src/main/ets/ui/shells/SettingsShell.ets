@@ -6,6 +6,7 @@
 // (safeAreaTop) so BackTopBar clears the status bar, and the scroll body pads its
 // bottom with safeAreaBottom so the last row clears the navigation bar.
 import { ColorTokens } from '../../contract/generated/ColorTokens';
+import { TokenAdapter } from '../adapters/TokenAdapter';
 import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
 import { SpacingTokens, ZIndexTokens } from '../../contract/generated/DimensionTokens';
 import { SafeAreaAdapter } from '../adapters/SafeAreaAdapter';
@@ -126,9 +127,9 @@ export struct SettingsShell {
       .linearGradient({
         angle: 180,
         colors: [
-          ['rgba(249,240,230,0)', 0],
-          ['rgba(249,240,230,0.96)', 0.42],
-          ['rgba(249,240,230,1)', 1.0]
+          [TokenAdapter.colorWithAlpha(ColorTokens.bottomBarBg, 0), 0],
+          [TokenAdapter.colorWithAlpha(ColorTokens.bottomBarBg, 0.96), 0.42],
+          [TokenAdapter.colorWithAlpha(ColorTokens.bottomBarBg, 1.0), 1.0]
         ]
       })
       .zIndex(ZIndexTokens.mainNav)
@@ -145,9 +146,9 @@ export struct SettingsShell {
       .linearGradient({
         angle: 180,
         colors: [
-          ['rgba(249,240,230,0)', 0],
-          ['rgba(249,240,230,0.96)', 0.42],
-          ['rgba(249,240,230,1)', 1.0]
+          [TokenAdapter.colorWithAlpha(ColorTokens.bottomBarBg, 0), 0],
+          [TokenAdapter.colorWithAlpha(ColorTokens.bottomBarBg, 0.96), 0.42],
+          [TokenAdapter.colorWithAlpha(ColorTokens.bottomBarBg, 1.0), 1.0]
         ]
       })
       .zIndex(ZIndexTokens.mainNav)
@@ -166,9 +167,9 @@ export struct SettingsShell {
       .linearGradient({
         angle: 180,
         colors: [
-          ['rgba(249,240,230,0)', 0],
-          ['rgba(249,240,230,0.96)', 0.42],
-          ['rgba(249,240,230,1)', 1.0]
+          [TokenAdapter.colorWithAlpha(ColorTokens.bottomBarBg, 0), 0],
+          [TokenAdapter.colorWithAlpha(ColorTokens.bottomBarBg, 0.96), 0.42],
+          [TokenAdapter.colorWithAlpha(ColorTokens.bottomBarBg, 1.0), 1.0]
         ]
       })
       .zIndex(ZIndexTokens.mainNav)

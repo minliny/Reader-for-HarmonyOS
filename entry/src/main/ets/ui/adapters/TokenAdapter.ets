@@ -14,6 +14,26 @@ export class TokenAdapter {
     return e ? TokenAdapter.parseArgb(e.value) : '';
   }
 
+  // 从 hex 颜色和透明度构造 ARGB hex 字符串（用于 linearGradient 等需要 alpha 通道的场景）。
+  // 接受 #RRGGBB 或 #AARRGGBB；输出 #AARRGGBB。
+  static colorWithAlpha(hex: string, alpha: number): string {
+    const v = hex.trim();
+    let rgb: string;
+    if (v.startsWith('#')) {
+      if (v.length === 9) {
+        rgb = v.substring(3);
+      } else if (v.length === 7) {
+        rgb = v.substring(1);
+      } else {
+        return ColorTokens.ink;
+      }
+    } else {
+      return ColorTokens.ink;
+    }
+    const a = Math.round(alpha * 255).toString(16).padStart(2, '0').toUpperCase();
+    return '#' + a + rgb.toUpperCase();
+  }
+
   // ── Numeric tokens (spacing / size / radius / elevation / z-index) ──
   static spacing(shortName: string): number {
     return TokenAdapter.numberToken('space', shortName);
