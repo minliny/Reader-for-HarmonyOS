@@ -503,7 +503,7 @@ export struct ReaderControlSheet {
             bottomLeft: this.wideControlDock() ? 0 : DemoAliasTokens.radiusXl,
             bottomRight: this.wideControlDock() ? 0 : DemoAliasTokens.radiusXl,
           })
-          .backgroundColor(DemoAliasTokens.surface)
+          .backgroundColor(ColorTokens.floatingControlBg)
           .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
         }
         .width('100%')
@@ -856,7 +856,7 @@ export struct ReaderQuickPanelShell {
           bottomLeft: this.wideControlDock() ? 0 : DemoAliasTokens.radiusXl,
           bottomRight: this.wideControlDock() ? 0 : DemoAliasTokens.radiusXl,
         })
-        .backgroundColor(DemoAliasTokens.surface)
+        .backgroundColor(ColorTokens.floatingControlBg)
         .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
       }
       .width(this.sheetWidth())
@@ -1102,7 +1102,7 @@ struct ReaderModulePanelShell {
           bottomLeft: this.wideControlDock() ? 0 : DemoAliasTokens.radiusXl,
           bottomRight: this.wideControlDock() ? 0 : DemoAliasTokens.radiusXl,
         })
-        .backgroundColor(DemoAliasTokens.surface)
+        .backgroundColor(ColorTokens.floatingControlBg)
         .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
       }
       .width(this.sheetWidth())

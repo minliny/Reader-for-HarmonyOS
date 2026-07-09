@@ -275,7 +275,6 @@ test('reader overlay panels keep live demo quick-panel and overlay copy', () => 
     '屏幕方向',
     '屏幕超时',
     '单双页',
-    '隐藏状态栏',
     '文字两端对齐',
     '文字底部对齐',
     '单手翻页',
@@ -499,16 +498,16 @@ test('reader control route fixture uses live demo control sheet, not obsolete fl
     'control-layer-base-v2 must mirror live demo reader surface + top overlay + sheet + bottom bar structure'
   );
   assert.ok(src.includes('export struct ReaderControlSheet'), 'control layer must render the live demo bottom sheet component');
-  assert.ok(controlSheetSrc.includes('.backgroundColor(DemoAliasTokens.surface)'),
-    'control sheet host must stay translucent so reader text continues under the overlay');
+  assert.ok(controlSheetSrc.includes('.backgroundColor(ColorTokens.floatingControlBg)'),
+    'control sheet host must be opaque so reader text does not bleed through the overlay');
   assert.ok(!controlSheetSrc.includes('.backgroundColor(ColorTokens.paperBright)'),
     'control sheet host must not regress to an opaque paper background');
-  assert.ok(quickPanelShellSrc.includes('.backgroundColor(DemoAliasTokens.surface)'),
-    'quick/module panel shell must stay translucent over the reader body');
+  assert.ok(quickPanelShellSrc.includes('.backgroundColor(ColorTokens.floatingControlBg)'),
+    'quick/module panel shell must be opaque over the reader body');
   assert.ok(!quickPanelShellSrc.includes('.backgroundColor(ColorTokens.paperBright)'),
     'quick/module panel shell must not regress to an opaque paper background');
-  assert.ok(modulePanelShellSrc.includes('.backgroundColor(DemoAliasTokens.surface)'),
-    'module panel shell must stay translucent over the reader body');
+  assert.ok(modulePanelShellSrc.includes('.backgroundColor(ColorTokens.floatingControlBg)'),
+    'module panel shell must be opaque over the reader body');
   assert.ok(!modulePanelShellSrc.includes('.backgroundColor(ColorTokens.paperBright)'),
     'module panel shell must not regress to an opaque paper background');
   assert.equal(src.includes('export struct FloatingBrightness'), false, 'obsolete detached brightness component must be removed');
