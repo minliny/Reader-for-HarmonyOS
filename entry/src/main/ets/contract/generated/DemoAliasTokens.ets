@@ -3,7 +3,7 @@
 // NOT contract tokens; demo-specific values needed for 1:1 demo-port fidelity.
 
 export class DemoAliasTokens {
-  // Colors (demo --fd-surface / --fd-on-primary; the rest alias --reader-ds-*)
+  // Colors (demo --fd-surface / --fd-on-primary; the rest alias --fd-ds-*)
   static readonly surface: string = '#E6FFFCF8';    // rgba(255,252,248,0.9)
   static readonly onPrimary: string = '#FFFFFAF4'; // #fffaf4
   // Shadow colors (demo --fd-soft-shadow / --fd-shadow as rgba; ArkUI shadow takes a color)

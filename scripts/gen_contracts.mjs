@@ -92,7 +92,7 @@ function toPxNumber(value) {
   throw new Error(`Cannot parse numeric token value: ${value}`);
 }
 
-// snake_case name for color.json: --reader-ds-color-paper -> reader_ds_color_paper
+// snake_case name for color.json: --fd-ds-color-paper -> reader_ds_color_paper
 function snakeArg(name) {
   return name.replace(/^--/, '').replace(/-/g, '_');
 }
@@ -115,7 +115,7 @@ const SHADOW = byCat('shadow');
 // ── ColorTokens.ets ───────────────────────────────────────────────────────
 function genColorTokens() {
   const lines = COLORS.map((t) => {
-    const suffix = stripPrefix(t.name, '--reader-ds-color-');
+    const suffix = stripPrefix(t.name, '--fd-ds-color-');
     return `  static readonly ${camel(suffix)}: string = '${toArgb(t.value)}';`;
   });
   return `${HEADER}\nexport class ColorTokens {\n${lines.join('\n')}\n}\n`;
@@ -123,7 +123,7 @@ function genColorTokens() {
 
 // ── color.json (base + dark) ──────────────────────────────────────────────
 function genColorJson() {
-  const paperArgb = toArgb(COLORS.find((c) => c.name === '--reader-ds-color-paper').value);
+  const paperArgb = toArgb(COLORS.find((c) => c.name === '--fd-ds-color-paper').value);
   const entries = [
     { name: 'start_window_background', value: paperArgb },
     ...COLORS.map((t) => ({ name: snakeArg(t.name), value: toArgb(t.value) })),
@@ -142,18 +142,18 @@ function genClassFor(category, prefix, valueFn) {
   return lines.join('\n');
 }
 function genDimensionTokens() {
-  const spacing = genClassFor(SPACING, '--reader-ds-space-', toPxNumber);
-  const size = genClassFor(SIZE, '--reader-ds-size-', toPxNumber);
-  const radius = genClassFor(RADIUS, '--reader-ds-radius-', toPxNumber);
-  const elevation = genClassFor(ELEVATION, '--reader-ds-elevation-', toPxNumber);
-  const zindex = genClassFor(ZINDEX, '--reader-ds-z-', toPxNumber);
+  const spacing = genClassFor(SPACING, '--fd-ds-space-', toPxNumber);
+  const size = genClassFor(SIZE, '--fd-ds-size-', toPxNumber);
+  const radius = genClassFor(RADIUS, '--fd-ds-radius-', toPxNumber);
+  const elevation = genClassFor(ELEVATION, '--fd-ds-elevation-', toPxNumber);
+  const zindex = genClassFor(ZINDEX, '--fd-ds-z-', toPxNumber);
   return `${HEADER}\nexport class SpacingTokens {\n${spacing}\n}\n\nexport class SizeTokens {\n${size}\n}\n\nexport class RadiusTokens {\n${radius}\n}\n\nexport class ElevationTokens {\n${elevation}\n}\n\nexport class ZIndexTokens {\n${zindex}\n}\n`;
 }
 
 // ── TextConstraintTokens.ets ──────────────────────────────────────────────
 function genTextConstraintTokens() {
   const lines = TEXT_CONSTRAINT.map((t) => {
-    const suffix = stripPrefix(t.name, '--reader-ds-text-');
+    const suffix = stripPrefix(t.name, '--fd-ds-text-');
     const v = t.value.trim();
     if (/^\d+$/.test(v)) return `  static readonly ${camel(suffix)}: number = ${v};`;
     return `  static readonly ${camel(suffix)}: string = '${esc(v)}';`;
@@ -164,13 +164,16 @@ function genTextConstraintTokens() {
 // ── TypeTokens.ets ────────────────────────────────────────────────────────
 function genTypeTokens() {
   const typeLines = TYPE.map((t) => {
-    const suffix = stripPrefix(t.name, '--reader-ds-type-');
+    const suffix = stripPrefix(t.name, '--fd-ds-type-');
     return `  static readonly ${camel(suffix)}: number = ${toPxNumber(t.value)};`;
   });
-  // Font tokens are iOS-oriented in the contract; map to HarmonyOS-available stacks.
+  // Keep Reader UI's serif intent stable on HarmonyOS by using the bundled
+  // Noto Serif CJK font registered from EntryAbility. ArkUI expects a concrete
+  // native family name here; the original contract fallback stack remains in
+  // TokenRegistry for audit / cross-platform comparison.
   const fontLines = [
     `  static readonly sans: string = '"HarmonyOS Sans", "PingFang SC", "Microsoft YaHei", sans-serif';`,
-    `  static readonly serif: string = '"Noto Serif CJK SC", "Source Han Serif SC", serif';`,
+    `  static readonly serif: string = 'Noto Serif CJK SC';`,
   ];
   return `${HEADER}\nexport class TypeTokens {\n${typeLines.join('\n')}\n}\n\nexport class FontTokens {\n${fontLines.join('\n')}\n}\n`;
 }
@@ -178,11 +181,11 @@ function genTypeTokens() {
 // ── MotionTokens.ets ─────────────────────────────────────────────────────
 function genMotionTokens() {
   const durLines = MOTION_DUR.map((t) => {
-    const suffix = stripPrefix(t.name, '--reader-ds-motion-duration-');
+    const suffix = stripPrefix(t.name, '--fd-ds-motion-duration-');
     return `  static readonly ${camel(suffix)}: number = ${toPxNumber(t.value)};`;
   });
   const easeLines = MOTION_EASE.map((t) => {
-    const suffix = stripPrefix(t.name, '--reader-ds-motion-easing-');
+    const suffix = stripPrefix(t.name, '--fd-ds-motion-easing-');
     return `  static readonly ${camel(suffix)}: string = '${esc(t.value)}';`;
   });
   return `${HEADER}\nexport class MotionDurationTokens {\n${durLines.join('\n')}\n}\n\nexport class MotionEasingTokens {\n${easeLines.join('\n')}\n}\n`;
@@ -191,7 +194,7 @@ function genMotionTokens() {
 // ── ShadowTokens.ets ──────────────────────────────────────────────────────
 function genShadowTokens() {
   const lines = SHADOW.map((t) => {
-    const suffix = stripPrefix(t.name, '--reader-ds-shadow-');
+    const suffix = stripPrefix(t.name, '--fd-ds-shadow-');
     return `  static readonly ${camel(suffix)}: string = '${esc(t.value)}';`;
   });
   return `${HEADER}\nexport class ShadowTokens {\n${lines.join('\n')}\n}\n`;
@@ -348,13 +351,13 @@ function genMotionSpecTable() {
 
 // ── DemoAliasTokens.ets (demo --fd-* aliases not in contract) ─────────────
 // Ported from frontend-demo/styles/00-foundation.css. These capture demo-specific
-// values (surface tint, on-primary, radius lg/xl) that have no 1:1 --reader-ds-*
+// values (surface tint, on-primary, radius lg/xl) that have no 1:1 --fd-ds-*
 // contract token, so 1:1 demo ports can reference them by name.
 function genDemoAliasTokens() {
   const hdr = '// GENERATED by scripts/gen_contracts.mjs — DO NOT EDIT BY HAND.\n// Source: ../Reader UI/frontend-demo/styles/00-foundation.css (--fd-* aliases).\n// NOT contract tokens; demo-specific values needed for 1:1 demo-port fidelity.\n';
   return `${hdr}
 export class DemoAliasTokens {
-  // Colors (demo --fd-surface / --fd-on-primary; the rest alias --reader-ds-*)
+  // Colors (demo --fd-surface / --fd-on-primary; the rest alias --fd-ds-*)
   static readonly surface: string = '#E6FFFCF8';    // rgba(255,252,248,0.9)
   static readonly onPrimary: string = '#FFFFFAF4'; // #fffaf4
   // Shadow colors (demo --fd-soft-shadow / --fd-shadow as rgba; ArkUI shadow takes a color)

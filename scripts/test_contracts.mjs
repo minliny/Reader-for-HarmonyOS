@@ -413,6 +413,8 @@ test('reader text render settings are reducer-backed, not static panel copy', ()
   const reducer = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderReducer.ets'));
   const store = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderUiStore.ets'));
   const overlay = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderOverlayComponents.ets'));
+  const entryAbility = read(path.join(REPO, 'entry/src/main/ets/entryability/EntryAbility.ets'));
+  const typeTokens = read(path.join(REPO, 'entry/src/main/ets/contract/generated/TypeTokens.ets'));
   for (const field of [
     'fontSize: number',
     'lineHeight: number',
@@ -451,6 +453,21 @@ test('reader text render settings are reducer-backed, not static panel copy', ()
     'appearance steppers must dispatch render metric changes');
   assert.ok(overlay.includes("ReaderUiStore.dispatch({ type: 'set-reader-font-family'"),
     'font choices must dispatch font-family changes');
+  assert.ok(fs.existsSync(path.join(REPO, 'entry/src/main/resources/rawfile/font/NotoSerifCJKsc-Regular.otf')),
+    'bundled reader serif font must be packaged as a rawfile resource');
+  assert.ok(entryAbility.includes("familyName: 'Noto Serif CJK SC'"),
+    'EntryAbility must register the bundled reader serif font family');
+  assert.ok(entryAbility.includes("$rawfile('font/NotoSerifCJKsc-Regular.otf')"),
+    'EntryAbility must register the packaged rawfile font, not rely on system serif availability');
+  assert.ok(entryAbility.includes('getUIContext().getFont().registerFont'),
+    'EntryAbility must register the reader serif font in the active ArkUI UIContext');
+  assert.ok(typeTokens.includes("Noto Serif CJK SC"),
+    'FontTokens.serif must use the registered reader serif family');
+  assert.ok(!typeTokens.includes('"Songti SC"') && !typeTokens.includes('"STSong"'),
+    'FontTokens.serif must be a concrete ArkUI family, not a CSS fallback list');
+  const tokenRegistry = read(path.join(REPO, 'entry/src/main/ets/contract/generated/TokenRegistry.ets'));
+  assert.ok(tokenRegistry.includes('Songti SC') && tokenRegistry.includes('STSong'),
+    'TokenRegistry must preserve the Reader UI demo serif fallback stack for audit');
   for (const staticCopy of [
     "ReaderLiveStepperRow({ label: '字号', value: '18' })",
     "ReaderLiveStepperRow({ label: '行距', value: '1.96'",
@@ -468,6 +485,9 @@ test('reader control route fixture uses live demo control sheet, not obsolete fl
   const VS = readJson('view-state.fixtures.json');
   const src = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderOverlayComponents.ets'));
   const readerSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderComponents.ets'));
+  const controlSheetSrc = src.slice(src.indexOf('export struct ReaderControlSheet'), src.indexOf('// ── Control bottom bar'));
+  const quickPanelShellSrc = src.slice(src.indexOf('export struct ReaderQuickPanelShell'), src.indexOf('struct ReaderModulePanelShell'));
+  const modulePanelShellSrc = src.slice(src.indexOf('struct ReaderModulePanelShell'), src.indexOf('export struct ReaderDirectoryPanel'));
   const byRoute = (routeId) => {
     const entry = VS.find((e) => e.routeId === routeId && e.pageState === 'default');
     assert.ok(entry, `${routeId}/default fixture missing`);
@@ -479,6 +499,18 @@ test('reader control route fixture uses live demo control sheet, not obsolete fl
     'control-layer-base-v2 must mirror live demo reader surface + top overlay + sheet + bottom bar structure'
   );
   assert.ok(src.includes('export struct ReaderControlSheet'), 'control layer must render the live demo bottom sheet component');
+  assert.ok(controlSheetSrc.includes('.backgroundColor(DemoAliasTokens.surface)'),
+    'control sheet host must stay translucent so reader text continues under the overlay');
+  assert.ok(!controlSheetSrc.includes('.backgroundColor(ColorTokens.paperBright)'),
+    'control sheet host must not regress to an opaque paper background');
+  assert.ok(quickPanelShellSrc.includes('.backgroundColor(DemoAliasTokens.surface)'),
+    'quick/module panel shell must stay translucent over the reader body');
+  assert.ok(!quickPanelShellSrc.includes('.backgroundColor(ColorTokens.paperBright)'),
+    'quick/module panel shell must not regress to an opaque paper background');
+  assert.ok(modulePanelShellSrc.includes('.backgroundColor(DemoAliasTokens.surface)'),
+    'module panel shell must stay translucent over the reader body');
+  assert.ok(!modulePanelShellSrc.includes('.backgroundColor(ColorTokens.paperBright)'),
+    'module panel shell must not regress to an opaque paper background');
   assert.equal(src.includes('export struct FloatingBrightness'), false, 'obsolete detached brightness component must be removed');
   assert.equal(src.includes('export struct FloatingQuickActions'), false, 'obsolete detached quick actions component must be removed');
   assert.equal(src.includes('export struct FloatingPageControl'), false, 'obsolete detached page control component must be removed');
@@ -730,6 +762,7 @@ test('source-switch routes keep the live demo reader-plane inline window', () =>
     'ViewStateRenderer must map SourceSwitchFlowPage');
   for (const marker of [
     'ReaderBase()',
+    'ReaderTopArea()',
     'ReaderControlSheet()',
     'ReaderBottomBar()',
     'SourceSwitchWindow()',
@@ -738,12 +771,23 @@ test('source-switch routes keep the live demo reader-plane inline window', () =>
     '优书网',
     '笔趣阁镜像',
     '备用线路 B',
+    '章节同步源',
+    '本地缓存',
+    '旧源备份',
     "route-replace', id: 'reader'",
   ]) {
     assert.ok(componentSrc.includes(marker), `SourceSwitchFlowComponents missing live flow marker: ${marker}`);
   }
   assert.ok(!componentSrc.includes('BackTopBar('), 'source-switch flow must not render a normal page top bar');
   assert.ok(!componentSrc.includes('SourceSwitchResultsPanel'), 'source-switch flow must not reuse the obsolete full-screen results panel');
+  const flowBody = componentSrc.slice(componentSrc.indexOf('export struct SourceSwitchFlowPage'));
+  const order = ['ReaderBase()', 'ReaderTopArea()', 'ReaderControlSheet()', 'ReaderBottomBar()', 'SourceSwitchWindow()'];
+  let previousIndex = -1;
+  for (const marker of order) {
+    const currentIndex = flowBody.indexOf(marker);
+    assert.ok(currentIndex > previousIndex, `SourceSwitchFlowPage must render ${marker} after the previous reader-plane layer`);
+    previousIndex = currentIndex;
+  }
 });
 
 test('bookshelf section head uses demo view-action icons, not generic more dots', () => {

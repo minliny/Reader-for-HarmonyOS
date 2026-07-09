@@ -14,5 +14,5 @@ export class TypeTokens {
 
 export class FontTokens {
   static readonly sans: string = '"HarmonyOS Sans", "PingFang SC", "Microsoft YaHei", sans-serif';
-  static readonly serif: string = '"Noto Serif CJK SC", "Source Han Serif SC", serif';
+  static readonly serif: string = 'Noto Serif CJK SC';
 }

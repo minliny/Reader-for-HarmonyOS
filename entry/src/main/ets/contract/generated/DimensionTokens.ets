@@ -52,7 +52,12 @@ export class ZIndexTokens {
   static readonly overlay: number = 10;
   static readonly mainNav: number = 20;
   static readonly bottomSheet: number = 30;
+  static readonly flowWindow: number = 36;
   static readonly readerModuleNav: number = 40;
+  static readonly settingsDropdown: number = 42;
   static readonly dialog: number = 60;
   static readonly keyboard: number = 70;
+  static readonly devOverlay: number = 95;
+  static readonly devRegion: number = 96;
+  static readonly demoSwitch: number = 100;
 }

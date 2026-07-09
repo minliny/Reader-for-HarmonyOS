@@ -11,8 +11,8 @@ export class ColorTokens {
   static readonly controlInk: string = '#FF41484C';
   static readonly muted: string = '#FF756F69';
   static readonly border: string = '#FFC1C7CD';
-  static readonly primary: string = '#FF366179';
-  static readonly primaryDark: string = '#FF274F66';
+  static readonly primary: string = '#FF2D4A3E';
+  static readonly primaryDark: string = '#FF1F3528';
   static readonly accent: string = '#FFF48B13';
   static readonly bottomBarBg: string = '#FFFBF2EB';
   static readonly floatingControlBg: string = '#FFFBF2EB';

@@ -5,5 +5,5 @@
 export class ShadowTokens {
   static readonly elevated: string = '0 18px 46px rgba(89,70,50,0.16)';
   static readonly soft: string = '0 8px 26px rgba(89,70,50,0.1)';
-  static readonly ReaderDsStateFocus: string = '0 0 0 4px rgba(54,97,121,0.22)';
+  static readonly FdDsStateFocus: string = '0 0 0 4px rgba(45,74,62,0.22)';
 }
