@@ -7,6 +7,7 @@ import { RouteId } from '../../contract/generated/RouteTable';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 import { InteractionDebugAdapter } from '../adapters/InteractionDebugAdapter';
 import { MotionAdapter } from '../adapters/MotionAdapter';
+import { BookshelfView } from '../store/ReaderUiState';
 
 interface SettingsRowSpec {
   title: string;
@@ -17,6 +18,7 @@ interface SettingsRowSpec {
 
 interface SettingsChoiceSpec {
   label: string;
+  value: string;   // B1 P0：segment 选项对应的设置值
   active: boolean;
 }
 
@@ -217,6 +219,7 @@ struct SettingsStatusBadge {
 @Component
 struct SettingsMiniSwitch {
   @Prop on: boolean = true;
+  @Prop settingsKey: string = '';   // B1 P0：开关对应的设置项 key
 
   build() {
     Row() {
@@ -238,12 +241,22 @@ struct SettingsMiniSwitch {
     .padding(2)
     .borderRadius(DemoAliasTokens.radiusPill)
     .backgroundColor(this.on ? ColorTokens.primary : ColorTokens.metaBg)
+    .onClick(() => {
+      // B1 P0：开关切换，按 settingsKey 派发对应 reducer 事件
+      const next = !this.on;
+      if (this.settingsKey === 'reducedMotion') {
+        ReaderUiStore.dispatch({ type: 'toggle-reduced-motion', enabled: next });
+      } else {
+        ReaderUiStore.dispatch({ type: 'settings-switch-toggle', settingsKey: this.settingsKey, settingsToggleValue: next });
+      }
+    })
   }
 }
 
 @Component
 struct SettingsSegment {
   @Prop options: SettingsChoiceSpec[] = [];
+  @Prop settingsKey: string = '';   // B1 P0：segment 对应的设置项 key
 
   build() {
     Row({ space: 4 }) {
@@ -256,6 +269,14 @@ struct SettingsSegment {
           .padding({ left: 9, right: 9 })
           .borderRadius(DemoAliasTokens.radiusPill)
           .backgroundColor(option.active ? Color.White : Color.Transparent)
+          .onClick(() => {
+            // B1 P0：segment 切换。bookshelfView 走专用 reducer，其余走 settings-segment-switch
+            if (this.settingsKey === 'bookshelfView') {
+              ReaderUiStore.dispatch({ type: 'set-bookshelf-view', bookshelfView: option.value as BookshelfView });
+            } else {
+              ReaderUiStore.dispatch({ type: 'settings-segment-switch', settingsKey: this.settingsKey, settingsValue: option.value });
+            }
+          })
       }, (option: SettingsChoiceSpec, idx: number) => `${option.label}-${idx}`)
     }
     .padding(3)
@@ -267,6 +288,7 @@ struct SettingsSegment {
 @Component
 struct SettingsStepper {
   @Prop value: string = '3列';
+  @Prop settingsKey: string = '';   // B1 P0：stepper 对应的设置项 key
 
   build() {
     Row({ space: 8 }) {
@@ -274,6 +296,10 @@ struct SettingsStepper {
         .fontSize(14)
         .fontWeight(900)
         .fontColor(ColorTokens.primaryDark)
+        .onClick(() => {
+          // B1 P0：stepper 减少，delta = -1
+          ReaderUiStore.dispatch({ type: 'settings-stepper-change', settingsKey: this.settingsKey, delta: -1 });
+        })
       Text(this.value)
         .fontSize(12)
         .fontWeight(900)
@@ -282,6 +308,10 @@ struct SettingsStepper {
         .fontSize(14)
         .fontWeight(900)
         .fontColor(ColorTokens.primaryDark)
+        .onClick(() => {
+          // B1 P0：stepper 增加，delta = +1
+          ReaderUiStore.dispatch({ type: 'settings-stepper-change', settingsKey: this.settingsKey, delta: 1 });
+        })
     }
     .height(28)
     .padding({ left: 10, right: 10 })
@@ -300,6 +330,7 @@ struct SettingsOptionRow {
   @Prop switchOn: boolean = true;
   @Prop tone: string = 'good';
   @Prop options: SettingsChoiceSpec[] = [];
+  @Prop settingsKey: string = '';   // B1 P0：设置项 key，透传给 segment/stepper/switch
 
   build() {
     Row() {
@@ -329,11 +360,11 @@ struct SettingsOptionRow {
       .margin({ left: 10, right: 10 })
 
       if (this.kind === 'segment') {
-        SettingsSegment({ options: this.options })
+        SettingsSegment({ options: this.options, settingsKey: this.settingsKey })
       } else if (this.kind === 'stepper') {
-        SettingsStepper({ value: this.value })
+        SettingsStepper({ value: this.value, settingsKey: this.settingsKey })
       } else if (this.kind === 'switch') {
-        SettingsMiniSwitch({ on: this.switchOn })
+        SettingsMiniSwitch({ on: this.switchOn, settingsKey: this.settingsKey })
       } else if (this.kind === 'status') {
         SettingsStatusBadge({ label: this.value, tone: this.tone })
       } else if (this.kind === 'action') {
@@ -393,13 +424,24 @@ struct SettingsDetailSection {
 
 @Component
 export struct SettingsGeneralPage {
+  // B1 P0：从 AppStorage 读取设置状态，驱动 segment/switch 动态渲染
+  @StorageProp('reader.appThemeMode') appThemeMode: string = 'system';
+  @StorageProp('reader.settingsToggles.autoCheckUpdate') autoCheckUpdate: boolean = true;
+  @StorageProp('reader.settingsToggles.tapBottomBarToTop') tapBottomBarToTop: boolean = true;
+  @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
+
   build() {
     Column() {
       SettingsDetailSection({ title: '基础偏好' }) {
         SettingsOptionRow({
           title: 'App主题',
           kind: 'segment',
-          options: [{ label: '跟随系统', active: true }, { label: '浅色', active: false }, { label: '深色', active: false }],
+          settingsKey: 'appThemeMode',
+          options: [
+            { label: '跟随系统', value: 'system', active: this.appThemeMode === 'system' },
+            { label: '浅色', value: 'light', active: this.appThemeMode === 'light' },
+            { label: '深色', value: 'dark', active: this.appThemeMode === 'dark' },
+          ],
         })
         SettingsOptionRow({ title: '语言', value: '简体中文' })
         SettingsOptionRow({ title: '启动时打开', value: '书架' })
@@ -407,9 +449,9 @@ export struct SettingsGeneralPage {
 
       Column() {
         SettingsDetailSection({ title: '行为与反馈' }) {
-          SettingsOptionRow({ title: '自动检查更新', kind: 'switch', switchOn: true })
-          SettingsOptionRow({ title: '点击当前底栏回顶部', kind: 'switch', switchOn: true })
-          SettingsOptionRow({ title: '减少动态效果', kind: 'switch', switchOn: true })
+          SettingsOptionRow({ title: '自动检查更新', kind: 'switch', settingsKey: 'autoCheckUpdate', switchOn: this.autoCheckUpdate })
+          SettingsOptionRow({ title: '点击当前底栏回顶部', kind: 'switch', settingsKey: 'tapBottomBarToTop', switchOn: this.tapBottomBarToTop })
+          SettingsOptionRow({ title: '减少动态效果', kind: 'switch', settingsKey: 'reducedMotion', switchOn: this.reducedMotion })
           SettingsOptionRow({ title: '崩溃日志', kind: 'status', value: '已开启' })
           SettingsOptionRow({ title: '动画效果', value: '标准' })
           SettingsOptionRow({ title: '缓存清理', kind: 'action', value: '清理缓存' })
@@ -435,17 +477,28 @@ export struct SettingsGeneralPage {
 
 @Component
 export struct BookshelfSearchSettingsPage {
+  // B1 P0：从 AppStorage 读取书架/搜索设置状态
+  @StorageProp('reader.bookshelfFilter.view') bookshelfView: string = 'cover';
+  @StorageProp('reader.coverColumns') coverColumns: number = 3;
+  @StorageProp('reader.settingsToggles.showUpdateBadge') showUpdateBadge: boolean = true;
+  @StorageProp('reader.settingsToggles.mergeSameBooks') mergeSameBooks: boolean = true;
+  @StorageProp('reader.settingsToggles.enableSearchHistory') enableSearchHistory: boolean = true;
+
   build() {
     Column() {
       SettingsDetailSection({ title: '书架' }) {
         SettingsOptionRow({
           title: '默认展示',
           kind: 'segment',
-          options: [{ label: '封面', active: true }, { label: '列表', active: false }],
+          settingsKey: 'bookshelfView',
+          options: [
+            { label: '封面', value: 'cover', active: this.bookshelfView === 'cover' },
+            { label: '列表', value: 'list', active: this.bookshelfView === 'list' },
+          ],
         })
-        SettingsOptionRow({ title: '封面列数', kind: 'stepper', value: '3列' })
+        SettingsOptionRow({ title: '封面列数', kind: 'stepper', settingsKey: 'coverColumns', value: `${this.coverColumns}列` })
         SettingsOptionRow({ title: '默认分组', value: '全部' })
-        SettingsOptionRow({ title: '显示更新标记', kind: 'switch', switchOn: true })
+        SettingsOptionRow({ title: '显示更新标记', kind: 'switch', settingsKey: 'showUpdateBadge', switchOn: this.showUpdateBadge })
       }
 
       Column() {
@@ -462,8 +515,8 @@ export struct BookshelfSearchSettingsPage {
         SettingsDetailSection({ title: '搜索' }) {
           SettingsOptionRow({ title: '搜索范围', value: '全局' })
           SettingsOptionRow({ title: '结果排序', value: '相关度' })
-          SettingsOptionRow({ title: '合并同名同作者', kind: 'switch', switchOn: true })
-          SettingsOptionRow({ title: '搜索历史', kind: 'switch', switchOn: true })
+          SettingsOptionRow({ title: '合并同名同作者', kind: 'switch', settingsKey: 'mergeSameBooks', switchOn: this.mergeSameBooks })
+          SettingsOptionRow({ title: '搜索历史', kind: 'switch', settingsKey: 'enableSearchHistory', switchOn: this.enableSearchHistory })
           SettingsOptionRow({ title: '搜索历史数量', value: '20条' })
         }
       }
