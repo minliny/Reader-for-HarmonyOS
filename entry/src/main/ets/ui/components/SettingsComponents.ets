@@ -7,6 +7,7 @@ import { RouteId } from '../../contract/generated/RouteTable';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 import { InteractionDebugAdapter } from '../adapters/InteractionDebugAdapter';
 import { MotionAdapter } from '../adapters/MotionAdapter';
+import { TokenAdapter } from '../adapters/TokenAdapter';
 import { BookshelfView } from '../store/ReaderUiState';
 
 interface SettingsRowSpec {
@@ -109,12 +110,12 @@ export struct SettingsNavRow {
 // .fd-setting-section: h2 "设置" 13/900 + nav rows (5: 通用/书架搜索/书源/同步/关于).
 @Component
 export struct SettingsHomeSection {
-  private rows: Array<[string, RouteId]> = [
-    ['通用设置', 'settings-general'],
-    ['书架与搜索设置', 'bookshelf-search-settings'],
-    ['书源管理', 'source-management'],
-    ['同步与备份', 'sync-backup'],
-    ['关于与反馈', 'about-feedback'],
+  private rows: Array<[string, RouteId, string]> = [
+    ['通用设置', 'settings-general', 'gear'],
+    ['书架与搜索设置', 'bookshelf-search-settings', 'bookshelf'],
+    ['书源管理', 'source-management', 'source-stack'],
+    ['同步与备份', 'sync-backup', 'sync'],
+    ['关于与反馈', 'about-feedback', 'info'],
   ];
 
   build() {
@@ -125,9 +126,9 @@ export struct SettingsHomeSection {
         .fontColor(ColorTokens.ink)
         .width('100%')
         .margin({ left: 12, top: 9, bottom: 5 })
-      ForEach(this.rows, (r: [string, string], i: number) => {
-        SettingsNavRow({ label: r[0], route: r[1] as RouteId })
-      }, (r: [string, string], i: number) => `${r[0]}-${i}`)
+      ForEach(this.rows, (r: [string, string, string], i: number) => {
+        SettingsNavRow({ label: r[0], route: r[1] as RouteId, icon: TokenAdapter.icon(r[2]) })
+      }, (r: [string, string, string], i: number) => `${r[0]}-${i}`)
       SettingsDeveloperRow()
     }
     .width('100%')
@@ -149,10 +150,7 @@ struct SettingsDeveloperRow {
   build() {
     Row({ space: 12 }) {
       Stack({ alignContent: Alignment.Center }) {
-        Text('D')
-          .fontSize(13)
-          .fontWeight(900)
-          .fontColor(ColorTokens.primaryDark)
+        Image(TokenAdapter.icon('motion')).width(15).height(15)
       }
       .width(28)
       .height(28)
@@ -257,6 +255,7 @@ struct SettingsMiniSwitch {
 struct SettingsSegment {
   @Prop options: SettingsChoiceSpec[] = [];
   @Prop settingsKey: string = '';   // B1 P0：segment 对应的设置项 key
+  @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
 
   build() {
     Row({ space: 4 }) {
@@ -270,12 +269,14 @@ struct SettingsSegment {
           .borderRadius(DemoAliasTokens.radiusPill)
           .backgroundColor(option.active ? Color.White : Color.Transparent)
           .onClick(() => {
-            // B1 P0：segment 切换。bookshelfView 走专用 reducer，其余走 settings-segment-switch
-            if (this.settingsKey === 'bookshelfView') {
-              ReaderUiStore.dispatch({ type: 'set-bookshelf-view', bookshelfView: option.value as BookshelfView });
-            } else {
-              ReaderUiStore.dispatch({ type: 'settings-segment-switch', settingsKey: this.settingsKey, settingsValue: option.value });
-            }
+            MotionAdapter.apply('segment.item.switch', this.reducedMotion, () => {
+              // B1 P0：segment 切换。bookshelfView 走专用 reducer，其余走 settings-segment-switch
+              if (this.settingsKey === 'bookshelfView') {
+                ReaderUiStore.dispatch({ type: 'set-bookshelf-view', bookshelfView: option.value as BookshelfView });
+              } else {
+                ReaderUiStore.dispatch({ type: 'settings-segment-switch', settingsKey: this.settingsKey, settingsValue: option.value });
+              }
+            });
           })
       }, (option: SettingsChoiceSpec, idx: number) => `${option.label}-${idx}`)
     }
@@ -331,14 +332,19 @@ struct SettingsOptionRow {
   @Prop tone: string = 'good';
   @Prop options: SettingsChoiceSpec[] = [];
   @Prop settingsKey: string = '';   // B1 P0：设置项 key，透传给 segment/stepper/switch
+  @Prop icon: Resource | undefined = undefined;   // P1.1：行首图标，通过 TokenAdapter.icon() 传入
 
   build() {
     Row() {
-      Stack()
-        .width(30)
-        .height(30)
-        .borderRadius(DemoAliasTokens.radiusPill)
-        .backgroundColor(ColorTokens.metaBg)
+      Stack({ alignContent: Alignment.Center }) {
+        if (this.icon !== undefined) {
+          Image(this.icon).width(15).height(15)
+        }
+      }
+      .width(30)
+      .height(30)
+      .borderRadius(DemoAliasTokens.radiusPill)
+      .backgroundColor(ColorTokens.metaBg)
       Column() {
         Text(this.title)
           .fontSize(13)
@@ -395,6 +401,52 @@ struct SettingsOptionRow {
     .border({ width: { top: 1 }, color: ColorTokens.border })
     .alignItems(VerticalAlign.Center)
     .backgroundColor(DemoAliasTokens.surface)
+    .onClick(() => {
+      // P1.2：select/action 控件接 onClick
+      if (this.kind === 'value') {
+        ReaderUiStore.dispatch({ type: 'settings-select-open', settingsKey: this.settingsKey });
+      } else if (this.kind === 'action') {
+        ReaderUiStore.dispatch({ type: 'settings-action', settingsKey: this.settingsKey });
+      }
+    })
+  }
+}
+
+// P1.2：select 选项面板（条件渲染的 Column）。当 expandedOptionKey 等于某 settingsKey 时显示。
+// 选中选项后派发 settings-segment-switch（segment 类）或 settings-select-close（纯关闭）。
+@Component
+struct SettingsSelectSheet {
+  @Prop options: SettingsChoiceSpec[] = [];
+  @Prop settingsKey: string = '';
+
+  build() {
+    Column() {
+      ForEach(this.options, (option: SettingsChoiceSpec, idx: number) => {
+        Row() {
+          Text(option.label)
+            .fontSize(13)
+            .fontWeight(option.active ? 800 : 400)
+            .fontColor(option.active ? ColorTokens.primary : ColorTokens.ink)
+            .layoutWeight(1)
+          if (option.active) {
+            Image(TokenAdapter.icon('checkmark')).width(16).height(16)
+          }
+        }
+        .width('100%')
+        .height(44)
+        .padding({ left: 12, right: 12 })
+        .border({ width: { top: idx === 0 ? 0 : 1 }, color: ColorTokens.border })
+        .alignItems(VerticalAlign.Center)
+        .onClick(() => {
+          ReaderUiStore.dispatch({ type: 'settings-segment-switch', settingsKey: this.settingsKey, settingsValue: option.value });
+        })
+      }, (option: SettingsChoiceSpec, idx: number) => `${option.label}-${idx}`)
+    }
+    .width('100%')
+    .border({ width: 1, color: ColorTokens.border })
+    .borderRadius(DemoAliasTokens.radiusMd)
+    .backgroundColor(DemoAliasTokens.surface)
+    .margin({ top: 4, bottom: 4 })
   }
 }
 
@@ -429,6 +481,7 @@ export struct SettingsGeneralPage {
   @StorageProp('reader.settingsToggles.autoCheckUpdate') autoCheckUpdate: boolean = true;
   @StorageProp('reader.settingsToggles.tapBottomBarToTop') tapBottomBarToTop: boolean = true;
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
+  @StorageProp('reader.expandedOptionKey') expandedOptionKey: string = '';
 
   build() {
     Column() {
@@ -437,24 +490,55 @@ export struct SettingsGeneralPage {
           title: 'App主题',
           kind: 'segment',
           settingsKey: 'appThemeMode',
+          icon: TokenAdapter.icon('palette'),
           options: [
             { label: '跟随系统', value: 'system', active: this.appThemeMode === 'system' },
             { label: '浅色', value: 'light', active: this.appThemeMode === 'light' },
             { label: '深色', value: 'dark', active: this.appThemeMode === 'dark' },
           ],
         })
-        SettingsOptionRow({ title: '语言', value: '简体中文' })
-        SettingsOptionRow({ title: '启动时打开', value: '书架' })
+        SettingsOptionRow({ title: '语言', value: '简体中文', settingsKey: 'language', icon: TokenAdapter.icon('globe') })
+        if (this.expandedOptionKey === 'language') {
+          SettingsSelectSheet({
+            settingsKey: 'language',
+            options: [
+              { label: '简体中文', value: 'zh-CN', active: true },
+              { label: 'English', value: 'en-US', active: false },
+              { label: '跟随系统', value: 'system', active: false },
+            ],
+          })
+        }
+        SettingsOptionRow({ title: '启动时打开', value: '书架', settingsKey: 'startupPage', icon: TokenAdapter.icon('home') })
+        if (this.expandedOptionKey === 'startupPage') {
+          SettingsSelectSheet({
+            settingsKey: 'startupPage',
+            options: [
+              { label: '书架', value: 'bookshelf', active: true },
+              { label: '发现', value: 'discover', active: false },
+              { label: 'RSS', value: 'rss', active: false },
+            ],
+          })
+        }
       }
 
       Column() {
         SettingsDetailSection({ title: '行为与反馈' }) {
-          SettingsOptionRow({ title: '自动检查更新', kind: 'switch', settingsKey: 'autoCheckUpdate', switchOn: this.autoCheckUpdate })
-          SettingsOptionRow({ title: '点击当前底栏回顶部', kind: 'switch', settingsKey: 'tapBottomBarToTop', switchOn: this.tapBottomBarToTop })
-          SettingsOptionRow({ title: '减少动态效果', kind: 'switch', settingsKey: 'reducedMotion', switchOn: this.reducedMotion })
-          SettingsOptionRow({ title: '崩溃日志', kind: 'status', value: '已开启' })
-          SettingsOptionRow({ title: '动画效果', value: '标准' })
-          SettingsOptionRow({ title: '缓存清理', kind: 'action', value: '清理缓存' })
+          SettingsOptionRow({ title: '自动检查更新', kind: 'switch', settingsKey: 'autoCheckUpdate', switchOn: this.autoCheckUpdate, icon: TokenAdapter.icon('refresh') })
+          SettingsOptionRow({ title: '点击当前底栏回顶部', kind: 'switch', settingsKey: 'tapBottomBarToTop', switchOn: this.tapBottomBarToTop, icon: TokenAdapter.icon('top') })
+          SettingsOptionRow({ title: '减少动态效果', kind: 'switch', settingsKey: 'reducedMotion', switchOn: this.reducedMotion, icon: TokenAdapter.icon('motion') })
+          SettingsOptionRow({ title: '崩溃日志', kind: 'status', value: '已开启', icon: TokenAdapter.icon('bug') })
+          SettingsOptionRow({ title: '动画效果', value: '标准', settingsKey: 'animationEffect', icon: TokenAdapter.icon('play') })
+          if (this.expandedOptionKey === 'animationEffect') {
+            SettingsSelectSheet({
+              settingsKey: 'animationEffect',
+              options: [
+                { label: '标准', value: 'standard', active: true },
+                { label: '简洁', value: 'simple', active: false },
+                { label: '无', value: 'none', active: false },
+              ],
+            })
+          }
+          SettingsOptionRow({ title: '缓存清理', kind: 'action', value: '清理缓存', settingsKey: 'cache-clear', icon: TokenAdapter.icon('trash') })
         }
       }
       .width('100%')
@@ -462,9 +546,9 @@ export struct SettingsGeneralPage {
 
       Column() {
         SettingsDetailSection({ title: '系统权限' }) {
-          SettingsOptionRow({ title: '文件访问', kind: 'status', value: '已授权' })
-          SettingsOptionRow({ title: '通知权限', kind: 'status', value: '未授权', tone: 'warn' })
-          SettingsOptionRow({ title: '电池优化', kind: 'status', value: '受系统管理' })
+          SettingsOptionRow({ title: '文件访问', kind: 'status', value: '已授权', icon: TokenAdapter.icon('folder') })
+          SettingsOptionRow({ title: '通知权限', kind: 'status', value: '未授权', tone: 'warn', icon: TokenAdapter.icon('bell') })
+          SettingsOptionRow({ title: '电池优化', kind: 'status', value: '受系统管理', icon: TokenAdapter.icon('battery') })
         }
       }
       .width('100%')
@@ -483,6 +567,7 @@ export struct BookshelfSearchSettingsPage {
   @StorageProp('reader.settingsToggles.showUpdateBadge') showUpdateBadge: boolean = true;
   @StorageProp('reader.settingsToggles.mergeSameBooks') mergeSameBooks: boolean = true;
   @StorageProp('reader.settingsToggles.enableSearchHistory') enableSearchHistory: boolean = true;
+  @StorageProp('reader.expandedOptionKey') expandedOptionKey: string = '';
 
   build() {
     Column() {
@@ -491,21 +576,33 @@ export struct BookshelfSearchSettingsPage {
           title: '默认展示',
           kind: 'segment',
           settingsKey: 'bookshelfView',
+          icon: TokenAdapter.icon('grid'),
           options: [
             { label: '封面', value: 'cover', active: this.bookshelfView === 'cover' },
             { label: '列表', value: 'list', active: this.bookshelfView === 'list' },
           ],
         })
-        SettingsOptionRow({ title: '封面列数', kind: 'stepper', settingsKey: 'coverColumns', value: `${this.coverColumns}列` })
-        SettingsOptionRow({ title: '默认分组', value: '全部' })
-        SettingsOptionRow({ title: '显示更新标记', kind: 'switch', settingsKey: 'showUpdateBadge', switchOn: this.showUpdateBadge })
+        SettingsOptionRow({ title: '封面列数', kind: 'stepper', settingsKey: 'coverColumns', value: `${this.coverColumns}列`, icon: TokenAdapter.icon('columns') })
+        SettingsOptionRow({ title: '默认分组', value: '全部', settingsKey: 'defaultGroup', icon: TokenAdapter.icon('folder') })
+        SettingsOptionRow({ title: '显示更新标记', kind: 'switch', settingsKey: 'showUpdateBadge', switchOn: this.showUpdateBadge, icon: TokenAdapter.icon('badge') })
       }
 
       Column() {
         SettingsDetailSection({ title: '排序与筛选' }) {
-          SettingsOptionRow({ title: '书架排序', value: '最近更新' })
-          SettingsOptionRow({ title: '展示范围', value: '全部' })
-          SettingsOptionRow({ title: '更新状态', value: '不限' })
+          SettingsOptionRow({ title: '书架排序', value: '最近更新', settingsKey: 'bookshelfSort', icon: TokenAdapter.icon('sort') })
+          if (this.expandedOptionKey === 'bookshelfSort') {
+            SettingsSelectSheet({
+              settingsKey: 'bookshelfSort',
+              options: [
+                { label: '最近更新', value: 'recent', active: true },
+                { label: '书名', value: 'title', active: false },
+                { label: '作者', value: 'author', active: false },
+                { label: '最近阅读', value: 'lastRead', active: false },
+              ],
+            })
+          }
+          SettingsOptionRow({ title: '展示范围', value: '全部', settingsKey: 'displayScope', icon: TokenAdapter.icon('list') })
+          SettingsOptionRow({ title: '更新状态', value: '不限', settingsKey: 'updateStatus', icon: TokenAdapter.icon('refresh') })
         }
       }
       .width('100%')
@@ -513,11 +610,21 @@ export struct BookshelfSearchSettingsPage {
 
       Column() {
         SettingsDetailSection({ title: '搜索' }) {
-          SettingsOptionRow({ title: '搜索范围', value: '全局' })
-          SettingsOptionRow({ title: '结果排序', value: '相关度' })
-          SettingsOptionRow({ title: '合并同名同作者', kind: 'switch', settingsKey: 'mergeSameBooks', switchOn: this.mergeSameBooks })
-          SettingsOptionRow({ title: '搜索历史', kind: 'switch', settingsKey: 'enableSearchHistory', switchOn: this.enableSearchHistory })
-          SettingsOptionRow({ title: '搜索历史数量', value: '20条' })
+          SettingsOptionRow({ title: '搜索范围', value: '全局', settingsKey: 'searchScope', icon: TokenAdapter.icon('search') })
+          SettingsOptionRow({ title: '结果排序', value: '相关度', settingsKey: 'resultSort', icon: TokenAdapter.icon('sort') })
+          SettingsOptionRow({ title: '合并同名同作者', kind: 'switch', settingsKey: 'mergeSameBooks', switchOn: this.mergeSameBooks, icon: TokenAdapter.icon('people') })
+          SettingsOptionRow({ title: '搜索历史', kind: 'switch', settingsKey: 'enableSearchHistory', switchOn: this.enableSearchHistory, icon: TokenAdapter.icon('clock') })
+          SettingsOptionRow({ title: '搜索历史数量', value: '20条', settingsKey: 'searchHistoryCount', icon: TokenAdapter.icon('list') })
+          if (this.expandedOptionKey === 'searchHistoryCount') {
+            SettingsSelectSheet({
+              settingsKey: 'searchHistoryCount',
+              options: [
+                { label: '10条', value: '10', active: false },
+                { label: '20条', value: '20', active: true },
+                { label: '50条', value: '50', active: false },
+              ],
+            })
+          }
         }
       }
       .width('100%')
@@ -525,7 +632,7 @@ export struct BookshelfSearchSettingsPage {
 
       Column() {
         SettingsDetailSection({ title: '搜索操作' }) {
-          SettingsOptionRow({ title: '清空搜索历史', kind: 'action', value: '清空' })
+          SettingsOptionRow({ title: '清空搜索历史', kind: 'action', value: '清空', settingsKey: 'clear-search-history', icon: TokenAdapter.icon('trash') })
         }
       }
       .width('100%')

@@ -170,9 +170,9 @@ struct SourceSwitchWindow {
               .width(24)
               .height(24)
               .onClick(() => {
-              // 关闭换源：route-replace 回 reader，用 FlowShell 的 pop 动效包裹
+              // 关闭换源：route-pop 回到阅读器，用 FlowShell 的 pop 动效包裹
               MotionAdapter.apply('source.switch.route.pop', this.reducedMotion, () => {
-                ReaderUiStore.dispatch({ type: 'route-replace', id: 'reader' as RouteId });
+                ReaderUiStore.dispatch({ type: 'route-pop' });
               });
             })
             InteractionDebugFrame({ label: 'CLOSE', tone: 'action' })
@@ -340,6 +340,7 @@ export struct SourceSwitchResultPanel {
           .borderRadius(DemoAliasTokens.radiusPill)
           .backgroundColor(ColorTokens.primaryDark)
           .textAlign(TextAlign.Center)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'source-switch-confirm' }))
         Text('取消')
           .fontSize(13)
           .fontWeight(700)
@@ -349,6 +350,7 @@ export struct SourceSwitchResultPanel {
           .borderRadius(DemoAliasTokens.radiusPill)
           .border({ width: 1, color: ColorTokens.border })
           .textAlign(TextAlign.Center)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'source-switch-cancel' }))
       }
       .width('100%')
     }

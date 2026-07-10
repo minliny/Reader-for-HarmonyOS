@@ -15,7 +15,9 @@ import { RouteId } from '../../contract/generated/RouteTable';
 import { SafeAreaAdapter } from '../adapters/SafeAreaAdapter';
 import { ViewportAdapter } from '../adapters/ViewportAdapter';
 import { ReaderUiStore } from '../store/ReaderUiStore';
-import { ReaderFontFamily, ReaderRenderMetric, ReaderToggleKey, ReaderSettingOptionKey, TtsScope, TtsTimer } from '../store/ReaderUiState';
+import { ReaderFontFamily, ReaderRenderMetric, ReaderToggleKey, ReaderSettingOptionKey, TtsScope, TtsTimer, ReplaceRule } from '../store/ReaderUiState';
+import { ReaderThemeResolver, ReaderThemeOption } from '../tokens/ReaderThemeResolver';
+import { MotionAdapter } from '../adapters/MotionAdapter';
 import { InteractionDebugBadge, InteractionDebugFrame } from './InteractionDebugComponents';
 
 // ── Panel header (.reader-panel-header) ──────────────────────────────────
@@ -253,10 +255,10 @@ export struct ReaderControlSheet {
   private readonly railGap: number = 14;
   private readonly quickHeight: number = 76;
 
-  private quickActions: Array<[string, string, string]> = [
-    ['搜索', 'reader_icon_reader_content_search_action', 'reader-search-overlay-v2'],
-    ['自动翻页', 'reader_icon_reader_auto_page_action', 'reader-auto-scroll-overlay-v2'],
-    ['替换', 'reader_icon_reader_content_replace_action', 'reader-replace-overlay-v2'],
+  private quickActions: Array<[string, string, string, string]> = [
+    ['搜索', 'reader_icon_reader_content_search_action', 'reader-search-overlay-v2', 'search'],
+    ['自动翻页', 'reader_icon_reader_auto_page_action', 'reader-auto-scroll-overlay-v2', 'auto-page'],
+    ['替换', 'reader_icon_reader_content_replace_action', 'reader-replace-overlay-v2', 'replacement'],
   ];
 
   private quickDebugLabel(routeId: string): string {
@@ -319,7 +321,7 @@ export struct ReaderControlSheet {
               Column({ space: 6 }) {
                 Stack({ alignContent: Alignment.TopStart }) {
                   Row({ space: 8 }) {
-                    ForEach(this.quickActions, (item: [string, string, string]) => {
+                    ForEach(this.quickActions, (item: [string, string, string, string]) => {
                       Stack({ alignContent: Alignment.TopStart }) {
                         Column({ space: 6 }) {
                           Image($r(`app.media.${item[1]}`)).width(22).height(22)
@@ -336,12 +338,12 @@ export struct ReaderControlSheet {
                         .alignItems(HorizontalAlign.Center)
                         .backgroundColor(ColorTokens.surfaceSoft)
                         .borderRadius(DemoAliasTokens.radiusLg)
-                        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: item[2] as RouteId }))
+                        .onClick(() => ReaderUiStore.dispatch({ type: 'reader-module-switch', module: item[3] }))
                         InteractionDebugBadge({ label: this.quickDebugLabel(item[2]), tone: 'action', offsetTop: 22 })
                       }
                       .layoutWeight(1)
                       .height(70)
-                    }, (item: [string, string, string]) => item[2])
+                    }, (item: [string, string, string, string]) => item[2])
                   }
                   .height(this.quickHeight)
                   .padding({ left: 8, right: 8, top: 9, bottom: 9 })
@@ -367,7 +369,7 @@ export struct ReaderControlSheet {
                       .backgroundColor(ColorTokens.floatingControlBgAlt)
                       .borderRadius(DemoAliasTokens.radiusPill)
                       .margin({ top: 9 })
-                      .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
+                      .onClick(() => ReaderUiStore.dispatch({ type: 'chapter-prev' }))
                       InteractionDebugBadge({ label: 'P', tone: 'action' })
                     }
                     .width(34)
@@ -608,7 +610,7 @@ export struct ReaderBottomBar {
               .height(62)
               .justifyContent(FlexAlign.Center)
               .alignItems(HorizontalAlign.Center)
-              .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: it[2] as RouteId }))
+              .onClick(() => ReaderUiStore.dispatch({ type: 'reader-module-switch', module: it[0] }))
               InteractionDebugBadge({ label: this.moduleDebugLabel(it[0]), tone: 'action', offsetTop: 24 })
             }
             .layoutWeight(1)
@@ -886,7 +888,7 @@ struct ReaderQuickBackButton {
       .borderRadius(DemoAliasTokens.radiusMd)
       .backgroundColor(DemoAliasTokens.surface)
       .alignItems(VerticalAlign.Center)
-      .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'reader' as RouteId }))
+      .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
       InteractionDebugBadge({ label: 'back', tone: 'action' })
     }
   }
@@ -944,7 +946,7 @@ struct ReaderSearchResultRow {
       .justifyContent(FlexAlign.Center)
       .alignItems(HorizontalAlign.Start)
       .border({ width: { top: 1 }, color: ColorTokens.border })
-      .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'immersive-reading' as RouteId }))
+      .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
       InteractionDebugBadge({ label: 'result', tone: 'action' })
     }
     .width('100%')
@@ -1190,7 +1192,7 @@ struct ReaderTocLiveRow {
     .border({ width: { top: 1 }, color: ColorTokens.border })
     .backgroundColor(this.current ? ColorTokens.surfaceSoft : 'transparent')
     .alignItems(VerticalAlign.Center)
-    .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'immersive-reading' as RouteId }))
+    .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
   }
 }
 
@@ -1274,27 +1276,23 @@ struct ReaderFontChoices {
 @Component
 struct ReaderThemeSwatches {
   @StorageProp('reader.readerTheme') currentTheme: string = 'paper';
-  private swatches: Array<[string, string, string]> = [
-    ['纸纹', 'paper', ColorTokens.paperBright],
-    ['暖白', 'warm', ColorTokens.paper],
-    ['青绿', 'green', ColorTokens.floatingControlBgAlt],
-    ['雾蓝', 'blue', ColorTokens.surface],
-  ];
+  @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
+  private options: ReaderThemeOption[] = ReaderThemeResolver.QUICK_OPTIONS;
 
-  private isActive(theme: string): boolean {
-    return this.currentTheme === theme;
+  private isActive(value: string): boolean {
+    return this.currentTheme === value;
   }
 
   build() {
     Row({ space: 4 }) {
-      ForEach(this.swatches, (item: [string, string, string], i: number) => {
+      ForEach(this.options, (item: ReaderThemeOption, i: number) => {
         Column() {
           Column()
             .width(46)
             .height(18)
             .borderRadius(DemoAliasTokens.radiusSm)
-            .backgroundColor(item[2])
-            .border({ width: 1, color: ColorTokens.border })
+            .backgroundColor(item.swatch)
+            .border({ width: 1, color: this.isActive(item.value) ? ColorTokens.primary : ColorTokens.border })
         }
         .layoutWeight(1)
         .height(24)
@@ -1302,9 +1300,13 @@ struct ReaderThemeSwatches {
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
         .borderRadius(DemoAliasTokens.radiusMd)
-        .backgroundColor(this.isActive(item[1]) ? ColorTokens.surfaceSoft : ColorTokens.floatingControlBgAlt)
-        .onClick(() => ReaderUiStore.dispatch({ type: 'set-reader-theme', theme: item[1] }))
-      }, (item: [string, string, string], i: number) => `${item[0]}-${i}`)
+        .backgroundColor(this.isActive(item.value) ? ColorTokens.surfaceSoft : ColorTokens.floatingControlBgAlt)
+        .onClick(() => {
+          MotionAdapter.apply('segment.item.switch', this.reducedMotion, () => {
+            ReaderUiStore.dispatch({ type: 'set-reader-theme', theme: item.value });
+          });
+        })
+      }, (item: ReaderThemeOption, i: number) => `${item.value}-${i}`)
     }
     .width('100%')
     .height(24)
@@ -1703,7 +1705,7 @@ struct ReaderFullPanelShell {
             .backgroundColor(ColorTokens.muted)
             .margin({ top: 9, left: '50%' })
             .translate({ x: -21 })
-            .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: this.closeRoute() }))
+            .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
 
           Row({ space: 10 }) {
             Row({ space: 8 }) {
@@ -1736,7 +1738,7 @@ struct ReaderFullPanelShell {
               .borderRadius(DemoAliasTokens.radiusMd)
               .backgroundColor(ColorTokens.floatingControlBgAlt)
               .textAlign(TextAlign.Center)
-              .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: this.closeRoute() }))
+              .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
             InteractionDebugBadge({ label: 'close', tone: 'action' })
           }
           .width('100%')
@@ -1869,38 +1871,43 @@ struct ReaderFullFontChoiceRow {
 
 @Component
 struct ReaderFullThemeGrid {
-  private swatches: Array<[string, string]> = [
-    ['纸纹', ColorTokens.paperBright],
-    ['暖白', ColorTokens.paper],
-    ['浅灰', ColorTokens.surface],
-    ['米色', ColorTokens.floatingControlBg],
-    ['夜间', ColorTokens.paperNight],
-    ['雾蓝', ColorTokens.floatingControlBgAltNight],
-    ['墨黑', ColorTokens.controlInk],
-    ['冷色', ColorTokens.primaryDark],
-  ];
+  @StorageProp('reader.readerTheme') currentTheme: string = 'paper';
+  @StorageProp('reader.appThemeMode') appThemeMode: string = 'system';
+  @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
+  private options: ReaderThemeOption[] = ReaderThemeResolver.ALL_OPTIONS;
+
+  private isActive(item: ReaderThemeOption): boolean {
+    const isNight = this.appThemeMode === 'dark';
+    return this.currentTheme === item.value && ((isNight && item.scheme === 'night') || (!isNight && item.scheme === 'day'));
+  }
 
   build() {
     Column({ space: 7 }) {
       ForEach([0, 1], (row: number) => {
         Row({ space: 7 }) {
-          ForEach(this.swatches.slice(row * 4, row * 4 + 4), (item: [string, string], i: number) => {
+          ForEach(this.options.slice(row * 4, row * 4 + 4), (item: ReaderThemeOption, i: number) => {
             Column({ space: 4 }) {
               Column()
                 .width('100%')
                 .height(30)
                 .borderRadius(DemoAliasTokens.radiusMd)
-                .backgroundColor(item[1])
-                .border({ width: row === 0 && i === 0 ? 2 : 1, color: row === 0 && i === 0 ? ColorTokens.primary : ColorTokens.border })
-              Text(item[0])
+                .backgroundColor(item.swatch)
+                .border({ width: this.isActive(item) ? 2 : 1, color: this.isActive(item) ? ColorTokens.primary : ColorTokens.border })
+              Text(item.label)
                 .fontSize(9)
                 .fontWeight(700)
-                .fontColor(ColorTokens.muted)
+                .fontColor(this.isActive(item) ? ColorTokens.primary : ColorTokens.muted)
                 .maxLines(1)
             }
             .layoutWeight(1)
             .alignItems(HorizontalAlign.Center)
-          }, (item: [string, string], i: number) => `${item[0]}-${row}-${i}`)
+            .onClick(() => {
+              MotionAdapter.apply('segment.item.switch', this.reducedMotion, () => {
+                ReaderUiStore.dispatch({ type: 'set-reader-theme', theme: item.value });
+                ReaderUiStore.dispatch({ type: 'settings-segment-switch', settingsKey: 'appThemeMode', settingsValue: item.scheme === 'night' ? 'dark' : 'light' });
+              });
+            })
+          }, (item: ReaderThemeOption, i: number) => `${item.value}-${item.scheme}-${row}-${i}`)
         }
         .width('100%')
       }, (row: number) => `${row}`)
@@ -2034,7 +2041,7 @@ struct ReaderFullTocRow {
       .padding({ left: 10, right: 10 })
       .border({ width: { top: 1 }, color: ColorTokens.border })
       .alignItems(VerticalAlign.Center)
-      .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'immersive-reading' as RouteId }))
+      .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
       InteractionDebugBadge({ label: 'row', tone: 'action' })
     }
     .width('100%')
@@ -2628,16 +2635,63 @@ export struct ReaderSearchPanel {
 }
 
 // ── Replace panel (.fd-replace-quick-panel) ───────────────────────────────
-//   Live demo quick panel: back toolbar + compact toggle list. No obsolete
-//   current-book summary or apply/cancel/restore footer.
+//   Live demo quick panel bound to state.replaceRules. Each row shows
+//   pattern -> replacement, an enabled toggle, edit and delete buttons.
+//   "新增规则" opens an inline form (pattern / replacement / scope) that
+//   dispatches replace-rule-add / replace-rule-edit; the toggle dispatches
+//   replace-rule-toggle; delete dispatches replace-rule-delete.
 @Component
 export struct ReaderReplacePanel {
-  private rules: Array<[string, boolean]> = [
-    ['雨容称呼', true],
-    ['旧称统一', true],
-    ['标点清理', false],
-    ['广告过滤', true],
-  ];
+  @StorageProp('reader.replaceRules') rules: ReplaceRule[] = [];
+  @State formVisible: boolean = false;
+  @State editingId: string = '';
+  @State patternInput: string = '';
+  @State replacementInput: string = '';
+  @State scopeInput: string = 'chapter';
+
+  private openAddForm(): void {
+    this.editingId = '';
+    this.patternInput = '';
+    this.replacementInput = '';
+    this.scopeInput = 'chapter';
+    this.formVisible = true;
+  }
+
+  private openEditForm(rule: ReplaceRule): void {
+    this.editingId = rule.id;
+    this.patternInput = rule.pattern;
+    this.replacementInput = rule.replacement;
+    this.scopeInput = rule.scope;
+    this.formVisible = true;
+  }
+
+  private closeForm(): void {
+    this.formVisible = false;
+    this.editingId = '';
+  }
+
+  private submitForm(): void {
+    if (this.patternInput.length === 0) {
+      return;
+    }
+    if (this.editingId.length > 0) {
+      ReaderUiStore.dispatch({
+        type: 'replace-rule-edit',
+        replaceRuleId: this.editingId,
+        replaceRulePattern: this.patternInput,
+        replaceRuleReplacement: this.replacementInput,
+        replaceRuleScope: this.scopeInput,
+      });
+    } else {
+      ReaderUiStore.dispatch({
+        type: 'replace-rule-add',
+        replaceRulePattern: this.patternInput,
+        replaceRuleReplacement: this.replacementInput,
+        replaceRuleScope: this.scopeInput,
+      });
+    }
+    this.closeForm();
+  }
 
   build() {
     ReaderQuickPanelShell({ debugLabel: 'ReaderQuickPanel' }) {
@@ -2645,15 +2699,161 @@ export struct ReaderReplacePanel {
         Row() {
           ReaderQuickBackButton()
           Blank()
+          Text('新增规则')
+            .fontSize(10)
+            .fontWeight(750)
+            .fontColor(ColorTokens.primaryDark)
+            .height(24)
+            .padding({ left: 9, right: 9 })
+            .border({ width: 1, color: ColorTokens.primary })
+            .borderRadius(DemoAliasTokens.radiusMd)
+            .backgroundColor(DemoAliasTokens.surface)
+            .textAlign(TextAlign.Center)
+            .onClick(() => this.openAddForm())
         }
         .width('100%')
         .height(24)
         .alignItems(VerticalAlign.Center)
 
+        if (this.formVisible) {
+          Column({ space: 6 }) {
+            Text(this.editingId.length > 0 ? '编辑规则' : '新增规则')
+              .fontSize(11)
+              .fontWeight(700)
+              .fontColor(ColorTokens.controlInk)
+
+            TextInput({ text: this.patternInput, placeholder: '匹配内容' })
+              .fontSize(11)
+              .fontColor(ColorTokens.ink)
+              .height(32)
+              .padding({ left: 8, right: 8 })
+              .borderRadius(DemoAliasTokens.radiusSm)
+              .backgroundColor(ColorTokens.metaBg)
+              .border({ width: 1, color: ColorTokens.border })
+              .onChange((v: string) => { this.patternInput = v; })
+
+            TextInput({ text: this.replacementInput, placeholder: '替换为（可空）' })
+              .fontSize(11)
+              .fontColor(ColorTokens.ink)
+              .height(32)
+              .padding({ left: 8, right: 8 })
+              .borderRadius(DemoAliasTokens.radiusSm)
+              .backgroundColor(ColorTokens.metaBg)
+              .border({ width: 1, color: ColorTokens.border })
+              .onChange((v: string) => { this.replacementInput = v; })
+
+            Row({ space: 4 }) {
+              Text('本章')
+                .fontSize(11)
+                .fontWeight(760)
+                .fontColor(this.scopeInput === 'chapter' ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
+                .layoutWeight(1)
+                .height(24)
+                .textAlign(TextAlign.Center)
+                .borderRadius(DemoAliasTokens.radiusSm)
+                .backgroundColor(this.scopeInput === 'chapter' ? ColorTokens.primaryDark : 'transparent')
+                .onClick(() => { this.scopeInput = 'chapter'; })
+              Text('全书')
+                .fontSize(11)
+                .fontWeight(760)
+                .fontColor(this.scopeInput === 'book' ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
+                .layoutWeight(1)
+                .height(24)
+                .textAlign(TextAlign.Center)
+                .borderRadius(DemoAliasTokens.radiusSm)
+                .backgroundColor(this.scopeInput === 'book' ? ColorTokens.primaryDark : 'transparent')
+                .onClick(() => { this.scopeInput = 'book'; })
+            }
+            .width('100%')
+            .height(24)
+
+            Row({ space: 8 }) {
+              Text('保存')
+                .fontSize(11)
+                .fontWeight(760)
+                .fontColor(DemoAliasTokens.onPrimary)
+                .height(26)
+                .padding({ left: 14, right: 14 })
+                .borderRadius(DemoAliasTokens.radiusPill)
+                .backgroundColor(ColorTokens.primary)
+                .textAlign(TextAlign.Center)
+                .onClick(() => this.submitForm())
+              Text('取消')
+                .fontSize(11)
+                .fontWeight(760)
+                .fontColor(ColorTokens.primaryDark)
+                .height(26)
+                .padding({ left: 14, right: 14 })
+                .borderRadius(DemoAliasTokens.radiusPill)
+                .border({ width: 1, color: ColorTokens.primary })
+                .backgroundColor(DemoAliasTokens.surface)
+                .textAlign(TextAlign.Center)
+                .onClick(() => this.closeForm())
+            }
+            .width('100%')
+            .alignItems(VerticalAlign.Center)
+          }
+          .width('100%')
+          .padding(8)
+          .border({ width: 1, color: ColorTokens.border })
+          .borderRadius(DemoAliasTokens.radiusMd)
+          .backgroundColor(DemoAliasTokens.surface)
+        }
+
         Column() {
-          ForEach(this.rules, (rule: [string, boolean], i: number) => {
-            ReaderReplaceRuleRow({ title: rule[0], active: rule[1] })
-          }, (rule: [string, boolean], i: number) => `${rule[0]}-${i}`)
+          ForEach(this.rules, (rule: ReplaceRule, i: number) => {
+            Row({ space: 6 }) {
+              Column() {
+                Text(rule.pattern)
+                  .fontSize(11)
+                  .fontWeight(600)
+                  .fontColor(ColorTokens.controlInk)
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                if (rule.replacement.length > 0) {
+                  Text(`→ ${rule.replacement}`)
+                    .fontSize(9)
+                    .fontColor(ColorTokens.muted)
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                }
+              }
+              .layoutWeight(1)
+              .alignItems(HorizontalAlign.Start)
+
+              Toggle({ type: ToggleType.Switch, isOn: rule.enabled })
+                .selectedColor(ColorTokens.primary)
+                .onChange((on: boolean) => ReaderUiStore.dispatch({ type: 'replace-rule-toggle', replaceRuleId: rule.id }))
+
+              Text('编辑')
+                .fontSize(10)
+                .fontWeight(750)
+                .fontColor(ColorTokens.primaryDark)
+                .height(24)
+                .padding({ left: 8, right: 8 })
+                .border({ width: 1, color: ColorTokens.primary })
+                .borderRadius(DemoAliasTokens.radiusMd)
+                .backgroundColor(DemoAliasTokens.surface)
+                .textAlign(TextAlign.Center)
+                .onClick(() => this.openEditForm(rule))
+
+              Text('删除')
+                .fontSize(10)
+                .fontWeight(750)
+                .fontColor(DemoAliasTokens.onPrimary)
+                .height(24)
+                .padding({ left: 8, right: 8 })
+                .borderRadius(DemoAliasTokens.radiusMd)
+                .backgroundColor(ColorTokens.border)
+                .textAlign(TextAlign.Center)
+                .onClick(() => ReaderUiStore.dispatch({ type: 'replace-rule-delete', replaceRuleId: rule.id }))
+            }
+            .width('100%')
+            .height(40)
+            .padding({ left: 10, right: 10 })
+            .border({ width: { top: 1 }, color: ColorTokens.border })
+            .alignItems(VerticalAlign.Center)
+          }, (rule: ReplaceRule, i: number) => `${rule.id}|${rule.pattern}|${rule.replacement}|${rule.enabled}`)
         }
         .width('100%')
         .layoutWeight(1)

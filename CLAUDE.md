@@ -2,7 +2,7 @@
 
 ## Project Identity
 
-Reader for HarmonyOS is the HarmonyOS (ArkTS / Stage Model, API 22 / SDK 6.0.2) native host app for the Reader multi-end architecture. It renders the Reader UI Contract (route / state / motion / token / view-state) as ArkUI, driven by an ArkTS reducer/store, and may now integrate Reader-Core-Native through a NAPI/Core bridge plus HarmonyOS Host Adapters.
+Reader for HarmonyOS is the HarmonyOS (ArkTS / Stage Model, API 22 / SDK 6.0.2) native host app for the Reader multi-end architecture. It renders the Reader UI Contract (route / state / motion / token / view-state) as ArkUI, driven by an ArkTS reducer/store, and integrates Reader-Core-Native through a NAPI/Core bridge (`entry/src/main/ets/bridge/CoreRuntime.ets` + `entry/libs/arm64-v8a/libreader_core_napi.so`) plus HarmonyOS Host Adapters (`entry/src/main/ets/host/adapters/`). P0 UI link matrix 120/120 green; 2026-07-08 device evidence collected (CoreSelfCheck + ReadingChain + ReadingChainUi verified on real device).
 
 ## Key Paths
 
@@ -16,15 +16,15 @@ Reader for HarmonyOS is the HarmonyOS (ArkTS / Stage Model, API 22 / SDK 6.0.2) 
 
 ## Current Architecture
 
-The UI shell remains contract-first and native, while Core/Host integration is now open:
+The UI shell is contract-first and native, with Core/Host integration landed (P0 reading chain + 15 Host Adapters + 2026-07-08 device evidence):
 
 1. **TokenAdapter** (`ui/adapters/TokenAdapter.ets`) — maps Reader UI token registry → ArkUI `color.json` / spacing / typography / motion. No raw color/spacing/size values anywhere outside `contract/generated/`.
 2. **MainTabShell** (`ui/shells/MainTabShell.ets`) — 5 slots: topArea / content / tabNav / overlayHost / stateHost. 4 tabs: bookshelf / discover / rss / settings.
 3. **ReaderShell** (`ui/shells/ReaderShell.ets`) — 5 slots: readingSurface / readerOverlayHost / bottomSheetHost / readerModuleNav / readerStateHost.
 4. **RouteRenderer** (`ui/router/RouteRenderer.ets`) — `RouteId → Shell → PageState` dispatch. P0 routes: app-shell / main-tabs / bookshelf / book-detail / reader / settings / discover / rss.
 5. **MotionAdapter** (`ui/adapters/MotionAdapter.ets`) — page transitions flow `ReaderMotionResolver → MotionSpecRegistry → MotionAdapter`. No ad-hoc `animateTo` in pages.
-6. **CoreBridge / NAPI** — may be implemented to connect ArkTS to Reader-Core-Native C ABI.
-7. **Host Adapter** — may implement HarmonyOS platform capabilities including HTTP, WebView, cookies, WebDAV/sync, JS runtime, media download, auth/login, and device proof.
+6. **CoreBridge / NAPI** (`bridge/CoreRuntime.ets` + `bridge/core/sdk/reader_core.ts`) — implemented; connects ArkTS to Reader-Core-Native C ABI via `libreader_core_napi.so`. P0 reading chain (source.import → book.search → book.detail → book.toc → chapter.content) wrapper smoke + 2026-07-08 device evidence verified.
+7. **Host Adapter** (`host/adapters/`) — implemented for HTTP, WebView, cookies, WebDAV/sync, JS runtime, media download, auth/login, TTS, file, credential, notification, permission, screen, share, clipboard, background, device. 15 adapters registered through `HostCapabilityRegistry` + `HostDispatcher`; `HostCapabilityManifest` broadcasts at init.
 
 State ownership: `UiState` (reducer-held, mirrors `ui-state.schema.json`) → `ViewState` (reducer-produced, UI-rendered, from `view-state.fixtures.json`). Durable DomainState belongs to Reader-Core-Native and must cross the NAPI/Core bridge or Host Adapter boundary explicitly.
 

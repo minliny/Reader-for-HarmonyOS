@@ -1,6 +1,6 @@
 // TokenAdapter — the unified outlet for token-derived ArkUI values.
 // Components should prefer:
-//   - $r('app.color.reader_ds_color_*')  for colors (auto light/dark)
+//   - $r('app.color.fd_ds_color_*')  for colors (auto light/dark)
 //   - generated classes (ColorTokens, SpacingTokens, …) for typed static access
 // TokenAdapter is used for dynamic lookups, derived typography roles, and shadow parsing.
 import { TokenRegistry, TokenEntry } from '../../contract/generated/TokenRegistry';
@@ -8,7 +8,7 @@ import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { ReaderTypography, Typography } from '../tokens/ReaderTypography';
 
 export class TokenAdapter {
-  // ── Color (dynamic; static use $r('app.color.reader_ds_color_<name>')) ──
+  // ── Color (dynamic; static use $r('app.color.fd_ds_color_<name>')) ──
   static color(shortName: string): string {
     const e = TokenRegistry.byName(`--fd-ds-color-${shortName}`);
     return e ? TokenAdapter.parseArgb(e.value) : '';
@@ -126,5 +126,121 @@ export class TokenAdapter {
     const blur = parseInt(m[3], 10);
     const color = TokenAdapter.parseArgb(m[4].trim());
     return { radius: blur, color: color, offsetX: offsetX, offsetY: offsetY };
+  }
+
+  // ── Font (font token family stack; prefers platforms.arkts) ──
+  static font(shortName: string): string {
+    const e = TokenRegistry.byName(`--fd-ds-font-${shortName}`);
+    if (!e) return '';
+    return e.arkts ? e.arkts : e.value;
+  }
+
+  // ── Text constraint (line counts / measure strings) ──
+  static textConstraint(shortName: string): string {
+    const e = TokenRegistry.byName(`--fd-ds-text-${shortName}`);
+    return e ? e.value : '';
+  }
+
+  // ── Icon ($r() must be a compile-time macro; explicit switch-case mapping) ──
+  // shortName is the contract icon value (e.g. 'add', 'eyeOff', 'auto-page').
+  // Returns the matching $r('app.media.reader_icon_<name>') Resource.
+  static icon(shortName: string): Resource {
+    switch (shortName) {
+      case 'add': return $r('app.media.reader_icon_add');
+      case 'activity': return $r('app.media.reader_icon_activity');
+      case 'appearance': return $r('app.media.reader_icon_appearance');
+      case 'assist': return $r('app.media.reader_icon_assist');
+      case 'auto-page': return $r('app.media.reader_icon_auto_page');
+      case 'back': return $r('app.media.reader_icon_back');
+      case 'badge': return $r('app.media.reader_icon_badge');
+      case 'battery': return $r('app.media.reader_icon_battery');
+      case 'bell': return $r('app.media.reader_icon_bell');
+      case 'book': return $r('app.media.reader_icon_book');
+      case 'book-open': return $r('app.media.reader_icon_book_open');
+      case 'bookmark': return $r('app.media.reader_icon_bookmark');
+      case 'bookshelf': return $r('app.media.reader_icon_bookshelf');
+      case 'bug': return $r('app.media.reader_icon_bug');
+      case 'check': return $r('app.media.reader_icon_check');
+      case 'checkmark': return $r('app.media.reader_icon_checkmark');
+      case 'chevron': return $r('app.media.reader_icon_chevron');
+      case 'chevron-left': return $r('app.media.reader_icon_chevron_left');
+      case 'clear': return $r('app.media.reader_icon_clear');
+      case 'clock': return $r('app.media.reader_icon_clock');
+      case 'close': return $r('app.media.reader_icon_close');
+      case 'cloud': return $r('app.media.reader_icon_cloud');
+      case 'code': return $r('app.media.reader_icon_code');
+      case 'columns': return $r('app.media.reader_icon_columns');
+      case 'copy': return $r('app.media.reader_icon_copy');
+      case 'current-location': return $r('app.media.reader_icon_current_location');
+      case 'database': return $r('app.media.reader_icon_database');
+      case 'directory': return $r('app.media.reader_icon_directory');
+      case 'discover': return $r('app.media.reader_icon_discover');
+      case 'download': return $r('app.media.reader_icon_download');
+      case 'edit': return $r('app.media.reader_icon_edit');
+      case 'eyeOff': return $r('app.media.reader_icon_eye_off');
+      case 'file': return $r('app.media.reader_icon_file');
+      case 'filter': return $r('app.media.reader_icon_filter');
+      case 'folder': return $r('app.media.reader_icon_folder');
+      case 'folder-off': return $r('app.media.reader_icon_folder_off');
+      case 'gear': return $r('app.media.reader_icon_gear');
+      case 'gesture': return $r('app.media.reader_icon_gesture');
+      case 'globe': return $r('app.media.reader_icon_globe');
+      case 'grid': return $r('app.media.reader_icon_grid');
+      case 'help': return $r('app.media.reader_icon_help');
+      case 'home': return $r('app.media.reader_icon_home');
+      case 'image': return $r('app.media.reader_icon_image');
+      case 'info': return $r('app.media.reader_icon_info');
+      case 'link': return $r('app.media.reader_icon_link');
+      case 'list': return $r('app.media.reader_icon_list');
+      case 'log': return $r('app.media.reader_icon_log');
+      case 'mail': return $r('app.media.reader_icon_mail');
+      case 'message': return $r('app.media.reader_icon_message');
+      case 'monitor': return $r('app.media.reader_icon_monitor');
+      case 'more': return $r('app.media.reader_icon_more');
+      case 'motion': return $r('app.media.reader_icon_motion');
+      case 'nav-list': return $r('app.media.reader_icon_nav_list');
+      case 'night-mode': return $r('app.media.reader_icon_night_mode');
+      case 'offline': return $r('app.media.reader_icon_offline');
+      case 'palette': return $r('app.media.reader_icon_palette');
+      case 'pause': return $r('app.media.reader_icon_pause');
+      case 'people': return $r('app.media.reader_icon_people');
+      case 'permission': return $r('app.media.reader_icon_permission');
+      case 'phone': return $r('app.media.reader_icon_phone');
+      case 'play': return $r('app.media.reader_icon_play');
+      case 'progress': return $r('app.media.reader_icon_progress');
+      case 'reader-auto-page': return $r('app.media.reader_icon_reader_auto_page');
+      case 'reader-content-replace': return $r('app.media.reader_icon_reader_content_replace');
+      case 'reader-content-search': return $r('app.media.reader_icon_reader_content_search');
+      case 'reader-module-directory': return $r('app.media.reader_icon_reader_module_directory');
+      case 'reader-module-tts': return $r('app.media.reader_icon_reader_module_tts');
+      case 'reader-module-appearance': return $r('app.media.reader_icon_reader_module_appearance');
+      case 'reader-module-settings': return $r('app.media.reader_icon_reader_module_settings');
+      case 'refresh': return $r('app.media.reader_icon_refresh');
+      case 'replace': return $r('app.media.reader_icon_replace');
+      case 'rss': return $r('app.media.reader_icon_rss');
+      case 'search': return $r('app.media.reader_icon_search');
+      case 'settings': return $r('app.media.reader_icon_settings');
+      case 'shield': return $r('app.media.reader_icon_shield');
+      case 'signal': return $r('app.media.reader_icon_signal');
+      case 'sort': return $r('app.media.reader_icon_sort');
+      case 'source': return $r('app.media.reader_icon_source');
+      case 'source-stack': return $r('app.media.reader_icon_source_stack');
+      case 'source-switch': return $r('app.media.reader_icon_source_switch');
+      case 'sparkle': return $r('app.media.reader_icon_sparkle');
+      case 'stop': return $r('app.media.reader_icon_stop');
+      case 'storage': return $r('app.media.reader_icon_storage');
+      case 'sun': return $r('app.media.reader_icon_sun');
+      case 'sync': return $r('app.media.reader_icon_sync');
+      case 'text': return $r('app.media.reader_icon_text');
+      case 'top': return $r('app.media.reader_icon_top');
+      case 'trash': return $r('app.media.reader_icon_trash');
+      case 'tts': return $r('app.media.reader_icon_tts');
+      case 'typo': return $r('app.media.reader_icon_typo');
+      case 'upload': return $r('app.media.reader_icon_upload');
+      case 'volume': return $r('app.media.reader_icon_volume');
+      case 'warning': return $r('app.media.reader_icon_warning');
+      case 'wifi': return $r('app.media.reader_icon_wifi');
+      default: return $r('app.media.reader_icon_add');
+    }
   }
 }

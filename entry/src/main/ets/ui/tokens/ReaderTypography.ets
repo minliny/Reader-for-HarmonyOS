@@ -44,16 +44,16 @@ export class ReaderTypography {
 
   // ── Derived roles (consume contract type tokens, no raw sizes) ──
   static topBarTitle(): Typography {
-    return { fontSize: 16, lineHeight: 17.28, fontFamily: FontTokens.sans, fontWeight: 600 };
+    return { fontSize: TypeTokens.topBarTitleSize, lineHeight: 17.28, fontFamily: FontTokens.sans, fontWeight: 600 };
   }
   static topBarSubtitle(): Typography {
-    return { fontSize: 10, lineHeight: 11, fontFamily: FontTokens.sans, fontWeight: 400 };
+    return { fontSize: TypeTokens.topBarSubtitleSize, lineHeight: 11, fontFamily: FontTokens.sans, fontWeight: 400 };
   }
   static actionLabel(): Typography {
-    return { fontSize: 11, lineHeight: 14, fontFamily: FontTokens.sans, fontWeight: 500 };
+    return { fontSize: TypeTokens.actionLabelSize, lineHeight: 14, fontFamily: FontTokens.sans, fontWeight: 500 };
   }
   static chapterTitle(): Typography {
-    return { fontSize: 13, lineHeight: 17, fontFamily: FontTokens.sans, fontWeight: 500 };
+    return { fontSize: TypeTokens.chapterTitleSize, lineHeight: 17, fontFamily: FontTokens.sans, fontWeight: 500 };
   }
   static immersiveInfo(): Typography {
     return { fontSize: TypeTokens.readerControlLabelSize, lineHeight: 14.4, fontFamily: FontTokens.sans, fontWeight: 400 };

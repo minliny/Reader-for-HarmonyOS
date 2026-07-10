@@ -54,6 +54,12 @@ export struct AppTopBar {
   private openTopMore(): void {
     if (this.routeId === 'bookshelf' || this.routeId === 'bookshelf-cover-mode' || this.routeId === 'bookshelf-list-mode') {
       ReaderUiStore.dispatch({ type: 'set-overlay', overlay: 'book-action' });
+    } else if (this.routeId === 'discover' || this.routeId === 'discover-home') {
+      ReaderUiStore.dispatch({ type: 'set-overlay', overlay: 'sort-filter' });
+    } else if (this.routeId === 'rss' || this.routeId === 'rss-all') {
+      ReaderUiStore.dispatch({ type: 'route-push', id: 'rss-subscription-management' });
+    } else if (this.routeId === 'settings' || this.routeId === 'global-settings') {
+      ReaderUiStore.dispatch({ type: 'route-push', id: 'about-feedback' });
     }
   }
 }
@@ -82,6 +88,7 @@ export struct BackTopBar {
         .margin({ left: 10, right: 10 })
       Image($r('app.media.reader_icon_more_dark'))
         .width(24).height(24)
+        .onClick(() => ReaderUiStore.dispatch({ type: 'set-overlay', overlay: 'book-action' }))
     }
     .width('100%')
     .height(SizeTokens.topBarHeight)

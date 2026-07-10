@@ -26,6 +26,8 @@ import { InteractionDebugAdapter } from '../adapters/InteractionDebugAdapter';
 import { TokenAdapter } from '../adapters/TokenAdapter';
 import { MotionAdapter } from '../adapters/MotionAdapter';
 import { ReaderTypography } from '../tokens/ReaderTypography';
+import { FontTokens } from '../../contract/generated/TypeTokens';
+import { ReaderThemeResolver, ReaderThemePalette } from '../tokens/ReaderThemeResolver';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 import { InteractionDebugBadge, InteractionDebugFrame } from './InteractionDebugComponents';
 import { ReaderSelectionToolbar } from './ReaderSelectionToolbar';
@@ -35,7 +37,12 @@ import { ReaderSelectionToolbar } from './ReaderSelectionToolbar';
 export struct ReadingBackgroundLayer {
   @StorageProp(ViewportAdapter.K_WIDTH) viewportWidth: number = ViewportAdapter.DEFAULT_WIDTH;
   @StorageProp(ViewportAdapter.K_HEIGHT) viewportHeight: number = ViewportAdapter.DEFAULT_HEIGHT;
-  @Prop theme: string = 'paper';
+  @StorageProp('reader.readerTheme') readerTheme: string = 'paper';
+  @StorageProp('reader.appThemeMode') appThemeMode: string = 'system';
+
+  private palette(): ReaderThemePalette {
+    return ReaderThemeResolver.palette(this.readerTheme, this.appThemeMode);
+  }
 
   private textureLines(): number[] {
     const lines: number[] = [];
@@ -47,11 +54,11 @@ export struct ReadingBackgroundLayer {
   }
 
   private textureColor(): string {
-    return this.theme === 'night' ? ColorTokens.controlInkNight : ColorTokens.muted;
+    return this.palette().textureColor;
   }
 
   private textureOpacity(): number {
-    return this.theme === 'night' ? 0.026 : 0.034;
+    return this.palette().textureOpacity;
   }
 
   // 夜读星点：11 颗固定相对坐标（视口百分比），近似 B 的
@@ -71,12 +78,12 @@ export struct ReadingBackgroundLayer {
       Column()
         .width('100%')
         .height('100%')
-        .backgroundColor(this.theme === 'night' ? ColorTokens.paperNight : ColorTokens.paper)
+        .backgroundColor(this.palette().paper)
         .linearGradient({
           angle: 180,
           colors: [
-            [this.theme === 'night' ? ColorTokens.paperNight : ColorTokens.paperBright, 0],
-            [this.theme === 'night' ? ColorTokens.paperNight : ColorTokens.paper, 100],
+            [this.palette().paperBright, 0],
+            [this.palette().paper, 100],
           ],
         })
       // 顶部高光：顶部中心柔光（B L2499 radial-gradient 顶部高光的 linearGradient 近似）。
@@ -86,8 +93,8 @@ export struct ReadingBackgroundLayer {
         .linearGradient({
           angle: 180,
           colors: [
-            [this.theme === 'night' ? TokenAdapter.colorWithAlpha(ColorTokens.primaryNight, 0.12) : TokenAdapter.colorWithAlpha(ColorTokens.paperBright, 0.5), 0],
-            [TokenAdapter.colorWithAlpha(ColorTokens.paperBright, 0), 1.0],
+            [this.palette().scheme === 'night' ? TokenAdapter.colorWithAlpha(this.palette().primary, 0.12) : TokenAdapter.colorWithAlpha(this.palette().paperBright, 0.5), 0],
+            [TokenAdapter.colorWithAlpha(this.palette().paperBright, 0), 1.0],
           ],
         })
       // 四周暗角 vignette：中心透明，四周加深（B L2500 radial-gradient 暗角）。
@@ -98,32 +105,32 @@ export struct ReadingBackgroundLayer {
           center: ['50%', '50%'],
           radius: '75%',
           colors: [
-            [TokenAdapter.colorWithAlpha(ColorTokens.ink, 0), 0.55],
-            [this.theme === 'night' ? TokenAdapter.colorWithAlpha(ColorTokens.ink, 0.45) : TokenAdapter.colorWithAlpha(ColorTokens.muted, 0.14), 1.0],
+            [TokenAdapter.colorWithAlpha(this.palette().ink, 0), 0.55],
+            [this.palette().scheme === 'night' ? TokenAdapter.colorWithAlpha(this.palette().ink, 0.45) : TokenAdapter.colorWithAlpha(this.palette().muted, 0.14), 1.0],
           ],
         })
       // 夜读极光 signature moment：顶部紫蓝渐变光晕（B L2504-2510 ::before 极光）。
-      if (this.theme === 'night') {
+      if (this.palette().scheme === 'night') {
         Column()
           .width('100%')
           .height('45%')
           .linearGradient({
             angle: 135,
             colors: [
-              [TokenAdapter.colorWithAlpha(ColorTokens.primaryNight, 0.18), 0],
-              [TokenAdapter.colorWithAlpha(ColorTokens.primaryNight, 0.12), 0.3],
-              [TokenAdapter.colorWithAlpha(ColorTokens.primaryNight, 0.06), 0.6],
-              [TokenAdapter.colorWithAlpha(ColorTokens.ink, 0), 1.0],
+              [TokenAdapter.colorWithAlpha(this.palette().primary, 0.18), 0],
+              [TokenAdapter.colorWithAlpha(this.palette().primary, 0.12), 0.3],
+              [TokenAdapter.colorWithAlpha(this.palette().primary, 0.06), 0.6],
+              [TokenAdapter.colorWithAlpha(this.palette().ink, 0), 1.0],
             ],
           })
       }
       // 夜读星点：顶部随机分布的微小光点（B L2511-2521 星点序列）。
-      if (this.theme === 'night') {
+      if (this.palette().scheme === 'night') {
         ForEach(this.starPoints(), (pt: number[]) => {
           Circle()
             .width(2)
             .height(2)
-            .fill(TokenAdapter.colorWithAlpha(ColorTokens.primaryNight, 0.6))
+            .fill(TokenAdapter.colorWithAlpha(this.palette().primary, 0.6))
             .position({ x: pt[0], y: pt[1] })
         }, (pt: number[], i: number) => `star-${i}`)
       }
@@ -165,7 +172,8 @@ export struct ReadingTextFlow {
   @StorageProp('reader.pageSpace.sideMargin') sideMargin: number = 32;
   @StorageProp('reader.pageSpace.bottomMargin') bottomMargin: number = 16;
   @StorageProp('reader.pageSpace.paragraphIndent') paragraphIndent: number = 2;
-  @Prop theme: string = 'paper';
+  @StorageProp('reader.readerTheme') readerTheme: string = 'paper';
+  @StorageProp('reader.appThemeMode') appThemeMode: string = 'system';
 
   private fallbackParagraphs: string[] = [
     '雨声在窗外连成一片，像无数细小的针，密密地刺在玻璃上，汇成一层朦胧的水幕，将城市的灯光晕成模糊的光团。',
@@ -177,7 +185,7 @@ export struct ReadingTextFlow {
   ];
 
   private inkColor(): string {
-    return this.theme === 'night' ? ColorTokens.inkNight : ColorTokens.ink;
+    return ReaderThemeResolver.palette(this.readerTheme, this.appThemeMode).ink;
   }
 
   private controlLayer(): boolean {
@@ -203,11 +211,11 @@ export struct ReadingTextFlow {
       case 'sans':
         return ReaderTypography.sansFamily();
       case 'kai':
-        return '"Kaiti SC", "KaiTi", serif';
+        return FontTokens.kai;
       case 'fangsong':
-        return '"FangSong", "STFangsong", serif';
+        return FontTokens.fangsong;
       case 'mono':
-        return '"SFMono-Regular", "HarmonyOS Sans Mono", monospace';
+        return FontTokens.mono;
       case 'serif':
       default:
         return ReaderTypography.serifFamily();
@@ -467,11 +475,12 @@ export struct ReadingInfoLayer {
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
   @StorageProp(ViewportAdapter.K_WIDTH) viewportWidth: number = ViewportAdapter.DEFAULT_WIDTH;
   @StorageProp(ViewportAdapter.K_HEIGHT) viewportHeight: number = ViewportAdapter.DEFAULT_HEIGHT;
-  @Prop theme: string = 'paper';
+  @StorageProp('reader.readerTheme') readerTheme: string = 'paper';
+  @StorageProp('reader.appThemeMode') appThemeMode: string = 'system';
   @StorageProp('reader.activeSession') activeSession: string = '';
 
   private mutedColor(): string {
-    return this.theme === 'night' ? ColorTokens.controlInkNight : ColorTokens.muted;
+    return ReaderThemeResolver.palette(this.readerTheme, this.appThemeMode).muted;
   }
 
   // 四角绝对定位锚点：top-left / top-right / bottom-left / bottom-right
@@ -553,7 +562,7 @@ export struct ReaderTopArea {
               .height(42)
               .justifyContent(FlexAlign.Start)
               .alignItems(VerticalAlign.Center)
-              .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
+              .onClick(() => ReaderUiStore.dispatch({ type: 'reader-exit' }))
               InteractionDebugBadge({ label: 'back', tone: 'action', offsetTop: 22 })
             }
             .width(40)
@@ -612,6 +621,7 @@ export struct ReaderTopArea {
               .height(42)
               .justifyContent(FlexAlign.Center)
               .alignItems(VerticalAlign.Center)
+              .onClick(() => ReaderUiStore.dispatch({ type: 'set-overlay', overlay: 'book-action' }))
               InteractionDebugBadge({ label: 'more', tone: 'action' })
             }
             .width(34)
@@ -677,7 +687,7 @@ export struct TapZones {
       .alignItems(HorizontalAlign.Center)
       .backgroundColor(this.zoneColor('prev'))
       .opacity(this.zoneOpacity())
-        .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
+        .onClick(() => ReaderUiStore.dispatch({ type: 'reader-page-prev' }))
       Column() {
         this.zoneLabel('ControlLayerHotzone')
       }
@@ -790,17 +800,17 @@ struct ControlDismissZone {
     }
     .width('100%')
     .height('100%')
-    .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'immersive-reading' }))
+    .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
   }
 }
 
 // ReaderBase — factored reading base (background + text + info + tap zones +
 // session capsule). Composite used by every reader route's view-state body so
 // the base is declared once in the contract, not repeated per overlay route.
-// theme prop: 'paper' (default) | 'night' (night-theme tokens — step 3c-2).
+// Theme is read from state (reader.readerTheme + reader.appThemeMode) by each
+// child layer via ReaderThemeResolver — no prop wiring needed.
 @Component
 export struct ReaderBase {
-  @Prop theme: string = 'paper';
   @StorageProp('reader.displayedRouteId') routeId: string = 'reader';
 
   private controlLayer(): boolean {
@@ -809,13 +819,13 @@ export struct ReaderBase {
 
   build() {
     Stack() {
-      ReadingBackgroundLayer({ theme: this.theme })
-      ReadingTextFlow({ theme: this.theme })
+      ReadingBackgroundLayer()
+      ReadingTextFlow()
       if (this.controlLayer()) {
         ControlDismissZone()
         SessionCapsule()
       } else {
-        ReadingInfoLayer({ theme: this.theme })
+        ReadingInfoLayer()
         TapZones()
         SessionCapsule()
         ReaderSelectionToolbar()

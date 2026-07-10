@@ -1,6 +1,6 @@
 // DemoUiState — Phase 1 demo initial state (from ui-state.fixtures.json).
 // Opens directly to the bookshelf (cover-mode). firstOpen ceremony is Phase 2 polish.
-import { ReaderUiState } from '../store/ReaderUiState';
+import { ReaderUiState, ReplaceRule } from '../store/ReaderUiState';
 
 export class DemoUiState {
   static initial(): ReaderUiState {
@@ -95,6 +95,27 @@ export class DemoUiState {
       readerTheme: 'paper',
       readerSettingExpandedOption: '',
       autoPageMode: 'continuous',
+      // ── P1.2 select/action 控件展开状态默认值 ──
+      expandedOptionKey: '',
+      // ── P1.3 WebDAV 配置默认值 ──
+      webdavServerUrl: '',
+      webdavUsername: '',
+      webdavPassword: '',
+      webdavSyncDir: '/reader/backup',
+      webdavTestStatus: 'idle',
+      webdavTestMessage: '',
+      webdavSaveStatus: 'idle',
+      webdavSaveMessage: '',
+      // ── W1 资源导入预览默认值 ──
+      importPreviewFormat: '',
+      importPreviewCount: 0,
+      // ── W5 规则替换默认值（demo 规则） ──
+      replaceRules: [
+        { id: 'rule-1', pattern: '雨容', replacement: '雨容（统一）', scope: 'chapter', enabled: true },
+        { id: 'rule-2', pattern: '旧称', replacement: '新称', scope: 'book', enabled: true },
+        { id: 'rule-3', pattern: '标点清理', replacement: '规范标点', scope: 'chapter', enabled: false },
+        { id: 'rule-4', pattern: '广告', replacement: '', scope: 'book', enabled: true },
+      ] as ReplaceRule[],
     };
   }
 }

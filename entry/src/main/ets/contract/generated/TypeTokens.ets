@@ -10,9 +10,21 @@ export class TypeTokens {
   static readonly bookMetaSize: number = 12;
   static readonly readerBodySize: number = 18;
   static readonly readerControlLabelSize: number = 12;
+  static readonly topBarTitleSize: number = 16;
+  static readonly topBarSubtitleSize: number = 10;
+  static readonly actionLabelSize: number = 11;
+  static readonly chapterTitleSize: number = 13;
+  static readonly readerTitleSize: number = 28;
+  static readonly appBarTitleSize: number = 29;
+  static readonly backBarTitleSize: number = 29;
+  static readonly readerChapterTitleSize: number = 23;
+  static readonly emptyHeadingSize: number = 19;
 }
 
 export class FontTokens {
   static readonly sans: string = '"HarmonyOS Sans", "PingFang SC", "Microsoft YaHei", sans-serif';
-  static readonly serif: string = 'Noto Serif CJK SC';
+  static readonly serif: string = '"Noto Serif CJK SC", serif';
+  static readonly kai: string = '"KaiTi", serif';
+  static readonly fangsong: string = '"FangSong", serif';
+  static readonly mono: string = '"SFMono-Regular", "HarmonyOS Sans Mono", monospace';
 }

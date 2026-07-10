@@ -185,7 +185,7 @@ export struct ViewStateRenderer {
     } else if (component.type === 'TapZones') {
       TapZones()
     } else if (component.type === 'ReaderBase') {
-      ReaderBase({ theme: this.textOr(component.props.theme, 'paper') })
+      ReaderBase()
     } else if (component.type === 'ReaderTopArea') {
       ReaderTopArea()
     } else if (component.type === 'ReaderControlSheet') {

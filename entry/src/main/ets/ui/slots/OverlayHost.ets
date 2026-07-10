@@ -30,7 +30,8 @@ export struct OverlayHost {
   ];
 
   build() {
-    if (this.overlayKind !== '') {
+    // sort-filter 由 BookshelfShelfSection 内部渲染筛选浮层（契约 fixture view-state 设计），不在此全局浮层显示
+    if (this.overlayKind !== '' && this.overlayKind !== 'sort-filter') {
       Stack() {
         Column()
           .width('100%').height('100%')

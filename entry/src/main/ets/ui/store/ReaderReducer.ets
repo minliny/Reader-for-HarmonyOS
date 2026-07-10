@@ -1,8 +1,8 @@
 // ReaderReducer — pure function reduce(state, event) -> new state.
 // No side effects. ArkTS forbids object spread (arkts-no-spread), so each method builds a
 // new ReaderUiState literal field-by-field (array spread is still allowed).
-import { RouteId } from '../../contract/generated/RouteTable';
-import { ReaderUiState, UiEvent, MainTab, Overlay, PageState, ReaderMode, ReaderPaginationMode, ReaderFontFamily, ReaderRenderMetric, RouteEntry, ReaderError, SearchResultEntry, BookDetail, ActiveSession, TtsPlaybackState, TtsScope, TtsTimer, TocMode, ReaderToggleKey, ReaderSettingOptionKey, ReaderTogglesMap, ReaderSettingOptionsMap, BookshelfView, BookshelfFilterState, DiscoverFilterState, SettingsTogglesMap } from './ReaderUiState';
+import { RouteId, RouteTable } from '../../contract/generated/RouteTable';
+import { ReaderUiState, UiEvent, MainTab, Overlay, PageState, ReaderMode, ReaderPaginationMode, ReaderFontFamily, ReaderRenderMetric, RouteEntry, ReaderError, SearchResultEntry, BookDetail, ActiveSession, TtsPlaybackState, TtsScope, TtsTimer, TocMode, ReaderToggleKey, ReaderSettingOptionKey, ReaderTogglesMap, ReaderSettingOptionsMap, BookshelfView, BookshelfFilterState, DiscoverFilterState, SettingsTogglesMap, ReplaceRule } from './ReaderUiState';
 
 function tabRoot(tab: MainTab): RouteId {
   switch (tab) {
@@ -12,6 +12,40 @@ function tabRoot(tab: MainTab): RouteId {
     case 'settings': return 'settings';
     default: return 'bookshelf';
   }
+}
+
+// reader-module-switch 辅助：module 名称 -> 模块 overlay 路由 id。
+// 调用方应先用 isValidReaderModule 校验，避免命中 default 回退分支。
+function moduleRouteId(module: string): RouteId {
+  switch (module) {
+    case 'directory': return 'reader-directory-overlay-v2';
+    case 'tts': return 'reader-tts-overlay-v2';
+    case 'appearance': return 'reader-appearance-overlay-v2';
+    case 'settings': return 'reader-settings-overlay-v2';
+    case 'search': return 'reader-search-overlay-v2';
+    case 'auto-page': return 'reader-auto-scroll-overlay-v2';
+    case 'replacement': return 'reader-replace-overlay-v2';
+    default: return 'reader-directory-overlay-v2';
+  }
+}
+
+// 判断一个 routeId 是否是 reader 模块 overlay 路由（用于 reader-module-switch
+// 的 replace/push 决策：栈顶已是模块 overlay 时 replace，否则 push）。
+function isReaderModuleOverlay(routeId: string): boolean {
+  return routeId === 'reader-directory-overlay-v2' ||
+    routeId === 'reader-tts-overlay-v2' ||
+    routeId === 'reader-appearance-overlay-v2' ||
+    routeId === 'reader-settings-overlay-v2' ||
+    routeId === 'reader-search-overlay-v2' ||
+    routeId === 'reader-auto-scroll-overlay-v2' ||
+    routeId === 'reader-replace-overlay-v2';
+}
+
+// 校验 module 名称是否是受支持的 reader 模块。
+function isValidReaderModule(module: string): boolean {
+  return module === 'directory' || module === 'tts' || module === 'appearance' ||
+    module === 'settings' || module === 'search' || module === 'auto-page' ||
+    module === 'replacement';
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -81,7 +115,10 @@ function normalizeMetricValue(metric: ReaderRenderMetric, value: number): number
 
 export class ReaderReducer {
   static reduce(state: ReaderUiState, event: UiEvent): ReaderUiState {
-    switch (event.type) {
+    // 事件名归一化：点号（reader.exit / route.pop / reader.module.switch 等）
+    // -> kebab-case，使契约层点号事件能命中现有/新增 case。
+    const normalizedType = event.type.replace(/\./g, '-');
+    switch (normalizedType) {
       case 'route-push': {
         const id = event.id;
         return id !== undefined ? ReaderReducer.push(state, id) : state;
@@ -314,6 +351,106 @@ export class ReaderReducer {
         const key = event.settingsKey;
         const val = event.settingsToggleValue;
         return key !== undefined && val !== undefined ? ReaderReducer.toggleSettingsSwitch(state, key, val) : state;
+      }
+      // ── P1.2 select/action 控件 cases ──
+      case 'settings-select-open': {
+        const key = event.settingsKey;
+        return key !== undefined ? ReaderReducer.openSettingsSelect(state, key) : state;
+      }
+      case 'settings-select-close':
+        return ReaderReducer.closeSettingsSelect(state);
+      case 'settings-action': {
+        // 状态机标记 + 透传给 effect（cache-clear / clear-search-history）
+        const key = event.settingsKey;
+        return key !== undefined ? ReaderReducer.markSettingsAction(state, key) : state;
+      }
+      // ── P1.3 WebDAV 配置 cases ──
+      case 'webdav-field-update': {
+        const field = event.field;
+        const val = event.settingsValue;
+        return field !== undefined && val !== undefined ? ReaderReducer.updateWebdavField(state, field, val) : state;
+      }
+      case 'webdav-test':
+        return ReaderReducer.setWebdavTestStatus(state, 'testing', '');
+      case 'webdav-test-result': {
+        const ok = event.success === true;
+        return ReaderReducer.setWebdavTestStatus(state, ok ? 'success' : 'error', event.message ?? '');
+      }
+      case 'webdav-save':
+        return ReaderReducer.setWebdavSaveStatus(state, 'saving', '');
+      case 'webdav-save-result': {
+        const ok = event.success === true;
+        return ReaderReducer.setWebdavSaveStatus(state, ok ? 'saved' : 'error', event.message ?? '');
+      }
+      // ── 契约事件 cases（reader-exit / reader-module-switch / reader-page-prev / source-switch-*）──
+      case 'reader-exit': {
+        // 一次弹尽 ReaderShell 路由，回到非阅读器页（书详情/书架）。
+        let stack = state.stack.slice();
+        while (stack.length > 1) {
+          const top = stack[stack.length - 1].id;
+          if (RouteTable.shellOf(top) !== 'ReaderShell') break;
+          stack = stack.slice(0, -1);
+        }
+        if (stack.length === state.stack.length) return state;
+        const top = stack[stack.length - 1];
+        return ReaderReducer.clone(state, top.id, state.tab, '', stack, 'default');
+      }
+      case 'reader-module-switch': {
+        // 模块切换（replace 语义）：栈顶已是模块 overlay 时 replace，否则 push。
+        const module = event.module ?? '';
+        if (!isValidReaderModule(module)) return state;
+        const targetId = moduleRouteId(module);
+        if (state.stack.length > 0 && isReaderModuleOverlay(state.stack[state.stack.length - 1].id)) {
+          return ReaderReducer.replace(state, targetId);
+        }
+        return ReaderReducer.push(state, targetId);
+      }
+      case 'reader-page-prev':
+        // No-op：页码未在 state 中追踪（与 chapter-prev 一致，保留 case 使
+        // default 不吞掉事件；实际翻页由渲染层处理）。
+        return state;
+      case 'source-switch-confirm':
+        // 确认换源：pop 路由回到来源页（实际书源切换由 Effects 层执行）。
+        return ReaderReducer.pop(state);
+      case 'source-switch-cancel':
+        // 取消换源：pop 路由回到来源页。
+        return ReaderReducer.pop(state);
+      // ── W1 资源导入 cases（source.import.* 归一化为 source-import-*）──
+      case 'source-import-open':
+        // 打开本地导入页：push 'local-import' 路由。
+        return ReaderReducer.openLocalImport(state);
+      case 'source-import-preview': {
+        // 设置导入预览格式。
+        const fmt = event.importFormat ?? '';
+        return ReaderReducer.setImportPreviewFormat(state, fmt);
+      }
+      case 'source-import-apply': {
+        // 应用导入：pop 回书架并记录导入数量（toast 由 effect 层 dispatch feedback.toast.show）。
+        const cnt = event.importCount ?? 0;
+        return ReaderReducer.applyImport(state, cnt);
+      }
+      // ── W5 规则替换 cases（replace.rule.* 归一化为 replace-rule-*）──
+      case 'replace-rule-add': {
+        const id = event.replaceRuleId ?? `rule-${state.replaceRules.length + 1}`;
+        const pattern = event.replaceRulePattern ?? '';
+        const replacement = event.replaceRuleReplacement ?? '';
+        const scope = event.replaceRuleScope ?? 'chapter';
+        return ReaderReducer.addReplaceRule(state, id, pattern, replacement, scope);
+      }
+      case 'replace-rule-edit': {
+        const id = event.replaceRuleId ?? '';
+        if (id.length === 0) return state;
+        return ReaderReducer.editReplaceRule(state, id, event.replaceRulePattern ?? '', event.replaceRuleReplacement ?? '', event.replaceRuleScope ?? 'chapter');
+      }
+      case 'replace-rule-delete': {
+        const id = event.replaceRuleId ?? '';
+        if (id.length === 0) return state;
+        return ReaderReducer.deleteReplaceRule(state, id);
+      }
+      case 'replace-rule-toggle': {
+        const id = event.replaceRuleId ?? '';
+        if (id.length === 0) return state;
+        return ReaderReducer.toggleReplaceRule(state, id);
       }
       default:
         return state;
@@ -1052,6 +1189,138 @@ export class ReaderReducer {
     return next;
   }
 
+  // ── P1.2 select/action 控件辅助方法 ──
+  // 展开 select 选项面板：设置 expandedOptionKey 为指定 key（若已展开同一 key 则收起）。
+  static openSettingsSelect(state: ReaderUiState, key: string): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    next.expandedOptionKey = state.expandedOptionKey === key ? '' : key;
+    return next;
+  }
+
+  // 收起 select 选项面板。
+  static closeSettingsSelect(state: ReaderUiState): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    next.expandedOptionKey = '';
+    return next;
+  }
+
+  // 标记 action 触发（状态机记录，实际副作用由 effect 执行）。
+  static markSettingsAction(state: ReaderUiState, key: string): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    // action 类型不需要持久化 key 到 state，这里仅做无副作用的 clone 标记。
+    // 实际副作用（cache-clear / clear-search-history）由 ReaderEffects.settings-action 处理。
+    return next;
+  }
+
+  // ── P1.3 WebDAV 配置辅助方法 ──
+  static updateWebdavField(state: ReaderUiState, field: string, value: string): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    if (field === 'serverUrl') {
+      next.webdavServerUrl = value;
+    } else if (field === 'username') {
+      next.webdavUsername = value;
+    } else if (field === 'password') {
+      next.webdavPassword = value;
+    } else if (field === 'syncDir') {
+      next.webdavSyncDir = value;
+    }
+    return next;
+  }
+
+  static setWebdavTestStatus(state: ReaderUiState, status: string, message: string): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    next.webdavTestStatus = status;
+    next.webdavTestMessage = message;
+    return next;
+  }
+
+  static setWebdavSaveStatus(state: ReaderUiState, status: string, message: string): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    next.webdavSaveStatus = status;
+    next.webdavSaveMessage = message;
+    return next;
+  }
+
+  // ── W1 资源导入 reducer 方法 ──
+
+  // 打开本地导入页：push 'local-import' 路由。
+  static openLocalImport(state: ReaderUiState): ReaderUiState {
+    return ReaderReducer.push(state, 'local-import');
+  }
+
+  // 设置导入预览格式（json / txt 等）。
+  static setImportPreviewFormat(state: ReaderUiState, format: string): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    next.importPreviewFormat = format;
+    return next;
+  }
+
+  // 应用导入：pop 回书架并记录导入数量，清空预览格式。
+  // toast 提示由 effect 层通过 feedback.toast.show 事件派发。
+  static applyImport(state: ReaderUiState, count: number): ReaderUiState {
+    const popped = ReaderReducer.pop(state);
+    const next: ReaderUiState = ReaderReducer.clone(popped, popped.routeId, popped.tab, popped.overlay, popped.stack, popped.pageState);
+    next.importPreviewCount = count;
+    next.importPreviewFormat = '';
+    return next;
+  }
+
+  // ── W5 规则替换 reducer 方法 ──
+
+  // 新增规则。生成新 ReplaceRule 并追加到 replaceRules 数组。
+  static addReplaceRule(state: ReaderUiState, id: string, pattern: string, replacement: string, scope: string): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    const rule: ReplaceRule = { id: id, pattern: pattern, replacement: replacement, scope: scope, enabled: true };
+    next.replaceRules = [...state.replaceRules, rule];
+    return next;
+  }
+
+  // 编辑规则：按 id 匹配并更新 pattern/replacement/scope（保留 enabled）。
+  static editReplaceRule(state: ReaderUiState, id: string, pattern: string, replacement: string, scope: string): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    const rules: ReplaceRule[] = [];
+    for (let i = 0; i < state.replaceRules.length; i++) {
+      const r = state.replaceRules[i];
+      if (r.id === id) {
+        rules.push({ id: r.id, pattern: pattern, replacement: replacement, scope: scope, enabled: r.enabled });
+      } else {
+        rules.push({ id: r.id, pattern: r.pattern, replacement: r.replacement, scope: r.scope, enabled: r.enabled });
+      }
+    }
+    next.replaceRules = rules;
+    return next;
+  }
+
+  // 删除规则：按 id 过滤掉。
+  static deleteReplaceRule(state: ReaderUiState, id: string): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    const rules: ReplaceRule[] = [];
+    for (let i = 0; i < state.replaceRules.length; i++) {
+      if (state.replaceRules[i].id !== id) {
+        const r = state.replaceRules[i];
+        rules.push({ id: r.id, pattern: r.pattern, replacement: r.replacement, scope: r.scope, enabled: r.enabled });
+      }
+    }
+    next.replaceRules = rules;
+    return next;
+  }
+
+  // 切换规则启用/禁用状态。
+  static toggleReplaceRule(state: ReaderUiState, id: string): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    const rules: ReplaceRule[] = [];
+    for (let i = 0; i < state.replaceRules.length; i++) {
+      const r = state.replaceRules[i];
+      if (r.id === id) {
+        rules.push({ id: r.id, pattern: r.pattern, replacement: r.replacement, scope: r.scope, enabled: !r.enabled });
+      } else {
+        rules.push({ id: r.id, pattern: r.pattern, replacement: r.replacement, scope: r.scope, enabled: r.enabled });
+      }
+    }
+    next.replaceRules = rules;
+    return next;
+  }
+
   // Toggle a string in an array: if present, remove it; otherwise append it.
   // ArkTS-safe (slice + push, no spread). Returns a new array; the input is
   // not mutated.
@@ -1124,6 +1393,20 @@ export class ReaderReducer {
       readerTheme: s.readerTheme,
       readerSettingExpandedOption: s.readerSettingExpandedOption,
       autoPageMode: s.autoPageMode,
+      // P1.2/P1.3 字段 — 浅拷贝（string 不可变）。
+      expandedOptionKey: s.expandedOptionKey,
+      webdavServerUrl: s.webdavServerUrl,
+      webdavUsername: s.webdavUsername,
+      webdavPassword: s.webdavPassword,
+      webdavSyncDir: s.webdavSyncDir,
+      webdavTestStatus: s.webdavTestStatus,
+      webdavTestMessage: s.webdavTestMessage,
+      webdavSaveStatus: s.webdavSaveStatus,
+      webdavSaveMessage: s.webdavSaveMessage,
+      // ── W1 资源导入 / W5 规则替换字段 ── 浅拷贝（string/number 不可变；数组引用拷贝，修改方法重建新数组）。
+      importPreviewFormat: s.importPreviewFormat,
+      importPreviewCount: s.importPreviewCount,
+      replaceRules: s.replaceRules,
     };
   }
 

@@ -1,7 +1,7 @@
 // ReaderUiStore — AppStorage bridge over the reducer.
 // Holds the canonical UiState; on dispatch, reduces and writes primitive fields to
 // AppStorage so any component can subscribe via @StorageProp / @StorageLink.
-import { ReaderUiState, UiEvent, SearchResultEntry, BookDetail } from './ReaderUiState';
+import { ReaderUiState, UiEvent, SearchResultEntry, BookDetail, ReplaceRule } from './ReaderUiState';
 import { ReaderReducer } from './ReaderReducer';
 import { DemoUiState } from '../fixtures/DemoUiState';
 import { ReaderThemeState } from '../tokens/ReaderThemeState';
@@ -84,6 +84,21 @@ export class ReaderUiStore {
   private static readonly K_READER_THEME = 'reader.readerTheme';
   private static readonly K_READER_SETTING_EXPANDED_OPTION = 'reader.readerSettingExpandedOption';
   private static readonly K_AUTO_PAGE_MODE = 'reader.autoPageMode';
+  // ── P1.2 select/action 控件展开状态 key ──
+  private static readonly K_EXPANDED_OPTION_KEY = 'reader.expandedOptionKey';
+  // ── P1.3 WebDAV 配置 keys ──
+  private static readonly K_WEBDAV_SERVER_URL = 'reader.webdavServerUrl';
+  private static readonly K_WEBDAV_USERNAME = 'reader.webdavUsername';
+  private static readonly K_WEBDAV_PASSWORD = 'reader.webdavPassword';
+  private static readonly K_WEBDAV_SYNC_DIR = 'reader.webdavSyncDir';
+  private static readonly K_WEBDAV_TEST_STATUS = 'reader.webdavTestStatus';
+  private static readonly K_WEBDAV_TEST_MESSAGE = 'reader.webdavTestMessage';
+  private static readonly K_WEBDAV_SAVE_STATUS = 'reader.webdavSaveStatus';
+  private static readonly K_WEBDAV_SAVE_MESSAGE = 'reader.webdavSaveMessage';
+  // ── W1 资源导入 / W5 规则替换 keys ──
+  private static readonly K_IMPORT_PREVIEW_FORMAT = 'reader.importPreviewFormat';
+  private static readonly K_IMPORT_PREVIEW_COUNT = 'reader.importPreviewCount';
+  private static readonly K_REPLACE_RULES = 'reader.replaceRules';
 
   private static state: ReaderUiState;
 
@@ -186,5 +201,19 @@ export class ReaderUiStore {
     AppStorage.setOrCreate<string>(ReaderUiStore.K_READER_THEME, s.readerTheme);
     AppStorage.setOrCreate<string>(ReaderUiStore.K_READER_SETTING_EXPANDED_OPTION, s.readerSettingExpandedOption);
     AppStorage.setOrCreate<string>(ReaderUiStore.K_AUTO_PAGE_MODE, s.autoPageMode);
+    // ── P1.2/P1.3 字段写入 AppStorage ──
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_EXPANDED_OPTION_KEY, s.expandedOptionKey);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_WEBDAV_SERVER_URL, s.webdavServerUrl);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_WEBDAV_USERNAME, s.webdavUsername);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_WEBDAV_PASSWORD, s.webdavPassword);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_WEBDAV_SYNC_DIR, s.webdavSyncDir);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_WEBDAV_TEST_STATUS, s.webdavTestStatus);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_WEBDAV_TEST_MESSAGE, s.webdavTestMessage);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_WEBDAV_SAVE_STATUS, s.webdavSaveStatus);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_WEBDAV_SAVE_MESSAGE, s.webdavSaveMessage);
+    // ── W1 资源导入 / W5 规则替换字段写入 AppStorage ──
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_IMPORT_PREVIEW_FORMAT, s.importPreviewFormat);
+    AppStorage.setOrCreate<number>(ReaderUiStore.K_IMPORT_PREVIEW_COUNT, s.importPreviewCount);
+    AppStorage.setOrCreate<ReplaceRule[]>(ReaderUiStore.K_REPLACE_RULES, s.replaceRules);
   }
 }

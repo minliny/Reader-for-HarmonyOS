@@ -145,7 +145,11 @@ export class CoreRuntime {
     // 4. Create Host adapters. Phase 3 (Core closed-set):
     this.sourceSessionStore = SourceSessionHostStore.shared();
     this.httpAdapter = new HttpHostAdapter(this.sourceSessionStore);
-    this.coreAdapter = new CoreHostAdapter();
+    // CoreHostAdapter takes optional context — when present (on device),
+    // persistence.* is backed by @ohos.data.preferences (survives restarts).
+    // When absent (unit-test env), it falls back to an in-process Map so the
+    // capability stays registered and callable for HostSmoke assertions.
+    this.coreAdapter = new CoreHostAdapter(config.context);
     this.cookieAdapter = new CookieHostAdapter(this.sourceSessionStore);
     this.webViewAdapter = new WebViewHostAdapter();
     this.fileAdapter = config.context !== undefined
@@ -339,15 +343,16 @@ export class CoreRuntime {
       return resp as Object as JsonObject;
     });
 
-    // persistence.get / persistence.put
-    this.registry.register('persistence.get', (event: ReaderCoreHostRequestEvent): JsonObject => {
+    // persistence.get / persistence.put — async because the on-device backend
+    // (@ohos.data.preferences) is async. Falls back to sync Map when no context.
+    this.registry.register('persistence.get', async (event: ReaderCoreHostRequestEvent): Promise<JsonObject> => {
       const request = event.params as Object as HostPersistenceGetRequest;
-      const resp = this.coreAdapter.persistenceGet(request);
+      const resp = await this.coreAdapter.persistenceGet(request);
       return resp as Object as JsonObject;
     });
-    this.registry.register('persistence.put', (event: ReaderCoreHostRequestEvent): JsonObject => {
+    this.registry.register('persistence.put', async (event: ReaderCoreHostRequestEvent): Promise<JsonObject> => {
       const request = event.params as Object as HostPersistencePutRequest;
-      const resp = this.coreAdapter.persistencePut(request);
+      const resp = await this.coreAdapter.persistencePut(request);
       return resp as Object as JsonObject;
     });
 
@@ -590,6 +595,25 @@ export class CoreRuntime {
       params['variables'] = variables;
     }
     const result = await this.runtime.request('chapter.content', params, { timeoutMs: 15000 });
+    return result.data;
+  }
+
+  // ── Sync bridge: sync.webdav.plan ──────────────────────────────────────
+  //    Ask Core to validate WebDAV credentials and produce a sync plan.
+  //    Used by ReaderEffects.runWebdavTest as the preferred path before
+  //    falling back to the local stub. 30s timeout for network I/O.
+
+  /**
+   * sync.webdav.plan — validate WebDAV credentials and produce a sync plan.
+   * Returns { plan: { ... } } on success. Throws on Core error/timeout.
+   */
+  async syncWebdavPlan(serverUrl: string, username: string, password: string, syncDir: string): Promise<JsonObject> {
+    const params: JsonObject = {};
+    params['serverUrl'] = serverUrl;
+    params['username'] = username;
+    params['password'] = password;
+    params['syncDir'] = syncDir;
+    const result = await this.runtime.request('sync.webdav.plan', params, { timeoutMs: 30000 });
     return result.data;
   }
 }

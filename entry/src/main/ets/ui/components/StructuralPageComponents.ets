@@ -900,6 +900,7 @@ struct WebDavInputRow {
   @Prop title: string = '服务器地址';
   @Prop value: string = '';
   @Prop kind: string = 'link';
+  @Prop field: string = '';   // P1.3：webdav-field-update 的字段名
 
   private iconResource(): Resource {
     if (this.kind === 'people') return $r('app.media.bookshelf_icon_people_dark');
@@ -927,7 +928,7 @@ struct WebDavInputRow {
           .fontColor(ColorTokens.controlInk)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-        Text(this.value)
+        TextInput({ text: this.value, placeholder: '请输入' + this.title })
           .fontSize(11)
           .fontWeight(700)
           .fontColor(ColorTokens.ink)
@@ -935,12 +936,16 @@ struct WebDavInputRow {
           .height(34)
           .padding({ left: 10, right: 10 })
           .textAlign(TextAlign.Start)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
           .borderRadius(DemoAliasTokens.radiusSm)
           .backgroundColor(ColorTokens.paper)
           .border({ width: 1, color: ColorTokens.border })
           .margin({ top: 4 })
+          .onChange((v: string) => {
+            // P1.3：受控输入，派发 webdav-field-update
+            if (this.field.length > 0) {
+              ReaderUiStore.dispatch({ type: 'webdav-field-update', field: this.field, settingsValue: v });
+            }
+          })
       }
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
@@ -960,6 +965,7 @@ struct WebDavInputRow {
 struct WebDavSectionAction {
   @Prop label: string = '测试网络连通性';
   @Prop kind: string = 'refresh';
+  @Prop actionType: string = '';   // P1.3：'test' | 'save'
 
   private iconResource(): Resource {
     return this.kind === 'check' ? $r('app.media.ui_icon_check_primary') : $r('app.media.ui_icon_refresh_primary');
@@ -986,11 +992,43 @@ struct WebDavSectionAction {
     .borderRadius(DemoAliasTokens.radiusMd)
     .backgroundColor(ColorTokens.metaBg)
     .border({ width: 1, color: ColorTokens.border })
+    .onClick(() => {
+      // P1.3：测试连通性 / 保存配置 派发对应 reducer 事件
+      if (this.actionType === 'test') {
+        ReaderUiStore.dispatch({ type: 'webdav-test' });
+      } else if (this.actionType === 'save') {
+        ReaderUiStore.dispatch({ type: 'webdav-save' });
+      }
+    })
   }
 }
 
 @Component
 struct WebDavConfigSection {
+  // P1.3：从 AppStorage 读取 WebDAV 配置状态，驱动受控输入
+  @StorageProp('reader.webdavServerUrl') serverUrl: string = '';
+  @StorageProp('reader.webdavUsername') username: string = '';
+  @StorageProp('reader.webdavPassword') password: string = '';
+  @StorageProp('reader.webdavSyncDir') syncDir: string = '/reader/backup';
+  @StorageProp('reader.webdavTestStatus') testStatus: string = 'idle';
+  @StorageProp('reader.webdavTestMessage') testMessage: string = '';
+  @StorageProp('reader.webdavSaveStatus') saveStatus: string = 'idle';
+  @StorageProp('reader.webdavSaveMessage') saveMessage: string = '';
+
+  private testStatusText(): string {
+    if (this.testStatus === 'testing') return '正在测试…';
+    if (this.testStatus === 'success') return '连通: ' + this.testMessage;
+    if (this.testStatus === 'error') return '失败: ' + this.testMessage;
+    return '';
+  }
+
+  private saveStatusText(): string {
+    if (this.saveStatus === 'saving') return '正在保存…';
+    if (this.saveStatus === 'saved') return '已保存: ' + this.saveMessage;
+    if (this.saveStatus === 'error') return '保存失败: ' + this.saveMessage;
+    return '';
+  }
+
   build() {
     Column() {
       Text('WebDAV 配置')
@@ -998,20 +1036,34 @@ struct WebDavConfigSection {
         .fontWeight(900)
         .fontColor(ColorTokens.ink)
         .margin({ left: 2, bottom: 5 })
-      WebDavInputRow({ title: '服务器地址', value: 'https://dav.example.com/reader/backup', kind: 'link' })
-      WebDavInputRow({ title: '账号', value: 'reader@example.com', kind: 'people' })
+      WebDavInputRow({ title: '服务器地址', value: this.serverUrl, kind: 'link', field: 'serverUrl' })
+      WebDavInputRow({ title: '账号', value: this.username, kind: 'people', field: 'username' })
         .margin({ top: 8 })
-      WebDavInputRow({ title: '密码', value: '••••••••••••••••••••', kind: 'shield' })
+      WebDavInputRow({ title: '密码', value: this.password, kind: 'shield', field: 'password' })
         .margin({ top: 8 })
-      WebDavInputRow({ title: '同步目录', value: '/ReaderBackup/ReaderAndroid', kind: 'folder' })
+      WebDavInputRow({ title: '同步目录', value: this.syncDir, kind: 'folder', field: 'syncDir' })
         .margin({ top: 8 })
       Row() {
-        WebDavSectionAction({ label: '测试网络连通性', kind: 'refresh' })
-        WebDavSectionAction({ label: '保存配置', kind: 'check' })
+        WebDavSectionAction({ label: '测试网络连通性', kind: 'refresh', actionType: 'test' })
+        WebDavSectionAction({ label: '保存配置', kind: 'check', actionType: 'save' })
           .margin({ left: 9 })
       }
       .width('100%')
       .margin({ top: 8 })
+      if (this.testStatusText().length > 0) {
+        Text(this.testStatusText())
+          .fontSize(11)
+          .fontColor(this.testStatus === 'error' ? ColorTokens.accent : ColorTokens.muted)
+          .width('100%')
+          .margin({ top: 6 })
+      }
+      if (this.saveStatusText().length > 0) {
+        Text(this.saveStatusText())
+          .fontSize(11)
+          .fontColor(this.saveStatus === 'error' ? ColorTokens.accent : ColorTokens.muted)
+          .width('100%')
+          .margin({ top: 4 })
+      }
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -2143,6 +2195,10 @@ export struct AboutFeedbackPage {
           showChevron: entry.title !== '检查更新',
         })
           .margin({ top: idx === 0 ? 10 : 8 })
+          .onClick(() => {
+            // P1.4：4 行 link 接 onClick，暂统一跳转到 about-version
+            ReaderUiStore.dispatch({ type: 'route-push', id: 'about-version' });
+          })
       }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
     }
     .width('100%')
@@ -2152,11 +2208,54 @@ export struct AboutFeedbackPage {
 
 @Component
 export struct LocalBookImportPage {
+  @StorageProp('reader.importPreviewFormat') previewFormat: string = '';
+  @StorageProp('reader.importPreviewCount') previewCount: number = 0;
+
   build() {
-    Column() {
-      StatePanel({ title: '选择本地文件', message: '支持 txt、epub 和常见文本文件，导入后进入书架。', action: '选择文件' })
+    Column({ space: 14 }) {
+      Text('选择本地文件')
+        .fontSize(20)
+        .fontWeight(700)
+        .fontColor(ColorTokens.controlInk)
+        .textAlign(TextAlign.Center)
+      Text('支持 txt、epub 和常见文本文件，导入后进入书架。')
+        .fontSize(14)
+        .fontColor(ColorTokens.muted)
+        .lineHeight(20)
+        .textAlign(TextAlign.Center)
+      Text('选择文件')
+        .fontSize(13)
+        .fontWeight(700)
+        .fontColor(DemoAliasTokens.onPrimary)
+        .height(40)
+        .padding({ left: 16, right: 16 })
+        .borderRadius(DemoAliasTokens.radiusPill)
+        .backgroundColor(ColorTokens.primary)
+        .textAlign(TextAlign.Center)
+        .onClick(() => ReaderUiStore.dispatch({ type: 'source.import.preview', importFormat: 'txt' }))
+
+      if (this.previewFormat.length > 0) {
+        Text(`已选择文件（${this.previewFormat}），预览到 1 个书籍`)
+          .fontSize(12)
+          .fontColor(ColorTokens.muted)
+          .textAlign(TextAlign.Center)
+        Text('导入')
+          .fontSize(13)
+          .fontWeight(700)
+          .fontColor(DemoAliasTokens.onPrimary)
+          .height(40)
+          .padding({ left: 16, right: 16 })
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .backgroundColor(ColorTokens.primaryDark)
+          .textAlign(TextAlign.Center)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'source.import.apply', importCount: 1 }))
+      }
     }
     .width('100%')
+    .constraintSize({ minHeight: 640 })
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+    .padding({ left: 12, right: 12, top: 32, bottom: 32 })
   }
 }
 

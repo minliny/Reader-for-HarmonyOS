@@ -146,6 +146,7 @@ export struct ShelfSectionHeader {
   @Prop title: string = '我的书架';
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
   @StorageProp('reader.bookshelfFilter.view') bookshelfView: string = 'cover';
+  @StorageProp('reader.overlay') overlayKind: string = '';
 
   build() {
     Row() {
@@ -155,11 +156,11 @@ export struct ShelfSectionHeader {
         .fontColor(ColorTokens.ink)
       Blank()
       Row({ space: 8 }) {
+        // 封面视图：仅切换 EphemeralState，不走 route-replace（契约要求视图模式不破坏书架结构）
         Column() {
           Image($r('app.media.bookshelf_icon_grid_primary'))
             .width(20)
             .height(20)
-            .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'bookshelf-cover-mode' }))
         }
         .width(34).height(34)
         .justifyContent(FlexAlign.Center)
@@ -170,15 +171,14 @@ export struct ShelfSectionHeader {
         .onClick(() => {
           MotionAdapter.apply('bookshelf.view.switch', this.reducedMotion, () => {
             ReaderUiStore.dispatch({ type: 'set-bookshelf-view', bookshelfView: 'cover' });
-            ReaderUiStore.dispatch({ type: 'route-replace', id: 'bookshelf-cover-mode' });
           });
         })
 
+        // 列表视图：仅切换 EphemeralState，不走 route-replace
         Column() {
           Image($r('app.media.bookshelf_icon_list_dark'))
             .width(20)
             .height(20)
-            .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'bookshelf-list-mode' }))
         }
         .width(34).height(34)
         .justifyContent(FlexAlign.Center)
@@ -189,29 +189,33 @@ export struct ShelfSectionHeader {
         .onClick(() => {
           MotionAdapter.apply('bookshelf.view.switch', this.reducedMotion, () => {
             ReaderUiStore.dispatch({ type: 'set-bookshelf-view', bookshelfView: 'list' });
-            ReaderUiStore.dispatch({ type: 'route-replace', id: 'bookshelf-list-mode' });
           });
         })
 
+        // 筛选：toggle overlay（契约 ui-state.fixtures.json 将 sort-filter 定义为 overlay，非独立路由）
         Column() {
           Image($r('app.media.bookshelf_icon_filter_dark'))
             .width(20)
             .height(20)
-            .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'sort-filter' }))
         }
         .width(34).height(34)
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
         .borderRadius(DemoAliasTokens.radiusPill)
         .backgroundColor(DemoAliasTokens.surface)
-        .border({ width: 1, color: ColorTokens.border })
-        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'sort-filter' }))
+        .border({ width: 1, color: this.overlayKind === 'sort-filter' ? ColorTokens.primary : ColorTokens.border })
+        .onClick(() => {
+          ReaderUiStore.dispatch({
+            type: 'set-overlay',
+            overlay: this.overlayKind === 'sort-filter' ? '' : 'sort-filter',
+          });
+        })
 
+        // 书架搜索设置：合法的 route-push（SettingsShell 路由）
         Column() {
           Image($r('app.media.bookshelf_icon_gear_dark'))
             .width(20)
             .height(20)
-            .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'bookshelf-search-settings' }))
         }
         .width(34).height(34)
         .justifyContent(FlexAlign.Center)
@@ -235,6 +239,7 @@ export struct BookshelfShelfSection {
   @Prop title: string = '我的书架';
   @Prop books: BookEntry[] = [];
   @Prop filterOpen: boolean = false;
+  @StorageProp('reader.overlay') overlayKind: string = '';
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -244,7 +249,7 @@ export struct BookshelfShelfSection {
           .margin({ top: 10 })
       }
       .width('100%')
-      if (this.filterOpen) {
+      if (this.filterOpen || this.overlayKind === 'sort-filter') {
         BookshelfFilterPopover()
           .position({ x: 0, y: 48 })
           .zIndex(ZIndexTokens.settingsDropdown)
@@ -608,6 +613,7 @@ export struct BookshelfEmptyState {
           .borderRadius(DemoAliasTokens.radiusPill)
           .border({ width: 1, color: ColorTokens.border })
           .textAlign(TextAlign.Center)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'source.import.open' }))
       }
 
       Column({ space: 4 }) {

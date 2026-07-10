@@ -420,12 +420,12 @@ export default class EntryAbility extends UIAbility {
 
         // Step 3: persistence.put / get — TXT metadata
         const txtMeta = `{"title":"Host 本地导入自检样章","author":"Reader-for-HarmonyOS","format":"txt","charCount":${txtContent.length}}`;
-        coreAdapter.persistencePut({
+        await coreAdapter.persistencePut({
           namespace: 'local_book',
           key: 'sample.txt.meta',
           value: txtMeta,
         } as HostPersistencePutRequest);
-        const txtMetaGet = coreAdapter.persistenceGet({
+        const txtMetaGet = await coreAdapter.persistenceGet({
           namespace: 'local_book',
           key: 'sample.txt.meta',
         } as HostPersistenceGetRequest);
@@ -494,12 +494,12 @@ export default class EntryAbility extends UIAbility {
 
         // Step 8: persistence.put / get — EPUB metadata
         const epubMeta = `{"title":"${epubTitle}","author":"${epubCreator}","format":"epub","extractedTo":"${epubExtractDir}"}`;
-        coreAdapter.persistencePut({
+        await coreAdapter.persistencePut({
           namespace: 'local_book',
           key: 'sample.epub.meta',
           value: epubMeta,
         } as HostPersistencePutRequest);
-        const epubMetaGet = coreAdapter.persistenceGet({
+        const epubMetaGet = await coreAdapter.persistenceGet({
           namespace: 'local_book',
           key: 'sample.epub.meta',
         } as HostPersistenceGetRequest);
@@ -905,6 +905,13 @@ export default class EntryAbility extends UIAbility {
     }
   }
 
+  // Register the bundled Noto Serif CJK SC font so ArkUI can resolve the first
+  // family in the contract --fd-ds-font-serif fallback stack
+  // (platforms.arkts = "Noto Serif CJK SC", serif). Only the primary family is
+  // registered; downstream families in the stack (serif generic) are resolved by
+  // the system font fallback chain. The remaining font tokens
+  // (sans/kai/fangsong/mono) rely on system-installed families and are not
+  // bundled — see FontTokens in contract/generated/TypeTokens.ets.
   private registerReaderFontsForWindow(win: window.Window): void {
     try {
       win.getUIContext().getFont().registerFont({

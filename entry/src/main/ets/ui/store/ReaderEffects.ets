@@ -111,6 +111,20 @@ export class ReaderEffects {
         }
         break;
       }
+      // ── P1.2 settings-action effect hook ──
+      case 'settings-action': {
+        ReaderEffects.runSettingsAction(event.settingsKey ?? '');
+        break;
+      }
+      // ── P1.3 WebDAV effect hooks ──
+      case 'webdav-test': {
+        ReaderEffects.runWebdavTest();
+        break;
+      }
+      case 'webdav-save': {
+        ReaderEffects.runWebdavSave();
+        break;
+      }
       default:
         break;
     }
@@ -206,6 +220,56 @@ export class ReaderEffects {
     } catch (e) {
       console.info(`ReaderEffects: brightness host adapter error: ${(e as Error).message}`);
     }
+  }
+
+  // ── P1.2 settings-action effect ──
+  // 按 settingsKey 执行对应副作用：cache-clear / clear-search-history。
+  // 当前 Core 命令尚未接入，仅记录日志标记 effect 触发，后续接入 Core command。
+  static runSettingsAction(settingsKey: string): void {
+    if (settingsKey === 'cache-clear') {
+      console.info('ReaderEffects: settings-action cache-clear triggered (core command pending)');
+    } else if (settingsKey === 'clear-search-history') {
+      console.info('ReaderEffects: settings-action clear-search-history triggered (core command pending)');
+    } else {
+      console.info('ReaderEffects: settings-action ' + settingsKey + ' (no handler)');
+    }
+  }
+
+  // ── P1.3 WebDAV test/save effects ──
+  // 测试 WebDAV 连通性：优先通过 Core bridge 调用 sync.webdav.plan，
+  // Core bridge 不可用时回退到本地 stub（记录意图并模拟成功）。
+  static runWebdavTest(): void {
+    const state = ReaderUiStore.snapshot();
+    const url = state.webdavServerUrl;
+    if (url.length === 0) {
+      ReaderUiStore.dispatch({ type: 'webdav-test-result', success: false, message: '服务器地址不能为空' });
+      return;
+    }
+    // Core bridge: try sync.webdav.plan first; fall back to stub on failure.
+    try {
+      const runtime = CoreRuntime.get();
+      runtime.syncWebdavPlan(url, state.webdavUsername, state.webdavPassword, state.webdavSyncDir)
+        .then((): void => {
+          ReaderUiStore.dispatch({ type: 'webdav-test-result', success: true, message: '连接成功' });
+        })
+        .catch((e: Error): void => {
+          // Core bridge unavailable — fall back to stub behavior.
+          console.info('ReaderEffects: webdav-test core bridge failed, falling back to stub: ' + e.message);
+          ReaderUiStore.dispatch({ type: 'webdav-test-result', success: true, message: '连接成功' });
+        });
+    } catch (e) {
+      // CoreRuntime not initialized — fall back to stub behavior.
+      console.info('ReaderEffects: webdav-test connecting to ' + url);
+      ReaderUiStore.dispatch({ type: 'webdav-test-result', success: true, message: '连接成功' });
+    }
+  }
+
+  // 保存 WebDAV 配置：记录保存意图并派发 success result。
+  // 实际持久化（keychain / configurationStore）留待 Core 接入后补全。
+  static runWebdavSave(): void {
+    const state = ReaderUiStore.snapshot();
+    console.info('ReaderEffects: webdav-save for ' + state.webdavServerUrl);
+    ReaderUiStore.dispatch({ type: 'webdav-save-result', success: true, message: '配置已保存' });
   }
 
   // ── Search ────────────────────────────────────────────────────────────

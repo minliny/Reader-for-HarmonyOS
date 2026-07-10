@@ -114,6 +114,15 @@ export interface SelectionState {
   selectedText: string;
 }
 
+// ── W5 规则替换：内容替换规则 ──
+export interface ReplaceRule {
+  id: string;
+  pattern: string;
+  replacement: string;
+  scope: string;        // 'chapter' | 'book' | 自定义作用域
+  enabled: boolean;
+}
+
 export interface ReaderUiState {
   routeId: RouteId;
   tab: MainTab;
@@ -165,6 +174,22 @@ export interface ReaderUiState {
   readerTheme: string;                    // 阅读主题: 'paper' | 'warm' | 'green' | 'blue'
   readerSettingExpandedOption: string;    // 当前展开的设置项 key（'' 表示无展开）
   autoPageMode: string;                   // 自动翻页模式: 'continuous' | 'single'
+  // ── P1.2 select/action 控件展开状态 ──
+  expandedOptionKey: string;              // 当前展开的 select 选项 key（'' 表示无展开）
+  // ── P1.3 WebDAV 配置字段 ──
+  webdavServerUrl: string;
+  webdavUsername: string;
+  webdavPassword: string;
+  webdavSyncDir: string;
+  webdavTestStatus: string;               // 'idle' | 'testing' | 'success' | 'error'
+  webdavTestMessage: string;
+  webdavSaveStatus: string;               // 'idle' | 'saving' | 'saved' | 'error'
+  webdavSaveMessage: string;
+  // ── W1 资源导入预览字段 ──
+  importPreviewFormat: string;            // 导入预览格式: 'json' | 'txt' | ''
+  importPreviewCount: number;             // 导入应用的书源数量
+  // ── W5 规则替换字段 ──
+  replaceRules: ReplaceRule[];            // 内容替换规则列表
 }
 
 // UiEvent is a tagged record; the reducer switches on `type` and reads the relevant
@@ -229,6 +254,21 @@ export interface UiEvent {
   settingOptionExpandedKey?: string;      // 设置项展开/收起的 key
   theme?: string;                         // 阅读主题
   autoPageMode?: string;                  // 自动翻页模式
+  // ── reader-module-switch 事件字段 ──
+  module?: string;                        // 阅读器模块切换目标: directory/tts/appearance/settings/search/auto-page/replacement
+  // ── P1.3 WebDAV 事件字段 ──
+  field?: string;                         // webdav-field-update 的字段名
+  success?: boolean;                      // webdav-test-result / webdav-save-result 是否成功
+  message?: string;                       // webdav-test-result / webdav-save-result 消息
+  // ── W1 资源导入事件字段 ──
+  importFormat?: string;                  // source-import-preview 格式
+  importCount?: number;                   // source-import-apply 数量
+  // ── W5 规则替换事件字段 ──
+  replaceRuleId?: string;                 // 规则 id
+  replaceRulePattern?: string;            // 规则匹配模式
+  replaceRuleReplacement?: string;        // 规则替换文本
+  replaceRuleScope?: string;              // 规则作用域
+  replaceRuleEnabled?: boolean;           // 规则启用状态
 }
 
 // ── Minimal visible reading chain data types ──
