@@ -150,8 +150,8 @@ export abstract class ReaderUIRuntimeDriver {
   abstract get state(): ReaderUIState;
   abstract dispatch(event: string, payload?: ReaderUIJSONPayload, correlationId?: string): ReaderUITransition;
 
-  // Book.open remains Shadow by default. Concrete test drivers that only need
-  // directory behavior do not have to implement the serial transaction API.
+  // Book.open is Pilot in production. Minimal test drivers that exercise only
+  // other cohorts do not have to implement the serial transaction API.
   acceptBookOpenResult(_coreType: string, _correlationId: string, _chapterCount?: number,
     _error?: string): ReaderUIAsyncTransition {
     throw new Error('ReaderUIRuntimeDriver does not implement book.open results');

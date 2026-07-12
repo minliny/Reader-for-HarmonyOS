@@ -2,11 +2,18 @@
 
 ArkUI (ArkTS / Stage Model, API 22) native host for the Reader multi-end architecture.
 
-**Phase 1: UI skeleton.** Renders the Reader UI Contract as ArkUI shells, driven by contract fixtures / demo state. No real Core integration in this phase.
+It renders Reader UI contracts with ArkUI, owns the ArkTS reducer/store and Host Adapters, and integrates Reader-Core-Native through the NAPI/Core bridge. This is a mixed-rollout native host, not a fixture-only Phase 1 skeleton.
 
-## P0 链路闭环交付（2026-07-10）
+## 当前 Reader UI 消费边界（2026-07-12）
 
-Reader for HarmonyOS 完成 Contract-first Native UI Architecture 的 P0 链路全闭环。5 条 P0 链路（bookshelf / reader / source-switch / book-detail / settings）× A-F 六列全部 ✅，矩阵 120/120 全绿。
+- 消费 Reader UI 2.5.1 的 immutable release identity；精确值以 `READER_UI_CONSUMER.json` 为准。
+- 35 条 covered event 中 7 条为 Pilot、28 条为 Shadow、0 条为 Authoritative。
+- 2026-07-08 有历史真机 ReadingChain 证据，但当前没有 hdc target，不能为本次 release identity 生成 fresh Core NAPI/device proof。
+- 因此当前状态是“合同/静态接线与部分 runtime Pilot 已落地”，不是“前端或五条 workflow 全闭环”。
+
+## P0 静态链路矩阵（2026-07-10，非完成口径）
+
+5 条 P0 链路（bookshelf / reader / source-switch / book-detail / settings）× A-F 六列的代码、fixture 与静态接线矩阵达到 120/120。该数字不证明 native 视觉一致、fresh 设备交互或 Authoritative rollout。
 
 ### 交付成果
 
@@ -24,7 +31,7 @@ Reader for HarmonyOS 完成 Contract-first Native UI Architecture 的 P0 链路�
 - reader overlay chrome 6 项失败修复
 - raw `rgba(` 字面量清零，统一引用 `ReaderToken` 语义 token
 
-### 验收
+### 当时静态验收
 
 - `test_contracts`：49/0 pass（49 测试全绿）
 - `npm test`：Reader-UI consumer gate 通过，Host 227/227 pass（含 3 条 shared runtime shadow pilot）
@@ -35,7 +42,7 @@ Reader for HarmonyOS 完成 Contract-first Native UI Architecture 的 P0 链路�
 
 - Host 单测不代替真实 NAPI 证明；当前无 hdc 目标，`npm run test:device` 会按设计失败，连接真机后需重新采集 fresh CoreSelfCheck 证据
 
-## Architecture (Phase 1)
+## Current architecture
 
 ```
 Reader UI Contract  (read-only source of truth)
@@ -53,7 +60,7 @@ Reader UI Contract  (read-only source of truth)
   ArkTS reducer/store (UiState) + ViewState fixtures
 ```
 
-State ownership: `UiState` (reducer-held) → `ViewState` (reducer-produced, UI-rendered). DomainState (Core) is untouched in Phase 1.
+State ownership: `UiState` (reducer-held) → `ViewState` (reducer-produced, UI-rendered). Durable DomainState belongs to Reader-Core-Native and crosses the NAPI/Core or Host Adapter boundary explicitly.
 
 ## Build & verify
 
@@ -93,4 +100,4 @@ entry/src/main/ets/
   resources/rawfile/font/# Noto Serif CJK SC reader font
 ```
 
-See `CLAUDE.md` for rules. Phase 2 (page families) follows once the skeleton builds and routes are verified.
+See `CLAUDE.md` for rules. Current follow-up work is to close the 28 Shadow events selectively and collect fresh physical-device evidence; static route coverage does not promote rollout authority.

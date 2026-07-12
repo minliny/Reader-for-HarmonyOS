@@ -1,4 +1,5 @@
-// R8 page/TTS/auto-page Pilot executor. ReaderUIRuntime remains the sole
+// R8 playback executor. TTS and auto-page are Pilot; page remains Shadow.
+// ReaderUIRuntime remains the sole
 // semantic state machine; this file binds typed Core chapter data, executes
 // each emitted effect exactly once, and rejects stale platform callbacks.
 import {

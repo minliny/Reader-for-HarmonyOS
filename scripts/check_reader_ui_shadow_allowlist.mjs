@@ -36,12 +36,12 @@ assert.deepEqual(
   'ReaderUIRuntime shadow allowlist must exactly match READER_UI_CONSUMER.json rollout.coveredEvents',
 );
 assert.equal(lock.rollout.mode, 'shadow', 'HarmonyOS default rollout must remain shadow for R7.2');
-assert.equal(lock.readerUiVersion, '2.5.0', 'HarmonyOS must consume Reader-UI 2.5.0');
+assert.equal(lock.readerUiVersion, '2.5.1', 'HarmonyOS must consume Reader-UI 2.5.1');
 assert.equal(lock.hostRequestSchemaVersion, '1.2.0', 'HarmonyOS must consume HostRequest schema 1.2.0');
 assert.equal(
   lock.runtimeActionsSha256,
   '0ac249341d8de651314687d8352bc1c3f62d3778371ff500f1f0a025a64be82c',
-  'HarmonyOS runtime action hash must match Reader-UI 2.5.0',
+  'HarmonyOS runtime action hash must match Reader-UI 2.5.1',
 );
 assert.equal(compiledEvents.length, 35, 'HarmonyOS runtime allowlist must cover exactly thirty-five events');
 assert.ok(lock.rollout.cohorts.length >= 1, 'HarmonyOS must define at least one rollout cohort');
@@ -196,6 +196,6 @@ const packageLock = JSON.parse(fs.readFileSync(path.join(repo, 'entry/oh-package
 const runtimePackages = Object.values(packageLock.packages ?? {})
   .filter((item) => item?.name === 'reader_ui_runtime');
 assert.equal(runtimePackages.length, 1, 'HarmonyOS lockfile must contain exactly one reader_ui_runtime');
-assert.equal(runtimePackages[0].version, '2.5.0', 'HarmonyOS lockfile must pin reader_ui_runtime 2.5.0');
+assert.equal(runtimePackages[0].version, '2.5.1', 'HarmonyOS lockfile must pin reader_ui_runtime 2.5.1');
 
 console.log(`ReaderUIRuntime shadow allowlist verified: ${compiledEvents.join(', ')}`);

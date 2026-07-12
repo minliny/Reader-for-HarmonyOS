@@ -6,7 +6,7 @@
     "buildTool": "hvigor",
     "directoryLevel": "project"
   },
-  "description": "Reader for HarmonyOS — ArkUI native host (Phase 1 UI skeleton, contract-driven)",
+  "description": "Reader for HarmonyOS — ArkUI native host with Reader UI mixed rollout and Core NAPI integration",
   "repository": {},
   "license": "ISC",
   "scripts": {

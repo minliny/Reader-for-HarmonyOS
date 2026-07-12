@@ -2,7 +2,7 @@
 
 ## Project Identity
 
-Reader for HarmonyOS is the HarmonyOS (ArkTS/Stage Model) native host app in the Reader Contract-first Native UI Architecture. It consumes Reader UI Contract route/state/event/motion/token/view-state artifacts, talks to Reader-Core-Native through the NAPI/Core bridge (`entry/src/main/ets/bridge/CoreRuntime.ets` + `entry/libs/arm64-v8a/libreader_core_napi.so`), and implements HarmonyOS platform capability through 15 Host Adapter seams (`entry/src/main/ets/host/adapters/`). P0 UI link matrix 120/120 green; 2026-07-08 device evidence collected (CoreSelfCheck + ReadingChain + ReadingChainUi verified on real device `af2137d`).
+Reader for HarmonyOS is the HarmonyOS (ArkTS/Stage Model) native host app in the Reader Contract-first Native UI Architecture. It consumes Reader UI Contract route/state/event/motion/token/view-state artifacts, talks to Reader-Core-Native through the NAPI/Core bridge (`entry/src/main/ets/bridge/CoreRuntime.ets` + `entry/libs/arm64-v8a/libreader_core_napi.so`), and implements HarmonyOS platform capability through 15 Host Adapter seams (`entry/src/main/ets/host/adapters/`). The P0 UI static link matrix is 120/120. Historical 2026-07-08 device evidence verified CoreSelfCheck + ReadingChain + ReadingChainUi on device `af2137d`, but it is not fresh proof for the current Reader UI release identity; current rollout remains 7 Pilot / 28 Shadow / 0 Authoritative and requires a new attached hdc target for device closure.
 
 ## Key Paths
 
