@@ -1,9 +1,10 @@
-// BookSourceRegistry — book source URL template + Legado rule registry.
-// Single source of truth for search/detail/chapter URL patterns AND the
-// inline Legado source definition passed to Core's RemoteContentPipeline
-// (book.search / book.detail / book.toc / chapter.content). The minimal
-// visible reading chain uses the default yodu.org source; later phases can
-// add more sources here without touching ReaderEffects.
+// BookSourceRegistry — legacy/demo URL template + Legado rule fixture.
+//
+// It is deliberately isolated from the production ReaderEffects remote path:
+// normal search/detail/toc/chapter work must use a persisted Core sourceId
+// and CoreRuntime.*FromSource, never this inline yodu fixture.  Keep this
+// module only for explicit demo fixtures/migration tooling until it can be
+// removed without breaking historical handoff assets.
 import type { JsonObject } from '../../bridge/core/sdk/reader_core';
 
 export interface BookSourceTemplate {

@@ -8,13 +8,18 @@ import { ZIndexTokens } from '../../contract/generated/DimensionTokens';
 import { ReaderTypography } from '../tokens/ReaderTypography';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 import { MotionAdapter } from '../adapters/MotionAdapter';
+import { CoreBookshelfBook, CoreBookGroup } from '../store/ReaderUiState';
+import { SourceCoverImage } from './SourceCoverImage';
 
 // Book entry passed from ViewStateRenderer (extracted from fixture BookCard children).
 export interface BookEntry {
+  sourceId?: string;
   bookId: string;
   title: string;
   author: string;
   coverKey: string;
+  coverUrl?: string;
+  latestChapter?: string;
 }
 
 interface BookshelfFilterOption {
@@ -24,10 +29,9 @@ interface BookshelfFilterOption {
 }
 
 // A bookId is loadable when it is a real source path (e.g. '/book/123' or a
-// full 'https://...' URL). Fixture ids like 'bk-001' are NOT loadable —
-// BookSourceRegistry.buildDetailUrl would produce an invalid URL. Guard with
-// this so fixture-only flows just route-push (showing fixture content) while
-// real search-result bookIds trigger the actual Host HTTP load.
+// full 'https://...' URL). Fixture ids like 'bk-001' are NOT loadable. Guard
+// this so fixture-only flows just route-push while real rows enter the
+// sourceId-backed Core reading path.
 function isLoadableBookId(bookId: string): boolean {
   return bookId.length > 0 && (bookId.startsWith('/') || bookId.startsWith('http'));
 }
@@ -54,65 +58,140 @@ function bookshelfCoverResource(coverKey: string): Resource {
 //   cover (.fd-continue-cover-button): 62px, aspect 2/3, radius-sm, clickable.
 //   div: h2 "继续阅读" (13/900 primary) + strong (serif 20) + span author (14 muted).
 //   button (.fd-continue-action-button) "阅读": min 74×40, pill, primary, 13/800.
-// Click dispatches route-push immersive-reading, then — only when bookId is a loadable
-// source path — book-detail-load(bookId, loadFirstChapter) which populates
-// currentBook and then reads the first chapter for the immersive reader route. Fixture
-// ids (bk-001) skip the load and the reader shows its fixture fallback
-// paragraphs.
+// The card is driven by a separate global Core progress query, never by the
+// first row of the currently filtered/sorted shelf. Loading, unavailable, and
+// empty states stay explicit instead of falling back to a fixture book.
 @Component
 export struct ContinueReadingCard {
   @Prop bookId: string = '';
-  @Prop title: string = '长夜余火';
-  @Prop author: string = '爱潜水的乌贼';
-  @Prop coverKey: string = 'longNight';
+  @Prop title: string = '';
+  @Prop author: string = '';
+  @Prop coverKey: string = '';
+  @StorageProp('reader.continueReadingBook') continueReadingBook: CoreBookshelfBook | null = null;
+  @StorageProp('reader.continueReadingLoaded') continueReadingLoaded: boolean = false;
+  @StorageProp('reader.continueReadingError') continueReadingError: string = '';
+
+  private coreContinueBook(): CoreBookshelfBook | null {
+    return this.continueReadingLoaded ? this.continueReadingBook : null;
+  }
 
   build() {
     Row() {
-      Stack() {
-        Image(bookshelfCoverResource(this.coverKey))
-          .width('100%').height('100%')
-          .objectFit(ImageFit.Cover)
-      }
-      .width(62)
-      .aspectRatio(2 / 3)
-      .borderRadius(DemoAliasTokens.radiusMd)
-      .backgroundColor(ColorTokens.metaBg)
-      .onClick(() => this.openReader())
-
-      Column() {
-        Text('继续阅读')
-          .fontSize(13)
-          .fontWeight(900)
-          .fontColor(ColorTokens.primary)
-          .fontFamily(ReaderTypography.sansFamily())
-        Text(this.title)
-          .fontSize(20)
-          .fontWeight(700)
-          .fontColor(ColorTokens.ink)
-          .fontFamily(ReaderTypography.serifFamily())
-          .maxLines(2)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .margin({ top: 6 })
-        Text(this.author)
-          .fontSize(14)
-          .fontColor(ColorTokens.muted)
-          .maxLines(2)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .margin({ top: 5 })
-      }
-      .alignItems(HorizontalAlign.Start)
-      .layoutWeight(1)
-      .margin({ left: 14, right: 14 })
-
-      Text('阅读')
-        .fontSize(13)
-        .fontWeight(800)
-        .fontColor(DemoAliasTokens.onPrimary)
-        .backgroundColor(ColorTokens.primary)
-        .borderRadius(DemoAliasTokens.radiusPill)
-        .height(40)
-        .padding({ left: 14, right: 14 })
+      if (!this.continueReadingLoaded) {
+        Column()
+          .width(62)
+          .height(93)
+          .borderRadius(DemoAliasTokens.radiusMd)
+          .backgroundColor(ColorTokens.metaBg)
+        Column({ space: 8 }) {
+          Text('正在读取继续阅读…')
+            .fontSize(16)
+            .fontWeight(700)
+            .fontColor(ColorTokens.ink)
+            .fontFamily(ReaderTypography.serifFamily())
+          Text('正在从 Core 核验上次阅读位置。')
+            .fontSize(13)
+            .fontColor(ColorTokens.muted)
+            .lineHeight(13 * 1.5)
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
+        .margin({ left: 14 })
+      } else if (this.continueReadingError.length > 0) {
+        Column()
+          .width(62)
+          .height(93)
+          .borderRadius(DemoAliasTokens.radiusMd)
+          .backgroundColor(ColorTokens.metaBg)
+        Column({ space: 8 }) {
+          Text('继续阅读暂不可用')
+            .fontSize(16)
+            .fontWeight(700)
+            .fontColor(ColorTokens.ink)
+            .fontFamily(ReaderTypography.serifFamily())
+          Text(this.continueReadingError)
+            .fontSize(13)
+            .fontColor(ColorTokens.muted)
+            .lineHeight(13 * 1.5)
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
+        .margin({ left: 14 })
+      } else if (this.coreContinueBook() === null) {
+        Column()
+          .width(62)
+          .height(93)
+          .borderRadius(DemoAliasTokens.radiusMd)
+          .backgroundColor(ColorTokens.metaBg)
+        Column({ space: 8 }) {
+          Text('暂无可继续阅读的书籍')
+            .fontSize(16)
+            .fontWeight(700)
+            .fontColor(ColorTokens.ink)
+            .fontFamily(ReaderTypography.serifFamily())
+          Text('打开并阅读书架中的书籍后会显示在这里。')
+            .fontSize(13)
+            .fontColor(ColorTokens.muted)
+            .lineHeight(13 * 1.5)
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
+        .margin({ left: 14 })
+      } else {
+        Stack() {
+          SourceCoverImage({
+            sourceId: this.coreContinueBook()?.sourceId ?? '',
+            coverUrl: this.coreContinueBook()?.coverUrl ?? '',
+          })
+        }
+        .width(62)
+        .aspectRatio(2 / 3)
+        .borderRadius(DemoAliasTokens.radiusMd)
+        .backgroundColor(ColorTokens.metaBg)
         .onClick(() => this.openReader())
+
+        Column() {
+          Text('继续阅读')
+            .fontSize(13)
+            .fontWeight(900)
+            .fontColor(ColorTokens.primary)
+            .fontFamily(ReaderTypography.sansFamily())
+          Text(this.coreContinueBook()?.title ?? '未命名书籍')
+            .fontSize(20)
+            .fontWeight(700)
+            .fontColor(ColorTokens.ink)
+            .fontFamily(ReaderTypography.serifFamily())
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .margin({ top: 6 })
+          if ((this.coreContinueBook()?.author ?? '').length > 0) {
+            Text(this.coreContinueBook()?.author ?? '')
+              .fontSize(14)
+              .fontColor(ColorTokens.muted)
+              .maxLines(2)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .margin({ top: 5 })
+          }
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+        .margin({ left: 14, right: 14 })
+
+        Text('阅读')
+          .fontSize(13)
+          .fontWeight(800)
+          .fontColor(DemoAliasTokens.onPrimary)
+          .backgroundColor(ColorTokens.primary)
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .height(40)
+          .padding({ left: 14, right: 14 })
+          .onClick(() => this.openReader())
+      }
     }
     .width('100%')
     .padding({ top: 10, bottom: 10, left: 16, right: 16 })
@@ -123,18 +202,16 @@ export struct ContinueReadingCard {
   }
 
   private openReader(): void {
-    ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' });
-    // Only dispatch book-detail-load when bookId is a loadable source path.
-    // Fixture ids (bk-001) skip the load to avoid invalid URL + stuck loading.
-    // The reader page's ReadingTextFlow falls back to fixture paragraphs when
-    // chapterContent is empty.
-    if (isLoadableBookId(this.bookId)) {
-      ReaderUiStore.dispatch({
-        type: 'book-detail-load',
-        bookId: this.bookId,
-        loadFirstChapter: true,
-      });
-    }
+    const coreBook = this.coreContinueBook();
+    if (coreBook === null) return;
+    ReaderUiStore.dispatch({
+      type: 'bookshelf-book-open',
+      sourceId: coreBook.sourceId,
+      bookId: coreBook.bookId,
+      sourceKind: coreBook.sourceId === 'local' ? 'local' : 'remote',
+      chapterIndex: 0,
+      readerEntry: true,
+    });
   }
 }
 
@@ -144,8 +221,8 @@ export struct ContinueReadingCard {
 @Component
 export struct ShelfSectionHeader {
   @Prop title: string = '我的书架';
+  @Prop viewMode: string = 'cover';
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
-  @StorageProp('reader.bookshelfFilter.view') bookshelfView: string = 'cover';
   @StorageProp('reader.overlay') overlayKind: string = '';
 
   build() {
@@ -156,7 +233,7 @@ export struct ShelfSectionHeader {
         .fontColor(ColorTokens.ink)
       Blank()
       Row({ space: 8 }) {
-        // 封面视图：仅切换 EphemeralState，不走 route-replace（契约要求视图模式不破坏书架结构）
+        // 封面视图：route-replace 切换书架视图模式
         Column() {
           Image($r('app.media.bookshelf_icon_grid_primary'))
             .width(20)
@@ -167,14 +244,15 @@ export struct ShelfSectionHeader {
         .alignItems(HorizontalAlign.Center)
         .borderRadius(DemoAliasTokens.radiusPill)
         .backgroundColor(ColorTokens.metaBg)
-        .border({ width: 1, color: this.bookshelfView === 'cover' ? ColorTokens.primary : ColorTokens.border })
+        .border({ width: 1, color: this.viewMode === 'cover' ? ColorTokens.primary : ColorTokens.border })
         .onClick(() => {
-          MotionAdapter.apply('bookshelf.view.switch', this.reducedMotion, () => {
+          MotionAdapter.apply('bookshelf.view.switch', this.reducedMotion, this.getUIContext(), () => {
             ReaderUiStore.dispatch({ type: 'set-bookshelf-view', bookshelfView: 'cover' });
+            ReaderUiStore.dispatch({ type: 'route-replace', id: 'bookshelf-cover-mode' });
           });
         })
 
-        // 列表视图：仅切换 EphemeralState，不走 route-replace
+        // 列表视图：route-replace 切换书架视图模式
         Column() {
           Image($r('app.media.bookshelf_icon_list_dark'))
             .width(20)
@@ -185,14 +263,15 @@ export struct ShelfSectionHeader {
         .alignItems(HorizontalAlign.Center)
         .borderRadius(DemoAliasTokens.radiusPill)
         .backgroundColor(DemoAliasTokens.surface)
-        .border({ width: 1, color: this.bookshelfView === 'list' ? ColorTokens.primary : ColorTokens.border })
+        .border({ width: 1, color: this.viewMode === 'list' ? ColorTokens.primary : ColorTokens.border })
         .onClick(() => {
-          MotionAdapter.apply('bookshelf.view.switch', this.reducedMotion, () => {
+          MotionAdapter.apply('bookshelf.view.switch', this.reducedMotion, this.getUIContext(), () => {
             ReaderUiStore.dispatch({ type: 'set-bookshelf-view', bookshelfView: 'list' });
+            ReaderUiStore.dispatch({ type: 'route-replace', id: 'bookshelf-list-mode' });
           });
         })
 
-        // 筛选：toggle overlay（契约 ui-state.fixtures.json 将 sort-filter 定义为 overlay，非独立路由）
+        // 筛选：route-push 到 sort-filter 路由
         Column() {
           Image($r('app.media.bookshelf_icon_filter_dark'))
             .width(20)
@@ -204,12 +283,7 @@ export struct ShelfSectionHeader {
         .borderRadius(DemoAliasTokens.radiusPill)
         .backgroundColor(DemoAliasTokens.surface)
         .border({ width: 1, color: this.overlayKind === 'sort-filter' ? ColorTokens.primary : ColorTokens.border })
-        .onClick(() => {
-          ReaderUiStore.dispatch({
-            type: 'set-overlay',
-            overlay: this.overlayKind === 'sort-filter' ? '' : 'sort-filter',
-          });
-        })
+        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'sort-filter' }))
 
         // 书架搜索设置：合法的 route-push（SettingsShell 路由）
         Column() {
@@ -238,15 +312,47 @@ export struct ShelfSectionHeader {
 export struct BookshelfShelfSection {
   @Prop title: string = '我的书架';
   @Prop books: BookEntry[] = [];
+  @Prop viewMode: string = 'cover';
   @Prop filterOpen: boolean = false;
   @StorageProp('reader.overlay') overlayKind: string = '';
+  @StorageProp('reader.bookshelfBooks') coreBooks: CoreBookshelfBook[] = [];
+  @StorageProp('reader.bookshelfLoaded') bookshelfLoaded: boolean = false;
+  @StorageProp('reader.bookshelfFilter.group') bookshelfGroup: string = 'all';
+
+  private displayedBooks(): BookEntry[] {
+    const result: BookEntry[] = [];
+    for (let i = 0; i < this.coreBooks.length; i++) {
+      const book = this.coreBooks[i];
+      result.push({
+        sourceId: book.sourceId,
+        bookId: book.bookId,
+        title: book.title,
+        author: book.author,
+        coverKey: '',
+        coverUrl: book.coverUrl,
+        latestChapter: book.lastChapter,
+      });
+    }
+    return result;
+  }
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       Column() {
-        ShelfSectionHeader({ title: this.title })
-        BookGrid({ books: this.books })
-          .margin({ top: 10 })
+        ShelfSectionHeader({ title: this.title, viewMode: this.viewMode })
+        if (!this.bookshelfLoaded) {
+          BookshelfLoadingState()
+            .margin({ top: 10 })
+        } else if (this.coreBooks.length === 0) {
+          BookshelfEmptyState({ group: this.bookshelfGroup })
+            .margin({ top: 10 })
+        } else if (this.viewMode === 'list') {
+          BookList({ books: this.displayedBooks() })
+            .margin({ top: 10 })
+        } else {
+          BookGrid({ books: this.displayedBooks() })
+            .margin({ top: 10 })
+        }
       }
       .width('100%')
       if (this.filterOpen || this.overlayKind === 'sort-filter') {
@@ -256,6 +362,45 @@ export struct BookshelfShelfSection {
       }
     }
     .width('100%')
+  }
+}
+
+@Component
+struct BookshelfLoadingState {
+  build() {
+    Column({ space: 14 }) {
+      Row({ space: 16 }) {
+        ForEach([0, 1, 2], (slot: number) => {
+          Column({ space: 8 }) {
+            Column()
+              .width('100%')
+              .aspectRatio(2 / 3)
+              .borderRadius(DemoAliasTokens.radiusMd)
+              .backgroundColor(ColorTokens.metaBg)
+            Row()
+              .width('72%')
+              .height(12)
+              .borderRadius(DemoAliasTokens.radiusPill)
+              .backgroundColor(ColorTokens.metaBg)
+            Row()
+              .width('48%')
+              .height(10)
+              .borderRadius(DemoAliasTokens.radiusPill)
+              .backgroundColor(ColorTokens.surfaceSoft)
+          }
+          .layoutWeight(1)
+          .alignItems(HorizontalAlign.Start)
+        }, (slot: number) => `bookshelf-loading-${slot}`)
+      }
+      .width('100%')
+      Text('正在从 Core 读取书架…')
+        .fontSize(13)
+        .fontColor(ColorTokens.muted)
+        .textAlign(TextAlign.Center)
+        .width('100%')
+    }
+    .width('100%')
+    .padding({ top: 18, bottom: 18 })
   }
 }
 
@@ -298,21 +443,25 @@ struct BookshelfFilterPopover {
   @StorageProp('reader.bookshelfFilter.group') bookshelfGroup: string = 'all';
   @StorageProp('reader.bookshelfFilter.sort') bookshelfSort: string = 'recent';
   @StorageProp('reader.bookshelfFilter.filters') bookshelfFilters: string[] = [];
+  @StorageProp('reader.bookGroups') bookGroups: CoreBookGroup[] = [];
 
   private groupOptions(): BookshelfFilterOption[] {
-    const opts: BookshelfFilterOption[] = [
-      { label: '全部', value: 'all', active: this.bookshelfGroup === 'all' },
-      { label: '默认', value: 'default', active: this.bookshelfGroup === 'default' },
-      { label: '本地书', value: 'local', active: this.bookshelfGroup === 'local' },
-      { label: '追更', value: 'following', active: this.bookshelfGroup === 'following' },
-    ];
+    const opts: BookshelfFilterOption[] = [{ label: '全部', value: 'all', active: this.bookshelfGroup === 'all' }];
+    for (let index = 0; index < this.bookGroups.length; index++) {
+      const group = this.bookGroups[index];
+      if (group.groupName.length === 0) continue;
+      opts.push({
+        label: group.groupName,
+        value: group.groupName,
+        active: this.bookshelfGroup === group.groupName,
+      });
+    }
     return opts;
   }
 
   private sortOptions(): BookshelfFilterOption[] {
     const opts: BookshelfFilterOption[] = [
-      { label: '最近更新', value: 'recent', active: this.bookshelfSort === 'recent' },
-      { label: '阅读进度', value: 'progress', active: this.bookshelfSort === 'progress' },
+      { label: '最近阅读', value: 'recent', active: this.bookshelfSort === 'recent' },
       { label: '书名', value: 'title', active: this.bookshelfSort === 'title' },
       { label: '作者', value: 'author', active: this.bookshelfSort === 'author' },
     ];
@@ -320,14 +469,10 @@ struct BookshelfFilterPopover {
   }
 
   private filterOptions(): BookshelfFilterOption[] {
-    const filters = this.bookshelfFilters;
-    const opts: BookshelfFilterOption[] = [
-      { label: '全部', value: 'all', active: filters.length === 0 },
-      { label: '未读', value: 'unread', active: filters.indexOf('unread') >= 0 },
-      { label: '已完结', value: 'completed', active: filters.indexOf('completed') >= 0 },
-      { label: '更新失败', value: 'failed', active: filters.indexOf('failed') >= 0 },
-    ];
-    return opts;
+    // Core bookshelf.list has no unread/completed/failed filter DTO.  Keep
+    // only the executable clear state instead of letting UI-only tags imply a
+    // filtered Core query.
+    return [{ label: '全部（Core 未提供状态筛选）', value: 'all', active: this.bookshelfFilters.length === 0 }];
   }
 
   build() {
@@ -351,12 +496,7 @@ struct BookshelfFilterPopover {
         title: '筛选',
         options: this.filterOptions(),
         onSelect: (value: string) => {
-          // 'all' clears filters (toggle off each). Simplified: toggle 'all'
-          // has no effect since reducer treats it as a regular tag; the
-          // active flag for 'all' is computed as filters.length === 0.
-          if (value !== 'all') {
-            ReaderUiStore.dispatch({ type: 'set-bookshelf-filter-toggle', bookshelfFilterToggle: value });
-          }
+          if (value === 'all') ReaderUiStore.dispatch({ type: 'set-bookshelf-filter-clear' });
         },
       })
         .margin({ top: 12 })
@@ -374,13 +514,21 @@ struct BookshelfFilterPopover {
 // .fd-book-cover-frame: width 100%, aspect 2/3, radius-md(8), surface, soft-shadow.
 @Component
 export struct BookCover {
-  @Prop coverKey: string = 'threeBody';
+  @Prop sourceId: string = '';
+  @Prop coverKey: string = '';
+  @Prop coverUrl: string = '';
+
+  private fallbackCover(): Resource | undefined {
+    return this.coverKey.length > 0 ? bookshelfCoverResource(this.coverKey) : undefined;
+  }
 
   build() {
     Stack() {
-      Image(bookshelfCoverResource(this.coverKey))
-        .width('100%').height('100%')
-        .objectFit(ImageFit.Cover)
+      SourceCoverImage({
+        sourceId: this.sourceId,
+        coverUrl: this.coverUrl,
+        fallback: this.fallbackCover(),
+      })
     }
     .width('100%')
     .aspectRatio(2 / 3)
@@ -394,20 +542,25 @@ export struct BookCover {
 // Click dispatches route-push book-detail, then — only when bookId is a
 // loadable source path — book-detail-load(bookId) so the reducer pushes the
 // route first (pageState resets to default), then the load effect fires on the
-// new route (pageState -> loading -> default on success). Fixture ids (bk-001)
-// skip the load; the detail page shows its fixture ViewState body.
+// new route (pageState -> loading -> default on success).
 @Component
 export struct BookCard {
+  @Prop sourceId: string = '';
   @Prop bookId: string = '';
-  @Prop title: string = '长夜余火';
-  @Prop author: string = '爱潜水的乌贼';
-  @Prop coverKey: string = 'longNight';
+  @Prop title: string = '';
+  @Prop author: string = '';
+  @Prop coverKey: string = '';
+  @Prop coverUrl: string = '';
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
+
+  private canOpen(): boolean {
+    return this.bookId.length > 0 && (this.sourceId.length > 0 || isLoadableBookId(this.bookId));
+  }
 
   build() {
     Column() {
-      BookCover({ coverKey: this.coverKey })
-      Text(this.title)
+      BookCover({ sourceId: this.sourceId, coverKey: this.coverKey, coverUrl: this.coverUrl })
+      Text(this.title.length > 0 ? this.title : '未提供书籍信息')
         .fontSize(15)
         .fontWeight(700)
         .fontColor(ColorTokens.ink)
@@ -415,22 +568,22 @@ export struct BookCard {
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .margin({ top: 6 })
-      Text(this.author)
-        .fontSize(12)
-        .fontColor(ColorTokens.muted)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
+      if (this.author.length > 0) {
+        Text(this.author)
+          .fontSize(12)
+          .fontColor(ColorTokens.muted)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
     }
     .alignItems(HorizontalAlign.Start)
     .onClick(() => {
-      MotionAdapter.apply('card.press', this.reducedMotion, () => {
+      if (!this.canOpen()) return;
+      MotionAdapter.apply('card.press', this.reducedMotion, this.getUIContext(), () => {
         ReaderUiStore.dispatch({ type: 'route-push', id: 'book-detail' });
-        // Guard: only dispatch book-detail-load when bookId is a loadable source
-        // path. Fixture ids (bk-001) would produce an invalid URL via
-        // BookSourceRegistry.buildDetailUrl and leave the detail page stuck on
-        // loading (reducer sets pageState='loading' but the HTTP fails with a
-        // non-retryable-looking error).
-        if (isLoadableBookId(this.bookId)) {
+        if (this.sourceId.length > 0) {
+          ReaderUiStore.dispatch({ type: 'bookshelf-book-open', sourceId: this.sourceId, bookId: this.bookId });
+        } else if (isLoadableBookId(this.bookId)) {
           ReaderUiStore.dispatch({ type: 'book-detail-load', bookId: this.bookId });
         }
       });
@@ -438,28 +591,43 @@ export struct BookCard {
   }
 }
 
-// .fd-book-grid: repeat(3, 1fr); gap 16px 30px.
-// Books come from ViewStateRenderer (extracted from fixture BookCard children).
-// Falls back to demo entries when no books are passed (e.g. standalone usage or
-// fixture missing children) so the grid is never empty.
+// .fd-book-grid: repeat(3, 1fr); gap 16px 30px. The parent selects either its
+// Core records, a loading skeleton, or an empty state; this leaf never invents
+// a fallback book list.
 @Component
 export struct BookGrid {
   @Prop books: BookEntry[] = [];
-  private demoBooks: BookEntry[] = [
-    { bookId: 'bk-demo-1', title: '长夜余火', author: '爱潜水的乌贼', coverKey: 'longNight' },
-    { bookId: 'bk-demo-2', title: '诡秘之主', author: '爱潜水的乌贼', coverKey: 'mysteryLord' },
-    { bookId: 'bk-demo-3', title: '明朝那些事儿', author: '当年明月', coverKey: 'brightMoon' },
-  ];
+  // `coverColumns` is a real reducer-backed setting.  Keep the grid within
+  // its declared 1–5 range instead of hardcoding the demo's three columns.
+  @StorageProp('reader.coverColumns') coverColumns: number = 3;
+
+  private columnsTemplate(): string {
+    const requested = Math.floor(this.coverColumns);
+    const columns = requested < 1 ? 1 : (requested > 5 ? 5 : requested);
+    let template = '';
+    for (let index = 0; index < columns; index++) {
+      if (index > 0) template += ' ';
+      template += '1fr';
+    }
+    return template;
+  }
 
   build() {
     Grid() {
-      ForEach(this.books.length > 0 ? this.books : this.demoBooks, (b: BookEntry, i: number) => {
+      ForEach(this.books, (b: BookEntry, i: number) => {
         GridItem() {
-          BookCard({ bookId: b.bookId, title: b.title, author: b.author, coverKey: b.coverKey })
+          BookCard({
+            sourceId: b.sourceId ?? '',
+            bookId: b.bookId,
+            title: b.title,
+            author: b.author,
+            coverKey: b.coverKey,
+            coverUrl: b.coverUrl ?? '',
+          })
         }
       }, (b: BookEntry, i: number) => `${b.bookId}-${b.title}-${i}`)
     }
-    .columnsTemplate('1fr 1fr 1fr')
+    .columnsTemplate(this.columnsTemplate())
     .rowsGap(16)
     .columnsGap(30)
     .width('100%')
@@ -496,33 +664,47 @@ export struct ShelfChipGroup {
 // Cover is 48×72 (shorter than grid-mode cover) per spec.
 @Component
 export struct BookListRow {
-  @Prop cover: Resource | undefined = undefined;
+  @Prop sourceId: string = '';
+  @Prop bookId: string = '';
+  @Prop coverKey: string = '';
+  @Prop coverUrl: string = '';
   @Prop title: string = '';
   @Prop author: string = '';
   @Prop latestChapter: string = '';
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
 
+  private canOpen(): boolean {
+    return this.bookId.length > 0 && (this.sourceId.length > 0 || isLoadableBookId(this.bookId));
+  }
+
   build() {
     Row({ space: 10 }) {
       // 48×72 封面（列表模式封面比网格模式矮）
-      Image(this.cover ?? $r('app.media.bookshelf_cover_long_night'))
-        .width(48)
-        .height(72)
-        .borderRadius(DemoAliasTokens.radiusSm)
-        .objectFit(ImageFit.Cover)
+      Stack() {
+        SourceCoverImage({
+          sourceId: this.sourceId,
+          coverUrl: this.coverUrl,
+          fallback: this.coverKey.length > 0 ? bookshelfCoverResource(this.coverKey) : undefined,
+        })
+      }
+      .width(48)
+      .height(72)
+      .borderRadius(DemoAliasTokens.radiusSm)
       Column({ space: 4 }) {
-        Text(this.title)
+        Text(this.title.length > 0 ? this.title : '未提供书籍信息')
           .fontSize(15)
           .fontWeight(700)
           .fontColor(ColorTokens.controlInk)
           .fontFamily(ReaderTypography.serifFamily())
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-        Text(this.author)
-          .fontSize(12)
-          .fontColor(ColorTokens.muted)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        if (this.author.length > 0) {
+          Text(this.author)
+            .fontSize(12)
+            .fontColor(ColorTokens.muted)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
         if (this.latestChapter !== '') {
           Text(this.latestChapter)
             .fontSize(11)
@@ -540,10 +722,44 @@ export struct BookListRow {
     .border({ width: { top: 1 }, color: ColorTokens.border })
     .alignItems(VerticalAlign.Center)
     .onClick(() => {
-      MotionAdapter.apply('listRow.select', this.reducedMotion, () => {
+      if (!this.canOpen()) return;
+      MotionAdapter.apply('listRow.select', this.reducedMotion, this.getUIContext(), () => {
         ReaderUiStore.dispatch({ type: 'route-push', id: 'book-detail' });
+        if (this.sourceId.length > 0) {
+          ReaderUiStore.dispatch({ type: 'bookshelf-book-open', sourceId: this.sourceId, bookId: this.bookId });
+        } else if (isLoadableBookId(this.bookId)) {
+          ReaderUiStore.dispatch({ type: 'book-detail-load', bookId: this.bookId });
+        }
       });
     })
+  }
+}
+
+// The demo's list route is semantically distinct from the cover grid.  Both
+// consume the same Core-backed book records so switching view never falls
+// back to fixture-only navigation.
+@Component
+export struct BookList {
+  @Prop books: BookEntry[] = [];
+
+  build() {
+    List({ space: 0 }) {
+      ForEach(this.books,
+        (book: BookEntry, index: number) => {
+          ListItem() {
+            BookListRow({
+              sourceId: book.sourceId ?? '',
+              bookId: book.bookId,
+              title: book.title,
+              author: book.author,
+              coverKey: book.coverKey,
+              coverUrl: book.coverUrl ?? '',
+              latestChapter: book.latestChapter ?? '',
+            })
+          }
+        }, (book: BookEntry, index: number) => `${book.bookId}-${book.title}-${index}`)
+    }
+    .width('100%')
   }
 }
 
@@ -553,6 +769,22 @@ export struct BookListRow {
 // primary, "导入本地" ghost). Three 10px muted hints below.
 @Component
 export struct BookshelfEmptyState {
+  @Prop group: string = 'all';
+
+  private filteredEmpty(): boolean {
+    return this.group !== 'all';
+  }
+
+  private title(): string {
+    return this.filteredEmpty() ? '当前分组暂无书籍' : '书架还空着';
+  }
+
+  private message(): string {
+    return this.filteredEmpty()
+      ? '其他分组中的书籍不会显示在这里。'
+      : '从发现页添加你感兴趣的书';
+  }
+
   build() {
     Column({ space: 14 }) {
       // 112×92 图形：用 Stack + 几个圆角矩形模拟书堆
@@ -583,18 +815,30 @@ export struct BookshelfEmptyState {
       .width(112)
       .height(92)
 
-      Text('书架还空着')
+      Text(this.title())
         .fontSize(16)
         .fontWeight(800)
         .fontColor(ColorTokens.controlInk)
         .fontFamily(ReaderTypography.serifFamily())
 
-      Text('从发现页添加你感兴趣的书')
+      Text(this.message())
         .fontSize(12)
         .fontColor(ColorTokens.muted)
 
       Row({ space: 10 }) {
-        Text('去发现')
+        if (this.filteredEmpty()) {
+          Text('查看全部')
+            .fontSize(13)
+            .fontWeight(700)
+            .fontColor(DemoAliasTokens.onPrimary)
+            .height(40)
+            .padding({ left: 20, right: 20 })
+            .borderRadius(DemoAliasTokens.radiusPill)
+            .backgroundColor(ColorTokens.primaryDark)
+            .textAlign(TextAlign.Center)
+            .onClick(() => ReaderUiStore.dispatch({ type: 'set-bookshelf-group', bookshelfGroup: 'all' }))
+        } else {
+          Text('去发现')
           .fontSize(13)
           .fontWeight(700)
           .fontColor(DemoAliasTokens.onPrimary)
@@ -603,7 +847,8 @@ export struct BookshelfEmptyState {
           .borderRadius(DemoAliasTokens.radiusPill)
           .backgroundColor(ColorTokens.primaryDark)
           .textAlign(TextAlign.Center)
-          .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'discover' }))
+            .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'discover' }))
+        }
         Text('导入本地')
           .fontSize(13)
           .fontWeight(700)

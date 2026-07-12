@@ -14,6 +14,9 @@ export class SpacingTokens {
   static readonly safeAreaBottom: number = 14;
   static readonly safeAreaHorizontal: number = 16;
   static readonly keyboardGap: number = 12;
+  static readonly controlInline: number = 10;
+  static readonly controlGap: number = 12;
+  static readonly controlRowBlock: number = 4;
 }
 
 export class SizeTokens {
@@ -28,6 +31,15 @@ export class SizeTokens {
   static readonly readerBottomSheetMinHeight: number = 284;
   static readonly readerModuleNavHeight: number = 82;
   static readonly keyboardHeight: number = 320;
+  static readonly controlSmHeight: number = 28;
+  static readonly controlMdHeight: number = 36;
+  static readonly controlLgHeight: number = 44;
+  static readonly controlTouchTarget: number = 44;
+  static readonly switchTrackWidth: number = 44;
+  static readonly switchTrackHeight: number = 24;
+  static readonly switchThumb: number = 20;
+  static readonly controlIcon: number = 16;
+  static readonly readerFieldLabelColumn: number = 108;
 }
 
 export class RadiusTokens {
@@ -38,6 +50,9 @@ export class RadiusTokens {
   static readonly chip: number = 2;
   static readonly bottomSheet: number = 8;
   static readonly control: number = 999;
+  static readonly field: number = 6;
+  static readonly button: number = 6;
+  static readonly switch: number = 999;
 }
 
 export class ElevationTokens {

@@ -26,4 +26,12 @@ export class ColorTokens {
   static readonly controlInkNight: string = '#FFD7E1E5';
   static readonly primaryNight: string = '#FF8FB6CA';
   static readonly floatingControlBgAltNight: string = '#FF2B3B43';
+  static readonly controlFieldSurface: string = '#D1FFF8EF';
+  static readonly controlFieldBorderDefault: string = '#FFC1C7CD';
+  static readonly controlFieldBorderHover: string = '#FF87928D';
+  static readonly controlFieldBorderFocus: string = '#FF2D4A3E';
+  static readonly controlFieldSurfaceDisabled: string = '#9EEAE1DA';
+  static readonly controlFieldInkDisabled: string = '#FF928B84';
+  static readonly controlFieldBorderError: string = '#FFD7473E';
+  static readonly controlFieldBorderSuccess: string = '#FF338144';
 }

@@ -5,5 +5,7 @@
   "main": "",
   "author": "",
   "license": "",
-  "dependencies": {}
+  "dependencies": {
+    "reader_ui_runtime": "file:../../Reader-UI/packages/arkts/reader-ui-runtime"
+  }
 }

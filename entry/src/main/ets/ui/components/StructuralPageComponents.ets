@@ -3,8 +3,26 @@
 import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
 import { RouteId } from '../../contract/generated/RouteTable';
+import picker from '@ohos.file.picker';
+import { ReaderEffects } from '../store/ReaderEffects';
 import { ReaderTypography } from '../tokens/ReaderTypography';
 import { ReaderUiStore } from '../store/ReaderUiStore';
+import { RssSelectionProjection } from './RssSelectionProjection';
+import { isSafeRssOriginalUrl } from './RssComponents';
+import { SearchInputBox } from './ContractComponents';
+import { SourceDetectPage } from './LibraryComponents';
+import {
+  BookDetail,
+  ChapterTocEntry,
+  CoreBookmark,
+  CoreSourceEntry,
+  CoreBookshelfBook,
+  CoreBookGroup,
+  CoreRssSubscription,
+  SearchResultEntry,
+  TocMode,
+  CoreStorageBackupInfo,
+} from '../store/ReaderUiState';
 
 interface RowEntry {
   title: string;
@@ -20,42 +38,11 @@ interface SyncBackupEntry {
   local: boolean;
 }
 
-interface SourceManagementEntry {
-  title: string;
-  meta: string;
-  status: string;
-  tone: string;
-  sourceEnabled: boolean;
-}
-
 interface SelectableBookEntry {
   title: string;
   detail: string;
   group: string;
   selected: boolean;
-}
-
-interface SourceModuleEntry {
-  title: string;
-  status: string;
-  tone: string;
-}
-
-interface SourceInfoEntry {
-  label: string;
-  value: string;
-}
-
-interface SourceImportOptionEntry {
-  title: string;
-  detail: string;
-  route: RouteId;
-  icon: Resource;
-}
-
-interface DirectoryEntry {
-  title: string;
-  marker: string;
 }
 
 @Component
@@ -287,6 +274,7 @@ struct BookshelfToolBookRow {
 struct DirectorySegmentButton {
   @Prop label: string = '目录';
   @Prop active: boolean = false;
+  onSelect: () => void = () => {};
 
   build() {
     Text(this.label)
@@ -298,25 +286,27 @@ struct DirectorySegmentButton {
       .borderRadius(DemoAliasTokens.radiusPill)
       .backgroundColor(this.active ? ColorTokens.primary : DemoAliasTokens.surface)
       .textAlign(TextAlign.Center)
+      .onClick(() => this.onSelect())
   }
 }
 
 @Component
 struct DirectoryChapterRow {
   @Prop title: string = '第一章';
-  @Prop marker: string = '';
+  @Prop current: boolean = false;
+  onSelect: () => void = () => {};
 
   build() {
     Row() {
       Text(this.title)
         .fontSize(14)
-        .fontWeight(600)
-        .fontColor(ColorTokens.controlInk)
+        .fontWeight(this.current ? 800 : 600)
+        .fontColor(this.current ? ColorTokens.primaryDark : ColorTokens.controlInk)
         .layoutWeight(1)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-      if (this.marker.length > 0) {
-        HandoffStatusChip({ label: this.marker })
+      if (this.current) {
+        HandoffStatusChip({ label: '当前' })
       }
       Image($r('app.media.reader_icon_chevron_chapter'))
         .width(18)
@@ -330,14 +320,20 @@ struct DirectoryChapterRow {
     .backgroundColor(DemoAliasTokens.surface)
     .border({ width: 1, color: ColorTokens.border })
     .alignItems(VerticalAlign.Center)
-    .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' }))
+    .onClick(() => this.onSelect())
   }
 }
 
 @Component
 struct SourceMetricStrip {
+  @Prop sourceCount: number = 0;
+  @Prop enabledCount: number = 0;
+  @Prop loaded: boolean = false;
+
   build() {
-    Text('12 个书源 · 8 个启用 · 4 个异常 · 10:30 检测')
+    Text(this.loaded
+      ? `${this.sourceCount} 个书源 · ${this.enabledCount} 个启用`
+      : '正在从 Core 读取书源…')
       .fontSize(12)
       .fontWeight(700)
       .fontColor(ColorTokens.muted)
@@ -353,10 +349,10 @@ struct SourceFilterSummaryRow {
   build() {
     Row() {
       Row() {
-        Image($r('app.media.bookshelf_icon_filter_dark'))
+        Image($r('app.media.ui_icon_source_dark'))
           .width(18)
           .height(18)
-        Text('筛选')
+        Text('Core 书源列表')
           .fontSize(13)
           .fontWeight(850)
           .fontColor(ColorTokens.controlInk)
@@ -364,16 +360,12 @@ struct SourceFilterSummaryRow {
       }
       .layoutWeight(1)
       .alignItems(VerticalAlign.Center)
-      Text('全部 · 全部分组')
+      Text('仅展示已持久化书源')
         .fontSize(12)
         .fontWeight(750)
         .fontColor(ColorTokens.muted)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-      Image($r('app.media.ui_icon_chevron_dark'))
-        .width(18)
-        .height(18)
-        .margin({ left: 6 })
     }
     .width('100%')
     .height(42)
@@ -404,23 +396,8 @@ struct SourceStatusDot {
 }
 
 @Component
-struct SourceDetectButton {
-  build() {
-    Text('检测')
-      .fontSize(11)
-      .fontWeight(850)
-      .fontColor(ColorTokens.controlInk)
-      .height(28)
-      .padding({ left: 9, right: 9 })
-      .borderRadius(DemoAliasTokens.radiusPill)
-      .backgroundColor(ColorTokens.metaBg)
-      .border({ width: 1, color: ColorTokens.border })
-      .textAlign(TextAlign.Center)
-  }
-}
-
-@Component
 struct SourceManagementRow {
+  @Prop sourceId: string = '';
   @Prop title: string = '起点中文网';
   @Prop meta: string = 'qidian.com · 起点导入';
   @Prop tone: string = 'good';
@@ -446,11 +423,24 @@ struct SourceManagementRow {
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
       .margin({ right: 10 })
+      .onClick(() => ReaderUiStore.dispatch({ type: 'source-detail-open', sourceId: this.sourceId }))
 
       Row({ space: 9 }) {
         SourceStatusDot({ tone: this.tone })
-        SourceDetectButton()
-        HandoffSwitch({ on: this.sourceEnabled })
+        Text(this.sourceEnabled ? '启用' : '停用')
+          .fontSize(11)
+          .fontWeight(800)
+          .fontColor(this.sourceEnabled ? ColorTokens.statusGood : ColorTokens.muted)
+        Text('导出')
+          .fontSize(11)
+          .fontWeight(850)
+          .fontColor(ColorTokens.primaryDark)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'source-export', sourceId: this.sourceId }))
+        Text('删除')
+          .fontSize(11)
+          .fontWeight(850)
+          .fontColor(ColorTokens.statusWarn)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'source-delete-request', sourceId: this.sourceId }))
       }
       .alignItems(VerticalAlign.Center)
     }
@@ -462,37 +452,40 @@ struct SourceManagementRow {
 }
 
 @Component
-struct SourceEnabledSwitch {
-  @Prop sourceEnabled: boolean = true;
-
+struct SourceManagementActionBar {
   build() {
-    Row() {
-      if (this.sourceEnabled) {
-        Blank()
-          .layoutWeight(1)
-      }
-      Row()
-        .width(18)
-        .height(18)
+    Row({ space: 10 }) {
+      Text('刷新')
+        .fontSize(13)
+        .fontWeight(850)
+        .fontColor(ColorTokens.controlInk)
+        .height(36)
+        .padding({ left: 14, right: 14 })
         .borderRadius(DemoAliasTokens.radiusPill)
-        .backgroundColor(ColorTokens.paper)
-        .shadow({ radius: 3, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 1 })
-      if (!this.sourceEnabled) {
-        Blank()
-          .layoutWeight(1)
-      }
+        .backgroundColor(ColorTokens.metaBg)
+        .border({ width: 1, color: ColorTokens.border })
+        .onClick(() => ReaderUiStore.dispatch({ type: 'source-management-refresh' }))
+      Text('导入书源')
+        .fontSize(13)
+        .fontWeight(850)
+        .fontColor(ColorTokens.paper)
+        .height(36)
+        .padding({ left: 14, right: 14 })
+        .borderRadius(DemoAliasTokens.radiusPill)
+        .backgroundColor(ColorTokens.primary)
+        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'source-import-options' }))
     }
-    .width(38)
-    .height(22)
-    .padding(2)
-    .borderRadius(DemoAliasTokens.radiusPill)
-    .backgroundColor(this.sourceEnabled ? ColorTokens.primary : ColorTokens.metaBg)
+    .width('100%')
+    .justifyContent(FlexAlign.End)
   }
 }
 
 @Component
 struct SourceDetailHeader {
-  @Prop title: string = '笔趣阁';
+  @Prop title: string = '';
+  @Prop baseUrl: string = '';
+  @Prop sourceId: string = '';
+  @Prop isSourceEnabled: boolean = false;
 
   build() {
     Row() {
@@ -503,8 +496,15 @@ struct SourceDetailHeader {
           .fontColor(ColorTokens.ink)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-        Text('biquge.example · 玄幻书源')
+        Text(this.baseUrl.length > 0 ? this.baseUrl : 'Core 未提供书源地址')
           .fontSize(12)
+          .fontWeight(600)
+          .fontColor(ColorTokens.muted)
+          .margin({ top: 4 })
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(this.sourceId)
+          .fontSize(10)
           .fontWeight(600)
           .fontColor(ColorTokens.muted)
           .margin({ top: 4 })
@@ -514,7 +514,14 @@ struct SourceDetailHeader {
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
       .margin({ right: 12 })
-      SourceEnabledSwitch({ sourceEnabled: true })
+      Text(this.isSourceEnabled ? '已启用' : '已停用')
+        .fontSize(12)
+        .fontWeight(850)
+        .fontColor(this.isSourceEnabled ? ColorTokens.statusGood : ColorTokens.muted)
+        .padding({ left: 10, right: 10, top: 6, bottom: 6 })
+        .borderRadius(DemoAliasTokens.radiusPill)
+        .backgroundColor(ColorTokens.metaBg)
+        .border({ width: 1, color: ColorTokens.border })
     }
     .width('100%')
     .padding({ left: 14, right: 14, top: 12, bottom: 12 })
@@ -522,228 +529,6 @@ struct SourceDetailHeader {
     .backgroundColor(DemoAliasTokens.surface)
     .border({ width: 1, color: ColorTokens.border })
     .alignItems(VerticalAlign.Center)
-  }
-}
-
-@Component
-struct SourceModuleStatusCard {
-  @Prop title: string = '站点';
-  @Prop status: string = '正常';
-  @Prop tone: string = 'good';
-
-  build() {
-    Row() {
-      Text(this.title)
-        .fontSize(13)
-        .fontWeight(850)
-        .fontColor(ColorTokens.controlInk)
-        .layoutWeight(1)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-      SourceStatusDot({ tone: this.tone })
-        .margin({ right: 6 })
-      Text(this.status)
-        .fontSize(11)
-        .fontWeight(800)
-        .fontColor(ColorTokens.primaryDark)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
-    .width('48%')
-    .height(44)
-    .padding({ left: 12, right: 12 })
-    .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(ColorTokens.floatingControlBg)
-    .border({ width: 1, color: ColorTokens.border })
-    .alignItems(VerticalAlign.Center)
-    .margin({ bottom: 8 })
-  }
-}
-
-@Component
-struct SourceDetailDetectCard {
-  build() {
-    Column() {
-      Text('最近检测结果')
-        .fontSize(15)
-        .fontWeight(900)
-        .fontColor(ColorTokens.ink)
-      Text('搜索、详情、目录均可解析；正文模块失败。')
-        .fontSize(13)
-        .fontWeight(650)
-        .fontColor(ColorTokens.controlInk)
-        .lineHeight(19)
-        .margin({ top: 8 })
-      Text('失败规则：正文内容规则“#content@text”返回空内容。建议进入规则编辑后调测正文模块。')
-        .fontSize(11)
-        .fontWeight(600)
-        .fontColor(ColorTokens.muted)
-        .lineHeight(17)
-        .margin({ top: 6 })
-    }
-    .width('100%')
-    .padding(14)
-    .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(ColorTokens.floatingControlBg)
-    .border({ width: 1, color: ColorTokens.border })
-    .alignItems(HorizontalAlign.Start)
-  }
-}
-
-@Component
-struct SourceInfoCard {
-  @Prop label: string = '请求方式';
-  @Prop value: string = 'GET · UTF-8';
-
-  build() {
-    Column() {
-      Text(this.label)
-        .fontSize(10)
-        .fontWeight(700)
-        .fontColor(ColorTokens.muted)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-      Text(this.value)
-        .fontSize(13)
-        .fontWeight(850)
-        .fontColor(ColorTokens.controlInk)
-        .margin({ top: 5 })
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
-    .width('48%')
-    .height(62)
-    .padding(12)
-    .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(DemoAliasTokens.surface)
-    .border({ width: 1, color: ColorTokens.border })
-    .alignItems(HorizontalAlign.Start)
-    .margin({ bottom: 8 })
-  }
-}
-
-@Component
-struct SourceInlineActionButton {
-  @Prop label: string = '复制书源';
-  @Prop icon: Resource = $r('app.media.ui_icon_source_dark');
-
-  build() {
-    Row() {
-      Image(this.icon)
-        .width(16)
-        .height(16)
-      Text(this.label)
-        .fontSize(12)
-        .fontWeight(850)
-        .fontColor(ColorTokens.primaryDark)
-        .margin({ left: 6 })
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
-    .height(38)
-    .layoutWeight(1)
-    .justifyContent(FlexAlign.Center)
-    .alignItems(VerticalAlign.Center)
-    .borderRadius(DemoAliasTokens.radiusPill)
-    .backgroundColor(ColorTokens.metaBg)
-    .border({ width: 1, color: ColorTokens.border })
-  }
-}
-
-@Component
-struct SourceImportOptionRow {
-  @Prop entry: SourceImportOptionEntry = {
-    title: '网络导入',
-    detail: '从 URL 拉取书源包',
-    route: 'source-import-preview',
-    icon: $r('app.media.ui_icon_upload_dark'),
-  };
-
-  build() {
-    Row() {
-      Image(this.entry.icon)
-        .width(18)
-        .height(18)
-      Column() {
-        Text(this.entry.title)
-          .fontSize(14)
-          .fontWeight(850)
-          .fontColor(ColorTokens.ink)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-        Text(this.entry.detail)
-          .fontSize(11)
-          .fontWeight(600)
-          .fontColor(ColorTokens.muted)
-          .margin({ top: 3 })
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
-      .margin({ left: 10 })
-      Image($r('app.media.ui_icon_chevron_dark'))
-        .width(18)
-        .height(18)
-    }
-    .width('100%')
-    .height(46)
-    .padding({ left: 14, right: 12 })
-    .border({ width: { bottom: 1 }, color: ColorTokens.border })
-    .alignItems(VerticalAlign.Center)
-    .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: this.entry.route }))
-  }
-}
-
-@Component
-struct SourceImportBottomSheet {
-  private options: SourceImportOptionEntry[] = [
-    { title: '网络导入', detail: '从 URL 拉取书源包', route: 'source-import-preview', icon: $r('app.media.ui_icon_upload_dark') },
-    { title: '本地导入', detail: '选择本地 JSON 或 TXT 文件', route: 'source-import-preview', icon: $r('app.media.ui_icon_source_stack_dark') },
-    { title: '剪贴板导入', detail: '解析剪贴板中的书源内容', route: 'source-import-preview', icon: $r('app.media.ui_icon_source_dark') },
-    { title: '手动新建', detail: '进入空白书源编辑页', route: 'source-rule-edit', icon: $r('app.media.ui_icon_source_primary') },
-  ];
-
-  build() {
-    Column() {
-      Row()
-        .width(42)
-        .height(4)
-        .borderRadius(DemoAliasTokens.radiusPill)
-        .backgroundColor(ColorTokens.border)
-      Text('添加书源')
-        .fontSize(16)
-        .fontWeight(900)
-        .fontColor(ColorTokens.ink)
-        .margin({ top: 8, bottom: 4 })
-      ForEach(this.options, (entry: SourceImportOptionEntry, idx: number) => {
-        SourceImportOptionRow({ entry: entry })
-      }, (entry: SourceImportOptionEntry, idx: number) => `${entry.title}-${idx}`)
-      Text('取消')
-        .fontSize(13)
-        .fontWeight(850)
-        .fontColor(ColorTokens.primaryDark)
-        .width('100%')
-        .height(38)
-        .textAlign(TextAlign.Center)
-        .borderRadius(DemoAliasTokens.radiusPill)
-        .backgroundColor(ColorTokens.metaBg)
-        .border({ width: 1, color: ColorTokens.border })
-        .margin({ top: 8 })
-        .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'source-management' }))
-    }
-    .width('100%')
-    .padding({ left: 16, right: 16, top: 10, bottom: 10 })
-    .borderRadius({
-      topLeft: DemoAliasTokens.radiusXl,
-      topRight: DemoAliasTokens.radiusXl,
-      bottomLeft: DemoAliasTokens.radiusXl,
-      bottomRight: DemoAliasTokens.radiusXl,
-    })
-    .backgroundColor(DemoAliasTokens.surface)
-    .border({ width: 1, color: ColorTokens.border })
-    .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
-    .alignItems(HorizontalAlign.Center)
   }
 }
 
@@ -833,10 +618,10 @@ struct HandoffSwitch {
 
 @Component
 struct ProgressSummaryCard {
-  @Prop title: string = '同步正常';
-  @Prop message: string = '深空信号 · 25% · 刚刚同步';
-  @Prop chip: string = '已同步';
-  @Prop progress: number = 0.64;
+  @Prop title: string = '';
+  @Prop message: string = '';
+  @Prop chip: string = '';
+  @Prop progress: number = 0;
 
   build() {
     Column() {
@@ -1287,10 +1072,11 @@ struct StatePanel {
           .textAlign(TextAlign.Center)
           .margin({ top: 8 })
       }
-      if (this.action.length > 0) {
-        PrimaryAction({ label: this.action })
-          .margin({ top: 12 })
-      }
+      // `StatePanel` is shared by generated empty/error routes.  It has no
+      // route-specific callback contract, so rendering a labelled button here
+      // would create a dead control (for example “重试”/“添加订阅”).  Concrete
+      // pages add their own actionable control only after wiring a real
+      // Core/Host event.
     }
     .width('100%')
     .constraintSize({ minHeight: 640 })
@@ -1302,8 +1088,8 @@ struct StatePanel {
 
 @Component
 export struct AppShellStructure {
-  @Prop title: string = 'Reader for Android';
-  @Prop message: string = '统一承载书架、发现、RSS、设置与阅读页入口。';
+  @Prop title: string = 'Reader for HarmonyOS';
+  @Prop message: string = '兼容路由：主导航承载书架、发现、RSS 与设置，阅读页只从实际书籍流程进入。';
   private entries: RowEntry[] = [
     { title: '书架', detail: '主书架与继续阅读', chip: '' },
     { title: '发现', detail: '书源发现与分类浏览', chip: '' },
@@ -1317,11 +1103,18 @@ export struct AppShellStructure {
 
   build() {
     Column() {
-      StructureCard({ title: this.title, message: this.message })
+      // The generated compatibility route still contains an old Android title.
+      // Do not let that upstream demo prop leak into the HarmonyOS application.
+      StructureCard({
+        title: this.title === 'Reader for Android' ? 'Reader for HarmonyOS' : this.title,
+        message: '兼容路由：请使用底部导航进入书架、发现、RSS 或设置；阅读页只从实际书籍流程进入。',
+      })
       SectionTitle({ title: '核心入口' })
         .margin({ top: 14, bottom: 10 })
       ForEach(this.entries, (entry: RowEntry, idx: number) => {
-        StructureRow({ title: entry.title, detail: entry.detail })
+        // This compatibility summary has no independent callbacks.  Removing
+        // the chevron prevents it from posing as a second navigation surface.
+        StructureRow({ title: entry.title, detail: entry.detail, showChevron: false })
           .margin({ bottom: idx === this.entries.length - 1 ? 0 : 8 })
       }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
     }
@@ -1333,11 +1126,14 @@ export struct AppShellStructure {
 @Component
 export struct MainTabsStructure {
   @Prop title: string = '主导航';
-  @Prop message: string = '底部四项：书架、发现、RSS、设置。';
+  @Prop message: string = '兼容路由：请使用下方真实底部导航切换书架、发现、RSS 和设置。';
 
   build() {
     Column() {
-      StructureCard({ title: this.title, message: this.message })
+      StructureCard({
+        title: this.title,
+        message: '兼容路由：请使用下方真实底部导航切换书架、发现、RSS 和设置。',
+      })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -1347,18 +1143,35 @@ export struct MainTabsStructure {
 @Component
 export struct SearchHomePage {
   @Prop placeholder: string = '搜索书名或作者';
+  @StorageProp('reader.searchQuery') searchQuery: string = '';
+  @StorageProp('reader.searchResults') searchResults: SearchResultEntry[] = [];
 
   build() {
     Column() {
-      SearchBox({ label: this.placeholder })
-      Column() {
-        SectionTitle({ title: '最近搜索' })
-        StructureRow({ title: '深空信号', showChevron: true })
-          .margin({ top: 10 })
+      SearchInputBox({ query: this.searchQuery, placeholder: this.placeholder })
+      if (this.searchResults.length > 0) {
+        StructureCard({
+          title: `已有 ${this.searchResults.length} 条 Core 搜索结果`,
+          message: '搜索结果由已启用书源返回，可进入结果页查看详情。',
+        })
+          .margin({ top: 14 })
+        Text('查看搜索结果')
+          .fontSize(13)
+          .fontWeight(800)
+          .fontColor(DemoAliasTokens.onPrimary)
+          .height(40)
+          .padding({ left: 18, right: 18 })
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .backgroundColor(ColorTokens.primary)
+          .margin({ top: 12 })
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'search-results' }))
+      } else {
+        StructureCard({
+          title: '开始搜索',
+          message: '输入书名或作者后，将从已启用的 Core 书源获取结果。当前没有可显示的搜索结果。',
+        })
+          .margin({ top: 14 })
       }
-      .width('100%')
-      .alignItems(HorizontalAlign.Start)
-      .margin({ top: 14 })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -1367,21 +1180,65 @@ export struct SearchHomePage {
 
 @Component
 export struct SearchResultsPage {
-  @Prop query: string = '深空信号';
-  private results: RowEntry[] = [
-    { title: '深空信号', detail: '作者 星港 · 3 个书源可用', chip: '可加入书架' },
-    { title: '深空信号', detail: '作者 星港 · 3 个书源可用', chip: '可加入书架' },
-    { title: '深空信号', detail: '作者 星港 · 3 个书源可用', chip: '可加入书架' },
-    { title: '深空信号', detail: '作者 星港 · 3 个书源可用', chip: '可加入书架' },
-  ];
+  @StorageProp('reader.searchQuery') searchQuery: string = '';
+  @StorageProp('reader.searchResults') searchResults: SearchResultEntry[] = [];
+
+  private resultDetail(result: SearchResultEntry): string {
+    const details: string[] = [];
+    if (result.author.length > 0) details.push(result.author);
+    if (result.sourceName.length > 0) details.push(result.sourceName);
+    if (result.latestChapter !== undefined && result.latestChapter.length > 0) {
+      details.push(result.latestChapter);
+    }
+    return details.length > 0 ? details.join(' · ') : 'Core 未提供作者或书源信息。';
+  }
+
+  private openResult(result: SearchResultEntry): void {
+    if (result.bookId.length === 0) return;
+    ReaderUiStore.dispatch({ type: 'route-push', id: 'book-detail' });
+    ReaderUiStore.dispatch({
+      type: 'book-detail-load', bookId: result.bookId, sourceId: result.sourceId ?? '',
+    });
+  }
 
   build() {
     Column() {
-      SearchBox({ label: this.query })
-      ForEach(this.results, (entry: RowEntry, idx: number) => {
-        StructureRow({ title: entry.title, detail: entry.detail, chip: entry.chip, showChevron: false })
-          .margin({ top: idx === 0 ? 14 : 8 })
-      }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
+      SearchInputBox({ query: this.searchQuery, placeholder: '搜索书名或作者' })
+      if (this.searchResults.length === 0) {
+        StructureCard({
+          title: '暂无搜索结果',
+          message: this.searchQuery.length > 0
+            ? `“${this.searchQuery}”暂无由 Core 返回的结果。请调整关键词或检查已启用书源。`
+            : '请输入关键词后开始搜索。',
+        })
+          .margin({ top: 14 })
+        Text('返回搜索入口')
+          .fontSize(13)
+          .fontWeight(800)
+          .fontColor(ColorTokens.primaryDark)
+          .height(40)
+          .padding({ left: 18, right: 18 })
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .backgroundColor(ColorTokens.metaBg)
+          .margin({ top: 12 })
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'search-home' }))
+      } else {
+        Text(`搜索结果（${this.searchResults.length}）`)
+          .fontSize(15)
+          .fontWeight(800)
+          .fontColor(ColorTokens.controlInk)
+          .margin({ top: 14 })
+        ForEach(this.searchResults, (result: SearchResultEntry, idx: number) => {
+          StructureRow({
+            title: result.title.length > 0 ? result.title : '未命名书籍',
+            detail: this.resultDetail(result),
+            chip: '详情',
+            showChevron: false,
+          })
+            .margin({ top: 8 })
+            .onClick(() => this.openResult(result))
+        }, (result: SearchResultEntry, idx: number) => `${result.sourceId ?? ''}-${result.bookId}-${idx}`)
+      }
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -1405,22 +1262,49 @@ export struct SearchStatePage {
 
 @Component
 export struct BookTocPreviewPage {
-  private chapters: RowEntry[] = [
-    { title: '第1章：深空信号', detail: '', chip: '可读' },
-    { title: '第2章：深空信号', detail: '', chip: '可读' },
-    { title: '第3章：深空信号', detail: '', chip: '可读' },
-    { title: '第4章：深空信号', detail: '', chip: '可读' },
-    { title: '第5章：深空信号', detail: '', chip: '可读' },
-    { title: '第6章：深空信号', detail: '', chip: '可读' },
-  ];
+  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
+  @StorageProp('reader.chapterToc') chapterToc: ChapterTocEntry[] = [];
+  @StorageProp('reader.currentChapterTitle') currentChapterTitle: string = '';
+  @StorageProp('reader.loading') loading: boolean = false;
+
+  private statusMessage(): string {
+    if (this.currentBook === null) return '尚未选择书籍，无法显示目录。';
+    return this.loading ? '正在从 Core 加载章节目录…' : '暂无从 Core 返回的章节目录。';
+  }
+
+  private isCurrent(chapter: ChapterTocEntry): boolean {
+    return this.currentChapterTitle.length > 0 && this.currentChapterTitle === chapter.title;
+  }
+
+  private openChapter(chapter: ChapterTocEntry): void {
+    const book = this.currentBook;
+    if (book === null || chapter.chapterId.length === 0) return;
+    ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' });
+    ReaderUiStore.dispatch({
+      type: 'chapter-load', chapterId: chapter.chapterId, bookId: book.bookId, chapterTitle: chapter.title,
+    });
+  }
 
   build() {
     Column() {
       SectionTitle({ title: '目录预览' })
-      ForEach(this.chapters, (entry: RowEntry, idx: number) => {
-        StructureRow({ title: entry.title, chip: entry.chip, showChevron: false })
-          .margin({ top: idx === 0 ? 10 : 8 })
-      }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
+      if (this.currentBook === null || this.chapterToc.length === 0) {
+        Text(this.statusMessage())
+          .fontSize(13)
+          .fontColor(ColorTokens.muted)
+          .lineHeight(19)
+          .width('100%')
+          .padding({ top: 14, bottom: 14 })
+      } else {
+        ForEach(this.chapterToc, (chapter: ChapterTocEntry, idx: number) => {
+          DirectoryChapterRow({
+            title: chapter.title,
+            current: this.isCurrent(chapter),
+            onSelect: () => this.openChapter(chapter),
+          })
+            .margin({ top: idx === 0 ? 10 : 8 })
+        }, (chapter: ChapterTocEntry, idx: number) => `${chapter.chapterId}-${idx}`)
+      }
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -1442,23 +1326,67 @@ export struct BookshelfEmptyPage {
 
 @Component
 export struct BookMoreMenuPage {
-  @Prop title: string = '深空信号';
-  @Prop subtitle: string = '本地书籍';
-  private actions: RowEntry[] = [
-    { title: '详情', detail: '', chip: '' },
-    { title: '移动分组', detail: '', chip: '' },
-    { title: '下载 / 缓存', detail: '', chip: '' },
-    { title: '重新扫描', detail: '', chip: '' },
-    { title: '移出书架', detail: '', chip: '' },
-  ];
+  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
+
+  private canRemoveFromShelf(): boolean {
+    return this.currentBook !== null && this.currentBook.bookId.length > 0
+      && (this.currentBook.sourceId ?? '').length > 0;
+  }
+
+  private openDetail(): void {
+    if (this.currentBook === null) return;
+    ReaderUiStore.dispatch({ type: 'route-push', id: 'book-detail' });
+  }
+
+  private openDirectory(): void {
+    if (this.currentBook === null) return;
+    ReaderUiStore.dispatch({ type: 'route-push', id: 'book-directory' });
+  }
+
+  private removeFromShelf(): void {
+    if (!this.canRemoveFromShelf()) return;
+    ReaderUiStore.dispatch({ type: 'book-action', bookAction: 'delete' });
+  }
+
+  private openGroupManagement(): void {
+    if (!this.canRemoveFromShelf()) return;
+    ReaderUiStore.dispatch({ type: 'route-push', id: 'group-management' });
+  }
 
   build() {
     Column() {
-      StructureCard({ title: this.title, message: this.subtitle })
-      ForEach(this.actions, (entry: RowEntry, idx: number) => {
-        StructureRow({ title: entry.title })
-          .margin({ top: idx === 0 ? 12 : 8 })
-      }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
+      if (this.currentBook === null) {
+        StructureCard({
+          title: '未选择书籍',
+          message: '请先从书架、搜索或发现结果打开一本实际书籍后，再使用更多操作。',
+        })
+      } else {
+        StructureCard({
+          title: this.currentBook.title.length > 0 ? this.currentBook.title : '未命名书籍',
+          message: this.currentBook.author.length > 0 ? this.currentBook.author : 'Core 未提供作者信息。',
+        })
+        StructureRow({ title: '书籍详情', detail: '查看当前 Core 书籍的简介、书源与目录' })
+          .margin({ top: 12 })
+          .onClick(() => this.openDetail())
+        StructureRow({ title: '章节目录', detail: '查看当前书籍的 Core 章节目录' })
+          .margin({ top: 8 })
+          .onClick(() => this.openDirectory())
+        if (this.canRemoveFromShelf()) {
+          StructureRow({ title: '书架分组', detail: '在 Core 分组管理中为当前书架书籍分配或清空分组' })
+            .margin({ top: 8 })
+            .onClick(() => this.openGroupManagement())
+          StructureRow({ title: '移出书架', detail: '从 Core 书架移除当前书籍', chip: '移除', showChevron: false })
+            .margin({ top: 8 })
+            .onClick(() => this.removeFromShelf())
+        } else {
+          Text('当前书籍缺少可用于移出书架的 Core 书源标识。')
+            .fontSize(12)
+            .lineHeight(18)
+            .fontColor(ColorTokens.muted)
+            .width('100%')
+            .margin({ top: 12 })
+        }
+      }
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -1466,21 +1394,346 @@ export struct BookMoreMenuPage {
 }
 
 @Component
-export struct BookGroupManagementPage {
-  private groups: RowEntry[] = [
-    { title: '默认分组', detail: '', chip: '12 本' },
-    { title: '科幻', detail: '', chip: '4 本' },
-    { title: '待读', detail: '', chip: '7 本' },
-  ];
+struct BookshelfGroupAssignmentRow {
+  @Prop book: CoreBookshelfBook;
+  @Prop groups: CoreBookGroup[] = [];
+  @Prop disabled: boolean = false;
+  @StorageProp('reader.pendingBookGroupClearSourceId') pendingClearSourceId: string = '';
+  @StorageProp('reader.pendingBookGroupClearBookId') pendingClearBookId: string = '';
+
+  private currentGroup(): string {
+    return this.book.group.trim().length > 0 ? this.book.group : '未分组';
+  }
+
+  private assign(group: string): void {
+    if (this.disabled) return;
+    ReaderUiStore.dispatch({
+      type: 'book-group-assign',
+      sourceId: this.book.sourceId,
+      bookId: this.book.bookId,
+      // `bookshelf.group.assign` treats empty string as an explicit clear.
+      bookshelfGroup: group,
+    });
+  }
+
+  private isClearPending(): boolean {
+    return this.pendingClearSourceId === this.book.sourceId &&
+      this.pendingClearBookId === this.book.bookId;
+  }
+
+  private requestClear(): void {
+    if (this.disabled) return;
+    ReaderUiStore.dispatch({
+      type: 'book-group-clear-request', sourceId: this.book.sourceId, bookId: this.book.bookId,
+    });
+  }
+
+  private confirmClear(): void {
+    if (this.disabled) return;
+    ReaderUiStore.dispatch({
+      type: 'book-group-clear-confirm', sourceId: this.book.sourceId, bookId: this.book.bookId,
+    });
+  }
 
   build() {
-    Column() {
-      ForEach(this.groups, (entry: RowEntry, idx: number) => {
-        StructureRow({ title: entry.title, chip: entry.chip, showChevron: false })
-          .margin({ bottom: idx === this.groups.length - 1 ? 0 : 8 })
-      }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
-      PrimaryAction({ label: '新建分组' })
-        .margin({ top: 12 })
+    Column({ space: 7 }) {
+      Text(this.book.title)
+        .fontSize(14).fontWeight(750).fontColor(ColorTokens.ink)
+        .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+      Text(`${this.book.author} · 当前分组：${this.currentGroup()}`)
+        .fontSize(12).fontColor(ColorTokens.muted)
+        .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+      if (this.groups.length === 0) {
+        Text('Core 中尚无可分配的分组；可先在上方创建分组。')
+          .fontSize(12).fontColor(ColorTokens.muted).lineHeight(18).width('100%')
+      } else {
+        ForEach(this.groups, (group: CoreBookGroup, idx: number) => {
+          Text(`分配到「${group.groupName}」`)
+            .fontSize(12).fontWeight(750)
+            .fontColor(this.disabled ? ColorTokens.muted : DemoAliasTokens.onPrimary)
+            .height(32).padding({ left: 12, right: 12 })
+            .borderRadius(DemoAliasTokens.radiusPill)
+            .backgroundColor(this.disabled ? ColorTokens.metaBg : ColorTokens.primary)
+            .opacity(this.disabled ? 0.58 : 1)
+            .enabled(!this.disabled)
+            .onClick(() => this.assign(group.groupName))
+            .margin({ right: 6, bottom: 5 })
+        }, (group: CoreBookGroup, idx: number) => `${group.groupId}-${idx}`)
+      }
+      if (this.book.group.trim().length > 0) {
+        if (this.isClearPending()) {
+          Row({ space: 8 }) {
+            Text('取消')
+              .fontSize(12).fontWeight(750)
+              .fontColor(ColorTokens.primary)
+              .height(32).layoutWeight(1).textAlign(TextAlign.Center)
+              .borderRadius(DemoAliasTokens.radiusPill)
+              .border({ width: 1, color: ColorTokens.border })
+              .onClick(() => ReaderUiStore.dispatch({ type: 'book-group-clear-cancel' }))
+            Text('确认清空分组')
+              .fontSize(12).fontWeight(750)
+              .fontColor(DemoAliasTokens.onPrimary)
+              .height(32).layoutWeight(1).textAlign(TextAlign.Center)
+              .borderRadius(DemoAliasTokens.radiusPill)
+              .backgroundColor(ColorTokens.accent)
+              .onClick(() => this.confirmClear())
+          }
+          .width('100%')
+        } else {
+          Text('清空分组')
+            .fontSize(12).fontWeight(750)
+            .fontColor(this.disabled ? ColorTokens.muted : ColorTokens.accent)
+            .height(32).padding({ left: 12, right: 12 })
+            .borderRadius(DemoAliasTokens.radiusPill)
+            .border({ width: 1, color: ColorTokens.border })
+            .opacity(this.disabled ? 0.58 : 1)
+            .enabled(!this.disabled)
+            .onClick(() => this.requestClear())
+        }
+      }
+    }
+    .width('100%')
+    .padding(12)
+    .borderRadius(DemoAliasTokens.radiusMd)
+    .backgroundColor(ColorTokens.surface)
+    .border({ width: 1, color: ColorTokens.border })
+  }
+}
+
+@Component
+struct BookGroupCreateForm {
+  @StorageProp('reader.bookGroupsLoading') loading: boolean = false;
+  @State private groupName: string = '';
+
+  private submit(): void {
+    if (this.loading) return;
+    const normalized = this.groupName.trim();
+    if (normalized.length === 0) return;
+    ReaderUiStore.dispatch({ type: 'book-group-create', bookGroupName: normalized });
+    this.groupName = '';
+  }
+
+  build() {
+    Column({ space: 8 }) {
+      Text('新建分组')
+        .fontSize(15)
+        .fontWeight(800)
+        .fontColor(ColorTokens.controlInk)
+      Row({ space: 8 }) {
+        TextInput({ text: this.groupName, placeholder: '输入分组名称' })
+          .fontSize(14)
+          .fontColor(ColorTokens.ink)
+          .height(42)
+          .layoutWeight(1)
+          .padding({ left: 12, right: 12 })
+          .borderRadius(DemoAliasTokens.radiusMd)
+          .backgroundColor(ColorTokens.metaBg)
+          .border({ width: 1, color: ColorTokens.border })
+          .onChange((value: string) => { this.groupName = value; })
+        Text(this.loading ? '处理中' : '创建')
+          .fontSize(13)
+          .fontWeight(800)
+          .fontColor(DemoAliasTokens.onPrimary)
+          .height(42)
+          .padding({ left: 16, right: 16 })
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .backgroundColor(ColorTokens.primary)
+          .textAlign(TextAlign.Center)
+          .onClick(() => this.submit())
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+    }
+    .width('100%')
+    .padding(12)
+    .borderRadius(DemoAliasTokens.radiusMd)
+    .backgroundColor(ColorTokens.surface)
+    .border({ width: 1, color: ColorTokens.border })
+  }
+}
+
+@Component
+struct BookGroupEditorRow {
+  @Prop group: CoreBookGroup = {
+    groupId: 0, groupName: '', cover: '', order: 0, enableRefresh: true, show: true,
+  };
+  @StorageProp('reader.bookGroupsLoading') loading: boolean = false;
+  @StorageProp('reader.pendingBookGroupDeleteId') pendingDeleteId: number = 0;
+  @State private nameDraft: string = '';
+
+  aboutToAppear(): void {
+    this.nameDraft = this.group.groupName;
+  }
+
+  private save(): void {
+    if (this.loading || this.pendingDeleteId !== 0) return;
+    ReaderUiStore.dispatch({
+      type: 'book-group-update', bookGroupId: this.group.groupId, bookGroupName: this.nameDraft,
+    });
+  }
+
+  private remove(): void {
+    if (this.loading || this.pendingDeleteId !== 0) return;
+    ReaderUiStore.dispatch({ type: 'book-group-delete-request', bookGroupId: this.group.groupId });
+  }
+
+  private awaitingDeleteConfirmation(): boolean {
+    return this.pendingDeleteId === this.group.groupId;
+  }
+
+  private cancelDelete(): void {
+    if (!this.awaitingDeleteConfirmation() || this.loading) return;
+    ReaderUiStore.dispatch({ type: 'book-group-delete-cancel' });
+  }
+
+  private confirmDelete(): void {
+    if (!this.awaitingDeleteConfirmation() || this.loading) return;
+    ReaderUiStore.dispatch({ type: 'book-group-delete-confirm', bookGroupId: this.group.groupId });
+  }
+
+  build() {
+    Column({ space: 8 }) {
+      Row() {
+        Text(`分组 #${this.group.groupId}`)
+          .fontSize(11)
+          .fontWeight(700)
+          .fontColor(ColorTokens.muted)
+          .layoutWeight(1)
+        HandoffStatusChip({ label: this.group.show ? '显示' : '隐藏' })
+        HandoffStatusChip({ label: this.group.enableRefresh ? '自动刷新' : '不自动刷新' })
+          .margin({ left: 6 })
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+      TextInput({ text: this.nameDraft, placeholder: '分组名称' })
+        .fontSize(14)
+        .fontWeight(700)
+        .fontColor(ColorTokens.ink)
+        .width('100%')
+        .height(40)
+        .padding({ left: 10, right: 10 })
+        .borderRadius(DemoAliasTokens.radiusSm)
+        .backgroundColor(ColorTokens.metaBg)
+        .border({ width: 1, color: ColorTokens.border })
+        .onChange((value: string) => { this.nameDraft = value; })
+      Text(`排序 ${this.group.order}`)
+        .fontSize(11)
+        .fontColor(ColorTokens.muted)
+      if (this.awaitingDeleteConfirmation()) {
+        Column({ space: 8 }) {
+          Text(`确认删除“${this.group.groupName}”？此操作会请求 Core 删除该分组。`)
+            .fontSize(12)
+            .fontWeight(700)
+            .fontColor(ColorTokens.accent)
+            .lineHeight(18)
+            .width('100%')
+          Row({ space: 10 }) {
+            Text(this.loading ? '处理中' : '取消')
+              .fontSize(12)
+              .fontWeight(800)
+              .fontColor(ColorTokens.primaryDark)
+              .height(34)
+              .layoutWeight(1)
+              .textAlign(TextAlign.Center)
+              .borderRadius(DemoAliasTokens.radiusPill)
+              .backgroundColor(ColorTokens.metaBg)
+              .border({ width: 1, color: ColorTokens.border })
+              .onClick(() => this.cancelDelete())
+            Text('确认删除')
+              .fontSize(12)
+              .fontWeight(800)
+              .fontColor(DemoAliasTokens.onPrimary)
+              .height(34)
+              .layoutWeight(1)
+              .textAlign(TextAlign.Center)
+              .borderRadius(DemoAliasTokens.radiusPill)
+              .backgroundColor(ColorTokens.accent)
+              .onClick(() => this.confirmDelete())
+          }
+          .width('100%')
+        }
+        .width('100%')
+        .padding(10)
+        .borderRadius(DemoAliasTokens.radiusSm)
+        .backgroundColor(ColorTokens.surfaceSoft)
+      } else {
+        Row({ space: 10 }) {
+          Text(this.loading ? '处理中' : '保存名称')
+            .fontSize(12)
+            .fontWeight(800)
+            .fontColor(DemoAliasTokens.onPrimary)
+            .height(34)
+            .layoutWeight(1)
+            .textAlign(TextAlign.Center)
+            .borderRadius(DemoAliasTokens.radiusPill)
+            .backgroundColor(ColorTokens.primary)
+            .onClick(() => this.save())
+          Text(this.pendingDeleteId !== 0 ? '请先处理删除确认' : '删除')
+            .fontSize(12)
+            .fontWeight(800)
+            .fontColor(this.pendingDeleteId !== 0 ? ColorTokens.muted : ColorTokens.accent)
+            .height(34)
+            .layoutWeight(1)
+            .textAlign(TextAlign.Center)
+            .borderRadius(DemoAliasTokens.radiusPill)
+            .border({ width: 1, color: ColorTokens.border })
+            .onClick(() => this.remove())
+        }
+        .width('100%')
+      }
+    }
+    .width('100%')
+    .padding(12)
+    .margin({ bottom: 8 })
+    .borderRadius(DemoAliasTokens.radiusMd)
+    .backgroundColor(ColorTokens.surface)
+    .border({ width: 1, color: ColorTokens.border })
+  }
+}
+
+@Component
+export struct BookGroupManagementPage {
+  @StorageProp('reader.bookGroups') groups: CoreBookGroup[] = [];
+  @StorageProp('reader.bookGroupsLoaded') loaded: boolean = false;
+  @StorageProp('reader.bookGroupsLoading') loading: boolean = false;
+  @StorageProp('reader.bookGroupsError') errorMessage: string = '';
+
+  build() {
+    Column({ space: 10 }) {
+      BookGroupCreateForm()
+      Text('分组列表')
+        .fontSize(15)
+        .fontWeight(800)
+        .fontColor(ColorTokens.controlInk)
+        .margin({ top: 4 })
+      if (this.loading) {
+        Text('正在从 Core 读取分组…')
+          .fontSize(13)
+          .fontColor(ColorTokens.muted)
+      }
+      if (this.errorMessage.length > 0) {
+        Text(`分组操作失败：${this.errorMessage}`)
+          .fontSize(13)
+          .fontColor(ColorTokens.accent)
+          .width('100%')
+          .padding(12)
+          .borderRadius(DemoAliasTokens.radiusMd)
+          .backgroundColor(ColorTokens.surfaceSoft)
+      }
+      if (this.loaded && !this.loading && this.groups.length === 0 && this.errorMessage.length === 0) {
+        Text('Core 中尚无书架分组。创建后会直接持久化到 Core。')
+          .fontSize(13)
+          .fontColor(ColorTokens.muted)
+          .width('100%')
+          .padding(14)
+          .borderRadius(DemoAliasTokens.radiusMd)
+          .backgroundColor(ColorTokens.surfaceSoft)
+      }
+      ForEach(this.groups, (entry: CoreBookGroup, idx: number) => {
+        BookGroupEditorRow({ group: entry })
+      }, (entry: CoreBookGroup, idx: number) => `${entry.groupId}-${idx}`)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -1489,38 +1742,68 @@ export struct BookGroupManagementPage {
 
 @Component
 export struct GroupManagementPage {
-  private groups: RowEntry[] = [
-    { title: '默认分组', detail: '8 本 · 当前分组', chip: '管理' },
-    { title: '追更', detail: '5 本 · 置顶显示', chip: '管理' },
-    { title: '本地书', detail: '2 本 · 导入书籍', chip: '管理' },
-    { title: '资料', detail: '3 本 · 可重命名', chip: '管理' },
-  ];
-  private assignments: SelectableBookEntry[] = [
-    { title: '三体', detail: '刘慈欣 · 当前分组', group: '默认分组', selected: false },
-    { title: '基地', detail: '阿西莫夫 · 当前分组', group: '追更', selected: false },
-    { title: '球状闪电', detail: '刘慈欣 · 当前分组', group: '本地书', selected: false },
-    { title: '深空信号', detail: '星港 · 当前分组', group: '资料', selected: false },
-  ];
+  @StorageProp('reader.bookGroups') groups: CoreBookGroup[] = [];
+  @StorageProp('reader.bookGroupsLoaded') loaded: boolean = false;
+  @StorageProp('reader.bookGroupsLoading') loading: boolean = false;
+  @StorageProp('reader.bookGroupsError') errorMessage: string = '';
+  @StorageProp('reader.bookshelfBooks') books: CoreBookshelfBook[] = [];
+  @StorageProp('reader.bookshelfLoaded') booksLoaded: boolean = false;
 
   build() {
-    Column() {
+    Column({ space: 10 }) {
       SectionTitle({ title: '分组列表' })
-      ForEach(this.groups, (entry: RowEntry, idx: number) => {
-        StructureRow({ title: entry.title, detail: entry.detail, chip: entry.chip, showChevron: false })
-          .margin({ top: idx === 0 ? 10 : 8 })
-      }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
+      BookGroupCreateForm()
+      if (this.loading) {
+        Text('正在从 Core 读取分组…')
+          .fontSize(13)
+          .fontColor(ColorTokens.muted)
+      }
+      if (this.errorMessage.length > 0) {
+        Text(`分组操作失败：${this.errorMessage}`)
+          .fontSize(13)
+          .fontColor(ColorTokens.accent)
+          .width('100%')
+          .padding(12)
+          .borderRadius(DemoAliasTokens.radiusMd)
+          .backgroundColor(ColorTokens.surfaceSoft)
+      }
+      if (this.loaded && !this.loading && this.groups.length === 0 && this.errorMessage.length === 0) {
+        Text('Core 中尚无书架分组。创建后会直接持久化到 Core。')
+          .fontSize(13)
+          .fontColor(ColorTokens.muted)
+          .width('100%')
+          .padding(14)
+          .borderRadius(DemoAliasTokens.radiusMd)
+          .backgroundColor(ColorTokens.surfaceSoft)
+      }
+      ForEach(this.groups, (entry: CoreBookGroup, idx: number) => {
+        BookGroupEditorRow({ group: entry })
+      }, (entry: CoreBookGroup, idx: number) => `${entry.groupId}-${idx}`)
 
       SectionTitle({ title: '书籍归属' })
-        .margin({ top: 16 })
-      ForEach(this.assignments, (entry: SelectableBookEntry, idx: number) => {
-        BookshelfToolBookRow({
-          title: entry.title,
-          detail: entry.detail,
-          group: entry.group,
-          selected: entry.selected,
+        .margin({ top: 8 })
+      Text('书籍归属通过 Core bookshelf.group.assign 逐本更新。可分配到当前 Core 分组或清空分组；批量操作仍未接入。')
+        .fontSize(12)
+        .lineHeight(18)
+        .fontColor(ColorTokens.muted)
+        .width('100%')
+      if (this.booksLoaded && this.books.length === 0) {
+        Text('书架为空。')
+          .fontSize(13)
+          .fontColor(ColorTokens.muted)
+          .width('100%')
+          .padding(14)
+          .borderRadius(DemoAliasTokens.radiusMd)
+          .backgroundColor(ColorTokens.surfaceSoft)
+      }
+      ForEach(this.books, (entry: CoreBookshelfBook, idx: number) => {
+        BookshelfGroupAssignmentRow({
+          book: entry,
+          groups: this.groups,
+          disabled: this.loading,
         })
-          .margin({ top: idx === 0 ? 10 : 8 })
-      }, (entry: SelectableBookEntry, idx: number) => `${entry.title}-${idx}`)
+          .margin({ top: idx === 0 ? 2 : 0 })
+      }, (entry: CoreBookshelfBook, idx: number) => `${entry.sourceId}-${entry.bookId}-${idx}`)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -1529,34 +1812,44 @@ export struct GroupManagementPage {
 
 @Component
 export struct BookBatchManagementPage {
-  private selectedBooks: SelectableBookEntry[] = [
-    { title: '三体', detail: '刘慈欣 · 继续阅读', group: '追更', selected: true },
-    { title: '基地', detail: '阿西莫夫 · 第一章', group: '默认分组', selected: true },
-    { title: '球状闪电', detail: '刘慈欣 · 未读', group: '本地书', selected: true },
-    { title: '长夜余火', detail: '爱潜水的乌贼 · 已读', group: '追更', selected: false },
-    { title: '人间词话', detail: '王国维 · 本地导入', group: '资料', selected: false },
-    { title: 'Android 开发笔记', detail: '本地书籍 · 最近导入', group: '资料', selected: false },
-  ];
+  @StorageProp('reader.bookshelfBooks') books: CoreBookshelfBook[] = [];
+  @StorageProp('reader.bookshelfLoaded') loaded: boolean = false;
+
+  private detail(book: CoreBookshelfBook): string {
+    return book.lastChapter.length > 0 ? `${book.author} · ${book.lastChapter}` : book.author;
+  }
 
   build() {
     Column() {
       StructureCard({
-        title: '已选 3 本',
-        message: '长按书籍或从更多菜单进入，选择后统一移动分组、删除或取消选择。',
-        chip: '全选',
+        title: '批量操作未接入',
+        message: '当前 Core 书架支持真实读取、单本移除和单本归组；没有可验证的批量选择或批量归组命令，因此不显示固定的选中数量、示例书籍或伪操作。',
       })
 
       SectionTitle({ title: '书架书籍' })
         .margin({ top: 14 })
-      ForEach(this.selectedBooks, (entry: SelectableBookEntry, idx: number) => {
+      if (!this.loaded) {
+        Text('正在读取 Core 书架…')
+          .fontSize(13)
+          .fontColor(ColorTokens.muted)
+      } else if (this.books.length === 0) {
+        Text('Core 书架为空。')
+          .fontSize(13)
+          .fontColor(ColorTokens.muted)
+          .width('100%')
+          .padding(14)
+          .borderRadius(DemoAliasTokens.radiusMd)
+          .backgroundColor(ColorTokens.surfaceSoft)
+      }
+      ForEach(this.books, (entry: CoreBookshelfBook, idx: number) => {
         BookshelfToolBookRow({
           title: entry.title,
-          detail: entry.detail,
+          detail: this.detail(entry),
           group: entry.group,
-          selected: entry.selected,
+          selected: false,
         })
           .margin({ top: idx === 0 ? 10 : 8 })
-      }, (entry: SelectableBookEntry, idx: number) => `${entry.title}-${idx}`)
+      }, (entry: CoreBookshelfBook, idx: number) => `${entry.sourceId}-${entry.bookId}-${idx}`)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -1564,32 +1857,185 @@ export struct BookBatchManagementPage {
 }
 
 @Component
+struct DirectoryBookmarkRow {
+  @Prop bookmark: CoreBookmark;
+  @StorageProp('reader.pendingBookmarkDeleteTime') pendingBookmarkDeleteTime: number = -1;
+
+  private chapterLabel(): string {
+    const name = this.bookmark.chapterName.trim();
+    return name.length > 0 ? name : `第 ${this.bookmark.chapterIndex + 1} 章`;
+  }
+
+  private contentLabel(): string {
+    const note = this.bookmark.content.trim();
+    if (note.length > 0) return note;
+    const original = this.bookmark.bookText.trim();
+    return original.length > 0 ? original : 'Core 书签未保存原文片段或批注。';
+  }
+
+  private awaitingDeleteConfirmation(): boolean {
+    return this.pendingBookmarkDeleteTime === this.bookmark.time;
+  }
+
+  build() {
+    Column({ space: 6 }) {
+      Row({ space: 8 }) {
+        Text(this.chapterLabel())
+          .fontSize(14).fontWeight(750).fontColor(ColorTokens.ink)
+          .layoutWeight(1).maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(`Core #${this.bookmark.time}`)
+          .fontSize(10).fontColor(ColorTokens.muted)
+      }
+      .width('100%')
+      Text(this.contentLabel())
+        .fontSize(12).fontColor(ColorTokens.muted).lineHeight(18)
+        .maxLines(3).textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+      Row({ space: 8 }) {
+        Text('跳转')
+          .fontSize(11).fontWeight(800).fontColor(DemoAliasTokens.onPrimary)
+          .height(30).padding({ left: 12, right: 12 })
+          .borderRadius(DemoAliasTokens.radiusPill).backgroundColor(ColorTokens.primary)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'bookmark-open', bookmarkTime: this.bookmark.time }))
+        Text('删除')
+          .fontSize(11).fontWeight(800).fontColor(ColorTokens.accent)
+          .height(30).padding({ left: 12, right: 12 })
+          .borderRadius(DemoAliasTokens.radiusPill).border({ width: 1, color: ColorTokens.border })
+          .onClick(() => ReaderUiStore.dispatch({ type: 'bookmark-delete-request', bookmarkTime: this.bookmark.time }))
+      }
+      .width('100%')
+      if (this.awaitingDeleteConfirmation()) {
+        Column({ space: 7 }) {
+          Text('确认删除这条 Core 书签？')
+            .fontSize(11).fontWeight(800).fontColor(ColorTokens.accent).width('100%')
+          Row({ space: 8 }) {
+            Text('取消')
+              .fontSize(11).fontWeight(800).fontColor(ColorTokens.primaryDark)
+              .height(30).padding({ left: 12, right: 12 })
+              .borderRadius(DemoAliasTokens.radiusPill).backgroundColor(ColorTokens.metaBg)
+              .border({ width: 1, color: ColorTokens.border })
+              .onClick(() => ReaderUiStore.dispatch({ type: 'bookmark-delete-cancel' }))
+            Text('确认删除')
+              .fontSize(11).fontWeight(800).fontColor(DemoAliasTokens.onPrimary)
+              .height(30).padding({ left: 12, right: 12 })
+              .borderRadius(DemoAliasTokens.radiusPill).backgroundColor(ColorTokens.accent)
+              .onClick(() => ReaderUiStore.dispatch({ type: 'bookmark-delete-confirm', bookmarkTime: this.bookmark.time }))
+          }
+          .width('100%')
+        }
+        .width('100%')
+        .padding(8)
+        .borderRadius(DemoAliasTokens.radiusSm)
+        .backgroundColor(ColorTokens.surfaceSoft)
+      }
+    }
+    .width('100%')
+    .padding(12)
+    .borderRadius(DemoAliasTokens.radiusMd)
+    .backgroundColor(ColorTokens.surface)
+    .border({ width: 1, color: ColorTokens.border })
+  }
+}
+
+@Component
 export struct BookDirectoryPage {
-  private chapters: DirectoryEntry[] = [
-    { title: '第 1 章 科学边界', marker: '当前' },
-    { title: '第 2 章 台球', marker: '' },
-    { title: '第 3 章 射手和农场主', marker: '' },
-    { title: '第 34 章 旧地图', marker: '已缓存' },
-    { title: '第 36 章 灯塔之后', marker: '书签' },
-  ];
+  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
+  @StorageProp('reader.chapterToc') chapterToc: ChapterTocEntry[] = [];
+  @StorageProp('reader.currentChapterTitle') currentChapterTitle: string = '';
+  @StorageProp('reader.tocMode') tocMode: TocMode = 'directory';
+  @StorageProp('reader.loading') loading: boolean = false;
+  @StorageProp('reader.bookmarks') bookmarks: CoreBookmark[] = [];
+  @StorageProp('reader.bookmarksLoaded') bookmarksLoaded: boolean = false;
+  @StorageProp('reader.bookmarksLoading') bookmarksLoading: boolean = false;
+  @StorageProp('reader.bookmarksError') bookmarksError: string = '';
+
+  private statusMessage(): string {
+    if (this.currentBook === null) return '尚未选择书籍，无法显示目录。';
+    return this.loading ? '正在从 Core 加载章节目录…' : '暂无从 Core 返回的章节目录。';
+  }
+
+  private isCurrent(chapter: ChapterTocEntry): boolean {
+    return this.currentChapterTitle.length > 0 && this.currentChapterTitle === chapter.title;
+  }
+
+  private openChapter(chapter: ChapterTocEntry): void {
+    const book = this.currentBook;
+    if (book === null || chapter.chapterId.length === 0) return;
+    ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' });
+    ReaderUiStore.dispatch({
+      type: 'chapter-load', chapterId: chapter.chapterId, bookId: book.bookId, chapterTitle: chapter.title,
+    });
+  }
+
+  private summaryMessage(): string {
+    if (this.currentBook === null) return '请选择一本实际书籍后再查看目录。';
+    if (this.loading) return '正在读取本书章节目录。';
+    return this.chapterToc.length > 0 ? `共 ${this.chapterToc.length} 章` : '暂无章节目录';
+  }
 
   build() {
     Column() {
-      StructureCard({ title: '三体', message: '刘慈欣 · 共 6 章', chip: '继续阅读' })
-      Row({ space: 8 }) {
-        DirectorySegmentButton({ label: '目录', active: true })
-        DirectorySegmentButton({ label: '书签', active: false })
-      }
-      .width('100%')
-      .padding(4)
-      .borderRadius(DemoAliasTokens.radiusPill)
-      .backgroundColor(ColorTokens.metaBg)
-      .margin({ top: 12 })
+      StructureCard({
+        title: this.currentBook === null ? '未选择书籍' : this.currentBook.title,
+        message: this.currentBook === null ? this.summaryMessage() : `${this.currentBook.author} · ${this.summaryMessage()}`,
+      })
+      if (this.currentBook !== null) {
+        Row({ space: 8 }) {
+          DirectorySegmentButton({
+            label: '目录',
+            active: this.tocMode === 'directory',
+            onSelect: () => ReaderUiStore.dispatch({ type: 'set-toc-mode', tocMode: 'directory' }),
+          })
+          DirectorySegmentButton({
+            label: '书签',
+            active: this.tocMode === 'bookmark',
+            onSelect: () => ReaderUiStore.dispatch({ type: 'set-toc-mode', tocMode: 'bookmark' }),
+          })
+        }
+        .width('100%')
+        .padding(4)
+        .borderRadius(DemoAliasTokens.radiusPill)
+        .backgroundColor(ColorTokens.metaBg)
+        .margin({ top: 12 })
 
-      ForEach(this.chapters, (entry: DirectoryEntry, idx: number) => {
-        DirectoryChapterRow({ title: entry.title, marker: entry.marker })
-          .margin({ top: idx === 0 ? 12 : 8 })
-      }, (entry: DirectoryEntry, idx: number) => `${entry.title}-${idx}`)
+        if (this.tocMode === 'bookmark') {
+          if (this.bookmarksLoading || !this.bookmarksLoaded) {
+            Text('正在从 Core 读取当前书的书签…')
+              .fontSize(13).fontColor(ColorTokens.muted).lineHeight(19)
+              .width('100%').padding({ top: 16, bottom: 16 })
+          } else if (this.bookmarksError.length > 0) {
+            Text(`书签操作失败：${this.bookmarksError}`)
+              .fontSize(13).fontColor(ColorTokens.accent).lineHeight(19)
+              .width('100%').padding({ top: 16, bottom: 16 })
+          } else if (this.bookmarks.length === 0) {
+            Text('当前书在 Core 中还没有书签。可在阅读器控制栏添加当前位置书签。')
+              .fontSize(13).fontColor(ColorTokens.muted).lineHeight(19)
+              .width('100%').padding({ top: 16, bottom: 16 })
+          } else {
+            ForEach(this.bookmarks, (bookmark: CoreBookmark, idx: number) => {
+              DirectoryBookmarkRow({ bookmark: bookmark })
+                .margin({ top: idx === 0 ? 12 : 8 })
+            }, (bookmark: CoreBookmark, idx: number) => `${bookmark.time}-${idx}`)
+          }
+        } else if (this.chapterToc.length === 0) {
+          Text(this.statusMessage())
+            .fontSize(13)
+            .fontColor(ColorTokens.muted)
+            .lineHeight(19)
+            .width('100%')
+            .padding({ top: 16, bottom: 16 })
+        } else {
+          ForEach(this.chapterToc, (chapter: ChapterTocEntry, idx: number) => {
+            DirectoryChapterRow({
+              title: chapter.title,
+              current: this.isCurrent(chapter),
+              onSelect: () => this.openChapter(chapter),
+            })
+              .margin({ top: idx === 0 ? 12 : 8 })
+          }, (chapter: ChapterTocEntry, idx: number) => `${chapter.chapterId}-${idx}`)
+        }
+      }
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -1598,32 +2044,54 @@ export struct BookDirectoryPage {
 
 @Component
 export struct SourceManagementPage {
-  private sources: SourceManagementEntry[] = [
-    { title: '起点中文网', meta: 'qidian.com · 起点导入', status: '可用', tone: 'good', sourceEnabled: true },
-    { title: '笔趣阁', meta: 'biquge.example · 玄幻书源', status: '异常', tone: 'warn', sourceEnabled: true },
-    { title: '本地导入源', meta: '本地文件导入 · 自定义', status: '未检测', tone: 'muted', sourceEnabled: false },
-    { title: '测试书源', meta: 'test.example · 测试书源', status: '可用', tone: 'good', sourceEnabled: true },
-    { title: '轻小说文库', meta: 'lightnovel.example · 测试书源', status: '可用', tone: 'good', sourceEnabled: true },
-    { title: '旧规则源', meta: 'old.example · 自定义', status: '异常', tone: 'warn', sourceEnabled: true },
-    { title: '飞卢小说网', meta: 'faloo.com · 玄幻书源', status: '可用', tone: 'good', sourceEnabled: true },
-    { title: '晋江文学城', meta: 'jjwxc.example · 起点导入', status: '可用', tone: 'good', sourceEnabled: true },
-    { title: '纵横中文网', meta: 'zongheng.com · 玄幻书源', status: '未检测', tone: 'muted', sourceEnabled: false },
-  ];
+  @StorageProp('reader.availableSources') coreSources: CoreSourceEntry[] = [];
+  @StorageProp('reader.sourcesLoaded') sourcesLoaded: boolean = false;
+  aboutToAppear(): void {
+    // Effects owns the Core boundary.  The semantic refresh event is also
+    // used for an initial-route launch where no route-push event occurred.
+    ReaderUiStore.dispatch({ type: 'source-management-refresh' });
+  }
+
+  private enabledCount(): number {
+    let count = 0;
+    for (let i = 0; i < this.coreSources.length; i++) {
+      if (this.coreSources[i].enabled) count += 1;
+    }
+    return count;
+  }
 
   build() {
     Column() {
-      SearchBox({ label: '搜索书源名称或域名' })
-      SourceMetricStrip()
+      SourceMetricStrip({
+        sourceCount: this.coreSources.length,
+        enabledCount: this.enabledCount(),
+        loaded: this.sourcesLoaded,
+      })
       SourceFilterSummaryRow()
+      SourceManagementActionBar()
+        .margin({ top: 10 })
       Column() {
-        ForEach(this.sources, (entry: SourceManagementEntry, idx: number) => {
-          SourceManagementRow({
-            title: entry.title,
-            meta: entry.meta,
-            tone: entry.tone,
-            sourceEnabled: entry.sourceEnabled,
-          })
-        }, (entry: SourceManagementEntry, idx: number) => `${entry.title}-${idx}`)
+        if (!this.sourcesLoaded) {
+          Text('正在读取 Core 书源…')
+            .fontSize(13)
+            .fontColor(ColorTokens.muted)
+            .padding({ top: 24, bottom: 24 })
+        } else if (this.coreSources.length === 0) {
+          Text('暂无书源，请使用右下角“新增书源”导入')
+            .fontSize(13)
+            .fontColor(ColorTokens.muted)
+            .padding({ top: 24, bottom: 24 })
+        } else {
+          ForEach(this.coreSources, (entry: CoreSourceEntry, idx: number) => {
+            SourceManagementRow({
+              sourceId: entry.sourceId,
+              title: entry.name,
+              meta: entry.baseUrl,
+              tone: entry.enabled ? 'good' : 'muted',
+              sourceEnabled: entry.enabled,
+            })
+          }, (entry: CoreSourceEntry, idx: number) => entry.sourceId)
+        }
       }
       .width('100%')
       .margin({ top: 18 })
@@ -1635,52 +2103,119 @@ export struct SourceManagementPage {
 
 @Component
 export struct SourceDetailPage {
-  @Prop title: string = '笔趣阁';
-  private modules: SourceModuleEntry[] = [
-    { title: '站点', status: '可访问', tone: 'good' },
-    { title: '搜索', status: '正常', tone: 'good' },
-    { title: '详情', status: '正常', tone: 'good' },
-    { title: '目录', status: '正常', tone: 'good' },
-    { title: '正文', status: '异常', tone: 'warn' },
-    { title: '登录', status: '未启用', tone: 'muted' },
-  ];
-  private info: SourceInfoEntry[] = [
-    { label: '请求方式', value: 'GET · UTF-8' },
-    { label: '并发限制', value: '2 个请求' },
-    { label: 'Cookie', value: '未启用' },
-    { label: '更新时间', value: '今天 10:12' },
-  ];
+  // Kept only for generated ViewStateRenderer compatibility. The rendered
+  // title always comes from the Core-selected source below.
+  @Prop title: string = '';
+  @StorageProp('reader.availableSources') coreSources: CoreSourceEntry[] = [];
+  @StorageProp('reader.selectedSourceId') selectedSourceId: string = '';
+
+  private selectedSource(): CoreSourceEntry | null {
+    for (let i = 0; i < this.coreSources.length; i++) {
+      const source = this.coreSources[i];
+      if (source.sourceId === this.selectedSourceId) return source;
+    }
+    return null;
+  }
+
+  private selectedName(): string {
+    const source = this.selectedSource();
+    return source === null ? '' : source.name;
+  }
+
+  private selectedBaseUrl(): string {
+    const source = this.selectedSource();
+    return source === null ? '' : source.baseUrl;
+  }
+
+  private selectedEnabled(): boolean {
+    const source = this.selectedSource();
+    return source !== null && source.enabled;
+  }
 
   build() {
     Column() {
-      SourceDetailHeader({ title: this.title })
-      Text('异常 · 最近检测 10:30 · 规则版本 3')
-        .fontSize(12)
-        .fontWeight(700)
-        .fontColor(ColorTokens.muted)
-        .margin({ top: 10 })
-      Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween }) {
-        ForEach(this.modules, (entry: SourceModuleEntry, idx: number) => {
-          SourceModuleStatusCard({ title: entry.title, status: entry.status, tone: entry.tone })
-        }, (entry: SourceModuleEntry, idx: number) => `${entry.title}-${idx}`)
+      if (this.selectedSource() === null) {
+        StructureCard({
+          title: '未选择有效书源',
+          message: '该书源已被删除或尚未由 Core 返回。请返回书源管理后重新选择。',
+        })
+        Text('返回书源管理')
+          .fontSize(13)
+          .fontWeight(850)
+          .fontColor(ColorTokens.primaryDark)
+          .height(40)
+          .padding({ left: 16, right: 16 })
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .backgroundColor(ColorTokens.metaBg)
+          .border({ width: 1, color: ColorTokens.border })
+          .margin({ top: 12 })
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
+      } else {
+        SourceDetailHeader({
+          title: this.selectedName(),
+          baseUrl: this.selectedBaseUrl(),
+          sourceId: this.selectedSourceId,
+          isSourceEnabled: this.selectedEnabled(),
+        })
+        Text(this.selectedEnabled()
+          ? '该启用书源可进入真实调测：Core 会通过 Host 执行 L1–L5，并只将短生命周期响应回放给 source.debug。规则编辑和启停仍需对应契约。'
+          : '该书源已停用；不会启动网络调测或显示模拟成功。规则编辑和启停仍需对应契约。')
+          .fontSize(12)
+          .fontWeight(650)
+          .fontColor(ColorTokens.muted)
+          .lineHeight(18)
+          .margin({ top: 12 })
+        Row({ space: 10 }) {
+          Text('返回管理')
+            .fontSize(13)
+            .fontWeight(850)
+            .fontColor(ColorTokens.controlInk)
+            .height(40)
+            .layoutWeight(1)
+            .textAlign(TextAlign.Center)
+            .borderRadius(DemoAliasTokens.radiusPill)
+            .backgroundColor(ColorTokens.metaBg)
+            .border({ width: 1, color: ColorTokens.border })
+            .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
+          Text('导出')
+            .fontSize(13)
+            .fontWeight(850)
+            .fontColor(ColorTokens.primaryDark)
+            .height(40)
+            .layoutWeight(1)
+            .textAlign(TextAlign.Center)
+            .borderRadius(DemoAliasTokens.radiusPill)
+            .backgroundColor(ColorTokens.metaBg)
+            .border({ width: 1, color: ColorTokens.border })
+            .onClick(() => ReaderUiStore.dispatch({ type: 'source-export', sourceId: this.selectedSourceId }))
+          Text('删除')
+            .fontSize(13)
+            .fontWeight(850)
+            .fontColor(ColorTokens.statusWarn)
+            .height(40)
+            .layoutWeight(1)
+            .textAlign(TextAlign.Center)
+            .borderRadius(DemoAliasTokens.radiusPill)
+            .backgroundColor(ColorTokens.metaBg)
+            .border({ width: 1, color: ColorTokens.border })
+            .onClick(() => ReaderUiStore.dispatch({ type: 'source-delete-request', sourceId: this.selectedSourceId }))
+        }
+        .width('100%')
+        .margin({ top: 16 })
+        if (this.selectedEnabled()) {
+          Text('运行真实调测')
+            .fontSize(13)
+            .fontWeight(850)
+            .fontColor(DemoAliasTokens.onPrimary)
+            .height(40)
+            .width('100%')
+            .textAlign(TextAlign.Center)
+            .borderRadius(DemoAliasTokens.radiusPill)
+            .backgroundColor(ColorTokens.primary)
+            .margin({ top: 10 })
+            .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'source-debug' }))
+        }
       }
-      .width('100%')
-      .margin({ top: 12 })
-      SourceDetailDetectCard()
-        .margin({ top: 6 })
-      Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween }) {
-        ForEach(this.info, (entry: SourceInfoEntry, idx: number) => {
-          SourceInfoCard({ label: entry.label, value: entry.value })
-        }, (entry: SourceInfoEntry, idx: number) => `${entry.label}-${idx}`)
-      }
-      .width('100%')
-      .margin({ top: 12 })
-      Row({ space: 10 }) {
-        SourceInlineActionButton({ label: '复制书源', icon: $r('app.media.ui_icon_source_dark') })
-        SourceInlineActionButton({ label: '导出书源', icon: $r('app.media.ui_icon_upload_dark') })
-      }
-      .width('100%')
-      .margin({ top: 4 })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -1689,32 +2224,113 @@ export struct SourceDetailPage {
 
 @Component
 export struct SourceImportOptionsPage {
-  private sources: SourceManagementEntry[] = [
-    { title: '起点中文网', meta: 'qidian.com · 起点导入', status: '可用', tone: 'good', sourceEnabled: true },
-    { title: '笔趣阁', meta: 'biquge.example · 玄幻书源', status: '异常', tone: 'warn', sourceEnabled: true },
-    { title: '本地导入源', meta: '本地文件导入 · 自定义', status: '未检测', tone: 'muted', sourceEnabled: false },
-    { title: '测试书源', meta: 'test.example · 测试书源', status: '可用', tone: 'good', sourceEnabled: true },
-  ];
+  @StorageProp('reader.sourceImportRunning') importing: boolean = false;
+  @State private jsonPayload: string = '';
+  @State private packageUrl: string = '';
+
+  private importManualJson(): void {
+    if (this.importing) return;
+    ReaderUiStore.dispatch({
+      type: 'source-package-import-json',
+      sourceImportPayload: this.jsonPayload,
+      sourceImportOrigin: '手动 JSON',
+    });
+  }
+
+  private importFromUrl(): void {
+    if (this.importing) return;
+    ReaderUiStore.dispatch({
+      type: 'source-package-import-url',
+      sourceImportUrl: this.packageUrl,
+      sourceImportOrigin: '网络 URL',
+    });
+  }
+
+  private importFromClipboard(): void {
+    if (this.importing) return;
+    ReaderUiStore.dispatch({
+      type: 'source-package-import-clipboard',
+      sourceImportOrigin: '剪贴板',
+    });
+  }
 
   build() {
-    Column() {
-      SearchBox({ label: '搜索书源名称或域名' })
-      SourceMetricStrip()
-      SourceFilterSummaryRow()
-      Column() {
-        ForEach(this.sources, (entry: SourceManagementEntry, idx: number) => {
-          SourceManagementRow({
-            title: entry.title,
-            meta: entry.meta,
-            tone: entry.tone,
-            sourceEnabled: entry.sourceEnabled,
-          })
-        }, (entry: SourceManagementEntry, idx: number) => `${entry.title}-${idx}`)
+    Column({ space: 12 }) {
+      Text('导入书源')
+        .fontSize(18)
+        .fontWeight(900)
+        .fontColor(ColorTokens.ink)
+      Text('粘贴一个 Legado BookSource JSON 对象或对象数组。每一项都会单独交给 Core 校验和写入。')
+        .fontSize(13)
+        .lineHeight(20)
+        .fontColor(ColorTokens.muted)
+      TextArea({
+        text: this.jsonPayload,
+        placeholder: '{"bookSourceName":"示例书源","bookSourceUrl":"https://example.com"}',
+      })
+        .fontSize(13)
+        .fontColor(ColorTokens.ink)
+        .width('100%')
+        .height(132)
+        .padding(12)
+        .borderRadius(DemoAliasTokens.radiusMd)
+        .backgroundColor(ColorTokens.metaBg)
+        .border({ width: 1, color: ColorTokens.border })
+        .onChange((value: string) => { this.jsonPayload = value; })
+      Row({ space: 10 }) {
+        Text(this.importing ? '正在导入…' : '导入粘贴的 JSON')
+          .fontSize(13)
+          .fontWeight(850)
+          .fontColor(DemoAliasTokens.onPrimary)
+          .height(40)
+          .layoutWeight(1)
+          .textAlign(TextAlign.Center)
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .backgroundColor(this.importing ? ColorTokens.border : ColorTokens.primary)
+          .onClick(() => this.importManualJson())
+        Text('从剪贴板导入')
+          .fontSize(13)
+          .fontWeight(850)
+          .fontColor(ColorTokens.primaryDark)
+          .height(40)
+          .layoutWeight(1)
+          .textAlign(TextAlign.Center)
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .backgroundColor(ColorTokens.metaBg)
+          .border({ width: 1, color: ColorTokens.border })
+          .onClick(() => this.importFromClipboard())
       }
       .width('100%')
-      .margin({ top: 14 })
-      SourceImportBottomSheet()
-        .margin({ top: 10 })
+      Text('网络书源包')
+        .fontSize(15)
+        .fontWeight(850)
+        .fontColor(ColorTokens.controlInk)
+        .margin({ top: 4 })
+      TextInput({ text: this.packageUrl, placeholder: 'https://example.com/book-source.json' })
+        .fontSize(14)
+        .fontColor(ColorTokens.ink)
+        .width('100%')
+        .height(42)
+        .padding({ left: 12, right: 12 })
+        .borderRadius(DemoAliasTokens.radiusMd)
+        .backgroundColor(ColorTokens.metaBg)
+        .border({ width: 1, color: ColorTokens.border })
+        .onChange((value: string) => { this.packageUrl = value; })
+      Text(this.importing ? '正在下载或写入…' : '从 URL 下载并导入')
+        .fontSize(13)
+        .fontWeight(850)
+        .fontColor(DemoAliasTokens.onPrimary)
+        .height(40)
+        .width('100%')
+        .textAlign(TextAlign.Center)
+        .borderRadius(DemoAliasTokens.radiusPill)
+        .backgroundColor(this.importing ? ColorTokens.border : ColorTokens.primary)
+        .onClick(() => this.importFromUrl())
+      Text('结果页显示 Core 已导入、已跳过和失败的真实计数；不提供 Core 尚未定义的连通性检测或启停操作。')
+        .fontSize(11)
+        .lineHeight(17)
+        .fontColor(ColorTokens.muted)
+        .margin({ top: 2 })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -1742,11 +2358,10 @@ export struct SourceFormPage {
 
   build() {
     Column() {
-      FormField({ placeholder: '书源名称', value: this.editing ? '阅读书源 1' : '' })
-      FormField({ placeholder: '书源 URL', value: this.editing ? 'https://example.com' : '' })
-        .margin({ top: 10 })
-      PrimaryAction({ label: this.action })
-        .margin({ top: 10 })
+      StatePanel({
+        title: '书源表单编辑未接入',
+        message: 'Core source.import 接受完整的 BookSource 原始契约。当前页面没有可验证的字段级更新 DTO，因此不显示固定名称、URL 或无效的“保存”按钮。请使用书源管理中的 JSON、URL 或剪贴板导入。',
+      })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -1766,21 +2381,16 @@ export struct SourceSettingsEntryPage {
 
 @Component
 export struct SourceTestResultPage {
-  private tests: RowEntry[] = [
-    { title: '搜索规则', detail: '', chip: '通过' },
-    { title: '目录规则', detail: '', chip: '通过' },
-    { title: '正文规则', detail: '', chip: '通过' },
-    { title: '封面规则', detail: '', chip: '通过' },
-  ];
-
   build() {
     Column() {
-      ForEach(this.tests, (entry: RowEntry, idx: number) => {
-        StructureRow({ title: entry.title, chip: entry.chip, showChevron: false })
-          .margin({ bottom: idx === this.tests.length - 1 ? 0 : 8 })
-      }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
+      // Both contract routes project the same Core-owned L1–L5 verdict.
+      // Keeping this route as a real view of SourceDetectPage prevents the
+      // historical “test result” screen from drifting into a static success
+      // or a second, stale diagnostic state.
+      SourceDetectPage()
     }
     .width('100%')
+    .alignItems(HorizontalAlign.Start)
   }
 }
 
@@ -1797,47 +2407,130 @@ export struct SyncSettingsEntryPage {
 
 @Component
 export struct SyncBackupPage {
+  // Retained for generated ViewState compatibility.  Runtime state, rather
+  // than this demo-era variant, drives all visible backup status.
   @Prop variant: string = 'default';
-  private backups: SyncBackupEntry[] = [
-    { source: 'WebDAV', time: '2026-06-23 08:00', content: '书架、进度、设置、书源', group: '最近备份', local: false },
-    { source: '本地', time: '2026-06-23 10:30', content: '书架、进度、设置、书源', group: '最近备份', local: true },
-    { source: 'WebDAV', time: '2026-06-21 22:30', content: '书架、分组、设置', group: '历史备份', local: false },
-    { source: 'WebDAV', time: '2026-06-16 02:00', content: '书架、进度、设置、书源', group: '历史备份', local: false },
-  ];
+  @StorageProp('reader.coreBackupStatus') status: string = 'idle';
+  @StorageProp('reader.coreBackupMessage') message: string = '';
+  @StorageProp('reader.localCoreBackup') localBackup: CoreStorageBackupInfo | null = null;
+
+  private isBusy(): boolean {
+    return this.status === 'loading' || this.status === 'creating' || this.status === 'restoring';
+  }
+
+  private localBackupDetail(): string {
+    if (this.localBackup === null) return '';
+    const prefix = this.localBackup.checksum.substring(0, 12);
+    return `schema v${this.localBackup.schemaVersion} · ${this.localBackup.bytes} B · SHA-256 ${prefix}…`;
+  }
+
+  private async selectBackupFile(): Promise<void> {
+    try {
+      const documentPicker = new picker.DocumentViewPicker();
+      const options = new picker.DocumentSelectOptions();
+      options.maxSelectNumber = 1;
+      options.fileSuffixFilters = ['.json'];
+      const uris: string[] = await documentPicker.select(options);
+      if (uris.length === 0) return;
+      const uri = uris[0];
+      const slash = uri.lastIndexOf('/');
+      const name = slash >= 0 ? uri.substring(slash + 1) : uri;
+      ReaderEffects.prepareCoreRestoreFromUri(uri, name);
+    } catch (e) {
+      // A picker cancel must not manufacture a backup error state.
+    }
+  }
 
   build() {
     Column() {
-      if (this.variant === 'loading') {
-        ProgressSummaryCard({ title: '正在同步备份', message: '正在连接 WebDAV 并校验备份目录。', chip: '进行中', progress: 0.42 })
-        RestoreStageRow({ title: '连接 WebDAV', detail: 'https://dav.example.com/reader/backup', chip: '进行中', progress: 0.42, active: true })
-          .margin({ top: 12 })
-      } else {
-        WebDavConfigSection()
-        Column() {
-          Text('恢复数据')
-            .fontSize(15)
-            .fontWeight(900)
-            .fontColor(ColorTokens.ink)
-            .margin({ left: 2, bottom: 8 })
-          ForEach(this.backups, (entry: SyncBackupEntry, idx: number) => {
-            SyncBackupRecordRow({
-              source: entry.source,
-              time: entry.time,
-              content: entry.content,
-              local: entry.local,
-              groupStart: idx === 0 || entry.group !== this.backups[idx - 1].group ? entry.group : '',
-            })
-              .margin({ bottom: idx === this.backups.length - 1 ? 0 : 8 })
-          }, (entry: SyncBackupEntry, idx: number) => `${entry.source}-${entry.time}-${idx}`)
-        }
-        .width('100%')
-        .alignItems(HorizontalAlign.Start)
-        .padding({ left: 12, right: 12, top: 9, bottom: 12 })
-        .borderRadius(DemoAliasTokens.radiusMd)
-        .backgroundColor(DemoAliasTokens.surface)
-        .border({ width: 1, color: ColorTokens.border })
-        .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
-        .margin({ top: 12 })
+      WebDavConfigSection()
+      SectionTitle({ title: 'Core 数据备份' })
+        .margin({ top: 14, bottom: 8 })
+      StructureCard({
+        title: this.localBackup === null ? '尚无本机 Core 备份' : '本机 Core 数据备份',
+        message: this.localBackup === null
+          ? '点击“创建本机备份”后，Core 会导出带 SHA-256 清单的完整存储快照。'
+          : this.localBackupDetail(),
+        chip: this.localBackup === null ? '空' : '可恢复',
+      })
+      if (this.localBackup !== null) {
+        Text('使用本机备份恢复')
+          .fontSize(13)
+          .fontWeight(800)
+          .fontColor(this.isBusy() ? ColorTokens.muted : ColorTokens.primary)
+          .height(38)
+          .width('100%')
+          .textAlign(TextAlign.Center)
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .border({ width: 1, color: ColorTokens.border })
+          .margin({ top: 8 })
+          .onClick(() => {
+            if (!this.isBusy()) ReaderUiStore.dispatch({ type: 'core-backup-prepare-local' });
+          })
+      }
+      Row({ space: 8 }) {
+        Text('创建本机备份')
+          .fontSize(13)
+          .fontWeight(800)
+          .fontColor(DemoAliasTokens.onPrimary)
+          .height(40)
+          .layoutWeight(1)
+          .textAlign(TextAlign.Center)
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .backgroundColor(this.isBusy() ? ColorTokens.muted : ColorTokens.primary)
+          .onClick(() => {
+            if (!this.isBusy()) ReaderUiStore.dispatch({ type: 'core-backup-create-local' });
+          })
+        Text('备份到 WebDAV')
+          .fontSize(13)
+          .fontWeight(800)
+          .fontColor(ColorTokens.primary)
+          .height(40)
+          .layoutWeight(1)
+          .textAlign(TextAlign.Center)
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .border({ width: 1, color: ColorTokens.border })
+          .onClick(() => {
+            if (!this.isBusy()) ReaderUiStore.dispatch({ type: 'core-backup-create-webdav' });
+          })
+      }
+      .width('100%')
+      .margin({ top: 10 })
+      Row({ space: 8 }) {
+        Text('从备份文件恢复')
+          .fontSize(13)
+          .fontWeight(800)
+          .fontColor(this.isBusy() ? ColorTokens.muted : ColorTokens.primary)
+          .height(38)
+          .layoutWeight(1)
+          .textAlign(TextAlign.Center)
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .border({ width: 1, color: ColorTokens.border })
+          .onClick(() => {
+            if (!this.isBusy()) this.selectBackupFile();
+          })
+        Text('从 WebDAV 恢复')
+          .fontSize(13)
+          .fontWeight(800)
+          .fontColor(this.isBusy() ? ColorTokens.muted : ColorTokens.primary)
+          .height(38)
+          .layoutWeight(1)
+          .textAlign(TextAlign.Center)
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .border({ width: 1, color: ColorTokens.border })
+          .onClick(() => {
+            if (!this.isBusy()) ReaderUiStore.dispatch({ type: 'core-backup-prepare-remote' });
+          })
+      }
+      .width('100%')
+      .margin({ top: 8 })
+      if (this.message.length > 0) {
+        Text(this.message)
+          .fontSize(11)
+          .fontColor(this.status === 'error' ? ColorTokens.accent : ColorTokens.muted)
+          .lineHeight(17)
+          .width('100%')
+          .margin({ top: 9 })
       }
     }
     .width('100%')
@@ -1848,75 +2541,124 @@ export struct SyncBackupPage {
 @Component
 export struct RestoreConfirmPage {
   @Prop variant: string = 'default';
-  private scopes: RowEntry[] = [
-    { title: '书架与分组', detail: '恢复书架书籍、分组和排序', chip: '128 本书' },
-    { title: '阅读进度', detail: '恢复章节位置和阅读进度', chip: '96 条' },
-    { title: '阅读与 App 设置', detail: '恢复主题、排版和通用设置', chip: '设置' },
-    { title: '书源配置', detail: '恢复书源、分组和启用状态', chip: '12 个书源' },
-  ];
+  @StorageProp('reader.pendingCoreRestore') pending: CoreStorageBackupInfo | null = null;
+  @StorageProp('reader.pendingCoreRestoreConfirmationChecksum') confirmationChecksum: string = '';
+  @StorageProp('reader.coreBackupStatus') status: string = 'idle';
+  @StorageProp('reader.coreBackupMessage') message: string = '';
 
-  private titleText(): string {
-    if (this.variant === 'scopes') return '恢复范围';
-    return this.variant === 'preview' ? '恢复预览' : '确认恢复数据';
+  private detail(): string {
+    if (this.pending === null) return '';
+    return `schema v${this.pending.schemaVersion} · ${this.pending.bytes} B · SHA-256 ${this.pending.checksum.substring(0, 12)}…`;
+  }
+
+  private awaitingSecondConfirmation(): boolean {
+    return this.pending !== null && this.status !== 'restoring' &&
+      this.confirmationChecksum === this.pending.checksum;
   }
 
   build() {
-    Column() {
-      StructureCard({
-        title: this.titleText(),
-        message: '将使用选中的备份覆盖本机同类数据。恢复前会创建本地快照，取消不会改变当前数据。',
-        chip: '待确认',
+    if (this.pending === null) {
+      StatePanel({
+        title: '没有可恢复的 Core 备份',
+        message: '请从同步页选择本机、WebDAV 或外部备份文件。',
       })
-      RestoreSummaryGrid()
-        .margin({ top: 12 })
-      SectionTitle({ title: '选择恢复范围' })
-        .margin({ top: 14, bottom: 10 })
-      ForEach(this.scopes, (entry: RowEntry, idx: number) => {
-        SwitchRow({ title: entry.title, chip: entry.chip })
-          .margin({ bottom: 8 })
-      }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
-      StructureCard({ title: '覆盖提醒', message: '冲突项会在恢复过程中单独确认，不会静默覆盖。' })
-        .margin({ top: 4, bottom: 12 })
-      ActionPair({ left: '取消', right: '开始恢复', leftRoute: 'sync-backup', rightRoute: 'restore-progress' })
+    } else {
+      Column() {
+        StructureCard({
+          title: '确认原子恢复 Core 数据',
+          message: `来源：${this.pending.source}\n${this.detail()}`,
+          chip: '已校验',
+        })
+        StructureCard({
+          title: '恢复范围',
+          message: '该操作应用完整 Core 存储快照，不能伪造按书架、进度或书源的局部恢复选项。Core 会再次校验 SHA-256、迁移并使用 Host CAS 原子写入。',
+        })
+          .margin({ top: 12 })
+        StructureCard({
+          title: '可回退点',
+          message: '开始前会先创建恢复前本机快照；若该快照无法写入，恢复会直接停止。',
+        })
+          .margin({ top: 8 })
+        if (this.awaitingSecondConfirmation()) {
+          Row({ space: 10 }) {
+            Text('取消恢复')
+              .fontSize(13)
+              .fontWeight(800)
+              .fontColor(ColorTokens.primary)
+              .height(40)
+              .layoutWeight(1)
+              .textAlign(TextAlign.Center)
+              .borderRadius(DemoAliasTokens.radiusPill)
+              .border({ width: 1, color: ColorTokens.border })
+              .onClick(() => ReaderUiStore.dispatch({ type: 'core-restore-apply-cancel' }))
+            Text('确认替换完整 Core 数据')
+              .fontSize(13)
+              .fontWeight(800)
+              .fontColor(DemoAliasTokens.onPrimary)
+              .height(40)
+              .layoutWeight(1)
+              .textAlign(TextAlign.Center)
+              .borderRadius(DemoAliasTokens.radiusPill)
+              .backgroundColor(ColorTokens.primary)
+              .onClick(() => ReaderUiStore.dispatch({ type: 'core-restore-apply-confirm' }))
+          }
+          .width('100%')
+          .margin({ top: 12 })
+        } else {
+          Row({ space: 10 }) {
+            Text('取消')
+              .fontSize(13)
+              .fontWeight(800)
+              .fontColor(ColorTokens.primary)
+              .height(40)
+              .layoutWeight(1)
+              .textAlign(TextAlign.Center)
+              .borderRadius(DemoAliasTokens.radiusPill)
+              .border({ width: 1, color: ColorTokens.border })
+              .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'sync-backup' }))
+            Text(this.status === 'restoring' ? '正在恢复…' : '开始原子恢复')
+              .fontSize(13)
+              .fontWeight(800)
+              .fontColor(DemoAliasTokens.onPrimary)
+              .height(40)
+              .layoutWeight(1)
+              .textAlign(TextAlign.Center)
+              .borderRadius(DemoAliasTokens.radiusPill)
+              .backgroundColor(this.status === 'restoring' ? ColorTokens.muted : ColorTokens.primary)
+              .onClick(() => {
+                if (this.status !== 'restoring') ReaderUiStore.dispatch({ type: 'core-restore-apply-request' });
+              })
+          }
+          .width('100%')
+          .margin({ top: 12 })
+        }
+        if (this.message.length > 0) {
+          Text(this.message)
+            .fontSize(11)
+            .fontColor(this.status === 'error' ? ColorTokens.accent : ColorTokens.muted)
+            .lineHeight(17)
+            .margin({ top: 8 })
+        }
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
     }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
   }
 }
 
 @Component
 export struct RestoreProgressPage {
   @Prop variant: string = 'default';
-  private steps: RestoreStepEntry[] = [
-    { title: '下载备份', detail: '12.8 MB · WebDAV', chip: '完成', progress: 1, done: true, active: false },
-    { title: '校验文件', detail: 'manifest、hash、版本兼容', chip: '完成', progress: 1, done: true, active: false },
-    { title: '合并数据', detail: '书架 128 本 · 进度 96 条', chip: '进行中', progress: 0.68, done: false, active: true },
-    { title: '写入设置', detail: '等待合并完成', chip: '等待', progress: 0, done: false, active: false },
-  ];
+  @StorageProp('reader.coreBackupStatus') status: string = 'idle';
+  @StorageProp('reader.coreBackupMessage') message: string = '';
 
   build() {
     Column() {
-      ProgressSummaryCard({
-        title: this.variant === 'running' ? '恢复任务运行中' : '正在恢复',
-        message: '当前正在合并书架和阅读进度。离开页面不会中断恢复，完成后会进入结果状态。',
-        chip: '68%',
-        progress: 0.68,
+      StatePanel({
+        variant: this.status === 'restoring' ? 'loading' : (this.status === 'error' ? 'error' : 'empty'),
+        title: this.status === 'restoring' ? 'Core 正在原子恢复' : '没有运行中的恢复任务',
+        message: this.message.length > 0 ? this.message : '恢复进度由 Core 的原子事务决定；页面不会展示固定百分比或虚构阶段。',
       })
-      SectionTitle({ title: '恢复阶段' })
-        .margin({ top: 14, bottom: 10 })
-      ForEach(this.steps, (step: RestoreStepEntry, idx: number) => {
-        RestoreStageRow({
-          title: step.title,
-          detail: step.detail,
-          chip: step.chip,
-          progress: step.progress,
-          done: step.done,
-          active: step.active,
-        })
-          .margin({ bottom: 8 })
-      }, (step: RestoreStepEntry, idx: number) => `${step.title}-${idx}`)
-      ActionPair({ left: '处理冲突', right: '查看结果', leftRoute: 'restore-conflict', rightRoute: 'restore-result' })
-        .margin({ top: 4 })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -1925,23 +2667,12 @@ export struct RestoreProgressPage {
 
 @Component
 export struct RestoreConflictPage {
-  private conflicts: RowEntry[] = [
-    { title: '分组：玄幻连载', detail: '本地 42 本 · 远程 46 本', chip: '使用备份' },
-    { title: '阅读进度：长夜余火', detail: '本地第 32 章 · 远程第 35 章', chip: '远程进度' },
-    { title: '阅读设置：浅色主题', detail: '本地字号 18 · 远程字号 17', chip: '备份设置' },
-  ];
-
   build() {
     Column() {
-      StructureCard({ title: '选择冲突处理方式', message: '以下项目本地和备份均有更新。请选择保留本地或使用备份，选择后恢复会继续。', chip: '3 项冲突' })
-      SectionTitle({ title: '冲突列表' })
-        .margin({ top: 14, bottom: 10 })
-      ForEach(this.conflicts, (entry: RowEntry, idx: number) => {
-        StructureRow({ title: entry.title, detail: entry.detail, chip: entry.chip, showChevron: false })
-          .margin({ bottom: 8 })
-      }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
-      ActionPair({ left: '返回进度', right: '应用选择', leftRoute: 'restore-progress', rightRoute: 'restore-result' })
-        .margin({ top: 4 })
+      StatePanel({
+        title: '没有可选择的伪冲突项',
+        message: 'runtime.storage.apply 使用完整快照的校验、迁移和 CAS 原子替换；当前 Core 事务没有按记录合并或人工冲突决策契约。',
+      })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -1950,25 +2681,18 @@ export struct RestoreConflictPage {
 
 @Component
 export struct RestoreResultPage {
-  private results: RowEntry[] = [
-    { title: '书架与分组', detail: '已恢复 128 本书和 12 个分组', chip: '成功' },
-    { title: '阅读进度', detail: '已恢复 96 条进度记录', chip: '成功' },
-    { title: '书源配置', detail: '1 条旧版规则字段不兼容', chip: '跳过' },
-  ];
+  @StorageProp('reader.coreBackupStatus') status: string = 'idle';
+  @StorageProp('reader.coreBackupMessage') message: string = '';
 
   build() {
     Column() {
-      StructureCard({ title: '恢复完成', message: '书架、分组和阅读进度已恢复。1 条书源配置因版本不兼容被跳过，可在日志中查看详情。', chip: '部分成功' })
-      RestoreSummaryGrid()
-        .margin({ top: 12 })
-      SectionTitle({ title: '恢复结果明细' })
-        .margin({ top: 14, bottom: 10 })
-      ForEach(this.results, (entry: RowEntry, idx: number) => {
-        StructureRow({ title: entry.title, detail: entry.detail, chip: entry.chip, showChevron: false })
-          .margin({ bottom: 8 })
-      }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
-      ActionPair({ left: '查看日志', right: '返回同步页', leftRoute: 'sync-backup', rightRoute: 'sync-backup' })
-        .margin({ top: 4 })
+      StatePanel({
+        variant: this.status === 'success' ? 'default' : (this.status === 'error' ? 'error' : 'empty'),
+        title: this.status === 'success' ? 'Core 数据恢复完成' : '没有可验证的恢复结果',
+        message: this.message.length > 0
+          ? this.message
+          : '完成后此处只显示 Core 与 Host 返回的事务结果，不显示固定的书籍或进度数量。',
+      })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -1978,18 +2702,31 @@ export struct RestoreResultPage {
 @Component
 export struct GlobalSettingsPage {
   private entries: RowEntry[] = [
-    { title: '阅读设置入口', detail: '', chip: '' },
-    { title: '书源设置入口', detail: '', chip: '' },
-    { title: '同步设置入口', detail: '', chip: '' },
-    { title: 'WebDAV 设置入口', detail: '', chip: '' },
-    { title: '备份恢复入口', detail: '', chip: '' },
-    { title: '关于版本', detail: '', chip: '' },
+    { title: '阅读设置入口', detail: '阅读页内显示、行为与控制设置', chip: '' },
+    { title: '书源设置入口', detail: '已持久化书源的导入与管理', chip: '' },
+    { title: '同步设置入口', detail: 'Core 快照与恢复操作', chip: '' },
+    { title: 'WebDAV 设置入口', detail: '配置并测试 WebDAV 传输', chip: '' },
+    { title: '备份恢复入口', detail: '本机或 WebDAV Core 快照', chip: '' },
+    { title: '关于与反馈', detail: '仅展示当前已接入的信息', chip: '' },
   ];
+
+  private routeFor(title: string): RouteId {
+    switch (title) {
+      case '阅读设置入口': return 'reader-full-settings';
+      case '书源设置入口': return 'source-management';
+      case '同步设置入口': return 'sync-backup';
+      case 'WebDAV 设置入口': return 'webdav-config';
+      case '备份恢复入口': return 'sync-backup';
+      case '关于与反馈': return 'about-feedback';
+      default: return 'settings';
+    }
+  }
 
   build() {
     Column() {
       ForEach(this.entries, (entry: RowEntry, idx: number) => {
-        StructureRow({ title: entry.title })
+        StructureRow({ title: entry.title, detail: entry.detail })
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: this.routeFor(entry.title) }))
           .margin({ bottom: idx === this.entries.length - 1 ? 0 : 8 })
       }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
     }
@@ -2002,9 +2739,10 @@ export struct GlobalSettingsPage {
 export struct BackupSettingsPage {
   build() {
     Column() {
-      SwitchRow({ title: '自动备份', switchOn: true })
-      SwitchRow({ title: '备份到 WebDAV', chip: '已开启' })
-        .margin({ top: 8 })
+      StatePanel({
+        title: '自动备份策略未接入',
+        message: '当前可用的是同步页中的手动 Core 快照导出、本机恢复与已配置 WebDAV 上传下载。没有后台调度、保留策略或“已开启”的真实状态投影。',
+      })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -2013,12 +2751,12 @@ export struct BackupSettingsPage {
 
 @Component
 export struct SyncErrorPage {
-  @Prop title: string = '同步失败';
-  @Prop message: string = 'WebDAV auth error，请重新登录。';
+  @Prop title: string = '同步操作未完成';
+  @Prop message: string = '请返回同步页查看 Core 与 Host 返回的具体错误。';
 
   build() {
     Column() {
-      StatePanel({ variant: 'error', title: this.title, message: this.message, action: '重新登录' })
+      StatePanel({ variant: 'error', title: this.title, message: this.message })
     }
     .width('100%')
   }
@@ -2026,12 +2764,12 @@ export struct SyncErrorPage {
 
 @Component
 export struct SyncProgressPage {
-  @Prop title: string = '同步正常';
-  @Prop progress: number = 0.64;
-
   build() {
     Column() {
-      ProgressSummaryCard({ title: this.title, message: '深空信号 · 25% · 刚刚同步', chip: '已同步', progress: this.progress })
+      StatePanel({
+        title: '同步状态未接入',
+        message: '当前没有由 Core 或 Host 返回的同步进度与结果投影，不能显示固定书籍、百分比或同步成功。',
+      })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -2040,19 +2778,12 @@ export struct SyncProgressPage {
 
 @Component
 export struct RemoteWebDavBooksPage {
-  private books: RowEntry[] = [
-    { title: '远程书籍 1', detail: '', chip: '可下载' },
-    { title: '远程书籍 2', detail: '', chip: '可下载' },
-    { title: '远程书籍 3', detail: '', chip: '可下载' },
-    { title: '远程书籍 4', detail: '', chip: '可下载' },
-  ];
-
   build() {
     Column() {
-      ForEach(this.books, (entry: RowEntry, idx: number) => {
-        StructureRow({ title: entry.title, chip: entry.chip, showChevron: false })
-          .margin({ bottom: idx === this.books.length - 1 ? 0 : 8 })
-      }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
+      StatePanel({
+        title: '远端书籍目录未接入',
+        message: '当前 WebDAV 链路传输的是完整 Core 存储快照，不提供按书列举或下载协议，因此不显示伪造的远端书籍。',
+      })
     }
     .width('100%')
   }
@@ -2060,11 +2791,99 @@ export struct RemoteWebDavBooksPage {
 
 @Component
 export struct RssDetailPage {
-  @Prop title: string = '深空信号更新';
+  @StorageProp(RssSelectionProjection.K_TITLE) selectedTitle: string = '';
+  @StorageProp(RssSelectionProjection.K_DESCRIPTION) selectedDescription: string = '';
+  @StorageProp(RssSelectionProjection.K_AUTHOR) selectedAuthor: string = '';
+  @StorageProp(RssSelectionProjection.K_DATE) selectedDate: string = '';
+  @StorageProp(RssSelectionProjection.K_LINK) selectedLink: string = '';
+  @StorageProp(RssSelectionProjection.K_SUBSCRIPTION_ID) selectedSubscriptionId: string = '';
+
+  private hasSelection(): boolean {
+    return this.selectedTitle.length > 0 || this.selectedDescription.length > 0 || this.selectedLink.length > 0;
+  }
+
+  private titleText(): string {
+    return this.selectedTitle.length > 0 ? this.selectedTitle : '未命名 RSS 条目';
+  }
+
+  private fieldValue(value: string, fallback: string): string {
+    return value.length > 0 ? value : fallback;
+  }
 
   build() {
     Column() {
-      StructureCard({ title: this.title, message: '来自订阅源的章节更新与说明。' })
+      if (!this.hasSelection()) {
+        StructureCard({
+          title: '未选择 RSS 条目',
+          message: '请从由 Core 返回的 RSS 条目列表选择一项后查看标题、摘要和原文链接。',
+        })
+      } else {
+        Column({ space: 10 }) {
+          Text(this.titleText())
+            .fontSize(20)
+            .fontWeight(800)
+            .fontColor(ColorTokens.controlInk)
+            .fontFamily(ReaderTypography.serifFamily())
+            .maxLines(3)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Text(this.fieldValue(this.selectedDescription, 'Core 未返回本条目的摘要。'))
+            .fontSize(14)
+            .lineHeight(22)
+            .fontColor(ColorTokens.muted)
+          Column({ space: 5 }) {
+            Text(`作者：${this.fieldValue(this.selectedAuthor, 'Core 未提供')}`)
+              .fontSize(12)
+              .fontColor(ColorTokens.muted)
+            Text(`日期：${this.fieldValue(this.selectedDate, 'Core 未提供')}`)
+              .fontSize(12)
+              .fontColor(ColorTokens.muted)
+            Text(`订阅：${this.fieldValue(this.selectedSubscriptionId, 'Core 未提供')}`)
+              .fontSize(12)
+              .fontColor(ColorTokens.muted)
+          }
+          .width('100%')
+          if (this.selectedLink.length > 0) {
+            Text('原文链接')
+              .fontSize(12)
+              .fontWeight(800)
+              .fontColor(ColorTokens.controlInk)
+              .margin({ top: 4 })
+            Text(this.selectedLink)
+              .fontSize(12)
+              .fontColor(ColorTokens.primaryDark)
+              .maxLines(3)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+            if (isSafeRssOriginalUrl(this.selectedLink)) {
+              Text('在应用内打开原文')
+                .fontSize(13)
+                .fontWeight(800)
+                .fontColor(DemoAliasTokens.onPrimary)
+                .height(38)
+                .padding({ left: 16, right: 16 })
+                .borderRadius(DemoAliasTokens.radiusPill)
+                .backgroundColor(ColorTokens.primary)
+                .margin({ top: 10 })
+                .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'rss-original' }))
+            } else {
+              Text('Core 返回的原文链接不是可加载的 http(s) 地址。')
+                .fontSize(12)
+                .lineHeight(18)
+                .fontColor(ColorTokens.statusWarn)
+                .margin({ top: 8 })
+            }
+          } else {
+            Text('Core 未提供原文链接。')
+              .fontSize(12)
+              .fontColor(ColorTokens.muted)
+          }
+        }
+        .width('100%')
+        .alignItems(HorizontalAlign.Start)
+        .padding(14)
+        .borderRadius(DemoAliasTokens.radiusMd)
+        .backgroundColor(ColorTokens.floatingControlBg)
+        .border({ width: 1, color: ColorTokens.border })
+      }
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -2101,22 +2920,195 @@ export struct RssErrorState {
 
 @Component
 export struct RssSubscriptionManagementPage {
-  private subscriptions: RowEntry[] = [
-    { title: '订阅源 1', detail: '', chip: '' },
-    { title: '订阅源 2', detail: '', chip: '' },
-    { title: '订阅源 3', detail: '', chip: '' },
-    { title: '订阅源 4', detail: '', chip: '' },
-  ];
+  @StorageProp('reader.rssSubscriptions') subscriptions: CoreRssSubscription[] = [];
+  @State private newTitle: string = '';
+  @State private newFeedUrl: string = '';
 
   build() {
-    Column() {
-      ForEach(this.subscriptions, (entry: RowEntry, idx: number) => {
-        SwitchRow({ title: entry.title, switchOn: true })
-          .margin({ bottom: idx === this.subscriptions.length - 1 ? 0 : 8 })
-      }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
+    Column({ space: 10 }) {
+      Text('添加订阅')
+        .fontSize(15).fontWeight(800).fontColor(ColorTokens.controlInk)
+      TextInput({ text: this.newTitle, placeholder: '名称（可选）' })
+        .width('100%').height(42).padding({ left: 12, right: 12 })
+        .borderRadius(DemoAliasTokens.radiusMd).backgroundColor(ColorTokens.metaBg)
+        .border({ width: 1, color: ColorTokens.border })
+        .onChange((value: string) => { this.newTitle = value; })
+      TextInput({ text: this.newFeedUrl, placeholder: 'Feed URL' })
+        .width('100%').height(42).padding({ left: 12, right: 12 })
+        .borderRadius(DemoAliasTokens.radiusMd).backgroundColor(ColorTokens.metaBg)
+        .border({ width: 1, color: ColorTokens.border })
+        .onChange((value: string) => { this.newFeedUrl = value; })
+      Text('添加订阅')
+        .fontSize(13).fontWeight(800).fontColor(DemoAliasTokens.onPrimary)
+        .height(40).width('100%').textAlign(TextAlign.Center)
+        .borderRadius(DemoAliasTokens.radiusPill).backgroundColor(ColorTokens.primary)
+        .onClick(() => {
+          ReaderUiStore.dispatch({ type: 'rss-subscription-add', rssTitle: this.newTitle, rssFeedUrl: this.newFeedUrl });
+          this.newTitle = '';
+          this.newFeedUrl = '';
+        })
+      Text('订阅列表')
+        .fontSize(15).fontWeight(800).fontColor(ColorTokens.controlInk).margin({ top: 6 })
+      if (this.subscriptions.length === 0) {
+        Text('暂无订阅，添加 Feed URL 后将在此由 Core 持久化管理。')
+          .fontSize(13).fontColor(ColorTokens.muted).width('100%').padding(14)
+          .borderRadius(DemoAliasTokens.radiusMd).backgroundColor(ColorTokens.surfaceSoft)
+      }
+      ForEach(this.subscriptions, (entry: CoreRssSubscription, idx: number) => {
+        RssSubscriptionEditorRow({ subscription: entry })
+      }, (entry: CoreRssSubscription, idx: number) => `${entry.subscriptionId}-${idx}`)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
+struct RssSubscriptionEditorRow {
+  @Prop subscription: CoreRssSubscription = { subscriptionId: '', feedUrl: '', title: '', enabled: true, unreadCount: 0 };
+  @State private titleDraft: string = '';
+  @State private feedDraft: string = '';
+
+  aboutToAppear(): void {
+    this.titleDraft = this.subscription.title;
+    this.feedDraft = this.subscription.feedUrl;
+  }
+
+  build() {
+    Column({ space: 8 }) {
+      Row() {
+        Text(this.subscription.subscriptionId).fontSize(10).fontColor(ColorTokens.muted).layoutWeight(1)
+        Text(`${this.subscription.unreadCount} 未读`).fontSize(11).fontColor(ColorTokens.primary)
+        Toggle({ type: ToggleType.Switch, isOn: this.subscription.enabled })
+          .selectedColor(ColorTokens.primary)
+          .margin({ left: 8 })
+          .onChange((enabled: boolean) => ReaderUiStore.dispatch({
+            type: 'rss-subscription-update', rssSubscriptionId: this.subscription.subscriptionId, rssEnabled: enabled,
+          }))
+      }.width('100%').alignItems(VerticalAlign.Center)
+      TextInput({ text: this.titleDraft, placeholder: '订阅名称' })
+        .width('100%').height(38).padding({ left: 10, right: 10 })
+        .borderRadius(DemoAliasTokens.radiusSm).backgroundColor(ColorTokens.metaBg)
+        .onChange((value: string) => { this.titleDraft = value; })
+      TextInput({ text: this.feedDraft, placeholder: 'Feed URL' })
+        .width('100%').height(38).padding({ left: 10, right: 10 })
+        .borderRadius(DemoAliasTokens.radiusSm).backgroundColor(ColorTokens.metaBg)
+        .onChange((value: string) => { this.feedDraft = value; })
+      Row({ space: 10 }) {
+        Text('保存')
+          .fontSize(12).fontWeight(800).fontColor(DemoAliasTokens.onPrimary)
+          .height(34).layoutWeight(1).textAlign(TextAlign.Center)
+          .borderRadius(DemoAliasTokens.radiusPill).backgroundColor(ColorTokens.primary)
+          .onClick(() => ReaderUiStore.dispatch({
+            type: 'rss-subscription-update', rssSubscriptionId: this.subscription.subscriptionId,
+            rssTitle: this.titleDraft, rssFeedUrl: this.feedDraft,
+          }))
+        Text('删除')
+          .fontSize(12).fontWeight(800).fontColor(ColorTokens.accent)
+          .height(34).layoutWeight(1).textAlign(TextAlign.Center)
+          .borderRadius(DemoAliasTokens.radiusPill).border({ width: 1, color: ColorTokens.border })
+          .onClick(() => ReaderUiStore.dispatch({
+            type: 'rss-subscription-delete-request', rssSubscriptionId: this.subscription.subscriptionId,
+          }))
+      }.width('100%')
+    }
+    .width('100%').padding(12).margin({ bottom: 8 })
+    .borderRadius(DemoAliasTokens.radiusMd).backgroundColor(ColorTokens.surface)
+    .border({ width: 1, color: ColorTokens.border })
+  }
+}
+
+@Component
+export struct RssSubscriptionDeleteConfirmPage {
+  @StorageProp('reader.rssSubscriptions') subscriptions: CoreRssSubscription[] = [];
+  @StorageProp('reader.pendingRssSubscriptionDeleteId') pendingSubscriptionId: string = '';
+
+  private target(): CoreRssSubscription | null {
+    for (let i = 0; i < this.subscriptions.length; i++) {
+      if (this.subscriptions[i].subscriptionId === this.pendingSubscriptionId) return this.subscriptions[i];
+    }
+    return null;
+  }
+
+  private targetLabel(): string {
+    const target = this.target();
+    if (target === null) return '';
+    const title = target.title.trim();
+    return title.length > 0 ? title : target.feedUrl;
+  }
+
+  private cancel(): void {
+    ReaderUiStore.dispatch({ type: 'rss-subscription-delete-cancel' });
+  }
+
+  private confirm(): void {
+    const target = this.target();
+    if (target === null) return;
+    ReaderUiStore.dispatch({
+      type: 'rss-subscription-delete-confirm', rssSubscriptionId: target.subscriptionId,
+    });
+  }
+
+  build() {
+    if (this.target() === null) {
+      Column({ space: 12 }) {
+        StructureCard({
+          title: '没有可确认的订阅删除操作',
+          message: '该订阅已不在当前 Core 列表中，或没有从订阅管理页明确选择目标；不会执行删除。',
+          chip: '已阻止',
+        })
+        Text('返回订阅管理')
+          .fontSize(13)
+          .fontWeight(800)
+          .fontColor(ColorTokens.primaryDark)
+          .height(40)
+          .width('100%')
+          .textAlign(TextAlign.Center)
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .backgroundColor(ColorTokens.metaBg)
+          .onClick(() => this.cancel())
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+    } else {
+      Column({ space: 12 }) {
+        StructureCard({
+          title: `删除“${this.targetLabel()}”？`,
+          message: `subscriptionId: ${this.target()!.subscriptionId}。确认后才会调用 Core rss.subscription.delete。`,
+          chip: '需要确认',
+        })
+        Text('Core 当前没有“删除并保留/清除缓存文章和阅读记录”的独立选项；本页不会虚构该语义。')
+          .fontSize(13)
+          .lineHeight(19)
+          .fontColor(ColorTokens.muted)
+          .width('100%')
+        Row({ space: 10 }) {
+          Text('取消')
+            .fontSize(13)
+            .fontWeight(800)
+            .fontColor(ColorTokens.primaryDark)
+            .height(42)
+            .layoutWeight(1)
+            .textAlign(TextAlign.Center)
+            .borderRadius(DemoAliasTokens.radiusPill)
+            .backgroundColor(ColorTokens.metaBg)
+            .onClick(() => this.cancel())
+          Text('确认删除')
+            .fontSize(13)
+            .fontWeight(800)
+            .fontColor(DemoAliasTokens.onPrimary)
+            .height(42)
+            .layoutWeight(1)
+            .textAlign(TextAlign.Center)
+            .borderRadius(DemoAliasTokens.radiusPill)
+            .backgroundColor(ColorTokens.accent)
+            .onClick(() => this.confirm())
+        }
+        .width('100%')
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+    }
   }
 }
 
@@ -2164,12 +3156,12 @@ export struct PermissionRequiredPage {
 
 @Component
 export struct AboutVersionPage {
-  @Prop title: string = 'Reader for Android';
-  @Prop version: string = '1.0.0';
-
   build() {
     Column() {
-      StatePanel({ title: this.title, message: `版本 ${this.version} · normalized handoff` })
+      StatePanel({
+        title: '版本信息未接入',
+        message: '当前页面未接入应用包版本或发布渠道查询，不能显示固定版本号。',
+      })
     }
     .width('100%')
   }
@@ -2177,29 +3169,12 @@ export struct AboutVersionPage {
 
 @Component
 export struct AboutFeedbackPage {
-  private rows: RowEntry[] = [
-    { title: '检查更新', detail: '已是最新', chip: '' },
-    { title: '源码仓库', detail: 'Reader 多端前端与 Core 仓库', chip: '' },
-    { title: '开源许可', detail: '查看第三方依赖与许可文本', chip: '' },
-    { title: '参与贡献', detail: '提交问题、反馈体验或参与适配', chip: '' },
-  ];
-
   build() {
     Column() {
-      SectionTitle({ title: '项目信息' })
-      ForEach(this.rows, (entry: RowEntry, idx: number) => {
-        StructureRow({
-          title: entry.title,
-          detail: entry.detail,
-          chip: entry.chip,
-          showChevron: entry.title !== '检查更新',
-        })
-          .margin({ top: idx === 0 ? 10 : 8 })
-          .onClick(() => {
-            // P1.4：4 行 link 接 onClick，暂统一跳转到 about-version
-            ReaderUiStore.dispatch({ type: 'route-push', id: 'about-version' });
-          })
-      }, (entry: RowEntry, idx: number) => `${entry.title}-${idx}`)
+      StructureCard({
+        title: '关于与反馈未接入',
+        message: '当前没有由 Host 或 Core 提供的更新检查、反馈提交、源码链接或许可信息契约，因此不显示“已是最新”或可点击的伪链接。',
+      })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -2209,53 +3184,202 @@ export struct AboutFeedbackPage {
 @Component
 export struct LocalBookImportPage {
   @StorageProp('reader.importPreviewFormat') previewFormat: string = '';
+  @StorageProp('reader.importPreviewEncoding') previewEncoding: string = '';
   @StorageProp('reader.importPreviewCount') previewCount: number = 0;
+  @StorageProp('reader.loading') loading: boolean = false;
+  @State selectedFileName: string = '';
+
+  // This is a presentation-only normalization of Core's detected encoding;
+  // there is deliberately no UI-selected charset parameter. GBK and GB18030
+  // overlap for most Chinese text, so the host must not claim a precision that
+  // Core's compatibility detector cannot promise.
+  private encodingLabel(detected: string): string {
+    const normalized = detected.trim().toLowerCase().replace(/[_\s-]/g, '');
+    if (normalized === 'gbk' || normalized === 'gb18030' || normalized === 'gb2312' ||
+      normalized === 'windows936' || normalized === 'cp936') {
+      return 'GBK/GB18030（自动识别）';
+    }
+    if (normalized === 'utf8' || normalized === 'utf8bom') {
+      return normalized === 'utf8bom' ? 'UTF-8（BOM）' : 'UTF-8';
+    }
+    if (normalized === 'utf16le') return 'UTF-16LE';
+    if (normalized === 'utf16be') return 'UTF-16BE';
+    return detected.length > 0 ? detected : 'Core 未返回编码';
+  }
+
+  // Section 1: file picker trigger. Opens DocumentViewPicker, reads the
+  // selected file via ReaderEffects.runLocalImport (which calls Core
+  // local_book.parse). Hardcoded preview text is replaced with real parse
+  // results dispatched back to the store.
+  private async selectFile(): Promise<void> {
+    try {
+      const documentPicker = new picker.DocumentViewPicker();
+      const options = new picker.DocumentSelectOptions();
+      options.maxSelectNumber = 1;
+      options.fileSuffixFilters = ['.txt', '.epub', '.epub3', '.pdf', '.mobi', '.azw', '.azw3'];
+      const uris: string[] = await documentPicker.select(options);
+      if (uris.length === 0) return;
+      const uri = uris[0];
+      // Extract file name from URI for display.
+      const slashIdx = uri.lastIndexOf('/');
+      this.selectedFileName = slashIdx >= 0 ? uri.substring(slashIdx + 1) : uri;
+      ReaderEffects.runLocalImport(uri, this.selectedFileName);
+    } catch (e) {
+      // Picker cancel or permission denied — silent, no state change.
+    }
+  }
 
   build() {
-    Column({ space: 14 }) {
-      Text('选择本地文件')
-        .fontSize(20)
-        .fontWeight(700)
-        .fontColor(ColorTokens.controlInk)
-        .textAlign(TextAlign.Center)
-      Text('支持 txt、epub 和常见文本文件，导入后进入书架。')
-        .fontSize(14)
-        .fontColor(ColorTokens.muted)
-        .lineHeight(20)
-        .textAlign(TextAlign.Center)
-      Text('选择文件')
-        .fontSize(13)
-        .fontWeight(700)
-        .fontColor(DemoAliasTokens.onPrimary)
-        .height(40)
-        .padding({ left: 16, right: 16 })
-        .borderRadius(DemoAliasTokens.radiusPill)
-        .backgroundColor(ColorTokens.primary)
-        .textAlign(TextAlign.Center)
-        .onClick(() => ReaderUiStore.dispatch({ type: 'source.import.preview', importFormat: 'txt' }))
+    // LibraryShell already owns the route-level Scroll. Keep this page
+    // wrap-content so percentage height/layoutWeight cannot create a second
+    // viewport and push the first card below the fold.
+    Column({ space: 16 }) {
+          // ── Section 1: 导入卡（文件选择触发区） ──
+          Column({ space: 10 }) {
+            Row({ space: 8 }) {
+              Text('📚')
+                .fontSize(24)
+              Text('选择本地文件')
+                .fontSize(18)
+                .fontWeight(700)
+                .fontColor(ColorTokens.controlInk)
+            }
+            .width('100%')
 
-      if (this.previewFormat.length > 0) {
-        Text(`已选择文件（${this.previewFormat}），预览到 1 个书籍`)
-          .fontSize(12)
-          .fontColor(ColorTokens.muted)
+            Text('支持 txt、epub、pdf、mobi、azw 格式，导入后进入书架。')
+              .fontSize(13)
+              .fontColor(ColorTokens.muted)
+              .lineHeight(18)
+
+            Text(this.selectedFileName.length > 0 ? this.selectedFileName : '未选择文件')
+              .fontSize(13)
+              .fontColor(this.selectedFileName.length > 0 ? ColorTokens.controlInk : ColorTokens.muted)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .width('100%')
+              .padding({ top: 8, bottom: 8 })
+
+            Text('选择文件')
+              .fontSize(13)
+              .fontWeight(700)
+              .fontColor(DemoAliasTokens.onPrimary)
+              .height(40)
+              .padding({ left: 24, right: 24 })
+              .borderRadius(DemoAliasTokens.radiusPill)
+              .backgroundColor(ColorTokens.primary)
+              .textAlign(TextAlign.Center)
+              .onClick(() => { this.selectFile(); })
+          }
+          .width('100%')
+          .padding(16)
+          .backgroundColor(ColorTokens.surface)
+          .borderRadius(12)
+
+          // ── Section 2: 导入设置（格式、编码） ──
+          if (this.previewFormat.length > 0) {
+            Column({ space: 10 }) {
+              Text('导入设置')
+                .fontSize(15)
+                .fontWeight(700)
+                .fontColor(ColorTokens.controlInk)
+
+              Row({ space: 12 }) {
+                Text('格式')
+                  .fontSize(13)
+                  .fontColor(ColorTokens.muted)
+                  .width(48)
+                Text(this.previewFormat.toUpperCase())
+                  .fontSize(13)
+                  .fontWeight(600)
+                  .fontColor(ColorTokens.controlInk)
+              }
+              .width('100%')
+
+              Row({ space: 12 }) {
+                Text('编码')
+                  .fontSize(13)
+                  .fontColor(ColorTokens.muted)
+                  .width(48)
+                Text(this.encodingLabel(this.previewEncoding))
+                  .fontSize(13)
+                  .fontWeight(600)
+                  .fontColor(ColorTokens.controlInk)
+              }
+              .width('100%')
+            }
+            .width('100%')
+            .padding(16)
+            .backgroundColor(ColorTokens.surface)
+            .borderRadius(12)
+          }
+
+          // ── Section 3: 待导入列表（解析结果预览） ──
+          if (this.previewFormat.length > 0) {
+            Column({ space: 10 }) {
+              Text('解析结果')
+                .fontSize(15)
+                .fontWeight(700)
+                .fontColor(ColorTokens.controlInk)
+
+              if (this.loading) {
+                Text('正在解析…')
+                  .fontSize(13)
+                  .fontColor(ColorTokens.muted)
+              } else {
+                Row({ space: 8 }) {
+                  Text('📄')
+                    .fontSize(16)
+                  Text(`已解析 ${this.previewCount} 章`)
+                    .fontSize(13)
+                    .fontColor(ColorTokens.controlInk)
+                }
+                .width('100%')
+              }
+            }
+            .width('100%')
+            .padding(16)
+            .backgroundColor(ColorTokens.surface)
+            .borderRadius(12)
+          }
+      // ── Section 4: 操作区（由 LibraryShell 一并滚动） ──
+      Row({ space: 12 }) {
+        Text('取消')
+          .fontSize(14)
+          .fontWeight(600)
+          .fontColor(ColorTokens.controlInk)
+          .height(44)
+          .layoutWeight(1)
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .border({ width: 1, color: ColorTokens.border })
           .textAlign(TextAlign.Center)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
+
         Text('导入')
-          .fontSize(13)
+          .fontSize(14)
           .fontWeight(700)
           .fontColor(DemoAliasTokens.onPrimary)
-          .height(40)
-          .padding({ left: 16, right: 16 })
+          .height(44)
+          .layoutWeight(1)
           .borderRadius(DemoAliasTokens.radiusPill)
-          .backgroundColor(ColorTokens.primaryDark)
+          .backgroundColor(
+            this.previewFormat.length > 0 && !this.loading
+              ? ColorTokens.primaryDark : ColorTokens.border
+          )
           .textAlign(TextAlign.Center)
-          .onClick(() => ReaderUiStore.dispatch({ type: 'source.import.apply', importCount: 1 }))
+          .onClick(() => {
+            if (this.previewFormat.length > 0 && !this.loading) {
+              ReaderUiStore.dispatch({
+                type: 'source.import.apply',
+                importCount: this.previewCount,
+              });
+            }
+          })
       }
+      .width('100%')
+      .padding({ left: 12, right: 12, top: 12, bottom: 16 })
     }
     .width('100%')
-    .constraintSize({ minHeight: 640 })
-    .justifyContent(FlexAlign.Center)
-    .alignItems(HorizontalAlign.Center)
-    .padding({ left: 12, right: 12, top: 32, bottom: 32 })
+    .padding({ left: 12, right: 12, top: 16 })
   }
 }
 

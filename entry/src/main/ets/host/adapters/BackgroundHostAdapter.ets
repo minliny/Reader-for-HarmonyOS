@@ -41,8 +41,21 @@ interface ScheduledTaskEntry {
   work: (() => void) | null;
 }
 
+export interface HostBackgroundTaskStartResponse {
+  started: boolean;
+  taskId: string;
+  name: string;
+}
+
+interface BackgroundTaskLease {
+  taskId: string;
+  name: string;
+  suspendRequestId: number;
+}
+
 export class BackgroundHostAdapter {
   private tasks: Map<string, ScheduledTaskEntry> = new Map<string, ScheduledTaskEntry>();
+  private leases: Map<string, BackgroundTaskLease> = new Map<string, BackgroundTaskLease>();
 
   /**
    * background.schedule — schedule `work` to run after delayMs.
@@ -62,7 +75,11 @@ export class BackgroundHostAdapter {
     const existing = this.tasks.get(taskId);
     if (existing !== undefined) {
       clearTimeout(existing.timeoutId);
-      backgroundTaskManager.cancelSuspendDelay(existing.suspendRequestId);
+      try {
+        backgroundTaskManager.cancelSuspendDelay(existing.suspendRequestId);
+      } catch (e) {
+        // Best-effort — the task is being replaced.
+      }
       this.tasks.delete(taskId);
     }
 
@@ -86,7 +103,11 @@ export class BackgroundHostAdapter {
           workFn();
         }
       } finally {
-        backgroundTaskManager.cancelSuspendDelay(suspendRequestId);
+        try {
+          backgroundTaskManager.cancelSuspendDelay(suspendRequestId);
+        } catch (e) {
+          // Best-effort — foreground task already completed.
+        }
         this.tasks.delete(taskId);
       }
     }, delayMs);
@@ -122,6 +143,47 @@ export class BackgroundHostAdapter {
   }
 
   /**
+   * Reader UI 2.5 background.task.start — acquire a real transient background
+   * lease. Failure to obtain a suspend request is surfaced; no foreground-only
+   * timeout is reported as background success.
+   */
+  startTask(name: string): HostBackgroundTaskStartResponse {
+    let taskId = '';
+    let info: backgroundTaskManager.DelaySuspendInfo;
+    try {
+      info = backgroundTaskManager.requestSuspendDelay('reader-ui-' + name, () => {
+        if (taskId.length > 0) this.leases.delete(taskId);
+      });
+    } catch (e) {
+      throw new Error(`BackgroundHostAdapter.startTask name=${name} failed: ${e}`);
+    }
+    if (!Number.isInteger(info.requestId) || info.requestId <= 0) {
+      throw new Error(`BackgroundHostAdapter.startTask name=${name} returned invalid request id`);
+    }
+    taskId = `harmony-transient-${info.requestId}`;
+    const lease: BackgroundTaskLease = {
+      taskId: taskId,
+      name: name,
+      suspendRequestId: info.requestId,
+    };
+    this.leases.set(taskId, lease);
+    return { started: true, taskId: taskId, name: name };
+  }
+
+  /** Reader UI 2.5 background.task.end — release exactly one live lease. */
+  endTask(taskId: string): boolean {
+    const lease = this.leases.get(taskId);
+    if (lease === undefined) return false;
+    try {
+      backgroundTaskManager.cancelSuspendDelay(lease.suspendRequestId);
+    } catch (e) {
+      throw new Error(`BackgroundHostAdapter.endTask taskId=${taskId} failed: ${e}`);
+    }
+    this.leases.delete(taskId);
+    return true;
+  }
+
+  /**
    * Cancel all scheduled tasks. Call on app shutdown.
    */
   cancelAll(): void {
@@ -136,5 +198,13 @@ export class BackgroundHostAdapter {
       }
     });
     this.tasks.clear();
+    this.leases.forEach((lease: BackgroundTaskLease) => {
+      try {
+        backgroundTaskManager.cancelSuspendDelay(lease.suspendRequestId);
+      } catch (e) {
+        // Best-effort during process shutdown only.
+      }
+    });
+    this.leases.clear();
   }
 }

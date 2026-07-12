@@ -12,6 +12,9 @@ import { ReaderUiStore } from '../store/ReaderUiStore';
 import { MotionAdapter } from '../adapters/MotionAdapter';
 
 function topBarTitle(routeId: string, pageState: string, kind: string, fallback: string): string {
+  // This route aliases its generated management body, while Harmony renders a
+  // real target-bound confirmation body. Keep the shell title truthful too.
+  if (routeId === 'rss-source-delete-confirm') return '删除订阅源';
   const components: ViewStateComponent[] = ViewStateTable.componentsFor(routeId, pageState);
   for (const component of components) {
     if (component.type === kind && component.props.title !== undefined && component.props.title !== '') {
@@ -55,7 +58,10 @@ export struct AppTopBar {
     if (this.routeId === 'bookshelf' || this.routeId === 'bookshelf-cover-mode' || this.routeId === 'bookshelf-list-mode') {
       ReaderUiStore.dispatch({ type: 'set-overlay', overlay: 'book-action' });
     } else if (this.routeId === 'discover' || this.routeId === 'discover-home') {
-      ReaderUiStore.dispatch({ type: 'set-overlay', overlay: 'sort-filter' });
+      // Core source.explore does not expose a global sort contract.  Make the
+      // top-bar affordance an honest refresh of the selected persisted source
+      // instead of routing to the demo-only sort fixture.
+      ReaderUiStore.dispatch({ type: 'discover-refresh' });
     } else if (this.routeId === 'rss' || this.routeId === 'rss-all') {
       ReaderUiStore.dispatch({ type: 'route-push', id: 'rss-subscription-management' });
     } else if (this.routeId === 'settings' || this.routeId === 'global-settings') {
@@ -70,6 +76,11 @@ export struct AppTopBar {
 export struct BackTopBar {
   @StorageProp('reader.displayedRouteId') routeId: string = 'book-detail';
   @StorageProp('reader.pageState') pageState: string = 'default';
+
+  private supportsBookActions(): boolean {
+    return this.routeId === 'book-detail' || this.routeId === 'book-detail-toc-preview' ||
+      this.routeId === 'book-directory';
+  }
 
   build() {
     Row() {
@@ -86,9 +97,13 @@ export struct BackTopBar {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .layoutWeight(1)
         .margin({ left: 10, right: 10 })
-      Image($r('app.media.reader_icon_more_dark'))
-        .width(24).height(24)
-        .onClick(() => ReaderUiStore.dispatch({ type: 'set-overlay', overlay: 'book-action' }))
+      if (this.supportsBookActions()) {
+        Image($r('app.media.reader_icon_more_dark'))
+          .width(24).height(24)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'set-overlay', overlay: 'book-action' }))
+      } else {
+        Blank().width(24).height(24)
+      }
     }
     .width('100%')
     .height(SizeTokens.topBarHeight)
@@ -158,7 +173,7 @@ export struct BottomNav {
     .borderRadius(DemoAliasTokens.radiusXl)
     .backgroundColor(this.tab === tab ? ColorTokens.primaryDark : ColorTokens.paper)
     .onClick(() => {
-      MotionAdapter.apply('tab.switch', this.reducedMotion, () => {
+      MotionAdapter.apply('tab.switch', this.reducedMotion, this.getUIContext(), () => {
         ReaderUiStore.dispatch({ type: 'switch-tab', tab: tab });
       });
     })
@@ -209,7 +224,7 @@ export struct ErrorState {
         .padding({ left: SpacingTokens.lg, right: SpacingTokens.lg, top: SpacingTokens.xs, bottom: SpacingTokens.xs })
         .borderRadius(DemoAliasTokens.radiusPill)
         .backgroundColor(ColorTokens.metaBg)
-        .onClick(() => ReaderUiStore.dispatch({ type: 'set-loading', loading: false }))
+        .onClick(() => ReaderUiStore.dispatch({ type: 'retry-last-operation' }))
     }
     .width('100%').height('100%')
     .justifyContent(FlexAlign.Center)

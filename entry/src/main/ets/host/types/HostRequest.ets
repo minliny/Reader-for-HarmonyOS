@@ -1,8 +1,9 @@
 // HostRequest — request type definitions for all Host capabilities.
 //
 // Sources of truth (do NOT invent names here):
-//   1. Reader UI Contract — host-request.schema.json enum (31 items). This is the
-//      authoritative HostRequest type list for the Reducer/UI layer.
+//   1. Reader UI Contract 1.2.0 — generated/HostRequestTable.ets (58 items) is
+//      the authoritative Reducer/UI wire list. This file retains the original
+//      33-item UI subset only for the historical mixed Core dispatcher types.
 //   2. Reader-Core-Native — crates/reader-contract/src/host.rs HostCapability
 //      enum (15-item closed set). This is the authoritative list of capabilities
 //      Core may send via host.request events over the NAPI bridge.
@@ -15,7 +16,7 @@
 //   - UI-only capabilities (webview.open/close, http.cancel, cookie.clear,
 //     file.delete, storage.path, credential.*, tts.system.*,
 //     permission.request/check, background.schedule/cancel,
-//     notification.show/cancel, share.invoke, clipboard.copy/paste,
+//     timer.foreground.arm/cancel, notification.show/cancel, share.invoke, clipboard.copy/paste,
 //     device.vibrate, device.screen.keep-on/release) are NOT in the Core
 //     HostCapability closed set. Reducer may dispatch them directly to Host
 //     adapters without crossing the Core boundary.
@@ -38,8 +39,22 @@
 export type HostRequestId = number;
 export type HostOperationId = number;
 
-// Union of Core closed-set capabilities + UI Contract HostRequest enum.
-// Keep grouped by source so drift is easy to spot in code review.
+// Optional Core-owned annotation on `source.check.run` HTTP descriptors.
+// It is not a Host correlation id: `operationId` remains the only value used
+// for `host.complete` / `host.error`.  Hosts may use this strict tuple solely
+// to keep a short-lived private source-debug recorder isolated.
+export type HostHttpDiagnosticStage = 'L2' | 'L3' | 'L4' | 'L5';
+
+export interface HostHttpDiagnostic {
+  traceId: string;
+  requestId: number;
+  sourceId: string;
+  stage: HostHttpDiagnosticStage;
+}
+
+// Historical union of Core closed-set capabilities + the original 33-item UI
+// HostRequest subset. New Reader UI capabilities belong to HostRequestTable +
+// ReaderUiHostDispatcher, not this Core-facing compatibility union.
 export type HostCapability =
   // ── Core closed-set (host.rs HostCapability) — Core may request these ──
   | 'host.smoke.echo'
@@ -57,7 +72,7 @@ export type HostCapability =
   | 'persistence.get'
   | 'persistence.put'
   | 'media.download'
-  // ── UI Contract only (host-request.schema.json) — Reducer may request these ──
+  // ── Legacy UI-only subset — Reducer may request these directly ──
   | 'http.cancel'
   | 'webview.open'
   | 'webview.close'
@@ -76,6 +91,8 @@ export type HostCapability =
   | 'permission.check'
   | 'background.schedule'
   | 'background.cancel'
+  | 'timer.foreground.arm'
+  | 'timer.foreground.cancel'
   | 'notification.show'
   | 'notification.cancel'
   | 'share.invoke'
@@ -89,7 +106,8 @@ export type HostCapability =
 // Mirrors Reader-Core-Native host-app-contracts/01-network-session.md §3.1.
 export interface HostHttpRequest {
   url: string;
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'HEAD' | 'OPTIONS' | 'PATCH';
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'HEAD' | 'OPTIONS' | 'PATCH'
+    | 'PROPFIND' | 'MKCOL' | 'MOVE' | 'COPY';
   headers: Record<string, string>;
   body?: string;
   charset?: string;
@@ -98,6 +116,7 @@ export interface HostHttpRequest {
   usePlatformCookieJar?: boolean;
   sessionId?: string;
   sourceId?: string;
+  diagnostic?: HostHttpDiagnostic;
 }
 
 export interface HostHttpCancelRequest {
@@ -285,6 +304,18 @@ export interface HostBackgroundCancelRequest {
   taskId: string;
 }
 
+// ── timer.foreground.arm / timer.foreground.cancel ──
+// Reader auto-page owns a cancellable foreground one-shot. It is deliberately
+// separate from background.schedule: no timer may survive app backgrounding.
+export interface HostForegroundTimerRequest {
+  timerId: string;
+  correlationId: string;
+  delayMs: number;
+  generation: number;
+  oneShot: boolean;
+  foregroundOnly: boolean;
+}
+
 // ── notification.show / notification.cancel ──
 export interface HostNotificationShowRequest {
   title: string;
@@ -303,6 +334,13 @@ export interface HostTtsSystemStartRequest {
   rate?: number;
   pitch?: number;
   voice?: string;
+  // Optional correlation metadata used by the R8 Pilot. Each real slice gets
+  // a unique article id so a late TextReader completion cannot advance a
+  // replacement queue.
+  articleId?: string;
+  correlationId?: string;
+  generation?: number;
+  sliceIndex?: number;
 }
 
 export interface HostTtsSystemControlRequest {

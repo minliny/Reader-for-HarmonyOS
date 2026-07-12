@@ -13,7 +13,7 @@ import { SpacingTokens } from '../../contract/generated/DimensionTokens';
 import { RouteId } from '../../contract/generated/RouteTable';
 import { ReaderTypography } from '../tokens/ReaderTypography';
 import { ReaderUiStore } from '../store/ReaderUiStore';
-import { SearchResultEntry, BookDetail } from '../store/ReaderUiState';
+import { SearchResultEntry, BookDetail, ChapterTocEntry } from '../store/ReaderUiState';
 
 // ── Bookshelf / book ───────────────────────────────────────────────────────
 
@@ -93,12 +93,19 @@ export struct ReadButton {
       .borderRadius(DemoAliasTokens.radiusPill)
       .height(40).padding({ left: 18, right: 18 })
       .onClick(() => {
-        // route-push first (resets pageState='default'), then chapter-load
-        // switches pageState='loading' on the immersive reader route.
+        const book = this.currentBook;
+        if (book === null) return;
         ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' });
-        if (this.currentBook !== null && this.currentBook.chapterListUrl.length > 0) {
-          ReaderUiStore.dispatch({ type: 'chapter-load', chapterId: this.currentBook.chapterListUrl });
+        const sourceId = book.sourceId ?? '';
+        if (sourceId === 'local') {
+          ReaderUiStore.dispatch({ type: 'bookshelf-book-open', sourceId: 'local', bookId: book.bookId });
+          return;
         }
+        // A chapterListUrl is a TOC endpoint, not a chapter or a resume
+        // coordinate. Re-open through the Core source-scoped resume path.
+        ReaderUiStore.dispatch({
+          type: 'book-detail-load', bookId: book.bookId, sourceId: sourceId, loadFirstChapter: true,
+        });
       })
   }
 }
@@ -106,17 +113,16 @@ export struct ReadButton {
 @Component
 export struct DirectoryPreview {
   @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
-  private fixtureChapters: string[] = ['第一章 科学边界', '第二章 疯狂年代', '第三章 红岸之一'];
+  @StorageProp('reader.chapterToc') chapterToc: ChapterTocEntry[] = [];
+  @StorageProp('reader.loading') loading: boolean = false;
 
-  // currentBook only carries latestChapter (a single string, not a full TOC).
-  // Show it as the first preview row; keep fixture rows as placeholders for the
-  // rest of the TOC. Real TOC list migration is a later phase.
-  private previewChapters(): string[] {
-    if (this.currentBook !== null && this.currentBook.latestChapter.length > 0) {
-      const rest: string[] = this.fixtureChapters.slice(1);
-      return [this.currentBook.latestChapter].concat(rest);
-    }
-    return this.fixtureChapters;
+  private previewChapters(): ChapterTocEntry[] {
+    return this.chapterToc.slice(0, 3);
+  }
+
+  private emptyLabel(): string {
+    if (this.currentBook === null) return '尚未选择书籍';
+    return this.loading ? '正在从 Core 加载目录…' : '暂无从 Core 返回的章节目录';
   }
 
   build() {
@@ -127,11 +133,16 @@ export struct DirectoryPreview {
         Text('完整目录').fontSize(12).fontColor(ColorTokens.primaryDark)
           .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'book-directory' }))
       }.width('100%').margin({ bottom: 6 })
-      ForEach(this.previewChapters(), (c: string, i: number) => {
-        Text(c).fontSize(13).fontColor(ColorTokens.controlInk)
+      if (this.previewChapters().length === 0) {
+        Text(this.emptyLabel()).fontSize(13).fontColor(ColorTokens.muted)
+          .width('100%').padding({ top: 8, bottom: 8 })
+      } else {
+        ForEach(this.previewChapters(), (chapter: ChapterTocEntry, i: number) => {
+          Text(chapter.title).fontSize(13).fontColor(ColorTokens.controlInk)
           .width('100%').padding({ top: 8, bottom: 8 })
           .border(i > 0 ? { width: { top: 1 }, color: ColorTokens.border } : { width: 0 })
-      }, (c: string, i: number) => `${c}-${i}`)
+        }, (chapter: ChapterTocEntry, i: number) => `${chapter.index}-${chapter.chapterId}-${i}`)
+      }
     }
     .width('100%').alignItems(HorizontalAlign.Start)
   }
@@ -144,7 +155,7 @@ export struct BookIntro {
   private summary(): string {
     return this.currentBook !== null && this.currentBook.summary.length > 0
       ? this.currentBook.summary
-      : '文化大革命如火如荼地进行，叶文洁在雷达峰向宇宙发出了人类第一条信息。';
+      : '暂无从 Core 返回的书籍简介。';
   }
 
   build() {
@@ -408,9 +419,27 @@ export struct QuickEntryGrid {
 
 @Component
 export struct SearchInputBox {
-  @Prop query: string = '';
+  @Prop @Watch('syncQueryFromProp') query: string = '';
   @Prop placeholder: string = '搜索书名/作者';
-  @State queryText: string = '';
+  @State private queryText: string = '';
+  @State private isEditing: boolean = false;
+  @State private lastSynchronizedQuery: string = '';
+  @State private hasLocalDraft: boolean = false;
+
+  aboutToAppear(): void {
+    this.syncQueryFromProp();
+  }
+
+  // The parent query is the durable submitted value.  Mirror it on entry and
+  // on later external navigation, but never replace a draft while the native
+  // input owns focus (for example while a search result refreshes state).
+  private syncQueryFromProp(): void {
+    if (this.isEditing) return;
+    if (this.query === this.lastSynchronizedQuery && this.hasLocalDraft) return;
+    if (this.queryText !== this.query) this.queryText = this.query;
+    this.lastSynchronizedQuery = this.query;
+    this.hasLocalDraft = false;
+  }
 
   build() {
     Row() {
@@ -420,7 +449,15 @@ export struct SearchInputBox {
         .backgroundColor(ColorTokens.metaBg).borderRadius(DemoAliasTokens.radiusSm)
         .height(40).padding({ left: SpacingTokens.md, right: SpacingTokens.md })
         .layoutWeight(1).margin({ left: 8 })
-        .onChange((v: string) => { this.queryText = v; })
+        .onFocus(() => { this.isEditing = true; })
+        .onBlur(() => {
+          this.isEditing = false;
+          this.syncQueryFromProp();
+        })
+        .onChange((v: string) => {
+          this.queryText = v;
+          this.hasLocalDraft = true;
+        })
         .onSubmit(() => {
           const q = this.queryText.trim();
           if (q.length > 0) {
@@ -434,54 +471,103 @@ export struct SearchInputBox {
 
 @Component
 export struct ScopeSelector {
-  private scopes: string[] = ['书名', '作者', '书源'];
-  private active: string = '书名';
   build() {
-    Row() {
-      ForEach(this.scopes, (s: string) => {
-        Text(s)
-          .fontSize(13).fontWeight(700)
-          .fontColor(s === this.active ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
-          .backgroundColor(s === this.active ? ColorTokens.primary : ColorTokens.metaBg)
-          .height(32).padding({ left: 14, right: 14 })
-          .borderRadius(DemoAliasTokens.radiusSm).margin({ right: 8 })
-      }, (s: string) => s)
-    }
-    .width('100%')
+    Text('当前范围：全部已启用的 Core 书源。Core 搜索契约不支持按书名、作者或单书源筛选。')
+      .fontSize(12)
+      .fontColor(ColorTokens.muted)
+      .lineHeight(18)
+      .width('100%')
+      .padding({ left: 12, right: 12, top: 9, bottom: 9 })
+      .borderRadius(DemoAliasTokens.radiusMd)
+      .backgroundColor(ColorTokens.surfaceSoft)
   }
 }
 
 @Component
 export struct GroupSelector {
   build() {
-    Row() {
-      Text('分组：全部').fontSize(13).fontColor(ColorTokens.controlInk)
-      Image($r('app.media.reader_icon_more_dark')).width(16).height(16).margin({ left: 6 })
-    }
-    .width('100%').height(36).padding({ left: 14, right: 14 })
-    .border({ width: 1, color: ColorTokens.border }).borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(DemoAliasTokens.surface).alignItems(VerticalAlign.Center)
+    Text('当前无分组筛选：Core book.search 只接受关键词并遍历已启用书源。')
+      .fontSize(12)
+      .fontColor(ColorTokens.muted)
+      .lineHeight(18)
+      .width('100%')
+      .padding({ left: 12, right: 12, top: 9, bottom: 9 })
+      .borderRadius(DemoAliasTokens.radiusMd)
+      .backgroundColor(ColorTokens.surfaceSoft)
   }
 }
 
 @Component
 export struct SearchHistoryList {
   @StorageProp('reader.searchResults') searchResults: SearchResultEntry[] = [];
-  private history: string[] = ['三体', '刘慈欣', '球状闪电'];
+  @StorageProp('reader.searchHistory') history: string[] = [];
+  @StorageProp('reader.searchHistoryLoaded') historyLoaded: boolean = false;
+  @StorageProp('reader.searchHistoryLoading') historyLoading: boolean = false;
+  @StorageProp('reader.searchHistoryError') historyError: string = '';
+  @StorageProp('reader.pendingSearchHistoryClear') pendingSearchHistoryClear: boolean = false;
   build() {
     if (this.searchResults.length > 0) {
       SearchResultsPanel({ results: this.searchResults })
     } else {
       Column() {
-        Text('搜索历史').fontSize(13).fontWeight(900).fontColor(ColorTokens.ink).margin({ bottom: 6 })
-        ForEach(this.history, (h: string, i: number) => {
-          Text(h).fontSize(13).fontColor(ColorTokens.controlInk)
+        Row() {
+          Text('搜索历史').fontSize(13).fontWeight(900).fontColor(ColorTokens.ink).layoutWeight(1)
+          if (this.history.length > 0 && !this.historyLoading) {
+            Text('清空')
+              .fontSize(12).fontWeight(800).fontColor(ColorTokens.accent)
+              .onClick(() => ReaderUiStore.dispatch({ type: 'search-history-clear-request' }))
+          }
+        }
+        .width('100%')
+        .margin({ bottom: 6 })
+        if (this.pendingSearchHistoryClear) {
+          Column({ space: 7 }) {
+            Text('确认清空 Core 中的全部搜索历史？')
+              .fontSize(12).fontWeight(800).fontColor(ColorTokens.accent).width('100%')
+            Text('此操作会删除当前设备 Core 存储中的所有搜索历史。')
+              .fontSize(11).fontColor(ColorTokens.muted).lineHeight(16).width('100%')
+            Row({ space: 8 }) {
+              Text('取消')
+                .fontSize(11).fontWeight(800).fontColor(ColorTokens.primaryDark)
+                .height(30).padding({ left: 12, right: 12 })
+                .borderRadius(DemoAliasTokens.radiusPill).backgroundColor(ColorTokens.metaBg)
+                .border({ width: 1, color: ColorTokens.border })
+                .onClick(() => ReaderUiStore.dispatch({ type: 'search-history-clear-cancel' }))
+              Text('确认清空')
+                .fontSize(11).fontWeight(800).fontColor(DemoAliasTokens.onPrimary)
+                .height(30).padding({ left: 12, right: 12 })
+                .borderRadius(DemoAliasTokens.radiusPill).backgroundColor(ColorTokens.accent)
+                .onClick(() => ReaderUiStore.dispatch({ type: 'search-history-clear-confirm' }))
+            }
+            .width('100%')
+          }
+          .width('100%')
+          .padding(8)
+          .margin({ bottom: 8 })
+          .borderRadius(DemoAliasTokens.radiusSm)
+          .backgroundColor(ColorTokens.surfaceSoft)
+        }
+        if (this.historyLoading || !this.historyLoaded) {
+          Text('正在从 Core 读取搜索历史…')
+            .fontSize(13).fontColor(ColorTokens.muted).width('100%').padding({ top: 8, bottom: 8 })
+        } else if (this.historyError.length > 0) {
+          Text(`搜索历史操作失败：${this.historyError}`)
+            .fontSize(13).fontColor(ColorTokens.accent).lineHeight(18)
             .width('100%').padding({ top: 8, bottom: 8 })
-            .border(i > 0 ? { width: { top: 1 }, color: ColorTokens.border } : { width: 0 })
-            .onClick(() => {
-              ReaderUiStore.dispatch({ type: 'search-submit', query: h });
-            })
-        }, (h: string, i: number) => `${h}-${i}`)
+        } else if (this.history.length === 0) {
+          Text('Core 中还没有搜索历史。开启“保存搜索历史”后，提交的关键词会写入 Core。')
+            .fontSize(13).fontColor(ColorTokens.muted).lineHeight(18)
+            .width('100%').padding({ top: 8, bottom: 8 })
+        } else {
+          ForEach(this.history, (h: string, i: number) => {
+            Text(h).fontSize(13).fontColor(ColorTokens.controlInk)
+              .width('100%').padding({ top: 8, bottom: 8 })
+              .border(i > 0 ? { width: { top: 1 }, color: ColorTokens.border } : { width: 0 })
+              .onClick(() => {
+                ReaderUiStore.dispatch({ type: 'search-submit', query: h });
+              })
+          }, (h: string, i: number) => `${h}-${i}`)
+        }
       }
       .width('100%').alignItems(HorizontalAlign.Start)
     }
@@ -519,7 +605,7 @@ export struct SearchResultsPanel {
           // switches pageState='loading' so book-detail/loading ViewState renders
           // the Loading component instead of the fixture body.
           ReaderUiStore.dispatch({ type: 'route-push', id: 'book-detail' });
-          ReaderUiStore.dispatch({ type: 'book-detail-load', bookId: r.bookId });
+          ReaderUiStore.dispatch({ type: 'book-detail-load', bookId: r.bookId, sourceId: r.sourceId ?? '' });
         })
       }, (r: SearchResultEntry, i: number) => `${r.bookId}-${i}`)
     }

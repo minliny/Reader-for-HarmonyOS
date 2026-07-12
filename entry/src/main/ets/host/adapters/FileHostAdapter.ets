@@ -25,8 +25,10 @@ import {
   HostFileWriteResponse,
   HostFileDeleteRequest,
   HostFileDeleteResponse,
+  HostStoragePathResponse,
   HostError,
   HostErrorWrapper,
+  createCapabilityUnavailableError,
   createFileNotFoundError,
 } from '../types';
 
@@ -58,7 +60,7 @@ export class FileHostAdapter {
           const buffer = new ArrayBuffer(size);
           fs.readSync(file.fd, buffer);
           const decoder = util.TextDecoder.create('utf-8');
-          content = decoder.decodeWithStream(new Uint8Array(buffer));
+          content = decoder.decodeToString(new Uint8Array(buffer));
         }
         const response: HostFileReadResponse = {
           content: content,
@@ -112,6 +114,30 @@ export class FileHostAdapter {
     } catch (e) {
       throw new HostErrorWrapper(this.mapError(e, event.path));
     }
+  }
+
+  /**
+   * storage.path — return the platform storage directory for a given scope.
+   * scope "files" → app filesDir; scope "cache" → app cacheDir.
+   *
+   * HarmonyOS Context intentionally exposes sandbox directories, not a raw
+   * shared/external filesystem root. External access must go through a picker
+   * URI, so that scope fails closed instead of silently returning filesDir.
+   */
+  storagePath(scope: 'cache' | 'files' | 'external' = 'files'): HostStoragePathResponse {
+    let path: string;
+    switch (scope) {
+      case 'cache':
+        path = this.context.cacheDir;
+        break;
+      case 'files':
+        path = this.context.filesDir;
+        break;
+      case 'external':
+        throw new HostErrorWrapper(createCapabilityUnavailableError('storage.path:external'));
+    }
+    const result: HostStoragePathResponse = { path: path };
+    return result;
   }
 
   // ── internal ──

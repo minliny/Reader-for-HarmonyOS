@@ -10,23 +10,25 @@ import { MotionDurationTokens } from '../../contract/generated/MotionTokens';
 import { RouteId } from '../../contract/generated/RouteTable';
 import { ReaderTypography } from '../tokens/ReaderTypography';
 import { ReaderUiStore } from '../store/ReaderUiStore';
+import { CoreBookshelfBook } from '../store/ReaderUiState';
 
 interface BookActionEntry {
   icon: string;
   title: string;
   meta: string;
   route: RouteId;
-  danger: boolean;
 }
 
 @Component
 export struct OverlayHost {
   @StorageProp('reader.overlay') overlayKind: string = '';
+  @StorageProp('reader.bookshelfBooks') bookshelfBooks: CoreBookshelfBook[] = [];
+  @StorageProp('reader.pendingBookshelfRemovalSourceId') pendingBookshelfRemovalSourceId: string = '';
+  @StorageProp('reader.pendingBookshelfRemovalBookId') pendingBookshelfRemovalBookId: string = '';
   private bookActions: BookActionEntry[] = [
-    { icon: 'check', title: '多选', meta: '选择多本书后移动或删除', route: 'book-batch-management', danger: false },
-    { icon: 'people', title: '分组管理', meta: '编辑书架分组与归属', route: 'group-management', danger: false },
-    { icon: 'info', title: '书籍详情', meta: '查看简介、目录和书源', route: 'book-detail', danger: false },
-    { icon: 'trash', title: '删除', meta: '从书架移除当前书籍', route: 'bookshelf', danger: true },
+    { icon: 'check', title: '多选', meta: '查看 Core 支持范围，不执行伪批量操作', route: 'book-batch-management' },
+    { icon: 'people', title: '分组管理', meta: '编辑书架分组与归属', route: 'group-management' },
+    { icon: 'info', title: '书籍详情', meta: '查看当前已选择书籍的简介、目录和书源', route: 'book-detail' },
   ];
 
   build() {
@@ -37,10 +39,12 @@ export struct OverlayHost {
           .width('100%').height('100%')
           .backgroundColor(ColorTokens.ink)
           .opacity(0.4)
-          .onClick(() => ReaderUiStore.dispatch({ type: 'set-overlay', overlay: '' }))
+          .onClick(() => this.dismiss())
 
         if (this.overlayKind === 'book-action') {
           this.renderBookActionSheet()
+        } else if (this.overlayKind === 'dialog') {
+          this.renderBookshelfRemovalConfirm()
         } else {
           Column() {
             Text(this.overlayLabel())
@@ -54,7 +58,7 @@ export struct OverlayHost {
               .padding({ left: SpacingTokens.lg, right: SpacingTokens.lg, top: SpacingTokens.xs, bottom: SpacingTokens.xs })
               .backgroundColor(ColorTokens.metaBg)
               .borderRadius(RadiusTokens.control)
-              .onClick(() => ReaderUiStore.dispatch({ type: 'set-overlay', overlay: '' }))
+              .onClick(() => this.dismiss())
           }
           .padding(SpacingTokens.lg)
           .backgroundColor(ColorTokens.floatingControlBg)
@@ -83,7 +87,7 @@ export struct OverlayHost {
               Text(entry.title)
                 .fontSize(15)
                 .fontWeight(700)
-                .fontColor(entry.danger ? ColorTokens.accent : ColorTokens.ink)
+                .fontColor(ColorTokens.ink)
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
               Text(entry.meta)
@@ -134,9 +138,102 @@ export struct OverlayHost {
 
   private openAction(entry: BookActionEntry): void {
     ReaderUiStore.dispatch({ type: 'set-overlay', overlay: '' });
-    if (!entry.danger) {
-      ReaderUiStore.dispatch({ type: 'route-push', id: entry.route });
+    ReaderUiStore.dispatch({ type: 'route-push', id: entry.route });
+  }
+
+  private pendingBookshelfBook(): CoreBookshelfBook | null {
+    const sourceId = this.pendingBookshelfRemovalSourceId;
+    const bookId = this.pendingBookshelfRemovalBookId;
+    if (sourceId.length === 0 || bookId.length === 0) return null;
+    for (let i = 0; i < this.bookshelfBooks.length; i++) {
+      const book = this.bookshelfBooks[i];
+      if (book.sourceId === sourceId && book.bookId === bookId) return book;
     }
+    return null;
+  }
+
+  private dismiss(): void {
+    if (this.overlayKind === 'dialog') {
+      ReaderUiStore.dispatch({ type: 'bookshelf-remove-cancel' });
+      return;
+    }
+    ReaderUiStore.dispatch({ type: 'set-overlay', overlay: '' });
+  }
+
+  @Builder renderBookshelfRemovalConfirm() {
+    Stack({ alignContent: Alignment.Bottom }) {
+      Column({ space: 10 }) {
+        if (this.pendingBookshelfBook() === null) {
+          Text('没有可确认的书架移除操作')
+            .fontSize(18)
+            .fontWeight(800)
+            .fontColor(ColorTokens.ink)
+          Text('目标已不在当前 Core 书架列表中；不会执行删除。')
+            .fontSize(13)
+            .lineHeight(19)
+            .fontColor(ColorTokens.muted)
+            .width('100%')
+          Text('关闭')
+            .fontSize(13)
+            .fontWeight(800)
+            .fontColor(ColorTokens.primaryDark)
+            .height(40)
+            .width('100%')
+            .textAlign(TextAlign.Center)
+            .borderRadius(RadiusTokens.control)
+            .backgroundColor(ColorTokens.metaBg)
+            .onClick(() => this.dismiss())
+        } else {
+          Text(`移出“${this.pendingBookshelfBook()!.title}”？`)
+            .fontSize(18)
+            .fontWeight(800)
+            .fontColor(ColorTokens.ink)
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Text(`书源：${this.pendingBookshelfBook()!.sourceId}。确认后只会调用 Core bookshelf.remove，不会删除正文缓存或书源。`)
+            .fontSize(13)
+            .lineHeight(19)
+            .fontColor(ColorTokens.muted)
+            .width('100%')
+          Row({ space: 10 }) {
+            Text('取消')
+              .fontSize(13)
+              .fontWeight(800)
+              .fontColor(ColorTokens.primaryDark)
+              .height(42)
+              .layoutWeight(1)
+              .textAlign(TextAlign.Center)
+              .borderRadius(RadiusTokens.control)
+              .backgroundColor(ColorTokens.metaBg)
+              .onClick(() => this.dismiss())
+            Text('确认移出')
+              .fontSize(13)
+              .fontWeight(800)
+              .fontColor(ColorTokens.paper)
+              .height(42)
+              .layoutWeight(1)
+              .textAlign(TextAlign.Center)
+              .borderRadius(RadiusTokens.control)
+              .backgroundColor(ColorTokens.accent)
+              .onClick(() => {
+                const target = this.pendingBookshelfBook();
+                if (target === null) return;
+                ReaderUiStore.dispatch({
+                  type: 'bookshelf-remove-confirm', sourceId: target.sourceId, bookId: target.bookId,
+                });
+              })
+          }
+          .width('100%')
+        }
+      }
+      .width('100%')
+      .padding(SpacingTokens.lg)
+      .backgroundColor(ColorTokens.floatingControlBg)
+      .borderRadius(RadiusTokens.large)
+    }
+    .width('100%')
+    .height('100%')
+    .padding({ left: SpacingTokens.lg, right: SpacingTokens.lg, bottom: SpacingTokens.lg })
   }
 
   private overlayLabel(): string {

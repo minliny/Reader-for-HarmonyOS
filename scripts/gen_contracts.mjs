@@ -1,7 +1,8 @@
 // gen_contracts.mjs — generate ArkTS contract bindings + color.json from Reader UI Contract fixtures.
 // Idempotent: re-run produces identical output. Safe to re-run whenever contracts change.
 //
-// Source (read-only): ../Reader UI/contracts/fixtures/{token,route,motion,motion-policy,view-state}.json
+// Source (read-only): ../Reader-UI/contracts plus fixtures. The historical
+// `Reader UI` checkout name remains accepted for local compatibility.
 //   (override with READER_UI_CONTRACTS env var pointing at the fixtures dir)
 // Output:
 //   entry/src/main/ets/contract/generated/{ColorTokens,DimensionTokens,TextConstraintTokens,TypeTokens,MotionTokens,ShadowTokens,RouteTable,MotionSpecTable,MotionPolicyTable}.ets
@@ -9,6 +10,7 @@
 //   entry/src/main/resources/dark/element/color.json
 import fs from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -19,6 +21,8 @@ const REPO_ROOT = path.resolve(__dirname, '..');
 function resolveContractsDir() {
   const candidates = [
     process.env.READER_UI_CONTRACTS,
+    path.resolve(__dirname, '../../Reader-UI/contracts/fixtures'),
+    path.resolve(REPO_ROOT, '../Reader-UI/contracts/fixtures'),
     path.resolve(__dirname, '../../Reader UI/contracts/fixtures'),
     path.resolve(REPO_ROOT, '../Reader UI/contracts/fixtures'),
   ].filter(Boolean);
@@ -38,10 +42,86 @@ function readJson(name) {
   return JSON.parse(fs.readFileSync(path.join(CONTRACTS_DIR, name), 'utf8'));
 }
 const TOKENS = readJson('token.fixtures.json');
-const ROUTES = readJson('route.fixtures.json');
+const ROUTE_FIXTURES = readJson('route.fixtures.json');
 const MOTIONS = readJson('motion.fixtures.json');
 const POLICIES = readJson('motion-policy.fixtures.json');
-const VIEW_STATES = readJson('view-state.fixtures.json');
+const VIEW_STATE_FIXTURES = readJson('view-state.fixtures.json');
+const HOST_REQUEST_SCHEMA = JSON.parse(
+  fs.readFileSync(path.resolve(CONTRACTS_DIR, '..', 'host-request.schema.json'), 'utf8')
+);
+const HOST_REQUEST_TYPES = HOST_REQUEST_SCHEMA.properties.type.enum;
+if (HOST_REQUEST_TYPES.length !== 58 || new Set(HOST_REQUEST_TYPES).size !== 58) {
+  throw new Error(
+    `Reader UI HostRequest 1.2.0 must contain exactly 58 unique types; got ${HOST_REQUEST_TYPES.length}`
+  );
+}
+
+// Route membership comes from the canonical schema, not the lagging route
+// fixture. Reader UI 2.5 intentionally publishes 235 RouteIds while the
+// historical route fixture still carries the original 200 shell records.
+// frontend-demo-next/route-contract.js supplies the canonical title/shell
+// metadata for the expanded set. Any future schema route without metadata is
+// a generation error: the host must never silently send it to a catch-all
+// shell or render an empty page.
+const ROUTE_SCHEMA = JSON.parse(fs.readFileSync(path.resolve(CONTRACTS_DIR, '..', 'route.schema.json'), 'utf8'));
+const CANONICAL_ROUTE_IDS = ROUTE_SCHEMA.properties.id.enum;
+
+function readCanonicalDemoRoutes() {
+  const readerUiRoot = path.resolve(CONTRACTS_DIR, '..', '..');
+  const candidates = [
+    path.join(readerUiRoot, 'frontend-demo-next', 'route-contract.js'),
+    path.join(readerUiRoot, 'frontend-demo-optimized', 'route-contract.js'),
+  ];
+  for (const candidate of candidates) {
+    if (!fs.existsSync(candidate)) continue;
+    const window = {};
+    vm.runInNewContext(fs.readFileSync(candidate, 'utf8'), { window }, { filename: candidate });
+    const contract = window.ReaderFrontendDemoDraftRouteContract;
+    if (contract && contract.routes) return contract.routes;
+  }
+  throw new Error('Could not load Reader UI frontend-demo route-contract.js');
+}
+
+const DEMO_ROUTES = readCanonicalDemoRoutes();
+// frontend-demo-next renders reader-replace-page but its current route-contract
+// object omits that single schema record. Keep this narrowly explicit until
+// the central metadata is corrected; exact-set validation below prevents this
+// from growing into a fallback table.
+const ROUTE_METADATA_OVERRIDES = {
+  'reader-replace-page': {
+    title: '内容替换规则管理（Reader Replace Page）',
+    shell: 'ReaderShell',
+  },
+};
+const ROUTE_FIXTURE_BY_ID = new Map(ROUTE_FIXTURES.map((route) => [route.id, route]));
+const ROUTE_METADATA_IDS = new Set([...Object.keys(DEMO_ROUTES), ...Object.keys(ROUTE_METADATA_OVERRIDES)]);
+const missingRouteMetadata = CANONICAL_ROUTE_IDS.filter((id) => !ROUTE_METADATA_IDS.has(id));
+const staleRouteMetadata = [...ROUTE_METADATA_IDS].filter((id) => !CANONICAL_ROUTE_IDS.includes(id));
+if (missingRouteMetadata.length > 0 || staleRouteMetadata.length > 0) {
+  throw new Error(`Route metadata must exactly cover canonical schema; missing=${missingRouteMetadata.join(',')} stale=${staleRouteMetadata.join(',')}`);
+}
+const ROUTES = CANONICAL_ROUTE_IDS.map((id) => {
+  const fixture = ROUTE_FIXTURE_BY_ID.get(id) || {};
+  const metadata = ROUTE_METADATA_OVERRIDES[id] || DEMO_ROUTES[id];
+  return { ...fixture, id, title: metadata.title, shell: metadata.shell };
+});
+
+const CONTRACT_25_ROUTE_IDS = CANONICAL_ROUTE_IDS.filter((id) => !ROUTE_FIXTURE_BY_ID.has(id));
+if (CONTRACT_25_ROUTE_IDS.length !== 0 && CONTRACT_25_ROUTE_IDS.length !== 35) {
+  throw new Error(`Expected the legacy 35 Reader UI 2.5 route additions or a fully expanded fixture, found ${CONTRACT_25_ROUTE_IDS.length}`);
+}
+const CONTRACT_25_VIEW_STATES = CONTRACT_25_ROUTE_IDS.map((id) => {
+  const route = ROUTES.find((candidate) => candidate.id === id);
+  return {
+    routeId: id,
+    pageState: 'default',
+    components: [
+      { type: 'BackTopBar', id: `${id}-top`, props: { title: route.title }, children: [] },
+      { type: 'Contract25RoutePage', id: `${id}-page`, props: { contractRouteId: id }, children: [] },
+    ],
+  };
+});
+const VIEW_STATES = [...VIEW_STATE_FIXTURES, ...CONTRACT_25_VIEW_STATES];
 
 function ensureDir(d) { fs.mkdirSync(d, { recursive: true }); }
 ensureDir(OUT_ETS);
@@ -223,6 +303,7 @@ function genRouteTable() {
   const shells = [...new Set(ROUTES.map((r) => r.shell))];
   const shellUnion = shells.map((s) => `'${s}'`).join(' | ');
   const shellCases = ROUTES.map((r) => `      case '${r.id}': return '${r.shell}';`).join('\n');
+  const titleCases = ROUTES.map((r) => `      case '${r.id}': return '${esc(r.title)}';`).join('\n');
   const mainTabCases = ROUTES.filter((r) => r.mainTab).map((r) => `      case '${r.id}': return '${r.mainTab}';`).join('\n');
   // aliasFor: a route may declare aliasFor to reuse another route's ViewState
   // (e.g. discover-home aliases discover). aliasOf resolves one hop; the
@@ -232,7 +313,32 @@ function genRouteTable() {
   const aliasMethod = aliasCases
     ? `\n  static aliasOf(id: string): string | null {\n    switch (id) {\n${aliasCases}\n      default: return null;\n    }\n  }`
     : '\n  static aliasOf(id: string): string | null { return null; }';
-  return `${HEADER}\nexport type RouteId = ${idUnion};\nexport type ShellId = ${shellUnion};\n\nexport class RouteTable {\n  static shellOf(id: string): ShellId {\n    switch (id) {\n${shellCases}\n      default: return 'FlowShell';\n    }\n  }\n\n  static mainTabOf(id: string): string | null {\n    switch (id) {\n${mainTabCases}\n      default: return null;\n    }\n  }${aliasMethod}\n}\n`;
+  const allIds = ids.map((id) => `    '${id}'`).join(',\n');
+  return `${HEADER}\nexport type RouteId = ${idUnion};\nexport type ShellId = ${shellUnion};\n\nexport class RouteTable {\n  static readonly ALL: RouteId[] = [\n${allIds}\n  ];\n\n  static has(id: string): boolean {\n    return RouteTable.ALL.indexOf(id as RouteId) >= 0;\n  }\n\n  static shellOf(id: string): ShellId | null {\n    switch (id) {\n${shellCases}\n      default: return null;\n    }\n  }\n\n  static titleOf(id: string): string | null {\n    switch (id) {\n${titleCases}\n      default: return null;\n    }\n  }\n\n  static mainTabOf(id: string): string | null {\n    switch (id) {\n${mainTabCases}\n      default: return null;\n    }\n  }${aliasMethod}\n}\n`;
+}
+
+// ── HostRequestTable.ets ─────────────────────────────────────────────────
+// Host identity is generated from the canonical 1.2.0 schema. Native Host
+// adapters consume this table directly; they never maintain a second list of
+// wire names that can silently drift from Reader UI.
+function genHostRequestTable() {
+  const typeUnion = HOST_REQUEST_TYPES.map((type) => `'${esc(type)}'`).join(' | ');
+  const all = HOST_REQUEST_TYPES.map((type) => `    '${esc(type)}'`).join(',\n');
+  return `${HEADER}
+export type HostRequestType = ${typeUnion};
+export type HostRequestInitiator = 'core' | 'reducer';
+
+export class HostRequestTable {
+  static readonly SCHEMA_VERSION: string = '1.2.0';
+  static readonly ALL: HostRequestType[] = [
+${all}
+  ];
+
+  static has(type: string): boolean {
+    return HostRequestTable.ALL.indexOf(type as HostRequestType) >= 0;
+  }
+}
+`;
 }
 
 // ── ViewStateTable.ets ────────────────────────────────────────────────────
@@ -260,7 +366,20 @@ const BASELINE_PROPS = {
   destructive: 'boolean',
   sources: 'number',
   unread: 'number',
+  // Kept even after the 35 Reader UI 2.5 routes moved from the historical
+  // Contract25RoutePage scaffold to direct canonical ViewState fixtures. The
+  // defensive renderer remains compilable for older fixture snapshots.
+  contractRouteId: 'string',
 };
+
+function viewStatePropType(value) {
+  if (value === null || Array.isArray(value) || typeof value === 'object') {
+    return 'ViewStateJSONValue';
+  }
+  if (typeof value === 'number') return 'number';
+  if (typeof value === 'boolean') return 'boolean';
+  return 'string';
+}
 
 function collectPropTypes(viewStates) {
   const types = new Map(Object.entries(BASELINE_PROPS));
@@ -268,13 +387,11 @@ function collectPropTypes(viewStates) {
     const props = c.props || {};
     for (const k of Object.keys(props)) {
       const v = props[k];
-      let t;
-      if (Array.isArray(v)) t = 'string[]';
-      else if (typeof v === 'number') t = 'number';
-      else if (typeof v === 'boolean') t = 'boolean';
-      else t = 'string';
-      // Conflicting types across fixtures → widen to string.
-      if (types.has(k) && types.get(k) !== t) t = 'string';
+      let t = viewStatePropType(v);
+      // Conflicting primitive/structured types must retain both shapes. A
+      // JSON value is the lossless widening; coercing to string would discard
+      // canonical nested payloads and make ArkTS consumers reconstruct data.
+      if (types.has(k) && types.get(k) !== t) t = 'ViewStateJSONValue';
       types.set(k, t);
     }
     (c.children || []).forEach(visit);
@@ -283,18 +400,32 @@ function collectPropTypes(viewStates) {
   return types;
 }
 
+function arktsTemplateLiteral(value) {
+  return '`' + value
+    .replace(/\\/g, '\\\\')
+    .replace(/`/g, '\\`')
+    .replace(/\$\{/g, '\\${') + '`';
+}
+
 function genViewStateTable() {
   const entries = VIEW_STATES.map((v) => ({
     routeId: v.routeId,
     pageState: v.pageState,
+    context: v.context || {},
     components: (v.components || []).map(normalizeComponent),
   }));
   const propTypes = collectPropTypes(VIEW_STATES);
   const propLines = [...propTypes.keys()].sort().map((k) => `  ${k}?: ${propTypes.get(k)};`);
   const propsIface = `export interface ViewStateProps {\n${propLines.join('\n')}\n}`;
-  const body = JSON.stringify(entries, null, 2);
+  // ArkTS rejects deeply nested untyped object literals even when the outer
+  // array has an interface annotation. Parse the canonical JSON as a typed
+  // value instead: props/context remain objects, arrays, numbers, booleans and
+  // null at runtime (they are not stringified payload fields).
+  const body = arktsTemplateLiteral(JSON.stringify(entries, null, 2));
   return `${HEADER}
 import { RouteId, RouteTable } from './RouteTable';
+
+export type ViewStateJSONValue = object | string | number | boolean | null;
 
 ${propsIface}
 
@@ -308,11 +439,12 @@ export interface ViewStateComponent {
 export interface ViewStateEntry {
   routeId: RouteId;
   pageState: string;
+  context: Record<string, ViewStateJSONValue>;
   components: ViewStateComponent[];
 }
 
 export class ViewStateTable {
-  static readonly ENTRIES: ViewStateEntry[] = ${body};
+  static readonly ENTRIES: ViewStateEntry[] = JSON.parse(${body}) as ViewStateEntry[];
 
   // Resolve components for (routeId, pageState). Falls back to:
   //   1. same-route 'default' pageState entry
@@ -336,6 +468,23 @@ export class ViewStateTable {
       current = next;
     }
     return [];
+  }
+
+  static contextFor(routeId: string, pageState: string): Record<string, ViewStateJSONValue> {
+    let current: string = routeId;
+    for (let depth = 0; depth < 5; depth++) {
+      let fallback: Record<string, ViewStateJSONValue> | undefined = undefined;
+      for (const entry of ViewStateTable.ENTRIES) {
+        if (entry.routeId !== current) continue;
+        if (entry.pageState === pageState) return entry.context;
+        if (entry.pageState === 'default' || fallback === undefined) fallback = entry.context;
+      }
+      if (fallback !== undefined) return fallback;
+      const next: string | null = RouteTable.aliasOf(current);
+      if (next === null || next === current) break;
+      current = next;
+    }
+    return {};
   }
 
   static bodyComponentsFor(routeId: string, pageState: string): ViewStateComponent[] {
@@ -414,6 +563,7 @@ writeEts('MotionTokens.ets', genMotionTokens());
 writeEts('ShadowTokens.ets', genShadowTokens());
 writeEts('TokenRegistry.ets', genTokenRegistry());
 writeEts('RouteTable.ets', genRouteTable());
+writeEts('HostRequestTable.ets', genHostRequestTable());
 writeEts('ViewStateTable.ets', genViewStateTable());
 writeEts('MotionSpecTable.ets', genMotionSpecTable());
 writeEts('MotionPolicyTable.ets', genMotionPolicyTable());
@@ -425,4 +575,4 @@ fs.writeFileSync(path.join(OUT_RES_DARK, 'color.json'), colorJson.dark);
 console.log('  wrote entry/src/main/resources/dark/element/color.json');
 
 console.log(`\nDone. Contracts: ${CONTRACTS_DIR}`);
-console.log(`Tokens: ${TOKENS.length} | Routes: ${ROUTES.length} | ViewStates: ${VIEW_STATES.length} | Motions: ${MOTIONS.length} | Policies: ${POLICIES.filter((p) => p && p.id).length}`);
+console.log(`Tokens: ${TOKENS.length} | Routes: ${ROUTES.length} | ViewStates: ${VIEW_STATES.length} | Motions: ${MOTIONS.length} | Policies: ${POLICIES.filter((p) => p && p.id).length} | HostRequests: ${HOST_REQUEST_TYPES.length}`);

@@ -27,11 +27,24 @@ export class DeviceHostAdapter {
     const duration: number = request.durationMs !== undefined && request.durationMs > 0
       ? request.durationMs
       : 15;
-    await vibrator.startVibration(
-      { type: 'time', duration: duration },
-      { id: 0, usage: 'notification' },
-    );
+    try {
+      await vibrator.startVibration(
+        { type: 'time', duration: duration },
+        { id: 0, usage: 'notification' },
+      );
+    } catch (e) {
+      throw new Error(`DeviceHostAdapter.vibrate duration=${duration} failed: ${e}`);
+    }
     const resp: HostDeviceVibrateResponse = { vibrated: true };
     return resp;
+  }
+
+  /** Reader UI 2.5 haptics.* — distinct, real time-based hardware effects. */
+  async haptic(style: 'light' | 'medium' | 'heavy'): Promise<boolean> {
+    let duration = 10;
+    if (style === 'medium') duration = 25;
+    if (style === 'heavy') duration = 45;
+    const result = await this.vibrate({ durationMs: duration });
+    return result.vibrated;
   }
 }

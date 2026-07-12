@@ -69,6 +69,18 @@ export default function SettingsViewStateTests(): void {
       expect(after.appThemeMode).assertEqual(s.appThemeMode);
     });
 
+    it('reducerSettingsSegmentSetsOnlySupportedCoreHistoryLimits', 0, () => {
+      const s = DemoUiState.initial();
+      const fifty = ReaderReducer.reduce(s, {
+        type: 'settings-segment-switch', settingsKey: 'searchHistoryLimit', settingsValue: '50',
+      });
+      expect(fifty.searchHistoryLimit).assertEqual(50);
+      const rejected = ReaderReducer.reduce(fifty, {
+        type: 'settings-segment-switch', settingsKey: 'searchHistoryLimit', settingsValue: '999',
+      });
+      expect(rejected.searchHistoryLimit).assertEqual(50);
+    });
+
     // ── Reducer: settings-stepper-change ──
     it('reducerSettingsStepperIncrementsCoverColumns', 0, () => {
       const s = DemoUiState.initial();

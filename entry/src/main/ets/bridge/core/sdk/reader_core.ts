@@ -86,6 +86,15 @@ export type CapabilityHandler = (
   event: ReaderCoreHostRequestEvent
 ) => JsonObject | Promise<JsonObject>;
 
+// A runtime request and a background dispatcher must never consume the same
+// native event queue.  Keep the routing seam deliberately structural so the
+// platform can attach its HostCapabilityRegistry directly to request waiting.
+// This makes the request owner the sole reader of its result/error events.
+export type CapabilityRequestRouter = {
+  has(capability: string): boolean;
+  route(event: ReaderCoreHostRequestEvent): JsonObject | Promise<JsonObject>;
+};
+
 /**
  * Host-owned HTTP fetch mechanism. The adapter calls this to actually perform
  * the network operation for an `http.execute` host request.
@@ -177,14 +186,14 @@ export class ReaderCoreRuntime {
   private readonly pendingEvents: ReaderCoreEvent[] = [];
   private nextRequestId = 1;
   private closed = false;
-  private capabilityRouter: CapabilityRouter | null = null;
+  private capabilityRouter: CapabilityRequestRouter | null = null;
 
   constructor(nativeModule: NativeReaderCoreModule, config: JsonObject = {}) {
     this.native = nativeModule;
     this.runtime = nativeModule.createRuntime(config);
   }
 
-  setCapabilityRouter(router: CapabilityRouter | null): void {
+  setCapabilityRouter(router: CapabilityRequestRouter | null): void {
     this.capabilityRouter = router;
   }
 

@@ -36,9 +36,13 @@ export class ScreenHostAdapter {
    * `enabled: true` keeps the screen on; `enabled: false` releases it.
    */
   async keepOn(request: HostDeviceScreenKeepOnRequest): Promise<HostDeviceScreenKeepOnResponse> {
-    const win = await window.getLastWindow(this.context);
-    await win.setWindowKeepScreenOn(request.enabled);
-    return { enabled: request.enabled };
+    try {
+      const win = await window.getLastWindow(this.context);
+      await win.setWindowKeepScreenOn(request.enabled);
+      return { enabled: request.enabled };
+    } catch (e) {
+      throw new Error(`ScreenHostAdapter.keepOn enabled=${request.enabled} failed: ${e}`);
+    }
   }
 
   /**
@@ -47,8 +51,33 @@ export class ScreenHostAdapter {
    * method because the UI Contract treats it as a distinct capability.
    */
   async release(): Promise<HostDeviceScreenReleaseResponse> {
-    const win = await window.getLastWindow(this.context);
-    await win.setWindowKeepScreenOn(false);
-    return { released: true };
+    try {
+      const win = await window.getLastWindow(this.context);
+      await win.setWindowKeepScreenOn(false);
+      return { released: true };
+    } catch (e) {
+      throw new Error(`ScreenHostAdapter.release failed: ${e}`);
+    }
+  }
+
+  /** Reader UI 2.5 brightness.set — apply and read back window brightness. */
+  async setBrightness(value: number): Promise<number> {
+    try {
+      const win = await window.getLastWindow(this.context);
+      await win.setWindowBrightness(value);
+      return win.getWindowProperties().brightness;
+    } catch (e) {
+      throw new Error(`ScreenHostAdapter.setBrightness value=${value} failed: ${e}`);
+    }
+  }
+
+  /** Reader UI 2.5 brightness.get — read the active window's real value. */
+  async getBrightness(): Promise<number> {
+    try {
+      const win = await window.getLastWindow(this.context);
+      return win.getWindowProperties().brightness;
+    } catch (e) {
+      throw new Error(`ScreenHostAdapter.getBrightness failed: ${e}`);
+    }
   }
 }

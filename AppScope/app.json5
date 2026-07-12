@@ -1,6 +1,6 @@
 {
   "app": {
-    "bundleName": "reader.minliny.testpackage",
+    "bundleName": "com.minliny.reader",
     "vendor": "reader",
     "versionCode": 1000000,
     "versionName": "1.0.0",

@@ -19,7 +19,8 @@ import { DiscoverSourceBar, DiscoverEntryRow, DiscoverFilterTrigger, DiscoverLis
   DiscoverStatePage, DiscoverSourceBulkPage, DiscoverSourceLoginPage, DiscoverRuleTestPage } from './DiscoverComponents';
 import { RssSearchEntry, RssModeRow, RssSourceOverview, RssArticleSection,
   RssAllPage, RssOriginalPage, RssRefreshingPage, RssOriginalBrowserPage,
-  RssFavoriteGroupsPage, RssSourceGroupsPage, RssSourceImportPage, RssSourceEditPage } from './RssComponents';
+  RssFavoritesUnavailablePage, RssFavoriteGroupsPage, RssSourceGroupsPage,
+  RssSourceImportPage, RssSourceEditPage } from './RssComponents';
 import { InteractionDebugBadge } from './InteractionDebugComponents';
 import { AppShellStructure, MainTabsStructure, SearchHomePage, SearchResultsPage, SearchStatePage, BookTocPreviewPage,
   BookshelfEmptyPage, SourceManagementPage, SourceDetailPage, SourceImportOptionsPage, SourceDisabledState,
@@ -28,11 +29,13 @@ import { AppShellStructure, MainTabsStructure, SearchHomePage, SearchResultsPage
   RemoteWebDavBooksPage, RssDetailPage, RssEmptyState, RssErrorState, GlobalStatePage,
   OfflineStatePage, PermissionRequiredPage, AboutVersionPage, AboutFeedbackPage, LocalBookImportPage, ReadingSettingsEntryPage,
   BookMoreMenuPage, BookGroupManagementPage, SourceFormPage, GlobalSettingsPage, BackupSettingsPage,
-  RssSubscriptionManagementPage, GroupManagementPage, BookBatchManagementPage, BookDirectoryPage } from './StructuralPageComponents';
+  RssSubscriptionManagementPage, RssSubscriptionDeleteConfirmPage, GroupManagementPage, BookBatchManagementPage, BookDirectoryPage } from './StructuralPageComponents';
 import { ProgressBar, BookTitleAuthor, SourceStatus, ReadButton, DirectoryPreview, BookIntro, ConfigEntry,
   SearchEntry, SourceTypeSegment, CurrentSourceCard, SourceCategoryChips, DiscoveryContentCard, SourceStatusBar,
   SubscriptionSummaryCard, FeedStatusChips, FeedSourceChips, RssEntryItem, UnreadIndicator,
   LocalOverviewCard, QuickEntryGrid, SearchInputBox, ScopeSelector, GroupSelector, SearchHistoryList } from './ContractComponents';
+import { Contract25RoutePage } from './Contract25RouteComponents';
+import { ReaderUIScreenGraphShadowRegistry } from '../router/ReaderUIScreenGraphShadowRegistry';
 
 @Component
 export struct ViewStateRenderer {
@@ -47,10 +50,51 @@ export struct ViewStateRenderer {
   // laid out vertically).
   @Prop layoutMode: string = 'column';
 
+  // The canonical demo's rss-starred fixture reuses its visual article list,
+  // but Core does not provide an RSS favorite projection.  Transform only
+  // this runtime body node so a regeneration of the read-only Reader UI
+  // fixture cannot accidentally display every Core article as a favorite.
+  private bodyComponentsForCurrentRoute(): ViewStateComponent[] {
+    // Execute the canonical registry lookup/parity check at the body entry,
+    // while retaining generated ViewStateTable as the native render source.
+    ReaderUIScreenGraphShadowRegistry.observeViewState(
+      this.routeId,
+      this.pageState,
+      ViewStateTable.componentsFor(this.routeId, this.pageState),
+    );
+    const components = ViewStateTable.bodyComponentsFor(this.routeId, this.pageState);
+    // The canonical route currently aliases this screen to management. Do not
+    // render that alias as a fake confirmation: the runtime has a live Core
+    // target and an explicit confirm action for this exact route.
+    if (this.routeId === 'rss-source-delete-confirm') {
+      return [{
+        type: 'RssSubscriptionDeleteConfirmPage',
+        id: 'rss-subscription-delete-confirm-page',
+        props: {},
+        children: [],
+      }];
+    }
+    if (this.routeId !== 'rss-starred') return components;
+    const resolved: ViewStateComponent[] = [];
+    for (const component of components) {
+      if (component.type === 'RssArticleSection') {
+        resolved.push({
+          type: 'RssFavoritesUnavailablePage',
+          id: component.id,
+          props: component.props,
+          children: component.children,
+        });
+      } else {
+        resolved.push(component);
+      }
+    }
+    return resolved;
+  }
+
   build() {
     if (this.layoutMode === 'stack') {
       Stack() {
-        ForEach(ViewStateTable.bodyComponentsFor(this.routeId, this.pageState), (component: ViewStateComponent, idx: number) => {
+        ForEach(this.bodyComponentsForCurrentRoute(), (component: ViewStateComponent, idx: number) => {
           this.renderDebuggedComponent(component, true)
         }, (component: ViewStateComponent, idx: number) => `${component.id}-${component.type}-${idx}`)
       }
@@ -61,7 +105,7 @@ export struct ViewStateRenderer {
       // 才能检测到内容溢出并启用滚动（设置 height('100%') 会让内容被限制为
       // 视口高度，无法溢出，Scroll 不滚动）。
       Column() {
-        ForEach(ViewStateTable.bodyComponentsFor(this.routeId, this.pageState), (component: ViewStateComponent, idx: number) => {
+        ForEach(this.bodyComponentsForCurrentRoute(), (component: ViewStateComponent, idx: number) => {
           Column() {
             this.renderDebuggedComponent(component, false)
           }
@@ -80,8 +124,7 @@ export struct ViewStateRenderer {
     return value !== undefined ? value : fallback;
   }
 
-  // Extract BookEntry[] from a BookGrid's children (BookCard ViewStateComponents).
-  // Recurses into BookshelfShelfSection children to find the nested BookGrid.
+  // Extract book rows from either a cover-grid or list-mode ViewState subtree.
   private extractBooks(children: ViewStateComponent[]): BookEntry[] {
     const books: BookEntry[] = [];
     for (const child of children) {
@@ -93,8 +136,8 @@ export struct ViewStateRenderer {
           coverKey: this.textOr(child.props.coverKey, 'threeBody'),
         };
         books.push(entry);
-      } else if (child.type === 'BookGrid' && child.children.length > 0) {
-        // BookGrid's children are BookCard entries — extract them.
+      } else if (child.children.length > 0) {
+        // Covers BookGrid -> BookCard and List -> ListRow recursively.
         const nested = this.extractBooks(child.children);
         for (const n of nested) {
           books.push(n);
@@ -168,6 +211,7 @@ export struct ViewStateRenderer {
       BookshelfShelfSection({
         title: this.textOr(component.props.title, '我的书架'),
         books: this.extractBooks(component.children),
+        viewMode: this.textOr(component.props.viewMode, 'cover'),
         filterOpen: component.props.filterOpen === true,
       })
     } else if (component.type === 'BookHero') {
@@ -300,6 +344,8 @@ export struct ViewStateRenderer {
       RssSourceOverview()
     } else if (component.type === 'RssArticleSection') {
       RssArticleSection()
+    } else if (component.type === 'RssFavoritesUnavailablePage') {
+      RssFavoritesUnavailablePage()
     } else if (component.type === 'RssAllPage') {
       RssAllPage()
     } else if (component.type === 'RssOriginalPage') {
@@ -329,7 +375,7 @@ export struct ViewStateRenderer {
     } else if (component.type === 'SearchHomePage') {
       SearchHomePage({ placeholder: this.textOr(component.props.placeholder, '搜索书名/作者') })
     } else if (component.type === 'SearchResultsPage') {
-      SearchResultsPage({ query: this.textOr(component.props.query, '深空信号') })
+      SearchResultsPage()
     } else if (component.type === 'SearchStatePage') {
       SearchStatePage({
         variant: this.textOr(component.props.variant, 'empty'),
@@ -345,16 +391,15 @@ export struct ViewStateRenderer {
         message: this.textOr(component.props.message, '导入本地书籍或从书源搜索后加入书架。'),
       })
     } else if (component.type === 'BookMoreMenuPage') {
-      BookMoreMenuPage({
-        title: this.textOr(component.props.title, '深空信号'),
-        subtitle: this.textOr(component.props.subtitle, '本地书籍'),
-      })
+      BookMoreMenuPage()
     } else if (component.type === 'BookGroupManagementPage') {
       BookGroupManagementPage()
     } else if (component.type === 'GroupManagementPage') {
       GroupManagementPage()
     } else if (component.type === 'BookBatchManagementPage') {
       BookBatchManagementPage()
+    } else if (component.type === 'RssSubscriptionDeleteConfirmPage') {
+      RssSubscriptionDeleteConfirmPage()
     } else if (component.type === 'BookDirectoryPage') {
       BookDirectoryPage()
     } else if (component.type === 'SourceManagementPage') {
@@ -388,14 +433,11 @@ export struct ViewStateRenderer {
       BackupSettingsPage()
     } else if (component.type === 'SyncErrorPage') {
       SyncErrorPage({
-        title: this.textOr(component.props.title, '同步冲突'),
-        message: this.textOr(component.props.message, '本地与云端版本不一致，请选择处理方式。'),
+        title: this.textOr(component.props.title, '同步操作未完成'),
+        message: this.textOr(component.props.message, '请返回同步页查看 Core 与 Host 返回的具体错误。'),
       })
     } else if (component.type === 'SyncProgressPage') {
-      SyncProgressPage({
-        title: this.textOr(component.props.title, '同步中'),
-        progress: this.numOr(component.props.progress, 0.64),
-      })
+      SyncProgressPage()
     } else if (component.type === 'RestoreConfirmPage') {
       RestoreConfirmPage({ variant: this.textOr(component.props.variant, 'default') })
     } else if (component.type === 'RestoreProgressPage') {
@@ -407,7 +449,7 @@ export struct ViewStateRenderer {
     } else if (component.type === 'RemoteWebDavBooksPage') {
       RemoteWebDavBooksPage()
     } else if (component.type === 'RssDetailPage') {
-      RssDetailPage({ title: this.textOr(component.props.title, 'AI 周报：端侧模型更新') })
+      RssDetailPage()
     } else if (component.type === 'RssEmptyState') {
       RssEmptyState({
         title: this.textOr(component.props.title, '暂无订阅'),
@@ -434,6 +476,12 @@ export struct ViewStateRenderer {
         title: this.textOr(component.props.title, '当前离线'),
         message: this.textOr(component.props.message, '检查网络后再继续同步或搜索。'),
       })
+    } else if (component.type === 'Permission') {
+      PermissionRequiredPage({
+        title: this.textOr(component.props.title, '需要权限'),
+        message: this.textOr(component.props.message, '授予权限后才能继续。'),
+        action: this.textOr(component.props.action, '重新选择文件'),
+      })
     } else if (component.type === 'PermissionRequiredPage') {
       PermissionRequiredPage({
         title: this.textOr(component.props.title, '需要权限'),
@@ -441,16 +489,67 @@ export struct ViewStateRenderer {
         action: this.textOr(component.props.action, '去授权'),
       })
     } else if (component.type === 'AboutVersionPage') {
-      AboutVersionPage({
-        title: this.textOr(component.props.title, 'Reader'),
-        version: this.textOr(component.props.version, '0.1.0'),
-      })
+      AboutVersionPage()
     } else if (component.type === 'AboutFeedbackPage') {
       AboutFeedbackPage()
     } else if (component.type === 'LocalBookImportPage') {
       LocalBookImportPage()
     } else if (component.type === 'ReadingSettingsEntryPage') {
       ReadingSettingsEntryPage()
+    } else if (component.type === 'Contract25RoutePage') {
+      Contract25RoutePage({ routeId: this.textOr(component.props.contractRouteId, '') })
+    } else if (component.type === 'Dialog') {
+      Column({ space: 10 }) {
+        Text(this.textOr(component.props.title, '确认操作'))
+          .fontSize(20)
+          .fontWeight(800)
+          .width('100%')
+        if (this.textOr(component.props.message, '') !== '') {
+          Text(this.textOr(component.props.message, ''))
+            .fontSize(14)
+            .fontColor('#725F50')
+            .width('100%')
+        }
+        if (component.children.length > 0) {
+          this.renderChildren(component.children)
+        }
+      }
+      .width('100%')
+      .padding(16)
+      .borderRadius(18)
+      .backgroundColor('#FFFDF8')
+      .border({ width: 1, color: '#E7DED2' })
+    } else if (component.type === 'FloatingPageControl') {
+      Row() {
+        Text(this.textOr(component.props.title, '阅读边界'))
+          .fontSize(13)
+          .fontWeight(700)
+          .fontColor('#FFFDF8')
+      }
+      .padding({ left: 14, right: 14, top: 9, bottom: 9 })
+      .borderRadius(20)
+      .backgroundColor('#2E2924')
+    } else if (component.type === 'Toast') {
+      Column({ space: 6 }) {
+        Text(this.textOr(component.props.title, '状态提示'))
+          .fontSize(14)
+          .fontWeight(750)
+          .width('100%')
+        if (this.textOr(component.props.message, '') !== '') {
+          Text(this.textOr(component.props.message, ''))
+            .fontSize(12)
+            .fontColor('#725F50')
+            .width('100%')
+        }
+        if (component.children.length > 0) {
+          this.renderChildren(component.children)
+        }
+      }
+      .width('100%')
+      .padding(12)
+      .borderRadius(14)
+      .backgroundColor('#FFF9EE')
+      .border({ width: 1, color: '#E7DED2' })
     } else if (component.type === 'Button') {
       DemoButton({ label: this.textOr(component.props.label, '操作'), destructive: component.props.destructive === true })
     } else if (component.type === 'Input') {
@@ -545,7 +644,23 @@ export struct ViewStateRenderer {
     } else if (component.type === 'SearchHistoryList') {
       SearchHistoryList()
     } else {
-      Empty()
+      // Fail closed and visibly on contract drift. Unknown canonical
+      // ComponentTypes never inherit a generic button/list implementation and
+      // therefore cannot dispatch an unintended action.
+      Column({ space: 6 }) {
+        Text('Reader UI 组件契约漂移')
+          .fontSize(14)
+          .fontWeight(800)
+          .fontColor('#A03A32')
+        Text(component.type)
+          .fontSize(11)
+          .fontColor('#725F50')
+      }
+      .width('100%')
+      .padding(12)
+      .borderRadius(12)
+      .backgroundColor('#FFF2F0')
+      .border({ width: 1, color: '#D98C83' })
     }
   }
 }

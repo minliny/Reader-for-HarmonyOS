@@ -59,7 +59,33 @@ const READ_STATE_WAITING: number = 4;
 type TtsBackendKind = 'textReader' | 'textToSpeechFallback' | 'none';
 
 // Progress callback type — Reducer registers to receive currentPercent updates.
-export type TtsProgressCallback = (articleId: string, currentPercent: number, maxPercent: number) => void;
+export type TtsProgressCallback = (articleId: string, currentPercent: number, maxPercent: number,
+  progressType: number) => void;
+export type TtsCompletionCallback =
+  (articleId: string, correlationId: string, generation: number, sliceIndex: number) => void;
+export type TtsFailureCallback =
+  (articleId: string, correlationId: string, generation: number, sliceIndex: number,
+    message: string) => void;
+
+class FallbackSpeakListener implements textToSpeech.SpeakListener {
+  private readonly completed: (requestId: string) => void;
+  private readonly failed: (requestId: string, message: string) => void;
+
+  constructor(completed: (requestId: string) => void,
+    failed: (requestId: string, message: string) => void) {
+    this.completed = completed;
+    this.failed = failed;
+  }
+
+  onStart(_requestId: string, _response: textToSpeech.StartResponse): void {}
+  onComplete(requestId: string, _response: textToSpeech.CompleteResponse): void {
+    this.completed(requestId);
+  }
+  onStop(_requestId: string, _response: textToSpeech.StopResponse): void {}
+  onError(requestId: string, _errorCode: number, errorMessage: string): void {
+    this.failed(requestId, errorMessage);
+  }
+}
 
 export class TtsHostAdapter {
   private context: common.BaseContext | null;
@@ -69,6 +95,12 @@ export class TtsHostAdapter {
   private currentText: string = '';
   private lastPercent: number = 0;
   private progressCallback: TtsProgressCallback | null = null;
+  private completionCallback: TtsCompletionCallback | null = null;
+  private failureCallback: TtsFailureCallback | null = null;
+  private currentCorrelationId: string = '';
+  private currentGeneration: number = -1;
+  private currentSliceIndex: number = -1;
+  private completionDeliveredArticleId: string = '';
   // Fallback engine (only used when TextReader.init fails).
   private fallbackEngine: textToSpeech.TextToSpeechEngine | null = null;
   private fallbackNextRequestId: number = 1;
@@ -84,6 +116,14 @@ export class TtsHostAdapter {
    */
   setProgressCallback(callback: TtsProgressCallback | null): void {
     this.progressCallback = callback;
+  }
+
+  setCompletionCallback(callback: TtsCompletionCallback | null): void {
+    this.completionCallback = callback;
+  }
+
+  setFailureCallback(callback: TtsFailureCallback | null): void {
+    this.failureCallback = callback;
   }
 
   /**
@@ -108,6 +148,11 @@ export class TtsHostAdapter {
    * tts.system.stop — stop playback and clear state.
    */
   async stop(): Promise<HostTtsSystemControlResponse> {
+    // Invalidate callbacks before asking the platform to stop. TextReader may
+    // emit a final progress event while stop() is resolving.
+    this.currentCorrelationId = '';
+    this.currentGeneration = -1;
+    this.currentSliceIndex = -1;
     if (this.backend === 'textReader' && this.initialized) {
       try {
         await TextReader.stop();
@@ -193,6 +238,12 @@ export class TtsHostAdapter {
     this.currentArticleId = '';
     this.currentText = '';
     this.lastPercent = 0;
+    this.currentCorrelationId = '';
+    this.currentGeneration = -1;
+    this.currentSliceIndex = -1;
+    this.completionDeliveredArticleId = '';
+    this.completionCallback = null;
+    this.failureCallback = null;
   }
 
   // ── internal: initialization ──
@@ -239,6 +290,10 @@ export class TtsHostAdapter {
         },
       };
       this.fallbackEngine = await textToSpeech.createEngine(createParams);
+      this.fallbackEngine.setListener(new FallbackSpeakListener(
+        (requestId: string): void => this.deliverFallbackCompletion(requestId),
+        (requestId: string, message: string): void => this.deliverFallbackFailure(requestId, message),
+      ));
       this.backend = 'textToSpeechFallback';
       this.initialized = true;
     } catch (e) {
@@ -253,7 +308,15 @@ export class TtsHostAdapter {
       const current = typeof progress.currentPercent === 'number' ? progress.currentPercent : 0;
       this.lastPercent = current;
       if (this.progressCallback !== null) {
-        this.progressCallback(progress.id, current, progress.maxPercent);
+        this.progressCallback(progress.id, current, progress.maxPercent, progress.readProgressType as number);
+      }
+      if (progress.readProgressType as number === READ_PROGRESS_TYPE_COMPLETED &&
+        progress.id === this.currentArticleId && this.currentCorrelationId.length > 0 &&
+        this.completionCallback !== null && this.completionDeliveredArticleId !== progress.id) {
+        this.completionDeliveredArticleId = progress.id;
+        this.completionCallback(
+          progress.id, this.currentCorrelationId, this.currentGeneration, this.currentSliceIndex,
+        );
       }
     });
     TextReader.on('stateChange', (state: TextReader.ReadState) => {
@@ -263,12 +326,36 @@ export class TtsHostAdapter {
     });
   }
 
+  private deliverFallbackCompletion(requestId: string): void {
+    if (requestId !== this.currentArticleId || this.currentCorrelationId.length === 0 ||
+      this.completionCallback === null || this.completionDeliveredArticleId === requestId) return;
+    this.completionDeliveredArticleId = requestId;
+    this.completionCallback(
+      requestId, this.currentCorrelationId, this.currentGeneration, this.currentSliceIndex,
+    );
+  }
+
+  private deliverFallbackFailure(requestId: string, message: string): void {
+    if (requestId !== this.currentArticleId || this.currentCorrelationId.length === 0 ||
+      this.failureCallback === null || this.completionDeliveredArticleId === requestId) return;
+    this.completionDeliveredArticleId = requestId;
+    this.failureCallback(
+      requestId, this.currentCorrelationId, this.currentGeneration, this.currentSliceIndex,
+      message.length > 0 ? message : 'Harmony TTS fallback failed',
+    );
+  }
+
   // ── internal: TextReader start ──
 
   private async startWithTextReader(request: HostTtsSystemStartRequest): Promise<HostTtsSystemStartResponse> {
     // Build a single-article ReadInfo list. bodyInfo is limited to 10000 chars;
     // longer text should be chunked by Reducer before calling start.
-    const articleId = this.currentArticleId !== '' ? this.currentArticleId : 'tts-' + Date.now();
+    // TextReader exposes its own player-panel speed control but no documented
+    // application-side speed setter in the installed SDK.  Do not pretend
+    // `request.rate` was applied here; Reader UI keeps rate disabled until a
+    // Host API can make that setting observable and effective.
+    const articleId = request.articleId !== undefined && request.articleId.length > 0
+      ? request.articleId : 'tts-' + Date.now();
     const titleInfo: TextReader.TextInfo = {
       text: '朗读',
       isClickable: false,
@@ -281,6 +368,10 @@ export class TtsHostAdapter {
     this.currentArticleId = articleId;
     this.currentText = request.text;
     this.lastPercent = 0;
+    this.currentCorrelationId = request.correlationId ?? '';
+    this.currentGeneration = request.generation ?? -1;
+    this.currentSliceIndex = request.sliceIndex ?? -1;
+    this.completionDeliveredArticleId = '';
 
     const readInfoList: TextReader.ReadInfo[] = [readInfo];
     const startParams: TextReader.StartParams = {
@@ -303,7 +394,8 @@ export class TtsHostAdapter {
     if (this.fallbackEngine === null) {
       return { started: false };
     }
-    const requestId = String(this.fallbackNextRequestId++);
+    const requestId = request.articleId !== undefined && request.articleId.length > 0
+      ? request.articleId : String(this.fallbackNextRequestId++);
     const params: textToSpeech.SpeakParams = {
       requestId: requestId,
       extraParams: {
@@ -318,7 +410,12 @@ export class TtsHostAdapter {
     };
     try {
       this.fallbackEngine.speak(request.text, params);
+      this.currentArticleId = requestId;
       this.currentText = request.text;
+      this.currentCorrelationId = request.correlationId ?? '';
+      this.currentGeneration = request.generation ?? -1;
+      this.currentSliceIndex = request.sliceIndex ?? -1;
+      this.completionDeliveredArticleId = '';
       return { started: true };
     } catch (e) {
       return { started: false };
@@ -360,6 +457,10 @@ export class TtsHostAdapter {
     return this.lastPercent;
   }
 
+  getCurrentArticleId(): string {
+    return this.currentArticleId;
+  }
+
   /**
    * Get the current backend kind. Reducer uses this to decide whether to
    * show/hide pause and resume controls.
@@ -369,5 +470,15 @@ export class TtsHostAdapter {
    */
   getBackendKind(): TtsBackendKind {
     return this.backend;
+  }
+
+  /**
+   * Only the TextToSpeech fallback accepts `SpeakParams.extraParams.speed`.
+   * The primary TextReader path deliberately returns false because its SDK
+   * offers no programmatic rate setter; callers must not advertise a rate
+   * selector just because the Core queue stores a rate value.
+   */
+  supportsProgrammaticRate(): boolean {
+    return this.backend === 'textToSpeechFallback';
   }
 }

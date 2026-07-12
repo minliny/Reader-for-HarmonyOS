@@ -1,7 +1,9 @@
 // HostResult — response type definitions for all Host capabilities.
 //
 // Sources of truth (must match HostRequest.ets capability names exactly):
-//   1. Reader UI Contract — host-request.schema.json enum (31 items).
+//   1. Historical Reader UI response DTOs used by the original Host subset.
+//      Reader UI 1.1.0's exact 55-item identity/dispatch boundary lives in
+//      generated/HostRequestTable.ets + ReaderUiHostDispatcher.
 //   2. Reader-Core-Native — host.rs HostCapability enum (15-item closed set).
 //
 // Naming drift fixed on 2026-07-07:

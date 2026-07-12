@@ -13,6 +13,10 @@
       "value": "Allows TTS playback and background downloads to continue when the app is in the background."
     },
     {
+      "name": "reason_read_pasteboard",
+      "value": "Allows importing book sources and reading content copied to the clipboard."
+    },
+    {
       "name": "reason_vibrate",
       "value": "Allows short vibration feedback for reader interactions such as chapter-end and tap zones."
     }

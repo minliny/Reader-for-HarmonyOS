@@ -8,9 +8,9 @@ Reader for HarmonyOS is the HarmonyOS (ArkTS/Stage Model) native host app in the
 
 | Resource | Path |
 |----------|------|
-| Repo root | `/Users/minliny/Documents/Reader-for-HarmonyOS` |
-| Business Core | `/Users/minliny/Documents/Reader-Core-Native` |
-| UI Contract | `/Users/minliny/Documents/Reader UI/contracts` |
+| Repo root | `/Users/minliny/Documents/Reader/Reader-for-HarmonyOS` |
+| Business Core | `../Reader-Core-Native` |
+| UI Contract | `../Reader-UI/contracts` |
 | Planning docs | `docs/PLANNING/` |
 | Loop command | `.claude/commands/harmonyos-loop.md` |
 

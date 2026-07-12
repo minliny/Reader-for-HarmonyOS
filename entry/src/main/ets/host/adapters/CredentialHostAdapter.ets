@@ -29,10 +29,11 @@ import {
   HostCredentialDeleteRequest,
   HostCredentialDeleteResponse,
 } from '../types';
+import type { WebDavCredentialReader } from './WebDavHostAdapter';
 
 const PREFERENCES_NAME: string = 'reader_credentials';
 
-export class CredentialHostAdapter {
+export class CredentialHostAdapter implements WebDavCredentialReader {
   private context: common.Context;
   private preferences: dataPreferences.Preferences | null = null;
 
@@ -45,13 +46,18 @@ export class CredentialHostAdapter {
    * Returns exists: false if the key is not present.
    */
   async get(request: HostCredentialGetRequest): Promise<HostCredentialGetResponse> {
-    const pref = await this.ensurePreferences();
-    const has = await pref.has(request.key);
-    if (!has) {
-      return { exists: false };
+    try {
+      const pref = await this.ensurePreferences();
+      const has = await pref.has(request.key);
+      if (!has) {
+        return { exists: false };
+      }
+      const value = await pref.get(request.key, '') as string;
+      return { exists: true, value: value };
+    } catch (e) {
+      console.error(`[CredentialHostAdapter] get key=${request.key} failed: ${e}`);
+      throw new Error(`CredentialHostAdapter.get key=${request.key} failed: ${e}`);
     }
-    const value = await pref.get(request.key, '') as string;
-    return { exists: true, value: value };
   }
 
   /**
@@ -60,33 +66,48 @@ export class CredentialHostAdapter {
    * values before passing them here.
    */
   async set(request: HostCredentialSetRequest): Promise<HostCredentialSetResponse> {
-    const pref = await this.ensurePreferences();
-    await pref.put(request.key, request.value);
-    await pref.flush();
-    return { stored: true };
+    try {
+      const pref = await this.ensurePreferences();
+      await pref.put(request.key, request.value);
+      await pref.flush();
+      return { stored: true };
+    } catch (e) {
+      console.error(`[CredentialHostAdapter] set key=${request.key} failed: ${e}`);
+      throw new Error(`CredentialHostAdapter.set key=${request.key} failed: ${e}`);
+    }
   }
 
   /**
    * credential.delete — delete a credential by key.
    */
   async delete(request: HostCredentialDeleteRequest): Promise<HostCredentialDeleteResponse> {
-    const pref = await this.ensurePreferences();
-    const has = await pref.has(request.key);
-    if (!has) {
-      return { deleted: false };
+    try {
+      const pref = await this.ensurePreferences();
+      const has = await pref.has(request.key);
+      if (!has) {
+        return { deleted: false };
+      }
+      await pref.delete(request.key);
+      await pref.flush();
+      return { deleted: true };
+    } catch (e) {
+      console.error(`[CredentialHostAdapter] delete key=${request.key} failed: ${e}`);
+      throw new Error(`CredentialHostAdapter.delete key=${request.key} failed: ${e}`);
     }
-    await pref.delete(request.key);
-    await pref.flush();
-    return { deleted: true };
   }
 
   // ── internal ──
 
   private async ensurePreferences(): Promise<dataPreferences.Preferences> {
-    if (this.preferences !== null) {
+    try {
+      if (this.preferences !== null) {
+        return this.preferences;
+      }
+      this.preferences = await dataPreferences.getPreferences(this.context, PREFERENCES_NAME);
       return this.preferences;
+    } catch (e) {
+      console.error(`[CredentialHostAdapter] ensurePreferences failed: ${e}`);
+      throw new Error(`CredentialHostAdapter.ensurePreferences failed: ${e}`);
     }
-    this.preferences = await dataPreferences.getPreferences(this.context, PREFERENCES_NAME);
-    return this.preferences;
   }
 }

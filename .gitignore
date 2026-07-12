@@ -24,3 +24,4 @@ build-profile.json5.bak
 
 # Local signing materials (private keys + signed haps — never commit)
 signing/
+entry/src/main/ets/ui/store/.write_test

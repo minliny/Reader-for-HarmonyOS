@@ -2,22 +2,25 @@
 // Resolves a motionId → MotionSpec (duration/easing/reducedMotionPolicy) and runs the
 // state mutation inside animateTo. Pages/components must NEVER call animateTo directly;
 // they declare intent via ReaderMotionResolver and hand the motionId here.
+//
+// API 22 note: the global animateTo() is deprecated; we use UIContext.animateTo()
+// instead. Callers (all @Component structs) pass their UIContext via this.getUIContext().
 import { MotionSpec } from '../../contract/generated/MotionSpecTable';
 import { MotionSpecRegistry } from '../motion/MotionSpecRegistry';
 
 export class MotionAdapter {
   // Apply by motionId. `event` mutates the animatable state (opacity / offset / scale).
-  static apply(motionId: string, reducedMotion: boolean, event: () => void): void {
+  static apply(motionId: string, reducedMotion: boolean, uiContext: UIContext, event: () => void): void {
     const spec = MotionSpecRegistry.byId(motionId);
     if (spec === undefined) {
       event();
       return;
     }
-    MotionAdapter.applySpec(spec, reducedMotion, event);
+    MotionAdapter.applySpec(spec, reducedMotion, uiContext, event);
   }
 
   // Apply when the caller already holds the resolved MotionSpec.
-  static applySpec(spec: MotionSpec, reducedMotion: boolean, event: () => void): void {
+  static applySpec(spec: MotionSpec, reducedMotion: boolean, uiContext: UIContext, event: () => void): void {
     if (MotionAdapter.shouldSkipAnimation(spec, reducedMotion)) {
       event();
       return;
@@ -27,7 +30,7 @@ export class MotionAdapter {
       event();
       return;
     }
-    animateTo({ duration: duration, curve: MotionAdapter.curveFor(spec.easing) }, event);
+    uiContext.animateTo({ duration: duration, curve: MotionAdapter.curveFor(spec.easing) }, event);
   }
 
   // Reduced-motion policy: zeroDuration → 0ms ; keepDirectManipulation → gesture-driven (no animateTo).

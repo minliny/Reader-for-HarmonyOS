@@ -8,7 +8,7 @@ import { ReaderUiStore } from '../store/ReaderUiStore';
 import { InteractionDebugAdapter } from '../adapters/InteractionDebugAdapter';
 import { MotionAdapter } from '../adapters/MotionAdapter';
 import { TokenAdapter } from '../adapters/TokenAdapter';
-import { BookshelfView } from '../store/ReaderUiState';
+import { BookshelfView, CoreBookGroup } from '../store/ReaderUiState';
 
 interface SettingsRowSpec {
   title: string;
@@ -39,8 +39,11 @@ function settingsRowSpec(itemId: string): SettingsRowSpec {
     case 'group-default': return { title: '默认分组', chip: '12 本', switchOn: false, chevron: false };
     case 'group-scifi': return { title: '科幻', chip: '4 本', switchOn: false, chevron: false };
     case 'group-todo': return { title: '待读', chip: '7 本', switchOn: false, chevron: false };
-    case 'auto-backup': return { title: '自动备份', chip: '', switchOn: true, chevron: false };
-    case 'webdav-backup': return { title: '备份到 WebDAV', chip: '已开启', switchOn: false, chevron: false };
+    // These legacy list ids still occur in compatibility view states.  Neither
+    // has a background scheduler or an enabled-state projection, so do not
+    // render a live-looking switch / "已开启" badge.
+    case 'auto-backup': return { title: '自动备份', chip: '未接入', switchOn: false, chevron: false };
+    case 'webdav-backup': return { title: '备份到 WebDAV', chip: '手动执行', switchOn: false, chevron: false };
     case 'sub-1': return { title: '订阅源 1', chip: '', switchOn: true, chevron: false };
     case 'sub-2': return { title: '订阅源 2', chip: '', switchOn: true, chevron: false };
     case 'sub-3': return { title: '订阅源 3', chip: '', switchOn: true, chevron: false };
@@ -100,7 +103,7 @@ export struct SettingsNavRow {
     .alignItems(VerticalAlign.Center)
     .onClick(() => {
         // 设置项跳转：route-push 到子页，用 SettingsShell 的 push 动效包裹
-        MotionAdapter.apply('app.route.push.forward', this.reducedMotion, () => {
+        MotionAdapter.apply('app.route.push.forward', this.reducedMotion, this.getUIContext(), () => {
           ReaderUiStore.dispatch({ type: 'route-push', id: this.route });
         });
       })
@@ -269,7 +272,7 @@ struct SettingsSegment {
           .borderRadius(DemoAliasTokens.radiusPill)
           .backgroundColor(option.active ? Color.White : Color.Transparent)
           .onClick(() => {
-            MotionAdapter.apply('segment.item.switch', this.reducedMotion, () => {
+            MotionAdapter.apply('segment.item.switch', this.reducedMotion, this.getUIContext(), () => {
               // B1 P0：segment 切换。bookshelfView 走专用 reducer，其余走 settings-segment-switch
               if (this.settingsKey === 'bookshelfView') {
                 ReaderUiStore.dispatch({ type: 'set-bookshelf-view', bookshelfView: option.value as BookshelfView });
@@ -333,6 +336,7 @@ struct SettingsOptionRow {
   @Prop options: SettingsChoiceSpec[] = [];
   @Prop settingsKey: string = '';   // B1 P0：设置项 key，透传给 segment/stepper/switch
   @Prop icon: Resource | undefined = undefined;   // P1.1：行首图标，通过 TokenAdapter.icon() 传入
+  @StorageProp('reader.pendingCacheClear') pendingCacheClear: boolean = false;
 
   build() {
     Row() {
@@ -374,7 +378,7 @@ struct SettingsOptionRow {
       } else if (this.kind === 'status') {
         SettingsStatusBadge({ label: this.value, tone: this.tone })
       } else if (this.kind === 'action') {
-        Text(this.value)
+        Text(this.settingsKey === 'cache-clear' && this.pendingCacheClear ? '确认清理' : this.value)
           .fontSize(12)
           .fontWeight(850)
           .fontColor(DemoAliasTokens.onPrimary)
@@ -406,7 +410,11 @@ struct SettingsOptionRow {
       if (this.kind === 'value') {
         ReaderUiStore.dispatch({ type: 'settings-select-open', settingsKey: this.settingsKey });
       } else if (this.kind === 'action') {
-        ReaderUiStore.dispatch({ type: 'settings-action', settingsKey: this.settingsKey });
+        if (this.settingsKey === 'cache-clear' && this.pendingCacheClear) {
+          ReaderUiStore.dispatch({ type: 'cache-clear-confirm' });
+        } else {
+          ReaderUiStore.dispatch({ type: 'settings-action', settingsKey: this.settingsKey });
+        }
       }
     })
   }
@@ -418,6 +426,20 @@ struct SettingsOptionRow {
 struct SettingsSelectSheet {
   @Prop options: SettingsChoiceSpec[] = [];
   @Prop settingsKey: string = '';
+
+  private select(value: string): void {
+    // These two settings already have Core-backed bookshelf reducers/effects.
+    // Do not route them through the generic segment reducer, which would make
+    // the sheet look selected while leaving the Core query unchanged.
+    if (this.settingsKey === 'bookshelfSort') {
+      ReaderUiStore.dispatch({ type: 'set-bookshelf-sort', bookshelfSort: value });
+    } else if (this.settingsKey === 'bookshelfGroup') {
+      ReaderUiStore.dispatch({ type: 'set-bookshelf-group', bookshelfGroup: value });
+    } else {
+      ReaderUiStore.dispatch({ type: 'settings-segment-switch', settingsKey: this.settingsKey, settingsValue: value });
+    }
+    ReaderUiStore.dispatch({ type: 'settings-select-close' });
+  }
 
   build() {
     Column() {
@@ -437,9 +459,7 @@ struct SettingsSelectSheet {
         .padding({ left: 12, right: 12 })
         .border({ width: { top: idx === 0 ? 0 : 1 }, color: ColorTokens.border })
         .alignItems(VerticalAlign.Center)
-        .onClick(() => {
-          ReaderUiStore.dispatch({ type: 'settings-segment-switch', settingsKey: this.settingsKey, settingsValue: option.value });
-        })
+        .onClick(() => this.select(option.value))
       }, (option: SettingsChoiceSpec, idx: number) => `${option.label}-${idx}`)
     }
     .width('100%')
@@ -478,10 +498,8 @@ struct SettingsDetailSection {
 export struct SettingsGeneralPage {
   // B1 P0：从 AppStorage 读取设置状态，驱动 segment/switch 动态渲染
   @StorageProp('reader.appThemeMode') appThemeMode: string = 'system';
-  @StorageProp('reader.settingsToggles.autoCheckUpdate') autoCheckUpdate: boolean = true;
-  @StorageProp('reader.settingsToggles.tapBottomBarToTop') tapBottomBarToTop: boolean = true;
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
-  @StorageProp('reader.expandedOptionKey') expandedOptionKey: string = '';
+  @StorageProp('reader.pendingCacheClear') pendingCacheClear: boolean = false;
 
   build() {
     Column() {
@@ -497,48 +515,93 @@ export struct SettingsGeneralPage {
             { label: '深色', value: 'dark', active: this.appThemeMode === 'dark' },
           ],
         })
-        SettingsOptionRow({ title: '语言', value: '简体中文', settingsKey: 'language', icon: TokenAdapter.icon('globe') })
-        if (this.expandedOptionKey === 'language') {
-          SettingsSelectSheet({
-            settingsKey: 'language',
-            options: [
-              { label: '简体中文', value: 'zh-CN', active: true },
-              { label: 'English', value: 'en-US', active: false },
-              { label: '跟随系统', value: 'system', active: false },
-            ],
-          })
-        }
-        SettingsOptionRow({ title: '启动时打开', value: '书架', settingsKey: 'startupPage', icon: TokenAdapter.icon('home') })
-        if (this.expandedOptionKey === 'startupPage') {
-          SettingsSelectSheet({
-            settingsKey: 'startupPage',
-            options: [
-              { label: '书架', value: 'bookshelf', active: true },
-              { label: '发现', value: 'discover', active: false },
-              { label: 'RSS', value: 'rss', active: false },
-            ],
-          })
-        }
+        SettingsOptionRow({
+          title: '语言',
+          subtitle: '当前没有本地化消费方或可持久化设置契约',
+          kind: 'status',
+          value: '未接入',
+          tone: 'warn',
+          icon: TokenAdapter.icon('globe'),
+        })
+        SettingsOptionRow({
+          title: '启动时打开',
+          subtitle: '当前没有启动路由持久化与消费方',
+          kind: 'status',
+          value: '未接入',
+          tone: 'warn',
+          icon: TokenAdapter.icon('home'),
+        })
       }
 
       Column() {
         SettingsDetailSection({ title: '行为与反馈' }) {
-          SettingsOptionRow({ title: '自动检查更新', kind: 'switch', settingsKey: 'autoCheckUpdate', switchOn: this.autoCheckUpdate, icon: TokenAdapter.icon('refresh') })
-          SettingsOptionRow({ title: '点击当前底栏回顶部', kind: 'switch', settingsKey: 'tapBottomBarToTop', switchOn: this.tapBottomBarToTop, icon: TokenAdapter.icon('top') })
+          SettingsOptionRow({
+            title: '自动检查更新',
+            subtitle: '当前没有更新检查 Host 服务或设置消费方',
+            kind: 'status',
+            value: '未接入',
+            tone: 'warn',
+            icon: TokenAdapter.icon('refresh'),
+          })
+          SettingsOptionRow({
+            title: '点击当前底栏回顶部',
+            subtitle: '当前底栏未消费该行为设置',
+            kind: 'status',
+            value: '未接入',
+            tone: 'warn',
+            icon: TokenAdapter.icon('top'),
+          })
           SettingsOptionRow({ title: '减少动态效果', kind: 'switch', settingsKey: 'reducedMotion', switchOn: this.reducedMotion, icon: TokenAdapter.icon('motion') })
-          SettingsOptionRow({ title: '崩溃日志', kind: 'status', value: '已开启', icon: TokenAdapter.icon('bug') })
-          SettingsOptionRow({ title: '动画效果', value: '标准', settingsKey: 'animationEffect', icon: TokenAdapter.icon('play') })
-          if (this.expandedOptionKey === 'animationEffect') {
-            SettingsSelectSheet({
-              settingsKey: 'animationEffect',
-              options: [
-                { label: '标准', value: 'standard', active: true },
-                { label: '简洁', value: 'simple', active: false },
-                { label: '无', value: 'none', active: false },
-              ],
-            })
+          SettingsOptionRow({
+            title: '崩溃日志',
+            subtitle: '当前未接入日志开关或状态查询',
+            kind: 'status',
+            value: '状态未接入',
+            tone: 'warn',
+            icon: TokenAdapter.icon('bug'),
+          })
+          SettingsOptionRow({
+            title: '动画效果',
+            subtitle: '转场由当前 Motion 方案控制，尚无独立选择器消费方',
+            kind: 'status',
+            value: '未接入',
+            tone: 'warn',
+            icon: TokenAdapter.icon('play'),
+          })
+          SettingsOptionRow({
+            title: '缓存清理',
+            subtitle: '仅清理本会话网络缓存；不会删除 Core 阅读正文、书架或备份',
+            kind: 'action',
+            value: '清理本会话缓存',
+            settingsKey: 'cache-clear',
+            icon: TokenAdapter.icon('trash'),
+          })
+          if (this.pendingCacheClear) {
+            Row({ space: 8 }) {
+              Text('取消')
+                .fontSize(12)
+                .fontWeight(750)
+                .fontColor(ColorTokens.primary)
+                .height(32)
+                .layoutWeight(1)
+                .textAlign(TextAlign.Center)
+                .borderRadius(DemoAliasTokens.radiusPill)
+                .border({ width: 1, color: ColorTokens.border })
+                .onClick(() => ReaderUiStore.dispatch({ type: 'cache-clear-cancel' }))
+              Text('确认仅清理会话缓存')
+                .fontSize(12)
+                .fontWeight(750)
+                .fontColor(DemoAliasTokens.onPrimary)
+                .height(32)
+                .layoutWeight(1)
+                .textAlign(TextAlign.Center)
+                .borderRadius(DemoAliasTokens.radiusPill)
+                .backgroundColor(ColorTokens.primary)
+                .onClick(() => ReaderUiStore.dispatch({ type: 'cache-clear-confirm' }))
+            }
+            .width('100%')
+            .padding({ left: 12, right: 12, top: 8, bottom: 4 })
           }
-          SettingsOptionRow({ title: '缓存清理', kind: 'action', value: '清理缓存', settingsKey: 'cache-clear', icon: TokenAdapter.icon('trash') })
         }
       }
       .width('100%')
@@ -546,9 +609,29 @@ export struct SettingsGeneralPage {
 
       Column() {
         SettingsDetailSection({ title: '系统权限' }) {
-          SettingsOptionRow({ title: '文件访问', kind: 'status', value: '已授权', icon: TokenAdapter.icon('folder') })
-          SettingsOptionRow({ title: '通知权限', kind: 'status', value: '未授权', tone: 'warn', icon: TokenAdapter.icon('bell') })
-          SettingsOptionRow({ title: '电池优化', kind: 'status', value: '受系统管理', icon: TokenAdapter.icon('battery') })
+          SettingsOptionRow({
+            title: '文件访问',
+            subtitle: '仅在导入时由系统文档选择器按需授予；当前不查询固定授权状态',
+            kind: 'status',
+            value: '按需选取',
+            icon: TokenAdapter.icon('folder'),
+          })
+          SettingsOptionRow({
+            title: '通知权限',
+            subtitle: '当前未接入通知权限查询或申请',
+            kind: 'status',
+            value: '状态未接入',
+            tone: 'warn',
+            icon: TokenAdapter.icon('bell'),
+          })
+          SettingsOptionRow({
+            title: '电池优化',
+            subtitle: '当前未接入系统电池优化状态查询',
+            kind: 'status',
+            value: '状态未接入',
+            tone: 'warn',
+            icon: TokenAdapter.icon('battery'),
+          })
         }
       }
       .width('100%')
@@ -561,13 +644,59 @@ export struct SettingsGeneralPage {
 
 @Component
 export struct BookshelfSearchSettingsPage {
-  // B1 P0：从 AppStorage 读取书架/搜索设置状态
+  // All values below are either consumed by the real Core-backed bookshelf /
+  // history effects, or are rendered explicitly unavailable. No row may
+  // advertise a setting merely because the demo had a chevron.
   @StorageProp('reader.bookshelfFilter.view') bookshelfView: string = 'cover';
+  @StorageProp('reader.bookshelfFilter.group') bookshelfGroup: string = 'all';
+  @StorageProp('reader.bookshelfFilter.sort') bookshelfSort: string = 'recent';
+  @StorageProp('reader.bookGroups') bookGroups: CoreBookGroup[] = [];
   @StorageProp('reader.coverColumns') coverColumns: number = 3;
-  @StorageProp('reader.settingsToggles.showUpdateBadge') showUpdateBadge: boolean = true;
   @StorageProp('reader.settingsToggles.mergeSameBooks') mergeSameBooks: boolean = true;
   @StorageProp('reader.settingsToggles.enableSearchHistory') enableSearchHistory: boolean = true;
+  @StorageProp('reader.searchHistoryLimit') searchHistoryLimit: number = 20;
   @StorageProp('reader.expandedOptionKey') expandedOptionKey: string = '';
+
+  private groupOptions(): SettingsChoiceSpec[] {
+    const options: SettingsChoiceSpec[] = [{ label: '全部', value: 'all', active: this.bookshelfGroup === 'all' }];
+    for (let index = 0; index < this.bookGroups.length; index++) {
+      const group = this.bookGroups[index];
+      if (group.groupName.trim().length === 0) continue;
+      options.push({
+        label: group.groupName,
+        value: group.groupName,
+        active: this.bookshelfGroup === group.groupName,
+      });
+    }
+    return options;
+  }
+
+  private groupLabel(): string {
+    if (this.bookshelfGroup === 'all') return '全部';
+    for (let index = 0; index < this.bookGroups.length; index++) {
+      if (this.bookGroups[index].groupName === this.bookshelfGroup) return this.bookshelfGroup;
+    }
+    return '分组已不存在';
+  }
+
+  private sortOptions(): SettingsChoiceSpec[] {
+    return [
+      { label: '最近阅读', value: 'recent', active: this.bookshelfSort === 'recent' },
+      { label: '书名', value: 'title', active: this.bookshelfSort === 'title' },
+      { label: '作者', value: 'author', active: this.bookshelfSort === 'author' },
+    ];
+  }
+
+  private sortLabel(): string {
+    switch (this.bookshelfSort) {
+      // A legacy stored `progress` value predates Core's actual sort DTO.
+      // It is normalized to the only truthful reading-time sort.
+      case 'progress': return '最近阅读';
+      case 'title': return '书名';
+      case 'author': return '作者';
+      default: return '最近阅读';
+    }
+  }
 
   build() {
     Column() {
@@ -583,26 +712,34 @@ export struct BookshelfSearchSettingsPage {
           ],
         })
         SettingsOptionRow({ title: '封面列数', kind: 'stepper', settingsKey: 'coverColumns', value: `${this.coverColumns}列`, icon: TokenAdapter.icon('columns') })
-        SettingsOptionRow({ title: '默认分组', value: '全部', settingsKey: 'defaultGroup', icon: TokenAdapter.icon('folder') })
-        SettingsOptionRow({ title: '显示更新标记', kind: 'switch', settingsKey: 'showUpdateBadge', switchOn: this.showUpdateBadge, icon: TokenAdapter.icon('badge') })
+        SettingsOptionRow({ title: '书架分组', value: this.groupLabel(), settingsKey: 'bookshelfGroup', icon: TokenAdapter.icon('folder') })
+        if (this.expandedOptionKey === 'bookshelfGroup') {
+          SettingsSelectSheet({ settingsKey: 'bookshelfGroup', options: this.groupOptions() })
+        }
+        SettingsOptionRow({
+          title: '显示更新标记',
+          subtitle: 'Core bookshelf.list 尚未提供可比较的更新状态',
+          kind: 'status', value: '未接入', tone: 'warn', icon: TokenAdapter.icon('badge'),
+        })
       }
 
       Column() {
         SettingsDetailSection({ title: '排序与筛选' }) {
-          SettingsOptionRow({ title: '书架排序', value: '最近更新', settingsKey: 'bookshelfSort', icon: TokenAdapter.icon('sort') })
+          SettingsOptionRow({ title: '书架排序', value: this.sortLabel(), settingsKey: 'bookshelfSort', icon: TokenAdapter.icon('sort') })
           if (this.expandedOptionKey === 'bookshelfSort') {
             SettingsSelectSheet({
               settingsKey: 'bookshelfSort',
-              options: [
-                { label: '最近更新', value: 'recent', active: true },
-                { label: '书名', value: 'title', active: false },
-                { label: '作者', value: 'author', active: false },
-                { label: '最近阅读', value: 'lastRead', active: false },
-              ],
+              options: this.sortOptions(),
             })
           }
-          SettingsOptionRow({ title: '展示范围', value: '全部', settingsKey: 'displayScope', icon: TokenAdapter.icon('list') })
-          SettingsOptionRow({ title: '更新状态', value: '不限', settingsKey: 'updateStatus', icon: TokenAdapter.icon('refresh') })
+          SettingsOptionRow({
+            title: '展示范围', subtitle: 'Core 未提供阅读状态筛选 DTO',
+            kind: 'status', value: '全部', tone: 'warn', icon: TokenAdapter.icon('list'),
+          })
+          SettingsOptionRow({
+            title: '更新状态', subtitle: 'Core 未提供更新状态筛选 DTO',
+            kind: 'status', value: '未接入', tone: 'warn', icon: TokenAdapter.icon('refresh'),
+          })
         }
       }
       .width('100%')
@@ -610,18 +747,30 @@ export struct BookshelfSearchSettingsPage {
 
       Column() {
         SettingsDetailSection({ title: '搜索' }) {
-          SettingsOptionRow({ title: '搜索范围', value: '全局', settingsKey: 'searchScope', icon: TokenAdapter.icon('search') })
-          SettingsOptionRow({ title: '结果排序', value: '相关度', settingsKey: 'resultSort', icon: TokenAdapter.icon('sort') })
-          SettingsOptionRow({ title: '合并同名同作者', kind: 'switch', settingsKey: 'mergeSameBooks', switchOn: this.mergeSameBooks, icon: TokenAdapter.icon('people') })
-          SettingsOptionRow({ title: '搜索历史', kind: 'switch', settingsKey: 'enableSearchHistory', switchOn: this.enableSearchHistory, icon: TokenAdapter.icon('clock') })
-          SettingsOptionRow({ title: '搜索历史数量', value: '20条', settingsKey: 'searchHistoryCount', icon: TokenAdapter.icon('list') })
-          if (this.expandedOptionKey === 'searchHistoryCount') {
+          SettingsOptionRow({
+            title: '搜索范围', subtitle: 'Core 当前搜索所有已启用书源',
+            kind: 'status', value: '全部书源', icon: TokenAdapter.icon('search'),
+          })
+          SettingsOptionRow({
+            title: '结果排序', subtitle: 'Core 未提供可验证的结果排序 DTO',
+            kind: 'status', value: '书源顺序', tone: 'warn', icon: TokenAdapter.icon('sort'),
+          })
+          SettingsOptionRow({
+            title: '合并同名同作者', subtitle: '仅合并展示；打开详情仍保留首条 Core 书源身份',
+            kind: 'switch', settingsKey: 'mergeSameBooks', switchOn: this.mergeSameBooks, icon: TokenAdapter.icon('people'),
+          })
+          SettingsOptionRow({
+            title: '搜索历史', subtitle: '仅控制新关键词是否写入 Core',
+            kind: 'switch', settingsKey: 'enableSearchHistory', switchOn: this.enableSearchHistory, icon: TokenAdapter.icon('clock'),
+          })
+          SettingsOptionRow({ title: '搜索历史数量', value: `${this.searchHistoryLimit}条`, settingsKey: 'searchHistoryLimit', icon: TokenAdapter.icon('list') })
+          if (this.expandedOptionKey === 'searchHistoryLimit') {
             SettingsSelectSheet({
-              settingsKey: 'searchHistoryCount',
+              settingsKey: 'searchHistoryLimit',
               options: [
-                { label: '10条', value: '10', active: false },
-                { label: '20条', value: '20', active: true },
-                { label: '50条', value: '50', active: false },
+                { label: '10条', value: '10', active: this.searchHistoryLimit === 10 },
+                { label: '20条', value: '20', active: this.searchHistoryLimit === 20 },
+                { label: '50条', value: '50', active: this.searchHistoryLimit === 50 },
               ],
             })
           }
@@ -647,21 +796,26 @@ export struct BookshelfSearchSettingsPage {
 export struct ProgressSyncPage {
   build() {
     Column() {
-      SettingsDetailSection({ title: '阅读进度同步' }) {
-        SettingsOptionRow({ title: '当前书籍', kind: 'status', value: '已同步' })
-        SettingsOptionRow({ title: '同步范围', value: '书架与阅读进度' })
-        SettingsOptionRow({ title: '同步频率', value: '阅读后自动同步' })
-        SettingsOptionRow({ title: '冲突处理', value: '保留较新进度' })
-      }
-      Column() {
-        SettingsDetailSection({ title: '同步状态' }) {
-          SettingsOptionRow({ title: '深空信号', subtitle: '25% · 刚刚同步', kind: 'status', value: '已同步' })
-          SettingsOptionRow({ title: '三体', subtitle: '第 34 章 · 5 分钟前', kind: 'status', value: '已同步' })
-          SettingsOptionRow({ title: '基地', subtitle: '第 1 章 · 待上传', kind: 'status', value: '待同步', tone: 'warn' })
-        }
-      }
-      .width('100%')
-      .margin({ top: 12 })
+      Text('跨设备进度同步未接入')
+        .fontSize(18)
+        .fontWeight(800)
+        .fontColor(ColorTokens.controlInk)
+      Text('阅读进度会写入本机 Core 存储，并可通过同步页的完整 Core 快照手动备份和恢复。当前没有远端进度队列、自动同步频率或按书冲突处理契约，因此不显示“已同步”“待上传”或固定书名。')
+        .fontSize(13)
+        .fontColor(ColorTokens.muted)
+        .lineHeight(20)
+        .margin({ top: 10 })
+      Text('打开 Core 数据备份')
+        .fontSize(13)
+        .fontWeight(800)
+        .fontColor(DemoAliasTokens.onPrimary)
+        .height(40)
+        .width('100%')
+        .textAlign(TextAlign.Center)
+        .borderRadius(DemoAliasTokens.radiusPill)
+        .backgroundColor(ColorTokens.primary)
+        .margin({ top: 16 })
+        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'sync-backup' }))
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)

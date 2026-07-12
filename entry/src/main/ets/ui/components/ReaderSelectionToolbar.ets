@@ -1,13 +1,12 @@
-// ReaderSelectionToolbar — floating text-selection action bar.
-// Batch 3: toolbar state machine only (visible / action / close). Real text
-// selection requires a native text picker; this component renders the action
-// row when reader.selection.visible is true and dispatches selection-action /
-// selection-close back to the reducer.
+// ReaderSelectionToolbar — ArkUI Text's native selection-menu content.
+//
+// This is not a free-floating reader overlay: ReadingTextFlow binds it with
+// Text.bindSelectionMenu(), so ArkUI invokes it only after a user long-presses
+// and selects real chapter text. The selected text comes from
+// onTextSelectionChange; no fixture prose or synthetic selection is accepted.
 import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
 import { RadiusTokens } from '../../contract/generated/DimensionTokens';
-import { SafeAreaAdapter } from '../adapters/SafeAreaAdapter';
-import { ViewportAdapter } from '../adapters/ViewportAdapter';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 import { MotionAdapter } from '../adapters/MotionAdapter';
 
@@ -16,53 +15,45 @@ export struct ReaderSelectionToolbar {
   @StorageProp('reader.selection.visible') visible: boolean = false;
   @StorageProp('reader.selection.selectedText') selectedText: string = '';
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
-  @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
-  @StorageProp(ViewportAdapter.K_HEIGHT) viewportHeight: number = ViewportAdapter.DEFAULT_HEIGHT;
+
+  private hasNativeSelection(): boolean {
+    return this.visible && this.selectedText.trim().length > 0;
+  }
 
   build() {
-    if (this.visible) {
-      Stack({ alignContent: Alignment.Bottom }) {
-        Row() {
-          Text('复制')
-            .fontSize(13).fontColor(ColorTokens.controlInk)
-            .padding({ left: 12, right: 12, top: 8, bottom: 8 })
-            .onClick(() => this.dispatchAction('copy'))
-          Text('高亮')
-            .fontSize(13).fontColor(ColorTokens.controlInk)
-            .padding({ left: 12, right: 12, top: 8, bottom: 8 })
-            .onClick(() => this.dispatchAction('highlight'))
-          Text('笔记')
-            .fontSize(13).fontColor(ColorTokens.controlInk)
-            .padding({ left: 12, right: 12, top: 8, bottom: 8 })
-            .onClick(() => this.dispatchAction('note'))
-          Text('搜索')
-            .fontSize(13).fontColor(ColorTokens.controlInk)
-            .padding({ left: 12, right: 12, top: 8, bottom: 8 })
-            .onClick(() => this.dispatchAction('search'))
-          Text('×')
-            .fontSize(16).fontColor(ColorTokens.muted)
-            .padding({ left: 12, right: 12, top: 8, bottom: 8 })
-            .onClick(() => {
-              MotionAdapter.apply('selection.toolbar.exit', this.reducedMotion, () => {
-                ReaderUiStore.dispatch({ type: 'selection-close' });
-              });
-            })
-        }
-        .backgroundColor(DemoAliasTokens.surface)
-        .borderRadius(RadiusTokens.control)
-        .border({ width: 1, color: ColorTokens.border })
-        .padding({ left: 4, right: 4, top: 4, bottom: 4 })
-        .shadow({ radius: 12, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 4 })
-      }
-      .width('100%')
-      .height('100%')
-      .padding({ bottom: this.safeAreaBottom + 80 })
-      .hitTestBehavior(HitTestMode.Transparent)
+    Row({ space: 2 }) {
+      Text('复制')
+        .fontSize(13).fontColor(this.hasNativeSelection() ? ColorTokens.controlInk : ColorTokens.muted)
+        .padding({ left: 12, right: 12, top: 8, bottom: 8 })
+        .enabled(this.hasNativeSelection())
+        .onClick(() => this.dispatchAction('copy'))
+      Text('搜索')
+        .fontSize(13).fontColor(this.hasNativeSelection() ? ColorTokens.controlInk : ColorTokens.muted)
+        .padding({ left: 12, right: 12, top: 8, bottom: 8 })
+        .enabled(this.hasNativeSelection())
+        .onClick(() => this.dispatchAction('search'))
+      // Core-Native currently has neither a highlight nor a note model. Keep
+      // the contract affordances visible as explicitly disabled information,
+      // not as reducer-only buttons that pretend the write succeeded.
+      Text('高亮（未接入）')
+        .fontSize(12).fontColor(ColorTokens.muted)
+        .padding({ left: 8, right: 8, top: 8, bottom: 8 })
+        .enabled(false)
+      Text('笔记（未接入）')
+        .fontSize(12).fontColor(ColorTokens.muted)
+        .padding({ left: 8, right: 8, top: 8, bottom: 8 })
+        .enabled(false)
     }
+    .backgroundColor(DemoAliasTokens.surface)
+    .borderRadius(RadiusTokens.control)
+    .border({ width: 1, color: ColorTokens.border })
+    .padding({ left: 4, right: 4, top: 4, bottom: 4 })
+    .shadow({ radius: 12, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 4 })
   }
 
   private dispatchAction(action: string): void {
-    MotionAdapter.apply('selection.toolbar.action', this.reducedMotion, () => {
+    if (!this.hasNativeSelection() || (action !== 'copy' && action !== 'search')) return;
+    MotionAdapter.apply('selection.toolbar.action', this.reducedMotion, this.getUIContext(), () => {
       ReaderUiStore.dispatch({ type: 'selection-action', selectionAction: action });
     });
   }

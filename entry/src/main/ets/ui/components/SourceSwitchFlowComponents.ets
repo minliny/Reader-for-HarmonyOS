@@ -17,24 +17,24 @@ import { ViewportAdapter } from '../adapters/ViewportAdapter';
 import { ReaderBase, ReaderTopArea } from './ReaderComponents';
 import { ReaderBottomBar, ReaderControlSheet } from './ReaderOverlayComponents';
 import { ReaderUiStore } from '../store/ReaderUiStore';
+import { BookDetail, CoreSourceEntry } from '../store/ReaderUiState';
 import { MotionAdapter } from '../adapters/MotionAdapter';
 import { InteractionDebugFrame } from './InteractionDebugComponents';
 import { ReaderTypography } from '../tokens/ReaderTypography';
 
 interface SourceSwitchCandidate {
+  id: string;
   source: string;
-  speed: string;
-  chapter: string;
   current: boolean;
 }
 
 @Component
 struct SourceSwitchCandidateRow {
-  @Prop candidate: SourceSwitchCandidate = { source: '优书网', speed: '120 ms', chapter: '第 32 章 雨夜', current: true };
+  @Prop candidate: SourceSwitchCandidate = { id: '', source: '', current: false };
   @StorageProp('reader.sourceSelection') sourceSelection: string[] = [];
 
   private isSelected(): boolean {
-    return this.sourceSelection.indexOf(this.candidate.source) >= 0;
+    return this.sourceSelection.indexOf(this.candidate.id) >= 0;
   }
 
   build() {
@@ -47,18 +47,20 @@ struct SourceSwitchCandidateRow {
           .backgroundColor(ColorTokens.accent)
       }
       Row({ space: 7 }) {
-        // Selection checkbox — reflects reader.sourceSelection state.
-        Stack() {
+        // One source can be confirmed at a time. Use a radio indicator rather
+        // than a checkbox so the visual model cannot promise multi-source
+        // selection while the Core flow only consumes one source id.
+        Stack({ alignContent: Alignment.Center }) {
           if (this.isSelected()) {
-            Image($r('app.media.ui_icon_check_white'))
-              .width(12)
-              .height(12)
+            Circle()
+              .width(8)
+              .height(8)
+              .fill(ColorTokens.primary)
           }
         }
         .width(18)
         .height(18)
         .borderRadius(DemoAliasTokens.radiusPill)
-        .backgroundColor(this.isSelected() ? ColorTokens.primary : Color.Transparent)
         .border({ width: 1, color: this.isSelected() ? ColorTokens.primary : ColorTokens.border })
         Text(this.candidate.source)
           .fontSize(12)
@@ -67,22 +69,12 @@ struct SourceSwitchCandidateRow {
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .layoutWeight(1)
-        Text(this.candidate.speed)
-          .fontSize(9)
-          .fontWeight(500)
-          .fontColor(this.candidate.current ? ColorTokens.accent : ColorTokens.muted)
-          .textAlign(TextAlign.End)
-          .width(48)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-        Text(this.candidate.chapter)
-          .fontSize(10)
-          .fontWeight(550)
-          .fontColor(ColorTokens.controlInk)
-          .textAlign(TextAlign.End)
-          .width(96)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        if (this.candidate.current) {
+          Text('当前')
+            .fontSize(10)
+            .fontWeight(700)
+            .fontColor(ColorTokens.accent)
+        }
       }
       .width('100%')
       .height(44)
@@ -91,7 +83,7 @@ struct SourceSwitchCandidateRow {
       .border({ width: { top: this.candidate.current ? 0 : 1 }, color: ColorTokens.border })
       .alignItems(VerticalAlign.Center)
       .onClick(() => {
-        ReaderUiStore.dispatch({ type: 'source-toggle', sourceId: this.candidate.source });
+        ReaderUiStore.dispatch({ type: 'source-toggle', sourceId: this.candidate.id });
       })
       InteractionDebugFrame({ label: 'SOURCE_ROW', tone: 'action' })
     }
@@ -108,23 +100,33 @@ struct SourceSwitchWindow {
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
   @StorageProp(ViewportAdapter.K_WIDTH) viewportWidth: number = ViewportAdapter.DEFAULT_WIDTH;
   @StorageProp(ViewportAdapter.K_HEIGHT) viewportHeight: number = ViewportAdapter.DEFAULT_HEIGHT;
+  // Bind current book from store to mark the active source in the candidate list.
+  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
+  @StorageProp('reader.availableSources') availableSources: CoreSourceEntry[] = [];
+  @StorageProp('reader.errorCode') errorCode: string = '';
+  @StorageProp('reader.errorMessage') errorMessage: string = '';
 
   private readonly inset: number = 12;
   private readonly topAfterReaderBar: number = 86;
   private readonly controlReserve: number = 330;
-  private candidates: SourceSwitchCandidate[] = [
-    { source: '优书网', speed: '120 ms', chapter: '第 32 章 雨夜', current: true },
-    { source: '笔趣阁镜像', speed: '180 ms', chapter: '第 32 章 雨夜', current: false },
-    { source: '轻小说书站', speed: '210 ms', chapter: '第 32 章 雨夜', current: false },
-    { source: '云端书库', speed: '260 ms', chapter: '第 32 章 雨夜', current: false },
-    { source: '聚合书源一', speed: '320 ms', chapter: '第 32 章 雨夜', current: false },
-    { source: '聚合书源二', speed: '390 ms', chapter: '第 32 章 雨夜', current: false },
-    { source: '备用线路 A', speed: '510 ms', chapter: '第 32 章 雨夜', current: false },
-    { source: '备用线路 B', speed: '680 ms', chapter: '第 32 章 雨夜', current: false },
-    { source: '章节同步源', speed: '760 ms', chapter: '第 32 章 雨夜', current: false },
-    { source: '本地缓存', speed: '离线', chapter: '第 32 章 雨夜', current: false },
-    { source: '旧源备份', speed: '超时', chapter: '第 31 章 归途', current: false },
-  ];
+
+  // Candidate source list comes exclusively from Core source.list. A missing
+  // Core list renders an honest empty state instead of demo source fixtures.
+  private getCandidates(): SourceSwitchCandidate[] {
+    const currentSource = this.currentBook !== null ? this.currentBook.sourceName : '';
+    const currentSourceId = this.currentBook !== null ? (this.currentBook.sourceId ?? '') : '';
+    const list: SourceSwitchCandidate[] = [];
+    for (let i = 0; i < this.availableSources.length; i++) {
+      const source = this.availableSources[i];
+      if (!source.enabled) continue;
+      list.push({
+        id: source.sourceId,
+        source: source.name,
+        current: currentSourceId === source.sourceId || currentSource === source.name,
+      });
+    }
+    return list;
+  }
 
   private windowWidth(): number {
     return Math.max(0, this.viewportWidth - this.inset * 2);
@@ -133,6 +135,10 @@ struct SourceSwitchWindow {
   private windowHeight(): number {
     const available = this.viewportHeight - this.safeAreaTop - this.safeAreaBottom - this.controlReserve - this.topAfterReaderBar;
     return Math.max(260, available);
+  }
+
+  private validationMessage(): string {
+    return this.errorCode.startsWith('SOURCE_SWITCH') ? this.errorMessage : '';
   }
 
   build() {
@@ -149,30 +155,18 @@ struct SourceSwitchWindow {
             .layoutWeight(1)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-          Text('按延迟排序')
+          Text('请选择一个书源')
             .fontSize(11)
             .fontWeight(700)
             .fontColor(ColorTokens.muted)
-          Text('全选')
-            .fontSize(11)
-            .fontWeight(700)
-            .fontColor(ColorTokens.primaryDark)
-            .margin({ left: 8 })
-            .onClick(() => ReaderUiStore.dispatch({ type: 'source-select-all' }))
-          Text('清除')
-            .fontSize(11)
-            .fontWeight(700)
-            .fontColor(ColorTokens.primaryDark)
-            .margin({ left: 8 })
-            .onClick(() => ReaderUiStore.dispatch({ type: 'source-clear' }))
           Stack({ alignContent: Alignment.TopStart }) {
             Image($r('app.media.reader_icon_close_dark'))
               .width(24)
               .height(24)
               .onClick(() => {
               // 关闭换源：route-pop 回到阅读器，用 FlowShell 的 pop 动效包裹
-              MotionAdapter.apply('source.switch.route.pop', this.reducedMotion, () => {
-                ReaderUiStore.dispatch({ type: 'route-pop' });
+              MotionAdapter.apply('source.switch.route.pop', this.reducedMotion, this.getUIContext(), () => {
+                ReaderUiStore.dispatch({ type: 'source-switch-cancel' });
               });
             })
             InteractionDebugFrame({ label: 'CLOSE', tone: 'action' })
@@ -186,11 +180,28 @@ struct SourceSwitchWindow {
         .border({ width: { bottom: 1 }, color: ColorTokens.border })
         .alignItems(VerticalAlign.Center)
 
+        if (this.validationMessage().length > 0) {
+          Text(this.validationMessage())
+            .fontSize(11)
+            .fontColor(ColorTokens.statusWarn)
+            .lineHeight(17)
+            .padding({ left: 10, right: 10, top: 7, bottom: 4 })
+            .width('100%')
+        }
+
         Scroll() {
           Column() {
-            ForEach(this.candidates, (candidate: SourceSwitchCandidate) => {
-              SourceSwitchCandidateRow({ candidate: candidate })
-            }, (candidate: SourceSwitchCandidate) => candidate.source)
+            if (this.getCandidates().length === 0) {
+              Text('暂无已启用书源，请先在书源管理中导入并启用书源')
+                .fontSize(13)
+                .fontColor(ColorTokens.muted)
+                .lineHeight(20)
+                .padding(20)
+            } else {
+              ForEach(this.getCandidates(), (candidate: SourceSwitchCandidate) => {
+                SourceSwitchCandidateRow({ candidate: candidate })
+              }, (candidate: SourceSwitchCandidate) => candidate.id)
+            }
           }
           .width('100%')
         }
@@ -213,14 +224,62 @@ struct SourceSwitchWindow {
 }
 
 @Component
+struct SourceSwitchPhoneActions {
+  @StorageProp('reader.sourceSelection') sourceSelection: string[] = [];
+  @StorageProp('reader.loading') loading: boolean = false;
+  @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
+  @StorageProp(ViewportAdapter.K_HEIGHT) viewportHeight: number = ViewportAdapter.DEFAULT_HEIGHT;
+
+  build() {
+    Row({ space: 12 }) {
+      Text('取消')
+        .fontSize(13)
+        .fontWeight(700)
+        .fontColor(ColorTokens.primary)
+        .height(44)
+        .layoutWeight(1)
+        .borderRadius(DemoAliasTokens.radiusPill)
+        .border({ width: 1, color: ColorTokens.border })
+        .textAlign(TextAlign.Center)
+        .onClick(() => ReaderUiStore.dispatch({ type: 'source-switch-cancel' }))
+      Text('确认换源')
+        .fontSize(13)
+        .fontWeight(700)
+        .fontColor(DemoAliasTokens.onPrimary)
+        .height(44)
+        .layoutWeight(1)
+        .borderRadius(DemoAliasTokens.radiusPill)
+        .backgroundColor(this.sourceSelection.length === 1 && !this.loading ? ColorTokens.primaryDark : ColorTokens.border)
+        .textAlign(TextAlign.Center)
+        // Always dispatch: an empty confirmation is surfaced by the reducer
+        // as an actionable validation message instead of doing nothing.
+        .onClick(() => ReaderUiStore.dispatch({ type: 'source-switch-confirm' }))
+    }
+    .width('100%')
+    .padding({ left: 12, right: 12, top: 10, bottom: 10 })
+    .backgroundColor(ColorTokens.floatingControlBg)
+    .borderRadius(DemoAliasTokens.radiusXl)
+    .position({ x: 0, y: Math.max(0, this.viewportHeight - this.safeAreaBottom - 144) })
+    .zIndex(ZIndexTokens.dialog + 1)
+  }
+}
+
+@Component
 export struct SourceSwitchFlowPage {
+  @StorageProp(ViewportAdapter.K_WIDTH) viewportWidth: number = ViewportAdapter.DEFAULT_WIDTH;
+
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       ReaderBase()
       ReaderTopArea()
-      ReaderControlSheet()
-      ReaderBottomBar()
-      SourceSwitchWindow()
+      if (this.viewportWidth >= 1100) {
+        SourceSwitchFlowFrame()
+      } else {
+        ReaderControlSheet()
+        ReaderBottomBar()
+        SourceSwitchWindow()
+        SourceSwitchPhoneActions()
+      }
     }
     .width('100%')
     .height('100%')
@@ -296,12 +355,12 @@ export struct SourceSwitchContextWindow {
 @Component
 export struct SourceSwitchResultPanel {
   @Prop selectedSource: string = '';
-  @Prop speed: string = '';
-  @Prop chapter: string = '';
+  @Prop hasSelection: boolean = false;
+  @Prop loading: boolean = false;
 
   build() {
     Column({ space: 16 }) {
-      Text('换源结果')
+      Text('已选择来源')
         .fontSize(11)
         .fontWeight(900)
         .fontColor(ColorTokens.muted)
@@ -310,15 +369,13 @@ export struct SourceSwitchResultPanel {
       Column({ space: 10 }) {
         Row() {
           Text('来源').fontSize(11).fontColor(ColorTokens.muted).width(60)
-          Text(this.selectedSource).fontSize(13).fontWeight(700).fontColor(ColorTokens.controlInk).layoutWeight(1)
+          Text(this.selectedSource.length > 0 ? this.selectedSource : '请选择一个书源')
+            .fontSize(13).fontWeight(700).fontColor(ColorTokens.controlInk).layoutWeight(1)
         }.width('100%')
         Row() {
-          Text('速度').fontSize(11).fontColor(ColorTokens.muted).width(60)
-          Text(this.speed).fontSize(13).fontColor(ColorTokens.controlInk).layoutWeight(1)
-        }.width('100%')
-        Row() {
-          Text('章节').fontSize(11).fontColor(ColorTokens.muted).width(60)
-          Text(this.chapter).fontSize(13).fontColor(ColorTokens.controlInk).layoutWeight(1).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+          Text('说明').fontSize(11).fontColor(ColorTokens.muted).width(60)
+          Text(this.hasSelection ? '确认后由 Core 搜索同名书并完成切换' : '选择后才能确认换源')
+            .fontSize(12).fontColor(ColorTokens.controlInk).layoutWeight(1).maxLines(2)
         }.width('100%')
       }
       .width('100%')
@@ -331,14 +388,14 @@ export struct SourceSwitchResultPanel {
 
       // 操作按钮
       Column({ space: 8 }) {
-        Text('确认换源')
+        Text(this.loading ? '正在切换…' : '确认换源')
           .fontSize(13)
           .fontWeight(700)
           .fontColor(DemoAliasTokens.onPrimary)
           .height(44)
           .width('100%')
           .borderRadius(DemoAliasTokens.radiusPill)
-          .backgroundColor(ColorTokens.primaryDark)
+          .backgroundColor(this.hasSelection && !this.loading ? ColorTokens.primaryDark : ColorTokens.border)
           .textAlign(TextAlign.Center)
           .onClick(() => ReaderUiStore.dispatch({ type: 'source-switch-confirm' }))
         Text('取消')
@@ -362,22 +419,52 @@ export struct SourceSwitchResultPanel {
 }
 
 // 3-column container — 300px context | 1fr candidate list | 320px result panel.
-// Right column hides below viewportWidth 1100 (B adaptive behavior).
+// Right column hides below viewportWidth 1100 (B adaptive behavior). On narrow
+// screens, the confirm/cancel action bar moves into the middle column bottom.
 @Component
 export struct SourceSwitchFlowFrame {
   @StorageProp(SafeAreaAdapter.K_TOP) safeAreaTop: number = SafeAreaAdapter.DEFAULT_TOP;
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
   @StorageProp(ViewportAdapter.K_WIDTH) viewportWidth: number = ViewportAdapter.DEFAULT_WIDTH;
+  // Bind real store state for context window and result panel.
+  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
+  @StorageProp('reader.sourceSelection') sourceSelection: string[] = [];
+  @StorageProp('reader.availableSources') availableSources: CoreSourceEntry[] = [];
+  @StorageProp('reader.loading') loading: boolean = false;
+
+  private bookTitle(): string {
+    return this.currentBook !== null ? this.currentBook.title : '未选择书籍';
+  }
+
+  private chapterTitle(): string {
+    return this.currentBook !== null ? this.currentBook.latestChapter : '';
+  }
+
+  private currentSourceName(): string {
+    return this.currentBook !== null ? this.currentBook.sourceName : '未知来源';
+  }
+
+  private selectedSource(): string {
+    const selectedId = this.sourceSelection.length === 1 ? this.sourceSelection[0] : '';
+    for (let i = 0; i < this.availableSources.length; i++) {
+      if (this.availableSources[i].sourceId === selectedId) return this.availableSources[i].name;
+    }
+    return '';
+  }
+
+  private hasSelection(): boolean {
+    return this.sourceSelection.length === 1;
+  }
 
   build() {
     Column() {
       Row({ space: 16 }) {
-        // 左栏 300px
+        // 左栏 300px — context window bound to store currentBook
         Column() {
           SourceSwitchContextWindow({
-            bookTitle: '长夜难明',
-            chapterTitle: '第 32 章 雨夜',
-            currentSource: '优书网'
+            bookTitle: this.bookTitle(),
+            chapterTitle: this.chapterTitle(),
+            currentSource: this.currentSourceName()
           })
         }
         .width(300)
@@ -385,22 +472,50 @@ export struct SourceSwitchFlowFrame {
         .borderRadius(DemoAliasTokens.radiusXl)
         .backgroundColor(ColorTokens.floatingControlBg)
 
-        // 中栏 1fr
+        // 中栏 1fr — candidate list + narrow-screen action bar
         Column() {
           SourceSwitchWindow()
+          // Narrow-screen bottom action bar (replaces right column's
+          // confirm/cancel when viewportWidth < 1100).
+          if (this.viewportWidth < 1100) {
+            Row({ space: 12 }) {
+              Text('取消')
+                .fontSize(13)
+                .fontWeight(700)
+                .fontColor(ColorTokens.primary)
+                .height(44)
+                .layoutWeight(1)
+                .borderRadius(DemoAliasTokens.radiusPill)
+                .border({ width: 1, color: ColorTokens.border })
+                .textAlign(TextAlign.Center)
+                .onClick(() => ReaderUiStore.dispatch({ type: 'source-switch-cancel' }))
+              Text('确认换源')
+                .fontSize(13)
+                .fontWeight(700)
+                .fontColor(DemoAliasTokens.onPrimary)
+                .height(44)
+                .layoutWeight(1)
+                .borderRadius(DemoAliasTokens.radiusPill)
+                .backgroundColor(this.hasSelection() && !this.loading ? ColorTokens.primaryDark : ColorTokens.border)
+                .textAlign(TextAlign.Center)
+                .onClick(() => ReaderUiStore.dispatch({ type: 'source-switch-confirm' }))
+            }
+            .width('100%')
+            .padding({ top: 8, bottom: 4 })
+          }
         }
         .layoutWeight(1)
         .height('100%')
         .borderRadius(DemoAliasTokens.radiusXl)
         .backgroundColor(ColorTokens.floatingControlBg)
 
-        // 右栏 320px（仅在宽屏显示）
+        // 右栏 320px — result panel bound to selected source (wide screen only)
         if (this.viewportWidth >= 1100) {
           Column() {
             SourceSwitchResultPanel({
-              selectedSource: '优书网',
-              speed: '120 ms',
-              chapter: '第 32 章 雨夜'
+              selectedSource: this.selectedSource(),
+              hasSelection: this.hasSelection(),
+              loading: this.loading,
             })
           }
           .width(320)

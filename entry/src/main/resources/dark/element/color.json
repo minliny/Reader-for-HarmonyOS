@@ -95,6 +95,38 @@
     {
       "name": "fd_ds_color_floating_control_bg_alt_night",
       "value": "#FF2B3B43"
+    },
+    {
+      "name": "fd_ds_color_control_field_surface",
+      "value": "#D1FFF8EF"
+    },
+    {
+      "name": "fd_ds_color_control_field_border_default",
+      "value": "#FFC1C7CD"
+    },
+    {
+      "name": "fd_ds_color_control_field_border_hover",
+      "value": "#FF87928D"
+    },
+    {
+      "name": "fd_ds_color_control_field_border_focus",
+      "value": "#FF2D4A3E"
+    },
+    {
+      "name": "fd_ds_color_control_field_surface_disabled",
+      "value": "#9EEAE1DA"
+    },
+    {
+      "name": "fd_ds_color_control_field_ink_disabled",
+      "value": "#FF928B84"
+    },
+    {
+      "name": "fd_ds_color_control_field_border_error",
+      "value": "#FFD7473E"
+    },
+    {
+      "name": "fd_ds_color_control_field_border_success",
+      "value": "#FF338144"
     }
   ]
 }

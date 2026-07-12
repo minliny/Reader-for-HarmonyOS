@@ -56,8 +56,7 @@ export struct SettingsShell {
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
 
   private hasFixedActionBar(): boolean {
-    return this.routeId === 'discover-source-bulk'
-      || this.routeId === 'source-management'
+    return this.routeId === 'source-management'
       || this.routeId === 'source-detail';
   }
 
@@ -112,28 +111,7 @@ export struct SettingsShell {
   }
 
   @Builder renderBottomActionBar() {
-    if (this.routeId === 'discover-source-bulk') {
-      Row({ space: 10 }) {
-        SettingsFixedActionButton({ label: '启用' })
-          .layoutWeight(1)
-        SettingsFixedActionButton({ label: '禁用', variant: 'secondary' })
-          .layoutWeight(1)
-        SettingsFixedActionButton({ label: '刷新', variant: 'secondary' })
-          .layoutWeight(1)
-      }
-      .width('100%')
-      .height(this.actionBarHeight())
-      .padding({ left: SpacingTokens.safeAreaHorizontal + 3, right: SpacingTokens.safeAreaHorizontal + 3, top: 10, bottom: this.safeAreaBottom + 10 })
-      .linearGradient({
-        angle: 180,
-        colors: [
-          [TokenAdapter.colorWithAlpha(ColorTokens.bottomBarBg, 0), 0],
-          [TokenAdapter.colorWithAlpha(ColorTokens.bottomBarBg, 0.96), 0.42],
-          [TokenAdapter.colorWithAlpha(ColorTokens.bottomBarBg, 1.0), 1.0]
-        ]
-      })
-      .zIndex(ZIndexTokens.mainNav)
-    } else if (this.routeId === 'source-management') {
+    if (this.routeId === 'source-management') {
       Row({ space: 10 }) {
         SettingsFixedActionButton({ label: '批量管理', variant: 'secondary', route: 'source-batch' })
           .layoutWeight(1)

@@ -19,6 +19,9 @@ export class TypeTokens {
   static readonly backBarTitleSize: number = 29;
   static readonly readerChapterTitleSize: number = 23;
   static readonly emptyHeadingSize: number = 19;
+  static readonly controlLabelSize: number = 12;
+  static readonly controlValueSize: number = 12;
+  static readonly controlHelperSize: number = 10;
 }
 
 export class FontTokens {

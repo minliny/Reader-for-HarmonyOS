@@ -2,20 +2,261 @@
 // Source: Reader UI/contracts/fixtures/*.json (read-only contract).
 // Re-run `npm run gen:contracts` after any contract change.
 
-export type RouteId = 'app-shell' | 'main-tabs' | 'bookshelf' | 'bookshelf-cover-mode' | 'bookshelf-list-mode' | 'bookshelf-empty' | 'bookshelf-book-more-menu' | 'bookshelf-group-management' | 'sort-filter' | 'group-management' | 'local-import' | 'book-search' | 'search-home' | 'search-results' | 'search-loading' | 'search-empty' | 'search-error' | 'book-detail' | 'book-detail-toc-preview' | 'book-directory' | 'immersive-reading' | 'reader' | 'reader_content' | 'toc-bookmarks' | 'reader-appearance' | 'reader-appearance-overlay-v2' | 'tts' | 'reader-tts-overlay-v2' | 'reader-settings' | 'reader-settings-overlay-v2' | 'reader-full-font' | 'reader-full-theme' | 'reader-full-theme-edit' | 'reader-full-layout' | 'reader-full-page-turn' | 'reader-book-cache' | 'reader-debug-info' | 'auto-page' | 'reader-auto-scroll-overlay-v2' | 'content-search' | 'reader-search-overlay-v2' | 'content-replacement' | 'reader-replace-overlay-v2' | 'source-switch' | 'source-switch-results' | 'reader-night-state-v2' | 'control-layer-base-v2' | 'reader-directory-overlay-v2' | 'discover' | 'discover-home' | 'rss' | 'rss-all' | 'rss-detail' | 'rss-original' | 'rss-refreshing' | 'rss-subscription-management' | 'settings' | 'global-settings' | 'settings-general' | 'source-management' | 'source-detail' | 'source-edit' | 'webdav-config' | 'sync-backup' | 'restore-scopes' | 'restore-running' | 'restore-result' | 'sync-error' | 'about-feedback' | 'global-loading' | 'global-empty' | 'global-error' | 'offline-state' | 'permission-required' | 'state-error' | 'state-offline' | 'discover-cache-confirm' | 'discover-cache-empty' | 'discover-cache-fresh' | 'discover-cache-stale' | 'discover-cache-toast' | 'discover-control' | 'discover-empty' | 'discover-entry-bestseller' | 'discover-entry-booklist' | 'discover-entry-category' | 'discover-entry-error' | 'discover-entry-finished' | 'discover-entry-latest' | 'discover-entry-new' | 'discover-entry-ranking' | 'discover-entry-source' | 'discover-error' | 'discover-filter-category' | 'discover-filter-female' | 'discover-filter-keyword' | 'discover-filter-male' | 'discover-filter-source-type' | 'discover-infinite-loading' | 'discover-loading' | 'discover-login-return' | 'discover-no-results' | 'discover-page-two' | 'discover-refreshing' | 'discover-sort' | 'discover-sort-collection' | 'discover-sort-finished' | 'discover-sort-popularity' | 'discover-sort-update' | 'discover-sort-words' | 'discover-switched-source' | 'discover-switching-source' | 'book-batch-management' | 'discover-source-login' | 'rss-empty' | 'rss-error' | 'rss-favorite-add' | 'rss-favorite-clear' | 'rss-favorite-group-edit' | 'rss-favorite-groups' | 'rss-favorite-remove' | 'rss-original-browser' | 'rss-read-record' | 'rss-record-clear' | 'rss-rule-subscription' | 'rss-rule-subscription-apply' | 'rss-rule-subscription-create' | 'rss-rule-subscription-detail' | 'rss-rule-subscription-edit' | 'rss-rule-subscription-test' | 'rss-search' | 'rss-source-actions' | 'rss-source-add' | 'rss-source-batch' | 'rss-source-batch-disable' | 'rss-source-category-booklist' | 'rss-source-category-discussions' | 'rss-source-category-issues' | 'rss-source-category-novel' | 'rss-source-category-releases' | 'rss-source-category-tech' | 'rss-source-debug' | 'rss-source-delete-confirm' | 'rss-source-disable' | 'rss-source-edit' | 'rss-source-export' | 'rss-source-export-detail' | 'rss-source-export-result' | 'rss-source-feed' | 'rss-source-group-edit' | 'rss-source-groups' | 'rss-source-import' | 'rss-source-import-detail' | 'rss-source-import-result' | 'rss-source-login' | 'rss-source-login-clear' | 'rss-source-login-cookie' | 'rss-source-login-web' | 'rss-source-pin' | 'rss-source-vars' | 'rss-starred' | 'reader-full-appearance' | 'reader-full-directory' | 'reader-full-settings' | 'reader-full-tts' | 'about' | 'about-version' | 'backup-settings' | 'bookshelf-search-settings' | 'discover-rule-test' | 'discover-source-bulk' | 'progress-sync' | 'progress-sync-status' | 'reading-settings-entry' | 'remote-webdav-books' | 'restore-confirm' | 'restore-conflict' | 'restore-preview' | 'restore-progress' | 'source-add' | 'source-batch' | 'source-code-view' | 'source-debug' | 'source-debug-catalog-result' | 'source-debug-content-log' | 'source-debug-detail-result' | 'source-debug-result' | 'source-debug-running' | 'source-debug-search-result' | 'source-delete-confirm' | 'source-detect' | 'source-edit-debug' | 'source-groups' | 'source-import-options' | 'source-import-preview' | 'source-logs' | 'source-rule-edit' | 'source-settings-entry' | 'source-test-result' | 'sync-settings-entry';
+export type RouteId = 'bookshelf' | 'bookshelf-empty' | 'bookshelf-cover-mode' | 'bookshelf-list-mode' | 'bookshelf-book-more-menu' | 'bookshelf-group-management' | 'book-batch-management' | 'sort-filter' | 'group-management' | 'local-import' | 'book-search' | 'search-home' | 'search-results' | 'search-loading' | 'search-empty' | 'search-error' | 'book-detail' | 'book-detail-toc-preview' | 'book-directory' | 'immersive-reading' | 'reader' | 'reader_content' | 'toc-bookmarks' | 'reader-appearance' | 'reader-appearance-overlay-v2' | 'tts' | 'reader-tts-overlay-v2' | 'reader-settings' | 'reader-settings-overlay-v2' | 'reader-full-font' | 'reader-full-theme' | 'reader-full-theme-edit' | 'reader-full-layout' | 'reader-full-page-turn' | 'reader-book-cache' | 'reader-debug-info' | 'auto-page' | 'reader-auto-scroll-overlay-v2' | 'content-search' | 'reader-search-overlay-v2' | 'content-replacement' | 'reader-replace-overlay-v2' | 'source-switch' | 'source-switch-results' | 'reader-night-state-v2' | 'discover' | 'discover-home' | 'discover-control' | 'discover-sort' | 'discover-entry-category' | 'discover-entry-source' | 'discover-filter-source-type' | 'discover-filter-category' | 'discover-no-results' | 'discover-loading' | 'discover-refreshing' | 'discover-infinite-loading' | 'discover-page-two' | 'discover-cache-empty' | 'discover-cache-stale' | 'discover-cache-fresh' | 'discover-login-return' | 'discover-switching-source' | 'discover-switched-source' | 'discover-entry-error' | 'discover-empty' | 'discover-error' | 'discover-source-login' | 'discover-rule-test' | 'discover-source-bulk' | 'rss' | 'rss-all' | 'rss-starred' | 'rss-source-feed' | 'rss-source-category-novel' | 'rss-source-category-tech' | 'rss-source-category-booklist' | 'rss-refreshing' | 'rss-search' | 'rss-detail' | 'rss-original' | 'rss-original-browser' | 'rss-subscription-management' | 'rss-source-add' | 'rss-source-edit' | 'rss-source-delete-confirm' | 'rss-rule-subscription-create' | 'rss-rule-subscription-edit' | 'rss-favorite-add' | 'rss-favorite-remove' | 'rss-empty' | 'rss-error' | 'settings' | 'global-settings' | 'settings-general' | 'bookshelf-search-settings' | 'about-feedback' | 'sync-backup' | 'webdav-config' | 'restore-scopes' | 'restore-preview' | 'restore-running' | 'restore-result' | 'source-management' | 'source-import-options' | 'source-import-preview' | 'source-detail' | 'source-edit' | 'source-add' | 'source-detect' | 'source-rule-edit' | 'source-debug' | 'source-debug-running' | 'source-debug-result' | 'source-logs' | 'source-code-view' | 'source-delete-confirm' | 'source-test-result' | 'source-settings-entry' | 'sync-settings-entry' | 'reading-settings-entry' | 'app-shell' | 'main-tabs' | 'global-loading' | 'global-empty' | 'global-error' | 'offline-state' | 'permission-required' | 'progress-sync-status' | 'sync-error' | 'backup-settings' | 'progress-sync' | 'remote-webdav-books' | 'about' | 'about-version' | 'state-error' | 'state-offline' | 'control-layer-base-v2' | 'reader-directory-overlay-v2' | 'discover-entry-ranking' | 'discover-entry-bestseller' | 'discover-entry-finished' | 'discover-entry-latest' | 'discover-entry-new' | 'discover-entry-booklist' | 'discover-filter-keyword' | 'discover-filter-male' | 'discover-filter-female' | 'discover-sort-popularity' | 'discover-sort-update' | 'discover-sort-collection' | 'discover-sort-finished' | 'discover-sort-words' | 'discover-cache-confirm' | 'discover-cache-toast' | 'rss-source-category-releases' | 'rss-source-category-issues' | 'rss-source-category-discussions' | 'rss-source-actions' | 'rss-source-debug' | 'rss-source-vars' | 'rss-source-login' | 'rss-source-login-web' | 'rss-source-login-cookie' | 'rss-source-login-clear' | 'rss-source-groups' | 'rss-source-group-edit' | 'rss-source-batch' | 'rss-source-export' | 'rss-source-export-detail' | 'rss-source-export-result' | 'rss-source-pin' | 'rss-source-disable' | 'rss-source-batch-disable' | 'rss-source-import' | 'rss-source-import-detail' | 'rss-source-import-result' | 'rss-read-record' | 'rss-record-clear' | 'rss-rule-subscription' | 'rss-rule-subscription-detail' | 'rss-rule-subscription-test' | 'rss-rule-subscription-apply' | 'rss-favorite-groups' | 'rss-favorite-group-edit' | 'rss-favorite-clear' | 'reader-full-directory' | 'reader-full-tts' | 'reader-full-appearance' | 'reader-full-settings' | 'restore-confirm' | 'restore-progress' | 'restore-conflict' | 'source-batch' | 'source-groups' | 'source-debug-search-result' | 'source-debug-detail-result' | 'source-debug-catalog-result' | 'source-debug-content-log' | 'source-edit-debug' | 'reader-font-import-confirm' | 'reader-font-delete-confirm' | 'reader-font-fallback' | 'reader-theme-new' | 'reader-theme-delete-confirm' | 'reader-typography-reset-confirm' | 'reader-replace-delete-confirm' | 'reader-replace-apply-result' | 'reader-replace-import-export' | 'reader-replace-preview' | 'reader-replace-page' | 'source-switch-empty' | 'source-switch-error' | 'source-switch-timeout' | 'source-switch-loading' | 'source-switch-rollback' | 'source-switch-preview' | 'reader-toc-loading' | 'reader-toc-offline' | 'reader-toc-error' | 'reader-content-loading' | 'reader-content-offline' | 'reader-content-error' | 'reader-page-boundary-first' | 'reader-page-boundary-last' | 'reader-progress-restore' | 'reader-background-restore' | 'import-permission-denied' | 'import-format-unsupported' | 'import-empty-file' | 'import-parsing' | 'import-duplicate' | 'import-conflict-resolve' | 'import-partial-success' | 'import-result-detail';
 export type ShellId = 'MainTabShell' | 'LibraryShell' | 'ReaderShell' | 'FlowShell' | 'SettingsShell';
 
 export class RouteTable {
-  static shellOf(id: string): ShellId {
+  static readonly ALL: RouteId[] = [
+    'bookshelf',
+    'bookshelf-empty',
+    'bookshelf-cover-mode',
+    'bookshelf-list-mode',
+    'bookshelf-book-more-menu',
+    'bookshelf-group-management',
+    'book-batch-management',
+    'sort-filter',
+    'group-management',
+    'local-import',
+    'book-search',
+    'search-home',
+    'search-results',
+    'search-loading',
+    'search-empty',
+    'search-error',
+    'book-detail',
+    'book-detail-toc-preview',
+    'book-directory',
+    'immersive-reading',
+    'reader',
+    'reader_content',
+    'toc-bookmarks',
+    'reader-appearance',
+    'reader-appearance-overlay-v2',
+    'tts',
+    'reader-tts-overlay-v2',
+    'reader-settings',
+    'reader-settings-overlay-v2',
+    'reader-full-font',
+    'reader-full-theme',
+    'reader-full-theme-edit',
+    'reader-full-layout',
+    'reader-full-page-turn',
+    'reader-book-cache',
+    'reader-debug-info',
+    'auto-page',
+    'reader-auto-scroll-overlay-v2',
+    'content-search',
+    'reader-search-overlay-v2',
+    'content-replacement',
+    'reader-replace-overlay-v2',
+    'source-switch',
+    'source-switch-results',
+    'reader-night-state-v2',
+    'discover',
+    'discover-home',
+    'discover-control',
+    'discover-sort',
+    'discover-entry-category',
+    'discover-entry-source',
+    'discover-filter-source-type',
+    'discover-filter-category',
+    'discover-no-results',
+    'discover-loading',
+    'discover-refreshing',
+    'discover-infinite-loading',
+    'discover-page-two',
+    'discover-cache-empty',
+    'discover-cache-stale',
+    'discover-cache-fresh',
+    'discover-login-return',
+    'discover-switching-source',
+    'discover-switched-source',
+    'discover-entry-error',
+    'discover-empty',
+    'discover-error',
+    'discover-source-login',
+    'discover-rule-test',
+    'discover-source-bulk',
+    'rss',
+    'rss-all',
+    'rss-starred',
+    'rss-source-feed',
+    'rss-source-category-novel',
+    'rss-source-category-tech',
+    'rss-source-category-booklist',
+    'rss-refreshing',
+    'rss-search',
+    'rss-detail',
+    'rss-original',
+    'rss-original-browser',
+    'rss-subscription-management',
+    'rss-source-add',
+    'rss-source-edit',
+    'rss-source-delete-confirm',
+    'rss-rule-subscription-create',
+    'rss-rule-subscription-edit',
+    'rss-favorite-add',
+    'rss-favorite-remove',
+    'rss-empty',
+    'rss-error',
+    'settings',
+    'global-settings',
+    'settings-general',
+    'bookshelf-search-settings',
+    'about-feedback',
+    'sync-backup',
+    'webdav-config',
+    'restore-scopes',
+    'restore-preview',
+    'restore-running',
+    'restore-result',
+    'source-management',
+    'source-import-options',
+    'source-import-preview',
+    'source-detail',
+    'source-edit',
+    'source-add',
+    'source-detect',
+    'source-rule-edit',
+    'source-debug',
+    'source-debug-running',
+    'source-debug-result',
+    'source-logs',
+    'source-code-view',
+    'source-delete-confirm',
+    'source-test-result',
+    'source-settings-entry',
+    'sync-settings-entry',
+    'reading-settings-entry',
+    'app-shell',
+    'main-tabs',
+    'global-loading',
+    'global-empty',
+    'global-error',
+    'offline-state',
+    'permission-required',
+    'progress-sync-status',
+    'sync-error',
+    'backup-settings',
+    'progress-sync',
+    'remote-webdav-books',
+    'about',
+    'about-version',
+    'state-error',
+    'state-offline',
+    'control-layer-base-v2',
+    'reader-directory-overlay-v2',
+    'discover-entry-ranking',
+    'discover-entry-bestseller',
+    'discover-entry-finished',
+    'discover-entry-latest',
+    'discover-entry-new',
+    'discover-entry-booklist',
+    'discover-filter-keyword',
+    'discover-filter-male',
+    'discover-filter-female',
+    'discover-sort-popularity',
+    'discover-sort-update',
+    'discover-sort-collection',
+    'discover-sort-finished',
+    'discover-sort-words',
+    'discover-cache-confirm',
+    'discover-cache-toast',
+    'rss-source-category-releases',
+    'rss-source-category-issues',
+    'rss-source-category-discussions',
+    'rss-source-actions',
+    'rss-source-debug',
+    'rss-source-vars',
+    'rss-source-login',
+    'rss-source-login-web',
+    'rss-source-login-cookie',
+    'rss-source-login-clear',
+    'rss-source-groups',
+    'rss-source-group-edit',
+    'rss-source-batch',
+    'rss-source-export',
+    'rss-source-export-detail',
+    'rss-source-export-result',
+    'rss-source-pin',
+    'rss-source-disable',
+    'rss-source-batch-disable',
+    'rss-source-import',
+    'rss-source-import-detail',
+    'rss-source-import-result',
+    'rss-read-record',
+    'rss-record-clear',
+    'rss-rule-subscription',
+    'rss-rule-subscription-detail',
+    'rss-rule-subscription-test',
+    'rss-rule-subscription-apply',
+    'rss-favorite-groups',
+    'rss-favorite-group-edit',
+    'rss-favorite-clear',
+    'reader-full-directory',
+    'reader-full-tts',
+    'reader-full-appearance',
+    'reader-full-settings',
+    'restore-confirm',
+    'restore-progress',
+    'restore-conflict',
+    'source-batch',
+    'source-groups',
+    'source-debug-search-result',
+    'source-debug-detail-result',
+    'source-debug-catalog-result',
+    'source-debug-content-log',
+    'source-edit-debug',
+    'reader-font-import-confirm',
+    'reader-font-delete-confirm',
+    'reader-font-fallback',
+    'reader-theme-new',
+    'reader-theme-delete-confirm',
+    'reader-typography-reset-confirm',
+    'reader-replace-delete-confirm',
+    'reader-replace-apply-result',
+    'reader-replace-import-export',
+    'reader-replace-preview',
+    'reader-replace-page',
+    'source-switch-empty',
+    'source-switch-error',
+    'source-switch-timeout',
+    'source-switch-loading',
+    'source-switch-rollback',
+    'source-switch-preview',
+    'reader-toc-loading',
+    'reader-toc-offline',
+    'reader-toc-error',
+    'reader-content-loading',
+    'reader-content-offline',
+    'reader-content-error',
+    'reader-page-boundary-first',
+    'reader-page-boundary-last',
+    'reader-progress-restore',
+    'reader-background-restore',
+    'import-permission-denied',
+    'import-format-unsupported',
+    'import-empty-file',
+    'import-parsing',
+    'import-duplicate',
+    'import-conflict-resolve',
+    'import-partial-success',
+    'import-result-detail'
+  ];
+
+  static has(id: string): boolean {
+    return RouteTable.ALL.indexOf(id as RouteId) >= 0;
+  }
+
+  static shellOf(id: string): ShellId | null {
     switch (id) {
-      case 'app-shell': return 'MainTabShell';
-      case 'main-tabs': return 'MainTabShell';
       case 'bookshelf': return 'MainTabShell';
+      case 'bookshelf-empty': return 'MainTabShell';
       case 'bookshelf-cover-mode': return 'MainTabShell';
       case 'bookshelf-list-mode': return 'MainTabShell';
-      case 'bookshelf-empty': return 'MainTabShell';
       case 'bookshelf-book-more-menu': return 'MainTabShell';
       case 'bookshelf-group-management': return 'LibraryShell';
+      case 'book-batch-management': return 'LibraryShell';
       case 'sort-filter': return 'MainTabShell';
       case 'group-management': return 'LibraryShell';
       case 'local-import': return 'LibraryShell';
@@ -54,170 +295,447 @@ export class RouteTable {
       case 'source-switch': return 'FlowShell';
       case 'source-switch-results': return 'FlowShell';
       case 'reader-night-state-v2': return 'ReaderShell';
-      case 'control-layer-base-v2': return 'ReaderShell';
-      case 'reader-directory-overlay-v2': return 'ReaderShell';
       case 'discover': return 'MainTabShell';
       case 'discover-home': return 'MainTabShell';
+      case 'discover-control': return 'MainTabShell';
+      case 'discover-sort': return 'MainTabShell';
+      case 'discover-entry-category': return 'MainTabShell';
+      case 'discover-entry-source': return 'MainTabShell';
+      case 'discover-filter-source-type': return 'MainTabShell';
+      case 'discover-filter-category': return 'MainTabShell';
+      case 'discover-no-results': return 'MainTabShell';
+      case 'discover-loading': return 'MainTabShell';
+      case 'discover-refreshing': return 'MainTabShell';
+      case 'discover-infinite-loading': return 'MainTabShell';
+      case 'discover-page-two': return 'MainTabShell';
+      case 'discover-cache-empty': return 'MainTabShell';
+      case 'discover-cache-stale': return 'MainTabShell';
+      case 'discover-cache-fresh': return 'MainTabShell';
+      case 'discover-login-return': return 'MainTabShell';
+      case 'discover-switching-source': return 'MainTabShell';
+      case 'discover-switched-source': return 'MainTabShell';
+      case 'discover-entry-error': return 'MainTabShell';
+      case 'discover-empty': return 'MainTabShell';
+      case 'discover-error': return 'MainTabShell';
+      case 'discover-source-login': return 'LibraryShell';
+      case 'discover-rule-test': return 'SettingsShell';
+      case 'discover-source-bulk': return 'SettingsShell';
       case 'rss': return 'MainTabShell';
       case 'rss-all': return 'LibraryShell';
+      case 'rss-starred': return 'LibraryShell';
+      case 'rss-source-feed': return 'LibraryShell';
+      case 'rss-source-category-novel': return 'LibraryShell';
+      case 'rss-source-category-tech': return 'LibraryShell';
+      case 'rss-source-category-booklist': return 'LibraryShell';
+      case 'rss-refreshing': return 'LibraryShell';
+      case 'rss-search': return 'LibraryShell';
       case 'rss-detail': return 'LibraryShell';
       case 'rss-original': return 'LibraryShell';
-      case 'rss-refreshing': return 'LibraryShell';
+      case 'rss-original-browser': return 'LibraryShell';
       case 'rss-subscription-management': return 'LibraryShell';
+      case 'rss-source-add': return 'LibraryShell';
+      case 'rss-source-edit': return 'LibraryShell';
+      case 'rss-source-delete-confirm': return 'LibraryShell';
+      case 'rss-rule-subscription-create': return 'LibraryShell';
+      case 'rss-rule-subscription-edit': return 'LibraryShell';
+      case 'rss-favorite-add': return 'LibraryShell';
+      case 'rss-favorite-remove': return 'LibraryShell';
+      case 'rss-empty': return 'LibraryShell';
+      case 'rss-error': return 'LibraryShell';
       case 'settings': return 'MainTabShell';
       case 'global-settings': return 'SettingsShell';
       case 'settings-general': return 'SettingsShell';
-      case 'source-management': return 'SettingsShell';
-      case 'source-detail': return 'SettingsShell';
-      case 'source-edit': return 'SettingsShell';
-      case 'webdav-config': return 'SettingsShell';
+      case 'bookshelf-search-settings': return 'SettingsShell';
+      case 'about-feedback': return 'SettingsShell';
       case 'sync-backup': return 'SettingsShell';
+      case 'webdav-config': return 'SettingsShell';
       case 'restore-scopes': return 'SettingsShell';
+      case 'restore-preview': return 'SettingsShell';
       case 'restore-running': return 'SettingsShell';
       case 'restore-result': return 'SettingsShell';
-      case 'sync-error': return 'SettingsShell';
-      case 'about-feedback': return 'SettingsShell';
+      case 'source-management': return 'SettingsShell';
+      case 'source-import-options': return 'SettingsShell';
+      case 'source-import-preview': return 'SettingsShell';
+      case 'source-detail': return 'SettingsShell';
+      case 'source-edit': return 'SettingsShell';
+      case 'source-add': return 'SettingsShell';
+      case 'source-detect': return 'SettingsShell';
+      case 'source-rule-edit': return 'SettingsShell';
+      case 'source-debug': return 'SettingsShell';
+      case 'source-debug-running': return 'SettingsShell';
+      case 'source-debug-result': return 'SettingsShell';
+      case 'source-logs': return 'SettingsShell';
+      case 'source-code-view': return 'SettingsShell';
+      case 'source-delete-confirm': return 'SettingsShell';
+      case 'source-test-result': return 'SettingsShell';
+      case 'source-settings-entry': return 'SettingsShell';
+      case 'sync-settings-entry': return 'SettingsShell';
+      case 'reading-settings-entry': return 'SettingsShell';
+      case 'app-shell': return 'MainTabShell';
+      case 'main-tabs': return 'MainTabShell';
       case 'global-loading': return 'SettingsShell';
       case 'global-empty': return 'SettingsShell';
       case 'global-error': return 'SettingsShell';
       case 'offline-state': return 'SettingsShell';
       case 'permission-required': return 'SettingsShell';
+      case 'progress-sync-status': return 'SettingsShell';
+      case 'sync-error': return 'SettingsShell';
+      case 'backup-settings': return 'SettingsShell';
+      case 'progress-sync': return 'SettingsShell';
+      case 'remote-webdav-books': return 'SettingsShell';
+      case 'about': return 'SettingsShell';
+      case 'about-version': return 'SettingsShell';
       case 'state-error': return 'SettingsShell';
       case 'state-offline': return 'SettingsShell';
-      case 'discover-cache-confirm': return 'MainTabShell';
-      case 'discover-cache-empty': return 'MainTabShell';
-      case 'discover-cache-fresh': return 'MainTabShell';
-      case 'discover-cache-stale': return 'MainTabShell';
-      case 'discover-cache-toast': return 'MainTabShell';
-      case 'discover-control': return 'MainTabShell';
-      case 'discover-empty': return 'MainTabShell';
+      case 'control-layer-base-v2': return 'ReaderShell';
+      case 'reader-directory-overlay-v2': return 'ReaderShell';
+      case 'discover-entry-ranking': return 'MainTabShell';
       case 'discover-entry-bestseller': return 'MainTabShell';
-      case 'discover-entry-booklist': return 'MainTabShell';
-      case 'discover-entry-category': return 'MainTabShell';
-      case 'discover-entry-error': return 'MainTabShell';
       case 'discover-entry-finished': return 'MainTabShell';
       case 'discover-entry-latest': return 'MainTabShell';
       case 'discover-entry-new': return 'MainTabShell';
-      case 'discover-entry-ranking': return 'MainTabShell';
-      case 'discover-entry-source': return 'MainTabShell';
-      case 'discover-error': return 'MainTabShell';
-      case 'discover-filter-category': return 'MainTabShell';
-      case 'discover-filter-female': return 'MainTabShell';
+      case 'discover-entry-booklist': return 'MainTabShell';
       case 'discover-filter-keyword': return 'MainTabShell';
       case 'discover-filter-male': return 'MainTabShell';
-      case 'discover-filter-source-type': return 'MainTabShell';
-      case 'discover-infinite-loading': return 'MainTabShell';
-      case 'discover-loading': return 'MainTabShell';
-      case 'discover-login-return': return 'MainTabShell';
-      case 'discover-no-results': return 'MainTabShell';
-      case 'discover-page-two': return 'MainTabShell';
-      case 'discover-refreshing': return 'MainTabShell';
-      case 'discover-sort': return 'MainTabShell';
-      case 'discover-sort-collection': return 'MainTabShell';
-      case 'discover-sort-finished': return 'MainTabShell';
+      case 'discover-filter-female': return 'MainTabShell';
       case 'discover-sort-popularity': return 'MainTabShell';
       case 'discover-sort-update': return 'MainTabShell';
+      case 'discover-sort-collection': return 'MainTabShell';
+      case 'discover-sort-finished': return 'MainTabShell';
       case 'discover-sort-words': return 'MainTabShell';
-      case 'discover-switched-source': return 'MainTabShell';
-      case 'discover-switching-source': return 'MainTabShell';
-      case 'book-batch-management': return 'LibraryShell';
-      case 'discover-source-login': return 'LibraryShell';
-      case 'rss-empty': return 'LibraryShell';
-      case 'rss-error': return 'LibraryShell';
-      case 'rss-favorite-add': return 'LibraryShell';
-      case 'rss-favorite-clear': return 'LibraryShell';
-      case 'rss-favorite-group-edit': return 'LibraryShell';
-      case 'rss-favorite-groups': return 'LibraryShell';
-      case 'rss-favorite-remove': return 'LibraryShell';
-      case 'rss-original-browser': return 'LibraryShell';
-      case 'rss-read-record': return 'LibraryShell';
-      case 'rss-record-clear': return 'LibraryShell';
-      case 'rss-rule-subscription': return 'LibraryShell';
-      case 'rss-rule-subscription-apply': return 'LibraryShell';
-      case 'rss-rule-subscription-create': return 'LibraryShell';
-      case 'rss-rule-subscription-detail': return 'LibraryShell';
-      case 'rss-rule-subscription-edit': return 'LibraryShell';
-      case 'rss-rule-subscription-test': return 'LibraryShell';
-      case 'rss-search': return 'LibraryShell';
-      case 'rss-source-actions': return 'LibraryShell';
-      case 'rss-source-add': return 'LibraryShell';
-      case 'rss-source-batch': return 'LibraryShell';
-      case 'rss-source-batch-disable': return 'LibraryShell';
-      case 'rss-source-category-booklist': return 'LibraryShell';
-      case 'rss-source-category-discussions': return 'LibraryShell';
-      case 'rss-source-category-issues': return 'LibraryShell';
-      case 'rss-source-category-novel': return 'LibraryShell';
+      case 'discover-cache-confirm': return 'MainTabShell';
+      case 'discover-cache-toast': return 'MainTabShell';
       case 'rss-source-category-releases': return 'LibraryShell';
-      case 'rss-source-category-tech': return 'LibraryShell';
+      case 'rss-source-category-issues': return 'LibraryShell';
+      case 'rss-source-category-discussions': return 'LibraryShell';
+      case 'rss-source-actions': return 'LibraryShell';
       case 'rss-source-debug': return 'LibraryShell';
-      case 'rss-source-delete-confirm': return 'LibraryShell';
-      case 'rss-source-disable': return 'LibraryShell';
-      case 'rss-source-edit': return 'LibraryShell';
+      case 'rss-source-vars': return 'LibraryShell';
+      case 'rss-source-login': return 'LibraryShell';
+      case 'rss-source-login-web': return 'LibraryShell';
+      case 'rss-source-login-cookie': return 'LibraryShell';
+      case 'rss-source-login-clear': return 'LibraryShell';
+      case 'rss-source-groups': return 'LibraryShell';
+      case 'rss-source-group-edit': return 'LibraryShell';
+      case 'rss-source-batch': return 'LibraryShell';
       case 'rss-source-export': return 'LibraryShell';
       case 'rss-source-export-detail': return 'LibraryShell';
       case 'rss-source-export-result': return 'LibraryShell';
-      case 'rss-source-feed': return 'LibraryShell';
-      case 'rss-source-group-edit': return 'LibraryShell';
-      case 'rss-source-groups': return 'LibraryShell';
+      case 'rss-source-pin': return 'LibraryShell';
+      case 'rss-source-disable': return 'LibraryShell';
+      case 'rss-source-batch-disable': return 'LibraryShell';
       case 'rss-source-import': return 'LibraryShell';
       case 'rss-source-import-detail': return 'LibraryShell';
       case 'rss-source-import-result': return 'LibraryShell';
-      case 'rss-source-login': return 'LibraryShell';
-      case 'rss-source-login-clear': return 'LibraryShell';
-      case 'rss-source-login-cookie': return 'LibraryShell';
-      case 'rss-source-login-web': return 'LibraryShell';
-      case 'rss-source-pin': return 'LibraryShell';
-      case 'rss-source-vars': return 'LibraryShell';
-      case 'rss-starred': return 'LibraryShell';
-      case 'reader-full-appearance': return 'ReaderShell';
+      case 'rss-read-record': return 'LibraryShell';
+      case 'rss-record-clear': return 'LibraryShell';
+      case 'rss-rule-subscription': return 'LibraryShell';
+      case 'rss-rule-subscription-detail': return 'LibraryShell';
+      case 'rss-rule-subscription-test': return 'LibraryShell';
+      case 'rss-rule-subscription-apply': return 'LibraryShell';
+      case 'rss-favorite-groups': return 'LibraryShell';
+      case 'rss-favorite-group-edit': return 'LibraryShell';
+      case 'rss-favorite-clear': return 'LibraryShell';
       case 'reader-full-directory': return 'ReaderShell';
-      case 'reader-full-settings': return 'ReaderShell';
       case 'reader-full-tts': return 'ReaderShell';
-      case 'about': return 'SettingsShell';
-      case 'about-version': return 'SettingsShell';
-      case 'backup-settings': return 'SettingsShell';
-      case 'bookshelf-search-settings': return 'SettingsShell';
-      case 'discover-rule-test': return 'SettingsShell';
-      case 'discover-source-bulk': return 'SettingsShell';
-      case 'progress-sync': return 'SettingsShell';
-      case 'progress-sync-status': return 'SettingsShell';
-      case 'reading-settings-entry': return 'SettingsShell';
-      case 'remote-webdav-books': return 'SettingsShell';
+      case 'reader-full-appearance': return 'ReaderShell';
+      case 'reader-full-settings': return 'ReaderShell';
       case 'restore-confirm': return 'SettingsShell';
-      case 'restore-conflict': return 'SettingsShell';
-      case 'restore-preview': return 'SettingsShell';
       case 'restore-progress': return 'SettingsShell';
-      case 'source-add': return 'SettingsShell';
+      case 'restore-conflict': return 'SettingsShell';
       case 'source-batch': return 'SettingsShell';
-      case 'source-code-view': return 'SettingsShell';
-      case 'source-debug': return 'SettingsShell';
+      case 'source-groups': return 'SettingsShell';
+      case 'source-debug-search-result': return 'SettingsShell';
+      case 'source-debug-detail-result': return 'SettingsShell';
       case 'source-debug-catalog-result': return 'SettingsShell';
       case 'source-debug-content-log': return 'SettingsShell';
-      case 'source-debug-detail-result': return 'SettingsShell';
-      case 'source-debug-result': return 'SettingsShell';
-      case 'source-debug-running': return 'SettingsShell';
-      case 'source-debug-search-result': return 'SettingsShell';
-      case 'source-delete-confirm': return 'SettingsShell';
-      case 'source-detect': return 'SettingsShell';
       case 'source-edit-debug': return 'SettingsShell';
-      case 'source-groups': return 'SettingsShell';
-      case 'source-import-options': return 'SettingsShell';
-      case 'source-import-preview': return 'SettingsShell';
-      case 'source-logs': return 'SettingsShell';
-      case 'source-rule-edit': return 'SettingsShell';
-      case 'source-settings-entry': return 'SettingsShell';
-      case 'source-test-result': return 'SettingsShell';
-      case 'sync-settings-entry': return 'SettingsShell';
-      default: return 'FlowShell';
+      case 'reader-font-import-confirm': return 'ReaderShell';
+      case 'reader-font-delete-confirm': return 'ReaderShell';
+      case 'reader-font-fallback': return 'ReaderShell';
+      case 'reader-theme-new': return 'ReaderShell';
+      case 'reader-theme-delete-confirm': return 'ReaderShell';
+      case 'reader-typography-reset-confirm': return 'ReaderShell';
+      case 'reader-replace-delete-confirm': return 'ReaderShell';
+      case 'reader-replace-apply-result': return 'ReaderShell';
+      case 'reader-replace-import-export': return 'ReaderShell';
+      case 'reader-replace-preview': return 'ReaderShell';
+      case 'reader-replace-page': return 'ReaderShell';
+      case 'source-switch-empty': return 'FlowShell';
+      case 'source-switch-error': return 'FlowShell';
+      case 'source-switch-timeout': return 'FlowShell';
+      case 'source-switch-loading': return 'FlowShell';
+      case 'source-switch-rollback': return 'FlowShell';
+      case 'source-switch-preview': return 'FlowShell';
+      case 'reader-toc-loading': return 'ReaderShell';
+      case 'reader-toc-offline': return 'ReaderShell';
+      case 'reader-toc-error': return 'ReaderShell';
+      case 'reader-content-loading': return 'ReaderShell';
+      case 'reader-content-offline': return 'ReaderShell';
+      case 'reader-content-error': return 'ReaderShell';
+      case 'reader-page-boundary-first': return 'ReaderShell';
+      case 'reader-page-boundary-last': return 'ReaderShell';
+      case 'reader-progress-restore': return 'ReaderShell';
+      case 'reader-background-restore': return 'ReaderShell';
+      case 'import-permission-denied': return 'LibraryShell';
+      case 'import-format-unsupported': return 'LibraryShell';
+      case 'import-empty-file': return 'LibraryShell';
+      case 'import-parsing': return 'LibraryShell';
+      case 'import-duplicate': return 'LibraryShell';
+      case 'import-conflict-resolve': return 'LibraryShell';
+      case 'import-partial-success': return 'LibraryShell';
+      case 'import-result-detail': return 'LibraryShell';
+      default: return null;
+    }
+  }
+
+  static titleOf(id: string): string | null {
+    switch (id) {
+      case 'bookshelf': return '书架（Bookshelf）';
+      case 'bookshelf-empty': return '书架空状态（Bookshelf Empty）';
+      case 'bookshelf-cover-mode': return '书架封面模式（Bookshelf Cover Mode）';
+      case 'bookshelf-list-mode': return '书架列表模式（Bookshelf List Mode）';
+      case 'bookshelf-book-more-menu': return '书籍更多操作（Bookshelf Book More Menu）';
+      case 'bookshelf-group-management': return '书架分组管理（Bookshelf Group Management）';
+      case 'book-batch-management': return '书籍批量管理（Book Batch Management）';
+      case 'sort-filter': return '书架排序筛选弹层（Bookshelf Sort Filter Popover）';
+      case 'group-management': return '分组管理（Group Management）';
+      case 'local-import': return '本地书导入（Local Import）';
+      case 'book-search': return '书籍搜索（Book Search）';
+      case 'search-home': return '搜索首页（Search Home）';
+      case 'search-results': return '搜索结果（Search Results）';
+      case 'search-loading': return '搜索加载中（Search Loading）';
+      case 'search-empty': return '搜索空状态（Search Empty）';
+      case 'search-error': return '搜索错误状态（Search Error）';
+      case 'book-detail': return '书籍详情（Book Detail）';
+      case 'book-detail-toc-preview': return '书籍详情目录预览（Book Detail TOC Preview）';
+      case 'book-directory': return '书籍目录（Book Directory）';
+      case 'immersive-reading': return '沉浸阅读（Immersive Reading）';
+      case 'reader': return '阅读控制层（Reader Control Layer）';
+      case 'reader_content': return '阅读正文（Reader Content）';
+      case 'toc-bookmarks': return '目录与书签（TOC and Bookmarks）';
+      case 'reader-appearance': return '阅读外观（Reading Appearance）';
+      case 'reader-appearance-overlay-v2': return '阅读外观覆盖层 V2（Reader Appearance Overlay V2）';
+      case 'tts': return '朗读（Read Aloud）';
+      case 'reader-tts-overlay-v2': return '朗读覆盖层 V2（Reader TTS Overlay V2）';
+      case 'reader-settings': return '阅读设置（Reading Settings）';
+      case 'reader-settings-overlay-v2': return '阅读设置覆盖层 V2（Reader Settings Overlay V2）';
+      case 'reader-full-font': return '字体完整设置（Reader Full Font）';
+      case 'reader-full-theme': return '主题完整设置（Reader Full Theme）';
+      case 'reader-full-theme-edit': return '自定义主题编辑（Reader Theme Edit）';
+      case 'reader-full-layout': return '版式完整设置（Reader Full Layout）';
+      case 'reader-full-page-turn': return '翻页完整设置（Reader Page Turn）';
+      case 'reader-book-cache': return '书籍缓存（Book Cache）';
+      case 'reader-debug-info': return '调试信息（Debug Info）';
+      case 'auto-page': return '自动翻页（Auto Page）';
+      case 'reader-auto-scroll-overlay-v2': return '自动翻页覆盖层 V2（Reader Auto Scroll Overlay V2）';
+      case 'content-search': return '内容搜索（Content Search）';
+      case 'reader-search-overlay-v2': return '内容搜索覆盖层 V2（Reader Search Overlay V2）';
+      case 'content-replacement': return '内容替换（Content Replacement）';
+      case 'reader-replace-overlay-v2': return '内容替换覆盖层 V2（Reader Replace Overlay V2）';
+      case 'source-switch': return '换源（Source Switching）';
+      case 'source-switch-results': return '换源结果（Source Switch Results）';
+      case 'reader-night-state-v2': return '阅读夜间状态 V2（Reader Night State V2）';
+      case 'discover': return '发现（Discover）';
+      case 'discover-home': return '发现首页（Discover Home）';
+      case 'discover-control': return '发现控制层（Discover Control）';
+      case 'discover-sort': return '发现排序选择（Discover Sort）';
+      case 'discover-entry-category': return '发现入口：分类（Discover Entry Category）';
+      case 'discover-entry-source': return '发现入口：书源（Discover Entry Source）';
+      case 'discover-filter-source-type': return '发现筛选：源类型（Discover Filter Source Type）';
+      case 'discover-filter-category': return '发现筛选：分类（Discover Filter Category）';
+      case 'discover-no-results': return '发现无结果（Discover No Results）';
+      case 'discover-loading': return '发现加载中（Discover Loading）';
+      case 'discover-refreshing': return '发现刷新中（Discover Refreshing）';
+      case 'discover-infinite-loading': return '发现继续加载（Discover Infinite Loading）';
+      case 'discover-page-two': return '发现第二屏（Discover Loaded More）';
+      case 'discover-cache-empty': return '发现缓存空状态（Discover Cache Empty）';
+      case 'discover-cache-stale': return '发现缓存过期（Discover Cache Stale）';
+      case 'discover-cache-fresh': return '发现缓存新鲜（Discover Cache Fresh）';
+      case 'discover-login-return': return '发现登录返回（Discover Login Return）';
+      case 'discover-switching-source': return '发现切换书源中（Discover Switching Source）';
+      case 'discover-switched-source': return '发现已切换书源（Discover Switched Source）';
+      case 'discover-entry-error': return '发现入口解析失败（Discover Entry Error）';
+      case 'discover-empty': return '发现空状态（Discover Empty）';
+      case 'discover-error': return '发现错误状态（Discover Error）';
+      case 'discover-source-login': return '书源登录（Discover Source Login）';
+      case 'discover-rule-test': return '发现规则测试（Discover Rule Test）';
+      case 'discover-source-bulk': return '发现源批量管理（Discover Source Bulk）';
+      case 'rss': return 'RSS';
+      case 'rss-all': return 'RSS 全部条目（RSS All Items）';
+      case 'rss-starred': return 'RSS 收藏（RSS Starred）';
+      case 'rss-source-feed': return 'RSS 单源条目（RSS Source Feed）';
+      case 'rss-source-category-novel': return 'RSS 单源分类：Novel（RSS Source Category Novel）';
+      case 'rss-source-category-tech': return 'RSS 单源分类：Tech（RSS Source Category Tech）';
+      case 'rss-source-category-booklist': return 'RSS 单源分类：Booklist（RSS Source Category Booklist）';
+      case 'rss-refreshing': return 'RSS 刷新中（RSS Refreshing）';
+      case 'rss-search': return 'RSS 搜索（RSS Search）';
+      case 'rss-detail': return 'RSS 阅读（RSS Reader）';
+      case 'rss-original': return 'RSS 原文页面（RSS Original Page）';
+      case 'rss-original-browser': return 'RSS 系统浏览器打开（RSS Open In Browser）';
+      case 'rss-subscription-management': return 'RSS 订阅管理（RSS Subscription Management）';
+      case 'rss-source-add': return 'RSS 源新增（RSS Source Add）';
+      case 'rss-source-edit': return 'RSS 源编辑（RSS Source Edit）';
+      case 'rss-source-delete-confirm': return 'RSS 源删除确认（RSS Source Delete Confirm）';
+      case 'rss-rule-subscription-create': return 'RSS 规则订阅创建（RSS Rule Subscription Create）';
+      case 'rss-rule-subscription-edit': return 'RSS 规则订阅编辑（RSS Rule Subscription Edit）';
+      case 'rss-favorite-add': return 'RSS 添加收藏（RSS Favorite Add）';
+      case 'rss-favorite-remove': return 'RSS 移除收藏（RSS Favorite Remove）';
+      case 'rss-empty': return 'RSS 空状态（RSS Empty）';
+      case 'rss-error': return 'RSS 错误状态（RSS Error）';
+      case 'settings': return '设置首页（Settings Home）';
+      case 'global-settings': return '全局设置（Global Settings）';
+      case 'settings-general': return '通用设置（General Settings）';
+      case 'bookshelf-search-settings': return '书架与搜索设置（Bookshelf and Search Settings）';
+      case 'about-feedback': return '关于与反馈（About and Feedback）';
+      case 'sync-backup': return '同步与备份（Sync and Backup）';
+      case 'webdav-config': return 'WebDAV 配置（WebDAV Config）';
+      case 'restore-scopes': return '恢复范围（Restore Scopes）';
+      case 'restore-preview': return '恢复预览（Restore Preview）';
+      case 'restore-running': return '恢复运行中（Restore Running）';
+      case 'restore-result': return '恢复结果（Restore Result）';
+      case 'source-management': return '书源管理（Source Management）';
+      case 'source-import-options': return '添加书源（Add Source）';
+      case 'source-import-preview': return '导入书源（Import Sources）';
+      case 'source-detail': return '书源详情（Source Detail）';
+      case 'source-edit': return '书源编辑（Source Edit）';
+      case 'source-add': return '新增书源（Source Add）';
+      case 'source-detect': return '书源检测（Source Detection）';
+      case 'source-rule-edit': return '规则编辑（Source Rule Edit）';
+      case 'source-debug': return '书源调测（Source Debug）';
+      case 'source-debug-running': return '书源调测运行中（Source Debug Running）';
+      case 'source-debug-result': return '书源调测结果（Source Debug Result）';
+      case 'source-logs': return '错误日志（Source Error Logs）';
+      case 'source-code-view': return '源码查看（Source Code View）';
+      case 'source-delete-confirm': return '删除书源（Delete Sources）';
+      case 'source-test-result': return '书源测试结果（Source Test Result）';
+      case 'source-settings-entry': return '书源设置入口（Source Settings Entry）';
+      case 'sync-settings-entry': return '同步设置入口（Sync Settings Entry）';
+      case 'reading-settings-entry': return '阅读设置入口（Reading Settings Entry）';
+      case 'app-shell': return '应用壳（App Shell）';
+      case 'main-tabs': return '主标签（Main Tabs）';
+      case 'global-loading': return '全局加载中（Global Loading）';
+      case 'global-empty': return '全局空状态（Global Empty）';
+      case 'global-error': return '全局错误状态（Global Error）';
+      case 'offline-state': return '离线状态（Offline State）';
+      case 'permission-required': return '权限需要（Permission Required）';
+      case 'progress-sync-status': return '进度同步状态（Progress Sync Status）';
+      case 'sync-error': return '同步错误（Sync Error）';
+      case 'backup-settings': return '备份设置（Backup Settings）';
+      case 'progress-sync': return '进度同步（Progress Sync）';
+      case 'remote-webdav-books': return '远程 WebDAV 书籍（Remote WebDAV Books）';
+      case 'about': return '关于（About）';
+      case 'about-version': return '关于版本（About Version）';
+      case 'state-error': return '状态错误（State Error）';
+      case 'state-offline': return '状态离线（State Offline）';
+      case 'control-layer-base-v2': return '阅读控制层基线 V2（Control Layer Base V2）';
+      case 'reader-directory-overlay-v2': return '目录覆盖层 V2（Reader Directory Overlay V2）';
+      case 'discover-entry-ranking': return '发现入口：排行榜（Discover Entry Ranking）';
+      case 'discover-entry-bestseller': return '发现入口：畅销（Discover Entry Bestseller）';
+      case 'discover-entry-finished': return '发现入口：完本（Discover Entry Finished）';
+      case 'discover-entry-latest': return '发现入口：最新（Discover Entry Latest）';
+      case 'discover-entry-new': return '发现入口：新书（Discover Entry New）';
+      case 'discover-entry-booklist': return '发现入口：书单（Discover Entry Booklist）';
+      case 'discover-filter-keyword': return '发现筛选：关键词（Discover Filter Keyword）';
+      case 'discover-filter-male': return '发现筛选：男频（Discover Filter Male）';
+      case 'discover-filter-female': return '发现筛选：女频（Discover Filter Female）';
+      case 'discover-sort-popularity': return '发现排序：人气（Discover Sort Popularity）';
+      case 'discover-sort-update': return '发现排序：更新（Discover Sort Update）';
+      case 'discover-sort-collection': return '发现排序：收藏（Discover Sort Collection）';
+      case 'discover-sort-finished': return '发现排序：完本（Discover Sort Finished）';
+      case 'discover-sort-words': return '发现排序：字数（Discover Sort Words）';
+      case 'discover-cache-confirm': return '清除发现缓存（Discover Cache Confirm）';
+      case 'discover-cache-toast': return '发现缓存已清除（Discover Cache Toast）';
+      case 'rss-source-category-releases': return 'RSS 单源分类：Releases（RSS Source Category Releases）';
+      case 'rss-source-category-issues': return 'RSS 单源分类：Issues（RSS Source Category Issues）';
+      case 'rss-source-category-discussions': return 'RSS 单源分类：Discussions（RSS Source Category Discussions）';
+      case 'rss-source-actions': return 'RSS 源操作（RSS Source Actions）';
+      case 'rss-source-debug': return 'RSS 规则调试（RSS Source Debug）';
+      case 'rss-source-vars': return 'RSS 源变量（RSS Source Variables）';
+      case 'rss-source-login': return 'RSS 源登录（RSS Source Login）';
+      case 'rss-source-login-web': return 'RSS 网页登录（RSS Source Web Login）';
+      case 'rss-source-login-cookie': return 'RSS Cookie 提取（RSS Source Login Cookie）';
+      case 'rss-source-login-clear': return 'RSS 清除登录（RSS Source Login Clear）';
+      case 'rss-source-groups': return 'RSS 分组管理（RSS Source Groups）';
+      case 'rss-source-group-edit': return 'RSS 分组编辑（RSS Source Group Edit）';
+      case 'rss-source-batch': return 'RSS 批量管理（RSS Source Batch）';
+      case 'rss-source-export': return 'RSS 导出订阅源（RSS Source Export）';
+      case 'rss-source-export-detail': return 'RSS 导出预览（RSS Source Export Detail）';
+      case 'rss-source-export-result': return 'RSS 导出完成（RSS Source Export Result）';
+      case 'rss-source-pin': return 'RSS 置顶确认（RSS Source Pin）';
+      case 'rss-source-disable': return 'RSS 禁用确认（RSS Source Disable）';
+      case 'rss-source-batch-disable': return 'RSS 批量禁用确认（RSS Source Batch Disable）';
+      case 'rss-source-import': return 'RSS 源导入（RSS Source Import）';
+      case 'rss-source-import-detail': return 'RSS 源导入详情（RSS Source Import Detail）';
+      case 'rss-source-import-result': return 'RSS 源导入完成（RSS Source Import Result）';
+      case 'rss-read-record': return 'RSS 阅读记录（RSS Read Record）';
+      case 'rss-record-clear': return 'RSS 清空阅读记录（RSS Clear Read Record）';
+      case 'rss-rule-subscription': return 'RSS 规则订阅（RSS Rule Subscription）';
+      case 'rss-rule-subscription-detail': return 'RSS 规则订阅详情（RSS Rule Subscription Detail）';
+      case 'rss-rule-subscription-test': return 'RSS 规则订阅测试（RSS Rule Subscription Test）';
+      case 'rss-rule-subscription-apply': return 'RSS 应用订阅更新（RSS Rule Subscription Apply）';
+      case 'rss-favorite-groups': return 'RSS 收藏分组（RSS Favorite Groups）';
+      case 'rss-favorite-group-edit': return 'RSS 收藏分组编辑（RSS Favorite Group Edit）';
+      case 'rss-favorite-clear': return 'RSS 清空收藏分组（RSS Clear Favorite Group）';
+      case 'reader-full-directory': return '目录大半屏控制窗（Expanded Directory Panel）';
+      case 'reader-full-tts': return '朗读大半屏控制窗（Expanded TTS Panel）';
+      case 'reader-full-appearance': return '界面大半屏控制窗（Expanded Appearance Panel）';
+      case 'reader-full-settings': return '阅读总控大半屏控制窗（Expanded Reader Control Panel）';
+      case 'restore-confirm': return '恢复确认（Restore Confirm）';
+      case 'restore-progress': return '恢复进度（Restore Progress）';
+      case 'restore-conflict': return '恢复冲突（Restore Conflict）';
+      case 'source-batch': return '批量管理（Batch Source Management）';
+      case 'source-groups': return '分组管理（Source Groups）';
+      case 'source-debug-search-result': return '搜索调测结果（Source Debug Search Result）';
+      case 'source-debug-detail-result': return '详情调测结果（Source Debug Detail Result）';
+      case 'source-debug-catalog-result': return '目录调测结果（Source Debug Catalog Result）';
+      case 'source-debug-content-log': return '正文调测日志（Source Debug Content Log）';
+      case 'source-edit-debug': return '规则编辑（Source Rule Edit）';
+      case 'reader-font-import-confirm': return '字体导入确认（Reader Font Import Confirm）';
+      case 'reader-font-delete-confirm': return '字体删除确认（Reader Font Delete Confirm）';
+      case 'reader-font-fallback': return '字体失效回退（Reader Font Fallback）';
+      case 'reader-theme-new': return '新建主题（Reader Theme New）';
+      case 'reader-theme-delete-confirm': return '主题删除确认（Reader Theme Delete Confirm）';
+      case 'reader-typography-reset-confirm': return '排版恢复默认确认（Reader Typography Reset Confirm）';
+      case 'reader-replace-delete-confirm': return '删除替换规则确认（Replace Delete Confirm）';
+      case 'reader-replace-apply-result': return '替换规则应用结果（Replace Apply Result）';
+      case 'reader-replace-import-export': return '替换规则导入导出（Replace Import Export）';
+      case 'reader-replace-preview': return '替换规则预览（Replace Preview）';
+      case 'reader-replace-page': return '内容替换规则管理（Reader Replace Page）';
+      case 'source-switch-empty': return '换源空结果（Source Switch Empty）';
+      case 'source-switch-error': return '换源加载失败（Source Switch Error）';
+      case 'source-switch-timeout': return '换源超时（Source Switch Timeout）';
+      case 'source-switch-loading': return '换源切换中（Source Switch Loading）';
+      case 'source-switch-rollback': return '换源失败回滚（Source Switch Rollback）';
+      case 'source-switch-preview': return '换源预览（Source Switch Preview）';
+      case 'reader-toc-loading': return '目录加载中（TOC Loading）';
+      case 'reader-toc-offline': return '目录离线（TOC Offline）';
+      case 'reader-toc-error': return '目录解析错误（TOC Error）';
+      case 'reader-content-loading': return '正文加载中（Content Loading）';
+      case 'reader-content-offline': return '正文离线（Content Offline）';
+      case 'reader-content-error': return '正文解析错误（Content Error）';
+      case 'reader-page-boundary-first': return '首章首页边界（Page Boundary First）';
+      case 'reader-page-boundary-last': return '末章末页边界（Page Boundary Last）';
+      case 'reader-progress-restore': return '阅读进度恢复（Progress Restore）';
+      case 'reader-background-restore': return '后台恢复（Background Restore）';
+      case 'import-permission-denied': return '导入权限拒绝（Import Permission Denied）';
+      case 'import-format-unsupported': return '导入格式不支持（Import Format Unsupported）';
+      case 'import-empty-file': return '导入空文件（Import Empty File）';
+      case 'import-parsing': return '导入解析中（Import Parsing）';
+      case 'import-duplicate': return '导入重复项（Import Duplicate）';
+      case 'import-conflict-resolve': return '导入冲突处理（Import Conflict Resolve）';
+      case 'import-partial-success': return '导入部分成功（Import Partial Success）';
+      case 'import-result-detail': return '导入结果详情（Import Result Detail）';
+      default: return null;
     }
   }
 
   static mainTabOf(id: string): string | null {
     switch (id) {
       case 'bookshelf': return 'bookshelf';
+      case 'bookshelf-empty': return 'bookshelf';
       case 'bookshelf-cover-mode': return 'bookshelf';
       case 'bookshelf-list-mode': return 'bookshelf';
-      case 'bookshelf-empty': return 'bookshelf';
       case 'discover': return 'discover';
       case 'discover-home': return 'discover';
       case 'rss': return 'rss';
@@ -234,75 +752,75 @@ export class RouteTable {
       case 'content-search': return 'reader-search-overlay-v2';
       case 'content-replacement': return 'reader-replace-overlay-v2';
       case 'discover-home': return 'discover';
-      case 'discover-cache-confirm': return 'discover';
-      case 'discover-cache-empty': return 'discover';
-      case 'discover-cache-fresh': return 'discover';
-      case 'discover-cache-stale': return 'discover';
-      case 'discover-cache-toast': return 'discover';
       case 'discover-control': return 'discover';
-      case 'discover-entry-bestseller': return 'discover';
-      case 'discover-entry-booklist': return 'discover';
+      case 'discover-sort': return 'discover';
       case 'discover-entry-category': return 'discover';
+      case 'discover-entry-source': return 'discover';
+      case 'discover-filter-source-type': return 'discover';
+      case 'discover-filter-category': return 'discover';
+      case 'discover-refreshing': return 'discover';
+      case 'discover-infinite-loading': return 'discover';
+      case 'discover-page-two': return 'discover';
+      case 'discover-cache-empty': return 'discover';
+      case 'discover-cache-stale': return 'discover';
+      case 'discover-cache-fresh': return 'discover';
+      case 'discover-login-return': return 'discover';
+      case 'discover-switching-source': return 'discover';
+      case 'discover-switched-source': return 'discover';
       case 'discover-entry-error': return 'discover';
+      case 'rss-source-feed': return 'rss-subscription-management';
+      case 'rss-source-category-novel': return 'rss-subscription-management';
+      case 'rss-source-category-tech': return 'rss-subscription-management';
+      case 'rss-source-category-booklist': return 'rss-subscription-management';
+      case 'rss-source-delete-confirm': return 'rss-subscription-management';
+      case 'rss-rule-subscription-create': return 'rss-subscription-management';
+      case 'rss-rule-subscription-edit': return 'rss-subscription-management';
+      case 'rss-favorite-add': return 'rss-subscription-management';
+      case 'rss-favorite-remove': return 'rss-subscription-management';
+      case 'discover-entry-ranking': return 'discover';
+      case 'discover-entry-bestseller': return 'discover';
       case 'discover-entry-finished': return 'discover';
       case 'discover-entry-latest': return 'discover';
       case 'discover-entry-new': return 'discover';
-      case 'discover-entry-ranking': return 'discover';
-      case 'discover-entry-source': return 'discover';
-      case 'discover-filter-category': return 'discover';
-      case 'discover-filter-female': return 'discover';
+      case 'discover-entry-booklist': return 'discover';
       case 'discover-filter-keyword': return 'discover';
       case 'discover-filter-male': return 'discover';
-      case 'discover-filter-source-type': return 'discover';
-      case 'discover-infinite-loading': return 'discover';
-      case 'discover-login-return': return 'discover';
-      case 'discover-page-two': return 'discover';
-      case 'discover-refreshing': return 'discover';
-      case 'discover-sort': return 'discover';
-      case 'discover-sort-collection': return 'discover';
-      case 'discover-sort-finished': return 'discover';
+      case 'discover-filter-female': return 'discover';
       case 'discover-sort-popularity': return 'discover';
       case 'discover-sort-update': return 'discover';
+      case 'discover-sort-collection': return 'discover';
+      case 'discover-sort-finished': return 'discover';
       case 'discover-sort-words': return 'discover';
-      case 'discover-switched-source': return 'discover';
-      case 'discover-switching-source': return 'discover';
-      case 'rss-favorite-add': return 'rss-subscription-management';
-      case 'rss-favorite-clear': return 'rss-subscription-management';
-      case 'rss-favorite-group-edit': return 'rss-subscription-management';
-      case 'rss-favorite-remove': return 'rss-subscription-management';
-      case 'rss-read-record': return 'rss-subscription-management';
-      case 'rss-record-clear': return 'rss-subscription-management';
-      case 'rss-rule-subscription': return 'rss-subscription-management';
-      case 'rss-rule-subscription-apply': return 'rss-subscription-management';
-      case 'rss-rule-subscription-create': return 'rss-subscription-management';
-      case 'rss-rule-subscription-detail': return 'rss-subscription-management';
-      case 'rss-rule-subscription-edit': return 'rss-subscription-management';
-      case 'rss-rule-subscription-test': return 'rss-subscription-management';
-      case 'rss-source-actions': return 'rss-subscription-management';
-      case 'rss-source-batch': return 'rss-subscription-management';
-      case 'rss-source-batch-disable': return 'rss-subscription-management';
-      case 'rss-source-category-booklist': return 'rss-subscription-management';
-      case 'rss-source-category-discussions': return 'rss-subscription-management';
-      case 'rss-source-category-issues': return 'rss-subscription-management';
-      case 'rss-source-category-novel': return 'rss-subscription-management';
+      case 'discover-cache-confirm': return 'discover';
+      case 'discover-cache-toast': return 'discover';
       case 'rss-source-category-releases': return 'rss-subscription-management';
-      case 'rss-source-category-tech': return 'rss-subscription-management';
+      case 'rss-source-category-issues': return 'rss-subscription-management';
+      case 'rss-source-category-discussions': return 'rss-subscription-management';
+      case 'rss-source-actions': return 'rss-subscription-management';
       case 'rss-source-debug': return 'rss-subscription-management';
-      case 'rss-source-delete-confirm': return 'rss-subscription-management';
-      case 'rss-source-disable': return 'rss-subscription-management';
+      case 'rss-source-vars': return 'rss-subscription-management';
+      case 'rss-source-login': return 'rss-subscription-management';
+      case 'rss-source-login-web': return 'rss-subscription-management';
+      case 'rss-source-login-cookie': return 'rss-subscription-management';
+      case 'rss-source-login-clear': return 'rss-subscription-management';
+      case 'rss-source-group-edit': return 'rss-subscription-management';
+      case 'rss-source-batch': return 'rss-subscription-management';
       case 'rss-source-export': return 'rss-subscription-management';
       case 'rss-source-export-detail': return 'rss-subscription-management';
       case 'rss-source-export-result': return 'rss-subscription-management';
-      case 'rss-source-feed': return 'rss-subscription-management';
-      case 'rss-source-group-edit': return 'rss-subscription-management';
+      case 'rss-source-pin': return 'rss-subscription-management';
+      case 'rss-source-disable': return 'rss-subscription-management';
+      case 'rss-source-batch-disable': return 'rss-subscription-management';
       case 'rss-source-import-detail': return 'rss-subscription-management';
       case 'rss-source-import-result': return 'rss-subscription-management';
-      case 'rss-source-login': return 'rss-subscription-management';
-      case 'rss-source-login-clear': return 'rss-subscription-management';
-      case 'rss-source-login-cookie': return 'rss-subscription-management';
-      case 'rss-source-login-web': return 'rss-subscription-management';
-      case 'rss-source-pin': return 'rss-subscription-management';
-      case 'rss-source-vars': return 'rss-subscription-management';
+      case 'rss-read-record': return 'rss-subscription-management';
+      case 'rss-record-clear': return 'rss-subscription-management';
+      case 'rss-rule-subscription': return 'rss-subscription-management';
+      case 'rss-rule-subscription-detail': return 'rss-subscription-management';
+      case 'rss-rule-subscription-test': return 'rss-subscription-management';
+      case 'rss-rule-subscription-apply': return 'rss-subscription-management';
+      case 'rss-favorite-group-edit': return 'rss-subscription-management';
+      case 'rss-favorite-clear': return 'rss-subscription-management';
       default: return null;
     }
   }

@@ -41,39 +41,37 @@ export class ShareHostAdapter {
    *             to PLAIN_TEXT if unknown)
    */
   async invoke(request: HostShareInvokeRequest): Promise<HostShareInvokeResponse> {
-    const sharedData = new systemShare.SharedData({
-      utd: utd.UniformDataType.PLAIN_TEXT,
-      content: request.text ?? '',
-    });
-
-    if (request.title !== undefined) {
-      // SharedData's first record doesn't take a title in the ctor; add a
-      // titled record if a title was supplied.
-      sharedData.addRecord({
+    try {
+      const sharedData = new systemShare.SharedData({
         utd: utd.UniformDataType.PLAIN_TEXT,
-        content: request.title,
+        content: request.text ?? '',
       });
-    }
 
-    if (request.url !== undefined && request.url.length > 0) {
-      sharedData.addRecord({
-        utd: utd.UniformDataType.HYPERLINK,
-        content: request.url,
-      });
-    }
-
-    if (request.files !== undefined) {
-      for (let i = 0; i < request.files.length; i++) {
-        const fileUri = request.files[i];
+      if (request.title !== undefined) {
         sharedData.addRecord({
           utd: utd.UniformDataType.PLAIN_TEXT,
-          uri: fileUri,
+          content: request.title,
         });
       }
-    }
 
-    const controller = new systemShare.ShareController(sharedData);
-    try {
+      if (request.url !== undefined && request.url.length > 0) {
+        sharedData.addRecord({
+          utd: utd.UniformDataType.HYPERLINK,
+          content: request.url,
+        });
+      }
+
+      if (request.files !== undefined) {
+        for (let i = 0; i < request.files.length; i++) {
+          const fileUri = request.files[i];
+          sharedData.addRecord({
+            utd: utd.UniformDataType.PLAIN_TEXT,
+            uri: fileUri,
+          });
+        }
+      }
+
+      const controller = new systemShare.ShareController(sharedData);
       await controller.show(this.context, {
         previewMode: systemShare.SharePreviewMode.DEFAULT,
         selectionMode: systemShare.SelectionMode.SINGLE,

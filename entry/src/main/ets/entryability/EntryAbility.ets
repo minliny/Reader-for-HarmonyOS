@@ -7,10 +7,12 @@
 import UIAbility from '@ohos.app.ability.UIAbility';
 import Want from '@ohos.app.ability.Want';
 import AbilityConstant from '@ohos.app.ability.AbilityConstant';
+import { Configuration } from '@ohos.app.ability.Configuration';
+import ConfigurationConstant from '@ohos.app.ability.ConfigurationConstant';
+import resourceManager from '@ohos.resourceManager';
 import window from '@ohos.window';
 import display from '@ohos.display';
 import fs from '@ohos.file.fs';
-import font from '@ohos.font';
 import util from '@ohos.util';
 import zlib from '@ohos.zlib';
 import { ReaderUiStore } from '../ui/store/ReaderUiStore';
@@ -21,6 +23,7 @@ import { ViewportAdapter } from '../ui/adapters/ViewportAdapter';
 import { InteractionDebugAdapter } from '../ui/adapters/InteractionDebugAdapter';
 import { RouteId, RouteTable } from '../contract/generated/RouteTable';
 import { ColorTokens } from '../contract/generated/ColorTokens';
+import { ReaderThemeState } from '../ui/tokens/ReaderThemeState';
 import { CoreRuntime } from '../bridge/CoreRuntime';
 import { HostCapabilityManifest } from '../host/HostCapabilityManifest';
 import { TtsHostAdapter } from '../host/adapters/TtsHostAdapter';
@@ -44,8 +47,9 @@ import {
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
-    this.registerReaderFonts();
     ReaderUiStore.init();
+    const initialConfig = this.context.resourceManager.getConfigurationSync();
+    ReaderThemeState.setColorMode(initialConfig.colorMode === resourceManager.ColorMode.DARK ? 'dark' : 'light');
     const params = want.parameters ?? {};
     // Seed demo fallback insets so the first frame approximates safe-area
     // avoidance before the real window avoid area is measured below.
@@ -70,36 +74,71 @@ export default class EntryAbility extends UIAbility {
         context: this.context,
       });
       core.startDispatcher();
-      // Self-checks are opt-in: they only run when the app is launched with
-      // want.parameters.selfCheck === 'true'. Regular launches (home screen
-      // icon, deep links) do NOT run self-checks — they are for device
-      // evidence collection only (see scripts/collect_device_evidence.mjs).
-      // To trigger: hdc shell aa start -a EntryAbility -b <pkg> --ps selfCheck true
       const selfCheckFlag = params['selfCheck'] as string;
-      if (selfCheckFlag === 'true') {
-        console.info('[EntryAbility] selfCheck=true — running all Host self-checks for device evidence');
-        const manifest = core.getCapabilityManifest();
-        this.runCoreSelfCheck(core, manifest);
-        this.runTtsSelfCheck(core, manifest);
-        this.runReadingChainSelfCheck(core, manifest);
-        this.runRssSelfCheck(core, manifest);
-        this.runLocalBookSelfCheck(core, manifest);
-        this.runSyncWebDavSelfCheck(core, manifest);
-        this.runUiAdapterSelfCheck(core, manifest);
-        this.runReadingChainUiSelfCheck(manifest);
-        // After a delay (self-checks are async), re-broadcast the manifest
-        // with evidence-driven deviceVerified counts. The delay must be
-        // long enough for the slowest chain (TTS ~6s + WebDAV network).
-        setTimeout(() => {
-          manifest.rebroadcastSummary();
-          console.info('[EntryAbility] self-check evidence drive complete — see [HostManifest] post-self-check line');
-        }, 30000);
-      } else {
-        console.info('[EntryAbility] selfCheck not requested — skipping Host self-checks (regular launch)');
-      }
+      // The restore request must finish before any initial Core reads. This
+      // prevents an empty in-memory runtime from rendering/persisting over an
+      // existing bookshelf/source/local-book snapshot on cold launch.
+      this.bootstrapCoreAfterRestore(core, selfCheckFlag).then((): void => {}).catch((error: Error): void => {
+        console.error('[EntryAbility] Core bootstrap failed: ' + error);
+      });
     } catch (e) {
       console.error('CoreRuntime init failed: ' + e);
     }
+  }
+
+  /**
+   * Restore Core-owned durable state before dispatching the initial reducer
+   * effects. A failed/corrupt restore is deliberately logged and falls back to
+   * a volatile session; Core keeps persistence disabled in that case so it
+   * cannot overwrite the unreadable snapshot.
+   */
+  private async bootstrapCoreAfterRestore(core: CoreRuntime, selfCheckFlag: string): Promise<void> {
+    try {
+      const restored = await core.restoreCoreStorage();
+      console.info('[EntryAbility] Core storage restore=' + JSON.stringify(restored));
+    } catch (e) {
+      console.error('[EntryAbility] Core storage restore failed; continuing without durable Core writes: ' + e);
+    }
+
+    // UI fixtures remain contract-development fallbacks only; production
+    // bookshelf/replacement/source data comes from the now-restored Core store.
+    ReaderEffects.loadBookshelf();
+    ReaderEffects.loadRss();
+    ReaderEffects.loadAvailableSources();
+    ReaderEffects.loadWebdavConfig();
+    // Development initialRoute is applied before CoreRuntime.init so the first
+    // frame can render the requested route. Replay group reads only after the
+    // Core restore barrier instead of leaving an initialization error.
+    const activeRoute = ReaderUiStore.snapshot().routeId;
+    if (activeRoute === 'bookshelf-group-management' || activeRoute === 'group-management') {
+      ReaderEffects.loadBookGroups();
+      ReaderEffects.loadBookshelf();
+    }
+
+    // Self-checks are opt-in: they only run after Core storage is ready so a
+    // device proof observes the same startup order as production.
+    if (selfCheckFlag === 'true') {
+      console.info('[EntryAbility] selfCheck=true — running all Host self-checks for device evidence');
+      const manifest = core.getCapabilityManifest();
+      this.runCoreSelfCheck(core, manifest);
+      this.runTtsSelfCheck(core, manifest);
+      this.runReadingChainSelfCheck(core, manifest);
+      this.runRssSelfCheck(core, manifest);
+      this.runLocalBookSelfCheck(core, manifest);
+      this.runSyncWebDavSelfCheck(core, manifest);
+      this.runUiAdapterSelfCheck(core, manifest);
+      this.runReadingChainUiSelfCheck(manifest);
+      setTimeout(() => {
+        manifest.rebroadcastSummary();
+        console.info('[EntryAbility] self-check evidence drive complete — see [HostManifest] post-self-check line');
+      }, 30000);
+    } else {
+      console.info('[EntryAbility] selfCheck not requested — skipping Host self-checks (regular launch)');
+    }
+  }
+
+  onConfigurationUpdate(newConfig: Configuration): void {
+    ReaderThemeState.setColorMode(newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ? 'dark' : 'light');
   }
 
   /**
@@ -403,8 +442,38 @@ export default class EntryAbility extends UIAbility {
         // Step 1: getRawFileContent('sample.txt') → decode UTF-8
         const txtBytes = await resourceManager.getRawFileContent('sample.txt');
         const txtDecoder = util.TextDecoder.create('utf-8');
-        const txtContent = txtDecoder.decodeWithStream(txtBytes);
+        const txtContent = txtDecoder.decodeToString(txtBytes);
         console.info(`[LocalBook] step=1 txt getRawFileContent bytes=${txtBytes.length} contentLen=${txtContent.length}`);
+
+        // Step 1b: prove the production Core vertical, not only Host file
+        // transport.  The confirmed import materializes metadata, TOC and
+        // chapter content in Core; subsequent reads use the durable Core API
+        // rather than this raw-file buffer.  This self-check is opt-in with
+        // selfCheck=true and never executes during a normal app launch.
+        const coreBookId = `device-local-self-check-${Date.now()}`;
+        const imported = await core.localBookImport(coreBookId, {
+          text: txtContent,
+          fileName: 'sample.txt',
+          format: 'txt',
+        });
+        const importedFields = imported as Object as Record<string, number>;
+        const importedChapterCount = importedFields['chapterCount'];
+        const coreToc = await core.localBookToc(coreBookId);
+        const tocFields = coreToc as Object as Record<string, Object[]>;
+        const tocEntries: Object[] = tocFields['toc'];
+        if (!Array.isArray(tocEntries) || tocEntries.length === 0) {
+          throw new Error('Core local_book.toc returned no entries after import');
+        }
+        const firstEntry = tocEntries[0] as Object as Record<string, number>;
+        const firstIndexValue: number = firstEntry['index'];
+        const firstIndex = typeof firstIndexValue === 'number' ? firstIndexValue : 0;
+        const coreChapter = await core.localBookChapterContent(coreBookId, firstIndex);
+        const chapterFields = coreChapter as Object as Record<string, string>;
+        const coreChapterContent = chapterFields['content'];
+        if (typeof coreChapterContent !== 'string' || coreChapterContent.length === 0) {
+          throw new Error('Core local_book.chapter.content returned empty content');
+        }
+        console.info(`[LocalBookCore] import=true chapters=${importedChapterCount} toc=${tocEntries.length} firstIndex=${firstIndex} contentLen=${coreChapterContent.length}`);
 
         // Step 2: file.write / file.read round-trip
         const txtPath = 'files://local_book/sample.txt';
@@ -815,9 +884,9 @@ export default class EntryAbility extends UIAbility {
    */
   private probeNativeLibraryLocations(): void {
     const candidates: string[] = [
-      '/data/app/el1/bundle/public/reader.minliny.testpackage/libs/arm64/libreader_core_napi.so',
-      '/data/storage/el1/bundle/reader.minliny.testpackage/libs/arm64/libreader_core_napi.so',
-      '/data/storage/el1/bundle/reader.minliny.testpackage/entry.hap',
+      '/data/app/el1/bundle/public/com.minliny.reader/libs/arm64/libreader_core_napi.so',
+      '/data/storage/el1/bundle/com.minliny.reader/libs/arm64/libreader_core_napi.so',
+      '/data/storage/el1/bundle/com.minliny.reader/entry.hap',
     ];
     for (const path of candidates) {
       try {
@@ -831,8 +900,27 @@ export default class EntryAbility extends UIAbility {
     console.info(`[EntryAbility] cacheDir=${this.context.cacheDir}`);
   }
 
+  onBackground(): void {
+    const playbackSuspended = ReaderUiStore.suspendPlaybackForBackground();
+    if (!CoreRuntime.isInitialized()) {
+      return;
+    }
+    // Best-effort lifecycle checkpoint. Core mutators write-through after a
+    // successful restore; this also covers an otherwise idle app backgrounding.
+    playbackSuspended.then((): Promise<Object> => CoreRuntime.get().flushCoreStorage())
+      .then((data: Object): void => {
+      console.info('[EntryAbility] Core storage background flush=' + JSON.stringify(data));
+    }).catch((e: Error): void => {
+      console.error('[EntryAbility] Core storage background flush failed: ' + e);
+    });
+  }
+
   onDestroy(): void {
-    CoreRuntime.close();
+    ReaderUiStore.teardownPlaybackForDestroy().then((): void => {
+      CoreRuntime.close();
+    }).catch((): void => {
+      CoreRuntime.close();
+    });
   }
 
   onNewWant(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
@@ -841,7 +929,7 @@ export default class EntryAbility extends UIAbility {
 
   private applyDevelopmentLaunchParameters(want: Want): void {
     const params = want.parameters ?? {};
-    AppStorage.setOrCreate<boolean>(InteractionDebugAdapter.K_VISIBLE, params['interactionDebug'] !== 'false');
+    AppStorage.setOrCreate<boolean>(InteractionDebugAdapter.K_VISIBLE, params['interactionDebug'] === 'true');
     const initialRoute = params[InteractionDebugAdapter.K_INITIAL_ROUTE] as string;
     if (initialRoute !== undefined && initialRoute !== '' && RouteTable.shellOf(initialRoute) !== null) {
       ReaderUiStore.dispatch({ type: 'route-replace', id: initialRoute as RouteId });
@@ -852,18 +940,6 @@ export default class EntryAbility extends UIAbility {
     if (paginationMode === 'horizontal' || paginationMode === 'vertical') {
       ReaderUiStore.dispatch({ type: 'set-pagination-mode', paginationMode: paginationMode as ReaderPaginationMode });
       console.info('[EntryAbility] development readerPaginationMode=' + paginationMode);
-    }
-  }
-
-  private registerReaderFonts(): void {
-    try {
-      font.registerFont({
-        familyName: 'Noto Serif CJK SC',
-        familySrc: $rawfile('font/NotoSerifCJKsc-Regular.otf'),
-      });
-      console.info('[EntryAbility] registered Noto Serif CJK SC font');
-    } catch (e) {
-      console.info('[EntryAbility] register Noto Serif CJK SC font failed: ' + e);
     }
   }
 

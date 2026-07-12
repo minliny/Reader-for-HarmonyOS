@@ -1,17 +1,22 @@
 {
   "app": {
+    // Signing materials live under ./signing/ (gitignored). DevEco-compatible
+    // encrypted debug passwords are stored here because hvigorw does not resolve
+    // ${VAR} placeholders in signingConfigs.material. Regenerate local debug
+    // materials and ciphertext with scripts/gen-debug-signing.sh plus
+    // scripts/encrypt-signing-pwds.mjs; production signing uses separate assets.
     "signingConfigs": [
       {
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "certpath": "/Users/minliny/.ohos/config/default_Reader-for-HarmonyOS_fB0QDzbOHY5o534drkAKgT3UOwg41Wj4thH02nplmmM=.cer",
+          "certpath": "./signing/app-cert.cer",
           "keyAlias": "debugKey",
-          "keyPassword": "0000001BA14CA491EEB7E9C16637604213EA9629786027FB68B21847C2A2105D3DB1FE101C5E7FE84644B0",
-          "profile": "/Users/minliny/.ohos/config/default_Reader-for-HarmonyOS_fB0QDzbOHY5o534drkAKgT3UOwg41Wj4thH02nplmmM=.p7b",
+          "keyPassword": "00000035b7a975ad58c4519dd2295614fff9bdf4517c829f8814ab6c549e2e03560403e295efb92cc952ec30cafb0060cb7f27d183121d715645eaf125ffcc8ea030427aab",
+          "profile": "./signing/app-profile.p7b",
           "signAlg": "SHA256withECDSA",
-          "storeFile": "/Users/minliny/.ohos/config/default_Reader-for-HarmonyOS_fB0QDzbOHY5o534drkAKgT3UOwg41Wj4thH02nplmmM=.p12",
-          "storePassword": "0000001B5F35B99FFA78AE10A96D34C015C4FA5D3ACA29FACEF2E8DA6AC6AF34C43ACF892B1E04525BCD2F"
+          "storeFile": "./signing/app-keypair.p12",
+          "storePassword": "00000035e5579d9d90ddd49bd6c9763bb7ee0f2da1579ae8d5d8ed4be31104ed76aa0b5947258ad886b9e5141940dd0c5ce33f8211ed2c8e8f2fe744fef607ad52519707df"
         }
       }
     ],
@@ -40,7 +45,7 @@
     ],
     "capabilities": [
       {
-        "bundleName": "reader.minliny.testpackage",
+        "bundleName": "com.minliny.reader",
         "config": [
           {
             "name": "Push Kit",
@@ -58,6 +63,18 @@
     {
       "name": "entry",
       "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reader_ui_runtime",
+      "srcPath": "../Reader-UI/packages/arkts/reader-ui-runtime",
       "targets": [
         {
           "name": "default",

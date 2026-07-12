@@ -2,9 +2,9 @@
 // Source of truth: Reader-Core-Native docs/host-app-contracts/01-network-session.md §3.1/§3.2.
 // Phase 4 implementation; consumed by HostDispatcher / CapabilityRouter.
 //
-// Method mapping: GET/POST/PUT/DELETE/HEAD/OPTIONS map directly to http.RequestMethod.
-// PATCH is not supported by HarmonyOS http module — it is sent as POST (caller may
-// include X-HTTP-Method-Override header if the server requires the original verb).
+// Method mapping: standard verbs use http.RequestMethod. WebDAV verbs are
+// passed through as their wire strings; the native HTTP stack accepts custom
+// method strings even though the ArkTS enum does not enumerate them.
 //
 // Error mapping: timeout → HTTP_TRANSPORT_TIMEOUT, DNS → HTTP_TRANSPORT_DNS,
 // TLS/SSL/certificate → HTTP_TRANSPORT_TLS, everything else → HTTP_TRANSPORT_CONNECT.
@@ -15,6 +15,7 @@ import http from '@ohos.net.http';
 import {
   HostHttpRequest,
   HostHttpResponse,
+  HostHttpCancelResponse,
   HostCookieRecord,
   HostError,
   HostErrorWrapper,
@@ -23,22 +24,80 @@ import {
   createTransportTlsError,
 } from '../types';
 import { SourceSessionHostStore } from './SourceSessionHostStore';
+import { type SourceImageHeaderResolver } from './SourceImageCache';
+import type { WebDavHttpExecutor } from './WebDavHostAdapter';
 
 interface HttpErrorLike {
   code?: number;
   message?: string;
 }
 
-export class HttpHostAdapter {
-  private httpClient: http.HttpRequest;
-  private readonly sessionStore: SourceSessionHostStore;
+class PreparedRequestHeader {
+  key: string;
+  value: string;
 
-  constructor(sessionStore: SourceSessionHostStore = SourceSessionHostStore.shared()) {
-    this.httpClient = http.createHttp();
-    this.sessionStore = sessionStore;
+  constructor(key: string, value: string) {
+    this.key = key;
+    this.value = value;
+  }
+}
+
+/**
+ * Narrow seam around @ohos.net.http so cancellation behavior can be verified
+ * without performing a real network request in the host unit-test runner.
+ */
+export interface HostHttpClient {
+  request(url: string, options: http.HttpRequestOptions): Promise<http.HttpResponse>;
+  destroy(): void;
+}
+
+export interface HostHttpClientFactory {
+  create(): HostHttpClient;
+}
+
+class PlatformHttpClientFactory implements HostHttpClientFactory {
+  create(): HostHttpClient {
+    return http.createHttp();
+  }
+}
+
+class ActiveHostHttpRequest {
+  readonly client: HostHttpClient;
+  private destroyed: boolean = false;
+
+  constructor(client: HostHttpClient) {
+    this.client = client;
   }
 
-  async execute(request: HostHttpRequest): Promise<HostHttpResponse> {
+  destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
+    this.destroyed = true;
+    this.client.destroy();
+  }
+}
+
+export class HttpHostAdapter implements SourceImageHeaderResolver, WebDavHttpExecutor {
+  private readonly sessionStore: SourceSessionHostStore;
+  private readonly httpClientFactory: HostHttpClientFactory;
+  private readonly activeRequests: Map<string, ActiveHostHttpRequest> = new Map<string, ActiveHostHttpRequest>();
+
+  constructor(sessionStore: SourceSessionHostStore = SourceSessionHostStore.shared(),
+    httpClientFactory: HostHttpClientFactory = new PlatformHttpClientFactory()) {
+    this.sessionStore = sessionStore;
+    this.httpClientFactory = httpClientFactory;
+  }
+
+  /**
+   * Execute one request on its own HarmonyOS HttpRequest instance.
+   *
+   * @param requestId Stable HostRequest id used by http.cancel. Core-originated
+   * requests pass their numeric request id as a string; reducer-originated
+   * requests pass the UI Contract HostRequest requestId. Requests without an id
+   * still execute, but cannot later claim request-scoped cancellation support.
+   */
+  async execute(request: HostHttpRequest, requestId?: string): Promise<HostHttpResponse> {
     const method = this.mapMethod(request.method);
     const requestHeaders = this.buildRequestHeaders(request);
     const options: http.HttpRequestOptions = {
@@ -55,8 +114,30 @@ export class HttpHostAdapter {
       options.extraData = request.body;
     }
 
+    const normalizedRequestId = requestId?.trim();
+    if (normalizedRequestId !== undefined && normalizedRequestId.length > 0 &&
+      this.activeRequests.has(normalizedRequestId)) {
+      const duplicateError: HostError = {
+        code: 'HTTP_TRANSPORT_CONNECT',
+        message: `duplicate active http requestId: ${normalizedRequestId}`,
+        retryable: false,
+        details: { phase: 'Transport', url: request.url },
+      };
+      throw new HostErrorWrapper(duplicateError);
+    }
+
+    // @ohos.net.http exposes destroy() on an HttpRequest object, not a
+    // cancel(requestId) API. Giving every execution its own client turns that
+    // primitive into honest request-scoped cancellation and prevents one
+    // cancellation from aborting unrelated requests.
+    const httpClient = this.httpClientFactory.create();
+    const activeRequest = new ActiveHostHttpRequest(httpClient);
+    if (normalizedRequestId !== undefined && normalizedRequestId.length > 0) {
+      this.activeRequests.set(normalizedRequestId, activeRequest);
+    }
+
     try {
-      const response = await this.httpClient.request(request.url, options);
+      const response = await httpClient.request(request.url, options);
       const headers = this.extractHeaders(response.header);
       this.captureResponseCookies(request, headers);
       let body = '';
@@ -78,11 +159,46 @@ export class HttpHostAdapter {
       const code = err.code ?? 0;
       const message = err.message ?? 'http request failed';
       throw new HostErrorWrapper(this.mapError(code, message, request.url));
+    } finally {
+      if (normalizedRequestId !== undefined && normalizedRequestId.length > 0) {
+        const registeredRequest = this.activeRequests.get(normalizedRequestId);
+        if (registeredRequest === activeRequest) {
+          this.activeRequests.delete(normalizedRequestId);
+        }
+      }
+      activeRequest.destroy();
     }
   }
 
   destroy(): void {
-    this.httpClient.destroy();
+    this.activeRequests.forEach((request: ActiveHostHttpRequest) => {
+      request.destroy();
+    });
+    this.activeRequests.clear();
+  }
+
+  /**
+   * http.cancel — cancel an in-flight HTTP request by requestId.
+   * Returns false for a blank, unknown, or already-completed request. It never
+   * reports success merely because a shared client was destroyed.
+   */
+  cancel(requestId: string): HostHttpCancelResponse {
+    const normalizedRequestId = requestId.trim();
+    if (normalizedRequestId.length === 0) {
+      const result: HostHttpCancelResponse = { cancelled: false };
+      return result;
+    }
+    const activeRequest = this.activeRequests.get(normalizedRequestId);
+    if (activeRequest === undefined) {
+      const result: HostHttpCancelResponse = { cancelled: false };
+      return result;
+    }
+    // Delete before destroy so a re-entrant error/completion cannot be mistaken
+    // for a second active request with the same id.
+    this.activeRequests.delete(normalizedRequestId);
+    activeRequest.destroy();
+    const result: HostHttpCancelResponse = { cancelled: true };
+    return result;
   }
 
   // ── internal ──
@@ -104,34 +220,57 @@ export class HttpHostAdapter {
       case 'PATCH':
         // HarmonyOS http module does not support PATCH — fall back to POST.
         return http.RequestMethod.POST;
+      case 'PROPFIND':
+      case 'MKCOL':
+      case 'MOVE':
+      case 'COPY':
+        return method as Object as http.RequestMethod;
       default:
         return http.RequestMethod.GET;
     }
   }
 
-  private buildRequestHeaders(request: HostHttpRequest): Record<string, string> {
-    const headers: Record<string, string> = {};
+  /**
+   * Build the final Host-owned request headers for both text http.execute and
+   * the binary SourceImageCache path.  Header names are case-insensitive by
+   * HTTP definition: descriptor headers override equal login headers without
+   * leaving a duplicate `Cookie`/`cookie` pair on the wire.  Cookie values are
+   * merged by name so a Core static source cookie, login state, and platform
+   * session jar can coexist without exposing any of them to UI code.
+  */
+  buildRequestHeaders(request: HostHttpRequest): Record<string, string> {
+    const normalizedHeaders: Map<string, PreparedRequestHeader> = new Map<string, PreparedRequestHeader>();
     if (request.sourceId !== undefined && request.sourceId.length > 0) {
       const loginState = this.sessionStore.getLoginHeaderMap(request.sourceId, request.sessionId);
       const loginKeys = Object.keys(loginState.headers);
       for (let i = 0; i < loginKeys.length; i++) {
         const key = loginKeys[i];
-        headers[key] = loginState.headers[key];
+        this.mergeRequestHeader(normalizedHeaders, key, loginState.headers[key], true);
       }
     }
 
     const requestKeys = Object.keys(request.headers);
     for (let i = 0; i < requestKeys.length; i++) {
       const key = requestKeys[i];
-      headers[key] = request.headers[key];
+      // The Core descriptor is authoritative for source-level Referer / UA /
+      // static Cookie headers. It may intentionally override a generic login
+      // header, while cookie pairs are merged by name below.
+      this.mergeRequestHeader(normalizedHeaders, key, request.headers[key], true);
     }
 
-    if (request.usePlatformCookieJar === true && !this.hasHeader(headers, 'cookie')) {
+    if (request.usePlatformCookieJar === true) {
       const cookieHeader = this.sessionStore.buildCookieHeader(request.url, request.sessionId);
       if (cookieHeader.length > 0) {
-        headers['Cookie'] = cookieHeader;
+        // The in-memory source session jar fills cookie names that Core's
+        // static source header did not already supply. This preserves auth
+        // established by prior http.execute calls without duplicating keys.
+        this.mergeRequestHeader(normalizedHeaders, 'Cookie', cookieHeader, false);
       }
     }
+    const headers: Record<string, string> = {};
+    normalizedHeaders.forEach((header: PreparedRequestHeader): void => {
+      headers[header.key] = header.value;
+    });
     return headers;
   }
 
@@ -234,14 +373,47 @@ export class HttpHostAdapter {
     return values;
   }
 
-  private hasHeader(headers: Record<string, string>, needle: string): boolean {
-    const keys = Object.keys(headers);
-    for (let i = 0; i < keys.length; i++) {
-      if (keys[i].toLowerCase() === needle) {
-        return true;
-      }
+  private mergeRequestHeader(headers: Map<string, PreparedRequestHeader>, key: string, value: string,
+    incomingWins: boolean): void {
+    const normalized = key.toLowerCase();
+    const existing = headers.get(normalized);
+    if (normalized === 'cookie') {
+      const merged = this.mergeCookieHeader(existing === undefined ? '' : existing.value, value, incomingWins);
+      headers.set(normalized, new PreparedRequestHeader(key, merged));
+      return;
     }
-    return false;
+    headers.set(normalized, new PreparedRequestHeader(key, value));
+  }
+
+  private mergeCookieHeader(existing: string, incoming: string, incomingWins: boolean): string {
+    const pairs: Map<string, string> = new Map<string, string>();
+    const order: string[] = [];
+    const add = (raw: string, overwrite: boolean): void => {
+      const segments = raw.split(';');
+      for (let index = 0; index < segments.length; index++) {
+        const pair = segments[index].trim();
+        const equals = pair.indexOf('=');
+        if (equals <= 0) continue;
+        const name = pair.substring(0, equals).trim();
+        const value = pair.substring(equals + 1).trim();
+        if (name.length === 0) continue;
+        const normalized = name.toLowerCase();
+        if (!pairs.has(normalized)) {
+          order.push(normalized);
+          pairs.set(normalized, `${name}=${value}`);
+        } else if (overwrite) {
+          pairs.set(normalized, `${name}=${value}`);
+        }
+      }
+    };
+    add(existing, true);
+    add(incoming, incomingWins);
+    const output: string[] = [];
+    for (let index = 0; index < order.length; index++) {
+      const pair = pairs.get(order[index]);
+      if (pair !== undefined) output.push(pair);
+    }
+    return output.join('; ');
   }
 
   private resolveDomain(url: string): string | undefined {

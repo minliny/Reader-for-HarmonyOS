@@ -6,15 +6,9 @@ import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
 import { ReaderTypography } from '../tokens/ReaderTypography';
 import { ReaderUiStore } from '../store/ReaderUiStore';
-import { BookDetail } from '../store/ReaderUiState';
+import { BookDetail, ChapterTocEntry } from '../store/ReaderUiState';
 import { MotionAdapter } from '../adapters/MotionAdapter';
-
-interface ChapterPreviewEntry {
-  title: string;
-  cached: boolean;
-  bookmarked: boolean;
-  current: boolean;
-}
+import { SourceCoverImage } from './SourceCoverImage';
 
 interface BookFactEntry {
   label: string;
@@ -61,88 +55,137 @@ export struct BookHero {
   // B1 P0：路由跳转用 MotionAdapter.apply 包裹，motionId 取 LibraryShell 的 app.route.push.forward
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
 
+  private facts(): BookFactEntry[] {
+    const book = this.currentBook;
+    const facts: BookFactEntry[] = [];
+    if (book === null) return facts;
+    if (book.latestChapter.length > 0) {
+      facts.push({ label: '最新', value: book.latestChapter });
+    }
+    if (book.sourceName.length > 0) {
+      facts.push({ label: '来源', value: book.sourceName });
+    }
+    return facts;
+  }
+
+  private openSourceSwitch(): void {
+    if (this.currentBook === null) return;
+    MotionAdapter.apply('app.route.push.forward', this.reducedMotion, this.getUIContext(), () => {
+      ReaderUiStore.dispatch({ type: 'route-push', id: 'source-switch' });
+    });
+  }
+
   build() {
-    Row({ space: 14 }) {
-      Image($r('app.media.bookshelf_cover_long_night'))
-        .width(86)
+    Column() {
+      if (this.currentBook === null) {
+        Row({ space: 14 }) {
+          Column()
+            .width(86)
+            .height(122)
+            .borderRadius(DemoAliasTokens.radiusSm)
+            .backgroundColor(ColorTokens.metaBg)
+          Column({ space: 8 }) {
+            Text('未选择书籍')
+              .fontSize(20)
+              .fontWeight(700)
+              .fontColor(ColorTokens.ink)
+              .fontFamily(ReaderTypography.serifFamily())
+            Text('请从书架、搜索或发现结果打开一本书。')
+              .fontSize(13)
+              .lineHeight(13 * 1.5)
+              .fontColor(ColorTokens.muted)
+              .maxLines(3)
+          }
+          .alignItems(HorizontalAlign.Start)
+          .layoutWeight(1)
+          .justifyContent(FlexAlign.Center)
+        }
+        .width('100%')
         .height(122)
-        .objectFit(ImageFit.Cover)
-        .borderRadius(DemoAliasTokens.radiusSm)
-        .shadow({ radius: 16, color: DemoAliasTokens.shadowElevatedColor, offsetX: 0, offsetY: 8 })
-      Column() {
-        Text(this.currentBook !== null ? this.currentBook.title : '长夜余火')
-          .fontSize(22)
-          .lineHeight(22 * 1.18)
-          .fontWeight(700)
-          .fontColor(ColorTokens.ink)
-          .fontFamily(ReaderTypography.serifFamily())
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-        Text(this.currentBook !== null ? this.currentBook.author : '爱潜水的乌贼')
-          .fontSize(13)
-          .lineHeight(13 * 1.35)
-          .fontColor(ColorTokens.muted)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .margin({ top: 8 })
-        Row({ space: 8 }) {
-          Text('最新')
-            .fontSize(11)
-            .fontWeight(800)
-            .fontColor(ColorTokens.muted)
-            .width(34)
-          Text(this.currentBook !== null && this.currentBook.latestChapter.length > 0
-            ? this.currentBook.latestChapter : '第 32 章 雨夜')
-            .fontSize(12)
-            .fontColor(ColorTokens.ink)
-            .lineHeight(12 * 1.35)
-            .layoutWeight(1)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-        .width('100%')
         .alignItems(VerticalAlign.Center)
-        .margin({ top: 10 })
-        BookFacts({
-          facts: [
-            { label: '最新', value: this.currentBook !== null && this.currentBook.latestChapter.length > 0
-                ? this.currentBook.latestChapter : '第 32 章 雨夜' },
-            { label: '字数', value: '128.4 万' },
-            { label: '状态', value: '连载中' },
-            { label: '来源', value: this.currentBook !== null ? this.currentBook.sourceName : '优书网' },
-            { label: '分类', value: '悬疑 · 推理' }
-          ]
-        })
-        Row({ space: 8 }) {
-          Text(`书源：${this.currentBook !== null ? this.currentBook.sourceName : '优书网'}`)
-            .fontSize(12)
-            .fontWeight(700)
-            .fontColor(ColorTokens.muted)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-          Text('更换书源')
-            .fontSize(9)
-            .fontWeight(900)
-            .fontColor(ColorTokens.primary)
-            .height(18)
-            .padding({ left: 8, right: 8 })
-            .borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(ColorTokens.surfaceSoft)
-            .textAlign(TextAlign.Center)
-            .onClick(() => {
-              // 更换书源：route-push 到 source-switch，用 LibraryShell 的 push 动效包裹
-              MotionAdapter.apply('app.route.push.forward', this.reducedMotion, () => {
-                ReaderUiStore.dispatch({ type: 'route-push', id: 'source-switch' });
-              });
+      } else {
+        Row({ space: 14 }) {
+          Stack() {
+            SourceCoverImage({
+              sourceId: this.currentBook.sourceId ?? '',
+              coverUrl: this.currentBook.coverUrl ?? '',
             })
+          }
+          .width(86)
+          .height(122)
+          .borderRadius(DemoAliasTokens.radiusSm)
+          .shadow({ radius: 16, color: DemoAliasTokens.shadowElevatedColor, offsetX: 0, offsetY: 8 })
+          Column() {
+            Text(this.currentBook.title.length > 0 ? this.currentBook.title : '未命名书籍')
+              .fontSize(22)
+              .lineHeight(22 * 1.18)
+              .fontWeight(700)
+              .fontColor(ColorTokens.ink)
+              .fontFamily(ReaderTypography.serifFamily())
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+            if (this.currentBook.author.length > 0) {
+              Text(this.currentBook.author)
+                .fontSize(13)
+                .lineHeight(13 * 1.35)
+                .fontColor(ColorTokens.muted)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+                .margin({ top: 8 })
+            }
+            if (this.currentBook.latestChapter.length > 0) {
+              Row({ space: 8 }) {
+                Text('最新')
+                  .fontSize(11)
+                  .fontWeight(800)
+                  .fontColor(ColorTokens.muted)
+                  .width(34)
+                Text(this.currentBook.latestChapter)
+                  .fontSize(12)
+                  .fontColor(ColorTokens.ink)
+                  .lineHeight(12 * 1.35)
+                  .layoutWeight(1)
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+              }
+              .width('100%')
+              .alignItems(VerticalAlign.Center)
+              .margin({ top: 10 })
+            }
+            if (this.facts().length > 0) {
+              BookFacts({ facts: this.facts() })
+            }
+            if (this.currentBook.sourceName.length > 0) {
+              Row({ space: 8 }) {
+                Text(`书源：${this.currentBook.sourceName}`)
+                  .fontSize(12)
+                  .fontWeight(700)
+                  .fontColor(ColorTokens.muted)
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                Text('更换书源')
+                  .fontSize(9)
+                  .fontWeight(900)
+                  .fontColor(ColorTokens.primary)
+                  .height(18)
+                  .padding({ left: 8, right: 8 })
+                  .borderRadius(DemoAliasTokens.radiusPill)
+                  .backgroundColor(ColorTokens.surfaceSoft)
+                  .textAlign(TextAlign.Center)
+                  .onClick(() => this.openSourceSwitch())
+              }
+              .width('100%')
+              .alignItems(VerticalAlign.Center)
+              .margin({ top: 8 })
+            }
+          }
+          .alignItems(HorizontalAlign.Start)
+          .layoutWeight(1)
+          .height(122)
         }
         .width('100%')
-        .alignItems(VerticalAlign.Center)
-        .margin({ top: 8 })
+        .alignItems(VerticalAlign.Top)
       }
-      .alignItems(HorizontalAlign.Start)
-      .layoutWeight(1)
-      .height(122)
     }
     .width('100%')
     .padding(14)
@@ -150,7 +193,7 @@ export struct BookHero {
     .borderRadius(DemoAliasTokens.radiusMd)
     .backgroundColor(DemoAliasTokens.surface)
     .shadow({ radius: 26, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 8 })
-    .alignItems(VerticalAlign.Top)
+    .alignItems(HorizontalAlign.Center)
   }
 }
 
@@ -167,7 +210,7 @@ export struct BookSummaryCard {
         .fontColor(ColorTokens.ink)
       Text(this.currentBook !== null && this.currentBook.summary.length > 0
         ? this.currentBook.summary
-        : '旧世界的余烬尚未冷却，新的秩序已经在废墟之上生长。主角沿着被遗忘的线索追寻真相，也在一次次选择里确认自己想守住的东西。')
+        : (this.currentBook === null ? '尚未选择书籍，暂无简介。' : 'Core 未返回本书简介。'))
         .fontSize(13)
         .fontColor(ColorTokens.muted)
         .lineHeight(13 * 1.65)
@@ -190,14 +233,53 @@ export struct BookSummaryCard {
 @Component
 export struct BookChapterList {
   @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
+  @StorageProp('reader.chapterToc') chapterToc: ChapterTocEntry[] = [];
+  @StorageProp('reader.currentChapterTitle') currentChapterTitle: string = '';
+  @StorageProp('reader.loading') loading: boolean = false;
   // B1 P0：路由跳转用 MotionAdapter.apply 包裹，motionId 取 LibraryShell 的 app.route.push.forward
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
-  private chapters: ChapterPreviewEntry[] = [
-    { title: '第 30 章 旧日', cached: true, bookmarked: false, current: false },
-    { title: '第 31 章 归途', cached: true, bookmarked: true, current: false },
-    { title: '第 32 章 雨夜', cached: false, bookmarked: true, current: true },
-    { title: '第 33 章 灯塔', cached: false, bookmarked: false, current: false },
-  ];
+
+  private previewChapters(): ChapterTocEntry[] {
+    const entries: ChapterTocEntry[] = [];
+    const limit = Math.min(4, this.chapterToc.length);
+    for (let i = 0; i < limit; i++) {
+      entries.push(this.chapterToc[i]);
+    }
+    return entries;
+  }
+
+  private hasDirectory(): boolean {
+    return this.currentBook !== null && this.chapterToc.length > 0;
+  }
+
+  private directoryStatus(): string {
+    if (this.currentBook === null) return '尚未选择书籍，无法显示章节目录。';
+    return this.loading ? '正在从 Core 加载章节目录…' : '暂无从 Core 返回的章节目录。';
+  }
+
+  private isCurrent(chapter: ChapterTocEntry): boolean {
+    return this.currentChapterTitle.length > 0 && chapter.title === this.currentChapterTitle;
+  }
+
+  private openDirectory(): void {
+    if (!this.hasDirectory()) return;
+    MotionAdapter.apply('app.route.push.forward', this.reducedMotion, this.getUIContext(), () => {
+      ReaderUiStore.dispatch({ type: 'route-push', id: 'book-directory' });
+    });
+  }
+
+  private openChapter(chapter: ChapterTocEntry): void {
+    const book = this.currentBook;
+    if (book === null || chapter.chapterId.length === 0) return;
+    MotionAdapter.apply('app.route.push.forward', this.reducedMotion, this.getUIContext(), () => {
+      // The reader route is entered before the asynchronous load so the visible
+      // loading state belongs to the selected, real chapter rather than a demo row.
+      ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' });
+      ReaderUiStore.dispatch({
+        type: 'chapter-load', chapterId: chapter.chapterId, bookId: book.bookId, chapterTitle: chapter.title,
+      });
+    });
+  }
 
   build() {
     Column() {
@@ -207,77 +289,64 @@ export struct BookChapterList {
           .fontWeight(700)
           .fontColor(ColorTokens.ink)
         Blank()
-        Row({ space: 5 }) {
-          Image($r('app.media.ui_icon_list_primary')).width(16).height(16)
-          Text('完整目录')
+        if (this.hasDirectory()) {
+          Row({ space: 5 }) {
+            Image($r('app.media.ui_icon_list_primary')).width(16).height(16)
+            Text('完整目录')
+              .fontSize(12)
+              .fontWeight(850)
+              .fontColor(ColorTokens.primaryDark)
+          }
+          .height(30)
+          .padding({ left: 10, right: 10 })
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .border({ width: 1, color: ColorTokens.border })
+          .alignItems(VerticalAlign.Center)
+          .onClick(() => this.openDirectory())
+        } else {
+          Text('目录未就绪')
             .fontSize(12)
-            .fontWeight(850)
-            .fontColor(ColorTokens.primaryDark)
+            .fontWeight(700)
+            .fontColor(ColorTokens.muted)
         }
-        .height(30)
-        .padding({ left: 10, right: 10 })
-        .borderRadius(DemoAliasTokens.radiusPill)
-        .border({ width: 1, color: ColorTokens.border })
-        .alignItems(VerticalAlign.Center)
-        .onClick(() => {
-          // 完整目录：route-push 到 book-directory，用 LibraryShell 的 push 动效包裹
-          MotionAdapter.apply('app.route.push.forward', this.reducedMotion, () => {
-            ReaderUiStore.dispatch({ type: 'route-push', id: 'book-directory' });
-          });
-        })
       }
       .width('100%')
       .height(48)
       .padding({ left: 14, right: 14 })
-      ForEach(this.chapters, (c: ChapterPreviewEntry, i: number) => {
-        Row() {
-          Text(c.title)
-            .fontSize(14)
-            .fontColor(c.current ? ColorTokens.accent : ColorTokens.controlInk)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .layoutWeight(1)
-          Row({ space: 6 }) {
-            Stack({ alignContent: Alignment.Center }) {
-              if (c.cached) {
-                Image($r('app.media.ui_icon_check_primary')).width(13).height(13)
-              }
+      if (!this.hasDirectory()) {
+        Text(this.directoryStatus())
+          .fontSize(12)
+          .fontColor(ColorTokens.muted)
+          .lineHeight(18)
+          .width('100%')
+          .padding({ left: 14, right: 14, top: 14, bottom: 14 })
+      } else {
+        ForEach(this.previewChapters(), (chapter: ChapterTocEntry, i: number) => {
+          Row({ space: 8 }) {
+            Text(chapter.title)
+              .fontSize(14)
+              .fontColor(this.isCurrent(chapter) ? ColorTokens.accent : ColorTokens.controlInk)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .layoutWeight(1)
+            if (this.isCurrent(chapter)) {
+              Text('当前')
+                .fontSize(10)
+                .fontWeight(800)
+                .fontColor(ColorTokens.primaryDark)
+                .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+                .borderRadius(DemoAliasTokens.radiusPill)
+                .backgroundColor(ColorTokens.surfaceSoft)
             }
-            .width(26)
-            .height(26)
-            .borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(c.cached ? ColorTokens.surfaceSoft : ColorTokens.metaBg)
-
-            Stack({ alignContent: Alignment.Center }) {
-              if (c.bookmarked) {
-                Image($r('app.media.ui_icon_bookmark_primary')).width(13).height(13)
-              }
-            }
-            .width(26)
-            .height(26)
-            .borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(c.bookmarked ? ColorTokens.surfaceSoft : ColorTokens.metaBg)
           }
-          .width(64)
-          .justifyContent(FlexAlign.End)
-        }
-        .width('100%')
-        .height(58)
-        .padding({ left: 14, right: 14 })
-        .border({ width: { top: 1 }, color: ColorTokens.border })
-        .alignItems(VerticalAlign.Center)
-        .onClick(() => {
-          // 章节跳转：route-push 到 immersive-reading，用 LibraryShell 的 push 动效包裹
-          MotionAdapter.apply('app.route.push.forward', this.reducedMotion, () => {
-            // route-push first (resets pageState='default'), then chapter-load
-            // switches pageState='loading' on the immersive reader route.
-            ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' });
-            if (this.currentBook !== null && this.currentBook.chapterListUrl.length > 0 && i === 0) {
-              ReaderUiStore.dispatch({ type: 'chapter-load', chapterId: this.currentBook.chapterListUrl });
-            }
-          });
-        })
-      }, (c: ChapterPreviewEntry, i: number) => `${c.title}-${i}`)
+          .width('100%')
+          .height(58)
+          .padding({ left: 14, right: 14 })
+          .border({ width: { top: 1 }, color: ColorTokens.border })
+          .alignItems(VerticalAlign.Center)
+          .onClick(() => this.openChapter(chapter))
+        }, (chapter: ChapterTocEntry, i: number) => `${chapter.chapterId}-${i}`)
+      }
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)

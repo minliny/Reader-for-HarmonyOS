@@ -1,44 +1,79 @@
-// DiscoverComponents — discover skeleton ported from render-runtime.js
-// mainTabDiscover() DOM: .fd-discover-source-bar → .fd-discover-entry-row →
-// .fd-filter-control → .fd-discover-list-head → .fd-discover-book-list.
+// DiscoverComponents — Core-backed discovery UI.
+//
+// The demo still owns the visual language, but every displayed source,
+// category and book now comes from Core source.list -> source.exploreKinds ->
+// source.explore.  There is deliberately no default source/ranking/fixed book
+// fallback: an unavailable Core capability is shown as unavailable instead.
 import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
-import { ZIndexTokens } from '../../contract/generated/DimensionTokens';
 import { ReaderUiStore } from '../store/ReaderUiStore';
+import { CoreDiscoverBook, CoreDiscoverKind, CoreSourceEntry } from '../store/ReaderUiState';
+import { SourceCoverImage } from './SourceCoverImage';
 
-interface DiscoverBulkSourceEntry {
-  name: string;
-  meta: string;
-  badge: string;
-  selected: boolean;
-  tone: string;
-}
-
-// .fd-discover-source-bar: min-height 58, grid 34/1fr/18, padding 10 12, border,
-// radius-md, surface, soft-shadow. icon 34 circle primary-tint, strong 15, small 11.
 @Component
 export struct DiscoverSourceBar {
+  @StorageProp('reader.discoverSources') discoverSources: CoreSourceEntry[] = [];
+  @StorageProp('reader.discoverSourceId') discoverSourceId: string = '';
+
+  private selectedSource(): CoreSourceEntry | null {
+    for (let i = 0; i < this.discoverSources.length; i++) {
+      if (this.discoverSources[i].sourceId === this.discoverSourceId) {
+        return this.discoverSources[i];
+      }
+    }
+    return null;
+  }
+
+  private sourceTitle(): string {
+    const source = this.selectedSource();
+    return source === null ? '暂无可用发现书源' : source.name;
+  }
+
+  private sourceMeta(): string {
+    const source = this.selectedSource();
+    if (source === null) return '请导入并启用支持发现的 Core 书源';
+    if (this.discoverSources.length > 1) {
+      return `sourceId: ${source.sourceId} · 点按切换（${this.discoverSources.length}）`;
+    }
+    return `sourceId: ${source.sourceId} · 已启用发现`;
+  }
+
+  private openSelectedOrImport(): void {
+    if (this.discoverSources.length > 0) {
+      ReaderUiStore.dispatch({ type: 'discover-source-cycle' });
+    } else {
+      ReaderUiStore.dispatch({ type: 'route-push', id: 'source-import-options' });
+    }
+  }
+
   build() {
     Row() {
       Stack()
-        .width(34).height(34)
+        .width(34)
+        .height(34)
         .borderRadius(DemoAliasTokens.radiusPill)
         .backgroundColor(ColorTokens.metaBg)
       Column() {
-        Text('默认书源')
+        Text(this.sourceTitle())
           .fontSize(15)
           .fontColor(ColorTokens.ink)
-        Text('小说 · 已启用')
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(this.sourceMeta())
           .fontSize(11)
           .fontColor(ColorTokens.muted)
           .margin({ top: 3 })
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
       .margin({ left: 10 })
+      .onClick(() => this.openSelectedOrImport())
       Image($r('app.media.reader_icon_more_dark'))
-        .width(18).height(18)
-        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'discover-source-bulk' }))
+        .width(18)
+        .height(18)
+        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'source-management' }))
     }
     .width('100%')
     .height(58)
@@ -51,124 +86,81 @@ export struct DiscoverSourceBar {
   }
 }
 
-// .fd-discover-entry-row: horizontal scroll of entry chips (排行榜/畅销/分类/...),
-//   min 32, pill, 12/800, surface/ink; active = primary.
+// Core can return grouping headers with an empty URL.  Those headers remain
+// visible, but only a non-empty Core URL is an executable discovery entry.
 @Component
 export struct DiscoverEntryRow {
-  private entries: string[] = ['排行榜', '畅销', '分类', '书源', '完本', '最新', '新书'];
-  private active: string = '排行榜';
+  @StorageProp('reader.discoverKinds') discoverKinds: CoreDiscoverKind[] = [];
+  @StorageProp('reader.discoverKindUrl') discoverKindUrl: string = '';
+
+  private label(kind: CoreDiscoverKind): string {
+    return kind.title.length > 0 ? kind.title : '未命名入口';
+  }
+
+  private isExecutable(kind: CoreDiscoverKind): boolean {
+    return kind.url.length > 0;
+  }
 
   build() {
-    Scroll() {
-      Row() {
-        ForEach(this.entries, (e: string) => {
-          Text(e)
-            .fontSize(12)
-            .fontWeight(800)
-            .fontColor(e === this.active ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
-            .backgroundColor(e === this.active ? ColorTokens.primary : ColorTokens.metaBg)
-            .height(32)
-            .padding({ left: 12, right: 12 })
-            .borderRadius(DemoAliasTokens.radiusPill)
-            .margin({ right: 7 })
-        }, (e: string) => e)
+    if (this.discoverKinds.length > 0) {
+      Scroll() {
+        Row() {
+          ForEach(this.discoverKinds, (kind: CoreDiscoverKind, index: number) => {
+            Text(this.label(kind))
+              .fontSize(12)
+              .fontWeight(800)
+              .fontColor(this.isExecutable(kind) && kind.url === this.discoverKindUrl
+                ? DemoAliasTokens.onPrimary : (this.isExecutable(kind) ? ColorTokens.controlInk : ColorTokens.muted))
+              .backgroundColor(this.isExecutable(kind) && kind.url === this.discoverKindUrl
+                ? ColorTokens.primary : ColorTokens.metaBg)
+              .height(32)
+              .padding({ left: 12, right: 12 })
+              .borderRadius(DemoAliasTokens.radiusPill)
+              .margin({ right: 7 })
+              .onClick(() => {
+                if (this.isExecutable(kind)) {
+                  ReaderUiStore.dispatch({ type: 'discover-kind-select', discoverKindUrl: kind.url });
+                }
+              })
+          }, (kind: CoreDiscoverKind, index: number) => `${kind.url}-${kind.title}-${index}`)
+        }
       }
+      .scrollable(ScrollDirection.Horizontal)
+      .scrollBar(BarState.Off)
+      .width('100%')
+    } else {
+      Blank().height(0)
     }
-    .scrollable(ScrollDirection.Horizontal)
-    .scrollBar(BarState.Off)
-    .width('100%')
   }
 }
 
-// DiscoverSortPopover — anchored sort selector for the discover filter trigger.
-// Replaces the old cycleSort() behavior with an explicit popover listing all
-// sort options (热门 / 最近更新 / 评分).
-@Component
-struct DiscoverSortPopover {
-  @StorageProp('reader.discoverFilter.sort') discoverSort: string = 'popular';
-  private sortEntries: Array<[string, string]> = [
-    ['热门', 'popular'],
-    ['最近更新', 'recent'],
-    ['评分', 'rating'],
-  ];
-
-  build() {
-    Column() {
-      Text('排序')
-        .fontSize(12)
-        .fontWeight(900)
-        .fontColor(ColorTokens.ink)
-      ForEach(this.sortEntries, (entry: [string, string], idx: number) => {
-        Text(entry[0])
-          .fontSize(12)
-          .fontWeight(800)
-          .fontColor(this.discoverSort === entry[1] ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
-          .height(32)
-          .padding({ left: 12, right: 12 })
-          .borderRadius(DemoAliasTokens.radiusPill)
-          .backgroundColor(this.discoverSort === entry[1] ? ColorTokens.primary : ColorTokens.metaBg)
-          .margin({ top: idx === 0 ? 10 : 6 })
-          .onClick(() => {
-            ReaderUiStore.dispatch({ type: 'set-discover-sort', discoverSort: entry[1] });
-          })
-      }, (entry: [string, string], idx: number) => `${entry[1]}-${idx}`)
-    }
-    .width('100%')
-    .padding(14)
-    .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(DemoAliasTokens.surface)
-    .border({ width: 1, color: ColorTokens.border })
-    .shadow({ radius: 18, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 6 })
-    .alignItems(HorizontalAlign.Start)
-  }
-}
-
-// .fd-filter-trigger: min 34, grid 16/auto/1fr/14, padding 0 10, border, radius-md,
-//   surface-soft, 12/900. filter icon + "筛选" + em (active) + chevron.
-// Click toggles the DiscoverSortPopover (anchored below the trigger) instead of
-// cycling through sort options silently.
+// The old sort control advertised rankings the Core protocol does not provide.
+// Keep the compact demo control shape, but make it an explicit reload of the
+// currently selected Core entry and state that Core preserves source order.
 @Component
 export struct DiscoverFilterTrigger {
-  @Prop filterActiveCount: number = 0;
-  @StorageProp('reader.discoverFilter.sort') discoverSort: string = 'popular';
-  @StorageProp('reader.discoverFilter.filters') discoverFilters: string[] = [];
-  @State popoverOpen: boolean = false;
-
-  private sortLabel(): string {
-    if (this.discoverSort === 'recent') return '最近更新';
-    if (this.discoverSort === 'rating') return '评分';
-    return '热门';
-  }
+  @StorageProp('reader.discoverSourceId') discoverSourceId: string = '';
+  @StorageProp('reader.discoverKindUrl') discoverKindUrl: string = '';
+  @StorageProp('reader.discoverKindTitle') discoverKindTitle: string = '';
 
   build() {
-    Stack({ alignContent: Alignment.TopStart }) {
+    if (this.discoverSourceId.length > 0 && this.discoverKindUrl.length > 0) {
       Row() {
-        Image($r('app.media.reader_icon_more_dark')).width(16).height(16)
-        Text('筛选')
+        Text('当前入口')
           .fontSize(12)
           .fontWeight(900)
           .fontColor(ColorTokens.controlInk)
-          .margin({ left: 7 })
-        if (this.discoverFilters.length > 0) {
-          Text(this.discoverFilters.length.toString())
-            .fontSize(10)
-            .fontWeight(800)
-            .fontColor(Color.White)
-            .height(18)
-            .constraintSize({ minWidth: 18 })
-            .padding({ left: 5, right: 5 })
-            .borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(ColorTokens.accent)
-            .textAlign(TextAlign.Center)
-            .margin({ left: 6 })
-        }
-        Text('全部 · ' + this.sortLabel())
+        Text(this.discoverKindTitle.length > 0 ? this.discoverKindTitle : 'Core 入口')
           .fontSize(11)
           .fontColor(ColorTokens.muted)
           .margin({ left: 7 })
           .layoutWeight(1)
-          .textAlign(TextAlign.End)
-        Image($r('app.media.reader_icon_more_dark')).width(14).height(14).margin({ left: 7 })
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text('Core 顺序 · 刷新')
+          .fontSize(11)
+          .fontColor(ColorTokens.primaryDark)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'discover-refresh' }))
       }
       .width('100%')
       .height(34)
@@ -177,65 +169,102 @@ export struct DiscoverFilterTrigger {
       .borderRadius(DemoAliasTokens.radiusMd)
       .backgroundColor(ColorTokens.metaBg)
       .alignItems(VerticalAlign.Center)
-      .onClick(() => { this.popoverOpen = !this.popoverOpen; })
-      if (this.popoverOpen) {
-        DiscoverSortPopover()
-          .position({ x: 0, y: 40 })
-          .zIndex(ZIndexTokens.settingsDropdown)
-      }
+    } else {
+      Blank().height(0)
     }
-    .width('100%')
   }
 }
 
-// .fd-discover-list-head: h2 15.
 @Component
 export struct DiscoverListHead {
+  @StorageProp('reader.discoverLoading') discoverLoading: boolean = false;
+  @StorageProp('reader.discoverError') discoverError: string = '';
+  @StorageProp('reader.discoverSourceId') discoverSourceId: string = '';
+  @StorageProp('reader.discoverKindUrl') discoverKindUrl: string = '';
+  @StorageProp('reader.discoverKindTitle') discoverKindTitle: string = '';
+  @StorageProp('reader.discoverBooks') discoverBooks: CoreDiscoverBook[] = [];
+
   build() {
-    Row() {
-      Text('排行榜')
-        .fontSize(15)
-        .fontColor(ColorTokens.ink)
+    if (!this.discoverLoading && this.discoverError.length === 0 &&
+      this.discoverSourceId.length > 0 && this.discoverKindUrl.length > 0) {
+      Row() {
+        Text(this.discoverKindTitle.length > 0 ? this.discoverKindTitle : '发现结果')
+          .fontSize(15)
+          .fontColor(ColorTokens.ink)
+          .layoutWeight(1)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(`${this.discoverBooks.length} 本`)
+          .fontSize(11)
+          .fontColor(ColorTokens.muted)
+      }
+      .width('100%')
+      .padding({ left: 2 })
+    } else {
+      Blank().height(0)
     }
-    .width('100%')
-    .padding({ left: 2 })
   }
 }
 
-// .fd-discover-book-list > .fd-discover-book-row: min 108, grid 52/1fr, gap 11,
-//   padding 12, border-top. img 52×74 radius-xs. h3 15, small 11, em 11 primary, p 12 clamp 2.
 @Component
 export struct DiscoverBookRow {
-  @Prop title: string = '三体';
-  @Prop author: string = '刘慈欣';
-  @Prop kind: string = '科幻';
-  @Prop latest: string = '第3部';
-  @Prop intro: string = '宇宙是一块黑暗森林。';
+  @Prop sourceId: string = '';
+  @Prop bookUrl: string = '';
+  @Prop title: string = '';
+  @Prop author: string = '';
+  @Prop kind: string = '';
+  @Prop latest: string = '';
+  @Prop intro: string = '';
+  @Prop coverUrl: string = '';
+
+  private authorKind(): string {
+    if (this.kind.length > 0) return `${this.author} · ${this.kind}`;
+    return this.author;
+  }
 
   build() {
     Row() {
-      Image($r('app.media.bookshelf_cover_three_body'))
-        .width(52).height(74)
-        .objectFit(ImageFit.Cover)
-        .borderRadius(DemoAliasTokens.radiusXs)
+      Stack() {
+        SourceCoverImage({ sourceId: this.sourceId, coverUrl: this.coverUrl })
+        if (this.coverUrl.length === 0) {
+          Text('书')
+            .fontSize(16)
+            .fontWeight(800)
+            .fontColor(ColorTokens.primaryDark)
+        }
+      }
+      .width(52)
+      .height(74)
+      .borderRadius(DemoAliasTokens.radiusXs)
+      .backgroundColor(ColorTokens.metaBg)
       Column() {
         Text(this.title)
           .fontSize(15)
           .fontColor(ColorTokens.ink)
-        Text(`${this.author} · ${this.kind}`)
-          .fontSize(11)
-          .fontColor(ColorTokens.muted)
-          .margin({ top: 3 })
-        Text(this.latest)
-          .fontSize(11)
-          .fontColor(ColorTokens.primaryDark)
-          .margin({ top: 3 })
-        Text(this.intro)
-          .fontSize(12)
-          .fontColor(ColorTokens.muted)
-          .maxLines(2)
+          .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .margin({ top: 5 })
+        Text(this.authorKind())
+          .fontSize(11)
+          .fontColor(ColorTokens.muted)
+          .margin({ top: 3 })
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        if (this.latest.length > 0) {
+          Text(this.latest)
+            .fontSize(11)
+            .fontColor(ColorTokens.primaryDark)
+            .margin({ top: 3 })
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        if (this.intro.length > 0) {
+          Text(this.intro)
+            .fontSize(12)
+            .fontColor(ColorTokens.muted)
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .margin({ top: 5 })
+        }
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
@@ -245,37 +274,31 @@ export struct DiscoverBookRow {
     .padding({ top: 12, bottom: 12, left: 12, right: 12 })
     .border({ width: { top: 1 }, color: ColorTokens.border })
     .alignItems(VerticalAlign.Center)
-    .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'book-detail' }))
-  }
-}
-
-// .fd-discover-book-list: card wrapping the book rows.
-@Component
-export struct DiscoverBookList {
-  private books: Array<[string, string, string, string, string]> = [
-    ['三体', '刘慈欣', '科幻', '第3部', '宇宙是一块黑暗森林，每个文明都是带枪的猎人。'],
-    ['基地', '阿西莫夫', '科幻', '完结', '银河帝国的衰亡与心理史学的预言。'],
-    ['球状闪电', '刘慈欣', '科幻', '更新中', '一个少年对球状闪电的追寻，揭开量子物理的奥秘。'],
-  ];
-
-  build() {
-    Column() {
-      ForEach(this.books, (b: [string, string, string, string, string], i: number) => {
-        DiscoverBookRow({ title: b[0], author: b[1], kind: b[2], latest: b[3], intro: b[4] })
-      }, (b: [string, string, string, string, string], i: number) => `${b[0]}-${i}`)
-    }
-    .width('100%')
-    .border({ width: 1, color: ColorTokens.border })
-    .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(DemoAliasTokens.surface)
-    .shadow({ radius: 26, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 8 })
+    .onClick(() => {
+      if (this.sourceId.length === 0 || this.bookUrl.length === 0) return;
+      ReaderUiStore.dispatch({ type: 'route-push', id: 'book-detail' });
+      ReaderUiStore.dispatch({ type: 'book-detail-load', bookId: this.bookUrl, sourceId: this.sourceId });
+    })
   }
 }
 
 @Component
 struct DiscoverStateAction {
-  @Prop label: string = '操作';
+  @Prop label: string = '';
+  @Prop action: string = '';
   @Prop primary: boolean = false;
+
+  private run(): void {
+    if (this.action === 'discover-refresh') {
+      ReaderUiStore.dispatch({ type: 'discover-refresh' });
+    } else if (this.action === 'source-import') {
+      ReaderUiStore.dispatch({ type: 'route-push', id: 'source-import-options' });
+    } else if (this.action === 'source-management') {
+      ReaderUiStore.dispatch({ type: 'route-push', id: 'source-management' });
+    } else if (this.action === 'discover-home') {
+      ReaderUiStore.dispatch({ type: 'route-replace', id: 'discover' });
+    }
+  }
 
   build() {
     Text(this.label)
@@ -288,23 +311,23 @@ struct DiscoverStateAction {
       .backgroundColor(this.primary ? ColorTokens.primary : ColorTokens.metaBg)
       .border({ width: this.primary ? 0 : 1, color: ColorTokens.border })
       .textAlign(TextAlign.Center)
+      .onClick(() => this.run())
   }
 }
 
 @Component
 struct DiscoverStateCard {
   @Prop variant: string = 'empty';
-  @Prop title: string = '当前没有内容';
+  @Prop title: string = '';
   @Prop message: string = '';
-  @Prop action: string = '';
+  @Prop primaryLabel: string = '';
+  @Prop primaryAction: string = '';
+  @Prop secondaryLabel: string = '';
+  @Prop secondaryAction: string = '';
 
   private iconName(): string {
-    if (this.variant === 'error') {
-      return 'ui_icon_info_primary';
-    }
-    if (this.variant === 'no-results') {
-      return 'ui_icon_search_primary';
-    }
+    if (this.variant === 'error') return 'ui_icon_info_primary';
+    if (this.variant === 'no-results') return 'ui_icon_search_primary';
     return 'ui_icon_source_stack_primary';
   }
 
@@ -325,17 +348,13 @@ struct DiscoverStateCard {
         .fontColor(ColorTokens.muted)
         .textAlign(TextAlign.Center)
         .margin({ top: 8 })
-      if (this.action.length > 0) {
+      if (this.primaryLabel.length > 0 || this.secondaryLabel.length > 0) {
         Row({ space: 8 }) {
-          DiscoverStateAction({ label: this.action, primary: true })
-          if (this.variant === 'empty') {
-            DiscoverStateAction({ label: '导入书源' })
-          } else if (this.variant === 'error') {
-            DiscoverStateAction({ label: '切换书源' })
-            DiscoverStateAction({ label: '编辑源' })
-          } else if (this.variant === 'no-results') {
-            DiscoverStateAction({ label: '切换入口' })
-            DiscoverStateAction({ label: '刷新' })
+          if (this.primaryLabel.length > 0) {
+            DiscoverStateAction({ label: this.primaryLabel, action: this.primaryAction, primary: true })
+          }
+          if (this.secondaryLabel.length > 0) {
+            DiscoverStateAction({ label: this.secondaryLabel, action: this.secondaryAction })
           }
         }
         .justifyContent(FlexAlign.Center)
@@ -388,544 +407,161 @@ struct DiscoverSkeletonList {
 }
 
 @Component
+export struct DiscoverBookList {
+  @StorageProp('reader.discoverSources') discoverSources: CoreSourceEntry[] = [];
+  @StorageProp('reader.discoverKinds') discoverKinds: CoreDiscoverKind[] = [];
+  @StorageProp('reader.discoverBooks') discoverBooks: CoreDiscoverBook[] = [];
+  @StorageProp('reader.discoverLoading') discoverLoading: boolean = false;
+  @StorageProp('reader.discoverLoaded') discoverLoaded: boolean = false;
+  @StorageProp('reader.discoverError') discoverError: string = '';
+
+  private hasExecutableKind(): boolean {
+    for (let i = 0; i < this.discoverKinds.length; i++) {
+      if (this.discoverKinds[i].url.length > 0) return true;
+    }
+    return false;
+  }
+
+  build() {
+    if (this.discoverLoading || !this.discoverLoaded) {
+      DiscoverSkeletonList()
+    } else if (this.discoverError.length > 0) {
+      DiscoverStateCard({
+        variant: 'error',
+        title: 'Core 发现请求失败',
+        message: this.discoverError,
+        primaryLabel: '重试',
+        primaryAction: 'discover-refresh',
+        secondaryLabel: '书源管理',
+        secondaryAction: 'source-management',
+      })
+    } else if (this.discoverSources.length === 0) {
+      DiscoverStateCard({
+        variant: 'empty',
+        title: '暂无可用发现书源',
+        message: 'Core source.list 未返回已启用且 enabledExplore=true 的书源。导入支持发现的书源后可在这里浏览。',
+        primaryLabel: '导入书源',
+        primaryAction: 'source-import',
+        secondaryLabel: '书源管理',
+        secondaryAction: 'source-management',
+      })
+    } else if (!this.hasExecutableKind()) {
+      DiscoverStateCard({
+        variant: 'empty',
+        title: '当前书源没有可执行分类',
+        message: 'Core source.exploreKinds 未返回可请求的入口 URL。请检查该已导入书源的发现规则。',
+        primaryLabel: '刷新',
+        primaryAction: 'discover-refresh',
+        secondaryLabel: '书源管理',
+        secondaryAction: 'source-management',
+      })
+    } else if (this.discoverBooks.length === 0) {
+      DiscoverStateCard({
+        variant: 'no-results',
+        title: '当前入口没有返回书籍',
+        message: 'Core source.explore 已完成，但该入口没有可打开的 bookUrl 条目。',
+        primaryLabel: '刷新',
+        primaryAction: 'discover-refresh',
+        secondaryLabel: '书源管理',
+        secondaryAction: 'source-management',
+      })
+    } else {
+      Column() {
+        ForEach(this.discoverBooks, (book: CoreDiscoverBook, index: number) => {
+          DiscoverBookRow({
+            sourceId: book.sourceId,
+            bookUrl: book.bookUrl,
+            title: book.title,
+            author: book.author,
+            kind: book.kind,
+            latest: book.lastChapter,
+            intro: book.intro,
+            coverUrl: book.coverUrl,
+          })
+        }, (book: CoreDiscoverBook, index: number) => `${book.sourceId}-${book.bookUrl}-${index}`)
+      }
+      .width('100%')
+      .border({ width: 1, color: ColorTokens.border })
+      .borderRadius(DemoAliasTokens.radiusMd)
+      .backgroundColor(DemoAliasTokens.surface)
+      .shadow({ radius: 26, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 8 })
+    }
+  }
+}
+
+// Generated contract state routes still instantiate this component.  Ignore
+// their old fixture copy and render the same live Core state as the main tab.
+@Component
 export struct DiscoverStatePage {
   @Prop variant: string = 'empty';
-  @Prop title: string = '当前没有启用发现的书源';
-  @Prop message: string = '启用发现后，可以在这里浏览书源提供的排行榜、分类和书单。';
+  @Prop title: string = '';
+  @Prop message: string = '';
   @Prop action: string = '';
 
   build() {
     Column() {
-      if (this.variant === 'loading') {
-        DiscoverSourceBar()
-        DiscoverEntryRow()
-          .margin({ top: 12 })
-        DiscoverFilterTrigger()
-          .margin({ top: 10 })
-        DiscoverListHead()
-          .margin({ top: 14, bottom: 8 })
-        DiscoverSkeletonList()
-      } else if (this.variant === 'error') {
-        DiscoverSourceBar()
-        DiscoverStateCard({
-          variant: this.variant,
-          title: this.title,
-          message: this.message,
-          action: this.action,
-        })
-          .margin({ top: 12 })
-        DiscoverBookList()
-          .margin({ top: 12 })
-      } else {
-        DiscoverStateCard({
-          variant: this.variant,
-          title: this.title,
-          message: this.message,
-          action: this.action,
-        })
-          .margin({ top: 56 })
-      }
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
-}
-
-@Component
-struct DiscoverBulkChip {
-  @Prop label: string = '筛选';
-  @Prop active: boolean = false;
-  onSelect: (label: string) => void = (_label: string) => {};
-
-  build() {
-    Text(this.label)
-      .fontSize(12)
-      .fontWeight(800)
-      .fontColor(this.active ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
-      .height(32)
-      .padding({ left: 12, right: 12 })
-      .borderRadius(DemoAliasTokens.radiusPill)
-      .backgroundColor(this.active ? ColorTokens.primary : ColorTokens.metaBg)
-      .margin({ right: 7 })
-      .onClick(() => this.onSelect(this.label))
-  }
-}
-
-@Component
-struct DiscoverBulkSourceRow {
-  @Prop name: string = '优书网';
-  @Prop meta: string = '默认分组 · 120ms';
-  @Prop badge: string = '可用';
-  @Prop selected: boolean = false;
-  @Prop tone: string = 'normal';
-
-  private badgeColor(): string {
-    if (this.tone === 'warning') {
-      return ColorTokens.accent;
-    }
-    if (this.tone === 'muted') {
-      return ColorTokens.muted;
-    }
-    return ColorTokens.primary;
-  }
-
-  build() {
-    Row() {
-      Stack() {
-        if (this.selected) {
-          Image($r('app.media.ui_icon_check_white'))
-            .width(14)
-            .height(14)
-        }
-      }
-      .width(26)
-      .height(26)
-      .borderRadius(DemoAliasTokens.radiusPill)
-      .backgroundColor(this.selected ? ColorTokens.primary : ColorTokens.metaBg)
-      .border({ width: 1, color: this.selected ? ColorTokens.primary : ColorTokens.border })
-      .margin({ right: 10 })
-
-      Column() {
-        Text(this.name)
-          .fontSize(15)
-          .fontWeight(700)
-          .fontColor(ColorTokens.ink)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-        Text(this.meta)
-          .fontSize(12)
-          .fontColor(ColorTokens.muted)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .margin({ top: 4 })
-      }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
-
-      Text(this.badge)
-        .fontSize(11)
-        .fontWeight(800)
-        .fontColor(this.badgeColor())
-        .height(26)
-        .padding({ left: 9, right: 9 })
-        .borderRadius(DemoAliasTokens.radiusPill)
-        .backgroundColor(ColorTokens.metaBg)
-    }
-    .width('100%')
-    .padding({ left: 12, right: 12, top: 12, bottom: 12 })
-    .border({ width: 1, color: ColorTokens.border })
-    .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(DemoAliasTokens.surface)
-    .alignItems(VerticalAlign.Center)
-  }
-}
-
-@Component
-struct DiscoverBulkHeadCard {
-  build() {
-    Column() {
-      Text('发现源管理')
-        .fontSize(16)
-        .fontWeight(800)
-        .fontColor(ColorTokens.ink)
-      Text('选择启用发现的书源，批量启用、禁用或刷新入口。')
-        .fontSize(13)
-        .lineHeight(19)
-        .fontColor(ColorTokens.muted)
-        .margin({ top: 8 })
-      Text('已选 3 个')
-        .fontSize(12)
-        .fontWeight(800)
-        .fontColor(ColorTokens.primary)
-        .height(24)
-        .padding({ left: 10, right: 10 })
-        .borderRadius(DemoAliasTokens.radiusPill)
-        .backgroundColor(ColorTokens.metaBg)
+      DiscoverSourceBar()
+      DiscoverEntryRow()
+        .margin({ top: 12 })
+      DiscoverFilterTrigger()
         .margin({ top: 10 })
+      DiscoverListHead()
+        .margin({ top: 14, bottom: 8 })
+      DiscoverBookList()
+        .margin({ top: 8 })
     }
     .width('100%')
-    .padding(14)
-    .borderRadius(DemoAliasTokens.radiusLg)
-    .backgroundColor(ColorTokens.floatingControlBg)
-    .border({ width: 1, color: ColorTokens.border })
     .alignItems(HorizontalAlign.Start)
+  }
+}
+
+// The generated routes remain addressable for navigation compatibility, but
+// their previous fixture-only workflows are deliberately unavailable until a
+// corresponding Core/Host capability is exposed.
+@Component
+struct DiscoverUnavailablePage {
+  @Prop title: string = '';
+  @Prop message: string = '';
+
+  build() {
+    DiscoverStateCard({
+      variant: 'empty',
+      title: this.title,
+      message: this.message,
+      primaryLabel: '书源管理',
+      primaryAction: 'source-management',
+      secondaryLabel: '返回发现',
+      secondaryAction: 'discover-home',
+    })
   }
 }
 
 @Component
 export struct DiscoverSourceBulkPage {
-  private chips: string[] = ['已启用发现', '有发现未启用', '需登录', '异常'];
-  @StorageProp('reader.discoverFilter.filters') discoverFilters: string[] = [];
-  private sources: DiscoverBulkSourceEntry[] = [
-    { name: '优书网', meta: '默认分组 · 120ms · 已启用发现', badge: '可用', selected: true, tone: 'normal' },
-    { name: '起点导入', meta: '正版 · 180ms · 已启用发现', badge: '可用', selected: true, tone: 'normal' },
-    { name: '轻小说文库', meta: '需登录 · 发现可用', badge: '需处理', selected: true, tone: 'warning' },
-    { name: '本地聚合源', meta: '维护中 · 暂停发现', badge: '暂停', selected: false, tone: 'muted' },
-    { name: '失效示例源', meta: '解析失败 · exploreUrl 异常', badge: '需处理', selected: false, tone: 'warning' },
-  ];
-
-  private chipActive(label: string): boolean {
-    if (this.discoverFilters.length === 0) return label === '已启用发现';
-    return this.discoverFilters.indexOf(label) >= 0;
-  }
-
   build() {
-    Column() {
-      DiscoverBulkHeadCard()
-
-      Row() {
-        Text('取消')
-          .fontSize(13)
-          .fontWeight(800)
-          .fontColor(ColorTokens.primaryDark)
-          .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
-        Text('已选 3 个')
-          .fontSize(13)
-          .fontWeight(800)
-          .fontColor(ColorTokens.controlInk)
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-        Text('全选')
-          .fontSize(13)
-          .fontWeight(800)
-          .fontColor(ColorTokens.primaryDark)
-      }
-      .width('100%')
-      .height(38)
-      .alignItems(VerticalAlign.Center)
-      .margin({ top: 12 })
-
-      Row() {
-        Image($r('app.media.ui_icon_search_muted'))
-          .width(18)
-          .height(18)
-        Text('搜索书源名称或分组')
-          .fontSize(13)
-          .fontColor(ColorTokens.muted)
-          .margin({ left: 8 })
-      }
-      .width('100%')
-      .height(42)
-      .padding({ left: 12, right: 12 })
-      .borderRadius(DemoAliasTokens.radiusPill)
-      .backgroundColor(ColorTokens.metaBg)
-      .alignItems(VerticalAlign.Center)
-
-      Scroll() {
-        Row() {
-          ForEach(this.chips, (chip: string, index: number) => {
-            DiscoverBulkChip({
-              label: chip,
-              active: this.chipActive(chip),
-              onSelect: (label: string) => {
-                ReaderUiStore.dispatch({ type: 'set-discover-filter-toggle', discoverFilterToggle: label });
-              },
-            })
-          }, (chip: string) => chip)
-        }
-      }
-      .scrollable(ScrollDirection.Horizontal)
-      .scrollBar(BarState.Off)
-      .width('100%')
-      .margin({ top: 10 })
-
-      ForEach(this.sources, (source: DiscoverBulkSourceEntry, index: number) => {
-        DiscoverBulkSourceRow({
-          name: source.name,
-          meta: source.meta,
-          badge: source.badge,
-          selected: source.selected,
-          tone: source.tone,
-        })
-          .margin({ top: index === 0 ? 12 : 8 })
-      }, (source: DiscoverBulkSourceEntry, index: number) => `${source.name}-${index}`)
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
-}
-
-@Component
-struct DiscoverSubpageBadge {
-  @Prop label: string = '可用';
-  @Prop tone: string = 'normal';
-
-  build() {
-    Text(this.label)
-      .fontSize(11)
-      .fontWeight(800)
-      .fontColor(this.tone === 'warning' ? ColorTokens.accent : ColorTokens.primaryDark)
-      .height(26)
-      .padding({ left: 10, right: 10 })
-      .borderRadius(DemoAliasTokens.radiusPill)
-      .backgroundColor(ColorTokens.metaBg)
-      .border({ width: 1, color: this.tone === 'warning' ? ColorTokens.accent : ColorTokens.border })
-  }
-}
-
-@Component
-struct DiscoverSubpageHead {
-  @Prop title: string = '';
-  @Prop message: string = '';
-  @Prop badge: string = '';
-  @Prop tone: string = 'normal';
-
-  build() {
-    Row() {
-      Image($r('app.media.ui_icon_source_stack_primary'))
-        .width(32)
-        .height(32)
-      Column() {
-        Text(this.title)
-          .fontSize(17)
-          .fontWeight(850)
-          .fontColor(ColorTokens.ink)
-        Text(this.message)
-          .fontSize(12)
-          .lineHeight(18)
-          .fontColor(ColorTokens.muted)
-          .margin({ top: 5 })
-      }
-      .alignItems(HorizontalAlign.Start)
-      .layoutWeight(1)
-      .margin({ left: 12, right: 10 })
-      if (this.badge.length > 0) {
-        DiscoverSubpageBadge({ label: this.badge, tone: this.tone })
-      }
-    }
-    .width('100%')
-    .padding(14)
-    .borderRadius(DemoAliasTokens.radiusLg)
-    .backgroundColor(ColorTokens.floatingControlBg)
-    .border({ width: 1, color: ColorTokens.border })
-    .alignItems(VerticalAlign.Center)
-  }
-}
-
-@Component
-struct DiscoverLoginInfoRow {
-  @Prop title: string = '';
-  @Prop detail: string = '';
-  @Prop badge: string = '';
-  @Prop tone: string = 'normal';
-  @Prop switchOn: boolean = false;
-
-  build() {
-    Row() {
-      Column() {
-        Text(this.title)
-          .fontSize(14)
-          .fontWeight(800)
-          .fontColor(ColorTokens.ink)
-        Text(this.detail)
-          .fontSize(11)
-          .lineHeight(16)
-          .fontColor(ColorTokens.muted)
-          .margin({ top: 4 })
-      }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
-      if (this.switchOn) {
-        Row() {
-          Blank().layoutWeight(1)
-          Row()
-            .width(20)
-            .height(20)
-            .borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(ColorTokens.paper)
-        }
-        .width(42)
-        .height(24)
-        .padding(2)
-        .borderRadius(DemoAliasTokens.radiusPill)
-        .backgroundColor(ColorTokens.primary)
-      } else {
-        DiscoverSubpageBadge({ label: this.badge, tone: this.tone })
-      }
-    }
-    .width('100%')
-    .padding({ left: 12, right: 12, top: 12, bottom: 12 })
-    .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(DemoAliasTokens.surface)
-    .border({ width: 1, color: ColorTokens.border })
-    .alignItems(VerticalAlign.Center)
-  }
-}
-
-@Component
-struct DiscoverSubpageAction {
-  @Prop label: string = '';
-  @Prop primary: boolean = false;
-
-  build() {
-    Text(this.label)
-      .fontSize(13)
-      .fontWeight(850)
-      .fontColor(this.primary ? DemoAliasTokens.onPrimary : ColorTokens.primaryDark)
-      .height(40)
-      .layoutWeight(1)
-      .textAlign(TextAlign.Center)
-      .borderRadius(DemoAliasTokens.radiusPill)
-      .backgroundColor(this.primary ? ColorTokens.primary : ColorTokens.metaBg)
-      .border({ width: this.primary ? 0 : 1, color: ColorTokens.border })
+    DiscoverUnavailablePage({
+      title: '发现源批量启停不可用',
+      message: '当前 Core/Host 未提供书源批量启停命令。此页不会伪造可启用、禁用或刷新结果，请使用书源管理中的已接入操作。',
+    })
   }
 }
 
 @Component
 export struct DiscoverSourceLoginPage {
   build() {
-    Column() {
-      DiscoverSubpageHead({
-        title: '轻小说文库',
-        message: '该书源的发现入口需要登录态，登录后返回当前入口并刷新列表。',
-        badge: '需登录',
-        tone: 'warning',
-      })
-      DiscoverLoginInfoRow({ title: '登录状态', detail: '未登录 · 最近检测 10:32', badge: '需登录', tone: 'warning' })
-        .margin({ top: 12 })
-      DiscoverLoginInfoRow({ title: '适用范围', detail: '发现入口、详情页、目录页', badge: '当前源' })
-        .margin({ top: 8 })
-      DiscoverLoginInfoRow({ title: 'Cookie 保存', detail: '仅保存在本机书源配置中', switchOn: true })
-        .margin({ top: 8 })
-
-      Row() {
-        DiscoverSubpageAction({ label: '打开网页登录', primary: true })
-        DiscoverSubpageAction({ label: '保存登录信息' })
-          .margin({ left: 8 })
-      }
-      .width('100%')
-      .margin({ top: 12 })
-      DiscoverSubpageAction({ label: '重新检测' })
-        .margin({ top: 8 })
-      Text('返回发现页后，当前书源和当前入口保持不变，只刷新内容列表。')
-        .fontSize(12)
-        .lineHeight(18)
-        .fontColor(ColorTokens.muted)
-        .margin({ top: 12 })
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
-}
-
-@Component
-struct DiscoverRuleFieldRow {
-  @Prop label: string = '';
-  @Prop value: string = '';
-
-  build() {
-    Row() {
-      Text(this.label)
-        .fontSize(11)
-        .fontWeight(800)
-        .fontColor(ColorTokens.muted)
-        .width(86)
-      Text(this.value)
-        .fontSize(12)
-        .fontWeight(800)
-        .fontColor(ColorTokens.controlInk)
-        .layoutWeight(1)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
-    .width('100%')
-    .padding({ left: 12, right: 12, top: 10, bottom: 10 })
-    .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(ColorTokens.floatingControlBg)
-    .border({ width: 1, color: ColorTokens.border })
-    .alignItems(VerticalAlign.Center)
-  }
-}
-
-@Component
-struct DiscoverRuleModuleTabs {
-  private modules: string[] = ['基本', '搜索', '详情', '目录', '正文', '发现', '高级'];
-
-  build() {
-    Scroll() {
-      Row() {
-        ForEach(this.modules, (item: string) => {
-          Text(item)
-            .fontSize(12)
-            .fontWeight(850)
-            .fontColor(item === '发现' ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
-            .height(32)
-            .padding({ left: 12, right: 12 })
-            .borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(item === '发现' ? ColorTokens.primary : ColorTokens.metaBg)
-            .margin({ right: 7 })
-        }, (item: string) => item)
-      }
-    }
-    .scrollable(ScrollDirection.Horizontal)
-    .scrollBar(BarState.Off)
-    .width('100%')
+    DiscoverUnavailablePage({
+      title: '书源登录流程不可用',
+      message: '当前 Core/Host 未暴露书源登录态协商能力。此页不会显示伪网页登录、Cookie 保存或登录成功状态。',
+    })
   }
 }
 
 @Component
 export struct DiscoverRuleTestPage {
-  private fields: Array<[string, string]> = [
-    ['exploreUrl', '@js: 首页入口 + 分类入口'],
-    ['bookList', '.result-list li'],
-    ['name', '.book-title@text'],
-    ['author', '.author@text'],
-    ['kind', '.tag@text'],
-    ['intro', '.intro@text'],
-    ['lastChapter', '.last@text'],
-    ['coverUrl', 'img@src'],
-    ['bookUrl', 'a@href'],
-  ];
-
   build() {
-    Column() {
-      DiscoverSubpageHead({ title: '优书网', message: '正在编辑：发现规则', badge: '已启用发现' })
-      DiscoverRuleModuleTabs()
-        .margin({ top: 12 })
-      ForEach(this.fields, (field: [string, string], index: number) => {
-        DiscoverRuleFieldRow({ label: field[0], value: field[1] })
-          .margin({ top: index === 0 ? 12 : 7 })
-      }, (field: [string, string], index: number) => `${field[0]}-${index}`)
-
-      Column() {
-        Text('测试输入')
-          .fontSize(15)
-          .fontWeight(850)
-          .fontColor(ColorTokens.ink)
-        DiscoverRuleFieldRow({ label: '入口 URL', value: 'https://example.com/rank/allvisit_1.html' })
-          .margin({ top: 10 })
-        DiscoverRuleFieldRow({ label: 'HTML 片段', value: '<li class=\"book\">长夜余火</li>' })
-          .margin({ top: 7 })
-        DiscoverSubpageAction({ label: '测试入口', primary: true })
-          .margin({ top: 10 })
-      }
-      .width('100%')
-      .padding(12)
-      .borderRadius(DemoAliasTokens.radiusLg)
-      .backgroundColor(DemoAliasTokens.surface)
-      .border({ width: 1, color: ColorTokens.border })
-      .margin({ top: 12 })
-      .alignItems(HorizontalAlign.Start)
-
-      Column() {
-        Text('测试结果')
-          .fontSize(15)
-          .fontWeight(850)
-          .fontColor(ColorTokens.ink)
-        DiscoverLoginInfoRow({ title: '生成 5 个入口', detail: '排行榜、分类、完本、最新、书单', badge: '通过' })
-          .margin({ top: 10 })
-        DiscoverLoginInfoRow({ title: '解析到 18 本书', detail: '首条：长夜余火 · 爱潜水的乌贼', badge: '通过' })
-          .margin({ top: 8 })
-      }
-      .width('100%')
-      .padding(12)
-      .borderRadius(DemoAliasTokens.radiusLg)
-      .backgroundColor(DemoAliasTokens.surface)
-      .border({ width: 1, color: ColorTokens.border })
-      .margin({ top: 12 })
-      .alignItems(HorizontalAlign.Start)
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
+    DiscoverUnavailablePage({
+      title: '发现规则编辑与测试不可用',
+      message: 'Core 已可执行已持久化书源的 source.exploreKinds/source.explore，但当前 Host 未接入规则编辑或调试写入能力。',
+    })
   }
 }

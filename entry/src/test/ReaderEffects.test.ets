@@ -1,71 +1,49 @@
-// ReaderEffects.test — pure-function tests for the minimal reading chain:
-// BookSourceRegistry URL builders + Legado source, ReaderEffects Core result
+// ReaderEffects.test — pure-function tests for the Core-backed reading chain:
+// ReaderEffects Core result
 // mappers (mapSearchResults / mapBookDetail / mapChapterContent /
 // getFirstChapterUrl / getVariables), and the reading-chain reducer action
 // cases. The async effect methods (runSearch / runBookDetail / runChapter)
-// need CoreRuntime + Host HTTP and are NOT tested here — they are covered by
-// device self-check evidence instead.
+// need CoreRuntime + Core-issued Host HTTP continuations and are NOT tested
+// here — they are covered by device self-check evidence instead.
 import { describe, it, expect } from '@ohos/hypium';
 import { ReaderReducer } from '../main/ets/ui/store/ReaderReducer';
 import { ReaderEffects } from '../main/ets/ui/store/ReaderEffects';
-import { BookSourceRegistry } from '../main/ets/ui/store/BookSourceRegistry';
 import { DemoUiState } from '../main/ets/ui/fixtures/DemoUiState';
-import { SearchResultEntry, BookDetail } from '../main/ets/ui/store/ReaderUiState';
+import { SearchResultEntry, BookDetail, CoreSourceEntry, CoreSourceCheckResult, CoreSourceDebugResult, CoreContentSearchResult, CoreBookmark } from '../main/ets/ui/store/ReaderUiState';
 import type { JsonObject } from '../main/ets/bridge/core/sdk/reader_core';
+import type { CoreSourceDebugRunProjection } from '../main/ets/bridge/CoreRuntime';
+
+function coreTestSource(): CoreSourceEntry {
+  return {
+    sourceId: 'core-test-source',
+    name: 'Core 测试书源',
+    baseUrl: 'https://core.example',
+    enabled: true,
+    enabledExplore: true,
+  };
+}
+
+function coreReaderBook(): BookDetail {
+  return {
+    bookId: '/book/101', title: '三体', author: '刘慈欣', summary: '...',
+    sourceId: 'core-test-source', sourceName: 'Core 测试书源', sourceUrl: 'https://core.example',
+    latestChapter: '第三部', chapterListUrl: '/book/101/ch1.html',
+  };
+}
+
+function loadedReaderState() {
+  let state = ReaderReducer.reduce(DemoUiState.initial(), { type: 'book-detail-success', book: coreReaderBook() });
+  state = ReaderReducer.reduce(state, { type: 'route-push', id: 'reader' });
+  return ReaderReducer.reduce(state, {
+    type: 'chapter-success', chapterParagraphs: ['第一段', '第二段'], chapterTitle: '第一章',
+    bookId: '/book/101', sourceId: 'core-test-source', chapterIndex: 0,
+  });
+}
 
 export default function ReaderEffectsTests(): void {
-  describe('BookSourceRegistry', () => {
-    it('defaultSourceIsYodu', 0, () => {
-      const s = BookSourceRegistry.getDefault();
-      expect(s.id).assertEqual('yodu');
-      expect(s.baseHost).assertEqual('https://www.yodu.org');
-    });
-    it('buildSearchUrlEncodesKeyword', 0, () => {
-      const s = BookSourceRegistry.getDefault();
-      const url = BookSourceRegistry.buildSearchUrl(s, '三体', 1);
-      expect(url).assertEqual('https://www.yodu.org/sa/all-' + encodeURIComponent('三体') + '-1.html');
-    });
-    it('buildDetailUrlPrependsHost', 0, () => {
-      const s = BookSourceRegistry.getDefault();
-      const url = BookSourceRegistry.buildDetailUrl(s, '/book/123');
-      expect(url).assertEqual('https://www.yodu.org/book/123');
-    });
-    it('buildChapterUrlPrependsHost', 0, () => {
-      const s = BookSourceRegistry.getDefault();
-      const url = BookSourceRegistry.buildChapterUrl(s, '/book/123/ch1.html');
-      expect(url).assertEqual('https://www.yodu.org/book/123/ch1.html');
-    });
-    it('getDefaultLegadoSourceReturnsJsonObjectWithRules', 0, () => {
-      const src = BookSourceRegistry.getDefaultLegadoSource();
-      expect(typeof src).assertEqual('object');
-      expect(src !== null).assertTrue();
-      const bookSourceVal = src['bookSource'] as Object;
-      expect(bookSourceVal !== null && bookSourceVal !== undefined).assertTrue();
-      expect(typeof bookSourceVal).assertEqual('object');
-      const bookSource = bookSourceVal as JsonObject;
-      const ruleSearchVal = bookSource['ruleSearch'] as Object;
-      expect(ruleSearchVal !== null && ruleSearchVal !== undefined).assertTrue();
-      const ruleSearch = ruleSearchVal as JsonObject;
-      expect(typeof ruleSearch['bookList']).assertEqual('string');
-      expect(typeof ruleSearch['name']).assertEqual('string');
-      expect(typeof ruleSearch['bookUrl']).assertEqual('string');
-      const ruleContentVal = bookSource['ruleContent'] as Object;
-      expect(ruleContentVal !== null && ruleContentVal !== undefined).assertTrue();
-      const ruleContent = ruleContentVal as JsonObject;
-      expect(typeof ruleContent['content']).assertEqual('string');
-    });
-    it('getDefaultLegadoSourceReturnsFreshInstance', 0, () => {
-      const a = BookSourceRegistry.getDefaultLegadoSource();
-      const b = BookSourceRegistry.getDefaultLegadoSource();
-      // Fresh parse each call — mutations to one must not leak to the other.
-      a['sourceId'] = 'mutated';
-      expect(b['sourceId'] as string).assertEqual('legado-yodu-src');
-    });
-  });
-
   describe('ReaderEffects.mapSearchResults', () => {
     it('extractsBooksFromCoreResult', 0, () => {
-      const source = BookSourceRegistry.getDefault();
+      const source = coreTestSource();
       const raw = '{"sourceId":"","books":[' +
         '{"bookId":"/book/101","title":"三体","author":"刘慈欣","lastChapter":"第三部"},' +
         '{"bookId":"/book/102","title":"球状闪电"}' +
@@ -77,8 +55,9 @@ export default function ReaderEffectsTests(): void {
       expect(results[0].bookId).assertEqual('/book/101');
       expect(results[0].author).assertEqual('刘慈欣');
       expect(results[0].latestChapter).assertEqual('第三部');
-      expect(results[0].sourceName).assertEqual('有度轻说');
-      expect(results[0].sourceUrl).assertEqual('https://www.yodu.org');
+      expect(results[0].sourceId).assertEqual('core-test-source');
+      expect(results[0].sourceName).assertEqual('Core 测试书源');
+      expect(results[0].sourceUrl).assertEqual('https://core.example');
       expect(results[1].title).assertEqual('球状闪电');
       expect(results[1].bookId).assertEqual('/book/102');
       // Missing author → default '未知作者'
@@ -87,7 +66,7 @@ export default function ReaderEffectsTests(): void {
       expect(results[1].latestChapter).assertEqual('');
     });
     it('skipsEntriesWithMissingTitleOrBookId', 0, () => {
-      const source = BookSourceRegistry.getDefault();
+      const source = coreTestSource();
       const raw = '{"books":[' +
         '{"bookId":"/book/101","title":"三体"},' +
         '{"bookId":"","title":"无ID"},' +
@@ -99,7 +78,7 @@ export default function ReaderEffectsTests(): void {
       expect(results[0].bookId).assertEqual('/book/101');
     });
     it('capsAtTwentyResults', 0, () => {
-      const source = BookSourceRegistry.getDefault();
+      const source = coreTestSource();
       const books: string[] = [];
       for (let i = 0; i < 25; i++) {
         books.push('{"bookId":"/book/' + i + '","title":"书' + i + '"}');
@@ -110,16 +89,282 @@ export default function ReaderEffectsTests(): void {
       expect(results.length).assertEqual(20);
     });
     it('returnsEmptyWhenNoBooksArray', 0, () => {
-      const source = BookSourceRegistry.getDefault();
+      const source = coreTestSource();
       const data = JSON.parse('{"sourceId":""}') as JsonObject;
       const results = ReaderEffects.mapSearchResults(data, source);
       expect(results.length).assertEqual(0);
     });
   });
 
+  describe('ReaderEffects.mapContentSearchResults', () => {
+    it('keepsOnlyCurrentCoreSourceAndBookWithCanonicalOffsets', 0, () => {
+      const data = JSON.parse('{' +
+        '"results":[' +
+        '{"sourceId":"core-test-source","bookId":"/book/101","bookName":"三体",' +
+        '"chapterIndex":4,"chapterOffset":128,"matchLength":2,"snippetStart":80,' +
+        '"chapterTitle":"第五章","snippet":"……包含关键词的上下文……"},' +
+        '{"sourceId":"other-source","bookId":"/book/101","chapterIndex":0,"chapterOffset":0,"matchLength":1,"snippetStart":0},' +
+        '{"sourceId":"core-test-source","bookId":"/book/other","chapterIndex":0,"chapterOffset":0,"matchLength":1,"snippetStart":0}' +
+        ']}') as JsonObject;
+      const results = ReaderEffects.mapContentSearchResults(data, 'core-test-source', '/book/101');
+      expect(results.length).assertEqual(1);
+      expect(results[0].sourceId).assertEqual('core-test-source');
+      expect(results[0].bookId).assertEqual('/book/101');
+      expect(results[0].chapterIndex).assertEqual(4);
+      expect(results[0].chapterOffset).assertEqual(128);
+      expect(results[0].chapterTitle).assertEqual('第五章');
+      expect(results[0].snippet).assertEqual('……包含关键词的上下文……');
+    });
+
+    it('dropsMalformedCoreRowsRatherThanInventingJumpTargets', 0, () => {
+      const data = JSON.parse('{' +
+        '"results":[' +
+        '{"sourceId":"core-test-source","bookId":"/book/101","chapterIndex":-1,"chapterOffset":0,"matchLength":1,"snippetStart":0},' +
+        '{"sourceId":"core-test-source","bookId":"/book/101","chapterIndex":1,"chapterOffset":-1,"matchLength":1,"snippetStart":0},' +
+        '{"sourceId":"core-test-source","bookId":"/book/101","chapterIndex":1.5,"chapterOffset":0,"matchLength":1,"snippetStart":0},' +
+        '{"sourceId":"core-test-source","bookId":"/book/101","chapterIndex":1,"chapterOffset":0,"matchLength":-1,"snippetStart":0}' +
+        ']}') as JsonObject;
+      expect(ReaderEffects.mapContentSearchResults(data, 'core-test-source', '/book/101').length).assertEqual(0);
+    });
+  });
+
+  describe('ReaderEffects.mapDiscoverKinds / mapDiscoverBooks', () => {
+    it('keepsCoreKindUrlsAndOnlyCoreBookIdentity', 0, () => {
+      const source = coreTestSource();
+      const kinds = ReaderEffects.mapDiscoverKinds(JSON.parse('{' +
+        '"kinds":[' +
+        '{"title":"榜单","url":"https://core.example/rank?page={{page}}"},' +
+        '{"title":"分组标题"}' +
+        ']}') as JsonObject);
+      expect(kinds.length).assertEqual(2);
+      expect(kinds[0].title).assertEqual('榜单');
+      expect(kinds[0].url).assertEqual('https://core.example/rank?page={{page}}');
+      expect(kinds[1].url).assertEqual('');
+
+      const books = ReaderEffects.mapDiscoverBooks(JSON.parse('{' +
+        '"sourceId":"ignored-by-ui","books":[' +
+        '{"bookId":"/book/101","title":"Core 发现书","author":"作者","intro":"简介","kind":"科幻","lastChapter":"第十章"},' +
+        '{"bookUrl":"/book/102","title":"另一册"},' +
+        '{"bookId":"","title":"无 URL"}' +
+        ']}') as JsonObject, source);
+      expect(books.length).assertEqual(2);
+      expect(books[0].sourceId).assertEqual('core-test-source');
+      expect(books[0].bookUrl).assertEqual('/book/101');
+      expect(books[0].title).assertEqual('Core 发现书');
+      expect(books[0].lastChapter).assertEqual('第十章');
+      expect(books[1].bookUrl).assertEqual('/book/102');
+      expect(books[1].author).assertEqual('未知作者');
+    });
+  });
+
+  describe('ReaderEffects.mapSourceCheckResult', () => {
+    it('keepsOnlyTheMatchingCoreVerdict', 0, () => {
+      const data = JSON.parse('{' +
+        '"results":[' +
+        '{"sourceId":"other","available":true,"levelsPassed":["L1"],"durationMs":1},' +
+        '{"sourceId":"core-test-source","available":false,"levelsPassed":["L1","L2"],' +
+        '"failureReason":"L3 detail: missing prefetched response","durationMs":19}' +
+        ']}') as JsonObject;
+      const result = ReaderEffects.mapSourceCheckResult(data, 'core-test-source');
+      expect(result !== null).assertTrue();
+      if (result !== null) {
+        expect(result.sourceId).assertEqual('core-test-source');
+        expect(result.available).assertFalse();
+        expect(result.levelsPassed.length).assertEqual(2);
+        expect(result.levelsPassed[1]).assertEqual('L2');
+        expect(result.failureReason).assertEqual('L3 detail: missing prefetched response');
+        expect(result.durationMs).assertEqual(19);
+      }
+    });
+
+    it('doesNotInventAVerdictWhenTheExpectedSourceIsAbsent', 0, () => {
+      const data = JSON.parse('{"results":[{"sourceId":"other","available":true}]}') as JsonObject;
+      expect(ReaderEffects.mapSourceCheckResult(data, 'core-test-source')).assertEqual(null);
+    });
+
+    it('failsClosedUnlessCoreReturnsEveryRequestedL1ToL5Pass', 0, () => {
+      const complete: CoreSourceCheckResult = {
+        sourceId: 'core-test-source',
+        available: true,
+        levelsPassed: ['L1', 'L2', 'L3', 'L4', 'L5'],
+        failureReason: '',
+        durationMs: 44,
+      };
+      const full = ReaderEffects.validateFullSourceCheckRunResult(complete);
+      expect(full.available).assertTrue();
+      expect(full.levelsPassed.length).assertEqual(5);
+
+      const incomplete: CoreSourceCheckResult = {
+        sourceId: 'core-test-source',
+        available: true,
+        levelsPassed: ['L1', 'L2'],
+        failureReason: '',
+        durationMs: 12,
+      };
+      const rejectedIncomplete = ReaderEffects.validateFullSourceCheckRunResult(incomplete);
+      expect(rejectedIncomplete.available).assertFalse();
+      expect(rejectedIncomplete.failureReason.indexOf('L3') >= 0).assertTrue();
+
+      const networkFailure: CoreSourceCheckResult = {
+        sourceId: 'core-test-source',
+        available: false,
+        levelsPassed: ['L1'],
+        failureReason: 'L2: host HTTP failed: connection refused',
+        durationMs: 18,
+      };
+      const rejectedNetwork = ReaderEffects.validateFullSourceCheckRunResult(networkFailure);
+      expect(rejectedNetwork.available).assertFalse();
+      expect(rejectedNetwork.failureReason).assertEqual('L2: host HTTP failed: connection refused');
+    });
+  });
+
+  describe('ReaderEffects.mapSourceDebugResult', () => {
+    it('keepsOnlyStructuredCoreLogsAndStageProjection', 0, () => {
+      const projection: CoreSourceDebugRunProjection = {
+        sourceId: 'core-test-source',
+        sourceCheckData: JSON.parse('{' +
+          '"results":[{"sourceId":"core-test-source","available":true,' +
+          '"levelsPassed":["L1","L2","L3","L4","L5"],"durationMs":31}]}') as JsonObject,
+        sourceCheckError: '',
+        sourceDebugData: JSON.parse('{' +
+          '"logs":[{"state":1,"msg":"L2 搜索成功","timestampMs":8,"step":"search","extractedCount":2},' +
+          '{"state":1000,"msg":"调试完成","timestampMs":13}],"finalState":1000,"durationMs":13}') as JsonObject,
+        sourceDebugError: '',
+        stages: [{
+          stage: 'L2', requestCount: 1, responseCount: 1, selectedResponseIndex: 0,
+          statusCode: 200, failed: false, failureMessage: '', replayLimited: false,
+        }, {
+          stage: 'L3', requestCount: 0, responseCount: 0, selectedResponseIndex: -1,
+          statusCode: 0, failed: false, failureMessage: '', replayLimited: false,
+        }, {
+          stage: 'L4', requestCount: 2, responseCount: 2, selectedResponseIndex: 0,
+          statusCode: 200, failed: false, failureMessage: '', replayLimited: true,
+        }, {
+          stage: 'L5', requestCount: 1, responseCount: 0, selectedResponseIndex: -1,
+          statusCode: 0, failed: true, failureMessage: 'HTTP_TRANSPORT_TIMEOUT', replayLimited: false,
+        }],
+        replayAttempted: true,
+        replayLimited: true,
+        replayNotice: 'L4 收集到 2 份响应，仅重放第 1 份。',
+      };
+      const result = ReaderEffects.mapSourceDebugResult(projection);
+      expect(result.sourceCheck !== null).assertTrue();
+      if (result.sourceCheck !== null) expect(result.sourceCheck.available).assertTrue();
+      expect(result.logs.length).assertEqual(2);
+      expect(result.logs[0].message).assertEqual('L2 搜索成功');
+      expect(result.logs[0].extractedCount).assertEqual(2);
+      expect(result.finalState).assertEqual(1000);
+      expect(result.stages.length).assertEqual(4);
+      expect(result.stages[2].replayLimited).assertTrue();
+      expect(result.stages[3].failureMessage).assertEqual('HTTP_TRANSPORT_TIMEOUT');
+      // This UI DTO intentionally has no HTTP body/finalUrl fields.
+      const fields = result as Object as Record<string, Object>;
+      expect(fields['body'] === undefined).assertTrue();
+      expect(fields['finalUrl'] === undefined).assertTrue();
+    });
+
+    it('doesNotTurnPartialReplayIntoSourceAvailability', 0, () => {
+      const partial: CoreSourceDebugResult = ReaderEffects.mapSourceDebugResult({
+        sourceId: 'core-test-source',
+        sourceCheckData: JSON.parse('{' +
+          '"results":[{"sourceId":"core-test-source","available":false,' +
+          '"levelsPassed":["L1","L2"],"failureReason":"L3: host HTTP failed","durationMs":12}]}') as JsonObject,
+        sourceCheckError: '',
+        sourceDebugData: JSON.parse('{"logs":[{"state":1000,"msg":"调试完成","timestampMs":3}],"finalState":1000,"durationMs":3}') as JsonObject,
+        sourceDebugError: '',
+        stages: [],
+        replayAttempted: true,
+        replayLimited: false,
+        replayNotice: '单份回放。',
+      });
+      expect(partial.sourceCheck !== null).assertTrue();
+      if (partial.sourceCheck !== null) expect(partial.sourceCheck.available).assertFalse();
+      const summary = ReaderEffects.sourceDebugSummary(partial);
+      expect(summary.indexOf('未通过') >= 0).assertTrue();
+      expect(summary.indexOf('不代表书源可用') >= 0).assertTrue();
+    });
+
+    it('reducerRejectsDisabledSourceDebugSelection', 0, () => {
+      const initial = DemoUiState.initial();
+      initial.availableSources = [{
+        sourceId: 'disabled-source', name: '已停用源', baseUrl: 'https://disabled.example', enabled: false,
+      }, {
+        sourceId: 'enabled-source', name: '启用源', baseUrl: 'https://enabled.example', enabled: true,
+      }];
+      const rejected = ReaderReducer.reduce(initial, { type: 'source-debug-select', sourceId: 'disabled-source' });
+      expect(rejected.selectedSourceId ?? '').assertEqual('');
+      const selected = ReaderReducer.reduce(initial, { type: 'source-debug-select', sourceId: 'enabled-source' });
+      expect(selected.selectedSourceId ?? '').assertEqual('enabled-source');
+      expect(selected.sourceDebugResult).assertEqual(null);
+    });
+  });
+
+  describe('ReaderEffects.mapBookGroups', () => {
+    it('projectsCoreBookGroupRowsWithoutFixtureFallback', 0, () => {
+      const data = JSON.parse('{"groups":[' +
+        '{"groupId":2,"groupName":"科幻","cover":"","order":4,"enableRefresh":true,"show":false},' +
+        '{"groupId":3,"groupName":"待读","order":5,"enableRefresh":false,"show":true}' +
+        ']}') as JsonObject;
+      const groups = ReaderEffects.mapBookGroups(data);
+      expect(groups.length).assertEqual(2);
+      expect(groups[0].groupId).assertEqual(2);
+      expect(groups[0].groupName).assertEqual('科幻');
+      expect(groups[0].show).assertFalse();
+      expect(groups[1].enableRefresh).assertFalse();
+    });
+
+    it('omitsMalformedCoreBookGroupRows', 0, () => {
+      const data = JSON.parse('{"groups":[{"groupName":"缺少 ID"},"bad"]}') as JsonObject;
+      expect(ReaderEffects.mapBookGroups(data).length).assertEqual(0);
+    });
+  });
+
+  describe('ReaderEffects.mapCoreBookmarks and reducer projection', () => {
+    it('keepsExactCoreBookmarkAnchorsWithoutSourceIdInventing', 0, () => {
+      const data = JSON.parse('{"bookmarks":[' +
+        '{"time":21,"bookName":"Core 书","bookAuthor":"作者","chapterIndex":4,"chapterPos":128,' +
+        '"chapterName":"第五章","bookText":"真实原文","content":"真实批注"}' +
+        ']}') as JsonObject;
+      const bookmarks = ReaderEffects.mapCoreBookmarks(data);
+      expect(bookmarks.length).assertEqual(1);
+      expect(bookmarks[0].time).assertEqual(21);
+      expect(bookmarks[0].chapterIndex).assertEqual(4);
+      expect(bookmarks[0].chapterPos).assertEqual(128);
+      expect(bookmarks[0].bookName).assertEqual('Core 书');
+      expect(bookmarks[0].content).assertEqual('真实批注');
+    });
+
+    it('dropsMalformedBookmarkAnchorsAndKeepsListStateSeparateFromReaderLoading', 0, () => {
+      const data = JSON.parse('{"bookmarks":[' +
+        '{"time":-1,"chapterIndex":0,"chapterPos":0},' +
+        '{"time":1,"chapterIndex":-1,"chapterPos":0},' +
+        '{"time":2,"chapterIndex":0,"chapterPos":-1}' +
+        ']}') as JsonObject;
+      expect(ReaderEffects.mapCoreBookmarks(data).length).assertEqual(0);
+
+      const initial = DemoUiState.initial();
+      const loading = ReaderReducer.reduce(initial, { type: 'bookmark-list-start' });
+      expect(loading.bookmarksLoading).assertTrue();
+      expect(loading.loading).assertEqual(initial.loading);
+      const rows: CoreBookmark[] = [{
+        time: 7, bookName: 'Core 书', bookAuthor: '作者', chapterIndex: 0, chapterPos: 0,
+        chapterName: '第一章', bookText: '正文', content: '',
+      }];
+      const loaded = ReaderReducer.reduce(loading, { type: 'bookmark-list-loaded', bookmarks: rows });
+      expect(loaded.bookmarksLoading).assertFalse();
+      expect(loaded.bookmarksLoaded).assertTrue();
+      expect(loaded.bookmarks.length).assertEqual(1);
+      const history = ReaderReducer.reduce(loaded, {
+        type: 'search-history-loaded', searchHistory: ['真实关键词'],
+      });
+      expect(history.searchHistoryLoaded).assertTrue();
+      expect(history.searchHistory[0]).assertEqual('真实关键词');
+    });
+  });
+
   describe('ReaderEffects.mapBookDetail', () => {
     it('extractsDetailFromCoreResult', 0, () => {
-      const source = BookSourceRegistry.getDefault();
+      const source = coreTestSource();
       const raw = '{"sourceId":"","book":{' +
         '"bookId":"/book/101","title":"三体","author":"刘慈欣",' +
         '"coverUrl":"https://example.com/cover.jpg",' +
@@ -135,11 +380,12 @@ export default function ReaderEffectsTests(): void {
       expect(detail.summary).assertEqual('文化大革命如火如荼地进行。');
       expect(detail.latestChapter).assertEqual('第三部');
       expect(detail.chapterListUrl).assertEqual('/book/101/chapters');
-      expect(detail.sourceName).assertEqual('有度轻说');
-      expect(detail.sourceUrl).assertEqual('https://www.yodu.org');
+      expect(detail.sourceId).assertEqual('core-test-source');
+      expect(detail.sourceName).assertEqual('Core 测试书源');
+      expect(detail.sourceUrl).assertEqual('https://core.example');
     });
     it('fallsBackOnMissingFields', 0, () => {
-      const source = BookSourceRegistry.getDefault();
+      const source = coreTestSource();
       const data = JSON.parse('{"sourceId":""}') as JsonObject;
       const detail = ReaderEffects.mapBookDetail(data, '/book/999', source);
       expect(detail.bookId).assertEqual('/book/999');
@@ -233,7 +479,7 @@ export default function ReaderEffectsTests(): void {
 
   describe('ReaderReducer reading chain', () => {
     it('searchSubmitSetsLoadingAndQuery', 0, () => {
-      const s = DemoUiState.initial();
+      const s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'book-search' });
       const next = ReaderReducer.reduce(s, { type: 'search-submit', query: '三体' });
       expect(next.searchQuery).assertEqual('三体');
       expect(next.loading).assertEqual(true);
@@ -241,11 +487,11 @@ export default function ReaderEffectsTests(): void {
       expect(next.error).assertEqual(null);
     });
     it('searchSuccessSetsResultsAndClearsLoading', 0, () => {
-      const s = DemoUiState.initial();
+      const s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'book-search' });
       const loading = ReaderReducer.reduce(s, { type: 'search-submit', query: '三体' });
       const results: SearchResultEntry[] = [{
         title: '三体', author: '刘慈欣', bookId: '/book/101',
-        sourceName: '有度轻说', sourceUrl: 'https://www.yodu.org',
+        sourceId: 'core-test-source', sourceName: 'Core 测试书源', sourceUrl: 'https://core.example',
       }];
       const next = ReaderReducer.reduce(loading, { type: 'search-success', searchResults: results });
       expect(next.searchResults.length).assertEqual(1);
@@ -253,14 +499,14 @@ export default function ReaderEffectsTests(): void {
       expect(next.pageState).assertEqual('default');
     });
     it('searchSuccessEmptyResultsSetsEmptyPageState', 0, () => {
-      const s = DemoUiState.initial();
+      const s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'book-search' });
       const loading = ReaderReducer.reduce(s, { type: 'search-submit', query: '三体' });
       const next = ReaderReducer.reduce(loading, { type: 'search-success', searchResults: [] });
       expect(next.searchResults.length).assertEqual(0);
       expect(next.pageState).assertEqual('empty');
     });
     it('searchFailureSetsErrorAndClearsLoadingAndPageState', 0, () => {
-      const s = DemoUiState.initial();
+      const s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'book-search' });
       // Simulate the real flow: search-submit sets loading+pageState=loading,
       // then search-failure should clear loading and switch pageState=error.
       const loading = ReaderReducer.reduce(s, { type: 'search-submit', query: '斗破' });
@@ -303,7 +549,7 @@ export default function ReaderEffectsTests(): void {
       const s = DemoUiState.initial();
       const book: BookDetail = {
         bookId: '/book/101', title: '三体', author: '刘慈欣', summary: '...',
-        sourceName: '有度轻说', sourceUrl: 'https://www.yodu.org',
+        sourceId: 'core-test-source', sourceName: 'Core 测试书源', sourceUrl: 'https://core.example',
         latestChapter: '第三部', chapterListUrl: '/book/101/ch1.html',
       };
       const next = ReaderReducer.reduce(s, { type: 'book-detail-success', book: book });
@@ -315,13 +561,14 @@ export default function ReaderEffectsTests(): void {
       expect(next.pageState).assertEqual('default');
     });
     it('chapterSuccessSetsParagraphs', 0, () => {
-      const s = DemoUiState.initial();
-      const next = ReaderReducer.reduce(s, {
+      const next = loadedReaderState();
+      const reloaded = ReaderReducer.reduce(next, {
         type: 'chapter-success',
         chapterParagraphs: ['第一段', '第二段'],
+        chapterTitle: '第一章', bookId: '/book/101', sourceId: 'core-test-source', chapterIndex: 0,
       });
-      expect(next.chapterContent.length).assertEqual(2);
-      expect(next.loading).assertEqual(false);
+      expect(reloaded.chapterContent.length).assertEqual(2);
+      expect(reloaded.loading).assertEqual(false);
     });
     it('chapterLoadSetsLoadingAndPageState', 0, () => {
       const s = DemoUiState.initial();
@@ -338,12 +585,13 @@ export default function ReaderEffectsTests(): void {
       expect(next.error).assertEqual(null);
     });
     it('chapterSuccessResetsPageStateToDefault', 0, () => {
-      const s = DemoUiState.initial();
+      const s = loadedReaderState();
       const loading = ReaderReducer.reduce(s, { type: 'chapter-load', chapterId: '/book/101/ch1.html' });
       expect(loading.pageState).assertEqual('loading');
       const next = ReaderReducer.reduce(loading, {
         type: 'chapter-success',
         chapterParagraphs: ['第一段', '第二段'],
+        chapterTitle: '第一章', bookId: '/book/101', sourceId: 'core-test-source', chapterIndex: 0,
       });
       expect(next.loading).assertEqual(false);
       expect(next.pageState).assertEqual('default');
@@ -368,7 +616,7 @@ export default function ReaderEffectsTests(): void {
       expect(loading.pageState).assertEqual('loading');
       const book: BookDetail = {
         bookId: '/book/101', title: '三体', author: '刘慈欣', summary: '...',
-        sourceName: '有度轻说', sourceUrl: 'https://www.yodu.org',
+        sourceId: 'core-test-source', sourceName: 'Core 测试书源', sourceUrl: 'https://core.example',
         latestChapter: '第三部', chapterListUrl: '/book/101/ch1.html',
       };
       const next = ReaderReducer.reduce(loading, { type: 'book-detail-success', book: book });
@@ -385,6 +633,618 @@ export default function ReaderEffectsTests(): void {
       expect(s.searchResults.length).assertEqual(0);
       expect(s.currentBook).assertEqual(null);
       expect(s.chapterContent.length).assertEqual(0);
+      expect(s.contentSearchResults.length).assertEqual(0);
+      expect(s.contentSearchLoading).assertFalse();
+      expect(s.contentSearchLoaded).assertFalse();
+    });
+
+    it('contentSearchUsesDedicatedLoadingEmptyAndErrorProjection', 0, () => {
+      const s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'content-search' });
+      const loading = ReaderReducer.reduce(s, { type: 'content-search-submit', query: '魔法' });
+      expect(loading.contentSearchQuery).assertEqual('魔法');
+      expect(loading.contentSearchLoading).assertTrue();
+      expect(loading.loading).assertFalse();
+      const results: CoreContentSearchResult[] = [{
+        sourceId: 'core-test-source', bookId: '/book/101', bookName: '三体',
+        chapterIndex: 2, chapterOffset: 64, matchLength: 2, snippetStart: 20,
+        chapterTitle: '第三章', snippet: '含有魔法的正文',
+      }];
+      const success = ReaderReducer.reduce(loading, {
+        type: 'content-search-success', contentSearchResults: results,
+      });
+      expect(success.contentSearchLoading).assertFalse();
+      expect(success.contentSearchLoaded).assertTrue();
+      expect(success.contentSearchResults.length).assertEqual(1);
+      const failed = ReaderReducer.reduce(success, {
+        type: 'content-search-failure', contentSearchMessage: 'Core search.content failed',
+      });
+      expect(failed.contentSearchLoaded).assertTrue();
+      expect(failed.contentSearchResults.length).assertEqual(0);
+      expect(failed.contentSearchError).assertEqual('Core search.content failed');
+      expect(failed.error).assertEqual(null);
+    });
+  });
+
+  describe('Native reader text selection gate', () => {
+    it('keepsOnlyTheActualArkUISelectionAndSupportedActions', 0, () => {
+      const initial = DemoUiState.initial();
+      const selected = ReaderReducer.reduce(initial, {
+        type: 'selection-show', selectedText: '  用户长按选中的真实正文  ',
+      });
+      expect(selected.selection.visible).assertTrue();
+      // Whitespace remains part of the exact native range for clipboard copy;
+      // the reducer only uses trim to reject an empty range.
+      expect(selected.selection.selectedText).assertEqual('  用户长按选中的真实正文  ');
+      expect(selected.selection.action).assertEqual('');
+
+      const copy = ReaderReducer.reduce(selected, {
+        type: 'selection-action', selectionAction: 'copy',
+      });
+      expect(copy.selection.action).assertEqual('copy');
+      expect(copy.selection.selectedText).assertEqual('  用户长按选中的真实正文  ');
+
+      const search = ReaderReducer.reduce(copy, {
+        type: 'selection-action', selectionAction: 'search',
+      });
+      expect(search.selection.action).assertEqual('search');
+    });
+
+    it('rejectsBlankRangesAndUnavailableHighlightOrNoteActions', 0, () => {
+      const initial = DemoUiState.initial();
+      const blank = ReaderReducer.reduce(initial, {
+        type: 'selection-show', selectedText: '   ',
+      });
+      expect(blank.selection.visible).assertFalse();
+      expect(blank.selection.selectedText).assertEqual('');
+
+      const selected = ReaderReducer.reduce(initial, {
+        type: 'selection-show', selectedText: '真实正文',
+      });
+      const highlight = ReaderReducer.reduce(selected, {
+        type: 'selection-action', selectionAction: 'highlight',
+      });
+      expect(highlight.selection.action).assertEqual('');
+      const note = ReaderReducer.reduce(selected, {
+        type: 'selection-action', selectionAction: 'note',
+      });
+      expect(note.selection.action).assertEqual('');
+
+      const closed = ReaderReducer.reduce(selected, { type: 'selection-close' });
+      expect(closed.selection.visible).assertFalse();
+      expect(closed.selection.selectedText).assertEqual('');
+    });
+  });
+
+  describe('Slice 2 reader entry chain', () => {
+    it('routePushToImmersiveReadingSetsRoute', 0, () => {
+      const s = DemoUiState.initial();
+      expect(s.routeId).assertEqual('bookshelf');
+      const next = ReaderReducer.reduce(s, { type: 'route-push', id: 'immersive-reading' });
+      expect(next.routeId).assertEqual('immersive-reading');
+      expect(next.pageState).assertEqual('default');
+    });
+
+    it('routePopFromReaderReturnsToBookshelf', 0, () => {
+      const s = DemoUiState.initial();
+      const reader = ReaderReducer.reduce(s, { type: 'route-push', id: 'immersive-reading' });
+      expect(reader.routeId).assertEqual('immersive-reading');
+      const back = ReaderReducer.reduce(reader, { type: 'route-pop' });
+      expect(back.routeId).assertEqual('bookshelf');
+    });
+
+    it('pageTurnNextIncrementsPageIndex', 0, () => {
+      const s = DemoUiState.initial();
+      const reader = ReaderReducer.reduce(s, { type: 'route-push', id: 'immersive-reading' });
+      const withPages = ReaderReducer.reduce(reader, { type: 'set-reader-page-count', readerPageCount: 5 });
+      expect(withPages.readerPageIndex).assertEqual(0);
+      const next = ReaderReducer.reduce(withPages, { type: 'reader-page-next' });
+      expect(next.readerPageIndex).assertEqual(1);
+    });
+
+    it('pageTurnPrevFloorsAtZero', 0, () => {
+      const s = DemoUiState.initial();
+      const reader = ReaderReducer.reduce(s, { type: 'route-push', id: 'immersive-reading' });
+      const withPages = ReaderReducer.reduce(reader, { type: 'set-reader-page-count', readerPageCount: 5 });
+      const page1 = ReaderReducer.reduce(withPages, { type: 'set-reader-page-index', readerPageIndex: 1 });
+      const page0 = ReaderReducer.reduce(page1, { type: 'reader-page-prev' });
+      expect(page0.readerPageIndex).assertEqual(0);
+      const clamped = ReaderReducer.reduce(page0, { type: 'reader-page-prev' });
+      expect(clamped.readerPageIndex).assertEqual(0);
+    });
+
+    it('readerReflowSettingsKeepTheMeasuredCoreAnchor', 0, () => {
+      const initial = loadedReaderState();
+      const anchored = ReaderReducer.reduce(initial, {
+        type: 'reader-location-anchor', readerChapterOffset: 256, readerChapterProgress: 0.4,
+        bookId: '/book/101', sourceId: 'core-test-source', chapterIndex: 0,
+      });
+      const vertical = ReaderReducer.reduce(anchored, {
+        type: 'set-pagination-mode', paginationMode: 'vertical',
+      });
+      expect(vertical.readerChapterOffset).assertEqual(256);
+      expect(vertical.readerChapterProgress).assertEqual(0.4);
+      const larger = ReaderReducer.reduce(vertical, {
+        type: 'set-reader-render-metric', readerMetric: 'fontSize', value: 22,
+      });
+      expect(larger.readerChapterOffset).assertEqual(256);
+      expect(larger.readerChapterProgress).assertEqual(0.4);
+      const reset = ReaderReducer.reduce(larger, { type: 'reset-reader-render-settings' });
+      expect(reset.readerChapterOffset).assertEqual(256);
+      expect(reset.readerChapterProgress).assertEqual(0.4);
+    });
+
+    it('chapterJumpSetsLoadingAndPageState', 0, () => {
+      const s = DemoUiState.initial();
+      const reader = ReaderReducer.reduce(s, { type: 'route-push', id: 'immersive-reading' });
+      const next = ReaderReducer.reduce(reader, { type: 'chapter-load', chapterId: '/book/101/ch5.html' });
+      expect(next.loading).assertEqual(true);
+      expect(next.pageState).assertEqual('loading');
+      expect(next.error).assertEqual(null);
+    });
+
+    it('chapterSuccessClearsLoadingAndSetsContent', 0, () => {
+      const s = loadedReaderState();
+      const reader = ReaderReducer.reduce(s, { type: 'route-push', id: 'immersive-reading' });
+      const loading = ReaderReducer.reduce(reader, { type: 'chapter-load', chapterId: '/book/101/ch5.html' });
+      const next = ReaderReducer.reduce(loading, {
+        type: 'chapter-success',
+        chapterParagraphs: ['章节内容第一段', '章节内容第二段'],
+        chapterTitle: '第一章', bookId: '/book/101', sourceId: 'core-test-source', chapterIndex: 0,
+      });
+      expect(next.loading).assertEqual(false);
+      expect(next.pageState).assertEqual('default');
+      expect(next.chapterContent.length).assertEqual(2);
+    });
+
+    it('continuousRoutePushesKeepLastOnTop', 0, () => {
+      const s = DemoUiState.initial();
+      const detail = ReaderReducer.reduce(s, { type: 'route-push', id: 'book-detail' });
+      const reader = ReaderReducer.reduce(detail, { type: 'route-push', id: 'immersive-reading' });
+      expect(reader.routeId).assertEqual('immersive-reading');
+      expect(reader.stack.length).assertEqual(3);
+      const back = ReaderReducer.reduce(reader, { type: 'route-pop' });
+      expect(back.routeId).assertEqual('book-detail');
+    });
+  });
+
+  describe('Slice 5 RSS / discover / source golden tests', () => {
+    it('switchToRssTabSetsRouteId', 0, () => {
+      const s = DemoUiState.initial();
+      expect(s.routeId).assertEqual('bookshelf');
+      const rss = ReaderReducer.reduce(s, { type: 'switch-tab', tab: 'rss' });
+      expect(rss.routeId).assertEqual('rss');
+      expect(rss.tab).assertEqual('rss');
+      expect(rss.stack.length).assertEqual(1);
+    });
+
+    it('switchToDiscoverTabSetsRouteId', 0, () => {
+      const s = DemoUiState.initial();
+      const discover = ReaderReducer.reduce(s, { type: 'switch-tab', tab: 'discover' });
+      expect(discover.routeId).assertEqual('discover');
+      expect(discover.tab).assertEqual('discover');
+    });
+
+    it('discoverReducerKeepsCoreSourceKindAndBookUrlTogether', 0, () => {
+      const s = DemoUiState.initial();
+      const loading = ReaderReducer.reduce(s, { type: 'discover-load-start' });
+      expect(loading.discoverLoading).assertTrue();
+      const loaded = ReaderReducer.reduce(loading, {
+        type: 'discover-data-loaded',
+        discoverSources: [coreTestSource()],
+        discoverSourceId: 'core-test-source',
+        discoverKinds: [{ title: 'Core 榜单', url: 'https://core.example/rank?page={{page}}' }],
+        discoverKindUrl: 'https://core.example/rank?page={{page}}',
+        discoverKindTitle: 'Core 榜单',
+        discoverBooks: [{
+          sourceId: 'core-test-source',
+          bookUrl: '/book/from-core',
+          title: 'Core 书籍',
+          author: '作者',
+          coverUrl: '',
+          intro: '',
+          kind: '',
+          lastChapter: '',
+        }],
+      });
+      expect(loaded.discoverLoading).assertFalse();
+      expect(loaded.discoverSourceId).assertEqual('core-test-source');
+      expect(loaded.discoverKindUrl).assertEqual('https://core.example/rank?page={{page}}');
+      expect(loaded.discoverBooks[0].sourceId).assertEqual('core-test-source');
+      expect(loaded.discoverBooks[0].bookUrl).assertEqual('/book/from-core');
+      const failed = ReaderReducer.reduce(loaded, {
+        type: 'discover-failed',
+        discoverError: 'Core http.execute 超时',
+      });
+      expect(failed.discoverLoading).assertFalse();
+      expect(failed.discoverError).assertEqual('Core http.execute 超时');
+      expect(failed.error === null).assertTrue();
+    });
+
+    it('sourceCheckReducerKeepsRealCoreFailureSeparateFromTransportError', 0, () => {
+      const s = DemoUiState.initial();
+      const checking = ReaderReducer.reduce(s, {
+        type: 'source-detect-run', sourceCheckSourceId: 'core-test-source',
+      });
+      expect(checking.sourceCheckLoading).assertTrue();
+      expect(checking.sourceCheckResult).assertEqual(null);
+
+      const resolved = ReaderReducer.reduce(checking, {
+        type: 'source-check-source-resolved',
+        sourceCheckSourceId: 'core-test-source',
+        sourceCheckSourceName: 'Core 测试书源',
+      });
+      expect(resolved.sourceCheckLoading).assertTrue();
+      expect(resolved.sourceCheckLoaded).assertFalse();
+      expect(resolved.sourceCheckSourceName).assertEqual('Core 测试书源');
+
+      const actual = ReaderReducer.reduce(resolved, {
+        type: 'source-check-success',
+        sourceCheckResult: {
+          sourceId: 'core-test-source', available: false, levelsPassed: ['L1'],
+          failureReason: 'L2: host HTTP failed', durationMs: 23,
+        },
+        sourceCheckMessage: 'Core 返回真实失败 verdict。',
+      });
+      expect(actual.sourceCheckResult !== null).assertTrue();
+      if (actual.sourceCheckResult !== null) {
+        expect(actual.sourceCheckResult.available).assertFalse();
+        expect(actual.sourceCheckResult.failureReason).assertEqual('L2: host HTTP failed');
+      }
+      expect(actual.sourceCheckError).assertEqual('');
+
+      const transportFailure = ReaderReducer.reduce(resolved, {
+        type: 'source-check-failed',
+        sourceCheckError: 'Core request timed out',
+      });
+      expect(transportFailure.sourceCheckResult).assertEqual(null);
+      expect(transportFailure.sourceCheckError).assertEqual('Core request timed out');
+    });
+
+    it('searchSubmitSetsQuery', 0, () => {
+      const s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'book-search' });
+      const next = ReaderReducer.reduce(s, { type: 'search-submit', query: '凡人修仙' });
+      expect(next.searchQuery).assertEqual('凡人修仙');
+      expect(next.loading).assertTrue();
+      expect(next.pageState).assertEqual('loading');
+    });
+
+    it('searchStartSetsLoading', 0, () => {
+      const s = DemoUiState.initial();
+      const next = ReaderReducer.reduce(s, { type: 'search-start' });
+      expect(next.loading).assertEqual(true);
+    });
+
+    it('searchSuccessSetsResults', 0, () => {
+      const s = DemoUiState.initial();
+      const loading = ReaderReducer.reduce(s, { type: 'search-start' });
+      const results: SearchResultEntry[] = [
+        { title: '凡人修仙传', author: '忘语', bookId: '/book/1', sourceId: 'core-test-source', sourceName: 'Core 测试书源', sourceUrl: 'https://core.example' },
+        { title: '仙逆', author: '耳根', bookId: '/book/2', sourceId: 'core-test-source', sourceName: 'Core 测试书源', sourceUrl: 'https://core.example' },
+      ];
+      const next = ReaderReducer.reduce(loading, {
+        type: 'search-success',
+        searchResults: results,
+      });
+      expect(next.loading).assertEqual(false);
+      expect(next.searchResults.length).assertEqual(2);
+      expect(next.searchResults[0].title).assertEqual('凡人修仙传');
+    });
+
+    it('searchErrorClearsLoading', 0, () => {
+      const s = DemoUiState.initial();
+      const loading = ReaderReducer.reduce(s, { type: 'search-start' });
+      const next = ReaderReducer.reduce(loading, {
+        type: 'search-failure',
+        error: { code: 'SEARCH_FAILED', message: '网络超时', retryable: false },
+      });
+      expect(next.loading).assertEqual(false);
+      expect(next.error !== null).assertTrue();
+      if (next.error !== null) {
+        expect(next.error.message).assertEqual('网络超时');
+      }
+    });
+
+    it('discoverFilterToggleAddsTag', 0, () => {
+      const s = DemoUiState.initial();
+      const next = ReaderReducer.reduce(s, { type: 'set-discover-filter-toggle', discoverFilterToggle: '玄幻' });
+      expect(next.discoverFilter.filters.includes('玄幻')).assertTrue();
+    });
+
+    it('discoverFilterToggleRemovesExistingTag', 0, () => {
+      const s = DemoUiState.initial();
+      const withFilter = ReaderReducer.reduce(s, { type: 'set-discover-filter-toggle', discoverFilterToggle: '玄幻' });
+      expect(withFilter.discoverFilter.filters.includes('玄幻')).assertTrue();
+      const withoutFilter = ReaderReducer.reduce(withFilter, { type: 'set-discover-filter-toggle', discoverFilterToggle: '玄幻' });
+      expect(withoutFilter.discoverFilter.filters.includes('玄幻')).assertFalse();
+    });
+
+    it('discoverSortChangeUpdatesSort', 0, () => {
+      const s = DemoUiState.initial();
+      const next = ReaderReducer.reduce(s, { type: 'set-discover-sort', discoverSort: 'recent' });
+      expect(next.discoverFilter.sort).assertEqual('recent');
+    });
+
+    it('sourceImportOpenPushesLocalImportRoute', 0, () => {
+      const s = DemoUiState.initial();
+      const next = ReaderReducer.reduce(s, { type: 'source-import-open' });
+      expect(next.routeId).assertEqual('local-import');
+      expect(next.stack.length).assertEqual(s.stack.length + 1);
+    });
+
+    it('sourceImportPreviewProjectsCoreDetectedEncoding', 0, () => {
+      let s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'local-import' });
+      s = ReaderReducer.reduce(s, { type: 'local-import-parse-start', localImportEpoch: s.localImportEpoch + 1 });
+      const next = ReaderReducer.reduce(s, {
+        type: 'source-import-preview',
+        importFormat: 'txt',
+        importEncoding: 'gb18030',
+        importCount: 8,
+        localImportEpoch: s.localImportEpoch,
+      });
+      expect(next.importPreviewFormat).assertEqual('txt');
+      expect(next.importPreviewEncoding).assertEqual('gb18030');
+      expect(next.importPreviewCount).assertEqual(8);
+      const committed = ReaderReducer.applyImport(next, 8);
+      expect(committed.importPreviewEncoding).assertEqual('');
+    });
+
+    it('rssTabBackReturnsToBookshelf', 0, () => {
+      const s = DemoUiState.initial();
+      const rss = ReaderReducer.reduce(s, { type: 'switch-tab', tab: 'rss' });
+      const back = ReaderReducer.reduce(rss, { type: 'switch-tab', tab: 'bookshelf' });
+      expect(back.routeId).assertEqual('bookshelf');
+      expect(back.tab).assertEqual('bookshelf');
+    });
+  });
+
+  describe('Slice 4 TTS / auto-page session golden tests', () => {
+    it('ttsToggleStartsTtsSession', 0, () => {
+      const s = DemoUiState.initial();
+      expect(s.activeSession).assertEqual('');
+      const next = ReaderReducer.reduce(s, { type: 'tts-toggle' });
+      expect(next.activeSession).assertEqual('tts');
+      expect(next.ttsSession.playback).assertEqual('playing');
+    });
+
+    it('ttsTogglePausesActiveTtsSession', 0, () => {
+      const s = DemoUiState.initial();
+      const playing = ReaderReducer.reduce(s, { type: 'tts-toggle' });
+      expect(playing.ttsSession.playback).assertEqual('playing');
+      const paused = ReaderReducer.reduce(playing, { type: 'tts-toggle' });
+      expect(paused.ttsSession.playback).assertEqual('paused');
+    });
+
+    it('ttsToggleResumesPausedTtsSession', 0, () => {
+      const s = DemoUiState.initial();
+      const playing = ReaderReducer.reduce(s, { type: 'tts-toggle' });
+      const paused = ReaderReducer.reduce(playing, { type: 'tts-toggle' });
+      const resumed = ReaderReducer.reduce(paused, { type: 'tts-toggle' });
+      expect(resumed.ttsSession.playback).assertEqual('playing');
+    });
+
+    it('autoPageToggleStartsAutoPageSession', 0, () => {
+      const s = DemoUiState.initial();
+      expect(s.activeSession).assertEqual('');
+      const next = ReaderReducer.reduce(s, { type: 'auto-page-toggle' });
+      expect(next.activeSession).assertEqual('auto-page');
+      expect(next.autoPageSession.playing).assertTrue();
+      expect(next.readerToggles.autoPage).assertTrue();
+    });
+
+    it('autoPageToggleStopsActiveAutoPageSession', 0, () => {
+      const s = DemoUiState.initial();
+      const active = ReaderReducer.reduce(s, { type: 'auto-page-toggle' });
+      expect(active.activeSession).assertEqual('auto-page');
+      const stopped = ReaderReducer.reduce(active, { type: 'auto-page-toggle' });
+      expect(stopped.activeSession).assertEqual('');
+      expect(stopped.readerToggles.autoPage).assertFalse();
+    });
+
+    it('ttsAndAutoPageMutualExclusionTtsFirst', 0, () => {
+      const s = DemoUiState.initial();
+      const tts = ReaderReducer.reduce(s, { type: 'tts-toggle' });
+      expect(tts.activeSession).assertEqual('tts');
+      const autoPage = ReaderReducer.reduce(tts, { type: 'auto-page-toggle' });
+      expect(autoPage.activeSession).assertEqual('auto-page');
+    });
+
+    it('ttsAndAutoPageMutualExclusionAutoPageFirst', 0, () => {
+      const s = DemoUiState.initial();
+      const autoPage = ReaderReducer.reduce(s, { type: 'auto-page-toggle' });
+      expect(autoPage.activeSession).assertEqual('auto-page');
+      const tts = ReaderReducer.reduce(autoPage, { type: 'tts-toggle' });
+      expect(tts.activeSession).assertEqual('tts');
+      expect(tts.autoPageSession.playing).assertFalse();
+      expect(tts.readerToggles.autoPage).assertFalse();
+    });
+
+    it('setActiveSessionTtsSetsTtsSessionFields', 0, () => {
+      const s = DemoUiState.initial();
+      const next = ReaderReducer.reduce(s, { type: 'set-active-session', session: 'tts' });
+      expect(next.activeSession).assertEqual('tts');
+      expect(next.ttsSession.playback).assertEqual('paused');
+    });
+
+    it('setActiveSessionAutoPageInitializesCountdown', 0, () => {
+      const s = DemoUiState.initial();
+      const next = ReaderReducer.reduce(s, { type: 'set-active-session', session: 'auto-page' });
+      expect(next.activeSession).assertEqual('auto-page');
+      expect(next.autoPageSession.playing).assertTrue();
+      expect(next.autoPageSession.countdownSeconds).assertEqual(next.autoPageSession.intervalSeconds);
+    });
+
+    it('setActiveSessionClearsPreviousSession', 0, () => {
+      const s = DemoUiState.initial();
+      const tts = ReaderReducer.reduce(s, { type: 'tts-toggle' });
+      expect(tts.activeSession).assertEqual('tts');
+      const cleared = ReaderReducer.reduce(tts, { type: 'set-active-session', session: '' });
+      expect(cleared.activeSession).assertEqual('');
+    });
+
+    it('readerExitClearsDirectReaderHostStates', 0, () => {
+      const s = ReaderReducer.push(DemoUiState.initial(), 'immersive-reading');
+      const auto = ReaderReducer.reduce(s, { type: 'auto-page-toggle' });
+      const keepOn = ReaderReducer.reduce(auto, {
+        type: 'set-reader-toggle', toggleKey: 'keepScreenOn', toggleValue: true,
+      });
+      const exited = ReaderReducer.reduce(keepOn, { type: 'reader-exit' });
+      expect(exited.activeSession).assertEqual('');
+      expect(exited.autoPageSession.playing).assertFalse();
+      expect(exited.readerToggles.autoPage).assertFalse();
+      expect(exited.readerToggles.keepScreenOn).assertFalse();
+      expect(exited.ttsSession.playback).assertEqual('idle');
+    });
+
+    it('hostRollbackEventsRestoreVisibleReaderControlsWithoutEffectRetry', 0, () => {
+      const s = DemoUiState.initial();
+      const changedBrightness = ReaderReducer.reduce(s, { type: 'set-brightness', value: 24 });
+      const restoredBrightness = ReaderReducer.reduce(changedBrightness, {
+        type: 'reader-brightness-host-revert', value: 80,
+      });
+      expect(restoredBrightness.brightness).assertEqual(80);
+      const hidden = ReaderReducer.reduce(restoredBrightness, {
+        type: 'set-reader-toggle', toggleKey: 'hideStatusBar', toggleValue: true,
+      });
+      const restoredBar = ReaderReducer.reduce(hidden, {
+        type: 'reader-toggle-host-revert', toggleKey: 'hideStatusBar', toggleValue: false,
+      });
+      expect(restoredBar.readerToggles.hideStatusBar).assertFalse();
+      const messaged = ReaderReducer.reduce(restoredBar, {
+        type: 'reader-host-message', readerHostMessage: '亮度设置未生效：Host 拒绝请求。',
+      });
+      expect(messaged.readerHostMessage).assertEqual('亮度设置未生效：Host 拒绝请求。');
+    });
+
+    it('autoPageSingleModeIsReducerBackedForTheTimerToConsume', 0, () => {
+      const s = DemoUiState.initial();
+      const single = ReaderReducer.reduce(s, { type: 'auto-page-set-mode', autoPageMode: 'single' });
+      expect(single.autoPageMode).assertEqual('single');
+    });
+
+    it('ttsNextIncrementsSegment', 0, () => {
+      const s = DemoUiState.initial();
+      const tts = ReaderReducer.reduce(s, { type: 'tts-toggle' });
+      const withSegments = ReaderReducer.setTtsSegments(tts, 0, 5);
+      const next = ReaderReducer.reduce(withSegments, { type: 'tts-next' });
+      expect(next.ttsSession.currentSegment).assertEqual(1);
+    });
+
+    it('ttsPrevDecrementsSegmentFloorsAtZero', 0, () => {
+      const s = DemoUiState.initial();
+      const tts = ReaderReducer.reduce(s, { type: 'tts-toggle' });
+      const withSegments = ReaderReducer.setTtsSegments(tts, 2, 5);
+      const prev1 = ReaderReducer.reduce(withSegments, { type: 'tts-prev' });
+      expect(prev1.ttsSession.currentSegment).assertEqual(1);
+      const prev0 = ReaderReducer.reduce(prev1, { type: 'tts-prev' });
+      expect(prev0.ttsSession.currentSegment).assertEqual(0);
+      const clamped = ReaderReducer.reduce(prev0, { type: 'tts-prev' });
+      expect(clamped.ttsSession.currentSegment).assertEqual(0);
+    });
+
+    it('autoPageCountdownTickDecrementsSeconds', 0, () => {
+      const s = DemoUiState.initial();
+      const active = ReaderReducer.reduce(s, { type: 'auto-page-toggle' });
+      expect(active.autoPageSession.countdownSeconds).assertEqual(active.autoPageSession.intervalSeconds);
+      const ticked = ReaderReducer.reduce(active, { type: 'session-capsule-countdown-tick' });
+      expect(ticked.autoPageSession.countdownSeconds).assertEqual(active.autoPageSession.countdownSeconds - 1);
+    });
+  });
+
+  describe('Slice 6 sync / webdav / offline golden tests', () => {
+    it('webdavFieldUpdateSetsServerUrl', 0, () => {
+      const s = DemoUiState.initial();
+      const next = ReaderReducer.reduce(s, { type: 'webdav-field-update', field: 'serverUrl', settingsValue: 'https://dav.example.com' });
+      expect(next.webdavServerUrl).assertEqual('https://dav.example.com');
+    });
+
+    it('webdavFieldUpdateSetsUsername', 0, () => {
+      const s = DemoUiState.initial();
+      const next = ReaderReducer.reduce(s, { type: 'webdav-field-update', field: 'username', settingsValue: 'user1' });
+      expect(next.webdavUsername).assertEqual('user1');
+    });
+
+    it('webdavFieldUpdateSetsPassword', 0, () => {
+      const s = DemoUiState.initial();
+      const next = ReaderReducer.reduce(s, { type: 'webdav-field-update', field: 'password', settingsValue: 'secret' });
+      expect(next.webdavPassword).assertEqual('secret');
+    });
+
+    it('webdavFieldUpdateSetsSyncDir', 0, () => {
+      const s = DemoUiState.initial();
+      const next = ReaderReducer.reduce(s, { type: 'webdav-field-update', field: 'syncDir', settingsValue: '/reader-sync' });
+      expect(next.webdavSyncDir).assertEqual('/reader-sync');
+    });
+
+    it('webdavTestSetsTestingStatus', 0, () => {
+      const s = DemoUiState.initial();
+      const next = ReaderReducer.reduce(s, { type: 'webdav-test' });
+      expect(next.webdavTestStatus).assertEqual('testing');
+    });
+
+    it('webdavTestResultSetsSuccessStatus', 0, () => {
+      const s = DemoUiState.initial();
+      const testing = ReaderReducer.reduce(s, { type: 'webdav-test' });
+      const next = ReaderReducer.reduce(testing, { type: 'webdav-test-result', success: true, message: '连接成功' });
+      expect(next.webdavTestStatus).assertEqual('success');
+      expect(next.webdavTestMessage).assertEqual('连接成功');
+    });
+
+    it('webdavTestResultSetsErrorStatus', 0, () => {
+      const s = DemoUiState.initial();
+      const testing = ReaderReducer.reduce(s, { type: 'webdav-test' });
+      const next = ReaderReducer.reduce(testing, { type: 'webdav-test-result', success: false, message: '认证失败' });
+      expect(next.webdavTestStatus).assertEqual('error');
+      expect(next.webdavTestMessage).assertEqual('认证失败');
+    });
+
+    it('webdavSaveSetsSavingStatus', 0, () => {
+      let s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'webdav-config' });
+      s = ReaderReducer.reduce(s, { type: 'webdav-field-update', field: 'serverUrl', settingsValue: 'https://dav.example' });
+      const next = ReaderReducer.reduce(s, { type: 'webdav-save' });
+      expect(next.webdavSaveStatus).assertEqual('saving');
+    });
+
+    it('webdavSaveResultSetsSavedStatus', 0, () => {
+      let s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'webdav-config' });
+      s = ReaderReducer.reduce(s, { type: 'webdav-field-update', field: 'serverUrl', settingsValue: 'https://dav.example' });
+      const saving = ReaderReducer.reduce(s, { type: 'webdav-save' });
+      const next = ReaderReducer.reduce(saving, { type: 'webdav-save-result', success: true, message: '' });
+      expect(next.webdavSaveStatus).assertEqual('saved');
+    });
+
+    it('webdavSaveResultSetsErrorStatus', 0, () => {
+      let s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'webdav-config' });
+      s = ReaderReducer.reduce(s, { type: 'webdav-field-update', field: 'serverUrl', settingsValue: 'https://dav.example' });
+      const saving = ReaderReducer.reduce(s, { type: 'webdav-save' });
+      const next = ReaderReducer.reduce(saving, { type: 'webdav-save-result', success: false, message: '保存失败' });
+      expect(next.webdavSaveStatus).assertEqual('error');
+      expect(next.webdavSaveMessage).assertEqual('保存失败');
+    });
+
+    it('webdavFieldsPersistAcrossTabSwitch', 0, () => {
+      const s = DemoUiState.initial();
+      const configured = ReaderReducer.reduce(s, { type: 'webdav-field-update', field: 'serverUrl', settingsValue: 'https://dav.example.com' });
+      const switched = ReaderReducer.switchTab(configured, 'rss');
+      const back = ReaderReducer.switchTab(switched, 'settings');
+      expect(back.webdavServerUrl).assertEqual('https://dav.example.com');
+    });
+  });
+
+  describe('Replace rule Core identity boundary', () => {
+    it('newRuleUsesPendingIdInsteadOfCallerOrCoreRuleId', 0, () => {
+      const state = ReaderReducer.reduce(DemoUiState.initial(), {
+        type: 'route-push', id: 'reader-replace-overlay-v2',
+      });
+      const next = ReaderReducer.reduce(state, {
+        type: 'replace-rule-add',
+        replaceRuleId: 'rule-7',
+        replaceRulePattern: 'old',
+        replaceRuleReplacement: 'new',
+        replaceRuleScope: 'chapter',
+      });
+      expect(next.replaceRules.length).assertEqual(1);
+      expect(next.replaceRules[0].id).assertEqual('pending-rule-1');
+      expect(next.replaceRules[0].pattern).assertEqual('old');
     });
   });
 }

@@ -16,3 +16,7 @@ export { BackgroundHostAdapter } from './BackgroundHostAdapter';
 export { ShareHostAdapter } from './ShareHostAdapter';
 export { PermissionHostAdapter } from './PermissionHostAdapter';
 export { CredentialHostAdapter } from './CredentialHostAdapter';
+export { FileSelectionHostAdapter } from './FileSelectionHostAdapter';
+export { FontHostAdapter } from './FontHostAdapter';
+export { NetworkHostAdapter } from './NetworkHostAdapter';
+export { WebDavHostAdapter } from './WebDavHostAdapter';

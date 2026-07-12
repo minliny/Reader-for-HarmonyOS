@@ -7,6 +7,7 @@ import { ReaderReducer } from '../main/ets/ui/store/ReaderReducer';
 import { DemoUiState } from '../main/ets/ui/fixtures/DemoUiState';
 import { ReaderMotionResolver } from '../main/ets/ui/motion/ReaderMotionResolver';
 import { MotionSpecRegistry } from '../main/ets/ui/motion/MotionSpecRegistry';
+import { CoreSourceEntry } from '../main/ets/ui/store/ReaderUiState';
 
 function collectTypes(components: ViewStateComponent[], sink: string[]): void {
   for (let i = 0; i < components.length; i++) {
@@ -15,6 +16,23 @@ function collectTypes(components: ViewStateComponent[], sink: string[]): void {
       collectTypes(components[i].children, sink);
     }
   }
+}
+
+function enabledSource(sourceId: string, name: string): CoreSourceEntry {
+  return {
+    sourceId: sourceId,
+    name: name,
+    baseUrl: `https://${sourceId}.example`,
+    enabled: true,
+    enabledExplore: true,
+  };
+}
+
+function stateWithSources() {
+  return ReaderReducer.reduce(DemoUiState.initial(), {
+    type: 'source-list-loaded',
+    sources: [enabledSource('source-a', '书源 A'), enabledSource('source-b', '书源 B')],
+  });
 }
 
 export default function SourceSwitchViewStateTests(): void {
@@ -40,26 +58,57 @@ export default function SourceSwitchViewStateTests(): void {
     });
 
     // ── Reducer 处理 source.switch.* 事件 ──
-    it('reducerSourceToggleAddsSourceId', 0, () => {
-      const s = DemoUiState.initial();
+    it('reducerSourceToggleSelectsExactlyOnePersistedSource', 0, () => {
+      const s = stateWithSources();
       expect(s.sourceSelection.length === 0).assertTrue();
-      const after = ReaderReducer.reduce(s, { type: 'source-toggle', sourceId: '优书网' });
+      const after = ReaderReducer.reduce(s, { type: 'source-toggle', sourceId: 'source-a' });
       expect(after.sourceSelection.length === 1).assertTrue();
-      expect(after.sourceSelection[0]).assertEqual('优书网');
+      expect(after.sourceSelection[0]).assertEqual('source-a');
     });
 
-    it('reducerSourceToggleRemovesExistingSourceId', 0, () => {
-      const s = DemoUiState.initial();
-      const after1 = ReaderReducer.reduce(s, { type: 'source-toggle', sourceId: '优书网' });
-      const after2 = ReaderReducer.reduce(after1, { type: 'source-toggle', sourceId: '优书网' });
-      expect(after2.sourceSelection.length === 0).assertTrue();
+    it('reducerSourceToggleReplacesRadioSelectionInsteadOfAccumulating', 0, () => {
+      const s = stateWithSources();
+      const after1 = ReaderReducer.reduce(s, { type: 'source-toggle', sourceId: 'source-a' });
+      const after2 = ReaderReducer.reduce(after1, { type: 'source-toggle', sourceId: 'source-b' });
+      expect(after2.sourceSelection.length).assertEqual(1);
+      expect(after2.sourceSelection[0]).assertEqual('source-b');
     });
 
-    it('reducerSourceClearEmptiesSelection', 0, () => {
-      const s = DemoUiState.initial();
-      const after = ReaderReducer.reduce(s, { type: 'source-toggle', sourceId: '优书网' });
-      const cleared = ReaderReducer.reduce(after, { type: 'source-clear' });
-      expect(cleared.sourceSelection.length === 0).assertTrue();
+    it('legacySelectAllCannotCreateMultiSourceSelection', 0, () => {
+      const s = stateWithSources();
+      const after = ReaderReducer.reduce(s, {
+        type: 'source-select-all', sourceIds: ['source-a', 'source-b'],
+      });
+      expect(after.sourceSelection.length).assertEqual(1);
+      expect(after.sourceSelection[0]).assertEqual('source-a');
+    });
+
+    it('emptyConfirmStaysOnSwitchRouteWithVisibleValidationError', 0, () => {
+      const pushed = ReaderReducer.push(stateWithSources(), 'source-switch');
+      const after = ReaderReducer.reduce(pushed, { type: 'source-switch-confirm' });
+      expect(after.routeId).assertEqual('source-switch');
+      expect(after.loading).assertFalse();
+      expect(after.error !== null).assertTrue();
+      if (after.error !== null) expect(after.error.code).assertEqual('SOURCE_SWITCH_SELECTION_REQUIRED');
+    });
+
+    it('confirmedSwitchWaitsForCompletionBeforePoppingRoute', 0, () => {
+      const withBook = ReaderReducer.reduce(stateWithSources(), {
+        type: 'book-detail-success',
+        book: {
+          bookId: 'book-a', sourceId: 'source-a', title: '测试书', author: '作者',
+          summary: '', sourceName: '书源 A', sourceUrl: 'source-a', latestChapter: '第一章',
+          chapterListUrl: '/toc',
+        },
+      });
+      const pushed = ReaderReducer.push(withBook, 'source-switch');
+      const selected = ReaderReducer.reduce(pushed, { type: 'source-toggle', sourceId: 'source-b' });
+      const started = ReaderReducer.reduce(selected, { type: 'source-switch-confirm' });
+      expect(started.routeId).assertEqual('source-switch');
+      expect(started.loading).assertTrue();
+      const completed = ReaderReducer.reduce(started, { type: 'source-switch-completed' });
+      expect(completed.routeId).assertEqual('bookshelf');
+      expect(completed.sourceSelection.length).assertEqual(0);
     });
 
     // ── Reducer: set-loading → source-switch loading 态 ──

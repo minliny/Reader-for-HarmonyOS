@@ -14,6 +14,10 @@ struct Index {
       ReaderUiStore.dispatch({ type: 'set-overlay', overlay: '' });
       return true;
     }
+    if (ReaderUiStore.isDirectoryPilotActive()) {
+      ReaderUiStore.dispatch({ type: 'reader.directory.close' });
+      return true;
+    }
     if (s.stack.length > 1) {
       ReaderUiStore.dispatch({ type: 'route-pop' });
       return true;

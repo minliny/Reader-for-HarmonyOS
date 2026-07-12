@@ -2,8 +2,10 @@
 // Host capability's routing, requirements, and device-evidence status.
 //
 // Why this exists:
-//   - HostCapability union has 41 entries split across two sources (Core
-//     closed-set host.rs × 15, UI Contract host-request.schema.json × 26).
+//   - The historical HostCapability union has 43 entries split across two
+//     sources (Core closed-set host.rs × 15, original UI-only subset × 28).
+//     Reader UI HostRequest 1.2.0 has its own exact 58-entry manifest and must
+//     not be collapsed into this Core-facing compatibility boundary.
 //   - Routing differs: Core closed-set is registered with
 //     HostCapabilityRegistry (Core requests them over NAPI); UI-Contract-only
 //     is exposed via CoreRuntime getters for Reducer direct dispatch.
@@ -96,6 +98,15 @@ export const HOST_EVIDENCE_TAG_MAP: Record<string, HostCapability[]> = {
     'tts.system.pause' as HostCapability,
     'tts.system.resume' as HostCapability,
     'tts.system.stop' as HostCapability,
+  ],
+  'ReadingChainUi': [
+    'http.execute' as HostCapability,
+    'cookie.set' as HostCapability,
+    'cookie.get' as HostCapability,
+    'file.write' as HostCapability,
+    'file.read' as HostCapability,
+    'webview.open' as HostCapability,
+    'webview.close' as HostCapability,
   ],
 };
 
@@ -281,6 +292,16 @@ const HOST_CAPABILITY_DESCRIPTORS: HostCapabilityDescriptor[] = [
     capability: 'background.cancel', source: 'ui-contract-only', dispatch: 'reducer-direct',
     adapter: 'BackgroundHostAdapter', requiresContext: false, requiresUiAbilityContext: false,
     requiresPermission: 'ohos.permission.KEEP_BACKGROUND_RUNNING',
+    deviceVerified: false,
+  },
+  {
+    capability: 'timer.foreground.arm', source: 'ui-contract-only', dispatch: 'reducer-direct',
+    adapter: 'ForegroundTimerHostAdapter', requiresContext: false, requiresUiAbilityContext: false,
+    deviceVerified: false,
+  },
+  {
+    capability: 'timer.foreground.cancel', source: 'ui-contract-only', dispatch: 'reducer-direct',
+    adapter: 'ForegroundTimerHostAdapter', requiresContext: false, requiresUiAbilityContext: false,
     deviceVerified: false,
   },
   {

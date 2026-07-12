@@ -23,6 +23,7 @@
 //   node scripts/collect_device_evidence.mjs --trigger-only   # just trigger
 //   node scripts/collect_device_evidence.mjs --report-only    # parse existing
 //   node scripts/collect_device_evidence.mjs --output evidence.json
+//   node scripts/collect_device_evidence.mjs --install --require-core-napi
 import { execSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -113,6 +114,8 @@ const TAG_TO_CAPABILITIES = {
 const args = process.argv.slice(2);
 const triggerOnly = args.includes('--trigger-only');
 const reportOnly = args.includes('--report-only');
+const installBeforeTrigger = args.includes('--install');
+const requireCoreNapi = args.includes('--require-core-napi');
 const outputIdx = args.indexOf('--output');
 const outputPath = outputIdx >= 0 && args[outputIdx + 1]
   ? path.resolve(args[outputIdx + 1])
@@ -155,9 +158,26 @@ function checkHdc() {
   return true;
 }
 
+function installCurrentHap() {
+  const hap = path.join(REPO, 'entry/build/default/outputs/default/entry-default-signed.hap');
+  if (!fs.existsSync(hap)) {
+    console.error(`✗ Signed HAP not found: ${hap}`);
+    console.error('  Run `npm run build` before the device gate.');
+    return false;
+  }
+  console.log(`→ Installing current signed HAP: ${hap}`);
+  const install = run(`"${HDC}" install -r "${hap}"`);
+  if (install.status !== 0) {
+    console.error(`✗ HAP install failed: ${install.stderr || install.stdout}`);
+    return false;
+  }
+  console.log(`✓ HAP installed: ${(install.stdout || '').trim()}`);
+  return true;
+}
+
 function triggerSelfChecks() {
   console.log('→ Triggering fresh self-checks (force-stop + launch with selfCheck=true)...');
-  const pkg = 'reader.minliny.testpackage';
+  const pkg = 'com.minliny.reader';
   run(`"${HDC}" shell aa force-stop ${pkg}`);
   // Clear hilog buffer so we only capture fresh output.
   run(`"${HDC}" shell hilog -r`);
@@ -256,6 +276,21 @@ function printSummary(evidence, matrix) {
   console.log('');
 }
 
+function verifyCoreNapiGate(evidence) {
+  if (!requireCoreNapi) {
+    return true;
+  }
+  const coreEvidence = evidence.CoreSelfCheck;
+  if (coreEvidence !== undefined && coreEvidence.status === 'verified') {
+    console.log('✓ Device NAPI gate passed: fresh CoreSelfCheck ping/coreInfo/hostSmoke verified.');
+    return true;
+  }
+  const status = coreEvidence === undefined ? 'missing' : coreEvidence.status;
+  console.error(`✗ Device NAPI gate failed: CoreSelfCheck status=${status}.`);
+  console.error('  Host unit success does not substitute for a device-backed CoreRuntime round-trip.');
+  return false;
+}
+
 // ── Main ──
 
 if (reportOnly) {
@@ -272,10 +307,16 @@ if (reportOnly) {
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, JSON.stringify({ evidence, matrix, capturedAt: new Date().toISOString() }, null, 2));
   console.log(`Evidence written to ${outputPath}`);
+  if (!verifyCoreNapiGate(evidence)) process.exit(1);
   process.exit(0);
 }
 
 if (!checkHdc()) process.exit(1);
+if (installBeforeTrigger && !installCurrentHap()) process.exit(1);
+if (triggerOnly && requireCoreNapi) {
+  console.error('✗ --trigger-only cannot satisfy --require-core-napi because no fresh hilog is parsed.');
+  process.exit(1);
+}
 
 if (!triggerOnly) {
   if (!triggerSelfChecks()) process.exit(1);
@@ -291,6 +332,7 @@ if (!triggerOnly) {
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, JSON.stringify({ evidence, matrix, capturedAt: new Date().toISOString() }, null, 2));
   console.log(`Evidence JSON written to ${outputPath}`);
+  if (!verifyCoreNapiGate(evidence)) process.exit(1);
 } else {
   if (!triggerSelfChecks()) process.exit(1);
   console.log('✓ Self-checks triggered. Run without --trigger-only to capture + report.');

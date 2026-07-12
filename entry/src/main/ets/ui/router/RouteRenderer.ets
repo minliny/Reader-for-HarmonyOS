@@ -11,14 +11,43 @@ import { ReaderShell } from '../shells/ReaderShell';
 import { LibraryShell } from '../shells/LibraryShell';
 import { SettingsShell } from '../shells/SettingsShell';
 import { FlowShell } from '../shells/FlowShell';
+import { ReaderUIScreenGraphShadowRegistry } from './ReaderUIScreenGraphShadowRegistry';
 
 function operationFor(lastOp: string): MotionRequest | null {
   switch (lastOp) {
     case 'route-push': return { operation: 'push', containerRole: 'appShell' };
+    case 'reader.directory.open': return { operation: 'push', containerRole: 'appShell' };
     case 'route-pop': return { operation: 'pop', containerRole: 'appShell' };
+    case 'reader.directory.close': return { operation: 'pop', containerRole: 'appShell' };
     case 'route-replace': return { operation: 'replace', containerRole: 'appShell' };
     case 'switch-tab': return { operation: 'tabSwitch', containerRole: 'mainTabShell' };
     default: return null;
+  }
+}
+
+@Component
+struct UnknownRouteContractDrift {
+  @Prop routeId: string = '';
+
+  build() {
+    Column({ space: 8 }) {
+      Text('Reader UI 路由契约漂移')
+        .fontSize(20)
+        .fontWeight(800)
+        .fontColor('#A03A32')
+      Text(this.routeId)
+        .fontSize(12)
+        .fontColor('#725F50')
+      Text('未知 RouteId 已 fail-closed，不会回落到任意 Shell。')
+        .fontSize(13)
+        .fontColor('#725F50')
+    }
+    .width('100%')
+    .height('100%')
+    .padding(24)
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+    .backgroundColor('#FFF8F5')
   }
 }
 
@@ -39,21 +68,35 @@ export struct RouteRenderer {
       this.displayedRouteId = this.routeId;
       return;
     }
-    const motionId = ReaderMotionResolver.resolveOr(op, 'app.route.replace');
-    MotionAdapter.apply(motionId, this.reducedMotion, () => {
+    const motionSpec = ReaderMotionResolver.resolveSpec(op);
+    if (motionSpec === undefined) {
+      this.displayedRouteId = this.routeId;
+      return;
+    }
+    MotionAdapter.applySpec(motionSpec, this.reducedMotion, this.getUIContext(), () => {
       this.displayedRouteId = this.routeId;
     });
   }
 
+  private shellOfDisplayedRoute(): string | null {
+    const shell: string | null = RouteTable.shellOf(this.displayedRouteId);
+    // Executed for every rendered route, but deliberately does not select the
+    // shell. RouteTable/native reducer ownership remains unchanged in Shadow.
+    ReaderUIScreenGraphShadowRegistry.observeRoute(this.displayedRouteId, shell);
+    return shell;
+  }
+
   build() {
     Stack() {
-      if (RouteTable.shellOf(this.displayedRouteId) === 'MainTabShell') {
+      if (this.shellOfDisplayedRoute() === null) {
+        UnknownRouteContractDrift({ routeId: this.displayedRouteId })
+      } else if (this.shellOfDisplayedRoute() === 'MainTabShell') {
         MainTabShell()
-      } else if (RouteTable.shellOf(this.displayedRouteId) === 'ReaderShell') {
+      } else if (this.shellOfDisplayedRoute() === 'ReaderShell') {
         ReaderShell()
-      } else if (RouteTable.shellOf(this.displayedRouteId) === 'LibraryShell') {
+      } else if (this.shellOfDisplayedRoute() === 'LibraryShell') {
         LibraryShell()
-      } else if (RouteTable.shellOf(this.displayedRouteId) === 'SettingsShell') {
+      } else if (this.shellOfDisplayedRoute() === 'SettingsShell') {
         SettingsShell()
       } else {
         FlowShell()

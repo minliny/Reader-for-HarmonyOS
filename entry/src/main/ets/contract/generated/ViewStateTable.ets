@@ -4,25 +4,36 @@
 
 import { RouteId, RouteTable } from './RouteTable';
 
+export type ViewStateJSONValue = object | string | number | boolean | null;
+
 export interface ViewStateProps {
   action?: string;
   author?: string;
   bookId?: string;
+  chapterTitle?: string;
+  contractRouteId?: string;
   coverKey?: string;
   destructive?: boolean;
+  enabled?: boolean;
   filterOpen?: boolean;
+  fontFamily?: string;
   label?: string;
   message?: string;
   mode?: string;
+  phase?: string;
   placeholder?: string;
   progress?: number;
   query?: string;
   retryable?: boolean;
+  section?: string;
   selected?: string;
   sources?: number;
+  state?: string;
   subtitle?: string;
   theme?: string;
   title?: string;
+  uiEvent?: string;
+  uiEventPayload?: ViewStateJSONValue;
   unread?: number;
   variant?: string;
   version?: string;
@@ -39,14 +50,16 @@ export interface ViewStateComponent {
 export interface ViewStateEntry {
   routeId: RouteId;
   pageState: string;
+  context: Record<string, ViewStateJSONValue>;
   components: ViewStateComponent[];
 }
 
 export class ViewStateTable {
-  static readonly ENTRIES: ViewStateEntry[] = [
+  static readonly ENTRIES: ViewStateEntry[] = JSON.parse(`[
   {
     "routeId": "app-shell",
     "pageState": "loading",
+    "context": {},
     "components": [
       {
         "type": "Loading",
@@ -59,6 +72,7 @@ export class ViewStateTable {
   {
     "routeId": "main-tabs",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "AppTopBar",
@@ -90,6 +104,10 @@ export class ViewStateTable {
   {
     "routeId": "bookshelf",
     "pageState": "default",
+    "context": {
+      "tab": "bookshelf",
+      "bookshelfViewMode": "cover-mode"
+    },
     "components": [
       {
         "type": "AppTopBar",
@@ -217,6 +235,7 @@ export class ViewStateTable {
   {
     "routeId": "bookshelf-empty",
     "pageState": "shelf-empty",
+    "context": {},
     "components": [
       {
         "type": "AppTopBar",
@@ -248,6 +267,9 @@ export class ViewStateTable {
   {
     "routeId": "discover",
     "pageState": "default",
+    "context": {
+      "tab": "discover"
+    },
     "components": [
       {
         "type": "AppTopBar",
@@ -300,6 +322,9 @@ export class ViewStateTable {
   {
     "routeId": "rss",
     "pageState": "default",
+    "context": {
+      "tab": "rss"
+    },
     "components": [
       {
         "type": "AppTopBar",
@@ -346,6 +371,9 @@ export class ViewStateTable {
   {
     "routeId": "settings",
     "pageState": "default",
+    "context": {
+      "tab": "settings"
+    },
     "components": [
       {
         "type": "AppTopBar",
@@ -374,6 +402,9 @@ export class ViewStateTable {
   {
     "routeId": "book-search",
     "pageState": "default",
+    "context": {
+      "tab": "bookshelf"
+    },
     "components": [
       {
         "type": "AppTopBar",
@@ -414,6 +445,7 @@ export class ViewStateTable {
   {
     "routeId": "book-detail",
     "pageState": "loading",
+    "context": {},
     "components": [
       {
         "type": "AppTopBar",
@@ -434,6 +466,9 @@ export class ViewStateTable {
   {
     "routeId": "book-detail",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "AppTopBar",
@@ -466,6 +501,10 @@ export class ViewStateTable {
   {
     "routeId": "reader",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001",
+      "chapterId": "ch-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -498,6 +537,9 @@ export class ViewStateTable {
   {
     "routeId": "reader",
     "pageState": "loading",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -524,6 +566,9 @@ export class ViewStateTable {
   {
     "routeId": "reader",
     "pageState": "offline",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -552,6 +597,9 @@ export class ViewStateTable {
   {
     "routeId": "control-layer-base-v2",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -584,6 +632,9 @@ export class ViewStateTable {
   {
     "routeId": "reader-directory-overlay-v2",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -616,6 +667,9 @@ export class ViewStateTable {
   {
     "routeId": "reader-appearance-overlay-v2",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -648,6 +702,9 @@ export class ViewStateTable {
   {
     "routeId": "reader-tts-overlay-v2",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -680,6 +737,9 @@ export class ViewStateTable {
   {
     "routeId": "reader-settings-overlay-v2",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -712,6 +772,9 @@ export class ViewStateTable {
   {
     "routeId": "reader-search-overlay-v2",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -744,6 +807,9 @@ export class ViewStateTable {
   {
     "routeId": "reader-replace-overlay-v2",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -776,6 +842,9 @@ export class ViewStateTable {
   {
     "routeId": "reader-auto-scroll-overlay-v2",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -808,6 +877,9 @@ export class ViewStateTable {
   {
     "routeId": "reader-night-state-v2",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -840,6 +912,7 @@ export class ViewStateTable {
   {
     "routeId": "state-offline",
     "pageState": "offline",
+    "context": {},
     "components": [
       {
         "type": "Offline",
@@ -854,6 +927,9 @@ export class ViewStateTable {
   {
     "routeId": "state-error",
     "pageState": "error",
+    "context": {
+      "message": "网络异常"
+    },
     "components": [
       {
         "type": "Error",
@@ -869,6 +945,9 @@ export class ViewStateTable {
   {
     "routeId": "rss-all",
     "pageState": "default",
+    "context": {
+      "filter": "all"
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -889,6 +968,7 @@ export class ViewStateTable {
   {
     "routeId": "rss-detail",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -911,6 +991,9 @@ export class ViewStateTable {
   {
     "routeId": "rss-original",
     "pageState": "default",
+    "context": {
+      "url": "https://example.com/feed/001"
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -931,6 +1014,7 @@ export class ViewStateTable {
   {
     "routeId": "search-home",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -954,6 +1038,7 @@ export class ViewStateTable {
   {
     "routeId": "search-results",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -976,6 +1061,7 @@ export class ViewStateTable {
   {
     "routeId": "search-empty",
     "pageState": "empty",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1000,6 +1086,7 @@ export class ViewStateTable {
   {
     "routeId": "source-detail",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1022,6 +1109,9 @@ export class ViewStateTable {
   {
     "routeId": "source-switch-results",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "SourceSwitchFlowPage",
@@ -1034,6 +1124,7 @@ export class ViewStateTable {
   {
     "routeId": "sync-backup",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1054,6 +1145,7 @@ export class ViewStateTable {
   {
     "routeId": "sync-backup",
     "pageState": "loading",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1076,6 +1168,12 @@ export class ViewStateTable {
   {
     "routeId": "restore-result",
     "pageState": "default",
+    "context": {
+      "scopes": [
+        "progress",
+        "bookshelf"
+      ]
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -1096,6 +1194,7 @@ export class ViewStateTable {
   {
     "routeId": "sync-error",
     "pageState": "error",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1119,6 +1218,7 @@ export class ViewStateTable {
   {
     "routeId": "webdav-config",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1139,6 +1239,12 @@ export class ViewStateTable {
   {
     "routeId": "restore-running",
     "pageState": "loading",
+    "context": {
+      "scopes": [
+        "progress",
+        "bookshelf"
+      ]
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -1161,6 +1267,10 @@ export class ViewStateTable {
   {
     "routeId": "bookshelf-cover-mode",
     "pageState": "default",
+    "context": {
+      "tab": "bookshelf",
+      "viewMode": "cover-mode"
+    },
     "components": [
       {
         "type": "AppTopBar",
@@ -1244,6 +1354,10 @@ export class ViewStateTable {
   {
     "routeId": "bookshelf-list-mode",
     "pageState": "default",
+    "context": {
+      "tab": "bookshelf",
+      "viewMode": "list-mode"
+    },
     "components": [
       {
         "type": "AppTopBar",
@@ -1310,6 +1424,9 @@ export class ViewStateTable {
   {
     "routeId": "bookshelf-book-more-menu",
     "pageState": "default",
+    "context": {
+      "tab": "bookshelf"
+    },
     "components": [
       {
         "type": "AppTopBar",
@@ -1341,6 +1458,7 @@ export class ViewStateTable {
   {
     "routeId": "bookshelf-group-management",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1363,6 +1481,7 @@ export class ViewStateTable {
   {
     "routeId": "local-import",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1385,6 +1504,7 @@ export class ViewStateTable {
   {
     "routeId": "search-loading",
     "pageState": "loading",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1409,6 +1529,7 @@ export class ViewStateTable {
   {
     "routeId": "search-error",
     "pageState": "error",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1434,6 +1555,7 @@ export class ViewStateTable {
   {
     "routeId": "book-detail-toc-preview",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1456,6 +1578,9 @@ export class ViewStateTable {
   {
     "routeId": "rss-subscription-management",
     "pageState": "default",
+    "context": {
+      "tab": "rss"
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -1478,6 +1603,7 @@ export class ViewStateTable {
   {
     "routeId": "rss-empty",
     "pageState": "empty",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1493,7 +1619,11 @@ export class ViewStateTable {
         "props": {
           "title": "暂无订阅",
           "message": "添加 RSS 订阅后查看更新。",
-          "action": "添加订阅"
+          "action": "添加订阅",
+          "uiEvent": "rss.subscription.open",
+          "uiEventPayload": {
+            "mode": "add"
+          }
         },
         "children": []
       }
@@ -1502,6 +1632,7 @@ export class ViewStateTable {
   {
     "routeId": "rss-error",
     "pageState": "error",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1526,6 +1657,7 @@ export class ViewStateTable {
   {
     "routeId": "source-management",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1548,6 +1680,7 @@ export class ViewStateTable {
   {
     "routeId": "source-add",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1570,6 +1703,9 @@ export class ViewStateTable {
   {
     "routeId": "source-edit",
     "pageState": "default",
+    "context": {
+      "sourceId": "src-001"
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -1592,6 +1728,7 @@ export class ViewStateTable {
   {
     "routeId": "source-import-options",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1614,6 +1751,7 @@ export class ViewStateTable {
   {
     "routeId": "source-test-result",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1636,6 +1774,9 @@ export class ViewStateTable {
   {
     "routeId": "global-settings",
     "pageState": "default",
+    "context": {
+      "tab": "settings"
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -1658,6 +1799,7 @@ export class ViewStateTable {
   {
     "routeId": "reading-settings-entry",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1680,6 +1822,7 @@ export class ViewStateTable {
   {
     "routeId": "source-settings-entry",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1702,6 +1845,7 @@ export class ViewStateTable {
   {
     "routeId": "sync-settings-entry",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1724,6 +1868,7 @@ export class ViewStateTable {
   {
     "routeId": "about-version",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1747,6 +1892,7 @@ export class ViewStateTable {
   {
     "routeId": "backup-settings",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1769,6 +1915,7 @@ export class ViewStateTable {
   {
     "routeId": "progress-sync-status",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1792,6 +1939,7 @@ export class ViewStateTable {
   {
     "routeId": "remote-webdav-books",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1814,6 +1962,7 @@ export class ViewStateTable {
   {
     "routeId": "global-loading",
     "pageState": "loading",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1838,6 +1987,7 @@ export class ViewStateTable {
   {
     "routeId": "global-empty",
     "pageState": "empty",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1862,6 +2012,7 @@ export class ViewStateTable {
   {
     "routeId": "global-error",
     "pageState": "error",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1887,6 +2038,7 @@ export class ViewStateTable {
   {
     "routeId": "offline-state",
     "pageState": "offline",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1910,6 +2062,7 @@ export class ViewStateTable {
   {
     "routeId": "permission-required",
     "pageState": "permission",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -1934,6 +2087,9 @@ export class ViewStateTable {
   {
     "routeId": "immersive-reading",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -1948,6 +2104,10 @@ export class ViewStateTable {
   {
     "routeId": "reader_content",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001",
+      "chapterId": "ch-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -1962,6 +2122,9 @@ export class ViewStateTable {
   {
     "routeId": "toc-bookmarks",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -1994,6 +2157,9 @@ export class ViewStateTable {
   {
     "routeId": "reader-full-font",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -2020,6 +2186,9 @@ export class ViewStateTable {
   {
     "routeId": "reader-full-theme",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -2046,6 +2215,9 @@ export class ViewStateTable {
   {
     "routeId": "reader-full-theme-edit",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -2072,6 +2244,9 @@ export class ViewStateTable {
   {
     "routeId": "reader-full-layout",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -2098,6 +2273,9 @@ export class ViewStateTable {
   {
     "routeId": "reader-full-page-turn",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -2124,6 +2302,9 @@ export class ViewStateTable {
   {
     "routeId": "reader-full-appearance",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -2150,6 +2331,9 @@ export class ViewStateTable {
   {
     "routeId": "reader-full-directory",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -2176,6 +2360,9 @@ export class ViewStateTable {
   {
     "routeId": "reader-full-settings",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -2202,6 +2389,9 @@ export class ViewStateTable {
   {
     "routeId": "reader-full-tts",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -2228,6 +2418,9 @@ export class ViewStateTable {
   {
     "routeId": "reader-book-cache",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -2254,6 +2447,9 @@ export class ViewStateTable {
   {
     "routeId": "reader-debug-info",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "ReaderBase",
@@ -2280,6 +2476,7 @@ export class ViewStateTable {
   {
     "routeId": "settings-general",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -2300,6 +2497,7 @@ export class ViewStateTable {
   {
     "routeId": "about",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -2320,6 +2518,7 @@ export class ViewStateTable {
   {
     "routeId": "about-feedback",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -2340,6 +2539,7 @@ export class ViewStateTable {
   {
     "routeId": "bookshelf-search-settings",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -2360,6 +2560,7 @@ export class ViewStateTable {
   {
     "routeId": "restore-scopes",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -2382,6 +2583,7 @@ export class ViewStateTable {
   {
     "routeId": "restore-confirm",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -2402,6 +2604,9 @@ export class ViewStateTable {
   {
     "routeId": "restore-conflict",
     "pageState": "error",
+    "context": {
+      "errorCode": "RESTORE_CONFLICT"
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -2422,6 +2627,7 @@ export class ViewStateTable {
   {
     "routeId": "restore-preview",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -2444,6 +2650,7 @@ export class ViewStateTable {
   {
     "routeId": "restore-progress",
     "pageState": "loading",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -2464,6 +2671,7 @@ export class ViewStateTable {
   {
     "routeId": "progress-sync",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -2484,6 +2692,7 @@ export class ViewStateTable {
   {
     "routeId": "source-batch",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -2504,6 +2713,9 @@ export class ViewStateTable {
   {
     "routeId": "source-code-view",
     "pageState": "default",
+    "context": {
+      "sourceId": "src-001"
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -2524,6 +2736,9 @@ export class ViewStateTable {
   {
     "routeId": "source-debug",
     "pageState": "default",
+    "context": {
+      "sourceId": "src-001"
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -2544,6 +2759,9 @@ export class ViewStateTable {
   {
     "routeId": "source-debug-catalog-result",
     "pageState": "default",
+    "context": {
+      "sourceId": "src-001"
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -2566,6 +2784,9 @@ export class ViewStateTable {
   {
     "routeId": "source-debug-content-log",
     "pageState": "default",
+    "context": {
+      "sourceId": "src-001"
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -2586,6 +2807,9 @@ export class ViewStateTable {
   {
     "routeId": "source-debug-detail-result",
     "pageState": "default",
+    "context": {
+      "sourceId": "src-001"
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -2608,6 +2832,9 @@ export class ViewStateTable {
   {
     "routeId": "source-debug-result",
     "pageState": "default",
+    "context": {
+      "sourceId": "src-001"
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -2630,6 +2857,9 @@ export class ViewStateTable {
   {
     "routeId": "source-debug-running",
     "pageState": "loading",
+    "context": {
+      "sourceId": "src-001"
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -2650,6 +2880,9 @@ export class ViewStateTable {
   {
     "routeId": "source-debug-search-result",
     "pageState": "default",
+    "context": {
+      "sourceId": "src-001"
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -2672,6 +2905,9 @@ export class ViewStateTable {
   {
     "routeId": "source-delete-confirm",
     "pageState": "default",
+    "context": {
+      "sourceId": "src-001"
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -2692,6 +2928,7 @@ export class ViewStateTable {
   {
     "routeId": "source-detect",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -2712,6 +2949,9 @@ export class ViewStateTable {
   {
     "routeId": "source-edit-debug",
     "pageState": "default",
+    "context": {
+      "sourceId": "src-001"
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -2734,6 +2974,7 @@ export class ViewStateTable {
   {
     "routeId": "source-groups",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -2754,6 +2995,7 @@ export class ViewStateTable {
   {
     "routeId": "source-import-preview",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -2774,6 +3016,9 @@ export class ViewStateTable {
   {
     "routeId": "source-logs",
     "pageState": "default",
+    "context": {
+      "sourceId": "src-001"
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -2794,6 +3039,9 @@ export class ViewStateTable {
   {
     "routeId": "source-rule-edit",
     "pageState": "default",
+    "context": {
+      "sourceId": "src-001"
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -2814,6 +3062,7 @@ export class ViewStateTable {
   {
     "routeId": "discover-rule-test",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -2834,6 +3083,7 @@ export class ViewStateTable {
   {
     "routeId": "discover-source-bulk",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -2854,6 +3104,9 @@ export class ViewStateTable {
   {
     "routeId": "discover-empty",
     "pageState": "empty",
+    "context": {
+      "tab": "discover"
+    },
     "components": [
       {
         "type": "AppTopBar",
@@ -2870,7 +3123,9 @@ export class ViewStateTable {
           "variant": "empty",
           "title": "当前没有启用发现的书源",
           "message": "启用发现后，可以在这里浏览书源提供的排行榜、分类和书单。",
-          "action": "去书源管理"
+          "action": "去书源管理",
+          "uiEvent": "source.management.open",
+          "uiEventPayload": {}
         },
         "children": []
       },
@@ -2887,6 +3142,9 @@ export class ViewStateTable {
   {
     "routeId": "discover-error",
     "pageState": "error",
+    "context": {
+      "tab": "discover"
+    },
     "components": [
       {
         "type": "AppTopBar",
@@ -2903,7 +3161,9 @@ export class ViewStateTable {
           "variant": "error",
           "title": "发现入口解析失败",
           "message": "当前入口返回异常，已保留上一批缓存结果。你可以重试、刷新入口、编辑源或切换书源。",
-          "action": "重试"
+          "action": "重试",
+          "uiEvent": "discover.refresh",
+          "uiEventPayload": {}
         },
         "children": []
       },
@@ -2920,6 +3180,9 @@ export class ViewStateTable {
   {
     "routeId": "discover-loading",
     "pageState": "loading",
+    "context": {
+      "tab": "discover"
+    },
     "components": [
       {
         "type": "AppTopBar",
@@ -2952,6 +3215,9 @@ export class ViewStateTable {
   {
     "routeId": "discover-no-results",
     "pageState": "empty",
+    "context": {
+      "tab": "discover"
+    },
     "components": [
       {
         "type": "AppTopBar",
@@ -2968,7 +3234,9 @@ export class ViewStateTable {
           "variant": "no-results",
           "title": "当前条件没有发现结果",
           "message": "可以重置筛选、切换入口，或刷新当前书源。",
-          "action": "重置筛选"
+          "action": "重置筛选",
+          "uiEvent": "discover.filter.reset",
+          "uiEventPayload": {}
         },
         "children": []
       },
@@ -2985,6 +3253,9 @@ export class ViewStateTable {
   {
     "routeId": "rss-refreshing",
     "pageState": "refreshing",
+    "context": {
+      "tab": "rss"
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -3005,6 +3276,9 @@ export class ViewStateTable {
   {
     "routeId": "rss-search",
     "pageState": "default",
+    "context": {
+      "tab": "rss"
+    },
     "components": [
       {
         "type": "AppTopBar",
@@ -3033,6 +3307,9 @@ export class ViewStateTable {
   {
     "routeId": "rss-starred",
     "pageState": "default",
+    "context": {
+      "tab": "rss"
+    },
     "components": [
       {
         "type": "AppTopBar",
@@ -3061,6 +3338,9 @@ export class ViewStateTable {
   {
     "routeId": "rss-original-browser",
     "pageState": "default",
+    "context": {
+      "url": "https://example.com"
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -3081,6 +3361,7 @@ export class ViewStateTable {
   {
     "routeId": "rss-favorite-groups",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -3101,6 +3382,7 @@ export class ViewStateTable {
   {
     "routeId": "rss-source-groups",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -3121,6 +3403,7 @@ export class ViewStateTable {
   {
     "routeId": "rss-source-add",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -3143,6 +3426,9 @@ export class ViewStateTable {
   {
     "routeId": "rss-source-edit",
     "pageState": "default",
+    "context": {
+      "sourceId": "rss-001"
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -3165,6 +3451,7 @@ export class ViewStateTable {
   {
     "routeId": "rss-source-import",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -3187,6 +3474,9 @@ export class ViewStateTable {
   {
     "routeId": "sort-filter",
     "pageState": "default",
+    "context": {
+      "tab": "bookshelf"
+    },
     "components": [
       {
         "type": "AppTopBar",
@@ -3279,6 +3569,7 @@ export class ViewStateTable {
   {
     "routeId": "group-management",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -3301,6 +3592,7 @@ export class ViewStateTable {
   {
     "routeId": "book-batch-management",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -3321,6 +3613,9 @@ export class ViewStateTable {
   {
     "routeId": "book-directory",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -3341,6 +3636,7 @@ export class ViewStateTable {
   {
     "routeId": "discover-source-login",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "BackTopBar",
@@ -3361,6 +3657,9 @@ export class ViewStateTable {
   {
     "routeId": "source-switch",
     "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
     "components": [
       {
         "type": "SourceSwitchFlowPage",
@@ -3373,6 +3672,7 @@ export class ViewStateTable {
   {
     "routeId": "app-shell",
     "pageState": "default",
+    "context": {},
     "components": [
       {
         "type": "AppTopBar",
@@ -3404,6 +3704,9 @@ export class ViewStateTable {
   {
     "routeId": "source-management",
     "pageState": "source-unavailable",
+    "context": {
+      "sourceId": "source-disabled"
+    },
     "components": [
       {
         "type": "BackTopBar",
@@ -3419,13 +3722,2117 @@ export class ViewStateTable {
         "props": {
           "title": "书源已停用",
           "message": "该书源 disabled / error，请在书源详情中修复。",
-          "action": "查看详情"
+          "action": "查看详情",
+          "uiEvent": "source.detail.open",
+          "uiEventPayload": {
+            "sourceId": "source-disabled"
+          }
         },
         "children": []
       }
     ]
+  },
+  {
+    "routeId": "import-permission-denied",
+    "pageState": "permission",
+    "context": {
+      "importId": "import-001"
+    },
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "import_permission_denied-topbar",
+        "props": {
+          "title": "本地导入"
+        },
+        "children": []
+      },
+      {
+        "type": "Permission",
+        "id": "import_permission_denied-state",
+        "props": {
+          "title": "导入权限被拒绝",
+          "message": "导入权限被拒绝",
+          "uiEvent": "import.permission.denied",
+          "uiEventPayload": {
+            "permission": "storage",
+            "reason": "denied"
+          }
+        },
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "import_permission_denied-action",
+        "props": {
+          "label": "重新选择文件",
+          "uiEvent": "import.start",
+          "uiEventPayload": {}
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "import-format-unsupported",
+    "pageState": "error",
+    "context": {
+      "importId": "import-001"
+    },
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "import_format_unsupported-topbar",
+        "props": {
+          "title": "本地导入"
+        },
+        "children": []
+      },
+      {
+        "type": "ErrorState",
+        "id": "import_format_unsupported-state",
+        "props": {
+          "title": "文件格式不支持",
+          "message": "文件格式不支持",
+          "uiEvent": "import.format.unsupported",
+          "uiEventPayload": {
+            "fileName": "reader.zip",
+            "fileFormat": "ZIP"
+          }
+        },
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "import_format_unsupported-action",
+        "props": {
+          "label": "重新选择文件",
+          "uiEvent": "import.start",
+          "uiEventPayload": {}
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "import-empty-file",
+    "pageState": "empty",
+    "context": {
+      "importId": "import-001"
+    },
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "import_empty_file-topbar",
+        "props": {
+          "title": "本地导入"
+        },
+        "children": []
+      },
+      {
+        "type": "Empty",
+        "id": "import_empty_file-state",
+        "props": {
+          "title": "文件为空",
+          "message": "文件为空",
+          "uiEvent": "import.file.empty",
+          "uiEventPayload": {
+            "fileName": "empty.txt",
+            "size": 0
+          }
+        },
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "import_empty_file-action",
+        "props": {
+          "label": "重新选择文件",
+          "uiEvent": "import.start",
+          "uiEventPayload": {}
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "import-parsing",
+    "pageState": "loading",
+    "context": {
+      "importId": "import-001"
+    },
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "import_parsing-topbar",
+        "props": {
+          "title": "本地导入"
+        },
+        "children": []
+      },
+      {
+        "type": "Loading",
+        "id": "import_parsing-state",
+        "props": {
+          "title": "正在解析书籍",
+          "message": "正在解析书籍"
+        },
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "import_parsing-action",
+        "props": {
+          "label": "取消解析",
+          "uiEvent": "import.cancel",
+          "uiEventPayload": {
+            "importId": "import-001"
+          }
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "import-duplicate",
+    "pageState": "default",
+    "context": {
+      "importId": "import-001"
+    },
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "import_duplicate-topbar",
+        "props": {
+          "title": "本地导入"
+        },
+        "children": []
+      },
+      {
+        "type": "Dialog",
+        "id": "import_duplicate-state",
+        "props": {
+          "title": "检测到重复书籍",
+          "message": "检测到重复书籍",
+          "uiEvent": "import.duplicate.found",
+          "uiEventPayload": {
+            "importId": "import-001",
+            "duplicateCount": 2
+          }
+        },
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "import_duplicate-action",
+        "props": {
+          "label": "继续处理",
+          "uiEvent": "import.conflict.resolve",
+          "uiEventPayload": {
+            "importId": "import-001",
+            "strategy": "per-item"
+          }
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "import-conflict-resolve",
+    "pageState": "default",
+    "context": {
+      "importId": "import-001"
+    },
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "import_conflict_resolve-topbar",
+        "props": {
+          "title": "本地导入"
+        },
+        "children": []
+      },
+      {
+        "type": "Dialog",
+        "id": "import_conflict_resolve-state",
+        "props": {
+          "title": "解决导入冲突",
+          "message": "解决导入冲突"
+        },
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "import_conflict_resolve-action",
+        "props": {
+          "label": "保留本地进度",
+          "uiEvent": "import.conflict.resolve",
+          "uiEventPayload": {
+            "importId": "import-001",
+            "strategy": "per-item"
+          }
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "import-partial-success",
+    "pageState": "default",
+    "context": {
+      "importId": "import-001"
+    },
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "import_partial_success-topbar",
+        "props": {
+          "title": "本地导入"
+        },
+        "children": []
+      },
+      {
+        "type": "Content",
+        "id": "import_partial_success-state",
+        "props": {
+          "title": "部分导入成功",
+          "message": "部分导入成功",
+          "uiEvent": "import.partial.success",
+          "uiEventPayload": {
+            "importId": "import-001",
+            "successCount": 2,
+            "failedCount": 1
+          }
+        },
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "import_partial_success-action",
+        "props": {
+          "label": "重试失败项",
+          "uiEvent": "import.retry.failed",
+          "uiEventPayload": {
+            "importId": "import-001",
+            "failureIds": [
+              "file-003"
+            ]
+          }
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "import-result-detail",
+    "pageState": "default",
+    "context": {
+      "importId": "import-001"
+    },
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "import_result_detail-topbar",
+        "props": {
+          "title": "本地导入"
+        },
+        "children": []
+      },
+      {
+        "type": "Content",
+        "id": "import_result_detail-state",
+        "props": {
+          "title": "导入结果详情",
+          "message": "导入结果详情"
+        },
+        "children": []
+      },
+      {
+        "type": "Button",
+        "id": "import_result_detail-action",
+        "props": {
+          "label": "继续导入",
+          "uiEvent": "import.start",
+          "uiEventPayload": {}
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader-toc-loading",
+    "pageState": "loading",
+    "context": {
+      "bookId": "bk-001",
+      "chapterId": "ch-001"
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": [
+          {
+            "type": "ReadingBackgroundLayer",
+            "id": "reader-background",
+            "props": {
+              "theme": "paper"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderDirectoryPanel",
+        "id": "reader_toc_loading-surface",
+        "props": {
+          "phase": "loading"
+        },
+        "children": [
+          {
+            "type": "Loading",
+            "id": "reader_toc_loading-state",
+            "props": {
+              "title": "加载中",
+              "message": "reader-toc-loading",
+              "uiEvent": "reader.toc.load",
+              "uiEventPayload": {
+                "bookId": "bk-001"
+              }
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "reader-toc-offline",
+    "pageState": "offline",
+    "context": {
+      "bookId": "bk-001",
+      "chapterId": "ch-001"
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": [
+          {
+            "type": "ReadingBackgroundLayer",
+            "id": "reader-background",
+            "props": {
+              "theme": "paper"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderDirectoryPanel",
+        "id": "reader_toc_offline-surface",
+        "props": {
+          "phase": "offline"
+        },
+        "children": [
+          {
+            "type": "Offline",
+            "id": "reader_toc_offline-state",
+            "props": {
+              "title": "离线",
+              "message": "reader-toc-offline",
+              "uiEvent": "reader.toc.offline",
+              "uiEventPayload": {
+                "bookId": "bk-001"
+              }
+            },
+            "children": []
+          },
+          {
+            "type": "Button",
+            "id": "reader_toc_offline-retry",
+            "props": {
+              "label": "重试",
+              "uiEvent": "reader.toc.load",
+              "uiEventPayload": {
+                "bookId": "bk-001"
+              }
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "reader-toc-error",
+    "pageState": "error",
+    "context": {
+      "bookId": "bk-001",
+      "chapterId": "ch-001"
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": [
+          {
+            "type": "ReadingBackgroundLayer",
+            "id": "reader-background",
+            "props": {
+              "theme": "paper"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderDirectoryPanel",
+        "id": "reader_toc_error-surface",
+        "props": {
+          "phase": "error"
+        },
+        "children": [
+          {
+            "type": "ErrorState",
+            "id": "reader_toc_error-state",
+            "props": {
+              "title": "加载失败",
+              "message": "reader-toc-error",
+              "uiEvent": "reader.toc.error",
+              "uiEventPayload": {
+                "bookId": "bk-001",
+                "errorCode": "toc-load-failed"
+              }
+            },
+            "children": []
+          },
+          {
+            "type": "Button",
+            "id": "reader_toc_error-retry",
+            "props": {
+              "label": "重试",
+              "uiEvent": "reader.toc.load",
+              "uiEventPayload": {
+                "bookId": "bk-001",
+                "errorCode": "toc-load-failed"
+              }
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "reader-content-loading",
+    "pageState": "loading",
+    "context": {
+      "bookId": "bk-001",
+      "chapterId": "ch-001"
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": [
+          {
+            "type": "ReadingBackgroundLayer",
+            "id": "reader-background",
+            "props": {
+              "theme": "paper"
+            },
+            "children": []
+          },
+          {
+            "type": "ReadingTextFlow",
+            "id": "reader_content_loading-surface",
+            "props": {
+              "phase": "loading"
+            },
+            "children": [
+              {
+                "type": "Loading",
+                "id": "reader_content_loading-state",
+                "props": {
+                  "title": "加载中",
+                  "message": "reader-content-loading",
+                  "uiEvent": "reader.content.load",
+                  "uiEventPayload": {
+                    "bookId": "bk-001",
+                    "chapterId": "ch-001"
+                  }
+                },
+                "children": []
+              }
+            ]
+          },
+          {
+            "type": "ReadingInfoLayer",
+            "id": "reader-info-layer",
+            "props": {
+              "chapterTitle": "第一章",
+              "progress": 0.18
+            },
+            "children": []
+          },
+          {
+            "type": "TapZones",
+            "id": "reader-tap-zones",
+            "props": {
+              "enabled": false
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader-content-offline",
+    "pageState": "offline",
+    "context": {
+      "bookId": "bk-001",
+      "chapterId": "ch-001"
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": [
+          {
+            "type": "ReadingBackgroundLayer",
+            "id": "reader-background",
+            "props": {
+              "theme": "paper"
+            },
+            "children": []
+          },
+          {
+            "type": "ReadingTextFlow",
+            "id": "reader_content_offline-surface",
+            "props": {
+              "phase": "offline"
+            },
+            "children": [
+              {
+                "type": "Offline",
+                "id": "reader_content_offline-state",
+                "props": {
+                  "title": "离线",
+                  "message": "reader-content-offline",
+                  "uiEvent": "reader.content.offline",
+                  "uiEventPayload": {
+                    "bookId": "bk-001",
+                    "chapterId": "ch-001"
+                  }
+                },
+                "children": []
+              },
+              {
+                "type": "Button",
+                "id": "reader_content_offline-retry",
+                "props": {
+                  "label": "重试",
+                  "uiEvent": "reader.content.load",
+                  "uiEventPayload": {
+                    "bookId": "bk-001",
+                    "chapterId": "ch-001"
+                  }
+                },
+                "children": []
+              }
+            ]
+          },
+          {
+            "type": "ReadingInfoLayer",
+            "id": "reader-info-layer",
+            "props": {
+              "chapterTitle": "第一章",
+              "progress": 0.18
+            },
+            "children": []
+          },
+          {
+            "type": "TapZones",
+            "id": "reader-tap-zones",
+            "props": {
+              "enabled": true
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader-content-error",
+    "pageState": "error",
+    "context": {
+      "bookId": "bk-001",
+      "chapterId": "ch-001"
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": [
+          {
+            "type": "ReadingBackgroundLayer",
+            "id": "reader-background",
+            "props": {
+              "theme": "paper"
+            },
+            "children": []
+          },
+          {
+            "type": "ReadingTextFlow",
+            "id": "reader_content_error-surface",
+            "props": {
+              "phase": "error"
+            },
+            "children": [
+              {
+                "type": "ErrorState",
+                "id": "reader_content_error-state",
+                "props": {
+                  "title": "加载失败",
+                  "message": "reader-content-error",
+                  "uiEvent": "reader.content.error",
+                  "uiEventPayload": {
+                    "bookId": "bk-001",
+                    "chapterId": "ch-001"
+                  }
+                },
+                "children": []
+              },
+              {
+                "type": "Button",
+                "id": "reader_content_error-retry",
+                "props": {
+                  "label": "重试",
+                  "uiEvent": "reader.content.load",
+                  "uiEventPayload": {
+                    "bookId": "bk-001",
+                    "chapterId": "ch-001"
+                  }
+                },
+                "children": []
+              }
+            ]
+          },
+          {
+            "type": "ReadingInfoLayer",
+            "id": "reader-info-layer",
+            "props": {
+              "chapterTitle": "第一章",
+              "progress": 0.18
+            },
+            "children": []
+          },
+          {
+            "type": "TapZones",
+            "id": "reader-tap-zones",
+            "props": {
+              "enabled": true
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader-page-boundary-first",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001",
+      "chapterId": "ch-001",
+      "pageBoundary": "first"
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": [
+          {
+            "type": "ReadingBackgroundLayer",
+            "id": "reader-background",
+            "props": {
+              "theme": "paper"
+            },
+            "children": []
+          },
+          {
+            "type": "ReadingTextFlow",
+            "id": "reader-text-flow",
+            "props": {
+              "state": "ready"
+            },
+            "children": []
+          },
+          {
+            "type": "ReadingInfoLayer",
+            "id": "reader-info-layer",
+            "props": {
+              "progress": 0
+            },
+            "children": []
+          },
+          {
+            "type": "TapZones",
+            "id": "reader-tap-zones",
+            "props": {
+              "enabled": true
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "FloatingPageControl",
+        "id": "reader_page_boundary_first-control",
+        "props": {
+          "title": "已是第一章",
+          "uiEvent": "reader.page.boundary",
+          "uiEventPayload": {
+            "bookId": "bk-001",
+            "boundary": "first"
+          }
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader-page-boundary-last",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001",
+      "chapterId": "ch-099",
+      "pageBoundary": "last"
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": [
+          {
+            "type": "ReadingBackgroundLayer",
+            "id": "reader-background",
+            "props": {
+              "theme": "paper"
+            },
+            "children": []
+          },
+          {
+            "type": "ReadingTextFlow",
+            "id": "reader-text-flow",
+            "props": {
+              "state": "ready"
+            },
+            "children": []
+          },
+          {
+            "type": "ReadingInfoLayer",
+            "id": "reader-info-layer",
+            "props": {
+              "progress": 1
+            },
+            "children": []
+          },
+          {
+            "type": "TapZones",
+            "id": "reader-tap-zones",
+            "props": {
+              "enabled": true
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "FloatingPageControl",
+        "id": "reader_page_boundary_last-control",
+        "props": {
+          "title": "已是最后一章",
+          "uiEvent": "reader.page.boundary",
+          "uiEventPayload": {
+            "bookId": "bk-001",
+            "boundary": "last"
+          }
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader-progress-restore",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001",
+      "savedChapterId": "ch-018"
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": [
+          {
+            "type": "ReadingBackgroundLayer",
+            "id": "reader-background",
+            "props": {
+              "theme": "paper"
+            },
+            "children": []
+          },
+          {
+            "type": "ReadingTextFlow",
+            "id": "reader-text-flow",
+            "props": {
+              "state": "ready"
+            },
+            "children": []
+          },
+          {
+            "type": "ReadingInfoLayer",
+            "id": "reader-info-layer",
+            "props": {
+              "progress": 0.18
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "Dialog",
+        "id": "reader-progress-restore-dialog",
+        "props": {
+          "title": "恢复上次阅读进度"
+        },
+        "children": [
+          {
+            "type": "Button",
+            "id": "reader-progress-restore-confirm",
+            "props": {
+              "label": "恢复进度",
+              "uiEvent": "reader.progress.restore",
+              "uiEventPayload": {
+                "bookId": "bk-001",
+                "chapterId": "ch-018",
+                "chapterOffset": 320
+              }
+            },
+            "children": []
+          },
+          {
+            "type": "Button",
+            "id": "reader-progress-start-over",
+            "props": {
+              "label": "从头阅读",
+              "action": "从头阅读"
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "reader-background-restore",
+    "pageState": "loading",
+    "context": {
+      "bookId": "bk-001",
+      "chapterId": "ch-018",
+      "reason": "foreground"
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": [
+          {
+            "type": "ReadingBackgroundLayer",
+            "id": "reader-background",
+            "props": {
+              "theme": "paper"
+            },
+            "children": []
+          },
+          {
+            "type": "ReadingTextFlow",
+            "id": "reader-text-flow",
+            "props": {
+              "state": "ready"
+            },
+            "children": []
+          },
+          {
+            "type": "ReadingInfoLayer",
+            "id": "reader-info-layer",
+            "props": {
+              "progress": 0.52
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "Toast",
+        "id": "reader-background-restore-toast",
+        "props": {
+          "title": "正在恢复阅读状态",
+          "message": "正在恢复阅读位置、书签和排版设置。",
+          "uiEvent": "reader.background.restore",
+          "uiEventPayload": {
+            "bookId": "bk-001",
+            "reason": "foreground"
+          }
+        },
+        "children": []
+      }
+    ]
+  },
+  {
+    "routeId": "source-switch-empty",
+    "pageState": "empty",
+    "context": {
+      "bookId": "bk-001",
+      "sourceId": "source-new",
+      "session": "switch-001"
+    },
+    "components": [
+      {
+        "type": "SourceSwitchFlowPage",
+        "id": "source_switch_empty-flow",
+        "props": {
+          "phase": "idle"
+        },
+        "children": [
+          {
+            "type": "Empty",
+            "id": "source_switch_empty-state",
+            "props": {
+              "title": "无可用源",
+              "message": "无可用源",
+              "uiEvent": "source.switch.empty",
+              "uiEventPayload": {
+                "bookId": "bk-001",
+                "sourceId": "source-old"
+              }
+            },
+            "children": []
+          },
+          {
+            "type": "Button",
+            "id": "source_switch_empty-action",
+            "props": {
+              "label": "取消换源",
+              "uiEvent": "source.switch.cancel",
+              "uiEventPayload": {}
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "source-switch-error",
+    "pageState": "error",
+    "context": {
+      "bookId": "bk-001",
+      "sourceId": "source-new",
+      "session": "switch-001"
+    },
+    "components": [
+      {
+        "type": "SourceSwitchFlowPage",
+        "id": "source_switch_error-flow",
+        "props": {
+          "phase": "error"
+        },
+        "children": [
+          {
+            "type": "ErrorState",
+            "id": "source_switch_error-state",
+            "props": {
+              "title": "换源失败",
+              "message": "换源失败",
+              "uiEvent": "source.switch.error",
+              "uiEventPayload": {
+                "bookId": "bk-001",
+                "errorCode": "source-load-failed"
+              }
+            },
+            "children": []
+          },
+          {
+            "type": "Button",
+            "id": "source_switch_error-action",
+            "props": {
+              "label": "取消换源",
+              "uiEvent": "source.switch.cancel",
+              "uiEventPayload": {}
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "source-switch-timeout",
+    "pageState": "error",
+    "context": {
+      "bookId": "bk-001",
+      "sourceId": "source-new",
+      "session": "switch-001"
+    },
+    "components": [
+      {
+        "type": "SourceSwitchFlowPage",
+        "id": "source_switch_timeout-flow",
+        "props": {
+          "phase": "timeout"
+        },
+        "children": [
+          {
+            "type": "ErrorState",
+            "id": "source_switch_timeout-state",
+            "props": {
+              "title": "换源超时",
+              "message": "换源超时",
+              "uiEvent": "source.switch.timeout",
+              "uiEventPayload": {
+                "bookId": "bk-001",
+                "sourceId": "source-new",
+                "timeoutMs": 15000
+              }
+            },
+            "children": []
+          },
+          {
+            "type": "Button",
+            "id": "source_switch_timeout-action",
+            "props": {
+              "label": "取消换源",
+              "uiEvent": "source.switch.cancel",
+              "uiEventPayload": {}
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "source-switch-loading",
+    "pageState": "loading",
+    "context": {
+      "bookId": "bk-001",
+      "sourceId": "source-new",
+      "session": "switch-001"
+    },
+    "components": [
+      {
+        "type": "SourceSwitchFlowPage",
+        "id": "source_switch_loading-flow",
+        "props": {
+          "phase": "loading"
+        },
+        "children": [
+          {
+            "type": "Loading",
+            "id": "source_switch_loading-state",
+            "props": {
+              "title": "正在切换书源",
+              "message": "正在切换书源",
+              "uiEvent": "source.switch.loading",
+              "uiEventPayload": {
+                "bookId": "bk-001",
+                "sourceId": "source-new",
+                "session": "switch-001"
+              }
+            },
+            "children": []
+          },
+          {
+            "type": "Button",
+            "id": "source_switch_loading-action",
+            "props": {
+              "label": "取消换源",
+              "uiEvent": "source.switch.cancel",
+              "uiEventPayload": {}
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "source-switch-rollback",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001",
+      "sourceId": "source-new",
+      "session": "switch-001"
+    },
+    "components": [
+      {
+        "type": "SourceSwitchFlowPage",
+        "id": "source_switch_rollback-flow",
+        "props": {
+          "phase": "rollback"
+        },
+        "children": [
+          {
+            "type": "Dialog",
+            "id": "source_switch_rollback-state",
+            "props": {
+              "title": "回滚到原书源？",
+              "message": "回滚到原书源？"
+            },
+            "children": []
+          },
+          {
+            "type": "Button",
+            "id": "source_switch_rollback-action",
+            "props": {
+              "label": "确认回滚",
+              "uiEvent": "source.switch.rollback",
+              "uiEventPayload": {
+                "rollbackToken": {
+                  "oldBook": {
+                    "sourceId": "source-old",
+                    "bookId": "bk-001",
+                    "addedAt": 100
+                  },
+                  "committedBook": {
+                    "sourceId": "source-new",
+                    "bookId": "bk-001-new",
+                    "addedAt": 200
+                  }
+                }
+              }
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "source-switch-preview",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001",
+      "sourceId": "source-new",
+      "session": "switch-001"
+    },
+    "components": [
+      {
+        "type": "SourceSwitchFlowPage",
+        "id": "source_switch_preview-flow",
+        "props": {
+          "phase": "preview"
+        },
+        "children": [
+          {
+            "type": "SourceSwitchResultsPanel",
+            "id": "source_switch_preview-state",
+            "props": {
+              "title": "换源预览",
+              "message": "换源预览",
+              "uiEvent": "source.switch.preview",
+              "uiEventPayload": {
+                "bookId": "bk-001",
+                "sourceId": "source-new"
+              }
+            },
+            "children": []
+          },
+          {
+            "type": "Button",
+            "id": "source_switch_preview-action",
+            "props": {
+              "label": "确认切换",
+              "uiEvent": "source.switch.confirm",
+              "uiEventPayload": {
+                "from": {
+                  "sourceId": "source-old",
+                  "bookId": "bk-001"
+                },
+                "target": {
+                  "sourceId": "source-new",
+                  "bookId": "bk-001-new",
+                  "title": "示例书名",
+                  "author": "示例作者",
+                  "coverUrl": null
+                },
+                "newToc": [
+                  {
+                    "chapterId": "ch-001",
+                    "chapterTitle": "第一章",
+                    "chapterUrl": "https://example.test/ch-001",
+                    "order": 0
+                  }
+                ],
+                "currentChapterTitle": "第一章",
+                "currentChapterIndex": 0,
+                "updatedAt": 300
+              }
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "reader-font-import-confirm",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": [
+          {
+            "type": "ReadingBackgroundLayer",
+            "id": "reader-background",
+            "props": {
+              "theme": "paper"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderAppearancePanel",
+        "id": "reader_font_import_confirm-panel",
+        "props": {
+          "section": "font"
+        },
+        "children": [
+          {
+            "type": "Dialog",
+            "id": "reader_font_import_confirm-state",
+            "props": {
+              "title": "导入字体",
+              "message": "导入字体"
+            },
+            "children": [
+              {
+                "type": "Button",
+                "id": "reader_font_import_confirm-confirm",
+                "props": {
+                  "label": "确认",
+                  "uiEvent": "reader.font.import",
+                  "uiEventPayload": {
+                    "fontId": "font-noto-serif",
+                    "path": "/fonts/NotoSerifSC-Regular.otf",
+                    "familyName": "Noto Serif SC"
+                  }
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "reader-font-delete-confirm",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": [
+          {
+            "type": "ReadingBackgroundLayer",
+            "id": "reader-background",
+            "props": {
+              "theme": "paper"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderAppearancePanel",
+        "id": "reader_font_delete_confirm-panel",
+        "props": {
+          "section": "font"
+        },
+        "children": [
+          {
+            "type": "Dialog",
+            "id": "reader_font_delete_confirm-state",
+            "props": {
+              "title": "删除字体",
+              "message": "删除字体"
+            },
+            "children": [
+              {
+                "type": "Button",
+                "id": "reader_font_delete_confirm-confirm",
+                "props": {
+                  "label": "确认",
+                  "uiEvent": "reader.font.delete",
+                  "uiEventPayload": {
+                    "fontId": "font-noto-serif"
+                  }
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "reader-font-fallback",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": [
+          {
+            "type": "ReadingBackgroundLayer",
+            "id": "reader-background",
+            "props": {
+              "theme": "paper"
+            },
+            "children": []
+          },
+          {
+            "type": "ReadingTextFlow",
+            "id": "reader-text-flow",
+            "props": {
+              "fontFamily": "system-serif"
+            },
+            "children": []
+          },
+          {
+            "type": "ReadingInfoLayer",
+            "id": "reader-info-layer",
+            "props": {
+              "chapterTitle": "第一章"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderAppearancePanel",
+        "id": "reader_font_fallback-panel",
+        "props": {
+          "section": "font"
+        },
+        "children": [
+          {
+            "type": "Toast",
+            "id": "reader_font_fallback-state",
+            "props": {
+              "title": "字体已回退",
+              "message": "字体已回退"
+            },
+            "children": [
+              {
+                "type": "Button",
+                "id": "reader_font_fallback-confirm",
+                "props": {
+                  "label": "确认",
+                  "uiEvent": "reader.font.fallback",
+                  "uiEventPayload": {
+                    "fontId": "font-missing",
+                    "fallbackFontId": "system-serif"
+                  }
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "reader-theme-new",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": [
+          {
+            "type": "ReadingBackgroundLayer",
+            "id": "reader-background",
+            "props": {
+              "theme": "paper"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderAppearancePanel",
+        "id": "reader_theme_new-panel",
+        "props": {
+          "section": "theme"
+        },
+        "children": [
+          {
+            "type": "FormSection",
+            "id": "reader_theme_new-state",
+            "props": {
+              "title": "新建主题",
+              "message": "新建主题"
+            },
+            "children": [
+              {
+                "type": "Button",
+                "id": "reader_theme_new-confirm",
+                "props": {
+                  "label": "确认",
+                  "uiEvent": "reader.theme.new",
+                  "uiEventPayload": {
+                    "theme": {
+                      "id": "theme-custom-paper",
+                      "name": "自定义纸张",
+                      "colorScheme": "light",
+                      "background": "#F6F0E4",
+                      "foreground": "#2D2923",
+                      "accent": "#8A5F3D"
+                    }
+                  }
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "reader-theme-delete-confirm",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": [
+          {
+            "type": "ReadingBackgroundLayer",
+            "id": "reader-background",
+            "props": {
+              "theme": "paper"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderAppearancePanel",
+        "id": "reader_theme_delete_confirm-panel",
+        "props": {
+          "section": "theme"
+        },
+        "children": [
+          {
+            "type": "Dialog",
+            "id": "reader_theme_delete_confirm-state",
+            "props": {
+              "title": "删除主题",
+              "message": "删除主题"
+            },
+            "children": [
+              {
+                "type": "Button",
+                "id": "reader_theme_delete_confirm-confirm",
+                "props": {
+                  "label": "确认",
+                  "uiEvent": "reader.theme.delete",
+                  "uiEventPayload": {
+                    "themeId": "theme-custom-paper"
+                  }
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "reader-typography-reset-confirm",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": [
+          {
+            "type": "ReadingBackgroundLayer",
+            "id": "reader-background",
+            "props": {
+              "theme": "paper"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderAppearancePanel",
+        "id": "reader_typography_reset_confirm-panel",
+        "props": {
+          "section": "typography"
+        },
+        "children": [
+          {
+            "type": "Dialog",
+            "id": "reader_typography_reset_confirm-state",
+            "props": {
+              "title": "恢复默认排版",
+              "message": "恢复默认排版"
+            },
+            "children": [
+              {
+                "type": "Button",
+                "id": "reader_typography_reset_confirm-confirm",
+                "props": {
+                  "label": "确认",
+                  "uiEvent": "reader.typography.reset",
+                  "uiEventPayload": {}
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "reader-replace-delete-confirm",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001",
+      "ruleId": 41
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": [
+          {
+            "type": "ReadingBackgroundLayer",
+            "id": "reader-background",
+            "props": {
+              "theme": "paper"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderReplacePanel",
+        "id": "reader_replace_delete_confirm-panel",
+        "props": {
+          "section": "delete"
+        },
+        "children": [
+          {
+            "type": "Dialog",
+            "id": "reader_replace_delete_confirm-state",
+            "props": {
+              "title": "删除替换规则",
+              "message": "删除替换规则"
+            },
+            "children": []
+          },
+          {
+            "type": "Button",
+            "id": "reader_replace_delete_confirm-action-1",
+            "props": {
+              "label": "reader.replace.delete",
+              "uiEvent": "reader.replace.delete",
+              "uiEventPayload": {
+                "ruleId": 41
+              }
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "reader-replace-apply-result",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001",
+      "ruleId": 41
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": [
+          {
+            "type": "ReadingBackgroundLayer",
+            "id": "reader-background",
+            "props": {
+              "theme": "paper"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderReplacePanel",
+        "id": "reader_replace_apply_result-panel",
+        "props": {
+          "section": "apply"
+        },
+        "children": [
+          {
+            "type": "Content",
+            "id": "reader_replace_apply_result-state",
+            "props": {
+              "title": "替换完成",
+              "message": "替换完成"
+            },
+            "children": []
+          },
+          {
+            "type": "Button",
+            "id": "reader_replace_apply_result-action-1",
+            "props": {
+              "label": "reader.replace.undo",
+              "uiEvent": "reader.replace.undo",
+              "uiEventPayload": {
+                "transactionId": "replace-42"
+              }
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "reader-replace-import-export",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001",
+      "ruleId": 41
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": [
+          {
+            "type": "ReadingBackgroundLayer",
+            "id": "reader-background",
+            "props": {
+              "theme": "paper"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderReplacePanel",
+        "id": "reader_replace_import_export-panel",
+        "props": {
+          "section": "import"
+        },
+        "children": [
+          {
+            "type": "FormSection",
+            "id": "reader_replace_import_export-state",
+            "props": {
+              "title": "导入导出规则",
+              "message": "导入导出规则"
+            },
+            "children": []
+          },
+          {
+            "type": "Button",
+            "id": "reader_replace_import_export-action-1",
+            "props": {
+              "label": "reader.replace.import",
+              "uiEvent": "reader.replace.import",
+              "uiEventPayload": {
+                "format": "json"
+              }
+            },
+            "children": []
+          },
+          {
+            "type": "Button",
+            "id": "reader_replace_import_export-action-2",
+            "props": {
+              "label": "reader.replace.export",
+              "uiEvent": "reader.replace.export",
+              "uiEventPayload": {
+                "format": "json",
+                "scope": "global"
+              }
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "reader-replace-preview",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001",
+      "ruleId": 41
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": [
+          {
+            "type": "ReadingBackgroundLayer",
+            "id": "reader-background",
+            "props": {
+              "theme": "paper"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderReplacePanel",
+        "id": "reader_replace_preview-panel",
+        "props": {
+          "section": "preview"
+        },
+        "children": [
+          {
+            "type": "Content",
+            "id": "reader_replace_preview-state",
+            "props": {
+              "title": "替换预览",
+              "message": "替换预览"
+            },
+            "children": []
+          },
+          {
+            "type": "Button",
+            "id": "reader_replace_preview-action-1",
+            "props": {
+              "label": "reader.replace.preview",
+              "uiEvent": "reader.replace.preview",
+              "uiEventPayload": {
+                "bookId": "bk-001",
+                "chapterId": "ch-001"
+              }
+            },
+            "children": []
+          },
+          {
+            "type": "Button",
+            "id": "reader_replace_preview-action-2",
+            "props": {
+              "label": "reader.replace.apply",
+              "uiEvent": "reader.replace.apply",
+              "uiEventPayload": {
+                "text": "雨落在旧城。",
+                "bookName": "示例书名",
+                "bookOrigin": "source-old",
+                "target": "chapter"
+              }
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "reader-replace-page",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001",
+      "ruleId": 41
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": [
+          {
+            "type": "ReadingBackgroundLayer",
+            "id": "reader-background",
+            "props": {
+              "theme": "paper"
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": []
+      },
+      {
+        "type": "ReaderReplacePanel",
+        "id": "reader_replace_page-panel",
+        "props": {
+          "section": "idle"
+        },
+        "children": [
+          {
+            "type": "List",
+            "id": "reader_replace_page-state",
+            "props": {
+              "title": "替换规则管理",
+              "message": "替换规则管理"
+            },
+            "children": []
+          },
+          {
+            "type": "Button",
+            "id": "reader_replace_page-action-1",
+            "props": {
+              "label": "reader.replace.create",
+              "uiEvent": "reader.replace.create",
+              "uiEventPayload": {
+                "operation": "create",
+                "params": {
+                  "name": "新规则",
+                  "pattern": "雨",
+                  "replacement": "晴",
+                  "scopeContent": true,
+                  "isRegex": false
+                }
+              }
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
   }
-];
+]`) as ViewStateEntry[];
 
   // Resolve components for (routeId, pageState). Falls back to:
   //   1. same-route 'default' pageState entry
@@ -3449,6 +5856,23 @@ export class ViewStateTable {
       current = next;
     }
     return [];
+  }
+
+  static contextFor(routeId: string, pageState: string): Record<string, ViewStateJSONValue> {
+    let current: string = routeId;
+    for (let depth = 0; depth < 5; depth++) {
+      let fallback: Record<string, ViewStateJSONValue> | undefined = undefined;
+      for (const entry of ViewStateTable.ENTRIES) {
+        if (entry.routeId !== current) continue;
+        if (entry.pageState === pageState) return entry.context;
+        if (entry.pageState === 'default' || fallback === undefined) fallback = entry.context;
+      }
+      if (fallback !== undefined) return fallback;
+      const next: string | null = RouteTable.aliasOf(current);
+      if (next === null || next === current) break;
+      current = next;
+    }
+    return {};
   }
 
   static bodyComponentsFor(routeId: string, pageState: string): ViewStateComponent[] {

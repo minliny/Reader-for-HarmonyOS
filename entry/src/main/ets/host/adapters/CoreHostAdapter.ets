@@ -15,6 +15,8 @@
 
 import dataPreferences from '@ohos.data.preferences';
 import common from '@ohos.app.ability.common';
+import fs from '@ohos.file.fs';
+import util from '@ohos.util';
 import {
   HostCacheGetRequest,
   HostCacheGetResponse,
@@ -65,6 +67,19 @@ function iso8601(millis: number): string {
 }
 
 const PREFERENCES_NAME: string = 'reader_persistence';
+// A full Core StorageSnapshot can contain local-book chapter text, so it must
+// not be stored as one Preferences value. Keep the protocol namespace/key
+// opaque and route only this Core-owned blob to an app-private atomic file.
+const CORE_STORAGE_NAMESPACE: string = 'reader-core.storage';
+const CORE_STORAGE_KEY: string = 'snapshot-v1';
+const CORE_STORAGE_DIR: string = 'reader-core';
+const CORE_STORAGE_FILE: string = 'snapshot-v1.json';
+const ENOENT_CODE: number = 13900002;
+
+interface FsErrorLike {
+  code?: number;
+  message?: string;
+}
 
 export class CoreHostAdapter {
   private cache: Map<string, CacheEntry> = new Map<string, CacheEntry>();
@@ -74,6 +89,10 @@ export class CoreHostAdapter {
   private context: common.Context | null = null;
   private preferences: dataPreferences.Preferences | null = null;
   private persistenceFallback: Map<string, PersistenceEntry> = new Map<string, PersistenceEntry>();
+  // Preferences exposes async read/put/flush operations. Chain writers before
+  // their first await so two requests carrying the same expectedRevision
+  // cannot both pass the read side of the CAS.
+  private persistenceWriteTail: Promise<void> = Promise.resolve();
 
   constructor(context?: common.Context) {
     this.context = context ?? null;
@@ -124,6 +143,25 @@ export class CoreHostAdapter {
     return response;
   }
 
+  /** UI-contract cache.clear. Core never requests this over the closed Host
+   * bus, so Reducer/Effects invoke it directly on the Host cache owner. */
+  cacheClear(namespace?: string): number {
+    if (namespace === undefined || namespace.length === 0 || namespace === 'all') {
+      const count = this.cache.size;
+      this.cache.clear();
+      return count;
+    }
+    const prefix = `${namespace}:`;
+    const keys = Array.from(this.cache.keys());
+    let cleared = 0;
+    for (let i = 0; i < keys.length; i++) {
+      if (keys[i].startsWith(prefix) && this.cache.delete(keys[i])) {
+        cleared += 1;
+      }
+    }
+    return cleared;
+  }
+
   async persistenceGet(request: HostPersistenceGetRequest): Promise<HostPersistenceGetResponse> {
     const key = compositeKey(request.namespace, request.key);
     // Fallback path: in-process Map (unit-test env without context).
@@ -134,58 +172,207 @@ export class CoreHostAdapter {
       }
       return this.buildGetResponse(entry);
     }
+    if (this.isCoreStorageSnapshot(request)) {
+      try {
+        const entry = this.readCoreStorageSnapshot();
+        if (entry === undefined) {
+          return { found: false };
+        }
+        return this.buildGetResponse(entry);
+      } catch (e) {
+        // A corrupt snapshot must fail the Core restore handshake rather than
+        // masquerade as a miss and later being overwritten by an empty state.
+        throw new Error(`CoreHostAdapter.persistenceGet Core snapshot failed: ${e}`);
+      }
+    }
     // Device path: @ohos.data.preferences (true on-disk persistence).
-    const pref = await this.ensurePreferences();
-    const has = await pref.has(key);
-    if (!has) {
-      return { found: false };
+    try {
+      const pref = await this.ensurePreferences();
+      const has = await pref.has(key);
+      if (!has) {
+        return { found: false };
+      }
+      const raw = await pref.get(key, '') as string;
+      const entry = this.deserializeEntry(raw);
+      if (entry === null) {
+        return { found: false };
+      }
+      return this.buildGetResponse(entry);
+    } catch (e) {
+      throw new Error(`CoreHostAdapter.persistenceGet key=${key} failed: ${e}`);
     }
-    const raw = await pref.get(key, '') as string;
-    const entry = this.deserializeEntry(raw);
-    if (entry === null) {
-      return { found: false };
-    }
-    return this.buildGetResponse(entry);
   }
 
   async persistencePut(request: HostPersistencePutRequest): Promise<HostPersistencePutResponse> {
+    const previous = this.persistenceWriteTail;
+    let release: () => void = (): void => {};
+    this.persistenceWriteTail = new Promise<void>((resolve): void => {
+      release = (): void => { resolve(); };
+    });
+    await previous;
+    try {
+      return await this.persistencePutLocked(request);
+    } finally {
+      release();
+    }
+  }
+
+  private async persistencePutLocked(request: HostPersistencePutRequest): Promise<HostPersistencePutResponse> {
     const key = compositeKey(request.namespace, request.key);
     // Fallback path: in-process Map (unit-test env without context).
     if (this.context === null) {
       const current = this.persistenceFallback.get(key);
       return this.applyPut(this.persistenceFallback, key, current, request);
     }
+    if (this.isCoreStorageSnapshot(request)) {
+      try {
+        const current = this.readCoreStorageSnapshot();
+        const nextRevision = this.checkAndComputeRevision(current, request);
+        const entry: PersistenceEntry = { revision: nextRevision };
+        if (request.value !== undefined) {
+          entry.value = request.value;
+        }
+        if (request.valueBase64 !== undefined) {
+          entry.valueBase64 = request.valueBase64;
+        }
+        this.writeCoreStorageSnapshot(entry);
+        return { stored: true, revision: nextRevision };
+      } catch (e) {
+        throw new Error(`CoreHostAdapter.persistencePut Core snapshot failed: ${e}`);
+      }
+    }
     // Device path: @ohos.data.preferences. Read-modify-write preserves the
     // expectedRevision optimistic-concurrency check; flush() persists to disk.
-    const pref = await this.ensurePreferences();
-    const has = await pref.has(key);
-    let current: PersistenceEntry | undefined = undefined;
-    if (has) {
-      const raw = await pref.get(key, '') as string;
-      current = this.deserializeEntry(raw) ?? undefined;
+    try {
+      const pref = await this.ensurePreferences();
+      const has = await pref.has(key);
+      let current: PersistenceEntry | undefined = undefined;
+      if (has) {
+        const raw = await pref.get(key, '') as string;
+        current = this.deserializeEntry(raw) ?? undefined;
+      }
+      const nextRevision = this.checkAndComputeRevision(current, request);
+      const entry: PersistenceEntry = { revision: nextRevision };
+      if (request.value !== undefined) {
+        entry.value = request.value;
+      }
+      if (request.valueBase64 !== undefined) {
+        entry.valueBase64 = request.valueBase64;
+      }
+      await pref.put(key, JSON.stringify(entry));
+      await pref.flush();
+      return { stored: true, revision: nextRevision };
+    } catch (e) {
+      throw new Error(`CoreHostAdapter.persistencePut key=${key} failed: ${e}`);
     }
-    const nextRevision = this.checkAndComputeRevision(current, request);
-    const entry: PersistenceEntry = { revision: nextRevision };
-    if (request.value !== undefined) {
-      entry.value = request.value;
-    }
-    if (request.valueBase64 !== undefined) {
-      entry.valueBase64 = request.valueBase64;
-    }
-    await pref.put(key, JSON.stringify(entry));
-    await pref.flush();
-    return { stored: true, revision: nextRevision };
   }
 
   // ── persistence helpers ──
 
   private async ensurePreferences(): Promise<dataPreferences.Preferences> {
-    if (this.preferences !== null) {
+    try {
+      if (this.preferences !== null) {
+        return this.preferences;
+      }
+      // context is non-null here — callers gate on this.context === null first.
+      this.preferences = await dataPreferences.getPreferences(this.context as common.Context, PREFERENCES_NAME);
       return this.preferences;
+    } catch (e) {
+      throw new Error(`CoreHostAdapter.ensurePreferences failed: ${e}`);
     }
-    // context is non-null here — callers gate on this.context === null first.
-    this.preferences = await dataPreferences.getPreferences(this.context as common.Context, PREFERENCES_NAME);
-    return this.preferences;
+  }
+
+  private isCoreStorageSnapshot(request: HostPersistenceGetRequest | HostPersistencePutRequest): boolean {
+    return request.namespace === CORE_STORAGE_NAMESPACE && request.key === CORE_STORAGE_KEY;
+  }
+
+  private coreStorageSnapshotPath(): string {
+    if (this.context === null) {
+      throw new Error('Core storage snapshot requires application context');
+    }
+    return this.context.filesDir + '/' + CORE_STORAGE_DIR + '/' + CORE_STORAGE_FILE;
+  }
+
+  /**
+   * Read the snapshot envelope from the app-private file. `undefined` is a
+   * genuine first-run miss; malformed JSON is a hard error so Core keeps its
+   * empty in-memory store disabled for persistence instead of overwriting data.
+   */
+  private readCoreStorageSnapshot(): PersistenceEntry | undefined {
+    const path = this.coreStorageSnapshotPath();
+    let size = 0;
+    try {
+      size = fs.statSync(path).size;
+    } catch (e) {
+      if (this.isNotFound(e as Object)) {
+        return undefined;
+      }
+      throw new Error(`Core storage snapshot stat failed: ${e}`);
+    }
+    const file = fs.openSync(path, fs.OpenMode.READ_ONLY);
+    try {
+      if (size <= 0) {
+        throw new Error('Core storage snapshot is empty');
+      }
+      const buffer = new ArrayBuffer(size);
+      fs.readSync(file.fd, buffer);
+      const decoder = util.TextDecoder.create('utf-8');
+      const raw = decoder.decodeToString(new Uint8Array(buffer));
+      const entry = this.deserializeEntry(raw);
+      if (entry === null) {
+        throw new Error('Core storage snapshot envelope is malformed');
+      }
+      return entry;
+    } finally {
+      fs.closeSync(file);
+    }
+  }
+
+  /**
+   * Write → fsync → rename gives the Core snapshot all-or-nothing replacement
+   * semantics inside the app sandbox. The persisted revision is carried in
+   * the envelope, so a restart can continue the HostPersistence CAS chain.
+   */
+  private writeCoreStorageSnapshot(entry: PersistenceEntry): void {
+    const path = this.coreStorageSnapshotPath();
+    const slash = path.lastIndexOf('/');
+    const dir = slash > 0
+      ? path.substring(0, slash)
+      : (this.context as common.Context).filesDir;
+    try {
+      fs.mkdirSync(dir, true);
+    } catch (e) {
+      // Existing directory is the expected path; openSync below surfaces a
+      // real permission or path failure.
+    }
+    const temp = path + '.tmp';
+    const file = fs.openSync(temp, fs.OpenMode.CREATE | fs.OpenMode.WRITE_ONLY | fs.OpenMode.TRUNC);
+    try {
+      fs.writeSync(file.fd, JSON.stringify(entry));
+      fs.fsyncSync(file.fd);
+    } finally {
+      fs.closeSync(file);
+    }
+    try {
+      fs.renameSync(temp, path);
+    } catch (e) {
+      try {
+        fs.unlinkSync(temp);
+      } catch (cleanupError) {
+        // Best effort only; preserve the original rename failure.
+      }
+      throw new Error(`Core storage snapshot rename failed: ${e}`);
+    }
+  }
+
+  private isNotFound(error: Object): boolean {
+    const value = error as FsErrorLike;
+    if (value.code === ENOENT_CODE) {
+      return true;
+    }
+    const message = value.message ?? '';
+    const lower = message.toLowerCase();
+    return lower.includes('no such file') || lower.includes('does not exist') || lower.includes('not exist');
   }
 
   private buildGetResponse(entry: PersistenceEntry): HostPersistenceGetResponse {
@@ -229,7 +416,11 @@ export class CoreHostAdapter {
     if (request.expectedRevision !== undefined && request.expectedRevision !== currentRevision) {
       throw new Error(`persistence.put revision mismatch: expected ${request.expectedRevision}, got ${currentRevision}`);
     }
-    return `${Number(currentRevision) + 1}`;
+    const revision = Number(currentRevision);
+    if (!Number.isSafeInteger(revision) || revision < 0 || revision >= 9007199254740991) {
+      throw new Error('persistence.put stored revision is corrupt or exhausted');
+    }
+    return `${revision + 1}`;
   }
 
   // Map-based put (fallback path). Keeps the same revision semantics as the

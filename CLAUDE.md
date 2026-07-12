@@ -8,9 +8,9 @@ Reader for HarmonyOS is the HarmonyOS (ArkTS / Stage Model, API 22 / SDK 6.0.2) 
 
 | Resource | Path |
 |----------|------|
-| Repo root | `/Users/minliny/Documents/Reader-for-HarmonyOS` |
-| UI Contract (read-only source of truth) | `/Users/minliny/Documents/Reader UI/contracts` |
-| Business Core | `/Users/minliny/Documents/Reader-Core-Native` |
+| Repo root | `/Users/minliny/Documents/Reader/Reader-for-HarmonyOS` |
+| UI Contract (read-only source of truth) | `../Reader-UI/contracts` |
+| Business Core | `../Reader-Core-Native` |
 | Contract codegen | `scripts/gen_contracts.mjs` |
 | Generated contract bindings | `entry/src/main/ets/contract/generated/` |
 

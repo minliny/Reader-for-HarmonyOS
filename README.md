@@ -27,19 +27,19 @@ Reader for HarmonyOS 完成 Contract-first Native UI Architecture 的 P0 链路�
 ### 验收
 
 - `test_contracts`：49/0 pass（49 测试全绿）
-- `test.mjs`：164 pass
+- `npm test`：Reader-UI consumer gate 通过，Host 227/227 pass（含 3 条 shared runtime shadow pilot）
 - `npm run build`（hvigorw assembleHap）：SUCCESS
 - P0 链路矩阵：120/120 全绿（退出码 0）
 
 ### 遗留
 
-- 2 项 by-design NAPI 测试需真机运行（模拟器/单测环境不覆盖）
+- Host 单测不代替真实 NAPI 证明；当前无 hdc 目标，`npm run test:device` 会按设计失败，连接真机后需重新采集 fresh CoreSelfCheck 证据
 
 ## Architecture (Phase 1)
 
 ```
 Reader UI Contract  (read-only source of truth)
-  /Users/minliny/Documents/Reader UI/contracts
+  ../Reader-UI/contracts
       token / route / motion / motion-policy / ui-state / view-state
             │
             ▼  scripts/gen_contracts.mjs  (codegen, idempotent)
@@ -60,9 +60,17 @@ State ownership: `UiState` (reducer-held) → `ViewState` (reducer-produced, UI-
 ```bash
 npm run gen:contracts     # regenerate contract bindings (idempotent; re-run when contracts change)
 npm run build             # hvigorw assembleHap — pure ArkTS HAP, no native compile
-npm run test              # hypium unit tests (token / route / motion / shell-slot)
+npm run test              # Reader-UI consumer drift gate + entry HAP hypium host tests
+npm run test:device       # install current signed HAP and require fresh Core NAPI self-check evidence
+npm run check:reader-ui-consumer # verify Reader-UI version/action hash/dependency lock for HarmonyOS
 npm run lint:tokens       # no raw #hex / Npx outside contract/generated/
 ```
+
+`reader_ui_runtime` is consumed as a sibling source HAR in shadow mode. Its
+ArkTS sources are compiled with the entry module, and runtime behavior is
+tested by `entry/src/test/ReaderUIRuntimePilot.test.ets`. DevEco's standalone
+external-HAR TestAbility is not a release proof; the consuming HAP harness and
+the explicit real-device gate own executable verification.
 
 Toolchain (DevEco-Studio): `hvigorw` / `ohpm` / `node` / `hdc` must be on PATH.
 

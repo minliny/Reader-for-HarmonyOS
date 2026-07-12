@@ -10,6 +10,24 @@ import BookDetailViewStateTests from './BookDetailViewState.test';
 import ReaderOverlayViewStateTests from './ReaderOverlayViewState.test';
 import ReaderOverlayDispatchTests from './ReaderOverlayDispatch.test';
 import ReaderEffectsTests from './ReaderEffects.test';
+import ReaderUIRuntimePilotTests from './ReaderUIRuntimePilot.test';
+import ReaderUIRuntimeShadowTests from './ReaderUIRuntimeShadow.test';
+import ReaderUIDirectoryPilotTests from './ReaderUIDirectoryPilot.test';
+import ReaderBookOpenDomainMapperTests from './ReaderBookOpenDomainMapper.test';
+import ReaderBookOpenPilotExecutorTests from './ReaderBookOpenPilotExecutor.test';
+import ReaderPlaybackPilotExecutorTests from './ReaderPlaybackPilotExecutor.test';
+import ReaderImportPilotExecutorTests from './ReaderImportPilotExecutor.test';
+import ReaderSourceSwitchPilotExecutorTests from './ReaderSourceSwitchPilotExecutor.test';
+import ReaderReplaceRulePilotExecutorTests from './ReaderReplaceRulePilotExecutor.test';
+import ReaderRssPilotExecutorTests from './ReaderRssPilotExecutor.test';
+import ReaderSyncPilotExecutorTests from './ReaderSyncPilotExecutor.test';
+import SourceDebugTranscriptRecorderTests from './SourceDebugTranscriptRecorder.test';
+import Contract25RouteRegistryTests from './Contract25RouteRegistry.test';
+import MotionRegistryExactTests from './MotionRegistryExact.test';
+import DestructiveFlowTests from './DestructiveFlow.test';
+import ReaderUi25HostDispatcherTests from './ReaderUi25HostDispatcher.test';
+import ReaderUi25WebDavHostAdapterTests from './ReaderUi25WebDavHostAdapter.test';
+import ScreenGraphShadowRegistryTests from './ScreenGraphShadowRegistry.test';
 import HostSmokeTest from '../main/ets/host/tests/HostSmoke.test.ets';
 
 export default function testsuit(): void {
@@ -24,5 +42,23 @@ export default function testsuit(): void {
   ReaderOverlayViewStateTests();
   ReaderOverlayDispatchTests();
   ReaderEffectsTests();
+  ReaderUIRuntimePilotTests();
+  ReaderUIRuntimeShadowTests();
+  ReaderUIDirectoryPilotTests();
+  ReaderBookOpenDomainMapperTests();
+  ReaderBookOpenPilotExecutorTests();
+  ReaderPlaybackPilotExecutorTests();
+  ReaderImportPilotExecutorTests();
+  ReaderSourceSwitchPilotExecutorTests();
+  ReaderReplaceRulePilotExecutorTests();
+  ReaderRssPilotExecutorTests();
+  ReaderSyncPilotExecutorTests();
+  SourceDebugTranscriptRecorderTests();
+  Contract25RouteRegistryTests();
+  MotionRegistryExactTests();
+  DestructiveFlowTests();
+  ReaderUi25HostDispatcherTests();
+  ReaderUi25WebDavHostAdapterTests();
+  ScreenGraphShadowRegistryTests();
   HostSmokeTest();
 }

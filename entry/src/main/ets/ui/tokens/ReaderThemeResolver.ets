@@ -6,6 +6,7 @@
 //
 // 颜色值对齐 frontend-demo-optimized/render-runtime.js readerThemeStyle() 的 day/night 分支。
 import { ColorTokens } from '../../contract/generated/ColorTokens';
+import { ReaderThemeState } from './ReaderThemeState';
 
 // 8 主题 fixture（对齐 demo fixture.js L211-229）。
 export interface ReaderThemeOption {
@@ -73,9 +74,9 @@ export class ReaderThemeResolver {
     ReaderThemeResolver.ALL_OPTIONS[3], // 雾蓝 day
   ];
 
-  // appThemeMode → 是否夜间。system 暂等价 light（后续可接系统暗色监听）。
+  // appThemeMode → 是否夜间。system 跟随 EntryAbility 同步的系统色彩模式。
   static isNight(appThemeMode: string): boolean {
-    return appThemeMode === 'dark';
+    return appThemeMode === 'dark' || (appThemeMode === 'system' && ReaderThemeState.colorMode() === 'dark');
   }
 
   // 根据 readerTheme(4值) + appThemeMode 解析 effective scheme。

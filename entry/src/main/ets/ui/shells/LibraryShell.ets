@@ -15,6 +15,7 @@ import { ViewStateRenderer } from '../components/ViewStateRenderer';
 import { OverlayHost } from '../slots/OverlayHost';
 import { StateHost } from '../slots/StateHost';
 import { ReaderUiStore } from '../store/ReaderUiStore';
+import { BookDetail } from '../store/ReaderUiState';
 
 @Component
 struct LibraryFixedActionButton {
@@ -61,10 +62,34 @@ export struct LibraryShell {
   @StorageProp('reader.displayedRouteId') routeId: string = 'book-detail';
   @StorageProp(SafeAreaAdapter.K_TOP) safeAreaTop: number = SafeAreaAdapter.DEFAULT_TOP;
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
+  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
+
+  private continueReading(): void {
+    if (this.currentBook === null) return;
+    ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' });
+    const sourceId = this.currentBook.sourceId ?? '';
+    if (sourceId === 'local') {
+      // Imported books are materialized shelf rows. Re-open through the
+      // local shelf path so Core's exact local progress row selects the
+      // chapter; a cached TOC's first row is not a resume position.
+      ReaderUiStore.dispatch({
+        type: 'bookshelf-book-open', sourceId: 'local', bookId: this.currentBook.bookId,
+      });
+      return;
+    }
+    if (sourceId.length > 0) {
+      // Re-read the source-scoped Core progress row and TOC. A visual TOC
+      // index is neither a Core chapter identity nor a character offset.
+      ReaderUiStore.dispatch({
+        type: 'book-detail-load', bookId: this.currentBook.bookId, sourceId: sourceId, loadFirstChapter: true,
+      });
+    } else {
+      ReaderUiStore.dispatch({ type: 'book-detail-load', bookId: this.currentBook.bookId, loadFirstChapter: true });
+    }
+  }
 
   private hasFixedActionBar(): boolean {
-    return this.routeId === 'book-batch-management'
-      || this.routeId === 'group-management'
+    return this.routeId === 'group-management'
       || this.routeId === 'book-detail'
       || this.routeId === 'book-detail-toc-preview';
   }
@@ -120,30 +145,8 @@ export struct LibraryShell {
   }
 
   @Builder renderBottomActionBar() {
-    if (this.routeId === 'book-batch-management') {
-      Row({ space: 10 }) {
-        LibraryFixedActionButton({ label: '移动分组', variant: 'secondary' })
-          .layoutWeight(1)
-          .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'group-management' }))
-        LibraryFixedActionButton({ label: '删除所选', variant: 'danger' })
-          .layoutWeight(1)
-      }
-      .width('100%')
-      .height(this.actionBarHeight())
-      .padding({ left: SpacingTokens.safeAreaHorizontal + 3, right: SpacingTokens.safeAreaHorizontal + 3, top: 10, bottom: this.safeAreaBottom + 10 })
-      .linearGradient({
-        angle: 180,
-        colors: [
-          [TokenAdapter.colorWithAlpha(ColorTokens.bottomBarBg, 0), 0],
-          [TokenAdapter.colorWithAlpha(ColorTokens.bottomBarBg, 0.96), 0.42],
-          [TokenAdapter.colorWithAlpha(ColorTokens.bottomBarBg, 1.0), 1.0]
-        ]
-      })
-      .zIndex(ZIndexTokens.mainNav)
-    } else if (this.routeId === 'group-management') {
-      Row({ space: 10 }) {
-        LibraryFixedActionButton({ label: '新建分组', variant: 'secondary' })
-          .layoutWeight(1)
+    if (this.routeId === 'group-management') {
+      Row() {
         LibraryFixedActionButton({ label: '完成' })
           .layoutWeight(1)
           .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
@@ -164,9 +167,10 @@ export struct LibraryShell {
       Row({ space: 10 }) {
         LibraryFixedActionButton({ label: '继续阅读' })
           .layoutWeight(1)
-          .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' }))
+          .onClick(() => this.continueReading())
         LibraryFixedActionButton({ label: '移除书架', variant: 'dangerSoft' })
           .layoutWeight(1)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'book-action', bookAction: 'delete' }))
       }
       .width('100%')
       .height(this.actionBarHeight())

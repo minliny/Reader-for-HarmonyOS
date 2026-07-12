@@ -9,6 +9,7 @@ import { ViewStateTable, ViewStateComponent } from '../main/ets/contract/generat
 import { ReaderReducer } from '../main/ets/ui/store/ReaderReducer';
 import { DemoUiState } from '../main/ets/ui/fixtures/DemoUiState';
 import { MotionSpecRegistry } from '../main/ets/ui/motion/MotionSpecRegistry';
+import { CoreBookGroup, CoreBookshelfBook } from '../main/ets/ui/store/ReaderUiState';
 
 function collectTypes(components: ViewStateComponent[], sink: string[]): void {
   for (let i = 0; i < components.length; i++) {
@@ -101,6 +102,88 @@ export default function BookshelfViewStateTests(): void {
       expect(s.bookshelfFilter.group).assertEqual('all');
       const after = ReaderReducer.reduce(s, { type: 'set-bookshelf-group', bookshelfGroup: 'local' });
       expect(after.bookshelfFilter.group).assertEqual('local');
+    });
+
+    it('continueReadingProjectionIsIndependentFromFilteredShelfRows', 0, () => {
+      const book: CoreBookshelfBook = {
+        sourceId: 'source-a', bookId: '/book/a', title: '真实阅读记录', author: '作者',
+        coverUrl: '', intro: '', kind: '', lastChapter: '', group: '', lastReadAt: 12,
+      };
+      const shelfOnly = ReaderReducer.reduce(DemoUiState.initial(), {
+        type: 'bookshelf-list-loaded', bookshelfBooks: [book],
+      });
+      expect(shelfOnly.continueReadingBook === null).assertTrue();
+      const after = ReaderReducer.reduce(shelfOnly, {
+        type: 'continue-reading-loaded', continueReadingBook: book,
+      });
+      expect(after.continueReadingLoaded).assertTrue();
+      expect(after.continueReadingBook !== null).assertTrue();
+      if (after.continueReadingBook !== null) {
+        expect(after.continueReadingBook.sourceId).assertEqual('source-a');
+        expect(after.continueReadingBook.bookId).assertEqual('/book/a');
+      }
+    });
+
+    // ── Core book-group vertical: list state and failure state ──
+    it('reducerBookGroupListUsesCoreRowsAndClearsRequestState', 0, () => {
+      const s = DemoUiState.initial();
+      const loading = ReaderReducer.reduce(s, { type: 'book-group-load-start' });
+      expect(loading.bookGroupsLoading).assertTrue();
+      const rows: CoreBookGroup[] = [{
+        groupId: 7, groupName: '科幻', cover: '', order: 2, enableRefresh: true, show: true,
+      }];
+      const after = ReaderReducer.reduce(loading, { type: 'book-group-list-loaded', bookGroups: rows });
+      expect(after.bookGroupsLoaded).assertTrue();
+      expect(after.bookGroupsLoading).assertFalse();
+      expect(after.bookGroups.length).assertEqual(1);
+      expect(after.bookGroups[0].groupName).assertEqual('科幻');
+      expect(after.bookGroupsError).assertEqual('');
+    });
+
+    it('reducerBookGroupFailureKeepsManagementPageDataAndSurfacesError', 0, () => {
+      const s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'group-management' });
+      const loading = ReaderReducer.reduce(s, { type: 'book-group-create', bookGroupName: '待读' });
+      expect(loading.bookGroupsLoading).assertTrue();
+      const after = ReaderReducer.reduce(loading, {
+        type: 'book-group-operation-failed', message: 'Core unavailable',
+      });
+      expect(after.bookGroupsLoading).assertFalse();
+      expect(after.bookGroupsError).assertEqual('Core unavailable');
+      expect(after.pageState).assertEqual(s.pageState);
+    });
+
+    it('bookGroupDeleteRequiresBoundLiveRowSecondConfirmationAndClearsOnNavigation', 0, () => {
+      const row: CoreBookGroup = {
+        groupId: 7, groupName: '科幻', cover: '', order: 2, enableRefresh: true, show: true,
+      };
+      const management = ReaderReducer.reduce(DemoUiState.initial(), {
+        type: 'route-replace', id: 'group-management',
+      });
+      const listed = ReaderReducer.reduce(management, {
+        type: 'book-group-list-loaded', bookGroups: [row],
+      });
+      const requested = ReaderReducer.reduce(listed, {
+        type: 'book-group-delete-request', bookGroupId: row.groupId,
+      });
+      expect(requested.pendingBookGroupDeleteId).assertEqual(row.groupId);
+      expect(requested.bookGroupsLoading).assertFalse();
+
+      const rawDelete = ReaderReducer.reduce(requested, {
+        type: 'book-group-delete', bookGroupId: row.groupId,
+      });
+      expect(rawDelete.pendingBookGroupDeleteId).assertEqual(row.groupId);
+      expect(rawDelete.bookGroupsError.length > 0).assertTrue();
+
+      const confirmed = ReaderReducer.reduce(requested, {
+        type: 'book-group-delete-confirm', bookGroupId: row.groupId,
+      });
+      expect(confirmed.pendingBookGroupDeleteId).assertEqual(row.groupId);
+      expect(confirmed.bookGroupsLoading).assertTrue();
+
+      const navigated = ReaderReducer.reduce(requested, {
+        type: 'route-push', id: 'bookshelf-group-management',
+      });
+      expect(navigated.pendingBookGroupDeleteId).assertEqual(0);
     });
 
     // ── MotionAdapter: bookshelf 相关 motionId 存在 ──

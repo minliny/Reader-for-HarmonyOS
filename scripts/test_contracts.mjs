@@ -10,10 +10,22 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(__dirname, '..');
 const GEN = path.join(REPO, 'entry/src/main/ets/contract/generated');
 const SHELLS = path.join(REPO, 'entry/src/main/ets/ui/shells');
+function firstExisting(candidates) {
+  for (const candidate of candidates) {
+    if (candidate && fs.existsSync(candidate)) return candidate;
+  }
+  return candidates[0];
+}
 const FIXTURES = process.env.READER_UI_CONTRACTS
-  || path.resolve(__dirname, '../../Reader UI/contracts/fixtures');
+  || firstExisting([
+    path.resolve(REPO, '../Reader-UI/contracts/fixtures'),
+    path.resolve(__dirname, '../../Reader-UI/contracts/fixtures'),
+  ]);
 const FRONTEND_DEMO = process.env.READER_UI_FRONTEND_DEMO
-  || path.resolve(__dirname, '../../Reader UI/frontend-demo');
+  || firstExisting([
+    path.resolve(REPO, '../Reader-UI/frontend-demo-optimized'),
+    path.resolve(REPO, '../Reader-UI/frontend-demo'),
+  ]);
 const LIVE_DEMO_RUNTIME = path.join(FRONTEND_DEMO, 'render-runtime.js');
 
 function read(p) { return fs.readFileSync(p, 'utf8'); }
@@ -27,6 +39,7 @@ function liveDemoRouteTuples() {
 const TOKENS = readJson('token.fixtures.json');
 const ROUTES = readJson('route.fixtures.json');
 const POLICIES = readJson('motion-policy.fixtures.json');
+const MOTIONS = readJson('motion.fixtures.json');
 
 let pass = 0;
 let fail = 0;
@@ -85,6 +98,72 @@ test('P0 route → shell mapping matches fixtures', () => {
   }
 });
 
+test('RouteTable registry exactly matches all 235 canonical RouteIds', () => {
+  const schema = JSON.parse(read(path.resolve(FIXTURES, '..', 'route.schema.json')));
+  const canonical = schema.properties.id.enum;
+  const allBlock = routeSrc.match(/static readonly ALL: RouteId\[\] = \[([\s\S]*?)\n  \];/);
+  assert.ok(allBlock, 'RouteTable.ALL not found');
+  const generated = [...allBlock[1].matchAll(/'([^']+)'/g)].map((match) => match[1]);
+  assert.equal(canonical.length, 235, `canonical RouteId count drifted: ${canonical.length}`);
+  assert.deepEqual(generated, canonical, 'RouteTable.ALL membership/order differs from canonical schema');
+  assert.equal(new Set(generated).size, 235, 'RouteTable.ALL contains duplicate RouteIds');
+  for (const routeId of canonical) {
+    assert.ok(routeSrc.includes(`case '${routeId}': return`), `RouteTable missing explicit shell/title case for ${routeId}`);
+  }
+  assert.ok(routeSrc.includes('default: return null;'), 'unknown routes must be rejected, not sent to a catch-all shell');
+
+  const viewStateSrc = read(path.join(GEN, 'ViewStateTable.ets'));
+  const directViewStateIds = new Set([...viewStateSrc.matchAll(/"routeId": "([^"]+)"/g)].map((match) => match[1]));
+  const aliasByRoute = new Map(ROUTES.filter((route) => route.aliasFor).map((route) => [route.id, route.aliasFor]));
+  for (const routeId of canonical) {
+    let current = routeId;
+    let resolved = directViewStateIds.has(current);
+    for (let depth = 0; !resolved && depth < 5; depth++) {
+      const next = aliasByRoute.get(current);
+      if (!next || next === current) break;
+      current = next;
+      resolved = directViewStateIds.has(current);
+    }
+    assert.ok(resolved, `canonical route ${routeId} has no direct or aliased ViewState`);
+  }
+});
+
+test('all 35 legacy 2.5 fallback routes now have direct canonical ViewState coverage', () => {
+  const viewStateSrc = read(path.join(GEN, 'ViewStateTable.ets'));
+  const registrySrc = read(path.join(REPO, 'entry/src/main/ets/ui/router/ReaderContract25RouteRegistry.ets'));
+  const rendererSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/Contract25RouteComponents.ets'));
+  const canonicalViewStates = readJson('view-state.fixtures.json');
+  const definedIds = [...registrySrc.matchAll(/unavailableRouteDefinition\('([^']+)'/g)].map((match) => match[1]);
+  assert.equal(definedIds.length, 35, `expected 35 historical Reader UI 2.5 fallback routes, got ${definedIds.length}`);
+  assert.equal(new Set(definedIds).size, 35, 'historical 2.5 fallback registry contains duplicate definitions');
+  for (const routeId of definedIds) {
+    const direct = canonicalViewStates.find((entry) => entry.routeId === routeId);
+    assert.ok(direct, `canonical ViewState fixture missing formerly synthetic route ${routeId}`);
+    assert.ok(viewStateSrc.includes(`"routeId": "${routeId}"`), `ViewStateTable missing ${routeId}`);
+    assert.ok(registrySrc.includes(`'${routeId}'`), `native renderer registry missing ${routeId}`);
+  }
+  assert.ok(viewStateSrc.includes('contractRouteId?: string;'),
+    'legacy Contract25RoutePage fallback must retain its explicit route identity type');
+  for (const marker of [
+    'Contract25RouteRendererKind.ReaderWorkspaceState',
+    'Contract25RouteRendererKind.ReaderReplacementState',
+    'Contract25RouteRendererKind.SourceSwitchState',
+    'Contract25RouteRendererKind.ReaderContentState',
+    'Contract25RouteRendererKind.LocalImportState',
+    'Contract25RouteAvailability.LegacyUnavailable',
+    '功能暂不可用',
+    '尚未接入可执行的 HarmonyOS 业务流程',
+    'ReaderBase()',
+  ]) {
+    assert.ok(registrySrc.includes(marker) || rendererSrc.includes(marker), `2.5 native renderer missing ${marker}`);
+  }
+  assert.ok(!registrySrc.includes('routeAction('), 'unconnected 2.5 routes must not retain fake action definitions');
+  assert.ok(!rendererSrc.includes('Contract25RouteActionButton'), 'unconnected 2.5 routes must not render action buttons');
+  assert.ok(!rendererSrc.includes("ReaderUiStore.dispatch({ type: 'route-replace'"),
+    'unconnected 2.5 routes must not route-replace as a fake workflow result');
+  assert.ok(!rendererSrc.includes('definition.actions'), 'unconnected 2.5 routes must render one explicit unavailable state');
+});
+
 // ── 3. Motion resolver: policy table resolves push/pop/replace/tabSwitch ──
 function resolvePolicy(req) {
   const real = POLICIES.filter((p) => p && p.id && p.priority !== undefined && p.match && p.motionId);
@@ -111,6 +190,48 @@ test('resolve replace/appShell → app.route.replace', () => {
 });
 test('resolve tabSwitch/mainTabShell → tab.switch', () => {
   assert.equal(resolvePolicy({ operation: 'tabSwitch', containerRole: 'mainTabShell' }), 'tab.switch');
+});
+
+test('all 93 generated MotionSpecs have derived serial metadata and valid policy/literal references', () => {
+  const specSrc = read(path.join(GEN, 'MotionSpecTable.ets'));
+  const serialRegistrySrc = read(path.join(REPO, 'entry/src/main/ets/ui/motion/MotionSerialMetadataRegistry.ets'));
+  const resolverSrc = read(path.join(REPO, 'entry/src/main/ets/ui/motion/ReaderMotionResolver.ets'));
+  const routeRendererSrc = read(path.join(REPO, 'entry/src/main/ets/ui/router/RouteRenderer.ets'));
+  const generatedIds = [...specSrc.matchAll(/\{ id: '([^']+)'/g)].map((match) => match[1]);
+  const canonicalIds = MOTIONS.map((motion) => motion.id);
+  assert.equal(canonicalIds.length, 93, `canonical MotionSpec count drifted: ${canonicalIds.length}`);
+  assert.deepEqual(generatedIds, canonicalIds, 'generated MotionSpec membership/order drifted');
+  assert.equal(new Set(generatedIds).size, 93, 'generated MotionSpecs contain duplicate ids');
+  assert.ok(serialRegistrySrc.includes('MotionSpecRegistry.all()'), 'serial metadata must derive from generated registry');
+  assert.ok(!serialRegistrySrc.includes('switch ('), 'serial metadata must not use a hand-written MotionId switch');
+  assert.ok(!serialRegistrySrc.includes('default:'), 'serial metadata must not use catch-all records');
+  for (const policy of POLICIES.filter((item) => item && item.id)) {
+    assert.ok(generatedIds.includes(policy.motionId), `motion policy ${policy.id} references missing spec ${policy.motionId}`);
+  }
+  assert.ok(resolverSrc.includes('static resolveSpec(req: MotionRequest): MotionSpec | undefined'));
+  assert.ok(resolverSrc.includes('MotionSpecRegistry.byId(p.motionId)'));
+  assert.ok(resolverSrc.includes('if (!ReaderMotionResolver.hasExplicitMatch(p)) continue;'),
+    'resolver must ignore empty-match catch-all policies');
+  assert.ok(routeRendererSrc.includes('ReaderMotionResolver.resolveSpec(op)'));
+  assert.ok(routeRendererSrc.includes('MotionAdapter.applySpec(motionSpec'));
+  assert.ok(!routeRendererSrc.includes("resolveOr(op, 'app.route.replace')"), 'route motion must not use hand-written fallback id');
+
+  const mainRoot = path.join(REPO, 'entry/src/main/ets');
+  const files = [];
+  const visit = (directory) => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const full = path.join(directory, entry.name);
+      if (entry.isDirectory()) visit(full);
+      else if (entry.isFile() && entry.name.endsWith('.ets') && !full.includes('/contract/generated/')) files.push(full);
+    }
+  };
+  visit(mainRoot);
+  for (const file of files) {
+    const source = read(file);
+    for (const match of source.matchAll(/MotionAdapter\.apply\(\s*'([^']+)'/g)) {
+      assert.ok(generatedIds.includes(match[1]), `${path.relative(REPO, file)} uses unknown MotionSpec ${match[1]}`);
+    }
+  }
 });
 
 // ── 4. Shell slot discipline: MainTabShell declares 5 slots; ReaderShell is a
@@ -203,12 +324,6 @@ test('reader overlay panels keep live demo quick-panel and overlay copy', () => 
     'ReaderModulePanelShell',
     'ReaderModulePanel',
     'BrightnessRail',
-    '第 30 章 旧日',
-    '第 31 章 归途',
-    '第 32 章 雨夜',
-    '第 33 章 灯塔',
-    '已缓存',
-    '书签',
     '阅读主题',
     '文字排版',
     '字号',
@@ -234,13 +349,14 @@ test('reader overlay panels keep live demo quick-panel and overlay copy', () => 
     '屏幕常亮',
     '页脚进度信息',
     '触摸反馈',
-    '自动缓存后续章节',
+    '阅读缓存预取',
     'ReaderQuickPanelShell',
     'ReaderQuickPanel',
-    '第 32 章 雨夜',
-    '雨夜的风格外冷 · 当前结果 1/2',
-    '第 33 章 灯塔',
-    '雨夜之后，远处灯塔亮起 · 结果 2/2',
+    '本地已加载段落',
+    'Core 阅读缓存 command',
+    'Core search.content',
+    '搜索当前书籍的已缓存正文',
+    'Core 全文已接入',
     '雨容称呼',
     '旧称统一',
     '标点清理',
@@ -255,6 +371,38 @@ test('reader overlay panels keep live demo quick-panel and overlay copy', () => 
     '单页',
   ]) {
     assert.ok(src.includes(text), `ReaderOverlayComponents missing live demo overlay text: ${text}`);
+  }
+  const quickDirectory = src.slice(
+    src.indexOf('export struct ReaderDirectoryPanel'),
+    src.indexOf('export struct ReaderAppearancePanel')
+  );
+  const fullDirectory = src.slice(
+    src.indexOf('export struct ReaderFullDirectoryPage'),
+    src.indexOf('export struct ReaderFullTtsPage')
+  );
+  const quickDirectoryRow = src.slice(
+    src.indexOf('struct ReaderTocLiveRow'),
+    src.indexOf('struct ReaderLiveStepperRow')
+  );
+  const fullDirectoryRow = src.slice(
+    src.indexOf('struct ReaderFullTocRow'),
+    src.indexOf('export struct ReaderFullDirectoryPage')
+  );
+  for (const directory of [quickDirectory, fullDirectory]) {
+    assert.ok(directory.includes("@StorageProp('reader.chapterToc')"),
+      'reader directory must bind the Core-backed chapter TOC');
+    assert.ok(directory.includes("type: 'set-toc-mode'"),
+      'reader directory tabs must use reducer-backed directory/bookmark state');
+    assert.ok(!directory.includes('已缓存'),
+      'reader directory must not claim a static cached-chapter result');
+  }
+  assert.ok(!quickDirectory.includes('tocRows'),
+    'quick reader directory must not retain fixture chapter rows');
+  assert.ok(!fullDirectory.includes('private rows: Array<[string, string, string, boolean]>'),
+    'full reader directory must not retain fixture chapter rows');
+  for (const row of [quickDirectoryRow, fullDirectoryRow]) {
+    assert.ok(row.includes("type: 'chapter-load'"),
+      'reader directory chapter rows must dispatch the selected real chapter');
   }
   for (const oldText of [
     '当前书籍：深空信号',
@@ -287,15 +435,170 @@ test('reader overlay panels keep live demo quick-panel and overlay copy', () => 
   assert.ok(!src.includes("ReaderSettingRow({ name: '替换\\\"信号\\\"为\\\"信号源\\\"'"), 'replace overlay must use live demo rule names');
 });
 
+test('bookmarks, search history, and single-book grouping stay Core-backed', () => {
+  const runtime = read(path.join(REPO, 'entry/src/main/ets/bridge/CoreRuntime.ets'));
+  const effects = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderEffects.ets'));
+  const overlay = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderOverlayComponents.ets'));
+  const contract = read(path.join(REPO, 'entry/src/main/ets/ui/components/ContractComponents.ets'));
+  const structure = read(path.join(REPO, 'entry/src/main/ets/ui/components/StructuralPageComponents.ets'));
+  for (const marker of [
+    'async bookmarkList(', 'async bookmarkCreate(', 'async bookmarkDelete(',
+    'async searchHistoryList(', 'async searchHistoryAdd(', 'async bookshelfGroupAssign(',
+    "'bookmark.list'", "'bookmark.create'", "'bookmark.delete'",
+    "'search.history.list'", "'search.history.add'", "'bookshelf.group.assign'",
+  ]) {
+    assert.ok(runtime.includes(marker), `CoreRuntime missing typed Core vertical ${marker}`);
+  }
+  for (const marker of [
+    'mapCoreBookmarks', 'loadBookmarksForCurrentBook', 'bookmark.operation',
+    'Core Bookmark V1 intentionally filters by (bookName, bookAuthor)',
+    'loadSearchHistory', 'clearConfirmedSearchHistory', 'searchHistoryAdd', 'assignBookshelfGroup',
+  ]) {
+    const present = marker === 'bookmark.operation'
+      ? effects.includes('bookmark-operation-failed')
+      : effects.includes(marker);
+    assert.ok(present, `ReaderEffects missing Core-backed vertical marker ${marker}`);
+  }
+  for (const directory of [
+    overlay.slice(overlay.indexOf('export struct ReaderDirectoryPanel'), overlay.indexOf('export struct ReaderAppearancePanel')),
+    overlay.slice(overlay.indexOf('export struct ReaderFullDirectoryPage'), overlay.indexOf('export struct ReaderFullTtsPage')),
+  ]) {
+    assert.ok(directory.includes("@StorageProp('reader.bookmarks')"),
+      'reader bookmark tabs must bind the Core bookmark projection');
+    assert.ok(directory.includes('ReaderBookmarkLiveRow'),
+      'reader bookmark tabs must render the Core-backed bookmark row');
+  }
+  assert.ok(overlay.includes("type: 'bookmark-open'") &&
+    overlay.includes("type: 'bookmark-delete-request'") &&
+    overlay.includes("type: 'bookmark-delete-confirm'"),
+  'reader bookmark rows must expose real jump plus live-target confirmed delete actions');
+  assert.ok(overlay.includes("type: 'bookmark-create'"),
+    'reader control sheet must expose a Core-backed add-bookmark action');
+  assert.ok(contract.includes("@StorageProp('reader.searchHistory')") &&
+    contract.includes("type: 'search-history-clear-request'") &&
+    contract.includes("type: 'search-history-clear-confirm'"),
+  'book search must bind Core history and clear only after live confirmation');
+  for (const fixtureKeyword of ["'三体'", "'刘慈欣'", "'球状闪电'"]) {
+    assert.equal(contract.includes(`private history: string[] = [${fixtureKeyword}`), false,
+      'book search must not retain fixture history keywords');
+  }
+  assert.ok(structure.includes('bookshelf.group.assign') && structure.includes("type: 'book-group-assign'"),
+    'group management must expose Core-backed single-book assignment');
+  assert.equal(structure.includes('当前 Core 未提供独立的书籍分组归属修改命令'), false,
+    'group management must not claim the now-connected Core command is unavailable');
+});
+
+test('reader cache and body search stay within the connected Core capability boundary', () => {
+  const src = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderOverlayComponents.ets'));
+  const cache = src.slice(
+    src.indexOf('export struct ReaderBookCachePage'),
+    src.indexOf('export struct ReaderDebugInfoPage')
+  );
+  const debug = src.slice(
+    src.indexOf('export struct ReaderDebugInfoPage'),
+    src.indexOf('export struct ReaderSearchPanel')
+  );
+  const search = src.slice(
+    src.indexOf('export struct ReaderSearchPanel'),
+    src.indexOf('export struct ReaderReplacePanel')
+  );
+  const settings = src.slice(
+    src.indexOf('export struct ReaderSettingsPanel'),
+    src.indexOf('struct ReaderFullPanelShell')
+  );
+
+  assert.ok(cache.includes("@StorageProp('reader.currentBook') currentBook: BookDetail | null = null"),
+    'cache view must gate content on the selected Core book');
+  assert.ok(cache.includes("@StorageProp('reader.chapterContent') chapterContent: string[] = []"),
+    'cache view may consume only loaded Core chapter content');
+  assert.ok(cache.includes("@StorageProp('reader.currentChapterTitle') currentChapterTitle: string = ''"),
+    'cache view must label data with the current Core chapter');
+  assert.ok(search.includes("@StorageProp('reader.currentBook') currentBook: BookDetail | null = null"),
+    'body search must scope requests to the selected Core book');
+  assert.ok(search.includes("@StorageProp('reader.contentSearchResults') contentSearchResults: CoreContentSearchResult[] = []"),
+    'body search must render the Core search.content projection rather than local snippets');
+  assert.ok(search.includes("@StorageProp('reader.contentSearchLoading') contentSearchLoading: boolean = false"),
+    'body search must expose a dedicated Core loading state');
+  assert.ok(cache.includes('Core 阅读缓存 command 未接入') && cache.includes('操作已禁用'),
+    'cache page must declare the unavailable Core cache command and disable all cache operations');
+  assert.ok(cache.includes('仅内存片段，不等同于磁盘缓存') && cache.includes('ReaderLoadedParagraphRow'),
+    'cache page may show only current in-memory content, never infer disk cache state');
+  assert.ok(!cache.includes('cacheRows') && !cache.includes('ReaderCacheListRow'),
+    'cache page must not retain fixture chapter cache rows');
+  assert.ok(search.includes("type: 'content-search-submit'") && search.includes('contentSearchResultIndex: i') &&
+    src.includes("type: 'content-search-result-open'"),
+    'body search must dispatch Core-backed search and scoped result-open events');
+  assert.ok(search.includes('Core search.content 只查询当前书源、当前书籍的已缓存章节') &&
+    search.includes("ReaderQuickPillButton({ label: 'Core 全文已接入', disabled: true })"),
+    'body search must declare the exact Core cache scope instead of a fake local search');
+  assert.ok(!search.includes('private localMatches(): string[]') && !search.includes('仅搜索当前已加载章节片段'),
+    'body search must not retain the old current-paragraph fallback');
+  assert.ok(!search.includes('Core 正文全文搜索 command 未接入'),
+    'body search must not claim the connected Core command is unavailable');
+  assert.ok(settings.includes("title: '阅读缓存预取'") && settings.includes('disabled: true'),
+    'reader settings must not expose an enabled cache-prefetch toggle before Core support exists');
+  for (const fixture of [
+    '第 32 章 雨夜',
+    '雨夜的风格外冷 · 当前结果 1/2',
+    '雨夜之后，远处灯塔亮起 · 结果 2/2',
+    '32/128',
+    '128 MB',
+    '已下载到本地',
+    '尚未缓存',
+    '前序章节已缓存',
+    '优书网 · 128ms',
+  ]) {
+    assert.equal(src.includes(fixture), false,
+      `reader cache/search/debug UI must not retain fabricated state: ${fixture}`);
+  }
+  assert.ok(debug.includes('private diagnostics(): Array<[string, string, string, string]>') &&
+    debug.includes("['正文搜索', 'search.content'"),
+    'debug view must derive full-text-search status from the Core projection');
+});
+
+test('reader body search wrapper preserves the Core cache boundary', () => {
+  const runtime = read(path.join(REPO, 'entry/src/main/ets/bridge/CoreRuntime.ets'));
+  const effects = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderEffects.ets'));
+  assert.ok(runtime.includes('async searchContent(keyword: string, sourceId: string, bookId: string'),
+    'Harmony bridge must expose a typed search.content wrapper');
+  assert.ok(runtime.includes("params['sourceId'] = sourceId") && runtime.includes("params['bookId'] = bookId") &&
+    runtime.includes("this.runtime.request('search.content'"),
+    'search.content wrapper must require current sourceId + bookId scope');
+  assert.ok(effects.includes('mapContentSearchResults(data, sourceId, book.bookId)') &&
+    effects.includes('result.sourceId !== sourceId || result.bookId !== book.bookId'),
+    'effect layer must reject late/cross-book Core result projections');
+  assert.ok(effects.includes('findTocPositionByCoreIndex') && effects.includes('persistContentSearchAnchor'),
+    'result opening must resolve the Core TOC and persist the Core chapterOffset anchor');
+  assert.ok(effects.includes('contentSearchJumpSequence') && effects.includes('enqueueReadingProgress(snapshot)'),
+    'content-search target progress must enter the same serialized queue as ordinary reader anchors');
+  assert.ok(effects.includes('bookOpenSequence: sequence') && effects.includes('loadStoredSourceToc(book, sourceId, sequence)'),
+    'content-search jumps must carry a book-open transaction through TOC and chapter loading');
+  assert.ok(effects.includes('isCurrentChapterLoad(book.bookId, sourceId, coreChapterIndex, chapterUrl)') &&
+    effects.includes("isCurrentChapterLoad(book.bookId, 'local', entry.index, entry.chapterId)"),
+  'late local and remote chapter callbacks must be rejected after a newer chapter load starts');
+});
+
 test('reader control layer uses live demo top overlay and reading copy', () => {
   const reader = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderComponents.ets'));
   assert.ok(reader.includes('export struct ReaderTopArea'), 'control-layer routes need the live demo reader-top component');
-  assert.ok(reader.includes("Text('长夜余火')"), 'reader top area must show the live demo book title');
-  assert.ok(reader.includes("Text('第 32 章 雨夜 · 优书网')"), 'reader top area must expose the live demo source line');
+  assert.ok(reader.includes("@StorageProp('reader.currentBook') currentBook: BookDetail | null = null"),
+    'reader top area must render the selected Core book instead of a fixed demo title');
+  assert.ok(reader.includes('private bookTitle(): string') && reader.includes("return '未选择书籍';"),
+    'reader top area must expose an honest no-selection state instead of a demo title');
+  assert.ok(reader.includes('private bookMeta(): string') && reader.includes('return `${chapter} · ${source}`;'),
+    'reader top area must expose a live chapter and source line');
   assert.ok(reader.includes("Text('换源')"), 'reader top area must expose the live demo source-switch action');
   assert.ok(reader.includes("id: 'source-switch'"), 'reader top source switch must push the live demo source-switch route');
-  assert.ok(reader.includes("return '雨夜'"), 'reading surface must show the live demo chapter title');
-  assert.ok(reader.includes('雨声在窗外连成一片'), 'reading surface must use live demo reader text');
+  assert.ok(reader.includes('private hasReadableContent(): boolean'),
+    'reading surface must gate body rendering on selected Core content');
+  assert.ok(reader.includes('return this.currentBook === null ? [] : this.chapterContent;'),
+    'reading surface must never substitute fixture prose when no book is selected');
+  assert.ok(reader.includes('尚未选择书籍') && reader.includes('Core 未返回本章正文。'),
+    'reading surface must expose truthful no-book and empty-content states');
+  for (const fixtureMarker of ['fallbackParagraphs', '雨声在窗外连成一片', "return '雨夜'", '长夜余火', '第 32 章 雨夜', '优书网']) {
+    assert.equal(reader.includes(fixtureMarker), false,
+      `reader surface must not retain fabricated fallback content: ${fixtureMarker}`);
+  }
   assert.ok(reader.includes('.borderRadius(DemoAliasTokens.radiusXl)'), 'reader top area must be one floating rounded live-demo bar');
   assert.ok(reader.includes('.textAlign(TextAlign.Center)'),
     'reader title must stay centered like live demo');
@@ -303,15 +606,14 @@ test('reader control layer uses live demo top overlay and reading copy', () => {
   const textFlowEnd = reader.indexOf('// .fd-ir-info-layer');
   const textFlow = reader.slice(textFlowStart, textFlowEnd);
   for (const storageKey of [
-    "@StorageProp('reader.typography.fontSize') fontSize",
-    "@StorageProp('reader.typography.lineHeight') lineHeightRatio",
-    "@StorageProp('reader.typography.paragraphGap') paragraphGap",
-    "@StorageProp('reader.typography.letterSpacing') letterSpacing",
-    "@StorageProp('reader.typography.fontFamily') fontFamily",
-    "@StorageProp('reader.pageSpace.topMargin') topMargin",
-    "@StorageProp('reader.pageSpace.sideMargin') sideMargin",
-    "@StorageProp('reader.pageSpace.bottomMargin') bottomMargin",
-    "@StorageProp('reader.pageSpace.paragraphIndent') paragraphIndent",
+    "@StorageProp('reader.typography.fontSize')",
+    "@StorageProp('reader.typography.lineHeight')",
+    "@StorageProp('reader.typography.paragraphGap')",
+    "@StorageProp('reader.typography.letterSpacing')",
+    "@StorageProp('reader.typography.fontFamily')",
+    "@StorageProp('reader.pageSpace.topMargin')",
+    "@StorageProp('reader.pageSpace.sideMargin')",
+    "@StorageProp('reader.pageSpace.paragraphIndent')",
   ]) {
     assert.ok(reader.includes(storageKey), `reading surface must subscribe to ${storageKey}`);
   }
@@ -347,18 +649,27 @@ test('reader control layer uses live demo top overlay and reading copy', () => {
     'reader invisible interaction modules must be visible in development mode');
   assert.ok(reader.includes("@StorageProp('reader.paginationMode') paginationMode"),
     'reader body must expose a rendering mode so horizontal and vertical reading are separate layouts');
-  assert.ok(reader.includes('private horizontalPages(): string[][]'),
+  assert.ok(reader.includes('private horizontalPages(): ReaderPageModel[]'),
     'horizontal page-turn mode must render page-sized bodies instead of one vertical flow');
-  assert.ok(reader.includes('private estimatedParagraphHeight(text: string): number'),
-    'horizontal reader mode must estimate page capacity from text metrics and frame size');
+  assert.ok(reader.includes('private measuredParagraphHeight(text: string): number'),
+    'horizontal reader mode must measure page capacity with ArkUI text metrics');
+  assert.ok(reader.includes('getMeasureUtils().measureTextSize({'),
+    'horizontal reader mode must use the native text engine instead of a stale line-height ratio');
+  assert.ok(!reader.includes('this.paragraphLineHeight() * 0.88'),
+    'reader pagination must not restore the obsolete 0.88 line-height correction');
   assert.ok(reader.includes('this.textLayerHeight()'),
     'horizontal reader mode must use the configured text frame height when paginating');
   assert.ok(!textFlow.includes('const pageSize = 2'),
     'horizontal reader mode must not use the old fixed two-paragraph pages');
   assert.ok(reader.includes('private verticalReading(): boolean'),
     'vertical reading mode must keep a dedicated scroll-flow branch');
-  assert.ok(reader.includes('.scrollable(ScrollDirection.Horizontal)'),
-    'horizontal reader mode must use a horizontal scroll/page surface');
+  assert.ok(reader.includes('ForEach([this.currentPageIndex()]') &&
+    reader.includes('this.ReaderParagraphs(this.horizontalPageData[pageIndex]?.fragments ?? [], pageIndex)'),
+    'horizontal reader mode must render one current-page subtree keyed by page index');
+  assert.ok(!textFlow.includes('.padding({ right: pageIndex ==='),
+    'horizontal pages must not consume a second right gutter inside the page width');
+  assert.ok(reader.includes('return this.interactionDebugVisible ? 0.42 : 0;'),
+    'normal reader hotzones must be fully transparent');
   assert.ok(reader.includes('top: this.textTopInset()'),
     'reader text top inset must be route-stable instead of control-layer-specific');
   assert.ok(reader.includes('left: this.textLeftInset()'),
@@ -367,6 +678,12 @@ test('reader control layer uses live demo top overlay and reading copy', () => {
     'reader text right inset may only branch for wide reader dock coverage');
   assert.ok(reader.includes('bottom: this.textBottomInset()'),
     'reader text bottom inset must not reserve bottom sheet space');
+  assert.ok(reader.includes('return Math.max(baseTop, this.safeAreaTop + SpacingTokens.lg)'),
+    'reader top inset must use safe area as a floor instead of adding two margins');
+  assert.ok(reader.includes('return Math.max(SpacingTokens.xl, this.safeAreaBottom + SpacingTokens.lg)'),
+    'reader bottom inset must preserve the demo 48vp floor without additive drift');
+  assert.ok(!textFlow.includes('reader.pageSpace.bottomMargin'),
+    'reader page space must not expose a bottom-margin control absent from the current demo');
   assert.ok(!reader.includes('controlParagraphs'),
     'control layer must not render a separate body copy');
   assert.ok(!reader.includes('if (this.controlLayer()) {\n      return this.controlParagraphs;\n    }'),
@@ -378,13 +695,17 @@ test('reader control layer uses live demo top overlay and reading copy', () => {
   assert.ok(reader.includes("return this.routeId !== 'immersive-reading' && this.routeId !== 'reader_content'"),
     'ReaderBase must treat reader as control and only immersive routes as immersive');
   assert.ok(reader.includes('ControlDismissZone()'), 'control-layer branch must render the live demo control dismiss zone');
-  assert.ok(reader.includes('ReadingInfoLayer({ theme: this.theme })'), 'immersive reader branch keeps corner info');
+  assert.ok(reader.includes('ReadingInfoLayer()'), 'immersive reader branch keeps corner info');
   assert.ok(reader.includes("route-push', id: 'reader'"),
     'center tap hot zone must open the live demo reader control route');
   assert.ok(reader.includes('@StorageProp(InteractionDebugAdapter.K_VISIBLE)'),
     'immersive tap zones must support development-mode visualization');
   assert.ok(reader.includes("this.zoneLabel('ControlLayerHotzone')"),
     'development mode must label the center reader control hot zone with the live demo data-dev-region name');
+  assert.ok(reader.includes("type: 'reader-page-next'"),
+    'the right reader hot zone must advance reducer-backed pagination');
+  assert.ok(reader.includes("Text(this.pageLabel())"),
+    'the immersive footer must show reducer-backed page index/count instead of a hard-coded total');
   assert.ok(!reader.includes('.hitTestBehavior(HitTestMode.Block)'),
     'TapZones parent must not block child hot-zone clicks');
   assert.ok(reader.includes('.zIndex(ZIndexTokens.dialog)'),
@@ -392,8 +713,8 @@ test('reader control layer uses live demo top overlay and reading copy', () => {
   const entryAbility = read(path.join(REPO, 'entry/src/main/ets/entryability/EntryAbility.ets'));
   assert.ok(entryAbility.includes('InteractionDebugAdapter.K_VISIBLE'),
     'EntryAbility must seed the development interaction visualization flag');
-  assert.ok(entryAbility.includes("params['interactionDebug'] !== 'false'"),
-    'development interaction visualization must be launch-parameter controllable');
+  assert.ok(entryAbility.includes("params['interactionDebug'] === 'true'"),
+    'development interaction visualization must be opt-in for production-like test packages');
   assert.ok(entryAbility.includes('InteractionDebugAdapter.K_INITIAL_ROUTE'),
     'development mode must support initialRoute for direct VM visual checks');
   assert.ok(entryAbility.includes("ReaderUiStore.dispatch({ type: 'route-replace', id: initialRoute as RouteId })"),
@@ -421,8 +742,9 @@ test('reader text render settings are reducer-backed, not static panel copy', ()
     'fontFamily: ReaderFontFamily',
     'topMargin: number',
     'sideMargin: number',
-    'bottomMargin: number',
     'paragraphIndent: number',
+    'readerPageIndex: number',
+    'readerPageCount: number',
   ]) {
     assert.ok(state.includes(field), `ReaderUiState missing render field ${field}`);
   }
@@ -442,8 +764,9 @@ test('reader text render settings are reducer-backed, not static panel copy', ()
     "K_FONT_FAMILY: string = 'reader.typography.fontFamily'",
     "K_TOP_MARGIN: string = 'reader.pageSpace.topMargin'",
     "K_SIDE_MARGIN: string = 'reader.pageSpace.sideMargin'",
-    "K_BOTTOM_MARGIN: string = 'reader.pageSpace.bottomMargin'",
     "K_PARAGRAPH_INDENT: string = 'reader.pageSpace.paragraphIndent'",
+    "K_READER_PAGE_INDEX: string = 'reader.pageIndex'",
+    "K_READER_PAGE_COUNT: string = 'reader.pageCount'",
   ]) {
     assert.ok(store.includes(key), `ReaderUiStore missing AppStorage key ${key}`);
   }
@@ -477,6 +800,42 @@ test('reader text render settings are reducer-backed, not static panel copy', ()
   ]) {
     assert.ok(!overlay.includes(staticCopy), `appearance panels must not keep static copy ${staticCopy}`);
   }
+});
+
+test('reader reflow and resume preserve Core scalar anchors instead of page zero', () => {
+  const reader = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderComponents.ets'));
+  const reducer = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderReducer.ets'));
+  const effects = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderEffects.ets'));
+  const library = read(path.join(REPO, 'entry/src/main/ets/ui/shells/LibraryShell.ets'));
+  const contract = read(path.join(REPO, 'entry/src/main/ets/ui/components/ContractComponents.ets'));
+
+  assert.ok(reader.includes('captureLiveReflowAnchor') && reader.includes('applyLiveReflowAnchor') &&
+    reader.includes('applyVisualAnchorRestore'),
+  'font, viewport, and pagination reflow must restore the current scalar anchor before any initial canonical anchor');
+  assert.ok(reader.includes('scalarBoundaryBefore') && reader.includes('firstScalarEnd'),
+    'horizontal pagination must not split UTF-16 surrogate pairs and drift Core Unicode-scalar offsets');
+  for (const method of ['setPaginationMode', 'setReaderRenderMetric', 'setReaderFontFamily', 'resetReaderRenderSettings']) {
+    const start = reducer.indexOf(`static ${method}`);
+    const end = reducer.indexOf('\n  static ', start + 1);
+    const body = reducer.slice(start, end < 0 ? reducer.length : end);
+    assert.ok(!body.includes('next.readerChapterOffset = 0') && !body.includes('next.readerChapterProgress = 0'),
+      `${method} must reflow from the current Core anchor rather than reset reading position`);
+  }
+  assert.ok(effects.includes('readingProgressGet(bookId, sourceId)') &&
+    effects.includes('bookOpenRequestSequence') && effects.includes('bookOpenSequence: sequence'),
+  'shelf reopening must use source-scoped Core progress and reject stale detail/TOC/body responses');
+  assert.ok(!library.includes('chapterToc[0]') && !contract.includes('chapterListUrl });'),
+    'continue-reading controls must not treat a TOC endpoint or first visible row as a resume location');
+  assert.ok(!contract.includes('fixtureChapters') && !contract.includes('科学边界') &&
+    !contract.includes('叶文洁在雷达峰'),
+  'book detail preview must not render fixture chapters or a fixture introduction when Core has no data');
+  assert.ok(reader.includes('contentIdentity: ReaderContentIdentity') &&
+    reader.includes('reportReadingAnchor(page.contentIdentity') &&
+    reader.includes('reportReadingAnchor(selected.contentIdentity'),
+  'rendered horizontal and vertical fragments must retain their own chapter identity for late ArkUI callbacks');
+  assert.ok(reducer.includes('activeReaderContentIdentity') &&
+    reducer.includes('bookId !== active.bookId') && reducer.includes('chapterIndex !== active.chapterIndex'),
+  'reducer must reject a stale anchor that does not match the active rendered body');
 });
 
 test('reader control route fixture uses live demo control sheet, not obsolete floating controls', () => {
@@ -636,16 +995,99 @@ test('reader full and utility routes use live demo expanded panels', () => {
     '定时关闭',
     '本书剩余',
     '书籍缓存',
-    '已缓存章节',
-    '缓存后续章节',
-    '清理本书缓存',
+    '缓存能力',
+    '当前已加载正文',
+    'Core 阅读缓存 command',
+    'search.content',
     '调试信息',
     '渲染状态',
     '调试日志',
-    '重新测量分页',
+    '命令可用性',
   ]) {
     assert.ok(overlaySrc.includes(marker), `ReaderOverlayComponents missing full/utility marker ${marker}`);
   }
+});
+
+test('reader controls bind Core or Host capabilities and mark missing controls unavailable', () => {
+  const overlay = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderOverlayComponents.ets'));
+  const effects = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderEffects.ets'));
+  const reader = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderComponents.ets'));
+  const fullTts = overlay.slice(
+    overlay.indexOf('export struct ReaderFullTtsPage'),
+    overlay.indexOf('export struct ReaderFullAppearancePage')
+  );
+  const fullSettings = overlay.slice(
+    overlay.indexOf('export struct ReaderFullSettingsPage'),
+    overlay.indexOf('struct ReaderUtilitySummaryCard')
+  );
+  const controlSheet = overlay.slice(
+    overlay.indexOf('export struct ReaderControlSheet'),
+    overlay.indexOf('// ── Control bottom bar')
+  );
+
+  for (const marker of [
+    "@StorageProp('reader.ttsSession.playback')",
+    "type: 'tts-prev'",
+    "type: 'tts-toggle'",
+    "type: 'tts-next'",
+    "choiceKey: 'ttsRate'",
+    'TextReader Host 未提供程序化速率',
+    'Host 未提供映射',
+    'Core 仅当前章节',
+    'Core/Host 未接入',
+    'disabled: true',
+  ]) {
+    assert.ok(fullTts.includes(marker), `full TTS must keep truthful capability marker ${marker}`);
+  }
+  for (const marker of [
+    "@StorageProp('reader.readerToggles.keepScreenOn')",
+    "@StorageProp('reader.readerToggles.statusInfo')",
+    "@StorageProp('reader.readerToggles.hapticFeedback')",
+    "choiceKey: 'tapMode'",
+    '未接入按键监听',
+    '未接入方向 Host',
+    '当前 Reader Pager 未接入',
+  ]) {
+    assert.ok(fullSettings.includes(marker), `full settings must bind or disable ${marker}`);
+  }
+  assert.ok(controlSheet.includes("type: 'chapter-next'"), 'control sheet next chapter must dispatch a real effect');
+  assert.ok(controlSheet.includes("type: 'chapter-progress-seek'"), 'control sheet progress must dispatch Core-backed seek');
+  assert.ok(overlay.includes('struct ReaderBrightnessRail'), 'reader shell/quick/module must share a bound brightness rail');
+  assert.ok(overlay.includes("type: 'set-brightness'"), 'brightness rail must dispatch reducer state');
+  assert.ok(effects.includes('setWindowBrightness'), 'set-brightness must reach the Harmony window');
+  assert.ok(effects.includes('applyKeepScreenOn'), 'keep-screen-on must reach the ScreenHostAdapter');
+  assert.ok(effects.includes('maybeVibrateForReaderInteraction'), 'haptic setting must reach DeviceHostAdapter');
+  assert.ok(effects.includes('revertReaderBrightness'), 'brightness failures must restore the visible slider state');
+  assert.ok(effects.includes('revertReaderToggle'), 'system-bar failures must restore the visible toggle state');
+  assert.ok(effects.includes("beforeTick.autoPageMode === 'single'"),
+    'single auto-page mode must be consumed by the active timer');
+  assert.ok(effects.includes("type: 'auto-page-toggle'"),
+    'single auto-page mode must stop the active timer after one advance');
+  assert.ok(reader.includes("@StorageProp('reader.readerSettingOptions.tapMode')"),
+    'tap-mode setting must have a reader-surface consumer');
+});
+
+test('reader body selection uses ArkUI native text selection and real action paths', () => {
+  const reader = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderComponents.ets'));
+  const toolbar = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderSelectionToolbar.ets'));
+  const effects = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderEffects.ets'));
+  assert.ok(reader.includes('.copyOption(CopyOptions.InApp)'),
+    'reader paragraphs must opt into ArkUI native text selection');
+  assert.ok(reader.includes('.bindSelectionMenu(TextSpanType.TEXT, this.NativeSelectionMenu, TextResponseType.LONG_PRESS)'),
+    'reader paragraphs must bind the native long-press selection menu');
+  assert.ok(reader.includes('.onTextSelectionChange((selectionStart: number, selectionEnd: number)'),
+    'reader selection text must come from ArkUI selection offsets');
+  assert.ok(reader.includes(".hitTestBehavior(HitTestMode.Transparent)"),
+    'tap hot zones must not mask native long-press selection');
+  assert.ok(toolbar.includes("Text('高亮（未接入）')") && toolbar.includes("Text('笔记（未接入）')"),
+    'unimplemented Core highlight/note capability must be explicit and disabled');
+  assert.ok(toolbar.includes('.enabled(false)'),
+    'unimplemented selection actions must not remain clickable');
+  assert.ok(effects.includes('getClipboardAdapter().copy({ text: selectedText })'),
+    'copy must use the Clipboard Host adapter');
+  assert.ok(effects.includes("{ type: 'route-push', id: 'content-search' }") &&
+    effects.includes("{ type: 'content-search-submit', query: keyword }"),
+    'search must enter the existing Core-backed content-search flow');
 });
 
 test('development interaction visualization covers reader control modules', () => {
@@ -674,8 +1116,8 @@ test('development interaction visualization covers reader control modules', () =
     'scroll/page routes must render development labels for body components');
   assert.ok(rendererSrc.includes('this.renderDebuggedComponent(child, false)'),
     'nested contract components must keep development labels too');
-  assert.ok(entryAbility.includes("params['interactionDebug'] !== 'false'"),
-    'development mode should be on by default and disableable with interactionDebug=false');
+  assert.ok(entryAbility.includes("params['interactionDebug'] === 'true'"),
+    'development mode should be off by default and enableable with interactionDebug=true');
   assert.ok(entryAbility.includes('onNewWant(want: Want'),
     'development mode must re-read launch params on hot aa start / VM route switching');
   assert.ok(entryAbility.includes('applyDevelopmentLaunchParameters(want)'),
@@ -746,6 +1188,8 @@ test('source-switch routes keep the live demo reader-plane inline window', () =>
   const VS = readJson('view-state.fixtures.json');
   const componentSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/SourceSwitchFlowComponents.ets'));
   const rendererSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/ViewStateRenderer.ets'));
+  const effectsSrc = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderEffects.ets'));
+  const reducerSrc = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderReducer.ets'));
   const runtime = read(LIVE_DEMO_RUNTIME);
   for (const marker of ['fd-source-reader-continuation', 'fd-source-window-slot', 'fd-source-switch-window', 'fd-source-candidate-row']) {
     assert.ok(runtime.includes(marker), `live demo runtime missing source-switch marker ${marker}`);
@@ -764,18 +1208,46 @@ test('source-switch routes keep the live demo reader-plane inline window', () =>
     'ReaderControlSheet()',
     'ReaderBottomBar()',
     'SourceSwitchWindow()',
+    'SourceSwitchPhoneActions()',
     "Text('换源')",
-    "Text('按延迟排序')",
-    '优书网',
-    '笔趣阁镜像',
-    '备用线路 B',
-    '章节同步源',
-    '本地缓存',
-    '旧源备份',
-    "route-replace', id: 'reader'",
+    "Text('请选择一个书源')",
+    "@StorageProp('reader.availableSources')",
+    "Text('确认换源')",
+    "Text('取消')",
+    "type: 'source-switch-confirm'",
   ]) {
     assert.ok(componentSrc.includes(marker), `SourceSwitchFlowComponents missing live flow marker: ${marker}`);
   }
+  assert.ok(!componentSrc.includes('按延迟排序') && !componentSrc.includes('待测速'),
+    'SourceSwitchFlowComponents must not claim latency ordering or unmeasured source speed');
+  assert.ok(!componentSrc.includes("type: 'source-select-all'"),
+    'SourceSwitchFlowComponents must not expose a multi-source select-all action for a single-source Core flow');
+  assert.ok(effectsSrc.includes('runtime.changeBookSource') && effectsSrc.includes('selectSourceSwitchCandidate'),
+    'source switch must use the selected persisted source and reject ambiguous Core candidates');
+  assert.ok(effectsSrc.includes('runtime.readingProgressGet') && effectsSrc.includes('runtime.readingProgressUpdate'),
+    'source switch must transfer the best available Core reading position to the final source');
+  assert.ok(effectsSrc.includes('runtime.bookshelfAdd') && effectsSrc.includes('runtime.bookshelfRemove'),
+    'source switch must persist the target shelf entry before replacing the old source key');
+  const remoteShelfOpen = effectsSrc.slice(
+    effectsSrc.indexOf('static openBookshelfBook'), effectsSrc.indexOf('private static localBookDetail'),
+  );
+  assert.ok(remoteShelfOpen.includes('runBookDetailFromPersistedSource(bookId, true, sourceId, sequence)') &&
+    !remoteShelfOpen.includes('loadSourceSwitchCandidate'),
+  'remote bookshelf reopen must restore its own persisted source progress, not enter the source-switch transaction');
+  assert.ok(effectsSrc.includes('readPersistedReadingProgress') && effectsSrc.includes('persistedProgressTocPosition'),
+    'remote reopen must resolve its exact Core progress row before choosing a TOC chapter');
+  assert.ok(effectsSrc.includes('parseSourceSwitchCanonicalLocation') &&
+    effectsSrc.includes('canonicalLocation.locationRevision'),
+  'source switch must persist and publish Core canonicalLocation.locationRevision, never resolverVersion');
+  assert.ok(effectsSrc.includes('sourceSwitchChapterTarget') && effectsSrc.includes('chapterTarget.matched ? progress'),
+    'an unmatched source-switch TOC fallback must reset the old chapter anchor instead of applying it to another body');
+  assert.ok(effectsSrc.includes('requireCurrentSourceSwitch(sequence)') &&
+    effectsSrc.includes('cancelled source-switch target cleanup failed'),
+  'cancelling an in-flight source switch must stop before old shelf removal and clean up a newly added target when possible');
+  assert.ok(!effectsSrc.includes('const candidate = rawCandidates[0]'),
+    'source switch must not silently use the first Core candidate from an ambiguous result');
+  assert.ok(reducerSrc.includes("case 'source-switch-completed'") && reducerSrc.includes('beginSourceSwitch(state)'),
+    'source switch route must remain open until the Core-backed replacement transaction completes');
   assert.ok(!componentSrc.includes('BackTopBar('), 'source-switch flow must not render a normal page top bar');
   assert.ok(!componentSrc.includes('SourceSwitchResultsPanel'), 'source-switch flow must not reuse the obsolete full-screen results panel');
   const flowBody = componentSrc.slice(componentSrc.indexOf('export struct SourceSwitchFlowPage'));
@@ -806,35 +1278,106 @@ test('bookshelf section head uses demo view-action icons, not generic more dots'
   assert.ok(!sectionHead.includes('reader_icon_more_dark'), 'bookshelf section head must not render generic more-dot icons');
 });
 
-test('bookshelf route data and covers follow the current live demo fixture', () => {
+test('bookshelf renders Core books or explicit loading and empty states', () => {
   const VS = readJson('view-state.fixtures.json');
   const src = read(path.join(REPO, 'entry/src/main/ets/ui/components/BookshelfComponents.ets'));
-  const renderer = read(path.join(REPO, 'entry/src/main/ets/ui/components/ViewStateRenderer.ets'));
   const bookshelf = VS.find((e) => e.routeId === 'bookshelf' && e.pageState === 'default');
   assert.ok(bookshelf, 'bookshelf/default fixture missing');
   const continueCard = bookshelf.components.find((c) => c.type === 'ContinueReadingCard');
-  assert.equal(continueCard?.props.title, '长夜余火', 'continue card must use the live demo first book');
-  assert.equal(continueCard?.props.author, '爱潜水的乌贼', 'continue card author must match live demo');
-  assert.equal(continueCard?.props.coverKey, 'longNight', 'continue card cover must match live demo');
+  assert.ok(continueCard, 'bookshelf route must retain the continue-reading placement');
   const shelf = bookshelf.components.find((c) => c.type === 'BookshelfShelfSection');
   const grid = shelf?.children.find((c) => c.type === 'BookGrid');
   const cards = grid?.children.filter((c) => c.type === 'BookCard') || [];
-  assert.deepEqual(
-    cards.slice(0, 3).map((c) => [c.props.title, c.props.author, c.props.coverKey]),
-    [
-      ['长夜余火', '爱潜水的乌贼', 'longNight'],
-      ['诡秘之主', '爱潜水的乌贼', 'mysteryLord'],
-      ['明朝那些事儿', '当年明月', 'brightMoon'],
-    ],
-    'bookshelf first row must mirror frontend-demo fixture.js'
-  );
-  for (const marker of ['bookshelf_cover_long_night', 'bookshelf_cover_mystery_lord', 'bookshelf_cover_bright_moon']) {
-    assert.ok(src.includes(marker), `BookshelfComponents missing cover resource ${marker}`);
+  assert.ok(cards.length > 0, 'bookshelf fixture must retain the demo card geometry input');
+  for (const marker of [
+    "@StorageProp('reader.bookshelfBooks')",
+    "@StorageProp('reader.bookshelfLoaded')",
+    "@StorageProp('reader.continueReadingBook')",
+    "@StorageProp('reader.continueReadingLoaded')",
+    "@StorageProp('reader.continueReadingError')",
+    'BookshelfLoadingState()',
+    'BookshelfEmptyState({ group: this.bookshelfGroup })',
+    '正在从 Core 核验上次阅读位置。',
+    '暂无可继续阅读的书籍',
+    "type: 'bookshelf-book-open'",
+  ]) {
+    assert.ok(src.includes(marker), `BookshelfComponents missing Core-backed state marker ${marker}`);
   }
-  assert.ok(renderer.includes("coverKey: this.textOr(child.props.coverKey, 'threeBody')"),
-    'ViewStateRenderer must preserve BookGrid child coverKey props');
-  assert.ok(renderer.includes("coverKey: this.textOr(component.props.coverKey, 'longNight')"),
-    'ViewStateRenderer must pass coverKey to ContinueReadingCard/direct BookCard');
+  const effects = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderEffects.ets'));
+  for (const marker of ['loadContinueReading()', "params['hasReadingProgress'] = true", 'readingProgressGet(candidate.bookId, candidate.sourceId)']) {
+    assert.ok(effects.includes(marker), `continue-reading must use exact Core progress verification: ${marker}`);
+  }
+  assert.equal(src.includes('this.coreBooks[0]'), false,
+    'continue-reading must not project the first current shelf row as reading progress');
+  for (const fixtureMarker of ['private demoBooks:', 'useDemoFallback', 'bk-demo-', 'title: \'长夜余火\'']) {
+    assert.equal(src.includes(fixtureMarker), false,
+      `bookshelf must not fabricate fixture cards: ${fixtureMarker}`);
+  }
+});
+
+test('protected source covers use Core descriptors, binary cache files, and the live cover-column setting', () => {
+  const bookshelf = read(path.join(REPO, 'entry/src/main/ets/ui/components/BookshelfComponents.ets'));
+  const detail = read(path.join(REPO, 'entry/src/main/ets/ui/components/BookDetailComponents.ets'));
+  const discover = read(path.join(REPO, 'entry/src/main/ets/ui/components/DiscoverComponents.ets'));
+  const cover = read(path.join(REPO, 'entry/src/main/ets/ui/components/SourceCoverImage.ets'));
+  const cache = read(path.join(REPO, 'entry/src/main/ets/host/adapters/SourceImageCache.ets'));
+  const runtime = read(path.join(REPO, 'entry/src/main/ets/bridge/CoreRuntime.ets'));
+  const http = read(path.join(REPO, 'entry/src/main/ets/host/adapters/HttpHostAdapter.ets'));
+
+  for (const src of [bookshelf, detail, discover]) {
+    assert.ok(src.includes('SourceCoverImage'), 'every production shelf/detail/discover cover surface must use SourceCoverImage');
+    assert.equal(src.includes('Image(this.coverUrl)'), false,
+      'production cover surfaces must not hand a raw remote coverUrl to Image');
+  }
+  for (const marker of [
+    "@StorageProp('reader.coverColumns')",
+    'private columnsTemplate()',
+    '.columnsTemplate(this.columnsTemplate())',
+  ]) {
+    assert.ok(bookshelf.includes(marker), `BookGrid must consume the real coverColumns setting: ${marker}`);
+  }
+  for (const marker of [
+    'requestEpoch',
+    'sourceImageRequest(this.sourceId, this.coverUrl)',
+    'cache.beginLoad(descriptor.request)',
+    'this.activeLoad.cancel()',
+    'retry with the raw remote URL',
+  ]) {
+    assert.ok(cover.includes(marker), `SourceCoverImage missing protected-load guard: ${marker}`);
+  }
+  for (const marker of [
+    "'source.imageRequest'",
+    "params['sourceId']",
+    "params['imageUrl']",
+    'usePlatformCookieJar: true',
+    'sourceImageCache',
+  ]) {
+    assert.ok(runtime.includes(marker), `CoreRuntime missing source.imageRequest host wrapper marker: ${marker}`);
+  }
+  const wrapper = runtime.slice(runtime.indexOf('async sourceImageRequest'), runtime.indexOf('/**\n   * Replay a source.check'));
+  assert.equal(wrapper.includes("params['source']"), false,
+    'source.imageRequest wrapper must not allow UI inline source payloads');
+  for (const marker of [
+    'requestInStream',
+    "'headersReceive'",
+    "'dataReceive'",
+    "'dataEnd'",
+    'SOURCE_IMAGE_MAX_BYTES',
+    'SOURCE_IMAGE_CACHE_TTL_MILLIS',
+    "reader-covers-v1",
+    'cryptoFramework.createMd(\'SHA256\')',
+    'fs.renameSync',
+    'discardPart',
+    'activePart.has(key)',
+    'inFlight',
+    'SharedSourceImageLoad',
+    'file://',
+  ]) {
+    assert.ok(cache.includes(marker), `SourceImageCache missing binary/cache safety marker: ${marker}`);
+  }
+  for (const marker of ['mergeRequestHeader', 'mergeCookieHeader', 'toLowerCase()', 'usePlatformCookieJar']) {
+    assert.ok(http.includes(marker), `HttpHostAdapter missing case-insensitive protected-header merge: ${marker}`);
+  }
 });
 
 test('bookshelf top more opens real batch/group actions, not a dead icon', () => {
@@ -847,18 +1390,23 @@ test('bookshelf top more opens real batch/group actions, not a dead icon', () =>
   }
 });
 
-test('bookshelf management pages use LibraryShell fixed bottom actions', () => {
+test('bookshelf management pages avoid fake batch fixed actions', () => {
   const shellSrc = read(path.join(REPO, 'entry/src/main/ets/ui/shells/LibraryShell.ets'));
   const structuralSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/StructuralPageComponents.ets'));
-  for (const text of ['移动分组', '删除所选', '新建分组', '完成']) {
-    assert.ok(shellSrc.includes(text), `LibraryShell fixed action host missing ${text}`);
+  assert.ok(!shellSrc.includes("this.routeId === 'book-batch-management'"),
+    'Core has no batch selection mutation, so LibraryShell must not render a fake batch action bar');
+  for (const text of ['移动分组', '删除所选', '新建分组']) {
+    assert.ok(!shellSrc.includes(text), `LibraryShell must not retain dead batch action ${text}`);
   }
-  assert.ok(shellSrc.includes("this.routeId === 'book-batch-management'"), 'LibraryShell must gate batch actions by route');
   assert.ok(shellSrc.includes("this.routeId === 'group-management'"), 'LibraryShell must gate group actions by route');
+  assert.ok(shellSrc.includes("LibraryFixedActionButton({ label: '完成' })"),
+    'the Core-backed group page may keep only its real completion action');
   assert.ok(shellSrc.includes('renderBottomActionBar()'), 'LibraryShell fixed actions must be rendered as a bottom action bar');
   assert.ok(shellSrc.includes('private actionBarHeight(): number'), 'LibraryShell bottom action bar must own its real safe-area height');
   assert.ok(!shellSrc.includes('renderBottomActionHost'), 'LibraryShell must not use the obsolete full-screen action host');
   assert.ok(!shellSrc.includes('.hitTestBehavior(HitTestMode.Transparent)'), 'LibraryShell fixed actions must not sit inside a full-screen transparent hit-test layer');
+  assert.ok(structuralSrc.includes('批量操作未接入'), 'batch page must clearly expose the Core capability boundary');
+  assert.ok(structuralSrc.includes('BookGroupCreateForm'), 'group creation must remain in the real Core-backed form');
   assert.equal(structuralSrc.includes('ToolBottomActionRow'), false, 'management page actions must not live in scroll content');
 });
 
@@ -882,6 +1430,38 @@ test('ViewStateProps keeps renderer baseline props even when fixtures stop using
   for (const prop of ['label', 'progress', 'destructive', 'sources', 'unread']) {
     assert.ok(vsTableSrc.includes(`${prop}?:`), `ViewStateProps baseline prop missing: ${prop}`);
   }
+});
+
+test('ViewStateTable preserves nested props and context as lossless JSON values', () => {
+  const vsTableSrc = read(path.join(GEN, 'ViewStateTable.ets'));
+  assert.ok(vsTableSrc.includes('export type ViewStateJSONValue = object | string | number | boolean | null;'));
+  assert.ok(vsTableSrc.includes('context: Record<string, ViewStateJSONValue>;'));
+  assert.ok(vsTableSrc.includes('uiEventPayload?: ViewStateJSONValue;'));
+  assert.equal(vsTableSrc.includes('uiEventPayload?: string;'), false,
+    'nested canonical payload must never be coerced to a string');
+  assert.ok(vsTableSrc.includes('"context": {\n      "bookId": "bk-001"'),
+    'generated table must retain canonical nested context');
+  assert.ok(vsTableSrc.includes('"uiEventPayload": {'),
+    'generated table must retain canonical nested payload objects');
+  assert.ok(vsTableSrc.includes('static readonly ENTRIES: ViewStateEntry[] = JSON.parse(`'),
+    'ArkTS embedding must parse typed canonical JSON instead of emitting untyped nested literals');
+});
+
+test('ScreenGraph registry is wired as Shadow and unknown renderer types fail closed visibly', () => {
+  const routeRendererSrc = read(path.join(REPO, 'entry/src/main/ets/ui/router/RouteRenderer.ets'));
+  const viewRendererSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/ViewStateRenderer.ets'));
+  const shadowSrc = read(path.join(REPO, 'entry/src/main/ets/ui/router/ReaderUIScreenGraphShadowRegistry.ets'));
+  assert.ok(shadowSrc.includes("Shadow = 'Shadow'"), 'ScreenGraph consumer must remain Shadow');
+  assert.ok(routeRendererSrc.includes('ReaderUIScreenGraphShadowRegistry.observeRoute('),
+    'RouteRenderer must execute the generated registry lookup');
+  assert.ok(viewRendererSrc.includes('ReaderUIScreenGraphShadowRegistry.observeViewState('),
+    'ViewStateRenderer must execute component-tree parity lookup');
+  assert.ok(routeRendererSrc.includes('UnknownRouteContractDrift'), 'unknown RouteId must fail closed visibly');
+  assert.ok(viewRendererSrc.includes('Reader UI 组件契约漂移'), 'unknown ComponentType must fail closed visibly');
+  assert.equal(viewRendererSrc.includes("} else {\n      Empty()\n    }"), false,
+    'unknown ComponentType must not silently render Empty');
+  assert.equal(shadowSrc.includes('Authoritative'), true,
+    'source comment must keep the promotion boundary explicit');
 });
 
 // ── 6. No duplicate (routeId, pageState) keys in the view-state fixture ──
@@ -913,11 +1493,34 @@ test('book-detail uses the demo detail composite body, not a standalone cover', 
     false,
     'book-detail must not render BookCover as a top-level body component'
   );
-  for (const text of ['长夜余火', '爱潜水的乌贼', '第 32 章 雨夜', '书源：', '更换书源', '第 30 章 旧日', '第 33 章 灯塔']) {
-    assert.ok(detailSrc.includes(text), `book-detail live demo content/structure missing ${text}`);
+  const hero = detailSrc.slice(
+    detailSrc.indexOf('export struct BookHero'),
+    detailSrc.indexOf('export struct BookSummaryCard')
+  );
+  for (const marker of [
+    "@StorageProp('reader.currentBook')",
+    '未选择书籍',
+    '请从书架、搜索或发现结果打开一本书。',
+    'currentBook.coverUrl',
+    'Core 未返回本书简介。',
+    '更换书源',
+  ]) {
+    assert.ok(detailSrc.includes(marker), `book-detail missing Core-backed state marker ${marker}`);
   }
+  for (const fixtureMarker of ['长夜余火', '爱潜水的乌贼', '第 32 章 雨夜', '128.4 万', '悬疑 · 推理', '优书网', 'bookshelf_cover_long_night']) {
+    assert.equal(hero.includes(fixtureMarker), false,
+      `book-detail hero must not retain fabricated fallback content: ${fixtureMarker}`);
+  }
+  const chapterList = detailSrc.slice(detailSrc.indexOf('export struct BookChapterList'));
+  assert.ok(chapterList.includes("@StorageProp('reader.chapterToc')"),
+    'book-detail preview must bind the Core-backed chapter TOC');
+  assert.ok(chapterList.includes("type: 'chapter-load'"),
+    'book-detail preview rows must dispatch the selected real chapter');
+  assert.ok(chapterList.includes('暂无从 Core 返回的章节目录'),
+    'book-detail preview must expose a truthful empty state');
+  assert.ok(!chapterList.includes('private chapters:'),
+    'book-detail preview must not retain fixture chapters');
   assert.ok(detailSrc.includes("id: 'source-switch'"), 'book-detail source action must push the live demo source-switch route');
-  assert.ok(detailSrc.includes('bookshelf_cover_long_night'), 'book-detail hero must use the live demo long-night cover');
   assert.ok(detailSrc.includes("Image($r('app.media.ui_icon_list_primary')).width(16).height(16)"),
     'book-detail complete-directory action must keep the live demo list icon');
   assert.ok(!detailSrc.includes('reader_icon_more_dark'), 'book-detail chapter rows must not use obsolete more-dot row affordances');
@@ -937,6 +1540,7 @@ test('reader entry route semantics match the live demo immersive-to-control flow
   const detailSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/BookDetailComponents.ets'));
   const contractSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/ContractComponents.ets'));
   const shellSrc = read(path.join(REPO, 'entry/src/main/ets/ui/shells/LibraryShell.ets'));
+  const reducerSrc = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderReducer.ets'));
   const runtime = read(LIVE_DEMO_RUNTIME);
 
   assert.ok(runtime.includes('reader: { mode: "control" }'),
@@ -964,10 +1568,15 @@ test('reader entry route semantics match the live demo immersive-to-control flow
     'ReaderBase must treat reader as control and only immersive routes as immersive');
   assert.ok(readerSrc.includes("route-push', id: 'reader'"),
     'immersive center hotzone must open the live reader control route');
-  for (const src of [bookshelfSrc, detailSrc, contractSrc, shellSrc]) {
+  for (const src of [detailSrc, contractSrc, shellSrc]) {
     assert.ok(src.includes("route-push', id: 'immersive-reading'"),
       'reader entry actions must route to immersive-reading before opening the control layer');
   }
+  assert.ok(bookshelfSrc.includes('readerEntry: true') &&
+    bookshelfSrc.includes("coreBook.sourceId === 'local' ? 'local' : 'remote'"),
+  'bookshelf continue must mark the one real book.open alias and preserve remote/local sourceKind');
+  assert.ok(reducerSrc.includes("ReaderReducer.push(state, 'immersive-reading')"),
+    'marked bookshelf reader entry must enter immersive-reading in the same native reducer pass');
   assert.ok(!bookshelfSrc.includes("route-push', id: 'reader'"),
     'bookshelf continue card must not enter the control route directly');
 });
@@ -1030,20 +1639,24 @@ test('discover/rss horizontal chip rows hide native scroll indicators', () => {
   }
 });
 
-test('discover source bulk route is reachable and owns fixed actions', () => {
+test('discover source management exposes only Core-backed or explicitly unavailable actions', () => {
   const discoverSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/DiscoverComponents.ets'));
   const settingsShellSrc = read(path.join(REPO, 'entry/src/main/ets/ui/shells/SettingsShell.ets'));
-  assert.ok(discoverSrc.includes("id: 'discover-source-bulk'"), 'DiscoverSourceBar must route-push source bulk management');
-  assert.ok(settingsShellSrc.includes("this.routeId === 'discover-source-bulk'"), 'SettingsShell must gate source bulk fixed actions by route');
-  for (const label of ['启用', '禁用', '刷新']) {
-    assert.ok(settingsShellSrc.includes(`label: '${label}'`), `discover-source-bulk fixed action missing ${label}`);
+  for (const marker of [
+    "type: 'discover-source-cycle'",
+    "id: 'source-management'",
+    '发现源批量启停不可用',
+    '当前 Core/Host 未提供书源批量启停命令',
+  ]) {
+    assert.ok(discoverSrc.includes(marker), `DiscoverComponents missing Core/unavailable source-management marker: ${marker}`);
   }
-  assert.ok(settingsShellSrc.includes('renderBottomActionBar()'), 'SettingsShell fixed actions must be rendered as a bottom action bar');
-  assert.ok(!settingsShellSrc.includes('renderBottomActionHost'), 'SettingsShell must not use the obsolete full-screen action host');
-  assert.ok(!settingsShellSrc.includes('.hitTestBehavior(HitTestMode.Transparent)'), 'SettingsShell fixed actions must not sit inside a full-screen transparent hit-test layer');
+  assert.equal(discoverSrc.includes("id: 'discover-source-bulk'"), false,
+    'DiscoverSourceBar must not route into the obsolete fixture bulk-enable page');
+  assert.equal(settingsShellSrc.includes("this.routeId === 'discover-source-bulk'"), false,
+    'SettingsShell must not render fake bulk enable/disable controls');
 });
 
-test('discover source login/rule pages use page-level visual components', () => {
+test('discover source login/rule routes are explicitly unavailable, never fake workflows', () => {
   const VS = readJson('view-state.fixtures.json');
   const expected = new Map([
     ['discover-source-login/default', ['BackTopBar', 'DiscoverSourceLoginPage']],
@@ -1063,13 +1676,64 @@ test('discover source login/rule pages use page-level visual components', () => 
 
   const discoverSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/DiscoverComponents.ets'));
   for (const text of [
+    '书源登录流程不可用',
+    '发现规则编辑与测试不可用',
+    '未暴露书源登录态协商能力',
+    '未接入规则编辑或调试写入能力',
+  ]) {
+    assert.ok(discoverSrc.includes(text), `DiscoverComponents missing unavailable-state copy: ${text}`);
+  }
+  for (const fixtureText of [
     '轻小说文库',
     '打开网页登录',
-    '发现规则',
+    '保存登录信息',
     '测试入口',
     '解析到 18 本书',
   ]) {
-    assert.ok(discoverSrc.includes(text), `DiscoverComponents missing source subpage copy: ${text}`);
+    assert.equal(discoverSrc.includes(fixtureText), false,
+      `DiscoverComponents must not retain fake source login/rule content: ${fixtureText}`);
+  }
+});
+
+test('discover main tab is sourced only from persisted Core source.explore data', () => {
+  const effects = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderEffects.ets'));
+  const runtime = read(path.join(REPO, 'entry/src/main/ets/bridge/CoreRuntime.ets'));
+  const state = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderUiState.ets'));
+  const components = read(path.join(REPO, 'entry/src/main/ets/ui/components/DiscoverComponents.ets'));
+  const topBar = read(path.join(REPO, 'entry/src/main/ets/ui/components/SharedComponents.ets'));
+  for (const marker of [
+    'sourceList(true)',
+    'sourceExploreKinds',
+    'sourceExplore(source.sourceId',
+    'enabledExplore === true',
+    'discover-data-loaded',
+    'mapDiscoverKinds',
+    'mapDiscoverBooks',
+  ]) {
+    assert.ok(effects.includes(marker) || runtime.includes(marker),
+      `Discover effects/runtime missing persisted-Core marker: ${marker}`);
+  }
+  for (const marker of [
+    'CoreDiscoverKind',
+    'CoreDiscoverBook',
+    'discoverSourceId',
+    'discoverKindUrl',
+    'discoverBooks',
+  ]) {
+    assert.ok(state.includes(marker), `Discover state missing ${marker}`);
+  }
+  for (const marker of [
+    "type: 'book-detail-load', bookId: this.bookUrl, sourceId: this.sourceId",
+    "type: 'discover-kind-select', discoverKindUrl: kind.url",
+    "type: 'discover-refresh'",
+  ]) {
+    assert.ok(components.includes(marker), `Discover UI missing live Core action: ${marker}`);
+  }
+  assert.ok(topBar.includes("ReaderUiStore.dispatch({ type: 'discover-refresh' })"),
+    'Discover top-bar action must refresh Core data rather than open a fixture sort route');
+  for (const fixtureText of ['默认书源', "'排行榜'", "['三体'", '球状闪电']) {
+    assert.equal(components.includes(fixtureText), false,
+      `Discover main tab must not retain fixed demo data: ${fixtureText}`);
   }
 });
 
@@ -1101,21 +1765,151 @@ test('rss subpages use page-level visual components, not scaffold-only lists/loa
   const rssSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/RssComponents.ets'));
   for (const text of [
     '全部条目',
+    'RssCoreFilterControls',
+    '正在刷新启用订阅源…',
+    'Web({ src: this.normalizedUrl(), controller: this.controller })',
+    'registerController(RSS_ORIGINAL_WEB_PROFILE, this.controller)',
+    'unregisterController(RSS_ORIGINAL_WEB_PROFILE)',
+    'RSS 收藏分组未接入',
+    '当前 Core 无 RSS 订阅源分组契约',
+    '当前 Core 无 RSS 批量导入契约',
+    '当前 Core 无 RSS 规则订阅',
+    '前往订阅管理',
+  ]) {
+    assert.ok(rssSrc.includes(text), `RssComponents missing truthful RSS subpage copy: ${text}`);
+  }
+  assert.equal(rssSrc.includes('当前 Host 未注册可用 WebView 控制器，原文打开已禁用。'), false,
+    'RSS original must not retain the obsolete unregistered-WebView placeholder');
+  for (const fixtureText of [
     '正在刷新启用订阅源和分类入口',
     'Reader UI 前端输入件更新说明',
-    '外部浏览器',
+    'github.com/minliny/Reader-UI/releases/latest',
     '技术文章',
     '开源项目',
     '选择导入方式',
-    'RSS 源编辑',
-    '源地址',
-    'WebView',
+    '调试规则',
+    '保存排序',
   ]) {
-    assert.ok(rssSrc.includes(text), `RssComponents missing RSS subpage copy: ${text}`);
+    assert.equal(rssSrc.includes(fixtureText), false,
+      `RssComponents must not retain fabricated RSS subpage content: ${fixtureText}`);
   }
 });
 
-test('source tool pages use page-level visual components, not scaffold-only lists/loading', () => {
+test('rss-starred fails closed instead of projecting all Core articles as favorites', () => {
+  const tableSrc = read(path.join(GEN, 'ViewStateTable.ets'));
+  const rendererSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/ViewStateRenderer.ets'));
+  const rssSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/RssComponents.ets'));
+  const starredStart = tableSrc.indexOf('"routeId": "rss-starred"');
+  const starredEnd = tableSrc.indexOf('"routeId": "rss-original-browser"', starredStart);
+  const starredEntry = tableSrc.slice(starredStart, starredEnd);
+
+  assert.ok(starredStart >= 0 && starredEnd > starredStart,
+    'rss-starred must retain a generated route body to protect at runtime');
+  assert.ok(starredEntry.includes('"type": "RssArticleSection"'),
+    'the current Reader UI fixture is the all-items-shaped input guarded by the native renderer');
+  assert.ok(rendererSrc.includes("if (this.routeId !== 'rss-starred') return components;"),
+    'ViewStateRenderer must scope the favorite capability fence to rss-starred');
+  assert.ok(rendererSrc.includes("component.type === 'RssArticleSection'"),
+    'ViewStateRenderer must replace the all-items body instead of rendering it as favorites');
+  assert.ok(rendererSrc.includes("type: 'RssFavoritesUnavailablePage'"),
+    'ViewStateRenderer must resolve rss-starred to the truthful page component');
+  assert.ok(rendererSrc.includes("component.type === 'RssFavoritesUnavailablePage'"),
+    'truthful RSS favorites component must be renderable after route resolution');
+  assert.ok(rssSrc.includes('export struct RssFavoritesUnavailablePage'),
+    'RSS favorites must have a dedicated unavailable page');
+  assert.ok(rssSrc.includes('RSS 收藏未接入') && rssSrc.includes('当前 Core 无 RSS 收藏契约'),
+    'RSS favorites unavailable page must explain the missing Core capability');
+});
+
+test('SearchInputBox synchronizes submitted query without replacing an active draft', () => {
+  const components = read(path.join(REPO, 'entry/src/main/ets/ui/components/ContractComponents.ets'));
+  const start = components.indexOf('export struct SearchInputBox');
+  const end = components.indexOf('export struct ScopeSelector', start);
+  const searchInput = components.slice(start, end);
+
+  assert.ok(searchInput.includes("@Prop @Watch('syncQueryFromProp') query: string = '';"),
+    'SearchInputBox must observe external submitted-query updates');
+  assert.ok(searchInput.includes('aboutToAppear(): void') && searchInput.includes('this.syncQueryFromProp();'),
+    'SearchInputBox must initialize from a passed query when the route appears');
+  assert.ok(searchInput.includes('if (this.isEditing) return;'),
+    'SearchInputBox must not overwrite an active native input draft');
+  assert.ok(searchInput.includes('this.query === this.lastSynchronizedQuery && this.hasLocalDraft'),
+    'SearchInputBox must retain an unsubmitted draft after focus is released');
+  assert.ok(searchInput.includes('.onFocus(() => { this.isEditing = true; })'),
+    'SearchInputBox must mark the draft active on focus');
+  assert.ok(searchInput.includes('.onBlur(() => {') && searchInput.includes('this.isEditing = false;'),
+    'SearchInputBox must resume external-query synchronization after blur');
+  assert.ok(searchInput.includes('TextInput({ text: this.queryText, placeholder: this.placeholder })'),
+    'SearchInputBox must render the synchronized local text value');
+});
+
+test('rss item selection projects Core fields into a truthful detail page', () => {
+  const rssSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/RssComponents.ets'));
+  const detailSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/StructuralPageComponents.ets'));
+  const projectionSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/RssSelectionProjection.ets'));
+  const rendererSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/ViewStateRenderer.ets'));
+  const effectsSrc = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderEffects.ets'));
+  const stateSrc = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderUiState.ets'));
+
+  assert.ok(rssSrc.includes('RssSelectionProjection.write(a);'),
+    'clicking a Core RSS row must write the UI-owned selected-item projection before routing');
+  assert.ok(rssSrc.includes("type: 'rss-item-open'"),
+    'clicking a Core RSS row must retain the Core read-confirmation action');
+  for (const marker of [
+    'K_TITLE',
+    'K_DESCRIPTION',
+    'K_AUTHOR',
+    'K_DATE',
+    'K_LINK',
+    'K_SUBSCRIPTION_ID',
+    'item.title',
+    'item.description',
+    'item.author',
+    'item.pubDate',
+    'item.link',
+    'item.subscriptionId',
+  ]) {
+    assert.ok(projectionSrc.includes(marker), `RSS selection projection missing Core field ${marker}`);
+  }
+  for (const marker of [
+    '@StorageProp(RssSelectionProjection.K_TITLE)',
+    '@StorageProp(RssSelectionProjection.K_DESCRIPTION)',
+    '@StorageProp(RssSelectionProjection.K_AUTHOR)',
+    '@StorageProp(RssSelectionProjection.K_DATE)',
+    '@StorageProp(RssSelectionProjection.K_LINK)',
+    '@StorageProp(RssSelectionProjection.K_SUBSCRIPTION_ID)',
+    '未选择 RSS 条目',
+    'Core 未提供原文链接。',
+    '在应用内打开原文',
+    'isSafeRssOriginalUrl(this.selectedLink)',
+    "id: 'rss-original'",
+  ]) {
+    assert.ok(detailSrc.includes(marker), `RssDetailPage missing truthful selected-item marker ${marker}`);
+  }
+  const detailPage = detailSrc.slice(detailSrc.indexOf('export struct RssDetailPage'), detailSrc.indexOf('export struct RssEmptyState'));
+  assert.equal(detailPage.includes('深空信号'), false,
+    'RssDetailPage must not use a fixed demo article when no Core item is selected');
+  assert.ok(rendererSrc.includes("} else if (component.type === 'RssDetailPage') {\n      RssDetailPage()"),
+    'ViewStateRenderer must not pass a fixture title into the Core-selected detail page');
+  assert.ok(rssSrc.includes('getWebViewAdapter'),
+    'RSS original must register its real ArkUI controller with the Host adapter');
+  assert.ok(rssSrc.includes('Web({ src: this.normalizedUrl(), controller: this.controller })'),
+    'RSS original must use an in-app ArkUI Web page rather than an external-browser placeholder');
+  assert.ok(rssSrc.includes('isSafeRssOriginalUrl'),
+    'RSS original must validate the Core link before constructing Web');
+  assert.ok(rssSrc.includes('unregisterController(RSS_ORIGINAL_WEB_PROFILE)'),
+    'RSS original must unregister the controller on route disappearance');
+  assert.ok(stateSrc.includes('read: boolean;'),
+    'RSS item state must retain the Core read projection');
+  assert.ok(effectsSrc.includes("params['unreadOnly'] = unreadOnly;"),
+    'RSS all/unread controls must issue the matching Core request filter');
+  assert.equal(effectsSrc.includes("params['limit'] = 50"), false,
+    'RSS all-items must not truncate Core cache rows to a fixed visual limit');
+  assert.ok(effectsSrc.includes("read: booleans['read'] === true"),
+    'RSS item mapping must preserve Core read state for the all-items view');
+});
+
+test('source tool routes render Core-backed results or explicit unavailable states', () => {
   const VS = readJson('view-state.fixtures.json');
   const expected = new Map([
     ['source-add/default', ['BackTopBar', 'SourceImportOptionsPage']],
@@ -1126,6 +1920,7 @@ test('source tool pages use page-level visual components, not scaffold-only list
     ['source-groups/default', ['BackTopBar', 'SourceGroupsPage']],
     ['source-detail/default', ['BackTopBar', 'SourceDetailPage']],
     ['source-detect/default', ['BackTopBar', 'SourceDetectPage']],
+    ['source-test-result/default', ['BackTopBar', 'SourceTestResultPage']],
     ['source-batch/default', ['BackTopBar', 'SourceBatchPage']],
     ['source-rule-edit/default', ['BackTopBar', 'SourceRuleEditPage']],
     ['source-edit-debug/default', ['BackTopBar', 'SourceRuleEditPage']],
@@ -1154,47 +1949,201 @@ test('source tool pages use page-level visual components, not scaffold-only list
 
   const sourceSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/LibraryComponents.ets'));
   for (const text of [
-    '网络导入',
-    '分组用于筛选和批量整理书源',
+    "@StorageProp('reader.sourceCheckResult')",
+    'CoreSourceCheckResult',
+    'Core L1–L5 真实诊断结果',
+    'L1 · 书源存在性',
+    'Core 未返回诊断结果',
+    '重新运行真实诊断',
+    "type: 'source-debug-run'",
+    '真实书源调测',
+    'L4/L5 多页会明确标为有限回放',
+    '不会展示或缓存 Host 响应正文',
+    '书源批量启停未接入',
+    '书源规则编辑未接入',
+    'Core source.delete',
+    '不会展示演示书源、固定成功状态、伪造请求日志',
+  ]) {
+    assert.ok(sourceSrc.includes(text), `LibraryComponents missing Core-backed source tool marker: ${text}`);
+  }
+  for (const staleFixture of [
     '5 项检测 · 4 项通过 · 1 项失败',
-    '正文模块调测',
+    '笔趣阁 · 第 128 章 风雨夜',
     '正在调测正文模块',
     '搜索模块调测',
     '正文模块日志',
-    '源码查看',
-    '错误日志',
-    '删除书源？',
-    '规则版本',
-    '解析规则',
-    '调测当前模块',
+    '解析 1280 章',
     '已选 3 个',
     '搜索书源名称或域名',
   ]) {
-    assert.ok(sourceSrc.includes(text), `LibraryComponents missing source tool copy: ${text}`);
+    assert.equal(sourceSrc.includes(staleFixture), false,
+      `LibraryComponents must not retain static source diagnostic fixture: ${staleFixture}`);
   }
+
+  const sourceEffects = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderEffects.ets'));
+  const sourceRuntime = read(path.join(REPO, 'entry/src/main/ets/bridge/CoreRuntime.ets'));
+  assert.ok(sourceEffects.includes('runtime.sourceCheckRun('),
+    'SourceDetect must execute Core source.check.run rather than a local or replayed diagnostic');
+  assert.ok(sourceEffects.includes('if (!source.enabled)'),
+    'SourceDetect must fail closed before diagnosing a disabled persisted source');
+  assert.ok(sourceEffects.includes('validateFullSourceCheckRunResult'),
+    'SourceDetect must fail closed when Core does not return a complete L1-L5 verdict');
+  assert.equal(sourceEffects.includes("type: 'source-check-unavailable'"), false,
+    'SourceDetect must no longer fall back to a missing-Host unavailable state');
+  const sourceCheckRunStart = sourceRuntime.indexOf('async sourceCheckRun(');
+  assert.ok(sourceCheckRunStart >= 0, 'CoreRuntime must expose a source.check.run wrapper');
+  const sourceCheckRunEnd = sourceRuntime.indexOf('\n  /**', sourceCheckRunStart + 1);
+  const sourceCheckRun = sourceRuntime.slice(sourceCheckRunStart,
+    sourceCheckRunEnd >= 0 ? sourceCheckRunEnd : sourceRuntime.length);
+  assert.ok(sourceCheckRun.includes("'source.check.run'"),
+    'source.check.run wrapper must use the Core diagnostic command');
+  assert.equal(sourceCheckRun.includes('responses'), false,
+    'source.check.run wrapper must not accept replay response bodies');
+  assert.ok(sourceRuntime.includes('SourceDebugTranscriptRecorder') &&
+    sourceRuntime.includes('sourceDebugRecordersByTraceAndSource') &&
+    sourceRuntime.includes('async sourceDebugRun(') &&
+    sourceRuntime.includes("this.runtime.request('source.debug'"),
+  'SourceDebug must attach a private trace/source recorder to the real source.check.run Host path and replay only through Core');
+  assert.ok(sourceRuntime.includes('ReaderCoreRuntime.waitForResult()') &&
+    sourceRuntime.includes('the sole native-event consumer'),
+  'SourceDebug must preserve the request waiter as the only Core result consumer');
+  assert.ok(sourceEffects.includes('runtime.sourceDebugRun(') &&
+    sourceEffects.includes('mapSourceDebugResult') &&
+    sourceEffects.includes('sourceDebugRequestSequence'),
+  'SourceDebug UI effect must use the isolated Core transaction projection and reject stale runs');
+  assert.ok(sourceEffects.includes('validateFullSourceCheckRunResult(rawCheck)') &&
+    sourceEffects.includes('调测日志仅重放已收集响应，不代表书源可用'),
+  'SourceDebug must not interpret a partial replay as a source availability success');
 
   const structuralSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/StructuralPageComponents.ets'));
   for (const text of [
-    'biquge.example · 玄幻书源',
-    '异常 · 最近检测 10:30 · 规则版本 3',
-    '最近检测结果',
-    '失败规则：正文内容规则“#content@text”返回空内容。',
-    '请求方式',
-    '并发限制',
-    'Cookie',
-    '更新时间',
-    '添加书源',
-    '从 URL 拉取书源包',
-    '选择本地 JSON 或 TXT 文件',
-    '解析剪贴板中的书源内容',
-    '进入空白书源编辑页',
+    "@StorageProp('reader.availableSources') coreSources: CoreSourceEntry[] = []",
+    "@StorageProp('reader.selectedSourceId') selectedSourceId: string = ''",
+    "type: 'source-detail-open'",
+    "type: 'source-export'",
+    "type: 'source-delete-request'",
+    '运行真实调测',
+    "id: 'source-debug'",
+    '粘贴一个 Legado BookSource JSON 对象或对象数组。',
+    "type: 'source-package-import-json'",
+    "type: 'source-package-import-url'",
+    "type: 'source-package-import-clipboard'",
+    '从 URL 下载并导入',
+    'Core 尚未定义的连通性检测或启停操作。',
+    'SourceDetectPage()',
   ]) {
     assert.ok(structuralSrc.includes(text), `StructuralPageComponents missing live source detail/import copy: ${text}`);
   }
+
+  const importEffects = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderEffects.ets'));
+  const importRuntime = read(path.join(REPO, 'entry/src/main/ets/bridge/CoreRuntime.ets'));
+  const importState = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderUiState.ets'));
+  const importResultPage = read(path.join(REPO, 'entry/src/main/ets/ui/components/LibraryComponents.ets'));
+  for (const marker of [
+    'runtime.sourceImport(bookSource)',
+    "this.runtime.request('source.import'",
+    'CoreRuntime.get().sourceList(false)',
+    "type: 'source-package-import-result'",
+    "resultFields['imported'] === true",
+    'sourceImportImported: number',
+    'sourceImportSkipped: number',
+    'sourceImportFailed: number',
+    "@StorageProp('reader.sourceImportImported')",
+    "@StorageProp('reader.sourceImportFailed')",
+    'Core 返回的逐项统计',
+  ]) {
+    const present = importEffects.includes(marker) || importRuntime.includes(marker) ||
+      importState.includes(marker) || importResultPage.includes(marker);
+    assert.ok(present, `Core-backed source import is missing ${marker}`);
+  }
+  assert.ok(importEffects.includes("if (resultFields['imported'] === true)"),
+    'source package import must only count Core-confirmed imports as successful');
+  assert.ok(importEffects.includes('skipped += 1'),
+    'source package import must expose non-imported/malformed entries as skipped rather than faking success');
+  assert.ok(importState.includes('sourceImportEpoch: number') &&
+    importEffects.includes('claimSourcePackageImport') && importEffects.includes('isCurrentSourcePackageImport'),
+  'source package import must bind every Core write to a visible-route epoch claim');
+  assert.ok(importEffects.indexOf("type: 'source-package-import-result'") <
+    importEffects.indexOf("type: 'route-push', id: 'source-import-preview'"),
+  'source package import must record the Core result before navigating to its preview');
   assert.equal(structuralSrc.includes("StructureCard({ title: this.title, message: '搜索、目录、正文规则均正常。'"), false,
     'source-detail must not regress to the old one-card placeholder');
   assert.equal(structuralSrc.includes("StatePanel({ title: '导入书源'"), false,
     'source-import-options must not regress to the old StatePanel placeholder');
+});
+
+test('normal remote reading uses only persisted Core source IDs', () => {
+  const effects = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderEffects.ets'));
+  const runtime = read(path.join(REPO, 'entry/src/main/ets/bridge/CoreRuntime.ets'));
+  const searchPanel = read(path.join(REPO, 'entry/src/main/ets/ui/components/ContractComponents.ets'));
+  const remoteStart = effects.indexOf('// ── Search');
+  const remoteEnd = effects.indexOf('// ── HTTP helper');
+  const remotePath = effects.slice(remoteStart, remoteEnd);
+  assert.ok(remoteStart >= 0 && remoteEnd > remoteStart,
+    'ReaderEffects must retain a bounded normal remote-reading section');
+  for (const marker of [
+    'bookSearchFromSource',
+    'bookDetailFromSource',
+    'bookTocFromSource',
+    'chapterContentFromSource',
+    'sourceList(true)',
+    '没有已启用的 Core 书源',
+  ]) {
+    assert.ok(remotePath.includes(marker) || runtime.includes(marker),
+      `normal remote path must retain persisted-Core marker ${marker}`);
+  }
+  assert.equal(remotePath.includes('BookSourceRegistry'), false,
+    'normal remote path must not import a yodu/demo source fallback');
+  assert.equal(remotePath.includes('httpGet('), false,
+    'normal remote path must not bypass Core with UI-owned direct HTTP');
+  assert.ok(searchPanel.includes("sourceId: r.sourceId ?? ''"),
+    'a Core search row must carry its sourceId into book.detail');
+});
+
+test('local book import preserves raw bytes and projects Core-detected encoding', () => {
+  const effects = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderEffects.ets'));
+  const state = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderUiState.ets'));
+  const reducer = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderReducer.ets'));
+  const store = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderUiStore.ets'));
+  const fixture = read(path.join(REPO, 'entry/src/main/ets/ui/fixtures/DemoUiState.ets'));
+  const structural = read(path.join(REPO, 'entry/src/main/ets/ui/components/StructuralPageComponents.ets'));
+  const importStart = effects.indexOf('static runLocalImport(');
+  const importEnd = effects.indexOf('// Detect import format from file extension.', importStart);
+  const importPath = effects.slice(importStart, importEnd);
+  const pageStart = structural.indexOf('export struct LocalBookImportPage');
+  const pageEnd = structural.indexOf('export struct ReadingSettingsEntryPage', pageStart);
+  const localImportPage = structural.slice(pageStart, pageEnd);
+
+  assert.ok(importStart >= 0 && importEnd > importStart,
+    'ReaderEffects must retain a bounded local-import effect');
+  assert.ok(importPath.includes('options.bytesBase64 = base64Helper.encodeToStringSync(bytes);'),
+    'local import must pass original bytes to Core for every format');
+  assert.equal(importPath.includes('TextDecoder.create'), false,
+    'local import must not pre-decode TXT as UTF-8 before Core can detect GBK/GB18030/UTF-16');
+  assert.equal(importPath.includes('options.text ='), false,
+    'local import must not send a lossy host-decoded text payload');
+  assert.ok(importPath.includes('ReaderEffects.pendingLocalBookOptions = options'),
+    'confirmed import must reuse exactly the raw-byte options parsed by Core');
+  assert.ok(importPath.includes("importEncoding: parsedEncoding"),
+    'local import preview must dispatch the encoding returned by Core');
+  for (const marker of [
+    'importPreviewEncoding: string',
+    'importEncoding?: string',
+    "K_IMPORT_PREVIEW_ENCODING = 'reader.importPreviewEncoding'",
+    'next.importPreviewEncoding = encoding',
+    'next.importPreviewEncoding = \'\'',
+    'importPreviewEncoding: \'\'',
+    "@StorageProp('reader.importPreviewEncoding')",
+    'GBK/GB18030（自动识别）',
+    'UTF-16LE',
+    'UTF-16BE',
+  ]) {
+    const present = state.includes(marker) || reducer.includes(marker) || store.includes(marker) ||
+      fixture.includes(marker) || localImportPage.includes(marker);
+    assert.ok(present, `local import encoding projection is missing ${marker}`);
+  }
+  assert.equal(localImportPage.includes("Text('UTF-8')"), false,
+    'local import page must not hardcode UTF-8 instead of Core-detected encoding');
 });
 
 test('source-management uses live list-management structure, not old tool hub', () => {
@@ -1206,15 +2155,19 @@ test('source-management uses live list-management structure, not old tool hub', 
 
   const structural = read(path.join(REPO, 'entry/src/main/ets/ui/components/StructuralPageComponents.ets'));
   for (const text of [
-    '搜索书源名称或域名',
-    '12 个书源 · 8 个启用 · 4 个异常 · 10:30 检测',
-    '全部 · 全部分组',
-    '起点中文网',
-    '笔趣阁',
-    '本地导入源',
-    '纵横中文网',
+    "@StorageProp('reader.availableSources') coreSources: CoreSourceEntry[] = []",
+    "@StorageProp('reader.sourcesLoaded') sourcesLoaded: boolean = false",
+    '正在读取 Core 书源…',
+    '暂无书源，请使用右下角“新增书源”导入',
+    "type: 'source-management-refresh'",
+    "type: 'source-export'",
+    "type: 'source-delete-request'",
   ]) {
     assert.ok(structural.includes(text), `SourceManagementPage missing live source-management copy: ${text}`);
+  }
+  for (const fixtureSource of ['起点中文网', '笔趣阁', '本地导入源', '纵横中文网']) {
+    assert.equal(structural.includes(`title: '${fixtureSource}'`), false,
+      `SourceManagementPage must not fabricate fixture source ${fixtureSource}`);
   }
   assert.equal(structural.includes("StructureCard({ title: '书源工具'"), false,
     'SourceManagementPage must not regress to the old source tool hub card');
@@ -1265,14 +2218,17 @@ test('sync restore pages use page-level visual components, not scaffold-only lis
     '同步目录',
     '测试网络连通性',
     '保存配置',
-    '恢复数据',
-    '最近备份',
-    '历史备份',
+    'Core 数据备份',
+    '本机 Core 数据备份',
+    '创建本机备份',
+    '从备份文件恢复',
+    '确认原子恢复 Core 数据',
     '恢复范围',
-    '确认恢复数据',
-    '正在恢复',
-    '选择冲突处理方式',
-    '恢复完成',
+    '开始原子恢复',
+    'Core 正在原子恢复',
+    '没有可选择的伪冲突项',
+    'Core 数据恢复完成',
+    'Core 与 Host 返回的事务结果',
   ]) {
     assert.ok(structureSrc.includes(text), `StructuralPageComponents missing sync restore copy: ${text}`);
   }
@@ -1332,6 +2288,100 @@ test('normalized settings/form pages use page-level components, not generic asse
   }
 });
 
+test('legacy search, book-more, and about pages render only live state or explicit unavailable states', () => {
+  const structural = read(path.join(REPO, 'entry/src/main/ets/ui/components/StructuralPageComponents.ets'));
+  const renderer = read(path.join(REPO, 'entry/src/main/ets/ui/components/ViewStateRenderer.ets'));
+  const searchHome = structural.slice(
+    structural.indexOf('export struct SearchHomePage'),
+    structural.indexOf('export struct SearchResultsPage')
+  );
+  const searchResults = structural.slice(
+    structural.indexOf('export struct SearchResultsPage'),
+    structural.indexOf('export struct SearchStatePage')
+  );
+  const bookMore = structural.slice(
+    structural.indexOf('export struct BookMoreMenuPage'),
+    structural.indexOf('struct BookGroupCreateForm')
+  );
+  const aboutVersion = structural.slice(
+    structural.indexOf('export struct AboutVersionPage'),
+    structural.indexOf('export struct AboutFeedbackPage')
+  );
+  const aboutFeedback = structural.slice(
+    structural.indexOf('export struct AboutFeedbackPage'),
+    structural.indexOf('export struct LocalBookImportPage')
+  );
+  const restoreResult = structural.slice(
+    structural.indexOf('export struct RestoreResultPage'),
+    structural.indexOf('export struct GlobalSettingsPage')
+  );
+  const syncProgress = structural.slice(
+    structural.indexOf('export struct SyncProgressPage'),
+    structural.indexOf('export struct RemoteWebDavBooksPage')
+  );
+
+  for (const component of [searchHome, searchResults]) {
+    assert.ok(component.includes("@StorageProp('reader.searchResults')"),
+      'legacy search pages must bind the reducer-backed Core search projection');
+    assert.ok(component.includes('SearchInputBox('),
+      'legacy search pages must expose the existing reducer-backed search input');
+  }
+  for (const marker of [
+    'SearchResultEntry',
+    "type: 'book-detail-load', bookId: result.bookId, sourceId: result.sourceId ?? ''",
+    '暂无搜索结果',
+    'Core 未提供作者或书源信息。',
+  ]) {
+    assert.ok(searchResults.includes(marker), `legacy search results missing real-data marker ${marker}`);
+  }
+  for (const fixtureText of ['深空信号', '可加入书架', 'private results:']) {
+    assert.equal(searchHome.includes(fixtureText) || searchResults.includes(fixtureText), false,
+      `legacy search pages must not retain fixture result data: ${fixtureText}`);
+  }
+
+  for (const marker of [
+    "@StorageProp('reader.currentBook')",
+    '未选择书籍',
+    "type: 'book-action', bookAction: 'delete'",
+    '当前书籍缺少可用于移出书架的 Core 书源标识。',
+  ]) {
+    assert.ok(bookMore.includes(marker), `BookMoreMenuPage missing truthful action/state marker ${marker}`);
+  }
+  for (const fixtureText of ['深空信号', '本地书籍', '下载 / 缓存', '重新扫描', '移动分组', 'private actions:']) {
+    assert.equal(bookMore.includes(fixtureText), false,
+      `BookMoreMenuPage must not retain fabricated book menu entry: ${fixtureText}`);
+  }
+
+  assert.ok(aboutVersion.includes('版本信息未接入') && aboutVersion.includes('不能显示固定版本号'),
+    'AboutVersionPage must not claim a fixture package version');
+  assert.ok(aboutFeedback.includes('关于与反馈未接入') && aboutFeedback.includes('不显示“已是最新”或可点击的伪链接'),
+    'AboutFeedbackPage must not claim unowned update or feedback capabilities');
+  assert.equal(aboutVersion.includes('Reader for Android'), false,
+    'AboutVersionPage must not retain a fixed foreign platform name');
+  assert.equal(aboutFeedback.includes("detail: '已是最新'"), false,
+    'AboutFeedbackPage must not retain a fabricated update result');
+
+  assert.ok(restoreResult.includes("@StorageProp('reader.coreBackupStatus')") &&
+    restoreResult.includes("@StorageProp('reader.coreBackupMessage')") &&
+    restoreResult.includes("this.status === 'success' ? 'Core 数据恢复完成'") &&
+    restoreResult.includes('Core 与 Host 返回的事务结果'),
+    'RestoreResultPage must show only the actual Core/Host restore transaction projection');
+  assert.ok(syncProgress.includes('同步状态未接入') && syncProgress.includes('不能显示固定书籍、百分比或同步成功'),
+    'SyncProgressPage must not fabricate a book-level sync result');
+  assert.equal(restoreResult.includes("chip: '成功'"), false,
+    'RestoreResultPage must not retain fixed successful-result rows');
+  assert.equal(syncProgress.includes('深空信号'), false,
+    'SyncProgressPage must not retain a fixed synced book');
+
+  for (const marker of [
+    "} else if (component.type === 'SearchResultsPage') {\n      SearchResultsPage()",
+    "} else if (component.type === 'BookMoreMenuPage') {\n      BookMoreMenuPage()",
+    "} else if (component.type === 'AboutVersionPage') {\n      AboutVersionPage()",
+  ]) {
+    assert.ok(renderer.includes(marker), `ViewStateRenderer must not inject fixture data into ${marker}`);
+  }
+});
+
 test('settings and sort-filter page-level components are wired to visual renderers', () => {
   const VS = readJson('view-state.fixtures.json');
   const sortFilter = VS.find((e) => e.routeId === 'sort-filter' && e.pageState === 'default');
@@ -1353,15 +2403,17 @@ test('settings and sort-filter page-level components are wired to visual rendere
     'ProgressSyncPage',
     'App主题',
     '书架排序',
-    '阅读进度同步',
+    '跨设备进度同步未接入',
   ]) {
     assert.ok(settingsSrc.includes(text), `SettingsComponents missing page-level copy/wiring: ${text}`);
   }
 
   const bookshelfSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/BookshelfComponents.ets'));
-  for (const text of ['BookshelfFilterPopover', '分组', '最近更新', '更新失败']) {
+  for (const text of ['BookshelfFilterPopover', '分组', '最近阅读', '全部（Core 未提供状态筛选）']) {
     assert.ok(bookshelfSrc.includes(text), `BookshelfComponents missing sort-filter popover copy: ${text}`);
   }
+  assert.equal(bookshelfSrc.includes("value: 'progress'"), false,
+    'sort-filter must not offer a fake progress sort when Core exposes only last-read time');
 
   const rendererSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/ViewStateRenderer.ets'));
   for (const type of ['SettingsHomePage', 'SettingsGeneralPage', 'BookshelfSearchSettingsPage', 'ProgressSyncPage', 'SourceBatchPage']) {
@@ -1377,14 +2429,32 @@ test('structural page visuals keep handoff row counts and copy', () => {
     '书源管理入口',
     '阅读页入口',
     'WebDAV / 同步入口',
-    '第6章：深空信号',
-    '已选 3 本',
+    '批量操作未接入',
     '书籍归属',
-    '第 34 章 旧地图',
     'https://example.com',
   ]) {
     assert.ok(structural.includes(text), `StructuralPageComponents missing handoff text: ${text}`);
   }
+  const tocPreview = structural.slice(
+    structural.indexOf('export struct BookTocPreviewPage'),
+    structural.indexOf('export struct BookshelfEmptyPage')
+  );
+  const directory = structural.slice(
+    structural.indexOf('export struct BookDirectoryPage'),
+    structural.indexOf('export struct SourceManagementPage')
+  );
+  for (const component of [tocPreview, directory]) {
+    assert.ok(component.includes("@StorageProp('reader.chapterToc')"),
+      'structural directory pages must bind the Core-backed chapter TOC');
+    assert.ok(component.includes("type: 'chapter-load'"),
+      'structural directory rows must dispatch the selected real chapter');
+    assert.ok(component.includes('暂无从 Core 返回的章节目录'),
+      'structural directory pages must expose a truthful empty state');
+  }
+  assert.ok(!tocPreview.includes('第6章：深空信号'),
+    'TOC preview must not retain fixture chapter rows');
+  assert.ok(!directory.includes('第 34 章 旧地图'),
+    'book directory must not retain fixture chapter rows');
   assert.ok(
     structural.includes('constraintSize({ minHeight: 640 })'),
     'StatePanel must match .reader-state-page min-height 640'
@@ -1392,7 +2462,7 @@ test('structural page visuals keep handoff row counts and copy', () => {
 });
 
 // ── 7. Live demo route → ViewState coverage guard ──────────────────────────
-// Reader UI/frontend-demo is the route/rendering source. Every route rendered
+// Reader-UI/frontend-demo is the route/rendering source. Every route rendered
 // by render-runtime.js must have a ViewState entry OR an aliasFor declaration.
 // PENDING_LIVE_DEMO_ROUTES is the explicit allowlist of routes not yet covered;
 // it MUST be empty before declaring full migration. A route missing from both
@@ -1401,6 +2471,14 @@ const ROUTES_JSON = readJson('route.fixtures.json');
 const VIEW_STATES_JSON = readJson('view-state.fixtures.json');
 const VS_ROUTE_IDS = new Set(VIEW_STATES_JSON.map((v) => v.routeId));
 const ALIAS_MAP = new Map(ROUTES_JSON.filter((r) => r.aliasFor).map((r) => [r.id, r.aliasFor]));
+// Reader UI 2.5 additions are direct generated ViewStates rather than rows in
+// the older JSON fixture. They are covered only when the exact unavailable
+// registry entry exists; this is not a blanket exemption.
+const CONTRACT25_ROUTE_IDS = new Set(
+  [...read(path.join(REPO, 'entry/src/main/ets/ui/router/ReaderContract25RouteRegistry.ets'))
+    .matchAll(/unavailableRouteDefinition\('([^']+)'/g)]
+    .map((match) => match[1]),
+);
 const LIVE_DEMO_ROUTES = liveDemoRouteTuples();
 
 // Routes acknowledged as not-yet-migrated. Remove a route here ONLY when it has
@@ -1412,8 +2490,9 @@ test('live demo routes each have ViewState or alias or are in PENDING allowlist'
   for (const [pageName, routeId] of LIVE_DEMO_ROUTES) {
     const hasVs = VS_ROUTE_IDS.has(routeId);
     const hasAlias = ALIAS_MAP.has(routeId);
+    const hasContract25 = CONTRACT25_ROUTE_IDS.has(routeId);
     const isPending = PENDING_LIVE_DEMO_ROUTES.has(routeId);
-    if (!hasVs && !hasAlias && !isPending) {
+    if (!hasVs && !hasAlias && !hasContract25 && !isPending) {
       missing.push(`${pageName} -> ${routeId}`);
     }
   }
@@ -1473,6 +2552,10 @@ const SCAFFOLD_ALLOWED = new Set([
   // All live demo routes have now been moved out of this allowlist; entries
   // below are non-demo contract routes that are still scaffold.
   // Phase 2-4: simple list/content/form pages where scaffold is the correct shape.
+  // R16 direct import state variants intentionally use canonical state
+  // primitives. Registry availability is not pixel-completion evidence.
+  'import-format-unsupported', 'import-empty-file', 'import-parsing',
+  'import-partial-success', 'import-result-detail',
 ]);
 
 // Aggregate ALL body components across every pageState entry for a route.
@@ -1512,6 +2595,251 @@ test('SCAFFOLD_ALLOWED contains no routes that now have bespoke components (stal
   }
   assert.equal(stale.length, 0,
     `SCAFFOLD_ALLOWED has routes now with bespoke components (remove them): ${stale.join(', ')}`);
+});
+
+test('destructive source, shelf, group, cache, restore, bookmark, history, RSS, and replacement paths require a live target plus confirmation', () => {
+  const effects = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderEffects.ets'));
+  const reducer = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderReducer.ets'));
+  const sourcePage = read(path.join(REPO, 'entry/src/main/ets/ui/components/LibraryComponents.ets'));
+  const structural = read(path.join(REPO, 'entry/src/main/ets/ui/components/StructuralPageComponents.ets'));
+  const overlay = read(path.join(REPO, 'entry/src/main/ets/ui/slots/OverlayHost.ets'));
+  const renderer = read(path.join(REPO, 'entry/src/main/ets/ui/components/ViewStateRenderer.ets'));
+  const replacePanel = read(path.join(REPO, 'entry/src/main/ets/ui/components/ReaderOverlayComponents.ets'));
+  const contract = read(path.join(REPO, 'entry/src/main/ets/ui/components/ContractComponents.ets'));
+  const settings = read(path.join(REPO, 'entry/src/main/ets/ui/components/SettingsComponents.ets'));
+
+  for (const marker of [
+    "case 'source-delete-request'", 'requestSourceDelete', "case 'source-delete-confirm'",
+    'confirmSourceDelete', 'deleteConfirmedSource', 'rejectUnconfirmedSourceDelete',
+  ]) {
+    assert.ok(reducer.includes(marker) || effects.includes(marker),
+      `source delete confirmation fence missing ${marker}`);
+  }
+  assert.ok(sourcePage.includes("type: 'source-delete-confirm'"),
+    'SourceDeleteConfirmPage must be the only page that grants the Core source delete');
+  assert.ok(structural.includes("type: 'source-delete-request'"),
+    'normal source rows must request a confirmation route instead of deleting directly');
+  assert.equal(structural.includes("type: 'source-delete', sourceId:"), false,
+    'normal source UI must not dispatch raw source-delete');
+  assert.ok(effects.includes("case 'source-delete':\n        ReaderEffects.rejectUnconfirmedSourceDelete();"),
+    'legacy raw source-delete must fail closed rather than reaching Core');
+
+  assert.equal(overlay.includes("bookAction: 'delete'"), false,
+    'shelf top-more must not delete a stale reader.currentBook');
+  for (const marker of [
+    "pendingBookshelfRemovalSourceId", "pendingBookshelfRemovalBookId",
+    "type: 'bookshelf-remove-confirm'", 'Core bookshelf.remove',
+  ]) {
+    assert.ok(overlay.includes(marker), `shelf confirmation overlay missing ${marker}`);
+  }
+  assert.ok(effects.includes('removeConfirmedBookshelfBook') &&
+    effects.includes('BOOKSHELF_REMOVE_CONFIRM_REQUIRED'),
+    'bookshelf Core mutation must validate the exact visible confirmation target');
+
+  for (const marker of [
+    "case 'book-group-delete-request'", "case 'book-group-delete-confirm'",
+    'requestBookGroupDelete', 'confirmBookGroupDelete',
+    'pendingBookGroupDeleteId', 'deleteConfirmedBookGroup',
+    'refreshBookGroupsAfterDeleteFailure', "fields['deleted'] !== true",
+    "type: 'book-group-delete-cancel'", "type: 'book-group-delete-confirm'",
+  ]) {
+    assert.ok(reducer.includes(marker) || effects.includes(marker) || structural.includes(marker),
+      `book-group delete confirmation fence missing ${marker}`);
+  }
+  assert.ok(structural.includes('确认删除“${this.group.groupName}”？') &&
+    structural.includes("type: 'book-group-delete-request'"),
+    'book-group row must visibly bind a live target before displaying confirmation');
+  assert.equal(structural.includes("type: 'book-group-delete', bookGroupId:"), false,
+    'book-group row must not dispatch the raw delete event');
+  assert.ok(reducer.includes("case 'book-group-delete':\n        return ReaderReducer.setBookGroupsError"),
+    'raw book-group-delete must fail closed in the reducer');
+  for (const marker of [
+    "case 'book-group-clear-request'", "case 'book-group-clear-confirm'",
+    'requestBookGroupClear', 'confirmBookGroupClear', 'clearConfirmedBookshelfGroup',
+    'pendingBookGroupClearSourceId', "type: 'book-group-clear-cancel'",
+  ]) {
+    assert.ok(reducer.includes(marker) || effects.includes(marker) || structural.includes(marker),
+      `book-group clear confirmation fence missing ${marker}`);
+  }
+  assert.equal(structural.includes("this.assign('')"), false,
+    'group clear UI must not dispatch the direct empty-group mutation');
+  for (const marker of [
+    'requestBookGroupUpdate', 'hasLiveBookGroup', 'isBookGroupManagementRoute',
+  ]) {
+    assert.ok(reducer.includes(marker) || effects.includes(marker),
+      `book-group update must bind a current management row: missing ${marker}`);
+  }
+
+  for (const marker of [
+    "case 'bookmark-delete-request'", "case 'bookmark-delete-confirm'",
+    'requestBookmarkDelete', 'confirmBookmarkDelete', 'deleteConfirmedBookmark',
+    'pendingBookmarkDeleteTime', 'refreshBookmarksAfterDeleteFailure',
+    "type: 'bookmark-delete-cancel'", "type: 'bookmark-delete-confirm'",
+  ]) {
+    assert.ok(reducer.includes(marker) || effects.includes(marker) || structural.includes(marker) || replacePanel.includes(marker),
+      `bookmark delete confirmation fence missing ${marker}`);
+  }
+  assert.equal(structural.includes("type: 'bookmark-delete', bookmarkTime:"), false,
+    'directory bookmark row must not dispatch raw bookmark-delete');
+  assert.equal(replacePanel.includes("type: 'bookmark-delete', bookmarkTime:"), false,
+    'reader bookmark row must not dispatch raw bookmark-delete');
+  assert.ok(effects.includes("case 'bookmark-delete':\n        ReaderEffects.rejectUnconfirmedBookmarkDelete();"),
+    'raw bookmark-delete must fail closed rather than reaching Core');
+
+  for (const marker of [
+    "case 'search-history-clear-request'", "case 'search-history-clear-confirm'",
+    'requestSearchHistoryClear', 'confirmSearchHistoryClear', 'clearConfirmedSearchHistory',
+    'pendingSearchHistoryClear', 'refreshSearchHistoryAfterClearFailure',
+    "type: 'search-history-clear-cancel'", "type: 'search-history-clear-confirm'",
+  ]) {
+    assert.ok(reducer.includes(marker) || effects.includes(marker) || contract.includes(marker),
+      `search-history clear confirmation fence missing ${marker}`);
+  }
+  assert.equal(contract.includes("type: 'search-history-clear'"), false,
+    'history clear UI must not dispatch the raw Core mutation');
+  assert.ok(effects.includes("case 'search-history-clear':\n        ReaderEffects.rejectUnconfirmedSearchHistoryClear();"),
+    'raw search-history-clear must fail closed rather than reaching Core');
+
+  for (const marker of [
+    "case 'cache-clear-confirm'", 'requestCacheClear', 'confirmCacheClear',
+    'clearConfirmedSessionCache', "type: 'cache-clear-cancel'",
+  ]) {
+    assert.ok(reducer.includes(marker) || effects.includes(marker) || settings.includes(marker),
+      `cache clear confirmation fence missing ${marker}`);
+  }
+  assert.equal(effects.includes("if (settingsKey === 'cache-clear') {\n      try"), false,
+    'settings-action must not clear cache before its confirmation event');
+
+  for (const marker of [
+    "case 'core-restore-apply-request'", "case 'core-restore-apply-confirm'",
+    'requestCoreRestoreApply', 'confirmCoreRestoreApply',
+    'hasConfirmedPreparedCoreRestore', 'pendingCoreRestoreConfirmationChecksum',
+  ]) {
+    assert.ok(reducer.includes(marker) || effects.includes(marker) || structural.includes(marker),
+      `Core restore confirmation fence missing ${marker}`);
+  }
+  assert.ok(effects.includes("case 'core-backup-apply':\n        ReaderEffects.rejectUnconfirmedCoreRestoreApply();"),
+    'raw core-backup-apply must fail closed rather than applying storage directly');
+
+  for (const marker of [
+    'sourceSwitchEpoch', 'resetSourceSwitchScopeInPlace', 'SOURCE_SWITCH_ROUTE_REQUIRED',
+    'sourceSwitchStateEpoch', "state.routeId !== 'source-switch' || !state.loading",
+  ]) {
+    assert.ok(reducer.includes(marker) || effects.includes(marker),
+      `source switch route/epoch fence missing ${marker}`);
+  }
+
+  assert.ok(structural.includes("type: 'rss-subscription-delete-request'"),
+    'RSS row delete must open a confirmation route first');
+  assert.ok(structural.includes('export struct RssSubscriptionDeleteConfirmPage') &&
+    structural.includes("type: 'rss-subscription-delete-confirm'"),
+    'RSS delete-confirm route must render a live-target confirm action');
+  assert.ok(renderer.includes("this.routeId === 'rss-source-delete-confirm'") &&
+    renderer.includes('RssSubscriptionDeleteConfirmPage'),
+    'RSS delete-confirm alias must not render the management screen as a fake confirmation');
+  const rawRssDeleteCase = effects.match(
+    /case 'rss-subscription-delete':([\s\S]*?)break;/,
+  )?.[1] ?? '';
+  assert.ok(rawRssDeleteCase.includes('ReaderEffects.rejectUnconfirmedRssSubscriptionDelete();') &&
+    effects.includes('deleteConfirmedRssSubscription'),
+    'raw RSS delete must fail closed and only the confirm event may call Core');
+  for (const marker of [
+    'requestRssSubscriptionUpdate', 'hasLiveRssSubscription', 'requestRssItemRead',
+    'hasLiveUnreadRssItem',
+  ]) {
+    assert.ok(reducer.includes(marker) || effects.includes(marker),
+      `RSS update/read must bind a live route item: missing ${marker}`);
+  }
+
+  for (const marker of [
+    "case 'replace-rule-delete-request'", "case 'replace-rule-delete-confirm'",
+    'requestReplaceRuleDelete', 'confirmReplaceRuleDelete',
+    'deleteConfirmedReplaceRule', 'REPLACE_RULE_DELETE_NOT_APPLIED',
+    "@StorageProp('reader.pendingReplaceRuleDeleteId')",
+    "type: 'replace-rule-delete-cancel'", "type: 'replace-rule-delete-confirm'",
+  ]) {
+    assert.ok(reducer.includes(marker) || effects.includes(marker) || replacePanel.includes(marker),
+      `replace-rule delete confirmation fence missing ${marker}`);
+  }
+  assert.equal(replacePanel.includes("type: 'replace-rule-delete', replaceRuleId: rule.id"), false,
+    'replace-rule row must not dispatch a raw Core delete');
+  assert.ok(effects.includes("case 'replace-rule-delete':\n        ReaderEffects.rejectUnconfirmedReplaceRuleDelete();"),
+    'raw replace-rule delete must fail closed rather than reaching Core');
+  for (const marker of [
+    'canMutatePersistentReplaceRule', 'REPLACE_RULE_UPDATE_TARGET_REQUIRED',
+    'rejectInvalidReplaceRuleMutation', 'hasCurrentPersistentReplaceRule(id)',
+  ]) {
+    assert.ok(reducer.includes(marker) || effects.includes(marker),
+      `replace-rule update fence missing ${marker}`);
+  }
+  for (const marker of [
+    'requestWebdavSave', "state.routeId !== 'webdav-config'", "state.webdavSaveStatus !== 'saving'",
+  ]) {
+    assert.ok(reducer.includes(marker) || effects.includes(marker),
+      `WebDAV save route/state fence missing ${marker}`);
+  }
+});
+
+// ── Reader UI HostRequest 1.2.0 exact-set / fail-closed gate ─────────────
+test('HostRequestTable exactly mirrors the canonical 58-type schema', () => {
+  const schema = JSON.parse(read(path.resolve(FIXTURES, '..', 'host-request.schema.json')));
+  const canonical = schema.properties.type.enum;
+  const generated = read(path.join(GEN, 'HostRequestTable.ets'));
+  const allBlock = generated.match(/static readonly ALL: HostRequestType\[\] = \[([\s\S]*?)\n  \];/);
+  assert.ok(allBlock, 'HostRequestTable.ALL not found');
+  const actual = [...allBlock[1].matchAll(/'([^']+)'/g)].map((match) => match[1]);
+  assert.equal(canonical.length, 58, `canonical HostRequest count drifted: ${canonical.length}`);
+  assert.equal(new Set(canonical).size, 58, 'canonical HostRequest contains duplicates');
+  assert.deepEqual(actual, canonical, 'generated HostRequest membership/order drifted');
+  assert.ok(generated.includes("SCHEMA_VERSION: string = '1.2.0'"), 'generated schema version is not 1.2.0');
+});
+
+test('Harmony dispatcher, platform executor, adapter manifest and proof tier explicitly cover 58/58', () => {
+  const schema = JSON.parse(read(path.resolve(FIXTURES, '..', 'host-request.schema.json')));
+  const canonical = schema.properties.type.enum;
+  const dispatcher = read(path.join(REPO, 'entry/src/main/ets/host/ReaderUiHostDispatcher.ets'));
+  const platform = read(path.join(REPO, 'entry/src/main/ets/host/HarmonyReaderUiHostPlatform.ets'));
+  const manifest = read(path.join(REPO, 'entry/src/main/ets/host/ReaderUiHostCapabilityManifest.ets'));
+  const validateBlock = dispatcher.slice(
+    dispatcher.indexOf('  private validate('),
+    dispatcher.indexOf('  private validateCookieSet('),
+  );
+  const executeBlock = platform.slice(
+    platform.indexOf('  async execute('),
+    platform.indexOf('  private cookieFromFlatPayload('),
+  );
+  const adapterBlock = manifest.slice(
+    manifest.indexOf('  private static adapterFor('),
+    manifest.indexOf('  private static tierFor('),
+  );
+  const tierBlock = manifest.slice(
+    manifest.indexOf('  private static tierFor('),
+    manifest.indexOf('  private static requiresContext('),
+  );
+  for (const type of canonical) {
+    assert.ok(validateBlock.includes(`case '${type}'`), `dispatcher DTO validator missing ${type}`);
+    assert.ok(executeBlock.includes(`case '${type}'`), `Harmony executor missing ${type}`);
+    assert.ok(adapterBlock.includes(`case '${type}'`), `Host manifest adapter missing ${type}`);
+    assert.ok(tierBlock.includes(`case '${type}'`), `Host manifest proof tier missing ${type}`);
+  }
+  assert.ok(dispatcher.includes("throw new ReaderUiHostFailure('UNKNOWN_CAPABILITY'"),
+    'unknown HostRequest must fail closed');
+  assert.ok(executeBlock.includes("throw new ReaderUiHostFailure('CONTRACT_DRIFT'"),
+    'platform default must fail instead of returning synthetic success');
+  assert.equal(executeBlock.includes('default: return'), false,
+    'platform executor must not have a catch-all return');
+});
+
+test('the historical Core manifest stays separate from Reader UI 55', () => {
+  const legacy = read(path.join(REPO, 'entry/src/main/ets/host/HostCapabilityManifest.ets'));
+  const runtime = read(path.join(REPO, 'entry/src/main/ets/bridge/CoreRuntime.ets'));
+  const legacyCapabilities = [...legacy.matchAll(/capability: '([^']+)'/g)].map((match) => match[1]);
+  assert.equal(legacyCapabilities.length, 43, 'legacy mixed manifest must remain exactly 43 entries');
+  assert.equal(new Set(legacyCapabilities).size, 43, 'legacy mixed manifest must not contain duplicates');
+  assert.ok(runtime.includes('readerUiHostManifest') && runtime.includes('[ReaderUiHostManifest]'),
+    'CoreRuntime must expose and broadcast the independent Reader UI manifest');
+  assert.ok(runtime.includes('dispatchReaderUiHostRequest'),
+    'CoreRuntime must expose the exact Reader UI dispatcher seam');
 });
 
 console.log(`\n${pass} passed, ${fail} failed`);

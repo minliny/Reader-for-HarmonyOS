@@ -5,6 +5,8 @@
 // Pages must NOT pick motionIds themselves.
 import { MotionPolicy } from '../../contract/generated/MotionPolicyTable';
 import { MotionPolicyTable } from '../../contract/generated/MotionPolicyTable';
+import { MotionSpec } from '../../contract/generated/MotionSpecTable';
+import { MotionSpecRegistry } from './MotionSpecRegistry';
 
 export interface MotionRequest {
   operation: string;        // enter | exit | push | pop | replace | tabSwitch | update | ...
@@ -15,22 +17,54 @@ export interface MotionRequest {
 }
 
 export class ReaderMotionResolver {
-  // Returns the highest-priority matching motionId, or undefined if no policy matches.
-  static resolve(req: MotionRequest): string | undefined {
+  // Returns the generated MotionSpec selected by the highest-priority policy.
+  // A policy that references an absent spec is contract drift and fails loudly;
+  // it must never fall through to an unrelated hand-authored motion.
+  static resolveSpec(req: MotionRequest): MotionSpec | undefined {
     const policies = MotionPolicyTable.POLICIES; // sorted priority desc at generation time
     for (let i = 0; i < policies.length; i++) {
       const p: MotionPolicy = policies[i];
+      // The central table retains a legacy empty-match policy for compatibility,
+      // but native resolution must not turn an unknown intent into an unrelated
+      // interrupt animation. Only policies with explicit match dimensions may
+      // participate; an unmatched request returns undefined to the caller.
+      if (!ReaderMotionResolver.hasExplicitMatch(p)) continue;
       if (ReaderMotionResolver.matches(p, req)) {
-        return p.motionId;
+        const spec = MotionSpecRegistry.byId(p.motionId);
+        if (spec === undefined) {
+          throw new Error(`Motion policy ${p.id} references missing generated spec ${p.motionId}`);
+        }
+        return spec;
       }
     }
     return undefined;
   }
 
-  // Convenience: resolve and fall back to a default motionId when nothing matches.
+  // Wire-name compatibility for existing callers.
+  static resolve(req: MotionRequest): string | undefined {
+    const spec = ReaderMotionResolver.resolveSpec(req);
+    return spec === undefined ? undefined : spec.id;
+  }
+
+  // Convenience for legacy callers. The fallback itself must be generated;
+  // unknown serial names are rejected instead of becoming a no-op catch-all.
   static resolveOr(req: MotionRequest, fallback: string): string {
-    const id = ReaderMotionResolver.resolve(req);
-    return id !== undefined ? id : fallback;
+    const spec = ReaderMotionResolver.resolveSpec(req);
+    if (spec !== undefined) return spec.id;
+    const fallbackSpec = MotionSpecRegistry.byId(fallback);
+    if (fallbackSpec === undefined) {
+      throw new Error(`Unknown generated fallback MotionSpec: ${fallback}`);
+    }
+    return fallbackSpec.id;
+  }
+
+  private static hasExplicitMatch(p: MotionPolicy): boolean {
+    const m = p.match;
+    return m.operation !== undefined
+      || m.containerRole !== undefined
+      || m.sourceRole !== undefined
+      || m.targetRole !== undefined
+      || m.reducedMotion !== undefined;
   }
 
   private static matches(p: MotionPolicy, req: MotionRequest): boolean {

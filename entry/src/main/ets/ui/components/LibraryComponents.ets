@@ -1,125 +1,12 @@
-// LibraryComponents — Library / Book / Search flow-page components (Batch 2).
-// Ported from docs/ui-handoff/normalized-html (source-switch-results.html, ...)
-// + reader-components.css. Route-driven: render as FlowShell body components
-// via ViewStateRenderer(column). Colors via ColorTokens / DemoAliasTokens;
-// sizes are bare vp (lint_tokens only forbids hex / px-unit strings).
+// Source-tool route bodies.  A route in the Reader UI contract is not proof
+// that Harmony has the corresponding Core + Host transaction.  These pages
+// deliberately render only Core-backed results or an explicit unavailable
+// state; they never keep demo source names, parsing logs, or pass counts.
 import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
-import { SafeAreaAdapter } from '../adapters/SafeAreaAdapter';
+import { RouteId } from '../../contract/generated/RouteTable';
 import { ReaderUiStore } from '../store/ReaderUiStore';
-
-interface SourceToolStep {
-  title: string;
-  detail: string;
-  status: string;
-}
-
-interface SourceToolMetric {
-  label: string;
-  value: string;
-  detail: string;
-}
-
-interface SourceToolLog {
-  time: string;
-  level: string;
-  message: string;
-  detail: string;
-}
-
-interface SourceBatchEntry {
-  title: string;
-  domain: string;
-  group: string;
-  status: string;
-  tone: string;
-  enabled: boolean;
-  selected: boolean;
-}
-
-// ── Source item (.reader-source-item) ──────────────────────────────────────
-//   list-title 15/600 + list-detail 12 (muted) + trailing status chip.
-@Component
-export struct SourceItem {
-  @Prop title: string = '';
-  @Prop detail: string = '';
-  @Prop chip: string = '';
-
-  build() {
-    Row() {
-      Column() {
-        Text(this.title)
-          .fontSize(15).fontWeight(600).fontColor(ColorTokens.ink)
-        if (this.detail !== '') {
-          Text(this.detail)
-            .fontSize(12).fontColor(ColorTokens.muted)
-            .margin({ top: 2 })
-        }
-      }
-      .alignItems(HorizontalAlign.Start)
-      .layoutWeight(1)
-
-      if (this.chip !== '') {
-        Text(this.chip)
-          .fontSize(12).fontColor(ColorTokens.primary)
-          .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-          .border({ width: 1, color: ColorTokens.primary })
-          .borderRadius(DemoAliasTokens.radiusPill)
-      }
-    }
-    .width('100%')
-    .padding({ left: 16, right: 16, top: 14, bottom: 14 })
-    .border({ width: { bottom: 1 }, color: ColorTokens.border })
-    .alignItems(VerticalAlign.Center)
-  }
-}
-
-// ── Source switch results panel (source-switch-results.html) ───────────────
-//   FlowShell body: header (title "换源结果" + close → route-pop) + source list
-//   (4 candidate sources with latency + "可切换" chip). Replaces the generic
-//   Overlay/ListRow fallback — the book-detail 换源 action now route-pushes
-//   here (Batch 2 first cut: source-switch from fake overlay → real route).
-@Component
-export struct SourceSwitchResultsPanel {
-  @StorageProp(SafeAreaAdapter.K_TOP) safeAreaTop: number = SafeAreaAdapter.DEFAULT_TOP;
-  @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
-
-  build() {
-    Column() {
-      // .reader-page-header: title + close (route-pop back to book-detail).
-      Row() {
-        Text('换源结果')
-          .fontSize(18).fontWeight(700).fontColor(ColorTokens.ink)
-          .layoutWeight(1)
-        Text('关闭')
-          .fontSize(13).fontColor(ColorTokens.primary)
-          .padding({ left: 12, right: 12, top: 8, bottom: 8 })
-          .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
-      }
-      .width('100%')
-      .height(52)
-      .padding({ left: 16, right: 16 })
-      .alignItems(VerticalAlign.Center)
-      .border({ width: { bottom: 1 }, color: ColorTokens.border })
-
-      // .reader-source-list: candidate sources by latency.
-      Scroll() {
-        Column() {
-          SourceItem({ title: '书源 1', detail: '章节完整 · 延迟 120ms', chip: '可切换' })
-          SourceItem({ title: '书源 2', detail: '章节完整 · 延迟 240ms', chip: '可切换' })
-          SourceItem({ title: '书源 3', detail: '章节完整 · 延迟 360ms', chip: '可切换' })
-          SourceItem({ title: '书源 4', detail: '章节完整 · 延迟 480ms', chip: '可切换' })
-        }
-      }
-      .layoutWeight(1)
-      .align(Alignment.Top)
-    }
-    .width('100%')
-    .height('100%')
-    .padding({ top: this.safeAreaTop, bottom: this.safeAreaBottom })
-    .backgroundColor(ColorTokens.paper)
-  }
-}
+import { CoreSourceCheckResult, CoreSourceDebugLog, CoreSourceDebugResult, CoreSourceDebugStage, CoreSourceEntry } from '../store/ReaderUiState';
 
 @Component
 struct SourceToolChip {
@@ -163,7 +50,7 @@ struct SourceToolCard {
               .lineHeight(18)
               .fontColor(ColorTokens.muted)
               .margin({ top: 5 })
-              .maxLines(2)
+              .maxLines(4)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
           }
         }
@@ -213,7 +100,7 @@ struct SourceToolRow {
           .fontSize(13)
           .fontWeight(800)
           .fontColor(ColorTokens.ink)
-          .maxLines(1)
+          .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         if (this.detail.length > 0) {
           Text(this.detail)
@@ -221,7 +108,7 @@ struct SourceToolRow {
             .lineHeight(16)
             .fontColor(ColorTokens.muted)
             .margin({ top: 4 })
-            .maxLines(2)
+            .maxLines(4)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
       }
@@ -262,436 +149,86 @@ struct SourceToolActionButton {
   }
 }
 
+// Reused by routes whose historical demo had a screen, but whose Core command
+// or Host transaction is intentionally not implemented by Harmony yet.
 @Component
-struct SourceBatchCheck {
-  @Prop selected: boolean = false;
-
-  build() {
-    Column() {
-      if (this.selected) {
-        Image($r('app.media.ui_icon_check_white'))
-          .width(13)
-          .height(13)
-      }
-    }
-    .width(26)
-    .height(26)
-    .justifyContent(FlexAlign.Center)
-    .alignItems(HorizontalAlign.Center)
-    .borderRadius(DemoAliasTokens.radiusPill)
-    .backgroundColor(this.selected ? ColorTokens.primary : ColorTokens.metaBg)
-    .border({ width: this.selected ? 0 : 1, color: ColorTokens.border })
-  }
-}
-
-@Component
-struct SourceBatchSwitch {
-  @Prop on: boolean = true;
-
-  build() {
-    Row() {
-      if (this.on) {
-        Blank().layoutWeight(1)
-      }
-      Row()
-        .width(18)
-        .height(18)
-        .borderRadius(DemoAliasTokens.radiusPill)
-        .backgroundColor(DemoAliasTokens.surface)
-      if (!this.on) {
-        Blank().layoutWeight(1)
-      }
-    }
-    .width(38)
-    .height(22)
-    .padding(2)
-    .borderRadius(DemoAliasTokens.radiusPill)
-    .backgroundColor(this.on ? ColorTokens.primary : ColorTokens.metaBg)
-  }
-}
-
-@Component
-struct SourceBatchSearchAndFilters {
-  build() {
-    Column() {
-      Row() {
-        Image($r('app.media.ui_icon_search_dark'))
-          .width(20)
-          .height(20)
-        Text('搜索书源名称或域名')
-          .fontSize(13)
-          .fontColor(ColorTokens.muted)
-          .margin({ left: 8 })
-      }
-      .width('100%')
-      .height(42)
-      .padding({ left: 12, right: 12 })
-      .borderRadius(DemoAliasTokens.radiusPill)
-      .backgroundColor(ColorTokens.metaBg)
-      .border({ width: 1, color: ColorTokens.border })
-      .alignItems(VerticalAlign.Center)
-
-      Text('12 个书源 · 8 个启用 · 4 个异常 · 10:30 检测')
-        .fontSize(12)
-        .fontColor(ColorTokens.muted)
-        .margin({ top: 10 })
-
-      Row({ space: 8 }) {
-        SourceToolChip({ label: '全部', tone: 'filled' })
-        SourceToolChip({ label: '已启用' })
-        SourceToolChip({ label: '异常' })
-        SourceToolChip({ label: '未检测' })
-      }
-      .width('100%')
-      .margin({ top: 10 })
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
-}
-
-@Component
-struct SourceBatchRow {
+struct SourceCoreUnavailablePage {
   @Prop title: string = '';
-  @Prop domain: string = '';
-  @Prop group: string = '';
-  @Prop status: string = '';
-  @Prop tone: string = 'soft';
-  @Prop sourceEnabled: boolean = true;
-  @Prop selected: boolean = false;
-
-  build() {
-    Row() {
-      SourceBatchCheck({ selected: this.selected })
-      Column() {
-        Text(this.title)
-          .fontSize(14)
-          .fontWeight(850)
-          .fontColor(ColorTokens.ink)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-        Text(`${this.domain} · ${this.group}`)
-          .fontSize(11)
-          .fontColor(ColorTokens.muted)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .margin({ top: 4 })
-      }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
-      .margin({ left: 10, right: 8 })
-      SourceToolChip({ label: this.status, tone: this.tone })
-      SourceBatchSwitch({ on: this.sourceEnabled })
-        .margin({ left: 8 })
-    }
-    .width('100%')
-    .constraintSize({ minHeight: 58 })
-    .padding({ left: 12, right: 12, top: 10, bottom: 10 })
-    .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(this.selected ? ColorTokens.surfaceSoft : DemoAliasTokens.surface)
-    .border({ width: 1, color: this.selected ? ColorTokens.primary : ColorTokens.border })
-    .alignItems(VerticalAlign.Center)
-  }
-}
-
-@Component
-export struct SourceBatchPage {
-  private sources: SourceBatchEntry[] = [
-    { title: '起点中文网', domain: 'qidian.com', group: '起点导入', status: '可用', tone: 'soft', enabled: true, selected: true },
-    { title: '笔趣阁', domain: 'biquge.example', group: '玄幻书源', status: '异常', tone: 'warn', enabled: true, selected: true },
-    { title: '本地导入源', domain: 'local.reader', group: '自定义', status: '未检测', tone: 'soft', enabled: false, selected: true },
-    { title: '测试书源', domain: 'test.example', group: '测试书源', status: '可用', tone: 'soft', enabled: true, selected: false },
-  ];
-
-  build() {
-    Column() {
-      Row() {
-        Text('取消')
-          .fontSize(13)
-          .fontWeight(800)
-          .fontColor(ColorTokens.primaryDark)
-          .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'source-management' }))
-        Text('已选 3 个')
-          .fontSize(16)
-          .fontWeight(900)
-          .fontColor(ColorTokens.ink)
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-        Text('全选')
-          .fontSize(13)
-          .fontWeight(800)
-          .fontColor(ColorTokens.primaryDark)
-      }
-      .width('100%')
-      .height(38)
-      .alignItems(VerticalAlign.Center)
-
-      SourceBatchSearchAndFilters()
-        .margin({ top: 12 })
-
-      Column() {
-        ForEach(this.sources, (item: SourceBatchEntry, idx: number) => {
-          SourceBatchRow({
-            title: item.title,
-            domain: item.domain,
-            group: item.group,
-            status: item.status,
-            tone: item.tone,
-            sourceEnabled: item.enabled,
-            selected: item.selected,
-          })
-            .margin({ bottom: idx === this.sources.length - 1 ? 0 : 8 })
-        }, (item: SourceBatchEntry, idx: number) => `${item.title}-${idx}`)
-      }
-      .width('100%')
-      .margin({ top: 12 })
-
-      Row() {
-        SourceToolActionButton({ label: '启用' })
-        SourceToolActionButton({ label: '禁用' })
-          .margin({ left: 8 })
-        SourceToolActionButton({ label: '检测' })
-          .margin({ left: 8 })
-      }
-      .width('100%')
-      .margin({ top: 14 })
-
-      Row() {
-        SourceToolActionButton({ label: '分组', primary: true })
-        SourceToolActionButton({ label: '删除', warning: true })
-          .margin({ left: 8 })
-      }
-      .width('100%')
-      .margin({ top: 8 })
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
-}
-
-@Component
-struct SourceToolProgressLine {
-  @Prop progress: number = 0.64;
-
-  build() {
-    Stack({ alignContent: Alignment.Start }) {
-      Row()
-        .width('100%')
-        .height(5)
-        .borderRadius(DemoAliasTokens.radiusPill)
-        .backgroundColor(ColorTokens.metaBg)
-      Row()
-        .width(`${Math.round(this.progress * 100)}%`)
-        .height(5)
-        .borderRadius(DemoAliasTokens.radiusPill)
-        .backgroundColor(ColorTokens.primary)
-    }
-    .width('100%')
-    .height(5)
-  }
-}
-
-@Component
-struct SourceToolCodeLine {
-  @Prop number: string = '';
-  @Prop text: string = '';
-
-  build() {
-    Row() {
-      Text(this.number)
-        .fontSize(10)
-        .fontColor(ColorTokens.muted)
-        .width(26)
-        .textAlign(TextAlign.End)
-      Text(this.text)
-        .fontSize(11)
-        .lineHeight(18)
-        .fontColor(ColorTokens.controlInk)
-        .layoutWeight(1)
-        .margin({ left: 10 })
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
-    .width('100%')
-    .padding({ top: 3, bottom: 3 })
-    .alignItems(VerticalAlign.Center)
-  }
-}
-
-@Component
-struct SourceToolStepRow {
-  @Prop title: string = '';
-  @Prop detail: string = '';
-  @Prop status: string = '';
-
-  build() {
-    Row() {
-      Circle()
-        .width(9)
-        .height(9)
-        .fill(this.status === '失败' ? ColorTokens.accent : ColorTokens.primary)
-      Column() {
-        Text(this.title)
-          .fontSize(13)
-          .fontWeight(800)
-          .fontColor(ColorTokens.ink)
-        Text(this.detail)
-          .fontSize(11)
-          .lineHeight(16)
-          .fontColor(ColorTokens.muted)
-          .margin({ top: 3 })
-          .maxLines(2)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }
-      .alignItems(HorizontalAlign.Start)
-      .layoutWeight(1)
-      .margin({ left: 10 })
-      SourceToolChip({ label: this.status, tone: this.status === '失败' ? 'warn' : 'soft' })
-    }
-    .width('100%')
-    .padding({ left: 12, right: 12, top: 12, bottom: 12 })
-    .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(ColorTokens.floatingControlBg)
-    .border({ width: 1, color: ColorTokens.border })
-    .alignItems(VerticalAlign.Center)
-  }
-}
-
-@Component
-struct SourceToolLogRow {
-  @Prop time: string = '';
-  @Prop level: string = '';
   @Prop message: string = '';
-  @Prop detail: string = '';
+  @Prop primaryLabel: string = '返回书源管理';
+  @Prop primaryRoute: RouteId = 'source-management';
 
   build() {
-    Column() {
-      Row() {
-        Text(this.time)
-          .fontSize(10)
-          .fontColor(ColorTokens.muted)
-          .layoutWeight(1)
-        SourceToolChip({ label: this.level, tone: this.level === 'ERROR' ? 'warn' : 'soft' })
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
-      Text(this.message)
-        .fontSize(13)
-        .fontWeight(800)
-        .fontColor(ColorTokens.ink)
-        .margin({ top: 6 })
-      Text(this.detail)
-        .fontSize(11)
-        .lineHeight(16)
-        .fontColor(ColorTokens.muted)
-        .margin({ top: 4 })
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    Column({ space: 10 }) {
+      SourceToolCard({ title: this.title, subtitle: this.message, chip: '未接入', tone: 'warn' })
+      SourceToolRow({
+        title: '当前行为',
+        detail: '不会展示演示书源、固定成功状态、伪造请求日志或未写入 Core 的规则。',
+        chip: '真实状态',
+        tone: 'soft',
+      })
+      SourceToolActionButton({ label: this.primaryLabel, primary: true })
+        .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: this.primaryRoute }))
     }
     .width('100%')
-    .padding(12)
-    .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(ColorTokens.floatingControlBg)
-    .border({ width: 1, color: ColorTokens.border })
     .alignItems(HorizontalAlign.Start)
   }
 }
 
+// `source-switch-results` was an old static result route.  The actual live
+// candidate path is SourceSwitchFlowPage; keep this route honest until its
+// result DTO is made persistent in Harmony state.
 @Component
-struct SourceToolMetricGrid {
-  @Prop variant: string = 'search';
-  private search: SourceToolMetric[] = [
-    { label: '命中数量', value: '12', detail: '列表规则返回 12 条' },
-    { label: '书名字段', value: '斗破苍穹', detail: '.book-name text' },
-    { label: '作者字段', value: '天蚕土豆', detail: '.author text' },
-    { label: '详情 URL', value: '有效', detail: '/book/123/' },
-  ];
-  private detail: SourceToolMetric[] = [
-    { label: '书名', value: '斗破苍穹', detail: 'meta.title' },
-    { label: '作者', value: '天蚕土豆', detail: 'meta.author' },
-    { label: '封面', value: '已解析', detail: '.cover img@src' },
-    { label: '简介', value: '312 字', detail: '.intro text' },
-  ];
-  private catalog: SourceToolMetric[] = [
-    { label: '章节数量', value: '1280', detail: 'catalog list' },
-    { label: '首章', value: '第一章', detail: 'URL 有效' },
-    { label: '末章', value: '风雨夜', detail: 'URL 有效' },
-    { label: '去重', value: '通过', detail: '未发现重复章节' },
-  ];
-
-  private metrics(): SourceToolMetric[] {
-    if (this.variant === 'detail') return this.detail;
-    if (this.variant === 'catalog') return this.catalog;
-    return this.search;
-  }
-
+export struct SourceSwitchResultsPanel {
   build() {
-    Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween }) {
-      ForEach(this.metrics(), (item: SourceToolMetric, idx: number) => {
-        Column() {
-          Text(item.label)
-            .fontSize(10)
-            .fontColor(ColorTokens.muted)
-          Text(item.value)
-            .fontSize(15)
-            .fontWeight(900)
-            .fontColor(ColorTokens.primaryDark)
-            .margin({ top: 4 })
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-          Text(item.detail)
-            .fontSize(10)
-            .fontColor(ColorTokens.muted)
-            .margin({ top: 4 })
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-        .width('48%')
-        .padding(12)
-        .borderRadius(DemoAliasTokens.radiusMd)
-        .backgroundColor(ColorTokens.floatingControlBg)
-        .border({ width: 1, color: ColorTokens.border })
-        .margin({ bottom: 8 })
-        .alignItems(HorizontalAlign.Start)
-      }, (item: SourceToolMetric, idx: number) => `${item.label}-${idx}`)
-    }
-    .width('100%')
+    SourceCoreUnavailablePage({
+      title: '换源候选结果未接入',
+      message: '该历史路由没有携带当前书籍和 Core 返回的候选 DTO。请从书籍详情重新进入实时换源流程，不显示固定候选书源。',
+      primaryLabel: '进入实时换源',
+      primaryRoute: 'source-switch',
+    })
   }
 }
 
 @Component
 export struct SourceImportPreviewPage {
-  private sources: Array<[string, string, string, string]> = [
-    ['起点中文网', 'https://qidian.example/source.json', '新增', 'soft'],
-    ['晋江文学城', 'https://jjwxc.example/source.json', '覆盖', 'filled'],
-    ['失效示例源', '规则版本过旧，正文规则缺失', '跳过', 'warn'],
-  ];
+  @StorageProp('reader.sourceImportOrigin') origin: string = '';
+  @StorageProp('reader.sourceImportTotal') total: number = 0;
+  @StorageProp('reader.sourceImportImported') imported: number = 0;
+  @StorageProp('reader.sourceImportSkipped') skipped: number = 0;
+  @StorageProp('reader.sourceImportFailed') failed: number = 0;
+  @StorageProp('reader.sourceImportMessage') message: string = '';
+  @StorageProp('reader.sourceImportRunning') running: boolean = false;
 
   build() {
-    Column() {
-      SourceToolCard({ title: '网络导入', subtitle: 'https://example.com/booksource.json', chip: '共 24 个书源', tone: 'filled' })
-      SourceToolSectionTitle({ title: '冲突处理' })
+    Column({ space: 8 }) {
+      SourceToolCard({
+        title: this.running ? '书源导入中' : '书源导入结果',
+        subtitle: this.origin.length > 0 ? this.origin : '尚未提交书源包',
+        chip: this.running ? '处理中' : `共 ${this.total} 项`,
+        tone: this.failed > 0 ? 'warn' : 'filled',
+      })
+      SourceToolSectionTitle({ title: 'Core 返回的逐项统计' })
         .margin({ top: 14, bottom: 8 })
-      Row() {
-        SourceToolChip({ label: '同名覆盖', tone: 'filled' })
-        SourceToolChip({ label: '保留本地', tone: 'soft' })
-          .margin({ left: 8 })
-        SourceToolChip({ label: '仅新增', tone: 'soft' })
-          .margin({ left: 8 })
+      SourceToolRow({ title: '已导入', detail: 'Core 返回 imported = true 的书源数', chip: `${this.imported}`, tone: 'filled' })
+      SourceToolRow({ title: '已跳过', detail: '缺少 bookSourceName 或 Core 未标记导入的对象', chip: `${this.skipped}`, tone: 'soft' })
+      SourceToolRow({ title: '失败', detail: 'Core 拒绝或请求失败的书源数', chip: `${this.failed}`, tone: this.failed > 0 ? 'warn' : 'soft' })
+      if (this.message.length > 0) {
+        SourceToolRow({
+          title: this.failed > 0 ? '处理详情' : '导入说明',
+          detail: this.message,
+          chip: this.failed > 0 ? '需处理' : '完成',
+          tone: this.failed > 0 ? 'warn' : 'soft',
+        })
       }
-      .width('100%')
-      .margin({ bottom: 10 })
-      ForEach(this.sources, (item: [string, string, string, string], idx: number) => {
-        SourceToolRow({ title: item[0], detail: item[1], chip: item[2], tone: item[3] })
-          .margin({ bottom: 8 })
-      }, (item: [string, string, string, string], idx: number) => `${item[0]}-${idx}`)
       Row() {
-        SourceToolActionButton({ label: '取消' })
-        SourceToolActionButton({ label: '确认导入', primary: true })
+        SourceToolActionButton({ label: '继续导入' })
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'source-import-options' }))
+        SourceToolActionButton({ label: '返回书源管理', primary: true })
           .margin({ left: 10 })
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'source-management' }))
       }
       .width('100%')
-      .margin({ top: 4 })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -700,61 +237,192 @@ export struct SourceImportPreviewPage {
 
 @Component
 export struct SourceGroupsPage {
-  private groups: Array<[string, string, string, string]> = [
-    ['全部分组', '24 个书源 · 默认入口', '系统', 'filled'],
-    ['玄幻书源', '8 个书源 · 2 个停用', '常用', 'soft'],
-    ['起点导入', '6 个书源 · 由网络导入创建', '导入', 'soft'],
-    ['测试书源', '3 个书源 · 仅用于规则调测', '测试', 'warn'],
-  ];
-
   build() {
-    Column() {
-      SourceToolCard({ title: '分组管理', subtitle: '分组用于筛选和批量整理书源', chip: '4 组' })
-      SourceToolSectionTitle({ title: '分组' })
-        .margin({ top: 14, bottom: 8 })
-      ForEach(this.groups, (item: [string, string, string, string], idx: number) => {
-        SourceToolRow({ title: item[0], detail: item[1], chip: item[2], tone: item[3] })
-          .margin({ bottom: 8 })
-      }, (item: [string, string, string, string], idx: number) => `${item[0]}-${idx}`)
-      Row() {
-        SourceToolActionButton({ label: '批量移动' })
-        SourceToolActionButton({ label: '新增分组', primary: true })
-          .margin({ left: 10 })
-      }
-      .width('100%')
-      .margin({ top: 4 })
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
+    SourceCoreUnavailablePage({
+      title: '书源分组未接入',
+      message: '当前 Harmony 未接入可持久化的 Core 书源分组 CRUD / 批量移动契约，因此不会显示或修改演示分组。',
+    })
   }
 }
 
 @Component
 export struct SourceDetectPage {
-  private steps: SourceToolStep[] = [
-    { title: '站点访问', detail: 'GET https://biquge.example · 200 OK · 108ms', status: '通过' },
-    { title: '搜索规则', detail: '关键词「斗破苍穹」返回 12 条结果', status: '通过' },
-    { title: '详情规则', detail: '书名、作者、封面与简介均可解析', status: '通过' },
-    { title: '目录规则', detail: '解析 1280 章，章节 URL 有效', status: '通过' },
-    { title: '正文规则', detail: '.content 节点为空，疑似广告包装层变化', status: '失败' },
-  ];
+  @StorageProp('reader.sourceCheckSourceId') sourceId: string = '';
+  @StorageProp('reader.sourceCheckSourceName') sourceName: string = '';
+  @StorageProp('reader.sourceCheckLoading') loading: boolean = false;
+  @StorageProp('reader.sourceCheckLoaded') loaded: boolean = false;
+  @StorageProp('reader.sourceCheckMessage') message: string = '';
+  @StorageProp('reader.sourceCheckError') errorMessage: string = '';
+  @StorageProp('reader.sourceCheckResult') result: CoreSourceCheckResult | null = null;
+
+  private sourceLabel(): string {
+    if (this.sourceName.length > 0 && this.sourceId.length > 0) return `${this.sourceName} · ${this.sourceId}`;
+    if (this.sourceName.length > 0) return this.sourceName;
+    return this.sourceId;
+  }
+
+  private resultSummary(): string {
+    if (this.result === null) return '';
+    if (this.result.available) {
+      return `Core 已返回 L1–L5 全部通过 verdict · ${this.result.durationMs}ms`;
+    }
+    const levels = this.result.levelsPassed.length > 0 ? this.result.levelsPassed.join('、') : '无';
+    return `Core 返回未通过 verdict · 已通过：${levels} · ${this.result.durationMs}ms`;
+  }
+
+  private retry(): void {
+    ReaderUiStore.dispatch({ type: 'source-detect-run' });
+  }
+
+  private levelIndex(level: string): number {
+    if (level === 'L1') return 1;
+    if (level === 'L2') return 2;
+    if (level === 'L3') return 3;
+    if (level === 'L4') return 4;
+    if (level === 'L5') return 5;
+    return 0;
+  }
+
+  private passed(level: string): boolean {
+    if (this.result === null) return false;
+    for (let i = 0; i < this.result.levelsPassed.length; i++) {
+      if (this.result.levelsPassed[i] === level) return true;
+    }
+    return false;
+  }
+
+  private failedLevel(): string {
+    if (this.result === null) return '';
+    const reason = this.result.failureReason;
+    const levels: string[] = ['L1', 'L2', 'L3', 'L4', 'L5'];
+    for (let i = 0; i < levels.length; i++) {
+      if (reason.indexOf(`${levels[i]}:`) === 0) return levels[i];
+    }
+    return '';
+  }
+
+  private stageChip(level: string): string {
+    if (this.passed(level)) return '通过';
+    const failed = this.failedLevel();
+    if (failed === level) return '失败';
+    if (failed.length > 0 && this.levelIndex(level) > this.levelIndex(failed)) return '未执行';
+    return '未完成';
+  }
+
+  private stageTone(level: string): string {
+    if (this.passed(level)) return 'filled';
+    if (this.failedLevel() === level) return 'warn';
+    return 'soft';
+  }
+
+  private stageDetail(level: string): string {
+    if (this.result === null) return '';
+    if (this.passed(level)) return 'Core 返回该阶段通过 verdict。';
+    const failed = this.failedLevel();
+    if (failed === level) return this.result.failureReason;
+    if (failed.length > 0 && this.levelIndex(level) > this.levelIndex(failed)) {
+      return `未执行：Core 在 ${failed} 失败后停止后续诊断链。`;
+    }
+    if (this.result.failureReason.length > 0) {
+      return `Core 未返回该阶段通过 verdict：${this.result.failureReason}`;
+    }
+    return 'Core 未返回该阶段的通过 verdict。';
+  }
 
   build() {
-    Column() {
-      SourceToolCard({ title: '笔趣阁', subtitle: '5 项检测 · 4 项通过 · 1 项失败', chip: '正文异常', tone: 'warn' })
-      SourceToolSectionTitle({ title: '检测项' })
-        .margin({ top: 14, bottom: 8 })
-      ForEach(this.steps, (step: SourceToolStep, idx: number) => {
-        SourceToolStepRow({ title: step.title, detail: step.detail, status: step.status })
-          .margin({ bottom: 8 })
-      }, (step: SourceToolStep, idx: number) => `${step.title}-${idx}`)
-      Row() {
-        SourceToolActionButton({ label: '失败定位' })
-        SourceToolActionButton({ label: '编辑正文规则', primary: true })
-          .margin({ left: 10 })
+    Column({ space: 10 }) {
+      if (this.loading) {
+        SourceToolCard({
+          title: '正在运行 Core 书源诊断',
+          subtitle: this.message.length > 0
+            ? this.message
+            : 'Core 正通过 Host http.execute 依次检查 L1–L5；网络或规则失败会返回真实失败 verdict。',
+          chip: '处理中',
+          tone: 'soft',
+        })
+      } else if (this.errorMessage.length > 0) {
+        SourceToolCard({ title: '书源诊断失败', subtitle: this.errorMessage, chip: '失败', tone: 'warn' })
+        SourceToolActionButton({ label: '重新运行诊断', primary: true })
+          .onClick(() => this.retry())
+      } else if (this.result !== null) {
+        SourceToolCard({
+          title: this.sourceLabel().length > 0 ? this.sourceLabel() : this.result.sourceId,
+          subtitle: this.resultSummary(),
+          chip: this.result.available ? '通过' : '未通过',
+          tone: this.result.available ? 'filled' : 'warn',
+        })
+        SourceToolSectionTitle({ title: 'Core L1–L5 真实诊断结果' })
+          .margin({ top: 4, bottom: 0 })
+        SourceToolRow({
+          title: 'L1 · 书源存在性',
+          detail: this.stageDetail('L1'),
+          chip: this.stageChip('L1'),
+          tone: this.stageTone('L1'),
+        })
+        SourceToolRow({
+          title: 'L2 · 搜索',
+          detail: this.stageDetail('L2'),
+          chip: this.stageChip('L2'),
+          tone: this.stageTone('L2'),
+        })
+        SourceToolRow({
+          title: 'L3 · 详情',
+          detail: this.stageDetail('L3'),
+          chip: this.stageChip('L3'),
+          tone: this.stageTone('L3'),
+        })
+        SourceToolRow({
+          title: 'L4 · 目录',
+          detail: this.stageDetail('L4'),
+          chip: this.stageChip('L4'),
+          tone: this.stageTone('L4'),
+        })
+        SourceToolRow({
+          title: 'L5 · 正文',
+          detail: this.stageDetail('L5'),
+          chip: this.stageChip('L5'),
+          tone: this.stageTone('L5'),
+        })
+        if (!this.result.available && this.result.failureReason.length > 0) {
+          SourceToolRow({
+            title: '失败原因',
+            detail: this.result.failureReason,
+            chip: 'Core verdict',
+            tone: 'warn',
+          })
+        }
+        if (this.message.length > 0) {
+          SourceToolRow({ title: '说明', detail: this.message, chip: '诊断链', tone: 'soft' })
+        }
+        SourceToolActionButton({ label: '重新运行真实诊断', primary: true })
+          .onClick(() => this.retry())
+      } else if (this.loaded && this.sourceId.length > 0) {
+        SourceToolCard({
+          title: 'Core 未返回诊断结果',
+          subtitle: this.message.length > 0
+            ? this.message
+            : '本次诊断没有返回当前书源的真实 verdict；请重新运行。',
+          chip: '未完成',
+          tone: 'warn',
+        })
+        Row() {
+          SourceToolActionButton({ label: '重新运行诊断' })
+            .onClick(() => this.retry())
+          SourceToolActionButton({ label: '返回书源管理', primary: true })
+            .margin({ left: 10 })
+            .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'source-management' }))
+        }
+        .width('100%')
+      } else {
+        SourceToolCard({
+          title: '未选择有效书源',
+          subtitle: this.message.length > 0 ? this.message : '请先从由 Core source.list 返回的书源中打开详情页。',
+          chip: '空状态',
+          tone: 'warn',
+        })
+        SourceToolActionButton({ label: '前往书源管理', primary: true })
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'source-management' }))
       }
-      .width('100%')
-      .margin({ top: 4 })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -762,43 +430,135 @@ export struct SourceDetectPage {
 }
 
 @Component
-export struct SourceDebugPage {
-  private modules: Array<[string, string]> = [
-    ['搜索', 'soft'],
-    ['详情', 'soft'],
-    ['目录', 'soft'],
-    ['正文', 'filled'],
-  ];
-  private rows: SourceToolMetric[] = [
-    { label: '章节标题', value: '第 128 章 风雨夜', detail: 'h1.chapter-title' },
-    { label: '正文长度', value: '0 字', detail: '.content 节点为空' },
-    { label: '匹配节点', value: '0', detail: '规则未命中' },
-    { label: '错误原因', value: '包装层变化', detail: '建议改为 .chapter-content' },
-  ];
+struct SourceDebugSourceChoice {
+  @Prop title: string = '';
+  @Prop subtitle: string = '';
+  @Prop selected: boolean = false;
+  onSelect: () => void = () => {};
 
   build() {
-    Column() {
-      SourceToolCard({ title: '正文模块调测', subtitle: '笔趣阁 · 第 128 章 风雨夜', chip: '待修复', tone: 'warn' })
-      Row() {
-        ForEach(this.modules, (item: [string, string], idx: number) => {
-          SourceToolChip({ label: item[0], tone: item[1] })
-            .margin({ right: 8, top: 12 })
-        }, (item: [string, string], idx: number) => `${item[0]}-${idx}`)
+    Row() {
+      Column() {
+        Text(this.title)
+          .fontSize(13)
+          .fontWeight(850)
+          .fontColor(ColorTokens.ink)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(this.subtitle)
+          .fontSize(11)
+          .fontColor(ColorTokens.muted)
+          .margin({ top: 4 })
+          .maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
-      .width('100%')
-      .margin({ bottom: 10 })
-      SourceToolRow({ title: '章节 URL', detail: 'https://biquge.example/book/123/128.html', chip: 'GET' })
-        .margin({ bottom: 8 })
-      SourceToolRow({ title: '正文规则', detail: '.content > p', chip: '当前' })
-        .margin({ bottom: 8 })
-      SourceToolRow({ title: '网络请求', detail: 'GET https://biquge.example/book/123/128.html · 200 OK · 412ms', chip: '200' })
-        .margin({ bottom: 12 })
-      ForEach(this.rows, (row: SourceToolMetric, idx: number) => {
-        SourceToolRow({ title: row.label, detail: `${row.value} · ${row.detail}`, chip: idx === 3 ? '建议' : '' })
-          .margin({ bottom: 8 })
-      }, (row: SourceToolMetric, idx: number) => `${row.label}-${idx}`)
-      SourceToolCard({ title: '修复建议', subtitle: '将正文规则改为 .chapter-content，并过滤 .ad 节点。', chip: '可应用' })
-        .margin({ top: 4 })
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+      SourceToolChip({ label: this.selected ? '已选择' : '启用', tone: this.selected ? 'filled' : 'soft' })
+        .margin({ left: 10 })
+    }
+    .width('100%')
+    .padding({ left: 12, right: 12, top: 10, bottom: 10 })
+    .borderRadius(DemoAliasTokens.radiusMd)
+    .backgroundColor(this.selected ? ColorTokens.metaBg : DemoAliasTokens.surface)
+    .border({ width: 1, color: this.selected ? ColorTokens.primary : ColorTokens.border })
+    .alignItems(VerticalAlign.Center)
+    .onClick(() => this.onSelect())
+  }
+}
+
+@Component
+export struct SourceDebugPage {
+  @StorageProp('reader.availableSources') sources: CoreSourceEntry[] = [];
+  @StorageProp('reader.sourcesLoaded') sourcesLoaded: boolean = false;
+  @StorageProp('reader.selectedSourceId') selectedSourceId: string = '';
+  @StorageProp('reader.sourceDebugMessage') message: string = '';
+  @StorageProp('reader.sourceDebugError') errorMessage: string = '';
+
+  private enabledSources(): CoreSourceEntry[] {
+    const result: CoreSourceEntry[] = [];
+    for (let i = 0; i < this.sources.length; i++) {
+      if (this.sources[i].enabled) result.push(this.sources[i]);
+    }
+    return result;
+  }
+
+  private selectedEnabled(): boolean {
+    const enabled = this.enabledSources();
+    for (let i = 0; i < enabled.length; i++) {
+      if (enabled[i].sourceId === this.selectedSourceId) return true;
+    }
+    return false;
+  }
+
+  private choose(sourceId: string): void {
+    ReaderUiStore.dispatch({ type: 'source-debug-select', sourceId });
+  }
+
+  private run(): void {
+    if (!this.selectedEnabled()) return;
+    ReaderUiStore.dispatch({ type: 'source-debug-run' });
+    ReaderUiStore.dispatch({ type: 'route-push', id: 'source-debug-running' });
+  }
+
+  build() {
+    Column({ space: 10 }) {
+      SourceToolCard({
+        title: '真实书源调测',
+        subtitle: '选择一个由 Core source.list 返回且处于启用状态的书源。Core source.check.run 通过 Host 执行真实请求；只有带诊断注解的响应才会在内存中短暂重放给 Core source.debug。',
+        chip: 'Core + Host',
+        tone: 'soft',
+      })
+      if (!this.sourcesLoaded) {
+        SourceToolCard({
+          title: '正在读取 Core 书源',
+          subtitle: '尚未收到 source.list 的真实列表，不显示演示书源。',
+          chip: '加载中',
+          tone: 'soft',
+        })
+      } else if (this.enabledSources().length === 0) {
+        SourceToolCard({
+          title: '没有可调测的启用书源',
+          subtitle: '请先导入并启用至少一个 Core 书源；停用书源不会被调测。',
+          chip: '空状态',
+          tone: 'warn',
+        })
+        SourceToolActionButton({ label: '前往书源管理', primary: true })
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'source-management' }))
+      } else {
+        SourceToolSectionTitle({ title: '选择启用书源' })
+        ForEach(this.enabledSources(), (source: CoreSourceEntry, index: number) => {
+          SourceDebugSourceChoice({
+            title: source.name,
+            subtitle: `${source.baseUrl.length > 0 ? source.baseUrl : source.sourceId} · ${source.sourceId}`,
+            selected: source.sourceId === this.selectedSourceId,
+            onSelect: () => this.choose(source.sourceId),
+          })
+            .margin({ top: index === 0 ? 0 : 2 })
+        })
+        if (this.selectedEnabled()) {
+          SourceToolRow({
+            title: '响应处理边界',
+            detail: '原始正文只保留到本次 Core source.debug 回放结束；页面仅显示结构化日志、最终状态、耗时与阶段状态。L4/L5 多页会明确标为有限回放。',
+            chip: '不持久化',
+            tone: 'soft',
+          })
+          SourceToolActionButton({ label: '运行真实调测', primary: true })
+            .onClick(() => this.run())
+        } else {
+          SourceToolRow({
+            title: '尚未选择书源',
+            detail: '请选择上方一个启用书源后再开始；不会自动挑选或使用固定演示源。',
+            chip: '需选择',
+            tone: 'warn',
+          })
+        }
+      }
+      if (this.errorMessage.length > 0) {
+        SourceToolRow({ title: '上次调测错误', detail: this.errorMessage, chip: '失败', tone: 'warn' })
+      } else if (this.message.length > 0) {
+        SourceToolRow({ title: '调测状态', detail: this.message, chip: '状态', tone: 'soft' })
+      }
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -807,28 +567,63 @@ export struct SourceDebugPage {
 
 @Component
 export struct SourceDebugRunningPage {
-  private steps: SourceToolStep[] = [
-    { title: '请求章节 HTML', detail: '正在下载目标章节源码', status: '完成' },
-    { title: '执行正文规则', detail: '运行 .chapter-content > p 选择器', status: '进行中' },
-    { title: '生成解析结果', detail: '等待正文节点与日志归档', status: '等待' },
-  ];
+  @StorageProp('reader.sourceDebugSourceId') sourceId: string = '';
+  @StorageProp('reader.sourceDebugSourceName') sourceName: string = '';
+  @StorageProp('reader.sourceDebugLoading') loading: boolean = false;
+  @StorageProp('reader.sourceDebugLoaded') loaded: boolean = false;
+  @StorageProp('reader.sourceDebugMessage') message: string = '';
+  @StorageProp('reader.sourceDebugError') errorMessage: string = '';
+  @StorageProp('reader.sourceDebugResult') result: CoreSourceDebugResult | null = null;
+
+  private sourceLabel(): string {
+    if (this.sourceName.length > 0 && this.sourceId.length > 0) return `${this.sourceName} · ${this.sourceId}`;
+    return this.sourceId.length > 0 ? this.sourceId : '尚未选择书源';
+  }
+
+  private retry(): void {
+    ReaderUiStore.dispatch({ type: 'source-debug-run' });
+  }
 
   build() {
-    Column() {
-      SourceToolCard({ title: '正在调测正文模块', subtitle: '笔趣阁 · 第 128 章 风雨夜', chip: '运行中', tone: 'filled' })
-      SourceToolProgressLine({ progress: 0.68 })
-        .margin({ top: 12, bottom: 14 })
-      ForEach(this.steps, (step: SourceToolStep, idx: number) => {
-        SourceToolStepRow({ title: step.title, detail: step.detail, status: step.status })
-          .margin({ bottom: 8 })
-      }, (step: SourceToolStep, idx: number) => `${step.title}-${idx}`)
-      Row() {
-        SourceToolActionButton({ label: '取消' })
-        SourceToolActionButton({ label: '查看日志', primary: true })
-          .margin({ left: 10 })
+    Column({ space: 10 }) {
+      if (this.loading) {
+        SourceToolCard({
+          title: this.sourceLabel(),
+          subtitle: this.message.length > 0
+            ? this.message
+            : '正在运行 Core L1–L5 真实诊断并收集带 traceId/sourceId 注解的 Host 完成结果。',
+          chip: '调测中',
+          tone: 'soft',
+        })
+        SourceToolRow({
+          title: '隐私与顺序',
+          detail: '阶段来自 Core diagnostic.stage，不按网络到达顺序推断。原始响应正文不写入 AppStorage、文件或日志。',
+          chip: '隔离',
+          tone: 'soft',
+        })
+      } else if (this.errorMessage.length > 0) {
+        SourceToolCard({ title: '真实调测请求失败', subtitle: this.errorMessage, chip: '失败', tone: 'warn' })
+        SourceToolActionButton({ label: '重新运行调测', primary: true })
+          .onClick(() => this.retry())
+      } else if (this.result !== null) {
+        SourceToolCard({
+          title: '调测已结束',
+          subtitle: this.message.length > 0 ? this.message : '已收到本次真实调测的结构化投影。',
+          chip: this.result.sourceCheck !== null && this.result.sourceCheck.available ? '查看结果' : '未通过',
+          tone: this.result.sourceCheck !== null && this.result.sourceCheck.available ? 'filled' : 'warn',
+        })
+        SourceToolActionButton({ label: '查看结构化结果', primary: true })
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'source-debug-result' }))
+      } else {
+        SourceToolCard({
+          title: '调测未开始',
+          subtitle: this.message.length > 0 ? this.message : '没有正在运行或已完成的真实 source.debug transaction。',
+          chip: this.loaded ? '未完成' : '空状态',
+          tone: 'warn',
+        })
+        SourceToolActionButton({ label: '返回选择书源', primary: true })
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'source-debug' }))
       }
-      .width('100%')
-      .margin({ top: 4 })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -838,32 +633,167 @@ export struct SourceDebugRunningPage {
 @Component
 export struct SourceDebugResultPage {
   @Prop variant: string = 'search';
+  @StorageProp('reader.sourceDebugLoading') loading: boolean = false;
+  @StorageProp('reader.sourceDebugMessage') message: string = '';
+  @StorageProp('reader.sourceDebugError') errorMessage: string = '';
+  @StorageProp('reader.sourceDebugResult') result: CoreSourceDebugResult | null = null;
 
-  private title(): string {
-    if (this.variant === 'detail') return '详情模块调测';
-    if (this.variant === 'catalog') return '目录模块调测';
-    return '搜索模块调测';
+  private moduleName(): string {
+    if (this.variant === 'detail') return '详情';
+    if (this.variant === 'catalog') return '目录';
+    return '搜索';
   }
 
-  private subtitle(): string {
-    if (this.variant === 'detail') return '/book/123/ · 基础信息解析完成';
-    if (this.variant === 'catalog') return '/book/123/catalog · 章节列表解析完成';
-    return '关键词 斗破苍穹 · 搜索结果解析完成';
+  private stepName(): string {
+    if (this.variant === 'detail') return 'detail';
+    if (this.variant === 'catalog') return 'toc';
+    return 'search';
+  }
+
+  private visibleLogs(): CoreSourceDebugLog[] {
+    const rows: CoreSourceDebugLog[] = [];
+    if (this.result === null) return rows;
+    const step = this.stepName();
+    for (let i = 0; i < this.result.logs.length; i++) {
+      const log = this.result.logs[i];
+      if (log.step === step) rows.push(log);
+    }
+    return rows;
+  }
+
+  private stageChip(stage: CoreSourceDebugStage): string {
+    if (stage.failed) return 'Host 失败';
+    if (stage.requestCount === 0) return '未请求';
+    if (stage.responseCount === 0) return '无响应';
+    return stage.statusCode > 0 ? `HTTP ${stage.statusCode}` : '已记录';
+  }
+
+  private stageDetail(stage: CoreSourceDebugStage): string {
+    if (stage.failed) return stage.failureMessage;
+    if (stage.responseCount === 0 && stage.requestCount > 0) return 'Host 未完成可记录响应；请以 Core L1–L5 verdict 为准。';
+    if (stage.replayLimited) return `已收集 ${stage.responseCount} 份响应；当前 DTO 只选择一份进行有限回放。`;
+    if (stage.responseCount > 0) return '已记录真实 Host 完成状态；HTTP 状态本身不等同于规则解析通过。';
+    return 'Core 未为该阶段发出可记录的诊断请求。';
+  }
+
+  private resultChip(): string {
+    if (this.result === null || this.result.sourceCheck === null || !this.result.sourceCheck.available) return '未通过';
+    if (this.result.sourceDebugError.length > 0) return '回放失败';
+    if (this.result.finalState === 1000) return 'Core 完成';
+    if (this.result.finalState === -1) return 'Core 错误';
+    return '未确认';
+  }
+
+  private resultTone(): string {
+    if (this.result === null || this.result.sourceCheck === null || !this.result.sourceCheck.available ||
+      this.result.sourceDebugError.length > 0 || this.result.finalState === -1) return 'warn';
+    return this.result.finalState === 1000 ? 'filled' : 'soft';
+  }
+
+  private logDetail(log: CoreSourceDebugLog): string {
+    const details: string[] = [`${log.timestampMs}ms`];
+    if (log.rule.length > 0) details.push(`规则：${log.rule}`);
+    if (log.extractedCount >= 0) details.push(`提取：${log.extractedCount}`);
+    if (log.errorKind.length > 0) details.push(`类型：${log.errorKind}`);
+    return details.join(' · ');
   }
 
   build() {
-    Column() {
-      SourceToolCard({ title: this.title(), subtitle: this.subtitle(), chip: '通过', tone: 'filled' })
-      SourceToolSectionTitle({ title: '解析字段' })
-        .margin({ top: 14, bottom: 8 })
-      SourceToolMetricGrid({ variant: this.variant })
-      Row() {
-        SourceToolActionButton({ label: '查看源码' })
-        SourceToolActionButton({ label: '保存规则', primary: true })
-          .margin({ left: 10 })
+    Column({ space: 10 }) {
+      if (this.loading) {
+        SourceToolCard({ title: '调测仍在运行', subtitle: this.message, chip: '处理中', tone: 'soft' })
+        SourceToolActionButton({ label: '查看运行状态', primary: true })
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'source-debug-running' }))
+      } else if (this.errorMessage.length > 0) {
+        SourceToolCard({ title: '调测请求失败', subtitle: this.errorMessage, chip: '失败', tone: 'warn' })
+        SourceToolActionButton({ label: '返回重新选择', primary: true })
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'source-debug' }))
+      } else if (this.result === null) {
+        SourceToolCard({
+          title: `${this.moduleName()}调测结果尚不可用`,
+          subtitle: this.message.length > 0 ? this.message : '没有本次 transaction 的 Core source.debug 结构化结果，不显示静态解析字段。',
+          chip: '空状态',
+          tone: 'warn',
+        })
+        SourceToolActionButton({ label: '开始真实调测', primary: true })
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'source-debug' }))
+      } else {
+        SourceToolCard({
+          title: `${this.moduleName()}调测 · ${this.result.sourceId}`,
+          subtitle: this.message.length > 0 ? this.message : 'Core 返回的本次结构化调测投影。',
+          chip: this.resultChip(),
+          tone: this.resultTone(),
+        })
+        if (this.result.sourceCheck === null) {
+          SourceToolRow({
+            title: 'L1–L5 verdict 缺失',
+            detail: this.result.sourceCheckError.length > 0 ? this.result.sourceCheckError : 'Core 未返回可验证 verdict；不会把回放日志当成成功。',
+            chip: '未验证',
+            tone: 'warn',
+          })
+        } else {
+          SourceToolRow({
+            title: 'Core L1–L5 真实诊断',
+            detail: this.result.sourceCheck.available
+              ? `全部通过 · ${this.result.sourceCheck.durationMs}ms`
+              : `未通过：${this.result.sourceCheck.failureReason}`,
+            chip: this.result.sourceCheck.available ? '通过' : '未通过',
+            tone: this.result.sourceCheck.available ? 'filled' : 'warn',
+          })
+        }
+        SourceToolSectionTitle({ title: '带注解 Host 阶段状态' })
+        ForEach(this.result.stages, (stage: CoreSourceDebugStage, index: number) => {
+          SourceToolRow({
+            title: `${stage.stage} · ${stage.stage === 'L2' ? '搜索' : (stage.stage === 'L3' ? '详情' : (stage.stage === 'L4' ? '目录' : '正文'))}`,
+            detail: this.stageDetail(stage),
+            chip: this.stageChip(stage),
+            tone: stage.failed ? 'warn' : 'soft',
+          })
+            .margin({ top: index === 0 ? 0 : 2 })
+        })
+        if (this.result.replayNotice.length > 0) {
+          SourceToolRow({ title: '回放范围', detail: this.result.replayNotice, chip: this.result.replayLimited ? '有限' : '单份', tone: this.result.replayLimited ? 'warn' : 'soft' })
+        }
+        if (this.result.sourceDebugError.length > 0) {
+          SourceToolRow({ title: 'Core source.debug', detail: this.result.sourceDebugError, chip: '失败', tone: 'warn' })
+        } else {
+          SourceToolRow({
+            title: 'Core source.debug 终态',
+            detail: this.result.replayAttempted
+              ? `finalState = ${this.result.finalState} · ${this.result.durationMs}ms`
+              : '未调用：没有可重放的 L2 真实响应。',
+            chip: this.result.replayAttempted ? '结构化' : '未回放',
+            tone: this.result.replayAttempted ? 'soft' : 'warn',
+          })
+        }
+        SourceToolSectionTitle({ title: `${this.moduleName()}结构化日志` })
+        if (this.visibleLogs().length === 0) {
+          SourceToolRow({
+            title: '该模块没有结构化日志',
+            detail: 'Core 未输出该步骤的日志，或该步骤未执行；不使用演示 INFO / ERROR 补齐。',
+            chip: '空',
+            tone: 'soft',
+          })
+        } else {
+          ForEach(this.visibleLogs(), (log: CoreSourceDebugLog, index: number) => {
+            SourceToolRow({
+              title: log.message,
+              detail: this.logDetail(log),
+              chip: `${log.state}`,
+              tone: log.state === -1 ? 'warn' : 'soft',
+            })
+              .margin({ top: index === 0 ? 0 : 2 })
+          })
+        }
+        Row() {
+          SourceToolActionButton({ label: '重新选择书源' })
+            .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'source-debug' }))
+          SourceToolActionButton({ label: '正文结构日志', primary: true })
+            .margin({ left: 10 })
+            .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'source-debug-content-log' }))
+        }
+        .width('100%')
       }
-      .width('100%')
-      .margin({ top: 2 })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -872,22 +802,72 @@ export struct SourceDebugResultPage {
 
 @Component
 export struct SourceDebugContentLogPage {
-  private logs: SourceToolLog[] = [
-    { time: '10:30:18.120', level: 'INFO', message: '请求章节 HTML', detail: 'GET /book/123/128.html · 200 OK · 412ms' },
-    { time: '10:30:18.538', level: 'INFO', message: '执行正文规则', detail: '.content > p · 匹配节点 0' },
-    { time: '10:30:18.541', level: 'ERROR', message: '返回错误', detail: '正文为空，当前规则未命中章节正文节点。' },
-    { time: '10:30:18.560', level: 'WARN', message: '定位结果', detail: '发现 .chapter-content 节点，建议替换规则。' },
-  ];
+  @StorageProp('reader.sourceDebugLoading') loading: boolean = false;
+  @StorageProp('reader.sourceDebugMessage') message: string = '';
+  @StorageProp('reader.sourceDebugError') errorMessage: string = '';
+  @StorageProp('reader.sourceDebugResult') result: CoreSourceDebugResult | null = null;
+
+  private contentLogs(): CoreSourceDebugLog[] {
+    const logs: CoreSourceDebugLog[] = [];
+    if (this.result === null) return logs;
+    for (let i = 0; i < this.result.logs.length; i++) {
+      if (this.result.logs[i].step === 'content') logs.push(this.result.logs[i]);
+    }
+    return logs;
+  }
+
+  private detail(log: CoreSourceDebugLog): string {
+    const details: string[] = [`${log.timestampMs}ms`];
+    if (log.rule.length > 0) details.push(`规则：${log.rule}`);
+    if (log.extractedCount >= 0) details.push(`提取：${log.extractedCount}`);
+    if (log.errorKind.length > 0) details.push(`类型：${log.errorKind}`);
+    return details.join(' · ');
+  }
 
   build() {
-    Column() {
-      SourceToolCard({ title: '正文模块日志', subtitle: '本次调测 4 条关键日志', chip: '1 错误', tone: 'warn' })
-      SourceToolSectionTitle({ title: '日志' })
-        .margin({ top: 14, bottom: 8 })
-      ForEach(this.logs, (log: SourceToolLog, idx: number) => {
-        SourceToolLogRow({ time: log.time, level: log.level, message: log.message, detail: log.detail })
-          .margin({ bottom: 8 })
-      }, (log: SourceToolLog, idx: number) => `${log.time}-${idx}`)
+    Column({ space: 10 }) {
+      if (this.loading) {
+        SourceToolCard({ title: '正文调测仍在运行', subtitle: this.message, chip: '处理中', tone: 'soft' })
+      } else if (this.errorMessage.length > 0) {
+        SourceToolCard({ title: '正文调测不可用', subtitle: this.errorMessage, chip: '失败', tone: 'warn' })
+      } else if (this.result === null) {
+        SourceToolCard({
+          title: '没有正文调测 transaction',
+          subtitle: this.message.length > 0 ? this.message : '请先运行一次真实书源调测；本页不会显示持久原文或静态日志。',
+          chip: '空状态',
+          tone: 'warn',
+        })
+      } else {
+        SourceToolCard({
+          title: `正文结构化日志 · ${this.result.sourceId}`,
+          subtitle: '仅展示 Core source.debug 返回的结构化 log 字段；不会展示或缓存 Host 响应正文。',
+          chip: this.result.finalState === -1 ? 'Core 错误' : '结构化',
+          tone: this.result.finalState === -1 ? 'warn' : 'soft',
+        })
+        if (this.contentLogs().length === 0) {
+          SourceToolRow({
+            title: 'Core 没有输出正文结构日志',
+            detail: '正文阶段可能未执行、没有响应或 Core 没有生成该步骤日志；不以虚构日志代替。',
+            chip: '空',
+            tone: 'soft',
+          })
+        } else {
+          ForEach(this.contentLogs(), (log: CoreSourceDebugLog, index: number) => {
+            SourceToolRow({
+              title: log.message,
+              detail: this.detail(log),
+              chip: `${log.state}`,
+              tone: log.state === -1 ? 'warn' : 'soft',
+            })
+              .margin({ top: index === 0 ? 0 : 2 })
+          })
+        }
+        if (this.result.replayLimited) {
+          SourceToolRow({ title: '分页回放限制', detail: this.result.replayNotice, chip: '有限', tone: 'warn' })
+        }
+      }
+      SourceToolActionButton({ label: '返回调测结果', primary: true })
+        .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -896,237 +876,95 @@ export struct SourceDebugContentLogPage {
 
 @Component
 export struct SourceCodeViewPage {
-  private lines: Array<[string, string]> = [
-    ['001', '<html>'],
-    ['012', '<body class="reader">'],
-    ['048', '<div class="chapter-content">'],
-    ['049', '<p>雨声撞在旧窗上，像一串迟到的脚步。</p>'],
-    ['050', '<p>他合上书源调测面板，重新看向正文。</p>'],
-    ['086', '</div>'],
-  ];
-
   build() {
-    Column() {
-      SourceToolCard({ title: '源码查看', subtitle: '正文模块 · 当前请求返回', chip: 'HTML' })
-      Column() {
-        ForEach(this.lines, (line: [string, string], idx: number) => {
-          SourceToolCodeLine({ number: line[0], text: line[1] })
-        }, (line: [string, string], idx: number) => `${line[0]}-${idx}`)
-      }
-      .width('100%')
-      .padding(12)
-      .borderRadius(DemoAliasTokens.radiusLg)
-      .backgroundColor(ColorTokens.floatingControlBg)
-      .border({ width: 1, color: ColorTokens.border })
-      .margin({ top: 12 })
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
+    SourceCoreUnavailablePage({
+      title: '诊断源码查看未接入',
+      message: '真实调测的 Host 响应正文只在内存中短暂提供给 Core source.debug，回放后立即清除；本页不持久化或展示原文/HTML。',
+    })
   }
 }
 
 @Component
 export struct SourceLogsPage {
-  private filters: string[] = ['全部', '异常', '警告', '今日'];
-  private logs: SourceToolLog[] = [
-    { time: '今天 10:30', level: 'ERROR', message: '笔趣阁', detail: '正文为空，.content > p 未匹配任何节点。' },
-    { time: '昨天 22:14', level: 'ERROR', message: '旧规则源', detail: '搜索接口返回 403，需要更新 User-Agent。' },
-    { time: '周一 08:12', level: 'WARN', message: '本地导入源', detail: '目录存在重复章节，已自动去重。' },
-  ];
-
   build() {
-    Column() {
-      SourceToolCard({ title: '错误日志', subtitle: '最近 7 天 · 2 个异常 · 1 个警告', chip: '今日' })
-      Row() {
-        ForEach(this.filters, (filter: string, idx: number) => {
-          SourceToolChip({ label: filter, tone: idx === 0 ? 'filled' : 'soft' })
-            .margin({ right: 8, top: 12 })
-        }, (filter: string, idx: number) => `${filter}-${idx}`)
-      }
-      .width('100%')
-      .margin({ bottom: 10 })
-      ForEach(this.logs, (log: SourceToolLog, idx: number) => {
-        SourceToolLogRow({ time: log.time, level: log.level, message: log.message, detail: log.detail })
-          .margin({ bottom: 8 })
-      }, (log: SourceToolLog, idx: number) => `${log.message}-${idx}`)
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
+    SourceCoreUnavailablePage({
+      title: '书源错误日志未接入',
+      message: 'Core 没有向该页面提供持久化的书源诊断日志集合；Harmony 不会用历史演示错误替代真实日志。',
+    })
   }
 }
 
 @Component
 export struct SourceDeleteConfirmPage {
+  @StorageProp('reader.availableSources') sources: CoreSourceEntry[] = [];
+  @StorageProp('reader.selectedSourceId') selectedSourceId: string = '';
+
+  private selectedSource(): CoreSourceEntry | null {
+    for (let i = 0; i < this.sources.length; i++) {
+      if (this.sources[i].sourceId === this.selectedSourceId) return this.sources[i];
+    }
+    return null;
+  }
+
+  private confirmDelete(): void {
+    const source = this.selectedSource();
+    if (source === null) return;
+    // This is the sole UI grant for Core source.delete. Normal source rows
+    // only enter this route via source-delete-request.
+    ReaderUiStore.dispatch({ type: 'source-delete-confirm' });
+  }
+
   build() {
-    Column() {
-      SourceToolCard({ title: '删除书源？', subtitle: '将删除已选 3 个书源。不会删除书架书籍，但后续搜索将不再使用这些源。', chip: '谨慎操作', tone: 'warn' })
-      SourceToolRow({ title: '同时清除相关检测日志', detail: '删除后可减少无效错误日志，但无法恢复历史调测记录。', chip: '可选' })
-        .margin({ top: 12, bottom: 12 })
-      Row() {
-        SourceToolActionButton({ label: '取消' })
-        SourceToolActionButton({ label: '删除', warning: true })
-          .margin({ left: 10 })
+    if (this.selectedSource() === null) {
+      SourceCoreUnavailablePage({
+        title: '未选择有效书源',
+        message: '该书源已被删除或未由 Core source.list 返回，不能执行删除操作。',
+      })
+    } else {
+      Column({ space: 10 }) {
+        SourceToolCard({
+          title: `删除“${this.selectedSource()!.name}”？`,
+          subtitle: `sourceId: ${this.selectedSource()!.sourceId}。确认后才会调用 Core source.delete；不会删除书架书籍。`,
+          chip: '谨慎操作',
+          tone: 'warn',
+        })
+        SourceToolRow({
+          title: '删除范围',
+          detail: '仅删除当前由 Core 返回且已选择的一条书源，不会使用固定的多选数量。',
+          chip: '1 条',
+          tone: 'soft',
+        })
+        Row() {
+          SourceToolActionButton({ label: '取消' })
+            .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
+          SourceToolActionButton({ label: '删除', warning: true })
+            .margin({ left: 10 })
+            .onClick(() => this.confirmDelete())
+        }
+        .width('100%')
       }
       .width('100%')
+      .alignItems(HorizontalAlign.Start)
     }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
-}
-
-@Component
-struct SourceRuleModuleTabs {
-  private modules: string[] = ['基本', '搜索', '详情', '目录', '正文', '高级'];
-
-  build() {
-    Scroll() {
-      Row() {
-        ForEach(this.modules, (module: string) => {
-          SourceToolChip({ label: module, tone: module === '正文' ? 'filled' : 'soft' })
-            .margin({ right: 8 })
-        }, (module: string) => module)
-      }
-    }
-    .scrollable(ScrollDirection.Horizontal)
-    .scrollBar(BarState.Off)
-    .width('100%')
-  }
-}
-
-@Component
-struct SourceRuleFieldRow {
-  @Prop label: string = '';
-  @Prop value: string = '';
-
-  build() {
-    Row() {
-      Text(this.label)
-        .fontSize(12)
-        .fontWeight(800)
-        .fontColor(ColorTokens.muted)
-        .width(78)
-      Text(this.value)
-        .fontSize(13)
-        .fontWeight(850)
-        .fontColor(ColorTokens.controlInk)
-        .layoutWeight(1)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-      Image($r('app.media.ui_icon_chevron_muted'))
-        .width(16)
-        .height(16)
-        .margin({ left: 8 })
-    }
-    .width('100%')
-    .padding({ left: 12, right: 12, top: 10, bottom: 10 })
-    .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(ColorTokens.floatingControlBg)
-    .border({ width: 1, color: ColorTokens.border })
-    .alignItems(VerticalAlign.Center)
-  }
-}
-
-@Component
-struct SourceRuleSection {
-  @Prop title: string = '';
-  @Prop rows: Array<[string, string]> = [];
-
-  build() {
-    Column() {
-      SourceToolSectionTitle({ title: this.title })
-      ForEach(this.rows, (row: [string, string], index: number) => {
-        SourceRuleFieldRow({ label: row[0], value: row[1] })
-          .margin({ top: index === 0 ? 10 : 8 })
-      }, (row: [string, string], index: number) => `${row[0]}-${index}`)
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
   }
 }
 
 @Component
 export struct SourceRuleEditPage {
-  private basicRows: Array<[string, string]> = [
-    ['书源名称', '笔趣阁'],
-    ['书源地址', 'https://biquge.example'],
-    ['书源分组', '玄幻书源'],
-    ['启用状态', '已启用'],
-  ];
-  private requestRows: Array<[string, string]> = [
-    ['请求方式', 'GET'],
-    ['字符编码', 'UTF-8'],
-    ['请求头', 'User-Agent / Referer'],
-    ['Cookie', '未启用'],
-  ];
-  private parseRows: Array<[string, string]> = [
-    ['正文页 URL', '{{chapterUrl}}'],
-    ['章节标题', '.chapter-title@text'],
-    ['正文内容', '#content@text'],
-    ['下一页', '.next@href'],
-  ];
-  private postRows: Array<[string, string]> = [
-    ['内容过滤', '.ad, script, style'],
-    ['段落处理', '保留段落换行'],
-    ['净化规则', '去除空行'],
-    ['失败回退', '尝试正文备用规则'],
-  ];
-
   build() {
-    Column() {
-      SourceToolCard({ title: '笔趣阁', subtitle: '正在编辑：正文规则', chip: '已启用' })
-      SourceRuleModuleTabs()
-        .margin({ top: 12 })
-      Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween }) {
-        ForEach([
-          ['当前模块', '正文'],
-          ['最近调测', '失败 · 0 字'],
-          ['规则版本', 'v3'],
-        ], (item: string[], index: number) => {
-          Column() {
-            Text(item[0])
-              .fontSize(10)
-              .fontWeight(800)
-              .fontColor(ColorTokens.muted)
-            Text(item[1])
-              .fontSize(13)
-              .fontWeight(900)
-              .fontColor(ColorTokens.primaryDark)
-              .margin({ top: 5 })
-          }
-          .width('31%')
-          .padding(10)
-          .borderRadius(DemoAliasTokens.radiusMd)
-          .backgroundColor(ColorTokens.floatingControlBg)
-          .border({ width: 1, color: ColorTokens.border })
-          .alignItems(HorizontalAlign.Start)
-        }, (item: string[], index: number) => `${item[0]}-${index}`)
-      }
-      .width('100%')
-      .margin({ top: 12 })
+    SourceCoreUnavailablePage({
+      title: '书源规则编辑未接入',
+      message: '当前没有完整的 Core source-update / 规则编辑契约和保存结果 DTO。为避免“保存成功”假象，本页不显示或修改固定规则。',
+    })
+  }
+}
 
-      SourceRuleSection({ title: '基础配置', rows: this.basicRows })
-        .margin({ top: 14 })
-      SourceRuleSection({ title: '请求配置', rows: this.requestRows })
-        .margin({ top: 14 })
-      SourceRuleSection({ title: '解析规则', rows: this.parseRows })
-        .margin({ top: 14 })
-      SourceRuleSection({ title: '后处理', rows: this.postRows })
-        .margin({ top: 14 })
-      SourceToolCard({
-        title: '当前规则说明',
-        subtitle: '正文规则用于从章节页面中提取正文文本。规则修改后先调测当前模块，确认解析结果正常后再保存。',
-        chip: '说明',
-      })
-        .margin({ top: 14 })
-      Row() {
-        SourceToolActionButton({ label: '保存规则' })
-        SourceToolActionButton({ label: '调测当前模块', primary: true })
-          .margin({ left: 10 })
-      }
-      .width('100%')
-      .margin({ top: 12 })
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
+@Component
+export struct SourceBatchPage {
+  build() {
+    SourceCoreUnavailablePage({
+      title: '书源批量启停未接入',
+      message: 'Harmony 尚未接入可验证的 Core 批量启停、批量检测和分组操作契约，因此不会展示静态源列表或执行伪批量成功。',
+    })
   }
 }

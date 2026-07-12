@@ -1,0 +1,105 @@
+// Reader UI 2.5 file.select backed by HarmonyOS DocumentViewPicker.
+// Cancellation is represented by an empty URI list. Platform/permission
+// failures throw and are never converted into a synthetic empty selection.
+import picker from '@ohos.file.picker';
+import fs from '@ohos.file.fs';
+import common from '@ohos.app.ability.common';
+
+export interface ReaderSelectedFile {
+  path: string;
+  name: string;
+  mimeType?: string;
+  size?: number;
+}
+
+export interface ReaderFileSelectionResponse {
+  selected: boolean;
+  files: ReaderSelectedFile[];
+}
+
+function suffixFilterForMime(mimeType: string): string | null {
+  switch (mimeType.toLowerCase()) {
+    case 'text/plain': return '.txt';
+    case 'application/json': return '.json';
+    case 'application/pdf': return '.pdf';
+    case 'application/epub+zip': return '.epub';
+    case 'font/ttf':
+    case 'application/x-font-ttf': return '.ttf';
+    case 'font/otf':
+    case 'application/x-font-opentype': return '.otf';
+    case 'font/collection': return '.ttc';
+    case 'image/*': return '.jpg,.jpeg,.png,.webp,.gif,.bmp';
+    default: return null;
+  }
+}
+
+function mimeForName(name: string): string | undefined {
+  const lower = name.toLowerCase();
+  if (lower.endsWith('.txt')) return 'text/plain';
+  if (lower.endsWith('.json')) return 'application/json';
+  if (lower.endsWith('.pdf')) return 'application/pdf';
+  if (lower.endsWith('.epub')) return 'application/epub+zip';
+  if (lower.endsWith('.ttf')) return 'font/ttf';
+  if (lower.endsWith('.otf')) return 'font/otf';
+  if (lower.endsWith('.ttc')) return 'font/collection';
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  return undefined;
+}
+
+export class FileSelectionHostAdapter {
+  private context: common.UIAbilityContext;
+
+  constructor(context: common.UIAbilityContext) {
+    this.context = context;
+  }
+
+  async select(mimeTypes: string[], allowsMultiple: boolean): Promise<ReaderFileSelectionResponse> {
+    const documentPicker = new picker.DocumentViewPicker(this.context);
+    const options = new picker.DocumentSelectOptions();
+    options.maxSelectNumber = allowsMultiple ? 32 : 1;
+    const filters: string[] = [];
+    let canApplyExactFilter = true;
+    for (let i = 0; i < mimeTypes.length; i++) {
+      if (mimeTypes[i] === '*/*') {
+        canApplyExactFilter = false;
+        break;
+      }
+      const filter = suffixFilterForMime(mimeTypes[i]);
+      if (filter === null) {
+        // DocumentViewPicker exposes suffix filters rather than arbitrary MIME
+        // filters. Do not pretend an unknown MIME was enforced.
+        canApplyExactFilter = false;
+        break;
+      }
+      filters.push(filter);
+    }
+    if (canApplyExactFilter && filters.length > 0) options.fileSuffixFilters = filters;
+
+    let uris: string[];
+    try {
+      uris = await documentPicker.select(options);
+    } catch (e) {
+      throw new Error(`FileSelectionHostAdapter.select failed: ${e}`);
+    }
+    const files: ReaderSelectedFile[] = [];
+    for (let i = 0; i < uris.length; i++) {
+      const uri = uris[i];
+      const slash = uri.lastIndexOf('/');
+      const name = slash >= 0 ? uri.substring(slash + 1) : uri;
+      const file: ReaderSelectedFile = { path: uri, name: name };
+      const mimeType = mimeForName(name);
+      if (mimeType !== undefined) file.mimeType = mimeType;
+      try {
+        const stat = fs.statSync(uri);
+        file.size = stat.size;
+      } catch (e) {
+        // Some provider URIs do not expose stat metadata. The selected URI is
+        // still the real platform grant; size is optional in the response.
+      }
+      files.push(file);
+    }
+    return { selected: files.length > 0, files: files };
+  }
+}

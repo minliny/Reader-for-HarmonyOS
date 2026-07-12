@@ -203,7 +203,12 @@ export class WebViewHostAdapter {
     script: string,
     timeoutMs: number
   ): Promise<void> {
-    const runPromise: Promise<void> = controller.runJavaScript(script).then((): void => {});
+    let runPromise: Promise<void>;
+    try {
+      runPromise = controller.runJavaScript(script).then((): void => {});
+    } catch (e) {
+      return Promise.reject<void>(new Error(`webview runJavaScript failed: ${e}`));
+    }
     const timeoutPromise = new Promise<void>((_resolve, reject) => {
       setTimeout(() => {
         reject(new Error(`webview script timed out after ${timeoutMs}ms`));

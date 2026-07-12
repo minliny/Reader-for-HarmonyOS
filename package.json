@@ -9,13 +9,17 @@
   "description": "Reader for HarmonyOS — ArkUI native host (Phase 1 UI skeleton, contract-driven)",
   "repository": {},
   "license": "ISC",
- "scripts": {
+  "scripts": {
     "gen:contracts": "node scripts/gen_contracts.mjs",
+    "sync:screen-graph": "node scripts/sync_reader_ui_screen_graph.mjs",
+    "check:screen-graph": "node scripts/sync_reader_ui_screen_graph.mjs --check",
     "lint:tokens": "node scripts/lint_tokens.mjs",
+    "check:reader-ui-consumer": "node ../Reader-UI/tools/runtime/check-host-consumers.mjs --host harmonyos && node scripts/check_reader_ui_shadow_allowlist.mjs && npm run check:screen-graph",
     "build": "hvigorw assembleHap --no-daemon",
-    "test": "node scripts/test.mjs",
-    "test:device": "node scripts/test.mjs",
-    "test:raw": "hvigorw test --no-daemon",
+    "test": "npm run check:reader-ui-consumer && node scripts/test.mjs",
+    "test:host": "npm run check:reader-ui-consumer && node scripts/test.mjs",
+    "test:device": "node scripts/collect_device_evidence.mjs --install --require-core-napi",
+    "test:raw": "hvigorw test --mode module -p module=entry@default --no-daemon",
     "evidence": "node scripts/collect_device_evidence.mjs"
   },
   "dependencies": {

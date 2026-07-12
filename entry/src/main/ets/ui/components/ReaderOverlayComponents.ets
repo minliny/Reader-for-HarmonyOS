@@ -15,7 +15,20 @@ import { RouteId } from '../../contract/generated/RouteTable';
 import { SafeAreaAdapter } from '../adapters/SafeAreaAdapter';
 import { ViewportAdapter } from '../adapters/ViewportAdapter';
 import { ReaderUiStore } from '../store/ReaderUiStore';
-import { ReaderFontFamily, ReaderRenderMetric, ReaderToggleKey, ReaderSettingOptionKey, TtsScope, TtsTimer, ReplaceRule } from '../store/ReaderUiState';
+import {
+  BookDetail,
+  ChapterTocEntry,
+  CoreBookmark,
+  CoreContentSearchResult,
+  ReaderFontFamily,
+  ReaderRenderMetric,
+  ReaderToggleKey,
+  ReaderSettingOptionKey,
+  TocMode,
+  TtsScope,
+  TtsTimer,
+  ReplaceRule,
+} from '../store/ReaderUiState';
 import { ReaderThemeResolver, ReaderThemeOption } from '../tokens/ReaderThemeResolver';
 import { MotionAdapter } from '../adapters/MotionAdapter';
 import { InteractionDebugBadge, InteractionDebugFrame } from './InteractionDebugComponents';
@@ -225,6 +238,70 @@ export struct ToggleSwitch {
   }
 }
 
+// The reader shell, its quick panels, and its module panels all expose the
+// same brightness rail.  Keep that rail bound to the reducer rather than
+// drawing a decorative 42% fill in each surface: `set-brightness` updates the
+// current window through ReaderEffects.applyBrightness.
+@Component
+struct ReaderBrightnessRail {
+  // `brightness` is an ArkUI CustomComponent attribute name; using it as a
+  // state field collides with the generated component base API. The storage
+  // key remains unchanged.
+  @StorageProp('reader.brightness') brightnessValue: number = 80;
+
+  private update(value: number, mode: SliderChangeMode): void {
+    // Begin only identifies the gesture. Moving/End/Click carry a real value
+    // and are deliberately sent through the reducer so the visual rail and
+    // the Harmony window never diverge.
+    if (mode === SliderChangeMode.Begin) return;
+    ReaderUiStore.dispatch({
+      type: 'set-brightness',
+      value: Math.round(value),
+      previousValue: this.brightnessValue,
+    });
+  }
+
+  build() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Column({ space: 8 }) {
+        Image($r('app.media.reader_icon_sun_primary')).width(18).height(18)
+        Slider({
+          value: this.brightnessValue,
+          min: 0,
+          max: 100,
+          step: 1,
+          style: SliderStyle.OutSet,
+          direction: Axis.Vertical,
+          reverse: true,
+        })
+          .width(24)
+          .layoutWeight(1)
+          .trackColor(ColorTokens.border)
+          .selectedColor(ColorTokens.primary)
+          .blockColor(ColorTokens.primaryDark)
+          .onChange((value: number, mode: SliderChangeMode) => this.update(value, mode))
+        Text(`${Math.round(this.brightnessValue)}%`)
+          .fontSize(9)
+          .fontWeight(800)
+          .fontColor(ColorTokens.primaryDark)
+          .maxLines(1)
+          .textAlign(TextAlign.Center)
+      }
+      .width('100%')
+      .height('100%')
+      .padding({ top: 12, bottom: 12 })
+      .justifyContent(FlexAlign.Center)
+      .alignItems(HorizontalAlign.Center)
+      .backgroundColor(ColorTokens.floatingControlBg)
+      .borderRadius(DemoAliasTokens.radiusLg)
+      InteractionDebugBadge({ label: 'B', tone: 'action', offsetTop: 22 })
+      InteractionDebugFrame({ label: 'BrightnessRail', tone: 'module' })
+    }
+    .width('100%')
+    .height('100%')
+  }
+}
+
 // ── Control sheet (.fd-reader-sheet + .fd-reader-control-main) ────────────
 //   Live demo truth for control-layer-base-v2:
 //   - mobile portrait: bottom sheet 330vp, left/right 12, module nav floats
@@ -237,6 +314,9 @@ export struct ReaderControlSheet {
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
   @StorageProp(ViewportAdapter.K_WIDTH) viewportWidth: number = ViewportAdapter.DEFAULT_WIDTH;
   @StorageProp(ViewportAdapter.K_HEIGHT) viewportHeight: number = ViewportAdapter.DEFAULT_HEIGHT;
+  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
+  @StorageProp('reader.chapterToc') chapterToc: ChapterTocEntry[] = [];
+  @StorageProp('reader.currentChapterTitle') currentChapterTitle: string = '';
 
   private readonly dockWidth: number = 340;
   private readonly dockRight: number = 24;
@@ -255,16 +335,25 @@ export struct ReaderControlSheet {
   private readonly railGap: number = 14;
   private readonly quickHeight: number = 76;
 
-  private quickActions: Array<[string, string, string, string]> = [
-    ['搜索', 'reader_icon_reader_content_search_action', 'reader-search-overlay-v2', 'search'],
-    ['自动翻页', 'reader_icon_reader_auto_page_action', 'reader-auto-scroll-overlay-v2', 'auto-page'],
-    ['替换', 'reader_icon_reader_content_replace_action', 'reader-replace-overlay-v2', 'replacement'],
+  private quickActions: Array<[string, string, string]> = [
+    ['搜索', 'reader_icon_reader_content_search_action', 'reader-search-overlay-v2'],
+    ['自动翻页', 'reader_icon_reader_auto_page_action', 'reader-auto-scroll-overlay-v2'],
+    ['替换', 'reader_icon_reader_content_replace_action', 'reader-replace-overlay-v2'],
+    ['书签', 'ui_icon_bookmark_dark', 'bookmark-create'],
   ];
+
+  private moduleForRoute(routeId: string): string {
+    if (routeId === 'reader-search-overlay-v2') return 'search';
+    if (routeId === 'reader-auto-scroll-overlay-v2') return 'auto-page';
+    if (routeId === 'reader-replace-overlay-v2') return 'replacement';
+    return '';
+  }
 
   private quickDebugLabel(routeId: string): string {
     if (routeId === 'reader-search-overlay-v2') return 'search';
     if (routeId === 'reader-auto-scroll-overlay-v2') return 'auto';
     if (routeId === 'reader-replace-overlay-v2') return 'replace';
+    if (routeId === 'bookmark-create') return 'bookmark';
     return 'quick';
   }
 
@@ -303,6 +392,43 @@ export struct ReaderControlSheet {
     return this.controlHeight() - this.quickHeight - 6;
   }
 
+  private chapterTitle(): string {
+    if (this.currentBook === null) return '尚未选择书籍';
+    return this.currentChapterTitle.length > 0 ? this.currentChapterTitle : 'Core 未返回当前章节';
+  }
+
+  private currentChapterIndex(): number {
+    if (this.currentChapterTitle.length === 0) return -1;
+    for (let i = 0; i < this.chapterToc.length; i += 1) {
+      if (this.chapterToc[i].title === this.currentChapterTitle) return i;
+    }
+    return -1;
+  }
+
+  private chapterProgressLabel(): string {
+    if (this.currentBook === null) return '未选择书籍';
+    const index = this.currentChapterIndex();
+    if (index >= 0 && this.chapterToc.length > 0) return `${index + 1}/${this.chapterToc.length}`;
+    return this.chapterToc.length > 0 ? `已加载目录 ${this.chapterToc.length} 章` : '目录未加载';
+  }
+
+  private chapterProgressPercent(): number {
+    const index = this.currentChapterIndex();
+    if (index < 0 || this.chapterToc.length === 0) return 0;
+    return Math.round((index + 1) * 100 / this.chapterToc.length);
+  }
+
+  private canSeekChapter(): boolean {
+    return this.currentBook !== null && this.currentChapterIndex() >= 0 && this.chapterToc.length > 0;
+  }
+
+  private seekChapter(value: number, mode: SliderChangeMode): void {
+    // Slider emits End for both a drag and a direct track tap.  Loading only
+    // then prevents a network/Core request for every intermediate thumb move.
+    if (!this.canSeekChapter() || mode !== SliderChangeMode.End) return;
+    ReaderUiStore.dispatch({ type: 'chapter-progress-seek', value: Math.round(value) });
+  }
+
   build() {
     Stack({ alignContent: Alignment.BottomEnd }) {
       Stack({ alignContent: Alignment.TopStart }) {
@@ -321,7 +447,7 @@ export struct ReaderControlSheet {
               Column({ space: 6 }) {
                 Stack({ alignContent: Alignment.TopStart }) {
                   Row({ space: 8 }) {
-                    ForEach(this.quickActions, (item: [string, string, string, string]) => {
+                    ForEach(this.quickActions, (item: [string, string, string]) => {
                       Stack({ alignContent: Alignment.TopStart }) {
                         Column({ space: 6 }) {
                           Image($r(`app.media.${item[1]}`)).width(22).height(22)
@@ -338,12 +464,18 @@ export struct ReaderControlSheet {
                         .alignItems(HorizontalAlign.Center)
                         .backgroundColor(ColorTokens.surfaceSoft)
                         .borderRadius(DemoAliasTokens.radiusLg)
-                        .onClick(() => ReaderUiStore.dispatch({ type: 'reader-module-switch', module: item[3] }))
+                        .onClick(() => {
+                          if (item[2] === 'bookmark-create') {
+                            ReaderUiStore.dispatch({ type: 'bookmark-create' });
+                          } else {
+                            ReaderUiStore.dispatch({ type: 'reader-module-switch', module: this.moduleForRoute(item[2]) });
+                          }
+                        })
                         InteractionDebugBadge({ label: this.quickDebugLabel(item[2]), tone: 'action', offsetTop: 22 })
                       }
                       .layoutWeight(1)
                       .height(70)
-                    }, (item: [string, string, string, string]) => item[2])
+                    }, (item: [string, string, string]) => item[2])
                   }
                   .height(this.quickHeight)
                   .padding({ left: 8, right: 8, top: 9, bottom: 9 })
@@ -374,7 +506,7 @@ export struct ReaderControlSheet {
                     }
                     .width(34)
                     .height(52)
-                    Text('第 32 章 雨夜')
+                    Text(this.chapterTitle())
                       .fontSize(13)
                       .fontWeight(750)
                       .fontColor(ColorTokens.controlInk)
@@ -393,6 +525,7 @@ export struct ReaderControlSheet {
                       .backgroundColor(ColorTokens.floatingControlBgAlt)
                       .borderRadius(DemoAliasTokens.radiusPill)
                       .margin({ top: 9 })
+                      .onClick(() => ReaderUiStore.dispatch({ type: 'chapter-next' }))
                       InteractionDebugBadge({ label: 'N', tone: 'action' })
                     }
                     .width(34)
@@ -402,37 +535,31 @@ export struct ReaderControlSheet {
                   .alignItems(VerticalAlign.Center)
 
                   Row({ space: 6 }) {
-                    Text('38%')
+                    Text(this.chapterProgressLabel())
                       .fontSize(9)
                       .fontColor(ColorTokens.muted)
                       .fontWeight(700)
                     Stack({ alignContent: Alignment.TopStart }) {
-                      Column()
+                      Slider({
+                        value: this.chapterProgressPercent(),
+                        min: 0,
+                        max: 100,
+                        step: 1,
+                        style: SliderStyle.OutSet,
+                      })
                         .width('100%')
-                        .height(5)
-                        .borderRadius(DemoAliasTokens.radiusPill)
-                        .backgroundColor(ColorTokens.border)
-                        .margin({ top: 13 })
-                      Column()
-                        .width('38%')
-                        .height(5)
-                        .borderRadius(DemoAliasTokens.radiusPill)
-                        .backgroundColor(ColorTokens.primary)
-                        .margin({ top: 13 })
-                      Column()
-                        .width(12)
-                        .height(12)
-                        .border({ width: 3, color: ColorTokens.primary })
-                        .borderRadius(DemoAliasTokens.radiusPill)
-                        .backgroundColor(ColorTokens.floatingControlBg)
-                        .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 4 })
-                        .margin({ left: '38%', top: 6 })
-                        .translate({ x: -9 })
+                        .height(30)
+                        .trackColor(ColorTokens.border)
+                        .selectedColor(ColorTokens.primary)
+                        .blockColor(ColorTokens.primaryDark)
+                        .enabled(this.canSeekChapter())
+                        .opacity(this.canSeekChapter() ? 1 : 0.54)
+                        .onChange((value: number, mode: SliderChangeMode) => this.seekChapter(value, mode))
                       InteractionDebugBadge({ label: 'progress', tone: 'action' })
                     }
                     .layoutWeight(1)
                     .height(30)
-                    Text('共 128 章')
+                    Text(this.currentBook === null ? '未选择书籍' : (this.chapterToc.length > 0 ? `共 ${this.chapterToc.length} 章` : '目录未加载'))
                       .fontSize(9)
                       .fontColor(ColorTokens.muted)
                       .fontWeight(700)
@@ -455,38 +582,7 @@ export struct ReaderControlSheet {
             .layoutWeight(1)
             .height('100%')
 
-            Stack({ alignContent: Alignment.TopStart }) {
-              Column({ space: 10 }) {
-                Image($r('app.media.reader_icon_sun_primary')).width(18).height(18)
-                Stack({ alignContent: Alignment.Bottom }) {
-                  Column()
-                    .width(4)
-                    .height('100%')
-                    .borderRadius(DemoAliasTokens.radiusPill)
-                    .backgroundColor(ColorTokens.border)
-                  Column()
-                    .width(4)
-                    .height('42%')
-                    .borderRadius(DemoAliasTokens.radiusPill)
-                    .backgroundColor(ColorTokens.primary)
-                }
-                .width(4)
-                .layoutWeight(1)
-                Text('A')
-                  .fontSize(12)
-                  .fontWeight(800)
-                  .fontColor(ColorTokens.primary)
-              }
-              .width(this.railWidth)
-              .height('100%')
-              .padding({ top: 12, bottom: 12 })
-              .justifyContent(FlexAlign.Center)
-              .alignItems(HorizontalAlign.Center)
-              .backgroundColor(ColorTokens.floatingControlBg)
-              .borderRadius(DemoAliasTokens.radiusLg)
-              InteractionDebugBadge({ label: 'B', tone: 'action', offsetTop: 22 })
-              InteractionDebugFrame({ label: 'BrightnessRail', tone: 'module' })
-            }
+            ReaderBrightnessRail()
             .width(this.railWidth)
             .height('100%')
           }
@@ -584,6 +680,14 @@ export struct ReaderBottomBar {
     return kind;
   }
 
+  private selectModule(kind: string): void {
+    if (kind === 'directory') {
+      ReaderUiStore.dispatch({ type: 'reader.directory.open' });
+      return;
+    }
+    ReaderUiStore.dispatch({ type: 'reader-module-switch', module: kind });
+  }
+
   build() {
     Stack({ alignContent: Alignment.BottomEnd }) {
       Stack({ alignContent: Alignment.TopStart }) {
@@ -610,7 +714,7 @@ export struct ReaderBottomBar {
               .height(62)
               .justifyContent(FlexAlign.Center)
               .alignItems(HorizontalAlign.Center)
-              .onClick(() => ReaderUiStore.dispatch({ type: 'reader-module-switch', module: it[0] }))
+              .onClick(() => this.selectModule(it[0]))
               InteractionDebugBadge({ label: this.moduleDebugLabel(it[0]), tone: 'action', offsetTop: 24 })
             }
             .layoutWeight(1)
@@ -808,37 +912,7 @@ export struct ReaderQuickPanelShell {
             .borderRadius(DemoAliasTokens.radiusMd)
             .backgroundColor(ColorTokens.surfaceSoft)
 
-            Stack({ alignContent: Alignment.TopStart }) {
-              Column({ space: 10 }) {
-                Image($r('app.media.reader_icon_sun_primary')).width(18).height(18)
-                Stack({ alignContent: Alignment.Bottom }) {
-                  Column()
-                    .width(4)
-                    .height('100%')
-                    .borderRadius(DemoAliasTokens.radiusPill)
-                    .backgroundColor(ColorTokens.border)
-                  Column()
-                    .width(4)
-                    .height('42%')
-                    .borderRadius(DemoAliasTokens.radiusPill)
-                    .backgroundColor(ColorTokens.primary)
-                }
-                .width(4)
-                .layoutWeight(1)
-                Text('A')
-                  .fontSize(12)
-                  .fontWeight(800)
-                  .fontColor(ColorTokens.primary)
-              }
-              .width(this.railWidth)
-              .height('100%')
-              .padding({ top: 12, bottom: 12 })
-              .justifyContent(FlexAlign.Center)
-              .alignItems(HorizontalAlign.Center)
-              .backgroundColor(ColorTokens.floatingControlBg)
-              .borderRadius(DemoAliasTokens.radiusLg)
-              InteractionDebugFrame({ label: 'BrightnessRail', tone: 'module' })
-            }
+            ReaderBrightnessRail()
             .width(this.railWidth)
             .height('100%')
           }
@@ -911,9 +985,10 @@ struct ReaderQuickPillButton {
       .borderRadius(DemoAliasTokens.radiusMd)
       .backgroundColor(DemoAliasTokens.surface)
       .opacity(this.disabled ? 0.78 : 1)
+      .enabled(!this.disabled)
       .textAlign(TextAlign.Center)
       .onClick(() => {
-        if (this.tapEvent.length > 0) {
+        if (!this.disabled && this.tapEvent.length > 0) {
           ReaderUiStore.dispatch({ type: this.tapEvent });
         }
       })
@@ -924,6 +999,10 @@ struct ReaderQuickPillButton {
 struct ReaderSearchResultRow {
   @Prop title: string = '';
   @Prop detail: string = '';
+  // A non-negative index identifies a real Core `search.content` projection.
+  // The component deliberately carries no fixture text or local paragraph
+  // index; ReaderEffects validates the result scope again before navigation.
+  @Prop contentSearchResultIndex: number = -1;
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -941,16 +1020,23 @@ struct ReaderSearchResultRow {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
       .width('100%')
-      .height(42)
-      .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+      .height('100%')
       .justifyContent(FlexAlign.Center)
       .alignItems(HorizontalAlign.Start)
-      .border({ width: { top: 1 }, color: ColorTokens.border })
-      .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
-      InteractionDebugBadge({ label: 'result', tone: 'action' })
+      InteractionDebugBadge({ label: 'result', tone: 'state' })
     }
     .width('100%')
     .height(42)
+    .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+    .border({ width: { top: 1 }, color: ColorTokens.border })
+    .onClick(() => {
+      if (this.contentSearchResultIndex >= 0) {
+        ReaderUiStore.dispatch({
+          type: 'content-search-result-open',
+          contentSearchResultIndex: this.contentSearchResultIndex,
+        });
+      }
+    })
   }
 }
 
@@ -988,6 +1074,7 @@ struct ReaderModulePanelShell {
   @StorageProp(ViewportAdapter.K_WIDTH) viewportWidth: number = ViewportAdapter.DEFAULT_WIDTH;
   @StorageProp(ViewportAdapter.K_HEIGHT) viewportHeight: number = ViewportAdapter.DEFAULT_HEIGHT;
   @Prop debugLabel: string = 'ReaderModulePanel';
+  @Prop closeEvent: string = '';
   @BuilderParam content: () => void;
 
   private readonly dockWidth: number = 340;
@@ -1048,6 +1135,9 @@ struct ReaderModulePanelShell {
             .backgroundColor(ColorTokens.muted)
             .margin({ top: 9, left: '50%' })
             .translate({ x: -21 })
+            .onClick(() => {
+              if (this.closeEvent.length > 0) ReaderUiStore.dispatch({ type: this.closeEvent });
+            })
 
           Row({ space: this.railGap }) {
             Column() {
@@ -1060,37 +1150,7 @@ struct ReaderModulePanelShell {
             .borderRadius(DemoAliasTokens.radiusMd)
             .backgroundColor(ColorTokens.surfaceSoft)
 
-            Stack({ alignContent: Alignment.TopStart }) {
-              Column({ space: 10 }) {
-                Image($r('app.media.reader_icon_sun_primary')).width(18).height(18)
-                Stack({ alignContent: Alignment.Bottom }) {
-                  Column()
-                    .width(4)
-                    .height('100%')
-                    .borderRadius(DemoAliasTokens.radiusPill)
-                    .backgroundColor(ColorTokens.border)
-                  Column()
-                    .width(4)
-                    .height('42%')
-                    .borderRadius(DemoAliasTokens.radiusPill)
-                    .backgroundColor(ColorTokens.primary)
-                }
-                .width(4)
-                .layoutWeight(1)
-                Text('A')
-                  .fontSize(12)
-                  .fontWeight(800)
-                  .fontColor(ColorTokens.primary)
-              }
-              .width(this.railWidth)
-              .height('100%')
-              .padding({ top: 12, bottom: 12 })
-              .justifyContent(FlexAlign.Center)
-              .alignItems(HorizontalAlign.Center)
-              .backgroundColor(ColorTokens.floatingControlBg)
-              .borderRadius(DemoAliasTokens.radiusLg)
-              InteractionDebugFrame({ label: 'BrightnessRail', tone: 'module' })
-            }
+            ReaderBrightnessRail()
             .width(this.railWidth)
             .height('100%')
           }
@@ -1127,6 +1187,7 @@ struct ReaderModulePanelShell {
 struct ReaderCompactSwitch {
   @Prop active: boolean = false;
   @Prop toggleKey: string = '';
+  @Prop disabled: boolean = false;
 
   build() {
     Stack({ alignContent: this.active ? Alignment.End : Alignment.Start }) {
@@ -1141,8 +1202,10 @@ struct ReaderCompactSwitch {
     .height(15)
     .borderRadius(DemoAliasTokens.radiusPill)
     .backgroundColor(this.active ? ColorTokens.primary : ColorTokens.border)
+    .opacity(this.disabled ? 0.56 : 1)
+    .enabled(!this.disabled)
     .onClick(() => {
-      if (this.toggleKey.length > 0) {
+      if (!this.disabled && this.toggleKey.length > 0) {
         ReaderUiStore.dispatch({ type: 'set-reader-toggle', toggleKey: this.toggleKey as ReaderToggleKey, toggleValue: !this.active });
       }
     })
@@ -1150,28 +1213,131 @@ struct ReaderCompactSwitch {
 }
 
 @Component
-struct ReaderTocLiveRow {
-  @Prop title: string = '';
-  @Prop cached: boolean = false;
-  @Prop bookmarked: boolean = false;
-  @Prop current: boolean = false;
+struct ReaderBookmarkLiveRow {
+  @Prop bookmark: CoreBookmark;
+  @Prop expanded: boolean = false;
+  @StorageProp('reader.pendingBookmarkDeleteTime') pendingBookmarkDeleteTime: number = -1;
 
-  @Builder
-  private markerIcon(icon: Resource, active: boolean) {
-    Stack({ alignContent: Alignment.Center }) {
-      Image(icon)
-        .width(14)
-        .height(14)
-        .opacity(active ? 1 : 0.28)
-    }
-    .width(24)
-    .height(24)
-    .borderRadius(DemoAliasTokens.radiusSm)
-    .backgroundColor(active ? ColorTokens.floatingControlBgAlt : 'transparent')
+  private chapterLabel(): string {
+    const name = this.bookmark.chapterName.trim();
+    return name.length > 0 ? name : `第 ${this.bookmark.chapterIndex + 1} 章`;
+  }
+
+  private textLabel(): string {
+    const note = this.bookmark.content.trim();
+    if (note.length > 0) return note;
+    const original = this.bookmark.bookText.trim();
+    return original.length > 0 ? original : 'Core 书签未保存原文片段或批注。';
+  }
+
+  private awaitingDeleteConfirmation(): boolean {
+    return this.pendingBookmarkDeleteTime === this.bookmark.time;
   }
 
   build() {
-    Row({ space: 4 }) {
+    Column({ space: 5 }) {
+      Row({ space: 8 }) {
+        Text(this.chapterLabel())
+          .fontSize(this.expanded ? 13 : 11)
+          .fontWeight(700)
+          .fontColor(ColorTokens.controlInk)
+          .layoutWeight(1)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        // `time` is the Core bookmark primary key.  Do not convert it into a
+        // device date because Core accepts caller-free monotonic ids too.
+        Text(`Core #${this.bookmark.time}`)
+          .fontSize(9)
+          .fontColor(ColorTokens.muted)
+      }
+      .width('100%')
+      Text(this.textLabel())
+        .fontSize(this.expanded ? 12 : 10)
+        .fontColor(ColorTokens.muted)
+        .lineHeight(this.expanded ? 18 : 15)
+        .maxLines(this.expanded ? 3 : 2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+      Row({ space: 8 }) {
+        Text('跳转')
+          .fontSize(10)
+          .fontWeight(800)
+          .fontColor(DemoAliasTokens.onPrimary)
+          .height(28)
+          .padding({ left: 10, right: 10 })
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .backgroundColor(ColorTokens.primary)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'bookmark-open', bookmarkTime: this.bookmark.time }))
+        Text('删除')
+          .fontSize(10)
+          .fontWeight(800)
+          .fontColor(ColorTokens.accent)
+          .height(28)
+          .padding({ left: 10, right: 10 })
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .border({ width: 1, color: ColorTokens.border })
+          .onClick(() => ReaderUiStore.dispatch({ type: 'bookmark-delete-request', bookmarkTime: this.bookmark.time }))
+      }
+      .width('100%')
+      if (this.awaitingDeleteConfirmation()) {
+        Column({ space: 6 }) {
+          Text('确认删除这条 Core 书签？')
+            .fontSize(this.expanded ? 12 : 10)
+            .fontWeight(800)
+            .fontColor(ColorTokens.accent)
+            .width('100%')
+          Row({ space: 8 }) {
+            Text('取消')
+              .fontSize(this.expanded ? 11 : 10)
+              .fontWeight(800)
+              .fontColor(ColorTokens.primaryDark)
+              .height(28)
+              .padding({ left: 10, right: 10 })
+              .borderRadius(DemoAliasTokens.radiusPill)
+              .backgroundColor(ColorTokens.metaBg)
+              .border({ width: 1, color: ColorTokens.border })
+              .onClick(() => ReaderUiStore.dispatch({ type: 'bookmark-delete-cancel' }))
+            Text('确认删除')
+              .fontSize(this.expanded ? 11 : 10)
+              .fontWeight(800)
+              .fontColor(DemoAliasTokens.onPrimary)
+              .height(28)
+              .padding({ left: 10, right: 10 })
+              .borderRadius(DemoAliasTokens.radiusPill)
+              .backgroundColor(ColorTokens.accent)
+              .onClick(() => ReaderUiStore.dispatch({ type: 'bookmark-delete-confirm', bookmarkTime: this.bookmark.time }))
+          }
+          .width('100%')
+        }
+        .width('100%')
+        .padding(7)
+        .borderRadius(DemoAliasTokens.radiusSm)
+        .backgroundColor(ColorTokens.surfaceSoft)
+      }
+    }
+    .width('100%')
+    .padding({ left: this.expanded ? 12 : 8, right: this.expanded ? 12 : 8, top: 9, bottom: 9 })
+    .border({ width: { top: 1 }, color: ColorTokens.border })
+  }
+}
+
+@Component
+struct ReaderTocLiveRow {
+  @Prop bookId: string = '';
+  @Prop chapterId: string = '';
+  @Prop title: string = '';
+  @Prop current: boolean = false;
+
+  private openChapter(): void {
+    if (this.bookId.length === 0 || this.chapterId.length === 0) return;
+    ReaderUiStore.dispatch({
+      type: 'chapter-load', chapterId: this.chapterId, bookId: this.bookId, chapterTitle: this.title,
+    });
+    ReaderUiStore.dispatch({ type: 'reader.directory.close' });
+  }
+
+  build() {
+    Row({ space: 6 }) {
       Text(this.title)
         .fontSize(11)
         .fontWeight(500)
@@ -1179,12 +1345,17 @@ struct ReaderTocLiveRow {
         .layoutWeight(1)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-      Row({ space: 5 }) {
-        this.markerIcon(this.cached ? $r('app.media.ui_icon_check_primary') : $r('app.media.ui_icon_download_dark'), this.cached)
-        this.markerIcon($r('app.media.ui_icon_bookmark_primary'), this.bookmarked)
+      if (this.current) {
+        Text('当前')
+          .fontSize(9)
+          .fontWeight(800)
+          .fontColor(ColorTokens.primaryDark)
+          .height(22)
+          .padding({ left: 7, right: 7 })
+          .borderRadius(DemoAliasTokens.radiusSm)
+          .backgroundColor(ColorTokens.floatingControlBgAlt)
+          .textAlign(TextAlign.Center)
       }
-      .width(58)
-      .height(24)
     }
     .width('100%')
     .height(32)
@@ -1192,7 +1363,7 @@ struct ReaderTocLiveRow {
     .border({ width: { top: 1 }, color: ColorTokens.border })
     .backgroundColor(this.current ? ColorTokens.surfaceSoft : 'transparent')
     .alignItems(VerticalAlign.Center)
-    .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
+    .onClick(() => this.openChapter())
   }
 }
 
@@ -1302,7 +1473,7 @@ struct ReaderThemeSwatches {
         .borderRadius(DemoAliasTokens.radiusMd)
         .backgroundColor(this.isActive(item.value) ? ColorTokens.surfaceSoft : ColorTokens.floatingControlBgAlt)
         .onClick(() => {
-          MotionAdapter.apply('segment.item.switch', this.reducedMotion, () => {
+          MotionAdapter.apply('segment.item.switch', this.reducedMotion, this.getUIContext(), () => {
             ReaderUiStore.dispatch({ type: 'set-reader-theme', theme: item.value });
           });
         })
@@ -1323,6 +1494,10 @@ struct ReaderLiveOptionRow {
   @Prop toggleKey: string = '';
   @Prop optionKey: string = '';
   @Prop optionChoices: string[] = [];
+  @Prop disabled: boolean = false;
+  // A disabled setting must say why it is unavailable.  Rendering a fixed
+  // switch in its place made no-op Host gaps look like successful settings.
+  @Prop unavailableReason: string = '';
   @StorageProp('reader.readerSettingExpandedOption') expandedOption: string = '';
 
   private isExpanded(): boolean {
@@ -1361,12 +1536,19 @@ struct ReaderLiveOptionRow {
         Text(this.title)
           .fontSize(11)
           .fontWeight(500)
-          .fontColor(ColorTokens.controlInk)
+          .fontColor(this.disabled ? ColorTokens.muted : ColorTokens.controlInk)
           .layoutWeight(1)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-        if (this.switchRow) {
+        if (this.switchRow && !this.disabled) {
           ReaderCompactSwitch({ active: this.active, toggleKey: this.toggleKey })
+        } else if (this.switchRow && this.disabled) {
+          Text(this.unavailableReason.length > 0 ? this.unavailableReason : '当前不可用')
+            .fontSize(9)
+            .fontWeight(600)
+            .fontColor(ColorTokens.muted)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
         } else {
           Text(this.value)
             .fontSize(10)
@@ -1374,8 +1556,10 @@ struct ReaderLiveOptionRow {
             .fontColor(ColorTokens.muted)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-          Image($r('app.media.ui_icon_chevron_dark')).width(13).height(13)
-            .rotate({ angle: this.isExpanded() ? 90 : 0 })
+          if (!this.disabled) {
+            Image($r('app.media.ui_icon_chevron_dark')).width(13).height(13)
+              .rotate({ angle: this.isExpanded() ? 90 : 0 })
+          }
         }
       }
       .width('100%')
@@ -1383,9 +1567,11 @@ struct ReaderLiveOptionRow {
       .padding({ left: 9, right: 9 })
       .border({ width: { top: 1 }, color: ColorTokens.border })
       .alignItems(VerticalAlign.Center)
+      .opacity(this.disabled ? 0.62 : 1)
+      .enabled(!this.disabled)
       .onClick(() => {
         // 仅 disclosure 行响应展开/收起；switchRow 的切换由 CompactSwitch 处理。
-        if (!this.switchRow && this.optionKey.length > 0) {
+        if (!this.disabled && !this.switchRow && this.optionKey.length > 0) {
           ReaderUiStore.dispatch({ type: 'set-reader-setting-option-expanded', settingOptionExpandedKey: this.optionKey });
         }
       })
@@ -1425,34 +1611,100 @@ struct ReaderLiveOptionRow {
 // ── Directory panel (.fd-reader-toc-panel) ────────────────────────────────
 @Component
 export struct ReaderDirectoryPanel {
-  private tocRows: Array<[string, boolean, boolean, boolean]> = [
-    ['第 30 章 旧日', true, false, false],
-    ['第 31 章 归途', true, true, false],
-    ['第 32 章 雨夜', false, true, true],
-    ['第 33 章 灯塔', false, false, false],
-  ];
+  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
+  @StorageProp('reader.chapterToc') chapterToc: ChapterTocEntry[] = [];
+  @StorageProp('reader.currentChapterTitle') currentChapterTitle: string = '';
+  @StorageProp('reader.tocMode') tocMode: TocMode = 'directory';
+  @StorageProp('reader.loading') loading: boolean = false;
+  @StorageProp('reader.bookmarks') bookmarks: CoreBookmark[] = [];
+  @StorageProp('reader.bookmarksLoaded') bookmarksLoaded: boolean = false;
+  @StorageProp('reader.bookmarksLoading') bookmarksLoading: boolean = false;
+  @StorageProp('reader.bookmarksError') bookmarksError: string = '';
+
+  private statusMessage(): string {
+    if (this.currentBook === null) return '尚未选择书籍，无法显示目录。';
+    return this.loading ? '正在从 Core 加载章节目录…' : '暂无从 Core 返回的章节目录。';
+  }
+
+  private isCurrent(chapter: ChapterTocEntry): boolean {
+    return this.currentChapterTitle.length > 0 && this.currentChapterTitle === chapter.title;
+  }
 
   build() {
-    ReaderModulePanelShell({ debugLabel: 'ReaderModulePanel' }) {
+    ReaderModulePanelShell({ debugLabel: 'ReaderModulePanel', closeEvent: 'reader.directory.close' }) {
       Column() {
         Row({ space: 4 }) {
           Text('目录')
-            .fontSize(10).fontWeight(600).fontColor(DemoAliasTokens.onPrimary)
+            .fontSize(10).fontWeight(600).fontColor(this.tocMode === 'directory' ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
             .layoutWeight(1).height(30).textAlign(TextAlign.Center)
-            .borderRadius(DemoAliasTokens.radiusMd).backgroundColor(ColorTokens.primaryDark)
+            .borderRadius(DemoAliasTokens.radiusMd).backgroundColor(this.tocMode === 'directory' ? ColorTokens.primaryDark : ColorTokens.floatingControlBgAlt)
+            .onClick(() => ReaderUiStore.dispatch({ type: 'set-toc-mode', tocMode: 'directory' }))
           Text('书签')
-            .fontSize(10).fontWeight(600).fontColor(ColorTokens.controlInk)
+            .fontSize(10).fontWeight(600).fontColor(this.tocMode === 'bookmark' ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
             .layoutWeight(1).height(30).textAlign(TextAlign.Center)
-            .borderRadius(DemoAliasTokens.radiusMd).backgroundColor(ColorTokens.floatingControlBgAlt)
+            .borderRadius(DemoAliasTokens.radiusMd).backgroundColor(this.tocMode === 'bookmark' ? ColorTokens.primaryDark : ColorTokens.floatingControlBgAlt)
+            .onClick(() => ReaderUiStore.dispatch({ type: 'set-toc-mode', tocMode: 'bookmark' }))
         }
         .width('100%')
         .height(36)
         .padding({ top: 3, bottom: 3 })
         .margin({ bottom: 5 })
 
-        ForEach(this.tocRows, (row: [string, boolean, boolean, boolean], i: number) => {
-          ReaderTocLiveRow({ title: row[0], cached: row[1], bookmarked: row[2], current: row[3] })
-        }, (row: [string, boolean, boolean, boolean], i: number) => `${row[0]}-${i}`)
+        if (this.tocMode === 'bookmark') {
+          if (this.currentBook === null) {
+            Text('尚未打开书籍，无法读取 Core 书签。')
+              .fontSize(11).fontColor(ColorTokens.muted).lineHeight(17)
+              .width('100%').padding({ left: 8, right: 8, top: 12, bottom: 12 })
+          } else if (this.bookmarksLoading || !this.bookmarksLoaded) {
+            Text('正在从 Core 读取当前书的书签…')
+              .fontSize(11).fontColor(ColorTokens.muted).lineHeight(17)
+              .width('100%').padding({ left: 8, right: 8, top: 12, bottom: 12 })
+          } else if (this.bookmarksError.length > 0) {
+            Text(`书签操作失败：${this.bookmarksError}`)
+              .fontSize(11).fontColor(ColorTokens.accent).lineHeight(17)
+              .width('100%').padding({ left: 8, right: 8, top: 12, bottom: 12 })
+          } else if (this.bookmarks.length === 0) {
+            Text('当前书在 Core 中还没有书签。可在阅读器控制栏添加当前位置书签。')
+              .fontSize(11).fontColor(ColorTokens.muted).lineHeight(17)
+              .width('100%').padding({ left: 8, right: 8, top: 12, bottom: 12 })
+          } else {
+            Scroll() {
+              Column() {
+                ForEach(this.bookmarks, (bookmark: CoreBookmark, i: number) => {
+                  ReaderBookmarkLiveRow({ bookmark: bookmark })
+                }, (bookmark: CoreBookmark, i: number) => `${bookmark.time}-${i}`)
+              }
+              .width('100%')
+            }
+            .width('100%')
+            .layoutWeight(1)
+            .scrollBar(BarState.Auto)
+          }
+        } else if (this.currentBook === null || this.chapterToc.length === 0) {
+          Text(this.statusMessage())
+            .fontSize(11)
+            .fontColor(ColorTokens.muted)
+            .lineHeight(17)
+            .width('100%')
+            .padding({ left: 8, right: 8, top: 12, bottom: 12 })
+        } else {
+          Scroll() {
+            Column() {
+              ForEach(this.chapterToc, (chapter: ChapterTocEntry, i: number) => {
+                ReaderTocLiveRow({
+                  bookId: this.currentBook?.bookId ?? '',
+                  chapterId: chapter.chapterId,
+                  title: chapter.title,
+                  current: this.isCurrent(chapter),
+                })
+              }, (chapter: ChapterTocEntry, i: number) => `${chapter.chapterId}-${i}`)
+            }
+            .width('100%')
+          }
+          .width('100%')
+          .layoutWeight(1)
+          .scrollBar(BarState.Auto)
+        }
       }
       .width('100%')
       .height('100%')
@@ -1514,27 +1766,22 @@ export struct ReaderAppearancePanel {
 @Component
 export struct ReaderTtsPanel {
   @StorageProp('reader.ttsSession.playback') playback: string = 'idle';
-  @StorageProp('reader.ttsSession.rate') ttsRate: number = 1.0;
-  @StorageProp('reader.ttsSession.voice') ttsVoice: string = '';
-  @StorageProp('reader.ttsSession.scope') ttsScope: string = 'chapter';
-  @StorageProp('reader.ttsSession.timer') ttsTimer: string = 'off';
+  @StorageProp('reader.ttsSession.currentSegment') currentSegment: number = 0;
+  @StorageProp('reader.ttsSession.totalSegments') totalSegments: number = 0;
+  @StorageProp('reader.chapterContent') chapterContent: string[] = [];
 
-  private rateLabel(): string {
-    return `${this.ttsRate}x`;
+  private canStart(): boolean {
+    return this.chapterContent.length > 0;
   }
-  private voiceLabel(): string {
-    return this.ttsVoice.length > 0 ? this.ttsVoice : '清晰女声';
+
+  private hasQueue(): boolean {
+    return this.totalSegments > 0;
   }
-  private scopeLabel(): string {
-    return this.ttsScope === 'full' ? '全书' : '当前章节';
-  }
-  private timerLabel(): string {
-    if (this.ttsTimer === '5min') { return '5 分钟'; }
-    if (this.ttsTimer === '10min') { return '10 分钟'; }
-    if (this.ttsTimer === '15min') { return '15 分钟'; }
-    if (this.ttsTimer === '30min') { return '30 分钟'; }
-    if (this.ttsTimer === 'chapterEnd') { return '本章结束'; }
-    return '关闭';
+
+  private playbackLabel(): string {
+    if (this.playback === 'playing') return '暂停朗读';
+    if (this.playback === 'paused') return '继续朗读';
+    return '开始朗读';
   }
 
   build() {
@@ -1547,7 +1794,7 @@ export struct ReaderTtsPanel {
               .fontWeight(800)
               .fontColor(ColorTokens.controlInk)
               .layoutWeight(1)
-            ReaderQuickPillButton({ label: '停止朗读', disabled: this.playback === 'idle', tapEvent: 'tts-toggle' })
+            ReaderQuickPillButton({ label: this.playbackLabel(), disabled: !this.canStart(), tapEvent: 'tts-toggle' })
           }
           .width('100%')
           .height(28)
@@ -1569,6 +1816,8 @@ export struct ReaderTtsPanel {
               }
               .width(28)
               .height(25)
+              .opacity(this.hasQueue() ? 1 : 0.5)
+              .enabled(this.hasQueue())
               .onClick(() => ReaderUiStore.dispatch({ type: 'tts-prev' }))
               Stack({ alignContent: Alignment.Center }) {
                 Image($r('app.media.reader_icon_play_white')).width(13).height(13)
@@ -1577,12 +1826,16 @@ export struct ReaderTtsPanel {
               .height(25)
               .borderRadius(DemoAliasTokens.radiusMd)
               .backgroundColor(ColorTokens.primaryDark)
+              .opacity(this.canStart() ? 1 : 0.5)
+              .enabled(this.canStart())
               .onClick(() => ReaderUiStore.dispatch({ type: 'tts-toggle' }))
               Stack({ alignContent: Alignment.Center }) {
                 Image($r('app.media.reader_icon_chevron_chapter')).width(13).height(13)
               }
               .width(28)
               .height(25)
+              .opacity(this.hasQueue() ? 1 : 0.5)
+              .enabled(this.hasQueue())
               .onClick(() => ReaderUiStore.dispatch({ type: 'tts-next' }))
             }
             .height(25)
@@ -1595,10 +1848,10 @@ export struct ReaderTtsPanel {
           .border({ width: { top: 1 }, color: ColorTokens.border })
           .alignItems(VerticalAlign.Center)
 
-          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_motion_dark'), title: '语速', value: this.rateLabel(), optionKey: 'ttsRate', optionChoices: ['0.5x', '1.0x', '1.5x', '2.0x'] })
-          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_volume_dark'), title: '音色', value: this.voiceLabel(), optionKey: 'ttsVoice', optionChoices: ['清晰女声', '温和女声', '磁性男声'] })
-          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_current_location_dark'), title: '范围', value: this.scopeLabel(), optionKey: 'ttsScope', optionChoices: ['当前章节', '全书'] })
-          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_clock_dark'), title: '定时', value: this.timerLabel(), optionKey: 'ttsTimer', optionChoices: ['关闭', '5 分钟', '10 分钟', '15 分钟', '30 分钟', '本章结束'] })
+          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_motion_dark'), title: '语速', value: 'TextReader Host 未提供程序化语速', disabled: true, unavailableReason: 'TextReader Host 未提供程序化语速' })
+          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_volume_dark'), title: '音色', value: 'Host 未提供音色映射', disabled: true, unavailableReason: 'Host 未提供音色映射' })
+          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_current_location_dark'), title: '范围', value: 'Core 仅当前章节', disabled: true, unavailableReason: 'Core 仅当前章节' })
+          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_clock_dark'), title: '定时', value: 'Core/Host 未接入', disabled: true, unavailableReason: 'Core/Host 未接入' })
         }
         .width('100%')
       }
@@ -1621,24 +1874,34 @@ export struct ReaderSettingsPanel {
   @StorageProp('reader.readerToggles.keepScreenOn') keepScreenOn: boolean = false;
   @StorageProp('reader.readerToggles.statusInfo') statusInfo: boolean = false;
   @StorageProp('reader.readerToggles.hapticFeedback') hapticFeedback: boolean = false;
-  @StorageProp('reader.readerToggles.cacheNext') cacheNext: boolean = false;
   @StorageProp('reader.readerToggles.hideStatusBar') hideStatusBar: boolean = false;
   @StorageProp('reader.readerSettingOptions.tapMode') tapMode: string = '左右区域';
   @StorageProp('reader.readerSettingOptions.pageAnimation') pageAnimation: string = '平滑';
+  @StorageProp('reader.readerHostMessage') readerHostMessage: string = '';
 
   build() {
     ReaderModulePanelShell({ debugLabel: 'ReaderModulePanel' }) {
       Scroll() {
         Column() {
+          if (this.readerHostMessage.length > 0) {
+            Text(this.readerHostMessage)
+              .fontSize(9)
+              .fontWeight(650)
+              .fontColor(ColorTokens.accent)
+              .lineHeight(14)
+              .width('100%')
+              .padding({ left: 9, right: 9, top: 7, bottom: 7 })
+              .border({ width: { bottom: 1 }, color: ColorTokens.border })
+          }
           ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_refresh_dark'), title: '自动翻页', active: this.autoPage, switchRow: true, toggleKey: 'autoPage' })
           ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_gesture_dark'), title: '点击翻页方式', value: this.tapMode, optionKey: 'tapMode', optionChoices: ['左右区域', '中间', '边缘'] })
-          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_volume_dark'), title: '音量键翻页', active: this.volumePage, switchRow: true, toggleKey: 'volumePage' })
-          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_file_dark'), title: '翻页动画', value: this.pageAnimation, optionKey: 'pageAnimation', optionChoices: ['平滑', '覆盖', '无'] })
-          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_permission_dark'), title: '横屏锁定', active: this.landscapeLock, switchRow: true, toggleKey: 'landscapeLock' })
+          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_volume_dark'), title: '音量键翻页', active: this.volumePage, switchRow: true, toggleKey: 'volumePage', disabled: true, unavailableReason: '未接入按键监听' })
+          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_file_dark'), title: '翻页动画', value: '当前 Reader Pager 未接入', disabled: true, unavailableReason: '当前 Reader Pager 未接入' })
+          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_permission_dark'), title: '横屏锁定', active: this.landscapeLock, switchRow: true, toggleKey: 'landscapeLock', disabled: true, unavailableReason: '未接入方向 Host' })
           ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_sun_dark'), title: '屏幕常亮', active: this.keepScreenOn, switchRow: true, toggleKey: 'keepScreenOn' })
           ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_progress_dark'), title: '页脚进度信息', active: this.statusInfo, switchRow: true, toggleKey: 'statusInfo' })
           ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_gesture_dark'), title: '触摸反馈', active: this.hapticFeedback, switchRow: true, toggleKey: 'hapticFeedback' })
-          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_download_dark'), title: '自动缓存后续章节', active: this.cacheNext, switchRow: true, toggleKey: 'cacheNext' })
+          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_download_dark'), title: '阅读缓存预取', value: 'Core command 未接入', disabled: true })
           ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_info_dark'), title: '隐藏状态栏', active: this.hideStatusBar, switchRow: true, toggleKey: 'hideStatusBar' })
         }
         .width('100%')
@@ -1815,6 +2078,19 @@ struct ReaderFullBlock {
 struct ReaderFullChoiceRow {
   @Prop values: string[] = [];
   @Prop active: string = '';
+  @Prop choiceKey: string = '';
+  @Prop disabled: boolean = false;
+
+  private select(value: string): void {
+    if (this.disabled) return;
+    if (this.choiceKey === 'tapMode') {
+      ReaderUiStore.dispatch({ type: 'set-reader-setting-option', optionKey: 'tapMode', optionValue: value });
+    } else if (this.choiceKey === 'pageAnimation') {
+      ReaderUiStore.dispatch({ type: 'set-reader-setting-option', optionKey: 'pageAnimation', optionValue: value });
+    } else if (this.choiceKey === 'ttsRate') {
+      ReaderUiStore.dispatch({ type: 'tts-set-rate', ttsRate: parseFloat(value) });
+    }
+  }
 
   build() {
     Row({ space: 6 }) {
@@ -1822,14 +2098,17 @@ struct ReaderFullChoiceRow {
         Text(value)
           .fontSize(10)
           .fontWeight(760)
-          .fontColor(value === this.active ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
+          .fontColor(this.disabled ? ColorTokens.muted : (value === this.active ? DemoAliasTokens.onPrimary : ColorTokens.controlInk))
           .height(30)
           .layoutWeight(1)
           .borderRadius(DemoAliasTokens.radiusMd)
-          .backgroundColor(value === this.active ? ColorTokens.primaryDark : ColorTokens.floatingControlBgAlt)
+          .backgroundColor(!this.disabled && value === this.active ? ColorTokens.primaryDark : ColorTokens.floatingControlBgAlt)
           .textAlign(TextAlign.Center)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .opacity(this.disabled ? 0.56 : 1)
+          .enabled(!this.disabled)
+          .onClick(() => this.select(value))
       }, (value: string, i: number) => `${value}-${i}`)
     }
     .width('100%')
@@ -1902,7 +2181,7 @@ struct ReaderFullThemeGrid {
             .layoutWeight(1)
             .alignItems(HorizontalAlign.Center)
             .onClick(() => {
-              MotionAdapter.apply('segment.item.switch', this.reducedMotion, () => {
+              MotionAdapter.apply('segment.item.switch', this.reducedMotion, this.getUIContext(), () => {
                 ReaderUiStore.dispatch({ type: 'set-reader-theme', theme: item.value });
                 ReaderUiStore.dispatch({ type: 'settings-segment-switch', settingsKey: 'appThemeMode', settingsValue: item.scheme === 'night' ? 'dark' : 'light' });
               });
@@ -1969,6 +2248,9 @@ struct ReaderFullToggleRow {
   @Prop icon: string = '';
   @Prop title: string = '';
   @Prop active: boolean = false;
+  @Prop toggleKey: string = '';
+  @Prop disabled: boolean = false;
+  @Prop unavailableReason: string = '';
 
   build() {
     Row({ space: 9 }) {
@@ -1984,9 +2266,18 @@ struct ReaderFullToggleRow {
       Text(this.title)
         .fontSize(12)
         .fontWeight(700)
-        .fontColor(ColorTokens.controlInk)
+        .fontColor(this.disabled ? ColorTokens.muted : ColorTokens.controlInk)
         .layoutWeight(1)
-      ReaderCompactSwitch({ active: this.active })
+      if (this.disabled) {
+        Text(this.unavailableReason.length > 0 ? this.unavailableReason : '当前不可用')
+          .fontSize(9)
+          .fontWeight(600)
+          .fontColor(ColorTokens.muted)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      } else {
+        ReaderCompactSwitch({ active: this.active, toggleKey: this.toggleKey })
+      }
     }
     .width('100%')
     .height(38)
@@ -1998,10 +2289,18 @@ struct ReaderFullToggleRow {
 
 @Component
 struct ReaderFullTocRow {
+  @Prop bookId: string = '';
+  @Prop chapterId: string = '';
   @Prop title: string = '';
-  @Prop markerA: string = '';
-  @Prop markerB: string = '';
   @Prop current: boolean = false;
+
+  private openChapter(): void {
+    if (this.bookId.length === 0 || this.chapterId.length === 0) return;
+    ReaderUiStore.dispatch({ type: 'route-pop' });
+    ReaderUiStore.dispatch({
+      type: 'chapter-load', chapterId: this.chapterId, bookId: this.bookId, chapterTitle: this.title,
+    });
+  }
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -2013,19 +2312,8 @@ struct ReaderFullTocRow {
           .layoutWeight(1)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-        if (this.markerA !== '') {
-          Text(this.markerA)
-            .fontSize(9)
-            .fontWeight(760)
-            .fontColor(ColorTokens.primaryDark)
-            .height(22)
-            .padding({ left: 7, right: 7 })
-            .borderRadius(DemoAliasTokens.radiusSm)
-            .backgroundColor(ColorTokens.floatingControlBgAlt)
-            .textAlign(TextAlign.Center)
-        }
-        if (this.markerB !== '') {
-          Text(this.markerB)
+        if (this.current) {
+          Text('当前')
             .fontSize(9)
             .fontWeight(760)
             .fontColor(ColorTokens.primaryDark)
@@ -2041,7 +2329,7 @@ struct ReaderFullTocRow {
       .padding({ left: 10, right: 10 })
       .border({ width: { top: 1 }, color: ColorTokens.border })
       .alignItems(VerticalAlign.Center)
-      .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
+      .onClick(() => this.openChapter())
       InteractionDebugBadge({ label: 'row', tone: 'action' })
     }
     .width('100%')
@@ -2051,16 +2339,24 @@ struct ReaderFullTocRow {
 
 @Component
 export struct ReaderFullDirectoryPage {
-  private rows: Array<[string, string, string, boolean]> = [
-    ['第 28 章 雨幕', '已缓存', '', false],
-    ['第 29 章 来信', '', '', false],
-    ['第 30 章 旧日', '已缓存', '', false],
-    ['第 31 章 归途', '已缓存', '书签', false],
-    ['第 32 章 雨夜', '书签', '', true],
-    ['第 33 章 灯塔', '', '', false],
-    ['第 34 章 远行', '', '', false],
-    ['第 35 章 风声', '', '书签', false],
-  ];
+  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
+  @StorageProp('reader.chapterToc') chapterToc: ChapterTocEntry[] = [];
+  @StorageProp('reader.currentChapterTitle') currentChapterTitle: string = '';
+  @StorageProp('reader.tocMode') tocMode: TocMode = 'directory';
+  @StorageProp('reader.loading') loading: boolean = false;
+  @StorageProp('reader.bookmarks') bookmarks: CoreBookmark[] = [];
+  @StorageProp('reader.bookmarksLoaded') bookmarksLoaded: boolean = false;
+  @StorageProp('reader.bookmarksLoading') bookmarksLoading: boolean = false;
+  @StorageProp('reader.bookmarksError') bookmarksError: string = '';
+
+  private statusMessage(): string {
+    if (this.currentBook === null) return '尚未选择书籍，无法显示目录。';
+    return this.loading ? '正在从 Core 加载章节目录…' : '暂无从 Core 返回的章节目录。';
+  }
+
+  private isCurrent(chapter: ChapterTocEntry): boolean {
+    return this.currentChapterTitle.length > 0 && this.currentChapterTitle === chapter.title;
+  }
 
   build() {
     ReaderFullPanelShell({ title: '目录', quickRoute: 'toc-bookmarks', debugLabel: 'ReaderExpandedPanel' }) {
@@ -2069,28 +2365,82 @@ export struct ReaderFullDirectoryPage {
           Text('目录')
             .fontSize(12)
             .fontWeight(800)
-            .fontColor(DemoAliasTokens.onPrimary)
+            .fontColor(this.tocMode === 'directory' ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
             .layoutWeight(1)
             .height(32)
             .borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(ColorTokens.primaryDark)
+            .backgroundColor(this.tocMode === 'directory' ? ColorTokens.primaryDark : ColorTokens.floatingControlBgAlt)
             .textAlign(TextAlign.Center)
+            .onClick(() => ReaderUiStore.dispatch({ type: 'set-toc-mode', tocMode: 'directory' }))
           Text('书签')
             .fontSize(12)
             .fontWeight(800)
-            .fontColor(ColorTokens.controlInk)
+            .fontColor(this.tocMode === 'bookmark' ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
             .layoutWeight(1)
             .height(32)
             .borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(ColorTokens.floatingControlBgAlt)
+            .backgroundColor(this.tocMode === 'bookmark' ? ColorTokens.primaryDark : ColorTokens.floatingControlBgAlt)
             .textAlign(TextAlign.Center)
+            .onClick(() => ReaderUiStore.dispatch({ type: 'set-toc-mode', tocMode: 'bookmark' }))
         }
         .width('100%')
         .padding({ left: 10, right: 10, top: 10, bottom: 8 })
 
-        ForEach(this.rows, (row: [string, string, string, boolean], i: number) => {
-          ReaderFullTocRow({ title: row[0], markerA: row[1], markerB: row[2], current: row[3] })
-        }, (row: [string, string, string, boolean], i: number) => `${row[0]}-${i}`)
+        if (this.tocMode === 'bookmark') {
+          if (this.currentBook === null) {
+            Text('尚未打开书籍，无法读取 Core 书签。')
+              .fontSize(12).fontColor(ColorTokens.muted).lineHeight(19)
+              .width('100%').padding({ left: 10, right: 10, top: 16, bottom: 16 })
+          } else if (this.bookmarksLoading || !this.bookmarksLoaded) {
+            Text('正在从 Core 读取当前书的书签…')
+              .fontSize(12).fontColor(ColorTokens.muted).lineHeight(19)
+              .width('100%').padding({ left: 10, right: 10, top: 16, bottom: 16 })
+          } else if (this.bookmarksError.length > 0) {
+            Text(`书签操作失败：${this.bookmarksError}`)
+              .fontSize(12).fontColor(ColorTokens.accent).lineHeight(19)
+              .width('100%').padding({ left: 10, right: 10, top: 16, bottom: 16 })
+          } else if (this.bookmarks.length === 0) {
+            Text('当前书在 Core 中还没有书签。可在阅读器控制栏添加当前位置书签。')
+              .fontSize(12).fontColor(ColorTokens.muted).lineHeight(19)
+              .width('100%').padding({ left: 10, right: 10, top: 16, bottom: 16 })
+          } else {
+            Scroll() {
+              Column() {
+                ForEach(this.bookmarks, (bookmark: CoreBookmark, i: number) => {
+                  ReaderBookmarkLiveRow({ bookmark: bookmark, expanded: true })
+                }, (bookmark: CoreBookmark, i: number) => `${bookmark.time}-${i}`)
+              }
+              .width('100%')
+            }
+            .width('100%')
+            .layoutWeight(1)
+            .scrollBar(BarState.Auto)
+          }
+        } else if (this.currentBook === null || this.chapterToc.length === 0) {
+          Text(this.statusMessage())
+            .fontSize(12)
+            .fontColor(ColorTokens.muted)
+            .lineHeight(19)
+            .width('100%')
+            .padding({ left: 10, right: 10, top: 16, bottom: 16 })
+        } else {
+          Scroll() {
+            Column() {
+              ForEach(this.chapterToc, (chapter: ChapterTocEntry, i: number) => {
+                ReaderFullTocRow({
+                  bookId: this.currentBook?.bookId ?? '',
+                  chapterId: chapter.chapterId,
+                  title: chapter.title,
+                  current: this.isCurrent(chapter),
+                })
+              }, (chapter: ChapterTocEntry, i: number) => `${chapter.chapterId}-${i}`)
+            }
+            .width('100%')
+          }
+          .width('100%')
+          .layoutWeight(1)
+          .scrollBar(BarState.Auto)
+        }
       }
       .width('100%')
       .height('100%')
@@ -2101,10 +2451,39 @@ export struct ReaderFullDirectoryPage {
 
 @Component
 export struct ReaderFullTtsPage {
+  @StorageProp('reader.ttsSession.playback') playback: string = 'idle';
+  @StorageProp('reader.ttsSession.currentSegment') currentSegment: number = 0;
+  @StorageProp('reader.ttsSession.totalSegments') totalSegments: number = 0;
+  @StorageProp('reader.chapterContent') chapterContent: string[] = [];
+
+  private canStart(): boolean {
+    return this.chapterContent.length > 0;
+  }
+
+  private hasQueue(): boolean {
+    return this.totalSegments > 0;
+  }
+
+  private playbackIcon(): string {
+    return this.playback === 'playing' ? 'Ⅱ' : '▶';
+  }
+
+  private playbackLabel(): string {
+    if (this.playback === 'playing') return '暂停';
+    if (this.playback === 'paused') return '继续';
+    return '播放';
+  }
+
+  private segmentLabel(): string {
+    if (!this.hasQueue()) return '等待 Core 切分当前正文';
+    return `片段 ${this.currentSegment + 1}/${this.totalSegments}`;
+  }
+
   build() {
     ReaderFullPanelShell({ title: '朗读', quickRoute: 'tts', debugLabel: 'ReaderExpandedPanel' }) {
-      Column({ space: 10 }) {
-        Row({ space: 12 }) {
+      Scroll() {
+        Column({ space: 10 }) {
+          Row({ space: 12 }) {
           Text('‹')
             .fontSize(24)
             .fontWeight(800)
@@ -2114,7 +2493,10 @@ export struct ReaderFullTtsPage {
             .borderRadius(DemoAliasTokens.radiusPill)
             .backgroundColor(ColorTokens.floatingControlBgAlt)
             .textAlign(TextAlign.Center)
-          Text('▶')
+            .opacity(this.hasQueue() ? 1 : 0.5)
+            .enabled(this.hasQueue())
+            .onClick(() => ReaderUiStore.dispatch({ type: 'tts-prev' }))
+          Text(this.playbackIcon())
             .fontSize(18)
             .fontWeight(800)
             .fontColor(DemoAliasTokens.onPrimary)
@@ -2123,6 +2505,9 @@ export struct ReaderFullTtsPage {
             .borderRadius(DemoAliasTokens.radiusPill)
             .backgroundColor(ColorTokens.primaryDark)
             .textAlign(TextAlign.Center)
+            .opacity(this.canStart() ? 1 : 0.5)
+            .enabled(this.canStart())
+            .onClick(() => ReaderUiStore.dispatch({ type: 'tts-toggle' }))
           Text('›')
             .fontSize(24)
             .fontWeight(800)
@@ -2132,28 +2517,41 @@ export struct ReaderFullTtsPage {
             .borderRadius(DemoAliasTokens.radiusPill)
             .backgroundColor(ColorTokens.floatingControlBgAlt)
             .textAlign(TextAlign.Center)
+            .opacity(this.hasQueue() ? 1 : 0.5)
+            .enabled(this.hasQueue())
+            .onClick(() => ReaderUiStore.dispatch({ type: 'tts-next' }))
         }
         .width('100%')
         .height(64)
         .justifyContent(FlexAlign.Center)
         .alignItems(VerticalAlign.Center)
 
-        ReaderFullBlock({ title: '语速', meta: '1.0x' }) {
-          ReaderFullChoiceRow({ values: ['0.8x', '1.0x', '1.25x', '1.5x'], active: '1.0x' })
+          Text(this.canStart() ? `${this.playbackLabel()} · ${this.segmentLabel()}` : '正文尚未从 Core 加载，无法开始朗读。')
+          .fontSize(10)
+          .fontWeight(650)
+          .fontColor(ColorTokens.muted)
+          .width('100%')
+          .textAlign(TextAlign.Center)
+
+          ReaderFullBlock({ title: '语速', meta: 'TextReader Host 未提供程序化速率' }) {
+            ReaderFullChoiceRow({ values: ['0.5x', '1.0x', '1.5x', '2.0x'], active: '', choiceKey: 'ttsRate', disabled: true })
+          }
+          ReaderFullBlock({ title: '音色', meta: 'Host 未提供映射' }) {
+            ReaderFullChoiceRow({ values: ['系统默认', '清晰女声', '沉稳男声'], active: '', disabled: true })
+          }
+          ReaderFullBlock({ title: '朗读范围', meta: 'Core 仅当前章节' }) {
+            ReaderFullChoiceRow({ values: ['当前章节', '本书剩余', '循环朗读'], active: '当前章节', disabled: true })
+          }
+          ReaderFullBlock({ title: '定时关闭', meta: 'Core/Host 未接入' }) {
+            ReaderFullChoiceRow({ values: ['不定时', '15 分钟', '30 分钟'], active: '', disabled: true })
+          }
         }
-        ReaderFullBlock({ title: '音色', meta: '清晰女声' }) {
-          ReaderFullChoiceRow({ values: ['系统默认', '清晰女声', '沉稳男声'], active: '清晰女声' })
-        }
-        ReaderFullBlock({ title: '朗读范围', meta: '当前章节' }) {
-          ReaderFullChoiceRow({ values: ['当前章节', '本书剩余', '循环朗读'], active: '当前章节' })
-        }
-        ReaderFullBlock({ title: '定时关闭', meta: '15 分钟' }) {
-          ReaderFullChoiceRow({ values: ['不定时', '15 分钟', '30 分钟'], active: '15 分钟' })
-        }
+        .width('100%')
+        .padding(10)
       }
       .width('100%')
       .height('100%')
-      .padding(10)
+      .scrollBar(BarState.Off)
     }
   }
 }
@@ -2166,7 +2564,6 @@ export struct ReaderFullAppearancePage {
   @StorageProp('reader.typography.letterSpacing') letterSpacing: number = 0;
   @StorageProp('reader.pageSpace.topMargin') topMargin: number = 72;
   @StorageProp('reader.pageSpace.sideMargin') sideMargin: number = 32;
-  @StorageProp('reader.pageSpace.bottomMargin') bottomMargin: number = 48;
   @StorageProp('reader.pageSpace.paragraphIndent') paragraphIndent: number = 2;
 
   private whole(value: number): string {
@@ -2202,7 +2599,6 @@ export struct ReaderFullAppearancePage {
             Column({ space: 4 }) {
               ReaderFullStepperRow({ label: '顶部边距', value: this.whole(this.topMargin), metric: 'topMargin' })
               ReaderFullStepperRow({ label: '左右边距', value: this.whole(this.sideMargin), metric: 'sideMargin' })
-              ReaderFullStepperRow({ label: '下边距', value: this.whole(this.bottomMargin), metric: 'bottomMargin' })
               ReaderFullStepperRow({ label: '段首缩进', value: `${this.one(this.paragraphIndent)}em`, metric: 'paragraphIndent' })
             }
             .width('100%')
@@ -2220,39 +2616,65 @@ export struct ReaderFullAppearancePage {
 
 @Component
 export struct ReaderFullSettingsPage {
-  private toggles: Array<[string, string, boolean]> = [
-    ['翻', '自动翻页', false],
-    ['音', '音量键翻页', true],
-    ['横', '横屏锁定', false],
-    ['亮', '屏幕常亮', true],
-    ['页', '页脚进度信息', true],
-    ['触', '触摸反馈', false],
-    ['缓', '自动缓存后续章节', true],
-  ];
+  @StorageProp('reader.readerToggles.autoPage') autoPage: boolean = false;
+  @StorageProp('reader.readerToggles.volumePage') volumePage: boolean = false;
+  @StorageProp('reader.readerToggles.landscapeLock') landscapeLock: boolean = false;
+  @StorageProp('reader.readerToggles.keepScreenOn') keepScreenOn: boolean = false;
+  @StorageProp('reader.readerToggles.statusInfo') statusInfo: boolean = true;
+  @StorageProp('reader.readerToggles.hapticFeedback') hapticFeedback: boolean = true;
+  @StorageProp('reader.readerToggles.hideStatusBar') hideStatusBar: boolean = false;
+  @StorageProp('reader.readerSettingOptions.tapMode') tapMode: string = '左右区域';
+  @StorageProp('reader.readerHostMessage') readerHostMessage: string = '';
 
   build() {
     ReaderFullPanelShell({ title: '设置', quickRoute: 'reader-settings', debugLabel: 'ReaderExpandedPanel' }) {
-      Column({ space: 10 }) {
-        ReaderFullBlock({ title: '点击翻页方式', meta: '左右区域' }) {
-          ReaderFullChoiceRow({ values: ['左右区域', '上下区域', '全屏点击'], active: '左右区域' })
+      Scroll() {
+        Column({ space: 10 }) {
+          if (this.readerHostMessage.length > 0) {
+            Text(this.readerHostMessage)
+            .fontSize(10)
+            .fontWeight(650)
+            .fontColor(ColorTokens.accent)
+            .lineHeight(16)
+            .width('100%')
+            .padding({ left: 10, right: 10, top: 8, bottom: 8 })
+            .border({ width: 1, color: ColorTokens.border })
+            .borderRadius(DemoAliasTokens.radiusMd)
+            .backgroundColor(ColorTokens.surfaceSoft)
         }
-        ReaderFullBlock({ title: '翻页动画', meta: '平滑' }) {
-          ReaderFullChoiceRow({ values: ['平滑', '覆盖', '无动画'], active: '平滑' })
-        }
-        ReaderFullBlock({ title: '阅读行为', meta: '开关项' }) {
-          Column() {
-            ForEach(this.toggles, (item: [string, string, boolean], i: number) => {
-              ReaderFullToggleRow({ icon: item[0], title: item[1], active: item[2] })
-            }, (item: [string, string, boolean], i: number) => `${item[1]}-${i}`)
+          ReaderFullBlock({ title: '点击翻页方式', meta: this.tapMode }) {
+            ReaderFullChoiceRow({ values: ['左右区域', '中间', '边缘'], active: this.tapMode, choiceKey: 'tapMode' })
           }
-          .width('100%')
-          .borderRadius(DemoAliasTokens.radiusMd)
-          .backgroundColor(ColorTokens.surfaceSoft)
+          ReaderFullBlock({ title: '翻页动画', meta: '当前 Reader Pager 未接入' }) {
+            ReaderFullChoiceRow({ values: ['平滑', '覆盖', '无动画'], active: '', choiceKey: 'pageAnimation', disabled: true })
+          }
+          ReaderFullBlock({ title: '阅读行为', meta: '开关项' }) {
+            Column() {
+              ReaderFullToggleRow({ icon: '翻', title: '自动翻页', active: this.autoPage, toggleKey: 'autoPage' })
+              ReaderFullToggleRow({ icon: '音', title: '音量键翻页', active: this.volumePage, toggleKey: 'volumePage', disabled: true, unavailableReason: '未接入按键监听' })
+              ReaderFullToggleRow({ icon: '横', title: '横屏锁定', active: this.landscapeLock, toggleKey: 'landscapeLock', disabled: true, unavailableReason: '未接入方向 Host' })
+              ReaderFullToggleRow({ icon: '亮', title: '屏幕常亮', active: this.keepScreenOn, toggleKey: 'keepScreenOn' })
+              ReaderFullToggleRow({ icon: '页', title: '页脚进度信息', active: this.statusInfo, toggleKey: 'statusInfo' })
+              ReaderFullToggleRow({ icon: '触', title: '触摸反馈', active: this.hapticFeedback, toggleKey: 'hapticFeedback' })
+              ReaderFullToggleRow({ icon: '栏', title: '隐藏状态栏', active: this.hideStatusBar, toggleKey: 'hideStatusBar' })
+            }
+            .width('100%')
+            .borderRadius(DemoAliasTokens.radiusMd)
+            .backgroundColor(ColorTokens.surfaceSoft)
+          }
+          ReaderFullBlock({ title: '阅读缓存预取', meta: 'Core command 未接入' }) {
+            Text('当前 Core 未接入阅读缓存预取命令，设置页不能开启、关闭或显示预取结果。')
+              .fontSize(11)
+              .fontColor(ColorTokens.muted)
+              .lineHeight(18)
+          }
         }
+        .width('100%')
+        .padding(10)
       }
       .width('100%')
       .height('100%')
-      .padding(10)
+      .scrollBar(BarState.Off)
     }
   }
 }
@@ -2290,6 +2712,7 @@ struct ReaderUtilityActionButton {
   @Prop title: string = '';
   @Prop detail: string = '';
   @Prop danger: boolean = false;
+  @Prop disabled: boolean = false;
 
   build() {
     Row({ space: 8 }) {
@@ -2326,26 +2749,26 @@ struct ReaderUtilityActionButton {
     .borderRadius(DemoAliasTokens.radiusMd)
     .backgroundColor(DemoAliasTokens.surface)
     .alignItems(VerticalAlign.Center)
+    .opacity(this.disabled ? 0.58 : 1)
+    .enabled(!this.disabled)
   }
 }
 
 @Component
-struct ReaderCacheListRow {
-  @Prop title: string = '';
-  @Prop detail: string = '';
-  @Prop cached: boolean = false;
-  @Prop current: boolean = false;
+struct ReaderLoadedParagraphRow {
+  @Prop index: number = 0;
+  @Prop text: string = '';
 
   build() {
     Row({ space: 8 }) {
       Column({ space: 2 }) {
-        Text(this.title)
+        Text(`本地片段 ${this.index + 1}`)
           .fontSize(12)
-          .fontWeight(this.current ? 820 : 700)
-          .fontColor(this.current ? ColorTokens.primaryDark : ColorTokens.controlInk)
+          .fontWeight(820)
+          .fontColor(ColorTokens.controlInk)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-        Text(this.detail)
+        Text(this.text)
           .fontSize(9)
           .fontColor(ColorTokens.muted)
           .maxLines(1)
@@ -2353,14 +2776,14 @@ struct ReaderCacheListRow {
       }
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
-      Text(this.cached ? '已缓存' : '缓存')
+      Text('当前内存')
         .fontSize(9)
         .fontWeight(760)
-        .fontColor(this.cached ? ColorTokens.primaryDark : DemoAliasTokens.onPrimary)
+        .fontColor(ColorTokens.primaryDark)
         .height(24)
         .padding({ left: 8, right: 8 })
         .borderRadius(DemoAliasTokens.radiusSm)
-        .backgroundColor(this.cached ? ColorTokens.floatingControlBgAlt : ColorTokens.primaryDark)
+        .backgroundColor(ColorTokens.floatingControlBgAlt)
         .textAlign(TextAlign.Center)
     }
     .width('100%')
@@ -2373,47 +2796,75 @@ struct ReaderCacheListRow {
 
 @Component
 export struct ReaderBookCachePage {
-  private cacheRows: Array<[string, string, boolean, boolean]> = [
-    ['第 30 章 旧日', '已下载到本地', true, false],
-    ['第 31 章 归途', '已下载到本地', true, false],
-    ['第 32 章 雨夜', '当前章节', false, true],
-    ['第 33 章 灯塔', '尚未缓存', false, false],
-    ['第 34 章 远行', '尚未缓存', false, false],
-    ['第 35 章 风声', '尚未缓存', false, false],
-  ];
+  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
+  @StorageProp('reader.chapterContent') chapterContent: string[] = [];
+  @StorageProp('reader.currentChapterTitle') currentChapterTitle: string = '';
+  @StorageProp('reader.loading') loading: boolean = false;
+
+  private loadedParagraphs(): string[] {
+    if (this.currentBook === null) return [];
+    const paragraphs: string[] = [];
+    for (let i = 0; i < this.chapterContent.length; i += 1) {
+      if (this.chapterContent[i].trim().length > 0) paragraphs.push(this.chapterContent[i]);
+    }
+    return paragraphs;
+  }
+
+  private chapterLabel(): string {
+    if (this.currentBook === null) return '未选择书籍';
+    return this.currentChapterTitle.length > 0 ? this.currentChapterTitle : 'Core 未返回当前章节';
+  }
+
+  private loadedContentMessage(): string {
+    if (this.currentBook === null) return '尚未选择书籍，无法展示当前已加载章节正文。';
+    if (this.loading) return '正在加载章节正文，当前没有可展示的本地片段。';
+    return 'Core 未返回本章正文，当前没有可展示的本地片段。';
+  }
 
   build() {
     ReaderFullPanelShell({ title: '书籍缓存', quickRoute: 'reader', debugLabel: 'ReaderUtilityPage', utility: true }) {
       Scroll() {
         Column({ space: 10 }) {
           Row({ space: 8 }) {
-            ReaderUtilitySummaryCard({ value: '32/128', label: '已缓存章节' })
-            ReaderUtilitySummaryCard({ value: '128 MB', label: '当前书籍缓存' })
-            ReaderUtilitySummaryCard({ value: '已开启', label: '自动缓存后续章节' })
+            ReaderUtilitySummaryCard({ value: `${this.loadedParagraphs().length}`, label: '本地已加载段落' })
+            ReaderUtilitySummaryCard({ value: this.chapterLabel(), label: '当前章节' })
+            ReaderUtilitySummaryCard({ value: '未接入', label: 'Core 阅读缓存 command' })
           }
           .width('100%')
 
-          ReaderFullBlock({ title: '缓存动作', meta: '只作用于当前书籍' }) {
+          ReaderFullBlock({ title: '缓存能力', meta: 'Core 阅读缓存 command 未接入；操作已禁用' }) {
             Column({ space: 8 }) {
+              Text('当前 Core 未接入阅读缓存命令，不能显示已缓存章节、容量、预取或清理结果。')
+                .fontSize(10)
+                .fontColor(ColorTokens.muted)
+                .lineHeight(16)
               Row({ space: 8 }) {
-                ReaderUtilityActionButton({ title: '缓存当前章节', detail: '第 32 章 雨夜' })
-                ReaderUtilityActionButton({ title: '缓存后续章节', detail: '从当前章节继续 20 章' })
+                ReaderUtilityActionButton({ title: '缓存当前章节', detail: 'Core command 未接入', disabled: true })
+                ReaderUtilityActionButton({ title: '预取后续章节', detail: 'Core command 未接入', disabled: true })
               }
               .width('100%')
               Row({ space: 8 }) {
-                ReaderUtilityActionButton({ title: '更新缓存目录', detail: '刷新章节列表和缓存标记' })
-                ReaderUtilityActionButton({ title: '清理本书缓存', detail: '保留阅读进度和书签', danger: true })
+                ReaderUtilityActionButton({ title: '查看缓存目录', detail: 'Core command 未接入', disabled: true })
+                ReaderUtilityActionButton({ title: '清理阅读缓存', detail: 'Core command 未接入', danger: true, disabled: true })
               }
               .width('100%')
             }
             .width('100%')
           }
 
-          ReaderFullBlock({ title: '章节缓存', meta: '右侧固定显示缓存状态和操作' }) {
+          ReaderFullBlock({ title: '当前已加载正文', meta: '仅内存片段，不等同于磁盘缓存' }) {
             Column() {
-              ForEach(this.cacheRows, (row: [string, string, boolean, boolean], i: number) => {
-                ReaderCacheListRow({ title: row[0], detail: row[1], cached: row[2], current: row[3] })
-              }, (row: [string, string, boolean, boolean], i: number) => `${row[0]}-${i}`)
+              if (this.loadedParagraphs().length === 0) {
+                Text(this.loadedContentMessage())
+                  .fontSize(11)
+                  .fontColor(ColorTokens.muted)
+                  .lineHeight(18)
+                  .padding(10)
+              } else {
+                ForEach(this.loadedParagraphs(), (paragraph: string, i: number) => {
+                  ReaderLoadedParagraphRow({ index: i, text: paragraph })
+                }, (paragraph: string, i: number) => `${i}-${paragraph.length}`)
+              }
             }
             .width('100%')
             .borderRadius(DemoAliasTokens.radiusMd)
@@ -2500,39 +2951,107 @@ struct ReaderDebugLogRow {
 
 @Component
 export struct ReaderDebugInfoPage {
-  private logs: Array<[string, string, string, string]> = [
-    ['正文渲染', 'page-measure', '完成', '按容器高度切分分页'],
-    ['章节缓存', 'cache-status', '可用', '前序章节已缓存'],
-    ['换源窗口', 'source-switch', '完成', '候选书源按延迟升序排列'],
-    ['控制层', 'overlay-state', '完成', '顶栏、快捷窗、亮度条同层结构'],
-  ];
+  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
+  @StorageProp('reader.chapterContent') chapterContent: string[] = [];
+  @StorageProp('reader.chapterToc') chapterToc: ChapterTocEntry[] = [];
+  @StorageProp('reader.currentChapterTitle') currentChapterTitle: string = '';
+  @StorageProp('reader.contentSearchQuery') contentSearchQuery: string = '';
+  @StorageProp('reader.contentSearchResults') contentSearchResults: CoreContentSearchResult[] = [];
+  @StorageProp('reader.contentSearchLoading') contentSearchLoading: boolean = false;
+  @StorageProp('reader.contentSearchLoaded') contentSearchLoaded: boolean = false;
+  @StorageProp('reader.contentSearchError') contentSearchError: string = '';
+  @StorageProp('reader.contentSearchMessage') contentSearchMessage: string = '';
+  @StorageProp('reader.loading') loading: boolean = false;
+  @StorageProp('reader.pageIndex') readerPageIndex: number = 0;
+  @StorageProp('reader.pageCount') readerPageCount: number = 0;
+  @StorageProp('reader.errorCode') errorCode: string = '';
+  @StorageProp('reader.errorMessage') errorMessage: string = '';
+
+  private loadedParagraphCount(): number {
+    if (this.currentBook === null) return 0;
+    let count = 0;
+    for (let i = 0; i < this.chapterContent.length; i += 1) {
+      if (this.chapterContent[i].trim().length > 0) count += 1;
+    }
+    return count;
+  }
+
+  private bookLabel(): string {
+    if (this.currentBook === null) return '未选择书籍';
+    return this.currentBook.title.length > 0 ? this.currentBook.title : 'Core 未返回书名';
+  }
+
+  private chapterLabel(): string {
+    if (this.currentBook === null) return '未选择书籍';
+    return this.currentChapterTitle.length > 0 ? this.currentChapterTitle : 'Core 未返回当前章节';
+  }
+
+  private pageLabel(): string {
+    if (this.currentBook === null || this.readerPageCount <= 0) return '未测量';
+    const page = Math.max(0, Math.min(this.readerPageCount - 1, this.readerPageIndex)) + 1;
+    return `${page}/${this.readerPageCount}`;
+  }
+
+  private bodyState(): string {
+    if (this.currentBook === null) return '未选择书籍';
+    if (this.loading) return '读取中';
+    return this.loadedParagraphCount() > 0 ? '已加载片段' : '无正文';
+  }
+
+  private tocState(): string {
+    if (this.currentBook === null) return '未选择书籍';
+    return this.chapterToc.length > 0 ? `已加载 ${this.chapterToc.length} 项` : '未加载目录';
+  }
+
+  private errorLabel(): string {
+    return this.errorCode.length > 0 ? this.errorCode : '无';
+  }
+
+  private contentSearchState(): string {
+    if (this.currentBook === null) return '未选择书籍';
+    if (this.contentSearchLoading) return 'Core 搜索中';
+    if (this.contentSearchError.length > 0) return '失败';
+    if (!this.contentSearchLoaded) return '待搜索';
+    return this.contentSearchResults.length > 0 ? `命中 ${this.contentSearchResults.length} 条` : '无匹配';
+  }
+
+  private contentSearchDetail(): string {
+    if (this.contentSearchMessage.length > 0) return this.contentSearchMessage;
+    if (this.contentSearchError.length > 0) return this.contentSearchError;
+    if (this.contentSearchQuery.length > 0) return `关键词：${this.contentSearchQuery}`;
+    return '仅当前书源、当前书籍的 Core chapter cache';
+  }
+
+  private diagnostics(): Array<[string, string, string, string]> {
+    return [
+      ['正文', 'chapter-content', this.bodyState(), `当前内存 ${this.loadedParagraphCount()} 段`],
+      ['目录', 'chapter-toc', this.tocState(), this.chapterLabel()],
+      ['阅读缓存', 'reader-cache', '未接入', 'Core 阅读缓存 command 未接入'],
+      ['正文搜索', 'search.content', this.contentSearchState(), this.contentSearchDetail()],
+    ];
+  }
 
   build() {
     ReaderFullPanelShell({ title: '调试信息', quickRoute: 'reader', debugLabel: 'ReaderUtilityPage', utility: true }) {
       Scroll() {
         Column({ space: 10 }) {
           Row({ space: 8 }) {
-            ReaderUtilitySummaryCard({ value: '1/8', label: '当前页' })
-            ReaderUtilitySummaryCard({ value: '32/128', label: '当前章节' })
-            ReaderUtilitySummaryCard({ value: '0', label: '当前错误' })
+            ReaderUtilitySummaryCard({ value: this.bookLabel(), label: '当前书籍' })
+            ReaderUtilitySummaryCard({ value: this.chapterLabel(), label: '当前章节' })
+            ReaderUtilitySummaryCard({ value: this.errorLabel(), label: '当前错误' })
           }
           .width('100%')
 
           ReaderFullBlock({ title: '渲染状态', meta: '用于核对页面结构和正文渲染链路' }) {
             Column({ space: 8 }) {
               Row({ space: 8 }) {
-                ReaderDebugMetric({ label: '当前路由', value: 'reader / immersive-reading' })
-                ReaderDebugMetric({ label: '当前章节', value: '32/128 · 第 32 章 雨夜' })
+                ReaderDebugMetric({ label: '正文状态', value: this.bodyState() })
+                ReaderDebugMetric({ label: '目录状态', value: this.tocState() })
               }
               .width('100%')
               Row({ space: 8 }) {
-                ReaderDebugMetric({ label: '分页状态', value: '1/8 · 流式测量分页' })
-                ReaderDebugMetric({ label: '正文排版', value: '字号 18 · 行距 1.96' })
-              }
-              .width('100%')
-              Row({ space: 8 }) {
-                ReaderDebugMetric({ label: '阅读主题', value: '纸纹 · default' })
-                ReaderDebugMetric({ label: '书源', value: '优书网 · 128ms' })
+                ReaderDebugMetric({ label: '页内分页', value: this.pageLabel() })
+                ReaderDebugMetric({ label: '最近错误', value: this.errorMessage.length > 0 ? this.errorMessage : '无' })
               }
               .width('100%')
             }
@@ -2541,7 +3060,7 @@ export struct ReaderDebugInfoPage {
 
           ReaderFullBlock({ title: '调试日志', meta: '当前阅读链路关键节点' }) {
             Column() {
-              ForEach(this.logs, (row: [string, string, string, string], i: number) => {
+              ForEach(this.diagnostics(), (row: [string, string, string, string], i: number) => {
                 ReaderDebugLogRow({ scope: row[0], code: row[1], state: row[2], message: row[3] })
               }, (row: [string, string, string, string], i: number) => `${row[0]}-${i}`)
             }
@@ -2550,20 +3069,11 @@ export struct ReaderDebugInfoPage {
             .backgroundColor(ColorTokens.surfaceSoft)
           }
 
-          ReaderFullBlock({ title: '调试动作', meta: '不改变正文，只导出或刷新诊断信息' }) {
-            Column({ space: 8 }) {
-              Row({ space: 8 }) {
-                ReaderUtilityActionButton({ title: '复制调试信息', detail: '复制路由、章节、分页和排版参数' })
-                ReaderUtilityActionButton({ title: '导出阅读日志', detail: '生成当前书籍调试记录' })
-              }
-              .width('100%')
-              Row({ space: 8 }) {
-                ReaderUtilityActionButton({ title: '重新测量分页', detail: '刷新正文容器和分页结果' })
-                ReaderUtilityActionButton({ title: '回到阅读控制层', detail: '完成调试查看' })
-              }
-              .width('100%')
-            }
-            .width('100%')
+          ReaderFullBlock({ title: '命令可用性', meta: '未接入 command 已禁用' }) {
+            Text('该页只展示当前 UI 已收到的阅读状态。正文全文搜索已接入 Core search.content，并且只查询当前书源、当前书籍的已缓存章节；阅读缓存管理和调试导出 command 仍未接入。')
+              .fontSize(11)
+              .fontColor(ColorTokens.muted)
+              .lineHeight(18)
           }
         }
         .width('100%')
@@ -2577,14 +3087,69 @@ export struct ReaderDebugInfoPage {
 }
 
 // ── Search panel (.fd-reader-search-quick-panel) ──────────────────────────
-//   Live demo quick panel: back/search toolbar + "雨夜" search field + result
-//   list. No legacy header, no clear/apply action row.
+//   Core `search.content` searches durable chapter_cache entries only. The
+//   panel scopes every request to the currently open sourceId + bookId, so it
+//   cannot turn a local snippet or another source's duplicate book id into a
+//   reader jump target.
 @Component
 export struct ReaderSearchPanel {
-  private results: Array<[string, string]> = [
-    ['第 32 章 雨夜', '雨夜的风格外冷 · 当前结果 1/2'],
-    ['第 33 章 灯塔', '雨夜之后，远处灯塔亮起 · 结果 2/2'],
-  ];
+  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
+  @StorageProp('reader.contentSearchResults') contentSearchResults: CoreContentSearchResult[] = [];
+  @StorageProp('reader.contentSearchLoading') contentSearchLoading: boolean = false;
+  @StorageProp('reader.contentSearchLoaded') contentSearchLoaded: boolean = false;
+  @StorageProp('reader.contentSearchError') contentSearchError: string = '';
+  @StorageProp('reader.contentSearchMessage') contentSearchMessage: string = '';
+  @StorageProp('reader.contentSearchQuery') @Watch('syncQueryFromCoreSearch') contentSearchQuery: string = '';
+  @State query: string = '';
+
+  aboutToAppear(): void {
+    this.syncQueryFromCoreSearch();
+  }
+
+  // A native text-selection "搜索" action dispatches content-search-submit
+  // before this route is drawn. Reflect that real selected text in the input
+  // rather than leaving a blank field next to already-running Core results.
+  private syncQueryFromCoreSearch(): void {
+    const keyword = this.contentSearchQuery.trim();
+    if (keyword.length > 0) this.query = keyword;
+  }
+
+  private hasCoreSearchScope(): boolean {
+    if (this.currentBook === null) return false;
+    const sourceId = this.currentBook.sourceId;
+    return sourceId !== undefined && sourceId.trim().length > 0 && this.currentBook.bookId.trim().length > 0;
+  }
+
+  private canSubmit(): boolean {
+    return this.hasCoreSearchScope() && !this.contentSearchLoading && this.query.trim().length > 0;
+  }
+
+  private submitSearch(): void {
+    const keyword = this.query.trim();
+    if (!this.hasCoreSearchScope() || keyword.length === 0 || this.contentSearchLoading) return;
+    ReaderUiStore.dispatch({ type: 'content-search-submit', query: keyword });
+  }
+
+  private resultTitle(result: CoreContentSearchResult): string {
+    const title = result.chapterTitle.trim();
+    return title.length > 0 ? title : `Core 第 ${result.chapterIndex + 1} 章`;
+  }
+
+  private resultDetail(result: CoreContentSearchResult): string {
+    const snippet = result.snippet.trim();
+    const context = snippet.length > 0 ? snippet : 'Core 未返回上下文片段';
+    return `正文偏移 ${result.chapterOffset} · ${context}`;
+  }
+
+  private statusMessage(): string {
+    if (this.currentBook === null) return '尚未选择书籍，无法搜索正文。';
+    if (!this.hasCoreSearchScope()) return '当前书籍缺少 Core sourceId 或 bookId，无法搜索已缓存正文。';
+    if (this.contentSearchLoading) return 'Core 正在搜索当前书源、当前书籍的已缓存章节。';
+    if (this.contentSearchError.length > 0) return this.contentSearchError;
+    if (!this.contentSearchLoaded) return '输入关键词后，Core 仅查询当前书籍已缓存的章节正文。';
+    if (this.contentSearchResults.length === 0) return `Core 未在当前书籍的已缓存章节中找到“${this.contentSearchQuery}”。`;
+    return '';
+  }
 
   build() {
     ReaderQuickPanelShell({ debugLabel: 'ReaderQuickPanel' }) {
@@ -2592,7 +3157,7 @@ export struct ReaderSearchPanel {
         Row() {
           ReaderQuickBackButton()
           Blank()
-          ReaderQuickPillButton({ label: '搜索' })
+          ReaderQuickPillButton({ label: 'Core 全文已接入', disabled: true })
         }
         .width('100%')
         .height(24)
@@ -2600,13 +3165,26 @@ export struct ReaderSearchPanel {
 
         Row({ space: 6 }) {
           Image($r('app.media.ui_icon_search_primary')).width(13).height(13)
-          Text('雨夜')
+          TextInput({ text: this.query, placeholder: '搜索当前书籍的已缓存正文' })
             .fontSize(11)
             .fontWeight(760)
             .fontColor(ColorTokens.controlInk)
             .layoutWeight(1)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .enabled(this.hasCoreSearchScope() && !this.contentSearchLoading)
+            .onChange((value: string) => { this.query = value; })
+            .onSubmit(() => this.submitSearch())
+          Text('搜索')
+            .fontSize(10)
+            .fontWeight(760)
+            .fontColor(this.canSubmit() ? DemoAliasTokens.onPrimary : ColorTokens.muted)
+            .height(22)
+            .padding({ left: 8, right: 8 })
+            .borderRadius(DemoAliasTokens.radiusSm)
+            .backgroundColor(this.canSubmit() ? ColorTokens.primary : ColorTokens.metaBg)
+            .opacity(this.canSubmit() ? 1 : 0.7)
+            .enabled(this.canSubmit())
+            .textAlign(TextAlign.Center)
+            .onClick(() => this.submitSearch())
         }
         .width('100%')
         .height(32)
@@ -2616,10 +3194,35 @@ export struct ReaderSearchPanel {
         .backgroundColor(DemoAliasTokens.surface)
         .alignItems(VerticalAlign.Center)
 
-        Column() {
-          ForEach(this.results, (r: [string, string], i: number) => {
-            ReaderSearchResultRow({ title: r[0], detail: r[1] })
-          }, (r: [string, string], i: number) => `${r[0]}-${i}`)
+        Column({ space: 4 }) {
+          Text('Core search.content 只查询当前书源、当前书籍的已缓存章节；点击结果会按 Core 目录跳转并写入返回的正文偏移。')
+            .fontSize(9)
+            .fontColor(ColorTokens.muted)
+            .lineHeight(14)
+            .padding({ left: 8, right: 8, top: 6 })
+          if (this.contentSearchMessage.length > 0) {
+            Text(this.contentSearchMessage)
+              .fontSize(9)
+              .fontColor(ColorTokens.primaryDark)
+              .lineHeight(14)
+              .padding({ left: 8, right: 8 })
+          }
+          if (this.contentSearchResults.length > 0) {
+            ForEach(this.contentSearchResults, (result: CoreContentSearchResult, i: number) => {
+              ReaderSearchResultRow({
+                title: this.resultTitle(result),
+                detail: this.resultDetail(result),
+                contentSearchResultIndex: i,
+              })
+            }, (result: CoreContentSearchResult, i: number) =>
+              `${result.sourceId}-${result.bookId}-${result.chapterIndex}-${result.chapterOffset}-${i}`)
+          } else {
+            Text(this.statusMessage())
+              .fontSize(10)
+              .fontColor(ColorTokens.muted)
+              .lineHeight(16)
+              .padding(8)
+          }
         }
         .width('100%')
         .layoutWeight(1)
@@ -2639,10 +3242,12 @@ export struct ReaderSearchPanel {
 //   pattern -> replacement, an enabled toggle, edit and delete buttons.
 //   "新增规则" opens an inline form (pattern / replacement / scope) that
 //   dispatches replace-rule-add / replace-rule-edit; the toggle dispatches
-//   replace-rule-toggle; delete dispatches replace-rule-delete.
+//   replace-rule-toggle; delete first opens an inline confirmation bound to a
+//   persisted Core rule, then the second tap dispatches the Core write.
 @Component
 export struct ReaderReplacePanel {
   @StorageProp('reader.replaceRules') rules: ReplaceRule[] = [];
+  @StorageProp('reader.pendingReplaceRuleDeleteId') pendingReplaceRuleDeleteId: string = '';
   @State formVisible: boolean = false;
   @State editingId: string = '';
   @State patternInput: string = '';
@@ -2668,6 +3273,14 @@ export struct ReaderReplacePanel {
   private closeForm(): void {
     this.formVisible = false;
     this.editingId = '';
+  }
+
+  private pendingDeleteRule(): ReplaceRule | null {
+    const id = this.pendingReplaceRuleDeleteId;
+    for (let i = 0; i < this.rules.length; i++) {
+      if (this.rules[i].id === id) return this.rules[i];
+    }
+    return null;
   }
 
   private submitForm(): void {
@@ -2713,6 +3326,17 @@ export struct ReaderReplacePanel {
         }
         .width('100%')
         .height(24)
+        .alignItems(VerticalAlign.Center)
+
+        // Preset rule category labels (live demo copy)
+        Row({ space: 8 }) {
+          Text('雨容称呼').fontSize(9).fontColor(ColorTokens.muted)
+          Text('旧称统一').fontSize(9).fontColor(ColorTokens.muted)
+          Text('标点清理').fontSize(9).fontColor(ColorTokens.muted)
+          Text('广告过滤').fontSize(9).fontColor(ColorTokens.muted)
+        }
+        .width('100%')
+        .height(18)
         .alignItems(VerticalAlign.Center)
 
         if (this.formVisible) {
@@ -2800,6 +3424,50 @@ export struct ReaderReplacePanel {
           .backgroundColor(DemoAliasTokens.surface)
         }
 
+        if (this.pendingReplaceRuleDeleteId.length > 0) {
+          Column({ space: 6 }) {
+            Text('确认删除这条替换规则？')
+              .fontSize(11)
+              .fontWeight(760)
+              .fontColor(ColorTokens.controlInk)
+            Text(this.pendingDeleteRule()?.pattern ?? '该规则已不在当前 Core 列表中')
+              .fontSize(10)
+              .fontColor(ColorTokens.muted)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+            Row({ space: 8 }) {
+              Text('取消')
+                .fontSize(10)
+                .fontWeight(760)
+                .fontColor(ColorTokens.primaryDark)
+                .height(26)
+                .padding({ left: 12, right: 12 })
+                .border({ width: 1, color: ColorTokens.primary })
+                .borderRadius(DemoAliasTokens.radiusPill)
+                .backgroundColor(DemoAliasTokens.surface)
+                .textAlign(TextAlign.Center)
+                .onClick(() => ReaderUiStore.dispatch({ type: 'replace-rule-delete-cancel' }))
+              Text('确认删除')
+                .fontSize(10)
+                .fontWeight(760)
+                .fontColor(DemoAliasTokens.onPrimary)
+                .height(26)
+                .padding({ left: 12, right: 12 })
+                .borderRadius(DemoAliasTokens.radiusPill)
+                .backgroundColor(ColorTokens.border)
+                .textAlign(TextAlign.Center)
+                .onClick(() => ReaderUiStore.dispatch({ type: 'replace-rule-delete-confirm' }))
+            }
+            .width('100%')
+            .alignItems(VerticalAlign.Center)
+          }
+          .width('100%')
+          .padding(8)
+          .border({ width: 1, color: ColorTokens.border })
+          .borderRadius(DemoAliasTokens.radiusMd)
+          .backgroundColor(ColorTokens.metaBg)
+        }
+
         Column() {
           ForEach(this.rules, (rule: ReplaceRule, i: number) => {
             Row({ space: 6 }) {
@@ -2846,7 +3514,7 @@ export struct ReaderReplacePanel {
                 .borderRadius(DemoAliasTokens.radiusMd)
                 .backgroundColor(ColorTokens.border)
                 .textAlign(TextAlign.Center)
-                .onClick(() => ReaderUiStore.dispatch({ type: 'replace-rule-delete', replaceRuleId: rule.id }))
+                .onClick(() => ReaderUiStore.dispatch({ type: 'replace-rule-delete-request', replaceRuleId: rule.id }))
             }
             .width('100%')
             .height(40)
@@ -2875,6 +3543,11 @@ export struct ReaderReplacePanel {
 export struct ReaderAutoScrollPanel {
   @StorageProp('reader.autoPageSession.intervalSeconds') intervalSeconds: number = 5;
   @StorageProp('reader.autoPageMode') autoPageMode: string = 'continuous';
+  @StorageProp('reader.activeSession') activeSession: string = '';
+
+  private toggleLabel(): string {
+    return this.activeSession === 'auto-page' ? '停止自动翻页' : '开始自动翻页';
+  }
 
   build() {
     ReaderQuickPanelShell({ debugLabel: 'ReaderQuickPanel' }) {
@@ -2882,7 +3555,7 @@ export struct ReaderAutoScrollPanel {
         Row() {
           ReaderQuickBackButton()
           Blank()
-          ReaderQuickPillButton({ label: '停止自动翻页', disabled: true, tapEvent: 'auto-page-toggle' })
+          ReaderQuickPillButton({ label: this.toggleLabel(), tapEvent: 'auto-page-toggle' })
         }
         .width('100%')
         .height(24)
@@ -2910,7 +3583,7 @@ export struct ReaderAutoScrollPanel {
           .height('100%')
           .justifyContent(FlexAlign.Center)
           .alignItems(HorizontalAlign.Center)
-          .opacity(0.42)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'chapter-prev' }))
 
           Column({ space: 4 }) {
             Stack({ alignContent: Alignment.Center }) {
@@ -2930,6 +3603,7 @@ export struct ReaderAutoScrollPanel {
           .height('100%')
           .justifyContent(FlexAlign.Center)
           .alignItems(HorizontalAlign.Center)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'auto-page-toggle' }))
 
           Column({ space: 3 }) {
             Row() {
@@ -2952,6 +3626,7 @@ export struct ReaderAutoScrollPanel {
           .height('100%')
           .justifyContent(FlexAlign.Center)
           .alignItems(HorizontalAlign.Center)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'chapter-next' }))
         }
         .width('100%')
         .height(73)

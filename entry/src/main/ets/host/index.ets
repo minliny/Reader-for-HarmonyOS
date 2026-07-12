@@ -13,3 +13,7 @@ export type {
   HostCapabilityDispatch,
   HostCapabilityAvailabilityResolver,
 } from './HostCapabilityManifest';
+export { ReaderUiHostDispatcher } from './ReaderUiHostDispatcher';
+export { ReaderUiHostCapabilityManifest } from './ReaderUiHostCapabilityManifest';
+export { HarmonyReaderUiHostPlatform } from './HarmonyReaderUiHostPlatform';
+export * from './ReaderUiHostContract';

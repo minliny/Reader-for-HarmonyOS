@@ -14,9 +14,9 @@
 //
 // Permission: setData needs no permission. getData needs
 //   ohos.permission.READ_PASTEBOARD (user_grant, API 12+) — declared in
-//   module.json5 and requested at runtime via PermissionHostAdapter. If the
-//   permission is not granted, paste() returns an empty string rather than
-//   throwing, so Reducer can degrade gracefully.
+//   module.json5 and requested at runtime via PermissionHostAdapter. A denied
+//   permission is an execution failure; it must not be confused with a real,
+//   successfully-read empty clipboard.
 import pasteboard from '@ohos.pasteboard';
 import {
   HostClipboardCopyRequest,
@@ -30,17 +30,20 @@ export class ClipboardHostAdapter {
    * setData needs no permission.
    */
   async copy(request: HostClipboardCopyRequest): Promise<HostClipboardCopyResponse> {
-    const systemPasteboard = pasteboard.getSystemPasteboard();
-    const pasteData = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, request.text);
-    await systemPasteboard.setData(pasteData);
-    return { copied: true };
+    try {
+      const systemPasteboard = pasteboard.getSystemPasteboard();
+      const pasteData = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, request.text);
+      await systemPasteboard.setData(pasteData);
+      return { copied: true };
+    } catch (e) {
+      throw new Error(`ClipboardHostAdapter.copy failed: ${e}`);
+    }
   }
 
   /**
    * clipboard.paste — read text from the system pasteboard.
-   * getData requires ohos.permission.READ_PASTEBOARD (API 12+). If the
-   * permission is missing, we return an empty string instead of throwing so
-   * Reducer can degrade gracefully.
+   * getData requires ohos.permission.READ_PASTEBOARD (API 12+). Permission or
+   * platform failures throw so HostRequest dispatch remains fail-closed.
    */
   async paste(): Promise<HostClipboardPasteResponse> {
     const systemPasteboard = pasteboard.getSystemPasteboard();
@@ -49,8 +52,7 @@ export class ClipboardHostAdapter {
       const text = data.getPrimaryText();
       return { text: text };
     } catch (e) {
-      // Permission denied or pasteboard empty — degrade to empty string.
-      return { text: '' };
+      throw new Error(`ClipboardHostAdapter.paste failed: ${e}`);
     }
   }
 }
