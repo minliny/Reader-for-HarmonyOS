@@ -132,7 +132,7 @@ jobs:
             --output "$RUNNER_TEMP/reader-ui-verified.json" \
             --github-output "$GITHUB_OUTPUT"
 
-      - name: Update only the HarmonyOS consumer lock identity
+      - name: Update the verified HarmonyOS Reader UI lock pair
         id: update-lock
         run: |
           set -euo pipefail
@@ -140,6 +140,10 @@ jobs:
             --lock Reader-for-HarmonyOS/READER_UI_CONSUMER.json \
             --verified-release "$RUNNER_TEMP/reader-ui-verified.json" \
             --github-output "$GITHUB_OUTPUT"
+          node Reader-for-HarmonyOS/scripts/update_reader_ui_package_lock.mjs \
+            --consumer-lock Reader-for-HarmonyOS/READER_UI_CONSUMER.json \
+            --package-lock Reader-for-HarmonyOS/entry/oh-package-lock.json5 \
+            --verified-release "$RUNNER_TEMP/reader-ui-verified.json"
 
       - name: Host-owned postcondition protects rollout and repository scope
         env:
@@ -150,10 +154,21 @@ jobs:
           import crypto from 'node:crypto';
           import fs from 'node:fs';
           import { execFileSync } from 'node:child_process';
+          import {
+            assertExactReaderUiReleaseBumpPaths,
+            assertReaderUiPackageLockVersionUpdate,
+            assertReaderUiReleaseLocksSynchronized,
+            READER_UI_PACKAGE_LOCK_PATH,
+            READER_UI_RELEASE_BUMP_PATHS,
+          } from './Reader-for-HarmonyOS/scripts/reader_ui_release_lock_lib.mjs';
           const repository = 'Reader-for-HarmonyOS';
           const payload = JSON.parse(process.env.READER_UI_DISPATCH_PAYLOAD);
           const before = JSON.parse(execFileSync('git', ['-C', repository, 'show', 'HEAD:READER_UI_CONSUMER.json'], { encoding: 'utf8' }));
           const after = JSON.parse(fs.readFileSync(`${repository}/READER_UI_CONSUMER.json`, 'utf8'));
+          const packageBefore = JSON.parse(execFileSync(
+            'git', ['-C', repository, 'show', `HEAD:${READER_UI_PACKAGE_LOCK_PATH}`], { encoding: 'utf8' },
+          ));
+          const packageAfter = JSON.parse(fs.readFileSync(`${repository}/${READER_UI_PACKAGE_LOCK_PATH}`, 'utf8'));
           const exactKeys = (value, expected, label) => {
             const actual = Object.keys(value).sort(); expected = [...expected].sort();
             if (actual.length !== expected.length || actual.some((key, index) => key !== expected[index])) throw new Error(`${label} keys changed outside the lock v2 contract`);
@@ -171,14 +186,22 @@ jobs:
           if (version.version !== payload.version) throw new Error('artifact VERSION.json does not match dispatch version');
           if (version.schema?.['host-request'] !== after.hostRequestSchemaVersion || runtime.schemaVersion !== after.runtimeActionsSchemaVersion) throw new Error('lock schema versions do not match the release artifact');
           if (crypto.createHash('sha256').update(runtimeBytes).digest('hex') !== payload.runtimeActionsSha256) throw new Error('artifact runtime actions do not match dispatch hash');
+          assertReaderUiPackageLockVersionUpdate(packageBefore, packageAfter, payload.version);
+          assertReaderUiReleaseLocksSynchronized(after, packageAfter);
           const status = execFileSync('git', ['-C', repository, 'status', '--porcelain=v1', '--untracked-files=all'], { encoding: 'utf8' }).trimEnd();
           const paths = status ? status.split(/\r?\n/).map((line) => line.slice(3)) : [];
-          if (paths.length > 1 || (paths.length === 1 && paths[0] !== 'READER_UI_CONSUMER.json')) throw new Error(`host changes escaped the consumer lock: ${paths.join(',')}`);
-          execFileSync('git', ['-C', repository, 'diff', '--check', '--', 'READER_UI_CONSUMER.json']);
+          assertExactReaderUiReleaseBumpPaths(paths, 'host changes');
+          execFileSync('git', ['-C', repository, 'diff', '--check', '--', ...READER_UI_RELEASE_BUMP_PATHS]);
           NODE
 
       - name: Verify version, action hash, release identity, rollout lock, and dependency wiring
         run: node Reader-UI/tools/runtime/check-host-consumers.mjs --host harmonyos
+
+      - name: Verify HarmonyOS dual-lock consistency and exact bump scope
+        working-directory: Reader-for-HarmonyOS
+        run: |
+          node scripts/check_reader_ui_shadow_allowlist.mjs
+          npm run test:reader-ui-release-lock
 
       - name: Explain executable proof boundary
         run: |
@@ -193,9 +216,10 @@ jobs:
           HOST_GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          node Reader-UI/tools/release/publish-host-bump-pr.mjs \
+          node Reader-for-HarmonyOS/scripts/publish-host-bump-pr.mjs \
             --host-root Reader-for-HarmonyOS \
-            --lock Reader-for-HarmonyOS/READER_UI_CONSUMER.json \
+            --consumer-lock Reader-for-HarmonyOS/READER_UI_CONSUMER.json \
+            --package-lock Reader-for-HarmonyOS/entry/oh-package-lock.json5 \
             --verified-release "$RUNNER_TEMP/reader-ui-verified.json" \
             --host-repository "$GITHUB_REPOSITORY" \
             --base '${{ github.event.repository.default_branch }}' \
