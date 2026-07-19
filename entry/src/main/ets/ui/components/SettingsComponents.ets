@@ -345,6 +345,7 @@ struct SettingsOptionRow {
   @Prop settingsKey: string = '';   // B1 P0：设置项 key，透传给 segment/stepper/switch
   @Prop icon: Resource | undefined = undefined;   // P1.1：行首图标，通过 TokenAdapter.icon() 传入
   @StorageProp('reader.pendingCacheClear') pendingCacheClear: boolean = false;
+  @StorageProp('reader.coreSlice10Loading') coreSlice10Loading: boolean = false;
 
   build() {
     Row() {
@@ -386,7 +387,8 @@ struct SettingsOptionRow {
       } else if (this.kind === 'status') {
         SettingsStatusBadge({ label: this.value, tone: this.tone })
       } else if (this.kind === 'action') {
-        Text(this.settingsKey === 'cache-clear' && this.pendingCacheClear ? '确认清理' : this.value)
+        Text(this.settingsKey === 'cache-clear' && this.coreSlice10Loading ? '清理中…' :
+          (this.settingsKey === 'cache-clear' && this.pendingCacheClear ? '确认清理' : this.value))
           .fontSize(12)
           .fontWeight(850)
           .fontColor(DemoAliasTokens.onPrimary)
@@ -422,6 +424,7 @@ struct SettingsOptionRow {
       if (this.kind === 'value') {
         ReaderUiStore.dispatch({ type: 'settings-select-open', settingsKey: this.settingsKey });
       } else if (this.kind === 'action') {
+        if (this.settingsKey === 'cache-clear' && this.coreSlice10Loading) return;
         if (this.settingsKey === 'cache-clear' && this.pendingCacheClear) {
           ReaderUiStore.dispatch({ type: 'cache-clear-confirm' });
         } else {
@@ -513,6 +516,7 @@ export struct SettingsGeneralPage {
   @StorageProp('reader.appThemeMode') appThemeMode: string = 'system';
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
   @StorageProp('reader.pendingCacheClear') pendingCacheClear: boolean = false;
+  @StorageProp('reader.coreSlice10Loading') coreSlice10Loading: boolean = false;
 
   build() {
     Column() {
@@ -615,9 +619,9 @@ export struct SettingsGeneralPage {
           })
           SettingsOptionRow({
             title: '缓存清理',
-            subtitle: '仅清理本会话网络缓存；不会删除 Core 阅读正文、书架或备份',
+            subtitle: '清理 Core 章节缓存和已完成队列项；保留未完成任务、书架与备份',
             kind: 'action',
-            value: '清理本会话缓存',
+            value: '清理 Core 缓存',
             settingsKey: 'cache-clear',
             icon: TokenAdapter.icon('trash'),
           })
@@ -633,7 +637,7 @@ export struct SettingsGeneralPage {
                 .borderRadius(DemoAliasTokens.radiusPill)
                 .border({ width: 1, color: ColorTokens.border })
                 .onClick(() => ReaderUiStore.dispatch({ type: 'cache-clear-cancel' }))
-              Text('确认仅清理会话缓存')
+              Text(this.coreSlice10Loading ? 'Core 正在清理…' : '确认清理 Core 缓存')
                 .fontSize(12)
                 .fontWeight(750)
                 .fontColor(DemoAliasTokens.onPrimary)
@@ -642,7 +646,11 @@ export struct SettingsGeneralPage {
                 .textAlign(TextAlign.Center)
                 .borderRadius(DemoAliasTokens.radiusPill)
                 .backgroundColor(ColorTokens.primary)
-                .onClick(() => ReaderUiStore.dispatch({ type: 'cache-clear-confirm' }))
+                .opacity(this.coreSlice10Loading ? 0.6 : 1)
+                .enabled(!this.coreSlice10Loading)
+                .onClick(() => {
+                  if (!this.coreSlice10Loading) ReaderUiStore.dispatch({ type: 'cache-clear-confirm' });
+                })
             }
             .width('100%')
             .padding({ left: 12, right: 12, top: 8, bottom: 4 })

@@ -510,6 +510,16 @@ export interface ReaderUiState {
   // Session-cache cleanup is intentionally a separate confirmation from the
   // generic settings action so a stale action event cannot clear Host cache.
   pendingCacheClear: boolean;
+  // Latest visible Slice 10 command projection. The exact Core result stays
+  // available to cache/download/undo surfaces instead of being reduced to a
+  // console message. `method` identifies the strict result shape.
+  coreSlice10Method: string;
+  coreSlice10Loading: boolean;
+  coreSlice10Result: ReaderUIJSONPayload | null;
+  coreSlice10Error: string;
+  // Only a successful Core replace.persist response may populate this token.
+  // Generated ViewState/sample payloads are never copied into Store state.
+  lastUndoToken: ReaderUIJSONPayload | null;
   // ── P1.3 WebDAV 配置字段 ──
   webdavServerUrl: string;
   webdavUsername: string;
@@ -698,6 +708,10 @@ export interface UiEvent {
   coreBackupStatus?: string;
   coreBackupMessage?: string;
   coreBackupInfo?: CoreStorageBackupInfo | null;
+  coreSlice10Method?: string;
+  coreSlice10Result?: ReaderUIJSONPayload | null;
+  coreSlice10Error?: string;
+  lastUndoToken?: ReaderUIJSONPayload | null;
   // ── W1 本地书导入事件字段 ──
   importFormat?: string;                  // source-import-preview: Core 实测格式
   importEncoding?: string;                // source-import-preview: Core 实测编码

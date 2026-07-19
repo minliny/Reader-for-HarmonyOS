@@ -54,6 +54,13 @@ export class Slice10CapabilityPolicy {
       reason: 'Core owns the global keyword collection and destructive clear.',
     },
     {
+      id: 'reading.cache',
+      coreMethods: ['cache.book.status', 'cache.book.prefetch', 'cache.clear'],
+      schemaTier: Slice10SchemaTier.TypedCommand,
+      executionPolicy: Slice10ExecutionPolicy.Production,
+      reason: 'Strict sourceId/bookId/range DTOs with Core-owned queue, status and clear results.',
+    },
+    {
       id: 'reading.read-record',
       coreMethods: ['read-record.create', 'read-record.list', 'read-record.update', 'read-record.delete'],
       schemaTier: Slice10SchemaTier.MethodExampleOnly,
@@ -62,10 +69,13 @@ export class Slice10CapabilityPolicy {
     },
     {
       id: 'rules.replace',
-      coreMethods: ['replace-rule.create', 'replace-rule.list', 'replace-rule.update', 'replace-rule.delete'],
+      coreMethods: [
+        'replace-rule.create', 'replace-rule.list', 'replace-rule.update', 'replace-rule.delete',
+        'replace.persist', 'replace.undo',
+      ],
       schemaTier: Slice10SchemaTier.TypedCommand,
       executionPolicy: Slice10ExecutionPolicy.Production,
-      reason: 'Existing Core-owned CRUD with the native pilot and explicit destructive confirmation.',
+      reason: 'Core-owned CRUD plus a Core-issued, one-time undo token projected by the native pilot.',
     },
     {
       id: 'rules.txt-toc',

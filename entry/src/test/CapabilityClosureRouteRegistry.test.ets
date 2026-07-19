@@ -40,6 +40,7 @@ export default function CapabilityClosureRouteRegistryTests(): void {
       expect(ReaderCapabilityClosureRouteRegistry.ALL.length).assertEqual(24);
       const seen: string[] = [];
       let coreBackedCount: number = 0;
+      let nativeBackedCount: number = 0;
       let failClosedCount: number = 0;
       for (let index: number = 0;
         index < ReaderCapabilityClosureRouteRegistry.ALL.length; index += 1) {
@@ -55,8 +56,12 @@ export default function CapabilityClosureRouteRegistryTests(): void {
           .assertEqual(definition.topLevelTypes.join('|'));
         if (definition.executionPolicy === CapabilityClosureExecutionPolicy.CoreBacked) {
           coreBackedCount += 1;
-          expect(definition.id === 'bookmarks-manager').assertTrue();
+          expect(definition.id === 'bookmarks-manager' || definition.id === 'settings-storage').assertTrue();
           expect(ReaderCapabilityClosureRouteRegistry.isCoreBacked(definition.id)).assertTrue();
+          expect(ReaderCapabilityClosureRouteRegistry.isFailClosed(definition.id)).assertFalse();
+        } else if (definition.executionPolicy === CapabilityClosureExecutionPolicy.NativeBacked) {
+          nativeBackedCount += 1;
+          expect(ReaderCapabilityClosureRouteRegistry.isNativeBacked(definition.id)).assertTrue();
           expect(ReaderCapabilityClosureRouteRegistry.isFailClosed(definition.id)).assertFalse();
         } else {
           failClosedCount += 1;
@@ -66,8 +71,9 @@ export default function CapabilityClosureRouteRegistryTests(): void {
           expect(ReaderCapabilityClosureRouteRegistry.isCoreBacked(definition.id)).assertFalse();
         }
       }
-      expect(coreBackedCount).assertEqual(1);
-      expect(failClosedCount).assertEqual(23);
+      expect(coreBackedCount).assertEqual(2);
+      expect(nativeBackedCount).assertEqual(4);
+      expect(failClosedCount).assertEqual(18);
     });
 
     it('keepsAll51BindingsAnd26ButtonsFailClosed', 0, () => {

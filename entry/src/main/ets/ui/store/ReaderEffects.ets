@@ -28,6 +28,8 @@ import util from '@ohos.util';
 import promptAction from '@ohos.promptAction';
 import { ViewportAdapter } from '../adapters/ViewportAdapter';
 import { LocalBookFormatPolicy } from '../../host/LocalBookFormatPolicy';
+import type { ReaderUIJSONPayload } from 'reader_ui_runtime';
+import { CoreSlice10Service } from './CoreSlice10Service';
 
 interface CoreStorageBackupEnvelope {
   manifest: JsonObject;
@@ -37,6 +39,7 @@ interface CoreStorageBackupEnvelope {
 
 interface ErrorMessageLike {
   message?: string;
+  retryable?: boolean;
 }
 
 interface SourceSwitchProgressSnapshot {
@@ -84,6 +87,7 @@ interface ReadingProgressSnapshot {
 }
 
 export class ReaderEffects {
+  private static readonly slice10Core: CoreSlice10Service = new CoreSlice10Service();
   // Auto-page countdown timer handle. Non-null while the auto-page session is
   // active; cleared on session exit. Stored statically because Effects is a
   // stateless dispatcher — the timer must outlive each maybeRun() call.
@@ -590,6 +594,19 @@ export class ReaderEffects {
         ReaderEffects.runSettingsAction(event.settingsKey ?? '');
         break;
       }
+      case 'reader-bookCache-open':
+        ReaderEffects.runSlice10ContractCommand('cache.book.status', event);
+        break;
+      case 'download-task-retry':
+        ReaderEffects.runSlice10ContractCommand('cache.book.prefetch', event);
+        break;
+      case 'settings-cache-clear':
+      case 'storage-cleanup-confirm':
+        ReaderEffects.runSlice10ContractCommand('cache.clear', event);
+        break;
+      case 'reader-replace-undo':
+        ReaderEffects.runSlice10ContractCommand('replace.undo', event);
+        break;
       case 'cache-clear-confirm':
         ReaderEffects.clearConfirmedSessionCache();
         break;
@@ -1209,12 +1226,12 @@ export class ReaderEffects {
 
   // ── P1.2 settings-action effect ──
   // `cache-clear` only opens its confirmation state here; the confirmed event
-  // reaches the Core adapter. Search-history delegates to its own Core-backed
+  // reaches Core. Search-history delegates to its own Core-backed
   // confirmation flow.
   static runSettingsAction(settingsKey: string): void {
     if (settingsKey === 'cache-clear') {
       // The reducer has only opened the visible confirmation surface. The
-      // second `cache-clear-confirm` event is the sole route to Core/Host.
+      // second `cache-clear-confirm` event is the sole route to Core.
       return;
     } else if (settingsKey === 'clear-search-history') {
       // Reuse the same Core-confirmed clear + refresh flow as the search page
@@ -1238,20 +1255,91 @@ export class ReaderEffects {
       });
       return;
     }
+    if (state.coreSlice10Loading) return;
+    const payload: ReaderUIJSONPayload = {};
+    payload['scope'] = 'cache';
+    ReaderUiStore.dispatch({ type: 'core-slice10-start', coreSlice10Method: 'cache.clear' });
     try {
-      const cleared = CoreRuntime.get().getCoreAdapter().cacheClear('all');
-      console.info(`ReaderEffects: cache-clear completed entries=${cleared}`);
-      ReaderUiStore.dispatch({ type: 'cache-clear-complete' });
-    } catch (e) {
-      ReaderUiStore.dispatch({
-        type: 'set-error',
-        error: {
-          code: 'CACHE_CLEAR_FAILED',
-          message: `缓存清理失败：${ReaderEffects.errorMessage(e)}`,
-          retryable: true,
-        },
+      ReaderEffects.slice10Core.cacheClear(payload).then((result: JsonObject): void => {
+        ReaderUiStore.dispatch({
+          type: 'core-slice10-succeeded',
+          coreSlice10Method: 'cache.clear',
+          coreSlice10Result: result as Object as ReaderUIJSONPayload,
+        });
+        ReaderUiStore.dispatch({ type: 'cache-clear-complete' });
+      }).catch((error: Error): void => {
+        ReaderEffects.reportSlice10CommandFailure('cache.clear', error, 'CACHE_CLEAR_FAILED');
       });
+    } catch (error) {
+      ReaderEffects.reportSlice10CommandFailure('cache.clear', error, 'CACHE_CLEAR_FAILED');
     }
+  }
+
+  /** Execute the four Reader UI Slice 10 commands through the common Core
+   * dispatcher. Canonical nested payloads are mandatory: this boundary never
+   * recovers a book selector/range/undo token from fixture or visible state. */
+  private static runSlice10ContractCommand(method: string, event: UiEvent): void {
+    ReaderUiStore.dispatch({ type: 'core-slice10-start', coreSlice10Method: method });
+    const payload = event.readerUIJSONPayload;
+    if (payload === undefined) {
+      ReaderEffects.reportSlice10CommandFailure(
+        method,
+        new Error(`${event.type} is missing canonical readerUIJSONPayload`),
+        'CORE_SLICE10_PAYLOAD_MISSING',
+        false,
+      );
+      return;
+    }
+    let request: Promise<JsonObject>;
+    try {
+      switch (method) {
+        case 'cache.book.status':
+          request = ReaderEffects.slice10Core.cacheBookStatus(payload);
+          break;
+        case 'cache.book.prefetch':
+          request = ReaderEffects.slice10Core.cacheBookPrefetch(payload);
+          break;
+        case 'cache.clear':
+          request = ReaderEffects.slice10Core.cacheClear(payload);
+          break;
+        case 'replace.undo':
+          request = ReaderEffects.slice10Core.replaceUndo(payload);
+          break;
+        default:
+          throw new Error(`unsupported Slice 10 Core method ${method}`);
+      }
+    } catch (error) {
+      // DTO boundary failures are deterministic; replaying the same malformed
+      // event cannot repair its selector/range/token.
+      ReaderEffects.reportSlice10CommandFailure(method, error, 'CORE_SLICE10_COMMAND_FAILED', false);
+      return;
+    }
+    request.then((result: JsonObject): void => {
+      ReaderUiStore.dispatch({
+        type: 'core-slice10-succeeded',
+        coreSlice10Method: method,
+        coreSlice10Result: result as Object as ReaderUIJSONPayload,
+      });
+      if (method === 'replace.undo') ReaderEffects.loadReplaceRules();
+    }).catch((error: Error): void => {
+      ReaderEffects.reportSlice10CommandFailure(method, error);
+    });
+  }
+
+  private static reportSlice10CommandFailure(method: string, error: Object,
+    code: string = 'CORE_SLICE10_COMMAND_FAILED', fallbackRetryable: boolean = true): void {
+    const candidate = error as ErrorMessageLike;
+    const message = `${method} 执行失败：${ReaderEffects.errorMessage(error)}`;
+    ReaderUiStore.dispatch({
+      type: 'core-slice10-failed',
+      coreSlice10Method: method,
+      coreSlice10Error: message,
+      error: {
+        code: code,
+        message: message,
+        retryable: typeof candidate.retryable === 'boolean' ? candidate.retryable : fallbackRetryable,
+      },
+    });
   }
 
   // ── P1.3 WebDAV test/save effects ──
@@ -6187,9 +6275,10 @@ export class ReaderEffects {
 
   // ── Replace rule persistence ──────────────────────────────────────────
   // The reducer updates local state optimistically (UI reflects the change
-  // immediately). These handlers persist the change to Core storage via
-  // replace-rule.create/update/delete.  Every create completion path reloads
-  // Core's canonical list, so a local pending id never becomes a fake Core id.
+  // immediately). Create is owned by the native production path and uses the
+  // strict replace.persist DTO so Core can issue the one-time undo token. The
+  // whole Reader-UI replace Pilot remains Shadow; update/delete keep their
+  // existing native owners until their typed promotion boundary is closed.
 
   static handleReplaceRuleAdd(event: UiEvent): void {
     const pattern = event.replaceRulePattern ?? '';
@@ -6208,21 +6297,43 @@ export class ReaderEffects {
     const replacement = event.replaceRuleReplacement ?? '';
     const scope = event.replaceRuleScope ?? 'chapter';
     try {
-      const runtime = CoreRuntime.get();
-      const rule: JsonObject = {};
-      rule['pattern'] = pattern;
-      rule['replacement'] = replacement;
-      rule['scope'] = scope;
-      rule['enabled'] = true;
-      runtime.replaceRuleCreate(rule).then((): void => {
+      const ruleParams: ReaderUIJSONPayload = {};
+      ruleParams['name'] = pattern;
+      ruleParams['pattern'] = pattern;
+      ruleParams['replacement'] = replacement;
+      ruleParams['scope'] = scope;
+      ruleParams['scopeTitle'] = scope === 'title';
+      ruleParams['scopeContent'] = scope !== 'title';
+      ruleParams['isEnabled'] = true;
+      ruleParams['isRegex'] = true;
+      const payload: ReaderUIJSONPayload = {};
+      payload['operation'] = 'create';
+      payload['params'] = ruleParams;
+      ReaderUiStore.dispatch({ type: 'core-slice10-start', coreSlice10Method: 'replace.persist' });
+      ReaderEffects.slice10Core.replacePersistCreate(payload).then((result: JsonObject): void => {
+        const resultPayload = result as Object as ReaderUIJSONPayload;
+        const token = resultPayload['undoToken'] as Object as ReaderUIJSONPayload;
+        ReaderUiStore.dispatch({
+          type: 'core-slice10-succeeded',
+          coreSlice10Method: 'replace.persist',
+          coreSlice10Result: resultPayload,
+        });
+        ReaderUiStore.dispatch({
+          type: 'core-slice10-undo-token-captured',
+          lastUndoToken: token,
+        });
         ReaderEffects.loadReplaceRules();
       }).catch((e: Error): void => {
+        ReaderEffects.reportSlice10CommandFailure(
+          'replace.persist', e, 'CORE_SLICE10_REPLACE_PERSIST_FAILED', false,
+        );
         ReaderEffects.loadReplaceRules();
-        console.info(`ReaderEffects: replace-rule-create error: ${e.message}`);
       });
     } catch (e) {
+      ReaderEffects.reportSlice10CommandFailure(
+        'replace.persist', e, 'CORE_SLICE10_REPLACE_PERSIST_FAILED', false,
+      );
       ReaderEffects.loadReplaceRules();
-      console.info(`ReaderEffects: replace-rule-create error: ${(e as Error).message}`);
     }
   }
 

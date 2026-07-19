@@ -40,6 +40,8 @@ import ScreenGraphEmptyAdapterTests from './ScreenGraphEmptyAdapter.test';
 import ScreenGraphTerminalStateAdapterTests from './ScreenGraphTerminalStateAdapter.test';
 import AppearanceSpecTests from './AppearanceSpec.test';
 import LocalBookFormatPolicyTests from './LocalBookFormatPolicy.test';
+import CoreSlice10ServiceTests from './CoreSlice10Service.test';
+import ReaderSlice10LivePayloadResolverTests from './ReaderSlice10LivePayloadResolver.test';
 import HostSmokeTest from '../main/ets/host/tests/HostSmoke.test.ets';
 
 export default function testsuit(): void {
@@ -84,5 +86,7 @@ export default function testsuit(): void {
   ScreenGraphTerminalStateAdapterTests();
   AppearanceSpecTests();
   LocalBookFormatPolicyTests();
+  CoreSlice10ServiceTests();
+  ReaderSlice10LivePayloadResolverTests();
   HostSmokeTest();
 }

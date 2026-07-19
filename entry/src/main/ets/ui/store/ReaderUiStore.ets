@@ -7,7 +7,7 @@ import { ReaderReducer } from './ReaderReducer';
 import { DemoUiState } from '../fixtures/DemoUiState';
 import { ReaderThemeState } from '../tokens/ReaderThemeState';
 import { ReaderEffects } from './ReaderEffects';
-import type { ReaderUIBookOpenLayout, ReaderUIPageLayout, ReaderUIState } from 'reader_ui_runtime';
+import type { ReaderUIBookOpenLayout, ReaderUIJSONPayload, ReaderUIPageLayout, ReaderUIState } from 'reader_ui_runtime';
 import {
   ReaderUIBookOpenPilotResult,
   ReaderUIImportPilotResult,
@@ -395,6 +395,11 @@ export class ReaderUiStore {
   // ── P1.2 select/action 控件展开状态 key ──
   private static readonly K_EXPANDED_OPTION_KEY = 'reader.expandedOptionKey';
   private static readonly K_PENDING_CACHE_CLEAR = 'reader.pendingCacheClear';
+  static readonly K_CORE_SLICE10_METHOD: string = 'reader.coreSlice10Method';
+  static readonly K_CORE_SLICE10_LOADING: string = 'reader.coreSlice10Loading';
+  static readonly K_CORE_SLICE10_RESULT: string = 'reader.coreSlice10Result';
+  static readonly K_CORE_SLICE10_ERROR: string = 'reader.coreSlice10Error';
+  static readonly K_LAST_UNDO_TOKEN: string = 'reader.lastUndoToken';
   // ── P1.3 WebDAV 配置 keys ──
   private static readonly K_WEBDAV_SERVER_URL = 'reader.webdavServerUrl';
   private static readonly K_WEBDAV_USERNAME = 'reader.webdavUsername';
@@ -1118,6 +1123,11 @@ export class ReaderUiStore {
     // ── P1.2/P1.3 字段写入 AppStorage ──
     AppStorage.setOrCreate<string>(ReaderUiStore.K_EXPANDED_OPTION_KEY, s.expandedOptionKey);
     AppStorage.setOrCreate<boolean>(ReaderUiStore.K_PENDING_CACHE_CLEAR, s.pendingCacheClear);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_CORE_SLICE10_METHOD, s.coreSlice10Method);
+    AppStorage.setOrCreate<boolean>(ReaderUiStore.K_CORE_SLICE10_LOADING, s.coreSlice10Loading);
+    AppStorage.setOrCreate<ReaderUIJSONPayload | null>(ReaderUiStore.K_CORE_SLICE10_RESULT, s.coreSlice10Result);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_CORE_SLICE10_ERROR, s.coreSlice10Error);
+    AppStorage.setOrCreate<ReaderUIJSONPayload | null>(ReaderUiStore.K_LAST_UNDO_TOKEN, s.lastUndoToken);
     AppStorage.setOrCreate<string>(ReaderUiStore.K_WEBDAV_SERVER_URL, s.webdavServerUrl);
     AppStorage.setOrCreate<string>(ReaderUiStore.K_WEBDAV_USERNAME, s.webdavUsername);
     AppStorage.setOrCreate<string>(ReaderUiStore.K_WEBDAV_PASSWORD, s.webdavPassword);

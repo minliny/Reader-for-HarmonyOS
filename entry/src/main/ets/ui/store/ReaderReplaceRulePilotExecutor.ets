@@ -4,7 +4,7 @@
 // one-to-one execution of its single next Core effect and retains the bound
 // replace-rule context until that correlation has completed or been cancelled.
 // It handles the three Core commands declared by runtime-actions.json:
-//   reader.replace.create  → replace.persist   (replaceRuleCreate + replaceRuleList)
+//   reader.replace.create  → replace.persist   (exact DTO + Core undoToken)
 //   reader.replace.apply   → replace.apply      (replaceRuleUpdate/Delete + replaceRuleList)
 //   reader.replace.validate → replace.validate  (host-side validation, no Core write)
 import {
@@ -58,7 +58,7 @@ export class ReaderReplaceRuleDeferredHandle implements ReaderReplaceRuleCommand
 
 /** Testable seam for exactly the Core commands used by a replace-rule sequence. */
 export interface ReaderReplaceRuleCoreGateway {
-  beginReplacePersist(pattern: string, replacement: string, scope: string): ReaderReplaceRuleCommandHandle;
+  beginReplacePersist(payload: ReaderUIJSONPayload): ReaderReplaceRuleCommandHandle;
   beginReplaceApply(ruleId: string, action: string, pattern: string, replacement: string,
     scope: string, enabled: boolean): ReaderReplaceRuleCommandHandle;
   beginReplaceValidate(pattern: string, replacement: string, scope: string): ReaderReplaceRuleCommandHandle;
@@ -69,19 +69,22 @@ export interface ReaderReplaceRuleCoreGateway {
 export class CoreRuntimeReplaceRuleGateway implements ReaderReplaceRuleCoreGateway {
   private nextRequestId: number = 1;
 
-  beginReplacePersist(pattern: string, replacement: string, scope: string): ReaderReplaceRuleCommandHandle {
+  beginReplacePersist(payload: ReaderUIJSONPayload): ReaderReplaceRuleCommandHandle {
     const runtime = CoreRuntime.get();
-    const rule: JsonObject = {};
-    rule['pattern'] = pattern;
-    rule['replacement'] = replacement;
-    rule['scope'] = scope;
-    rule['enabled'] = true;
-    // Persist chains replace-rule.create → replace-rule.list. The executor
-    // consumes the canonical list so local state never retains a pending id.
-    const chained = runtime.replaceRuleCreate(rule).then((): Promise<JsonObject> => {
-      return runtime.replaceRuleList();
-    });
-    const handle = new ReaderReplaceRuleDeferredHandle(this.nextRequestId, chained);
+    const paramsValue = payload['params'];
+    if (paramsValue === null || paramsValue === undefined ||
+      typeof paramsValue !== 'object' || Array.isArray(paramsValue)) {
+      throw new Error('replace.persist requires the canonical params object');
+    }
+    const params: JsonObject = {};
+    params['operation'] = payload['operation'];
+    params['params'] = paramsValue;
+    if (payload['transactionId'] !== undefined) params['transactionId'] = payload['transactionId'];
+    if (payload['undoTtlSeconds'] !== undefined) params['undoTtlSeconds'] = payload['undoTtlSeconds'];
+    // Forward the exact Reader-UI DTO to the new Core method. The legacy
+    // replace-rule.create -> list chain discarded the Core-issued undo token.
+    const result = runtime.executeCoreMethod('replace.persist', params, 5000);
+    const handle = new ReaderReplaceRuleDeferredHandle(this.nextRequestId, result);
     this.nextRequestId += 1;
     return handle;
   }
@@ -129,9 +132,9 @@ export class CoreRuntimeReplaceRuleGateway implements ReaderReplaceRuleCoreGatew
   }
 
   beginReplaceRollback(): ReaderReplaceRuleCommandHandle {
-    // Rollback reloads Core's canonical list to restore local state after a
-    // failed write. No Core undo command exists; the list refresh is the
-    // authoritative restore.
+    // Failure rollback reloads Core's canonical list to restore local state.
+    // User-requested optimistic undo is a separate replace.undo transaction
+    // and must never be synthesized from a failed Pilot correlation.
     const runtime = CoreRuntime.get();
     const handle = new ReaderReplaceRuleDeferredHandle(
       this.nextRequestId,
@@ -164,6 +167,7 @@ export interface ReaderReplaceRulePilotContext {
   replacement: string;
   scope: string;
   enabled: boolean;
+  canonicalPayload: ReaderUIJSONPayload;
   inFlight?: ReaderReplaceRuleCommandHandle;
   currentEffect?: string;
 }
@@ -278,6 +282,7 @@ export class ReaderReplaceRuleEffectExecutor {
       replacement: replacement,
       scope: scope,
       enabled: enabled,
+      canonicalPayload: payload,
     };
   }
 
@@ -321,7 +326,7 @@ export class ReaderReplaceRuleEffectExecutor {
 
   private executePersist(context: ReaderReplaceRulePilotContext): void {
     try {
-      const handle = this.core.beginReplacePersist(context.pattern, context.replacement, context.scope);
+      const handle = this.core.beginReplacePersist(context.canonicalPayload);
       this.attachHandle(context, 'replace.persist', handle);
     } catch (error) {
       this.fail(context, 'replace.persist', error as Error);
@@ -386,10 +391,20 @@ export class ReaderReplaceRuleEffectExecutor {
       );
       switch (stage) {
         case 'replace.persist': {
-          const rules = this.parseRules(data);
+          const rules = this.mergePersistedRule(this.host.nativeState().replaceRules, data);
           this.host.applyDomainEvent({
             type: 'replace-rule-list-loaded',
             replaceRules: rules,
+          });
+          const fields = data as Object as Record<string, Object>;
+          const tokenValue = fields['undoToken'];
+          if (tokenValue === null || tokenValue === undefined ||
+            typeof tokenValue !== 'object' || Array.isArray(tokenValue)) {
+            throw new Error('replace.persist returned no Core undoToken');
+          }
+          this.host.applyDomainEvent({
+            type: 'core-slice10-undo-token-captured',
+            lastUndoToken: tokenValue as Object as ReaderUIJSONPayload,
           });
           this.complete(context);
           return;
@@ -500,5 +515,45 @@ export class ReaderReplaceRuleEffectExecutor {
       });
     }
     return rules;
+  }
+
+  private mergePersistedRule(existing: ReplaceRule[], data: JsonObject): ReplaceRule[] {
+    const resultFields = data as Object as Record<string, Object>;
+    const dataValue = resultFields['data'];
+    if (dataValue === null || dataValue === undefined ||
+      typeof dataValue !== 'object' || Array.isArray(dataValue)) {
+      throw new Error('replace.persist result requires data');
+    }
+    const dataFields = dataValue as Object as Record<string, Object>;
+    const ruleValue = dataFields['rule'];
+    if (ruleValue === null || ruleValue === undefined ||
+      typeof ruleValue !== 'object' || Array.isArray(ruleValue)) {
+      throw new Error('replace.persist create result requires data.rule');
+    }
+    const raw = ruleValue as Object as JsonObject;
+    const numberFields = raw as Object as Record<string, number>;
+    const stringFields = raw as Object as Record<string, string>;
+    const booleanFields = raw as Object as Record<string, boolean>;
+    const idValue = numberFields['id'];
+    if (!Number.isSafeInteger(idValue)) throw new Error('replace.persist data.rule requires integer id');
+    const rule: ReplaceRule = {
+      id: `rule-${idValue}`,
+      pattern: typeof stringFields['pattern'] === 'string' ? stringFields['pattern'] : '',
+      replacement: typeof stringFields['replacement'] === 'string' ? stringFields['replacement'] : '',
+      scope: booleanFields['scopeTitle'] === true && booleanFields['scopeContent'] !== true ? 'title' : 'chapter',
+      enabled: booleanFields['isEnabled'] === true,
+    };
+    const merged: ReplaceRule[] = [];
+    let replaced = false;
+    for (let index = 0; index < existing.length; index += 1) {
+      if (existing[index].id === rule.id) {
+        merged.push(rule);
+        replaced = true;
+      } else {
+        merged.push(existing[index]);
+      }
+    }
+    if (!replaced) merged.push(rule);
+    return merged;
   }
 }

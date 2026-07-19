@@ -16,6 +16,8 @@ import { ReaderAppearanceFont, ReaderAppearanceSelect, ReaderAppearanceSpecRegis
 import { SafeAreaAdapter } from '../adapters/SafeAreaAdapter';
 import { ViewportAdapter } from '../adapters/ViewportAdapter';
 import { ReaderUiStore } from '../store/ReaderUiStore';
+import { ReaderSlice10LivePayloadResolver } from '../store/ReaderSlice10LivePayloadResolver';
+import type { ReaderUIJSONPayload } from 'reader_ui_runtime';
 import {
   BookDetail,
   ChapterTocEntry,
@@ -29,6 +31,7 @@ import {
   TtsScope,
   TtsTimer,
   ReplaceRule,
+  UiEvent,
 } from '../store/ReaderUiState';
 import { ReaderThemeResolver, ReaderThemeOption } from '../tokens/ReaderThemeResolver';
 import { MotionAdapter } from '../adapters/MotionAdapter';
@@ -1511,6 +1514,7 @@ struct ReaderLiveOptionRow {
   @Prop toggleKey: string = '';
   @Prop optionKey: string = '';
   @Prop optionChoices: string[] = [];
+  @Prop routeId: string = '';
   @Prop disabled: boolean = false;
   // A disabled setting must say why it is unavailable.  Rendering a fixed
   // switch in its place made no-op Host gaps look like successful settings.
@@ -1603,6 +1607,10 @@ struct ReaderLiveOptionRow {
       .opacity(this.disabled ? 0.62 : 1)
       .enabled(!this.disabled)
       .onClick(() => {
+        if (!this.disabled && !this.switchRow && this.routeId.length > 0) {
+          ReaderUiStore.dispatch({ type: 'route-push', id: this.routeId as RouteId });
+          return;
+        }
         // 仅 disclosure 行响应展开/收起；switchRow 的切换由 CompactSwitch 处理。
         if (!this.disabled && !this.switchRow && this.optionKey.length > 0) {
           ReaderUiStore.dispatch({ type: 'set-reader-setting-option-expanded', settingOptionExpandedKey: this.optionKey });
@@ -1909,6 +1917,7 @@ export struct ReaderTtsPanel {
 // ── Settings panel (.fd-reader-settings-panel) ────────────────────────────
 @Component
 export struct ReaderSettingsPanel {
+  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
   @StorageProp('reader.readerToggles.autoPage') autoPage: boolean = false;
   @StorageProp('reader.readerToggles.volumePage') volumePage: boolean = false;
   @StorageProp('reader.readerToggles.landscapeLock') landscapeLock: boolean = false;
@@ -1954,7 +1963,14 @@ export struct ReaderSettingsPanel {
           ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_sun_dark'), title: '屏幕常亮', active: this.keepScreenOn, switchRow: true, toggleKey: 'keepScreenOn' })
           ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_progress_dark'), title: '页脚进度信息', active: this.statusInfo, switchRow: true, toggleKey: 'statusInfo' })
           ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_gesture_dark'), title: '触摸反馈', active: this.hapticFeedback, switchRow: true, toggleKey: 'hapticFeedback' })
-          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_download_dark'), title: '阅读缓存预取', value: 'Core command 未接入', disabled: true })
+          ReaderLiveOptionRow({
+            icon: $r('app.media.ui_icon_download_dark'),
+            title: '阅读缓存与预取',
+            value: this.currentBook === null ? '请先打开一本书' : '查看状态与操作',
+            routeId: 'reader-book-cache',
+            disabled: this.currentBook === null,
+            unavailableReason: '请先打开一本书',
+          })
           ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_info_dark'), title: '隐藏状态栏', active: this.hideStatusBar, switchRow: true, toggleKey: 'hideStatusBar' })
         }
         .width('100%')
@@ -2427,6 +2443,7 @@ struct ReaderFullToggleRow {
   @Prop title: string = '';
   @Prop active: boolean = false;
   @Prop toggleKey: string = '';
+  @Prop routeId: string = '';
   @Prop disabled: boolean = false;
   @Prop unavailableReason: string = '';
 
@@ -2453,6 +2470,11 @@ struct ReaderFullToggleRow {
           .fontColor(ColorTokens.muted)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
+      } else if (this.routeId.length > 0) {
+        Text('打开')
+          .fontSize(9)
+          .fontWeight(700)
+          .fontColor(ColorTokens.primaryDark)
       } else {
         ReaderCompactSwitch({ active: this.active, toggleKey: this.toggleKey })
       }
@@ -2462,6 +2484,12 @@ struct ReaderFullToggleRow {
     .padding({ left: 9, right: 9 })
     .border({ width: { top: 1 }, color: ColorTokens.border })
     .alignItems(VerticalAlign.Center)
+    .enabled(!this.disabled)
+    .onClick(() => {
+      if (!this.disabled && this.routeId.length > 0) {
+        ReaderUiStore.dispatch({ type: 'route-push', id: this.routeId as RouteId });
+      }
+    })
   }
 }
 
@@ -2812,6 +2840,7 @@ export struct ReaderFullAppearancePage {
 
 @Component
 export struct ReaderFullSettingsPage {
+  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
   @StorageProp('reader.readerToggles.autoPage') autoPage: boolean = false;
   @StorageProp('reader.readerToggles.volumePage') volumePage: boolean = false;
   @StorageProp('reader.readerToggles.landscapeLock') landscapeLock: boolean = false;
@@ -2859,11 +2888,14 @@ export struct ReaderFullSettingsPage {
             .borderRadius(DemoAliasTokens.radiusMd)
             .backgroundColor(ColorTokens.surfaceSoft)
           }
-          ReaderFullBlock({ title: '阅读缓存预取', meta: 'Core command 未接入' }) {
-            Text('当前 Core 未接入阅读缓存预取命令，设置页不能开启、关闭或显示预取结果。')
-              .fontSize(11)
-              .fontColor(ColorTokens.muted)
-              .lineHeight(18)
+          ReaderFullBlock({ title: '阅读缓存与预取', meta: 'Core 状态、预取与清理已接入' }) {
+            ReaderFullToggleRow({
+              icon: '缓',
+              title: this.currentBook === null ? '请先打开一本书' : '查看当前书籍缓存',
+              routeId: 'reader-book-cache',
+              disabled: this.currentBook === null,
+              unavailableReason: '缺少当前书籍上下文',
+            })
           }
         }
         .width('100%')
@@ -2910,6 +2942,37 @@ struct ReaderUtilityActionButton {
   @Prop detail: string = '';
   @Prop danger: boolean = false;
   @Prop disabled: boolean = false;
+  @Prop action: string = '';
+
+  private dispatchAction(): void {
+    if (this.disabled) return;
+    const state = ReaderUiStore.snapshot();
+    let event: UiEvent | null = null;
+    let method = 'cache.book.status';
+    if (this.action === 'status') {
+      event = ReaderSlice10LivePayloadResolver.cacheBookStatusEvent(state);
+    } else if (this.action === 'prefetch-current') {
+      method = 'cache.book.prefetch';
+      event = ReaderSlice10LivePayloadResolver.cacheBookPrefetchEvent(state, 'current');
+    } else if (this.action === 'prefetch-next') {
+      method = 'cache.book.prefetch';
+      event = ReaderSlice10LivePayloadResolver.cacheBookPrefetchEvent(state, 'next');
+    } else if (this.action === 'clear-book') {
+      method = 'cache.clear';
+      event = ReaderSlice10LivePayloadResolver.cacheClearEvent(state, 'book');
+    }
+    if (event !== null) {
+      ReaderUiStore.dispatch(event);
+      return;
+    }
+    const message = '当前书籍、书源或章节范围已变化，请返回阅读页后重试。';
+    ReaderUiStore.dispatch({
+      type: 'core-slice10-failed',
+      coreSlice10Method: method,
+      coreSlice10Error: message,
+      error: { code: 'CORE_SLICE10_LIVE_CONTEXT_REQUIRED', message: message, retryable: false },
+    });
+  }
 
   build() {
     Row({ space: 8 }) {
@@ -2948,6 +3011,7 @@ struct ReaderUtilityActionButton {
     .alignItems(VerticalAlign.Center)
     .opacity(this.disabled ? 0.58 : 1)
     .enabled(!this.disabled)
+    .onClick(() => this.dispatchAction())
   }
 }
 
@@ -2997,6 +3061,62 @@ export struct ReaderBookCachePage {
   @StorageProp('reader.chapterContent') chapterContent: string[] = [];
   @StorageProp('reader.currentChapterTitle') currentChapterTitle: string = '';
   @StorageProp('reader.loading') loading: boolean = false;
+  @StorageProp('reader.coreSlice10Method') coreSlice10Method: string = '';
+  @StorageProp('reader.coreSlice10Loading') coreSlice10Loading: boolean = false;
+  @StorageProp('reader.coreSlice10Result') coreSlice10Result: ReaderUIJSONPayload | null = null;
+  @StorageProp('reader.coreSlice10Error') coreSlice10Error: string = '';
+
+  aboutToAppear(): void {
+    if (this.coreSlice10Loading) return;
+    const event = ReaderSlice10LivePayloadResolver.cacheBookStatusEvent(ReaderUiStore.snapshot());
+    if (event !== null) ReaderUiStore.dispatch(event);
+  }
+
+  private canReadStatus(): boolean {
+    return ReaderSlice10LivePayloadResolver.cacheBookStatusEvent(ReaderUiStore.snapshot()) !== null;
+  }
+
+  private canPrefetchCurrent(): boolean {
+    return ReaderSlice10LivePayloadResolver.cacheBookPrefetchEvent(
+      ReaderUiStore.snapshot(), 'current',
+    ) !== null;
+  }
+
+  private canPrefetchNext(): boolean {
+    return ReaderSlice10LivePayloadResolver.cacheBookPrefetchEvent(
+      ReaderUiStore.snapshot(), 'next',
+    ) !== null;
+  }
+
+  private resultNumber(key: string): string {
+    if (this.coreSlice10Result === null) return '--';
+    const value = this.coreSlice10Result[key];
+    return typeof value === 'number' && Number.isSafeInteger(value) ? `${value}` : '--';
+  }
+
+  private cachedCount(): string {
+    return this.coreSlice10Method === 'cache.book.status' ? this.resultNumber('cachedCount') : '--';
+  }
+
+  private queuedCount(): string {
+    return this.coreSlice10Method === 'cache.book.status' ? this.resultNumber('queuedCount') : '--';
+  }
+
+  private commandMessage(): string {
+    if (this.coreSlice10Loading) return `${this.coreSlice10Method} 正在执行…`;
+    if (this.coreSlice10Error.length > 0) return this.coreSlice10Error;
+    if (this.coreSlice10Result === null) return '进入页面后将读取当前书籍的 Core 缓存状态。';
+    if (this.coreSlice10Method === 'cache.book.status') {
+      return `Core 已返回：缓存 ${this.resultNumber('cachedCount')} 章，队列 ${this.resultNumber('queuedCount')} 章。`;
+    }
+    if (this.coreSlice10Method === 'cache.book.prefetch') {
+      return `预取完成：新入队 ${this.resultNumber('prefetchedCount')} 章。可点击“刷新状态”查看队列。`;
+    }
+    if (this.coreSlice10Method === 'cache.clear') {
+      return `清理完成：移除 ${this.resultNumber('cacheEntriesRemoved')} 个缓存条目。`;
+    }
+    return `${this.coreSlice10Method} 已完成。`;
+  }
 
   private loadedParagraphs(): string[] {
     if (this.currentBook === null) return [];
@@ -3023,26 +3143,38 @@ export struct ReaderBookCachePage {
       Scroll() {
         Column({ space: 10 }) {
           Row({ space: 8 }) {
-            ReaderUtilitySummaryCard({ value: `${this.loadedParagraphs().length}`, label: '本地已加载段落' })
+            ReaderUtilitySummaryCard({ value: this.cachedCount(), label: 'Core 已缓存章节' })
+            ReaderUtilitySummaryCard({ value: this.queuedCount(), label: 'Core 队列章节' })
             ReaderUtilitySummaryCard({ value: this.chapterLabel(), label: '当前章节' })
-            ReaderUtilitySummaryCard({ value: '未接入', label: 'Core 阅读缓存 command' })
           }
           .width('100%')
 
-          ReaderFullBlock({ title: '缓存能力', meta: 'Core 阅读缓存 command 未接入；操作已禁用' }) {
+          ReaderFullBlock({ title: '缓存能力', meta: 'Core 状态 / 预取 / 按书清理' }) {
             Column({ space: 8 }) {
-              Text('当前 Core 未接入阅读缓存命令，不能显示已缓存章节、容量、预取或清理结果。')
+              Text(this.commandMessage())
                 .fontSize(10)
-                .fontColor(ColorTokens.muted)
+                .fontColor(this.coreSlice10Error.length > 0 ? ColorTokens.accent : ColorTokens.muted)
                 .lineHeight(16)
               Row({ space: 8 }) {
-                ReaderUtilityActionButton({ title: '缓存当前章节', detail: 'Core command 未接入', disabled: true })
-                ReaderUtilityActionButton({ title: '预取后续章节', detail: 'Core command 未接入', disabled: true })
+                ReaderUtilityActionButton({
+                  title: '缓存当前章节', detail: '当前章节范围', action: 'prefetch-current',
+                  disabled: this.coreSlice10Loading || !this.canPrefetchCurrent(),
+                })
+                ReaderUtilityActionButton({
+                  title: '预取后续章节', detail: '最多后续 10 章', action: 'prefetch-next',
+                  disabled: this.coreSlice10Loading || !this.canPrefetchNext(),
+                })
               }
               .width('100%')
               Row({ space: 8 }) {
-                ReaderUtilityActionButton({ title: '查看缓存目录', detail: 'Core command 未接入', disabled: true })
-                ReaderUtilityActionButton({ title: '清理阅读缓存', detail: 'Core command 未接入', danger: true, disabled: true })
+                ReaderUtilityActionButton({
+                  title: '刷新缓存状态', detail: '读取 Core 最新状态', action: 'status',
+                  disabled: this.coreSlice10Loading || !this.canReadStatus(),
+                })
+                ReaderUtilityActionButton({
+                  title: '清理本书缓存', detail: '保留书架与备份', action: 'clear-book', danger: true,
+                  disabled: this.coreSlice10Loading || !this.canReadStatus(),
+                })
               }
               .width('100%')
             }
@@ -3223,7 +3355,7 @@ export struct ReaderDebugInfoPage {
     return [
       ['正文', 'chapter-content', this.bodyState(), `当前内存 ${this.loadedParagraphCount()} 段`],
       ['目录', 'chapter-toc', this.tocState(), this.chapterLabel()],
-      ['阅读缓存', 'reader-cache', '未接入', 'Core 阅读缓存 command 未接入'],
+      ['阅读缓存', 'reader-cache', '已接入', 'Core 状态、预取和清理结果由 reducer 投影'],
       ['正文搜索', 'search.content', this.contentSearchState(), this.contentSearchDetail()],
     ];
   }
@@ -3266,8 +3398,8 @@ export struct ReaderDebugInfoPage {
             .backgroundColor(ColorTokens.surfaceSoft)
           }
 
-          ReaderFullBlock({ title: '命令可用性', meta: '未接入 command 已禁用' }) {
-            Text('该页只展示当前 UI 已收到的阅读状态。正文全文搜索已接入 Core search.content，并且只查询当前书源、当前书籍的已缓存章节；阅读缓存管理和调试导出 command 仍未接入。')
+          ReaderFullBlock({ title: '命令可用性', meta: '按真实 Core 能力显示' }) {
+            Text('正文全文搜索只查询当前书源、当前书籍的已缓存章节；阅读缓存状态、章节预取和清理已接入 Core。调试日志导出仍保持未接入。')
               .fontSize(11)
               .fontColor(ColorTokens.muted)
               .lineHeight(18)
@@ -3445,6 +3577,10 @@ export struct ReaderSearchPanel {
 export struct ReaderReplacePanel {
   @StorageProp('reader.replaceRules') rules: ReplaceRule[] = [];
   @StorageProp('reader.pendingReplaceRuleDeleteId') pendingReplaceRuleDeleteId: string = '';
+  @StorageProp('reader.coreSlice10Method') coreSlice10Method: string = '';
+  @StorageProp('reader.coreSlice10Loading') coreSlice10Loading: boolean = false;
+  @StorageProp('reader.coreSlice10Error') coreSlice10Error: string = '';
+  @StorageProp('reader.lastUndoToken') lastUndoToken: ReaderUIJSONPayload | null = null;
   @State formVisible: boolean = false;
   @State editingId: string = '';
   @State patternInput: string = '';
@@ -3470,6 +3606,27 @@ export struct ReaderReplacePanel {
   private closeForm(): void {
     this.formVisible = false;
     this.editingId = '';
+  }
+
+  private undoLastPersist(): void {
+    if (this.coreSlice10Loading) return;
+    const event = ReaderSlice10LivePayloadResolver.replaceUndoEvent(ReaderUiStore.snapshot());
+    if (event !== null) ReaderUiStore.dispatch(event);
+  }
+
+  private undoStatus(): string {
+    if (this.coreSlice10Method === 'replace.persist' && this.coreSlice10Loading) {
+      return 'Core 正在保存规则…';
+    }
+    if (this.coreSlice10Method === 'replace.undo') {
+      if (this.coreSlice10Loading) return 'Core 正在撤销…';
+      if (this.coreSlice10Error.length > 0) return this.coreSlice10Error;
+      return '已撤销上次新增规则';
+    }
+    if (this.coreSlice10Error.length > 0 && this.coreSlice10Method === 'replace.persist') {
+      return this.coreSlice10Error;
+    }
+    return this.lastUndoToken === null ? '' : '上次新增规则可撤销';
   }
 
   private pendingDeleteRule(): ReplaceRule | null {
@@ -3535,6 +3692,33 @@ export struct ReaderReplacePanel {
         .width('100%')
         .height(18)
         .alignItems(VerticalAlign.Center)
+
+        if (this.lastUndoToken !== null || this.coreSlice10Method === 'replace.persist' ||
+          this.coreSlice10Method === 'replace.undo') {
+          Row({ space: 8 }) {
+            Text(this.undoStatus())
+              .fontSize(9)
+              .fontColor(this.coreSlice10Error.length > 0 ? ColorTokens.accent : ColorTokens.muted)
+              .layoutWeight(1)
+              .maxLines(2)
+            Text('撤销上次新增')
+              .fontSize(10)
+              .fontWeight(750)
+              .fontColor(ColorTokens.primaryDark)
+              .height(24)
+              .padding({ left: 9, right: 9 })
+              .border({ width: 1, color: ColorTokens.primary })
+              .borderRadius(DemoAliasTokens.radiusMd)
+              .backgroundColor(DemoAliasTokens.surface)
+              .textAlign(TextAlign.Center)
+              .opacity(this.lastUndoToken === null || this.coreSlice10Loading ? 0.52 : 1)
+              .enabled(this.lastUndoToken !== null && !this.coreSlice10Loading)
+              .onClick(() => this.undoLastPersist())
+          }
+          .width('100%')
+          .height(28)
+          .alignItems(VerticalAlign.Center)
+        }
 
         if (this.formVisible) {
           Column({ space: 6 }) {

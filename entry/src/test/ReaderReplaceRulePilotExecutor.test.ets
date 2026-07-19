@@ -67,10 +67,11 @@ class RecordingReplaceRuleCoreGateway implements ReaderReplaceRuleCoreGateway {
   throwOnPersist: boolean = false;
   private nextRequestId: number = 1;
 
-  beginReplacePersist(pattern: string, _replacement: string, _scope: string): ReaderReplaceRuleCommandHandle {
+  beginReplacePersist(payload: ReaderUIJSONPayload): ReaderReplaceRuleCommandHandle {
     if (this.throwOnPersist) throw new Error('mock replace.persist boundary failure');
     this.effectOrder.push('replace.persist');
-    this.persistPatterns.push(pattern);
+    const params = payload['params'] as Object as ReaderUIJSONPayload;
+    this.persistPatterns.push(params['pattern'] as string);
     return this.newHandle(this.persistHandles);
   }
 
@@ -184,6 +185,22 @@ function emptyRuleListResult(): JsonObject {
   return JSON.parse('{"rules":[]}') as JsonObject;
 }
 
+function persistResult(): JsonObject {
+  return JSON.parse('{' +
+    '"operation":"create",' +
+    '"data":{"rule":{' +
+    '"id":1,"name":"test","pattern":"test-pattern","replacement":"test-replacement",' +
+    '"scopeTitle":false,"scopeContent":true,"isEnabled":true,"isRegex":false,' +
+    '"timeoutMillisecond":3000,"order":0}},' +
+    '"undoToken":{' +
+    '"schemaVersion":1,"transactionId":"replace-live-1",' +
+    '"revision":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",' +
+    '"operation":"create","ruleId":1,"issuedAt":1900000000,"expiresAt":1900000300,' +
+    '"after":{"id":1,"name":"test","pattern":"test-pattern",' +
+    '"replacement":"test-replacement","scopeTitle":false,"scopeContent":true,' +
+    '"isEnabled":true,"isRegex":false,"timeoutMillisecond":3000,"order":0}}}') as JsonObject;
+}
+
 async function flushReplaceRuleResult(): Promise<void> {
   // One turn resolves the fake Core promise and a second runs the executor's
   // domain-event callback. Keep this microtask-only: no timing-based proof
@@ -221,16 +238,16 @@ export default function ReaderReplaceRulePilotExecutorTests(): void {
       expect(ReaderUiStore.replaceRulePilotSnapshot().activeCorrelationId.length > 0).assertTrue();
       expect(ReaderUiStore.replaceRulePilotSnapshot().executedEffects).assertEqual(1);
 
-      core.persistHandles[0].resolve(ruleListResult());
+      core.persistHandles[0].resolve(persistResult());
       await flushReplaceRuleResult();
 
-      // Core's retained CRUD gateway returns a legacy rule list, not the
-      // canonical replacePersistResult. The Shadow experiment must reject it.
       expect(ReaderUiStore.replaceRulePilotSnapshot().activeCorrelationId).assertEqual('');
       expect(ReaderUiStore.replaceRulePilotSnapshot().executedEffects).assertEqual(1);
       const state = ReaderUiStore.snapshot();
-      expect(state.replaceRules.length).assertEqual(0);
-      expect(state.error?.code).assertEqual('REPLACE_RULE_PILOT_FAILED');
+      expect(state.replaceRules.length).assertEqual(1);
+      expect(state.replaceRules[0].id).assertEqual('rule-1');
+      expect(state.lastUndoToken !== null).assertTrue();
+      expect(state.lastUndoToken!['transactionId'] as string).assertEqual('replace-live-1');
     });
 
     it('replaceRuleValidateDispatchesValidateEffect', 0, async () => {
@@ -305,12 +322,10 @@ export default function ReaderReplaceRulePilotExecutorTests(): void {
       const executor = new ReaderReplaceRuleEffectExecutor(runtime, host, core);
 
       const correlationId = 'test-replace-rule-stale-1';
-      const payload: Record<string, string> = {};
-      payload['action'] = 'create';
-      payload['pattern'] = 'stale-pattern';
-      payload['replacement'] = 'stale-replacement';
-      payload['scope'] = 'chapter';
-      const effect = new MockReplaceRuleEffect('replace.persist', correlationId, payload);
+      const payload = JSON.parse('{' +
+        '"operation":"create","params":{"pattern":"stale-pattern",' +
+        '"replacement":"stale-replacement","scopeContent":true,"isRegex":false}}') as ReaderUIJSONPayload;
+      const effect = new MockReplaceRuleEffect('replace.persist', correlationId);
 
       executor.start(correlationId, payload, effect);
       expect(core.persistHandles.length).assertEqual(1);

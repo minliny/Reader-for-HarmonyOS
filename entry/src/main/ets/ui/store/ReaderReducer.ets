@@ -4,6 +4,7 @@
 import { RouteId, RouteTable } from '../../contract/generated/RouteTable';
 import { ReaderAppearanceSpecRegistry, ReaderAppearanceStepper } from '../../contract/reader_ui/Appearance';
 import { ReaderUiState, UiEvent, MainTab, Overlay, PageState, ReaderMode, ReaderPaginationMode, ReaderFontFamily, ReaderRenderMetric, RouteEntry, ReaderError, SearchResultEntry, BookDetail, ActiveSession, TtsPlaybackState, TtsScope, TtsTimer, TocMode, ReaderToggleKey, ReaderSettingOptionKey, ReaderTogglesMap, ReaderSettingOptionsMap, BookshelfView, BookshelfFilterState, DiscoverFilterState, CoreDiscoverKind, CoreDiscoverBook, CoreSourceEntry, CoreSourceCheckResult, CoreSourceDebugResult, CoreContentSearchResult, CoreBookmark, SettingsTogglesMap, ReplaceRule, CoreRssSubscription, CoreRssItem, RssItemFilter, ChapterTocEntry, CoreStorageBackupInfo, CoreReaderCanonicalLocation } from './ReaderUiState';
+import type { ReaderUIJSONPayload } from 'reader_ui_runtime';
 
 function tabRoot(tab: MainTab): RouteId {
   switch (tab) {
@@ -798,10 +799,23 @@ export class ReaderReducer {
       case 'cache-clear-cancel':
       case 'cache-clear-complete':
         return ReaderReducer.cancelCacheClear(state);
+      case 'core-slice10-start':
+        return ReaderReducer.beginCoreSlice10(state, event.coreSlice10Method ?? '');
+      case 'core-slice10-succeeded':
+        return ReaderReducer.completeCoreSlice10(
+          state, event.coreSlice10Method ?? '', event.coreSlice10Result ?? null,
+        );
+      case 'core-slice10-failed':
+        return ReaderReducer.failCoreSlice10(
+          state, event.coreSlice10Method ?? '', event.coreSlice10Error ?? '', event.error ?? null,
+        );
+      case 'core-slice10-undo-token-captured':
+        return event.lastUndoToken !== undefined && event.lastUndoToken !== null
+          ? ReaderReducer.captureCoreUndoToken(state, event.lastUndoToken) : state;
       case 'cache-clear':
         return ReaderReducer.setError(state, {
           code: 'CACHE_CLEAR_CONFIRM_REQUIRED',
-          message: '请在通用设置中先打开缓存清理确认，再次确认后才会清理本会话缓存。',
+          message: '请在通用设置中先打开缓存清理确认，再次确认后才会清理 Core 章节缓存。',
           retryable: false,
         });
       // ── P1.3 WebDAV 配置 cases ──
@@ -1258,6 +1272,59 @@ export class ReaderReducer {
     const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, pageState);
     next.error = error;
     next.loading = false;
+    return next;
+  }
+
+  static beginCoreSlice10(state: ReaderUiState, method: string): ReaderUiState {
+    if (method.length === 0) return state;
+    const next = ReaderReducer.clone(
+      state, state.routeId, state.tab, state.overlay, state.stack, state.pageState,
+    );
+    next.coreSlice10Method = method;
+    next.coreSlice10Loading = true;
+    next.coreSlice10Result = null;
+    next.coreSlice10Error = '';
+    if (next.error !== null && (next.error.code.startsWith('CORE_SLICE10_') ||
+      (method === 'cache.clear' && next.error.code === 'CACHE_CLEAR_FAILED'))) next.error = null;
+    return next;
+  }
+
+  static completeCoreSlice10(state: ReaderUiState, method: string,
+    result: ReaderUIJSONPayload | null): ReaderUiState {
+    if (method.length === 0 || result === null) return state;
+    const next = ReaderReducer.clone(
+      state, state.routeId, state.tab, state.overlay, state.stack, state.pageState,
+    );
+    next.coreSlice10Method = method;
+    next.coreSlice10Loading = false;
+    next.coreSlice10Result = result;
+    next.coreSlice10Error = '';
+    if (method === 'replace.undo') next.lastUndoToken = null;
+    if (next.error !== null && (next.error.code.startsWith('CORE_SLICE10_') ||
+      (method === 'cache.clear' && next.error.code === 'CACHE_CLEAR_FAILED'))) next.error = null;
+    return next;
+  }
+
+  static failCoreSlice10(state: ReaderUiState, method: string, message: string,
+    error: ReaderError | null): ReaderUiState {
+    if (method.length === 0) return state;
+    const next = ReaderReducer.clone(
+      state, state.routeId, state.tab, state.overlay, state.stack, state.pageState,
+    );
+    next.coreSlice10Method = method;
+    next.coreSlice10Loading = false;
+    next.coreSlice10Result = null;
+    next.coreSlice10Error = message;
+    next.error = error;
+    return next;
+  }
+
+  static captureCoreUndoToken(state: ReaderUiState,
+    token: ReaderUIJSONPayload): ReaderUiState {
+    const next = ReaderReducer.clone(
+      state, state.routeId, state.tab, state.overlay, state.stack, state.pageState,
+    );
+    next.lastUndoToken = token;
     return next;
   }
 
@@ -3591,6 +3658,11 @@ export class ReaderReducer {
       // P1.2/P1.3 字段 — 浅拷贝（string 不可变）。
       expandedOptionKey: s.expandedOptionKey,
       pendingCacheClear: s.pendingCacheClear,
+      coreSlice10Method: s.coreSlice10Method,
+      coreSlice10Loading: s.coreSlice10Loading,
+      coreSlice10Result: s.coreSlice10Result,
+      coreSlice10Error: s.coreSlice10Error,
+      lastUndoToken: s.lastUndoToken,
       webdavServerUrl: s.webdavServerUrl,
       webdavUsername: s.webdavUsername,
       webdavPassword: s.webdavPassword,

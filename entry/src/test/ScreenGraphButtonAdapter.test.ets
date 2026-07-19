@@ -1,4 +1,5 @@
 import { describe, it, expect } from '@ohos/hypium';
+import type { ReaderUIJSONPayload } from 'reader_ui_runtime';
 import { RouteId } from '../main/ets/contract/generated/RouteTable';
 import {
   ViewStateComponent,
@@ -8,7 +9,8 @@ import {
 } from '../main/ets/contract/generated/ViewStateTable';
 import { ReaderUIScreenGraphButtonAdapter } from '../main/ets/ui/router/ReaderUIScreenGraphButtonAdapter';
 import { ReaderUiStore } from '../main/ets/ui/store/ReaderUiStore';
-import { UiEvent } from '../main/ets/ui/store/ReaderUiState';
+import { ReaderUiState, UiEvent } from '../main/ets/ui/store/ReaderUiState';
+import { DemoUiState } from '../main/ets/ui/fixtures/DemoUiState';
 
 const ROUTES: RouteId[] = [
   'import-permission-denied',
@@ -43,6 +45,34 @@ function canonicalButton(index: number): ViewStateComponent {
     return { type: '', id: '', props: {}, children: [], bindings: [] };
   }
   return component;
+}
+
+function routeButton(routeId: RouteId, pageState: string, componentId: string): ViewStateComponent {
+  const component = componentById(ViewStateTable.componentsFor(routeId, pageState), componentId);
+  if (component === null) return { type: '', id: '', props: {}, children: [], bindings: [] };
+  return component;
+}
+
+function liveSlice10State(): ReaderUiState {
+  const state = DemoUiState.initial();
+  state.currentBook = {
+    sourceId: 'source-live', bookId: 'book-live', title: 'Live', author: 'Reader',
+    summary: '', sourceName: 'Live source', sourceUrl: 'https://source.test',
+    latestChapter: '', chapterListUrl: 'https://source.test/toc',
+  };
+  state.activeReaderContentIdentity = {
+    sourceId: 'source-live', bookId: 'book-live', chapterIndex: 1,
+  };
+  state.chapterToc = [
+    { index: 0, title: '0', chapterId: 'c0' },
+    { index: 1, title: '1', chapterId: 'c1' },
+    { index: 2, title: '2', chapterId: 'c2' },
+    { index: 3, title: '3', chapterId: 'c3' },
+  ];
+  state.lastUndoToken = JSON.parse(
+    '{"schemaVersion":1,"transactionId":"live-undo-token"}',
+  ) as Object as ReaderUIJSONPayload;
+  return state;
 }
 
 function malformedButton(component: ViewStateComponent, uiEvent: string,
@@ -108,6 +138,32 @@ export default function ScreenGraphButtonAdapterTests(): void {
       expect(totals[3]).assertEqual(33);
       expect(totals[4]).assertEqual(33);
       expect(totals[5]).assertEqual(31);
+    });
+
+    it('admitsOnlyTheExactLockedSlice10ButtonAndKeepsDriftedNodesFailClosed', 0, () => {
+      const state = liveSlice10State();
+      const retry = ReaderUIScreenGraphButtonAdapter.event(
+        'download-task-detail', 'default',
+        routeButton('download-task-detail', 'default', 'download-task-detail-retry'), state,
+      );
+      // The locked 2.5.1 node still carries taskId/bookId plus a
+      // planned-fail-closed prop, not the typed live prefetch tuple.
+      expect(retry === null).assertTrue();
+
+      const clear = ReaderUIScreenGraphButtonAdapter.event(
+        'settings-storage', 'default',
+        routeButton('settings-storage', 'default', 'settings-storage-clear-cache'), state,
+      )!;
+      expect(clear.type).assertEqual('settings-cache-clear');
+      expect(clear.readerUIJSONPayload!['scope'] as string).assertEqual('cache');
+
+      const undo = ReaderUIScreenGraphButtonAdapter.event(
+        'reader-replace-apply-result', 'default',
+        routeButton('reader-replace-apply-result', 'default', 'reader_replace_apply_result-action-1'), state,
+      );
+      // The locked node carries only a sample transactionId and no binding;
+      // the native replace panel owns the real Core-issued undo token.
+      expect(undo === null).assertTrue();
     });
 
     it('rejectsRouteTriggerPayloadBindingAndEffectfulDrift', 0, () => {

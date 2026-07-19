@@ -71,6 +71,7 @@ import {
 } from '../router/ReaderUIScreenGraphTerminalStateAdapter';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 import { UiEvent } from '../store/ReaderUiState';
+import type { ReaderUIJSONPayload } from 'reader_ui_runtime';
 
 @Component
 export struct ViewStateRenderer {
@@ -80,6 +81,10 @@ export struct ViewStateRenderer {
   // shell renders the new route body).
   @StorageProp('reader.displayedRouteId') routeId: string = 'bookshelf';
   @StorageProp('reader.pageState') pageState: string = 'default';
+  @StorageProp('reader.coreSlice10Method') coreSlice10Method: string = '';
+  @StorageProp('reader.coreSlice10Loading') coreSlice10Loading: boolean = false;
+  @StorageProp('reader.coreSlice10Error') coreSlice10Error: string = '';
+  @StorageProp('reader.lastUndoToken') lastUndoToken: ReaderUIJSONPayload | null = null;
   // 'column' (default — scrollable pages) | 'stack' (reader layered body, where
   // components are absolutely positioned over the reading base rather than
   // laid out vertically).
@@ -347,7 +352,9 @@ export struct ViewStateRenderer {
   @Builder renderReadOnlyReplaceChildren(children: ViewStateComponent[]) {
     ForEach(children, (child: ViewStateComponent, idx: number) => {
       if (child.type === 'Button') {
-        this.renderInertCanonicalButton(child)
+        this.renderCanonicalButton(
+          child, this.canonicalButtonLabel(child), child.props.destructive === true,
+        )
       } else if (this.textOr(child.props.uiEventTrigger, '') === 'tap') {
         Text(`只读 · ${this.textOr(child.props.label, this.textOr(child.props.title, '操作未接线'))}`)
           .fontSize(13)
@@ -373,6 +380,16 @@ export struct ViewStateRenderer {
         .fontColor('#725F50')
         .width('100%')
       this.renderReadOnlyReplaceChildren(children)
+      if (section === 'apply') {
+        Text(this.coreSlice10Method === 'replace.undo'
+          ? (this.coreSlice10Loading ? 'Core 正在撤销…' :
+            (this.coreSlice10Error.length > 0 ? this.coreSlice10Error : 'Core 撤销已完成'))
+          : (this.lastUndoToken !== null ? 'Core 撤销令牌已就绪' : '尚无可用的 Core 撤销令牌'))
+          .fontSize(11)
+          .fontWeight(650)
+          .fontColor(this.coreSlice10Error.length > 0 ? '#9E3B32' : '#725F50')
+          .width('100%')
+      }
     }
     .width('100%')
     .padding(16)
@@ -569,13 +586,15 @@ export struct ViewStateRenderer {
 
   @Builder renderCanonicalButton(component: ViewStateComponent, label: string,
     destructive: boolean) {
-    if (ReaderUIScreenGraphButtonAdapter.event(this.routeId, this.pageState, component) !== null) {
+    if (ReaderUIScreenGraphButtonAdapter.event(
+      this.routeId, this.pageState, component, ReaderUiStore.snapshot(),
+    ) !== null) {
       DemoButton({ label: label, destructive: destructive })
         .onClick(() => {
           // Resolve again at tap time so a delayed click cannot reuse an event
           // after the displayed route/page-state or canonical component has changed.
           const event: UiEvent | null = ReaderUIScreenGraphButtonAdapter.event(
-            this.routeId, this.pageState, component,
+            this.routeId, this.pageState, component, ReaderUiStore.snapshot(),
           );
           if (event !== null) ReaderUiStore.dispatch(event);
         })
@@ -987,6 +1006,10 @@ export struct ViewStateRenderer {
       ReaderFullSettingsPage()
     } else if (component.type === 'ReaderBookCachePage') {
       if (component.children.length > 0) {
+        // Canonical task/detail children may contain review fixtures. Keep
+        // them behind the capability closure until a dedicated live owner
+        // projects task state; only the childless reader-book-cache route
+        // enters the native Core-backed page below.
         this.renderCapabilityClosureNode(
           component,
           component.children,
@@ -1031,6 +1054,12 @@ export struct ViewStateRenderer {
       if (this.routeId === 'settings-accessibility' &&
         ReaderCapabilityClosureRouteRegistry.isNativeBacked(this.routeId)) {
         Slice12AccessibilitySettingsPage()
+      } else if (component.children.length > 0 &&
+        ReaderCapabilityClosureRouteRegistry.isCoreBacked(this.routeId)) {
+        Column({ space: 8 }) {
+          this.renderChildren(component.children)
+        }
+        .width('100%')
       } else if (component.children.length > 0) {
         this.renderCapabilityClosureNode(
           component,

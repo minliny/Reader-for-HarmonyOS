@@ -195,6 +195,11 @@ export class DemoUiState {
       // ── P1.2 select/action 控件展开状态默认值 ──
       expandedOptionKey: '',
       pendingCacheClear: false,
+      coreSlice10Method: '',
+      coreSlice10Loading: false,
+      coreSlice10Result: null,
+      coreSlice10Error: '',
+      lastUndoToken: null,
       // ── P1.3 WebDAV 配置默认值 ──
       webdavServerUrl: '',
       webdavUsername: '',
