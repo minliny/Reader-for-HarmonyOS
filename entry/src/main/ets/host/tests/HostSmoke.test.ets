@@ -12,7 +12,8 @@
 import { describe, it, expect } from '@ohos/hypium';
 import http from '@ohos.net.http';
 import common from '@ohos.app.ability.common';
-import { CoreRuntime, type LocalBookParseOptions } from '../../bridge/CoreRuntime';
+import { CoreRuntime, type LocalBookParseOptions, type CoreTxtTocRuleCreateInput,
+  type CoreTxtTocRuleUpdateInput, type CoreTtsConfigInput, type CoreBookmarkUpdateInput } from '../../bridge/CoreRuntime';
 import {
   type NativeReaderCoreModule,
   type JsonObject,
@@ -20,12 +21,17 @@ import {
   type ReaderCoreLastError,
   type ReaderCoreError,
 } from '../../bridge/core/sdk/reader_core';
-import { type HostCapability, type HostHttpRequest } from '../types';
+import {
+  type HostCapability,
+  type HostHttpRequest,
+} from '../types';
 import { SourceSessionHostStore } from '../adapters/SourceSessionHostStore';
 import {
   HttpHostAdapter,
   type HostHttpClient,
   type HostHttpClientFactory,
+  type HostHttpStreamClient,
+  type HostHttpStreamClientFactory,
 } from '../adapters/HttpHostAdapter';
 import {
   SourceImageCache,
@@ -37,6 +43,7 @@ import {
   type SourceImageStreamClientFactory,
 } from '../adapters/SourceImageCache';
 import { FileHostAdapter } from '../adapters/FileHostAdapter';
+import { CoreHostAdapter } from '../adapters/CoreHostAdapter';
 
 // Stub class that satisfies NativeReaderCoreModule without touching
 // libreader_core_napi.so. ArkTS requires object literals to correspond to a
@@ -186,6 +193,34 @@ class RecordingHostHttpClientFactory implements HostHttpClientFactory {
   }
 }
 
+class RecordingMediaFileAdapter {
+  openedPath: string = '';
+  appendedBytes: number = 0;
+  committed: boolean = false;
+  discarded: boolean = false;
+
+  openAtomicPart(path: string, _createDirectories: boolean): void {
+    this.openedPath = path;
+    this.appendedBytes = 0;
+    this.committed = false;
+    this.discarded = false;
+  }
+
+  appendAtomicPart(path: string, chunk: ArrayBuffer): void {
+    if (path !== this.openedPath) throw new Error('unexpected media part path');
+    this.appendedBytes += chunk.byteLength;
+  }
+
+  commitAtomicPart(path: string): void {
+    if (path !== this.openedPath) throw new Error('unexpected media commit path');
+    this.committed = true;
+  }
+
+  discardAtomicPart(path: string): void {
+    if (path === this.openedPath) this.discarded = true;
+  }
+}
+
 class SourceImageTestHeaderResolver implements SourceImageHeaderResolver {
   lastRequestUrl: string = '';
 
@@ -250,7 +285,7 @@ class SourceImageTestHeaders {
   }
 }
 
-class ManualSourceImageStreamClient implements SourceImageStreamClient {
+class ManualSourceImageStreamClient implements SourceImageStreamClient, HostHttpStreamClient {
   private headerCallback: ((headers: Object) => void) | null = null;
   private dataCallback: ((chunk: ArrayBuffer) => void) | null = null;
   private endCallback: (() => void) | null = null;
@@ -308,10 +343,10 @@ class ManualSourceImageStreamClient implements SourceImageStreamClient {
   }
 }
 
-class ManualSourceImageStreamClientFactory implements SourceImageStreamClientFactory {
+class ManualSourceImageStreamClientFactory implements SourceImageStreamClientFactory, HostHttpStreamClientFactory {
   clients: ManualSourceImageStreamClient[] = [];
 
-  create(): SourceImageStreamClient {
+  create(): ManualSourceImageStreamClient {
     const client = new ManualSourceImageStreamClient();
     this.clients.push(client);
     return client;
@@ -365,6 +400,71 @@ export default function HostSmokeTest(): void {
       await second;
       expect(factory.clients[0].destroyCount).assertEqual(1);
       expect(factory.clients[1].destroyCount).assertEqual(1);
+    });
+
+    it('media_download_preserves_binary_bytes_and_honors_range_validators_and_limit', 0, async () => {
+      const streamFactory = new ManualSourceImageStreamClientFactory();
+      const httpAdapter = new HttpHostAdapter(
+        SourceSessionHostStore.shared(),
+        new RecordingHostHttpClientFactory(),
+        streamFactory,
+      );
+      const fileRecorder = new RecordingMediaFileAdapter();
+      const coreAdapter = new CoreHostAdapter();
+      const pending = coreAdapter.mediaDownload({
+        url: 'https://cdn.example.test/book.pdf',
+        rangeStart: 2,
+        rangeEnd: 5,
+        ifNoneMatch: 'etag-v1',
+        maxBytes: 4,
+        savePath: 'cache://downloads/book.pdf',
+      }, httpAdapter, fileRecorder as Object as FileHostAdapter);
+      expect(streamFactory.clients.length).assertEqual(1);
+      const client = streamFactory.clients[0];
+      client.emitHeaders('application/pdf', '4');
+      client.emitData(4);
+      client.emitEnd();
+      client.emitStatus(206);
+      const response = await pending;
+
+      expect(client.requestHeaders['Range']).assertEqual('bytes=2-5');
+      expect(client.requestHeaders['If-None-Match']).assertEqual('etag-v1');
+      expect(fileRecorder.openedPath).assertEqual('cache://downloads/book.pdf');
+      expect(fileRecorder.appendedBytes).assertEqual(4);
+      expect(fileRecorder.committed).assertTrue();
+      expect(fileRecorder.discarded).assertFalse();
+      expect(response.statusCode).assertEqual(206);
+      expect(response.byteLength).assertEqual(4);
+      expect(response.tempPath).assertEqual('cache://downloads/book.pdf');
+      expect(client.destroyed).assertTrue();
+    });
+
+    it('media_download_discards_atomic_part_when_stream_exceeds_limit', 0, async () => {
+      const streamFactory = new ManualSourceImageStreamClientFactory();
+      const httpAdapter = new HttpHostAdapter(
+        SourceSessionHostStore.shared(),
+        new RecordingHostHttpClientFactory(),
+        streamFactory,
+      );
+      const fileRecorder = new RecordingMediaFileAdapter();
+      const pending = new CoreHostAdapter().mediaDownload({
+        url: 'https://cdn.example.test/chapter.zip',
+        maxBytes: 3,
+        savePath: 'cache://downloads/chapter.zip',
+      }, httpAdapter, fileRecorder as Object as FileHostAdapter);
+      const client = streamFactory.clients[0];
+      client.emitHeaders('application/zip');
+      client.emitData(4);
+      let rejected = false;
+      try {
+        await pending;
+      } catch (_error) {
+        rejected = true;
+      }
+      expect(rejected).assertTrue();
+      expect(fileRecorder.committed).assertFalse();
+      expect(fileRecorder.discarded).assertTrue();
+      expect(client.destroyed).assertTrue();
     });
 
     it('source_image_request_wrapper_keeps_persisted_source_and_host_session_ownership', 0, async () => {
@@ -759,6 +859,58 @@ export default function HostSmokeTest(): void {
       expect(native.lastMethod).assertEqual('local_book.chapter.content');
       expect(native.stringParam('bookId')).assertEqual('local-1');
       expect(native.numberParam('chapterIndex')).assertEqual(3);
+    });
+
+    it('slice10_typed_wrappers_preserve_exact_core_dtos', 0, async () => {
+      const native = new RecordingNativeReaderCore();
+      const core = CoreRuntime.createForTest(native, {});
+
+      const bookmark: CoreBookmarkUpdateInput = { time: 7, content: '更正后的书签备注' };
+      await core.bookmarkUpdate(bookmark);
+      expect(native.lastMethod).assertEqual('bookmark.update');
+      expect(native.numberParam('time')).assertEqual(7);
+      expect(native.stringParam('content')).assertEqual('更正后的书签备注');
+
+      const createRule: CoreTxtTocRuleCreateInput = {
+        name: '中文章节',
+        rule: '第[\\d]+章',
+        serialNumber: 0,
+        enable: true,
+      };
+      await core.txtTocRuleCreate(createRule);
+      expect(native.lastMethod).assertEqual('txt-toc-rule.create');
+      expect(native.stringParam('name')).assertEqual('中文章节');
+      expect(native.stringParam('rule')).assertEqual('第[\\d]+章');
+      expect(native.numberParam('serialNumber')).assertEqual(0);
+      expect(native.booleanParam('enable')).assertTrue();
+
+      const updateRule: CoreTxtTocRuleUpdateInput = { id: 9, enable: false };
+      await core.txtTocRuleUpdate(updateRule);
+      expect(native.lastMethod).assertEqual('txt-toc-rule.update');
+      expect(native.numberParam('id')).assertEqual(9);
+      expect(native.booleanParam('enable')).assertFalse();
+
+      await core.txtTocRuleDelete(9);
+      expect(native.lastMethod).assertEqual('txt-toc-rule.delete');
+      expect(native.numberParam('id')).assertEqual(9);
+
+      const ttsConfig: CoreTtsConfigInput = { rate: 5, pitch: 0, followSys: true };
+      await core.ttsConfigPut(ttsConfig);
+      expect(native.lastMethod).assertEqual('tts.config.put');
+      expect(native.numberParam('rate')).assertEqual(5);
+      expect(native.numberParam('pitch')).assertEqual(0);
+      expect(native.booleanParam('followSys')).assertTrue();
+
+      await core.bookChapterReview(
+        'source-1', 'book-1', 'https://reviews.example.test/chapter/1',
+        'https://reviews.example.test/chapter/1',
+      );
+      expect(native.lastMethod).assertEqual('book.chapterReview');
+      expect(native.stringParam('sourceId')).assertEqual('source-1');
+      expect(native.stringParam('bookId')).assertEqual('book-1');
+      expect(native.stringParam('reviewUrl')).assertEqual('https://reviews.example.test/chapter/1');
+      expect(native.hasParam('source')).assertFalse();
+      expect(native.hasParam('reviewResponse')).assertFalse();
     });
 
     it('storage_path_maps_sandbox_scopes_and_rejects_external_scope', 0, () => {

@@ -184,6 +184,16 @@ export abstract class ReaderUIRuntimeDriver {
     throw new Error('ReaderUIRuntimeDriver does not implement typed page location results');
   }
 
+  acceptPageProgressResult(_correlationId: string, _stored?: boolean,
+    _error?: string): ReaderUIPlaybackTransition {
+    throw new Error('ReaderUIRuntimeDriver does not implement page progress results');
+  }
+
+  acceptPageProgressJSONResult(_correlationId: string,
+    _result: ReaderUIJSONResult): ReaderUIPlaybackTransition {
+    throw new Error('ReaderUIRuntimeDriver does not implement typed page progress results');
+  }
+
   cancelPageStep(_correlationId: string): ReaderUIPlaybackTransition {
     throw new Error('ReaderUIRuntimeDriver does not implement page cancellation');
   }
@@ -275,6 +285,16 @@ class GeneratedReaderUIRuntimeDriver extends ReaderUIRuntimeDriver {
   acceptPageLocationJSONResult(correlationId: string,
     result: ReaderUIJSONResult): ReaderUIPlaybackTransition {
     return this.runtime.acceptPageLocationJSONResult(correlationId, result);
+  }
+
+  acceptPageProgressResult(correlationId: string, stored?: boolean,
+    error?: string): ReaderUIPlaybackTransition {
+    return this.runtime.acceptPageProgressResult(correlationId, stored, error);
+  }
+
+  acceptPageProgressJSONResult(correlationId: string,
+    result: ReaderUIJSONResult): ReaderUIPlaybackTransition {
+    return this.runtime.acceptPageProgressJSONResult(correlationId, result);
   }
 
   cancelPageStep(correlationId: string): ReaderUIPlaybackTransition {
@@ -376,6 +396,14 @@ class RuntimeDriverPlaybackGateway implements ReaderPlaybackRuntimeGateway {
   acceptPageLocationJSONResult(correlationId: string,
     result: ReaderUIJSONResult): ReaderUIPlaybackTransition {
     return this.driverReader().acceptPageLocationJSONResult(correlationId, result);
+  }
+  acceptPageProgressResult(correlationId: string, stored?: boolean,
+    error?: string): ReaderUIPlaybackTransition {
+    return this.driverReader().acceptPageProgressResult(correlationId, stored, error);
+  }
+  acceptPageProgressJSONResult(correlationId: string,
+    result: ReaderUIJSONResult): ReaderUIPlaybackTransition {
+    return this.driverReader().acceptPageProgressJSONResult(correlationId, result);
   }
   cancelPageStep(correlationId: string): ReaderUIPlaybackTransition {
     return this.driverReader().cancelPageStep(correlationId);
@@ -915,6 +943,39 @@ export class ReaderUIRuntimeShadowCoordinator {
     if (executor === null) {
       return { handled: false, succeeded: false, canonicalEvent: '', correlationId: '' };
     }
+    const commitBoundaryMutation = this.playbackCommitBoundaryMutation(event);
+    if (commitBoundaryMutation.length > 0) {
+      this.metrics.lastEvent = event.type;
+      this.metrics.lastCanonicalEvent = commitBoundaryMutation;
+      this.metrics.lastRuntimeError = '';
+      this.metrics.lastMismatch = '';
+      this.lastEffectTypes = [];
+      this.metrics.covered += 1;
+      this.metrics.pilot += 1;
+      try {
+        this.correlationSequence += 1;
+        this.runtime.dispatch(
+          commitBoundaryMutation,
+          this.playbackCommitBoundaryPayload(commitBoundaryMutation, event),
+          `harmony-playback-boundary-${this.correlationSequence}`,
+        );
+        this.metrics.pilotFailure += 1;
+        this.metrics.runtimeError += 1;
+        this.metrics.lastRuntimeError =
+          `${commitBoundaryMutation} unexpectedly crossed the progress commit boundary`;
+      } catch (error) {
+        this.metrics.pilotFailure += 1;
+        this.metrics.runtimeError += 1;
+        this.metrics.lastRuntimeError = `PAGE_PROGRESS_COMMIT_PENDING: ${(error as Error).message}`;
+      }
+      return {
+        handled: true,
+        succeeded: false,
+        canonicalEvent: commitBoundaryMutation,
+        correlationId: '',
+      };
+    }
+
     const canonicalEvent = this.playbackCanonicalEvent(event, nativeBefore);
     if (canonicalEvent.length === 0 || !this.playbackPairEnabled(canonicalEvent)) {
       return { handled: false, succeeded: false, canonicalEvent: '', correlationId: '' };
@@ -1611,6 +1672,42 @@ export class ReaderUIRuntimeShadowCoordinator {
         ? 'reader.autoPage.start' : 'reader.autoPage.stop';
     }
     return '';
+  }
+
+  private playbackCommitBoundaryMutation(event: UiEvent): string {
+    if (this.runtime.state.pageTransaction?.stage !== 'persisting-progress') return '';
+    let canonical = event.type;
+    if (GENERATED_RUNTIME_ACTIONS[canonical] === undefined) {
+      const normalized = event.type.replace(/\./g, '-');
+      if (normalized === 'route-push') canonical = 'route.push';
+      else if (normalized === 'route-replace') canonical = 'route.replace';
+      else if (normalized === 'route-pop') canonical = 'route.pop';
+      else if (normalized === 'route-pop-to-root') canonical = 'route.popToRoot';
+      else if (normalized === 'switch-tab') canonical = 'mainTab.select';
+      else return '';
+    }
+    const descriptor = GENERATED_RUNTIME_ACTIONS[canonical];
+    if (descriptor === undefined) return '';
+    const blockedActions = [
+      'pushRoute', 'replaceRoute', 'popRoute', 'popToRoot', 'selectTab', 'bookOpenSequence',
+    ];
+    return blockedActions.indexOf(descriptor.action) >= 0 ? canonical : '';
+  }
+
+  private playbackCommitBoundaryPayload(canonicalEvent: string,
+    event: UiEvent): ReaderUIJSONPayload {
+    if (event.readerUIJSONPayload !== undefined) return event.readerUIJSONPayload;
+    const payload: ReaderUIJSONPayload = {};
+    if (canonicalEvent === 'route.push' || canonicalEvent === 'route.replace') {
+      if (event.id !== undefined) payload['routeId'] = event.id;
+    } else if (canonicalEvent === 'mainTab.select') {
+      if (event.tab !== undefined) payload['tab'] = event.tab;
+    } else {
+      if (event.bookId !== undefined) payload['bookId'] = event.bookId;
+      if (event.sourceId !== undefined) payload['sourceId'] = event.sourceId;
+      if (event.sourceKind !== undefined) payload['sourceKind'] = event.sourceKind;
+    }
+    return payload;
   }
 
   private playbackPairEnabled(canonicalEvent: string): boolean {

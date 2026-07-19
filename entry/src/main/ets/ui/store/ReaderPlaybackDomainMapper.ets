@@ -1,4 +1,5 @@
 import type { JsonObject } from '../../bridge/core/sdk/reader_core';
+import type { ReaderUIJSONPayload, ReaderUIJSONResult, ReaderUIPageLayout } from 'reader_ui_runtime';
 import {
   CoreReaderCanonicalLocation,
   ReaderUiState,
@@ -28,6 +29,22 @@ export interface ReaderPlaybackTtsPlan {
   raw: JsonObject;
   slices: ReaderPlaybackSlice[];
   sourceCharCount: number;
+}
+
+/**
+ * Exact Core DTO bound from the correlation-scoped page transaction. The
+ * shared runtime deliberately emits an empty reader.progress.update payload;
+ * UI aliases are never allowed to supply these durable fields.
+ */
+export interface ReaderPlaybackProgressUpdate {
+  bookId: string;
+  sourceId: string;
+  chapterIndex: number;
+  chapterOffset: number;
+  chapterProgress: number;
+  locationRevision: string;
+  deviceId?: string;
+  updatedAt?: number;
 }
 
 export type ReaderPlaybackQueueState = 'idle' | 'playing' | 'paused' | 'completed' | 'stopped';
@@ -92,6 +109,76 @@ export class ReaderPlaybackDomainMapper {
     // locationRevision is the Core canonical field. resolverVersion describes
     // the algorithm and must never be copied into the revision slot.
     return mapped.canonicalLocation;
+  }
+
+  static bindProgressUpdate(effectPayload: ReaderUIJSONPayload,
+    chapter: ReaderPlaybackChapterContext, layout: ReaderUIPageLayout,
+    location: CoreReaderCanonicalLocation): ReaderPlaybackProgressUpdate {
+    if (Object.keys(effectPayload).length !== 0) {
+      throw new Error('reader.progress.update effect payload must stay empty');
+    }
+    if (location.bookId !== chapter.bookId || location.chapterIndex !== chapter.chapterIndex ||
+      layout.chapterIndex !== chapter.chapterIndex || location.chapterOffset !== layout.chapterOffset ||
+      Math.abs(location.chapterProgress - layout.chapterProgress) > 0.000001 ||
+      location.locationRevision.trim().length === 0) {
+      throw new Error('reader.progress.update requires the matching pending canonical location');
+    }
+    return {
+      bookId: chapter.bookId,
+      sourceId: chapter.sourceId,
+      chapterIndex: chapter.chapterIndex,
+      chapterOffset: layout.chapterOffset,
+      chapterProgress: layout.chapterProgress,
+      locationRevision: location.locationRevision,
+    };
+  }
+
+  /**
+   * Validate Core's full storage DTO before projecting the intentionally
+   * narrower Reader-UI result. Passing the raw Core object to the runtime is
+   * forbidden because the typed runtime contract accepts only { stored:true }.
+   */
+  static mapProgressResult(data: JsonObject,
+    expected: ReaderPlaybackProgressUpdate): ReaderUIJSONResult {
+    const allowed = [
+      'bookId', 'sourceId', 'deviceId', 'updatedAt', 'chapterIndex',
+      'chapterOffset', 'chapterProgress', 'stored', 'locationRevision',
+    ];
+    const keys = Object.keys(data);
+    for (let index = 0; index < keys.length; index += 1) {
+      if (allowed.indexOf(keys[index]) < 0) {
+        throw new Error(`reading.progress.update returned unknown field ${keys[index]}`);
+      }
+    }
+
+    const bookId = ReaderPlaybackDomainMapper.stringField(data, 'bookId');
+    const sourceId = ReaderPlaybackDomainMapper.stringField(data, 'sourceId');
+    const chapterIndex = ReaderPlaybackDomainMapper.integerField(data, 'chapterIndex', -1);
+    const chapterOffset = ReaderPlaybackDomainMapper.integerField(data, 'chapterOffset', -1);
+    const chapterProgressValue = data['chapterProgress'] as Object;
+    const chapterProgress = typeof chapterProgressValue === 'number' ? chapterProgressValue : Number.NaN;
+    const locationRevision = ReaderPlaybackDomainMapper.stringField(data, 'locationRevision');
+    const updatedAt = ReaderPlaybackDomainMapper.integerField(data, 'updatedAt', -1);
+    if (bookId !== expected.bookId || sourceId !== expected.sourceId ||
+      chapterIndex !== expected.chapterIndex || chapterOffset !== expected.chapterOffset ||
+      !Number.isFinite(chapterProgress) ||
+      Math.abs(chapterProgress - expected.chapterProgress) > 0.000001 ||
+      locationRevision !== expected.locationRevision || updatedAt < 0 || data['stored'] !== true) {
+      throw new Error('reading.progress.update returned a mismatched durable progress row');
+    }
+
+    const rawDeviceId = data['deviceId'] as Object;
+    if (expected.deviceId === undefined) {
+      if (rawDeviceId !== undefined && rawDeviceId !== null) {
+        throw new Error('reading.progress.update returned an unexpected deviceId');
+      }
+    } else if (typeof rawDeviceId !== 'string' || rawDeviceId !== expected.deviceId) {
+      throw new Error('reading.progress.update returned a mismatched deviceId');
+    }
+    if (expected.updatedAt !== undefined && updatedAt !== expected.updatedAt) {
+      throw new Error('reading.progress.update returned a mismatched updatedAt');
+    }
+    return { 'stored': true };
   }
 
   static mapTtsPlan(data: JsonObject, chapter: ReaderPlaybackChapterContext): ReaderPlaybackTtsPlan {

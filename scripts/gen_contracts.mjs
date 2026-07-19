@@ -35,6 +35,7 @@ function resolveContractsDir() {
 }
 const CONTRACTS_DIR = resolveContractsDir();
 const OUT_ETS = path.resolve(REPO_ROOT, 'entry/src/main/ets/contract/generated');
+const OUT_READER_UI_ETS = path.resolve(REPO_ROOT, 'entry/src/main/ets/contract/reader_ui');
 const OUT_RES_BASE = path.resolve(REPO_ROOT, 'entry/src/main/resources/base/element');
 const OUT_RES_DARK = path.resolve(REPO_ROOT, 'entry/src/main/resources/dark/element');
 
@@ -57,9 +58,9 @@ if (HOST_REQUEST_TYPES.length !== 58 || new Set(HOST_REQUEST_TYPES).size !== 58)
 }
 
 // Route membership comes from the canonical schema, not the lagging route
-// fixture. Reader UI 2.5 intentionally publishes 235 RouteIds while the
+// fixture. Reader UI 3.0 currently publishes 260 RouteIds while the
 // historical route fixture still carries the original 200 shell records.
-// frontend-demo-next/route-contract.js supplies the canonical title/shell
+// frontend-demo-optimized/route-contract.js supplies the canonical title/shell
 // metadata for the expanded set. Any future schema route without metadata is
 // a generation error: the host must never silently send it to a catch-all
 // shell or render an empty page.
@@ -69,8 +70,8 @@ const CANONICAL_ROUTE_IDS = ROUTE_SCHEMA.properties.id.enum;
 function readCanonicalDemoRoutes() {
   const readerUiRoot = path.resolve(CONTRACTS_DIR, '..', '..');
   const candidates = [
-    path.join(readerUiRoot, 'frontend-demo-next', 'route-contract.js'),
     path.join(readerUiRoot, 'frontend-demo-optimized', 'route-contract.js'),
+    path.join(readerUiRoot, 'frontend-demo-next', 'route-contract.js'),
   ];
   for (const candidate of candidates) {
     if (!fs.existsSync(candidate)) continue;
@@ -348,6 +349,15 @@ function normalizeComponent(c) {
     id: c.id || '',
     props: c.props || {},
     children: (c.children || []).map(normalizeComponent),
+    // ViewState 1.2 carries explicit target bindings. Preserve the canonical
+    // tuple losslessly so host-composite adapters can consume action metadata
+    // without recursively rendering the component's declarative children.
+    bindings: (c.bindings || []).map((binding) => ({
+      target: binding.target,
+      event: binding.event,
+      payload: binding.payload || {},
+      trigger: binding.trigger,
+    })),
   };
 }
 
@@ -415,7 +425,10 @@ function genViewStateTable() {
     components: (v.components || []).map(normalizeComponent),
   }));
   const propTypes = collectPropTypes(VIEW_STATES);
-  const propLines = [...propTypes.keys()].sort().map((k) => `  ${k}?: ${propTypes.get(k)};`);
+  const propLines = [...propTypes.keys()].sort().map((k) => {
+    const key = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(k) ? k : `'${esc(k)}'`;
+    return `  ${key}?: ${propTypes.get(k)};`;
+  });
   const propsIface = `export interface ViewStateProps {\n${propLines.join('\n')}\n}`;
   // ArkTS rejects deeply nested untyped object literals even when the outer
   // array has an interface annotation. Parse the canonical JSON as a typed
@@ -429,11 +442,19 @@ export type ViewStateJSONValue = object | string | number | boolean | null;
 
 ${propsIface}
 
+export interface ViewStateExplicitBinding {
+  target: string;
+  event: string;
+  payload: Record<string, ViewStateJSONValue>;
+  trigger: string;
+}
+
 export interface ViewStateComponent {
   type: string;
   id: string;
   props: ViewStateProps;
   children: ViewStateComponent[];
+  bindings: ViewStateExplicitBinding[];
 }
 
 export interface ViewStateEntry {
@@ -497,10 +518,19 @@ export class ViewStateTable {
 
 // ── MotionSpecTable.ets ──────────────────────────────────────────────────
 function genMotionSpecTable() {
-  const iface = `export interface MotionSpecTokens { durationToken: string; easingToken: string; }\nexport interface MotionSpec {\n  id: string;\n  durationMs: number;\n  easing: string;\n  implementationKind: string;\n  containerRole: string;\n  operation: string;\n  visualPattern: string;\n  interruptPolicy: string;\n  reducedMotionPolicy: string;\n  tokens: MotionSpecTokens;\n  guardRules: string[];\n}`;
+  const iface = `export interface MotionSpecTokens { durationToken: string; easingToken: string; }\nexport interface MotionSpec {\n  id: string;\n  durationMs: number;\n  easing: string;\n  implementationKind: string;\n  containerRole: string;\n  operation: string;\n  visualPattern: string;\n  interruptPolicy: string;\n  reducedMotionPolicy: string;\n  tokens: MotionSpecTokens;\n  guardRules: string[];\n  trigger?: string[];\n  from?: string[];\n  to?: string[];\n  interrupt?: string[];\n  finalState?: string;\n  cleanup?: string[];\n  deprecated?: boolean;\n}`;
   const specs = MOTIONS.map((m) => {
     const gr = (m.guardRules || []).map((g) => `'${esc(g)}'`).join(', ');
-    return `    { id: '${esc(m.id)}', durationMs: ${m.durationMs}, easing: '${esc(m.easing)}', implementationKind: '${esc(m.implementationKind)}', containerRole: '${esc(m.containerRole)}', operation: '${esc(m.operation)}', visualPattern: '${esc(m.visualPattern)}', interruptPolicy: '${esc(m.interruptPolicy)}', reducedMotionPolicy: '${esc(m.reducedMotionPolicy)}', tokens: { durationToken: '${esc(m.tokens.durationToken)}', easingToken: '${esc(m.tokens.easingToken)}' }, guardRules: [${gr}] }`;
+    const optional = [];
+    for (const field of ['trigger', 'from', 'to', 'interrupt', 'cleanup']) {
+      if (Array.isArray(m[field])) {
+        optional.push(`${field}: [${m[field].map((value) => `'${esc(value)}'`).join(', ')}]`);
+      }
+    }
+    if (typeof m.finalState === 'string') optional.push(`finalState: '${esc(m.finalState)}'`);
+    if (m.deprecated === true) optional.push('deprecated: true');
+    const optionalSuffix = optional.length > 0 ? `, ${optional.join(', ')}` : '';
+    return `    { id: '${esc(m.id)}', durationMs: ${m.durationMs}, easing: '${esc(m.easing)}', implementationKind: '${esc(m.implementationKind)}', containerRole: '${esc(m.containerRole)}', operation: '${esc(m.operation)}', visualPattern: '${esc(m.visualPattern)}', interruptPolicy: '${esc(m.interruptPolicy)}', reducedMotionPolicy: '${esc(m.reducedMotionPolicy)}', tokens: { durationToken: '${esc(m.tokens.durationToken)}', easingToken: '${esc(m.tokens.easingToken)}' }, guardRules: [${gr}]${optionalSuffix} }`;
   });
   return `${HEADER}\n${iface}\n\nexport class MotionSpecTable {\n  static readonly SPECS: MotionSpec[] = [\n${specs.join(',\n')}\n  ];\n\n  static byId(id: string): MotionSpec | undefined {\n    for (const s of MotionSpecTable.SPECS) {\n      if (s.id === id) return s;\n    }\n    return undefined;\n  }\n}\n`;
 }
@@ -533,11 +563,16 @@ export class DemoAliasTokens {
 // ── MotionPolicyTable.ets ─────────────────────────────────────────────────
 function genMotionPolicyTable() {
   const real = POLICIES.filter((p) => p && p.id && p.priority !== undefined && p.match && p.motionId);
-  real.sort((a, b) => b.priority - a.priority);
-  const iface = `export interface MotionPolicyMatch {\n  operation?: string;\n  containerRole?: string;\n  sourceRole?: string;\n  targetRole?: string;\n  reducedMotion?: boolean;\n}\nexport interface MotionPolicy {\n  id: string;\n  priority: number;\n  match: MotionPolicyMatch;\n  motionId: string;\n}`;
+  const specificity = (policy) => Object.values(policy.match).filter((value) => value !== undefined).length;
+  real.sort((a, b) => (b.priority - a.priority) || (specificity(b) - specificity(a)));
+  const iface = `export interface MotionPolicyMatch {\n  fromRoute?: string;\n  toRoute?: string;\n  fromShell?: string;\n  toShell?: string;\n  operation?: string;\n  containerRole?: string;\n  sourceRole?: string;\n  targetRole?: string;\n  reducedMotion?: boolean;\n}\nexport interface MotionPolicy {\n  id: string;\n  priority: number;\n  match: MotionPolicyMatch;\n  motionId: string;\n}`;
   const policies = real.map((p) => {
     const m = p.match;
     const parts = [];
+    if (m.fromRoute !== undefined) parts.push(`fromRoute: '${esc(m.fromRoute)}'`);
+    if (m.toRoute !== undefined) parts.push(`toRoute: '${esc(m.toRoute)}'`);
+    if (m.fromShell !== undefined) parts.push(`fromShell: '${esc(m.fromShell)}'`);
+    if (m.toShell !== undefined) parts.push(`toShell: '${esc(m.toShell)}'`);
     if (m.operation !== undefined) parts.push(`operation: '${esc(m.operation)}'`);
     if (m.containerRole !== undefined) parts.push(`containerRole: '${esc(m.containerRole)}'`);
     if (m.sourceRole !== undefined) parts.push(`sourceRole: '${esc(m.sourceRole)}'`);
@@ -552,6 +587,15 @@ function genMotionPolicyTable() {
 function writeEts(name, content) {
   fs.writeFileSync(path.join(OUT_ETS, name), content);
   console.log(`  wrote entry/src/main/ets/contract/generated/${name}`);
+}
+
+function syncReaderUiGenerated(name) {
+  const source = path.resolve(CONTRACTS_DIR, '..', '..', 'generated', 'arkts', name);
+  if (!fs.existsSync(source)) {
+    throw new Error(`missing canonical Reader UI ArkTS artifact: ${source}`);
+  }
+  fs.copyFileSync(source, path.join(OUT_READER_UI_ETS, name));
+  console.log(`  synced entry/src/main/ets/contract/reader_ui/${name}`);
 }
 const colorJson = genColorJson();
 
@@ -568,6 +612,9 @@ writeEts('ViewStateTable.ets', genViewStateTable());
 writeEts('MotionSpecTable.ets', genMotionSpecTable());
 writeEts('MotionPolicyTable.ets', genMotionPolicyTable());
 writeEts('DemoAliasTokens.ets', genDemoAliasTokens());
+for (const name of ['Route.ets', 'ViewState.ets', 'UiEvent.ets', 'UiState.ets', 'ScreenGraph.ets', 'Appearance.ets']) {
+  syncReaderUiGenerated(name);
+}
 
 fs.writeFileSync(path.join(OUT_RES_BASE, 'color.json'), colorJson.base);
 console.log('  wrote entry/src/main/resources/base/element/color.json');

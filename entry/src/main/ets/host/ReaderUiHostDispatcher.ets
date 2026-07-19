@@ -11,6 +11,7 @@ import {
   type ReaderUiHostRequest,
   type ReaderUiHostResponse,
 } from './ReaderUiHostContract';
+import { HostErrorWrapper } from './types';
 
 const HTTP_METHODS: string[] = [
   'GET', 'POST', 'PUT', 'DELETE', 'HEAD', 'OPTIONS', 'PATCH',
@@ -59,6 +60,13 @@ export class ReaderUiHostDispatcher {
       result = await this.platform.execute(type, payload, request);
     } catch (e) {
       if (e instanceof ReaderUiHostFailure) throw e;
+      if (e instanceof HostErrorWrapper) {
+        throw new ReaderUiHostFailure(
+          e.hostError.code,
+          `${type} failed: ${e.hostError.message}`,
+          e.hostError.retryable,
+        );
+      }
       const message = e instanceof Error ? e.message : String(e);
       throw new ReaderUiHostFailure('EXECUTION_FAILED', `${type} failed: ${message}`, true);
     }
@@ -110,7 +118,19 @@ export class ReaderUiHostDispatcher {
       case 'cookie.clear':
         this.optionalString(payload, 'url'); this.optionalString(payload, 'domain');
         this.optionalString(payload, 'sessionId'); return;
-      case 'file.read': this.requiredString(payload, 'path'); this.optionalString(payload, 'encoding'); return;
+      case 'file.read': {
+        this.requiredString(payload, 'path');
+        this.optionalString(payload, 'encoding');
+        const byteOffset = this.optionalNumber(payload, 'byteOffset');
+        const maxBytes = this.optionalNumber(payload, 'maxBytes');
+        if (byteOffset !== undefined && (!Number.isInteger(byteOffset) || byteOffset < 0)) {
+          this.invalid(type, 'byteOffset must be a non-negative integer');
+        }
+        if (maxBytes !== undefined && (!Number.isInteger(maxBytes) || maxBytes < 1)) {
+          this.invalid(type, 'maxBytes must be a positive integer');
+        }
+        return;
+      }
       case 'file.write': this.validateFileWrite(payload, type); return;
       case 'file.delete': this.requiredString(payload, 'path'); return;
       case 'storage.path': {
@@ -152,7 +172,8 @@ export class ReaderUiHostDispatcher {
       case 'timer.foreground.arm':
       case 'timer.foreground.cancel': this.validateForegroundTimer(payload, type); return;
       case 'notification.show':
-        this.requiredString(payload, 'title'); this.requiredString(payload, 'body', true); return;
+        this.requiredString(payload, 'id'); this.requiredString(payload, 'title');
+        this.requiredString(payload, 'body', true); return;
       case 'notification.cancel': this.requiredString(payload, 'id'); return;
       case 'share.invoke': this.validateShareInvoke(payload, type); return;
       case 'clipboard.copy': this.requiredString(payload, 'text', true); return;
@@ -220,9 +241,14 @@ export class ReaderUiHostDispatcher {
     this.requiredString(payload, 'path');
     const content = payload['content'];
     const contentBase64 = payload['contentBase64'];
-    if (typeof content !== 'string' && typeof contentBase64 !== 'string') {
-      this.invalid(type, 'content or contentBase64 is required');
+    const hasContent = typeof content === 'string';
+    const hasContentBase64 = typeof contentBase64 === 'string';
+    if (hasContent === hasContentBase64) {
+      this.invalid(type, 'exactly one of content or contentBase64 is required');
     }
+    this.optionalString(payload, 'encoding');
+    this.optionalBoolean(payload, 'createDirectories');
+    this.optionalBoolean(payload, 'append');
   }
 
   private validateTtsSystem(payload: ReaderUiHostPayload, type: HostRequestType): void {

@@ -9,8 +9,8 @@ import {
 
 export default function Contract25RouteRegistryTests(): void {
   describe('Contract25RouteRegistry', () => {
-    it('matchesCanonical235AndExact35Additions', 0, () => {
-      expect(RouteTable.ALL.length).assertEqual(235);
+    it('matchesCanonical260AndExact35HistoricalAdditions', 0, () => {
+      expect(RouteTable.ALL.length).assertEqual(260);
       expect(ReaderContract25RouteRegistry.ALL.length).assertEqual(35);
 
       const seen: string[] = [];
@@ -31,7 +31,7 @@ export default function Contract25RouteRegistryTests(): void {
       }
     });
 
-    it('all235RoutesResolveAConcreteViewState', 0, () => {
+    it('all260RoutesResolveAConcreteViewState', 0, () => {
       for (let index = 0; index < RouteTable.ALL.length; index++) {
         expect(ViewStateTable.componentsFor(RouteTable.ALL[index], 'default').length > 0).assertTrue();
       }

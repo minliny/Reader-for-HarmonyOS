@@ -101,6 +101,8 @@ export struct SettingsNavRow {
     .padding({ left: 12, right: 12 })
     .border({ width: { top: 1 }, color: ColorTokens.border })
     .alignItems(VerticalAlign.Center)
+    .accessibilityText(this.label)
+    .accessibilityDescription(this.subtitle.length > 0 ? `${this.subtitle}。打开二级设置` : '打开二级设置')
     .onClick(() => {
         // 设置项跳转：route-push 到子页，用 SettingsShell 的 push 动效包裹
         MotionAdapter.apply('app.route.push.forward', this.reducedMotion, this.getUIContext(), () => {
@@ -110,7 +112,8 @@ export struct SettingsNavRow {
   }
 }
 
-// .fd-setting-section: h2 "设置" 13/900 + nav rows (5: 通用/书架搜索/书源/同步/关于).
+// .fd-setting-section: h2 "设置" 13/900 + nav rows
+// (6: 通用/书架搜索/书源/同步/无障碍与显示/关于).
 @Component
 export struct SettingsHomeSection {
   private rows: Array<[string, RouteId, string]> = [
@@ -118,6 +121,7 @@ export struct SettingsHomeSection {
     ['书架与搜索设置', 'bookshelf-search-settings', 'bookshelf'],
     ['书源管理', 'source-management', 'source-stack'],
     ['同步与备份', 'sync-backup', 'sync'],
+    ['无障碍与显示', 'settings-accessibility', 'assist'],
     ['关于与反馈', 'about-feedback', 'info'],
   ];
 
@@ -187,6 +191,8 @@ struct SettingsDeveloperRow {
     .padding({ left: 12, right: 12 })
     .border({ width: { top: 1 }, color: ColorTokens.border })
     .alignItems(VerticalAlign.Center)
+    .accessibilityText('开发者选项')
+    .accessibilityDescription(this.devVisible ? '已开启' : '已关闭')
   }
 }
 
@@ -242,6 +248,8 @@ struct SettingsMiniSwitch {
     .padding(2)
     .borderRadius(DemoAliasTokens.radiusPill)
     .backgroundColor(this.on ? ColorTokens.primary : ColorTokens.metaBg)
+    .accessibilityText(this.settingsKey.length > 0 ? this.settingsKey : '设置开关')
+    .accessibilityDescription(this.on ? '已开启' : '已关闭')
     .onClick(() => {
       // B1 P0：开关切换，按 settingsKey 派发对应 reducer 事件
       const next = !this.on;
@@ -405,6 +413,10 @@ struct SettingsOptionRow {
     .border({ width: { top: 1 }, color: ColorTokens.border })
     .alignItems(VerticalAlign.Center)
     .backgroundColor(DemoAliasTokens.surface)
+    .accessibilityText(this.title)
+    .accessibilityDescription(this.subtitle.length > 0
+      ? `${this.subtitle}。${this.value.length > 0 ? this.value : this.kind}`
+      : (this.value.length > 0 ? this.value : this.kind))
     .onClick(() => {
       // P1.2：select/action 控件接 onClick
       if (this.kind === 'value') {
@@ -496,6 +508,7 @@ struct SettingsDetailSection {
 
 @Component
 export struct SettingsGeneralPage {
+  @Prop variant: string = 'general';
   // B1 P0：从 AppStorage 读取设置状态，驱动 segment/switch 动态渲染
   @StorageProp('reader.appThemeMode') appThemeMode: string = 'system';
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
@@ -503,9 +516,18 @@ export struct SettingsGeneralPage {
 
   build() {
     Column() {
+      if (this.variant === 'developer-motion') {
+        Text('开发者动效设置')
+          .fontSize(15)
+          .fontWeight(900)
+          .fontColor(ColorTokens.ink)
+          .width('100%')
+          .margin({ left: 12, bottom: 8 })
+      }
       SettingsDetailSection({ title: '基础偏好' }) {
         SettingsOptionRow({
           title: 'App主题',
+          subtitle: '当前由 Harmony reducer 消费；跨重启持久化合同尚未冻结',
           kind: 'segment',
           settingsKey: 'appThemeMode',
           icon: TokenAdapter.icon('palette'),
@@ -517,7 +539,7 @@ export struct SettingsGeneralPage {
         })
         SettingsOptionRow({
           title: '语言',
-          subtitle: '当前没有本地化消费方或可持久化设置契约',
+          subtitle: '合同展示简体中文、繁體中文、English；当前没有本地化消费方或可持久化设置契约',
           kind: 'status',
           value: '未接入',
           tone: 'warn',
@@ -532,6 +554,29 @@ export struct SettingsGeneralPage {
           icon: TokenAdapter.icon('home'),
         })
       }
+
+      Column() {
+        SettingsDetailSection({ title: '阅读扩展' }) {
+          SettingsOptionRow({
+            title: '词典规则',
+            subtitle: 'Core 尚无 DictRule 命令、结果与持久化实体',
+            kind: 'status',
+            value: '合同缺失',
+            tone: 'warn',
+            icon: TokenAdapter.icon('book'),
+          })
+          SettingsOptionRow({
+            title: '大模型服务',
+            subtitle: '尚无 provider、凭据、请求、流式取消与结果合同',
+            kind: 'status',
+            value: '合同缺失',
+            tone: 'warn',
+            icon: TokenAdapter.icon('assist'),
+          })
+        }
+      }
+      .width('100%')
+      .margin({ top: 12 })
 
       Column() {
         SettingsDetailSection({ title: '行为与反馈' }) {
@@ -608,6 +653,28 @@ export struct SettingsGeneralPage {
       .margin({ top: 12 })
 
       Column() {
+        SettingsDetailSection({ title: '设置归属与重置' }) {
+          SettingsOptionRow({
+            title: '减少动态效果',
+            subtitle: 'Owner：ReaderUIRuntime + Harmony preferences；默认/重置值：关闭',
+            kind: 'status', value: '可持久化', icon: TokenAdapter.icon('motion'),
+          })
+          SettingsOptionRow({
+            title: '界面偏好',
+            subtitle: '主题、封面列数和展示开关当前只在本次运行生效',
+            kind: 'status', value: '会话级', tone: 'warn', icon: TokenAdapter.icon('gear'),
+          })
+          SettingsOptionRow({
+            title: '重置全部设置',
+            subtitle: 'Core 数据、阅读外观和平台偏好的统一范围/迁移合同尚未冻结',
+            kind: 'status', value: '合同缺失', tone: 'warn', icon: TokenAdapter.icon('trash'),
+          })
+        }
+      }
+      .width('100%')
+      .margin({ top: 12 })
+
+      Column() {
         SettingsDetailSection({ title: '系统权限' }) {
           SettingsOptionRow({
             title: '文件访问',
@@ -654,6 +721,7 @@ export struct BookshelfSearchSettingsPage {
   @StorageProp('reader.coverColumns') coverColumns: number = 3;
   @StorageProp('reader.settingsToggles.mergeSameBooks') mergeSameBooks: boolean = true;
   @StorageProp('reader.settingsToggles.enableSearchHistory') enableSearchHistory: boolean = true;
+  @StorageProp('reader.settingsToggles.showLocalBookBadge') showLocalBookBadge: boolean = true;
   @StorageProp('reader.searchHistoryLimit') searchHistoryLimit: number = 20;
   @StorageProp('reader.expandedOptionKey') expandedOptionKey: string = '';
 
@@ -720,6 +788,12 @@ export struct BookshelfSearchSettingsPage {
           title: '显示更新标记',
           subtitle: 'Core bookshelf.list 尚未提供可比较的更新状态',
           kind: 'status', value: '未接入', tone: 'warn', icon: TokenAdapter.icon('badge'),
+        })
+        SettingsOptionRow({
+          title: '本地书标识',
+          subtitle: '本次运行仅按 Core sourceId=local 渲染；跨重启设置合同未接入',
+          kind: 'switch', settingsKey: 'showLocalBookBadge', switchOn: this.showLocalBookBadge,
+          icon: TokenAdapter.icon('book'),
         })
       }
 

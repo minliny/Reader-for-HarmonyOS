@@ -11,6 +11,7 @@ import { RssSelectionProjection } from './RssSelectionProjection';
 import { isSafeRssOriginalUrl } from './RssComponents';
 import { SearchInputBox } from './ContractComponents';
 import { SourceDetectPage } from './LibraryComponents';
+import { LocalBookFormatPolicy } from '../../host/LocalBookFormatPolicy';
 import {
   BookDetail,
   ChapterTocEntry,
@@ -714,6 +715,7 @@ struct WebDavInputRow {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         TextInput({ text: this.value, placeholder: '请输入' + this.title })
+          .type(this.field === 'password' ? InputType.Password : InputType.Normal)
           .fontSize(11)
           .fontWeight(700)
           .fontColor(ColorTokens.ink)
@@ -751,6 +753,7 @@ struct WebDavSectionAction {
   @Prop label: string = '测试网络连通性';
   @Prop kind: string = 'refresh';
   @Prop actionType: string = '';   // P1.3：'test' | 'save'
+  @Prop disabled: boolean = false;
 
   private iconResource(): Resource {
     return this.kind === 'check' ? $r('app.media.ui_icon_check_primary') : $r('app.media.ui_icon_refresh_primary');
@@ -777,7 +780,10 @@ struct WebDavSectionAction {
     .borderRadius(DemoAliasTokens.radiusMd)
     .backgroundColor(ColorTokens.metaBg)
     .border({ width: 1, color: ColorTokens.border })
+    .opacity(this.disabled ? 0.5 : 1)
+    .enabled(!this.disabled)
     .onClick(() => {
+      if (this.disabled) return;
       // P1.3：测试连通性 / 保存配置 派发对应 reducer 事件
       if (this.actionType === 'test') {
         ReaderUiStore.dispatch({ type: 'webdav-test' });
@@ -828,9 +834,21 @@ struct WebDavConfigSection {
         .margin({ top: 8 })
       WebDavInputRow({ title: '同步目录', value: this.syncDir, kind: 'folder', field: 'syncDir' })
         .margin({ top: 8 })
+      Text('密码只用于本次连接测试。当前 Host 尚未接入 HUKS，带账号或密码的配置禁止持久化。')
+        .fontSize(10)
+        .fontColor(ColorTokens.muted)
+        .lineHeight(16)
+        .width('100%')
+        .margin({ top: 7 })
       Row() {
-        WebDavSectionAction({ label: '测试网络连通性', kind: 'refresh', actionType: 'test' })
-        WebDavSectionAction({ label: '保存配置', kind: 'check', actionType: 'save' })
+        WebDavSectionAction({
+          label: this.testStatus === 'testing' ? '正在测试…' : '测试网络连通性',
+          kind: 'refresh', actionType: 'test', disabled: this.testStatus === 'testing' || this.saveStatus === 'saving',
+        })
+        WebDavSectionAction({
+          label: this.saveStatus === 'saving' ? '正在保存…' : '保存匿名配置',
+          kind: 'check', actionType: 'save', disabled: this.testStatus === 'testing' || this.saveStatus === 'saving',
+        })
           .margin({ left: 9 })
       }
       .width('100%')
@@ -1262,6 +1280,7 @@ export struct SearchStatePage {
 
 @Component
 export struct BookTocPreviewPage {
+  @Prop title: string = '目录预览';
   @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
   @StorageProp('reader.chapterToc') chapterToc: ChapterTocEntry[] = [];
   @StorageProp('reader.currentChapterTitle') currentChapterTitle: string = '';
@@ -1287,7 +1306,7 @@ export struct BookTocPreviewPage {
 
   build() {
     Column() {
-      SectionTitle({ title: '目录预览' })
+      SectionTitle({ title: this.title })
       if (this.currentBook === null || this.chapterToc.length === 0) {
         Text(this.statusMessage())
           .fontSize(13)
@@ -1358,7 +1377,7 @@ export struct BookMoreMenuPage {
       if (this.currentBook === null) {
         StructureCard({
           title: '未选择书籍',
-          message: '请先从书架、搜索或发现结果打开一本实际书籍后，再使用更多操作。',
+          message: '请先从书架、搜索或发现结果打开一本实际 Core 书籍后，再使用更多操作。',
         })
       } else {
         StructureCard({
@@ -1695,6 +1714,7 @@ struct BookGroupEditorRow {
 
 @Component
 export struct BookGroupManagementPage {
+  @Prop title: string = '分组';
   @StorageProp('reader.bookGroups') groups: CoreBookGroup[] = [];
   @StorageProp('reader.bookGroupsLoaded') loaded: boolean = false;
   @StorageProp('reader.bookGroupsLoading') loading: boolean = false;
@@ -1702,6 +1722,7 @@ export struct BookGroupManagementPage {
 
   build() {
     Column({ space: 10 }) {
+      SectionTitle({ title: this.title })
       BookGroupCreateForm()
       Text('分组列表')
         .fontSize(15)
@@ -1742,6 +1763,7 @@ export struct BookGroupManagementPage {
 
 @Component
 export struct GroupManagementPage {
+  @Prop variant: string = 'group-flow';
   @StorageProp('reader.bookGroups') groups: CoreBookGroup[] = [];
   @StorageProp('reader.bookGroupsLoaded') loaded: boolean = false;
   @StorageProp('reader.bookGroupsLoading') loading: boolean = false;
@@ -1751,7 +1773,7 @@ export struct GroupManagementPage {
 
   build() {
     Column({ space: 10 }) {
-      SectionTitle({ title: '分组列表' })
+      SectionTitle({ title: this.variant === 'group-flow' ? '分组列表' : '分组管理' })
       BookGroupCreateForm()
       if (this.loading) {
         Text('正在从 Core 读取分组…')
@@ -2044,6 +2066,7 @@ export struct BookDirectoryPage {
 
 @Component
 export struct SourceManagementPage {
+  @Prop title: string = '书源管理';
   @StorageProp('reader.availableSources') coreSources: CoreSourceEntry[] = [];
   @StorageProp('reader.sourcesLoaded') sourcesLoaded: boolean = false;
   aboutToAppear(): void {
@@ -2062,6 +2085,8 @@ export struct SourceManagementPage {
 
   build() {
     Column() {
+      SectionTitle({ title: this.title })
+        .margin({ bottom: 10 })
       SourceMetricStrip({
         sourceCount: this.coreSources.length,
         enabledCount: this.enabledCount(),
@@ -2224,6 +2249,7 @@ export struct SourceDetailPage {
 
 @Component
 export struct SourceImportOptionsPage {
+  @Prop title: string = '导入书源';
   @StorageProp('reader.sourceImportRunning') importing: boolean = false;
   @State private jsonPayload: string = '';
   @State private packageUrl: string = '';
@@ -2256,7 +2282,7 @@ export struct SourceImportOptionsPage {
 
   build() {
     Column({ space: 12 }) {
-      Text('导入书源')
+      Text(this.title)
         .fontSize(18)
         .fontWeight(900)
         .fontColor(ColorTokens.ink)
@@ -2381,8 +2407,12 @@ export struct SourceSettingsEntryPage {
 
 @Component
 export struct SourceTestResultPage {
+  @Prop title: string = '测试结果';
+
   build() {
     Column() {
+      SectionTitle({ title: this.title })
+        .margin({ bottom: 10 })
       // Both contract routes project the same Core-owned L1–L5 verdict.
       // Keeping this route as a real view of SourceDetectPage prevents the
       // historical “test result” screen from drifting into a static success
@@ -2396,9 +2426,11 @@ export struct SourceTestResultPage {
 
 @Component
 export struct SyncSettingsEntryPage {
+  @Prop title: string = '同步设置';
+
   build() {
     Column() {
-      StructureCard({ title: '同步设置', message: '管理 WebDAV、备份和阅读进度同步。' })
+      StructureCard({ title: this.title, message: '管理 WebDAV、备份和阅读进度同步。' })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -2413,6 +2445,8 @@ export struct SyncBackupPage {
   @StorageProp('reader.coreBackupStatus') status: string = 'idle';
   @StorageProp('reader.coreBackupMessage') message: string = '';
   @StorageProp('reader.localCoreBackup') localBackup: CoreStorageBackupInfo | null = null;
+  @StorageProp('reader.displayedRouteId') routeId: string = 'sync-backup';
+  @StorageProp('reader.webdavServerUrl') webdavServerUrl: string = '';
 
   private isBusy(): boolean {
     return this.status === 'loading' || this.status === 'creating' || this.status === 'restoring';
@@ -2443,7 +2477,27 @@ export struct SyncBackupPage {
 
   build() {
     Column() {
-      WebDavConfigSection()
+      if (this.routeId === 'webdav-config') {
+        WebDavConfigSection()
+      } else {
+      StructureCard({
+        title: 'WebDAV 传输',
+        message: this.webdavServerUrl.trim().length > 0
+          ? '已保存匿名 HTTPS 端点；完整地址不会在备份页回显。'
+          : '尚未保存 WebDAV 端点；远端备份和恢复会保持关闭。',
+        chip: this.webdavServerUrl.trim().length > 0 ? '已配置端点' : '未配置',
+      })
+      Text('打开 WebDAV 配置')
+        .fontSize(13)
+        .fontWeight(800)
+        .fontColor(ColorTokens.primary)
+        .height(38)
+        .width('100%')
+        .textAlign(TextAlign.Center)
+        .borderRadius(DemoAliasTokens.radiusPill)
+        .border({ width: 1, color: ColorTokens.border })
+        .margin({ top: 8 })
+        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'webdav-config' }))
       SectionTitle({ title: 'Core 数据备份' })
         .margin({ top: 14, bottom: 8 })
       StructureCard({
@@ -2531,6 +2585,7 @@ export struct SyncBackupPage {
           .lineHeight(17)
           .width('100%')
           .margin({ top: 9 })
+      }
       }
     }
     .width('100%')
@@ -2701,6 +2756,7 @@ export struct RestoreResultPage {
 
 @Component
 export struct GlobalSettingsPage {
+  @Prop title: string = '设置入口';
   private entries: RowEntry[] = [
     { title: '阅读设置入口', detail: '阅读页内显示、行为与控制设置', chip: '' },
     { title: '书源设置入口', detail: '已持久化书源的导入与管理', chip: '' },
@@ -2724,6 +2780,8 @@ export struct GlobalSettingsPage {
 
   build() {
     Column() {
+      SectionTitle({ title: this.title })
+        .margin({ bottom: 10 })
       ForEach(this.entries, (entry: RowEntry, idx: number) => {
         StructureRow({ title: entry.title, detail: entry.detail })
           .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: this.routeFor(entry.title) }))
@@ -2737,10 +2795,12 @@ export struct GlobalSettingsPage {
 
 @Component
 export struct BackupSettingsPage {
+  @Prop title: string = '备份';
+
   build() {
     Column() {
       StatePanel({
-        title: '自动备份策略未接入',
+        title: `${this.title}策略未接入`,
         message: '当前可用的是同步页中的手动 Core 快照导出、本机恢复与已配置 WebDAV 上传下载。没有后台调度、保留策略或“已开启”的真实状态投影。',
       })
     }
@@ -2768,7 +2828,7 @@ export struct SyncProgressPage {
     Column() {
       StatePanel({
         title: '同步状态未接入',
-        message: '当前没有由 Core 或 Host 返回的同步进度与结果投影，不能显示固定书籍、百分比或同步成功。',
+        message: '当前没有由 Core 或 Host 返回的书籍级同步进度投影，不能显示固定书籍、百分比或同步成功。',
       })
     }
     .width('100%')
@@ -2778,10 +2838,12 @@ export struct SyncProgressPage {
 
 @Component
 export struct RemoteWebDavBooksPage {
+  @Prop title: string = '远端书籍';
+
   build() {
     Column() {
       StatePanel({
-        title: '远端书籍目录未接入',
+        title: `${this.title}目录未接入`,
         message: '当前 WebDAV 链路传输的是完整 Core 存储快照，不提供按书列举或下载协议，因此不显示伪造的远端书籍。',
       })
     }
@@ -2920,12 +2982,14 @@ export struct RssErrorState {
 
 @Component
 export struct RssSubscriptionManagementPage {
+  @Prop title: string = '订阅源';
   @StorageProp('reader.rssSubscriptions') subscriptions: CoreRssSubscription[] = [];
   @State private newTitle: string = '';
   @State private newFeedUrl: string = '';
 
   build() {
     Column({ space: 10 }) {
+      SectionTitle({ title: this.title })
       Text('添加订阅')
         .fontSize(15).fontWeight(800).fontColor(ColorTokens.controlInk)
       TextInput({ text: this.newTitle, placeholder: '名称（可选）' })
@@ -3183,6 +3247,7 @@ export struct AboutFeedbackPage {
 
 @Component
 export struct LocalBookImportPage {
+  @Prop title: string = '本地导入';
   @StorageProp('reader.importPreviewFormat') previewFormat: string = '';
   @StorageProp('reader.importPreviewEncoding') previewEncoding: string = '';
   @StorageProp('reader.importPreviewCount') previewCount: number = 0;
@@ -3216,7 +3281,7 @@ export struct LocalBookImportPage {
       const documentPicker = new picker.DocumentViewPicker();
       const options = new picker.DocumentSelectOptions();
       options.maxSelectNumber = 1;
-      options.fileSuffixFilters = ['.txt', '.epub', '.epub3', '.pdf', '.mobi', '.azw', '.azw3'];
+      options.fileSuffixFilters = LocalBookFormatPolicy.supportedSuffixFilters();
       const uris: string[] = await documentPicker.select(options);
       if (uris.length === 0) return;
       const uri = uris[0];
@@ -3234,6 +3299,7 @@ export struct LocalBookImportPage {
     // wrap-content so percentage height/layoutWeight cannot create a second
     // viewport and push the first card below the fold.
     Column({ space: 16 }) {
+          SectionTitle({ title: this.title })
           // ── Section 1: 导入卡（文件选择触发区） ──
           Column({ space: 10 }) {
             Row({ space: 8 }) {
@@ -3246,7 +3312,7 @@ export struct LocalBookImportPage {
             }
             .width('100%')
 
-            Text('支持 txt、epub、pdf、mobi、azw 格式，导入后进入书架。')
+            Text('支持识别 TXT、EPUB、PDF、MOBI、UMD；当前仅 TXT/EPUB 可进入 Core 导入。其余格式会明确说明缺失协议，不会回退为文本。')
               .fontSize(13)
               .fontColor(ColorTokens.muted)
               .lineHeight(18)
@@ -3385,9 +3451,11 @@ export struct LocalBookImportPage {
 
 @Component
 export struct ReadingSettingsEntryPage {
+  @Prop title: string = '阅读设置';
+
   build() {
     Column() {
-      StructureCard({ title: '阅读设置', message: '进入阅读页内的显示、行为与控制层设置。' })
+      StructureCard({ title: this.title, message: '进入阅读页内的显示、行为与控制层设置。' })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)

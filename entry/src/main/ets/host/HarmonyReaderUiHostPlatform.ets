@@ -244,6 +244,8 @@ export class HarmonyReaderUiHostPlatform implements ReaderUiHostPlatform {
         const response = await adapter.read({
           path: payload['path'] as string,
           encoding: payload['encoding'] as string | undefined,
+          byteOffset: payload['byteOffset'] as number | undefined,
+          maxBytes: payload['maxBytes'] as number | undefined,
         });
         return this.payload(response);
       }
@@ -253,6 +255,9 @@ export class HarmonyReaderUiHostPlatform implements ReaderUiHostPlatform {
         if (typeof payload['content'] === 'string') fileRequest.content = payload['content'] as string;
         if (typeof payload['contentBase64'] === 'string') fileRequest.contentBase64 = payload['contentBase64'] as string;
         if (typeof payload['encoding'] === 'string') fileRequest.encoding = payload['encoding'] as string;
+        if (typeof payload['createDirectories'] === 'boolean') {
+          fileRequest.createDirectories = payload['createDirectories'] as boolean;
+        }
         if (typeof payload['append'] === 'boolean') fileRequest.append = payload['append'] as boolean;
         const response = await adapter.write(fileRequest);
         this.requireTrue(type, response.written, 'file was not written');
@@ -370,6 +375,7 @@ export class HarmonyReaderUiHostPlatform implements ReaderUiHostPlatform {
       }
       case 'notification.show': {
         const response = await this.requireNotification(type).show({
+          id: payload['id'] as string,
           title: payload['title'] as string,
           body: payload['body'] as string,
         });

@@ -1,9 +1,10 @@
-// Reader UI 2.5 file.select backed by HarmonyOS DocumentViewPicker.
+// Reader UI file.select backed by HarmonyOS DocumentViewPicker.
 // Cancellation is represented by an empty URI list. Platform/permission
 // failures throw and are never converted into a synthetic empty selection.
 import picker from '@ohos.file.picker';
 import fs from '@ohos.file.fs';
 import common from '@ohos.app.ability.common';
+import { LocalBookFormatPolicy } from '../LocalBookFormatPolicy';
 
 export interface ReaderSelectedFile {
   path: string;
@@ -18,11 +19,10 @@ export interface ReaderFileSelectionResponse {
 }
 
 function suffixFilterForMime(mimeType: string): string | null {
+  const localBookFilter = LocalBookFormatPolicy.suffixFilterForMime(mimeType);
+  if (localBookFilter !== null) return localBookFilter;
   switch (mimeType.toLowerCase()) {
-    case 'text/plain': return '.txt';
     case 'application/json': return '.json';
-    case 'application/pdf': return '.pdf';
-    case 'application/epub+zip': return '.epub';
     case 'font/ttf':
     case 'application/x-font-ttf': return '.ttf';
     case 'font/otf':
@@ -35,10 +35,9 @@ function suffixFilterForMime(mimeType: string): string | null {
 
 function mimeForName(name: string): string | undefined {
   const lower = name.toLowerCase();
-  if (lower.endsWith('.txt')) return 'text/plain';
+  const localBookDecision = LocalBookFormatPolicy.decide(name);
+  if (localBookDecision.mimeType !== undefined) return localBookDecision.mimeType;
   if (lower.endsWith('.json')) return 'application/json';
-  if (lower.endsWith('.pdf')) return 'application/pdf';
-  if (lower.endsWith('.epub')) return 'application/epub+zip';
   if (lower.endsWith('.ttf')) return 'font/ttf';
   if (lower.endsWith('.otf')) return 'font/otf';
   if (lower.endsWith('.ttc')) return 'font/collection';

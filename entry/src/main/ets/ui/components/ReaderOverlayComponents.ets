@@ -12,6 +12,7 @@ import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
 import { SizeTokens, ZIndexTokens } from '../../contract/generated/DimensionTokens';
 import { RouteId } from '../../contract/generated/RouteTable';
+import { ReaderAppearanceFont, ReaderAppearanceSelect, ReaderAppearanceSpecRegistry } from '../../contract/reader_ui/Appearance';
 import { SafeAreaAdapter } from '../adapters/SafeAreaAdapter';
 import { ViewportAdapter } from '../adapters/ViewportAdapter';
 import { ReaderUiStore } from '../store/ReaderUiStore';
@@ -32,6 +33,19 @@ import {
 import { ReaderThemeResolver, ReaderThemeOption } from '../tokens/ReaderThemeResolver';
 import { MotionAdapter } from '../adapters/MotionAdapter';
 import { InteractionDebugBadge, InteractionDebugFrame } from './InteractionDebugComponents';
+
+function appearanceReaderFontFamily(value: string): ReaderFontFamily {
+  switch (value) {
+    case 'serif': return 'serif';
+    case 'sans': return 'sans';
+    case 'kai': return 'kai';
+    case 'fangsong': return 'fangsong';
+    case 'mono': return 'mono';
+    case 'sourceSerif': return 'sourceSerif';
+    case 'lxgw': return 'lxgw';
+    default: return 'system';
+  }
+}
 
 // ── Panel header (.reader-panel-header) ──────────────────────────────────
 //   flex space-between, gap 12. h2 title 18/700 + span meta/subtitle 12 (76% ink).
@@ -626,6 +640,7 @@ export struct ReaderBottomBar {
   @StorageProp(ViewportAdapter.K_WIDTH) viewportWidth: number = ViewportAdapter.DEFAULT_WIDTH;
   @StorageProp(ViewportAdapter.K_HEIGHT) viewportHeight: number = ViewportAdapter.DEFAULT_HEIGHT;
   @StorageProp('reader.displayedRouteId') routeId: string = 'control-layer-base-v2';
+  @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
 
   private readonly dockWidth: number = 340;
   private readonly dockRight: number = 24;
@@ -681,11 +696,13 @@ export struct ReaderBottomBar {
   }
 
   private selectModule(kind: string): void {
-    if (kind === 'directory') {
-      ReaderUiStore.dispatch({ type: 'reader.directory.open' });
-      return;
-    }
-    ReaderUiStore.dispatch({ type: 'reader-module-switch', module: kind });
+    MotionAdapter.apply('reader.module.switch', this.reducedMotion, this.getUIContext(), () => {
+      if (kind === 'directory') {
+        ReaderUiStore.dispatch({ type: 'reader.directory.open' });
+        return;
+      }
+      ReaderUiStore.dispatch({ type: 'reader-module-switch', module: kind });
+    });
   }
 
   build() {
@@ -1504,10 +1521,26 @@ struct ReaderLiveOptionRow {
     return this.optionKey.length > 0 && this.expandedOption === this.optionKey;
   }
 
+  private normalizedOptionValue(label: string): string {
+    if (this.optionKey !== 'pageAnimation') return label;
+    if (label === '覆盖' || label === 'cover') return 'cover';
+    if (label === '无' || label === '无动画' || label === 'none') return 'none';
+    return 'slide';
+  }
+
+  private isSelected(choice: string): boolean {
+    if (this.optionKey !== 'pageAnimation') return choice === this.value;
+    return this.normalizedOptionValue(choice) === this.normalizedOptionValue(this.value);
+  }
+
   // 根据选项 key 将选中的标签值分发到对应的 reducer action。
   private applyOptionChoice(label: string): void {
     if (this.optionKey === 'tapMode' || this.optionKey === 'pageAnimation' || this.optionKey === 'pageMode') {
-      ReaderUiStore.dispatch({ type: 'set-reader-setting-option', optionKey: this.optionKey as ReaderSettingOptionKey, optionValue: label });
+      ReaderUiStore.dispatch({
+        type: 'set-reader-setting-option',
+        optionKey: this.optionKey as ReaderSettingOptionKey,
+        optionValue: this.normalizedOptionValue(label),
+      });
     } else if (this.optionKey === 'ttsRate') {
       ReaderUiStore.dispatch({ type: 'tts-set-rate', ttsRate: parseFloat(label) });
     } else if (this.optionKey === 'ttsVoice') {
@@ -1584,9 +1617,9 @@ struct ReaderLiveOptionRow {
               Text(choice)
                 .fontSize(10)
                 .fontWeight(500)
-                .fontColor(choice === this.value ? ColorTokens.primaryDark : ColorTokens.controlInk)
+                .fontColor(this.isSelected(choice) ? ColorTokens.primaryDark : ColorTokens.controlInk)
                 .layoutWeight(1)
-              if (choice === this.value) {
+              if (this.isSelected(choice)) {
                 Image($r('app.media.ui_icon_check_primary')).width(12).height(12)
               }
             }
@@ -1611,6 +1644,7 @@ struct ReaderLiveOptionRow {
 // ── Directory panel (.fd-reader-toc-panel) ────────────────────────────────
 @Component
 export struct ReaderDirectoryPanel {
+  @Prop standalone: boolean = false;
   @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
   @StorageProp('reader.chapterToc') chapterToc: ChapterTocEntry[] = [];
   @StorageProp('reader.currentChapterTitle') currentChapterTitle: string = '';
@@ -1630,8 +1664,12 @@ export struct ReaderDirectoryPanel {
     return this.currentChapterTitle.length > 0 && this.currentChapterTitle === chapter.title;
   }
 
+  private closeEvent(): string {
+    return this.standalone ? 'route-pop' : 'reader.directory.close';
+  }
+
   build() {
-    ReaderModulePanelShell({ debugLabel: 'ReaderModulePanel', closeEvent: 'reader.directory.close' }) {
+    ReaderModulePanelShell({ debugLabel: 'ReaderModulePanel', closeEvent: this.closeEvent() }) {
       Column() {
         Row({ space: 4 }) {
           Text('目录')
@@ -1851,6 +1889,9 @@ export struct ReaderTtsPanel {
           ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_motion_dark'), title: '语速', value: 'TextReader Host 未提供程序化语速', disabled: true, unavailableReason: 'TextReader Host 未提供程序化语速' })
           ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_volume_dark'), title: '音色', value: 'Host 未提供音色映射', disabled: true, unavailableReason: 'Host 未提供音色映射' })
           ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_current_location_dark'), title: '范围', value: 'Core 仅当前章节', disabled: true, unavailableReason: 'Core 仅当前章节' })
+          ReaderLiveOptionRow({ icon: $r('app.media.reader_icon_globe'), title: '在线语音区域', value: 'HttpTTS 合同缺失', disabled: true, unavailableReason: 'HttpTTS 合同缺失' })
+          ReaderLiveOptionRow({ icon: $r('app.media.reader_icon_globe'), title: '在线语音语言', value: 'HttpTTS 合同缺失', disabled: true, unavailableReason: 'HttpTTS 合同缺失' })
+          ReaderLiveOptionRow({ icon: $r('app.media.reader_icon_assist'), title: '在线语音模型', value: 'HttpTTS 合同缺失', disabled: true, unavailableReason: 'HttpTTS 合同缺失' })
           ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_clock_dark'), title: '定时', value: 'Core/Host 未接入', disabled: true, unavailableReason: 'Core/Host 未接入' })
         }
         .width('100%')
@@ -1876,8 +1917,14 @@ export struct ReaderSettingsPanel {
   @StorageProp('reader.readerToggles.hapticFeedback') hapticFeedback: boolean = false;
   @StorageProp('reader.readerToggles.hideStatusBar') hideStatusBar: boolean = false;
   @StorageProp('reader.readerSettingOptions.tapMode') tapMode: string = '左右区域';
-  @StorageProp('reader.readerSettingOptions.pageAnimation') pageAnimation: string = '平滑';
+  @StorageProp('reader.readerSettingOptions.pageAnimation') pageAnimation: string = ReaderAppearanceSpecRegistry.select('pageAnimation')!.defaultValue;
   @StorageProp('reader.readerHostMessage') readerHostMessage: string = '';
+
+  private pageAnimationLabel(): string {
+    if (this.pageAnimation === 'cover' || this.pageAnimation === '覆盖') return '覆盖';
+    if (this.pageAnimation === 'none' || this.pageAnimation === '无' || this.pageAnimation === '无动画') return '无动画';
+    return '平滑';
+  }
 
   build() {
     ReaderModulePanelShell({ debugLabel: 'ReaderModulePanel' }) {
@@ -1896,7 +1943,13 @@ export struct ReaderSettingsPanel {
           ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_refresh_dark'), title: '自动翻页', active: this.autoPage, switchRow: true, toggleKey: 'autoPage' })
           ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_gesture_dark'), title: '点击翻页方式', value: this.tapMode, optionKey: 'tapMode', optionChoices: ['左右区域', '中间', '边缘'] })
           ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_volume_dark'), title: '音量键翻页', active: this.volumePage, switchRow: true, toggleKey: 'volumePage', disabled: true, unavailableReason: '未接入按键监听' })
-          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_file_dark'), title: '翻页动画', value: '当前 Reader Pager 未接入', disabled: true, unavailableReason: '当前 Reader Pager 未接入' })
+          ReaderLiveOptionRow({
+            icon: $r('app.media.ui_icon_file_dark'),
+            title: '翻页动画',
+            value: this.pageAnimationLabel(),
+            optionKey: 'pageAnimation',
+            optionChoices: ['平滑', '覆盖', '无动画'],
+          })
           ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_permission_dark'), title: '横屏锁定', active: this.landscapeLock, switchRow: true, toggleKey: 'landscapeLock', disabled: true, unavailableReason: '未接入方向 Host' })
           ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_sun_dark'), title: '屏幕常亮', active: this.keepScreenOn, switchRow: true, toggleKey: 'keepScreenOn' })
           ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_progress_dark'), title: '页脚进度信息', active: this.statusInfo, switchRow: true, toggleKey: 'statusInfo' })
@@ -2086,10 +2139,21 @@ struct ReaderFullChoiceRow {
     if (this.choiceKey === 'tapMode') {
       ReaderUiStore.dispatch({ type: 'set-reader-setting-option', optionKey: 'tapMode', optionValue: value });
     } else if (this.choiceKey === 'pageAnimation') {
-      ReaderUiStore.dispatch({ type: 'set-reader-setting-option', optionKey: 'pageAnimation', optionValue: value });
+      ReaderUiStore.dispatch({ type: 'set-reader-setting-option', optionKey: 'pageAnimation', optionValue: this.pageAnimationValue(value) });
     } else if (this.choiceKey === 'ttsRate') {
       ReaderUiStore.dispatch({ type: 'tts-set-rate', ttsRate: parseFloat(value) });
     }
+  }
+
+  private pageAnimationValue(value: string): string {
+    if (value === '覆盖' || value === 'cover') return 'cover';
+    if (value === '无' || value === '无动画' || value === 'none') return 'none';
+    return 'slide';
+  }
+
+  private isActive(value: string): boolean {
+    if (this.choiceKey !== 'pageAnimation') return value === this.active;
+    return this.pageAnimationValue(value) === this.pageAnimationValue(this.active);
   }
 
   build() {
@@ -2098,11 +2162,11 @@ struct ReaderFullChoiceRow {
         Text(value)
           .fontSize(10)
           .fontWeight(760)
-          .fontColor(this.disabled ? ColorTokens.muted : (value === this.active ? DemoAliasTokens.onPrimary : ColorTokens.controlInk))
+          .fontColor(this.disabled ? ColorTokens.muted : (this.isActive(value) ? DemoAliasTokens.onPrimary : ColorTokens.controlInk))
           .height(30)
           .layoutWeight(1)
           .borderRadius(DemoAliasTokens.radiusMd)
-          .backgroundColor(!this.disabled && value === this.active ? ColorTokens.primaryDark : ColorTokens.floatingControlBgAlt)
+          .backgroundColor(!this.disabled && this.isActive(value) ? ColorTokens.primaryDark : ColorTokens.floatingControlBgAlt)
           .textAlign(TextAlign.Center)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -2118,31 +2182,45 @@ struct ReaderFullChoiceRow {
 @Component
 struct ReaderFullFontChoiceRow {
   @StorageProp('reader.typography.fontFamily') fontFamily: string = 'serif';
-  private values: Array<[string, ReaderFontFamily]> = [
-    ['系统', 'system'],
-    ['宋体', 'serif'],
-    ['黑体', 'sans'],
-    ['楷体', 'kai'],
-    ['仿宋', 'fangsong'],
-    ['等宽', 'mono'],
-  ];
+  private values: Array<[string, ReaderFontFamily]> = ReaderAppearanceSpecRegistry.fonts
+    .filter((item: ReaderAppearanceFont) => !item.importAction)
+    .map((item: ReaderAppearanceFont): [string, ReaderFontFamily] => [item.label, appearanceReaderFontFamily(item.arktsValue)]);
 
   build() {
-    Row({ space: 6 }) {
-      ForEach(this.values, (item: [string, ReaderFontFamily], i: number) => {
-        Text(item[0])
-          .fontSize(10)
+    Column({ space: 8 }) {
+      ForEach([0, 1], (row: number) => {
+        Row({ space: 8 }) {
+          ForEach(this.values.slice(row * 4, row * 4 + 4), (item: [string, ReaderFontFamily], i: number) => {
+            Text(item[0])
+              .fontSize(9)
+              .fontWeight(760)
+              .fontColor(item[1] === this.fontFamily ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
+              .height(30)
+              .layoutWeight(1)
+              .borderRadius(12)
+              .border({ width: 1, color: item[1] === this.fontFamily ? ColorTokens.primary : ColorTokens.border })
+              .backgroundColor(item[1] === this.fontFamily ? ColorTokens.primaryDark : ColorTokens.floatingControlBgAlt)
+              .textAlign(TextAlign.Center)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .onClick(() => ReaderUiStore.dispatch({ type: 'set-reader-font-family', fontFamily: item[1] }))
+          }, (item: [string, ReaderFontFamily], i: number) => `${item[1]}-${row}-${i}`)
+        }
+        .width('100%')
+      }, (row: number) => `${row}`)
+      Row() {
+        Text(ReaderAppearanceSpecRegistry.fonts.find((item: ReaderAppearanceFont) => item.importAction)?.label ?? '+ 导入')
+          .fontSize(9)
           .fontWeight(760)
-          .fontColor(item[1] === this.fontFamily ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
+          .fontColor(ColorTokens.controlInk)
+          .width('23%')
           .height(30)
-          .layoutWeight(1)
-          .borderRadius(DemoAliasTokens.radiusMd)
-          .backgroundColor(item[1] === this.fontFamily ? ColorTokens.primaryDark : ColorTokens.floatingControlBgAlt)
+          .borderRadius(12)
+          .border({ width: 1, color: ColorTokens.muted, style: BorderStyle.Dashed })
           .textAlign(TextAlign.Center)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .onClick(() => ReaderUiStore.dispatch({ type: 'set-reader-font-family', fontFamily: item[1] }))
-      }, (item: [string, ReaderFontFamily], i: number) => `${item[1]}-${i}`)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'reader-font-import-confirm' }))
+      }
+      .width('100%')
     }
     .width('100%')
   }
@@ -2157,19 +2235,22 @@ struct ReaderFullThemeGrid {
 
   private isActive(item: ReaderThemeOption): boolean {
     const isNight = this.appThemeMode === 'dark';
-    return this.currentTheme === item.value && ((isNight && item.scheme === 'night') || (!isNight && item.scheme === 'day'));
+    let effectiveTheme: string = this.currentTheme;
+    if (isNight && !effectiveTheme.endsWith('-night')) effectiveTheme = `${effectiveTheme}-night`;
+    if (!isNight && effectiveTheme.endsWith('-night')) effectiveTheme = effectiveTheme.substring(0, effectiveTheme.length - 6);
+    return effectiveTheme === item.value && ((isNight && item.scheme === 'night') || (!isNight && item.scheme === 'day'));
   }
 
   build() {
-    Column({ space: 7 }) {
+    Column({ space: 6 }) {
       ForEach([0, 1], (row: number) => {
-        Row({ space: 7 }) {
+        Row({ space: 6 }) {
           ForEach(this.options.slice(row * 4, row * 4 + 4), (item: ReaderThemeOption, i: number) => {
-            Column({ space: 4 }) {
+            Column({ space: 3 }) {
               Column()
-                .width('100%')
-                .height(30)
-                .borderRadius(DemoAliasTokens.radiusMd)
+                .width(46)
+                .height(18)
+                .borderRadius(6)
                 .backgroundColor(item.swatch)
                 .border({ width: this.isActive(item) ? 2 : 1, color: this.isActive(item) ? ColorTokens.primary : ColorTokens.border })
               Text(item.label)
@@ -2179,7 +2260,12 @@ struct ReaderFullThemeGrid {
                 .maxLines(1)
             }
             .layoutWeight(1)
+            .height(59)
+            .justifyContent(FlexAlign.Center)
             .alignItems(HorizontalAlign.Center)
+            .borderRadius(DemoAliasTokens.radiusMd)
+            .border({ width: this.isActive(item) ? 1 : 0, color: ColorTokens.primary })
+            .backgroundColor(this.isActive(item) ? ColorTokens.floatingControlBgAlt : DemoAliasTokens.surface)
             .onClick(() => {
               MotionAdapter.apply('segment.item.switch', this.reducedMotion, this.getUIContext(), () => {
                 ReaderUiStore.dispatch({ type: 'set-reader-theme', theme: item.value });
@@ -2190,8 +2276,96 @@ struct ReaderFullThemeGrid {
         }
         .width('100%')
       }, (row: number) => `${row}`)
+      Row({ space: 6 }) {
+        Blank().layoutWeight(1)
+        ReaderFullAppearanceAction({ label: '设为日间主题', mode: 'light' })
+        ReaderFullAppearanceAction({ label: '设为夜间主题', mode: 'dark' })
+      }
+      .width('100%')
     }
     .width('100%')
+  }
+}
+
+@Component
+struct ReaderFullAppearanceAction {
+  @Prop label: string = '';
+  @Prop mode: string = 'light';
+
+  build() {
+    Text(this.label)
+      .fontSize(9)
+      .fontWeight(760)
+      .fontColor(ColorTokens.controlInk)
+      .width(74)
+      .height(28)
+      .borderRadius(6)
+      .border({ width: 1, color: ColorTokens.border })
+      .textAlign(TextAlign.Center)
+      .onClick(() => ReaderUiStore.dispatch({ type: 'settings-segment-switch', settingsKey: 'appThemeMode', settingsValue: this.mode }))
+  }
+}
+
+@Component
+struct ReaderFullAppearanceSelectRow {
+  @Prop label: string = '';
+  @Prop value: string = '';
+  @Prop optionKey: ReaderSettingOptionKey = 'paragraphIndentMode';
+
+  private spec(): ReaderAppearanceSelect | undefined {
+    return ReaderAppearanceSpecRegistry.select(this.optionKey);
+  }
+
+  private currentLabel(): string {
+    const spec: ReaderAppearanceSelect | undefined = this.spec();
+    if (spec === undefined) return this.value;
+    const option = spec.options.find((item) => item.value === this.value || item.label === this.value);
+    return option?.label ?? this.value;
+  }
+
+  private nextValue(): string {
+    const spec: ReaderAppearanceSelect | undefined = this.spec();
+    if (spec === undefined || spec.options.length === 0) return this.value;
+    for (let index: number = 0; index < spec.options.length; index += 1) {
+      if (spec.options[index].value === this.value || spec.options[index].label === this.value) {
+        return spec.options[(index + 1) % spec.options.length].value;
+      }
+    }
+    return spec.defaultValue;
+  }
+
+  private select(): void {
+    const next = this.nextValue();
+    ReaderUiStore.dispatch({ type: 'set-reader-setting-option', optionKey: this.optionKey, optionValue: next });
+    if (this.optionKey === 'paragraphIndentMode') {
+      ReaderUiStore.dispatch({ type: 'set-reader-render-metric', readerMetric: 'paragraphIndent', value: next === 'none' ? 0 : 2 });
+    }
+  }
+
+  build() {
+    Row() {
+      Text(this.label)
+        .fontSize(11)
+        .fontWeight(760)
+        .fontColor(ColorTokens.controlInk)
+        .layoutWeight(1)
+      Text(this.currentLabel())
+        .fontSize(10)
+        .fontWeight(650)
+        .fontColor(ColorTokens.muted)
+      Text('⌄')
+        .fontSize(11)
+        .fontColor(ColorTokens.muted)
+        .margin({ left: 8 })
+    }
+    .width('100%')
+    .height(34)
+    .padding({ left: 10, right: 10 })
+    .borderRadius(8)
+    .border({ width: 1, color: ColorTokens.border })
+    .backgroundColor(ColorTokens.floatingControlBgAlt)
+    .alignItems(VerticalAlign.Center)
+    .onClick(() => this.select())
   }
 }
 
@@ -2201,9 +2375,13 @@ struct ReaderFullStepperRow {
   @Prop value: string = '';
   @Prop metric: ReaderRenderMetric = 'fontSize';
 
+  private title(): string {
+    return ReaderAppearanceSpecRegistry.stepper(this.metric)?.label ?? this.label;
+  }
+
   build() {
     Row() {
-      Text(this.label)
+      Text(this.title())
         .fontSize(12)
         .fontWeight(760)
         .fontColor(ColorTokens.controlInk)
@@ -2542,6 +2720,14 @@ export struct ReaderFullTtsPage {
           ReaderFullBlock({ title: '朗读范围', meta: 'Core 仅当前章节' }) {
             ReaderFullChoiceRow({ values: ['当前章节', '本书剩余', '循环朗读'], active: '当前章节', disabled: true })
           }
+          ReaderFullBlock({ title: '在线语音', meta: 'HttpTTS 合同与凭据/播放闭环未接入' }) {
+            Column() {
+              ReaderFullToggleRow({ icon: '区', title: '区域', disabled: true, unavailableReason: '合同缺失' })
+              ReaderFullToggleRow({ icon: '语', title: '语言', disabled: true, unavailableReason: '合同缺失' })
+              ReaderFullToggleRow({ icon: '模', title: '模型', disabled: true, unavailableReason: '合同缺失' })
+            }
+            .width('100%')
+          }
           ReaderFullBlock({ title: '定时关闭', meta: 'Core/Host 未接入' }) {
             ReaderFullChoiceRow({ values: ['不定时', '15 分钟', '30 分钟'], active: '', disabled: true })
           }
@@ -2558,13 +2744,17 @@ export struct ReaderFullTtsPage {
 
 @Component
 export struct ReaderFullAppearancePage {
-  @StorageProp('reader.typography.fontSize') fontSize: number = 18;
-  @StorageProp('reader.typography.lineHeight') lineHeightRatio: number = 1.96;
-  @StorageProp('reader.typography.paragraphGap') paragraphGap: number = 16;
-  @StorageProp('reader.typography.letterSpacing') letterSpacing: number = 0;
+  @StorageProp('reader.typography.fontSize') fontSize: number = ReaderAppearanceSpecRegistry.stepper('fontSize')!.defaultValue;
+  @StorageProp('reader.typography.lineHeight') lineHeightRatio: number = ReaderAppearanceSpecRegistry.stepper('lineHeight')!.defaultValue;
+  @StorageProp('reader.typography.paragraphGap') paragraphGap: number = ReaderAppearanceSpecRegistry.stepper('paragraphGap')!.defaultValue;
+  @StorageProp('reader.typography.letterSpacing') letterSpacing: number = ReaderAppearanceSpecRegistry.stepper('letterSpacing')!.defaultValue;
   @StorageProp('reader.pageSpace.topMargin') topMargin: number = 72;
   @StorageProp('reader.pageSpace.sideMargin') sideMargin: number = 32;
   @StorageProp('reader.pageSpace.paragraphIndent') paragraphIndent: number = 2;
+  @StorageProp('reader.readerSettingOptions.paragraphIndentMode') paragraphIndentMode: string = ReaderAppearanceSpecRegistry.select('paragraphIndentMode')!.defaultValue;
+  @StorageProp('reader.readerSettingOptions.textConversion') textConversion: string = ReaderAppearanceSpecRegistry.select('textConversion')!.defaultValue;
+  @StorageProp('reader.readerSettingOptions.pageAnimation') pageAnimation: string = ReaderAppearanceSpecRegistry.select('pageAnimation')!.defaultValue;
+  @StorageProp('reader.readerSettingOptions.textAlignment') textAlignment: string = ReaderAppearanceSpecRegistry.select('textAlignment')!.defaultValue;
 
   private whole(value: number): string {
     return `${Math.round(value)}`;
@@ -2582,24 +2772,30 @@ export struct ReaderFullAppearancePage {
     ReaderFullPanelShell({ title: '界面', quickRoute: 'reader-appearance', debugLabel: 'ReaderExpandedPanel' }) {
       Scroll() {
         Column({ space: 10 }) {
-          ReaderFullBlock({ title: '阅读主题' }) {
+          ReaderFullBlock({ title: '主题库', meta: '日间：纸纹 · 夜间：夜纹' }) {
             ReaderFullThemeGrid()
           }
-          ReaderFullBlock({ title: '文字排版' }) {
+          ReaderFullBlock({ title: '字形选择', meta: '使用已接入的本地字形' }) {
+            ReaderFullFontChoiceRow()
+          }
+          ReaderFullBlock({ title: '排版' }) {
             Column({ space: 4 }) {
+              ReaderFullAppearanceSelectRow({ label: '缩进', value: this.paragraphIndentMode, optionKey: 'paragraphIndentMode' })
+              ReaderFullAppearanceSelectRow({ label: '简繁', value: this.textConversion, optionKey: 'textConversion' })
+              ReaderFullAppearanceSelectRow({ label: '翻页动画', value: this.pageAnimation, optionKey: 'pageAnimation' })
+              ReaderFullAppearanceSelectRow({ label: '文字对齐', value: this.textAlignment, optionKey: 'textAlignment' })
               ReaderFullStepperRow({ label: '字号', value: this.whole(this.fontSize), metric: 'fontSize' })
               ReaderFullStepperRow({ label: '行距', value: this.two(this.lineHeightRatio), metric: 'lineHeight' })
               ReaderFullStepperRow({ label: '段距', value: this.whole(this.paragraphGap), metric: 'paragraphGap' })
               ReaderFullStepperRow({ label: '字距', value: this.one(this.letterSpacing), metric: 'letterSpacing' })
-              ReaderFullFontChoiceRow()
             }
             .width('100%')
           }
           ReaderFullBlock({ title: '页面空间', meta: '边距 / 缩进' }) {
             Column({ space: 4 }) {
-              ReaderFullStepperRow({ label: '顶部边距', value: this.whole(this.topMargin), metric: 'topMargin' })
+              ReaderFullStepperRow({ label: '上下边距', value: this.whole(this.topMargin), metric: 'topMargin' })
               ReaderFullStepperRow({ label: '左右边距', value: this.whole(this.sideMargin), metric: 'sideMargin' })
-              ReaderFullStepperRow({ label: '段首缩进', value: `${this.one(this.paragraphIndent)}em`, metric: 'paragraphIndent' })
+              ReaderFullStepperRow({ label: '段首缩进', value: this.one(this.paragraphIndent), metric: 'paragraphIndent' })
             }
             .width('100%')
           }
@@ -2624,6 +2820,7 @@ export struct ReaderFullSettingsPage {
   @StorageProp('reader.readerToggles.hapticFeedback') hapticFeedback: boolean = true;
   @StorageProp('reader.readerToggles.hideStatusBar') hideStatusBar: boolean = false;
   @StorageProp('reader.readerSettingOptions.tapMode') tapMode: string = '左右区域';
+  @StorageProp('reader.readerSettingOptions.pageAnimation') pageAnimation: string = ReaderAppearanceSpecRegistry.select('pageAnimation')!.defaultValue;
   @StorageProp('reader.readerHostMessage') readerHostMessage: string = '';
 
   build() {
@@ -2645,8 +2842,8 @@ export struct ReaderFullSettingsPage {
           ReaderFullBlock({ title: '点击翻页方式', meta: this.tapMode }) {
             ReaderFullChoiceRow({ values: ['左右区域', '中间', '边缘'], active: this.tapMode, choiceKey: 'tapMode' })
           }
-          ReaderFullBlock({ title: '翻页动画', meta: '当前 Reader Pager 未接入' }) {
-            ReaderFullChoiceRow({ values: ['平滑', '覆盖', '无动画'], active: '', choiceKey: 'pageAnimation', disabled: true })
+          ReaderFullBlock({ title: '翻页动画', meta: '当前 Reader Pager 未接入仿真/滚动；可用平滑/覆盖/无动画' }) {
+            ReaderFullChoiceRow({ values: ['平滑', '覆盖', '无动画'], active: this.pageAnimation, choiceKey: 'pageAnimation' })
           }
           ReaderFullBlock({ title: '阅读行为', meta: '开关项' }) {
             Column() {

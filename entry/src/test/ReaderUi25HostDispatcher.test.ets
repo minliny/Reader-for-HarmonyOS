@@ -13,6 +13,7 @@ import {
 } from '../main/ets/host/ReaderUiHostContract';
 import { CoreHostAdapter } from '../main/ets/host/adapters/CoreHostAdapter';
 import { FontHostAdapter } from '../main/ets/host/adapters/FontHostAdapter';
+import { HostErrorWrapper } from '../main/ets/host/types';
 
 const NEW_25_TYPES: string[] = [
   'file.select', 'font.registerFile', 'clipboard.read', 'clipboard.write',
@@ -42,6 +43,18 @@ class FakeReaderUiHostPlatform implements ReaderUiHostPlatform {
     const result = emptyPayload();
     result['accepted'] = true;
     return Promise.resolve(result);
+  }
+}
+
+class StructuredFailureReaderUiHostPlatform extends FakeReaderUiHostPlatform {
+  execute(_type: HostRequestType, _payload: ReaderUiHostPayload,
+    _request: ReaderUiHostRequest): Promise<ReaderUiHostPayload> {
+    return Promise.reject(new HostErrorWrapper({
+      code: 'FILE_NOT_FOUND',
+      message: 'missing media file',
+      retryable: false,
+      details: { phase: 'Storage', path: 'cache://missing.pdf' },
+    }));
   }
 }
 
@@ -84,7 +97,7 @@ function validPayload(type: HostRequestType): ReaderUiHostPayload {
       payload['timerId'] = 'timer-1'; payload['correlationId'] = 'timer-1';
       payload['delayMs'] = 1000; payload['generation'] = 1;
       payload['oneShot'] = true; payload['foregroundOnly'] = true; return payload;
-    case 'notification.show': payload['title'] = 'Reader'; payload['body'] = ''; return payload;
+    case 'notification.show': payload['id'] = 'reader-test'; payload['title'] = 'Reader'; payload['body'] = ''; return payload;
     case 'notification.cancel': payload['id'] = '1'; return payload;
     case 'share.invoke': payload['text'] = 'Reader'; return payload;
     case 'clipboard.copy': payload['text'] = ''; return payload;
@@ -264,10 +277,24 @@ export default function ReaderUi25HostDispatcherTests(): void {
         type: 'tts.start', payload: invalidTts,
       })).assertEqual('INVALID_PARAMS');
 
+      const notificationWithoutId = emptyPayload();
+      notificationWithoutId['title'] = 'Reader';
+      notificationWithoutId['body'] = 'download complete';
+      expect(await capturedCode(dispatcher, {
+        type: 'notification.show', payload: notificationWithoutId,
+      })).assertEqual('INVALID_PARAMS');
+
       platform.available = false;
       expect(await capturedCode(dispatcher, {
         type: 'network.status', payload: emptyPayload(),
       })).assertEqual('CAPABILITY_UNAVAILABLE');
+    });
+
+    it('structured_host_errors_keep_their_contract_code', 0, async () => {
+      const dispatcher = new ReaderUiHostDispatcher(new StructuredFailureReaderUiHostPlatform());
+      expect(await capturedCode(dispatcher, {
+        type: 'file.read', payload: validPayload('file.read'),
+      })).assertEqual('FILE_NOT_FOUND');
     });
   });
 }

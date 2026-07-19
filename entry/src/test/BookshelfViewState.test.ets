@@ -191,7 +191,7 @@ export default function BookshelfViewStateTests(): void {
       expect(MotionSpecRegistry.has('bookshelf.view.switch')).assertTrue();
       const spec = MotionSpecRegistry.byId('bookshelf.view.switch');
       expect(spec !== undefined).assertTrue();
-      expect(spec!.durationMs).assertEqual(160);
+      expect(spec!.durationMs).assertEqual(320);
       expect(spec!.reducedMotionPolicy).assertEqual('zeroDuration');
     });
 

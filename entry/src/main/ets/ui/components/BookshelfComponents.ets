@@ -70,6 +70,7 @@ export struct ContinueReadingCard {
   @StorageProp('reader.continueReadingBook') continueReadingBook: CoreBookshelfBook | null = null;
   @StorageProp('reader.continueReadingLoaded') continueReadingLoaded: boolean = false;
   @StorageProp('reader.continueReadingError') continueReadingError: string = '';
+  @StorageProp('reader.settingsToggles.showLocalBookBadge') showLocalBookBadge: boolean = true;
 
   private coreContinueBook(): CoreBookshelfBook | null {
     return this.continueReadingLoaded ? this.continueReadingBook : null;
@@ -143,11 +144,15 @@ export struct ContinueReadingCard {
         .justifyContent(FlexAlign.Center)
         .margin({ left: 14 })
       } else {
-        Stack() {
+        Stack({ alignContent: Alignment.TopEnd }) {
           SourceCoverImage({
             sourceId: this.coreContinueBook()?.sourceId ?? '',
             coverUrl: this.coreContinueBook()?.coverUrl ?? '',
           })
+          if (this.showLocalBookBadge && this.coreContinueBook()?.sourceId === 'local') {
+            LocalBookBadge()
+              .margin({ top: 5, right: 5 })
+          }
         }
         .width(62)
         .aspectRatio(2 / 3)
@@ -511,24 +516,47 @@ struct BookshelfFilterPopover {
   }
 }
 
+// Presentation-only local-book marker. Its truth source is the canonical Core
+// bookshelf identity (`sourceId=local`); filenames, cover availability and
+// fixture ids are deliberately never used as local-book heuristics.
+@Component
+struct LocalBookBadge {
+  build() {
+    Text('本地')
+      .fontSize(9)
+      .fontWeight(800)
+      .fontColor(DemoAliasTokens.onPrimary)
+      .height(20)
+      .padding({ left: 7, right: 7 })
+      .borderRadius(DemoAliasTokens.radiusPill)
+      .backgroundColor(ColorTokens.primaryDark)
+      .textAlign(TextAlign.Center)
+  }
+}
+
 // .fd-book-cover-frame: width 100%, aspect 2/3, radius-md(8), surface, soft-shadow.
 @Component
 export struct BookCover {
   @Prop sourceId: string = '';
   @Prop coverKey: string = '';
   @Prop coverUrl: string = '';
+  @Prop showLocalBadge: boolean = true;
 
   private fallbackCover(): Resource | undefined {
     return this.coverKey.length > 0 ? bookshelfCoverResource(this.coverKey) : undefined;
   }
 
   build() {
-    Stack() {
+    Stack({ alignContent: Alignment.TopEnd }) {
       SourceCoverImage({
         sourceId: this.sourceId,
         coverUrl: this.coverUrl,
         fallback: this.fallbackCover(),
       })
+      if (this.showLocalBadge && this.sourceId === 'local') {
+        LocalBookBadge()
+          .margin({ top: 7, right: 7 })
+      }
     }
     .width('100%')
     .aspectRatio(2 / 3)
@@ -552,6 +580,7 @@ export struct BookCard {
   @Prop coverKey: string = '';
   @Prop coverUrl: string = '';
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
+  @StorageProp('reader.settingsToggles.showLocalBookBadge') showLocalBookBadge: boolean = true;
 
   private canOpen(): boolean {
     return this.bookId.length > 0 && (this.sourceId.length > 0 || isLoadableBookId(this.bookId));
@@ -559,7 +588,12 @@ export struct BookCard {
 
   build() {
     Column() {
-      BookCover({ sourceId: this.sourceId, coverKey: this.coverKey, coverUrl: this.coverUrl })
+      BookCover({
+        sourceId: this.sourceId,
+        coverKey: this.coverKey,
+        coverUrl: this.coverUrl,
+        showLocalBadge: this.showLocalBookBadge,
+      })
       Text(this.title.length > 0 ? this.title : '未提供书籍信息')
         .fontSize(15)
         .fontWeight(700)
@@ -597,6 +631,9 @@ export struct BookCard {
 @Component
 export struct BookGrid {
   @Prop books: BookEntry[] = [];
+  // ScreenGraph can reuse BookGrid for both cover and list variants. Keep the
+  // same book identities and route actions while changing only presentation.
+  @Prop viewMode: string = 'cover';
   // `coverColumns` is a real reducer-backed setting.  Keep the grid within
   // its declared 1–5 range instead of hardcoding the demo's three columns.
   @StorageProp('reader.coverColumns') coverColumns: number = 3;
@@ -613,24 +650,28 @@ export struct BookGrid {
   }
 
   build() {
-    Grid() {
-      ForEach(this.books, (b: BookEntry, i: number) => {
-        GridItem() {
-          BookCard({
-            sourceId: b.sourceId ?? '',
-            bookId: b.bookId,
-            title: b.title,
-            author: b.author,
-            coverKey: b.coverKey,
-            coverUrl: b.coverUrl ?? '',
-          })
-        }
-      }, (b: BookEntry, i: number) => `${b.bookId}-${b.title}-${i}`)
+    if (this.viewMode === 'list') {
+      BookList({ books: this.books })
+    } else {
+      Grid() {
+        ForEach(this.books, (b: BookEntry, i: number) => {
+          GridItem() {
+            BookCard({
+              sourceId: b.sourceId ?? '',
+              bookId: b.bookId,
+              title: b.title,
+              author: b.author,
+              coverKey: b.coverKey,
+              coverUrl: b.coverUrl ?? '',
+            })
+          }
+        }, (b: BookEntry, i: number) => `${b.bookId}-${b.title}-${i}`)
+      }
+      .columnsTemplate(this.columnsTemplate())
+      .rowsGap(16)
+      .columnsGap(30)
+      .width('100%')
     }
-    .columnsTemplate(this.columnsTemplate())
-    .rowsGap(16)
-    .columnsGap(30)
-    .width('100%')
   }
 }
 
@@ -672,6 +713,7 @@ export struct BookListRow {
   @Prop author: string = '';
   @Prop latestChapter: string = '';
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
+  @StorageProp('reader.settingsToggles.showLocalBookBadge') showLocalBookBadge: boolean = true;
 
   private canOpen(): boolean {
     return this.bookId.length > 0 && (this.sourceId.length > 0 || isLoadableBookId(this.bookId));
@@ -680,12 +722,16 @@ export struct BookListRow {
   build() {
     Row({ space: 10 }) {
       // 48×72 封面（列表模式封面比网格模式矮）
-      Stack() {
+      Stack({ alignContent: Alignment.TopEnd }) {
         SourceCoverImage({
           sourceId: this.sourceId,
           coverUrl: this.coverUrl,
           fallback: this.coverKey.length > 0 ? bookshelfCoverResource(this.coverKey) : undefined,
         })
+        if (this.showLocalBookBadge && this.sourceId === 'local') {
+          LocalBookBadge()
+            .margin({ top: 4, right: 4 })
+        }
       }
       .width(48)
       .height(72)

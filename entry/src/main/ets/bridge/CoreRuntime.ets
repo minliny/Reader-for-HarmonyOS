@@ -58,6 +58,7 @@ import { FileSelectionHostAdapter } from '../host/adapters/FileSelectionHostAdap
 import { FontHostAdapter } from '../host/adapters/FontHostAdapter';
 import { NetworkHostAdapter } from '../host/adapters/NetworkHostAdapter';
 import { WebDavHostAdapter } from '../host/adapters/WebDavHostAdapter';
+import { ReaderUiPreferenceHostAdapter } from '../host/adapters/ReaderUiPreferenceHostAdapter';
 import {
   type HostHttpRequest,
   type HostCookieGetRequest,
@@ -208,6 +209,7 @@ export class CoreRuntime {
   private shareAdapter: ShareHostAdapter | null;
   private permissionAdapter: PermissionHostAdapter | null;
   private credentialAdapter: CredentialHostAdapter | null;
+  private readerUiPreferenceAdapter: ReaderUiPreferenceHostAdapter | null;
   // Reader UI HostRequest 1.2.0 is a separate exact 58-item boundary. The
   // historical mixed Core/UI manifest above remains 43 items.
   private fileSelectionAdapter: FileSelectionHostAdapter | null;
@@ -298,6 +300,7 @@ export class CoreRuntime {
       this.permissionAdapter = new PermissionHostAdapter(uiCtx);
       this.fileSelectionAdapter = new FileSelectionHostAdapter(uiCtx);
       this.fontAdapter = new FontHostAdapter(uiCtx);
+      this.readerUiPreferenceAdapter = new ReaderUiPreferenceHostAdapter(uiCtx);
     } else {
       this.screenAdapter = null;
       this.notificationAdapter = null;
@@ -306,6 +309,7 @@ export class CoreRuntime {
       this.permissionAdapter = null;
       this.fileSelectionAdapter = null;
       this.fontAdapter = null;
+      this.readerUiPreferenceAdapter = null;
     }
 
     this.webDavAdapter = this.credentialAdapter !== null
@@ -826,6 +830,10 @@ export class CoreRuntime {
 
   getCredentialAdapter(): CredentialHostAdapter | null {
     return this.credentialAdapter;
+  }
+
+  getReaderUiPreferenceAdapter(): ReaderUiPreferenceHostAdapter | null {
+    return this.readerUiPreferenceAdapter;
   }
 
   getFileSelectionAdapter(): FileSelectionHostAdapter | null {
@@ -1708,6 +1716,31 @@ export class CoreRuntime {
     return result.data;
   }
 
+  /** Update one existing Core bookmark.  `time` is Core's exact primary key;
+   * the bridge never derives it from a row index or a visual fixture. */
+  async bookmarkUpdate(input: CoreBookmarkUpdateInput): Promise<JsonObject> {
+    if (!Number.isSafeInteger(input.time) || input.time < 0) {
+      throw new Error('bookmark.update requires a non-negative Core bookmark time.');
+    }
+    const params: JsonObject = {};
+    params['time'] = input.time;
+    if (input.bookName !== undefined) params['bookName'] = input.bookName;
+    if (input.bookAuthor !== undefined) params['bookAuthor'] = input.bookAuthor;
+    if (input.chapterIndex !== undefined) {
+      CoreRuntime.requireNonNegativeInt32(input.chapterIndex, 'bookmark.update chapterIndex');
+      params['chapterIndex'] = input.chapterIndex;
+    }
+    if (input.chapterPos !== undefined) {
+      CoreRuntime.requireNonNegativeInt32(input.chapterPos, 'bookmark.update chapterPos');
+      params['chapterPos'] = input.chapterPos;
+    }
+    if (input.chapterName !== undefined) params['chapterName'] = input.chapterName;
+    if (input.bookText !== undefined) params['bookText'] = input.bookText;
+    if (input.content !== undefined) params['content'] = input.content;
+    const result = await this.runtime.request('bookmark.update', params, { timeoutMs: 5000 });
+    return result.data;
+  }
+
   async searchHistoryList(limit?: number): Promise<JsonObject> {
     const params: JsonObject = {};
     if (limit !== undefined) {
@@ -1819,6 +1852,112 @@ export class CoreRuntime {
     return result.data;
   }
 
+  // ── Slice 10 typed-schema Core verticals ─────────────────────────────
+  // These methods are the complete production bridge for commands whose
+  // params are bound through reader-command.schema.json.  They deliberately
+  // do not wrap runtime-only/content-edit/cover or examples-only HTTP-TTS and
+  // read-record commands: those remain fail-closed in Slice10CapabilityPolicy.
+
+  async txtTocRuleCreate(input: CoreTxtTocRuleCreateInput): Promise<JsonObject> {
+    const name = input.name.trim();
+    const rule = input.rule.trim();
+    if (name.length === 0 || rule.length === 0) {
+      throw new Error('txt-toc-rule.create requires non-empty name and rule.');
+    }
+    const params: JsonObject = {};
+    params['name'] = input.name;
+    params['rule'] = input.rule;
+    if (input.example !== undefined) params['example'] = input.example;
+    if (input.serialNumber !== undefined) {
+      CoreRuntime.requireInt32(input.serialNumber, 'txt-toc-rule.create serialNumber');
+      params['serialNumber'] = input.serialNumber;
+    }
+    if (input.enable !== undefined) params['enable'] = input.enable;
+    if (input.id !== undefined) {
+      CoreRuntime.requirePositiveSafeInteger(input.id, 'txt-toc-rule.create id');
+      params['id'] = input.id;
+    }
+    const result = await this.runtime.request('txt-toc-rule.create', params, { timeoutMs: 5000 });
+    return result.data;
+  }
+
+  async txtTocRuleList(enabledOnly?: boolean): Promise<JsonObject> {
+    const params: JsonObject = {};
+    if (enabledOnly !== undefined) params['enabledOnly'] = enabledOnly;
+    const result = await this.runtime.request('txt-toc-rule.list', params, { timeoutMs: 5000 });
+    return result.data;
+  }
+
+  async txtTocRuleUpdate(input: CoreTxtTocRuleUpdateInput): Promise<JsonObject> {
+    CoreRuntime.requirePositiveSafeInteger(input.id, 'txt-toc-rule.update id');
+    const params: JsonObject = {};
+    params['id'] = input.id;
+    if (input.name !== undefined) params['name'] = input.name;
+    if (input.rule !== undefined) params['rule'] = input.rule;
+    if (input.example !== undefined) params['example'] = input.example;
+    if (input.serialNumber !== undefined) {
+      CoreRuntime.requireInt32(input.serialNumber, 'txt-toc-rule.update serialNumber');
+      params['serialNumber'] = input.serialNumber;
+    }
+    if (input.enable !== undefined) params['enable'] = input.enable;
+    if (Object.keys(params).length === 1) {
+      throw new Error('txt-toc-rule.update requires at least one changed field.');
+    }
+    const result = await this.runtime.request('txt-toc-rule.update', params, { timeoutMs: 5000 });
+    return result.data;
+  }
+
+  async txtTocRuleDelete(id: number): Promise<JsonObject> {
+    CoreRuntime.requirePositiveSafeInteger(id, 'txt-toc-rule.delete id');
+    const params: JsonObject = {};
+    params['id'] = id;
+    const result = await this.runtime.request('txt-toc-rule.delete', params, { timeoutMs: 5000 });
+    return result.data;
+  }
+
+  /** Persist only Core's singleton system-TTS configuration.  This call does
+   * not start speech and does not claim HTTP-TTS/audio-player support. */
+  async ttsConfigPut(input: CoreTtsConfigInput): Promise<JsonObject> {
+    CoreRuntime.requireInt32(input.rate, 'tts.config.put rate');
+    CoreRuntime.requireInt32(input.pitch, 'tts.config.put pitch');
+    const params: JsonObject = {};
+    if (input.engine !== undefined) params['engine'] = input.engine;
+    params['rate'] = input.rate;
+    params['pitch'] = input.pitch;
+    params['followSys'] = input.followSys;
+    const result = await this.runtime.request('tts.config.put', params, { timeoutMs: 5000 });
+    return result.data;
+  }
+
+  async ttsConfigGet(): Promise<JsonObject> {
+    const params: JsonObject = {};
+    const result = await this.runtime.request('tts.config.get', params, { timeoutMs: 5000 });
+    return result.data;
+  }
+
+  /** Load read-only chapter reviews for one current, persisted Core source.
+   * `reviewUrl` is mandatory: Core cannot derive a request from chapterUrl and
+   * the Host must not invent or prefetch a response outside this command. */
+  async bookChapterReview(sourceId: string, bookId: string, reviewUrl: string,
+    chapterUrl?: string): Promise<JsonObject> {
+    const normalizedSourceId = sourceId.trim();
+    const normalizedBookId = bookId.trim();
+    const normalizedReviewUrl = reviewUrl.trim();
+    if (normalizedSourceId.length === 0 || normalizedBookId.length === 0 ||
+      normalizedReviewUrl.length === 0) {
+      throw new Error('book.chapterReview requires current sourceId, bookId and reviewUrl.');
+    }
+    const params: JsonObject = {};
+    params['sourceId'] = normalizedSourceId;
+    params['bookId'] = normalizedBookId;
+    params['reviewUrl'] = normalizedReviewUrl;
+    if (chapterUrl !== undefined && chapterUrl.trim().length > 0) {
+      params['chapterUrl'] = chapterUrl.trim();
+    }
+    const result = await this.runtime.request('book.chapterReview', params, { timeoutMs: 30000 });
+    return result.data;
+  }
+
   /** Execute an actual Core-Native method for contract translations that do
    * not need a dedicated convenience wrapper. Core still validates the DTO. */
   async executeCoreMethod(method: string, params: JsonObject = {}, timeoutMs: number = 15000): Promise<JsonObject> {
@@ -1887,6 +2026,23 @@ export class CoreRuntime {
     params['scopeContent'] = true;
     return params;
   }
+
+  private static requirePositiveSafeInteger(value: number, label: string): void {
+    if (!Number.isSafeInteger(value) || value <= 0) {
+      throw new Error(`${label} must be a positive safe integer.`);
+    }
+  }
+
+  private static requireInt32(value: number, label: string): void {
+    if (!Number.isSafeInteger(value) || value < -2147483648 || value > 2147483647) {
+      throw new Error(`${label} must be an Int32.`);
+    }
+  }
+
+  private static requireNonNegativeInt32(value: number, label: string): void {
+    CoreRuntime.requireInt32(value, label);
+    if (value < 0) throw new Error(`${label} must be non-negative.`);
+  }
 }
 
 // ── Local book parse options (for localBookParse wrapper) ──────────────
@@ -1913,4 +2069,41 @@ export interface CoreBookmarkCreateInput {
   // Bookmark V1's user-note field. The one-tap reader action has no note
   // editor yet, so it is explicitly persisted as empty rather than invented.
   content: string;
+}
+
+/** Exact optional fields of Core BookmarkUpdateParams. */
+export interface CoreBookmarkUpdateInput {
+  time: number;
+  bookName?: string;
+  bookAuthor?: string;
+  chapterIndex?: number;
+  chapterPos?: number;
+  chapterName?: string;
+  bookText?: string;
+  content?: string;
+}
+
+export interface CoreTxtTocRuleCreateInput {
+  name: string;
+  rule: string;
+  example?: string;
+  serialNumber?: number;
+  enable?: boolean;
+  id?: number;
+}
+
+export interface CoreTxtTocRuleUpdateInput {
+  id: number;
+  name?: string;
+  rule?: string;
+  example?: string;
+  serialNumber?: number;
+  enable?: boolean;
+}
+
+export interface CoreTtsConfigInput {
+  engine?: string;
+  rate: number;
+  pitch: number;
+  followSys: boolean;
 }

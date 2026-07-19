@@ -7,6 +7,7 @@ export class MotionDurationTokens {
   static readonly tabPress: number = 80;
   static readonly tabSelect: number = 120;
   static readonly tabSwitch: number = 160;
+  static readonly layoutSwitch: number = 320;
   static readonly buttonPress: number = 80;
   static readonly buttonActivate: number = 120;
   static readonly toggleSwitch: number = 140;
@@ -29,6 +30,10 @@ export class MotionDurationTokens {
   static readonly handleLongPress: number = 320;
   static readonly handleSnap: number = 120;
   static readonly panel: number = 200;
+  static readonly controlEnter: number = 420;
+  static readonly controlExit: number = 360;
+  static readonly quickPromote: number = 320;
+  static readonly moduleSwitch: number = 360;
   static readonly pageTurn: number = 220;
   static readonly readerEntry: number = 240;
   static readonly sessionReturn: number = 200;
@@ -39,6 +44,8 @@ export class MotionDurationTokens {
   static readonly voicePulse: number = 960;
   static readonly overlay: number = 240;
   static readonly route: number = 280;
+  static readonly routePop: number = 240;
+  static readonly routeReplace: number = 200;
   static readonly loadingSpin: number = 800;
   static readonly interruptSettle: number = 80;
   static readonly viewportReshape: number = 240;

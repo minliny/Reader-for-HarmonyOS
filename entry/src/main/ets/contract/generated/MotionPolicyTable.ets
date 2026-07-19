@@ -3,6 +3,10 @@
 // Re-run `npm run gen:contracts` after any contract change.
 
 export interface MotionPolicyMatch {
+  fromRoute?: string;
+  toRoute?: string;
+  fromShell?: string;
+  toShell?: string;
   operation?: string;
   containerRole?: string;
   sourceRole?: string;
@@ -18,11 +22,17 @@ export interface MotionPolicy {
 
 export class MotionPolicyTable {
   static readonly POLICIES: MotionPolicy[] = [
-    { id: 'bookshelf-cover-to-reader', priority: 350, match: { operation: 'push', sourceRole: 'bookCover' }, motionId: 'reader.entry.coverToImmersive' },
-    { id: 'reader-action-to-immersive', priority: 350, match: { operation: 'push', sourceRole: 'actionButton' }, motionId: 'reader.entry.actionToImmersive' },
+    { id: 'bookshelf-cover-to-reader', priority: 350, match: { fromShell: 'MainTabShell', toShell: 'ReaderShell', operation: 'push', sourceRole: 'bookCover' }, motionId: 'reader.entry.coverToImmersive' },
+    { id: 'reader-action-to-immersive', priority: 350, match: { fromShell: 'MainTabShell', toShell: 'ReaderShell', operation: 'push', sourceRole: 'actionButton' }, motionId: 'reader.entry.actionToImmersive' },
     { id: 'session-capsule-enter', priority: 350, match: { operation: 'enter', containerRole: 'sessionCapsule' }, motionId: 'reader.session.capsule.enter' },
     { id: 'session-capsule-exit', priority: 350, match: { operation: 'exit', containerRole: 'sessionCapsule' }, motionId: 'reader.session.capsule.exit' },
     { id: 'session-capsule-update', priority: 350, match: { operation: 'update', containerRole: 'sessionCapsule' }, motionId: 'reader.session.capsule.update' },
+    { id: 'reader-module-switch', priority: 320, match: { operation: 'tabSwitch', containerRole: 'readerShell', sourceRole: 'moduleNav', targetRole: 'quickPanel' }, motionId: 'reader.module.switch' },
+    { id: 'reader-control-show', priority: 320, match: { operation: 'enter', containerRole: 'readerShell', sourceRole: 'controlLayer', targetRole: 'controlHome' }, motionId: 'reader.control.show' },
+    { id: 'reader-control-hide', priority: 320, match: { operation: 'exit', containerRole: 'readerShell', sourceRole: 'controlLayer', targetRole: 'immersiveReading' }, motionId: 'reader.control.hide' },
+    { id: 'reader-quick-promote', priority: 320, match: { operation: 'enter', containerRole: 'readerShell', sourceRole: 'controlHome', targetRole: 'quickPanel' }, motionId: 'reader.quick.promote' },
+    { id: 'reader-panel-expand', priority: 320, match: { operation: 'enter', containerRole: 'readerShell', sourceRole: 'quickPanel', targetRole: 'fullPanel' }, motionId: 'reader.panel.expand' },
+    { id: 'reader-panel-collapse', priority: 320, match: { operation: 'exit', containerRole: 'readerShell', sourceRole: 'fullPanel', targetRole: 'quickPanel' }, motionId: 'reader.panel.collapse' },
     { id: 'reader-overlay-sheet-enter', priority: 300, match: { operation: 'enter', containerRole: 'readerShell', targetRole: 'sheet' }, motionId: 'overlay.sheet.enter' },
     { id: 'reader-overlay-sheet-exit', priority: 300, match: { operation: 'exit', containerRole: 'readerShell', targetRole: 'sheet' }, motionId: 'overlay.sheet.exit' },
     { id: 'reader-overlay-dialog-enter', priority: 300, match: { operation: 'enter', containerRole: 'readerShell', targetRole: 'dialog' }, motionId: 'overlay.dialog.enter' },
@@ -31,7 +41,6 @@ export class MotionPolicyTable {
     { id: 'settings-overlay-dialog-exit', priority: 300, match: { operation: 'exit', containerRole: 'settingsShell', targetRole: 'dialog' }, motionId: 'overlay.dialog.exit' },
     { id: 'reader-page-turn', priority: 300, match: { operation: 'update', containerRole: 'readerSurface', sourceRole: 'page' }, motionId: 'reader.page.turn.next-prev' },
     { id: 'reader-chapter-jump', priority: 300, match: { operation: 'replace', containerRole: 'readerSurface', sourceRole: 'chapter' }, motionId: 'reader.chapter.jump' },
-    { id: 'reader-control-hide', priority: 300, match: { operation: 'exit', containerRole: 'readerSurface', sourceRole: 'controlLayer' }, motionId: 'reader.control.hide' },
     { id: 'reader-control-handle-press', priority: 300, match: { operation: 'dragStart', containerRole: 'readerSurface', sourceRole: 'handle' }, motionId: 'reader.control.handle.press' },
     { id: 'reader-control-handle-release', priority: 300, match: { operation: 'dragRelease', containerRole: 'readerSurface', sourceRole: 'handle' }, motionId: 'reader.control.handle.release' },
     { id: 'reader-control-dock-drag', priority: 300, match: { operation: 'dragUpdate', containerRole: 'readerSurface', sourceRole: 'dock' }, motionId: 'reader.control.dock.drag' },
@@ -45,28 +54,26 @@ export class MotionPolicyTable {
     { id: 'toast-enter', priority: 250, match: { operation: 'enter', containerRole: 'overlayHost', targetRole: 'toast' }, motionId: 'feedback.toast.enter' },
     { id: 'toast-exit', priority: 250, match: { operation: 'exit', containerRole: 'overlayHost', targetRole: 'toast' }, motionId: 'feedback.toast.exit' },
     { id: 'search-state-replace', priority: 250, match: { operation: 'replace', containerRole: 'inlineState', sourceRole: 'search' }, motionId: 'search.state.replace' },
-    { id: 'main-tab-switch', priority: 200, match: { operation: 'tabSwitch', containerRole: 'mainTabShell' }, motionId: 'tab.switch' },
     { id: 'bookshelf-view-switch', priority: 200, match: { operation: 'replace', containerRole: 'mainTabShell', sourceRole: 'viewMode' }, motionId: 'bookshelf.view.switch' },
-    { id: 'reader-module-switch', priority: 200, match: { operation: 'tabSwitch', containerRole: 'readerSurface' }, motionId: 'reader.module.switch' },
+    { id: 'state-content-replace', priority: 200, match: { operation: 'replace', containerRole: 'inlineState', sourceRole: 'content' }, motionId: 'state.content.replace' },
+    { id: 'loading-inline', priority: 200, match: { operation: 'update', containerRole: 'inlineState', sourceRole: 'loading' }, motionId: 'state.loading.inline' },
+    { id: 'main-tab-switch', priority: 200, match: { operation: 'tabSwitch', containerRole: 'mainTabShell' }, motionId: 'tab.switch' },
     { id: 'flow-shell-route-push', priority: 200, match: { operation: 'push', containerRole: 'flowShell' }, motionId: 'source.switch.route.push' },
     { id: 'flow-shell-route-pop', priority: 200, match: { operation: 'pop', containerRole: 'flowShell' }, motionId: 'source.switch.route.pop' },
     { id: 'flow-shell-route-replace', priority: 200, match: { operation: 'replace', containerRole: 'flowShell' }, motionId: 'source.switch.route.replace' },
-    { id: 'state-content-replace', priority: 200, match: { operation: 'replace', containerRole: 'inlineState', sourceRole: 'content' }, motionId: 'state.content.replace' },
-    { id: 'loading-inline', priority: 200, match: { operation: 'update', containerRole: 'inlineState', sourceRole: 'loading' }, motionId: 'state.loading.inline' },
-    { id: 'library-shell-route-push', priority: 150, match: { operation: 'push', containerRole: 'libraryShell' }, motionId: 'app.route.push.forward' },
-    { id: 'library-shell-route-pop', priority: 150, match: { operation: 'pop', containerRole: 'libraryShell' }, motionId: 'app.route.pop.backward' },
-    { id: 'settings-shell-route-push', priority: 150, match: { operation: 'push', containerRole: 'settingsShell' }, motionId: 'app.route.push.forward' },
-    { id: 'settings-shell-route-pop', priority: 150, match: { operation: 'pop', containerRole: 'settingsShell' }, motionId: 'app.route.pop.backward' },
     { id: 'tab-item-select', priority: 150, match: { operation: 'update', containerRole: 'mainTabShell', sourceRole: 'tabItem' }, motionId: 'tab.item.select' },
     { id: 'toggle-switch', priority: 150, match: { operation: 'update', containerRole: 'listItem', sourceRole: 'toggle' }, motionId: 'toggle.switch' },
     { id: 'input-focus', priority: 150, match: { operation: 'update', containerRole: 'listItem', sourceRole: 'inputFocus' }, motionId: 'input.focus' },
     { id: 'input-blur', priority: 150, match: { operation: 'update', containerRole: 'listItem', sourceRole: 'inputBlur' }, motionId: 'input.blur' },
+    { id: 'library-shell-route-push', priority: 150, match: { operation: 'push', containerRole: 'libraryShell' }, motionId: 'app.route.push.forward' },
+    { id: 'library-shell-route-pop', priority: 150, match: { operation: 'pop', containerRole: 'libraryShell' }, motionId: 'app.route.pop.backward' },
+    { id: 'settings-shell-route-push', priority: 150, match: { operation: 'push', containerRole: 'settingsShell' }, motionId: 'app.route.push.forward' },
+    { id: 'settings-shell-route-pop', priority: 150, match: { operation: 'pop', containerRole: 'settingsShell' }, motionId: 'app.route.pop.backward' },
+    { id: 'app-first-open', priority: 100, match: { operation: 'enter', containerRole: 'appShell', sourceRole: 'firstOpen' }, motionId: 'app.firstOpen.enter' },
+    { id: 'button-activate', priority: 100, match: { operation: 'update', containerRole: 'listItem', sourceRole: 'button' }, motionId: 'button.activate' },
     { id: 'route-push-default', priority: 100, match: { operation: 'push', containerRole: 'appShell' }, motionId: 'app.route.push.forward' },
     { id: 'route-pop-default', priority: 100, match: { operation: 'pop', containerRole: 'appShell' }, motionId: 'app.route.pop.backward' },
     { id: 'route-replace-default', priority: 100, match: { operation: 'replace', containerRole: 'appShell' }, motionId: 'app.route.replace' },
-    { id: 'app-first-open', priority: 100, match: { operation: 'enter', containerRole: 'appShell', sourceRole: 'firstOpen' }, motionId: 'app.firstOpen.enter' },
-    { id: 'button-activate', priority: 100, match: { operation: 'update', containerRole: 'listItem', sourceRole: 'button' }, motionId: 'button.activate' },
-    { id: 'motion-interrupt-redirect', priority: 50, match: { operation: 'update', sourceRole: 'interrupt' }, motionId: 'motion.interrupt.redirect' },
-    { id: 'fallback-no-motion', priority: 0, match: {  }, motionId: 'motion.interrupt.redirect' }
+    { id: 'motion-interrupt-redirect', priority: 50, match: { operation: 'update', sourceRole: 'interrupt', targetRole: 'redirect' }, motionId: 'motion.interrupt.redirect' }
   ];
 }

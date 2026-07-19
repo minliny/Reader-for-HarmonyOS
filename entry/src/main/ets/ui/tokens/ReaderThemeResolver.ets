@@ -6,6 +6,7 @@
 //
 // 颜色值对齐 frontend-demo-optimized/render-runtime.js readerThemeStyle() 的 day/night 分支。
 import { ColorTokens } from '../../contract/generated/ColorTokens';
+import { ReaderAppearanceSpecRegistry, ReaderAppearanceTheme } from '../../contract/reader_ui/Appearance';
 import { ReaderThemeState } from './ReaderThemeState';
 
 // 8 主题 fixture（对齐 demo fixture.js L211-229）。
@@ -47,51 +48,60 @@ export interface ReaderThemePalette {
 
 export class ReaderThemeResolver {
   // 8 主题全量（full appearance page 用）。
-  static readonly ALL_OPTIONS: ReaderThemeOption[] = [
-    { value: 'paper', label: '纸纹', scheme: 'day', pair: 'paper', texture: 'paper',
-      swatch: '#F5EAD8', ink: '#2B241D', paperStart: '#FFFFF8F1', paperEnd: '#FFFFF8F4' },
-    { value: 'warm', label: '暖白', scheme: 'day', pair: 'warm', texture: 'plain',
-      swatch: '#FBF0DF', ink: '#2C241D', paperStart: '#FFFFF8F1', paperEnd: '#FFFFF8F4' },
-    { value: 'green', label: '青绿', scheme: 'day', pair: 'green', texture: 'plain',
-      swatch: '#E7F0E2', ink: '#263423', paperStart: '#FFFFF8F1', paperEnd: '#FFFFF8F4' },
-    { value: 'blue', label: '雾蓝', scheme: 'day', pair: 'blue', texture: 'plain',
-      swatch: '#E9F1F4', ink: '#22313A', paperStart: '#FFFFF8F1', paperEnd: '#FFFFF8F4' },
-    { value: 'paper', label: '夜纹', scheme: 'night', pair: 'paper', texture: 'paper',
-      swatch: '#2D2924', ink: '#E9DECE', paperStart: '#FF1F1C19', paperEnd: '#FF181F22' },
-    { value: 'warm', label: '暖夜', scheme: 'night', pair: 'warm', texture: 'plain',
-      swatch: '#27231F', ink: '#E7D8C8', paperStart: '#FF1F1C19', paperEnd: '#FF181F22' },
-    { value: 'green', label: '墨绿', scheme: 'night', pair: 'green', texture: 'plain',
-      swatch: '#202B26', ink: '#D8E2D2', paperStart: '#FF1F1C19', paperEnd: '#FF181F22' },
-    { value: 'blue', label: '蓝夜', scheme: 'night', pair: 'blue', texture: 'plain',
-      swatch: '#232934', ink: '#DBE2EA', paperStart: '#FF1F1C19', paperEnd: '#FF181F22' },
-  ];
+  static readonly ALL_OPTIONS: ReaderThemeOption[] = ReaderAppearanceSpecRegistry.themes
+    .map((theme: ReaderAppearanceTheme): ReaderThemeOption => {
+      const option: ReaderThemeOption = {
+        value: theme.id,
+        label: theme.label,
+        scheme: theme.scheme === 'night' ? 'night' : 'day',
+        pair: theme.pairId,
+        texture: theme.texture === 'paper' ? 'paper' : 'plain',
+        swatch: theme.swatchHex,
+        ink: theme.inkHex,
+        paperStart: theme.backgroundHex,
+        paperEnd: theme.backgroundHex,
+      };
+      return option;
+    });
 
   // 4 块 quick swatches（快速外观面板用，4 个 day 颜色变体）。
   static readonly QUICK_OPTIONS: ReaderThemeOption[] = [
-    ReaderThemeResolver.ALL_OPTIONS[0], // 纸纹 day
-    ReaderThemeResolver.ALL_OPTIONS[1], // 暖白 day
-    ReaderThemeResolver.ALL_OPTIONS[2], // 青绿 day
-    ReaderThemeResolver.ALL_OPTIONS[3], // 雾蓝 day
-  ];
+    ReaderAppearanceSpecRegistry.defaults.dayThemeId,
+    'warm',
+    'green',
+    'blue',
+  ].map((id: string): ReaderThemeOption => ReaderThemeResolver.optionById(id));
+
+  private static optionById(id: string): ReaderThemeOption {
+    const option: ReaderThemeOption | undefined = ReaderThemeResolver.ALL_OPTIONS
+      .find((item: ReaderThemeOption): boolean => item.value === id);
+    if (option === undefined) {
+      throw new Error(`Missing Reader Appearance theme: ${id}`);
+    }
+    return option;
+  }
 
   // appThemeMode → 是否夜间。system 跟随 EntryAbility 同步的系统色彩模式。
   static isNight(appThemeMode: string): boolean {
     return appThemeMode === 'dark' || (appThemeMode === 'system' && ReaderThemeState.colorMode() === 'dark');
   }
 
-  // 根据 readerTheme(4值) + appThemeMode 解析 effective scheme。
+  // 根据 readerTheme + appThemeMode 解析 effective scheme。
   static scheme(readerTheme: string, appThemeMode: string): 'day' | 'night' {
     return ReaderThemeResolver.isNight(appThemeMode) ? 'night' : 'day';
   }
 
   // 查找 option（按 value + scheme）。
   static optionFor(value: string, scheme: 'day' | 'night'): ReaderThemeOption {
+    let effectiveValue: string = value;
+    if (scheme === 'night' && !effectiveValue.endsWith('-night')) effectiveValue = `${effectiveValue}-night`;
+    if (scheme === 'day' && effectiveValue.endsWith('-night')) effectiveValue = effectiveValue.substring(0, effectiveValue.length - 6);
     for (const opt of ReaderThemeResolver.ALL_OPTIONS) {
-      if (opt.value === value && opt.scheme === scheme) {
+      if (opt.value === effectiveValue && opt.scheme === scheme) {
         return opt;
       }
     }
-    return ReaderThemeResolver.ALL_OPTIONS[0]; // fallback 纸纹 day
+    return ReaderThemeResolver.optionById(ReaderAppearanceSpecRegistry.defaults.dayThemeId);
   }
 
   // 解析调色板（ReaderBase 各层调用）。
@@ -113,8 +123,8 @@ export class ReaderThemeResolver {
   private static dayPalette(opt: ReaderThemeOption): ReaderThemePalette {
     return {
       scheme: 'day',
-      paper: ColorTokens.paper,
-      paperBright: ColorTokens.paperBright,
+      paper: opt.swatch,
+      paperBright: opt.paperStart,
       ink: ColorTokens.ink,
       controlInk: ColorTokens.controlInk,
       muted: ColorTokens.muted,
@@ -140,7 +150,7 @@ export class ReaderThemeResolver {
   private static nightPalette(opt: ReaderThemeOption): ReaderThemePalette {
     return {
       scheme: 'night',
-      paper: opt.paperEnd,            // #181F22 基底
+      paper: opt.swatch,
       paperBright: opt.paperStart,    // #1F1C19 顶部
       ink: opt.ink,                   // 按 variant: e9dece/e7d8c8/d8e2d2/dbe2ea
       controlInk: ColorTokens.controlInkNight,  // #D7E1E5

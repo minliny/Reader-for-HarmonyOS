@@ -1152,37 +1152,39 @@ export default function ReaderEffectsTests(): void {
 
   describe('Slice 6 sync / webdav / offline golden tests', () => {
     it('webdavFieldUpdateSetsServerUrl', 0, () => {
-      const s = DemoUiState.initial();
+      const s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'webdav-config' });
       const next = ReaderReducer.reduce(s, { type: 'webdav-field-update', field: 'serverUrl', settingsValue: 'https://dav.example.com' });
       expect(next.webdavServerUrl).assertEqual('https://dav.example.com');
     });
 
     it('webdavFieldUpdateSetsUsername', 0, () => {
-      const s = DemoUiState.initial();
+      const s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'webdav-config' });
       const next = ReaderReducer.reduce(s, { type: 'webdav-field-update', field: 'username', settingsValue: 'user1' });
       expect(next.webdavUsername).assertEqual('user1');
     });
 
     it('webdavFieldUpdateSetsPassword', 0, () => {
-      const s = DemoUiState.initial();
+      const s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'webdav-config' });
       const next = ReaderReducer.reduce(s, { type: 'webdav-field-update', field: 'password', settingsValue: 'secret' });
       expect(next.webdavPassword).assertEqual('secret');
     });
 
     it('webdavFieldUpdateSetsSyncDir', 0, () => {
-      const s = DemoUiState.initial();
+      const s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'webdav-config' });
       const next = ReaderReducer.reduce(s, { type: 'webdav-field-update', field: 'syncDir', settingsValue: '/reader-sync' });
       expect(next.webdavSyncDir).assertEqual('/reader-sync');
     });
 
     it('webdavTestSetsTestingStatus', 0, () => {
-      const s = DemoUiState.initial();
+      let s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'webdav-config' });
+      s = ReaderReducer.reduce(s, { type: 'webdav-field-update', field: 'serverUrl', settingsValue: 'https://dav.example.com' });
       const next = ReaderReducer.reduce(s, { type: 'webdav-test' });
       expect(next.webdavTestStatus).assertEqual('testing');
     });
 
     it('webdavTestResultSetsSuccessStatus', 0, () => {
-      const s = DemoUiState.initial();
+      let s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'webdav-config' });
+      s = ReaderReducer.reduce(s, { type: 'webdav-field-update', field: 'serverUrl', settingsValue: 'https://dav.example.com' });
       const testing = ReaderReducer.reduce(s, { type: 'webdav-test' });
       const next = ReaderReducer.reduce(testing, { type: 'webdav-test-result', success: true, message: '连接成功' });
       expect(next.webdavTestStatus).assertEqual('success');
@@ -1190,7 +1192,8 @@ export default function ReaderEffectsTests(): void {
     });
 
     it('webdavTestResultSetsErrorStatus', 0, () => {
-      const s = DemoUiState.initial();
+      let s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'webdav-config' });
+      s = ReaderReducer.reduce(s, { type: 'webdav-field-update', field: 'serverUrl', settingsValue: 'https://dav.example.com' });
       const testing = ReaderReducer.reduce(s, { type: 'webdav-test' });
       const next = ReaderReducer.reduce(testing, { type: 'webdav-test-result', success: false, message: '认证失败' });
       expect(next.webdavTestStatus).assertEqual('error');

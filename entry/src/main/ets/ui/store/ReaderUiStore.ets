@@ -61,6 +61,11 @@ import {
 } from './ReaderSyncPilotExecutor';
 import { ReaderPlaybackQueueSnapshot } from './ReaderPlaybackDomainMapper';
 import { ReaderPlaybackPilotProjection } from './ReaderPlaybackPilotProjection';
+import {
+  ReaderControlCandidateAdapter,
+  ReaderControlCandidateResult,
+  ReaderControlCandidateRuntimeFactory,
+} from './ReaderControlCandidateAdapter';
 
 // ArkTS does not permit structural object literals for interface values. Keep
 // the Store callbacks in a nominal class so the executor receives one stable
@@ -309,6 +314,9 @@ export class ReaderUiStore {
   private static readonly K_OPT_PAGE_MODE = 'reader.readerSettingOptions.pageMode';
   private static readonly K_OPT_TAP_MODE = 'reader.readerSettingOptions.tapMode';
   private static readonly K_OPT_PAGE_ANIMATION = 'reader.readerSettingOptions.pageAnimation';
+  private static readonly K_OPT_PARAGRAPH_INDENT_MODE = 'reader.readerSettingOptions.paragraphIndentMode';
+  private static readonly K_OPT_TEXT_CONVERSION = 'reader.readerSettingOptions.textConversion';
+  private static readonly K_OPT_TEXT_ALIGNMENT = 'reader.readerSettingOptions.textAlignment';
   private static readonly K_SELECTION_VISIBLE = 'reader.selection.visible';
   private static readonly K_SELECTION_ACTION = 'reader.selection.action';
   private static readonly K_SELECTION_TEXT = 'reader.selection.selectedText';
@@ -378,6 +386,7 @@ export class ReaderUiStore {
   private static readonly K_TOGGLE_SHOW_UPDATE_BADGE = 'reader.settingsToggles.showUpdateBadge';
   private static readonly K_TOGGLE_MERGE_SAME_BOOKS = 'reader.settingsToggles.mergeSameBooks';
   private static readonly K_TOGGLE_ENABLE_SEARCH_HISTORY = 'reader.settingsToggles.enableSearchHistory';
+  private static readonly K_TOGGLE_SHOW_LOCAL_BOOK_BADGE = 'reader.settingsToggles.showLocalBookBadge';
   private static readonly K_SEARCH_HISTORY_LIMIT = 'reader.searchHistoryLimit';
   // ── F3 交互连接 keys ──
   private static readonly K_READER_THEME = 'reader.readerTheme';
@@ -421,6 +430,7 @@ export class ReaderUiStore {
 
   private static state: ReaderUiState;
   private static runtimeShadow: ReaderUIRuntimeShadowCoordinator;
+  private static readerControlCandidateRuntimeFactoryForTest?: ReaderControlCandidateRuntimeFactory;
 
   static init(runtime?: ReaderUIRuntimeDriver, bookOpenCore?: ReaderBookOpenCoreGateway,
     playbackCore?: ReaderPlaybackCoreGateway, playbackPlatform?: ReaderPlaybackPlatformGateway,
@@ -429,6 +439,7 @@ export class ReaderUiStore {
     rssCore?: ReaderRssPilotEffectExecutor,
     syncCore?: ReaderSyncExperimentalGateway): void {
     ReaderUiStore.state = DemoUiState.initial();
+    ReaderUiStore.readerControlCandidateRuntimeFactoryForTest = undefined;
     ReaderUiStore.runtimeShadow = new ReaderUIRuntimeShadowCoordinator(
       ReaderUiStore.state,
       runtime,
@@ -591,6 +602,32 @@ export class ReaderUiStore {
 
   static snapshot(): ReaderUiState {
     return ReaderUiStore.state;
+  }
+
+  /**
+   * Explicit local-candidate entry for schema 3 reader control validation.
+   *
+   * Production dispatch remains bound to the schema 2 consumer lock and never
+   * calls this method. The adapter projects into the existing native route
+   * stack, so it does not create a second overlay/module authority.
+   */
+  static setReaderControlCandidateRuntimeFactoryForTest(
+    factory?: ReaderControlCandidateRuntimeFactory): void {
+    ReaderUiStore.readerControlCandidateRuntimeFactoryForTest = factory;
+  }
+
+  static dispatchLocalReaderControlCandidateForTest(event: UiEvent): ReaderControlCandidateResult {
+    const result: ReaderControlCandidateResult =
+      ReaderControlCandidateAdapter.consume(
+        event, ReaderUiStore.state, ReaderUiStore.readerControlCandidateRuntimeFactoryForTest,
+      );
+    if (!result.handled) return result;
+    if (result.succeeded && result.changed) ReaderUiStore.state = result.state;
+    ReaderUiStore.writeAll();
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_LAST_OP,
+      `local-candidate:${result.canonicalEvent}:${result.motionKind}`);
+    ReaderThemeState.setReducedMotion(ReaderUiStore.state.reducedMotion);
+    return result;
   }
 
   /**
@@ -997,6 +1034,9 @@ export class ReaderUiStore {
     AppStorage.setOrCreate<string>(ReaderUiStore.K_OPT_PAGE_MODE, s.readerSettingOptions.pageMode);
     AppStorage.setOrCreate<string>(ReaderUiStore.K_OPT_TAP_MODE, s.readerSettingOptions.tapMode);
     AppStorage.setOrCreate<string>(ReaderUiStore.K_OPT_PAGE_ANIMATION, s.readerSettingOptions.pageAnimation);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_OPT_PARAGRAPH_INDENT_MODE, s.readerSettingOptions.paragraphIndentMode);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_OPT_TEXT_CONVERSION, s.readerSettingOptions.textConversion);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_OPT_TEXT_ALIGNMENT, s.readerSettingOptions.textAlignment);
     AppStorage.setOrCreate<boolean>(ReaderUiStore.K_SELECTION_VISIBLE, s.selection.visible);
     AppStorage.setOrCreate<string>(ReaderUiStore.K_SELECTION_ACTION, s.selection.action);
     AppStorage.setOrCreate<string>(ReaderUiStore.K_SELECTION_TEXT, s.selection.selectedText);
@@ -1069,6 +1109,7 @@ export class ReaderUiStore {
     AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_SHOW_UPDATE_BADGE, s.settingsToggles.showUpdateBadge);
     AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_MERGE_SAME_BOOKS, s.settingsToggles.mergeSameBooks);
     AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_ENABLE_SEARCH_HISTORY, s.settingsToggles.enableSearchHistory);
+    AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_SHOW_LOCAL_BOOK_BADGE, s.settingsToggles.showLocalBookBadge);
     AppStorage.setOrCreate<number>(ReaderUiStore.K_SEARCH_HISTORY_LIMIT, s.searchHistoryLimit);
     // ── F3 交互连接字段写入 AppStorage ──
     AppStorage.setOrCreate<string>(ReaderUiStore.K_READER_THEME, s.readerTheme);

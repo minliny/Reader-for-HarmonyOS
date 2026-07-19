@@ -6,7 +6,7 @@ import type { ReaderUIJSONPayload } from 'reader_ui_runtime';
 export type MainTab = 'bookshelf' | 'discover' | 'rss' | 'settings';
 export type ReaderMode = 'default' | 'loading' | 'empty' | 'error' | 'offline' | 'permission';
 export type ReaderPaginationMode = 'horizontal' | 'vertical';
-export type ReaderFontFamily = 'system' | 'serif' | 'sans' | 'kai' | 'fangsong' | 'mono';
+export type ReaderFontFamily = 'system' | 'serif' | 'sans' | 'kai' | 'fangsong' | 'mono' | 'sourceSerif' | 'lxgw';
 export type ReaderRenderMetric =
   | 'fontSize' | 'lineHeight' | 'paragraphGap' | 'letterSpacing'
   | 'topMargin' | 'sideMargin' | 'paragraphIndent';
@@ -38,7 +38,9 @@ export type RssRefreshStatus = 'idle' | 'refreshing' | 'success' | 'error';
 export type ReaderToggleKey =
   | 'autoPage' | 'volumePage' | 'landscapeLock' | 'keepScreenOn'
   | 'statusInfo' | 'hapticFeedback' | 'cacheNext' | 'hideStatusBar';
-export type ReaderSettingOptionKey = 'pageMode' | 'tapMode' | 'pageAnimation';
+export type ReaderSettingOptionKey =
+  | 'pageMode' | 'tapMode' | 'pageAnimation'
+  | 'paragraphIndentMode' | 'textConversion' | 'textAlignment';
 
 // ── Batch 4 bookshelf/discover/source-switch types ──
 export type BookshelfView = 'cover' | 'list';
@@ -46,7 +48,7 @@ export type BookshelfView = 'cover' | 'list';
 // ── B1 P0 全局设置 segment/stepper/switch 类型 ──
 export type SettingsToggleKey =
   | 'autoCheckUpdate' | 'tapBottomBarToTop' | 'showUpdateBadge'
-  | 'mergeSameBooks' | 'enableSearchHistory';
+  | 'mergeSameBooks' | 'enableSearchHistory' | 'showLocalBookBadge';
 
 export interface SettingsTogglesMap {
   autoCheckUpdate: boolean;
@@ -54,6 +56,7 @@ export interface SettingsTogglesMap {
   showUpdateBadge: boolean;
   mergeSameBooks: boolean;
   enableSearchHistory: boolean;
+  showLocalBookBadge: boolean;
 }
 
 export interface BookshelfFilterState {
@@ -290,6 +293,9 @@ export interface ReaderSettingOptionsMap {
   pageMode: string;
   tapMode: string;
   pageAnimation: string;
+  paragraphIndentMode: string;
+  textConversion: string;
+  textAlignment: string;
 }
 
 export interface TtsSessionState {

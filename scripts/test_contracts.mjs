@@ -98,15 +98,15 @@ test('P0 route → shell mapping matches fixtures', () => {
   }
 });
 
-test('RouteTable registry exactly matches all 235 canonical RouteIds', () => {
+test('RouteTable registry exactly matches all 260 canonical RouteIds', () => {
   const schema = JSON.parse(read(path.resolve(FIXTURES, '..', 'route.schema.json')));
   const canonical = schema.properties.id.enum;
   const allBlock = routeSrc.match(/static readonly ALL: RouteId\[\] = \[([\s\S]*?)\n  \];/);
   assert.ok(allBlock, 'RouteTable.ALL not found');
   const generated = [...allBlock[1].matchAll(/'([^']+)'/g)].map((match) => match[1]);
-  assert.equal(canonical.length, 235, `canonical RouteId count drifted: ${canonical.length}`);
+  assert.equal(canonical.length, 260, `canonical RouteId count drifted: ${canonical.length}`);
   assert.deepEqual(generated, canonical, 'RouteTable.ALL membership/order differs from canonical schema');
-  assert.equal(new Set(generated).size, 235, 'RouteTable.ALL contains duplicate RouteIds');
+  assert.equal(new Set(generated).size, 260, 'RouteTable.ALL contains duplicate RouteIds');
   for (const routeId of canonical) {
     assert.ok(routeSrc.includes(`case '${routeId}': return`), `RouteTable missing explicit shell/title case for ${routeId}`);
   }
@@ -192,16 +192,16 @@ test('resolve tabSwitch/mainTabShell → tab.switch', () => {
   assert.equal(resolvePolicy({ operation: 'tabSwitch', containerRole: 'mainTabShell' }), 'tab.switch');
 });
 
-test('all 93 generated MotionSpecs have derived serial metadata and valid policy/literal references', () => {
+test('all 95 generated MotionSpecs have derived serial metadata and valid policy/literal references', () => {
   const specSrc = read(path.join(GEN, 'MotionSpecTable.ets'));
   const serialRegistrySrc = read(path.join(REPO, 'entry/src/main/ets/ui/motion/MotionSerialMetadataRegistry.ets'));
   const resolverSrc = read(path.join(REPO, 'entry/src/main/ets/ui/motion/ReaderMotionResolver.ets'));
   const routeRendererSrc = read(path.join(REPO, 'entry/src/main/ets/ui/router/RouteRenderer.ets'));
   const generatedIds = [...specSrc.matchAll(/\{ id: '([^']+)'/g)].map((match) => match[1]);
   const canonicalIds = MOTIONS.map((motion) => motion.id);
-  assert.equal(canonicalIds.length, 93, `canonical MotionSpec count drifted: ${canonicalIds.length}`);
+  assert.equal(canonicalIds.length, 95, `canonical MotionSpec count drifted: ${canonicalIds.length}`);
   assert.deepEqual(generatedIds, canonicalIds, 'generated MotionSpec membership/order drifted');
-  assert.equal(new Set(generatedIds).size, 93, 'generated MotionSpecs contain duplicate ids');
+  assert.equal(new Set(generatedIds).size, 95, 'generated MotionSpecs contain duplicate ids');
   assert.ok(serialRegistrySrc.includes('MotionSpecRegistry.all()'), 'serial metadata must derive from generated registry');
   assert.ok(!serialRegistrySrc.includes('switch ('), 'serial metadata must not use a hand-written MotionId switch');
   assert.ok(!serialRegistrySrc.includes('default:'), 'serial metadata must not use catch-all records');
@@ -1445,6 +1445,10 @@ test('ViewStateTable preserves nested props and context as lossless JSON values'
     'generated table must retain canonical nested payload objects');
   assert.ok(vsTableSrc.includes('static readonly ENTRIES: ViewStateEntry[] = JSON.parse(`'),
     'ArkTS embedding must parse typed canonical JSON instead of emitting untyped nested literals');
+  assert.ok(vsTableSrc.includes("'raw-source-mutation'?: string;"),
+    'non-identifier canonical prop names must be quoted in the ArkTS interface');
+  assert.equal(vsTableSrc.includes('  raw-source-mutation?:'), false,
+    'non-identifier canonical prop names must never generate invalid ArkTS syntax');
 });
 
 test('ScreenGraph registry is wired as Shadow and unknown renderer types fail closed visibly', () => {
@@ -2556,6 +2560,9 @@ const SCAFFOLD_ALLOWED = new Set([
   // primitives. Registry availability is not pixel-completion evidence.
   'import-format-unsupported', 'import-empty-file', 'import-parsing',
   'import-partial-success', 'import-result-detail',
+  // Reader UI 3.0 publishes this list surface as an explicit planned,
+  // fail-closed structure rather than a production-complete bespoke page.
+  'chapter-reviews',
 ]);
 
 // Aggregate ALL body components across every pageState entry for a route.

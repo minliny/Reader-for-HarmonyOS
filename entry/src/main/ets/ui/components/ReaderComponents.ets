@@ -30,6 +30,11 @@ import { FontTokens } from '../../contract/generated/TypeTokens';
 import { ReaderThemeResolver, ReaderThemePalette } from '../tokens/ReaderThemeResolver';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 import { BookDetail, CoreReaderCanonicalLocation, ReaderContentIdentity } from '../store/ReaderUiState';
+import { ViewStateExplicitBinding } from '../../contract/generated/ViewStateTable';
+import {
+  ReaderUIScreenGraphTapZoneAdapter,
+  ReaderUIScreenGraphTapZoneTarget,
+} from '../router/ReaderUIScreenGraphTapZoneAdapter';
 import { InteractionDebugBadge, InteractionDebugFrame } from './InteractionDebugComponents';
 import { ReaderSelectionToolbar } from './ReaderSelectionToolbar';
 
@@ -64,9 +69,11 @@ export struct ReadingBackgroundLayer {
   @StorageProp('reader.readerTheme') readerTheme: string = 'paper';
   @StorageProp('reader.appThemeMode') appThemeMode: string = 'system';
   @StorageProp('reader.theme.colorMode') systemColorMode: string = 'light';
+  @Prop theme: string = '';
 
   private palette(): ReaderThemePalette {
-    return ReaderThemeResolver.palette(this.readerTheme, this.appThemeMode);
+    const resolvedTheme: string = this.theme !== '' ? this.theme : this.readerTheme;
+    return ReaderThemeResolver.palette(resolvedTheme, this.appThemeMode);
   }
 
   private textureLines(): number[] {
@@ -196,6 +203,8 @@ export struct ReadingTextFlow {
   @StorageProp('reader.paginationMode') @Watch('onPaginationInputChange') paginationMode: string = 'horizontal';
   @StorageProp('reader.pageIndex') @Watch('onReaderPageIndexChange') readerPageIndex: number = 0;
   @StorageProp('reader.pageCount') readerPageCount: number = 1;
+  @StorageProp('reader.readerSettingOptions.pageAnimation') pageAnimation: string = 'slide';
+  @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
   @StorageProp(ReaderUiStore.K_READER_CHAPTER_OFFSET) readerChapterOffset: number = 0;
   @StorageProp(ReaderUiStore.K_READER_CHAPTER_PROGRESS) readerChapterProgress: number = 0;
   @StorageProp('reader.typography.fontSize') @Watch('onPaginationInputChange') fontSize: number = 18;
@@ -214,6 +223,8 @@ export struct ReadingTextFlow {
   @StorageProp('reader.theme.colorMode') systemColorMode: string = 'light';
   @State private horizontalPageData: ReaderPageModel[] = [{ fragments: [], chapterOffset: 0, chapterProgress: 0, contentIdentity: null }];
   @State private verticalFragmentLayouts: ReaderVerticalFragmentLayout[] = [];
+  @State private pageTurnOffset: number = 0;
+  @State private pageTurnOpacity: number = 1;
   private verticalScroller: Scroller = new Scroller();
   private lastVerticalScrollOffset: number = 0;
   private pendingVerticalRestoreOffset: number = -1;
@@ -226,6 +237,7 @@ export struct ReadingTextFlow {
   // offset by many paragraphs.
   private pendingReflowAnchorOffset: number = -1;
   private pendingReflowAnchorProgress: number = 0;
+  private lastAnimatedPageIndex: number = 0;
 
   private inkColor(): string {
     return ReaderThemeResolver.palette(this.readerTheme, this.appThemeMode).ink;
@@ -261,6 +273,10 @@ export struct ReadingTextFlow {
         return FontTokens.fangsong;
       case 'mono':
         return FontTokens.mono;
+      case 'sourceSerif':
+        return ReaderTypography.serifFamily();
+      case 'lxgw':
+        return FontTokens.kai;
       case 'serif':
       default:
         return ReaderTypography.serifFamily();
@@ -541,6 +557,7 @@ export struct ReadingTextFlow {
   }
 
   aboutToAppear(): void {
+    this.lastAnimatedPageIndex = this.readerPageIndex;
     this.refreshPagination();
   }
 
@@ -594,11 +611,56 @@ export struct ReadingTextFlow {
   }
 
   private onReaderPageIndexChange(): void {
+    const previousIndex = this.lastAnimatedPageIndex;
+    this.lastAnimatedPageIndex = this.readerPageIndex;
     if (this.suppressNextHorizontalAnchor) {
       this.suppressNextHorizontalAnchor = false;
+      this.resetPageTurnVisualState();
       return;
     }
+    this.animatePageTurn(previousIndex);
     this.publishVisibleHorizontalAnchor();
+  }
+
+  private normalizedPageAnimation(): string {
+    switch (this.pageAnimation) {
+      case 'none':
+      case '无':
+      case '无动画':
+        return 'none';
+      case 'cover':
+      case '覆盖':
+        return 'cover';
+      case 'slide':
+      case 'smooth':
+      case '平滑':
+      case '平移':
+      case '滑动':
+      default:
+        return 'slide';
+    }
+  }
+
+  private resetPageTurnVisualState(): void {
+    this.pageTurnOffset = 0;
+    this.pageTurnOpacity = 1;
+  }
+
+  // The page index is reducer-owned. This method only animates the newly
+  // committed page subtree and never advances content or invents an anchor.
+  // Reduced-motion and the explicit "none" option settle synchronously.
+  private animatePageTurn(previousIndex: number): void {
+    const animation = this.normalizedPageAnimation();
+    if (this.verticalReading() || animation === 'none' || previousIndex === this.readerPageIndex) {
+      this.resetPageTurnVisualState();
+      return;
+    }
+    this.pageTurnOffset = animation === 'cover' ? 0 : (this.readerPageIndex > previousIndex ? 28 : -28);
+    this.pageTurnOpacity = animation === 'cover' ? 0.28 : 0.7;
+    MotionAdapter.apply('reader.page.turn.next-prev', this.reducedMotion, this.getUIContext(), () => {
+      this.pageTurnOffset = 0;
+      this.pageTurnOpacity = 1;
+    });
   }
 
   private onCanonicalReaderLocationChange(): void {
@@ -984,6 +1046,8 @@ export struct ReadingTextFlow {
         }
         .width('100%')
         .height('100%')
+        .translate({ x: this.pageTurnOffset })
+        .opacity(this.pageTurnOpacity)
       }
       InteractionDebugFrame({ label: this.verticalReading() ? 'ReadingTextLayer:V' : 'ReadingTextLayer:H', tone: 'module' })
     }
@@ -1063,6 +1127,8 @@ export struct ReadingInfoLayer {
   @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
   @StorageProp('reader.currentChapterTitle') currentChapterTitle: string = '';
   @StorageProp('reader.readerToggles.statusInfo') statusInfo: boolean = true;
+  @Prop chapterTitle: string = '';
+  @Prop progress: number = -1;
 
   private mutedColor(): string {
     return ReaderThemeResolver.palette(this.readerTheme, this.appThemeMode).muted;
@@ -1092,15 +1158,16 @@ export struct ReadingInfoLayer {
   }
 
   private bookChapterLabel(): string {
-    if (this.currentBook === null) return '未选择书籍';
+    const canonicalChapter: string = this.chapterTitle !== '' ? this.chapterTitle : this.currentChapterTitle;
+    if (this.currentBook === null) return canonicalChapter !== '' ? canonicalChapter : '未选择书籍';
     const title = this.currentBook.title.length > 0 ? this.currentBook.title : '未命名书籍';
-    const chapter = this.currentChapterTitle.length > 0
-      ? this.currentChapterTitle : this.currentBook.latestChapter;
+    const chapter = canonicalChapter.length > 0 ? canonicalChapter : this.currentBook.latestChapter;
     if (chapter.length === 0) return `${title} · 正文未加载`;
     return `${title} · ${chapter}`;
   }
 
   private progressLabel(): string {
+    if (this.progress >= 0 && this.progress <= 1) return `${Math.round(this.progress * 100)}%`;
     const count = Math.max(1, this.readerPageCount);
     const page = Math.max(0, Math.min(count - 1, this.readerPageIndex)) + 1;
     return `${Math.round((page / count) * 100)}%`;
@@ -1299,7 +1366,7 @@ export struct ReaderTopArea {
 }
 
 // .fd-immersive-hotzone: prev 26% / center 48% / next 26%. Center opens the
-// live reader control layer (route-push reader); prev pops back.
+// live reader control layer (route-push reader); side zones dispatch page prev/next.
 @Component
 export struct TapZones {
   @StorageProp(InteractionDebugAdapter.K_VISIBLE) interactionDebugVisible: boolean = InteractionDebugAdapter.DEFAULT_VISIBLE;
@@ -1308,6 +1375,33 @@ export struct TapZones {
   // `tapMode`, not a decorative preference.  Each mode keeps a center control
   // region while changing how much of the page advances/retreats on a tap.
   @StorageProp('reader.readerSettingOptions.tapMode') tapMode: string = '左右区域';
+  @Prop zoneEnabled: boolean = true;
+  // `contractBindingsDefined` distinguishes a host-composite node with an
+  // intentionally empty binding list (for example loading) from legacy live
+  // immersive routes which have no TapZones contract node at all.
+  @Prop contractBindingsDefined: boolean = false;
+  @Prop contractBindings: ViewStateExplicitBinding[] = [];
+
+  private dispatchTarget(target: ReaderUIScreenGraphTapZoneTarget): void {
+    if (!this.zoneEnabled) return;
+    // The live immersive surface predates a TapZones contract node. Keep its
+    // reducer actions explicit here so the right/left zones remain production
+    // pagination even when no ScreenGraph binding is present. Contract-backed
+    // composite states continue through the strict adapter and fail closed on
+    // malformed or missing target bindings.
+    if (!this.contractBindingsDefined) {
+      if (target === 'previous') {
+        ReaderUiStore.dispatch({ type: 'reader-page-prev' });
+      } else if (target === 'next') {
+        ReaderUiStore.dispatch({ type: 'reader-page-next' });
+      } else {
+        ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' });
+      }
+      return;
+    }
+    const event = ReaderUIScreenGraphTapZoneAdapter.explicitEvent(this.contractBindings, target);
+    if (event !== null) ReaderUiStore.dispatch(event);
+  }
 
   private zoneOpacity(): number {
     return this.interactionDebugVisible ? 0.42 : 0;
@@ -1355,7 +1449,7 @@ export struct TapZones {
         .alignItems(HorizontalAlign.Center)
         .backgroundColor(this.zoneColor('prev'))
         .opacity(this.zoneOpacity())
-        .onClick(() => ReaderUiStore.dispatch({ type: 'reader-page-prev' }))
+        .onClick(() => this.dispatchTarget('previous'))
         Column() {
           this.zoneLabel('ControlLayerHotzone')
         }
@@ -1365,7 +1459,7 @@ export struct TapZones {
         .alignItems(HorizontalAlign.Center)
         .backgroundColor(this.zoneColor('center'))
         .opacity(this.zoneOpacity())
-        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' }))
+        .onClick(() => this.dispatchTarget('control'))
         Column() {
           this.zoneLabel('NextPageHotzone')
         }
@@ -1375,7 +1469,7 @@ export struct TapZones {
         .alignItems(HorizontalAlign.Center)
         .backgroundColor(this.zoneColor('next'))
         .opacity(this.zoneOpacity())
-        .onClick(() => ReaderUiStore.dispatch({ type: 'reader-page-next' }))
+        .onClick(() => this.dispatchTarget('next'))
       }
       .width('100%')
       .height('100%')
@@ -1489,6 +1583,8 @@ struct ControlDismissZone {
 @Component
 export struct ReaderBase {
   @StorageProp('reader.displayedRouteId') routeId: string = 'reader';
+  @Prop tapZoneContractBindingsDefined: boolean = false;
+  @Prop tapZoneContractBindings: ViewStateExplicitBinding[] = [];
 
   private controlLayer(): boolean {
     return this.routeId !== 'immersive-reading' && this.routeId !== 'reader_content';
@@ -1503,7 +1599,10 @@ export struct ReaderBase {
         SessionCapsule()
       } else {
         ReadingInfoLayer()
-        TapZones()
+        TapZones({
+          contractBindingsDefined: this.tapZoneContractBindingsDefined,
+          contractBindings: this.tapZoneContractBindings,
+        })
         SessionCapsule()
       }
     }

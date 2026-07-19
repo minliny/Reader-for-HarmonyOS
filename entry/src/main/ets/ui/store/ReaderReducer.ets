@@ -2,6 +2,7 @@
 // No side effects. ArkTS forbids object spread (arkts-no-spread), so each method builds a
 // new ReaderUiState literal field-by-field (array spread is still allowed).
 import { RouteId, RouteTable } from '../../contract/generated/RouteTable';
+import { ReaderAppearanceSpecRegistry, ReaderAppearanceStepper } from '../../contract/reader_ui/Appearance';
 import { ReaderUiState, UiEvent, MainTab, Overlay, PageState, ReaderMode, ReaderPaginationMode, ReaderFontFamily, ReaderRenderMetric, RouteEntry, ReaderError, SearchResultEntry, BookDetail, ActiveSession, TtsPlaybackState, TtsScope, TtsTimer, TocMode, ReaderToggleKey, ReaderSettingOptionKey, ReaderTogglesMap, ReaderSettingOptionsMap, BookshelfView, BookshelfFilterState, DiscoverFilterState, CoreDiscoverKind, CoreDiscoverBook, CoreSourceEntry, CoreSourceCheckResult, CoreSourceDebugResult, CoreContentSearchResult, CoreBookmark, SettingsTogglesMap, ReplaceRule, CoreRssSubscription, CoreRssItem, RssItemFilter, ChapterTocEntry, CoreStorageBackupInfo, CoreReaderCanonicalLocation } from './ReaderUiState';
 
 function tabRoot(tab: MainTab): RouteId {
@@ -59,6 +60,8 @@ function roundMetric(value: number, precision: number): number {
 }
 
 function metricMin(metric: ReaderRenderMetric): number {
+  const appearance: ReaderAppearanceStepper | undefined = ReaderAppearanceSpecRegistry.stepper(metric);
+  if (appearance !== undefined) return appearance.minimum;
   switch (metric) {
     case 'fontSize': return 14;
     case 'lineHeight': return 1.4;
@@ -72,6 +75,8 @@ function metricMin(metric: ReaderRenderMetric): number {
 }
 
 function metricMax(metric: ReaderRenderMetric): number {
+  const appearance: ReaderAppearanceStepper | undefined = ReaderAppearanceSpecRegistry.stepper(metric);
+  if (appearance !== undefined) return appearance.maximum;
   switch (metric) {
     case 'fontSize': return 26;
     case 'lineHeight': return 2.4;
@@ -85,6 +90,8 @@ function metricMax(metric: ReaderRenderMetric): number {
 }
 
 function metricStep(metric: ReaderRenderMetric): number {
+  const appearance: ReaderAppearanceStepper | undefined = ReaderAppearanceSpecRegistry.stepper(metric);
+  if (appearance !== undefined) return appearance.step;
   switch (metric) {
     case 'fontSize': return 1;
     case 'lineHeight': return 0.08;
@@ -98,6 +105,8 @@ function metricStep(metric: ReaderRenderMetric): number {
 }
 
 function metricPrecision(metric: ReaderRenderMetric): number {
+  const appearance: ReaderAppearanceStepper | undefined = ReaderAppearanceSpecRegistry.stepper(metric);
+  if (appearance !== undefined) return appearance.precision;
   switch (metric) {
     case 'lineHeight': return 2;
     case 'letterSpacing': return 1;
@@ -178,6 +187,10 @@ export class ReaderReducer {
       case 'reset-reader-render-settings':
         return ReaderReducer.resetReaderRenderSettings(state);
       case 'toggle-reduced-motion': {
+        const e = event.enabled;
+        return e !== undefined ? ReaderReducer.setReducedMotion(state, e) : state;
+      }
+      case 'hydrate-reduced-motion': {
         const e = event.enabled;
         return e !== undefined ? ReaderReducer.setReducedMotion(state, e) : state;
       }
@@ -798,14 +811,16 @@ export class ReaderReducer {
         return field !== undefined && val !== undefined ? ReaderReducer.updateWebdavField(state, field, val) : state;
       }
       case 'webdav-test':
-        return ReaderReducer.setWebdavTestStatus(state, 'testing', '');
+        return ReaderReducer.requestWebdavTest(state);
       case 'webdav-test-result': {
+        if (state.routeId !== 'webdav-config' || state.webdavTestStatus !== 'testing') return state;
         const ok = event.success === true;
         return ReaderReducer.setWebdavTestStatus(state, ok ? 'success' : 'error', event.message ?? '');
       }
       case 'webdav-save':
         return ReaderReducer.requestWebdavSave(state);
       case 'webdav-save-result': {
+        if (state.routeId !== 'webdav-config' || state.webdavSaveStatus !== 'saving') return state;
         const ok = event.success === true;
         return ReaderReducer.setWebdavSaveStatus(state, ok ? 'saved' : 'error', event.message ?? '');
       }
@@ -1521,7 +1536,8 @@ export class ReaderReducer {
   }
 
   private static isBookmarkDeleteRoute(routeId: string): boolean {
-    return routeId === 'toc-bookmarks' || routeId === 'reader-directory-overlay-v2';
+    return routeId === 'toc-bookmarks' || routeId === 'reader-directory-overlay-v2' ||
+      routeId === 'bookmarks-manager';
   }
 
   private static isBookmarkCreateRoute(routeId: string): boolean {
@@ -1910,13 +1926,16 @@ export class ReaderReducer {
     return next;
   }
 
-  // Update a single reader setting option (pageMode / tapMode / pageAnimation).
+  // Update one durable reader option, including the Full Appearance select rows.
   static setReaderSettingOption(state: ReaderUiState, key: ReaderSettingOptionKey, value: string): ReaderUiState {
     const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
     const options: ReaderSettingOptionsMap = {
       pageMode: state.readerSettingOptions.pageMode,
       tapMode: state.readerSettingOptions.tapMode,
       pageAnimation: state.readerSettingOptions.pageAnimation,
+      paragraphIndentMode: state.readerSettingOptions.paragraphIndentMode,
+      textConversion: state.readerSettingOptions.textConversion,
+      textAlignment: state.readerSettingOptions.textAlignment,
     };
     switch (key) {
       case 'pageMode':
@@ -1927,6 +1946,15 @@ export class ReaderReducer {
         break;
       case 'pageAnimation':
         options.pageAnimation = value;
+        break;
+      case 'paragraphIndentMode':
+        options.paragraphIndentMode = value;
+        break;
+      case 'textConversion':
+        options.textConversion = value;
+        break;
+      case 'textAlignment':
+        options.textAlignment = value;
         break;
       default:
         break;
@@ -2902,6 +2930,7 @@ export class ReaderReducer {
       showUpdateBadge: state.settingsToggles.showUpdateBadge,
       mergeSameBooks: state.settingsToggles.mergeSameBooks,
       enableSearchHistory: state.settingsToggles.enableSearchHistory,
+      showLocalBookBadge: state.settingsToggles.showLocalBookBadge,
     };
     switch (key) {
       case 'autoCheckUpdate':
@@ -2918,6 +2947,9 @@ export class ReaderReducer {
         break;
       case 'enableSearchHistory':
         toggles.enableSearchHistory = value;
+        break;
+      case 'showLocalBookBadge':
+        toggles.showLocalBookBadge = value;
         break;
       default:
         break;
@@ -2983,6 +3015,9 @@ export class ReaderReducer {
 
   // ── P1.3 WebDAV 配置辅助方法 ──
   static updateWebdavField(state: ReaderUiState, field: string, value: string): ReaderUiState {
+    // `sync-backup` consumes the persisted endpoint summary but owns no input
+    // controls; `webdav-config` is the only editable route.
+    if (state.routeId !== 'webdav-config' && state.routeId !== 'sync-backup') return state;
     const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
     if (field === 'serverUrl') {
       next.webdavServerUrl = value;
@@ -3001,6 +3036,15 @@ export class ReaderReducer {
     next.webdavTestStatus = status;
     next.webdavTestMessage = message;
     return next;
+  }
+
+  static requestWebdavTest(state: ReaderUiState): ReaderUiState {
+    if (state.routeId !== 'webdav-config' || state.webdavServerUrl.trim().length === 0 ||
+      state.webdavTestStatus === 'testing' || state.webdavSaveStatus === 'saving') {
+      return ReaderReducer.setWebdavTestStatus(state, 'error',
+        '请在当前 WebDAV 配置页填写服务器地址后再测试。');
+    }
+    return ReaderReducer.setWebdavTestStatus(state, 'testing', '');
   }
 
   static setWebdavSaveStatus(state: ReaderUiState, status: string, message: string): ReaderUiState {

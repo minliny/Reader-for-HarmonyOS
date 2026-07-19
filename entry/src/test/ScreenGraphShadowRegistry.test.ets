@@ -28,11 +28,11 @@ export default function ScreenGraphShadowRegistryTests(): void {
   describe('ScreenGraphShadowRegistry', () => {
     it('loadsExactCanonicalIdentityAndCounts', 0, () => {
       expect(ScreenGraphCanonicalAsset.sha256)
-        .assertEqual('6a9c9623d5cbef3a4a1fb1625b9503b3b20bbe01b74a4e16c6df34a0cd8f8f02');
-      expect(ScreenGraphCanonicalAsset.routeCount).assertEqual(235);
-      expect(ScreenGraphCanonicalAsset.variantCount).assertEqual(165);
-      expect(ScreenGraphCanonicalAsset.componentCount).assertEqual(519);
-      expect(ScreenGraphCanonicalAsset.bindingCount).assertEqual(36);
+        .assertEqual('78052471b2ab3ac2c5729499d7234c0a94e6e1273862e8b48528cc512e6b089e');
+      expect(ScreenGraphCanonicalAsset.routeCount).assertEqual(260);
+      expect(ScreenGraphCanonicalAsset.variantCount).assertEqual(190);
+      expect(ScreenGraphCanonicalAsset.componentCount).assertEqual(615);
+      expect(ScreenGraphCanonicalAsset.bindingCount).assertEqual(97);
       expect(ScreenGraphCanonicalAsset.stateEventEvidenceCount).assertEqual(19);
       expect(ScreenGraphRegistry.loadCanonical().resolve('bookshelf').routeId).assertEqual('bookshelf');
     });

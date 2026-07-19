@@ -60,7 +60,7 @@ export class NotificationHostAdapter {
       }
       this.enableRequested = true;
     }
-    const numericId = hashStringToNumericId(request.title + '|' + request.body);
+    const numericId = hashStringToNumericId(request.id);
     const notificationRequest: notificationManager.NotificationRequest = {
       id: numericId,
       content: {
@@ -73,7 +73,7 @@ export class NotificationHostAdapter {
     };
     try {
       await notificationManager.publish(notificationRequest);
-      return { shown: true, id: String(numericId) };
+      return { shown: true, id: request.id };
     } catch (e) {
       return { shown: false };
     }
@@ -81,13 +81,10 @@ export class NotificationHostAdapter {
 
   /**
    * notification.cancel — cancel a previously shown notification by id.
-   * The id must match what show() returned in the response.
+   * The contract id is mapped through the same stable hash as show().
    */
   async cancel(request: HostNotificationCancelRequest): Promise<HostNotificationCancelResponse> {
-    const numericId = parseInt(request.id, 10);
-    if (isNaN(numericId)) {
-      return { cancelled: false };
-    }
+    const numericId = hashStringToNumericId(request.id);
     try {
       await notificationManager.cancel(numericId);
       return { cancelled: true };

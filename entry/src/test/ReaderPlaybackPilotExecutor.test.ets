@@ -11,6 +11,7 @@ import {
   ReaderPlaybackCoreGateway,
   ReaderPlaybackPlatformGateway,
 } from '../main/ets/ui/store/ReaderPlaybackPilot';
+import type { ReaderPlaybackProgressUpdate } from '../main/ets/ui/store/ReaderPlaybackDomainMapper';
 import { ReaderUiStore } from '../main/ets/ui/store/ReaderUiStore';
 
 class ImmediatePlaybackHandle implements ReaderPlaybackCommandHandle {
@@ -55,11 +56,18 @@ class DeferredPlaybackHandle implements ReaderPlaybackCommandHandle {
 class FakePlaybackCore implements ReaderPlaybackCoreGateway {
   operations: string[] = [];
   locationHandles: ReaderPlaybackCommandHandle[] = [];
+  progressUpdates: ReaderPlaybackProgressUpdate[] = [];
   deferFirstLocation: boolean = false;
+  deferProgress: boolean = false;
+  failProgress: boolean = false;
+  mismatchProgressRevision: boolean = false;
+  progressStored: boolean = true;
   private nextRequestId: number = 1;
   private nextCallCount: number = 0;
   private lastPlan: JsonObject | null = null;
   private lastChapter: JsonObject | null = null;
+  private progressResolver: ((data: JsonObject) => void) | undefined = undefined;
+  private progressRejecter: ((error: Error) => void) | undefined = undefined;
 
   beginReaderLocationResolve(bookId: string, chapterIndex: number, chapterOffset: number,
     chapterProgress: number, _viewportWidth: number, _viewportHeight: number,
@@ -89,6 +97,34 @@ class FakePlaybackCore implements ReaderPlaybackCoreGateway {
     const handle = new ImmediatePlaybackHandle(this.nextRequestId++, data);
     this.locationHandles.push(handle);
     return handle;
+  }
+
+  updateReaderProgress(progress: ReaderPlaybackProgressUpdate): Promise<JsonObject> {
+    this.operations.push(`progress:${progress.chapterOffset}`);
+    this.progressUpdates.push(progress);
+    if (this.deferProgress) {
+      return new Promise<JsonObject>((resolve, reject): void => {
+        this.progressResolver = (data: JsonObject): void => resolve(data);
+        this.progressRejecter = (error: Error): void => reject(error);
+      });
+    }
+    if (this.failProgress) return Promise.reject(new Error('progress-store-failed'));
+    return Promise.resolve(this.progressData(progress));
+  }
+
+  completeProgress(): void {
+    const resolver = this.progressResolver;
+    const progress = this.progressUpdates[this.progressUpdates.length - 1];
+    this.progressResolver = undefined;
+    this.progressRejecter = undefined;
+    if (resolver !== undefined && progress !== undefined) resolver(this.progressData(progress));
+  }
+
+  rejectProgress(message: string): void {
+    const rejecter = this.progressRejecter;
+    this.progressResolver = undefined;
+    this.progressRejecter = undefined;
+    if (rejecter !== undefined) rejecter(new Error(message));
   }
 
   beginTtsSlice(chapter: JsonObject, _content: string,
@@ -153,6 +189,21 @@ class FakePlaybackCore implements ReaderPlaybackCoreGateway {
     snapshot['chapter'] = this.lastChapter ?? {} as JsonObject;
     const data: JsonObject = {};
     data['snapshot'] = snapshot;
+    return data;
+  }
+
+  private progressData(progress: ReaderPlaybackProgressUpdate): JsonObject {
+    const data: JsonObject = {};
+    data['bookId'] = progress.bookId;
+    data['sourceId'] = progress.sourceId;
+    data['deviceId'] = progress.deviceId ?? null;
+    data['updatedAt'] = progress.updatedAt ?? 1700000000;
+    data['chapterIndex'] = progress.chapterIndex;
+    data['chapterOffset'] = progress.chapterOffset;
+    data['chapterProgress'] = progress.chapterProgress;
+    data['stored'] = this.progressStored;
+    data['locationRevision'] = this.mismatchProgressRevision
+      ? `${progress.locationRevision}-mismatch` : progress.locationRevision;
     return data;
   }
 }
@@ -389,7 +440,96 @@ export default function ReaderPlaybackPilotExecutorTests(): void {
       expect(ReaderUiStore.snapshot().canonicalReaderLocation?.chapterOffset).assertEqual(40);
       expect(ReaderUiStore.snapshot().canonicalReaderLocation?.locationRevision)
         .assertEqual('location-revision-40');
-      expect(core.operations.join(',')).assertEqual('location:40');
+      expect(core.operations.join(',')).assertEqual('location:40,progress:40');
+      expect(core.progressUpdates[0].bookId).assertEqual('book-1');
+      expect(core.progressUpdates[0].sourceId).assertEqual('source-1');
+      expect(core.progressUpdates[0].chapterIndex).assertEqual(4);
+      expect(core.progressUpdates[0].chapterOffset).assertEqual(40);
+      expect(core.progressUpdates[0].chapterProgress).assertEqual(0.4);
+      expect(core.progressUpdates[0].locationRevision).assertEqual('location-revision-40');
+    });
+
+    it('page pair keeps the old visible page until the durable progress row succeeds', 0, async () => {
+      const core = new FakePlaybackCore();
+      core.deferProgress = true;
+      const platform = new FakePlaybackPlatform();
+      configureActiveReader(core, platform);
+      ReaderUiStore.setPlaybackPilotPairsForTest(true, false, false);
+      ReaderUiStore.dispatch({ type: 'reader-page-next' });
+      const correlation = ReaderUiStore.playbackPilotSnapshot().activePageCorrelationId;
+      expect(pageLayout(correlation, 1, 40)).assertTrue();
+      for (let tick = 0; tick < 20 && core.progressUpdates.length === 0; tick += 1) {
+        await Promise.resolve();
+      }
+      expect(core.progressUpdates.length).assertEqual(1);
+      expect(ReaderUiStore.snapshot().readerPageIndex).assertEqual(0);
+      expect(ReaderUiStore.snapshot().canonicalReaderLocation?.chapterOffset).assertEqual(0);
+      expect(ReaderUiStore.runtimeShadowSnapshot().runtimeState.pageTransaction?.stage)
+        .assertEqual('persisting-progress');
+
+      core.completeProgress();
+      await ReaderUiStore.waitForPlaybackPilotIdle();
+      expect(ReaderUiStore.snapshot().readerPageIndex).assertEqual(1);
+      expect(ReaderUiStore.snapshot().canonicalReaderLocation?.chapterOffset).assertEqual(40);
+      expect(ReaderUiStore.runtimeShadowSnapshot().runtimeState.pageTransaction === undefined).assertTrue();
+    });
+
+    it('progress failure and mismatched raw Core rows preserve the last committed page', 0, async () => {
+      const failingCore = new FakePlaybackCore();
+      failingCore.failProgress = true;
+      const failingPlatform = new FakePlaybackPlatform();
+      configureActiveReader(failingCore, failingPlatform);
+      ReaderUiStore.setPlaybackPilotPairsForTest(true, false, false);
+      ReaderUiStore.dispatch({ type: 'reader-page-next' });
+      const failedCorrelation = ReaderUiStore.playbackPilotSnapshot().activePageCorrelationId;
+      expect(pageLayout(failedCorrelation, 1, 40)).assertTrue();
+      await ReaderUiStore.waitForPlaybackPilotIdle();
+      expect(ReaderUiStore.snapshot().readerPageIndex).assertEqual(0);
+      expect(ReaderUiStore.snapshot().canonicalReaderLocation?.chapterOffset).assertEqual(0);
+      expect(ReaderUiStore.snapshot().error?.message).assertEqual('progress-store-failed');
+
+      const mismatchCore = new FakePlaybackCore();
+      mismatchCore.mismatchProgressRevision = true;
+      const mismatchPlatform = new FakePlaybackPlatform();
+      configureActiveReader(mismatchCore, mismatchPlatform);
+      ReaderUiStore.setPlaybackPilotPairsForTest(true, false, false);
+      ReaderUiStore.dispatch({ type: 'reader-page-next' });
+      const mismatchCorrelation = ReaderUiStore.playbackPilotSnapshot().activePageCorrelationId;
+      expect(pageLayout(mismatchCorrelation, 1, 40)).assertTrue();
+      await ReaderUiStore.waitForPlaybackPilotIdle();
+      expect(ReaderUiStore.snapshot().readerPageIndex).assertEqual(0);
+      expect(ReaderUiStore.snapshot().canonicalReaderLocation?.chapterOffset).assertEqual(0);
+      expect(ReaderUiStore.snapshot().error?.message)
+        .assertEqual('reading.progress.update returned a mismatched durable progress row');
+    });
+
+    it('progress commit boundary blocks route replacement and survives destroy teardown', 0, async () => {
+      const core = new FakePlaybackCore();
+      core.deferProgress = true;
+      const platform = new FakePlaybackPlatform();
+      configureActiveReader(core, platform);
+      ReaderUiStore.setPlaybackPilotPairsForTest(true, false, false);
+      ReaderUiStore.dispatch({ type: 'reader-page-next' });
+      const correlation = ReaderUiStore.playbackPilotSnapshot().activePageCorrelationId;
+      expect(pageLayout(correlation, 1, 40)).assertTrue();
+      for (let tick = 0; tick < 20 && core.progressUpdates.length === 0; tick += 1) {
+        await Promise.resolve();
+      }
+      expect(core.progressUpdates.length).assertEqual(1);
+
+      ReaderUiStore.dispatch({ type: 'route-replace', id: 'settings' });
+      expect(ReaderUiStore.snapshot().routeId).assertEqual('immersive-reading');
+      expect(ReaderUiStore.runtimeShadowSnapshot().metrics.lastRuntimeError.indexOf(
+        'PAGE_PROGRESS_COMMIT_PENDING',
+      ) >= 0).assertTrue();
+      expect(ReaderUiStore.playbackPilotSnapshot().activePageCorrelationId).assertEqual(correlation);
+
+      const teardown = ReaderUiStore.teardownPlaybackForDestroy();
+      core.completeProgress();
+      await teardown;
+      expect(ReaderUiStore.snapshot().readerPageIndex).assertEqual(1);
+      expect(ReaderUiStore.snapshot().canonicalReaderLocation?.chapterOffset).assertEqual(40);
+      expect(core.progressUpdates.length).assertEqual(1);
     });
 
     it('superseding page intent cancels the exact request handle', 0, async () => {
@@ -472,6 +612,27 @@ export default function ReaderPlaybackPilotExecutorTests(): void {
       expect(platform.timerCancelCount).assertEqual(1);
       expect(ReaderUiStore.snapshot().activeSession).assertEqual('');
       expect(ReaderUiStore.playbackPilotSnapshot().activePageCorrelationId.length > 0).assertTrue();
+    });
+
+    it('auto-page progress failure preserves the old page and terminates the session', 0, async () => {
+      const core = new FakePlaybackCore();
+      core.failProgress = true;
+      const platform = new FakePlaybackPlatform();
+      configureActiveReader(core, platform);
+      ReaderUiStore.setPlaybackPilotPairsForTest(true, false, true);
+      ReaderUiStore.dispatch({ type: 'auto-page-toggle' });
+      await ReaderUiStore.waitForPlaybackPilotIdle();
+      platform.fireTimer();
+      await ReaderUiStore.waitForPlaybackPilotIdle();
+      const pageCorrelation = ReaderUiStore.playbackPilotSnapshot().activePageCorrelationId;
+      expect(pageLayout(pageCorrelation, 1, 40)).assertTrue();
+      await ReaderUiStore.waitForPlaybackPilotIdle();
+      expect(ReaderUiStore.snapshot().readerPageIndex).assertEqual(0);
+      expect(ReaderUiStore.snapshot().canonicalReaderLocation?.chapterOffset).assertEqual(0);
+      expect(ReaderUiStore.snapshot().activeSession).assertEqual('');
+      expect(platform.timerArmCount).assertEqual(1);
+      expect(ReaderUiStore.playbackPilotSnapshot().activePageCorrelationId).assertEqual('');
+      expect(ReaderUiStore.playbackPilotSnapshot().activeAutoPageCorrelationId).assertEqual('');
     });
 
     it('asynchronous speech failure reports failed and performs terminal teardown', 0, async () => {

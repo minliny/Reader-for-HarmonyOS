@@ -35,8 +35,10 @@ import {
   HostMediaDownloadRequest,
   HostMediaDownloadResponse,
   HostHttpRequest,
+  HostError,
+  HostErrorWrapper,
 } from '../types';
-import { HttpHostAdapter } from './HttpHostAdapter';
+import { HttpHostAdapter, MEDIA_DOWNLOAD_DEFAULT_MAX_BYTES } from './HttpHostAdapter';
 import { FileHostAdapter } from './FileHostAdapter';
 
 interface CacheEntry {
@@ -64,6 +66,30 @@ function compositeKey(namespace: string, key: string): string {
 
 function iso8601(millis: number): string {
   return new Date(millis).toISOString();
+}
+
+function firstHeader(headers: Record<string, string | string[]> | undefined,
+  name: string): string | undefined {
+  if (headers === undefined) return undefined;
+  const keys = Object.keys(headers);
+  const normalizedName = name.toLowerCase().replace(/[-_]/g, '');
+  for (let index = 0; index < keys.length; index++) {
+    if (keys[index].toLowerCase().replace(/[-_]/g, '') !== normalizedName) continue;
+    const value = headers[keys[index]];
+    return value instanceof Array ? value[0] : value;
+  }
+  return undefined;
+}
+
+function downloadFailure(message: string, url: string, status?: number): HostErrorWrapper {
+  const error: HostError = {
+    code: 'DOWNLOAD_FAILED',
+    message: message,
+    retryable: status !== undefined && status >= 500,
+    details: { phase: 'Transport', url: url },
+  };
+  if (status !== undefined) error.details = { phase: 'Transport', url: url, status: status };
+  return new HostErrorWrapper(error);
 }
 
 const PREFERENCES_NAME: string = 'reader_persistence';
@@ -497,32 +523,57 @@ export class CoreHostAdapter {
     }
     const resourceId = request.cacheKey ?? `media-${Date.now()}`;
     const savePath = request.savePath ?? `cache://${resourceId}`;
+    const headers: Record<string, string> = {};
+    if (request.headers !== undefined) {
+      const requestHeaderKeys = Object.keys(request.headers);
+      for (let index = 0; index < requestHeaderKeys.length; index++) {
+        const key = requestHeaderKeys[index];
+        headers[key] = request.headers[key];
+      }
+    }
+    if (request.rangeStart !== undefined || request.rangeEnd !== undefined) {
+      const start = request.rangeStart ?? 0;
+      const end = request.rangeEnd;
+      if (!Number.isFinite(start) || start < 0 || Math.floor(start) !== start ||
+        (end !== undefined && (!Number.isFinite(end) || end < start || Math.floor(end) !== end))) {
+        throw downloadFailure('media.download range must be a non-negative ordered byte range', request.url);
+      }
+      headers['Range'] = `bytes=${start}-${end === undefined ? '' : end}`;
+    }
+    if (request.ifNoneMatch !== undefined) headers['If-None-Match'] = request.ifNoneMatch;
+    if (request.ifModifiedSince !== undefined) headers['If-Modified-Since'] = request.ifModifiedSince;
     const httpRequest: HostHttpRequest = {
       url: request.url,
       method: request.method ?? 'GET',
-      headers: request.headers ?? {},
+      headers: headers,
       sessionId: request.sessionId,
     };
-    const response = await httpAdapter.execute(httpRequest);
-    const body = response.body ?? '';
-    if ((request.method ?? 'GET') !== 'HEAD' && response.status !== 304) {
-      await fileAdapter.write({
-        path: savePath,
-        content: body,
-        createDirectories: true,
-      });
+    const streamed = await httpAdapter.downloadToFile(
+      httpRequest,
+      fileAdapter,
+      savePath,
+      `media-download-${resourceId}-${Date.now()}`,
+      request.maxBytes ?? MEDIA_DOWNLOAD_DEFAULT_MAX_BYTES,
+      request.timeoutMillis ?? 15000,
+    );
+    const response = streamed.response;
+    if ((response.status < 200 || response.status >= 300) && response.status !== 304) {
+      throw downloadFailure(`media.download returned HTTP ${response.status}`, request.url, response.status);
     }
-    const contentTypeValue = response.headers?.['content-type'];
-    const contentType = contentTypeValue instanceof Array ? contentTypeValue[0] : contentTypeValue;
-    const etagValue = response.headers?.['etag'];
-    const etag = etagValue instanceof Array ? etagValue[0] : etagValue;
+    const contentType = firstHeader(response.headers, 'content-type');
+    const etag = firstHeader(response.headers, 'etag');
+    const declaredLength = Number(firstHeader(response.headers, 'content-length'));
+    const contentLength = Number.isFinite(declaredLength) && declaredLength >= 0
+      ? declaredLength
+      : undefined;
     return {
       resourceId,
       tempPath: savePath,
       statusCode: response.status,
       contentType,
+      contentLength,
       etag,
-      byteLength: body.length,
+      byteLength: streamed.byteLength,
       fromCache: response.status === 304,
       finalUrl: response.finalUrl ?? request.url,
     };

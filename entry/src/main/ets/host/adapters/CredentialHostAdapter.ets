@@ -42,6 +42,16 @@ export class CredentialHostAdapter implements WebDavCredentialReader {
   }
 
   /**
+   * The current Preferences implementation is deliberately not admitted for
+   * passwords, API keys or tokens. Callers must check this before offering a
+   * durable authenticated configuration; a future HUKS implementation can
+   * flip the value only together with encryption and migration tests.
+   */
+  supportsProtectedSecrets(): boolean {
+    return false;
+  }
+
+  /**
    * credential.get — read a credential value by key.
    * Returns exists: false if the key is not present.
    */

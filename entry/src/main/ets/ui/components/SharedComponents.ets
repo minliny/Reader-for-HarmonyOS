@@ -30,10 +30,18 @@ function topBarTitle(routeId: string, pageState: string, kind: string, fallback:
 export struct AppTopBar {
   @StorageProp('reader.displayedRouteId') routeId: string = 'bookshelf';
   @StorageProp('reader.pageState') pageState: string = 'default';
+  // ViewStateRenderer supplies the canonical title. Shell-owned callers leave
+  // it empty and keep the route-derived fallback used by production today.
+  @Prop title: string = '';
+
+  private resolvedTitle(): string {
+    if (this.title !== '') return this.title;
+    return topBarTitle(this.routeId, this.pageState, 'AppTopBar', '');
+  }
 
   build() {
     Row() {
-      Text(topBarTitle(this.routeId, this.pageState, 'AppTopBar', ''))
+      Text(this.resolvedTitle())
         .fontSize(29)
         .fontWeight(700)
         .fontColor(ColorTokens.ink)
@@ -42,9 +50,17 @@ export struct AppTopBar {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .layoutWeight(1)
       Row() {
-        Image($r('app.media.bookshelf_icon_search_dark')).width(24).height(24)
+        Stack({ alignContent: Alignment.Center }) {
+          Image($r('app.media.bookshelf_icon_search_dark')).width(24).height(24)
+        }
+          .width(44).height(44)
+          .accessibilityText('搜索书籍')
           .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'book-search' }))
-        Image($r('app.media.reader_icon_more_dark')).width(24).height(24).margin({ left: 18 })
+        Stack({ alignContent: Alignment.Center }) {
+          Image($r('app.media.reader_icon_more_dark')).width(24).height(24)
+        }
+          .width(44).height(44).margin({ left: 8 })
+          .accessibilityText('更多操作')
           .onClick(() => this.openTopMore())
       }
       .alignItems(VerticalAlign.Center)
@@ -76,6 +92,13 @@ export struct AppTopBar {
 export struct BackTopBar {
   @StorageProp('reader.displayedRouteId') routeId: string = 'book-detail';
   @StorageProp('reader.pageState') pageState: string = 'default';
+  @Prop title: string = '';
+
+  private resolvedTitle(): string {
+    if (this.title !== '') return this.title;
+    return topBarTitle(this.routeId, this.pageState, 'BackTopBar',
+      topBarTitle(this.routeId, this.pageState, 'AppTopBar', ''));
+  }
 
   private supportsBookActions(): boolean {
     return this.routeId === 'book-detail' || this.routeId === 'book-detail-toc-preview' ||
@@ -84,11 +107,13 @@ export struct BackTopBar {
 
   build() {
     Row() {
-      Image($r('app.media.reader_icon_back_dark'))
-        .width(24).height(24)
+      Stack({ alignContent: Alignment.Center }) {
+        Image($r('app.media.reader_icon_back_dark')).width(24).height(24)
+      }
+        .width(44).height(44)
+        .accessibilityText('返回')
         .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
-      Text(topBarTitle(this.routeId, this.pageState, 'BackTopBar',
-        topBarTitle(this.routeId, this.pageState, 'AppTopBar', '')))
+      Text(this.resolvedTitle())
         .fontSize(24)
         .fontWeight(700)
         .fontColor(ColorTokens.ink)
@@ -98,11 +123,14 @@ export struct BackTopBar {
         .layoutWeight(1)
         .margin({ left: 10, right: 10 })
       if (this.supportsBookActions()) {
-        Image($r('app.media.reader_icon_more_dark'))
-          .width(24).height(24)
+        Stack({ alignContent: Alignment.Center }) {
+          Image($r('app.media.reader_icon_more_dark')).width(24).height(24)
+        }
+          .width(44).height(44)
+          .accessibilityText('书籍更多操作')
           .onClick(() => ReaderUiStore.dispatch({ type: 'set-overlay', overlay: 'book-action' }))
       } else {
-        Blank().width(24).height(24)
+        Blank().width(44).height(44)
       }
     }
     .width('100%')
@@ -121,6 +149,18 @@ type TabKind = 'bookshelf' | 'discover' | 'rss' | 'settings';
 export struct BottomNav {
   @StorageProp('reader.tab') tab: string = 'bookshelf';
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
+  @Prop selected: string = '';
+
+  private activeTab(): TabKind {
+    if (this.selected === 'bookshelf' || this.selected === 'discover' ||
+      this.selected === 'rss' || this.selected === 'settings') {
+      return this.selected as TabKind;
+    }
+    if (this.tab === 'discover' || this.tab === 'rss' || this.tab === 'settings') {
+      return this.tab as TabKind;
+    }
+    return 'bookshelf';
+  }
 
   private iconFor(tab: TabKind, active: boolean): Resource {
     switch (tab) {
@@ -156,14 +196,14 @@ export struct BottomNav {
   @Builder tabItem(tab: TabKind, label: string) {
     Column() {
       Stack() {
-        Image(this.iconFor(tab, this.tab === tab)).width(24).height(24)
+        Image(this.iconFor(tab, this.activeTab() === tab)).width(24).height(24)
       }
       .width(30).height(30)
       .borderRadius(DemoAliasTokens.radiusPill)
       Text(label)
         .fontSize(11)
         .fontWeight(800)
-        .fontColor(this.tab === tab ? DemoAliasTokens.onPrimary : ColorTokens.muted)
+        .fontColor(this.activeTab() === tab ? DemoAliasTokens.onPrimary : ColorTokens.muted)
         .margin({ top: 3 })
     }
     .layoutWeight(1)
@@ -171,7 +211,9 @@ export struct BottomNav {
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
     .borderRadius(DemoAliasTokens.radiusXl)
-    .backgroundColor(this.tab === tab ? ColorTokens.primaryDark : ColorTokens.paper)
+    .backgroundColor(this.activeTab() === tab ? ColorTokens.primaryDark : ColorTokens.paper)
+    .accessibilityText(label)
+    .accessibilityDescription(this.activeTab() === tab ? '已选中标签' : '未选中标签')
     .onClick(() => {
       MotionAdapter.apply('tab.switch', this.reducedMotion, this.getUIContext(), () => {
         ReaderUiStore.dispatch({ type: 'switch-tab', tab: tab });
@@ -182,9 +224,32 @@ export struct BottomNav {
 
 @Component
 export struct Loading {
+  @Prop title: string = '';
+  @Prop message: string = '';
+  @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
+
   build() {
-    Column() {
-      LoadingProgress().color(ColorTokens.primary).width(40).height(40)
+    Column({ space: 8 }) {
+      if (this.reducedMotion) {
+        Text('加载中')
+          .fontSize(13)
+          .fontWeight(800)
+          .fontColor(ColorTokens.primaryDark)
+          .accessibilityText('正在加载')
+      } else {
+        LoadingProgress().color(ColorTokens.primary).width(40).height(40)
+          .accessibilityText('正在加载')
+      }
+      if (this.title !== '') {
+        Text(this.title)
+          .fontSize(ReaderTypography.sectionTitle().fontSize)
+          .fontColor(ColorTokens.ink)
+      }
+      if (this.message !== '' && this.message !== this.title) {
+        Text(this.message)
+          .fontSize(ReaderTypography.bookMeta().fontSize)
+          .fontColor(ColorTokens.muted)
+      }
     }
     .width('100%').height('100%')
     .justifyContent(FlexAlign.Center)
@@ -211,20 +276,38 @@ export struct Empty {
 @Component
 export struct ErrorState {
   @StorageProp('reader.errorMessage') message: string = '网络异常';
+  @Prop title: string = '';
+  @Prop canonicalMessage: string = '';
+  // Native fallback errors retain retry. Canonical state-evidence nodes pass
+  // false because their retry action, when present, is a separate Button with
+  // its own explicit binding.
+  @Prop retryEnabled: boolean = true;
+
+  private resolvedMessage(): string {
+    if (this.canonicalMessage !== '') return this.canonicalMessage;
+    return this.message;
+  }
 
   build() {
     Column() {
-      Text(this.message)
+      if (this.title !== '') {
+        Text(this.title)
+          .fontSize(ReaderTypography.sectionTitle().fontSize)
+          .fontColor(ColorTokens.ink)
+      }
+      Text(this.resolvedMessage())
         .fontSize(ReaderTypography.sectionTitle().fontSize)
         .fontColor(ColorTokens.ink)
-      Text('重试')
-        .fontSize(ReaderTypography.bookMeta().fontSize)
-        .fontColor(ColorTokens.primary)
-        .margin({ top: SpacingTokens.md })
-        .padding({ left: SpacingTokens.lg, right: SpacingTokens.lg, top: SpacingTokens.xs, bottom: SpacingTokens.xs })
-        .borderRadius(DemoAliasTokens.radiusPill)
-        .backgroundColor(ColorTokens.metaBg)
-        .onClick(() => ReaderUiStore.dispatch({ type: 'retry-last-operation' }))
+      if (this.retryEnabled) {
+        Text('重试')
+          .fontSize(ReaderTypography.bookMeta().fontSize)
+          .fontColor(ColorTokens.primary)
+          .margin({ top: SpacingTokens.md })
+          .padding({ left: SpacingTokens.lg, right: SpacingTokens.lg, top: SpacingTokens.xs, bottom: SpacingTokens.xs })
+          .borderRadius(DemoAliasTokens.radiusPill)
+          .backgroundColor(ColorTokens.metaBg)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'retry-last-operation' }))
+      }
     }
     .width('100%').height('100%')
     .justifyContent(FlexAlign.Center)
@@ -234,11 +317,19 @@ export struct ErrorState {
 
 @Component
 export struct Offline {
+  @Prop title: string = '';
+  @Prop message: string = '';
+
   build() {
-    Column() {
-      Text('离线')
+    Column({ space: 8 }) {
+      Text(this.title !== '' ? this.title : '离线')
         .fontSize(ReaderTypography.sectionTitle().fontSize)
         .fontColor(ColorTokens.muted)
+      if (this.message !== '' && this.message !== this.title) {
+        Text(this.message)
+          .fontSize(ReaderTypography.bookMeta().fontSize)
+          .fontColor(ColorTokens.muted)
+      }
     }
     .width('100%').height('100%')
     .justifyContent(FlexAlign.Center)

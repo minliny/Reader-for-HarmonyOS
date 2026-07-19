@@ -1,5 +1,5 @@
 // ReaderMotionResolver — Phase 2 Motion Runtime entry point.
-// Pages/components declare an intent {operation, containerRole, sourceRole?, targetRole?, reducedMotion?};
+// Pages/components declare a generated MotionPolicy-shaped intent;
 // the resolver matches against the priority-sorted MotionPolicy table and returns the concrete motionId.
 // The motionId is then handed to MotionSpecRegistry → MotionAdapter.
 // Pages must NOT pick motionIds themselves.
@@ -9,8 +9,12 @@ import { MotionSpec } from '../../contract/generated/MotionSpecTable';
 import { MotionSpecRegistry } from './MotionSpecRegistry';
 
 export interface MotionRequest {
-  operation: string;        // enter | exit | push | pop | replace | tabSwitch | update | ...
-  containerRole: string;    // appShell | mainTabShell | readerShell | overlayHost | sessionCapsule | ...
+  fromRoute?: string;
+  toRoute?: string;
+  fromShell?: string;
+  toShell?: string;
+  operation?: string;        // enter | exit | push | pop | replace | tabSwitch | update | ...
+  containerRole?: string;    // appShell | mainTabShell | readerShell | overlayHost | sessionCapsule | ...
   sourceRole?: string;       // firstOpen | viewMode | bookCover | actionButton | ...
   targetRole?: string;       // sheet | dialog | toast | dropdown | ...
   reducedMotion?: boolean;
@@ -24,8 +28,7 @@ export class ReaderMotionResolver {
     const policies = MotionPolicyTable.POLICIES; // sorted priority desc at generation time
     for (let i = 0; i < policies.length; i++) {
       const p: MotionPolicy = policies[i];
-      // The central table retains a legacy empty-match policy for compatibility,
-      // but native resolution must not turn an unknown intent into an unrelated
+      // Native resolution must not turn an unknown intent into an unrelated
       // interrupt animation. Only policies with explicit match dimensions may
       // participate; an unmatched request returns undefined to the caller.
       if (!ReaderMotionResolver.hasExplicitMatch(p)) continue;
@@ -60,7 +63,11 @@ export class ReaderMotionResolver {
 
   private static hasExplicitMatch(p: MotionPolicy): boolean {
     const m = p.match;
-    return m.operation !== undefined
+    return m.fromRoute !== undefined
+      || m.toRoute !== undefined
+      || m.fromShell !== undefined
+      || m.toShell !== undefined
+      || m.operation !== undefined
       || m.containerRole !== undefined
       || m.sourceRole !== undefined
       || m.targetRole !== undefined
@@ -69,6 +76,10 @@ export class ReaderMotionResolver {
 
   private static matches(p: MotionPolicy, req: MotionRequest): boolean {
     const m = p.match;
+    if (m.fromRoute !== undefined && m.fromRoute !== req.fromRoute) return false;
+    if (m.toRoute !== undefined && m.toRoute !== req.toRoute) return false;
+    if (m.fromShell !== undefined && m.fromShell !== req.fromShell) return false;
+    if (m.toShell !== undefined && m.toShell !== req.toShell) return false;
     if (m.operation !== undefined && m.operation !== req.operation) return false;
     if (m.containerRole !== undefined && m.containerRole !== req.containerRole) return false;
     if (m.sourceRole !== undefined) {

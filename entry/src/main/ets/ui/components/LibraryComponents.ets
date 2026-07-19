@@ -180,10 +180,13 @@ struct SourceCoreUnavailablePage {
 // result DTO is made persistent in Harmony state.
 @Component
 export struct SourceSwitchResultsPanel {
+  @Prop title: string = '换源预览';
+  @Prop message: string = '换源预览';
+
   build() {
     SourceCoreUnavailablePage({
-      title: '换源候选结果未接入',
-      message: '该历史路由没有携带当前书籍和 Core 返回的候选 DTO。请从书籍详情重新进入实时换源流程，不显示固定候选书源。',
+      title: `${this.title}未接入`,
+      message: `${this.message}。该历史路由没有携带当前书籍和 Core 返回的候选 DTO。请从书籍详情重新进入实时换源流程，不显示固定候选书源。`,
       primaryLabel: '进入实时换源',
       primaryRoute: 'source-switch',
     })
@@ -951,10 +954,27 @@ export struct SourceDeleteConfirmPage {
 
 @Component
 export struct SourceRuleEditPage {
+  @Prop title: string = '规则编辑';
+  @Prop variant: string = 'edit';
+
+  private unavailableMessage(): string {
+    if (this.variant === 'debug') {
+      return '当前没有可验证的 Core 规则编辑 DTO；调测结果只能读取，不能从此页伪造规则修改或保存成功。';
+    }
+    return '当前没有完整的 Core source-update / 规则编辑契约和保存结果 DTO。为避免“保存成功”假象，本页不显示或修改固定规则。';
+  }
+
+  private unavailableTitle(): string {
+    // Source-rule editing is outside typed Slice 10 TxtTocRule CRUD. Keep the
+    // exact fail-closed capability name visible instead of constructing an
+    // ambiguous title from the fixture-provided heading.
+    return this.variant === 'debug' ? `${this.title}未接入` : '书源规则编辑未接入';
+  }
+
   build() {
     SourceCoreUnavailablePage({
-      title: '书源规则编辑未接入',
-      message: '当前没有完整的 Core source-update / 规则编辑契约和保存结果 DTO。为避免“保存成功”假象，本页不显示或修改固定规则。',
+      title: this.unavailableTitle(),
+      message: this.unavailableMessage(),
     })
   }
 }

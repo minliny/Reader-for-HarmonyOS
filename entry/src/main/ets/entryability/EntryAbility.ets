@@ -59,6 +59,11 @@ export default class EntryAbility extends UIAbility {
     AppStorage.setOrCreate<number>(SafeAreaAdapter.K_END, SafeAreaAdapter.DEFAULT_END);
     AppStorage.setOrCreate<number>(ViewportAdapter.K_WIDTH, ViewportAdapter.DEFAULT_WIDTH);
     AppStorage.setOrCreate<number>(ViewportAdapter.K_HEIGHT, ViewportAdapter.DEFAULT_HEIGHT);
+    AppStorage.setOrCreate<string>(ViewportAdapter.K_CLASS,
+      ViewportAdapter.classify(ViewportAdapter.DEFAULT_WIDTH, ViewportAdapter.DEFAULT_HEIGHT));
+    // No frozen hinge/posture Host event exists. Never infer fold state from
+    // device type or viewport width.
+    AppStorage.setOrCreate<string>(ViewportAdapter.K_FOLD_POSTURE, 'unverified');
     this.applyDevelopmentLaunchParameters(want);
 
     // Diagnostic: probe where the NAPI .so might live on device.
@@ -93,6 +98,17 @@ export default class EntryAbility extends UIAbility {
    * cannot overwrite the unreadable snapshot.
    */
   private async bootstrapCoreAfterRestore(core: CoreRuntime, selfCheckFlag: string): Promise<void> {
+    const uiPreferences = core.getReaderUiPreferenceAdapter();
+    if (uiPreferences !== null) {
+      try {
+        const snapshot = await uiPreferences.load();
+        ReaderUiStore.dispatch({ type: 'hydrate-reduced-motion', enabled: snapshot.reducedMotion });
+      } catch (e) {
+        // Default false remains active. A corrupt/future preference schema is
+        // never silently rewritten during startup.
+        console.error('[EntryAbility] Reader UI preference restore failed: ' + e);
+      }
+    }
     try {
       const restored = await core.restoreCoreStorage();
       console.info('[EntryAbility] Core storage restore=' + JSON.stringify(restored));
@@ -619,6 +635,10 @@ export default class EntryAbility extends UIAbility {
           console.info('[SyncWebDav] SKIP credential adapter null (no UIAbilityContext)');
           return;
         }
+        if (!credentialAdapter.supportsProtectedSecrets()) {
+          console.info('[SyncWebDav] SKIP protected credential storage unavailable; plaintext auth is fail-closed');
+          return;
+        }
 
         // Step 1: credential.get — retrieve pre-provisioned target/auth.
         const urlResp = await credentialAdapter.get({ key: 'webdav.url' } as HostCredentialGetRequest);
@@ -754,6 +774,7 @@ export default class EntryAbility extends UIAbility {
           console.info('[UiAdapter] notification SKIP adapter null (no UIAbilityContext)');
         } else {
           const showResp = await notificationAdapter.show({
+            id: 'reader-host-self-check',
             title: 'Reader Host Self-Check',
             body: 'UI adapter device evidence @ ' + Date.now(),
           } as HostNotificationShowRequest);
@@ -1022,8 +1043,11 @@ export default class EntryAbility extends UIAbility {
     try {
       const dpy = display.getDefaultDisplaySync();
       const density = dpy.densityPixels;
-      AppStorage.setOrCreate<number>(ViewportAdapter.K_WIDTH, dpy.width / density);
-      AppStorage.setOrCreate<number>(ViewportAdapter.K_HEIGHT, dpy.height / density);
+      const width = dpy.width / density;
+      const height = dpy.height / density;
+      AppStorage.setOrCreate<number>(ViewportAdapter.K_WIDTH, width);
+      AppStorage.setOrCreate<number>(ViewportAdapter.K_HEIGHT, height);
+      AppStorage.setOrCreate<string>(ViewportAdapter.K_CLASS, ViewportAdapter.classify(width, height));
     } catch (e) {
       // keep previously published / demo-fallback viewport metrics
     }

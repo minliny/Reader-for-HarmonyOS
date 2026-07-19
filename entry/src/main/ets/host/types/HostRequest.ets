@@ -318,6 +318,7 @@ export interface HostForegroundTimerRequest {
 
 // ── notification.show / notification.cancel ──
 export interface HostNotificationShowRequest {
+  id: string;
   title: string;
   body: string;
 }

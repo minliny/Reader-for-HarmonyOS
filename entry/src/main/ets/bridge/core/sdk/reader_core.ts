@@ -496,6 +496,14 @@ function normalizeHostError(error: unknown): ReaderCoreError {
   }
 
   if (error instanceof Error) {
+    // HarmonyOS adapters throw HostErrorWrapper so ArkTS receives an Error,
+    // while the contract error remains on `hostError`. Preserve that payload
+    // across host.fail instead of collapsing file/http/download failures into
+    // INTERNAL and losing retryability/details.
+    const wrapped = (error as Error & { hostError?: unknown }).hostError;
+    if (isReaderCoreError(wrapped)) {
+      return wrapped;
+    }
     return {
       code: "INTERNAL",
       message: error.message,

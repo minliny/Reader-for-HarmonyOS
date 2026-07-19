@@ -26,6 +26,9 @@ import {
 import { SourceSessionHostStore } from './SourceSessionHostStore';
 import { type SourceImageHeaderResolver } from './SourceImageCache';
 import type { WebDavHttpExecutor } from './WebDavHostAdapter';
+import { FileHostAdapter } from './FileHostAdapter';
+
+export const MEDIA_DOWNLOAD_DEFAULT_MAX_BYTES: number = 512 * 1024 * 1024;
 
 interface HttpErrorLike {
   code?: number;
@@ -46,9 +49,12 @@ class PreparedRequestHeader {
  * Narrow seam around @ohos.net.http so cancellation behavior can be verified
  * without performing a real network request in the host unit-test runner.
  */
-export interface HostHttpClient {
-  request(url: string, options: http.HttpRequestOptions): Promise<http.HttpResponse>;
+interface DestroyableHostHttpClient {
   destroy(): void;
+}
+
+export interface HostHttpClient extends DestroyableHostHttpClient {
+  request(url: string, options: http.HttpRequestOptions): Promise<http.HttpResponse>;
 }
 
 export interface HostHttpClientFactory {
@@ -61,18 +67,76 @@ class PlatformHttpClientFactory implements HostHttpClientFactory {
   }
 }
 
-class ActiveHostHttpRequest {
-  readonly client: HostHttpClient;
-  private destroyed: boolean = false;
+export interface HostHttpStreamClient extends DestroyableHostHttpClient {
+  onHeaders(callback: (headers: Object) => void): void;
+  onData(callback: (chunk: ArrayBuffer) => void): void;
+  onEnd(callback: () => void): void;
+  request(url: string, options: http.HttpRequestOptions): Promise<number>;
+}
 
-  constructor(client: HostHttpClient) {
-    this.client = client;
+export interface HostHttpStreamClientFactory {
+  create(): HostHttpStreamClient;
+}
+
+class PlatformHostHttpStreamClient implements HostHttpStreamClient {
+  private readonly client: http.HttpRequest = http.createHttp();
+
+  onHeaders(callback: (headers: Object) => void): void {
+    this.client.on('headersReceive', callback);
+  }
+
+  onData(callback: (chunk: ArrayBuffer) => void): void {
+    this.client.on('dataReceive', callback);
+  }
+
+  onEnd(callback: () => void): void {
+    this.client.on('dataEnd', callback);
+  }
+
+  request(url: string, options: http.HttpRequestOptions): Promise<number> {
+    return this.client.requestInStream(url, options);
   }
 
   destroy(): void {
+    this.client.destroy();
+  }
+}
+
+class PlatformHostHttpStreamClientFactory implements HostHttpStreamClientFactory {
+  create(): HostHttpStreamClient {
+    return new PlatformHostHttpStreamClient();
+  }
+}
+
+export interface HostBinaryFileResponse {
+  response: HostHttpResponse;
+  byteLength: number;
+}
+
+class ActiveHostHttpRequest {
+  readonly client: DestroyableHostHttpClient;
+  private destroyed: boolean = false;
+  private cancelAction: (() => void) | null = null;
+
+  constructor(client: DestroyableHostHttpClient) {
+    this.client = client;
+  }
+
+  setCancelAction(action: () => void): void {
+    this.cancelAction = action;
+  }
+
+  cancel(): void {
     if (this.destroyed) {
       return;
     }
+    this.destroyed = true;
+    this.client.destroy();
+    if (this.cancelAction !== null) this.cancelAction();
+  }
+
+  dispose(): void {
+    if (this.destroyed) return;
     this.destroyed = true;
     this.client.destroy();
   }
@@ -81,12 +145,15 @@ class ActiveHostHttpRequest {
 export class HttpHostAdapter implements SourceImageHeaderResolver, WebDavHttpExecutor {
   private readonly sessionStore: SourceSessionHostStore;
   private readonly httpClientFactory: HostHttpClientFactory;
+  private readonly httpStreamClientFactory: HostHttpStreamClientFactory;
   private readonly activeRequests: Map<string, ActiveHostHttpRequest> = new Map<string, ActiveHostHttpRequest>();
 
   constructor(sessionStore: SourceSessionHostStore = SourceSessionHostStore.shared(),
-    httpClientFactory: HostHttpClientFactory = new PlatformHttpClientFactory()) {
+    httpClientFactory: HostHttpClientFactory = new PlatformHttpClientFactory(),
+    httpStreamClientFactory: HostHttpStreamClientFactory = new PlatformHostHttpStreamClientFactory()) {
     this.sessionStore = sessionStore;
     this.httpClientFactory = httpClientFactory;
+    this.httpStreamClientFactory = httpStreamClientFactory;
   }
 
   /**
@@ -98,6 +165,226 @@ export class HttpHostAdapter implements SourceImageHeaderResolver, WebDavHttpExe
    * still execute, but cannot later claim request-scoped cancellation support.
    */
   async execute(request: HostHttpRequest, requestId?: string): Promise<HostHttpResponse> {
+    return this.executeWithTimeout(request, requestId, 15000);
+  }
+
+  /**
+   * Stream a binary GET/HEAD response directly into FileHostAdapter's atomic
+   * part transaction. The body is never materialized as a whole ArrayBuffer.
+   */
+  downloadToFile(request: HostHttpRequest, fileAdapter: FileHostAdapter, savePath: string,
+    requestId?: string, maxBytes: number = MEDIA_DOWNLOAD_DEFAULT_MAX_BYTES,
+    timeoutMillis: number = 15000): Promise<HostBinaryFileResponse> {
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      return Promise.reject(new HostErrorWrapper({
+        code: 'DOWNLOAD_FAILED',
+        message: 'binary download supports only GET or HEAD',
+        retryable: false,
+        details: { phase: 'Transport', url: request.url },
+      }));
+    }
+    if (!Number.isFinite(maxBytes) || maxBytes < 0 || Math.floor(maxBytes) !== maxBytes) {
+      return Promise.reject(new HostErrorWrapper({
+        code: 'DOWNLOAD_FAILED',
+        message: 'binary download maxBytes must be a non-negative integer',
+        retryable: false,
+        details: { phase: 'Transport', url: request.url },
+      }));
+    }
+    const timeout = Number.isFinite(timeoutMillis) && timeoutMillis > 0
+      ? Math.floor(timeoutMillis)
+      : 15000;
+    const normalizedRequestId = requestId?.trim();
+    if (normalizedRequestId !== undefined && normalizedRequestId.length > 0 &&
+      this.activeRequests.has(normalizedRequestId)) {
+      return Promise.reject(new HostErrorWrapper({
+        code: 'HTTP_TRANSPORT_CONNECT',
+        message: `duplicate active http requestId: ${normalizedRequestId}`,
+        retryable: false,
+        details: { phase: 'Transport', url: request.url },
+      }));
+    }
+
+    const requestHeaders = this.buildRequestHeaders(request);
+    const client = this.httpStreamClientFactory.create();
+    const activeRequest = new ActiveHostHttpRequest(client);
+    if (normalizedRequestId !== undefined && normalizedRequestId.length > 0) {
+      this.activeRequests.set(normalizedRequestId, activeRequest);
+    }
+
+    return new Promise<HostBinaryFileResponse>((resolve: (value: HostBinaryFileResponse) => void,
+      reject: (error: HostErrorWrapper) => void): void => {
+      let settled = false;
+      let status: number | null = null;
+      let responseHeaders: Record<string, string | string[]> | null = null;
+      let streamEnded = false;
+      let partOpened = false;
+      let bytesReceived = 0;
+      let declaredLength: number | null = null;
+
+      const unregister = (): void => {
+        if (normalizedRequestId !== undefined && normalizedRequestId.length > 0 &&
+          this.activeRequests.get(normalizedRequestId) === activeRequest) {
+          this.activeRequests.delete(normalizedRequestId);
+        }
+      };
+      const dispose = (): void => {
+        unregister();
+        activeRequest.dispose();
+      };
+      const fail = (error: HostErrorWrapper): void => {
+        if (settled) return;
+        settled = true;
+        if (partOpened) fileAdapter.discardAtomicPart(savePath);
+        dispose();
+        reject(error);
+      };
+      const failUnexpected = (error: Error): void => {
+        if (error instanceof HostErrorWrapper) {
+          fail(error);
+          return;
+        }
+        const hostError: HostError = {
+          code: 'DOWNLOAD_FAILED',
+          message: error.message,
+          retryable: false,
+          details: { phase: 'Storage', path: savePath },
+        };
+        fail(new HostErrorWrapper(hostError));
+      };
+      const succeed = (): void => {
+        if (settled || status === null || responseHeaders === null || !streamEnded) return;
+        if (status === 304) {
+          if (partOpened) fileAdapter.discardAtomicPart(savePath);
+          partOpened = false;
+        } else if (status < 200 || status >= 300) {
+          fail(new HostErrorWrapper({
+            code: 'DOWNLOAD_FAILED',
+            message: `binary download returned HTTP ${status}`,
+            retryable: status >= 500,
+            details: { phase: 'Transport', url: request.url, status: status },
+          }));
+          return;
+        } else if (request.method === 'GET') {
+          if (declaredLength !== null && bytesReceived !== declaredLength) {
+            fail(new HostErrorWrapper({
+              code: 'DOWNLOAD_FAILED',
+              message: 'binary download ended before the declared content length',
+              retryable: true,
+              details: { phase: 'Transport', url: request.url },
+            }));
+            return;
+          }
+          try {
+            fileAdapter.commitAtomicPart(savePath);
+            partOpened = false;
+          } catch (e) {
+            failUnexpected(e instanceof Error ? e : new Error(String(e)));
+            return;
+          }
+        }
+        settled = true;
+        dispose();
+        const response: HostHttpResponse = {
+          status: status,
+          body: '',
+          headers: responseHeaders,
+          finalUrl: request.url,
+          sessionId: request.sessionId,
+        };
+        resolve({ response: response, byteLength: bytesReceived });
+      };
+
+      activeRequest.setCancelAction((): void => {
+        fail(new HostErrorWrapper({
+          code: 'HTTP_TRANSPORT_CANCELED',
+          message: 'binary download cancelled',
+          retryable: true,
+          details: { phase: 'Transport', url: request.url },
+        }));
+      });
+      client.onHeaders((headersEvent: Object): void => {
+        if (settled) return;
+        responseHeaders = this.extractHeaders(headersEvent);
+        this.captureResponseCookies(request, responseHeaders);
+        declaredLength = this.parseContentLength(this.headerValue(responseHeaders, 'content-length'));
+        if (declaredLength === -1 || (declaredLength !== null && declaredLength > maxBytes)) {
+          fail(new HostErrorWrapper({
+            code: 'DOWNLOAD_FAILED',
+            message: 'binary download content length exceeds the admitted limit',
+            retryable: false,
+            details: { phase: 'Transport', url: request.url },
+          }));
+          return;
+        }
+        if (request.method === 'GET') {
+          try {
+            fileAdapter.openAtomicPart(savePath, true);
+            partOpened = true;
+          } catch (e) {
+            failUnexpected(e instanceof Error ? e : new Error(String(e)));
+            return;
+          }
+        }
+        succeed();
+      });
+      client.onData((chunk: ArrayBuffer): void => {
+        if (settled) return;
+        if (responseHeaders === null || request.method !== 'GET' || !partOpened) {
+          fail(new HostErrorWrapper({
+            code: 'DOWNLOAD_FAILED',
+            message: 'binary data arrived before an admitted response header',
+            retryable: false,
+            details: { phase: 'Transport', url: request.url },
+          }));
+          return;
+        }
+        const nextTotal = bytesReceived + chunk.byteLength;
+        if (nextTotal > maxBytes) {
+          fail(new HostErrorWrapper({
+            code: 'DOWNLOAD_FAILED',
+            message: 'binary download body exceeds the admitted limit',
+            retryable: false,
+            details: { phase: 'Transport', url: request.url },
+          }));
+          return;
+        }
+        try {
+          fileAdapter.appendAtomicPart(savePath, chunk);
+          bytesReceived = nextTotal;
+        } catch (e) {
+          failUnexpected(e instanceof Error ? e : new Error(String(e)));
+        }
+      });
+      client.onEnd((): void => {
+        if (settled) return;
+        streamEnded = true;
+        succeed();
+      });
+
+      const options: http.HttpRequestOptions = {
+        method: this.mapMethod(request.method),
+        header: requestHeaders,
+        connectTimeout: timeout,
+        readTimeout: timeout,
+      };
+      client.request(request.url, options).then((responseStatus: number): void => {
+        if (settled) return;
+        status = responseStatus;
+        succeed();
+      }).catch((e: Error): void => {
+        const candidate = e as HttpErrorLike;
+        fail(new HostErrorWrapper(this.mapError(
+          candidate.code ?? 0,
+          candidate.message ?? 'binary download failed',
+          request.url,
+        )));
+      });
+    });
+  }
+
+  private async executeWithTimeout(request: HostHttpRequest,
+    requestId: string | undefined, timeoutMillis: number): Promise<HostHttpResponse> {
     const method = this.mapMethod(request.method);
     const requestHeaders = this.buildRequestHeaders(request);
     const options: http.HttpRequestOptions = {
@@ -107,8 +394,8 @@ export class HttpHostAdapter implements SourceImageHeaderResolver, WebDavHttpExe
       // Default timeouts: 15s connect + 15s read. Prevents indefinite hangs
       // when a source is unreachable (e.g. yodu.org behind GFW). Callers that
       // need longer can override via request.timeoutMs if the contract grows.
-      connectTimeout: 15000,
-      readTimeout: 15000,
+      connectTimeout: timeoutMillis,
+      readTimeout: timeoutMillis,
     };
     if (request.body !== undefined) {
       options.extraData = request.body;
@@ -166,13 +453,13 @@ export class HttpHostAdapter implements SourceImageHeaderResolver, WebDavHttpExe
           this.activeRequests.delete(normalizedRequestId);
         }
       }
-      activeRequest.destroy();
+      activeRequest.dispose();
     }
   }
 
   destroy(): void {
     this.activeRequests.forEach((request: ActiveHostHttpRequest) => {
-      request.destroy();
+      request.cancel();
     });
     this.activeRequests.clear();
   }
@@ -196,7 +483,7 @@ export class HttpHostAdapter implements SourceImageHeaderResolver, WebDavHttpExe
     // Delete before destroy so a re-entrant error/completion cannot be mistaken
     // for a second active request with the same id.
     this.activeRequests.delete(normalizedRequestId);
-    activeRequest.destroy();
+    activeRequest.cancel();
     const result: HostHttpCancelResponse = { cancelled: true };
     return result;
   }
@@ -297,6 +584,25 @@ export class HttpHostAdapter implements SourceImageHeaderResolver, WebDavHttpExe
       }
     }
     return headers;
+  }
+
+  private headerValue(headers: Record<string, string | string[]>, name: string): string {
+    const keys = Object.keys(headers);
+    const normalizedName = name.toLowerCase().replace(/[-_]/g, '');
+    for (let index = 0; index < keys.length; index++) {
+      if (keys[index].toLowerCase().replace(/[-_]/g, '') !== normalizedName) continue;
+      const value = headers[keys[index]];
+      return value instanceof Array ? (value[0] ?? '') : value;
+    }
+    return '';
+  }
+
+  private parseContentLength(value: string): number | null {
+    const normalized = value.trim();
+    if (normalized.length === 0) return null;
+    if (!/^[0-9]+$/.test(normalized)) return -1;
+    const parsed = Number(normalized);
+    return Number.isSafeInteger(parsed) ? parsed : -1;
   }
 
   private captureResponseCookies(request: HostHttpRequest, headers: Record<string, string | string[]>): void {

@@ -1,10 +1,14 @@
 // ViewStateRenderer — renders generated ViewStateTable component trees.
 // Shell-owned components (top bars / bottom nav) are filtered by ViewStateTable;
 // this renderer owns body components and simple recursive container children.
-import { ViewStateComponent, ViewStateTable } from '../../contract/generated/ViewStateTable';
-import { AppTopBar, BackTopBar, BottomNav, Loading, Empty, ErrorState, Offline,
-  DemoButton, Input, ListRow, DemoList, Card, Content, FormSection, FilterBar, Overlay } from './SharedComponents';
-import { ContinueReadingCard, BookshelfShelfSection, ShelfChipGroup, ShelfSectionHeader, BookCard, BookCover, BookGrid, BookEntry } from './BookshelfComponents';
+import {
+  ViewStateComponent,
+  ViewStateExplicitBinding,
+  ViewStateTable,
+} from '../../contract/generated/ViewStateTable';
+import { AppTopBar, BackTopBar, BottomNav, Loading, ErrorState, Offline,
+  DemoButton, DemoList, Card, FilterBar, Overlay } from './SharedComponents';
+import { ContinueReadingCard, BookshelfShelfSection, ShelfChipGroup, ShelfSectionHeader, BookCard, BookGrid, BookEntry } from './BookshelfComponents';
 import { BookHero, BookSummaryCard, BookChapterList } from './BookDetailComponents';
 import { ReadingBackgroundLayer, ReadingTextFlow, ReadingInfoLayer, TapZones, ReaderBase, ReaderTopArea } from './ReaderComponents';
 import { ReaderControlSheet, ReaderBottomBar, ReaderDirectoryPanel, ReaderAppearancePanel, ReaderTtsPanel, ReaderSettingsPanel,
@@ -14,7 +18,7 @@ import { SourceSwitchResultsPanel, SourceImportPreviewPage, SourceGroupsPage, So
   SourceDebugRunningPage, SourceDebugResultPage, SourceDebugContentLogPage, SourceCodeViewPage, SourceLogsPage,
   SourceDeleteConfirmPage, SourceRuleEditPage, SourceBatchPage } from './LibraryComponents';
 import { SourceSwitchFlowPage } from './SourceSwitchFlowComponents';
-import { SettingsHomeSection, SettingsHomePage, SettingsGeneralPage, BookshelfSearchSettingsPage, ProgressSyncPage, SettingsSection, SettingsListItem } from './SettingsComponents';
+import { SettingsHomeSection, SettingsHomePage, SettingsGeneralPage, BookshelfSearchSettingsPage, ProgressSyncPage, SettingsSection } from './SettingsComponents';
 import { DiscoverSourceBar, DiscoverEntryRow, DiscoverFilterTrigger, DiscoverListHead, DiscoverBookList,
   DiscoverStatePage, DiscoverSourceBulkPage, DiscoverSourceLoginPage, DiscoverRuleTestPage } from './DiscoverComponents';
 import { RssSearchEntry, RssModeRow, RssSourceOverview, RssArticleSection,
@@ -28,14 +32,45 @@ import { AppShellStructure, MainTabsStructure, SearchHomePage, SearchResultsPage
   SyncErrorPage, SyncProgressPage, RestoreConfirmPage, RestoreProgressPage, RestoreConflictPage, RestoreResultPage,
   RemoteWebDavBooksPage, RssDetailPage, RssEmptyState, RssErrorState, GlobalStatePage,
   OfflineStatePage, PermissionRequiredPage, AboutVersionPage, AboutFeedbackPage, LocalBookImportPage, ReadingSettingsEntryPage,
-  BookMoreMenuPage, BookGroupManagementPage, SourceFormPage, GlobalSettingsPage, BackupSettingsPage,
+  BookMoreMenuPage, BookGroupManagementPage, GlobalSettingsPage, BackupSettingsPage,
   RssSubscriptionManagementPage, RssSubscriptionDeleteConfirmPage, GroupManagementPage, BookBatchManagementPage, BookDirectoryPage } from './StructuralPageComponents';
-import { ProgressBar, BookTitleAuthor, SourceStatus, ReadButton, DirectoryPreview, BookIntro, ConfigEntry,
+import { BookTitleAuthor, SourceStatus, ReadButton, DirectoryPreview, BookIntro, ConfigEntry,
   SearchEntry, SourceTypeSegment, CurrentSourceCard, SourceCategoryChips, DiscoveryContentCard, SourceStatusBar,
   SubscriptionSummaryCard, FeedStatusChips, FeedSourceChips, RssEntryItem, UnreadIndicator,
   LocalOverviewCard, QuickEntryGrid, SearchInputBox, ScopeSelector, GroupSelector, SearchHistoryList } from './ContractComponents';
 import { Contract25RoutePage } from './Contract25RouteComponents';
+import {
+  Slice12AccessibilitySettingsPage,
+  Slice12OnboardingCapabilityPage,
+  Slice12OnboardingWelcomePage,
+  Slice12PermissionRecoveryPage,
+} from './Slice12LifecycleComponents';
 import { ReaderUIScreenGraphShadowRegistry } from '../router/ReaderUIScreenGraphShadowRegistry';
+import {
+  ReaderUIScreenGraphStatePrimitiveAdapter,
+  ReaderUIScreenGraphStatePrimitiveProjection,
+} from '../router/ReaderUIScreenGraphStatePrimitiveAdapter';
+import { ReaderUIScreenGraphButtonAdapter } from '../router/ReaderUIScreenGraphButtonAdapter';
+import { ReaderCapabilityClosureRouteRegistry } from '../router/ReaderCapabilityClosureRouteRegistry';
+import {
+  ReaderUIScreenGraphDialogAdapter,
+  ReaderUIScreenGraphDialogProjection,
+} from '../router/ReaderUIScreenGraphDialogAdapter';
+import {
+  ReaderUIScreenGraphContentAdapter,
+  ReaderUIScreenGraphContentProjection,
+} from '../router/ReaderUIScreenGraphContentAdapter';
+import {
+  ReaderUIScreenGraphEmptyAdapter,
+  ReaderUIScreenGraphEmptyProjection,
+} from '../router/ReaderUIScreenGraphEmptyAdapter';
+import {
+  ReaderUIScreenGraphErrorProjection,
+  ReaderUIScreenGraphPermissionProjection,
+  ReaderUIScreenGraphTerminalStateAdapter,
+} from '../router/ReaderUIScreenGraphTerminalStateAdapter';
+import { ReaderUiStore } from '../store/ReaderUiStore';
+import { UiEvent } from '../store/ReaderUiState';
 
 @Component
 export struct ViewStateRenderer {
@@ -49,6 +84,45 @@ export struct ViewStateRenderer {
   // components are absolutely positioned over the reading base rather than
   // laid out vertically).
   @Prop layoutMode: string = 'column';
+
+  private statePrimitiveProjection(component: ViewStateComponent): ReaderUIScreenGraphStatePrimitiveProjection {
+    const projection: ReaderUIScreenGraphStatePrimitiveProjection | null =
+      ReaderUIScreenGraphStatePrimitiveAdapter.project(component);
+    // Source gates prove the three canonical leaf shapes. Keep runtime drift
+    // visibly inert rather than inventing text or an implicit action.
+    return projection ?? new ReaderUIScreenGraphStatePrimitiveProjection('', '');
+  }
+
+  private statePrimitiveTitle(component: ViewStateComponent): string {
+    return this.statePrimitiveProjection(component).title;
+  }
+
+  private statePrimitiveMessage(component: ViewStateComponent): string {
+    return this.statePrimitiveProjection(component).message;
+  }
+
+  private statePrimitiveRetryEnabled(component: ViewStateComponent): boolean {
+    return this.statePrimitiveProjection(component).retryEnabled;
+  }
+
+  // ReaderBase is a ScreenGraph 1.2 host-composite. Its children describe the
+  // canonical anatomy and action metadata; they must never be recursively
+  // instantiated alongside the native ReaderBase layers. Only the explicit
+  // TapZones bindings cross this boundary.
+  private readerBaseHasTapZones(component: ViewStateComponent): boolean {
+    for (let index: number = 0; index < component.children.length; index += 1) {
+      if (component.children[index].type === 'TapZones') return true;
+    }
+    return false;
+  }
+
+  private readerBaseTapZoneBindings(component: ViewStateComponent): ViewStateExplicitBinding[] {
+    for (let index: number = 0; index < component.children.length; index += 1) {
+      const child: ViewStateComponent = component.children[index];
+      if (child.type === 'TapZones') return child.bindings;
+    }
+    return [];
+  }
 
   // The canonical demo's rss-starred fixture reuses its visual article list,
   // but Core does not provide an RSS favorite projection.  Transform only
@@ -72,6 +146,7 @@ export struct ViewStateRenderer {
         id: 'rss-subscription-delete-confirm-page',
         props: {},
         children: [],
+        bindings: [],
       }];
     }
     if (this.routeId !== 'rss-starred') return components;
@@ -83,6 +158,7 @@ export struct ViewStateRenderer {
           id: component.id,
           props: component.props,
           children: component.children,
+          bindings: component.bindings,
         });
       } else {
         resolved.push(component);
@@ -124,6 +200,29 @@ export struct ViewStateRenderer {
     return value !== undefined ? value : fallback;
   }
 
+  private capabilityClosureTitle(title: string | undefined, label: string | undefined,
+    name: string | undefined, fallback: string): string {
+    if (title !== undefined && title.length > 0) return title;
+    if (label !== undefined && label.length > 0) return label;
+    if (name !== undefined && name.length > 0) return name;
+    return fallback;
+  }
+
+  private capabilityClosureDetail(summary: string | undefined, state: string | undefined,
+    variant: string | undefined): string {
+    if (summary !== undefined && summary.length > 0) return summary;
+    if (state !== undefined && state.length > 0) return state;
+    if (variant !== undefined && variant.length > 0) return variant;
+    return 'planned · fail-closed';
+  }
+
+  // Button labels are data, not placeholder copy. Missing canonical text is
+  // rendered visibly empty and remains inert through the adapter instead of
+  // being replaced with an invented action label.
+  private canonicalButtonLabel(component: ViewStateComponent): string {
+    return component.props.label ?? '';
+  }
+
   // Extract book rows from either a cover-grid or list-mode ViewState subtree.
   private extractBooks(children: ViewStateComponent[]): BookEntry[] {
     const books: BookEntry[] = [];
@@ -153,6 +252,271 @@ export struct ViewStateRenderer {
     }, (child: ViewStateComponent, idx: number) => `${child.id}-${child.type}-${idx}`)
   }
 
+  // Canonical directory error/offline fixtures contain retry UiEvents whose
+  // Host ownership is not proven. Preserve the state evidence, but render
+  // action children as explicit read-only rows so this Shadow consumer cannot
+  // expose an operation which the production reducer does not own.
+  @Builder renderReadOnlyDirectoryState(phase: string, children: ViewStateComponent[]) {
+    Column({ space: 12 }) {
+      Text(`目录状态 · ${phase}`)
+        .fontSize(13)
+        .fontWeight(700)
+        .fontColor('#725F50')
+        .width('100%')
+      ForEach(children, (child: ViewStateComponent, idx: number) => {
+        if (child.type === 'Button') {
+          this.renderInertCanonicalButton(child)
+        } else {
+          this.renderDebuggedComponent(child, false)
+        }
+      }, (child: ViewStateComponent, idx: number) => `${child.id}-${child.type}-${idx}`)
+    }
+    .width('100%')
+    .padding(16)
+    .borderRadius(18)
+    .backgroundColor('#FFFDF8')
+    .border({ width: 1, color: '#E7DED2' })
+  }
+
+  // Reader appearance management UiEvents are canonical contract evidence,
+  // but the production reducer does not own those operations yet. Consume the
+  // composed state recursively while making every tap action visibly read-only.
+  @Builder renderReadOnlyAppearanceChildren(children: ViewStateComponent[]) {
+    ForEach(children, (child: ViewStateComponent, idx: number) => {
+      if (child.type === 'Button') {
+        this.renderInertCanonicalButton(child)
+      } else if (this.textOr(child.props.uiEventTrigger, '') === 'tap') {
+        Text(`只读 · ${this.textOr(child.props.label, this.textOr(child.props.title, '操作未接线'))}`)
+          .fontSize(13)
+          .fontWeight(650)
+          .fontColor('#8A7768')
+          .width('100%')
+          .padding({ left: 12, right: 12, top: 9, bottom: 9 })
+          .borderRadius(12)
+          .backgroundColor('#EFE8DE')
+          .enabled(false)
+          .hitTestBehavior(HitTestMode.None)
+      } else if (child.type === 'Dialog') {
+        // Keep all nine canonical Dialogs on the same dedicated renderer.
+        // Their Button children still cross the fail-closed Button adapter.
+        this.renderDebuggedComponent(child, false)
+      } else if (child.children.length > 0) {
+        Column({ space: 8 }) {
+          Text(this.textOr(child.props.title, child.type))
+            .fontSize(14)
+            .fontWeight(800)
+            .width('100%')
+          if (this.textOr(child.props.message, '') !== '') {
+            Text(this.textOr(child.props.message, ''))
+              .fontSize(12)
+              .fontColor('#725F50')
+              .width('100%')
+          }
+          this.renderReadOnlyAppearanceChildren(child.children)
+        }
+        .width('100%')
+        .padding(12)
+        .borderRadius(14)
+        .backgroundColor('#FFF9EE')
+        .border({ width: 1, color: '#E7DED2' })
+      } else {
+        this.renderDebuggedComponent(child, false)
+      }
+    }, (child: ViewStateComponent, idx: number) => `${child.id}-${child.type}-${idx}`)
+  }
+
+  @Builder renderReadOnlyAppearanceState(section: string, children: ViewStateComponent[]) {
+    Column({ space: 12 }) {
+      Text(`外观状态 · ${section}`)
+        .fontSize(13)
+        .fontWeight(700)
+        .fontColor('#725F50')
+        .width('100%')
+      this.renderReadOnlyAppearanceChildren(children)
+    }
+    .width('100%')
+    .padding(16)
+    .borderRadius(18)
+    .backgroundColor('#FFFDF8')
+    .border({ width: 1, color: '#E7DED2' })
+  }
+
+  // Canonical replace flow actions mix pilot-owned and unsupported UiEvents.
+  // The Shadow renderer must not guess payload or confirmation semantics, so
+  // composed action children remain visible but non-interactive.
+  @Builder renderReadOnlyReplaceChildren(children: ViewStateComponent[]) {
+    ForEach(children, (child: ViewStateComponent, idx: number) => {
+      if (child.type === 'Button') {
+        this.renderInertCanonicalButton(child)
+      } else if (this.textOr(child.props.uiEventTrigger, '') === 'tap') {
+        Text(`只读 · ${this.textOr(child.props.label, this.textOr(child.props.title, '操作未接线'))}`)
+          .fontSize(13)
+          .fontWeight(650)
+          .fontColor('#8A7768')
+          .width('100%')
+          .padding({ left: 12, right: 12, top: 9, bottom: 9 })
+          .borderRadius(12)
+          .backgroundColor('#EFE8DE')
+          .enabled(false)
+          .hitTestBehavior(HitTestMode.None)
+      } else {
+        this.renderDebuggedComponent(child, false)
+      }
+    }, (child: ViewStateComponent, idx: number) => `${child.id}-${child.type}-${idx}`)
+  }
+
+  @Builder renderReadOnlyReplaceState(section: string, children: ViewStateComponent[]) {
+    Column({ space: 12 }) {
+      Text(`替换状态 · ${section}`)
+        .fontSize(13)
+        .fontWeight(700)
+        .fontColor('#725F50')
+        .width('100%')
+      this.renderReadOnlyReplaceChildren(children)
+    }
+    .width('100%')
+    .padding(16)
+    .borderRadius(18)
+    .backgroundColor('#FFFDF8')
+    .border({ width: 1, color: '#E7DED2' })
+  }
+
+  // Canonical source-switch state evidence is safe to observe, but its action
+  // payloads do not match the complete typed context required by the native
+  // coordinator. Keep evidence visible and every tap child fail-closed.
+  @Builder renderReadOnlySourceSwitchChildren(children: ViewStateComponent[]) {
+    ForEach(children, (child: ViewStateComponent, idx: number) => {
+      if (child.type === 'Button') {
+        this.renderInertCanonicalButton(child)
+      } else if (this.textOr(child.props.uiEventTrigger, '') === 'tap') {
+        Text(`只读 · ${this.textOr(child.props.label, this.textOr(child.props.title, '操作未接线'))}`)
+          .fontSize(13)
+          .fontWeight(650)
+          .fontColor('#8A7768')
+          .width('100%')
+          .padding({ left: 12, right: 12, top: 9, bottom: 9 })
+          .borderRadius(12)
+          .backgroundColor('#EFE8DE')
+          .enabled(false)
+          .hitTestBehavior(HitTestMode.None)
+      } else {
+        Column({ space: 6 }) {
+          this.renderDebuggedComponent(child, false)
+          if (this.textOr(child.props.uiEventTrigger, '') === 'state-evidence') {
+            Text(`状态证据 · ${this.textOr(child.props.uiEvent, '未声明')}`)
+              .fontSize(10)
+              .fontWeight(650)
+              .fontColor('#8A7768')
+              .width('100%')
+              .enabled(false)
+              .hitTestBehavior(HitTestMode.None)
+          }
+        }
+        .width('100%')
+      }
+    }, (child: ViewStateComponent, idx: number) => `${child.id}-${child.type}-${idx}`)
+  }
+
+  @Builder renderReadOnlySourceSwitchState(phase: string, children: ViewStateComponent[]) {
+    Column({ space: 12 }) {
+      Text(`换源状态 · ${phase}`)
+        .fontSize(13)
+        .fontWeight(700)
+        .fontColor('#725F50')
+        .width('100%')
+      this.renderReadOnlySourceSwitchChildren(children)
+    }
+    .width('100%')
+    .padding(16)
+    .borderRadius(18)
+    .backgroundColor('#FFFDF8')
+    .border({ width: 1, color: '#E7DED2' })
+  }
+
+  // Canonical ReadingTextFlow fixtures carry state/font evidence but no
+  // chapter paragraphs, content identity, pagination anchor, or TapZones.
+  // Observe that evidence without replacing the Core-backed native text flow.
+  @Builder renderReadOnlyReadingTextChildren(children: ViewStateComponent[]) {
+    ForEach(children, (child: ViewStateComponent, idx: number) => {
+      if (child.type === 'Button') {
+        this.renderInertCanonicalButton(child)
+      } else if (this.textOr(child.props.uiEventTrigger, '') === 'tap') {
+        Text(`只读 · ${this.textOr(child.props.label, this.textOr(child.props.title, '操作未接线'))}`)
+          .fontSize(13)
+          .fontWeight(650)
+          .fontColor('#8A7768')
+          .width('100%')
+          .padding({ left: 12, right: 12, top: 9, bottom: 9 })
+          .borderRadius(12)
+          .backgroundColor('#EFE8DE')
+          .enabled(false)
+          .hitTestBehavior(HitTestMode.None)
+      } else {
+        Column({ space: 6 }) {
+          this.renderDebuggedComponent(child, false)
+          if (this.textOr(child.props.uiEventTrigger, '') === 'state-evidence') {
+            Text(`状态证据 · ${this.textOr(child.props.uiEvent, '未声明')}`)
+              .fontSize(10)
+              .fontWeight(650)
+              .fontColor('#8A7768')
+              .width('100%')
+              .enabled(false)
+              .hitTestBehavior(HitTestMode.None)
+          }
+        }
+        .width('100%')
+      }
+    }, (child: ViewStateComponent, idx: number) => `${child.id}-${child.type}-${idx}`)
+  }
+
+  @Builder renderReadOnlyReadingTextState(phase: string, children: ViewStateComponent[]) {
+    Column({ space: 12 }) {
+      Text(`正文状态 · ${phase}`)
+        .fontSize(13)
+        .fontWeight(700)
+        .fontColor('#725F50')
+        .width('100%')
+      this.renderReadOnlyReadingTextChildren(children)
+    }
+    .width('100%')
+    .padding(16)
+    .borderRadius(18)
+    .backgroundColor('#FFFDF8')
+    .border({ width: 1, color: '#E7DED2' })
+  }
+
+  @Builder renderReadingTextFlowMetadata(state: string, fontFamily: string) {
+    Stack({ alignContent: Alignment.TopStart }) {
+      ReadingTextFlow()
+      if (state !== '') {
+        Text(`正文契约 · ${state}`)
+          .fontSize(9)
+          .fontWeight(700)
+          .fontColor('#FFFDF8')
+          .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+          .borderRadius(6)
+          .backgroundColor('#725F50')
+          .position({ x: 12, y: 26 })
+          .enabled(false)
+          .hitTestBehavior(HitTestMode.None)
+      }
+      if (fontFamily !== '') {
+        Text(`字体契约 · ${fontFamily}`)
+          .fontSize(9)
+          .fontWeight(700)
+          .fontColor('#FFFDF8')
+          .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+          .borderRadius(6)
+          .backgroundColor('#725F50')
+          .position({ x: 12, y: 48 })
+          .enabled(false)
+          .hitTestBehavior(HitTestMode.None)
+      }
+    }
+    .width('100%')
+    .height('100%')
+  }
+
   private debugTone(componentType: string): string {
     if (componentType.indexOf('Panel') >= 0 || componentType.indexOf('Sheet') >= 0 || componentType.indexOf('Overlay') >= 0) {
       return 'sheet';
@@ -164,6 +528,238 @@ export struct ViewStateRenderer {
       return 'route';
     }
     return 'module';
+  }
+
+  /**
+   * Explicit read-only ArkUI structure for Reader UI 3.0 capability closure.
+   * Canonical props and child topology stay visible, while every generated
+   * binding remains non-executable until a Host/reducer owner is admitted.
+   */
+  @Builder renderCapabilityClosureNode(component: ViewStateComponent,
+    children: ViewStateComponent[], title: string, detail: string) {
+    Column({ space: 7 }) {
+      Text(title)
+        .fontSize(14)
+        .fontWeight(750)
+        .fontColor('#2E2924')
+        .width('100%')
+      Text(`${component.type} · ${detail}`)
+        .fontSize(11)
+        .fontColor('#725F50')
+        .width('100%')
+      if (component.bindings.length > 0) {
+        Text(`${component.bindings.length} 个 planned action · fail-closed`)
+          .fontSize(10)
+          .fontWeight(700)
+          .fontColor('#9E3B32')
+          .width('100%')
+      }
+      if (children.length > 0) {
+        this.renderChildren(children)
+      }
+    }
+    .width('100%')
+    .padding(12)
+    .borderRadius(14)
+    .backgroundColor('#FFF9EE')
+    .border({ width: 1, color: '#E7DED2' })
+    .enabled(false)
+    .hitTestBehavior(HitTestMode.None)
+  }
+
+  @Builder renderCanonicalButton(component: ViewStateComponent, label: string,
+    destructive: boolean) {
+    if (ReaderUIScreenGraphButtonAdapter.event(this.routeId, this.pageState, component) !== null) {
+      DemoButton({ label: label, destructive: destructive })
+        .onClick(() => {
+          // Resolve again at tap time so a delayed click cannot reuse an event
+          // after the displayed route/page-state or canonical component has changed.
+          const event: UiEvent | null = ReaderUIScreenGraphButtonAdapter.event(
+            this.routeId, this.pageState, component,
+          );
+          if (event !== null) ReaderUiStore.dispatch(event);
+        })
+    } else {
+      this.renderInertCanonicalButton(component)
+    }
+  }
+
+  @Builder renderInertCanonicalButton(component: ViewStateComponent) {
+    DemoButton({
+      label: this.canonicalButtonLabel(component),
+      destructive: component.props.destructive === true,
+    })
+      .enabled(false)
+      .hitTestBehavior(HitTestMode.None)
+  }
+
+  @Builder renderCanonicalDialog(component: ViewStateComponent,
+    projection: ReaderUIScreenGraphDialogProjection | null) {
+    if (projection !== null) {
+      Column({ space: 10 }) {
+        Text(projection.title)
+          .fontSize(20)
+          .fontWeight(800)
+          .width('100%')
+        if (projection.message !== '') {
+          Text(projection.message)
+            .fontSize(14)
+            .fontColor('#725F50')
+            .width('100%')
+        }
+        if (projection.children.length > 0) {
+          this.renderChildren(projection.children)
+        }
+      }
+      .width('100%')
+      .padding(16)
+      .borderRadius(18)
+      .backgroundColor('#FFFDF8')
+      .border({ width: 1, color: '#E7DED2' })
+    } else {
+      Text(`Dialog 契约漂移 · ${component.id}`)
+        .fontSize(13)
+        .fontWeight(700)
+        .fontColor('#9E3B32')
+        .width('100%')
+        .padding(12)
+        .enabled(false)
+        .hitTestBehavior(HitTestMode.None)
+    }
+  }
+
+  @Builder renderCanonicalContent(component: ViewStateComponent,
+    projection: ReaderUIScreenGraphContentProjection | null) {
+    if (projection !== null) {
+      Column({ space: 6 }) {
+        Text(projection.title)
+          .fontSize(16)
+          .fontWeight(800)
+          .fontColor('#2E2924')
+          .width('100%')
+        if (projection.message !== projection.title) {
+          Text(projection.message)
+            .fontSize(13)
+            .fontColor('#725F50')
+            .width('100%')
+        }
+      }
+      .width('100%')
+      .padding(12)
+      .borderRadius(14)
+      .backgroundColor('#FFF9EE')
+      .border({ width: 1, color: '#E7DED2' })
+    } else {
+      Text(`Content 契约漂移 · ${component.id}`)
+        .fontSize(13)
+        .fontWeight(700)
+        .fontColor('#9E3B32')
+        .width('100%')
+        .padding(12)
+        .enabled(false)
+        .hitTestBehavior(HitTestMode.None)
+    }
+  }
+
+  @Builder renderCanonicalEmpty(component: ViewStateComponent,
+    projection: ReaderUIScreenGraphEmptyProjection | null) {
+    if (projection !== null) {
+      Column({ space: 6 }) {
+        Text(projection.title)
+          .fontSize(16)
+          .fontWeight(800)
+          .fontColor('#2E2924')
+          .textAlign(TextAlign.Center)
+        if (projection.message !== projection.title) {
+          Text(projection.message)
+            .fontSize(13)
+            .fontColor('#725F50')
+            .textAlign(TextAlign.Center)
+        }
+      }
+      .width('100%')
+      .height('100%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(HorizontalAlign.Center)
+      .padding(24)
+    } else {
+      Text(`Empty 契约漂移 · ${component.id}`)
+        .fontSize(13)
+        .fontWeight(700)
+        .fontColor('#9E3B32')
+        .width('100%')
+        .padding(12)
+        .enabled(false)
+        .hitTestBehavior(HitTestMode.None)
+    }
+  }
+
+  @Builder renderCanonicalError(component: ViewStateComponent,
+    projection: ReaderUIScreenGraphErrorProjection | null) {
+    if (projection !== null) {
+      Column({ space: 8 }) {
+        Text(projection.message)
+          .fontSize(16)
+          .fontWeight(800)
+          .fontColor('#2E2924')
+          .textAlign(TextAlign.Center)
+        if (projection.retryable) {
+          Text('可重试')
+            .fontSize(12)
+            .fontWeight(700)
+            .fontColor('#725F50')
+            .enabled(false)
+            .hitTestBehavior(HitTestMode.None)
+        }
+      }
+      .width('100%')
+      .height('100%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(HorizontalAlign.Center)
+      .padding(24)
+    } else {
+      Text(`Error 契约漂移 · ${component.id}`)
+        .fontSize(13)
+        .fontWeight(700)
+        .fontColor('#9E3B32')
+        .width('100%')
+        .padding(12)
+        .enabled(false)
+        .hitTestBehavior(HitTestMode.None)
+    }
+  }
+
+  @Builder renderCanonicalPermission(component: ViewStateComponent,
+    projection: ReaderUIScreenGraphPermissionProjection | null) {
+    if (projection !== null) {
+      Column({ space: 8 }) {
+        Text(projection.title)
+          .fontSize(16)
+          .fontWeight(800)
+          .fontColor('#2E2924')
+          .textAlign(TextAlign.Center)
+        if (projection.message !== projection.title) {
+          Text(projection.message)
+            .fontSize(13)
+            .fontColor('#725F50')
+            .textAlign(TextAlign.Center)
+        }
+      }
+      .width('100%')
+      .height('100%')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(HorizontalAlign.Center)
+      .padding(24)
+    } else {
+      Text(`Permission 契约漂移 · ${component.id}`)
+        .fontSize(13)
+        .fontWeight(700)
+        .fontColor('#9E3B32')
+        .width('100%')
+        .padding(12)
+        .enabled(false)
+        .hitTestBehavior(HitTestMode.None)
+    }
   }
 
   @Builder renderDebuggedComponent(component: ViewStateComponent, fullFrame: boolean) {
@@ -187,19 +783,29 @@ export struct ViewStateRenderer {
 
   @Builder renderComponent(component: ViewStateComponent) {
     if (component.type === 'AppTopBar') {
-      AppTopBar()
+      AppTopBar({ title: this.textOr(component.props.title, '') })
     } else if (component.type === 'BackTopBar') {
-      BackTopBar()
+      BackTopBar({ title: this.textOr(component.props.title, '') })
     } else if (component.type === 'BottomNav') {
-      BottomNav()
+      BottomNav({ selected: this.textOr(component.props.selected, '') })
     } else if (component.type === 'Loading') {
-      Loading()
+      Loading({
+        title: this.statePrimitiveTitle(component),
+        message: this.statePrimitiveMessage(component),
+      })
     } else if (component.type === 'Empty') {
-      Empty({ message: this.textOr(component.props.message, '书架为空') })
+      this.renderCanonicalEmpty(component, ReaderUIScreenGraphEmptyAdapter.project(component))
     } else if (component.type === 'ErrorState') {
-      ErrorState()
+      ErrorState({
+        title: this.statePrimitiveTitle(component),
+        canonicalMessage: this.statePrimitiveMessage(component),
+        retryEnabled: this.statePrimitiveRetryEnabled(component),
+      })
     } else if (component.type === 'Offline') {
-      Offline()
+      Offline({
+        title: this.statePrimitiveTitle(component),
+        message: this.statePrimitiveMessage(component),
+      })
     } else if (component.type === 'ContinueReadingCard') {
       ContinueReadingCard({
         bookId: this.textOr(component.props.bookId, ''),
@@ -221,17 +827,69 @@ export struct ViewStateRenderer {
     } else if (component.type === 'BookChapterList') {
       BookChapterList()
     } else if (component.type === 'ReadingBackgroundLayer') {
-      ReadingBackgroundLayer()
+      ReadingBackgroundLayer({ theme: this.textOr(component.props.theme, '') })
     } else if (component.type === 'ReadingTextFlow') {
-      ReadingTextFlow()
+      if (component.children.length > 0) {
+        this.renderReadOnlyReadingTextState(
+          this.textOr(component.props.phase, 'unknown'),
+          component.children,
+        )
+      } else {
+        this.renderReadingTextFlowMetadata(
+          this.textOr(component.props.state, ''),
+          this.textOr(component.props.fontFamily, ''),
+        )
+      }
     } else if (component.type === 'ReadingInfoLayer') {
-      ReadingInfoLayer()
+      ReadingInfoLayer({
+        chapterTitle: this.textOr(component.props.chapterTitle, ''),
+        progress: this.numOr(component.props.progress, -1),
+      })
     } else if (component.type === 'TapZones') {
-      TapZones()
+      if (ReaderCapabilityClosureRouteRegistry.has(this.routeId)) {
+        this.renderCapabilityClosureNode(
+          component,
+          component.children,
+          this.capabilityClosureTitle(component.props.title, component.props.label,
+            component.props.name, component.type),
+          this.capabilityClosureDetail(component.props.summary, component.props.state,
+            component.props.variant),
+        )
+      } else {
+        TapZones({
+          contractBindingsDefined: true,
+          contractBindings: component.bindings,
+        })
+      }
     } else if (component.type === 'ReaderBase') {
-      ReaderBase()
+      if (ReaderCapabilityClosureRouteRegistry.has(this.routeId)) {
+        this.renderCapabilityClosureNode(
+          component,
+          component.children,
+          this.capabilityClosureTitle(component.props.title, component.props.label,
+            component.props.documentKind, component.type),
+          this.capabilityClosureDetail(component.props.summary, component.props.availability,
+            component.props.executionOwner),
+        )
+      } else {
+        ReaderBase({
+          tapZoneContractBindingsDefined: this.readerBaseHasTapZones(component),
+          tapZoneContractBindings: this.readerBaseTapZoneBindings(component),
+        })
+      }
     } else if (component.type === 'ReaderTopArea') {
-      ReaderTopArea()
+      if (ReaderCapabilityClosureRouteRegistry.has(this.routeId)) {
+        this.renderCapabilityClosureNode(
+          component,
+          component.children,
+          this.capabilityClosureTitle(component.props.title, component.props.label,
+            component.props.name, component.type),
+          this.capabilityClosureDetail(component.props.summary, component.props.state,
+            component.props.variant),
+        )
+      } else {
+        ReaderTopArea()
+      }
     } else if (component.type === 'ReaderControlSheet') {
       ReaderControlSheet()
     } else if (component.type === 'ReaderBottomBar') {
@@ -239,9 +897,20 @@ export struct ViewStateRenderer {
     } else if (component.type === 'NightToast') {
       NightToast()
     } else if (component.type === 'SourceSwitchResultsPanel') {
-      SourceSwitchResultsPanel()
+      SourceSwitchResultsPanel({
+        title: this.textOr(component.props.title, '换源预览'),
+        message: this.textOr(component.props.message, '换源预览'),
+      })
     } else if (component.type === 'SourceSwitchFlowPage') {
-      SourceSwitchFlowPage()
+      if (component.children.length > 0) {
+        this.renderReadOnlySourceSwitchState(
+          this.textOr(component.props.phase, 'source-switch'),
+          component.children,
+        )
+      } else {
+        // Default flow instances retain the live typed native workflow.
+        SourceSwitchFlowPage()
+      }
     } else if (component.type === 'SourceImportPreviewPage') {
       SourceImportPreviewPage()
     } else if (component.type === 'SourceGroupsPage') {
@@ -263,13 +932,47 @@ export struct ViewStateRenderer {
     } else if (component.type === 'SourceDeleteConfirmPage') {
       SourceDeleteConfirmPage()
     } else if (component.type === 'SourceRuleEditPage') {
-      SourceRuleEditPage()
+      SourceRuleEditPage({
+        title: this.textOr(component.props.title, '规则编辑'),
+        variant: this.textOr(component.props.variant, 'edit'),
+      })
     } else if (component.type === 'SourceBatchPage') {
       SourceBatchPage()
     } else if (component.type === 'ReaderDirectoryPanel') {
-      ReaderDirectoryPanel()
+      if (this.routeId === 'bookmarks-manager' &&
+        ReaderCapabilityClosureRouteRegistry.isCoreBacked(this.routeId)) {
+        // Ignore the canonical fixture row. The native panel renders only the
+        // current book's Core bookmark projection and uses its real Core time
+        // key for jump/delete confirmation.
+        ReaderDirectoryPanel({ standalone: true })
+      } else if (ReaderCapabilityClosureRouteRegistry.isFailClosed(this.routeId)) {
+        this.renderCapabilityClosureNode(
+          component,
+          component.children,
+          this.capabilityClosureTitle(component.props.title, component.props.label,
+            component.props.name, component.type),
+          this.capabilityClosureDetail(component.props.summary, component.props.state,
+            component.props.variant),
+        )
+      } else if (component.children.length > 0) {
+        this.renderReadOnlyDirectoryState(
+          this.textOr(component.props.phase, 'unknown'),
+          component.children,
+        )
+      } else {
+        // The normal directory surface stays on the existing native panel.
+        ReaderDirectoryPanel()
+      }
     } else if (component.type === 'ReaderAppearancePanel') {
-      ReaderAppearancePanel()
+      if (component.children.length > 0) {
+        this.renderReadOnlyAppearanceState(
+          this.textOr(component.props.section, 'appearance'),
+          component.children,
+        )
+      } else {
+        // The default surface remains the live native appearance panel.
+        ReaderAppearancePanel()
+      }
     } else if (component.type === 'ReaderTtsPanel') {
       ReaderTtsPanel()
     } else if (component.type === 'ReaderSettingsPanel') {
@@ -283,13 +986,41 @@ export struct ViewStateRenderer {
     } else if (component.type === 'ReaderFullSettingsPage') {
       ReaderFullSettingsPage()
     } else if (component.type === 'ReaderBookCachePage') {
-      ReaderBookCachePage()
+      if (component.children.length > 0) {
+        this.renderCapabilityClosureNode(
+          component,
+          component.children,
+          this.capabilityClosureTitle(component.props.title, component.props.label,
+            component.props.name, component.type),
+          this.capabilityClosureDetail(component.props.summary, component.props.state,
+            component.props.variant),
+        )
+      } else {
+        ReaderBookCachePage()
+      }
     } else if (component.type === 'ReaderDebugInfoPage') {
       ReaderDebugInfoPage()
     } else if (component.type === 'ReaderSearchPanel') {
       ReaderSearchPanel()
     } else if (component.type === 'ReaderReplacePanel') {
-      ReaderReplacePanel()
+      if (ReaderCapabilityClosureRouteRegistry.has(this.routeId)) {
+        this.renderCapabilityClosureNode(
+          component,
+          component.children,
+          this.capabilityClosureTitle(component.props.title, component.props.label,
+            component.props.name, component.type),
+          this.capabilityClosureDetail(component.props.summary, component.props.state,
+            component.props.variant),
+        )
+      } else if (component.children.length > 0) {
+        this.renderReadOnlyReplaceState(
+          this.textOr(component.props.section, 'replace'),
+          component.children,
+        )
+      } else {
+        // The default surface retains the production-owned native rule flow.
+        ReaderReplacePanel()
+      }
     } else if (component.type === 'ReaderAutoScrollPanel') {
       ReaderAutoScrollPanel()
     } else if (component.type === 'SettingsHomeSection') {
@@ -297,7 +1028,21 @@ export struct ViewStateRenderer {
     } else if (component.type === 'SettingsHomePage') {
       SettingsHomePage()
     } else if (component.type === 'SettingsGeneralPage') {
-      SettingsGeneralPage()
+      if (this.routeId === 'settings-accessibility' &&
+        ReaderCapabilityClosureRouteRegistry.isNativeBacked(this.routeId)) {
+        Slice12AccessibilitySettingsPage()
+      } else if (component.children.length > 0) {
+        this.renderCapabilityClosureNode(
+          component,
+          component.children,
+          this.capabilityClosureTitle(component.props.title, component.props.label,
+            component.props.name, component.type),
+          this.capabilityClosureDetail(component.props.summary, component.props.state,
+            component.props.variant),
+        )
+      } else {
+        SettingsGeneralPage({ variant: this.textOr(component.props.variant, 'general') })
+      }
     } else if (component.type === 'BookshelfSearchSettingsPage') {
       BookshelfSearchSettingsPage()
     } else if (component.type === 'ProgressSyncPage') {
@@ -312,7 +1057,14 @@ export struct ViewStateRenderer {
         SettingsSection({ title: this.textOr(component.props.title, '') })
       }
     } else if (component.type === 'SettingsListItem') {
-      SettingsListItem({ itemId: component.id })
+      this.renderCapabilityClosureNode(
+        component,
+        component.children,
+        this.capabilityClosureTitle(component.props.title, component.props.label,
+          component.props.name, component.type),
+        this.capabilityClosureDetail(component.props.summary, component.props.state,
+          component.props.variant),
+      )
     } else if (component.type === 'DiscoverSourceBar') {
       DiscoverSourceBar()
     } else if (component.type === 'DiscoverEntryRow') {
@@ -359,14 +1111,28 @@ export struct ViewStateRenderer {
     } else if (component.type === 'RssSourceGroupsPage') {
       RssSourceGroupsPage()
     } else if (component.type === 'RssSourceImportPage') {
-      RssSourceImportPage()
+      RssSourceImportPage({ message: this.textOr(component.props.message, '从 OPML 或 URL 导入。') })
     } else if (component.type === 'RssSourceEditPage') {
       RssSourceEditPage({ mode: this.textOr(component.props.mode, 'edit') })
     } else if (component.type === 'AppShellStructure') {
-      AppShellStructure({
-        title: this.textOr(component.props.title, 'Reader for Android'),
-        message: this.textOr(component.props.message, '统一承载书架、发现、RSS、设置与阅读页入口。'),
-      })
+      if (this.routeId === 'onboarding-welcome' &&
+        ReaderCapabilityClosureRouteRegistry.isNativeBacked(this.routeId)) {
+        Slice12OnboardingWelcomePage()
+      } else if (component.children.length > 0) {
+        this.renderCapabilityClosureNode(
+          component,
+          component.children,
+          this.capabilityClosureTitle(component.props.title, component.props.label,
+            component.props.name, component.type),
+          this.capabilityClosureDetail(component.props.summary, component.props.state,
+            component.props.variant),
+        )
+      } else {
+        AppShellStructure({
+          title: this.textOr(component.props.title, 'Reader for Android'),
+          message: this.textOr(component.props.message, '统一承载书架、发现、RSS、设置与阅读页入口。'),
+        })
+      }
     } else if (component.type === 'MainTabsStructure') {
       MainTabsStructure({
         title: this.textOr(component.props.title, '主导航'),
@@ -374,6 +1140,19 @@ export struct ViewStateRenderer {
       })
     } else if (component.type === 'SearchHomePage') {
       SearchHomePage({ placeholder: this.textOr(component.props.placeholder, '搜索书名/作者') })
+    } else if (component.type === 'SearchResultsPage' &&
+      ReaderCapabilityClosureRouteRegistry.isFailClosed(this.routeId)) {
+      // Cover search currently shares the visual component type but has no
+      // production search/apply contract. Keep that route unavailable before
+      // entering the real Core book-search projection below.
+      this.renderCapabilityClosureNode(
+        component,
+        component.children,
+        this.capabilityClosureTitle(component.props.title, component.props.label,
+          component.props.name, component.type),
+        this.capabilityClosureDetail(component.props.summary, component.props.state,
+          component.props.variant),
+      )
     } else if (component.type === 'SearchResultsPage') {
       SearchResultsPage()
     } else if (component.type === 'SearchStatePage') {
@@ -384,7 +1163,7 @@ export struct ViewStateRenderer {
         action: this.textOr(component.props.action, ''),
       })
     } else if (component.type === 'BookTocPreviewPage') {
-      BookTocPreviewPage()
+      BookTocPreviewPage({ title: this.textOr(component.props.title, '目录预览') })
     } else if (component.type === 'BookshelfEmptyPage') {
       BookshelfEmptyPage({
         title: this.textOr(component.props.title, '书架为空'),
@@ -393,9 +1172,9 @@ export struct ViewStateRenderer {
     } else if (component.type === 'BookMoreMenuPage') {
       BookMoreMenuPage()
     } else if (component.type === 'BookGroupManagementPage') {
-      BookGroupManagementPage()
+      BookGroupManagementPage({ title: this.textOr(component.props.title, '分组') })
     } else if (component.type === 'GroupManagementPage') {
-      GroupManagementPage()
+      GroupManagementPage({ variant: this.textOr(component.props.variant, 'group-flow') })
     } else if (component.type === 'BookBatchManagementPage') {
       BookBatchManagementPage()
     } else if (component.type === 'RssSubscriptionDeleteConfirmPage') {
@@ -403,11 +1182,11 @@ export struct ViewStateRenderer {
     } else if (component.type === 'BookDirectoryPage') {
       BookDirectoryPage()
     } else if (component.type === 'SourceManagementPage') {
-      SourceManagementPage()
+      SourceManagementPage({ title: this.textOr(component.props.title, '书源管理') })
     } else if (component.type === 'SourceDetailPage') {
       SourceDetailPage({ title: this.textOr(component.props.title, '阅读书源 1') })
     } else if (component.type === 'SourceImportOptionsPage') {
-      SourceImportOptionsPage()
+      SourceImportOptionsPage({ title: this.textOr(component.props.title, '导入书源') })
     } else if (component.type === 'SourceDisabledState') {
       SourceDisabledState({
         title: this.textOr(component.props.title, '书源已停用'),
@@ -415,22 +1194,37 @@ export struct ViewStateRenderer {
         action: this.textOr(component.props.action, '查看详情'),
       })
     } else if (component.type === 'SourceFormPage') {
-      SourceFormPage({
-        action: this.textOr(component.props.action, '保存'),
-        editing: component.id === 'source-edit-page',
-      })
+      this.renderCapabilityClosureNode(
+        component,
+        component.children,
+        this.capabilityClosureTitle(component.props.title, component.props.label,
+          component.props.name, component.type),
+        this.capabilityClosureDetail(component.props.summary, component.props.state,
+          component.props.variant),
+      )
     } else if (component.type === 'SourceSettingsEntryPage') {
       SourceSettingsEntryPage()
     } else if (component.type === 'SourceTestResultPage') {
-      SourceTestResultPage()
+      SourceTestResultPage({ title: this.textOr(component.props.title, '测试结果') })
     } else if (component.type === 'SyncSettingsEntryPage') {
-      SyncSettingsEntryPage()
+      SyncSettingsEntryPage({ title: this.textOr(component.props.title, '同步设置') })
     } else if (component.type === 'SyncBackupPage') {
       SyncBackupPage({ variant: this.textOr(component.props.variant, 'default') })
     } else if (component.type === 'GlobalSettingsPage') {
-      GlobalSettingsPage()
+      if (component.children.length > 0) {
+        this.renderCapabilityClosureNode(
+          component,
+          component.children,
+          this.capabilityClosureTitle(component.props.title, component.props.label,
+            component.props.name, component.type),
+          this.capabilityClosureDetail(component.props.summary, component.props.state,
+            component.props.variant),
+        )
+      } else {
+        GlobalSettingsPage({ title: this.textOr(component.props.title, '设置入口') })
+      }
     } else if (component.type === 'BackupSettingsPage') {
-      BackupSettingsPage()
+      BackupSettingsPage({ title: this.textOr(component.props.title, '备份') })
     } else if (component.type === 'SyncErrorPage') {
       SyncErrorPage({
         title: this.textOr(component.props.title, '同步操作未完成'),
@@ -447,7 +1241,7 @@ export struct ViewStateRenderer {
     } else if (component.type === 'RestoreResultPage') {
       RestoreResultPage()
     } else if (component.type === 'RemoteWebDavBooksPage') {
-      RemoteWebDavBooksPage()
+      RemoteWebDavBooksPage({ title: this.textOr(component.props.title, '远端书籍') })
     } else if (component.type === 'RssDetailPage') {
       RssDetailPage()
     } else if (component.type === 'RssEmptyState') {
@@ -463,62 +1257,80 @@ export struct ViewStateRenderer {
         action: this.textOr(component.props.action, '重试'),
       })
     } else if (component.type === 'RssSubscriptionManagementPage') {
-      RssSubscriptionManagementPage()
+      RssSubscriptionManagementPage({ title: this.textOr(component.props.title, '订阅源') })
     } else if (component.type === 'GlobalStatePage') {
-      GlobalStatePage({
-        variant: this.textOr(component.props.variant, 'empty'),
-        title: this.textOr(component.props.title, '暂无内容'),
-        message: this.textOr(component.props.message, ''),
-        action: this.textOr(component.props.action, ''),
-      })
+      if (component.children.length > 0) {
+        this.renderCapabilityClosureNode(
+          component,
+          component.children,
+          this.capabilityClosureTitle(component.props.title, component.props.label,
+            component.props.name, component.type),
+          this.capabilityClosureDetail(component.props.summary, component.props.state,
+            component.props.variant),
+        )
+      } else {
+        GlobalStatePage({
+          variant: this.textOr(component.props.variant, 'empty'),
+          title: this.textOr(component.props.title, '暂无内容'),
+          message: this.textOr(component.props.message, ''),
+          action: this.textOr(component.props.action, ''),
+        })
+      }
     } else if (component.type === 'OfflineStatePage') {
       OfflineStatePage({
         title: this.textOr(component.props.title, '当前离线'),
         message: this.textOr(component.props.message, '检查网络后再继续同步或搜索。'),
       })
     } else if (component.type === 'Permission') {
-      PermissionRequiredPage({
-        title: this.textOr(component.props.title, '需要权限'),
-        message: this.textOr(component.props.message, '授予权限后才能继续。'),
-        action: this.textOr(component.props.action, '重新选择文件'),
-      })
+      this.renderCanonicalPermission(
+        component, ReaderUIScreenGraphTerminalStateAdapter.projectPermission(component),
+      )
     } else if (component.type === 'PermissionRequiredPage') {
-      PermissionRequiredPage({
-        title: this.textOr(component.props.title, '需要权限'),
-        message: this.textOr(component.props.message, '授予存储或通知权限后才能继续。'),
-        action: this.textOr(component.props.action, '去授权'),
-      })
+      if (this.routeId === 'onboarding-capability-setup' &&
+        ReaderCapabilityClosureRouteRegistry.isNativeBacked(this.routeId)) {
+        Slice12OnboardingCapabilityPage()
+      } else if (this.routeId === 'permission-recovery' &&
+        ReaderCapabilityClosureRouteRegistry.isNativeBacked(this.routeId)) {
+        Slice12PermissionRecoveryPage()
+      } else if (component.children.length > 0) {
+        this.renderCapabilityClosureNode(
+          component,
+          component.children,
+          this.capabilityClosureTitle(component.props.title, component.props.label,
+            component.props.name, component.type),
+          this.capabilityClosureDetail(component.props.summary, component.props.state,
+            component.props.variant),
+        )
+      } else {
+        PermissionRequiredPage({
+          title: this.textOr(component.props.title, '需要权限'),
+          message: this.textOr(component.props.message, '授予存储或通知权限后才能继续。'),
+          action: this.textOr(component.props.action, '去授权'),
+        })
+      }
     } else if (component.type === 'AboutVersionPage') {
       AboutVersionPage()
     } else if (component.type === 'AboutFeedbackPage') {
       AboutFeedbackPage()
     } else if (component.type === 'LocalBookImportPage') {
-      LocalBookImportPage()
+      if (component.children.length > 0) {
+        this.renderCapabilityClosureNode(
+          component,
+          component.children,
+          this.capabilityClosureTitle(component.props.title, component.props.label,
+            component.props.name, component.type),
+          this.capabilityClosureDetail(component.props.summary, component.props.state,
+            component.props.variant),
+        )
+      } else {
+        LocalBookImportPage({ title: this.textOr(component.props.title, '本地导入') })
+      }
     } else if (component.type === 'ReadingSettingsEntryPage') {
-      ReadingSettingsEntryPage()
+      ReadingSettingsEntryPage({ title: this.textOr(component.props.title, '阅读设置') })
     } else if (component.type === 'Contract25RoutePage') {
       Contract25RoutePage({ routeId: this.textOr(component.props.contractRouteId, '') })
     } else if (component.type === 'Dialog') {
-      Column({ space: 10 }) {
-        Text(this.textOr(component.props.title, '确认操作'))
-          .fontSize(20)
-          .fontWeight(800)
-          .width('100%')
-        if (this.textOr(component.props.message, '') !== '') {
-          Text(this.textOr(component.props.message, ''))
-            .fontSize(14)
-            .fontColor('#725F50')
-            .width('100%')
-        }
-        if (component.children.length > 0) {
-          this.renderChildren(component.children)
-        }
-      }
-      .width('100%')
-      .padding(16)
-      .borderRadius(18)
-      .backgroundColor('#FFFDF8')
-      .border({ width: 1, color: '#E7DED2' })
+      this.renderCanonicalDialog(component, ReaderUIScreenGraphDialogAdapter.project(component))
     } else if (component.type === 'FloatingPageControl') {
       Row() {
         Text(this.textOr(component.props.title, '阅读边界'))
@@ -551,35 +1363,112 @@ export struct ViewStateRenderer {
       .backgroundColor('#FFF9EE')
       .border({ width: 1, color: '#E7DED2' })
     } else if (component.type === 'Button') {
-      DemoButton({ label: this.textOr(component.props.label, '操作'), destructive: component.props.destructive === true })
+      this.renderCanonicalButton(
+        component,
+        this.canonicalButtonLabel(component),
+        component.props.destructive === true,
+      )
     } else if (component.type === 'Input') {
-      Input({ placeholder: this.textOr(component.props.placeholder, '输入...') })
+      this.renderCapabilityClosureNode(
+        component,
+        component.children,
+        this.capabilityClosureTitle(component.props.title, component.props.label,
+          component.props.name, component.type),
+        this.capabilityClosureDetail(component.props.summary, component.props.state,
+          component.props.variant),
+      )
     } else if (component.type === 'ListRow') {
-      ListRow({
-        title: this.textOr(component.props.title, '列表项'),
-        detail: this.textOr(component.props.author, this.textOr(component.props.subtitle, '')),
-      })
+      this.renderCapabilityClosureNode(
+        component,
+        component.children,
+        this.capabilityClosureTitle(component.props.title, component.props.label,
+          component.props.name, component.type),
+        this.capabilityClosureDetail(component.props.summary, component.props.state,
+          component.props.variant),
+      )
     } else if (component.type === 'List') {
-      if (component.children.length > 0) {
+      if (ReaderCapabilityClosureRouteRegistry.isFailClosed(this.routeId)) {
+        this.renderCapabilityClosureNode(
+          component,
+          component.children,
+          this.capabilityClosureTitle(component.props.title, component.props.label,
+            component.props.name, component.type),
+          this.capabilityClosureDetail(component.props.summary, component.props.state,
+            component.props.variant),
+        )
+      } else if (component.children.length > 0) {
         Column() {
+          Text(this.textOr(component.props.title, '列表'))
+            .fontSize(14)
+            .fontWeight(800)
+            .width('100%')
+          if (this.textOr(component.props.message, '') !== '') {
+            Text(this.textOr(component.props.message, ''))
+              .fontSize(12)
+              .fontColor('#725F50')
+              .width('100%')
+          }
           this.renderChildren(component.children)
         }
         .width('100%')
       } else {
-        DemoList()
+        Column() {
+          Text(this.textOr(component.props.title, '列表'))
+            .fontSize(14)
+            .fontWeight(800)
+            .width('100%')
+          if (this.textOr(component.props.message, '') !== '') {
+            Text(this.textOr(component.props.message, ''))
+              .fontSize(12)
+              .fontColor('#725F50')
+              .width('100%')
+          }
+          DemoList()
+        }
+        .width('100%')
       }
     } else if (component.type === 'Card') {
       Card({ title: this.textOr(component.props.title, '卡片标题'), subtitle: this.textOr(component.props.subtitle, '卡片摘要') })
     } else if (component.type === 'Content') {
-      Content({ text: this.textOr(component.props.message, '正文内容') })
+      if (ReaderCapabilityClosureRouteRegistry.has(this.routeId)) {
+        this.renderCapabilityClosureNode(
+          component,
+          component.children,
+          this.capabilityClosureTitle(component.props.title, component.props.label,
+            component.props.name, component.type),
+          this.capabilityClosureDetail(component.props.summary, component.props.state,
+            component.props.variant),
+        )
+      } else {
+        this.renderCanonicalContent(component, ReaderUIScreenGraphContentAdapter.project(component))
+      }
     } else if (component.type === 'FormSection') {
-      FormSection({ title: this.textOr(component.props.title, '表单分组') })
+      Column({ space: 8 }) {
+        Text(this.textOr(component.props.title, '表单分组'))
+          .fontSize(14)
+          .fontWeight(800)
+          .width('100%')
+        if (this.textOr(component.props.message, '') !== '') {
+          Text(this.textOr(component.props.message, ''))
+            .fontSize(12)
+            .fontColor('#725F50')
+            .width('100%')
+        }
+        if (component.children.length > 0) {
+          this.renderChildren(component.children)
+        }
+      }
+      .width('100%')
+      .padding(12)
+      .borderRadius(14)
+      .backgroundColor('#FFFDF8')
+      .border({ width: 1, color: '#E7DED2' })
     } else if (component.type === 'FilterBar') {
       FilterBar()
     } else if (component.type === 'Overlay') {
       Overlay()
     } else if (component.type === 'Error') {
-      ErrorState()
+      this.renderCanonicalError(component, ReaderUIScreenGraphTerminalStateAdapter.projectError(component))
     } else if (component.type === 'ShelfChipGroup') {
       ShelfChipGroup()
     } else if (component.type === 'ShelfSectionHeader') {
@@ -592,11 +1481,64 @@ export struct ViewStateRenderer {
         coverKey: this.textOr(component.props.coverKey, 'longNight'),
       })
     } else if (component.type === 'BookCover') {
-      BookCover()
+      this.renderCapabilityClosureNode(
+        component,
+        component.children,
+        this.capabilityClosureTitle(component.props.title, component.props.label,
+          component.props.name, component.type),
+        this.capabilityClosureDetail(component.props.summary, component.props.state,
+          component.props.variant),
+      )
     } else if (component.type === 'BookGrid') {
-      BookGrid({ books: this.extractBooks(component.children) })
+      BookGrid({
+        books: this.extractBooks(component.children),
+        viewMode: this.textOr(component.props.viewMode, 'cover'),
+      })
     } else if (component.type === 'ProgressBar') {
-      ProgressBar({ progress: this.numOr(component.props.progress, 0.42) })
+      this.renderCapabilityClosureNode(
+        component,
+        component.children,
+        this.capabilityClosureTitle(component.props.title, component.props.label,
+          component.props.name, component.type),
+        this.capabilityClosureDetail(component.props.summary, component.props.state,
+          component.props.variant),
+      )
+    } else if (component.type === 'Toggle') {
+      this.renderCapabilityClosureNode(
+        component,
+        component.children,
+        this.capabilityClosureTitle(component.props.title, component.props.label,
+          component.props.name, component.type),
+        this.capabilityClosureDetail(component.props.summary, component.props.state,
+          component.props.variant),
+      )
+    } else if (component.type === 'Slider') {
+      this.renderCapabilityClosureNode(
+        component,
+        component.children,
+        this.capabilityClosureTitle(component.props.title, component.props.label,
+          component.props.name, component.type),
+        this.capabilityClosureDetail(component.props.summary, component.props.state,
+          component.props.variant),
+      )
+    } else if (component.type === 'Dropdown') {
+      this.renderCapabilityClosureNode(
+        component,
+        component.children,
+        this.capabilityClosureTitle(component.props.title, component.props.label,
+          component.props.name, component.type),
+        this.capabilityClosureDetail(component.props.summary, component.props.state,
+          component.props.variant),
+      )
+    } else if (component.type === 'WebView') {
+      this.renderCapabilityClosureNode(
+        component,
+        component.children,
+        this.capabilityClosureTitle(component.props.title, component.props.label,
+          component.props.name, component.type),
+        this.capabilityClosureDetail(component.props.summary, component.props.state,
+          component.props.variant),
+      )
     } else if (component.type === 'BookTitleAuthor') {
       BookTitleAuthor({ title: this.textOr(component.props.title, '三体'), author: this.textOr(component.props.author, '刘慈欣') })
     } else if (component.type === 'SourceStatus') {

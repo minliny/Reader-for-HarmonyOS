@@ -24,6 +24,7 @@ import {
 import {
   ReaderPlaybackChapterContext,
   ReaderPlaybackDomainMapper,
+  ReaderPlaybackProgressUpdate,
   ReaderPlaybackQueueSnapshot,
   ReaderPlaybackTtsPlan,
 } from './ReaderPlaybackDomainMapper';
@@ -44,6 +45,7 @@ export interface ReaderPlaybackCoreGateway {
   beginReaderLocationResolve(bookId: string, chapterIndex: number, chapterOffset: number,
     chapterProgress: number, viewportWidth: number, viewportHeight: number,
     fontScale: number, sourceId?: string, chapterTitle?: string): ReaderPlaybackCommandHandle;
+  updateReaderProgress(progress: ReaderPlaybackProgressUpdate): Promise<JsonObject>;
   beginTtsSlice(chapter: JsonObject, content: string, strategy?: string): ReaderPlaybackCommandHandle;
   beginTtsPlay(plan: JsonObject, startSliceIndex?: number): ReaderPlaybackCommandHandle;
   beginTtsStop(chapter: JsonObject): ReaderPlaybackCommandHandle;
@@ -59,6 +61,13 @@ export class CoreRuntimeReaderPlaybackGateway implements ReaderPlaybackCoreGatew
     return CoreRuntime.get().beginReaderLocationResolve(
       bookId, chapterIndex, chapterOffset, chapterProgress, viewportWidth, viewportHeight,
       fontScale, sourceId, chapterTitle,
+    );
+  }
+
+  updateReaderProgress(progress: ReaderPlaybackProgressUpdate): Promise<JsonObject> {
+    return CoreRuntime.get().readingProgressUpdate(
+      progress.bookId, progress.sourceId, progress.chapterIndex, progress.chapterOffset,
+      progress.chapterProgress, progress.locationRevision,
     );
   }
 
@@ -91,6 +100,10 @@ export interface ReaderPlaybackRuntimeGateway {
   acceptPageLocationResult(correlationId: string, canonicalLocation?: string,
     pageIndex?: number, error?: string): ReaderUIPlaybackTransition;
   acceptPageLocationJSONResult(correlationId: string,
+    result: ReaderUIJSONResult): ReaderUIPlaybackTransition;
+  acceptPageProgressResult(correlationId: string, stored?: boolean,
+    error?: string): ReaderUIPlaybackTransition;
+  acceptPageProgressJSONResult(correlationId: string,
     result: ReaderUIJSONResult): ReaderUIPlaybackTransition;
   cancelPageStep(correlationId: string): ReaderUIPlaybackTransition;
   acceptTTSCoreResult(coreType: string, correlationId: string,
@@ -163,6 +176,8 @@ class ReaderPlaybackPilotContext {
   inFlight?: ReaderPlaybackCommandHandle;
   currentEffect: string = '';
   pageLayout?: ReaderUIPageLayout;
+  pendingCanonicalLocation?: CoreReaderCanonicalLocation;
+  progressCommitPending: boolean = false;
   plan?: ReaderPlaybackTtsPlan;
   queue?: ReaderPlaybackQueueSnapshot;
   speechGeneration: number = 0;
@@ -301,6 +316,15 @@ export class ReaderPlaybackEffectExecutor {
   }
 
   teardownForDestroy(): Promise<void> {
+    // A dispatched reader.progress.update is the durable commit boundary and
+    // cannot be cancelled or made stale. Wait for the serialized terminal
+    // callback before invalidating any remaining TTS/timer/page contexts.
+    const pending = this.serial;
+    return pending.then((): Promise<void> => this.teardownContexts())
+      .catch((): Promise<void> => this.teardownContexts());
+  }
+
+  private teardownContexts(): Promise<void> {
     this.platform.cancelAllTimers();
     const ids = Array.from(this.contexts.keys());
     let hasTtsContext = false;
@@ -395,6 +419,9 @@ export class ReaderPlaybackEffectExecutor {
       case 'reader.location.resolve':
         await this.executeLocation(context);
         return;
+      case 'reader.progress.update':
+        await this.executeProgress(context, effect);
+        return;
       case 'tts.queue.plan':
         await this.executeTtsPlan(context);
         return;
@@ -430,24 +457,92 @@ export class ReaderPlaybackEffectExecutor {
       context.chapter.sourceId, context.chapter.chapterTitle,
     );
     context.inFlight = handle;
+    let data: JsonObject;
     try {
-      const data = await handle.result;
-      if (!this.live(context, handle)) return;
+      data = await handle.result;
+    } catch (error) {
+      if (!this.liveContext(context)) return;
       context.inFlight = undefined;
+      const transition = this.runtime.acceptPageLocationJSONResult(
+        context.correlationId, { 'error': this.errorMessage(error) },
+      );
+      this.contexts.delete(context.correlationId);
+      if (transition.accepted) {
+        this.applyTransitionState(transition);
+        await this.executeEffects(transition.effects);
+      }
+      if (context.sessionCorrelationId.length > 0 &&
+        this.runtime.currentState().autoPageTransaction === undefined) {
+        this.contexts.delete(context.sessionCorrelationId);
+      }
+      return;
+    }
+    if (!this.live(context, handle)) return;
+    context.inFlight = undefined;
+    try {
       const location = ReaderPlaybackDomainMapper.mapLocation(data, context.chapter, layout.chapterOffset);
       const transition = this.runtime.acceptPageLocationJSONResult(context.correlationId, {
         'canonicalLocation': location.locationRevision,
         'pageIndex': layout.targetPageIndex,
       });
-      if (!transition.accepted) return;
-      this.contexts.delete(context.correlationId);
-      this.host.commitCanonicalLocation(location, layout.targetPageIndex);
+      if (!transition.accepted) {
+        this.ignoredLateCallbacks += 1;
+        return;
+      }
+      context.pendingCanonicalLocation = location;
       this.applyTransitionState(transition);
       await this.executeEffects(transition.effects);
     } catch (error) {
       if (!this.liveContext(context)) return;
-      context.inFlight = undefined;
       const transition = this.runtime.acceptPageLocationJSONResult(
+        context.correlationId, { 'error': this.errorMessage(error) },
+      );
+      this.contexts.delete(context.correlationId);
+      if (transition.accepted) this.applyTransitionState(transition);
+      if (context.sessionCorrelationId.length > 0 &&
+        this.runtime.currentState().autoPageTransaction === undefined) {
+        this.contexts.delete(context.sessionCorrelationId);
+      }
+    }
+  }
+
+  private async executeProgress(context: ReaderPlaybackPilotContext,
+    effect: ReaderUIEffect): Promise<void> {
+    if (context.cancelled || context.progressCommitPending) {
+      this.ignoredLateCallbacks += 1;
+      return;
+    }
+    const layout = context.pageLayout;
+    const location = context.pendingCanonicalLocation;
+    context.progressCommitPending = true;
+    try {
+      if (layout === undefined || location === undefined) {
+        throw new Error('reader.progress.update requires pending page layout and canonical location');
+      }
+      const progress = ReaderPlaybackDomainMapper.bindProgressUpdate(
+        effect.jsonPayload ?? {}, context.chapter, layout, location,
+      );
+      const data = await this.core.updateReaderProgress(progress);
+      if (!this.liveContext(context)) {
+        this.ignoredLateCallbacks += 1;
+        return;
+      }
+      const result = ReaderPlaybackDomainMapper.mapProgressResult(data, progress);
+      const transition = this.runtime.acceptPageProgressJSONResult(context.correlationId, result);
+      if (!transition.accepted) {
+        this.ignoredLateCallbacks += 1;
+        this.contexts.delete(context.correlationId);
+        return;
+      }
+      context.progressCommitPending = false;
+      this.applyTransitionState(transition);
+      this.host.commitCanonicalLocation(location, layout.targetPageIndex);
+      this.contexts.delete(context.correlationId);
+      await this.executeEffects(transition.effects);
+    } catch (error) {
+      if (!this.liveContext(context)) return;
+      context.progressCommitPending = false;
+      const transition = this.runtime.acceptPageProgressJSONResult(
         context.correlationId, { 'error': this.errorMessage(error) },
       );
       this.contexts.delete(context.correlationId);
@@ -749,6 +844,18 @@ export class ReaderPlaybackEffectExecutor {
     type: string, message: string): Promise<void> {
     if (type === 'reader.location.resolve') {
       const transition = this.runtime.acceptPageLocationJSONResult(
+        context.correlationId, { 'error': message },
+      );
+      this.contexts.delete(context.correlationId);
+      if (transition.accepted) this.applyTransitionState(transition);
+      if (context.sessionCorrelationId.length > 0 &&
+        this.runtime.currentState().autoPageTransaction === undefined) {
+        this.contexts.delete(context.sessionCorrelationId);
+      }
+      return;
+    }
+    if (type === 'reader.progress.update') {
+      const transition = this.runtime.acceptPageProgressJSONResult(
         context.correlationId, { 'error': message },
       );
       this.contexts.delete(context.correlationId);

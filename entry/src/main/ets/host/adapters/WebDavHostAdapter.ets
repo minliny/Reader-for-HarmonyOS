@@ -52,6 +52,7 @@ export interface WebDavHttpExecutor {
 
 export interface WebDavCredentialReader {
   get(request: HostCredentialGetRequest): Promise<HostCredentialGetResponse>;
+  supportsProtectedSecrets?(): boolean;
 }
 
 function ensureHttpUrl(value: string, field: string): string {
@@ -59,6 +60,13 @@ function ensureHttpUrl(value: string, field: string): string {
   const lower = normalized.toLowerCase();
   if ((!lower.startsWith('https://') && !lower.startsWith('http://')) || normalized.indexOf(' ') >= 0) {
     throw new Error(`${field} must be an absolute http(s) URL`);
+  }
+  const authorityStart = normalized.indexOf('://') + 3;
+  const authorityEndCandidate = normalized.indexOf('/', authorityStart);
+  const authorityEnd = authorityEndCandidate < 0 ? normalized.length : authorityEndCandidate;
+  const authority = normalized.substring(authorityStart, authorityEnd);
+  if (authority.length === 0 || authority.indexOf('@') >= 0) {
+    throw new Error(`${field} must not contain URL user info`);
   }
   return normalized;
 }
@@ -115,6 +123,9 @@ export class WebDavHostAdapter {
   async backup(override?: ReaderWebDavCredentials): Promise<ReaderWebDavBackupResponse> {
     const credentials = await this.resolveCredentials(override);
     const remoteURL = this.backupURL(credentials.serverURL);
+    if (!remoteURL.toLowerCase().startsWith('https://')) {
+      throw new Error('webdav.backup requires HTTPS');
+    }
     const exported = await this.exportStorage();
     const envelope = this.envelopeFromExport(exported);
     const body = JSON.stringify({
@@ -138,6 +149,9 @@ export class WebDavHostAdapter {
 
   async restore(remoteURL: string, override?: ReaderWebDavCredentials): Promise<ReaderWebDavRestoreResponse> {
     const normalizedRemoteURL = ensureHttpUrl(remoteURL, 'remoteURL');
+    if (!normalizedRemoteURL.toLowerCase().startsWith('https://')) {
+      throw new Error('webdav.restore requires HTTPS');
+    }
     const credentials = await this.resolveCredentials(override);
     const request = this.request(credentials, normalizedRemoteURL, 'GET');
     const response = await this.httpAdapter.execute(request, this.requestId('restore'));
@@ -172,10 +186,16 @@ export class WebDavHostAdapter {
         ? ensureHttpUrl(storedURL.value, 'webdav.url')
         : '');
     if (serverURL.length === 0) throw new Error('WebDAV credentials are not configured');
+    const username = storedUser.exists && storedUser.value !== undefined ? storedUser.value : '';
+    const password = storedPassword.exists && storedPassword.value !== undefined ? storedPassword.value : '';
+    if ((username.length > 0 || password.length > 0) &&
+      this.credentialAdapter.supportsProtectedSecrets?.() !== true) {
+      throw new Error('Stored WebDAV authentication is unavailable without protected credential storage');
+    }
     return {
       serverURL: serverURL,
-      username: storedUser.exists && storedUser.value !== undefined ? storedUser.value : '',
-      password: storedPassword.exists && storedPassword.value !== undefined ? storedPassword.value : '',
+      username: username,
+      password: password,
     };
   }
 

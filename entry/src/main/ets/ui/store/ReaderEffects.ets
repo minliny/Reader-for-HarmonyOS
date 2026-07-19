@@ -27,6 +27,7 @@ import fs from '@ohos.file.fs';
 import util from '@ohos.util';
 import promptAction from '@ohos.promptAction';
 import { ViewportAdapter } from '../adapters/ViewportAdapter';
+import { LocalBookFormatPolicy } from '../../host/LocalBookFormatPolicy';
 
 interface CoreStorageBackupEnvelope {
   manifest: JsonObject;
@@ -212,12 +213,14 @@ export class ReaderEffects {
           if (event.id !== 'bookshelf-search-settings') ReaderEffects.loadBookshelf();
         } else if (event.id === 'book-search' || event.id === 'search-home') {
           ReaderEffects.loadSearchHistory();
-        } else if (event.id === 'toc-bookmarks') {
+        } else if (event.id === 'toc-bookmarks' || event.id === 'bookmarks-manager') {
           ReaderUiStore.dispatch({ type: 'set-toc-mode', tocMode: 'bookmark' });
         } else if (event.id === 'book-directory' && ReaderUiStore.snapshot().tocMode === 'bookmark') {
           ReaderEffects.loadBookmarksForCurrentBook();
         } else if (event.id === 'sync-backup') {
           ReaderEffects.loadLocalCoreBackup();
+          ReaderEffects.loadWebdavConfig();
+        } else if (event.id === 'webdav-config') {
           ReaderEffects.loadWebdavConfig();
         }
         break;
@@ -241,12 +244,14 @@ export class ReaderEffects {
           if (event.id !== 'bookshelf-search-settings') ReaderEffects.loadBookshelf();
         } else if (event.id === 'book-search' || event.id === 'search-home') {
           ReaderEffects.loadSearchHistory();
-        } else if (event.id === 'toc-bookmarks') {
+        } else if (event.id === 'toc-bookmarks' || event.id === 'bookmarks-manager') {
           ReaderUiStore.dispatch({ type: 'set-toc-mode', tocMode: 'bookmark' });
         } else if (event.id === 'book-directory' && ReaderUiStore.snapshot().tocMode === 'bookmark') {
           ReaderEffects.loadBookmarksForCurrentBook();
         } else if (event.id === 'sync-backup') {
           ReaderEffects.loadLocalCoreBackup();
+          ReaderEffects.loadWebdavConfig();
+        } else if (event.id === 'webdav-config') {
           ReaderEffects.loadWebdavConfig();
         }
         break;
@@ -548,6 +553,9 @@ export class ReaderEffects {
         break;
       case 'selection-action':
         ReaderEffects.runNativeSelectionAction(event.selectionAction ?? '');
+        break;
+      case 'toggle-reduced-motion':
+        ReaderEffects.persistReducedMotion(event.enabled === true);
         break;
       // `book-action/delete` only opens a target-bound confirmation sheet in
       // the reducer. The Core write is reachable solely from its confirm tap.
@@ -1039,6 +1047,15 @@ export class ReaderEffects {
     ReaderUiStore.dispatch({ type: 'reader-host-message', readerHostMessage: message });
   }
 
+  private static persistReducedMotion(enabled: boolean): void {
+    if (!CoreRuntime.isInitialized()) return;
+    const preferences = CoreRuntime.get().getReaderUiPreferenceAdapter();
+    if (preferences === null) return;
+    preferences.saveReducedMotion(enabled).catch((e: Error): void => {
+      console.info(`ReaderEffects: reducedMotion persistence failed: ${e.message}`);
+    });
+  }
+
   // ── Native reader text selection ─────────────────────────────────────
   // The Text component supplies the selection through onTextSelectionChange.
   // Do not derive it from chapterContent or from any fixture: a selection
@@ -1242,9 +1259,15 @@ export class ReaderEffects {
   // 真正执行网络访问。只有服务端返回 WebDAV 207 才报告连接成功。
   static runWebdavTest(): void {
     const state = ReaderUiStore.snapshot();
-    const url = state.webdavServerUrl;
-    if (url.length === 0) {
-      ReaderUiStore.dispatch({ type: 'webdav-test-result', success: false, message: '服务器地址不能为空' });
+    if (state.routeId !== 'webdav-config' || state.webdavTestStatus !== 'testing') return;
+    const url = state.webdavServerUrl.trim();
+    if (!ReaderEffects.validWebdavBaseUrl(url)) {
+      ReaderUiStore.dispatch({ type: 'webdav-test-result', success: false, message: '服务器地址必须是完整的 http(s) URL' });
+      return;
+    }
+    if ((state.webdavUsername.trim().length > 0 || state.webdavPassword.length > 0) &&
+      !url.toLowerCase().startsWith('https://')) {
+      ReaderUiStore.dispatch({ type: 'webdav-test-result', success: false, message: '带凭据的 WebDAV 测试必须使用 HTTPS' });
       return;
     }
     try {
@@ -1274,9 +1297,13 @@ export class ReaderEffects {
           if (response.status !== 207) {
             throw new Error(`WebDAV 服务返回 HTTP ${response.status}，预期 207`);
           }
+          const current = ReaderUiStore.snapshot();
+          if (current.routeId !== 'webdav-config' || current.webdavTestStatus !== 'testing') return;
           ReaderUiStore.dispatch({ type: 'webdav-test-result', success: true, message: '连接成功（HTTP 207）' });
         })
         .catch((e: Error): void => {
+          const current = ReaderUiStore.snapshot();
+          if (current.routeId !== 'webdav-config' || current.webdavTestStatus !== 'testing') return;
           ReaderUiStore.dispatch({ type: 'webdav-test-result', success: false, message: e.message });
         });
     } catch (e) {
@@ -1294,9 +1321,20 @@ export class ReaderEffects {
       });
       return;
     }
-    const url = state.webdavServerUrl;
-    if (url.length === 0) {
-      ReaderUiStore.dispatch({ type: 'webdav-save-result', success: false, message: '服务器地址不能为空' });
+    const url = state.webdavServerUrl.trim();
+    if (!ReaderEffects.validWebdavBaseUrl(url)) {
+      ReaderUiStore.dispatch({ type: 'webdav-save-result', success: false, message: '服务器地址必须是完整的 http(s) URL' });
+      return;
+    }
+    if (!url.toLowerCase().startsWith('https://')) {
+      ReaderUiStore.dispatch({ type: 'webdav-save-result', success: false, message: '持久化 WebDAV 端点必须使用 HTTPS' });
+      return;
+    }
+    let syncDir: string;
+    try {
+      syncDir = ReaderEffects.normalizedWebdavDirectory(state.webdavSyncDir);
+    } catch (e) {
+      ReaderUiStore.dispatch({ type: 'webdav-save-result', success: false, message: ReaderEffects.errorMessage(e as Object) });
       return;
     }
     try {
@@ -1306,16 +1344,25 @@ export class ReaderEffects {
         ReaderUiStore.dispatch({ type: 'webdav-save-result', success: false, message: '凭据存储不可用' });
         return;
       }
+      if ((state.webdavUsername.trim().length > 0 || state.webdavPassword.length > 0) &&
+        !credential.supportsProtectedSecrets()) {
+        ReaderUiStore.dispatch({
+          type: 'webdav-save-result', success: false,
+          message: '当前 Host 未接入 HUKS，带账号或密码的 WebDAV 配置禁止持久化；仍可进行本次会话连接测试。',
+        });
+        return;
+      }
       // Keep password out of general-purpose persistence. The credential
-      // adapter owns all authentication fields consumed by sync device proof;
-      // non-secret syncDir remains in Core persistence.
+      // adapter currently admits anonymous endpoint persistence only. Blank
+      // legacy user/password values prevent an old Preferences secret from
+      // silently becoming the credential for this newly saved endpoint.
       credential.set({ key: 'webdav.url', value: url })
-        .then(() => credential.set({ key: 'webdav.user', value: state.webdavUsername }))
-        .then(() => credential.set({ key: 'webdav.password', value: state.webdavPassword }))
+        .then(() => credential.set({ key: 'webdav.user', value: '' }))
+        .then(() => credential.set({ key: 'webdav.password', value: '' }))
         .then(() => runtime.getCoreAdapter().persistencePut({
           namespace: 'webdav',
           key: 'config',
-          value: JSON.stringify({ syncDir: state.webdavSyncDir }),
+          value: JSON.stringify({ syncDir: syncDir }),
         }))
         .then((): void => {
           ReaderUiStore.dispatch({ type: 'webdav-save-result', success: true, message: '配置已保存' });
@@ -1334,8 +1381,6 @@ export class ReaderEffects {
       const credential = runtime.getCredentialAdapter();
       if (credential === null) return;
       const url = await credential.get({ key: 'webdav.url' });
-      const user = await credential.get({ key: 'webdav.user' });
-      const password = await credential.get({ key: 'webdav.password' });
       const config = await runtime.getCoreAdapter().persistenceGet({ namespace: 'webdav', key: 'config' });
       let syncDir = '/reader/backup';
       if (config.found && config.value !== undefined && config.value.length > 0) {
@@ -1345,8 +1390,11 @@ export class ReaderEffects {
         }
       }
       ReaderUiStore.dispatch({ type: 'webdav-field-update', field: 'serverUrl', settingsValue: url.value ?? '' });
-      ReaderUiStore.dispatch({ type: 'webdav-field-update', field: 'username', settingsValue: user.value ?? '' });
-      ReaderUiStore.dispatch({ type: 'webdav-field-update', field: 'password', settingsValue: password.value ?? '' });
+      // Preferences-backed authentication fields are not loaded into UI
+      // state. Username/password are intentionally session-only until the
+      // Host provides HUKS-protected secret persistence.
+      ReaderUiStore.dispatch({ type: 'webdav-field-update', field: 'username', settingsValue: '' });
+      ReaderUiStore.dispatch({ type: 'webdav-field-update', field: 'password', settingsValue: '' });
       ReaderUiStore.dispatch({ type: 'webdav-field-update', field: 'syncDir', settingsValue: syncDir });
     } catch (e) {
       console.info(`ReaderEffects: load WebDAV config error: ${(e as Error).message}`);
@@ -1688,6 +1736,9 @@ export class ReaderEffects {
     const state = ReaderUiStore.snapshot();
     const baseUrl = state.webdavServerUrl.trim();
     if (baseUrl.length === 0) throw new Error('请先保存 WebDAV 服务器地址');
+    if (!ReaderEffects.validWebdavBaseUrl(baseUrl) || !baseUrl.toLowerCase().startsWith('https://')) {
+      throw new Error('WebDAV Core 备份要求不含用户信息的 HTTPS 端点');
+    }
     const directory = ReaderEffects.normalizedWebdavDirectory(state.webdavSyncDir);
     const remotePath = `${directory}/${ReaderEffects.REMOTE_CORE_BACKUP_FILE}`;
     const uploadText = ReaderEffects.serializeCoreBackupEnvelope(envelope);
@@ -1716,6 +1767,9 @@ export class ReaderEffects {
     const state = ReaderUiStore.snapshot();
     const baseUrl = state.webdavServerUrl.trim();
     if (baseUrl.length === 0) throw new Error('请先保存 WebDAV 服务器地址');
+    if (!ReaderEffects.validWebdavBaseUrl(baseUrl) || !baseUrl.toLowerCase().startsWith('https://')) {
+      throw new Error('WebDAV Core 恢复要求不含用户信息的 HTTPS 端点');
+    }
     const remotePath = `${ReaderEffects.normalizedWebdavDirectory(state.webdavSyncDir)}/${ReaderEffects.REMOTE_CORE_BACKUP_FILE}`;
     const descriptor = ReaderEffects.webdavRequest('GET', remotePath, '', [200]);
     const planned = await runtime.syncWebdavPlan(baseUrl, ReaderEffects.webdavAuthorization(), [descriptor]);
@@ -1732,6 +1786,19 @@ export class ReaderEffects {
     while (directory.endsWith('/')) directory = directory.substring(0, directory.length - 1);
     if (directory.length === 0) throw new Error('WebDAV 同步目录不能为空');
     return directory;
+  }
+
+  private static validWebdavBaseUrl(value: string): boolean {
+    const normalized = value.trim();
+    const lower = normalized.toLowerCase();
+    if ((!lower.startsWith('https://') && !lower.startsWith('http://')) ||
+      normalized.indexOf(' ') >= 0 || normalized.indexOf('\n') >= 0 || normalized.indexOf('\r') >= 0) return false;
+    const schemeEnd = normalized.indexOf('://');
+    const authorityStart = schemeEnd + 3;
+    const authorityEndCandidate = normalized.indexOf('/', authorityStart);
+    const authorityEnd = authorityEndCandidate < 0 ? normalized.length : authorityEndCandidate;
+    const authority = normalized.substring(authorityStart, authorityEnd);
+    return authority.length > 0 && authority.indexOf('@') < 0;
   }
 
   private static webdavAuthorization(): string | undefined {
@@ -1785,6 +1852,29 @@ export class ReaderEffects {
       });
       return;
     }
+    const formatDecision = LocalBookFormatPolicy.decide(fileName);
+    if (formatDecision.admission === 'unsupported') {
+      ReaderUiStore.dispatch({
+        type: 'set-error',
+        error: {
+          code: 'IMPORT_FORMAT_UNSUPPORTED',
+          message: '不支持该文件格式。请选择 TXT、EPUB、PDF、MOBI 或 UMD 文件。',
+          retryable: false,
+        },
+      });
+      return;
+    }
+    if (formatDecision.admission === 'protocol-required') {
+      ReaderUiStore.dispatch({
+        type: 'set-error',
+        error: {
+          code: 'IMPORT_FORMAT_PROTOCOL_REQUIRED',
+          message: LocalBookFormatPolicy.protocolRequiredMessage(formatDecision.format),
+          retryable: false,
+        },
+      });
+      return;
+    }
     const epoch = Math.max(ReaderEffects.localImportParseEpoch + 1, state.localImportEpoch + 1);
     ReaderEffects.localImportParseEpoch = epoch;
     ReaderEffects.pendingImportedBook = null;
@@ -1792,7 +1882,7 @@ export class ReaderEffects {
     ReaderEffects.pendingLocalBookOptions = null;
     ReaderEffects.pendingLocalImportEpoch = 0;
     ReaderUiStore.dispatch({ type: 'local-import-parse-start', localImportEpoch: epoch });
-    const format = ReaderEffects.detectImportFormat(fileName);
+    const format = formatDecision.format;
     try {
       const file = fs.openSync(uri, fs.OpenMode.READ_ONLY);
       try {
@@ -1861,16 +1951,8 @@ export class ReaderEffects {
     }
   }
 
-  // Detect import format from file extension.
-  private static detectImportFormat(fileName: string): string {
-    const lower = fileName.toLowerCase();
-    if (lower.endsWith('.epub') || lower.endsWith('.epub3')) return 'epub';
-    if (lower.endsWith('.pdf')) return 'pdf';
-    if (lower.endsWith('.mobi')) return 'mobi';
-    if (lower.endsWith('.azw') || lower.endsWith('.azw3')) return 'azw';
-    return 'txt';
-  }
-
+  // Detect import format from file extension. The actual decision is owned by
+  // LocalBookFormatPolicy above so unknown/PDF/MOBI/UMD inputs fail closed.
   // Commit the parsed book to Core's durable bookshelf. The route is popped
   // only after Core confirms the upsert, so a failed write cannot masquerade
   // as a successful import.
@@ -2307,7 +2389,8 @@ export class ReaderEffects {
   // the exact bookmark identity from state rather than trusting event data.
   private static deleteConfirmedBookmark(time: number): void {
     const state = ReaderUiStore.snapshot();
-    const liveRoute = state.routeId === 'toc-bookmarks' || state.routeId === 'reader-directory-overlay-v2';
+    const liveRoute = state.routeId === 'toc-bookmarks' ||
+      state.routeId === 'reader-directory-overlay-v2' || state.routeId === 'bookmarks-manager';
     if (!state.bookmarksLoading || !liveRoute || state.pendingBookmarkDeleteTime !== time ||
       !ReaderEffects.isLiveCurrentBookmark(time)) {
       ReaderEffects.rejectUnconfirmedBookmarkDelete();
@@ -2414,7 +2497,7 @@ export class ReaderEffects {
 
   private static closeBookmarkDirectory(): void {
     const route = ReaderUiStore.snapshot().routeId;
-    if (route === 'toc-bookmarks') {
+    if (route === 'toc-bookmarks' || route === 'bookmarks-manager') {
       ReaderUiStore.dispatch({ type: 'route-pop' });
     } else if (route === 'reader-directory-overlay-v2') {
       ReaderUiStore.dispatch({ type: 'reader.directory.close' });
@@ -5340,7 +5423,34 @@ export class ReaderEffects {
       return;
     }
     try {
-      const result = await CoreRuntime.get().getClipboardAdapter().paste();
+      const runtime = CoreRuntime.get();
+      const permission = runtime.getPermissionAdapter();
+      if (permission === null) {
+        await ReaderEffects.finishSourcePackageImport(epoch,
+          origin, 0, 0, 0, 0, '当前环境不能检查剪贴板权限。请改用手动 JSON 或网络 URL。',
+        );
+        return;
+      }
+      const scope = 'ohos.permission.READ_PASTEBOARD';
+      const checked = await permission.check({ scope: scope });
+      let granted = checked.granted;
+      if (!granted) {
+        // Permission is requested only after the user explicitly chose the
+        // clipboard-import business action. No onboarding/preflight prompt.
+        const requested = await permission.request({ scope: scope });
+        granted = requested.granted;
+      }
+      if (!ReaderEffects.isCurrentSourcePackageImport(epoch, origin)) {
+        ReaderEffects.releaseSourcePackageImportClaim(epoch);
+        return;
+      }
+      if (!granted) {
+        await ReaderEffects.finishSourcePackageImport(epoch,
+          origin, 0, 0, 0, 0, '未授予读取剪贴板权限。可返回后重试，或改用手动 JSON / 网络 URL。',
+        );
+        return;
+      }
+      const result = await runtime.getClipboardAdapter().paste();
       if (!ReaderEffects.isCurrentSourcePackageImport(epoch, origin)) {
         ReaderEffects.releaseSourcePackageImportClaim(epoch);
         return;

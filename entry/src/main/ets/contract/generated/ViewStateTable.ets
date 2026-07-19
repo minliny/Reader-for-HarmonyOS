@@ -9,35 +9,114 @@ export type ViewStateJSONValue = object | string | number | boolean | null;
 export interface ViewStateProps {
   action?: string;
   author?: string;
+  availability?: string;
+  body?: string;
   bookId?: string;
+  bookmarkId?: string;
+  capabilityBasis?: ViewStateJSONValue;
+  chapterId?: string;
   chapterTitle?: string;
+  completedChapters?: number;
+  completionSignal?: string;
   contractRouteId?: string;
+  controlEnabled?: boolean;
+  controlRatio?: number;
+  cookieScope?: string;
+  coreBasis?: ViewStateJSONValue;
+  coreSupport?: string;
   coverKey?: string;
+  createdAt?: string;
+  credentialCapture?: string;
+  description?: string;
   destructive?: boolean;
+  documentKind?: string;
+  effectPlan?: ViewStateJSONValue;
   enabled?: boolean;
+  errorCode?: string;
+  executionOwner?: string;
+  failureStates?: ViewStateJSONValue;
+  fallback?: string;
+  fields?: ViewStateJSONValue;
   filterOpen?: boolean;
   fontFamily?: string;
+  formatAvailability?: string;
+  formatKinds?: ViewStateJSONValue;
+  hostBasis?: ViewStateJSONValue;
+  imageCount?: number;
+  imageIndex?: number;
   label?: string;
+  max?: number;
   message?: string;
+  min?: number;
   mode?: string;
+  multiline?: boolean;
+  mutationScope?: string;
+  name?: string;
+  nextEnabled?: boolean;
+  nextRatio?: number;
+  page?: number;
+  pageCount?: number;
+  pauseOrCancelCoreSupport?: string;
+  pdfAndMangaCoreSupport?: string;
+  permissionScopes?: ViewStateJSONValue;
   phase?: string;
   placeholder?: string;
+  platformDifferenceRequired?: boolean;
+  playbackSupport?: string;
+  policy?: string;
+  previousEnabled?: boolean;
+  previousRatio?: number;
+  profileId?: string;
   progress?: number;
+  providerId?: string;
   query?: string;
+  'raw-source-mutation'?: string;
+  readingDirection?: string;
+  recoveryStates?: ViewStateJSONValue;
+  remoteProviderRequired?: boolean;
+  requiresUiContext?: boolean;
+  resultId?: string;
   retryable?: boolean;
+  runtimeBasis?: ViewStateJSONValue;
+  scope?: string;
+  scopes?: ViewStateJSONValue;
+  screenReaderAndTextScale?: string;
+  secretDisplay?: string;
+  secretStorage?: string;
   section?: string;
   selected?: string;
+  semanticRole?: string;
   sources?: number;
   state?: string;
+  states?: ViewStateJSONValue;
   subtitle?: string;
+  successProof?: string;
+  summary?: string;
+  syncDataBasis?: string;
+  tab?: string;
+  taskId?: string;
   theme?: string;
   title?: string;
+  totalChapters?: number;
   uiEvent?: string;
   uiEventPayload?: ViewStateJSONValue;
+  uiEventTrigger?: string;
   unread?: number;
+  unsupportedBehavior?: string;
+  url?: string;
+  usedBytes?: number;
+  value?: ViewStateJSONValue;
   variant?: string;
   version?: string;
   viewMode?: string;
+  zoom?: number;
+}
+
+export interface ViewStateExplicitBinding {
+  target: string;
+  event: string;
+  payload: Record<string, ViewStateJSONValue>;
+  trigger: string;
 }
 
 export interface ViewStateComponent {
@@ -45,6 +124,7 @@ export interface ViewStateComponent {
   id: string;
   props: ViewStateProps;
   children: ViewStateComponent[];
+  bindings: ViewStateExplicitBinding[];
 }
 
 export interface ViewStateEntry {
@@ -65,7 +145,8 @@ export class ViewStateTable {
         "type": "Loading",
         "id": "first-open-loading",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -80,7 +161,8 @@ export class ViewStateTable {
         "props": {
           "title": "主标签"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "MainTabsStructure",
@@ -89,7 +171,8 @@ export class ViewStateTable {
           "title": "主导航",
           "message": "底部四项：书架、发现、RSS、设置。"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BottomNav",
@@ -97,7 +180,8 @@ export class ViewStateTable {
         "props": {
           "selected": "bookshelf"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -115,7 +199,8 @@ export class ViewStateTable {
         "props": {
           "title": "书架"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ContinueReadingCard",
@@ -126,7 +211,8 @@ export class ViewStateTable {
           "author": "爱潜水的乌贼",
           "coverKey": "longNight"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BookshelfShelfSection",
@@ -143,84 +229,105 @@ export class ViewStateTable {
               "title": "我的书架",
               "viewMode": "cover"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "BookGrid",
-            "id": "book-grid",
+            "id": "book-collection",
             "props": {
               "viewMode": "cover"
             },
             "children": [
               {
                 "type": "BookCard",
-                "id": "book-1",
+                "id": "book-bk-001",
                 "props": {
+                  "semanticRole": "BookItem",
+                  "viewMode": "cover",
                   "bookId": "bk-001",
                   "title": "长夜余火",
                   "author": "爱潜水的乌贼",
                   "coverKey": "longNight"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
               },
               {
                 "type": "BookCard",
-                "id": "book-2",
+                "id": "book-bk-002",
                 "props": {
+                  "semanticRole": "BookItem",
+                  "viewMode": "cover",
                   "bookId": "bk-002",
                   "title": "诡秘之主",
                   "author": "爱潜水的乌贼",
                   "coverKey": "mysteryLord"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
               },
               {
                 "type": "BookCard",
-                "id": "book-3",
+                "id": "book-bk-003",
                 "props": {
+                  "semanticRole": "BookItem",
+                  "viewMode": "cover",
                   "bookId": "bk-003",
                   "title": "明朝那些事儿",
                   "author": "当年明月",
                   "coverKey": "brightMoon"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
               },
               {
                 "type": "BookCard",
-                "id": "book-4",
+                "id": "book-bk-004",
                 "props": {
+                  "semanticRole": "BookItem",
+                  "viewMode": "cover",
                   "bookId": "bk-004",
                   "title": "三体",
                   "author": "刘慈欣",
                   "coverKey": "threeBody"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
               },
               {
                 "type": "BookCard",
-                "id": "book-5",
+                "id": "book-bk-005",
                 "props": {
+                  "semanticRole": "BookItem",
+                  "viewMode": "cover",
                   "bookId": "bk-005",
                   "title": "人间词话",
                   "author": "王国维",
                   "coverKey": "renjian"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
               },
               {
                 "type": "BookCard",
-                "id": "book-6",
+                "id": "book-bk-006",
                 "props": {
+                  "semanticRole": "BookItem",
+                  "viewMode": "cover",
                   "bookId": "bk-006",
                   "title": "Android 开发笔记",
                   "author": "本地文档",
                   "coverKey": "androidNotes"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
               }
-            ]
+            ],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "BottomNav",
@@ -228,7 +335,8 @@ export class ViewStateTable {
         "props": {
           "selected": "bookshelf"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -243,7 +351,8 @@ export class ViewStateTable {
         "props": {
           "title": "书架"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BookshelfEmptyPage",
@@ -252,7 +361,8 @@ export class ViewStateTable {
           "title": "书架还是空的",
           "message": "导入本地书籍或通过搜索加入书架。"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BottomNav",
@@ -260,7 +370,8 @@ export class ViewStateTable {
         "props": {
           "selected": "bookshelf"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -277,37 +388,43 @@ export class ViewStateTable {
         "props": {
           "title": "发现"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "DiscoverSourceBar",
         "id": "discover-source-bar",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "DiscoverEntryRow",
         "id": "discover-entry-row",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "DiscoverFilterTrigger",
         "id": "discover-filter",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "DiscoverListHead",
         "id": "discover-list-head",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "DiscoverBookList",
         "id": "discover-book-list",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BottomNav",
@@ -315,7 +432,8 @@ export class ViewStateTable {
         "props": {
           "selected": "discover"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -332,31 +450,36 @@ export class ViewStateTable {
         "props": {
           "title": "RSS"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RssSearchEntry",
         "id": "rss-search",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RssModeRow",
         "id": "rss-mode-row",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RssSourceOverview",
         "id": "rss-source-overview",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RssArticleSection",
         "id": "rss-article-section",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BottomNav",
@@ -364,7 +487,8 @@ export class ViewStateTable {
         "props": {
           "selected": "rss"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -381,13 +505,15 @@ export class ViewStateTable {
         "props": {
           "title": "设置"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SettingsHomePage",
         "id": "settings-home-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BottomNav",
@@ -395,7 +521,8 @@ export class ViewStateTable {
         "props": {
           "selected": "settings"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -412,7 +539,8 @@ export class ViewStateTable {
         "props": {
           "title": "搜索"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SearchInputBox",
@@ -420,25 +548,29 @@ export class ViewStateTable {
         "props": {
           "query": ""
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ScopeSelector",
         "id": "scope-selector",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "GroupSelector",
         "id": "group-selector",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SearchHistoryList",
         "id": "search-history",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -453,13 +585,15 @@ export class ViewStateTable {
         "props": {
           "title": "书籍详情"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "Loading",
         "id": "detail-loading",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -476,25 +610,29 @@ export class ViewStateTable {
         "props": {
           "title": "书籍详情"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BookHero",
         "id": "detail-hero",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BookSummaryCard",
         "id": "detail-summary",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BookChapterList",
         "id": "detail-chapters",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -512,25 +650,29 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderControlSheet",
         "id": "reader-control-sheet",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderBottomBar",
         "id": "reader-bottom-bar",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -547,19 +689,22 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "Loading",
         "id": "reader-loading",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -576,13 +721,15 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "Offline",
@@ -590,7 +737,8 @@ export class ViewStateTable {
         "props": {
           "message": "网络不可用"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -607,25 +755,29 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderControlSheet",
         "id": "reader-control-sheet",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderBottomBar",
         "id": "reader-bottom-bar",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -642,25 +794,29 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderDirectoryPanel",
         "id": "directory-panel",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderBottomBar",
         "id": "reader-bottom-bar",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -677,25 +833,29 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderAppearancePanel",
         "id": "appearance-panel",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderBottomBar",
         "id": "reader-bottom-bar",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -712,25 +872,29 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTtsPanel",
         "id": "tts-panel",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderBottomBar",
         "id": "reader-bottom-bar",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -747,25 +911,29 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderSettingsPanel",
         "id": "settings-panel",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderBottomBar",
         "id": "reader-bottom-bar",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -782,25 +950,29 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderSearchPanel",
         "id": "search-panel",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderBottomBar",
         "id": "reader-bottom-bar",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -817,25 +989,29 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderReplacePanel",
         "id": "replace-panel",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderBottomBar",
         "id": "reader-bottom-bar",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -852,25 +1028,29 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderAutoScrollPanel",
         "id": "auto-scroll-panel",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderBottomBar",
         "id": "reader-bottom-bar",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -887,25 +1067,29 @@ export class ViewStateTable {
         "props": {
           "theme": "night"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderBottomBar",
         "id": "reader-bottom-bar",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "NightToast",
         "id": "night-toast",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -920,7 +1104,8 @@ export class ViewStateTable {
         "props": {
           "message": "网络不可用"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -938,7 +1123,8 @@ export class ViewStateTable {
           "message": "网络异常",
           "retryable": true
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -955,13 +1141,15 @@ export class ViewStateTable {
         "props": {
           "title": "全部条目"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RssAllPage",
         "id": "rss-all-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -976,7 +1164,8 @@ export class ViewStateTable {
         "props": {
           "title": "RSS 详情"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RssDetailPage",
@@ -984,7 +1173,8 @@ export class ViewStateTable {
         "props": {
           "title": "深空信号更新"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1001,13 +1191,15 @@ export class ViewStateTable {
         "props": {
           "title": "原文"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RssOriginalPage",
         "id": "rss-original-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1022,7 +1214,8 @@ export class ViewStateTable {
         "props": {
           "title": "搜索"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SearchHomePage",
@@ -1031,7 +1224,8 @@ export class ViewStateTable {
           "query": "",
           "placeholder": "搜索书名/作者"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1046,7 +1240,8 @@ export class ViewStateTable {
         "props": {
           "title": "搜索结果"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SearchResultsPage",
@@ -1054,7 +1249,8 @@ export class ViewStateTable {
         "props": {
           "query": "深空信号"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1069,7 +1265,8 @@ export class ViewStateTable {
         "props": {
           "title": "搜索"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SearchStatePage",
@@ -1079,7 +1276,8 @@ export class ViewStateTable {
           "title": "没有找到结果",
           "message": "换个关键词或检查书源状态。"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1094,7 +1292,8 @@ export class ViewStateTable {
         "props": {
           "title": "书源详情"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SourceDetailPage",
@@ -1102,7 +1301,8 @@ export class ViewStateTable {
         "props": {
           "title": "笔趣阁"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1117,7 +1317,8 @@ export class ViewStateTable {
         "type": "SourceSwitchFlowPage",
         "id": "source-switch-results-flow",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1132,13 +1333,15 @@ export class ViewStateTable {
         "props": {
           "title": "同步与备份"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SyncBackupPage",
         "id": "sync-backup-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1153,7 +1356,8 @@ export class ViewStateTable {
         "props": {
           "title": "同步与备份"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SyncBackupPage",
@@ -1161,7 +1365,8 @@ export class ViewStateTable {
         "props": {
           "variant": "loading"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1181,13 +1386,15 @@ export class ViewStateTable {
         "props": {
           "title": "恢复完成"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RestoreResultPage",
         "id": "restore-result-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1202,7 +1409,8 @@ export class ViewStateTable {
         "props": {
           "title": "同步异常"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SyncErrorPage",
@@ -1211,7 +1419,8 @@ export class ViewStateTable {
           "title": "同步失败",
           "message": "WebDAV auth error，请重新登录。"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1226,13 +1435,15 @@ export class ViewStateTable {
         "props": {
           "title": "同步与备份"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SyncBackupPage",
         "id": "webdav-sync-backup-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1252,7 +1463,8 @@ export class ViewStateTable {
         "props": {
           "title": "恢复中"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RestoreProgressPage",
@@ -1260,7 +1472,8 @@ export class ViewStateTable {
         "props": {
           "variant": "running"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1278,7 +1491,8 @@ export class ViewStateTable {
         "props": {
           "title": "书架"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BookshelfShelfSection",
@@ -1295,51 +1509,63 @@ export class ViewStateTable {
               "title": "我的书架",
               "viewMode": "cover"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "BookGrid",
-            "id": "book-grid",
+            "id": "book-collection",
             "props": {
               "viewMode": "cover"
             },
             "children": [
               {
                 "type": "BookCard",
-                "id": "book-1",
+                "id": "book-bk-001",
                 "props": {
+                  "semanticRole": "BookItem",
+                  "viewMode": "cover",
                   "bookId": "bk-001",
                   "title": "长夜余火",
                   "author": "爱潜水的乌贼",
                   "coverKey": "longNight"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
               },
               {
                 "type": "BookCard",
-                "id": "book-2",
+                "id": "book-bk-002",
                 "props": {
+                  "semanticRole": "BookItem",
+                  "viewMode": "cover",
                   "bookId": "bk-002",
                   "title": "诡秘之主",
                   "author": "爱潜水的乌贼",
                   "coverKey": "mysteryLord"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
               },
               {
                 "type": "BookCard",
-                "id": "book-3",
+                "id": "book-bk-003",
                 "props": {
+                  "semanticRole": "BookItem",
+                  "viewMode": "cover",
                   "bookId": "bk-003",
                   "title": "明朝那些事儿",
                   "author": "当年明月",
                   "coverKey": "brightMoon"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
               }
-            ]
+            ],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "BottomNav",
@@ -1347,7 +1573,8 @@ export class ViewStateTable {
         "props": {
           "selected": "bookshelf"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1363,9 +1590,10 @@ export class ViewStateTable {
         "type": "AppTopBar",
         "id": "topbar",
         "props": {
-          "title": "书架列表"
+          "title": "书架"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BookshelfShelfSection",
@@ -1382,34 +1610,63 @@ export class ViewStateTable {
               "title": "我的书架",
               "viewMode": "list"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
-            "type": "List",
-            "id": "book-list",
-            "props": {},
+            "type": "BookGrid",
+            "id": "book-collection",
+            "props": {
+              "viewMode": "list"
+            },
             "children": [
               {
-                "type": "ListRow",
-                "id": "book-row-1",
+                "type": "BookCard",
+                "id": "book-bk-001",
                 "props": {
+                  "semanticRole": "BookItem",
+                  "viewMode": "list",
+                  "bookId": "bk-001",
                   "title": "长夜余火",
-                  "author": "爱潜水的乌贼"
+                  "author": "爱潜水的乌贼",
+                  "coverKey": "longNight"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
               },
               {
-                "type": "ListRow",
-                "id": "book-row-2",
+                "type": "BookCard",
+                "id": "book-bk-002",
                 "props": {
+                  "semanticRole": "BookItem",
+                  "viewMode": "list",
+                  "bookId": "bk-002",
                   "title": "诡秘之主",
-                  "author": "爱潜水的乌贼"
+                  "author": "爱潜水的乌贼",
+                  "coverKey": "mysteryLord"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
+              },
+              {
+                "type": "BookCard",
+                "id": "book-bk-003",
+                "props": {
+                  "semanticRole": "BookItem",
+                  "viewMode": "list",
+                  "bookId": "bk-003",
+                  "title": "明朝那些事儿",
+                  "author": "当年明月",
+                  "coverKey": "brightMoon"
+                },
+                "children": [],
+                "bindings": []
               }
-            ]
+            ],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "BottomNav",
@@ -1417,7 +1674,8 @@ export class ViewStateTable {
         "props": {
           "selected": "bookshelf"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1434,7 +1692,8 @@ export class ViewStateTable {
         "props": {
           "title": "书籍更多菜单"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BookMoreMenuPage",
@@ -1443,7 +1702,8 @@ export class ViewStateTable {
           "title": "深空信号",
           "subtitle": "本地书籍"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BottomNav",
@@ -1451,7 +1711,8 @@ export class ViewStateTable {
         "props": {
           "selected": "bookshelf"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1466,7 +1727,8 @@ export class ViewStateTable {
         "props": {
           "title": "分组管理"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BookGroupManagementPage",
@@ -1474,7 +1736,8 @@ export class ViewStateTable {
         "props": {
           "title": "分组"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1489,7 +1752,8 @@ export class ViewStateTable {
         "props": {
           "title": "本地导入"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "LocalBookImportPage",
@@ -1497,7 +1761,8 @@ export class ViewStateTable {
         "props": {
           "title": "本地导入"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1512,7 +1777,8 @@ export class ViewStateTable {
         "props": {
           "title": "搜索"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SearchStatePage",
@@ -1522,7 +1788,8 @@ export class ViewStateTable {
           "title": "正在搜索",
           "message": "正在从启用书源获取结果。"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1537,7 +1804,8 @@ export class ViewStateTable {
         "props": {
           "title": "搜索"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SearchStatePage",
@@ -1548,7 +1816,8 @@ export class ViewStateTable {
           "message": "网络源暂时不可用。",
           "action": "重试"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1563,7 +1832,8 @@ export class ViewStateTable {
         "props": {
           "title": "目录预览"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BookTocPreviewPage",
@@ -1571,7 +1841,8 @@ export class ViewStateTable {
         "props": {
           "title": "目录预览"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1588,7 +1859,8 @@ export class ViewStateTable {
         "props": {
           "title": "订阅管理"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RssSubscriptionManagementPage",
@@ -1596,7 +1868,8 @@ export class ViewStateTable {
         "props": {
           "title": "订阅源"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1611,7 +1884,8 @@ export class ViewStateTable {
         "props": {
           "title": "RSS"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RssEmptyState",
@@ -1623,9 +1897,11 @@ export class ViewStateTable {
           "uiEvent": "rss.subscription.open",
           "uiEventPayload": {
             "mode": "add"
-          }
+          },
+          "uiEventTrigger": "tap"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1640,7 +1916,8 @@ export class ViewStateTable {
         "props": {
           "title": "RSS"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RssErrorState",
@@ -1650,7 +1927,8 @@ export class ViewStateTable {
           "message": "网络异常或订阅源不可访问。",
           "action": "重试"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1665,7 +1943,8 @@ export class ViewStateTable {
         "props": {
           "title": "书源管理"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SourceManagementPage",
@@ -1673,7 +1952,8 @@ export class ViewStateTable {
         "props": {
           "title": "书源管理"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1688,7 +1968,8 @@ export class ViewStateTable {
         "props": {
           "title": "书源管理"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SourceImportOptionsPage",
@@ -1696,7 +1977,8 @@ export class ViewStateTable {
         "props": {
           "title": "书源管理"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1713,7 +1995,8 @@ export class ViewStateTable {
         "props": {
           "title": "规则编辑"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SourceRuleEditPage",
@@ -1721,7 +2004,8 @@ export class ViewStateTable {
         "props": {
           "title": "规则编辑"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1736,7 +2020,8 @@ export class ViewStateTable {
         "props": {
           "title": "书源管理"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SourceImportOptionsPage",
@@ -1744,7 +2029,8 @@ export class ViewStateTable {
         "props": {
           "title": "导入书源"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1759,7 +2045,8 @@ export class ViewStateTable {
         "props": {
           "title": "书源测试结果"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SourceTestResultPage",
@@ -1767,7 +2054,8 @@ export class ViewStateTable {
         "props": {
           "title": "测试结果"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1784,7 +2072,8 @@ export class ViewStateTable {
         "props": {
           "title": "全局设置"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "GlobalSettingsPage",
@@ -1792,7 +2081,8 @@ export class ViewStateTable {
         "props": {
           "title": "设置入口"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1807,7 +2097,8 @@ export class ViewStateTable {
         "props": {
           "title": "阅读设置"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReadingSettingsEntryPage",
@@ -1815,7 +2106,8 @@ export class ViewStateTable {
         "props": {
           "title": "阅读设置"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1830,7 +2122,8 @@ export class ViewStateTable {
         "props": {
           "title": "书源管理"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SourceManagementPage",
@@ -1838,7 +2131,8 @@ export class ViewStateTable {
         "props": {
           "title": "书源管理"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1853,7 +2147,8 @@ export class ViewStateTable {
         "props": {
           "title": "同步设置"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SyncSettingsEntryPage",
@@ -1861,7 +2156,8 @@ export class ViewStateTable {
         "props": {
           "title": "同步设置"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1876,7 +2172,8 @@ export class ViewStateTable {
         "props": {
           "title": "关于"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "AboutVersionPage",
@@ -1885,7 +2182,8 @@ export class ViewStateTable {
           "title": "Reader for Android",
           "version": "1.0.0"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1900,7 +2198,8 @@ export class ViewStateTable {
         "props": {
           "title": "备份设置"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BackupSettingsPage",
@@ -1908,7 +2207,8 @@ export class ViewStateTable {
         "props": {
           "title": "备份"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1923,7 +2223,8 @@ export class ViewStateTable {
         "props": {
           "title": "同步进度"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SyncProgressPage",
@@ -1932,7 +2233,8 @@ export class ViewStateTable {
           "title": "同步中",
           "progress": 0.64
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1947,7 +2249,8 @@ export class ViewStateTable {
         "props": {
           "title": "远端书籍"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RemoteWebDavBooksPage",
@@ -1955,7 +2258,8 @@ export class ViewStateTable {
         "props": {
           "title": "远端书籍"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1970,7 +2274,8 @@ export class ViewStateTable {
         "props": {
           "title": "加载中"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "GlobalStatePage",
@@ -1980,7 +2285,8 @@ export class ViewStateTable {
           "title": "加载中",
           "message": "正在准备内容。"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -1995,7 +2301,8 @@ export class ViewStateTable {
         "props": {
           "title": "空状态"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "GlobalStatePage",
@@ -2005,7 +2312,8 @@ export class ViewStateTable {
           "title": "暂无内容",
           "message": "当前列表为空。"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2020,7 +2328,8 @@ export class ViewStateTable {
         "props": {
           "title": "错误"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "GlobalStatePage",
@@ -2031,7 +2340,8 @@ export class ViewStateTable {
           "message": "请稍后重试。",
           "action": "重试"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2046,7 +2356,8 @@ export class ViewStateTable {
         "props": {
           "title": "离线"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "OfflineStatePage",
@@ -2055,7 +2366,8 @@ export class ViewStateTable {
           "title": "当前离线",
           "message": "可继续阅读已缓存书籍。"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2070,7 +2382,8 @@ export class ViewStateTable {
         "props": {
           "title": "权限请求"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "PermissionRequiredPage",
@@ -2080,7 +2393,8 @@ export class ViewStateTable {
           "message": "授予权限后可导入本地书籍。",
           "action": "授予权限"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2097,7 +2411,8 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2115,7 +2430,8 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2132,25 +2448,29 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderBottomBar",
         "id": "reader-bottom-bar",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderDirectoryPanel",
         "id": "directory-panel",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2167,19 +2487,22 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderFullAppearancePage",
         "id": "font-full-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2196,19 +2519,22 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderFullAppearancePage",
         "id": "theme-full-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2225,19 +2551,22 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderFullAppearancePage",
         "id": "theme-edit-full-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2254,19 +2583,22 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderFullAppearancePage",
         "id": "layout-full-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2283,19 +2615,22 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderFullSettingsPage",
         "id": "page-turn-full-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2312,19 +2647,22 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderFullAppearancePage",
         "id": "appearance-full-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2341,19 +2679,22 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderFullDirectoryPage",
         "id": "directory-full-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2370,19 +2711,22 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderFullSettingsPage",
         "id": "settings-full-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2399,19 +2743,22 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderFullTtsPage",
         "id": "tts-full-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2428,19 +2775,22 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderBookCachePage",
         "id": "cache-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2457,19 +2807,22 @@ export class ViewStateTable {
         "props": {
           "theme": "paper"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderDebugInfoPage",
         "id": "debug-info-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2484,13 +2837,40 @@ export class ViewStateTable {
         "props": {
           "title": "通用设置"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SettingsGeneralPage",
         "id": "settings-general-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
+      }
+    ]
+  },
+  {
+    "routeId": "settings-developer",
+    "pageState": "default",
+    "context": {},
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "settings-developer-topbar",
+        "props": {
+          "title": "开发模式"
+        },
+        "children": [],
+        "bindings": []
+      },
+      {
+        "type": "SettingsGeneralPage",
+        "id": "settings-developer-page",
+        "props": {
+          "variant": "developer-motion"
+        },
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2505,13 +2885,15 @@ export class ViewStateTable {
         "props": {
           "title": "关于"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "AboutFeedbackPage",
         "id": "about-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2526,13 +2908,15 @@ export class ViewStateTable {
         "props": {
           "title": "关于与反馈"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "AboutFeedbackPage",
         "id": "about-feedback-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2547,13 +2931,15 @@ export class ViewStateTable {
         "props": {
           "title": "书架与搜索"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BookshelfSearchSettingsPage",
         "id": "bookshelf-search-settings-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2568,7 +2954,8 @@ export class ViewStateTable {
         "props": {
           "title": "恢复范围"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RestoreConfirmPage",
@@ -2576,7 +2963,8 @@ export class ViewStateTable {
         "props": {
           "variant": "scopes"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2591,13 +2979,15 @@ export class ViewStateTable {
         "props": {
           "title": "恢复确认"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RestoreConfirmPage",
         "id": "restore-confirm-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2614,13 +3004,15 @@ export class ViewStateTable {
         "props": {
           "title": "恢复冲突"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RestoreConflictPage",
         "id": "restore-conflict-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2635,7 +3027,8 @@ export class ViewStateTable {
         "props": {
           "title": "恢复预览"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RestoreConfirmPage",
@@ -2643,7 +3036,8 @@ export class ViewStateTable {
         "props": {
           "variant": "preview"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2658,13 +3052,15 @@ export class ViewStateTable {
         "props": {
           "title": "恢复中"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RestoreProgressPage",
         "id": "restore-progress-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2679,13 +3075,15 @@ export class ViewStateTable {
         "props": {
           "title": "阅读进度同步"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ProgressSyncPage",
         "id": "progress-sync-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2700,13 +3098,15 @@ export class ViewStateTable {
         "props": {
           "title": "已选 3 个"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SourceBatchPage",
         "id": "source-batch-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2723,13 +3123,15 @@ export class ViewStateTable {
         "props": {
           "title": "源码查看"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SourceCodeViewPage",
         "id": "source-code-view-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2746,13 +3148,15 @@ export class ViewStateTable {
         "props": {
           "title": "书源调测"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SourceDebugPage",
         "id": "source-debug-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2769,7 +3173,8 @@ export class ViewStateTable {
         "props": {
           "title": "目录调试结果"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SourceDebugResultPage",
@@ -2777,7 +3182,8 @@ export class ViewStateTable {
         "props": {
           "variant": "catalog"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2794,13 +3200,15 @@ export class ViewStateTable {
         "props": {
           "title": "正文调试日志"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SourceDebugContentLogPage",
         "id": "source-debug-content-log-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2817,7 +3225,8 @@ export class ViewStateTable {
         "props": {
           "title": "详情调试结果"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SourceDebugResultPage",
@@ -2825,7 +3234,8 @@ export class ViewStateTable {
         "props": {
           "variant": "detail"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2842,7 +3252,8 @@ export class ViewStateTable {
         "props": {
           "title": "调试结果"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SourceDebugResultPage",
@@ -2850,7 +3261,8 @@ export class ViewStateTable {
         "props": {
           "variant": "search"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2867,13 +3279,15 @@ export class ViewStateTable {
         "props": {
           "title": "调试中"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SourceDebugRunningPage",
         "id": "source-debug-running-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2890,7 +3304,8 @@ export class ViewStateTable {
         "props": {
           "title": "搜索调试结果"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SourceDebugResultPage",
@@ -2898,7 +3313,8 @@ export class ViewStateTable {
         "props": {
           "variant": "search"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2915,13 +3331,15 @@ export class ViewStateTable {
         "props": {
           "title": "删除书源"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SourceDeleteConfirmPage",
         "id": "source-delete-confirm-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2936,13 +3354,15 @@ export class ViewStateTable {
         "props": {
           "title": "书源检测"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SourceDetectPage",
         "id": "source-detect-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2959,7 +3379,8 @@ export class ViewStateTable {
         "props": {
           "title": "编辑并调试"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SourceRuleEditPage",
@@ -2967,7 +3388,8 @@ export class ViewStateTable {
         "props": {
           "variant": "debug"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -2982,13 +3404,15 @@ export class ViewStateTable {
         "props": {
           "title": "分组管理"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SourceGroupsPage",
         "id": "source-groups-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3003,13 +3427,15 @@ export class ViewStateTable {
         "props": {
           "title": "导入书源"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SourceImportPreviewPage",
         "id": "source-import-preview-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3026,13 +3452,15 @@ export class ViewStateTable {
         "props": {
           "title": "错误日志"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SourceLogsPage",
         "id": "source-logs-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3049,13 +3477,15 @@ export class ViewStateTable {
         "props": {
           "title": "规则编辑"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SourceRuleEditPage",
         "id": "source-rule-edit-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3070,13 +3500,15 @@ export class ViewStateTable {
         "props": {
           "title": "发现规则测试"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "DiscoverRuleTestPage",
         "id": "discover-rule-test-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3091,13 +3523,15 @@ export class ViewStateTable {
         "props": {
           "title": "发现源管理"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "DiscoverSourceBulkPage",
         "id": "discover-source-bulk-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3114,7 +3548,8 @@ export class ViewStateTable {
         "props": {
           "title": "发现"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "DiscoverStatePage",
@@ -3125,9 +3560,11 @@ export class ViewStateTable {
           "message": "启用发现后，可以在这里浏览书源提供的排行榜、分类和书单。",
           "action": "去书源管理",
           "uiEvent": "source.management.open",
-          "uiEventPayload": {}
+          "uiEventPayload": {},
+          "uiEventTrigger": "tap"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BottomNav",
@@ -3135,7 +3572,8 @@ export class ViewStateTable {
         "props": {
           "selected": "discover"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3152,7 +3590,8 @@ export class ViewStateTable {
         "props": {
           "title": "发现"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "DiscoverStatePage",
@@ -3163,9 +3602,11 @@ export class ViewStateTable {
           "message": "当前入口返回异常，已保留上一批缓存结果。你可以重试、刷新入口、编辑源或切换书源。",
           "action": "重试",
           "uiEvent": "discover.refresh",
-          "uiEventPayload": {}
+          "uiEventPayload": {},
+          "uiEventTrigger": "tap"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BottomNav",
@@ -3173,7 +3614,8 @@ export class ViewStateTable {
         "props": {
           "selected": "discover"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3190,7 +3632,8 @@ export class ViewStateTable {
         "props": {
           "title": "发现"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "DiscoverStatePage",
@@ -3200,7 +3643,8 @@ export class ViewStateTable {
           "title": "正在加载发现内容",
           "message": "正在从启用发现的书源获取排行榜和分类入口。"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BottomNav",
@@ -3208,7 +3652,8 @@ export class ViewStateTable {
         "props": {
           "selected": "discover"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3225,7 +3670,8 @@ export class ViewStateTable {
         "props": {
           "title": "发现"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "DiscoverStatePage",
@@ -3236,9 +3682,11 @@ export class ViewStateTable {
           "message": "可以重置筛选、切换入口，或刷新当前书源。",
           "action": "重置筛选",
           "uiEvent": "discover.filter.reset",
-          "uiEventPayload": {}
+          "uiEventPayload": {},
+          "uiEventTrigger": "tap"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BottomNav",
@@ -3246,7 +3694,8 @@ export class ViewStateTable {
         "props": {
           "selected": "discover"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3263,13 +3712,15 @@ export class ViewStateTable {
         "props": {
           "title": "刷新订阅"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RssRefreshingPage",
         "id": "rss-refreshing-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3281,26 +3732,20 @@ export class ViewStateTable {
     },
     "components": [
       {
-        "type": "AppTopBar",
+        "type": "BackTopBar",
         "id": "rss-topbar",
         "props": {
           "title": "RSS 搜索"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RssSearchEntry",
         "id": "rss-search-entry",
         "props": {},
-        "children": []
-      },
-      {
-        "type": "BottomNav",
-        "id": "bottom-nav",
-        "props": {
-          "selected": "rss"
-        },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3312,26 +3757,20 @@ export class ViewStateTable {
     },
     "components": [
       {
-        "type": "AppTopBar",
+        "type": "BackTopBar",
         "id": "rss-topbar",
         "props": {
           "title": "RSS 收藏"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RssArticleSection",
         "id": "starred-section",
         "props": {},
-        "children": []
-      },
-      {
-        "type": "BottomNav",
-        "id": "bottom-nav",
-        "props": {
-          "selected": "rss"
-        },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3348,13 +3787,15 @@ export class ViewStateTable {
         "props": {
           "title": "原文"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RssOriginalBrowserPage",
         "id": "rss-original-browser-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3369,13 +3810,15 @@ export class ViewStateTable {
         "props": {
           "title": "收藏分组"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RssFavoriteGroupsPage",
         "id": "rss-favorite-groups-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3390,13 +3833,15 @@ export class ViewStateTable {
         "props": {
           "title": "RSS 源分组"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RssSourceGroupsPage",
         "id": "rss-source-groups-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3411,7 +3856,8 @@ export class ViewStateTable {
         "props": {
           "title": "添加 RSS 源"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RssSourceEditPage",
@@ -3419,7 +3865,8 @@ export class ViewStateTable {
         "props": {
           "mode": "add"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3436,7 +3883,8 @@ export class ViewStateTable {
         "props": {
           "title": "编辑 RSS 源"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RssSourceEditPage",
@@ -3444,7 +3892,8 @@ export class ViewStateTable {
         "props": {
           "mode": "edit"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3459,7 +3908,8 @@ export class ViewStateTable {
         "props": {
           "title": "导入 RSS 源"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "RssSourceImportPage",
@@ -3467,7 +3917,8 @@ export class ViewStateTable {
         "props": {
           "message": "从 OPML 或 URL 导入。"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3484,7 +3935,8 @@ export class ViewStateTable {
         "props": {
           "title": "书架"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ContinueReadingCard",
@@ -3495,7 +3947,8 @@ export class ViewStateTable {
           "author": "爱潜水的乌贼",
           "coverKey": "longNight"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BookshelfShelfSection",
@@ -3512,49 +3965,63 @@ export class ViewStateTable {
             "props": {
               "title": "我的书架"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "BookGrid",
-            "id": "book-grid",
-            "props": {},
+            "id": "book-collection",
+            "props": {
+              "viewMode": "cover"
+            },
             "children": [
               {
                 "type": "BookCard",
                 "id": "book-bk-001",
                 "props": {
+                  "semanticRole": "BookItem",
+                  "viewMode": "cover",
                   "bookId": "bk-001",
                   "title": "长夜余火",
                   "author": "爱潜水的乌贼",
                   "coverKey": "longNight"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
               },
               {
                 "type": "BookCard",
                 "id": "book-bk-002",
                 "props": {
+                  "semanticRole": "BookItem",
+                  "viewMode": "cover",
                   "bookId": "bk-002",
                   "title": "诡秘之主",
                   "author": "爱潜水的乌贼",
                   "coverKey": "mysteryLord"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
               },
               {
                 "type": "BookCard",
                 "id": "book-bk-003",
                 "props": {
+                  "semanticRole": "BookItem",
+                  "viewMode": "cover",
                   "bookId": "bk-003",
                   "title": "明朝那些事儿",
                   "author": "当年明月",
                   "coverKey": "brightMoon"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
               }
-            ]
+            ],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "BottomNav",
@@ -3562,7 +4029,8 @@ export class ViewStateTable {
         "props": {
           "selected": "bookshelf"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3577,7 +4045,8 @@ export class ViewStateTable {
         "props": {
           "title": "分组管理"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "GroupManagementPage",
@@ -3585,7 +4054,8 @@ export class ViewStateTable {
         "props": {
           "variant": "group-flow"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3600,13 +4070,15 @@ export class ViewStateTable {
         "props": {
           "title": "批量管理"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BookBatchManagementPage",
         "id": "book-batch-management-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3623,13 +4095,15 @@ export class ViewStateTable {
         "props": {
           "title": "书籍目录"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BookDirectoryPage",
         "id": "book-directory-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3644,13 +4118,15 @@ export class ViewStateTable {
         "props": {
           "title": "源登录"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "DiscoverSourceLoginPage",
         "id": "discover-source-login-page",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3665,7 +4141,8 @@ export class ViewStateTable {
         "type": "SourceSwitchFlowPage",
         "id": "source-switch-flow",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3680,7 +4157,8 @@ export class ViewStateTable {
         "props": {
           "title": "应用壳"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "AppShellStructure",
@@ -3689,7 +4167,8 @@ export class ViewStateTable {
           "title": "Reader for Android",
           "message": "统一承载书架、发现、RSS、设置与阅读页入口。"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "BottomNav",
@@ -3697,7 +4176,8 @@ export class ViewStateTable {
         "props": {
           "selected": "bookshelf"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3714,7 +4194,8 @@ export class ViewStateTable {
         "props": {
           "title": "书源停用错误"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "SourceDisabledState",
@@ -3726,9 +4207,11 @@ export class ViewStateTable {
           "uiEvent": "source.detail.open",
           "uiEventPayload": {
             "sourceId": "source-disabled"
-          }
+          },
+          "uiEventTrigger": "tap"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3745,7 +4228,8 @@ export class ViewStateTable {
         "props": {
           "title": "本地导入"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "Permission",
@@ -3757,19 +4241,23 @@ export class ViewStateTable {
           "uiEventPayload": {
             "permission": "storage",
             "reason": "denied"
-          }
+          },
+          "uiEventTrigger": "state-evidence"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "Button",
         "id": "import_permission_denied-action",
         "props": {
           "label": "重新选择文件",
-          "uiEvent": "import.start",
-          "uiEventPayload": {}
+          "uiEvent": "source.import.open",
+          "uiEventPayload": {},
+          "uiEventTrigger": "tap"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3786,7 +4274,8 @@ export class ViewStateTable {
         "props": {
           "title": "本地导入"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ErrorState",
@@ -3798,19 +4287,23 @@ export class ViewStateTable {
           "uiEventPayload": {
             "fileName": "reader.zip",
             "fileFormat": "ZIP"
-          }
+          },
+          "uiEventTrigger": "state-evidence"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "Button",
         "id": "import_format_unsupported-action",
         "props": {
           "label": "重新选择文件",
-          "uiEvent": "import.start",
-          "uiEventPayload": {}
+          "uiEvent": "source.import.open",
+          "uiEventPayload": {},
+          "uiEventTrigger": "tap"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3827,7 +4320,8 @@ export class ViewStateTable {
         "props": {
           "title": "本地导入"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "Empty",
@@ -3839,19 +4333,23 @@ export class ViewStateTable {
           "uiEventPayload": {
             "fileName": "empty.txt",
             "size": 0
-          }
+          },
+          "uiEventTrigger": "state-evidence"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "Button",
         "id": "import_empty_file-action",
         "props": {
           "label": "重新选择文件",
-          "uiEvent": "import.start",
-          "uiEventPayload": {}
+          "uiEvent": "source.import.open",
+          "uiEventPayload": {},
+          "uiEventTrigger": "tap"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3868,7 +4366,8 @@ export class ViewStateTable {
         "props": {
           "title": "本地导入"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "Loading",
@@ -3877,19 +4376,18 @@ export class ViewStateTable {
           "title": "正在解析书籍",
           "message": "正在解析书籍"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "Button",
         "id": "import_parsing-action",
         "props": {
           "label": "取消解析",
-          "uiEvent": "import.cancel",
-          "uiEventPayload": {
-            "importId": "import-001"
-          }
+          "action": "取消解析"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3906,7 +4404,8 @@ export class ViewStateTable {
         "props": {
           "title": "本地导入"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "Dialog",
@@ -3918,9 +4417,11 @@ export class ViewStateTable {
           "uiEventPayload": {
             "importId": "import-001",
             "duplicateCount": 2
-          }
+          },
+          "uiEventTrigger": "state-evidence"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "Button",
@@ -3931,9 +4432,11 @@ export class ViewStateTable {
           "uiEventPayload": {
             "importId": "import-001",
             "strategy": "per-item"
-          }
+          },
+          "uiEventTrigger": "tap"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3950,7 +4453,8 @@ export class ViewStateTable {
         "props": {
           "title": "本地导入"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "Dialog",
@@ -3959,7 +4463,8 @@ export class ViewStateTable {
           "title": "解决导入冲突",
           "message": "解决导入冲突"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "Button",
@@ -3970,9 +4475,11 @@ export class ViewStateTable {
           "uiEventPayload": {
             "importId": "import-001",
             "strategy": "per-item"
-          }
+          },
+          "uiEventTrigger": "tap"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -3989,7 +4496,8 @@ export class ViewStateTable {
         "props": {
           "title": "本地导入"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "Content",
@@ -4002,9 +4510,11 @@ export class ViewStateTable {
             "importId": "import-001",
             "successCount": 2,
             "failedCount": 1
-          }
+          },
+          "uiEventTrigger": "state-evidence"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "Button",
@@ -4017,9 +4527,11 @@ export class ViewStateTable {
             "failureIds": [
               "file-003"
             ]
-          }
+          },
+          "uiEventTrigger": "tap"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -4036,7 +4548,8 @@ export class ViewStateTable {
         "props": {
           "title": "本地导入"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "Content",
@@ -4045,17 +4558,20 @@ export class ViewStateTable {
           "title": "导入结果详情",
           "message": "导入结果详情"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "Button",
         "id": "import_result_detail-action",
         "props": {
           "label": "继续导入",
-          "uiEvent": "import.start",
-          "uiEventPayload": {}
+          "uiEvent": "source.import.open",
+          "uiEventPayload": {},
+          "uiEventTrigger": "tap"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -4080,15 +4596,18 @@ export class ViewStateTable {
             "props": {
               "theme": "paper"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderDirectoryPanel",
@@ -4106,11 +4625,14 @@ export class ViewStateTable {
               "uiEvent": "reader.toc.load",
               "uiEventPayload": {
                 "bookId": "bk-001"
-              }
+              },
+              "uiEventTrigger": "state-evidence"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       }
     ]
   },
@@ -4135,15 +4657,18 @@ export class ViewStateTable {
             "props": {
               "theme": "paper"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderDirectoryPanel",
@@ -4161,9 +4686,11 @@ export class ViewStateTable {
               "uiEvent": "reader.toc.offline",
               "uiEventPayload": {
                 "bookId": "bk-001"
-              }
+              },
+              "uiEventTrigger": "state-evidence"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "Button",
@@ -4173,11 +4700,14 @@ export class ViewStateTable {
               "uiEvent": "reader.toc.load",
               "uiEventPayload": {
                 "bookId": "bk-001"
-              }
+              },
+              "uiEventTrigger": "tap"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       }
     ]
   },
@@ -4202,15 +4732,18 @@ export class ViewStateTable {
             "props": {
               "theme": "paper"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderDirectoryPanel",
@@ -4229,9 +4762,11 @@ export class ViewStateTable {
               "uiEventPayload": {
                 "bookId": "bk-001",
                 "errorCode": "toc-load-failed"
-              }
+              },
+              "uiEventTrigger": "state-evidence"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "Button",
@@ -4242,11 +4777,14 @@ export class ViewStateTable {
               "uiEventPayload": {
                 "bookId": "bk-001",
                 "errorCode": "toc-load-failed"
-              }
+              },
+              "uiEventTrigger": "tap"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       }
     ]
   },
@@ -4271,7 +4809,8 @@ export class ViewStateTable {
             "props": {
               "theme": "paper"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "ReadingTextFlow",
@@ -4290,11 +4829,14 @@ export class ViewStateTable {
                   "uiEventPayload": {
                     "bookId": "bk-001",
                     "chapterId": "ch-001"
-                  }
+                  },
+                  "uiEventTrigger": "state-evidence"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
               }
-            ]
+            ],
+            "bindings": []
           },
           {
             "type": "ReadingInfoLayer",
@@ -4303,23 +4845,34 @@ export class ViewStateTable {
               "chapterTitle": "第一章",
               "progress": 0.18
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "TapZones",
             "id": "reader-tap-zones",
             "props": {
-              "enabled": false
+              "enabled": false,
+              "mode": "horizontal",
+              "previousRatio": 0.26,
+              "controlRatio": 0.48,
+              "nextRatio": 0.26,
+              "previousEnabled": false,
+              "controlEnabled": false,
+              "nextEnabled": false
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -4344,7 +4897,8 @@ export class ViewStateTable {
             "props": {
               "theme": "paper"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "ReadingTextFlow",
@@ -4363,9 +4917,11 @@ export class ViewStateTable {
                   "uiEventPayload": {
                     "bookId": "bk-001",
                     "chapterId": "ch-001"
-                  }
+                  },
+                  "uiEventTrigger": "state-evidence"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
               },
               {
                 "type": "Button",
@@ -4376,11 +4932,14 @@ export class ViewStateTable {
                   "uiEventPayload": {
                     "bookId": "bk-001",
                     "chapterId": "ch-001"
-                  }
+                  },
+                  "uiEventTrigger": "tap"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
               }
-            ]
+            ],
+            "bindings": []
           },
           {
             "type": "ReadingInfoLayer",
@@ -4389,23 +4948,55 @@ export class ViewStateTable {
               "chapterTitle": "第一章",
               "progress": 0.18
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "TapZones",
             "id": "reader-tap-zones",
             "props": {
-              "enabled": true
+              "enabled": true,
+              "mode": "horizontal",
+              "previousRatio": 0.26,
+              "controlRatio": 0.48,
+              "nextRatio": 0.26,
+              "previousEnabled": true,
+              "controlEnabled": true,
+              "nextEnabled": true
             },
-            "children": []
+            "children": [],
+            "bindings": [
+              {
+                "target": "previous",
+                "event": "reader.page.prev",
+                "payload": {},
+                "trigger": "tap"
+              },
+              {
+                "target": "control",
+                "event": "reader.control.toggle",
+                "payload": {
+                  "overlay": "reader-control"
+                },
+                "trigger": "tap"
+              },
+              {
+                "target": "next",
+                "event": "reader.page.next",
+                "payload": {},
+                "trigger": "tap"
+              }
+            ]
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -4430,7 +5021,8 @@ export class ViewStateTable {
             "props": {
               "theme": "paper"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "ReadingTextFlow",
@@ -4449,9 +5041,11 @@ export class ViewStateTable {
                   "uiEventPayload": {
                     "bookId": "bk-001",
                     "chapterId": "ch-001"
-                  }
+                  },
+                  "uiEventTrigger": "state-evidence"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
               },
               {
                 "type": "Button",
@@ -4462,11 +5056,14 @@ export class ViewStateTable {
                   "uiEventPayload": {
                     "bookId": "bk-001",
                     "chapterId": "ch-001"
-                  }
+                  },
+                  "uiEventTrigger": "tap"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
               }
-            ]
+            ],
+            "bindings": []
           },
           {
             "type": "ReadingInfoLayer",
@@ -4475,23 +5072,55 @@ export class ViewStateTable {
               "chapterTitle": "第一章",
               "progress": 0.18
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "TapZones",
             "id": "reader-tap-zones",
             "props": {
-              "enabled": true
+              "enabled": true,
+              "mode": "horizontal",
+              "previousRatio": 0.26,
+              "controlRatio": 0.48,
+              "nextRatio": 0.26,
+              "previousEnabled": true,
+              "controlEnabled": true,
+              "nextEnabled": true
             },
-            "children": []
+            "children": [],
+            "bindings": [
+              {
+                "target": "previous",
+                "event": "reader.page.prev",
+                "payload": {},
+                "trigger": "tap"
+              },
+              {
+                "target": "control",
+                "event": "reader.control.toggle",
+                "payload": {
+                  "overlay": "reader-control"
+                },
+                "trigger": "tap"
+              },
+              {
+                "target": "next",
+                "event": "reader.page.next",
+                "payload": {},
+                "trigger": "tap"
+              }
+            ]
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -4517,7 +5146,8 @@ export class ViewStateTable {
             "props": {
               "theme": "paper"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "ReadingTextFlow",
@@ -4525,7 +5155,8 @@ export class ViewStateTable {
             "props": {
               "state": "ready"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "ReadingInfoLayer",
@@ -4533,23 +5164,49 @@ export class ViewStateTable {
             "props": {
               "progress": 0
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "TapZones",
             "id": "reader-tap-zones",
             "props": {
-              "enabled": true
+              "enabled": true,
+              "mode": "horizontal",
+              "previousRatio": 0.26,
+              "controlRatio": 0.48,
+              "nextRatio": 0.26,
+              "previousEnabled": false,
+              "controlEnabled": true,
+              "nextEnabled": true
             },
-            "children": []
+            "children": [],
+            "bindings": [
+              {
+                "target": "control",
+                "event": "reader.control.toggle",
+                "payload": {
+                  "overlay": "reader-control"
+                },
+                "trigger": "tap"
+              },
+              {
+                "target": "next",
+                "event": "reader.page.next",
+                "payload": {},
+                "trigger": "tap"
+              }
+            ]
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "FloatingPageControl",
@@ -4560,9 +5217,11 @@ export class ViewStateTable {
           "uiEventPayload": {
             "bookId": "bk-001",
             "boundary": "first"
-          }
+          },
+          "uiEventTrigger": "state-evidence"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -4588,7 +5247,8 @@ export class ViewStateTable {
             "props": {
               "theme": "paper"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "ReadingTextFlow",
@@ -4596,7 +5256,8 @@ export class ViewStateTable {
             "props": {
               "state": "ready"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "ReadingInfoLayer",
@@ -4604,23 +5265,49 @@ export class ViewStateTable {
             "props": {
               "progress": 1
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "TapZones",
             "id": "reader-tap-zones",
             "props": {
-              "enabled": true
+              "enabled": true,
+              "mode": "horizontal",
+              "previousRatio": 0.26,
+              "controlRatio": 0.48,
+              "nextRatio": 0.26,
+              "previousEnabled": true,
+              "controlEnabled": true,
+              "nextEnabled": false
             },
-            "children": []
+            "children": [],
+            "bindings": [
+              {
+                "target": "previous",
+                "event": "reader.page.prev",
+                "payload": {},
+                "trigger": "tap"
+              },
+              {
+                "target": "control",
+                "event": "reader.control.toggle",
+                "payload": {
+                  "overlay": "reader-control"
+                },
+                "trigger": "tap"
+              }
+            ]
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "FloatingPageControl",
@@ -4631,9 +5318,11 @@ export class ViewStateTable {
           "uiEventPayload": {
             "bookId": "bk-001",
             "boundary": "last"
-          }
+          },
+          "uiEventTrigger": "state-evidence"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -4658,7 +5347,8 @@ export class ViewStateTable {
             "props": {
               "theme": "paper"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "ReadingTextFlow",
@@ -4666,7 +5356,8 @@ export class ViewStateTable {
             "props": {
               "state": "ready"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "ReadingInfoLayer",
@@ -4674,15 +5365,18 @@ export class ViewStateTable {
             "props": {
               "progress": 0.18
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "Dialog",
@@ -4701,9 +5395,11 @@ export class ViewStateTable {
                 "bookId": "bk-001",
                 "chapterId": "ch-018",
                 "chapterOffset": 320
-              }
+              },
+              "uiEventTrigger": "tap"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "Button",
@@ -4712,9 +5408,11 @@ export class ViewStateTable {
               "label": "从头阅读",
               "action": "从头阅读"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       }
     ]
   },
@@ -4740,7 +5438,8 @@ export class ViewStateTable {
             "props": {
               "theme": "paper"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "ReadingTextFlow",
@@ -4748,7 +5447,8 @@ export class ViewStateTable {
             "props": {
               "state": "ready"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "ReadingInfoLayer",
@@ -4756,15 +5456,18 @@ export class ViewStateTable {
             "props": {
               "progress": 0.52
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "Toast",
@@ -4776,9 +5479,11 @@ export class ViewStateTable {
           "uiEventPayload": {
             "bookId": "bk-001",
             "reason": "foreground"
-          }
+          },
+          "uiEventTrigger": "state-evidence"
         },
-        "children": []
+        "children": [],
+        "bindings": []
       }
     ]
   },
@@ -4808,9 +5513,11 @@ export class ViewStateTable {
               "uiEventPayload": {
                 "bookId": "bk-001",
                 "sourceId": "source-old"
-              }
+              },
+              "uiEventTrigger": "state-evidence"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "Button",
@@ -4818,11 +5525,14 @@ export class ViewStateTable {
             "props": {
               "label": "取消换源",
               "uiEvent": "source.switch.cancel",
-              "uiEventPayload": {}
+              "uiEventPayload": {},
+              "uiEventTrigger": "tap"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       }
     ]
   },
@@ -4852,9 +5562,11 @@ export class ViewStateTable {
               "uiEventPayload": {
                 "bookId": "bk-001",
                 "errorCode": "source-load-failed"
-              }
+              },
+              "uiEventTrigger": "state-evidence"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "Button",
@@ -4862,11 +5574,14 @@ export class ViewStateTable {
             "props": {
               "label": "取消换源",
               "uiEvent": "source.switch.cancel",
-              "uiEventPayload": {}
+              "uiEventPayload": {},
+              "uiEventTrigger": "tap"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       }
     ]
   },
@@ -4897,9 +5612,11 @@ export class ViewStateTable {
                 "bookId": "bk-001",
                 "sourceId": "source-new",
                 "timeoutMs": 15000
-              }
+              },
+              "uiEventTrigger": "state-evidence"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "Button",
@@ -4907,11 +5624,14 @@ export class ViewStateTable {
             "props": {
               "label": "取消换源",
               "uiEvent": "source.switch.cancel",
-              "uiEventPayload": {}
+              "uiEventPayload": {},
+              "uiEventTrigger": "tap"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       }
     ]
   },
@@ -4942,9 +5662,11 @@ export class ViewStateTable {
                 "bookId": "bk-001",
                 "sourceId": "source-new",
                 "session": "switch-001"
-              }
+              },
+              "uiEventTrigger": "state-evidence"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "Button",
@@ -4952,11 +5674,14 @@ export class ViewStateTable {
             "props": {
               "label": "取消换源",
               "uiEvent": "source.switch.cancel",
-              "uiEventPayload": {}
+              "uiEventPayload": {},
+              "uiEventTrigger": "tap"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       }
     ]
   },
@@ -4983,7 +5708,8 @@ export class ViewStateTable {
               "title": "回滚到原书源？",
               "message": "回滚到原书源？"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "Button",
@@ -5004,11 +5730,14 @@ export class ViewStateTable {
                     "addedAt": 200
                   }
                 }
-              }
+              },
+              "uiEventTrigger": "tap"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       }
     ]
   },
@@ -5038,9 +5767,11 @@ export class ViewStateTable {
               "uiEventPayload": {
                 "bookId": "bk-001",
                 "sourceId": "source-new"
-              }
+              },
+              "uiEventTrigger": "state-evidence"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "Button",
@@ -5071,11 +5802,14 @@ export class ViewStateTable {
                 "currentChapterTitle": "第一章",
                 "currentChapterIndex": 0,
                 "updatedAt": 300
-              }
+              },
+              "uiEventTrigger": "tap"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       }
     ]
   },
@@ -5099,15 +5833,18 @@ export class ViewStateTable {
             "props": {
               "theme": "paper"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderAppearancePanel",
@@ -5134,13 +5871,17 @@ export class ViewStateTable {
                     "fontId": "font-noto-serif",
                     "path": "/fonts/NotoSerifSC-Regular.otf",
                     "familyName": "Noto Serif SC"
-                  }
+                  },
+                  "uiEventTrigger": "tap"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
               }
-            ]
+            ],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       }
     ]
   },
@@ -5164,15 +5905,18 @@ export class ViewStateTable {
             "props": {
               "theme": "paper"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderAppearancePanel",
@@ -5197,13 +5941,17 @@ export class ViewStateTable {
                   "uiEvent": "reader.font.delete",
                   "uiEventPayload": {
                     "fontId": "font-noto-serif"
-                  }
+                  },
+                  "uiEventTrigger": "tap"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
               }
-            ]
+            ],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       }
     ]
   },
@@ -5227,7 +5975,8 @@ export class ViewStateTable {
             "props": {
               "theme": "paper"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "ReadingTextFlow",
@@ -5235,7 +5984,8 @@ export class ViewStateTable {
             "props": {
               "fontFamily": "system-serif"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "ReadingInfoLayer",
@@ -5243,15 +5993,18 @@ export class ViewStateTable {
             "props": {
               "chapterTitle": "第一章"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderAppearancePanel",
@@ -5277,13 +6030,17 @@ export class ViewStateTable {
                   "uiEventPayload": {
                     "fontId": "font-missing",
                     "fallbackFontId": "system-serif"
-                  }
+                  },
+                  "uiEventTrigger": "tap"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
               }
-            ]
+            ],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       }
     ]
   },
@@ -5307,15 +6064,18 @@ export class ViewStateTable {
             "props": {
               "theme": "paper"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderAppearancePanel",
@@ -5347,13 +6107,17 @@ export class ViewStateTable {
                       "foreground": "#2D2923",
                       "accent": "#8A5F3D"
                     }
-                  }
+                  },
+                  "uiEventTrigger": "tap"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
               }
-            ]
+            ],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       }
     ]
   },
@@ -5377,15 +6141,18 @@ export class ViewStateTable {
             "props": {
               "theme": "paper"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderAppearancePanel",
@@ -5410,13 +6177,17 @@ export class ViewStateTable {
                   "uiEvent": "reader.theme.delete",
                   "uiEventPayload": {
                     "themeId": "theme-custom-paper"
-                  }
+                  },
+                  "uiEventTrigger": "tap"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
               }
-            ]
+            ],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       }
     ]
   },
@@ -5440,15 +6211,18 @@ export class ViewStateTable {
             "props": {
               "theme": "paper"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderAppearancePanel",
@@ -5471,13 +6245,17 @@ export class ViewStateTable {
                 "props": {
                   "label": "确认",
                   "uiEvent": "reader.typography.reset",
-                  "uiEventPayload": {}
+                  "uiEventPayload": {},
+                  "uiEventTrigger": "tap"
                 },
-                "children": []
+                "children": [],
+                "bindings": []
               }
-            ]
+            ],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       }
     ]
   },
@@ -5502,15 +6280,18 @@ export class ViewStateTable {
             "props": {
               "theme": "paper"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderReplacePanel",
@@ -5526,7 +6307,8 @@ export class ViewStateTable {
               "title": "删除替换规则",
               "message": "删除替换规则"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "Button",
@@ -5536,11 +6318,14 @@ export class ViewStateTable {
               "uiEvent": "reader.replace.delete",
               "uiEventPayload": {
                 "ruleId": 41
-              }
+              },
+              "uiEventTrigger": "tap"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       }
     ]
   },
@@ -5565,15 +6350,18 @@ export class ViewStateTable {
             "props": {
               "theme": "paper"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderReplacePanel",
@@ -5589,7 +6377,8 @@ export class ViewStateTable {
               "title": "替换完成",
               "message": "替换完成"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "Button",
@@ -5599,11 +6388,14 @@ export class ViewStateTable {
               "uiEvent": "reader.replace.undo",
               "uiEventPayload": {
                 "transactionId": "replace-42"
-              }
+              },
+              "uiEventTrigger": "tap"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       }
     ]
   },
@@ -5628,15 +6420,18 @@ export class ViewStateTable {
             "props": {
               "theme": "paper"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderReplacePanel",
@@ -5652,7 +6447,8 @@ export class ViewStateTable {
               "title": "导入导出规则",
               "message": "导入导出规则"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "Button",
@@ -5662,9 +6458,11 @@ export class ViewStateTable {
               "uiEvent": "reader.replace.import",
               "uiEventPayload": {
                 "format": "json"
-              }
+              },
+              "uiEventTrigger": "tap"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "Button",
@@ -5675,11 +6473,14 @@ export class ViewStateTable {
               "uiEventPayload": {
                 "format": "json",
                 "scope": "global"
-              }
+              },
+              "uiEventTrigger": "tap"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       }
     ]
   },
@@ -5704,15 +6505,18 @@ export class ViewStateTable {
             "props": {
               "theme": "paper"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderReplacePanel",
@@ -5728,7 +6532,8 @@ export class ViewStateTable {
               "title": "替换预览",
               "message": "替换预览"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "Button",
@@ -5739,9 +6544,11 @@ export class ViewStateTable {
               "uiEventPayload": {
                 "bookId": "bk-001",
                 "chapterId": "ch-001"
-              }
+              },
+              "uiEventTrigger": "tap"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "Button",
@@ -5754,11 +6561,14 @@ export class ViewStateTable {
                 "bookName": "示例书名",
                 "bookOrigin": "source-old",
                 "target": "chapter"
-              }
+              },
+              "uiEventTrigger": "tap"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       }
     ]
   },
@@ -5783,15 +6593,18 @@ export class ViewStateTable {
             "props": {
               "theme": "paper"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           }
-        ]
+        ],
+        "bindings": []
       },
       {
         "type": "ReaderTopArea",
         "id": "reader-top-area",
         "props": {},
-        "children": []
+        "children": [],
+        "bindings": []
       },
       {
         "type": "ReaderReplacePanel",
@@ -5807,7 +6620,8 @@ export class ViewStateTable {
               "title": "替换规则管理",
               "message": "替换规则管理"
             },
-            "children": []
+            "children": [],
+            "bindings": []
           },
           {
             "type": "Button",
@@ -5824,9 +6638,1893 @@ export class ViewStateTable {
                   "scopeContent": true,
                   "isRegex": false
                 }
-              }
+              },
+              "uiEventTrigger": "tap"
             },
-            "children": []
+            "children": [],
+            "bindings": []
+          }
+        ],
+        "bindings": []
+      }
+    ]
+  },
+  {
+    "routeId": "onboarding-welcome",
+    "pageState": "default",
+    "context": {
+      "step": 1,
+      "totalSteps": 2
+    },
+    "components": [
+      {
+        "type": "AppShellStructure",
+        "id": "onboarding-welcome-shell",
+        "props": {
+          "variant": "onboarding-welcome",
+          "title": "欢迎使用 Reader",
+          "description": "先了解本地阅读、书源、同步与平台能力，再按需授权。",
+          "coreSupport": "orientation-only"
+        },
+        "children": [
+          {
+            "type": "Button",
+            "id": "onboarding-welcome-continue",
+            "props": {
+              "label": "继续"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "continue",
+                "event": "onboarding.continue",
+                "payload": {
+                  "nextRouteId": "onboarding-capability-setup"
+                },
+                "trigger": "tap"
+              }
+            ]
+          }
+        ],
+        "bindings": []
+      }
+    ]
+  },
+  {
+    "routeId": "onboarding-capability-setup",
+    "pageState": "permission",
+    "context": {
+      "step": 2,
+      "totalSteps": 2
+    },
+    "components": [
+      {
+        "type": "PermissionRequiredPage",
+        "id": "onboarding-capability-page",
+        "props": {
+          "variant": "onboarding",
+          "title": "按需启用平台能力",
+          "permissionScopes": [
+            "storage",
+            "notifications"
+          ],
+          "capabilityBasis": [
+            "permission.check",
+            "permission.request",
+            "file.select"
+          ],
+          "policy": "request-only-when-triggered",
+          "availability": "host-capability-gated"
+        },
+        "children": [
+          {
+            "type": "Button",
+            "id": "onboarding-open-permission-recovery",
+            "props": {
+              "label": "检查权限"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "check",
+                "event": "route.push",
+                "payload": {
+                  "routeId": "permission-recovery"
+                },
+                "trigger": "tap"
+              }
+            ]
+          },
+          {
+            "type": "Button",
+            "id": "onboarding-finish",
+            "props": {
+              "label": "稍后设置"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "finish",
+                "event": "onboarding.capabilitySetup.complete",
+                "payload": {
+                  "nextRouteId": "bookshelf",
+                  "skippedScopes": [
+                    "notifications"
+                  ]
+                },
+                "trigger": "tap"
+              }
+            ]
+          }
+        ],
+        "bindings": []
+      }
+    ]
+  },
+  {
+    "routeId": "permission-recovery",
+    "pageState": "permission",
+    "context": {
+      "scope": "storage",
+      "returnRouteId": "local-import"
+    },
+    "components": [
+      {
+        "type": "PermissionRequiredPage",
+        "id": "permission-recovery-page",
+        "props": {
+          "variant": "recovery",
+          "title": "需要文件访问能力",
+          "state": "denied",
+          "capabilityBasis": [
+            "permission.check",
+            "permission.request",
+            "file.select"
+          ],
+          "recoveryStates": [
+            "requestable",
+            "settings-required",
+            "capability-unavailable"
+          ],
+          "platformDifferenceRequired": true
+        },
+        "children": [
+          {
+            "type": "Button",
+            "id": "permission-recovery-open-settings",
+            "props": {
+              "label": "前往系统设置"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "settings",
+                "event": "permission.recovery.openSettings",
+                "payload": {
+                  "scope": "storage",
+                  "returnRouteId": "local-import"
+                },
+                "trigger": "tap"
+              }
+            ]
+          },
+          {
+            "type": "Button",
+            "id": "permission-recovery-retry",
+            "props": {
+              "label": "重新检查"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "retry",
+                "event": "permission.recovery.retry",
+                "payload": {
+                  "scope": "storage"
+                },
+                "trigger": "tap"
+              }
+            ]
+          },
+          {
+            "type": "Button",
+            "id": "permission-recovery-cancel",
+            "props": {
+              "label": "取消"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "cancel",
+                "event": "route.pop",
+                "payload": {},
+                "trigger": "tap"
+              }
+            ]
+          }
+        ],
+        "bindings": []
+      }
+    ]
+  },
+  {
+    "routeId": "local-format-support",
+    "pageState": "default",
+    "context": {
+      "entry": "local-import"
+    },
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "local-format-support-topbar",
+        "props": {
+          "title": "本地格式支持"
+        },
+        "children": [],
+        "bindings": []
+      },
+      {
+        "type": "LocalBookImportPage",
+        "id": "local-format-support-page",
+        "props": {
+          "variant": "format-capabilities",
+          "capabilityBasis": [
+            "file.select",
+            "file.read",
+            "import.parse",
+            "import.persist"
+          ],
+          "formatKinds": [
+            "text-document",
+            "ebook-package",
+            "pdf-document",
+            "image-sequence"
+          ],
+          "formatAvailability": "runtime-negotiated",
+          "unsupportedBehavior": "fail-closed-with-format-error",
+          "pdfAndMangaCoreSupport": "not-declared"
+        },
+        "children": [
+          {
+            "type": "Button",
+            "id": "local-format-support-select",
+            "props": {
+              "label": "选择本地文件"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "select",
+                "event": "localFormat.select",
+                "payload": {
+                  "source": "format-support",
+                  "allowsMultiple": true
+                },
+                "trigger": "tap"
+              }
+            ]
+          }
+        ],
+        "bindings": [
+          {
+            "target": "open",
+            "event": "localFormat.open",
+            "payload": {
+              "entry": "local-import"
+            },
+            "trigger": "appear"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "pdf-reader",
+    "pageState": "default",
+    "context": {
+      "documentId": "local-pdf-001",
+      "page": 12
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "pdf-reader-base",
+        "props": {
+          "documentKind": "pdf",
+          "executionOwner": "platform-renderer",
+          "coreSupport": "not-declared",
+          "hostBasis": [
+            "file.read",
+            "storage.path"
+          ],
+          "availability": "capability-gated"
+        },
+        "children": [
+          {
+            "type": "Content",
+            "id": "pdf-page-surface",
+            "props": {
+              "page": 12,
+              "pageCount": 218,
+              "zoom": 1
+            },
+            "children": [],
+            "bindings": []
+          },
+          {
+            "type": "TapZones",
+            "id": "pdf-tap-zones",
+            "props": {
+              "enabled": true,
+              "mode": "horizontal"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "previous",
+                "event": "reader.page.prev",
+                "payload": {},
+                "trigger": "tap"
+              },
+              {
+                "target": "control",
+                "event": "reader.control.toggle",
+                "payload": {
+                  "overlay": "reader-control"
+                },
+                "trigger": "tap"
+              },
+              {
+                "target": "next",
+                "event": "reader.page.next",
+                "payload": {},
+                "trigger": "tap"
+              }
+            ]
+          }
+        ],
+        "bindings": [
+          {
+            "target": "document",
+            "event": "pdf.open",
+            "payload": {
+              "documentId": "local-pdf-001",
+              "page": 12
+            },
+            "trigger": "appear"
+          }
+        ]
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "pdf-reader-top-area",
+        "props": {
+          "documentKind": "pdf",
+          "page": 12,
+          "pageCount": 218
+        },
+        "children": [],
+        "bindings": []
+      }
+    ]
+  },
+  {
+    "routeId": "manga-reader",
+    "pageState": "default",
+    "context": {
+      "documentId": "local-manga-001",
+      "imageIndex": 6
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "manga-reader-base",
+        "props": {
+          "documentKind": "image-sequence",
+          "executionOwner": "platform-renderer",
+          "coreSupport": "not-declared",
+          "hostBasis": [
+            "file.read",
+            "storage.path"
+          ],
+          "availability": "capability-gated"
+        },
+        "children": [
+          {
+            "type": "Content",
+            "id": "manga-image-surface",
+            "props": {
+              "imageIndex": 6,
+              "imageCount": 42,
+              "readingDirection": "vertical"
+            },
+            "children": [],
+            "bindings": []
+          },
+          {
+            "type": "TapZones",
+            "id": "manga-tap-zones",
+            "props": {
+              "enabled": true,
+              "mode": "horizontal"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "previous",
+                "event": "reader.page.prev",
+                "payload": {},
+                "trigger": "tap"
+              },
+              {
+                "target": "control",
+                "event": "reader.control.toggle",
+                "payload": {
+                  "overlay": "reader-control"
+                },
+                "trigger": "tap"
+              },
+              {
+                "target": "next",
+                "event": "reader.page.next",
+                "payload": {},
+                "trigger": "tap"
+              }
+            ]
+          }
+        ],
+        "bindings": [
+          {
+            "target": "document",
+            "event": "manga.open",
+            "payload": {
+              "documentId": "local-manga-001",
+              "imageIndex": 6
+            },
+            "trigger": "appear"
+          }
+        ]
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "manga-reader-top-area",
+        "props": {
+          "documentKind": "image-sequence",
+          "imageIndex": 6,
+          "imageCount": 42
+        },
+        "children": [],
+        "bindings": []
+      }
+    ]
+  },
+  {
+    "routeId": "http-tts-management",
+    "pageState": "default",
+    "context": {
+      "selectedProviderId": "http-tts-001"
+    },
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "http-tts-management-topbar",
+        "props": {
+          "title": "HTTP TTS"
+        },
+        "children": [],
+        "bindings": []
+      },
+      {
+        "type": "SettingsGeneralPage",
+        "id": "http-tts-management-page",
+        "props": {
+          "variant": "http-tts-management",
+          "executionOwner": "app-host-orchestration",
+          "coreSupport": "not-declared",
+          "hostBasis": [
+            "http.execute",
+            "credential.get",
+            "credential.set",
+            "persistence.get",
+            "persistence.put"
+          ],
+          "playbackSupport": "not-claimed"
+        },
+        "children": [
+          {
+            "type": "ListRow",
+            "id": "http-tts-provider-row",
+            "props": {
+              "providerId": "http-tts-001",
+              "name": "示例接口",
+              "state": "untested"
+            },
+            "children": [],
+            "bindings": []
+          },
+          {
+            "type": "Button",
+            "id": "http-tts-management-edit",
+            "props": {
+              "label": "编辑"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "edit",
+                "event": "route.push",
+                "payload": {
+                  "routeId": "http-tts-editor"
+                },
+                "trigger": "tap"
+              }
+            ]
+          },
+          {
+            "type": "Button",
+            "id": "http-tts-management-test",
+            "props": {
+              "label": "测试连接"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "test",
+                "event": "route.push",
+                "payload": {
+                  "routeId": "http-tts-test"
+                },
+                "trigger": "tap"
+              }
+            ]
+          }
+        ],
+        "bindings": [
+          {
+            "target": "management",
+            "event": "httpTts.management.open",
+            "payload": {},
+            "trigger": "appear"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "http-tts-editor",
+    "pageState": "default",
+    "context": {
+      "providerId": "http-tts-001"
+    },
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "http-tts-editor-topbar",
+        "props": {
+          "title": "编辑 HTTP TTS"
+        },
+        "children": [],
+        "bindings": []
+      },
+      {
+        "type": "SourceFormPage",
+        "id": "http-tts-editor-form",
+        "props": {
+          "variant": "http-tts-provider",
+          "fields": [
+            "name",
+            "endpoint",
+            "method",
+            "headers",
+            "bodyTemplate",
+            "credentialKey"
+          ],
+          "secretStorage": "credential-capability",
+          "coreSupport": "not-declared",
+          "hostBasis": [
+            "credential.set",
+            "persistence.put"
+          ]
+        },
+        "children": [
+          {
+            "type": "Button",
+            "id": "http-tts-editor-save",
+            "props": {
+              "label": "保存"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "save",
+                "event": "httpTts.provider.save",
+                "payload": {
+                  "providerId": "http-tts-001",
+                  "credentialKey": "http-tts-001"
+                },
+                "trigger": "tap"
+              }
+            ]
+          }
+        ],
+        "bindings": []
+      }
+    ]
+  },
+  {
+    "routeId": "http-tts-test",
+    "pageState": "loading",
+    "context": {
+      "providerId": "http-tts-001",
+      "requestId": "http-tts-test-001"
+    },
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "http-tts-test-topbar",
+        "props": {
+          "title": "测试 HTTP TTS"
+        },
+        "children": [],
+        "bindings": []
+      },
+      {
+        "type": "GlobalStatePage",
+        "id": "http-tts-test-state",
+        "props": {
+          "variant": "http-tts-test",
+          "state": "requesting",
+          "effectPlan": [
+            "credential.get",
+            "http.execute"
+          ],
+          "successProof": "valid-http-response",
+          "playbackSupport": "not-claimed",
+          "failureStates": [
+            "credential-missing",
+            "offline",
+            "http-error",
+            "invalid-response",
+            "capability-unavailable"
+          ]
+        },
+        "children": [
+          {
+            "type": "Loading",
+            "id": "http-tts-test-loading",
+            "props": {
+              "label": "正在请求接口"
+            },
+            "children": [],
+            "bindings": []
+          },
+          {
+            "type": "Button",
+            "id": "http-tts-test-cancel",
+            "props": {
+              "label": "取消测试"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "cancel",
+                "event": "httpTts.test.cancel",
+                "payload": {
+                  "requestId": "http-tts-test-001"
+                },
+                "trigger": "tap"
+              }
+            ]
+          }
+        ],
+        "bindings": [
+          {
+            "target": "request",
+            "event": "httpTts.test.start",
+            "payload": {
+              "providerId": "http-tts-001",
+              "sampleText": "这是一段测试。"
+            },
+            "trigger": "appear"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "content-edit",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001",
+      "chapterId": "ch-001"
+    },
+    "components": [
+      {
+        "type": "ReaderTopArea",
+        "id": "content-edit-top-area",
+        "props": {
+          "title": "编辑正文"
+        },
+        "children": [],
+        "bindings": []
+      },
+      {
+        "type": "ReaderReplacePanel",
+        "id": "content-edit-panel",
+        "props": {
+          "variant": "direct-content-edit",
+          "coreBasis": [
+            "content.load",
+            "content.replace",
+            "replace.validate",
+            "replace.apply",
+            "replace.persist"
+          ],
+          "mutationScope": "replacement-rules-only",
+          "raw-source-mutation": "not-supported"
+        },
+        "children": [
+          {
+            "type": "Input",
+            "id": "content-edit-input",
+            "props": {
+              "multiline": true,
+              "value": "雨落在旧城。"
+            },
+            "children": [],
+            "bindings": []
+          },
+          {
+            "type": "Button",
+            "id": "content-edit-validate",
+            "props": {
+              "label": "校验"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "validate",
+                "event": "reader.replace.validate",
+                "payload": {
+                  "pattern": "雨",
+                  "isRegex": false,
+                  "scope": [
+                    "bk-001",
+                    "ch-001"
+                  ]
+                },
+                "trigger": "tap"
+              }
+            ]
+          },
+          {
+            "type": "Button",
+            "id": "content-edit-apply",
+            "props": {
+              "label": "应用替换"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "save",
+                "event": "content.edit.save",
+                "payload": {
+                  "bookId": "bk-001",
+                  "chapterId": "ch-001",
+                  "target": "replacement-rule"
+                },
+                "trigger": "tap"
+              }
+            ]
+          }
+        ],
+        "bindings": [
+          {
+            "target": "editor",
+            "event": "content.edit.open",
+            "payload": {
+              "bookId": "bk-001",
+              "chapterId": "ch-001"
+            },
+            "trigger": "appear"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "book-cover-change",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "book-cover-change-topbar",
+        "props": {
+          "title": "更换封面"
+        },
+        "children": [],
+        "bindings": []
+      },
+      {
+        "type": "SourceFormPage",
+        "id": "book-cover-change-page",
+        "props": {
+          "variant": "book-cover-change",
+          "coreBasis": [
+            "bookshelf.book.update"
+          ],
+          "hostBasis": [
+            "file.select",
+            "file.read"
+          ],
+          "states": [
+            "idle",
+            "selecting",
+            "preview",
+            "saving",
+            "error"
+          ]
+        },
+        "children": [
+          {
+            "type": "BookCover",
+            "id": "book-cover-change-preview",
+            "props": {
+              "bookId": "bk-001",
+              "state": "preview"
+            },
+            "children": [],
+            "bindings": []
+          },
+          {
+            "type": "Button",
+            "id": "book-cover-change-select",
+            "props": {
+              "label": "选择图片"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "select",
+                "event": "book.cover.change",
+                "payload": {
+                  "bookId": "bk-001",
+                  "selection": "local-file"
+                },
+                "trigger": "tap"
+              }
+            ]
+          }
+        ],
+        "bindings": []
+      }
+    ]
+  },
+  {
+    "routeId": "book-cover-search",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001",
+      "query": "长夜余火"
+    },
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "book-cover-search-topbar",
+        "props": {
+          "title": "搜索封面"
+        },
+        "children": [],
+        "bindings": []
+      },
+      {
+        "type": "SearchResultsPage",
+        "id": "book-cover-search-page",
+        "props": {
+          "variant": "cover-search",
+          "executionOwner": "app-host-orchestration",
+          "coreBasis": [
+            "bookshelf.book.update"
+          ],
+          "hostBasis": [
+            "http.execute",
+            "network.status"
+          ],
+          "remoteProviderRequired": true
+        },
+        "children": [
+          {
+            "type": "SearchInputBox",
+            "id": "book-cover-search-input",
+            "props": {
+              "query": "长夜余火"
+            },
+            "children": [],
+            "bindings": []
+          },
+          {
+            "type": "Button",
+            "id": "book-cover-search-submit",
+            "props": {
+              "label": "搜索"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "submit",
+                "event": "book.cover.search",
+                "payload": {
+                  "bookId": "bk-001",
+                  "query": "长夜余火"
+                },
+                "trigger": "submit"
+              }
+            ]
+          },
+          {
+            "type": "BookCover",
+            "id": "book-cover-search-result-1",
+            "props": {
+              "resultId": "cover-001",
+              "state": "available"
+            },
+            "children": [],
+            "bindings": []
+          }
+        ],
+        "bindings": []
+      }
+    ]
+  },
+  {
+    "routeId": "chapter-reviews",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001",
+      "chapterId": "ch-001",
+      "sourceId": "src-001"
+    },
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "chapter-reviews-topbar",
+        "props": {
+          "title": "章节评论"
+        },
+        "children": [],
+        "bindings": []
+      },
+      {
+        "type": "List",
+        "id": "chapter-reviews-list",
+        "props": {
+          "executionOwner": "app-host-orchestration",
+          "coreSupport": "not-declared",
+          "hostBasis": [
+            "http.execute",
+            "network.status",
+            "cookie.get"
+          ],
+          "availability": "source-capability-gated",
+          "states": [
+            "loading",
+            "ready",
+            "empty",
+            "offline",
+            "auth-required",
+            "error"
+          ]
+        },
+        "children": [
+          {
+            "type": "ListRow",
+            "id": "chapter-review-001",
+            "props": {
+              "author": "读者甲",
+              "body": "这一章节奏很好。",
+              "createdAt": "2026-07-19T10:00:00+08:00"
+            },
+            "children": [],
+            "bindings": []
+          },
+          {
+            "type": "Button",
+            "id": "chapter-reviews-retry",
+            "props": {
+              "label": "重新加载"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "retry",
+                "event": "chapter.reviews.retry",
+                "payload": {
+                  "bookId": "bk-001",
+                  "chapterId": "ch-001",
+                  "sourceId": "src-001"
+                },
+                "trigger": "tap"
+              }
+            ]
+          }
+        ],
+        "bindings": [
+          {
+            "target": "reviews",
+            "event": "chapter.reviews.open",
+            "payload": {
+              "bookId": "bk-001",
+              "chapterId": "ch-001",
+              "sourceId": "src-001"
+            },
+            "trigger": "appear"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "bookmarks-manager",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "bookmarks-manager-topbar",
+        "props": {
+          "title": "书签管理"
+        },
+        "children": [],
+        "bindings": []
+      },
+      {
+        "type": "ReaderDirectoryPanel",
+        "id": "bookmarks-manager-panel",
+        "props": {
+          "tab": "bookmarks",
+          "executionOwner": "reader-ui-runtime-and-app-store",
+          "coreSupport": "bookmark-crud-not-declared",
+          "syncDataBasis": "sync-conflict.bookmark"
+        },
+        "children": [
+          {
+            "type": "ListRow",
+            "id": "bookmark-row-001",
+            "props": {
+              "bookmarkId": "bookmark-001",
+              "chapterId": "ch-001",
+              "label": "雨落在旧城"
+            },
+            "children": [
+              {
+                "type": "Button",
+                "id": "bookmark-row-001-remove",
+                "props": {
+                  "label": "删除"
+                },
+                "children": [],
+                "bindings": [
+                  {
+                    "target": "remove",
+                    "event": "reader.bookmark.remove",
+                    "payload": {
+                      "bookmarkId": "bookmark-001",
+                      "bookId": "bk-001"
+                    },
+                    "trigger": "tap"
+                  }
+                ]
+              }
+            ],
+            "bindings": []
+          }
+        ],
+        "bindings": [
+          {
+            "target": "manager",
+            "event": "bookmarks.manage.open",
+            "payload": {
+              "bookId": "bk-001"
+            },
+            "trigger": "appear"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "download-queue",
+    "pageState": "default",
+    "context": {
+      "activeCount": 1,
+      "queuedCount": 1
+    },
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "download-queue-topbar",
+        "props": {
+          "title": "下载队列"
+        },
+        "children": [],
+        "bindings": []
+      },
+      {
+        "type": "ReaderBookCachePage",
+        "id": "download-queue-page",
+        "props": {
+          "variant": "download-queue",
+          "coreBasis": [
+            "cache.book.prefetch",
+            "cache.book.status",
+            "cache.clear"
+          ],
+          "hostBasis": [
+            "background.schedule",
+            "background.cancel",
+            "notification.show",
+            "storage.path"
+          ],
+          "states": [
+            "queued",
+            "running",
+            "paused-by-system",
+            "completed",
+            "failed",
+            "cancelled"
+          ],
+          "platformDifferenceRequired": true
+        },
+        "children": [
+          {
+            "type": "ListRow",
+            "id": "download-task-row-001",
+            "props": {
+              "taskId": "download-001",
+              "bookId": "bk-001",
+              "state": "running",
+              "progress": 0.42
+            },
+            "children": [
+              {
+                "type": "Button",
+                "id": "download-task-row-001-open",
+                "props": {
+                  "label": "查看"
+                },
+                "children": [],
+                "bindings": [
+                  {
+                    "target": "open",
+                    "event": "download.task.open",
+                    "payload": {
+                      "routeId": "download-task-detail",
+                      "taskId": "download-001",
+                      "bookId": "bk-001"
+                    },
+                    "trigger": "tap"
+                  }
+                ]
+              }
+            ],
+            "bindings": []
+          },
+          {
+            "type": "ListRow",
+            "id": "download-task-row-002",
+            "props": {
+              "taskId": "download-002",
+              "bookId": "bk-002",
+              "state": "queued",
+              "progress": 0
+            },
+            "children": [],
+            "bindings": []
+          }
+        ],
+        "bindings": [
+          {
+            "target": "queue",
+            "event": "download.queue.open",
+            "payload": {},
+            "trigger": "appear"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "download-task-detail",
+    "pageState": "default",
+    "context": {
+      "taskId": "download-001",
+      "bookId": "bk-001"
+    },
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "download-task-detail-topbar",
+        "props": {
+          "title": "下载任务"
+        },
+        "children": [],
+        "bindings": []
+      },
+      {
+        "type": "ReaderBookCachePage",
+        "id": "download-task-detail-page",
+        "props": {
+          "variant": "task-detail",
+          "state": "running",
+          "coreBasis": [
+            "cache.book.status"
+          ],
+          "hostBasis": [
+            "background.schedule",
+            "notification.show",
+            "storage.path"
+          ],
+          "pauseOrCancelCoreSupport": "not-declared"
+        },
+        "children": [
+          {
+            "type": "ProgressBar",
+            "id": "download-task-detail-progress",
+            "props": {
+              "value": 0.42,
+              "completedChapters": 12,
+              "totalChapters": 30
+            },
+            "children": [],
+            "bindings": []
+          },
+          {
+            "type": "Button",
+            "id": "download-task-detail-back",
+            "props": {
+              "label": "返回队列"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "back",
+                "event": "route.pop",
+                "payload": {},
+                "trigger": "tap"
+              }
+            ]
+          },
+          {
+            "type": "Button",
+            "id": "download-task-detail-retry",
+            "props": {
+              "label": "重试",
+              "availability": "planned-fail-closed"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "retry",
+                "event": "download.task.retry",
+                "payload": {
+                  "taskId": "download-001",
+                  "bookId": "bk-001"
+                },
+                "trigger": "tap"
+              }
+            ]
+          },
+          {
+            "type": "Button",
+            "id": "download-task-detail-cancel",
+            "props": {
+              "label": "取消任务",
+              "availability": "planned-fail-closed"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "cancel",
+                "event": "download.task.cancel",
+                "payload": {
+                  "taskId": "download-001"
+                },
+                "trigger": "tap"
+              }
+            ]
+          }
+        ],
+        "bindings": []
+      }
+    ]
+  },
+  {
+    "routeId": "storage-management",
+    "pageState": "default",
+    "context": {
+      "scope": "all"
+    },
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "storage-management-topbar",
+        "props": {
+          "title": "存储管理"
+        },
+        "children": [],
+        "bindings": []
+      },
+      {
+        "type": "GlobalSettingsPage",
+        "id": "storage-management-page",
+        "props": {
+          "variant": "storage-management",
+          "coreBasis": [
+            "cache.book.status",
+            "cache.clear"
+          ],
+          "hostBasis": [
+            "storage.path",
+            "file.read",
+            "file.delete"
+          ],
+          "scopes": [
+            "cache",
+            "files",
+            "external"
+          ],
+          "availability": "host-capability-gated"
+        },
+        "children": [
+          {
+            "type": "SettingsListItem",
+            "id": "storage-cache-row",
+            "props": {
+              "scope": "cache",
+              "usedBytes": 268435456
+            },
+            "children": [],
+            "bindings": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "storage-books-row",
+            "props": {
+              "scope": "books",
+              "usedBytes": 1073741824
+            },
+            "children": [],
+            "bindings": []
+          },
+          {
+            "type": "Button",
+            "id": "storage-clear-cache",
+            "props": {
+              "label": "清理缓存"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "clear",
+                "event": "storage.cleanup.confirm",
+                "payload": {
+                  "scope": "cache"
+                },
+                "trigger": "tap"
+              }
+            ]
+          }
+        ],
+        "bindings": [
+          {
+            "target": "management",
+            "event": "storage.management.open",
+            "payload": {
+              "scope": "all"
+            },
+            "trigger": "appear"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "webview-login",
+    "pageState": "default",
+    "context": {
+      "sourceId": "src-001",
+      "profileId": "source-src-001"
+    },
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "webview-login-topbar",
+        "props": {
+          "title": "网页登录"
+        },
+        "children": [],
+        "bindings": []
+      },
+      {
+        "type": "WebView",
+        "id": "webview-login-surface",
+        "props": {
+          "url": "https://example.com/login",
+          "profileId": "source-src-001",
+          "hostBasis": [
+            "webview.open",
+            "webview.close",
+            "webview.evaluate",
+            "cookie.get"
+          ],
+          "coreSupport": "not-declared",
+          "states": [
+            "opening",
+            "interactive",
+            "captcha",
+            "challenge",
+            "cookie-return",
+            "error"
+          ],
+          "requiresUiContext": true
+        },
+        "children": [],
+        "bindings": [
+          {
+            "target": "login",
+            "event": "webview.login.open",
+            "payload": {
+              "sourceId": "src-001",
+              "profileId": "source-src-001"
+            },
+            "trigger": "appear"
+          }
+        ]
+      },
+      {
+        "type": "Button",
+        "id": "webview-login-cancel",
+        "props": {
+          "label": "取消登录"
+        },
+        "children": [],
+        "bindings": [
+          {
+            "target": "cancel",
+            "event": "webview.login.cancel",
+            "payload": {
+              "sourceId": "src-001",
+              "profileId": "source-src-001"
+            },
+            "trigger": "tap"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "webview-captcha",
+    "pageState": "default",
+    "context": {
+      "sourceId": "src-001",
+      "profileId": "source-src-001"
+    },
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "webview-captcha-topbar",
+        "props": {
+          "title": "完成验证"
+        },
+        "children": [],
+        "bindings": []
+      },
+      {
+        "type": "WebView",
+        "id": "webview-captcha-surface",
+        "props": {
+          "state": "captcha",
+          "hostBasis": [
+            "webview.open",
+            "webview.evaluate",
+            "cookie.get"
+          ],
+          "completionSignal": "app-owned-evaluate-result",
+          "coreSupport": "not-declared",
+          "credentialCapture": "forbidden"
+        },
+        "children": [],
+        "bindings": [
+          {
+            "target": "captcha",
+            "event": "webview.login.open",
+            "payload": {
+              "sourceId": "src-001",
+              "profileId": "source-src-001",
+              "mode": "captcha"
+            },
+            "trigger": "appear"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "webview-challenge",
+    "pageState": "error",
+    "context": {
+      "sourceId": "src-001",
+      "failedRequestId": "source-http-001"
+    },
+    "components": [
+      {
+        "type": "GlobalStatePage",
+        "id": "webview-challenge-state",
+        "props": {
+          "variant": "challenge-required",
+          "errorCode": "CHALLENGE_REQUIRED",
+          "retryable": false,
+          "hostBasis": [
+            "webview.open",
+            "cookie.get"
+          ],
+          "fallback": "fail-closed-when-webview-unavailable"
+        },
+        "children": [
+          {
+            "type": "Button",
+            "id": "webview-challenge-continue",
+            "props": {
+              "label": "打开验证页"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "retry",
+                "event": "webview.challenge.retry",
+                "payload": {
+                  "sourceId": "src-001",
+                  "failedRequestId": "source-http-001"
+                },
+                "trigger": "tap"
+              }
+            ]
+          }
+        ],
+        "bindings": []
+      }
+    ]
+  },
+  {
+    "routeId": "webview-cookie-return",
+    "pageState": "loading",
+    "context": {
+      "sourceId": "src-001",
+      "profileId": "source-src-001",
+      "returnRequestId": "source-http-001"
+    },
+    "components": [
+      {
+        "type": "GlobalStatePage",
+        "id": "webview-cookie-return-state",
+        "props": {
+          "variant": "cookie-return",
+          "state": "extracting",
+          "effectPlan": [
+            "webview.evaluate",
+            "cookie.get",
+            "webview.close"
+          ],
+          "cookieScope": "profile-and-source",
+          "secretDisplay": "redacted",
+          "failureStates": [
+            "cookie-empty",
+            "profile-mismatch",
+            "capability-unavailable",
+            "evaluation-failed"
+          ]
+        },
+        "children": [
+          {
+            "type": "Loading",
+            "id": "webview-cookie-return-loading",
+            "props": {
+              "label": "正在读取登录状态"
+            },
+            "children": [],
+            "bindings": []
+          }
+        ],
+        "bindings": [
+          {
+            "target": "cookie",
+            "event": "webview.cookie.return",
+            "payload": {
+              "sourceId": "src-001",
+              "profileId": "source-src-001",
+              "returnRequestId": "source-http-001"
+            },
+            "trigger": "appear"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "settings-tts",
+    "pageState": "default",
+    "context": {
+      "scope": "system-tts"
+    },
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "settings-tts-topbar",
+        "props": {
+          "title": "朗读设置"
+        },
+        "children": [],
+        "bindings": []
+      },
+      {
+        "type": "SettingsGeneralPage",
+        "id": "settings-tts-page",
+        "props": {
+          "variant": "system-tts",
+          "coreBasis": [
+            "tts.queue.plan",
+            "tts.queue.start",
+            "tts.queue.pause",
+            "tts.queue.resume",
+            "tts.queue.stop",
+            "tts.queue.seek"
+          ],
+          "hostBasis": [
+            "tts.system.start",
+            "tts.system.pause",
+            "tts.system.resume",
+            "tts.system.stop"
+          ],
+          "states": [
+            "unavailable",
+            "ready",
+            "testing",
+            "speaking",
+            "paused",
+            "interrupted",
+            "error"
+          ]
+        },
+        "children": [
+          {
+            "type": "Dropdown",
+            "id": "settings-tts-voice",
+            "props": {
+              "label": "语音",
+              "value": "system-default"
+            },
+            "children": [],
+            "bindings": []
+          },
+          {
+            "type": "Slider",
+            "id": "settings-tts-rate",
+            "props": {
+              "label": "语速",
+              "value": 1,
+              "min": 0.1,
+              "max": 4
+            },
+            "children": [],
+            "bindings": []
+          },
+          {
+            "type": "Button",
+            "id": "settings-tts-test",
+            "props": {
+              "label": "试听"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "test",
+                "event": "reader.tts.start",
+                "payload": {
+                  "voice": "system-default"
+                },
+                "trigger": "tap"
+              }
+            ]
+          }
+        ],
+        "bindings": [
+          {
+            "target": "settings",
+            "event": "settings.capability.open",
+            "payload": {
+              "scope": "tts"
+            },
+            "trigger": "appear"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "settings-storage",
+    "pageState": "default",
+    "context": {
+      "scope": "storage"
+    },
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "settings-storage-topbar",
+        "props": {
+          "title": "存储设置"
+        },
+        "children": [],
+        "bindings": []
+      },
+      {
+        "type": "SettingsGeneralPage",
+        "id": "settings-storage-page",
+        "props": {
+          "variant": "storage",
+          "coreBasis": [
+            "cache.book.status",
+            "cache.clear"
+          ],
+          "hostBasis": [
+            "storage.path",
+            "file.delete"
+          ],
+          "platformDifferenceRequired": true
+        },
+        "children": [
+          {
+            "type": "SettingsListItem",
+            "id": "settings-storage-management-entry",
+            "props": {
+              "title": "存储管理",
+              "summary": "查看缓存、本地书与临时文件"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "open",
+                "event": "route.push",
+                "payload": {
+                  "routeId": "storage-management"
+                },
+                "trigger": "tap"
+              }
+            ]
+          },
+          {
+            "type": "Button",
+            "id": "settings-storage-clear-cache",
+            "props": {
+              "label": "清理缓存"
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "clear",
+                "event": "settings.cache.clear",
+                "payload": {
+                  "scope": "cache"
+                },
+                "trigger": "tap"
+              }
+            ]
+          }
+        ],
+        "bindings": [
+          {
+            "target": "settings",
+            "event": "settings.capability.open",
+            "payload": {
+              "scope": "storage"
+            },
+            "trigger": "appear"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "routeId": "settings-accessibility",
+    "pageState": "default",
+    "context": {
+      "scope": "accessibility"
+    },
+    "components": [
+      {
+        "type": "BackTopBar",
+        "id": "settings-accessibility-topbar",
+        "props": {
+          "title": "无障碍"
+        },
+        "children": [],
+        "bindings": []
+      },
+      {
+        "type": "SettingsGeneralPage",
+        "id": "settings-accessibility-page",
+        "props": {
+          "variant": "accessibility",
+          "runtimeBasis": [
+            "reducedMotion"
+          ],
+          "hostBasis": [
+            "brightness.get",
+            "brightness.set",
+            "screen.keepAwake",
+            "screen.allowSleep",
+            "haptics.light"
+          ],
+          "screenReaderAndTextScale": "platform-setting-only",
+          "platformDifferenceRequired": true
+        },
+        "children": [
+          {
+            "type": "Toggle",
+            "id": "settings-accessibility-reduced-motion",
+            "props": {
+              "label": "减少动态效果",
+              "value": false
+            },
+            "children": [],
+            "bindings": [
+              {
+                "target": "enable",
+                "event": "reducedMotion.enable",
+                "payload": {},
+                "trigger": "change"
+              },
+              {
+                "target": "disable",
+                "event": "reducedMotion.disable",
+                "payload": {},
+                "trigger": "change"
+              }
+            ]
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "settings-accessibility-screen-reader",
+            "props": {
+              "title": "屏幕阅读器",
+              "availability": "system-managed"
+            },
+            "children": [],
+            "bindings": []
+          },
+          {
+            "type": "SettingsListItem",
+            "id": "settings-accessibility-text-scale",
+            "props": {
+              "title": "系统文字大小",
+              "availability": "system-managed"
+            },
+            "children": [],
+            "bindings": []
+          }
+        ],
+        "bindings": [
+          {
+            "target": "settings",
+            "event": "settings.capability.open",
+            "payload": {
+              "scope": "accessibility"
+            },
+            "trigger": "appear"
           }
         ]
       }

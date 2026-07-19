@@ -1,6 +1,21 @@
 // DemoUiState — Phase 1 demo initial state (from ui-state.fixtures.json).
 // Opens directly to the bookshelf (cover-mode). firstOpen ceremony is Phase 2 polish.
-import { ReaderUiState, ReplaceRule } from '../store/ReaderUiState';
+import { ReaderFontFamily, ReaderUiState, ReplaceRule } from '../store/ReaderUiState';
+import { ReaderAppearanceSpecRegistry } from '../../contract/reader_ui/Appearance';
+
+function defaultAppearanceFontFamily(): ReaderFontFamily {
+  const value = ReaderAppearanceSpecRegistry.font(ReaderAppearanceSpecRegistry.defaults.fontId)!.arktsValue;
+  switch (value) {
+    case 'serif': return 'serif';
+    case 'sans': return 'sans';
+    case 'kai': return 'kai';
+    case 'fangsong': return 'fangsong';
+    case 'mono': return 'mono';
+    case 'sourceSerif': return 'sourceSerif';
+    case 'lxgw': return 'lxgw';
+    default: return 'system';
+  }
+}
 
 export class DemoUiState {
   static initial(): ReaderUiState {
@@ -13,11 +28,11 @@ export class DemoUiState {
       readerPageCount: 1,
       readerChapterOffset: 0,
       readerChapterProgress: 0,
-      fontSize: 18,
-      lineHeight: 1.96,
-      paragraphGap: 16,
-      letterSpacing: 0,
-      fontFamily: 'serif',
+      fontSize: ReaderAppearanceSpecRegistry.stepper('fontSize')!.defaultValue,
+      lineHeight: ReaderAppearanceSpecRegistry.stepper('lineHeight')!.defaultValue,
+      paragraphGap: ReaderAppearanceSpecRegistry.stepper('paragraphGap')!.defaultValue,
+      letterSpacing: ReaderAppearanceSpecRegistry.stepper('letterSpacing')!.defaultValue,
+      fontFamily: defaultAppearanceFontFamily(),
       topMargin: 72,
       sideMargin: 32,
       paragraphIndent: 2,
@@ -90,7 +105,10 @@ export class DemoUiState {
       readerSettingOptions: {
         pageMode: 'horizontal',
         tapMode: '左右区域',
-        pageAnimation: '平滑',
+        pageAnimation: ReaderAppearanceSpecRegistry.select('pageAnimation')!.defaultValue,
+        paragraphIndentMode: ReaderAppearanceSpecRegistry.select('paragraphIndentMode')!.defaultValue,
+        textConversion: ReaderAppearanceSpecRegistry.select('textConversion')!.defaultValue,
+        textAlignment: ReaderAppearanceSpecRegistry.select('textAlignment')!.defaultValue,
       },
       selection: {
         visible: false,
@@ -168,9 +186,10 @@ export class DemoUiState {
         showUpdateBadge: true,
         mergeSameBooks: true,
         enableSearchHistory: true,
+        showLocalBookBadge: true,
       },
       // ── F3 交互连接默认值 ──
-      readerTheme: 'paper',
+      readerTheme: ReaderAppearanceSpecRegistry.defaults.dayThemeId,
       readerSettingExpandedOption: '',
       autoPageMode: 'continuous',
       // ── P1.2 select/action 控件展开状态默认值 ──

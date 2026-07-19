@@ -828,11 +828,13 @@ export struct RssSourceGroupsPage {
 
 @Component
 export struct RssSourceImportPage {
+  @Prop message: string = '从 OPML 或 URL 导入。';
+
   build() {
     Column() {
       RssCoreContractNotice({
         title: 'RSS 批量导入未接入',
-        message: '当前 Core 无 RSS 批量导入契约，不能把 OPML、剪贴板或 URL 列表展示为已可导入。请在订阅管理中逐个添加真实 Feed URL。',
+        message: `${this.message} 当前 Core 无 RSS 批量导入契约，不能把 OPML、剪贴板或 URL 列表展示为已可导入。请在订阅管理中逐个添加真实 Feed URL。`,
       })
     }
     .width('100%')
