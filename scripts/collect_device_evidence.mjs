@@ -28,6 +28,7 @@ import { execSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isSuccessfulHdcInstall } from './device_evidence_install_result.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(__dirname, '..');
@@ -80,9 +81,11 @@ const TAG_TO_CAPABILITIES = {
     successPattern: /DONE transport\+cache verified/,
   },
   'ReadingChainUi': {
-    description: 'Reading chain UI path: reducer + ReaderEffects + Host HTTP round-trip',
+    description: 'Complete reading chain: reducer + ReaderEffects + TOC + body content round-trip',
     capabilities: ['http.execute'],
-    successPattern: /DONE (chain-success|search-success)/,
+    // A search or detail response is not reading proof.  Only the terminal
+    // body-content signal can verify this capability on the installed HAP.
+    successPattern: /DONE chain-success/,
   },
   'RssChain': {
     description: 'RSS ingestion: http + item-count + file cache',
@@ -167,8 +170,10 @@ function installCurrentHap() {
   }
   console.log(`→ Installing current signed HAP: ${hap}`);
   const install = run(`"${HDC}" install -r "${hap}"`);
-  if (install.status !== 0) {
-    console.error(`✗ HAP install failed: ${install.stderr || install.stdout}`);
+  if (!isSuccessfulHdcInstall(install)) {
+    const installOutput = `${install.stdout ?? ''}\n${install.stderr ?? ''}`.trim();
+    console.error(`✗ HAP install failed or was not explicitly acknowledged by HDC: ${installOutput}`);
+    console.error('  Stopping before launch: an older installed package must not count as proof for this HAP.');
     return false;
   }
   console.log(`✓ HAP installed: ${(install.stdout || '').trim()}`);

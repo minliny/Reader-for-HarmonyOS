@@ -1,5 +1,8 @@
 import { describe, it, expect } from '@ohos/hypium';
-import { buildReadingChainUiDetailLoadEvent } from '../main/ets/entryability/EntryAbility';
+import {
+  buildReadingChainUiDetailLoadEvent,
+  firstReadableReadingChainUiChapterId,
+} from '../main/ets/entryability/EntryAbility';
 
 export default function EntryAbilityReadingChainSelfCheckTests(): void {
   describe('EntryAbility reading-chain self-check', () => {
@@ -29,6 +32,21 @@ export default function EntryAbilityReadingChainSelfCheckTests(): void {
       });
 
       expect(event.sourceId).assertEqual('');
+    });
+
+    it('usesAReadableTocRowInsteadOfTheDetailTocEndpoint', 0, () => {
+      const chapterId = firstReadableReadingChainUiChapterId([
+        { index: 4, title: '目录占位', chapterId: '' },
+        { index: 9, title: '第一章', chapterId: '/book/real-result/chapter/9' },
+      ]);
+
+      expect(chapterId).assertEqual('/book/real-result/chapter/9');
+    });
+
+    it('doesNotInventAChapterWhenTheCoreTocHasNoReadableRow', 0, () => {
+      expect(firstReadableReadingChainUiChapterId([
+        { index: 4, title: '空目录项', chapterId: '' },
+      ])).assertEqual('');
     });
   });
 }

@@ -17,7 +17,7 @@ import util from '@ohos.util';
 import zlib from '@ohos.zlib';
 import { ReaderUiStore } from '../ui/store/ReaderUiStore';
 import { ReaderEffects } from '../ui/store/ReaderEffects';
-import { ReaderPaginationMode, SearchResultEntry, BookDetail, UiEvent } from '../ui/store/ReaderUiState';
+import { ReaderPaginationMode, SearchResultEntry, BookDetail, ChapterTocEntry, UiEvent } from '../ui/store/ReaderUiState';
 import { SafeAreaAdapter } from '../ui/adapters/SafeAreaAdapter';
 import { ViewportAdapter } from '../ui/adapters/ViewportAdapter';
 import { InteractionDebugAdapter } from '../ui/adapters/InteractionDebugAdapter';
@@ -55,6 +55,18 @@ export function buildReadingChainUiDetailLoadEvent(result: SearchResultEntry): U
     sourceId: result.sourceId ?? '',
     loadFirstChapter: false,
   };
+}
+
+// A detail's TOC endpoint is not a readable chapter URL.  The device probe
+// must wait for the Core-backed UI projection and select an actual row, just
+// as the Reader does, otherwise it can falsely stop at detail or dispatch the
+// endpoint itself as chapter content.
+export function firstReadableReadingChainUiChapterId(toc: ChapterTocEntry[]): string {
+  for (let i = 0; i < toc.length; i++) {
+    const chapterId = toc[i].chapterId.trim();
+    if (chapterId.length > 0) return chapterId;
+  }
+  return '';
 }
 
 export default class EntryAbility extends UIAbility {
@@ -840,9 +852,9 @@ export default class EntryAbility extends UIAbility {
     ReaderUiStore.dispatch({ type: 'search-submit', query: query });
     let elapsed = 0;
     const interval = 1500;
-    // Full chain: search -> book-detail-load -> chapter-load -> chapterContent.
-    // Phases: 'search' -> 'detail' -> 'chapter'. Each phase polls the store
-    // for its completion signal and dispatches the next phase once observed.
+    // Full chain: search -> book-detail-load -> Core TOC -> chapter-load ->
+    // chapter content. Each phase polls the store for its completion signal
+    // and dispatches the next phase once observed.
     let phase: string = 'search';
     let detailDispatched: boolean = false;
     let chapterDispatched: boolean = false;
@@ -854,16 +866,15 @@ export default class EntryAbility extends UIAbility {
       const errMsg: string = AppStorage.get<string>('reader.errorMessage') ?? '';
       const loading: boolean = AppStorage.get<boolean>('reader.loading') ?? false;
       const currentBook: BookDetail | undefined = AppStorage.get<BookDetail>('reader.currentBook');
+      const chapterToc: ChapterTocEntry[] = AppStorage.get<ChapterTocEntry[]>('reader.chapterToc') ?? [];
       const chapterContent: string[] = AppStorage.get<string[]>('reader.chapterContent') ?? [];
-      console.info('[ReadingChainUi] poll elapsed=' + elapsed + 'ms phase=' + phase + ' searchQuery="' + sq + '" results=' + sr.length + ' loading=' + loading + ' errorCode=' + errCode + ' hasBook=' + (currentBook !== null && currentBook !== undefined) + ' chapterLen=' + chapterContent.length);
-      // Any error short-circuits the chain. The effect path is verified even
-      // when the source is unreachable; only search-success counts as a real
-      // verified reading chain per collect_device_evidence.mjs criteria.
+      console.info('[ReadingChainUi] poll elapsed=' + elapsed + 'ms phase=' + phase + ' searchQuery="' + sq + '" results=' + sr.length + ' loading=' + loading + ' errorCode=' + errCode + ' hasBook=' + (currentBook !== null && currentBook !== undefined) + ' tocLen=' + chapterToc.length + ' chapterLen=' + chapterContent.length);
+      // Any error short-circuits the chain. It is logged as device diagnosis,
+      // but only a complete body load counts as verified evidence.
       const hasError: boolean = errCode === 'SEARCH_FAILED' || errCode === 'BOOK_DETAIL_FAILED' || errCode === 'CHAPTER_FAILED';
       if (hasError) {
         clearInterval(poll);
-        console.info('[ReadingChainUi] DONE chain-failure phase=' + phase + ' errorCode=' + errCode + ' msg=' + errMsg + ' (effect path verified; source may be unreachable)');
-        manifest.markVerifiedByTag('ReadingChainUi');
+        console.info('[ReadingChainUi] DONE chain-failure phase=' + phase + ' errorCode=' + errCode + ' msg=' + errMsg + ' (not verified: body was not loaded)');
         return;
       }
       if (phase === 'search') {
@@ -881,18 +892,17 @@ export default class EntryAbility extends UIAbility {
       } else if (phase === 'detail') {
         if (currentBook !== null && currentBook !== undefined && currentBook.bookId === sr[0].bookId) {
           console.info('[ReadingChainUi] step detail-success title="' + currentBook.title + '" chapterListUrl="' + currentBook.chapterListUrl + '"');
-          if (currentBook.chapterListUrl.length > 0) {
-            phase = 'chapter';
-            chapterDispatched = true;
-            ReaderUiStore.dispatch({ type: 'chapter-load', chapterId: currentBook.chapterListUrl });
-            console.info('[ReadingChainUi] dispatched chapter-load chapterId=' + currentBook.chapterListUrl);
-            return;
-          } else {
-            clearInterval(poll);
-            console.info('[ReadingChainUi] DONE search-success (detail has no chapterListUrl; chain stops at detail) results=' + sr.length + ' title="' + currentBook.title + '"');
-            manifest.markVerifiedByTag('ReadingChainUi');
-            return;
-          }
+          phase = 'toc';
+          return;
+        }
+      } else if (phase === 'toc') {
+        const chapterId = firstReadableReadingChainUiChapterId(chapterToc);
+        if (chapterId.length > 0) {
+          phase = 'chapter';
+          chapterDispatched = true;
+          ReaderUiStore.dispatch({ type: 'chapter-load', chapterId: chapterId });
+          console.info('[ReadingChainUi] dispatched chapter-load chapterId=' + chapterId);
+          return;
         }
       } else if (phase === 'chapter') {
         if (chapterContent.length > 0) {

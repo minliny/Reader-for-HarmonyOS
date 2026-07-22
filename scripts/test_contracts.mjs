@@ -1557,6 +1557,7 @@ test('reader entry route semantics match the live demo immersive-to-control flow
   const contractSrc = read(path.join(REPO, 'entry/src/main/ets/ui/components/ContractComponents.ets'));
   const shellSrc = read(path.join(REPO, 'entry/src/main/ets/ui/shells/LibraryShell.ets'));
   const reducerSrc = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderReducer.ets'));
+  const storeSrc = read(path.join(REPO, 'entry/src/main/ets/ui/store/ReaderUiStore.ets'));
   const runtime = read(LIVE_DEMO_RUNTIME);
 
   assert.ok(runtime.includes('reader: { mode: "control" }'),
@@ -1584,15 +1585,31 @@ test('reader entry route semantics match the live demo immersive-to-control flow
     'ReaderBase must treat reader as control and only immersive routes as immersive');
   assert.ok(readerSrc.includes("route-push', id: 'reader'"),
     'immersive center hotzone must open the live reader control route');
-  for (const src of [detailSrc, contractSrc, shellSrc]) {
-    assert.ok(src.includes("route-push', id: 'immersive-reading'"),
-      'reader entry actions must route to immersive-reading before opening the control layer');
+  // A chapter-row tap owns its own concrete chapter load, while all visible
+  // “continue reading” actions share the Core-progress recovery helper. Do
+  // not regress them to duplicated literal route pushes, which would lose the
+  // durable chapter/offset restoration contract.
+  const readButton = contractSrc.slice(
+    contractSrc.indexOf('export struct ReadButton'),
+    contractSrc.indexOf('export struct DirectoryPreview'),
+  );
+  const fixedContinue = shellSrc.slice(
+    shellSrc.indexOf('private continueReading'),
+    shellSrc.indexOf('private hasFixedActionBar'),
+  );
+  for (const src of [readButton, fixedContinue, bookshelfSrc]) {
+    assert.ok(src.includes('ReaderUiStore.dispatchContinueReading('),
+      'continue-reading actions must share Core-backed immersive recovery before the control layer');
   }
-  assert.ok(bookshelfSrc.includes('readerEntry: true') &&
-    bookshelfSrc.includes("coreBook.sourceId === 'local' ? 'local' : 'remote'"),
-  'bookshelf continue must mark the one real book.open alias and preserve remote/local sourceKind');
+  assert.ok(detailSrc.includes("route-push', id: 'immersive-reading'"),
+    'an explicit chapter-row tap must still enter immersive-reading before loading that selected chapter');
+  assert.ok(storeSrc.includes("ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' })") &&
+    storeSrc.includes("sourceId === 'local'") &&
+    storeSrc.includes("type: 'bookshelf-book-open', sourceId: 'local'") &&
+    storeSrc.includes("type: 'book-detail-load', bookId: bookId, sourceId: sourceId, loadFirstChapter: true"),
+  'shared bookshelf continue must enter immersive-reading and preserve local/remote Core recovery ownership');
   assert.ok(reducerSrc.includes("ReaderReducer.push(state, 'immersive-reading')"),
-    'marked bookshelf reader entry must enter immersive-reading in the same native reducer pass');
+    'native reducer must still recognize the immersive Reader route');
   assert.ok(!bookshelfSrc.includes("route-push', id: 'reader'"),
     'bookshelf continue card must not enter the control route directly');
 });
