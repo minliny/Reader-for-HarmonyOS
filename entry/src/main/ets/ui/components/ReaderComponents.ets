@@ -845,9 +845,10 @@ export struct ReadingTextFlow {
 
   private textRightInset(): number {
     const designInset = this.wideReaderLayout() ? Math.max(this.sideMargin, 44) : this.sideMargin;
-    if (this.wideControlDock()) {
-      return Math.max(400, this.safeAreaEnd + designInset);
-    }
+    // The Tablet ControlDock is a floating overlay, not a permanent second
+    // column. Keep the same bilateral reading edges as the frozen Reader 2
+    // master; reserving 400vp here collapsed the entire chapter into the left
+    // half of the tablet whenever the control layer was open.
     return Math.max(designInset, this.safeAreaEnd + designInset);
   }
 

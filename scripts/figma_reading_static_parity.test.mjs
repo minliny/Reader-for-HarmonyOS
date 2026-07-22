@@ -55,3 +55,13 @@ test('Figma responsive policy exposes only Phone and Tablet, with a measured Tab
   assert.ok(shell.includes("bottom: this.usesTabletShell()"));
   assert.equal(shell.includes('.position('), false);
 });
+
+test('Figma Tablet Reader keeps a bilateral reading surface beneath its floating Dock', async () => {
+  const reader = await source('entry/src/main/ets/ui/components/ReaderComponents.ets');
+  const textFlow = sourceRange(reader, 'export struct ReadingTextFlow', '@Builder NativeSelectionMenu()');
+  const textRightInset = sourceRange(textFlow, 'private textRightInset(): number', 'private textBottomInset(): number');
+  assert.ok(textRightInset.includes('return Math.max(designInset, this.safeAreaEnd + designInset);'));
+  assert.equal(textRightInset.includes('wideControlDock()'), false);
+  assert.equal(textRightInset.includes('Math.max(400,'), false);
+  assert.equal(760 - 44 * 2, 672);
+});

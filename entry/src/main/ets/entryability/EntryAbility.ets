@@ -17,7 +17,7 @@ import util from '@ohos.util';
 import zlib from '@ohos.zlib';
 import { ReaderUiStore } from '../ui/store/ReaderUiStore';
 import { ReaderEffects } from '../ui/store/ReaderEffects';
-import { ReaderPaginationMode, SearchResultEntry, BookDetail } from '../ui/store/ReaderUiState';
+import { ReaderPaginationMode, SearchResultEntry, BookDetail, UiEvent } from '../ui/store/ReaderUiState';
 import { SafeAreaAdapter } from '../ui/adapters/SafeAreaAdapter';
 import { ViewportAdapter } from '../ui/adapters/ViewportAdapter';
 import { InteractionDebugAdapter } from '../ui/adapters/InteractionDebugAdapter';
@@ -44,6 +44,18 @@ import {
   HostNotificationCancelRequest,
   HostDeviceVibrateRequest,
 } from '../host/types';
+
+// Keep the device-only reading-chain probe on the same source-scoped detail
+// contract as a user tap. Exported solely so the probe payload can be covered
+// without constructing a UIAbility in a host unit test.
+export function buildReadingChainUiDetailLoadEvent(result: SearchResultEntry): UiEvent {
+  return {
+    type: 'book-detail-load',
+    bookId: result.bookId,
+    sourceId: result.sourceId ?? '',
+    loadFirstChapter: false,
+  };
+}
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
@@ -862,7 +874,7 @@ export default class EntryAbility extends UIAbility {
           console.info('[ReadingChainUi] step search-success results=' + sr.length + ' first="' + firstTitle + '" bookId="' + firstBookId + '"');
           phase = 'detail';
           detailDispatched = true;
-          ReaderUiStore.dispatch({ type: 'book-detail-load', bookId: firstBookId, loadFirstChapter: false });
+          ReaderUiStore.dispatch(buildReadingChainUiDetailLoadEvent(sr[0]));
           console.info('[ReadingChainUi] dispatched book-detail-load bookId=' + firstBookId);
           return;
         }

@@ -675,7 +675,19 @@ test('reader control layer uses live demo top overlay and reading copy', () => {
   assert.ok(reader.includes('left: this.textLeftInset()'),
     'reader text left inset must be route-stable instead of control-layer-specific');
   assert.ok(reader.includes('right: this.textRightInset()'),
-    'reader text right inset may only branch for wide reader dock coverage');
+    'reader text right inset must stay explicit and independently verifiable');
+  const textRightInsetStart = textFlow.indexOf('private textRightInset(): number');
+  const textRightInsetEnd = textFlow.indexOf('  private textBottomInset(): number', textRightInsetStart);
+  const textRightInset = textFlow.slice(textRightInsetStart, textRightInsetEnd);
+  assert.ok(textRightInset.includes('return Math.max(designInset, this.safeAreaEnd + designInset);'),
+    'tablet reading text must retain its normal bilateral design edge');
+  assert.ok(!textRightInset.includes('wideControlDock()') && !textRightInset.includes('return Math.max(400,'),
+    'tablet ControlDock must remain a floating overlay and never reserve a 400vp full-height text column');
+  const frozenTabletWidth = 760;
+  const frozenTabletDesignInset = 44;
+  const frozenTabletTextWidth = frozenTabletWidth - frozenTabletDesignInset * 2;
+  assert.equal(frozenTabletTextWidth, 672,
+    'frozen Reader 2 tablet baseline retains a full-width 672vp text frame before its independent floating dock overlays it');
   assert.ok(reader.includes('bottom: this.textBottomInset()'),
     'reader text bottom inset must not reserve bottom sheet space');
   assert.ok(reader.includes('return Math.max(baseTop, this.safeAreaTop + SpacingTokens.lg)'),
