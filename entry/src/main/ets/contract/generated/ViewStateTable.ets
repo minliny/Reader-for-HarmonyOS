@@ -6387,7 +6387,39 @@ export class ViewStateTable {
               "label": "reader.replace.undo",
               "uiEvent": "reader.replace.undo",
               "uiEventPayload": {
-                "transactionId": "replace-42"
+                "undoToken": {
+                  "schemaVersion": 1,
+                  "transactionId": "replace-42",
+                  "revision": "40bcc58c1d465c597efdd35bd5227498c66163938cfef4f4f0d08fcab241f5f3",
+                  "operation": "update",
+                  "ruleId": 41,
+                  "issuedAt": 1900000000,
+                  "expiresAt": 1900000300,
+                  "before": {
+                    "id": 41,
+                    "name": "rename",
+                    "pattern": "rain",
+                    "replacement": "rain",
+                    "scopeTitle": false,
+                    "scopeContent": true,
+                    "isEnabled": true,
+                    "isRegex": false,
+                    "timeoutMillisecond": 3000,
+                    "order": 0
+                  },
+                  "after": {
+                    "id": 41,
+                    "name": "rename",
+                    "pattern": "rain",
+                    "replacement": "sun",
+                    "scopeTitle": false,
+                    "scopeContent": true,
+                    "isEnabled": true,
+                    "isRegex": false,
+                    "timeoutMillisecond": 3000,
+                    "order": 0
+                  }
+                }
               },
               "uiEventTrigger": "tap"
             },
@@ -7843,6 +7875,7 @@ export class ViewStateTable {
     "pageState": "default",
     "context": {
       "taskId": "download-001",
+      "sourceId": "src-001",
       "bookId": "bk-001"
     },
     "components": [
@@ -7903,8 +7936,7 @@ export class ViewStateTable {
             "type": "Button",
             "id": "download-task-detail-retry",
             "props": {
-              "label": "重试",
-              "availability": "planned-fail-closed"
+              "label": "重试"
             },
             "children": [],
             "bindings": [
@@ -7912,8 +7944,12 @@ export class ViewStateTable {
                 "target": "retry",
                 "event": "download.task.retry",
                 "payload": {
-                  "taskId": "download-001",
-                  "bookId": "bk-001"
+                  "sourceId": "src-001",
+                  "bookId": "bk-001",
+                  "chapterRange": [
+                    12,
+                    30
+                  ]
                 },
                 "trigger": "tap"
               }

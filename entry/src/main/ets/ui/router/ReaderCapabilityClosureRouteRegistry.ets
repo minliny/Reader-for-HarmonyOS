@@ -120,7 +120,7 @@ export class ReaderCapabilityClosureRouteRegistry {
       ['GlobalStatePage']),
     plannedRouteDefinition('settings-tts', '朗读设置（TTS Settings）', 'SettingsShell', 'default',
       ['BackTopBar', 'SettingsGeneralPage']),
-    coreRouteDefinition('settings-storage', '存储设置（Storage Settings）', 'SettingsShell', 'default',
+    plannedRouteDefinition('settings-storage', '存储设置（Storage Settings）', 'SettingsShell', 'default',
       ['BackTopBar', 'SettingsGeneralPage']),
     nativeRouteDefinition('settings-accessibility', '无障碍设置（Accessibility Settings）', 'SettingsShell', 'default',
       ['BackTopBar', 'SettingsGeneralPage']),
@@ -160,9 +160,6 @@ export class ReaderCapabilityClosureRouteRegistry {
       definition.executionPolicy !== CapabilityClosureExecutionPolicy.CoreBacked) return false;
     if (id === 'bookmarks-manager') {
       return Slice10CapabilityPolicy.isProduction('reading.bookmarks');
-    }
-    if (id === 'settings-storage') {
-      return Slice10CapabilityPolicy.isProduction('reading.cache');
     }
     return false;
   }
