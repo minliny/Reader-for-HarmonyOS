@@ -66,26 +66,7 @@ export struct LibraryShell {
 
   private continueReading(): void {
     if (this.currentBook === null) return;
-    ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' });
-    const sourceId = this.currentBook.sourceId ?? '';
-    if (sourceId === 'local') {
-      // Imported books are materialized shelf rows. Re-open through the
-      // local shelf path so Core's exact local progress row selects the
-      // chapter; a cached TOC's first row is not a resume position.
-      ReaderUiStore.dispatch({
-        type: 'bookshelf-book-open', sourceId: 'local', bookId: this.currentBook.bookId,
-      });
-      return;
-    }
-    if (sourceId.length > 0) {
-      // Re-read the source-scoped Core progress row and TOC. A visual TOC
-      // index is neither a Core chapter identity nor a character offset.
-      ReaderUiStore.dispatch({
-        type: 'book-detail-load', bookId: this.currentBook.bookId, sourceId: sourceId, loadFirstChapter: true,
-      });
-    } else {
-      ReaderUiStore.dispatch({ type: 'book-detail-load', bookId: this.currentBook.bookId, loadFirstChapter: true });
-    }
+    ReaderUiStore.dispatchContinueReading(this.currentBook.bookId, this.currentBook.sourceId ?? '');
   }
 
   private hasFixedActionBar(): boolean {

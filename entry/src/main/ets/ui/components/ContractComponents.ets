@@ -95,17 +95,7 @@ export struct ReadButton {
       .onClick(() => {
         const book = this.currentBook;
         if (book === null) return;
-        ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' });
-        const sourceId = book.sourceId ?? '';
-        if (sourceId === 'local') {
-          ReaderUiStore.dispatch({ type: 'bookshelf-book-open', sourceId: 'local', bookId: book.bookId });
-          return;
-        }
-        // A chapterListUrl is a TOC endpoint, not a chapter or a resume
-        // coordinate. Re-open through the Core source-scoped resume path.
-        ReaderUiStore.dispatch({
-          type: 'book-detail-load', bookId: book.bookId, sourceId: sourceId, loadFirstChapter: true,
-        });
+        ReaderUiStore.dispatchContinueReading(book.bookId, book.sourceId ?? '');
       })
   }
 }

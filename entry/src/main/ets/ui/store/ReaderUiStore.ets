@@ -469,6 +469,28 @@ export class ReaderUiStore {
     AppStorage.setOrCreate<string>(ReaderUiStore.K_LAST_OP, '');
   }
 
+  /**
+   * Shared direct-reader entry for every visible “continue reading” affordance.
+   *
+   * The Book Open Pilot currently starts from a requested visual chapter
+   * position and cannot carry the durable Core character anchor.  Continue
+   * therefore stays on the existing ReaderEffects recovery owner: it reads
+   * the source-scoped Core progress row, resolves its Core TOC identity, then
+   * restores the canonical location after the selected chapter has loaded.
+   * This is deliberately a dispatch helper, not a new UiEvent or UI state.
+   */
+  static dispatchContinueReading(bookId: string, sourceId: string): void {
+    if (bookId.length === 0) return;
+    ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' });
+    if (sourceId === 'local') {
+      ReaderUiStore.dispatch({ type: 'bookshelf-book-open', sourceId: 'local', bookId: bookId });
+      return;
+    }
+    ReaderUiStore.dispatch({
+      type: 'book-detail-load', bookId: bookId, sourceId: sourceId, loadFirstChapter: true,
+    });
+  }
+
   static dispatch(event: UiEvent): void {
     const bookOpenCancellation: ReaderUIBookOpenPilotResult =
       ReaderUiStore.runtimeShadow.dispatchBookOpenCancellation(event, ReaderUiStore.state);

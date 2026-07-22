@@ -10,6 +10,7 @@ import BookDetailViewStateTests from './BookDetailViewState.test';
 import ReaderOverlayViewStateTests from './ReaderOverlayViewState.test';
 import ReaderOverlayDispatchTests from './ReaderOverlayDispatch.test';
 import ReaderEffectsTests from './ReaderEffects.test';
+import ReaderContinueRecoveryTests from './ReaderContinueRecovery.test';
 import ReaderUIRuntimePilotTests from './ReaderUIRuntimePilot.test';
 import ReaderUIRuntimeShadowTests from './ReaderUIRuntimeShadow.test';
 import ReaderUIDirectoryPilotTests from './ReaderUIDirectoryPilot.test';
@@ -56,6 +57,7 @@ export default function testsuit(): void {
   ReaderOverlayViewStateTests();
   ReaderOverlayDispatchTests();
   ReaderEffectsTests();
+  ReaderContinueRecoveryTests();
   ReaderUIRuntimePilotTests();
   ReaderUIRuntimeShadowTests();
   ReaderUIDirectoryPilotTests();

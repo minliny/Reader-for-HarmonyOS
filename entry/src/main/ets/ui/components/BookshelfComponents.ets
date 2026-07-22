@@ -209,14 +209,11 @@ export struct ContinueReadingCard {
   private openReader(): void {
     const coreBook = this.coreContinueBook();
     if (coreBook === null) return;
-    ReaderUiStore.dispatch({
-      type: 'bookshelf-book-open',
-      sourceId: coreBook.sourceId,
-      bookId: coreBook.bookId,
-      sourceKind: coreBook.sourceId === 'local' ? 'local' : 'remote',
-      chapterIndex: 0,
-      readerEntry: true,
-    });
+    // Keep the card a direct reader entry, but never send it through the
+    // chapterIndex=0 Book Open Pilot. The shared dispatch preserves the same
+    // durable Core progress -> TOC identity -> canonical location recovery as
+    // the detail page's “继续阅读” action.
+    ReaderUiStore.dispatchContinueReading(coreBook.bookId, coreBook.sourceId);
   }
 }
 

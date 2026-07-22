@@ -57,7 +57,7 @@ interface SourceSwitchChapterTarget {
 // A source-scoped row returned by Core's `reading.progress.get`.  This is
 // deliberately separate from the visible reader state: the latter is only a
 // fallback while Core has no durable row for the exact book/source pair.
-interface PersistedReadingProgress {
+export interface PersistedReadingProgress {
   chapterIndex: number;
   chapterOffset: number;
   chapterProgress: number;
@@ -3355,7 +3355,10 @@ export class ReaderEffects {
     });
   }
 
-  private static localPersistedProgressTocEntry(toc: ChapterTocEntry[],
+  // Pure Core-identity selection policy shared by the direct continue-reading
+  // path and its regression coverage. `toc` already contains only readable
+  // local rows, so its first entry is the deterministic no-progress fallback.
+  static localPersistedProgressTocEntry(toc: ChapterTocEntry[],
     progress: PersistedReadingProgress | null): ChapterTocEntry {
     if (progress !== null) {
       for (let index = 0; index < toc.length; index += 1) {
@@ -4524,33 +4527,7 @@ export class ReaderEffects {
     sourceId: string): Promise<PersistedReadingProgress | null> {
     try {
       const data = await runtime.readingProgressGet(bookId, sourceId);
-      const fields = data as Object as Record<string, Object>;
-      if (fields['found'] !== true) return null;
-      const rawProgress = fields['progress'];
-      if (rawProgress === null || rawProgress === undefined || typeof rawProgress !== 'object' ||
-        Array.isArray(rawProgress)) {
-        return null;
-      }
-      const progress = rawProgress as Object as JsonObject;
-      // A malformed or foreign payload must never relocate the visible reader.
-      const returnedBookId = ReaderEffects.getString(progress, 'bookId');
-      const returnedSourceId = ReaderEffects.getString(progress, 'sourceId');
-      if (returnedBookId !== bookId || returnedSourceId !== sourceId) {
-        return null;
-      }
-      const chapterIndex = ReaderEffects.getNumber(progress, 'chapterIndex', -1);
-      const chapterOffset = ReaderEffects.getNumber(progress, 'chapterOffset', -1);
-      const chapterProgress = ReaderEffects.getNumber(progress, 'chapterProgress', -1);
-      if (!Number.isFinite(chapterIndex) || chapterIndex < 0 || !Number.isFinite(chapterOffset) ||
-        chapterOffset < 0 || !Number.isFinite(chapterProgress) || chapterProgress < 0 || chapterProgress > 1) {
-        return null;
-      }
-      return {
-        chapterIndex: Math.floor(chapterIndex),
-        chapterOffset: Math.floor(chapterOffset),
-        chapterProgress: chapterProgress,
-        locationRevision: ReaderEffects.getString(progress, 'locationRevision'),
-      };
+      return ReaderEffects.parsePersistedReadingProgress(data, bookId, sourceId);
     } catch (e) {
       // Rolling upgrades can temporarily pair the UI with an older Core NAPI
       // binary.  Falling back to an explicit chapter start is safer than
@@ -4560,7 +4537,45 @@ export class ReaderEffects {
     }
   }
 
-  private static persistedProgressTocPosition(toc: JsonObject[],
+  // Keep DTO validation independent of the async Core bridge so malformed,
+  // foreign, or incomplete durable rows can be tested without pretending a
+  // fake runtime proves NAPI behavior.
+  static parsePersistedReadingProgress(data: JsonObject, bookId: string,
+    sourceId: string): PersistedReadingProgress | null {
+    const fields = data as Object as Record<string, Object>;
+    if (fields['found'] !== true) return null;
+    const rawProgress = fields['progress'];
+    if (rawProgress === null || rawProgress === undefined || typeof rawProgress !== 'object' ||
+      Array.isArray(rawProgress)) {
+      return null;
+    }
+    const progress = rawProgress as Object as JsonObject;
+    // A malformed or foreign payload must never relocate the visible reader.
+    const returnedBookId = ReaderEffects.getString(progress, 'bookId');
+    const returnedSourceId = ReaderEffects.getString(progress, 'sourceId');
+    if (returnedBookId !== bookId || returnedSourceId !== sourceId) {
+      return null;
+    }
+    const chapterIndex = ReaderEffects.getNumber(progress, 'chapterIndex', -1);
+    const chapterOffset = ReaderEffects.getNumber(progress, 'chapterOffset', -1);
+    const chapterProgress = ReaderEffects.getNumber(progress, 'chapterProgress', -1);
+    if (!Number.isFinite(chapterIndex) || chapterIndex < 0 || !Number.isFinite(chapterOffset) ||
+      chapterOffset < 0 || !Number.isFinite(chapterProgress) || chapterProgress < 0 || chapterProgress > 1) {
+      return null;
+    }
+    return {
+      chapterIndex: Math.floor(chapterIndex),
+      chapterOffset: Math.floor(chapterOffset),
+      chapterProgress: chapterProgress,
+      locationRevision: ReaderEffects.getString(progress, 'locationRevision'),
+    };
+  }
+
+  // Pure Core-identity selection policy for persisted remote rows. The return
+  // value is a raw TOC position only after the progress chapter identity has
+  // matched a readable Core row; it is never an interpretation of the Core
+  // chapter index as an array position.
+  static persistedProgressTocPosition(toc: JsonObject[],
     progress: PersistedReadingProgress | null): number {
     if (progress !== null) {
       const exactPosition = ReaderEffects.findTocPositionByCoreIndex(toc, progress.chapterIndex);
