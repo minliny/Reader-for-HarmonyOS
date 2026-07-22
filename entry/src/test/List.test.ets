@@ -20,6 +20,7 @@ import ReaderBookOpenDomainMapperTests from './ReaderBookOpenDomainMapper.test';
 import ReaderBookOpenPilotExecutorTests from './ReaderBookOpenPilotExecutor.test';
 import ReaderPlaybackPilotExecutorTests from './ReaderPlaybackPilotExecutor.test';
 import ReaderImportPilotExecutorTests from './ReaderImportPilotExecutor.test';
+import LocalBookImportBatchCoordinatorTests from './LocalBookImportBatchCoordinator.test';
 import ReaderSourceSwitchPilotExecutorTests from './ReaderSourceSwitchPilotExecutor.test';
 import ReaderReplaceRulePilotExecutorTests from './ReaderReplaceRulePilotExecutor.test';
 import ReaderRssPilotExecutorTests from './ReaderRssPilotExecutor.test';
@@ -68,6 +69,7 @@ export default function testsuit(): void {
   ReaderBookOpenPilotExecutorTests();
   ReaderPlaybackPilotExecutorTests();
   ReaderImportPilotExecutorTests();
+  LocalBookImportBatchCoordinatorTests();
   ReaderSourceSwitchPilotExecutorTests();
   ReaderReplaceRulePilotExecutorTests();
   ReaderRssPilotExecutorTests();
