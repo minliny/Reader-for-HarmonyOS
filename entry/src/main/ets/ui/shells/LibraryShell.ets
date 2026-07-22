@@ -16,6 +16,7 @@ import { OverlayHost } from '../slots/OverlayHost';
 import { StateHost } from '../slots/StateHost';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 import { BookDetail } from '../store/ReaderUiState';
+import { ReaderTypography } from '../tokens/ReaderTypography';
 
 @Component
 struct LibraryFixedActionButton {
@@ -56,6 +57,33 @@ struct LibraryFixedActionButton {
   }
 }
 
+// Native rendering of the attached Figma Library/BookDetail/ActionBar child.
+// This is deliberately separate from the legacy generic Library fixed action
+// button so Book Detail's 52px bar and 46px actions cannot change other routes.
+@Component
+struct BookDetailActionBarButton {
+  @Prop label: string = '';
+  @Prop variant: string = 'primary';
+
+  private isDanger(): boolean {
+    return this.variant === 'danger';
+  }
+
+  build() {
+    Text(this.label)
+      .fontFamily(ReaderTypography.sansFamily())
+      .fontSize(13)
+      .fontWeight(900)
+      .fontColor(this.isDanger() ? ColorTokens.accent : DemoAliasTokens.onPrimary)
+      .width('100%')
+      .height(46)
+      .border({ width: 1, color: this.isDanger() ? ColorTokens.border : ColorTokens.primaryDark })
+      .borderRadius(DemoAliasTokens.radiusPill)
+      .backgroundColor(this.isDanger() ? DemoAliasTokens.surface : ColorTokens.primaryDark)
+      .textAlign(TextAlign.Center)
+  }
+}
+
 @Component
 export struct LibraryShell {
   static readonly SLOT_NAMES: string[] = ['topArea', 'content', 'overlayHost', 'stateHost'];
@@ -75,12 +103,33 @@ export struct LibraryShell {
       || this.routeId === 'book-detail-toc-preview';
   }
 
+  private isBookDetailRoute(): boolean {
+    return this.routeId === 'book-detail' || this.routeId === 'book-detail-toc-preview';
+  }
+
+  // Figma Book Detail masters: x=19, width=350 on 390 Phone and width=720 on
+  // 760 Tablet. The explicit 19/21 split preserves those attached-master
+  // measurements without changing the shared LibraryShell spacing of other routes.
+  private contentInsetLeft(): number {
+    return SpacingTokens.safeAreaHorizontal + 3;
+  }
+
+  private contentInsetRight(): number {
+    return SpacingTokens.safeAreaHorizontal + (this.isBookDetailRoute() ? 5 : 3);
+  }
+
   private scrollBottomPadding(): number {
     return this.hasFixedActionBar() ? 18 : 112 + this.safeAreaBottom;
   }
 
   private actionBarHeight(): number {
     return 62 + this.safeAreaBottom;
+  }
+
+  private bookDetailActionBarHeight(): number {
+    // The safe-area strip is host-owned; the visible Figma ActionBar remains
+    // exactly 52px, with two 46px controls and 3px vertical insets.
+    return 52 + this.safeAreaBottom;
   }
 
   build() {
@@ -99,8 +148,8 @@ export struct LibraryShell {
         .align(Alignment.Top)
         .padding({
           top: 8,
-          left: SpacingTokens.safeAreaHorizontal + 3,
-          right: SpacingTokens.safeAreaHorizontal + 3,
+          left: this.contentInsetLeft(),
+          right: this.contentInsetRight(),
           bottom: this.scrollBottomPadding(),
         })
         .backgroundColor(ColorTokens.paper)
@@ -134,7 +183,7 @@ export struct LibraryShell {
       }
       .width('100%')
       .height(this.actionBarHeight())
-      .padding({ left: SpacingTokens.safeAreaHorizontal + 3, right: SpacingTokens.safeAreaHorizontal + 3, top: 10, bottom: this.safeAreaBottom + 10 })
+      .padding({ left: this.contentInsetLeft(), right: this.contentInsetRight(), top: 10, bottom: this.safeAreaBottom + 10 })
       .linearGradient({
         angle: 180,
         colors: [
@@ -146,16 +195,16 @@ export struct LibraryShell {
       .zIndex(ZIndexTokens.mainNav)
     } else if (this.routeId === 'book-detail' || this.routeId === 'book-detail-toc-preview') {
       Row({ space: 10 }) {
-        LibraryFixedActionButton({ label: '继续阅读' })
+        BookDetailActionBarButton({ label: '继续阅读' })
           .layoutWeight(1)
           .onClick(() => this.continueReading())
-        LibraryFixedActionButton({ label: '移除书架', variant: 'dangerSoft' })
+        BookDetailActionBarButton({ label: '移除书架', variant: 'danger' })
           .layoutWeight(1)
           .onClick(() => ReaderUiStore.dispatch({ type: 'book-action', bookAction: 'delete' }))
       }
       .width('100%')
-      .height(this.actionBarHeight())
-      .padding({ left: SpacingTokens.safeAreaHorizontal + 3, right: SpacingTokens.safeAreaHorizontal + 3, top: 10, bottom: this.safeAreaBottom + 10 })
+      .height(this.bookDetailActionBarHeight())
+      .padding({ left: this.contentInsetLeft(), right: this.contentInsetRight(), top: 3, bottom: this.safeAreaBottom + 3 })
       .linearGradient({
         angle: 180,
         colors: [

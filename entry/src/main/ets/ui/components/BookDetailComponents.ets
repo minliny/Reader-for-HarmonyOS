@@ -8,6 +8,7 @@ import { ReaderTypography } from '../tokens/ReaderTypography';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 import { BookDetail, ChapterTocEntry } from '../store/ReaderUiState';
 import { MotionAdapter } from '../adapters/MotionAdapter';
+import { ViewportAdapter } from '../adapters/ViewportAdapter';
 import { SourceCoverImage } from './SourceCoverImage';
 
 interface BookFactEntry {
@@ -62,9 +63,6 @@ export struct BookHero {
     if (book.latestChapter.length > 0) {
       facts.push({ label: '最新', value: book.latestChapter });
     }
-    if (book.sourceName.length > 0) {
-      facts.push({ label: '来源', value: book.sourceName });
-    }
     return facts;
   }
 
@@ -114,7 +112,6 @@ export struct BookHero {
           .width(86)
           .height(122)
           .borderRadius(DemoAliasTokens.radiusSm)
-          .shadow({ radius: 16, color: DemoAliasTokens.shadowElevatedColor, offsetX: 0, offsetY: 8 })
           Column() {
             Text(this.currentBook.title.length > 0 ? this.currentBook.title : '未命名书籍')
               .fontSize(22)
@@ -133,25 +130,6 @@ export struct BookHero {
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
                 .margin({ top: 8 })
             }
-            if (this.currentBook.latestChapter.length > 0) {
-              Row({ space: 8 }) {
-                Text('最新')
-                  .fontSize(11)
-                  .fontWeight(800)
-                  .fontColor(ColorTokens.muted)
-                  .width(34)
-                Text(this.currentBook.latestChapter)
-                  .fontSize(12)
-                  .fontColor(ColorTokens.ink)
-                  .lineHeight(12 * 1.35)
-                  .layoutWeight(1)
-                  .maxLines(1)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
-              }
-              .width('100%')
-              .alignItems(VerticalAlign.Center)
-              .margin({ top: 10 })
-            }
             if (this.facts().length > 0) {
               BookFacts({ facts: this.facts() })
             }
@@ -161,6 +139,7 @@ export struct BookHero {
                   .fontSize(12)
                   .fontWeight(700)
                   .fontColor(ColorTokens.muted)
+                  .layoutWeight(1)
                   .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
                 Text('更换书源')
@@ -188,11 +167,11 @@ export struct BookHero {
       }
     }
     .width('100%')
+    .height(152)
     .padding(14)
     .border({ width: 1, color: ColorTokens.border })
     .borderRadius(DemoAliasTokens.radiusMd)
     .backgroundColor(DemoAliasTokens.surface)
-    .shadow({ radius: 26, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 8 })
     .alignItems(HorizontalAlign.Center)
   }
 }
@@ -201,6 +180,14 @@ export struct BookHero {
 @Component
 export struct BookSummaryCard {
   @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
+  @StorageProp(ViewportAdapter.K_WIDTH) viewportWidth: number = ViewportAdapter.DEFAULT_WIDTH;
+  @StorageProp(ViewportAdapter.K_HEIGHT) viewportHeight: number = ViewportAdapter.DEFAULT_HEIGHT;
+
+  // The only responsive branches in the Book Detail Figma master are Phone
+  // and Tablet.  Landscape intentionally reuses Tablet geometry.
+  private cardHeight(): number {
+    return ViewportAdapter.isWide(this.viewportWidth, this.viewportHeight) ? 98 : 120;
+  }
 
   build() {
     Column() {
@@ -219,12 +206,12 @@ export struct BookSummaryCard {
         .margin({ top: 8 })
     }
     .width('100%')
+    .height(this.cardHeight())
     .alignItems(HorizontalAlign.Start)
     .padding(14)
     .border({ width: 1, color: ColorTokens.border })
     .borderRadius(DemoAliasTokens.radiusMd)
     .backgroundColor(DemoAliasTokens.surface)
-    .shadow({ radius: 26, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 8 })
   }
 }
 
@@ -349,11 +336,11 @@ export struct BookChapterList {
       }
     }
     .width('100%')
+    .height(282)
     .alignItems(HorizontalAlign.Start)
     .padding(0)
     .border({ width: 1, color: ColorTokens.border })
     .borderRadius(DemoAliasTokens.radiusMd)
     .backgroundColor(DemoAliasTokens.surface)
-    .shadow({ radius: 26, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 8 })
   }
 }

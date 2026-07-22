@@ -52,18 +52,30 @@ test('Slice 12 settings freeze owner, default, persistence and reset without cro
   assert.ok(effects.includes('preferences.saveReducedMotion(enabled)'));
 });
 
-test('Slice 12 viewport publishes Phone, Compact Landscape and Tablet while fold stays explicit unverified', async () => {
+test('Slice 12 viewport publishes only Phone and Tablet while fold stays explicit unverified', async () => {
   const viewport = await source('entry/src/main/ets/ui/adapters/ViewportAdapter.ets');
   const entry = await source('entry/src/main/ets/entryability/EntryAbility.ets');
   const components = await source('entry/src/main/ets/ui/components/Slice12LifecycleComponents.ets');
-  assert.ok(viewport.includes("export type ViewportClass = 'phone' | 'compact-landscape' | 'tablet'"));
-  assert.ok(viewport.includes("if (safeWidth >= 700) return 'tablet'"));
-  assert.ok(viewport.includes("if (safeWidth > safeHeight) return 'compact-landscape'"));
+  assert.ok(viewport.includes("export type ViewportClass = 'phone' | 'tablet'"));
+  assert.ok(viewport.includes("return safeWidth >= 700 || safeWidth > safeHeight ? 'tablet' : 'phone';"));
+  assert.equal(viewport.includes("'compact-landscape'"), false);
   assert.ok(entry.includes('ViewportAdapter.classify(width, height)'));
   assert.ok(entry.includes("ViewportAdapter.K_FOLD_POSTURE, 'unverified'"));
   assert.ok(components.includes('未收到 hinge Host 事件时不会按宽度猜测折叠状态'));
   assert.match(await source('entry/src/main/ets/ui/store/Slice12CapabilityPolicy.ets'),
     /id: 'layout\.fold-posture'[\s\S]*HostBlockedFailClosed/);
+});
+
+test('MainTabShell maps the approved Tablet rail without replacing Phone tab behavior', async () => {
+  const shell = await source('entry/src/main/ets/ui/shells/MainTabShell.ets');
+  assert.ok(shell.includes('TABLET_NAV_WIDTH: number = 82'));
+  assert.ok(shell.includes('TABLET_NAV_FOOTPRINT: number = 100'));
+  assert.ok(shell.includes('if (this.usesTabletShell())'));
+  assert.ok(shell.includes('this.renderTabletMainNav()'));
+  assert.ok(shell.includes('if (!this.usesTabletShell())'));
+  assert.ok(shell.includes('BottomNav()'));
+  assert.ok(shell.includes("MotionAdapter.apply('tab.switch'"));
+  assert.equal(shell.includes('.position('), false);
 });
 
 test('Slice 12 accessibility baseline labels shared controls and removes loading animation under reduced motion', async () => {

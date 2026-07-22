@@ -80,7 +80,7 @@ export class Slice12CapabilityPolicy {
       id: 'layout.viewport-class',
       owner: 'Harmony window metrics',
       executionPolicy: Slice12ExecutionPolicy.NativeLocal,
-      reason: 'Phone, compact-landscape and tablet are derived only from live viewport dimensions.',
+      reason: 'Phone and tablet are derived only from live viewport dimensions; landscape aliases the tablet shell.',
     },
     {
       id: 'layout.fold-posture',

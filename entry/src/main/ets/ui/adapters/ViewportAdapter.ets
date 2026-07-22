@@ -1,10 +1,12 @@
 // ViewportAdapter — runtime viewport bridge for responsive demo geometry.
-// EntryAbility writes display width/height in vp so reader control components can
-// choose the same mobile vs tablet/landscape branches as frontend-demo CSS.
+//
+// Figma admits only two shell canvases: Phone (390×844) and Tablet (760×960).
+// A landscape viewport intentionally aliases the Tablet shell; there is no
+// separate landscape or fold-specific layout branch to keep in sync.
 
 import { SizeTokens } from '../../contract/generated/DimensionTokens';
 
-export type ViewportClass = 'phone' | 'compact-landscape' | 'tablet';
+export type ViewportClass = 'phone' | 'tablet';
 export type FoldPostureState = 'unverified' | 'flat' | 'separating' | 'folded';
 
 export class ViewportAdapter {
@@ -17,15 +19,15 @@ export class ViewportAdapter {
   static readonly DEFAULT_HEIGHT: number = SizeTokens.phoneHeight;
 
   static isWide(width: number, height: number): boolean {
-    return width >= 700 || width > height;
+    return ViewportAdapter.classify(width, height) === 'tablet';
   }
 
   static classify(width: number, height: number): ViewportClass {
     const safeWidth = Number.isFinite(width) && width > 0 ? width : ViewportAdapter.DEFAULT_WIDTH;
     const safeHeight = Number.isFinite(height) && height > 0 ? height : ViewportAdapter.DEFAULT_HEIGHT;
-    if (safeWidth >= 700) return 'tablet';
-    if (safeWidth > safeHeight) return 'compact-landscape';
-    return 'phone';
+    // Portrait Tablet keeps the existing width admission. Any landscape
+    // viewport aliases the same Tablet shell, including a rotated Phone.
+    return safeWidth >= 700 || safeWidth > safeHeight ? 'tablet' : 'phone';
   }
 
   // Fold posture is never inferred from width, height or device type. A future

@@ -218,7 +218,6 @@ export struct Slice12AccessibilitySettingsPage {
   @StorageProp(ViewportAdapter.K_FOLD_POSTURE) foldPosture: string = 'unverified';
 
   private viewportLabel(): string {
-    if (this.viewportClass === 'compact-landscape') return 'Compact Landscape';
     if (this.viewportClass === 'tablet') return 'Tablet';
     return 'Phone';
   }

@@ -54,8 +54,11 @@ function bookshelfCoverResource(coverKey: string): Resource {
   }
 }
 
-// .fd-continue-card: grid 62px 1fr 82px; gap 14; min-height 100; padding 10 16.
-//   cover (.fd-continue-cover-button): 62px, aspect 2/3, radius-sm, clickable.
+// Figma Bookshelf phone master: the content column is 350px wide and the
+// continue card is 350×100.  The shell owns the responsive content width (the
+// tablet shell supplies its 658px content column), while this component keeps
+// the card's internal 10px vertical rhythm and its measured 62×93 cover. No
+// persistent card elevation is part of this surface.
 //   div: h2 "继续阅读" (13/900 primary) + strong (serif 20) + span author (14 muted).
 //   button (.fd-continue-action-button) "阅读": min 74×40, pill, primary, 13/800.
 // The card is driven by a separate global Core progress query, never by the
@@ -155,7 +158,7 @@ export struct ContinueReadingCard {
           }
         }
         .width(62)
-        .aspectRatio(2 / 3)
+        .height(93)
         .borderRadius(DemoAliasTokens.radiusMd)
         .backgroundColor(ColorTokens.metaBg)
         .onClick(() => this.openReader())
@@ -199,11 +202,12 @@ export struct ContinueReadingCard {
       }
     }
     .width('100%')
+    .height(100)
     .padding({ top: 10, bottom: 10, left: 16, right: 16 })
     .border({ width: 1, color: ColorTokens.border })
     .borderRadius(DemoAliasTokens.radiusMd)
     .backgroundColor(DemoAliasTokens.surface)
-    .shadow({ radius: 26, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 8 })
+    .alignItems(VerticalAlign.Center)
   }
 
   private openReader(): void {
@@ -531,7 +535,8 @@ struct LocalBookBadge {
   }
 }
 
-// .fd-book-cover-frame: width 100%, aspect 2/3, radius-md(8), surface, soft-shadow.
+// .fd-book-cover-frame: width 100%, aspect 2/3, radius-md(8), surface.
+// The Figma bookshelf masters do not use a persistent cover elevation.
 @Component
 export struct BookCover {
   @Prop sourceId: string = '';
@@ -559,7 +564,6 @@ export struct BookCover {
     .aspectRatio(2 / 3)
     .borderRadius(DemoAliasTokens.radiusMd)
     .backgroundColor(DemoAliasTokens.surface)
-    .shadow({ radius: 26, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 6 })
   }
 }
 
