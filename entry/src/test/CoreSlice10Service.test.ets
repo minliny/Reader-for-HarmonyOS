@@ -199,7 +199,11 @@ export default function CoreSlice10ServiceTests(): void {
         message = (error as Error).message;
       }
 
-      expect(message.indexOf('both sourceId and bookId') >= 0).assertTrue();
+      // The typed payload contract uses oneOf with three scope variants
+      // (all/cache/book). A book scope without bookId matches none of them,
+      // so rejection happens at schema validation before dispatch.
+      expect(message.indexOf('payload') >= 0).assertTrue();
+      expect(message.indexOf('schema variant') >= 0).assertTrue();
       expect(dispatcher.methods.length).assertEqual(0);
     });
 
@@ -214,7 +218,11 @@ export default function CoreSlice10ServiceTests(): void {
         message = (error as Error).message;
       }
 
-      expect(message).assertEqual('cache.clear returned no result data');
+      // The typed result contract requires scope on every cache.clear result.
+      // An empty object fails schema validation before the service-level
+      // "returned no result data" guard ever runs.
+      expect(message.indexOf('result.scope') >= 0).assertTrue();
+      expect(message.indexOf('is required') >= 0).assertTrue();
     });
 
     it('propagatesCoreRejectionInsteadOfReportingSuccess', 0, async () => {

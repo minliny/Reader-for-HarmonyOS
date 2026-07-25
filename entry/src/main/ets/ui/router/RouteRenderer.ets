@@ -12,6 +12,7 @@ import { LibraryShell } from '../shells/LibraryShell';
 import { SettingsShell } from '../shells/SettingsShell';
 import { FlowShell } from '../shells/FlowShell';
 import { ReaderUIScreenGraphShadowRegistry } from './ReaderUIScreenGraphShadowRegistry';
+import { FigmaWarmSurfaceTokens, FigmaErrorStateTokens } from '../tokens/FigmaReadingVisualTokens';
 
 function operationFor(lastOp: string): MotionRequest | null {
   switch (lastOp) {
@@ -34,20 +35,20 @@ struct UnknownRouteContractDrift {
       Text('Reader UI 路由契约漂移')
         .fontSize(20)
         .fontWeight(800)
-        .fontColor('#A03A32')
+        .fontColor(FigmaErrorStateTokens.errorText)
       Text(this.routeId)
         .fontSize(12)
-        .fontColor('#725F50')
+        .fontColor(FigmaWarmSurfaceTokens.secondaryText)
       Text('未知 RouteId 已 fail-closed，不会回落到任意 Shell。')
         .fontSize(13)
-        .fontColor('#725F50')
+        .fontColor(FigmaWarmSurfaceTokens.secondaryText)
     }
     .width('100%')
     .height('100%')
     .padding(24)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor('#FFF8F5')
+    .backgroundColor(FigmaErrorStateTokens.errorContainer)
   }
 }
 

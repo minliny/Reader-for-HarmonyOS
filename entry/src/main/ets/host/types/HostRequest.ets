@@ -182,7 +182,7 @@ export interface HostWebViewEvaluateRequest {
   profileId?: string;
 }
 
-// ── file.read / file.write / file.delete ──
+// ── file.read / file.write / file.delete / UI-only file.list ──
 export interface HostFileReadRequest {
   path: string;
   encoding?: string;
@@ -200,6 +200,14 @@ export interface HostFileWriteRequest {
 }
 
 export interface HostFileDeleteRequest {
+  path: string;
+}
+
+/**
+ * UI-only sandbox directory enumeration. This is deliberately not a Core
+ * HostCapability: Core never receives a directory listing over NAPI.
+ */
+export interface HostFileListRequest {
   path: string;
 }
 

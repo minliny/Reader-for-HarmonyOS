@@ -20,8 +20,8 @@ export default function ScreenGraphCoverageTests(): void {
       expect(coverage.hostCompositeTypes.join('|'))
         .assertEqual('TapZones|ReaderBase|ReaderTopArea|ReaderBottomBar');
 
-      expect(coverage.faithfulTypes.length).assertEqual(81);
-      expect(coverage.genericUsableTypes.length).assertEqual(56);
+      expect(coverage.faithfulTypes.length).assertEqual(78);
+      expect(coverage.genericUsableTypes.length).assertEqual(59);
       expect(coverage.partialTypes.length).assertEqual(1);
       expect(coverage.insufficientTypes.length).assertEqual(0);
       expect(coverage.visibleFailureTypes.length).assertEqual(1);
@@ -29,6 +29,11 @@ export default function ScreenGraphCoverageTests(): void {
       expect(coverage.genericUsableTypes.indexOf('ReaderAppearancePanel') >= 0).assertTrue();
       expect(coverage.genericUsableTypes.indexOf('ReaderReplacePanel') >= 0).assertTrue();
       expect(coverage.genericUsableTypes.indexOf('SourceSwitchFlowPage') >= 0).assertTrue();
+      expect(coverage.genericUsableTypes.indexOf('SourceSwitchResultsPanel')).assertEqual(-1);
+      expect(coverage.faithfulTypes.indexOf('RestoreConfirmPage')).assertEqual(-1);
+      expect(coverage.faithfulTypes.indexOf('RestoreProgressPage')).assertEqual(-1);
+      expect(coverage.faithfulTypes.indexOf('RestoreConflictPage')).assertEqual(-1);
+      expect(coverage.faithfulTypes.indexOf('RestoreResultPage')).assertEqual(-1);
       expect(coverage.genericUsableTypes.indexOf('ReadingTextFlow') >= 0).assertTrue();
       // Button stays generic until every canonical binding has an exact
       // Host/reducer/runtime owner. The current adapter intentionally admits
@@ -56,9 +61,12 @@ export default function ScreenGraphCoverageTests(): void {
       expect(coverage.genericUsableTypes.indexOf('Offline')).assertEqual(-1);
 
       expect(coverage.canonicalInstanceCount).assertEqual(615);
-      expect(coverage.faithfulInstanceCount).assertEqual(323);
+      // runtimeActiveInstanceCount / retiredInstanceCount were tracked by the
+      // deleted parallel admission policy; the canonical count above already
+      // covers the total. The decomposition is not re-tracked here.
+      expect(coverage.faithfulInstanceCount).assertEqual(317);
       expect(coverage.hostCompositeInstanceCount).assertEqual(115);
-      expect(coverage.genericUsableInstanceCount).assertEqual(243);
+      expect(coverage.genericUsableInstanceCount).assertEqual(249);
       expect(coverage.partialInstanceCount).assertEqual(49);
       expect(coverage.insufficientInstanceCount).assertEqual(0);
       expect(coverage.explicitTargetBindingCount).assertEqual(97);

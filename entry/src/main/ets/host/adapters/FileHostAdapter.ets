@@ -23,6 +23,9 @@ import {
   HostFileWriteResponse,
   HostFileDeleteRequest,
   HostFileDeleteResponse,
+  HostFileListRequest,
+  HostFileListResponse,
+  HostFileListEntry,
   HostStoragePathResponse,
   HostError,
   HostErrorWrapper,
@@ -249,6 +252,41 @@ export class FileHostAdapter {
     try {
       fs.unlinkSync(resolvedPath);
       return { deleted: true };
+    } catch (e) {
+      throw new HostErrorWrapper(this.mapError(e, event.path));
+    }
+  }
+
+  /**
+   * Enumerate direct children of an app-private directory for UI-owned local
+   * history projections.  This remains intentionally outside Core's closed
+   * HostCapability set: Core receives no directory listing over NAPI.
+   */
+  async list(event: HostFileListRequest): Promise<HostFileListResponse> {
+    const resolvedPath = this.resolvePath(event.path);
+    try {
+      const names = fs.listFileSync(resolvedPath);
+      const entries: HostFileListEntry[] = [];
+      for (let index = 0; index < names.length; index++) {
+        const name = names[index];
+        // listFileSync returns direct names, but reject path separators before
+        // joining so a platform anomaly cannot escape the resolved directory.
+        if (name.indexOf('/') >= 0 || name.indexOf('\\') >= 0 || name === '.' || name === '..') continue;
+        const childPath = `${resolvedPath}/${name}`;
+        try {
+          const stat = fs.statSync(childPath);
+          entries.push({
+            name: name,
+            isFile: stat.isFile(),
+            byteLength: stat.size,
+            modifiedAt: stat.mtime,
+          });
+        } catch (_entryError) {
+          // A concurrent cleanup/delete only omits that one candidate. The
+          // validated reader performs a fresh read before restoring it.
+        }
+      }
+      return { entries: entries };
     } catch (e) {
       throw new HostErrorWrapper(this.mapError(e, event.path));
     }

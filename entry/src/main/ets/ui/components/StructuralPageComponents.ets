@@ -97,7 +97,6 @@ struct StructureCard {
     .borderRadius(16)
     .backgroundColor(ColorTokens.floatingControlBg)
     .border({ width: 1, color: ColorTokens.border })
-    .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
   }
 }
 
@@ -267,7 +266,6 @@ struct BookshelfToolBookRow {
     .backgroundColor(DemoAliasTokens.surface)
     .border({ width: 1, color: this.selected ? ColorTokens.primary : ColorTokens.border })
     .alignItems(VerticalAlign.Center)
-    .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
   }
 }
 
@@ -603,7 +601,6 @@ struct HandoffSwitch {
         .height(20)
         .borderRadius(DemoAliasTokens.radiusPill)
         .backgroundColor(ColorTokens.paper)
-        .shadow({ radius: 3, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 1 })
       if (!this.on) {
         Blank()
           .layoutWeight(1)
@@ -874,7 +871,6 @@ struct WebDavConfigSection {
     .borderRadius(DemoAliasTokens.radiusMd)
     .backgroundColor(DemoAliasTokens.surface)
     .border({ width: 1, color: ColorTokens.border })
-    .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
   }
 }
 

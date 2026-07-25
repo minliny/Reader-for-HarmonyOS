@@ -19,6 +19,14 @@ struct Index {
       return true;
     }
     if (s.stack.length > 1) {
+      // The system back key must have the same persistence semantics as the
+      // reader's visible back control.  A generic route-pop would leave an
+      // immersive reader without flushing its Core reading anchor; overlays
+      // still use ordinary route-pop above.
+      if (s.routeId === 'immersive-reading' || s.routeId === 'reader' || s.routeId === 'reader_content') {
+        ReaderUiStore.requestReaderExit();
+        return true;
+      }
       ReaderUiStore.dispatch({ type: 'route-pop' });
       return true;
     }

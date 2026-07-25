@@ -126,17 +126,17 @@ export default function ScreenGraphButtonAdapterTests(): void {
       }
     });
 
-    it('projectsExactDataAndKeepsTheOtherTwentyNineCanonicalButtonsFailClosed', 0, () => {
+    it('projectsExactDataAndKeepsTheOtherFiftyFiveCanonicalButtonsFailClosed', 0, () => {
       const totals: number[] = [0, 0, 0, 0, 0, 0];
       for (let index: number = 0; index < ViewStateTable.ENTRIES.length; index += 1) {
         const entry: ViewStateEntry = ViewStateTable.ENTRIES[index];
         countButtons(entry.components, entry.routeId, entry.pageState, totals);
       }
-      expect(totals[0]).assertEqual(33);
+      expect(totals[0]).assertEqual(59);
       expect(totals[1]).assertEqual(4);
-      expect(totals[2]).assertEqual(29);
-      expect(totals[3]).assertEqual(33);
-      expect(totals[4]).assertEqual(33);
+      expect(totals[2]).assertEqual(55);
+      expect(totals[3]).assertEqual(59);
+      expect(totals[4]).assertEqual(59);
       expect(totals[5]).assertEqual(31);
     });
 
@@ -237,9 +237,13 @@ export default function ScreenGraphButtonAdapterTests(): void {
         );
         expect(event !== null).assertTrue();
         ReaderUiStore.dispatch(event!);
-        expect(ReaderUiStore.snapshot().routeId).assertEqual('local-import');
-        expect(ReaderUiStore.snapshot().stack.length).assertEqual(beforeLength + 1);
-        expect(ReaderUiStore.snapshot().stack[beforeLength].id).assertEqual('local-import');
+        // ROUTES members are retired local-import routes: route-replace
+        // redirects them to 'bookshelf', and source-import-open keeps the
+        // invoking page in place. The assertion verifies no side effect
+        // (stack length preserved, dialog stays idle) rather than route id.
+        expect(ReaderUiStore.snapshot().routeId).assertEqual('bookshelf');
+        expect(ReaderUiStore.snapshot().stack.length).assertEqual(beforeLength);
+        expect(ReaderUiStore.snapshot().localImportDialogPhase).assertEqual('idle');
       }
     });
   });

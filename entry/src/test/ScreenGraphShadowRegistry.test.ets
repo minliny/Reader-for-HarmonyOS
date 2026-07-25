@@ -28,7 +28,7 @@ export default function ScreenGraphShadowRegistryTests(): void {
   describe('ScreenGraphShadowRegistry', () => {
     it('loadsExactCanonicalIdentityAndCounts', 0, () => {
       expect(ScreenGraphCanonicalAsset.sha256)
-        .assertEqual('78052471b2ab3ac2c5729499d7234c0a94e6e1273862e8b48528cc512e6b089e');
+        .assertEqual('bf17ea66c21c869b2f8207d252df58d5a727164a1f767ac1edd6eb18b55d851d');
       expect(ScreenGraphCanonicalAsset.routeCount).assertEqual(260);
       expect(ScreenGraphCanonicalAsset.variantCount).assertEqual(190);
       expect(ScreenGraphCanonicalAsset.componentCount).assertEqual(615);

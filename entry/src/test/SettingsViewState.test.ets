@@ -82,29 +82,11 @@ export default function SettingsViewStateTests(): void {
     });
 
     // ── Reducer: settings-stepper-change ──
-    it('reducerSettingsStepperIncrementsCoverColumns', 0, () => {
+    it('reducerSettingsStepperRejectsRetiredCoverColumns', 0, () => {
       const s = DemoUiState.initial();
-      expect(s.coverColumns).assertEqual(3);
       const after = ReaderReducer.reduce(s, { type: 'settings-stepper-change', settingsKey: 'coverColumns', delta: 1 });
-      expect(after.coverColumns).assertEqual(4);
-    });
-
-    it('reducerSettingsStepperDecrementsCoverColumns', 0, () => {
-      const s = DemoUiState.initial();
-      const after = ReaderReducer.reduce(s, { type: 'settings-stepper-change', settingsKey: 'coverColumns', delta: -1 });
-      expect(after.coverColumns).assertEqual(2);
-    });
-
-    it('reducerSettingsStepperClampsAtMin', 0, () => {
-      const s = DemoUiState.initial();
-      const min = ReaderReducer.reduce(s, { type: 'settings-stepper-change', settingsKey: 'coverColumns', delta: -10 });
-      expect(min.coverColumns).assertEqual(1);
-    });
-
-    it('reducerSettingsStepperClampsAtMax', 0, () => {
-      const s = DemoUiState.initial();
-      const max = ReaderReducer.reduce(s, { type: 'settings-stepper-change', settingsKey: 'coverColumns', delta: 10 });
-      expect(max.coverColumns).assertEqual(5);
+      expect(after.appThemeMode).assertEqual(s.appThemeMode);
+      expect(after.bookshelfFilter.view).assertEqual(s.bookshelfFilter.view);
     });
 
     // ── Reducer: settings-switch-toggle ──

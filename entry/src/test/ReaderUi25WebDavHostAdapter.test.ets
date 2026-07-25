@@ -46,6 +46,10 @@ class FakeWebDavCredentials implements WebDavCredentialReader {
     const response: HostCredentialGetResponse = { exists: true, value: value };
     return Promise.resolve(response);
   }
+
+  supportsProtectedSecrets(): boolean {
+    return true;
+  }
 }
 
 function exportedSnapshot(): JsonObject {

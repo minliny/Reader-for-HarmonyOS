@@ -10,7 +10,7 @@ async function source(relativePath) {
   return readFile(resolve(root, relativePath), 'utf8');
 }
 
-test('Slice 11 Reader bottom bar keeps canonical order, active routes and module motion', async () => {
+test('Slice 11 Reader bottom bar keeps canonical order and commits modules fail-closed', async () => {
   const overlay = await source('entry/src/main/ets/ui/components/ReaderOverlayComponents.ets');
   const reducer = await source('entry/src/main/ets/ui/store/ReaderReducer.ets');
   const bottom = overlay.slice(overlay.indexOf('export struct ReaderBottomBar'), overlay.indexOf('// ── Panel shell'));
@@ -26,7 +26,8 @@ test('Slice 11 Reader bottom bar keeps canonical order, active routes and module
     assert.ok(index > cursor, `missing or reordered bottom-bar item: ${marker}`);
     cursor = index;
   }
-  assert.ok(bottom.includes("MotionAdapter.apply('reader.module.switch'"));
+  assert.equal(bottom.includes("MotionAdapter.apply('reader.module.switch'"), false,
+    'partial Figma module-switch evidence must not become a generic local transition');
   assert.ok(bottom.includes("type: 'reader.directory.open'"));
   assert.ok(bottom.includes("type: 'reader-module-switch', module: kind"));
   assert.ok(reducer.includes('isReaderModuleOverlay(state.stack[state.stack.length - 1].id)'));
@@ -76,29 +77,31 @@ test('Slice 11 local-book style is reducer-backed and derives only from Core sou
   }
 });
 
-test('Slice 11 WebDAV separates config from backup and fences insecure or stale operations', async () => {
+test('Slice 11 WebDAV shares the Figma canonical form with Sync Backup and fences insecure or stale operations', async () => {
   const structural = await source('entry/src/main/ets/ui/components/StructuralPageComponents.ets');
+  const figmaForm = await source('entry/src/main/ets/ui/components/FigmaWebDavConfigForm.ets');
   const reducer = await source('entry/src/main/ets/ui/store/ReaderReducer.ets');
   const effects = await source('entry/src/main/ets/ui/store/ReaderEffects.ets');
   const credentials = await source('entry/src/main/ets/host/adapters/CredentialHostAdapter.ets');
   const webdavHost = await source('entry/src/main/ets/host/adapters/WebDavHostAdapter.ets');
   const remote = structural.slice(structural.indexOf('export struct RemoteWebDavBooksPage'), structural.indexOf('export struct RssDetailPage'));
   assert.ok(structural.includes("if (this.routeId === 'webdav-config')"));
-  assert.ok(structural.includes("Text('打开 WebDAV 配置')"));
-  assert.ok(structural.includes(".type(this.field === 'password' ? InputType.Password : InputType.Normal)"));
-  assert.ok(structural.includes('当前 Host 尚未接入 HUKS'));
+  assert.ok(structural.includes('FigmaWebDavConfigForm()'));
+  assert.ok(figmaForm.includes("password ? InputType.Password : InputType.Normal"));
+  assert.ok(figmaForm.includes("ReaderUiStore.dispatch({ type: 'webdav-test' })"));
+  assert.ok(figmaForm.includes("ReaderUiStore.dispatch({ type: 'webdav-save' })"));
   assert.ok(remote.includes('不提供按书列举或下载协议'));
   assert.equal(remote.includes('ForEach('), false);
   assert.ok(reducer.includes('static requestWebdavTest'));
-  assert.ok(reducer.includes("state.routeId !== 'webdav-config' || state.webdavTestStatus !== 'testing'"));
-  assert.ok(reducer.includes("state.routeId !== 'webdav-config' || state.webdavSaveStatus !== 'saving'"));
+  assert.ok(reducer.includes('isWebdavConfigurationRoute'));
+  assert.ok(reducer.includes("routeId === 'webdav-config' || routeId === 'sync-backup'"));
   assert.ok(effects.includes("event.id === 'webdav-config'"));
+  assert.ok(effects.includes("event.id === 'sync-backup'"));
   assert.ok(effects.includes('current.webdavTestStatus !== \'testing\''));
   assert.ok(effects.includes('credential.supportsProtectedSecrets()'));
   assert.ok(effects.includes('带账号或密码的 WebDAV 配置禁止持久化'));
   assert.ok(effects.includes('持久化 WebDAV 端点必须使用 HTTPS'));
   assert.ok(effects.includes("authority.indexOf('@') < 0"));
-  assert.ok(structural.includes('完整地址不会在备份页回显'));
   assert.ok(credentials.includes('supportsProtectedSecrets(): boolean'));
   assert.ok(credentials.includes('return false;'));
   assert.ok(webdavHost.includes('webdav.backup requires HTTPS'));

@@ -1,13 +1,13 @@
-// SourceSwitchViewState.test — B1 P0 核心接线验证：source-switch 路由的
-// ViewState 渲染、reducer 事件处理、MotionAdapter motionId 解析、loading 态。
+// SourceSwitchViewState.test — source-switch 的当前 Figma Window、直接候选
+// 提交和已撤销状态矩阵的 reducer/display firewall 验证。F3 motion is not
+// claimed here: the current Window has no locally wired production timeline.
 import { describe, it, expect } from '@ohos/hypium';
 import { ViewStateTable, ViewStateComponent } from '../main/ets/contract/generated/ViewStateTable';
-import { RouteTable } from '../main/ets/contract/generated/RouteTable';
-import { ReaderReducer } from '../main/ets/ui/store/ReaderReducer';
+import { RouteId, RouteTable } from '../main/ets/contract/generated/RouteTable';
+import { ReaderReducer, isRetiredSourceSwitchRoute } from '../main/ets/ui/store/ReaderReducer';
+import { ReaderUiStore } from '../main/ets/ui/store/ReaderUiStore';
 import { DemoUiState } from '../main/ets/ui/fixtures/DemoUiState';
-import { ReaderMotionResolver } from '../main/ets/ui/motion/ReaderMotionResolver';
-import { MotionSpecRegistry } from '../main/ets/ui/motion/MotionSpecRegistry';
-import { CoreSourceEntry } from '../main/ets/ui/store/ReaderUiState';
+import { BookDetail, CoreSourceEntry } from '../main/ets/ui/store/ReaderUiState';
 
 function collectTypes(components: ViewStateComponent[], sink: string[]): void {
   for (let i = 0; i < components.length; i++) {
@@ -35,12 +35,27 @@ function stateWithSources() {
   });
 }
 
+function localBook(): BookDetail {
+  return {
+    bookId: 'local-book', sourceId: 'local', title: '本地书', author: '作者',
+    summary: '', sourceName: '本地导入', sourceUrl: '', latestChapter: '', chapterListUrl: 'local-book',
+  };
+}
+
 export default function SourceSwitchViewStateTests(): void {
   describe('SourceSwitchViewState', () => {
     // ── ViewState 渲染 ──
-    it('sourceSwitchRouteRendersFlowShell', 0, () => {
+    it('onlyCurrentSourceSwitchRouteRendersTheLiveFlowShell', 0, () => {
       expect(RouteTable.shellOf('source-switch')).assertEqual('FlowShell');
+      // The generated union still retains this historical route ID for
+      // compatibility. The display firewall, not a second visual page, owns
+      // its removal from the presentation graph.
       expect(RouteTable.shellOf('source-switch-results')).assertEqual('FlowShell');
+      // The retirement firewall is now inlined into ReaderReducer (the
+      // parallel RetiredSourceSwitchRouteDisplayPolicy module was removed).
+      // A deep link to source-switch-results is blocked at the reducer level
+      // instead of being redirected to 'reader'.
+      expect(isRetiredSourceSwitchRoute('source-switch-results' as RouteId)).assertTrue();
     });
 
     it('sourceSwitchBodyContainsSourceSwitchFlowPage', 0, () => {
@@ -50,11 +65,14 @@ export default function SourceSwitchViewStateTests(): void {
       expect(types.indexOf('SourceSwitchFlowPage') >= 0).assertTrue();
     });
 
-    it('sourceSwitchResultsBodyContainsSourceSwitchFlowPage', 0, () => {
+    it('generatedStateMatrixFixtureCannotReopenTheLiveWindow', 0, () => {
       const body = ViewStateTable.bodyComponentsFor('source-switch-results', 'default');
       const types: string[] = [];
       collectTypes(body, types);
+      // This only proves traceability of the generated contract fixture. It is
+      // never directly rendered after the inlined retirement firewall.
       expect(types.indexOf('SourceSwitchFlowPage') >= 0).assertTrue();
+      expect(isRetiredSourceSwitchRoute('source-switch-results' as RouteId)).assertTrue();
     });
 
     // ── Reducer 处理 source.switch.* 事件 ──
@@ -83,7 +101,7 @@ export default function SourceSwitchViewStateTests(): void {
       expect(after.sourceSelection[0]).assertEqual('source-a');
     });
 
-    it('emptyConfirmStaysOnSwitchRouteWithVisibleValidationError', 0, () => {
+    it('internalEmptySelectionFailsClosedWithoutCreatingAnotherVisualState', 0, () => {
       const pushed = ReaderReducer.push(stateWithSources(), 'source-switch');
       const after = ReaderReducer.reduce(pushed, { type: 'source-switch-confirm' });
       expect(after.routeId).assertEqual('source-switch');
@@ -92,7 +110,7 @@ export default function SourceSwitchViewStateTests(): void {
       if (after.error !== null) expect(after.error.code).assertEqual('SOURCE_SWITCH_SELECTION_REQUIRED');
     });
 
-    it('confirmedSwitchWaitsForCompletionBeforePoppingRoute', 0, () => {
+    it('directCandidateTransactionWaitsForCoreCompletionBeforeClosingTheWindow', 0, () => {
       const withBook = ReaderReducer.reduce(stateWithSources(), {
         type: 'book-detail-success',
         book: {
@@ -101,14 +119,77 @@ export default function SourceSwitchViewStateTests(): void {
           chapterListUrl: '/toc',
         },
       });
-      const pushed = ReaderReducer.push(withBook, 'source-switch');
+      const reader = ReaderReducer.push(withBook, 'reader');
+      const pushed = ReaderReducer.push(reader, 'source-switch');
       const selected = ReaderReducer.reduce(pushed, { type: 'source-toggle', sourceId: 'source-b' });
       const started = ReaderReducer.reduce(selected, { type: 'source-switch-confirm' });
       expect(started.routeId).assertEqual('source-switch');
       expect(started.loading).assertTrue();
       const completed = ReaderReducer.reduce(started, { type: 'source-switch-completed' });
-      expect(completed.routeId).assertEqual('bookshelf');
+      expect(completed.routeId).assertEqual('reader');
       expect(completed.sourceSelection.length).assertEqual(0);
+    });
+
+    it('localBookCannotOpenOrRetryAnySourceSwitchRoute', 0, () => {
+      const local = ReaderReducer.reduce(stateWithSources(), {
+        type: 'book-detail-success', book: localBook(),
+      });
+      const sourceSwitchRoutes: RouteId[] = [
+        'source-switch', 'source-switch-results', 'source-switch-empty', 'source-switch-error',
+        'source-switch-timeout', 'source-switch-loading', 'source-switch-rollback', 'source-switch-preview',
+      ];
+      for (let index = 0; index < sourceSwitchRoutes.length; index += 1) {
+        const route = sourceSwitchRoutes[index];
+        const pushed = ReaderReducer.reduce(local, { type: 'route-push', id: route });
+        const replaced = ReaderReducer.reduce(local, { type: 'route-replace', id: route });
+        expect(pushed.routeId).assertEqual(local.routeId);
+        expect(replaced.routeId).assertEqual(local.routeId);
+      }
+      const selected = ReaderReducer.reduce(local, { type: 'source-toggle', sourceId: 'source-b' });
+      expect(selected.sourceSelection.length).assertEqual(0);
+      const confirmed = ReaderReducer.reduce(local, { type: 'source-switch-confirm' });
+      expect(confirmed.routeId).assertEqual(local.routeId);
+      expect(confirmed.loading).assertFalse();
+    });
+
+    it('storeRequestSourceSwitchOpenRejectsALocalBookBeforeAnyRouteOrCoreWork', 0, () => {
+      // This exercises the public component entry point, not just reducer
+      // deep-link fencing. A local file has no remote source identity, so the
+      // action must return before it can open a route or ask Effects to load
+      // replacement candidates.
+      ReaderUiStore.init();
+      ReaderUiStore.dispatch({ type: 'book-detail-success', book: localBook() });
+      const before = ReaderUiStore.snapshot();
+
+      ReaderUiStore.requestSourceSwitchOpen();
+
+      const after = ReaderUiStore.snapshot();
+      expect(after.routeId).assertEqual(before.routeId);
+      expect(after.stack.length).assertEqual(before.stack.length);
+      expect(after.loading).assertEqual(before.loading);
+    });
+
+    it('remoteBookCannotNavigateToWithdrawnSourceSwitchStateRoutes', 0, () => {
+      const remote = ReaderReducer.reduce(stateWithSources(), {
+        type: 'book-detail-success',
+        book: {
+          bookId: 'book-a', sourceId: 'source-a', title: '测试书', author: '作者',
+          summary: '', sourceName: '书源 A', sourceUrl: 'source-a', latestChapter: '第一章',
+          chapterListUrl: '/toc',
+        },
+      });
+      const retiredRoutes: RouteId[] = [
+        'source-switch-results', 'source-switch-empty', 'source-switch-error',
+        'source-switch-timeout', 'source-switch-loading', 'source-switch-rollback',
+        'source-switch-preview',
+      ];
+      for (let index = 0; index < retiredRoutes.length; index += 1) {
+        const route = retiredRoutes[index];
+        const pushed = ReaderReducer.reduce(remote, { type: 'route-push', id: route });
+        const replaced = ReaderReducer.reduce(remote, { type: 'route-replace', id: route });
+        expect(pushed.routeId).assertEqual(remote.routeId);
+        expect(replaced.routeId).assertEqual(remote.routeId);
+      }
     });
 
     // ── Reducer: set-loading → source-switch loading 态 ──
@@ -123,33 +204,5 @@ export default function SourceSwitchViewStateTests(): void {
       expect(done.loading).assertFalse();
     });
 
-    // ── MotionAdapter 解析 motionId ──
-    it('resolvesFlowShellPush', 0, () => {
-      const id = ReaderMotionResolver.resolve({ operation: 'push', containerRole: 'flowShell' });
-      expect(id).assertEqual('source.switch.route.push');
-    });
-
-    it('resolvesFlowShellPop', 0, () => {
-      const id = ReaderMotionResolver.resolve({ operation: 'pop', containerRole: 'flowShell' });
-      expect(id).assertEqual('source.switch.route.pop');
-    });
-
-    it('resolvesFlowShellReplace', 0, () => {
-      const id = ReaderMotionResolver.resolve({ operation: 'replace', containerRole: 'flowShell' });
-      expect(id).assertEqual('source.switch.route.replace');
-    });
-
-    it('flowShellMotionSpecsExist', 0, () => {
-      expect(MotionSpecRegistry.has('source.switch.route.push')).assertTrue();
-      expect(MotionSpecRegistry.has('source.switch.route.pop')).assertTrue();
-      expect(MotionSpecRegistry.has('source.switch.route.replace')).assertTrue();
-    });
-
-    it('flowShellPushSpecDuration', 0, () => {
-      const spec = MotionSpecRegistry.byId('source.switch.route.push');
-      expect(spec !== undefined).assertTrue();
-      expect(spec!.durationMs).assertEqual(280);
-      expect(spec!.reducedMotionPolicy).assertEqual('zeroDuration');
-    });
   });
 }

@@ -36,6 +36,13 @@ export interface LocalBookImportBatchResult {
   results: LocalBookImportBatchFileResult[];
 }
 
+// The coordinator remains non-visual. These callbacks let the reducer expose
+// the already-approved in-place Figma dialog while the serial Core batch is
+// still running; no selected URI or bytes leave this execution boundary.
+export type LocalBookImportBatchStarted = (epoch: number, files: ReaderSelectedFile[]) => void;
+export type LocalBookImportBatchFileSettled = (epoch: number, fileIndex: number,
+  result: LocalBookImportBatchFileResult) => void;
+
 /** Reads the exact selected bytes; this boundary keeps picker I/O testable. */
 export interface LocalBookImportBatchFileReader {
   readBase64(file: ReaderSelectedFile): Promise<string>;
@@ -110,11 +117,13 @@ export class LocalBookImportBatchCoordinator {
   }
 
   /** Start a new batch. A new epoch supersedes any prior in-flight batch. */
-  async start(files: ReaderSelectedFile[]): Promise<LocalBookImportBatchResult> {
+  async start(files: ReaderSelectedFile[], onBatchStarted?: LocalBookImportBatchStarted,
+    onFileSettled?: LocalBookImportBatchFileSettled): Promise<LocalBookImportBatchResult> {
     const epoch = this.nextEpoch + 1;
     this.nextEpoch = epoch;
     this.activeEpoch = epoch;
     const results: LocalBookImportBatchFileResult[] = [];
+    if (onBatchStarted !== undefined) onBatchStarted(epoch, files);
 
     for (let index = 0; index < files.length; index += 1) {
       if (!this.isCurrent(epoch)) break;
@@ -124,7 +133,9 @@ export class LocalBookImportBatchCoordinator {
       // MOBI and UMD are recognized but must not be routed into TXT/EPUB Core
       // import until their dedicated host protocols are frozen.
       if (decision.admission !== 'core-import') {
-        results.push({ fileName: file.name, status: 'failure' });
+        const result = { fileName: file.name, status: 'failure' } as LocalBookImportBatchFileResult;
+        results.push(result);
+        if (onFileSettled !== undefined) onFileSettled(epoch, index, result);
         continue;
       }
 
@@ -132,7 +143,9 @@ export class LocalBookImportBatchCoordinator {
         const bytesBase64 = await this.fileReader.readBase64(file);
         if (!this.isCurrent(epoch)) break;
         if (bytesBase64.trim().length === 0) {
-          results.push({ fileName: file.name, status: 'failure' });
+          const result = { fileName: file.name, status: 'failure' } as LocalBookImportBatchFileResult;
+          results.push(result);
+          if (onFileSettled !== undefined) onFileSettled(epoch, index, result);
           continue;
         }
 
@@ -149,12 +162,16 @@ export class LocalBookImportBatchCoordinator {
         const book = LocalBookImportBatchCoordinator.materializedBook(materialized);
         await this.core.addToBookshelf(book);
         if (!this.isCurrent(epoch)) break;
-        results.push({ fileName: file.name, status: 'success' });
+        const result = { fileName: file.name, status: 'success' } as LocalBookImportBatchFileResult;
+        results.push(result);
+        if (onFileSettled !== undefined) onFileSettled(epoch, index, result);
       } catch (_error) {
         // The confirmed result dialog displays only filename + outcome. It
         // intentionally does not manufacture a user-facing error taxonomy.
         if (!this.isCurrent(epoch)) break;
-        results.push({ fileName: file.name, status: 'failure' });
+        const result = { fileName: file.name, status: 'failure' } as LocalBookImportBatchFileResult;
+        results.push(result);
+        if (onFileSettled !== undefined) onFileSettled(epoch, index, result);
       }
     }
 

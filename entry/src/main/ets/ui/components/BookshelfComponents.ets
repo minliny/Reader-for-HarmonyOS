@@ -6,6 +6,7 @@ import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
 import { ZIndexTokens } from '../../contract/generated/DimensionTokens';
 import { ReaderTypography } from '../tokens/ReaderTypography';
+import { FigmaReadingVisualTokens } from '../tokens/FigmaReadingVisualTokens';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 import { MotionAdapter } from '../adapters/MotionAdapter';
 import { CoreBookshelfBook, CoreBookGroup } from '../store/ReaderUiState';
@@ -26,6 +27,28 @@ interface BookshelfFilterOption {
   label: string;
   value: string;
   active: boolean;
+}
+
+// Whether the ContinueReadingCard should reserve a slot on the shelf view.
+// Figma binds only the populated ContinueReadingCard: while the shelf is
+// unresolved or empty, do not reserve a speculative skeleton/empty card slot.
+// The current Core response is group-scoped, so a loaded empty group renders
+// as empty rather than inventing a hidden recent-reading record from another
+// group.
+export function shouldRenderContinueReadingForShelf(
+  isLoaded: boolean,
+  books: CoreBookshelfBook[],
+  _view: string,
+): boolean {
+  return isLoaded && books.length > 0;
+}
+
+// Whether a bookshelf route should embed the ContinueReadingCard itself.
+// The cover and list presentation routes own the card through their generated
+// ViewState tree; the default and filter routes already include it via their
+// own ViewState tree, so embedding it again would duplicate the card.
+export function shouldEmbedContinueReadingForBookshelfRoute(routeId: string): boolean {
+  return routeId === 'bookshelf-cover-mode' || routeId === 'bookshelf-list-mode';
 }
 
 // A bookId is loadable when it is a real source path (e.g. '/book/123' or a
@@ -512,7 +535,6 @@ struct BookshelfFilterPopover {
     .borderRadius(DemoAliasTokens.radiusMd)
     .backgroundColor(DemoAliasTokens.surface)
     .border({ width: 1, color: ColorTokens.border })
-    .shadow({ radius: 18, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 6 })
     .alignItems(HorizontalAlign.Start)
   }
 }
@@ -564,6 +586,7 @@ export struct BookCover {
     .aspectRatio(2 / 3)
     .borderRadius(DemoAliasTokens.radiusMd)
     .backgroundColor(DemoAliasTokens.surface)
+    .shadow({ radius: 26, color: FigmaReadingVisualTokens.shelfCoverShadow, offsetX: 0, offsetY: 8 })
   }
 }
 
@@ -737,6 +760,7 @@ export struct BookListRow {
       .width(48)
       .height(72)
       .borderRadius(DemoAliasTokens.radiusSm)
+      .shadow({ radius: 12, color: FigmaReadingVisualTokens.shelfListCoverShadow, offsetX: 0, offsetY: 6 })
       Column({ space: 4 }) {
         Text(this.title.length > 0 ? this.title : '未提供书籍信息')
           .fontSize(15)

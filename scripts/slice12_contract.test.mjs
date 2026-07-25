@@ -15,6 +15,7 @@ test('Slice 12 onboarding and permission recovery use native local routes withou
   const registry = await source('entry/src/main/ets/ui/router/ReaderCapabilityClosureRouteRegistry.ets');
   const renderer = await source('entry/src/main/ets/ui/components/ViewStateRenderer.ets');
   const components = await source('entry/src/main/ets/ui/components/Slice12LifecycleComponents.ets');
+  const retiredImportRoutes = await source('entry/src/main/ets/ui/router/RetiredLocalImportRouteDisplayPolicy.ets');
   for (const route of ['onboarding-welcome', 'onboarding-capability-setup', 'permission-recovery', 'settings-accessibility']) {
     assert.ok(registry.includes(`nativeRouteDefinition('${route}'`), `native route missing: ${route}`);
   }
@@ -23,7 +24,11 @@ test('Slice 12 onboarding and permission recovery use native local routes withou
     'Slice12PermissionRecoveryPage', 'Slice12AccessibilitySettingsPage',
   ]) assert.ok(renderer.includes(component), `renderer missing ${component}`);
   assert.ok(components.includes("id: 'onboarding-capability-setup'"));
-  assert.ok(components.includes("id: 'local-import'"));
+  // The confirmed Figma flow replaces the obsolete local-import full page
+  // with a system picker plus in-place result dialog. Its retained route ID
+  // must therefore resolve back to the bookshelf, never revive that renderer.
+  assert.ok(retiredImportRoutes.includes("'local-import'"));
+  assert.ok(retiredImportRoutes.includes("FALLBACK_ROUTE_ID: string = 'bookshelf'"));
   assert.ok(components.includes('不会提供无效按钮'));
   assert.match(policy, /id: 'onboarding\.first-run-persistence'[\s\S]*ContractMissingFailClosed/);
   assert.match(policy, /id: 'permission\.system-settings-return'[\s\S]*ContractMissingFailClosed/);
@@ -37,19 +42,27 @@ test('Slice 12 settings freeze owner, default, persistence and reset without cro
   const reducer = await source('entry/src/main/ets/ui/store/ReaderReducer.ets');
   const effects = await source('entry/src/main/ets/ui/store/ReaderEffects.ets');
   for (const id of [
-    'reducedMotion', 'appThemeMode', 'coverColumns', 'mergeSameBooks',
+    'reducedMotion', 'readerPageTurn', 'appThemeMode', 'mergeSameBooks',
     'enableSearchHistory', 'showLocalBookBadge', 'durableDomainData',
   ]) assert.ok(policy.includes(`id: '${id}'`), `setting definition missing: ${id}`);
   assert.match(policy, /id: 'reducedMotion'[\s\S]*defaultValue: 'false'[\s\S]*reader_ui_preferences_v1\/reducedMotion[\s\S]*reset: 'false'/);
+  assert.match(policy, /id: 'readerPageTurn'[\s\S]*defaultValue: 'slide\/horizontal'[\s\S]*pageAnimation\+pageMode[\s\S]*scroll only = vertical/);
   assert.match(policy, /id: 'durableDomainData'[\s\S]*Reader-Core-Native[\s\S]*ContractMissingFailClosed/);
   assert.ok(preferences.includes("const KEY_REDUCED_MOTION: string = 'reducedMotion'"));
-  for (const forbidden of ['firstOpenPlayed', 'appThemeMode', 'coverColumns', 'bookshelf', 'searchHistory']) {
+  assert.ok(preferences.includes("const KEY_PAGE_ANIMATION: string = 'pageAnimation'"));
+  assert.ok(preferences.includes("const KEY_PAGE_MODE: string = 'pageMode'"));
+  assert.ok(preferences.includes('savePageTurnPreference'));
+  assert.ok(preferences.includes('inconsistent Reader UI preference pageAnimation/pageMode'));
+  for (const forbidden of ['firstOpenPlayed', 'appThemeMode', 'coverColumns', 'bookshelf', 'searchHistory', 'bookId', 'sourceId']) {
     assert.equal(preferences.includes(forbidden), false, `UI preference store must not persist ${forbidden}`);
   }
   assert.ok(runtime.includes('getReaderUiPreferenceAdapter()'));
   assert.ok(entry.includes("type: 'hydrate-reduced-motion'"));
+  assert.ok(entry.includes("type: 'hydrate-reader-page-turn-preference'"));
   assert.ok(reducer.includes("case 'hydrate-reduced-motion':"));
+  assert.ok(reducer.includes("case 'hydrate-reader-page-turn-preference':"));
   assert.ok(effects.includes('preferences.saveReducedMotion(enabled)'));
+  assert.ok(effects.includes('preferences.savePageTurnPreference(options.pageAnimation, options.pageMode)'));
 });
 
 test('Slice 12 viewport publishes only Phone and Tablet while fold stays explicit unverified', async () => {

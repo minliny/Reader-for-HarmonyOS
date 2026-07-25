@@ -190,7 +190,6 @@ export struct BottomNav {
     .border({ width: 1, color: ColorTokens.border })
     .borderRadius(DemoAliasTokens.radiusXl)
     .backgroundColor(DemoAliasTokens.surface)
-    .shadow({ radius: 26, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 8 })
   }
 
   @Builder tabItem(tab: TabKind, label: string) {
@@ -452,7 +451,6 @@ export struct Card {
     .borderRadius(16)
     .border({ width: 1, color: ColorTokens.border })
     .backgroundColor(ColorTokens.floatingControlBg)
-    .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
     .alignItems(HorizontalAlign.Start)
   }
 }

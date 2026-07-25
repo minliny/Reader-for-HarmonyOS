@@ -160,6 +160,15 @@ export class DemoUiState {
       continueReadingError: '',
       pendingBookshelfRemovalSourceId: '',
       pendingBookshelfRemovalBookId: '',
+      pendingBookshelfRemovalTargets: [],
+      bookshelfRemovalScope: 'single',
+      bookshelfRemovalDialogPhase: 'idle',
+      bookshelfRemovalEpoch: 0,
+      bookshelfRemovalError: '',
+      lastBookshelfRemovalReceipt: null,
+      pendingBookshelfActionSourceId: '',
+      pendingBookshelfActionBookId: '',
+      bookshelfSelectedTargets: [],
       bookGroups: [],
       bookGroupsLoaded: false,
       bookGroupsLoading: false,
@@ -179,7 +188,6 @@ export class DemoUiState {
       pendingReplaceRuleDeleteId: '',
       // ── B1 P0 全局设置默认值 ──
       appThemeMode: 'system',
-      coverColumns: 3,
       settingsToggles: {
         autoCheckUpdate: true,
         tapBottomBarToTop: true,
@@ -215,6 +223,7 @@ export class DemoUiState {
       coreBackupStatus: 'idle',
       coreBackupMessage: '',
       localCoreBackup: null,
+      localCoreBackupHistory: [],
       pendingCoreRestore: null,
       pendingCoreRestoreConfirmationChecksum: '',
       // ── W1 本地书导入预览默认值 ──
@@ -222,6 +231,9 @@ export class DemoUiState {
       importPreviewEncoding: '',
       importPreviewCount: 0,
       localImportEpoch: 0,
+      localImportDialogPhase: 'idle',
+      localImportDialogEpoch: 0,
+      localImportDialogResults: [],
       // ── Core 书源包导入默认值 ──
       sourceImportOrigin: '',
       sourceImportTotal: 0,

@@ -6,6 +6,7 @@
 import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
 import { ReaderTypography } from '../tokens/ReaderTypography';
+import { FigmaOverlayTokens } from '../tokens/FigmaReadingVisualTokens';
 import { ReaderBase } from './ReaderComponents';
 import {
   Contract25RouteDefinition,
@@ -123,7 +124,6 @@ struct Contract25StateCard {
     .borderRadius(DemoAliasTokens.radiusLg)
     .backgroundColor(ColorTokens.paper)
     .border({ width: 1, color: ColorTokens.border })
-    .shadow({ radius: 12, color: DemoAliasTokens.shadowElevatedColor, offsetX: 0, offsetY: 5 })
   }
 }
 
@@ -206,7 +206,7 @@ struct Contract25ReaderPlane {
       Column()
         .width('100%')
         .height('100%')
-        .backgroundColor('#24594632')
+        .backgroundColor(FigmaOverlayTokens.flowOverlayGreen)
       if (this.hasDedicatedPage()) {
         Column() {
           this.DedicatedPage()

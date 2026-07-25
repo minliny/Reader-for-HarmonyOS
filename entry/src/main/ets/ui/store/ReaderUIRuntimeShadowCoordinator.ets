@@ -16,7 +16,7 @@ import {
   ReaderUIState,
   ReaderUITransition,
 } from 'reader_ui_runtime';
-import { ReaderUiState, UiEvent } from './ReaderUiState';
+import { ReaderUiState, UiEvent, isLocalBookSourceId } from './ReaderUiState';
 import { isReaderModuleOverlayRoute } from './ReaderDirectoryPilotProjection';
 import {
   ReaderBookOpenCoreGateway,
@@ -1831,7 +1831,10 @@ export class ReaderUIRuntimeShadowCoordinator {
     return payload;
   }
 
-  private isSourceSwitchPilotEvent(event: UiEvent, _nativeBefore: ReaderUiState): boolean {
+  private isSourceSwitchPilotEvent(event: UiEvent, nativeBefore: ReaderUiState): boolean {
+    // The runtime Pilot is a second line of defense, not an authority to turn
+    // a local import into a remote-source replacement transaction.
+    if (isLocalBookSourceId(nativeBefore.currentBook?.sourceId)) return false;
     // Canonical runtime events for the source switch Pilot.
     if (event.type === 'source.switch.open' || event.type === 'source.switch.cancel' ||
       event.type === 'source.switch.confirm' || event.type === 'source.switch.rollback' ||

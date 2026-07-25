@@ -18,6 +18,7 @@ import type { JsonObject } from '../../bridge/core/sdk/reader_core';
 import {
   ReaderUiState,
   UiEvent,
+  isLocalBookSourceId,
 } from './ReaderUiState';
 
 /** Narrow structural view of a cancellable Core command handle for source switch. */
@@ -254,6 +255,9 @@ export class ReaderSourceSwitchEffectExecutor {
     const keyword = this.payloadString(target ?? {}, 'title');
     if (bookId.length === 0) {
       throw new Error('source.switch Pilot requires non-empty bookId');
+    }
+    if (isLocalBookSourceId(previousSourceId)) {
+      throw new Error('source.switch Pilot cannot replace a local book source');
     }
     if (effectType === 'source.switch.commit' &&
       selectedSourceId.length === 0) {

@@ -85,7 +85,7 @@ export interface HostWebViewEvaluateResponse {
   result: Record<string, Object>;
 }
 
-// ── file.read / file.write / file.delete ──
+// ── file.read / file.write / file.delete / UI-only file.list ──
 export interface HostFileReadResponse {
   content?: string;
   contentBase64?: string;
@@ -100,6 +100,18 @@ export interface HostFileWriteResponse {
 
 export interface HostFileDeleteResponse {
   deleted: boolean;
+}
+
+/** Metadata only; file bytes are still read through file.read. */
+export interface HostFileListEntry {
+  name: string;
+  isFile: boolean;
+  byteLength: number;
+  modifiedAt: number;
+}
+
+export interface HostFileListResponse {
+  entries: HostFileListEntry[];
 }
 
 // ── storage.path ──

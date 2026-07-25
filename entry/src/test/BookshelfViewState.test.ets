@@ -10,6 +10,10 @@ import { ReaderReducer } from '../main/ets/ui/store/ReaderReducer';
 import { DemoUiState } from '../main/ets/ui/fixtures/DemoUiState';
 import { MotionSpecRegistry } from '../main/ets/ui/motion/MotionSpecRegistry';
 import { CoreBookGroup, CoreBookshelfBook } from '../main/ets/ui/store/ReaderUiState';
+import {
+  shouldEmbedContinueReadingForBookshelfRoute,
+  shouldRenderContinueReadingForShelf,
+} from '../main/ets/ui/components/BookshelfComponents';
 
 function collectTypes(components: ViewStateComponent[], sink: string[]): void {
   for (let i = 0; i < components.length; i++) {
@@ -124,6 +128,71 @@ export default function BookshelfViewStateTests(): void {
       }
     });
 
+    it('anEmptyLoadedShelfViewNeverReservesContinueReading', 0, () => {
+      const book: CoreBookshelfBook = {
+        sourceId: 'source-a', bookId: '/book/a', title: '真实阅读记录', author: '作者',
+        coverUrl: '', intro: '', kind: '', lastChapter: '', group: '', lastReadAt: 12,
+      };
+      expect(shouldRenderContinueReadingForShelf(true, [], 'all')).assertFalse();
+      // Figma binds only the populated ContinueReadingCard. While the shelf
+      // is unresolved, do not reserve a speculative skeleton/empty card slot.
+      expect(shouldRenderContinueReadingForShelf(false, [], 'all')).assertFalse();
+      expect(shouldRenderContinueReadingForShelf(true, [book], 'all')).assertTrue();
+      // The current Core response is group-scoped. Without a verified global
+      // count, a loaded empty group must be rendered as empty rather than
+      // inventing a hidden recent-reading record from another group.
+      expect(shouldRenderContinueReadingForShelf(true, [], 'local')).assertFalse();
+    });
+
+    it('coverAndListPresentationRoutesEmbedTheSameContinueReadingComponent', 0, () => {
+      expect(shouldEmbedContinueReadingForBookshelfRoute('bookshelf-cover-mode')).assertTrue();
+      expect(shouldEmbedContinueReadingForBookshelfRoute('bookshelf-list-mode')).assertTrue();
+      // The default and filter routes already own the card through their
+      // generated ViewState tree; embedding it again would duplicate it.
+      expect(shouldEmbedContinueReadingForBookshelfRoute('bookshelf')).assertFalse();
+      expect(shouldEmbedContinueReadingForBookshelfRoute('sort-filter')).assertFalse();
+    });
+
+    it('longPressActionMenuBindsOneLiveShelfBookInsteadOfCurrentReadingBook', 0, () => {
+      const target: CoreBookshelfBook = {
+        sourceId: 'source-a', bookId: '/book/a', title: '目标书籍', author: '作者 A',
+        coverUrl: '', intro: '', kind: '', lastChapter: '', group: '', lastReadAt: 12,
+      };
+      const other: CoreBookshelfBook = {
+        sourceId: 'source-b', bookId: '/book/b', title: '另一册书', author: '作者 B',
+        coverUrl: '', intro: '', kind: '', lastChapter: '', group: '', lastReadAt: 8,
+      };
+      const listed = ReaderReducer.reduce(DemoUiState.initial(), {
+        type: 'bookshelf-list-loaded', bookshelfBooks: [target, other],
+      });
+      const opened = ReaderReducer.reduce(listed, {
+        type: 'bookshelf-book-action-open', sourceId: target.sourceId, bookId: target.bookId,
+      });
+      expect(opened.overlay).assertEqual('book-action');
+      expect(opened.pendingBookshelfActionSourceId).assertEqual(target.sourceId);
+      expect(opened.pendingBookshelfActionBookId).assertEqual(target.bookId);
+
+      const removal = ReaderReducer.reduce(opened, {
+        type: 'book-action', bookAction: 'delete', sourceId: target.sourceId, bookId: target.bookId,
+      });
+      expect(removal.overlay).assertEqual('dialog');
+      expect(removal.pendingBookshelfRemovalSourceId).assertEqual(target.sourceId);
+      expect(removal.pendingBookshelfRemovalBookId).assertEqual(target.bookId);
+      expect(removal.pendingBookshelfActionBookId).assertEqual('');
+    });
+
+    it('longPressActionMenuRejectsAStaleShelfIdentity', 0, () => {
+      const listed = ReaderReducer.reduce(DemoUiState.initial(), {
+        type: 'bookshelf-list-loaded', bookshelfBooks: [],
+      });
+      const opened = ReaderReducer.reduce(listed, {
+        type: 'bookshelf-book-action-open', sourceId: 'gone-source', bookId: 'gone-book',
+      });
+      expect(opened.overlay).assertEqual('');
+      expect(opened.pendingBookshelfActionSourceId).assertEqual('');
+      expect(opened.pendingBookshelfActionBookId).assertEqual('');
+    });
+
     // ── Core book-group vertical: list state and failure state ──
     it('reducerBookGroupListUsesCoreRowsAndClearsRequestState', 0, () => {
       const s = DemoUiState.initial();
@@ -141,7 +210,13 @@ export default function BookshelfViewStateTests(): void {
     });
 
     it('reducerBookGroupFailureKeepsManagementPageDataAndSurfacesError', 0, () => {
-      const s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'group-management' });
+      // 'group-management' is a retired user-declined route: route-push redirects
+      // to 'bookshelf'. Tests that verify book-group reducer semantics set the
+      // routeId directly to simulate the management surface without going
+      // through the retired navigation path.
+      const initial = DemoUiState.initial();
+      initial.routeId = 'group-management';
+      const s = initial;
       const loading = ReaderReducer.reduce(s, { type: 'book-group-create', bookGroupName: '待读' });
       expect(loading.bookGroupsLoading).assertTrue();
       const after = ReaderReducer.reduce(loading, {
@@ -156,9 +231,9 @@ export default function BookshelfViewStateTests(): void {
       const row: CoreBookGroup = {
         groupId: 7, groupName: '科幻', cover: '', order: 2, enableRefresh: true, show: true,
       };
-      const management = ReaderReducer.reduce(DemoUiState.initial(), {
-        type: 'route-replace', id: 'group-management',
-      });
+      const base = DemoUiState.initial();
+      base.routeId = 'group-management';
+      const management = base;
       const listed = ReaderReducer.reduce(management, {
         type: 'book-group-list-loaded', bookGroups: [row],
       });
@@ -180,6 +255,8 @@ export default function BookshelfViewStateTests(): void {
       expect(confirmed.pendingBookGroupDeleteId).assertEqual(row.groupId);
       expect(confirmed.bookGroupsLoading).assertTrue();
 
+      // 'bookshelf-group-management' is also retired: route-push redirects to
+      // 'bookshelf', which clears the pending delete target via navigation.
       const navigated = ReaderReducer.reduce(requested, {
         type: 'route-push', id: 'bookshelf-group-management',
       });

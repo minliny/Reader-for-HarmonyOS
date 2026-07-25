@@ -8,6 +8,7 @@
 import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { ReaderAppearanceSpecRegistry, ReaderAppearanceTheme } from '../../contract/reader_ui/Appearance';
 import { ReaderThemeState } from './ReaderThemeState';
+import { FigmaNightPaletteTokens } from './FigmaReadingVisualTokens';
 
 // 8 主题 fixture（对齐 demo fixture.js L211-229）。
 export interface ReaderThemeOption {
@@ -87,17 +88,16 @@ export class ReaderThemeResolver {
   }
 
   // 根据 readerTheme + appThemeMode 解析 effective scheme。
+  // readerTheme 值本身编码了 scheme 信息（带 `-night` 后缀即为夜间），
+  // 它优先于 appThemeMode：用户显式选择了夜间变体时就按夜间渲染。
   static scheme(readerTheme: string, appThemeMode: string): 'day' | 'night' {
-    return ReaderThemeResolver.isNight(appThemeMode) ? 'night' : 'day';
+    return readerTheme.endsWith('-night') ? 'night' : 'day';
   }
 
-  // 查找 option（按 value + scheme）。
+  // 查找 option（按 value；value 本身已编码 scheme）。
   static optionFor(value: string, scheme: 'day' | 'night'): ReaderThemeOption {
-    let effectiveValue: string = value;
-    if (scheme === 'night' && !effectiveValue.endsWith('-night')) effectiveValue = `${effectiveValue}-night`;
-    if (scheme === 'day' && effectiveValue.endsWith('-night')) effectiveValue = effectiveValue.substring(0, effectiveValue.length - 6);
     for (const opt of ReaderThemeResolver.ALL_OPTIONS) {
-      if (opt.value === effectiveValue && opt.scheme === scheme) {
+      if (opt.value === value) {
         return opt;
       }
     }
@@ -147,24 +147,25 @@ export class ReaderThemeResolver {
 
   // night 调色板（对齐 demo readerThemeStyle night 分支）。
   // night 控件面统一暗色，纸张色按 variant 略不同。
+  // 字面量集中在 FigmaNightPaletteTokens（Figma 字面量边界文件）。
   private static nightPalette(opt: ReaderThemeOption): ReaderThemePalette {
     return {
       scheme: 'night',
       paper: opt.swatch,
-      paperBright: opt.paperStart,    // #1F1C19 顶部
+      paperBright: opt.paperStart,    // 顶部高光
       ink: opt.ink,                   // 按 variant: e9dece/e7d8c8/d8e2d2/dbe2ea
-      controlInk: ColorTokens.controlInkNight,  // #D7E1E5
-      muted: '#FF8A8378',             // demo night muted
-      surface: '#F226231F',           // rgba(38,35,31,0.96)
-      surfaceSoft: '#B81C1916',       // rgba(28,25,22,0.72)
-      floatingControlBg: '#F226231F', // rgba(38,35,31,0.96)
-      floatingControlBgAlt: ColorTokens.floatingControlBgAltNight, // #2B3B43
-      border: '#14FFFFFF',            // rgba(255,255,255,0.08)
-      primary: '#FFD2BD96',           // demo night 暖金
-      primaryDark: '#FFB8A072',
-      accent: '#FFD2BD96',
-      metaBg: '#991C1916',            // rgba(28,25,22,0.6)
-      bottomBarBg: '#F226231F',
+      controlInk: ColorTokens.controlInkNight,
+      muted: FigmaNightPaletteTokens.muted,
+      surface: FigmaNightPaletteTokens.surface,
+      surfaceSoft: FigmaNightPaletteTokens.surfaceSoft,
+      floatingControlBg: FigmaNightPaletteTokens.floatingControlBg,
+      floatingControlBgAlt: ColorTokens.floatingControlBgAltNight,
+      border: FigmaNightPaletteTokens.border,
+      primary: FigmaNightPaletteTokens.primary,
+      primaryDark: FigmaNightPaletteTokens.primaryDark,
+      accent: FigmaNightPaletteTokens.accent,
+      metaBg: FigmaNightPaletteTokens.metaBg,
+      bottomBarBg: FigmaNightPaletteTokens.bottomBarBg,
       textureOpacity: opt.texture === 'paper' ? 0.026 : 0,
       textureColor: ColorTokens.controlInkNight,
       auroraOpacity: 0.18,

@@ -23,7 +23,41 @@ export type PageState =
 // future Batch 2+ overlays.
 export type Overlay =
   | '' | 'source-switch' | 'book-action' | 'sort-filter' | 'group-management'
-  | 'local-import' | 'dialog' | 'sheet' | 'toast';
+  | 'local-import' | 'bookshelf-multiselect' | 'dialog' | 'sheet' | 'toast';
+// The confirmed local-book flow is an in-place overlay rather than a route.
+// Keep its lifecycle separate from the global page `loading` state so the
+// bookshelf stays visible behind the dialog.
+export type LocalImportDialogPhase = 'idle' | 'loading' | 'result';
+// The approved result view is intentionally terminal-only: every row is
+// either imported or failed.  The one spinner-only loading surface owns all
+// in-flight work; it never exposes a per-file progress list.
+export type LocalImportDialogResultStatus = 'success' | 'failure';
+// Figma Library/BookDetail/DeleteDialog 2269:66 exposes Default, Loading,
+// and Failed.  The visual variants are Figma-owned; this small transaction
+// state and its epoch remain local because Figma has no reactions for Core IO.
+export type BookshelfRemovalDialogPhase = 'idle' | 'default' | 'loading' | 'failed';
+export type BookshelfRemovalScope = 'single' | 'batch';
+export interface BookshelfSelectionTarget {
+  sourceId: string;
+  bookId: string;
+}
+// Core returns this receipt for a batch write. It remains non-visual because
+// the approved Figma flow has no extra completion page; it exists for exact
+// state truth, stale-callback checks and test evidence.
+export interface BookshelfRemovalReceipt {
+  requestedCount: number;
+  uniqueCount: number;
+  removedTargets: BookshelfSelectionTarget[];
+  missingTargets: BookshelfSelectionTarget[];
+  duplicateTargets: BookshelfSelectionTarget[];
+}
+export interface LocalImportDialogResult {
+  // Stable only within one picker batch. It deliberately contains no URI,
+  // selected-file bytes, or Core payload.
+  id?: string;
+  fileName: string;
+  status: LocalImportDialogResultStatus;
+}
 export type ActiveSession = '' | 'reading' | 'tts' | 'auto-page';
 
 // ── Batch 1 session/TTS/settings types ──
@@ -199,6 +233,20 @@ export interface CoreBookshelfBook {
   lastReadAt?: number;
 }
 
+// `local` is a Core-owned transport identity, not a display label.  Every
+// local-book branch must use this exact key so a filename or the visible
+// “本地” badge can never accidentally enable remote-source operations.
+export function isLocalBookSourceId(sourceId?: string): boolean {
+  return (sourceId ?? '').trim() === 'local';
+}
+
+// A source replacement is meaningful only for a persisted remote source.  An
+// empty id is also rejected: there is no safe fallback source for a book.
+export function canSwitchBookSourceId(sourceId?: string): boolean {
+  const normalized = (sourceId ?? '').trim();
+  return normalized.length > 0 && !isLocalBookSourceId(normalized);
+}
+
 // UI-safe projection of Core's book-group.* vertical. Book membership itself
 // is stored on Core bookshelf rows and is changed through
 // `bookshelf.group.assign`, not by mutating a visual-only group list.
@@ -290,6 +338,9 @@ export interface ReaderTogglesMap {
 }
 
 export interface ReaderSettingOptionsMap {
+  // Migration-only mirror of `pageAnimation`; it must never be a separately
+  // writable user-facing setting. `scroll` ⇔ vertical, all other animations ⇔
+  // horizontal. Kept for persisted legacy payload compatibility.
   pageMode: string;
   tapMode: string;
   pageAnimation: string;
@@ -471,6 +522,24 @@ export interface ReaderUiState {
   // bookshelf row, then consumed by the explicit confirmation sheet.
   pendingBookshelfRemovalSourceId: string;
   pendingBookshelfRemovalBookId: string;
+  // The exact targets are retained for both the one-book and batch flows.
+  // Batch remove must cross the Core boundary once as `bookshelf.removeBatch`.
+  pendingBookshelfRemovalTargets: BookshelfSelectionTarget[];
+  bookshelfRemovalScope: BookshelfRemovalScope;
+  bookshelfRemovalDialogPhase: BookshelfRemovalDialogPhase;
+  // Monotonic transaction identity. Async Core callbacks must match this
+  // value as well as the exact source/book composite key before they project.
+  bookshelfRemovalEpoch: number;
+  bookshelfRemovalError: string;
+  lastBookshelfRemovalReceipt: BookshelfRemovalReceipt | null;
+  // A long-press action sheet is bound to one exact live bookshelf row.  It is
+  // intentionally separate from the delete-confirmation key so merely opening
+  // an edit menu never grants a destructive operation or reuses last-read book.
+  pendingBookshelfActionSourceId: string;
+  pendingBookshelfActionBookId: string;
+  // Figma Bookshelf/MultiSelect: transient selected live shelf identities.
+  // No group/move state is represented in V1.
+  bookshelfSelectedTargets: BookshelfSelectionTarget[];
   bookGroups: CoreBookGroup[]; // Core book-group.list 的真实分组
   bookGroupsLoaded: boolean;
   bookGroupsLoading: boolean;
@@ -499,7 +568,6 @@ export interface ReaderUiState {
   pendingReplaceRuleDeleteId: string;
   // ── B1 P0 全局设置 segment/stepper/switch 字段 ──
   appThemeMode: string;        // 'system' | 'light' | 'dark'
-  coverColumns: number;        // 书架封面列数（1-5）
   settingsToggles: SettingsTogglesMap;
   // ── F3 交互连接字段 ──
   readerTheme: string;                    // 阅读主题: 'paper' | 'warm' | 'green' | 'blue'
@@ -536,6 +604,9 @@ export interface ReaderUiState {
   coreBackupStatus: string;               // idle | loading | creating | ready | restoring | success | error
   coreBackupMessage: string;
   localCoreBackup: CoreStorageBackupInfo | null;
+  // Verified, app-private local snapshot metadata in newest-first order. The
+  // snapshot payload and selection bytes never enter AppStorage.
+  localCoreBackupHistory: CoreStorageBackupHistoryEntry[];
   pendingCoreRestore: CoreStorageBackupInfo | null;
   // The checksum binds the visible second restore confirmation to exactly the
   // transient envelope that was validated by Core/Host preparation.
@@ -547,6 +618,13 @@ export interface ReaderUiState {
   // Monotonic local-import transaction token. It binds the transient raw bytes
   // held by Effects to the currently visible Core parse preview.
   localImportEpoch: number;
+  // Current production local-book flow: the user stays on the invoking page,
+  // the system picker selects up to 32 files, and this overlay shows only the
+  // loading or final per-file outcomes. It contains no paths, raw bytes or
+  // parser details.
+  localImportDialogPhase: LocalImportDialogPhase;
+  localImportDialogEpoch: number;
+  localImportDialogResults: LocalImportDialogResult[];
   // ── Core 书源包导入（与本地书籍导入分离） ──
   // The package itself is deliberately transient component state.  These
   // durable fields contain only Core-observed import accounting so the result
@@ -591,6 +669,7 @@ export interface UiEvent {
   delta?: number;
   fontFamily?: ReaderFontFamily;
   enabled?: boolean;
+  previousEnabled?: boolean;
   loading?: boolean;
   error?: ReaderError | null;
   // Minimal visible reading chain event fields.
@@ -635,6 +714,10 @@ export interface UiEvent {
   toggleValue?: boolean;
   optionKey?: ReaderSettingOptionKey;
   optionValue?: string;
+  // Startup-only projection of the validated Host preference pair. It is not
+  // a UI option payload: `pageMode` remains a checked mirror of pageAnimation.
+  preferencePageAnimation?: string;
+  preferencePageMode?: string;
   countdownSeconds?: number;
   // ── Batch 2 reader control event fields ──
   tocMode?: TocMode;
@@ -688,10 +771,14 @@ export interface UiEvent {
   rssTitle?: string;
   rssEnabled?: boolean;
   bookAction?: string;  // 'branch' | 'delete'
+  bookshelfSelectionTargets?: BookshelfSelectionTarget[];
+  bookshelfRemovalEpoch?: number;
+  bookshelfRemovalError?: string;
+  bookshelfRemovalReceipt?: BookshelfRemovalReceipt | null;
   // Destructive operations have separate request/confirm events.  A raw
   // source-delete / rss-subscription-delete event is never a delete grant.
   // ── B1 P0 全局设置事件字段 ──
-  settingsKey?: string;            // 设置项 key（appThemeMode / coverColumns / autoCheckUpdate …）
+  settingsKey?: string;            // 设置项 key（appThemeMode / autoCheckUpdate …）
   settingsValue?: string;          // segment 选中值
   settingsToggleValue?: boolean;   // switch 切换值
   // ── F3 交互连接事件字段 ──
@@ -708,6 +795,10 @@ export interface UiEvent {
   coreBackupStatus?: string;
   coreBackupMessage?: string;
   coreBackupInfo?: CoreStorageBackupInfo | null;
+  coreBackupHistory?: CoreStorageBackupHistoryEntry[];
+  // A path must come from localCoreBackupHistory; effects rejects arbitrary
+  // strings so a route event cannot select an unvalidated sandbox file.
+  coreBackupPath?: string;
   coreSlice10Method?: string;
   coreSlice10Result?: ReaderUIJSONPayload | null;
   coreSlice10Error?: string;
@@ -717,6 +808,10 @@ export interface UiEvent {
   importEncoding?: string;                // source-import-preview: Core 实测编码
   importCount?: number;                   // source-import-preview/apply: Core 实测章节数
   localImportEpoch?: number;
+  localImportDialogEpoch?: number;
+  localImportDialogResults?: LocalImportDialogResult[];
+  localImportDialogResultIndex?: number;
+  localImportDialogResultStatus?: LocalImportDialogResultStatus;
   // Raw JSON / URL are one-shot effect inputs and are never copied into
   // ReaderUiState.  A source package can be one Legado BookSource object or
   // an array of those objects.
@@ -749,6 +844,12 @@ export interface CoreStorageBackupInfo {
   exportedAt: number;
 }
 
+/** AppStorage-safe metadata for one validated local snapshot. */
+export interface CoreStorageBackupHistoryEntry extends CoreStorageBackupInfo {
+  path: string;
+  fileName: string;
+}
+
 // ── Minimal visible reading chain data types ──
 export interface SearchResultEntry {
   title: string;
@@ -760,6 +861,11 @@ export interface SearchResultEntry {
   sourceName: string;
   sourceUrl: string;
   latestChapter?: string;
+  // Optional display fields already returned by Core `book.search`. They stay
+  // on the existing result identity rather than creating a second visual-only
+  // search model for the Figma result rows.
+  coverUrl?: string;
+  intro?: string;
 }
 
 export interface BookDetail {

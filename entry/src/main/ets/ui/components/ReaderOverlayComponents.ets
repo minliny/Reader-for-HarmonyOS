@@ -619,7 +619,6 @@ export struct ReaderControlSheet {
             bottomRight: this.wideControlDock() ? 0 : DemoAliasTokens.radiusXl,
           })
           .backgroundColor(ColorTokens.floatingControlBg)
-          .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
         }
         .width('100%')
         .height('100%')
@@ -843,7 +842,6 @@ export struct ReaderOverlayPanel {
         bottomLeft: this.wideControlDock() ? 0 : DemoAliasTokens.radiusXl,
         bottomRight: this.wideControlDock() ? 0 : DemoAliasTokens.radiusXl,
       })
-      .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
       .margin({ right: this.panelRight(), bottom: this.panelBottom() })
     }
     .width('100%')
@@ -953,7 +951,6 @@ export struct ReaderQuickPanelShell {
           bottomRight: this.wideControlDock() ? 0 : DemoAliasTokens.radiusXl,
         })
         .backgroundColor(ColorTokens.floatingControlBg)
-        .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
       }
       .width(this.sheetWidth())
       .margin({ right: this.sheetRight(), bottom: this.sheetBottom() })
@@ -1191,7 +1188,6 @@ struct ReaderModulePanelShell {
           bottomRight: this.wideControlDock() ? 0 : DemoAliasTokens.radiusXl,
         })
         .backgroundColor(ColorTokens.floatingControlBg)
-        .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
       }
       .width(this.sheetWidth())
       .margin({ right: this.sheetRight(), bottom: this.sheetBottom() })
@@ -2094,7 +2090,6 @@ struct ReaderFullPanelShell {
         .border({ width: 1, color: ColorTokens.border })
         .borderRadius(DemoAliasTokens.radiusXl)
         .backgroundColor(ColorTokens.paperBright)
-        .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
         InteractionDebugFrame({ label: this.debugLabel, tone: 'sheet' })
       }
       .width(this.panelWidth())
@@ -4086,7 +4081,6 @@ export struct NightToast {
         .backgroundColor(ColorTokens.floatingControlBgAltNight)
         .border({ width: 1, color: ColorTokens.border })
         .borderRadius(DemoAliasTokens.radiusPill)
-        .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
         .margin({ bottom: SizeTokens.bottomBarHeight + 152 })
     }
     .width('100%')

@@ -39,6 +39,7 @@ import { BookTitleAuthor, SourceStatus, ReadButton, DirectoryPreview, BookIntro,
   SubscriptionSummaryCard, FeedStatusChips, FeedSourceChips, RssEntryItem, UnreadIndicator,
   LocalOverviewCard, QuickEntryGrid, SearchInputBox, ScopeSelector, GroupSelector, SearchHistoryList } from './ContractComponents';
 import { Contract25RoutePage } from './Contract25RouteComponents';
+import { FigmaWarmSurfaceTokens, FigmaErrorStateTokens } from '../tokens/FigmaReadingVisualTokens';
 import {
   Slice12AccessibilitySettingsPage,
   Slice12OnboardingCapabilityPage,
@@ -266,7 +267,7 @@ export struct ViewStateRenderer {
       Text(`目录状态 · ${phase}`)
         .fontSize(13)
         .fontWeight(700)
-        .fontColor('#725F50')
+        .fontColor(FigmaWarmSurfaceTokens.secondaryText)
         .width('100%')
       ForEach(children, (child: ViewStateComponent, idx: number) => {
         if (child.type === 'Button') {
@@ -279,8 +280,8 @@ export struct ViewStateRenderer {
     .width('100%')
     .padding(16)
     .borderRadius(18)
-    .backgroundColor('#FFFDF8')
-    .border({ width: 1, color: '#E7DED2' })
+    .backgroundColor(FigmaWarmSurfaceTokens.surface)
+    .border({ width: 1, color: FigmaWarmSurfaceTokens.border })
   }
 
   // Reader appearance management UiEvents are canonical contract evidence,
@@ -294,11 +295,11 @@ export struct ViewStateRenderer {
         Text(`只读 · ${this.textOr(child.props.label, this.textOr(child.props.title, '操作未接线'))}`)
           .fontSize(13)
           .fontWeight(650)
-          .fontColor('#8A7768')
+          .fontColor(FigmaWarmSurfaceTokens.disabledText)
           .width('100%')
           .padding({ left: 12, right: 12, top: 9, bottom: 9 })
           .borderRadius(12)
-          .backgroundColor('#EFE8DE')
+          .backgroundColor(FigmaWarmSurfaceTokens.disabledSurface)
           .enabled(false)
           .hitTestBehavior(HitTestMode.None)
       } else if (child.type === 'Dialog') {
@@ -314,7 +315,7 @@ export struct ViewStateRenderer {
           if (this.textOr(child.props.message, '') !== '') {
             Text(this.textOr(child.props.message, ''))
               .fontSize(12)
-              .fontColor('#725F50')
+              .fontColor(FigmaWarmSurfaceTokens.secondaryText)
               .width('100%')
           }
           this.renderReadOnlyAppearanceChildren(child.children)
@@ -322,8 +323,8 @@ export struct ViewStateRenderer {
         .width('100%')
         .padding(12)
         .borderRadius(14)
-        .backgroundColor('#FFF9EE')
-        .border({ width: 1, color: '#E7DED2' })
+        .backgroundColor(FigmaWarmSurfaceTokens.surfaceAlt)
+        .border({ width: 1, color: FigmaWarmSurfaceTokens.border })
       } else {
         this.renderDebuggedComponent(child, false)
       }
@@ -335,15 +336,15 @@ export struct ViewStateRenderer {
       Text(`外观状态 · ${section}`)
         .fontSize(13)
         .fontWeight(700)
-        .fontColor('#725F50')
+        .fontColor(FigmaWarmSurfaceTokens.secondaryText)
         .width('100%')
       this.renderReadOnlyAppearanceChildren(children)
     }
     .width('100%')
     .padding(16)
     .borderRadius(18)
-    .backgroundColor('#FFFDF8')
-    .border({ width: 1, color: '#E7DED2' })
+    .backgroundColor(FigmaWarmSurfaceTokens.surface)
+    .border({ width: 1, color: FigmaWarmSurfaceTokens.border })
   }
 
   // Canonical replace flow actions mix pilot-owned and unsupported UiEvents.
@@ -359,11 +360,11 @@ export struct ViewStateRenderer {
         Text(`只读 · ${this.textOr(child.props.label, this.textOr(child.props.title, '操作未接线'))}`)
           .fontSize(13)
           .fontWeight(650)
-          .fontColor('#8A7768')
+          .fontColor(FigmaWarmSurfaceTokens.disabledText)
           .width('100%')
           .padding({ left: 12, right: 12, top: 9, bottom: 9 })
           .borderRadius(12)
-          .backgroundColor('#EFE8DE')
+          .backgroundColor(FigmaWarmSurfaceTokens.disabledSurface)
           .enabled(false)
           .hitTestBehavior(HitTestMode.None)
       } else {
@@ -377,7 +378,7 @@ export struct ViewStateRenderer {
       Text(`替换状态 · ${section}`)
         .fontSize(13)
         .fontWeight(700)
-        .fontColor('#725F50')
+        .fontColor(FigmaWarmSurfaceTokens.secondaryText)
         .width('100%')
       this.renderReadOnlyReplaceChildren(children)
       if (section === 'apply') {
@@ -387,67 +388,15 @@ export struct ViewStateRenderer {
           : (this.lastUndoToken !== null ? 'Core 撤销令牌已就绪' : '尚无可用的 Core 撤销令牌'))
           .fontSize(11)
           .fontWeight(650)
-          .fontColor(this.coreSlice10Error.length > 0 ? '#9E3B32' : '#725F50')
+          .fontColor(this.coreSlice10Error.length > 0 ? FigmaErrorStateTokens.errorTextStrong : FigmaWarmSurfaceTokens.secondaryText)
           .width('100%')
       }
     }
     .width('100%')
     .padding(16)
     .borderRadius(18)
-    .backgroundColor('#FFFDF8')
-    .border({ width: 1, color: '#E7DED2' })
-  }
-
-  // Canonical source-switch state evidence is safe to observe, but its action
-  // payloads do not match the complete typed context required by the native
-  // coordinator. Keep evidence visible and every tap child fail-closed.
-  @Builder renderReadOnlySourceSwitchChildren(children: ViewStateComponent[]) {
-    ForEach(children, (child: ViewStateComponent, idx: number) => {
-      if (child.type === 'Button') {
-        this.renderInertCanonicalButton(child)
-      } else if (this.textOr(child.props.uiEventTrigger, '') === 'tap') {
-        Text(`只读 · ${this.textOr(child.props.label, this.textOr(child.props.title, '操作未接线'))}`)
-          .fontSize(13)
-          .fontWeight(650)
-          .fontColor('#8A7768')
-          .width('100%')
-          .padding({ left: 12, right: 12, top: 9, bottom: 9 })
-          .borderRadius(12)
-          .backgroundColor('#EFE8DE')
-          .enabled(false)
-          .hitTestBehavior(HitTestMode.None)
-      } else {
-        Column({ space: 6 }) {
-          this.renderDebuggedComponent(child, false)
-          if (this.textOr(child.props.uiEventTrigger, '') === 'state-evidence') {
-            Text(`状态证据 · ${this.textOr(child.props.uiEvent, '未声明')}`)
-              .fontSize(10)
-              .fontWeight(650)
-              .fontColor('#8A7768')
-              .width('100%')
-              .enabled(false)
-              .hitTestBehavior(HitTestMode.None)
-          }
-        }
-        .width('100%')
-      }
-    }, (child: ViewStateComponent, idx: number) => `${child.id}-${child.type}-${idx}`)
-  }
-
-  @Builder renderReadOnlySourceSwitchState(phase: string, children: ViewStateComponent[]) {
-    Column({ space: 12 }) {
-      Text(`换源状态 · ${phase}`)
-        .fontSize(13)
-        .fontWeight(700)
-        .fontColor('#725F50')
-        .width('100%')
-      this.renderReadOnlySourceSwitchChildren(children)
-    }
-    .width('100%')
-    .padding(16)
-    .borderRadius(18)
-    .backgroundColor('#FFFDF8')
-    .border({ width: 1, color: '#E7DED2' })
+    .backgroundColor(FigmaWarmSurfaceTokens.surface)
+    .border({ width: 1, color: FigmaWarmSurfaceTokens.border })
   }
 
   // Canonical ReadingTextFlow fixtures carry state/font evidence but no
@@ -461,11 +410,11 @@ export struct ViewStateRenderer {
         Text(`只读 · ${this.textOr(child.props.label, this.textOr(child.props.title, '操作未接线'))}`)
           .fontSize(13)
           .fontWeight(650)
-          .fontColor('#8A7768')
+          .fontColor(FigmaWarmSurfaceTokens.disabledText)
           .width('100%')
           .padding({ left: 12, right: 12, top: 9, bottom: 9 })
           .borderRadius(12)
-          .backgroundColor('#EFE8DE')
+          .backgroundColor(FigmaWarmSurfaceTokens.disabledSurface)
           .enabled(false)
           .hitTestBehavior(HitTestMode.None)
       } else {
@@ -475,7 +424,7 @@ export struct ViewStateRenderer {
             Text(`状态证据 · ${this.textOr(child.props.uiEvent, '未声明')}`)
               .fontSize(10)
               .fontWeight(650)
-              .fontColor('#8A7768')
+              .fontColor(FigmaWarmSurfaceTokens.disabledText)
               .width('100%')
               .enabled(false)
               .hitTestBehavior(HitTestMode.None)
@@ -491,15 +440,15 @@ export struct ViewStateRenderer {
       Text(`正文状态 · ${phase}`)
         .fontSize(13)
         .fontWeight(700)
-        .fontColor('#725F50')
+        .fontColor(FigmaWarmSurfaceTokens.secondaryText)
         .width('100%')
       this.renderReadOnlyReadingTextChildren(children)
     }
     .width('100%')
     .padding(16)
     .borderRadius(18)
-    .backgroundColor('#FFFDF8')
-    .border({ width: 1, color: '#E7DED2' })
+    .backgroundColor(FigmaWarmSurfaceTokens.surface)
+    .border({ width: 1, color: FigmaWarmSurfaceTokens.border })
   }
 
   @Builder renderReadingTextFlowMetadata(state: string, fontFamily: string) {
@@ -509,10 +458,10 @@ export struct ViewStateRenderer {
         Text(`正文契约 · ${state}`)
           .fontSize(9)
           .fontWeight(700)
-          .fontColor('#FFFDF8')
+          .fontColor(FigmaWarmSurfaceTokens.onAccentText)
           .padding({ left: 6, right: 6, top: 2, bottom: 2 })
           .borderRadius(6)
-          .backgroundColor('#725F50')
+          .backgroundColor(FigmaWarmSurfaceTokens.accent)
           .position({ x: 12, y: 26 })
           .enabled(false)
           .hitTestBehavior(HitTestMode.None)
@@ -521,10 +470,10 @@ export struct ViewStateRenderer {
         Text(`字体契约 · ${fontFamily}`)
           .fontSize(9)
           .fontWeight(700)
-          .fontColor('#FFFDF8')
+          .fontColor(FigmaWarmSurfaceTokens.onAccentText)
           .padding({ left: 6, right: 6, top: 2, bottom: 2 })
           .borderRadius(6)
-          .backgroundColor('#725F50')
+          .backgroundColor(FigmaWarmSurfaceTokens.accent)
           .position({ x: 12, y: 48 })
           .enabled(false)
           .hitTestBehavior(HitTestMode.None)
@@ -558,17 +507,17 @@ export struct ViewStateRenderer {
       Text(title)
         .fontSize(14)
         .fontWeight(750)
-        .fontColor('#2E2924')
+        .fontColor(FigmaWarmSurfaceTokens.strongText)
         .width('100%')
       Text(`${component.type} · ${detail}`)
         .fontSize(11)
-        .fontColor('#725F50')
+        .fontColor(FigmaWarmSurfaceTokens.secondaryText)
         .width('100%')
       if (component.bindings.length > 0) {
         Text(`${component.bindings.length} 个 planned action · fail-closed`)
           .fontSize(10)
           .fontWeight(700)
-          .fontColor('#9E3B32')
+          .fontColor(FigmaErrorStateTokens.errorTextStrong)
           .width('100%')
       }
       if (children.length > 0) {
@@ -578,8 +527,8 @@ export struct ViewStateRenderer {
     .width('100%')
     .padding(12)
     .borderRadius(14)
-    .backgroundColor('#FFF9EE')
-    .border({ width: 1, color: '#E7DED2' })
+    .backgroundColor(FigmaWarmSurfaceTokens.surfaceAlt)
+    .border({ width: 1, color: FigmaWarmSurfaceTokens.border })
     .enabled(false)
     .hitTestBehavior(HitTestMode.None)
   }
@@ -623,7 +572,7 @@ export struct ViewStateRenderer {
         if (projection.message !== '') {
           Text(projection.message)
             .fontSize(14)
-            .fontColor('#725F50')
+            .fontColor(FigmaWarmSurfaceTokens.secondaryText)
             .width('100%')
         }
         if (projection.children.length > 0) {
@@ -633,13 +582,13 @@ export struct ViewStateRenderer {
       .width('100%')
       .padding(16)
       .borderRadius(18)
-      .backgroundColor('#FFFDF8')
-      .border({ width: 1, color: '#E7DED2' })
+      .backgroundColor(FigmaWarmSurfaceTokens.surface)
+      .border({ width: 1, color: FigmaWarmSurfaceTokens.border })
     } else {
       Text(`Dialog 契约漂移 · ${component.id}`)
         .fontSize(13)
         .fontWeight(700)
-        .fontColor('#9E3B32')
+        .fontColor(FigmaErrorStateTokens.errorTextStrong)
         .width('100%')
         .padding(12)
         .enabled(false)
@@ -654,25 +603,25 @@ export struct ViewStateRenderer {
         Text(projection.title)
           .fontSize(16)
           .fontWeight(800)
-          .fontColor('#2E2924')
+          .fontColor(FigmaWarmSurfaceTokens.strongText)
           .width('100%')
         if (projection.message !== projection.title) {
           Text(projection.message)
             .fontSize(13)
-            .fontColor('#725F50')
+            .fontColor(FigmaWarmSurfaceTokens.secondaryText)
             .width('100%')
         }
       }
       .width('100%')
       .padding(12)
       .borderRadius(14)
-      .backgroundColor('#FFF9EE')
-      .border({ width: 1, color: '#E7DED2' })
+      .backgroundColor(FigmaWarmSurfaceTokens.surfaceAlt)
+      .border({ width: 1, color: FigmaWarmSurfaceTokens.border })
     } else {
       Text(`Content 契约漂移 · ${component.id}`)
         .fontSize(13)
         .fontWeight(700)
-        .fontColor('#9E3B32')
+        .fontColor(FigmaErrorStateTokens.errorTextStrong)
         .width('100%')
         .padding(12)
         .enabled(false)
@@ -687,12 +636,12 @@ export struct ViewStateRenderer {
         Text(projection.title)
           .fontSize(16)
           .fontWeight(800)
-          .fontColor('#2E2924')
+          .fontColor(FigmaWarmSurfaceTokens.strongText)
           .textAlign(TextAlign.Center)
         if (projection.message !== projection.title) {
           Text(projection.message)
             .fontSize(13)
-            .fontColor('#725F50')
+            .fontColor(FigmaWarmSurfaceTokens.secondaryText)
             .textAlign(TextAlign.Center)
         }
       }
@@ -705,7 +654,7 @@ export struct ViewStateRenderer {
       Text(`Empty 契约漂移 · ${component.id}`)
         .fontSize(13)
         .fontWeight(700)
-        .fontColor('#9E3B32')
+        .fontColor(FigmaErrorStateTokens.errorTextStrong)
         .width('100%')
         .padding(12)
         .enabled(false)
@@ -720,13 +669,13 @@ export struct ViewStateRenderer {
         Text(projection.message)
           .fontSize(16)
           .fontWeight(800)
-          .fontColor('#2E2924')
+          .fontColor(FigmaWarmSurfaceTokens.strongText)
           .textAlign(TextAlign.Center)
         if (projection.retryable) {
           Text('可重试')
             .fontSize(12)
             .fontWeight(700)
-            .fontColor('#725F50')
+            .fontColor(FigmaWarmSurfaceTokens.secondaryText)
             .enabled(false)
             .hitTestBehavior(HitTestMode.None)
         }
@@ -740,7 +689,7 @@ export struct ViewStateRenderer {
       Text(`Error 契约漂移 · ${component.id}`)
         .fontSize(13)
         .fontWeight(700)
-        .fontColor('#9E3B32')
+        .fontColor(FigmaErrorStateTokens.errorTextStrong)
         .width('100%')
         .padding(12)
         .enabled(false)
@@ -755,12 +704,12 @@ export struct ViewStateRenderer {
         Text(projection.title)
           .fontSize(16)
           .fontWeight(800)
-          .fontColor('#2E2924')
+          .fontColor(FigmaWarmSurfaceTokens.strongText)
           .textAlign(TextAlign.Center)
         if (projection.message !== projection.title) {
           Text(projection.message)
             .fontSize(13)
-            .fontColor('#725F50')
+            .fontColor(FigmaWarmSurfaceTokens.secondaryText)
             .textAlign(TextAlign.Center)
         }
       }
@@ -773,7 +722,7 @@ export struct ViewStateRenderer {
       Text(`Permission 契约漂移 · ${component.id}`)
         .fontSize(13)
         .fontWeight(700)
-        .fontColor('#9E3B32')
+        .fontColor(FigmaErrorStateTokens.errorTextStrong)
         .width('100%')
         .padding(12)
         .enabled(false)
@@ -921,15 +870,12 @@ export struct ViewStateRenderer {
         message: this.textOr(component.props.message, '换源预览'),
       })
     } else if (component.type === 'SourceSwitchFlowPage') {
+      // Withdrawn generated state-matrix children are isolated into a zero-size
+      // column so only the live Figma window remains in the presentation path.
       if (component.children.length > 0) {
-        this.renderReadOnlySourceSwitchState(
-          this.textOr(component.props.phase, 'source-switch'),
-          component.children,
-        )
-      } else {
-        // Default flow instances retain the live typed native workflow.
-        SourceSwitchFlowPage()
+        Column().width(0).height(0)
       }
+      SourceSwitchFlowPage()
     } else if (component.type === 'SourceImportPreviewPage') {
       SourceImportPreviewPage()
     } else if (component.type === 'SourceGroupsPage') {
@@ -1365,11 +1311,11 @@ export struct ViewStateRenderer {
         Text(this.textOr(component.props.title, '阅读边界'))
           .fontSize(13)
           .fontWeight(700)
-          .fontColor('#FFFDF8')
+          .fontColor(FigmaWarmSurfaceTokens.onAccentText)
       }
       .padding({ left: 14, right: 14, top: 9, bottom: 9 })
       .borderRadius(20)
-      .backgroundColor('#2E2924')
+      .backgroundColor(FigmaWarmSurfaceTokens.strongText)
     } else if (component.type === 'Toast') {
       Column({ space: 6 }) {
         Text(this.textOr(component.props.title, '状态提示'))
@@ -1379,7 +1325,7 @@ export struct ViewStateRenderer {
         if (this.textOr(component.props.message, '') !== '') {
           Text(this.textOr(component.props.message, ''))
             .fontSize(12)
-            .fontColor('#725F50')
+            .fontColor(FigmaWarmSurfaceTokens.secondaryText)
             .width('100%')
         }
         if (component.children.length > 0) {
@@ -1389,8 +1335,8 @@ export struct ViewStateRenderer {
       .width('100%')
       .padding(12)
       .borderRadius(14)
-      .backgroundColor('#FFF9EE')
-      .border({ width: 1, color: '#E7DED2' })
+      .backgroundColor(FigmaWarmSurfaceTokens.surfaceAlt)
+      .border({ width: 1, color: FigmaWarmSurfaceTokens.border })
     } else if (component.type === 'Button') {
       this.renderCanonicalButton(
         component,
@@ -1434,7 +1380,7 @@ export struct ViewStateRenderer {
           if (this.textOr(component.props.message, '') !== '') {
             Text(this.textOr(component.props.message, ''))
               .fontSize(12)
-              .fontColor('#725F50')
+              .fontColor(FigmaWarmSurfaceTokens.secondaryText)
               .width('100%')
           }
           this.renderChildren(component.children)
@@ -1449,7 +1395,7 @@ export struct ViewStateRenderer {
           if (this.textOr(component.props.message, '') !== '') {
             Text(this.textOr(component.props.message, ''))
               .fontSize(12)
-              .fontColor('#725F50')
+              .fontColor(FigmaWarmSurfaceTokens.secondaryText)
               .width('100%')
           }
           DemoList()
@@ -1480,7 +1426,7 @@ export struct ViewStateRenderer {
         if (this.textOr(component.props.message, '') !== '') {
           Text(this.textOr(component.props.message, ''))
             .fontSize(12)
-            .fontColor('#725F50')
+            .fontColor(FigmaWarmSurfaceTokens.secondaryText)
             .width('100%')
         }
         if (component.children.length > 0) {
@@ -1490,8 +1436,8 @@ export struct ViewStateRenderer {
       .width('100%')
       .padding(12)
       .borderRadius(14)
-      .backgroundColor('#FFFDF8')
-      .border({ width: 1, color: '#E7DED2' })
+      .backgroundColor(FigmaWarmSurfaceTokens.surface)
+      .border({ width: 1, color: FigmaWarmSurfaceTokens.border })
     } else if (component.type === 'FilterBar') {
       FilterBar()
     } else if (component.type === 'Overlay') {
@@ -1622,16 +1568,16 @@ export struct ViewStateRenderer {
         Text('Reader UI 组件契约漂移')
           .fontSize(14)
           .fontWeight(800)
-          .fontColor('#A03A32')
+          .fontColor(FigmaErrorStateTokens.errorText)
         Text(component.type)
           .fontSize(11)
-          .fontColor('#725F50')
+          .fontColor(FigmaWarmSurfaceTokens.secondaryText)
       }
       .width('100%')
       .padding(12)
       .borderRadius(12)
-      .backgroundColor('#FFF2F0')
-      .border({ width: 1, color: '#D98C83' })
+      .backgroundColor(FigmaErrorStateTokens.errorSurface)
+      .border({ width: 1, color: FigmaErrorStateTokens.errorBorder })
     }
   }
 }

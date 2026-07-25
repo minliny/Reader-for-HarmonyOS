@@ -1348,7 +1348,6 @@ export struct ReaderTopArea {
           .border({ width: 1, color: ColorTokens.border })
           .borderRadius(DemoAliasTokens.radiusXl)
           .backgroundColor(DemoAliasTokens.surface)
-          .shadow({ radius: 8, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 2 })
           InteractionDebugFrame({ label: 'ReaderTopBar', tone: 'module' })
         }
         .width('100%')

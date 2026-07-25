@@ -9,6 +9,7 @@ import { describe, it, expect } from '@ohos/hypium';
 import { ReaderReducer } from '../main/ets/ui/store/ReaderReducer';
 import { ReaderEffects } from '../main/ets/ui/store/ReaderEffects';
 import { DemoUiState } from '../main/ets/ui/fixtures/DemoUiState';
+import { RouteId } from '../main/ets/contract/generated/RouteTable';
 import { SearchResultEntry, BookDetail, CoreSourceEntry, CoreSourceCheckResult, CoreSourceDebugResult, CoreContentSearchResult, CoreBookmark } from '../main/ets/ui/store/ReaderUiState';
 import type { JsonObject } from '../main/ets/bridge/core/sdk/reader_core';
 import type { CoreSourceDebugRunProjection } from '../main/ets/bridge/CoreRuntime';
@@ -773,6 +774,61 @@ export default function ReaderEffectsTests(): void {
       expect(reset.readerChapterProgress).assertEqual(0.4);
     });
 
+    it('pageAnimationAtomicallyOwnsPaginationLayout', 0, () => {
+      const initial = DemoUiState.initial();
+      for (const animation of ['slide', 'cover', 'simulation', 'none']) {
+        const next = ReaderReducer.reduce(initial, {
+          type: 'set-reader-setting-option', optionKey: 'pageAnimation', optionValue: animation,
+        });
+        expect(next.readerSettingOptions.pageAnimation).assertEqual(animation);
+        expect(next.readerSettingOptions.pageMode).assertEqual('horizontal');
+        expect(next.paginationMode).assertEqual('horizontal');
+      }
+      const scrolling = ReaderReducer.reduce(initial, {
+        type: 'set-reader-setting-option', optionKey: 'pageAnimation', optionValue: '滚动',
+      });
+      expect(scrolling.readerSettingOptions.pageAnimation).assertEqual('scroll');
+      expect(scrolling.readerSettingOptions.pageMode).assertEqual('vertical');
+      expect(scrolling.paginationMode).assertEqual('vertical');
+      const restoredHorizontal = ReaderReducer.reduce(scrolling, {
+        type: 'set-reader-setting-option', optionKey: 'pageAnimation', optionValue: '覆盖',
+      });
+      expect(restoredHorizontal.readerSettingOptions.pageAnimation).assertEqual('cover');
+      expect(restoredHorizontal.readerSettingOptions.pageMode).assertEqual('horizontal');
+      expect(restoredHorizontal.paginationMode).assertEqual('horizontal');
+      const legacyVertical = ReaderReducer.reduce(initial, {
+        type: 'set-pagination-mode', paginationMode: 'vertical',
+      });
+      expect(legacyVertical.readerSettingOptions.pageAnimation).assertEqual('scroll');
+      expect(legacyVertical.readerSettingOptions.pageMode).assertEqual('vertical');
+      const legacyHorizontal = ReaderReducer.reduce(legacyVertical, {
+        type: 'set-pagination-mode', paginationMode: 'horizontal',
+      });
+      expect(legacyHorizontal.readerSettingOptions.pageAnimation).assertEqual('slide');
+      expect(legacyHorizontal.readerSettingOptions.pageMode).assertEqual('horizontal');
+
+      const persistedSimulation = ReaderReducer.reduce(initial, {
+        type: 'hydrate-reader-page-turn-preference',
+        preferencePageAnimation: 'simulation',
+        preferencePageMode: 'horizontal',
+      });
+      expect(persistedSimulation.readerSettingOptions.pageAnimation).assertEqual('simulation');
+      expect(persistedSimulation.readerSettingOptions.pageMode).assertEqual('horizontal');
+      const rejectedMismatch = ReaderReducer.reduce(persistedSimulation, {
+        type: 'hydrate-reader-page-turn-preference',
+        preferencePageAnimation: 'scroll',
+        preferencePageMode: 'horizontal',
+      });
+      expect(rejectedMismatch.readerSettingOptions.pageAnimation).assertEqual('simulation');
+      expect(rejectedMismatch.readerSettingOptions.pageMode).assertEqual('horizontal');
+      const rejectedUnknown = ReaderReducer.reduce(persistedSimulation, {
+        type: 'hydrate-reader-page-turn-preference',
+        preferencePageAnimation: 'smooth',
+        preferencePageMode: 'horizontal',
+      });
+      expect(rejectedUnknown.readerSettingOptions.pageAnimation).assertEqual('simulation');
+    });
+
     it('chapterJumpSetsLoadingAndPageState', 0, () => {
       const s = DemoUiState.initial();
       const reader = ReaderReducer.reduce(s, { type: 'route-push', id: 'immersive-reading' });
@@ -964,28 +1020,91 @@ export default function ReaderEffectsTests(): void {
       expect(next.discoverFilter.sort).assertEqual('recent');
     });
 
-    it('sourceImportOpenPushesLocalImportRoute', 0, () => {
+    it('sourceImportOpenKeepsInvokingRouteForSystemPicker', 0, () => {
       const s = DemoUiState.initial();
       const next = ReaderReducer.reduce(s, { type: 'source-import-open' });
-      expect(next.routeId).assertEqual('local-import');
-      expect(next.stack.length).assertEqual(s.stack.length + 1);
+      expect(next.routeId).assertEqual(s.routeId);
+      expect(next.stack.length).assertEqual(s.stack.length);
+      expect(next.overlay).assertEqual('');
+      expect(next.localImportDialogPhase).assertEqual('idle');
     });
 
-    it('sourceImportPreviewProjectsCoreDetectedEncoding', 0, () => {
-      let s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'local-import' });
-      s = ReaderReducer.reduce(s, { type: 'local-import-parse-start', localImportEpoch: s.localImportEpoch + 1 });
-      const next = ReaderReducer.reduce(s, {
-        type: 'source-import-preview',
-        importFormat: 'txt',
-        importEncoding: 'gb18030',
-        importCount: 8,
-        localImportEpoch: s.localImportEpoch,
+    it('localImportDialogShowsOnlyBatchOutcomesAndRequiresConfirmation', 0, () => {
+      const s = DemoUiState.initial();
+      const loading = ReaderReducer.reduce(s, {
+        type: 'local-import-dialog-loading', localImportDialogEpoch: 1,
+        localImportDialogResults: [],
       });
-      expect(next.importPreviewFormat).assertEqual('txt');
-      expect(next.importPreviewEncoding).assertEqual('gb18030');
-      expect(next.importPreviewCount).assertEqual(8);
-      const committed = ReaderReducer.applyImport(next, 8);
-      expect(committed.importPreviewEncoding).assertEqual('');
+      expect(loading.routeId).assertEqual(s.routeId);
+      expect(loading.overlay).assertEqual('local-import');
+      expect(loading.localImportDialogPhase).assertEqual('loading');
+      expect(loading.loading).assertEqual(false);
+      const ignoredBack = ReaderReducer.reduce(loading, { type: 'set-overlay', overlay: '' });
+      expect(ignoredBack.overlay).assertEqual('local-import');
+      const result = ReaderReducer.reduce(loading, {
+        type: 'local-import-dialog-result',
+        localImportDialogEpoch: 1,
+        localImportDialogResults: [
+          { id: 'local-import-1-0', fileName: '第一本.txt', status: 'success' },
+          { id: 'local-import-1-1', fileName: '第二本.epub', status: 'failure' },
+        ],
+      });
+      expect(result.localImportDialogPhase).assertEqual('result');
+      expect(result.localImportDialogResults.length).assertEqual(2);
+      expect(result.localImportDialogResults[0].fileName).assertEqual('第一本.txt');
+      expect(result.localImportDialogResults[1].status).assertEqual('failure');
+      const confirmed = ReaderReducer.reduce(result, { type: 'local-import-dialog-confirm' });
+      expect(confirmed.overlay).assertEqual('');
+      expect(confirmed.localImportDialogPhase).assertEqual('idle');
+      expect(confirmed.localImportDialogResults.length).assertEqual(0);
+    });
+
+    it('localImportDialogRejectsStaleCompletionAndNavigation', 0, () => {
+      const s = ReaderReducer.reduce(DemoUiState.initial(), {
+        type: 'local-import-dialog-loading', localImportDialogEpoch: 3,
+        localImportDialogResults: [],
+      });
+      const stale = ReaderReducer.reduce(s, {
+        type: 'local-import-dialog-result',
+        localImportDialogEpoch: 2,
+        localImportDialogResults: [{ id: 'local-import-2-0', fileName: '旧回调.txt', status: 'success' }],
+      });
+      expect(stale.localImportDialogPhase).assertEqual('loading');
+      expect(stale.localImportDialogResults.length).assertEqual(0);
+      const moved = ReaderReducer.reduce(s, { type: 'route-push', id: 'book-search' });
+      expect(moved.routeId).assertEqual(s.routeId);
+      expect(moved.stack.length).assertEqual(s.stack.length);
+    });
+
+    it('retiredLocalImportRoutesNeverReopenFullPageFlow', 0, () => {
+      const retired: RouteId[] = [
+        'local-import',
+        'import-permission-denied',
+        'import-format-unsupported',
+        'import-empty-file',
+        'import-parsing',
+        'import-duplicate',
+        'import-conflict-resolve',
+        'import-partial-success',
+        'import-result-detail',
+        'local-format-support',
+      ];
+      for (let index = 0; index < retired.length; index += 1) {
+        const pushed = ReaderReducer.reduce(DemoUiState.initial(), {
+          type: 'route-push', id: retired[index],
+        });
+        expect(pushed.routeId).assertEqual('bookshelf');
+        expect(pushed.stack.length).assertEqual(1);
+
+        const detail = ReaderReducer.reduce(DemoUiState.initial(), {
+          type: 'route-push', id: 'book-detail',
+        });
+        const replaced = ReaderReducer.reduce(detail, {
+          type: 'route-replace', id: retired[index],
+        });
+        expect(replaced.routeId).assertEqual('bookshelf');
+        expect(replaced.stack[replaced.stack.length - 1].id).assertEqual('bookshelf');
+      }
     });
 
     it('rssTabBackReturnsToBookshelf', 0, () => {
@@ -1102,6 +1221,18 @@ export default function ReaderEffectsTests(): void {
         type: 'reader-brightness-host-revert', value: 80,
       });
       expect(restoredBrightness.brightness).assertEqual(80);
+      const autoBrightness = ReaderReducer.reduce(restoredBrightness, {
+        type: 'toggle-brightness-auto', enabled: true,
+      });
+      expect(autoBrightness.brightnessAuto).assertTrue();
+      const manualBrightness = ReaderReducer.reduce(autoBrightness, {
+        type: 'set-brightness', value: 42,
+      });
+      expect(manualBrightness.brightnessAuto).assertFalse();
+      const restoredAutoBrightness = ReaderReducer.reduce(autoBrightness, {
+        type: 'reader-brightness-auto-host-revert', enabled: false,
+      });
+      expect(restoredAutoBrightness.brightnessAuto).assertFalse();
       const hidden = ReaderReducer.reduce(restoredBrightness, {
         type: 'set-reader-toggle', toggleKey: 'hideStatusBar', toggleValue: true,
       });
@@ -1182,6 +1313,13 @@ export default function ReaderEffectsTests(): void {
       expect(next.webdavTestStatus).assertEqual('testing');
     });
 
+    it('syncBackupInlineWebdavTestSetsTestingStatus', 0, () => {
+      let s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'sync-backup' });
+      s = ReaderReducer.reduce(s, { type: 'webdav-field-update', field: 'serverUrl', settingsValue: 'https://dav.example.com' });
+      const next = ReaderReducer.reduce(s, { type: 'webdav-test' });
+      expect(next.webdavTestStatus).assertEqual('testing');
+    });
+
     it('webdavTestResultSetsSuccessStatus', 0, () => {
       let s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'webdav-config' });
       s = ReaderReducer.reduce(s, { type: 'webdav-field-update', field: 'serverUrl', settingsValue: 'https://dav.example.com' });
@@ -1207,6 +1345,13 @@ export default function ReaderEffectsTests(): void {
       expect(next.webdavSaveStatus).assertEqual('saving');
     });
 
+    it('syncBackupInlineWebdavSaveSetsSavingStatus', 0, () => {
+      let s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'sync-backup' });
+      s = ReaderReducer.reduce(s, { type: 'webdav-field-update', field: 'serverUrl', settingsValue: 'https://dav.example' });
+      const next = ReaderReducer.reduce(s, { type: 'webdav-save' });
+      expect(next.webdavSaveStatus).assertEqual('saving');
+    });
+
     it('webdavSaveResultSetsSavedStatus', 0, () => {
       let s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'webdav-config' });
       s = ReaderReducer.reduce(s, { type: 'webdav-field-update', field: 'serverUrl', settingsValue: 'https://dav.example' });
@@ -1225,7 +1370,9 @@ export default function ReaderEffectsTests(): void {
     });
 
     it('webdavFieldsPersistAcrossTabSwitch', 0, () => {
+      // webdav-field-update only applies on webdav-config or sync-backup routes.
       const s = DemoUiState.initial();
+      s.routeId = 'webdav-config';
       const configured = ReaderReducer.reduce(s, { type: 'webdav-field-update', field: 'serverUrl', settingsValue: 'https://dav.example.com' });
       const switched = ReaderReducer.switchTab(configured, 'rss');
       const back = ReaderReducer.switchTab(switched, 'settings');

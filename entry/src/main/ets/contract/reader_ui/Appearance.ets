@@ -36,7 +36,7 @@ export class ReaderAppearanceSpecRegistry {
   static readonly selects: ReaderAppearanceSelect[] = [
     { id: "paragraphIndentMode", label: "缩进", defaultValue: "none", options: [{ value: "none", label: "无" }, { value: "two-character", label: "2 字符" }] },
     { id: "textConversion", label: "简繁", defaultValue: "simplified", options: [{ value: "simplified", label: "简体" }, { value: "traditional", label: "繁体" }] },
-    { id: "pageAnimation", label: "翻页动画", defaultValue: "slide", options: [{ value: "slide", label: "平移" }, { value: "cover", label: "覆盖" }, { value: "none", label: "无" }] },
+    { id: "pageAnimation", label: "翻页动画", defaultValue: "slide", options: [{ value: "cover", label: "覆盖" }, { value: "slide", label: "滑动" }, { value: "simulation", label: "仿真" }, { value: "scroll", label: "滚动" }, { value: "none", label: "无动画" }] },
     { id: "textAlignment", label: "文字对齐", defaultValue: "justify", options: [{ value: "justify", label: "开启" }, { value: "leading", label: "关闭" }] }
   ];
   static readonly steppers: ReaderAppearanceStepper[] = [

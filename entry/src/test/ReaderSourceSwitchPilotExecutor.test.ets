@@ -193,6 +193,25 @@ export default function ReaderSourceSwitchPilotExecutorTests(): void {
       expect(ReaderUiStore.sourceSwitchPilotSnapshot().activeCorrelationId).assertEqual('');
     });
 
+    it('localBookCannotAdmitSourceSwitchPilotTransaction', 0, () => {
+      const core = new RecordingSourceSwitchCoreGateway();
+      initSourceSwitchPilot(core);
+      ReaderUiStore.dispatch({
+        type: 'book-detail-success',
+        book: {
+          bookId: 'local-book', sourceId: 'local', title: '本地书', author: '作者',
+          summary: '', sourceName: '本地导入', sourceUrl: '', latestChapter: '', chapterListUrl: 'local-book',
+        },
+      });
+
+      ReaderUiStore.dispatch({ type: 'source.switch.open' });
+      ReaderUiStore.dispatch({ type: 'source.switch.confirm', sourceId: 'src-new' });
+
+      expect(core.commitHandles.length).assertEqual(0);
+      expect(ReaderUiStore.sourceSwitchPilotSnapshot().activeCorrelationId).assertEqual('');
+      expect(ReaderUiStore.snapshot().routeId).assertEqual('bookshelf');
+    });
+
     it('sourceSwitchConfirmDispatchesCommitEffect', 0, async () => {
       const core = new RecordingSourceSwitchCoreGateway();
       initSourceSwitchPilot(core);

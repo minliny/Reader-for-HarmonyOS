@@ -662,7 +662,10 @@ export default function HostSmokeTest(): void {
       expect(native.numberParam('offset')).assertEqual(5);
       expect(native.numberParam('limit')).assertEqual(20);
 
-      await core.readerLocationResolve('book-1', 2, 128, 0.5, 390, 844, 1.0);
+      // Device density can produce fractional logical dimensions.  The bridge
+      // is the sole DTO boundary and must round them before Core's u32 layout
+      // schema sees the command.
+      await core.readerLocationResolve('book-1', 2, 128, 0.5, 365.7142857, 809.1428571, 1.0);
       expect(native.lastMethod).assertEqual('reader.location.resolve');
       expect(native.stringParam('bookId')).assertEqual('book-1');
       expect(native.numberParam('chapterIndex')).assertEqual(2);
@@ -670,8 +673,8 @@ export default function HostSmokeTest(): void {
       expect(anchor['chapterOffset']).assertEqual(128);
       expect(anchor['chapterProgress']).assertEqual(0.5);
       const layout = native.objectParam('layout') as Object as Record<string, number>;
-      expect(layout['viewportWidth']).assertEqual(390);
-      expect(layout['viewportHeight']).assertEqual(844);
+      expect(layout['viewportWidth']).assertEqual(366);
+      expect(layout['viewportHeight']).assertEqual(809);
       expect(layout['fontScale']).assertEqual(1.0);
     });
 

@@ -76,8 +76,6 @@ export class DemoViewState {
         return ['FormSection', 'Input', 'Button'];
       case 'sync-error':
         return ['Error', 'Overlay'];
-      case 'source-switch-results':
-        return ['Overlay'];
       default:
         return ['Empty'];
     }

@@ -17,7 +17,7 @@ import util from '@ohos.util';
 import zlib from '@ohos.zlib';
 import { ReaderUiStore } from '../ui/store/ReaderUiStore';
 import { ReaderEffects } from '../ui/store/ReaderEffects';
-import { ReaderPaginationMode, SearchResultEntry, BookDetail, ChapterTocEntry, UiEvent } from '../ui/store/ReaderUiState';
+import { SearchResultEntry, BookDetail, ChapterTocEntry, UiEvent } from '../ui/store/ReaderUiState';
 import { SafeAreaAdapter } from '../ui/adapters/SafeAreaAdapter';
 import { ViewportAdapter } from '../ui/adapters/ViewportAdapter';
 import { InteractionDebugAdapter } from '../ui/adapters/InteractionDebugAdapter';
@@ -45,6 +45,15 @@ import {
   HostDeviceVibrateRequest,
 } from '../host/types';
 
+// Device-observable lifecycle evidence for the one bundled display font. This
+// says only whether ArkUI accepted the packaged font for the active UIContext;
+// it is deliberately not a claim that any external design font is present.
+export type BundledSerifFontRegistrationStatus = 'pending' | 'registered' | 'failed';
+export const BUNDLED_SERIF_FONT_REGISTRATION_STATUS_KEY =
+  'reader.fontRegistration.bundledSerif.status';
+export const BUNDLED_SERIF_FONT_REGISTRATION_DETAIL_KEY =
+  'reader.fontRegistration.bundledSerif.detail';
+
 // Keep the device-only reading-chain probe on the same source-scoped detail
 // contract as a user tap. Exported solely so the probe payload can be covered
 // without constructing a UIAbility in a host unit test.
@@ -54,6 +63,23 @@ export function buildReadingChainUiDetailLoadEvent(result: SearchResultEntry): U
     bookId: result.bookId,
     sourceId: result.sourceId ?? '',
     loadFirstChapter: false,
+  };
+}
+
+// The reading-chain self-check must use the same route fence as a visible
+// search action.  `search-submit` is deliberately ignored off a Search page,
+// so starting the evidence run from the bookshelf must first enter the
+// canonical Book Search route instead of bypassing the reducer.
+export function buildReadingChainUiSearchRouteEvent(): UiEvent {
+  return { type: 'route-push', id: 'book-search' };
+}
+
+export function buildSelfCheckCacheWriteRequest(path: string, content: string): HostFileWriteRequest {
+  return {
+    path: path,
+    content: content,
+    encoding: 'utf-8',
+    createDirectories: true,
   };
 }
 
@@ -85,6 +111,7 @@ export default class EntryAbility extends UIAbility {
     AppStorage.setOrCreate<number>(ViewportAdapter.K_HEIGHT, ViewportAdapter.DEFAULT_HEIGHT);
     AppStorage.setOrCreate<string>(ViewportAdapter.K_CLASS,
       ViewportAdapter.classify(ViewportAdapter.DEFAULT_WIDTH, ViewportAdapter.DEFAULT_HEIGHT));
+    this.recordBundledSerifFontRegistration('pending', 'waiting for the loaded page UIContext');
     // No frozen hinge/posture Host event exists. Never infer fold state from
     // device type or viewport width.
     AppStorage.setOrCreate<string>(ViewportAdapter.K_FOLD_POSTURE, 'unverified');
@@ -127,6 +154,13 @@ export default class EntryAbility extends UIAbility {
       try {
         const snapshot = await uiPreferences.load();
         ReaderUiStore.dispatch({ type: 'hydrate-reduced-motion', enabled: snapshot.reducedMotion });
+        // The Host adapter admits only a validated global pair. Hydration is a
+        // reducer-only event, so startup never rewrites a corrupt preference.
+        ReaderUiStore.dispatch({
+          type: 'hydrate-reader-page-turn-preference',
+          preferencePageAnimation: snapshot.pageAnimation,
+          preferencePageMode: snapshot.pageMode,
+        });
       } catch (e) {
         // Default false remains active. A corrupt/future preference schema is
         // never silently rewritten during startup.
@@ -146,15 +180,6 @@ export default class EntryAbility extends UIAbility {
     ReaderEffects.loadRss();
     ReaderEffects.loadAvailableSources();
     ReaderEffects.loadWebdavConfig();
-    // Development initialRoute is applied before CoreRuntime.init so the first
-    // frame can render the requested route. Replay group reads only after the
-    // Core restore barrier instead of leaving an initialization error.
-    const activeRoute = ReaderUiStore.snapshot().routeId;
-    if (activeRoute === 'bookshelf-group-management' || activeRoute === 'group-management') {
-      ReaderEffects.loadBookGroups();
-      ReaderEffects.loadBookshelf();
-    }
-
     // Self-checks are opt-in: they only run after Core storage is ready so a
     // device proof observes the same startup order as production.
     if (selfCheckFlag === 'true') {
@@ -335,11 +360,7 @@ export default class EntryAbility extends UIAbility {
           console.info('[ReadingChain] step=3 SKIP file adapter null (no context)');
           return;
         }
-        const writeReq: HostFileWriteRequest = {
-          path: cachePath,
-          content: httpResp.body,
-          encoding: 'utf-8',
-        };
+        const writeReq = buildSelfCheckCacheWriteRequest(cachePath, httpResp.body);
         const writeResp = await fileAdapter.write(writeReq);
         console.info(`[ReadingChain] step=3a file.write path=${cachePath} written=${writeResp.written} bytes=${writeResp.byteLength}`);
         const readResp = await fileAdapter.read({ path: cachePath, encoding: 'utf-8' } as HostFileReadRequest);
@@ -412,11 +433,7 @@ export default class EntryAbility extends UIAbility {
           console.info('[RssChain] step=3 SKIP file adapter null (no context)');
           return;
         }
-        const writeReq: HostFileWriteRequest = {
-          path: cachePath,
-          content: body,
-          encoding: 'utf-8',
-        };
+        const writeReq = buildSelfCheckCacheWriteRequest(cachePath, body);
         const writeResp = await fileAdapter.write(writeReq);
         console.info(`[RssChain] step=3a file.write path=${cachePath} written=${writeResp.written} bytes=${writeResp.byteLength}`);
         const readResp = await fileAdapter.read({ path: cachePath, encoding: 'utf-8' } as HostFileReadRequest);
@@ -846,9 +863,10 @@ export default class EntryAbility extends UIAbility {
    */
   private runReadingChainUiSelfCheck(manifest: HostCapabilityManifest): void {
     const query: string = '斗破';
-    console.info('[ReadingChainUi] start: dispatching search-submit query=' + query);
+    console.info('[ReadingChainUi] start: entering book-search then dispatching search-submit query=' + query);
     const beforeStr: string = AppStorage.get<string>('reader.searchQuery') ?? '';
     console.info('[ReadingChainUi] before: searchQuery="' + beforeStr + '"');
+    ReaderUiStore.dispatch(buildReadingChainUiSearchRouteEvent());
     ReaderUiStore.dispatch({ type: 'search-submit', query: query });
     let elapsed = 0;
     const interval = 1500;
@@ -976,38 +994,42 @@ export default class EntryAbility extends UIAbility {
     const initialRoute = params[InteractionDebugAdapter.K_INITIAL_ROUTE] as string;
     if (initialRoute !== undefined && initialRoute !== '' && RouteTable.shellOf(initialRoute) !== null) {
       ReaderUiStore.dispatch({ type: 'route-replace', id: initialRoute as RouteId });
-      AppStorage.setOrCreate<string>('reader.displayedRouteId', initialRoute);
-      console.info('[EntryAbility] development initialRoute=' + initialRoute);
+      // The reducer may safely redirect a retired published RouteId.  Always
+      // publish the actual current route, never the raw debug parameter.
+      const resolvedRoute = ReaderUiStore.snapshot().routeId;
+      AppStorage.setOrCreate<string>('reader.displayedRouteId', resolvedRoute);
+      console.info('[EntryAbility] development initialRoute=' + initialRoute + ' resolvedRoute=' + resolvedRoute);
     }
-    const paginationMode = params['readerPaginationMode'] as string;
-    if (paginationMode === 'horizontal' || paginationMode === 'vertical') {
-      ReaderUiStore.dispatch({ type: 'set-pagination-mode', paginationMode: paginationMode as ReaderPaginationMode });
-      console.info('[EntryAbility] development readerPaginationMode=' + paginationMode);
-    }
+    // Pagination layout is not a launch/deep-link concern.  A previous
+    // development-only parameter could force vertical scrolling while the
+    // visible setting still said “平滑”, making two independent settings look
+    // like one broken option.  Only the dedicated reader-layout owner may
+    // change paginationMode; pageAnimation remains one of cover / slide /
+    // simulation / scroll / none, with scroll as the only vertical mode.
   }
 
   async onWindowStageCreate(windowStage: window.WindowStage): Promise<void> {
+    let mainWindow: window.Window | null = null;
     try {
-      const win = await windowStage.getMainWindow();
-      ReaderEffects.setMainWindow(win);
-      this.registerReaderFontsForWindow(win);
+      mainWindow = await windowStage.getMainWindow();
+      ReaderEffects.setMainWindow(mainWindow);
       this.applyViewportMetrics();
       // Immersive: window layout extends behind the status / navigation bars.
-      await win.setWindowLayoutFullScreen(true);
+      await mainWindow.setWindowLayoutFullScreen(true);
       // Keep both system bars enabled: non-reader pages own only the status-bar
       // background color, not the platform time/icons. Navigation remains enabled
       // so the platform owns the bottom gesture/navigation indicator.
-      await win.setWindowSystemBarEnable(['status', 'navigation']);
+      await mainWindow.setWindowSystemBarEnable(['status', 'navigation']);
       // Status background follows the paper surface; content uses ink for contrast.
-      await win.setWindowSystemBarProperties({
+      await mainWindow.setWindowSystemBarProperties({
         statusBarColor: ColorTokens.paper,
         statusBarContentColor: ColorTokens.ink,
         navigationBarColor: SafeAreaAdapter.SYSTEM_BAR_TRANSPARENT,
         navigationBarContentColor: ColorTokens.ink,
       });
       // Publish real device insets (vp) and keep them current on rotation / keyboard.
-      this.applyAvoidArea(await win.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM));
-      win.on('avoidAreaChange', (data: window.AvoidAreaOptions) => {
+      this.applyAvoidArea(await mainWindow.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM));
+      mainWindow.on('avoidAreaChange', (data: window.AvoidAreaOptions) => {
         this.applyViewportMetrics();
         this.applyAvoidArea(data.area);
       });
@@ -1015,13 +1037,21 @@ export default class EntryAbility extends UIAbility {
       // Immersive setup is best-effort; demo fallback insets already seeded in
       // onCreate carry the first frame until the next avoidAreaChange fires.
     }
-    // Page load is independent of immersive setup and must always run. Wrapped to
-    // satisfy ArkTS may-throw handling (the path is fixed and valid).
+    // The page must finish loading before we acquire its UIContext. Registering
+    // a font against a window before that point can silently bind it to no
+    // active render context on a real device.
     try {
-      windowStage.loadContent('pages/Index');
+      await windowStage.loadContent('pages/Index');
     } catch (e) {
+      this.recordBundledSerifFontRegistration('failed', 'page load failed before UIContext: ' + e);
       // fatal: no page to render; nothing to recover to
+      return;
     }
+    if (mainWindow === null) {
+      this.recordBundledSerifFontRegistration('failed', 'main window is unavailable after page load');
+      return;
+    }
+    this.registerReaderFontsForWindow(mainWindow);
   }
 
   // Register the bundled Noto Serif CJK SC font so ArkUI can resolve the first
@@ -1033,14 +1063,36 @@ export default class EntryAbility extends UIAbility {
   // bundled — see FontTokens in contract/generated/TypeTokens.ets.
   private registerReaderFontsForWindow(win: window.Window): void {
     try {
-      win.getUIContext().getFont().registerFont({
+      const uiContext = win.getUIContext();
+      if (uiContext === null || uiContext === undefined) {
+        throw new Error('active UIContext is unavailable after page load');
+      }
+      const font = uiContext.getFont();
+      if (font === null || font === undefined) {
+        throw new Error('Font service is unavailable from the active UIContext');
+      }
+      font.registerFont({
         familyName: 'Noto Serif CJK SC',
         familySrc: $rawfile('font/NotoSerifCJKsc-Regular.otf'),
       });
+      this.recordBundledSerifFontRegistration('registered', 'registered for active UIContext');
       console.info('[EntryAbility] registered Noto Serif CJK SC font for UIContext');
     } catch (e) {
+      this.recordBundledSerifFontRegistration('failed', String(e));
       console.info('[EntryAbility] register Noto Serif CJK SC font for UIContext failed: ' + e);
     }
+  }
+
+  private recordBundledSerifFontRegistration(
+    status: BundledSerifFontRegistrationStatus,
+    detail: string,
+  ): void {
+    AppStorage.setOrCreate<BundledSerifFontRegistrationStatus>(
+      BUNDLED_SERIF_FONT_REGISTRATION_STATUS_KEY,
+      status,
+    );
+    AppStorage.setOrCreate<string>(BUNDLED_SERIF_FONT_REGISTRATION_DETAIL_KEY, detail);
+    console.info('[ReaderFontRegistration] bundledSerif status=' + status + ' detail=' + detail);
   }
 
   // getWindowAvoidArea returns Rect in px; ArkUI padding takes vp, so divide by
@@ -1065,8 +1117,13 @@ export default class EntryAbility extends UIAbility {
     try {
       const dpy = display.getDefaultDisplaySync();
       const density = dpy.densityPixels;
-      const width = dpy.width / density;
-      const height = dpy.height / density;
+      if (!Number.isFinite(density) || density <= 0) return;
+      // Keep AppStorage's viewport in the same logical-integer unit expected
+      // by Core reader.location.resolve.  A non-integral density otherwise
+      // leaks fractional dimensions into the Core DTO and rejects progress
+      // persistence on real devices.
+      const width = Math.max(1, Math.round(dpy.width / density));
+      const height = Math.max(1, Math.round(dpy.height / density));
       AppStorage.setOrCreate<number>(ViewportAdapter.K_WIDTH, width);
       AppStorage.setOrCreate<number>(ViewportAdapter.K_HEIGHT, height);
       AppStorage.setOrCreate<string>(ViewportAdapter.K_CLASS, ViewportAdapter.classify(width, height));

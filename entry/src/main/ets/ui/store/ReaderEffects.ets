@@ -17,8 +17,10 @@
 // (e.g. during first UI build before EntryAbility.init). We guard with
 // try/catch and the promise rejects — the caller surfaces an error state and
 // the user can retry once CoreRuntime is ready.
-import { ReaderUiState, UiEvent, SearchResultEntry, BookDetail, CoreSourceEntry, CoreSourceCheckResult, CoreSourceDebugResult, CoreSourceDebugStage, CoreSourceDebugLog, CoreContentSearchResult, CoreBookmark, CoreDiscoverKind, CoreDiscoverBook, ReplaceRule, CoreBookshelfBook, CoreBookGroup, CoreRssSubscription, CoreRssItem, ChapterTocEntry, CoreStorageBackupInfo, CoreReaderCanonicalLocation, ReaderContentIdentity } from './ReaderUiState';
+import { ReaderUiState, UiEvent, SearchResultEntry, BookDetail, CoreSourceEntry, CoreSourceCheckResult, CoreSourceDebugResult, CoreSourceDebugStage, CoreSourceDebugLog, CoreContentSearchResult, CoreBookmark, CoreDiscoverKind, CoreDiscoverBook, ReplaceRule, CoreBookshelfBook, CoreBookGroup, CoreRssSubscription, CoreRssItem, ChapterTocEntry, CoreStorageBackupInfo, CoreStorageBackupHistoryEntry, CoreReaderCanonicalLocation, ReaderContentIdentity, LocalImportDialogResult, BookshelfSelectionTarget, BookshelfRemovalReceipt, isLocalBookSourceId } from './ReaderUiState';
 import { ReaderUiStore } from './ReaderUiStore';
+import { CoreStorageBackupHistory } from './CoreStorageBackupHistory';
+import { RouteTable } from '../../contract/generated/RouteTable';
 import { CoreRuntime, CoreBookmarkCreateInput, LocalBookParseOptions, CoreSourceDebugRunProjection } from '../../bridge/CoreRuntime';
 import { HostHttpRequest, HostShareInvokeRequest } from '../../host/types/HostRequest';
 import type { JsonObject } from '../../bridge/core/sdk/reader_core';
@@ -28,6 +30,8 @@ import util from '@ohos.util';
 import promptAction from '@ohos.promptAction';
 import { ViewportAdapter } from '../adapters/ViewportAdapter';
 import { LocalBookFormatPolicy } from '../../host/LocalBookFormatPolicy';
+import { HarmonyLocalBookImportBatchFileReader, LocalBookImportBatchCoordinator, type LocalBookImportBatchFileResult } from './LocalBookImportBatchCoordinator';
+import type { ReaderSelectedFile } from '../../host/adapters/FileSelectionHostAdapter';
 import type { ReaderUIJSONPayload } from 'reader_ui_runtime';
 import { CoreSlice10Service } from './CoreSlice10Service';
 
@@ -35,6 +39,11 @@ interface CoreStorageBackupEnvelope {
   manifest: JsonObject;
   payload: string;
   info: CoreStorageBackupInfo;
+}
+
+interface LocalCoreBackupHistoryLoad {
+  entries: CoreStorageBackupHistoryEntry[];
+  invalidFileCount: number;
 }
 
 interface ErrorMessageLike {
@@ -68,6 +77,7 @@ interface RemoteChapterLoadOptions {
   contentSearchOffset?: number;
   restoredProgress?: PersistedReadingProgress;
   bookOpenSequence?: number;
+  chapterNavigationRequestId?: number;
 }
 
 // Immutable snapshot queued by the real reader surface.  Keeping the Core
@@ -75,6 +85,7 @@ interface RemoteChapterLoadOptions {
 // an in-flight write for the chapter the reader has just left.
 interface ReadingProgressSnapshot {
   key: string;
+  sessionEpoch: number;
   bookId: string;
   sourceId: string;
   chapterIndex: number;
@@ -84,6 +95,17 @@ interface ReadingProgressSnapshot {
   viewportHeight: number;
   fontScale: number;
   contentSearchJumpSequence?: number;
+}
+
+// One serialized Core write may unblock a navigation action only after the
+// exact snapshot has made it through `reader.location.resolve` and a durable
+// `reading.progress.update`.  Ordinary layout anchors carry no continuation
+// and may still be coalesced; a navigation barrier is never silently replaced
+// by a later background anchor.
+interface QueuedReadingProgress {
+  snapshot: ReadingProgressSnapshot;
+  onStored: Array<() => void>;
+  onFailed: Array<() => void>;
 }
 
 export class ReaderEffects {
@@ -118,6 +140,16 @@ export class ReaderEffects {
   private static pendingLocalBookOptions: LocalBookParseOptions | null = null;
   private static localImportParseEpoch: number = 0;
   private static pendingLocalImportEpoch: number = 0;
+  // Production local-book imports use a durable, serial coordinator rather
+  // than the obsolete single-file parse-preview flow. Keep one coordinator so
+  // its batch epoch cannot restart at 1 and admit stale completions.
+  private static readonly localImportBatch: LocalBookImportBatchCoordinator =
+    new LocalBookImportBatchCoordinator(new HarmonyLocalBookImportBatchFileReader());
+  private static localImportPickerInFlight: boolean = false;
+  private static readonly LOCAL_IMPORT_PICKER_MIME_TYPES: string[] = [
+    'text/plain',
+    'application/epub+zip',
+  ];
   // A source-package import is a sequence of Core source.import writes. The
   // state epoch is the durable UI admission token; this transient claim
   // prevents maybeRun() from replaying a reducer-rejected duplicate event.
@@ -166,9 +198,24 @@ export class ReaderEffects {
   private static contentSearchRequestSequence: number = 0;
   // Progress writes must remain ordered: a slow resolve for an old page must
   // never arrive after a newer anchor and overwrite the durable location.
+  // `inFlightReadingProgress` retains navigation barriers while Core is
+  // writing so duplicate taps cannot start a second transition.
   private static progressWriteInFlight: boolean = false;
-  private static pendingReadingProgress: ReadingProgressSnapshot | null = null;
+  private static inFlightReadingProgress: QueuedReadingProgress | null = null;
+  private static pendingReadingProgress: QueuedReadingProgress[] = [];
   private static lastCompletedReadingProgressKey: string = '';
+  private static pendingReadingCommitAction: string = '';
+  // A reader session ends only after its exit progress barrier succeeds.  The
+  // epoch lets that exit invalidate delayed layout anchors without cancelling
+  // the already-confirmed durable write that made the exit admissible.
+  private static readingSessionEpoch: number = 1;
+  // A chapter request remains claimed from the user gesture until the target
+  // body has either landed or failed. Core TOC lookup is asynchronous, so a
+  // progress barrier alone would otherwise allow a fast double tap to launch
+  // the same adjacent chapter twice before loading=true is projected.
+  private static chapterNavigationInFlight: boolean = false;
+  private static chapterNavigationSequence: number = 0;
+  private static activeChapterNavigationRequestId: number = 0;
   // Bookmark V1 is scoped only by Core's (bookName, bookAuthor) filter, so a
   // late response must still be rejected when the visible title/author pair
   // changes. Search-history refreshes likewise need sequencing around clear.
@@ -179,7 +226,9 @@ export class ReaderEffects {
   // carries manifest metadata; a process restart requires the user to select
   // the local/remote backup again instead of silently applying stale bytes.
   private static pendingCoreRestoreEnvelope: CoreStorageBackupEnvelope | null = null;
-  private static readonly LOCAL_CORE_BACKUP_PATH: string = 'files://backups/core-storage-snapshot-v1.json';
+  // Legacy fixed path is read as one migration-compatible history record.
+  // Newly created local snapshots use immutable Core timestamp/checksum names.
+  private static readonly LOCAL_CORE_BACKUP_PATH: string = CoreStorageBackupHistory.legacyPath();
   private static readonly PRE_RESTORE_CORE_BACKUP_PATH: string = 'files://backups/pre-restore-core-storage-snapshot-v1.json';
   private static readonly REMOTE_CORE_BACKUP_FILE: string = 'core-storage-snapshot-v1.json';
 
@@ -204,17 +253,18 @@ export class ReaderEffects {
         } else if (event.id === 'source-detect' || event.id === 'source-test-result') {
           ReaderEffects.runSourceCheck();
         } else if (event.id === 'source-switch') {
-          ReaderEffects.loadAvailableSources(true);
+          // Reducer rejects the route for local books; keep the effect layer
+          // fail-closed too so a stale event cannot even fetch a replacement
+          // candidate list for a local file.
+          if (!isLocalBookSourceId(ReaderUiStore.snapshot().currentBook?.sourceId)) {
+            ReaderEffects.loadAvailableSources(true);
+          }
         } else if (event.id === 'source-management' || event.id === 'source-batch' || event.id === 'source-debug') {
           ReaderEffects.loadAvailableSources(false);
         } else if (event.id === 'content-replacement' || event.id === 'reader-replace-overlay-v2') {
           ReaderEffects.loadReplaceRules();
         } else if (event.id === 'rss' || event.id === 'rss-all' || event.id === 'rss-subscription-management') {
           ReaderEffects.loadRss();
-        } else if (event.id === 'bookshelf-group-management' || event.id === 'group-management' ||
-          event.id === 'bookshelf-search-settings') {
-          ReaderEffects.loadBookGroups();
-          if (event.id !== 'bookshelf-search-settings') ReaderEffects.loadBookshelf();
         } else if (event.id === 'book-search' || event.id === 'search-home') {
           ReaderEffects.loadSearchHistory();
         } else if (event.id === 'toc-bookmarks' || event.id === 'bookmarks-manager') {
@@ -242,10 +292,6 @@ export class ReaderEffects {
           ReaderEffects.runSourceCheck();
         } else if (event.id === 'source-debug') {
           ReaderEffects.loadAvailableSources(false);
-        } else if (event.id === 'bookshelf-group-management' || event.id === 'group-management' ||
-          event.id === 'bookshelf-search-settings') {
-          ReaderEffects.loadBookGroups();
-          if (event.id !== 'bookshelf-search-settings') ReaderEffects.loadBookshelf();
         } else if (event.id === 'book-search' || event.id === 'search-home') {
           ReaderEffects.loadSearchHistory();
         } else if (event.id === 'toc-bookmarks' || event.id === 'bookmarks-manager') {
@@ -515,20 +561,21 @@ export class ReaderEffects {
       }
       // ── Batch 2 reader control effect hooks ──
       case 'chapter-prev':
-        ReaderEffects.persistReadingProgress();
-        ReaderEffects.loadAdjacentChapter(-1);
-        ReaderEffects.maybeVibrateForReaderInteraction();
+        ReaderEffects.requestAdjacentChapter(-1);
         break;
       case 'chapter-next':
-        ReaderEffects.persistReadingProgress();
-        ReaderEffects.loadAdjacentChapter(+1);
-        ReaderEffects.maybeVibrateForReaderInteraction();
+        ReaderEffects.requestAdjacentChapter(+1);
         break;
       case 'chapter-progress-seek': {
-        ReaderEffects.persistReadingProgress();
         const pv = event.value ?? 0;
-        ReaderEffects.loadChapterByProgress(pv);
-        ReaderEffects.maybeVibrateForReaderInteraction();
+        // Seeking to another chapter is the same durable boundary as an
+        // adjacent-chapter action.  Do not replace the current body until
+        // Core has acknowledged its measured anchor; otherwise a failed
+        // write can make the old location unrecoverable after this seek.
+        ReaderEffects.commitReadingProgressBefore('chapter-progress-seek', (): void => {
+          ReaderEffects.loadChapterByProgress(pv);
+          ReaderEffects.maybeVibrateForReaderInteraction();
+        });
         break;
       }
       case 'reader-page-prev':
@@ -546,9 +593,7 @@ export class ReaderEffects {
         break;
       }
       case 'toggle-brightness-auto':
-        // State-only update; no Host side effect (brightness adapter may not
-        // exist). When a Host brightness adapter is wired, observe
-        // reader.brightnessAuto and switch source there.
+        ReaderEffects.applyBrightnessAuto(event.enabled === true, event.previousEnabled === true);
         break;
       case 'set-toc-mode':
         if (event.tocMode === 'bookmark') {
@@ -560,6 +605,16 @@ export class ReaderEffects {
         break;
       case 'toggle-reduced-motion':
         ReaderEffects.persistReducedMotion(event.enabled === true);
+        break;
+      case 'set-pagination-mode':
+        // Compatibility callers still enter through this event. Persist the
+        // normalized pair after the reducer has made pageAnimation authoritative.
+        ReaderEffects.persistReaderPageTurnPreference();
+        break;
+      case 'set-reader-setting-option':
+        if (event.optionKey === 'pageAnimation' || event.optionKey === 'pageMode') {
+          ReaderEffects.persistReaderPageTurnPreference();
+        }
         break;
       // `book-action/delete` only opens a target-bound confirmation sheet in
       // the reducer. The Core write is reachable solely from its confirm tap.
@@ -626,16 +681,26 @@ export class ReaderEffects {
         ReaderEffects.createWebdavCoreBackup();
         break;
       case 'core-backup-prepare-local':
-        ReaderEffects.prepareLocalCoreRestore();
+        ReaderEffects.prepareLocalCoreRestore(event.coreBackupPath);
         break;
       case 'core-backup-prepare-remote':
         ReaderEffects.prepareRemoteCoreRestore();
         break;
-      case 'core-restore-apply-confirm':
+      case 'core-restore-apply-request':
         ReaderEffects.applyPreparedCoreRestore();
+        break;
+      case 'core-restore-apply-confirm':
+        // The old full-page flow emitted a second confirmation. Current Figma
+        // has one Confirm action, and the reducer has already entered the
+        // guarded restoring state before this effect runs. Keep this event
+        // inert for one compatibility cycle rather than starting a duplicate
+        // Core transaction.
         break;
       case 'core-backup-apply':
         ReaderEffects.rejectUnconfirmedCoreRestoreApply();
+        break;
+      case 'source-import-open':
+        ReaderEffects.startLocalImportFromSystemPicker();
         break;
       case 'source-import-apply': {
         // H4-C: When the import Pilot is enabled, the coordinator's
@@ -1059,6 +1124,30 @@ export class ReaderEffects {
     });
   }
 
+  // `setWindowBrightness(-1)` restores Harmony's normal system-managed
+  // brightness.  It deliberately does not alter the user's system auto-
+  // brightness preference; it merely stops this reader window overriding it.
+  static applyBrightnessAuto(enabled: boolean, previousEnabled: boolean): void {
+    const requestSequence = ++ReaderEffects.brightnessRequestSequence;
+    const win = ReaderEffects.mainWindow;
+    if (win === null) {
+      ReaderEffects.revertReaderBrightnessAuto(previousEnabled, '自动亮度未生效：主窗口尚未就绪。', requestSequence);
+      return;
+    }
+    const requested = enabled ? -1 : ReaderUiStore.snapshot().brightness / 100;
+    win.setWindowBrightness(requested).then((): void => {
+      if (requestSequence !== ReaderEffects.brightnessRequestSequence) return;
+      if (!enabled) {
+        ReaderEffects.lastConfirmedBrightness = ReaderUiStore.snapshot().brightness;
+      }
+      ReaderEffects.reportReaderHostMessage('');
+    }).catch((e: Error): void => {
+      if (requestSequence !== ReaderEffects.brightnessRequestSequence) return;
+      console.info(`ReaderEffects: auto brightness setWindowBrightness error: ${e.message}`);
+      ReaderEffects.revertReaderBrightnessAuto(previousEnabled, `自动亮度未生效：${e.message}`, requestSequence);
+    });
+  }
+
   private static reportReaderHostMessage(message: string): void {
     if (ReaderUiStore.snapshot().readerHostMessage === message) return;
     ReaderUiStore.dispatch({ type: 'reader-host-message', readerHostMessage: message });
@@ -1070,6 +1159,19 @@ export class ReaderEffects {
     if (preferences === null) return;
     preferences.saveReducedMotion(enabled).catch((e: Error): void => {
       console.info(`ReaderEffects: reducedMotion persistence failed: ${e.message}`);
+    });
+  }
+
+  // Page turn is a single global presentation preference. The state already
+  // went through the reducer's atomic animation/mode mapping before this
+  // effect runs; the Host adapter validates the five stable values again.
+  private static persistReaderPageTurnPreference(): void {
+    if (!CoreRuntime.isInitialized()) return;
+    const preferences = CoreRuntime.get().getReaderUiPreferenceAdapter();
+    if (preferences === null) return;
+    const options = ReaderUiStore.snapshot().readerSettingOptions;
+    preferences.savePageTurnPreference(options.pageAnimation, options.pageMode).catch((e: Error): void => {
+      console.info(`ReaderEffects: page-turn preference persistence failed: ${e.message}`);
     });
   }
 
@@ -1133,6 +1235,13 @@ export class ReaderEffects {
   private static revertReaderBrightness(value: number, message: string, requestSequence?: number): void {
     if (requestSequence !== undefined && requestSequence !== ReaderEffects.brightnessRequestSequence) return;
     ReaderUiStore.dispatch({ type: 'reader-brightness-host-revert', value: value });
+    ReaderEffects.reportReaderHostMessage(message);
+  }
+
+  private static revertReaderBrightnessAuto(enabled: boolean, message: string, requestSequence?: number): void {
+    if (requestSequence !== undefined && requestSequence !== ReaderEffects.brightnessRequestSequence) return;
+    // Reducer-only acknowledgement: never re-enters the Host effect after a rejection.
+    ReaderUiStore.dispatch({ type: 'reader-brightness-auto-host-revert', enabled: enabled });
     ReaderEffects.reportReaderHostMessage(message);
   }
 
@@ -1345,9 +1454,13 @@ export class ReaderEffects {
   // ── P1.3 WebDAV test/save effects ──
   // 测试 WebDAV 连通性：Core 生成 PROPFIND Host 请求，HarmonyOS Host
   // 真正执行网络访问。只有服务端返回 WebDAV 207 才报告连接成功。
+  private static isWebdavConfigurationRoute(routeId: string): boolean {
+    return routeId === 'webdav-config' || routeId === 'sync-backup';
+  }
+
   static runWebdavTest(): void {
     const state = ReaderUiStore.snapshot();
-    if (state.routeId !== 'webdav-config' || state.webdavTestStatus !== 'testing') return;
+    if (!ReaderEffects.isWebdavConfigurationRoute(state.routeId) || state.webdavTestStatus !== 'testing') return;
     const url = state.webdavServerUrl.trim();
     if (!ReaderEffects.validWebdavBaseUrl(url)) {
       ReaderUiStore.dispatch({ type: 'webdav-test-result', success: false, message: '服务器地址必须是完整的 http(s) URL' });
@@ -1386,12 +1499,12 @@ export class ReaderEffects {
             throw new Error(`WebDAV 服务返回 HTTP ${response.status}，预期 207`);
           }
           const current = ReaderUiStore.snapshot();
-          if (current.routeId !== 'webdav-config' || current.webdavTestStatus !== 'testing') return;
+          if (!ReaderEffects.isWebdavConfigurationRoute(current.routeId) || current.webdavTestStatus !== 'testing') return;
           ReaderUiStore.dispatch({ type: 'webdav-test-result', success: true, message: '连接成功（HTTP 207）' });
         })
         .catch((e: Error): void => {
           const current = ReaderUiStore.snapshot();
-          if (current.routeId !== 'webdav-config' || current.webdavTestStatus !== 'testing') return;
+          if (!ReaderEffects.isWebdavConfigurationRoute(current.routeId) || current.webdavTestStatus !== 'testing') return;
           ReaderUiStore.dispatch({ type: 'webdav-test-result', success: false, message: e.message });
         });
     } catch (e) {
@@ -1402,7 +1515,7 @@ export class ReaderEffects {
   // 保存 WebDAV 配置：通过 Core bridge 验证连接并持久化到 persistence。
   static runWebdavSave(): void {
     const state = ReaderUiStore.snapshot();
-    if (state.routeId !== 'webdav-config' || state.webdavSaveStatus !== 'saving') {
+    if (!ReaderEffects.isWebdavConfigurationRoute(state.routeId) || state.webdavSaveStatus !== 'saving') {
       ReaderUiStore.dispatch({
         type: 'webdav-save-result', success: false,
         message: 'WebDAV 保存确认已失效；请在当前配置页重新发起保存。',
@@ -1500,23 +1613,32 @@ export class ReaderEffects {
     if (!CoreRuntime.isInitialized()) return;
     ReaderUiStore.dispatch({ type: 'core-backup-status', coreBackupStatus: 'loading', coreBackupMessage: '正在读取本机 Core 备份…' });
     try {
-      const envelope = await ReaderEffects.readCoreBackupFile(
-        ReaderEffects.LOCAL_CORE_BACKUP_PATH,
-        '本机 Core 备份',
-      );
-      ReaderUiStore.dispatch({
-        type: 'core-backup-local-loaded',
-        coreBackupInfo: envelope.info,
-        coreBackupMessage: '已读取本机 Core 备份；可在确认页原子恢复。',
-      });
+      const history = await ReaderEffects.readLocalCoreBackupHistory();
+      ReaderEffects.publishLocalCoreBackupHistory(history,
+        history.entries.length > 0
+          ? '已读取并校验本机 Core 备份历史；可选择其中一项进行原子恢复。'
+          : '当前设备尚无本机 Core 数据备份。');
+      if (history.entries.length === 0 && history.invalidFileCount > 0) {
+        ReaderUiStore.dispatch({
+          type: 'core-backup-status',
+          coreBackupStatus: 'error',
+          coreBackupMessage: '本机备份目录中没有通过校验的 Core 快照。',
+        });
+      }
     } catch (e) {
       if (ReaderEffects.isFileNotFound(e)) {
         ReaderUiStore.dispatch({
-          type: 'core-backup-local-loaded',
-          coreBackupInfo: null,
+          type: 'core-backup-history-loaded',
+          coreBackupHistory: [],
           coreBackupMessage: '当前设备尚无本机 Core 数据备份。',
         });
       } else {
+        // The file list is no longer trustworthy if its directory itself
+        // cannot be read. Clear the AppStorage projection instead of keeping
+        // a stale restore target visible.
+        ReaderUiStore.dispatch({
+          type: 'core-backup-history-loaded', coreBackupHistory: [], coreBackupMessage: '',
+        });
         ReaderUiStore.dispatch({
           type: 'core-backup-status',
           coreBackupStatus: 'error',
@@ -1531,12 +1653,9 @@ export class ReaderEffects {
     try {
       const runtime = CoreRuntime.get();
       const envelope = await ReaderEffects.exportCoreBackupEnvelope(runtime, '本机 Core 备份');
-      await ReaderEffects.writeCoreBackupFile(ReaderEffects.LOCAL_CORE_BACKUP_PATH, envelope);
-      ReaderUiStore.dispatch({
-        type: 'core-backup-local-loaded',
-        coreBackupInfo: envelope.info,
-        coreBackupMessage: '本机 Core 数据备份已创建并通过 Core 清单校验。',
-      });
+      await ReaderEffects.writeImmutableLocalCoreBackup(envelope);
+      const history = await ReaderEffects.readLocalCoreBackupHistory();
+      ReaderEffects.publishLocalCoreBackupHistory(history, '本机 Core 数据备份已创建并通过 Core 清单校验。');
     } catch (e) {
       ReaderUiStore.dispatch({
         type: 'core-backup-status',
@@ -1552,12 +1671,9 @@ export class ReaderEffects {
       const runtime = CoreRuntime.get();
       const envelope = await ReaderEffects.exportCoreBackupEnvelope(runtime, 'WebDAV Core 备份');
       // Always retain a verified local copy before a remote transport attempt.
-      await ReaderEffects.writeCoreBackupFile(ReaderEffects.LOCAL_CORE_BACKUP_PATH, envelope);
-      ReaderUiStore.dispatch({
-        type: 'core-backup-local-loaded',
-        coreBackupInfo: ReaderEffects.copyBackupInfo(envelope.info, '本机 Core 备份'),
-        coreBackupMessage: '本机 Core 数据备份已创建，正在上传 WebDAV。',
-      });
+      await ReaderEffects.writeImmutableLocalCoreBackup(envelope);
+      const history = await ReaderEffects.readLocalCoreBackupHistory();
+      ReaderEffects.publishLocalCoreBackupHistory(history, '本机 Core 数据备份已创建，正在上传 WebDAV。');
       await ReaderEffects.uploadCoreBackupToWebdav(runtime, envelope);
       ReaderUiStore.dispatch({
         type: 'core-backup-status',
@@ -1584,13 +1700,28 @@ export class ReaderEffects {
     return false;
   }
 
-  static async prepareLocalCoreRestore(): Promise<void> {
+  static async prepareLocalCoreRestore(requestedPath?: string): Promise<void> {
     ReaderUiStore.dispatch({ type: 'core-backup-status', coreBackupStatus: 'loading', coreBackupMessage: '正在校验本机 Core 备份…' });
     try {
+      const history = await ReaderEffects.readLocalCoreBackupHistory();
+      ReaderEffects.publishLocalCoreBackupHistory(history,
+        history.entries.length > 0 ? '已读取并校验本机 Core 备份历史。' : '当前设备尚无本机 Core 数据备份。');
+      const selected = requestedPath === undefined || requestedPath.length === 0
+        ? history.entries[0]
+        : ReaderEffects.findLocalCoreBackupHistoryEntry(history.entries, requestedPath);
+      if (selected === undefined) {
+        throw new Error(requestedPath === undefined || requestedPath.length === 0
+          ? '当前设备尚无通过校验的本机 Core 备份'
+          : '所选本机 Core 备份已不存在或未通过校验');
+      }
       const envelope = await ReaderEffects.readCoreBackupFile(
-        ReaderEffects.LOCAL_CORE_BACKUP_PATH,
-        '本机 Core 备份',
+        selected.path,
+        selected.source,
       );
+      if (!CoreStorageBackupHistory.immutableFileNameMatches(selected.fileName, envelope.info) ||
+        !CoreStorageBackupHistory.sameInfo(envelope.info, CoreStorageBackupHistory.info(selected))) {
+        throw new Error('所选本机 Core 备份在校验后已变化');
+      }
       ReaderEffects.publishPreparedCoreRestore(envelope);
     } catch (e) {
       ReaderUiStore.dispatch({
@@ -1677,6 +1808,10 @@ export class ReaderEffects {
         coreBackupStatus: 'error',
         coreBackupMessage: `Core 恢复未完成：${ReaderEffects.errorMessage(e)}`,
       });
+      // Figma has no failure terminal for Overlay/Restore Backup. Return to
+      // the existing Sync Backup surface with Core's actual message instead
+      // of inventing a generic error dialog or leaving a false Confirm card.
+      ReaderUiStore.dispatch({ type: 'route-replace', id: 'sync-backup' });
     }
   }
 
@@ -1709,6 +1844,82 @@ export class ReaderEffects {
     return ReaderEffects.makeCoreBackupEnvelope(manifestRaw as JsonObject, payload, source);
   }
 
+  /**
+   * Reads only recognized snapshot filenames, then validates each candidate
+   * through the same Core envelope parser used by restore. Invalid files are
+   * omitted rather than converted into guessed history rows.
+   */
+  private static async readLocalCoreBackupHistory(): Promise<LocalCoreBackupHistoryLoad> {
+    const runtime = CoreRuntime.get();
+    const file = runtime.getFileAdapter();
+    if (file === null) throw new Error('当前 Host 未提供本机备份文件能力');
+    const listed = await file.list({ path: CoreStorageBackupHistory.DIRECTORY_PATH });
+    const entries: CoreStorageBackupHistoryEntry[] = [];
+    let invalidFileCount = 0;
+    for (let index = 0; index < listed.entries.length; index++) {
+      const listedEntry = listed.entries[index];
+      if (!listedEntry.isFile || !CoreStorageBackupHistory.isCandidateFileName(listedEntry.name)) continue;
+      const path = listedEntry.name === CoreStorageBackupHistory.LEGACY_FILE_NAME
+        ? ReaderEffects.LOCAL_CORE_BACKUP_PATH
+        : `${CoreStorageBackupHistory.DIRECTORY_PATH}/${listedEntry.name}`;
+      try {
+        const envelope = await ReaderEffects.readCoreBackupFile(path, '本机 Core 备份');
+        if (!CoreStorageBackupHistory.immutableFileNameMatches(listedEntry.name, envelope.info)) {
+          invalidFileCount += 1;
+          continue;
+        }
+        entries.push(CoreStorageBackupHistory.entry(path, listedEntry.name, envelope.info));
+      } catch (_error) {
+        // Files may be truncated, corrupt, or concurrently removed. None is
+        // safe to present until a later successful full parse.
+        invalidFileCount += 1;
+      }
+    }
+    return {
+      entries: CoreStorageBackupHistory.sortNewestFirst(entries),
+      invalidFileCount: invalidFileCount,
+    };
+  }
+
+  private static publishLocalCoreBackupHistory(history: LocalCoreBackupHistoryLoad, message: string): void {
+    const suffix = history.invalidFileCount > 0
+      ? `；已跳过 ${history.invalidFileCount} 个未通过校验的本机快照。`
+      : '';
+    ReaderUiStore.dispatch({
+      type: 'core-backup-history-loaded',
+      coreBackupHistory: history.entries,
+      coreBackupMessage: `${message}${suffix}`,
+    });
+  }
+
+  private static findLocalCoreBackupHistoryEntry(entries: CoreStorageBackupHistoryEntry[],
+    path: string): CoreStorageBackupHistoryEntry | undefined {
+    for (let index = 0; index < entries.length; index++) {
+      if (entries[index].path === path) return entries[index];
+    }
+    return undefined;
+  }
+
+  /**
+   * New snapshots are never written to the legacy fixed filename. A collision
+   * under the immutable timestamp/checksum name must already be the identical
+   * snapshot; any mismatch fails closed instead of overwriting user data.
+   */
+  private static async writeImmutableLocalCoreBackup(envelope: CoreStorageBackupEnvelope): Promise<void> {
+    const path = CoreStorageBackupHistory.pathFor(envelope.info);
+    try {
+      const existing = await ReaderEffects.readCoreBackupFile(path, '本机 Core 备份');
+      if (!CoreStorageBackupHistory.sameSnapshot(existing.info, envelope.info) ||
+        ReaderEffects.serializeCoreBackupEnvelope(existing) !== ReaderEffects.serializeCoreBackupEnvelope(envelope)) {
+        throw new Error('本机 Core 备份文件名冲突；已拒绝覆盖现有快照');
+      }
+      return;
+    } catch (e) {
+      if (!ReaderEffects.isFileNotFound(e)) throw new Error(ReaderEffects.errorMessage(e));
+    }
+    await ReaderEffects.writeCoreBackupFile(path, envelope);
+  }
+
   private static async readCoreBackupFile(path: string, source: string): Promise<CoreStorageBackupEnvelope> {
     const runtime = CoreRuntime.get();
     const file = runtime.getFileAdapter();
@@ -1723,7 +1934,7 @@ export class ReaderEffects {
     const file = runtime.getFileAdapter();
     if (file === null) throw new Error('当前 Host 未提供本机备份文件能力');
     const content = ReaderEffects.serializeCoreBackupEnvelope(envelope);
-    const result = await file.write({ path: path, content: content, encoding: 'utf-8' });
+    const result = await file.writeAtomic({ path: path, content: content, encoding: 'utf-8', createDirectories: true });
     if (result.written !== true) throw new Error('Host 未确认备份文件写入成功');
   }
 
@@ -1808,16 +2019,6 @@ export class ReaderEffects {
     } finally {
       fs.closeSync(handle);
     }
-  }
-
-  private static copyBackupInfo(info: CoreStorageBackupInfo, source: string): CoreStorageBackupInfo {
-    return {
-      source: source,
-      schemaVersion: info.schemaVersion,
-      bytes: info.bytes,
-      checksum: info.checksum,
-      exportedAt: info.exportedAt,
-    };
   }
 
   private static async uploadCoreBackupToWebdav(runtime: CoreRuntime, envelope: CoreStorageBackupEnvelope): Promise<void> {
@@ -2110,6 +2311,116 @@ export class ReaderEffects {
         type: 'set-error',
         error: { code: 'IMPORT_STORE_FAILED', message: (e as Error).message, retryable: true },
       });
+    }
+  }
+
+  /**
+   * Confirmed production flow: open the platform document picker with
+   * multi-selection, retain the invoking screen, then show only an in-place
+   * loading/result dialog. The coordinator owns Core import + bookshelf
+   * persistence; this method owns picker/overlay admission only.
+   */
+  static startLocalImportFromSystemPicker(): void {
+    const initial = ReaderUiStore.snapshot();
+    if (ReaderEffects.localImportPickerInFlight || initial.overlay !== '') return;
+    if (!CoreRuntime.isInitialized()) {
+      ReaderEffects.showLocalImportFeedback('本地导入暂不可用，请稍后重试。');
+      return;
+    }
+    const picker = CoreRuntime.get().getFileSelectionAdapter();
+    if (picker === null) {
+      ReaderEffects.showLocalImportFeedback('系统文件选择不可用，请稍后重试。');
+      return;
+    }
+    ReaderEffects.localImportPickerInFlight = true;
+    const originRoute = initial.routeId;
+    ReaderEffects.runLocalImportPicker(originRoute);
+  }
+
+  private static async runLocalImportPicker(originRoute: string): Promise<void> {
+    try {
+      const picker = CoreRuntime.get().getFileSelectionAdapter();
+      if (picker === null) {
+        ReaderEffects.showLocalImportFeedback('系统文件选择不可用，请稍后重试。');
+        return;
+      }
+      const selected = await picker.select(ReaderEffects.LOCAL_IMPORT_PICKER_MIME_TYPES, true);
+      // Cancelling the system picker is not an error and must leave the
+      // invoking screen unchanged.
+      if (!selected.selected || selected.files.length === 0) return;
+      const beforeBatch = ReaderUiStore.snapshot();
+      if (beforeBatch.routeId !== originRoute || beforeBatch.overlay !== '') return;
+
+      const onBatchStarted = (epoch: number, files: ReaderSelectedFile[]): void => {
+          ReaderUiStore.dispatch({
+            type: 'local-import-dialog-loading',
+            localImportDialogEpoch: epoch,
+            localImportDialogResults: [],
+          });
+      };
+      // Do not surface per-file progress: the approved Importing variant has
+      // one spinner only. The terminal outcomes arrive together in Result.
+      const completion = ReaderEffects.localImportBatch.start(selected.files, onBatchStarted);
+      const epoch = ReaderEffects.localImportBatch.currentEpoch();
+      if (epoch <= 0) {
+        ReaderEffects.showLocalImportFeedback('未能开始导入，请重新选择文件。');
+        return;
+      }
+      const result = await completion;
+      const current = ReaderUiStore.snapshot();
+      if (result.cancelled || result.stale || current.overlay !== 'local-import' ||
+        current.localImportDialogPhase !== 'loading' || current.localImportDialogEpoch !== result.epoch ||
+        result.results.length === 0) {
+        return;
+      }
+      ReaderUiStore.dispatch({
+        type: 'local-import-dialog-result',
+        localImportDialogEpoch: result.epoch,
+        localImportDialogResults: ReaderEffects.localImportDialogResults(result.epoch, selected.files, result.results),
+      });
+      for (let index = 0; index < result.results.length; index += 1) {
+        if (result.results[index].status === 'success') {
+          ReaderEffects.loadBookshelf();
+          break;
+        }
+      }
+    } catch (e) {
+      // Picker/service failures do not have a separate approved page state.
+      // Reuse the app's existing transient system feedback and preserve the
+      // invoking page rather than turning it into a global error screen.
+      ReaderEffects.showLocalImportFeedback(`本地导入未开始：${ReaderEffects.errorMessage(e)}`);
+    } finally {
+      ReaderEffects.localImportPickerInFlight = false;
+    }
+  }
+
+  private static localImportDialogRow(epoch: number, index: number, file: ReaderSelectedFile): LocalImportDialogResult {
+    return {
+      id: `local-import-${epoch}-${index}`,
+      fileName: file.name,
+      // This value is overwritten before Result is shown. Keeping a terminal
+      // default makes the DTO valid without exposing an internal progress row.
+      status: 'failure',
+    };
+  }
+
+  private static localImportDialogResults(epoch: number, files: ReaderSelectedFile[],
+    results: LocalBookImportBatchFileResult[]): LocalImportDialogResult[] {
+    const rows: LocalImportDialogResult[] = [];
+    for (let index = 0; index < files.length; index += 1) {
+      const row = ReaderEffects.localImportDialogRow(epoch, index, files[index]);
+      const outcome = results[index];
+      row.status = outcome !== undefined && outcome.status === 'success' ? 'success' : 'failure';
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  private static showLocalImportFeedback(message: string): void {
+    try {
+      promptAction.showToast({ message: message, duration: 1800 });
+    } catch (e) {
+      console.info(`ReaderEffects: local import feedback unavailable: ${ReaderEffects.errorMessage(e)}`);
     }
   }
 
@@ -2556,7 +2867,7 @@ export class ReaderEffects {
       return;
     }
     ReaderEffects.closeBookmarkDirectory();
-    if (sourceId === 'local') {
+    if (isLocalBookSourceId(sourceId)) {
       ReaderEffects.loadLocalBookToc(book).then((toc: ChapterTocEntry[]): void => {
         let target: ChapterTocEntry | null = null;
         for (let i = 0; i < toc.length; i++) {
@@ -3223,7 +3534,8 @@ export class ReaderEffects {
 
   static openBookshelfBook(sourceId: string, bookId: string): void {
     if (sourceId.length === 0 || bookId.length === 0) return;
-    const shelf = ReaderUiStore.snapshot().bookshelfBooks;
+    const state = ReaderUiStore.snapshot();
+    const shelf = state.bookshelfBooks;
     let selected: CoreBookshelfBook | null = null;
     for (let i = 0; i < shelf.length; i++) {
       if (shelf[i].sourceId === sourceId && shelf[i].bookId === bookId) {
@@ -3231,11 +3543,20 @@ export class ReaderEffects {
         break;
       }
     }
+    // Continue Reading is deliberately projected from its own exact Core
+    // progress query, not from a filtered shelf list. A local book must still
+    // open when the shelf is loading, reordered, or filtered away.
+    if (selected === null) {
+      const continueBook = state.continueReadingBook;
+      if (continueBook !== null && continueBook.sourceId === sourceId && continueBook.bookId === bookId) {
+        selected = continueBook;
+      }
+    }
     if (selected === null) return;
     ReaderEffects.cancelSourceSwitchIfActive();
     const sequence = ReaderEffects.bookOpenRequestSequence + 1;
     ReaderEffects.bookOpenRequestSequence = sequence;
-    if (sourceId === 'local') {
+    if (isLocalBookSourceId(sourceId)) {
       ReaderEffects.openLocalBookshelfBook(selected, sequence);
       return;
     }
@@ -3244,7 +3565,9 @@ export class ReaderEffects {
       // Opening an existing remote shelf entry is not a source switch.  Keep
       // its durable key intact and restore its own Core progress instead of
       // routing it through the source-switch replacement transaction.
-      ReaderEffects.runBookDetailFromPersistedSource(bookId, true, sourceId, sequence).catch((e: Error): void => {
+      const route = ReaderUiStore.snapshot().routeId;
+      const shouldRestoreForReader = route === 'immersive-reading' || route === 'reader' || route === 'reader_content';
+      ReaderEffects.runBookDetailFromPersistedSource(bookId, shouldRestoreForReader, sourceId, sequence).catch((e: Error): void => {
         if (!ReaderEffects.isCurrentBookOpen(sequence)) return;
         ReaderUiStore.dispatch({
           type: 'set-error',
@@ -3282,7 +3605,6 @@ export class ReaderEffects {
       case 'immersive-reading':
       case 'reader_content':
       case 'source-switch':
-      case 'source-switch-results':
       case 'reader-full-tts':
       case 'reader-full-settings':
         return;
@@ -3373,8 +3695,12 @@ export class ReaderEffects {
   }
 
   private static loadLocalBookChapter(book: BookDetail, entry: ChapterTocEntry,
-    contentSearchOffset?: number, restoredProgress?: PersistedReadingProgress, sequence?: number): void {
-    if (sequence !== undefined && !ReaderEffects.isCurrentBookOpen(sequence)) return;
+    contentSearchOffset?: number, restoredProgress?: PersistedReadingProgress, sequence?: number,
+    chapterNavigationRequestId?: number): void {
+    if (sequence !== undefined && !ReaderEffects.isCurrentBookOpen(sequence)) {
+      ReaderEffects.completeChapterNavigation(chapterNavigationRequestId);
+      return;
+    }
     ReaderEffects.currentSourceId = 'local';
     ReaderEffects.currentBookId = book.bookId;
     ReaderEffects.currentChapterId = entry.chapterId;
@@ -3383,8 +3709,14 @@ export class ReaderEffects {
     ReaderUiStore.dispatch({ type: 'set-loading', loading: true });
     try {
       CoreRuntime.get().localBookChapterContent(book.bookId, entry.index).then((data: JsonObject): void => {
-        if (sequence !== undefined && !ReaderEffects.isCurrentBookOpen(sequence)) return;
-        if (!ReaderEffects.isCurrentChapterLoad(book.bookId, 'local', entry.index, entry.chapterId)) return;
+        if (sequence !== undefined && !ReaderEffects.isCurrentBookOpen(sequence)) {
+          ReaderEffects.completeChapterNavigation(chapterNavigationRequestId);
+          return;
+        }
+        if (!ReaderEffects.isCurrentChapterLoad(book.bookId, 'local', entry.index, entry.chapterId)) {
+          ReaderEffects.completeChapterNavigation(chapterNavigationRequestId);
+          return;
+        }
         ReaderUiStore.dispatch({
           type: 'chapter-success',
           chapterParagraphs: ReaderEffects.mapChapterContent(data),
@@ -3393,6 +3725,7 @@ export class ReaderEffects {
           sourceId: 'local',
           chapterIndex: entry.index,
         });
+        ReaderEffects.completeChapterNavigation(chapterNavigationRequestId);
         if (restoredProgress !== undefined) {
           // Dispatch only after chapter-success, which clears the previous
           // renderer state. ReadingTextFlow then restores the exact Core
@@ -3414,8 +3747,15 @@ export class ReaderEffects {
           ReaderEffects.persistContentSearchAnchor(book, 'local', entry.index, contentSearchOffset, sequence);
         }
       }).catch((e: Error): void => {
-        if (sequence !== undefined && !ReaderEffects.isCurrentBookOpen(sequence)) return;
-        if (!ReaderEffects.isCurrentChapterLoad(book.bookId, 'local', entry.index, entry.chapterId)) return;
+        if (sequence !== undefined && !ReaderEffects.isCurrentBookOpen(sequence)) {
+          ReaderEffects.completeChapterNavigation(chapterNavigationRequestId);
+          return;
+        }
+        if (!ReaderEffects.isCurrentChapterLoad(book.bookId, 'local', entry.index, entry.chapterId)) {
+          ReaderEffects.completeChapterNavigation(chapterNavigationRequestId);
+          return;
+        }
+        ReaderEffects.completeChapterNavigation(chapterNavigationRequestId);
         if (contentSearchOffset !== undefined) {
           ReaderUiStore.dispatch({
             type: 'content-search-jump-status',
@@ -3428,7 +3768,11 @@ export class ReaderEffects {
         });
       });
     } catch (e) {
-      if (sequence !== undefined && !ReaderEffects.isCurrentBookOpen(sequence)) return;
+      if (sequence !== undefined && !ReaderEffects.isCurrentBookOpen(sequence)) {
+        ReaderEffects.completeChapterNavigation(chapterNavigationRequestId);
+        return;
+      }
+      ReaderEffects.completeChapterNavigation(chapterNavigationRequestId);
       ReaderUiStore.dispatch({
         type: 'set-error',
         error: { code: 'LOCAL_BOOK_CHAPTER_FAILED', message: (e as Error).message, retryable: true },
@@ -3440,50 +3784,108 @@ export class ReaderEffects {
     const source = sourceId.trim();
     const book = bookId.trim();
     const state = ReaderUiStore.snapshot();
-    let found = false;
-    for (let i = 0; i < state.bookshelfBooks.length; i++) {
-      const shelfBook = state.bookshelfBooks[i];
-      if (shelfBook.sourceId === source && shelfBook.bookId === book) {
-        found = true;
-        break;
-      }
-    }
-    if (state.overlay !== 'dialog' ||
-      state.pendingBookshelfRemovalSourceId !== source ||
-      state.pendingBookshelfRemovalBookId !== book || !found) {
-      ReaderUiStore.dispatch({
-        type: 'set-error',
-        error: {
-          code: 'BOOKSHELF_REMOVE_CONFIRM_REQUIRED',
-          message: '请先选择一条仍在 Core 书架中的书籍，并在确认页再次确认。',
-          retryable: false,
-        },
-      });
-      return;
-    }
-    const key = `${source}\u0000${book}`;
+    const epoch = state.bookshelfRemovalEpoch;
+    const isBatch = state.bookshelfRemovalScope === 'batch';
+    const targets: BookshelfSelectionTarget[] = isBatch
+      ? state.pendingBookshelfRemovalTargets.slice()
+      : [{ sourceId: source, bookId: book }];
+    if (targets.length === 0 || !ReaderEffects.targetsAreLive(state, targets)) return;
+    // The reducer has already projected the explicit confirmation into the
+    // Figma Loading variant. Effects only consumes that exact transaction;
+    // an old/forged event is ignored rather than replacing the page with a
+    // global error view.
+    if (!ReaderEffects.isCurrentBookshelfRemoval(source, book, epoch)) return;
+    const key = ReaderEffects.removalTargetKey(targets);
     if (ReaderEffects.bookshelfRemoveInFlightKey === key) return;
     ReaderEffects.bookshelfRemoveInFlightKey = key;
     try {
-      CoreRuntime.get().bookshelfRemove(source, book).then((): void => {
+      const request = isBatch
+        ? CoreRuntime.get().bookshelfRemoveBatch(targets)
+        : CoreRuntime.get().bookshelfRemove(source, book);
+      request.then((data: JsonObject): void => {
         ReaderEffects.bookshelfRemoveInFlightKey = '';
-        ReaderUiStore.dispatch({ type: 'bookshelf-remove-complete' });
+        if (!ReaderEffects.isCurrentBookshelfRemoval(source, book, epoch)) return;
+        const receipt: BookshelfRemovalReceipt | null = isBatch
+          ? ReaderEffects.bookshelfRemovalReceipt(data, targets) : null;
+        ReaderUiStore.dispatch({ type: 'bookshelf-remove-complete', sourceId: source, bookId: book,
+          bookshelfRemovalEpoch: epoch, bookshelfRemovalReceipt: receipt });
         ReaderEffects.loadBookshelf();
         ReaderUiStore.dispatch({ type: 'route-replace', id: 'bookshelf' });
       }).catch((e: Error): void => {
         ReaderEffects.bookshelfRemoveInFlightKey = '';
-        ReaderUiStore.dispatch({
-          type: 'set-error',
-          error: { code: 'BOOKSHELF_REMOVE_FAILED', message: e.message, retryable: true },
-        });
+        if (!ReaderEffects.isCurrentBookshelfRemoval(source, book, epoch)) return;
+        ReaderUiStore.dispatch({ type: 'bookshelf-remove-failed', sourceId: source, bookId: book,
+          bookshelfRemovalEpoch: epoch, bookshelfRemovalError: e.message });
       });
     } catch (e) {
       ReaderEffects.bookshelfRemoveInFlightKey = '';
-      ReaderUiStore.dispatch({
-        type: 'set-error',
-        error: { code: 'BOOKSHELF_REMOVE_FAILED', message: (e as Error).message, retryable: true },
-      });
+      if (!ReaderEffects.isCurrentBookshelfRemoval(source, book, epoch)) return;
+      ReaderUiStore.dispatch({ type: 'bookshelf-remove-failed', sourceId: source, bookId: book,
+        bookshelfRemovalEpoch: epoch, bookshelfRemovalError: (e as Error).message });
     }
+  }
+
+  private static isCurrentBookshelfRemoval(sourceId: string, bookId: string, epoch: number): boolean {
+    const state = ReaderUiStore.snapshot();
+    if (state.overlay !== 'dialog' || state.bookshelfRemovalDialogPhase !== 'loading' ||
+      state.bookshelfRemovalEpoch !== epoch) return false;
+    if (state.bookshelfRemovalScope === 'batch') {
+      return sourceId.length === 0 && bookId.length === 0 && state.pendingBookshelfRemovalTargets.length > 0;
+    }
+    return state.pendingBookshelfRemovalSourceId === sourceId && state.pendingBookshelfRemovalBookId === bookId;
+  }
+
+  private static targetsAreLive(state: ReaderUiState, targets: BookshelfSelectionTarget[]): boolean {
+    for (let index = 0; index < targets.length; index += 1) {
+      const target = targets[index];
+      let found = false;
+      for (let shelfIndex = 0; shelfIndex < state.bookshelfBooks.length; shelfIndex += 1) {
+        const shelf = state.bookshelfBooks[shelfIndex];
+        if (shelf.sourceId === target.sourceId && shelf.bookId === target.bookId) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) return false;
+    }
+    return true;
+  }
+
+  private static removalTargetKey(targets: BookshelfSelectionTarget[]): string {
+    let key = 'bookshelf-remove';
+    for (let index = 0; index < targets.length; index += 1) {
+      key = `${key}\u0000${targets[index].sourceId}\u0000${targets[index].bookId}`;
+    }
+    return key;
+  }
+
+  private static bookshelfRemovalReceipt(data: JsonObject,
+    requested: BookshelfSelectionTarget[]): BookshelfRemovalReceipt {
+    const fields = data as Object as Record<string, Object>;
+    const requestedCount = ReaderEffects.getNumber(data, 'requestedCount', requested.length);
+    const uniqueCount = ReaderEffects.getNumber(data, 'uniqueCount', requested.length);
+    return {
+      requestedCount: requestedCount,
+      uniqueCount: uniqueCount,
+      removedTargets: ReaderEffects.receiptTargets(fields['removedTargets']),
+      missingTargets: ReaderEffects.receiptTargets(fields['missingTargets']),
+      duplicateTargets: ReaderEffects.receiptTargets(fields['duplicateTargets']),
+    };
+  }
+
+  private static receiptTargets(value: Object | undefined): BookshelfSelectionTarget[] {
+    const result: BookshelfSelectionTarget[] = [];
+    if (!Array.isArray(value)) return result;
+    const values = value as JsonObject[];
+    for (let index = 0; index < values.length; index += 1) {
+      const target: JsonObject = values[index];
+      if (target === null || Array.isArray(target)) continue;
+      const sourceId = ReaderEffects.getString(target, 'sourceId');
+      const bookId = ReaderEffects.getString(target, 'bookId');
+      if (sourceId.length === 0 || bookId.length === 0) continue;
+      result.push({ sourceId: sourceId, bookId: bookId });
+    }
+    return result;
   }
 
   private static retryLastOperation(): void {
@@ -3505,7 +3907,7 @@ export class ReaderEffects {
       ReaderEffects.loadRss();
       return;
     }
-    if (route === 'source-switch') {
+    if (route === 'source-switch' && !isLocalBookSourceId(state.currentBook?.sourceId)) {
       ReaderEffects.loadAvailableSources(true);
       return;
     }
@@ -3542,14 +3944,15 @@ export class ReaderEffects {
   // Load the previous or next chapter relative to the current one.
   // Re-fetches the book detail/TOC page, parses it via Core book.toc, finds
   // the current chapter index, then loads the adjacent chapter.
-  static loadAdjacentChapter(direction: number): void {
+  static loadAdjacentChapter(direction: number, chapterNavigationRequestId?: number): void {
     const state = ReaderUiStore.snapshot();
     const book = state.currentBook;
     if (book === null || ReaderEffects.currentChapterId.length === 0) {
+      ReaderEffects.completeChapterNavigation(chapterNavigationRequestId);
       return;
     }
     const sourceId = book.sourceId ?? ReaderEffects.currentSourceId;
-    if (sourceId === 'local') {
+    if (isLocalBookSourceId(sourceId)) {
       ReaderEffects.loadLocalBookToc(book).then((toc: ChapterTocEntry[]): void => {
         let currentIndex = ReaderEffects.currentChapterIndex;
         for (let i = 0; i < toc.length; i++) {
@@ -3560,9 +3963,13 @@ export class ReaderEffects {
         }
         const targetIndex = currentIndex + direction;
         if (targetIndex >= 0 && targetIndex < toc.length) {
-          ReaderEffects.loadLocalBookChapter(book, toc[targetIndex]);
+          ReaderEffects.loadLocalBookChapter(book, toc[targetIndex], undefined, undefined, undefined,
+            chapterNavigationRequestId);
+        } else {
+          ReaderEffects.completeChapterNavigation(chapterNavigationRequestId);
         }
       }).catch((e: Error): void => {
+        ReaderEffects.completeChapterNavigation(chapterNavigationRequestId);
         ReaderUiStore.dispatch({
           type: 'set-error',
           error: { code: 'LOCAL_BOOK_TOC_FAILED', message: e.message, retryable: true },
@@ -3572,7 +3979,10 @@ export class ReaderEffects {
     }
     // Remote chapter navigation never recreates a demo URL. The source must
     // still exist in Core storage and Core constructs the request itself.
-    ReaderEffects.loadRemoteAdjacentChapter(book, sourceId, direction).catch((e: Error): void => {
+    ReaderEffects.loadRemoteAdjacentChapter(book, sourceId, direction, chapterNavigationRequestId).then((started: boolean): void => {
+      if (!started) ReaderEffects.completeChapterNavigation(chapterNavigationRequestId);
+    }).catch((e: Error): void => {
+      ReaderEffects.completeChapterNavigation(chapterNavigationRequestId);
       ReaderEffects.surfaceRemoteSourceError('CHAPTER_NAVIGATION_FAILED', e);
     });
   }
@@ -3585,7 +3995,7 @@ export class ReaderEffects {
       return;
     }
     const sourceId = book.sourceId ?? ReaderEffects.currentSourceId;
-    if (sourceId === 'local') {
+    if (isLocalBookSourceId(sourceId)) {
       ReaderEffects.loadLocalBookToc(book).then((toc: ChapterTocEntry[]): void => {
         if (toc.length === 0) return;
         const targetIndex = Math.min(Math.floor((progress / 100) * toc.length), toc.length - 1);
@@ -3876,7 +4286,7 @@ export class ReaderEffects {
     const sequence = ReaderEffects.bookOpenRequestSequence + 1;
     ReaderEffects.bookOpenRequestSequence = sequence;
     ReaderEffects.closeContentSearchPanel();
-    if (sourceId === 'local') {
+    if (isLocalBookSourceId(sourceId)) {
       ReaderEffects.openLocalContentSearchResult(book, result, sequence);
       return;
     }
@@ -4481,7 +4891,7 @@ export class ReaderEffects {
   }
 
   private static async loadRemoteAdjacentChapter(book: BookDetail, preferredSourceId: string,
-    direction: number): Promise<void> {
+    direction: number, chapterNavigationRequestId?: number): Promise<boolean> {
     const source = await ReaderEffects.resolvePersistedRemoteSource(preferredSourceId);
     const toc = await ReaderEffects.loadStoredSourceToc(book, source.sourceId);
     const currentIndex = ReaderEffects.findChapterIndex(toc, ReaderEffects.currentChapterId);
@@ -4490,8 +4900,12 @@ export class ReaderEffects {
     }
     const targetIndex = currentIndex + direction;
     if (targetIndex >= 0 && targetIndex < toc.length) {
-      ReaderEffects.loadStoredSourceChapter(book, toc, targetIndex, source.sourceId);
+      ReaderEffects.loadStoredSourceChapter(book, toc, targetIndex, source.sourceId, {
+        chapterNavigationRequestId: chapterNavigationRequestId,
+      });
+      return true;
     }
+    return false;
   }
 
   private static async loadRemoteChapterByProgress(book: BookDetail, preferredSourceId: string,
@@ -4625,19 +5039,30 @@ export class ReaderEffects {
 
   private static loadStoredSourceChapter(book: BookDetail, toc: JsonObject[], targetIndex: number,
     sourceId: string, options?: RemoteChapterLoadOptions): void {
-    if (targetIndex < 0 || targetIndex >= toc.length) return;
+    if (targetIndex < 0 || targetIndex >= toc.length) {
+      if (options !== undefined) ReaderEffects.completeChapterNavigation(options.chapterNavigationRequestId);
+      return;
+    }
     let contentSearchOffset: number | undefined = undefined;
     let restoredProgress: PersistedReadingProgress | undefined = undefined;
     let bookOpenSequence: number | undefined = undefined;
+    let chapterNavigationRequestId: number | undefined = undefined;
     if (options !== undefined) {
       contentSearchOffset = options.contentSearchOffset;
       restoredProgress = options.restoredProgress;
       bookOpenSequence = options.bookOpenSequence;
+      chapterNavigationRequestId = options.chapterNavigationRequestId;
     }
-    if (bookOpenSequence !== undefined && !ReaderEffects.isCurrentBookOpen(bookOpenSequence)) return;
+    if (bookOpenSequence !== undefined && !ReaderEffects.isCurrentBookOpen(bookOpenSequence)) {
+      ReaderEffects.completeChapterNavigation(chapterNavigationRequestId);
+      return;
+    }
     const entry = toc[targetIndex];
     const chapterUrl = ReaderEffects.getString(entry, 'url');
-    if (chapterUrl.length === 0) return;
+    if (chapterUrl.length === 0) {
+      ReaderEffects.completeChapterNavigation(chapterNavigationRequestId);
+      return;
+    }
     const coreChapterIndex = ReaderEffects.getNumber(entry, 'index', targetIndex);
     const entryVariablesValue = entry['variables'] as Object;
     const entryVariables = entryVariablesValue !== null && typeof entryVariablesValue === 'object' &&
@@ -4651,8 +5076,14 @@ export class ReaderEffects {
     ReaderUiStore.dispatch({ type: 'set-loading', loading: true });
     CoreRuntime.get().chapterContentFromSource(sourceId, book.bookId, chapterUrl,
       ReaderEffects.getString(entry, 'title'), coreChapterIndex, entryVariables).then((data: JsonObject): void => {
-        if (bookOpenSequence !== undefined && !ReaderEffects.isCurrentBookOpen(bookOpenSequence)) return;
-        if (!ReaderEffects.isCurrentChapterLoad(book.bookId, sourceId, coreChapterIndex, chapterUrl)) return;
+        if (bookOpenSequence !== undefined && !ReaderEffects.isCurrentBookOpen(bookOpenSequence)) {
+          ReaderEffects.completeChapterNavigation(chapterNavigationRequestId);
+          return;
+        }
+        if (!ReaderEffects.isCurrentChapterLoad(book.bookId, sourceId, coreChapterIndex, chapterUrl)) {
+          ReaderEffects.completeChapterNavigation(chapterNavigationRequestId);
+          return;
+        }
         ReaderUiStore.dispatch({
           type: 'chapter-success',
           chapterParagraphs: ReaderEffects.mapChapterContent(data),
@@ -4661,6 +5092,7 @@ export class ReaderEffects {
           sourceId: sourceId,
           chapterIndex: coreChapterIndex,
         });
+        ReaderEffects.completeChapterNavigation(chapterNavigationRequestId);
         if (restoredProgress !== undefined) {
           // Publish the exact durable location only after chapter-success:
           // that reducer transition clears the previous chapter's renderer
@@ -4683,8 +5115,15 @@ export class ReaderEffects {
             bookOpenSequence);
         }
       }).catch((e: Error): void => {
-        if (bookOpenSequence !== undefined && !ReaderEffects.isCurrentBookOpen(bookOpenSequence)) return;
-        if (!ReaderEffects.isCurrentChapterLoad(book.bookId, sourceId, coreChapterIndex, chapterUrl)) return;
+        if (bookOpenSequence !== undefined && !ReaderEffects.isCurrentBookOpen(bookOpenSequence)) {
+          ReaderEffects.completeChapterNavigation(chapterNavigationRequestId);
+          return;
+        }
+        if (!ReaderEffects.isCurrentChapterLoad(book.bookId, sourceId, coreChapterIndex, chapterUrl)) {
+          ReaderEffects.completeChapterNavigation(chapterNavigationRequestId);
+          return;
+        }
+        ReaderEffects.completeChapterNavigation(chapterNavigationRequestId);
         if (contentSearchOffset !== undefined) {
           ReaderUiStore.dispatch({
             type: 'content-search-jump-status',
@@ -4717,6 +5156,7 @@ export class ReaderEffects {
     const viewportHeight = AppStorage.get<number>(ViewportAdapter.K_HEIGHT) ?? ViewportAdapter.DEFAULT_HEIGHT;
     const snapshot: ReadingProgressSnapshot = {
       key: `${book.bookId}|${sourceId}|${chapterIndex}|${Math.floor(chapterOffset)}|0.000000|${viewportWidth}|${viewportHeight}|${(state.fontSize / 17).toFixed(4)}`,
+      sessionEpoch: ReaderEffects.readingSessionEpoch,
       bookId: book.bookId,
       sourceId: sourceId,
       chapterIndex: chapterIndex,
@@ -4736,25 +5176,117 @@ export class ReaderEffects {
       ReaderEffects.currentChapterIndex === chapterIndex && ReaderEffects.currentChapterId === chapterId;
   }
 
+  // Request a chapter transition only after the current measured position has
+  // become durable.  The reducer deliberately keeps chapter-next/prev as
+  // no-ops, so this is the one transition owner rather than a second route or
+  // state authority.
+  static requestAdjacentChapter(direction: number): void {
+    if ((direction !== -1 && direction !== 1) || ReaderUiStore.snapshot().loading ||
+      ReaderEffects.chapterNavigationInFlight) return;
+    const action = direction > 0 ? 'chapter-next' : 'chapter-prev';
+    const requestId = ReaderEffects.chapterNavigationSequence + 1;
+    ReaderEffects.chapterNavigationSequence = requestId;
+    ReaderEffects.activeChapterNavigationRequestId = requestId;
+    ReaderEffects.chapterNavigationInFlight = true;
+    ReaderEffects.commitReadingProgressBefore(action, (): void => {
+      ReaderEffects.loadAdjacentChapter(direction, requestId);
+      ReaderEffects.maybeVibrateForReaderInteraction();
+    }, (): void => {
+      ReaderEffects.completeChapterNavigation(requestId);
+    });
+  }
+
+  // The visible Reader back affordance and system Back both call this helper.
+  // Keeping the existing `reader-exit` event as the final dispatch preserves
+  // its route/session teardown semantics while preventing an optimistic pop.
+  static requestReaderExit(): void {
+    ReaderEffects.commitReadingProgressBefore('reader-exit', (): void => {
+      ReaderEffects.invalidateExitedReadingSession();
+      ReaderUiStore.dispatchCommittedReaderExit();
+    });
+  }
+
+  // `set-error` is global: source/import/search errors may arrive while a
+  // chapter TOC is still resolving.  Only the exact request which claimed the
+  // guard may release it, otherwise an unrelated error re-admits a duplicate
+  // next/previous gesture into the same asynchronous window.
+  private static completeChapterNavigation(requestId?: number): void {
+    if (requestId === undefined || ReaderEffects.activeChapterNavigationRequestId !== requestId) return;
+    ReaderEffects.activeChapterNavigationRequestId = 0;
+    ReaderEffects.chapterNavigationInFlight = false;
+  }
+
+  // The exit barrier itself is already durable when this runs.  Its older
+  // queued layout reports are not: discard them so an unmounted reader cannot
+  // overwrite the confirmed exit anchor after the visible route has changed.
+  private static invalidateExitedReadingSession(): void {
+    const expiredEpoch = ReaderEffects.readingSessionEpoch;
+    ReaderEffects.readingSessionEpoch = expiredEpoch >= 2147483646 ? 1 : expiredEpoch + 1;
+    const retained: QueuedReadingProgress[] = [];
+    for (let index = 0; index < ReaderEffects.pendingReadingProgress.length; index += 1) {
+      const queued = ReaderEffects.pendingReadingProgress[index];
+      if (queued.snapshot.sessionEpoch === expiredEpoch) {
+        ReaderEffects.runReadingProgressCallbacks(queued.onFailed);
+      } else {
+        retained.push(queued);
+      }
+    }
+    ReaderEffects.pendingReadingProgress = retained;
+  }
+
   // Resolve and persist the canonical reading location after the rendered
   // surface publishes its actual Unicode scalar anchor. A page index is not a
   // chapter offset: horizontal page models and vertical paragraph anchors own
   // the measurement and feed it through ReaderUiStore.reportReadingAnchor().
   static persistReadingProgress(anchorEvent?: UiEvent): void {
+    const snapshot = ReaderEffects.readingProgressSnapshot(anchorEvent);
+    if (snapshot === null) return;
+    ReaderEffects.enqueueReadingProgress(snapshot);
+  }
+
+  // A navigation barrier shares the single progress writer with ordinary
+  // anchor updates. It intentionally fails closed: a Core failure keeps the
+  // current body/route visible and leaves the same gesture available to retry.
+  private static commitReadingProgressBefore(action: string, continuation: () => void,
+    onFailure?: () => void): void {
+    if (ReaderEffects.pendingReadingCommitAction.length > 0) return;
+    ReaderEffects.pendingReadingCommitAction = action;
+    const snapshot = ReaderEffects.readingProgressSnapshot();
+    const release = (): void => {
+      if (ReaderEffects.pendingReadingCommitAction === action) {
+        ReaderEffects.pendingReadingCommitAction = '';
+      }
+    };
+    if (snapshot === null) {
+      release();
+      continuation();
+      return;
+    }
+    ReaderEffects.enqueueReadingProgress(snapshot, (): void => {
+      release();
+      continuation();
+    }, (): void => {
+      release();
+      if (onFailure !== undefined) onFailure();
+    });
+  }
+
+  private static readingProgressSnapshot(anchorEvent?: UiEvent): ReadingProgressSnapshot | null {
     const state = ReaderUiStore.snapshot();
     const book = state.currentBook;
     const identity = state.activeReaderContentIdentity;
-    if (book === null || identity === null || !ReaderEffects.isCurrentReadingIdentity(state, identity)) return;
+    if (book === null || identity === null || !ReaderEffects.isCurrentReadingIdentity(state, identity)) return null;
     if (anchorEvent !== undefined && (anchorEvent.bookId !== identity.bookId ||
       anchorEvent.sourceId !== identity.sourceId || anchorEvent.chapterIndex !== identity.chapterIndex)) {
-      return;
+      return null;
     }
     const chapterOffset = Math.max(0, Math.floor(state.readerChapterOffset));
     const chapterProgress = Math.max(0, Math.min(1, state.readerChapterProgress));
     const viewportWidth = AppStorage.get<number>(ViewportAdapter.K_WIDTH) ?? ViewportAdapter.DEFAULT_WIDTH;
     const viewportHeight = AppStorage.get<number>(ViewportAdapter.K_HEIGHT) ?? ViewportAdapter.DEFAULT_HEIGHT;
-    const snapshot: ReadingProgressSnapshot = {
+    return {
       key: `${identity.bookId}|${identity.sourceId}|${identity.chapterIndex}|${chapterOffset}|${chapterProgress.toFixed(6)}|${viewportWidth}|${viewportHeight}|${(state.fontSize / 17).toFixed(4)}`,
+      sessionEpoch: ReaderEffects.readingSessionEpoch,
       bookId: identity.bookId,
       sourceId: identity.sourceId,
       chapterIndex: identity.chapterIndex,
@@ -4764,19 +5296,46 @@ export class ReaderEffects {
       viewportHeight: viewportHeight,
       fontScale: state.fontSize / 17,
     };
-    ReaderEffects.enqueueReadingProgress(snapshot);
   }
 
-  private static enqueueReadingProgress(snapshot: ReadingProgressSnapshot): void {
-    if (!ReaderEffects.progressWriteInFlight &&
-      ReaderEffects.lastCompletedReadingProgressKey === snapshot.key) {
+  private static enqueueReadingProgress(snapshot: ReadingProgressSnapshot,
+    onStored?: () => void, onFailed?: () => void): void {
+    if (!ReaderEffects.progressWriteInFlight && ReaderEffects.lastCompletedReadingProgressKey === snapshot.key) {
+      if (onStored !== undefined) onStored();
       return;
     }
-    if (ReaderEffects.progressWriteInFlight && ReaderEffects.pendingReadingProgress !== null &&
-      ReaderEffects.pendingReadingProgress.key === snapshot.key) {
+    const inFlight = ReaderEffects.inFlightReadingProgress;
+    if (inFlight !== null && inFlight.snapshot.key === snapshot.key) {
+      if (onStored !== undefined) inFlight.onStored.push(onStored);
+      if (onFailed !== undefined) inFlight.onFailed.push(onFailed);
       return;
     }
-    ReaderEffects.pendingReadingProgress = snapshot;
+    for (let index = 0; index < ReaderEffects.pendingReadingProgress.length; index += 1) {
+      const pending = ReaderEffects.pendingReadingProgress[index];
+      if (pending.snapshot.key !== snapshot.key) continue;
+      if (onStored !== undefined) pending.onStored.push(onStored);
+      if (onFailed !== undefined) pending.onFailed.push(onFailed);
+      return;
+    }
+    const next: QueuedReadingProgress = {
+      snapshot: snapshot,
+      onStored: onStored === undefined ? [] : [onStored],
+      onFailed: onFailed === undefined ? [] : [onFailed],
+    };
+    const lastIndex = ReaderEffects.pendingReadingProgress.length - 1;
+    const last = lastIndex >= 0 ? ReaderEffects.pendingReadingProgress[lastIndex] : null;
+    // Background layout reports may coalesce, but never replace a queued
+    // barrier whose continuation would otherwise be lost.
+    if (onStored === undefined && onFailed === undefined && last !== null &&
+      last.onStored.length === 0 && last.onFailed.length === 0) {
+      ReaderEffects.pendingReadingProgress[lastIndex] = next;
+    } else if (onStored !== undefined && last !== null && last.onStored.length === 0 && last.onFailed.length === 0) {
+      // A pending background anchor is stale once a user gesture asks to
+      // navigate. Upgrade it into this barrier rather than writing both.
+      ReaderEffects.pendingReadingProgress[lastIndex] = next;
+    } else {
+      ReaderEffects.pendingReadingProgress.push(next);
+    }
     if (!ReaderEffects.progressWriteInFlight) {
       ReaderEffects.drainReadingProgressQueue();
     }
@@ -4784,16 +5343,31 @@ export class ReaderEffects {
 
   private static isCurrentReadingIdentity(state: ReaderUiState, identity: ReaderContentIdentity): boolean {
     const book = state.currentBook;
-    return book !== null && state.chapterContent.length > 0 && book.bookId === identity.bookId &&
+    return RouteTable.shellOf(state.routeId) === 'ReaderShell' && book !== null && state.chapterContent.length > 0 &&
+      book.bookId === identity.bookId &&
       (book.sourceId ?? '') === identity.sourceId && ReaderEffects.currentBookId === identity.bookId &&
       ReaderEffects.currentSourceId === identity.sourceId && ReaderEffects.currentChapterIndex === identity.chapterIndex;
   }
 
   private static drainReadingProgressQueue(): void {
-    const snapshot = ReaderEffects.pendingReadingProgress;
-    if (snapshot === null || ReaderEffects.progressWriteInFlight) return;
-    ReaderEffects.pendingReadingProgress = null;
+    if (ReaderEffects.progressWriteInFlight) return;
+    let entry: QueuedReadingProgress | undefined = undefined;
+    while (ReaderEffects.pendingReadingProgress.length > 0 && entry === undefined) {
+      const candidate = ReaderEffects.pendingReadingProgress.shift();
+      if (candidate === undefined) break;
+      if (candidate.snapshot.sessionEpoch !== ReaderEffects.readingSessionEpoch) {
+        ReaderEffects.runReadingProgressCallbacks(candidate.onFailed);
+        continue;
+      }
+      entry = candidate;
+    }
+    if (entry === undefined) return;
+    // ArkTS does not retain the preceding undefined guard through Promise
+    // closures, so capture the admitted queue item as a concrete value.
+    const activeEntry: QueuedReadingProgress = entry;
+    const snapshot = activeEntry.snapshot;
     ReaderEffects.progressWriteInFlight = true;
+    ReaderEffects.inFlightReadingProgress = activeEntry;
     try {
       const runtime = CoreRuntime.get();
       runtime.readerLocationResolve(snapshot.bookId, snapshot.chapterIndex, snapshot.chapterOffset,
@@ -4804,7 +5378,8 @@ export class ReaderEffects {
         );
         return runtime.readingProgressUpdate(snapshot.bookId, snapshot.sourceId, snapshot.chapterIndex,
           snapshot.chapterOffset, snapshot.chapterProgress, revision);
-      }).then((): void => {
+      }).then((result: JsonObject): void => {
+        ReaderEffects.requireStoredReadingProgress(result, snapshot);
         ReaderEffects.lastCompletedReadingProgressKey = snapshot.key;
         if (snapshot.contentSearchJumpSequence !== undefined &&
           ReaderEffects.isCurrentBookOpen(snapshot.contentSearchJumpSequence) &&
@@ -4819,6 +5394,7 @@ export class ReaderEffects {
           });
         }
         ReaderEffects.loadContinueReading();
+        ReaderEffects.runReadingProgressCallbacks(activeEntry.onStored);
         ReaderEffects.finishReadingProgressWrite();
       }).catch((e: Error): void => {
         console.info(`ReaderEffects: reading-progress error: ${e.message}`);
@@ -4829,6 +5405,7 @@ export class ReaderEffects {
             contentSearchMessage: `已打开目标章节，但 Core 阅读位置写入失败：${e.message}`,
           });
         }
+        ReaderEffects.runReadingProgressCallbacks(activeEntry.onFailed);
         ReaderEffects.finishReadingProgressWrite();
       });
     } catch (e) {
@@ -4840,13 +5417,35 @@ export class ReaderEffects {
           contentSearchMessage: `已打开目标章节，但 Core 阅读位置不可用：${(e as Error).message}`,
         });
       }
+      ReaderEffects.runReadingProgressCallbacks(activeEntry.onFailed);
       ReaderEffects.finishReadingProgressWrite();
     }
   }
 
+  private static requireStoredReadingProgress(data: JsonObject, snapshot: ReadingProgressSnapshot): void {
+    if (data['stored'] !== true || ReaderEffects.getString(data, 'bookId') !== snapshot.bookId ||
+      ReaderEffects.getString(data, 'sourceId') !== snapshot.sourceId ||
+      ReaderEffects.getNumber(data, 'chapterIndex', -1) !== snapshot.chapterIndex ||
+      ReaderEffects.getNumber(data, 'chapterOffset', -1) !== snapshot.chapterOffset ||
+      Math.abs(ReaderEffects.getNumber(data, 'chapterProgress', -1) - snapshot.chapterProgress) > 0.000001) {
+      throw new Error('reading.progress.update did not confirm the requested durable reading location');
+    }
+  }
+
+  private static runReadingProgressCallbacks(callbacks: Array<() => void>): void {
+    for (let index = 0; index < callbacks.length; index += 1) {
+      try {
+        callbacks[index]();
+      } catch (e) {
+        console.info(`ReaderEffects: post-progress continuation failed: ${(e as Error).message}`);
+      }
+    }
+  }
+
   private static finishReadingProgressWrite(): void {
+    ReaderEffects.inFlightReadingProgress = null;
     ReaderEffects.progressWriteInFlight = false;
-    if (ReaderEffects.pendingReadingProgress !== null) {
+    if (ReaderEffects.pendingReadingProgress.length > 0) {
       ReaderEffects.drainReadingProgressQueue();
     }
   }
@@ -5118,6 +5717,8 @@ export class ReaderEffects {
         sourceName: source.name,
         sourceUrl: source.baseUrl,
         latestChapter: latestChapter,
+        coverUrl: ReaderEffects.getString(book, 'coverUrl'),
+        intro: ReaderEffects.getString(book, 'intro'),
       };
       results.push(entry);
       if (results.length >= 20) break;
@@ -5881,6 +6482,10 @@ export class ReaderEffects {
     }
     if (book === null) {
       ReaderEffects.surfaceSourceSwitchFailure('当前没有可换源的书籍。');
+      return;
+    }
+    if (isLocalBookSourceId(book.sourceId)) {
+      ReaderEffects.surfaceSourceSwitchFailure('本地书籍没有可更换的书源。');
       return;
     }
     const newSourceId = state.sourceSelection[0].trim();

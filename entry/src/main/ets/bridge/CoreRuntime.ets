@@ -1154,6 +1154,14 @@ export class CoreRuntime {
   beginReaderLocationResolve(bookId: string, chapterIndex: number, chapterOffset: number,
     chapterProgress: number, viewportWidth: number, viewportHeight: number,
     fontScale: number, sourceId: string = '', chapterTitle: string = ''): CoreCommandHandle {
+    // ArkUI's display API reports physical pixels divided by density.  That is
+    // intentionally a floating-point value on some devices (for example,
+    // 1280 / 3.5 = 365.714…), while Core's location contract requires an
+    // integer logical viewport.  Normalize at this bridge boundary so every
+    // reader owner sends the same valid DTO instead of relying on each caller
+    // to remember device-density semantics.
+    const coreViewportWidth = CoreRuntime.normalizeCoreViewportDimension(viewportWidth, 'viewportWidth');
+    const coreViewportHeight = CoreRuntime.normalizeCoreViewportDimension(viewportHeight, 'viewportHeight');
     const params: JsonObject = {};
     if (sourceId.length > 0) params['sourceId'] = sourceId;
     params['bookId'] = bookId;
@@ -1164,8 +1172,8 @@ export class CoreRuntime {
     anchor['chapterProgress'] = chapterProgress;
     params['anchor'] = anchor;
     const layout: JsonObject = {};
-    layout['viewportWidth'] = viewportWidth;
-    layout['viewportHeight'] = viewportHeight;
+    layout['viewportWidth'] = coreViewportWidth;
+    layout['viewportHeight'] = coreViewportHeight;
     layout['fontScale'] = fontScale;
     params['layout'] = layout;
     return this.beginCoreCommand('reader.location.resolve', params, 5000);
@@ -1329,6 +1337,30 @@ export class CoreRuntime {
     params['sourceId'] = sourceId;
     params['bookId'] = bookId;
     const result = await this.runtime.request('bookshelf.remove', params, { timeoutMs: 5000 });
+    return result.data;
+  }
+
+  // One Core transaction for the approved Figma Bookshelf/MultiSelect flow.
+  // Do not replace this with a client loop around `bookshelf.remove`: Core owns
+  // duplicate/missing accounting and atomic rollback semantics.
+  async bookshelfRemoveBatch(targets: CoreBookshelfRemoveTarget[]): Promise<JsonObject> {
+    if (targets.length === 0) throw new Error('bookshelf.removeBatch requires at least one target.');
+    const values: JsonObject[] = [];
+    for (let index = 0; index < targets.length; index += 1) {
+      const target = targets[index];
+      const sourceId = target.sourceId.trim();
+      const bookId = target.bookId.trim();
+      if (sourceId.length === 0 || bookId.length === 0) {
+        throw new Error('bookshelf.removeBatch targets require sourceId and bookId.');
+      }
+      const value: JsonObject = {};
+      value['sourceId'] = sourceId;
+      value['bookId'] = bookId;
+      values.push(value);
+    }
+    const params: JsonObject = {};
+    params['targets'] = values;
+    const result = await this.runtime.request('bookshelf.removeBatch', params, { timeoutMs: 5000 });
     return result.data;
   }
 
@@ -2043,9 +2075,26 @@ export class CoreRuntime {
     CoreRuntime.requireInt32(value, label);
     if (value < 0) throw new Error(`${label} must be non-negative.`);
   }
+
+  /** Convert a device-density-derived ArkUI dimension to Core's u32 DTO. */
+  private static normalizeCoreViewportDimension(value: number, label: string): number {
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new Error(`${label} must be a finite positive viewport dimension.`);
+    }
+    const normalized = Math.max(1, Math.round(value));
+    if (!Number.isSafeInteger(normalized) || normalized <= 0 || normalized > 4294967295) {
+      throw new Error(`${label} must fit Core's positive uint32 viewport dimension.`);
+    }
+    return normalized;
+  }
 }
 
 // ── Local book parse options (for localBookParse wrapper) ──────────────
+export interface CoreBookshelfRemoveTarget {
+  sourceId: string;
+  bookId: string;
+}
+
 export interface LocalBookParseOptions {
   // Legacy already-decoded text path. New host imports must send bytesBase64
   // so Core owns encoding detection and TXT rule evaluation.

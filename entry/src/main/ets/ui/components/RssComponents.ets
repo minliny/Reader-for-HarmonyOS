@@ -188,7 +188,6 @@ export struct RssSourceOverview {
     .border({ width: 1, color: ColorTokens.border })
     .borderRadius(DemoAliasTokens.radiusMd)
     .backgroundColor(DemoAliasTokens.surface)
-    .shadow({ radius: 26, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 8 })
   }
 }
 
@@ -547,7 +546,6 @@ struct RssOriginalPreviewHeader {
     .border({ width: 1, color: ColorTokens.border })
     .borderRadius(DemoAliasTokens.radiusMd)
     .backgroundColor(DemoAliasTokens.surface)
-    .shadow({ radius: 26, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 8 })
     .alignItems(VerticalAlign.Center)
   }
 }
@@ -777,7 +775,6 @@ struct RssCoreContractNotice {
     .border({ width: 1, color: ColorTokens.border })
     .borderRadius(DemoAliasTokens.radiusMd)
     .backgroundColor(DemoAliasTokens.surface)
-    .shadow({ radius: 26, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 8 })
     .alignItems(HorizontalAlign.Start)
   }
 }

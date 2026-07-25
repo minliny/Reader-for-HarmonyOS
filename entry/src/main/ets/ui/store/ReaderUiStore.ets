@@ -1,8 +1,8 @@
 // ReaderUiStore — AppStorage bridge over the reducer.
 // Holds the canonical UiState; on dispatch, reduces and writes primitive fields to
 // AppStorage so any component can subscribe via @StorageProp / @StorageLink.
-import { ReaderUiState, UiEvent, SearchResultEntry, BookDetail, ReplaceRule, CoreSourceEntry, CoreSourceCheckResult, CoreSourceDebugResult, CoreContentSearchResult, CoreBookmark, CoreDiscoverKind, CoreDiscoverBook, CoreBookshelfBook, CoreBookGroup, CoreRssSubscription, CoreRssItem, ChapterTocEntry, CoreStorageBackupInfo, CoreReaderCanonicalLocation, ReaderContentIdentity, RouteEntry, Overlay } from './ReaderUiState';
-import { RouteId } from '../../contract/generated/RouteTable';
+import { ReaderUiState, UiEvent, SearchResultEntry, BookDetail, ReplaceRule, CoreSourceEntry, CoreSourceCheckResult, CoreSourceDebugResult, CoreContentSearchResult, CoreBookmark, CoreDiscoverKind, CoreDiscoverBook, CoreBookshelfBook, CoreBookGroup, CoreRssSubscription, CoreRssItem, ChapterTocEntry, CoreStorageBackupInfo, CoreStorageBackupHistoryEntry, CoreReaderCanonicalLocation, ReaderContentIdentity, RouteEntry, Overlay, BookshelfSelectionTarget, BookshelfRemovalReceipt, canSwitchBookSourceId, isLocalBookSourceId } from './ReaderUiState';
+import { RouteId, RouteTable } from '../../contract/generated/RouteTable';
 import { ReaderReducer } from './ReaderReducer';
 import { DemoUiState } from '../fixtures/DemoUiState';
 import { ReaderThemeState } from '../tokens/ReaderThemeState';
@@ -362,6 +362,15 @@ export class ReaderUiStore {
   private static readonly K_CONTINUE_READING_ERROR = 'reader.continueReadingError';
   private static readonly K_PENDING_BOOKSHELF_REMOVAL_SOURCE_ID = 'reader.pendingBookshelfRemovalSourceId';
   private static readonly K_PENDING_BOOKSHELF_REMOVAL_BOOK_ID = 'reader.pendingBookshelfRemovalBookId';
+  private static readonly K_PENDING_BOOKSHELF_REMOVAL_TARGETS = 'reader.pendingBookshelfRemovalTargets';
+  private static readonly K_BOOKSHELF_REMOVAL_SCOPE = 'reader.bookshelfRemovalScope';
+  private static readonly K_BOOKSHELF_REMOVAL_DIALOG_PHASE = 'reader.bookshelfRemovalDialogPhase';
+  private static readonly K_BOOKSHELF_REMOVAL_EPOCH = 'reader.bookshelfRemovalEpoch';
+  private static readonly K_BOOKSHELF_REMOVAL_ERROR = 'reader.bookshelfRemovalError';
+  private static readonly K_BOOKSHELF_REMOVAL_RECEIPT = 'reader.lastBookshelfRemovalReceipt';
+  private static readonly K_PENDING_BOOKSHELF_ACTION_SOURCE_ID = 'reader.pendingBookshelfActionSourceId';
+  private static readonly K_PENDING_BOOKSHELF_ACTION_BOOK_ID = 'reader.pendingBookshelfActionBookId';
+  private static readonly K_BOOKSHELF_SELECTED_TARGETS = 'reader.bookshelfSelectedTargets';
   private static readonly K_BOOK_GROUPS = 'reader.bookGroups';
   private static readonly K_BOOK_GROUPS_LOADED = 'reader.bookGroupsLoaded';
   private static readonly K_BOOK_GROUPS_LOADING = 'reader.bookGroupsLoading';
@@ -380,7 +389,6 @@ export class ReaderUiStore {
   private static readonly K_PENDING_RSS_SUBSCRIPTION_DELETE_ID = 'reader.pendingRssSubscriptionDeleteId';
   // ── B1 P0 全局设置 segment/stepper/switch keys ──
   private static readonly K_APP_THEME_MODE = 'reader.appThemeMode';
-  private static readonly K_COVER_COLUMNS = 'reader.coverColumns';
   private static readonly K_TOGGLE_AUTO_CHECK_UPDATE = 'reader.settingsToggles.autoCheckUpdate';
   private static readonly K_TOGGLE_TAP_BOTTOM_BAR_TO_TOP = 'reader.settingsToggles.tapBottomBarToTop';
   private static readonly K_TOGGLE_SHOW_UPDATE_BADGE = 'reader.settingsToggles.showUpdateBadge';
@@ -415,6 +423,7 @@ export class ReaderUiStore {
   private static readonly K_CORE_BACKUP_STATUS = 'reader.coreBackupStatus';
   private static readonly K_CORE_BACKUP_MESSAGE = 'reader.coreBackupMessage';
   private static readonly K_LOCAL_CORE_BACKUP = 'reader.localCoreBackup';
+  private static readonly K_LOCAL_CORE_BACKUP_HISTORY = 'reader.localCoreBackupHistory';
   private static readonly K_PENDING_CORE_RESTORE = 'reader.pendingCoreRestore';
   private static readonly K_PENDING_CORE_RESTORE_CONFIRMATION_CHECKSUM = 'reader.pendingCoreRestoreConfirmationChecksum';
   // ── W1 本地书导入 / W5 规则替换 keys ──
@@ -422,6 +431,9 @@ export class ReaderUiStore {
   private static readonly K_IMPORT_PREVIEW_ENCODING = 'reader.importPreviewEncoding';
   private static readonly K_IMPORT_PREVIEW_COUNT = 'reader.importPreviewCount';
   private static readonly K_LOCAL_IMPORT_EPOCH = 'reader.localImportEpoch';
+  private static readonly K_LOCAL_IMPORT_DIALOG_PHASE = 'reader.localImportDialogPhase';
+  private static readonly K_LOCAL_IMPORT_DIALOG_EPOCH = 'reader.localImportDialogEpoch';
+  private static readonly K_LOCAL_IMPORT_DIALOG_RESULTS = 'reader.localImportDialogResults';
   static readonly K_SOURCE_IMPORT_ORIGIN = 'reader.sourceImportOrigin';
   static readonly K_SOURCE_IMPORT_TOTAL = 'reader.sourceImportTotal';
   static readonly K_SOURCE_IMPORT_IMPORTED = 'reader.sourceImportImported';
@@ -436,6 +448,15 @@ export class ReaderUiStore {
   private static state: ReaderUiState;
   private static runtimeShadow: ReaderUIRuntimeShadowCoordinator;
   private static readerControlCandidateRuntimeFactoryForTest?: ReaderControlCandidateRuntimeFactory;
+  // RouteRenderer needs the source-role intent at the same time it observes
+  // the route change.  Keep this as a one-dispatch bridge rather than adding
+  // a second navigation state owner or changing the Core-backed book-open
+  // recovery transaction.
+  private static pendingImmersiveEntryLastOp: string = '';
+  // `reader-exit` is a reducer event rather than a public navigation shortcut.
+  // This scoped flag admits only the Effects continuation after the current
+  // reader anchor has been confirmed durable by Core.
+  private static committedReaderExitDispatch: boolean = false;
 
   static init(runtime?: ReaderUIRuntimeDriver, bookOpenCore?: ReaderBookOpenCoreGateway,
     playbackCore?: ReaderPlaybackCoreGateway, playbackPlatform?: ReaderPlaybackPlatformGateway,
@@ -445,6 +466,8 @@ export class ReaderUiStore {
     syncCore?: ReaderSyncExperimentalGateway): void {
     ReaderUiStore.state = DemoUiState.initial();
     ReaderUiStore.readerControlCandidateRuntimeFactoryForTest = undefined;
+    ReaderUiStore.pendingImmersiveEntryLastOp = '';
+    ReaderUiStore.committedReaderExitDispatch = false;
     ReaderUiStore.runtimeShadow = new ReaderUIRuntimeShadowCoordinator(
       ReaderUiStore.state,
       runtime,
@@ -478,12 +501,58 @@ export class ReaderUiStore {
    * the source-scoped Core progress row, resolves its Core TOC identity, then
    * restores the canonical location after the selected chapter has loaded.
    * This is deliberately a dispatch helper, not a new UiEvent or UI state.
-   */
+  */
   static dispatchContinueReading(bookId: string, sourceId: string): void {
+    // This helper is also used by Book Detail. It deliberately preserves the
+    // generic route intent there: only the bookshelf's known MainTabShell
+    // actors below may claim one of the generated bookshelf entry policies.
+    ReaderUiStore.dispatchImmersiveReaderEntry(bookId, sourceId, '');
+  }
+
+  // A grid card is the explicit cover-origin actor in the bookshelf. It is
+  // eligible for the Figma matched-cover entry policy; the adapter does not
+  // pretend to have a geometry snapshot when the visual actor is unavailable.
+  // The Core recovery path remains the same as every other reader entry.
+  static dispatchBookshelfCoverToReader(bookId: string, sourceId: string): void {
+    ReaderUiStore.dispatchImmersiveReaderEntry(
+      bookId, sourceId, 'reader.entry.coverToImmersive',
+    );
+  }
+
+  // Continue Reading and a list row are button/row entry actors, not a
+  // measured cover snapshot. Use the generated fade-entry policy rather than
+  // mislabeling either as a matched-cover transition.
+  static dispatchBookshelfActionToReader(bookId: string, sourceId: string): void {
+    ReaderUiStore.dispatchImmersiveReaderEntry(
+      bookId, sourceId, 'reader.entry.actionToImmersive',
+    );
+  }
+
+  private static dispatchImmersiveReaderEntry(bookId: string, sourceId: string,
+    entryLastOp: string): void {
     if (bookId.length === 0) return;
-    ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' });
-    if (sourceId === 'local') {
-      ReaderUiStore.dispatch({ type: 'bookshelf-book-open', sourceId: 'local', bookId: bookId });
+    // Write a generated semantic marker before the route storage key so
+    // RouteRenderer cannot observe a generic `route-push` during the same
+    // synchronous AppStorage transaction. dispatch() consumes it exactly once
+    // when recording the route event below.
+    if (entryLastOp.length > 0) {
+      ReaderUiStore.pendingImmersiveEntryLastOp = entryLastOp;
+      AppStorage.setOrCreate<string>(ReaderUiStore.K_LAST_OP, entryLastOp);
+      try {
+        ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' });
+      } finally {
+        // Fail closed if a future dispatch guard returns before consuming it.
+        ReaderUiStore.pendingImmersiveEntryLastOp = '';
+      }
+    } else {
+      ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' });
+    }
+    if (isLocalBookSourceId(sourceId)) {
+      // The Reader route is already authoritative above.  Keep this as the
+      // ordinary shelf-open event so the reducer does not push the same route
+      // a second time; Effects sees the immersive route and restores Core's
+      // persisted local chapter/offset from there.
+      ReaderUiStore.dispatch({ type: 'bookshelf-book-open', sourceId: sourceId.trim(), bookId: bookId });
       return;
     }
     ReaderUiStore.dispatch({
@@ -491,7 +560,97 @@ export class ReaderUiStore {
     });
   }
 
+  private static lastOpFor(event: UiEvent): string {
+    if (event.type !== 'route-push' || event.id !== 'immersive-reading' ||
+      ReaderUiStore.pendingImmersiveEntryLastOp.length === 0) {
+      return event.type;
+    }
+    const semanticLastOp = ReaderUiStore.pendingImmersiveEntryLastOp;
+    ReaderUiStore.pendingImmersiveEntryLastOp = '';
+    return semanticLastOp;
+  }
+
+  // A bookshelf long press has an exact Core identity before it opens any
+  // visual sheet. This prevents a previous reading session from becoming the
+  // action target when the shelf reorders or detail loading is still pending.
+  static requestBookshelfBookActions(bookId: string, sourceId: string): void {
+    if (bookId.trim().length === 0 || sourceId.trim().length === 0) return;
+    ReaderUiStore.dispatch({
+      type: 'bookshelf-book-action-open', sourceId: sourceId, bookId: bookId,
+    });
+  }
+
+  static openBookshelfBookDetail(bookId: string, sourceId: string): void {
+    if (bookId.trim().length === 0 || sourceId.trim().length === 0) return;
+    ReaderUiStore.dispatch({ type: 'set-overlay', overlay: '' });
+    ReaderUiStore.dispatch({ type: 'route-push', id: 'book-detail' });
+    // `readerEntry` remains false: this is a detail inspection, never an
+    // implicit reader launch or background first-chapter read.
+    ReaderUiStore.dispatch({ type: 'bookshelf-book-open', sourceId: sourceId, bookId: bookId });
+  }
+
+  static requestSourceSwitchOpen(): void {
+    if (!canSwitchBookSourceId(ReaderUiStore.state.currentBook?.sourceId)) return;
+    ReaderUiStore.dispatch({ type: 'route-push', id: 'source-switch' });
+  }
+
+  // Reader exit has a durable Core boundary. Keep the existing `reader-exit`
+  // event as the route/session owner, but let Effects commit the measured
+  // reader anchor before that event is allowed to pop the visible Reader.
+  static requestReaderExit(): void {
+    ReaderEffects.requestReaderExit();
+  }
+
+  /**
+   * The approved source-switch gesture is a direct candidate-row tap.  Keep
+   * the existing reducer/effect transaction intact, but make its temporary
+   * single selection an internal implementation detail rather than a visible
+   * radio-and-confirmation workflow.
+   */
+  static requestSourceSwitch(sourceId: string): void {
+    const requestedSourceId = sourceId.trim();
+    const current = ReaderUiStore.state;
+    if (requestedSourceId.length === 0 || current.routeId !== 'source-switch' || current.loading ||
+      current.currentBook === null || !canSwitchBookSourceId(current.currentBook.sourceId) ||
+      (current.currentBook.sourceId ?? '').trim() === requestedSourceId) {
+      return;
+    }
+    let enabled = false;
+    for (let index = 0; index < current.availableSources.length; index += 1) {
+      const candidate = current.availableSources[index];
+      if (candidate.sourceId === requestedSourceId && candidate.enabled) {
+        enabled = true;
+        break;
+      }
+    }
+    if (!enabled) return;
+
+    ReaderUiStore.dispatch({ type: 'source-toggle', sourceId: requestedSourceId });
+    const selected = ReaderUiStore.state;
+    if (selected.routeId !== 'source-switch' || selected.loading || selected.sourceSelection.length !== 1 ||
+      selected.sourceSelection[0] !== requestedSourceId) {
+      return;
+    }
+    ReaderUiStore.dispatch({ type: 'source-switch-confirm' });
+  }
+
+  static dispatchCommittedReaderExit(): void {
+    ReaderUiStore.committedReaderExitDispatch = true;
+    try {
+      ReaderUiStore.dispatch({ type: 'reader-exit' });
+    } finally {
+      ReaderUiStore.committedReaderExitDispatch = false;
+    }
+  }
+
   static dispatch(event: UiEvent): void {
+    // Keep every ordinary caller on the durable exit path. The reducer's
+    // actual `reader-exit` event remains available only to the continuation
+    // above, after Core has returned stored=true for the current anchor.
+    if (event.type === 'reader-exit' && !ReaderUiStore.committedReaderExitDispatch) {
+      ReaderEffects.requestReaderExit();
+      return;
+    }
     const bookOpenCancellation: ReaderUIBookOpenPilotResult =
       ReaderUiStore.runtimeShadow.dispatchBookOpenCancellation(event, ReaderUiStore.state);
     if (bookOpenCancellation.handled) {
@@ -623,7 +782,7 @@ export class ReaderUiStore {
     // fire Host HTTP. The synchronous reducer pass already applied loading=true;
     // the effect dispatches success/failure back into the reducer when done.
     ReaderEffects.maybeRun(event);
-    AppStorage.setOrCreate<string>(ReaderUiStore.K_LAST_OP, event.type);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_LAST_OP, ReaderUiStore.lastOpFor(event));
     ReaderThemeState.setReducedMotion(ReaderUiStore.state.reducedMotion);
   }
 
@@ -671,13 +830,28 @@ export class ReaderUiStore {
     const normalizedOffset = Math.floor(chapterOffset);
     const normalizedProgress = Math.max(0, Math.min(1, chapterProgress));
     const current = ReaderUiStore.state;
+    // Layout callbacks can arrive during ArkUI unmount.  Once Reader exit has
+    // committed, no former ReaderShell surface may enqueue another Core
+    // progress write from the returned bookshelf/detail route.
+    if (RouteTable.shellOf(current.routeId) !== 'ReaderShell') return;
     const active = current.activeReaderContentIdentity;
     if (active === null || identity.bookId !== active.bookId || identity.sourceId !== active.sourceId ||
       identity.chapterIndex !== active.chapterIndex) {
       return;
     }
+    // A chapter-success resets the visible anchor to 0/0.  That is identical
+    // to a freshly initialized reader numerically, but it is still a new Core
+    // identity and must be reported once.  Otherwise moving from a previous
+    // chapter to a new short chapter can leave Core progress on the old
+    // chapter, so an immediate Continue reopens the wrong place.
+    const canonical = current.canonicalReaderLocation;
+    const alreadyResolvedForThisAnchor = canonical !== null &&
+      canonical.bookId === identity.bookId && canonical.chapterIndex === identity.chapterIndex &&
+      canonical.chapterOffset === normalizedOffset &&
+      Math.abs(canonical.chapterProgress - normalizedProgress) < 0.000001;
     if (current.readerChapterOffset === normalizedOffset &&
-      Math.abs(current.readerChapterProgress - normalizedProgress) < 0.000001) {
+      Math.abs(current.readerChapterProgress - normalizedProgress) < 0.000001 &&
+      alreadyResolvedForThisAnchor) {
       return;
     }
     ReaderUiStore.dispatch({
@@ -1111,6 +1285,23 @@ export class ReaderUiStore {
       s.pendingBookshelfRemovalSourceId);
     AppStorage.setOrCreate<string>(ReaderUiStore.K_PENDING_BOOKSHELF_REMOVAL_BOOK_ID,
       s.pendingBookshelfRemovalBookId);
+    AppStorage.setOrCreate<BookshelfSelectionTarget[]>(ReaderUiStore.K_PENDING_BOOKSHELF_REMOVAL_TARGETS,
+      s.pendingBookshelfRemovalTargets);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_BOOKSHELF_REMOVAL_SCOPE, s.bookshelfRemovalScope);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_BOOKSHELF_REMOVAL_DIALOG_PHASE,
+      s.bookshelfRemovalDialogPhase);
+    AppStorage.setOrCreate<number>(ReaderUiStore.K_BOOKSHELF_REMOVAL_EPOCH,
+      s.bookshelfRemovalEpoch);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_BOOKSHELF_REMOVAL_ERROR,
+      s.bookshelfRemovalError);
+    AppStorage.setOrCreate<BookshelfRemovalReceipt | null>(ReaderUiStore.K_BOOKSHELF_REMOVAL_RECEIPT,
+      s.lastBookshelfRemovalReceipt);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_PENDING_BOOKSHELF_ACTION_SOURCE_ID,
+      s.pendingBookshelfActionSourceId);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_PENDING_BOOKSHELF_ACTION_BOOK_ID,
+      s.pendingBookshelfActionBookId);
+    AppStorage.setOrCreate<BookshelfSelectionTarget[]>(ReaderUiStore.K_BOOKSHELF_SELECTED_TARGETS,
+      s.bookshelfSelectedTargets);
     AppStorage.setOrCreate<CoreBookGroup[]>(ReaderUiStore.K_BOOK_GROUPS, s.bookGroups);
     AppStorage.setOrCreate<boolean>(ReaderUiStore.K_BOOK_GROUPS_LOADED, s.bookGroupsLoaded);
     AppStorage.setOrCreate<boolean>(ReaderUiStore.K_BOOK_GROUPS_LOADING, s.bookGroupsLoading);
@@ -1130,7 +1321,9 @@ export class ReaderUiStore {
       s.pendingRssSubscriptionDeleteId);
     // ── B1 P0 全局设置字段写入 AppStorage ──
     AppStorage.setOrCreate<string>(ReaderUiStore.K_APP_THEME_MODE, s.appThemeMode);
-    AppStorage.setOrCreate<number>(ReaderUiStore.K_COVER_COLUMNS, s.coverColumns);
+    // Retired cover-column values from older builds are intentionally ignored:
+    // current Figma Bookshelf has one fixed three-column grid, and no new
+    // AppStorage key is published for that former presentation preference.
     AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_AUTO_CHECK_UPDATE, s.settingsToggles.autoCheckUpdate);
     AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_TAP_BOTTOM_BAR_TO_TOP, s.settingsToggles.tapBottomBarToTop);
     AppStorage.setOrCreate<boolean>(ReaderUiStore.K_TOGGLE_SHOW_UPDATE_BADGE, s.settingsToggles.showUpdateBadge);
@@ -1161,6 +1354,8 @@ export class ReaderUiStore {
     AppStorage.setOrCreate<string>(ReaderUiStore.K_CORE_BACKUP_STATUS, s.coreBackupStatus);
     AppStorage.setOrCreate<string>(ReaderUiStore.K_CORE_BACKUP_MESSAGE, s.coreBackupMessage);
     AppStorage.setOrCreate<CoreStorageBackupInfo | null>(ReaderUiStore.K_LOCAL_CORE_BACKUP, s.localCoreBackup);
+    AppStorage.setOrCreate<CoreStorageBackupHistoryEntry[]>(ReaderUiStore.K_LOCAL_CORE_BACKUP_HISTORY,
+      s.localCoreBackupHistory);
     AppStorage.setOrCreate<CoreStorageBackupInfo | null>(ReaderUiStore.K_PENDING_CORE_RESTORE, s.pendingCoreRestore);
     AppStorage.setOrCreate<string>(ReaderUiStore.K_PENDING_CORE_RESTORE_CONFIRMATION_CHECKSUM,
       s.pendingCoreRestoreConfirmationChecksum);
@@ -1169,6 +1364,9 @@ export class ReaderUiStore {
     AppStorage.setOrCreate<string>(ReaderUiStore.K_IMPORT_PREVIEW_ENCODING, s.importPreviewEncoding);
     AppStorage.setOrCreate<number>(ReaderUiStore.K_IMPORT_PREVIEW_COUNT, s.importPreviewCount);
     AppStorage.setOrCreate<number>(ReaderUiStore.K_LOCAL_IMPORT_EPOCH, s.localImportEpoch);
+    AppStorage.setOrCreate<string>(ReaderUiStore.K_LOCAL_IMPORT_DIALOG_PHASE, s.localImportDialogPhase);
+    AppStorage.setOrCreate<number>(ReaderUiStore.K_LOCAL_IMPORT_DIALOG_EPOCH, s.localImportDialogEpoch);
+    AppStorage.setOrCreate(ReaderUiStore.K_LOCAL_IMPORT_DIALOG_RESULTS, s.localImportDialogResults);
     AppStorage.setOrCreate<string>(ReaderUiStore.K_SOURCE_IMPORT_ORIGIN, s.sourceImportOrigin);
     AppStorage.setOrCreate<number>(ReaderUiStore.K_SOURCE_IMPORT_TOTAL, s.sourceImportTotal);
     AppStorage.setOrCreate<number>(ReaderUiStore.K_SOURCE_IMPORT_IMPORTED, s.sourceImportImported);

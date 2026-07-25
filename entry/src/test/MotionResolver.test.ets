@@ -4,6 +4,7 @@ import { describe, it, expect } from '@ohos/hypium';
 import { ReaderMotionResolver } from '../main/ets/ui/motion/ReaderMotionResolver';
 import { MotionSpecRegistry } from '../main/ets/ui/motion/MotionSpecRegistry';
 import { MotionAdapter } from '../main/ets/ui/adapters/MotionAdapter';
+import { ReaderControlMotionCoordinator } from '../main/ets/ui/motion/ReaderControlMotionCoordinator';
 
 export default function MotionResolverTests(): void {
   describe('MotionResolver', () => {
@@ -38,6 +39,31 @@ export default function MotionResolverTests(): void {
     it('easingMapsToCurve', 0, () => {
       // curveFor returns an ArkUI Curve enum value; both standard easings must map.
       expect(MotionAdapter.curveFor('ease-out') === MotionAdapter.curveFor('ease-out')).assertTrue();
+    });
+    it('resolvesReaderControlShowAndHideSemantically', 0, () => {
+      expect(ReaderMotionResolver.resolve({
+        operation: 'enter', containerRole: 'readerShell', sourceRole: 'controlLayer', targetRole: 'controlHome',
+      })).assertEqual('reader.control.show');
+      expect(ReaderMotionResolver.resolve({
+        operation: 'exit', containerRole: 'readerShell', sourceRole: 'controlLayer', targetRole: 'immersiveReading',
+      })).assertEqual('reader.control.hide');
+    });
+    it('readerControlExitSettlesOnePresentationTargetBeforeReturningHidden', 0, () => {
+      ReaderControlMotionCoordinator.reset();
+      ReaderControlMotionCoordinator.beginEnter(true);
+      expect(ReaderControlMotionCoordinator.phase()).assertEqual('visible');
+      let displayedRoute = 'reader';
+      const accepted = ReaderControlMotionCoordinator.beginExit(true, (): void => {
+        // Mirrors RouteRenderer's presentation-route commit callback.  It
+        // executes while the phase is still exiting, so the outgoing actors
+        // cannot reset visible for a frame before the target is committed.
+        expect(ReaderControlMotionCoordinator.phase()).assertEqual('exiting');
+        displayedRoute = 'immersive-reading';
+      });
+      expect(accepted).assertTrue();
+      expect(displayedRoute).assertEqual('immersive-reading');
+      expect(ReaderControlMotionCoordinator.phase()).assertEqual('hidden');
+      ReaderControlMotionCoordinator.reset();
     });
   });
 }

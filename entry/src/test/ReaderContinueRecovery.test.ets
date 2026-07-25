@@ -149,5 +149,42 @@ export default function ReaderContinueRecoveryTests(): void {
       expect(state.loading).assertFalse();
       expect(ReaderUiStore.runtimeShadowSnapshot().runtimeState.bookOpenTransaction === undefined).assertTrue();
     });
+
+    it('reportsTheZeroAnchorOfANewChapterBeforeContinueCanReadStaleCoreProgress', 0, () => {
+      ReaderUiStore.init();
+      ReaderUiStore.setBookOpenPilotEnabledForTest(false);
+      ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' });
+      ReaderUiStore.dispatch({
+        type: 'book-detail-success',
+        book: {
+          bookId: 'local-book',
+          sourceId: 'local',
+          title: '本地书',
+          author: '作者',
+          summary: '',
+          sourceName: '本地导入',
+          sourceUrl: '',
+          latestChapter: '第二章',
+          chapterListUrl: 'local-book',
+        },
+      });
+      ReaderUiStore.dispatch({
+        type: 'chapter-success',
+        chapterParagraphs: ['第二章正文'],
+        chapterTitle: '第二章',
+        bookId: 'local-book',
+        sourceId: 'local',
+        chapterIndex: 9,
+      });
+
+      // `chapter-success` initializes a new chapter at 0/0. It is still a
+      // real new Core location, so the surface must emit an anchor instead of
+      // treating the matching numeric values as a duplicate.
+      AppStorage.setOrCreate<string>('reader.lastOp', 'before-anchor');
+      ReaderUiStore.reportReadingAnchor(
+        { bookId: 'local-book', sourceId: 'local', chapterIndex: 9 }, 0, 0,
+      );
+      expect(AppStorage.get<string>('reader.lastOp')).assertEqual('reader-location-anchor');
+    });
   });
 }

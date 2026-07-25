@@ -117,6 +117,51 @@ export default function DestructiveFlowTests(): void {
       expect(after.overlay).assertEqual('dialog');
       expect(after.pendingBookshelfRemovalSourceId).assertEqual('source-a');
       expect(after.pendingBookshelfRemovalBookId).assertEqual('/book/a');
+      expect(after.bookshelfRemovalDialogPhase).assertEqual('default');
+    });
+
+    it('bookshelfDeleteProjectsFigmaDefaultLoadingFailedWithEpochGuards', 0, () => {
+      let state = ReaderReducer.reduce(DemoUiState.initial(), {
+        type: 'bookshelf-list-loaded', bookshelfBooks: [shelfBook('source-a', '/book/a')],
+      });
+      state = ReaderReducer.reduce(state, {
+        type: 'book-detail-success', book: bookDetail('source-a', '/book/a'),
+      });
+      const dialog = ReaderReducer.reduce(state, { type: 'book-action', bookAction: 'delete' });
+      const loading = ReaderReducer.reduce(dialog, {
+        type: 'bookshelf-remove-confirm', sourceId: 'source-a', bookId: '/book/a',
+      });
+      expect(loading.bookshelfRemovalDialogPhase).assertEqual('loading');
+      const loadingEpoch = loading.bookshelfRemovalEpoch;
+      // Core bookshelf.remove cannot be cancelled. A backdrop/system-back
+      // projection must preserve the current exact transaction while loading.
+      const blockedCancel = ReaderReducer.reduce(loading, { type: 'bookshelf-remove-cancel' });
+      expect(blockedCancel.bookshelfRemovalDialogPhase).assertEqual('loading');
+      expect(blockedCancel.bookshelfRemovalEpoch).assertEqual(loadingEpoch);
+      const failed = ReaderReducer.reduce(loading, {
+        type: 'bookshelf-remove-failed', sourceId: 'source-a', bookId: '/book/a',
+        bookshelfRemovalEpoch: loadingEpoch, bookshelfRemovalError: 'network unavailable',
+      });
+      expect(failed.bookshelfRemovalDialogPhase).assertEqual('failed');
+      expect(failed.error === null).assertTrue();
+      const retry = ReaderReducer.reduce(failed, {
+        type: 'bookshelf-remove-confirm', sourceId: 'source-a', bookId: '/book/a',
+      });
+      expect(retry.bookshelfRemovalDialogPhase).assertEqual('loading');
+      expect(retry.bookshelfRemovalEpoch > loadingEpoch).assertTrue();
+      const staleFailure = ReaderReducer.reduce(retry, {
+        type: 'bookshelf-remove-failed', sourceId: 'source-a', bookId: '/book/a',
+        bookshelfRemovalEpoch: loadingEpoch, bookshelfRemovalError: 'stale callback',
+      });
+      expect(staleFailure.bookshelfRemovalDialogPhase).assertEqual('loading');
+      const complete = ReaderReducer.reduce(retry, {
+        type: 'bookshelf-remove-complete', sourceId: 'source-a', bookId: '/book/a',
+        bookshelfRemovalEpoch: retry.bookshelfRemovalEpoch,
+      });
+      expect(complete.overlay).assertEqual('');
+      expect(complete.bookshelfRemovalDialogPhase).assertEqual('idle');
+      expect(complete.pendingBookshelfRemovalSourceId).assertEqual('');
+      expect(complete.pendingBookshelfRemovalBookId).assertEqual('');
     });
 
     it('bookshelfDeleteRefusesStaleCurrentBookNotReturnedByCoreShelf', 0, () => {
@@ -132,6 +177,47 @@ export default function DestructiveFlowTests(): void {
       expect(after.pendingBookshelfRemovalBookId).assertEqual('');
       expect(after.error !== null).assertTrue();
       if (after.error !== null) expect(after.error.code).assertEqual('BOOKSHELF_REMOVE_TARGET_REQUIRED');
+    });
+
+    it('bookshelfMultiSelectKeepsExactLiveTargetsAndUsesOneBatchConfirmation', 0, () => {
+      const first = shelfBook('source-a', '/book/a');
+      const second = shelfBook('source-b', '/book/b');
+      const listed = ReaderReducer.reduce(DemoUiState.initial(), {
+        type: 'bookshelf-list-loaded', bookshelfBooks: [first, second],
+      });
+      const selected = ReaderReducer.reduce(listed, {
+        type: 'bookshelf-multiselect-open', sourceId: first.sourceId, bookId: first.bookId,
+      });
+      expect(selected.overlay).assertEqual('bookshelf-multiselect');
+      expect(selected.bookshelfSelectedTargets.length).assertEqual(1);
+      expect(selected.bookshelfSelectedTargets[0].sourceId).assertEqual(first.sourceId);
+      const toggled = ReaderReducer.reduce(selected, {
+        type: 'bookshelf-multiselect-toggle', sourceId: second.sourceId, bookId: second.bookId,
+      });
+      expect(toggled.bookshelfSelectedTargets.length).assertEqual(2);
+      const dialog = ReaderReducer.reduce(toggled, { type: 'bookshelf-multiselect-remove-request' });
+      expect(dialog.overlay).assertEqual('dialog');
+      expect(dialog.bookshelfRemovalScope).assertEqual('batch');
+      expect(dialog.pendingBookshelfRemovalTargets.length).assertEqual(2);
+      const loading = ReaderReducer.reduce(dialog, { type: 'bookshelf-remove-confirm' });
+      expect(loading.bookshelfRemovalDialogPhase).assertEqual('loading');
+      const stale = ReaderReducer.reduce(loading, {
+        type: 'bookshelf-remove-complete', bookshelfRemovalEpoch: loading.bookshelfRemovalEpoch - 1,
+      });
+      expect(stale.bookshelfRemovalDialogPhase).assertEqual('loading');
+      const failed = ReaderReducer.reduce(loading, {
+        type: 'bookshelf-remove-failed', bookshelfRemovalEpoch: loading.bookshelfRemovalEpoch,
+        bookshelfRemovalError: 'Core unavailable',
+      });
+      expect(failed.bookshelfRemovalDialogPhase).assertEqual('failed');
+      const retried = ReaderReducer.reduce(failed, { type: 'bookshelf-remove-confirm' });
+      expect(retried.bookshelfRemovalEpoch > loading.bookshelfRemovalEpoch).assertTrue();
+      const complete = ReaderReducer.reduce(retried, {
+        type: 'bookshelf-remove-complete', bookshelfRemovalEpoch: retried.bookshelfRemovalEpoch,
+      });
+      expect(complete.overlay).assertEqual('');
+      expect(complete.bookshelfSelectedTargets.length).assertEqual(0);
+      expect(complete.pendingBookshelfRemovalTargets.length).assertEqual(0);
     });
 
     it('rssDeleteRequestUsesRealConfirmRouteAndExactSubscription', 0, () => {
@@ -230,7 +316,10 @@ export default function DestructiveFlowTests(): void {
     });
 
     it('groupClearBindsAnExactGroupedShelfRowAndRequiresSecondTap', 0, () => {
-      let ready = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'group-management' });
+      // 'group-management' is a retired user-declined route: set routeId directly.
+      const base = DemoUiState.initial();
+      base.routeId = 'group-management';
+      let ready = base;
       ready = ReaderReducer.reduce(ready, {
         type: 'bookshelf-list-loaded', bookshelfBooks: [shelfBook('source-a', '/book/a', '已读')],
       });
@@ -252,7 +341,7 @@ export default function DestructiveFlowTests(): void {
       expect(direct.bookGroupsError.length > 0).assertTrue();
     });
 
-    it('cacheClearAndCoreRestoreNeedAVisibleSecondConfirmation', 0, () => {
+    it('cacheClearNeedsSecondConfirmationButCoreRestoreUsesItsOneFigmaConfirmation', 0, () => {
       let settings = ReaderReducer.reduce(DemoUiState.initial(), { type: 'switch-tab', tab: 'settings' });
       settings = ReaderReducer.reduce(settings, { type: 'route-push', id: 'settings-general' });
       const requestedCache = ReaderReducer.reduce(settings, { type: 'settings-action', settingsKey: 'cache-clear' });
@@ -268,8 +357,9 @@ export default function DestructiveFlowTests(): void {
       restore = ReaderReducer.reduce(restore, { type: 'route-push', id: 'restore-confirm' });
       const requestedRestore = ReaderReducer.reduce(restore, { type: 'core-restore-apply-request' });
       expect(requestedRestore.pendingCoreRestoreConfirmationChecksum).assertEqual(restoreInfo().checksum);
-      const confirmedRestore = ReaderReducer.reduce(requestedRestore, { type: 'core-restore-apply-confirm' });
-      expect(confirmedRestore.coreBackupStatus).assertEqual('restoring');
+      expect(requestedRestore.coreBackupStatus).assertEqual('restoring');
+      const legacyConfirm = ReaderReducer.reduce(requestedRestore, { type: 'core-restore-apply-confirm' });
+      expect(legacyConfirm.coreBackupStatus).assertEqual('restoring');
       const rawRestore = ReaderReducer.reduce(restore, { type: 'core-backup-apply' });
       expect(rawRestore.coreBackupStatus).assertEqual('error');
     });
@@ -308,7 +398,10 @@ export default function DestructiveFlowTests(): void {
         type: 'book-group-update', bookGroupId: 1, bookGroupName: '新名称',
       });
       expect(groupOffRoute.bookGroupsError.length > 0).assertTrue();
-      let groupReady = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'group-management' });
+      // 'group-management' is a retired user-declined route: set routeId directly.
+      const groupBase = DemoUiState.initial();
+      groupBase.routeId = 'group-management';
+      let groupReady = groupBase;
       groupReady = ReaderReducer.reduce(groupReady, {
         type: 'book-group-list-loaded', bookGroups: [bookGroup(1, '旧名称')],
       });

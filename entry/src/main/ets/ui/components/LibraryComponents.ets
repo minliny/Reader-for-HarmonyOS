@@ -69,7 +69,6 @@ struct SourceToolCard {
     .borderRadius(DemoAliasTokens.radiusLg)
     .backgroundColor(DemoAliasTokens.surface)
     .border({ width: 1, color: ColorTokens.border })
-    .shadow({ radius: 18, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 6 })
   }
 }
 

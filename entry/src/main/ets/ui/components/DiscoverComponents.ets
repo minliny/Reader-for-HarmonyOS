@@ -81,7 +81,6 @@ export struct DiscoverSourceBar {
     .border({ width: 1, color: ColorTokens.border })
     .borderRadius(DemoAliasTokens.radiusMd)
     .backgroundColor(DemoAliasTokens.surface)
-    .shadow({ radius: 26, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 8 })
     .alignItems(VerticalAlign.Center)
   }
 }
@@ -367,7 +366,6 @@ struct DiscoverStateCard {
     .borderRadius(DemoAliasTokens.radiusLg)
     .backgroundColor(DemoAliasTokens.surface)
     .border({ width: 1, color: ColorTokens.border })
-    .shadow({ radius: 26, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 8 })
     .alignItems(HorizontalAlign.Center)
   }
 }
@@ -484,7 +482,6 @@ export struct DiscoverBookList {
       .border({ width: 1, color: ColorTokens.border })
       .borderRadius(DemoAliasTokens.radiusMd)
       .backgroundColor(DemoAliasTokens.surface)
-      .shadow({ radius: 26, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 8 })
     }
   }
 }

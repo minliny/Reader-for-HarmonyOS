@@ -12,6 +12,7 @@ const GRAPH_JSON = path.join(READER_UI, 'ui-spec', 'screen-graph.json');
 const VIEW_STATE_FIXTURES = path.join(READER_UI, 'contracts', 'fixtures', 'view-state.fixtures.json');
 const VIEW_STATE_RENDERER = path.join(REPO, 'entry', 'src', 'main', 'ets', 'ui', 'components', 'ViewStateRenderer.ets');
 const COVERAGE_REGISTRY = path.join(REPO, 'entry', 'src', 'main', 'ets', 'ui', 'router', 'ReaderUIScreenGraphCoverage.ets');
+const RETIREMENT_REGISTRY = path.join(REPO, 'entry', 'src', 'main', 'ets', 'ui', 'router', 'ReaderUIScreenGraphRetirementRegistry.ets');
 const TAP_ZONE_ADAPTER = path.join(REPO, 'entry', 'src', 'main', 'ets', 'ui', 'router', 'ReaderUIScreenGraphTapZoneAdapter.ets');
 const STATE_PRIMITIVE_ADAPTER = path.join(REPO, 'entry', 'src', 'main', 'ets', 'ui', 'router', 'ReaderUIScreenGraphStatePrimitiveAdapter.ets');
 const BUTTON_ADAPTER = path.join(REPO, 'entry', 'src', 'main', 'ets', 'ui', 'router', 'ReaderUIScreenGraphButtonAdapter.ets');
@@ -76,6 +77,21 @@ function countComponents(components) {
     stateEventEvidence += child.stateEventEvidence;
   }
   return { components: count, bindings, stateEventEvidence };
+}
+
+function componentRecordKey(routeId, componentId) {
+  return `${routeId}\u0000${componentId}`;
+}
+
+function readRetiredComponentEntries(source) {
+  const body = requiredMatch(
+    source,
+    /export const READER_SCREEN_GRAPH_RETIRED_COMPONENT_INSTANCES:[^=]+?= \[([\s\S]*?)\n\];/,
+    'READER_SCREEN_GRAPH_RETIRED_COMPONENT_INSTANCES',
+  );
+  return [...body.matchAll(
+    /\{ routeId: '([^']+)', componentId: '([^']+)', reason: '([^']+)' \}/g,
+  )].map((match) => ({ routeId: match[1], componentId: match[2], reason: match[3] }));
 }
 
 for (const file of FILES) {
@@ -144,6 +160,78 @@ for (const route of graph.routes || []) {
   }
 }
 
+// Generated route unions are intentionally broader than the current Figma
+// presentation. Keep the precise retirement list in native code, then prove
+// every retired generated component is named by route + component ID. The
+// generated Reader UI files remain immutable inputs to this audit.
+const RETIRED_GENERATED_ROUTE_IDS = new Set([
+  'source-switch-results',
+  'source-switch-empty',
+  'source-switch-error',
+  'source-switch-timeout',
+  'source-switch-loading',
+  'source-switch-rollback',
+  'source-switch-preview',
+  'restore-scopes',
+  'restore-preview',
+  'restore-running',
+  'restore-result',
+  'restore-confirm',
+  'restore-progress',
+  'restore-conflict',
+]);
+const canonicalComponentRecords = [];
+const collectCanonicalComponentRecords = (routeId, components) => {
+  for (const component of components || []) {
+    canonicalComponentRecords.push({ routeId, component });
+    collectCanonicalComponentRecords(routeId, component.children || []);
+  }
+};
+for (const route of graph.routes || []) {
+  for (const variant of route.variants || []) {
+    collectCanonicalComponentRecords(route.routeId, variant.components || []);
+  }
+}
+const canonicalComponentRecordByKey = new Map();
+for (const record of canonicalComponentRecords) {
+  const key = componentRecordKey(record.routeId, record.component.id);
+  // A generated component ID may recur across state variants of the same
+  // route. Retirement intentionally covers that stable route/component pair
+  // across all such variants; the registry itself remains one entry per key.
+  canonicalComponentRecordByKey.set(key, record);
+}
+let retiredComponentEntries = [];
+let retiredComponentKeys = new Set();
+if (!fs.existsSync(RETIREMENT_REGISTRY)) {
+  failures.push('missing exact ScreenGraph runtime retirement registry');
+} else {
+  const retirementSource = fs.readFileSync(RETIREMENT_REGISTRY, 'utf8');
+  retiredComponentEntries = readRetiredComponentEntries(retirementSource);
+  for (const entry of retiredComponentEntries) {
+    const key = componentRecordKey(entry.routeId, entry.componentId);
+    if (!RETIRED_GENERATED_ROUTE_IDS.has(entry.routeId)) {
+      failures.push(`retirement registry may only cover withdrawn Source Switch/Restore routes: ${entry.routeId}/${entry.componentId}`);
+    }
+    if (retiredComponentKeys.has(key)) {
+      failures.push(`duplicate ScreenGraph retirement registry entry: ${entry.routeId}/${entry.componentId}`);
+    }
+    if (!canonicalComponentRecordByKey.has(key)) {
+      failures.push(`retirement registry references no canonical component: ${entry.routeId}/${entry.componentId}`);
+    }
+    retiredComponentKeys.add(key);
+  }
+  for (const record of canonicalComponentRecords) {
+    if (!RETIRED_GENERATED_ROUTE_IDS.has(record.routeId)) continue;
+    const key = componentRecordKey(record.routeId, record.component.id);
+    if (!retiredComponentKeys.has(key)) {
+      failures.push(`withdrawn generated component is not explicitly retired: ${record.routeId}/${record.component.id}`);
+    }
+  }
+  if (retiredComponentKeys.has(componentRecordKey('source-switch', 'source-switch-flow'))) {
+    failures.push('live source-switch window must not be retired from runtime coverage');
+  }
+}
+
 const rendererSource = fs.readFileSync(VIEW_STATE_RENDERER, 'utf8');
 const rendererEntry = rendererSource.indexOf('@Builder renderComponent(component: ViewStateComponent)');
 if (rendererEntry < 0) throw new Error('ViewStateRenderer.ets missing renderComponent entry');
@@ -177,6 +265,7 @@ let faithfulInstanceCount = 0;
 let genericInstanceCount = 0;
 let partialInstanceCount = 0;
 let insufficientInstanceCount = 0;
+let retiredRuntimeInstanceCount = 0;
 let buttonCount = 0;
 let boundButtonCount = 0;
 let gapButtonCount = 0;
@@ -290,23 +379,14 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
     failures.push('ReaderReplacePanel canonical actions must remain visibly read-only and fail closed');
   }
   const sourceSwitchBranch = branchBodies.get('SourceSwitchFlowPage') || '';
-  if (!sourceSwitchBranch.includes('renderReadOnlySourceSwitchState') ||
-    !sourceSwitchBranch.includes('component.props.phase') ||
-    !sourceSwitchBranch.includes('component.children')) {
-    failures.push('SourceSwitchFlowPage must consume canonical phase/children through its read-only state renderer');
+  if (!sourceSwitchBranch.includes('if (component.children.length > 0)') ||
+    !sourceSwitchBranch.includes('Column().width(0).height(0)') ||
+    !sourceSwitchBranch.includes('SourceSwitchFlowPage()')) {
+    failures.push('SourceSwitchFlowPage must isolate withdrawn generated state-matrix children and retain only the live Figma window');
   }
-  const sourceSwitchReadOnlyStart = rendererSource.indexOf('@Builder renderReadOnlySourceSwitchChildren');
-  const sourceSwitchReadOnlyEnd = rendererSource.indexOf('@Builder renderReadOnlySourceSwitchState', sourceSwitchReadOnlyStart);
-  const sourceSwitchReadOnlySource = sourceSwitchReadOnlyStart >= 0 && sourceSwitchReadOnlyEnd > sourceSwitchReadOnlyStart
-    ? rendererSource.slice(sourceSwitchReadOnlyStart, sourceSwitchReadOnlyEnd)
-    : '';
-  if (!sourceSwitchReadOnlySource.includes("child.props.uiEventTrigger, '') === 'state-evidence'") ||
-    !sourceSwitchReadOnlySource.includes('child.props.uiEvent') ||
-    !sourceSwitchReadOnlySource.includes('.enabled(false)') ||
-    !sourceSwitchReadOnlySource.includes('.hitTestBehavior(HitTestMode.None)') ||
-    sourceSwitchReadOnlySource.includes('.onClick(') ||
-    sourceSwitchReadOnlySource.includes('ReaderUiStore.dispatch')) {
-    failures.push('SourceSwitchFlowPage must expose state evidence while canonical actions remain fail closed');
+  if (rendererSource.includes('renderReadOnlySourceSwitchChildren') ||
+    rendererSource.includes('renderReadOnlySourceSwitchState')) {
+    failures.push('withdrawn SourceSwitch state-matrix renderers must not remain in the native presentation path');
   }
   const readingTextBranch = branchBodies.get('ReadingTextFlow') || '';
   if (!readingTextBranch.includes('renderReadOnlyReadingTextState') ||
@@ -418,6 +498,9 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
   for (const route of graph.routes || []) {
     for (const variant of route.variants || []) walkNodes(variant.components || []);
   }
+  const activeRuntimeNodes = canonicalComponentRecords
+    .filter((record) => !retiredComponentKeys.has(componentRecordKey(record.routeId, record.component.id)))
+    .map((record) => record.component);
   // Button action closure is intentionally smaller than Button visual
   // coverage. Historical ScreenGraph entries synthesize self bindings from
   // ViewState uiEvent props; Reader UI 3.0 capability routes publish bindings
@@ -1425,7 +1508,8 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
   }
   const derivedPartialSet = new Set();
   for (const type of referencedComponentTypes) {
-    const instances = nodes.filter((node) => node.type === type);
+    const instances = activeRuntimeNodes.filter((node) => node.type === type);
+    if (instances.length === 0) continue;
     const hostComposite = instances.length > 0 &&
       instances.every((node) => node.compositionMode === 'host-composite');
     // ReaderBase deliberately remains visible partial: its canonical anatomy
@@ -1464,23 +1548,37 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
     failures.push(`partial coverage drift missing=[${missing.join(',')}] stale=[${stale.join(',')}]`);
   }
 
-  const catalogByType = new Map((graph.componentCatalog || []).map((entry) => [entry.type, entry]));
-  const insufficientSet = new Set(referencedComponentTypes.filter((type) => !declaredDispatchSet.has(type)));
-  const faithfulSet = new Set(referencedComponentTypes.filter(
+  // The generated graph remains the complete contract ledger above. These
+  // numbers are specifically the active ArkUI coverage ledger, so exact
+  // retired route/component pairs must not inflate generic or faithful work.
+  const activeRuntimeRecords = canonicalComponentRecords.filter((record) =>
+    !retiredComponentKeys.has(componentRecordKey(record.routeId, record.component.id)));
+  const activeRuntimeTypes = new Set(activeRuntimeRecords.map((record) => record.component.type));
+  const activeInstanceCounts = new Map();
+  for (const record of activeRuntimeRecords) {
+    const type = record.component.type;
+    activeInstanceCounts.set(type, (activeInstanceCounts.get(type) || 0) + 1);
+  }
+  const activeReferencedTypes = referencedComponentTypes.filter((type) => activeRuntimeTypes.has(type));
+  const activeGenericSet = new Set([...genericSet].filter((type) => activeRuntimeTypes.has(type)));
+  const activePartialSet = new Set([...partialSet].filter((type) => activeRuntimeTypes.has(type)));
+  const insufficientSet = new Set(activeReferencedTypes.filter((type) => !declaredDispatchSet.has(type)));
+  const faithfulSet = new Set(activeReferencedTypes.filter(
     (type) => declaredDispatchSet.has(type) && !genericSet.has(type) && !partialSet.has(type),
   ));
   const sumInstances = (types) => [...types].reduce(
-    (sum, type) => sum + (catalogByType.get(type)?.instanceCount || 0),
+    (sum, type) => sum + (activeInstanceCounts.get(type) || 0),
     0,
   );
   faithfulCoverageCount = faithfulSet.size;
-  genericCoverageCount = genericSet.size;
-  partialCoverageCount = partialSet.size;
+  genericCoverageCount = activeGenericSet.size;
+  partialCoverageCount = activePartialSet.size;
   insufficientCoverageCount = insufficientSet.size;
   faithfulInstanceCount = sumInstances(faithfulSet);
-  genericInstanceCount = sumInstances(genericSet);
-  partialInstanceCount = sumInstances(partialSet);
+  genericInstanceCount = sumInstances(activeGenericSet);
+  partialInstanceCount = sumInstances(activePartialSet);
   insufficientInstanceCount = sumInstances(insufficientSet);
+  retiredRuntimeInstanceCount = canonicalComponentRecords.length - activeRuntimeRecords.length;
 }
 
 const actual = {
@@ -1524,5 +1622,6 @@ console.log(
   `coverage=${faithfulCoverageCount}faithful+${genericCoverageCount}generic+` +
   `${partialCoverageCount}partial+${insufficientCoverageCount}insufficient ` +
   `instances=${faithfulInstanceCount}faithful+${genericInstanceCount}generic+` +
-  `${partialInstanceCount}partial+${insufficientInstanceCount}insufficient`
+  `${partialInstanceCount}partial+${insufficientInstanceCount}insufficient ` +
+  `retiredRuntimeInstances=${retiredRuntimeInstanceCount}`
 );

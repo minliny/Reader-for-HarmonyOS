@@ -56,7 +56,6 @@ export struct ReaderSelectionToolbar {
     .borderRadius(RadiusTokens.control)
     .border({ width: 1, color: ColorTokens.border })
     .padding({ left: 4, right: 4, top: 4, bottom: 4 })
-    .shadow({ radius: 12, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 4 })
   }
 
   private dispatchAction(action: string): void {

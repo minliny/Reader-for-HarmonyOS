@@ -230,6 +230,7 @@ export struct OverlayHost {
       .padding(SpacingTokens.lg)
       .backgroundColor(ColorTokens.floatingControlBg)
       .borderRadius(RadiusTokens.large)
+      .shadow({ radius: 46, color: '#29594632', offsetX: 0, offsetY: 18 })
     }
     .width('100%')
     .height('100%')

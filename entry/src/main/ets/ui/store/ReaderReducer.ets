@@ -3,8 +3,21 @@
 // new ReaderUiState literal field-by-field (array spread is still allowed).
 import { RouteId, RouteTable } from '../../contract/generated/RouteTable';
 import { ReaderAppearanceSpecRegistry, ReaderAppearanceStepper } from '../../contract/reader_ui/Appearance';
-import { ReaderUiState, UiEvent, MainTab, Overlay, PageState, ReaderMode, ReaderPaginationMode, ReaderFontFamily, ReaderRenderMetric, RouteEntry, ReaderError, SearchResultEntry, BookDetail, ActiveSession, TtsPlaybackState, TtsScope, TtsTimer, TocMode, ReaderToggleKey, ReaderSettingOptionKey, ReaderTogglesMap, ReaderSettingOptionsMap, BookshelfView, BookshelfFilterState, DiscoverFilterState, CoreDiscoverKind, CoreDiscoverBook, CoreSourceEntry, CoreSourceCheckResult, CoreSourceDebugResult, CoreContentSearchResult, CoreBookmark, SettingsTogglesMap, ReplaceRule, CoreRssSubscription, CoreRssItem, RssItemFilter, ChapterTocEntry, CoreStorageBackupInfo, CoreReaderCanonicalLocation } from './ReaderUiState';
+import { ReaderUiState, UiEvent, MainTab, Overlay, PageState, ReaderMode, ReaderPaginationMode, ReaderFontFamily, ReaderRenderMetric, RouteEntry, ReaderError, SearchResultEntry, BookDetail, ActiveSession, TtsPlaybackState, TtsScope, TtsTimer, TocMode, ReaderToggleKey, ReaderSettingOptionKey, ReaderTogglesMap, ReaderSettingOptionsMap, BookshelfView, BookshelfFilterState, DiscoverFilterState, CoreDiscoverKind, CoreDiscoverBook, CoreSourceEntry, CoreSourceCheckResult, CoreSourceDebugResult, CoreContentSearchResult, CoreBookmark, SettingsTogglesMap, ReplaceRule, CoreRssSubscription, CoreRssItem, RssItemFilter, ChapterTocEntry, CoreStorageBackupInfo, CoreStorageBackupHistoryEntry, CoreReaderCanonicalLocation, LocalImportDialogResult, LocalImportDialogResultStatus, BookshelfSelectionTarget, BookshelfRemovalReceipt, isLocalBookSourceId } from './ReaderUiState';
+import { CoreStorageBackupHistory } from './CoreStorageBackupHistory';
 import type { ReaderUIJSONPayload } from 'reader_ui_runtime';
+
+// User-declined visual routes remain in the generated RouteId union for a
+// compatibility cycle only.  The visual-admission registry in Reader-UI owns
+// which routes are retired; this reducer owns their behavioral fallback so
+// effects/reducers cannot continue treating them as active surfaces.
+const RETIRED_ABOUT_ROUTE_IDS: string[] = ['about', 'about-version', 'about-feedback'];
+const RETIRED_GROUP_ROUTE_IDS: string[] = ['group-management', 'bookshelf-group-management'];
+const RETIRED_OVERLAY_IDS: string[] = ['group-management'];
+
+function isRetiredUserDeclinedOverlay(overlayId: string): boolean {
+  return RETIRED_OVERLAY_IDS.indexOf(overlayId) >= 0;
+}
 
 function tabRoot(tab: MainTab): RouteId {
   switch (tab) {
@@ -14,6 +27,78 @@ function tabRoot(tab: MainTab): RouteId {
     case 'settings': return 'settings';
     default: return 'bookshelf';
   }
+}
+
+// These identifiers remain in the published generated RouteId union for one
+// compatibility cycle, but their old full-page renderers are retired. They
+// must never be admitted as a visible navigation destination: the confirmed
+// local-book flow lives on the invoking page as a system-picker dialog. The
+// old `bookshelf-empty` fixture is likewise a visual alias only; true empty
+// state is derived from the Core bookshelf projection on `bookshelf`.
+function isRetiredLocalImportRoute(id: RouteId): boolean {
+  return id === 'local-import' ||
+    id === 'import-permission-denied' ||
+    id === 'import-format-unsupported' ||
+    id === 'import-empty-file' ||
+    id === 'import-parsing' ||
+    id === 'import-duplicate' ||
+    id === 'import-conflict-resolve' ||
+    id === 'import-partial-success' ||
+    id === 'import-result-detail' ||
+    id === 'local-format-support' ||
+    id === 'bookshelf-empty';
+}
+
+// This includes the base flow, its historical result route, and the six
+// generated state pages. A local import has no remote source to replace, so a
+// deep link to any member of this family is equally invalid.
+function isSourceSwitchRoute(id: RouteId): boolean {
+  return id === 'source-switch' ||
+    id === 'source-switch-results' ||
+    id === 'source-switch-empty' ||
+    id === 'source-switch-error' ||
+    id === 'source-switch-timeout' ||
+    id === 'source-switch-loading' ||
+    id === 'source-switch-rollback' ||
+    id === 'source-switch-preview';
+}
+
+// The base `source-switch` route is the current Figma-backed candidate window.
+// All other members are withdrawn compatibility routes from the former
+// confirm/result state matrix and must re-enter through that one live window.
+// Exported for display-layer tests that verify the retirement firewall without
+// importing the deleted parallel policy module.
+export function isRetiredSourceSwitchRoute(id: RouteId): boolean {
+  return id === 'source-switch-results' ||
+    id === 'source-switch-empty' ||
+    id === 'source-switch-error' ||
+    id === 'source-switch-timeout' ||
+    id === 'source-switch-loading' ||
+    id === 'source-switch-rollback' ||
+    id === 'source-switch-preview';
+}
+
+// The current Figma restore flow is an overlay on Sync Backup. These former
+// full-page state routes remain in the generated union only for compatibility
+// and must not become visual destinations again. `restore-confirm` and
+// `restore-result` are intentionally excluded: they are the live Core route
+// identities that the overlay reads.
+function isRetiredRestoreRoute(id: RouteId): boolean {
+  return id === 'restore-scopes' ||
+    id === 'restore-preview' ||
+    id === 'restore-running' ||
+    id === 'restore-progress' ||
+    id === 'restore-conflict';
+}
+
+// User-declined visual routes remain in the generated RouteId union for a
+// compatibility cycle only.  Admit their safe parent here as well as in the
+// display layer, so effects/reducers cannot continue treating them as active
+// production surfaces after a direct deep link.
+function resolveUserDeclinedRoute(id: RouteId): RouteId {
+  if (RETIRED_ABOUT_ROUTE_IDS.indexOf(id) >= 0) return 'settings-general';
+  if (RETIRED_GROUP_ROUTE_IDS.indexOf(id) >= 0) return 'bookshelf';
+  return id;
 }
 
 // reader-module-switch 辅助：native-owned module 名称 -> overlay 路由 id。
@@ -120,6 +205,58 @@ function normalizeMetricValue(metric: ReaderRenderMetric, value: number): number
   return roundMetric(clamp(value, metricMin(metric), metricMax(metric)), metricPrecision(metric));
 }
 
+// Figma's five PageStyle labels have stable implementation values.  The
+// product rule confirmed by the user is that only `scroll` selects the
+// vertical Scroll surface; every other choice keeps horizontal pagination.
+// Legacy labels are accepted only as migration input and are never re-emitted.
+function normalizePageAnimation(value: string): string {
+  switch (value) {
+    case 'cover':
+    case '覆盖':
+      return 'cover';
+    case 'none':
+    case '无':
+    case '无动画':
+      return 'none';
+    case 'simulation':
+    case '仿真':
+      return 'simulation';
+    case 'scroll':
+    case '滚动':
+      return 'scroll';
+    case 'slide':
+    case 'smooth':
+    case '平滑':
+    case '平移':
+    case '滑动':
+    default:
+      return 'slide';
+  }
+}
+
+// Preferences persist stable implementation values only. Unlike the UI
+// normalizer above, this validator deliberately refuses labels, aliases and
+// unknown values so a malformed durable record can never change reader layout.
+function isPersistedPageAnimation(value: string): boolean {
+  return value === 'cover' || value === 'slide' || value === 'simulation' ||
+    value === 'scroll' || value === 'none';
+}
+
+function paginationModeForPageAnimation(animation: string): ReaderPaginationMode {
+  return normalizePageAnimation(animation) === 'scroll' ? 'vertical' : 'horizontal';
+}
+
+function normalizeLegacyPageMode(value: string): ReaderPaginationMode {
+  switch (value) {
+    case 'vertical':
+    case '竖向翻页':
+    case '竖向滚动':
+      return 'vertical';
+    default:
+      return 'horizontal';
+  }
+}
+
 export class ReaderReducer {
   static reduce(state: ReaderUiState, event: UiEvent): ReaderUiState {
     // 事件名归一化：点号（reader.exit / route.pop / reader.module.switch 等）
@@ -195,6 +332,13 @@ export class ReaderReducer {
         const e = event.enabled;
         return e !== undefined ? ReaderReducer.setReducedMotion(state, e) : state;
       }
+      case 'hydrate-reader-page-turn-preference': {
+        const pageAnimation = event.preferencePageAnimation;
+        const pageMode = event.preferencePageMode;
+        return pageAnimation !== undefined && pageMode !== undefined
+          ? ReaderReducer.hydrateReaderPageTurnPreference(state, pageAnimation, pageMode)
+          : state;
+      }
       case 'set-loading': {
         const l = event.loading;
         return l !== undefined ? ReaderReducer.setLoading(state, l) : state;
@@ -231,6 +375,20 @@ export class ReaderReducer {
         if (event.readerEntry !== true) return state;
         return ReaderReducer.setRouteLoading(ReaderReducer.push(state, 'immersive-reading'));
       }
+      case 'bookshelf-book-action-open':
+        return ReaderReducer.beginBookshelfActionMenu(state, event.sourceId ?? '', event.bookId ?? '');
+      case 'bookshelf-multiselect-open':
+        return ReaderReducer.beginBookshelfMultiSelect(state, event.sourceId ?? '', event.bookId ?? '');
+      case 'bookshelf-multiselect-toggle':
+        return ReaderReducer.toggleBookshelfMultiSelectTarget(state, event.sourceId ?? '', event.bookId ?? '');
+      case 'bookshelf-multiselect-select-all':
+        return ReaderReducer.selectAllBookshelfMultiSelectTargets(state);
+      case 'bookshelf-multiselect-clear-all':
+        return ReaderReducer.clearAllBookshelfMultiSelectTargets(state);
+      case 'bookshelf-multiselect-exit':
+        return ReaderReducer.exitBookshelfMultiSelect(state);
+      case 'bookshelf-multiselect-remove-request':
+        return ReaderReducer.beginBookshelfBatchRemovalConfirmation(state);
       case 'book-detail-success': {
         const book = event.book ?? null;
         return ReaderReducer.setCurrentBook(state, book);
@@ -388,6 +546,10 @@ export class ReaderReducer {
       case 'reader-brightness-host-revert': {
         const v = event.value;
         return v !== undefined ? ReaderReducer.setBrightness(state, v) : state;
+      }
+      case 'reader-brightness-auto-host-revert': {
+        const e = event.enabled;
+        return e !== undefined ? ReaderReducer.setBrightnessAuto(state, e) : state;
       }
       case 'reader-toggle-host-revert': {
         const k = event.toggleKey;
@@ -759,10 +921,18 @@ export class ReaderReducer {
       }
       case 'book-action': {
         const a = event.bookAction;
-        return a !== undefined ? ReaderReducer.handleBookAction(state, a) : state;
+        return a !== undefined
+          ? ReaderReducer.handleBookAction(state, a, event.sourceId ?? '', event.bookId ?? '') : state;
       }
-      case 'bookshelf-remove-cancel':
+      case 'bookshelf-remove-confirm':
+        return ReaderReducer.startBookshelfRemoval(state, event.sourceId ?? '', event.bookId ?? '');
+      case 'bookshelf-remove-failed':
+        return ReaderReducer.failBookshelfRemoval(state, event.sourceId ?? '', event.bookId ?? '',
+          event.bookshelfRemovalEpoch ?? -1, event.bookshelfRemovalError ?? '');
       case 'bookshelf-remove-complete':
+        return ReaderReducer.completeBookshelfRemoval(state, event.sourceId ?? '', event.bookId ?? '',
+          event.bookshelfRemovalEpoch ?? -1, event.bookshelfRemovalReceipt ?? null);
+      case 'bookshelf-remove-cancel':
         return ReaderReducer.clearBookshelfRemovalConfirmation(state);
       // ── B1 P0 全局设置 segment/stepper/switch cases ──
       case 'settings-segment-switch': {
@@ -827,14 +997,14 @@ export class ReaderReducer {
       case 'webdav-test':
         return ReaderReducer.requestWebdavTest(state);
       case 'webdav-test-result': {
-        if (state.routeId !== 'webdav-config' || state.webdavTestStatus !== 'testing') return state;
+        if (!ReaderReducer.isWebdavConfigurationRoute(state.routeId) || state.webdavTestStatus !== 'testing') return state;
         const ok = event.success === true;
         return ReaderReducer.setWebdavTestStatus(state, ok ? 'success' : 'error', event.message ?? '');
       }
       case 'webdav-save':
         return ReaderReducer.requestWebdavSave(state);
       case 'webdav-save-result': {
-        if (state.routeId !== 'webdav-config' || state.webdavSaveStatus !== 'saving') return state;
+        if (!ReaderReducer.isWebdavConfigurationRoute(state.routeId) || state.webdavSaveStatus !== 'saving') return state;
         const ok = event.success === true;
         return ReaderReducer.setWebdavSaveStatus(state, ok ? 'saved' : 'error', event.message ?? '');
       }
@@ -849,6 +1019,8 @@ export class ReaderReducer {
         return ReaderReducer.setCoreBackupStatus(state, event.coreBackupStatus ?? 'idle', event.coreBackupMessage ?? '');
       case 'core-backup-local-loaded':
         return ReaderReducer.setLocalCoreBackup(state, event.coreBackupInfo ?? null, event.coreBackupMessage ?? '');
+      case 'core-backup-history-loaded':
+        return ReaderReducer.setLocalCoreBackupHistory(state, event.coreBackupHistory ?? [], event.coreBackupMessage ?? '');
       case 'core-restore-prepared':
         return ReaderReducer.setPendingCoreRestore(state, event.coreBackupInfo ?? null, event.coreBackupMessage ?? '');
       case 'core-restore-cleared':
@@ -931,8 +1103,31 @@ export class ReaderReducer {
         return state.routeId === 'source-switch' ? ReaderReducer.cancelSourceSwitch(state) : state;
       // ── W1 资源导入 cases（source.import.* 归一化为 source-import-*）──
       case 'source-import-open':
-        // 打开本地导入页：push 'local-import' 路由。
-        return ReaderReducer.openLocalImport(state);
+        // The production entry opens the platform picker from Effects. Keep
+        // the invoking page in place; the confirmed feedback is an overlay.
+        return state;
+      case 'local-import-dialog-loading':
+        return ReaderReducer.beginLocalImportDialog(
+          state,
+          event.localImportDialogEpoch ?? -1,
+          event.localImportDialogResults,
+        );
+      case 'local-import-dialog-row-settled':
+        return ReaderReducer.settleLocalImportDialogRow(
+          state,
+          event.localImportDialogEpoch ?? -1,
+          event.localImportDialogResultIndex ?? -1,
+          event.localImportDialogResultStatus,
+        );
+      case 'local-import-dialog-result':
+        return ReaderReducer.completeLocalImportDialog(
+          state,
+          event.localImportDialogEpoch ?? -1,
+          event.localImportDialogResults,
+        );
+      case 'local-import-dialog-confirm':
+      case 'local-import-dialog-dismiss':
+        return ReaderReducer.dismissLocalImportDialog(state);
       case 'local-import-parse-start':
         return ReaderReducer.beginLocalImportParse(state, event.localImportEpoch ?? -1);
       case 'source-import-preview': {
@@ -1037,7 +1232,21 @@ export class ReaderReducer {
   }
 
   static push(state: ReaderUiState, id: RouteId): ReaderUiState {
-    if (ReaderReducer.hasActiveLocalImportCommit(state)) return state;
+    if (ReaderReducer.hasActiveLocalImportCommit(state) || ReaderReducer.hasActiveLocalImportDialog(state) ||
+      ReaderReducer.hasActiveBookshelfRemoval(state)) return state;
+    // Preserve a safe deep-link destination while preventing any legacy
+    // action from reviving the retired single-file / preview page family.
+    if (isRetiredLocalImportRoute(id)) return ReaderReducer.replace(state, 'bookshelf');
+    const admittedId: RouteId = resolveUserDeclinedRoute(id);
+    if (admittedId !== id) return ReaderReducer.replace(state, admittedId);
+    // Do not revive the old result/confirmation matrix.  The only valid
+    // entry is the explicit `source-switch` event path; a stale deep link
+    // cannot silently become a new visible candidate window.
+    if (isRetiredSourceSwitchRoute(id)) return state;
+    if (isRetiredRestoreRoute(id)) return ReaderReducer.replace(state, 'sync-backup');
+    // A local file has no remote source identity to replace.  Reject deep links
+    // and stale UI events here as well as hiding visual entry points.
+    if (isSourceSwitchRoute(id) && isLocalBookSourceId(state.currentBook?.sourceId)) return state;
     const entry: RouteEntry = { id: id };
     const stack: RouteEntry[] = [...state.stack, entry];
     const next = ReaderReducer.clone(state, id, state.tab, '', stack, 'default');
@@ -1046,6 +1255,7 @@ export class ReaderReducer {
     // the old bookshelf key after a later re-entry.
     ReaderReducer.resetSourceSwitchScopeInPlace(next);
     ReaderReducer.clearBookshelfRemovalTargetInPlace(next);
+    ReaderReducer.clearBookshelfActionTargetInPlace(next);
     ReaderReducer.clearBookGroupDeleteTargetInPlace(next);
     ReaderReducer.clearBookGroupClearTargetInPlace(next);
     ReaderReducer.clearReplaceRuleDeleteTargetInPlace(next);
@@ -1059,13 +1269,15 @@ export class ReaderReducer {
   }
 
   static pop(state: ReaderUiState): ReaderUiState {
-    if (ReaderReducer.hasActiveLocalImportCommit(state)) return state;
+    if (ReaderReducer.hasActiveLocalImportCommit(state) || ReaderReducer.hasActiveLocalImportDialog(state) ||
+      ReaderReducer.hasActiveBookshelfRemoval(state)) return state;
     if (state.stack.length <= 1) return state;
     const stack = state.stack.slice(0, -1);
     const top = stack[stack.length - 1];
     const next = ReaderReducer.clone(state, top.id, state.tab, '', stack, 'default');
     ReaderReducer.resetSourceSwitchScopeInPlace(next);
     ReaderReducer.clearBookshelfRemovalTargetInPlace(next);
+    ReaderReducer.clearBookshelfActionTargetInPlace(next);
     ReaderReducer.clearBookGroupDeleteTargetInPlace(next);
     ReaderReducer.clearBookGroupClearTargetInPlace(next);
     ReaderReducer.clearReplaceRuleDeleteTargetInPlace(next);
@@ -1079,13 +1291,20 @@ export class ReaderReducer {
   }
 
   static replace(state: ReaderUiState, id: RouteId): ReaderUiState {
-    if (ReaderReducer.hasActiveLocalImportCommit(state)) return state;
-    if (state.stack.length === 0) return ReaderReducer.push(state, id);
+    if (ReaderReducer.hasActiveLocalImportCommit(state) || ReaderReducer.hasActiveLocalImportDialog(state) ||
+      ReaderReducer.hasActiveBookshelfRemoval(state)) return state;
+    if (isRetiredSourceSwitchRoute(id)) return state;
+    const compatibilityResolvedId: RouteId = isRetiredLocalImportRoute(id) ? 'bookshelf'
+      : (isRetiredRestoreRoute(id) ? 'sync-backup' : id);
+    const resolvedId: RouteId = resolveUserDeclinedRoute(compatibilityResolvedId);
+    if (isSourceSwitchRoute(resolvedId) && isLocalBookSourceId(state.currentBook?.sourceId)) return state;
+    if (state.stack.length === 0) return ReaderReducer.push(state, resolvedId);
     const stack = state.stack.slice(0, -1);
-    stack.push({ id: id });
-    const next = ReaderReducer.clone(state, id, state.tab, '', stack, 'default');
+    stack.push({ id: resolvedId });
+    const next = ReaderReducer.clone(state, resolvedId, state.tab, '', stack, 'default');
     ReaderReducer.resetSourceSwitchScopeInPlace(next);
     ReaderReducer.clearBookshelfRemovalTargetInPlace(next);
+    ReaderReducer.clearBookshelfActionTargetInPlace(next);
     ReaderReducer.clearBookGroupDeleteTargetInPlace(next);
     ReaderReducer.clearBookGroupClearTargetInPlace(next);
     ReaderReducer.clearReplaceRuleDeleteTargetInPlace(next);
@@ -1099,12 +1318,14 @@ export class ReaderReducer {
   }
 
   static switchTab(state: ReaderUiState, tab: MainTab): ReaderUiState {
-    if (ReaderReducer.hasActiveLocalImportCommit(state)) return state;
+    if (ReaderReducer.hasActiveLocalImportCommit(state) || ReaderReducer.hasActiveLocalImportDialog(state) ||
+      ReaderReducer.hasActiveBookshelfRemoval(state)) return state;
     const root = tabRoot(tab);
     const stack: RouteEntry[] = [{ id: root }];
     const next = ReaderReducer.clone(state, root, tab, '', stack, 'default');
     ReaderReducer.resetSourceSwitchScopeInPlace(next);
     ReaderReducer.clearBookshelfRemovalTargetInPlace(next);
+    ReaderReducer.clearBookshelfActionTargetInPlace(next);
     ReaderReducer.clearBookGroupDeleteTargetInPlace(next);
     ReaderReducer.clearBookGroupClearTargetInPlace(next);
     ReaderReducer.clearReplaceRuleDeleteTargetInPlace(next);
@@ -1118,8 +1339,18 @@ export class ReaderReducer {
   }
 
   static setOverlay(state: ReaderUiState, overlay: Overlay): ReaderUiState {
+    if (isRetiredUserDeclinedOverlay(overlay)) return state;
+    // The confirmed local-import dialog closes only through its result
+    // confirmation action. Generic backdrop/system-back overlay dismissal must
+    // not discard either the running batch or its visible outcomes.
+    if (state.overlay === 'local-import' && overlay !== 'local-import') return state;
+    // Core's bookshelf.remove cannot be cancelled. Keep its Figma Loading
+    // dialog modal so Back/backdrop cannot clear the transaction identity and
+    // let an old callback mutate a later screen.
+    if (ReaderReducer.hasActiveBookshelfRemoval(state) && overlay !== 'dialog') return state;
     const next = ReaderReducer.clone(state, state.routeId, state.tab, overlay, state.stack, state.pageState);
     if (overlay !== 'dialog') ReaderReducer.clearBookshelfRemovalTargetInPlace(next);
+    if (overlay !== 'book-action') ReaderReducer.clearBookshelfActionTargetInPlace(next);
     if (overlay !== 'dialog') ReaderReducer.clearReplaceRuleDeleteTargetInPlace(next);
     ReaderReducer.clearBookmarkDeleteTargetInPlace(next);
     ReaderReducer.clearSearchHistoryClearTargetInPlace(next);
@@ -1139,6 +1370,19 @@ export class ReaderReducer {
   static setPaginationMode(state: ReaderUiState, mode: ReaderPaginationMode): ReaderUiState {
     const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
     next.paginationMode = mode;
+    const options: ReaderSettingOptionsMap = {
+      pageMode: mode,
+      tapMode: state.readerSettingOptions.tapMode,
+      pageAnimation: mode === 'vertical'
+        ? 'scroll'
+        : (normalizePageAnimation(state.readerSettingOptions.pageAnimation) === 'scroll'
+          ? 'slide'
+          : normalizePageAnimation(state.readerSettingOptions.pageAnimation)),
+      paragraphIndentMode: state.readerSettingOptions.paragraphIndentMode,
+      textConversion: state.readerSettingOptions.textConversion,
+      textAlignment: state.readerSettingOptions.textAlignment,
+    };
+    next.readerSettingOptions = options;
     // A page number is layout-specific, but the Core chapter anchor is not.
     // ReadingTextFlow will derive a new visual page/scroll position from the
     // retained scalar offset after the new layout has been measured.
@@ -1242,6 +1486,22 @@ export class ReaderReducer {
     const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
     next.reducedMotion = enabled;
     return next;
+  }
+
+  // This event is intentionally narrower than setReaderSettingOption: it
+  // accepts only the persisted implementation values and rejects any pair
+  // whose mirror would disagree with the page-animation layout invariant.
+  static hydrateReaderPageTurnPreference(
+    state: ReaderUiState,
+    pageAnimation: string,
+    pageMode: string,
+  ): ReaderUiState {
+    if (!isPersistedPageAnimation(pageAnimation) ||
+      (pageMode !== 'horizontal' && pageMode !== 'vertical') ||
+      pageMode !== paginationModeForPageAnimation(pageAnimation)) {
+      return state;
+    }
+    return ReaderReducer.setReaderSettingOption(state, 'pageAnimation', pageAnimation);
   }
 
   static setLoading(state: ReaderUiState, loading: boolean): ReaderUiState {
@@ -1993,7 +2253,9 @@ export class ReaderReducer {
     return next;
   }
 
-  // Update one durable reader option, including the Full Appearance select rows.
+  // Update one durable reader option. `pageAnimation` is the sole user-facing
+  // owner of reading layout; the older `pageMode` input remains migration-only
+  // and is immediately folded back into the same invariant.
   static setReaderSettingOption(state: ReaderUiState, key: ReaderSettingOptionKey, value: string): ReaderUiState {
     const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
     const options: ReaderSettingOptionsMap = {
@@ -2005,15 +2267,30 @@ export class ReaderReducer {
       textAlignment: state.readerSettingOptions.textAlignment,
     };
     switch (key) {
-      case 'pageMode':
-        options.pageMode = value;
+      case 'pageMode': {
+        const paginationMode = normalizeLegacyPageMode(value);
+        options.pageMode = paginationMode;
+        options.pageAnimation = paginationMode === 'vertical'
+          ? 'scroll'
+          : (normalizePageAnimation(state.readerSettingOptions.pageAnimation) === 'scroll'
+            ? 'slide'
+            : normalizePageAnimation(state.readerSettingOptions.pageAnimation));
+        next.paginationMode = paginationMode;
+        next.readerPageIndex = 0;
         break;
+      }
       case 'tapMode':
         options.tapMode = value;
         break;
-      case 'pageAnimation':
-        options.pageAnimation = value;
+      case 'pageAnimation': {
+        const animation = normalizePageAnimation(value);
+        options.pageAnimation = animation;
+        const paginationMode = paginationModeForPageAnimation(animation);
+        options.pageMode = paginationMode;
+        next.paginationMode = paginationMode;
+        next.readerPageIndex = 0;
         break;
+      }
       case 'paragraphIndentMode':
         options.paragraphIndentMode = value;
         break;
@@ -2084,6 +2361,8 @@ export class ReaderReducer {
     const clamped = Math.round(clamp(value, 0, 100));
     const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
     next.brightness = clamped;
+    // A direct manual adjustment leaves the system-following brightness mode.
+    next.brightnessAuto = false;
     return next;
   }
 
@@ -2323,6 +2602,7 @@ export class ReaderReducer {
   // replaces the radio selection; it never creates a multi-source request.
   static selectSingleSource(state: ReaderUiState, id: string): ReaderUiState {
     const sourceId = id.trim();
+    if (isLocalBookSourceId(state.currentBook?.sourceId)) return state;
     if (!ReaderReducer.hasEnabledSource(state, sourceId)) return state;
     const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
     next.sourceSelection = [sourceId];
@@ -2374,6 +2654,11 @@ export class ReaderReducer {
     if (state.currentBook === null) {
       return ReaderReducer.setSourceSwitchError(
         state, 'SOURCE_SWITCH_BOOK_REQUIRED', '当前没有可换源的书籍。',
+      );
+    }
+    if (isLocalBookSourceId(state.currentBook.sourceId)) {
+      return ReaderReducer.setSourceSwitchError(
+        state, 'LOCAL_BOOK_SOURCE_SWITCH_UNAVAILABLE', '本地书籍没有可更换的书源。',
       );
     }
     const next: ReaderUiState = ReaderReducer.clone(
@@ -2723,17 +3008,38 @@ export class ReaderReducer {
   // Book removal always names a live shelf row first. A stale currentBook
   // (for example one left by a previous reading session) cannot become a
   // delete target from the shelf top-more sheet.
-  static handleBookAction(state: ReaderUiState, action: string): ReaderUiState {
-    if (action === 'delete') return ReaderReducer.beginBookshelfRemovalConfirmation(state);
+  static handleBookAction(state: ReaderUiState, action: string, sourceId: string = '', bookId: string = ''): ReaderUiState {
+    if (action === 'delete') return ReaderReducer.beginBookshelfRemovalConfirmation(state, sourceId, bookId);
+    if (action === 'multi-select') return ReaderReducer.beginBookshelfMultiSelect(state, sourceId, bookId);
     const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
     next.overlay = action.length > 0 ? '' : 'book-action';
     return next;
   }
 
-  private static beginBookshelfRemovalConfirmation(state: ReaderUiState): ReaderUiState {
+  private static beginBookshelfActionMenu(state: ReaderUiState, requestedSourceId: string, requestedBookId: string): ReaderUiState {
+    const sourceId = requestedSourceId.trim();
+    const bookId = requestedBookId.trim();
+    if (sourceId.length === 0 || bookId.length === 0) return state;
+    for (let index = 0; index < state.bookshelfBooks.length; index += 1) {
+      const shelfBook = state.bookshelfBooks[index];
+      if (shelfBook.sourceId === sourceId && shelfBook.bookId === bookId) {
+        const next = ReaderReducer.clone(state, state.routeId, state.tab, 'book-action', state.stack, state.pageState);
+        next.pendingBookshelfActionSourceId = sourceId;
+        next.pendingBookshelfActionBookId = bookId;
+        next.error = null;
+        return next;
+      }
+    }
+    return state;
+  }
+
+  private static beginBookshelfRemovalConfirmation(state: ReaderUiState,
+    requestedSourceId: string = '', requestedBookId: string = ''): ReaderUiState {
     const current = state.currentBook;
-    const sourceId = (current?.sourceId ?? '').trim();
-    const bookId = (current?.bookId ?? '').trim();
+    const sourceId = requestedSourceId.trim().length > 0
+      ? requestedSourceId.trim() : (current?.sourceId ?? '').trim();
+    const bookId = requestedBookId.trim().length > 0
+      ? requestedBookId.trim() : (current?.bookId ?? '').trim();
     if (sourceId.length > 0 && bookId.length > 0) {
       for (let i = 0; i < state.bookshelfBooks.length; i++) {
         const shelfBook = state.bookshelfBooks[i];
@@ -2741,6 +3047,13 @@ export class ReaderReducer {
           const next = ReaderReducer.clone(state, state.routeId, state.tab, 'dialog', state.stack, state.pageState);
           next.pendingBookshelfRemovalSourceId = sourceId;
           next.pendingBookshelfRemovalBookId = bookId;
+          next.pendingBookshelfRemovalTargets = [{ sourceId: sourceId, bookId: bookId }];
+          next.bookshelfRemovalScope = 'single';
+          next.bookshelfRemovalDialogPhase = 'default';
+          next.bookshelfRemovalEpoch = state.bookshelfRemovalEpoch + 1;
+          next.bookshelfRemovalError = '';
+          next.lastBookshelfRemovalReceipt = null;
+          ReaderReducer.clearBookshelfActionTargetInPlace(next);
           next.error = null;
           return next;
         }
@@ -2748,6 +3061,7 @@ export class ReaderReducer {
     }
     const next = ReaderReducer.clone(state, state.routeId, state.tab, '', state.stack, state.pageState);
     ReaderReducer.clearBookshelfRemovalTargetInPlace(next);
+    ReaderReducer.clearBookshelfActionTargetInPlace(next);
     next.error = {
       code: 'BOOKSHELF_REMOVE_TARGET_REQUIRED',
       message: '请先打开一条仍由 Core 书架返回的书籍，再确认移除。',
@@ -2756,15 +3070,202 @@ export class ReaderReducer {
     return next;
   }
 
-  static clearBookshelfRemovalConfirmation(state: ReaderUiState): ReaderUiState {
-    const next = ReaderReducer.clone(state, state.routeId, state.tab, '', state.stack, state.pageState);
-    ReaderReducer.clearBookshelfRemovalTargetInPlace(next);
+  // A long press enters the Figma Bookshelf/MultiSelect surface with the exact
+  // pressed shelf row selected. It does not reuse the historical batch/group
+  // route and never derives a target from currentBook.
+  private static beginBookshelfMultiSelect(state: ReaderUiState,
+    requestedSourceId: string, requestedBookId: string): ReaderUiState {
+    const sourceId = requestedSourceId.trim();
+    const bookId = requestedBookId.trim();
+    if (!ReaderReducer.isLiveBookshelfTarget(state, sourceId, bookId)) return state;
+    const next = ReaderReducer.clone(state, state.routeId, state.tab, 'bookshelf-multiselect', state.stack, state.pageState);
+    next.bookshelfSelectedTargets = [{ sourceId: sourceId, bookId: bookId }];
+    ReaderReducer.clearBookshelfActionTargetInPlace(next);
+    next.error = null;
     return next;
   }
 
-  private static clearBookshelfRemovalTargetInPlace(state: ReaderUiState): void {
+  private static toggleBookshelfMultiSelectTarget(state: ReaderUiState,
+    requestedSourceId: string, requestedBookId: string): ReaderUiState {
+    const sourceId = requestedSourceId.trim();
+    const bookId = requestedBookId.trim();
+    if (state.overlay !== 'bookshelf-multiselect' || !ReaderReducer.isLiveBookshelfTarget(state, sourceId, bookId)) {
+      return state;
+    }
+    const next = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    const targets: BookshelfSelectionTarget[] = [];
+    let removed = false;
+    for (let index = 0; index < state.bookshelfSelectedTargets.length; index += 1) {
+      const target = state.bookshelfSelectedTargets[index];
+      if (target.sourceId === sourceId && target.bookId === bookId) {
+        removed = true;
+        continue;
+      }
+      targets.push({ sourceId: target.sourceId, bookId: target.bookId });
+    }
+    if (!removed) targets.push({ sourceId: sourceId, bookId: bookId });
+    next.bookshelfSelectedTargets = targets;
+    return next;
+  }
+
+  private static selectAllBookshelfMultiSelectTargets(state: ReaderUiState): ReaderUiState {
+    if (state.overlay !== 'bookshelf-multiselect') return state;
+    const next = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    const values: BookshelfSelectionTarget[] = [];
+    for (let index = 0; index < state.bookshelfBooks.length; index += 1) {
+      const book = state.bookshelfBooks[index];
+      values.push({ sourceId: book.sourceId, bookId: book.bookId });
+    }
+    next.bookshelfSelectedTargets = ReaderReducer.liveBookshelfTargets(state, values);
+    return next;
+  }
+
+  private static clearAllBookshelfMultiSelectTargets(state: ReaderUiState): ReaderUiState {
+    if (state.overlay !== 'bookshelf-multiselect') return state;
+    const next = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    next.bookshelfSelectedTargets = [];
+    return next;
+  }
+
+  private static exitBookshelfMultiSelect(state: ReaderUiState): ReaderUiState {
+    if (state.overlay !== 'bookshelf-multiselect') return state;
+    const next = ReaderReducer.clone(state, state.routeId, state.tab, '', state.stack, state.pageState);
+    next.bookshelfSelectedTargets = [];
+    ReaderReducer.clearBookshelfActionTargetInPlace(next);
+    return next;
+  }
+
+  private static beginBookshelfBatchRemovalConfirmation(state: ReaderUiState): ReaderUiState {
+    if (state.overlay !== 'bookshelf-multiselect') return state;
+    const targets = ReaderReducer.liveBookshelfTargets(state, state.bookshelfSelectedTargets);
+    if (targets.length === 0 || targets.length !== state.bookshelfSelectedTargets.length) return state;
+    const next = ReaderReducer.clone(state, state.routeId, state.tab, 'dialog', state.stack, state.pageState);
+    next.pendingBookshelfRemovalSourceId = '';
+    next.pendingBookshelfRemovalBookId = '';
+    next.pendingBookshelfRemovalTargets = targets;
+    next.bookshelfRemovalScope = 'batch';
+    next.bookshelfRemovalDialogPhase = 'default';
+    next.bookshelfRemovalEpoch = state.bookshelfRemovalEpoch + 1;
+    next.bookshelfRemovalError = '';
+    next.lastBookshelfRemovalReceipt = null;
+    next.error = null;
+    return next;
+  }
+
+  static clearBookshelfRemovalConfirmation(state: ReaderUiState): ReaderUiState {
+    // Core's removal request cannot be cancelled. The Loading visual is modal
+    // until its same-epoch callback resolves into the Figma Failed/complete
+    // state; never clear its exact target from backdrop or system Back.
+    if (ReaderReducer.hasActiveBookshelfRemoval(state)) return state;
+    const resumeMultiSelect = state.bookshelfRemovalScope === 'batch' && state.bookshelfSelectedTargets.length > 0;
+    const next = ReaderReducer.clone(state, state.routeId, state.tab,
+      resumeMultiSelect ? 'bookshelf-multiselect' : '', state.stack, state.pageState);
+    ReaderReducer.clearBookshelfRemovalTargetInPlace(next, !resumeMultiSelect);
+    ReaderReducer.clearBookshelfActionTargetInPlace(next);
+    return next;
+  }
+
+  private static startBookshelfRemoval(state: ReaderUiState, requestedSourceId: string,
+    requestedBookId: string): ReaderUiState {
+    const sourceId = requestedSourceId.trim();
+    const bookId = requestedBookId.trim();
+    const base = state.overlay === 'dialog' &&
+      (state.bookshelfRemovalDialogPhase === 'default' || state.bookshelfRemovalDialogPhase === 'failed');
+    const canStartSingle = state.bookshelfRemovalScope === 'single' &&
+      state.pendingBookshelfRemovalSourceId === sourceId && state.pendingBookshelfRemovalBookId === bookId;
+    const canStartBatch = state.bookshelfRemovalScope === 'batch' && sourceId.length === 0 && bookId.length === 0 &&
+      state.pendingBookshelfRemovalTargets.length > 0 &&
+      ReaderReducer.liveBookshelfTargets(state, state.pendingBookshelfRemovalTargets).length ===
+        state.pendingBookshelfRemovalTargets.length;
+    const canStart = base && (canStartSingle || canStartBatch);
+    if (!canStart) return state;
+    const next = ReaderReducer.clone(state, state.routeId, state.tab, 'dialog', state.stack, state.pageState);
+    next.bookshelfRemovalDialogPhase = 'loading';
+    next.bookshelfRemovalEpoch = state.bookshelfRemovalEpoch + 1;
+    next.bookshelfRemovalError = '';
+    next.error = null;
+    return next;
+  }
+
+  private static failBookshelfRemoval(state: ReaderUiState, requestedSourceId: string,
+    requestedBookId: string, epoch: number, error: string): ReaderUiState {
+    if (!ReaderReducer.matchesActiveBookshelfRemoval(state, requestedSourceId, requestedBookId, epoch)) return state;
+    const next = ReaderReducer.clone(state, state.routeId, state.tab, 'dialog', state.stack, state.pageState);
+    next.bookshelfRemovalDialogPhase = 'failed';
+    next.bookshelfRemovalError = error;
+    // Failure is a dialog-local Figma state, never a page-level error screen.
+    next.error = null;
+    return next;
+  }
+
+  private static completeBookshelfRemoval(state: ReaderUiState, requestedSourceId: string,
+    requestedBookId: string, epoch: number, receipt: BookshelfRemovalReceipt | null): ReaderUiState {
+    if (!ReaderReducer.matchesActiveBookshelfRemoval(state, requestedSourceId, requestedBookId, epoch)) return state;
+    const next = ReaderReducer.clone(state, state.routeId, state.tab, '', state.stack, state.pageState);
+    next.lastBookshelfRemovalReceipt = receipt;
+    ReaderReducer.clearBookshelfRemovalTargetInPlace(next, true);
+    ReaderReducer.clearBookshelfActionTargetInPlace(next);
+    return next;
+  }
+
+  private static matchesActiveBookshelfRemoval(state: ReaderUiState, requestedSourceId: string,
+    requestedBookId: string, epoch: number): boolean {
+    if (state.overlay !== 'dialog' || state.bookshelfRemovalDialogPhase !== 'loading' ||
+      state.bookshelfRemovalEpoch !== epoch) return false;
+    if (state.bookshelfRemovalScope === 'batch') {
+      return requestedSourceId.trim().length === 0 && requestedBookId.trim().length === 0 &&
+        state.pendingBookshelfRemovalTargets.length > 0;
+    }
+    return state.pendingBookshelfRemovalSourceId === requestedSourceId.trim() &&
+      state.pendingBookshelfRemovalBookId === requestedBookId.trim();
+  }
+
+  private static hasActiveBookshelfRemoval(state: ReaderUiState): boolean {
+    return state.overlay === 'dialog' && state.bookshelfRemovalDialogPhase === 'loading';
+  }
+
+  private static clearBookshelfRemovalTargetInPlace(state: ReaderUiState, clearSelection: boolean = true): void {
     state.pendingBookshelfRemovalSourceId = '';
     state.pendingBookshelfRemovalBookId = '';
+    state.pendingBookshelfRemovalTargets = [];
+    state.bookshelfRemovalScope = 'single';
+    state.bookshelfRemovalDialogPhase = 'idle';
+    state.bookshelfRemovalEpoch += 1;
+    state.bookshelfRemovalError = '';
+    if (clearSelection) state.bookshelfSelectedTargets = [];
+  }
+
+  private static clearBookshelfActionTargetInPlace(state: ReaderUiState): void {
+    state.pendingBookshelfActionSourceId = '';
+    state.pendingBookshelfActionBookId = '';
+  }
+
+  private static isLiveBookshelfTarget(state: ReaderUiState, sourceId: string, bookId: string): boolean {
+    if (sourceId.length === 0 || bookId.length === 0) return false;
+    for (let index = 0; index < state.bookshelfBooks.length; index += 1) {
+      const book = state.bookshelfBooks[index];
+      if (book.sourceId === sourceId && book.bookId === bookId) return true;
+    }
+    return false;
+  }
+
+  private static liveBookshelfTargets(state: ReaderUiState,
+    values: BookshelfSelectionTarget[]): BookshelfSelectionTarget[] {
+    const result: BookshelfSelectionTarget[] = [];
+    for (let index = 0; index < values.length; index += 1) {
+      const sourceId = values[index].sourceId.trim();
+      const bookId = values[index].bookId.trim();
+      if (!ReaderReducer.isLiveBookshelfTarget(state, sourceId, bookId)) continue;
+      let duplicate = false;
+      for (let seen = 0; seen < result.length; seen += 1) {
+        if (result[seen].sourceId === sourceId && result[seen].bookId === bookId) {
+          duplicate = true;
+          break;
+        }
+      }
+      if (!duplicate) result.push({ sourceId: sourceId, bookId: bookId });
+    }
+    return result;
   }
 
   // Book-group mutations are Core-owned. Keep their request state separate
@@ -2978,14 +3479,11 @@ export class ReaderReducer {
     return next;
   }
 
-  // 步进修改全局设置中的数值项（当前仅 coverColumns，范围 1-5）。
+  // No current Figma Settings master exposes a numeric stepper.  Keep the
+  // event fail-closed so a stale client cannot revive the retired cover-column
+  // presentation setting.
   static stepSettingsStepper(state: ReaderUiState, key: string, delta: number): ReaderUiState {
-    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
-    if (key === 'coverColumns') {
-      const v = state.coverColumns + delta;
-      next.coverColumns = v < 1 ? 1 : (v > 5 ? 5 : v);
-    }
-    return next;
+    return state;
   }
 
   // 切换全局设置中的开关项。重建 settingsToggles 对象，按 key 修改对应字段。
@@ -3105,11 +3603,18 @@ export class ReaderReducer {
     return next;
   }
 
+  // Figma places the same canonical WebDAV form inside Sync Backup as well
+  // as on the dedicated WebDAV route. Both are real configuration owners;
+  // no other settings route may execute or receive this asynchronous result.
+  static isWebdavConfigurationRoute(routeId: RouteId): boolean {
+    return routeId === 'webdav-config' || routeId === 'sync-backup';
+  }
+
   static requestWebdavTest(state: ReaderUiState): ReaderUiState {
-    if (state.routeId !== 'webdav-config' || state.webdavServerUrl.trim().length === 0 ||
+    if (!ReaderReducer.isWebdavConfigurationRoute(state.routeId) || state.webdavServerUrl.trim().length === 0 ||
       state.webdavTestStatus === 'testing' || state.webdavSaveStatus === 'saving') {
       return ReaderReducer.setWebdavTestStatus(state, 'error',
-        '请在当前 WebDAV 配置页填写服务器地址后再测试。');
+        '请在当前 WebDAV 配置中填写服务器地址后再测试。');
     }
     return ReaderReducer.setWebdavTestStatus(state, 'testing', '');
   }
@@ -3122,10 +3627,10 @@ export class ReaderReducer {
   }
 
   static requestWebdavSave(state: ReaderUiState): ReaderUiState {
-    if (state.routeId !== 'webdav-config' || state.webdavServerUrl.trim().length === 0 ||
+    if (!ReaderReducer.isWebdavConfigurationRoute(state.routeId) || state.webdavServerUrl.trim().length === 0 ||
       state.webdavSaveStatus === 'saving') {
       return ReaderReducer.setWebdavSaveStatus(state, 'error',
-        '请在当前 WebDAV 配置页填写服务器地址后再保存。');
+        '请在当前 WebDAV 配置中填写服务器地址后再保存。');
     }
     return ReaderReducer.setWebdavSaveStatus(state, 'saving', '');
   }
@@ -3156,6 +3661,23 @@ export class ReaderReducer {
     return next;
   }
 
+  /**
+   * The Host/effect layer supplies only snapshots that were read and
+   * validated in the app sandbox. Preserve a newest-first immutable metadata
+   * projection for future Figma-backed history UI while keeping the old
+   * `localCoreBackup` newest-record projection migration-compatible.
+   */
+  static setLocalCoreBackupHistory(state: ReaderUiState,
+    history: CoreStorageBackupHistoryEntry[], message: string): ReaderUiState {
+    const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    const sorted = CoreStorageBackupHistory.sortNewestFirst(history);
+    next.localCoreBackupHistory = sorted;
+    next.localCoreBackup = sorted.length > 0 ? CoreStorageBackupHistory.info(sorted[0]) : null;
+    next.coreBackupStatus = sorted.length > 0 ? 'ready' : 'idle';
+    next.coreBackupMessage = message;
+    return next;
+  }
+
   static setPendingCoreRestore(state: ReaderUiState, info: CoreStorageBackupInfo | null, message: string): ReaderUiState {
     const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
     next.pendingCoreRestore = info;
@@ -3172,22 +3694,25 @@ export class ReaderReducer {
     }
     const next = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
     next.pendingCoreRestoreConfirmationChecksum = info.checksum;
-    next.coreBackupStatus = 'ready';
-    next.coreBackupMessage = '恢复会替换完整 Core 数据；请再次确认已校验快照。';
+    // Figma Overlay/Restore Backup has exactly one visible confirmation.
+    // Stamp the prepared checksum and enter the Core-owned loading state in
+    // this same event so a stale compatibility `confirm` cannot start work.
+    next.coreBackupStatus = 'restoring';
+    next.coreBackupMessage = '正在创建恢复前快照并由 Core 原子应用…';
     return next;
   }
 
   static confirmCoreRestoreApply(state: ReaderUiState): ReaderUiState {
     const info = state.pendingCoreRestore;
-    if (state.routeId !== 'restore-confirm' || info === null ||
-      state.pendingCoreRestoreConfirmationChecksum !== info.checksum ||
+    // Compatibility only: old full-page UI could emit a second confirmation.
+    // The current overlay never does. Never let this legacy event start or
+    // duplicate a restore transaction.
+    if (state.routeId === 'restore-confirm' && info !== null &&
+      state.pendingCoreRestoreConfirmationChecksum === info.checksum &&
       state.coreBackupStatus === 'restoring') {
-      return ReaderReducer.rejectCoreRestoreApply(state);
+      return state;
     }
-    const next = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
-    next.coreBackupStatus = 'restoring';
-    next.coreBackupMessage = '正在创建恢复前快照并由 Core 原子应用…';
-    return next;
+    return ReaderReducer.rejectCoreRestoreApply(state);
   }
 
   static cancelCoreRestoreApply(state: ReaderUiState): ReaderUiState {
@@ -3217,6 +3742,69 @@ export class ReaderReducer {
   // 打开本地导入页：push 'local-import' 路由。
   static openLocalImport(state: ReaderUiState): ReaderUiState {
     return ReaderReducer.push(state, 'local-import');
+  }
+
+  static beginLocalImportDialog(state: ReaderUiState, epoch: number,
+    values: LocalImportDialogResult[] | undefined): ReaderUiState {
+    if (!Number.isSafeInteger(epoch) || epoch <= state.localImportDialogEpoch || state.overlay !== '') {
+      return state;
+    }
+    const next = ReaderReducer.clone(state, state.routeId, state.tab, 'local-import', state.stack, state.pageState);
+    next.localImportDialogPhase = 'loading';
+    next.localImportDialogEpoch = epoch;
+    // Figma loading is one spinner only. Do not store or render per-file rows
+    // until every Core import attempt has settled into the result state.
+    next.localImportDialogResults = [];
+    next.error = null;
+    return next;
+  }
+
+  static settleLocalImportDialogRow(state: ReaderUiState, epoch: number,
+    index: number, status: LocalImportDialogResultStatus | undefined): ReaderUiState {
+    // Retained as a fail-closed compatibility event for an in-flight older
+    // host. Current Figma flow never projects individual progress rows.
+    return state;
+  }
+
+  static completeLocalImportDialog(state: ReaderUiState, epoch: number,
+    values: LocalImportDialogResult[] | undefined): ReaderUiState {
+    if (state.overlay !== 'local-import' || state.localImportDialogPhase !== 'loading' ||
+      epoch !== state.localImportDialogEpoch || values === undefined || values.length === 0) {
+      return state;
+    }
+    const results = ReaderReducer.normalizedLocalImportDialogResults(values, epoch);
+    if (results.length === 0) return state;
+    const next = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    next.localImportDialogPhase = 'result';
+    next.localImportDialogResults = results;
+    next.error = null;
+    return next;
+  }
+
+  private static normalizedLocalImportDialogResults(values: LocalImportDialogResult[] | undefined,
+    epoch: number): LocalImportDialogResult[] {
+    if (values === undefined) return [];
+    const results: LocalImportDialogResult[] = [];
+    for (let index = 0; index < values.length; index += 1) {
+      const value = values[index];
+      const fileName = value.fileName.trim();
+      if (fileName.length === 0) continue;
+      const id = value.id !== undefined && value.id.trim().length > 0
+        ? value.id.trim() : `local-import-${epoch}-${index}`;
+      const status: LocalImportDialogResultStatus = value.status === 'success' ? 'success' : 'failure';
+      results.push({ id: id, fileName: fileName, status: status });
+    }
+    return results;
+  }
+
+  static dismissLocalImportDialog(state: ReaderUiState): ReaderUiState {
+    // A running import has no cancellation grant in the confirmed flow. The
+    // only visible close action is the result dialog's confirmation button.
+    if (state.overlay !== 'local-import' || state.localImportDialogPhase !== 'result') return state;
+    const next = ReaderReducer.clone(state, state.routeId, state.tab, '', state.stack, state.pageState);
+    next.localImportDialogPhase = 'idle';
+    next.localImportDialogResults = [];
+    return next;
   }
 
   // 设置由 Core 从原始字节测得的导入预览格式、编码和章节数。
@@ -3267,6 +3855,11 @@ export class ReaderReducer {
 
   private static hasActiveLocalImportCommit(state: ReaderUiState): boolean {
     return state.routeId === 'local-import' && state.loading && state.localImportEpoch > 0;
+  }
+
+  private static hasActiveLocalImportDialog(state: ReaderUiState): boolean {
+    return state.overlay === 'local-import' && state.localImportDialogPhase !== 'idle' &&
+      state.localImportDialogEpoch > 0;
   }
 
   // 应用导入：pop 回书架并记录导入数量，清空预览格式。
@@ -3630,6 +4223,15 @@ export class ReaderReducer {
       continueReadingError: s.continueReadingError,
       pendingBookshelfRemovalSourceId: s.pendingBookshelfRemovalSourceId,
       pendingBookshelfRemovalBookId: s.pendingBookshelfRemovalBookId,
+      pendingBookshelfRemovalTargets: s.pendingBookshelfRemovalTargets.slice(),
+      bookshelfRemovalScope: s.bookshelfRemovalScope,
+      bookshelfRemovalDialogPhase: s.bookshelfRemovalDialogPhase,
+      bookshelfRemovalEpoch: s.bookshelfRemovalEpoch,
+      bookshelfRemovalError: s.bookshelfRemovalError,
+      lastBookshelfRemovalReceipt: s.lastBookshelfRemovalReceipt,
+      pendingBookshelfActionSourceId: s.pendingBookshelfActionSourceId,
+      pendingBookshelfActionBookId: s.pendingBookshelfActionBookId,
+      bookshelfSelectedTargets: s.bookshelfSelectedTargets.slice(),
       bookGroups: s.bookGroups,
       bookGroupsLoaded: s.bookGroupsLoaded,
       bookGroupsLoading: s.bookGroupsLoading,
@@ -3649,7 +4251,6 @@ export class ReaderReducer {
       pendingReplaceRuleDeleteId: s.pendingReplaceRuleDeleteId,
       // B1 P0 全局设置字段 — 浅引用拷贝。需要修改的方法必须先重建对象。
       appThemeMode: s.appThemeMode,
-      coverColumns: s.coverColumns,
       settingsToggles: s.settingsToggles,
       // F3 交互连接字段 — 浅拷贝（string 不可变，无需重建）。
       readerTheme: s.readerTheme,
@@ -3674,6 +4275,7 @@ export class ReaderReducer {
       coreBackupStatus: s.coreBackupStatus,
       coreBackupMessage: s.coreBackupMessage,
       localCoreBackup: s.localCoreBackup,
+      localCoreBackupHistory: s.localCoreBackupHistory.slice(),
       pendingCoreRestore: s.pendingCoreRestore,
       pendingCoreRestoreConfirmationChecksum: s.pendingCoreRestoreConfirmationChecksum,
       // ── W1 本地书导入 / W5 规则替换字段 ── 浅拷贝（string/number 不可变；数组引用拷贝，修改方法重建新数组）。
@@ -3681,6 +4283,9 @@ export class ReaderReducer {
       importPreviewEncoding: s.importPreviewEncoding,
       importPreviewCount: s.importPreviewCount,
       localImportEpoch: s.localImportEpoch,
+      localImportDialogPhase: s.localImportDialogPhase,
+      localImportDialogEpoch: s.localImportDialogEpoch,
+      localImportDialogResults: s.localImportDialogResults,
       sourceImportOrigin: s.sourceImportOrigin,
       sourceImportTotal: s.sourceImportTotal,
       sourceImportImported: s.sourceImportImported,

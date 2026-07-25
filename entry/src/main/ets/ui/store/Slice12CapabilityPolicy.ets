@@ -142,19 +142,19 @@ export class Slice12CapabilityPolicy {
       executionPolicy: Slice12ExecutionPolicy.HostReadyDeviceProofRequired,
     },
     {
+      id: 'readerPageTurn',
+      owner: 'Harmony reader reducer + Harmony preferences',
+      defaultValue: 'slide/horizontal',
+      persistence: 'reader_ui_preferences_v1/pageAnimation+pageMode; validated cover|slide|simulation|scroll|none, scroll only = vertical',
+      reset: 'no dedicated reset action; missing record defaults to slide/horizontal',
+      executionPolicy: Slice12ExecutionPolicy.HostReadyDeviceProofRequired,
+    },
+    {
       id: 'appThemeMode',
       owner: 'Harmony reducer presentation',
       defaultValue: 'system',
       persistence: 'session-only; frozen durable setting contract missing',
       reset: 'system for current session',
-      executionPolicy: Slice12ExecutionPolicy.SessionOnly,
-    },
-    {
-      id: 'coverColumns',
-      owner: 'Harmony reducer presentation',
-      defaultValue: '3',
-      persistence: 'session-only; frozen durable setting contract missing',
-      reset: '3 for current session',
       executionPolicy: Slice12ExecutionPolicy.SessionOnly,
     },
     {

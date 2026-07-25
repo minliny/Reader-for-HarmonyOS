@@ -57,7 +57,9 @@ export class FileSelectionHostAdapter {
   async select(mimeTypes: string[], allowsMultiple: boolean): Promise<ReaderFileSelectionResponse> {
     const documentPicker = new picker.DocumentViewPicker(this.context);
     const options = new picker.DocumentSelectOptions();
-    options.maxSelectNumber = allowsMultiple ? 32 : 1;
+    // Figma Library/LocalImportDialog (2657:916) explicitly caps the batch
+    // at 50. The platform picker remains the only selection surface.
+    options.maxSelectNumber = allowsMultiple ? 50 : 1;
     const filters: string[] = [];
     let canApplyExactFilter = true;
     for (let i = 0; i < mimeTypes.length; i++) {

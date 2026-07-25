@@ -142,7 +142,6 @@ export struct SettingsHomeSection {
     .border({ width: 1, color: ColorTokens.border })
     .borderRadius(DemoAliasTokens.radiusMd)
     .backgroundColor(DemoAliasTokens.surface)
-    .shadow({ radius: 26, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 8 })
     .alignItems(HorizontalAlign.Start)
   }
 }
@@ -238,7 +237,6 @@ struct SettingsMiniSwitch {
         .height(18)
         .borderRadius(DemoAliasTokens.radiusPill)
         .backgroundColor(DemoAliasTokens.surface)
-        .shadow({ radius: 3, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 1 })
       if (!this.on) {
         Blank().layoutWeight(1)
       }
@@ -504,7 +502,6 @@ struct SettingsDetailSection {
     .border({ width: 1, color: ColorTokens.border })
     .borderRadius(DemoAliasTokens.radiusMd)
     .backgroundColor(DemoAliasTokens.surface)
-    .shadow({ radius: 26, color: DemoAliasTokens.shadowSoftColor, offsetX: 0, offsetY: 8 })
     .alignItems(HorizontalAlign.Start)
   }
 }

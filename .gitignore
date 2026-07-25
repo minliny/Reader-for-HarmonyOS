@@ -12,6 +12,9 @@ entry/.test/
 evidence/
 .harmony-signing/
 signing.local.json5
+# Generated immediately before a build; the source/build snapshot is bundled in
+# that HAP and its signed-HAP sidecar remains inside the ignored build output.
+entry/src/main/resources/rawfile/provenance/
 
 # IDE / tooling local config (user-specific, not for git)
 .idea/

@@ -1,14 +1,14 @@
 {
   "schemaVersion": 2,
   "host": "harmonyos",
-  "readerUiVersion": "2.5.1",
+  "readerUiVersion": "3.1.1",
   "hostRequestSchemaVersion": "1.2.0",
-  "runtimeActionsSchemaVersion": 2,
-  "runtimeActionsSha256": "0ac249341d8de651314687d8352bc1c3f62d3778371ff500f1f0a025a64be82c",
+  "runtimeActionsSchemaVersion": 3,
+  "runtimeActionsSha256": "94151094c1025bd68a57f3201ee5abcd56fe4ff0877f23e8f163b32d81fe9f7a",
   "releaseIdentity": {
-    "releaseId": "39685dd10edf4435e973ab39a8235f05f2243c1c:297079f71c13130443fae2da4c2fb2156e82f558b2f0cf2927fb56cda28d4a54",
-    "sourceSha": "39685dd10edf4435e973ab39a8235f05f2243c1c",
-    "manifestSha256": "297079f71c13130443fae2da4c2fb2156e82f558b2f0cf2927fb56cda28d4a54",
+    "releaseId": "33d5352ee589ccf988852a111309414afc1d7d49:c87e1cbd93d9a7fcaa65053343defbc97a4dc857d8eb221c46ac20f57f205481",
+    "sourceSha": "33d5352ee589ccf988852a111309414afc1d7d49",
+    "manifestSha256": "c87e1cbd93d9a7fcaa65053343defbc97a4dc857d8eb221c46ac20f57f205481",
     "targetConfigSha256": "650d47ce1e2fb69e34afc29b0fb09d1aa73827b557580cc8d7daded8b40b695c"
   },
   "rollout": {
