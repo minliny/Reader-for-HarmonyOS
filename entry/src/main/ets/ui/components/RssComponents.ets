@@ -4,6 +4,7 @@
 import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
 import { RouteId } from '../../contract/generated/RouteTable';
+import { ReaderUiVisualTokens } from '../../contract/reader_ui/VisualAdmission';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 import { CoreRssSubscription, CoreRssItem } from '../store/ReaderUiState';
 import { CoreRuntime } from '../../bridge/CoreRuntime';
@@ -25,19 +26,21 @@ export function isSafeRssOriginalUrl(value: string): boolean {
 export struct RssSearchEntry {
   build() {
     Row() {
-      Image($r('app.media.ui_icon_search_dark')).width(24).height(24)
-      Text('搜索订阅源、文章标题（筛选尚未接入）')
+      Image($r('app.media.ui_icon_search_muted')).width(20).height(20)
+      Text('搜索订阅源、文章标题或分组')
+        .fontFamily(ReaderUiVisualTokens.rssControlFontFamily)
         .fontSize(14)
-        .fontColor(ColorTokens.muted)
+        .fontColor(ReaderUiVisualTokens.rssSearchPlaceholder)
         .margin({ left: 10 })
     }
     .width('100%')
-    .height(44)
+    .height(ReaderUiVisualTokens.rssSearchHeight)
     .padding({ left: 14, right: 14 })
-    .borderRadius(DemoAliasTokens.radiusPill)
-    .backgroundColor(DemoAliasTokens.surface)
-    .border({ width: 1, color: ColorTokens.border })
+    .borderRadius(999)
+    .backgroundColor(ReaderUiVisualTokens.rssSearchSurface)
+    .border({ width: 1, color: ReaderUiVisualTokens.rssSearchBorder })
     .alignItems(VerticalAlign.Center)
+    .accessibilityText('搜索订阅源、文章标题或分组：当前 Figma 未提供可进入的搜索目标')
   }
 }
 
@@ -46,33 +49,23 @@ export struct RssSearchEntry {
 // explicit unavailable state on its legacy routes.
 @Component
 export struct RssModeRow {
-  private modes: string[] = ['订阅管理', '全部'];
-  @StorageProp('reader.displayedRouteId') routeId: string = 'rss';
-
-  private activeMode(): string {
-    if (this.routeId === 'rss-subscription-management') return '订阅管理';
-    return '全部';
-  }
-
-  private routeFor(mode: string): RouteId {
-    if (mode === '订阅管理') return 'rss-subscription-management';
-    return 'rss-all';
-  }
+  private modes: string[] = ['源列表', '全部', '收藏', '规则订阅'];
 
   build() {
     Scroll() {
       Row() {
         ForEach(this.modes, (m: string) => {
           Text(m)
-            .fontSize(12)
+            .fontFamily(ReaderUiVisualTokens.rssControlFontFamily)
+            .fontSize(ReaderUiVisualTokens.rssControlLabelSize)
             .fontWeight(850)
-            .fontColor(m === this.activeMode() ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
-            .backgroundColor(m === this.activeMode() ? ColorTokens.primary : ColorTokens.metaBg)
-            .height(30)
+            .fontColor(m === '源列表' ? ReaderUiVisualTokens.rssOnPrimary : ReaderUiVisualTokens.rssInactiveChipInk)
+            .backgroundColor(m === '源列表' ? ReaderUiVisualTokens.rssPrimary : ReaderUiVisualTokens.rssInactiveChipSurface)
+            .height(ReaderUiVisualTokens.rssModeHeight)
             .padding({ left: 10, right: 10 })
-            .borderRadius(DemoAliasTokens.radiusPill)
+            .borderRadius(999)
             .margin({ right: 6 })
-            .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: this.routeFor(m) }))
+            .accessibilityText(`${m}${m === '源列表' ? '，当前页面' : '，当前 Figma 未提供可进入的目标'}`)
         }, (m: string) => m)
       }
     }
@@ -82,112 +75,149 @@ export struct RssModeRow {
   }
 }
 
-// .fd-rss-source-overview (simplified): card — header (h2 "订阅源" + count) +
-//   source-overview-list rows (icon 32 + name/meta + count + badge).
+// Current Figma RSS master: subscription header, filter field and truthful
+// Core-projected subscription rows. Actions without an admitted Figma target
+// remain present as visuals but deliberately inert.
 @Component
 export struct RssSourceOverview {
   @StorageProp('reader.rssSubscriptions') coreSources: CoreRssSubscription[] = [];
   @StorageProp('reader.rssLoaded') rssLoaded: boolean = false;
-  @StorageProp('reader.rssRefreshStatus') rssRefreshStatus: string = 'idle';
-  @StorageProp('reader.rssRefreshMessage') rssRefreshMessage: string = '';
 
-  private displayedSources(): CoreRssSubscription[] {
-    return this.coreSources;
+  private sourceTitle(source: CoreRssSubscription): string {
+    return source.title.length > 0 ? source.title : source.feedUrl;
+  }
+
+  private sourceMeta(source: CoreRssSubscription): string {
+    return source.enabled ? '已启用' : '已暂停';
   }
 
   build() {
     Column() {
       Row() {
         Text('订阅源')
-          .fontSize(15)
-          .fontColor(ColorTokens.ink)
+          .fontFamily(ReaderUiVisualTokens.rssControlFontFamily)
+          .fontSize(ReaderUiVisualTokens.rssTitleSize)
+          .fontWeight(700)
+          .fontColor(ReaderUiVisualTokens.rssHeaderInk)
         Blank()
-        Text('管理')
-          .fontSize(11)
-          .fontWeight(850)
-          .fontColor(ColorTokens.primaryDark)
-          .padding({ left: 9, right: 9, top: 6, bottom: 6 })
-          .borderRadius(DemoAliasTokens.radiusPill)
-          .backgroundColor(ColorTokens.metaBg)
-          .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'rss-subscription-management' }))
-        Text('刷新')
-          .fontSize(11)
-          .fontWeight(850)
-          .fontColor(ColorTokens.primaryDark)
-          .padding({ left: 9, right: 9, top: 6, bottom: 6 })
-          .borderRadius(DemoAliasTokens.radiusPill)
-          .backgroundColor(ColorTokens.metaBg)
-          .margin({ left: 6 })
-          .onClick(() => ReaderUiStore.dispatch({ type: 'rss-refresh' }))
-        Text('添加')
-          .fontSize(11)
-          .fontWeight(850)
-          .fontColor(ColorTokens.primaryDark)
-          .padding({ left: 9, right: 9, top: 6, bottom: 6 })
-          .borderRadius(DemoAliasTokens.radiusPill)
-          .backgroundColor(ColorTokens.metaBg)
-          .margin({ left: 6 })
-          .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'rss-subscription-management' }))
+        Row() {
+          Text('导入')
+            .fontFamily(ReaderUiVisualTokens.rssControlFontFamily)
+            .fontSize(ReaderUiVisualTokens.rssControlLabelSize)
+            .fontWeight(850)
+            .fontColor(ReaderUiVisualTokens.rssInactiveChipInk)
+        }
+        .width(65)
+        .height(30)
+        .borderRadius(999)
+        .backgroundColor(ReaderUiVisualTokens.rssInactiveChipSurface)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+        .accessibilityText('导入订阅源：当前 Figma 未提供可进入的目标')
+        Row() {
+          Text('新建')
+            .fontFamily(ReaderUiVisualTokens.rssControlFontFamily)
+            .fontSize(ReaderUiVisualTokens.rssControlLabelSize)
+            .fontWeight(850)
+            .fontColor(ReaderUiVisualTokens.rssInactiveChipInk)
+        }
+        .width(65)
+        .height(30)
+        .borderRadius(999)
+        .backgroundColor(ReaderUiVisualTokens.rssInactiveChipSurface)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+        .margin({ left: 6 })
+        .accessibilityText('新建订阅源：当前 Figma 未提供可进入的目标')
       }
       .width('100%')
-      .margin({ bottom: 8 })
-      if (this.rssRefreshStatus !== 'idle') {
-        Text(this.rssRefreshMessage.length > 0 ? this.rssRefreshMessage
-          : (this.rssRefreshStatus === 'refreshing' ? '正在刷新启用订阅源…' : 'RSS 刷新状态已更新。'))
-          .fontSize(12)
-          .fontColor(this.rssRefreshStatus === 'error' ? ColorTokens.statusWarn
-            : (this.rssRefreshStatus === 'success' ? ColorTokens.statusGood : ColorTokens.muted))
-          .width('100%')
-          .padding({ top: 6, bottom: 8 })
+      .height(ReaderUiVisualTokens.rssSourceHeaderHeight)
+      .padding({ left: 10, right: 10 })
+      .border({ width: 1, color: ReaderUiVisualTokens.rssCardBorder })
+      .borderRadius(8)
+      .backgroundColor(ReaderUiVisualTokens.rssCardSurface)
+      .alignItems(VerticalAlign.Center)
+      Row() {
+        Text('筛选')
+          .fontFamily(ReaderUiVisualTokens.rssControlFontFamily)
+          .fontSize(ReaderUiVisualTokens.rssControlLabelSize)
+          .fontWeight(900)
+          .fontColor(ReaderUiVisualTokens.rssInactiveChipInk)
+        Blank().layoutWeight(1)
+        Text('全部')
+          .fontFamily(ReaderUiVisualTokens.rssControlFontFamily)
+          .fontSize(ReaderUiVisualTokens.rssMetaSize)
+          .fontWeight(800)
+          .fontColor(ReaderUiVisualTokens.rssMuted)
+        Text('⌄')
+          .fontFamily(ReaderUiVisualTokens.rssControlFontFamily)
+          .fontSize(16)
+          .fontColor(ReaderUiVisualTokens.rssInactiveChipInk)
+          .margin({ left: 7 })
       }
-      if (!this.rssLoaded) {
-        Text('正在读取 Core 订阅…')
-          .fontSize(12)
-          .fontColor(ColorTokens.muted)
-          .width('100%')
-          .padding({ top: 12, bottom: 12 })
-      } else if (this.displayedSources().length === 0) {
-        Text('暂无订阅源。新增 Feed URL 后由 Core 管理刷新与未读数。')
-          .fontSize(12)
-          .fontColor(ColorTokens.muted)
-          .width('100%')
-          .padding({ top: 12, bottom: 12 })
-      } else {
-        ForEach(this.displayedSources(), (s: CoreRssSubscription, i: number) => {
+      .width('100%')
+      .height(34)
+      .padding({ left: 10, right: 10 })
+      .border({ width: 1, color: ReaderUiVisualTokens.rssFieldBorder })
+      .borderRadius(8)
+      .backgroundColor(ReaderUiVisualTokens.rssFieldSurface)
+      .alignItems(VerticalAlign.Center)
+      .margin({ top: ReaderUiVisualTokens.rssSectionGap })
+      Column() {
+        if (this.rssLoaded) {
+          ForEach(this.coreSources, (source: CoreRssSubscription, index: number) => {
           Row() {
-            Stack()
-              .width(32).height(32)
-              .borderRadius(DemoAliasTokens.radiusPill)
-              .backgroundColor(ColorTokens.metaBg)
+            Stack({ alignContent: Alignment.Center }) {
+              Image($r('app.media.ui_icon_rss_primary')).width(16).height(16)
+            }
+              .width(ReaderUiVisualTokens.rssSourceIconSize)
+              .height(ReaderUiVisualTokens.rssSourceIconSize)
+              .borderRadius(16)
+              .backgroundColor(ReaderUiVisualTokens.rssSourceIconSurface)
             Column() {
-              Text(s.title)
-                .fontSize(13)
-                .fontColor(ColorTokens.ink)
-              Text(s.feedUrl)
-                .fontSize(10)
-                .fontColor(ColorTokens.muted)
+              Text(this.sourceTitle(source))
+                .fontFamily(ReaderUiVisualTokens.rssControlFontFamily)
+                .fontSize(ReaderUiVisualTokens.rssSourceTitleSize)
+                .fontWeight(700)
+                .fontColor(ReaderUiVisualTokens.rssHeaderInk)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+              Text(this.sourceMeta(source))
+                .fontFamily(ReaderUiVisualTokens.rssControlFontFamily)
+                .fontSize(ReaderUiVisualTokens.rssMetaSize)
+                .fontColor(ReaderUiVisualTokens.rssMuted)
                 .margin({ top: 3 })
             }
             .alignItems(HorizontalAlign.Start)
             .layoutWeight(1)
             .margin({ left: 8 })
-            Text(`${s.unreadCount}`)
+            Text(`${source.unreadCount}`)
+              .fontFamily(ReaderUiVisualTokens.rssControlFontFamily)
               .fontSize(16)
               .fontWeight(900)
-              .fontColor(ColorTokens.primaryDark)
+              .fontColor(ReaderUiVisualTokens.rssHeaderInk)
+            Circle()
+              .width(7)
+              .height(7)
+              .fill(source.enabled ? ReaderUiVisualTokens.rssSourceStatusGood : ReaderUiVisualTokens.rssSourceStatusWarn)
+              .margin({ left: 8 })
           }
           .width('100%')
-          .padding({ top: 9, bottom: 9, left: 10, right: 10 })
-          .border(i > 0 ? { width: { top: 1 }, color: ColorTokens.border } : { width: 0 })
+          .height(ReaderUiVisualTokens.rssSourceRowHeight)
+          .padding({ left: 10, right: 10 })
+          .border(index > 0 ? { width: { top: 1 }, color: ReaderUiVisualTokens.rssCardBorder } : { width: 0 })
           .alignItems(VerticalAlign.Center)
-        }, (s: CoreRssSubscription, i: number) => `${s.subscriptionId}-${i}`)
+          }, (source: CoreRssSubscription, index: number) => `${source.subscriptionId}-${index}`)
+        }
       }
+      .width('100%')
+      .margin({ top: ReaderUiVisualTokens.rssSectionGap })
+      .border({ width: 1, color: ReaderUiVisualTokens.rssCardBorder })
+      .borderRadius(8)
+      .backgroundColor(ReaderUiVisualTokens.rssCardSurface)
+      .clip(true)
     }
     .width('100%')
-    .padding(10)
-    .border({ width: 1, color: ColorTokens.border })
-    .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(DemoAliasTokens.surface)
   }
 }
 
@@ -238,135 +268,78 @@ struct RssCoreFilterControls {
   }
 }
 
-// .fd-rss-article-section: Core-backed article list. A read row is retained
-// in the all-items response and only disappears when Core receives an
-// unreadOnly=true query.
+// Current Figma RSS page shows the recent-unread section below the subscription
+// list.  The static Figma examples never become app data: only unread Core
+// records are projected here, and article detail stays inert until Figma has a
+// corresponding admitted destination.
 @Component
 export struct RssArticleSection {
-  @Prop title: string = '最近条目';
-  @Prop actionLabel: string = '查看全部';
-  @Prop actionRoute: string = 'rss-all';
+  @Prop title: string = '最近未读';
+  // Legacy blocked routes still instantiate this component with these props.
+  // Keep the schema-compatible inputs but never turn them into unadmitted UI.
+  @Prop actionLabel: string = '';
+  @Prop actionRoute: string = '';
   @StorageProp('reader.rssItems') coreArticles: CoreRssItem[] = [];
   @StorageProp('reader.rssLoaded') rssLoaded: boolean = false;
-  @StorageProp('reader.rssLoading') rssLoading: boolean = false;
-  @StorageProp('reader.rssLoadError') rssLoadError: string = '';
-  @StorageProp('reader.rssItemFilter') itemFilter: string = 'all';
 
-  private displayedArticles(): CoreRssItem[] {
-    return this.coreArticles;
+  private unreadArticles(): CoreRssItem[] {
+    const rows: CoreRssItem[] = [];
+    for (let index = 0; index < this.coreArticles.length; index += 1) {
+      if (!this.coreArticles[index].read) rows.push(this.coreArticles[index]);
+    }
+    return rows;
   }
 
   build() {
     Column() {
       Row() {
         Text(this.title)
-          .fontSize(15)
-          .fontColor(ColorTokens.ink)
-        Blank()
-        Text(this.actionLabel)
-          .fontSize(11)
-          .fontWeight(850)
-          .fontColor(ColorTokens.primaryDark)
-          .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: this.actionRoute as RouteId }))
+          .fontFamily(ReaderUiVisualTokens.rssControlFontFamily)
+          .fontSize(ReaderUiVisualTokens.rssTitleSize)
+          .fontWeight(700)
+          .fontColor(ReaderUiVisualTokens.rssHeaderInk)
       }
       .width('100%')
       .margin({ bottom: 6 })
-      RssCoreFilterControls()
-        .margin({ bottom: 8 })
-      if (this.rssLoading) {
-        Text(`正在从 Core 读取${this.itemFilter === 'unread' ? '未读' : '全部'}条目…`)
-          .fontSize(12)
-          .fontColor(ColorTokens.muted)
-          .width('100%')
-          .padding({ bottom: 8 })
-      }
-      if (this.rssLoadError.length > 0) {
-        Row() {
-          Text(`读取失败：${this.rssLoadError}`)
-            .fontSize(12)
-            .fontColor(ColorTokens.statusWarn)
-            .layoutWeight(1)
-            .maxLines(2)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-          Text('重试')
-            .fontSize(12)
-            .fontWeight(800)
-            .fontColor(ColorTokens.primaryDark)
-            .margin({ left: 8 })
-            .onClick(() => ReaderUiStore.dispatch({ type: 'rss-load' }))
-        }
-        .width('100%')
-        .padding({ top: 8, bottom: 8, left: 10, right: 10 })
-        .border({ width: 1, color: ColorTokens.border })
-        .borderRadius(DemoAliasTokens.radiusMd)
-        .backgroundColor(ColorTokens.metaBg)
-        .margin({ bottom: 8 })
-      }
-      if (!this.rssLoaded && !this.rssLoading && this.rssLoadError.length === 0) {
-        Text('等待 Core 返回订阅与条目。')
-          .fontSize(12)
-          .fontColor(ColorTokens.muted)
-          .width('100%')
-          .padding({ top: 12, bottom: 12 })
-      } else if (this.rssLoaded && this.displayedArticles().length === 0 && !this.rssLoading) {
-        Text(this.itemFilter === 'unread'
-          ? 'Core 当前没有未读条目。'
-          : 'Core 当前没有缓存的 RSS 条目；可刷新启用订阅源后重试。')
-          .fontSize(12)
-          .fontColor(ColorTokens.muted)
-          .width('100%')
-          .padding({ top: 12, bottom: 12 })
-      }
-      if (this.displayedArticles().length > 0) {
-        ForEach(this.displayedArticles(), (a: CoreRssItem, i: number) => {
+      if (this.rssLoaded && this.unreadArticles().length > 0) {
+        Column() {
+          ForEach(this.unreadArticles(), (article: CoreRssItem, index: number) => {
           Row() {
             Stack({ alignContent: Alignment.Center }) {
-              Circle().width(7).height(7).fill(a.read ? ColorTokens.border : ColorTokens.accent)
+              Circle().width(7).height(7).fill(ReaderUiVisualTokens.rssUnreadIndicator)
             }
             .width(10)
             .height(10)
             Column() {
-              Text(a.title)
-                .fontSize(13)
-                .fontColor(a.read ? ColorTokens.muted : ColorTokens.ink)
-              Text(`${a.sourceTitle}${a.pubDate.length > 0 ? ' · ' + a.pubDate : ''}`)
-                .fontSize(10)
-                .fontColor(ColorTokens.muted)
-                .margin({ top: 4 })
-              Text(a.description)
-                .fontSize(11)
-                .fontColor(ColorTokens.muted)
-                .maxLines(2)
+              Text(article.title)
+                .fontFamily(ReaderUiVisualTokens.rssControlFontFamily)
+                .fontSize(ReaderUiVisualTokens.rssSourceTitleSize)
+                .fontWeight(700)
+                .fontColor(ReaderUiVisualTokens.rssHeaderInk)
+                .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
-                .margin({ top: 5 })
+              Text(`${article.sourceTitle}${article.pubDate.length > 0 ? ' · ' + article.pubDate : ''}`)
+                .fontFamily(ReaderUiVisualTokens.rssControlFontFamily)
+                .fontSize(ReaderUiVisualTokens.rssMetaSize)
+                .fontColor(ReaderUiVisualTokens.rssMuted)
+                .margin({ top: 4 })
             }
             .alignItems(HorizontalAlign.Start)
             .layoutWeight(1)
             .margin({ left: 8 })
-            Column({ space: 5 }) {
-              Text(a.read ? '已读' : '未读')
-                .fontSize(10)
-                .fontColor(a.read ? ColorTokens.muted : ColorTokens.primaryDark)
-              Image($r('app.media.reader_icon_more_dark')).width(18).height(18)
-            }
-            .alignItems(HorizontalAlign.End)
           }
           .width('100%')
-          .padding({ top: 10, bottom: 10, left: 12, right: 12 })
-          .border(i > 0 ? { width: { top: 1 }, color: ColorTokens.border } : { width: 0 })
+          .height(ReaderUiVisualTokens.rssSourceRowHeight)
+          .padding({ left: 12, right: 12 })
+          .border(index > 0 ? { width: { top: 1 }, color: ReaderUiVisualTokens.rssCardBorder } : { width: 0 })
           .alignItems(VerticalAlign.Center)
-          .onClick(() => {
-            RssSelectionProjection.write(a);
-            ReaderUiStore.dispatch({ type: 'route-push', id: 'rss-detail' });
-            if (a.guid.length > 0) {
-              ReaderUiStore.dispatch({
-                type: 'rss-item-open',
-                rssGuid: a.guid,
-                rssSubscriptionId: a.subscriptionId,
-              });
-            }
-          })
-        }, (a: CoreRssItem, i: number) => `${a.guid}-${i}`)
+          }, (article: CoreRssItem, index: number) => `${article.subscriptionId}-${article.guid}-${index}`)
+        }
+        .width('100%')
+        .border({ width: 1, color: ReaderUiVisualTokens.rssCardBorder })
+        .borderRadius(8)
+        .backgroundColor(ReaderUiVisualTokens.rssCardSurface)
+        .clip(true)
       }
     }
     .width('100%')

@@ -245,12 +245,31 @@ const referencedComponentTypes = (graph.componentCatalog || [])
 const explicitGapComponentTypes = (graph.componentCatalog || [])
   .filter((entry) => entry.status === 'explicit-gap')
   .map((entry) => entry.type);
-const missingRendererMappings = referencedComponentTypes.filter((type) => !rendererMappings.has(type));
+// The generated graph deliberately remains a complete historical ledger, but
+// a component whose every instance is explicitly retired must not demand a
+// renderer. The retirement registry is the only exception: it records the
+// exact route/component pairs and prevents stale Source Switch matrices from
+// reappearing just to satisfy a coverage count.
+const retiredOnlyReferencedComponentTypes = new Set(referencedComponentTypes.filter((type) => {
+  const instances = canonicalComponentRecords.filter((record) => record.component.type === type);
+  return instances.length > 0 && instances.every((record) =>
+    retiredComponentKeys.has(componentRecordKey(record.routeId, record.component.id)));
+}));
+const activeReferencedComponentTypes = referencedComponentTypes.filter((type) =>
+  !retiredOnlyReferencedComponentTypes.has(type));
+const missingRendererMappings = activeReferencedComponentTypes.filter((type) => !rendererMappings.has(type));
 if (missingRendererMappings.length > 0) {
   failures.push(`missing renderer mappings: ${missingRendererMappings.join(',')}`);
 }
-if (!rendererSource.includes('Reader UI 组件契约漂移')) {
-  failures.push('unknown ComponentType is not visibly fail-closed');
+// An unknown generated type has no current Figma authority. It must disappear
+// from the shipped visual tree rather than showing a native diagnostic card:
+// diagnostics belong to developer evidence, never to a user-facing fallback.
+if (!rendererSource.includes('Unknown component types have no current Figma visual authority') ||
+  !rendererSource.includes('Column().width(0).height(0)')) {
+  failures.push('unknown ComponentType is not strictly inert fail-closed');
+}
+if (rendererSource.includes('Reader UI 组件契约漂移')) {
+  failures.push('unknown ComponentType must not render a local diagnostic card');
 }
 
 if (!fs.existsSync(COVERAGE_REGISTRY)) {
@@ -261,10 +280,12 @@ let faithfulCoverageCount = 0;
 let genericCoverageCount = 0;
 let partialCoverageCount = 0;
 let insufficientCoverageCount = 0;
+let figmaUnboundStateCoverageCount = 0;
 let faithfulInstanceCount = 0;
 let genericInstanceCount = 0;
 let partialInstanceCount = 0;
 let insufficientInstanceCount = 0;
+let figmaUnboundStateInstanceCount = 0;
 let retiredRuntimeInstanceCount = 0;
 let buttonCount = 0;
 let boundButtonCount = 0;
@@ -296,6 +317,10 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
     coverageSource,
     'READER_SCREEN_GRAPH_LIVE_STATE_PROJECTION_TYPES',
   );
+  const declaredFigmaUnboundState = declaredStringArray(
+    coverageSource,
+    'READER_SCREEN_GRAPH_FIGMA_UNBOUND_STATE_TYPES',
+  );
   const partialBody = requiredMatch(
     coverageSource,
     /export const READER_SCREEN_GRAPH_PARTIAL_ENTRIES:[^=]+?= \[([\s\S]*?)\n\];/,
@@ -307,9 +332,15 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
   const actualReferencedDispatchSet = new Set(
     [...rendererMappings].filter((type) => referencedSet.has(type)),
   );
+  // Coverage retains the immutable generated catalog, including components
+  // that are retired at runtime. Treat those exact retired-only types as
+  // accounted for here, but never as renderer work.
+  for (const type of retiredOnlyReferencedComponentTypes) actualReferencedDispatchSet.add(type);
   const genericSet = new Set(declaredGeneric);
   const liveStateProjectionSet = new Set(declaredLiveStateProjection);
   const partialSet = new Set(declaredPartial);
+  const figmaUnboundStateSet = new Set(declaredFigmaUnboundState);
+  const expectedFigmaUnboundStateSet = new Set(['Loading', 'Empty', 'ErrorState', 'Offline']);
 
   if (!sameStringSet(declaredDispatchSet, actualReferencedDispatchSet)) {
     failures.push('coverage dispatch registry does not match ViewStateRenderer referenced branches');
@@ -323,6 +354,15 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
   }
   for (const type of partialSet) {
     if (!referencedSet.has(type)) failures.push(`partial coverage type is not canonical referenced: ${type}`);
+  }
+  if (!sameStringSet(figmaUnboundStateSet, expectedFigmaUnboundStateSet)) {
+    failures.push('Figma-unbound state coverage must list exactly Loading, Empty, ErrorState, and Offline');
+  }
+  for (const type of figmaUnboundStateSet) {
+    if (!referencedSet.has(type)) failures.push(`Figma-unbound state type is not canonical referenced: ${type}`);
+    if (genericSet.has(type) || partialSet.has(type)) {
+      failures.push(`Figma-unbound state type cannot also be generic or partial: ${type}`);
+    }
   }
   for (const type of liveStateProjectionSet) {
     if (!referencedSet.has(type)) failures.push(`live-state projection type is not canonical referenced: ${type}`);
@@ -419,23 +459,29 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
     readingTextMetadataSource.includes('ReaderUiStore.dispatch')) {
     failures.push('ReadingTextFlow canonical evidence must remain read-only while native Core content stays authoritative');
   }
-  const promotedStatePrimitiveTypes = ['Loading', 'ErrorState', 'Offline'];
-  for (const type of promotedStatePrimitiveTypes) {
-    const branch = branchBodies.get(type) || '';
-    if (!branch.includes('this.statePrimitiveTitle(component)') ||
-      !branch.includes('this.statePrimitiveMessage(component)')) {
-      failures.push(`${type} faithful adapter must consume canonical title/message through the state primitive adapter`);
-    }
-  }
-  const errorStateBranch = branchBodies.get('ErrorState') || '';
-  if (!errorStateBranch.includes('retryEnabled: this.statePrimitiveRetryEnabled(component)')) {
-    failures.push('ErrorState canonical projection must disable the primitive implicit retry action');
+  const genericStatePrimitiveTypes = ['Loading', 'ErrorState', 'Offline'];
+  const genericStateBranchStart = rendererSource.indexOf(
+    "} else if (component.type === 'Loading' || component.type === 'Empty' ||",
+  );
+  const genericStateBranchEnd = rendererSource.indexOf(
+    "} else if (component.type === 'ContinueReadingCard')",
+    genericStateBranchStart,
+  );
+  const genericStateBranch = genericStateBranchStart >= 0 && genericStateBranchEnd > genericStateBranchStart
+    ? rendererSource.slice(genericStateBranchStart, genericStateBranchEnd)
+    : '';
+  if (!genericStateBranch.includes('These old generated primitives have no component-level Figma master') ||
+    !genericStateBranch.includes('Column().width(0).height(0)') ||
+    genericStateBranch.includes('this.statePrimitiveTitle(component)') ||
+    genericStateBranch.includes('this.statePrimitiveMessage(component)') ||
+    genericStateBranch.includes('ErrorState({')) {
+    failures.push('Figma-unbound generated state primitives must remain visually inert; route-state bindings require their dedicated Figma component');
   }
   if (!fs.existsSync(STATE_PRIMITIVE_ADAPTER)) {
     failures.push('missing exact ScreenGraph state primitive adapter');
   } else {
     const adapterSource = fs.readFileSync(STATE_PRIMITIVE_ADAPTER, 'utf8');
-    if (!promotedStatePrimitiveTypes.every((type) => adapterSource.includes(`component.type !== '${type}'`)) ||
+    if (!genericStatePrimitiveTypes.every((type) => adapterSource.includes(`component.type !== '${type}'`)) ||
       !adapterSource.includes('component.children.length !== 0') ||
       !adapterSource.includes('component.bindings.length !== 0') ||
       !adapterSource.includes('component.props.label') ||
@@ -1165,21 +1211,10 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
       failures.push('Empty adapter must remain Store-free, strict-leaf, and state-evidence-only');
     }
   }
-  const canonicalEmptyStart = rendererSource.indexOf('@Builder renderCanonicalEmpty');
-  const canonicalEmptyEnd = rendererSource.indexOf('  @Builder renderDebuggedComponent', canonicalEmptyStart);
-  const canonicalEmptySource = canonicalEmptyStart >= 0 && canonicalEmptyEnd > canonicalEmptyStart
-    ? rendererSource.slice(canonicalEmptyStart, canonicalEmptyEnd)
-    : '';
-  const emptyBranch = branchBodies.get('Empty') || '';
-  if (!canonicalEmptySource.includes('Text(projection.title)') ||
-    !canonicalEmptySource.includes('projection.message !== projection.title') ||
-    !canonicalEmptySource.includes('Text(projection.message)') ||
-    !canonicalEmptySource.includes('Empty 契约漂移') ||
-    canonicalEmptySource.includes('.onClick(') ||
-    canonicalEmptySource.includes('ReaderUiStore.dispatch') ||
-    !emptyBranch.includes('ReaderUIScreenGraphEmptyAdapter.project(component)') ||
+  if (!genericStateBranch.includes("component.type === 'Empty'") ||
+    !genericStateBranch.includes('Column().width(0).height(0)') ||
     genericSet.has('Empty') || partialSet.has('Empty')) {
-    failures.push('Empty faithful renderer must consume strict title/message state projection without an action callback');
+    failures.push('Figma-unbound Empty primitive must remain semantic evidence only, not a locally drawn page');
   }
   // Error and Permission have different strict schemas even though both are
   // contract-owned terminal leaves. Error exposes retryability as inert state;
@@ -1342,10 +1377,10 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
     genericSet.has('Permission') || partialSet.has('Permission')) {
     failures.push('Permission faithful renderer must consume exact denial evidence as display-only state');
   }
-  // Promote only exact contract-owned state leaves. Visual text is consumed by
-  // the dedicated ArkUI primitive; uiEvent fields are state evidence, never an
-  // inferred tap action. Any children/bindings/authority drift reopens audit.
-  const expectedStatePrimitivePromotions = new Map([
+  // These remain exact contract-owned state leaves, but current Figma has no
+  // admitted generic state master. Keep their schema/evidence frozen while
+  // proving they cannot be promoted into an invented native state screen.
+  const expectedFigmaUnboundStateEvidence = new Map([
     ['Loading', { count: 9, evidence: 3 }],
     ['ErrorState', { count: 5, evidence: 5 }],
     ['Offline', { count: 4, evidence: 2 }],
@@ -1353,7 +1388,7 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
   const allowedStatePrimitiveProps = new Set([
     'title', 'label', 'message', 'uiEvent', 'uiEventPayload', 'uiEventTrigger',
   ]);
-  for (const [type, expected] of expectedStatePrimitivePromotions) {
+  for (const [type, expected] of expectedFigmaUnboundStateEvidence) {
     const instances = nodes.filter((node) => node.type === type);
     const evidenceCount = instances.reduce(
       (count, instance) => count + (instance.stateEventEvidence || []).length,
@@ -1375,9 +1410,10 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
         JSON.stringify(canonicalValue(evidence[0].payload || {})) !==
           JSON.stringify(canonicalValue(instance.props.uiEventPayload || {}));
     });
-    if (genericSet.has(type) || instances.length !== expected.count ||
+    if (!figmaUnboundStateSet.has(type) || genericSet.has(type) || partialSet.has(type) ||
+      instances.length !== expected.count ||
       evidenceCount !== expected.evidence || invalid) {
-      failures.push(`${type} faithful state primitive evidence changed; re-audit props, state evidence, or action ownership`);
+      failures.push(`${type} Figma-unbound state evidence changed; re-audit props, state evidence, or source admission`);
     }
   }
   // ScreenGraph 1.2 makes composite ownership explicit. These four types are
@@ -1507,7 +1543,7 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
     failures.push('ReaderBase canonical ownership evidence changed; re-audit host-composite theme/text/info, TapZones targets, and control-layer authority');
   }
   const derivedPartialSet = new Set();
-  for (const type of referencedComponentTypes) {
+  for (const type of activeReferencedComponentTypes) {
     const instances = activeRuntimeNodes.filter((node) => node.type === type);
     if (instances.length === 0) continue;
     const hostComposite = instances.length > 0 &&
@@ -1518,7 +1554,7 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
       derivedPartialSet.add(type);
       continue;
     }
-    if (expectedStatePrimitivePromotions.has(type)) continue;
+    if (figmaUnboundStateSet.has(type)) continue;
     // Dialog props/children are consumed through the exact projection checked
     // above; its remaining gap is interaction parity, tracked as generic.
     if (type === 'Dialog') continue;
@@ -1562,9 +1598,13 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
   const activeReferencedTypes = referencedComponentTypes.filter((type) => activeRuntimeTypes.has(type));
   const activeGenericSet = new Set([...genericSet].filter((type) => activeRuntimeTypes.has(type)));
   const activePartialSet = new Set([...partialSet].filter((type) => activeRuntimeTypes.has(type)));
+  const activeFigmaUnboundStateSet = new Set(
+    [...figmaUnboundStateSet].filter((type) => activeRuntimeTypes.has(type)),
+  );
   const insufficientSet = new Set(activeReferencedTypes.filter((type) => !declaredDispatchSet.has(type)));
   const faithfulSet = new Set(activeReferencedTypes.filter(
-    (type) => declaredDispatchSet.has(type) && !genericSet.has(type) && !partialSet.has(type),
+    (type) => declaredDispatchSet.has(type) && !genericSet.has(type) && !partialSet.has(type) &&
+      !figmaUnboundStateSet.has(type),
   ));
   const sumInstances = (types) => [...types].reduce(
     (sum, type) => sum + (activeInstanceCounts.get(type) || 0),
@@ -1574,10 +1614,16 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
   genericCoverageCount = activeGenericSet.size;
   partialCoverageCount = activePartialSet.size;
   insufficientCoverageCount = insufficientSet.size;
+  figmaUnboundStateCoverageCount = activeFigmaUnboundStateSet.size;
   faithfulInstanceCount = sumInstances(faithfulSet);
   genericInstanceCount = sumInstances(activeGenericSet);
   partialInstanceCount = sumInstances(activePartialSet);
   insufficientInstanceCount = sumInstances(insufficientSet);
+  figmaUnboundStateInstanceCount = sumInstances(activeFigmaUnboundStateSet);
+  if (faithfulInstanceCount + genericInstanceCount + partialInstanceCount +
+    insufficientInstanceCount + figmaUnboundStateInstanceCount !== activeRuntimeRecords.length) {
+    failures.push('active ScreenGraph coverage must partition every non-retired canonical instance');
+  }
   retiredRuntimeInstanceCount = canonicalComponentRecords.length - activeRuntimeRecords.length;
 }
 
@@ -1600,6 +1646,25 @@ for (const key of Object.keys(actual)) {
   if (actual[key] !== declared[key]) failures.push(`${key} declared=${declared[key]} actual=${actual[key]}`);
 }
 
+// Coverage quality baseline — prevents silent faithful→partial regression.
+// Only an explicitly approved Design Delta may update these numbers.  A green
+// screen-graph gate must never imply that quality held; it only proves
+// structural completeness.  This baseline closes that gap.
+const COVERAGE_QUALITY_BASELINE = {
+  faithfulInstanceFloor: 285,
+  partialInstanceCeiling: 52,
+};
+if (faithfulInstanceCount < COVERAGE_QUALITY_BASELINE.faithfulInstanceFloor) {
+  failures.push(
+    `faithfulInstanceCount=${faithfulInstanceCount} below baseline floor ${COVERAGE_QUALITY_BASELINE.faithfulInstanceFloor} — coverage quality regression; only an approved Design Delta may lower this`,
+  );
+}
+if (partialInstanceCount > COVERAGE_QUALITY_BASELINE.partialInstanceCeiling) {
+  failures.push(
+    `partialInstanceCount=${partialInstanceCount} above baseline ceiling ${COVERAGE_QUALITY_BASELINE.partialInstanceCeiling} — coverage quality regression; only an approved Design Delta may raise this`,
+  );
+}
+
 if (failures.length > 0) {
   console.error(`[screen-graph-consumer] FAIL sourceSha256=${sourceSha} canonicalSha256=${canonicalSha}`);
   for (const failure of failures) console.error(`- ${failure}`);
@@ -1620,8 +1685,10 @@ console.log(
   `errors=${errorCount}/${errorStateEvidenceCount}evidence ` +
   `permissions=${permissionCount}/${permissionStateEvidenceCount}evidence ` +
   `coverage=${faithfulCoverageCount}faithful+${genericCoverageCount}generic+` +
-  `${partialCoverageCount}partial+${insufficientCoverageCount}insufficient ` +
+  `${partialCoverageCount}partial+${insufficientCoverageCount}insufficient+` +
+  `${figmaUnboundStateCoverageCount}figmaUnboundState ` +
   `instances=${faithfulInstanceCount}faithful+${genericInstanceCount}generic+` +
-  `${partialInstanceCount}partial+${insufficientInstanceCount}insufficient ` +
+  `${partialInstanceCount}partial+${insufficientInstanceCount}insufficient+` +
+  `${figmaUnboundStateInstanceCount}figmaUnboundState ` +
   `retiredRuntimeInstances=${retiredRuntimeInstanceCount}`
 );

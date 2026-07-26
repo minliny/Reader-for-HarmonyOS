@@ -1,15 +1,11 @@
 // BookshelfComponents — bookshelf skeleton ported from render-runtime.js
 // mainTabBookshelf() DOM: .fd-continue-card → .fd-bookshelf-shelf-section
-// (wrapper, gap 10: .fd-section-head [h2 + 4 view-action buttons] + .fd-book-grid).
+// (wrapper, gap 10: .fd-section-head [h2 + 5 view-action buttons] + .fd-book-grid).
 // NO ShelfChipGroup on bookshelf (the chips were invented, not in demo).
-import { ColorTokens } from '../../contract/generated/ColorTokens';
-import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
-import { ZIndexTokens } from '../../contract/generated/DimensionTokens';
-import { ReaderTypography } from '../tokens/ReaderTypography';
-import { FigmaReadingVisualTokens } from '../tokens/FigmaReadingVisualTokens';
+import { ReaderUiVisualTokens } from '../../contract/reader_ui/VisualAdmission';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 import { MotionAdapter } from '../adapters/MotionAdapter';
-import { CoreBookshelfBook, CoreBookGroup } from '../store/ReaderUiState';
+import { CoreBookshelfBook } from '../store/ReaderUiState';
 import { SourceCoverImage } from './SourceCoverImage';
 
 // Book entry passed from ViewStateRenderer (extracted from fixture BookCard children).
@@ -21,12 +17,6 @@ export interface BookEntry {
   coverKey: string;
   coverUrl?: string;
   latestChapter?: string;
-}
-
-interface BookshelfFilterOption {
-  label: string;
-  value: string;
-  active: boolean;
 }
 
 // Whether the ContinueReadingCard should reserve a slot on the shelf view.
@@ -89,121 +79,47 @@ function bookshelfCoverResource(coverKey: string): Resource {
 // empty states stay explicit instead of falling back to a fixture book.
 @Component
 export struct ContinueReadingCard {
-  @Prop bookId: string = '';
-  @Prop title: string = '';
-  @Prop author: string = '';
-  @Prop coverKey: string = '';
   @StorageProp('reader.continueReadingBook') continueReadingBook: CoreBookshelfBook | null = null;
   @StorageProp('reader.continueReadingLoaded') continueReadingLoaded: boolean = false;
-  @StorageProp('reader.continueReadingError') continueReadingError: string = '';
-  @StorageProp('reader.settingsToggles.showLocalBookBadge') showLocalBookBadge: boolean = true;
 
   private coreContinueBook(): CoreBookshelfBook | null {
     return this.continueReadingLoaded ? this.continueReadingBook : null;
   }
 
   build() {
-    Row() {
-      if (!this.continueReadingLoaded) {
-        Column()
-          .width(62)
-          .height(93)
-          .borderRadius(DemoAliasTokens.radiusMd)
-          .backgroundColor(ColorTokens.metaBg)
-        Column({ space: 8 }) {
-          Text('正在读取继续阅读…')
-            .fontSize(16)
-            .fontWeight(700)
-            .fontColor(ColorTokens.ink)
-            .fontFamily(ReaderTypography.serifFamily())
-          Text('正在从 Core 核验上次阅读位置。')
-            .fontSize(13)
-            .fontColor(ColorTokens.muted)
-            .lineHeight(13 * 1.5)
-        }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
-        .margin({ left: 14 })
-      } else if (this.continueReadingError.length > 0) {
-        Column()
-          .width(62)
-          .height(93)
-          .borderRadius(DemoAliasTokens.radiusMd)
-          .backgroundColor(ColorTokens.metaBg)
-        Column({ space: 8 }) {
-          Text('继续阅读暂不可用')
-            .fontSize(16)
-            .fontWeight(700)
-            .fontColor(ColorTokens.ink)
-            .fontFamily(ReaderTypography.serifFamily())
-          Text(this.continueReadingError)
-            .fontSize(13)
-            .fontColor(ColorTokens.muted)
-            .lineHeight(13 * 1.5)
-            .maxLines(2)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
-        .margin({ left: 14 })
-      } else if (this.coreContinueBook() === null) {
-        Column()
-          .width(62)
-          .height(93)
-          .borderRadius(DemoAliasTokens.radiusMd)
-          .backgroundColor(ColorTokens.metaBg)
-        Column({ space: 8 }) {
-          Text('暂无可继续阅读的书籍')
-            .fontSize(16)
-            .fontWeight(700)
-            .fontColor(ColorTokens.ink)
-            .fontFamily(ReaderTypography.serifFamily())
-          Text('打开并阅读书架中的书籍后会显示在这里。')
-            .fontSize(13)
-            .fontColor(ColorTokens.muted)
-            .lineHeight(13 * 1.5)
-        }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
-        .margin({ left: 14 })
-      } else {
+    if (this.coreContinueBook() !== null) {
+      Row() {
         Stack({ alignContent: Alignment.TopEnd }) {
           SourceCoverImage({
             sourceId: this.coreContinueBook()?.sourceId ?? '',
             coverUrl: this.coreContinueBook()?.coverUrl ?? '',
           })
-          if (this.showLocalBookBadge && this.coreContinueBook()?.sourceId === 'local') {
-            LocalBookBadge()
-              .margin({ top: 5, right: 5 })
-          }
         }
         .width(62)
         .height(93)
-        .borderRadius(DemoAliasTokens.radiusMd)
-        .backgroundColor(ColorTokens.metaBg)
+        .borderRadius(6)
+        .backgroundColor(ReaderUiVisualTokens.bookshelfSectionSurface)
         .onClick(() => this.openReader())
 
         Column() {
           Text('继续阅读')
             .fontSize(13)
             .fontWeight(900)
-            .fontColor(ColorTokens.primary)
-            .fontFamily(ReaderTypography.sansFamily())
-          Text(this.coreContinueBook()?.title ?? '未命名书籍')
+            .fontColor(ReaderUiVisualTokens.bookshelfActionPrimary)
+            .fontFamily(ReaderUiVisualTokens.bookshelfControlFontFamily)
+          Text(this.coreContinueBook()?.title ?? '')
             .fontSize(20)
             .fontWeight(700)
-            .fontColor(ColorTokens.ink)
-            .fontFamily(ReaderTypography.serifFamily())
+            .fontColor(ReaderUiVisualTokens.bookshelfInk)
+            .fontFamily(ReaderUiVisualTokens.bookshelfBookTitleFontFamily)
             .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .margin({ top: 6 })
           if ((this.coreContinueBook()?.author ?? '').length > 0) {
             Text(this.coreContinueBook()?.author ?? '')
               .fontSize(14)
-              .fontColor(ColorTokens.muted)
+              .fontColor(ReaderUiVisualTokens.bookshelfMuted)
+              .fontFamily(ReaderUiVisualTokens.bookshelfControlFontFamily)
               .maxLines(2)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
               .margin({ top: 5 })
@@ -215,22 +131,26 @@ export struct ContinueReadingCard {
 
         Text('阅读')
           .fontSize(13)
-          .fontWeight(800)
-          .fontColor(DemoAliasTokens.onPrimary)
-          .backgroundColor(ColorTokens.primary)
-          .borderRadius(DemoAliasTokens.radiusPill)
+          .fontWeight(700)
+          .fontFamily(ReaderUiVisualTokens.bookshelfControlFontFamily)
+          .fontColor(ReaderUiVisualTokens.bookshelfActionLabel)
+          .backgroundColor(ReaderUiVisualTokens.bookshelfActionPrimary)
+          .borderRadius(20)
+          .width(82)
           .height(40)
-          .padding({ left: 14, right: 14 })
+          .textAlign(TextAlign.Center)
           .onClick(() => this.openReader())
       }
+      .width('100%')
+      .height(100)
+      .padding({ left: 16.5538, right: 16.5538 })
+      .border({ width: 1, color: ReaderUiVisualTokens.bookshelfBorder })
+      .borderRadius(8)
+      .backgroundColor(ReaderUiVisualTokens.bookshelfSectionSurface)
+      .alignItems(VerticalAlign.Center)
+    } else {
+      Column().width(0).height(0)
     }
-    .width('100%')
-    .height(100)
-    .padding({ top: 10, bottom: 10, left: 16, right: 16 })
-    .border({ width: 1, color: ColorTokens.border })
-    .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(DemoAliasTokens.surface)
-    .alignItems(VerticalAlign.Center)
   }
 
   private openReader(): void {
@@ -245,21 +165,21 @@ export struct ContinueReadingCard {
 }
 
 // .fd-section-head.fd-bookshelf-section-head: flex space-between, gap 12,
-//   min-height 38. h2 "我的书架" 15/700. view-actions: 4 buttons (grid/list/
-//   filter/gear), each 34×34 circle with 20×20 fd-small-icon.
+//   min-height 38. h2 "我的书架" 15/700. view-actions: 5 transparent 34×34
+//   hit targets (grid/list/filter/search/settings), each with a 20×20 icon.
 @Component
 export struct ShelfSectionHeader {
   @Prop title: string = '我的书架';
   @Prop viewMode: string = 'cover';
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
-  @StorageProp('reader.overlay') overlayKind: string = '';
 
   build() {
     Row() {
       Text(this.title)
         .fontSize(15)
         .fontWeight(700)
-        .fontColor(ColorTokens.ink)
+        .fontColor(ReaderUiVisualTokens.bookshelfInk)
+        .fontFamily(ReaderUiVisualTokens.bookshelfControlFontFamily)
       Blank()
       Row({ space: 8 }) {
         // 封面视图：route-replace 切换书架视图模式
@@ -271,9 +191,6 @@ export struct ShelfSectionHeader {
         .width(34).height(34)
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
-        .borderRadius(DemoAliasTokens.radiusPill)
-        .backgroundColor(ColorTokens.metaBg)
-        .border({ width: 1, color: this.viewMode === 'cover' ? ColorTokens.primary : ColorTokens.border })
         .onClick(() => {
           MotionAdapter.apply('bookshelf.view.switch', this.reducedMotion, this.getUIContext(), () => {
             ReaderUiStore.dispatch({ type: 'set-bookshelf-view', bookshelfView: 'cover' });
@@ -290,9 +207,6 @@ export struct ShelfSectionHeader {
         .width(34).height(34)
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
-        .borderRadius(DemoAliasTokens.radiusPill)
-        .backgroundColor(DemoAliasTokens.surface)
-        .border({ width: 1, color: this.viewMode === 'list' ? ColorTokens.primary : ColorTokens.border })
         .onClick(() => {
           MotionAdapter.apply('bookshelf.view.switch', this.reducedMotion, this.getUIContext(), () => {
             ReaderUiStore.dispatch({ type: 'set-bookshelf-view', bookshelfView: 'list' });
@@ -300,7 +214,9 @@ export struct ShelfSectionHeader {
           });
         })
 
-        // 筛选：route-push 到 sort-filter 路由
+        // Figma supplies this control's appearance, but no separate filter
+        // sheet or route is bound in the current visual registry. Keep it
+        // visually faithful without inventing an unbound flow.
         Column() {
           Image($r('app.media.bookshelf_icon_filter_dark'))
             .width(20)
@@ -309,12 +225,22 @@ export struct ShelfSectionHeader {
         .width(34).height(34)
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
-        .borderRadius(DemoAliasTokens.radiusPill)
-        .backgroundColor(DemoAliasTokens.surface)
-        .border({ width: 1, color: this.overlayKind === 'sort-filter' ? ColorTokens.primary : ColorTokens.border })
-        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'sort-filter' }))
 
-        // 书架搜索设置：合法的 route-push（SettingsShell 路由）
+        // The current SectionHeader includes the same admitted search target
+        // as the page top bar. It is a transparent icon hit target in Figma,
+        // not a locally styled pill.
+        Column() {
+          Image($r('app.media.bookshelf_icon_search_dark'))
+            .width(20)
+            .height(20)
+        }
+        .width(34).height(34)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Center)
+        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'book-search' }))
+
+        // Likewise, current Figma supplies the icon only; the old local
+        // settings route has no bound page and must not be resurrected.
         Column() {
           Image($r('app.media.bookshelf_icon_gear_dark'))
             .width(20)
@@ -323,10 +249,6 @@ export struct ShelfSectionHeader {
         .width(34).height(34)
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
-        .borderRadius(DemoAliasTokens.radiusPill)
-        .backgroundColor(DemoAliasTokens.surface)
-        .border({ width: 1, color: ColorTokens.border })
-        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'bookshelf-search-settings' }))
       }
     }
     .width('100%')
@@ -342,11 +264,8 @@ export struct BookshelfShelfSection {
   @Prop title: string = '我的书架';
   @Prop books: BookEntry[] = [];
   @Prop viewMode: string = 'cover';
-  @Prop filterOpen: boolean = false;
-  @StorageProp('reader.overlay') overlayKind: string = '';
   @StorageProp('reader.bookshelfBooks') coreBooks: CoreBookshelfBook[] = [];
   @StorageProp('reader.bookshelfLoaded') bookshelfLoaded: boolean = false;
-  @StorageProp('reader.bookshelfFilter.group') bookshelfGroup: string = 'all';
 
   private displayedBooks(): BookEntry[] {
     const result: BookEntry[] = [];
@@ -366,194 +285,31 @@ export struct BookshelfShelfSection {
   }
 
   build() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Column() {
+    Column() {
+      if (this.bookshelfLoaded && this.coreBooks.length === 0) {
+        // Figma canonical State/BookshelfEmpty (286:31) is the entire empty
+        // shelf body. Do not leave the populated-master section header or a
+        // fabricated loading/empty composition above it.
+        BookshelfEmptyState()
+      } else {
         ShelfSectionHeader({ title: this.title, viewMode: this.viewMode })
-        if (!this.bookshelfLoaded) {
-          BookshelfLoadingState()
-            .margin({ top: 10 })
-        } else if (this.coreBooks.length === 0) {
-          BookshelfEmptyState({ group: this.bookshelfGroup })
-            .margin({ top: 10 })
-        } else if (this.viewMode === 'list') {
-          BookList({ books: this.displayedBooks() })
-            .margin({ top: 10 })
-        } else {
-          BookGrid({ books: this.displayedBooks() })
-            .margin({ top: 10 })
-        }
       }
-      .width('100%')
-      if (this.filterOpen || this.overlayKind === 'sort-filter') {
-        BookshelfFilterPopover()
-          .position({ x: 0, y: 48 })
-          .zIndex(ZIndexTokens.settingsDropdown)
+      if (!this.bookshelfLoaded) {
+        // Figma binds no loading shelf. Until Core returns a concrete shelf
+        // state, do not manufacture a skeleton that changes the page layout.
+        Column().width(0).height(0)
+      } else if (this.coreBooks.length === 0) {
+        Column().width(0).height(0)
+      } else if (this.viewMode === 'list') {
+        BookList({ books: this.displayedBooks() })
+          .margin({ top: 10 })
+      } else {
+        BookGrid({ books: this.displayedBooks() })
+          .margin({ top: 10 })
       }
     }
     .width('100%')
-  }
-}
-
-@Component
-struct BookshelfLoadingState {
-  build() {
-    Column({ space: 14 }) {
-      Row({ space: 16 }) {
-        ForEach([0, 1, 2], (slot: number) => {
-          Column({ space: 8 }) {
-            Column()
-              .width('100%')
-              .aspectRatio(2 / 3)
-              .borderRadius(DemoAliasTokens.radiusMd)
-              .backgroundColor(ColorTokens.metaBg)
-            Row()
-              .width('72%')
-              .height(12)
-              .borderRadius(DemoAliasTokens.radiusPill)
-              .backgroundColor(ColorTokens.metaBg)
-            Row()
-              .width('48%')
-              .height(10)
-              .borderRadius(DemoAliasTokens.radiusPill)
-              .backgroundColor(ColorTokens.surfaceSoft)
-          }
-          .layoutWeight(1)
-          .alignItems(HorizontalAlign.Start)
-        }, (slot: number) => `bookshelf-loading-${slot}`)
-      }
-      .width('100%')
-      Text('正在从 Core 读取书架…')
-        .fontSize(13)
-        .fontColor(ColorTokens.muted)
-        .textAlign(TextAlign.Center)
-        .width('100%')
-    }
-    .width('100%')
-    .padding({ top: 18, bottom: 18 })
-  }
-}
-
-@Component
-struct BookshelfFilterGroup {
-  @Prop title: string = '';
-  @Prop options: BookshelfFilterOption[] = [];
-  onSelect: (value: string) => void = (_value: string) => {};
-
-  build() {
-    Column() {
-      Text(this.title)
-        .fontSize(12)
-        .fontWeight(900)
-        .fontColor(ColorTokens.ink)
-      Flex({ wrap: FlexWrap.Wrap }) {
-        ForEach(this.options, (option: BookshelfFilterOption, idx: number) => {
-          Text(option.label)
-            .fontSize(12)
-            .fontWeight(800)
-            .fontColor(option.active ? DemoAliasTokens.onPrimary : ColorTokens.primaryDark)
-            .height(30)
-            .padding({ left: 12, right: 12 })
-            .borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(option.active ? ColorTokens.primary : ColorTokens.metaBg)
-            .border({ width: option.active ? 0 : 1, color: ColorTokens.border })
-            .margin({ right: 8, top: 8 })
-            .onClick(() => this.onSelect(option.value))
-        }, (option: BookshelfFilterOption, idx: number) => `${option.label}-${idx}`)
-      }
-      .width('100%')
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
-}
-
-@Component
-struct BookshelfFilterPopover {
-  @StorageProp('reader.bookshelfFilter.group') bookshelfGroup: string = 'all';
-  @StorageProp('reader.bookshelfFilter.sort') bookshelfSort: string = 'recent';
-  @StorageProp('reader.bookshelfFilter.filters') bookshelfFilters: string[] = [];
-  @StorageProp('reader.bookGroups') bookGroups: CoreBookGroup[] = [];
-
-  private groupOptions(): BookshelfFilterOption[] {
-    const opts: BookshelfFilterOption[] = [{ label: '全部', value: 'all', active: this.bookshelfGroup === 'all' }];
-    for (let index = 0; index < this.bookGroups.length; index++) {
-      const group = this.bookGroups[index];
-      if (group.groupName.length === 0) continue;
-      opts.push({
-        label: group.groupName,
-        value: group.groupName,
-        active: this.bookshelfGroup === group.groupName,
-      });
-    }
-    return opts;
-  }
-
-  private sortOptions(): BookshelfFilterOption[] {
-    const opts: BookshelfFilterOption[] = [
-      { label: '最近阅读', value: 'recent', active: this.bookshelfSort === 'recent' },
-      { label: '书名', value: 'title', active: this.bookshelfSort === 'title' },
-      { label: '作者', value: 'author', active: this.bookshelfSort === 'author' },
-    ];
-    return opts;
-  }
-
-  private filterOptions(): BookshelfFilterOption[] {
-    // Core bookshelf.list has no unread/completed/failed filter DTO.  Keep
-    // only the executable clear state instead of letting UI-only tags imply a
-    // filtered Core query.
-    return [{ label: '全部（Core 未提供状态筛选）', value: 'all', active: this.bookshelfFilters.length === 0 }];
-  }
-
-  build() {
-    Column() {
-      BookshelfFilterGroup({
-        title: '分组',
-        options: this.groupOptions(),
-        onSelect: (value: string) => {
-          ReaderUiStore.dispatch({ type: 'set-bookshelf-group', bookshelfGroup: value });
-        },
-      })
-      BookshelfFilterGroup({
-        title: '排序',
-        options: this.sortOptions(),
-        onSelect: (value: string) => {
-          ReaderUiStore.dispatch({ type: 'set-bookshelf-sort', bookshelfSort: value });
-        },
-      })
-        .margin({ top: 12 })
-      BookshelfFilterGroup({
-        title: '筛选',
-        options: this.filterOptions(),
-        onSelect: (value: string) => {
-          if (value === 'all') ReaderUiStore.dispatch({ type: 'set-bookshelf-filter-clear' });
-        },
-      })
-        .margin({ top: 12 })
-    }
-    .width('100%')
-    .padding(14)
-    .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(DemoAliasTokens.surface)
-    .border({ width: 1, color: ColorTokens.border })
-    .alignItems(HorizontalAlign.Start)
-  }
-}
-
-// Presentation-only local-book marker. Its truth source is the canonical Core
-// bookshelf identity (`sourceId=local`); filenames, cover availability and
-// fixture ids are deliberately never used as local-book heuristics.
-@Component
-struct LocalBookBadge {
-  build() {
-    Text('本地')
-      .fontSize(9)
-      .fontWeight(800)
-      .fontColor(DemoAliasTokens.onPrimary)
-      .height(20)
-      .padding({ left: 7, right: 7 })
-      .borderRadius(DemoAliasTokens.radiusPill)
-      .backgroundColor(ColorTokens.primaryDark)
-      .textAlign(TextAlign.Center)
+    .alignItems(HorizontalAlign.Center)
   }
 }
 
@@ -564,7 +320,6 @@ export struct BookCover {
   @Prop sourceId: string = '';
   @Prop coverKey: string = '';
   @Prop coverUrl: string = '';
-  @Prop showLocalBadge: boolean = true;
 
   private fallbackCover(): Resource | undefined {
     return this.coverKey.length > 0 ? bookshelfCoverResource(this.coverKey) : undefined;
@@ -577,24 +332,19 @@ export struct BookCover {
         coverUrl: this.coverUrl,
         fallback: this.fallbackCover(),
       })
-      if (this.showLocalBadge && this.sourceId === 'local') {
-        LocalBookBadge()
-          .margin({ top: 7, right: 7 })
-      }
     }
     .width('100%')
     .aspectRatio(2 / 3)
-    .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(DemoAliasTokens.surface)
-    .shadow({ radius: 26, color: FigmaReadingVisualTokens.shelfCoverShadow, offsetX: 0, offsetY: 8 })
+    .borderRadius(8)
+    .backgroundColor(ReaderUiVisualTokens.bookshelfSectionSurface)
+    .shadow({ radius: 26, color: ReaderUiVisualTokens.bookshelfCoverShadow, offsetX: 0, offsetY: 8 })
   }
 }
 
-// .fd-book-card (cover mode): grid, gap 6. cover + strong (serif 15) + span (12 muted).
-// Click dispatches route-push book-detail, then — only when bookId is a
-// loadable source path — book-detail-load(bookId) so the reducer pushes the
-// route first (pageState resets to default), then the load effect fires on the
-// new route (pageState -> loading -> default on success).
+// .fd-book-card (cover mode): grid, gap 6. cover + strong (serif 15) + span
+// (12 muted). Figma's Bookshelf entry is direct-to-Reader; detail inspection
+// belongs to the long-press action sheet instead. The stable Core identity is
+// always passed into the shared reader-entry owner.
 @Component
 export struct BookCard {
   @Prop sourceId: string = '';
@@ -604,10 +354,21 @@ export struct BookCard {
   @Prop coverKey: string = '';
   @Prop coverUrl: string = '';
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
-  @StorageProp('reader.settingsToggles.showLocalBookBadge') showLocalBookBadge: boolean = true;
 
   private canOpen(): boolean {
     return this.bookId.length > 0 && (this.sourceId.length > 0 || isLoadableBookId(this.bookId));
+  }
+
+  private openBookActions(): void {
+    if (!this.canOpen()) return;
+    ReaderUiStore.requestBookshelfBookActions(this.bookId, this.sourceId);
+  }
+
+  private openReader(): void {
+    if (!this.canOpen()) return;
+    MotionAdapter.apply('card.press', this.reducedMotion, this.getUIContext(), () => {
+      ReaderUiStore.dispatchBookshelfCoverToReader(this.bookId, this.sourceId);
+    });
   }
 
   build() {
@@ -616,36 +377,38 @@ export struct BookCard {
         sourceId: this.sourceId,
         coverKey: this.coverKey,
         coverUrl: this.coverUrl,
-        showLocalBadge: this.showLocalBookBadge,
       })
-      Text(this.title.length > 0 ? this.title : '未提供书籍信息')
+      Text(this.title)
         .fontSize(15)
         .fontWeight(700)
-        .fontColor(ColorTokens.ink)
-        .fontFamily(ReaderTypography.serifFamily())
+        .fontColor(ReaderUiVisualTokens.bookshelfInk)
+        .fontFamily(ReaderUiVisualTokens.bookshelfBookTitleFontFamily)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .margin({ top: 6 })
       if (this.author.length > 0) {
         Text(this.author)
           .fontSize(12)
-          .fontColor(ColorTokens.muted)
+          .fontColor(ReaderUiVisualTokens.bookshelfMuted)
+          .fontFamily(ReaderUiVisualTokens.bookshelfControlFontFamily)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
     }
     .alignItems(HorizontalAlign.Start)
-    .onClick(() => {
-      if (!this.canOpen()) return;
-      MotionAdapter.apply('card.press', this.reducedMotion, this.getUIContext(), () => {
-        ReaderUiStore.dispatch({ type: 'route-push', id: 'book-detail' });
-        if (this.sourceId.length > 0) {
-          ReaderUiStore.dispatch({ type: 'bookshelf-book-open', sourceId: this.sourceId, bookId: this.bookId });
-        } else if (isLoadableBookId(this.bookId)) {
-          ReaderUiStore.dispatch({ type: 'book-detail-load', bookId: this.bookId });
-        }
-      });
-    })
+    .gesture(
+      // A long press and a tap must be mutually exclusive.  Keeping the old
+      // generic onClick beside LongPressGesture made the emulator emit the
+      // normal book-open click when the finger lifted, closing the action
+      // sheet before it could become visible.
+      GestureGroup(
+        GestureMode.Exclusive,
+        LongPressGesture({ repeat: false, duration: 500 })
+          .onAction(() => this.openBookActions()),
+        TapGesture()
+          .onAction(() => this.openReader())
+      )
+    )
   }
 }
 
@@ -658,20 +421,6 @@ export struct BookGrid {
   // ScreenGraph can reuse BookGrid for both cover and list variants. Keep the
   // same book identities and route actions while changing only presentation.
   @Prop viewMode: string = 'cover';
-  // `coverColumns` is a real reducer-backed setting.  Keep the grid within
-  // its declared 1–5 range instead of hardcoding the demo's three columns.
-  @StorageProp('reader.coverColumns') coverColumns: number = 3;
-
-  private columnsTemplate(): string {
-    const requested = Math.floor(this.coverColumns);
-    const columns = requested < 1 ? 1 : (requested > 5 ? 5 : requested);
-    let template = '';
-    for (let index = 0; index < columns; index++) {
-      if (index > 0) template += ' ';
-      template += '1fr';
-    }
-    return template;
-  }
 
   build() {
     if (this.viewMode === 'list') {
@@ -691,7 +440,7 @@ export struct BookGrid {
           }
         }, (b: BookEntry, i: number) => `${b.bookId}-${b.title}-${i}`)
       }
-      .columnsTemplate(this.columnsTemplate())
+      .columnsTemplate('1fr 1fr 1fr')
       .rowsGap(16)
       .columnsGap(30)
       .width('100%')
@@ -699,34 +448,20 @@ export struct BookGrid {
   }
 }
 
-// .fd-chip-row — NOT used on bookshelf (kept for other routes that may use chips).
+// This ComponentType is retained solely for the generated contract catalog.
+// No current Figma screen instantiates it, so it must remain visually inert.
 @Component
 export struct ShelfChipGroup {
-  private chips: string[] = ['全部', '在读', '已读', '本地'];
-  private active: string = '全部';
-
   build() {
-    Row() {
-      ForEach(this.chips, (c: string) => {
-        Text(c)
-          .fontSize(14)
-          .fontWeight(700)
-          .fontColor(c === this.active ? DemoAliasTokens.onPrimary : ColorTokens.ink)
-          .backgroundColor(c === this.active ? ColorTokens.primary : DemoAliasTokens.surface)
-          .borderRadius(DemoAliasTokens.radiusPill)
-          .padding({ left: 12, right: 12, top: 8, bottom: 8 })
-          .height(34)
-          .margin({ right: 8 })
-      }, (c: string) => c)
-    }
-    .width('100%')
-    .height(34)
+    Column().width(0).height(0)
   }
 }
 
-// .fd-book-grid.is-list-view: single column; each row is a 48px cover +
-// minmax(0, 1fr) info row, min-height 66, gap 10, padding 8 12, border-top 1.
-// Cover is 48×72 (shorter than grid-mode cover) per spec.
+// Figma Library/BookCard `Layout=List, Viewport=Phone` (493:191): one
+// 350.9×72 row with a 48×72 cover, a 10px gap, 58.3px content column, and a
+// visible 34×34 More affordance. There is intentionally no Tablet list master;
+// viewport admission keeps this Phone-only rather than stretching it into a
+// made-up tablet layout.
 @Component
 export struct BookListRow {
   @Prop sourceId: string = '';
@@ -737,10 +472,21 @@ export struct BookListRow {
   @Prop author: string = '';
   @Prop latestChapter: string = '';
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
-  @StorageProp('reader.settingsToggles.showLocalBookBadge') showLocalBookBadge: boolean = true;
 
   private canOpen(): boolean {
     return this.bookId.length > 0 && (this.sourceId.length > 0 || isLoadableBookId(this.bookId));
+  }
+
+  private openBookActions(): void {
+    if (!this.canOpen()) return;
+    ReaderUiStore.requestBookshelfBookActions(this.bookId, this.sourceId);
+  }
+
+  private openReader(): void {
+    if (!this.canOpen()) return;
+    MotionAdapter.apply('listRow.select', this.reducedMotion, this.getUIContext(), () => {
+      ReaderUiStore.dispatchBookshelfActionToReader(this.bookId, this.sourceId);
+    });
   }
 
   build() {
@@ -752,57 +498,68 @@ export struct BookListRow {
           coverUrl: this.coverUrl,
           fallback: this.coverKey.length > 0 ? bookshelfCoverResource(this.coverKey) : undefined,
         })
-        if (this.showLocalBookBadge && this.sourceId === 'local') {
-          LocalBookBadge()
-            .margin({ top: 4, right: 4 })
-        }
       }
       .width(48)
       .height(72)
-      .borderRadius(DemoAliasTokens.radiusSm)
-      .shadow({ radius: 12, color: FigmaReadingVisualTokens.shelfListCoverShadow, offsetX: 0, offsetY: 6 })
-      Column({ space: 4 }) {
-        Text(this.title.length > 0 ? this.title : '未提供书籍信息')
+      .borderRadius(6)
+      .shadow({ radius: 12, color: ReaderUiVisualTokens.bookshelfListCoverShadow, offsetX: 0, offsetY: 6 })
+      Column({ space: 3 }) {
+        Text(this.title)
           .fontSize(15)
           .fontWeight(700)
-          .fontColor(ColorTokens.controlInk)
-          .fontFamily(ReaderTypography.serifFamily())
+          .fontColor(ReaderUiVisualTokens.bookshelfInk)
+          .fontFamily(ReaderUiVisualTokens.bookshelfBookTitleFontFamily)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         if (this.author.length > 0) {
           Text(this.author)
             .fontSize(12)
-            .fontColor(ColorTokens.muted)
+            .fontColor(ReaderUiVisualTokens.bookshelfMuted)
+            .fontFamily(ReaderUiVisualTokens.bookshelfControlFontFamily)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
         if (this.latestChapter !== '') {
           Text(this.latestChapter)
             .fontSize(11)
-            .fontColor(ColorTokens.primary)
+            .fontColor(ReaderUiVisualTokens.bookshelfActionPrimary)
+            .fontFamily(ReaderUiVisualTokens.bookshelfControlFontFamily)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
+      .height(58)
+      .justifyContent(FlexAlign.Center)
+
+      Column() {
+        Image($r('app.media.reader_icon_more_dark'))
+          .width(20)
+          .height(20)
+      }
+      .width(34)
+      .height(34)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(HorizontalAlign.Center)
+      .onClick(() => {
+        if (!this.canOpen()) return;
+        ReaderUiStore.requestBookshelfBookActions(this.bookId, this.sourceId);
+      })
+      .accessibilityText('书籍操作')
     }
     .width('100%')
-    .constraintSize({ minHeight: 66 })
-    .padding({ left: 12, right: 12, top: 8, bottom: 8 })
-    .border({ width: { top: 1 }, color: ColorTokens.border })
+    .height(72)
     .alignItems(VerticalAlign.Center)
-    .onClick(() => {
-      if (!this.canOpen()) return;
-      MotionAdapter.apply('listRow.select', this.reducedMotion, this.getUIContext(), () => {
-        ReaderUiStore.dispatch({ type: 'route-push', id: 'book-detail' });
-        if (this.sourceId.length > 0) {
-          ReaderUiStore.dispatch({ type: 'bookshelf-book-open', sourceId: this.sourceId, bookId: this.bookId });
-        } else if (isLoadableBookId(this.bookId)) {
-          ReaderUiStore.dispatch({ type: 'book-detail-load', bookId: this.bookId });
-        }
-      });
-    })
+    .gesture(
+      GestureGroup(
+        GestureMode.Exclusive,
+        LongPressGesture({ repeat: false, duration: 500 })
+          .onAction(() => this.openBookActions()),
+        TapGesture()
+          .onAction(() => this.openReader())
+      )
+    )
   }
 }
 
@@ -834,121 +591,111 @@ export struct BookList {
   }
 }
 
-// .fd-bookshelf-empty-state: min-height 350, centered Column.
-// .fd-bookshelf-empty-visual: 112×92 graphic simulated with a Stack of rounded
-// rectangles. Title 16/800 serif, subtitle 12 muted. Two pill actions ("去发现"
-// primary, "导入本地" ghost). Three 10px muted hints below.
+// Figma State/BookshelfEmpty (286:31). The fixed 352×350 component is centered
+// by BookshelfShelfSection; every color, type value, and surface comes from the
+// generated Figma token ledger. The two action owners are explicitly bound by
+// the F0 crosswalk: system multi-file picker and existing book-search route.
 @Component
 export struct BookshelfEmptyState {
-  @Prop group: string = 'all';
-
-  private filteredEmpty(): boolean {
-    return this.group !== 'all';
+  private openLocalImport(): void {
+    ReaderUiStore.dispatch({ type: 'source-import-open' });
   }
 
-  private title(): string {
-    return this.filteredEmpty() ? '当前分组暂无书籍' : '书架还空着';
-  }
-
-  private message(): string {
-    return this.filteredEmpty()
-      ? '其他分组中的书籍不会显示在这里。'
-      : '从发现页添加你感兴趣的书';
+  private openBookSearch(): void {
+    ReaderUiStore.dispatch({ type: 'route-push', id: 'book-search' });
   }
 
   build() {
-    Column({ space: 14 }) {
-      // 112×92 图形：用 Stack + 几个圆角矩形模拟书堆
-      Stack({ alignContent: Alignment.Center }) {
-        Row({ space: 6 }) {
-          Column()
-            .width(34)
-            .height(70)
-            .borderRadius(DemoAliasTokens.radiusSm)
-            .backgroundColor(ColorTokens.metaBg)
-            .border({ width: 1, color: ColorTokens.border })
-          Column()
-            .width(34)
-            .height(78)
-            .borderRadius(DemoAliasTokens.radiusSm)
-            .backgroundColor(ColorTokens.floatingControlBg)
-            .border({ width: 1, color: ColorTokens.border })
-            .margin({ bottom: 8 })
-          Column()
-            .width(34)
-            .height(64)
-            .borderRadius(DemoAliasTokens.radiusSm)
-            .backgroundColor(ColorTokens.surfaceSoft)
-            .border({ width: 1, color: ColorTokens.border })
+    Stack({ alignContent: Alignment.TopStart }) {
+      Stack({ alignContent: Alignment.TopStart }) {
+        Column()
+          .width(72)
+          .height(52)
+          .border({ width: 1, color: ReaderUiVisualTokens.bookshelfEmptyBorder })
+          .borderRadius(8)
+          .backgroundColor(ReaderUiVisualTokens.bookshelfEmptySurface)
+          .rotate({ angle: -8 })
+          .position({ x: 6, y: 32 })
+        Column()
+          .width(72)
+          .height(52)
+          .border({ width: 1, color: ReaderUiVisualTokens.bookshelfEmptyBorder })
+          .borderRadius(8)
+          .backgroundColor(ReaderUiVisualTokens.bookshelfEmptySurface)
+          .rotate({ angle: 8 })
+          .position({ x: 34, y: 32 })
+        Stack({ alignContent: Alignment.Center }) {
+          Image($r('app.media.figma_bookshelf_empty_icon'))
+            .width(32)
+            .height(32)
         }
-        .alignItems(VerticalAlign.Bottom)
+        .width(ReaderUiVisualTokens.bookshelfEmptyIconShellSize)
+        .height(ReaderUiVisualTokens.bookshelfEmptyIconShellSize)
+        .border({ width: 1, color: ReaderUiVisualTokens.bookshelfEmptyIconShellStroke })
+        .borderRadius(ReaderUiVisualTokens.bookshelfEmptyIconShellRadius)
+        .backgroundColor(ReaderUiVisualTokens.bookshelfEmptyIconShellSoft)
+        .position({ x: 25, y: 8 })
       }
-      .width(112)
-      .height(92)
+      .width(ReaderUiVisualTokens.bookshelfEmptyVisualWidth)
+      .height(ReaderUiVisualTokens.bookshelfEmptyVisualHeight)
+      .position({ x: 120, y: 28 })
 
-      Text(this.title())
-        .fontSize(16)
-        .fontWeight(800)
-        .fontColor(ColorTokens.controlInk)
-        .fontFamily(ReaderTypography.serifFamily())
+      Text('书架还是空的')
+        .fontSize(ReaderUiVisualTokens.bookshelfEmptyTitleSize)
+        .fontWeight(700)
+        .fontFamily(ReaderUiVisualTokens.bookshelfControlFontFamily)
+        .fontColor(ReaderUiVisualTokens.bookshelfEmptyTitleInk)
+        .lineHeight(23)
+        .position({ x: 119, y: 138 })
 
-      Text(this.message())
-        .fontSize(12)
-        .fontColor(ColorTokens.muted)
+      Text('导入本地书籍或通过搜索加入书架。')
+        .fontSize(ReaderUiVisualTokens.bookshelfEmptyBodySize)
+        .fontWeight(400)
+        .fontFamily(ReaderUiVisualTokens.bookshelfControlFontFamily)
+        .fontColor(ReaderUiVisualTokens.bookshelfEmptyBodyInk)
+        .lineHeight(16)
+        .position({ x: 72, y: 174 })
 
-      Row({ space: 10 }) {
-        if (this.filteredEmpty()) {
-          Text('查看全部')
-            .fontSize(13)
-            .fontWeight(700)
-            .fontColor(DemoAliasTokens.onPrimary)
-            .height(40)
-            .padding({ left: 20, right: 20 })
-            .borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(ColorTokens.primaryDark)
-            .textAlign(TextAlign.Center)
-            .onClick(() => ReaderUiStore.dispatch({ type: 'set-bookshelf-group', bookshelfGroup: 'all' }))
-        } else {
-          Text('去发现')
+      Stack({ alignContent: Alignment.TopStart }) {
+        Text('导入本地书籍')
           .fontSize(13)
           .fontWeight(700)
-          .fontColor(DemoAliasTokens.onPrimary)
-          .height(40)
-          .padding({ left: 20, right: 20 })
-          .borderRadius(DemoAliasTokens.radiusPill)
-          .backgroundColor(ColorTokens.primaryDark)
-          .textAlign(TextAlign.Center)
-            .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'discover' }))
-        }
-        Text('导入本地')
+          .fontFamily(ReaderUiVisualTokens.bookshelfControlFontFamily)
+          .fontColor(ReaderUiVisualTokens.bookshelfEmptyPrimaryLabel)
+          .lineHeight(16)
+          .position({ x: 14, y: 18 })
+      }
+      .width(316)
+      .height(ReaderUiVisualTokens.bookshelfEmptyActionHeight)
+      .borderRadius(ReaderUiVisualTokens.bookshelfEmptyActionRadius)
+      .backgroundColor(ReaderUiVisualTokens.bookshelfEmptyPrimarySurface)
+      .position({ x: ReaderUiVisualTokens.bookshelfEmptyActionHorizontalInset, y: 220 })
+      .onClick(() => this.openLocalImport())
+      .accessibilityText('导入本地书籍')
+      .accessibilityDescription('打开系统文件选择器，可多选')
+
+      Stack({ alignContent: Alignment.TopStart }) {
+        Text('搜索并加入书架')
           .fontSize(13)
           .fontWeight(700)
-          .fontColor(ColorTokens.primary)
-          .height(40)
-          .padding({ left: 20, right: 20 })
-          .borderRadius(DemoAliasTokens.radiusPill)
-          .border({ width: 1, color: ColorTokens.border })
-          .textAlign(TextAlign.Center)
-          .onClick(() => ReaderUiStore.dispatch({ type: 'source.import.open' }))
+          .fontFamily(ReaderUiVisualTokens.bookshelfControlFontFamily)
+          .fontColor(ReaderUiVisualTokens.bookshelfEmptySecondaryInk)
+          .lineHeight(16)
+          .position({ x: 14, y: 18 })
       }
-
-      Column({ space: 4 }) {
-        Text('· 支持 EPUB / TXT 格式')
-          .fontSize(10)
-          .fontColor(ColorTokens.muted)
-        Text('· 支持书源规则')
-          .fontSize(10)
-          .fontColor(ColorTokens.muted)
-        Text('· 支持 WebDAV 同步')
-          .fontSize(10)
-          .fontColor(ColorTokens.muted)
-      }
-      .margin({ top: 6 })
+      .width(316)
+      .height(ReaderUiVisualTokens.bookshelfEmptyActionHeight)
+      .border({ width: 1, color: ReaderUiVisualTokens.bookshelfEmptySecondaryStroke })
+      .borderRadius(ReaderUiVisualTokens.bookshelfEmptyActionRadius)
+      .backgroundColor(ReaderUiVisualTokens.bookshelfEmptySecondarySurface)
+      .position({ x: ReaderUiVisualTokens.bookshelfEmptyActionHorizontalInset, y: 282 })
+      .onClick(() => this.openBookSearch())
+      .accessibilityText('搜索并加入书架')
     }
-    .width('100%')
-    .constraintSize({ minHeight: 350 })
-    .justifyContent(FlexAlign.Center)
-    .alignItems(HorizontalAlign.Center)
-    .padding({ top: 40, bottom: 40 })
+    .width(ReaderUiVisualTokens.bookshelfEmptyWidth)
+    .height(ReaderUiVisualTokens.bookshelfEmptyHeight)
+    .border({ width: 1, color: ReaderUiVisualTokens.bookshelfEmptyBorder })
+    .borderRadius(ReaderUiVisualTokens.bookshelfEmptyRadius)
+    .backgroundColor(ReaderUiVisualTokens.bookshelfEmptySurface)
   }
 }

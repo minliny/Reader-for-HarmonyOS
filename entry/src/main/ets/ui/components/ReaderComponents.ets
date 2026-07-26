@@ -18,8 +18,7 @@
 // avoidance so the explicit padding is the single source of truth — no double
 // inset.
 import { ColorTokens } from '../../contract/generated/ColorTokens';
-import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
-import { SpacingTokens, RadiusTokens, ZIndexTokens } from '../../contract/generated/DimensionTokens';
+import { ZIndexTokens } from '../../contract/generated/DimensionTokens';
 import { SafeAreaAdapter } from '../adapters/SafeAreaAdapter';
 import { ViewportAdapter } from '../adapters/ViewportAdapter';
 import { InteractionDebugAdapter } from '../adapters/InteractionDebugAdapter';
@@ -28,8 +27,9 @@ import { MotionAdapter } from '../adapters/MotionAdapter';
 import { ReaderTypography } from '../tokens/ReaderTypography';
 import { FontTokens } from '../../contract/generated/TypeTokens';
 import { ReaderThemeResolver, ReaderThemePalette } from '../tokens/ReaderThemeResolver';
+import { ReaderUiVisualTokens } from '../../contract/reader_ui/VisualAdmission';
 import { ReaderUiStore } from '../store/ReaderUiStore';
-import { BookDetail, CoreReaderCanonicalLocation, ReaderContentIdentity } from '../store/ReaderUiState';
+import { BookDetail, CoreReaderCanonicalLocation, ReaderContentIdentity, canSwitchBookSourceId } from '../store/ReaderUiState';
 import { ViewStateExplicitBinding } from '../../contract/generated/ViewStateTable';
 import {
   ReaderUIScreenGraphTapZoneAdapter,
@@ -64,11 +64,8 @@ interface ReaderVerticalFragmentLayout {
 // .fd-ir-background-layer: full-bleed paper bg (night theme -> paperNight).
 @Component
 export struct ReadingBackgroundLayer {
-  @StorageProp(ViewportAdapter.K_WIDTH) viewportWidth: number = ViewportAdapter.DEFAULT_WIDTH;
-  @StorageProp(ViewportAdapter.K_HEIGHT) viewportHeight: number = ViewportAdapter.DEFAULT_HEIGHT;
   @StorageProp('reader.readerTheme') readerTheme: string = 'paper';
   @StorageProp('reader.appThemeMode') appThemeMode: string = 'system';
-  @StorageProp('reader.theme.colorMode') systemColorMode: string = 'light';
   @Prop theme: string = '';
 
   private palette(): ReaderThemePalette {
@@ -76,104 +73,61 @@ export struct ReadingBackgroundLayer {
     return ReaderThemeResolver.palette(resolvedTheme, this.appThemeMode);
   }
 
-  private textureLines(): number[] {
-    const lines: number[] = [];
-    const count = Math.ceil(Math.max(this.viewportHeight, ViewportAdapter.DEFAULT_HEIGHT) / 7) + 4;
-    for (let line = 0; line < count; line++) {
-      lines.push(line);
-    }
-    return lines;
-  }
-
-  private textureColor(): string {
-    return this.palette().textureColor;
-  }
-
-  private textureOpacity(): number {
-    return this.palette().textureOpacity;
-  }
-
-  // 夜读星点：11 颗固定相对坐标（视口百分比），近似 B 的
-  // .fd-ir-background-layer::before 星点 radial-gradient 序列。
-  private starPoints(): number[][] {
-    const raw: number[][] = [
-      [0.12, 0.08], [0.28, 0.15], [0.42, 0.06], [0.55, 0.12],
-      [0.68, 0.18], [0.78, 0.09], [0.88, 0.14], [0.35, 0.22],
-      [0.62, 0.25], [0.18, 0.28], [0.82, 0.28]
-    ];
-    return raw.map((p: number[]): number[] => [p[0] * this.viewportWidth, p[1] * this.viewportHeight]);
+  private usesCanonicalPaperLayer(): boolean {
+    return (this.theme !== '' ? this.theme : this.readerTheme) === 'paper';
   }
 
   build() {
     Stack() {
-      // 纸色 linear-gradient（B L2498）。
+      // Exact Figma ReadingSurface/PaperLayer (1023:18356 / 1023:18372).
+      // Its four fills are kept as independent layers: linear paper base,
+      // tiled source texture, the 10% outer vignette and the 70% highlight.
+      // Do not approximate it with viewport-generated stripes, stars or a
+      // theme-specific gradient: those caused the recurring top-left shadow
+      // drift that does not exist in the canonical component.
       Column()
         .width('100%')
         .height('100%')
-        .backgroundColor(this.palette().paper)
-        .linearGradient({
-          angle: 180,
-          colors: [
-            [this.palette().paperBright, 0],
-            [this.palette().paper, 100],
-          ],
-        })
-      // 顶部高光：顶部中心柔光（B L2499 radial-gradient 顶部高光的 linearGradient 近似）。
-      Column()
-        .width('100%')
-        .height('50%')
-        .linearGradient({
-          angle: 180,
-          colors: [
-            [this.palette().scheme === 'night' ? TokenAdapter.colorWithAlpha(this.palette().primary, 0.12) : TokenAdapter.colorWithAlpha(this.palette().paperBright, 0.5), 0],
-            [TokenAdapter.colorWithAlpha(this.palette().paperBright, 0), 1.0],
-          ],
-        })
-      // 四周暗角 vignette：中心透明，四周加深（B L2500 radial-gradient 暗角）。
-      Column()
-        .width('100%')
-        .height('100%')
-        .radialGradient({
-          center: ['50%', '50%'],
-          radius: '75%',
-          colors: [
-            [TokenAdapter.colorWithAlpha(this.palette().ink, 0), 0.55],
-            [this.palette().scheme === 'night' ? TokenAdapter.colorWithAlpha(this.palette().ink, 0.45) : TokenAdapter.colorWithAlpha(this.palette().muted, 0.14), 1.0],
-          ],
-        })
-      // 夜读极光 signature moment：顶部紫蓝渐变光晕（B L2504-2510 ::before 极光）。
-      if (this.palette().scheme === 'night') {
+        .backgroundColor(this.usesCanonicalPaperLayer() ? ReaderUiVisualTokens.readerPaperBaseEnd : this.palette().paper)
+      if (this.usesCanonicalPaperLayer()) {
         Column()
           .width('100%')
-          .height('45%')
+          .height('100%')
           .linearGradient({
-            angle: 135,
+            angle: 180,
             colors: [
-              [TokenAdapter.colorWithAlpha(this.palette().primary, 0.18), 0],
-              [TokenAdapter.colorWithAlpha(this.palette().primary, 0.12), 0.3],
-              [TokenAdapter.colorWithAlpha(this.palette().primary, 0.06), 0.6],
-              [TokenAdapter.colorWithAlpha(this.palette().ink, 0), 1.0],
+              [ReaderUiVisualTokens.readerPaperBaseStart, 0],
+              [ReaderUiVisualTokens.readerPaperBaseEnd, 100],
+            ],
+          })
+        Image($r('app.media.figma_reader_paper_tile'))
+          .width('100%')
+          .height('100%')
+          .objectFit(ImageFit.None)
+          .objectRepeat(ImageRepeat.XY)
+        Column()
+          .width('100%')
+          .height('100%')
+          .radialGradient({
+            center: ['85.36%', '85.36%'],
+            radius: '100%',
+            colors: [
+              [ReaderUiVisualTokens.readerPaperVignetteTransparent, 0.56],
+              [ReaderUiVisualTokens.readerPaperVignette, 1],
+            ],
+          })
+        Column()
+          .width('100%')
+          .height('100%')
+          .radialGradient({
+            center: ['60.57%', '63.54%'],
+            radius: '42%',
+            colors: [
+              [ReaderUiVisualTokens.readerPaperHighlight, 0],
+              [ReaderUiVisualTokens.readerPaperHighlightTransparent, 0.42],
             ],
           })
       }
-      // 夜读星点：顶部随机分布的微小光点（B L2511-2521 星点序列）。
-      if (this.palette().scheme === 'night') {
-        ForEach(this.starPoints(), (pt: number[]) => {
-          Circle()
-            .width(2)
-            .height(2)
-            .fill(TokenAdapter.colorWithAlpha(this.palette().primary, 0.6))
-            .position({ x: pt[0], y: pt[1] })
-        }, (pt: number[], i: number) => `star-${i}`)
-      }
-      ForEach(this.textureLines(), (line: number) => {
-        Row()
-          .width('100%')
-          .height(1)
-          .backgroundColor(this.textureColor())
-          .opacity(this.textureOpacity())
-          .position({ x: 0, y: line * 7 })
-      }, (line: number) => `${line}`)
       InteractionDebugFrame({ label: 'ReadingBackground', tone: 'module' })
     }
     .width('100%')
@@ -183,9 +137,10 @@ export struct ReadingBackgroundLayer {
   }
 }
 
-// .fd-ir-reading-layer: text frame is driven by reader.pageSpace.*. h1 uses
-//   reader-font-size + 5, centered. p uses reader.typography.* and
-//   reader.pageSpace.paragraphIndent.
+// Reader/Responsive/ReadingSurface owns one exact text frame per admitted
+// viewport. The Figma master fixes its outer geometry; typography controls may
+// change the chapter's measured pagination, but may never squeeze the text
+// frame when a floating control layer appears.
 @Component
 export struct ReadingTextFlow {
   @StorageProp(SafeAreaAdapter.K_TOP) @Watch('onPaginationInputChange') safeAreaTop: number = SafeAreaAdapter.DEFAULT_TOP;
@@ -207,14 +162,12 @@ export struct ReadingTextFlow {
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
   @StorageProp(ReaderUiStore.K_READER_CHAPTER_OFFSET) readerChapterOffset: number = 0;
   @StorageProp(ReaderUiStore.K_READER_CHAPTER_PROGRESS) readerChapterProgress: number = 0;
-  @StorageProp('reader.typography.fontSize') @Watch('onPaginationInputChange') fontSize: number = 18;
-  @StorageProp('reader.typography.lineHeight') @Watch('onPaginationInputChange') lineHeightRatio: number = 1.96;
-  @StorageProp('reader.typography.paragraphGap') @Watch('onPaginationInputChange') paragraphGap: number = 16;
+  @StorageProp('reader.typography.fontSize') @Watch('onPaginationInputChange') fontSize: number = ReaderUiVisualTokens.readerContentBodySize;
+  @StorageProp('reader.typography.lineHeight') @Watch('onPaginationInputChange') lineHeightRatio: number = ReaderUiVisualTokens.readerContentBodyLineHeight / ReaderUiVisualTokens.readerContentBodySize;
+  @StorageProp('reader.typography.paragraphGap') @Watch('onPaginationInputChange') paragraphGap: number = ReaderUiVisualTokens.readerContentParagraphGap;
   @StorageProp('reader.typography.letterSpacing') @Watch('onPaginationInputChange') letterSpacing: number = 0;
   @StorageProp('reader.typography.fontFamily') @Watch('onPaginationInputChange') fontFamily: string = 'serif';
-  @StorageProp('reader.pageSpace.topMargin') @Watch('onPaginationInputChange') topMargin: number = 72;
-  @StorageProp('reader.pageSpace.sideMargin') @Watch('onPaginationInputChange') sideMargin: number = 32;
-  @StorageProp('reader.pageSpace.paragraphIndent') @Watch('onPaginationInputChange') paragraphIndent: number = 2;
+  @StorageProp('reader.pageSpace.paragraphIndent') @Watch('onPaginationInputChange') paragraphIndent: number = ReaderUiVisualTokens.readerContentParagraphIndent / ReaderUiVisualTokens.readerContentBodySize;
   @StorageProp(ReaderUiStore.K_CANONICAL_READER_LOCATION) @Watch('onCanonicalReaderLocationChange') canonicalLocation: CoreReaderCanonicalLocation | null = null;
   @StorageProp(ReaderUiStore.K_PLAYBACK_PAGE_CORRELATION) playbackPageCorrelation: string = '';
   @StorageProp(ReaderUiStore.K_PLAYBACK_PAGE_DIRECTION) playbackPageDirection: string = '';
@@ -240,15 +193,12 @@ export struct ReadingTextFlow {
   private lastAnimatedPageIndex: number = 0;
 
   private inkColor(): string {
+    if (this.readerTheme === 'paper') return ReaderUiVisualTokens.readerContentInk;
     return ReaderThemeResolver.palette(this.readerTheme, this.appThemeMode).ink;
   }
 
   private controlLayer(): boolean {
     return this.routeId !== 'immersive-reading' && this.routeId !== 'reader_content';
-  }
-
-  private wideControlDock(): boolean {
-    return this.controlLayer() && ViewportAdapter.isWide(this.viewportWidth, this.viewportHeight);
   }
 
   private wideReaderLayout(): boolean {
@@ -274,21 +224,27 @@ export struct ReadingTextFlow {
       case 'mono':
         return FontTokens.mono;
       case 'sourceSerif':
-        return ReaderTypography.serifFamily();
+        // The appearance contract's Figma master names this face explicitly;
+        // do not silently collapse it into the generic system serif role.
+        return 'Noto Serif SC';
       case 'lxgw':
-        return FontTokens.kai;
+        // 霞鹜文楷 is not 楷体.  If the device lacks it ArkUI falls back
+        // normally, but the requested face remains the Figma contract value.
+        return 'LXGW WenKai';
       case 'serif':
       default:
-        return ReaderTypography.serifFamily();
+        return ReaderUiVisualTokens.readerContentBodyFontFamily;
     }
   }
 
   private titleFontSize(): number {
-    return this.fontSize + 5;
+    return this.fontSize + (ReaderUiVisualTokens.readerContentTitleSize -
+      ReaderUiVisualTokens.readerContentBodySize);
   }
 
   private titleLineHeight(): number {
-    return this.titleFontSize() * 1.25;
+    return this.titleFontSize() * (ReaderUiVisualTokens.readerContentTitleLineHeight /
+      ReaderUiVisualTokens.readerContentTitleSize);
   }
 
   private paragraphLineHeight(): number {
@@ -347,7 +303,8 @@ export struct ReadingTextFlow {
   }
 
   private firstPageTitleReserve(): number {
-    return this.title().length > 0 ? this.titleLineHeight() + SpacingTokens.lg : 0;
+    return this.title().length > 0
+      ? this.titleLineHeight() + ReaderUiVisualTokens.readerContentSectionGap : 0;
   }
 
   // A reader surface may only draw paragraphs that came from the selected
@@ -363,16 +320,6 @@ export struct ReadingTextFlow {
       if (this.chapterContent[i].trim().length > 0) return true;
     }
     return false;
-  }
-
-  private emptyTitle(): string {
-    if (this.currentBook === null) return '尚未选择书籍';
-    return this.loading ? '正在加载章节正文…' : '暂无可显示正文';
-  }
-
-  private emptyMessage(): string {
-    if (this.currentBook === null) return '请从书架、搜索或发现结果选择一本书后开始阅读。';
-    return this.loading ? 'Core 正在读取所选章节。' : 'Core 未返回本章正文。';
   }
 
   private readerSplitIndex(text: string, bestIndex: number): number {
@@ -631,6 +578,12 @@ export struct ReadingTextFlow {
       case 'cover':
       case '覆盖':
         return 'cover';
+      case 'simulation':
+      case '仿真':
+        return 'simulation';
+      case 'scroll':
+      case '滚动':
+        return 'scroll';
       case 'slide':
       case 'smooth':
       case '平滑':
@@ -653,6 +606,17 @@ export struct ReadingTextFlow {
     const animation = this.normalizedPageAnimation();
     if (this.verticalReading() || animation === 'none' || previousIndex === this.readerPageIndex) {
       this.resetPageTurnVisualState();
+      return;
+    }
+    // Figma has no simulation-page-turn timeline. Preserve the selected
+    // semantic without pretending it is the slide transition; the reducer
+    // still commits the exact page target and MotionAdapter still owns
+    // reduced-motion / interruption cleanup.
+    if (animation === 'simulation') {
+      this.resetPageTurnVisualState();
+      MotionAdapter.apply('reader.page.turn.next-prev', this.reducedMotion, this.getUIContext(), () => {
+        this.resetPageTurnVisualState();
+      });
       return;
     }
     this.pageTurnOffset = animation === 'cover' ? 0 : (this.readerPageIndex > previousIndex ? 28 : -28);
@@ -834,28 +798,31 @@ export struct ReadingTextFlow {
   }
 
   private textTopInset(): number {
-    const baseTop = this.wideReaderLayout() ? Math.max(this.topMargin, 48) : this.topMargin;
-    return Math.max(baseTop, this.safeAreaTop + SpacingTokens.lg);
+    const sourceInset = this.wideReaderLayout()
+      ? ReaderUiVisualTokens.readerContentTabletTop
+      : ReaderUiVisualTokens.readerContentPhoneTop;
+    return Math.max(sourceInset, this.safeAreaTop);
   }
 
   private textLeftInset(): number {
-    const designInset = this.wideReaderLayout() ? Math.max(this.sideMargin, 44) : this.sideMargin;
-    return Math.max(designInset, this.safeAreaStart + designInset);
+    const sourceInset = this.wideReaderLayout()
+      ? ReaderUiVisualTokens.readerContentTabletLeft
+      : ReaderUiVisualTokens.readerContentPhoneLeft;
+    return Math.max(sourceInset, this.safeAreaStart);
   }
 
   private textRightInset(): number {
-    const designInset = this.wideReaderLayout() ? Math.max(this.sideMargin, 44) : this.sideMargin;
-    // The Tablet ControlDock is a floating overlay, not a permanent second
-    // column. Keep the same bilateral reading edges as the frozen Reader 2
-    // master; reserving 400vp here collapsed the entire chapter into the left
-    // half of the tablet whenever the control layer was open.
-    return Math.max(designInset, this.safeAreaEnd + designInset);
+    const sourceInset = this.wideReaderLayout()
+      ? ReaderUiVisualTokens.readerContentTabletRight
+      : ReaderUiVisualTokens.readerContentPhoneRight;
+    return Math.max(sourceInset, this.safeAreaEnd);
   }
 
   private textBottomInset(): number {
-    // The demo owns a fixed 48vp body bottom inset. Safe area is a floor, not an
-    // additive second margin, so ordinary navigation bars do not move the body.
-    return Math.max(SpacingTokens.xl, this.safeAreaBottom + SpacingTokens.lg);
+    const sourceInset = this.wideReaderLayout()
+      ? ReaderUiVisualTokens.readerContentTabletBottom
+      : ReaderUiVisualTokens.readerContentPhoneBottom;
+    return Math.max(sourceInset, this.safeAreaBottom);
   }
 
   private textLayerWidth(): number {
@@ -914,7 +881,7 @@ export struct ReadingTextFlow {
           .lineHeight(this.titleLineHeight())
           .textAlign(TextAlign.Center)
           .width('100%')
-          .margin({ bottom: SpacingTokens.lg })
+          .margin({ bottom: ReaderUiVisualTokens.readerContentSectionGap })
       }
       ForEach(paragraphs, (fragment: ReaderPageFragment, i: number) => {
         Text(fragment.text)
@@ -933,6 +900,15 @@ export struct ReadingTextFlow {
             this.reportNativeSelection(fragment.text, selectionStart, selectionEnd);
           })
           .onCopy((value: string) => this.handleNativeCopy(value))
+          // The Text node owns native long-press selection and is therefore
+          // the actual hit target in vertical mode. Bind the deliberate tap
+          // here instead of relying on an ancestor Scroll callback that never
+          // receives the event once selection is enabled.
+          .onClick(() => {
+            if (this.verticalReading() && !this.controlLayer()) {
+              ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' });
+            }
+          })
           .onAreaChange((_oldArea: Area, newArea: Area) => {
             this.recordVerticalFragmentLayout(fragment, newArea);
           })
@@ -943,27 +919,10 @@ export struct ReadingTextFlow {
   }
 
   @Builder EmptyReadingState() {
-    Column({ space: 10 }) {
-      Text(this.emptyTitle())
-        .fontSize(Math.max(16, this.fontSize))
-        .fontWeight(700)
-        .fontColor(this.inkColor())
-        .fontFamily(this.readerFontFamily())
-        .textAlign(TextAlign.Center)
-      Text(this.emptyMessage())
-        .fontSize(13)
-        .lineHeight(13 * 1.5)
-        .fontColor(this.inkColor())
-        .opacity(0.68)
-        .fontFamily(ReaderTypography.sansFamily())
-        .textAlign(TextAlign.Center)
-        .maxLines(3)
-        .width('100%')
-    }
-    .width('100%')
-    .height('100%')
-    .justifyContent(FlexAlign.Center)
-    .alignItems(HorizontalAlign.Center)
+    // There is no canonical Figma no-book / no-content reader page.  An
+    // unavailable Core chapter must therefore stay visually inert instead of
+    // being substituted with a locally-authored explanation panel.
+    Column().width(0).height(0)
   }
 
   /**
@@ -1027,14 +986,13 @@ export struct ReadingTextFlow {
         }
         .width('100%')
         .height('100%')
+        // ArkUI vertically centers a short Scroll child by default. The
+        // Figma reading surface fixes the text frame to its top inset, and a
+        // real long chapter must begin from that same origin before scrolling.
+        .align(Alignment.Top)
         .scrollBar(BarState.Off)
         .onScroll((xOffset: number, yOffset: number) => this.handleVerticalScroll(xOffset, yOffset))
         .onScrollStop(() => this.reportVerticalScrollAnchor(this.lastVerticalScrollOffset))
-        .onClick(() => {
-          if (!this.controlLayer()) {
-            ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' });
-          }
-        })
       } else {
         Column() {
           // Key the rendered subtree by the logical page. Without this keyed
@@ -1107,64 +1065,46 @@ export struct ReadingTextFlow {
   }
 }
 
-// .fd-ir-info-layer: inset 26 24 22, 4-corner overlay (top-left book·chapter,
-//   top-right time, bottom-left progress, bottom-right page label). 12px sans
-//   muted. pointer-events none (taps pass through to TapZones).
+// Exact Reader/ImmersiveInfo (654:693) and Reader/ImmersiveFooterStatus
+// (1167:10248).  These are a distinct Figma component, not a generic reader
+// HUD: 24.55px inset, Noto Sans SC 12/14.4 metadata, and a bottom-right
+// footer that incorporates the current session capsule when active.
 @Component
 export struct ReadingInfoLayer {
-  @StorageProp(SafeAreaAdapter.K_TOP) safeAreaTop: number = SafeAreaAdapter.DEFAULT_TOP;
-  @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
-  @StorageProp(SafeAreaAdapter.K_START) safeAreaStart: number = SafeAreaAdapter.DEFAULT_START;
-  @StorageProp(SafeAreaAdapter.K_END) safeAreaEnd: number = SafeAreaAdapter.DEFAULT_END;
   @StorageProp(ViewportAdapter.K_WIDTH) viewportWidth: number = ViewportAdapter.DEFAULT_WIDTH;
   @StorageProp(ViewportAdapter.K_HEIGHT) viewportHeight: number = ViewportAdapter.DEFAULT_HEIGHT;
-  @StorageProp('reader.readerTheme') readerTheme: string = 'paper';
-  @StorageProp('reader.appThemeMode') appThemeMode: string = 'system';
-  @StorageProp('reader.theme.colorMode') systemColorMode: string = 'light';
   @StorageProp('reader.activeSession') activeSession: string = '';
   @StorageProp('reader.paginationMode') paginationMode: string = 'horizontal';
   @StorageProp('reader.pageIndex') readerPageIndex: number = 0;
   @StorageProp('reader.pageCount') readerPageCount: number = 1;
-  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
-  @StorageProp('reader.currentChapterTitle') currentChapterTitle: string = '';
   @StorageProp('reader.readerToggles.statusInfo') statusInfo: boolean = true;
+  // Retained for ScreenGraph constructor compatibility. Reader/ImmersiveInfo's
+  // current Figma default is the system-status row, so this alternate prop is
+  // intentionally not drawn until its boolean variant is admitted.
   @Prop chapterTitle: string = '';
   @Prop progress: number = -1;
 
-  private mutedColor(): string {
-    return ReaderThemeResolver.palette(this.readerTheme, this.appThemeMode).muted;
+  private footerSessionVisible(): boolean {
+    return this.activeSession === 'auto-page' || this.activeSession === 'tts';
   }
 
-  // 四角绝对定位锚点：top-left / top-right / bottom-left / bottom-right
-  private cornerLeft(): number {
-    return Math.max(24, this.safeAreaStart + 24);
+  private footerInset(): number {
+    return ReaderUiVisualTokens.readerImmersiveInset;
   }
-  private cornerRightX(): number {
-    return this.viewportWidth - Math.max(24, this.safeAreaEnd + 24);
+
+  private footerMetaY(): number {
+    return this.viewportHeight - this.footerInset() - ReaderUiVisualTokens.readerImmersiveMetaLineHeight;
   }
-  private cornerTopY(): number {
-    return this.safeAreaTop + 26;
-  }
-  private cornerBottomY(): number {
-    return this.viewportHeight - this.safeAreaBottom - 22;
-  }
-  private pageRightOffset(): number {
-    return this.activeSession !== '' ? 100 : 0;
+
+  private footerSessionY(): number {
+    return this.viewportHeight - ReaderUiVisualTokens.readerImmersiveFooterBottom -
+      ReaderUiVisualTokens.readerSessionCapsuleHeight;
   }
 
   private pageLabel(): string {
     const count = Math.max(1, this.readerPageCount);
     const page = Math.max(0, Math.min(count - 1, this.readerPageIndex)) + 1;
     return `第 ${page} / ${count} 页`;
-  }
-
-  private bookChapterLabel(): string {
-    const canonicalChapter: string = this.chapterTitle !== '' ? this.chapterTitle : this.currentChapterTitle;
-    if (this.currentBook === null) return canonicalChapter !== '' ? canonicalChapter : '未选择书籍';
-    const title = this.currentBook.title.length > 0 ? this.currentBook.title : '未命名书籍';
-    const chapter = canonicalChapter.length > 0 ? canonicalChapter : this.currentBook.latestChapter;
-    if (chapter.length === 0) return `${title} · 正文未加载`;
-    return `${title} · ${chapter}`;
   }
 
   private progressLabel(): string {
@@ -1180,45 +1120,87 @@ export struct ReadingInfoLayer {
     return `${now.getHours()}:${minute < 10 ? '0' : ''}${minute}`;
   }
 
+  @Builder systemStatus() {
+    Text(this.clockLabel())
+      .width(80)
+      .height(ReaderUiVisualTokens.readerImmersiveStatusHeight)
+      .fontSize(ReaderUiVisualTokens.readerImmersiveMetaSize)
+      .lineHeight(ReaderUiVisualTokens.readerImmersiveMetaLineHeight)
+      .fontWeight(400)
+      .fontColor(ReaderUiVisualTokens.readerImmersiveMetaInk)
+      .fontFamily(ReaderUiVisualTokens.readerImmersiveMetaFontFamily)
+      .position({ x: this.footerInset(), y: this.footerInset() })
+    Row({ space: ReaderUiVisualTokens.readerImmersiveStatusIconGap }) {
+      Image($r('app.media.figma_reader_immersive_signal'))
+        .width(ReaderUiVisualTokens.readerImmersiveStatusIconSize)
+        .height(ReaderUiVisualTokens.readerImmersiveStatusIconSize)
+      Image($r('app.media.figma_reader_immersive_wifi'))
+        .width(ReaderUiVisualTokens.readerImmersiveStatusIconSize)
+        .height(ReaderUiVisualTokens.readerImmersiveStatusIconSize)
+      Image($r('app.media.figma_reader_immersive_battery'))
+        .width(ReaderUiVisualTokens.readerImmersiveStatusIconSize)
+        .height(ReaderUiVisualTokens.readerImmersiveStatusIconSize)
+    }
+    .position({
+      x: this.viewportWidth - this.footerInset() -
+        ReaderUiVisualTokens.readerImmersiveStatusIconSize * 3 -
+        ReaderUiVisualTokens.readerImmersiveStatusIconGap * 2,
+      y: this.footerInset() + ReaderUiVisualTokens.readerImmersiveStatusIconTop,
+    })
+  }
+
+  @Builder footerStatus() {
+    if (this.footerSessionVisible()) {
+      Row({ space: ReaderUiVisualTokens.readerImmersiveFooterGap }) {
+        if (this.paginationMode !== 'vertical') {
+          Text(this.pageLabel())
+            .fontSize(ReaderUiVisualTokens.readerImmersiveMetaSize)
+            .lineHeight(ReaderUiVisualTokens.readerImmersiveMetaLineHeight)
+            .fontWeight(400)
+            .fontColor(ReaderUiVisualTokens.readerImmersiveMetaInk)
+            .fontFamily(ReaderUiVisualTokens.readerImmersiveMetaFontFamily)
+        }
+        SessionCapsule()
+      }
+      .height(ReaderUiVisualTokens.readerSessionCapsuleHeight)
+      .alignItems(VerticalAlign.Center)
+      .position({ x: this.viewportWidth - this.footerInset(), y: this.footerSessionY() })
+      .markAnchor({ x: '100%', y: 0 })
+    } else if (this.paginationMode !== 'vertical') {
+      Text(this.pageLabel())
+        .fontSize(ReaderUiVisualTokens.readerImmersiveMetaSize)
+        .lineHeight(ReaderUiVisualTokens.readerImmersiveMetaLineHeight)
+        .fontWeight(400)
+        .fontColor(ReaderUiVisualTokens.readerImmersiveMetaInk)
+        .fontFamily(ReaderUiVisualTokens.readerImmersiveMetaFontFamily)
+        .position({ x: this.viewportWidth - this.footerInset(), y: this.footerMetaY() })
+        .markAnchor({ x: '100%', y: 0 })
+    }
+  }
+
   build() {
     Stack() {
       if (this.statusInfo) {
-        // top-left: book · chapter
-        Text(this.bookChapterLabel())
-          .fontSize(12)
-          .fontColor(this.mutedColor())
-          .fontFamily(ReaderTypography.sansFamily())
-          .position({ x: this.cornerLeft(), y: this.cornerTopY() })
-          .markAnchor({ x: 0, y: 0 })
-        // top-right: current device time, never a demo fixture.
-        Text(this.clockLabel())
-          .fontSize(12)
-          .fontColor(this.mutedColor())
-          .fontFamily(ReaderTypography.sansFamily())
-          .position({ x: this.cornerRightX(), y: this.cornerTopY() })
-          .markAnchor({ x: '100%', y: 0 })
-        // bottom-left: progress
+        this.systemStatus()
         Text(this.progressLabel())
-          .fontSize(12)
-          .fontColor(this.mutedColor())
-          .fontFamily(ReaderTypography.sansFamily())
-          .position({ x: this.cornerLeft(), y: this.cornerBottomY() })
-          .markAnchor({ x: 0, y: '100%' })
-        // Vertical continuous reading has no page-number concept.
-        if (this.paginationMode !== 'vertical') {
-          Text(this.pageLabel())
-            .fontSize(12)
-            .fontColor(this.mutedColor())
-            .fontFamily(ReaderTypography.sansFamily())
-            .position({ x: this.cornerRightX() - this.pageRightOffset(), y: this.cornerBottomY() })
-            .markAnchor({ x: '100%', y: '100%' })
-        }
+          .fontSize(ReaderUiVisualTokens.readerImmersiveMetaSize)
+          .lineHeight(ReaderUiVisualTokens.readerImmersiveMetaLineHeight)
+          .fontWeight(400)
+          .fontColor(ReaderUiVisualTokens.readerImmersiveMetaInk)
+          .fontFamily(ReaderUiVisualTokens.readerImmersiveMetaFontFamily)
+          .position({ x: this.footerInset(), y: this.footerMetaY() })
       }
+      this.footerStatus()
       InteractionDebugFrame({ label: 'ImmersiveInfoLayer', tone: 'module' })
     }
     .width('100%')
     .height('100%')
-    .hitTestBehavior(HitTestMode.None)
+    // The session capsule must remain above horizontal page-turn zones. In a
+    // normal reading session, however, this full-screen metadata layer is
+    // purely visual and must not sit over the vertical Scroll: doing so turns
+    // the Figma “滚动” mode into a visually single but non-draggable page.
+    .zIndex(this.footerSessionVisible() ? ZIndexTokens.dialog + 1 : 0)
+    .hitTestBehavior(this.footerSessionVisible() ? HitTestMode.Transparent : HitTestMode.None)
     .expandSafeArea([SafeAreaType.SYSTEM, SafeAreaType.CUTOUT],
       [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END])
   }
@@ -1229,27 +1211,31 @@ export struct ReadingInfoLayer {
 // source-switch action, and more. The immersive routes keep ReadingInfoLayer.
 @Component
 export struct ReaderTopArea {
+  // The reader surface intentionally expands behind the system status bar.
+  // Its floating control chrome therefore needs the real measured top inset;
+  // a fixed Figma-canvas margin alone places the title beneath the status
+  // icons on an actual HarmonyOS window.
   @StorageProp(SafeAreaAdapter.K_TOP) safeAreaTop: number = SafeAreaAdapter.DEFAULT_TOP;
-  @StorageProp(SafeAreaAdapter.K_START) safeAreaStart: number = SafeAreaAdapter.DEFAULT_START;
-  @StorageProp(SafeAreaAdapter.K_END) safeAreaEnd: number = SafeAreaAdapter.DEFAULT_END;
+  @StorageProp(ViewportAdapter.K_WIDTH) viewportWidth: number = ViewportAdapter.DEFAULT_WIDTH;
+  @StorageProp(ViewportAdapter.K_HEIGHT) viewportHeight: number = ViewportAdapter.DEFAULT_HEIGHT;
   @StorageProp('reader.displayedRouteId') routeId: string = 'reader';
   @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
   @StorageProp('reader.currentChapterTitle') currentChapterTitle: string = '';
 
   private bookTitle(): string {
-    if (this.currentBook === null) return '未选择书籍';
-    return this.currentBook.title.length > 0 ? this.currentBook.title : '未命名书籍';
+    if (this.currentBook === null) return '';
+    return this.currentBook.title.length > 0 ? this.currentBook.title : '';
   }
 
   private bookMeta(): string {
-    if (this.currentBook === null) return '请选择书籍后开始阅读';
+    if (this.currentBook === null) return '';
     const chapter = this.currentChapterTitle.length > 0
       ? this.currentChapterTitle : this.currentBook.latestChapter;
     const source = this.currentBook.sourceName;
     if (chapter.length > 0 && source.length > 0) return `${chapter} · ${source}`;
     if (chapter.length > 0) return chapter;
     if (source.length > 0) return source;
-    return '正文未加载';
+    return '';
   }
 
   private handleBack(): void {
@@ -1257,7 +1243,22 @@ export struct ReaderTopArea {
       ReaderUiStore.dispatch({ type: 'route-pop' });
       return;
     }
-    ReaderUiStore.dispatch({ type: 'reader-exit' });
+    ReaderUiStore.requestReaderExit();
+  }
+
+  private wideViewport(): boolean {
+    return ViewportAdapter.isWide(this.viewportWidth, this.viewportHeight);
+  }
+
+  private horizontalInset(): number {
+    // `1023:18739` / `1023:18747`: 390px Phone uses 15px; 760px Tablet uses
+    // 29px.  This bar deliberately follows the Figma root rather than a
+    // generic safe-area card token.
+    return this.wideViewport() ? 29 : 15;
+  }
+
+  private topInset(): number {
+    return this.safeAreaTop + 19;
   }
 
   build() {
@@ -1267,61 +1268,61 @@ export struct ReaderTopArea {
           Row({ space: 8 }) {
             Stack({ alignContent: Alignment.TopStart }) {
               Row() {
-                Image($r('app.media.reader_icon_back_dark'))
-                  .width(28)
-                  .height(28)
+                Image($r('app.media.reader_control_top_back'))
+                  .width(24)
+                  .height(24)
               }
-              .width(40)
+              .width(44)
               .height(42)
-              .justifyContent(FlexAlign.Start)
+              .justifyContent(FlexAlign.Center)
               .alignItems(VerticalAlign.Center)
               .onClick(() => this.handleBack())
               InteractionDebugBadge({ label: 'back', tone: 'action', offsetTop: 22 })
             }
-            .width(40)
+            .width(44)
             .height(42)
 
             Stack({ alignContent: Alignment.TopStart }) {
-              Column({ space: 5 }) {
+              Column({ space: 1 }) {
                 Text(this.bookTitle())
                   .fontSize(16)
                   .fontWeight(700)
-                  .fontColor(ColorTokens.controlInk)
-                  .fontFamily(ReaderTypography.sansFamily())
-                  .maxLines(2)
+                  .fontColor(ReaderUiVisualTokens.readerControlInk)
+                  .fontFamily(ReaderUiVisualTokens.readerControlTopFontFamily)
+                  .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
                 Text(this.bookMeta())
                   .fontSize(12)
-                  .fontColor(ColorTokens.muted)
-                  .fontFamily(ReaderTypography.sansFamily())
-                  .maxLines(2)
+                  .fontColor(ReaderUiVisualTokens.readerControlMuted)
+                  .fontFamily(ReaderUiVisualTokens.readerControlTopFontFamily)
+                  .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
               }
               .width('100%')
-              .height(42)
+              .height(45)
               .justifyContent(FlexAlign.Center)
               .alignItems(HorizontalAlign.Start)
             }
             .layoutWeight(1)
             .height(42)
 
-            if (this.currentBook !== null) {
+            if (canSwitchBookSourceId(this.currentBook?.sourceId)) {
               Stack({ alignContent: Alignment.TopStart }) {
-                Row({ space: 4 }) {
-                  Image($r('app.media.reader_icon_source_switch_dark'))
+                Column({ space: 0 }) {
+                  Image($r('app.media.reader_control_top_source_switch'))
                     .width(20)
                     .height(20)
                   Text('换源')
                     .fontSize(12)
                     .fontWeight(800)
-                    .fontColor(ColorTokens.controlInk)
-                    .fontFamily(ReaderTypography.sansFamily())
+                    .fontColor(ReaderUiVisualTokens.readerControlInk)
+                    .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
                 }
                 .width(62)
                 .height(42)
                 .justifyContent(FlexAlign.Center)
-                .alignItems(VerticalAlign.Center)
-                .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'source-switch' }))
+                .alignItems(HorizontalAlign.Center)
+                .onClick(() => ReaderUiStore.requestSourceSwitchOpen())
                 InteractionDebugBadge({ label: 'source', tone: 'action' })
               }
               .width(62)
@@ -1330,13 +1331,17 @@ export struct ReaderTopArea {
 
             Stack({ alignContent: Alignment.TopStart }) {
               Row() {
-                Image($r('app.media.reader_icon_more_dark')).width(24).height(24)
+                Image($r('app.media.reader_control_top_more')).width(20).height(20)
               }
               .width(34)
               .height(42)
               .justifyContent(FlexAlign.Center)
               .alignItems(VerticalAlign.Center)
-              .onClick(() => ReaderUiStore.dispatch({ type: 'set-overlay', overlay: 'book-action' }))
+              // Reader-UI's canonical TapZones binding resolves
+              // reader.control.toggle to the reader control-home route. This
+              // is deliberately not the bookshelf long-press/action menu.
+              .accessibilityText('打开阅读控制栏')
+              .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' }))
               InteractionDebugBadge({ label: 'more', tone: 'action' })
             }
             .width(34)
@@ -1344,21 +1349,18 @@ export struct ReaderTopArea {
           }
           .width('100%')
           .height(54)
-          .padding({ left: SpacingTokens.sm, right: SpacingTokens.sm })
-          .border({ width: 1, color: ColorTokens.border })
-          .borderRadius(DemoAliasTokens.radiusXl)
-          .backgroundColor(DemoAliasTokens.surface)
+          .padding({ left: 13, right: 13, top: 6, bottom: 6 })
+          .border({ width: 1, color: ReaderUiVisualTokens.readerControlBorder })
+          .borderRadius(24)
+          .backgroundColor(ReaderUiVisualTokens.readerControlSurface)
           InteractionDebugFrame({ label: 'ReaderTopBar', tone: 'module' })
         }
         .width('100%')
         .height(54)
       }
       .width('100%')
-      .padding({
-        left: Math.max(SpacingTokens.cardPadding, this.safeAreaStart + SpacingTokens.cardPadding),
-        right: Math.max(SpacingTokens.cardPadding, this.safeAreaEnd + SpacingTokens.cardPadding),
-      })
-      .margin({ top: this.safeAreaTop + 18 })
+      .padding({ left: this.horizontalInset(), right: this.horizontalInset() })
+      .margin({ top: this.topInset() })
     }
     .width('100%')
     .height('100%')
@@ -1481,25 +1483,29 @@ export struct TapZones {
   }
 }
 
-// Session capsule — reflects reader.activeSession (reading / tts / auto-page).
-// Batch 1.4: interactive — play/pause control + click-to-expand + countdown.
+// Exact Reader/SessionCapsule (1164:10275).  Hidden is owned by the footer;
+// only AutoPage and TTS have a rendered capsule.  This intentionally has no
+// generic "reading" state, emoji, or local surface tokens.
 @Component
 export struct SessionCapsule {
   @StorageProp('reader.activeSession') activeSession: string = '';
   @StorageProp('reader.ttsSession.playback') ttsPlayback: string = 'idle';
   @StorageProp('reader.autoPageSession.playing') autoPagePlaying: boolean = false;
   @StorageProp('reader.autoPageSession.countdownSeconds') countdown: number = 0;
-  @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
-  @StorageProp(SafeAreaAdapter.K_END) safeAreaEnd: number = SafeAreaAdapter.DEFAULT_END;
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
 
-  private sessionLabel(): string {
-    switch (this.activeSession) {
-      case 'tts': return '朗读中';
-      case 'auto-page': return '自动翻页';
-      case 'reading': return '阅读中';
-      default: return '';
-    }
+  private isVisible(): boolean {
+    return this.activeSession === 'auto-page' || this.activeSession === 'tts';
+  }
+
+  private isAutoPage(): boolean {
+    return this.activeSession === 'auto-page';
+  }
+
+  private capsuleWidth(): number {
+    return this.isAutoPage()
+      ? ReaderUiVisualTokens.readerSessionCapsuleAutoWidth
+      : ReaderUiVisualTokens.readerSessionCapsuleTtsWidth;
   }
 
   private isPlaying(): boolean {
@@ -1508,57 +1514,91 @@ export struct SessionCapsule {
     return false;
   }
 
-  build() {
-    if (this.activeSession !== '') {
-      Stack({ alignContent: Alignment.BottomEnd }) {
-        Row() {
-          if (this.activeSession === 'tts') {
-            Text('🔊').fontSize(11).margin({ right: 4 })
-          }
-          Circle().width(6).height(6)
-            .fill(this.isPlaying() ? ColorTokens.primary : ColorTokens.muted)
-            .margin({ right: 6 })
-          Text(this.sessionLabel())
-            .fontSize(11).fontWeight(700).fontColor(ColorTokens.controlInk)
-          if (this.activeSession === 'auto-page' && this.countdown > 0) {
-            Text(`${this.countdown}s`)
-              .fontSize(11).fontColor(ColorTokens.accent)
-              .margin({ left: 4 })
-          }
-          Text(this.isPlaying() ? '⏸' : '▶')
-            .fontSize(12)
-            .margin({ left: 6 })
-            .onClick(() => {
-              MotionAdapter.apply('reader.session.capsule.control.press-toggle', this.reducedMotion, this.getUIContext(), () => {
-                if (this.activeSession === 'tts') {
-                  ReaderUiStore.dispatch({ type: 'tts-toggle' });
-                } else if (this.activeSession === 'auto-page') {
-                  ReaderUiStore.dispatch({ type: 'auto-page-toggle' });
-                }
-              });
-            })
-        }
-        .padding({ left: SpacingTokens.xs, right: SpacingTokens.xs, top: SpacingTokens.xs, bottom: SpacingTokens.xs })
-        .borderRadius(RadiusTokens.control)
-        .backgroundColor(DemoAliasTokens.surface)
-        .border({ width: 1, color: ColorTokens.border })
-        .onClick(() => {
-          MotionAdapter.apply('reader.session.capsule.update', this.reducedMotion, this.getUIContext(), () => {
-            if (this.activeSession === 'tts') {
-              ReaderUiStore.dispatch({ type: 'route-push', id: 'reader-full-tts' });
-            } else if (this.activeSession === 'auto-page') {
-              ReaderUiStore.dispatch({ type: 'route-push', id: 'reader-full-settings' });
-            }
-          });
-        })
+  private toggleTransport(): void {
+    MotionAdapter.apply('reader.session.capsule.control.press-toggle', this.reducedMotion, this.getUIContext(), () => {
+      if (this.activeSession === 'tts') {
+        // The native TextToSpeechEngine exposes stop, not a reliable pause /
+        // resume boundary. Never present a fake paused playback state.
+        ReaderUiStore.dispatch({ type: 'reader-tts-stop' });
+      } else if (this.activeSession === 'auto-page') {
+        ReaderUiStore.dispatch({ type: 'auto-page-toggle' });
       }
-      .width('100%')
-      .height('100%')
+    });
+  }
+
+  private openSessionPanel(): void {
+    MotionAdapter.apply('reader.session.capsule.update', this.reducedMotion, this.getUIContext(), () => {
+      if (this.activeSession === 'tts') {
+        ReaderUiStore.dispatch({ type: 'route-push', id: 'reader-full-tts' });
+      } else if (this.activeSession === 'auto-page') {
+        ReaderUiStore.dispatch({ type: 'route-push', id: 'reader-full-settings' });
+      }
+    });
+  }
+
+  build() {
+    if (this.isVisible()) {
+      Row({ space: ReaderUiVisualTokens.readerSessionCapsuleGap }) {
+        if (this.isAutoPage()) {
+          Text(`${Math.max(0, this.countdown)}`)
+            .width(ReaderUiVisualTokens.readerSessionCapsuleCountdownWidth)
+            .height(ReaderUiVisualTokens.readerSessionCapsuleCountdownHeight)
+            .fontSize(ReaderUiVisualTokens.readerSessionCapsuleCountdownSize)
+            .lineHeight(ReaderUiVisualTokens.readerSessionCapsuleCountdownSize)
+            .fontWeight(900)
+            .fontColor(ReaderUiVisualTokens.readerSessionCapsulePrimaryInk)
+            .fontFamily(ReaderUiVisualTokens.readerSessionCapsuleFontFamily)
+            .textAlign(TextAlign.Center)
+            .borderRadius(ReaderUiVisualTokens.readerSessionCapsuleRadius)
+            .backgroundColor(ReaderUiVisualTokens.readerSessionCapsulePrimary)
+        } else {
+          Stack({ alignContent: Alignment.Center }) {
+            Image($r('app.media.figma_reader_session_tts'))
+              .width(ReaderUiVisualTokens.readerSessionCapsuleTtsIconSize)
+              .height(ReaderUiVisualTokens.readerSessionCapsuleTtsIconSize)
+          }
+          .width(ReaderUiVisualTokens.readerSessionCapsuleCountdownHeight)
+          .height(ReaderUiVisualTokens.readerSessionCapsuleCountdownHeight)
+        }
+        Text(this.isAutoPage() ? '自动翻页' : '朗读')
+          .width(42)
+          .height(ReaderUiVisualTokens.readerSessionCapsuleLabelLineHeight)
+          .fontSize(ReaderUiVisualTokens.readerSessionCapsuleLabelSize)
+          .lineHeight(ReaderUiVisualTokens.readerSessionCapsuleLabelLineHeight)
+          .fontWeight(700)
+          .fontColor(ReaderUiVisualTokens.readerSessionCapsuleInk)
+          .fontFamily(ReaderUiVisualTokens.readerSessionCapsuleFontFamily)
+          .textAlign(TextAlign.Center)
+        Stack({ alignContent: Alignment.Center }) {
+          if (this.isPlaying()) {
+            Image($r('app.media.figma_reader_session_pause'))
+              .width(ReaderUiVisualTokens.readerSessionCapsuleActionIconSize)
+              .height(ReaderUiVisualTokens.readerSessionCapsuleActionIconSize)
+          } else {
+            Image($r('app.media.figma_reader_session_play'))
+              .width(ReaderUiVisualTokens.readerSessionCapsuleActionIconSize)
+              .height(ReaderUiVisualTokens.readerSessionCapsuleActionIconSize)
+          }
+        }
+        .width(ReaderUiVisualTokens.readerSessionCapsuleActionSize)
+        .height(ReaderUiVisualTokens.readerSessionCapsuleActionSize)
+        .borderRadius(ReaderUiVisualTokens.readerSessionCapsuleRadius)
+        .backgroundColor(ReaderUiVisualTokens.readerSessionCapsulePrimary)
+        .onClick(() => this.toggleTransport())
+      }
+      .width(this.capsuleWidth())
+      .height(ReaderUiVisualTokens.readerSessionCapsuleHeight)
       .padding({
-        right: Math.max(SpacingTokens.lg, this.safeAreaEnd + SpacingTokens.lg),
-        bottom: this.safeAreaBottom + SpacingTokens.lg,
+        left: ReaderUiVisualTokens.readerSessionCapsuleHorizontalPadding,
+        right: ReaderUiVisualTokens.readerSessionCapsuleHorizontalPadding,
       })
-      .hitTestBehavior(HitTestMode.Transparent)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+      .borderRadius(ReaderUiVisualTokens.readerSessionCapsuleRadius)
+      .backgroundColor(ReaderUiVisualTokens.readerSessionCapsuleSurface)
+      .border({ width: 1, color: ReaderUiVisualTokens.readerSessionCapsuleBorder })
+      .shadow({ radius: 8, color: ReaderUiVisualTokens.readerSessionCapsuleShadow, offsetX: 0, offsetY: 3 })
+      .onClick(() => this.openSessionPanel())
     }
   }
 }
@@ -1583,6 +1623,11 @@ struct ControlDismissZone {
 @Component
 export struct ReaderBase {
   @StorageProp('reader.displayedRouteId') routeId: string = 'reader';
+  // `scroll` is the one Figma PageStyle choice that selects the native
+  // vertical reading surface.  In that mode the Scroll must receive the
+  // gesture directly; an invisible page-turn hot-zone above it would make a
+  // long chapter look like a single, non-scrollable page.
+  @StorageProp('reader.paginationMode') paginationMode: string = 'horizontal';
   @Prop tapZoneContractBindingsDefined: boolean = false;
   @Prop tapZoneContractBindings: ViewStateExplicitBinding[] = [];
 
@@ -1596,14 +1641,19 @@ export struct ReaderBase {
       ReadingTextFlow()
       if (this.controlLayer()) {
         ControlDismissZone()
-        SessionCapsule()
       } else {
+        // The Scroll's own click handler still opens the control layer in
+        // vertical reading.  Do not layer horizontal page-turn targets over
+        // it, otherwise their gesture recognizers intercept scrolling.
+        if (this.paginationMode !== 'vertical') {
+          TapZones({
+            contractBindingsDefined: this.tapZoneContractBindingsDefined,
+            contractBindings: this.tapZoneContractBindings,
+          })
+        }
+        // Must sit above the transparent tap zones so the current Figma
+        // footer session capsule remains an actual in-app control.
         ReadingInfoLayer()
-        TapZones({
-          contractBindingsDefined: this.tapZoneContractBindingsDefined,
-          contractBindings: this.tapZoneContractBindings,
-        })
-        SessionCapsule()
       }
     }
     .width('100%')

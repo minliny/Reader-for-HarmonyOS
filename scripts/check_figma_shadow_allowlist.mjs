@@ -13,15 +13,21 @@ const uiRoot = path.join(repo, 'entry/src/main/ets/ui');
 
 const allowlist = [
   // Library/BookCard 493:196: cover only, 0 8 26 rgba(89,70,50,.10).
-  "entry/src/main/ets/ui/components/BookshelfComponents.ets|radius: 26, color: FigmaReadingVisualTokens.shelfCoverShadow, offsetX: 0, offsetY: 8",
+  "entry/src/main/ets/ui/components/BookshelfComponents.ets|radius: 26, color: ReaderUiVisualTokens.bookshelfCoverShadow, offsetX: 0, offsetY: 8",
   // Library/BookCard List cover 493:192: 0 6 12 rgba(52,38,26,.12).
-  "entry/src/main/ets/ui/components/BookshelfComponents.ets|radius: 12, color: FigmaReadingVisualTokens.shelfListCoverShadow, offsetX: 0, offsetY: 6",
-  // Book Detail/DeleteDialog 2269:66: 0 18 46 rgba(89,70,50,.16).
-  "entry/src/main/ets/ui/slots/OverlayHost.ets|radius: 46, color: '#29594632', offsetX: 0, offsetY: 18",
-  // Library/LocalImportDialog State=Import Result 2657:917: 0 25 50 -12 rgba(0,0,0,.25).
-  "entry/src/main/ets/ui/components/FigmaLocalImportDialog.ets|radius: 50, color: FigmaLibraryVisualTokens.dialogShadow, offsetX: 0, offsetY: 25",
-  // Overlay/Restore Backup Confirm 2834:32130: 0 18 46 rgba(89,70,50,.16).
-  "entry/src/main/ets/ui/components/FigmaRestoreBackupOverlay.ets|radius: FigmaSyncBackupVisualTokens.confirmShadowRadius, color: FigmaSyncBackupVisualTokens.confirmShadow, offsetX: 0, offsetY: FigmaSyncBackupVisualTokens.confirmShadowOffsetY,",
+  "entry/src/main/ets/ui/components/BookshelfComponents.ets|radius: 12, color: ReaderUiVisualTokens.bookshelfListCoverShadow, offsetX: 0, offsetY: 6",
+  // Bookshelf/MultiSelect 2914:58964: checkbox only, 0 2 4 rgba(0,0,0,.15).
+  "entry/src/main/ets/ui/slots/OverlayHost.ets|radius: 4, color: ReaderUiVisualTokens.multiSelectCheckboxShadow, offsetX: 0, offsetY: 2",
+  // Library/BookActionSheet 2903:1737: 0 18 46 rgba(89,70,50,.16).
+  "entry/src/main/ets/ui/slots/OverlayHost.ets|radius: 46, color: ReaderUiVisualTokens.actionSheetShadow, offsetX: 0, offsetY: 18",
+  // Library/BookDetail/DeleteDialog 2269:66: same Figma effect binding.
+  "entry/src/main/ets/ui/slots/OverlayHost.ets|radius: 46, color: ReaderUiVisualTokens.actionSheetShadow, offsetX: 0, offsetY: 18",
+  // Reader/SessionCapsule 1164:10227: 0 3 8 rgba(70,52,35,.07), footer control only.
+  "entry/src/main/ets/ui/components/ReaderComponents.ets|radius: 8, color: ReaderUiVisualTokens.readerSessionCapsuleShadow, offsetX: 0, offsetY: 3",
+  // Library/LocalImportDialog Importing 2899:58923: 0 25 50 rgba(0,0,0,.25).
+  "entry/src/main/ets/ui/slots/OverlayHost.ets|radius: 50, color: ReaderUiVisualTokens.localImportDialogShadow, offsetX: 0, offsetY: 25",
+  // Library/LocalImportDialog Import Result 2657:917: same Figma effect binding.
+  "entry/src/main/ets/ui/slots/OverlayHost.ets|radius: 50, color: ReaderUiVisualTokens.localImportDialogShadow, offsetX: 0, offsetY: 25",
 ];
 
 function collectEtsFiles(dir) {

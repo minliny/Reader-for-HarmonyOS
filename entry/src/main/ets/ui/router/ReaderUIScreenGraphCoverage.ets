@@ -27,12 +27,14 @@ export interface ReaderUIScreenGraphComponentCoverage {
   genericUsableTypes: ComponentType[];
   partialTypes: ComponentType[];
   insufficientTypes: ComponentType[];
+  figmaUnboundStateTypes: ComponentType[];
   visibleFailureTypes: ComponentType[];
   faithfulInstanceCount: number;
   hostCompositeInstanceCount: number;
   genericUsableInstanceCount: number;
   partialInstanceCount: number;
   insufficientInstanceCount: number;
+  figmaUnboundStateInstanceCount: number;
   explicitTargetBindingCount: number;
   tapZoneExplicitTargetBindingCount: number;
   isAdapterRegistryClosed: boolean;
@@ -190,13 +192,14 @@ export const READER_SCREEN_GRAPH_REFERENCED_DISPATCH_TYPES: ComponentType[] = [
 export const READER_SCREEN_GRAPH_DIALOG_GENERIC_BLOCKER: string =
   '5 executable nested Button bindings remain inert: reader.font.import, reader.font.delete, reader.theme.delete, reader.typography.reset, reader.progress.restore';
 
-// These page types deliberately reject fixture display values and project
+// These surfaces deliberately reject fixture display values and project
 // only live Store/Core/Host state (or an explicit unavailable state). They are
 // generic usable surfaces, not partial adapters: consuming the canonical
 // title/query/progress placeholder would make the native page less truthful.
 // The screen-graph gate verifies that their direct renderer branches pass no
 // canonical props or children into the production component.
 export const READER_SCREEN_GRAPH_LIVE_STATE_PROJECTION_TYPES: ComponentType[] = [
+  'ContinueReadingCard',
   'SearchResultsPage',
   'SyncProgressPage',
   'RssDetailPage',
@@ -209,6 +212,7 @@ export const READER_SCREEN_GRAPH_LIVE_STATE_PROJECTION_TYPES: ComponentType[] = 
 // live-state projection list above is also generic, but intentionally rejects
 // fixture display props instead of treating them as runtime facts.
 export const READER_SCREEN_GRAPH_GENERIC_USABLE_TYPES: ComponentType[] = [
+  'ContinueReadingCard',
   'Toast',
   'Dialog',
   'Button',
@@ -255,7 +259,6 @@ export const READER_SCREEN_GRAPH_GENERIC_USABLE_TYPES: ComponentType[] = [
   'AppShellStructure',
   'MainTabsStructure',
   'SearchStatePage',
-  'BookshelfEmptyPage',
   'SourceDisabledState',
   'SyncErrorPage',
   'RssEmptyState',
@@ -270,8 +273,22 @@ export const READER_SCREEN_GRAPH_GENERIC_USABLE_TYPES: ComponentType[] = [
   'ReadingTextFlow',
 ];
 
+// The current revision-bound Figma registry intentionally has no generic
+// route-state master. These ScreenGraph leaves remain semantic/Core evidence
+// but must stay visually inert: Search and Local Import own their separately
+// admitted state components. Adding a visual implementation requires a Figma
+// STATE_ADMISSIONS entry first; it must not be promoted by this local list.
+export const READER_SCREEN_GRAPH_FIGMA_UNBOUND_STATE_TYPES: ComponentType[] = [
+  'Loading',
+  'Empty',
+  'ErrorState',
+  'Offline',
+];
+
 export const READER_SCREEN_GRAPH_PARTIAL_ENTRIES: ReaderUIScreenGraphPartialEntry[] = [
   { type: 'ReaderBase', reason: '49 host-composite instances retain Core/Host authority for live theme, text/info, pagination/anchor, and composite controls; 2 planned document formats stay fail-closed' },
+  { type: 'SearchInputBox', reason: 'the historical generated SearchInputBox props are intentionally not rendered; current Figma Search owns the one composed header/input and the fragment remains inert to prevent a duplicate visual hierarchy' },
+  { type: 'BookshelfEmptyPage', reason: 'the historical generated title/message fixture is intentionally not projected; current Figma State/BookshelfEmpty owns the exact visible component and its two crosswalk-bound actions' },
 ];
 
 function typeSet(types: ComponentType[]): Set<string> {
@@ -357,15 +374,19 @@ export class ReaderUIScreenGraphCoverageRegistry {
     const dispatchSet: Set<string> = typeSet(READER_SCREEN_GRAPH_REFERENCED_DISPATCH_TYPES);
     const genericSet: Set<string> = typeSet(READER_SCREEN_GRAPH_GENERIC_USABLE_TYPES);
     const partialSet: Set<string> = partialTypeSet();
+    const figmaUnboundStateSet: Set<string> = typeSet(READER_SCREEN_GRAPH_FIGMA_UNBOUND_STATE_TYPES);
     const faithful: ComponentType[] = [];
     const generic: ComponentType[] = [];
     const partial: ComponentType[] = [];
     const insufficient: ComponentType[] = [];
+    const figmaUnboundStates: ComponentType[] = [];
 
     for (let index: number = 0; index < referenced.length; index += 1) {
       const type: ComponentType = referenced[index];
       if (!dispatchSet.has(type)) {
         insufficient.push(type);
+      } else if (figmaUnboundStateSet.has(type)) {
+        figmaUnboundStates.push(type);
       } else if (partialSet.has(type)) {
         partial.push(type);
       } else if (genericSet.has(type)) {
@@ -393,9 +414,10 @@ export class ReaderUIScreenGraphCoverageRegistry {
     const genericUsableInstanceCount: number = instanceCount(catalog, generic);
     const partialInstanceCount: number = instanceCount(catalog, partial);
     const insufficientInstanceCount: number = instanceCount(catalog, insufficient);
+    const figmaUnboundStateInstanceCount: number = instanceCount(catalog, figmaUnboundStates);
 
     if (faithfulInstanceCount + genericUsableInstanceCount + partialInstanceCount +
-      insufficientInstanceCount !== canonicalInstanceCount) {
+      insufficientInstanceCount + figmaUnboundStateInstanceCount !== canonicalInstanceCount) {
       throw new Error('Harmony ScreenGraph instance coverage must partition canonical instances');
     }
 
@@ -411,16 +433,23 @@ export class ReaderUIScreenGraphCoverageRegistry {
       genericUsableTypes: generic,
       partialTypes: partial,
       insufficientTypes: insufficient,
+      figmaUnboundStateTypes: figmaUnboundStates,
       visibleFailureTypes: visibleFailures,
       faithfulInstanceCount,
       hostCompositeInstanceCount,
       genericUsableInstanceCount,
       partialInstanceCount,
       insufficientInstanceCount,
+      figmaUnboundStateInstanceCount,
       explicitTargetBindingCount,
       tapZoneExplicitTargetBindingCount,
-      isAdapterRegistryClosed: visibleFailures.length === 0,
-      isFullRenderer: visibleFailures.length === 0 && generic.length === 0,
+      // A state leaf with no Figma state admission is intentionally inert, not
+      // a successful visual adapter. Keep it separate from visible failures so
+      // product routing can remain fail-closed, but never claim the registry
+      // or renderer is complete until Figma supplies the master.
+      isAdapterRegistryClosed: visibleFailures.length === 0 && figmaUnboundStates.length === 0,
+      isFullRenderer: visibleFailures.length === 0 && generic.length === 0 &&
+        figmaUnboundStates.length === 0,
     };
   }
 }

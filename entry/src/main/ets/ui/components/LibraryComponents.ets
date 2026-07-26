@@ -174,24 +174,6 @@ struct SourceCoreUnavailablePage {
   }
 }
 
-// `source-switch-results` was an old static result route.  The actual live
-// candidate path is SourceSwitchFlowPage; keep this route honest until its
-// result DTO is made persistent in Harmony state.
-@Component
-export struct SourceSwitchResultsPanel {
-  @Prop title: string = '换源预览';
-  @Prop message: string = '换源预览';
-
-  build() {
-    SourceCoreUnavailablePage({
-      title: `${this.title}未接入`,
-      message: `${this.message}。该历史路由没有携带当前书籍和 Core 返回的候选 DTO。请从书籍详情重新进入实时换源流程，不显示固定候选书源。`,
-      primaryLabel: '进入实时换源',
-      primaryRoute: 'source-switch',
-    })
-  }
-}
-
 @Component
 export struct SourceImportPreviewPage {
   @StorageProp('reader.sourceImportOrigin') origin: string = '';

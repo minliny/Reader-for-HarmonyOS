@@ -4,7 +4,6 @@
 // sandbox file, and only that file:// URI reaches Image.
 import { CoreRuntime } from '../../bridge/CoreRuntime';
 import { SourceImageLoadHandle } from '../../host/adapters/SourceImageCache';
-import { ColorTokens } from '../../contract/generated/ColorTokens';
 
 @Component
 export struct SourceCoverImage {
@@ -101,10 +100,12 @@ export struct SourceCoverImage {
           .height('100%')
           .objectFit(ImageFit.Cover)
       } else {
+        // A missing image has no globally approved visual state.  Preserve the
+        // caller's Figma-owned surface (or transparent frame) rather than
+        // injecting the retired generic grey cover placeholder.
         Column()
           .width('100%')
           .height('100%')
-          .backgroundColor(ColorTokens.metaBg)
       }
     }
     .width('100%')

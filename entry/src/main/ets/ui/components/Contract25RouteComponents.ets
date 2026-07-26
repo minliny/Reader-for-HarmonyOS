@@ -6,7 +6,6 @@
 import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
 import { ReaderTypography } from '../tokens/ReaderTypography';
-import { FigmaOverlayTokens } from '../tokens/FigmaReadingVisualTokens';
 import { ReaderBase } from './ReaderComponents';
 import {
   Contract25RouteDefinition,
@@ -31,14 +30,6 @@ import {
   ReaderTocOfflinePage,
   ReaderTocErrorPage,
 } from './W2ReaderStateComponents';
-import {
-  SourceSwitchEmptyPage,
-  SourceSwitchErrorPage,
-  SourceSwitchTimeoutPage,
-  SourceSwitchLoadingPage,
-  SourceSwitchRollbackPage,
-  SourceSwitchPreviewPage,
-} from './W3SourceSwitchStateComponents';
 import {
   ReplaceRuleManagePage,
   ReplaceDeleteConfirmPage,
@@ -135,7 +126,9 @@ struct Contract25ReaderPlane {
     return this.definition.renderer === Contract25RouteRendererKind.SourceSwitchState;
   }
 
-  // W2/W3/W5 routes have dedicated ArkUI pages that read real Core state.
+  // W2/W5 routes have dedicated ArkUI pages that read real Core state.
+  // The historical W3 source-switch result matrix is retired by the
+  // Reader-UI visual-admission contract and intentionally has no renderer.
   // Returns true if this routeId has a dedicated page (not the generic card).
   private hasDedicatedPage(): boolean {
     const id = this.definition.id;
@@ -143,12 +136,6 @@ struct Contract25ReaderPlane {
     if (id === 'reader-content-loading' || id === 'reader-content-offline' ||
         id === 'reader-content-error' || id === 'reader-toc-loading' ||
         id === 'reader-toc-offline' || id === 'reader-toc-error') {
-      return true;
-    }
-    // W3 source switch state variants
-    if (id === 'source-switch-empty' || id === 'source-switch-error' ||
-        id === 'source-switch-timeout' || id === 'source-switch-loading' ||
-        id === 'source-switch-rollback' || id === 'source-switch-preview') {
       return true;
     }
     // W5 replace rule routes
@@ -173,18 +160,6 @@ struct Contract25ReaderPlane {
       ReaderTocOfflinePage()
     } else if (this.definition.id === 'reader-toc-error') {
       ReaderTocErrorPage()
-    } else if (this.definition.id === 'source-switch-empty') {
-      SourceSwitchEmptyPage()
-    } else if (this.definition.id === 'source-switch-error') {
-      SourceSwitchErrorPage()
-    } else if (this.definition.id === 'source-switch-timeout') {
-      SourceSwitchTimeoutPage()
-    } else if (this.definition.id === 'source-switch-loading') {
-      SourceSwitchLoadingPage()
-    } else if (this.definition.id === 'source-switch-rollback') {
-      SourceSwitchRollbackPage()
-    } else if (this.definition.id === 'source-switch-preview') {
-      SourceSwitchPreviewPage()
     } else if (this.definition.id === 'reader-replace-page') {
       ReplaceRuleManagePage()
     } else if (this.definition.id === 'reader-replace-delete-confirm') {
@@ -206,7 +181,7 @@ struct Contract25ReaderPlane {
       Column()
         .width('100%')
         .height('100%')
-        .backgroundColor(FigmaOverlayTokens.flowOverlayGreen)
+        .backgroundColor(ColorTokens.surfaceSoft)
       if (this.hasDedicatedPage()) {
         Column() {
           this.DedicatedPage()

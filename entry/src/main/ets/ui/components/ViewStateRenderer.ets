@@ -6,15 +6,15 @@ import {
   ViewStateExplicitBinding,
   ViewStateTable,
 } from '../../contract/generated/ViewStateTable';
-import { AppTopBar, BackTopBar, BottomNav, Loading, ErrorState, Offline,
+import { AppTopBar, BackTopBar, BottomNav,
   DemoButton, DemoList, Card, FilterBar, Overlay } from './SharedComponents';
-import { ContinueReadingCard, BookshelfShelfSection, ShelfChipGroup, ShelfSectionHeader, BookCard, BookGrid, BookEntry } from './BookshelfComponents';
+import { ContinueReadingCard, BookshelfShelfSection, BookshelfEmptyState, ShelfChipGroup, ShelfSectionHeader, BookCard, BookGrid, BookEntry } from './BookshelfComponents';
 import { BookHero, BookSummaryCard, BookChapterList } from './BookDetailComponents';
 import { ReadingBackgroundLayer, ReadingTextFlow, ReadingInfoLayer, TapZones, ReaderBase, ReaderTopArea } from './ReaderComponents';
 import { ReaderControlSheet, ReaderBottomBar, ReaderDirectoryPanel, ReaderAppearancePanel, ReaderTtsPanel, ReaderSettingsPanel,
   ReaderFullDirectoryPage, ReaderFullTtsPage, ReaderFullAppearancePage, ReaderFullSettingsPage, ReaderBookCachePage, ReaderDebugInfoPage,
   ReaderSearchPanel, ReaderReplacePanel, ReaderAutoScrollPanel, NightToast } from './ReaderOverlayComponents';
-import { SourceSwitchResultsPanel, SourceImportPreviewPage, SourceGroupsPage, SourceDetectPage, SourceDebugPage,
+import { SourceImportPreviewPage, SourceGroupsPage, SourceDetectPage, SourceDebugPage,
   SourceDebugRunningPage, SourceDebugResultPage, SourceDebugContentLogPage, SourceCodeViewPage, SourceLogsPage,
   SourceDeleteConfirmPage, SourceRuleEditPage, SourceBatchPage } from './LibraryComponents';
 import { SourceSwitchFlowPage } from './SourceSwitchFlowComponents';
@@ -27,7 +27,7 @@ import { RssSearchEntry, RssModeRow, RssSourceOverview, RssArticleSection,
   RssSourceImportPage, RssSourceEditPage } from './RssComponents';
 import { InteractionDebugBadge } from './InteractionDebugComponents';
 import { AppShellStructure, MainTabsStructure, SearchHomePage, SearchResultsPage, SearchStatePage, BookTocPreviewPage,
-  BookshelfEmptyPage, SourceManagementPage, SourceDetailPage, SourceImportOptionsPage, SourceDisabledState,
+  SourceManagementPage, SourceDetailPage, SourceImportOptionsPage, SourceDisabledState,
   SourceSettingsEntryPage, SourceTestResultPage, SyncSettingsEntryPage, SyncBackupPage,
   SyncErrorPage, SyncProgressPage, RestoreConfirmPage, RestoreProgressPage, RestoreConflictPage, RestoreResultPage,
   RemoteWebDavBooksPage, RssDetailPage, RssEmptyState, RssErrorState, GlobalStatePage,
@@ -37,9 +37,12 @@ import { AppShellStructure, MainTabsStructure, SearchHomePage, SearchResultsPage
 import { BookTitleAuthor, SourceStatus, ReadButton, DirectoryPreview, BookIntro, ConfigEntry,
   SearchEntry, SourceTypeSegment, CurrentSourceCard, SourceCategoryChips, DiscoveryContentCard, SourceStatusBar,
   SubscriptionSummaryCard, FeedStatusChips, FeedSourceChips, RssEntryItem, UnreadIndicator,
-  LocalOverviewCard, QuickEntryGrid, SearchInputBox, ScopeSelector, GroupSelector, SearchHistoryList } from './ContractComponents';
+  LocalOverviewCard, QuickEntryGrid } from './ContractComponents';
 import { Contract25RoutePage } from './Contract25RouteComponents';
-import { FigmaWarmSurfaceTokens, FigmaErrorStateTokens } from '../tokens/FigmaReadingVisualTokens';
+import {
+  ReaderUiErrorTokens,
+  ReaderUiWarmSurfaceTokens,
+} from '../../contract/reader_ui/ReaderUiVisualTokenAdapter';
 import {
   Slice12AccessibilitySettingsPage,
   Slice12OnboardingCapabilityPage,
@@ -71,8 +74,10 @@ import {
   ReaderUIScreenGraphTerminalStateAdapter,
 } from '../router/ReaderUIScreenGraphTerminalStateAdapter';
 import { ReaderUiStore } from '../store/ReaderUiStore';
-import { UiEvent } from '../store/ReaderUiState';
+import { UiEvent, CoreBookshelfBook } from '../store/ReaderUiState';
 import type { ReaderUIJSONPayload } from 'reader_ui_runtime';
+import { ReaderUiVisualAdmission } from '../../contract/reader_ui/VisualAdmission';
+import { ViewportAdapter } from '../adapters/ViewportAdapter';
 
 @Component
 export struct ViewStateRenderer {
@@ -86,6 +91,11 @@ export struct ViewStateRenderer {
   @StorageProp('reader.coreSlice10Loading') coreSlice10Loading: boolean = false;
   @StorageProp('reader.coreSlice10Error') coreSlice10Error: string = '';
   @StorageProp('reader.lastUndoToken') lastUndoToken: ReaderUIJSONPayload | null = null;
+  @StorageProp('reader.bookshelfLoaded') bookshelfLoaded: boolean = false;
+  @StorageProp('reader.bookshelfBooks') bookshelfBooks: CoreBookshelfBook[] = [];
+  @StorageProp('reader.continueReadingLoaded') continueReadingLoaded: boolean = false;
+  @StorageProp('reader.continueReadingBook') continueReadingBook: CoreBookshelfBook | null = null;
+  @StorageProp(ViewportAdapter.K_CLASS) viewportClass: string = 'phone';
   // 'column' (default — scrollable pages) | 'stack' (reader layered body, where
   // components are absolutely positioned over the reading base rather than
   // laid out vertically).
@@ -135,6 +145,20 @@ export struct ViewStateRenderer {
   // this runtime body node so a regeneration of the read-only Reader UI
   // fixture cannot accidentally display every Core article as a favorite.
   private bodyComponentsForCurrentRoute(): ViewStateComponent[] {
+    // The generated Reader-UI visual admission artifact is the sole source of
+    // truth for visible route eligibility. A route without a current Figma
+    // binding is deliberately empty here; RouteRenderer owns its fail-closed
+    // diagnostic surface, so this direct body mount cannot fall back to a
+    // generic historical page.
+    if (!ReaderUiVisualAdmission.isRouteAdmittedForViewport(this.routeId, this.viewportClass)) return [];
+    // A route master does not authorize arbitrary host page states. The
+    // generated table historically falls back from an unknown loading/error
+    // variant to the route default body, which can revive a generic local
+    // screen above an otherwise current Figma route. `default` is the route
+    // master itself; every other state needs an explicit Reader-UI/Figma
+    // admission entry or remains visibly inert.
+    if (this.pageState !== 'default' &&
+      !ReaderUiVisualAdmission.isStateAdmitted(this.routeId, this.pageState)) return [];
     // Execute the canonical registry lookup/parity check at the body entry,
     // while retaining generated ViewStateTable as the native render source.
     ReaderUIScreenGraphShadowRegistry.observeViewState(
@@ -267,7 +291,7 @@ export struct ViewStateRenderer {
       Text(`目录状态 · ${phase}`)
         .fontSize(13)
         .fontWeight(700)
-        .fontColor(FigmaWarmSurfaceTokens.secondaryText)
+        .fontColor(ReaderUiWarmSurfaceTokens.secondaryText)
         .width('100%')
       ForEach(children, (child: ViewStateComponent, idx: number) => {
         if (child.type === 'Button') {
@@ -280,8 +304,8 @@ export struct ViewStateRenderer {
     .width('100%')
     .padding(16)
     .borderRadius(18)
-    .backgroundColor(FigmaWarmSurfaceTokens.surface)
-    .border({ width: 1, color: FigmaWarmSurfaceTokens.border })
+    .backgroundColor(ReaderUiWarmSurfaceTokens.surface)
+    .border({ width: 1, color: ReaderUiWarmSurfaceTokens.border })
   }
 
   // Reader appearance management UiEvents are canonical contract evidence,
@@ -295,11 +319,11 @@ export struct ViewStateRenderer {
         Text(`只读 · ${this.textOr(child.props.label, this.textOr(child.props.title, '操作未接线'))}`)
           .fontSize(13)
           .fontWeight(650)
-          .fontColor(FigmaWarmSurfaceTokens.disabledText)
+          .fontColor(ReaderUiWarmSurfaceTokens.disabledText)
           .width('100%')
           .padding({ left: 12, right: 12, top: 9, bottom: 9 })
           .borderRadius(12)
-          .backgroundColor(FigmaWarmSurfaceTokens.disabledSurface)
+          .backgroundColor(ReaderUiWarmSurfaceTokens.disabledSurface)
           .enabled(false)
           .hitTestBehavior(HitTestMode.None)
       } else if (child.type === 'Dialog') {
@@ -315,7 +339,7 @@ export struct ViewStateRenderer {
           if (this.textOr(child.props.message, '') !== '') {
             Text(this.textOr(child.props.message, ''))
               .fontSize(12)
-              .fontColor(FigmaWarmSurfaceTokens.secondaryText)
+              .fontColor(ReaderUiWarmSurfaceTokens.secondaryText)
               .width('100%')
           }
           this.renderReadOnlyAppearanceChildren(child.children)
@@ -323,8 +347,8 @@ export struct ViewStateRenderer {
         .width('100%')
         .padding(12)
         .borderRadius(14)
-        .backgroundColor(FigmaWarmSurfaceTokens.surfaceAlt)
-        .border({ width: 1, color: FigmaWarmSurfaceTokens.border })
+        .backgroundColor(ReaderUiWarmSurfaceTokens.surfaceAlt)
+        .border({ width: 1, color: ReaderUiWarmSurfaceTokens.border })
       } else {
         this.renderDebuggedComponent(child, false)
       }
@@ -336,15 +360,15 @@ export struct ViewStateRenderer {
       Text(`外观状态 · ${section}`)
         .fontSize(13)
         .fontWeight(700)
-        .fontColor(FigmaWarmSurfaceTokens.secondaryText)
+        .fontColor(ReaderUiWarmSurfaceTokens.secondaryText)
         .width('100%')
       this.renderReadOnlyAppearanceChildren(children)
     }
     .width('100%')
     .padding(16)
     .borderRadius(18)
-    .backgroundColor(FigmaWarmSurfaceTokens.surface)
-    .border({ width: 1, color: FigmaWarmSurfaceTokens.border })
+    .backgroundColor(ReaderUiWarmSurfaceTokens.surface)
+    .border({ width: 1, color: ReaderUiWarmSurfaceTokens.border })
   }
 
   // Canonical replace flow actions mix pilot-owned and unsupported UiEvents.
@@ -360,11 +384,11 @@ export struct ViewStateRenderer {
         Text(`只读 · ${this.textOr(child.props.label, this.textOr(child.props.title, '操作未接线'))}`)
           .fontSize(13)
           .fontWeight(650)
-          .fontColor(FigmaWarmSurfaceTokens.disabledText)
+          .fontColor(ReaderUiWarmSurfaceTokens.disabledText)
           .width('100%')
           .padding({ left: 12, right: 12, top: 9, bottom: 9 })
           .borderRadius(12)
-          .backgroundColor(FigmaWarmSurfaceTokens.disabledSurface)
+          .backgroundColor(ReaderUiWarmSurfaceTokens.disabledSurface)
           .enabled(false)
           .hitTestBehavior(HitTestMode.None)
       } else {
@@ -378,7 +402,7 @@ export struct ViewStateRenderer {
       Text(`替换状态 · ${section}`)
         .fontSize(13)
         .fontWeight(700)
-        .fontColor(FigmaWarmSurfaceTokens.secondaryText)
+        .fontColor(ReaderUiWarmSurfaceTokens.secondaryText)
         .width('100%')
       this.renderReadOnlyReplaceChildren(children)
       if (section === 'apply') {
@@ -388,15 +412,15 @@ export struct ViewStateRenderer {
           : (this.lastUndoToken !== null ? 'Core 撤销令牌已就绪' : '尚无可用的 Core 撤销令牌'))
           .fontSize(11)
           .fontWeight(650)
-          .fontColor(this.coreSlice10Error.length > 0 ? FigmaErrorStateTokens.errorTextStrong : FigmaWarmSurfaceTokens.secondaryText)
+          .fontColor(this.coreSlice10Error.length > 0 ? ReaderUiErrorTokens.errorTextStrong : ReaderUiWarmSurfaceTokens.secondaryText)
           .width('100%')
       }
     }
     .width('100%')
     .padding(16)
     .borderRadius(18)
-    .backgroundColor(FigmaWarmSurfaceTokens.surface)
-    .border({ width: 1, color: FigmaWarmSurfaceTokens.border })
+    .backgroundColor(ReaderUiWarmSurfaceTokens.surface)
+    .border({ width: 1, color: ReaderUiWarmSurfaceTokens.border })
   }
 
   // Canonical ReadingTextFlow fixtures carry state/font evidence but no
@@ -410,11 +434,11 @@ export struct ViewStateRenderer {
         Text(`只读 · ${this.textOr(child.props.label, this.textOr(child.props.title, '操作未接线'))}`)
           .fontSize(13)
           .fontWeight(650)
-          .fontColor(FigmaWarmSurfaceTokens.disabledText)
+          .fontColor(ReaderUiWarmSurfaceTokens.disabledText)
           .width('100%')
           .padding({ left: 12, right: 12, top: 9, bottom: 9 })
           .borderRadius(12)
-          .backgroundColor(FigmaWarmSurfaceTokens.disabledSurface)
+          .backgroundColor(ReaderUiWarmSurfaceTokens.disabledSurface)
           .enabled(false)
           .hitTestBehavior(HitTestMode.None)
       } else {
@@ -424,7 +448,7 @@ export struct ViewStateRenderer {
             Text(`状态证据 · ${this.textOr(child.props.uiEvent, '未声明')}`)
               .fontSize(10)
               .fontWeight(650)
-              .fontColor(FigmaWarmSurfaceTokens.disabledText)
+              .fontColor(ReaderUiWarmSurfaceTokens.disabledText)
               .width('100%')
               .enabled(false)
               .hitTestBehavior(HitTestMode.None)
@@ -440,15 +464,15 @@ export struct ViewStateRenderer {
       Text(`正文状态 · ${phase}`)
         .fontSize(13)
         .fontWeight(700)
-        .fontColor(FigmaWarmSurfaceTokens.secondaryText)
+        .fontColor(ReaderUiWarmSurfaceTokens.secondaryText)
         .width('100%')
       this.renderReadOnlyReadingTextChildren(children)
     }
     .width('100%')
     .padding(16)
     .borderRadius(18)
-    .backgroundColor(FigmaWarmSurfaceTokens.surface)
-    .border({ width: 1, color: FigmaWarmSurfaceTokens.border })
+    .backgroundColor(ReaderUiWarmSurfaceTokens.surface)
+    .border({ width: 1, color: ReaderUiWarmSurfaceTokens.border })
   }
 
   @Builder renderReadingTextFlowMetadata(state: string, fontFamily: string) {
@@ -458,10 +482,10 @@ export struct ViewStateRenderer {
         Text(`正文契约 · ${state}`)
           .fontSize(9)
           .fontWeight(700)
-          .fontColor(FigmaWarmSurfaceTokens.onAccentText)
+          .fontColor(ReaderUiWarmSurfaceTokens.onAccentText)
           .padding({ left: 6, right: 6, top: 2, bottom: 2 })
           .borderRadius(6)
-          .backgroundColor(FigmaWarmSurfaceTokens.accent)
+          .backgroundColor(ReaderUiWarmSurfaceTokens.accent)
           .position({ x: 12, y: 26 })
           .enabled(false)
           .hitTestBehavior(HitTestMode.None)
@@ -470,10 +494,10 @@ export struct ViewStateRenderer {
         Text(`字体契约 · ${fontFamily}`)
           .fontSize(9)
           .fontWeight(700)
-          .fontColor(FigmaWarmSurfaceTokens.onAccentText)
+          .fontColor(ReaderUiWarmSurfaceTokens.onAccentText)
           .padding({ left: 6, right: 6, top: 2, bottom: 2 })
           .borderRadius(6)
-          .backgroundColor(FigmaWarmSurfaceTokens.accent)
+          .backgroundColor(ReaderUiWarmSurfaceTokens.accent)
           .position({ x: 12, y: 48 })
           .enabled(false)
           .hitTestBehavior(HitTestMode.None)
@@ -507,17 +531,17 @@ export struct ViewStateRenderer {
       Text(title)
         .fontSize(14)
         .fontWeight(750)
-        .fontColor(FigmaWarmSurfaceTokens.strongText)
+        .fontColor(ReaderUiWarmSurfaceTokens.strongText)
         .width('100%')
       Text(`${component.type} · ${detail}`)
         .fontSize(11)
-        .fontColor(FigmaWarmSurfaceTokens.secondaryText)
+        .fontColor(ReaderUiWarmSurfaceTokens.secondaryText)
         .width('100%')
       if (component.bindings.length > 0) {
         Text(`${component.bindings.length} 个 planned action · fail-closed`)
           .fontSize(10)
           .fontWeight(700)
-          .fontColor(FigmaErrorStateTokens.errorTextStrong)
+          .fontColor(ReaderUiErrorTokens.errorTextStrong)
           .width('100%')
       }
       if (children.length > 0) {
@@ -527,8 +551,8 @@ export struct ViewStateRenderer {
     .width('100%')
     .padding(12)
     .borderRadius(14)
-    .backgroundColor(FigmaWarmSurfaceTokens.surfaceAlt)
-    .border({ width: 1, color: FigmaWarmSurfaceTokens.border })
+    .backgroundColor(ReaderUiWarmSurfaceTokens.surfaceAlt)
+    .border({ width: 1, color: ReaderUiWarmSurfaceTokens.border })
     .enabled(false)
     .hitTestBehavior(HitTestMode.None)
   }
@@ -572,7 +596,7 @@ export struct ViewStateRenderer {
         if (projection.message !== '') {
           Text(projection.message)
             .fontSize(14)
-            .fontColor(FigmaWarmSurfaceTokens.secondaryText)
+            .fontColor(ReaderUiWarmSurfaceTokens.secondaryText)
             .width('100%')
         }
         if (projection.children.length > 0) {
@@ -582,13 +606,13 @@ export struct ViewStateRenderer {
       .width('100%')
       .padding(16)
       .borderRadius(18)
-      .backgroundColor(FigmaWarmSurfaceTokens.surface)
-      .border({ width: 1, color: FigmaWarmSurfaceTokens.border })
+      .backgroundColor(ReaderUiWarmSurfaceTokens.surface)
+      .border({ width: 1, color: ReaderUiWarmSurfaceTokens.border })
     } else {
       Text(`Dialog 契约漂移 · ${component.id}`)
         .fontSize(13)
         .fontWeight(700)
-        .fontColor(FigmaErrorStateTokens.errorTextStrong)
+        .fontColor(ReaderUiErrorTokens.errorTextStrong)
         .width('100%')
         .padding(12)
         .enabled(false)
@@ -603,25 +627,25 @@ export struct ViewStateRenderer {
         Text(projection.title)
           .fontSize(16)
           .fontWeight(800)
-          .fontColor(FigmaWarmSurfaceTokens.strongText)
+          .fontColor(ReaderUiWarmSurfaceTokens.strongText)
           .width('100%')
         if (projection.message !== projection.title) {
           Text(projection.message)
             .fontSize(13)
-            .fontColor(FigmaWarmSurfaceTokens.secondaryText)
+            .fontColor(ReaderUiWarmSurfaceTokens.secondaryText)
             .width('100%')
         }
       }
       .width('100%')
       .padding(12)
       .borderRadius(14)
-      .backgroundColor(FigmaWarmSurfaceTokens.surfaceAlt)
-      .border({ width: 1, color: FigmaWarmSurfaceTokens.border })
+      .backgroundColor(ReaderUiWarmSurfaceTokens.surfaceAlt)
+      .border({ width: 1, color: ReaderUiWarmSurfaceTokens.border })
     } else {
       Text(`Content 契约漂移 · ${component.id}`)
         .fontSize(13)
         .fontWeight(700)
-        .fontColor(FigmaErrorStateTokens.errorTextStrong)
+        .fontColor(ReaderUiErrorTokens.errorTextStrong)
         .width('100%')
         .padding(12)
         .enabled(false)
@@ -636,12 +660,12 @@ export struct ViewStateRenderer {
         Text(projection.title)
           .fontSize(16)
           .fontWeight(800)
-          .fontColor(FigmaWarmSurfaceTokens.strongText)
+          .fontColor(ReaderUiWarmSurfaceTokens.strongText)
           .textAlign(TextAlign.Center)
         if (projection.message !== projection.title) {
           Text(projection.message)
             .fontSize(13)
-            .fontColor(FigmaWarmSurfaceTokens.secondaryText)
+            .fontColor(ReaderUiWarmSurfaceTokens.secondaryText)
             .textAlign(TextAlign.Center)
         }
       }
@@ -654,7 +678,7 @@ export struct ViewStateRenderer {
       Text(`Empty 契约漂移 · ${component.id}`)
         .fontSize(13)
         .fontWeight(700)
-        .fontColor(FigmaErrorStateTokens.errorTextStrong)
+        .fontColor(ReaderUiErrorTokens.errorTextStrong)
         .width('100%')
         .padding(12)
         .enabled(false)
@@ -669,13 +693,13 @@ export struct ViewStateRenderer {
         Text(projection.message)
           .fontSize(16)
           .fontWeight(800)
-          .fontColor(FigmaWarmSurfaceTokens.strongText)
+          .fontColor(ReaderUiWarmSurfaceTokens.strongText)
           .textAlign(TextAlign.Center)
         if (projection.retryable) {
           Text('可重试')
             .fontSize(12)
             .fontWeight(700)
-            .fontColor(FigmaWarmSurfaceTokens.secondaryText)
+            .fontColor(ReaderUiWarmSurfaceTokens.secondaryText)
             .enabled(false)
             .hitTestBehavior(HitTestMode.None)
         }
@@ -689,7 +713,7 @@ export struct ViewStateRenderer {
       Text(`Error 契约漂移 · ${component.id}`)
         .fontSize(13)
         .fontWeight(700)
-        .fontColor(FigmaErrorStateTokens.errorTextStrong)
+        .fontColor(ReaderUiErrorTokens.errorTextStrong)
         .width('100%')
         .padding(12)
         .enabled(false)
@@ -704,12 +728,12 @@ export struct ViewStateRenderer {
         Text(projection.title)
           .fontSize(16)
           .fontWeight(800)
-          .fontColor(FigmaWarmSurfaceTokens.strongText)
+          .fontColor(ReaderUiWarmSurfaceTokens.strongText)
           .textAlign(TextAlign.Center)
         if (projection.message !== projection.title) {
           Text(projection.message)
             .fontSize(13)
-            .fontColor(FigmaWarmSurfaceTokens.secondaryText)
+            .fontColor(ReaderUiWarmSurfaceTokens.secondaryText)
             .textAlign(TextAlign.Center)
         }
       }
@@ -722,7 +746,7 @@ export struct ViewStateRenderer {
       Text(`Permission 契约漂移 · ${component.id}`)
         .fontSize(13)
         .fontWeight(700)
-        .fontColor(FigmaErrorStateTokens.errorTextStrong)
+        .fontColor(ReaderUiErrorTokens.errorTextStrong)
         .width('100%')
         .padding(12)
         .enabled(false)
@@ -751,42 +775,43 @@ export struct ViewStateRenderer {
 
   @Builder renderComponent(component: ViewStateComponent) {
     if (component.type === 'AppTopBar') {
-      AppTopBar({ title: this.textOr(component.props.title, '') })
+      // The current Figma book-search master owns its header (including the
+      // system-safe back affordance, input and submit action). Rendering the
+      // generated legacy AppTopBar here would create a second header above it.
+      if (this.routeId === 'book-search') {
+        Column().width(0).height(0)
+      } else {
+        AppTopBar({ title: this.textOr(component.props.title, '') })
+      }
     } else if (component.type === 'BackTopBar') {
       BackTopBar({ title: this.textOr(component.props.title, '') })
     } else if (component.type === 'BottomNav') {
       BottomNav({ selected: this.textOr(component.props.selected, '') })
-    } else if (component.type === 'Loading') {
-      Loading({
-        title: this.statePrimitiveTitle(component),
-        message: this.statePrimitiveMessage(component),
-      })
-    } else if (component.type === 'Empty') {
-      this.renderCanonicalEmpty(component, ReaderUIScreenGraphEmptyAdapter.project(component))
-    } else if (component.type === 'ErrorState') {
-      ErrorState({
-        title: this.statePrimitiveTitle(component),
-        canonicalMessage: this.statePrimitiveMessage(component),
-        retryEnabled: this.statePrimitiveRetryEnabled(component),
-      })
-    } else if (component.type === 'Offline') {
-      Offline({
-        title: this.statePrimitiveTitle(component),
-        message: this.statePrimitiveMessage(component),
-      })
+    } else if (component.type === 'Loading' || component.type === 'Empty' ||
+      component.type === 'ErrorState' || component.type === 'Offline') {
+      // These old generated primitives have no component-level Figma master.
+      // A route-state binding (for example the current Search five-state
+      // master) must render through its dedicated admitted component below,
+      // never by promoting a generic native loading, empty, error, or offline
+      // card. StateHost likewise stays inert for this legacy primitive branch.
+      Column().width(0).height(0)
     } else if (component.type === 'ContinueReadingCard') {
-      ContinueReadingCard({
-        bookId: this.textOr(component.props.bookId, ''),
-        title: this.textOr(component.props.title, '长夜余火'),
-        author: this.textOr(component.props.author, '爱潜水的乌贼'),
-        coverKey: this.textOr(component.props.coverKey, 'longNight'),
-      })
+      if (this.bookshelfLoaded && this.bookshelfBooks.length > 0 &&
+        this.continueReadingLoaded && this.continueReadingBook !== null) {
+        // The Figma node only describes the populated visual. The actual
+        // title, cover and resume point come from the Core progress record,
+        // never from a fixture carried by the generated ViewState tree.
+        ContinueReadingCard()
+      } else {
+        // Figma binds only the populated card. An empty shelf or a book with
+        // no durable progress must not reserve a fake "recent reading" slot.
+        Column().width(0).height(0)
+      }
     } else if (component.type === 'BookshelfShelfSection') {
       BookshelfShelfSection({
         title: this.textOr(component.props.title, '我的书架'),
         books: this.extractBooks(component.children),
         viewMode: this.textOr(component.props.viewMode, 'cover'),
-        filterOpen: component.props.filterOpen === true,
       })
     } else if (component.type === 'BookHero') {
       BookHero()
@@ -864,11 +889,6 @@ export struct ViewStateRenderer {
       ReaderBottomBar()
     } else if (component.type === 'NightToast') {
       NightToast()
-    } else if (component.type === 'SourceSwitchResultsPanel') {
-      SourceSwitchResultsPanel({
-        title: this.textOr(component.props.title, '换源预览'),
-        message: this.textOr(component.props.message, '换源预览'),
-      })
     } else if (component.type === 'SourceSwitchFlowPage') {
       // Withdrawn generated state-matrix children are isolated into a zero-size
       // column so only the live Figma window remains in the presentation path.
@@ -1114,7 +1134,7 @@ export struct ViewStateRenderer {
         message: this.textOr(component.props.message, '底部四项：书架、发现、RSS、设置。'),
       })
     } else if (component.type === 'SearchHomePage') {
-      SearchHomePage({ placeholder: this.textOr(component.props.placeholder, '搜索书名/作者') })
+      SearchHomePage()
     } else if (component.type === 'SearchResultsPage' &&
       ReaderCapabilityClosureRouteRegistry.isFailClosed(this.routeId)) {
       // Cover search currently shares the visual component type but has no
@@ -1131,19 +1151,14 @@ export struct ViewStateRenderer {
     } else if (component.type === 'SearchResultsPage') {
       SearchResultsPage()
     } else if (component.type === 'SearchStatePage') {
-      SearchStatePage({
-        variant: this.textOr(component.props.variant, 'empty'),
-        title: this.textOr(component.props.title, '暂无结果'),
-        message: this.textOr(component.props.message, '换个关键词后重试。'),
-        action: this.textOr(component.props.action, ''),
-      })
+      SearchStatePage({ variant: this.textOr(component.props.variant, 'empty') })
     } else if (component.type === 'BookTocPreviewPage') {
       BookTocPreviewPage({ title: this.textOr(component.props.title, '目录预览') })
     } else if (component.type === 'BookshelfEmptyPage') {
-      BookshelfEmptyPage({
-        title: this.textOr(component.props.title, '书架为空'),
-        message: this.textOr(component.props.message, '导入本地书籍或从书源搜索后加入书架。'),
-      })
+      // Current Figma State/BookshelfEmpty (286:31) owns this route. The old
+      // generic StatePanel route was a local substitute and is intentionally
+      // bypassed in favor of the canonical component.
+      BookshelfEmptyState()
     } else if (component.type === 'BookMoreMenuPage') {
       BookMoreMenuPage()
     } else if (component.type === 'BookGroupManagementPage') {
@@ -1311,11 +1326,11 @@ export struct ViewStateRenderer {
         Text(this.textOr(component.props.title, '阅读边界'))
           .fontSize(13)
           .fontWeight(700)
-          .fontColor(FigmaWarmSurfaceTokens.onAccentText)
+          .fontColor(ReaderUiWarmSurfaceTokens.onAccentText)
       }
       .padding({ left: 14, right: 14, top: 9, bottom: 9 })
       .borderRadius(20)
-      .backgroundColor(FigmaWarmSurfaceTokens.strongText)
+      .backgroundColor(ReaderUiWarmSurfaceTokens.strongText)
     } else if (component.type === 'Toast') {
       Column({ space: 6 }) {
         Text(this.textOr(component.props.title, '状态提示'))
@@ -1325,7 +1340,7 @@ export struct ViewStateRenderer {
         if (this.textOr(component.props.message, '') !== '') {
           Text(this.textOr(component.props.message, ''))
             .fontSize(12)
-            .fontColor(FigmaWarmSurfaceTokens.secondaryText)
+            .fontColor(ReaderUiWarmSurfaceTokens.secondaryText)
             .width('100%')
         }
         if (component.children.length > 0) {
@@ -1335,8 +1350,8 @@ export struct ViewStateRenderer {
       .width('100%')
       .padding(12)
       .borderRadius(14)
-      .backgroundColor(FigmaWarmSurfaceTokens.surfaceAlt)
-      .border({ width: 1, color: FigmaWarmSurfaceTokens.border })
+      .backgroundColor(ReaderUiWarmSurfaceTokens.surfaceAlt)
+      .border({ width: 1, color: ReaderUiWarmSurfaceTokens.border })
     } else if (component.type === 'Button') {
       this.renderCanonicalButton(
         component,
@@ -1380,7 +1395,7 @@ export struct ViewStateRenderer {
           if (this.textOr(component.props.message, '') !== '') {
             Text(this.textOr(component.props.message, ''))
               .fontSize(12)
-              .fontColor(FigmaWarmSurfaceTokens.secondaryText)
+              .fontColor(ReaderUiWarmSurfaceTokens.secondaryText)
               .width('100%')
           }
           this.renderChildren(component.children)
@@ -1395,7 +1410,7 @@ export struct ViewStateRenderer {
           if (this.textOr(component.props.message, '') !== '') {
             Text(this.textOr(component.props.message, ''))
               .fontSize(12)
-              .fontColor(FigmaWarmSurfaceTokens.secondaryText)
+              .fontColor(ReaderUiWarmSurfaceTokens.secondaryText)
               .width('100%')
           }
           DemoList()
@@ -1426,7 +1441,7 @@ export struct ViewStateRenderer {
         if (this.textOr(component.props.message, '') !== '') {
           Text(this.textOr(component.props.message, ''))
             .fontSize(12)
-            .fontColor(FigmaWarmSurfaceTokens.secondaryText)
+            .fontColor(ReaderUiWarmSurfaceTokens.secondaryText)
             .width('100%')
         }
         if (component.children.length > 0) {
@@ -1436,8 +1451,8 @@ export struct ViewStateRenderer {
       .width('100%')
       .padding(12)
       .borderRadius(14)
-      .backgroundColor(FigmaWarmSurfaceTokens.surface)
-      .border({ width: 1, color: FigmaWarmSurfaceTokens.border })
+      .backgroundColor(ReaderUiWarmSurfaceTokens.surface)
+      .border({ width: 1, color: ReaderUiWarmSurfaceTokens.border })
     } else if (component.type === 'FilterBar') {
       FilterBar()
     } else if (component.type === 'Overlay') {
@@ -1553,31 +1568,24 @@ export struct ViewStateRenderer {
     } else if (component.type === 'QuickEntryGrid') {
       QuickEntryGrid()
     } else if (component.type === 'SearchInputBox') {
-      SearchInputBox({ query: this.textOr(component.props.query, ''), placeholder: this.textOr(component.props.placeholder, '搜索书名/作者') })
-    } else if (component.type === 'ScopeSelector') {
-      ScopeSelector()
-    } else if (component.type === 'GroupSelector') {
-      GroupSelector()
-    } else if (component.type === 'SearchHistoryList') {
-      SearchHistoryList()
-    } else {
-      // Fail closed and visibly on contract drift. Unknown canonical
-      // ComponentTypes never inherit a generic button/list implementation and
-      // therefore cannot dispatch an unintended action.
-      Column({ space: 6 }) {
-        Text('Reader UI 组件契约漂移')
-          .fontSize(14)
-          .fontWeight(800)
-          .fontColor(FigmaErrorStateTokens.errorText)
-        Text(component.type)
-          .fontSize(11)
-          .fontColor(FigmaWarmSurfaceTokens.secondaryText)
+      // The generated legacy graph splits one Figma Search page into four
+      // generic fragments. Mount the exact current Figma page once, and keep
+      // the remaining historical fragments inert below instead of drawing a
+      // second visual hierarchy.
+      if (this.routeId === 'book-search') {
+        SearchHomePage()
+      } else {
+        Column().width(0).height(0)
       }
-      .width('100%')
-      .padding(12)
-      .borderRadius(12)
-      .backgroundColor(FigmaErrorStateTokens.errorSurface)
-      .border({ width: 1, color: FigmaErrorStateTokens.errorBorder })
+    } else if (component.type === 'ScopeSelector' || component.type === 'GroupSelector' ||
+      component.type === 'SearchHistoryList') {
+      Column().width(0).height(0)
+    } else {
+      // Unknown component types have no current Figma visual authority. Keep
+      // them strictly inert instead of drawing a local diagnostic card into a
+      // user-facing page; contract diagnostics belong to developer evidence,
+      // not to the shipped visual hierarchy.
+      Column().width(0).height(0)
     }
   }
 }

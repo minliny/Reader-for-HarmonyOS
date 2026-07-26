@@ -11,8 +11,9 @@ import { ReaderShell } from '../shells/ReaderShell';
 import { LibraryShell } from '../shells/LibraryShell';
 import { SettingsShell } from '../shells/SettingsShell';
 import { FlowShell } from '../shells/FlowShell';
+import { ViewportAdapter } from '../adapters/ViewportAdapter';
 import { ReaderUIScreenGraphShadowRegistry } from './ReaderUIScreenGraphShadowRegistry';
-import { FigmaWarmSurfaceTokens, FigmaErrorStateTokens } from '../tokens/FigmaReadingVisualTokens';
+import { ReaderUiVisualAdmission } from '../../contract/reader_ui/VisualAdmission';
 
 function operationFor(lastOp: string): MotionRequest | null {
   switch (lastOp) {
@@ -27,36 +28,11 @@ function operationFor(lastOp: string): MotionRequest | null {
 }
 
 @Component
-struct UnknownRouteContractDrift {
-  @Prop routeId: string = '';
-
-  build() {
-    Column({ space: 8 }) {
-      Text('Reader UI 路由契约漂移')
-        .fontSize(20)
-        .fontWeight(800)
-        .fontColor(FigmaErrorStateTokens.errorText)
-      Text(this.routeId)
-        .fontSize(12)
-        .fontColor(FigmaWarmSurfaceTokens.secondaryText)
-      Text('未知 RouteId 已 fail-closed，不会回落到任意 Shell。')
-        .fontSize(13)
-        .fontColor(FigmaWarmSurfaceTokens.secondaryText)
-    }
-    .width('100%')
-    .height('100%')
-    .padding(24)
-    .justifyContent(FlexAlign.Center)
-    .alignItems(HorizontalAlign.Center)
-    .backgroundColor(FigmaErrorStateTokens.errorContainer)
-  }
-}
-
-@Component
 export struct RouteRenderer {
   @StorageProp('reader.routeId') @Watch('onRouteChange') routeId: string = 'bookshelf';
   @StorageProp('reader.lastOp') lastOp: string = '';
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
+  @StorageProp(ViewportAdapter.K_CLASS) viewportClass: string = 'phone';
   // displayedRouteId is the motion-delayed route used to pick the shell. It is
   // shared via AppStorage (reader.displayedRouteId) so ViewStateRenderer (and any
   // other body component) reads the SAME value the shell is rendered for — no
@@ -87,10 +63,17 @@ export struct RouteRenderer {
     return shell;
   }
 
+  private isDisplayedRouteVisuallyAdmitted(): boolean {
+    return ReaderUiVisualAdmission.isRouteAdmittedForViewport(this.displayedRouteId, this.viewportClass);
+  }
+
   build() {
     Stack() {
-      if (this.shellOfDisplayedRoute() === null) {
-        UnknownRouteContractDrift({ routeId: this.displayedRouteId })
+      if (!this.isDisplayedRouteVisuallyAdmitted() || this.shellOfDisplayedRoute() === null) {
+        // A visible diagnostic would itself be a locally invented page. Keep
+        // the unadmitted route inert until Figma provides and registers a
+        // canonical surface.
+        Column().width(0).height(0)
       } else if (this.shellOfDisplayedRoute() === 'MainTabShell') {
         MainTabShell()
       } else if (this.shellOfDisplayedRoute() === 'ReaderShell') {

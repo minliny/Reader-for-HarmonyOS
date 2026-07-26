@@ -2,11 +2,9 @@
 // libraryScreen() DOM: .fd-book-hero (cover + identity) → .fd-book-summary-card →
 // .fd-chapter-list. Action buttons (继续阅读/移除书架) live in LibraryShell's
 // bottomActionHost, not content.
-import { ColorTokens } from '../../contract/generated/ColorTokens';
-import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
-import { ReaderTypography } from '../tokens/ReaderTypography';
+import { ReaderUiVisualTokens } from '../../contract/reader_ui/VisualAdmission';
 import { ReaderUiStore } from '../store/ReaderUiStore';
-import { BookDetail, ChapterTocEntry } from '../store/ReaderUiState';
+import { BookDetail, ChapterTocEntry, canSwitchBookSourceId } from '../store/ReaderUiState';
 import { MotionAdapter } from '../adapters/MotionAdapter';
 import { ViewportAdapter } from '../adapters/ViewportAdapter';
 import { SourceCoverImage } from './SourceCoverImage';
@@ -29,11 +27,13 @@ struct BookFacts {
           Text(f.label)
             .fontSize(11)
             .fontWeight(800)
-            .fontColor(ColorTokens.muted)
+            .fontColor(ReaderUiVisualTokens.bookDetailMuted)
+            .fontFamily(ReaderUiVisualTokens.bookDetailControlFontFamily)
             .width(34)
           Text(f.value)
             .fontSize(12)
-            .fontColor(ColorTokens.controlInk)
+            .fontColor(ReaderUiVisualTokens.bookDetailInk)
+            .fontFamily(ReaderUiVisualTokens.bookDetailControlFontFamily)
             .lineHeight(12 * 1.35)
             .layoutWeight(1)
             .maxLines(1)
@@ -67,41 +67,15 @@ export struct BookHero {
   }
 
   private openSourceSwitch(): void {
-    if (this.currentBook === null) return;
+    if (!canSwitchBookSourceId(this.currentBook?.sourceId)) return;
     MotionAdapter.apply('app.route.push.forward', this.reducedMotion, this.getUIContext(), () => {
-      ReaderUiStore.dispatch({ type: 'route-push', id: 'source-switch' });
+      ReaderUiStore.requestSourceSwitchOpen();
     });
   }
 
   build() {
-    Column() {
-      if (this.currentBook === null) {
-        Row({ space: 14 }) {
-          Column()
-            .width(86)
-            .height(122)
-            .borderRadius(DemoAliasTokens.radiusSm)
-            .backgroundColor(ColorTokens.metaBg)
-          Column({ space: 8 }) {
-            Text('未选择书籍')
-              .fontSize(20)
-              .fontWeight(700)
-              .fontColor(ColorTokens.ink)
-              .fontFamily(ReaderTypography.serifFamily())
-            Text('请从书架、搜索或发现结果打开一本书。')
-              .fontSize(13)
-              .lineHeight(13 * 1.5)
-              .fontColor(ColorTokens.muted)
-              .maxLines(3)
-          }
-          .alignItems(HorizontalAlign.Start)
-          .layoutWeight(1)
-          .justifyContent(FlexAlign.Center)
-        }
-        .width('100%')
-        .height(122)
-        .alignItems(VerticalAlign.Center)
-      } else {
+    if (this.currentBook !== null) {
+      Column() {
         Row({ space: 14 }) {
           Stack() {
             SourceCoverImage({
@@ -111,21 +85,22 @@ export struct BookHero {
           }
           .width(86)
           .height(122)
-          .borderRadius(DemoAliasTokens.radiusSm)
+          .borderRadius(6)
           Column() {
-            Text(this.currentBook.title.length > 0 ? this.currentBook.title : '未命名书籍')
+            Text(this.currentBook.title)
               .fontSize(22)
               .lineHeight(22 * 1.18)
               .fontWeight(700)
-              .fontColor(ColorTokens.ink)
-              .fontFamily(ReaderTypography.serifFamily())
+              .fontColor(ReaderUiVisualTokens.bookDetailInk)
+              .fontFamily(ReaderUiVisualTokens.bookDetailTitleFontFamily)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
             if (this.currentBook.author.length > 0) {
               Text(this.currentBook.author)
                 .fontSize(13)
                 .lineHeight(13 * 1.35)
-                .fontColor(ColorTokens.muted)
+                .fontColor(ReaderUiVisualTokens.bookDetailMuted)
+                .fontFamily(ReaderUiVisualTokens.bookDetailControlFontFamily)
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
                 .margin({ top: 8 })
@@ -133,23 +108,25 @@ export struct BookHero {
             if (this.facts().length > 0) {
               BookFacts({ facts: this.facts() })
             }
-            if (this.currentBook.sourceName.length > 0) {
+            if (canSwitchBookSourceId(this.currentBook.sourceId) && this.currentBook.sourceName.length > 0) {
               Row({ space: 8 }) {
                 Text(`书源：${this.currentBook.sourceName}`)
                   .fontSize(12)
                   .fontWeight(700)
-                  .fontColor(ColorTokens.muted)
+                  .fontColor(ReaderUiVisualTokens.bookDetailMuted)
+                  .fontFamily(ReaderUiVisualTokens.bookDetailControlFontFamily)
                   .layoutWeight(1)
                   .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
                 Text('更换书源')
                   .fontSize(9)
                   .fontWeight(900)
-                  .fontColor(ColorTokens.primary)
+                  .fontColor(ReaderUiVisualTokens.bookDetailSourceSwitchInk)
+                  .fontFamily(ReaderUiVisualTokens.bookDetailControlFontFamily)
                   .height(18)
                   .padding({ left: 8, right: 8 })
-                  .borderRadius(DemoAliasTokens.radiusPill)
-                  .backgroundColor(ColorTokens.surfaceSoft)
+                  .borderRadius(999)
+                  .backgroundColor(ReaderUiVisualTokens.bookDetailSourceSwitchSurface)
                   .textAlign(TextAlign.Center)
                   .onClick(() => this.openSourceSwitch())
               }
@@ -165,14 +142,18 @@ export struct BookHero {
         .width('100%')
         .alignItems(VerticalAlign.Top)
       }
+      .width('100%')
+      .height(152)
+      .padding(14)
+      .border({ width: 1, color: ReaderUiVisualTokens.bookDetailSectionBorder })
+      .borderRadius(8)
+      .backgroundColor(ReaderUiVisualTokens.bookDetailSectionSurface)
+      .alignItems(HorizontalAlign.Center)
+    } else {
+      // There is no Figma "no selected book" hero. Do not substitute an
+      // instructional card while the Core-backed book identity is absent.
+      Column().width(0).height(0)
     }
-    .width('100%')
-    .height(152)
-    .padding(14)
-    .border({ width: 1, color: ColorTokens.border })
-    .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(DemoAliasTokens.surface)
-    .alignItems(HorizontalAlign.Center)
   }
 }
 
@@ -190,28 +171,33 @@ export struct BookSummaryCard {
   }
 
   build() {
-    Column() {
-      Text('简介')
-        .fontSize(15)
-        .fontWeight(700)
-        .fontColor(ColorTokens.ink)
-      Text(this.currentBook !== null && this.currentBook.summary.length > 0
-        ? this.currentBook.summary
-        : (this.currentBook === null ? '尚未选择书籍，暂无简介。' : 'Core 未返回本书简介。'))
-        .fontSize(13)
-        .fontColor(ColorTokens.muted)
-        .lineHeight(13 * 1.65)
-        .maxLines(4)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .margin({ top: 8 })
+    if (this.currentBook !== null && this.currentBook.summary.length > 0) {
+      Column() {
+        Text('简介')
+          .fontSize(15)
+          .fontWeight(700)
+          .fontColor(ReaderUiVisualTokens.bookDetailInk)
+          .fontFamily(ReaderUiVisualTokens.bookDetailControlFontFamily)
+        Text(this.currentBook.summary)
+          .fontSize(13)
+          .fontColor(ReaderUiVisualTokens.bookDetailMuted)
+          .fontFamily(ReaderUiVisualTokens.bookDetailControlFontFamily)
+          .lineHeight(13 * 1.65)
+          .maxLines(4)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .margin({ top: 8 })
+      }
+      .width('100%')
+      .height(this.cardHeight())
+      .alignItems(HorizontalAlign.Start)
+      .padding(14)
+      .border({ width: 1, color: ReaderUiVisualTokens.bookDetailSectionBorder })
+      .borderRadius(8)
+      .backgroundColor(ReaderUiVisualTokens.bookDetailSectionSurface)
+    } else {
+      // Figma has no summary-error or no-book card variant.
+      Column().width(0).height(0)
     }
-    .width('100%')
-    .height(this.cardHeight())
-    .alignItems(HorizontalAlign.Start)
-    .padding(14)
-    .border({ width: 1, color: ColorTokens.border })
-    .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(DemoAliasTokens.surface)
   }
 }
 
@@ -239,11 +225,6 @@ export struct BookChapterList {
     return this.currentBook !== null && this.chapterToc.length > 0;
   }
 
-  private directoryStatus(): string {
-    if (this.currentBook === null) return '尚未选择书籍，无法显示章节目录。';
-    return this.loading ? '正在从 Core 加载章节目录…' : '暂无从 Core 返回的章节目录。';
-  }
-
   private isCurrent(chapter: ChapterTocEntry): boolean {
     return this.currentChapterTitle.length > 0 && chapter.title === this.currentChapterTitle;
   }
@@ -269,78 +250,82 @@ export struct BookChapterList {
   }
 
   build() {
-    Column() {
+    if (this.hasDirectory()) {
+      Column() {
       Row() {
         Text('章节信息')
           .fontSize(15)
           .fontWeight(700)
-          .fontColor(ColorTokens.ink)
+          .fontColor(ReaderUiVisualTokens.bookDetailInk)
+          .fontFamily(ReaderUiVisualTokens.bookDetailControlFontFamily)
         Blank()
         if (this.hasDirectory()) {
-          Row({ space: 5 }) {
-            Image($r('app.media.ui_icon_list_primary')).width(16).height(16)
+          Row({ space: 4 }) {
+            Image($r('app.media.ui_icon_list_primary')).width(20).height(20)
             Text('完整目录')
               .fontSize(12)
-              .fontWeight(850)
-              .fontColor(ColorTokens.primaryDark)
+              .fontWeight(900)
+              .fontColor(ReaderUiVisualTokens.bookDetailActionPrimary)
+              .fontFamily(ReaderUiVisualTokens.bookDetailControlFontFamily)
           }
+          .width(94)
           .height(30)
           .padding({ left: 10, right: 10 })
-          .borderRadius(DemoAliasTokens.radiusPill)
-          .border({ width: 1, color: ColorTokens.border })
+          .borderRadius(999)
+          .border({ width: 1, color: ReaderUiVisualTokens.bookDetailSectionBorder })
+          .backgroundColor(ReaderUiVisualTokens.bookDetailActionSecondarySurface)
           .alignItems(VerticalAlign.Center)
           .onClick(() => this.openDirectory())
-        } else {
-          Text('目录未就绪')
-            .fontSize(12)
-            .fontWeight(700)
-            .fontColor(ColorTokens.muted)
         }
       }
       .width('100%')
       .height(48)
       .padding({ left: 14, right: 14 })
-      if (!this.hasDirectory()) {
-        Text(this.directoryStatus())
-          .fontSize(12)
-          .fontColor(ColorTokens.muted)
-          .lineHeight(18)
-          .width('100%')
-          .padding({ left: 14, right: 14, top: 14, bottom: 14 })
-      } else {
-        ForEach(this.previewChapters(), (chapter: ChapterTocEntry, i: number) => {
-          Row({ space: 8 }) {
-            Text(chapter.title)
-              .fontSize(14)
-              .fontColor(this.isCurrent(chapter) ? ColorTokens.accent : ColorTokens.controlInk)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .layoutWeight(1)
+      ForEach(this.previewChapters(), (chapter: ChapterTocEntry, i: number) => {
+          Stack({ alignContent: Alignment.TopStart }) {
             if (this.isCurrent(chapter)) {
-              Text('当前')
-                .fontSize(10)
-                .fontWeight(800)
-                .fontColor(ColorTokens.primaryDark)
-                .padding({ left: 8, right: 8, top: 4, bottom: 4 })
-                .borderRadius(DemoAliasTokens.radiusPill)
-                .backgroundColor(ColorTokens.surfaceSoft)
+              Column()
+                .width('100%')
+                .height(58)
+                .backgroundColor(ReaderUiVisualTokens.bookDetailChapterSelectedSurface)
+            }
+            Row({ space: 8 }) {
+              Text(chapter.title)
+                .fontSize(14)
+                .fontColor(ReaderUiVisualTokens.bookDetailInk)
+                .fontFamily(ReaderUiVisualTokens.bookDetailControlFontFamily)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+                .layoutWeight(1)
+            }
+            .width('100%')
+            .height(58)
+            .padding({ left: 14, right: 14 })
+            .alignItems(VerticalAlign.Center)
+            if (this.isCurrent(chapter)) {
+              Column()
+                .width(3)
+                .height(58)
+                .backgroundColor(ReaderUiVisualTokens.bookDetailChapterCurrentIndicator)
             }
           }
           .width('100%')
           .height(58)
-          .padding({ left: 14, right: 14 })
-          .border({ width: { top: 1 }, color: ColorTokens.border })
-          .alignItems(VerticalAlign.Center)
+          .border({ width: { top: 1 }, color: ReaderUiVisualTokens.bookDetailChapterDivider })
           .onClick(() => this.openChapter(chapter))
-        }, (chapter: ChapterTocEntry, i: number) => `${chapter.chapterId}-${i}`)
+      }, (chapter: ChapterTocEntry, i: number) => `${chapter.chapterId}-${i}`)
       }
+      .width('100%')
+      .height(282)
+      .alignItems(HorizontalAlign.Start)
+      .padding(0)
+      .border({ width: 1, color: ReaderUiVisualTokens.bookDetailSectionBorder })
+      .borderRadius(8)
+      .backgroundColor(ReaderUiVisualTokens.bookDetailSectionSurface)
+    } else {
+      // Loading/error variants are supplied through the bound StateHost; the
+      // content master itself never becomes a locally written status card.
+      Column().width(0).height(0)
     }
-    .width('100%')
-    .height(282)
-    .alignItems(HorizontalAlign.Start)
-    .padding(0)
-    .border({ width: 1, color: ColorTokens.border })
-    .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(DemoAliasTokens.surface)
   }
 }

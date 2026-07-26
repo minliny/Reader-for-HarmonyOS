@@ -5,48 +5,14 @@
 // Column expands into the status-bar region and pads with the real device inset
 // (safeAreaTop) so BackTopBar clears the status bar, and the scroll body pads its
 // bottom with safeAreaBottom so the last row clears the navigation bar.
-import { ColorTokens } from '../../contract/generated/ColorTokens';
-import { TokenAdapter } from '../adapters/TokenAdapter';
-import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
-import { SpacingTokens, ZIndexTokens } from '../../contract/generated/DimensionTokens';
+import { ZIndexTokens } from '../../contract/generated/DimensionTokens';
 import { SafeAreaAdapter } from '../adapters/SafeAreaAdapter';
 import { BackTopBar } from '../components/SharedComponents';
-import { ReaderUiStore } from '../store/ReaderUiStore';
-import { RouteId } from '../../contract/generated/RouteTable';
+import { RestoreBackupOverlay, SyncBackupPage } from '../components/StructuralPageComponents';
 import { ViewStateRenderer } from '../components/ViewStateRenderer';
 import { OverlayHost } from '../slots/OverlayHost';
 import { StateHost } from '../slots/StateHost';
-
-@Component
-struct SettingsFixedActionButton {
-  @Prop label: string = '操作';
-  @Prop variant: string = 'primary';
-  @Prop route: RouteId = 'settings';
-
-  private fillColor(): string {
-    if (this.variant === 'danger') return ColorTokens.accent;
-    return this.variant === 'secondary' ? DemoAliasTokens.surface : ColorTokens.primary;
-  }
-
-  private textColor(): string {
-    if (this.variant === 'danger') return DemoAliasTokens.onPrimary;
-    return this.variant === 'secondary' ? ColorTokens.primaryDark : DemoAliasTokens.onPrimary;
-  }
-
-  build() {
-    Text(this.label)
-      .fontSize(13)
-      .fontWeight(800)
-      .fontColor(this.textColor())
-      .width('100%')
-      .height(42)
-      .borderRadius(DemoAliasTokens.radiusPill)
-      .backgroundColor(this.fillColor())
-      .border({ width: this.variant === 'secondary' ? 1 : 0, color: ColorTokens.border })
-      .textAlign(TextAlign.Center)
-      .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: this.route }))
-  }
-}
+import { ReaderUiVisualTokens } from '../../contract/reader_ui/VisualAdmission';
 
 @Component
 export struct SettingsShell {
@@ -56,25 +22,99 @@ export struct SettingsShell {
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
 
   private hasFixedActionBar(): boolean {
-    return this.routeId === 'source-management'
-      || this.routeId === 'source-detail';
+    return this.routeId === 'source-management';
+  }
+
+  private isSyncFigmaRoute(): boolean {
+    return this.routeId === 'sync-backup' || this.routeId === 'webdav-config' ||
+      this.routeId === 'restore-confirm' || this.routeId === 'restore-running' ||
+      this.routeId === 'restore-result';
+  }
+
+  private isWebDavFigmaRoute(): boolean {
+    return this.routeId === 'webdav-config';
+  }
+
+  private isSyncBackupFigmaRoute(): boolean {
+    return this.routeId === 'sync-backup' || this.isRestoreOverlayRoute();
+  }
+
+  private isRestoreOverlayRoute(): boolean {
+    return this.routeId === 'restore-confirm' || this.routeId === 'restore-running' ||
+      this.routeId === 'restore-result';
   }
 
   private scrollBottomPadding(): number {
-    return this.hasFixedActionBar() ? 18 : 112 + this.safeAreaBottom;
+    if (this.isSyncBackupFigmaRoute()) {
+      return this.safeAreaBottom + ReaderUiVisualTokens.syncContentBottomInset;
+    }
+    if (this.isWebDavFigmaRoute()) {
+      return this.safeAreaBottom + ReaderUiVisualTokens.webdavContentBottomInset;
+    }
+    if (this.hasFixedActionBar()) return ReaderUiVisualTokens.sourceManagementContentBottomInset;
+    return this.safeAreaBottom + ReaderUiVisualTokens.settingsContentBottomInset;
+  }
+
+  private scrollTopPadding(): number {
+    if (this.isSyncFigmaRoute()) return 0;
+    return this.routeId === 'source-management'
+      ? ReaderUiVisualTokens.sourceManagementContentTopInset
+      : ReaderUiVisualTokens.settingsContentTopInset;
   }
 
   private actionBarHeight(): number {
-    return 62 + this.safeAreaBottom;
+    if (this.routeId === 'source-management') {
+      // Figma Phone places the 44vp actions at y=757 and leaves 43vp beneath
+      // them. A larger real system safe-area may increase, but never reduce,
+      // that current-Figma visual minimum.
+      return ReaderUiVisualTokens.sourceManagementBottomActionHeight +
+        Math.max(this.safeAreaBottom, ReaderUiVisualTokens.sourceManagementBottomActionBottomInset);
+    }
+    return this.safeAreaBottom;
+  }
+
+  private pageSurface(): string {
+    return this.routeId === 'settings-general'
+      ? ReaderUiVisualTokens.settingsPageSurface
+      : this.routeId === 'source-management'
+        ? ReaderUiVisualTokens.sourceManagementPageSurface
+        : this.isWebDavFigmaRoute()
+          ? ReaderUiVisualTokens.webdavPageSurface
+          : this.isSyncBackupFigmaRoute()
+            ? ReaderUiVisualTokens.syncPageSurface
+          // Every other visible settings route is blocked until it obtains a
+          // Figma binding. Keep the fallback within the generated source-led
+          // contract, never the historical global paper palette.
+          : ReaderUiVisualTokens.settingsPageSurface;
+  }
+
+  private contentHorizontalInset(): number {
+    return this.routeId === 'source-management'
+      ? ReaderUiVisualTokens.sourceManagementContentHorizontalInset
+      : this.isWebDavFigmaRoute()
+        ? ReaderUiVisualTokens.webdavContentPhoneInset
+        : this.isSyncBackupFigmaRoute()
+          ? ReaderUiVisualTokens.syncContentPhoneInset
+        : ReaderUiVisualTokens.settingsContentHorizontalInset;
   }
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       Column() {
-        BackTopBar()
+        if (this.isRestoreOverlayRoute()) {
+          BackTopBar({ title: '同步与备份' })
+        } else {
+          BackTopBar()
+        }
         Scroll() {
           Column() {
-            ViewStateRenderer()
+            if (this.isRestoreOverlayRoute()) {
+              // Restore is an admitted Figma overlay over this exact Sync
+              // Backup surface; do not render the old generated full page.
+              SyncBackupPage()
+            } else {
+              ViewStateRenderer()
+            }
           }
           .width('100%')
         }
@@ -83,12 +123,12 @@ export struct SettingsShell {
         .scrollBar(BarState.Auto)
         .align(Alignment.Top)
         .padding({
-          top: 8,
-          left: SpacingTokens.safeAreaHorizontal + 3,
-          right: SpacingTokens.safeAreaHorizontal + 3,
+          top: this.scrollTopPadding(),
+          left: this.contentHorizontalInset(),
+          right: this.contentHorizontalInset(),
           bottom: this.scrollBottomPadding(),
         })
-        .backgroundColor(ColorTokens.paper)
+        .backgroundColor(this.pageSurface())
         this.renderBottomActionBar()
       }
       .width('100%')
@@ -100,56 +140,54 @@ export struct SettingsShell {
 
       OverlayHost()
         .zIndex(ZIndexTokens.dialog)
+      if (this.isRestoreOverlayRoute()) {
+        RestoreBackupOverlay()
+          .zIndex(ZIndexTokens.dialog + 1)
+      }
       StateHost()
         .zIndex(ZIndexTokens.mainNav)
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(ColorTokens.paper)
+    .backgroundColor(this.pageSurface())
     .expandSafeArea([SafeAreaType.SYSTEM, SafeAreaType.CUTOUT],
       [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END])
   }
 
   @Builder renderBottomActionBar() {
     if (this.routeId === 'source-management') {
-      Row({ space: 10 }) {
-        SettingsFixedActionButton({ label: '批量管理', variant: 'secondary', route: 'source-batch' })
+      Row({ space: ReaderUiVisualTokens.sourceManagementBottomActionGap }) {
+        Text('批量管理')
+          .fontFamily(ReaderUiVisualTokens.sourceManagementCjkFontFamily)
+          .fontSize(ReaderUiVisualTokens.sourceManagementBottomActionLabelSize)
+          .fontWeight(700)
+          .fontColor(ReaderUiVisualTokens.sourceManagementInk)
+          .height(ReaderUiVisualTokens.sourceManagementBottomActionHeight)
+          .textAlign(TextAlign.Center)
+          .borderRadius(ReaderUiVisualTokens.sourceManagementBottomActionRadius)
+          .backgroundColor(ReaderUiVisualTokens.sourceManagementFieldSurface)
+          .border({ width: 1, color: ReaderUiVisualTokens.sourceManagementFieldBorder })
           .layoutWeight(1)
-        SettingsFixedActionButton({ label: '新增书源', route: 'source-import-options' })
-          .layoutWeight(1)
-      }
-      .width('100%')
-      .height(this.actionBarHeight())
-      .padding({ left: SpacingTokens.safeAreaHorizontal + 3, right: SpacingTokens.safeAreaHorizontal + 3, top: 10, bottom: this.safeAreaBottom + 10 })
-      .linearGradient({
-        angle: 180,
-        colors: [
-          [TokenAdapter.colorWithAlpha(ColorTokens.bottomBarBg, 0), 0],
-          [TokenAdapter.colorWithAlpha(ColorTokens.bottomBarBg, 0.96), 0.42],
-          [TokenAdapter.colorWithAlpha(ColorTokens.bottomBarBg, 1.0), 1.0]
-        ]
-      })
-      .zIndex(ZIndexTokens.mainNav)
-    } else if (this.routeId === 'source-detail') {
-      Row({ space: 10 }) {
-        SettingsFixedActionButton({ label: '检测此源', variant: 'secondary', route: 'source-detect' })
-          .layoutWeight(1)
-        SettingsFixedActionButton({ label: '编辑规则', route: 'source-rule-edit' })
-          .layoutWeight(1)
-        SettingsFixedActionButton({ label: '删除', variant: 'danger', route: 'source-delete-confirm' })
+        Text('＋  新增书源')
+          .fontFamily(ReaderUiVisualTokens.sourceManagementCjkFontFamily)
+          .fontSize(ReaderUiVisualTokens.sourceManagementBottomActionLabelSize)
+          .fontWeight(700)
+          .fontColor(ReaderUiVisualTokens.sourceManagementOnPrimary)
+          .height(ReaderUiVisualTokens.sourceManagementBottomActionHeight)
+          .textAlign(TextAlign.Center)
+          .borderRadius(ReaderUiVisualTokens.sourceManagementBottomActionRadius)
+          .backgroundColor(ReaderUiVisualTokens.sourceManagementPrimary)
           .layoutWeight(1)
       }
       .width('100%')
       .height(this.actionBarHeight())
-      .padding({ left: SpacingTokens.safeAreaHorizontal + 3, right: SpacingTokens.safeAreaHorizontal + 3, top: 10, bottom: this.safeAreaBottom + 10 })
-      .linearGradient({
-        angle: 180,
-        colors: [
-          [TokenAdapter.colorWithAlpha(ColorTokens.bottomBarBg, 0), 0],
-          [TokenAdapter.colorWithAlpha(ColorTokens.bottomBarBg, 0.96), 0.42],
-          [TokenAdapter.colorWithAlpha(ColorTokens.bottomBarBg, 1.0), 1.0]
-        ]
+      .padding({
+        left: this.contentHorizontalInset(),
+        right: this.contentHorizontalInset(),
+        top: 0,
+        bottom: Math.max(this.safeAreaBottom, ReaderUiVisualTokens.sourceManagementBottomActionBottomInset),
       })
+      .backgroundColor(ReaderUiVisualTokens.sourceManagementPageSurface)
       .zIndex(ZIndexTokens.mainNav)
     }
   }

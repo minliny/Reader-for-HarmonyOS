@@ -1,15 +1,16 @@
-// SharedComponents — shell components ported 1:1 from frontend-demo
-// (styles/00-foundation.css .fd-top-bar / .fd-back-bar / .fd-main-nav +
-// styles/01-shell-layout.css). State components (Loading/Empty/Error/Offline)
-// remain P0 stubs pending their own port. All values are demo vp (lint allows
-// plain numbers); colors via tokens.
+// SharedComponents — shared shell pieces for admitted Figma routes. Every
+// visible header/navigation value below comes from Reader-UI's revision-bound
+// VisualAdmission contract. Historical generic state helpers remain inert by
+// route admission; they never substitute for a missing Figma surface.
 import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
-import { SpacingTokens, SizeTokens } from '../../contract/generated/DimensionTokens';
+import { SpacingTokens } from '../../contract/generated/DimensionTokens';
 import { ViewStateComponent, ViewStateTable } from '../../contract/generated/ViewStateTable';
 import { ReaderTypography } from '../tokens/ReaderTypography';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 import { MotionAdapter } from '../adapters/MotionAdapter';
+import { ReaderUiVisualTokens } from '../../contract/reader_ui/VisualAdmission';
+import { CoreRssSubscription } from '../store/ReaderUiState';
 
 function topBarTitle(routeId: string, pageState: string, kind: string, fallback: string): string {
   // This route aliases its generated management body, while Harmony renders a
@@ -24,12 +25,13 @@ function topBarTitle(routeId: string, pageState: string, kind: string, fallback:
   return fallback;
 }
 
-// .fd-top-bar: flex space-between, min-height 58, padding 6 20 0, ink.
-//   h1: serif 29/700, nowrap ellipsis. top-actions: flex gap 18, 44×44 icon-buttons.
+// Current Figma AppTopBar master: 58 high, 6/20/0 padding, 29pt title, and
+// two 44pt actions separated by 18pt (all read through VisualAdmission).
 @Component
 export struct AppTopBar {
   @StorageProp('reader.displayedRouteId') routeId: string = 'bookshelf';
   @StorageProp('reader.pageState') pageState: string = 'default';
+  @StorageProp('reader.rssSubscriptions') rssSubscriptions: CoreRssSubscription[] = [];
   // ViewStateRenderer supplies the canonical title. Shell-owned callers leave
   // it empty and keep the route-derived fallback used by production today.
   @Prop title: string = '';
@@ -39,40 +41,194 @@ export struct AppTopBar {
     return topBarTitle(this.routeId, this.pageState, 'AppTopBar', '');
   }
 
+  private isDiscoverRoute(): boolean {
+    return this.routeId === 'discover' || this.routeId === 'discover-home';
+  }
+
+  private isRssRoute(): boolean {
+    return this.routeId === 'rss';
+  }
+
+  private isBookshelfRoute(): boolean {
+    return this.routeId === 'bookshelf' || this.routeId === 'bookshelf-cover-mode' ||
+      this.routeId === 'bookshelf-list-mode' || this.routeId === 'bookshelf-empty';
+  }
+
+  private genericTitleFontFamily(): string {
+    return this.isBookshelfRoute()
+      ? ReaderUiVisualTokens.bookshelfBookTitleFontFamily
+      // Other visible MainTab headers have dedicated Figma branches above.
+      // Keep this defensive path source-led for any future admitted header.
+      : ReaderUiVisualTokens.settingsTitleFontFamily;
+  }
+
+  private genericTitleInk(): string {
+    return this.isBookshelfRoute()
+      ? ReaderUiVisualTokens.bookshelfInk
+      : ReaderUiVisualTokens.settingsTitleInk;
+  }
+
+  private enabledRssSourceCount(): number {
+    let count = 0;
+    for (let index = 0; index < this.rssSubscriptions.length; index += 1) {
+      if (this.rssSubscriptions[index].enabled) count += 1;
+    }
+    return count;
+  }
+
   build() {
-    Row() {
-      Text(this.resolvedTitle())
-        .fontSize(29)
-        .fontWeight(700)
-        .fontColor(ColorTokens.ink)
-        .fontFamily(ReaderTypography.serifFamily())
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .layoutWeight(1)
+    if (this.isDiscoverRoute()) {
+      this.renderDiscoverHeader()
+    } else if (this.isRssRoute()) {
+      this.renderRssHeader()
+    } else {
       Row() {
-        Stack({ alignContent: Alignment.Center }) {
-          Image($r('app.media.bookshelf_icon_search_dark')).width(24).height(24)
+        Text(this.resolvedTitle())
+          .fontSize(ReaderUiVisualTokens.navigationTopBarTitleSize)
+          .fontWeight(700)
+          .fontColor(this.genericTitleInk())
+          .fontFamily(this.genericTitleFontFamily())
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .layoutWeight(1)
+        Row({ space: ReaderUiVisualTokens.navigationTopBarActionGap }) {
+          Stack({ alignContent: Alignment.Center }) {
+            Image($r('app.media.bookshelf_icon_search_dark'))
+              .width(ReaderUiVisualTokens.navigationMainNavIconSize)
+              .height(ReaderUiVisualTokens.navigationMainNavIconSize)
+          }
+            .width(ReaderUiVisualTokens.navigationTopBarActionSize)
+            .height(ReaderUiVisualTokens.navigationTopBarActionSize)
+            .accessibilityText('搜索书籍')
+            .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'book-search' }))
+          Stack({ alignContent: Alignment.Center }) {
+            Image($r('app.media.reader_icon_more_dark'))
+              .width(ReaderUiVisualTokens.navigationMainNavIconSize)
+              .height(ReaderUiVisualTokens.navigationMainNavIconSize)
+          }
+            .width(ReaderUiVisualTokens.navigationTopBarActionSize)
+            .height(ReaderUiVisualTokens.navigationTopBarActionSize)
+            .accessibilityText('更多操作')
+            .onClick(() => this.openTopMore())
         }
-          .width(44).height(44)
-          .accessibilityText('搜索书籍')
-          .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'book-search' }))
-        Stack({ alignContent: Alignment.Center }) {
-          Image($r('app.media.reader_icon_more_dark')).width(24).height(24)
+        .alignItems(VerticalAlign.Center)
+      }
+      .width('100%')
+      .height(ReaderUiVisualTokens.navigationHeaderHeight)
+      .padding({
+        top: ReaderUiVisualTokens.navigationHeaderTopInset,
+        left: ReaderUiVisualTokens.navigationHeaderHorizontalInset,
+        right: ReaderUiVisualTokens.navigationHeaderHorizontalInset,
+        bottom: 0,
+      })
+    }
+  }
+
+  @Builder renderDiscoverHeader() {
+    Row() {
+      Text('发现')
+        .fontFamily(ReaderUiVisualTokens.discoverHeaderFontFamily)
+        .fontSize(ReaderUiVisualTokens.discoverHeaderTitleSize)
+        .fontWeight(700)
+        .fontColor(ReaderUiVisualTokens.discoverHeaderInk)
+      Blank().layoutWeight(1)
+      Stack({ alignContent: Alignment.Center }) {
+        Image($r('app.media.ui_icon_refresh_primary'))
+          .width(ReaderUiVisualTokens.navigationMainNavIconSize)
+          .height(ReaderUiVisualTokens.navigationMainNavIconSize)
+      }
+      .width(ReaderUiVisualTokens.navigationTopBarActionSize)
+      .height(ReaderUiVisualTokens.navigationTopBarActionSize)
+      .accessibilityText('刷新发现')
+      .onClick(() => ReaderUiStore.dispatch({ type: 'discover-refresh' }))
+    }
+    .width('100%')
+    .height(ReaderUiVisualTokens.navigationHeaderHeight)
+    .padding({
+      top: ReaderUiVisualTokens.navigationHeaderTopInset,
+      left: ReaderUiVisualTokens.navigationHeaderHorizontalInset,
+      right: ReaderUiVisualTokens.navigationHeaderHorizontalInset,
+      bottom: 0,
+    })
+    .alignItems(VerticalAlign.Center)
+  }
+
+  @Builder renderRssHeader() {
+    Row() {
+      Text('RSS')
+        .fontFamily(ReaderUiVisualTokens.rssHeaderFontFamily)
+        .fontSize(ReaderUiVisualTokens.rssHeaderTitleSize)
+        .fontWeight(700)
+        .fontColor(ReaderUiVisualTokens.rssHeaderInk)
+      Blank().layoutWeight(1)
+      Row({ space: ReaderUiVisualTokens.rssHeaderControlGap }) {
+        Row() {
+          Circle()
+            .width(ReaderUiVisualTokens.rssHeaderStatusDotSize)
+            .height(ReaderUiVisualTokens.rssHeaderStatusDotSize)
+            .fill(ReaderUiVisualTokens.rssPrimary)
+          Text(`${this.enabledRssSourceCount()} 个启用源`)
+            .fontFamily(ReaderUiVisualTokens.rssControlFontFamily)
+            .fontSize(ReaderUiVisualTokens.rssControlLabelSize)
+            .fontWeight(900)
+            .fontColor(ReaderUiVisualTokens.rssHeaderInk)
+            .margin({ left: ReaderUiVisualTokens.rssHeaderStatusTextGap })
+          Image($r('app.media.ui_icon_refresh_primary'))
+            .width(ReaderUiVisualTokens.rssHeaderRefreshIconSize)
+            .height(ReaderUiVisualTokens.rssHeaderRefreshIconSize)
+            .margin({ left: ReaderUiVisualTokens.rssHeaderStatusTextGap })
         }
-          .width(44).height(44).margin({ left: 8 })
-          .accessibilityText('更多操作')
-          .onClick(() => this.openTopMore())
+        .height(ReaderUiVisualTokens.rssHeaderStatusHeight)
+        .padding({
+          left: ReaderUiVisualTokens.rssHeaderStatusPaddingLeft,
+          right: ReaderUiVisualTokens.rssHeaderStatusPaddingRight,
+        })
+        .border({ width: 1, color: ReaderUiVisualTokens.rssSoftBorder })
+        .borderRadius(999)
+        .backgroundColor(ReaderUiVisualTokens.rssStatusSurface)
+        .alignItems(VerticalAlign.Center)
+        .accessibilityText('刷新当前订阅')
+        .onClick(() => ReaderUiStore.dispatch({ type: 'rss-refresh' }))
+        Row() {
+          Image($r('app.media.ui_icon_list_dark'))
+            .width(ReaderUiVisualTokens.rssHeaderManageIconSize)
+            .height(ReaderUiVisualTokens.rssHeaderManageIconSize)
+          Text('管理')
+            .fontFamily(ReaderUiVisualTokens.rssControlFontFamily)
+            .fontSize(ReaderUiVisualTokens.rssControlLabelSize)
+            .fontWeight(900)
+            .fontColor(ReaderUiVisualTokens.rssHeaderInk)
+            .margin({ left: ReaderUiVisualTokens.rssHeaderManageLabelGap })
+        }
+        .width(ReaderUiVisualTokens.rssHeaderManageWidth)
+        .height(ReaderUiVisualTokens.rssHeaderStatusHeight)
+        .border({ width: 1, color: ReaderUiVisualTokens.rssSoftBorder })
+        .borderRadius(ReaderUiVisualTokens.rssHeaderManageRadius)
+        .backgroundColor(ReaderUiVisualTokens.rssStatusSurface)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+        .accessibilityText('管理订阅源：当前 Figma 未提供可进入的目标')
       }
       .alignItems(VerticalAlign.Center)
     }
     .width('100%')
-    .height(SizeTokens.topBarHeight)
-      .padding({ top: 6, left: 20, right: 20, bottom: 0 })
+    .height(ReaderUiVisualTokens.navigationHeaderHeight)
+    .padding({
+      top: ReaderUiVisualTokens.navigationHeaderTopInset,
+      left: ReaderUiVisualTokens.navigationHeaderHorizontalInset,
+      right: ReaderUiVisualTokens.navigationHeaderHorizontalInset,
+      bottom: 0,
+    })
+    .alignItems(VerticalAlign.Center)
   }
 
   private openTopMore(): void {
     if (this.routeId === 'bookshelf' || this.routeId === 'bookshelf-cover-mode' || this.routeId === 'bookshelf-list-mode') {
-      ReaderUiStore.dispatch({ type: 'set-overlay', overlay: 'book-action' });
+      // Figma Page/Bookshelf (941:6) defines this as a visual/pressed
+      // `More Action` only: it has no click navigation reaction.  A book
+      // action sheet belongs exclusively to a long-pressed, identity-bound
+      // card, so do not manufacture a targetless sheet from the top bar.
+      return;
     } else if (this.routeId === 'discover' || this.routeId === 'discover-home') {
       // Core source.explore does not expose a global sort contract.  Make the
       // top-bar affordance an honest refresh of the selected persisted source
@@ -86,8 +242,8 @@ export struct AppTopBar {
   }
 }
 
-// .fd-back-bar: grid 44px 1fr 44px, gap 10, min-height 58, padding 6 20 0, ink.
-//   back button + more: 44×44 circle (.fd-icon-button). h1: serif 24/700.
+// Current Figma back header: 58 high with a 44pt back action, 24pt icon, and
+// a 10pt title gap. Route-specific colors and typography remain source-bound.
 @Component
 export struct BackTopBar {
   @StorageProp('reader.displayedRouteId') routeId: string = 'book-detail';
@@ -101,50 +257,134 @@ export struct BackTopBar {
   }
 
   private supportsBookActions(): boolean {
-    return this.routeId === 'book-detail' || this.routeId === 'book-detail-toc-preview' ||
-      this.routeId === 'book-directory';
+    // The current Book Detail Figma master has only a back affordance. Book
+    // actions are the two exact bottom-bar buttons; adding a top-right more
+    // control would be a local visual invention. The Reader directory keeps
+    // its separately admitted action affordance.
+    return this.routeId === 'book-directory';
+  }
+
+  private isBookDetailRoute(): boolean {
+    return this.routeId === 'book-detail' || this.routeId === 'book-detail-toc-preview';
+  }
+
+  private usesSourceManagementMore(): boolean {
+    return this.routeId === 'source-management';
+  }
+
+  private isSettingsGeneralRoute(): boolean {
+    return this.routeId === 'settings-general';
+  }
+
+  private isSyncFigmaRoute(): boolean {
+    return this.routeId === 'webdav-config' || this.routeId === 'sync-backup' ||
+      this.routeId === 'restore-confirm' || this.routeId === 'restore-running' ||
+      this.routeId === 'restore-result';
+  }
+
+  private titleFontFamily(): string {
+    return this.isBookDetailRoute()
+      ? ReaderUiVisualTokens.bookDetailTitleFontFamily
+      : this.usesSourceManagementMore()
+      ? ReaderUiVisualTokens.sourceManagementTitleFontFamily
+      : this.isSettingsGeneralRoute()
+      ? ReaderUiVisualTokens.settingsTitleFontFamily
+      : this.isSyncFigmaRoute()
+      ? ReaderUiVisualTokens.webdavControlFontFamily
+      : ReaderUiVisualTokens.settingsTitleFontFamily;
+  }
+
+  private titleFontSize(): number {
+    return this.usesSourceManagementMore()
+      ? ReaderUiVisualTokens.sourceManagementTitleSize
+      : this.isSettingsGeneralRoute()
+      ? ReaderUiVisualTokens.settingsTitleSize
+      : ReaderUiVisualTokens.navigationBackTitleSize;
+  }
+
+  private titleInk(): string {
+    return this.isBookDetailRoute()
+      ? ReaderUiVisualTokens.bookDetailInk
+      : this.usesSourceManagementMore()
+      ? ReaderUiVisualTokens.sourceManagementInk
+      : this.isSettingsGeneralRoute()
+      ? ReaderUiVisualTokens.settingsTitleInk
+      : this.isSyncFigmaRoute()
+      ? ReaderUiVisualTokens.webdavInk
+      : ReaderUiVisualTokens.settingsTitleInk;
+  }
+
+  private barHeight(): number {
+    return this.isSettingsGeneralRoute()
+      ? ReaderUiVisualTokens.settingsBackBarHeight
+      : ReaderUiVisualTokens.navigationHeaderHeight;
   }
 
   build() {
     Row() {
       Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.reader_icon_back_dark')).width(24).height(24)
+        Image($r('app.media.reader_icon_back_dark'))
+          .width(ReaderUiVisualTokens.navigationBackIconSize)
+          .height(ReaderUiVisualTokens.navigationBackIconSize)
       }
-        .width(44).height(44)
+        .width(ReaderUiVisualTokens.navigationBackActionSize)
+        .height(ReaderUiVisualTokens.navigationBackActionSize)
         .accessibilityText('返回')
         .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
       Text(this.resolvedTitle())
-        .fontSize(24)
+        .fontSize(this.titleFontSize())
         .fontWeight(700)
-        .fontColor(ColorTokens.ink)
-        .fontFamily(ReaderTypography.serifFamily())
+        .fontColor(this.titleInk())
+        .fontFamily(this.titleFontFamily())
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .layoutWeight(1)
-        .margin({ left: 10, right: 10 })
+        .margin({
+          left: ReaderUiVisualTokens.navigationBackTitleGap,
+          right: ReaderUiVisualTokens.navigationBackTitleGap,
+        })
       if (this.supportsBookActions()) {
         Stack({ alignContent: Alignment.Center }) {
-          Image($r('app.media.reader_icon_more_dark')).width(24).height(24)
+          Image($r('app.media.reader_icon_more_dark'))
+            .width(ReaderUiVisualTokens.navigationMainNavIconSize)
+            .height(ReaderUiVisualTokens.navigationMainNavIconSize)
         }
-          .width(44).height(44)
+          .width(ReaderUiVisualTokens.navigationBackActionSize)
+          .height(ReaderUiVisualTokens.navigationBackActionSize)
           .accessibilityText('书籍更多操作')
           .onClick(() => ReaderUiStore.dispatch({ type: 'set-overlay', overlay: 'book-action' }))
+      } else if (this.usesSourceManagementMore()) {
+        Stack({ alignContent: Alignment.Center }) {
+          Row({ space: 3 }) {
+            Circle().width(ReaderUiVisualTokens.sourceManagementMoreDotSize).height(ReaderUiVisualTokens.sourceManagementMoreDotSize).fill(ReaderUiVisualTokens.sourceManagementInk)
+            Circle().width(ReaderUiVisualTokens.sourceManagementMoreDotSize).height(ReaderUiVisualTokens.sourceManagementMoreDotSize).fill(ReaderUiVisualTokens.sourceManagementInk)
+            Circle().width(ReaderUiVisualTokens.sourceManagementMoreDotSize).height(ReaderUiVisualTokens.sourceManagementMoreDotSize).fill(ReaderUiVisualTokens.sourceManagementInk)
+          }
+        }
+          .width(ReaderUiVisualTokens.sourceManagementMoreHitSize)
+          .height(ReaderUiVisualTokens.sourceManagementMoreHitSize)
       } else {
-        Blank().width(44).height(44)
+        Blank()
+          .width(ReaderUiVisualTokens.navigationBackActionSize)
+          .height(ReaderUiVisualTokens.navigationBackActionSize)
       }
     }
     .width('100%')
-    .height(SizeTokens.topBarHeight)
-    .padding({ top: 6, left: 20, right: 20, bottom: 0 })
+    .height(this.barHeight())
+    .padding({
+      top: ReaderUiVisualTokens.navigationHeaderTopInset,
+      left: ReaderUiVisualTokens.navigationHeaderHorizontalInset,
+      right: ReaderUiVisualTokens.navigationHeaderHorizontalInset,
+      bottom: 0,
+    })
   }
 }
 
 type TabKind = 'bookshelf' | 'discover' | 'rss' | 'settings';
 
-// .fd-main-nav: 4-col grid, min-height 68, padding 7 8, border 1 border,
-//   radius-xl(24), surface bg, soft-shadow. Floats (margin 14 horizontal).
-// .fd-main-nav-item: grid-rows 30px 18px, gap 3, icon-shell 30×30 circle,
-//   label 11/800. is-active: primaryDark bg, on-primary.
+// Current Figma navigation has separate 390×844 Phone and 760×960 Tablet
+// geometries. Its dimensions below are generated from those masters; compact
+// and fold layouts are intentionally not represented.
 @Component
 export struct BottomNav {
   @StorageProp('reader.tab') tab: string = 'bookshelf';
@@ -185,32 +425,44 @@ export struct BottomNav {
       this.tabItem('settings', '设置')
     }
     .width('100%')
-    .height(SizeTokens.mainNavHeight)
-    .padding({ top: 7, bottom: 7, left: 8, right: 8 })
-    .border({ width: 1, color: ColorTokens.border })
-    .borderRadius(DemoAliasTokens.radiusXl)
-    .backgroundColor(DemoAliasTokens.surface)
+    .height(ReaderUiVisualTokens.navigationMainNavPhoneHeight)
+    .padding({
+      top: ReaderUiVisualTokens.navigationMainNavPhoneVisualInset,
+      bottom: ReaderUiVisualTokens.navigationMainNavPhoneVisualInset,
+      left: ReaderUiVisualTokens.navigationMainNavPhoneVisualInset,
+      right: ReaderUiVisualTokens.navigationMainNavPhoneVisualInset,
+    })
+    .border({ width: 1, color: ReaderUiVisualTokens.bookshelfBorder })
+    .borderRadius(ReaderUiVisualTokens.navigationMainNavRadius)
+    .backgroundColor(ReaderUiVisualTokens.bookshelfMainNavSurface)
   }
 
   @Builder tabItem(tab: TabKind, label: string) {
     Column() {
       Stack() {
-        Image(this.iconFor(tab, this.activeTab() === tab)).width(24).height(24)
+        Image(this.iconFor(tab, this.activeTab() === tab))
+          .width(ReaderUiVisualTokens.navigationMainNavIconSize)
+          .height(ReaderUiVisualTokens.navigationMainNavIconSize)
       }
-      .width(30).height(30)
-      .borderRadius(DemoAliasTokens.radiusPill)
+      .width(ReaderUiVisualTokens.navigationMainNavPhoneIconShellSize)
+      .height(ReaderUiVisualTokens.navigationMainNavPhoneIconShellSize)
+      .borderRadius(999)
       Text(label)
-        .fontSize(11)
-        .fontWeight(800)
-        .fontColor(this.activeTab() === tab ? DemoAliasTokens.onPrimary : ColorTokens.muted)
-        .margin({ top: 3 })
+        .fontSize(ReaderUiVisualTokens.navigationMainNavLabelSize)
+        .fontWeight(700)
+        .fontFamily(ReaderUiVisualTokens.bookshelfMainNavLabelFontFamily)
+        .fontColor(this.activeTab() === tab
+          ? ReaderUiVisualTokens.bookshelfActionLabel
+          : ReaderUiVisualTokens.bookshelfMainNavInactiveLabel)
+        .lineHeight(ReaderUiVisualTokens.navigationMainNavLabelLineHeight)
+        .margin({ top: ReaderUiVisualTokens.navigationMainNavItemGap })
     }
     .layoutWeight(1)
-    .height('100%')
+    .height(ReaderUiVisualTokens.navigationMainNavPhoneItemHeight)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .borderRadius(DemoAliasTokens.radiusXl)
-    .backgroundColor(this.activeTab() === tab ? ColorTokens.primaryDark : ColorTokens.paper)
+    .borderRadius(ReaderUiVisualTokens.navigationMainNavRadius)
+    .backgroundColor(this.activeTab() === tab ? ReaderUiVisualTokens.bookshelfMainNavActive : Color.Transparent)
     .accessibilityText(label)
     .accessibilityDescription(this.activeTab() === tab ? '已选中标签' : '未选中标签')
     .onClick(() => {

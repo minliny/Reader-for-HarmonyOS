@@ -8,7 +8,7 @@
 import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { ReaderAppearanceSpecRegistry, ReaderAppearanceTheme } from '../../contract/reader_ui/Appearance';
 import { ReaderThemeState } from './ReaderThemeState';
-import { FigmaNightPaletteTokens } from './FigmaReadingVisualTokens';
+import { ReaderUiNightPaletteTokens } from '../../contract/reader_ui/ReaderUiVisualTokenAdapter';
 
 // 8 主题 fixture（对齐 demo fixture.js L211-229）。
 export interface ReaderThemeOption {
@@ -147,7 +147,7 @@ export class ReaderThemeResolver {
 
   // night 调色板（对齐 demo readerThemeStyle night 分支）。
   // night 控件面统一暗色，纸张色按 variant 略不同。
-  // 字面量集中在 FigmaNightPaletteTokens（Figma 字面量边界文件）。
+  // 字面量集中在 ReaderUiNightPaletteTokens（Reader-UI 生成合同）。
   private static nightPalette(opt: ReaderThemeOption): ReaderThemePalette {
     return {
       scheme: 'night',
@@ -155,17 +155,17 @@ export class ReaderThemeResolver {
       paperBright: opt.paperStart,    // 顶部高光
       ink: opt.ink,                   // 按 variant: e9dece/e7d8c8/d8e2d2/dbe2ea
       controlInk: ColorTokens.controlInkNight,
-      muted: FigmaNightPaletteTokens.muted,
-      surface: FigmaNightPaletteTokens.surface,
-      surfaceSoft: FigmaNightPaletteTokens.surfaceSoft,
-      floatingControlBg: FigmaNightPaletteTokens.floatingControlBg,
+      muted: ReaderUiNightPaletteTokens.muted,
+      surface: ReaderUiNightPaletteTokens.surface,
+      surfaceSoft: ReaderUiNightPaletteTokens.surfaceSoft,
+      floatingControlBg: ReaderUiNightPaletteTokens.floatingControlBg,
       floatingControlBgAlt: ColorTokens.floatingControlBgAltNight,
-      border: FigmaNightPaletteTokens.border,
-      primary: FigmaNightPaletteTokens.primary,
-      primaryDark: FigmaNightPaletteTokens.primaryDark,
-      accent: FigmaNightPaletteTokens.accent,
-      metaBg: FigmaNightPaletteTokens.metaBg,
-      bottomBarBg: FigmaNightPaletteTokens.bottomBarBg,
+      border: ReaderUiNightPaletteTokens.border,
+      primary: ReaderUiNightPaletteTokens.primary,
+      primaryDark: ReaderUiNightPaletteTokens.primaryDark,
+      accent: ReaderUiNightPaletteTokens.accent,
+      metaBg: ReaderUiNightPaletteTokens.metaBg,
+      bottomBarBg: ReaderUiNightPaletteTokens.bottomBarBg,
       textureOpacity: opt.texture === 'paper' ? 0.026 : 0,
       textureColor: ColorTokens.controlInkNight,
       auroraOpacity: 0.18,

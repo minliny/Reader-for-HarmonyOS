@@ -13,6 +13,7 @@ import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
 import { SizeTokens, ZIndexTokens } from '../../contract/generated/DimensionTokens';
 import { RouteId } from '../../contract/generated/RouteTable';
 import { ReaderAppearanceFont, ReaderAppearanceSelect, ReaderAppearanceSpecRegistry } from '../../contract/reader_ui/Appearance';
+import { ReaderUiVisualTokens } from '../../contract/reader_ui/VisualAdmission';
 import { SafeAreaAdapter } from '../adapters/SafeAreaAdapter';
 import { ViewportAdapter } from '../adapters/ViewportAdapter';
 import { ReaderUiStore } from '../store/ReaderUiStore';
@@ -265,6 +266,7 @@ struct ReaderBrightnessRail {
   // state field collides with the generated component base API. The storage
   // key remains unchanged.
   @StorageProp('reader.brightness') brightnessValue: number = 80;
+  @StorageProp('reader.brightnessAuto') brightnessAuto: boolean = false;
 
   private update(value: number, mode: SliderChangeMode): void {
     // Begin only identifies the gesture. Moving/End/Click carry a real value
@@ -278,10 +280,24 @@ struct ReaderBrightnessRail {
     });
   }
 
+  private toggleAuto(): void {
+    ReaderUiStore.dispatch({
+      type: 'toggle-brightness-auto',
+      enabled: !this.brightnessAuto,
+      previousEnabled: this.brightnessAuto,
+    });
+  }
+
   build() {
+    // `924:125` is a fixed 38 × 190 rail, not a generic panel that stretches
+    // with its parent.  Every visible reader sheet composes this same Figma
+    // component, so its geometry and all colors come from the generated
+    // Reader-UI visual-admission contract.
     Stack({ alignContent: Alignment.TopStart }) {
-      Column({ space: 8 }) {
-        Image($r('app.media.reader_icon_sun_primary')).width(18).height(18)
+      Column({ space: ReaderUiVisualTokens.readerBrightnessRailContentGap }) {
+        Image($r('app.media.reader_control_brightness_sun'))
+          .width(ReaderUiVisualTokens.readerBrightnessIconSize)
+          .height(ReaderUiVisualTokens.readerBrightnessIconSize)
         Slider({
           value: this.brightnessValue,
           min: 0,
@@ -291,31 +307,53 @@ struct ReaderBrightnessRail {
           direction: Axis.Vertical,
           reverse: true,
         })
-          .width(24)
-          .layoutWeight(1)
-          .trackColor(ColorTokens.border)
-          .selectedColor(ColorTokens.primary)
-          .blockColor(ColorTokens.primaryDark)
+          .width(ReaderUiVisualTokens.readerBrightnessTrackWidth)
+          .height(ReaderUiVisualTokens.readerBrightnessTrackHeight)
+          .trackColor(ReaderUiVisualTokens.readerBrightnessTrackSurface)
+          .selectedColor(ReaderUiVisualTokens.readerBrightnessTrackSelected)
+          .blockColor(ReaderUiVisualTokens.readerBrightnessTrackSelected)
           .onChange((value: number, mode: SliderChangeMode) => this.update(value, mode))
-        Text(`${Math.round(this.brightnessValue)}%`)
-          .fontSize(9)
-          .fontWeight(800)
-          .fontColor(ColorTokens.primaryDark)
-          .maxLines(1)
-          .textAlign(TextAlign.Center)
+        // The Figma hit area is 24 × 20 while the pill itself is centered at
+        // 20 × 20. It has a pale inner highlight rather than a dark selected
+        // chip, which keeps the automatic-brightness affordance visible.
+        Stack({ alignContent: Alignment.Center }) {
+          Column()
+            .width(ReaderUiVisualTokens.readerBrightnessAutoVisualWidth)
+            .height(ReaderUiVisualTokens.readerBrightnessAutoHeight)
+            .border({ width: 1, color: ReaderUiVisualTokens.readerBrightnessAutoBorder })
+            .borderRadius(ReaderUiVisualTokens.readerBrightnessAutoRadius)
+            .backgroundColor(ReaderUiVisualTokens.readerBrightnessAutoSurface)
+          Column()
+            .width(18)
+            .height(1)
+            .backgroundColor(ReaderUiVisualTokens.readerBrightnessAutoInnerHighlight)
+            .borderRadius(1)
+            .position({ x: 3, y: 1 })
+          Text('A')
+            .fontSize(13)
+            .fontWeight(500)
+            .fontColor(ReaderUiVisualTokens.readerBrightnessAutoInk)
+            .textAlign(TextAlign.Center)
+            .width(ReaderUiVisualTokens.readerBrightnessAutoVisualWidth)
+            .height(ReaderUiVisualTokens.readerBrightnessAutoHeight)
+        }
+        .width(ReaderUiVisualTokens.readerBrightnessAutoHitWidth)
+        .height(ReaderUiVisualTokens.readerBrightnessAutoHeight)
+        .accessibilityText('自动亮度')
+        .onClick(() => this.toggleAuto())
       }
-      .width('100%')
-      .height('100%')
-      .padding({ top: 12, bottom: 12 })
-      .justifyContent(FlexAlign.Center)
+      .width(ReaderUiVisualTokens.readerBrightnessRailWidth)
+      .height(ReaderUiVisualTokens.readerBrightnessRailHeight)
+      .padding({ top: ReaderUiVisualTokens.readerBrightnessRailTopInset })
       .alignItems(HorizontalAlign.Center)
-      .backgroundColor(ColorTokens.floatingControlBg)
-      .borderRadius(DemoAliasTokens.radiusLg)
+      .backgroundColor(ReaderUiVisualTokens.readerBrightnessRailSurface)
+      .border({ width: 1, color: ReaderUiVisualTokens.readerBrightnessRailBorder })
+      .borderRadius(ReaderUiVisualTokens.readerBrightnessRailRadius)
       InteractionDebugBadge({ label: 'B', tone: 'action', offsetTop: 22 })
       InteractionDebugFrame({ label: 'BrightnessRail', tone: 'module' })
     }
-    .width('100%')
-    .height('100%')
+    .width(ReaderUiVisualTokens.readerBrightnessRailWidth)
+    .height(ReaderUiVisualTokens.readerBrightnessRailHeight)
   }
 }
 
@@ -335,28 +373,28 @@ export struct ReaderControlSheet {
   @StorageProp('reader.chapterToc') chapterToc: ChapterTocEntry[] = [];
   @StorageProp('reader.currentChapterTitle') currentChapterTitle: string = '';
 
+  // `reader.control-home` is a single Figma component with two constrained
+  // layouts.  Keep its source geometry here instead of inheriting the legacy
+  // generic reader sheet palette/radius values.
   private readonly dockWidth: number = 340;
-  private readonly dockRight: number = 24;
-  private readonly mobileSheetInset: number = 12;
-  private readonly navBottom: number = 32;
-  private readonly navHeight: number = 79;
+  private readonly dockRight: number = 25;
+  private readonly mobileSheetInset: number = 13;
+  private readonly navBottom: number = 33;
   private readonly dockGap: number = -1;
-  private readonly mobileSheetBottom: number = 18;
+  private readonly mobileSheetBottom: number = 19;
   private readonly wideSheetHeight: number = 252;
   private readonly mobileSheetHeight: number = 330;
-  private readonly controlTop: number = 28;
-  private readonly wideControlBottom: number = 32;
-  private readonly mobileControlBottom: number = 110;
-  private readonly sheetPaddingX: number = 12;
-  private readonly railWidth: number = 38;
+  private readonly controlTop: number = 29;
+  private readonly wideControlBottom: number = 33;
+  private readonly mobileControlBottom: number = 111;
+  private readonly sheetPaddingX: number = 13;
   private readonly railGap: number = 14;
-  private readonly quickHeight: number = 76;
+  private readonly quickHeight: number = 75.438;
 
   private quickActions: Array<[string, string, string]> = [
-    ['搜索', 'reader_icon_reader_content_search_action', 'reader-search-overlay-v2'],
-    ['自动翻页', 'reader_icon_reader_auto_page_action', 'reader-auto-scroll-overlay-v2'],
-    ['替换', 'reader_icon_reader_content_replace_action', 'reader-replace-overlay-v2'],
-    ['书签', 'ui_icon_bookmark_dark', 'bookmark-create'],
+    ['搜索', 'reader_control_quick_search', 'reader-search-overlay-v2'],
+    ['自动翻页', 'reader_control_quick_auto_page', 'reader-auto-scroll-overlay-v2'],
+    ['替换', 'reader_control_quick_replace', 'reader-replace-overlay-v2'],
   ];
 
   private moduleForRoute(routeId: string): string {
@@ -370,7 +408,6 @@ export struct ReaderControlSheet {
     if (routeId === 'reader-search-overlay-v2') return 'search';
     if (routeId === 'reader-auto-scroll-overlay-v2') return 'auto';
     if (routeId === 'reader-replace-overlay-v2') return 'replace';
-    if (routeId === 'bookmark-create') return 'bookmark';
     return 'quick';
   }
 
@@ -386,9 +423,13 @@ export struct ReaderControlSheet {
     return this.wideControlDock() ? this.wideSheetHeight : this.mobileSheetHeight;
   }
 
+  private navHeightValue(): number {
+    return this.wideControlDock() ? 79 : 80;
+  }
+
   private sheetBottom(): number {
     if (this.wideControlDock()) {
-      return this.safeAreaBottom + this.navBottom + this.navHeight + this.dockGap;
+      return this.safeAreaBottom + this.navBottom + this.navHeightValue() + this.dockGap;
     }
     return this.mobileSheetBottom;
   }
@@ -402,11 +443,13 @@ export struct ReaderControlSheet {
   }
 
   private controlHeight(): number {
-    return this.sheetHeightValue() - this.controlTop - this.controlBottomInset();
+    // Both Figma variants reserve a fixed 190vp control main area.  The
+    // apparent difference is only the bottom space of the containing dock.
+    return 190;
   }
 
   private chapterHeight(): number {
-    return this.controlHeight() - this.quickHeight - 6;
+    return 108.563;
   }
 
   private chapterTitle(): string {
@@ -454,9 +497,9 @@ export struct ReaderControlSheet {
           Column()
             .width(42)
             .height(4)
-            .borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(ColorTokens.muted)
-            .margin({ top: 9, left: '50%' })
+            .borderRadius(999)
+            .backgroundColor(ReaderUiVisualTokens.readerControlGrabber)
+            .margin({ top: 10, left: '50%' })
             .translate({ x: -21 })
 
           Row({ space: this.railGap }) {
@@ -466,87 +509,85 @@ export struct ReaderControlSheet {
                   Row({ space: 8 }) {
                     ForEach(this.quickActions, (item: [string, string, string]) => {
                       Stack({ alignContent: Alignment.TopStart }) {
-                        Column({ space: 6 }) {
-                          Image($r(`app.media.${item[1]}`)).width(22).height(22)
+                        Column({ space: 5 }) {
+                          Image($r(`app.media.${item[1]}`)).width(24).height(24)
                           Text(item[0])
                             .fontSize(11)
                             .fontWeight(800)
-                            .fontColor(ColorTokens.controlInk)
+                            .fontColor(ReaderUiVisualTokens.readerControlInk)
+                            .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
                             .maxLines(1)
                             .textOverflow({ overflow: TextOverflow.Ellipsis })
                         }
                         .width('100%')
-                        .height(70)
+                        .height(55.438)
                         .justifyContent(FlexAlign.Center)
                         .alignItems(HorizontalAlign.Center)
-                        .backgroundColor(ColorTokens.surfaceSoft)
-                        .borderRadius(DemoAliasTokens.radiusLg)
+                        .backgroundColor(ReaderUiVisualTokens.readerControlQuickActionSurface)
+                        .borderRadius(8)
                         .onClick(() => {
-                          if (item[2] === 'bookmark-create') {
-                            ReaderUiStore.dispatch({ type: 'bookmark-create' });
-                          } else {
-                            ReaderUiStore.dispatch({ type: 'reader-module-switch', module: this.moduleForRoute(item[2]) });
-                          }
+                          ReaderUiStore.dispatch({ type: 'reader-module-switch', module: this.moduleForRoute(item[2]) });
                         })
                         InteractionDebugBadge({ label: this.quickDebugLabel(item[2]), tone: 'action', offsetTop: 22 })
                       }
                       .layoutWeight(1)
-                      .height(70)
+                      .height(55.438)
                     }, (item: [string, string, string]) => item[2])
                   }
                   .height(this.quickHeight)
-                  .padding({ left: 8, right: 8, top: 9, bottom: 9 })
-                  .border({ width: 1, color: ColorTokens.border })
-                  .borderRadius(DemoAliasTokens.radiusLg)
-                  .backgroundColor(ColorTokens.floatingControlBg)
+                  .padding({ left: 9, right: 9, top: 10, bottom: 10 })
+                  .border({ width: 1, color: ReaderUiVisualTokens.readerControlBorder })
+                  .borderRadius(8)
+                  .backgroundColor(ReaderUiVisualTokens.readerControlTranslucentSurface)
                 }
                 .height(this.quickHeight)
 
                 Stack({ alignContent: Alignment.TopStart }) {
-                  Column({ space: 8 }) {
+                  Column({ space: 6 }) {
                   Row() {
                     Stack({ alignContent: Alignment.TopStart }) {
                       Row() {
-                        Image($r('app.media.reader_icon_chevron_left_chapter'))
-                          .width(22)
-                          .height(22)
+                        Image($r('app.media.reader_control_chapter_prev'))
+                          .width(20)
+                          .height(20)
                       }
                       .width(34)
                       .height(34)
                       .justifyContent(FlexAlign.Center)
                       .alignItems(VerticalAlign.Center)
-                      .backgroundColor(ColorTokens.floatingControlBgAlt)
-                      .borderRadius(DemoAliasTokens.radiusPill)
+                      .backgroundColor(ReaderUiVisualTokens.readerControlStepSurface)
+                      .borderRadius(999)
                       .margin({ top: 9 })
                       .onClick(() => ReaderUiStore.dispatch({ type: 'chapter-prev' }))
                       InteractionDebugBadge({ label: 'P', tone: 'action' })
                     }
                     .width(34)
-                    .height(52)
+                    .height(52.563)
                     Text(this.chapterTitle())
                       .fontSize(13)
-                      .fontWeight(750)
-                      .fontColor(ColorTokens.controlInk)
+                      .fontWeight(700)
+                      .fontColor(ReaderUiVisualTokens.readerControlInk)
+                      .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
                       .textAlign(TextAlign.Center)
                       .layoutWeight(1)
                       .maxLines(2)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
                     Stack({ alignContent: Alignment.TopStart }) {
                       Row() {
-                        Image($r('app.media.reader_icon_chevron_chapter')).width(22).height(22)
+                        Image($r('app.media.reader_control_chapter_next')).width(20).height(20)
                       }
                       .width(34)
                       .height(34)
                       .justifyContent(FlexAlign.Center)
                       .alignItems(VerticalAlign.Center)
-                      .backgroundColor(ColorTokens.floatingControlBgAlt)
-                      .borderRadius(DemoAliasTokens.radiusPill)
+                      .backgroundColor(ReaderUiVisualTokens.readerControlStepSurface)
+                      .borderRadius(999)
                       .margin({ top: 9 })
                       .onClick(() => ReaderUiStore.dispatch({ type: 'chapter-next' }))
                       InteractionDebugBadge({ label: 'N', tone: 'action' })
                     }
                     .width(34)
-                    .height(52)
+                    .height(52.563)
                   }
                   .height(52)
                   .alignItems(VerticalAlign.Center)
@@ -554,8 +595,9 @@ export struct ReaderControlSheet {
                   Row({ space: 6 }) {
                     Text(this.chapterProgressLabel())
                       .fontSize(9)
-                      .fontColor(ColorTokens.muted)
-                      .fontWeight(700)
+                      .fontColor(ReaderUiVisualTokens.readerControlMuted)
+                      .fontWeight(400)
+                      .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
                     Stack({ alignContent: Alignment.TopStart }) {
                       Slider({
                         value: this.chapterProgressPercent(),
@@ -566,9 +608,9 @@ export struct ReaderControlSheet {
                       })
                         .width('100%')
                         .height(30)
-                        .trackColor(ColorTokens.border)
-                        .selectedColor(ColorTokens.primary)
-                        .blockColor(ColorTokens.primaryDark)
+                        .trackColor(ReaderUiVisualTokens.readerControlProgressTrack)
+                        .selectedColor(ReaderUiVisualTokens.readerControlProgressFill)
+                        .blockColor(ReaderUiVisualTokens.readerControlSurface)
                         .enabled(this.canSeekChapter())
                         .opacity(this.canSeekChapter() ? 1 : 0.54)
                         .onChange((value: number, mode: SliderChangeMode) => this.seekChapter(value, mode))
@@ -578,17 +620,18 @@ export struct ReaderControlSheet {
                     .height(30)
                     Text(this.currentBook === null ? '未选择书籍' : (this.chapterToc.length > 0 ? `共 ${this.chapterToc.length} 章` : '目录未加载'))
                       .fontSize(9)
-                      .fontColor(ColorTokens.muted)
-                      .fontWeight(700)
+                      .fontColor(ReaderUiVisualTokens.readerControlMuted)
+                      .fontWeight(400)
+                      .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
                   }
                   .height(30)
                   .alignItems(VerticalAlign.Center)
                   }
                   .height(this.chapterHeight())
-                  .padding({ left: 10, right: 10, top: 9, bottom: 9 })
-                  .border({ width: 1, color: ColorTokens.border })
-                  .borderRadius(DemoAliasTokens.radiusLg)
-                  .backgroundColor(ColorTokens.floatingControlBg)
+                  .padding({ left: 11, right: 11, top: 10, bottom: 10 })
+                  .border({ width: 1, color: ReaderUiVisualTokens.readerControlBorder })
+                  .borderRadius(8)
+                  .backgroundColor(ReaderUiVisualTokens.readerControlTranslucentSurface)
                 }
                 .height(this.chapterHeight())
               }
@@ -600,8 +643,6 @@ export struct ReaderControlSheet {
             .height('100%')
 
             ReaderBrightnessRail()
-            .width(this.railWidth)
-            .height('100%')
           }
           .width('100%')
           .height(this.controlHeight())
@@ -611,14 +652,14 @@ export struct ReaderControlSheet {
           .width('100%')
           .height(this.sheetHeightValue())
           .clip(true)
-          .border({ width: { left: 1, right: 1, top: 1, bottom: this.wideControlDock() ? 0 : 1 }, color: ColorTokens.border })
+          .border({ width: { left: 1, right: 1, top: 1, bottom: this.wideControlDock() ? 0 : 1 }, color: ReaderUiVisualTokens.readerControlBorder })
           .borderRadius({
-            topLeft: DemoAliasTokens.radiusXl,
-            topRight: DemoAliasTokens.radiusXl,
-            bottomLeft: this.wideControlDock() ? 0 : DemoAliasTokens.radiusXl,
-            bottomRight: this.wideControlDock() ? 0 : DemoAliasTokens.radiusXl,
+            topLeft: 24,
+            topRight: 24,
+            bottomLeft: this.wideControlDock() ? 0 : 24,
+            bottomRight: this.wideControlDock() ? 0 : 24,
           })
-          .backgroundColor(ColorTokens.floatingControlBg)
+          .backgroundColor(ReaderUiVisualTokens.readerControlSurface)
         }
         .width('100%')
         .height('100%')
@@ -644,10 +685,11 @@ export struct ReaderBottomBar {
   @StorageProp('reader.displayedRouteId') routeId: string = 'control-layer-base-v2';
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
 
+  // Figma `Control/ModuleNav` remains 340vp in both approved viewports.
+  // Phone centers it with a 25vp inset; tablet docks it 25vp from the right.
   private readonly dockWidth: number = 340;
-  private readonly dockRight: number = 24;
-  private readonly navBottom: number = 32;
-  private readonly navHeight: number = 79;
+  private readonly dockRight: number = 25;
+  private readonly navBottom: number = 33;
 
   private items: Array<[string, string, string]> = [
     ['directory', '目录', 'reader-directory-overlay-v2'],
@@ -661,7 +703,11 @@ export struct ReaderBottomBar {
   }
 
   private navWidth(): number {
-    return this.wideControlDock() ? this.dockWidth : Math.max(0, this.viewportWidth - this.dockRight * 2);
+    return this.dockWidth;
+  }
+
+  private navHeightValue(): number {
+    return this.wideControlDock() ? 79 : 80;
   }
 
   private navBottomValue(): number {
@@ -671,15 +717,15 @@ export struct ReaderBottomBar {
   private moduleIcon(kind: string, active: boolean): Resource {
     switch (kind) {
       case 'directory':
-        return active ? $r('app.media.reader_icon_reader_module_directory_white') : $r('app.media.reader_icon_reader_module_directory_primary');
+        return active ? $r('app.media.reader_control_module_directory_active') : $r('app.media.reader_control_module_directory_default');
       case 'appearance':
-        return active ? $r('app.media.reader_icon_reader_module_appearance_white') : $r('app.media.reader_icon_reader_module_appearance_primary');
+        return active ? $r('app.media.reader_control_module_appearance_active') : $r('app.media.reader_control_module_appearance_default');
       case 'tts':
-        return active ? $r('app.media.reader_icon_reader_module_tts_white') : $r('app.media.reader_icon_reader_module_tts_primary');
+        return active ? $r('app.media.reader_control_module_tts_active') : $r('app.media.reader_control_module_tts_default');
       case 'settings':
-        return active ? $r('app.media.reader_icon_reader_module_settings_white') : $r('app.media.reader_icon_reader_module_settings_primary');
+        return active ? $r('app.media.reader_control_module_settings_active') : $r('app.media.reader_control_module_settings_default');
       default:
-        return $r('app.media.reader_icon_reader_module_directory_primary');
+        return $r('app.media.reader_control_module_directory_default');
     }
   }
 
@@ -713,48 +759,53 @@ export struct ReaderBottomBar {
         Row({ space: 4 }) {
           ForEach(this.items, (it: [string, string, string]) => {
             Stack({ alignContent: Alignment.TopStart }) {
-              Column({ space: 4 }) {
+              Column({ space: 3 }) {
                 Stack({ alignContent: Alignment.Center }) {
-                  Image(this.moduleIcon(it[0], this.active(it[0]))).width(26).height(26)
+                  Image(this.moduleIcon(it[0], this.active(it[0]))).width(24).height(24)
                 }
                 .width(42)
                 .height(42)
-                .borderRadius(DemoAliasTokens.radiusPill)
-                .backgroundColor(this.active(it[0]) ? ColorTokens.primaryDark : ColorTokens.surfaceSoft)
+                .borderRadius(999)
+                .backgroundColor(this.active(it[0])
+                  ? ReaderUiVisualTokens.readerControlModuleActive
+                  : ReaderUiVisualTokens.readerControlModuleInactiveSurface)
 
                 Text(it[1])
-                  .fontSize(12)
+                  .fontSize(10)
                   .fontWeight(800)
-                  .fontColor(this.active(it[0]) ? ColorTokens.primaryDark : ColorTokens.controlInk)
+                  .fontColor(this.active(it[0])
+                    ? ReaderUiVisualTokens.readerControlModuleActive
+                    : ReaderUiVisualTokens.readerControlModuleInactiveLabel)
+                  .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
                   .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
               }
-              .width('100%')
+              .width(77.5)
               .height(62)
               .justifyContent(FlexAlign.Center)
               .alignItems(HorizontalAlign.Center)
               .onClick(() => this.selectModule(it[0]))
               InteractionDebugBadge({ label: this.moduleDebugLabel(it[0]), tone: 'action', offsetTop: 24 })
             }
-            .layoutWeight(1)
+            .width(77.5)
             .height(62)
           }, (it: [string, string, string]) => it[2])
         }
         .width(this.navWidth())
-        .height(this.navHeight)
-        .padding({ left: 8, right: 8, top: 8, bottom: 8 })
-        .backgroundColor(ColorTokens.bottomBarBg)
-        .border({ width: { left: 1, right: 1, top: this.wideControlDock() ? 0 : 1, bottom: 1 }, color: ColorTokens.border })
+        .height(this.navHeightValue())
+        .padding({ left: 9, right: 9, top: this.wideControlDock() ? 8 : 9, bottom: 9 })
+        .backgroundColor(ReaderUiVisualTokens.readerControlModuleSurface)
+        .border({ width: { left: 1, right: 1, top: this.wideControlDock() ? 0 : 1, bottom: 1 }, color: ReaderUiVisualTokens.readerControlBorder })
         .borderRadius({
-          topLeft: this.wideControlDock() ? 0 : DemoAliasTokens.radiusLg,
-          topRight: this.wideControlDock() ? 0 : DemoAliasTokens.radiusLg,
-          bottomLeft: DemoAliasTokens.radiusLg,
-          bottomRight: DemoAliasTokens.radiusLg,
+          topLeft: this.wideControlDock() ? 0 : 12,
+          topRight: this.wideControlDock() ? 0 : 12,
+          bottomLeft: 12,
+          bottomRight: 12,
         })
         InteractionDebugFrame({ label: 'readerModuleNav', tone: 'sheet' })
       }
       .width(this.navWidth())
-      .height(this.navHeight)
+      .height(this.navHeightValue())
       .margin({ right: this.dockRight, bottom: this.navBottomValue() })
     }
     .width('100%')
@@ -862,22 +913,20 @@ export struct ReaderQuickPanelShell {
   @StorageProp(ViewportAdapter.K_WIDTH) viewportWidth: number = ViewportAdapter.DEFAULT_WIDTH;
   @StorageProp(ViewportAdapter.K_HEIGHT) viewportHeight: number = ViewportAdapter.DEFAULT_HEIGHT;
   @Prop debugLabel: string = 'ReaderQuickPanel';
+  // Search and Auto Page are 196vp Figma sections; Replace is 190vp.
+  @Prop contentHeight: number = 190;
   @BuilderParam content: () => void;
 
   private readonly dockWidth: number = 340;
-  private readonly dockRight: number = 24;
-  private readonly mobileSheetInset: number = 12;
-  private readonly navBottom: number = 32;
-  private readonly navHeight: number = 79;
+  private readonly dockRight: number = 25;
+  private readonly mobileSheetInset: number = 13;
+  private readonly navBottom: number = 33;
   private readonly dockGap: number = -1;
-  private readonly mobileSheetBottom: number = 18;
+  private readonly mobileSheetBottom: number = 19;
   private readonly wideSheetHeight: number = 252;
   private readonly mobileSheetHeight: number = 330;
-  private readonly controlTop: number = 28;
-  private readonly wideQuickBottom: number = 32;
-  private readonly mobileQuickBottom: number = 105;
-  private readonly sheetPaddingX: number = 12;
-  private readonly railWidth: number = 38;
+  private readonly controlTop: number = 29;
+  private readonly sheetPaddingX: number = 13;
   private readonly railGap: number = 14;
 
   private wideControlDock(): boolean {
@@ -892,9 +941,13 @@ export struct ReaderQuickPanelShell {
     return this.wideControlDock() ? this.wideSheetHeight : this.mobileSheetHeight;
   }
 
+  private navHeightValue(): number {
+    return this.wideControlDock() ? 79 : 80;
+  }
+
   private sheetBottom(): number {
     if (this.wideControlDock()) {
-      return this.safeAreaBottom + this.navBottom + this.navHeight + this.dockGap;
+      return this.safeAreaBottom + this.navBottom + this.navHeightValue() + this.dockGap;
     }
     return this.mobileSheetBottom;
   }
@@ -904,7 +957,7 @@ export struct ReaderQuickPanelShell {
   }
 
   private quickHeight(): number {
-    return this.sheetHeightValue() - this.controlTop - (this.wideControlDock() ? this.wideQuickBottom : this.mobileQuickBottom);
+    return this.contentHeight;
   }
 
   build() {
@@ -914,9 +967,9 @@ export struct ReaderQuickPanelShell {
           Column()
             .width(42)
             .height(4)
-            .borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(ColorTokens.muted)
-            .margin({ top: 9, left: '50%' })
+            .borderRadius(999)
+            .backgroundColor(ReaderUiVisualTokens.readerControlGrabber)
+            .margin({ top: 10, left: '50%' })
             .translate({ x: -21 })
 
           Row({ space: this.railGap }) {
@@ -925,34 +978,34 @@ export struct ReaderQuickPanelShell {
             }
             .layoutWeight(1)
             .height('100%')
-            .padding({ left: 10, right: 10, top: 12, bottom: 12 })
-            .border({ width: 1, color: ColorTokens.border })
-            .borderRadius(DemoAliasTokens.radiusMd)
-            .backgroundColor(ColorTokens.surfaceSoft)
+            .padding({ left: 11, right: 11, top: 13, bottom: 13 })
+            .border({ width: 1, color: ReaderUiVisualTokens.readerControlBorder })
+            .borderRadius(8)
+            .backgroundColor(ReaderUiVisualTokens.readerControlTranslucentSurface)
 
             ReaderBrightnessRail()
-            .width(this.railWidth)
-            .height('100%')
           }
           .width('100%')
           .height(this.quickHeight())
           .padding({ left: this.sheetPaddingX, right: this.sheetPaddingX })
           .margin({ top: this.controlTop })
+          .alignItems(VerticalAlign.Top)
           InteractionDebugFrame({ label: this.debugLabel, tone: 'sheet' })
         }
         .width('100%')
         .height(this.sheetHeightValue())
         .clip(true)
-        .border({ width: { left: 1, right: 1, top: 1, bottom: this.wideControlDock() ? 0 : 1 }, color: ColorTokens.border })
+        .border({ width: { left: 1, right: 1, top: 1, bottom: this.wideControlDock() ? 0 : 1 }, color: ReaderUiVisualTokens.readerControlBorder })
         .borderRadius({
-          topLeft: DemoAliasTokens.radiusXl,
-          topRight: DemoAliasTokens.radiusXl,
-          bottomLeft: this.wideControlDock() ? 0 : DemoAliasTokens.radiusXl,
-          bottomRight: this.wideControlDock() ? 0 : DemoAliasTokens.radiusXl,
+          topLeft: 24,
+          topRight: 24,
+          bottomLeft: this.wideControlDock() ? 0 : 24,
+          bottomRight: this.wideControlDock() ? 0 : 24,
         })
-        .backgroundColor(ColorTokens.floatingControlBg)
+        .backgroundColor(ReaderUiVisualTokens.readerControlSurface)
       }
       .width(this.sheetWidth())
+      .height(this.sheetHeightValue())
       .margin({ right: this.sheetRight(), bottom: this.sheetBottom() })
     }
     .width('100%')
@@ -964,20 +1017,23 @@ export struct ReaderQuickPanelShell {
 
 @Component
 struct ReaderQuickBackButton {
+  @Prop buttonWidth: number = 51;
+
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       Row({ space: 4 }) {
-        Image($r('app.media.reader_icon_back_dark')).width(12).height(12)
+        Image($r('app.media.reader_control_top_back')).width(11).height(11)
         Text('返回')
           .fontSize(10)
           .fontWeight(750)
-          .fontColor(ColorTokens.primaryDark)
+          .fontColor(ReaderUiVisualTokens.readerModuleActive)
+          .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
       }
+      .width(this.buttonWidth)
       .height(24)
-      .padding({ left: 9, right: 9 })
-      .border({ width: 1, color: ColorTokens.primary })
-      .borderRadius(DemoAliasTokens.radiusMd)
-      .backgroundColor(DemoAliasTokens.surface)
+      .padding({ left: 8, right: 8 })
+      .borderRadius(8)
+      .backgroundColor(ReaderUiVisualTokens.readerControlTranslucentSurface)
       .alignItems(VerticalAlign.Center)
       .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
       InteractionDebugBadge({ label: 'back', tone: 'action' })
@@ -1025,15 +1081,17 @@ struct ReaderSearchResultRow {
     Stack({ alignContent: Alignment.TopStart }) {
       Column({ space: 2 }) {
         Text(this.title)
-          .fontSize(11)
-          .fontWeight(760)
-          .fontColor(ColorTokens.controlInk)
+          .fontSize(10)
+          .fontWeight(600)
+          .fontColor(ReaderUiVisualTokens.readerControlInk)
+          .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         Text(this.detail)
-          .fontSize(9)
-          .fontColor(ColorTokens.muted)
-          .maxLines(1)
+          .fontSize(8)
+          .fontColor(ReaderUiVisualTokens.readerControlMuted)
+          .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
+          .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
       .width('100%')
@@ -1043,9 +1101,9 @@ struct ReaderSearchResultRow {
       InteractionDebugBadge({ label: 'result', tone: 'state' })
     }
     .width('100%')
-    .height(42)
+    .height(54)
     .padding({ left: 8, right: 8, top: 4, bottom: 4 })
-    .border({ width: { top: 1 }, color: ColorTokens.border })
+    .border({ width: { top: 1 }, color: ReaderUiVisualTokens.readerModuleDivider })
     .onClick(() => {
       if (this.contentSearchResultIndex >= 0) {
         ReaderUiStore.dispatch({
@@ -1092,22 +1150,22 @@ struct ReaderModulePanelShell {
   @StorageProp(ViewportAdapter.K_HEIGHT) viewportHeight: number = ViewportAdapter.DEFAULT_HEIGHT;
   @Prop debugLabel: string = 'ReaderModulePanel';
   @Prop closeEvent: string = '';
+  // The small grab handle is an explicit Figma affordance on modules that
+  // have a fuller control page.  It must not silently become a close control:
+  // TTS uses it to open the admitted full TTS page.
+  @Prop expandRoute: string = '';
   @BuilderParam content: () => void;
 
   private readonly dockWidth: number = 340;
-  private readonly dockRight: number = 24;
-  private readonly mobileSheetInset: number = 12;
-  private readonly navBottom: number = 32;
-  private readonly navHeight: number = 79;
+  private readonly dockRight: number = 25;
+  private readonly mobileSheetInset: number = 13;
+  private readonly navBottom: number = 33;
   private readonly dockGap: number = -1;
-  private readonly mobileSheetBottom: number = 18;
+  private readonly mobileSheetBottom: number = 19;
   private readonly wideSheetHeight: number = 252;
   private readonly mobileSheetHeight: number = 330;
-  private readonly moduleTop: number = 28;
-  private readonly mobileModuleBottom: number = 110;
-  private readonly wideModuleBottom: number = 32;
-  private readonly sheetPaddingX: number = 12;
-  private readonly railWidth: number = 38;
+  private readonly moduleTop: number = 29;
+  private readonly sheetPaddingX: number = 13;
   private readonly railGap: number = 14;
 
   private wideControlDock(): boolean {
@@ -1122,9 +1180,13 @@ struct ReaderModulePanelShell {
     return this.wideControlDock() ? this.wideSheetHeight : this.mobileSheetHeight;
   }
 
+  private navHeightValue(): number {
+    return this.wideControlDock() ? 79 : 80;
+  }
+
   private sheetBottom(): number {
     if (this.wideControlDock()) {
-      return this.safeAreaBottom + this.navBottom + this.navHeight + this.dockGap;
+      return this.safeAreaBottom + this.navBottom + this.navHeightValue() + this.dockGap;
     }
     return this.mobileSheetBottom;
   }
@@ -1133,12 +1195,8 @@ struct ReaderModulePanelShell {
     return this.wideControlDock() ? this.dockRight : this.mobileSheetInset;
   }
 
-  private moduleBottom(): number {
-    return this.wideControlDock() ? this.wideModuleBottom : this.mobileModuleBottom;
-  }
-
   private moduleHeight(): number {
-    return this.sheetHeightValue() - this.moduleTop - this.moduleBottom();
+    return 190;
   }
 
   build() {
@@ -1148,12 +1206,16 @@ struct ReaderModulePanelShell {
           Column()
             .width(42)
             .height(4)
-            .borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(ColorTokens.muted)
-            .margin({ top: 9, left: '50%' })
+            .borderRadius(999)
+            .backgroundColor(ReaderUiVisualTokens.readerControlGrabber)
+            .margin({ top: 10, left: '50%' })
             .translate({ x: -21 })
             .onClick(() => {
-              if (this.closeEvent.length > 0) ReaderUiStore.dispatch({ type: this.closeEvent });
+              if (this.expandRoute.length > 0) {
+                ReaderUiStore.dispatch({ type: 'route-push', id: this.expandRoute as RouteId });
+              } else if (this.closeEvent.length > 0) {
+                ReaderUiStore.dispatch({ type: this.closeEvent });
+              }
             })
 
           Row({ space: this.railGap }) {
@@ -1162,14 +1224,12 @@ struct ReaderModulePanelShell {
             }
             .layoutWeight(1)
             .height('100%')
-            .padding({ left: 10, right: 10, top: 12, bottom: 12 })
-            .border({ width: 1, color: ColorTokens.border })
-            .borderRadius(DemoAliasTokens.radiusMd)
-            .backgroundColor(ColorTokens.surfaceSoft)
+            .padding({ left: 11, right: 11, top: 13, bottom: 13 })
+            .border({ width: 1, color: ReaderUiVisualTokens.readerControlBorder })
+            .borderRadius(8)
+            .backgroundColor(ReaderUiVisualTokens.readerControlTranslucentSurface)
 
             ReaderBrightnessRail()
-            .width(this.railWidth)
-            .height('100%')
           }
           .width('100%')
           .height(this.moduleHeight())
@@ -1180,16 +1240,17 @@ struct ReaderModulePanelShell {
         .width('100%')
         .height(this.sheetHeightValue())
         .clip(true)
-        .border({ width: { left: 1, right: 1, top: 1, bottom: this.wideControlDock() ? 0 : 1 }, color: ColorTokens.border })
+        .border({ width: { left: 1, right: 1, top: 1, bottom: this.wideControlDock() ? 0 : 1 }, color: ReaderUiVisualTokens.readerControlBorder })
         .borderRadius({
-          topLeft: DemoAliasTokens.radiusXl,
-          topRight: DemoAliasTokens.radiusXl,
-          bottomLeft: this.wideControlDock() ? 0 : DemoAliasTokens.radiusXl,
-          bottomRight: this.wideControlDock() ? 0 : DemoAliasTokens.radiusXl,
+          topLeft: 24,
+          topRight: 24,
+          bottomLeft: this.wideControlDock() ? 0 : 24,
+          bottomRight: this.wideControlDock() ? 0 : 24,
         })
-        .backgroundColor(ColorTokens.floatingControlBg)
+        .backgroundColor(ReaderUiVisualTokens.readerControlSurface)
       }
       .width(this.sheetWidth())
+      .height(this.sheetHeightValue())
       .margin({ right: this.sheetRight(), bottom: this.sheetBottom() })
     }
     .width('100%')
@@ -1251,7 +1312,7 @@ struct ReaderBookmarkLiveRow {
   }
 
   build() {
-    Column({ space: 5 }) {
+    Column({ space: ReaderUiVisualTokens.readerQuickSettingsInternalGap }) {
       Row({ space: 8 }) {
         Text(this.chapterLabel())
           .fontSize(this.expanded ? 13 : 11)
@@ -1357,27 +1418,27 @@ struct ReaderTocLiveRow {
       Text(this.title)
         .fontSize(11)
         .fontWeight(500)
-        .fontColor(this.current ? ColorTokens.primaryDark : ColorTokens.controlInk)
+        .fontColor(ReaderUiVisualTokens.readerControlInk)
+        .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
         .layoutWeight(1)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
       if (this.current) {
-        Text('当前')
-          .fontSize(9)
-          .fontWeight(800)
-          .fontColor(ColorTokens.primaryDark)
-          .height(22)
-          .padding({ left: 7, right: 7 })
-          .borderRadius(DemoAliasTokens.radiusSm)
-          .backgroundColor(ColorTokens.floatingControlBgAlt)
-          .textAlign(TextAlign.Center)
+        // The current-directory marker is a compact Figma status circle, not
+        // a locally invented "当前" label.
+        Column()
+          .width(24)
+          .height(24)
+          .borderRadius(999)
+          .backgroundColor(ReaderUiVisualTokens.readerModuleStatusSurface)
       }
     }
     .width('100%')
     .height(32)
-    .padding({ left: 7, right: 7 })
-    .border({ width: { top: 1 }, color: ColorTokens.border })
-    .backgroundColor(this.current ? ColorTokens.surfaceSoft : 'transparent')
+    .padding({ left: 8, right: 8 })
+    .border({ width: { top: 1 }, color: ReaderUiVisualTokens.readerModuleDivider })
+    .borderRadius(6)
+    .backgroundColor(this.current ? ReaderUiVisualTokens.readerModuleSelectedSurface : Color.Transparent)
     .alignItems(VerticalAlign.Center)
     .onClick(() => this.openChapter())
   }
@@ -1437,26 +1498,72 @@ struct ReaderLiveStepperRow {
 @Component
 struct ReaderFontChoices {
   @StorageProp('reader.typography.fontFamily') fontFamily: string = 'serif';
-  private choices: Array<[string, ReaderFontFamily]> = [
-    ['系统', 'system'],
-    ['宋体', 'serif'],
-    ['黑体', 'sans'],
-  ];
+
+  private choices: ReaderAppearanceFont[] = ReaderAppearanceSpecRegistry.fonts
+    .filter((item: ReaderAppearanceFont) => !item.importAction);
+
+  private active(item: ReaderAppearanceFont): boolean {
+    return appearanceReaderFontFamily(item.arktsValue) === this.fontFamily;
+  }
+
+  private previewFamily(item: ReaderAppearanceFont): string {
+    switch (item.arktsValue) {
+      case 'serif': return ReaderUiVisualTokens.readerControlTopFontFamily;
+      case 'kai': return 'Kaiti SC';
+      case 'fangsong': return 'STFangsong';
+      case 'mono': return 'JetBrains Mono';
+      case 'sourceSerif': return 'Noto Serif SC';
+      case 'lxgw': return 'LXGW WenKai';
+      case 'system':
+      case 'sans':
+      default: return ReaderUiVisualTokens.readerControlFontFamily;
+    }
+  }
 
   build() {
-    Row({ space: 4 }) {
-      ForEach(this.choices, (item: [string, ReaderFontFamily], i: number) => {
-        Text(item[0])
-          .fontSize(8).fontWeight(700).fontColor(item[1] === this.fontFamily ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
-          .layoutWeight(1).height(22).textAlign(TextAlign.Center)
-          .borderRadius(DemoAliasTokens.radiusSm).backgroundColor(item[1] === this.fontFamily ? ColorTokens.primaryDark : ColorTokens.floatingControlBgAlt)
-          .onClick(() => ReaderUiStore.dispatch({ type: 'set-reader-font-family', fontFamily: item[1] }))
-      }, (item: [string, ReaderFontFamily], i: number) => `${item[1]}-${i}`)
+    Column({ space: 3 }) {
+      Text('字体库')
+        .fontSize(9)
+        .fontWeight(700)
+        .fontColor(ReaderUiVisualTokens.readerControlInk)
+        .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
+        .width('100%')
+        .height(10)
+      Column({ space: 4 }) {
+        ForEach([0, 1], (row: number) => {
+          Row({ space: 4 }) {
+            ForEach(this.choices.slice(row * 4, row * 4 + 4), (item: ReaderAppearanceFont, i: number) => {
+              Text(item.label)
+                .fontSize(8)
+                .fontWeight(400)
+                .fontColor(ReaderUiVisualTokens.readerControlInk)
+                .fontFamily(this.previewFamily(item))
+                .width(62.5)
+                .height(27)
+                .border({ width: 1, color: ReaderUiVisualTokens.readerAppearanceDivider })
+                .backgroundColor(this.active(item)
+                  ? ReaderUiVisualTokens.readerAppearanceFontSelectedSurface
+                  : Color.Transparent)
+                .textAlign(TextAlign.Center)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+                .onClick(() => ReaderUiStore.dispatch({
+                  type: 'set-reader-font-family',
+                  fontFamily: appearanceReaderFontFamily(item.arktsValue),
+                }))
+            }, (item: ReaderAppearanceFont, i: number) => `${item.id}-${row}-${i}`)
+          }
+          .width('100%')
+          .height(27)
+        }, (row: number) => `${row}`)
+      }
+      .width('100%')
+      .height(58)
     }
     .width('100%')
-    .height(27)
+    .height(77)
     .padding({ top: 4 })
-    .border({ width: { top: 1 }, color: ColorTokens.border })
+    .border({ width: { top: 1 }, color: ReaderUiVisualTokens.readerAppearanceDivider })
   }
 }
 
@@ -1464,39 +1571,73 @@ struct ReaderFontChoices {
 struct ReaderThemeSwatches {
   @StorageProp('reader.readerTheme') currentTheme: string = 'paper';
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
-  private options: ReaderThemeOption[] = ReaderThemeResolver.QUICK_OPTIONS;
+  private options: ReaderThemeOption[] = ReaderThemeResolver.ALL_OPTIONS;
 
   private isActive(value: string): boolean {
     return this.currentTheme === value;
   }
 
   build() {
-    Row({ space: 4 }) {
-      ForEach(this.options, (item: ReaderThemeOption, i: number) => {
-        Column() {
-          Column()
-            .width(46)
-            .height(18)
-            .borderRadius(DemoAliasTokens.radiusSm)
-            .backgroundColor(item.swatch)
-            .border({ width: 1, color: this.isActive(item.value) ? ColorTokens.primary : ColorTokens.border })
-        }
-        .layoutWeight(1)
-        .height(24)
-        .padding({ left: 3, right: 3, top: 2, bottom: 2 })
-        .justifyContent(FlexAlign.Center)
-        .alignItems(HorizontalAlign.Center)
-        .borderRadius(DemoAliasTokens.radiusMd)
-        .backgroundColor(this.isActive(item.value) ? ColorTokens.surfaceSoft : ColorTokens.floatingControlBgAlt)
-        .onClick(() => {
-          MotionAdapter.apply('segment.item.switch', this.reducedMotion, this.getUIContext(), () => {
-            ReaderUiStore.dispatch({ type: 'set-reader-theme', theme: item.value });
-          });
-        })
-      }, (item: ReaderThemeOption, i: number) => `${item.value}-${i}`)
+    Column({ space: 3 }) {
+      Row() {
+        Text('主题库')
+          .fontSize(9)
+          .fontWeight(700)
+          .fontColor(ReaderUiVisualTokens.readerControlInk)
+          .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
+          .layoutWeight(1)
+        Text('日间：纸纹 · 夜间：夜纹')
+          .fontSize(8)
+          .fontWeight(500)
+          .fontColor(ReaderUiVisualTokens.readerControlMuted)
+          .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
+      }
+      .width('100%')
+      .height(16)
+      .alignItems(VerticalAlign.Center)
+
+      Column({ space: 4 }) {
+        ForEach([0, 1], (row: number) => {
+          Row({ space: 4 }) {
+            ForEach(this.options.slice(row * 4, row * 4 + 4), (item: ReaderThemeOption, i: number) => {
+              Column() {
+                Column()
+                  .width(46)
+                  .height(18)
+                  .borderRadius(6)
+                  .backgroundColor(item.swatch)
+                  .border({ width: 1, color: ReaderUiVisualTokens.readerAppearanceSwatchBorder })
+              }
+              .width(62.5)
+              .height(24)
+              .border({ width: this.isActive(item.value) ? 1 : 0, color: ReaderUiVisualTokens.readerAppearanceSelectedStroke })
+              .backgroundColor(this.isActive(item.value)
+                ? ReaderUiVisualTokens.readerAppearanceSelectedSurface
+                : (item.scheme === 'night' ? ReaderUiVisualTokens.readerAppearanceNightTileSurface : Color.Transparent))
+              .justifyContent(FlexAlign.Center)
+              .alignItems(HorizontalAlign.Center)
+              .onClick(() => {
+                MotionAdapter.apply('segment.item.switch', this.reducedMotion, this.getUIContext(), () => {
+                  ReaderUiStore.dispatch({ type: 'set-reader-theme', theme: item.value });
+                  ReaderUiStore.dispatch({
+                    type: 'settings-segment-switch',
+                    settingsKey: 'appThemeMode',
+                    settingsValue: item.scheme === 'night' ? 'dark' : 'light',
+                  });
+                });
+              })
+            }, (item: ReaderThemeOption, i: number) => `${item.value}-${row}-${i}`)
+          }
+          .width('100%')
+          .height(24)
+        }, (row: number) => `${row}`)
+      }
+      .width('100%')
+      .height(52)
     }
     .width('100%')
-    .height(24)
+    .height(75.89)
+    .padding({ top: 3 })
   }
 }
 
@@ -1524,6 +1665,9 @@ struct ReaderLiveOptionRow {
   private normalizedOptionValue(label: string): string {
     if (this.optionKey !== 'pageAnimation') return label;
     if (label === '覆盖' || label === 'cover') return 'cover';
+    if (label === '滑动' || label === 'slide') return 'slide';
+    if (label === '仿真' || label === 'simulation') return 'simulation';
+    if (label === '滚动' || label === 'scroll') return 'scroll';
     if (label === '无' || label === '无动画' || label === 'none') return 'none';
     return 'slide';
   }
@@ -1675,45 +1819,62 @@ export struct ReaderDirectoryPanel {
   build() {
     ReaderModulePanelShell({ debugLabel: 'ReaderModulePanel', closeEvent: this.closeEvent() }) {
       Column() {
-        Row({ space: 4 }) {
-          Text('目录')
-            .fontSize(10).fontWeight(600).fontColor(this.tocMode === 'directory' ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
-            .layoutWeight(1).height(30).textAlign(TextAlign.Center)
-            .borderRadius(DemoAliasTokens.radiusMd).backgroundColor(this.tocMode === 'directory' ? ColorTokens.primaryDark : ColorTokens.floatingControlBgAlt)
-            .onClick(() => ReaderUiStore.dispatch({ type: 'set-toc-mode', tocMode: 'directory' }))
-          Text('书签')
-            .fontSize(10).fontWeight(600).fontColor(this.tocMode === 'bookmark' ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
-            .layoutWeight(1).height(30).textAlign(TextAlign.Center)
-            .borderRadius(DemoAliasTokens.radiusMd).backgroundColor(this.tocMode === 'bookmark' ? ColorTokens.primaryDark : ColorTokens.floatingControlBgAlt)
-            .onClick(() => ReaderUiStore.dispatch({ type: 'set-toc-mode', tocMode: 'bookmark' }))
+        Row({ space: 0 }) {
+          Stack({ alignContent: Alignment.Bottom }) {
+            Text('目录')
+              .fontSize(10).fontWeight(600)
+              .fontColor(this.tocMode === 'directory' ? ReaderUiVisualTokens.readerModuleActive : ReaderUiVisualTokens.readerControlMuted)
+              .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
+              .width('100%').height(31).textAlign(TextAlign.Center)
+              .padding({ top: 9, bottom: 10 })
+            if (this.tocMode === 'directory') {
+              Column()
+                .width(66).height(2).borderRadius(999)
+                .backgroundColor(ReaderUiVisualTokens.readerModuleActive)
+            }
+          }
+          .layoutWeight(1).height(31)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'set-toc-mode', tocMode: 'directory' }))
+          Stack({ alignContent: Alignment.Bottom }) {
+            Text('书签')
+              .fontSize(10).fontWeight(600)
+              .fontColor(this.tocMode === 'bookmark' ? ReaderUiVisualTokens.readerModuleActive : ReaderUiVisualTokens.readerControlMuted)
+              .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
+              .width('100%').height(31).textAlign(TextAlign.Center)
+              .padding({ top: 9, bottom: 10 })
+            if (this.tocMode === 'bookmark') {
+              Column()
+                .width(66).height(2).borderRadius(999)
+                .backgroundColor(ReaderUiVisualTokens.readerModuleActive)
+            }
+          }
+          .layoutWeight(1).height(31)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'set-toc-mode', tocMode: 'bookmark' }))
         }
         .width('100%')
-        .height(36)
-        .padding({ top: 3, bottom: 3 })
-        .margin({ bottom: 5 })
+        .height(32)
+        .padding({ left: 5, right: 5 })
+        .border({ width: { bottom: 1 }, color: ReaderUiVisualTokens.readerModuleDivider })
 
         if (this.tocMode === 'bookmark') {
           if (this.currentBook === null) {
-            Text('尚未打开书籍，无法读取 Core 书签。')
-              .fontSize(11).fontColor(ColorTokens.muted).lineHeight(17)
-              .width('100%').padding({ left: 8, right: 8, top: 12, bottom: 12 })
+            // There is no current Figma empty/bookmark-error visual.  Keep the
+            // approved module chrome instead of inserting a generic message.
+            Column().width(0).height(0)
           } else if (this.bookmarksLoading || !this.bookmarksLoaded) {
-            Text('正在从 Core 读取当前书的书签…')
-              .fontSize(11).fontColor(ColorTokens.muted).lineHeight(17)
-              .width('100%').padding({ left: 8, right: 8, top: 12, bottom: 12 })
+            Column().width(0).height(0)
           } else if (this.bookmarksError.length > 0) {
-            Text(`书签操作失败：${this.bookmarksError}`)
-              .fontSize(11).fontColor(ColorTokens.accent).lineHeight(17)
-              .width('100%').padding({ left: 8, right: 8, top: 12, bottom: 12 })
+            Column().width(0).height(0)
           } else if (this.bookmarks.length === 0) {
-            Text('当前书在 Core 中还没有书签。可在阅读器控制栏添加当前位置书签。')
-              .fontSize(11).fontColor(ColorTokens.muted).lineHeight(17)
-              .width('100%').padding({ left: 8, right: 8, top: 12, bottom: 12 })
+            Column().width(0).height(0)
           } else {
             Scroll() {
               Column() {
                 ForEach(this.bookmarks, (bookmark: CoreBookmark, i: number) => {
-                  ReaderBookmarkLiveRow({ bookmark: bookmark })
+                  // The Figma file has no independent bookmark-card master.
+                  // Reuse its approved directory-row geometry instead of the
+                  // retired local jump/delete card.
+                  ReaderFullBookmarkRow({ bookmark: bookmark })
                 }, (bookmark: CoreBookmark, i: number) => `${bookmark.time}-${i}`)
               }
               .width('100%')
@@ -1723,12 +1884,7 @@ export struct ReaderDirectoryPanel {
             .scrollBar(BarState.Auto)
           }
         } else if (this.currentBook === null || this.chapterToc.length === 0) {
-          Text(this.statusMessage())
-            .fontSize(11)
-            .fontColor(ColorTokens.muted)
-            .lineHeight(17)
-            .width('100%')
-            .padding({ left: 8, right: 8, top: 12, bottom: 12 })
+          Column().width(0).height(0)
         } else {
           Scroll() {
             Column() {
@@ -1750,8 +1906,6 @@ export struct ReaderDirectoryPanel {
       }
       .width('100%')
       .height('100%')
-      .borderRadius(DemoAliasTokens.radiusMd)
-      .backgroundColor(DemoAliasTokens.surface)
     }
   }
 }
@@ -1759,45 +1913,14 @@ export struct ReaderDirectoryPanel {
 // ── Appearance panel (.fd-reader-appearance-panel) ────────────────────────
 @Component
 export struct ReaderAppearancePanel {
-  @StorageProp('reader.typography.fontSize') fontSize: number = 18;
-  @StorageProp('reader.typography.lineHeight') lineHeightRatio: number = 1.96;
-
-  private whole(value: number): string {
-    return `${Math.round(value)}`;
-  }
-
-  private two(value: number): string {
-    return `${Math.round(value * 100) / 100}`;
-  }
-
   build() {
     ReaderModulePanelShell({ debugLabel: 'ReaderModulePanel' }) {
-      Column() {
-        Column({ space: 3 }) {
-          Row() {
-            Text('阅读主题').fontSize(9).fontWeight(700).fontColor(ColorTokens.controlInk)
-          }.width('100%').height(10)
-          ReaderThemeSwatches()
-        }
-        .width('100%')
-        .height(42)
-        .padding({ top: 3, bottom: 2 })
-        .border({ width: { bottom: 1 }, color: ColorTokens.border })
-
-        Column({ space: 3 }) {
-          Row() {
-            Text('文字排版').fontSize(9).fontWeight(700).fontColor(ColorTokens.controlInk)
-          }.width('100%').height(10)
-          ReaderLiveStepperRow({ label: '字号', value: this.whole(this.fontSize), metric: 'fontSize' })
-          ReaderLiveStepperRow({ label: '行距', value: this.two(this.lineHeightRatio), metric: 'lineHeight', divider: true })
-          ReaderFontChoices()
-        }
-        .width('100%')
-        .height(106)
-        .padding({ top: 3, bottom: 2 })
+      Column({ space: 10 }) {
+        ReaderThemeSwatches()
+        ReaderFontChoices()
       }
       .width('100%')
-      .height(148)
+      .height(162.89)
       .padding({ left: 1, right: 1 })
       .alignItems(HorizontalAlign.Start)
     }
@@ -1810,7 +1933,10 @@ export struct ReaderTtsPanel {
   @StorageProp('reader.ttsSession.playback') playback: string = 'idle';
   @StorageProp('reader.ttsSession.currentSegment') currentSegment: number = 0;
   @StorageProp('reader.ttsSession.totalSegments') totalSegments: number = 0;
+  @StorageProp('reader.ttsSession.rate') ttsRate: number = 1;
+  @StorageProp('reader.ttsSession.timer') ttsTimer: TtsTimer = 'off';
   @StorageProp('reader.chapterContent') chapterContent: string[] = [];
+  @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
 
   private canStart(): boolean {
     return this.chapterContent.length > 0;
@@ -1820,163 +1946,312 @@ export struct ReaderTtsPanel {
     return this.totalSegments > 0;
   }
 
-  private playbackLabel(): string {
-    if (this.playback === 'playing') return '暂停朗读';
-    if (this.playback === 'paused') return '继续朗读';
-    return '开始朗读';
+  private rateLabel(): string {
+    return `${this.ttsRate.toFixed(1)}x`;
+  }
+
+  private timerLabel(): string {
+    switch (this.ttsTimer) {
+      case '5min': return '5 分钟';
+      case '10min': return '10 分钟';
+      case '15min': return '15 分钟';
+      case '30min': return '30 分钟';
+      case 'chapterEnd': return '本章结束';
+      default: return '不定时';
+    }
+  }
+
+  private updateRate(value: number, mode: SliderChangeMode): void {
+    if (mode === SliderChangeMode.Begin) return;
+    ReaderUiStore.dispatch({ type: 'tts-set-rate', ttsRate: Math.round(value) / 10 });
+  }
+
+  private stop(): void {
+    // The red stop affordance in the Figma source goes through the generated
+    // Reader-UI event so the production playback owner stops both Core and the
+    // app-local speech engine together.
+    ReaderUiStore.dispatch({ type: 'reader-tts-stop' });
+  }
+
+  private start(): void {
+    MotionAdapter.apply('reader.session.tts.start', this.reducedMotion, this.getUIContext(), () => {
+      ReaderUiStore.startTtsFromReaderSurface();
+    });
   }
 
   build() {
-    ReaderModulePanelShell({ debugLabel: 'ReaderModulePanel' }) {
-      Scroll() {
-        Column() {
-          Row() {
-            Text('朗读')
+    ReaderModulePanelShell({ debugLabel: 'ReaderModulePanel', expandRoute: 'reader-full-tts' }) {
+      // This is the 264×164 Figma quick panel: playback (66), a gap (8),
+      // then timer and rate rows (42 + 6 + 42).  Do not put unavailable
+      // capability diagnostics or a second title into this surface.
+      Column({ space: 8 }) {
+        Row({ space: 8 }) {
+          Row({ space: 8 }) {
+            Image($r('app.media.reader_control_tts_playback'))
+              .width(20)
+              .height(20)
+            Text('播放')
               .fontSize(12)
-              .fontWeight(800)
-              .fontColor(ColorTokens.controlInk)
-              .layoutWeight(1)
-            ReaderQuickPillButton({ label: this.playbackLabel(), disabled: !this.canStart(), tapEvent: 'tts-toggle' })
+              .fontWeight(700)
+              .fontColor(ReaderUiVisualTokens.readerControlInk)
+              .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
           }
-          .width('100%')
-          .height(28)
+          .layoutWeight(1)
           .alignItems(VerticalAlign.Center)
 
-          Row({ space: 9 }) {
-            Image($r('app.media.reader_icon_reader_module_tts_primary'))
-              .width(18)
-              .height(18)
-              .margin({ left: 1, right: 1 })
-            Text('播放控制')
-              .fontSize(11)
-              .fontWeight(500)
-              .fontColor(ColorTokens.controlInk)
-              .layoutWeight(1)
-            Row() {
-              Stack({ alignContent: Alignment.Center }) {
-                Image($r('app.media.reader_icon_chevron_left_chapter')).width(13).height(13)
-              }
-              .width(28)
-              .height(25)
+          Row({ space: 4 }) {
+            Image($r('app.media.reader_control_compact_prev'))
+              .width(16)
+              .height(16)
               .opacity(this.hasQueue() ? 1 : 0.5)
               .enabled(this.hasQueue())
               .onClick(() => ReaderUiStore.dispatch({ type: 'tts-prev' }))
-              Stack({ alignContent: Alignment.Center }) {
-                Image($r('app.media.reader_icon_play_white')).width(13).height(13)
-              }
-              .width(34)
-              .height(25)
-              .borderRadius(DemoAliasTokens.radiusMd)
-              .backgroundColor(ColorTokens.primaryDark)
-              .opacity(this.canStart() ? 1 : 0.5)
-              .enabled(this.canStart())
-              .onClick(() => ReaderUiStore.dispatch({ type: 'tts-toggle' }))
-              Stack({ alignContent: Alignment.Center }) {
-                Image($r('app.media.reader_icon_chevron_chapter')).width(13).height(13)
-              }
-              .width(28)
-              .height(25)
+            Stack({ alignContent: Alignment.Center }) {
+              // CoreSpeechKit exposes start/stop, not a pause/resume state.
+              // Keep this as the Figma play mark and disable it while active;
+              // do not substitute a fake pause symbol.
+              Image($r('app.media.reader_control_play'))
+                .width(14)
+                .height(14)
+            }
+            .width(24)
+            .height(24)
+            .borderRadius(999)
+            .backgroundColor(ReaderUiVisualTokens.readerModuleActive)
+            .opacity(this.canStart() && this.playback !== 'playing' ? 1 : 0.5)
+            .enabled(this.canStart() && this.playback !== 'playing')
+            .onClick(() => this.start())
+            Stack({ alignContent: Alignment.Center }) {
+              Column()
+                .width(22)
+                .height(22)
+                .borderRadius(999)
+                .backgroundColor(ReaderUiVisualTokens.readerTtsStop)
+              Image($r('app.media.reader_control_tts_stop'))
+                .width(26)
+                .height(26)
+            }
+            .width(26)
+            .height(26)
+            .opacity(this.playback === 'idle' ? 0.5 : 1)
+            .enabled(this.playback !== 'idle')
+            .onClick(() => this.stop())
+            Image($r('app.media.reader_control_compact_next'))
+              .width(16)
+              .height(16)
               .opacity(this.hasQueue() ? 1 : 0.5)
               .enabled(this.hasQueue())
               .onClick(() => ReaderUiStore.dispatch({ type: 'tts-next' }))
+          }
+          .width(128)
+          .height(32)
+          .justifyContent(FlexAlign.SpaceBetween)
+          .alignItems(VerticalAlign.Center)
+        }
+        .width('100%')
+        .height(66)
+        .padding({ left: 11, right: 11 })
+        .border({ width: 1, color: ReaderUiVisualTokens.readerControlBorder })
+        .borderRadius(6)
+        .alignItems(VerticalAlign.Center)
+
+        Column({ space: 6 }) {
+          Row({ space: 8 }) {
+            Image($r('app.media.reader_control_tts_clock')).width(20).height(20)
+            Text('定时')
+              .fontSize(12)
+              .fontWeight(700)
+              .fontColor(ReaderUiVisualTokens.readerControlInk)
+              .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
+              .layoutWeight(1)
+            Row({ space: 5 }) {
+              Text(this.timerLabel())
+                .fontSize(10)
+                .fontWeight(600)
+                .fontColor(ReaderUiVisualTokens.readerControlInk)
+                .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
+              Image($r('app.media.reader_control_tts_caret_down')).width(7).height(4)
             }
-            .height(25)
-            .borderRadius(DemoAliasTokens.radiusMd)
-            .backgroundColor(ColorTokens.floatingControlBgAlt)
+            .height(30)
+            .padding({ left: 8, right: 8 })
+            .border({ width: 1, color: ReaderUiVisualTokens.readerControlProgressTrack })
+            .borderRadius(6)
+            .backgroundColor(ReaderUiVisualTokens.readerTtsDropdownSurface)
+            .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'reader-full-tts' }))
           }
           .width('100%')
-          .height(32)
-          .padding({ left: 9, right: 9 })
-          .border({ width: { top: 1 }, color: ColorTokens.border })
+          .height(42)
+          .padding({ left: 11, right: 11 })
+          .border({ width: 1, color: ReaderUiVisualTokens.readerControlBorder })
+          .borderRadius(6)
           .alignItems(VerticalAlign.Center)
 
-          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_motion_dark'), title: '语速', value: 'TextReader Host 未提供程序化语速', disabled: true, unavailableReason: 'TextReader Host 未提供程序化语速' })
-          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_volume_dark'), title: '音色', value: 'Host 未提供音色映射', disabled: true, unavailableReason: 'Host 未提供音色映射' })
-          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_current_location_dark'), title: '范围', value: 'Core 仅当前章节', disabled: true, unavailableReason: 'Core 仅当前章节' })
-          ReaderLiveOptionRow({ icon: $r('app.media.reader_icon_globe'), title: '在线语音区域', value: 'HttpTTS 合同缺失', disabled: true, unavailableReason: 'HttpTTS 合同缺失' })
-          ReaderLiveOptionRow({ icon: $r('app.media.reader_icon_globe'), title: '在线语音语言', value: 'HttpTTS 合同缺失', disabled: true, unavailableReason: 'HttpTTS 合同缺失' })
-          ReaderLiveOptionRow({ icon: $r('app.media.reader_icon_assist'), title: '在线语音模型', value: 'HttpTTS 合同缺失', disabled: true, unavailableReason: 'HttpTTS 合同缺失' })
-          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_clock_dark'), title: '定时', value: 'Core/Host 未接入', disabled: true, unavailableReason: 'Core/Host 未接入' })
+          Row({ space: 8 }) {
+            Image($r('app.media.reader_control_tts_speed')).width(20).height(20)
+            Text('语速')
+              .fontSize(12)
+              .fontWeight(700)
+              .fontColor(ReaderUiVisualTokens.readerControlInk)
+              .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
+            Slider({
+              value: this.ttsRate * 10,
+              min: 5,
+              max: 20,
+              step: 1,
+              style: SliderStyle.OutSet,
+            })
+              .width(116)
+              .height(32)
+              .trackColor(ReaderUiVisualTokens.readerControlProgressTrack)
+              .selectedColor(ReaderUiVisualTokens.readerModuleActive)
+              .blockColor(ReaderUiVisualTokens.readerControlSurface)
+              .onChange((value: number, mode: SliderChangeMode) => this.updateRate(value, mode))
+            Text(this.rateLabel())
+              .fontSize(12)
+              .fontWeight(700)
+              .fontColor(ReaderUiVisualTokens.readerModuleActive)
+              .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
+              .width(38)
+              .textAlign(TextAlign.End)
+          }
+          .width('100%')
+          .height(42)
+          .padding({ left: 11, right: 11 })
+          .border({ width: 1, color: ReaderUiVisualTokens.readerControlBorder })
+          .borderRadius(6)
+          .alignItems(VerticalAlign.Center)
         }
         .width('100%')
       }
       .width('100%')
-      .height('100%')
-      .clip(true)
-      .scrollBar(BarState.Off)
-      .borderRadius(DemoAliasTokens.radiusMd)
-      .backgroundColor(DemoAliasTokens.surface)
+      .height(164)
     }
   }
 }
 
 // ── Settings panel (.fd-reader-settings-panel) ────────────────────────────
+// The quick module is a direct composition of reader.module.settings (Figma
+// Phone 942:70): three 30vp segments for orientation, page transition, and
+// screen timeout. Do not add unrelated reader preferences to this panel.
+@Component
+struct ReaderQuickSettingsSegment {
+  @Prop label: string = '';
+  @Prop values: string[] = [];
+  @Prop active: string = '';
+  @Prop action: string = '';
+
+  private normalizedPageAnimation(value: string): string {
+    if (value === '覆盖') return 'cover';
+    if (value === '滑动') return 'slide';
+    if (value === '仿真') return 'simulation';
+    if (value === '滚动') return 'scroll';
+    if (value === '无动画') return 'none';
+    return 'slide';
+  }
+
+  private selected(value: string): boolean {
+    if (this.action !== 'pageAnimation') return value === this.active;
+    return this.normalizedPageAnimation(value) === this.normalizedPageAnimation(this.active);
+  }
+
+  private actionable(): boolean {
+    return this.action === 'pageAnimation' || this.action === 'screenTimeout';
+  }
+
+  private choose(value: string): void {
+    if (this.action === 'pageAnimation') {
+      ReaderUiStore.dispatch({
+        type: 'set-reader-setting-option',
+        optionKey: 'pageAnimation',
+        optionValue: this.normalizedPageAnimation(value),
+      });
+    } else if (this.action === 'screenTimeout' && value === '始终开启') {
+      // The current Host can truthfully keep the screen on. It cannot force an
+      // arbitrary system timeout, so the remaining Figma choices stay visual
+      // until such a capability is explicitly added.
+      ReaderUiStore.dispatch({ type: 'set-reader-toggle', toggleKey: 'keepScreenOn', toggleValue: true });
+    } else if (this.action === 'screenTimeout' && this.active === '始终开启') {
+      ReaderUiStore.dispatch({ type: 'set-reader-toggle', toggleKey: 'keepScreenOn', toggleValue: false });
+    }
+  }
+
+  build() {
+    Column({ space: 5 }) {
+      Text(this.label)
+        .fontSize(ReaderUiVisualTokens.readerQuickSettingsLabelSize)
+        .fontWeight(600)
+        .fontColor(ReaderUiVisualTokens.readerControlMuted)
+        .fontFamily(ReaderUiVisualTokens.readerQuickSettingsFontFamily)
+        .width('100%')
+      Row({ space: 0 }) {
+        ForEach(this.values, (value: string) => {
+          Text(value)
+            .fontSize(ReaderUiVisualTokens.readerQuickSettingsChoiceSize)
+            .fontWeight(this.selected(value) ? 700 : 500)
+            .fontFamily(ReaderUiVisualTokens.readerQuickSettingsFontFamily)
+            .fontColor(this.selected(value) ? ReaderUiVisualTokens.readerModuleActive : ReaderUiVisualTokens.readerControlMuted)
+            .height(ReaderUiVisualTokens.readerQuickSettingsChoiceHeight)
+            .layoutWeight(1)
+            .padding({
+              left: ReaderUiVisualTokens.readerQuickSettingsSegmentInset,
+              right: ReaderUiVisualTokens.readerQuickSettingsSegmentInset,
+            })
+            .borderRadius(ReaderUiVisualTokens.readerQuickSettingsChoiceRadius)
+            .backgroundColor(this.selected(value) ? ReaderUiVisualTokens.readerQuickSettingsSelectedSurface : Color.Transparent)
+            .textAlign(TextAlign.Center)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .enabled(this.actionable())
+            .onClick(() => this.choose(value))
+        }, (value: string) => value)
+      }
+      .width('100%')
+      .height(ReaderUiVisualTokens.readerQuickSettingsSegmentHeight)
+      .padding(ReaderUiVisualTokens.readerQuickSettingsSegmentInset)
+      .borderRadius(ReaderUiVisualTokens.readerQuickSettingsSegmentRadius)
+      .backgroundColor(ReaderUiVisualTokens.readerQuickSettingsSegmentSurface)
+    }
+    .width('100%')
+    .height(ReaderUiVisualTokens.readerQuickSettingsGroupHeight)
+  }
+}
+
 @Component
 export struct ReaderSettingsPanel {
-  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
-  @StorageProp('reader.readerToggles.autoPage') autoPage: boolean = false;
-  @StorageProp('reader.readerToggles.volumePage') volumePage: boolean = false;
-  @StorageProp('reader.readerToggles.landscapeLock') landscapeLock: boolean = false;
   @StorageProp('reader.readerToggles.keepScreenOn') keepScreenOn: boolean = false;
-  @StorageProp('reader.readerToggles.statusInfo') statusInfo: boolean = false;
-  @StorageProp('reader.readerToggles.hapticFeedback') hapticFeedback: boolean = false;
-  @StorageProp('reader.readerToggles.hideStatusBar') hideStatusBar: boolean = false;
-  @StorageProp('reader.readerSettingOptions.tapMode') tapMode: string = '左右区域';
   @StorageProp('reader.readerSettingOptions.pageAnimation') pageAnimation: string = ReaderAppearanceSpecRegistry.select('pageAnimation')!.defaultValue;
-  @StorageProp('reader.readerHostMessage') readerHostMessage: string = '';
 
   private pageAnimationLabel(): string {
     if (this.pageAnimation === 'cover' || this.pageAnimation === '覆盖') return '覆盖';
+    if (this.pageAnimation === 'simulation' || this.pageAnimation === '仿真') return '仿真';
+    if (this.pageAnimation === 'scroll' || this.pageAnimation === '滚动') return '滚动';
     if (this.pageAnimation === 'none' || this.pageAnimation === '无' || this.pageAnimation === '无动画') return '无动画';
-    return '平滑';
+    return '滑动';
   }
 
   build() {
     ReaderModulePanelShell({ debugLabel: 'ReaderModulePanel' }) {
-      Scroll() {
-        Column() {
-          if (this.readerHostMessage.length > 0) {
-            Text(this.readerHostMessage)
-              .fontSize(9)
-              .fontWeight(650)
-              .fontColor(ColorTokens.accent)
-              .lineHeight(14)
-              .width('100%')
-              .padding({ left: 9, right: 9, top: 7, bottom: 7 })
-              .border({ width: { bottom: 1 }, color: ColorTokens.border })
-          }
-          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_refresh_dark'), title: '自动翻页', active: this.autoPage, switchRow: true, toggleKey: 'autoPage' })
-          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_gesture_dark'), title: '点击翻页方式', value: this.tapMode, optionKey: 'tapMode', optionChoices: ['左右区域', '中间', '边缘'] })
-          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_volume_dark'), title: '音量键翻页', active: this.volumePage, switchRow: true, toggleKey: 'volumePage', disabled: true, unavailableReason: '未接入按键监听' })
-          ReaderLiveOptionRow({
-            icon: $r('app.media.ui_icon_file_dark'),
-            title: '翻页动画',
-            value: this.pageAnimationLabel(),
-            optionKey: 'pageAnimation',
-            optionChoices: ['平滑', '覆盖', '无动画'],
-          })
-          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_permission_dark'), title: '横屏锁定', active: this.landscapeLock, switchRow: true, toggleKey: 'landscapeLock', disabled: true, unavailableReason: '未接入方向 Host' })
-          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_sun_dark'), title: '屏幕常亮', active: this.keepScreenOn, switchRow: true, toggleKey: 'keepScreenOn' })
-          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_progress_dark'), title: '页脚进度信息', active: this.statusInfo, switchRow: true, toggleKey: 'statusInfo' })
-          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_gesture_dark'), title: '触摸反馈', active: this.hapticFeedback, switchRow: true, toggleKey: 'hapticFeedback' })
-          ReaderLiveOptionRow({
-            icon: $r('app.media.ui_icon_download_dark'),
-            title: '阅读缓存与预取',
-            value: this.currentBook === null ? '请先打开一本书' : '查看状态与操作',
-            routeId: 'reader-book-cache',
-            disabled: this.currentBook === null,
-            unavailableReason: '请先打开一本书',
-          })
-          ReaderLiveOptionRow({ icon: $r('app.media.ui_icon_info_dark'), title: '隐藏状态栏', active: this.hideStatusBar, switchRow: true, toggleKey: 'hideStatusBar' })
-        }
-        .width('100%')
+      Column({ space: ReaderUiVisualTokens.readerQuickSettingsGroupGap }) {
+        ReaderQuickSettingsSegment({
+          label: '屏幕方向',
+          values: ['跟随系统', '竖屏', '横屏'],
+          active: '跟随系统',
+        })
+        ReaderQuickSettingsSegment({
+          label: '翻页样式',
+          values: ['覆盖', '滑动', '仿真', '滚动', '无动画'],
+          active: this.pageAnimationLabel(),
+          action: 'pageAnimation',
+        })
+        ReaderQuickSettingsSegment({
+          label: '屏幕超时',
+          values: ['跟随系统', '1 分钟', '5 分钟', '10 分钟', '始终开启'],
+          active: this.keepScreenOn ? '始终开启' : '5 分钟',
+          action: 'screenTimeout',
+        })
       }
       .width('100%')
-      .height('100%')
-      .clip(true)
-      .scrollBar(BarState.Off)
-      .borderRadius(DemoAliasTokens.radiusMd)
-      .backgroundColor(DemoAliasTokens.surface)
+      .height(ReaderUiVisualTokens.readerQuickSettingsPanelHeight)
     }
   }
 }
@@ -1988,7 +2263,6 @@ export struct ReaderSettingsPanel {
 // corresponding quick/module route.
 @Component
 struct ReaderFullPanelShell {
-  @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
   @StorageProp(ViewportAdapter.K_WIDTH) viewportWidth: number = ViewportAdapter.DEFAULT_WIDTH;
   @StorageProp(ViewportAdapter.K_HEIGHT) viewportHeight: number = ViewportAdapter.DEFAULT_HEIGHT;
   @Prop title: string = '';
@@ -1997,107 +2271,117 @@ struct ReaderFullPanelShell {
   @Prop utility: boolean = false;
   @BuilderParam content: () => void;
 
+  private isTablet(): boolean {
+    return ViewportAdapter.classify(this.viewportWidth, this.viewportHeight) !== 'phone';
+  }
+
   private panelWidth(): number {
-    return Math.max(0, this.viewportWidth - 24);
+    return this.isTablet()
+      ? ReaderUiVisualTokens.readerFullPanelTabletWidth
+      : ReaderUiVisualTokens.readerFullPanelPhoneWidth;
   }
 
   private panelHeight(): number {
-    return Math.max(320, this.viewportHeight - this.safeAreaBottom - 106);
+    return this.isTablet()
+      ? ReaderUiVisualTokens.readerFullPanelTabletHeight
+      : ReaderUiVisualTokens.readerFullPanelPhoneHeight;
   }
 
-  private iconLabel(): string {
-    if (this.title === '目录') return '目';
-    if (this.title === '朗读') return '朗';
-    if (this.title === '界面') return 'A';
-    if (this.title === '书籍缓存') return '缓';
-    if (this.title === '调试信息') return '调';
-    return '设';
+  private panelLeft(): number {
+    return this.isTablet()
+      ? ReaderUiVisualTokens.readerFullPanelTabletLeft
+      : ReaderUiVisualTokens.readerFullPanelPhoneLeft;
   }
 
-  private closeLabel(): string {
-    return this.utility ? '完成' : '收起';
+  private contentWidth(): number {
+    return this.isTablet()
+      ? ReaderUiVisualTokens.readerFullContentTabletWidth
+      : ReaderUiVisualTokens.readerFullContentPhoneWidth;
   }
 
-  private closeRoute(): RouteId {
-    return this.quickRoute as RouteId;
+  private contentHeight(): number {
+    return this.isTablet()
+      ? ReaderUiVisualTokens.readerFullContentTabletHeight
+      : ReaderUiVisualTokens.readerFullContentPhoneHeight;
+  }
+
+  @Builder
+  private titleIcon() {
+    if (this.title === '目录') {
+      Image($r('app.media.figma_reader_full_directory')).width(20).height(20)
+    } else if (this.title === '朗读') {
+      Image($r('app.media.figma_reader_full_tts')).width(20).height(20)
+    } else if (this.title === '界面') {
+      Image($r('app.media.figma_reader_full_appearance')).width(20).height(20)
+    } else if (this.title === '设置') {
+      Image($r('app.media.figma_reader_full_settings')).width(20).height(20)
+    }
   }
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Stack({ alignContent: Alignment.TopStart }) {
-        Column({ space: 8 }) {
-          Column()
-            .width(42)
-            .height(4)
-            .borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(ColorTokens.muted)
-            .margin({ top: 9, left: '50%' })
-            .translate({ x: -21 })
-            .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
+      Column()
+        .width(ReaderUiVisualTokens.readerFullGrabberWidth)
+        .height(4)
+        .borderRadius(999)
+        .backgroundColor(ReaderUiVisualTokens.readerFullGrabber)
+        .position({
+          x: (this.panelWidth() - ReaderUiVisualTokens.readerFullGrabberWidth) / 2,
+          y: 10,
+        })
+        .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
 
-          Row({ space: 10 }) {
-            Row({ space: 8 }) {
-              Text(this.iconLabel())
-                .fontSize(11)
-                .fontWeight(900)
-                .fontColor(DemoAliasTokens.onPrimary)
-                .width(22)
-                .height(22)
-                .borderRadius(DemoAliasTokens.radiusPill)
-                .backgroundColor(ColorTokens.primaryDark)
-                .textAlign(TextAlign.Center)
-              Text(this.title)
-                .fontSize(14)
-                .fontWeight(760)
-                .fontColor(ColorTokens.controlInk)
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-            }
-            .layoutWeight(1)
-            .height(30)
-            .alignItems(VerticalAlign.Center)
-
-            Text(this.closeLabel())
-              .fontSize(10)
-              .fontWeight(760)
-              .fontColor(ColorTokens.primaryDark)
-              .height(26)
-              .padding({ left: 10, right: 10 })
-              .borderRadius(DemoAliasTokens.radiusMd)
-              .backgroundColor(ColorTokens.floatingControlBgAlt)
-              .textAlign(TextAlign.Center)
-              .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
-            InteractionDebugBadge({ label: 'close', tone: 'action' })
-          }
-          .width('100%')
-          .height(30)
-
-          Column() {
-            this.content()
-          }
-          .width('100%')
-          .layoutWeight(1)
-          .justifyContent(FlexAlign.Start)
-          .alignItems(HorizontalAlign.Start)
-          .clip(true)
-          .border({ width: 1, color: ColorTokens.border })
-          .borderRadius(DemoAliasTokens.radiusLg)
-          .backgroundColor(ColorTokens.surfaceSoft)
+      Row({ space: 10 }) {
+        Row({ space: 8 }) {
+          this.titleIcon()
+          Text(this.title)
+            .fontSize(ReaderUiVisualTokens.readerFullHeaderTitleSize)
+            .fontWeight(700)
+            .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+            .fontColor(ReaderUiVisualTokens.readerFullHeaderInk)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
-        .width('100%')
-        .height('100%')
-        .padding({ left: 12, right: 12, top: 18, bottom: 12 })
-        .border({ width: 1, color: ColorTokens.border })
-        .borderRadius(DemoAliasTokens.radiusXl)
-        .backgroundColor(ColorTokens.paperBright)
-        InteractionDebugFrame({ label: this.debugLabel, tone: 'sheet' })
+        .layoutWeight(1)
+        .height(20)
+        .alignItems(VerticalAlign.Center)
+
+        Text('收起')
+          .fontSize(10)
+          .fontWeight(700)
+          .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+          .fontColor(ReaderUiVisualTokens.readerFullCollapseInk)
+          .width(40)
+          .height(26)
+          .borderRadius(8)
+          .backgroundColor(ReaderUiVisualTokens.readerFullCollapseSurface)
+          .textAlign(TextAlign.Center)
+          .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
       }
-      .width(this.panelWidth())
-      .height(this.panelHeight())
-      .margin({ left: 12, top: 88 })
+      .width(this.contentWidth())
+      .height(ReaderUiVisualTokens.readerFullHeaderHeight)
+      .position({ x: ReaderUiVisualTokens.readerFullHeaderInsetX, y: ReaderUiVisualTokens.readerFullHeaderTop })
+
+      Column() {
+        this.content()
+      }
+      .width(this.contentWidth())
+      .height(this.contentHeight())
+      .justifyContent(FlexAlign.Start)
+      .alignItems(HorizontalAlign.Start)
+      .clip(true)
+      .border({ width: 1, color: ReaderUiVisualTokens.readerFullContentBorder })
+      .borderRadius(ReaderUiVisualTokens.readerFullContentRadius)
+      .backgroundColor(ReaderUiVisualTokens.readerFullContentSurface)
+      .position({ x: ReaderUiVisualTokens.readerFullHeaderInsetX, y: ReaderUiVisualTokens.readerFullContentTop })
+      InteractionDebugFrame({ label: this.debugLabel, tone: 'sheet' })
     }
-    .width('100%')
-    .height('100%')
+    .width(this.panelWidth())
+    .height(this.panelHeight())
+    .margin({ left: this.panelLeft(), top: ReaderUiVisualTokens.readerFullPanelTop })
+    .border({ width: 1, color: ReaderUiVisualTokens.readerFullPanelBorder })
+    .borderRadius(ReaderUiVisualTokens.readerFullPanelRadius)
+    .backgroundColor(ReaderUiVisualTokens.readerFullPanelSurface)
     .hitTestBehavior(HitTestMode.Transparent)
     .zIndex(ZIndexTokens.bottomSheet)
   }
@@ -2107,21 +2391,24 @@ struct ReaderFullPanelShell {
 struct ReaderFullBlock {
   @Prop title: string = '';
   @Prop meta: string = '';
+  @Prop separator: boolean = false;
   @BuilderParam content: () => void;
 
   build() {
     Column({ space: 8 }) {
       Row() {
         Text(this.title)
-          .fontSize(13)
-          .fontWeight(800)
-          .fontColor(ColorTokens.controlInk)
+          .fontSize(ReaderUiVisualTokens.readerFullSettingsSectionTitleSize)
+          .fontWeight(700)
+          .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+          .fontColor(ReaderUiVisualTokens.readerFullHeaderInk)
           .layoutWeight(1)
         if (this.meta !== '') {
           Text(this.meta)
             .fontSize(10)
-            .fontWeight(600)
-            .fontColor(ColorTokens.muted)
+            .fontWeight(500)
+            .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+            .fontColor(ReaderUiVisualTokens.readerControlMuted)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
@@ -2131,10 +2418,8 @@ struct ReaderFullBlock {
       this.content()
     }
     .width('100%')
-    .padding({ left: 10, right: 10, top: 10, bottom: 10 })
-    .border({ width: 1, color: ColorTokens.border })
-    .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(DemoAliasTokens.surface)
+    .padding({ left: 10, right: 10, top: this.separator ? 11 : 10, bottom: 10 })
+    .border({ width: { top: this.separator ? 1 : 0 }, color: ReaderUiVisualTokens.readerFullContentBorder })
   }
 }
 
@@ -2146,18 +2431,30 @@ struct ReaderFullChoiceRow {
   @Prop disabled: boolean = false;
 
   private select(value: string): void {
-    if (this.disabled) return;
+    if (this.disabled || !this.isActionable()) return;
     if (this.choiceKey === 'tapMode') {
       ReaderUiStore.dispatch({ type: 'set-reader-setting-option', optionKey: 'tapMode', optionValue: value });
     } else if (this.choiceKey === 'pageAnimation') {
       ReaderUiStore.dispatch({ type: 'set-reader-setting-option', optionKey: 'pageAnimation', optionValue: this.pageAnimationValue(value) });
     } else if (this.choiceKey === 'ttsRate') {
       ReaderUiStore.dispatch({ type: 'tts-set-rate', ttsRate: parseFloat(value) });
+    } else if (this.choiceKey === 'screenTimeout' && value === '始终开启') {
+      ReaderUiStore.dispatch({ type: 'set-reader-toggle', toggleKey: 'keepScreenOn', toggleValue: true });
+    } else if (this.choiceKey === 'screenTimeout') {
+      ReaderUiStore.dispatch({ type: 'set-reader-toggle', toggleKey: 'keepScreenOn', toggleValue: false });
     }
+  }
+
+  private isActionable(): boolean {
+    return this.choiceKey === 'tapMode' || this.choiceKey === 'pageAnimation' ||
+      this.choiceKey === 'ttsRate' || this.choiceKey === 'screenTimeout';
   }
 
   private pageAnimationValue(value: string): string {
     if (value === '覆盖' || value === 'cover') return 'cover';
+    if (value === '滑动' || value === 'slide') return 'slide';
+    if (value === '仿真' || value === 'simulation') return 'simulation';
+    if (value === '滚动' || value === 'scroll') return 'scroll';
     if (value === '无' || value === '无动画' || value === 'none') return 'none';
     return 'slide';
   }
@@ -2168,68 +2465,115 @@ struct ReaderFullChoiceRow {
   }
 
   build() {
-    Row({ space: 6 }) {
+    Row({ space: 0 }) {
       ForEach(this.values, (value: string, i: number) => {
         Text(value)
-          .fontSize(10)
-          .fontWeight(760)
-          .fontColor(this.disabled ? ColorTokens.muted : (this.isActive(value) ? DemoAliasTokens.onPrimary : ColorTokens.controlInk))
-          .height(30)
+          .fontSize(ReaderUiVisualTokens.readerFullSettingsChoiceSize)
+          .fontWeight(600)
+          .fontFamily(ReaderUiVisualTokens.readerFullSettingsFontFamily)
+          .fontColor(this.disabled
+            ? ReaderUiVisualTokens.readerControlMuted
+            : (this.isActive(value)
+              ? ReaderUiVisualTokens.readerFullSettingsChoiceActive
+              : ReaderUiVisualTokens.readerFullSettingsChoiceInk))
+          .height(27)
           .layoutWeight(1)
-          .borderRadius(DemoAliasTokens.radiusMd)
-          .backgroundColor(!this.disabled && this.isActive(value) ? ColorTokens.primaryDark : ColorTokens.floatingControlBgAlt)
+          .borderRadius(6)
+          .backgroundColor(!this.disabled && this.isActive(value)
+            ? ReaderUiVisualTokens.readerFullSettingsSelectedSurface
+            : Color.Transparent)
           .textAlign(TextAlign.Center)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .opacity(this.disabled ? 0.56 : 1)
-          .enabled(!this.disabled)
+          .enabled(!this.disabled && this.isActionable())
           .onClick(() => this.select(value))
       }, (value: string, i: number) => `${value}-${i}`)
     }
     .width('100%')
+    .height(ReaderUiVisualTokens.readerFullSettingsSegmentHeight)
+    .padding(3)
+    .borderRadius(8)
+    .backgroundColor(ReaderUiVisualTokens.readerFullSettingsSegmentSurface)
   }
 }
 
 @Component
 struct ReaderFullFontChoiceRow {
   @StorageProp('reader.typography.fontFamily') fontFamily: string = 'serif';
-  private values: Array<[string, ReaderFontFamily]> = ReaderAppearanceSpecRegistry.fonts
-    .filter((item: ReaderAppearanceFont) => !item.importAction)
-    .map((item: ReaderAppearanceFont): [string, ReaderFontFamily] => [item.label, appearanceReaderFontFamily(item.arktsValue)]);
+  private values: ReaderAppearanceFont[] = ReaderAppearanceSpecRegistry.fonts;
+
+  private selected(item: ReaderAppearanceFont): boolean {
+    return !item.importAction && appearanceReaderFontFamily(item.arktsValue) === this.fontFamily;
+  }
+
+  private previewFamily(item: ReaderAppearanceFont): string {
+    switch (item.arktsValue) {
+      case 'serif': return 'Songti SC';
+      case 'kai': return 'Kaiti SC';
+      case 'fangsong': return 'STFangsong';
+      case 'mono': return 'JetBrains Mono';
+      case 'sourceSerif': return 'Noto Serif SC';
+      // The current Figma label itself is rendered in Tinos; the reader body
+      // continues to use the contract's LXGW WenKai mapping after selection.
+      case 'lxgw': return 'Tinos';
+      default: return ReaderUiVisualTokens.readerFullHeaderFontFamily;
+    }
+  }
+
+  @Builder
+  private fontCell(item: ReaderAppearanceFont) {
+    if (item.importAction) {
+      Text('导入')
+        .fontSize(10)
+        .fontWeight(400)
+        .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+        .fontColor(ReaderUiVisualTokens.readerFullHeaderInk)
+        .width(73.5)
+        .height(38)
+        .borderRadius(6)
+        .border({ width: 1, color: ReaderUiVisualTokens.readerFullAppearanceFontBorder })
+        .textAlign(TextAlign.Center)
+    } else {
+      Text(item.label)
+        .fontSize(10)
+        .fontWeight(400)
+        .fontFamily(this.previewFamily(item))
+        .fontColor(ReaderUiVisualTokens.readerFullHeaderInk)
+        .width(73.5)
+        .height(38)
+        .borderRadius(6)
+        .border({
+          width: 1,
+          color: this.selected(item)
+            ? ReaderUiVisualTokens.readerFullAppearanceFontSelectedStroke
+            : ReaderUiVisualTokens.readerFullAppearanceFontBorder,
+        })
+        .backgroundColor(this.selected(item)
+          ? ReaderUiVisualTokens.readerFullAppearanceFontSelectedSurface
+          : Color.Transparent)
+        .textAlign(TextAlign.Center)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .onClick(() => ReaderUiStore.dispatch({
+          type: 'set-reader-font-family',
+          fontFamily: appearanceReaderFontFamily(item.arktsValue),
+        }))
+    }
+  }
 
   build() {
-    Column({ space: 8 }) {
+    Column({ space: 6 }) {
       ForEach([0, 1], (row: number) => {
-        Row({ space: 8 }) {
-          ForEach(this.values.slice(row * 4, row * 4 + 4), (item: [string, ReaderFontFamily], i: number) => {
-            Text(item[0])
-              .fontSize(9)
-              .fontWeight(760)
-              .fontColor(item[1] === this.fontFamily ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
-              .height(30)
-              .layoutWeight(1)
-              .borderRadius(12)
-              .border({ width: 1, color: item[1] === this.fontFamily ? ColorTokens.primary : ColorTokens.border })
-              .backgroundColor(item[1] === this.fontFamily ? ColorTokens.primaryDark : ColorTokens.floatingControlBgAlt)
-              .textAlign(TextAlign.Center)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .onClick(() => ReaderUiStore.dispatch({ type: 'set-reader-font-family', fontFamily: item[1] }))
-          }, (item: [string, ReaderFontFamily], i: number) => `${item[1]}-${row}-${i}`)
+        Row({ space: 6 }) {
+          ForEach(this.values.slice(row * 4, row * 4 + 4), (item: ReaderAppearanceFont, i: number) => {
+            this.fontCell(item)
+          }, (item: ReaderAppearanceFont, i: number) => `${item.id}-${row}-${i}`)
         }
         .width('100%')
       }, (row: number) => `${row}`)
       Row() {
-        Text(ReaderAppearanceSpecRegistry.fonts.find((item: ReaderAppearanceFont) => item.importAction)?.label ?? '+ 导入')
-          .fontSize(9)
-          .fontWeight(760)
-          .fontColor(ColorTokens.controlInk)
-          .width('23%')
-          .height(30)
-          .borderRadius(12)
-          .border({ width: 1, color: ColorTokens.muted, style: BorderStyle.Dashed })
-          .textAlign(TextAlign.Center)
-          .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'reader-font-import-confirm' }))
+        this.fontCell(this.values.find((item: ReaderAppearanceFont) => item.importAction) ?? this.values[0])
+        Blank().layoutWeight(1)
       }
       .width('100%')
     }
@@ -2259,24 +2603,26 @@ struct ReaderFullThemeGrid {
           ForEach(this.options.slice(row * 4, row * 4 + 4), (item: ReaderThemeOption, i: number) => {
             Column({ space: 3 }) {
               Column()
-                .width(46)
-                .height(18)
+                .width(64)
+                .height(24)
                 .borderRadius(6)
                 .backgroundColor(item.swatch)
-                .border({ width: this.isActive(item) ? 2 : 1, color: this.isActive(item) ? ColorTokens.primary : ColorTokens.border })
+                .border({ width: 1, color: ReaderUiVisualTokens.readerAppearanceSwatchBorder })
               Text(item.label)
                 .fontSize(9)
-                .fontWeight(700)
-                .fontColor(this.isActive(item) ? ColorTokens.primary : ColorTokens.muted)
+                .fontWeight(400)
+                .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                .fontColor(ReaderUiVisualTokens.readerControlMuted)
                 .maxLines(1)
             }
             .layoutWeight(1)
             .height(59)
             .justifyContent(FlexAlign.Center)
             .alignItems(HorizontalAlign.Center)
-            .borderRadius(DemoAliasTokens.radiusMd)
-            .border({ width: this.isActive(item) ? 1 : 0, color: ColorTokens.primary })
-            .backgroundColor(this.isActive(item) ? ColorTokens.floatingControlBgAlt : DemoAliasTokens.surface)
+            .borderRadius(8)
+            .backgroundColor(this.isActive(item)
+              ? ReaderUiVisualTokens.readerAppearanceSelectedSurface
+              : ReaderUiVisualTokens.readerAppearanceNightTileSurface)
             .onClick(() => {
               MotionAdapter.apply('segment.item.switch', this.reducedMotion, this.getUIContext(), () => {
                 ReaderUiStore.dispatch({ type: 'set-reader-theme', theme: item.value });
@@ -2306,12 +2652,13 @@ struct ReaderFullAppearanceAction {
   build() {
     Text(this.label)
       .fontSize(9)
-      .fontWeight(760)
-      .fontColor(ColorTokens.controlInk)
+      .fontWeight(700)
+      .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+      .fontColor(ReaderUiVisualTokens.readerFullHeaderInk)
       .width(74)
       .height(28)
       .borderRadius(6)
-      .border({ width: 1, color: ColorTokens.border })
+      .border({ width: 1, color: ReaderUiVisualTokens.readerFullContentBorder })
       .textAlign(TextAlign.Center)
       .onClick(() => ReaderUiStore.dispatch({ type: 'settings-segment-switch', settingsKey: 'appThemeMode', settingsValue: this.mode }))
   }
@@ -2356,25 +2703,36 @@ struct ReaderFullAppearanceSelectRow {
   build() {
     Row() {
       Text(this.label)
-        .fontSize(11)
-        .fontWeight(760)
-        .fontColor(ColorTokens.controlInk)
+        .fontSize(ReaderUiVisualTokens.readerFullAppearanceFieldLabelSize)
+        .fontWeight(700)
+        .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+        .fontColor(ReaderUiVisualTokens.readerFullAppearanceFieldInk)
         .layoutWeight(1)
-      Text(this.currentLabel())
-        .fontSize(10)
-        .fontWeight(650)
-        .fontColor(ColorTokens.muted)
-      Text('⌄')
-        .fontSize(11)
-        .fontColor(ColorTokens.muted)
-        .margin({ left: 8 })
+      Row({ space: 4 }) {
+        Text(this.currentLabel())
+          .fontSize(9)
+          .fontWeight(500)
+          .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+          .fontColor(ReaderUiVisualTokens.readerControlMuted)
+          .layoutWeight(1)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text('⌄')
+          .fontSize(10)
+          .fontColor(ReaderUiVisualTokens.readerControlMuted)
+      }
+      .width(56)
+      .height(36)
+      .padding({ left: 6, right: 6 })
+      .borderRadius(6)
+      .border({ width: 1, color: ReaderUiVisualTokens.readerFullAppearanceFieldBorder })
+      .backgroundColor(ReaderUiVisualTokens.readerFullAppearanceFieldSurface)
+      .alignItems(VerticalAlign.Center)
     }
     .width('100%')
-    .height(34)
-    .padding({ left: 10, right: 10 })
-    .borderRadius(8)
-    .border({ width: 1, color: ColorTokens.border })
-    .backgroundColor(ColorTokens.floatingControlBgAlt)
+    .height(44)
+    .padding({ left: 9, right: 8 })
+    .borderRadius(6)
     .alignItems(VerticalAlign.Center)
     .onClick(() => this.select())
   }
@@ -2385,6 +2743,7 @@ struct ReaderFullStepperRow {
   @Prop label: string = '';
   @Prop value: string = '';
   @Prop metric: ReaderRenderMetric = 'fontSize';
+  @Prop divider: boolean = false;
 
   private title(): string {
     return ReaderAppearanceSpecRegistry.stepper(this.metric)?.label ?? this.label;
@@ -2393,41 +2752,45 @@ struct ReaderFullStepperRow {
   build() {
     Row() {
       Text(this.title())
-        .fontSize(12)
-        .fontWeight(760)
-        .fontColor(ColorTokens.controlInk)
+        .fontSize(11)
+        .fontWeight(500)
+        .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+        .fontColor(ReaderUiVisualTokens.readerFullAppearanceFieldInk)
         .layoutWeight(1)
-      Row({ space: 6 }) {
+      Row({ space: 4 }) {
         Text('-')
-          .fontSize(15)
-          .fontWeight(900)
-          .fontColor(ColorTokens.controlInk)
-          .width(28)
-          .height(26)
-          .borderRadius(DemoAliasTokens.radiusMd)
-          .backgroundColor(ColorTokens.floatingControlBgAlt)
+          .fontSize(14)
+          .fontWeight(700)
+          .fontColor(ReaderUiVisualTokens.readerFullAppearanceFieldInk)
+          .width(24)
+          .height(28)
+          .borderRadius(8)
+          .backgroundColor(ReaderUiVisualTokens.readerFullAppearanceStepperSurface)
           .textAlign(TextAlign.Center)
           .onClick(() => ReaderUiStore.dispatch({ type: 'step-reader-render-metric', readerMetric: this.metric, delta: -1 }))
         Text(this.value)
-          .fontSize(11)
-          .fontWeight(800)
-          .fontColor(ColorTokens.controlInk)
+          .fontSize(10)
+          .fontWeight(500)
+          .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+          .fontColor(ReaderUiVisualTokens.readerControlMuted)
           .width(42)
           .textAlign(TextAlign.Center)
         Text('+')
-          .fontSize(15)
-          .fontWeight(900)
-          .fontColor(ColorTokens.controlInk)
-          .width(28)
-          .height(26)
-          .borderRadius(DemoAliasTokens.radiusMd)
-          .backgroundColor(ColorTokens.floatingControlBgAlt)
+          .fontSize(14)
+          .fontWeight(700)
+          .fontColor(ReaderUiVisualTokens.readerFullAppearanceFieldInk)
+          .width(24)
+          .height(28)
+          .borderRadius(8)
+          .backgroundColor(ReaderUiVisualTokens.readerFullAppearanceStepperSurface)
           .textAlign(TextAlign.Center)
           .onClick(() => ReaderUiStore.dispatch({ type: 'step-reader-render-metric', readerMetric: this.metric, delta: 1 }))
       }
     }
     .width('100%')
-    .height(32)
+    .height(34)
+    .padding({ left: 8, right: 8 })
+    .border({ width: { top: this.divider ? 1 : 0 }, color: ReaderUiVisualTokens.readerFullContentBorder })
     .alignItems(VerticalAlign.Center)
   }
 }
@@ -2505,36 +2868,48 @@ struct ReaderFullTocRow {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Row({ space: 8 }) {
-        Text(this.title)
-          .fontSize(13)
-          .fontWeight(this.current ? 800 : 650)
-          .fontColor(this.current ? ColorTokens.primaryDark : ColorTokens.controlInk)
-          .layoutWeight(1)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-        if (this.current) {
-          Text('当前')
-            .fontSize(9)
-            .fontWeight(760)
-            .fontColor(ColorTokens.primaryDark)
-            .height(22)
-            .padding({ left: 7, right: 7 })
-            .borderRadius(DemoAliasTokens.radiusSm)
-            .backgroundColor(ColorTokens.floatingControlBgAlt)
-            .textAlign(TextAlign.Center)
-        }
-      }
-      .width('100%')
-      .height(42)
-      .padding({ left: 10, right: 10 })
-      .border({ width: { top: 1 }, color: ColorTokens.border })
-      .alignItems(VerticalAlign.Center)
-      .onClick(() => this.openChapter())
+      Text(this.title)
+        .fontSize(11)
+        .fontWeight(500)
+        .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+        .fontColor(ReaderUiVisualTokens.readerFullHeaderInk)
+        .width('100%')
+        .height(40)
+        .padding({ left: 9, right: 9 })
+        .borderRadius(6)
+        .backgroundColor(this.current ? ReaderUiVisualTokens.readerModuleSelectedSurface : Color.Transparent)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .onClick(() => this.openChapter())
       InteractionDebugBadge({ label: 'row', tone: 'action' })
     }
-    .width('100%')
-    .height(42)
+      .width('100%')
+      .height(40)
+  }
+}
+
+@Component
+struct ReaderFullBookmarkRow {
+  @Prop bookmark: CoreBookmark;
+
+  private title(): string {
+    const chapterName = this.bookmark.chapterName.trim();
+    return chapterName.length > 0 ? chapterName : `第 ${this.bookmark.chapterIndex + 1} 章`;
+  }
+
+  build() {
+    Text(this.title())
+      .fontSize(11)
+      .fontWeight(500)
+      .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+      .fontColor(ReaderUiVisualTokens.readerFullHeaderInk)
+      .width('100%')
+      .height(40)
+      .padding({ left: 9, right: 9 })
+      .borderRadius(6)
+      .maxLines(1)
+      .textOverflow({ overflow: TextOverflow.Ellipsis })
+      .onClick(() => ReaderUiStore.dispatch({ type: 'bookmark-open', bookmarkTime: this.bookmark.time }))
   }
 }
 
@@ -2549,69 +2924,199 @@ export struct ReaderFullDirectoryPage {
   @StorageProp('reader.bookmarksLoaded') bookmarksLoaded: boolean = false;
   @StorageProp('reader.bookmarksLoading') bookmarksLoading: boolean = false;
   @StorageProp('reader.bookmarksError') bookmarksError: string = '';
+  @State private searchText: string = '';
+  @State private appliedQuery: string = '';
+  @State private descending: boolean = false;
+  private directoryScroller: Scroller = new Scroller();
 
   private statusMessage(): string {
-    if (this.currentBook === null) return '尚未选择书籍，无法显示目录。';
-    return this.loading ? '正在从 Core 加载章节目录…' : '暂无从 Core 返回的章节目录。';
+    if (this.currentBook === null) return '暂无章节';
+    return this.loading ? '加载章节中' : '暂无章节';
   }
 
   private isCurrent(chapter: ChapterTocEntry): boolean {
     return this.currentChapterTitle.length > 0 && this.currentChapterTitle === chapter.title;
   }
 
+  private visibleChapters(): ChapterTocEntry[] {
+    const query = this.appliedQuery.trim().toLowerCase();
+    const result = query.length === 0
+      ? this.chapterToc.slice()
+      : this.chapterToc.filter((chapter: ChapterTocEntry) => chapter.title.toLowerCase().includes(query));
+    return this.descending ? result.reverse() : result;
+  }
+
+  private applySearch(): void {
+    this.appliedQuery = this.searchText;
+    this.directoryScroller.scrollEdge(Edge.Top);
+  }
+
+  private jumpToTop(): void {
+    this.directoryScroller.scrollEdge(Edge.Top);
+  }
+
+  private jumpToBottom(): void {
+    this.directoryScroller.scrollEdge(Edge.Bottom);
+  }
+
+  private toggleOrder(): void {
+    this.descending = !this.descending;
+    this.directoryScroller.scrollEdge(Edge.Top);
+  }
+
+  private currentChapterOrdinal(): number {
+    const all = this.visibleChapters();
+    for (let index = 0; index < all.length; index += 1) {
+      if (this.isCurrent(all[index])) return index + 1;
+    }
+    return 0;
+  }
+
+  private currentChapterLabel(): string {
+    return this.currentChapterTitle.length > 0 ? this.currentChapterTitle : '—';
+  }
+
   build() {
     ReaderFullPanelShell({ title: '目录', quickRoute: 'toc-bookmarks', debugLabel: 'ReaderExpandedPanel' }) {
       Column() {
-        Row({ space: 6 }) {
-          Text('目录')
-            .fontSize(12)
-            .fontWeight(800)
-            .fontColor(this.tocMode === 'directory' ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
-            .layoutWeight(1)
-            .height(32)
-            .borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(this.tocMode === 'directory' ? ColorTokens.primaryDark : ColorTokens.floatingControlBgAlt)
-            .textAlign(TextAlign.Center)
-            .onClick(() => ReaderUiStore.dispatch({ type: 'set-toc-mode', tocMode: 'directory' }))
-          Text('书签')
-            .fontSize(12)
-            .fontWeight(800)
-            .fontColor(this.tocMode === 'bookmark' ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
-            .layoutWeight(1)
-            .height(32)
-            .borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(this.tocMode === 'bookmark' ? ColorTokens.primaryDark : ColorTokens.floatingControlBgAlt)
-            .textAlign(TextAlign.Center)
+        Row({ space: 0 }) {
+          Column({ space: 0 }) {
+            Text('目录')
+              .fontSize(11)
+              .fontWeight(600)
+              .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+              .fontColor(this.tocMode === 'directory'
+                ? ReaderUiVisualTokens.readerModuleActive
+                : ReaderUiVisualTokens.readerControlMuted)
+              .width('100%')
+              .height(34)
+              .textAlign(TextAlign.Center)
+              .onClick(() => ReaderUiStore.dispatch({ type: 'set-toc-mode', tocMode: 'directory' }))
+            Column()
+              .width(83)
+              .height(this.tocMode === 'directory' ? 2 : 0)
+              .borderRadius(999)
+              .backgroundColor(ReaderUiVisualTokens.readerModuleActive)
+          }
+          .layoutWeight(1)
+          .height(36)
+          .alignItems(HorizontalAlign.Center)
+
+          Column({ space: 0 }) {
+            Row({ space: 5 }) {
+              Image($r('app.media.figma_reader_directory_bookmark')).width(15).height(15)
+              Text('书签')
+                .fontSize(11)
+                .fontWeight(600)
+                .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                .fontColor(this.tocMode === 'bookmark'
+                  ? ReaderUiVisualTokens.readerModuleActive
+                  : ReaderUiVisualTokens.readerControlMuted)
+            }
+            .height(34)
+            .justifyContent(FlexAlign.Center)
             .onClick(() => ReaderUiStore.dispatch({ type: 'set-toc-mode', tocMode: 'bookmark' }))
+            Column()
+              .width(83)
+              .height(this.tocMode === 'bookmark' ? 2 : 0)
+              .borderRadius(999)
+              .backgroundColor(ReaderUiVisualTokens.readerModuleActive)
+          }
+          .layoutWeight(1)
         }
         .width('100%')
-        .padding({ left: 10, right: 10, top: 10, bottom: 8 })
+        .height(42)
+        .padding({ left: 8, right: 8, top: 5 })
+        .border({ width: { bottom: 1 }, color: ReaderUiVisualTokens.readerFullContentBorder })
+
+        Row({ space: 5 }) {
+          Row({ space: 7 }) {
+            Image($r('app.media.figma_reader_directory_search')).width(16).height(16)
+            TextInput({ text: this.searchText, placeholder: '搜索章节名称' })
+              .fontSize(10)
+              .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+              .fontColor(ReaderUiVisualTokens.readerFullHeaderInk)
+              .placeholderColor(ReaderUiVisualTokens.readerControlMuted)
+              .backgroundColor(Color.Transparent)
+              .layoutWeight(1)
+              .height(32)
+              .onChange((value: string) => this.searchText = value)
+          }
+          .width(168)
+          .height(32)
+          .padding({ left: 9, right: 9 })
+          .borderRadius(8)
+          .backgroundColor(ReaderUiVisualTokens.readerFullSettingsSegmentSurface)
+          .alignItems(VerticalAlign.Center)
+
+          Stack({ alignContent: Alignment.Center }) {
+            Image($r('app.media.figma_reader_directory_search_active')).width(16).height(16)
+          }
+          .width(32)
+          .height(32)
+          .borderRadius(8)
+          .backgroundColor(ReaderUiVisualTokens.readerFullSettingsSegmentSurface)
+          .onClick(() => this.applySearch())
+          Stack({ alignContent: Alignment.Center }) {
+            Image($r('app.media.figma_reader_directory_top')).width(16).height(16)
+          }
+          .width(32)
+          .height(32)
+          .borderRadius(8)
+          .backgroundColor(ReaderUiVisualTokens.readerFullSettingsSegmentSurface)
+          .onClick(() => this.jumpToTop())
+          Stack({ alignContent: Alignment.Center }) {
+            Image($r('app.media.figma_reader_directory_bottom')).width(16).height(16)
+          }
+          .width(32)
+          .height(32)
+          .borderRadius(8)
+          .backgroundColor(ReaderUiVisualTokens.readerFullSettingsSegmentSurface)
+          .onClick(() => this.jumpToBottom())
+          Stack({ alignContent: Alignment.Center }) {
+            Image($r('app.media.figma_reader_directory_order')).width(16).height(16)
+          }
+          .width(32)
+          .height(32)
+          .borderRadius(8)
+          .backgroundColor(ReaderUiVisualTokens.readerFullSettingsSegmentSurface)
+          .onClick(() => this.toggleOrder())
+        }
+        .width('100%')
+        .height(51)
+        .padding({ left: 10, right: 10, top: 9, bottom: 10 })
+        .border({ width: { bottom: 1 }, color: ReaderUiVisualTokens.readerFullContentBorder })
 
         if (this.tocMode === 'bookmark') {
           if (this.currentBook === null) {
-            Text('尚未打开书籍，无法读取 Core 书签。')
-              .fontSize(12).fontColor(ColorTokens.muted).lineHeight(19)
-              .width('100%').padding({ left: 10, right: 10, top: 16, bottom: 16 })
+            Text('暂无书签')
+              .fontSize(10).fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+              .fontColor(ReaderUiVisualTokens.readerControlMuted)
+              .width('100%').layoutWeight(1).padding({ left: 10, right: 10, top: 16, bottom: 16 })
           } else if (this.bookmarksLoading || !this.bookmarksLoaded) {
-            Text('正在从 Core 读取当前书的书签…')
-              .fontSize(12).fontColor(ColorTokens.muted).lineHeight(19)
-              .width('100%').padding({ left: 10, right: 10, top: 16, bottom: 16 })
+            Text('加载书签中')
+              .fontSize(10).fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+              .fontColor(ReaderUiVisualTokens.readerControlMuted)
+              .width('100%').layoutWeight(1).padding({ left: 10, right: 10, top: 16, bottom: 16 })
           } else if (this.bookmarksError.length > 0) {
-            Text(`书签操作失败：${this.bookmarksError}`)
-              .fontSize(12).fontColor(ColorTokens.accent).lineHeight(19)
-              .width('100%').padding({ left: 10, right: 10, top: 16, bottom: 16 })
+            Text('书签加载失败')
+              .fontSize(10).fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+              .fontColor(ReaderUiVisualTokens.readerControlMuted)
+              .width('100%').layoutWeight(1).padding({ left: 10, right: 10, top: 16, bottom: 16 })
           } else if (this.bookmarks.length === 0) {
-            Text('当前书在 Core 中还没有书签。可在阅读器控制栏添加当前位置书签。')
-              .fontSize(12).fontColor(ColorTokens.muted).lineHeight(19)
-              .width('100%').padding({ left: 10, right: 10, top: 16, bottom: 16 })
+            Text('暂无书签')
+              .fontSize(10).fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+              .fontColor(ReaderUiVisualTokens.readerControlMuted)
+              .width('100%').layoutWeight(1).padding({ left: 10, right: 10, top: 16, bottom: 16 })
           } else {
-            Scroll() {
+            Scroll(this.directoryScroller) {
               Column() {
                 ForEach(this.bookmarks, (bookmark: CoreBookmark, i: number) => {
-                  ReaderBookmarkLiveRow({ bookmark: bookmark, expanded: true })
+                  ReaderFullBookmarkRow({ bookmark: bookmark })
                 }, (bookmark: CoreBookmark, i: number) => `${bookmark.time}-${i}`)
               }
               .width('100%')
+              .padding({ left: 10, right: 10, top: 5 })
             }
             .width('100%')
             .layoutWeight(1)
@@ -2619,15 +3124,16 @@ export struct ReaderFullDirectoryPage {
           }
         } else if (this.currentBook === null || this.chapterToc.length === 0) {
           Text(this.statusMessage())
-            .fontSize(12)
-            .fontColor(ColorTokens.muted)
-            .lineHeight(19)
+            .fontSize(10)
+            .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+            .fontColor(ReaderUiVisualTokens.readerControlMuted)
             .width('100%')
+            .layoutWeight(1)
             .padding({ left: 10, right: 10, top: 16, bottom: 16 })
         } else {
-          Scroll() {
+          Scroll(this.directoryScroller) {
             Column() {
-              ForEach(this.chapterToc, (chapter: ChapterTocEntry, i: number) => {
+              ForEach(this.visibleChapters(), (chapter: ChapterTocEntry, i: number) => {
                 ReaderFullTocRow({
                   bookId: this.currentBook?.bookId ?? '',
                   chapterId: chapter.chapterId,
@@ -2637,16 +3143,146 @@ export struct ReaderFullDirectoryPage {
               }, (chapter: ChapterTocEntry, i: number) => `${chapter.chapterId}-${i}`)
             }
             .width('100%')
+            .padding({ left: 10, right: 10, top: 5 })
           }
           .width('100%')
           .layoutWeight(1)
           .scrollBar(BarState.Auto)
         }
+
+        Row({ space: 9 }) {
+          Text('当前章节')
+            .fontSize(9)
+            .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+            .fontColor(ReaderUiVisualTokens.readerControlMuted)
+          Text(this.currentChapterLabel())
+            .fontSize(11)
+            .fontWeight(700)
+            .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+            .fontColor(ReaderUiVisualTokens.readerFullHeaderInk)
+            .layoutWeight(1)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Text(`${this.currentChapterOrdinal()} / ${this.visibleChapters().length}`)
+            .fontSize(9)
+            .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+            .fontColor(ReaderUiVisualTokens.readerControlMuted)
+        }
+        .width('100%')
+        .height(48)
+        .padding({ left: 12, right: 12 })
+        .border({ width: { top: 1 }, color: ReaderUiVisualTokens.readerFullContentBorder })
+        .backgroundColor(ReaderUiVisualTokens.readerFullSettingsSegmentSurface)
+        .alignItems(VerticalAlign.Center)
       }
       .width('100%')
       .height('100%')
-      .backgroundColor(DemoAliasTokens.surface)
     }
+  }
+}
+
+@Component
+struct ReaderFullTtsSwitch {
+  @Prop active: boolean = false;
+
+  build() {
+    Stack({ alignContent: this.active ? Alignment.End : Alignment.Start }) {
+      Column()
+        .width(20)
+        .height(20)
+        .borderRadius(10)
+        .backgroundColor(ReaderUiVisualTokens.readerFullTtsSwitchKnob)
+        .margin({ left: 2, right: 2 })
+    }
+    .width(44)
+    .height(24)
+    .borderRadius(999)
+    .backgroundColor(this.active
+      ? ReaderUiVisualTokens.readerFullTtsSwitchActive
+      : ReaderUiVisualTokens.readerFullTtsSwitchInactive)
+    // Figma currently supplies the visible states only.  These no-owner
+    // switches intentionally remain inert until Reader-UI/Core adds their
+    // events; keeping the exact design state is safer than inventing a Host
+    // capability or a local preference.
+    .enabled(false)
+  }
+}
+
+@Component
+struct ReaderFullTtsTimerDial {
+  @Prop value: string = '00';
+  @Prop unit: string = '分';
+
+  build() {
+    Column({ space: 4 }) {
+      Column() {
+        Text(this.value)
+          .fontSize(24)
+          .fontWeight(700)
+          .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+          .fontColor(ReaderUiVisualTokens.readerFullTtsInk)
+          .textAlign(TextAlign.Center)
+      }
+      .width(121.5)
+      .height(132)
+      .border({ width: 1, color: ReaderUiVisualTokens.readerFullTtsSectionBorder })
+      .borderRadius(ReaderUiVisualTokens.readerFullTtsSectionRadius)
+      .backgroundColor(ReaderUiVisualTokens.readerFullTtsSectionSurface)
+      .justifyContent(FlexAlign.Center)
+      Text(this.unit)
+        .fontSize(10)
+        .fontWeight(600)
+        .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+        .fontColor(ReaderUiVisualTokens.readerFullTtsMuted)
+        .width(123.5)
+        .textAlign(TextAlign.Center)
+    }
+    .width(123.5)
+    .height(149)
+  }
+}
+
+@Component
+struct ReaderFullTtsEngineTab {
+  @Prop title: string = '';
+  @Prop detail: string = '';
+  @Prop selected: boolean = false;
+
+  build() {
+    Row({ space: 8 }) {
+      Stack({ alignContent: Alignment.Center }) {
+        Image($r('app.media.reader_control_tts_playback'))
+          .width(16)
+          .height(16)
+      }
+      .width(44)
+      .height(44)
+      .borderRadius(ReaderUiVisualTokens.readerFullTtsFieldRadius)
+      .backgroundColor(this.selected ? ReaderUiVisualTokens.readerFullTtsSectionSurface : Color.Transparent)
+      Column({ space: 2 }) {
+        Text(this.title)
+          .fontSize(12)
+          .fontWeight(900)
+          .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+          .fontColor(ReaderUiVisualTokens.readerFullTtsControlInk)
+        Text(this.detail)
+          .fontSize(10)
+          .fontWeight(700)
+          .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+          .fontColor(ReaderUiVisualTokens.readerFullTtsMuted)
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+    }
+    .width('100%')
+    .height(54)
+    .padding({ left: 11, right: 11 })
+    .border({ width: this.selected ? 1 : 0, color: ReaderUiVisualTokens.readerFullTtsPrimary })
+    .borderRadius(ReaderUiVisualTokens.readerFullTtsFieldRadius)
+    .backgroundColor(this.selected ? ReaderUiVisualTokens.readerFullTtsTransportSurface : Color.Transparent)
+    // The Figma master contains no reaction for service selection.  Do not
+    // silently route to an unimplemented online TTS configuration.
+    .enabled(false)
   }
 }
 
@@ -2655,7 +3291,11 @@ export struct ReaderFullTtsPage {
   @StorageProp('reader.ttsSession.playback') playback: string = 'idle';
   @StorageProp('reader.ttsSession.currentSegment') currentSegment: number = 0;
   @StorageProp('reader.ttsSession.totalSegments') totalSegments: number = 0;
+  @StorageProp('reader.ttsSession.rate') ttsRate: number = 1;
+  @StorageProp('reader.ttsSession.timer') ttsTimer: TtsTimer = 'off';
+  @StorageProp('reader.ttsSession.voice') ttsVoice: string = 'system-default';
   @StorageProp('reader.chapterContent') chapterContent: string[] = [];
+  @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
 
   private canStart(): boolean {
     return this.chapterContent.length > 0;
@@ -2665,98 +3305,540 @@ export struct ReaderFullTtsPage {
     return this.totalSegments > 0;
   }
 
-  private playbackIcon(): string {
-    return this.playback === 'playing' ? 'Ⅱ' : '▶';
+  private rateLabel(): string {
+    return `${this.ttsRate.toFixed(1)}x`;
   }
 
-  private playbackLabel(): string {
-    if (this.playback === 'playing') return '暂停';
-    if (this.playback === 'paused') return '继续';
-    return '播放';
+  private playbackStatus(): string {
+    if (this.playback === 'playing') return '播放中';
+    if (this.playback === 'paused') return '已暂停';
+    return '未开始';
   }
 
-  private segmentLabel(): string {
-    if (!this.hasQueue()) return '等待 Core 切分当前正文';
-    return `片段 ${this.currentSegment + 1}/${this.totalSegments}`;
+  private timerLabel(timer: TtsTimer = this.ttsTimer): string {
+    switch (timer) {
+      case '5min': return '05:00';
+      case '10min': return '10:00';
+      case '15min': return '15:00';
+      case '30min': return '30:00';
+      case 'chapterEnd': return '本章结束';
+      default: return '不定时';
+    }
+  }
+
+  private timerOptions(): TtsTimer[] {
+    return ['off', '5min', '10min', '15min', '30min', 'chapterEnd'];
+  }
+
+  private timerOptionLabel(timer: TtsTimer): string {
+    if (timer === 'off') return '不定时';
+    return this.timerLabel(timer);
+  }
+
+  private timerMinutes(): string {
+    switch (this.ttsTimer) {
+      case '5min': return '05';
+      case '10min': return '10';
+      case '15min': return '15';
+      case '30min': return '30';
+      default: return '00';
+    }
+  }
+
+  private cycleTimer(): void {
+    let next: TtsTimer = '5min';
+    switch (this.ttsTimer) {
+      case '5min': next = '10min'; break;
+      case '10min': next = '15min'; break;
+      case '15min': next = '30min'; break;
+      case '30min': next = 'off'; break;
+      default: next = '5min'; break;
+    }
+    ReaderUiStore.dispatch({ type: 'tts-set-timer', ttsTimer: next });
+  }
+
+  private voiceLabel(): string {
+    if (this.ttsVoice.length === 0 || this.ttsVoice === 'system-default') return '系统默认';
+    return this.ttsVoice;
+  }
+
+  private updateRate(value: number, mode: SliderChangeMode): void {
+    if (mode === SliderChangeMode.Begin) return;
+    ReaderUiStore.dispatch({ type: 'tts-set-rate', ttsRate: Math.round(value) / 10 });
+  }
+
+  private stop(): void {
+    ReaderUiStore.dispatch({ type: 'reader-tts-stop' });
+  }
+
+  private start(): void {
+    MotionAdapter.apply('reader.session.tts.start', this.reducedMotion, this.getUIContext(), () => {
+      ReaderUiStore.startTtsFromReaderSurface();
+    });
   }
 
   build() {
-    ReaderFullPanelShell({ title: '朗读', quickRoute: 'tts', debugLabel: 'ReaderExpandedPanel' }) {
+    // Page/Reader Full TTS, current Phone master 942:78.  This is deliberately
+    // not the old generic settings-card composition: the Figma master has its
+    // own transport, timer, rate, detail and device-engine sections.  Only
+    // transport/timer/rate are interactive because those are the operations
+    // backed by the current Reader-UI/Core/Host contract.
+    ReaderFullPanelShell({
+      title: '朗读',
+      quickRoute: 'tts',
+      debugLabel: 'ReaderExpandedPanel',
+    }) {
       Scroll() {
-        Column({ space: 10 }) {
-          Row({ space: 12 }) {
-          Text('‹')
-            .fontSize(24)
-            .fontWeight(800)
-            .fontColor(ColorTokens.controlInk)
-            .width(44)
-            .height(44)
-            .borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(ColorTokens.floatingControlBgAlt)
-            .textAlign(TextAlign.Center)
-            .opacity(this.hasQueue() ? 1 : 0.5)
-            .enabled(this.hasQueue())
-            .onClick(() => ReaderUiStore.dispatch({ type: 'tts-prev' }))
-          Text(this.playbackIcon())
-            .fontSize(18)
-            .fontWeight(800)
-            .fontColor(DemoAliasTokens.onPrimary)
-            .width(52)
-            .height(52)
-            .borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(ColorTokens.primaryDark)
-            .textAlign(TextAlign.Center)
-            .opacity(this.canStart() ? 1 : 0.5)
-            .enabled(this.canStart())
-            .onClick(() => ReaderUiStore.dispatch({ type: 'tts-toggle' }))
-          Text('›')
-            .fontSize(24)
-            .fontWeight(800)
-            .fontColor(ColorTokens.controlInk)
-            .width(44)
-            .height(44)
-            .borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(ColorTokens.floatingControlBgAlt)
-            .textAlign(TextAlign.Center)
-            .opacity(this.hasQueue() ? 1 : 0.5)
-            .enabled(this.hasQueue())
-            .onClick(() => ReaderUiStore.dispatch({ type: 'tts-next' }))
-        }
-        .width('100%')
-        .height(64)
-        .justifyContent(FlexAlign.Center)
-        .alignItems(VerticalAlign.Center)
-
-          Text(this.canStart() ? `${this.playbackLabel()} · ${this.segmentLabel()}` : '正文尚未从 Core 加载，无法开始朗读。')
-          .fontSize(10)
-          .fontWeight(650)
-          .fontColor(ColorTokens.muted)
-          .width('100%')
-          .textAlign(TextAlign.Center)
-
-          ReaderFullBlock({ title: '语速', meta: 'TextReader Host 未提供程序化速率' }) {
-            ReaderFullChoiceRow({ values: ['0.5x', '1.0x', '1.5x', '2.0x'], active: '', choiceKey: 'ttsRate', disabled: true })
-          }
-          ReaderFullBlock({ title: '音色', meta: 'Host 未提供映射' }) {
-            ReaderFullChoiceRow({ values: ['系统默认', '清晰女声', '沉稳男声'], active: '', disabled: true })
-          }
-          ReaderFullBlock({ title: '朗读范围', meta: 'Core 仅当前章节' }) {
-            ReaderFullChoiceRow({ values: ['当前章节', '本书剩余', '循环朗读'], active: '当前章节', disabled: true })
-          }
-          ReaderFullBlock({ title: '在线语音', meta: 'HttpTTS 合同与凭据/播放闭环未接入' }) {
-            Column() {
-              ReaderFullToggleRow({ icon: '区', title: '区域', disabled: true, unavailableReason: '合同缺失' })
-              ReaderFullToggleRow({ icon: '语', title: '语言', disabled: true, unavailableReason: '合同缺失' })
-              ReaderFullToggleRow({ icon: '模', title: '模型', disabled: true, unavailableReason: '合同缺失' })
+        Column({ space: 0 }) {
+          Column({ space: 0 }) {
+            Row() {
+              Text('播放控制区')
+                .fontSize(12)
+                .fontWeight(700)
+                .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                .fontColor(ReaderUiVisualTokens.readerFullTtsInk)
+                .layoutWeight(1)
+              Text(this.playbackStatus())
+                .fontSize(10)
+                .fontWeight(500)
+                .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                .fontColor(ReaderUiVisualTokens.readerFullTtsMuted)
             }
             .width('100%')
+            .height(28)
+
+            Row({ space: 12 }) {
+              Stack({ alignContent: Alignment.Center }) {
+                Image($r('app.media.reader_control_compact_prev'))
+                  .width(16)
+                  .height(16)
+              }
+              .width(44)
+              .height(44)
+              .borderRadius(999)
+              .border({ width: 1, color: ReaderUiVisualTokens.readerFullTtsSectionBorder })
+              .backgroundColor(ReaderUiVisualTokens.readerFullTtsTransportSurface)
+              .opacity(this.hasQueue() ? 1 : 0.48)
+              .enabled(this.hasQueue())
+              .onClick(() => ReaderUiStore.dispatch({ type: 'tts-prev' }))
+
+              Stack({ alignContent: Alignment.Center }) {
+                Image($r('app.media.reader_control_play'))
+                  .width(21)
+                  .height(21)
+              }
+              .width(52)
+              .height(52)
+              .borderRadius(999)
+              .backgroundColor(ReaderUiVisualTokens.readerFullTtsPrimary)
+              .opacity(this.canStart() && this.playback !== 'playing' ? 1 : 0.48)
+              .enabled(this.canStart() && this.playback !== 'playing')
+              .onClick(() => this.start())
+
+              Stack({ alignContent: Alignment.Center }) {
+                Image($r('app.media.reader_control_tts_stop'))
+                  .width(44)
+                  .height(44)
+              }
+              .width(44)
+              .height(44)
+              .borderRadius(999)
+              .opacity(this.playback === 'idle' ? 0.48 : 1)
+              .enabled(this.playback !== 'idle')
+              .onClick(() => this.stop())
+
+              Stack({ alignContent: Alignment.Center }) {
+                Image($r('app.media.reader_control_compact_next'))
+                  .width(16)
+                  .height(16)
+              }
+              .width(44)
+              .height(44)
+              .borderRadius(999)
+              .border({ width: 1, color: ReaderUiVisualTokens.readerFullTtsSectionBorder })
+              .backgroundColor(ReaderUiVisualTokens.readerFullTtsTransportSurface)
+              .opacity(this.hasQueue() ? 1 : 0.48)
+              .enabled(this.hasQueue())
+              .onClick(() => ReaderUiStore.dispatch({ type: 'tts-next' }))
+            }
+            .width('100%')
+            .height(68)
+            .margin({ top: 8 })
+            .justifyContent(FlexAlign.Center)
+            .alignItems(VerticalAlign.Center)
           }
-          ReaderFullBlock({ title: '定时关闭', meta: 'Core/Host 未接入' }) {
-            ReaderFullChoiceRow({ values: ['不定时', '15 分钟', '30 分钟'], active: '', disabled: true })
+          .width('100%')
+          .height(128)
+          .padding({ top: 12 })
+
+          Column({ space: 0 }) {
+            Row() {
+              Text('定时')
+                .fontSize(12)
+                .fontWeight(700)
+                .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                .fontColor(ReaderUiVisualTokens.readerFullTtsInk)
+                .layoutWeight(1)
+              Text(this.timerLabel())
+                .fontSize(10)
+                .fontWeight(500)
+                .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                .fontColor(ReaderUiVisualTokens.readerFullTtsMuted)
+            }
+            .width('100%')
+            .height(28)
+
+            Column({ space: 0 }) {
+              Row({ space: 12 }) {
+                Stack({ alignContent: Alignment.Center }) {
+                  Image($r('app.media.reader_control_tts_clock'))
+                    .width(24)
+                    .height(24)
+                }
+                .width(44)
+                .height(44)
+                .border({ width: 1, color: ReaderUiVisualTokens.readerFullTtsSectionBorder })
+                .borderRadius(ReaderUiVisualTokens.readerFullTtsSectionRadius)
+                .backgroundColor(ReaderUiVisualTokens.readerFullTtsTransportSurface)
+                Column({ space: 2 }) {
+                  Text('朗读后停止')
+                    .fontSize(10)
+                    .fontWeight(400)
+                    .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                    .fontColor(ReaderUiVisualTokens.readerFullTtsMuted)
+                  Text(this.timerLabel())
+                    .fontSize(20)
+                    .fontWeight(700)
+                    .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                    .fontColor(ReaderUiVisualTokens.readerFullTtsInk)
+                }
+                .alignItems(HorizontalAlign.Start)
+              }
+              .width('100%')
+              .height(44)
+              .justifyContent(FlexAlign.Center)
+
+              Row({ space: 8 }) {
+                ReaderFullTtsTimerDial({ value: this.timerMinutes(), unit: '分' })
+                Text(':')
+                  .fontSize(15)
+                  .fontWeight(700)
+                  .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                  .fontColor(ReaderUiVisualTokens.readerFullTtsMuted)
+                  .width(5)
+                  .textAlign(TextAlign.Center)
+                ReaderFullTtsTimerDial({ value: '00', unit: '秒' })
+              }
+              .width('100%')
+              .height(167)
+              .margin({ top: 16 })
+              .padding({ left: 9, right: 9, top: 9, bottom: 9 })
+              .border({ width: 1, color: ReaderUiVisualTokens.readerFullTtsSectionBorder })
+              .borderRadius(ReaderUiVisualTokens.readerFullTtsSectionRadius)
+              .backgroundColor(ReaderUiVisualTokens.readerFullTtsTransportSurface)
+              .alignItems(VerticalAlign.Center)
+              .onClick(() => this.cycleTimer())
+            }
+            .width('100%')
+            .height(253)
+            .margin({ top: 8 })
+            .padding({ left: 13, right: 13, top: 13, bottom: 13 })
+            .border({ width: 1, color: ReaderUiVisualTokens.readerFullTtsSectionBorder })
+            .borderRadius(ReaderUiVisualTokens.readerFullTtsSectionRadius)
+            .backgroundColor(ReaderUiVisualTokens.readerFullTtsSectionSurface)
           }
+          .width('100%')
+          .height(314)
+          .padding({ top: 13 })
+          .border({ width: 1, color: ReaderUiVisualTokens.readerFullTtsSectionBorder })
+
+          Column({ space: 0 }) {
+            Row() {
+              Text('语速')
+                .fontSize(12)
+                .fontWeight(700)
+                .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                .fontColor(ReaderUiVisualTokens.readerFullTtsInk)
+                .layoutWeight(1)
+              Text(this.rateLabel())
+                .fontSize(10)
+                .fontWeight(500)
+                .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                .fontColor(ReaderUiVisualTokens.readerFullTtsMuted)
+            }
+            .width('100%')
+            .height(28)
+            Row({ space: 10 }) {
+              Text('0.5x')
+                .fontSize(10)
+                .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                .fontColor(ReaderUiVisualTokens.readerFullTtsMuted)
+              Slider({ value: this.ttsRate * 10, min: 5, max: 20, step: 1, style: SliderStyle.OutSet })
+                .layoutWeight(1)
+                .height(44)
+                .trackColor(ReaderUiVisualTokens.readerFullTtsSectionBorder)
+                .selectedColor(ReaderUiVisualTokens.readerFullTtsPrimary)
+                .blockColor(ReaderUiVisualTokens.readerFullTtsPrimary)
+                .onChange((value: number, mode: SliderChangeMode) => this.updateRate(value, mode))
+              Text('2.0x')
+                .fontSize(10)
+                .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                .fontColor(ReaderUiVisualTokens.readerFullTtsMuted)
+            }
+            .width('100%')
+            .margin({ top: 8 })
+            .alignItems(VerticalAlign.Center)
+          }
+          .width('100%')
+          .height(105)
+          .padding({ top: 13 })
+          .border({ width: 1, color: ReaderUiVisualTokens.readerFullTtsSectionBorder })
+
+          Column({ space: 0 }) {
+            Row() {
+              Text('详细配置')
+                .fontSize(12)
+                .fontWeight(700)
+                .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                .fontColor(ReaderUiVisualTokens.readerFullTtsInk)
+                .layoutWeight(1)
+              Text('即时生效')
+                .fontSize(10)
+                .fontWeight(500)
+                .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                .fontColor(ReaderUiVisualTokens.readerFullTtsMuted)
+            }
+            .width('100%')
+            .height(28)
+            Column({ space: 0 }) {
+              Row({ space: 8 }) {
+                Text('音色选项')
+                  .fontSize(12)
+                  .fontWeight(700)
+                  .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                  .fontColor(ReaderUiVisualTokens.readerFullTtsControlInk)
+                  .layoutWeight(1)
+                Row({ space: 3 }) {
+                  Text(this.voiceLabel())
+                    .fontSize(10)
+                    .fontWeight(500)
+                    .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                    .fontColor(ReaderUiVisualTokens.readerFullTtsControlInk)
+                    .layoutWeight(1)
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  Text('⌄')
+                    .fontSize(10)
+                    .fontColor(ReaderUiVisualTokens.readerFullTtsMuted)
+                }
+                .width(70)
+                .height(36)
+                .padding({ left: 6, right: 6 })
+                .border({ width: 1, color: ReaderUiVisualTokens.readerFullTtsSectionBorder })
+                .borderRadius(ReaderUiVisualTokens.readerFullTtsFieldRadius)
+                .backgroundColor(ReaderUiVisualTokens.readerFullTtsFieldSurface)
+                .alignItems(VerticalAlign.Center)
+              }
+              .width('100%')
+              .height(47)
+              .padding({ left: 10, right: 10 })
+              .border({ width: { bottom: 1 }, color: ReaderUiVisualTokens.readerFullTtsSectionBorder })
+              .alignItems(VerticalAlign.Center)
+              Row() {
+                Text('跟随高亮')
+                  .fontSize(12)
+                  .fontWeight(700)
+                  .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                  .fontColor(ReaderUiVisualTokens.readerFullTtsControlInk)
+                  .layoutWeight(1)
+                ReaderFullTtsSwitch({ active: true })
+              }
+              .width('100%')
+              .height(44)
+              .padding({ left: 10, right: 10 })
+              .border({ width: { bottom: 1 }, color: ReaderUiVisualTokens.readerFullTtsSectionBorder })
+              .alignItems(VerticalAlign.Center)
+              Row() {
+                Text('来电暂停')
+                  .fontSize(12)
+                  .fontWeight(700)
+                  .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                  .fontColor(ReaderUiVisualTokens.readerFullTtsControlInk)
+                  .layoutWeight(1)
+                ReaderFullTtsSwitch({ active: true })
+              }
+              .width('100%')
+              .height(44)
+              .padding({ left: 10, right: 10 })
+              .border({ width: { bottom: 1 }, color: ReaderUiVisualTokens.readerFullTtsSectionBorder })
+              .alignItems(VerticalAlign.Center)
+              Row() {
+                Text('允许与其他应用同时播放')
+                  .fontSize(12)
+                  .fontWeight(700)
+                  .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                  .fontColor(ReaderUiVisualTokens.readerFullTtsControlInk)
+                  .layoutWeight(1)
+                ReaderFullTtsSwitch({ active: false })
+              }
+              .width('100%')
+              .height(44)
+              .padding({ left: 10, right: 10 })
+              .alignItems(VerticalAlign.Center)
+            }
+            .width('100%')
+            .height(181)
+            .margin({ top: 8 })
+            .border({ width: 1, color: ReaderUiVisualTokens.readerFullTtsSectionBorder })
+            .borderRadius(ReaderUiVisualTokens.readerFullTtsFieldRadius)
+            .backgroundColor(ReaderUiVisualTokens.readerFullTtsSectionSurface)
+          }
+          .width('100%')
+          .height(242)
+          .padding({ top: 13 })
+          .border({ width: 1, color: ReaderUiVisualTokens.readerFullTtsSectionBorder })
+
+          Column({ space: 0 }) {
+            Row() {
+              Text('TTS 配置')
+                .fontSize(12)
+                .fontWeight(700)
+                .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                .fontColor(ReaderUiVisualTokens.readerFullTtsInk)
+                .layoutWeight(1)
+              Text('设备引擎')
+                .fontSize(10)
+                .fontWeight(500)
+                .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                .fontColor(ReaderUiVisualTokens.readerFullTtsMuted)
+            }
+            .width('100%')
+            .height(28)
+            Column({ space: 0 }) {
+              ReaderFullTtsEngineTab({ title: '系统 TTS', detail: '使用设备内置语音', selected: true })
+              ReaderFullTtsEngineTab({ title: '在线 TTS', detail: '第三方或自定义服务' })
+            }
+            .width('100%')
+            .height(116)
+            .margin({ top: 8 })
+            .padding({ left: 3, right: 3, top: 3, bottom: 3 })
+            .border({ width: 1, color: ReaderUiVisualTokens.readerFullTtsSectionBorder })
+            .borderRadius(ReaderUiVisualTokens.readerFullTtsFieldRadius)
+            .backgroundColor(ReaderUiVisualTokens.readerFullTtsSectionSurface)
+            Column({ space: 0 }) {
+              Row({ space: 8 }) {
+                Text('系统引擎')
+                  .fontSize(12)
+                  .fontWeight(700)
+                  .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                  .fontColor(ReaderUiVisualTokens.readerFullTtsControlInk)
+                  .layoutWeight(1)
+                Text(this.voiceLabel())
+                  .fontSize(10)
+                  .fontWeight(500)
+                  .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                  .fontColor(ReaderUiVisualTokens.readerFullTtsControlInk)
+                  .width(94)
+                  .height(36)
+                  .padding({ left: 7, right: 7 })
+                  .border({ width: 1, color: ReaderUiVisualTokens.readerFullTtsSectionBorder })
+                  .borderRadius(ReaderUiVisualTokens.readerFullTtsFieldRadius)
+                  .backgroundColor(ReaderUiVisualTokens.readerFullTtsTransportSurface)
+                  .textAlign(TextAlign.Center)
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+              }
+              .width('100%')
+              .height(45)
+              .padding({ left: 10, right: 10 })
+              .border({ width: { bottom: 1 }, color: ReaderUiVisualTokens.readerFullTtsSectionBorder })
+              .alignItems(VerticalAlign.Center)
+              Row({ space: 8 }) {
+                Text('语言')
+                  .fontSize(12)
+                  .fontWeight(700)
+                  .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                  .fontColor(ReaderUiVisualTokens.readerFullTtsControlInk)
+                  .layoutWeight(1)
+                Text('中文')
+                  .fontSize(10)
+                  .fontWeight(500)
+                  .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                  .fontColor(ReaderUiVisualTokens.readerFullTtsControlInk)
+                  .width(61)
+                  .height(36)
+                  .border({ width: 1, color: ReaderUiVisualTokens.readerFullTtsSectionBorder })
+                  .borderRadius(ReaderUiVisualTokens.readerFullTtsFieldRadius)
+                  .backgroundColor(ReaderUiVisualTokens.readerFullTtsTransportSurface)
+                  .textAlign(TextAlign.Center)
+              }
+              .width('100%')
+              .height(45)
+              .padding({ left: 10, right: 10 })
+              .border({ width: { bottom: 1 }, color: ReaderUiVisualTokens.readerFullTtsSectionBorder })
+              .alignItems(VerticalAlign.Center)
+              Row({ space: 8 }) {
+                Text('音频会话')
+                  .fontSize(12)
+                  .fontWeight(700)
+                  .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                  .fontColor(ReaderUiVisualTokens.readerFullTtsControlInk)
+                  .layoutWeight(1)
+                Text('媒体')
+                  .fontSize(10)
+                  .fontWeight(500)
+                  .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                  .fontColor(ReaderUiVisualTokens.readerFullTtsControlInk)
+                  .width(106)
+                  .height(36)
+                  .border({ width: 1, color: ReaderUiVisualTokens.readerFullTtsSectionBorder })
+                  .borderRadius(ReaderUiVisualTokens.readerFullTtsFieldRadius)
+                  .backgroundColor(ReaderUiVisualTokens.readerFullTtsTransportSurface)
+                  .textAlign(TextAlign.Center)
+              }
+              .width('100%')
+              .height(45)
+              .padding({ left: 10, right: 10 })
+              .border({ width: { bottom: 1 }, color: ReaderUiVisualTokens.readerFullTtsSectionBorder })
+              .alignItems(VerticalAlign.Center)
+              Row({ space: 8 }) {
+                Text('不可用处理')
+                  .fontSize(12)
+                  .fontWeight(700)
+                  .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                  .fontColor(ReaderUiVisualTokens.readerFullTtsControlInk)
+                  .layoutWeight(1)
+                Text('跳过')
+                  .fontSize(10)
+                  .fontWeight(500)
+                  .fontFamily(ReaderUiVisualTokens.readerFullHeaderFontFamily)
+                  .fontColor(ReaderUiVisualTokens.readerFullTtsControlInk)
+                  .width(106)
+                  .height(36)
+                  .border({ width: 1, color: ReaderUiVisualTokens.readerFullTtsSectionBorder })
+                  .borderRadius(ReaderUiVisualTokens.readerFullTtsFieldRadius)
+                  .backgroundColor(ReaderUiVisualTokens.readerFullTtsTransportSurface)
+                  .textAlign(TextAlign.Center)
+              }
+              .width('100%')
+              .height(45)
+              .padding({ left: 10, right: 10 })
+              .alignItems(VerticalAlign.Center)
+            }
+            .width('100%')
+            .height(182)
+            .margin({ top: 12 })
+            .border({ width: 1, color: ReaderUiVisualTokens.readerFullTtsSectionBorder })
+            .borderRadius(ReaderUiVisualTokens.readerFullTtsFieldRadius)
+            .backgroundColor(ReaderUiVisualTokens.readerFullTtsSectionSurface)
+          }
+          .width('100%')
+          .height(371)
+          .padding({ top: 13 })
+          .border({ width: 1, color: ReaderUiVisualTokens.readerFullTtsSectionBorder })
         }
         .width('100%')
-        .padding(10)
+        .padding({ left: 12, right: 12, top: 10, bottom: 0 })
       }
       .width('100%')
       .height('100%')
@@ -2771,9 +3853,6 @@ export struct ReaderFullAppearancePage {
   @StorageProp('reader.typography.lineHeight') lineHeightRatio: number = ReaderAppearanceSpecRegistry.stepper('lineHeight')!.defaultValue;
   @StorageProp('reader.typography.paragraphGap') paragraphGap: number = ReaderAppearanceSpecRegistry.stepper('paragraphGap')!.defaultValue;
   @StorageProp('reader.typography.letterSpacing') letterSpacing: number = ReaderAppearanceSpecRegistry.stepper('letterSpacing')!.defaultValue;
-  @StorageProp('reader.pageSpace.topMargin') topMargin: number = 72;
-  @StorageProp('reader.pageSpace.sideMargin') sideMargin: number = 32;
-  @StorageProp('reader.pageSpace.paragraphIndent') paragraphIndent: number = 2;
   @StorageProp('reader.readerSettingOptions.paragraphIndentMode') paragraphIndentMode: string = ReaderAppearanceSpecRegistry.select('paragraphIndentMode')!.defaultValue;
   @StorageProp('reader.readerSettingOptions.textConversion') textConversion: string = ReaderAppearanceSpecRegistry.select('textConversion')!.defaultValue;
   @StorageProp('reader.readerSettingOptions.pageAnimation') pageAnimation: string = ReaderAppearanceSpecRegistry.select('pageAnimation')!.defaultValue;
@@ -2794,37 +3873,37 @@ export struct ReaderFullAppearancePage {
   build() {
     ReaderFullPanelShell({ title: '界面', quickRoute: 'reader-appearance', debugLabel: 'ReaderExpandedPanel' }) {
       Scroll() {
-        Column({ space: 10 }) {
+        Column({ space: 0 }) {
           ReaderFullBlock({ title: '主题库', meta: '日间：纸纹 · 夜间：夜纹' }) {
             ReaderFullThemeGrid()
           }
-          ReaderFullBlock({ title: '字形选择', meta: '使用已接入的本地字形' }) {
+          ReaderFullBlock({ title: '排版库', meta: '即时应用', separator: true }) {
+            Column({ space: 8 }) {
+              Row({ space: 12 }) {
+                ReaderFullAppearanceSelectRow({ label: '缩进', value: this.paragraphIndentMode, optionKey: 'paragraphIndentMode' })
+                ReaderFullAppearanceSelectRow({ label: '简繁', value: this.textConversion, optionKey: 'textConversion' })
+              }
+              .width('100%')
+              Row({ space: 12 }) {
+                ReaderFullAppearanceSelectRow({ label: '翻页动画', value: this.pageAnimation, optionKey: 'pageAnimation' })
+                ReaderFullAppearanceSelectRow({ label: '文字两端对齐', value: this.textAlignment, optionKey: 'textAlignment' })
+              }
+              .width('100%')
+              Column() {
+                ReaderFullStepperRow({ label: '字号', value: this.whole(this.fontSize), metric: 'fontSize' })
+                ReaderFullStepperRow({ label: '行距', value: this.two(this.lineHeightRatio), metric: 'lineHeight', divider: true })
+                ReaderFullStepperRow({ label: '段距', value: this.whole(this.paragraphGap), metric: 'paragraphGap', divider: true })
+                ReaderFullStepperRow({ label: '字距', value: this.one(this.letterSpacing), metric: 'letterSpacing', divider: true })
+              }
+              .width('100%')
+            }
+            .width('100%')
+          }
+          ReaderFullBlock({ title: '字体库', meta: '可拖动调整位置', separator: true }) {
             ReaderFullFontChoiceRow()
-          }
-          ReaderFullBlock({ title: '排版' }) {
-            Column({ space: 4 }) {
-              ReaderFullAppearanceSelectRow({ label: '缩进', value: this.paragraphIndentMode, optionKey: 'paragraphIndentMode' })
-              ReaderFullAppearanceSelectRow({ label: '简繁', value: this.textConversion, optionKey: 'textConversion' })
-              ReaderFullAppearanceSelectRow({ label: '翻页动画', value: this.pageAnimation, optionKey: 'pageAnimation' })
-              ReaderFullAppearanceSelectRow({ label: '文字对齐', value: this.textAlignment, optionKey: 'textAlignment' })
-              ReaderFullStepperRow({ label: '字号', value: this.whole(this.fontSize), metric: 'fontSize' })
-              ReaderFullStepperRow({ label: '行距', value: this.two(this.lineHeightRatio), metric: 'lineHeight' })
-              ReaderFullStepperRow({ label: '段距', value: this.whole(this.paragraphGap), metric: 'paragraphGap' })
-              ReaderFullStepperRow({ label: '字距', value: this.one(this.letterSpacing), metric: 'letterSpacing' })
-            }
-            .width('100%')
-          }
-          ReaderFullBlock({ title: '页面空间', meta: '边距 / 缩进' }) {
-            Column({ space: 4 }) {
-              ReaderFullStepperRow({ label: '上下边距', value: this.whole(this.topMargin), metric: 'topMargin' })
-              ReaderFullStepperRow({ label: '左右边距', value: this.whole(this.sideMargin), metric: 'sideMargin' })
-              ReaderFullStepperRow({ label: '段首缩进', value: this.one(this.paragraphIndent), metric: 'paragraphIndent' })
-            }
-            .width('100%')
           }
         }
         .width('100%')
-        .padding(10)
       }
       .width('100%')
       .height('100%')
@@ -2834,67 +3913,165 @@ export struct ReaderFullAppearancePage {
 }
 
 @Component
+struct ReaderFullFigmaChoiceRow {
+  @Prop label: string = '';
+  @Prop values: string[] = [];
+  @Prop active: string = '';
+  @Prop choiceKey: string = '';
+
+  build() {
+    Column({ space: 7 }) {
+      Text(this.label)
+        .fontFamily(ReaderUiVisualTokens.readerFullSettingsFontFamily)
+        .fontSize(ReaderUiVisualTokens.readerFullSettingsRowLabelSize)
+        .fontWeight(600)
+        .fontColor(ReaderUiVisualTokens.readerFullSettingsChoiceInk)
+        .width('100%')
+        .height(16)
+      ReaderFullChoiceRow({ values: this.values, active: this.active, choiceKey: this.choiceKey })
+    }
+    .width('100%')
+    .height(72)
+    .padding({ top: 8, bottom: 8 })
+  }
+}
+
+@Component
+struct ReaderFullFigmaSwitch {
+  @Prop active: boolean = false;
+  @Prop toggleKey: string = '';
+  @Prop optionKey: string = '';
+
+  private canToggle(): boolean {
+    return this.toggleKey.length > 0 || this.optionKey === 'textAlignment';
+  }
+
+  private toggle(): void {
+    if (this.toggleKey.length > 0) {
+      ReaderUiStore.dispatch({ type: 'set-reader-toggle', toggleKey: this.toggleKey as ReaderToggleKey, toggleValue: !this.active });
+    } else if (this.optionKey === 'textAlignment') {
+      ReaderUiStore.dispatch({
+        type: 'set-reader-setting-option',
+        optionKey: 'textAlignment',
+        optionValue: this.active ? 'leading' : 'justify',
+      });
+    }
+  }
+
+  build() {
+    Stack({ alignContent: this.active ? Alignment.End : Alignment.Start }) {
+      Column()
+        .width(20)
+        .height(20)
+        .borderRadius(10)
+        .backgroundColor(ReaderUiVisualTokens.readerFullSettingsSwitchKnob)
+        .margin({ left: 2, right: 2 })
+    }
+    .width(44)
+    .height(24)
+    .borderRadius(999)
+    .backgroundColor(this.active
+      ? ReaderUiVisualTokens.readerFullSettingsSwitchActive
+      : ReaderUiVisualTokens.readerFullSettingsSwitchInactive)
+    .enabled(this.canToggle())
+    .onClick(() => {
+      if (this.canToggle()) this.toggle();
+    })
+  }
+}
+
+@Component
+struct ReaderFullFigmaToggleRow {
+  @Prop title: string = '';
+  @Prop active: boolean = false;
+  @Prop toggleKey: string = '';
+  @Prop optionKey: string = '';
+
+  build() {
+    Row() {
+      Text(this.title)
+        .fontFamily(ReaderUiVisualTokens.readerFullSettingsFontFamily)
+        .fontSize(ReaderUiVisualTokens.readerFullSettingsRowLabelSize)
+        .fontWeight(600)
+        .fontColor(ReaderUiVisualTokens.readerFullSettingsChoiceInk)
+        .layoutWeight(1)
+      // An empty key intentionally leaves an unbound Figma control inert. It
+      // preserves the design without inventing a Host capability or a fake
+      // “unavailable” explanation inside the approved UI.
+      ReaderFullFigmaSwitch({ active: this.active, toggleKey: this.toggleKey, optionKey: this.optionKey })
+    }
+    .width('100%')
+    .height(38)
+    .alignItems(VerticalAlign.Center)
+  }
+}
+
+@Component
 export struct ReaderFullSettingsPage {
-  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
-  @StorageProp('reader.readerToggles.autoPage') autoPage: boolean = false;
-  @StorageProp('reader.readerToggles.volumePage') volumePage: boolean = false;
-  @StorageProp('reader.readerToggles.landscapeLock') landscapeLock: boolean = false;
   @StorageProp('reader.readerToggles.keepScreenOn') keepScreenOn: boolean = false;
-  @StorageProp('reader.readerToggles.statusInfo') statusInfo: boolean = true;
-  @StorageProp('reader.readerToggles.hapticFeedback') hapticFeedback: boolean = true;
   @StorageProp('reader.readerToggles.hideStatusBar') hideStatusBar: boolean = false;
-  @StorageProp('reader.readerSettingOptions.tapMode') tapMode: string = '左右区域';
+  @StorageProp('reader.readerToggles.volumePage') volumePage: boolean = false;
+  @StorageProp('reader.readerSettingOptions.textAlignment') textAlignment: string = 'justify';
   @StorageProp('reader.readerSettingOptions.pageAnimation') pageAnimation: string = ReaderAppearanceSpecRegistry.select('pageAnimation')!.defaultValue;
-  @StorageProp('reader.readerHostMessage') readerHostMessage: string = '';
+
+  private screenTimeout(): string {
+    return this.keepScreenOn ? '始终开启' : '5 分钟';
+  }
 
   build() {
     ReaderFullPanelShell({ title: '设置', quickRoute: 'reader-settings', debugLabel: 'ReaderExpandedPanel' }) {
       Scroll() {
-        Column({ space: 10 }) {
-          if (this.readerHostMessage.length > 0) {
-            Text(this.readerHostMessage)
-            .fontSize(10)
-            .fontWeight(650)
-            .fontColor(ColorTokens.accent)
-            .lineHeight(16)
-            .width('100%')
-            .padding({ left: 10, right: 10, top: 8, bottom: 8 })
-            .border({ width: 1, color: ColorTokens.border })
-            .borderRadius(DemoAliasTokens.radiusMd)
-            .backgroundColor(ColorTokens.surfaceSoft)
-        }
-          ReaderFullBlock({ title: '点击翻页方式', meta: this.tapMode }) {
-            ReaderFullChoiceRow({ values: ['左右区域', '中间', '边缘'], active: this.tapMode, choiceKey: 'tapMode' })
-          }
-          ReaderFullBlock({ title: '翻页动画', meta: '当前 Reader Pager 未接入仿真/滚动；可用平滑/覆盖/无动画' }) {
-            ReaderFullChoiceRow({ values: ['平滑', '覆盖', '无动画'], active: this.pageAnimation, choiceKey: 'pageAnimation' })
-          }
-          ReaderFullBlock({ title: '阅读行为', meta: '开关项' }) {
-            Column() {
-              ReaderFullToggleRow({ icon: '翻', title: '自动翻页', active: this.autoPage, toggleKey: 'autoPage' })
-              ReaderFullToggleRow({ icon: '音', title: '音量键翻页', active: this.volumePage, toggleKey: 'volumePage', disabled: true, unavailableReason: '未接入按键监听' })
-              ReaderFullToggleRow({ icon: '横', title: '横屏锁定', active: this.landscapeLock, toggleKey: 'landscapeLock', disabled: true, unavailableReason: '未接入方向 Host' })
-              ReaderFullToggleRow({ icon: '亮', title: '屏幕常亮', active: this.keepScreenOn, toggleKey: 'keepScreenOn' })
-              ReaderFullToggleRow({ icon: '页', title: '页脚进度信息', active: this.statusInfo, toggleKey: 'statusInfo' })
-              ReaderFullToggleRow({ icon: '触', title: '触摸反馈', active: this.hapticFeedback, toggleKey: 'hapticFeedback' })
-              ReaderFullToggleRow({ icon: '栏', title: '隐藏状态栏', active: this.hideStatusBar, toggleKey: 'hideStatusBar' })
+        Column({ space: 0 }) {
+          ReaderFullBlock({ title: '屏幕样式' }) {
+            Column({ space: 10 }) {
+              ReaderFullFigmaChoiceRow({
+                label: '屏幕方向',
+                values: ['跟随系统', '竖屏', '横屏'],
+                active: '跟随系统',
+              })
+              ReaderFullFigmaChoiceRow({
+                label: '翻页样式',
+                values: ['覆盖', '滑动', '仿真', '滚动', '无动画'],
+                active: this.pageAnimation,
+                choiceKey: 'pageAnimation',
+              })
+              ReaderFullFigmaChoiceRow({
+                label: '屏幕超时',
+                values: ['跟随系统', '1 分钟', '5 分钟', '10 分钟', '始终开启'],
+                active: this.screenTimeout(),
+                choiceKey: 'screenTimeout',
+              })
             }
             .width('100%')
-            .borderRadius(DemoAliasTokens.radiusMd)
-            .backgroundColor(ColorTokens.surfaceSoft)
           }
-          ReaderFullBlock({ title: '阅读缓存与预取', meta: 'Core 状态、预取与清理已接入' }) {
-            ReaderFullToggleRow({
-              icon: '缓',
-              title: this.currentBook === null ? '请先打开一本书' : '查看当前书籍缓存',
-              routeId: 'reader-book-cache',
-              disabled: this.currentBook === null,
-              unavailableReason: '缺少当前书籍上下文',
-            })
+
+          ReaderFullBlock({ title: '导航状态栏', separator: true }) {
+            Column() {
+              ReaderFullFigmaToggleRow({ title: '隐藏状态栏', active: this.hideStatusBar, toggleKey: 'hideStatusBar' })
+              ReaderFullFigmaToggleRow({ title: '隐藏导航栏' })
+              ReaderFullFigmaToggleRow({ title: '拓展到刘海（灵动岛）' })
+            }
+            .width('100%')
+          }
+
+          ReaderFullBlock({ title: '排版', separator: true }) {
+            Column() {
+              ReaderFullFigmaToggleRow({ title: '文字两端对齐', active: this.textAlignment === 'justify', optionKey: 'textAlignment' })
+              ReaderFullFigmaToggleRow({ title: '底部对齐' })
+            }
+            .width('100%')
+          }
+
+          ReaderFullBlock({ title: '控制', separator: true }) {
+            Column() {
+              ReaderFullFigmaToggleRow({ title: '音量键翻页', active: this.volumePage })
+              ReaderFullFigmaToggleRow({ title: '息屏终止朗读' })
+              ReaderFullFigmaToggleRow({ title: '长按选择文本' })
+            }
+            .width('100%')
           }
         }
         .width('100%')
-        .padding(10)
       }
       .width('100%')
       .height('100%')
@@ -3476,63 +4653,52 @@ export struct ReaderSearchPanel {
   }
 
   build() {
-    ReaderQuickPanelShell({ debugLabel: 'ReaderQuickPanel' }) {
+    ReaderQuickPanelShell({ debugLabel: 'ReaderQuickPanel', contentHeight: 196 }) {
       Column({ space: 5 }) {
-        Row() {
-          ReaderQuickBackButton()
-          Blank()
-          ReaderQuickPillButton({ label: 'Core 全文已接入', disabled: true })
-        }
-        .width('100%')
-        .height(24)
-        .alignItems(VerticalAlign.Center)
-
-        Row({ space: 6 }) {
-          Image($r('app.media.ui_icon_search_primary')).width(13).height(13)
-          TextInput({ text: this.query, placeholder: '搜索当前书籍的已缓存正文' })
-            .fontSize(11)
-            .fontWeight(760)
-            .fontColor(ColorTokens.controlInk)
-            .layoutWeight(1)
-            .enabled(this.hasCoreSearchScope() && !this.contentSearchLoading)
-            .onChange((value: string) => { this.query = value; })
-            .onSubmit(() => this.submitSearch())
+        Row({ space: 5 }) {
+          ReaderQuickBackButton({ buttonWidth: 51 })
+          Row({ space: 8 }) {
+            Image($r('app.media.ui_icon_search_primary')).width(11).height(11)
+            TextInput({ text: this.query, placeholder: '搜索正文内容' })
+              .fontSize(9)
+              .fontWeight(760)
+              .fontColor(ReaderUiVisualTokens.readerControlMuted)
+              .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
+              .layoutWeight(1)
+              .height(22)
+              .backgroundColor(Color.Transparent)
+              .enabled(this.hasCoreSearchScope() && !this.contentSearchLoading)
+              .onChange((value: string) => { this.query = value; })
+              .onSubmit(() => this.submitSearch())
+          }
+          .width(167)
+          .height(24)
+          .padding({ left: 7, right: 7 })
+          .border({ width: 1, color: ReaderUiVisualTokens.readerQuickSearchInputBorder })
+          .borderRadius(999)
+          .backgroundColor(ReaderUiVisualTokens.readerQuickSearchInputSurface)
+          .alignItems(VerticalAlign.Center)
           Text('搜索')
             .fontSize(10)
-            .fontWeight(760)
-            .fontColor(this.canSubmit() ? DemoAliasTokens.onPrimary : ColorTokens.muted)
-            .height(22)
-            .padding({ left: 8, right: 8 })
-            .borderRadius(DemoAliasTokens.radiusSm)
-            .backgroundColor(this.canSubmit() ? ColorTokens.primary : ColorTokens.metaBg)
-            .opacity(this.canSubmit() ? 1 : 0.7)
+            .fontWeight(750)
+            .fontColor(ReaderUiVisualTokens.readerControlSurface)
+            .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
+            .width(36)
+            .height(24)
+            .borderRadius(8)
+            .backgroundColor(ReaderUiVisualTokens.readerModuleActive)
+            .opacity(this.canSubmit() ? 1 : 0.54)
             .enabled(this.canSubmit())
             .textAlign(TextAlign.Center)
             .onClick(() => this.submitSearch())
         }
         .width('100%')
-        .height(32)
-        .padding({ left: 8, right: 8 })
-        .border({ width: 1, color: ColorTokens.border })
-        .borderRadius(DemoAliasTokens.radiusMd)
-        .backgroundColor(DemoAliasTokens.surface)
-        .alignItems(VerticalAlign.Center)
+        .height(24)
 
-        Column({ space: 4 }) {
-          Text('Core search.content 只查询当前书源、当前书籍的已缓存章节；点击结果会按 Core 目录跳转并写入返回的正文偏移。')
-            .fontSize(9)
-            .fontColor(ColorTokens.muted)
-            .lineHeight(14)
-            .padding({ left: 8, right: 8, top: 6 })
-          if (this.contentSearchMessage.length > 0) {
-            Text(this.contentSearchMessage)
-              .fontSize(9)
-              .fontColor(ColorTokens.primaryDark)
-              .lineHeight(14)
-              .padding({ left: 8, right: 8 })
-          }
+        Stack({ alignContent: Alignment.TopStart }) {
+          Column() {
           if (this.contentSearchResults.length > 0) {
-            ForEach(this.contentSearchResults, (result: CoreContentSearchResult, i: number) => {
+            ForEach(this.contentSearchResults.slice(0, 2), (result: CoreContentSearchResult, i: number) => {
               ReaderSearchResultRow({
                 title: this.resultTitle(result),
                 detail: this.resultDetail(result),
@@ -3542,376 +4708,151 @@ export struct ReaderSearchPanel {
               `${result.sourceId}-${result.bookId}-${result.chapterIndex}-${result.chapterOffset}-${i}`)
           } else {
             Text(this.statusMessage())
-              .fontSize(10)
-              .fontColor(ColorTokens.muted)
-              .lineHeight(16)
-              .padding(8)
+              .fontSize(9)
+              .fontColor(ReaderUiVisualTokens.readerControlMuted)
+              .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
+              .lineHeight(14)
+              .padding({ left: 8, right: 8, top: 10 })
           }
+          }
+          .width('100%')
         }
         .width('100%')
-        .layoutWeight(1)
+        .height(141)
         .clip(true)
-        .border({ width: 1, color: ColorTokens.border })
-        .borderRadius(DemoAliasTokens.radiusMd)
-        .backgroundColor(DemoAliasTokens.surface)
+        .border({ width: 1, color: ReaderUiVisualTokens.readerControlBorder })
+        .borderRadius(8)
+        .backgroundColor(ReaderUiVisualTokens.readerControlTranslucentSurface)
       }
       .width('100%')
-      .height('100%')
+      .height(170)
     }
+  }
+}
+
+@Component
+struct ReaderReplaceFigmaRuleRow {
+  @Prop rule: ReplaceRule;
+
+  private title(): string {
+    return this.rule.pattern.length > 0 ? this.rule.pattern : this.rule.replacement;
+  }
+
+  build() {
+    Row({ space: 10 }) {
+      Stack({ alignContent: this.rule.enabled ? Alignment.End : Alignment.Start }) {
+        Column()
+          .width(12)
+          .height(12)
+          .borderRadius(999)
+          .backgroundColor(ReaderUiVisualTokens.readerControlSurface)
+          .margin({ left: 2, right: 2 })
+      }
+      .width(27)
+      .height(16)
+      .borderRadius(999)
+      .backgroundColor(this.rule.enabled
+        ? ReaderUiVisualTokens.readerModuleActive
+        : ReaderUiVisualTokens.readerReplaceInactiveToggle)
+      .onClick(() => ReaderUiStore.dispatch({
+        type: 'replace-rule-toggle',
+        replaceRuleId: this.rule.id,
+      }))
+
+      Text(this.title())
+        .fontSize(9)
+        .fontWeight(600)
+        .fontColor(ReaderUiVisualTokens.readerControlInk)
+        .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
+        .layoutWeight(1)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .width('100%')
+    .height(28)
+    .padding({ left: 5, right: 5 })
+    .border({ width: { top: 1 }, color: ReaderUiVisualTokens.readerModuleDivider })
+    .alignItems(VerticalAlign.Center)
   }
 }
 
 // ── Replace panel (.fd-replace-quick-panel) ───────────────────────────────
-//   Live demo quick panel bound to state.replaceRules. Each row shows
-//   pattern -> replacement, an enabled toggle, edit and delete buttons.
-//   "新增规则" opens an inline form (pattern / replacement / scope) that
-//   dispatches replace-rule-add / replace-rule-edit; the toggle dispatches
-//   replace-rule-toggle; delete first opens an inline confirmation bound to a
-//   persisted Core rule, then the second tap dispatches the Core write.
+// Current Figma master is a compact rule switcher.  Editing, deleting,
+// import/export, and management pages have no admitted Figma target here, so
+// they are intentionally not rendered as extra native controls.
 @Component
 export struct ReaderReplacePanel {
   @StorageProp('reader.replaceRules') rules: ReplaceRule[] = [];
-  @StorageProp('reader.pendingReplaceRuleDeleteId') pendingReplaceRuleDeleteId: string = '';
-  @StorageProp('reader.coreSlice10Method') coreSlice10Method: string = '';
-  @StorageProp('reader.coreSlice10Loading') coreSlice10Loading: boolean = false;
-  @StorageProp('reader.coreSlice10Error') coreSlice10Error: string = '';
-  @StorageProp('reader.lastUndoToken') lastUndoToken: ReaderUIJSONPayload | null = null;
-  @State formVisible: boolean = false;
-  @State editingId: string = '';
-  @State patternInput: string = '';
-  @State replacementInput: string = '';
-  @State scopeInput: string = 'chapter';
-
-  private openAddForm(): void {
-    this.editingId = '';
-    this.patternInput = '';
-    this.replacementInput = '';
-    this.scopeInput = 'chapter';
-    this.formVisible = true;
-  }
-
-  private openEditForm(rule: ReplaceRule): void {
-    this.editingId = rule.id;
-    this.patternInput = rule.pattern;
-    this.replacementInput = rule.replacement;
-    this.scopeInput = rule.scope;
-    this.formVisible = true;
-  }
-
-  private closeForm(): void {
-    this.formVisible = false;
-    this.editingId = '';
-  }
-
-  private undoLastPersist(): void {
-    if (this.coreSlice10Loading) return;
-    const event = ReaderSlice10LivePayloadResolver.replaceUndoEvent(ReaderUiStore.snapshot());
-    if (event !== null) ReaderUiStore.dispatch(event);
-  }
-
-  private undoStatus(): string {
-    if (this.coreSlice10Method === 'replace.persist' && this.coreSlice10Loading) {
-      return 'Core 正在保存规则…';
-    }
-    if (this.coreSlice10Method === 'replace.undo') {
-      if (this.coreSlice10Loading) return 'Core 正在撤销…';
-      if (this.coreSlice10Error.length > 0) return this.coreSlice10Error;
-      return '已撤销上次新增规则';
-    }
-    if (this.coreSlice10Error.length > 0 && this.coreSlice10Method === 'replace.persist') {
-      return this.coreSlice10Error;
-    }
-    return this.lastUndoToken === null ? '' : '上次新增规则可撤销';
-  }
-
-  private pendingDeleteRule(): ReplaceRule | null {
-    const id = this.pendingReplaceRuleDeleteId;
-    for (let i = 0; i < this.rules.length; i++) {
-      if (this.rules[i].id === id) return this.rules[i];
-    }
-    return null;
-  }
-
-  private submitForm(): void {
-    if (this.patternInput.length === 0) {
-      return;
-    }
-    if (this.editingId.length > 0) {
-      ReaderUiStore.dispatch({
-        type: 'replace-rule-edit',
-        replaceRuleId: this.editingId,
-        replaceRulePattern: this.patternInput,
-        replaceRuleReplacement: this.replacementInput,
-        replaceRuleScope: this.scopeInput,
-      });
-    } else {
-      ReaderUiStore.dispatch({
-        type: 'replace-rule-add',
-        replaceRulePattern: this.patternInput,
-        replaceRuleReplacement: this.replacementInput,
-        replaceRuleScope: this.scopeInput,
-      });
-    }
-    this.closeForm();
-  }
 
   build() {
-    ReaderQuickPanelShell({ debugLabel: 'ReaderQuickPanel' }) {
-      Column({ space: 5 }) {
+    ReaderQuickPanelShell({ debugLabel: 'ReaderQuickPanel', contentHeight: 190 }) {
+      Column({ space: 4 }) {
         Row() {
-          ReaderQuickBackButton()
-          Blank()
-          Text('新增规则')
-            .fontSize(10)
-            .fontWeight(750)
-            .fontColor(ColorTokens.primaryDark)
-            .height(24)
-            .padding({ left: 9, right: 9 })
-            .border({ width: 1, color: ColorTokens.primary })
-            .borderRadius(DemoAliasTokens.radiusMd)
-            .backgroundColor(DemoAliasTokens.surface)
-            .textAlign(TextAlign.Center)
-            .onClick(() => this.openAddForm())
+          Text('替换规则')
+            .fontSize(13)
+            .fontWeight(700)
+            .fontColor(ReaderUiVisualTokens.readerControlInk)
+            .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
+            .layoutWeight(1)
+          Image($r('app.media.figma_reader_replace_close'))
+            .width(28)
+            .height(28)
+            .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
         }
         .width('100%')
-        .height(24)
+        .height(28)
+        .padding({ left: 8, right: 8 })
+        .border({ width: { bottom: 1 }, color: ReaderUiVisualTokens.readerModuleDivider })
         .alignItems(VerticalAlign.Center)
 
-        // Preset rule category labels (live demo copy)
-        Row({ space: 8 }) {
-          Text('雨容称呼').fontSize(9).fontColor(ColorTokens.muted)
-          Text('旧称统一').fontSize(9).fontColor(ColorTokens.muted)
-          Text('标点清理').fontSize(9).fontColor(ColorTokens.muted)
-          Text('广告过滤').fontSize(9).fontColor(ColorTokens.muted)
-        }
-        .width('100%')
-        .height(18)
-        .alignItems(VerticalAlign.Center)
+        Column({ space: 6 }) {
+          Column() {
+            ForEach(this.rules.slice(0, 3), (rule: ReplaceRule, i: number) => {
+              ReaderReplaceFigmaRuleRow({ rule: rule })
+            }, (rule: ReplaceRule, i: number) => `${rule.id}-${i}`)
+          }
+          .width('100%')
+          .height(93)
+          .padding({ left: 7, right: 7 })
+          .clip(true)
 
-        if (this.lastUndoToken !== null || this.coreSlice10Method === 'replace.persist' ||
-          this.coreSlice10Method === 'replace.undo') {
-          Row({ space: 8 }) {
-            Text(this.undoStatus())
-              .fontSize(9)
-              .fontColor(this.coreSlice10Error.length > 0 ? ColorTokens.accent : ColorTokens.muted)
-              .layoutWeight(1)
-              .maxLines(2)
-            Text('撤销上次新增')
-              .fontSize(10)
-              .fontWeight(750)
-              .fontColor(ColorTokens.primaryDark)
-              .height(24)
-              .padding({ left: 9, right: 9 })
-              .border({ width: 1, color: ColorTokens.primary })
-              .borderRadius(DemoAliasTokens.radiusMd)
-              .backgroundColor(DemoAliasTokens.surface)
+          Row({ space: 6 }) {
+            Text('预览效果')
+              .fontSize(8)
+              .fontWeight(600)
+              .fontColor(ReaderUiVisualTokens.readerControlInk)
+              .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
+              .width(97.59)
+              .height(28)
+              .border({ width: 1, color: ReaderUiVisualTokens.readerControlBorder })
+              .borderRadius(8)
+              .backgroundColor(ReaderUiVisualTokens.readerControlTranslucentSurface)
               .textAlign(TextAlign.Center)
-              .opacity(this.lastUndoToken === null || this.coreSlice10Loading ? 0.52 : 1)
-              .enabled(this.lastUndoToken !== null && !this.coreSlice10Loading)
-              .onClick(() => this.undoLastPersist())
+            // No target is admitted for replacement management; retain the
+            // current Figma affordance as inert visual evidence rather than
+            // routing into a locally invented page.
+            Text('完整管理')
+              .fontSize(8)
+              .fontWeight(600)
+              .fontColor(ReaderUiVisualTokens.readerControlSurface)
+              .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
+              .layoutWeight(1)
+              .height(28)
+              .borderRadius(8)
+              .backgroundColor(ReaderUiVisualTokens.readerModuleActive)
+              .textAlign(TextAlign.Center)
           }
           .width('100%')
           .height(28)
-          .alignItems(VerticalAlign.Center)
-        }
-
-        if (this.formVisible) {
-          Column({ space: 6 }) {
-            Text(this.editingId.length > 0 ? '编辑规则' : '新增规则')
-              .fontSize(11)
-              .fontWeight(700)
-              .fontColor(ColorTokens.controlInk)
-
-            TextInput({ text: this.patternInput, placeholder: '匹配内容' })
-              .fontSize(11)
-              .fontColor(ColorTokens.ink)
-              .height(32)
-              .padding({ left: 8, right: 8 })
-              .borderRadius(DemoAliasTokens.radiusSm)
-              .backgroundColor(ColorTokens.metaBg)
-              .border({ width: 1, color: ColorTokens.border })
-              .onChange((v: string) => { this.patternInput = v; })
-
-            TextInput({ text: this.replacementInput, placeholder: '替换为（可空）' })
-              .fontSize(11)
-              .fontColor(ColorTokens.ink)
-              .height(32)
-              .padding({ left: 8, right: 8 })
-              .borderRadius(DemoAliasTokens.radiusSm)
-              .backgroundColor(ColorTokens.metaBg)
-              .border({ width: 1, color: ColorTokens.border })
-              .onChange((v: string) => { this.replacementInput = v; })
-
-            Row({ space: 4 }) {
-              Text('本章')
-                .fontSize(11)
-                .fontWeight(760)
-                .fontColor(this.scopeInput === 'chapter' ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
-                .layoutWeight(1)
-                .height(24)
-                .textAlign(TextAlign.Center)
-                .borderRadius(DemoAliasTokens.radiusSm)
-                .backgroundColor(this.scopeInput === 'chapter' ? ColorTokens.primaryDark : 'transparent')
-                .onClick(() => { this.scopeInput = 'chapter'; })
-              Text('全书')
-                .fontSize(11)
-                .fontWeight(760)
-                .fontColor(this.scopeInput === 'book' ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
-                .layoutWeight(1)
-                .height(24)
-                .textAlign(TextAlign.Center)
-                .borderRadius(DemoAliasTokens.radiusSm)
-                .backgroundColor(this.scopeInput === 'book' ? ColorTokens.primaryDark : 'transparent')
-                .onClick(() => { this.scopeInput = 'book'; })
-            }
-            .width('100%')
-            .height(24)
-
-            Row({ space: 8 }) {
-              Text('保存')
-                .fontSize(11)
-                .fontWeight(760)
-                .fontColor(DemoAliasTokens.onPrimary)
-                .height(26)
-                .padding({ left: 14, right: 14 })
-                .borderRadius(DemoAliasTokens.radiusPill)
-                .backgroundColor(ColorTokens.primary)
-                .textAlign(TextAlign.Center)
-                .onClick(() => this.submitForm())
-              Text('取消')
-                .fontSize(11)
-                .fontWeight(760)
-                .fontColor(ColorTokens.primaryDark)
-                .height(26)
-                .padding({ left: 14, right: 14 })
-                .borderRadius(DemoAliasTokens.radiusPill)
-                .border({ width: 1, color: ColorTokens.primary })
-                .backgroundColor(DemoAliasTokens.surface)
-                .textAlign(TextAlign.Center)
-                .onClick(() => this.closeForm())
-            }
-            .width('100%')
-            .alignItems(VerticalAlign.Center)
-          }
-          .width('100%')
-          .padding(8)
-          .border({ width: 1, color: ColorTokens.border })
-          .borderRadius(DemoAliasTokens.radiusMd)
-          .backgroundColor(DemoAliasTokens.surface)
-        }
-
-        if (this.pendingReplaceRuleDeleteId.length > 0) {
-          Column({ space: 6 }) {
-            Text('确认删除这条替换规则？')
-              .fontSize(11)
-              .fontWeight(760)
-              .fontColor(ColorTokens.controlInk)
-            Text(this.pendingDeleteRule()?.pattern ?? '该规则已不在当前 Core 列表中')
-              .fontSize(10)
-              .fontColor(ColorTokens.muted)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-            Row({ space: 8 }) {
-              Text('取消')
-                .fontSize(10)
-                .fontWeight(760)
-                .fontColor(ColorTokens.primaryDark)
-                .height(26)
-                .padding({ left: 12, right: 12 })
-                .border({ width: 1, color: ColorTokens.primary })
-                .borderRadius(DemoAliasTokens.radiusPill)
-                .backgroundColor(DemoAliasTokens.surface)
-                .textAlign(TextAlign.Center)
-                .onClick(() => ReaderUiStore.dispatch({ type: 'replace-rule-delete-cancel' }))
-              Text('确认删除')
-                .fontSize(10)
-                .fontWeight(760)
-                .fontColor(DemoAliasTokens.onPrimary)
-                .height(26)
-                .padding({ left: 12, right: 12 })
-                .borderRadius(DemoAliasTokens.radiusPill)
-                .backgroundColor(ColorTokens.border)
-                .textAlign(TextAlign.Center)
-                .onClick(() => ReaderUiStore.dispatch({ type: 'replace-rule-delete-confirm' }))
-            }
-            .width('100%')
-            .alignItems(VerticalAlign.Center)
-          }
-          .width('100%')
-          .padding(8)
-          .border({ width: 1, color: ColorTokens.border })
-          .borderRadius(DemoAliasTokens.radiusMd)
-          .backgroundColor(ColorTokens.metaBg)
-        }
-
-        Column() {
-          ForEach(this.rules, (rule: ReplaceRule, i: number) => {
-            Row({ space: 6 }) {
-              Column() {
-                Text(rule.pattern)
-                  .fontSize(11)
-                  .fontWeight(600)
-                  .fontColor(ColorTokens.controlInk)
-                  .maxLines(1)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
-                if (rule.replacement.length > 0) {
-                  Text(`→ ${rule.replacement}`)
-                    .fontSize(9)
-                    .fontColor(ColorTokens.muted)
-                    .maxLines(1)
-                    .textOverflow({ overflow: TextOverflow.Ellipsis })
-                }
-              }
-              .layoutWeight(1)
-              .alignItems(HorizontalAlign.Start)
-
-              Toggle({ type: ToggleType.Switch, isOn: rule.enabled })
-                .selectedColor(ColorTokens.primary)
-                .onChange((on: boolean) => ReaderUiStore.dispatch({ type: 'replace-rule-toggle', replaceRuleId: rule.id }))
-
-              Text('编辑')
-                .fontSize(10)
-                .fontWeight(750)
-                .fontColor(ColorTokens.primaryDark)
-                .height(24)
-                .padding({ left: 8, right: 8 })
-                .border({ width: 1, color: ColorTokens.primary })
-                .borderRadius(DemoAliasTokens.radiusMd)
-                .backgroundColor(DemoAliasTokens.surface)
-                .textAlign(TextAlign.Center)
-                .onClick(() => this.openEditForm(rule))
-
-              Text('删除')
-                .fontSize(10)
-                .fontWeight(750)
-                .fontColor(DemoAliasTokens.onPrimary)
-                .height(24)
-                .padding({ left: 8, right: 8 })
-                .borderRadius(DemoAliasTokens.radiusMd)
-                .backgroundColor(ColorTokens.border)
-                .textAlign(TextAlign.Center)
-                .onClick(() => ReaderUiStore.dispatch({ type: 'replace-rule-delete-request', replaceRuleId: rule.id }))
-            }
-            .width('100%')
-            .height(40)
-            .padding({ left: 10, right: 10 })
-            .border({ width: { top: 1 }, color: ColorTokens.border })
-            .alignItems(VerticalAlign.Center)
-          }, (rule: ReplaceRule, i: number) => `${rule.id}|${rule.pattern}|${rule.replacement}|${rule.enabled}`)
         }
         .width('100%')
-        .layoutWeight(1)
-        .clip(true)
-        .border({ width: 1, color: ColorTokens.border })
-        .borderRadius(DemoAliasTokens.radiusMd)
-        .backgroundColor(DemoAliasTokens.surface)
+        .height(132)
       }
       .width('100%')
-      .height('100%')
+      .height(164)
     }
   }
 }
-
 // ── Auto-page panel (.fd-reader-auto-page-quick-panel) ────────────────────
 //   Live demo quick panel: toolbar, prev/toggle/next control, speed stepper,
 //   and two-option mode segment.
@@ -3926,143 +4867,148 @@ export struct ReaderAutoScrollPanel {
   }
 
   build() {
-    ReaderQuickPanelShell({ debugLabel: 'ReaderQuickPanel' }) {
+    ReaderQuickPanelShell({ debugLabel: 'ReaderQuickPanel', contentHeight: 196 }) {
       Column({ space: 5 }) {
         Row() {
-          ReaderQuickBackButton()
-          Blank()
-          ReaderQuickPillButton({ label: this.toggleLabel(), tapEvent: 'auto-page-toggle' })
+          ReaderQuickBackButton({ buttonWidth: 53 })
         }
         .width('100%')
         .height(24)
         .alignItems(VerticalAlign.Center)
 
-        Row({ space: 0 }) {
-          Column({ space: 3 }) {
-            Row() {
-              Image($r('app.media.reader_icon_chevron_left_chapter')).width(14).height(14)
-              Image($r('app.media.reader_icon_chevron_left_chapter')).width(14).height(14).margin({ left: -7 })
+        Stack({ alignContent: Alignment.TopStart }) {
+          Row({ space: 20 }) {
+            Column({ space: 3 }) {
+              Row() {
+                Image($r('app.media.reader_control_chapter_prev')).width(14).height(14)
+                Image($r('app.media.reader_control_chapter_prev')).width(14).height(14).margin({ left: -7 })
+              }
+              .width(27)
+              .height(27)
+              .justifyContent(FlexAlign.Center)
+              .alignItems(VerticalAlign.Center)
+              .border({ width: 1, color: ReaderUiVisualTokens.readerControlBorder })
+              .borderRadius(8)
+              .backgroundColor(ReaderUiVisualTokens.readerControlQuickActionSurface)
+              Text('上一章')
+                .fontSize(9)
+                .fontWeight(700)
+                .fontColor(ReaderUiVisualTokens.readerControlInk)
+                .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
             }
-            .width(30)
-            .height(26)
+            .width(62)
+            .height(52)
             .justifyContent(FlexAlign.Center)
-            .alignItems(VerticalAlign.Center)
-            .border({ width: 1, color: ColorTokens.border })
-            .borderRadius(DemoAliasTokens.radiusMd)
-            .backgroundColor(DemoAliasTokens.surface)
-            Text('上一章')
+            .alignItems(HorizontalAlign.Center)
+            .onClick(() => ReaderUiStore.dispatch({ type: 'chapter-prev' }))
+
+            Column({ space: 4 }) {
+              Stack({ alignContent: Alignment.Center }) {
+                Image($r('app.media.reader_control_play')).width(20).height(20)
+              }
+              .width(32)
+              .height(32)
+              .borderRadius(999)
+              .backgroundColor(ReaderUiVisualTokens.readerModuleActive)
+              Text('自动翻页')
+                .fontSize(9)
+                .fontWeight(800)
+                .fontColor(ReaderUiVisualTokens.readerControlInk)
+                .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
+                .maxLines(1)
+            }
+            .width(82)
+            .height(52)
+            .justifyContent(FlexAlign.Center)
+            .alignItems(HorizontalAlign.Center)
+            .onClick(() => ReaderUiStore.dispatch({ type: 'auto-page-toggle' }))
+
+            Column({ space: 3 }) {
+              Row() {
+                Image($r('app.media.reader_control_chapter_next')).width(14).height(14)
+                Image($r('app.media.reader_control_chapter_next')).width(14).height(14).margin({ left: -7 })
+              }
+              .width(27)
+              .height(27)
+              .justifyContent(FlexAlign.Center)
+              .alignItems(VerticalAlign.Center)
+              .border({ width: 1, color: ReaderUiVisualTokens.readerControlBorder })
+              .borderRadius(8)
+              .backgroundColor(ReaderUiVisualTokens.readerControlQuickActionSurface)
+              Text('下一章')
+                .fontSize(9)
+                .fontWeight(700)
+                .fontColor(ReaderUiVisualTokens.readerControlInk)
+                .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
+            }
+            .width(62)
+            .height(52)
+            .justifyContent(FlexAlign.Center)
+            .alignItems(HorizontalAlign.Center)
+            .onClick(() => ReaderUiStore.dispatch({ type: 'chapter-next' }))
+          }
+          .width(246)
+          .height(52)
+          .margin({ left: 9, top: 26 })
+
+          Column({ space: 3 }) {
+            Text('■')
+              .fontSize(13)
+              .fontColor(ReaderUiVisualTokens.readerAutoStop)
+              .width(24)
+              .height(24)
+              .textAlign(TextAlign.Center)
+            Text('停止')
               .fontSize(9)
               .fontWeight(700)
-              .fontColor(ColorTokens.controlInk)
+              .fontColor(ReaderUiVisualTokens.readerAutoStop)
+              .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
           }
-          .width(46)
-          .height('100%')
-          .justifyContent(FlexAlign.Center)
-          .alignItems(HorizontalAlign.Center)
-          .onClick(() => ReaderUiStore.dispatch({ type: 'chapter-prev' }))
-
-          Column({ space: 4 }) {
-            Stack({ alignContent: Alignment.Center }) {
-              Image($r('app.media.reader_icon_play_white')).width(15).height(15)
-            }
-            .width(38)
-            .height(38)
-            .borderRadius(DemoAliasTokens.radiusPill)
-            .backgroundColor(ColorTokens.primaryDark)
-            Text('自动翻页')
-              .fontSize(12)
-              .fontWeight(800)
-              .fontColor(ColorTokens.controlInk)
-              .maxLines(1)
-          }
-          .layoutWeight(1)
-          .height('100%')
-          .justifyContent(FlexAlign.Center)
-          .alignItems(HorizontalAlign.Center)
+          .width(24)
+          .height(41)
+          .position({ x: 161, y: 36 })
+          .opacity(this.activeSession === 'auto-page' ? 1 : 0.5)
           .onClick(() => ReaderUiStore.dispatch({ type: 'auto-page-toggle' }))
-
-          Column({ space: 3 }) {
-            Row() {
-              Image($r('app.media.reader_icon_chevron_chapter')).width(14).height(14)
-              Image($r('app.media.reader_icon_chevron_chapter')).width(14).height(14).margin({ left: -7 })
-            }
-            .width(30)
-            .height(26)
-            .justifyContent(FlexAlign.Center)
-            .alignItems(VerticalAlign.Center)
-            .border({ width: 1, color: ColorTokens.border })
-            .borderRadius(DemoAliasTokens.radiusMd)
-            .backgroundColor(DemoAliasTokens.surface)
-            Text('下一章')
-              .fontSize(9)
-              .fontWeight(700)
-              .fontColor(ColorTokens.controlInk)
-          }
-          .width(46)
-          .height('100%')
-          .justifyContent(FlexAlign.Center)
-          .alignItems(HorizontalAlign.Center)
-          .onClick(() => ReaderUiStore.dispatch({ type: 'chapter-next' }))
         }
         .width('100%')
-        .height(73)
-        .padding({ left: 8, right: 8, top: 4, bottom: 4 })
-        .border({ width: 1, color: ColorTokens.border })
-        .borderRadius(DemoAliasTokens.radiusMd)
-        .backgroundColor(DemoAliasTokens.surface)
+        .height(104)
+        .border({ width: 1, color: ReaderUiVisualTokens.readerControlBorder })
+        .borderRadius(8)
+        .backgroundColor(ReaderUiVisualTokens.readerControlTranslucentSurface)
 
         Row() {
           Text('翻页速度')
-            .fontSize(12)
+            .fontSize(11)
             .fontWeight(760)
-            .fontColor(ColorTokens.controlInk)
+            .fontColor(ReaderUiVisualTokens.readerControlInk)
+            .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
             .layoutWeight(1)
           Row({ space: 5 }) {
-            Text('-').fontSize(18).fontWeight(800).fontColor(ColorTokens.controlInk)
+            Text('-').fontSize(18).fontWeight(800).fontColor(ReaderUiVisualTokens.readerControlModuleInactiveLabel)
               .width(24).height(24).textAlign(TextAlign.Center)
-              .borderRadius(DemoAliasTokens.radiusPill).backgroundColor(ColorTokens.floatingControlBgAlt)
+              .borderRadius(999).backgroundColor(ReaderUiVisualTokens.readerControlQuickActionSurface)
+              .border({ width: 1, color: ReaderUiVisualTokens.readerControlBorder })
               .onClick(() => ReaderUiStore.dispatch({ type: 'auto-page-step-interval', delta: -1 }))
-            Text(`${this.intervalSeconds} 秒`).fontSize(15).fontWeight(780).fontColor(ColorTokens.controlInk)
-              .width(46).textAlign(TextAlign.Center)
-            Text('+').fontSize(18).fontWeight(800).fontColor(ColorTokens.controlInk)
+            Text(`${this.intervalSeconds} 秒`).fontSize(11).fontWeight(900).fontColor(ReaderUiVisualTokens.readerModuleActive)
+              .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
+              .width(30).textAlign(TextAlign.Center)
+            Text('+').fontSize(18).fontWeight(800).fontColor(ReaderUiVisualTokens.readerControlModuleInactiveLabel)
               .width(24).height(24).textAlign(TextAlign.Center)
-              .borderRadius(DemoAliasTokens.radiusPill).backgroundColor(ColorTokens.floatingControlBgAlt)
+              .borderRadius(999).backgroundColor(ReaderUiVisualTokens.readerControlQuickActionSurface)
+              .border({ width: 1, color: ReaderUiVisualTokens.readerControlBorder })
               .onClick(() => ReaderUiStore.dispatch({ type: 'auto-page-step-interval', delta: 1 }))
           }
         }
         .width('100%')
         .height(32)
         .padding({ left: 7, right: 7 })
-        .border({ width: 1, color: ColorTokens.border })
-        .borderRadius(DemoAliasTokens.radiusMd)
-        .backgroundColor(DemoAliasTokens.surface)
+        .border({ width: 1, color: ReaderUiVisualTokens.readerControlBorder })
+        .borderRadius(6)
+        .backgroundColor(ReaderUiVisualTokens.readerControlQuickActionSurface)
         .alignItems(VerticalAlign.Center)
-
-        Row({ space: 4 }) {
-          Text('连续')
-            .fontSize(12).fontWeight(760)
-            .fontColor(this.autoPageMode === 'continuous' ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
-            .layoutWeight(1).height(20).textAlign(TextAlign.Center)
-            .borderRadius(DemoAliasTokens.radiusSm)
-            .backgroundColor(this.autoPageMode === 'continuous' ? ColorTokens.primaryDark : 'transparent')
-            .onClick(() => ReaderUiStore.dispatch({ type: 'auto-page-set-mode', autoPageMode: 'continuous' }))
-          Text('单页')
-            .fontSize(12).fontWeight(760)
-            .fontColor(this.autoPageMode === 'single' ? DemoAliasTokens.onPrimary : ColorTokens.controlInk)
-            .layoutWeight(1).height(20).textAlign(TextAlign.Center)
-            .borderRadius(DemoAliasTokens.radiusSm)
-            .backgroundColor(this.autoPageMode === 'single' ? ColorTokens.primaryDark : 'transparent')
-            .onClick(() => ReaderUiStore.dispatch({ type: 'auto-page-set-mode', autoPageMode: 'single' }))
-        }
-        .width('100%')
-        .height(28)
-        .padding(3)
-        .border({ width: 1, color: ColorTokens.border })
-        .borderRadius(DemoAliasTokens.radiusMd)
-        .backgroundColor(DemoAliasTokens.surface)
       }
       .width('100%')
-      .height('100%')
+      .height(170)
     }
   }
 }

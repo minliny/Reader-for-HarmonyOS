@@ -15,8 +15,8 @@
 //
 // Immersive: the outermost Stack expands its paper background behind the system
 // status / nav bars so the reading paper owns the whole screen.
-import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { ZIndexTokens } from '../../contract/generated/DimensionTokens';
+import { ReaderUiVisualTokens } from '../../contract/reader_ui/VisualAdmission';
 import { ViewStateRenderer } from '../components/ViewStateRenderer';
 import { OverlayHost } from '../slots/OverlayHost';
 import { StateHost } from '../slots/StateHost';
@@ -47,7 +47,10 @@ export struct ReaderShell {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(ColorTokens.paper)
+    // The shell is visible during the first reader frame, before the layered
+    // ReadingSurface mounts. It must therefore start on the Figma paper base,
+    // not the older generic app paper that caused a visible flash.
+    .backgroundColor(ReaderUiVisualTokens.readerPaperBaseEnd)
     .expandSafeArea([SafeAreaType.SYSTEM, SafeAreaType.CUTOUT],
       [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END])
   }

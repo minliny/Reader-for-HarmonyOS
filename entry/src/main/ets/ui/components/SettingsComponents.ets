@@ -8,7 +8,8 @@ import { ReaderUiStore } from '../store/ReaderUiStore';
 import { InteractionDebugAdapter } from '../adapters/InteractionDebugAdapter';
 import { MotionAdapter } from '../adapters/MotionAdapter';
 import { TokenAdapter } from '../adapters/TokenAdapter';
-import { BookshelfView, CoreBookGroup } from '../store/ReaderUiState';
+import { BookshelfView } from '../store/ReaderUiState';
+import { ReaderUiVisualTokens } from '../../contract/reader_ui/VisualAdmission';
 
 interface SettingsRowSpec {
   title: string;
@@ -69,7 +70,9 @@ export struct SettingsNavRow {
     Row({ space: 12 }) {
       if (this.icon !== undefined) {
         Stack({ alignContent: Alignment.Center }) {
-          Image(this.icon).width(15).height(15)
+          Image(this.icon)
+            .width(ReaderUiVisualTokens.settingsIconGlyphSize)
+            .height(ReaderUiVisualTokens.settingsIconGlyphSize)
         }
         .width(28)
         .height(28)
@@ -446,8 +449,6 @@ struct SettingsSelectSheet {
     // the sheet look selected while leaving the Core query unchanged.
     if (this.settingsKey === 'bookshelfSort') {
       ReaderUiStore.dispatch({ type: 'set-bookshelf-sort', bookshelfSort: value });
-    } else if (this.settingsKey === 'bookshelfGroup') {
-      ReaderUiStore.dispatch({ type: 'set-bookshelf-group', bookshelfGroup: value });
     } else {
       ReaderUiStore.dispatch({ type: 'settings-segment-switch', settingsKey: this.settingsKey, settingsValue: value });
     }
@@ -506,208 +507,326 @@ struct SettingsDetailSection {
   }
 }
 
+// Direct Settings General implementation for the current Figma master. The
+// surrounding SettingsShell supplies the same 19vp side inset, 8vp top inset,
+// and vertical scroll contract as the Phone and Tablet masters.
 @Component
-export struct SettingsGeneralPage {
-  @Prop variant: string = 'general';
-  // B1 P0：从 AppStorage 读取设置状态，驱动 segment/switch 动态渲染
-  @StorageProp('reader.appThemeMode') appThemeMode: string = 'system';
-  @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
-  @StorageProp('reader.pendingCacheClear') pendingCacheClear: boolean = false;
-  @StorageProp('reader.coreSlice10Loading') coreSlice10Loading: boolean = false;
+struct FigmaSettingsSection {
+  @Prop title: string = '';
+  @BuilderParam content: () => void;
 
   build() {
     Column() {
-      if (this.variant === 'developer-motion') {
-        Text('开发者动效设置')
-          .fontSize(15)
-          .fontWeight(900)
-          .fontColor(ColorTokens.ink)
-          .width('100%')
-          .margin({ left: 12, bottom: 8 })
-      }
-      SettingsDetailSection({ title: '基础偏好' }) {
-        SettingsOptionRow({
-          title: 'App主题',
-          subtitle: '当前由 Harmony reducer 消费；跨重启持久化合同尚未冻结',
-          kind: 'segment',
-          settingsKey: 'appThemeMode',
-          icon: TokenAdapter.icon('palette'),
-          options: [
-            { label: '跟随系统', value: 'system', active: this.appThemeMode === 'system' },
-            { label: '浅色', value: 'light', active: this.appThemeMode === 'light' },
-            { label: '深色', value: 'dark', active: this.appThemeMode === 'dark' },
-          ],
-        })
-        SettingsOptionRow({
-          title: '语言',
-          subtitle: '合同展示简体中文、繁體中文、English；当前没有本地化消费方或可持久化设置契约',
-          kind: 'status',
-          value: '未接入',
-          tone: 'warn',
-          icon: TokenAdapter.icon('globe'),
-        })
-        SettingsOptionRow({
-          title: '启动时打开',
-          subtitle: '当前没有启动路由持久化与消费方',
-          kind: 'status',
-          value: '未接入',
-          tone: 'warn',
-          icon: TokenAdapter.icon('home'),
-        })
-      }
+      Text(this.title)
+        .fontFamily(ReaderUiVisualTokens.settingsFontFamily)
+        .fontSize(ReaderUiVisualTokens.settingsSectionTitleSize)
+        .fontWeight(900)
+        .fontColor(ReaderUiVisualTokens.settingsTitleInk)
+        .width('100%')
+        .margin({ left: ReaderUiVisualTokens.settingsSectionHeaderInset })
+      this.content()
+    }
+    .width('100%')
+    .padding({ top: ReaderUiVisualTokens.settingsSectionHeaderTopInset })
+    .backgroundColor(ReaderUiVisualTokens.settingsSectionSurface)
+    .border({ width: 1, color: ReaderUiVisualTokens.settingsSectionBorder })
+    .borderRadius(ReaderUiVisualTokens.settingsSectionRadius)
+    .alignItems(HorizontalAlign.Start)
+  }
+}
 
-      Column() {
-        SettingsDetailSection({ title: '阅读扩展' }) {
-          SettingsOptionRow({
-            title: '词典规则',
-            subtitle: 'Core 尚无 DictRule 命令、结果与持久化实体',
-            kind: 'status',
-            value: '合同缺失',
-            tone: 'warn',
-            icon: TokenAdapter.icon('book'),
-          })
-          SettingsOptionRow({
-            title: '大模型服务',
-            subtitle: '尚无 provider、凭据、请求、流式取消与结果合同',
-            kind: 'status',
-            value: '合同缺失',
-            tone: 'warn',
-            icon: TokenAdapter.icon('assist'),
-          })
+@Component
+struct FigmaSettingsRow {
+  @Prop title: string = '';
+  @Prop icon: Resource | undefined = undefined;
+  @BuilderParam trailing: () => void;
+
+  build() {
+    Row() {
+      Stack({ alignContent: Alignment.Center }) {
+        if (this.icon !== undefined) {
+          Image(this.icon).width(15).height(15)
         }
       }
-      .width('100%')
-      .margin({ top: 12 })
+      .width(ReaderUiVisualTokens.settingsIconSize)
+      .height(ReaderUiVisualTokens.settingsIconSize)
+      .borderRadius(ReaderUiVisualTokens.settingsIconRadius)
+      .backgroundColor(ReaderUiVisualTokens.settingsIconSurface)
 
-      Column() {
-        SettingsDetailSection({ title: '行为与反馈' }) {
-          SettingsOptionRow({
-            title: '自动检查更新',
-            subtitle: '当前没有更新检查 Host 服务或设置消费方',
-            kind: 'status',
-            value: '未接入',
-            tone: 'warn',
-            icon: TokenAdapter.icon('refresh'),
-          })
-          SettingsOptionRow({
-            title: '点击当前底栏回顶部',
-            subtitle: '当前底栏未消费该行为设置',
-            kind: 'status',
-            value: '未接入',
-            tone: 'warn',
-            icon: TokenAdapter.icon('top'),
-          })
-          SettingsOptionRow({ title: '减少动态效果', kind: 'switch', settingsKey: 'reducedMotion', switchOn: this.reducedMotion, icon: TokenAdapter.icon('motion') })
-          SettingsOptionRow({
-            title: '崩溃日志',
-            subtitle: '当前未接入日志开关或状态查询',
-            kind: 'status',
-            value: '状态未接入',
-            tone: 'warn',
-            icon: TokenAdapter.icon('bug'),
-          })
-          SettingsOptionRow({
-            title: '动画效果',
-            subtitle: '转场由当前 Motion 方案控制，尚无独立选择器消费方',
-            kind: 'status',
-            value: '未接入',
-            tone: 'warn',
-            icon: TokenAdapter.icon('play'),
-          })
-          SettingsOptionRow({
-            title: '缓存清理',
-            subtitle: '清理 Core 章节缓存和已完成队列项；保留未完成任务、书架与备份',
-            kind: 'action',
-            value: '清理 Core 缓存',
-            settingsKey: 'cache-clear',
-            icon: TokenAdapter.icon('trash'),
-          })
-          if (this.pendingCacheClear) {
-            Row({ space: 8 }) {
-              Text('取消')
-                .fontSize(12)
-                .fontWeight(750)
-                .fontColor(ColorTokens.primary)
-                .height(32)
-                .layoutWeight(1)
-                .textAlign(TextAlign.Center)
-                .borderRadius(DemoAliasTokens.radiusPill)
-                .border({ width: 1, color: ColorTokens.border })
-                .onClick(() => ReaderUiStore.dispatch({ type: 'cache-clear-cancel' }))
-              Text(this.coreSlice10Loading ? 'Core 正在清理…' : '确认清理 Core 缓存')
-                .fontSize(12)
-                .fontWeight(750)
-                .fontColor(DemoAliasTokens.onPrimary)
-                .height(32)
-                .layoutWeight(1)
-                .textAlign(TextAlign.Center)
-                .borderRadius(DemoAliasTokens.radiusPill)
-                .backgroundColor(ColorTokens.primary)
-                .opacity(this.coreSlice10Loading ? 0.6 : 1)
-                .enabled(!this.coreSlice10Loading)
-                .onClick(() => {
-                  if (!this.coreSlice10Loading) ReaderUiStore.dispatch({ type: 'cache-clear-confirm' });
-                })
-            }
-            .width('100%')
-            .padding({ left: 12, right: 12, top: 8, bottom: 4 })
-          }
+      Text(this.title)
+        .fontFamily(ReaderUiVisualTokens.settingsFontFamily)
+        .fontSize(ReaderUiVisualTokens.settingsRowLabelSize)
+        .fontWeight(800)
+        .fontColor(ReaderUiVisualTokens.settingsTitleInk)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .layoutWeight(1)
+        .margin({ left: ReaderUiVisualTokens.settingsSectionHeaderInset, right: 8 })
+
+      Row() {
+        this.trailing()
+      }
+      .justifyContent(FlexAlign.End)
+      .alignItems(VerticalAlign.Center)
+    }
+    .width('100%')
+    .height(ReaderUiVisualTokens.settingsRowHeight)
+    .padding({
+      left: ReaderUiVisualTokens.settingsRowHorizontalInset,
+      right: ReaderUiVisualTokens.settingsRowHorizontalInset,
+    })
+    .border({ width: { top: 1 }, color: ReaderUiVisualTokens.settingsRowDivider })
+    .alignItems(VerticalAlign.Center)
+    .accessibilityText(this.title)
+  }
+}
+
+@Component
+struct FigmaSettingsThemeSegment {
+  @Prop current: string = 'system';
+  @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
+
+  private choices(): SettingsChoiceSpec[] {
+    return [
+      { label: '跟随', value: 'system', active: this.current === 'system' },
+      { label: '浅色', value: 'light', active: this.current === 'light' },
+      { label: '深色', value: 'dark', active: this.current === 'dark' },
+    ];
+  }
+
+  private choose(value: string): void {
+    MotionAdapter.apply('segment.item.switch', this.reducedMotion, this.getUIContext(), () => {
+      ReaderUiStore.dispatch({ type: 'settings-segment-switch', settingsKey: 'appThemeMode', settingsValue: value });
+    });
+  }
+
+  build() {
+    Row({ space: 0 }) {
+      ForEach(this.choices(), (option: SettingsChoiceSpec) => {
+        Text(option.label)
+          .fontFamily(ReaderUiVisualTokens.settingsFontFamily)
+          .fontSize(ReaderUiVisualTokens.settingsControlValueSize)
+          .fontWeight(700)
+          .fontColor(option.active
+            ? ReaderUiVisualTokens.settingsSegmentSelectedInk
+            : ReaderUiVisualTokens.settingsSegmentInactiveInk)
+          .width(ReaderUiVisualTokens.settingsSegmentItemWidth)
+          .height(ReaderUiVisualTokens.settingsSegmentItemHeight)
+          .textAlign(TextAlign.Center)
+          .borderRadius(ReaderUiVisualTokens.settingsControlRadius)
+          .backgroundColor(option.active ? ReaderUiVisualTokens.settingsSegmentSelectedSurface : Color.Transparent)
+          .border({ width: option.active ? 1.25 : 0, color: ReaderUiVisualTokens.settingsSegmentSelectedBorder })
+          .onClick(() => this.choose(option.value))
+      // The selected Figma state is a visual variant, not just an accessibility
+      // description.  Include it in the ForEach identity so ArkUI recreates the
+      // option when the reducer changes `current`; otherwise the reused Text
+      // node can retain the previous fill/border even though AppStorage already
+      // holds the new segment value.
+      }, (option: SettingsChoiceSpec) => `${option.value}-${option.active ? 'selected' : 'default'}`)
+    }
+    .width(ReaderUiVisualTokens.settingsSegmentWidth)
+    .height(ReaderUiVisualTokens.settingsSegmentHeight)
+    .padding(ReaderUiVisualTokens.settingsSegmentInset)
+    .borderRadius(ReaderUiVisualTokens.settingsSectionRadius)
+    .backgroundColor(ReaderUiVisualTokens.settingsSegmentSurface)
+    .border({ width: 1, color: ReaderUiVisualTokens.settingsSegmentBorder })
+    .accessibilityText('App主题')
+    .accessibilityDescription(this.current === 'system' ? '跟随' : (this.current === 'light' ? '浅色' : '深色'))
+  }
+}
+
+@Component
+struct FigmaSettingsSelect {
+  @Prop value: string = '';
+  @Prop widthValue: number = 88;
+
+  build() {
+    Row({ space: 6 }) {
+      Text(this.value)
+        .fontFamily(ReaderUiVisualTokens.settingsFontFamily)
+        .fontSize(ReaderUiVisualTokens.settingsControlValueSize)
+        .fontWeight(400)
+        .fontColor(ReaderUiVisualTokens.settingsSelectInk)
+        .textAlign(TextAlign.End)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .layoutWeight(1)
+      Image($r('app.media.ui_icon_chevron_dark'))
+        .width(ReaderUiVisualTokens.settingsSelectChevronWidth)
+        .height(ReaderUiVisualTokens.settingsSelectChevronHeight)
+        .opacity(0.76)
+    }
+    .width(this.widthValue)
+    .height(ReaderUiVisualTokens.settingsSelectHeight)
+    .padding({
+      left: ReaderUiVisualTokens.settingsSelectHorizontalInset,
+      right: ReaderUiVisualTokens.settingsSelectHorizontalInset,
+    })
+    .borderRadius(ReaderUiVisualTokens.settingsControlRadius)
+    .backgroundColor(ReaderUiVisualTokens.settingsSelectSurface)
+    .border({ width: 1, color: ReaderUiVisualTokens.settingsSectionBorder })
+    .alignItems(VerticalAlign.Center)
+    .accessibilityText(this.value)
+  }
+}
+
+@Component
+struct FigmaSettingsSwitch {
+  @Prop on: boolean = false;
+  @Prop settingsKey: string = '';
+
+  private toggle(): void {
+    const next = !this.on;
+    if (this.settingsKey === 'reducedMotion') {
+      ReaderUiStore.dispatch({ type: 'toggle-reduced-motion', enabled: next });
+    } else if (this.settingsKey === 'crash-log') {
+      AppStorage.setOrCreate<boolean>('reader.settingsCrashLog', next);
+    } else {
+      ReaderUiStore.dispatch({ type: 'settings-switch-toggle', settingsKey: this.settingsKey, settingsToggleValue: next });
+    }
+  }
+
+  build() {
+    Stack({ alignContent: Alignment.Center }) {
+      Row() {
+        if (this.on) Blank().layoutWeight(1)
+        Row()
+          .width(ReaderUiVisualTokens.settingsSwitchThumbSize)
+          .height(ReaderUiVisualTokens.settingsSwitchThumbSize)
+          .borderRadius(ReaderUiVisualTokens.settingsSwitchThumbSize)
+          .backgroundColor(ReaderUiVisualTokens.settingsSwitchThumbSurface)
+        if (!this.on) Blank().layoutWeight(1)
+      }
+      .width(ReaderUiVisualTokens.settingsSwitchWidth)
+      .height(ReaderUiVisualTokens.settingsSwitchHeight)
+      .padding(2)
+      .borderRadius(ReaderUiVisualTokens.settingsSwitchWidth)
+      .backgroundColor(this.on ? ReaderUiVisualTokens.settingsSwitchOn : ReaderUiVisualTokens.settingsSwitchOff)
+      .alignItems(VerticalAlign.Center)
+    }
+    .width(ReaderUiVisualTokens.settingsSwitchWidth)
+    .height(ReaderUiVisualTokens.settingsSwitchWidth)
+    .accessibilityText('设置开关')
+    .accessibilityDescription(this.on ? '已开启' : '已关闭')
+    .onClick(() => this.toggle())
+  }
+}
+
+@Component
+struct FigmaSettingsInlineAction {
+  @Prop label: string = '';
+  @Prop widthValue: number = 55;
+
+  build() {
+    Text(this.label)
+      .fontFamily(ReaderUiVisualTokens.settingsFontFamily)
+      .fontSize(ReaderUiVisualTokens.settingsInlineActionLabelSize)
+      .fontWeight(800)
+      .fontColor(ReaderUiVisualTokens.settingsInlineActionInk)
+      .width(this.widthValue)
+      .height(ReaderUiVisualTokens.settingsInlineActionHeight)
+      .textAlign(TextAlign.Center)
+      .borderRadius(ReaderUiVisualTokens.settingsControlRadius)
+      .backgroundColor(ReaderUiVisualTokens.settingsInlineActionSurface)
+      .accessibilityText(this.label)
+  }
+}
+
+@Component
+struct FigmaSettingsResetRow {
+  build() {
+    Row() {
+      Stack({ alignContent: Alignment.Center }) {
+        Image(TokenAdapter.icon('trash'))
+          .width(ReaderUiVisualTokens.settingsIconGlyphSize)
+          .height(ReaderUiVisualTokens.settingsIconGlyphSize)
+      }
+      .width(ReaderUiVisualTokens.settingsIconSize)
+      .height(ReaderUiVisualTokens.settingsIconSize)
+      .borderRadius(ReaderUiVisualTokens.settingsIconRadius)
+      .backgroundColor(ReaderUiVisualTokens.settingsIconSurface)
+      Text('恢复默认')
+        .fontFamily(ReaderUiVisualTokens.settingsFontFamily)
+        .fontSize(ReaderUiVisualTokens.settingsDangerLabelSize)
+        .fontWeight(400)
+        .fontColor(ReaderUiVisualTokens.settingsDangerText)
+        .layoutWeight(1)
+        .margin({ left: ReaderUiVisualTokens.settingsSectionHeaderInset })
+      Image($r('app.media.ui_icon_chevron_dark'))
+        .width(ReaderUiVisualTokens.settingsResetChevronWidth)
+        .height(ReaderUiVisualTokens.settingsResetChevronHeight)
+        .opacity(0.76)
+    }
+    .width('100%')
+    .height(ReaderUiVisualTokens.settingsRowHeight)
+    .padding({
+      left: ReaderUiVisualTokens.settingsRowHorizontalInset,
+      right: ReaderUiVisualTokens.settingsRowHorizontalInset,
+    })
+    .borderRadius(ReaderUiVisualTokens.settingsSectionRadius)
+    .backgroundColor(ReaderUiVisualTokens.settingsResetSurface)
+    .alignItems(VerticalAlign.Center)
+    .accessibilityText('恢复默认')
+  }
+}
+
+@Component
+export struct SettingsGeneralPage {
+  @Prop variant: string = 'general';
+  @StorageProp('reader.appThemeMode') appThemeMode: string = 'system';
+  @StorageProp('reader.settingsToggles.autoCheckUpdate') autoCheckUpdate: boolean = true;
+  @StorageProp('reader.settingsToggles.tapBottomBarToTop') tapBottomBarToTop: boolean = true;
+  @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
+  @StorageProp('reader.settingsCrashLog') crashLog: boolean = true;
+
+  build() {
+    Column({ space: ReaderUiVisualTokens.settingsSectionGap }) {
+      FigmaSettingsSection({ title: '基础偏好' }) {
+        FigmaSettingsRow({ title: 'App主题', icon: TokenAdapter.icon('palette') }) {
+          FigmaSettingsThemeSegment({ current: this.appThemeMode })
+        }
+        FigmaSettingsRow({ title: '语言', icon: TokenAdapter.icon('globe') }) {
+          FigmaSettingsSelect({ value: '简体中文', widthValue: 104 })
+        }
+        FigmaSettingsRow({ title: '启动时打开', icon: TokenAdapter.icon('home') }) {
+          FigmaSettingsSelect({ value: '书架', widthValue: 88 })
         }
       }
-      .width('100%')
-      .margin({ top: 12 })
 
-      Column() {
-        SettingsDetailSection({ title: '设置归属与重置' }) {
-          SettingsOptionRow({
-            title: '减少动态效果',
-            subtitle: 'Owner：ReaderUIRuntime + Harmony preferences；默认/重置值：关闭',
-            kind: 'status', value: '可持久化', icon: TokenAdapter.icon('motion'),
-          })
-          SettingsOptionRow({
-            title: '界面偏好',
-            subtitle: '主题、封面列数和展示开关当前只在本次运行生效',
-            kind: 'status', value: '会话级', tone: 'warn', icon: TokenAdapter.icon('gear'),
-          })
-          SettingsOptionRow({
-            title: '重置全部设置',
-            subtitle: 'Core 数据、阅读外观和平台偏好的统一范围/迁移合同尚未冻结',
-            kind: 'status', value: '合同缺失', tone: 'warn', icon: TokenAdapter.icon('trash'),
-          })
+      FigmaSettingsSection({ title: '行为与反馈' }) {
+        FigmaSettingsRow({ title: '自动检查更新', icon: TokenAdapter.icon('refresh') }) {
+          FigmaSettingsSwitch({ on: this.autoCheckUpdate, settingsKey: 'autoCheckUpdate' })
+        }
+        FigmaSettingsRow({ title: '点击当前底栏回顶部', icon: TokenAdapter.icon('top') }) {
+          FigmaSettingsSwitch({ on: this.tapBottomBarToTop, settingsKey: 'tapBottomBarToTop' })
+        }
+        FigmaSettingsRow({ title: '减少动态效果', icon: TokenAdapter.icon('motion') }) {
+          FigmaSettingsSwitch({ on: this.reducedMotion, settingsKey: 'reducedMotion' })
+        }
+        FigmaSettingsRow({ title: '崩溃日志', icon: TokenAdapter.icon('bug') }) {
+          FigmaSettingsSwitch({ on: this.crashLog, settingsKey: 'crash-log' })
+        }
+        FigmaSettingsRow({ title: '动画效果', icon: TokenAdapter.icon('play') }) {
+          FigmaSettingsSelect({ value: '标准', widthValue: 88 })
+        }
+        FigmaSettingsRow({ title: '缓存清理', icon: TokenAdapter.icon('trash') }) {
+          FigmaSettingsInlineAction({ label: '清理缓存', widthValue: 66 })
         }
       }
-      .width('100%')
-      .margin({ top: 12 })
 
-      Column() {
-        SettingsDetailSection({ title: '系统权限' }) {
-          SettingsOptionRow({
-            title: '文件访问',
-            subtitle: '仅在导入时由系统文档选择器按需授予；当前不查询固定授权状态',
-            kind: 'status',
-            value: '按需选取',
-            icon: TokenAdapter.icon('folder'),
-          })
-          SettingsOptionRow({
-            title: '通知权限',
-            subtitle: '当前未接入通知权限查询或申请',
-            kind: 'status',
-            value: '状态未接入',
-            tone: 'warn',
-            icon: TokenAdapter.icon('bell'),
-          })
-          SettingsOptionRow({
-            title: '电池优化',
-            subtitle: '当前未接入系统电池优化状态查询',
-            kind: 'status',
-            value: '状态未接入',
-            tone: 'warn',
-            icon: TokenAdapter.icon('battery'),
-          })
+      FigmaSettingsSection({ title: '系统权限' }) {
+        FigmaSettingsRow({ title: '文件访问', icon: TokenAdapter.icon('folder') }) {
+          FigmaSettingsInlineAction({ label: '去设置' })
+        }
+        FigmaSettingsRow({ title: '通知权限', icon: TokenAdapter.icon('bell') }) {
+          FigmaSettingsInlineAction({ label: '去设置' })
+        }
+        FigmaSettingsRow({ title: '电池优化', icon: TokenAdapter.icon('battery') }) {
+          FigmaSettingsInlineAction({ label: '去设置' })
         }
       }
-      .width('100%')
-      .margin({ top: 12 })
+
+      FigmaSettingsResetRow()
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -720,37 +839,12 @@ export struct BookshelfSearchSettingsPage {
   // history effects, or are rendered explicitly unavailable. No row may
   // advertise a setting merely because the demo had a chevron.
   @StorageProp('reader.bookshelfFilter.view') bookshelfView: string = 'cover';
-  @StorageProp('reader.bookshelfFilter.group') bookshelfGroup: string = 'all';
   @StorageProp('reader.bookshelfFilter.sort') bookshelfSort: string = 'recent';
-  @StorageProp('reader.bookGroups') bookGroups: CoreBookGroup[] = [];
-  @StorageProp('reader.coverColumns') coverColumns: number = 3;
   @StorageProp('reader.settingsToggles.mergeSameBooks') mergeSameBooks: boolean = true;
   @StorageProp('reader.settingsToggles.enableSearchHistory') enableSearchHistory: boolean = true;
   @StorageProp('reader.settingsToggles.showLocalBookBadge') showLocalBookBadge: boolean = true;
   @StorageProp('reader.searchHistoryLimit') searchHistoryLimit: number = 20;
   @StorageProp('reader.expandedOptionKey') expandedOptionKey: string = '';
-
-  private groupOptions(): SettingsChoiceSpec[] {
-    const options: SettingsChoiceSpec[] = [{ label: '全部', value: 'all', active: this.bookshelfGroup === 'all' }];
-    for (let index = 0; index < this.bookGroups.length; index++) {
-      const group = this.bookGroups[index];
-      if (group.groupName.trim().length === 0) continue;
-      options.push({
-        label: group.groupName,
-        value: group.groupName,
-        active: this.bookshelfGroup === group.groupName,
-      });
-    }
-    return options;
-  }
-
-  private groupLabel(): string {
-    if (this.bookshelfGroup === 'all') return '全部';
-    for (let index = 0; index < this.bookGroups.length; index++) {
-      if (this.bookGroups[index].groupName === this.bookshelfGroup) return this.bookshelfGroup;
-    }
-    return '分组已不存在';
-  }
 
   private sortOptions(): SettingsChoiceSpec[] {
     return [
@@ -784,11 +878,6 @@ export struct BookshelfSearchSettingsPage {
             { label: '列表', value: 'list', active: this.bookshelfView === 'list' },
           ],
         })
-        SettingsOptionRow({ title: '封面列数', kind: 'stepper', settingsKey: 'coverColumns', value: `${this.coverColumns}列`, icon: TokenAdapter.icon('columns') })
-        SettingsOptionRow({ title: '书架分组', value: this.groupLabel(), settingsKey: 'bookshelfGroup', icon: TokenAdapter.icon('folder') })
-        if (this.expandedOptionKey === 'bookshelfGroup') {
-          SettingsSelectSheet({ settingsKey: 'bookshelfGroup', options: this.groupOptions() })
-        }
         SettingsOptionRow({
           title: '显示更新标记',
           subtitle: 'Core bookshelf.list 尚未提供可比较的更新状态',

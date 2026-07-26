@@ -612,7 +612,7 @@ writeEts('ViewStateTable.ets', genViewStateTable());
 writeEts('MotionSpecTable.ets', genMotionSpecTable());
 writeEts('MotionPolicyTable.ets', genMotionPolicyTable());
 writeEts('DemoAliasTokens.ets', genDemoAliasTokens());
-for (const name of ['Route.ets', 'ViewState.ets', 'UiEvent.ets', 'UiState.ets', 'ScreenGraph.ets', 'Appearance.ets']) {
+for (const name of ['Route.ets', 'ViewState.ets', 'UiEvent.ets', 'UiState.ets', 'ScreenGraph.ets', 'Appearance.ets', 'VisualAdmission.ets']) {
   syncReaderUiGenerated(name);
 }
 

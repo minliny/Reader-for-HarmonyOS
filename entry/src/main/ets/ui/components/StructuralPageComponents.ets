@@ -3,15 +3,18 @@
 import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
 import { RouteId } from '../../contract/generated/RouteTable';
+import { ReaderUiVisualTokens } from '../../contract/reader_ui/VisualAdmission';
 import picker from '@ohos.file.picker';
 import { ReaderEffects } from '../store/ReaderEffects';
 import { ReaderTypography } from '../tokens/ReaderTypography';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 import { RssSelectionProjection } from './RssSelectionProjection';
 import { isSafeRssOriginalUrl } from './RssComponents';
-import { SearchInputBox } from './ContractComponents';
+import { SourceCoverImage } from './SourceCoverImage';
 import { SourceDetectPage } from './LibraryComponents';
 import { LocalBookFormatPolicy } from '../../host/LocalBookFormatPolicy';
+import { ViewportAdapter } from '../adapters/ViewportAdapter';
+import { RestoreBackupOverlayMotionCoordinator } from '../motion/RestoreBackupOverlayMotionCoordinator';
 import {
   BookDetail,
   ChapterTocEntry,
@@ -23,6 +26,7 @@ import {
   SearchResultEntry,
   TocMode,
   CoreStorageBackupInfo,
+  CoreStorageBackupHistoryEntry,
 } from '../store/ReaderUiState';
 
 interface RowEntry {
@@ -323,159 +327,181 @@ struct DirectoryChapterRow {
   }
 }
 
+// Source Management is an exact Figma-bound surface (Page/Source Management,
+// 942:29).  Its controls deliberately do not invent secondary routes: Figma
+// currently has no admitted Source Detail / Import / Batch target for them.
+// The only live data manipulation retained here is local query filtering over
+// the persisted Core list.
 @Component
-struct SourceMetricStrip {
-  @Prop sourceCount: number = 0;
-  @Prop enabledCount: number = 0;
-  @Prop loaded: boolean = false;
+struct FigmaSourceStatusFilter {
+  @Prop label: string = '';
+  @Prop selected: boolean = false;
+  @Prop wide: boolean = false;
 
   build() {
-    Text(this.loaded
-      ? `${this.sourceCount} 个书源 · ${this.enabledCount} 个启用`
-      : '正在从 Core 读取书源…')
-      .fontSize(12)
+    Text(this.label)
+      .fontFamily(ReaderUiVisualTokens.sourceManagementCjkFontFamily)
+      .fontSize(ReaderUiVisualTokens.sourceManagementFilterLabelSize)
       .fontWeight(700)
-      .fontColor(ColorTokens.muted)
-      .width('100%')
-      .maxLines(1)
-      .textOverflow({ overflow: TextOverflow.Ellipsis })
-      .margin({ top: 8, bottom: 10 })
+      .fontColor(this.selected ? ReaderUiVisualTokens.sourceManagementOnPrimary : ReaderUiVisualTokens.sourceManagementInk)
+      .width(this.wide
+        ? ReaderUiVisualTokens.sourceManagementFilterWideWidth
+        : ReaderUiVisualTokens.sourceManagementFilterNarrowWidth)
+      .height(ReaderUiVisualTokens.sourceManagementFilterHeight)
+      .textAlign(TextAlign.Center)
+      .borderRadius(ReaderUiVisualTokens.sourceManagementFilterRadius)
+      .backgroundColor(this.selected
+        ? ReaderUiVisualTokens.sourceManagementPrimary
+        : ReaderUiVisualTokens.sourceManagementInactiveControlSurface)
+      .border({ width: 1, color: ReaderUiVisualTokens.sourceManagementControlBorder })
+      .accessibilityText(this.label)
   }
 }
 
 @Component
-struct SourceFilterSummaryRow {
+struct FigmaSourceGroupFilter {
   build() {
     Row() {
+      Image($r('app.media.source_management_group_folder'))
+        .width(15)
+        .height(15)
+      Text('分组')
+        .fontFamily(ReaderUiVisualTokens.sourceManagementCjkFontFamily)
+        .fontSize(ReaderUiVisualTokens.sourceManagementGroupLabelSize)
+        .fontWeight(700)
+        .fontColor(ReaderUiVisualTokens.sourceManagementInk)
+        .margin({ left: 11 })
+      Blank().layoutWeight(1)
       Row() {
-        Image($r('app.media.ui_icon_source_dark'))
-          .width(18)
-          .height(18)
-        Text('Core 书源列表')
-          .fontSize(13)
-          .fontWeight(850)
-          .fontColor(ColorTokens.controlInk)
-          .margin({ left: 8 })
+        Text('全部分组')
+          .fontFamily(ReaderUiVisualTokens.sourceManagementControlFontFamily)
+          .fontSize(ReaderUiVisualTokens.sourceManagementGroupValueSize)
+          .fontColor(ReaderUiVisualTokens.sourceManagementInk)
+        Text('⌄')
+          .fontFamily(ReaderUiVisualTokens.sourceManagementControlFontFamily)
+          .fontSize(16)
+          .fontColor(ReaderUiVisualTokens.sourceManagementInk)
+          .margin({ left: 8, right: 10 })
       }
-      .layoutWeight(1)
+      .height(ReaderUiVisualTokens.sourceManagementGroupHeight)
+      .padding({ left: 14 })
+      .borderRadius(ReaderUiVisualTokens.sourceManagementGroupRadius)
+      .backgroundColor(ReaderUiVisualTokens.sourceManagementFieldSurface)
+      .border({ width: 1, color: ReaderUiVisualTokens.sourceManagementControlBorder })
       .alignItems(VerticalAlign.Center)
-      Text('仅展示已持久化书源')
-        .fontSize(12)
-        .fontWeight(750)
-        .fontColor(ColorTokens.muted)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .width('100%')
-    .height(42)
-    .padding({ left: 12, right: 10 })
-    .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(DemoAliasTokens.surface)
-    .border({ width: 1, color: ColorTokens.border })
+    .height(ReaderUiVisualTokens.sourceManagementGroupHeight)
     .alignItems(VerticalAlign.Center)
+    .accessibilityText('分组：全部分组')
   }
 }
 
 @Component
-struct SourceStatusDot {
-  @Prop tone: string = 'good';
-
-  private dotColor(): string {
-    if (this.tone === 'warn') return ColorTokens.statusWarn;
-    if (this.tone === 'muted') return ColorTokens.muted;
-    return ColorTokens.statusGood;
-  }
+struct FigmaSourceEnabledSwitch {
+  @Prop on: boolean = false;
 
   build() {
-    Circle()
-      .width(7)
-      .height(7)
-      .fill(this.dotColor())
+    Stack({ alignContent: Alignment.Center }) {
+      Row() {
+        if (this.on) {
+          Blank().layoutWeight(1)
+        }
+        Row()
+          .width(ReaderUiVisualTokens.sourceManagementSwitchThumbSize)
+          .height(ReaderUiVisualTokens.sourceManagementSwitchThumbSize)
+          .borderRadius(ReaderUiVisualTokens.sourceManagementSwitchThumbSize)
+          .backgroundColor(ReaderUiVisualTokens.sourceManagementSwitchThumb)
+        if (!this.on) {
+          Blank().layoutWeight(1)
+        }
+      }
+      .width(ReaderUiVisualTokens.sourceManagementSwitchWidth)
+      .height(ReaderUiVisualTokens.sourceManagementSwitchHeight)
+      .padding(2)
+      .borderRadius(ReaderUiVisualTokens.sourceManagementSwitchWidth)
+      .backgroundColor(this.on ? ReaderUiVisualTokens.sourceManagementPrimary : ReaderUiVisualTokens.sourceManagementFieldSurface)
+      .border({ width: this.on ? 0 : 1, color: ReaderUiVisualTokens.sourceManagementControlBorder })
+      .alignItems(VerticalAlign.Center)
+    }
+    .width(ReaderUiVisualTokens.sourceManagementSwitchWidth)
+    .height(ReaderUiVisualTokens.sourceManagementMoreHitSize)
+    .accessibilityText(this.on ? '书源已启用' : '书源未启用')
   }
 }
 
 @Component
-struct SourceManagementRow {
-  @Prop sourceId: string = '';
-  @Prop title: string = '起点中文网';
-  @Prop meta: string = 'qidian.com · 起点导入';
-  @Prop tone: string = 'good';
-  @Prop sourceEnabled: boolean = true;
+struct FigmaSourceManagementRow {
+  @Prop title: string = '';
+  @Prop meta: string = '';
+  @Prop sourceEnabled: boolean = false;
 
   build() {
     Row() {
       Column() {
         Text(this.title)
-          .fontSize(15)
-          .fontWeight(850)
-          .fontColor(ColorTokens.controlInk)
+          .fontFamily(ReaderUiVisualTokens.sourceManagementCjkFontFamily)
+          .fontSize(ReaderUiVisualTokens.sourceManagementRowTitleSize)
+          .fontWeight(700)
+          .fontColor(ReaderUiVisualTokens.sourceManagementInk)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         Text(this.meta)
-          .fontSize(12)
-          .fontWeight(600)
-          .fontColor(ColorTokens.muted)
-          .margin({ top: 4 })
+          .fontFamily(ReaderUiVisualTokens.sourceManagementCjkFontFamily)
+          .fontSize(ReaderUiVisualTokens.sourceManagementRowMetaSize)
+          .fontWeight(700)
+          .fontColor(ReaderUiVisualTokens.sourceManagementMuted)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .margin({ top: 4 })
       }
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
-      .margin({ right: 10 })
-      .onClick(() => ReaderUiStore.dispatch({ type: 'source-detail-open', sourceId: this.sourceId }))
 
-      Row({ space: 9 }) {
-        SourceStatusDot({ tone: this.tone })
-        Text(this.sourceEnabled ? '启用' : '停用')
-          .fontSize(11)
-          .fontWeight(800)
-          .fontColor(this.sourceEnabled ? ColorTokens.statusGood : ColorTokens.muted)
-        Text('导出')
-          .fontSize(11)
-          .fontWeight(850)
-          .fontColor(ColorTokens.primaryDark)
-          .onClick(() => ReaderUiStore.dispatch({ type: 'source-export', sourceId: this.sourceId }))
-        Text('删除')
-          .fontSize(11)
-          .fontWeight(850)
-          .fontColor(ColorTokens.statusWarn)
-          .onClick(() => ReaderUiStore.dispatch({ type: 'source-delete-request', sourceId: this.sourceId }))
+      Text('检测')
+        .fontFamily(ReaderUiVisualTokens.sourceManagementCjkFontFamily)
+        .fontSize(ReaderUiVisualTokens.sourceManagementDetectLabelSize)
+        .fontWeight(700)
+        .fontColor(ReaderUiVisualTokens.sourceManagementInk)
+        .width(ReaderUiVisualTokens.sourceManagementDetectWidth)
+        .height(ReaderUiVisualTokens.sourceManagementDetectHeight)
+        .textAlign(TextAlign.Center)
+        .borderRadius(ReaderUiVisualTokens.sourceManagementDetectRadius)
+        .backgroundColor(ReaderUiVisualTokens.sourceManagementFieldSurface)
+        .border({ width: 1, color: ReaderUiVisualTokens.sourceManagementControlBorder })
+
+      Stack({ alignContent: Alignment.Center }) {
+        Circle()
+          .width(7)
+          .height(7)
+          .fill(this.sourceEnabled ? ReaderUiVisualTokens.sourceManagementStatusDot : ReaderUiVisualTokens.sourceManagementMuted)
       }
-      .alignItems(VerticalAlign.Center)
-    }
-    .width('100%')
-    .height(66)
-    .border({ width: { bottom: 1 }, color: ColorTokens.border })
-    .alignItems(VerticalAlign.Center)
-  }
-}
+      .width(20)
+      .height(20)
+      .borderRadius(10)
+      .backgroundColor(ReaderUiVisualTokens.sourceManagementStatusBadgeSurface)
+      .margin({ left: 2 })
 
-@Component
-struct SourceManagementActionBar {
-  build() {
-    Row({ space: 10 }) {
-      Text('刷新')
-        .fontSize(13)
-        .fontWeight(850)
-        .fontColor(ColorTokens.controlInk)
-        .height(36)
-        .padding({ left: 14, right: 14 })
-        .borderRadius(DemoAliasTokens.radiusPill)
-        .backgroundColor(ColorTokens.metaBg)
-        .border({ width: 1, color: ColorTokens.border })
-        .onClick(() => ReaderUiStore.dispatch({ type: 'source-management-refresh' }))
-      Text('导入书源')
-        .fontSize(13)
-        .fontWeight(850)
-        .fontColor(ColorTokens.paper)
-        .height(36)
-        .padding({ left: 14, right: 14 })
-        .borderRadius(DemoAliasTokens.radiusPill)
-        .backgroundColor(ColorTokens.primary)
-        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'source-import-options' }))
+      FigmaSourceEnabledSwitch({ on: this.sourceEnabled })
+        .margin({ left: 10 })
+
+      Stack({ alignContent: Alignment.Center }) {
+        Row({ space: 3 }) {
+          Circle().width(ReaderUiVisualTokens.sourceManagementMoreDotSize).height(ReaderUiVisualTokens.sourceManagementMoreDotSize).fill(ReaderUiVisualTokens.sourceManagementInk)
+          Circle().width(ReaderUiVisualTokens.sourceManagementMoreDotSize).height(ReaderUiVisualTokens.sourceManagementMoreDotSize).fill(ReaderUiVisualTokens.sourceManagementInk)
+          Circle().width(ReaderUiVisualTokens.sourceManagementMoreDotSize).height(ReaderUiVisualTokens.sourceManagementMoreDotSize).fill(ReaderUiVisualTokens.sourceManagementInk)
+        }
+      }
+      .width(ReaderUiVisualTokens.sourceManagementMoreHitSize)
+      .height(ReaderUiVisualTokens.sourceManagementMoreHitSize)
+      .margin({ left: 16 })
     }
     .width('100%')
-    .justifyContent(FlexAlign.End)
+    .height(ReaderUiVisualTokens.sourceManagementRowHeight)
+    .padding({ left: ReaderUiVisualTokens.sourceManagementRowHorizontalInset })
+    .border({ width: { bottom: 1 }, color: ReaderUiVisualTokens.sourceManagementRowDivider })
+    .alignItems(VerticalAlign.Center)
+    .accessibilityText(`${this.title}，${this.sourceEnabled ? '已启用' : '未启用'}`)
   }
 }
 
@@ -682,50 +708,51 @@ struct SecondaryAction {
 struct WebDavInputRow {
   @Prop title: string = '服务器地址';
   @Prop value: string = '';
-  @Prop kind: string = 'link';
-  @Prop field: string = '';   // P1.3：webdav-field-update 的字段名
+  @Prop kind: string = 'server';
+  @Prop field: string = '';
 
   private iconResource(): Resource {
-    if (this.kind === 'people') return $r('app.media.bookshelf_icon_people_dark');
-    if (this.kind === 'shield') return $r('app.media.ui_icon_check_dark');
-    if (this.kind === 'folder') return $r('app.media.ui_icon_bookmark_dark');
-    return $r('app.media.ui_icon_source_dark');
+    if (this.kind === 'account') return $r('app.media.webdav_account');
+    if (this.kind === 'password') return $r('app.media.webdav_password');
+    if (this.kind === 'folder') return $r('app.media.webdav_folder');
+    return $r('app.media.webdav_server');
   }
 
   build() {
     Row() {
-      Stack() {
+      Stack({ alignContent: Alignment.Center }) {
         Image(this.iconResource())
-          .width(17)
-          .height(17)
+          .width(15)
+          .height(15)
       }
-      .width(34)
-      .height(34)
-      .borderRadius(DemoAliasTokens.radiusPill)
-      .backgroundColor(ColorTokens.metaBg)
+      .width(ReaderUiVisualTokens.webdavFieldIconShellSize)
+      .height(ReaderUiVisualTokens.webdavFieldIconShellSize)
+      .borderRadius(ReaderUiVisualTokens.webdavFieldIconShellSize / 2)
+      .backgroundColor(ReaderUiVisualTokens.webdavIconShellSurface)
 
       Column() {
         Text(this.title)
-          .fontSize(12)
+          .fontFamily(ReaderUiVisualTokens.webdavControlFontFamily)
+          .fontSize(ReaderUiVisualTokens.webdavFieldLabelSize)
           .fontWeight(800)
-          .fontColor(ColorTokens.controlInk)
+          .fontColor(ReaderUiVisualTokens.webdavInk)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         TextInput({ text: this.value, placeholder: '请输入' + this.title })
           .type(this.field === 'password' ? InputType.Password : InputType.Normal)
-          .fontSize(11)
-          .fontWeight(700)
-          .fontColor(ColorTokens.ink)
+          .fontFamily(ReaderUiVisualTokens.webdavControlFontFamily)
+          .fontSize(ReaderUiVisualTokens.webdavInputTextSize)
+          .fontWeight(600)
+          .fontColor(ReaderUiVisualTokens.webdavMuted)
           .width('100%')
-          .height(34)
+          .height(ReaderUiVisualTokens.webdavInputHeight)
           .padding({ left: 10, right: 10 })
           .textAlign(TextAlign.Start)
-          .borderRadius(DemoAliasTokens.radiusSm)
-          .backgroundColor(ColorTokens.paper)
-          .border({ width: 1, color: ColorTokens.border })
+          .borderRadius(6)
+          .backgroundColor(ReaderUiVisualTokens.webdavInputSurface)
+          .border({ width: 1, color: ReaderUiVisualTokens.webdavInputBorder })
           .margin({ top: 4 })
           .onChange((v: string) => {
-            // P1.3：受控输入，派发 webdav-field-update
             if (this.field.length > 0) {
               ReaderUiStore.dispatch({ type: 'webdav-field-update', field: this.field, settingsValue: v });
             }
@@ -736,11 +763,11 @@ struct WebDavInputRow {
       .margin({ left: 9 })
     }
     .width('100%')
-    .constraintSize({ minHeight: 76 })
+    .height(ReaderUiVisualTokens.webdavFieldHeight)
     .padding({ left: 10, right: 10, top: 9, bottom: 9 })
-    .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(ColorTokens.surfaceSoft)
-    .border({ width: 1, color: ColorTokens.border })
+    .borderRadius(ReaderUiVisualTokens.webdavPanelRadius)
+    .backgroundColor(ReaderUiVisualTokens.webdavFieldSurface)
+    .border({ width: 1, color: ReaderUiVisualTokens.webdavFieldBorder })
     .alignItems(VerticalAlign.Center)
   }
 }
@@ -753,7 +780,7 @@ struct WebDavSectionAction {
   @Prop disabled: boolean = false;
 
   private iconResource(): Resource {
-    return this.kind === 'check' ? $r('app.media.ui_icon_check_primary') : $r('app.media.ui_icon_refresh_primary');
+    return this.kind === 'save' ? $r('app.media.webdav_save') : $r('app.media.webdav_test');
   }
 
   build() {
@@ -762,26 +789,28 @@ struct WebDavSectionAction {
         .width(18)
         .height(18)
       Text(this.label)
-        .fontSize(13)
+        .fontFamily(ReaderUiVisualTokens.webdavControlFontFamily)
+        .fontSize(ReaderUiVisualTokens.webdavActionLabelSize)
         .fontWeight(800)
-        .fontColor(ColorTokens.primaryDark)
+        .fontColor(this.kind === 'save' ? ReaderUiVisualTokens.webdavActionOnPrimary : ReaderUiVisualTokens.webdavActionInk)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .margin({ left: 8 })
     }
     .layoutWeight(1)
-    .constraintSize({ minHeight: 44 })
+    .height(ReaderUiVisualTokens.webdavActionHeight)
     .justifyContent(FlexAlign.Center)
     .alignItems(VerticalAlign.Center)
     .padding({ left: 10, right: 10, top: 8, bottom: 8 })
-    .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(ColorTokens.metaBg)
-    .border({ width: 1, color: ColorTokens.border })
+    .borderRadius(this.kind === 'save' ? 12 : ReaderUiVisualTokens.webdavPanelRadius)
+    .backgroundColor(this.kind === 'save'
+      ? ReaderUiVisualTokens.webdavActionPrimary
+      : ReaderUiVisualTokens.webdavSoftActionSurface)
+    .border({ width: this.kind === 'save' ? 0 : 1, color: ReaderUiVisualTokens.webdavSoftActionBorder })
     .opacity(this.disabled ? 0.5 : 1)
     .enabled(!this.disabled)
     .onClick(() => {
       if (this.disabled) return;
-      // P1.3：测试连通性 / 保存配置 派发对应 reducer 事件
       if (this.actionType === 'test') {
         ReaderUiStore.dispatch({ type: 'webdav-test' });
       } else if (this.actionType === 'save') {
@@ -792,8 +821,151 @@ struct WebDavSectionAction {
 }
 
 @Component
+struct WebDavMetricCard {
+  @Prop icon: Resource = $r('app.media.webdav_metric_status');
+  @Prop value: string = '—';
+  @Prop label: string = '';
+
+  build() {
+    Row({ space: 14 }) {
+      Image(this.icon)
+        .width(20)
+        .height(20)
+      Column({ space: 2 }) {
+        Text(this.value)
+          .fontFamily(ReaderUiVisualTokens.webdavControlFontFamily)
+          .fontSize(15)
+          .fontWeight(700)
+          .fontColor(ReaderUiVisualTokens.webdavInk)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(this.label)
+          .fontFamily(ReaderUiVisualTokens.webdavControlFontFamily)
+          .fontSize(11)
+          .fontColor(ReaderUiVisualTokens.webdavMuted)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+    }
+    .height(ReaderUiVisualTokens.webdavMetricsCardHeight)
+    .padding({ left: 10, right: 10, top: 8, bottom: 8 })
+    .borderRadius(ReaderUiVisualTokens.webdavPanelRadius)
+    .backgroundColor(ReaderUiVisualTokens.webdavPanelSurface)
+    .border({ width: 1, color: ReaderUiVisualTokens.webdavMetricBorder })
+    .alignItems(VerticalAlign.Center)
+  }
+}
+
+@Component
+struct WebDavStaticSwitch {
+  @Prop on: boolean = true;
+
+  build() {
+    Row() {
+      Circle()
+        .width(20)
+        .height(20)
+        .fill(ReaderUiVisualTokens.webdavSwitchKnob)
+    }
+    .width(44)
+    .height(24)
+    .padding(2)
+    .justifyContent(this.on ? FlexAlign.End : FlexAlign.Start)
+    .borderRadius(999)
+    .backgroundColor(this.on ? ReaderUiVisualTokens.webdavActionInk : ReaderUiVisualTokens.webdavSwitchOff)
+  }
+}
+
+@Component
+struct WebDavAdvancedRow {
+  @Prop icon: Resource = $r('app.media.webdav_password');
+  @Prop title: string = '';
+  @Prop stepper: boolean = false;
+
+  build() {
+    Row() {
+      Stack({ alignContent: Alignment.Center }) {
+        Image(this.icon).width(15).height(15)
+      }
+      .width(ReaderUiVisualTokens.webdavFieldIconShellSize)
+      .height(ReaderUiVisualTokens.webdavFieldIconShellSize)
+      .borderRadius(ReaderUiVisualTokens.webdavFieldIconShellSize / 2)
+      .backgroundColor(ReaderUiVisualTokens.webdavIconShellSurface)
+      Text(this.title)
+        .fontFamily(ReaderUiVisualTokens.webdavControlFontFamily)
+        .fontSize(ReaderUiVisualTokens.webdavFieldLabelSize)
+        .fontWeight(800)
+        .fontColor(ReaderUiVisualTokens.webdavInk)
+        .layoutWeight(1)
+        .margin({ left: 10 })
+      if (this.stepper) {
+        Row({ space: 4 }) {
+          Text('−').fontFamily(ReaderUiVisualTokens.webdavControlFontFamily).fontSize(13).fontWeight(800).fontColor(ReaderUiVisualTokens.webdavMuted)
+          Text('15 秒').fontFamily(ReaderUiVisualTokens.webdavControlFontFamily).fontSize(11).fontWeight(800).fontColor(ReaderUiVisualTokens.webdavMuted)
+          Text('+').fontFamily(ReaderUiVisualTokens.webdavControlFontFamily).fontSize(13).fontWeight(800).fontColor(ReaderUiVisualTokens.webdavMuted)
+        }
+        .height(24)
+        .padding({ left: 7, right: 7 })
+        .borderRadius(999)
+        .backgroundColor(ReaderUiVisualTokens.webdavStepperSurface)
+        .alignItems(VerticalAlign.Center)
+      } else {
+        WebDavStaticSwitch({ on: true })
+      }
+    }
+    .width('100%')
+    .height(ReaderUiVisualTokens.webdavAdvancedRowHeight)
+    .padding({ left: 12, right: 12 })
+    .border({ width: { bottom: 1 }, color: ReaderUiVisualTokens.webdavRowDivider })
+    .alignItems(VerticalAlign.Center)
+  }
+}
+
+@Component
+struct WebDavConnectionCard {
+  @StorageProp('reader.webdavServerUrl') serverUrl: string = '';
+  @StorageProp('reader.webdavUsername') username: string = '';
+  @StorageProp('reader.webdavPassword') password: string = '';
+  @StorageProp('reader.webdavSyncDir') syncDir: string = '/reader/backup';
+  @StorageProp('reader.webdavTestStatus') testStatus: string = 'idle';
+  @StorageProp('reader.webdavSaveStatus') saveStatus: string = 'idle';
+
+  build() {
+    Column({ space: 8 }) {
+      Text('连接信息')
+        .fontFamily(ReaderUiVisualTokens.webdavControlFontFamily)
+        .fontSize(ReaderUiVisualTokens.webdavSectionTitleSize)
+        .fontWeight(900)
+        .fontColor(ReaderUiVisualTokens.webdavInk)
+      WebDavInputRow({ title: '服务器地址', value: this.serverUrl, kind: 'server', field: 'serverUrl' })
+      WebDavInputRow({ title: '账号', value: this.username, kind: 'account', field: 'username' })
+      WebDavInputRow({ title: '密码', value: this.password, kind: 'password', field: 'password' })
+      WebDavInputRow({ title: '同步目录', value: this.syncDir, kind: 'folder', field: 'syncDir' })
+      Row({ space: 8 }) {
+        WebDavSectionAction({
+          label: this.testStatus === 'testing' ? '正在测试…' : '测试网络连通性',
+          kind: 'test', actionType: 'test', disabled: this.testStatus === 'testing' || this.saveStatus === 'saving',
+        })
+        WebDavSectionAction({
+          label: this.saveStatus === 'saving' ? '正在保存…' : '保存配置',
+          kind: 'save', actionType: 'save', disabled: this.testStatus === 'testing' || this.saveStatus === 'saving',
+        })
+      }
+      .width('100%')
+    }
+    .width('100%')
+    .padding({ left: 10, right: 10, top: 9, bottom: 10 })
+    .borderRadius(ReaderUiVisualTokens.webdavPanelRadius)
+    .backgroundColor(ReaderUiVisualTokens.webdavPanelSurface)
+    .border({ width: 1, color: ReaderUiVisualTokens.webdavPanelBorder })
+    .alignItems(HorizontalAlign.Start)
+  }
+}
+
+@Component
 struct WebDavConfigSection {
-  // P1.3：从 AppStorage 读取 WebDAV 配置状态，驱动受控输入
   @StorageProp('reader.webdavServerUrl') serverUrl: string = '';
   @StorageProp('reader.webdavUsername') username: string = '';
   @StorageProp('reader.webdavPassword') password: string = '';
@@ -802,75 +974,65 @@ struct WebDavConfigSection {
   @StorageProp('reader.webdavTestMessage') testMessage: string = '';
   @StorageProp('reader.webdavSaveStatus') saveStatus: string = 'idle';
   @StorageProp('reader.webdavSaveMessage') saveMessage: string = '';
+  @StorageProp('reader.localCoreBackupHistory') localBackupHistory: CoreStorageBackupHistoryEntry[] = [];
 
-  private testStatusText(): string {
-    if (this.testStatus === 'testing') return '正在测试…';
-    if (this.testStatus === 'success') return '连通: ' + this.testMessage;
-    if (this.testStatus === 'error') return '失败: ' + this.testMessage;
-    return '';
+  private connectionValue(): string {
+    if (this.testStatus === 'success') return '已连接';
+    if (this.testStatus === 'testing') return '测试中';
+    if (this.testStatus === 'error') return '连接失败';
+    return '未测试';
   }
 
-  private saveStatusText(): string {
-    if (this.saveStatus === 'saving') return '正在保存…';
-    if (this.saveStatus === 'saved') return '已保存: ' + this.saveMessage;
-    if (this.saveStatus === 'error') return '保存失败: ' + this.saveMessage;
-    return '';
+  private latestTestValue(): string {
+    if (this.testStatus === 'success') return '已完成';
+    if (this.testStatus === 'testing') return '进行中';
+    if (this.testStatus === 'error') return '失败';
+    return '—';
   }
 
   build() {
     Column() {
-      Text('WebDAV 配置')
-        .fontSize(15)
-        .fontWeight(900)
-        .fontColor(ColorTokens.ink)
-        .margin({ left: 2, bottom: 5 })
-      WebDavInputRow({ title: '服务器地址', value: this.serverUrl, kind: 'link', field: 'serverUrl' })
-      WebDavInputRow({ title: '账号', value: this.username, kind: 'people', field: 'username' })
-        .margin({ top: 8 })
-      WebDavInputRow({ title: '密码', value: this.password, kind: 'shield', field: 'password' })
-        .margin({ top: 8 })
-      WebDavInputRow({ title: '同步目录', value: this.syncDir, kind: 'folder', field: 'syncDir' })
-        .margin({ top: 8 })
-      Text('密码只用于本次连接测试。当前 Host 尚未接入 HUKS，带账号或密码的配置禁止持久化。')
-        .fontSize(10)
-        .fontColor(ColorTokens.muted)
-        .lineHeight(16)
-        .width('100%')
-        .margin({ top: 7 })
-      Row() {
-        WebDavSectionAction({
-          label: this.testStatus === 'testing' ? '正在测试…' : '测试网络连通性',
-          kind: 'refresh', actionType: 'test', disabled: this.testStatus === 'testing' || this.saveStatus === 'saving',
-        })
-        WebDavSectionAction({
-          label: this.saveStatus === 'saving' ? '正在保存…' : '保存匿名配置',
-          kind: 'check', actionType: 'save', disabled: this.testStatus === 'testing' || this.saveStatus === 'saving',
-        })
-          .margin({ left: 9 })
+      Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween }) {
+        WebDavMetricCard({ icon: $r('app.media.webdav_metric_status'), value: this.connectionValue(), label: '连接状态' })
+          .width('48.85%')
+        WebDavMetricCard({ icon: $r('app.media.webdav_metric_time'), value: this.latestTestValue(), label: '最近测试' })
+          .width('48.85%')
+        WebDavMetricCard({ icon: $r('app.media.webdav_metric_backups'), value: this.localBackupHistory.length > 0 ? `${this.localBackupHistory.length} 个` : '—', label: '本机备份' })
+          .width('48.85%')
+          .margin({ top: 8 })
+        WebDavMetricCard({ icon: $r('app.media.webdav_metric_folder'), value: this.syncDir, label: '同步目录' })
+          .width('48.85%')
+          .margin({ top: 8 })
       }
       .width('100%')
-      .margin({ top: 8 })
-      if (this.testStatusText().length > 0) {
-        Text(this.testStatusText())
-          .fontSize(11)
-          .fontColor(this.testStatus === 'error' ? ColorTokens.accent : ColorTokens.muted)
+
+      WebDavConnectionCard()
+        .margin({ top: 12 })
+
+      Column() {
+        Text('高级')
+          .fontFamily(ReaderUiVisualTokens.webdavControlFontFamily)
+          .fontSize(ReaderUiVisualTokens.webdavSectionTitleSize)
+          .fontWeight(900)
+          .fontColor(ReaderUiVisualTokens.webdavInk)
           .width('100%')
-          .margin({ top: 6 })
+          .padding({ left: 12 })
+          .margin({ bottom: 5 })
+        WebDavAdvancedRow({ icon: $r('app.media.webdav_password'), title: 'SSL 证书校验' })
+        WebDavAdvancedRow({ icon: $r('app.media.webdav_metric_time'), title: '连接超时', stepper: true })
+        WebDavAdvancedRow({ icon: $r('app.media.webdav_metric_status'), title: '仅 Wi-Fi 同步' })
+        WebDavAdvancedRow({ icon: $r('app.media.webdav_test'), title: '自动同步' })
       }
-      if (this.saveStatusText().length > 0) {
-        Text(this.saveStatusText())
-          .fontSize(11)
-          .fontColor(this.saveStatus === 'error' ? ColorTokens.accent : ColorTokens.muted)
-          .width('100%')
-          .margin({ top: 4 })
-      }
+      .width('100%')
+      .margin({ top: 12 })
+      .padding({ top: 9 })
+      .borderRadius(ReaderUiVisualTokens.webdavPanelRadius)
+      .backgroundColor(ReaderUiVisualTokens.webdavPanelSurface)
+      .border({ width: 1, color: ReaderUiVisualTokens.webdavPanelBorder })
+      .alignItems(HorizontalAlign.Start)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
-    .padding({ left: 10, right: 10, top: 9, bottom: 10 })
-    .borderRadius(DemoAliasTokens.radiusMd)
-    .backgroundColor(DemoAliasTokens.surface)
-    .border({ width: 1, color: ColorTokens.border })
   }
 }
 
@@ -1155,122 +1317,600 @@ export struct MainTabsStructure {
 }
 
 @Component
-export struct SearchHomePage {
-  @Prop placeholder: string = '搜索书名或作者';
-  @StorageProp('reader.searchQuery') searchQuery: string = '';
+struct FigmaSearchResultRow {
+  @Prop result: SearchResultEntry;
+
+  private title(): string {
+    return this.result.title.trim().length > 0 ? this.result.title : '未命名书籍';
+  }
+
+  private latest(): string {
+    const chapter = this.result.latestChapter ?? '';
+    return chapter.trim().length > 0 ? `最新：${chapter}` : '';
+  }
+
+  private openResult(): void {
+    if (this.result.bookId.length === 0) return;
+    ReaderUiStore.dispatch({ type: 'route-push', id: 'book-detail' });
+    ReaderUiStore.dispatch({
+      type: 'book-detail-load',
+      bookId: this.result.bookId,
+      sourceId: this.result.sourceId ?? '',
+    });
+  }
+
+  build() {
+    Row({ space: ReaderUiVisualTokens.searchResultGap }) {
+      Stack({ alignContent: Alignment.Center }) {
+        SourceCoverImage({
+          sourceId: this.result.sourceId ?? '',
+          coverUrl: this.result.coverUrl ?? '',
+          // The Figma result-card master supplies this exact gradient when a
+          // Core result has no cover URI.  The title stays live data in the
+          // layer above, so the static Figma sample label is intentionally not
+          // carried into the app.
+          fallback: $r('app.media.figma_search_result_cover_placeholder'),
+        })
+        if ((this.result.coverUrl ?? '').trim().length === 0) {
+          Text(this.title())
+            .fontFamily(ReaderUiVisualTokens.searchSerifFontFamily)
+            .fontSize(9)
+            .fontWeight(700)
+            .fontColor(ReaderUiVisualTokens.searchOnPrimary)
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .textAlign(TextAlign.Center)
+            .padding(6)
+        }
+      }
+      .width(ReaderUiVisualTokens.searchResultCoverWidth)
+      .height(ReaderUiVisualTokens.searchResultCoverHeight)
+      .borderRadius(ReaderUiVisualTokens.searchResultCoverRadius)
+      .clip(true)
+
+      Column() {
+        Text(this.title())
+          .fontFamily(ReaderUiVisualTokens.searchSerifFontFamily)
+          .fontSize(ReaderUiVisualTokens.searchResultTitleSize)
+          .fontWeight(700)
+          .fontColor(ReaderUiVisualTokens.searchInk)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
+        if (this.result.author.trim().length > 0) {
+          Text(this.result.author)
+            .fontFamily(ReaderUiVisualTokens.searchControlFontFamily)
+            .fontSize(ReaderUiVisualTokens.searchResultAuthorSize)
+            .fontColor(ReaderUiVisualTokens.searchMuted)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .width('100%')
+            .margin({ top: 5 })
+        }
+        if (this.latest().length > 0) {
+          Text(this.latest())
+            .fontFamily(ReaderUiVisualTokens.searchControlFontFamily)
+            .fontSize(ReaderUiVisualTokens.searchResultLatestSize)
+            .fontColor(ReaderUiVisualTokens.searchMuted)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .width('100%')
+            .margin({ top: 5 })
+        }
+        if ((this.result.intro ?? '').trim().length > 0) {
+          Text(this.result.intro ?? '')
+            .fontFamily(ReaderUiVisualTokens.searchControlFontFamily)
+            .fontSize(ReaderUiVisualTokens.searchResultIntroSize)
+            .fontColor(ReaderUiVisualTokens.searchIntro)
+            .lineHeight(18)
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .width('100%')
+            .margin({ top: 5 })
+        }
+        if (this.result.sourceName.trim().length > 0) {
+          Text(this.result.sourceName)
+            .fontFamily(ReaderUiVisualTokens.searchControlFontFamily)
+            .fontSize(ReaderUiVisualTokens.searchResultSourceSize)
+            .fontWeight(700)
+            .fontColor(ReaderUiVisualTokens.searchPrimary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .width('100%')
+            .margin({ top: 5 })
+        }
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+    }
+    .width('100%')
+    .height(ReaderUiVisualTokens.searchResultRowHeight)
+    .padding({
+      left: ReaderUiVisualTokens.searchResultHorizontalInset,
+      right: ReaderUiVisualTokens.searchResultHorizontalInset,
+      top: 14,
+      bottom: 14,
+    })
+    .alignItems(VerticalAlign.Top)
+    .border({ width: { bottom: 1 }, color: ReaderUiVisualTokens.searchBorder })
+    .onClick(() => this.openResult())
+  }
+}
+
+@Component
+struct FigmaSearchPage {
+  @Prop requestedState: string = 'initial';
+  @StorageProp('reader.searchQuery') submittedQuery: string = '';
   @StorageProp('reader.searchResults') searchResults: SearchResultEntry[] = [];
+  @StorageProp('reader.searchHistory') history: string[] = [];
+  @StorageProp('reader.searchHistoryLoaded') historyLoaded: boolean = false;
+  @StorageProp('reader.searchHistoryLoading') historyLoading: boolean = false;
+  @StorageProp('reader.loading') loading: boolean = false;
+  @StorageProp('reader.pageState') pageState: string = 'default';
+  @StorageProp('reader.errorCode') errorCode: string = '';
+  @StorageProp('reader.availableSources') availableSources: CoreSourceEntry[] = [];
+  @StorageProp('reader.displayedRouteId') routeId: string = 'book-search';
+  @StorageProp(ViewportAdapter.K_CLASS) viewportClass: string = 'phone';
+  @State private queryText: string = '';
+
+  aboutToAppear(): void {
+    this.syncQueryFromStore();
+  }
+
+  private syncQueryFromStore(): void {
+    if (this.queryText.length === 0 || this.queryText === this.submittedQuery) {
+      this.queryText = this.submittedQuery;
+    }
+  }
+
+  private isTablet(): boolean {
+    return this.viewportClass === 'tablet';
+  }
+
+  private headerHeight(): number {
+    return this.isTablet()
+      ? ReaderUiVisualTokens.searchTabletHeaderHeight
+      : ReaderUiVisualTokens.searchPhoneHeaderHeight;
+  }
+
+  private headerContentWidth(): string | number {
+    return this.isTablet() ? ReaderUiVisualTokens.searchTabletHeaderWidth : '100%';
+  }
+
+  private headerInset(): number {
+    return this.isTablet()
+      ? ReaderUiVisualTokens.searchTabletHeaderInset
+      : ReaderUiVisualTokens.searchPhoneHeaderInset;
+  }
+
+  private fieldHeight(): number {
+    return this.isTablet()
+      ? ReaderUiVisualTokens.searchHeaderFieldTabletHeight
+      : ReaderUiVisualTokens.searchHeaderFieldPhoneHeight;
+  }
+
+  private actionWidth(): number {
+    if (this.loading && !this.isTablet()) return ReaderUiVisualTokens.searchHeaderLoadingPhoneActionWidth;
+    return this.isTablet()
+      ? ReaderUiVisualTokens.searchHeaderTabletActionWidth
+      : ReaderUiVisualTokens.searchHeaderPhoneActionWidth;
+  }
+
+  private bodyWidth(): string | number {
+    return this.isTablet() ? ReaderUiVisualTokens.searchContentTabletWidth : '100%';
+  }
+
+  private bodyInset(): number {
+    return this.isTablet()
+      ? ReaderUiVisualTokens.searchContentTabletInset
+      : ReaderUiVisualTokens.searchContentPhoneInset;
+  }
+
+  private resolvedState(): string {
+    if (this.loading || this.requestedState === 'loading') return 'loading';
+    if (this.errorCode.length > 0 || this.pageState === 'error' || this.requestedState === 'error') return 'error';
+    if (this.searchResults.length > 0) return 'results';
+    if (this.pageState === 'empty' || this.requestedState === 'empty') return 'empty';
+    return 'initial';
+  }
+
+  private canSubmit(): boolean {
+    return !this.loading && this.queryText.trim().length > 0;
+  }
+
+  private submit(): void {
+    const query = this.queryText.trim();
+    if (query.length === 0 || this.loading) return;
+    ReaderUiStore.dispatch({ type: 'search-submit', query });
+  }
+
+  private clearDraft(): void {
+    if (this.loading) return;
+    this.queryText = '';
+  }
+
+  private clearHistory(): void {
+    if (!this.historyLoaded || this.historyLoading || this.history.length === 0 || this.routeId !== 'book-search') return;
+    // Figma exposes one direct “清空记录” control. The existing Core reducer
+    // still receives its two guarded events synchronously, so no local-only
+    // deletion is ever presented as persisted data.
+    ReaderUiStore.dispatch({ type: 'search-history-clear-request' });
+    ReaderUiStore.dispatch({ type: 'search-history-clear-confirm' });
+  }
+
+  private visibleHistory(): string[] {
+    return this.history.slice(0, 5);
+  }
+
+  private visibleSourceNames(): string[] {
+    const names: string[] = [];
+    for (let index = 0; index < this.availableSources.length && names.length < 4; index += 1) {
+      const source = this.availableSources[index];
+      if (!source.enabled || source.name.trim().length === 0) continue;
+      names.push(source.name);
+    }
+    return names;
+  }
+
+  private retry(): void {
+    this.submit();
+  }
+
+  @Builder renderHeader() {
+    Column() {
+      Row({ space: ReaderUiVisualTokens.searchHeaderGap }) {
+        Stack({ alignContent: Alignment.Center }) {
+          Image($r('app.media.search_page_back')).width(20).height(20)
+        }
+        .width(ReaderUiVisualTokens.searchBackHitSize)
+        .height(ReaderUiVisualTokens.searchBackHitSize)
+        .accessibilityText('返回')
+        .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
+
+        Row({ space: 8 }) {
+          Image($r('app.media.search_page_magnifier')).width(14).height(14)
+          Stack({ alignContent: Alignment.Start }) {
+            if (this.queryText.length === 0) {
+              Text('搜索书名、作者...')
+                .fontFamily(ReaderUiVisualTokens.searchControlFontFamily)
+                .fontSize(14)
+                .fontColor(ReaderUiVisualTokens.searchInputPlaceholder)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+                .width('100%')
+            }
+            TextInput({ text: this.queryText, placeholder: '' })
+              .fontFamily(ReaderUiVisualTokens.searchControlFontFamily)
+              .fontSize(14)
+              .fontColor(ReaderUiVisualTokens.searchInk)
+              .backgroundColor(Color.Transparent)
+              .width('100%')
+              .height(this.fieldHeight())
+              .padding(0)
+              .onChange((value: string) => { this.queryText = value; })
+              .onSubmit(() => this.submit())
+          }
+          .layoutWeight(1)
+          .height(this.fieldHeight())
+          if (this.queryText.length > 0) {
+            Image($r('app.media.search_page_clear')).width(14).height(14)
+              .accessibilityText('清空搜索词')
+              .onClick(() => this.clearDraft())
+          }
+        }
+        .layoutWeight(1)
+        .height(this.fieldHeight())
+        .padding({ left: 12, right: 12 })
+        .borderRadius(ReaderUiVisualTokens.searchHeaderRadius)
+        .backgroundColor(ReaderUiVisualTokens.searchInputSurface)
+        .alignItems(VerticalAlign.Center)
+
+        Row({ space: this.loading ? 6 : 0 }) {
+          if (this.loading) {
+            LoadingProgress()
+              .width(13)
+              .height(13)
+              .color(ReaderUiVisualTokens.searchOnPrimary)
+          }
+          Text('搜索')
+            .fontFamily(ReaderUiVisualTokens.searchControlFontFamily)
+            .fontSize(this.isTablet() ? 14 : 13)
+            .fontWeight(800)
+            .fontColor(ReaderUiVisualTokens.searchOnPrimary)
+        }
+        .width(this.actionWidth())
+        .height(this.fieldHeight())
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+        .borderRadius(ReaderUiVisualTokens.searchHeaderRadius)
+        .backgroundColor(this.canSubmit() ? ReaderUiVisualTokens.searchPrimary : ReaderUiVisualTokens.searchPrimaryDisabled)
+        .enabled(this.canSubmit())
+        .onClick(() => this.submit())
+      }
+      .width(this.headerContentWidth())
+      .height(this.headerHeight())
+      .padding({ left: this.headerInset(), right: this.headerInset() })
+      .alignItems(VerticalAlign.Center)
+    }
+    .width('100%')
+    .height(this.headerHeight() + 1)
+    .alignItems(HorizontalAlign.Center)
+    .border({ width: { bottom: 1 }, color: ReaderUiVisualTokens.searchBorder })
+  }
+
+  @Builder renderSourceTabs() {
+    Column() {
+      Scroll() {
+        Row({ space: ReaderUiVisualTokens.searchSourceChipGap }) {
+          Text('全部')
+            .fontFamily(ReaderUiVisualTokens.searchControlFontFamily)
+            .fontSize(12)
+            .fontWeight(700)
+            .fontColor(ReaderUiVisualTokens.searchOnPrimary)
+            .height(ReaderUiVisualTokens.searchSourceChipHeight)
+            .padding({ left: 12, right: 12 })
+            .textAlign(TextAlign.Center)
+            .borderRadius(ReaderUiVisualTokens.searchHeaderRadius)
+            .backgroundColor(ReaderUiVisualTokens.searchPrimary)
+          ForEach(this.visibleSourceNames(), (name: string, index: number) => {
+            Text(name)
+              .fontFamily(ReaderUiVisualTokens.searchControlFontFamily)
+              .fontSize(12)
+              .fontWeight(700)
+              .fontColor(ReaderUiVisualTokens.searchMuted)
+              .height(ReaderUiVisualTokens.searchSourceChipHeight)
+              .padding({ left: 12, right: 12 })
+              .textAlign(TextAlign.Center)
+              .borderRadius(ReaderUiVisualTokens.searchHeaderRadius)
+              .backgroundColor(ReaderUiVisualTokens.searchChipSurface)
+              .border({ width: 1, color: ReaderUiVisualTokens.searchBorder })
+          }, (name: string, index: number) => `${name}-${index}`)
+        }
+        .height(ReaderUiVisualTokens.searchSourceTabsHeight)
+        .padding({ left: this.headerInset(), right: this.headerInset() })
+        .alignItems(VerticalAlign.Center)
+      }
+      .scrollable(ScrollDirection.Horizontal)
+      .scrollBar(BarState.Off)
+      .width(this.headerContentWidth())
+      .height(ReaderUiVisualTokens.searchSourceTabsHeight)
+    }
+    .width('100%')
+    .height(ReaderUiVisualTokens.searchSourceTabsHeight + 1)
+    .alignItems(HorizontalAlign.Center)
+    .border({ width: { bottom: 1 }, color: ReaderUiVisualTokens.searchBorder })
+  }
+
+  @Builder renderInitial() {
+    Column() {
+      Row() {
+        Text('最近搜索')
+          .fontFamily(ReaderUiVisualTokens.searchControlFontFamily)
+          .fontSize(13)
+          .fontWeight(700)
+          .fontColor(ReaderUiVisualTokens.searchInk)
+          .layoutWeight(1)
+        if (this.visibleHistory().length > 0 && !this.historyLoading && this.routeId === 'book-search') {
+          Text('清空记录')
+            .fontFamily(ReaderUiVisualTokens.searchControlFontFamily)
+            .fontSize(12)
+            .fontWeight(500)
+            .fontColor(ReaderUiVisualTokens.searchMuted)
+            .height(26)
+            .onClick(() => this.clearHistory())
+        }
+      }
+      .width('100%')
+      .height(26)
+      .alignItems(VerticalAlign.Center)
+
+      if (this.visibleHistory().length > 0) {
+        Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Start }) {
+          ForEach(this.visibleHistory(), (keyword: string, index: number) => {
+            Text(keyword)
+              .fontFamily(ReaderUiVisualTokens.searchControlFontFamily)
+              .fontSize(13)
+              .fontWeight(500)
+              .fontColor(ReaderUiVisualTokens.searchInk)
+              .height(ReaderUiVisualTokens.searchHistoryChipHeight)
+              .padding({ left: 14, right: 14 })
+              .borderRadius(ReaderUiVisualTokens.searchHeaderRadius)
+              .backgroundColor(ReaderUiVisualTokens.searchChipSurface)
+              .border({ width: 1, color: ReaderUiVisualTokens.searchBorder })
+              .margin({ right: ReaderUiVisualTokens.searchHistoryChipGap, bottom: 8 })
+              .onClick(() => { this.queryText = keyword; })
+          }, (keyword: string, index: number) => `${keyword}-${index}`)
+        }
+        .width('100%')
+        .margin({ top: 14 })
+      }
+    }
+    .width(this.bodyWidth())
+    .padding({ left: this.bodyInset(), right: this.bodyInset(), top: ReaderUiVisualTokens.searchHistoryTopInset })
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder renderLoading() {
+    Column({ space: 8 }) {
+      LoadingProgress()
+        .width(36)
+        .height(36)
+        .color(ReaderUiVisualTokens.searchPrimary)
+      Text('正在搜索所有书源…')
+        .fontFamily(ReaderUiVisualTokens.searchControlFontFamily)
+        .fontSize(13)
+        .fontColor(ReaderUiVisualTokens.searchMuted)
+    }
+    .width(this.bodyWidth())
+    .height(194)
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+  }
+
+  @Builder renderResults() {
+    Column() {
+      Text(`找到 ${this.searchResults.length} 本相关书籍`)
+        .fontFamily(ReaderUiVisualTokens.searchControlFontFamily)
+        .fontSize(11)
+        .fontColor(ReaderUiVisualTokens.searchMuted)
+        .width('100%')
+        .height(ReaderUiVisualTokens.searchResultStatusHeight)
+        .padding({ left: ReaderUiVisualTokens.searchResultHorizontalInset })
+        .align(Alignment.Start)
+        .border({ width: { bottom: 1 }, color: ReaderUiVisualTokens.searchBorder })
+      ForEach(this.searchResults, (result: SearchResultEntry, index: number) => {
+        FigmaSearchResultRow({ result })
+      }, (result: SearchResultEntry, index: number) => `${result.sourceId ?? ''}-${result.bookId}-${index}`)
+    }
+    .width(this.bodyWidth())
+  }
+
+  @Builder renderEmpty() {
+    Column() {
+      Text('?')
+        .fontFamily(ReaderUiVisualTokens.searchControlFontFamily)
+        .fontSize(18)
+        .fontWeight(700)
+        .fontColor(ReaderUiVisualTokens.searchMuted)
+        .margin({ top: 68 })
+      Text('没有找到相关书籍')
+        .fontFamily(ReaderUiVisualTokens.searchSerifFontFamily)
+        .fontSize(ReaderUiVisualTokens.searchEmptyTitleSize)
+        .fontWeight(700)
+        .fontColor(ReaderUiVisualTokens.searchInk)
+        .margin({ top: 102 })
+      Text(`所有书源均未搜索到\n「${this.submittedQuery}」\n的相关结果`)
+        .fontFamily(ReaderUiVisualTokens.searchControlFontFamily)
+        .fontSize(13)
+        .fontColor(ReaderUiVisualTokens.searchMuted)
+        .textAlign(TextAlign.Center)
+        .lineHeight(20)
+        .margin({ top: 10 })
+      Column({ space: 4 }) {
+        Text('搜索建议')
+          .fontFamily(ReaderUiVisualTokens.searchControlFontFamily)
+          .fontSize(12)
+          .fontWeight(700)
+          .fontColor(ReaderUiVisualTokens.searchInk)
+        Text('·  检查书名拼写是否正确')
+          .fontFamily(ReaderUiVisualTokens.searchControlFontFamily)
+          .fontSize(12)
+          .fontColor(ReaderUiVisualTokens.searchMuted)
+        Text('·  尝试更短的关键词或作者名')
+          .fontFamily(ReaderUiVisualTokens.searchControlFontFamily)
+          .fontSize(12)
+          .fontColor(ReaderUiVisualTokens.searchMuted)
+        Text('·  前往发现页手动添加书源')
+          .fontFamily(ReaderUiVisualTokens.searchControlFontFamily)
+          .fontSize(12)
+          .fontColor(ReaderUiVisualTokens.searchMuted)
+      }
+      .margin({ top: 32 })
+      .alignItems(HorizontalAlign.Start)
+      Row({ space: 10 }) {
+        Text('添加书源')
+          .fontFamily(ReaderUiVisualTokens.searchControlFontFamily)
+          .fontSize(13)
+          .fontWeight(800)
+          .fontColor(ReaderUiVisualTokens.searchOnPrimary)
+          .width(88)
+          .height(36)
+          .textAlign(TextAlign.Center)
+          .borderRadius(ReaderUiVisualTokens.searchHeaderRadius)
+          .backgroundColor(ReaderUiVisualTokens.searchPrimary)
+        Text('重新搜索')
+          .fontFamily(ReaderUiVisualTokens.searchControlFontFamily)
+          .fontSize(13)
+          .fontWeight(700)
+          .fontColor(ReaderUiVisualTokens.searchMuted)
+          .width(89)
+          .height(36)
+          .textAlign(TextAlign.Center)
+          .borderRadius(ReaderUiVisualTokens.searchHeaderRadius)
+          .backgroundColor(ReaderUiVisualTokens.searchChipSurface)
+          .border({ width: 1, color: ReaderUiVisualTokens.searchBorder })
+          .onClick(() => this.retry())
+      }
+      .margin({ top: 28 })
+    }
+    .width(this.bodyWidth())
+    .alignItems(HorizontalAlign.Center)
+  }
+
+  @Builder renderError() {
+    Column() {
+      Text('搜索失败')
+        .fontFamily(ReaderUiVisualTokens.searchSerifFontFamily)
+        .fontSize(ReaderUiVisualTokens.searchEmptyTitleSize)
+        .fontWeight(700)
+        .fontColor(ReaderUiVisualTokens.searchInk)
+        .margin({ top: 196 })
+      Text('请检查网络后重试')
+        .fontFamily(ReaderUiVisualTokens.searchControlFontFamily)
+        .fontSize(13)
+        .fontColor(ReaderUiVisualTokens.searchMuted)
+        .margin({ top: 8 })
+      Text('重新搜索')
+        .fontFamily(ReaderUiVisualTokens.searchControlFontFamily)
+        .fontSize(14)
+        .fontWeight(800)
+        .fontColor(ReaderUiVisualTokens.searchOnPrimary)
+        .width(112)
+        .height(ReaderUiVisualTokens.searchStateActionHeight)
+        .textAlign(TextAlign.Center)
+        .borderRadius(ReaderUiVisualTokens.searchHeaderRadius)
+        .backgroundColor(ReaderUiVisualTokens.searchPrimary)
+        .margin({ top: 28 })
+        .onClick(() => this.retry())
+    }
+    .width(this.bodyWidth())
+    .alignItems(HorizontalAlign.Center)
+  }
 
   build() {
     Column() {
-      SearchInputBox({ query: this.searchQuery, placeholder: this.placeholder })
-      if (this.searchResults.length > 0) {
-        StructureCard({
-          title: `已有 ${this.searchResults.length} 条 Core 搜索结果`,
-          message: '搜索结果由已启用书源返回，可进入结果页查看详情。',
-        })
-          .margin({ top: 14 })
-        Text('查看搜索结果')
-          .fontSize(13)
-          .fontWeight(800)
-          .fontColor(DemoAliasTokens.onPrimary)
-          .height(40)
-          .padding({ left: 18, right: 18 })
-          .borderRadius(DemoAliasTokens.radiusPill)
-          .backgroundColor(ColorTokens.primary)
-          .margin({ top: 12 })
-          .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'search-results' }))
+      this.renderHeader()
+      if (this.resolvedState() === 'initial') {
+        this.renderInitial()
       } else {
-        StructureCard({
-          title: '开始搜索',
-          message: '输入书名或作者后，将从已启用的 Core 书源获取结果。当前没有可显示的搜索结果。',
-        })
-          .margin({ top: 14 })
+        this.renderSourceTabs()
+        if (this.resolvedState() === 'loading') {
+          this.renderLoading()
+        } else if (this.resolvedState() === 'results') {
+          this.renderResults()
+        } else if (this.resolvedState() === 'empty') {
+          this.renderEmpty()
+        } else {
+          this.renderError()
+        }
       }
     }
     .width('100%')
-    .alignItems(HorizontalAlign.Start)
+    .alignItems(HorizontalAlign.Center)
+    .backgroundColor(ReaderUiVisualTokens.searchPageSurface)
+  }
+}
+
+@Component
+export struct SearchHomePage {
+  build() {
+    FigmaSearchPage({ requestedState: 'initial' })
   }
 }
 
 @Component
 export struct SearchResultsPage {
-  @StorageProp('reader.searchQuery') searchQuery: string = '';
-  @StorageProp('reader.searchResults') searchResults: SearchResultEntry[] = [];
-
-  private resultDetail(result: SearchResultEntry): string {
-    const details: string[] = [];
-    if (result.author.length > 0) details.push(result.author);
-    if (result.sourceName.length > 0) details.push(result.sourceName);
-    if (result.latestChapter !== undefined && result.latestChapter.length > 0) {
-      details.push(result.latestChapter);
-    }
-    return details.length > 0 ? details.join(' · ') : 'Core 未提供作者或书源信息。';
-  }
-
-  private openResult(result: SearchResultEntry): void {
-    if (result.bookId.length === 0) return;
-    ReaderUiStore.dispatch({ type: 'route-push', id: 'book-detail' });
-    ReaderUiStore.dispatch({
-      type: 'book-detail-load', bookId: result.bookId, sourceId: result.sourceId ?? '',
-    });
-  }
-
   build() {
-    Column() {
-      SearchInputBox({ query: this.searchQuery, placeholder: '搜索书名或作者' })
-      if (this.searchResults.length === 0) {
-        StructureCard({
-          title: '暂无搜索结果',
-          message: this.searchQuery.length > 0
-            ? `“${this.searchQuery}”暂无由 Core 返回的结果。请调整关键词或检查已启用书源。`
-            : '请输入关键词后开始搜索。',
-        })
-          .margin({ top: 14 })
-        Text('返回搜索入口')
-          .fontSize(13)
-          .fontWeight(800)
-          .fontColor(ColorTokens.primaryDark)
-          .height(40)
-          .padding({ left: 18, right: 18 })
-          .borderRadius(DemoAliasTokens.radiusPill)
-          .backgroundColor(ColorTokens.metaBg)
-          .margin({ top: 12 })
-          .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'search-home' }))
-      } else {
-        Text(`搜索结果（${this.searchResults.length}）`)
-          .fontSize(15)
-          .fontWeight(800)
-          .fontColor(ColorTokens.controlInk)
-          .margin({ top: 14 })
-        ForEach(this.searchResults, (result: SearchResultEntry, idx: number) => {
-          StructureRow({
-            title: result.title.length > 0 ? result.title : '未命名书籍',
-            detail: this.resultDetail(result),
-            chip: '详情',
-            showChevron: false,
-          })
-            .margin({ top: 8 })
-            .onClick(() => this.openResult(result))
-        }, (result: SearchResultEntry, idx: number) => `${result.sourceId ?? ''}-${result.bookId}-${idx}`)
-      }
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
+    FigmaSearchPage({ requestedState: 'results' })
   }
 }
 
 @Component
 export struct SearchStatePage {
   @Prop variant: string = 'empty';
-  @Prop title: string = '暂无结果';
-  @Prop message: string = '换个关键词后重试。';
-  @Prop action: string = '';
 
   build() {
-    Column() {
-      StatePanel({ variant: this.variant, title: this.title, message: this.message, action: this.action })
-    }
-    .width('100%')
+    FigmaSearchPage({ requestedState: this.variant })
   }
 }
 
@@ -2062,12 +2702,17 @@ export struct BookDirectoryPage {
 
 @Component
 export struct SourceManagementPage {
+  // The canonical view-state title is consumed as the semantic label for this
+  // body; the visible Figma title remains shell-owned by BackTopBar.
   @Prop title: string = '书源管理';
   @StorageProp('reader.availableSources') coreSources: CoreSourceEntry[] = [];
-  @StorageProp('reader.sourcesLoaded') sourcesLoaded: boolean = false;
+  @StorageProp(ViewportAdapter.K_CLASS) viewportClass: string = 'phone';
+  @State query: string = '';
+
   aboutToAppear(): void {
-    // Effects owns the Core boundary.  The semantic refresh event is also
-    // used for an initial-route launch where no route-push event occurred.
+    // The Figma screen is a projection of persisted sources.  Reading that
+    // projection remains an Effects-owned refresh, rather than a visual-only
+    // sample list.
     ReaderUiStore.dispatch({ type: 'source-management-refresh' });
   }
 
@@ -2079,46 +2724,119 @@ export struct SourceManagementPage {
     return count;
   }
 
+  private isTablet(): boolean {
+    return this.viewportClass === 'tablet';
+  }
+
+  private sourceSummary(): string {
+    return `${this.coreSources.length} 个书源 · ${this.enabledCount()} 个启用`;
+  }
+
+  private filteredSources(): CoreSourceEntry[] {
+    const normalized = this.query.trim().toLowerCase();
+    if (normalized.length === 0) return this.coreSources;
+    const filtered: CoreSourceEntry[] = [];
+    for (let index = 0; index < this.coreSources.length; index++) {
+      const source = this.coreSources[index];
+      const name = source.name.toLowerCase();
+      const address = source.baseUrl.toLowerCase();
+      if (name.indexOf(normalized) >= 0 || address.indexOf(normalized) >= 0) {
+        filtered.push(source);
+      }
+    }
+    return filtered;
+  }
+
+  @Builder renderFilters() {
+    Row({ space: ReaderUiVisualTokens.sourceManagementFilterGap }) {
+      FigmaSourceStatusFilter({ label: '全部', selected: true })
+      FigmaSourceStatusFilter({ label: '启用' })
+      FigmaSourceStatusFilter({ label: '异常' })
+      FigmaSourceStatusFilter({ label: '未检测', wide: true })
+      FigmaSourceStatusFilter({ label: '自定义', wide: true })
+    }
+    .width(350)
+    .height(ReaderUiVisualTokens.sourceManagementFilterHeight)
+  }
+
   build() {
     Column() {
-      SectionTitle({ title: this.title })
-        .margin({ bottom: 10 })
-      SourceMetricStrip({
-        sourceCount: this.coreSources.length,
-        enabledCount: this.enabledCount(),
-        loaded: this.sourcesLoaded,
-      })
-      SourceFilterSummaryRow()
-      SourceManagementActionBar()
-        .margin({ top: 10 })
-      Column() {
-        if (!this.sourcesLoaded) {
-          Text('正在读取 Core 书源…')
-            .fontSize(13)
-            .fontColor(ColorTokens.muted)
-            .padding({ top: 24, bottom: 24 })
-        } else if (this.coreSources.length === 0) {
-          Text('暂无书源，请使用右下角“新增书源”导入')
-            .fontSize(13)
-            .fontColor(ColorTokens.muted)
-            .padding({ top: 24, bottom: 24 })
-        } else {
-          ForEach(this.coreSources, (entry: CoreSourceEntry, idx: number) => {
-            SourceManagementRow({
-              sourceId: entry.sourceId,
-              title: entry.name,
-              meta: entry.baseUrl,
-              tone: entry.enabled ? 'good' : 'muted',
-              sourceEnabled: entry.enabled,
-            })
-          }, (entry: CoreSourceEntry, idx: number) => entry.sourceId)
+      Stack({ alignContent: Alignment.TopStart }) {
+        TextInput({ text: this.query, placeholder: '搜索书源名称或域名' })
+          .fontFamily(ReaderUiVisualTokens.sourceManagementControlFontFamily)
+          .fontSize(ReaderUiVisualTokens.sourceManagementSearchTextSize)
+          .fontColor(ReaderUiVisualTokens.sourceManagementInk)
+          .width('100%')
+          .height(ReaderUiVisualTokens.sourceManagementSearchHeight)
+          .padding({ left: 42, right: 12 })
+          .borderRadius(ReaderUiVisualTokens.sourceManagementSearchRadius)
+          .backgroundColor(ReaderUiVisualTokens.sourceManagementSearchSurface)
+          .border({ width: 1, color: ReaderUiVisualTokens.sourceManagementFieldBorder })
+          .onChange((value: string) => { this.query = value; })
+        Stack({ alignContent: Alignment.TopStart }) {
+          Image($r('app.media.source_management_search_ring'))
+            .width(13)
+            .height(13)
+          Image($r('app.media.source_management_search_handle'))
+            .width(6)
+            .height(6)
+            .margin({ left: 11, top: 8 })
         }
+        .width(17)
+        .height(17)
+        .margin({ left: 13, top: 10 })
       }
       .width('100%')
-      .margin({ top: 18 })
+      .height(ReaderUiVisualTokens.sourceManagementSearchHeight)
+
+      Text(this.sourceSummary())
+        .fontFamily(ReaderUiVisualTokens.sourceManagementControlFontFamily)
+        .fontSize(ReaderUiVisualTokens.sourceManagementStatsTextSize)
+        .fontColor(ReaderUiVisualTokens.sourceManagementMuted)
+        .width('100%')
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .margin({ top: 8 })
+
+      if (this.isTablet()) {
+        Row({ space: ReaderUiVisualTokens.sourceManagementTabletFilterGroupGap }) {
+          Column() {
+            this.renderFilters()
+          }
+          .width(350)
+          .height(ReaderUiVisualTokens.sourceManagementFilterHeight)
+          FigmaSourceGroupFilter().width(350)
+        }
+        .width('100%')
+        .height(ReaderUiVisualTokens.sourceManagementGroupHeight)
+        .alignItems(VerticalAlign.Center)
+        .margin({ top: 6 })
+      } else {
+        Column() {
+          this.renderFilters()
+        }
+          .width(350)
+          .height(ReaderUiVisualTokens.sourceManagementFilterHeight)
+          .margin({ top: 8 })
+        FigmaSourceGroupFilter()
+          .margin({ top: 8 })
+      }
+
+      Column() {
+        ForEach(this.filteredSources(), (entry: CoreSourceEntry, idx: number) => {
+          FigmaSourceManagementRow({
+              title: entry.name,
+              meta: entry.baseUrl,
+              sourceEnabled: entry.enabled,
+            })
+        }, (entry: CoreSourceEntry, idx: number) => entry.sourceId)
+      }
+      .width('100%')
+      .margin({ top: this.isTablet() ? 12 : 10 })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
+    .accessibilityText(this.title)
   }
 }
 
@@ -2434,262 +3152,210 @@ export struct SyncSettingsEntryPage {
 }
 
 @Component
-export struct SyncBackupPage {
-  // Retained for generated ViewState compatibility.  Runtime state, rather
-  // than this demo-era variant, drives all visible backup status.
-  @Prop variant: string = 'default';
-  @StorageProp('reader.coreBackupStatus') status: string = 'idle';
-  @StorageProp('reader.coreBackupMessage') message: string = '';
-  @StorageProp('reader.localCoreBackup') localBackup: CoreStorageBackupInfo | null = null;
-  @StorageProp('reader.displayedRouteId') routeId: string = 'sync-backup';
-  @StorageProp('reader.webdavServerUrl') webdavServerUrl: string = '';
-
-  private isBusy(): boolean {
-    return this.status === 'loading' || this.status === 'creating' || this.status === 'restoring';
-  }
-
-  private localBackupDetail(): string {
-    if (this.localBackup === null) return '';
-    const prefix = this.localBackup.checksum.substring(0, 12);
-    return `schema v${this.localBackup.schemaVersion} · ${this.localBackup.bytes} B · SHA-256 ${prefix}…`;
-  }
-
-  private async selectBackupFile(): Promise<void> {
-    try {
-      const documentPicker = new picker.DocumentViewPicker();
-      const options = new picker.DocumentSelectOptions();
-      options.maxSelectNumber = 1;
-      options.fileSuffixFilters = ['.json'];
-      const uris: string[] = await documentPicker.select(options);
-      if (uris.length === 0) return;
-      const uri = uris[0];
-      const slash = uri.lastIndexOf('/');
-      const name = slash >= 0 ? uri.substring(slash + 1) : uri;
-      ReaderEffects.prepareCoreRestoreFromUri(uri, name);
-    } catch (e) {
-      // A picker cancel must not manufacture a backup error state.
-    }
-  }
+struct SyncSectionHeading {
+  @Prop title: string = '';
 
   build() {
-    Column() {
-      if (this.routeId === 'webdav-config') {
-        WebDavConfigSection()
-      } else {
-      StructureCard({
-        title: 'WebDAV 传输',
-        message: this.webdavServerUrl.trim().length > 0
-          ? '已保存匿名 HTTPS 端点；完整地址不会在备份页回显。'
-          : '尚未保存 WebDAV 端点；远端备份和恢复会保持关闭。',
-        chip: this.webdavServerUrl.trim().length > 0 ? '已配置端点' : '未配置',
-      })
-      Text('打开 WebDAV 配置')
-        .fontSize(13)
-        .fontWeight(800)
-        .fontColor(ColorTokens.primary)
-        .height(38)
-        .width('100%')
-        .textAlign(TextAlign.Center)
-        .borderRadius(DemoAliasTokens.radiusPill)
-        .border({ width: 1, color: ColorTokens.border })
-        .margin({ top: 8 })
-        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'webdav-config' }))
-      SectionTitle({ title: 'Core 数据备份' })
-        .margin({ top: 14, bottom: 8 })
-      StructureCard({
-        title: this.localBackup === null ? '尚无本机 Core 备份' : '本机 Core 数据备份',
-        message: this.localBackup === null
-          ? '点击“创建本机备份”后，Core 会导出带 SHA-256 清单的完整存储快照。'
-          : this.localBackupDetail(),
-        chip: this.localBackup === null ? '空' : '可恢复',
-      })
-      if (this.localBackup !== null) {
-        Text('使用本机备份恢复')
-          .fontSize(13)
-          .fontWeight(800)
-          .fontColor(this.isBusy() ? ColorTokens.muted : ColorTokens.primary)
-          .height(38)
-          .width('100%')
-          .textAlign(TextAlign.Center)
-          .borderRadius(DemoAliasTokens.radiusPill)
-          .border({ width: 1, color: ColorTokens.border })
-          .margin({ top: 8 })
-          .onClick(() => {
-            if (!this.isBusy()) ReaderUiStore.dispatch({ type: 'core-backup-prepare-local' });
-          })
-      }
-      Row({ space: 8 }) {
-        Text('创建本机备份')
-          .fontSize(13)
-          .fontWeight(800)
-          .fontColor(DemoAliasTokens.onPrimary)
-          .height(40)
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-          .borderRadius(DemoAliasTokens.radiusPill)
-          .backgroundColor(this.isBusy() ? ColorTokens.muted : ColorTokens.primary)
-          .onClick(() => {
-            if (!this.isBusy()) ReaderUiStore.dispatch({ type: 'core-backup-create-local' });
-          })
-        Text('备份到 WebDAV')
-          .fontSize(13)
-          .fontWeight(800)
-          .fontColor(ColorTokens.primary)
-          .height(40)
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-          .borderRadius(DemoAliasTokens.radiusPill)
-          .border({ width: 1, color: ColorTokens.border })
-          .onClick(() => {
-            if (!this.isBusy()) ReaderUiStore.dispatch({ type: 'core-backup-create-webdav' });
-          })
-      }
+    Text(this.title)
+      .fontFamily(ReaderUiVisualTokens.webdavControlFontFamily)
+      .fontSize(ReaderUiVisualTokens.syncSectionTitleSize)
+      .fontWeight(900)
+      .fontColor(ReaderUiVisualTokens.webdavInk)
       .width('100%')
-      .margin({ top: 10 })
-      Row({ space: 8 }) {
-        Text('从备份文件恢复')
-          .fontSize(13)
-          .fontWeight(800)
-          .fontColor(this.isBusy() ? ColorTokens.muted : ColorTokens.primary)
-          .height(38)
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-          .borderRadius(DemoAliasTokens.radiusPill)
-          .border({ width: 1, color: ColorTokens.border })
-          .onClick(() => {
-            if (!this.isBusy()) this.selectBackupFile();
-          })
-        Text('从 WebDAV 恢复')
-          .fontSize(13)
-          .fontWeight(800)
-          .fontColor(this.isBusy() ? ColorTokens.muted : ColorTokens.primary)
-          .height(38)
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-          .borderRadius(DemoAliasTokens.radiusPill)
-          .border({ width: 1, color: ColorTokens.border })
-          .onClick(() => {
-            if (!this.isBusy()) ReaderUiStore.dispatch({ type: 'core-backup-prepare-remote' });
-          })
-      }
-      .width('100%')
-      .margin({ top: 8 })
-      if (this.message.length > 0) {
-        Text(this.message)
-          .fontSize(11)
-          .fontColor(this.status === 'error' ? ColorTokens.accent : ColorTokens.muted)
-          .lineHeight(17)
-          .width('100%')
-          .margin({ top: 9 })
-      }
-      }
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
+      .padding({ left: 12 })
   }
 }
 
 @Component
-export struct RestoreConfirmPage {
-  @Prop variant: string = 'default';
-  @StorageProp('reader.pendingCoreRestore') pending: CoreStorageBackupInfo | null = null;
-  @StorageProp('reader.pendingCoreRestoreConfirmationChecksum') confirmationChecksum: string = '';
-  @StorageProp('reader.coreBackupStatus') status: string = 'idle';
-  @StorageProp('reader.coreBackupMessage') message: string = '';
+struct SyncAutoBackupRow {
+  @Prop label: string = '';
+  @Prop value: string = '';
+  @Prop last: boolean = false;
 
-  private detail(): string {
-    if (this.pending === null) return '';
-    return `schema v${this.pending.schemaVersion} · ${this.pending.bytes} B · SHA-256 ${this.pending.checksum.substring(0, 12)}…`;
+  build() {
+    Column() {
+      Row() {
+        Text(this.label)
+          .fontFamily(ReaderUiVisualTokens.webdavControlFontFamily)
+          .fontSize(ReaderUiVisualTokens.syncRowLabelSize)
+          .fontWeight(700)
+          .fontColor(ReaderUiVisualTokens.webdavInk)
+          .layoutWeight(1)
+        Row({ space: 8 }) {
+          Text(this.value)
+            .fontFamily(ReaderUiVisualTokens.webdavControlFontFamily)
+            .fontSize(ReaderUiVisualTokens.syncRowLabelSize)
+            .fontWeight(650)
+            .fontColor(ReaderUiVisualTokens.syncValue)
+          Text('⌄')
+            .fontFamily(ReaderUiVisualTokens.webdavControlFontFamily)
+            .fontSize(16)
+            .fontColor(ReaderUiVisualTokens.syncValue)
+        }
+        .alignItems(VerticalAlign.Center)
+      }
+      .height(ReaderUiVisualTokens.syncAutoRowHeight)
+      .width('100%')
+      .padding({ left: 14, right: 14 })
+      .alignItems(VerticalAlign.Center)
+      if (!this.last) {
+        Column()
+          .width('100%')
+          .height(1)
+          .backgroundColor(ReaderUiVisualTokens.syncPanelBorder)
+      }
+    }
+    .width('100%')
+  }
+}
+
+@Component
+struct SyncBackupHistoryCard {
+  @Prop entry: CoreStorageBackupHistoryEntry = {
+    path: '', fileName: '', source: '', schemaVersion: 0, bytes: 0, checksum: '', exportedAt: 0,
+  };
+  @StorageProp('reader.coreBackupStatus') status: string = 'idle';
+
+  private pad(value: number): string {
+    return value < 10 ? `0${value}` : `${value}`;
   }
 
-  private awaitingSecondConfirmation(): boolean {
-    return this.pending !== null && this.status !== 'restoring' &&
-      this.confirmationChecksum === this.pending.checksum;
+  private exportedAtLabel(): string {
+    const date = new Date(this.entry.exportedAt);
+    if (isNaN(date.getTime())) return '';
+    return `${date.getFullYear()}-${this.pad(date.getMonth() + 1)}-${this.pad(date.getDate())} ${this.pad(date.getHours())}:${this.pad(date.getMinutes())}`;
+  }
+
+  private sourceLabel(): string {
+    return this.entry.source.toLowerCase().indexOf('webdav') >= 0 ? 'WebDAV' : '本地';
+  }
+
+  private byteLabel(): string {
+    if (this.entry.bytes < 1024 * 1024) return `${Math.max(1, Math.round(this.entry.bytes / 1024))} KB`;
+    return `${(this.entry.bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  private busy(): boolean {
+    return this.status === 'loading' || this.status === 'creating' || this.status === 'restoring';
   }
 
   build() {
-    if (this.pending === null) {
-      StatePanel({
-        title: '没有可恢复的 Core 备份',
-        message: '请从同步页选择本机、WebDAV 或外部备份文件。',
-      })
+    Column() {
+      Row({ space: 14 }) {
+        Text(this.sourceLabel())
+          .fontFamily(ReaderUiVisualTokens.webdavControlFontFamily)
+          .fontSize(ReaderUiVisualTokens.syncHistoryTextSize)
+          .fontWeight(800)
+          .fontColor(ReaderUiVisualTokens.webdavInk)
+          .height(ReaderUiVisualTokens.syncHistoryBadgeHeight)
+          .padding({ left: 10, right: 10 })
+          .borderRadius(999)
+          .backgroundColor(ReaderUiVisualTokens.syncBadgeSurface)
+        Text(this.exportedAtLabel())
+          .fontFamily(ReaderUiVisualTokens.webdavControlFontFamily)
+          .fontSize(ReaderUiVisualTokens.syncHistoryTextSize)
+          .fontColor(ReaderUiVisualTokens.syncValue)
+          .layoutWeight(1)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+      Row() {
+        Text('完整 Core 数据')
+          .fontFamily(ReaderUiVisualTokens.webdavControlFontFamily)
+          .fontSize(ReaderUiVisualTokens.syncHistoryTextSize)
+          .fontColor(ReaderUiVisualTokens.syncValue)
+          .layoutWeight(1)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(this.byteLabel())
+          .fontFamily(ReaderUiVisualTokens.webdavControlFontFamily)
+          .fontSize(ReaderUiVisualTokens.syncHistoryTextSize)
+          .fontColor(ReaderUiVisualTokens.syncValue)
+      }
+      .width('100%')
+      .margin({ top: 11 })
+    }
+    .width('100%')
+    .height(ReaderUiVisualTokens.syncHistoryRowHeight)
+    .padding({ left: 14, right: 14, top: 12, bottom: 12 })
+    .borderRadius(ReaderUiVisualTokens.syncAutoPanelRadius)
+    .backgroundColor(ReaderUiVisualTokens.syncPanelSurface)
+    .border({ width: 1, color: ReaderUiVisualTokens.syncPanelBorder })
+    .opacity(this.busy() ? 0.56 : 1)
+    .enabled(!this.busy())
+    .onClick(() => {
+      if (!this.busy()) {
+        ReaderUiStore.dispatch({ type: 'core-backup-prepare-local', coreBackupPath: this.entry.path });
+      }
+    })
+  }
+}
+
+@Component
+export struct SyncBackupPage {
+  // `variant` remains only for generated ViewState compatibility.  The page
+  // itself is the current Figma composition; every backup row comes from the
+  // Core-validated local history projection, never from the design sample.
+  @Prop variant: string = 'default';
+  @StorageProp('reader.displayedRouteId') routeId: string = 'sync-backup';
+  @StorageProp('reader.localCoreBackupHistory') localBackupHistory: CoreStorageBackupHistoryEntry[] = [];
+  @State historyExpanded: boolean = false;
+
+  private visibleHistory(): CoreStorageBackupHistoryEntry[] {
+    return this.historyExpanded ? this.localBackupHistory : this.localBackupHistory.slice(0, 5);
+  }
+
+  build() {
+    if (this.routeId === 'webdav-config') {
+      WebDavConfigSection()
     } else {
-      Column() {
-        StructureCard({
-          title: '确认原子恢复 Core 数据',
-          message: `来源：${this.pending.source}\n${this.detail()}`,
-          chip: '已校验',
-        })
-        StructureCard({
-          title: '恢复范围',
-          message: '该操作应用完整 Core 存储快照，不能伪造按书架、进度或书源的局部恢复选项。Core 会再次校验 SHA-256、迁移并使用 Host CAS 原子写入。',
-        })
-          .margin({ top: 12 })
-        StructureCard({
-          title: '可回退点',
-          message: '开始前会先创建恢复前本机快照；若该快照无法写入，恢复会直接停止。',
-        })
-          .margin({ top: 8 })
-        if (this.awaitingSecondConfirmation()) {
-          Row({ space: 10 }) {
-            Text('取消恢复')
-              .fontSize(13)
-              .fontWeight(800)
-              .fontColor(ColorTokens.primary)
-              .height(40)
-              .layoutWeight(1)
-              .textAlign(TextAlign.Center)
-              .borderRadius(DemoAliasTokens.radiusPill)
-              .border({ width: 1, color: ColorTokens.border })
-              .onClick(() => ReaderUiStore.dispatch({ type: 'core-restore-apply-cancel' }))
-            Text('确认替换完整 Core 数据')
-              .fontSize(13)
-              .fontWeight(800)
-              .fontColor(DemoAliasTokens.onPrimary)
-              .height(40)
-              .layoutWeight(1)
-              .textAlign(TextAlign.Center)
-              .borderRadius(DemoAliasTokens.radiusPill)
-              .backgroundColor(ColorTokens.primary)
-              .onClick(() => ReaderUiStore.dispatch({ type: 'core-restore-apply-confirm' }))
+      Column({ space: ReaderUiVisualTokens.syncSectionGap }) {
+        Column({ space: 8 }) {
+          SyncSectionHeading({ title: 'WebDAV 配置' })
+          WebDavConnectionCard()
+        }
+        .width('100%')
+
+        Column({ space: 8 }) {
+          SyncSectionHeading({ title: '自动备份配置' })
+          Column() {
+            // These values are the admitted Figma static configuration view.
+            // There is no Core owner for editing them yet, so rows stay inert
+            // instead of claiming native scheduling or scope behavior.
+            SyncAutoBackupRow({ label: '保存位置', value: 'WebDAV' })
+            SyncAutoBackupRow({ label: '备份频率', value: '12h' })
+            SyncAutoBackupRow({ label: '备份范围', value: '2 项已选', last: true })
           }
           .width('100%')
-          .margin({ top: 12 })
-        } else {
-          Row({ space: 10 }) {
-            Text('取消')
-              .fontSize(13)
+          .borderRadius(ReaderUiVisualTokens.syncAutoPanelRadius)
+          .backgroundColor(ReaderUiVisualTokens.syncPanelSurface)
+          .border({ width: 1, color: ReaderUiVisualTokens.syncPanelBorder })
+        }
+        .width('100%')
+
+        Column({ space: ReaderUiVisualTokens.syncHistoryRowGap }) {
+          SyncSectionHeading({ title: '历史备份' })
+          ForEach(this.visibleHistory(), (entry: CoreStorageBackupHistoryEntry, index: number) => {
+            SyncBackupHistoryCard({ entry: entry })
+          }, (entry: CoreStorageBackupHistoryEntry, index: number) => `${entry.path}-${entry.exportedAt}-${index}`)
+          if (this.localBackupHistory.length > 5) {
+            Text(this.historyExpanded ? '收起' : '展开')
+              .fontFamily(ReaderUiVisualTokens.webdavControlFontFamily)
+              .fontSize(ReaderUiVisualTokens.syncHistoryTextSize)
               .fontWeight(800)
-              .fontColor(ColorTokens.primary)
-              .height(40)
-              .layoutWeight(1)
+              .fontColor(ReaderUiVisualTokens.syncValue)
+              .height(ReaderUiVisualTokens.syncHistoryExpandHeight)
+              .width('100%')
               .textAlign(TextAlign.Center)
-              .borderRadius(DemoAliasTokens.radiusPill)
-              .border({ width: 1, color: ColorTokens.border })
-              .onClick(() => ReaderUiStore.dispatch({ type: 'route-replace', id: 'sync-backup' }))
-            Text(this.status === 'restoring' ? '正在恢复…' : '开始原子恢复')
-              .fontSize(13)
-              .fontWeight(800)
-              .fontColor(DemoAliasTokens.onPrimary)
-              .height(40)
-              .layoutWeight(1)
-              .textAlign(TextAlign.Center)
-              .borderRadius(DemoAliasTokens.radiusPill)
-              .backgroundColor(this.status === 'restoring' ? ColorTokens.muted : ColorTokens.primary)
-              .onClick(() => {
-                if (this.status !== 'restoring') ReaderUiStore.dispatch({ type: 'core-restore-apply-request' });
-              })
+              .borderRadius(ReaderUiVisualTokens.syncAutoPanelRadius)
+              .backgroundColor(ReaderUiVisualTokens.syncPanelSurface)
+              .border({ width: 1, color: ReaderUiVisualTokens.syncPanelBorder })
+              .onClick(() => this.historyExpanded = !this.historyExpanded)
           }
-          .width('100%')
-          .margin({ top: 12 })
         }
-        if (this.message.length > 0) {
-          Text(this.message)
-            .fontSize(11)
-            .fontColor(this.status === 'error' ? ColorTokens.accent : ColorTokens.muted)
-            .lineHeight(17)
-            .margin({ top: 8 })
-        }
+        .width('100%')
       }
       .width('100%')
       .alignItems(HorizontalAlign.Start)
@@ -2698,56 +3364,182 @@ export struct RestoreConfirmPage {
 }
 
 @Component
-export struct RestoreProgressPage {
-  @Prop variant: string = 'default';
-  @StorageProp('reader.coreBackupStatus') status: string = 'idle';
-  @StorageProp('reader.coreBackupMessage') message: string = '';
+export struct RestoreBackupOverlay {
+  @StorageProp('reader.displayedRouteId') @Watch('syncPresentation') routeId: string = 'sync-backup';
+  @StorageProp('reader.coreBackupStatus') @Watch('syncPresentation') status: string = 'idle';
+  @StorageProp('reader.pendingCoreRestore') pending: CoreStorageBackupInfo | null = null;
+  @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
+  @StorageProp(RestoreBackupOverlayMotionCoordinator.K_PHASE) presentationPhase: string = 'idle';
+
+  aboutToAppear(): void {
+    this.syncPresentation();
+  }
+
+  private isRestoreRoute(): boolean {
+    return this.routeId === 'restore-confirm' || this.routeId === 'restore-running' ||
+      this.routeId === 'restore-result';
+  }
+
+  private isLoading(): boolean {
+    return this.routeId === 'restore-running' || this.status === 'restoring' ||
+      this.presentationPhase === 'dissolving' || this.presentationPhase === 'loading';
+  }
+
+  private isComplete(): boolean {
+    return this.routeId === 'restore-result' && this.status === 'success';
+  }
+
+  private syncPresentation(): void {
+    if (this.routeId === 'restore-confirm' && this.pending !== null && this.status !== 'restoring') {
+      RestoreBackupOverlayMotionCoordinator.prepareConfirm();
+      return;
+    }
+    if (this.isComplete()) {
+      RestoreBackupOverlayMotionCoordinator.beginComplete((): void => {
+        ReaderUiStore.dispatch({ type: 'route-replace', id: 'sync-backup' });
+      });
+    }
+  }
+
+  private cancel(): void {
+    RestoreBackupOverlayMotionCoordinator.cancel();
+    ReaderUiStore.dispatch({ type: 'core-restore-apply-cancel' });
+    ReaderUiStore.dispatch({ type: 'route-replace', id: 'sync-backup' });
+  }
+
+  private confirm(): void {
+    const sequence = RestoreBackupOverlayMotionCoordinator.beginConfirmToLoading(this.reducedMotion);
+    ReaderUiStore.dispatch({ type: 'core-restore-apply-request' });
+    if (!this.reducedMotion) {
+      setTimeout((): void => RestoreBackupOverlayMotionCoordinator.finishConfirmToLoading(sequence),
+        RestoreBackupOverlayMotionCoordinator.CONFIRM_TO_LOADING_DURATION_MS);
+    }
+  }
 
   build() {
-    Column() {
-      StatePanel({
-        variant: this.status === 'restoring' ? 'loading' : (this.status === 'error' ? 'error' : 'empty'),
-        title: this.status === 'restoring' ? 'Core 正在原子恢复' : '没有运行中的恢复任务',
-        message: this.message.length > 0 ? this.message : '恢复进度由 Core 的原子事务决定；页面不会展示固定百分比或虚构阶段。',
-      })
+    if (!this.isRestoreRoute() ||
+      (this.routeId === 'restore-confirm' && this.pending === null && !this.isLoading())) {
+      Column().width(0).height(0)
+    } else {
+      Stack({ alignContent: Alignment.Center }) {
+        if (this.isComplete()) {
+          Row({ space: 8 }) {
+            Image($r('app.media.restore_backup_check'))
+              .width(16)
+              .height(16)
+            Text('恢复完成')
+              .fontFamily(ReaderUiVisualTokens.restoreFontFamily)
+              .fontSize(ReaderUiVisualTokens.restoreToastLabelSize)
+              .fontWeight(800)
+              .fontColor(ReaderUiVisualTokens.restoreToastText)
+          }
+          .width(ReaderUiVisualTokens.restoreToastWidth)
+          .height(ReaderUiVisualTokens.restoreToastHeight)
+          .padding({ left: 14, right: 14 })
+          .borderRadius(ReaderUiVisualTokens.restoreToastRadius)
+          .backgroundColor(ReaderUiVisualTokens.restoreToastSurface)
+          .alignItems(VerticalAlign.Center)
+        } else if (this.isLoading()) {
+          Column({ space: 9 }) {
+            Image($r('app.media.restore_backup_refresh'))
+              .width(28)
+              .height(28)
+            Text('正在恢复')
+              .fontFamily(ReaderUiVisualTokens.restoreFontFamily)
+              .fontSize(ReaderUiVisualTokens.restoreLoadingTitleSize)
+              .fontWeight(700)
+              .fontColor(ReaderUiVisualTokens.webdavInk)
+            Text('正在从备份恢复数据，请稍候。')
+              .fontFamily(ReaderUiVisualTokens.restoreFontFamily)
+              .fontSize(ReaderUiVisualTokens.restoreLoadingBodySize)
+              .fontColor(ReaderUiVisualTokens.syncValue)
+          }
+          .width(ReaderUiVisualTokens.restoreLoadingWidth)
+          .height(ReaderUiVisualTokens.restoreLoadingHeight)
+          .justifyContent(FlexAlign.Center)
+          .alignItems(HorizontalAlign.Center)
+          .borderRadius(ReaderUiVisualTokens.restoreDialogRadius)
+          .backgroundColor(ReaderUiVisualTokens.restoreDialogSurface)
+          .border({ width: 1, color: ReaderUiVisualTokens.restoreDialogBorder })
+        } else {
+          Column() {
+            Text('恢复此备份？')
+              .fontFamily(ReaderUiVisualTokens.restoreFontFamily)
+              .fontSize(ReaderUiVisualTokens.restoreDialogTitleSize)
+              .fontWeight(700)
+              .fontColor(ReaderUiVisualTokens.webdavInk)
+            Text('将使用所选备份恢复数据。确认后开始恢复。')
+              .fontFamily(ReaderUiVisualTokens.restoreFontFamily)
+              .fontSize(ReaderUiVisualTokens.restoreDialogBodySize)
+              .fontColor(ReaderUiVisualTokens.syncValue)
+              .lineHeight(20)
+              .margin({ top: 12 })
+            Row({ space: 10 }) {
+              Text('取消')
+                .fontFamily(ReaderUiVisualTokens.restoreFontFamily)
+                .fontSize(13)
+                .fontWeight(700)
+                .fontColor(ReaderUiVisualTokens.webdavInk)
+                .height(ReaderUiVisualTokens.restoreDialogActionHeight)
+                .layoutWeight(1)
+                .textAlign(TextAlign.Center)
+                .borderRadius(8)
+                .backgroundColor(ReaderUiVisualTokens.restoreDialogCancelSurface)
+                .onClick(() => this.cancel())
+              Text('确认')
+                .fontFamily(ReaderUiVisualTokens.restoreFontFamily)
+                .fontSize(13)
+                .fontWeight(700)
+                .fontColor(ReaderUiVisualTokens.webdavActionOnPrimary)
+                .height(ReaderUiVisualTokens.restoreDialogActionHeight)
+                .layoutWeight(1)
+                .textAlign(TextAlign.Center)
+                .borderRadius(8)
+                .backgroundColor(ReaderUiVisualTokens.restoreDialogPrimary)
+                .onClick(() => this.confirm())
+            }
+            .width('100%')
+            .margin({ top: 16 })
+          }
+          .width(ReaderUiVisualTokens.restoreDialogConfirmWidth)
+          .height(ReaderUiVisualTokens.restoreDialogConfirmHeight)
+          .padding(18)
+          .borderRadius(ReaderUiVisualTokens.restoreDialogRadius)
+          .backgroundColor(ReaderUiVisualTokens.restoreDialogSurface)
+          .border({ width: 1, color: ReaderUiVisualTokens.restoreDialogBorder })
+          .alignItems(HorizontalAlign.Start)
+        }
+      }
+      .width('100%')
+      .height('100%')
+      .hitTestBehavior(HitTestMode.Block)
     }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
   }
+}
+
+// Generated compatibility components for withdrawn full-page restore routes.
+// The admitted restore flow is rendered only by RestoreBackupOverlay in
+// SettingsShell, so these cannot revive generic substitute pages.
+@Component
+export struct RestoreConfirmPage {
+  @Prop variant: string = 'default';
+  build() { Column().width(0).height(0) }
+}
+
+@Component
+export struct RestoreProgressPage {
+  @Prop variant: string = 'default';
+  build() { Column().width(0).height(0) }
 }
 
 @Component
 export struct RestoreConflictPage {
-  build() {
-    Column() {
-      StatePanel({
-        title: '没有可选择的伪冲突项',
-        message: 'runtime.storage.apply 使用完整快照的校验、迁移和 CAS 原子替换；当前 Core 事务没有按记录合并或人工冲突决策契约。',
-      })
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
+  build() { Column().width(0).height(0) }
 }
 
 @Component
 export struct RestoreResultPage {
-  @StorageProp('reader.coreBackupStatus') status: string = 'idle';
-  @StorageProp('reader.coreBackupMessage') message: string = '';
-
-  build() {
-    Column() {
-      StatePanel({
-        variant: this.status === 'success' ? 'default' : (this.status === 'error' ? 'error' : 'empty'),
-        title: this.status === 'success' ? 'Core 数据恢复完成' : '没有可验证的恢复结果',
-        message: this.message.length > 0
-          ? this.message
-          : '完成后此处只显示 Core 与 Host 返回的事务结果，不显示固定的书籍或进度数量。',
-      })
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
+  build() { Column().width(0).height(0) }
 }
 
 @Component
