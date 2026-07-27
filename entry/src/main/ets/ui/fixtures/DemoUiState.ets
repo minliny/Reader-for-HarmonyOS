@@ -1,0 +1,253 @@
+// DemoUiState — Phase 1 demo initial state (from ui-state.fixtures.json).
+// Opens directly to the bookshelf.  `cover-mode` is the bookshelf's view-mode
+// context, not a route pageState: the canonical Reader-UI fixture uses the
+// admitted route master state `default` for this initial route.
+import { ReaderFontFamily, ReaderUiState, ReplaceRule } from '../store/ReaderUiState';
+import { ReaderAppearanceSpecRegistry } from '../../contract/reader_ui/Appearance';
+
+function defaultAppearanceFontFamily(): ReaderFontFamily {
+  const value = ReaderAppearanceSpecRegistry.font(ReaderAppearanceSpecRegistry.defaults.fontId)!.arktsValue;
+  switch (value) {
+    case 'serif': return 'serif';
+    case 'sans': return 'sans';
+    case 'kai': return 'kai';
+    case 'fangsong': return 'fangsong';
+    case 'mono': return 'mono';
+    case 'sourceSerif': return 'sourceSerif';
+    case 'lxgw': return 'lxgw';
+    default: return 'system';
+  }
+}
+
+export class DemoUiState {
+  static initial(): ReaderUiState {
+    return {
+      routeId: 'bookshelf',
+      tab: 'bookshelf',
+      readerMode: 'default',
+      paginationMode: 'horizontal',
+      readerPageIndex: 0,
+      readerPageCount: 1,
+      readerChapterOffset: 0,
+      readerChapterProgress: 0,
+      fontSize: ReaderAppearanceSpecRegistry.stepper('fontSize')!.defaultValue,
+      lineHeight: ReaderAppearanceSpecRegistry.stepper('lineHeight')!.defaultValue,
+      paragraphGap: ReaderAppearanceSpecRegistry.stepper('paragraphGap')!.defaultValue,
+      letterSpacing: ReaderAppearanceSpecRegistry.stepper('letterSpacing')!.defaultValue,
+      fontFamily: defaultAppearanceFontFamily(),
+      topMargin: 72,
+      sideMargin: 32,
+      paragraphIndent: 2,
+      overlay: '',
+      activeSession: '',
+      focusTarget: '',
+      loading: false,
+      error: null,
+      reducedMotion: false,
+      pageState: 'default',
+      firstOpenPlayed: true,
+      stack: [{ id: 'bookshelf' }],
+      searchQuery: '',
+      searchResults: [],
+      currentBook: null,
+      chapterContent: [],
+      chapterToc: [],
+      currentChapterTitle: '',
+      canonicalReaderLocation: null,
+      activeReaderContentIdentity: null,
+      contentSearchQuery: '',
+      contentSearchResults: [],
+      contentSearchLoading: false,
+      contentSearchLoaded: false,
+      contentSearchError: '',
+      contentSearchMessage: '',
+      // Core owns bookmark storage.  A fresh application must display an
+      // honest empty projection instead of demo rows.
+      bookmarks: [],
+      bookmarksLoaded: false,
+      bookmarksLoading: false,
+      bookmarksError: '',
+      pendingBookmarkDeleteTime: -1,
+      // Core `search.history.*` owns keyword history; no fixture keywords.
+      searchHistory: [],
+      searchHistoryLoaded: false,
+      searchHistoryLoading: false,
+      searchHistoryError: '',
+      pendingSearchHistoryClear: false,
+      searchHistoryLimit: 20,
+      // ── Batch 1 session/TTS/settings defaults ──
+      ttsSession: {
+        playback: 'idle',
+        rate: 1.0,
+        voice: '',
+        scope: 'chapter',
+        timer: 'off',
+        currentSegment: 0,
+        totalSegments: 0,
+      },
+      autoPageSession: {
+        playing: false,
+        countdownSeconds: 0,
+        intervalSeconds: 5,
+      },
+      brightness: 80,
+      brightnessAuto: false,
+      readerHostMessage: '',
+      tocMode: 'directory',
+      readerToggles: {
+        autoPage: false,
+        volumePage: false,
+        landscapeLock: false,
+        keepScreenOn: false,
+        statusInfo: true,
+        hapticFeedback: true,
+        cacheNext: true,
+        hideStatusBar: false,
+      },
+      readerSettingOptions: {
+        pageMode: 'horizontal',
+        tapMode: '左右区域',
+        pageAnimation: ReaderAppearanceSpecRegistry.select('pageAnimation')!.defaultValue,
+        paragraphIndentMode: ReaderAppearanceSpecRegistry.select('paragraphIndentMode')!.defaultValue,
+        textConversion: ReaderAppearanceSpecRegistry.select('textConversion')!.defaultValue,
+        textAlignment: ReaderAppearanceSpecRegistry.select('textAlignment')!.defaultValue,
+      },
+      selection: {
+        visible: false,
+        action: '',
+        selectedText: '',
+      },
+      // ── Batch 4 bookshelf/discover/source-switch defaults ──
+      bookshelfFilter: {
+        view: 'cover',
+        group: 'all',
+        sort: 'recent',
+        filters: [],
+      },
+      discoverFilter: {
+        filters: [],
+        sort: 'popular',
+      },
+      discoverSources: [],
+      discoverSourceId: '',
+      discoverKinds: [],
+      discoverKindUrl: '',
+      discoverKindTitle: '',
+      discoverBooks: [],
+      discoverLoading: false,
+      discoverLoaded: false,
+      discoverError: '',
+      sourceSelection: [],
+      sourceSwitchEpoch: 0,
+      availableSources: [],
+      sourcesLoaded: false,
+      sourceCheckSourceId: '',
+      sourceCheckSourceName: '',
+      sourceCheckLoading: false,
+      sourceCheckLoaded: false,
+      sourceCheckMessage: '',
+      sourceCheckError: '',
+      sourceCheckResult: null,
+      sourceDebugSourceId: '',
+      sourceDebugSourceName: '',
+      sourceDebugLoading: false,
+      sourceDebugLoaded: false,
+      sourceDebugMessage: '',
+      sourceDebugError: '',
+      sourceDebugResult: null,
+      bookshelfBooks: [],
+      bookshelfLoaded: false,
+      continueReadingBook: null,
+      continueReadingLoaded: false,
+      continueReadingError: '',
+      pendingBookshelfRemovalSourceId: '',
+      pendingBookshelfRemovalBookId: '',
+      pendingBookshelfRemovalTargets: [],
+      bookshelfRemovalScope: 'single',
+      bookshelfRemovalDialogPhase: 'idle',
+      bookshelfRemovalEpoch: 0,
+      bookshelfRemovalError: '',
+      lastBookshelfRemovalReceipt: null,
+      pendingBookshelfActionSourceId: '',
+      pendingBookshelfActionBookId: '',
+      bookshelfSelectedTargets: [],
+      bookGroups: [],
+      bookGroupsLoaded: false,
+      bookGroupsLoading: false,
+      bookGroupsError: '',
+      pendingBookGroupDeleteId: 0,
+      pendingBookGroupClearSourceId: '',
+      pendingBookGroupClearBookId: '',
+      rssSubscriptions: [],
+      rssItems: [],
+      rssLoaded: false,
+      rssLoading: false,
+      rssLoadError: '',
+      rssItemFilter: 'all',
+      rssRefreshStatus: 'idle',
+      rssRefreshMessage: '',
+      pendingRssSubscriptionDeleteId: '',
+      pendingReplaceRuleDeleteId: '',
+      // ── B1 P0 全局设置默认值 ──
+      appThemeMode: 'system',
+      settingsToggles: {
+        autoCheckUpdate: true,
+        tapBottomBarToTop: true,
+        showUpdateBadge: true,
+        mergeSameBooks: true,
+        enableSearchHistory: true,
+        showLocalBookBadge: true,
+      },
+      // ── F3 交互连接默认值 ──
+      readerTheme: ReaderAppearanceSpecRegistry.defaults.dayThemeId,
+      readerSettingExpandedOption: '',
+      autoPageMode: 'continuous',
+      // ── P1.2 select/action 控件展开状态默认值 ──
+      expandedOptionKey: '',
+      pendingCacheClear: false,
+      coreSlice10Method: '',
+      coreSlice10Loading: false,
+      coreSlice10Result: null,
+      coreSlice10Error: '',
+      lastUndoToken: null,
+      // ── P1.3 WebDAV 配置默认值 ──
+      webdavServerUrl: '',
+      webdavUsername: '',
+      webdavPassword: '',
+      webdavSyncDir: '/reader/backup',
+      webdavTestStatus: 'idle',
+      webdavTestMessage: '',
+      webdavSaveStatus: 'idle',
+      webdavSaveMessage: '',
+      // Core storage backup starts unknown until the host file is inspected.
+      // Do not seed a demo backup record here: the Sync page must only render
+      // an exported snapshot that really exists on this device.
+      coreBackupStatus: 'idle',
+      coreBackupMessage: '',
+      localCoreBackup: null,
+      localCoreBackupHistory: [],
+      pendingCoreRestore: null,
+      pendingCoreRestoreConfirmationChecksum: '',
+      // ── W1 本地书导入预览默认值 ──
+      importPreviewFormat: '',
+      importPreviewEncoding: '',
+      importPreviewCount: 0,
+      localImportEpoch: 0,
+      localImportDialogPhase: 'idle',
+      localImportDialogEpoch: 0,
+      localImportDialogResults: [],
+      // ── Core 书源包导入默认值 ──
+      sourceImportOrigin: '',
+      sourceImportTotal: 0,
+      sourceImportImported: 0,
+      sourceImportSkipped: 0,
+      sourceImportFailed: 0,
+      sourceImportMessage: '',
+      sourceImportRunning: false,
+      sourceImportEpoch: 0,
+      // Replace rules are Core-owned.  Starting with demo rows made a fresh
+      // install (or a failed Core load) appear to contain persisted rules.
+      replaceRules: [] as ReplaceRule[],
+    };
+  }
+}

@@ -8,3 +8,23 @@ local.properties
 .hvigor/
 artifacts/
 entry/.cxx/
+entry/.test/
+evidence/
+.harmony-signing/
+signing.local.json5
+# Generated immediately before a build; the source/build snapshot is bundled in
+# that HAP and its signed-HAP sidecar remains inside the ignored build output.
+entry/src/main/resources/rawfile/provenance/
+
+# IDE / tooling local config (user-specific, not for git)
+.idea/
+.clang-tidy
+.clangd
+.appanalyzer/
+
+# Build profile backup (local only)
+build-profile.json5.bak
+
+# Local signing materials (private keys + signed haps — never commit)
+signing/
+entry/src/main/ets/ui/store/.write_test

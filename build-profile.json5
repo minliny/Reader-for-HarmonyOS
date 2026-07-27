@@ -1,6 +1,25 @@
 {
   "app": {
-    "signingConfigs": [],
+    // Signing materials live under ./signing/ (gitignored). DevEco-compatible
+    // encrypted debug passwords are stored here because hvigorw does not resolve
+    // ${VAR} placeholders in signingConfigs.material. Regenerate local debug
+    // materials and ciphertext with scripts/gen-debug-signing.sh plus
+    // scripts/encrypt-signing-pwds.mjs; production signing uses separate assets.
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "./signing/app-cert.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "00000035b7a975ad58c4519dd2295614fff9bdf4517c829f8814ab6c549e2e03560403e295efb92cc952ec30cafb0060cb7f27d183121d715645eaf125ffcc8ea030427aab",
+          "profile": "./signing/app-profile.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "./signing/app-keypair.p12",
+          "storePassword": "00000035e5579d9d90ddd49bd6c9763bb7ee0f2da1579ae8d5d8ed4be31104ed76aa0b5947258ad886b9e5141940dd0c5ce33f8211ed2c8e8f2fe744fef607ad52519707df"
+        }
+      }
+    ],
     "products": [
       {
         "name": "default",
@@ -23,6 +42,21 @@
       {
         "name": "release"
       }
+    ],
+    "capabilities": [
+      {
+        "bundleName": "com.minliny.reader",
+        "config": [
+          {
+            "name": "Push Kit",
+            "capability": "com.huawei.service.push.base_service"
+          },
+          {
+            "name": "Device status detection",
+            "capability": "com.huawei.service.device_security.device_verify"
+          }
+        ]
+      }
     ]
   },
   "modules": [
@@ -32,7 +66,21 @@
       "targets": [
         {
           "name": "default",
-          "applyToProducts": ["default"]
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reader_ui_runtime",
+      "srcPath": "../Reader-UI/packages/arkts/reader-ui-runtime",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
         }
       ]
     }

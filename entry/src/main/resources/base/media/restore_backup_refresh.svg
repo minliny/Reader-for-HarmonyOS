@@ -1,0 +1,11 @@
+<svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Tabler/refresh/outline" clip-path="url(#clip0_3115_13)">
+<path id="Vector" d="M23.3334 12.8333C23.0481 10.7803 22.0957 8.87793 20.6228 7.41941C19.15 5.96089 17.2385 5.02707 15.1827 4.76181C13.1269 4.49655 11.041 4.91456 9.24615 5.95145C7.45133 6.98834 6.04721 8.58659 5.25008 10.5M4.66675 5.83333V10.5H9.33342" stroke="#1F1B17" stroke-width="2.04167" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_2" d="M4.66675 15.1667C4.95207 17.2198 5.9045 19.1221 7.37734 20.5806C8.85017 22.0391 10.7617 22.9729 12.8175 23.2382C14.8732 23.5035 16.9592 23.0854 18.754 22.0486C20.5488 21.0117 21.953 19.4134 22.7501 17.5M23.3334 22.1667V17.5H18.6667" stroke="#1F1B17" stroke-width="2.04167" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<defs>
+<clipPath id="clip0_3115_13">
+<rect width="28" height="28" fill="white"/>
+</clipPath>
+</defs>
+</svg>

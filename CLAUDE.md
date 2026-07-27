@@ -2,35 +2,52 @@
 
 ## Project Identity
 
-Reader for HarmonyOS is the HarmonyOS (ArkTS/Stage Model) port of the Reader ebook application. It consumes Reader-Core (Swift 5.9) for cross-platform models, protocols, and service contracts. This project is currently in the **planning phase** — no HarmonyOS project scaffold exists yet.
+Reader for HarmonyOS is the HarmonyOS (ArkTS / Stage Model, API 22 / SDK 6.0.2) native host app for the Reader multi-end architecture. It renders the Reader UI Contract (route / state / motion / token / view-state) as ArkUI, driven by an ArkTS reducer/store, and integrates Reader-Core-Native through a NAPI/Core bridge (`entry/src/main/ets/bridge/CoreRuntime.ets` + `entry/libs/arm64-v8a/libreader_core_napi.so`) plus HarmonyOS Host Adapters (`entry/src/main/ets/host/adapters/`). The P0 UI static link matrix is 120/120. Historical 2026-07-08 CoreSelfCheck + ReadingChain + ReadingChainUi device evidence exists, but current rollout remains 7 Pilot / 28 Shadow / 0 Authoritative and the current release identity still needs fresh proof on an attached hdc target.
 
 ## Key Paths
 
 | Resource | Path |
 |----------|------|
-| Repo root | `/Users/minliny/Documents/Reader for HarmonyOS` |
-| Upstream Core | `/Users/minliny/Documents/Reader-Core` |
-| Planning docs | `docs/PLANNING/` |
-| Loop command | `.claude/commands/harmonyos-loop.md` |
+| Repo root | `/Users/minliny/Documents/Reader/Reader-for-HarmonyOS` |
+| UI Contract (read-only source of truth) | `../Reader-UI/contracts` |
+| Business Core | `../Reader-Core-Native` |
+| Contract codegen | `scripts/gen_contracts.mjs` |
+| Generated contract bindings | `entry/src/main/ets/contract/generated/` |
 
-## Reader-Core Baseline
+## Current Architecture
 
-- **HEAD**: `5b199ff` (Phase 2 active: P2.J1 done, P2.I1 done)
-- **Language**: Swift 5.9, iOS 15+/macOS 13+
-- **73 frozen symbols** across 6 modules
-- **Services ready**: DefaultSearchService, DefaultTOCService, DefaultContentService
-- **Core is Swift** — cannot be directly linked from ArkTS
+The UI shell is contract-first and native, with Core/Host integration landed (P0 reading chain + 15 Host Adapters + 2026-07-08 device evidence):
+
+1. **TokenAdapter** (`ui/adapters/TokenAdapter.ets`) — maps Reader UI token registry → ArkUI `color.json` / spacing / typography / motion. No raw color/spacing/size values anywhere outside `contract/generated/`.
+2. **MainTabShell** (`ui/shells/MainTabShell.ets`) — 5 slots: topArea / content / tabNav / overlayHost / stateHost. 4 tabs: bookshelf / discover / rss / settings.
+3. **ReaderShell** (`ui/shells/ReaderShell.ets`) — 5 slots: readingSurface / readerOverlayHost / bottomSheetHost / readerModuleNav / readerStateHost.
+4. **RouteRenderer** (`ui/router/RouteRenderer.ets`) — `RouteId → Shell → PageState` dispatch. P0 routes: app-shell / main-tabs / bookshelf / book-detail / reader / settings / discover / rss.
+5. **MotionAdapter** (`ui/adapters/MotionAdapter.ets`) — page transitions flow `ReaderMotionResolver → MotionSpecRegistry → MotionAdapter`. No ad-hoc `animateTo` in pages.
+6. **CoreBridge / NAPI** (`bridge/CoreRuntime.ets` + `bridge/core/sdk/reader_core.ts`) — implemented; connects ArkTS to Reader-Core-Native C ABI via `libreader_core_napi.so`. P0 reading chain (source.import → book.search → book.detail → book.toc → chapter.content) wrapper smoke + 2026-07-08 device evidence verified.
+7. **Host Adapter** (`host/adapters/`) — implemented for HTTP, WebView, cookies, WebDAV/sync, JS runtime, media download, auth/login, TTS, file, credential, notification, permission, screen, share, clipboard, background, device. 15 adapters registered through `HostCapabilityRegistry` + `HostDispatcher`; `HostCapabilityManifest` broadcasts at init.
+
+State ownership: `UiState` (reducer-held, mirrors `ui-state.schema.json`) → `ViewState` (reducer-produced, UI-rendered, from `view-state.fixtures.json`). Durable DomainState belongs to Reader-Core-Native and must cross the NAPI/Core bridge or Host Adapter boundary explicitly.
+
+## Toolchain
+
+DevEco-Studio toolchain is available: `hvigorw`, `ohpm`, `node`, `hdc` (under `/Applications/DevEco-Studio.app/Contents/tools`). NOT ENV_BLOCKED.
 
 ## Rules
 
-1. **Do NOT modify Reader-Core** under any circumstances
-2. **Do NOT copy iOS code** as HarmonyOS implementation
-3. **Do NOT assume Core capabilities** — read actual Core files before using them
-4. **Mark all Core-missing features** as CONTRACT_ONLY or MOCK_ONLY
-5. **Do NOT implement**: WebDAV, JS Runtime, WebView, TXT/EPUB parser, real book source access
-6. **Bridge strategy** defaults to Strategy A (DTO regeneration) unless user specifies otherwise
-7. **ENV_BLOCKED** is a valid state — do not fake build success when ohpm/hvigor missing
+1. **Do NOT modify Reader UI Contract or Reader-Core-Native** unless the user explicitly asks for cross-repo changes.
+2. **Do NOT copy iOS / Android code** as HarmonyOS implementation.
+3. **Do NOT assume Core capabilities** — read actual contract files before using them.
+4. Real Core integration, real book-source access, NAPI bridge, Host Adapters, WebView runtime, JS runtime, WebDAV/sync, HTTP, cookie, media download, and auth/login work are allowed when they are clean-room, evidence-bound, redacted where needed, and validated.
+5. **All tokens flow through TokenAdapter** — no raw `#hex` / `Npx` outside `contract/generated/` (enforced by `scripts/lint_tokens.mjs`).
+6. **All page motion flows through the resolver** — no ad-hoc `animateTo` in page components.
+7. **Durable UI state lives in the reducer/store**, not inside ArkUI page components.
+8. **ENV_BLOCKED** is valid only for a true environment blocker; do not fake build / test success.
 
-## Development Loop
+## Build & Verify
 
-Use `/harmonyos-loop` for automated single-task execution. See `docs/PLANNING/HARMONYOS_AUTODEV_QUEUE.md` for the task queue and `docs/PLANNING/HARMONYOS_CRON_LOOP_SETUP.md` for cron/automation setup.
+```bash
+node scripts/gen_contracts.mjs        # regenerate contract bindings (idempotent)
+hvigorw assembleHap --no-daemon       # build pure-ArkTS HAP
+hvigorw test                           # hypium unit tests
+node scripts/lint_tokens.mjs           # no raw token values outside generated/
+```
