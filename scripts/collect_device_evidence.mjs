@@ -33,6 +33,24 @@ import { isSuccessfulHdcInstall } from './device_evidence_install_result.mjs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(__dirname, '..');
 
+// ─── Internal preflight: enforce the implementation-ready gate ─────────────
+// npm lifecycle hooks (pretest:device) are NOT sufficient — an agent can
+// invoke this script directly with `node scripts/collect_device_evidence.mjs`
+// or `npm run evidence`. This internal preflight re-runs the gate so direct
+// invocation is also covered. Device evidence collection must not proceed on
+// a stale artifact or a hand-edited registry — the evidence would be
+// meaningless and could be reported as fresh delivery proof.
+{
+  const gate = spawnSync('node', [path.join(__dirname, 'enforce-implementation-ready-gate.mjs')], {
+    cwd: REPO,
+    stdio: ['ignore', 'inherit', 'inherit'],
+  });
+  if (gate.status !== 0) {
+    console.error('✗ implementation-ready gate failed — refusing to collect device evidence.');
+    process.exit(1);
+  }
+}
+
 const DEVECO = '/Applications/DevEco-Studio.app/Contents';
 function resolveHdc() {
   if (process.env.HDC_PATH) {

@@ -123,7 +123,7 @@ const structuralPages = source('entry/src/main/ets/ui/components/StructuralPageC
 const entryAbility = source('entry/src/main/ets/entryability/EntryAbility.ets');
 const packageJson = source('package.json');
 const arktsTestPackageGate = source('scripts/test.mjs');
-const arktsDeviceRunner = source('scripts/run_ohos_device_tests.mjs');
+const arktsEmulatorRunner = source('scripts/run_ohos_device_tests.mjs');
 const brightnessSunAsset = source('entry/src/main/resources/base/media/reader_control_brightness_sun.svg');
 const readerControlIconEvidence = json('docs/design/FIGMA_READER_CONTROL_ICON_EXPORT_EVIDENCE.json');
 const readerControlIconCrosswalk = json('docs/design/FIGMA_READER_CONTROL_ICON_CROSSWALK.json');
@@ -152,12 +152,59 @@ test('generated visual admission artifact is synchronized to the current registr
   const expectedRevision = registry.records.find((record) => record.classification === 'exact-figma-binding')?.figma?.revision;
   assert.ok(visualAdmission.includes(`SOURCE_FILE_KEY: string = '${registry.authority.fileKey}'`));
   assert.ok(visualAdmission.includes(`SOURCE_REVISION: string = '${expectedRevision}'`));
+  // The generator now emits a two-dimensional gate per entry: `sourceBound`
+  // (Figma identity registered) and `implementationReady` (page family
+  // delivered). A `candidate-backport` route is source-bound but NOT
+  // implementation-ready; an `implementation-ready` route is both. The old
+  // single `admitted` flag is gone — asserting it would let a
+  // candidate-backport page be confused with a deliverable surface.
   for (const record of registry.records.filter((item) => item.classification === 'exact-figma-binding')) {
+    const expectedAdmission = record.harmony?.status === 'implementation-ready'
+      ? 'implementation-ready' : 'candidate-backport';
+    const expectedImplementationReady = expectedAdmission === 'implementation-ready';
     for (const routeId of record.routeIds) {
-      assert.ok(visualAdmission.includes(`routeId: '${routeId}', admission: 'admitted'`),
-        `generated admission is missing current exact route ${routeId}`);
+      assert.ok(visualAdmission.includes(
+        `routeId: '${routeId}', admission: '${expectedAdmission}', sourceBound: true, implementationReady: ${expectedImplementationReady}`),
+        `generated admission is missing current exact route ${routeId} as ${expectedAdmission}`);
     }
   }
+});
+
+test('generated visual admission artifact is internally consistent — admission ↔ implementationReady', () => {
+  // The two-dimensional gate must be self-consistent. This is the heart of
+  // the execution gate: `candidate-backport` must never carry
+  // `implementationReady: true`, and `implementation-ready` must never carry
+  // `implementationReady: false`. Without this, a renderer that checks only
+  // `implementationReady` (or only `admission`) could let a not-yet-delivered
+  // page family through.
+  const entryPattern = /\{ routeId: '[^']*', admission: '(implementation-ready|candidate-backport|blocked|retired)', sourceBound: (true|false), implementationReady: (true|false), recordIds: \[[^\]]*\] \}/g;
+  const routeEntries = [...visualAdmission.matchAll(entryPattern)];
+  assert.ok(routeEntries.length > 0, 'no route admission entries found in generated artifact');
+  for (const match of routeEntries) {
+    const admission = match[1];
+    const sourceBound = match[2] === 'true';
+    const implementationReady = match[3] === 'true';
+    if (admission === 'implementation-ready') {
+      assert.equal(implementationReady, true, `implementation-ready route must have implementationReady=true: ${match[0]}`);
+      assert.equal(sourceBound, true, `implementation-ready route must have sourceBound=true: ${match[0]}`);
+    } else if (admission === 'candidate-backport') {
+      assert.equal(implementationReady, false, `candidate-backport route must have implementationReady=false: ${match[0]}`);
+      assert.equal(sourceBound, true, `candidate-backport route must have sourceBound=true: ${match[0]}`);
+    } else {
+      assert.equal(implementationReady, false, `${admission} route must have implementationReady=false: ${match[0]}`);
+    }
+  }
+  // The renderer gate methods must check === 'implementation-ready', not
+  // just truthiness or a loose comparison. This is what makes
+  // candidate-backport fail closed at runtime.
+  assert.ok(visualAdmission.includes("admissionForRoute(routeId) === 'implementation-ready'"),
+    'isRouteAdmitted must gate on === implementation-ready');
+  assert.ok(visualAdmission.includes("admissionForRouteViewport(routeId, viewport) === 'implementation-ready'"),
+    'isRouteAdmittedForViewport must gate on === implementation-ready');
+  assert.ok(visualAdmission.includes("admissionForOverlay(overlayKind) === 'implementation-ready'"),
+    'isOverlayAdmitted must gate on === implementation-ready');
+  assert.ok(visualAdmission.includes("admissionForState(routeId, stateId) === 'implementation-ready'"),
+    'isStateAdmitted must gate on === implementation-ready');
 });
 
 test('every admitted native visual has a live Figma node, master, and viewport source', () => {
@@ -179,12 +226,22 @@ test('every admitted native visual has a live Figma node, master, and viewport s
       assert.ok(liveNodeIds.has(nodeId), `${record.id}/${viewport} is absent from live Figma snapshot`);
     }
     for (const routeId of record.routeIds || []) {
-      assert.ok(visualAdmission.includes(`routeId: '${routeId}', admission: 'admitted'`),
-        `${record.id}/${routeId} is not admitted from the generated Figma contract`);
+      // Source-bound routes now appear as either `implementation-ready` or
+      // `candidate-backport` depending on harmony.status. Both carry
+      // `sourceBound: true`; the distinction is captured by
+      // `implementationReady`. Asserting `admission: 'admitted'` here would
+      // let a candidate-backport page family be confused with a deliverable.
+      assert.ok(visualAdmission.includes(`routeId: '${routeId}', admission: `) &&
+        visualAdmission.includes(`routeId: '${routeId}', admission: '`) &&
+        /\{ routeId: '[^']*', admission: '(implementation-ready|candidate-backport)', sourceBound: true,/.test(
+          visualAdmission.match(new RegExp(`\\{ routeId: '${routeId}',[^}]*\\}`))?.[0] || ''),
+        `${record.id}/${routeId} is not source-bound in the generated Figma contract`);
     }
     for (const overlayKind of record.overlayKinds || []) {
-      assert.ok(visualAdmission.includes(`overlayKind: '${overlayKind}', admission: 'admitted'`),
-        `${record.id}/${overlayKind} is not admitted from the generated Figma contract`);
+      assert.ok(visualAdmission.includes(`overlayKind: '${overlayKind}', admission: `) &&
+        /\{ overlayKind: '[^']*', admission: '(implementation-ready|candidate-backport)', sourceBound: true,/.test(
+          visualAdmission.match(new RegExp(`\\{ overlayKind: '${overlayKind}',[^}]*\\}`))?.[0] || ''),
+        `${record.id}/${overlayKind} is not source-bound in the generated Figma contract`);
     }
   }
 });
@@ -240,14 +297,58 @@ test('all visual consumers consult the generated Reader-UI authority and fail cl
   assert.ok(stateHost.includes('Column().width(0).height(0)'), 'unbound page states must be inert');
 });
 
+test('candidate-backport page families fail closed at every renderer execution gate', () => {
+  // This is the execution gate that was missing on 2026-07-27: the renderers
+  // consumed `isRouteAdmitted` / `isOverlayAdmitted` / `isStateAdmitted`
+  // without distinguishing `candidate-backport` (source-bound but not
+  // delivered) from `implementation-ready` (deliverable). The generated
+  // artifact now gates on === 'implementation-ready', and every renderer must
+  // document that `candidate-backport` is a stop condition, not a renderable
+  // state. This test makes that contract enforceable, not just documentary.
+  //
+  // RouteRenderer: the shell gate must mention both `implementation-ready`
+  // (the only passing status) and `candidate-backport` (the fail-closed
+  // status) so a future edit cannot silently collapse the two dimensions.
+  assert.ok(routeRenderer.includes('implementation-ready'),
+    'RouteRenderer must document implementation-ready as the renderer execution gate');
+  assert.ok(routeRenderer.includes('candidate-backport'),
+    'RouteRenderer must document candidate-backport as a fail-closed stop condition');
+  assert.ok(routeRenderer.includes('isDisplayedRouteImplementationReady'),
+    'RouteRenderer must name its gate method after implementation-ready, not the old admitted flag');
+
+  // ViewStateRenderer: the body gate must fail closed for candidate-backport.
+  assert.ok(viewStateRenderer.includes('implementation-ready'),
+    'ViewStateRenderer must document implementation-ready as the body execution gate');
+  assert.ok(viewStateRenderer.includes('candidate-backport'),
+    'ViewStateRenderer must document candidate-backport as a fail-closed stop condition');
+
+  // OverlayHost: the overlay gate must fail closed for candidate-backport.
+  assert.ok(overlayHost.includes('implementation-ready'),
+    'OverlayHost must document implementation-ready as the overlay execution gate');
+  assert.ok(overlayHost.includes('candidate-backport'),
+    'OverlayHost must document candidate-backport as a fail-closed stop condition');
+
+  // StateHost: the state gate must fail closed for candidate-backport.
+  assert.ok(stateHost.includes('implementation-ready'),
+    'StateHost must document implementation-ready as the state execution gate');
+  assert.ok(stateHost.includes('candidate-backport'),
+    'StateHost must document candidate-backport as a fail-closed stop condition');
+});
+
 test('legacy generated state primitives cannot draw a local loading or error page over an admitted Figma route', () => {
   assert.ok(viewStateRenderer.includes("component.type === 'Loading' || component.type === 'Empty' ||"),
     'ViewStateRenderer must identify legacy generated state primitives together');
   assert.ok(viewStateRenderer.includes('These old generated primitives have no component-level Figma master'),
     'the source-led state exception boundary must remain documented');
   for (const stateId of ['loading', 'empty', 'error']) {
-    assert.ok(visualAdmission.includes(`{ routeId: 'book-search', stateId: '${stateId}', admission: 'admitted', recordIds: ['search.five-state'] }`),
-      `the confirmed Figma Search five-state master must admit book-search/${stateId}`);
+    // The Search five-state master is source-bound but currently
+    // candidate-backport (implementationReady: false). The state still
+    // registers in the generated artifact so it cannot be silently dropped,
+    // but it must fail closed at the renderer until the family is
+    // implementation-ready.
+    assert.ok(visualAdmission.includes(
+      `{ routeId: 'book-search', stateId: '${stateId}', admission: 'candidate-backport', sourceBound: true, implementationReady: false, recordIds: ['search.five-state'] }`),
+      `the confirmed Figma Search five-state master must register book-search/${stateId} as candidate-backport`);
   }
   for (const legacyMount of ['Loading', 'ErrorState', 'Offline']) {
     assert.equal(new RegExp(`\\b${legacyMount}\\(\\{`).test(viewStateRenderer), false,
@@ -924,7 +1025,8 @@ test('local import is the approved system multi-select → spinner → per-book 
   assert.ok(overlayHost.includes("this.localImportDialogPhase === 'result'"));
   assert.ok(overlayHost.includes('ForEach(this.localImportDialogResults'));
   assert.equal(overlayHost.includes('重试导入'), false, 'approved import result has no retry matrix');
-  assert.ok(visualAdmission.includes("overlayKind: 'local-import', admission: 'admitted'"));
+  assert.ok(visualAdmission.includes("overlayKind: 'local-import', admission: 'candidate-backport', sourceBound: true, implementationReady: false"),
+    'local-import overlay must register as candidate-backport (source-bound, not yet implementation-ready)');
 });
 
 test('Bookshelf overlays consume their revision-bound Figma masters without a local overlay skin', () => {
@@ -1162,8 +1264,18 @@ test('Search, WebDAV, Sync Backup, and Restore consume their current Figma sourc
 test('Discover and RSS consume only their current Figma masters and Core-projected values', () => {
   const discoverRecord = registry.records.find((item) => item.id === 'discover.page');
   const rssRecord = registry.records.find((item) => item.id === 'rss.page');
+  // `candidate-backport` here is intentional: it records that the Figma
+  // source is bound but the page family has NOT completed Reader-UI source-
+  // side conversion + HarmonyOS consumption. The generated artifact must
+  // reflect the same status so the renderer execution gate fails closed for
+  // these routes. This is the stop condition the protocol requires, not a
+  // license to advance a virtual-machine or device cycle on these families.
   assert.equal(discoverRecord?.harmony?.status, 'candidate-backport');
   assert.equal(rssRecord?.harmony?.status, 'candidate-backport');
+  assert.ok(visualAdmission.includes("routeId: 'discover', admission: 'candidate-backport', sourceBound: true, implementationReady: false"),
+    'Discover route must be candidate-backport in the generated artifact');
+  assert.ok(visualAdmission.includes("routeId: 'rss', admission: 'candidate-backport', sourceBound: true, implementationReady: false"),
+    'RSS route must be candidate-backport in the generated artifact');
   for (const target of [
     'Reader-for-HarmonyOS/entry/src/main/ets/ui/components/DiscoverComponents.ets#DiscoverSourceBar',
     'Reader-for-HarmonyOS/entry/src/main/ets/ui/components/DiscoverComponents.ets#DiscoverEntryRow',
@@ -1284,7 +1396,15 @@ test('current Figma search results retain the exact cover fallback and source im
 
 test('ArkTS assertions use the real Stage ohosTest runner and cannot reuse stale host output', () => {
   assert.ok(packageJson.includes('"test:arkts-compile": "node scripts/test.mjs"'));
-  assert.ok(packageJson.includes('"test:arkts-device": "node scripts/run_ohos_device_tests.mjs"'));
+  // The emulator-only suite is named `test:arkts-emulator`, not
+  // `test:arkts-device`. The old name conflated emulator unit tests with
+  // device/visual delivery, which let a 465/465 emulator pass be reported as
+  // if it proved frontend or device completion. The script itself is still
+  // run_ohos_device_tests.mjs (the file name is historical), but the npm
+  // script name must say emulator.
+  assert.ok(packageJson.includes('"test:arkts-emulator": "node scripts/run_ohos_device_tests.mjs"'));
+  assert.equal(packageJson.includes('"test:arkts-device"'), false,
+    'the old test:arkts-device name must not survive — it conflated emulator unit tests with device delivery');
   assert.ok(packageJson.includes('"test:raw": "hvigorw onDeviceTest --mode module -p module=entry@default --no-daemon"'));
   assert.equal(packageJson.includes('"test:raw": "hvigorw test '), false,
     'the hanging local UnitTest command must never be the raw test path');
@@ -1298,6 +1418,7 @@ test('ArkTS assertions use the real Stage ohosTest runner and cannot reuse stale
     assert.ok(arktsTestPackageGate.includes(required), `ArkTS compile gate misses ${required}`);
   }
   for (const required of [
+    'emulator-only runner',
     "'onDeviceTest'",
     "'module=entry@default'",
     'readExactlyOneTarget',
@@ -1309,7 +1430,7 @@ test('ArkTS assertions use the real Stage ohosTest runner and cannot reuse stale
     'mtimeMs < startedAt',
     'Tests run:',
   ]) {
-    assert.ok(arktsDeviceRunner.includes(required), `ArkTS device runner misses ${required}`);
+    assert.ok(arktsEmulatorRunner.includes(required), `ArkTS emulator runner misses ${required}`);
   }
 });
 

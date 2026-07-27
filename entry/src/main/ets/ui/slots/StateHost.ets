@@ -22,10 +22,13 @@ export struct StateHost {
   build() {
     if (this.activeStateId().length === 0 ||
       !ReaderUiVisualAdmission.isStateAdmitted(this.routeId, this.activeStateId())) {
-      // Loading/empty/error/offline can be visible only when the Figma record
-      // declares that exact route-state.  Crucially, an inert state host must
-      // have no full-screen hit region: the former transparent Stack sat above
-      // every page and swallowed all normal Reader taps.
+      // `isStateAdmitted` returns true ONLY for `implementation-ready` state
+      // bindings; `candidate-backport` states (source bound but not yet
+      // delivered) fail closed here too. Loading/empty/error/offline can be
+      // visible only when the Figma record declares that exact route-state AND
+      // the family is implementation-ready. Crucially, an inert state host
+      // must have no full-screen hit region: the former transparent Stack sat
+      // above every page and swallowed all normal Reader taps.
       Column().width(0).height(0)
     } else {
       // Admission alone is not enough: a future state binding also needs an

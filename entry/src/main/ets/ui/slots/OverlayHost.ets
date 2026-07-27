@@ -46,10 +46,13 @@ export struct OverlayHost {
     if (this.overlayKind === '' || this.overlayKind === 'sort-filter') {
       Column().width(0).height(0)
     } else if (!ReaderUiVisualAdmission.isOverlayAdmitted(this.overlayKind)) {
-      // The Reader-UI generated admission table is the only authority.  Do
-      // not turn an unbound overlay into a native generic card or a duplicate
-      // Figma-specific policy; it remains visually inert until a real source
-      // node is registered.
+      // The Reader-UI generated admission table is the only authority.
+      // `isOverlayAdmitted` returns true ONLY for `implementation-ready`
+      // overlays; `candidate-backport` overlays (source bound but not yet
+      // delivered) fail closed here too. Do not turn an unbound or
+      // not-yet-delivered overlay into a native generic card or a duplicate
+      // Figma-specific policy; it remains visually inert until Reader-UI marks
+      // the family implementation-ready.
       Column().width(0).height(0)
     } else if (this.overlayKind === 'bookshelf-multiselect') {
       this.renderBookshelfMultiSelect()

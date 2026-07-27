@@ -63,16 +63,25 @@ export struct RouteRenderer {
     return shell;
   }
 
-  private isDisplayedRouteVisuallyAdmitted(): boolean {
+  private isDisplayedRouteImplementationReady(): boolean {
+    // This is the renderer execution gate. `isRouteAdmittedForViewport` returns
+    // true ONLY when the page family is `implementation-ready` — i.e. Reader-UI
+    // has completed source-side conversion AND HarmonyOS has consumed it.
+    // `candidate-backport` routes (source bound but not yet delivered) fail
+    // closed here. This is the gate that prevents advancing a virtual-machine
+    // or renderer cycle on a page family whose Figma → Reader-UI → HarmonyOS
+    // chain is not actually complete.
     return ReaderUiVisualAdmission.isRouteAdmittedForViewport(this.displayedRouteId, this.viewportClass);
   }
 
   build() {
     Stack() {
-      if (!this.isDisplayedRouteVisuallyAdmitted() || this.shellOfDisplayedRoute() === null) {
+      if (!this.isDisplayedRouteImplementationReady() || this.shellOfDisplayedRoute() === null) {
         // A visible diagnostic would itself be a locally invented page. Keep
-        // the unadmitted route inert until Figma provides and registers a
-        // canonical surface.
+        // the not-implementation-ready route inert until Reader-UI marks the
+        // family implementation-ready and HarmonyOS consumes the regenerated
+        // artifact. `candidate-backport` is a stop condition, not a renderable
+        // state.
         Column().width(0).height(0)
       } else if (this.shellOfDisplayedRoute() === 'MainTabShell') {
         MainTabShell()

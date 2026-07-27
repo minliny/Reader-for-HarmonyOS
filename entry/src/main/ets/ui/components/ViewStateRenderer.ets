@@ -146,10 +146,11 @@ export struct ViewStateRenderer {
   // fixture cannot accidentally display every Core article as a favorite.
   private bodyComponentsForCurrentRoute(): ViewStateComponent[] {
     // The generated Reader-UI visual admission artifact is the sole source of
-    // truth for visible route eligibility. A route without a current Figma
-    // binding is deliberately empty here; RouteRenderer owns its fail-closed
-    // diagnostic surface, so this direct body mount cannot fall back to a
-    // generic historical page.
+    // truth for visible route eligibility. `isRouteAdmittedForViewport` returns
+    // true ONLY for `implementation-ready` routes; `candidate-backport` routes
+    // (source bound but not yet delivered) fail closed here too, mirroring
+    // RouteRenderer's execution gate. This stops a body from rendering through
+    // the generic ViewState tree before the page family is deliverable.
     if (!ReaderUiVisualAdmission.isRouteAdmittedForViewport(this.routeId, this.viewportClass)) return [];
     // A route master does not authorize arbitrary host page states. The
     // generated table historically falls back from an unknown loading/error

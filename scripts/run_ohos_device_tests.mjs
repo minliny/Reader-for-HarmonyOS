@@ -1,5 +1,13 @@
 // run_ohos_device_tests.mjs — strict emulator-only runner for the ArkTS suite.
 //
+// NAMING: the npm script is `test:arkts-emulator`, not `test:arkts-device`.
+// This is an emulator behavior test runner, NOT a device delivery test and
+// NOT a frontend visual delivery test. A 465/465 pass here only proves the
+// ArkTS Hypium suite passed on the local emulator (127.0.0.1:5555); it does
+// NOT prove Figma parity, Reader-UI source-side completion, HarmonyOS
+// consumption, or real-device behavior. Do not report this suite's pass count
+// as device evidence or frontend completion evidence.
+//
 // DevEco's supported command is `hvigorw onDeviceTest`, not `hvigorw test`.
 // It builds the default + ohosTest HAPs, installs them, then starts
 // /ets/testrunner/OpenHarmonyTestRunner through `aa test`. This wrapper fails
@@ -13,14 +21,32 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const SCRIPTS_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEVECO = '/Applications/DevEco-Studio.app/Contents';
 const COVERAGE_LOG = path.join(REPO, 'entry/.test/default/intermediates/ohosTest/coverage_data/coverage.log');
 const TEST_RESULT = path.join(REPO, 'entry/.test/default/intermediates/ohosTest/coverage_data/test_result.txt');
 const REQUIRED_EMULATOR_TARGET = process.env.READER_OHOS_EMULATOR_TARGET || '127.0.0.1:5555';
 
 function fail(message) {
-  console.error(`✗ ArkTS device test: ${message}`);
+  console.error(`✗ ArkTS emulator test: ${message}`);
   process.exit(1);
+}
+
+// ─── Internal preflight: enforce the implementation-ready gate ─────────────
+// npm lifecycle hooks (pretest:arkts-emulator) are NOT sufficient — an agent
+// can invoke this script directly with `node scripts/run_ohos_device_tests.mjs`
+// or through `hvigorw onDeviceTest`. This internal preflight re-runs the gate
+// so direct invocation is also covered. On 2026-07-27 the user audit found
+// that only `pretest` existed, leaving emulator/device/raw build invocation
+// unguarded against stale artifacts and hand-edited registry bypasses.
+{
+  const gate = spawnSync('node', [path.join(SCRIPTS_DIR, 'enforce-implementation-ready-gate.mjs')], {
+    cwd: REPO,
+    stdio: ['ignore', 'inherit', 'inherit'],
+  });
+  if (gate.status !== 0) {
+    fail('implementation-ready gate failed — refusing to start emulator test cycle.');
+  }
 }
 
 function resolveHdc() {
@@ -74,7 +100,7 @@ const env = {
   PATH: `${DEVECO}/tools/node/bin:${DEVECO}/tools/ohpm/bin:${process.env.JAVA_HOME || `${DEVECO}/jbr/Contents/Home`}/bin:${process.env.PATH}`,
 };
 
-console.log(`→ Running the ArkTS suite on ${target} through DevEco onDeviceTest...`);
+console.log(`→ Running the ArkTS emulator suite on ${target} through DevEco onDeviceTest...`);
 const startedAt = Date.now();
 const executed = spawnSync('./hvigorw', [
   'onDeviceTest',
@@ -91,12 +117,12 @@ const executed = spawnSync('./hvigorw', [
 });
 if (executed.status !== 0) fail(`onDeviceTest exited ${executed.status ?? 'unknown'}`);
 
-if (!fs.existsSync(COVERAGE_LOG)) fail(`DevEco produced no device coverage log: ${COVERAGE_LOG}`);
-if (!fs.existsSync(TEST_RESULT)) fail(`DevEco produced no device test result: ${TEST_RESULT}`);
+if (!fs.existsSync(COVERAGE_LOG)) fail(`DevEco produced no emulator coverage log: ${COVERAGE_LOG}`);
+if (!fs.existsSync(TEST_RESULT)) fail(`DevEco produced no emulator test result: ${TEST_RESULT}`);
 const coverageStat = fs.statSync(COVERAGE_LOG);
 const resultStat = fs.statSync(TEST_RESULT);
 if (coverageStat.mtimeMs < startedAt || resultStat.mtimeMs < startedAt) {
-  fail('DevEco device test output is stale; fresh device output was not produced');
+  fail('DevEco emulator test output is stale; fresh emulator output was not produced');
 }
 const coverageOutput = fs.readFileSync(COVERAGE_LOG, 'utf8');
 const hypiumSummary = coverageOutput.match(/Tests run:\s*(\d+),\s*Failure:\s*(\d+),\s*Error:\s*(\d+),\s*Pass:\s*(\d+),\s*Ignore:\s*(\d+)/);
@@ -113,7 +139,7 @@ if (hypiumSummary !== null) {
   // that supported format, but fail closed if no case result is present.
   const resultOutput = fs.readFileSync(TEST_RESULT, 'utf8');
   const results = [...resultOutput.matchAll(/^result=(Success|Failure|Error|Ignore)$/gm)].map((match) => match[1]);
-  if (results.length === 0) fail('could not parse a Hypium test summary from fresh device output');
+  if (results.length === 0) fail('could not parse a Hypium test summary from fresh emulator output');
   for (const result of results) {
     if (result === 'Success') pass += 1;
     else if (result === 'Failure') failure += 1;
@@ -125,4 +151,4 @@ if (hypiumSummary !== null) {
 if (run === 0 || failure > 0 || error > 0 || pass + failure + error + ignore !== run) {
   fail(`Hypium reported ${pass} pass / ${failure} fail / ${error} error / ${run} run / ${ignore} ignore`);
 }
-console.log(`✓ ArkTS device tests: ${pass} pass / ${run} run / ${ignore} ignore.`);
+console.log(`✓ ArkTS emulator tests: ${pass} pass / ${run} run / ${ignore} ignore.`);
