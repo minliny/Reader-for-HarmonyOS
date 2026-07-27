@@ -206,12 +206,24 @@ assert.ok(quarantinedRouteIds.length > 0,
   'at least one historical route must remain isolated until its own native promotion is complete');
 assert.equal(new Set(quarantinedRouteIds).size, quarantinedRouteIds.length,
   'A quarantined route must have exactly one source owner');
+const routeTableAllStart = routeTable.indexOf('static readonly ALL: RouteId[] = [');
+const routeTableAllEnd = routeTable.indexOf('  ];', routeTableAllStart);
+assert.ok(routeTableAllStart >= 0 && routeTableAllEnd > routeTableAllStart,
+  'generated RouteTable.ALL is missing');
+const activeRouteTable = routeTable.slice(routeTableAllStart, routeTableAllEnd);
 for (const routeId of quarantinedRouteIds) {
-  assert.ok(!routeTable.includes(`'${routeId}'`),
-    `quarantined route ${routeId} remains in generated native RouteTable`);
+  // A3 publishes a compatibility type so isolated legacy behavior can still
+  // compile while it is removed. Runtime routing remains fail-closed: only
+  // RouteTable.ALL and shell cases can make a route reachable.
+  assert.ok(routeTable.includes(`'${routeId}'`),
+    `quarantined route ${routeId} is missing from the published compatibility type`);
+  assert.ok(!activeRouteTable.includes(`'${routeId}'`),
+    `quarantined route ${routeId} remains in generated RouteTable.ALL`);
+  assert.ok(!routeTable.includes(`case '${routeId}': return`),
+    `quarantined route ${routeId} still has a generated shell mapping`);
 }
-assert.ok(routeRenderer.includes('this.isDisplayedRouteImplementationReady() && shell !== null'),
-  'RouteRenderer must require both implementation readiness and a source-generated shell mapping');
+assert.ok(routeRenderer.includes("this.isDisplayedRouteImplementationReady() && this.shellOfDisplayedRoute() === 'ReaderShell'"),
+  'RouteRenderer must require both implementation readiness and a source-generated Reader shell mapping');
 for (const source of [routeRenderer, overlayHost, stateHost]) {
   assert.ok(!source.includes('Column().width(0).height(0)'),
     'RouteRenderer, OverlayHost, and the retired StateHost must not use a zero-size hiding node');

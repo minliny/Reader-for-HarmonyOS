@@ -75,25 +75,25 @@ export struct RouteRenderer {
   }
 
   build() {
-    const shell: string | null = this.shellOfDisplayedRoute();
     Stack() {
       // A candidate-backport route is a stop condition, not a renderable
       // placeholder. A3 extracts its old mapping from Reader-UI-generated
       // RouteTable/ViewStateTable, so `shell` is null and no native shell or
       // hidden hit node is instantiated. A visible diagnostic would be a
       // locally invented page and is deliberately absent.
-      if (this.isDisplayedRouteImplementationReady() && shell !== null) {
-        if (shell === 'MainTabShell') {
-          MainTabShell()
-        } else if (shell === 'ReaderShell') {
-          ReaderShell()
-        } else if (shell === 'LibraryShell') {
-          LibraryShell()
-        } else if (shell === 'SettingsShell') {
-          SettingsShell()
-        } else {
-          FlowShell()
-        }
+      // ArkTS @Entry build methods may not declare a local value before their
+      // single container root. Each branch resolves the same generated
+      // mapping; quarantined routes still return null and mount nothing.
+      if (this.isDisplayedRouteImplementationReady() && this.shellOfDisplayedRoute() === 'MainTabShell') {
+        MainTabShell()
+      } else if (this.isDisplayedRouteImplementationReady() && this.shellOfDisplayedRoute() === 'ReaderShell') {
+        ReaderShell()
+      } else if (this.isDisplayedRouteImplementationReady() && this.shellOfDisplayedRoute() === 'LibraryShell') {
+        LibraryShell()
+      } else if (this.isDisplayedRouteImplementationReady() && this.shellOfDisplayedRoute() === 'SettingsShell') {
+        SettingsShell()
+      } else if (this.isDisplayedRouteImplementationReady() && this.shellOfDisplayedRoute() === 'FlowShell') {
+        FlowShell()
       }
     }
     .width('100%')

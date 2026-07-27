@@ -867,6 +867,7 @@ export struct ViewStateRenderer {
         )
       } else {
         ReaderBase({
+          canonicalReadingSurface: this.textOr(component.props.surfaceContract, '') === 'canonical-reading-surface',
           tapZoneContractBindingsDefined: this.readerBaseHasTapZones(component),
           tapZoneContractBindings: this.readerBaseTapZoneBindings(component),
         })

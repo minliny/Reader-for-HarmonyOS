@@ -10,13 +10,13 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "certpath": "./signing/app-cert.cer",
+          "certpath": "/Users/minliny/.ohos/config/default_Reader-for-HarmonyOS_g2wzCxdhuuosQAHMRq5n3M-e6Kwm_JwC4MxeHjSHNMI=.cer",
           "keyAlias": "debugKey",
-          "keyPassword": "00000035b7a975ad58c4519dd2295614fff9bdf4517c829f8814ab6c549e2e03560403e295efb92cc952ec30cafb0060cb7f27d183121d715645eaf125ffcc8ea030427aab",
-          "profile": "./signing/app-profile.p7b",
+          "keyPassword": "0000001B1CE0255F69DD37C0BE1CCFFF1E54726147C44C8EC8D2D445BD20348A19879B252010CE17A81DA2",
+          "profile": "/Users/minliny/.ohos/config/default_Reader-for-HarmonyOS_g2wzCxdhuuosQAHMRq5n3M-e6Kwm_JwC4MxeHjSHNMI=.p7b",
           "signAlg": "SHA256withECDSA",
-          "storeFile": "./signing/app-keypair.p12",
-          "storePassword": "00000035e5579d9d90ddd49bd6c9763bb7ee0f2da1579ae8d5d8ed4be31104ed76aa0b5947258ad886b9e5141940dd0c5ce33f8211ed2c8e8f2fe744fef607ad52519707df"
+          "storeFile": "/Users/minliny/.ohos/config/default_Reader-for-HarmonyOS_g2wzCxdhuuosQAHMRq5n3M-e6Kwm_JwC4MxeHjSHNMI=.p12",
+          "storePassword": "0000001B445B0EC4459C85C329A8B96D92D0C26C458B36903D0F09FF4099920FA299D70E2262B5C4E56926"
         }
       }
     ],

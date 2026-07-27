@@ -1628,6 +1628,11 @@ export struct ReaderBase {
   // gesture directly; an invisible page-turn hot-zone above it would make a
   // long chapter look like a single, non-scrollable page.
   @StorageProp('reader.paginationMode') paginationMode: string = 'horizontal';
+  // This flag comes only from the generated Reader-UI ViewState contract for
+  // reader.reading-surface. It deliberately renders the frozen
+  // Reader/Responsive/ReadingSurface and does not pull in the independently
+  // quarantined control-home, top-area, footer, or generic state branches.
+  @Prop canonicalReadingSurface: boolean = false;
   @Prop tapZoneContractBindingsDefined: boolean = false;
   @Prop tapZoneContractBindings: ViewStateExplicitBinding[] = [];
 
@@ -1639,7 +1644,19 @@ export struct ReaderBase {
     Stack() {
       ReadingBackgroundLayer()
       ReadingTextFlow()
-      if (this.controlLayer()) {
+      if (this.canonicalReadingSurface) {
+        // The canonical master contains the paper and text frame only. Tap
+        // zones are invisible behavior-owned hit targets; they preserve the
+        // existing Reader-UI pagination events without adding an unbound
+        // visual control layer. Vertical reading receives gestures directly
+        // from ReadingTextFlow's Scroll.
+        if (this.paginationMode !== 'vertical') {
+          TapZones({
+            contractBindingsDefined: this.tapZoneContractBindingsDefined,
+            contractBindings: this.tapZoneContractBindings,
+          })
+        }
+      } else if (this.controlLayer()) {
         ControlDismissZone()
       } else {
         // The Scroll's own click handler still opens the control layer in

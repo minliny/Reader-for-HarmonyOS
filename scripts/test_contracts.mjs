@@ -292,7 +292,10 @@ test('HarmonyOS has no Figma parallel root, policy, manifest, or token authority
 test('all visual consumers consult the generated Reader-UI authority without hidden fallback nodes', () => {
   assert.ok(routeRenderer.includes("import { ReaderUiVisualAdmission } from '../../contract/reader_ui/VisualAdmission';"));
   assert.ok(routeRenderer.includes('isRouteAdmittedForViewport(this.displayedRouteId, this.viewportClass)'));
-  assert.ok(routeRenderer.includes('shell !== null'), 'unadmitted routes must require a source-generated shell mapping');
+  assert.ok(routeRenderer.includes("this.shellOfDisplayedRoute() === 'ReaderShell'"),
+    'an admitted Reader route must require a source-generated shell mapping');
+  assert.ok(routeRenderer.includes("this.shellOfDisplayedRoute() === 'FlowShell'"),
+    'an admitted flow route must require a source-generated shell mapping');
   assert.equal(routeRenderer.includes('Column().width(0).height(0)'), false,
     'unadmitted routes must not use a hidden zero-size placeholder');
   assert.ok(viewStateRenderer.includes('ReaderUiVisualAdmission'), 'view-state renderer must consume generated admission');
@@ -320,15 +323,21 @@ test('Reader source release cannot restore a native route before its HarmonyOS p
     .flatMap((entry) => entry.routeIds);
   assert.ok(routeIds.length > 0, 'at least one route must remain native-quarantined');
   for (const routeId of routeIds) {
-    assert.equal(routeTable.includes(`'${routeId}'`), false,
-      `${routeId} must not remain in generated native RouteTable`);
+    assert.ok(routeTable.includes(`export type RouteId =`) && routeTable.includes(`'${routeId}'`),
+      `${routeId} must remain a published compatibility type while old native behavior is removed`);
+    const allStart = routeTable.indexOf('static readonly ALL: RouteId[] = [');
+    const allEnd = routeTable.indexOf('  ];', allStart);
+    assert.ok(allStart >= 0 && allEnd > allStart, 'generated RouteTable.ALL must be present');
+    const activeRouteTable = routeTable.slice(allStart, allEnd);
+    assert.equal(activeRouteTable.includes(`'${routeId}'`), false,
+      `${routeId} must not remain in generated native RouteTable.ALL`);
     assert.equal(viewStateTable.includes(`\"routeId\": \"${routeId}\"`), false,
       `${routeId} must not remain in generated native ViewStateTable`);
   }
-  assert.ok(routeRenderer.includes('const shell: string | null = this.shellOfDisplayedRoute();'),
-    'RouteRenderer must resolve the source-generated shell once before any native shell mounts');
-  assert.ok(routeRenderer.includes('this.isDisplayedRouteImplementationReady() && shell !== null'),
-    'RouteRenderer must require both implementation readiness and a non-quarantined source shell');
+  assert.ok(routeRenderer.includes("this.isDisplayedRouteImplementationReady() && this.shellOfDisplayedRoute() === 'ReaderShell'"),
+    'RouteRenderer must require implementation readiness and a source-generated Reader shell');
+  assert.ok(routeRenderer.includes("this.isDisplayedRouteImplementationReady() && this.shellOfDisplayedRoute() === 'FlowShell'"),
+    'RouteRenderer must require implementation readiness and a source-generated Flow shell');
 });
 
 test('candidate-backport page families fail closed at every active renderer execution gate', () => {
@@ -409,6 +418,41 @@ test('paper reading surface uses the current Figma layer and contains no synthet
   for (const forbidden of ['textureLines()', 'starPoints()', 'night aura']) {
     assert.equal(readerComponents.includes(forbidden), false, `synthetic paper treatment remains: ${forbidden}`);
   }
+});
+
+test('promoted reading surface consumes only the B2 canonical layers, not quarantined reader chrome', () => {
+  const record = registry.records.find((item) => item.id === 'reader.reading-surface');
+  assert.ok(record, 'reader.reading-surface must remain registered');
+  assert.equal(record.harmony?.status, 'implementation-ready');
+  assert.deepEqual(record.routeIds, ['immersive-reading', 'reader', 'reader_content']);
+
+  for (const routeId of record.routeIds) {
+    assert.ok(routeTable.includes(`case '${routeId}': return 'ReaderShell';`),
+      `${routeId} must be restored only after the atomic B4 promotion`);
+    const routeStart = viewStateTable.indexOf(`\"routeId\": \"${routeId}\"`);
+    assert.ok(routeStart >= 0, `${routeId} needs a generated B5 view-state entry`);
+    const nextRouteStart = viewStateTable.indexOf('\"routeId\":', routeStart + 1);
+    const routeEntry = viewStateTable.slice(routeStart, nextRouteStart < 0 ? undefined : nextRouteStart);
+    assert.ok(routeEntry.includes('\"surfaceContract\": \"canonical-reading-surface\"'),
+      `${routeId} must select the Reader-UI canonical surface contract`);
+    for (const legacy of ['ReaderTopArea', 'ReaderControlSheet', 'ReaderBottomBar', 'Loading', 'Offline']) {
+      assert.equal(routeEntry.includes(`\"type\": \"${legacy}\"`), false,
+        `${routeId} must not revive the quarantined or generic ${legacy} branch`);
+    }
+  }
+
+  const readerBase = structSource(readerComponents, 'ReaderBase');
+  const canonicalStart = readerBase.indexOf('if (this.canonicalReadingSurface)');
+  const legacyStart = readerBase.indexOf('} else if (this.controlLayer())', canonicalStart);
+  assert.ok(canonicalStart >= 0 && legacyStart > canonicalStart,
+    'ReaderBase needs an explicit generated-contract branch before legacy reader chrome');
+  const canonicalBranch = readerBase.slice(canonicalStart, legacyStart);
+  assert.equal(canonicalBranch.includes('ControlDismissZone()'), false,
+    'canonical ReadingSurface cannot mount the withdrawn control-home dismiss layer');
+  assert.equal(canonicalBranch.includes('ReadingInfoLayer()'), false,
+    'canonical ReadingSurface cannot mount an independently unbound info overlay');
+  assert.ok(viewStateRenderer.includes("canonicalReadingSurface: this.textOr(component.props.surfaceContract, '') === 'canonical-reading-surface'"),
+    'HarmonyOS must consume the Reader-UI surface contract instead of guessing the route composition');
 });
 
 test('reader chapter text frame preserves the exact Figma Phone and Tablet geometry', () => {

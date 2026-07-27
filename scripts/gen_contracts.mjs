@@ -116,10 +116,12 @@ function activeQuarantinedRouteIds(document) {
 }
 
 // This set is generated from Reader-UI source data. It is the explicit A3
-// route extraction: legacy reading routes remain published RouteIds but are
-// omitted from native RouteTable and ViewStateTable until BOTH the Reader-UI
-// source conversion is released and the atomic promotion gives HarmonyOS an
-// implementation-ready admission. Do not recreate this list in a renderer.
+// route extraction: legacy reading routes remain published RouteIds for
+// compile-time compatibility, but are omitted from native RouteTable and
+// ViewStateTable until BOTH the Reader-UI source conversion is released and
+// the atomic promotion gives HarmonyOS an implementation-ready admission.
+// A published type is not a routable surface: RouteTable.ALL remains the
+// runtime authority. Do not recreate this list in a renderer.
 const QUARANTINED_ROUTE_IDS = activeQuarantinedRouteIds(ROUTE_RECONSTRUCTION_QUARANTINE);
 
 function readCanonicalDemoRoutes() {
@@ -358,8 +360,13 @@ function genTokenRegistry() {
 
 // ── RouteTable.ets ────────────────────────────────────────────────────────
 function genRouteTable() {
+  // Keep every canonical schema identifier in the TypeScript/ArkTS union so
+  // quarantined legacy behavior can be compiled while it is being removed.
+  // Only ACTIVE_ROUTES are emitted into RouteTable.ALL and its shell cases,
+  // which keeps an isolated identifier non-routable and non-renderable.
+  const publishedIds = ROUTES.map((r) => r.id);
   const ids = ACTIVE_ROUTES.map((r) => r.id);
-  const idUnion = ids.map((i) => `'${i}'`).join(' | ');
+  const idUnion = publishedIds.map((i) => `'${i}'`).join(' | ');
   const shells = [...new Set(ACTIVE_ROUTES.map((r) => r.shell))];
   const shellUnion = shells.map((s) => `'${s}'`).join(' | ');
   const shellCases = ACTIVE_ROUTES.map((r) => `      case '${r.id}': return '${r.shell}';`).join('\n');

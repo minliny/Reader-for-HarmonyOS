@@ -92,6 +92,7 @@ export interface ViewStateProps {
   subtitle?: string;
   successProof?: string;
   summary?: string;
+  surfaceContract?: string;
   syncDataBasis?: string;
   tab?: string;
   taskId?: string;
@@ -631,6 +632,64 @@ export class ViewStateTable {
         "type": "BookChapterList",
         "id": "detail-chapters",
         "props": {},
+        "children": [],
+        "bindings": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001",
+      "chapterId": "ch-001"
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper",
+          "surfaceContract": "canonical-reading-surface"
+        },
+        "children": [],
+        "bindings": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader",
+    "pageState": "loading",
+    "context": {
+      "bookId": "bk-001"
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper",
+          "surfaceContract": "canonical-reading-surface"
+        },
+        "children": [],
+        "bindings": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader",
+    "pageState": "offline",
+    "context": {
+      "bookId": "bk-001"
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper",
+          "surfaceContract": "canonical-reading-surface"
+        },
         "children": [],
         "bindings": []
       }
@@ -1974,6 +2033,45 @@ export class ViewStateTable {
           "title": "需要存储权限",
           "message": "授予权限后可导入本地书籍。",
           "action": "授予权限"
+        },
+        "children": [],
+        "bindings": []
+      }
+    ]
+  },
+  {
+    "routeId": "immersive-reading",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper",
+          "surfaceContract": "canonical-reading-surface"
+        },
+        "children": [],
+        "bindings": []
+      }
+    ]
+  },
+  {
+    "routeId": "reader_content",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001",
+      "chapterId": "ch-001"
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper",
+          "surfaceContract": "canonical-reading-surface"
         },
         "children": [],
         "bindings": []
