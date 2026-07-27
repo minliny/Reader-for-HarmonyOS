@@ -184,9 +184,14 @@ assert.ok(fs.existsSync(routeReconstructionQuarantinePath),
 const routeReconstructionQuarantine = JSON.parse(fs.readFileSync(routeReconstructionQuarantinePath, 'utf8'));
 assert.equal(routeReconstructionQuarantine.status, 'active',
   'A3 route extraction must remain active until a new source conversion releases it');
-const quarantinedRouteIds = routeReconstructionQuarantine.entries.flatMap((entry) => entry.routeIds || []);
-assert.equal(quarantinedRouteIds.length, 16,
-  'A3 route extraction must contain the complete 16-route audited Reader set');
+const trackedQuarantineRouteIds = routeReconstructionQuarantine.entries.flatMap((entry) => entry.routeIds || []);
+assert.equal(trackedQuarantineRouteIds.length, 16,
+  'A3 route extraction must retain the complete 16-route audited Reader set');
+const quarantinedRouteIds = routeReconstructionQuarantine.entries
+  .filter((entry) => entry.status === 'active')
+  .flatMap((entry) => entry.routeIds || []);
+assert.ok(quarantinedRouteIds.length > 0,
+  'at least one historical route must remain isolated until its own source conversion is complete');
 assert.equal(new Set(quarantinedRouteIds).size, quarantinedRouteIds.length,
   'A quarantined route must have exactly one source owner');
 for (const routeId of quarantinedRouteIds) {

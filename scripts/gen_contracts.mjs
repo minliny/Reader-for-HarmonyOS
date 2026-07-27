@@ -73,13 +73,20 @@ function activeQuarantinedRouteIds(document) {
     (document.status !== 'active' && document.status !== 'released') || !Array.isArray(document.entries)) {
     throw new Error('Reader UI route reconstruction quarantine is invalid');
   }
-  if (document.status === 'released') return new Set();
+  if (document.status === 'released') {
+    if (document.entries.some((entry) => entry?.status === 'active')) {
+      throw new Error('a globally released Reader UI route reconstruction quarantine cannot retain an active entry');
+    }
+    return new Set();
+  }
   const ids = new Set();
   for (const [index, entry] of document.entries.entries()) {
     if (entry === null || Array.isArray(entry) || typeof entry !== 'object' ||
-      typeof entry.recordId !== 'string' || !Array.isArray(entry.routeIds) || entry.blocksPromotion !== true) {
+      typeof entry.recordId !== 'string' || !Array.isArray(entry.routeIds) || entry.blocksPromotion !== true ||
+      (entry.status !== 'active' && entry.status !== 'released')) {
       throw new Error(`Reader UI route reconstruction quarantine entry ${index + 1} is invalid`);
     }
+    if (entry.status === 'released') continue;
     for (const routeId of entry.routeIds) {
       if (typeof routeId !== 'string' || !CANONICAL_ROUTE_IDS.includes(routeId)) {
         throw new Error(`Reader UI route reconstruction quarantine references unknown RouteId: ${String(routeId)}`);

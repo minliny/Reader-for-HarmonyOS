@@ -305,11 +305,15 @@ test('all visual consumers consult the generated Reader-UI authority without hid
     'the retired generic StateHost must not remain an instantiable visual component');
 });
 
-test('active Reader source quarantine removes all historical Reader shell and body mappings', () => {
+test('active Reader source quarantine removes only historical mappings whose owning record remains active', () => {
   assert.equal(routeReconstructionQuarantine.status, 'active');
-  const routeIds = routeReconstructionQuarantine.entries.flatMap((entry) => entry.routeIds);
-  assert.equal(routeIds.length, 16, 'A3 must extract the full audited Reader route set');
-  assert.equal(new Set(routeIds).size, 16, 'a quarantined route must have one source owner');
+  const trackedRouteIds = routeReconstructionQuarantine.entries.flatMap((entry) => entry.routeIds);
+  assert.equal(trackedRouteIds.length, 16, 'A3 must retain the full audited Reader route set');
+  assert.equal(new Set(trackedRouteIds).size, 16, 'a tracked route must have one source owner');
+  const routeIds = routeReconstructionQuarantine.entries
+    .filter((entry) => entry.status === 'active')
+    .flatMap((entry) => entry.routeIds);
+  assert.ok(routeIds.length > 0, 'at least one source record must remain actively quarantined');
   for (const routeId of routeIds) {
     assert.equal(routeTable.includes(`'${routeId}'`), false,
       `${routeId} must not remain in generated native RouteTable`);
