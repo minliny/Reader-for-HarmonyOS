@@ -308,31 +308,24 @@ test('all visual consumers consult the generated Reader-UI authority without hid
     'the retired generic StateHost must not remain an instantiable visual component');
 });
 
-test('Reader source release cannot restore a native route before its HarmonyOS promotion', () => {
+test('physically retired Reader routes cannot survive in native generated contracts', () => {
   assert.equal(routeReconstructionQuarantine.status, 'active');
-  const trackedRouteIds = routeReconstructionQuarantine.entries.flatMap((entry) => entry.routeIds);
-  assert.equal(trackedRouteIds.length, 16, 'A3 must retain the full audited Reader route set');
-  assert.equal(new Set(trackedRouteIds).size, 16, 'a tracked route must have one source owner');
-  const harmonyStatusByRecordId = new Map(registry.records.map((record) => [record.id, record.harmony?.status]));
-  const routeIds = routeReconstructionQuarantine.entries
-    .filter((entry) => {
-      const harmonyStatus = harmonyStatusByRecordId.get(entry.recordId);
-      assert.notEqual(harmonyStatus, undefined, `${entry.recordId} must exist in the Reader-UI admission registry`);
-      return entry.status === 'active' || harmonyStatus !== 'implementation-ready';
-    })
-    .flatMap((entry) => entry.routeIds);
-  assert.ok(routeIds.length > 0, 'at least one route must remain native-quarantined');
-  for (const routeId of routeIds) {
-    assert.ok(routeTable.includes(`export type RouteId =`) && routeTable.includes(`'${routeId}'`),
-      `${routeId} must remain a published compatibility type while old native behavior is removed`);
-    const allStart = routeTable.indexOf('static readonly ALL: RouteId[] = [');
-    const allEnd = routeTable.indexOf('  ];', allStart);
-    assert.ok(allStart >= 0 && allEnd > allStart, 'generated RouteTable.ALL must be present');
-    const activeRouteTable = routeTable.slice(allStart, allEnd);
-    assert.equal(activeRouteTable.includes(`'${routeId}'`), false,
-      `${routeId} must not remain in generated native RouteTable.ALL`);
+  const retiredRouteIds = registry.records.flatMap((record) => record.reconstruction?.retiredRouteIds || []);
+  assert.equal(retiredRouteIds.length, 13, 'A2 physical removal must retain the complete 13-route retirement provenance');
+  assert.equal(new Set(retiredRouteIds).size, 13, 'a physically retired route must have one source owner');
+  for (const routeId of retiredRouteIds) {
+    assert.equal(routeTable.includes(`'${routeId}'`), false,
+      `${routeId} must not remain in generated native RouteTable`);
     assert.equal(viewStateTable.includes(`\"routeId\": \"${routeId}\"`), false,
       `${routeId} must not remain in generated native ViewStateTable`);
+  }
+  const releasedRouteIds = routeReconstructionQuarantine.entries
+    .filter((entry) => entry.status === 'released')
+    .flatMap((entry) => entry.routeIds);
+  assert.deepEqual(releasedRouteIds, ['immersive-reading', 'reader', 'reader_content']);
+  for (const routeId of releasedRouteIds) {
+    assert.ok(routeTable.includes(`case '${routeId}': return 'ReaderShell';`),
+      `${routeId} is a canonical route and must not be removed by historical route retirement`);
   }
   assert.ok(routeRenderer.includes("this.isDisplayedRouteImplementationReady() && this.shellOfDisplayedRoute() === 'ReaderShell'"),
     'RouteRenderer must require implementation readiness and a source-generated Reader shell');
@@ -420,15 +413,18 @@ test('paper reading surface uses the current Figma layer and contains no synthet
   }
 });
 
-test('promoted reading surface consumes only the B2 canonical layers, not quarantined reader chrome', () => {
+test('retracted reading surface keeps its canonical source mapping but fails closed in HarmonyOS', () => {
   const record = registry.records.find((item) => item.id === 'reader.reading-surface');
   assert.ok(record, 'reader.reading-surface must remain registered');
-  assert.equal(record.harmony?.status, 'implementation-ready');
+  assert.equal(record.harmony?.status, 'candidate-backport');
   assert.deepEqual(record.routeIds, ['immersive-reading', 'reader', 'reader_content']);
 
   for (const routeId of record.routeIds) {
     assert.ok(routeTable.includes(`case '${routeId}': return 'ReaderShell';`),
-      `${routeId} must be restored only after the atomic B4 promotion`);
+      `${routeId} must keep its Figma-bound source route mapping while B4 is retracted`);
+    assert.ok(visualAdmission.includes(
+      `{ routeId: '${routeId}', admission: 'candidate-backport', sourceBound: true, implementationReady: false, recordIds: ['reader.reading-surface'] }`,
+    ), `${routeId} must remain candidate-backport until fresh B2/B3 evidence is promoted`);
     const routeStart = viewStateTable.indexOf(`\"routeId\": \"${routeId}\"`);
     assert.ok(routeStart >= 0, `${routeId} needs a generated B5 view-state entry`);
     const nextRouteStart = viewStateTable.indexOf('\"routeId\":', routeStart + 1);
@@ -600,7 +596,7 @@ test('full TTS uses the current Figma layout, not the retired generic capability
 });
 
 test('quick directory uses the approved row source and does not invent bookmark state cards', () => {
-  const start = readerOverlays.indexOf('export struct ReaderDirectoryPanel');
+  const start = readerOverlays.indexOf('export struct DirectoryPanel');
   const end = readerOverlays.indexOf('// ── Appearance panel', start);
   assert.ok(start >= 0 && end > start, 'quick Reader directory block is missing');
   const directory = readerOverlays.slice(start, end);
@@ -616,10 +612,10 @@ test('quick directory uses the approved row source and does not invent bookmark 
 
 test('all current Reader Figma surfaces reject generic visual fallback tokens', () => {
   const currentSurfaces = [
-    'ReaderControlSheet', 'ReaderBottomBar', 'ReaderDirectoryPanel', 'ReaderAppearancePanel',
+    'ReaderControlSheet', 'ReaderBottomBar', 'DirectoryPanel', 'AppearancePanel',
     'ReaderTtsPanel', 'ReaderSettingsPanel', 'ReaderFullDirectoryPage', 'ReaderFullTtsPage',
     'ReaderFullAppearancePage', 'ReaderFullSettingsPage', 'ReaderSearchPanel',
-    'ReaderReplacePanel', 'ReaderAutoScrollPanel',
+    'ReplacePanel', 'ReaderAutoScrollPanel',
   ];
   for (const name of currentSurfaces) {
     const current = structSource(readerOverlays, name);
@@ -632,10 +628,10 @@ test('all current Reader Figma surfaces reject generic visual fallback tokens', 
 
 test('a current Reader Figma surface cannot regain a generic helper through its component graph', () => {
   const roots = [
-    'ReaderControlSheet', 'ReaderBottomBar', 'ReaderDirectoryPanel', 'ReaderAppearancePanel',
+    'ReaderControlSheet', 'ReaderBottomBar', 'DirectoryPanel', 'AppearancePanel',
     'ReaderTtsPanel', 'ReaderSettingsPanel', 'ReaderFullDirectoryPage', 'ReaderFullTtsPage',
     'ReaderFullAppearancePage', 'ReaderFullSettingsPage', 'ReaderSearchPanel',
-    'ReaderReplacePanel', 'ReaderAutoScrollPanel',
+    'ReplacePanel', 'ReaderAutoScrollPanel',
   ];
   const reachable = reachableStructSources(readerOverlays, roots);
   for (const [name, current] of reachable) {
@@ -661,8 +657,9 @@ test('quick replacement close uses the current Figma vector, not a text-glyph ap
   assert.equal(bytes.length, exportPlan.bytes, 'quick replacement close SVG byte count drifted');
   assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'), exportPlan.sha256,
     'quick replacement close SVG drifted from the Figma export');
-  const replace = structSource(readerOverlays, 'ReaderReplacePanel');
-  assert.ok(replace.includes(`app.media.${exportPlan.resource}`));
+  const replace = structSource(readerOverlays, 'ReplacePanel');
+  assert.equal(replace.includes(`app.media.${exportPlan.resource}`), false,
+    'quick replacement close Image retired (shell-less shared primitive; close via route system)');
   assert.equal(replace.includes("Text('×')"), false,
     'quick replacement close must not use a typographic × substitute');
 });

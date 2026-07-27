@@ -69,7 +69,7 @@ export default function ReaderOverlayViewStateTests(): void {
       const types = topTypes(body);
       expect(types[0]).assertEqual('ReaderBase');
       expect(types[1]).assertEqual('ReaderTopArea');
-      expect(types[2]).assertEqual('ReaderDirectoryPanel');
+      expect(types[2]).assertEqual('DirectoryPanel');
       expect(types[3]).assertEqual('ReaderBottomBar');
     });
 
@@ -115,7 +115,7 @@ export default function ReaderOverlayViewStateTests(): void {
       const types = topTypes(body);
       expect(types[0]).assertEqual('ReaderBase');
       expect(types[1]).assertEqual('ReaderTopArea');
-      expect(types[2]).assertEqual('ReaderAppearancePanel');
+      expect(types[2]).assertEqual('AppearancePanel');
       expect(types[3]).assertEqual('ReaderBottomBar');
       const all: string[] = [];
       collectTypes(body, all);
@@ -172,7 +172,7 @@ export default function ReaderOverlayViewStateTests(): void {
       const types = topTypes(body);
       expect(types[0]).assertEqual('ReaderBase');
       expect(types[1]).assertEqual('ReaderTopArea');
-      expect(types[2]).assertEqual('ReaderReplacePanel');
+      expect(types[2]).assertEqual('ReplacePanel');
       expect(types[3]).assertEqual('ReaderBottomBar');
     });
 

@@ -65,7 +65,8 @@ test('Slice 10 review input stays fail-closed while bookmark manager uses live C
   assert.match(routes, /coreRouteDefinition\('bookmarks-manager'/);
   assert.ok(routes.includes("Slice10CapabilityPolicy.isProduction('reading.bookmarks')"));
   assert.ok(renderer.includes("this.routeId === 'bookmarks-manager'"));
-  assert.ok(renderer.includes('ReaderDirectoryPanel({ standalone: true })'));
+  assert.ok(renderer.includes('DirectoryPanel()'),
+    'bookmarks-manager renders the retained shared DirectoryPanel primitive (reading-page shell retired)');
   assert.ok(effects.includes("event.id === 'toc-bookmarks' || event.id === 'bookmarks-manager'"));
 });
 

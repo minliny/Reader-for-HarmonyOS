@@ -384,11 +384,11 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
       : rendererDispatchSource.indexOf('    } else {', start);
     branchBodies.set(branchMatches[index][1], rendererDispatchSource.slice(start, end));
   }
-  const appearanceBranch = branchBodies.get('ReaderAppearancePanel') || '';
+  const appearanceBranch = branchBodies.get('AppearancePanel') || '';
   if (!appearanceBranch.includes('renderReadOnlyAppearanceState') ||
     !appearanceBranch.includes('component.props.section') ||
     !appearanceBranch.includes('component.children')) {
-    failures.push('ReaderAppearancePanel must consume canonical section/children through its read-only state renderer');
+    failures.push('AppearancePanel must consume canonical section/children through its read-only state renderer');
   }
   const appearanceReadOnlyStart = rendererSource.indexOf('@Builder renderReadOnlyAppearanceChildren');
   const appearanceReadOnlyEnd = rendererSource.indexOf('@Builder renderReadOnlyAppearanceState', appearanceReadOnlyStart);
@@ -399,13 +399,13 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
     !appearanceReadOnlySource.includes('.hitTestBehavior(HitTestMode.None)') ||
     appearanceReadOnlySource.includes('.onClick(') ||
     appearanceReadOnlySource.includes('ReaderUiStore.dispatch')) {
-    failures.push('ReaderAppearancePanel canonical actions must remain visibly read-only and fail closed');
+    failures.push('AppearancePanel canonical actions must remain visibly read-only and fail closed');
   }
-  const replaceBranch = branchBodies.get('ReaderReplacePanel') || '';
+  const replaceBranch = branchBodies.get('ReplacePanel') || '';
   if (!replaceBranch.includes('renderReadOnlyReplaceState') ||
     !replaceBranch.includes('component.props.section') ||
     !replaceBranch.includes('component.children')) {
-    failures.push('ReaderReplacePanel must consume canonical section/children through its read-only state renderer');
+    failures.push('ReplacePanel must consume canonical section/children through its read-only state renderer');
   }
   const replaceReadOnlyStart = rendererSource.indexOf('@Builder renderReadOnlyReplaceChildren');
   const replaceReadOnlyEnd = rendererSource.indexOf('@Builder renderReadOnlyReplaceState', replaceReadOnlyStart);
@@ -416,7 +416,7 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
     !replaceReadOnlySource.includes('.hitTestBehavior(HitTestMode.None)') ||
     replaceReadOnlySource.includes('.onClick(') ||
     replaceReadOnlySource.includes('ReaderUiStore.dispatch')) {
-    failures.push('ReaderReplacePanel canonical actions must remain visibly read-only and fail closed');
+    failures.push('ReplacePanel canonical actions must remain visibly read-only and fail closed');
   }
   const sourceSwitchBranch = branchBodies.get('SourceSwitchFlowPage') || '';
   if (!sourceSwitchBranch.includes('if (component.children.length > 0)') ||

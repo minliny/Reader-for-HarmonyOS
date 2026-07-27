@@ -1410,7 +1410,6 @@ struct ReaderTocLiveRow {
     ReaderUiStore.dispatch({
       type: 'chapter-load', chapterId: this.chapterId, bookId: this.bookId, chapterTitle: this.title,
     });
-    ReaderUiStore.dispatch({ type: 'reader.directory.close' });
   }
 
   build() {
@@ -1791,8 +1790,7 @@ struct ReaderLiveOptionRow {
 
 // ── Directory panel (.fd-reader-toc-panel) ────────────────────────────────
 @Component
-export struct ReaderDirectoryPanel {
-  @Prop standalone: boolean = false;
+export struct DirectoryPanel {
   @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
   @StorageProp('reader.chapterToc') chapterToc: ChapterTocEntry[] = [];
   @StorageProp('reader.currentChapterTitle') currentChapterTitle: string = '';
@@ -1812,13 +1810,8 @@ export struct ReaderDirectoryPanel {
     return this.currentChapterTitle.length > 0 && this.currentChapterTitle === chapter.title;
   }
 
-  private closeEvent(): string {
-    return this.standalone ? 'route-pop' : 'reader.directory.close';
-  }
-
   build() {
-    ReaderModulePanelShell({ debugLabel: 'ReaderModulePanel', closeEvent: this.closeEvent() }) {
-      Column() {
+    Column() {
         Row({ space: 0 }) {
           Stack({ alignContent: Alignment.Bottom }) {
             Text('目录')
@@ -1906,16 +1899,14 @@ export struct ReaderDirectoryPanel {
       }
       .width('100%')
       .height('100%')
-    }
   }
 }
 
 // ── Appearance panel (.fd-reader-appearance-panel) ────────────────────────
 @Component
-export struct ReaderAppearancePanel {
+export struct AppearancePanel {
   build() {
-    ReaderModulePanelShell({ debugLabel: 'ReaderModulePanel' }) {
-      Column({ space: 10 }) {
+    Column({ space: 10 }) {
         ReaderThemeSwatches()
         ReaderFontChoices()
       }
@@ -1923,7 +1914,6 @@ export struct ReaderAppearancePanel {
       .height(162.89)
       .padding({ left: 1, right: 1 })
       .alignItems(HorizontalAlign.Start)
-    }
   }
 }
 
@@ -4781,12 +4771,11 @@ struct ReaderReplaceFigmaRuleRow {
 // import/export, and management pages have no admitted Figma target here, so
 // they are intentionally not rendered as extra native controls.
 @Component
-export struct ReaderReplacePanel {
+export struct ReplacePanel {
   @StorageProp('reader.replaceRules') rules: ReplaceRule[] = [];
 
   build() {
-    ReaderQuickPanelShell({ debugLabel: 'ReaderQuickPanel', contentHeight: 190 }) {
-      Column({ space: 4 }) {
+    Column({ space: 4 }) {
         Row() {
           Text('替换规则')
             .fontSize(13)
@@ -4794,10 +4783,6 @@ export struct ReaderReplacePanel {
             .fontColor(ReaderUiVisualTokens.readerControlInk)
             .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
             .layoutWeight(1)
-          Image($r('app.media.figma_reader_replace_close'))
-            .width(28)
-            .height(28)
-            .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
         }
         .width('100%')
         .height(28)
@@ -4815,42 +4800,12 @@ export struct ReaderReplacePanel {
           .height(93)
           .padding({ left: 7, right: 7 })
           .clip(true)
-
-          Row({ space: 6 }) {
-            Text('预览效果')
-              .fontSize(8)
-              .fontWeight(600)
-              .fontColor(ReaderUiVisualTokens.readerControlInk)
-              .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
-              .width(97.59)
-              .height(28)
-              .border({ width: 1, color: ReaderUiVisualTokens.readerControlBorder })
-              .borderRadius(8)
-              .backgroundColor(ReaderUiVisualTokens.readerControlTranslucentSurface)
-              .textAlign(TextAlign.Center)
-            // No target is admitted for replacement management; retain the
-            // current Figma affordance as inert visual evidence rather than
-            // routing into a locally invented page.
-            Text('完整管理')
-              .fontSize(8)
-              .fontWeight(600)
-              .fontColor(ReaderUiVisualTokens.readerControlSurface)
-              .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
-              .layoutWeight(1)
-              .height(28)
-              .borderRadius(8)
-              .backgroundColor(ReaderUiVisualTokens.readerModuleActive)
-              .textAlign(TextAlign.Center)
-          }
-          .width('100%')
-          .height(28)
         }
         .width('100%')
         .height(132)
       }
       .width('100%')
       .height(164)
-    }
   }
 }
 // ── Auto-page panel (.fd-reader-auto-page-quick-panel) ────────────────────

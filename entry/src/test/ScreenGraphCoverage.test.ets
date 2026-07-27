@@ -27,9 +27,9 @@ export default function ScreenGraphCoverageTests(): void {
       expect(coverage.figmaUnboundStateTypes.join('|'))
         .assertEqual('Loading|Empty|ErrorState|Offline');
       expect(coverage.visibleFailureTypes.length).assertEqual(3);
-      expect(coverage.genericUsableTypes.indexOf('ReaderDirectoryPanel') >= 0).assertTrue();
-      expect(coverage.genericUsableTypes.indexOf('ReaderAppearancePanel') >= 0).assertTrue();
-      expect(coverage.genericUsableTypes.indexOf('ReaderReplacePanel') >= 0).assertTrue();
+      expect(coverage.genericUsableTypes.indexOf('DirectoryPanel') >= 0).assertTrue();
+      expect(coverage.genericUsableTypes.indexOf('AppearancePanel') >= 0).assertTrue();
+      expect(coverage.genericUsableTypes.indexOf('ReplacePanel') >= 0).assertTrue();
       expect(coverage.genericUsableTypes.indexOf('SourceSwitchFlowPage') >= 0).assertTrue();
       expect(coverage.genericUsableTypes.indexOf('SourceSwitchResultsPanel')).assertEqual(-1);
       expect(coverage.faithfulTypes.indexOf('RestoreConfirmPage')).assertEqual(-1);
@@ -91,9 +91,9 @@ export default function ScreenGraphCoverageTests(): void {
         'the historical generated title/message fixture is intentionally not projected; current Figma State/BookshelfEmpty owns the exact visible component and its two crosswalk-bound actions',
       );
       expect(ReaderUIScreenGraphCoverageRegistry.partialReason('ReadingTextFlow') === undefined).assertTrue();
-      expect(ReaderUIScreenGraphCoverageRegistry.partialReason('ReaderDirectoryPanel') === undefined).assertTrue();
-      expect(ReaderUIScreenGraphCoverageRegistry.partialReason('ReaderAppearancePanel') === undefined).assertTrue();
-      expect(ReaderUIScreenGraphCoverageRegistry.partialReason('ReaderReplacePanel') === undefined).assertTrue();
+      expect(ReaderUIScreenGraphCoverageRegistry.partialReason('DirectoryPanel') === undefined).assertTrue();
+      expect(ReaderUIScreenGraphCoverageRegistry.partialReason('AppearancePanel') === undefined).assertTrue();
+      expect(ReaderUIScreenGraphCoverageRegistry.partialReason('ReplacePanel') === undefined).assertTrue();
       expect(ReaderUIScreenGraphCoverageRegistry.partialReason('SourceSwitchFlowPage') === undefined).assertTrue();
       expect(ReaderUIScreenGraphCoverageRegistry.partialReason('BackTopBar') === undefined).assertTrue();
       expect(ReaderUIScreenGraphCoverageRegistry.partialReason('AppTopBar') === undefined).assertTrue();

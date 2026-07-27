@@ -4214,7 +4214,7 @@ export class ViewStateTable {
         "bindings": []
       },
       {
-        "type": "ReaderDirectoryPanel",
+        "type": "DirectoryPanel",
         "id": "reader_toc_loading-surface",
         "props": {
           "phase": "loading"
@@ -4275,7 +4275,7 @@ export class ViewStateTable {
         "bindings": []
       },
       {
-        "type": "ReaderDirectoryPanel",
+        "type": "DirectoryPanel",
         "id": "reader_toc_offline-surface",
         "props": {
           "phase": "offline"
@@ -4350,7 +4350,7 @@ export class ViewStateTable {
         "bindings": []
       },
       {
-        "type": "ReaderDirectoryPanel",
+        "type": "DirectoryPanel",
         "id": "reader_toc_error-surface",
         "props": {
           "phase": "error"
@@ -5451,7 +5451,7 @@ export class ViewStateTable {
         "bindings": []
       },
       {
-        "type": "ReaderAppearancePanel",
+        "type": "AppearancePanel",
         "id": "reader_font_import_confirm-panel",
         "props": {
           "section": "font"
@@ -5523,7 +5523,7 @@ export class ViewStateTable {
         "bindings": []
       },
       {
-        "type": "ReaderAppearancePanel",
+        "type": "AppearancePanel",
         "id": "reader_font_delete_confirm-panel",
         "props": {
           "section": "font"
@@ -5611,7 +5611,7 @@ export class ViewStateTable {
         "bindings": []
       },
       {
-        "type": "ReaderAppearancePanel",
+        "type": "AppearancePanel",
         "id": "reader_font_fallback-panel",
         "props": {
           "section": "font"
@@ -5682,7 +5682,7 @@ export class ViewStateTable {
         "bindings": []
       },
       {
-        "type": "ReaderAppearancePanel",
+        "type": "AppearancePanel",
         "id": "reader_theme_new-panel",
         "props": {
           "section": "theme"
@@ -5759,7 +5759,7 @@ export class ViewStateTable {
         "bindings": []
       },
       {
-        "type": "ReaderAppearancePanel",
+        "type": "AppearancePanel",
         "id": "reader_theme_delete_confirm-panel",
         "props": {
           "section": "theme"
@@ -5829,7 +5829,7 @@ export class ViewStateTable {
         "bindings": []
       },
       {
-        "type": "ReaderAppearancePanel",
+        "type": "AppearancePanel",
         "id": "reader_typography_reset_confirm-panel",
         "props": {
           "section": "typography"
@@ -5898,7 +5898,7 @@ export class ViewStateTable {
         "bindings": []
       },
       {
-        "type": "ReaderReplacePanel",
+        "type": "ReplacePanel",
         "id": "reader_replace_delete_confirm-panel",
         "props": {
           "section": "delete"
@@ -5968,7 +5968,7 @@ export class ViewStateTable {
         "bindings": []
       },
       {
-        "type": "ReaderReplacePanel",
+        "type": "ReplacePanel",
         "id": "reader_replace_apply_result-panel",
         "props": {
           "section": "apply"
@@ -6070,7 +6070,7 @@ export class ViewStateTable {
         "bindings": []
       },
       {
-        "type": "ReaderReplacePanel",
+        "type": "ReplacePanel",
         "id": "reader_replace_import_export-panel",
         "props": {
           "section": "import"
@@ -6155,7 +6155,7 @@ export class ViewStateTable {
         "bindings": []
       },
       {
-        "type": "ReaderReplacePanel",
+        "type": "ReplacePanel",
         "id": "reader_replace_preview-panel",
         "props": {
           "section": "preview"
@@ -6243,7 +6243,7 @@ export class ViewStateTable {
         "bindings": []
       },
       {
-        "type": "ReaderReplacePanel",
+        "type": "ReplacePanel",
         "id": "reader_replace_page-panel",
         "props": {
           "section": "idle"
@@ -6985,7 +6985,7 @@ export class ViewStateTable {
         "bindings": []
       },
       {
-        "type": "ReaderReplacePanel",
+        "type": "ReplacePanel",
         "id": "content-edit-panel",
         "props": {
           "variant": "direct-content-edit",
@@ -7319,7 +7319,7 @@ export class ViewStateTable {
         "bindings": []
       },
       {
-        "type": "ReaderDirectoryPanel",
+        "type": "DirectoryPanel",
         "id": "bookmarks-manager-panel",
         "props": {
           "tab": "bookmarks",
@@ -8167,6 +8167,84 @@ export class ViewStateTable {
             "trigger": "appear"
           }
         ]
+      }
+    ]
+  },
+  {
+    "routeId": "auto-page",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": [],
+        "bindings": []
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": [],
+        "bindings": []
+      },
+      {
+        "type": "ReaderAutoScrollPanel",
+        "id": "auto-scroll-panel",
+        "props": {},
+        "children": [],
+        "bindings": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
+        "props": {},
+        "children": [],
+        "bindings": []
+      }
+    ]
+  },
+  {
+    "routeId": "content-replacement",
+    "pageState": "default",
+    "context": {
+      "bookId": "bk-001"
+    },
+    "components": [
+      {
+        "type": "ReaderBase",
+        "id": "reader-base",
+        "props": {
+          "theme": "paper"
+        },
+        "children": [],
+        "bindings": []
+      },
+      {
+        "type": "ReaderTopArea",
+        "id": "reader-top-area",
+        "props": {},
+        "children": [],
+        "bindings": []
+      },
+      {
+        "type": "ReplacePanel",
+        "id": "replace-panel",
+        "props": {},
+        "children": [],
+        "bindings": []
+      },
+      {
+        "type": "ReaderBottomBar",
+        "id": "reader-bottom-bar",
+        "props": {},
+        "children": [],
+        "bindings": []
       }
     ]
   }

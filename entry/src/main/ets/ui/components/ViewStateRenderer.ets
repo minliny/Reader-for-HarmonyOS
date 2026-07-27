@@ -11,9 +11,9 @@ import { AppTopBar, BackTopBar, BottomNav,
 import { ContinueReadingCard, BookshelfShelfSection, BookshelfEmptyState, ShelfChipGroup, ShelfSectionHeader, BookCard, BookGrid, BookEntry } from './BookshelfComponents';
 import { BookHero, BookSummaryCard, BookChapterList } from './BookDetailComponents';
 import { ReadingBackgroundLayer, ReadingTextFlow, ReadingInfoLayer, TapZones, ReaderBase, ReaderTopArea } from './ReaderComponents';
-import { ReaderControlSheet, ReaderBottomBar, ReaderDirectoryPanel, ReaderAppearancePanel, ReaderTtsPanel, ReaderSettingsPanel,
+import { ReaderControlSheet, ReaderBottomBar, DirectoryPanel, AppearancePanel, ReaderTtsPanel, ReaderSettingsPanel,
   ReaderFullDirectoryPage, ReaderFullTtsPage, ReaderFullAppearancePage, ReaderFullSettingsPage, ReaderBookCachePage, ReaderDebugInfoPage,
-  ReaderSearchPanel, ReaderReplacePanel, ReaderAutoScrollPanel, NightToast } from './ReaderOverlayComponents';
+  ReaderSearchPanel, ReplacePanel, ReaderAutoScrollPanel, NightToast } from './ReaderOverlayComponents';
 import { SourceImportPreviewPage, SourceGroupsPage, SourceDetectPage, SourceDebugPage,
   SourceDebugRunningPage, SourceDebugResultPage, SourceDebugContentLogPage, SourceCodeViewPage, SourceLogsPage,
   SourceDeleteConfirmPage, SourceRuleEditPage, SourceBatchPage } from './LibraryComponents';
@@ -925,13 +925,13 @@ export struct ViewStateRenderer {
       })
     } else if (component.type === 'SourceBatchPage') {
       SourceBatchPage()
-    } else if (component.type === 'ReaderDirectoryPanel') {
+    } else if (component.type === 'DirectoryPanel') {
       if (this.routeId === 'bookmarks-manager' &&
         ReaderCapabilityClosureRouteRegistry.isCoreBacked(this.routeId)) {
         // Ignore the canonical fixture row. The native panel renders only the
         // current book's Core bookmark projection and uses its real Core time
         // key for jump/delete confirmation.
-        ReaderDirectoryPanel({ standalone: true })
+        DirectoryPanel()
       } else if (ReaderCapabilityClosureRouteRegistry.isFailClosed(this.routeId)) {
         this.renderCapabilityClosureNode(
           component,
@@ -948,9 +948,9 @@ export struct ViewStateRenderer {
         )
       } else {
         // The normal directory surface stays on the existing native panel.
-        ReaderDirectoryPanel()
+        DirectoryPanel()
       }
-    } else if (component.type === 'ReaderAppearancePanel') {
+    } else if (component.type === 'AppearancePanel') {
       if (component.children.length > 0) {
         this.renderReadOnlyAppearanceState(
           this.textOr(component.props.section, 'appearance'),
@@ -958,7 +958,7 @@ export struct ViewStateRenderer {
         )
       } else {
         // The default surface remains the live native appearance panel.
-        ReaderAppearancePanel()
+        AppearancePanel()
       }
     } else if (component.type === 'ReaderTtsPanel') {
       ReaderTtsPanel()
@@ -993,7 +993,7 @@ export struct ViewStateRenderer {
       ReaderDebugInfoPage()
     } else if (component.type === 'ReaderSearchPanel') {
       ReaderSearchPanel()
-    } else if (component.type === 'ReaderReplacePanel') {
+    } else if (component.type === 'ReplacePanel') {
       if (ReaderCapabilityClosureRouteRegistry.has(this.routeId)) {
         this.renderCapabilityClosureNode(
           component,
@@ -1010,7 +1010,7 @@ export struct ViewStateRenderer {
         )
       } else {
         // The default surface retains the production-owned native rule flow.
-        ReaderReplacePanel()
+        ReplacePanel()
       }
     } else if (component.type === 'ReaderAutoScrollPanel') {
       ReaderAutoScrollPanel()
