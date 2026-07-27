@@ -68,6 +68,7 @@ const routeReconstructionQuarantinePath = path.join(
   'fixtures',
   'route-reconstruction-quarantine.fixtures.json',
 );
+const visualAdmissionRegistryPath = path.join(READER_UI, 'docs', 'design', 'FIGMA_VISUAL_ADMISSION_REGISTRY.json');
 
 console.log('enforce-implementation-ready-gate: verifying execution gate semantics...\n');
 
@@ -183,15 +184,26 @@ assert.ok(fs.existsSync(routeReconstructionQuarantinePath),
   'Reader-UI route reconstruction quarantine fixture is missing');
 const routeReconstructionQuarantine = JSON.parse(fs.readFileSync(routeReconstructionQuarantinePath, 'utf8'));
 assert.equal(routeReconstructionQuarantine.status, 'active',
-  'A3 route extraction must remain active until a new source conversion releases it');
+  'A3 route extraction must remain active while any Reader record is still isolated');
+assert.ok(fs.existsSync(visualAdmissionRegistryPath),
+  'Reader-UI visual admission registry is missing');
+const visualAdmissionRegistry = JSON.parse(fs.readFileSync(visualAdmissionRegistryPath, 'utf8'));
+const harmonyStatusByRecordId = new Map(visualAdmissionRegistry.records.map((record) => [record.id, record.harmony?.status]));
 const trackedQuarantineRouteIds = routeReconstructionQuarantine.entries.flatMap((entry) => entry.routeIds || []);
 assert.equal(trackedQuarantineRouteIds.length, 16,
   'A3 route extraction must retain the complete 16-route audited Reader set');
 const quarantinedRouteIds = routeReconstructionQuarantine.entries
-  .filter((entry) => entry.status === 'active')
+  .filter((entry) => {
+    const harmonyStatus = harmonyStatusByRecordId.get(entry.recordId);
+    assert.notEqual(harmonyStatus, undefined,
+      `route reconstruction quarantine references missing admission record ${entry.recordId}`);
+    // B3 may release the Reader-UI source record, but it must remain absent
+    // from native route tables until B4 atomically promotes HarmonyOS.
+    return entry.status === 'active' || harmonyStatus !== 'implementation-ready';
+  })
   .flatMap((entry) => entry.routeIds || []);
 assert.ok(quarantinedRouteIds.length > 0,
-  'at least one historical route must remain isolated until its own source conversion is complete');
+  'at least one historical route must remain isolated until its own native promotion is complete');
 assert.equal(new Set(quarantinedRouteIds).size, quarantinedRouteIds.length,
   'A quarantined route must have exactly one source owner');
 for (const routeId of quarantinedRouteIds) {

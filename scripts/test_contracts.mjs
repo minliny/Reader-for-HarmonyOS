@@ -305,15 +305,20 @@ test('all visual consumers consult the generated Reader-UI authority without hid
     'the retired generic StateHost must not remain an instantiable visual component');
 });
 
-test('active Reader source quarantine removes only historical mappings whose owning record remains active', () => {
+test('Reader source release cannot restore a native route before its HarmonyOS promotion', () => {
   assert.equal(routeReconstructionQuarantine.status, 'active');
   const trackedRouteIds = routeReconstructionQuarantine.entries.flatMap((entry) => entry.routeIds);
   assert.equal(trackedRouteIds.length, 16, 'A3 must retain the full audited Reader route set');
   assert.equal(new Set(trackedRouteIds).size, 16, 'a tracked route must have one source owner');
+  const harmonyStatusByRecordId = new Map(registry.records.map((record) => [record.id, record.harmony?.status]));
   const routeIds = routeReconstructionQuarantine.entries
-    .filter((entry) => entry.status === 'active')
+    .filter((entry) => {
+      const harmonyStatus = harmonyStatusByRecordId.get(entry.recordId);
+      assert.notEqual(harmonyStatus, undefined, `${entry.recordId} must exist in the Reader-UI admission registry`);
+      return entry.status === 'active' || harmonyStatus !== 'implementation-ready';
+    })
     .flatMap((entry) => entry.routeIds);
-  assert.ok(routeIds.length > 0, 'at least one source record must remain actively quarantined');
+  assert.ok(routeIds.length > 0, 'at least one route must remain native-quarantined');
   for (const routeId of routeIds) {
     assert.equal(routeTable.includes(`'${routeId}'`), false,
       `${routeId} must not remain in generated native RouteTable`);

@@ -67,17 +67,22 @@ if (HOST_REQUEST_TYPES.length !== 58 || new Set(HOST_REQUEST_TYPES).size !== 58)
 // shell or render an empty page.
 const ROUTE_SCHEMA = JSON.parse(fs.readFileSync(path.resolve(CONTRACTS_DIR, '..', 'route.schema.json'), 'utf8'));
 const CANONICAL_ROUTE_IDS = ROUTE_SCHEMA.properties.id.enum;
+const READER_UI_ROOT = path.resolve(CONTRACTS_DIR, '..', '..');
+const VISUAL_ADMISSION_REGISTRY = JSON.parse(fs.readFileSync(
+  path.join(READER_UI_ROOT, 'docs', 'design', 'FIGMA_VISUAL_ADMISSION_REGISTRY.json'),
+  'utf8',
+));
+const HARMONY_STATUS_BY_RECORD_ID = new Map(
+  VISUAL_ADMISSION_REGISTRY.records.map((record) => [record.id, record.harmony?.status]),
+);
 
 function activeQuarantinedRouteIds(document) {
   if (document === null || Array.isArray(document) || typeof document !== 'object' ||
     (document.status !== 'active' && document.status !== 'released') || !Array.isArray(document.entries)) {
     throw new Error('Reader UI route reconstruction quarantine is invalid');
   }
-  if (document.status === 'released') {
-    if (document.entries.some((entry) => entry?.status === 'active')) {
-      throw new Error('a globally released Reader UI route reconstruction quarantine cannot retain an active entry');
-    }
-    return new Set();
+  if (document.status === 'released' && document.entries.some((entry) => entry?.status === 'active')) {
+    throw new Error('a globally released Reader UI route reconstruction quarantine cannot retain an active entry');
   }
   const ids = new Set();
   for (const [index, entry] of document.entries.entries()) {
@@ -86,7 +91,17 @@ function activeQuarantinedRouteIds(document) {
       (entry.status !== 'active' && entry.status !== 'released')) {
       throw new Error(`Reader UI route reconstruction quarantine entry ${index + 1} is invalid`);
     }
-    if (entry.status === 'released') continue;
+    const harmonyStatus = HARMONY_STATUS_BY_RECORD_ID.get(entry.recordId);
+    if (harmonyStatus === undefined) {
+      throw new Error(`Reader UI route reconstruction quarantine references missing admission record: ${entry.recordId}`);
+    }
+    // Releasing source isolation (B3) is deliberately insufficient to put an
+    // old native route back in RouteTable. It remains absent until the atomic
+    // B4 promotion has made this exact record implementation-ready for
+    // HarmonyOS. This prevents B3 evidence from quietly becoming B5 consumer
+    // work through a generator side effect.
+    const mustRemainQuarantined = entry.status === 'active' || harmonyStatus !== 'implementation-ready';
+    if (!mustRemainQuarantined) continue;
     for (const routeId of entry.routeIds) {
       if (typeof routeId !== 'string' || !CANONICAL_ROUTE_IDS.includes(routeId)) {
         throw new Error(`Reader UI route reconstruction quarantine references unknown RouteId: ${String(routeId)}`);
@@ -102,8 +117,9 @@ function activeQuarantinedRouteIds(document) {
 
 // This set is generated from Reader-UI source data. It is the explicit A3
 // route extraction: legacy reading routes remain published RouteIds but are
-// omitted from native RouteTable and ViewStateTable until a new source
-// conversion releases them. Do not recreate this list in a Harmony renderer.
+// omitted from native RouteTable and ViewStateTable until BOTH the Reader-UI
+// source conversion is released and the atomic promotion gives HarmonyOS an
+// implementation-ready admission. Do not recreate this list in a renderer.
 const QUARANTINED_ROUTE_IDS = activeQuarantinedRouteIds(ROUTE_RECONSTRUCTION_QUARANTINE);
 
 function readCanonicalDemoRoutes() {
