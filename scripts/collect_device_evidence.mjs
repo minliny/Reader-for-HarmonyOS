@@ -108,8 +108,8 @@ const TAG_TO_CAPABILITIES = {
     successPattern: /DONE webview\+permission\+notification/,
   },
   'TtsSelfCheck': {
-    description: 'TTS TextReader: start/pause/resume/stop/progress',
-    capabilities: ['tts.system.start', 'tts.system.pause', 'tts.system.resume', 'tts.system.stop'],
+    description: 'TTS in-app engine: start/stop/shutdown',
+    capabilities: ['tts.system.start', 'tts.system.stop'],
     successPattern: /shutdown done/,
   },
 };

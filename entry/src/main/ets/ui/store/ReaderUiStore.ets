@@ -447,6 +447,7 @@ export class ReaderUiStore {
 
   private static state: ReaderUiState;
   private static runtimeShadow: ReaderUIRuntimeShadowCoordinator;
+  private static hasInitializedRuntimeShadow: boolean = false;
   private static readerControlCandidateRuntimeFactoryForTest?: ReaderControlCandidateRuntimeFactory;
   // RouteRenderer needs the source-role intent at the same time it observes
   // the route change.  Keep this as a one-dispatch bridge rather than adding
@@ -464,6 +465,12 @@ export class ReaderUiStore {
     replaceRuleCore?: ReaderReplaceRuleCoreGateway,
     rssCore?: ReaderRssPilotEffectExecutor,
     syncCore?: ReaderSyncExperimentalGateway): void {
+    // Do not allow an old playback executor's asynchronous Core or platform
+    // callback to mutate the next Store instance. This is needed both for an
+    // EntryAbility reinitialization and for deterministic on-device tests.
+    if (ReaderUiStore.hasInitializedRuntimeShadow) {
+      ReaderUiStore.runtimeShadow.cancelForStoreReinitialize();
+    }
     ReaderUiStore.state = DemoUiState.initial();
     ReaderUiStore.readerControlCandidateRuntimeFactoryForTest = undefined;
     ReaderUiStore.pendingImmersiveEntryLastOp = '';
@@ -487,6 +494,7 @@ export class ReaderUiStore {
       syncCore === undefined ? undefined : ReaderUiStore.syncPilotHost(),
       syncCore,
     );
+    ReaderUiStore.hasInitializedRuntimeShadow = true;
     ReaderThemeState.init();
     ReaderUiStore.writeAll();
     AppStorage.setOrCreate<string>(ReaderUiStore.K_LAST_OP, '');
@@ -641,6 +649,26 @@ export class ReaderUiStore {
     } finally {
       ReaderUiStore.committedReaderExitDispatch = false;
     }
+  }
+
+  /**
+   * Figma / Reader-UI motion contract: starting TTS from a control surface
+   * replaces that surface with immersive reading, then starts the session so
+   * the status capsule has one stable owner.  Calling `reader-tts-start`
+   * directly from an overlay violates the generated runtime's active-reader
+   * guard and must remain impossible for production controls.
+   */
+  static startTtsFromReaderSurface(): void {
+    const origin = ReaderUiStore.state.routeId;
+    const isTtsStartSurface = origin === 'reader' || origin === 'reader-tts-overlay-v2' ||
+      origin === 'reader-full-tts';
+    if (!isTtsStartSurface) return;
+
+    ReaderUiStore.dispatch({ type: 'route-replace', id: 'immersive-reading' });
+    // Navigation can be refused by an active modal/transaction. Do not then
+    // bypass the runtime guard by emitting a start event from the old surface.
+    if (ReaderUiStore.state.routeId !== 'immersive-reading') return;
+    ReaderUiStore.dispatch({ type: 'reader-tts-start' });
   }
 
   static dispatch(event: UiEvent): void {

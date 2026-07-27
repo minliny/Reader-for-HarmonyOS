@@ -105,26 +105,26 @@ export default function SettingsViewStateTests(): void {
       expect(after.settingsToggles.enableSearchHistory).assertTrue();
     });
 
-    // ── Reducer: switch-tab → settings（tab switch 链路） ──
-    it('reducerSwitchTabToSettings', 0, () => {
+    // ── Reducer: switch-tab → Settings General（Figma 当前根页面） ──
+    it('reducerSwitchTabToSettingsGeneral', 0, () => {
       const s = DemoUiState.initial();
       expect(s.tab).assertEqual('bookshelf');
       const after = ReaderReducer.reduce(s, { type: 'switch-tab', tab: 'settings' });
       expect(after.tab).assertEqual('settings');
-      expect(after.routeId).assertEqual('settings');
+      expect(after.routeId).assertEqual('settings-general');
       expect(after.stack.length).assertEqual(1);
-      expect(after.stack[0].id).assertEqual('settings');
+      expect(after.stack[0].id).assertEqual('settings-general');
     });
 
-    // ── Reducer: route-pop → 从 settings-general 返回（close 链路） ──
-    it('reducerRoutePopReturnsFromSettingsGeneral', 0, () => {
+    // ── Reducer: route-pop → 返回 Settings General 根页面（close 链路） ──
+    it('reducerRoutePopReturnsToSettingsGeneralRoot', 0, () => {
       const s = DemoUiState.initial();
       const settingsTab = ReaderReducer.reduce(s, { type: 'switch-tab', tab: 'settings' });
       const pushed = ReaderReducer.reduce(settingsTab, { type: 'route-push', id: 'settings-general' });
       expect(pushed.routeId).assertEqual('settings-general');
       expect(pushed.stack.length).assertEqual(2);
       const popped = ReaderReducer.reduce(pushed, { type: 'route-pop' });
-      expect(popped.routeId).assertEqual('settings');
+      expect(popped.routeId).assertEqual('settings-general');
       expect(popped.stack.length).assertEqual(1);
     });
 

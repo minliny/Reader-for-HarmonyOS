@@ -1125,20 +1125,24 @@ export default function ReaderEffectsTests(): void {
       expect(next.ttsSession.playback).assertEqual('playing');
     });
 
-    it('ttsTogglePausesActiveTtsSession', 0, () => {
+    it('ttsToggleIsIdempotentWhilePlaying', 0, () => {
       const s = DemoUiState.initial();
       const playing = ReaderReducer.reduce(s, { type: 'tts-toggle' });
       expect(playing.ttsSession.playback).assertEqual('playing');
-      const paused = ReaderReducer.reduce(playing, { type: 'tts-toggle' });
-      expect(paused.ttsSession.playback).assertEqual('paused');
+      // Figma has separate play and stop actions. Harmony's speech host does
+      // not expose a faithful pause/resume cursor, so a second play is a no-op
+      // instead of claiming a fabricated paused position.
+      const repeatedPlay = ReaderReducer.reduce(playing, { type: 'tts-toggle' });
+      expect(repeatedPlay.ttsSession.playback).assertEqual('playing');
+      expect(repeatedPlay.activeSession).assertEqual('tts');
     });
 
-    it('ttsToggleResumesPausedTtsSession', 0, () => {
+    it('ttsStopClearsTheActiveTtsSession', 0, () => {
       const s = DemoUiState.initial();
       const playing = ReaderReducer.reduce(s, { type: 'tts-toggle' });
-      const paused = ReaderReducer.reduce(playing, { type: 'tts-toggle' });
-      const resumed = ReaderReducer.reduce(paused, { type: 'tts-toggle' });
-      expect(resumed.ttsSession.playback).assertEqual('playing');
+      const stopped = ReaderReducer.reduce(playing, { type: 'reader-tts-stop' });
+      expect(stopped.ttsSession.playback).assertEqual('idle');
+      expect(stopped.activeSession).assertEqual('');
     });
 
     it('autoPageToggleStartsAutoPageSession', 0, () => {

@@ -25,6 +25,7 @@ import { RouteId, RouteTable } from '../contract/generated/RouteTable';
 import { ColorTokens } from '../contract/generated/ColorTokens';
 import { ReaderThemeState } from '../ui/tokens/ReaderThemeState';
 import { CoreRuntime } from '../bridge/CoreRuntime';
+import type { JsonObject } from '../bridge/core/sdk/reader_core';
 import { HostCapabilityManifest } from '../host/HostCapabilityManifest';
 import { TtsHostAdapter } from '../host/adapters/TtsHostAdapter';
 import {
@@ -131,10 +132,11 @@ export default class EntryAbility extends UIAbility {
       });
       core.startDispatcher();
       const selfCheckFlag = params['selfCheck'] as string;
+      const verticalScrollCheckFlag = params['verticalScrollCheck'] as string;
       // The restore request must finish before any initial Core reads. This
       // prevents an empty in-memory runtime from rendering/persisting over an
       // existing bookshelf/source/local-book snapshot on cold launch.
-      this.bootstrapCoreAfterRestore(core, selfCheckFlag).then((): void => {}).catch((error: Error): void => {
+      this.bootstrapCoreAfterRestore(core, selfCheckFlag, verticalScrollCheckFlag).then((): void => {}).catch((error: Error): void => {
         console.error('[EntryAbility] Core bootstrap failed: ' + error);
       });
     } catch (e) {
@@ -148,7 +150,8 @@ export default class EntryAbility extends UIAbility {
    * a volatile session; Core keeps persistence disabled in that case so it
    * cannot overwrite the unreadable snapshot.
    */
-  private async bootstrapCoreAfterRestore(core: CoreRuntime, selfCheckFlag: string): Promise<void> {
+  private async bootstrapCoreAfterRestore(core: CoreRuntime, selfCheckFlag: string,
+    verticalScrollCheckFlag: string): Promise<void> {
     const uiPreferences = core.getReaderUiPreferenceAdapter();
     if (uiPreferences !== null) {
       try {
@@ -197,6 +200,12 @@ export default class EntryAbility extends UIAbility {
         manifest.rebroadcastSummary();
         console.info('[EntryAbility] self-check evidence drive complete — see [HostManifest] post-self-check line');
       }, 30000);
+    } else if (verticalScrollCheckFlag === 'true') {
+      // Keep the visual VM scroll proof isolated from the broader Host probe:
+      // the latter intentionally enters non-admitted diagnostic routes and is
+      // not a valid visible-app smoke test.
+      console.info('[EntryAbility] verticalScrollCheck=true — importing only the long local-book scroll probe');
+      this.runLocalBookSelfCheck(core, core.getCapabilityManifest());
     } else {
       console.info('[EntryAbility] selfCheck not requested — skipping Host self-checks (regular launch)');
     }
@@ -241,23 +250,13 @@ export default class EntryAbility extends UIAbility {
   }
 
   /**
-   * One-shot TTS self-check. Exercises TtsHostAdapter.start → pause → resume →
-   * stop → shutdown on the device and logs each step under [TtsSelfCheck].
-   *
-   * This produces device-executed evidence for the TTS Host adapter proof,
-   * answering whether TextReader.init succeeds on this device and whether
-   * pause/resume are truly honored (vs. fallback mode where they return
-   * acknowledged: false).
-   *
-   * The check is best-effort: any failure is logged but does not affect the
-   * app lifecycle. TextReader is lazy-initialized on first start().
+   * One-shot in-app TTS self-check.  It exercises the same app-owned engine
+   * path as the visible Reader TTS panel: start → stop → shutdown.  It never
+   * initializes a system reader surface and does not claim unsupported
+   * pause/resume or percentage-progress evidence.
    */
   private runTtsSelfCheck(core: CoreRuntime, manifest: HostCapabilityManifest): void {
     const tts: TtsHostAdapter = core.getTtsAdapter();
-    // Register a progress callback so we can see readProgress events.
-    tts.setProgressCallback((articleId: string, currentPercent: number, maxPercent: number) => {
-      console.info(`[TtsSelfCheck] progress articleId=${articleId} current=${currentPercent} max=${maxPercent}`);
-    });
     Promise.resolve()
       .then(async () => {
         const req: HostTtsSystemStartRequest = {
@@ -265,17 +264,8 @@ export default class EntryAbility extends UIAbility {
         };
         const startResp = await tts.start(req);
         console.info(`[TtsSelfCheck] start started=${startResp.started} backend=${tts.getBackendKind()}`);
-        // Wait 3s for playback to actually begin and produce some progress.
-        await new Promise<void>((resolve) => setTimeout(resolve, 3000));
-        console.info(`[TtsSelfCheck] pre-pause state=${tts.queryState()} lastPercent=${tts.getLastPercent()}`);
-        const pauseResp = await tts.pause();
-        console.info(`[TtsSelfCheck] pause acknowledged=${pauseResp.acknowledged}`);
-        // Wait 1s paused.
-        await new Promise<void>((resolve) => setTimeout(resolve, 1000));
-        const resumeResp = await tts.resume();
-        console.info(`[TtsSelfCheck] resume acknowledged=${resumeResp.acknowledged}`);
-        // Wait 2s for resumed playback.
-        await new Promise<void>((resolve) => setTimeout(resolve, 2000));
+        await new Promise<void>((resolve) => setTimeout(resolve, 1200));
+        console.info(`[TtsSelfCheck] state=${tts.queryState()}`);
         const stopResp = await tts.stop();
         console.info(`[TtsSelfCheck] stop acknowledged=${stopResp.acknowledged}`);
         await tts.shutdown();
@@ -515,6 +505,19 @@ export default class EntryAbility extends UIAbility {
         });
         const importedFields = imported as Object as Record<string, number>;
         const importedChapterCount = importedFields['chapterCount'];
+        // The normal user flow persists a materialized local book and then
+        // adds that returned Core book to the bookshelf.  Keep the explicit
+        // device self-check on the same persistence path so an emulator
+        // reading-chain test has a real shelf entry rather than an invented
+        // UI fixture.  This only runs for the opt-in selfCheck launch flag.
+        const materializedBook = (imported as Object as Record<string, Object>)['book'];
+        if (materializedBook === undefined || materializedBook === null ||
+          typeof materializedBook !== 'object' || Array.isArray(materializedBook)) {
+          throw new Error('Core local_book.import returned no valid bookshelf book');
+        }
+        const bookshelfBook = materializedBook as JsonObject;
+        bookshelfBook['sourceId'] = 'local';
+        await core.bookshelfAdd(bookshelfBook);
         const coreToc = await core.localBookToc(coreBookId);
         const tocFields = coreToc as Object as Record<string, Object[]>;
         const tocEntries: Object[] = tocFields['toc'];
@@ -530,7 +533,33 @@ export default class EntryAbility extends UIAbility {
         if (typeof coreChapterContent !== 'string' || coreChapterContent.length === 0) {
           throw new Error('Core local_book.chapter.content returned empty content');
         }
-        console.info(`[LocalBookCore] import=true chapters=${importedChapterCount} toc=${tocEntries.length} firstIndex=${firstIndex} contentLen=${coreChapterContent.length}`);
+        console.info(`[LocalBookCore] import=true shelfAdded=true chapters=${importedChapterCount} toc=${tocEntries.length} firstIndex=${firstIndex} contentLen=${coreChapterContent.length}`);
+
+        // The bundled sample is intentionally short, so it cannot prove that
+        // the production vertical reading surface receives a real drag.  Add
+        // a long Core-backed book only for the explicit device self-check;
+        // regular launches never create this record or alter a user's shelf.
+        let verticalProbeText = '';
+        for (let paragraphIndex = 1; paragraphIndex <= 96; paragraphIndex += 1) {
+          verticalProbeText += `第 ${paragraphIndex} 段：这是用于虚拟机验证竖向阅读滚动的真实本地导入文本。` +
+            '拖动正文后，阅读位置必须发生变化，且不应被翻页热区或控制层覆盖。\n\n';
+        }
+        const verticalProbeId = `device-vertical-scroll-self-check-${Date.now()}`;
+        const verticalImported = await core.localBookImport(verticalProbeId, {
+          text: verticalProbeText,
+          fileName: '长文本滚动验证.txt',
+          format: 'txt',
+        });
+        const verticalMaterializedBook = (verticalImported as Object as Record<string, Object>)['book'];
+        if (verticalMaterializedBook === undefined || verticalMaterializedBook === null ||
+          typeof verticalMaterializedBook !== 'object' || Array.isArray(verticalMaterializedBook)) {
+          throw new Error('Core local_book.import returned no vertical-scroll probe book');
+        }
+        const verticalShelfBook = verticalMaterializedBook as JsonObject;
+        verticalShelfBook['sourceId'] = 'local';
+        await core.bookshelfAdd(verticalShelfBook);
+        ReaderEffects.loadBookshelf();
+        console.info(`[LocalBookCore] verticalScrollProbe=true contentLen=${verticalProbeText.length}`);
 
         // Step 2: file.write / file.read round-trip
         const txtPath = 'files://local_book/sample.txt';
@@ -764,10 +793,9 @@ export default class EntryAbility extends UIAbility {
    *              (non-intrusive: check only, no request dialog)
    *   Notification — notification.show + cancel (first show may trigger
    *              requestEnableNotification dialog; if denied, shown: false)
-   *   TTS progress — evidence is captured by [TtsSelfCheck] tag in
-   *              runTtsSelfCheck above (lastPercent + progress callback with
-   *              currentPercent/maxPercent — non-zero currentPercent proves
-   *              TextReader tracks real read position)
+   *   TTS lifecycle — evidence is captured by [TtsSelfCheck] for the
+   *              app-owned engine start/stop/shutdown sequence.  The engine
+   *              intentionally has no fabricated progress or pause claim.
    *
    * Best-effort: any failure is logged but does not affect app lifecycle.
    */
@@ -828,13 +856,8 @@ export default class EntryAbility extends UIAbility {
           }
         }
 
-        // ── TTS progress ──
-        // TTS progress evidence is captured by [TtsSelfCheck] tag in
-        // runTtsSelfCheck above. The progress callback logs
-        // articleId/currentPercent/maxPercent, and lastPercent is logged
-        // before pause. Real progress (currentPercent > 0) proves TextReader
-        // is tracking read position, not just fire-and-forget playback.
-        console.info('[UiAdapter] tts.progress evidence captured by [TtsSelfCheck] tag (lastPercent + progress callback)');
+        // ── TTS lifecycle ──
+        console.info('[UiAdapter] tts lifecycle evidence captured by [TtsSelfCheck] tag (in-app engine start/stop/shutdown)');
 
         // ── device.vibrate ──
         // vibrator.vibrate is a no-op on emulator (no hardware), but the call
@@ -845,7 +868,7 @@ export default class EntryAbility extends UIAbility {
         const vibrateResp = await deviceAdapter.vibrate(vibrateReq);
         console.info('[UiAdapter] device.vibrate vibrated=' + vibrateResp.vibrated + ' durationMs=15');
 
-        console.info('[UiAdapter] DONE webview+permission+notification+tts-progress+vibrate device evidence captured');
+        console.info('[UiAdapter] DONE webview+permission+notification+tts-lifecycle+vibrate device evidence captured');
         manifest.markVerifiedByTag('UiAdapter');
       })
       .catch((e: Error) => {
@@ -863,6 +886,12 @@ export default class EntryAbility extends UIAbility {
    */
   private runReadingChainUiSelfCheck(manifest: HostCapabilityManifest): void {
     const query: string = '斗破';
+    const originRoute = ReaderUiStore.snapshot().routeId as RouteId;
+    const restoreOriginRoute = (): void => {
+      if (ReaderUiStore.snapshot().routeId !== originRoute) {
+        ReaderUiStore.dispatch({ type: 'route-replace', id: originRoute });
+      }
+    };
     console.info('[ReadingChainUi] start: entering book-search then dispatching search-submit query=' + query);
     const beforeStr: string = AppStorage.get<string>('reader.searchQuery') ?? '';
     console.info('[ReadingChainUi] before: searchQuery="' + beforeStr + '"');
@@ -893,6 +922,7 @@ export default class EntryAbility extends UIAbility {
       if (hasError) {
         clearInterval(poll);
         console.info('[ReadingChainUi] DONE chain-failure phase=' + phase + ' errorCode=' + errCode + ' msg=' + errMsg + ' (not verified: body was not loaded)');
+        restoreOriginRoute();
         return;
       }
       if (phase === 'search') {
@@ -929,12 +959,14 @@ export default class EntryAbility extends UIAbility {
           const bookTitle: string = currentBook !== null && currentBook !== undefined ? currentBook.title : '';
           console.info('[ReadingChainUi] DONE chain-success results=' + sr.length + ' bookTitle="' + bookTitle + '" chapterParagraphs=' + chapterContent.length + ' firstPara="' + firstPara + '"');
           manifest.markVerifiedByTag('ReadingChainUi');
+          restoreOriginRoute();
           return;
         }
       }
       if (elapsed >= 35000) {
         clearInterval(poll);
         console.info('[ReadingChainUi] TIMEOUT after 35s phase=' + phase + ' detailDispatched=' + detailDispatched + ' chapterDispatched=' + chapterDispatched + ' (searchQuery="' + sq + '" results=' + sr.length + ' loading=' + loading + '). HTTP may have hung past adapter timeout.');
+        restoreOriginRoute();
       }
     }, interval);
   }
@@ -1054,13 +1086,11 @@ export default class EntryAbility extends UIAbility {
     this.registerReaderFontsForWindow(mainWindow);
   }
 
-  // Register the bundled Noto Serif CJK SC font so ArkUI can resolve the first
-  // family in the contract --fd-ds-font-serif fallback stack
-  // (platforms.arkts = "Noto Serif CJK SC", serif). Only the primary family is
-  // registered; downstream families in the stack (serif generic) are resolved by
-  // the system font fallback chain. The remaining font tokens
-  // (sans/kai/fangsong/mono) rely on system-installed families and are not
-  // bundled — see FontTokens in contract/generated/TypeTokens.ets.
+  // Register the two current Figma families that are not guaranteed by a
+  // HarmonyOS device: Noto Serif CJK SC for reading and Inter for the Settings
+  // General component family. The visual family name is emitted by the
+  // Reader-UI admission artifact; this host code only installs that bundled
+  // asset into the active UIContext.
   private registerReaderFontsForWindow(win: window.Window): void {
     try {
       const uiContext = win.getUIContext();
@@ -1071,6 +1101,10 @@ export default class EntryAbility extends UIAbility {
       if (font === null || font === undefined) {
         throw new Error('Font service is unavailable from the active UIContext');
       }
+      font.registerFont({
+        familyName: 'Inter',
+        familySrc: $rawfile('font/InterVariable.ttf'),
+      });
       font.registerFont({
         familyName: 'Noto Serif CJK SC',
         familySrc: $rawfile('font/NotoSerifCJKsc-Regular.otf'),

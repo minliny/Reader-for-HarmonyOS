@@ -57,9 +57,6 @@ export class FileSelectionHostAdapter {
   async select(mimeTypes: string[], allowsMultiple: boolean): Promise<ReaderFileSelectionResponse> {
     const documentPicker = new picker.DocumentViewPicker(this.context);
     const options = new picker.DocumentSelectOptions();
-    // Figma Library/LocalImportDialog (2657:916) explicitly caps the batch
-    // at 50. The platform picker remains the only selection surface.
-    options.maxSelectNumber = allowsMultiple ? 50 : 1;
     const filters: string[] = [];
     let canApplyExactFilter = true;
     for (let i = 0; i < mimeTypes.length; i++) {
@@ -77,6 +74,10 @@ export class FileSelectionHostAdapter {
       filters.push(filter);
     }
     if (canApplyExactFilter && filters.length > 0) options.fileSuffixFilters = filters;
+    // Figma Library/LocalImportDialog (2657:916) explicitly caps the batch
+    // at 50. Set this after all other option writes so the final native option
+    // write carries the requested selection cardinality into the picker.
+    options.maxSelectNumber = allowsMultiple ? 50 : 1;
 
     let uris: string[];
     try {

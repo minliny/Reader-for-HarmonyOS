@@ -1,5 +1,7 @@
 // DemoUiState — Phase 1 demo initial state (from ui-state.fixtures.json).
-// Opens directly to the bookshelf (cover-mode). firstOpen ceremony is Phase 2 polish.
+// Opens directly to the bookshelf.  `cover-mode` is the bookshelf's view-mode
+// context, not a route pageState: the canonical Reader-UI fixture uses the
+// admitted route master state `default` for this initial route.
 import { ReaderFontFamily, ReaderUiState, ReplaceRule } from '../store/ReaderUiState';
 import { ReaderAppearanceSpecRegistry } from '../../contract/reader_ui/Appearance';
 
@@ -42,7 +44,7 @@ export class DemoUiState {
       loading: false,
       error: null,
       reducedMotion: false,
-      pageState: 'cover-mode',
+      pageState: 'default',
       firstOpenPlayed: true,
       stack: [{ id: 'bookshelf' }],
       searchQuery: '',

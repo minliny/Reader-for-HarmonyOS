@@ -344,7 +344,7 @@ export interface HostTtsSystemStartRequest {
   pitch?: number;
   voice?: string;
   // Optional correlation metadata used by the R8 Pilot. Each real slice gets
-  // a unique article id so a late TextReader completion cannot advance a
+  // a unique article id so a late platform completion cannot advance a
   // replacement queue.
   articleId?: string;
   correlationId?: string;

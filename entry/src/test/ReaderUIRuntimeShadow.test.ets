@@ -37,20 +37,48 @@ export default function ReaderUIRuntimeShadowTests(): void {
       expect(shadowClosed.metrics.lastCanonicalEvent).assertEqual('reader.directory.close');
     });
 
-    it('records runtime effects without executing or applying them', 0, () => {
+    it('records runtime effects without executing them or replacing native state ownership', 0, () => {
       ReaderUiStore.init();
       ReaderUiStore.setPlaybackPilotPairsForTest(false, false, false);
+      const before = ReaderUiStore.playbackPilotSnapshot();
+      expect(before.executedEffects).assertEqual(0);
       ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' });
       ReaderUiStore.dispatch({ type: 'reader.tts.start' });
 
       const production = ReaderUiStore.snapshot();
       const shadow: ReaderUIRuntimeShadowSnapshot = ReaderUiStore.runtimeShadowSnapshot();
-      expect(production.activeSession).assertEqual('');
-      expect(shadow.runtimeState.activeSession === undefined).assertTrue();
-      expect(shadow.lastEffectTypes.join(',')).assertEqual('tts.queue.plan');
+      // With the playback Pilot explicitly disabled, the native reducer remains
+      // the sole production owner. The shadow keeps its own generated semantic
+      // projection for observation only; it must never execute the effect or
+      // replace the native state that the visible UI reads.
+      expect(production.activeSession).assertEqual('tts');
+      expect(shadow.runtimeState.activeSession).assertEqual('tts');
+      // Shadow observes the generated start effect but never submits it to an
+      // executor. A synchronous native cleanup may replace lastEffectTypes
+      // before this snapshot, so the monotonic count is the stable assertion.
       expect(shadow.metrics.observedEffects).assertEqual(1);
       expect(shadow.metrics.executedEffects).assertEqual(0);
-      expect(shadow.metrics.mismatch).assertEqual(0);
+      expect(shadow.metrics.lastMismatch).assertEqual('');
+    });
+
+    it('starts TTS from a Reader surface only after replacing it with immersive reading', 0, () => {
+      ReaderUiStore.init();
+      // This test keeps the pair in shadow mode so it exercises the exact
+      // route/event ordering without starting a platform speech engine.
+      ReaderUiStore.setPlaybackPilotPairsForTest(false, false, false);
+      ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' });
+      ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' });
+      ReaderUiStore.dispatch({ type: 'route-push', id: 'reader-tts-overlay-v2' });
+
+      ReaderUiStore.startTtsFromReaderSurface();
+
+      const production = ReaderUiStore.snapshot();
+      const shadow = ReaderUiStore.runtimeShadowSnapshot();
+      expect(production.routeId).assertEqual('immersive-reading');
+      expect(production.activeSession).assertEqual('tts');
+      expect(shadow.runtimeState.routeId).assertEqual('immersive-reading');
+      expect(shadow.runtimeState.activeSession).assertEqual('tts');
+      expect(shadow.metrics.runtimeError).assertEqual(0);
     });
 
     it('counts fallback and resynchronizes without replacing production state', 0, () => {

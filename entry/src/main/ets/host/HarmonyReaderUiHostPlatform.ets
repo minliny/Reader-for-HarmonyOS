@@ -121,11 +121,15 @@ export class HarmonyReaderUiHostPlatform implements ReaderUiHostPlatform {
       case 'credential.delete': return this.options.credentialAdapter !== null;
       case 'tts.system.start':
       case 'tts.system.stop':
+      case 'tts.start':
+      case 'tts.stop': return this.options.ttsAdapter !== null;
+      // The in-app engine intentionally has no position-preserving
+      // pause/resume primitive. Treat these contract compatibility requests
+      // as unavailable rather than advertising a button the engine cannot
+      // honor truthfully.
       case 'tts.system.pause':
       case 'tts.system.resume':
-      case 'tts.start':
-      case 'tts.stop':
-      case 'tts.pause': return this.options.ttsAdapter !== null;
+      case 'tts.pause': return false;
       case 'permission.request':
       case 'permission.check': return this.options.permissionAdapter !== null;
       case 'background.schedule': return this.backgroundWork !== null;
@@ -320,16 +324,9 @@ export class HarmonyReaderUiHostPlatform implements ReaderUiHostPlatform {
         return this.payload(response);
       }
       case 'tts.system.pause':
-      case 'tts.pause': {
-        const response = await this.options.ttsAdapter.pause();
-        this.requireTrue(type, response.acknowledged, 'TTS pause is not supported by the active engine');
-        return this.payload(response);
-      }
-      case 'tts.system.resume': {
-        const response = await this.options.ttsAdapter.resume();
-        this.requireTrue(type, response.acknowledged, 'TTS resume is not supported by the active engine');
-        return this.payload(response);
-      }
+      case 'tts.system.resume':
+      case 'tts.pause':
+        return this.unavailable(type, 'the in-app speech engine has no position-preserving pause/resume contract');
       case 'permission.request': {
         const response = await this.requirePermission(type).request({ scope: payload['scope'] as string });
         return this.payload(response);

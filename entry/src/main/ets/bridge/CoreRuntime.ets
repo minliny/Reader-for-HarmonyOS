@@ -278,8 +278,9 @@ export class CoreRuntime {
     // Phase 4 (UI-Contract-only). Some require a UIAbilityContext; those are
     // created only when context is available and exposed as nullable getters.
     this.clipboardAdapter = new ClipboardHostAdapter();
-    // TtsHostAdapter takes an optional BaseContext — TextReader needs it for
-    // init(); if absent, it falls back to TextToSpeechEngine (start/stop only).
+    // TtsHostAdapter keeps normal playback in the Reader app via
+    // TextToSpeechEngine.  The optional context is retained for the host seam,
+    // not for opening a system reader surface.
     this.ttsAdapter = config.context !== undefined
       ? new TtsHostAdapter(config.context)
       : new TtsHostAdapter();
@@ -399,8 +400,6 @@ export class CoreRuntime {
         case 'clipboard.paste':
         case 'tts.system.start':
         case 'tts.system.stop':
-        case 'tts.system.pause':
-        case 'tts.system.resume':
         case 'background.schedule':
         case 'background.cancel':
         case 'timer.foreground.arm':
@@ -689,7 +688,7 @@ export class CoreRuntime {
     CoreRuntime.instance.httpAdapter.destroy();
     CoreRuntime.instance.backgroundAdapter.cancelAll();
     CoreRuntime.instance.foregroundTimerAdapter.cancelAll();
-    // TtsHostAdapter.shutdown is async (releases TextReader / fallback engine),
+    // TtsHostAdapter.shutdown is async (releases the app-owned speech engine),
     // but CoreRuntime.close is sync (called from onDestroy). We fire-and-forget
     // the shutdown — the adapter's resources are best-effort released.
     CoreRuntime.instance.ttsAdapter.shutdown().then((): void => {});

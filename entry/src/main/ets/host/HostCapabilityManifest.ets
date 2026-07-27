@@ -40,7 +40,7 @@ export interface HostCapabilityDescriptor {
   dispatch: HostCapabilityDispatch;
   // Adapter class name (e.g. 'HttpHostAdapter'). Empty string when unimplemented.
   adapter: string;
-  requiresContext: boolean;          // needs common.Context (file / TextReader init)
+  requiresContext: boolean;          // needs common.Context (file / legacy reader initialization)
   requiresUiAbilityContext: boolean; // needs UIAbilityContext (screen/notif/share/perm/cred)
   requiresPermission?: string;       // module.json5 permission required
   // True only when device-executed hdc evidence exists for this capability.
@@ -95,8 +95,6 @@ export const HOST_EVIDENCE_TAG_MAP: Record<string, HostCapability[]> = {
   ],
   'TtsSelfCheck': [
     'tts.system.start' as HostCapability,
-    'tts.system.pause' as HostCapability,
-    'tts.system.resume' as HostCapability,
     'tts.system.stop' as HostCapability,
   ],
   'ReadingChainUi': [

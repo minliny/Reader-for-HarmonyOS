@@ -24,7 +24,10 @@ function tabRoot(tab: MainTab): RouteId {
     case 'bookshelf': return 'bookshelf';
     case 'discover': return 'discover';
     case 'rss': return 'rss';
-    case 'settings': return 'settings';
+    // Figma Settings General is a dedicated full-page surface (no main-tab
+    // navigation). The old generic `settings` root has no current Figma
+    // binding, so the tab enters its canonical Settings General route.
+    case 'settings': return 'settings-general';
     default: return 'bookshelf';
   }
 }
@@ -470,6 +473,10 @@ export class ReaderReducer {
       }
       case 'tts-toggle':
         return ReaderReducer.toggleTtsPlayback(state);
+      case 'reader-tts-start':
+        return ReaderReducer.toggleTtsPlayback(state);
+      case 'reader-tts-stop':
+        return ReaderReducer.setActiveSession(state, '');
       case 'tts-prev':
         return ReaderReducer.stepTtsSegment(state, -1);
       case 'tts-next':
@@ -2028,9 +2035,15 @@ export class ReaderReducer {
     return ReaderReducer.setReaderToggle(next, 'autoPage', session === 'auto-page');
   }
 
-  // Toggle TTS playback. If not in tts session, switch to tts and start playing.
-  // Otherwise flip between 'playing' and 'paused'.
+  // The Figma control has an explicit play button and a separate stop button.
+  // The production Harmony engine has no trustworthy pause/resume primitive,
+  // so a second press must never pretend to pause a sentence and later restart
+  // it from an invented character position.  Starting is idempotent; stop is
+  // owned by `set-active-session: ''`.
   static toggleTtsPlayback(state: ReaderUiState): ReaderUiState {
+    if (state.activeSession === 'tts' && state.ttsSession.playback === 'playing') {
+      return state;
+    }
     const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
     if (state.activeSession !== 'tts') {
       next.activeSession = 'tts';
@@ -2049,9 +2062,8 @@ export class ReaderReducer {
         intervalSeconds: state.autoPageSession.intervalSeconds,
       };
     } else {
-      const newPlayback: TtsPlaybackState = state.ttsSession.playback === 'playing' ? 'paused' : 'playing';
       next.ttsSession = {
-        playback: newPlayback,
+        playback: 'playing',
         rate: state.ttsSession.rate,
         voice: state.ttsSession.voice,
         scope: state.ttsSession.scope,

@@ -810,6 +810,11 @@ export class ReaderUIRuntimeShadowCoordinator {
     this.autoPagePilotEnabled = autoPagePair;
   }
 
+  /** Prevent a stale playback callback from crossing a Store reinitialization. */
+  cancelForStoreReinitialize(): void {
+    this.playbackExecutor?.cancelForStoreReinitialize();
+  }
+
   /** Experimental test-only switch. Production instances remain Shadow. */
   setImportPilotEnabledForTest(enabled: boolean): void {
     this.importPilotEnabled = enabled;
@@ -1018,6 +1023,11 @@ export class ReaderUIRuntimeShadowCoordinator {
       this.metrics.pilotFailure += 1;
       this.metrics.runtimeError += 1;
       this.metrics.lastRuntimeError = (error as Error).message;
+      // A Pilot admission failure is intentionally fail-closed: it must not
+      // fall back to a local reducer or a system reader screen.  Keep the
+      // reason in the device log so an on-device tap can be diagnosed without
+      // inventing visible error UI or guessing from a static test.
+      console.error(`[ReaderPlaybackPilot] ${canonicalEvent} admission failed: ${this.metrics.lastRuntimeError}`);
       return { handled: true, succeeded: false, canonicalEvent: canonicalEvent, correlationId: '' };
     }
   }

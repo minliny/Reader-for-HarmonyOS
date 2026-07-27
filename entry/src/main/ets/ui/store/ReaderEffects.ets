@@ -114,6 +114,9 @@ export class ReaderEffects {
   // active; cleared on session exit. Stored statically because Effects is a
   // stateless dispatcher — the timer must outlive each maybeRun() call.
   private static autoPageTimerId: number | null = null;
+  // TTS uses the same single session owner as the visible Figma timer.  This
+  // is deliberately a real timeout, not a decorative countdown label.
+  private static ttsTimerId: number | null = null;
   // The fallback used when a window brightness request rejects. The slider
   // also supplies its pre-gesture value, but this survives non-slider callers.
   private static lastConfirmedBrightness: number = 80;
@@ -538,10 +541,23 @@ export class ReaderEffects {
         break;
       }
       case 'tts-toggle': {
-        // Likewise, starting/resuming TTS must stop an auto-page timer first.
+        // Starting TTS must stop an auto-page timer first.  There is no fake
+        // pause/resume branch: the Figma surface has a distinct stop control.
         ReaderEffects.manageSessionTransition();
         ReaderEffects.manageTtsPlayback();
+        ReaderEffects.manageTtsTimer();
         ReaderEffects.maybeVibrateForReaderInteraction();
+        break;
+      }
+      case 'reader-tts-start': {
+        ReaderEffects.manageSessionTransition();
+        ReaderEffects.manageTtsPlayback();
+        ReaderEffects.manageTtsTimer();
+        ReaderEffects.maybeVibrateForReaderInteraction();
+        break;
+      }
+      case 'reader-tts-stop': {
+        ReaderEffects.manageSessionTransition();
         break;
       }
       case 'tts-prev':
@@ -554,6 +570,9 @@ export class ReaderEffects {
         break;
       case 'tts-set-rate':
         ReaderEffects.updateTtsQueueRate();
+        break;
+      case 'tts-set-timer':
+        ReaderEffects.manageTtsTimer();
         break;
       case 'set-active-session': {
         ReaderEffects.manageSessionTransition();
@@ -835,44 +854,18 @@ export class ReaderEffects {
     }
   }
 
-  // Core owns slicing and queue state; HarmonyOS owns vocalization. Every
-  // play/pause/resume transition is first accepted by Core, then mirrored to
-  // the native TTS adapter.
+  // Core owns slicing and queue state; HarmonyOS owns app-local vocalization.
+  // TextToSpeechEngine does not have a faithful pause/resume API, so a visible
+  // play request either prepares a fresh queue or leaves an already-playing
+  // queue alone.  The red Figma stop action owns cleanup through
+  // `set-active-session: ''`.
   static manageTtsPlayback(): void {
     const playback = ReaderUiStore.snapshot().ttsSession.playback;
+    if (playback !== 'playing') return;
     try {
       const runtime = CoreRuntime.get();
-      const adapter = runtime.getTtsAdapter();
-      if (playback === 'playing') {
-        if (ReaderEffects.ttsPlan === null || ReaderEffects.ttsChapterRef === null) {
-          ReaderEffects.prepareAndStartTts(runtime);
-        } else {
-          const params: JsonObject = {};
-          params['chapter'] = ReaderEffects.ttsChapterRef;
-          runtime.executeCoreMethod('tts.queue.resume', params, 5000).then(() => {
-            return adapter.resume();
-          }).then((result): void => {
-            if (!result.acknowledged) throw new Error('Harmony TTS Host 未确认恢复');
-          }).catch((e: Error): void => {
-            // Do not leave a Core queue marked Playing while the Host cannot
-            // vocalize it. `set-active-session` performs the Core stop too.
-            console.info(`ReaderEffects: tts resume error: ${e.message}`);
-            ReaderUiStore.dispatch({ type: 'set-active-session', session: '' });
-          });
-        }
-      } else {
-        if (ReaderEffects.ttsChapterRef !== null && ReaderEffects.ttsPlan !== null) {
-          const params: JsonObject = {};
-          params['chapter'] = ReaderEffects.ttsChapterRef;
-          runtime.executeCoreMethod('tts.queue.pause', params, 5000).then(() => {
-            return adapter.pause();
-          }).then((result): void => {
-            if (!result.acknowledged) throw new Error('Harmony TTS Host 未确认暂停');
-          }).catch((e: Error): void => {
-            console.info(`ReaderEffects: tts pause error: ${e.message}`);
-            ReaderUiStore.dispatch({ type: 'set-active-session', session: '' });
-          });
-        }
+      if (ReaderEffects.ttsPlan === null || ReaderEffects.ttsChapterRef === null) {
+        ReaderEffects.prepareAndStartTts(runtime);
       }
     } catch (e) {
       console.info(`ReaderEffects: tts host adapter error: ${(e as Error).message}`);
@@ -887,7 +880,7 @@ export class ReaderEffects {
       // The button is disabled in the UI until Core content is loaded, but
       // keep this guard for route/event callers so a false Playing state never
       // survives an empty chapter.
-      ReaderUiStore.dispatch({ type: 'set-active-session', session: '' });
+      ReaderUiStore.dispatch({ type: 'reader-tts-stop' });
       return;
     }
     const chapter: JsonObject = {};
@@ -921,7 +914,7 @@ export class ReaderEffects {
       ReaderEffects.ttsPlan = null;
       ReaderEffects.ttsChapterRef = null;
       console.info(`ReaderEffects: tts plan/start error: ${e.message}`);
-      ReaderUiStore.dispatch({ type: 'set-active-session', session: '' });
+      ReaderUiStore.dispatch({ type: 'reader-tts-stop' });
     });
   }
 
@@ -983,7 +976,7 @@ export class ReaderEffects {
       }
     }).catch((e: Error): void => {
       console.info(`ReaderEffects: tts start error: ${e.message}`);
-      ReaderUiStore.dispatch({ type: 'set-active-session', session: '' });
+      ReaderUiStore.dispatch({ type: 'reader-tts-stop' });
     });
   }
 
@@ -1010,7 +1003,7 @@ export class ReaderEffects {
     status['status'] = 'done';
     runtime.executeCoreMethod('tts.queue.report-status', status, 5000).then((): Promise<JsonObject> => {
       if (index + 1 >= total) {
-        ReaderUiStore.dispatch({ type: 'set-active-session', session: '' });
+        ReaderUiStore.dispatch({ type: 'reader-tts-stop' });
         const completed: JsonObject = {};
         return Promise.resolve(completed);
       }
@@ -1064,6 +1057,40 @@ export class ReaderEffects {
     });
   }
 
+  private static clearTtsTimer(): void {
+    if (ReaderEffects.ttsTimerId !== null) {
+      clearTimeout(ReaderEffects.ttsTimerId);
+      ReaderEffects.ttsTimerId = null;
+    }
+  }
+
+  // The Figma timer supports a fixed end time as well as "本章结束".  The
+  // latter needs no synthetic timer because the real queue already ends the
+  // session after its final slice; fixed choices schedule one authoritative
+  // stop action and are cancelled whenever the session changes.
+  static manageTtsTimer(): void {
+    ReaderEffects.clearTtsTimer();
+    const state = ReaderUiStore.snapshot();
+    if (state.activeSession !== 'tts' || state.ttsSession.playback !== 'playing') return;
+    let minutes: number = 0;
+    switch (state.ttsSession.timer) {
+      case '5min': minutes = 5; break;
+      case '10min': minutes = 10; break;
+      case '15min': minutes = 15; break;
+      case '30min': minutes = 30; break;
+      default: return;
+    }
+    const expectedTimer = state.ttsSession.timer;
+    ReaderEffects.ttsTimerId = setTimeout((): void => {
+      ReaderEffects.ttsTimerId = null;
+      const current = ReaderUiStore.snapshot();
+      if (current.activeSession === 'tts' && current.ttsSession.playback === 'playing' &&
+        current.ttsSession.timer === expectedTimer) {
+        ReaderUiStore.dispatch({ type: 'reader-tts-stop' });
+      }
+    }, minutes * 60 * 1000);
+  }
+
   // Cleanup hook fired on explicit session switches. If the new activeSession
   // is not 'auto-page', tear down the countdown timer; if it is not 'tts',
   // signal TTS stop. This prevents timers/speech from leaking across session
@@ -1075,6 +1102,7 @@ export class ReaderEffects {
       ReaderEffects.autoPageTimerId = null;
     }
     if (active !== 'tts') {
+      ReaderEffects.clearTtsTimer();
       try {
         const runtime = CoreRuntime.get();
         if (ReaderEffects.ttsChapterRef !== null && ReaderEffects.ttsPlan !== null) {

@@ -80,16 +80,33 @@ const bodyEntries = textEntries.filter(({ node }) => {
 assert(bodyEntries.length > 0, 'reader snapshot must contain body text');
 
 const firstBody = bodyEntries[0];
-const frameCandidates = firstBody.ancestors.filter((node) => {
-  const bounds = boundsOf(node);
-  return node.attributes?.type === 'Column' && bounds &&
-    bounds.left > rootBounds.left && bounds.right < rootBounds.right &&
-    width(bounds) > width(rootBounds) * 0.5;
-});
-assert(frameCandidates.length > 0, 'body text must be owned by an inset Column frame');
-const textFrame = frameCandidates.reduce((largest, node) => {
-  return height(boundsOf(node)) > height(boundsOf(largest)) ? node : largest;
-});
+// Horizontal pagination uses an inset Column whose height is its visible text
+// frame. Vertical reading is different: a short chapter's child Column shrinks
+// to its content height, while the enclosing Scroll is the actual fixed Figma
+// viewport. Measure that Scroll so a short fixture cannot masquerade as a
+// bottom-inset regression.
+let textFrame;
+if (vertical) {
+  const scrollFrame = [...firstBody.ancestors].reverse().find((node) => {
+    const bounds = boundsOf(node);
+    return node.attributes?.type === 'Scroll' && bounds &&
+      bounds.left > rootBounds.left && bounds.right < rootBounds.right &&
+      width(bounds) > width(rootBounds) * 0.5;
+  });
+  assert(scrollFrame, 'vertical reading body must be owned by an inset Scroll viewport');
+  textFrame = scrollFrame;
+} else {
+  const frameCandidates = firstBody.ancestors.filter((node) => {
+    const bounds = boundsOf(node);
+    return node.attributes?.type === 'Column' && bounds &&
+      bounds.left > rootBounds.left && bounds.right < rootBounds.right &&
+      width(bounds) > width(rootBounds) * 0.5;
+  });
+  assert(frameCandidates.length > 0, 'body text must be owned by an inset Column frame');
+  textFrame = frameCandidates.reduce((largest, node) => {
+    return height(boundsOf(node)) > height(boundsOf(largest)) ? node : largest;
+  });
+}
 const frameBounds = boundsOf(textFrame);
 
 // Reader UI defines a 32vp side inset. It also gives us a density-independent

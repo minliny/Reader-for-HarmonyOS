@@ -149,7 +149,7 @@ export class HarmonyReaderPlaybackPlatformGateway implements ReaderPlaybackPlatf
     if (!CoreRuntime.isInitialized()) return Promise.resolve(true);
     const adapter = CoreRuntime.get().getTtsAdapter();
     // Completion callbacks are invalidated before the asynchronous platform
-    // stop so a final TextReader event cannot advance a replacement queue.
+    // stop so a final platform completion cannot advance a replacement queue.
     adapter.setCompletionCallback(null);
     adapter.setFailureCallback(null);
     return adapter.stop().then((response): boolean => response.acknowledged);
@@ -322,6 +322,32 @@ export class ReaderPlaybackEffectExecutor {
     const pending = this.serial;
     return pending.then((): Promise<void> => this.teardownContexts())
       .catch((): Promise<void> => this.teardownContexts());
+  }
+
+  /**
+   * Store reinitialization is a hard ownership boundary.  It cannot wait for
+   * a previous serialized effect chain because the next Store instance may
+   * already be visible; make every old correlation ineligible synchronously
+   * so a late Core/platform callback cannot project into that new instance.
+   */
+  cancelForStoreReinitialize(): void {
+    this.platform.cancelAllTimers();
+    const ids = Array.from(this.contexts.keys());
+    let hasTtsContext = false;
+    for (let index = 0; index < ids.length; index += 1) {
+      const context = this.contexts.get(ids[index]);
+      if (context === undefined) continue;
+      if (context.kind === 'tts') hasTtsContext = true;
+      context.cancelled = true;
+      context.speechGeneration += 1;
+      context.articleId = '';
+      if (context.inFlight !== undefined && context.inFlight.cancel()) this.cancelledCommands += 1;
+      context.inFlight = undefined;
+      this.contexts.delete(ids[index]);
+    }
+    if (hasTtsContext) {
+      this.platform.stopSpeech().then((): void => {}).catch((): void => {});
+    }
   }
 
   private teardownContexts(): Promise<void> {
@@ -559,6 +585,7 @@ export class ReaderPlaybackEffectExecutor {
 
   private async executeTtsPlan(context: ReaderPlaybackPilotContext): Promise<void> {
     if (context.cancelled) return;
+    console.info(`[ReaderPlaybackPilot] TTS ${context.correlationId} stage=queue-plan`);
     const handle = this.core.beginTtsSlice(context.chapter.chapter, context.chapter.content);
     context.inFlight = handle;
     try {
@@ -566,6 +593,7 @@ export class ReaderPlaybackEffectExecutor {
       if (!this.live(context, handle)) return;
       context.inFlight = undefined;
       context.plan = ReaderPlaybackDomainMapper.mapTtsPlan(data, context.chapter);
+      console.info(`[ReaderPlaybackPilot] TTS ${context.correlationId} stage=queue-plan-ready`);
       const transition = this.runtime.acceptTTSCoreJSONResult(
         'tts.queue.plan', context.correlationId, {},
       );
@@ -579,6 +607,7 @@ export class ReaderPlaybackEffectExecutor {
 
   private async executeTtsPlay(context: ReaderPlaybackPilotContext): Promise<void> {
     if (context.cancelled || context.plan === undefined) return;
+    console.info(`[ReaderPlaybackPilot] TTS ${context.correlationId} stage=queue-start`);
     const handle = this.core.beginTtsPlay(context.plan.raw, 0);
     context.inFlight = handle;
     try {
@@ -586,6 +615,7 @@ export class ReaderPlaybackEffectExecutor {
       if (!this.live(context, handle)) return;
       context.inFlight = undefined;
       context.queue = ReaderPlaybackDomainMapper.mapQueueSnapshot(data, context.plan.slices.length);
+      console.info(`[ReaderPlaybackPilot] TTS ${context.correlationId} stage=queue-start-ready`);
       this.host.applyQueueSnapshot(context.queue);
       const transition = this.runtime.acceptTTSCoreJSONResult(
         'tts.queue.start', context.correlationId, {},
@@ -634,6 +664,7 @@ export class ReaderPlaybackEffectExecutor {
         );
       };
     try {
+      console.info(`[ReaderPlaybackPilot] TTS ${context.correlationId} stage=speech-start`);
       const started = await this.platform.startSpeech(request, callback, failureCallback);
       if (!this.liveContext(context) || context.speechGeneration !== generation ||
         context.articleId !== articleId) return;
@@ -641,10 +672,15 @@ export class ReaderPlaybackEffectExecutor {
         await this.failTtsSystemStart(context, 'Harmony TTS Host did not start the slice');
         return;
       }
+      console.info(`[ReaderPlaybackPilot] TTS ${context.correlationId} stage=speech-started`);
       this.speechStarts += 1;
       if (notifyRuntime) {
         const transition = this.runtime.acceptTTSSystemStartJSONResult(
           context.correlationId, { 'started': true },
+        );
+        console.info(
+          `[ReaderPlaybackPilot] TTS ${context.correlationId} stage=runtime-start-accepted ` +
+          `accepted=${transition.accepted} session=${transition.state.activeSession ?? ''}`,
         );
         if (transition.accepted) this.applyTransitionState(transition);
       }
@@ -731,6 +767,10 @@ export class ReaderPlaybackEffectExecutor {
     }
     // Invalidate this article before queueing work; duplicate platform done
     // callbacks cannot enqueue a second report-status/next chain.
+    console.info(
+      `[ReaderPlaybackPilot] TTS ${correlationId} stage=speech-complete ` +
+      `generation=${generation} slice=${sliceIndex}`,
+    );
     context.articleId = '';
     this.serial = this.serial.then((): Promise<void> => this.advanceAfterSpeech(context, generation, sliceIndex))
       .catch((error: Error): void => {
@@ -793,6 +833,10 @@ export class ReaderPlaybackEffectExecutor {
       context.inFlight = undefined;
       context.queue = ReaderPlaybackDomainMapper.mapQueueSnapshot(nextData, context.plan.slices.length);
       this.host.applyQueueSnapshot(context.queue);
+      console.info(
+        `[ReaderPlaybackPilot] TTS ${context.correlationId} stage=queue-next ` +
+        `state=${context.queue.state} slice=${context.queue.currentSliceIndex}`,
+      );
       if (context.queue.state === 'completed') {
         // Core next must reach Completed even for the final slice; only then do
         // shared-runtime teardown effects stop platform speech and Core queue.
@@ -801,6 +845,7 @@ export class ReaderPlaybackEffectExecutor {
           this.applyTransitionState(stop);
           await this.executeEffects(stop.effects);
         }
+        console.info(`[ReaderPlaybackPilot] TTS ${context.correlationId} stage=session-complete`);
         return;
       }
       if (context.queue.state !== 'playing') {
@@ -817,6 +862,7 @@ export class ReaderPlaybackEffectExecutor {
     coreType: string, error: Object): Promise<void> {
     if (!this.liveContext(context)) return;
     context.inFlight = undefined;
+    console.error(`[ReaderPlaybackPilot] TTS ${context.correlationId} ${coreType} failed: ${this.errorMessage(error)}`);
     const transition = this.runtime.acceptTTSCoreJSONResult(
       coreType, context.correlationId, { 'error': this.errorMessage(error) },
     );
@@ -830,6 +876,7 @@ export class ReaderPlaybackEffectExecutor {
   private async failTtsSystemStart(context: ReaderPlaybackPilotContext,
     message: string): Promise<void> {
     if (!this.liveContext(context)) return;
+    console.error(`[ReaderPlaybackPilot] TTS ${context.correlationId} tts.system.start failed: ${message}`);
     const transition = this.runtime.acceptTTSSystemStartJSONResult(
       context.correlationId, { 'error': message },
     );
