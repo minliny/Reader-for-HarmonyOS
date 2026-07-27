@@ -58,6 +58,7 @@ function ok(message) {
 
 const visualAdmission = read('entry/src/main/ets/contract/reader_ui/VisualAdmission.ets');
 const routeTable = read('entry/src/main/ets/contract/generated/RouteTable.ets');
+const viewStateTable = read('entry/src/main/ets/contract/generated/ViewStateTable.ets');
 const routeRenderer = read('entry/src/main/ets/ui/router/RouteRenderer.ets');
 const viewStateRenderer = read('entry/src/main/ets/ui/components/ViewStateRenderer.ets');
 const overlayHost = read('entry/src/main/ets/ui/slots/OverlayHost.ets');
@@ -188,39 +189,39 @@ assert.equal(routeReconstructionQuarantine.status, 'active',
 assert.ok(fs.existsSync(visualAdmissionRegistryPath),
   'Reader-UI visual admission registry is missing');
 const visualAdmissionRegistry = JSON.parse(fs.readFileSync(visualAdmissionRegistryPath, 'utf8'));
-const harmonyStatusByRecordId = new Map(visualAdmissionRegistry.records.map((record) => [record.id, record.harmony?.status]));
-const trackedQuarantineRouteIds = routeReconstructionQuarantine.entries.flatMap((entry) => entry.routeIds || []);
-assert.equal(trackedQuarantineRouteIds.length, 16,
-  'A3 route extraction must retain the complete 16-route audited Reader set');
-const quarantinedRouteIds = routeReconstructionQuarantine.entries
+const admissionRecordIds = new Set(visualAdmissionRegistry.records.map((record) => record.id));
+const physicallyRetiredRouteIds = [];
+for (const record of visualAdmissionRegistry.records) {
+  const retiredRouteIds = record.reconstruction?.retiredRouteIds;
+  if (retiredRouteIds === undefined) continue;
+  assert.ok(Array.isArray(retiredRouteIds),
+    `${record.id} reconstruction.retiredRouteIds must be an array when present`);
+  for (const routeId of retiredRouteIds) {
+    assert.ok(typeof routeId === 'string' && routeId.length > 0,
+      `${record.id} reconstruction.retiredRouteIds contains an invalid route id`);
+    physicallyRetiredRouteIds.push(routeId);
+  }
+}
+for (const routeId of routeReconstructionQuarantine.entries
   .filter((entry) => {
-    const harmonyStatus = harmonyStatusByRecordId.get(entry.recordId);
-    assert.notEqual(harmonyStatus, undefined,
+    assert.ok(admissionRecordIds.has(entry.recordId),
       `route reconstruction quarantine references missing admission record ${entry.recordId}`);
-    // B3 may release the Reader-UI source record, but it must remain absent
-    // from native route tables until B4 atomically promotes HarmonyOS.
-    return entry.status === 'active' || harmonyStatus !== 'implementation-ready';
+    return entry.status === 'active';
   })
-  .flatMap((entry) => entry.routeIds || []);
-assert.ok(quarantinedRouteIds.length > 0,
-  'at least one historical route must remain isolated until its own native promotion is complete');
-assert.equal(new Set(quarantinedRouteIds).size, quarantinedRouteIds.length,
-  'A quarantined route must have exactly one source owner');
-const routeTableAllStart = routeTable.indexOf('static readonly ALL: RouteId[] = [');
-const routeTableAllEnd = routeTable.indexOf('  ];', routeTableAllStart);
-assert.ok(routeTableAllStart >= 0 && routeTableAllEnd > routeTableAllStart,
-  'generated RouteTable.ALL is missing');
-const activeRouteTable = routeTable.slice(routeTableAllStart, routeTableAllEnd);
-for (const routeId of quarantinedRouteIds) {
-  // A3 publishes a compatibility type so isolated legacy behavior can still
-  // compile while it is removed. Runtime routing remains fail-closed: only
-  // RouteTable.ALL and shell cases can make a route reachable.
-  assert.ok(routeTable.includes(`'${routeId}'`),
-    `quarantined route ${routeId} is missing from the published compatibility type`);
-  assert.ok(!activeRouteTable.includes(`'${routeId}'`),
-    `quarantined route ${routeId} remains in generated RouteTable.ALL`);
-  assert.ok(!routeTable.includes(`case '${routeId}': return`),
-    `quarantined route ${routeId} still has a generated shell mapping`);
+  .flatMap((entry) => entry.routeIds || [])) {
+  physicallyRetiredRouteIds.push(routeId);
+}
+assert.equal(new Set(physicallyRetiredRouteIds).size, physicallyRetiredRouteIds.length,
+  'a physically retired route must have exactly one source owner');
+for (const routeId of physicallyRetiredRouteIds) {
+  // Strict A2 removal: no compatibility union, no active table entry, no
+  // shell mapping, and no generated view-state may retain a historical route.
+  assert.equal(routeTable.includes(`'${routeId}'`), false,
+    `physically retired route ${routeId} remains in generated RouteTable`);
+  assert.equal(routeTable.includes(`case '${routeId}': return`), false,
+    `physically retired route ${routeId} still has a generated shell mapping`);
+  assert.equal(viewStateTable.includes(`\"routeId\": \"${routeId}\"`), false,
+    `physically retired route ${routeId} remains in generated ViewStateTable`);
 }
 assert.ok(routeRenderer.includes("this.isDisplayedRouteImplementationReady() && this.shellOfDisplayedRoute() === 'ReaderShell'"),
   'RouteRenderer must require both implementation readiness and a source-generated Reader shell mapping');

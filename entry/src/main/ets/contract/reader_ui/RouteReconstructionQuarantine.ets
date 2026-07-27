@@ -2,8 +2,8 @@
 // Source: contracts/route-reconstruction-quarantine.schema.json + fixtures/route-reconstruction-quarantine.fixtures.json
 export class RouteReconstructionQuarantine {
   static readonly STATUS: string = "active";
-  static readonly RECORD_IDS: string[] = ["reader.control-home", "reader.module.directory", "reader.module.tts", "reader.module.appearance", "reader.module.settings", "reader.quick.content-search"];
-  static readonly ROUTE_IDS: string[] = ["control-layer-base-v2", "reader-directory-overlay-v2", "reader-appearance-overlay-v2", "reader-tts-overlay-v2", "reader-settings-overlay-v2", "reader-auto-scroll-overlay-v2", "reader-search-overlay-v2", "reader-replace-overlay-v2", "toc-bookmarks", "tts", "reader-appearance", "reader-settings", "content-search"];
+  static readonly RECORD_IDS: string[] = [];
+  static readonly ROUTE_IDS: string[] = [];
   static readonly RELEASED_RECORD_IDS: string[] = ["reader.reading-surface"];
   static readonly RELEASED_ROUTE_IDS: string[] = ["immersive-reading", "reader", "reader_content"];
 

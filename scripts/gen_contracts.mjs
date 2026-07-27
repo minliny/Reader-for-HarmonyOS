@@ -59,8 +59,9 @@ if (HOST_REQUEST_TYPES.length !== 58 || new Set(HOST_REQUEST_TYPES).size !== 58)
 }
 
 // Route membership comes from the canonical schema, not the lagging route
-// fixture. Reader UI 3.0 currently publishes 260 RouteIds while the
-// historical route fixture still carries the original 200 shell records.
+// fixture. The historical route fixture still carries fewer shell records
+// than the schema; frontend-demo-optimized/route-contract.js supplies the
+// canonical title/shell metadata for the expanded set.
 // frontend-demo-optimized/route-contract.js supplies the canonical title/shell
 // metadata for the expanded set. Any future schema route without metadata is
 // a generation error: the host must never silently send it to a catch-all
@@ -76,7 +77,7 @@ const HARMONY_STATUS_BY_RECORD_ID = new Map(
   VISUAL_ADMISSION_REGISTRY.records.map((record) => [record.id, record.harmony?.status]),
 );
 
-function activeQuarantinedRouteIds(document) {
+function physicallyRetiredQuarantineRouteIds(document) {
   if (document === null || Array.isArray(document) || typeof document !== 'object' ||
     (document.status !== 'active' && document.status !== 'released') || !Array.isArray(document.entries)) {
     throw new Error('Reader UI route reconstruction quarantine is invalid');
@@ -91,20 +92,21 @@ function activeQuarantinedRouteIds(document) {
       (entry.status !== 'active' && entry.status !== 'released')) {
       throw new Error(`Reader UI route reconstruction quarantine entry ${index + 1} is invalid`);
     }
-    const harmonyStatus = HARMONY_STATUS_BY_RECORD_ID.get(entry.recordId);
-    if (harmonyStatus === undefined) {
+    if (!HARMONY_STATUS_BY_RECORD_ID.has(entry.recordId)) {
       throw new Error(`Reader UI route reconstruction quarantine references missing admission record: ${entry.recordId}`);
     }
-    // Releasing source isolation (B3) is deliberately insufficient to put an
-    // old native route back in RouteTable. It remains absent until the atomic
-    // B4 promotion has made this exact record implementation-ready for
-    // HarmonyOS. This prevents B3 evidence from quietly becoming B5 consumer
-    // work through a generator side effect.
-    const mustRemainQuarantined = entry.status === 'active' || harmonyStatus !== 'implementation-ready';
-    if (!mustRemainQuarantined) continue;
+    // An active entry is provenance for a route that has been physically
+    // removed from the Reader-UI schema. A released entry is a current,
+    // Figma-bound canonical route and must remain generatable even while its
+    // visual admission is candidate-backport. Admission—not route removal—is
+    // what keeps that canonical surface fail-closed.
+    if (entry.status !== 'active') continue;
     for (const routeId of entry.routeIds) {
-      if (typeof routeId !== 'string' || !CANONICAL_ROUTE_IDS.includes(routeId)) {
-        throw new Error(`Reader UI route reconstruction quarantine references unknown RouteId: ${String(routeId)}`);
+      if (typeof routeId !== 'string' || routeId.length === 0) {
+        throw new Error(`Reader UI route reconstruction quarantine references invalid RouteId: ${String(routeId)}`);
+      }
+      if (CANONICAL_ROUTE_IDS.includes(routeId)) {
+        throw new Error(`active Reader UI route reconstruction quarantine must be physically absent from route.schema.json: ${routeId}`);
       }
       if (ids.has(routeId)) {
         throw new Error(`Reader UI route reconstruction quarantine duplicates RouteId: ${routeId}`);
@@ -115,14 +117,10 @@ function activeQuarantinedRouteIds(document) {
   return ids;
 }
 
-// This set is generated from Reader-UI source data. It is the explicit A3
-// route extraction: legacy reading routes remain published RouteIds for
-// compile-time compatibility, but are omitted from native RouteTable and
-// ViewStateTable until BOTH the Reader-UI source conversion is released and
-// the atomic promotion gives HarmonyOS an implementation-ready admission.
-// A published type is not a routable surface: RouteTable.ALL remains the
-// runtime authority. Do not recreate this list in a renderer.
-const QUARANTINED_ROUTE_IDS = activeQuarantinedRouteIds(ROUTE_RECONSTRUCTION_QUARANTINE);
+// This set is source provenance for physically removed historical routes. It
+// must never be emitted as a compatibility RouteId, RouteTable, or ViewState
+// entry. Do not recreate it in a renderer.
+const QUARANTINED_ROUTE_IDS = physicallyRetiredQuarantineRouteIds(ROUTE_RECONSTRUCTION_QUARANTINE);
 
 function readCanonicalDemoRoutes() {
   const readerUiRoot = path.resolve(CONTRACTS_DIR, '..', '..');
@@ -360,10 +358,9 @@ function genTokenRegistry() {
 
 // ── RouteTable.ets ────────────────────────────────────────────────────────
 function genRouteTable() {
-  // Keep every canonical schema identifier in the TypeScript/ArkTS union so
-  // quarantined legacy behavior can be compiled while it is being removed.
-  // Only ACTIVE_ROUTES are emitted into RouteTable.ALL and its shell cases,
-  // which keeps an isolated identifier non-routable and non-renderable.
+  // The published type is derived solely from canonical Reader-UI schema IDs.
+  // Historical quarantine IDs have already been physically removed and cannot
+  // survive as compile-time compatibility aliases.
   const publishedIds = ROUTES.map((r) => r.id);
   const ids = ACTIVE_ROUTES.map((r) => r.id);
   const idUnion = publishedIds.map((i) => `'${i}'`).join(' | ');
