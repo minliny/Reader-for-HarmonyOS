@@ -13,10 +13,11 @@
 ### Bug 1：CredentialHostAdapter 明文存储敏感凭据
 
 - **位置**：`entry/src/main/ets/host/adapters/CredentialHostAdapter.ets:19`
-- **现状**：credentials 以明文存入 `@ohos.data.preferences`
+- **现状**：credentials 以明文存入 `@ohos.data.preferences`，`supportsProtectedSecrets()` 返回 `false`
 - **风险**：敏感凭据（密码、API key、token）明文落盘
 - **修复方向**：接入 HUKS（`@ohos.security.huks`）加密，seam 已留好但 crypto 未实现
-- **阻塞**：本地可实现 HUKS 集成；需设备验证加密/解密链路
+- **阻塞**：HUKS 是系统级 API，需要设备验证 key generation/encryption/decryption/migration 全链路；本地无法验证
+- **分类修正**：原标记为"本地可推进"，实际应为"设备阻塞"——HUKS 集成是较大工程，且 `supportsProtectedSecrets()=false` 已是已知设计决策，非隐藏 bug
 
 ### Bug 2：部分 Host capability 的 deviceVerified=false
 
@@ -26,13 +27,12 @@
 - **修复方向**：在 hdc 设备上运行 `selfCheck=true` 启动参数，采集 `[HostManifest] post-self-check summary` 日志
 - **阻塞**：必须真机
 
-### Bug 3：历史 Source Switch 结果路由残留已移除
+### Bug 3：SourceStatus 点击仍 push 到已退休的 source-switch-results 路由 — 已修复 ✅
 
-- **位置**：`entry/src/main/ets/ui/components/LibraryComponents.ets:152`
-- **现状**：`SourceSwitchResultsPanel` 已删除（commit `c9a6bdb`），但注释仍提到 "old static result route"
-- **影响**：无功能影响，仅注释陈旧
-- **修复方向**：清理注释，确认 `source-switch-results` 路由在 `ReaderUIScreenGraphRetirementRegistry.ets` 已退休
-- **阻塞**：本地可完成
+- **位置**：`entry/src/main/ets/ui/components/ContractComponents.ets:78`
+- **现状**：`SourceStatus` 组件的 onClick 仍 dispatch `route-push` 到 `source-switch-results`，但该路由已在 `ReaderUIScreenGraphRetirementRegistry.ets` 退休
+- **修复**：改为 `source-switch`（实时换源流程），与 `SourceCoreUnavailablePage` 的 `primaryRoute: 'source-management'` 方向一致
+- **验证**：`source-switch-results` 在退休 registry 中已登记（line 26），`source-switch` 是实时窗口不应退休
 
 ### Bug 4：verticalScrollCheck 启动参数未经设备验证
 
@@ -42,13 +42,12 @@
 - **修复方向**：在 hdc 设备上用 `verticalScrollCheck=true` 启动，采集日志
 - **阻塞**：必须真机
 
-### Bug 5：reader-tts-start / reader-tts-stop 事件处理器合并到 toggleTtsPlayback
+### Bug 5：reader-tts-start / reader-tts-stop 幂等性 — 已验证无需修复 ✅
 
 - **位置**：`entry/src/main/ets/ui/store/ReaderReducer.ets:476-479`
-- **现状**：`reader-tts-start` 直接调用 `toggleTtsPlayback`，`reader-tts-stop` 调用 `setActiveSession('')`
-- **风险**：`reader-tts-start` 在 TTS 已运行时会变成 stop（toggle 语义），而非保持播放
-- **修复方向**：`reader-tts-start` 应改为幂等启动（若已运行则 no-op），`reader-tts-stop` 应幂等停止
-- **阻塞**：本地可修复；需设备验证 TTS 状态流转
+- **现状**：`reader-tts-start` 调用 `toggleTtsPlayback`，`reader-tts-stop` 调用 `setActiveSession('')`
+- **验证结果**：`toggleTtsPlayback` 在 line 2044-2046 已有幂等检查——`activeSession === 'tts' && playback === 'playing'` 时直接返回 state（no-op）。注释 line 2041 也明确 "Starting is idempotent"。
+- **结论**：`reader-tts-start` 在 TTS 已播放时是 no-op，不会变成 stop。Bug 不存在。
 
 ### Bug 6：settings tab 路由改到 settings-general 未经验证
 
@@ -71,14 +70,14 @@
 
 ## 本地可推进 vs 设备阻塞
 
-| 类型 | 可本地推进 | 必须设备 |
-|------|-----------|---------|
-| Bug 1 HUKS 集成 | ✅ 代码实现 | 验证加密链路 |
-| Bug 2 deviceVerified | ❌ | ✅ self-check 日志 |
-| Bug 3 注释清理 | ✅ | 无 |
-| Bug 4 verticalScrollCheck | ❌ | ✅ 启动参数验证 |
-| Bug 5 TTS 幂等 | ✅ 代码修复 | ✅ 状态流转验证 |
-| Bug 6 settings 路由 | ❌ | ✅ 路由渲染验证 |
+| 类型 | 可本地推进 | 必须设备 | 状态 |
+|------|-----------|---------|------|
+| Bug 1 HUKS 集成 | ❌ 系统级 API | ✅ 全链路验证 | 设备阻塞 |
+| Bug 2 deviceVerified | ❌ | ✅ self-check 日志 | 设备阻塞 |
+| Bug 3 路由残留 | ✅ 已修复 | 无 | **已完成** |
+| Bug 4 verticalScrollCheck | ❌ | ✅ 启动参数验证 | 设备阻塞 |
+| Bug 5 TTS 幂等 | 已验证无需修复 | — | **已完成** |
+| Bug 6 settings 路由 | ❌ | ✅ 路由渲染验证 | 设备阻塞 |
 
 ## 不可做的
 

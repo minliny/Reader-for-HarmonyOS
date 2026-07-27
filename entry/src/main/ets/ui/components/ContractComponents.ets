@@ -75,7 +75,7 @@ export struct SourceStatus {
     Row() {
       Text('书源：').fontSize(12).fontColor(ColorTokens.muted)
       Text(this.sourceName()).fontSize(12).fontColor(ColorTokens.primaryDark)
-        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'source-switch-results' }))
+        .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'source-switch' }))
     }
     .width('100%').alignItems(VerticalAlign.Center)
   }
