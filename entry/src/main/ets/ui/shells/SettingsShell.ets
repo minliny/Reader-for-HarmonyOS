@@ -1,5 +1,5 @@
 // SettingsShell — shell for settings secondary pages (source-management, webdav-config, …).
-// Slots: topArea (BackTopBar) · content (ViewStateRenderer) · overlayHost · stateHost.
+// Slots: topArea (BackTopBar) · content (ViewStateRenderer) · overlayHost.
 //
 // Immersive: outermost Stack expands paper behind the system bars; the content
 // Column expands into the status-bar region and pads with the real device inset
@@ -11,12 +11,11 @@ import { BackTopBar } from '../components/SharedComponents';
 import { RestoreBackupOverlay, SyncBackupPage } from '../components/StructuralPageComponents';
 import { ViewStateRenderer } from '../components/ViewStateRenderer';
 import { OverlayHost } from '../slots/OverlayHost';
-import { StateHost } from '../slots/StateHost';
 import { ReaderUiVisualTokens } from '../../contract/reader_ui/VisualAdmission';
 
 @Component
 export struct SettingsShell {
-  static readonly SLOT_NAMES: string[] = ['topArea', 'content', 'overlayHost', 'stateHost'];
+  static readonly SLOT_NAMES: string[] = ['topArea', 'content', 'overlayHost'];
   @StorageProp('reader.displayedRouteId') routeId: string = 'settings';
   @StorageProp(SafeAreaAdapter.K_TOP) safeAreaTop: number = SafeAreaAdapter.DEFAULT_TOP;
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
@@ -144,8 +143,6 @@ export struct SettingsShell {
         RestoreBackupOverlay()
           .zIndex(ZIndexTokens.dialog + 1)
       }
-      StateHost()
-        .zIndex(ZIndexTokens.mainNav)
     }
     .width('100%')
     .height('100%')

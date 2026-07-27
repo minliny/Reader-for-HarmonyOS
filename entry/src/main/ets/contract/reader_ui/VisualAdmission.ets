@@ -719,7 +719,7 @@ export class ReaderUiVisualTokens {
 export class ReaderUiVisualAdmission {
   static readonly SOURCE_FILE_KEY: string = 'klhs2jMM4MncaJFqZMfqEK';
   static readonly SOURCE_REVISION: string = '2379851596474967636';
-  static readonly REGISTRY_SHA256: string = 'd46b3b328019a2f428d187551ab5c90d34207dce92cb2244e305966b21e9050c';
+  static readonly REGISTRY_SHA256: string = 'a2a1722b90d0ee07af5c2b2210feca690657e3ced23116facf8a10d76598b7a4';
   static readonly ROUTE_ADMISSIONS: ReaderUiVisualRouteAdmissionEntry[] = [
     { routeId: 'about', admission: 'retired', sourceBound: false, implementationReady: false, recordIds: ['about.withdrawn'] },
     { routeId: 'about-feedback', admission: 'retired', sourceBound: false, implementationReady: false, recordIds: ['about.withdrawn'] },

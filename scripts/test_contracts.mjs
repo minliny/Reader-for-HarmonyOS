@@ -94,6 +94,8 @@ const liveSourceSnapshot = json('docs/design/FIGMA_LIVE_SOURCE_SNAPSHOT.json');
 const ledgerSource = readerUiSource('docs/design/FIGMA_VISUAL_TOKEN_LEDGER.json');
 const ledger = JSON.parse(ledgerSource);
 const visualAdmission = source('entry/src/main/ets/contract/reader_ui/VisualAdmission.ets');
+const routeReconstructionQuarantine = json('contracts/fixtures/route-reconstruction-quarantine.fixtures.json');
+const routeTable = source('entry/src/main/ets/contract/generated/RouteTable.ets');
 const routeRenderer = source('entry/src/main/ets/ui/router/RouteRenderer.ets');
 const viewStateRenderer = source('entry/src/main/ets/ui/components/ViewStateRenderer.ets');
 const viewStateTable = source('entry/src/main/ets/contract/generated/ViewStateTable.ets');
@@ -113,6 +115,7 @@ const sourceSwitch = source('entry/src/main/ets/ui/components/SourceSwitchFlowCo
 const discover = source('entry/src/main/ets/ui/components/DiscoverComponents.ets');
 const rss = source('entry/src/main/ets/ui/components/RssComponents.ets');
 const sharedComponents = source('entry/src/main/ets/ui/components/SharedComponents.ets');
+const readerShell = source('entry/src/main/ets/ui/shells/ReaderShell.ets');
 const mainTabShell = source('entry/src/main/ets/ui/shells/MainTabShell.ets');
 const libraryShell = source('entry/src/main/ets/ui/shells/LibraryShell.ets');
 const effects = source('entry/src/main/ets/ui/store/ReaderEffects.ets');
@@ -286,18 +289,40 @@ test('HarmonyOS has no Figma parallel root, policy, manifest, or token authority
   }
 });
 
-test('all visual consumers consult the generated Reader-UI authority and fail closed', () => {
+test('all visual consumers consult the generated Reader-UI authority without hidden fallback nodes', () => {
   assert.ok(routeRenderer.includes("import { ReaderUiVisualAdmission } from '../../contract/reader_ui/VisualAdmission';"));
   assert.ok(routeRenderer.includes('isRouteAdmittedForViewport(this.displayedRouteId, this.viewportClass)'));
-  assert.ok(routeRenderer.includes('Column().width(0).height(0)'), 'unadmitted routes must be inert');
+  assert.ok(routeRenderer.includes('shell !== null'), 'unadmitted routes must require a source-generated shell mapping');
+  assert.equal(routeRenderer.includes('Column().width(0).height(0)'), false,
+    'unadmitted routes must not use a hidden zero-size placeholder');
   assert.ok(viewStateRenderer.includes('ReaderUiVisualAdmission'), 'view-state renderer must consume generated admission');
   assert.ok(overlayHost.includes('ReaderUiVisualAdmission.isOverlayAdmitted(this.overlayKind)'));
-  assert.ok(overlayHost.includes('Column().width(0).height(0)'), 'unadmitted overlays must be inert');
-  assert.ok(stateHost.includes('ReaderUiVisualAdmission.isStateAdmitted(this.routeId, this.activeStateId())'));
-  assert.ok(stateHost.includes('Column().width(0).height(0)'), 'unbound page states must be inert');
+  assert.equal(overlayHost.includes('Column().width(0).height(0)'), false,
+    'unadmitted overlays must not use a hidden zero-size placeholder');
+  assert.ok(stateHost.includes('STATE_HOST_RETIRED'),
+    'the generic state fallback must be explicitly retired rather than rendered inert');
+  assert.equal(stateHost.includes('@Component'), false,
+    'the retired generic StateHost must not remain an instantiable visual component');
 });
 
-test('candidate-backport page families fail closed at every renderer execution gate', () => {
+test('active Reader source quarantine removes all historical Reader shell and body mappings', () => {
+  assert.equal(routeReconstructionQuarantine.status, 'active');
+  const routeIds = routeReconstructionQuarantine.entries.flatMap((entry) => entry.routeIds);
+  assert.equal(routeIds.length, 16, 'A3 must extract the full audited Reader route set');
+  assert.equal(new Set(routeIds).size, 16, 'a quarantined route must have one source owner');
+  for (const routeId of routeIds) {
+    assert.equal(routeTable.includes(`'${routeId}'`), false,
+      `${routeId} must not remain in generated native RouteTable`);
+    assert.equal(viewStateTable.includes(`\"routeId\": \"${routeId}\"`), false,
+      `${routeId} must not remain in generated native ViewStateTable`);
+  }
+  assert.ok(routeRenderer.includes('const shell: string | null = this.shellOfDisplayedRoute();'),
+    'RouteRenderer must resolve the source-generated shell once before any native shell mounts');
+  assert.ok(routeRenderer.includes('this.isDisplayedRouteImplementationReady() && shell !== null'),
+    'RouteRenderer must require both implementation readiness and a non-quarantined source shell');
+});
+
+test('candidate-backport page families fail closed at every active renderer execution gate', () => {
   // This is the execution gate that was missing on 2026-07-27: the renderers
   // consumed `isRouteAdmitted` / `isOverlayAdmitted` / `isStateAdmitted`
   // without distinguishing `candidate-backport` (source-bound but not
@@ -328,11 +353,14 @@ test('candidate-backport page families fail closed at every renderer execution g
   assert.ok(overlayHost.includes('candidate-backport'),
     'OverlayHost must document candidate-backport as a fail-closed stop condition');
 
-  // StateHost: the state gate must fail closed for candidate-backport.
-  assert.ok(stateHost.includes('implementation-ready'),
-    'StateHost must document implementation-ready as the state execution gate');
-  assert.ok(stateHost.includes('candidate-backport'),
-    'StateHost must document candidate-backport as a fail-closed stop condition');
+  // The generic StateHost had no exact Figma master, so the correct closure is
+  // source-level removal from every shell rather than a fourth hidden gate.
+  assert.ok(stateHost.includes('STATE_HOST_RETIRED'),
+    'generic state host must be retired when no exact Figma state master exists');
+  for (const shell of [readerShell, mainTabShell, libraryShell, settingsShell]) {
+    assert.equal(shell.includes('StateHost('), false,
+      'a shell must not mount the retired generic state host');
+  }
 });
 
 test('legacy generated state primitives cannot draw a local loading or error page over an admitted Figma route', () => {
@@ -759,14 +787,17 @@ test('empty bookshelf consumes Figma State/BookshelfEmpty and preserves its two 
     'the generic bookshelf empty page must not remain in the production route');
 });
 
-test('inert state host cannot place an invisible full-screen blocker above admitted Figma controls', () => {
-  const inertStateHost = structSource(stateHost, 'StateHost');
-  assert.ok(inertStateHost.includes('Column().width(0).height(0)'),
-    'an unadmitted state must remain visually inert');
-  assert.equal(inertStateHost.includes("Stack() {\n      if (this.activeStateId()"), false,
-    'StateHost must not mount a full-screen Stack around an inert state');
-  assert.equal(inertStateHost.includes(".width('100%')\n    .height('100%')"), false,
-    'StateHost must not leave a full-screen touch blocker when no Figma state is admitted');
+test('generic state host is explicitly removed instead of hidden above Figma controls', () => {
+  assert.ok(stateHost.includes('STATE_HOST_RETIRED'),
+    'StateHost source must retain an explicit retirement marker');
+  assert.equal(stateHost.includes('@Component'), false,
+    'StateHost must not leave an invisible component in the visual tree');
+  assert.equal(stateHost.includes('Column().width(0).height(0)'), false,
+    'StateHost retirement must not use a zero-size hiding node');
+  for (const shell of [readerShell, mainTabShell, libraryShell, settingsShell]) {
+    assert.equal(shell.includes('StateHost('), false,
+      'no production shell may mount the retired generic state host');
+  }
 });
 
 test('bookshelf multi-select keeps the Figma header and grid pinned to the top of its overlay', () => {

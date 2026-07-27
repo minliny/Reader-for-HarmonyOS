@@ -57,10 +57,17 @@ function ok(message) {
 }
 
 const visualAdmission = read('entry/src/main/ets/contract/reader_ui/VisualAdmission.ets');
+const routeTable = read('entry/src/main/ets/contract/generated/RouteTable.ets');
 const routeRenderer = read('entry/src/main/ets/ui/router/RouteRenderer.ets');
 const viewStateRenderer = read('entry/src/main/ets/ui/components/ViewStateRenderer.ets');
 const overlayHost = read('entry/src/main/ets/ui/slots/OverlayHost.ets');
 const stateHost = read('entry/src/main/ets/ui/slots/StateHost.ets');
+const routeReconstructionQuarantinePath = path.join(
+  READER_UI,
+  'contracts',
+  'fixtures',
+  'route-reconstruction-quarantine.fixtures.json',
+);
 
 console.log('enforce-implementation-ready-gate: verifying execution gate semantics...\n');
 
@@ -146,7 +153,6 @@ const renderers = [
   { name: 'RouteRenderer', source: routeRenderer },
   { name: 'ViewStateRenderer', source: viewStateRenderer },
   { name: 'OverlayHost', source: overlayHost },
-  { name: 'StateHost', source: stateHost },
 ];
 for (const renderer of renderers) {
   assert.ok(renderer.source.includes('implementation-ready'),
@@ -154,7 +160,7 @@ for (const renderer of renderers) {
   assert.ok(renderer.source.includes('candidate-backport'),
     `${renderer.name} must document candidate-backport as a fail-closed stop condition`);
 }
-ok('all four renderers (RouteRenderer, ViewStateRenderer, OverlayHost, StateHost) document the execution gate');
+ok('all active renderers (RouteRenderer, ViewStateRenderer, OverlayHost) document the execution gate');
 
 // ─── Gate E: RouteRenderer must name its gate method after implementation-ready ───
 
@@ -167,16 +173,35 @@ assert.ok(!routeRenderer.includes('isDisplayedRouteVisuallyAdmitted'),
   'RouteRenderer must not retain the old isDisplayedRouteVisuallyAdmitted method name');
 ok('RouteRenderer gate method is named after implementation-ready');
 
-// ─── Gate F: every renderer must fail closed with Column().width(0).height(0) ───
+// ─── Gate F: source route extraction must replace hidden fail-closed slots ───
 
-// A candidate-backport route must render NOTHING — not a diagnostic card,
-// not a placeholder, not a transparent full-screen blocker. The only
-// acceptable fail-closed shape is a zero-sized Column.
-for (const renderer of renderers) {
-  assert.ok(renderer.source.includes('Column().width(0).height(0)'),
-    `${renderer.name} must fail closed with Column().width(0).height(0)`);
+// A candidate-backport route must not receive a local diagnostic, fallback
+// page, or a hidden width(0) hit node. The A3 source fixture removes the old
+// Reader route mappings from generated RouteTable/ViewStateTable, and the
+// renderer only mounts a shell when that generated mapping is still present.
+assert.ok(fs.existsSync(routeReconstructionQuarantinePath),
+  'Reader-UI route reconstruction quarantine fixture is missing');
+const routeReconstructionQuarantine = JSON.parse(fs.readFileSync(routeReconstructionQuarantinePath, 'utf8'));
+assert.equal(routeReconstructionQuarantine.status, 'active',
+  'A3 route extraction must remain active until a new source conversion releases it');
+const quarantinedRouteIds = routeReconstructionQuarantine.entries.flatMap((entry) => entry.routeIds || []);
+assert.equal(quarantinedRouteIds.length, 16,
+  'A3 route extraction must contain the complete 16-route audited Reader set');
+assert.equal(new Set(quarantinedRouteIds).size, quarantinedRouteIds.length,
+  'A quarantined route must have exactly one source owner');
+for (const routeId of quarantinedRouteIds) {
+  assert.ok(!routeTable.includes(`'${routeId}'`),
+    `quarantined route ${routeId} remains in generated native RouteTable`);
 }
-ok('all four renderers fail closed with Column().width(0).height(0)');
+assert.ok(routeRenderer.includes('this.isDisplayedRouteImplementationReady() && shell !== null'),
+  'RouteRenderer must require both implementation readiness and a source-generated shell mapping');
+for (const source of [routeRenderer, overlayHost, stateHost]) {
+  assert.ok(!source.includes('Column().width(0).height(0)'),
+    'RouteRenderer, OverlayHost, and the retired StateHost must not use a zero-size hiding node');
+}
+assert.ok(stateHost.includes('STATE_HOST_RETIRED') && !stateHost.includes('@Component'),
+  'generic StateHost must be explicitly retired, not preserved as an inert visual component');
+ok('A3 source route extraction replaces zero-size hidden route/slot fallbacks');
 
 // ─── Gate G: the generated artifact must be synchronized to the current registry ───
 

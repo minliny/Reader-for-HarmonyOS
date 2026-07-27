@@ -75,24 +75,25 @@ export struct RouteRenderer {
   }
 
   build() {
+    const shell: string | null = this.shellOfDisplayedRoute();
     Stack() {
-      if (!this.isDisplayedRouteImplementationReady() || this.shellOfDisplayedRoute() === null) {
-        // A visible diagnostic would itself be a locally invented page. Keep
-        // the not-implementation-ready route inert until Reader-UI marks the
-        // family implementation-ready and HarmonyOS consumes the regenerated
-        // artifact. `candidate-backport` is a stop condition, not a renderable
-        // state.
-        Column().width(0).height(0)
-      } else if (this.shellOfDisplayedRoute() === 'MainTabShell') {
-        MainTabShell()
-      } else if (this.shellOfDisplayedRoute() === 'ReaderShell') {
-        ReaderShell()
-      } else if (this.shellOfDisplayedRoute() === 'LibraryShell') {
-        LibraryShell()
-      } else if (this.shellOfDisplayedRoute() === 'SettingsShell') {
-        SettingsShell()
-      } else {
-        FlowShell()
+      // A candidate-backport route is a stop condition, not a renderable
+      // placeholder. A3 extracts its old mapping from Reader-UI-generated
+      // RouteTable/ViewStateTable, so `shell` is null and no native shell or
+      // hidden hit node is instantiated. A visible diagnostic would be a
+      // locally invented page and is deliberately absent.
+      if (this.isDisplayedRouteImplementationReady() && shell !== null) {
+        if (shell === 'MainTabShell') {
+          MainTabShell()
+        } else if (shell === 'ReaderShell') {
+          ReaderShell()
+        } else if (shell === 'LibraryShell') {
+          LibraryShell()
+        } else if (shell === 'SettingsShell') {
+          SettingsShell()
+        } else {
+          FlowShell()
+        }
       }
     }
     .width('100%')
