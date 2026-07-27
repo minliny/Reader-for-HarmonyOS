@@ -47,7 +47,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ${{ github.repository_owner }}/Reader-UI
-          ref: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.head_ref || github.ref }}
+          # Reader-UI is a separate repo — it does NOT share branch names with
+          # Reader-for-HarmonyOS. Always check out Reader-UI's default branch
+          # (main). Cross-repo PR coordination happens via the dispatch workflow
+          # (reader-ui-consumer.yml), not here. This gate verifies the current
+          # shipped contract authority, not a pending Reader-UI PR.
+          ref: main
           path: Reader-UI
           persist-credentials: false
 
