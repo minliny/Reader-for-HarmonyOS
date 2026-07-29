@@ -3829,7 +3829,7 @@ export class ReaderEffects {
               chapterOffset: restoredProgress.chapterOffset,
               chapterProgress: restoredProgress.chapterProgress,
               locationRevision: restoredProgress.locationRevision,
-              resolverVersion: '',
+              resolverVersion: CANONICAL_RESOLVER_VERSION,
             },
           });
         }
@@ -5198,7 +5198,7 @@ export class ReaderEffects {
               chapterOffset: restoredProgress.chapterOffset,
               chapterProgress: restoredProgress.chapterProgress,
               locationRevision: restoredProgress.locationRevision,
-              resolverVersion: '',
+              resolverVersion: CANONICAL_RESOLVER_VERSION,
             },
           });
         }

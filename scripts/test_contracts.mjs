@@ -574,6 +574,19 @@ test('reader page animation labels and layout mapping preserve the Figma rule', 
   assert.ok(readerReducer.includes("options.pageAnimation = paginationMode === 'vertical'\n          ? 'scroll'"));
   assert.ok(readerComponents.includes("private verticalReading(): boolean {\n    return this.paginationMode === 'vertical';"));
   assert.ok(readerComponents.includes('Scroll(this.verticalScroller)'), 'scroll reading must use a native Scroll');
+  assert.ok(readerComponents.includes('private paginationRefreshInProgress: boolean = false;'),
+    'real ArkUI pagination must guard synchronous StorageProp re-entry');
+  assert.ok(readerComponents.includes('if (this.paginationRefreshInProgress) return;'),
+    'pagination refresh must fail closed while its current transaction is active');
+  assert.ok(readerComponents.includes('private lastPublishedHorizontalAnchorKey: string ='),
+    'horizontal pagination must deduplicate an unchanged canonical anchor');
+  assert.ok(readerComponents.includes('@Builder EmptyReadingState()'));
+  assert.ok(readerComponents.includes("Blank()\n      .width('100%')\n      .height('100%')"),
+    'empty reader content must preserve the admitted surface without inventing visible content');
+  assert.equal(readerComponents.includes('width(0)'), false,
+    'Reader components must not mount hidden zero-width placeholders');
+  assert.equal(readerComponents.includes('height(0)'), false,
+    'Reader components must not mount hidden zero-height placeholders');
   assert.equal(readerComponents.includes("MotionAdapter.apply('reader.page.turn.next-prev'"), false,
     'Figma has no approved F3 page-turn timeline, so native rendering must not invent one');
   assert.equal(readerComponents.includes('pageTurnOffset'), false);

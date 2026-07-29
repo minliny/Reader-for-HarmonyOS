@@ -13,14 +13,14 @@ export default function ScreenGraphCoverageTests(): void {
         ReaderUIScreenGraphCoverageRegistry.loadCanonical();
 
       expect(coverage.authority).assertEqual(ReaderUIScreenGraphAuthority.Shadow);
-      expect(coverage.canonicalComponentCount).assertEqual(174);
-      expect(coverage.referencedTypes.length).assertEqual(138);
-      expect(coverage.explicitGapTypes.length).assertEqual(36);
-      expect(coverage.explicitDispatchTypes.length).assertEqual(138);
+      expect(coverage.canonicalComponentCount).assertEqual(177);
+      expect(coverage.referencedTypes.length).assertEqual(134);
+      expect(coverage.explicitGapTypes.length).assertEqual(43);
+      expect(coverage.explicitDispatchTypes.length).assertEqual(134);
       expect(coverage.hostCompositeTypes.join('|'))
         .assertEqual('TapZones|ReaderBase|ReaderTopArea|ReaderBottomBar');
 
-      expect(coverage.faithfulTypes.length).assertEqual(72);
+      expect(coverage.faithfulTypes.length).assertEqual(68);
       expect(coverage.genericUsableTypes.length).assertEqual(59);
       expect(coverage.partialTypes.length).assertEqual(3);
       expect(coverage.insufficientTypes.length).assertEqual(0);
@@ -66,16 +66,16 @@ export default function ScreenGraphCoverageTests(): void {
       expect(coverage.genericUsableTypes.indexOf('ErrorState')).assertEqual(-1);
       expect(coverage.genericUsableTypes.indexOf('Offline')).assertEqual(-1);
 
-      expect(coverage.canonicalInstanceCount).assertEqual(615);
+      expect(coverage.canonicalInstanceCount).assertEqual(580);
       // runtimeActiveInstanceCount / retiredInstanceCount were tracked by the
       // deleted parallel admission policy; the canonical count above already
       // covers the total. The decomposition is not re-tracked here.
-      expect(coverage.faithfulInstanceCount).assertEqual(293);
-      expect(coverage.hostCompositeInstanceCount).assertEqual(115);
-      expect(coverage.genericUsableInstanceCount).assertEqual(250);
-      expect(coverage.partialInstanceCount).assertEqual(52);
+      expect(coverage.faithfulInstanceCount).assertEqual(280);
+      expect(coverage.hostCompositeInstanceCount).assertEqual(90);
+      expect(coverage.genericUsableInstanceCount).assertEqual(237);
+      expect(coverage.partialInstanceCount).assertEqual(45);
       expect(coverage.insufficientInstanceCount).assertEqual(0);
-      expect(coverage.figmaUnboundStateInstanceCount).assertEqual(20);
+      expect(coverage.figmaUnboundStateInstanceCount).assertEqual(18);
       expect(coverage.explicitTargetBindingCount).assertEqual(97);
       expect(coverage.tapZoneExplicitTargetBindingCount).assertEqual(16);
 

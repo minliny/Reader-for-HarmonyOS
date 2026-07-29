@@ -1,7 +1,7 @@
 # Device-Ready Execution Checklist — Layer 4 + Bug 2/4/6
 
-> 状态：阻塞（需要 hdc 设备 + 当前 release HAP）
-> 生成时间：2026-07-26
+> 状态：执行中（模拟器已验证 reading-surface；真机与 release identity 仍属于 B7）
+> 生成时间：2026-07-30
 > 前置条件：hdc target 可达 + 设备已解锁 + 当前 release identity HAP 已安装
 
 ## 执行顺序
@@ -16,7 +16,7 @@
 
 ### 启动参数
 ```
-hdc shell aa start -a EntryAbility -b com.example.reader -e selfCheck true
+hdc shell aa start -a EntryAbility -b com.minliny.reader --ps selfCheck true
 ```
 
 ### 期望日志
@@ -40,18 +40,21 @@ hdc shell aa start -a EntryAbility -b com.example.reader -e selfCheck true
 
 ### 启动参数
 ```
-hdc shell aa start -a EntryAbility -b com.example.reader -e verticalScrollCheck true
+hdc shell aa start -a EntryAbility -b com.minliny.reader --ps verticalScrollCheck true
 ```
 
 ### 期望日志
 ```
-[bootstrapCoreAfterRestore] verticalScrollCheck=true
-[verticalScrollCheck] result=...
+[EntryAbility] verticalScrollCheck=true — importing only the long local-book scroll probe
+[verticalScrollCheck] enteredReader=true bookId=...
+[verticalScrollCheck] result=ready paragraphs=... paginationMode=vertical pageAnimation=scroll
 ```
 
 ### 成功条件
 - 启动参数被正确读取
-- 竖向滚动链路日志完整
+- 通过真实 Core-backed shelf-open transaction 进入阅读页
+- `pageAnimation=scroll` 严格映射为 `paginationMode=vertical`
+- 正文上滑前后可见段落发生变化，且布局验证器通过
 - 无 `verticalScrollCheck failed` 错误
 
 ## Step 3: Bug 6 — settings tab 路由验证

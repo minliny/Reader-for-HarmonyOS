@@ -153,7 +153,8 @@ export abstract class ReaderUIRuntimeDriver {
   // Book.open is Pilot in production. Minimal test drivers that exercise only
   // other cohorts do not have to implement the serial transaction API.
   acceptBookOpenResult(_coreType: string, _correlationId: string, _chapterCount?: number,
-    _canonicalLocation?: ReaderUICanonicalLocation, _reflow?: ReaderUILocationReflow,
+    _selectedChapterIndex?: number, _canonicalLocation?: ReaderUICanonicalLocation,
+    _reflow?: ReaderUILocationReflow,
     _error?: string): ReaderUIAsyncTransition {
     throw new Error('ReaderUIRuntimeDriver does not implement book.open results');
   }
@@ -256,10 +257,11 @@ class GeneratedReaderUIRuntimeDriver extends ReaderUIRuntimeDriver {
   }
 
   acceptBookOpenResult(coreType: string, correlationId: string, chapterCount?: number,
-    canonicalLocation?: ReaderUICanonicalLocation, reflow?: ReaderUILocationReflow,
+    selectedChapterIndex?: number, canonicalLocation?: ReaderUICanonicalLocation,
+    reflow?: ReaderUILocationReflow,
     error?: string): ReaderUIAsyncTransition {
     return this.runtime.acceptBookOpenResult(
-      coreType, correlationId, chapterCount, canonicalLocation, reflow, error,
+      coreType, correlationId, chapterCount, selectedChapterIndex, canonicalLocation, reflow, error,
     );
   }
 
@@ -364,10 +366,11 @@ class RuntimeDriverBookOpenGateway implements ReaderBookOpenRuntimeGateway {
   }
 
   acceptBookOpenResult(coreType: string, correlationId: string, chapterCount?: number,
-    canonicalLocation?: ReaderUICanonicalLocation, reflow?: ReaderUILocationReflow,
+    selectedChapterIndex?: number, canonicalLocation?: ReaderUICanonicalLocation,
+    reflow?: ReaderUILocationReflow,
     error?: string): ReaderUIAsyncTransition {
     return this.driverReader().acceptBookOpenResult(
-      coreType, correlationId, chapterCount, canonicalLocation, reflow, error,
+      coreType, correlationId, chapterCount, selectedChapterIndex, canonicalLocation, reflow, error,
     );
   }
 
@@ -595,6 +598,24 @@ function semanticOverlay(state: ReaderUiState): string | undefined {
   return state.overlay.length > 0 ? state.overlay : undefined;
 }
 
+function projectCanonicalReaderLocation(state: ReaderUiState): ReaderUICanonicalLocation | undefined {
+  const location = state.canonicalReaderLocation;
+  if (location === null) return undefined;
+  return {
+    bookId: location.bookId,
+    chapterIndex: location.chapterIndex,
+    chapterOffset: location.chapterOffset,
+    chapterProgress: location.chapterProgress,
+    locationRevision: location.locationRevision,
+  };
+}
+
+function canonicalLocationIdentity(location?: ReaderUICanonicalLocation): string {
+  if (location === undefined) return '';
+  return `${location.bookId}|${location.chapterIndex}|${location.chapterOffset}|` +
+    `${location.chapterProgress}|${location.locationRevision}`;
+}
+
 // Reader modules are semantic overlays. Native and ReaderUIRuntime therefore
 // keep the same route identity and route stack while a module is visible.
 function projectNativeState(state: ReaderUiState): ReaderUIState {
@@ -614,6 +635,7 @@ function projectNativeState(state: ReaderUiState): ReaderUIState {
     loading: state.loading,
     reducedMotion: state.reducedMotion,
     readerPageIndex: state.readerPageIndex,
+    readerCanonicalLocation: projectCanonicalReaderLocation(state),
     focusTarget: state.focusTarget.length > 0 ? state.focusTarget : undefined,
     error: state.error !== null ? state.error.code : undefined,
   };
@@ -629,6 +651,8 @@ function stateDifference(runtime: ReaderUIState, nativeState: ReaderUIState): st
   if (runtime.loading !== nativeState.loading) fields.push('loading');
   if (runtime.reducedMotion !== nativeState.reducedMotion) fields.push('reducedMotion');
   if (runtime.readerPageIndex !== nativeState.readerPageIndex) fields.push('readerPageIndex');
+  if (canonicalLocationIdentity(runtime.readerCanonicalLocation) !==
+    canonicalLocationIdentity(nativeState.readerCanonicalLocation)) fields.push('readerCanonicalLocation');
   if (optionalValue(runtime.focusTarget) !== optionalValue(nativeState.focusTarget)) fields.push('focusTarget');
   if (optionalValue(runtime.error) !== optionalValue(nativeState.error)) fields.push('error');
   return fields.join(',');

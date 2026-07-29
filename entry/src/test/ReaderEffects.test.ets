@@ -1172,7 +1172,10 @@ export default function ReaderEffectsTests(): void {
       const blockedVertical = ReaderReducer.reduce(lateResolve, {
         type: 'set-pagination-mode', paginationMode: 'vertical',
       });
-      expect(blockedVertical.paginationMode).assertEqual('horizontal');
+      // The rejected late resolve leaves the valid active anchor untouched,
+      // so the five-option appearance contract may still select scroll
+      // (vertical reading) without jumping to the stale chapter.
+      expect(blockedVertical.paginationMode).assertEqual('vertical');
     });
 
     it('chapterJumpSetsLoadingAndPageState', 0, () => {

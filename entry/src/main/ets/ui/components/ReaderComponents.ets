@@ -191,6 +191,13 @@ export struct ReadingTextFlow {
   private suppressNextHorizontalAnchor: boolean = false;
   private ignoreNextVerticalScrollAnchor: boolean = false;
   private restoredCanonicalLocationKey: string = '';
+  // ArkUI StorageProp notifications are synchronous. Publishing a page anchor
+  // writes the reducer snapshot back to AppStorage, including the same
+  // pagination inputs watched by this component. Without a transaction guard
+  // that write re-enters pagination before the first refresh returns and
+  // eventually overflows the JS stack on a real device/emulator.
+  private paginationRefreshInProgress: boolean = false;
+  private lastPublishedHorizontalAnchorKey: string = '';
   // Layout changes must reflow from the reader's current measured anchor,
   // not from the initial canonical restore location. The latter intentionally
   // stays stable while the reader scrolls, so it can be older than the live
@@ -514,6 +521,7 @@ export struct ReadingTextFlow {
   }
 
   private onPaginationInputChange(): void {
+    if (this.paginationRefreshInProgress) return;
     this.captureLiveReflowAnchor();
     // A viewport/font/mode change creates new page boundaries. Do not let a
     // prior canonical restore key suppress restoration in the new layout.
@@ -536,34 +544,40 @@ export struct ReadingTextFlow {
   }
 
   private refreshPagination(): void {
-    let pages: ReaderPageModel[];
-    if (this.verticalReading()) {
-      const fragments: ReaderPageFragment[] = [];
-      const identity = this.activeReaderContentIdentity;
-      let offset = 0;
-      const paragraphs = this.paragraphs();
-      if (identity !== null) {
-        for (let index = 0; index < paragraphs.length; index += 1) {
-          fragments.push({ text: paragraphs[index], sourceOffset: offset, contentIdentity: identity });
-          offset += this.sourceCharacterCount(paragraphs[index]) + (index + 1 < paragraphs.length ? 1 : 0);
+    if (this.paginationRefreshInProgress) return;
+    this.paginationRefreshInProgress = true;
+    try {
+      let pages: ReaderPageModel[];
+      if (this.verticalReading()) {
+        const fragments: ReaderPageFragment[] = [];
+        const identity = this.activeReaderContentIdentity;
+        let offset = 0;
+        const paragraphs = this.paragraphs();
+        if (identity !== null) {
+          for (let index = 0; index < paragraphs.length; index += 1) {
+            fragments.push({ text: paragraphs[index], sourceOffset: offset, contentIdentity: identity });
+            offset += this.sourceCharacterCount(paragraphs[index]) + (index + 1 < paragraphs.length ? 1 : 0);
+          }
         }
+        pages = [this.pageModel(fragments, offset, identity)];
+      } else {
+        pages = this.horizontalPages();
       }
-      pages = [this.pageModel(fragments, offset, identity)];
-    } else {
-      pages = this.horizontalPages();
-    }
-    this.horizontalPageData = pages.length > 0 ? pages : [this.pageModel([], 0, null)];
-    if (this.verticalReading()) {
-      this.verticalFragmentLayouts = [];
-      this.lastVerticalScrollOffset = 0;
-    }
-    const nextCount = this.verticalReading() ? 1 : this.horizontalPageData.length;
-    const state = ReaderUiStore.snapshot();
-    if (state.readerPageCount !== nextCount) {
-      ReaderUiStore.dispatch({ type: 'set-reader-page-count', readerPageCount: nextCount });
-    }
-    if (!this.applyLiveReflowAnchor() && !this.applyCanonicalLocationRestore()) {
-      this.publishVisibleHorizontalAnchor();
+      this.horizontalPageData = pages.length > 0 ? pages : [this.pageModel([], 0, null)];
+      if (this.verticalReading()) {
+        this.verticalFragmentLayouts = [];
+        this.lastVerticalScrollOffset = 0;
+      }
+      const nextCount = this.verticalReading() ? 1 : this.horizontalPageData.length;
+      const state = ReaderUiStore.snapshot();
+      if (state.readerPageCount !== nextCount) {
+        ReaderUiStore.dispatch({ type: 'set-reader-page-count', readerPageCount: nextCount });
+      }
+      if (!this.applyLiveReflowAnchor() && !this.applyCanonicalLocationRestore()) {
+        this.publishVisibleHorizontalAnchor();
+      }
+    } finally {
+      this.paginationRefreshInProgress = false;
     }
   }
 
@@ -632,9 +646,17 @@ export struct ReadingTextFlow {
   // only after the page model is present; the Effects layer persists that
   // anchor, never the visual `readerPageIndex`.
   private publishVisibleHorizontalAnchor(): void {
-    if (this.verticalReading() || !this.hasReadableContent()) return;
+    if (this.verticalReading() || !this.hasReadableContent()) {
+      this.lastPublishedHorizontalAnchorKey = '';
+      return;
+    }
     const page = this.horizontalPageData[this.currentPageIndex()];
     if (page === undefined || page.fragments.length === 0 || page.contentIdentity === null) return;
+    const identity = page.contentIdentity;
+    const key = identity.bookId + '|' + identity.sourceId + '|' + identity.chapterIndex +
+      '|' + page.chapterOffset + '|' + page.chapterProgress;
+    if (key === this.lastPublishedHorizontalAnchorKey) return;
+    this.lastPublishedHorizontalAnchorKey = key;
     ReaderUiStore.reportReadingAnchor(page.contentIdentity, page.chapterOffset, page.chapterProgress);
   }
 
@@ -869,8 +891,11 @@ export struct ReadingTextFlow {
   @Builder EmptyReadingState() {
     // There is no canonical Figma no-book / no-content reader page.  An
     // unavailable Core chapter must therefore stay visually inert instead of
-    // being substituted with a locally-authored explanation panel.
-    Column().width(0).height(0)
+    // being substituted with a locally-authored explanation panel. Preserve
+    // the admitted paper surface without mounting a hidden zero-size node.
+    Blank()
+      .width('100%')
+      .height('100%')
   }
 
   /**

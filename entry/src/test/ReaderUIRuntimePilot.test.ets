@@ -68,7 +68,7 @@ export default function ReaderUIRuntimePilotTests(): void {
       expect(detail.effects[0].type).assertEqual('chapter.list');
 
       const toc = runtime.acceptBookOpenJSONResult(
-        'chapter.list', 'book-open-1', { 'chapterCount': 3 },
+        'chapter.list', 'book-open-1', { 'chapterCount': 3, 'selectedChapterIndex': 1 },
       );
       expect(toc.accepted).assertTrue();
       expect(toc.effects[0].type).assertEqual('content.load');
@@ -103,12 +103,12 @@ export default function ReaderUIRuntimePilotTests(): void {
         layoutIndependent: true,
       };
       const complete = runtime.acceptBookOpenResult(
-        'reader.location.resolve', 'book-open-1', undefined, canonicalLocation, reflow,
+        'reader.location.resolve', 'book-open-1', undefined, undefined, canonicalLocation, reflow,
       );
       expect(complete.accepted).assertTrue();
       expect(complete.state.loading).assertFalse();
       const stale = runtime.acceptBookOpenResult(
-        'reader.location.resolve', 'book-open-1', undefined, canonicalLocation, reflow,
+        'reader.location.resolve', 'book-open-1', undefined, undefined, canonicalLocation, reflow,
       );
       expect(stale.accepted).assertFalse();
     });
