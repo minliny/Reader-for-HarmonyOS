@@ -487,18 +487,18 @@ test('paper reading surface uses the current Figma layer and contains no synthet
   }
 });
 
-test('retracted reading surface keeps its canonical source mapping but fails closed in HarmonyOS', () => {
+test('promoted reading surface consumes only its canonical source mapping in HarmonyOS', () => {
   const record = registry.records.find((item) => item.id === 'reader.reading-surface');
   assert.ok(record, 'reader.reading-surface must remain registered');
-  assert.equal(record.harmony?.status, 'candidate-backport');
+  assert.equal(record.harmony?.status, 'implementation-ready');
   assert.deepEqual(record.routeIds, ['immersive-reading', 'reader', 'reader_content']);
 
   for (const routeId of record.routeIds) {
     assert.ok(routeTable.includes(`case '${routeId}': return 'ReaderShell';`),
-      `${routeId} must keep its Figma-bound source route mapping while B4 is retracted`);
+      `${routeId} must keep its Figma-bound source route mapping after B4`);
     assert.ok(visualAdmission.includes(
-      `{ routeId: '${routeId}', admission: 'candidate-backport', sourceBound: true, implementationReady: false, recordIds: ['reader.reading-surface'] }`,
-    ), `${routeId} must remain candidate-backport until fresh B2/B3 evidence is promoted`);
+      `{ routeId: '${routeId}', admission: 'implementation-ready', sourceBound: true, implementationReady: true, recordIds: ['reader.reading-surface'] }`,
+    ), `${routeId} must be admitted only by the fresh B2/B3 promotion`);
     const routeStart = viewStateTable.indexOf(`\"routeId\": \"${routeId}\"`);
     assert.ok(routeStart >= 0, `${routeId} needs a generated B5 view-state entry`);
     const nextRouteStart = viewStateTable.indexOf('\"routeId\":', routeStart + 1);

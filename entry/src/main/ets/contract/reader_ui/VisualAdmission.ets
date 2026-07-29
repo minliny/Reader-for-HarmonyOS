@@ -719,7 +719,7 @@ export class ReaderUiVisualTokens {
 export class ReaderUiVisualAdmission {
   static readonly SOURCE_FILE_KEY: string = 'klhs2jMM4MncaJFqZMfqEK';
   static readonly SOURCE_REVISION: string = '2379851596474967636';
-  static readonly REGISTRY_SHA256: string = '2ce37cf59ec6f4f6a092822cd205a6a62c0baf79f5e429604c33d9c05d389302';
+  static readonly REGISTRY_SHA256: string = '5e38d28f7ea24eee72e686e3943c01e553fe1e43bc865ff7c928d32bdca48a59';
   static readonly ROUTE_ADMISSIONS: ReaderUiVisualRouteAdmissionEntry[] = [
     { routeId: 'about', admission: 'retired', sourceBound: false, implementationReady: false, recordIds: ['about.withdrawn'] },
     { routeId: 'about-feedback', admission: 'retired', sourceBound: false, implementationReady: false, recordIds: ['about.withdrawn'] },
@@ -796,7 +796,7 @@ export class ReaderUiVisualAdmission {
     { routeId: 'http-tts-editor', admission: 'blocked', sourceBound: false, implementationReady: false, recordIds: ['figma-absent.d6-capability-contract-routes'] },
     { routeId: 'http-tts-management', admission: 'blocked', sourceBound: false, implementationReady: false, recordIds: ['figma-absent.d6-capability-contract-routes'] },
     { routeId: 'http-tts-test', admission: 'blocked', sourceBound: false, implementationReady: false, recordIds: ['figma-absent.d6-capability-contract-routes'] },
-    { routeId: 'immersive-reading', admission: 'candidate-backport', sourceBound: true, implementationReady: false, recordIds: ['reader.reading-surface'] },
+    { routeId: 'immersive-reading', admission: 'implementation-ready', sourceBound: true, implementationReady: true, recordIds: ['reader.reading-surface'] },
     { routeId: 'import-conflict-resolve', admission: 'retired', sourceBound: false, implementationReady: false, recordIds: ['local-import.legacy-error-and-conflict-pages'] },
     { routeId: 'import-duplicate', admission: 'retired', sourceBound: false, implementationReady: false, recordIds: ['local-import.legacy-error-and-conflict-pages'] },
     { routeId: 'import-empty-file', admission: 'retired', sourceBound: false, implementationReady: false, recordIds: ['local-import.legacy-error-and-conflict-pages'] },
@@ -817,7 +817,7 @@ export class ReaderUiVisualAdmission {
     { routeId: 'permission-required', admission: 'blocked', sourceBound: false, implementationReady: false, recordIds: ['nonvisual.helper-contract-routes'] },
     { routeId: 'progress-sync', admission: 'retired', sourceBound: false, implementationReady: false, recordIds: ['retired.unbound-route-supersession'] },
     { routeId: 'progress-sync-status', admission: 'retired', sourceBound: false, implementationReady: false, recordIds: ['retired.unbound-route-supersession'] },
-    { routeId: 'reader', admission: 'candidate-backport', sourceBound: true, implementationReady: false, recordIds: ['reader.reading-surface'] },
+    { routeId: 'reader', admission: 'implementation-ready', sourceBound: true, implementationReady: true, recordIds: ['reader.reading-surface'] },
     { routeId: 'reader-background-restore', admission: 'blocked', sourceBound: false, implementationReady: false, recordIds: ['figma-unbound.needs-page-or-user-decision'] },
     { routeId: 'reader-book-cache', admission: 'blocked', sourceBound: false, implementationReady: false, recordIds: ['figma-unbound.needs-page-or-user-decision'] },
     { routeId: 'reader-content-error', admission: 'blocked', sourceBound: false, implementationReady: false, recordIds: ['figma-unbound.needs-page-or-user-decision'] },
@@ -851,7 +851,7 @@ export class ReaderUiVisualAdmission {
     { routeId: 'reader-toc-loading', admission: 'blocked', sourceBound: false, implementationReady: false, recordIds: ['figma-unbound.needs-page-or-user-decision'] },
     { routeId: 'reader-toc-offline', admission: 'blocked', sourceBound: false, implementationReady: false, recordIds: ['figma-unbound.needs-page-or-user-decision'] },
     { routeId: 'reader-typography-reset-confirm', admission: 'blocked', sourceBound: false, implementationReady: false, recordIds: ['figma-unbound.needs-page-or-user-decision'] },
-    { routeId: 'reader_content', admission: 'candidate-backport', sourceBound: true, implementationReady: false, recordIds: ['reader.reading-surface'] },
+    { routeId: 'reader_content', admission: 'implementation-ready', sourceBound: true, implementationReady: true, recordIds: ['reader.reading-surface'] },
     { routeId: 'reading-settings-entry', admission: 'retired', sourceBound: false, implementationReady: false, recordIds: ['retired.unbound-route-supersession'] },
     { routeId: 'remote-webdav-books', admission: 'blocked', sourceBound: false, implementationReady: false, recordIds: ['figma-unbound.needs-page-or-user-decision'] },
     { routeId: 'restore-confirm', admission: 'candidate-backport', sourceBound: true, implementationReady: false, recordIds: ['sync-backup.restore-backup-overlay'] },
