@@ -11,9 +11,9 @@ import { AppTopBar, BackTopBar, BottomNav,
 import { ContinueReadingCard, BookshelfShelfSection, BookshelfEmptyState, ShelfChipGroup, ShelfSectionHeader, BookCard, BookGrid, BookEntry } from './BookshelfComponents';
 import { BookHero, BookSummaryCard, BookChapterList } from './BookDetailComponents';
 import { ReadingBackgroundLayer, ReadingTextFlow, ReadingInfoLayer, TapZones, ReaderBase, ReaderTopArea } from './ReaderComponents';
-import { ReaderControlSheet, ReaderBottomBar, DirectoryPanel, AppearancePanel, ReaderTtsPanel, ReaderSettingsPanel,
+import { ReaderBottomBar, DirectoryPanel, AppearancePanel,
   ReaderFullDirectoryPage, ReaderFullTtsPage, ReaderFullAppearancePage, ReaderFullSettingsPage, ReaderBookCachePage, ReaderDebugInfoPage,
-  ReaderSearchPanel, ReplacePanel, ReaderAutoScrollPanel, NightToast } from './ReaderOverlayComponents';
+  ReplacePanel, ReaderAutoScrollPanel, NightToast } from './ReaderOverlayComponents';
 import { SourceImportPreviewPage, SourceGroupsPage, SourceDetectPage, SourceDebugPage,
   SourceDebugRunningPage, SourceDebugResultPage, SourceDebugContentLogPage, SourceCodeViewPage, SourceLogsPage,
   SourceDeleteConfirmPage, SourceRuleEditPage, SourceBatchPage } from './LibraryComponents';
@@ -885,18 +885,14 @@ export struct ViewStateRenderer {
       } else {
         ReaderTopArea()
       }
-    } else if (component.type === 'ReaderControlSheet') {
-      ReaderControlSheet()
     } else if (component.type === 'ReaderBottomBar') {
       ReaderBottomBar()
     } else if (component.type === 'NightToast') {
       NightToast()
     } else if (component.type === 'SourceSwitchFlowPage') {
-      // Withdrawn generated state-matrix children are isolated into a zero-size
-      // column so only the live Figma window remains in the presentation path.
-      if (component.children.length > 0) {
-        Column().width(0).height(0)
-      }
+      // Source Switch owns its complete canonical window. Retired generated
+      // state-matrix children are deliberately not consumed; they are not
+      // retained behind a hidden presentation node.
       SourceSwitchFlowPage()
     } else if (component.type === 'SourceImportPreviewPage') {
       SourceImportPreviewPage()
@@ -960,10 +956,6 @@ export struct ViewStateRenderer {
         // The default surface remains the live native appearance panel.
         AppearancePanel()
       }
-    } else if (component.type === 'ReaderTtsPanel') {
-      ReaderTtsPanel()
-    } else if (component.type === 'ReaderSettingsPanel') {
-      ReaderSettingsPanel()
     } else if (component.type === 'ReaderFullDirectoryPage') {
       ReaderFullDirectoryPage()
     } else if (component.type === 'ReaderFullTtsPage') {
@@ -991,8 +983,6 @@ export struct ViewStateRenderer {
       }
     } else if (component.type === 'ReaderDebugInfoPage') {
       ReaderDebugInfoPage()
-    } else if (component.type === 'ReaderSearchPanel') {
-      ReaderSearchPanel()
     } else if (component.type === 'ReplacePanel') {
       if (ReaderCapabilityClosureRouteRegistry.has(this.routeId)) {
         this.renderCapabilityClosureNode(

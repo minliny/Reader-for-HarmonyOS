@@ -10,6 +10,15 @@ const SOURCE_DIR = path.join(READER_UI, 'generated', 'arkts');
 const DEST_DIR = path.join(REPO, 'entry', 'src', 'main', 'ets', 'contract', 'reader_ui');
 const GRAPH_JSON = path.join(READER_UI, 'ui-spec', 'screen-graph.json');
 const VIEW_STATE_FIXTURES = path.join(READER_UI, 'contracts', 'fixtures', 'view-state.fixtures.json');
+const READING_SURFACE_A2_DELTA = path.join(
+  READER_UI,
+  'docs',
+  'design',
+  'handoffs',
+  'reader-runtime',
+  'reading-surface',
+  'A2_CONTRACT_RETIREMENT_DELTA.json',
+);
 const VIEW_STATE_RENDERER = path.join(REPO, 'entry', 'src', 'main', 'ets', 'ui', 'components', 'ViewStateRenderer.ets');
 const COVERAGE_REGISTRY = path.join(REPO, 'entry', 'src', 'main', 'ets', 'ui', 'router', 'ReaderUIScreenGraphCoverage.ets');
 const RETIREMENT_REGISTRY = path.join(REPO, 'entry', 'src', 'main', 'ets', 'ui', 'router', 'ReaderUIScreenGraphRetirementRegistry.ets');
@@ -100,6 +109,9 @@ for (const file of FILES) {
 }
 if (!fs.existsSync(GRAPH_JSON)) throw new Error(`Reader UI screen graph JSON missing: ${GRAPH_JSON}`);
 if (!fs.existsSync(VIEW_STATE_FIXTURES)) throw new Error(`Reader UI ViewState fixtures missing: ${VIEW_STATE_FIXTURES}`);
+if (!fs.existsSync(READING_SURFACE_A2_DELTA)) {
+  throw new Error(`Reader UI reading-surface A2 delta missing: ${READING_SURFACE_A2_DELTA}`);
+}
 
 if (!CHECK) {
   fs.mkdirSync(DEST_DIR, { recursive: true });
@@ -127,6 +139,7 @@ const screenGraphSource = fs.readFileSync(path.join(SOURCE_DIR, 'ScreenGraph.ets
 const graphBytes = fs.readFileSync(GRAPH_JSON);
 const graph = JSON.parse(graphBytes.toString('utf8'));
 const viewStateFixtures = JSON.parse(fs.readFileSync(VIEW_STATE_FIXTURES, 'utf8'));
+const readingSurfaceA2Delta = JSON.parse(fs.readFileSync(READING_SURFACE_A2_DELTA, 'utf8'));
 if (graph.schemaVersion !== '1.2.0') {
   failures.push(`ScreenGraph schemaVersion must be 1.2.0, got ${graph.schemaVersion}`);
 }
@@ -158,6 +171,57 @@ for (const route of graph.routes || []) {
     bindingCount += counts.bindings;
     stateEventEvidenceCount += counts.stateEventEvidence;
   }
+}
+
+const EXPECTED_A2_RETIRED_ROUTE_IDS = [
+  'control-layer-base-v2',
+  'reader-directory-overlay-v2',
+  'reader-appearance-overlay-v2',
+  'reader-tts-overlay-v2',
+  'reader-settings-overlay-v2',
+  'reader-auto-scroll-overlay-v2',
+  'reader-search-overlay-v2',
+  'reader-replace-overlay-v2',
+  'toc-bookmarks',
+  'tts',
+  'reader-appearance',
+  'reader-settings',
+  'content-search',
+];
+if (readingSurfaceA2Delta.kind !== 'A2_CONTRACT_RETIREMENT_DELTA' ||
+  readingSurfaceA2Delta.status !== 'approved-source-retirement' ||
+  readingSurfaceA2Delta.recordId !== 'reader.reading-surface' ||
+  readingSurfaceA2Delta.currentClosure?.readerUiSource?.status !== 'passed') {
+  failures.push('reading-surface A2 source retirement is not approved and source-verified');
+}
+if (!sameStringSet(
+  new Set(readingSurfaceA2Delta.retiredRouteIds || []),
+  new Set(EXPECTED_A2_RETIRED_ROUTE_IDS),
+)) {
+  failures.push('reading-surface A2 delta does not name the exact 13 retired routes');
+}
+const approvedA2Coverage = readingSurfaceA2Delta.coverage;
+const approvedA2CoverageAfter = readingSurfaceA2Delta.coverageAfter;
+if (approvedA2CoverageAfter?.faithfulInstanceFloor !== 272 ||
+  approvedA2CoverageAfter?.partialInstanceCeiling !== 45 ||
+  approvedA2CoverageAfter?.ReaderBase !== 42 ||
+  approvedA2CoverageAfter?.ReaderTopArea !== 38 ||
+  approvedA2CoverageAfter?.ReaderBottomBar !== 3 ||
+  approvedA2CoverageAfter?.TapZones !== 7 ||
+  approvedA2CoverageAfter?.readerBaseEmptySignature !== 19 ||
+  !sameStringSet(
+    new Set(approvedA2CoverageAfter?.readerBasePropKeys || []),
+    new Set([
+      'availability',
+      'coreSupport',
+      'documentKind',
+      'executionOwner',
+      'hostBasis',
+      'surfaceContract',
+      'theme',
+    ]),
+  )) {
+  failures.push('reading-surface A2 approved coverage-after boundary changed');
 }
 
 // Generated route unions are intentionally broader than the current Figma
@@ -419,10 +483,11 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
     failures.push('ReplacePanel canonical actions must remain visibly read-only and fail closed');
   }
   const sourceSwitchBranch = branchBodies.get('SourceSwitchFlowPage') || '';
-  if (!sourceSwitchBranch.includes('if (component.children.length > 0)') ||
-    !sourceSwitchBranch.includes('Column().width(0).height(0)') ||
-    !sourceSwitchBranch.includes('SourceSwitchFlowPage()')) {
-    failures.push('SourceSwitchFlowPage must isolate withdrawn generated state-matrix children and retain only the live Figma window');
+  if (!sourceSwitchBranch.includes('SourceSwitchFlowPage()') ||
+    sourceSwitchBranch.includes('component.children') ||
+    sourceSwitchBranch.includes('width(0)') ||
+    sourceSwitchBranch.includes('height(0)')) {
+    failures.push('SourceSwitchFlowPage must render only the canonical window; retired children cannot survive behind a hidden branch');
   }
   if (rendererSource.includes('renderReadOnlySourceSwitchChildren') ||
     rendererSource.includes('renderReadOnlySourceSwitchState')) {
@@ -1380,10 +1445,20 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
   // These remain exact contract-owned state leaves, but current Figma has no
   // admitted generic state master. Keep their schema/evidence frozen while
   // proving they cannot be promoted into an invented native state screen.
+  const approvedStateDenominators = approvedA2Coverage?.stateComponentDenominators;
   const expectedFigmaUnboundStateEvidence = new Map([
-    ['Loading', { count: 9, evidence: 3 }],
-    ['ErrorState', { count: 5, evidence: 5 }],
-    ['Offline', { count: 4, evidence: 2 }],
+    ['Loading', {
+      count: approvedStateDenominators?.Loading?.instanceCount?.after,
+      evidence: approvedStateDenominators?.Loading?.stateEventEvidence?.after,
+    }],
+    ['ErrorState', {
+      count: approvedStateDenominators?.ErrorState?.instanceCount?.after,
+      evidence: approvedStateDenominators?.ErrorState?.stateEventEvidence?.after,
+    }],
+    ['Offline', {
+      count: approvedStateDenominators?.Offline?.instanceCount?.after,
+      evidence: approvedStateDenominators?.Offline?.stateEventEvidence?.after,
+    }],
   ]);
   const allowedStatePrimitiveProps = new Set([
     'title', 'label', 'message', 'uiEvent', 'uiEventPayload', 'uiEventTrigger',
@@ -1419,11 +1494,24 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
   // ScreenGraph 1.2 makes composite ownership explicit. These four types are
   // native composites: their children are declarative anatomy/action metadata,
   // never a request for the generic renderer to instantiate a second tree.
+  const approvedHostCompositeCounts = approvedA2Coverage?.hostCompositeInstanceCounts;
   const expectedHostCompositeCatalog = new Map([
-    ['ReaderBase', { count: 49, authorities: ['core', 'reader-ui-runtime', 'host-store', 'host-layout'] }],
-    ['ReaderTopArea', { count: 48, authorities: ['core', 'reader-ui-runtime', 'host-store'] }],
-    ['ReaderBottomBar', { count: 11, authorities: ['reader-ui-runtime', 'host-store'] }],
-    ['TapZones', { count: 7, authorities: ['reader-ui-runtime', 'host-layout'] }],
+    ['ReaderBase', {
+      count: approvedHostCompositeCounts?.ReaderBase?.after,
+      authorities: ['core', 'reader-ui-runtime', 'host-store', 'host-layout'],
+    }],
+    ['ReaderTopArea', {
+      count: approvedHostCompositeCounts?.ReaderTopArea?.after,
+      authorities: ['core', 'reader-ui-runtime', 'host-store'],
+    }],
+    ['ReaderBottomBar', {
+      count: approvedHostCompositeCounts?.ReaderBottomBar?.after,
+      authorities: ['reader-ui-runtime', 'host-store'],
+    }],
+    ['TapZones', {
+      count: approvedHostCompositeCounts?.TapZones?.after,
+      authorities: ['reader-ui-runtime', 'host-layout'],
+    }],
   ]);
   const hostCompositeCatalog = (graph.componentCatalog || [])
     .filter((entry) => entry.status === 'referenced' && entry.compositionMode === 'host-composite');
@@ -1459,7 +1547,7 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
     readerBaseSignatures.set(signature, (readerBaseSignatures.get(signature) || 0) + 1);
   }
   const expectedReaderBaseSignatures = new Map([
-    ['', 26],
+    ['', approvedA2Coverage?.readerBaseOwnership?.emptyPropsSignatureCount?.after],
     ['Content+TapZones', 2],
     ['ReadingBackgroundLayer', 13],
     ['ReadingBackgroundLayer+ReadingTextFlow+ReadingInfoLayer', 3],
@@ -1505,7 +1593,7 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
     tapZoneTargetCounts.set(binding.target, (tapZoneTargetCounts.get(binding.target) || 0) + 1);
   }
   const expectedReaderBasePropKeys = new Set([
-    'availability', 'coreSupport', 'documentKind', 'executionOwner', 'hostBasis', 'theme',
+    ...(approvedA2CoverageAfter?.readerBasePropKeys || []),
   ]);
   const validPlannedDocumentOpen = (instance) => {
     if ((instance.bindings || []).length === 0) return instance.props?.documentKind === undefined;
@@ -1524,7 +1612,8 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
       payloadKeys[1] === expected.positionKey && binding.payload.documentId === expected.documentId &&
       binding.payload[expected.positionKey] === expected.position;
   };
-  if (!partialSet.has('ReaderBase') || readerBaseInstances.length !== 49 ||
+  if (!partialSet.has('ReaderBase') ||
+    readerBaseInstances.length !== approvedA2Coverage?.readerBaseOwnership?.instanceCount?.after ||
     !sameStringSet(new Set(readerBaseSignatures.keys()), new Set(expectedReaderBaseSignatures.keys())) ||
     [...expectedReaderBaseSignatures].some(([signature, count]) => readerBaseSignatures.get(signature) !== count) ||
     readerBaseOwnBindings.length !== 2 || readerBaseOwnStateEventEvidenceCount !== 0 ||
@@ -1647,12 +1736,11 @@ for (const key of Object.keys(actual)) {
 }
 
 // Coverage quality baseline — prevents silent faithful→partial regression.
-// Only an explicitly approved Design Delta may update these numbers.  A green
-// screen-graph gate must never imply that quality held; it only proves
-// structural completeness.  This baseline closes that gap.
+// The source-owned A2 retirement delta is the only authority for this
+// intentional denominator decrease. Any unrelated shrink still fails closed.
 const COVERAGE_QUALITY_BASELINE = {
-  faithfulInstanceFloor: 285,
-  partialInstanceCeiling: 52,
+  faithfulInstanceFloor: approvedA2CoverageAfter?.faithfulInstanceFloor,
+  partialInstanceCeiling: approvedA2CoverageAfter?.partialInstanceCeiling,
 };
 if (faithfulInstanceCount < COVERAGE_QUALITY_BASELINE.faithfulInstanceFloor) {
   failures.push(

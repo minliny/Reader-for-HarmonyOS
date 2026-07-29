@@ -103,6 +103,8 @@ const overlayHost = source('entry/src/main/ets/ui/slots/OverlayHost.ets');
 const stateHost = source('entry/src/main/ets/ui/slots/StateHost.ets');
 const readerComponents = source('entry/src/main/ets/ui/components/ReaderComponents.ets');
 const readerOverlays = source('entry/src/main/ets/ui/components/ReaderOverlayComponents.ets');
+const readerScreenGraphCoverage =
+  source('entry/src/main/ets/ui/router/ReaderUIScreenGraphCoverage.ets');
 const readerReducer = source('entry/src/main/ets/ui/store/ReaderReducer.ets');
 const readerUiStore = source('entry/src/main/ets/ui/store/ReaderUiStore.ets');
 const ttsHost = source('entry/src/main/ets/host/adapters/TtsHostAdapter.ets');
@@ -331,6 +333,78 @@ test('physically retired Reader routes cannot survive in native generated contra
     'RouteRenderer must require implementation readiness and a source-generated Reader shell');
   assert.ok(routeRenderer.includes("this.isDisplayedRouteImplementationReady() && this.shellOfDisplayedRoute() === 'FlowShell'"),
     'RouteRenderer must require implementation readiness and a source-generated Flow shell');
+});
+
+test('reading-surface A2 removes retired dispatch paths while preserving shared direct consumers', () => {
+  const dispatchStart = readerScreenGraphCoverage.indexOf(
+    'export const READER_SCREEN_GRAPH_REFERENCED_DISPATCH_TYPES',
+  );
+  const dispatchEnd = readerScreenGraphCoverage.indexOf('];', dispatchStart);
+  assert.ok(dispatchStart >= 0 && dispatchEnd > dispatchStart,
+    'missing Reader Screen Graph referenced dispatch registry');
+  const dispatchTypes = readerScreenGraphCoverage.slice(dispatchStart, dispatchEnd);
+
+  const retiredDispatchTypes = [
+    'ReaderControlSheet',
+    'ReaderDirectoryPanel',
+    'ReaderAppearancePanel',
+    'ReaderTtsPanel',
+    'ReaderSettingsPanel',
+    'ReaderSearchPanel',
+    'ReaderReplacePanel',
+  ];
+  for (const type of retiredDispatchTypes) {
+    assert.equal(viewStateRenderer.includes(`component.type === '${type}'`), false,
+      `${type} is explicit-gap and must not remain dispatchable`);
+    assert.equal(dispatchTypes.includes(`'${type}'`), false,
+      `${type} must not remain in the referenced dispatch registry`);
+  }
+
+  const sourceSwitchStart = viewStateRenderer.indexOf("component.type === 'SourceSwitchFlowPage'");
+  const sourceSwitchEnd = viewStateRenderer.indexOf('} else if', sourceSwitchStart + 1);
+  assert.ok(sourceSwitchStart >= 0 && sourceSwitchEnd > sourceSwitchStart,
+    'missing SourceSwitchFlowPage dispatch branch');
+  const sourceSwitchBranch = viewStateRenderer.slice(sourceSwitchStart, sourceSwitchEnd);
+  assert.ok(sourceSwitchBranch.includes('SourceSwitchFlowPage()'),
+    'Source Switch must retain its canonical direct consumer');
+  assert.equal(sourceSwitchBranch.includes('component.children'), false,
+    'retired Source Switch state-matrix children must not be consumed');
+  assert.equal(sourceSwitchBranch.includes('width(0)'), false,
+    'retired Source Switch children must not survive behind a zero-width node');
+  assert.equal(sourceSwitchBranch.includes('height(0)'), false,
+    'retired Source Switch children must not survive behind a zero-height node');
+
+  assert.ok(readerOverlays.includes('export struct ReaderControlSheet'),
+    'ReaderControlSheet remains a legal direct Source Switch dependency and must not be deleted');
+  assert.ok(readerOverlays.includes('export struct ReaderAutoScrollPanel'),
+    'ReaderAutoScrollPanel remains the canonical auto-page surface');
+  assert.ok(viewStateRenderer.includes("component.type === 'ReaderAutoScrollPanel'"),
+    'the referenced auto-page panel must remain dispatchable');
+
+  const readerBase = structSource(readerComponents, 'ReaderBase');
+  for (const retiredType of retiredDispatchTypes) {
+    assert.equal(readerBase.includes(`${retiredType}(`), false,
+      `ReaderBase must not compose retired ${retiredType}`);
+  }
+
+  const retiredMotionOwners = [
+    [
+      'ReaderControlMotionCoordinator',
+      path.join(ETS, 'ui/motion/ReaderControlMotionCoordinator.ets'),
+    ],
+    [
+      'ReaderDirectoryToTtsMotionCoordinator',
+      path.join(ETS, 'ui/motion/ReaderDirectoryToTtsMotionCoordinator.ets'),
+    ],
+  ];
+  for (const [symbol, definitionPath] of retiredMotionOwners) {
+    const productionReferences = etsFiles()
+      .filter((file) => file !== definitionPath)
+      .filter((file) => fs.readFileSync(file, 'utf8').includes(symbol))
+      .map((file) => path.relative(REPO, file));
+    assert.deepEqual(productionReferences, [],
+      `${symbol} must remain unreachable from production ArkTS: ${productionReferences.join(', ')}`);
+  }
 });
 
 test('candidate-backport page families fail closed at every active renderer execution gate', () => {
