@@ -7,9 +7,11 @@ import {
   GENERATED_RUNTIME_ACTIONS,
   ReaderUIAsyncTransition,
   ReaderUIBookOpenLayout,
+  ReaderUICanonicalLocation,
   ReaderUIEffect,
   ReaderUIJSONPayload,
   ReaderUIJSONResult,
+  ReaderUILocationReflow,
   ReaderUIPageLayout,
   ReaderUIPlaybackTransition,
   ReaderUIRuntime,
@@ -17,7 +19,6 @@ import {
   ReaderUITransition,
 } from 'reader_ui_runtime';
 import { ReaderUiState, UiEvent, isLocalBookSourceId } from './ReaderUiState';
-import { isReaderModuleOverlayRoute } from './ReaderDirectoryPilotProjection';
 import {
   ReaderBookOpenCoreGateway,
   ReaderBookOpenEffectExecutor,
@@ -111,7 +112,6 @@ export const READER_UI_SHADOW_COVERED_EVENTS: string[] = [
   'sync.resolve',
 ];
 
-const DIRECTORY_OVERLAY_ROUTE: string = 'reader-directory-overlay-v2';
 
 export interface ReaderUIRuntimeShadowMetrics {
   covered: number;
@@ -153,6 +153,7 @@ export abstract class ReaderUIRuntimeDriver {
   // Book.open is Pilot in production. Minimal test drivers that exercise only
   // other cohorts do not have to implement the serial transaction API.
   acceptBookOpenResult(_coreType: string, _correlationId: string, _chapterCount?: number,
+    _canonicalLocation?: ReaderUICanonicalLocation, _reflow?: ReaderUILocationReflow,
     _error?: string): ReaderUIAsyncTransition {
     throw new Error('ReaderUIRuntimeDriver does not implement book.open results');
   }
@@ -174,8 +175,8 @@ export abstract class ReaderUIRuntimeDriver {
     throw new Error('ReaderUIRuntimeDriver does not implement page layout');
   }
 
-  acceptPageLocationResult(_correlationId: string, _canonicalLocation?: string,
-    _pageIndex?: number, _error?: string): ReaderUIPlaybackTransition {
+  acceptPageLocationResult(_correlationId: string, _canonicalLocation?: ReaderUICanonicalLocation,
+    _reflow?: ReaderUILocationReflow, _error?: string): ReaderUIPlaybackTransition {
     throw new Error('ReaderUIRuntimeDriver does not implement page location results');
   }
 
@@ -255,8 +256,11 @@ class GeneratedReaderUIRuntimeDriver extends ReaderUIRuntimeDriver {
   }
 
   acceptBookOpenResult(coreType: string, correlationId: string, chapterCount?: number,
+    canonicalLocation?: ReaderUICanonicalLocation, reflow?: ReaderUILocationReflow,
     error?: string): ReaderUIAsyncTransition {
-    return this.runtime.acceptBookOpenResult(coreType, correlationId, chapterCount, error);
+    return this.runtime.acceptBookOpenResult(
+      coreType, correlationId, chapterCount, canonicalLocation, reflow, error,
+    );
   }
 
 
@@ -277,9 +281,9 @@ class GeneratedReaderUIRuntimeDriver extends ReaderUIRuntimeDriver {
     return this.runtime.providePageLayout(correlationId, layout);
   }
 
-  acceptPageLocationResult(correlationId: string, canonicalLocation?: string,
-    pageIndex?: number, error?: string): ReaderUIPlaybackTransition {
-    return this.runtime.acceptPageLocationResult(correlationId, canonicalLocation, pageIndex, error);
+  acceptPageLocationResult(correlationId: string, canonicalLocation?: ReaderUICanonicalLocation,
+    reflow?: ReaderUILocationReflow, error?: string): ReaderUIPlaybackTransition {
+    return this.runtime.acceptPageLocationResult(correlationId, canonicalLocation, reflow, error);
   }
 
   acceptPageLocationJSONResult(correlationId: string,
@@ -360,8 +364,11 @@ class RuntimeDriverBookOpenGateway implements ReaderBookOpenRuntimeGateway {
   }
 
   acceptBookOpenResult(coreType: string, correlationId: string, chapterCount?: number,
+    canonicalLocation?: ReaderUICanonicalLocation, reflow?: ReaderUILocationReflow,
     error?: string): ReaderUIAsyncTransition {
-    return this.driverReader().acceptBookOpenResult(coreType, correlationId, chapterCount, error);
+    return this.driverReader().acceptBookOpenResult(
+      coreType, correlationId, chapterCount, canonicalLocation, reflow, error,
+    );
   }
 
   acceptBookOpenJSONResult(coreType: string, correlationId: string,
@@ -389,9 +396,9 @@ class RuntimeDriverPlaybackGateway implements ReaderPlaybackRuntimeGateway {
   providePageLayout(correlationId: string, layout: ReaderUIPageLayout): ReaderUIPlaybackTransition {
     return this.driverReader().providePageLayout(correlationId, layout);
   }
-  acceptPageLocationResult(correlationId: string, canonicalLocation?: string,
-    pageIndex?: number, error?: string): ReaderUIPlaybackTransition {
-    return this.driverReader().acceptPageLocationResult(correlationId, canonicalLocation, pageIndex, error);
+  acceptPageLocationResult(correlationId: string, canonicalLocation?: ReaderUICanonicalLocation,
+    reflow?: ReaderUILocationReflow, error?: string): ReaderUIPlaybackTransition {
+    return this.driverReader().acceptPageLocationResult(correlationId, canonicalLocation, reflow, error);
   }
   acceptPageLocationJSONResult(correlationId: string,
     result: ReaderUIJSONResult): ReaderUIPlaybackTransition {
@@ -585,19 +592,13 @@ function optionalValue(value?: string): string {
 }
 
 function semanticOverlay(state: ReaderUiState): string | undefined {
-  if (state.routeId === DIRECTORY_OVERLAY_ROUTE) return 'directory';
   return state.overlay.length > 0 ? state.overlay : undefined;
 }
 
-// Native overlay routes occupy the top stack entry, while ReaderUIRuntime keeps
-// the underlying route current and records the overlay semantically.
+// Reader modules are semantic overlays. Native and ReaderUIRuntime therefore
+// keep the same route identity and route stack while a module is visible.
 function projectNativeState(state: ReaderUiState): ReaderUIState {
-  let currentIndex: number = state.stack.length - 1;
-  let routeId: string = state.routeId;
-  if (isReaderModuleOverlayRoute(state.routeId) && currentIndex > 0) {
-    currentIndex -= 1;
-    routeId = state.stack[currentIndex].id;
-  }
+  const currentIndex: number = state.stack.length - 1;
 
   const routeStack: string[] = [];
   for (let index = 0; index < currentIndex; index += 1) {
@@ -605,7 +606,7 @@ function projectNativeState(state: ReaderUiState): ReaderUIState {
   }
 
   return {
-    routeId: routeId,
+    routeId: state.routeId,
     routeStack: routeStack,
     tab: state.tab,
     overlay: semanticOverlay(state),
@@ -1781,7 +1782,7 @@ export class ReaderUIRuntimeShadowCoordinator {
     if (normalized === 'reader-module-switch' && event.module === 'directory') {
       return 'reader.directory.open';
     }
-    if (normalized === 'route-pop' && nativeBefore.routeId === DIRECTORY_OVERLAY_ROUTE &&
+    if (normalized === 'route-pop' && nativeBefore.overlay === 'directory' &&
       this.runtime.state.overlay === 'directory') {
       return 'reader.directory.close';
     }

@@ -3,9 +3,11 @@
 // semantic state machine; this file binds typed Core chapter data, executes
 // each emitted effect exactly once, and rejects stale platform callbacks.
 import {
+  ReaderUICanonicalLocation,
   ReaderUIEffect,
   ReaderUIJSONPayload,
   ReaderUIJSONResult,
+  ReaderUILocationReflow,
   ReaderUIPageLayout,
   ReaderUIPlaybackTransition,
   ReaderUIState,
@@ -28,6 +30,7 @@ import {
   ReaderPlaybackQueueSnapshot,
   ReaderPlaybackTtsPlan,
 } from './ReaderPlaybackDomainMapper';
+import { ReaderBookOpenDomainMapper } from './ReaderBookOpenDomainMapper';
 import {
   CoreReaderCanonicalLocation,
   ReaderUiState,
@@ -97,8 +100,8 @@ export class CoreRuntimeReaderPlaybackGateway implements ReaderPlaybackCoreGatew
 export interface ReaderPlaybackRuntimeGateway {
   currentState(): ReaderUIState;
   providePageLayout(correlationId: string, layout: ReaderUIPageLayout): ReaderUIPlaybackTransition;
-  acceptPageLocationResult(correlationId: string, canonicalLocation?: string,
-    pageIndex?: number, error?: string): ReaderUIPlaybackTransition;
+  acceptPageLocationResult(correlationId: string, canonicalLocation?: ReaderUICanonicalLocation,
+    reflow?: ReaderUILocationReflow, error?: string): ReaderUIPlaybackTransition;
   acceptPageLocationJSONResult(correlationId: string,
     result: ReaderUIJSONResult): ReaderUIPlaybackTransition;
   acceptPageProgressResult(correlationId: string, stored?: boolean,
@@ -507,15 +510,15 @@ export class ReaderPlaybackEffectExecutor {
     context.inFlight = undefined;
     try {
       const location = ReaderPlaybackDomainMapper.mapLocation(data, context.chapter, layout.chapterOffset);
-      const transition = this.runtime.acceptPageLocationJSONResult(context.correlationId, {
-        'canonicalLocation': location.locationRevision,
-        'pageIndex': layout.targetPageIndex,
-      });
+      const transition = this.runtime.acceptPageLocationJSONResult(
+        context.correlationId,
+        ReaderBookOpenDomainMapper.runtimeLocationResult(location),
+      );
       if (!transition.accepted) {
         this.ignoredLateCallbacks += 1;
         return;
       }
-      context.pendingCanonicalLocation = location;
+      context.pendingCanonicalLocation = location.canonicalLocation;
       this.applyTransitionState(transition);
       await this.executeEffects(transition.effects);
     } catch (error) {

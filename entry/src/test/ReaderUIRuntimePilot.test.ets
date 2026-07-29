@@ -3,7 +3,16 @@
 // transition with HarmonyOS' current native reducer wiring; the shared runtime
 // is not yet used as the production store.
 import { describe, it, expect } from '@ohos/hypium';
-import { ReaderUIBookOpenLayout, ReaderUIJSONPayload, ReaderUIPlaybackTransition, ReaderUIRuntime, ReaderUIState, ReaderUITransition } from 'reader_ui_runtime';
+import {
+  ReaderUIBookOpenLayout,
+  ReaderUICanonicalLocation,
+  ReaderUIJSONPayload,
+  ReaderUILocationReflow,
+  ReaderUIPlaybackTransition,
+  ReaderUIRuntime,
+  ReaderUIState,
+  ReaderUITransition,
+} from 'reader_ui_runtime';
 import { DemoUiState } from '../main/ets/ui/fixtures/DemoUiState';
 import { ReaderReducer } from '../main/ets/ui/store/ReaderReducer';
 
@@ -78,12 +87,29 @@ export default function ReaderUIRuntimePilotTests(): void {
       const located = runtime.provideBookOpenLayout('book-open-1', layout);
       expect(located.accepted).assertTrue();
       expect(located.effects[0].type).assertEqual('reader.location.resolve');
-      expect(located.effects[0].payload['viewportWidth']).assertEqual('390');
-
-      const complete = runtime.acceptBookOpenResult('reader.location.resolve', 'book-open-1');
+      const resolvePayload: ReaderUIJSONPayload = located.effects[0].jsonPayload as ReaderUIJSONPayload;
+      expect(resolvePayload['bookId'] as string).assertEqual('/book/101');
+      const canonicalLocation: ReaderUICanonicalLocation = {
+        bookId: '/book/101',
+        chapterIndex: 1,
+        chapterOffset: 0,
+        chapterProgress: 0,
+        locationRevision: 'reader-location-v1:/book/101:1:0',
+      };
+      const reflow: ReaderUILocationReflow = {
+        strategy: 'offsetAnchor',
+        primaryAnchor: 'chapterOffset',
+        fallbackAnchor: 'chapterProgress',
+        layoutIndependent: true,
+      };
+      const complete = runtime.acceptBookOpenResult(
+        'reader.location.resolve', 'book-open-1', undefined, canonicalLocation, reflow,
+      );
       expect(complete.accepted).assertTrue();
       expect(complete.state.loading).assertFalse();
-      const stale = runtime.acceptBookOpenResult('reader.location.resolve', 'book-open-1');
+      const stale = runtime.acceptBookOpenResult(
+        'reader.location.resolve', 'book-open-1', undefined, canonicalLocation, reflow,
+      );
       expect(stale.accepted).assertFalse();
     });
 
@@ -91,14 +117,15 @@ export default function ReaderUIRuntimePilotTests(): void {
       const runtime = new ReaderUIRuntime();
       const transition = runtime.dispatch('reader.directory.open');
 
-      const controlLayer = ReaderReducer.push(DemoUiState.initial(), 'control-layer-base-v2');
-      const nativeOverlay = ReaderReducer.reduce(controlLayer, {
-        type: 'reader-module-switch',
-        module: 'directory',
-      });
+      const nativeBase = DemoUiState.initial();
+      const nativeOverlay = ReaderReducer.reduce(
+        nativeBase, { type: 'set-overlay', overlay: 'directory' },
+      );
 
       expect(transition.state.overlay).assertEqual('directory');
-      expect(nativeOverlay.routeId).assertEqual('control-layer-base-v2');
+      expect(nativeOverlay.routeId).assertEqual(nativeBase.routeId);
+      expect(nativeOverlay.stack.length).assertEqual(nativeBase.stack.length);
+      expect(nativeOverlay.overlay).assertEqual('directory');
       expect(transition.effects.length).assertEqual(0);
     });
 

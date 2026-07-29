@@ -15,10 +15,10 @@ test('Slice 11 Reader bottom bar keeps canonical order and commits modules fail-
   const reducer = await source('entry/src/main/ets/ui/store/ReaderReducer.ets');
   const bottom = overlay.slice(overlay.indexOf('export struct ReaderBottomBar'), overlay.indexOf('// ── Panel shell'));
   const ordered = [
-    "['directory', '目录', 'reader-directory-overlay-v2']",
-    "['tts', '朗读', 'reader-tts-overlay-v2']",
-    "['appearance', '界面', 'reader-appearance-overlay-v2']",
-    "['settings', '设置', 'reader-settings-overlay-v2']",
+    "['directory', '目录']",
+    "['tts', '朗读']",
+    "['appearance', '界面']",
+    "['settings', '设置']",
   ];
   let cursor = -1;
   for (const marker of ordered) {
@@ -26,12 +26,23 @@ test('Slice 11 Reader bottom bar keeps canonical order and commits modules fail-
     assert.ok(index > cursor, `missing or reordered bottom-bar item: ${marker}`);
     cursor = index;
   }
-  assert.equal(bottom.includes("MotionAdapter.apply('reader.module.switch'"), false,
-    'partial Figma module-switch evidence must not become a generic local transition');
+  assert.ok(bottom.includes("MotionAdapter.apply('reader.module.switch'"),
+    'the admitted module nav keeps its dedicated motion contract');
   assert.ok(bottom.includes("type: 'reader.directory.open'"));
   assert.ok(bottom.includes("type: 'reader-module-switch', module: kind"));
-  assert.ok(reducer.includes('isReaderModuleOverlay(state.stack[state.stack.length - 1].id)'));
-  assert.ok(reducer.includes('return ReaderReducer.replace(state, targetId)'));
+  assert.ok(reducer.includes("state.routeId !== 'immersive-reading'"));
+  assert.ok(reducer.includes('isReaderControlOverlay(state.overlay)'));
+  assert.ok(reducer.includes('const targetOverlay = moduleOverlay(module)'));
+  assert.ok(reducer.includes('state.overlay === targetOverlay'));
+  for (const retired of [
+    'reader-directory-overlay-v2',
+    'reader-tts-overlay-v2',
+    'reader-appearance-overlay-v2',
+    'reader-settings-overlay-v2',
+  ]) {
+    assert.equal(bottom.includes(retired), false, `bottom bar must not recreate retired route ${retired}`);
+    assert.equal(reducer.includes(retired), false, `reducer must not recreate retired route ${retired}`);
+  }
 });
 
 test('Slice 11 language, online TTS region/model, dictionary and large-model controls fail closed visibly', async () => {
@@ -41,55 +52,54 @@ test('Slice 11 language, online TTS region/model, dictionary and large-model con
   for (const id of ['settings.app-language', 'tts.locale-region-model', 'rules.dictionary', 'ai.large-model']) {
     assert.match(policy, new RegExp(`id: '${id.replaceAll('.', '\\.')}'[\\s\\S]*ContractMissingFailClosed`));
   }
-  for (const marker of [
-    "title: '语言'",
-    "title: '词典规则'",
-    "title: '大模型服务'",
-    "value: '合同缺失'",
-  ]) assert.ok(settings.includes(marker), `missing fail-closed settings marker: ${marker}`);
-  for (const marker of ["title: '在线语音区域'", "title: '在线语音语言'", "title: '在线语音模型'"]) {
-    assert.ok(overlay.includes(marker), `missing fail-closed TTS marker: ${marker}`);
-  }
-  assert.ok(overlay.includes("ReaderFullBlock({ title: '在线语音', meta: 'HttpTTS 合同与凭据/播放闭环未接入' })"));
+  assert.ok(settings.includes("title: '语言'"),
+    'the current Figma Settings row remains visible as a static select');
+  assert.ok(settings.includes("FigmaSettingsSelect({ value: '简体中文'"));
   assert.equal(settings.includes("settingsKey: 'appLanguage'"), false);
   assert.equal(settings.includes("settingsKey: 'dictionary'"), false);
   assert.equal(settings.includes("settingsKey: 'largeModel'"), false);
+  assert.equal(settings.includes("title: '词典规则'"), false,
+    'a missing dictionary contract must not invent a settings row');
+  assert.equal(settings.includes("title: '大模型服务'"), false,
+    'a missing AI contract must not invent a settings row');
+  for (const marker of ['在线语音区域', '在线语音语言', '在线语音模型']) {
+    assert.equal(overlay.includes(marker), false,
+      `missing TTS contract must remain absent instead of drawing ${marker}`);
+  }
 });
 
-test('Slice 11 local-book style is reducer-backed and derives only from Core sourceId=local', async () => {
+test('Slice 11 local-book semantics derive only from Core sourceId=local without inventing a badge', async () => {
   const state = await source('entry/src/main/ets/ui/store/ReaderUiState.ets');
-  const fixture = await source('entry/src/main/ets/ui/fixtures/DemoUiState.ets');
   const reducer = await source('entry/src/main/ets/ui/store/ReaderReducer.ets');
-  const store = await source('entry/src/main/ets/ui/store/ReaderUiStore.ets');
-  const settings = await source('entry/src/main/ets/ui/components/SettingsComponents.ets');
+  const effects = await source('entry/src/main/ets/ui/store/ReaderEffects.ets');
   const bookshelf = await source('entry/src/main/ets/ui/components/BookshelfComponents.ets');
-  assert.ok(state.includes("| 'showLocalBookBadge';"));
-  assert.ok(fixture.includes('showLocalBookBadge: true'));
-  assert.ok(reducer.includes("case 'showLocalBookBadge':"));
-  assert.ok(store.includes("reader.settingsToggles.showLocalBookBadge"));
-  assert.ok(settings.includes("title: '本地书标识'"));
-  assert.ok(settings.includes("settingsKey: 'showLocalBookBadge'"));
-  assert.ok(bookshelf.includes("this.sourceId === 'local'"));
-  assert.ok(bookshelf.includes("this.coreContinueBook()?.sourceId === 'local'"));
-  assert.ok(bookshelf.includes("Text('本地')"));
+  assert.ok(state.includes('export function isLocalBookSourceId'));
+  assert.ok(state.includes("return (sourceId ?? '').trim() === 'local'"));
+  assert.ok(reducer.includes('isLocalBookSourceId(state.currentBook?.sourceId)'));
+  assert.ok(effects.includes('isLocalBookSourceId(sourceId)'));
+  assert.equal(bookshelf.includes("Text('本地')"), false,
+    'the current Figma bookshelf does not define a local-book badge');
   for (const forbidden of ['bookId.includes(', 'title.includes(', 'coverUrl.includes(']) {
-    assert.equal(bookshelf.includes(`${forbidden}'local'`), false, `local style must not infer from ${forbidden}`);
+    assert.equal(
+      (state + reducer + effects + bookshelf).includes(`${forbidden}'local'`),
+      false,
+      `local-book behavior must not infer from ${forbidden}`,
+    );
   }
 });
 
 test('Slice 11 WebDAV shares the Figma canonical form with Sync Backup and fences insecure or stale operations', async () => {
   const structural = await source('entry/src/main/ets/ui/components/StructuralPageComponents.ets');
-  const figmaForm = await source('entry/src/main/ets/ui/components/FigmaWebDavConfigForm.ets');
   const reducer = await source('entry/src/main/ets/ui/store/ReaderReducer.ets');
   const effects = await source('entry/src/main/ets/ui/store/ReaderEffects.ets');
   const credentials = await source('entry/src/main/ets/host/adapters/CredentialHostAdapter.ets');
   const webdavHost = await source('entry/src/main/ets/host/adapters/WebDavHostAdapter.ets');
   const remote = structural.slice(structural.indexOf('export struct RemoteWebDavBooksPage'), structural.indexOf('export struct RssDetailPage'));
   assert.ok(structural.includes("if (this.routeId === 'webdav-config')"));
-  assert.ok(structural.includes('FigmaWebDavConfigForm()'));
-  assert.ok(figmaForm.includes("password ? InputType.Password : InputType.Normal"));
-  assert.ok(figmaForm.includes("ReaderUiStore.dispatch({ type: 'webdav-test' })"));
-  assert.ok(figmaForm.includes("ReaderUiStore.dispatch({ type: 'webdav-save' })"));
+  assert.ok(structural.includes('WebDavConfigSection()'));
+  assert.ok(structural.includes("this.field === 'password' ? InputType.Password : InputType.Normal"));
+  assert.ok(structural.includes("ReaderUiStore.dispatch({ type: 'webdav-test' })"));
+  assert.ok(structural.includes("ReaderUiStore.dispatch({ type: 'webdav-save' })"));
   assert.ok(remote.includes('不提供按书列举或下载协议'));
   assert.equal(remote.includes('ForEach('), false);
   assert.ok(reducer.includes('static requestWebdavTest'));

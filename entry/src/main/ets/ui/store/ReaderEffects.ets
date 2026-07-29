@@ -17,11 +17,11 @@
 // (e.g. during first UI build before EntryAbility.init). We guard with
 // try/catch and the promise rejects — the caller surfaces an error state and
 // the user can retry once CoreRuntime is ready.
-import { ReaderUiState, UiEvent, SearchResultEntry, BookDetail, CoreSourceEntry, CoreSourceCheckResult, CoreSourceDebugResult, CoreSourceDebugStage, CoreSourceDebugLog, CoreContentSearchResult, CoreBookmark, CoreDiscoverKind, CoreDiscoverBook, ReplaceRule, CoreBookshelfBook, CoreBookGroup, CoreRssSubscription, CoreRssItem, ChapterTocEntry, CoreStorageBackupInfo, CoreStorageBackupHistoryEntry, CoreReaderCanonicalLocation, ReaderContentIdentity, LocalImportDialogResult, BookshelfSelectionTarget, BookshelfRemovalReceipt, isLocalBookSourceId } from './ReaderUiState';
+import { ReaderUiState, UiEvent, SearchResultEntry, BookDetail, CoreSourceEntry, CoreSourceCheckResult, CoreSourceDebugResult, CoreSourceDebugStage, CoreSourceDebugLog, CoreContentSearchResult, CoreBookmark, CoreDiscoverKind, CoreDiscoverBook, ReplaceRule, CoreBookshelfBook, CoreBookGroup, CoreRssSubscription, CoreRssItem, ChapterTocEntry, CoreStorageBackupInfo, CoreStorageBackupHistoryEntry, CoreReaderCanonicalLocation, ReaderContentIdentity, CANONICAL_RESOLVER_VERSION, LocalImportDialogResult, BookshelfSelectionTarget, BookshelfRemovalReceipt, isLocalBookSourceId } from './ReaderUiState';
 import { ReaderUiStore } from './ReaderUiStore';
 import { CoreStorageBackupHistory } from './CoreStorageBackupHistory';
 import { RouteTable } from '../../contract/generated/RouteTable';
-import { CoreRuntime, CoreBookmarkCreateInput, LocalBookParseOptions, CoreSourceDebugRunProjection } from '../../bridge/CoreRuntime';
+import { CoreRuntime, CoreBookmarkCreateInput, LocalBookParseOptions, CoreSourceDebugRunProjection, ReadingProgressCoreRuntime } from '../../bridge/CoreRuntime';
 import { HostHttpRequest, HostShareInvokeRequest } from '../../host/types/HostRequest';
 import type { JsonObject } from '../../bridge/core/sdk/reader_core';
 import window from '@ohos.window';
@@ -80,10 +80,15 @@ interface RemoteChapterLoadOptions {
   chapterNavigationRequestId?: number;
 }
 
+// The narrow runtime view the drain uses (`ReadingProgressCoreRuntime`) is
+// declared on CoreRuntime itself in bridge/CoreRuntime.ets, and imported below;
+// keeping it there avoids a reverse import from CoreRuntime back into the store
+// while letting ArkTS nominal typing admit both CoreRuntime and a test mock.
+
 // Immutable snapshot queued by the real reader surface.  Keeping the Core
 // identity with the measured anchor prevents a chapter change from relabeling
 // an in-flight write for the chapter the reader has just left.
-interface ReadingProgressSnapshot {
+export interface ReadingProgressSnapshot {
   key: string;
   sessionEpoch: number;
   bookId: string;
@@ -212,6 +217,61 @@ export class ReaderEffects {
   // epoch lets that exit invalidate delayed layout anchors without cancelling
   // the already-confirmed durable write that made the exit admissible.
   private static readingSessionEpoch: number = 1;
+  // Test seam: when non-null, drainReadingProgressQueue resolves Core via this
+  // provider instead of CoreRuntime.get(), so async race tests can drive a
+  // controllable-delay mock. Production leaves this null. The narrow runtime
+  // interface lets a test mock implement only the two methods the drain uses.
+  private static runtimeProviderForTest: (() => ReadingProgressCoreRuntime) | null = null;
+
+  /** Test seam: inject a CoreRuntime provider (null restores the real singleton). */
+  static setRuntimeProviderForTest(provider?: () => ReadingProgressCoreRuntime): void {
+    ReaderEffects.runtimeProviderForTest = provider ?? null;
+  }
+  static acquireCoreRuntime(): ReadingProgressCoreRuntime {
+    return ReaderEffects.runtimeProviderForTest !== null
+      ? ReaderEffects.runtimeProviderForTest!()
+      : CoreRuntime.get();
+  }
+  /** Test seam: bump the reading session epoch to simulate mid-resolve invalidation. */
+  static bumpReadingSessionEpochForTest(): void {
+    const expired = ReaderEffects.readingSessionEpoch;
+    ReaderEffects.readingSessionEpoch = expired >= 2147483646 ? 1 : expired + 1;
+  }
+  /** Test seam: reset all reading-progress statics to a clean baseline between cases. */
+  static resetReadingProgressStateForTest(): void {
+    ReaderEffects.progressWriteInFlight = false;
+    ReaderEffects.inFlightReadingProgress = null;
+    ReaderEffects.pendingReadingProgress = [];
+    ReaderEffects.lastCompletedReadingProgressKey = '';
+    ReaderEffects.readingSessionEpoch = 1;
+    ReaderEffects.runtimeProviderForTest = null;
+    ReaderEffects.currentBookId = '';
+    ReaderEffects.currentSourceId = '';
+    ReaderEffects.currentChapterIndex = 0;
+  }
+  /** Test seam: read the current epoch so a test snapshot can carry it. */
+  static readingSessionEpochForTest(): number {
+    return ReaderEffects.readingSessionEpoch;
+  }
+  /** Test seam: observe the completed key to assert whether a write was committed. */
+  static lastCompletedReadingProgressKeyForTest(): string {
+    return ReaderEffects.lastCompletedReadingProgressKey;
+  }
+  /** Test seam: enqueue a snapshot directly with callbacks, bypassing reportReadingAnchor. */
+  static enqueueReadingProgressForTest(snapshot: ReadingProgressSnapshot,
+    onStored?: () => void, onFailed?: () => void): void {
+    ReaderEffects.enqueueReadingProgress(snapshot, onStored, onFailed);
+  }
+  /** Test seam: set the current-reading identity statics so isCurrentReadingIdentity
+   *  reflects a chapter that was loaded by the effects layer in production. Tests
+   *  that drive the drain without a real chapter-load effect use this to seed the
+   *  identity guards; pass empty strings/(-1) to clear it. */
+  static setCurrentReadingIdentityForTest(bookId: string, sourceId: string, chapterIndex: number): void {
+    ReaderEffects.currentBookId = bookId;
+    ReaderEffects.currentSourceId = sourceId;
+    ReaderEffects.currentChapterIndex = chapterIndex;
+  }
+
   // A chapter request remains claimed from the user gesture until the target
   // body has either landed or failed. Core TOC lookup is asynchronous, so a
   // progress barrier alone would otherwise allow a fast double tap to launch
@@ -264,13 +324,13 @@ export class ReaderEffects {
           }
         } else if (event.id === 'source-management' || event.id === 'source-batch' || event.id === 'source-debug') {
           ReaderEffects.loadAvailableSources(false);
-        } else if (event.id === 'content-replacement' || event.id === 'reader-replace-overlay-v2') {
+        } else if (event.id === 'content-replacement') {
           ReaderEffects.loadReplaceRules();
         } else if (event.id === 'rss' || event.id === 'rss-all' || event.id === 'rss-subscription-management') {
           ReaderEffects.loadRss();
         } else if (event.id === 'book-search' || event.id === 'search-home') {
           ReaderEffects.loadSearchHistory();
-        } else if (event.id === 'toc-bookmarks' || event.id === 'bookmarks-manager') {
+        } else if (event.id === 'bookmarks-manager') {
           ReaderUiStore.dispatch({ type: 'set-toc-mode', tocMode: 'bookmark' });
         } else if (event.id === 'book-directory' && ReaderUiStore.snapshot().tocMode === 'bookmark') {
           ReaderEffects.loadBookmarksForCurrentBook();
@@ -297,7 +357,7 @@ export class ReaderEffects {
           ReaderEffects.loadAvailableSources(false);
         } else if (event.id === 'book-search' || event.id === 'search-home') {
           ReaderEffects.loadSearchHistory();
-        } else if (event.id === 'toc-bookmarks' || event.id === 'bookmarks-manager') {
+        } else if (event.id === 'bookmarks-manager') {
           ReaderUiStore.dispatch({ type: 'set-toc-mode', tocMode: 'bookmark' });
         } else if (event.id === 'book-directory' && ReaderUiStore.snapshot().tocMode === 'bookmark') {
           ReaderEffects.loadBookmarksForCurrentBook();
@@ -1242,10 +1302,13 @@ export class ReaderEffects {
       ReaderEffects.showSelectionFeedback('未检测到可搜索的正文选区。');
       return;
     }
-    // Keep the selection text in the existing Core-backed body-search state,
-    // then navigate to the same route used by the reader quick action. The
-    // panel synchronizes its input from contentSearchQuery on appearance.
-    ReaderUiStore.dispatch({ type: 'route-push', id: 'content-search' });
+    // `content-search` was retired as a RouteId. Until the independently
+    // admitted quick-search overlay is active, a native selection action must
+    // fail closed instead of navigating to an invented or unrelated page.
+    if (ReaderUiStore.snapshot().overlay !== 'content-search') {
+      ReaderEffects.showSelectionFeedback('正文搜索控制层尚未准入，未执行搜索。');
+      return;
+    }
     ReaderUiStore.dispatch({ type: 'content-search-submit', query: keyword });
   }
 
@@ -2755,7 +2818,7 @@ export class ReaderEffects {
   }
 
   private static isBookmarkCreateRoute(routeId: string): boolean {
-    return routeId === 'reader' || routeId === 'control-layer-base-v2';
+    return routeId === 'immersive-reading' || routeId === 'reader' || routeId === 'reader_content';
   }
 
   private static currentBookmarkChapterIndex(state: ReaderUiState,
@@ -2816,8 +2879,7 @@ export class ReaderEffects {
   // the exact bookmark identity from state rather than trusting event data.
   private static deleteConfirmedBookmark(time: number): void {
     const state = ReaderUiStore.snapshot();
-    const liveRoute = state.routeId === 'toc-bookmarks' ||
-      state.routeId === 'reader-directory-overlay-v2' || state.routeId === 'bookmarks-manager';
+    const liveRoute = state.routeId === 'bookmarks-manager';
     if (!state.bookmarksLoading || !liveRoute || state.pendingBookmarkDeleteTime !== time ||
       !ReaderEffects.isLiveCurrentBookmark(time)) {
       ReaderEffects.rejectUnconfirmedBookmarkDelete();
@@ -2923,10 +2985,10 @@ export class ReaderEffects {
   }
 
   private static closeBookmarkDirectory(): void {
-    const route = ReaderUiStore.snapshot().routeId;
-    if (route === 'toc-bookmarks' || route === 'bookmarks-manager') {
+    const state = ReaderUiStore.snapshot();
+    if (state.routeId === 'bookmarks-manager') {
       ReaderUiStore.dispatch({ type: 'route-pop' });
-    } else if (route === 'reader-directory-overlay-v2') {
+    } else if (state.overlay === 'directory') {
       ReaderUiStore.dispatch({ type: 'reader.directory.close' });
     }
   }
@@ -3619,21 +3681,21 @@ export class ReaderEffects {
     ReaderEffects.bookOpenRequestSequence += 1;
   }
 
-  // A route-pop can merely dismiss a reader overlay (and must not cancel the
-  // still-visible reader), or it can leave the book flow entirely. This runs
-  // after the reducer, so the destination route is authoritative.
+  // Reader modules are semantic overlays and no longer add route entries.
+  // This runs after a real route-pop, so the destination route is authoritative.
   private static cancelBookOpenIfRouteLeft(): void {
     const route = ReaderUiStore.snapshot().routeId;
     switch (route) {
       case 'book-detail':
       case 'book-detail-toc-preview':
       case 'book-directory':
-      case 'toc-bookmarks':
       case 'reader':
       case 'immersive-reading':
       case 'reader_content':
       case 'source-switch':
+      case 'reader-full-directory':
       case 'reader-full-tts':
+      case 'reader-full-appearance':
       case 'reader-full-settings':
         return;
       default:
@@ -3947,11 +4009,11 @@ export class ReaderEffects {
       if (state.searchQuery.length > 0) ReaderEffects.runSearch(state.searchQuery);
       return;
     }
-    if (route === 'reader-search-overlay-v2') {
+    if (state.overlay === 'content-search') {
       if (state.contentSearchQuery.length > 0) ReaderEffects.runContentSearch(state.contentSearchQuery);
       return;
     }
-    if (route === 'book-detail' || route === 'book-detail-toc-preview' || route === 'toc-bookmarks') {
+    if (route === 'book-detail' || route === 'book-detail-toc-preview') {
       const book = state.currentBook;
       if (book !== null) {
         // Search/detail results need not be on the bookshelf yet. Retrying
@@ -4220,7 +4282,7 @@ export class ReaderEffects {
   static runContentSearch(query: string): void {
     const keyword = query.trim();
     const state = ReaderUiStore.snapshot();
-    if (!ReaderEffects.isContentSearchRoute(state.routeId)) {
+    if (!ReaderEffects.isContentSearchSurface(state)) {
       ReaderUiStore.dispatch({
         type: 'content-search-failure',
         contentSearchMessage: '请在当前阅读器的正文搜索面板中执行搜索。',
@@ -4286,7 +4348,7 @@ export class ReaderEffects {
   static openContentSearchResult(resultIndex: number): void {
     const state = ReaderUiStore.snapshot();
     const book = state.currentBook;
-    if (!ReaderEffects.isContentSearchRoute(state.routeId) || state.contentSearchLoading ||
+    if (!ReaderEffects.isContentSearchSurface(state) || state.contentSearchLoading ||
       !state.contentSearchLoaded || book === null || resultIndex < 0 ||
       resultIndex >= state.contentSearchResults.length) {
       ReaderUiStore.dispatch({
@@ -4361,13 +4423,15 @@ export class ReaderEffects {
   }
 
   private static closeContentSearchPanel(): void {
-    if (ReaderUiStore.snapshot().routeId === 'reader-search-overlay-v2') {
-      ReaderUiStore.dispatch({ type: 'route-pop' });
+    if (ReaderUiStore.snapshot().overlay === 'content-search') {
+      ReaderUiStore.dispatch({ type: 'set-overlay', overlay: '' });
     }
   }
 
-  private static isContentSearchRoute(routeId: string): boolean {
-    return routeId === 'reader-search-overlay-v2' || routeId === 'content-search';
+  private static isContentSearchSurface(state: ReaderUiState): boolean {
+    const readerRoute = state.routeId === 'immersive-reading' ||
+      state.routeId === 'reader' || state.routeId === 'reader_content';
+    return readerRoute && state.overlay === 'content-search';
   }
 
   private static surfaceContentSearchJumpError(error: Error): void {
@@ -5397,33 +5461,66 @@ export class ReaderEffects {
     ReaderEffects.progressWriteInFlight = true;
     ReaderEffects.inFlightReadingProgress = activeEntry;
     try {
-      const runtime = CoreRuntime.get();
+      const runtime = ReaderEffects.acquireCoreRuntime();
       runtime.readerLocationResolve(snapshot.bookId, snapshot.chapterIndex, snapshot.chapterOffset,
         snapshot.chapterProgress, snapshot.viewportWidth, snapshot.viewportHeight, snapshot.fontScale,
-        snapshot.sourceId).then((location: JsonObject): Promise<JsonObject> => {
-        const revision = ReaderEffects.requireCanonicalReadingLocationRevision(
+        snapshot.sourceId).then((location: JsonObject): Promise<void> => {
+        const canonical = ReaderEffects.parseCanonicalReadingLocation(
           location, snapshot.bookId, snapshot.chapterIndex, snapshot.chapterOffset, snapshot.chapterProgress,
         );
-        return runtime.readingProgressUpdate(snapshot.bookId, snapshot.sourceId, snapshot.chapterIndex,
-          snapshot.chapterOffset, snapshot.chapterProgress, revision);
-      }).then((result: JsonObject): void => {
-        ReaderEffects.requireStoredReadingProgress(result, snapshot);
-        ReaderEffects.lastCompletedReadingProgressKey = snapshot.key;
-        if (snapshot.contentSearchJumpSequence !== undefined &&
-          ReaderEffects.isCurrentBookOpen(snapshot.contentSearchJumpSequence) &&
-          ReaderEffects.isCurrentReadingIdentity(ReaderUiStore.snapshot(), {
+        // The session was checked at dequeue, but the resolve was async: the reader
+        // may have since navigated to another chapter or had its session
+        // invalidated. Re-validate BEFORE writing the progress row so an in-flight
+        // resolve cannot persist a location for an anchor the user has left.
+        // Throwing here routes to the .catch below (onFailed); it does not set the
+        // completed key or invoke onStored, so the write can be retried.
+        if (snapshot.sessionEpoch !== ReaderEffects.readingSessionEpoch ||
+          !ReaderEffects.isCurrentReadingIdentity(ReaderUiStore.snapshot(), {
             bookId: snapshot.bookId,
             sourceId: snapshot.sourceId,
             chapterIndex: snapshot.chapterIndex,
           })) {
-          ReaderUiStore.dispatch({
-            type: 'content-search-jump-status',
-            contentSearchMessage: `已跳转到 Core 目录第 ${snapshot.chapterIndex + 1} 章；正文偏移 ${snapshot.chapterOffset} 已写入阅读位置。`,
-          });
+          throw new Error('reading-progress session changed during resolve');
         }
-        ReaderEffects.loadContinueReading();
-        ReaderEffects.runReadingProgressCallbacks(activeEntry.onStored);
-        ReaderEffects.finishReadingProgressWrite();
+        return runtime.readingProgressUpdate(snapshot.bookId, snapshot.sourceId, snapshot.chapterIndex,
+          snapshot.chapterOffset, snapshot.chapterProgress, canonical.locationRevision).then((result: JsonObject): void => {
+          ReaderEffects.requireStoredReadingProgress(result, snapshot);
+          ReaderEffects.lastCompletedReadingProgressKey = snapshot.key;
+          if (snapshot.contentSearchJumpSequence !== undefined &&
+            ReaderEffects.isCurrentBookOpen(snapshot.contentSearchJumpSequence) &&
+            ReaderEffects.isCurrentReadingIdentity(ReaderUiStore.snapshot(), {
+              bookId: snapshot.bookId,
+              sourceId: snapshot.sourceId,
+              chapterIndex: snapshot.chapterIndex,
+            })) {
+            ReaderUiStore.dispatch({
+              type: 'content-search-jump-status',
+              contentSearchMessage: `已跳转到 Core 目录第 ${snapshot.chapterIndex + 1} 章；正文偏移 ${snapshot.chapterOffset} 已写入阅读位置。`,
+            });
+          }
+          // Write the Core-confirmed canonical back into the reducer so a later
+          // horizontal/vertical reflow is anchored to the position Core just
+          // stored, not the stale local anchor left by reader-location-anchor.
+          // Guard: only when the reader is still on this chapter and still at the
+          // offset this resolve was for. If the user has since measured a new
+          // offset, the progress row is already written; do not overwrite the
+          // visible canonical with a now-stale one.
+          const current = ReaderUiStore.snapshot();
+          if (ReaderEffects.isCurrentReadingIdentity(current, {
+            bookId: snapshot.bookId,
+            sourceId: snapshot.sourceId,
+            chapterIndex: snapshot.chapterIndex,
+          }) && current.readerChapterOffset === snapshot.chapterOffset &&
+            Math.abs(current.readerChapterProgress - snapshot.chapterProgress) <= 0.000001) {
+            ReaderUiStore.dispatch({
+              type: 'reader-location-resolved',
+              canonicalReaderLocation: canonical,
+            });
+          }
+          ReaderEffects.loadContinueReading();
+          ReaderEffects.runReadingProgressCallbacks(activeEntry.onStored);
+          ReaderEffects.finishReadingProgressWrite();
+        });
       }).catch((e: Error): void => {
         console.info(`ReaderEffects: reading-progress error: ${e.message}`);
         if (snapshot.contentSearchJumpSequence !== undefined &&
@@ -5980,8 +6077,13 @@ export class ReaderEffects {
   // A progress row may only retain a revision produced for that exact Core
   // anchor. `resolverVersion` names the algorithm; it is not a location
   // revision and must never be written into reading.progress.update.
-  private static requireCanonicalReadingLocationRevision(data: JsonObject, bookId: string,
-    chapterIndex: number, chapterOffset: number, chapterProgress: number): string {
+  // Parses the Core resolve response into the full CoreReaderCanonicalLocation
+  // (carrying the real resolverVersion), validating it matches the requested
+  // reading anchor. The returned canonical feeds the reader-location-resolved
+  // writeback in drainReadingProgressQueue so a later horizontal/vertical reflow
+  // is anchored to the position Core just stored instead of a stale local one.
+  private static parseCanonicalReadingLocation(data: JsonObject, bookId: string,
+    chapterIndex: number, chapterOffset: number, chapterProgress: number): CoreReaderCanonicalLocation {
     if (data['resolved'] !== true) {
       throw new Error('reader.location.resolve did not confirm a canonical location');
     }
@@ -5994,10 +6096,17 @@ export class ReaderEffects {
     const returnedChapterIndex = ReaderEffects.getNumber(canonical, 'chapterIndex', -1);
     const returnedChapterOffset = ReaderEffects.getNumber(canonical, 'chapterOffset', -1);
     const returnedChapterProgress = ReaderEffects.getNumber(canonical, 'chapterProgress', -1);
-    if (returnedBookId !== bookId || !Number.isFinite(returnedChapterIndex) ||
-      Math.floor(returnedChapterIndex) !== Math.floor(chapterIndex) ||
-      !Number.isFinite(returnedChapterOffset) || Math.floor(returnedChapterOffset) !== Math.floor(chapterOffset) ||
-      !Number.isFinite(returnedChapterProgress) ||
+    // Strict identity + safe-integer checks (no Math.floor coercion): a fractional
+    // offset or a location for another anchor must be rejected here, BEFORE the
+    // progress row is written to Core. The reducer's setCanonicalReaderLocation
+    // applies the same strictness, so a canonical that passes here is guaranteed
+    // reducer-valid and cannot be "persisted then rejected".
+    if (!Number.isSafeInteger(chapterIndex) || !Number.isSafeInteger(chapterOffset) ||
+      !Number.isFinite(chapterProgress) || chapterProgress < 0 || chapterProgress > 1 ||
+      returnedBookId !== bookId ||
+      !Number.isSafeInteger(returnedChapterIndex) || returnedChapterIndex !== chapterIndex ||
+      !Number.isSafeInteger(returnedChapterOffset) || returnedChapterOffset !== chapterOffset ||
+      !Number.isFinite(returnedChapterProgress) || returnedChapterProgress < 0 || returnedChapterProgress > 1 ||
       Math.abs(returnedChapterProgress - chapterProgress) > 0.000001) {
       throw new Error('reader.location.resolve returned a location for another reading anchor');
     }
@@ -6005,7 +6114,19 @@ export class ReaderEffects {
     if (revision.length === 0) {
       throw new Error('reader.location.resolve returned an empty locationRevision');
     }
-    return revision;
+    const resolverVersion = ReaderEffects.getString(data, 'resolverVersion');
+    if (resolverVersion !== CANONICAL_RESOLVER_VERSION) {
+      throw new Error(
+        `reader.location.resolve returned resolverVersion ${resolverVersion}, expected ${CANONICAL_RESOLVER_VERSION}`);
+    }
+    return {
+      bookId: bookId,
+      chapterIndex: chapterIndex,
+      chapterOffset: chapterOffset,
+      chapterProgress: returnedChapterProgress,
+      locationRevision: revision,
+      resolverVersion: resolverVersion,
+    };
   }
 
   static getString(data: JsonObject, key: string, defaultValue: string = ''): string {
@@ -6930,7 +7051,7 @@ export class ReaderEffects {
 
   static handleReplaceRuleAdd(event: UiEvent): void {
     const pattern = event.replaceRulePattern ?? '';
-    if (ReaderUiStore.snapshot().routeId !== 'reader-replace-overlay-v2' || pattern.trim().length === 0) {
+    if (ReaderUiStore.snapshot().routeId !== 'content-replacement' || pattern.trim().length === 0) {
       ReaderUiStore.dispatch({
         type: 'set-error',
         error: {
@@ -6992,7 +7113,7 @@ export class ReaderEffects {
       return;
     }
     const state = ReaderUiStore.snapshot();
-    if (state.routeId !== 'reader-replace-overlay-v2' ||
+    if (state.routeId !== 'content-replacement' ||
       !ReaderEffects.hasCurrentPersistentReplaceRule(id)) {
       ReaderEffects.rejectInvalidReplaceRuleMutation();
       ReaderEffects.loadReplaceRules();
@@ -7073,7 +7194,7 @@ export class ReaderEffects {
   private static deleteConfirmedReplaceRule(): void {
     const state = ReaderUiStore.snapshot();
     const id = state.pendingReplaceRuleDeleteId;
-    if (state.routeId !== 'reader-replace-overlay-v2' ||
+    if (state.routeId !== 'content-replacement' ||
       !ReaderEffects.hasCurrentPersistentReplaceRule(id)) {
       ReaderEffects.rejectUnconfirmedReplaceRuleDelete();
       return;
@@ -7125,7 +7246,7 @@ export class ReaderEffects {
       return;
     }
     const state = ReaderUiStore.snapshot();
-    if (state.routeId !== 'reader-replace-overlay-v2' ||
+    if (state.routeId !== 'content-replacement' ||
       !ReaderEffects.hasCurrentPersistentReplaceRule(id)) {
       ReaderEffects.rejectInvalidReplaceRuleMutation();
       ReaderEffects.loadReplaceRules();

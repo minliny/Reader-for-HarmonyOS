@@ -443,7 +443,6 @@ export struct ReaderTocOfflinePage {
           label: '重试加载',
           primary: true,
           onTap: () => {
-            ReaderUiStore.dispatch({ type: 'route-replace', id: 'toc-bookmarks' });
             ReaderUiStore.dispatch({ type: 'retry-last-operation' });
           },
         })

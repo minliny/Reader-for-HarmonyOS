@@ -1,12 +1,12 @@
 // Verifies that the compiled HarmonyOS shadow allowlist cannot drift from the
 // checked-in Reader-UI consumer lock. Runtime action semantics remain generated
 // by Reader-UI; this gate only validates rollout membership and cohort shape.
+// Release/package identity is a separate B7 gate owned by
+// reader_ui_release_lock.test.mjs and check-host-consumers.mjs.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-import { assertReaderUiReleaseLocksSynchronized } from './reader_ui_release_lock_lib.mjs';
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const lock = JSON.parse(fs.readFileSync(path.join(repo, 'READER_UI_CONSUMER.json'), 'utf8'));
@@ -178,11 +178,9 @@ assert.ok(
 );
 assert.ok(overlayComponents.includes("ReaderUiStore.dispatch({ type: 'reader.directory.open' })"),
   'real directory UI entry must dispatch the canonical Pilot event');
-assert.ok(overlayComponents.includes("ReaderUiStore.dispatch({ type: 'reader.directory.close' })"),
-  'directory close must dispatch the canonical Pilot event');
 assert.ok(indexPage.includes('ReaderUiStore.isDirectoryPilotActive()') &&
   indexPage.includes("type: 'reader.directory.close'"),
-  'system back must close the directory through the Pilot coordinator');
+  'the real system-back exit must close the semantic directory overlay through the Pilot coordinator');
 assert.ok(overlayComponents.includes("@StorageProp('reader.chapterToc')") &&
   overlayComponents.includes("@StorageProp('reader.currentChapterTitle')") &&
   overlayComponents.includes('ForEach(this.chapterToc'),
@@ -192,8 +190,5 @@ assert.ok(!overlayComponents.includes('private tocRows:'),
 const moduleMapping = reducer.slice(reducer.indexOf('function moduleRouteId'), reducer.indexOf('function isReaderModuleOverlay'));
 assert.ok(!moduleMapping.includes("case 'directory'"),
   'native reducer must not retain directory event ownership during Pilot');
-
-const packageLock = JSON.parse(fs.readFileSync(path.join(repo, 'entry/oh-package-lock.json5'), 'utf8'));
-assertReaderUiReleaseLocksSynchronized(lock, packageLock);
 
 console.log(`ReaderUIRuntime shadow allowlist verified: ${compiledEvents.join(', ')}`);

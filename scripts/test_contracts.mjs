@@ -567,16 +567,25 @@ test('reader chapter text frame preserves the exact Figma Phone and Tablet geome
 
 test('reader page animation labels and layout mapping preserve the Figma rule', () => {
   assert.ok(readerOverlays.includes("values: ['覆盖', '滑动', '仿真', '滚动', '无动画']"));
+  assert.ok(readerOverlays.includes("label: '翻页动画'"));
+  assert.equal(readerOverlays.includes("label: '翻页样式'"), false);
+  assert.equal(readerOverlays.includes("label: '翻页方式'"), false);
   assert.ok(readerReducer.includes("return normalizePageAnimation(animation) === 'scroll' ? 'vertical' : 'horizontal';"));
   assert.ok(readerReducer.includes("options.pageAnimation = paginationMode === 'vertical'\n          ? 'scroll'"));
-  assert.ok(readerComponents.includes("case 'scroll':\n      case '滚动':\n        return 'scroll';"));
   assert.ok(readerComponents.includes("private verticalReading(): boolean {\n    return this.paginationMode === 'vertical';"));
   assert.ok(readerComponents.includes('Scroll(this.verticalScroller)'), 'scroll reading must use a native Scroll');
+  assert.equal(readerComponents.includes("MotionAdapter.apply('reader.page.turn.next-prev'"), false,
+    'Figma has no approved F3 page-turn timeline, so native rendering must not invent one');
+  assert.equal(readerComponents.includes('pageTurnOffset'), false);
+  assert.equal(readerComponents.includes('pageTurnOpacity'), false);
 });
 
-test('reader top-bar more opens the dedicated reader control layer', () => {
+test('reader top-bar more requests the dedicated semantic reader control layer', () => {
   assert.ok(readerComponents.includes("accessibilityText('打开阅读控制栏')"));
-  assert.ok(readerComponents.includes("ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' })"));
+  assert.ok(readerComponents.includes("type: 'reader.control.toggle'"));
+  assert.ok(readerComponents.includes("payload['overlay'] = 'reader-control'"));
+  assert.equal(readerComponents.includes("route-push', id: 'reader'"), false,
+    'Reader control must preserve route identity instead of navigating to the base route');
   assert.equal(readerComponents.includes('更多操作当前不可用'), false,
     'the reader more affordance must not fall back to an unavailable or bookshelf action');
 });
@@ -743,7 +752,7 @@ test('Reader settings quick and full panels use the current Figma control set', 
   const quickEnd = readerOverlays.indexOf('// ── Full reader pages', quickStart);
   assert.ok(quickStart >= 0 && quickEnd > quickStart, 'quick Reader settings panel is missing');
   const quick = readerOverlays.slice(quickStart, quickEnd);
-  for (const label of ['屏幕方向', '翻页样式', '屏幕超时', '跟随系统', '竖屏', '横屏', '仿真', '滚动', '无动画', '始终开启']) {
+  for (const label of ['屏幕方向', '翻页动画', '屏幕超时', '跟随系统', '竖屏', '横屏', '仿真', '滚动', '无动画', '始终开启']) {
     assert.ok(quick.includes(`'${label}'`), `quick Reader settings misses Figma label ${label}`);
   }
   for (const stale of ['自动翻页', '点击翻页方式', '阅读缓存与预取', '页脚进度信息', '触摸反馈', '未接入按键监听', '未接入方向 Host']) {

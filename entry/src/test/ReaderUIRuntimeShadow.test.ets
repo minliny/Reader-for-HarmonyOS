@@ -15,8 +15,8 @@ export default function ReaderUIRuntimeShadowTests(): void {
       ReaderUiStore.dispatch({ type: 'reader-module-switch', module: 'directory' });
       const productionOpen = ReaderUiStore.snapshot();
       const shadowOpen: ReaderUIRuntimeShadowSnapshot = ReaderUiStore.runtimeShadowSnapshot();
-      expect(productionOpen.routeId).assertEqual('reader-directory-overlay-v2');
-      expect(productionOpen.overlay).assertEqual('');
+      expect(productionOpen.routeId).assertEqual('bookshelf');
+      expect(productionOpen.overlay).assertEqual('directory');
       expect(shadowOpen.runtimeState.routeId).assertEqual('bookshelf');
       expect(shadowOpen.runtimeState.overlay).assertEqual('directory');
       expect(shadowOpen.metrics.covered).assertEqual(1);
@@ -67,8 +67,7 @@ export default function ReaderUIRuntimeShadowTests(): void {
       // route/event ordering without starting a platform speech engine.
       ReaderUiStore.setPlaybackPilotPairsForTest(false, false, false);
       ReaderUiStore.dispatch({ type: 'route-push', id: 'immersive-reading' });
-      ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' });
-      ReaderUiStore.dispatch({ type: 'route-push', id: 'reader-tts-overlay-v2' });
+      ReaderUiStore.dispatch({ type: 'set-overlay', overlay: 'tts' });
 
       ReaderUiStore.startTtsFromReaderSurface();
 

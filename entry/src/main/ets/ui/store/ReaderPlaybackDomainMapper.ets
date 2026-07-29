@@ -5,6 +5,7 @@ import {
   ReaderUiState,
 } from './ReaderUiState';
 import { ReaderBookOpenDomainMapper } from './ReaderBookOpenDomainMapper';
+import type { ReaderBookOpenLocationContext } from './ReaderBookOpenDomainMapper';
 
 export interface ReaderPlaybackChapterContext {
   sourceId: string;
@@ -98,7 +99,7 @@ export class ReaderPlaybackDomainMapper {
   }
 
   static mapLocation(data: JsonObject, chapter: ReaderPlaybackChapterContext,
-    expectedOffset: number): CoreReaderCanonicalLocation {
+    expectedOffset: number): ReaderBookOpenLocationContext {
     const mapped = ReaderBookOpenDomainMapper.mapLocation(data, chapter.bookId, chapter.chapterIndex);
     if (mapped.canonicalLocation.chapterOffset !== expectedOffset) {
       throw new Error(
@@ -108,7 +109,7 @@ export class ReaderPlaybackDomainMapper {
     }
     // locationRevision is the Core canonical field. resolverVersion describes
     // the algorithm and must never be copied into the revision slot.
-    return mapped.canonicalLocation;
+    return mapped;
   }
 
   static bindProgressUpdate(effectPayload: ReaderUIJSONPayload,

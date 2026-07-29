@@ -5,14 +5,17 @@
 // cases. The async effect methods (runSearch / runBookDetail / runChapter)
 // need CoreRuntime + Core-issued Host HTTP continuations and are NOT tested
 // here — they are covered by device self-check evidence instead.
-import { describe, it, expect } from '@ohos/hypium';
+import { describe, it, expect, beforeEach } from '@ohos/hypium';
 import { ReaderReducer } from '../main/ets/ui/store/ReaderReducer';
 import { ReaderEffects } from '../main/ets/ui/store/ReaderEffects';
 import { DemoUiState } from '../main/ets/ui/fixtures/DemoUiState';
 import { RouteId } from '../main/ets/contract/generated/RouteTable';
-import { SearchResultEntry, BookDetail, CoreSourceEntry, CoreSourceCheckResult, CoreSourceDebugResult, CoreContentSearchResult, CoreBookmark } from '../main/ets/ui/store/ReaderUiState';
+import { SearchResultEntry, BookDetail, CoreSourceEntry, CoreSourceCheckResult, CoreSourceDebugResult, CoreContentSearchResult, CoreBookmark, CANONICAL_RESOLVER_VERSION, CoreReaderCanonicalLocation } from '../main/ets/ui/store/ReaderUiState';
 import type { JsonObject } from '../main/ets/bridge/core/sdk/reader_core';
 import type { CoreSourceDebugRunProjection } from '../main/ets/bridge/CoreRuntime';
+import { ReaderUiStore } from '../main/ets/ui/store/ReaderUiStore';
+import type { ReadingProgressCoreRuntime } from '../main/ets/bridge/CoreRuntime';
+import type { ReadingProgressSnapshot } from '../main/ets/ui/store/ReaderEffects';
 
 function coreTestSource(): CoreSourceEntry {
   return {
@@ -39,6 +42,107 @@ function loadedReaderState() {
     type: 'chapter-success', chapterParagraphs: ['第一段', '第二段'], chapterTitle: '第一章',
     bookId: '/book/101', sourceId: 'core-test-source', chapterIndex: 0,
   });
+}
+
+// Controllable-delay mock + helpers for the drainReadingProgressQueue async
+// race tests. Declared at module scope (ArkTS does not admit class declarations
+// nested inside a describe callback) so the describe body holds only setup +
+// cases.
+class DeferredJsonObject {
+  readonly promise: Promise<JsonObject>;
+  private resolver: ((value: JsonObject) => void) | undefined = undefined;
+  settled: boolean = false;
+  constructor() {
+    this.promise = new Promise<JsonObject>((resolve: (value: JsonObject) => void): void => {
+      this.resolver = (data: JsonObject): void => { resolve(data); };
+    });
+  }
+  resolve(data: JsonObject): void {
+    if (this.settled) return;
+    this.settled = true;
+    const r = this.resolver;
+    if (r !== undefined) r(data);
+  }
+}
+
+class MockReadingProgressCore implements ReadingProgressCoreRuntime {
+  resolveDeferred: DeferredJsonObject = new DeferredJsonObject();
+  progressDeferred: DeferredJsonObject = new DeferredJsonObject();
+  resolveCalls: number = 0;
+  progressCalls: number = 0;
+  readerLocationResolve(_bookId: string, _chapterIndex: number, _chapterOffset: number,
+    _chapterProgress: number, _viewportWidth: number, _viewportHeight: number,
+    _fontScale: number, _sourceId?: string, _chapterTitle?: string): Promise<JsonObject> {
+    this.resolveCalls += 1;
+    return this.resolveDeferred.promise;
+  }
+  readingProgressUpdate(_bookId: string, _sourceId: string, _chapterIndex: number,
+    _chapterOffset: number, _chapterProgress: number, _locationRevision?: string): Promise<JsonObject> {
+    this.progressCalls += 1;
+    return this.progressDeferred.promise;
+  }
+}
+
+function makeProgressSnapshot(chapterOffset: number, chapterProgress: number): ReadingProgressSnapshot {
+  return {
+    key: `/book/101|core-test-source|0|${chapterOffset}|${chapterProgress.toFixed(6)}|390|844|1.0000`,
+    sessionEpoch: ReaderEffects.readingSessionEpochForTest(),
+    bookId: '/book/101',
+    sourceId: 'core-test-source',
+    chapterIndex: 0,
+    chapterOffset: chapterOffset,
+    chapterProgress: chapterProgress,
+    viewportWidth: 390,
+    viewportHeight: 844,
+    fontScale: 1.0,
+  };
+}
+
+function resolveResult(chapterOffset: number, chapterProgress: number,
+  resolverVersion: string = CANONICAL_RESOLVER_VERSION): JsonObject {
+  return JSON.parse('{' +
+    '"resolved":true,' +
+    '"canonicalLocation":{' +
+    '"bookId":"/book/101",' +
+    '"chapterIndex":0,' +
+    `"chapterOffset":${chapterOffset},` +
+    `"chapterProgress":${chapterProgress},` +
+    `"locationRevision":"reader-location-v1:/book/101:0:${chapterOffset}"` +
+    '},' +
+    `"resolverVersion":"${resolverVersion}"` +
+    '}') as JsonObject;
+}
+
+function storedResult(chapterOffset: number, chapterProgress: number): JsonObject {
+  return JSON.parse('{' +
+    '"stored":true,' +
+    '"bookId":"/book/101",' +
+    '"sourceId":"core-test-source",' +
+    '"chapterIndex":0,' +
+    `"chapterOffset":${chapterOffset},` +
+    `"chapterProgress":${chapterProgress}` +
+    '}') as JsonObject;
+}
+
+// Seed store + identity so isCurrentReadingIdentity holds for the snapshot's
+// anchor: a chapter loaded by the effects layer in production.
+function seedReaderState(chapterOffset: number, chapterProgress: number): void {
+  let state = loadedReaderState();
+  state = ReaderReducer.reduce(state, {
+    type: 'reader-location-anchor', readerChapterOffset: chapterOffset,
+    readerChapterProgress: chapterProgress, bookId: '/book/101',
+    sourceId: 'core-test-source', chapterIndex: 0,
+  });
+  ReaderUiStore.setStateForTest(state);
+  ReaderEffects.setCurrentReadingIdentityForTest('/book/101', 'core-test-source', 0);
+}
+
+async function flushReadingProgressMicrotasks(): Promise<void> {
+  // Drain the chained .then/.catch microtasks between deferred settlements.
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
 }
 
 export default function ReaderEffectsTests(): void {
@@ -640,7 +744,12 @@ export default function ReaderEffectsTests(): void {
     });
 
     it('contentSearchUsesDedicatedLoadingEmptyAndErrorProjection', 0, () => {
-      const s = ReaderReducer.reduce(DemoUiState.initial(), { type: 'route-push', id: 'content-search' });
+      const reader = ReaderReducer.reduce(
+        DemoUiState.initial(), { type: 'route-push', id: 'immersive-reading' },
+      );
+      const s = ReaderReducer.reduce(
+        reader, { type: 'set-overlay', overlay: 'content-search' },
+      );
       const loading = ReaderReducer.reduce(s, { type: 'content-search-submit', query: '魔法' });
       expect(loading.contentSearchQuery).assertEqual('魔法');
       expect(loading.contentSearchLoading).assertTrue();
@@ -753,15 +862,32 @@ export default function ReaderEffectsTests(): void {
       expect(clamped.readerPageIndex).assertEqual(0);
     });
 
-    it('readerReflowSettingsKeepTheMeasuredCoreAnchor', 0, () => {
+    it('readerReflowSettingsRequireAndKeepTheCommittedCoreAnchor', 0, () => {
       const initial = loadedReaderState();
-      const anchored = ReaderReducer.reduce(initial, {
+      const locallyMeasured = ReaderReducer.reduce(initial, {
         type: 'reader-location-anchor', readerChapterOffset: 256, readerChapterProgress: 0.4,
         bookId: '/book/101', sourceId: 'core-test-source', chapterIndex: 0,
       });
-      const vertical = ReaderReducer.reduce(anchored, {
+      const blockedWithoutCore = ReaderReducer.reduce(locallyMeasured, {
         type: 'set-pagination-mode', paginationMode: 'vertical',
       });
+      expect(blockedWithoutCore.paginationMode).assertEqual('horizontal');
+      expect(blockedWithoutCore.readerSettingOptions.pageAnimation).assertEqual('slide');
+      const committed = ReaderReducer.reduce(locallyMeasured, {
+        type: 'reader-location-resolved',
+        canonicalReaderLocation: {
+          bookId: '/book/101',
+          chapterIndex: 0,
+          chapterOffset: 256,
+          chapterProgress: 0.4,
+          locationRevision: 'reader-location-v1:/book/101:0:256',
+          resolverVersion: 'reader.location.resolve.v1.reflow',
+        },
+      });
+      const vertical = ReaderReducer.reduce(committed, {
+        type: 'set-pagination-mode', paginationMode: 'vertical',
+      });
+      expect(vertical.paginationMode).assertEqual('vertical');
       expect(vertical.readerChapterOffset).assertEqual(256);
       expect(vertical.readerChapterProgress).assertEqual(0.4);
       const larger = ReaderReducer.reduce(vertical, {
@@ -775,7 +901,18 @@ export default function ReaderEffectsTests(): void {
     });
 
     it('pageAnimationAtomicallyOwnsPaginationLayout', 0, () => {
-      const initial = DemoUiState.initial();
+      const loaded = loadedReaderState();
+      const initial = ReaderReducer.reduce(loaded, {
+        type: 'reader-location-resolved',
+        canonicalReaderLocation: {
+          bookId: '/book/101',
+          chapterIndex: 0,
+          chapterOffset: 128,
+          chapterProgress: 0.2,
+          locationRevision: 'reader-location-v1:/book/101:0:128',
+          resolverVersion: 'reader.location.resolve.v1.reflow',
+        },
+      });
       for (const animation of ['slide', 'cover', 'simulation', 'none']) {
         const next = ReaderReducer.reduce(initial, {
           type: 'set-reader-setting-option', optionKey: 'pageAnimation', optionValue: animation,
@@ -807,13 +944,28 @@ export default function ReaderEffectsTests(): void {
       expect(legacyHorizontal.readerSettingOptions.pageAnimation).assertEqual('slide');
       expect(legacyHorizontal.readerSettingOptions.pageMode).assertEqual('horizontal');
 
-      const persistedSimulation = ReaderReducer.reduce(initial, {
+      const persistedSimulation = ReaderReducer.reduce(DemoUiState.initial(), {
         type: 'hydrate-reader-page-turn-preference',
         preferencePageAnimation: 'simulation',
         preferencePageMode: 'horizontal',
       });
       expect(persistedSimulation.readerSettingOptions.pageAnimation).assertEqual('simulation');
       expect(persistedSimulation.readerSettingOptions.pageMode).assertEqual('horizontal');
+      const persistedScroll = ReaderReducer.reduce(DemoUiState.initial(), {
+        type: 'hydrate-reader-page-turn-preference',
+        preferencePageAnimation: 'scroll',
+        preferencePageMode: 'vertical',
+      });
+      expect(persistedScroll.readerSettingOptions.pageAnimation).assertEqual('scroll');
+      expect(persistedScroll.readerSettingOptions.pageMode).assertEqual('vertical');
+      expect(persistedScroll.paginationMode).assertEqual('vertical');
+      const rejectedLiveHydration = ReaderReducer.reduce(loadedReaderState(), {
+        type: 'hydrate-reader-page-turn-preference',
+        preferencePageAnimation: 'scroll',
+        preferencePageMode: 'vertical',
+      });
+      expect(rejectedLiveHydration.readerSettingOptions.pageAnimation).assertEqual('slide');
+      expect(rejectedLiveHydration.paginationMode).assertEqual('horizontal');
       const rejectedMismatch = ReaderReducer.reduce(persistedSimulation, {
         type: 'hydrate-reader-page-turn-preference',
         preferencePageAnimation: 'scroll',
@@ -827,6 +979,200 @@ export default function ReaderEffectsTests(): void {
         preferencePageMode: 'horizontal',
       });
       expect(rejectedUnknown.readerSettingOptions.pageAnimation).assertEqual('simulation');
+      const rejectedUiInput = ReaderReducer.reduce(persistedSimulation, {
+        type: 'set-reader-setting-option',
+        optionKey: 'pageAnimation',
+        optionValue: 'bogus',
+      });
+      expect(rejectedUiInput.readerSettingOptions.pageAnimation).assertEqual('simulation');
+      expect(rejectedUiInput.paginationMode).assertEqual('horizontal');
+      const rejectedPageModeInput = ReaderReducer.reduce(persistedSimulation, {
+        type: 'set-reader-setting-option',
+        optionKey: 'pageMode',
+        optionValue: 'bogus',
+      });
+      expect(rejectedPageModeInput.readerSettingOptions.pageMode).assertEqual('horizontal');
+      expect(rejectedPageModeInput.readerSettingOptions.pageAnimation).assertEqual('simulation');
+    });
+
+    it('pageAnimationCannotReflowFromLocalOrMismatchedAnchors', 0, () => {
+      const initial = loadedReaderState();
+      const locallyMeasured = ReaderReducer.reduce(initial, {
+        type: 'reader-location-anchor', readerChapterOffset: 512, readerChapterProgress: 0.8,
+        bookId: '/book/101', sourceId: 'core-test-source', chapterIndex: 0,
+      });
+      const blockedLocal = ReaderReducer.reduce(locallyMeasured, {
+        type: 'set-reader-setting-option', optionKey: 'pageAnimation', optionValue: 'scroll',
+      });
+      expect(blockedLocal.paginationMode).assertEqual('horizontal');
+      expect(blockedLocal.readerSettingOptions.pageAnimation).assertEqual('slide');
+
+      const rejectedMismatch = ReaderReducer.reduce(locallyMeasured, {
+        type: 'reader-location-resolved',
+        canonicalReaderLocation: {
+          bookId: '/book/other',
+          chapterIndex: 7,
+          chapterOffset: 512,
+          chapterProgress: 0.8,
+          locationRevision: 'reader-location-v1:/book/other:7:512',
+          resolverVersion: 'reader.location.resolve.v1.reflow',
+        },
+      });
+      const blockedMismatch = ReaderReducer.reduce(rejectedMismatch, {
+        type: 'set-pagination-mode', paginationMode: 'vertical',
+      });
+      expect(blockedMismatch.paginationMode).assertEqual('horizontal');
+      expect(blockedMismatch.readerSettingOptions.pageMode).assertEqual('horizontal');
+      expect(blockedMismatch.readerSettingOptions.pageAnimation).assertEqual('slide');
+    });
+
+    it('pageAnimationRejectsMalformedOrUncommittedCoreAnchors', 0, () => {
+      const initial = loadedReaderState();
+      const malformedLocations: CoreReaderCanonicalLocation[] = [
+        {
+          bookId: '/book/101', chapterIndex: 0, chapterOffset: 1.5, chapterProgress: 0.2,
+          locationRevision: 'reader-location-v1:/book/101:0:1', resolverVersion: 'reader.location.resolve.v1.reflow',
+        },
+        {
+          bookId: '/book/101', chapterIndex: 0, chapterOffset: 128, chapterProgress: 1.2,
+          locationRevision: 'reader-location-v1:/book/101:0:128', resolverVersion: 'reader.location.resolve.v1.reflow',
+        },
+        {
+          bookId: '/book/101', chapterIndex: 0, chapterOffset: 128, chapterProgress: 0.2,
+          locationRevision: '', resolverVersion: 'reader.location.resolve.v1.reflow',
+        },
+        {
+          bookId: '/book/101', chapterIndex: 0, chapterOffset: 128, chapterProgress: 0.2,
+          locationRevision: 'reader-location-v1:/book/101:0:128', resolverVersion: 'local.reader.reflow',
+        },
+      ];
+      for (const location of malformedLocations) {
+        const rejected = ReaderReducer.reduce(initial, {
+          type: 'reader-location-resolved', canonicalReaderLocation: location,
+        });
+        expect(rejected.canonicalReaderLocation === null).assertTrue();
+        const blocked = ReaderReducer.reduce(rejected, {
+          type: 'set-reader-setting-option', optionKey: 'pageAnimation', optionValue: 'scroll',
+        });
+        expect(blocked.paginationMode).assertEqual('horizontal');
+        expect(blocked.readerSettingOptions.pageAnimation).assertEqual('slide');
+      }
+    });
+
+    it('staleCanonicalOffsetRejectsReflow', 0, () => {
+      // P1 fix: hasCommittedReflowAnchor rejects a canonical whose offset no
+      // longer matches the visible position. reader-location-anchor updates
+      // readerChapterOffset from a local measurement without refreshing
+      // canonicalReaderLocation, so a stale canonical must not let a reflow
+      // jump the surface back to the old offset.
+      const initial = loadedReaderState();
+      const anchored = ReaderReducer.reduce(initial, {
+        type: 'reader-location-resolved',
+        canonicalReaderLocation: {
+          bookId: '/book/101', chapterIndex: 0, chapterOffset: 256, chapterProgress: 0.4,
+          locationRevision: 'reader-location-v1:/book/101:0:256',
+          resolverVersion: 'reader.location.resolve.v1.reflow',
+        },
+      });
+      expect(anchored.readerChapterOffset).assertEqual(256);
+      // Local measurement moves the visible offset; canonical stays stale.
+      const measured = ReaderReducer.reduce(anchored, {
+        type: 'reader-location-anchor', readerChapterOffset: 512, readerChapterProgress: 0.8,
+        bookId: '/book/101', sourceId: 'core-test-source', chapterIndex: 0,
+      });
+      expect(measured.readerChapterOffset).assertEqual(512);
+      const staleCanonical = measured.canonicalReaderLocation;
+      if (staleCanonical !== null) {
+        expect(staleCanonical.chapterOffset).assertEqual(256);
+      }
+      const blockedVertical = ReaderReducer.reduce(measured, {
+        type: 'set-pagination-mode', paginationMode: 'vertical',
+      });
+      expect(blockedVertical.paginationMode).assertEqual('horizontal');
+      expect(blockedVertical.readerSettingOptions.pageAnimation).assertEqual('slide');
+      expect(blockedVertical.readerChapterOffset).assertEqual(512);
+    });
+
+    it('storedCanonicalAllowsReflow', 0, () => {
+      // After drainReadingProgressQueue writes the Core-confirmed canonical
+      // back via reader-location-resolved (offset matching the visible
+      // position), the stale block lifts and the reflow is allowed.
+      const initial = loadedReaderState();
+      const anchored = ReaderReducer.reduce(initial, {
+        type: 'reader-location-resolved',
+        canonicalReaderLocation: {
+          bookId: '/book/101', chapterIndex: 0, chapterOffset: 256, chapterProgress: 0.4,
+          locationRevision: 'reader-location-v1:/book/101:0:256',
+          resolverVersion: 'reader.location.resolve.v1.reflow',
+        },
+      });
+      const measured = ReaderReducer.reduce(anchored, {
+        type: 'reader-location-anchor', readerChapterOffset: 512, readerChapterProgress: 0.8,
+        bookId: '/book/101', sourceId: 'core-test-source', chapterIndex: 0,
+      });
+      // Stale canonical still blocks before the writeback lands.
+      const blockedBefore = ReaderReducer.reduce(measured, {
+        type: 'set-pagination-mode', paginationMode: 'vertical',
+      });
+      expect(blockedBefore.paginationMode).assertEqual('horizontal');
+      // The writeback refreshes canonicalReaderLocation to the visible position.
+      const writeback = ReaderReducer.reduce(measured, {
+        type: 'reader-location-resolved',
+        canonicalReaderLocation: {
+          bookId: '/book/101', chapterIndex: 0, chapterOffset: 512, chapterProgress: 0.8,
+          locationRevision: 'reader-location-v1:/book/101:0:512',
+          resolverVersion: 'reader.location.resolve.v1.reflow',
+        },
+      });
+      expect(writeback.readerChapterOffset).assertEqual(512);
+      const refreshedCanonical = writeback.canonicalReaderLocation;
+      if (refreshedCanonical !== null) {
+        expect(refreshedCanonical.chapterOffset).assertEqual(512);
+      }
+      const vertical = ReaderReducer.reduce(writeback, {
+        type: 'set-pagination-mode', paginationMode: 'vertical',
+      });
+      expect(vertical.paginationMode).assertEqual('vertical');
+      expect(vertical.readerSettingOptions.pageAnimation).assertEqual('scroll');
+    });
+
+    it('lateResolveDoesNotOverwriteNewChapter', 0, () => {
+      // Defense-in-depth for the drainReadingProgressQueue writeback guard. The
+      // effects layer (isCurrentReadingIdentity) skips the dispatch when the
+      // reader has moved to a new chapter; this reducer-level test verifies the
+      // second line of defense - setCanonicalReaderLocation rejects a canonical
+      // whose chapterIndex no longer matches the active chapter, so a late
+      // resolve cannot overwrite the current chapter's canonical. The effects
+      // guard itself needs CoreRuntime and is covered by device self-check.
+      const initial = loadedReaderState();
+      const anchored = ReaderReducer.reduce(initial, {
+        type: 'reader-location-resolved',
+        canonicalReaderLocation: {
+          bookId: '/book/101', chapterIndex: 0, chapterOffset: 256, chapterProgress: 0.4,
+          locationRevision: 'reader-location-v1:/book/101:0:256',
+          resolverVersion: 'reader.location.resolve.v1.reflow',
+        },
+      });
+      // A late resolve for a different chapter must be rejected, leaving the
+      // active chapter 0 canonical intact (not overwritten to chapter 5).
+      const lateResolve = ReaderReducer.reduce(anchored, {
+        type: 'reader-location-resolved',
+        canonicalReaderLocation: {
+          bookId: '/book/101', chapterIndex: 5, chapterOffset: 999, chapterProgress: 0.9,
+          locationRevision: 'reader-location-v1:/book/101:5:999',
+          resolverVersion: 'reader.location.resolve.v1.reflow',
+        },
+      });
+      const canonical = lateResolve.canonicalReaderLocation;
+      expect(canonical !== null).assertTrue();
+      if (canonical !== null) {
+        expect(canonical.chapterIndex).assertEqual(0);
+        expect(canonical.chapterOffset).assertEqual(256);
+      }
+      const blockedVertical = ReaderReducer.reduce(lateResolve, {
+        type: 'set-pagination-mode', paginationMode: 'vertical',
+      });
+      expect(blockedVertical.paginationMode).assertEqual('horizontal');
     });
 
     it('chapterJumpSetsLoadingAndPageState', 0, () => {
@@ -1387,7 +1733,7 @@ export default function ReaderEffectsTests(): void {
   describe('Replace rule Core identity boundary', () => {
     it('newRuleUsesPendingIdInsteadOfCallerOrCoreRuleId', 0, () => {
       const state = ReaderReducer.reduce(DemoUiState.initial(), {
-        type: 'route-push', id: 'reader-replace-overlay-v2',
+        type: 'route-push', id: 'content-replacement',
       });
       const next = ReaderReducer.reduce(state, {
         type: 'replace-rule-add',
@@ -1399,6 +1745,199 @@ export default function ReaderEffectsTests(): void {
       expect(next.replaceRules.length).assertEqual(1);
       expect(next.replaceRules[0].id).assertEqual('pending-rule-1');
       expect(next.replaceRules[0].pattern).assertEqual('old');
+    });
+  });
+
+  // Async race tests for drainReadingProgressQueue. The strict parser
+  // (parseCanonicalReadingLocation) and the in-flight session/identity guard
+  // must abort BEFORE the durable reading.progress.update is written to Core.
+  // These tests drive a controllable-delay mock CoreRuntime so the resolve
+  // promise can be settled AFTER the reader session has changed, proving no
+  // stale or malformed canonical reaches Core and no late resolve overwrites a
+  // newer visible position. They complement the reducer-level staleCanonical /
+  // lateResolve tests above, which only cover the second line of defense.
+  describe('ReaderEffects drainReadingProgressQueue async race guards', () => {
+    beforeEach(() => {
+      // init() seeds runtimeShadow so the happy-path writeback's dispatch
+      // (reader-location-resolved) can run the reducer path without a real
+      // Core runtime; each test then overrides the live state via setStateForTest.
+      ReaderUiStore.init();
+      ReaderEffects.resetReadingProgressStateForTest();
+    });
+
+    it('malformedCanonicalAbortsBeforeCoreWrite', 0, async () => {
+      // A fractional offset (256.7) is rejected by the strict parser BEFORE
+      // readingProgressUpdate is ever called. The old Math.floor comparison
+      // would have accepted it as 256 and persisted it.
+      seedReaderState(256, 0.4);
+      const core = new MockReadingProgressCore();
+      ReaderEffects.setRuntimeProviderForTest((): ReadingProgressCoreRuntime => core);
+      const snapshot = makeProgressSnapshot(256, 0.4);
+      let onStoredCalls = 0;
+      let onFailedCalls = 0;
+      ReaderEffects.enqueueReadingProgressForTest(snapshot,
+        (): void => { onStoredCalls += 1; },
+        (): void => { onFailedCalls += 1; });
+      expect(core.resolveCalls).assertEqual(1);
+
+      core.resolveDeferred.resolve(resolveResult(256.7, 0.4));
+      await flushReadingProgressMicrotasks();
+
+      expect(core.progressCalls).assertEqual(0);
+      expect(onStoredCalls).assertEqual(0);
+      expect(onFailedCalls).assertEqual(1);
+      expect(ReaderEffects.lastCompletedReadingProgressKeyForTest()).assertEqual('');
+    });
+
+    it('wrongResolverVersionAbortsBeforeCoreWrite', 0, async () => {
+      // A resolverVersion that is not the reflow algorithm (here a stale
+      // 'local.reader.reflow') must be rejected even when the offset is valid.
+      // The old check only required resolverVersion to be non-empty.
+      seedReaderState(256, 0.4);
+      const core = new MockReadingProgressCore();
+      ReaderEffects.setRuntimeProviderForTest((): ReadingProgressCoreRuntime => core);
+      const snapshot = makeProgressSnapshot(256, 0.4);
+      let onStoredCalls = 0;
+      let onFailedCalls = 0;
+      ReaderEffects.enqueueReadingProgressForTest(snapshot,
+        (): void => { onStoredCalls += 1; },
+        (): void => { onFailedCalls += 1; });
+
+      core.resolveDeferred.resolve(resolveResult(256, 0.4, 'local.reader.reflow'));
+      await flushReadingProgressMicrotasks();
+
+      expect(core.progressCalls).assertEqual(0);
+      expect(onStoredCalls).assertEqual(0);
+      expect(onFailedCalls).assertEqual(1);
+      expect(ReaderEffects.lastCompletedReadingProgressKeyForTest()).assertEqual('');
+    });
+
+    it('sessionChangedMidResolveAbortsBeforeCoreWrite', 0, async () => {
+      // The resolve was async: by the time Core returns a valid canonical, the
+      // reading session may have been invalidated (epoch bumped). The in-flight
+      // session guard must abort so a location for an anchor the user has left
+      // is never persisted. lastCompletedReadingProgressKey stays empty so the
+      // write can be retried.
+      seedReaderState(256, 0.4);
+      const core = new MockReadingProgressCore();
+      ReaderEffects.setRuntimeProviderForTest((): ReadingProgressCoreRuntime => core);
+      const snapshot = makeProgressSnapshot(256, 0.4);
+      let onFailedCalls = 0;
+      ReaderEffects.enqueueReadingProgressForTest(snapshot,
+        undefined,
+        (): void => { onFailedCalls += 1; });
+      expect(core.resolveCalls).assertEqual(1);
+
+      // Simulate mid-resolve invalidation: a route exit or chapter swap bumps
+      // the epoch while the resolve promise is still pending.
+      ReaderEffects.bumpReadingSessionEpochForTest();
+      expect(snapshot.sessionEpoch).assertEqual(1);
+      expect(ReaderEffects.readingSessionEpochForTest()).assertEqual(2);
+
+      core.resolveDeferred.resolve(resolveResult(256, 0.4));
+      await flushReadingProgressMicrotasks();
+
+      expect(core.progressCalls).assertEqual(0);
+      expect(onFailedCalls).assertEqual(1);
+      expect(ReaderEffects.lastCompletedReadingProgressKeyForTest()).assertEqual('');
+    });
+
+    it('identityChangedMidResolveAbortsBeforeCoreWrite', 0, async () => {
+      // Even with the epoch unchanged, a chapter swap (currentBookId/SourceId/
+      // ChapterIndex no longer match the snapshot) must abort before Core write.
+      seedReaderState(256, 0.4);
+      const core = new MockReadingProgressCore();
+      ReaderEffects.setRuntimeProviderForTest((): ReadingProgressCoreRuntime => core);
+      const snapshot = makeProgressSnapshot(256, 0.4);
+      let onFailedCalls = 0;
+      ReaderEffects.enqueueReadingProgressForTest(snapshot,
+        undefined,
+        (): void => { onFailedCalls += 1; });
+
+      // The reader has since navigated to chapter 1; the resolve completing now
+      // is for the chapter it just left.
+      ReaderEffects.setCurrentReadingIdentityForTest('/book/101', 'core-test-source', 1);
+
+      core.resolveDeferred.resolve(resolveResult(256, 0.4));
+      await flushReadingProgressMicrotasks();
+
+      expect(core.progressCalls).assertEqual(0);
+      expect(onFailedCalls).assertEqual(1);
+      expect(ReaderEffects.lastCompletedReadingProgressKeyForTest()).assertEqual('');
+    });
+
+    it('lateResolveDoesNotOverwriteCanonicalAfterChapterChange', 0, async () => {
+      // The durable progress row IS written (the user's location for chapter 0
+      // must be saved), but the canonical writeback to the reducer is skipped:
+      // the reader has moved to chapter 1, so a reader-location-resolved for
+      // chapter 0 must not overwrite the visible canonical/offset.
+      seedReaderState(256, 0.4);
+      const core = new MockReadingProgressCore();
+      ReaderEffects.setRuntimeProviderForTest((): ReadingProgressCoreRuntime => core);
+      const snapshot = makeProgressSnapshot(256, 0.4);
+      let onStoredCalls = 0;
+      ReaderEffects.enqueueReadingProgressForTest(snapshot,
+        (): void => { onStoredCalls += 1; },
+        undefined);
+      expect(core.resolveCalls).assertEqual(1);
+
+      core.resolveDeferred.resolve(resolveResult(256, 0.4));
+      await flushReadingProgressMicrotasks();
+      expect(core.progressCalls).assertEqual(1);
+
+      // ProgressUpdate is pending; the reader navigates to chapter 1 before it
+      // settles. Identity now points at chapter 1, so the writeback guard will
+      // skip the reader-location-resolved dispatch for the chapter-0 snapshot.
+      ReaderEffects.setCurrentReadingIdentityForTest('/book/101', 'core-test-source', 1);
+      const beforeStore = ReaderUiStore.snapshot();
+      expect(beforeStore.canonicalReaderLocation).assertNull();
+
+      core.progressDeferred.resolve(storedResult(256, 0.4));
+      await flushReadingProgressMicrotasks();
+
+      // Durable progress was written and confirmed (correct); the completion
+      // key advanced. But the canonical writeback was suppressed.
+      expect(onStoredCalls).assertEqual(1);
+      expect(ReaderEffects.lastCompletedReadingProgressKeyForTest()).assertEqual(snapshot.key);
+      const afterStore = ReaderUiStore.snapshot();
+      expect(afterStore.canonicalReaderLocation).assertNull();
+    });
+
+    it('happyPathWritesProgressAndCanonical', 0, async () => {
+      // Positive control: a valid canonical for the still-current anchor writes
+      // the progress row, sets the completion key, and writes the Core-confirmed
+      // canonical back into the reducer (offset/progress matching the visible
+      // position), so a later reflow is anchored to what Core just stored.
+      seedReaderState(256, 0.4);
+      const core = new MockReadingProgressCore();
+      ReaderEffects.setRuntimeProviderForTest((): ReadingProgressCoreRuntime => core);
+      const snapshot = makeProgressSnapshot(256, 0.4);
+      let onStoredCalls = 0;
+      let onFailedCalls = 0;
+      ReaderEffects.enqueueReadingProgressForTest(snapshot,
+        (): void => { onStoredCalls += 1; },
+        (): void => { onFailedCalls += 1; });
+      expect(core.resolveCalls).assertEqual(1);
+
+      core.resolveDeferred.resolve(resolveResult(256, 0.4));
+      await flushReadingProgressMicrotasks();
+      expect(core.progressCalls).assertEqual(1);
+
+      core.progressDeferred.resolve(storedResult(256, 0.4));
+      await flushReadingProgressMicrotasks();
+
+      expect(onStoredCalls).assertEqual(1);
+      expect(onFailedCalls).assertEqual(0);
+      expect(ReaderEffects.lastCompletedReadingProgressKeyForTest()).assertEqual(snapshot.key);
+      const store = ReaderUiStore.snapshot();
+      const canonical = store.canonicalReaderLocation;
+      expect(canonical !== null).assertTrue();
+      if (canonical !== null) {
+        expect(canonical.chapterOffset).assertEqual(256);
+        expect(canonical.chapterProgress).assertEqual(0.4);
+        expect(canonical.resolverVersion).assertEqual(CANONICAL_RESOLVER_VERSION);
+      }
+      expect(store.readerChapterOffset).assertEqual(256);
     });
   });
 }

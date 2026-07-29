@@ -3,7 +3,7 @@
 // new ReaderUiState literal field-by-field (array spread is still allowed).
 import { RouteId, RouteTable } from '../../contract/generated/RouteTable';
 import { ReaderAppearanceSpecRegistry, ReaderAppearanceStepper } from '../../contract/reader_ui/Appearance';
-import { ReaderUiState, UiEvent, MainTab, Overlay, PageState, ReaderMode, ReaderPaginationMode, ReaderFontFamily, ReaderRenderMetric, RouteEntry, ReaderError, SearchResultEntry, BookDetail, ActiveSession, TtsPlaybackState, TtsScope, TtsTimer, TocMode, ReaderToggleKey, ReaderSettingOptionKey, ReaderTogglesMap, ReaderSettingOptionsMap, BookshelfView, BookshelfFilterState, DiscoverFilterState, CoreDiscoverKind, CoreDiscoverBook, CoreSourceEntry, CoreSourceCheckResult, CoreSourceDebugResult, CoreContentSearchResult, CoreBookmark, SettingsTogglesMap, ReplaceRule, CoreRssSubscription, CoreRssItem, RssItemFilter, ChapterTocEntry, CoreStorageBackupInfo, CoreStorageBackupHistoryEntry, CoreReaderCanonicalLocation, LocalImportDialogResult, LocalImportDialogResultStatus, BookshelfSelectionTarget, BookshelfRemovalReceipt, isLocalBookSourceId } from './ReaderUiState';
+import { ReaderUiState, UiEvent, MainTab, Overlay, PageState, ReaderMode, ReaderPaginationMode, ReaderFontFamily, ReaderRenderMetric, RouteEntry, ReaderError, SearchResultEntry, BookDetail, ActiveSession, TtsPlaybackState, TtsScope, TtsTimer, TocMode, ReaderToggleKey, ReaderSettingOptionKey, ReaderTogglesMap, ReaderSettingOptionsMap, BookshelfView, BookshelfFilterState, DiscoverFilterState, CoreDiscoverKind, CoreDiscoverBook, CoreSourceEntry, CoreSourceCheckResult, CoreSourceDebugResult, CoreContentSearchResult, CoreBookmark, SettingsTogglesMap, ReplaceRule, CoreRssSubscription, CoreRssItem, RssItemFilter, ChapterTocEntry, CoreStorageBackupInfo, CoreStorageBackupHistoryEntry, CoreReaderCanonicalLocation, CANONICAL_RESOLVER_VERSION, LocalImportDialogResult, LocalImportDialogResultStatus, BookshelfSelectionTarget, BookshelfRemovalReceipt, isLocalBookSourceId } from './ReaderUiState';
 import { CoreStorageBackupHistory } from './CoreStorageBackupHistory';
 import type { ReaderUIJSONPayload } from 'reader_ui_runtime';
 
@@ -104,38 +104,26 @@ function resolveUserDeclinedRoute(id: RouteId): RouteId {
   return id;
 }
 
-// reader-module-switch 辅助：native-owned module 名称 -> overlay 路由 id。
-// directory 已由 ReaderUIRuntime Pilot 独占，不再进入本地 reducer。
-// 调用方应先用 isValidReaderModule 校验，避免命中 default 回退分支。
-function moduleRouteId(module: string): RouteId {
+// Reader modules are semantic overlays on the stable immersive-reading route.
+// The former reader-*-overlay-v2 RouteIds were retired in Reader-UI A2 and
+// must never be recreated by a native route projection.
+function moduleOverlay(module: string): Overlay {
   switch (module) {
-    case 'tts': return 'reader-tts-overlay-v2';
-    case 'appearance': return 'reader-appearance-overlay-v2';
-    case 'settings': return 'reader-settings-overlay-v2';
-    case 'search': return 'reader-search-overlay-v2';
-    case 'auto-page': return 'reader-auto-scroll-overlay-v2';
-    case 'replacement': return 'reader-replace-overlay-v2';
-    default: return 'reader-tts-overlay-v2';
+    case 'tts': return 'tts';
+    case 'appearance': return 'appearance';
+    case 'settings': return 'settings';
+    default: return '';
   }
-}
-
-// 判断一个 routeId 是否是 reader 模块 overlay 路由（用于 reader-module-switch
-// 的 replace/push 决策：栈顶已是模块 overlay 时 replace，否则 push）。
-function isReaderModuleOverlay(routeId: string): boolean {
-  return routeId === 'reader-directory-overlay-v2' ||
-    routeId === 'reader-tts-overlay-v2' ||
-    routeId === 'reader-appearance-overlay-v2' ||
-    routeId === 'reader-settings-overlay-v2' ||
-    routeId === 'reader-search-overlay-v2' ||
-    routeId === 'reader-auto-scroll-overlay-v2' ||
-    routeId === 'reader-replace-overlay-v2';
 }
 
 // 校验 module 名称是否是受支持的 reader 模块。
 function isValidReaderModule(module: string): boolean {
-  return module === 'tts' || module === 'appearance' ||
-    module === 'settings' || module === 'search' || module === 'auto-page' ||
-    module === 'replacement';
+  return module === 'tts' || module === 'appearance' || module === 'settings';
+}
+
+function isReaderControlOverlay(overlay: Overlay): boolean {
+  return overlay === 'reader-control' || overlay === 'directory' ||
+    overlay === 'tts' || overlay === 'appearance' || overlay === 'settings';
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -237,6 +225,15 @@ function normalizePageAnimation(value: string): string {
   }
 }
 
+function isAcceptedPageAnimationInput(value: string): boolean {
+  return value === 'cover' || value === '覆盖' ||
+    value === 'slide' || value === 'smooth' || value === '平滑' ||
+    value === '平移' || value === '滑动' ||
+    value === 'simulation' || value === '仿真' ||
+    value === 'scroll' || value === '滚动' ||
+    value === 'none' || value === '无' || value === '无动画';
+}
+
 // Preferences persist stable implementation values only. Unlike the UI
 // normalizer above, this validator deliberately refuses labels, aliases and
 // unknown values so a malformed durable record can never change reader layout.
@@ -249,6 +246,29 @@ function paginationModeForPageAnimation(animation: string): ReaderPaginationMode
   return normalizePageAnimation(animation) === 'scroll' ? 'vertical' : 'horizontal';
 }
 
+function hasCommittedReflowAnchor(state: ReaderUiState): boolean {
+  const active = state.activeReaderContentIdentity;
+  const canonical = state.canonicalReaderLocation;
+  return active !== null && canonical !== null &&
+    canonical.bookId === active.bookId &&
+    canonical.chapterIndex === active.chapterIndex &&
+    Number.isSafeInteger(canonical.chapterOffset) &&
+    canonical.chapterOffset >= 0 &&
+    Number.isFinite(canonical.chapterProgress) &&
+    canonical.chapterProgress >= 0 &&
+    canonical.chapterProgress <= 1 &&
+    canonical.locationRevision.trim().length > 0 &&
+    canonical.resolverVersion === CANONICAL_RESOLVER_VERSION &&
+    // The canonical anchor must match the currently visible position, not merely
+    // be a valid number. reader-location-anchor updates readerChapterOffset from
+    // a local measurement without refreshing canonicalReaderLocation, so a stale
+    // canonical would otherwise let a horizontal/vertical reflow jump the surface
+    // back to the old offset. The canonical is refreshed by the reader-location-
+    // resolved writeback in drainReadingProgressQueue once Core confirms it.
+    canonical.chapterOffset === state.readerChapterOffset &&
+    Math.abs(canonical.chapterProgress - state.readerChapterProgress) <= 0.000001;
+}
+
 function normalizeLegacyPageMode(value: string): ReaderPaginationMode {
   switch (value) {
     case 'vertical':
@@ -258,6 +278,11 @@ function normalizeLegacyPageMode(value: string): ReaderPaginationMode {
     default:
       return 'horizontal';
   }
+}
+
+function isAcceptedLegacyPageModeInput(value: string): boolean {
+  return value === 'vertical' || value === '竖向翻页' || value === '竖向滚动' ||
+    value === 'horizontal' || value === '横向翻页' || value === '横向分页';
 }
 
 export class ReaderReducer {
@@ -1079,15 +1104,18 @@ export class ReaderReducer {
         return exited;
       }
       case 'reader-module-switch': {
-        // Native-owned 模块切换（replace 语义）。directory open/close 已由
-        // Store 前置归一并交给 ReaderUIRuntime Pilot，禁止在此重复处理。
+        // The Reader-UI runtime owns the directory Pilot. The remaining
+        // modules use the same semantic-overlay model and never mutate the
+        // route stack. Full panels and the independently admitted auto-page /
+        // content-replacement routes have their own explicit actions.
         const module = event.module ?? '';
-        if (!isValidReaderModule(module)) return state;
-        const targetId = moduleRouteId(module);
-        if (state.stack.length > 0 && isReaderModuleOverlay(state.stack[state.stack.length - 1].id)) {
-          return ReaderReducer.replace(state, targetId);
-        }
-        return ReaderReducer.push(state, targetId);
+        if (state.routeId !== 'immersive-reading' || !isReaderControlOverlay(state.overlay) ||
+          !isValidReaderModule(module)) return state;
+        const targetOverlay = moduleOverlay(module);
+        if (targetOverlay.length === 0 || state.overlay === targetOverlay) return state;
+        return ReaderReducer.clone(
+          state, state.routeId, state.tab, targetOverlay, state.stack, state.pageState,
+        );
       }
       case 'reader-page-prev':
         return ReaderReducer.setReaderPageIndex(state, state.readerPageIndex - 1);
@@ -1177,7 +1205,7 @@ export class ReaderReducer {
         const scope = event.replaceRuleScope ?? 'chapter';
         // A new rule has no Core id yet.  Never let a caller-provided id or a
         // UI-local id masquerade as Core's canonical `rule-N` identity.
-        if (state.routeId !== 'reader-replace-overlay-v2' || pattern.trim().length === 0) {
+        if (state.routeId !== 'content-replacement' || pattern.trim().length === 0) {
           return ReaderReducer.setError(state, {
             code: 'REPLACE_RULE_CREATE_TARGET_REQUIRED',
             message: '请在当前阅读器替换面板填写规则后再创建。',
@@ -1375,6 +1403,9 @@ export class ReaderReducer {
   }
 
   static setPaginationMode(state: ReaderUiState, mode: ReaderPaginationMode): ReaderUiState {
+    if (mode !== state.paginationMode && !hasCommittedReflowAnchor(state)) {
+      return state;
+    }
     const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
     next.paginationMode = mode;
     const options: ReaderSettingOptionsMap = {
@@ -1505,10 +1536,25 @@ export class ReaderReducer {
   ): ReaderUiState {
     if (!isPersistedPageAnimation(pageAnimation) ||
       (pageMode !== 'horizontal' && pageMode !== 'vertical') ||
-      pageMode !== paginationModeForPageAnimation(pageAnimation)) {
+      pageMode !== paginationModeForPageAnimation(pageAnimation) ||
+      state.activeReaderContentIdentity !== null ||
+      state.chapterContent.length > 0) {
       return state;
     }
-    return ReaderReducer.setReaderSettingOption(state, 'pageAnimation', pageAnimation);
+    const next = ReaderReducer.clone(
+      state, state.routeId, state.tab, state.overlay, state.stack, state.pageState,
+    );
+    next.paginationMode = pageMode;
+    next.readerPageIndex = 0;
+    next.readerSettingOptions = {
+      pageMode: pageMode,
+      tapMode: state.readerSettingOptions.tapMode,
+      pageAnimation: pageAnimation,
+      paragraphIndentMode: state.readerSettingOptions.paragraphIndentMode,
+      textConversion: state.readerSettingOptions.textConversion,
+      textAlignment: state.readerSettingOptions.textAlignment,
+    };
+    return next;
   }
 
   static setLoading(state: ReaderUiState, loading: boolean): ReaderUiState {
@@ -1714,7 +1760,16 @@ export class ReaderReducer {
     location: CoreReaderCanonicalLocation | null): ReaderUiState {
     if (location !== null) {
       const active = state.activeReaderContentIdentity;
-      if (active === null || active.bookId !== location.bookId || active.chapterIndex !== location.chapterIndex) {
+      if (active === null ||
+        active.bookId !== location.bookId ||
+        active.chapterIndex !== location.chapterIndex ||
+        !Number.isSafeInteger(location.chapterOffset) ||
+        location.chapterOffset < 0 ||
+        !Number.isFinite(location.chapterProgress) ||
+        location.chapterProgress < 0 ||
+        location.chapterProgress > 1 ||
+        location.locationRevision.trim().length === 0 ||
+        location.resolverVersion !== CANONICAL_RESOLVER_VERSION) {
         return state;
       }
     }
@@ -1723,8 +1778,8 @@ export class ReaderReducer {
     );
     next.canonicalReaderLocation = location;
     if (location !== null) {
-      next.readerChapterOffset = Math.max(0, Math.floor(location.chapterOffset));
-      next.readerChapterProgress = clamp(location.chapterProgress, 0, 1);
+      next.readerChapterOffset = location.chapterOffset;
+      next.readerChapterProgress = location.chapterProgress;
     }
     return next;
   }
@@ -1733,8 +1788,7 @@ export class ReaderReducer {
   // loading/error state. A body-search failure must not turn the currently
   // readable chapter into an error page.
   static beginContentSearch(state: ReaderUiState, query: string): ReaderUiState {
-    if ((state.routeId !== 'reader-search-overlay-v2' && state.routeId !== 'content-search') ||
-      query.trim().length === 0) {
+    if (state.overlay !== 'content-search' || query.trim().length === 0) {
       return state;
     }
     const next: ReaderUiState = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
@@ -1870,12 +1924,11 @@ export class ReaderReducer {
   }
 
   private static isBookmarkDeleteRoute(routeId: string): boolean {
-    return routeId === 'toc-bookmarks' || routeId === 'reader-directory-overlay-v2' ||
-      routeId === 'bookmarks-manager';
+    return routeId === 'bookmarks-manager';
   }
 
   private static isBookmarkCreateRoute(routeId: string): boolean {
-    return routeId === 'reader' || routeId === 'control-layer-base-v2';
+    return routeId === 'immersive-reading' || routeId === 'reader' || routeId === 'reader_content';
   }
 
   private static hasCurrentBookmark(state: ReaderUiState, time: number): boolean {
@@ -2280,7 +2333,13 @@ export class ReaderReducer {
     };
     switch (key) {
       case 'pageMode': {
+        if (!isAcceptedLegacyPageModeInput(value)) {
+          return state;
+        }
         const paginationMode = normalizeLegacyPageMode(value);
+        if (paginationMode !== state.paginationMode && !hasCommittedReflowAnchor(state)) {
+          return state;
+        }
         options.pageMode = paginationMode;
         options.pageAnimation = paginationMode === 'vertical'
           ? 'scroll'
@@ -2295,9 +2354,15 @@ export class ReaderReducer {
         options.tapMode = value;
         break;
       case 'pageAnimation': {
+        if (!isAcceptedPageAnimationInput(value)) {
+          return state;
+        }
         const animation = normalizePageAnimation(value);
-        options.pageAnimation = animation;
         const paginationMode = paginationModeForPageAnimation(animation);
+        if (paginationMode !== state.paginationMode && !hasCommittedReflowAnchor(state)) {
+          return state;
+        }
+        options.pageAnimation = animation;
         options.pageMode = paginationMode;
         next.paginationMode = paginationMode;
         next.readerPageIndex = 0;
@@ -4017,7 +4082,7 @@ export class ReaderReducer {
   // cannot safely be deleted through the Core `rule-N` endpoint.
   static requestReplaceRuleDelete(state: ReaderUiState, id: string): ReaderUiState {
     const target = id.trim();
-    if (state.routeId !== 'reader-replace-overlay-v2' ||
+    if (state.routeId !== 'content-replacement' ||
       !ReaderReducer.hasPersistentReplaceRule(state, target)) {
       return ReaderReducer.setError(state, {
         code: 'REPLACE_RULE_DELETE_TARGET_REQUIRED',
@@ -4035,7 +4100,7 @@ export class ReaderReducer {
   // Keeping them in the reducer makes forged direct confirm events visible as
   // a local error rather than silently mutating an unrelated rule.
   static confirmReplaceRuleDelete(state: ReaderUiState): ReaderUiState {
-    if (state.routeId === 'reader-replace-overlay-v2' &&
+    if (state.routeId === 'content-replacement' &&
       ReaderReducer.hasPersistentReplaceRule(state, state.pendingReplaceRuleDeleteId)) {
       return state;
     }
@@ -4079,7 +4144,7 @@ export class ReaderReducer {
   }
 
   private static canMutatePersistentReplaceRule(state: ReaderUiState, id: string): boolean {
-    return state.routeId === 'reader-replace-overlay-v2' &&
+    return state.routeId === 'content-replacement' &&
       ReaderReducer.hasPersistentReplaceRule(state, id.trim());
   }
 

@@ -8,9 +8,11 @@
 import {
   type ReaderUIAsyncTransition,
   type ReaderUIBookOpenLayout,
+  type ReaderUICanonicalLocation,
   type ReaderUIEffect,
   type ReaderUIJSONPayload,
   type ReaderUIJSONResult,
+  type ReaderUILocationReflow,
   type ReaderUIState,
 } from 'reader_ui_runtime';
 import { CoreRuntime } from '../../bridge/CoreRuntime';
@@ -86,6 +88,7 @@ export class CoreRuntimeBookOpenGateway implements ReaderBookOpenCoreGateway {
 export interface ReaderBookOpenRuntimeGateway {
   currentState(): ReaderUIState;
   acceptBookOpenResult(coreType: string, correlationId: string, chapterCount?: number,
+    canonicalLocation?: ReaderUICanonicalLocation, reflow?: ReaderUILocationReflow,
     error?: string): ReaderUIAsyncTransition;
   acceptBookOpenJSONResult(coreType: string, correlationId: string,
     result: ReaderUIJSONResult): ReaderUIAsyncTransition;
@@ -464,10 +467,11 @@ export class ReaderBookOpenEffectExecutor {
             type: 'reader-location-resolved',
             canonicalReaderLocation: context.location.canonicalLocation,
           });
-          this.acceptStage(context, stage, {
-            'canonicalLocation': context.location.canonicalLocation.locationRevision,
-            'pageIndex': this.runtime.currentState().readerPageIndex,
-          });
+          this.acceptStage(
+            context,
+            stage,
+            ReaderBookOpenDomainMapper.runtimeLocationResult(context.location),
+          );
           return;
         }
         default:
