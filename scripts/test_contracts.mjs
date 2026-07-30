@@ -933,6 +933,33 @@ test('empty bookshelf consumes Figma State/BookshelfEmpty and preserves its two 
     'the generic bookshelf empty page must not remain in the production route');
 });
 
+test('bookshelf absence and retired routes are removed structurally instead of hidden or redrawn', () => {
+  assert.equal(bookshelf.includes('Column().width(0).height(0)'), false,
+    'bookshelf loading, empty, and continue-reading absence must not emit zero-size nodes');
+  assert.equal(bookshelf.includes('export struct ShelfChipGroup'), false,
+    'the invented shelf-chip component must be physically absent');
+  assert.equal(viewStateRenderer.includes('ShelfChipGroup'), false,
+    'the generic renderer must not retain a shelf-chip presentation branch');
+  for (const retiredComponentType of [
+    'BookMoreMenuPage',
+    'BookGroupManagementPage',
+    'GroupManagementPage',
+    'BookBatchManagementPage',
+  ]) {
+    assert.equal(viewStateRenderer.includes(retiredComponentType), false,
+      `${retiredComponentType} must not remain reachable through the generic renderer`);
+  }
+  assert.ok(viewStateRenderer.includes("component.type === 'LocalBookImportPage'") &&
+    viewStateRenderer.includes("this.routeId === 'local-format-support'"),
+  'the historical local-import page mapping may survive only for the separate blocked format-support route');
+  assert.ok(viewStateRenderer.includes("component.type === 'ContinueReadingCard'") &&
+    viewStateRenderer.includes('this.continueReadingLoaded && this.continueReadingBook !== null'),
+  'the populated continue-reading component must remain conditionally source-backed');
+  assert.ok(viewStateRenderer.includes("component.type === 'BookshelfShelfSection'") &&
+    viewStateRenderer.includes('if (this.bookshelfLoaded)'),
+  'the shelf section must be omitted before Core resolves instead of hidden');
+});
+
 test('generic state host is explicitly removed instead of hidden above Figma controls', () => {
   assert.ok(stateHost.includes('STATE_HOST_RETIRED'),
     'StateHost source must retain an explicit retirement marker');

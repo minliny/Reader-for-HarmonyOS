@@ -5,7 +5,7 @@
 // Names match the contract
 // enum 1:1 so DemoViewState can cite them directly from the fixture trees.
 // Existing contract-named structs that already live in the domain files
-// (BookCard / BookCover / ShelfSectionHeader / ShelfChipGroup / SettingsSection
+// (BookCard / BookCover / ShelfSectionHeader / SettingsSection
 // / SettingsListItem) are wired via ViewStateRenderer branches, not duplicated here.
 import { ColorTokens } from '../../contract/generated/ColorTokens';
 import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';

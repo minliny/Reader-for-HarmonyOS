@@ -8,7 +8,7 @@ import {
 } from '../../contract/generated/ViewStateTable';
 import { AppTopBar, BackTopBar, BottomNav,
   DemoButton, DemoList, Card, FilterBar, Overlay } from './SharedComponents';
-import { ContinueReadingCard, BookshelfShelfSection, BookshelfEmptyState, ShelfChipGroup, ShelfSectionHeader, BookCard, BookGrid, BookEntry } from './BookshelfComponents';
+import { ContinueReadingCard, BookshelfShelfSection, BookshelfEmptyState, ShelfSectionHeader, BookCard, BookGrid, BookEntry } from './BookshelfComponents';
 import { BookHero, BookSummaryCard, BookChapterList } from './BookDetailComponents';
 import { ReadingBackgroundLayer, ReadingTextFlow, ReadingInfoLayer, TapZones, ReaderBase, ReaderTopArea } from './ReaderComponents';
 import { ReaderBottomBar, DirectoryPanel, AppearancePanel,
@@ -32,8 +32,8 @@ import { AppShellStructure, MainTabsStructure, SearchHomePage, SearchResultsPage
   SyncErrorPage, SyncProgressPage, RestoreConfirmPage, RestoreProgressPage, RestoreConflictPage, RestoreResultPage,
   RemoteWebDavBooksPage, RssDetailPage, RssEmptyState, RssErrorState, GlobalStatePage,
   OfflineStatePage, PermissionRequiredPage, AboutVersionPage, AboutFeedbackPage, LocalBookImportPage, ReadingSettingsEntryPage,
-  BookMoreMenuPage, BookGroupManagementPage, GlobalSettingsPage, BackupSettingsPage,
-  RssSubscriptionManagementPage, RssSubscriptionDeleteConfirmPage, GroupManagementPage, BookBatchManagementPage, BookDirectoryPage } from './StructuralPageComponents';
+  GlobalSettingsPage, BackupSettingsPage,
+  RssSubscriptionManagementPage, RssSubscriptionDeleteConfirmPage, BookDirectoryPage } from './StructuralPageComponents';
 import { BookTitleAuthor, SourceStatus, ReadButton, DirectoryPreview, BookIntro, ConfigEntry,
   SearchEntry, SourceTypeSegment, CurrentSourceCard, SourceCategoryChips, DiscoveryContentCard, SourceStatusBar,
   SubscriptionSummaryCard, FeedStatusChips, FeedSourceChips, RssEntryItem, UnreadIndicator,
@@ -803,17 +803,15 @@ export struct ViewStateRenderer {
         // title, cover and resume point come from the Core progress record,
         // never from a fixture carried by the generated ViewState tree.
         ContinueReadingCard()
-      } else {
-        // Figma binds only the populated card. An empty shelf or a book with
-        // no durable progress must not reserve a fake "recent reading" slot.
-        Column().width(0).height(0)
       }
     } else if (component.type === 'BookshelfShelfSection') {
-      BookshelfShelfSection({
-        title: this.textOr(component.props.title, '我的书架'),
-        books: this.extractBooks(component.children),
-        viewMode: this.textOr(component.props.viewMode, 'cover'),
-      })
+      if (this.bookshelfLoaded) {
+        BookshelfShelfSection({
+          title: this.textOr(component.props.title, '我的书架'),
+          books: this.extractBooks(component.children),
+          viewMode: this.textOr(component.props.viewMode, 'cover'),
+        })
+      }
     } else if (component.type === 'BookHero') {
       BookHero()
     } else if (component.type === 'BookSummaryCard') {
@@ -1151,14 +1149,6 @@ export struct ViewStateRenderer {
       // generic StatePanel route was a local substitute and is intentionally
       // bypassed in favor of the canonical component.
       BookshelfEmptyState()
-    } else if (component.type === 'BookMoreMenuPage') {
-      BookMoreMenuPage()
-    } else if (component.type === 'BookGroupManagementPage') {
-      BookGroupManagementPage({ title: this.textOr(component.props.title, '分组') })
-    } else if (component.type === 'GroupManagementPage') {
-      GroupManagementPage({ variant: this.textOr(component.props.variant, 'group-flow') })
-    } else if (component.type === 'BookBatchManagementPage') {
-      BookBatchManagementPage()
     } else if (component.type === 'RssSubscriptionDeleteConfirmPage') {
       RssSubscriptionDeleteConfirmPage()
     } else if (component.type === 'BookDirectoryPage') {
@@ -1295,17 +1285,23 @@ export struct ViewStateRenderer {
     } else if (component.type === 'AboutFeedbackPage') {
       AboutFeedbackPage()
     } else if (component.type === 'LocalBookImportPage') {
-      if (component.children.length > 0) {
-        this.renderCapabilityClosureNode(
-          component,
-          component.children,
-          this.capabilityClosureTitle(component.props.title, component.props.label,
-            component.props.name, component.type),
-          this.capabilityClosureDetail(component.props.summary, component.props.state,
-            component.props.variant),
-        )
-      } else {
-        LocalBookImportPage({ title: this.textOr(component.props.title, '本地导入') })
+      // The standalone local-import route was retired in favor of the
+      // revision-bound in-place dialog. This historical component remains a
+      // contract mapping only for the separate, currently blocked
+      // local-format-support capability route.
+      if (this.routeId === 'local-format-support') {
+        if (component.children.length > 0) {
+          this.renderCapabilityClosureNode(
+            component,
+            component.children,
+            this.capabilityClosureTitle(component.props.title, component.props.label,
+              component.props.name, component.type),
+            this.capabilityClosureDetail(component.props.summary, component.props.state,
+              component.props.variant),
+          )
+        } else {
+          LocalBookImportPage({ title: this.textOr(component.props.title, '本地导入') })
+        }
       }
     } else if (component.type === 'ReadingSettingsEntryPage') {
       ReadingSettingsEntryPage({ title: this.textOr(component.props.title, '阅读设置') })
@@ -1451,8 +1447,6 @@ export struct ViewStateRenderer {
       Overlay()
     } else if (component.type === 'Error') {
       this.renderCanonicalError(component, ReaderUIScreenGraphTerminalStateAdapter.projectError(component))
-    } else if (component.type === 'ShelfChipGroup') {
-      ShelfChipGroup()
     } else if (component.type === 'ShelfSectionHeader') {
       ShelfSectionHeader({ title: this.textOr(component.props.title, '我的书架') })
     } else if (component.type === 'BookCard') {

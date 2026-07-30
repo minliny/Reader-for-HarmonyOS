@@ -19,6 +19,20 @@ const READING_SURFACE_A2_DELTA = path.join(
   'reading-surface',
   'A2_CONTRACT_RETIREMENT_DELTA.json',
 );
+const BOOKSHELF_A2_DELTA = path.join(
+  READER_UI,
+  'docs',
+  'design',
+  'native-disposition',
+  'bookshelf',
+  'A2_NATIVE_RETIREMENT_DELTA.json',
+);
+const VISUAL_ADMISSION_REGISTRY = path.join(
+  READER_UI,
+  'docs',
+  'design',
+  'FIGMA_VISUAL_ADMISSION_REGISTRY.json',
+);
 const VIEW_STATE_RENDERER = path.join(REPO, 'entry', 'src', 'main', 'ets', 'ui', 'components', 'ViewStateRenderer.ets');
 const COVERAGE_REGISTRY = path.join(REPO, 'entry', 'src', 'main', 'ets', 'ui', 'router', 'ReaderUIScreenGraphCoverage.ets');
 const RETIREMENT_REGISTRY = path.join(REPO, 'entry', 'src', 'main', 'ets', 'ui', 'router', 'ReaderUIScreenGraphRetirementRegistry.ets');
@@ -140,6 +154,8 @@ const graphBytes = fs.readFileSync(GRAPH_JSON);
 const graph = JSON.parse(graphBytes.toString('utf8'));
 const viewStateFixtures = JSON.parse(fs.readFileSync(VIEW_STATE_FIXTURES, 'utf8'));
 const readingSurfaceA2Delta = JSON.parse(fs.readFileSync(READING_SURFACE_A2_DELTA, 'utf8'));
+const bookshelfA2Delta = JSON.parse(fs.readFileSync(BOOKSHELF_A2_DELTA, 'utf8'));
+const visualAdmissionRegistry = JSON.parse(fs.readFileSync(VISUAL_ADMISSION_REGISTRY, 'utf8'));
 if (graph.schemaVersion !== '1.2.0') {
   failures.push(`ScreenGraph schemaVersion must be 1.2.0, got ${graph.schemaVersion}`);
 }
@@ -224,11 +240,68 @@ if (approvedA2CoverageAfter?.faithfulInstanceFloor !== 272 ||
   failures.push('reading-surface A2 approved coverage-after boundary changed');
 }
 
+const EXPECTED_BOOKSHELF_A2_RETIRED_ROUTE_IDS = [
+  'bookshelf-book-more-menu',
+  'bookshelf-group-management',
+  'group-management',
+  'book-batch-management',
+  'local-import',
+];
+const EXPECTED_BOOKSHELF_A2_RETIRED_COMPONENTS = [
+  'bookshelf-book-more-menu/topbar',
+  'bookshelf-book-more-menu/book-more-menu-page',
+  'bookshelf-book-more-menu/bottom-nav',
+  'bookshelf-group-management/topbar',
+  'bookshelf-group-management/book-group-management-page',
+  'group-management/topbar',
+  'group-management/group-management-page',
+  'book-batch-management/topbar',
+  'book-batch-management/book-batch-management-page',
+  'local-import/local-import-topbar',
+  'local-import/local-import-page',
+];
+const approvedBookshelfA2CoverageAfter = bookshelfA2Delta.coverageAfter;
+if (bookshelfA2Delta.kind !== 'A2_NATIVE_RETIREMENT_DELTA' ||
+  bookshelfA2Delta.status !== 'approved-source-backed-retirement' ||
+  bookshelfA2Delta.recordId !== 'bookshelf.page' ||
+  bookshelfA2Delta.sourceCommit !== '092fb4d15a222ce9efeb503842673ccb529281ca' ||
+  bookshelfA2Delta.b2ImplementationCommit !== '8c984963344307d2cd58afa26be63ce285a56c9d' ||
+  bookshelfA2Delta.b3EvidenceCommit !== '7994b78c490aa62dafbc8fbf7e23d9733b039937' ||
+  bookshelfA2Delta.figma?.revision !== '2379851596474967636') {
+  failures.push('bookshelf A2 native retirement is not source- and revision-backed');
+}
+if (!sameStringSet(
+  new Set(bookshelfA2Delta.retiredRouteIds || []),
+  new Set(EXPECTED_BOOKSHELF_A2_RETIRED_ROUTE_IDS),
+) || !sameStringSet(
+  new Set(bookshelfA2Delta.retiredComponentInstances || []),
+  new Set(EXPECTED_BOOKSHELF_A2_RETIRED_COMPONENTS),
+)) {
+  failures.push('bookshelf A2 delta does not name the exact retired routes and component instances');
+}
+if (approvedBookshelfA2CoverageAfter?.faithfulInstanceFloor !== 265 ||
+  approvedBookshelfA2CoverageAfter?.partialInstanceCeiling !== 45 ||
+  approvedBookshelfA2CoverageAfter?.retiredRuntimeInstances !== 44) {
+  failures.push('bookshelf A2 approved coverage-after boundary changed');
+}
+for (const routeId of EXPECTED_BOOKSHELF_A2_RETIRED_ROUTE_IDS) {
+  const owners = (visualAdmissionRegistry.records || []).filter((record) =>
+    (record.routeIds || []).includes(routeId));
+  if (owners.length === 0 || owners.some((record) => record.classification !== 'retired')) {
+    failures.push(`bookshelf A2 route is not exclusively retired by Reader-UI: ${routeId}`);
+  }
+}
+
 // Generated route unions are intentionally broader than the current Figma
 // presentation. Keep the precise retirement list in native code, then prove
 // every retired generated component is named by route + component ID. The
 // generated Reader UI files remain immutable inputs to this audit.
 const RETIRED_GENERATED_ROUTE_IDS = new Set([
+  'bookshelf-book-more-menu',
+  'bookshelf-group-management',
+  'group-management',
+  'book-batch-management',
+  'local-import',
   'source-switch-results',
   'source-switch-empty',
   'source-switch-error',
@@ -274,7 +347,7 @@ if (!fs.existsSync(RETIREMENT_REGISTRY)) {
   for (const entry of retiredComponentEntries) {
     const key = componentRecordKey(entry.routeId, entry.componentId);
     if (!RETIRED_GENERATED_ROUTE_IDS.has(entry.routeId)) {
-      failures.push(`retirement registry may only cover withdrawn Source Switch/Restore routes: ${entry.routeId}/${entry.componentId}`);
+      failures.push(`retirement registry may only cover approved withdrawn routes: ${entry.routeId}/${entry.componentId}`);
     }
     if (retiredComponentKeys.has(key)) {
       failures.push(`duplicate ScreenGraph retirement registry entry: ${entry.routeId}/${entry.componentId}`);
@@ -290,6 +363,15 @@ if (!fs.existsSync(RETIREMENT_REGISTRY)) {
     if (!retiredComponentKeys.has(key)) {
       failures.push(`withdrawn generated component is not explicitly retired: ${record.routeId}/${record.component.id}`);
     }
+  }
+  const actualBookshelfRetiredComponents = retiredComponentEntries
+    .filter((entry) => EXPECTED_BOOKSHELF_A2_RETIRED_ROUTE_IDS.includes(entry.routeId))
+    .map((entry) => `${entry.routeId}/${entry.componentId}`);
+  if (!sameStringSet(
+    new Set(actualBookshelfRetiredComponents),
+    new Set(EXPECTED_BOOKSHELF_A2_RETIRED_COMPONENTS),
+  )) {
+    failures.push('native retirement registry drifted from the source-owned bookshelf A2 delta');
   }
   if (retiredComponentKeys.has(componentRecordKey('source-switch', 'source-switch-flow'))) {
     failures.push('live source-switch window must not be retired from runtime coverage');
@@ -312,8 +394,8 @@ const explicitGapComponentTypes = (graph.componentCatalog || [])
 // The generated graph deliberately remains a complete historical ledger, but
 // a component whose every instance is explicitly retired must not demand a
 // renderer. The retirement registry is the only exception: it records the
-// exact route/component pairs and prevents stale Source Switch matrices from
-// reappearing just to satisfy a coverage count.
+// exact route/component pairs and prevents stale superseded pages or state
+// matrices from reappearing just to satisfy a coverage count.
 const retiredOnlyReferencedComponentTypes = new Set(referencedComponentTypes.filter((type) => {
   const instances = canonicalComponentRecords.filter((record) => record.component.type === type);
   return instances.length > 0 && instances.every((record) =>
@@ -1736,11 +1818,11 @@ for (const key of Object.keys(actual)) {
 }
 
 // Coverage quality baseline — prevents silent faithful→partial regression.
-// The source-owned A2 retirement delta is the only authority for this
-// intentional denominator decrease. Any unrelated shrink still fails closed.
+// Source-owned A2 retirement deltas are the only authority for intentional
+// denominator decreases. Any unrelated shrink still fails closed.
 const COVERAGE_QUALITY_BASELINE = {
-  faithfulInstanceFloor: approvedA2CoverageAfter?.faithfulInstanceFloor,
-  partialInstanceCeiling: approvedA2CoverageAfter?.partialInstanceCeiling,
+  faithfulInstanceFloor: approvedBookshelfA2CoverageAfter?.faithfulInstanceFloor,
+  partialInstanceCeiling: approvedBookshelfA2CoverageAfter?.partialInstanceCeiling,
 };
 if (faithfulInstanceCount < COVERAGE_QUALITY_BASELINE.faithfulInstanceFloor) {
   failures.push(
@@ -1754,7 +1836,12 @@ if (partialInstanceCount > COVERAGE_QUALITY_BASELINE.partialInstanceCeiling) {
 }
 
 if (failures.length > 0) {
-  console.error(`[screen-graph-consumer] FAIL sourceSha256=${sourceSha} canonicalSha256=${canonicalSha}`);
+  console.error(
+    `[screen-graph-consumer] FAIL sourceSha256=${sourceSha} canonicalSha256=${canonicalSha} ` +
+    `instances=${faithfulInstanceCount}faithful+${genericInstanceCount}generic+` +
+    `${partialInstanceCount}partial+${insufficientInstanceCount}insufficient+` +
+    `${figmaUnboundStateInstanceCount}figmaUnboundState retiredRuntimeInstances=${retiredRuntimeInstanceCount}`,
+  );
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }

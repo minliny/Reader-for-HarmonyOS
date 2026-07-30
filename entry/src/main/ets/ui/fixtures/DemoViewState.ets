@@ -2,7 +2,7 @@
 // (body components only; shells provide topbar (topArea) and nav (tabNav /
 // readerModuleNav) via their own slots, per the 5-slot discipline).
 // Main tab pages + book-detail are aligned to the contract ComponentType trees
-// (ShelfChipGroup / BookCover / SubscriptionSummaryCard / etc.); the generic
+// (BookCover / SubscriptionSummaryCard / etc.); the generic
 // flow-page types (Loading / Empty / FormSection / Overlay / ...) cover the rest.
 import { RouteId } from '../../contract/generated/RouteTable';
 
@@ -13,7 +13,7 @@ export class DemoViewState {
       case 'bookshelf':
       case 'bookshelf-cover-mode':
       case 'bookshelf-list-mode':
-        return ['ShelfChipGroup', 'ContinueReadingCard', 'ShelfSectionHeader', 'BookGrid'];
+        return ['ContinueReadingCard', 'ShelfSectionHeader', 'BookGrid'];
       case 'bookshelf-empty':
         return ['Empty'];
       case 'discover':

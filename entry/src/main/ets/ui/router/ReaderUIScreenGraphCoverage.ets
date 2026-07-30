@@ -200,7 +200,6 @@ export const READER_SCREEN_GRAPH_LIVE_STATE_PROJECTION_TYPES: ComponentType[] = 
   'SyncProgressPage',
   'RssDetailPage',
   'AboutVersionPage',
-  'BookMoreMenuPage',
 ];
 
 // Conservative generic surfaces which consume their canonical data but do
@@ -246,9 +245,6 @@ export const READER_SCREEN_GRAPH_GENERIC_USABLE_TYPES: ComponentType[] = [
   'AboutVersionPage',
   'LocalBookImportPage',
   'ReadingSettingsEntryPage',
-  'BookMoreMenuPage',
-  'BookGroupManagementPage',
-  'GroupManagementPage',
   'GlobalSettingsPage',
   'BackupSettingsPage',
   'RssSubscriptionManagementPage',

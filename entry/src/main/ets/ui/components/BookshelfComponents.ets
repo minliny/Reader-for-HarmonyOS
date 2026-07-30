@@ -1,7 +1,7 @@
 // BookshelfComponents — bookshelf skeleton ported from render-runtime.js
 // mainTabBookshelf() DOM: .fd-continue-card → .fd-bookshelf-shelf-section
 // (wrapper, gap 10: .fd-section-head [h2 + 5 view-action buttons] + .fd-book-grid).
-// NO ShelfChipGroup on bookshelf (the chips were invented, not in demo).
+// No local category-chip row: the chips were invented and have no Figma source.
 import { ReaderUiVisualTokens } from '../../contract/reader_ui/VisualAdmission';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 import { MotionAdapter } from '../adapters/MotionAdapter';
@@ -148,8 +148,6 @@ export struct ContinueReadingCard {
       .borderRadius(8)
       .backgroundColor(ReaderUiVisualTokens.bookshelfSectionSurface)
       .alignItems(VerticalAlign.Center)
-    } else {
-      Column().width(0).height(0)
     }
   }
 
@@ -265,7 +263,6 @@ export struct BookshelfShelfSection {
   @Prop books: BookEntry[] = [];
   @Prop viewMode: string = 'cover';
   @StorageProp('reader.bookshelfBooks') coreBooks: CoreBookshelfBook[] = [];
-  @StorageProp('reader.bookshelfLoaded') bookshelfLoaded: boolean = false;
 
   private displayedBooks(): BookEntry[] {
     const result: BookEntry[] = [];
@@ -286,26 +283,20 @@ export struct BookshelfShelfSection {
 
   build() {
     Column() {
-      if (this.bookshelfLoaded && this.coreBooks.length === 0) {
+      if (this.coreBooks.length === 0) {
         // Figma canonical State/BookshelfEmpty (286:31) is the entire empty
         // shelf body. Do not leave the populated-master section header or a
         // fabricated loading/empty composition above it.
         BookshelfEmptyState()
       } else {
         ShelfSectionHeader({ title: this.title, viewMode: this.viewMode })
-      }
-      if (!this.bookshelfLoaded) {
-        // Figma binds no loading shelf. Until Core returns a concrete shelf
-        // state, do not manufacture a skeleton that changes the page layout.
-        Column().width(0).height(0)
-      } else if (this.coreBooks.length === 0) {
-        Column().width(0).height(0)
-      } else if (this.viewMode === 'list') {
-        BookList({ books: this.displayedBooks() })
-          .margin({ top: 10 })
-      } else {
-        BookGrid({ books: this.displayedBooks() })
-          .margin({ top: 10 })
+        if (this.viewMode === 'list') {
+          BookList({ books: this.displayedBooks() })
+            .margin({ top: 10 })
+        } else {
+          BookGrid({ books: this.displayedBooks() })
+            .margin({ top: 10 })
+        }
       }
     }
     .width('100%')
@@ -445,15 +436,6 @@ export struct BookGrid {
       .columnsGap(30)
       .width('100%')
     }
-  }
-}
-
-// This ComponentType is retained solely for the generated contract catalog.
-// No current Figma screen instantiates it, so it must remain visually inert.
-@Component
-export struct ShelfChipGroup {
-  build() {
-    Column().width(0).height(0)
   }
 }
 
