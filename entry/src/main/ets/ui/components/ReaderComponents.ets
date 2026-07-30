@@ -1335,6 +1335,9 @@ export struct ReaderTopArea {
     }
     .width('100%')
     .height('100%')
+    // Only the visible top-bar controls own taps. The full-screen positioning
+    // host must let exposed reading-area taps reach ReaderControlDismissZone.
+    .hitTestBehavior(HitTestMode.Transparent)
   }
 }
 
@@ -1576,14 +1579,18 @@ export struct SessionCapsule {
 }
 
 @Component
-struct ControlDismissZone {
+export struct ReaderControlDismissZone {
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       InteractionDebugFrame({ label: 'ControlDismissZone', tone: 'module' })
     }
     .width('100%')
     .height('100%')
-    .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
+    .accessibilityText('隐藏阅读控制层')
+    // Reader-UI renders this as the full-screen data-reader-dismiss zone
+    // behind the visible control-home layers. Hiding the controls changes only
+    // the semantic overlay and must never pop or replace the reading route.
+    .onClick(() => requestReaderControlToggle())
   }
 }
 
@@ -1629,7 +1636,7 @@ export struct ReaderBase {
           })
         }
       } else if (this.controlLayer()) {
-        ControlDismissZone()
+        ReaderControlDismissZone()
       } else {
         // The Scroll's own click handler still opens the control layer in
         // vertical reading.  Do not layer horizontal page-turn targets over
