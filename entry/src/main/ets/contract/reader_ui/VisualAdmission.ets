@@ -720,7 +720,7 @@ export class ReaderUiVisualTokens {
 export class ReaderUiVisualAdmission {
   static readonly SOURCE_FILE_KEY: string = 'klhs2jMM4MncaJFqZMfqEK';
   static readonly SOURCE_REVISION: string = '2379851596474967636';
-  static readonly REGISTRY_SHA256: string = '8f52a84a0fe1ae761433b167ca06b38c3d47ecde7513275f692d985d2f6e4c37';
+  static readonly REGISTRY_SHA256: string = 'be2798a82ac78fb53e7c428a3500e1bd87e07fb57c821288c825dc01124ea70a';
   static readonly ROUTE_ADMISSIONS: ReaderUiVisualRouteAdmissionEntry[] = [
     { routeId: 'about', admission: 'retired', sourceBound: false, implementationReady: false, recordIds: ['about.withdrawn'] },
     { routeId: 'about-feedback', admission: 'retired', sourceBound: false, implementationReady: false, recordIds: ['about.withdrawn'] },
@@ -736,10 +736,10 @@ export class ReaderUiVisualAdmission {
     { routeId: 'book-directory', admission: 'candidate-backport', sourceBound: true, implementationReady: false, recordIds: ['book-detail.chapter-row', 'book-detail.page'] },
     { routeId: 'book-search', admission: 'candidate-backport', sourceBound: true, implementationReady: false, recordIds: ['search.five-state'] },
     { routeId: 'bookmarks-manager', admission: 'blocked', sourceBound: false, implementationReady: false, recordIds: ['figma-absent.d6-capability-contract-routes'] },
-    { routeId: 'bookshelf', admission: 'candidate-backport', sourceBound: true, implementationReady: false, recordIds: ['bookshelf.book-card', 'bookshelf.page'] },
+    { routeId: 'bookshelf', admission: 'implementation-ready', sourceBound: true, implementationReady: true, recordIds: ['bookshelf.book-card', 'bookshelf.page'] },
     { routeId: 'bookshelf-book-more-menu', admission: 'retired', sourceBound: false, implementationReady: false, recordIds: ['bookshelf.book-more-menu-legacy-route'] },
-    { routeId: 'bookshelf-cover-mode', admission: 'candidate-backport', sourceBound: true, implementationReady: false, recordIds: ['bookshelf.book-card', 'bookshelf.page'] },
-    { routeId: 'bookshelf-empty', admission: 'candidate-backport', sourceBound: true, implementationReady: false, recordIds: ['bookshelf.page'] },
+    { routeId: 'bookshelf-cover-mode', admission: 'implementation-ready', sourceBound: true, implementationReady: true, recordIds: ['bookshelf.book-card', 'bookshelf.page'] },
+    { routeId: 'bookshelf-empty', admission: 'implementation-ready', sourceBound: true, implementationReady: true, recordIds: ['bookshelf.page'] },
     { routeId: 'bookshelf-group-management', admission: 'retired', sourceBound: false, implementationReady: false, recordIds: ['bookshelf.group-management.withdrawn'] },
     { routeId: 'bookshelf-list-mode', admission: 'blocked', sourceBound: false, implementationReady: false, recordIds: ['bookshelf.tablet-list'] },
     { routeId: 'bookshelf-search-settings', admission: 'blocked', sourceBound: false, implementationReady: false, recordIds: ['figma-unbound.needs-page-or-user-decision'] },
@@ -971,10 +971,10 @@ export class ReaderUiVisualAdmission {
     { routeId: 'webview-login', admission: 'blocked', sourceBound: false, implementationReady: false, recordIds: ['figma-absent.d6-capability-contract-routes'] },
   ];
   static readonly OVERLAY_ADMISSIONS: ReaderUiVisualOverlayAdmissionEntry[] = [
-    { overlayKind: 'book-action', admission: 'candidate-backport', sourceBound: true, implementationReady: false, recordIds: ['bookshelf.action-sheet'] },
-    { overlayKind: 'bookshelf-multiselect', admission: 'candidate-backport', sourceBound: true, implementationReady: false, recordIds: ['bookshelf.multi-select'] },
-    { overlayKind: 'dialog', admission: 'candidate-backport', sourceBound: true, implementationReady: false, recordIds: ['bookshelf.action-sheet'] },
-    { overlayKind: 'local-import', admission: 'candidate-backport', sourceBound: true, implementationReady: false, recordIds: ['bookshelf.local-import-dialog'] },
+    { overlayKind: 'book-action', admission: 'implementation-ready', sourceBound: true, implementationReady: true, recordIds: ['bookshelf.action-sheet'] },
+    { overlayKind: 'bookshelf-multiselect', admission: 'implementation-ready', sourceBound: true, implementationReady: true, recordIds: ['bookshelf.multi-select'] },
+    { overlayKind: 'dialog', admission: 'implementation-ready', sourceBound: true, implementationReady: true, recordIds: ['bookshelf.action-sheet'] },
+    { overlayKind: 'local-import', admission: 'implementation-ready', sourceBound: true, implementationReady: true, recordIds: ['bookshelf.local-import-dialog'] },
   ];
   static readonly VIEWPORT_ROUTE_ADMISSIONS: ReaderUiVisualViewportRouteAdmissionEntry[] = [
     { routeId: 'bookshelf-list-mode', viewport: 'phone', admission: 'candidate-backport', sourceBound: true, implementationReady: false, recordIds: ['bookshelf.tablet-list'] },
