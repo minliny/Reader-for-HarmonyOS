@@ -9,6 +9,9 @@ import {
   ScreenGraphRegistry,
 } from '../../contract/reader_ui/ScreenGraph';
 import { ReaderUIScreenGraphAuthority } from './ReaderUIScreenGraphShadowRegistry';
+import {
+  READER_SCREEN_GRAPH_RETIRED_COMPONENT_INSTANCES,
+} from './ReaderUIScreenGraphRetirementRegistry';
 
 export interface ReaderUIScreenGraphPartialEntry {
   type: ComponentType;
@@ -23,12 +26,15 @@ export interface ReaderUIScreenGraphComponentCoverage {
   explicitGapTypes: ComponentType[];
   explicitDispatchTypes: ComponentType[];
   hostCompositeTypes: ComponentType[];
+  retiredOnlyTypes: ComponentType[];
   faithfulTypes: ComponentType[];
   genericUsableTypes: ComponentType[];
   partialTypes: ComponentType[];
   insufficientTypes: ComponentType[];
   figmaUnboundStateTypes: ComponentType[];
   visibleFailureTypes: ComponentType[];
+  runtimeActiveInstanceCount: number;
+  retiredInstanceCount: number;
   faithfulInstanceCount: number;
   hostCompositeInstanceCount: number;
   genericUsableInstanceCount: number;
@@ -306,6 +312,71 @@ function instanceCount(entries: ScreenGraphComponentCatalogEntry[], types: Compo
   return total;
 }
 
+function componentInstanceKey(routeId: string, componentId: string): string {
+  return routeId + '\u0000' + componentId;
+}
+
+function retiredComponentInstanceKeys(): Set<string> {
+  const result: Set<string> = new Set<string>();
+  for (let index: number = 0; index < READER_SCREEN_GRAPH_RETIRED_COMPONENT_INSTANCES.length; index += 1) {
+    result.add(componentInstanceKey(
+      READER_SCREEN_GRAPH_RETIRED_COMPONENT_INSTANCES[index].routeId,
+      READER_SCREEN_GRAPH_RETIRED_COMPONENT_INSTANCES[index].componentId,
+    ));
+  }
+  return result;
+}
+
+function collectActiveComponentTypes(
+  routeId: string,
+  nodes: ScreenGraphComponentNode[],
+  retiredKeys: Set<string>,
+  activeTypes: Set<string>,
+): void {
+  for (let index: number = 0; index < nodes.length; index += 1) {
+    const node: ScreenGraphComponentNode = nodes[index];
+    if (!retiredKeys.has(componentInstanceKey(routeId, node.id))) {
+      activeTypes.add(node.type);
+    }
+    collectActiveComponentTypes(routeId, node.children, retiredKeys, activeTypes);
+  }
+}
+
+function activeInstanceCountForNodes(
+  routeId: string,
+  nodes: ScreenGraphComponentNode[],
+  includedTypes: Set<string>,
+  retiredKeys: Set<string>,
+): number {
+  let total: number = 0;
+  for (let index: number = 0; index < nodes.length; index += 1) {
+    const node: ScreenGraphComponentNode = nodes[index];
+    if (includedTypes.has(node.type) &&
+      !retiredKeys.has(componentInstanceKey(routeId, node.id))) {
+      total += 1;
+    }
+    total += activeInstanceCountForNodes(routeId, node.children, includedTypes, retiredKeys);
+  }
+  return total;
+}
+
+function activeInstanceCount(
+  registry: ScreenGraphRegistry,
+  types: ComponentType[],
+  retiredKeys: Set<string>,
+): number {
+  const includedTypes: Set<string> = typeSet(types);
+  let total: number = 0;
+  for (let routeIndex: number = 0; routeIndex < registry.document.routes.length; routeIndex += 1) {
+    const routeId: string = registry.document.routes[routeIndex].routeId;
+    const variants = registry.document.routes[routeIndex].variants;
+    for (let variantIndex: number = 0; variantIndex < variants.length; variantIndex += 1) {
+      total += activeInstanceCountForNodes(routeId, variants[variantIndex].components, includedTypes, retiredKeys);
+    }
+  }
+  return total;
+}
+
 interface ReaderUIScreenGraphTargetBindingCounts {
   total: number;
   tapZones: number;
@@ -363,6 +434,15 @@ export class ReaderUIScreenGraphCoverageRegistry {
     }
 
     const referencedSet: Set<string> = typeSet(referenced);
+    const retiredKeys: Set<string> = retiredComponentInstanceKeys();
+    const activeTypes: Set<string> = new Set<string>();
+    for (let routeIndex: number = 0; routeIndex < registry.document.routes.length; routeIndex += 1) {
+      const routeId: string = registry.document.routes[routeIndex].routeId;
+      const variants = registry.document.routes[routeIndex].variants;
+      for (let variantIndex: number = 0; variantIndex < variants.length; variantIndex += 1) {
+        collectActiveComponentTypes(routeId, variants[variantIndex].components, retiredKeys, activeTypes);
+      }
+    }
     const dispatchSet: Set<string> = typeSet(READER_SCREEN_GRAPH_REFERENCED_DISPATCH_TYPES);
     const genericSet: Set<string> = typeSet(READER_SCREEN_GRAPH_GENERIC_USABLE_TYPES);
     const partialSet: Set<string> = partialTypeSet();
@@ -372,10 +452,13 @@ export class ReaderUIScreenGraphCoverageRegistry {
     const partial: ComponentType[] = [];
     const insufficient: ComponentType[] = [];
     const figmaUnboundStates: ComponentType[] = [];
+    const retiredOnly: ComponentType[] = [];
 
     for (let index: number = 0; index < referenced.length; index += 1) {
       const type: ComponentType = referenced[index];
-      if (!dispatchSet.has(type)) {
+      if (!activeTypes.has(type)) {
+        retiredOnly.push(type);
+      } else if (!dispatchSet.has(type)) {
         insufficient.push(type);
       } else if (figmaUnboundStateSet.has(type)) {
         figmaUnboundStates.push(type);
@@ -401,16 +484,29 @@ export class ReaderUIScreenGraphCoverageRegistry {
 
     const visibleFailures: ComponentType[] = partial.concat(insufficient);
     const canonicalInstanceCount: number = instanceCount(catalog, referenced);
-    const faithfulInstanceCount: number = instanceCount(catalog, faithful);
-    const hostCompositeInstanceCount: number = instanceCount(catalog, hostComposites);
-    const genericUsableInstanceCount: number = instanceCount(catalog, generic);
-    const partialInstanceCount: number = instanceCount(catalog, partial);
-    const insufficientInstanceCount: number = instanceCount(catalog, insufficient);
-    const figmaUnboundStateInstanceCount: number = instanceCount(catalog, figmaUnboundStates);
+    const runtimeActiveInstanceCount: number = activeInstanceCount(registry, referenced, retiredKeys);
+    const retiredInstanceCount: number = canonicalInstanceCount - runtimeActiveInstanceCount;
+    const faithfulInstanceCount: number = activeInstanceCount(registry, faithful, retiredKeys);
+    const hostCompositeInstanceCount: number = activeInstanceCount(registry, hostComposites, retiredKeys);
+    const genericUsableInstanceCount: number = activeInstanceCount(registry, generic, retiredKeys);
+    const partialInstanceCount: number = activeInstanceCount(registry, partial, retiredKeys);
+    const insufficientInstanceCount: number = activeInstanceCount(registry, insufficient, retiredKeys);
+    const figmaUnboundStateInstanceCount: number = activeInstanceCount(
+      registry,
+      figmaUnboundStates,
+      retiredKeys,
+    );
 
     if (faithfulInstanceCount + genericUsableInstanceCount + partialInstanceCount +
-      insufficientInstanceCount + figmaUnboundStateInstanceCount !== canonicalInstanceCount) {
-      throw new Error('Harmony ScreenGraph instance coverage must partition canonical instances');
+      insufficientInstanceCount + figmaUnboundStateInstanceCount !== runtimeActiveInstanceCount) {
+      throw new Error('Harmony ScreenGraph instance coverage must partition runtime-active instances');
+    }
+    if (runtimeActiveInstanceCount + retiredInstanceCount !== canonicalInstanceCount) {
+      throw new Error('Harmony ScreenGraph active and retired instances must partition canonical instances');
+    }
+    if (faithful.length + generic.length + partial.length + insufficient.length +
+      figmaUnboundStates.length + retiredOnly.length !== referenced.length) {
+      throw new Error('Harmony ScreenGraph type coverage must partition canonical referenced types');
     }
 
     return {
@@ -421,12 +517,15 @@ export class ReaderUIScreenGraphCoverageRegistry {
       explicitGapTypes: explicitGaps,
       explicitDispatchTypes: READER_SCREEN_GRAPH_REFERENCED_DISPATCH_TYPES,
       hostCompositeTypes: hostComposites,
+      retiredOnlyTypes: retiredOnly,
       faithfulTypes: faithful,
       genericUsableTypes: generic,
       partialTypes: partial,
       insufficientTypes: insufficient,
       figmaUnboundStateTypes: figmaUnboundStates,
       visibleFailureTypes: visibleFailures,
+      runtimeActiveInstanceCount,
+      retiredInstanceCount,
       faithfulInstanceCount,
       hostCompositeInstanceCount,
       genericUsableInstanceCount,

@@ -20,8 +20,11 @@ export default function ScreenGraphCoverageTests(): void {
       expect(coverage.hostCompositeTypes.join('|'))
         .assertEqual('TapZones|ReaderBase|ReaderTopArea|ReaderBottomBar');
 
-      expect(coverage.faithfulTypes.length).assertEqual(68);
-      expect(coverage.genericUsableTypes.length).assertEqual(59);
+      expect(coverage.retiredOnlyTypes.join('|')).assertEqual(
+        'SourceSwitchResultsPanel|RestoreConfirmPage|RestoreProgressPage|RestoreConflictPage|RestoreResultPage|BookMoreMenuPage|BookGroupManagementPage|GroupManagementPage|BookBatchManagementPage',
+      );
+      expect(coverage.faithfulTypes.length).assertEqual(66);
+      expect(coverage.genericUsableTypes.length).assertEqual(52);
       expect(coverage.partialTypes.length).assertEqual(3);
       expect(coverage.insufficientTypes.length).assertEqual(0);
       expect(coverage.figmaUnboundStateTypes.join('|'))
@@ -32,6 +35,7 @@ export default function ScreenGraphCoverageTests(): void {
       expect(coverage.genericUsableTypes.indexOf('ReplacePanel') >= 0).assertTrue();
       expect(coverage.genericUsableTypes.indexOf('SourceSwitchFlowPage') >= 0).assertTrue();
       expect(coverage.genericUsableTypes.indexOf('SourceSwitchResultsPanel')).assertEqual(-1);
+      expect(coverage.retiredOnlyTypes.indexOf('SourceSwitchResultsPanel') >= 0).assertTrue();
       expect(coverage.faithfulTypes.indexOf('RestoreConfirmPage')).assertEqual(-1);
       expect(coverage.faithfulTypes.indexOf('RestoreProgressPage')).assertEqual(-1);
       expect(coverage.faithfulTypes.indexOf('RestoreConflictPage')).assertEqual(-1);
@@ -67,15 +71,14 @@ export default function ScreenGraphCoverageTests(): void {
       expect(coverage.genericUsableTypes.indexOf('Offline')).assertEqual(-1);
 
       expect(coverage.canonicalInstanceCount).assertEqual(580);
-      // runtimeActiveInstanceCount / retiredInstanceCount were tracked by the
-      // deleted parallel admission policy; the canonical count above already
-      // covers the total. The decomposition is not re-tracked here.
-      expect(coverage.faithfulInstanceCount).assertEqual(280);
+      expect(coverage.runtimeActiveInstanceCount).assertEqual(536);
+      expect(coverage.retiredInstanceCount).assertEqual(44);
+      expect(coverage.faithfulInstanceCount).assertEqual(265);
       expect(coverage.hostCompositeInstanceCount).assertEqual(90);
-      expect(coverage.genericUsableInstanceCount).assertEqual(237);
+      expect(coverage.genericUsableInstanceCount).assertEqual(212);
       expect(coverage.partialInstanceCount).assertEqual(45);
       expect(coverage.insufficientInstanceCount).assertEqual(0);
-      expect(coverage.figmaUnboundStateInstanceCount).assertEqual(18);
+      expect(coverage.figmaUnboundStateInstanceCount).assertEqual(14);
       expect(coverage.explicitTargetBindingCount).assertEqual(97);
       expect(coverage.tapZoneExplicitTargetBindingCount).assertEqual(16);
 
