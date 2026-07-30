@@ -1,15 +1,17 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "host": "harmonyos",
-  "readerUiVersion": "3.1.1",
+  "readerUiVersion": "4.0.0",
   "hostRequestSchemaVersion": "1.2.0",
   "runtimeActionsSchemaVersion": 3,
   "runtimeActionsSha256": "94151094c1025bd68a57f3201ee5abcd56fe4ff0877f23e8f163b32d81fe9f7a",
+  "runtimePayloadContractsSchemaVersion": 4,
+  "runtimePayloadContractsSha256": "5254d7a40e15bace95d72df6941de6f3c2f638382ebdf9c6d76d38a05fac2409",
   "releaseIdentity": {
-    "releaseId": "33d5352ee589ccf988852a111309414afc1d7d49:c87e1cbd93d9a7fcaa65053343defbc97a4dc857d8eb221c46ac20f57f205481",
-    "sourceSha": "33d5352ee589ccf988852a111309414afc1d7d49",
-    "manifestSha256": "c87e1cbd93d9a7fcaa65053343defbc97a4dc857d8eb221c46ac20f57f205481",
-    "targetConfigSha256": "650d47ce1e2fb69e34afc29b0fb09d1aa73827b557580cc8d7daded8b40b695c"
+    "releaseId": "7322b147176449b296e71092752e23fa7bfa8308:0e82f6143630058e9d36e04f4bf2766317c7cd7047c6ba96ac8cf17c690f2b29",
+    "sourceSha": "7322b147176449b296e71092752e23fa7bfa8308",
+    "manifestSha256": "0e82f6143630058e9d36e04f4bf2766317c7cd7047c6ba96ac8cf17c690f2b29",
+    "targetConfigSha256": "24aefc29247f25a21dad8fb4e1c47964806ed94fdb26e235cd6a012700eec825"
   },
   "rollout": {
     "mode": "shadow",
@@ -68,7 +70,9 @@
         "effectPolicy": "exactly-once",
         "evidence": "ReaderBookOpenPilotExecutor.test.ets covers shadow default, four-stage serial execution with measured layout gating, cancel/replacement/late-result, contentGeneration stale guard, and supersession; consuming-HAP tests and assembleHap are required without substituting for physical-device proof.",
         "rollback": "Set bookOpenPilotEnabled back to false in ReaderUIRuntimeShadowCoordinator.ets and remove the bookOpenHost injection from production construction; rerun npm run check:reader-ui-consumer plus npm test before release.",
-        "events": ["book.open"]
+        "events": [
+          "book.open"
+        ]
       },
       {
         "id": "playback-pilot",
@@ -76,14 +80,23 @@
         "effectPolicy": "exactly-once",
         "evidence": "ReaderPlaybackPilotExecutor.test.ets covers TTS queue plan/start/stop, auto-page timer arm/cancel, stale result guard, and rollback; consuming-HAP tests and assembleHap are required without substituting for physical-device proof.",
         "rollback": "Disable playback pilot in ReaderUIRuntimeShadowCoordinator.ets and rerun npm run check:reader-ui-consumer plus npm test before release.",
-        "events": ["reader.tts.start", "reader.tts.stop", "reader.autoPage.start", "reader.autoPage.stop"]
+        "events": [
+          "reader.tts.start",
+          "reader.tts.stop",
+          "reader.autoPage.start",
+          "reader.autoPage.stop"
+        ]
       },
       {
         "id": "import-shadow-experiment",
         "mode": "shadow",
         "evidence": "The three generated import events remain covered for read-only runtime observation. ReaderImportPilotExecutor.test.ets exercises the retained executor only after an explicit test switch; it is not live authority evidence for the generic import DTO or transaction journal.",
         "rollback": "No production rollback is required because import effect ownership is disabled by default. Promotion requires a kind-discriminated DTO, verified Core transaction mapping, consuming-HAP proof, and physical-device evidence.",
-        "events": ["import.start", "import.apply", "import.cancel"]
+        "events": [
+          "import.start",
+          "import.apply",
+          "import.cancel"
+        ]
       },
       {
         "id": "source-switch-overlay-shadow-experiment",
@@ -102,28 +115,51 @@
         "mode": "shadow",
         "evidence": "ReaderSourceSwitchPilotExecutor.test.ets covers an explicitly enabled commit/rollback experiment, stale-result guard, and fail-closed semantics. Current generated actions do not enforce the full Core compatibility DTO, so live effect ownership remains native.",
         "rollback": "No production rollback is required because source-switch effect ownership is disabled by default. Promotion requires typed payload closure plus consuming-HAP and physical-device evidence.",
-        "events": ["source.switch.confirm", "source.switch.rollback"]
+        "events": [
+          "source.switch.confirm",
+          "source.switch.rollback"
+        ]
       },
       {
         "id": "replace-rules-shadow-experiment",
         "mode": "shadow",
         "evidence": "ReaderReplaceRulePilotExecutor.test.ets covers an explicitly enabled persist/apply/validate experiment, stale-result guard, rollback, and fail-closed semantics. Generated actions still lack typed payload requirements, so live effect ownership remains native.",
         "rollback": "No production rollback is required because replace-rule effect ownership is disabled by default. Promotion requires typed DTO closure plus consuming-HAP and physical-device evidence.",
-        "events": ["reader.replace.apply", "reader.replace.create", "reader.replace.validate"]
+        "events": [
+          "reader.replace.apply",
+          "reader.replace.create",
+          "reader.replace.validate"
+        ]
       },
       {
         "id": "rss-shadow-experiment",
         "mode": "shadow",
         "evidence": "The seven RSS events remain covered for read-only runtime observation. ReaderRssPilotExecutor.test.ets exercises an explicitly enabled mock-backed executor, but the six generated abstract RSS command names do not yet have complete production Core mappings.",
         "rollback": "No production rollback is required because RSS effect ownership is disabled by default and ReaderEffects remains authoritative. Promotion requires typed command mappings plus consuming-HAP and physical-device evidence.",
-        "events": ["rss.refresh", "rss.subscription.add", "rss.subscription.delete", "rss.subscription.edit", "rss.entry.open", "rss.favorite.add", "rss.favorite.remove"]
+        "events": [
+          "rss.refresh",
+          "rss.subscription.add",
+          "rss.subscription.delete",
+          "rss.subscription.edit",
+          "rss.entry.open",
+          "rss.favorite.add",
+          "rss.favorite.remove"
+        ]
       },
       {
         "id": "sync-shadow-experiment",
         "mode": "shadow",
         "evidence": "The seven generated Sync events remain covered for read-only runtime observation. ReaderSyncPilotExecutor.test.ets exercises an injected mock gateway only; it is not evidence that sync.snapshot, sync.push, sync.conflict.detect, sync.conflict.resolve, or http.execute exist as production Core commands.",
         "rollback": "No production rollback is required because Sync effect ownership is disabled by default and ReaderEffects remains authoritative. Promotion requires verified Core/Host mappings plus consuming-HAP and physical-device evidence.",
-        "events": ["sync.run", "webdav.config.test", "sync.start", "sync.progress", "sync.complete", "sync.conflict", "sync.resolve"]
+        "events": [
+          "sync.run",
+          "webdav.config.test",
+          "sync.start",
+          "sync.progress",
+          "sync.complete",
+          "sync.conflict",
+          "sync.resolve"
+        ]
       }
     ]
   },
