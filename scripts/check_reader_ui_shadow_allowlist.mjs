@@ -176,8 +176,15 @@ assert.ok(
   !coordinator.includes('coreSequence:') && !coordinator.includes('hostRequest:'),
   'Coordinator must not copy the generated action descriptor table',
 );
-assert.ok(overlayComponents.includes("ReaderUiStore.dispatch({ type: 'reader.directory.open' })"),
-  'real directory UI entry must dispatch the canonical Pilot event');
+const readerBottomBar = overlayComponents.slice(
+  overlayComponents.indexOf('export struct ReaderBottomBar'),
+  overlayComponents.indexOf('// ── Panel shell'),
+);
+assert.ok(readerBottomBar.includes("type: 'reader.module.switch'") &&
+  readerBottomBar.includes("payload['module'] = kind"),
+  'the admitted Directory entry must dispatch the canonical schema-3 module event');
+assert.equal(readerBottomBar.includes("type: 'reader.directory.open'"), false,
+  'the admitted Directory entry must not dispatch the legacy Pilot alias');
 assert.ok(indexPage.includes('ReaderUiStore.isDirectoryPilotActive()') &&
   indexPage.includes("type: 'reader.directory.close'"),
   'the real system-back exit must close the semantic directory overlay through the Pilot coordinator');

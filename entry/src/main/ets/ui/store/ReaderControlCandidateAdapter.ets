@@ -1,9 +1,8 @@
 // Generated-runtime projection for Reader-UI schema 3 reader controls.
 //
-// ReaderUiStore may consume `reader.control.toggle` in production only after
-// the exact reader-control overlay is implementation-ready. Module switching
-// remains candidate-backport and uses this adapter only through the explicit
-// test seam until each module family completes its own admission.
+// ReaderUiStore consumes `reader.control.toggle` and each independently
+// admitted `reader.module.switch` target through this one schema-3 projection.
+// Candidate module records remain fail-closed before this adapter is called.
 import {
   GENERATED_RUNTIME_ACTIONS,
   ReaderUIJSONPayload,

@@ -12,12 +12,16 @@ const overlayComponents = read('entry/src/main/ets/ui/components/ReaderOverlayCo
 const controlHome = read('entry/src/main/ets/ui/components/ReaderControlHomeOverlay.ets');
 const visualAdmission = read('entry/src/main/ets/contract/reader_ui/VisualAdmission.ets');
 
-test('B5 admits only the exact reader-control overlay', () => {
+test('B5 admits the exact reader-control and Directory overlays', () => {
   assert.match(
     visualAdmission,
     /overlayKind:\s*'reader-control'[\s\S]{0,160}admission:\s*'implementation-ready'/,
   );
   assert.match(store, /ReaderUiVisualAdmission\.isOverlayAdmitted\('reader-control'\)/);
+  assert.match(
+    visualAdmission,
+    /overlayKind:\s*'directory'[\s\S]{0,160}admission:\s*'implementation-ready'/,
+  );
 });
 
 test('B5 production dispatch consumes the semantic toggle before legacy paths', () => {
@@ -25,7 +29,8 @@ test('B5 production dispatch consumes the semantic toggle before legacy paths', 
   const legacy = store.indexOf('dispatchBookOpenCancellation(event');
   assert.ok(gate >= 0 && legacy > gate);
   assert.match(store, /ReaderControlCandidateAdapter\.consume\(event, ReaderUiStore\.state\)/);
-  assert.match(store, /if \(event\.type === 'reader\.module\.switch'\) return true;/);
+  assert.match(store, /ReaderUiStore\.readerModuleFromEvent\(event\)/);
+  assert.match(store, /ReaderUiVisualAdmission\.isRecordAdmitted\(`reader\.module\.\$\{module\}`\)/);
 });
 
 test('B5 tap-zone adapter preserves route identity', () => {
@@ -34,16 +39,19 @@ test('B5 tap-zone adapter preserves route identity', () => {
   assert.doesNotMatch(tapZoneAdapter, /route-push[\s\S]{0,80}id:\s*'reader'/);
 });
 
-test('B5 keeps separately admitted reader modules inert', () => {
+test('B5 admits Directory while keeping three sibling modules inert', () => {
   assert.match(
     overlayComponents,
     /ReaderUiVisualAdmission\.isRecordAdmitted\(recordId\)/,
   );
   const guard = overlayComponents.indexOf('if (!this.readerModuleAdmitted(kind)) return;');
-  const dispatch = overlayComponents.indexOf("ReaderUiStore.dispatch({ type: 'reader-module-switch'");
+  const dispatch = overlayComponents.indexOf("type: 'reader.module.switch'");
   assert.ok(guard >= 0 && dispatch > guard);
+  assert.match(
+    visualAdmission,
+    /recordId:\s*'reader\.module\.directory'[\s\S]{0,160}admission:\s*'implementation-ready'/,
+  );
   for (const recordId of [
-    'reader.module.directory',
     'reader.module.tts',
     'reader.module.appearance',
     'reader.module.settings',

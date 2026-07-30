@@ -822,16 +822,20 @@ export class ReaderUiStore {
    * transition is still handled here and cannot fall through to the legacy
    * reducer or create a route-backed substitute.
    *
-   * Reader module switching is deliberately not handled here: directory, TTS,
-   * appearance and settings each have a separate candidate-backport record.
+   * Reader module switching is admitted per module record. An unpromoted or
+   * malformed module request is consumed but cannot fall through to the old
+   * native reducer or runtime-shadow Pilot.
    */
   private static dispatchAdmittedReaderControl(event: UiEvent): boolean {
-    // Canonical module events are a separate admission family. Swallow them
-    // here until those records are promoted so the reducer cannot expose the
-    // older generic overlays through a direct dispatch.
-    if (event.type === 'reader.module.switch') return true;
-    if (event.type !== 'reader.control.toggle') return false;
-    if (!ReaderUiVisualAdmission.isOverlayAdmitted('reader-control')) return true;
+    if (event.type === 'reader.module.switch') {
+      const module: string = ReaderUiStore.readerModuleFromEvent(event);
+      if (module.length === 0 ||
+        !ReaderUiVisualAdmission.isRecordAdmitted(`reader.module.${module}`)) return true;
+    } else if (event.type === 'reader.control.toggle') {
+      if (!ReaderUiVisualAdmission.isOverlayAdmitted('reader-control')) return true;
+    } else {
+      return false;
+    }
 
     const result: ReaderControlCandidateResult =
       ReaderControlCandidateAdapter.consume(event, ReaderUiStore.state);
@@ -845,6 +849,13 @@ export class ReaderUiStore {
     );
     ReaderThemeState.setReducedMotion(ReaderUiStore.state.reducedMotion);
     return true;
+  }
+
+  private static readerModuleFromEvent(event: UiEvent): string {
+    const payload: ReaderUIJSONPayload = event.readerUIJSONPayload ?? {};
+    const payloadModule = payload['module'];
+    if (typeof payloadModule === 'string') return payloadModule as string;
+    return event.module ?? '';
   }
 
   static snapshot(): ReaderUiState {

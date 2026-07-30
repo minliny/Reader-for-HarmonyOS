@@ -28,8 +28,10 @@ test('Slice 11 Reader bottom bar keeps canonical order and commits modules fail-
   }
   assert.ok(bottom.includes("MotionAdapter.apply('reader.module.switch'"),
     'the admitted module nav keeps its dedicated motion contract');
-  assert.ok(bottom.includes("type: 'reader.directory.open'"));
-  assert.ok(bottom.includes("type: 'reader-module-switch', module: kind"));
+  assert.ok(bottom.includes("type: 'reader.module.switch'"));
+  assert.ok(bottom.includes("payload['module'] = kind"));
+  assert.equal(bottom.includes("type: 'reader.directory.open'"), false);
+  assert.equal(bottom.includes("type: 'reader-module-switch'"), false);
   assert.ok(reducer.includes("state.routeId !== 'immersive-reading'"));
   assert.ok(reducer.includes('isReaderControlOverlay(state.overlay)'));
   assert.ok(reducer.includes('const targetOverlay = moduleOverlay(module)'));

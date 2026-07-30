@@ -754,17 +754,18 @@ export struct ReaderBottomBar {
   }
 
   private selectModule(kind: string): void {
-    // These four buttons are present in the admitted control-home master, but
-    // each destination is a separate candidate-backport record. Keep the
-    // controls inert until those records are promoted instead of falling back
-    // to the older generic overlay implementations.
+    // Each destination is admitted independently. The generated registry
+    // currently enables Directory only; sibling buttons stay inert and can
+    // never fall back to the retired generic overlays.
     if (!this.readerModuleAdmitted(kind)) return;
+    const payload: ReaderUIJSONPayload = {};
+    payload['module'] = kind;
     MotionAdapter.apply('reader.module.switch', this.reducedMotion, this.getUIContext(), () => {
-      if (kind === 'directory') {
-        ReaderUiStore.dispatch({ type: 'reader.directory.open' });
-        return;
-      }
-      ReaderUiStore.dispatch({ type: 'reader-module-switch', module: kind });
+      ReaderUiStore.dispatch({
+        type: 'reader.module.switch',
+        module: kind,
+        readerUIJSONPayload: payload,
+      });
     });
   }
 

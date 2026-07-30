@@ -58,17 +58,16 @@ test('A2 ReaderDirectoryPanel reuses the canonical shell and emits no hidden sta
   assert.doesNotMatch(panel, /reader-directory-overlay-v2|toc-bookmarks/);
 });
 
-test('A2 OverlayHost gates Directory before the component branch and remains non-emitting pre-promotion', () => {
+test('A2 composition is activated only by the generated post-promotion admission table', () => {
   const gateIndex = overlayHost.indexOf('ReaderUiVisualAdmission.isOverlayAdmitted(this.overlayKind)');
   const branchIndex = overlayHost.indexOf("this.overlayKind === 'directory'");
   const componentIndex = overlayHost.indexOf('ReaderDirectoryOverlay()');
   assert.ok(gateIndex >= 0 && branchIndex > gateIndex && componentIndex > branchIndex);
   assert.doesNotMatch(overlayHost, /directory[\s\S]{0,240}\.width\(0\)|directory[\s\S]{0,240}\.height\(0\)/);
   assert.match(visualAdmission, /static admissionForOverlay\(overlayKind: string\)/);
-  assert.doesNotMatch(
+  assert.match(
     visualAdmission,
     /overlayKind:\s*'directory'[\s\S]{0,160}admission:\s*'implementation-ready'/,
-    'A2 must not activate Directory before B4 promotion',
   );
 });
 
