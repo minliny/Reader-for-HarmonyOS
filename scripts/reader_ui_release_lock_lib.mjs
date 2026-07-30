@@ -59,6 +59,9 @@ export function readerUiRuntimePackageVersion(packageLock) {
 export function assertVerifiedHarmonyReleaseMatchesConsumer(verifiedValue, consumerValue) {
   const verified = plainObject(verifiedValue, 'verified Reader UI release');
   const consumer = plainObject(consumerValue, 'Reader UI consumer lock');
+  if (verified.schemaVersion !== 2) {
+    throw new Error('verified Reader UI release schemaVersion must be 2');
+  }
   if (verified.host !== 'harmonyos') throw new Error('verified Reader UI release must target harmonyos');
   if (verified.hostRepository !== 'minliny/Reader-for-HarmonyOS') {
     throw new Error('verified Reader UI release targets the wrong host repository');
@@ -71,10 +74,19 @@ export function assertVerifiedHarmonyReleaseMatchesConsumer(verifiedValue, consu
   sha256(verified.manifestSha256, 'verified Reader UI manifest SHA-256');
   sha256(verified.targetConfigSha256, 'verified Reader UI target config SHA-256');
   sha256(verified.runtimeActionsSha256, 'verified Reader UI runtime actions SHA-256');
+  if (!Number.isSafeInteger(verified.runtimePayloadContractsSchemaVersion) ||
+      verified.runtimePayloadContractsSchemaVersion < 1) {
+    throw new Error('verified Reader UI runtime payload schema must be a positive safe integer');
+  }
+  sha256(
+    verified.runtimePayloadContractsSha256,
+    'verified Reader UI runtime payload contracts SHA-256',
+  );
   if (verified.releaseId !== `${verified.sourceSha}:${verified.manifestSha256}`) {
     throw new Error('verified Reader UI releaseId is not bound to source and manifest');
   }
   if (consumer.host !== 'harmonyos') throw new Error('Reader UI consumer lock must target harmonyos');
+  assert.equal(consumer.schemaVersion, 3, 'Reader UI consumer lock schemaVersion must be 3');
   assert.equal(consumer.readerUiVersion, verified.readerUiVersion,
     'consumer version must match the verified Reader UI release');
   assert.equal(consumer.hostRequestSchemaVersion, verified.hostRequestSchemaVersion,
@@ -83,6 +95,16 @@ export function assertVerifiedHarmonyReleaseMatchesConsumer(verifiedValue, consu
     'consumer runtime schema must match the verified Reader UI release');
   assert.equal(consumer.runtimeActionsSha256, verified.runtimeActionsSha256,
     'consumer runtime hash must match the verified Reader UI release');
+  assert.equal(
+    consumer.runtimePayloadContractsSchemaVersion,
+    verified.runtimePayloadContractsSchemaVersion,
+    'consumer runtime payload schema must match the verified Reader UI release',
+  );
+  assert.equal(
+    consumer.runtimePayloadContractsSha256,
+    verified.runtimePayloadContractsSha256,
+    'consumer runtime payload hash must match the verified Reader UI release',
+  );
   const identity = plainObject(consumer.releaseIdentity, 'Reader UI consumer release identity');
   assert.deepEqual(identity, {
     releaseId: verified.releaseId,
@@ -117,16 +139,25 @@ export function assertReaderUiPackageLockVersionUpdate(beforeValue, afterValue, 
   return expected;
 }
 
-export function assertExactReaderUiReleaseBumpPaths(pathsValue, label = 'Reader UI release bump') {
+export function assertReaderUiReleaseBumpPaths(
+  pathsValue,
+  label = 'Reader UI release bump',
+  { allowEmpty = false } = {},
+) {
   if (!Array.isArray(pathsValue)) throw new Error(`${label} paths must be an array`);
   const paths = [...pathsValue];
   if (paths.some((value) => typeof value !== 'string' || value.length === 0)) {
     throw new Error(`${label} paths must be non-empty strings`);
   }
   if (new Set(paths).size !== paths.length) throw new Error(`${label} paths must be unique`);
+  if (!allowEmpty && paths.length === 0) throw new Error(`${label} must change at least one lock file`);
   const actual = paths.sort();
-  const expected = [...READER_UI_RELEASE_BUMP_PATHS].sort();
-  assert.deepEqual(actual, expected,
-    `${label} must contain exactly ${expected.join(', ')}`);
+  const allowed = new Set(READER_UI_RELEASE_BUMP_PATHS);
+  const unexpected = actual.filter((entry) => !allowed.has(entry));
+  assert.deepEqual(
+    unexpected,
+    [],
+    `${label} may contain only ${READER_UI_RELEASE_BUMP_PATHS.join(', ')}`,
+  );
   return actual;
 }

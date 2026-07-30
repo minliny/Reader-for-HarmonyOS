@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 
 import { assertVerifiedHostRelease } from '../../Reader-UI/tools/release/host-consumer-release-lib.mjs';
 import {
-  assertExactReaderUiReleaseBumpPaths,
+  assertReaderUiReleaseBumpPaths,
   assertReaderUiReleaseLocksSynchronized,
   READER_UI_CONSUMER_LOCK_PATH,
   READER_UI_PACKAGE_LOCK_PATH,
@@ -131,9 +131,9 @@ try {
     console.log(`[reader-ui-bump-pr] PASS already-current releaseId=${verified.releaseId}`);
     process.exit(0);
   }
-  assertExactReaderUiReleaseBumpPaths(diffPaths, 'working tree lock diff');
+  assertReaderUiReleaseBumpPaths(diffPaths, 'working tree lock diff');
   const statusPaths = outputPaths(status).map((line) => line.slice(3));
-  assertExactReaderUiReleaseBumpPaths(statusPaths, 'host repository status');
+  assertReaderUiReleaseBumpPaths(statusPaths, 'host repository status');
   run('git', ['diff', '--check', '--', ...READER_UI_RELEASE_BUMP_PATHS], { cwd: hostRoot });
 
   const remoteCheck = run(
@@ -150,7 +150,7 @@ try {
     const parents = run('git', ['rev-list', '--parents', '-n', '1', remoteRef], { cwd: hostRoot })
       .stdout.trim().split(/\s+/);
     if (parents.length !== 2) throw new Error('existing deterministic bump branch must contain a single-parent commit');
-    assertExactReaderUiReleaseBumpPaths(
+    assertReaderUiReleaseBumpPaths(
       outputPaths(run(
         'git',
         ['diff-tree', '--no-commit-id', '--name-only', '-r', parents[1], remoteRef],
@@ -189,7 +189,7 @@ try {
 
   run('git', ['switch', '-c', verified.branch], { cwd: hostRoot });
   run('git', ['add', '--', ...READER_UI_RELEASE_BUMP_PATHS], { cwd: hostRoot });
-  assertExactReaderUiReleaseBumpPaths(
+  assertReaderUiReleaseBumpPaths(
     outputPaths(run('git', ['diff', '--cached', '--name-only'], { cwd: hostRoot }).stdout),
     'staged bump',
   );
