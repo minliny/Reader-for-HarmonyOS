@@ -1,7 +1,7 @@
 // OverlayHost — shell slot for generic transient overlays (dropdown / sheet /
-// toast / source-switch). Reader overlays are routes now (Batch 1) — they do
-// NOT come through here; they render via ViewStateRenderer(stack) as the
-// reader route's body. Reads `overlay` from AppStorage. Appear/disappear uses
+// toast / source-switch / reader control home). Reader modules remain separate
+// records; the control home itself is a semantic overlay and does not replace
+// the canonical reading route. Reads `overlay` from AppStorage. Appear/disappear uses
 // the motion-duration overlay token (centralized here, never animateTo in
 // pages). Admitted overlay visuals come exclusively from the Reader-UI
 // revision-bound token contract; there is no local fallback overlay skin.
@@ -13,6 +13,7 @@ import { BookshelfSelectionTarget, CoreBookshelfBook, LocalImportDialogResult } 
 import { ViewportAdapter } from '../adapters/ViewportAdapter';
 import { SafeAreaAdapter } from '../adapters/SafeAreaAdapter';
 import { BookCover } from '../components/BookshelfComponents';
+import { ReaderControlHomeOverlay } from '../components/ReaderControlHomeOverlay';
 
 interface BookActionEntry {
   action: 'multi-select' | 'book-info' | 'remove';
@@ -50,7 +51,17 @@ export struct OverlayHost {
     // than a width(0) placeholder or a local fallback sheet.
     if (this.overlayKind !== '' && this.overlayKind !== 'sort-filter' &&
       ReaderUiVisualAdmission.isOverlayAdmitted(this.overlayKind)) {
-      if (this.overlayKind === 'bookshelf-multiselect') {
+      if (this.overlayKind === 'reader-control') {
+        Stack() {
+          ReaderControlHomeOverlay()
+        }
+        .width('100%')
+        .height('100%')
+        .transition(TransitionEffect.OPACITY.animation({
+          duration: MotionDurationTokens.overlay,
+          curve: Curve.EaseInOut,
+        }))
+      } else if (this.overlayKind === 'bookshelf-multiselect') {
         this.renderBookshelfMultiSelect()
       } else if (this.overlayKind === 'local-import') {
         this.renderLocalImportDialog()
