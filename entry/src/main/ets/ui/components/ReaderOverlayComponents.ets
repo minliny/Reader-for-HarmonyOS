@@ -1428,6 +1428,10 @@ struct ReaderTocLiveRow {
 
   private openChapter(): void {
     if (this.bookId.length === 0 || this.chapterId.length === 0) return;
+    // Reader-UI's canonical reader.chapter.jump returns to the immersive
+    // reading surface. Close the quick module before starting the async Core
+    // load so the old Directory overlay cannot remain above the new chapter.
+    ReaderUiStore.dispatch({ type: 'set-overlay', overlay: '' });
     ReaderUiStore.dispatch({
       type: 'chapter-load', chapterId: this.chapterId, bookId: this.bookId, chapterTitle: this.title,
     });

@@ -87,3 +87,14 @@ test('B5 exact Directory overlay has one visual tree and no synthesized bookmark
   assert.match(panel, /Text\('书签'\)/);
   assert.match(panel, /ReaderTocLiveRow\(\{/);
 });
+
+test('B5 chapter selection returns to the immersive surface before Core loading', () => {
+  const row = section(
+    overlayComponents,
+    'struct ReaderTocLiveRow',
+    '@Component\nstruct ReaderLiveStepperRow',
+  );
+  const dismiss = row.indexOf("type: 'set-overlay', overlay: ''");
+  const load = row.indexOf("type: 'chapter-load'");
+  assert.ok(dismiss >= 0 && load > dismiss);
+});
