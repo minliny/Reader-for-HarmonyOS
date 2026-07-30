@@ -1,9 +1,9 @@
-// Local-only consumer for the Reader-UI schema 3 reader control candidates.
+// Generated-runtime projection for Reader-UI schema 3 reader controls.
 //
-// The consumer lock is schema 3, but reader.control-home remains
-// candidate-backport. Production Store dispatch therefore does not call this
-// adapter. The explicit ForTest entry verifies the generated runtime without
-// creating a second overlay/module authority.
+// ReaderUiStore may consume `reader.control.toggle` in production only after
+// the exact reader-control overlay is implementation-ready. Module switching
+// remains candidate-backport and uses this adapter only through the explicit
+// test seam until each module family completes its own admission.
 import {
   GENERATED_RUNTIME_ACTIONS,
   ReaderUIJSONPayload,

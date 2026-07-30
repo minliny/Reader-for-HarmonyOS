@@ -66,8 +66,8 @@ export default function ScreenGraphTapZoneAdapterTests(): void {
       expect(previous !== null).assertTrue();
       expect(previous!.type).assertEqual('reader-page-prev');
       expect(control !== null).assertTrue();
-      expect(control!.type).assertEqual('route-push');
-      expect(control!.id).assertEqual('reader');
+      expect(control!.type).assertEqual('reader.control.toggle');
+      expect(control!.readerUIJSONPayload?.['overlay']).assertEqual('reader-control');
       expect(next !== null).assertTrue();
       expect(next!.type).assertEqual('reader-page-next');
     });
@@ -98,7 +98,9 @@ export default function ScreenGraphTapZoneAdapterTests(): void {
 
     it('keepsLegacyImmersiveProductionFallbackStable', 0, () => {
       expect(ReaderUIScreenGraphTapZoneAdapter.productionEvent('previous').type).assertEqual('reader-page-prev');
-      expect(ReaderUIScreenGraphTapZoneAdapter.productionEvent('control').id).assertEqual('reader');
+      expect(ReaderUIScreenGraphTapZoneAdapter.productionEvent('control').type).assertEqual('reader.control.toggle');
+      expect(ReaderUIScreenGraphTapZoneAdapter.productionEvent('control')
+        .readerUIJSONPayload?.['overlay']).assertEqual('reader-control');
       expect(ReaderUIScreenGraphTapZoneAdapter.productionEvent('next').type).assertEqual('reader-page-next');
     });
   });

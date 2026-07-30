@@ -4,6 +4,13 @@
 
 export type ReaderUiVisualAdmissionStatus = 'implementation-ready' | 'candidate-backport' | 'blocked' | 'retired';
 
+export interface ReaderUiVisualRecordAdmissionEntry {
+  recordId: string;
+  admission: ReaderUiVisualAdmissionStatus;
+  sourceBound: boolean;
+  implementationReady: boolean;
+}
+
 export interface ReaderUiVisualRouteAdmissionEntry {
   routeId: string;
   admission: ReaderUiVisualAdmissionStatus;
@@ -721,6 +728,55 @@ export class ReaderUiVisualAdmission {
   static readonly SOURCE_FILE_KEY: string = 'klhs2jMM4MncaJFqZMfqEK';
   static readonly SOURCE_REVISION: string = '2379851596474967636';
   static readonly REGISTRY_SHA256: string = 'f783f4a9536ffd6306fddbce1655d093257583469809c2409ccd8a1b037354e5';
+  static readonly RECORD_ADMISSIONS: ReaderUiVisualRecordAdmissionEntry[] = [
+    { recordId: 'about.withdrawn', admission: 'retired', sourceBound: false, implementationReady: false },
+    { recordId: 'book-detail.chapter-row', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
+    { recordId: 'book-detail.page', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
+    { recordId: 'bookshelf.action-sheet', admission: 'implementation-ready', sourceBound: true, implementationReady: true },
+    { recordId: 'bookshelf.book-card', admission: 'implementation-ready', sourceBound: true, implementationReady: true },
+    { recordId: 'bookshelf.book-more-menu-legacy-route', admission: 'retired', sourceBound: false, implementationReady: false },
+    { recordId: 'bookshelf.group-management.withdrawn', admission: 'retired', sourceBound: false, implementationReady: false },
+    { recordId: 'bookshelf.list-mode', admission: 'implementation-ready', sourceBound: true, implementationReady: true },
+    { recordId: 'bookshelf.local-import-dialog', admission: 'implementation-ready', sourceBound: true, implementationReady: true },
+    { recordId: 'bookshelf.multi-select', admission: 'implementation-ready', sourceBound: true, implementationReady: true },
+    { recordId: 'bookshelf.multi-select-legacy-route', admission: 'retired', sourceBound: false, implementationReady: false },
+    { recordId: 'bookshelf.page', admission: 'implementation-ready', sourceBound: true, implementationReady: true },
+    { recordId: 'compact-and-fold.viewport-policy', admission: 'retired', sourceBound: false, implementationReady: false },
+    { recordId: 'discover.page', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
+    { recordId: 'discover.page-route-variants', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
+    { recordId: 'figma-absent.d6-capability-contract-routes', admission: 'blocked', sourceBound: false, implementationReady: false },
+    { recordId: 'figma-unbound.needs-page-or-user-decision', admission: 'blocked', sourceBound: false, implementationReady: false },
+    { recordId: 'local-import.legacy-error-and-conflict-pages', admission: 'retired', sourceBound: false, implementationReady: false },
+    { recordId: 'nonvisual.helper-contract-routes', admission: 'blocked', sourceBound: false, implementationReady: false },
+    { recordId: 'reader.control-home', admission: 'implementation-ready', sourceBound: true, implementationReady: true },
+    { recordId: 'reader.full.appearance', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
+    { recordId: 'reader.full.directory', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
+    { recordId: 'reader.full.settings', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
+    { recordId: 'reader.full.tts', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
+    { recordId: 'reader.module.appearance', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
+    { recordId: 'reader.module.directory', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
+    { recordId: 'reader.module.settings', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
+    { recordId: 'reader.module.tts', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
+    { recordId: 'reader.more-menu', admission: 'blocked', sourceBound: false, implementationReady: false },
+    { recordId: 'reader.quick-and-full-unbound-options', admission: 'blocked', sourceBound: false, implementationReady: false },
+    { recordId: 'reader.quick.auto-page', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
+    { recordId: 'reader.quick.content-replacement', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
+    { recordId: 'reader.quick.content-search', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
+    { recordId: 'reader.reading-surface', admission: 'implementation-ready', sourceBound: true, implementationReady: true },
+    { recordId: 'restore-preview.withdrawn', admission: 'retired', sourceBound: false, implementationReady: false },
+    { recordId: 'retired.unbound-route-supersession', admission: 'retired', sourceBound: false, implementationReady: false },
+    { recordId: 'rss.page', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
+    { recordId: 'search.five-state', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
+    { recordId: 'search.history-expanded', admission: 'retired', sourceBound: false, implementationReady: false },
+    { recordId: 'settings.general', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
+    { recordId: 'source-management.final', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
+    { recordId: 'source-management.historical-pilot', admission: 'retired', sourceBound: false, implementationReady: false },
+    { recordId: 'source-switch.legacy-state-matrix', admission: 'retired', sourceBound: false, implementationReady: false },
+    { recordId: 'source-switch.window', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
+    { recordId: 'sync-backup.page-and-restore-overlay', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
+    { recordId: 'sync-backup.restore-backup-overlay', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
+    { recordId: 'webdav.config', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
+  ];
   static readonly ROUTE_ADMISSIONS: ReaderUiVisualRouteAdmissionEntry[] = [
     { routeId: 'about', admission: 'retired', sourceBound: false, implementationReady: false, recordIds: ['about.withdrawn'] },
     { routeId: 'about-feedback', admission: 'retired', sourceBound: false, implementationReady: false, recordIds: ['about.withdrawn'] },
@@ -989,6 +1045,26 @@ export class ReaderUiVisualAdmission {
     { routeId: 'search-error', stateId: 'error', admission: 'candidate-backport', sourceBound: true, implementationReady: false, recordIds: ['search.five-state'] },
     { routeId: 'search-loading', stateId: 'loading', admission: 'candidate-backport', sourceBound: true, implementationReady: false, recordIds: ['search.five-state'] },
   ];
+
+  static admissionForRecord(recordId: string): ReaderUiVisualAdmissionStatus {
+    for (let index = 0; index < ReaderUiVisualAdmission.RECORD_ADMISSIONS.length; index += 1) {
+      const entry = ReaderUiVisualAdmission.RECORD_ADMISSIONS[index];
+      if (entry.recordId === recordId) return entry.admission;
+    }
+    return 'blocked';
+  }
+
+  static isRecordAdmitted(recordId: string): boolean {
+    return ReaderUiVisualAdmission.admissionForRecord(recordId) === 'implementation-ready';
+  }
+
+  static isRecordSourceBound(recordId: string): boolean {
+    for (let index = 0; index < ReaderUiVisualAdmission.RECORD_ADMISSIONS.length; index += 1) {
+      const entry = ReaderUiVisualAdmission.RECORD_ADMISSIONS[index];
+      if (entry.recordId === recordId) return entry.sourceBound;
+    }
+    return false;
+  }
 
   static admissionForRoute(routeId: string): ReaderUiVisualAdmissionStatus {
     for (let index = 0; index < ReaderUiVisualAdmission.ROUTE_ADMISSIONS.length; index += 1) {

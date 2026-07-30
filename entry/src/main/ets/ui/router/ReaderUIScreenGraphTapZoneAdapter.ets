@@ -8,6 +8,7 @@ import {
   ViewStateExplicitBinding,
   ViewStateJSONValue,
 } from '../../contract/generated/ViewStateTable';
+import type { ReaderUIJSONPayload } from 'reader_ui_runtime';
 import { UiEvent } from '../store/ReaderUiState';
 
 export type ReaderUIScreenGraphTapZoneTarget = 'previous' | 'control' | 'next';
@@ -36,7 +37,7 @@ export class ReaderUIScreenGraphTapZoneAdapter {
     }
     if (target === 'control' && selected.event === 'reader.control.toggle' &&
       ReaderUIScreenGraphTapZoneAdapter.controlPayload(selected.payload)) {
-      return { type: 'route-push', id: 'reader' };
+      return ReaderUIScreenGraphTapZoneAdapter.readerControlToggleEvent();
     }
     return null;
   }
@@ -47,7 +48,13 @@ export class ReaderUIScreenGraphTapZoneAdapter {
   static productionEvent(target: ReaderUIScreenGraphTapZoneTarget): UiEvent {
     if (target === 'previous') return { type: 'reader-page-prev' };
     if (target === 'next') return { type: 'reader-page-next' };
-    return { type: 'route-push', id: 'reader' };
+    return ReaderUIScreenGraphTapZoneAdapter.readerControlToggleEvent();
+  }
+
+  private static readerControlToggleEvent(): UiEvent {
+    const payload: ReaderUIJSONPayload = {};
+    payload['overlay'] = 'reader-control';
+    return { type: 'reader.control.toggle', readerUIJSONPayload: payload };
   }
 
   private static emptyPayload(payload: Record<string, ViewStateJSONValue>): boolean {

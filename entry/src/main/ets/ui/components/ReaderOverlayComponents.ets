@@ -13,7 +13,7 @@ import { DemoAliasTokens } from '../../contract/generated/DemoAliasTokens';
 import { SizeTokens, ZIndexTokens } from '../../contract/generated/DimensionTokens';
 import { RouteId } from '../../contract/generated/RouteTable';
 import { ReaderAppearanceFont, ReaderAppearanceSelect, ReaderAppearanceSpecRegistry } from '../../contract/reader_ui/Appearance';
-import { ReaderUiVisualTokens } from '../../contract/reader_ui/VisualAdmission';
+import { ReaderUiVisualAdmission, ReaderUiVisualTokens } from '../../contract/reader_ui/VisualAdmission';
 import { SafeAreaAdapter } from '../adapters/SafeAreaAdapter';
 import { ViewportAdapter } from '../adapters/ViewportAdapter';
 import { ReaderUiStore } from '../store/ReaderUiStore';
@@ -754,6 +754,11 @@ export struct ReaderBottomBar {
   }
 
   private selectModule(kind: string): void {
+    // These four buttons are present in the admitted control-home master, but
+    // each destination is a separate candidate-backport record. Keep the
+    // controls inert until those records are promoted instead of falling back
+    // to the older generic overlay implementations.
+    if (!this.readerModuleAdmitted(kind)) return;
     MotionAdapter.apply('reader.module.switch', this.reducedMotion, this.getUIContext(), () => {
       if (kind === 'directory') {
         ReaderUiStore.dispatch({ type: 'reader.directory.open' });
@@ -761,6 +766,11 @@ export struct ReaderBottomBar {
       }
       ReaderUiStore.dispatch({ type: 'reader-module-switch', module: kind });
     });
+  }
+
+  private readerModuleAdmitted(kind: string): boolean {
+    const recordId: string = `reader.module.${kind}`;
+    return ReaderUiVisualAdmission.isRecordAdmitted(recordId);
   }
 
   build() {

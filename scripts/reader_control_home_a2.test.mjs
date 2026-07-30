@@ -28,10 +28,10 @@ test('A2 OverlayHost gates reader-control before it reaches the component branch
   assert.doesNotMatch(overlayHost, /reader-control[\s\S]{0,240}\.width\(0\)|reader-control[\s\S]{0,240}\.height\(0\)/);
 });
 
-test('A2 remains fail closed against the pre-promotion consumer admission table', () => {
+test('A2 composition is activated only by the generated post-promotion admission table', () => {
   assert.match(visualAdmission, /static admissionForOverlay\(overlayKind: string\)/);
   assert.match(visualAdmission, /return 'blocked';/);
-  assert.doesNotMatch(
+  assert.match(
     visualAdmission,
     /overlayKind:\s*'reader-control'[\s\S]{0,160}admission:\s*'implementation-ready'/,
   );
