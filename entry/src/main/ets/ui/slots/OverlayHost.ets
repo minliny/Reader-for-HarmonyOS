@@ -14,6 +14,7 @@ import { ViewportAdapter } from '../adapters/ViewportAdapter';
 import { SafeAreaAdapter } from '../adapters/SafeAreaAdapter';
 import { BookCover } from '../components/BookshelfComponents';
 import { ReaderControlHomeOverlay } from '../components/ReaderControlHomeOverlay';
+import { ReaderDirectoryOverlay } from '../components/ReaderDirectoryOverlay';
 
 interface BookActionEntry {
   action: 'multi-select' | 'book-info' | 'remove';
@@ -61,6 +62,10 @@ export struct OverlayHost {
           duration: MotionDurationTokens.overlay,
           curve: Curve.EaseInOut,
         }))
+      } else if (this.overlayKind === 'directory') {
+        // A2 prepares the exact static composition, but the generated gate
+        // keeps it non-emitting until B4. Motion remains a later B7 concern.
+        ReaderDirectoryOverlay()
       } else if (this.overlayKind === 'bookshelf-multiselect') {
         this.renderBookshelfMultiSelect()
       } else if (this.overlayKind === 'local-import') {

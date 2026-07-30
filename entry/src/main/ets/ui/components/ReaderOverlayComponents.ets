@@ -1873,36 +1873,28 @@ export struct DirectoryPanel {
         .padding({ left: 5, right: 5 })
         .border({ width: { bottom: 1 }, color: ReaderUiVisualTokens.readerModuleDivider })
 
-        if (this.tocMode === 'bookmark') {
-          if (this.currentBook === null) {
-            // There is no current Figma empty/bookmark-error visual.  Keep the
-            // approved module chrome instead of inserting a generic message.
-            Column().width(0).height(0)
-          } else if (this.bookmarksLoading || !this.bookmarksLoaded) {
-            Column().width(0).height(0)
-          } else if (this.bookmarksError.length > 0) {
-            Column().width(0).height(0)
-          } else if (this.bookmarks.length === 0) {
-            Column().width(0).height(0)
-          } else {
-            Scroll() {
-              Column() {
-                ForEach(this.bookmarks, (bookmark: CoreBookmark, i: number) => {
-                  // The Figma file has no independent bookmark-card master.
-                  // Reuse its approved directory-row geometry instead of the
-                  // retired local jump/delete card.
-                  ReaderFullBookmarkRow({ bookmark: bookmark })
-                }, (bookmark: CoreBookmark, i: number) => `${bookmark.time}-${i}`)
-              }
-              .width('100%')
+        // Figma has no independent empty/loading/error child for the quick
+        // Directory module. When Core has no list to project, emit no list
+        // child at all; never retain a zero-size placeholder that can hide a
+        // parallel visual or intercept interaction.
+        if (this.tocMode === 'bookmark' && this.currentBook !== null &&
+          !this.bookmarksLoading && this.bookmarksLoaded &&
+          this.bookmarksError.length === 0 && this.bookmarks.length > 0) {
+          Scroll() {
+            Column() {
+              ForEach(this.bookmarks, (bookmark: CoreBookmark, i: number) => {
+                // This legacy capability-closure projection is not consumed
+                // by the exact reader.module.directory overlay below.
+                ReaderFullBookmarkRow({ bookmark: bookmark })
+              }, (bookmark: CoreBookmark, i: number) => `${bookmark.time}-${i}`)
             }
             .width('100%')
-            .layoutWeight(1)
-            .scrollBar(BarState.Auto)
           }
-        } else if (this.currentBook === null || this.chapterToc.length === 0) {
-          Column().width(0).height(0)
-        } else {
+          .width('100%')
+          .layoutWeight(1)
+          .scrollBar(BarState.Auto)
+        } else if (this.tocMode === 'directory' && this.currentBook !== null &&
+          this.chapterToc.length > 0) {
           Scroll() {
             Column() {
               ForEach(this.chapterToc, (chapter: ChapterTocEntry, i: number) => {
@@ -1923,6 +1915,87 @@ export struct DirectoryPanel {
       }
       .width('100%')
       .height('100%')
+  }
+}
+
+// Exact quick Directory module panel. The live Figma masters expose the
+// directory list plus a visible bookmark label, but no bookmark state,
+// bookmark card, hidden variant, or reaction. Keep that label inert and emit
+// only the Core-backed directory rows until a separate exact state is bound.
+@Component
+export struct ReaderDirectoryPanel {
+  @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
+  @StorageProp('reader.chapterToc') chapterToc: ChapterTocEntry[] = [];
+  @StorageProp('reader.currentChapterTitle') currentChapterTitle: string = '';
+
+  private isCurrent(chapter: ChapterTocEntry): boolean {
+    return this.currentChapterTitle.length > 0 && this.currentChapterTitle === chapter.title;
+  }
+
+  build() {
+    ReaderModulePanelShell({ debugLabel: 'ReaderModulePanel' }) {
+      Column() {
+        Row({ space: 0 }) {
+          Stack({ alignContent: Alignment.Bottom }) {
+            Text('目录')
+              .fontSize(10)
+              .fontWeight(600)
+              .fontColor(ReaderUiVisualTokens.readerModuleActive)
+              .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
+              .width('100%')
+              .height(31)
+              .textAlign(TextAlign.Center)
+              .padding({ top: 9, bottom: 10 })
+            Column()
+              .width(66)
+              .height(2)
+              .borderRadius(999)
+              .backgroundColor(ReaderUiVisualTokens.readerModuleActive)
+          }
+          .layoutWeight(1)
+          .height(31)
+
+          Stack({ alignContent: Alignment.Bottom }) {
+            Text('书签')
+              .fontSize(10)
+              .fontWeight(600)
+              .fontColor(ReaderUiVisualTokens.readerControlMuted)
+              .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
+              .width('100%')
+              .height(31)
+              .textAlign(TextAlign.Center)
+              .padding({ top: 9, bottom: 10 })
+          }
+          .layoutWeight(1)
+          .height(31)
+        }
+        .width('100%')
+        .height(32)
+        .padding({ left: 5, right: 5 })
+        .border({ width: { bottom: 1 }, color: ReaderUiVisualTokens.readerModuleDivider })
+
+        if (this.currentBook !== null && this.chapterToc.length > 0) {
+          Scroll() {
+            Column() {
+              ForEach(this.chapterToc, (chapter: ChapterTocEntry, i: number) => {
+                ReaderTocLiveRow({
+                  bookId: this.currentBook?.bookId ?? '',
+                  chapterId: chapter.chapterId,
+                  title: chapter.title,
+                  current: this.isCurrent(chapter),
+                })
+              }, (chapter: ChapterTocEntry, i: number) => `${chapter.chapterId}-${i}`)
+            }
+            .width('100%')
+          }
+          .width('100%')
+          .layoutWeight(1)
+          .scrollBar(BarState.Auto)
+        }
+      }
+      .width('100%')
+      .height('100%')
+    }
   }
 }
 
