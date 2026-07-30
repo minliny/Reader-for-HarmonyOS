@@ -727,7 +727,7 @@ export class ReaderUiVisualTokens {
 export class ReaderUiVisualAdmission {
   static readonly SOURCE_FILE_KEY: string = 'klhs2jMM4MncaJFqZMfqEK';
   static readonly SOURCE_REVISION: string = '2379851596474967636';
-  static readonly REGISTRY_SHA256: string = 'f783f4a9536ffd6306fddbce1655d093257583469809c2409ccd8a1b037354e5';
+  static readonly REGISTRY_SHA256: string = 'd297631aeb916f5fb1260f012bf73aa1c830a4832a3195baa8e224158f9d90c4';
   static readonly RECORD_ADMISSIONS: ReaderUiVisualRecordAdmissionEntry[] = [
     { recordId: 'about.withdrawn', admission: 'retired', sourceBound: false, implementationReady: false },
     { recordId: 'book-detail.chapter-row', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
@@ -754,7 +754,7 @@ export class ReaderUiVisualAdmission {
     { recordId: 'reader.full.settings', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
     { recordId: 'reader.full.tts', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
     { recordId: 'reader.module.appearance', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
-    { recordId: 'reader.module.directory', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
+    { recordId: 'reader.module.directory', admission: 'implementation-ready', sourceBound: true, implementationReady: true },
     { recordId: 'reader.module.settings', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
     { recordId: 'reader.module.tts', admission: 'candidate-backport', sourceBound: true, implementationReady: false },
     { recordId: 'reader.more-menu', admission: 'blocked', sourceBound: false, implementationReady: false },
@@ -1030,6 +1030,7 @@ export class ReaderUiVisualAdmission {
     { overlayKind: 'book-action', admission: 'implementation-ready', sourceBound: true, implementationReady: true, recordIds: ['bookshelf.action-sheet'] },
     { overlayKind: 'bookshelf-multiselect', admission: 'implementation-ready', sourceBound: true, implementationReady: true, recordIds: ['bookshelf.multi-select'] },
     { overlayKind: 'dialog', admission: 'implementation-ready', sourceBound: true, implementationReady: true, recordIds: ['bookshelf.action-sheet'] },
+    { overlayKind: 'directory', admission: 'implementation-ready', sourceBound: true, implementationReady: true, recordIds: ['reader.module.directory'] },
     { overlayKind: 'local-import', admission: 'implementation-ready', sourceBound: true, implementationReady: true, recordIds: ['bookshelf.local-import-dialog'] },
     { overlayKind: 'reader-control', admission: 'implementation-ready', sourceBound: true, implementationReady: true, recordIds: ['reader.control-home'] },
   ];
