@@ -102,6 +102,8 @@ const viewStateTable = source('entry/src/main/ets/contract/generated/ViewStateTa
 const overlayHost = source('entry/src/main/ets/ui/slots/OverlayHost.ets');
 const stateHost = source('entry/src/main/ets/ui/slots/StateHost.ets');
 const readerComponents = source('entry/src/main/ets/ui/components/ReaderComponents.ets');
+const readerControlHomeOverlay =
+  source('entry/src/main/ets/ui/components/ReaderControlHomeOverlay.ets');
 const readerOverlays = source('entry/src/main/ets/ui/components/ReaderOverlayComponents.ets');
 const readerScreenGraphCoverage =
   source('entry/src/main/ets/ui/router/ReaderUIScreenGraphCoverage.ets');
@@ -844,7 +846,8 @@ test('reader control home consumes the exact Figma dock, module nav, and top bar
   assert.ok(sheetStart >= 0 && sheetEnd > sheetStart, 'reader control sheet block is missing');
   assert.ok(navStart >= 0 && navEnd > navStart, 'reader module nav block is missing');
   assert.ok(topStart >= 0 && topEnd > topStart, 'reader top bar block is missing');
-  const controlHome = `${readerOverlays.slice(sheetStart, sheetEnd)}\n${readerOverlays.slice(navStart, navEnd)}\n${readerComponents.slice(topStart, topEnd)}`;
+  const topArea = readerComponents.slice(topStart, topEnd);
+  const controlHome = `${readerOverlays.slice(sheetStart, sheetEnd)}\n${readerOverlays.slice(navStart, navEnd)}\n${topArea}`;
 
   for (const token of [
     'readerControlSurface', 'readerControlTranslucentSurface', 'readerControlQuickActionSurface',
@@ -870,6 +873,26 @@ test('reader control home consumes the exact Figma dock, module nav, and top bar
   ]) {
     assert.ok(controlHome.includes(exactGeometry), `reader control home misses Figma geometry: ${exactGeometry}`);
   }
+
+  const overlayComposition = structSource(readerControlHomeOverlay, 'ReaderControlHomeOverlay');
+  const dismissZone = structSource(readerComponents, 'ReaderControlDismissZone');
+  assert.ok(overlayComposition.includes('ReaderControlDismissZone()'),
+    'reader control home must consume the Reader-UI full-screen dismiss zone');
+  assert.ok(
+    overlayComposition.indexOf('ReaderControlDismissZone()') <
+      overlayComposition.indexOf('ReaderTopArea()'),
+    'the dismiss zone must stay behind the visible Figma-bound controls');
+  assert.ok(dismissZone.includes("accessibilityText('隐藏阅读控制层')"));
+  assert.ok(dismissZone.includes('requestReaderControlToggle()'),
+    'dismiss must use the canonical semantic overlay toggle');
+  assert.equal(dismissZone.includes("type: 'route-pop'"), false,
+    'dismissing control-home must preserve the current reading route');
+  assert.ok(topArea.includes('.hitTestBehavior(HitTestMode.Transparent)'),
+    'the full-screen top-area host must expose empty reading space to the dismiss zone');
+  assert.ok(overlayComposition.includes('.hitTestBehavior(HitTestMode.Default)'),
+    'control-home must stop dismiss taps from reaching the vertical reading text handler');
+  assert.equal(overlayComposition.includes('.hitTestBehavior(HitTestMode.Transparent)'), false,
+    'transparent control-home hit testing would dispatch the semantic toggle twice');
 });
 
 test('RSS entry uses the current Figma search copy without a capability warning', () => {
