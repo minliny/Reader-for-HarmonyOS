@@ -13,6 +13,7 @@ name: Reader contract gate
 #   1. Reader-UI's atomic promotion transaction (promote-family.mjs --check)
 #   2. Artifact ↔ registry synchronization (generator --check)
 #   3. local.status === harmony.status for every implementation-ready record
+#   4. Native A2 cleanup and B4/B5 consumption receipts for every promoted family
 #
 # Branch protection MUST require this check to pass before merge. Without
 # branch protection, this workflow is advisory only — an agent can merge a
@@ -42,6 +43,7 @@ jobs:
         with:
           path: Reader-for-HarmonyOS
           persist-credentials: false
+          fetch-depth: 0
 
       - name: Check out Reader-UI (contract authority)
         uses: actions/checkout@v4
@@ -55,6 +57,7 @@ jobs:
           ref: main
           path: Reader-UI
           persist-credentials: false
+          fetch-depth: 0
 
       - name: Set up Node.js 24
         uses: actions/setup-node@v4
@@ -66,6 +69,12 @@ jobs:
         run: |
           set -euo pipefail
           node tools/design/promote-family.mjs --check
+
+      - name: Verify native A2 and B4 consumer receipts
+        working-directory: Reader-UI
+        run: |
+          set -euo pipefail
+          node tools/design/native-consumer-receipts.mjs
 
       - name: Verify generated artifact is synchronized to registry (Reader-UI)
         working-directory: Reader-UI
@@ -139,5 +148,6 @@ jobs:
           echo '1. Completing Reader-UI source-side conversion (`local.status`)' >> "$GITHUB_STEP_SUMMARY"
           echo '2. Running `promote-family.mjs` (tamper-evident ledger entry)' >> "$GITHUB_STEP_SUMMARY"
           echo '3. Regenerating `VisualAdmission.ets` (artifact ↔ registry sync)' >> "$GITHUB_STEP_SUMMARY"
+          echo '4. Recording independently verifiable native A2 cleanup and B4/B5 consumption receipts' >> "$GITHUB_STEP_SUMMARY"
           echo '' >> "$GITHUB_STEP_SUMMARY"
           echo 'Local gates can be bypassed by an agent with write access. This CI gate runs from a clean checkout and cannot be bypassed by editing local files. **Branch protection must require this check to pass before merge.**' >> "$GITHUB_STEP_SUMMARY"

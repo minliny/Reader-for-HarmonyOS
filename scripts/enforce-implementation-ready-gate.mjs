@@ -23,6 +23,8 @@
 //        implementation-ready (source-side self-promotion happened first).
 //   I.   Every implementation-ready registry record has a tamper-evident
 //        promotion ledger entry from promote-family.mjs (no hand-edited bypass).
+//   J.   Every implementation-ready B3 record set has an immutable native A2
+//        pre-promotion receipt and a B4/B5 consumption receipt.
 //
 // Run this BEFORE `test:static`, `test:arkts-emulator`, `test:device`,
 // `test:raw`, `build`, or any VM/device cycle. It is wired as `pretest`,
@@ -342,6 +344,41 @@ if (ledgerCheck.status !== 0) {
 }
 ok('every implementation-ready record has a tamper-evident promotion ledger entry');
 
+// ─── Gate J: every implementation-ready record set must have native receipts ───
+
+// The promotion ledger proves that the registry transaction ran. It does not,
+// by itself, prove that the old native route closure was independently cleaned
+// before promotion. Reader-UI owns that cross-repository receipt index and its
+// verifier; the HarmonyOS gate executes the verifier against both current
+// repositories so a documentary-only A2 claim cannot authorize rendering.
+const nativeConsumerReceiptsPath = path.join(
+  READER_UI,
+  'tools',
+  'design',
+  'native-consumer-receipts.mjs',
+);
+if (!fs.existsSync(nativeConsumerReceiptsPath)) {
+  fail(`native consumer receipt verifier not found at ${nativeConsumerReceiptsPath}`);
+}
+const nativeConsumerReceiptsCheck = spawnSync(
+  process.execPath,
+  [nativeConsumerReceiptsPath],
+  {
+    cwd: READER_UI,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  },
+);
+if (nativeConsumerReceiptsCheck.status !== 0) {
+  const stderr = nativeConsumerReceiptsCheck.stderr?.toString().trim();
+  const stdout = nativeConsumerReceiptsCheck.stdout?.toString().trim();
+  fail(
+    `native A2/B4 consumer receipt check failed — an implementation-ready ` +
+    `record set lacks independently verifiable native cleanup/consumption evidence.\n` +
+    `  ${stderr || stdout}`,
+  );
+}
+ok('every implementation-ready record set has verified native A2/B4 consumer receipts');
+
 // ─── Summary ───
 
 console.log(`\n✓ implementation-ready gate passed (${pass} checks).`);
@@ -349,6 +386,7 @@ console.log('  The execution gate is structurally sound AND source-consistent:')
 console.log('    - artifact ↔ registry are synchronized');
 console.log('    - local.status === harmony.status for every implementation-ready record');
 console.log('    - every promotion has a tamper-evident ledger entry');
+console.log('    - every promoted family has verified native A2/B4 consumer receipts');
 console.log('  candidate-backport page families will fail closed at every renderer.');
 console.log('  This gate does NOT verify Figma parity, Reader-UI source-side conversion');
 console.log('  quality, or device delivery — it only verifies that the gate itself cannot');

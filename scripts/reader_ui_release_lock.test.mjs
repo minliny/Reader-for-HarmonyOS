@@ -7,7 +7,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
-  assertExactReaderUiReleaseBumpPaths,
+  assertReaderUiReleaseBumpPaths,
   assertReaderUiPackageLockVersionUpdate,
   assertReaderUiReleaseLocksSynchronized,
   READER_UI_CONSUMER_LOCK_PATH,
@@ -44,7 +44,10 @@ test('package lock updater consumes an already verified consumer identity atomic
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'reader-ui-harmony-lock-'));
   try {
     const nextConsumer = structuredClone(consumer);
+    nextConsumer.schemaVersion = 3;
     nextConsumer.readerUiVersion = '3.0.0';
+    nextConsumer.runtimePayloadContractsSchemaVersion = 4;
+    nextConsumer.runtimePayloadContractsSha256 = 'd'.repeat(64);
     nextConsumer.releaseIdentity = {
       releaseId: `${'a'.repeat(40)}:${'b'.repeat(64)}`,
       sourceSha: 'a'.repeat(40),
@@ -52,6 +55,7 @@ test('package lock updater consumes an already verified consumer identity atomic
       targetConfigSha256: 'c'.repeat(64),
     };
     const verified = {
+      schemaVersion: 2,
       host: 'harmonyos',
       hostRepository: 'minliny/Reader-for-HarmonyOS',
       readerUiVersion: '3.0.0',
@@ -61,6 +65,8 @@ test('package lock updater consumes an already verified consumer identity atomic
       targetConfigSha256: 'c'.repeat(64),
       runtimeActionsSha256: nextConsumer.runtimeActionsSha256,
       runtimeActionsSchemaVersion: nextConsumer.runtimeActionsSchemaVersion,
+      runtimePayloadContractsSchemaVersion: nextConsumer.runtimePayloadContractsSchemaVersion,
+      runtimePayloadContractsSha256: nextConsumer.runtimePayloadContractsSha256,
       hostRequestSchemaVersion: nextConsumer.hostRequestSchemaVersion,
       releaseId: nextConsumer.releaseIdentity.releaseId,
     };
@@ -92,29 +98,31 @@ test('package lock updater consumes an already verified consumer identity atomic
   }
 });
 
-test('release bump scope is exactly the consumer lock and HarmonyOS package lock', () => {
+test('release bump scope permits only a non-empty subset of the two lock files', () => {
   assert.deepEqual(READER_UI_RELEASE_BUMP_PATHS, [
     READER_UI_CONSUMER_LOCK_PATH,
     READER_UI_PACKAGE_LOCK_PATH,
   ]);
-  assert.doesNotThrow(() => assertExactReaderUiReleaseBumpPaths([
+  assert.doesNotThrow(() => assertReaderUiReleaseBumpPaths([
     READER_UI_PACKAGE_LOCK_PATH,
     READER_UI_CONSUMER_LOCK_PATH,
   ]));
+  assert.doesNotThrow(() => assertReaderUiReleaseBumpPaths([READER_UI_CONSUMER_LOCK_PATH]));
+  assert.doesNotThrow(() => assertReaderUiReleaseBumpPaths([READER_UI_PACKAGE_LOCK_PATH]));
+  assert.throws(() => assertReaderUiReleaseBumpPaths([]), /must change at least one/);
+  assert.doesNotThrow(() => assertReaderUiReleaseBumpPaths([], 'idempotent release', {
+    allowEmpty: true,
+  }));
   assert.throws(
-    () => assertExactReaderUiReleaseBumpPaths([READER_UI_CONSUMER_LOCK_PATH]),
-    /must contain exactly/,
-  );
-  assert.throws(
-    () => assertExactReaderUiReleaseBumpPaths([
+    () => assertReaderUiReleaseBumpPaths([
       READER_UI_CONSUMER_LOCK_PATH,
       READER_UI_PACKAGE_LOCK_PATH,
       'entry/oh-package.json5',
     ]),
-    /must contain exactly/,
+    /may contain only/,
   );
   assert.throws(
-    () => assertExactReaderUiReleaseBumpPaths([
+    () => assertReaderUiReleaseBumpPaths([
       READER_UI_CONSUMER_LOCK_PATH,
       READER_UI_CONSUMER_LOCK_PATH,
     ]),
@@ -122,18 +130,23 @@ test('release bump scope is exactly the consumer lock and HarmonyOS package lock
   );
 });
 
-test('workflow updates, validates, and publishes the same exact dual-lock scope', () => {
+test('workflow binds typed payload identity and publishes only the allowed lock subset', () => {
   const workflow = fs.readFileSync(
     path.join(repo, '.github/workflows/reader-ui-consumer.yml'),
     'utf8',
   );
   assert.match(workflow, /update_reader_ui_package_lock\.mjs/);
-  assert.match(workflow, /assertExactReaderUiReleaseBumpPaths/);
+  assert.match(workflow, /assertReaderUiReleaseBumpPaths/);
   assert.match(workflow, /assertReaderUiPackageLockVersionUpdate/);
+  assert.match(workflow, /runtimePayloadContractsSchemaVersion/);
+  assert.match(workflow, /runtimePayloadContractsSha256/);
+  assert.match(workflow, /after\.schemaVersion !== 3/);
+  assert.match(workflow, /allowEmpty: true/);
+  assert.doesNotMatch(workflow, /lock v2 contract/);
   assert.match(workflow, /Reader-for-HarmonyOS\/scripts\/publish-host-bump-pr\.mjs/);
   assert.doesNotMatch(workflow, /Reader-UI\/tools\/release\/publish-host-bump-pr\.mjs/);
   const publisher = fs.readFileSync(path.join(repo, 'scripts/publish-host-bump-pr.mjs'), 'utf8');
-  assert.ok([...publisher.matchAll(/assertExactReaderUiReleaseBumpPaths/g)].length >= 4,
+  assert.ok([...publisher.matchAll(/assertReaderUiReleaseBumpPaths/g)].length >= 4,
     'publisher must protect working, status, existing-commit, and staged scopes');
   assert.match(publisher, /\['add', '--', \.\.\.READER_UI_RELEASE_BUMP_PATHS\]/);
   assert.doesNotMatch(publisher, /git[^\n]+add[^\n]+READER_UI_CONSUMER\.json/,

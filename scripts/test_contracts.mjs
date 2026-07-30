@@ -128,6 +128,8 @@ const structuralPages = source('entry/src/main/ets/ui/components/StructuralPageC
 const entryAbility = source('entry/src/main/ets/entryability/EntryAbility.ets');
 const packageJson = source('package.json');
 const arktsTestPackageGate = source('scripts/test.mjs');
+const implementationReadyGate = source('scripts/enforce-implementation-ready-gate.mjs');
+const readerContractWorkflow = source('.github/workflows/reader-contract-gate.yml');
 const arktsEmulatorRunner = source('scripts/run_ohos_device_tests.mjs');
 const brightnessSunAsset = source('entry/src/main/resources/base/media/reader_control_brightness_sun.svg');
 const readerControlIconEvidence = json('docs/design/FIGMA_READER_CONTROL_ICON_EXPORT_EVIDENCE.json');
@@ -446,6 +448,28 @@ test('candidate-backport page families fail closed at every active renderer exec
     assert.equal(shell.includes('StateHost('), false,
       'a shell must not mount the retired generic state host');
   }
+});
+
+test('implementation-ready gate and clean-checkout CI require native A2/B4 consumer receipts', () => {
+  assert.ok(
+    implementationReadyGate.includes('native-consumer-receipts.mjs'),
+    'local implementation-ready meta-gate must execute the native receipt verifier',
+  );
+  assert.ok(
+    implementationReadyGate.includes(
+      'every implementation-ready record set has verified native A2/B4 consumer receipts',
+    ),
+    'local meta-gate must report the receipt check as a distinct pass condition',
+  );
+  assert.ok(
+    readerContractWorkflow.includes('node tools/design/native-consumer-receipts.mjs'),
+    'clean-checkout CI must execute the native receipt verifier',
+  );
+  assert.equal(
+    (readerContractWorkflow.match(/fetch-depth:\s*0/g) || []).length,
+    2,
+    'both repositories need full history because receipts bind historical commits and trees',
+  );
 });
 
 test('legacy generated state primitives cannot draw a local loading or error page over an admitted Figma route', () => {
