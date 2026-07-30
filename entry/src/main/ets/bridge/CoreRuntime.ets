@@ -179,7 +179,21 @@ export class CoreCommandHandle {
   }
 }
 
-export class CoreRuntime {
+// Narrow view of CoreRuntime's reading-progress surface. Defined here - the
+// owner of the real type - so ReaderEffects can depend on CoreRuntime without
+// a reverse import, and so ArkTS nominal typing admits both the production
+// CoreRuntime (which implements this interface) and a test mock that supplies
+// only these two methods. The drainReadingProgressQueue test seam acquires its
+// runtime through this interface.
+export interface ReadingProgressCoreRuntime {
+  readerLocationResolve(bookId: string, chapterIndex: number, chapterOffset: number,
+    chapterProgress: number, viewportWidth: number, viewportHeight: number,
+    fontScale: number, sourceId?: string, chapterTitle?: string): Promise<JsonObject>;
+  readingProgressUpdate(bookId: string, sourceId: string, chapterIndex: number,
+    chapterOffset: number, chapterProgress: number, locationRevision?: string): Promise<JsonObject>;
+}
+
+export class CoreRuntime implements ReadingProgressCoreRuntime {
   private static instance: CoreRuntime | null = null;
   private runtime: ReaderCoreRuntime;
   private registry: HostCapabilityRegistry;

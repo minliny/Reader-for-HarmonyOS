@@ -42,32 +42,29 @@ export struct OverlayHost {
   ];
 
   build() {
-    // sort-filter 由 BookshelfShelfSection 内部渲染筛选浮层（契约 fixture view-state 设计），不在此全局浮层显示
-    if (this.overlayKind === '' || this.overlayKind === 'sort-filter') {
-      Column().width(0).height(0)
-    } else if (!ReaderUiVisualAdmission.isOverlayAdmitted(this.overlayKind)) {
-      // The Reader-UI generated admission table is the only authority.
-      // `isOverlayAdmitted` returns true ONLY for `implementation-ready`
-      // overlays; `candidate-backport` overlays (source bound but not yet
-      // delivered) fail closed here too. Do not turn an unbound or
-      // not-yet-delivered overlay into a native generic card or a duplicate
-      // Figma-specific policy; it remains visually inert until Reader-UI marks
-      // the family implementation-ready.
-      Column().width(0).height(0)
-    } else if (this.overlayKind === 'bookshelf-multiselect') {
-      this.renderBookshelfMultiSelect()
-    } else if (this.overlayKind === 'local-import') {
-      this.renderLocalImportDialog()
-    } else {
-      Stack() {
-        if (this.overlayKind === 'book-action') {
-          this.renderBookActionSheet()
-        } else if (this.overlayKind === 'dialog') {
-          this.renderBookshelfRemovalConfirm()
+    // sort-filter 由 BookshelfShelfSection 内部渲染筛选浮层（契约 fixture view-state 设计），不在此全局浮层显示。
+    // The Reader-UI generated admission table is the only authority.
+    // `isOverlayAdmitted` returns true ONLY for `implementation-ready`
+    // overlays; `candidate-backport` overlays (source bound but not yet
+    // delivered) have no branch at all. This is explicit non-emission rather
+    // than a width(0) placeholder or a local fallback sheet.
+    if (this.overlayKind !== '' && this.overlayKind !== 'sort-filter' &&
+      ReaderUiVisualAdmission.isOverlayAdmitted(this.overlayKind)) {
+      if (this.overlayKind === 'bookshelf-multiselect') {
+        this.renderBookshelfMultiSelect()
+      } else if (this.overlayKind === 'local-import') {
+        this.renderLocalImportDialog()
+      } else {
+        Stack() {
+          if (this.overlayKind === 'book-action') {
+            this.renderBookActionSheet()
+          } else if (this.overlayKind === 'dialog') {
+            this.renderBookshelfRemovalConfirm()
+          }
         }
+        .width('100%').height('100%')
+        .transition(TransitionEffect.OPACITY.animation({ duration: MotionDurationTokens.overlay, curve: Curve.EaseInOut }))
       }
-      .width('100%').height('100%')
-      .transition(TransitionEffect.OPACITY.animation({ duration: MotionDurationTokens.overlay, curve: Curve.EaseInOut }))
     }
   }
 

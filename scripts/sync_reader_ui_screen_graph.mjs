@@ -10,6 +10,29 @@ const SOURCE_DIR = path.join(READER_UI, 'generated', 'arkts');
 const DEST_DIR = path.join(REPO, 'entry', 'src', 'main', 'ets', 'contract', 'reader_ui');
 const GRAPH_JSON = path.join(READER_UI, 'ui-spec', 'screen-graph.json');
 const VIEW_STATE_FIXTURES = path.join(READER_UI, 'contracts', 'fixtures', 'view-state.fixtures.json');
+const READING_SURFACE_A2_DELTA = path.join(
+  READER_UI,
+  'docs',
+  'design',
+  'handoffs',
+  'reader-runtime',
+  'reading-surface',
+  'A2_CONTRACT_RETIREMENT_DELTA.json',
+);
+const BOOKSHELF_A2_DELTA = path.join(
+  READER_UI,
+  'docs',
+  'design',
+  'native-disposition',
+  'bookshelf',
+  'A2_NATIVE_RETIREMENT_DELTA.json',
+);
+const VISUAL_ADMISSION_REGISTRY = path.join(
+  READER_UI,
+  'docs',
+  'design',
+  'FIGMA_VISUAL_ADMISSION_REGISTRY.json',
+);
 const VIEW_STATE_RENDERER = path.join(REPO, 'entry', 'src', 'main', 'ets', 'ui', 'components', 'ViewStateRenderer.ets');
 const COVERAGE_REGISTRY = path.join(REPO, 'entry', 'src', 'main', 'ets', 'ui', 'router', 'ReaderUIScreenGraphCoverage.ets');
 const RETIREMENT_REGISTRY = path.join(REPO, 'entry', 'src', 'main', 'ets', 'ui', 'router', 'ReaderUIScreenGraphRetirementRegistry.ets');
@@ -100,6 +123,9 @@ for (const file of FILES) {
 }
 if (!fs.existsSync(GRAPH_JSON)) throw new Error(`Reader UI screen graph JSON missing: ${GRAPH_JSON}`);
 if (!fs.existsSync(VIEW_STATE_FIXTURES)) throw new Error(`Reader UI ViewState fixtures missing: ${VIEW_STATE_FIXTURES}`);
+if (!fs.existsSync(READING_SURFACE_A2_DELTA)) {
+  throw new Error(`Reader UI reading-surface A2 delta missing: ${READING_SURFACE_A2_DELTA}`);
+}
 
 if (!CHECK) {
   fs.mkdirSync(DEST_DIR, { recursive: true });
@@ -127,6 +153,9 @@ const screenGraphSource = fs.readFileSync(path.join(SOURCE_DIR, 'ScreenGraph.ets
 const graphBytes = fs.readFileSync(GRAPH_JSON);
 const graph = JSON.parse(graphBytes.toString('utf8'));
 const viewStateFixtures = JSON.parse(fs.readFileSync(VIEW_STATE_FIXTURES, 'utf8'));
+const readingSurfaceA2Delta = JSON.parse(fs.readFileSync(READING_SURFACE_A2_DELTA, 'utf8'));
+const bookshelfA2Delta = JSON.parse(fs.readFileSync(BOOKSHELF_A2_DELTA, 'utf8'));
+const visualAdmissionRegistry = JSON.parse(fs.readFileSync(VISUAL_ADMISSION_REGISTRY, 'utf8'));
 if (graph.schemaVersion !== '1.2.0') {
   failures.push(`ScreenGraph schemaVersion must be 1.2.0, got ${graph.schemaVersion}`);
 }
@@ -160,11 +189,119 @@ for (const route of graph.routes || []) {
   }
 }
 
+const EXPECTED_A2_RETIRED_ROUTE_IDS = [
+  'control-layer-base-v2',
+  'reader-directory-overlay-v2',
+  'reader-appearance-overlay-v2',
+  'reader-tts-overlay-v2',
+  'reader-settings-overlay-v2',
+  'reader-auto-scroll-overlay-v2',
+  'reader-search-overlay-v2',
+  'reader-replace-overlay-v2',
+  'toc-bookmarks',
+  'tts',
+  'reader-appearance',
+  'reader-settings',
+  'content-search',
+];
+if (readingSurfaceA2Delta.kind !== 'A2_CONTRACT_RETIREMENT_DELTA' ||
+  readingSurfaceA2Delta.status !== 'approved-source-retirement' ||
+  readingSurfaceA2Delta.recordId !== 'reader.reading-surface' ||
+  readingSurfaceA2Delta.currentClosure?.readerUiSource?.status !== 'passed') {
+  failures.push('reading-surface A2 source retirement is not approved and source-verified');
+}
+if (!sameStringSet(
+  new Set(readingSurfaceA2Delta.retiredRouteIds || []),
+  new Set(EXPECTED_A2_RETIRED_ROUTE_IDS),
+)) {
+  failures.push('reading-surface A2 delta does not name the exact 13 retired routes');
+}
+const approvedA2Coverage = readingSurfaceA2Delta.coverage;
+const approvedA2CoverageAfter = readingSurfaceA2Delta.coverageAfter;
+if (approvedA2CoverageAfter?.faithfulInstanceFloor !== 272 ||
+  approvedA2CoverageAfter?.partialInstanceCeiling !== 45 ||
+  approvedA2CoverageAfter?.ReaderBase !== 42 ||
+  approvedA2CoverageAfter?.ReaderTopArea !== 38 ||
+  approvedA2CoverageAfter?.ReaderBottomBar !== 3 ||
+  approvedA2CoverageAfter?.TapZones !== 7 ||
+  approvedA2CoverageAfter?.readerBaseEmptySignature !== 19 ||
+  !sameStringSet(
+    new Set(approvedA2CoverageAfter?.readerBasePropKeys || []),
+    new Set([
+      'availability',
+      'coreSupport',
+      'documentKind',
+      'executionOwner',
+      'hostBasis',
+      'surfaceContract',
+      'theme',
+    ]),
+  )) {
+  failures.push('reading-surface A2 approved coverage-after boundary changed');
+}
+
+const EXPECTED_BOOKSHELF_A2_RETIRED_ROUTE_IDS = [
+  'bookshelf-book-more-menu',
+  'bookshelf-group-management',
+  'group-management',
+  'book-batch-management',
+  'local-import',
+];
+const EXPECTED_BOOKSHELF_A2_RETIRED_COMPONENTS = [
+  'bookshelf-book-more-menu/topbar',
+  'bookshelf-book-more-menu/book-more-menu-page',
+  'bookshelf-book-more-menu/bottom-nav',
+  'bookshelf-group-management/topbar',
+  'bookshelf-group-management/book-group-management-page',
+  'group-management/topbar',
+  'group-management/group-management-page',
+  'book-batch-management/topbar',
+  'book-batch-management/book-batch-management-page',
+  'local-import/local-import-topbar',
+  'local-import/local-import-page',
+];
+const approvedBookshelfA2CoverageAfter = bookshelfA2Delta.coverageAfter;
+if (bookshelfA2Delta.kind !== 'A2_NATIVE_RETIREMENT_DELTA' ||
+  bookshelfA2Delta.status !== 'approved-source-backed-retirement' ||
+  bookshelfA2Delta.recordId !== 'bookshelf.page' ||
+  bookshelfA2Delta.sourceCommit !== '092fb4d15a222ce9efeb503842673ccb529281ca' ||
+  bookshelfA2Delta.b2ImplementationCommit !== '8c984963344307d2cd58afa26be63ce285a56c9d' ||
+  bookshelfA2Delta.b3EvidenceCommit !== '7994b78c490aa62dafbc8fbf7e23d9733b039937' ||
+  bookshelfA2Delta.figma?.revision !== '2379851596474967636') {
+  failures.push('bookshelf A2 native retirement is not source- and revision-backed');
+}
+if (!sameStringSet(
+  new Set(bookshelfA2Delta.retiredRouteIds || []),
+  new Set(EXPECTED_BOOKSHELF_A2_RETIRED_ROUTE_IDS),
+) || !sameStringSet(
+  new Set(bookshelfA2Delta.retiredComponentInstances || []),
+  new Set(EXPECTED_BOOKSHELF_A2_RETIRED_COMPONENTS),
+)) {
+  failures.push('bookshelf A2 delta does not name the exact retired routes and component instances');
+}
+if (approvedBookshelfA2CoverageAfter?.faithfulInstanceFloor !== 265 ||
+  approvedBookshelfA2CoverageAfter?.partialInstanceCeiling !== 45 ||
+  approvedBookshelfA2CoverageAfter?.retiredRuntimeInstances !== 44) {
+  failures.push('bookshelf A2 approved coverage-after boundary changed');
+}
+for (const routeId of EXPECTED_BOOKSHELF_A2_RETIRED_ROUTE_IDS) {
+  const owners = (visualAdmissionRegistry.records || []).filter((record) =>
+    (record.routeIds || []).includes(routeId));
+  if (owners.length === 0 || owners.some((record) => record.classification !== 'retired')) {
+    failures.push(`bookshelf A2 route is not exclusively retired by Reader-UI: ${routeId}`);
+  }
+}
+
 // Generated route unions are intentionally broader than the current Figma
 // presentation. Keep the precise retirement list in native code, then prove
 // every retired generated component is named by route + component ID. The
 // generated Reader UI files remain immutable inputs to this audit.
 const RETIRED_GENERATED_ROUTE_IDS = new Set([
+  'bookshelf-book-more-menu',
+  'bookshelf-group-management',
+  'group-management',
+  'book-batch-management',
+  'local-import',
   'source-switch-results',
   'source-switch-empty',
   'source-switch-error',
@@ -210,7 +347,7 @@ if (!fs.existsSync(RETIREMENT_REGISTRY)) {
   for (const entry of retiredComponentEntries) {
     const key = componentRecordKey(entry.routeId, entry.componentId);
     if (!RETIRED_GENERATED_ROUTE_IDS.has(entry.routeId)) {
-      failures.push(`retirement registry may only cover withdrawn Source Switch/Restore routes: ${entry.routeId}/${entry.componentId}`);
+      failures.push(`retirement registry may only cover approved withdrawn routes: ${entry.routeId}/${entry.componentId}`);
     }
     if (retiredComponentKeys.has(key)) {
       failures.push(`duplicate ScreenGraph retirement registry entry: ${entry.routeId}/${entry.componentId}`);
@@ -226,6 +363,15 @@ if (!fs.existsSync(RETIREMENT_REGISTRY)) {
     if (!retiredComponentKeys.has(key)) {
       failures.push(`withdrawn generated component is not explicitly retired: ${record.routeId}/${record.component.id}`);
     }
+  }
+  const actualBookshelfRetiredComponents = retiredComponentEntries
+    .filter((entry) => EXPECTED_BOOKSHELF_A2_RETIRED_ROUTE_IDS.includes(entry.routeId))
+    .map((entry) => `${entry.routeId}/${entry.componentId}`);
+  if (!sameStringSet(
+    new Set(actualBookshelfRetiredComponents),
+    new Set(EXPECTED_BOOKSHELF_A2_RETIRED_COMPONENTS),
+  )) {
+    failures.push('native retirement registry drifted from the source-owned bookshelf A2 delta');
   }
   if (retiredComponentKeys.has(componentRecordKey('source-switch', 'source-switch-flow'))) {
     failures.push('live source-switch window must not be retired from runtime coverage');
@@ -248,8 +394,8 @@ const explicitGapComponentTypes = (graph.componentCatalog || [])
 // The generated graph deliberately remains a complete historical ledger, but
 // a component whose every instance is explicitly retired must not demand a
 // renderer. The retirement registry is the only exception: it records the
-// exact route/component pairs and prevents stale Source Switch matrices from
-// reappearing just to satisfy a coverage count.
+// exact route/component pairs and prevents stale superseded pages or state
+// matrices from reappearing just to satisfy a coverage count.
 const retiredOnlyReferencedComponentTypes = new Set(referencedComponentTypes.filter((type) => {
   const instances = canonicalComponentRecords.filter((record) => record.component.type === type);
   return instances.length > 0 && instances.every((record) =>
@@ -265,7 +411,8 @@ if (missingRendererMappings.length > 0) {
 // from the shipped visual tree rather than showing a native diagnostic card:
 // diagnostics belong to developer evidence, never to a user-facing fallback.
 if (!rendererSource.includes('Unknown component types have no current Figma visual authority') ||
-  !rendererSource.includes('Column().width(0).height(0)')) {
+  !rendererSource.includes('Unknown components are physically not emitted.') ||
+  rendererSource.includes('Column().width(0).height(0)')) {
   failures.push('unknown ComponentType is not strictly inert fail-closed');
 }
 if (rendererSource.includes('Reader UI 组件契约漂移')) {
@@ -384,11 +531,11 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
       : rendererDispatchSource.indexOf('    } else {', start);
     branchBodies.set(branchMatches[index][1], rendererDispatchSource.slice(start, end));
   }
-  const appearanceBranch = branchBodies.get('ReaderAppearancePanel') || '';
+  const appearanceBranch = branchBodies.get('AppearancePanel') || '';
   if (!appearanceBranch.includes('renderReadOnlyAppearanceState') ||
     !appearanceBranch.includes('component.props.section') ||
     !appearanceBranch.includes('component.children')) {
-    failures.push('ReaderAppearancePanel must consume canonical section/children through its read-only state renderer');
+    failures.push('AppearancePanel must consume canonical section/children through its read-only state renderer');
   }
   const appearanceReadOnlyStart = rendererSource.indexOf('@Builder renderReadOnlyAppearanceChildren');
   const appearanceReadOnlyEnd = rendererSource.indexOf('@Builder renderReadOnlyAppearanceState', appearanceReadOnlyStart);
@@ -399,13 +546,13 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
     !appearanceReadOnlySource.includes('.hitTestBehavior(HitTestMode.None)') ||
     appearanceReadOnlySource.includes('.onClick(') ||
     appearanceReadOnlySource.includes('ReaderUiStore.dispatch')) {
-    failures.push('ReaderAppearancePanel canonical actions must remain visibly read-only and fail closed');
+    failures.push('AppearancePanel canonical actions must remain visibly read-only and fail closed');
   }
-  const replaceBranch = branchBodies.get('ReaderReplacePanel') || '';
+  const replaceBranch = branchBodies.get('ReplacePanel') || '';
   if (!replaceBranch.includes('renderReadOnlyReplaceState') ||
     !replaceBranch.includes('component.props.section') ||
     !replaceBranch.includes('component.children')) {
-    failures.push('ReaderReplacePanel must consume canonical section/children through its read-only state renderer');
+    failures.push('ReplacePanel must consume canonical section/children through its read-only state renderer');
   }
   const replaceReadOnlyStart = rendererSource.indexOf('@Builder renderReadOnlyReplaceChildren');
   const replaceReadOnlyEnd = rendererSource.indexOf('@Builder renderReadOnlyReplaceState', replaceReadOnlyStart);
@@ -416,13 +563,14 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
     !replaceReadOnlySource.includes('.hitTestBehavior(HitTestMode.None)') ||
     replaceReadOnlySource.includes('.onClick(') ||
     replaceReadOnlySource.includes('ReaderUiStore.dispatch')) {
-    failures.push('ReaderReplacePanel canonical actions must remain visibly read-only and fail closed');
+    failures.push('ReplacePanel canonical actions must remain visibly read-only and fail closed');
   }
   const sourceSwitchBranch = branchBodies.get('SourceSwitchFlowPage') || '';
-  if (!sourceSwitchBranch.includes('if (component.children.length > 0)') ||
-    !sourceSwitchBranch.includes('Column().width(0).height(0)') ||
-    !sourceSwitchBranch.includes('SourceSwitchFlowPage()')) {
-    failures.push('SourceSwitchFlowPage must isolate withdrawn generated state-matrix children and retain only the live Figma window');
+  if (!sourceSwitchBranch.includes('SourceSwitchFlowPage()') ||
+    sourceSwitchBranch.includes('component.children') ||
+    sourceSwitchBranch.includes('width(0)') ||
+    sourceSwitchBranch.includes('height(0)')) {
+    failures.push('SourceSwitchFlowPage must render only the canonical window; retired children cannot survive behind a hidden branch');
   }
   if (rendererSource.includes('renderReadOnlySourceSwitchChildren') ||
     rendererSource.includes('renderReadOnlySourceSwitchState')) {
@@ -471,7 +619,8 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
     ? rendererSource.slice(genericStateBranchStart, genericStateBranchEnd)
     : '';
   if (!genericStateBranch.includes('These old generated primitives have no component-level Figma master') ||
-    !genericStateBranch.includes('Column().width(0).height(0)') ||
+    !genericStateBranch.includes('Intentionally emit no node.') ||
+    genericStateBranch.includes('Column().width(0).height(0)') ||
     genericStateBranch.includes('this.statePrimitiveTitle(component)') ||
     genericStateBranch.includes('this.statePrimitiveMessage(component)') ||
     genericStateBranch.includes('ErrorState({')) {
@@ -1212,7 +1361,8 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
     }
   }
   if (!genericStateBranch.includes("component.type === 'Empty'") ||
-    !genericStateBranch.includes('Column().width(0).height(0)') ||
+    !genericStateBranch.includes('Intentionally emit no node.') ||
+    genericStateBranch.includes('Column().width(0).height(0)') ||
     genericSet.has('Empty') || partialSet.has('Empty')) {
     failures.push('Figma-unbound Empty primitive must remain semantic evidence only, not a locally drawn page');
   }
@@ -1380,10 +1530,20 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
   // These remain exact contract-owned state leaves, but current Figma has no
   // admitted generic state master. Keep their schema/evidence frozen while
   // proving they cannot be promoted into an invented native state screen.
+  const approvedStateDenominators = approvedA2Coverage?.stateComponentDenominators;
   const expectedFigmaUnboundStateEvidence = new Map([
-    ['Loading', { count: 9, evidence: 3 }],
-    ['ErrorState', { count: 5, evidence: 5 }],
-    ['Offline', { count: 4, evidence: 2 }],
+    ['Loading', {
+      count: approvedStateDenominators?.Loading?.instanceCount?.after,
+      evidence: approvedStateDenominators?.Loading?.stateEventEvidence?.after,
+    }],
+    ['ErrorState', {
+      count: approvedStateDenominators?.ErrorState?.instanceCount?.after,
+      evidence: approvedStateDenominators?.ErrorState?.stateEventEvidence?.after,
+    }],
+    ['Offline', {
+      count: approvedStateDenominators?.Offline?.instanceCount?.after,
+      evidence: approvedStateDenominators?.Offline?.stateEventEvidence?.after,
+    }],
   ]);
   const allowedStatePrimitiveProps = new Set([
     'title', 'label', 'message', 'uiEvent', 'uiEventPayload', 'uiEventTrigger',
@@ -1419,11 +1579,24 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
   // ScreenGraph 1.2 makes composite ownership explicit. These four types are
   // native composites: their children are declarative anatomy/action metadata,
   // never a request for the generic renderer to instantiate a second tree.
+  const approvedHostCompositeCounts = approvedA2Coverage?.hostCompositeInstanceCounts;
   const expectedHostCompositeCatalog = new Map([
-    ['ReaderBase', { count: 49, authorities: ['core', 'reader-ui-runtime', 'host-store', 'host-layout'] }],
-    ['ReaderTopArea', { count: 48, authorities: ['core', 'reader-ui-runtime', 'host-store'] }],
-    ['ReaderBottomBar', { count: 11, authorities: ['reader-ui-runtime', 'host-store'] }],
-    ['TapZones', { count: 7, authorities: ['reader-ui-runtime', 'host-layout'] }],
+    ['ReaderBase', {
+      count: approvedHostCompositeCounts?.ReaderBase?.after,
+      authorities: ['core', 'reader-ui-runtime', 'host-store', 'host-layout'],
+    }],
+    ['ReaderTopArea', {
+      count: approvedHostCompositeCounts?.ReaderTopArea?.after,
+      authorities: ['core', 'reader-ui-runtime', 'host-store'],
+    }],
+    ['ReaderBottomBar', {
+      count: approvedHostCompositeCounts?.ReaderBottomBar?.after,
+      authorities: ['reader-ui-runtime', 'host-store'],
+    }],
+    ['TapZones', {
+      count: approvedHostCompositeCounts?.TapZones?.after,
+      authorities: ['reader-ui-runtime', 'host-layout'],
+    }],
   ]);
   const hostCompositeCatalog = (graph.componentCatalog || [])
     .filter((entry) => entry.status === 'referenced' && entry.compositionMode === 'host-composite');
@@ -1459,7 +1632,7 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
     readerBaseSignatures.set(signature, (readerBaseSignatures.get(signature) || 0) + 1);
   }
   const expectedReaderBaseSignatures = new Map([
-    ['', 26],
+    ['', approvedA2Coverage?.readerBaseOwnership?.emptyPropsSignatureCount?.after],
     ['Content+TapZones', 2],
     ['ReadingBackgroundLayer', 13],
     ['ReadingBackgroundLayer+ReadingTextFlow+ReadingInfoLayer', 3],
@@ -1505,7 +1678,7 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
     tapZoneTargetCounts.set(binding.target, (tapZoneTargetCounts.get(binding.target) || 0) + 1);
   }
   const expectedReaderBasePropKeys = new Set([
-    'availability', 'coreSupport', 'documentKind', 'executionOwner', 'hostBasis', 'theme',
+    ...(approvedA2CoverageAfter?.readerBasePropKeys || []),
   ]);
   const validPlannedDocumentOpen = (instance) => {
     if ((instance.bindings || []).length === 0) return instance.props?.documentKind === undefined;
@@ -1524,7 +1697,8 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
       payloadKeys[1] === expected.positionKey && binding.payload.documentId === expected.documentId &&
       binding.payload[expected.positionKey] === expected.position;
   };
-  if (!partialSet.has('ReaderBase') || readerBaseInstances.length !== 49 ||
+  if (!partialSet.has('ReaderBase') ||
+    readerBaseInstances.length !== approvedA2Coverage?.readerBaseOwnership?.instanceCount?.after ||
     !sameStringSet(new Set(readerBaseSignatures.keys()), new Set(expectedReaderBaseSignatures.keys())) ||
     [...expectedReaderBaseSignatures].some(([signature, count]) => readerBaseSignatures.get(signature) !== count) ||
     readerBaseOwnBindings.length !== 2 || readerBaseOwnStateEventEvidenceCount !== 0 ||
@@ -1647,12 +1821,11 @@ for (const key of Object.keys(actual)) {
 }
 
 // Coverage quality baseline — prevents silent faithful→partial regression.
-// Only an explicitly approved Design Delta may update these numbers.  A green
-// screen-graph gate must never imply that quality held; it only proves
-// structural completeness.  This baseline closes that gap.
+// Source-owned A2 retirement deltas are the only authority for intentional
+// denominator decreases. Any unrelated shrink still fails closed.
 const COVERAGE_QUALITY_BASELINE = {
-  faithfulInstanceFloor: 285,
-  partialInstanceCeiling: 52,
+  faithfulInstanceFloor: approvedBookshelfA2CoverageAfter?.faithfulInstanceFloor,
+  partialInstanceCeiling: approvedBookshelfA2CoverageAfter?.partialInstanceCeiling,
 };
 if (faithfulInstanceCount < COVERAGE_QUALITY_BASELINE.faithfulInstanceFloor) {
   failures.push(
@@ -1666,7 +1839,12 @@ if (partialInstanceCount > COVERAGE_QUALITY_BASELINE.partialInstanceCeiling) {
 }
 
 if (failures.length > 0) {
-  console.error(`[screen-graph-consumer] FAIL sourceSha256=${sourceSha} canonicalSha256=${canonicalSha}`);
+  console.error(
+    `[screen-graph-consumer] FAIL sourceSha256=${sourceSha} canonicalSha256=${canonicalSha} ` +
+    `instances=${faithfulInstanceCount}faithful+${genericInstanceCount}generic+` +
+    `${partialInstanceCount}partial+${insufficientInstanceCount}insufficient+` +
+    `${figmaUnboundStateInstanceCount}figmaUnboundState retiredRuntimeInstances=${retiredRuntimeInstanceCount}`,
+  );
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }

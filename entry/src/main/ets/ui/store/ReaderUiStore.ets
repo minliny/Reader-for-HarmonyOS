@@ -660,8 +660,8 @@ export class ReaderUiStore {
    */
   static startTtsFromReaderSurface(): void {
     const origin = ReaderUiStore.state.routeId;
-    const isTtsStartSurface = origin === 'reader' || origin === 'reader-tts-overlay-v2' ||
-      origin === 'reader-full-tts';
+    const isTtsStartSurface = origin === 'immersive-reading' || origin === 'reader' ||
+      origin === 'reader_content' || origin === 'reader-full-tts';
     if (!isTtsStartSurface) return;
 
     ReaderUiStore.dispatch({ type: 'route-replace', id: 'immersive-reading' });
@@ -816,6 +816,12 @@ export class ReaderUiStore {
 
   static snapshot(): ReaderUiState {
     return ReaderUiStore.state;
+  }
+
+  /** Test seam: install an exact reducer state (e.g. a reader on a chapter) for async Effects tests. */
+  static setStateForTest(state: ReaderUiState): void {
+    ReaderUiStore.state = state;
+    ReaderUiStore.writeAll();
   }
 
   /**

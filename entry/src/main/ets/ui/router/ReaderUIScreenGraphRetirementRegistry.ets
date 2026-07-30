@@ -1,13 +1,12 @@
 // Runtime retirement registry for ScreenGraph component instances that belong
-// to withdrawn Source Switch / Restore generated state-matrix routes.  These
-// routes remain part of the canonical Reader-UI ScreenGraph (the generated
-// contract is immutable) but their generated state-matrix children must not
-// reach the native presentation path.  Only the live Figma window — e.g. the
-// real SourceSwitchFlowPage — remains visible at runtime.
+// to explicitly withdrawn generated routes. These routes remain part of the
+// canonical Reader-UI ScreenGraph (the generated contract is immutable), but
+// their historical children must not reach the native presentation path. Only
+// the current in-place Figma states remain visible at runtime.
 //
 // The companion audit (scripts/sync_reader_ui_screen_graph.mjs) loads this
 // registry and verifies:
-//   1. every retired entry covers a withdrawn Source Switch / Restore route,
+//   1. every retired entry covers an explicitly withdrawn route,
 //   2. every withdrawn generated component (including nested state/action
 //      children) is explicitly retired,
 //   3. the live 'source-switch/source-switch-flow' window is NOT retired.
@@ -23,6 +22,17 @@ export interface ReaderUIScreenGraphRetiredComponentInstance {
 }
 
 export const READER_SCREEN_GRAPH_RETIRED_COMPONENT_INSTANCES: ReaderUIScreenGraphRetiredComponentInstance[] = [
+  { routeId: 'bookshelf-book-more-menu', componentId: 'topbar', reason: 'superseded-by-in-place-book-action-sheet' },
+  { routeId: 'bookshelf-book-more-menu', componentId: 'book-more-menu-page', reason: 'superseded-by-in-place-book-action-sheet' },
+  { routeId: 'bookshelf-book-more-menu', componentId: 'bottom-nav', reason: 'superseded-by-in-place-book-action-sheet' },
+  { routeId: 'bookshelf-group-management', componentId: 'topbar', reason: 'group-management-withdrawn-from-v1' },
+  { routeId: 'bookshelf-group-management', componentId: 'book-group-management-page', reason: 'group-management-withdrawn-from-v1' },
+  { routeId: 'group-management', componentId: 'topbar', reason: 'group-management-withdrawn-from-v1' },
+  { routeId: 'group-management', componentId: 'group-management-page', reason: 'group-management-withdrawn-from-v1' },
+  { routeId: 'book-batch-management', componentId: 'topbar', reason: 'superseded-by-in-place-bookshelf-multiselect' },
+  { routeId: 'book-batch-management', componentId: 'book-batch-management-page', reason: 'superseded-by-in-place-bookshelf-multiselect' },
+  { routeId: 'local-import', componentId: 'local-import-topbar', reason: 'superseded-by-in-place-local-import-dialog' },
+  { routeId: 'local-import', componentId: 'local-import-page', reason: 'superseded-by-in-place-local-import-dialog' },
   { routeId: 'source-switch-results', componentId: 'source-switch-results-flow', reason: 'withdrawn-source-switch-state-matrix' },
   { routeId: 'source-switch-empty', componentId: 'source_switch_empty-flow', reason: 'withdrawn-source-switch-state-matrix' },
   { routeId: 'source-switch-empty', componentId: 'source_switch_empty-state', reason: 'withdrawn-source-switch-state-matrix' },

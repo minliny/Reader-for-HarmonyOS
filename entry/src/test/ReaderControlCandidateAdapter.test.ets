@@ -100,13 +100,13 @@ export default function ReaderControlCandidateAdapterTests(): void {
       expect(GENERATED_RUNTIME_ACTIONS['reader.module.switch']?.action).assertEqual('switchReaderModule');
     });
 
-    it('production schema2 dispatch does not consume schema3 typed candidates', 0, () => {
+    it('production dispatch does not activate the candidate-only adapter', 0, () => {
       ReaderUiStore.init();
       enterImmersiveReader();
       const beforeRoutes: string = routeStack(ReaderUiStore.snapshot());
 
       ReaderUiStore.dispatch(controlToggle());
-      ReaderUiStore.dispatch(moduleSwitch('directory'));
+      ReaderUiStore.dispatch(moduleSwitch('tts'));
 
       const after: ReaderUiState = ReaderUiStore.snapshot();
       expect(after.routeId).assertEqual('immersive-reading');
@@ -128,7 +128,8 @@ export default function ReaderControlCandidateAdapterTests(): void {
       expect(shown.semanticOverlay).assertEqual('reader-control');
       expect(shown.motionKind).assertEqual('show');
       expect(shown.motionId).assertEqual('reader.control.show');
-      expect(ReaderUiStore.snapshot().routeId).assertEqual('control-layer-base-v2');
+      expect(ReaderUiStore.snapshot().routeId).assertEqual('immersive-reading');
+      expect(ReaderUiStore.snapshot().overlay).assertEqual('reader-control');
 
       const directory: ReaderControlCandidateResult = consume(moduleSwitch('directory'));
       expect(directory.succeeded).assertTrue();
@@ -137,7 +138,8 @@ export default function ReaderControlCandidateAdapterTests(): void {
       expect(directory.semanticOverlay).assertEqual('directory');
       expect(directory.motionKind).assertEqual('switch');
       expect(directory.motionId).assertEqual('reader.module.switch');
-      expect(ReaderUiStore.snapshot().routeId).assertEqual('reader-directory-overlay-v2');
+      expect(ReaderUiStore.snapshot().routeId).assertEqual('immersive-reading');
+      expect(ReaderUiStore.snapshot().overlay).assertEqual('directory');
 
       const routesBeforeRepeat: string = routeStack(ReaderUiStore.snapshot());
       const repeated: ReaderControlCandidateResult = consume(moduleSwitch('directory'));
@@ -152,7 +154,8 @@ export default function ReaderControlCandidateAdapterTests(): void {
       expect(appearance.previousOverlay).assertEqual('directory');
       expect(appearance.semanticOverlay).assertEqual('appearance');
       expect(appearance.motionKind).assertEqual('switch');
-      expect(ReaderUiStore.snapshot().routeId).assertEqual('reader-appearance-overlay-v2');
+      expect(ReaderUiStore.snapshot().routeId).assertEqual('immersive-reading');
+      expect(ReaderUiStore.snapshot().overlay).assertEqual('appearance');
 
       const hidden: ReaderControlCandidateResult = consume(controlToggle());
       expect(hidden.succeeded).assertTrue();
@@ -162,15 +165,12 @@ export default function ReaderControlCandidateAdapterTests(): void {
       expect(hidden.motionKind).assertEqual('hide');
       expect(hidden.motionId).assertEqual('reader.control.hide');
       expect(ReaderUiStore.snapshot().routeId).assertEqual('immersive-reading');
+      expect(ReaderUiStore.snapshot().overlay).assertEqual('');
       expect(routeStack(ReaderUiStore.snapshot())).assertEqual(immersiveStack);
     });
 
     it('accepts exactly four compatible module overlays and preserves reader identity', 0, () => {
       const modules: string[] = ['directory', 'tts', 'appearance', 'settings'];
-      const routes: string[] = [
-        'reader-directory-overlay-v2', 'reader-tts-overlay-v2',
-        'reader-appearance-overlay-v2', 'reader-settings-overlay-v2',
-      ];
       for (let index: number = 0; index < modules.length; index += 1) {
         ReaderUiStore.init();
         enterImmersiveReader();
@@ -180,7 +180,8 @@ export default function ReaderControlCandidateAdapterTests(): void {
         expect(selected.succeeded).assertTrue();
         expect(selected.readerRouteId).assertEqual('immersive-reading');
         expect(selected.semanticOverlay).assertEqual(modules[index]);
-        expect(ReaderUiStore.snapshot().routeId).assertEqual(routes[index]);
+        expect(ReaderUiStore.snapshot().routeId).assertEqual('immersive-reading');
+        expect(ReaderUiStore.snapshot().overlay).assertEqual(modules[index]);
 
         const hidden: ReaderControlCandidateResult = consume(controlToggle());
         expect(hidden.succeeded).assertTrue();
@@ -208,14 +209,6 @@ export default function ReaderControlCandidateAdapterTests(): void {
       expect(genericOverlay.succeeded).assertFalse();
       expect(genericOverlay.errorCode).assertEqual('READER_CONTROL_OVERLAY_GUARD');
       expect(ReaderUiStore.snapshot().overlay).assertEqual('dialog');
-
-      ReaderUiStore.init();
-      enterImmersiveReader();
-      ReaderUiStore.dispatch({ type: 'route-push', id: 'reader-search-overlay-v2' });
-      const incompatibleRoute: ReaderControlCandidateResult = consume(moduleSwitch('settings'));
-      expect(incompatibleRoute.succeeded).assertFalse();
-      expect(incompatibleRoute.errorCode).assertEqual('READER_CONTROL_OVERLAY_GUARD');
-      expect(ReaderUiStore.snapshot().routeId).assertEqual('reader-search-overlay-v2');
     });
 
     it('uses real typed validation before touching native state', 0, () => {

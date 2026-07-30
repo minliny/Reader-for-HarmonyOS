@@ -245,7 +245,7 @@ export default function DestructiveFlowTests(): void {
 
     it('replaceRuleDeleteRequiresPersistedTargetThenSecondConfirmTap', 0, () => {
       let ready = ReaderReducer.reduce(DemoUiState.initial(), {
-        type: 'route-push', id: 'reader-replace-overlay-v2',
+        type: 'route-push', id: 'content-replacement',
       });
       ready = ReaderReducer.reduce(ready, {
         type: 'replace-rule-list-loaded', replaceRules: [persistedReplaceRule('rule-7')],
@@ -264,7 +264,7 @@ export default function DestructiveFlowTests(): void {
 
     it('replaceRuleDeleteRejectsPendingAndDirectDeleteEvents', 0, () => {
       let ready = ReaderReducer.reduce(DemoUiState.initial(), {
-        type: 'route-push', id: 'reader-replace-overlay-v2',
+        type: 'route-push', id: 'content-replacement',
       });
       ready = ReaderReducer.reduce(ready, {
         type: 'replace-rule-list-loaded', replaceRules: [persistedReplaceRule('pending-rule-1')],
@@ -286,7 +286,7 @@ export default function DestructiveFlowTests(): void {
       let ready = ReaderReducer.reduce(DemoUiState.initial(), {
         type: 'book-detail-success', book: bookDetail('source-a', '/book/a'),
       });
-      ready = ReaderReducer.reduce(ready, { type: 'route-push', id: 'toc-bookmarks' });
+      ready = ReaderReducer.reduce(ready, { type: 'route-push', id: 'bookmarks-manager' });
       ready = ReaderReducer.reduce(ready, { type: 'bookmark-list-loaded', bookmarks: [bookmark(42)] });
       const requested = ReaderReducer.reduce(ready, {
         type: 'bookmark-delete-request', bookmarkTime: 42,
@@ -384,7 +384,7 @@ export default function DestructiveFlowTests(): void {
       });
       expect(offRoute.error !== null).assertTrue();
       let ready = ReaderReducer.reduce(DemoUiState.initial(), {
-        type: 'route-push', id: 'reader-replace-overlay-v2',
+        type: 'route-push', id: 'content-replacement',
       });
       ready = ReaderReducer.reduce(ready, {
         type: 'replace-rule-list-loaded', replaceRules: [persistedReplaceRule('pending-rule-1')],

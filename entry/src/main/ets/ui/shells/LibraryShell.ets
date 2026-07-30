@@ -1,5 +1,5 @@
 // LibraryShell — shell for library/secondary pages (book-detail, search, rss-detail, …).
-// Slots: topArea (BackTopBar) · content (ViewStateRenderer) · overlayHost · stateHost.
+// Slots: topArea (BackTopBar) · content (ViewStateRenderer) · overlayHost.
 //
 // Immersive: outermost Stack expands paper behind the system bars; the content
 // Column expands into the status-bar region and pads with the real device inset
@@ -10,7 +10,6 @@ import { SafeAreaAdapter } from '../adapters/SafeAreaAdapter';
 import { BackTopBar } from '../components/SharedComponents';
 import { ViewStateRenderer } from '../components/ViewStateRenderer';
 import { OverlayHost } from '../slots/OverlayHost';
-import { StateHost } from '../slots/StateHost';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 import { BookDetail } from '../store/ReaderUiState';
 import { ReaderUiVisualTokens } from '../../contract/reader_ui/VisualAdmission';
@@ -49,7 +48,7 @@ struct BookDetailActionBarButton {
 
 @Component
 export struct LibraryShell {
-  static readonly SLOT_NAMES: string[] = ['topArea', 'content', 'overlayHost', 'stateHost'];
+  static readonly SLOT_NAMES: string[] = ['topArea', 'content', 'overlayHost'];
   @StorageProp('reader.displayedRouteId') routeId: string = 'book-detail';
   @StorageProp(SafeAreaAdapter.K_TOP) safeAreaTop: number = SafeAreaAdapter.DEFAULT_TOP;
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
@@ -148,8 +147,6 @@ export struct LibraryShell {
 
       OverlayHost()
         .zIndex(ZIndexTokens.dialog)
-      StateHost()
-        .zIndex(ZIndexTokens.mainNav)
     }
     .width('100%')
     .height('100%')

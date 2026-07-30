@@ -13,25 +13,29 @@ export default function ScreenGraphCoverageTests(): void {
         ReaderUIScreenGraphCoverageRegistry.loadCanonical();
 
       expect(coverage.authority).assertEqual(ReaderUIScreenGraphAuthority.Shadow);
-      expect(coverage.canonicalComponentCount).assertEqual(174);
-      expect(coverage.referencedTypes.length).assertEqual(138);
-      expect(coverage.explicitGapTypes.length).assertEqual(36);
-      expect(coverage.explicitDispatchTypes.length).assertEqual(138);
+      expect(coverage.canonicalComponentCount).assertEqual(177);
+      expect(coverage.referencedTypes.length).assertEqual(134);
+      expect(coverage.explicitGapTypes.length).assertEqual(43);
+      expect(coverage.explicitDispatchTypes.length).assertEqual(134);
       expect(coverage.hostCompositeTypes.join('|'))
         .assertEqual('TapZones|ReaderBase|ReaderTopArea|ReaderBottomBar');
 
-      expect(coverage.faithfulTypes.length).assertEqual(72);
-      expect(coverage.genericUsableTypes.length).assertEqual(59);
+      expect(coverage.retiredOnlyTypes.join('|')).assertEqual(
+        'SourceSwitchResultsPanel|RestoreConfirmPage|RestoreProgressPage|RestoreConflictPage|RestoreResultPage|BookMoreMenuPage|BookGroupManagementPage|GroupManagementPage|BookBatchManagementPage',
+      );
+      expect(coverage.faithfulTypes.length).assertEqual(66);
+      expect(coverage.genericUsableTypes.length).assertEqual(52);
       expect(coverage.partialTypes.length).assertEqual(3);
       expect(coverage.insufficientTypes.length).assertEqual(0);
       expect(coverage.figmaUnboundStateTypes.join('|'))
         .assertEqual('Loading|Empty|ErrorState|Offline');
       expect(coverage.visibleFailureTypes.length).assertEqual(3);
-      expect(coverage.genericUsableTypes.indexOf('ReaderDirectoryPanel') >= 0).assertTrue();
-      expect(coverage.genericUsableTypes.indexOf('ReaderAppearancePanel') >= 0).assertTrue();
-      expect(coverage.genericUsableTypes.indexOf('ReaderReplacePanel') >= 0).assertTrue();
+      expect(coverage.genericUsableTypes.indexOf('DirectoryPanel') >= 0).assertTrue();
+      expect(coverage.genericUsableTypes.indexOf('AppearancePanel') >= 0).assertTrue();
+      expect(coverage.genericUsableTypes.indexOf('ReplacePanel') >= 0).assertTrue();
       expect(coverage.genericUsableTypes.indexOf('SourceSwitchFlowPage') >= 0).assertTrue();
       expect(coverage.genericUsableTypes.indexOf('SourceSwitchResultsPanel')).assertEqual(-1);
+      expect(coverage.retiredOnlyTypes.indexOf('SourceSwitchResultsPanel') >= 0).assertTrue();
       expect(coverage.faithfulTypes.indexOf('RestoreConfirmPage')).assertEqual(-1);
       expect(coverage.faithfulTypes.indexOf('RestoreProgressPage')).assertEqual(-1);
       expect(coverage.faithfulTypes.indexOf('RestoreConflictPage')).assertEqual(-1);
@@ -66,16 +70,15 @@ export default function ScreenGraphCoverageTests(): void {
       expect(coverage.genericUsableTypes.indexOf('ErrorState')).assertEqual(-1);
       expect(coverage.genericUsableTypes.indexOf('Offline')).assertEqual(-1);
 
-      expect(coverage.canonicalInstanceCount).assertEqual(615);
-      // runtimeActiveInstanceCount / retiredInstanceCount were tracked by the
-      // deleted parallel admission policy; the canonical count above already
-      // covers the total. The decomposition is not re-tracked here.
-      expect(coverage.faithfulInstanceCount).assertEqual(293);
-      expect(coverage.hostCompositeInstanceCount).assertEqual(115);
-      expect(coverage.genericUsableInstanceCount).assertEqual(250);
-      expect(coverage.partialInstanceCount).assertEqual(52);
+      expect(coverage.canonicalInstanceCount).assertEqual(580);
+      expect(coverage.runtimeActiveInstanceCount).assertEqual(536);
+      expect(coverage.retiredInstanceCount).assertEqual(44);
+      expect(coverage.faithfulInstanceCount).assertEqual(265);
+      expect(coverage.hostCompositeInstanceCount).assertEqual(90);
+      expect(coverage.genericUsableInstanceCount).assertEqual(212);
+      expect(coverage.partialInstanceCount).assertEqual(45);
       expect(coverage.insufficientInstanceCount).assertEqual(0);
-      expect(coverage.figmaUnboundStateInstanceCount).assertEqual(20);
+      expect(coverage.figmaUnboundStateInstanceCount).assertEqual(14);
       expect(coverage.explicitTargetBindingCount).assertEqual(97);
       expect(coverage.tapZoneExplicitTargetBindingCount).assertEqual(16);
 
@@ -91,9 +94,9 @@ export default function ScreenGraphCoverageTests(): void {
         'the historical generated title/message fixture is intentionally not projected; current Figma State/BookshelfEmpty owns the exact visible component and its two crosswalk-bound actions',
       );
       expect(ReaderUIScreenGraphCoverageRegistry.partialReason('ReadingTextFlow') === undefined).assertTrue();
-      expect(ReaderUIScreenGraphCoverageRegistry.partialReason('ReaderDirectoryPanel') === undefined).assertTrue();
-      expect(ReaderUIScreenGraphCoverageRegistry.partialReason('ReaderAppearancePanel') === undefined).assertTrue();
-      expect(ReaderUIScreenGraphCoverageRegistry.partialReason('ReaderReplacePanel') === undefined).assertTrue();
+      expect(ReaderUIScreenGraphCoverageRegistry.partialReason('DirectoryPanel') === undefined).assertTrue();
+      expect(ReaderUIScreenGraphCoverageRegistry.partialReason('AppearancePanel') === undefined).assertTrue();
+      expect(ReaderUIScreenGraphCoverageRegistry.partialReason('ReplacePanel') === undefined).assertTrue();
       expect(ReaderUIScreenGraphCoverageRegistry.partialReason('SourceSwitchFlowPage') === undefined).assertTrue();
       expect(ReaderUIScreenGraphCoverageRegistry.partialReason('BackTopBar') === undefined).assertTrue();
       expect(ReaderUIScreenGraphCoverageRegistry.partialReason('AppTopBar') === undefined).assertTrue();

@@ -1,206 +1,130 @@
-// ReaderOverlayViewState.test — contract-first regression guard for the Batch 1
-// reader overlay routes. Mirrors BookshelfViewState.test: locks the generated
-// ViewStateTable so a contract regen that drops a reader overlay route, falls
-// back to generic Overlay, or double-renders the reading base fails locally.
+// ReaderOverlayViewState.test — current Reader-UI route/body regression guard.
+// Retired route-backed quick controls must stay physically absent. Canonical
+// reading routes and independently admitted full/utility routes retain their
+// generated component trees without reviving the old overlay matrix.
 import { describe, it, expect } from '@ohos/hypium';
 import { RouteTable } from '../main/ets/contract/generated/RouteTable';
 import { ViewStateTable, ViewStateComponent } from '../main/ets/contract/generated/ViewStateTable';
 
-function collectTypes(components: ViewStateComponent[], sink: string[]): void {
-  for (let i = 0; i < components.length; i++) {
-    sink.push(components[i].type);
-    if (components[i].children.length > 0) {
-      collectTypes(components[i].children, sink);
-    }
-  }
-}
-
-function countOccurrences(types: string[], target: string): number {
-  let n = 0;
-  for (let i = 0; i < types.length; i++) {
-    if (types[i] === target) n++;
-  }
-  return n;
-}
+const RETIRED_READER_ROUTES: string[] = [
+  'control-layer-base-v2',
+  'reader-directory-overlay-v2',
+  'reader-appearance-overlay-v2',
+  'reader-tts-overlay-v2',
+  'reader-settings-overlay-v2',
+  'reader-auto-scroll-overlay-v2',
+  'reader-search-overlay-v2',
+  'reader-replace-overlay-v2',
+  'toc-bookmarks',
+  'tts',
+  'reader-appearance',
+  'reader-settings',
+  'content-search',
+];
 
 function topTypes(components: ViewStateComponent[]): string[] {
-  const out: string[] = [];
-  for (let i = 0; i < components.length; i++) out.push(components[i].type);
-  return out;
+  const result: string[] = [];
+  for (let index: number = 0; index < components.length; index += 1) {
+    result.push(components[index].type);
+  }
+  return result;
+}
+
+function countType(components: ViewStateComponent[], target: string): number {
+  let total: number = 0;
+  for (let index: number = 0; index < components.length; index += 1) {
+    if (components[index].type === target) total += 1;
+    total += countType(components[index].children, target);
+  }
+  return total;
 }
 
 export default function ReaderOverlayViewStateTests(): void {
   describe('ReaderOverlayViewState', () => {
-    // ── Route → shell ──────────────────────────────────────────────────────
-    it('controlLayerBaseResolvesToReaderShell', 0, () => {
-      expect(RouteTable.shellOf('control-layer-base-v2')).assertEqual('ReaderShell');
-      expect(RouteTable.mainTabOf('control-layer-base-v2')).assertNull();
+    it('retiredReaderRoutesArePhysicallyAbsent', 0, () => {
+      for (let index: number = 0; index < RETIRED_READER_ROUTES.length; index += 1) {
+        const routeId: string = RETIRED_READER_ROUTES[index];
+        expect(RouteTable.shellOf(routeId)).assertNull();
+        expect(ViewStateTable.bodyComponentsFor(routeId, 'default').length).assertEqual(0);
+      }
     });
 
-    it('directoryOverlayResolvesToReaderShell', 0, () => {
-      expect(RouteTable.shellOf('reader-directory-overlay-v2')).assertEqual('ReaderShell');
-      expect(RouteTable.mainTabOf('reader-directory-overlay-v2')).assertNull();
+    it('canonicalReadingRoutesRenderOneReaderBaseOnly', 0, () => {
+      const routes: string[] = ['immersive-reading', 'reader', 'reader_content'];
+      for (let index: number = 0; index < routes.length; index += 1) {
+        expect(RouteTable.shellOf(routes[index])).assertEqual('ReaderShell');
+        const body: ViewStateComponent[] =
+          ViewStateTable.bodyComponentsFor(routes[index], 'default');
+        expect(body.length).assertEqual(1);
+        expect(body[0].type).assertEqual('ReaderBase');
+        expect(countType(body, 'ReaderBase')).assertEqual(1);
+        expect(countType(body, 'ReaderControlSheet')).assertEqual(0);
+        expect(countType(body, 'ReaderBottomBar')).assertEqual(0);
+      }
     });
 
-    // ── Body resolves (no fallback to []) ───────────────────────────────────
-    it('controlLayerBodyResolvesWithoutFallback', 0, () => {
-      const body = ViewStateTable.bodyComponentsFor('control-layer-base-v2', 'default');
-      expect(body.length > 0).assertTrue();
+    it('fullReaderPanelsRemainExplicitReaderShellRoutes', 0, () => {
+      const routes: string[] = [
+        'reader-full-directory',
+        'reader-full-tts',
+        'reader-full-appearance',
+        'reader-full-settings',
+      ];
+      const panels: string[] = [
+        'ReaderFullDirectoryPage',
+        'ReaderFullTtsPage',
+        'ReaderFullAppearancePage',
+        'ReaderFullSettingsPage',
+      ];
+      for (let index: number = 0; index < routes.length; index += 1) {
+        expect(RouteTable.shellOf(routes[index])).assertEqual('ReaderShell');
+        const body: ViewStateComponent[] =
+          ViewStateTable.bodyComponentsFor(routes[index], 'default');
+        const types: string[] = topTypes(body);
+        expect(types[0]).assertEqual('ReaderBase');
+        expect(types[1]).assertEqual('ReaderTopArea');
+        expect(types[2]).assertEqual(panels[index]);
+        expect(countType(body, 'ReaderBase')).assertEqual(1);
+      }
     });
 
-    it('directoryOverlayBodyResolvesWithoutFallback', 0, () => {
-      const body = ViewStateTable.bodyComponentsFor('reader-directory-overlay-v2', 'default');
-      expect(body.length > 0).assertTrue();
-    });
-
-    // ── Body shape: bespoke components, not generic Overlay ───────────────
-    it('controlLayerBodyIsReaderBaseControlSheetAndBottomBar', 0, () => {
-      const body = ViewStateTable.bodyComponentsFor('control-layer-base-v2', 'default');
-      const types = topTypes(body);
-      expect(types[0]).assertEqual('ReaderBase');
-      expect(types[1]).assertEqual('ReaderTopArea');
-      expect(types[2]).assertEqual('ReaderControlSheet');
-      expect(types[3]).assertEqual('ReaderBottomBar');
-      expect(types.length).assertEqual(4);
-    });
-
-    it('directoryOverlayBodyIsBaseBarAndDirectoryPanel', 0, () => {
-      const body = ViewStateTable.bodyComponentsFor('reader-directory-overlay-v2', 'default');
-      const types = topTypes(body);
-      expect(types[0]).assertEqual('ReaderBase');
-      expect(types[1]).assertEqual('ReaderTopArea');
-      expect(types[2]).assertEqual('ReaderDirectoryPanel');
-      expect(types[3]).assertEqual('ReaderBottomBar');
-    });
-
-    // ── No double-render: ReaderBase appears exactly once ─────────────────
-    it('controlLayerBodyHasReaderBaseExactlyOnce', 0, () => {
-      const body = ViewStateTable.bodyComponentsFor('control-layer-base-v2', 'default');
-      const all: string[] = [];
-      collectTypes(body, all);
-      expect(countOccurrences(all, 'ReaderBase')).assertEqual(1);
-    });
-
-    it('directoryOverlayBodyHasReaderBaseExactlyOnce', 0, () => {
-      const body = ViewStateTable.bodyComponentsFor('reader-directory-overlay-v2', 'default');
-      const all: string[] = [];
-      collectTypes(body, all);
-      expect(countOccurrences(all, 'ReaderBase')).assertEqual(1);
-    });
-
-    // ── Bespoke, not generic Overlay/FormSection ──────────────────────────
-    it('directoryOverlayBodyExcludesGenericOverlay', 0, () => {
-      const body = ViewStateTable.bodyComponentsFor('reader-directory-overlay-v2', 'default');
-      const all: string[] = [];
-      collectTypes(body, all);
-      expect(countOccurrences(all, 'Overlay')).assertEqual(0);
-    });
-
-    // ── Reader base route factored to ReaderBase (no repeated base structs) ──
-    it('readerBaseRouteUsesReaderBaseComposite', 0, () => {
-      const body = ViewStateTable.bodyComponentsFor('reader', 'default');
-      const all: string[] = [];
-      collectTypes(body, all);
-      expect(countOccurrences(all, 'ReaderBase')).assertEqual(1);
-      // The 4 individual base structs should NOT also appear (would double-render).
-      expect(countOccurrences(all, 'ReadingBackgroundLayer')).assertEqual(0);
-      expect(countOccurrences(all, 'TapZones')).assertEqual(0);
-    });
-
-    // ── Remaining bottom-function panels (Step 3) ─────────────────────────
-    it('appearanceOverlayResolvesBespoke', 0, () => {
-      expect(RouteTable.shellOf('reader-appearance-overlay-v2')).assertEqual('ReaderShell');
-      const body = ViewStateTable.bodyComponentsFor('reader-appearance-overlay-v2', 'default');
-      expect(body.length > 0).assertTrue();
-      const types = topTypes(body);
-      expect(types[0]).assertEqual('ReaderBase');
-      expect(types[1]).assertEqual('ReaderTopArea');
-      expect(types[2]).assertEqual('ReaderAppearancePanel');
-      expect(types[3]).assertEqual('ReaderBottomBar');
-      const all: string[] = [];
-      collectTypes(body, all);
-      expect(countOccurrences(all, 'ReaderBase')).assertEqual(1);
-      expect(countOccurrences(all, 'Overlay')).assertEqual(0);
-    });
-
-    it('ttsOverlayResolvesBespoke', 0, () => {
-      expect(RouteTable.shellOf('reader-tts-overlay-v2')).assertEqual('ReaderShell');
-      const body = ViewStateTable.bodyComponentsFor('reader-tts-overlay-v2', 'default');
-      expect(body.length > 0).assertTrue();
-      const types = topTypes(body);
-      expect(types[0]).assertEqual('ReaderBase');
-      expect(types[1]).assertEqual('ReaderTopArea');
-      expect(types[2]).assertEqual('ReaderTtsPanel');
-      expect(types[3]).assertEqual('ReaderBottomBar');
-      const all: string[] = [];
-      collectTypes(body, all);
-      expect(countOccurrences(all, 'ReaderBase')).assertEqual(1);
-      expect(countOccurrences(all, 'Overlay')).assertEqual(0);
-    });
-
-    it('settingsOverlayResolvesBespoke', 0, () => {
-      expect(RouteTable.shellOf('reader-settings-overlay-v2')).assertEqual('ReaderShell');
-      const body = ViewStateTable.bodyComponentsFor('reader-settings-overlay-v2', 'default');
-      expect(body.length > 0).assertTrue();
-      const types = topTypes(body);
-      expect(types[0]).assertEqual('ReaderBase');
-      expect(types[1]).assertEqual('ReaderTopArea');
-      expect(types[2]).assertEqual('ReaderSettingsPanel');
-      expect(types[3]).assertEqual('ReaderBottomBar');
-      const all: string[] = [];
-      collectTypes(body, all);
-      expect(countOccurrences(all, 'ReaderBase')).assertEqual(1);
-      expect(countOccurrences(all, 'Overlay')).assertEqual(0);
-    });
-
-    // ── Quick-action panels (Step 3b) ──────────────────────────────────────
-    //   Quick-action overlays show a dedicated panel above the module nav. They
-    //   must not re-render detached quick-actions/page-control controls.
-    it('searchOverlayResolvesBespoke', 0, () => {
-      expect(RouteTable.shellOf('reader-search-overlay-v2')).assertEqual('ReaderShell');
-      const body = ViewStateTable.bodyComponentsFor('reader-search-overlay-v2', 'default');
-      const types = topTypes(body);
-      expect(types[0]).assertEqual('ReaderBase');
-      expect(types[1]).assertEqual('ReaderTopArea');
-      expect(types[2]).assertEqual('ReaderSearchPanel');
-      expect(types[3]).assertEqual('ReaderBottomBar');
-    });
-
-    it('replaceOverlayResolvesBespoke', 0, () => {
-      expect(RouteTable.shellOf('reader-replace-overlay-v2')).assertEqual('ReaderShell');
-      const body = ViewStateTable.bodyComponentsFor('reader-replace-overlay-v2', 'default');
-      const types = topTypes(body);
-      expect(types[0]).assertEqual('ReaderBase');
-      expect(types[1]).assertEqual('ReaderTopArea');
-      expect(types[2]).assertEqual('ReaderReplacePanel');
-      expect(types[3]).assertEqual('ReaderBottomBar');
-    });
-
-    it('autoScrollOverlayResolvesBespoke', 0, () => {
-      expect(RouteTable.shellOf('reader-auto-scroll-overlay-v2')).assertEqual('ReaderShell');
-      const body = ViewStateTable.bodyComponentsFor('reader-auto-scroll-overlay-v2', 'default');
-      const types = topTypes(body);
+    it('autoPageUsesItsCanonicalPanelRoute', 0, () => {
+      const body: ViewStateComponent[] =
+        ViewStateTable.bodyComponentsFor('auto-page', 'default');
+      const types: string[] = topTypes(body);
       expect(types[0]).assertEqual('ReaderBase');
       expect(types[1]).assertEqual('ReaderTopArea');
       expect(types[2]).assertEqual('ReaderAutoScrollPanel');
       expect(types[3]).assertEqual('ReaderBottomBar');
     });
 
-    // ── Night state (Step 3c-2) — themed base + toast, no panel ────────────
-    it('nightStateResolvesBespoke', 0, () => {
+    it('contentReplacementUsesItsCanonicalPanelRoute', 0, () => {
+      const body: ViewStateComponent[] =
+        ViewStateTable.bodyComponentsFor('content-replacement', 'default');
+      const types: string[] = topTypes(body);
+      expect(types[0]).assertEqual('ReaderBase');
+      expect(types[1]).assertEqual('ReaderTopArea');
+      expect(types[2]).assertEqual('ReplacePanel');
+      expect(types[3]).assertEqual('ReaderBottomBar');
+    });
+
+    it('bookmarksManagerRetainsSharedDirectoryPrimitive', 0, () => {
+      expect(RouteTable.shellOf('bookmarks-manager')).assertEqual('LibraryShell');
+      const body: ViewStateComponent[] =
+        ViewStateTable.bodyComponentsFor('bookmarks-manager', 'default');
+      expect(countType(body, 'DirectoryPanel')).assertEqual(1);
+    });
+
+    it('nightStateRemainsAThemedReaderRoute', 0, () => {
       expect(RouteTable.shellOf('reader-night-state-v2')).assertEqual('ReaderShell');
-      const body = ViewStateTable.bodyComponentsFor('reader-night-state-v2', 'default');
-      expect(body.length > 0).assertTrue();
-      const types = topTypes(body);
+      const body: ViewStateComponent[] =
+        ViewStateTable.bodyComponentsFor('reader-night-state-v2', 'default');
+      const types: string[] = topTypes(body);
       expect(types[0]).assertEqual('ReaderBase');
       expect(types[1]).assertEqual('ReaderTopArea');
       expect(types[2]).assertEqual('ReaderBottomBar');
       expect(types[3]).assertEqual('NightToast');
-      // themed night: ReaderBase carries theme=night.
       expect(body[0].props.theme === 'night').assertTrue();
-      const all: string[] = [];
-      collectTypes(body, all);
-      expect(countOccurrences(all, 'Overlay')).assertEqual(0);
     });
   });
 }

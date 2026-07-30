@@ -7,7 +7,10 @@ import { ReaderEffects } from '../main/ets/ui/store/ReaderEffects';
 import { ReaderReducer } from '../main/ets/ui/store/ReaderReducer';
 import { ReaderUiStore } from '../main/ets/ui/store/ReaderUiStore';
 import { DemoUiState } from '../main/ets/ui/fixtures/DemoUiState';
-import { ChapterTocEntry } from '../main/ets/ui/store/ReaderUiState';
+import {
+  CANONICAL_RESOLVER_VERSION,
+  ChapterTocEntry,
+} from '../main/ets/ui/store/ReaderUiState';
 
 function localSparseToc(): ChapterTocEntry[] {
   return [
@@ -76,7 +79,7 @@ export default function ReaderContinueRecoveryTests(): void {
           chapterOffset: persisted.chapterOffset,
           chapterProgress: persisted.chapterProgress,
           locationRevision: persisted.locationRevision,
-          resolverVersion: '',
+          resolverVersion: CANONICAL_RESOLVER_VERSION,
         },
       });
       expect(state.canonicalReaderLocation !== null).assertTrue();

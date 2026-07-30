@@ -1,19 +1,10 @@
 // Narrow native projection for the Reader-UI directory Pilot cohort.
-// It maps only runtime semantic overlay=directory to the existing HarmonyOS
-// reader-directory-overlay-v2 route. It is not a general navigation reducer.
-import { ReaderUiState, RouteEntry } from './ReaderUiState';
+// Reader-UI keeps the canonical reading route stable and stores the selected
+// module in UiState.overlay. The retired reader-directory-overlay-v2 route is
+// deliberately absent from this projection.
+import { ReaderUiState } from './ReaderUiState';
 
-export const READER_DIRECTORY_OVERLAY_ROUTE: string = 'reader-directory-overlay-v2';
-
-export function isReaderModuleOverlayRoute(routeId: string): boolean {
-  return routeId === 'reader-directory-overlay-v2' ||
-    routeId === 'reader-tts-overlay-v2' ||
-    routeId === 'reader-appearance-overlay-v2' ||
-    routeId === 'reader-settings-overlay-v2' ||
-    routeId === 'reader-search-overlay-v2' ||
-    routeId === 'reader-auto-scroll-overlay-v2' ||
-    routeId === 'reader-replace-overlay-v2';
-}
+export const READER_DIRECTORY_OVERLAY: string = 'directory';
 
 export class ReaderDirectoryPilotProjection {
   static applyInPlace(state: ReaderUiState, previousOverlay?: string, semanticOverlay?: string): boolean {
@@ -28,24 +19,13 @@ export class ReaderDirectoryPilotProjection {
   }
 
   private static open(state: ReaderUiState): boolean {
-    if (state.routeId === READER_DIRECTORY_OVERLAY_ROUTE) return false;
-    const stack: RouteEntry[] = state.stack.slice();
-    if (stack.length > 0 && isReaderModuleOverlayRoute(state.routeId)) {
-      stack[stack.length - 1] = { id: 'reader-directory-overlay-v2' };
-    } else {
-      stack.push({ id: 'reader-directory-overlay-v2' });
-    }
-    state.routeId = 'reader-directory-overlay-v2';
-    state.stack = stack;
-    state.overlay = '';
+    if (state.overlay === READER_DIRECTORY_OVERLAY) return false;
+    state.overlay = 'directory';
     return true;
   }
 
   private static close(state: ReaderUiState): boolean {
-    if (state.routeId !== READER_DIRECTORY_OVERLAY_ROUTE || state.stack.length <= 1) return false;
-    const stack: RouteEntry[] = state.stack.slice(0, -1);
-    state.stack = stack;
-    state.routeId = stack[stack.length - 1].id;
+    if (state.overlay !== READER_DIRECTORY_OVERLAY) return false;
     state.overlay = '';
     return true;
   }

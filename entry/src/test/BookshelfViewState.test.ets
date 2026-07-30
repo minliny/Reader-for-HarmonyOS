@@ -144,13 +144,43 @@ export default function BookshelfViewStateTests(): void {
       expect(shouldRenderContinueReadingForShelf(true, [], 'local')).assertFalse();
     });
 
-    it('coverAndListPresentationRoutesEmbedTheSameContinueReadingComponent', 0, () => {
+    it('onlyCoverPresentationEmbedsContinueReading', 0, () => {
       expect(shouldEmbedContinueReadingForBookshelfRoute('bookshelf-cover-mode')).assertTrue();
-      expect(shouldEmbedContinueReadingForBookshelfRoute('bookshelf-list-mode')).assertTrue();
+      expect(shouldEmbedContinueReadingForBookshelfRoute('bookshelf-list-mode')).assertFalse();
       // The default and filter routes already own the card through their
       // generated ViewState tree; embedding it again would duplicate it.
       expect(shouldEmbedContinueReadingForBookshelfRoute('bookshelf')).assertFalse();
       expect(shouldEmbedContinueReadingForBookshelfRoute('sort-filter')).assertFalse();
+    });
+
+    it('cacheStatusUpdatesOnlyTheExactCoreBookshelfIdentity', 0, () => {
+      const target: CoreBookshelfBook = {
+        sourceId: 'source-a', bookId: '/book/a', title: '目标书籍', author: '作者 A',
+        coverUrl: '', intro: '', kind: '', lastChapter: '', group: '',
+      };
+      const other: CoreBookshelfBook = {
+        sourceId: 'source-b', bookId: '/book/b', title: '另一册书', author: '作者 B',
+        coverUrl: '', intro: '', kind: '', lastChapter: '', group: '',
+      };
+      const listed = ReaderReducer.reduce(DemoUiState.initial(), {
+        type: 'bookshelf-list-loaded', bookshelfBooks: [target, other],
+      });
+      const resolved = ReaderReducer.reduce(listed, {
+        type: 'bookshelf-cache-status-loaded',
+        sourceId: target.sourceId,
+        bookId: target.bookId,
+        bookshelfCacheStatus: 'cached',
+      });
+      expect(resolved.bookshelfBooks[0].cacheStatus).assertEqual('cached');
+      expect(resolved.bookshelfBooks[1].cacheStatus === undefined).assertTrue();
+
+      const stale = ReaderReducer.reduce(resolved, {
+        type: 'bookshelf-cache-status-loaded',
+        sourceId: 'gone-source',
+        bookId: 'gone-book',
+        bookshelfCacheStatus: 'missing',
+      });
+      expect(stale === resolved).assertTrue();
     });
 
     it('longPressActionMenuBindsOneLiveShelfBookInsteadOfCurrentReadingBook', 0, () => {

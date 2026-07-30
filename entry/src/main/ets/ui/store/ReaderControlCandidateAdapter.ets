@@ -1,9 +1,9 @@
 // Local-only consumer for the Reader-UI schema 3 reader control candidates.
 //
-// The committed Harmony consumer lock is still schema 2. Production Store
-// dispatch therefore never calls this adapter. The explicit ForTest entry can
-// exercise the source dependency's schema 3 runtime before coordinated lock
-// promotion without creating a second overlay/module authority.
+// The consumer lock is schema 3, but reader.control-home remains
+// candidate-backport. Production Store dispatch therefore does not call this
+// adapter. The explicit ForTest entry verifies the generated runtime without
+// creating a second overlay/module authority.
 import {
   GENERATED_RUNTIME_ACTIONS,
   ReaderUIJSONPayload,
@@ -12,9 +12,8 @@ import {
   ReaderUITransition,
   RUNTIME_ACTION_SCHEMA_VERSION,
 } from 'reader_ui_runtime';
-import { RouteId } from '../../contract/generated/RouteTable';
 import { ReaderReducer } from './ReaderReducer';
-import { ReaderUiState, UiEvent } from './ReaderUiState';
+import { Overlay, ReaderUiState, UiEvent } from './ReaderUiState';
 
 export type ReaderControlCandidateMotionKind = 'show' | 'hide' | 'switch' | 'no-op';
 export type ReaderControlCandidateMotionId =
@@ -73,8 +72,7 @@ interface RuntimeErrorLike {
   code?: string;
 }
 
-const IMMERSIVE_READER_ROUTE: RouteId = 'immersive-reading';
-const READER_CONTROL_ROUTE: RouteId = 'control-layer-base-v2';
+const IMMERSIVE_READER_ROUTE: string = 'immersive-reading';
 const GENERATED_FACTORY: ReaderControlCandidateRuntimeFactory = new GeneratedReaderControlCandidateFactory();
 
 export class ReaderControlCandidateAdapter {
@@ -195,9 +193,10 @@ export class ReaderControlCandidateAdapter {
   }
 
   private static project(state: ReaderUiState): ReaderControlNativeProjection {
-    if (state.overlay.length > 0) {
+    if (!ReaderControlCandidateAdapter.isSemanticOverlay(state.overlay)) {
       return {
-        valid: false, readerRouteId: state.routeId, readerRouteStack: [], semanticOverlay: '',
+        valid: false, readerRouteId: state.routeId, readerRouteStack: [],
+        semanticOverlay: state.overlay,
         errorCode: 'READER_CONTROL_OVERLAY_GUARD',
       };
     }
@@ -208,33 +207,12 @@ export class ReaderControlCandidateAdapter {
       };
     }
 
-    let readerIndex: number = state.stack.length - 1;
-    let semanticOverlay: string = '';
-    if (state.routeId !== IMMERSIVE_READER_ROUTE) {
-      semanticOverlay = ReaderControlCandidateAdapter.overlayForRoute(state.routeId);
-      if (semanticOverlay.length === 0) {
-        let hasImmersiveBase: boolean = false;
-        for (let index: number = 0; index < state.stack.length - 1; index += 1) {
-          if (state.stack[index].id === IMMERSIVE_READER_ROUTE) {
-            hasImmersiveBase = true;
-            break;
-          }
-        }
-        return {
-          valid: false, readerRouteId: state.routeId, readerRouteStack: [], semanticOverlay: '',
-          errorCode: hasImmersiveBase ? 'READER_CONTROL_OVERLAY_GUARD' : 'READER_ROUTE_GUARD',
-        };
-      }
-      while (readerIndex >= 0 &&
-        ReaderControlCandidateAdapter.overlayForRoute(state.stack[readerIndex].id).length > 0) {
-        readerIndex -= 1;
-      }
-    }
-    if (readerIndex < 0 || state.stack[readerIndex].id !== IMMERSIVE_READER_ROUTE) {
+    const readerIndex: number = state.stack.length - 1;
+    if (state.routeId !== IMMERSIVE_READER_ROUTE ||
+      state.stack[readerIndex].id !== IMMERSIVE_READER_ROUTE) {
       return {
-        valid: false,
-        readerRouteId: readerIndex >= 0 ? state.stack[readerIndex].id : state.routeId,
-        readerRouteStack: [], semanticOverlay: semanticOverlay, errorCode: 'READER_ROUTE_GUARD',
+        valid: false, readerRouteId: state.routeId, readerRouteStack: [],
+        semanticOverlay: state.overlay, errorCode: 'READER_ROUTE_GUARD',
       };
     }
 
@@ -244,7 +222,7 @@ export class ReaderControlCandidateAdapter {
     }
     return {
       valid: true, readerRouteId: IMMERSIVE_READER_ROUTE,
-      readerRouteStack: readerRouteStack, semanticOverlay: semanticOverlay, errorCode: '',
+      readerRouteStack: readerRouteStack, semanticOverlay: state.overlay, errorCode: '',
     };
   }
 
@@ -270,8 +248,8 @@ export class ReaderControlCandidateAdapter {
         ReaderControlCandidateAdapter.optional(state.activeSession) &&
       previous.loading === state.loading && previous.reducedMotion === state.reducedMotion &&
       previous.readerPageIndex === state.readerPageIndex &&
-      ReaderControlCandidateAdapter.optional(previous.readerCanonicalLocation) ===
-        ReaderControlCandidateAdapter.optional(state.readerCanonicalLocation) &&
+      ReaderControlCandidateAdapter.json(previous.readerCanonicalLocation) ===
+        ReaderControlCandidateAdapter.json(state.readerCanonicalLocation) &&
       ReaderControlCandidateAdapter.optional(previous.focusTarget) ===
         ReaderControlCandidateAdapter.optional(state.focusTarget) &&
       ReaderControlCandidateAdapter.optional(previous.error) === ReaderControlCandidateAdapter.optional(state.error) &&
@@ -297,42 +275,17 @@ export class ReaderControlCandidateAdapter {
   private static applyOverlay(state: ReaderUiState, previousOverlay: string,
     semanticOverlay: string): ReaderUiState {
     if (previousOverlay === semanticOverlay) return state;
-    if (semanticOverlay.length === 0) return ReaderControlCandidateAdapter.closeReaderControlFamily(state);
-    const targetRoute: RouteId = ReaderControlCandidateAdapter.routeForOverlay(semanticOverlay);
-    if (previousOverlay.length === 0) return ReaderReducer.push(state, targetRoute);
-    return ReaderControlCandidateAdapter.isReaderControlRoute(state.routeId)
-      ? ReaderReducer.push(state, targetRoute)
-      : ReaderReducer.replace(state, targetRoute);
+    const overlay: Overlay = ReaderControlCandidateAdapter.nativeOverlay(semanticOverlay);
+    return ReaderReducer.setOverlay(state, overlay);
   }
 
-  private static closeReaderControlFamily(state: ReaderUiState): ReaderUiState {
-    let next: ReaderUiState = state;
-    while (next.stack.length > 1 &&
-      ReaderControlCandidateAdapter.overlayForRoute(next.routeId).length > 0) {
-      next = ReaderReducer.pop(next);
-    }
-    return next;
-  }
-
-  private static overlayForRoute(routeId: string): string {
-    if (ReaderControlCandidateAdapter.isReaderControlRoute(routeId)) return 'reader-control';
-    if (routeId === 'reader-directory-overlay-v2') return 'directory';
-    if (routeId === 'reader-tts-overlay-v2') return 'tts';
-    if (routeId === 'reader-appearance-overlay-v2') return 'appearance';
-    if (routeId === 'reader-settings-overlay-v2') return 'settings';
+  private static nativeOverlay(overlay: string): Overlay {
+    if (overlay === 'reader-control') return 'reader-control';
+    if (overlay === 'directory') return 'directory';
+    if (overlay === 'tts') return 'tts';
+    if (overlay === 'appearance') return 'appearance';
+    if (overlay === 'settings') return 'settings';
     return '';
-  }
-
-  private static routeForOverlay(overlay: string): RouteId {
-    if (overlay === 'reader-control') return READER_CONTROL_ROUTE;
-    if (overlay === 'directory') return 'reader-directory-overlay-v2';
-    if (overlay === 'tts') return 'reader-tts-overlay-v2';
-    if (overlay === 'appearance') return 'reader-appearance-overlay-v2';
-    return 'reader-settings-overlay-v2';
-  }
-
-  private static isReaderControlRoute(routeId: string): boolean {
-    return routeId === READER_CONTROL_ROUTE || routeId === 'reader';
   }
 
   private static isSemanticOverlay(overlay: string): boolean {

@@ -7,11 +7,12 @@
 // contract body already declares) and no longer dispatches Reader overlays via
 // the reader.overlay field — overlays are routes now (route-push / route-pop).
 //
-// Slots: content · overlayHost · stateHost.
+// Slots: content · overlayHost.
 //   - content: ViewStateRenderer (stack) — reader route body (base + overlay).
 //   - overlayHost: generic transient overlays (book-action / sort-filter / …)
 //     still driven by reader.overlay — NOT Reader overlays (those are routes).
-//   - stateHost: loading / empty / error / offline page-state overlays.
+//   - loading / empty / error / offline state is owned only by a dedicated
+//     Figma body; the retired generic StateHost is not mounted.
 //
 // Immersive: the outermost Stack expands its paper background behind the system
 // status / nav bars so the reading paper owns the whole screen.
@@ -19,11 +20,10 @@ import { ZIndexTokens } from '../../contract/generated/DimensionTokens';
 import { ReaderUiVisualTokens } from '../../contract/reader_ui/VisualAdmission';
 import { ViewStateRenderer } from '../components/ViewStateRenderer';
 import { OverlayHost } from '../slots/OverlayHost';
-import { StateHost } from '../slots/StateHost';
 
 @Component
 export struct ReaderShell {
-  static readonly SLOT_NAMES: string[] = ['content', 'overlayHost', 'stateHost'];
+  static readonly SLOT_NAMES: string[] = ['content', 'overlayHost'];
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -40,10 +40,6 @@ export struct ReaderShell {
       // are route-driven and render inside the content slot above.
       OverlayHost()
         .zIndex(ZIndexTokens.dialog)
-
-      // stateHost (z=20) — loading / empty / error / offline page states.
-      StateHost()
-        .zIndex(ZIndexTokens.mainNav)
     }
     .width('100%')
     .height('100%')

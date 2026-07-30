@@ -16,14 +16,19 @@ export type PageState =
   | 'switching-source-type' | 'source-empty' | 'source-unavailable' | 'network-failed'
   | 'refreshing' | 'no-subscription' | 'no-unread' | 'local-data-loading' | 'no-backup'
   | 'permission-missing' | 'topbar-action';
-// Overlay = generic transient overlays only. Reader overlays (directory /
-// appearance / tts / settings / search / replace / auto-scroll / night-state /
-// reader-control) are ROUTES now (Batch 1) — not this field. Retired kinds
-// removed; kept: source-switch (live) + the generic transient kinds for
-// future Batch 2+ overlays.
+// Overlay follows Reader-UI's UiState contract. Reader control modules keep
+// the canonical reading route stable and change this semantic field; the
+// retired reader-*-overlay-v2 route family must never be reconstructed here.
+// Harmony-owned transient overlays remain in the same single-owner field so
+// overlay mutual exclusion is enforced by the reducer/runtime rather than by
+// stacking hidden route entries.
 export type Overlay =
-  | '' | 'source-switch' | 'book-action' | 'sort-filter' | 'group-management'
-  | 'local-import' | 'bookshelf-multiselect' | 'dialog' | 'sheet' | 'toast';
+  | '' | 'reader-control' | 'directory' | 'tts' | 'appearance' | 'settings'
+  | 'auto-page' | 'content-search' | 'content-replacement'
+  | 'reader-night-state' | 'reader-debug-info' | 'reader-book-cache'
+  | 'source-switch' | 'book-action' | 'sort-filter' | 'group-management'
+  | 'local-import' | 'bookshelf-multiselect' | 'batch-management'
+  | 'keyboard' | 'dialog' | 'sheet' | 'toast';
 // The confirmed local-book flow is an in-place overlay rather than a route.
 // Keep its lifecycle separate from the global page `loading` state so the
 // bookshelf stays visible behind the dialog.
@@ -218,6 +223,8 @@ export interface CoreDiscoverBook {
   lastChapter: string;
 }
 
+export type BookshelfCacheStatus = 'unknown' | 'cached' | 'missing';
+
 export interface CoreBookshelfBook {
   sourceId: string;
   bookId: string;
@@ -231,6 +238,10 @@ export interface CoreBookshelfBook {
   // Core returns this only after a durable reading-progress write. It remains
   // optional because unstarted books intentionally have no last-read time.
   lastReadAt?: number;
+  // Remote cache state is projected only from Core `cache.book.status`.
+  // Local books are `cached` by their transport identity; a failed or pending
+  // remote query remains `unknown` and must not be displayed as "未缓存".
+  cacheStatus?: BookshelfCacheStatus;
 }
 
 // `local` is a Core-owned transport identity, not a display label.  Every
@@ -292,6 +303,13 @@ export interface ChapterTocEntry {
   title: string;
   chapterId: string;
 }
+
+// The single resolver identity Core returns for `reader.location.resolve` on
+// the reading surface. Both the Effects parser and the Reducer reflow anchor
+// guard read this constant so a Core response with any other resolverVersion is
+// rejected at the Effects layer (before any progress is written) and again at
+// the reducer layer, never silently stored.
+export const CANONICAL_RESOLVER_VERSION = 'reader.location.resolve.v1.reflow';
 
 // Core's resolved reader anchor. It is deliberately a typed durable-state
 // projection rather than a rendered-page estimate: subsequent progress/reflow
@@ -755,6 +773,7 @@ export interface UiEvent {
   sourceIds?: string[]; // source-select-all 时的全部书源 id 列表
   sources?: CoreSourceEntry[]; // source-list-loaded
   bookshelfBooks?: CoreBookshelfBook[]; // bookshelf-list-loaded
+  bookshelfCacheStatus?: BookshelfCacheStatus; // bookshelf-cache-status-loaded
   continueReadingBook?: CoreBookshelfBook | null;
   continueReadingError?: string;
   bookGroups?: CoreBookGroup[]; // book-group-list-loaded

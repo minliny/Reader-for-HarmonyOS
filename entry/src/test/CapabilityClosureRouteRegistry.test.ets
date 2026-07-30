@@ -36,7 +36,7 @@ function buttonCountAndAdmission(routeId: string, pageState: string,
 export default function CapabilityClosureRouteRegistryTests(): void {
   describe('CapabilityClosureRouteRegistry', () => {
     it('matchesExact24CanonicalStructures', 0, () => {
-      expect(RouteTable.ALL.length).assertEqual(260);
+      expect(RouteTable.ALL.length).assertEqual(247);
       expect(ReaderCapabilityClosureRouteRegistry.ALL.length).assertEqual(24);
       const seen: string[] = [];
       let coreBackedCount: number = 0;

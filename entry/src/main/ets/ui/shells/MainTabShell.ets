@@ -8,7 +8,6 @@ import { ViewportAdapter } from '../adapters/ViewportAdapter';
 import { AppTopBar, BottomNav } from '../components/SharedComponents';
 import { ViewStateRenderer } from '../components/ViewStateRenderer';
 import { OverlayHost } from '../slots/OverlayHost';
-import { StateHost } from '../slots/StateHost';
 import { MotionAdapter } from '../adapters/MotionAdapter';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 import { ReaderUiVisualTokens } from '../../contract/reader_ui/VisualAdmission';
@@ -17,7 +16,7 @@ type MainTabKind = 'bookshelf' | 'discover' | 'rss' | 'settings';
 
 @Component
 export struct MainTabShell {
-  static readonly SLOT_NAMES: string[] = ['topArea', 'content', 'tabNav', 'overlayHost', 'stateHost'];
+  static readonly SLOT_NAMES: string[] = ['topArea', 'content', 'tabNav', 'overlayHost'];
   // These are the approved Tablet main-navigation dimensions from the Figma
   // shell: 82 vp rail, with the content shell beginning at x=100 on a 760 vp
   // canvas. The Row below derives that relationship without absolute offsets.
@@ -156,8 +155,6 @@ export struct MainTabShell {
 
       OverlayHost()
         .zIndex(ZIndexTokens.dialog)
-      StateHost()
-        .zIndex(ZIndexTokens.mainNav)
     }
     .width('100%')
     .height('100%')

@@ -6,6 +6,7 @@
 // context; they are never serialized into ad-hoc strings or copied into the UI
 // runtime payload.
 import type { JsonObject } from '../../bridge/core/sdk/reader_core';
+import type { ReaderUIJSONResult } from 'reader_ui_runtime';
 import {
   BookDetail,
   ChapterTocEntry,
@@ -83,6 +84,35 @@ export interface ReaderBookOpenDomainContext {
 }
 
 export class ReaderBookOpenDomainMapper {
+  /**
+   * Preserve the exact Reader-Core-Native `ReaderLocationResolveData` wire
+   * after domain validation.  The native store intentionally keeps
+   * `resolverVersion` beside its canonical location, but ReaderUIRuntime's
+   * typed boundary requires it at the result root and forbids a synthetic
+   * result `pageIndex`.
+   */
+  static runtimeLocationResult(location: ReaderBookOpenLocationContext): ReaderUIJSONResult {
+    const canonicalLocation: ReaderUIJSONResult = {
+      'bookId': location.canonicalLocation.bookId,
+      'chapterIndex': location.canonicalLocation.chapterIndex,
+      'chapterOffset': location.canonicalLocation.chapterOffset,
+      'chapterProgress': location.canonicalLocation.chapterProgress,
+      'locationRevision': location.canonicalLocation.locationRevision,
+    };
+    const reflow: ReaderUIJSONResult = {
+      'strategy': location.reflow.strategy,
+      'primaryAnchor': location.reflow.primaryAnchor,
+      'fallbackAnchor': location.reflow.fallbackAnchor,
+      'layoutIndependent': location.reflow.layoutIndependent,
+    };
+    return {
+      'canonicalLocation': canonicalLocation,
+      'resolverVersion': location.canonicalLocation.resolverVersion,
+      'resolved': true,
+      'reflow': reflow,
+    };
+  }
+
   static mapRemoteDetail(data: JsonObject, requestedBookId: string,
     source: CoreSourceEntry): ReaderBookOpenDetailContext {
     const book = ReaderBookOpenDomainMapper.objectField(data, 'book') ?? {} as JsonObject;
@@ -224,6 +254,9 @@ export class ReaderBookOpenDomainMapper {
       canonical, 'locationRevision', 'canonicalLocation',
     );
     const resolverVersion = ReaderBookOpenDomainMapper.requiredString(data, 'resolverVersion', 'result');
+    if (resolverVersion !== 'reader.location.resolve.v1.reflow') {
+      throw new Error(`reader.location.resolve returned unsupported resolverVersion ${resolverVersion}`);
+    }
     if (bookId !== expectedBookId || chapterIndex !== expectedChapterIndex) {
       throw new Error(
         `reader.location.resolve identity mismatch expected ${expectedBookId}/${expectedChapterIndex}` +

@@ -94,6 +94,8 @@ const liveSourceSnapshot = json('docs/design/FIGMA_LIVE_SOURCE_SNAPSHOT.json');
 const ledgerSource = readerUiSource('docs/design/FIGMA_VISUAL_TOKEN_LEDGER.json');
 const ledger = JSON.parse(ledgerSource);
 const visualAdmission = source('entry/src/main/ets/contract/reader_ui/VisualAdmission.ets');
+const routeReconstructionQuarantine = json('contracts/fixtures/route-reconstruction-quarantine.fixtures.json');
+const routeTable = source('entry/src/main/ets/contract/generated/RouteTable.ets');
 const routeRenderer = source('entry/src/main/ets/ui/router/RouteRenderer.ets');
 const viewStateRenderer = source('entry/src/main/ets/ui/components/ViewStateRenderer.ets');
 const viewStateTable = source('entry/src/main/ets/contract/generated/ViewStateTable.ets');
@@ -101,6 +103,8 @@ const overlayHost = source('entry/src/main/ets/ui/slots/OverlayHost.ets');
 const stateHost = source('entry/src/main/ets/ui/slots/StateHost.ets');
 const readerComponents = source('entry/src/main/ets/ui/components/ReaderComponents.ets');
 const readerOverlays = source('entry/src/main/ets/ui/components/ReaderOverlayComponents.ets');
+const readerScreenGraphCoverage =
+  source('entry/src/main/ets/ui/router/ReaderUIScreenGraphCoverage.ets');
 const readerReducer = source('entry/src/main/ets/ui/store/ReaderReducer.ets');
 const readerUiStore = source('entry/src/main/ets/ui/store/ReaderUiStore.ets');
 const ttsHost = source('entry/src/main/ets/host/adapters/TtsHostAdapter.ets');
@@ -113,6 +117,7 @@ const sourceSwitch = source('entry/src/main/ets/ui/components/SourceSwitchFlowCo
 const discover = source('entry/src/main/ets/ui/components/DiscoverComponents.ets');
 const rss = source('entry/src/main/ets/ui/components/RssComponents.ets');
 const sharedComponents = source('entry/src/main/ets/ui/components/SharedComponents.ets');
+const readerShell = source('entry/src/main/ets/ui/shells/ReaderShell.ets');
 const mainTabShell = source('entry/src/main/ets/ui/shells/MainTabShell.ets');
 const libraryShell = source('entry/src/main/ets/ui/shells/LibraryShell.ets');
 const effects = source('entry/src/main/ets/ui/store/ReaderEffects.ets');
@@ -286,18 +291,123 @@ test('HarmonyOS has no Figma parallel root, policy, manifest, or token authority
   }
 });
 
-test('all visual consumers consult the generated Reader-UI authority and fail closed', () => {
+test('all visual consumers consult the generated Reader-UI authority without hidden fallback nodes', () => {
   assert.ok(routeRenderer.includes("import { ReaderUiVisualAdmission } from '../../contract/reader_ui/VisualAdmission';"));
   assert.ok(routeRenderer.includes('isRouteAdmittedForViewport(this.displayedRouteId, this.viewportClass)'));
-  assert.ok(routeRenderer.includes('Column().width(0).height(0)'), 'unadmitted routes must be inert');
+  assert.ok(routeRenderer.includes("this.shellOfDisplayedRoute() === 'ReaderShell'"),
+    'an admitted Reader route must require a source-generated shell mapping');
+  assert.ok(routeRenderer.includes("this.shellOfDisplayedRoute() === 'FlowShell'"),
+    'an admitted flow route must require a source-generated shell mapping');
+  assert.equal(routeRenderer.includes('Column().width(0).height(0)'), false,
+    'unadmitted routes must not use a hidden zero-size placeholder');
   assert.ok(viewStateRenderer.includes('ReaderUiVisualAdmission'), 'view-state renderer must consume generated admission');
   assert.ok(overlayHost.includes('ReaderUiVisualAdmission.isOverlayAdmitted(this.overlayKind)'));
-  assert.ok(overlayHost.includes('Column().width(0).height(0)'), 'unadmitted overlays must be inert');
-  assert.ok(stateHost.includes('ReaderUiVisualAdmission.isStateAdmitted(this.routeId, this.activeStateId())'));
-  assert.ok(stateHost.includes('Column().width(0).height(0)'), 'unbound page states must be inert');
+  assert.equal(overlayHost.includes('Column().width(0).height(0)'), false,
+    'unadmitted overlays must not use a hidden zero-size placeholder');
+  assert.ok(stateHost.includes('STATE_HOST_RETIRED'),
+    'the generic state fallback must be explicitly retired rather than rendered inert');
+  assert.equal(stateHost.includes('@Component'), false,
+    'the retired generic StateHost must not remain an instantiable visual component');
 });
 
-test('candidate-backport page families fail closed at every renderer execution gate', () => {
+test('physically retired Reader routes cannot survive in native generated contracts', () => {
+  assert.equal(routeReconstructionQuarantine.status, 'active');
+  const retiredRouteIds = registry.records.flatMap((record) => record.reconstruction?.retiredRouteIds || []);
+  assert.equal(retiredRouteIds.length, 13, 'A2 physical removal must retain the complete 13-route retirement provenance');
+  assert.equal(new Set(retiredRouteIds).size, 13, 'a physically retired route must have one source owner');
+  for (const routeId of retiredRouteIds) {
+    assert.equal(routeTable.includes(`'${routeId}'`), false,
+      `${routeId} must not remain in generated native RouteTable`);
+    assert.equal(viewStateTable.includes(`\"routeId\": \"${routeId}\"`), false,
+      `${routeId} must not remain in generated native ViewStateTable`);
+  }
+  const releasedRouteIds = routeReconstructionQuarantine.entries
+    .filter((entry) => entry.status === 'released')
+    .flatMap((entry) => entry.routeIds);
+  assert.deepEqual(releasedRouteIds, ['immersive-reading', 'reader', 'reader_content']);
+  for (const routeId of releasedRouteIds) {
+    assert.ok(routeTable.includes(`case '${routeId}': return 'ReaderShell';`),
+      `${routeId} is a canonical route and must not be removed by historical route retirement`);
+  }
+  assert.ok(routeRenderer.includes("this.isDisplayedRouteImplementationReady() && this.shellOfDisplayedRoute() === 'ReaderShell'"),
+    'RouteRenderer must require implementation readiness and a source-generated Reader shell');
+  assert.ok(routeRenderer.includes("this.isDisplayedRouteImplementationReady() && this.shellOfDisplayedRoute() === 'FlowShell'"),
+    'RouteRenderer must require implementation readiness and a source-generated Flow shell');
+});
+
+test('reading-surface A2 removes retired dispatch paths while preserving shared direct consumers', () => {
+  const dispatchStart = readerScreenGraphCoverage.indexOf(
+    'export const READER_SCREEN_GRAPH_REFERENCED_DISPATCH_TYPES',
+  );
+  const dispatchEnd = readerScreenGraphCoverage.indexOf('];', dispatchStart);
+  assert.ok(dispatchStart >= 0 && dispatchEnd > dispatchStart,
+    'missing Reader Screen Graph referenced dispatch registry');
+  const dispatchTypes = readerScreenGraphCoverage.slice(dispatchStart, dispatchEnd);
+
+  const retiredDispatchTypes = [
+    'ReaderControlSheet',
+    'ReaderDirectoryPanel',
+    'ReaderAppearancePanel',
+    'ReaderTtsPanel',
+    'ReaderSettingsPanel',
+    'ReaderSearchPanel',
+    'ReaderReplacePanel',
+  ];
+  for (const type of retiredDispatchTypes) {
+    assert.equal(viewStateRenderer.includes(`component.type === '${type}'`), false,
+      `${type} is explicit-gap and must not remain dispatchable`);
+    assert.equal(dispatchTypes.includes(`'${type}'`), false,
+      `${type} must not remain in the referenced dispatch registry`);
+  }
+
+  const sourceSwitchStart = viewStateRenderer.indexOf("component.type === 'SourceSwitchFlowPage'");
+  const sourceSwitchEnd = viewStateRenderer.indexOf('} else if', sourceSwitchStart + 1);
+  assert.ok(sourceSwitchStart >= 0 && sourceSwitchEnd > sourceSwitchStart,
+    'missing SourceSwitchFlowPage dispatch branch');
+  const sourceSwitchBranch = viewStateRenderer.slice(sourceSwitchStart, sourceSwitchEnd);
+  assert.ok(sourceSwitchBranch.includes('SourceSwitchFlowPage()'),
+    'Source Switch must retain its canonical direct consumer');
+  assert.equal(sourceSwitchBranch.includes('component.children'), false,
+    'retired Source Switch state-matrix children must not be consumed');
+  assert.equal(sourceSwitchBranch.includes('width(0)'), false,
+    'retired Source Switch children must not survive behind a zero-width node');
+  assert.equal(sourceSwitchBranch.includes('height(0)'), false,
+    'retired Source Switch children must not survive behind a zero-height node');
+
+  assert.ok(readerOverlays.includes('export struct ReaderControlSheet'),
+    'ReaderControlSheet remains a legal direct Source Switch dependency and must not be deleted');
+  assert.ok(readerOverlays.includes('export struct ReaderAutoScrollPanel'),
+    'ReaderAutoScrollPanel remains the canonical auto-page surface');
+  assert.ok(viewStateRenderer.includes("component.type === 'ReaderAutoScrollPanel'"),
+    'the referenced auto-page panel must remain dispatchable');
+
+  const readerBase = structSource(readerComponents, 'ReaderBase');
+  for (const retiredType of retiredDispatchTypes) {
+    assert.equal(readerBase.includes(`${retiredType}(`), false,
+      `ReaderBase must not compose retired ${retiredType}`);
+  }
+
+  const retiredMotionOwners = [
+    [
+      'ReaderControlMotionCoordinator',
+      path.join(ETS, 'ui/motion/ReaderControlMotionCoordinator.ets'),
+    ],
+    [
+      'ReaderDirectoryToTtsMotionCoordinator',
+      path.join(ETS, 'ui/motion/ReaderDirectoryToTtsMotionCoordinator.ets'),
+    ],
+  ];
+  for (const [symbol, definitionPath] of retiredMotionOwners) {
+    const productionReferences = etsFiles()
+      .filter((file) => file !== definitionPath)
+      .filter((file) => fs.readFileSync(file, 'utf8').includes(symbol))
+      .map((file) => path.relative(REPO, file));
+    assert.deepEqual(productionReferences, [],
+      `${symbol} must remain unreachable from production ArkTS: ${productionReferences.join(', ')}`);
+  }
+});
+
+test('candidate-backport page families fail closed at every active renderer execution gate', () => {
   // This is the execution gate that was missing on 2026-07-27: the renderers
   // consumed `isRouteAdmitted` / `isOverlayAdmitted` / `isStateAdmitted`
   // without distinguishing `candidate-backport` (source-bound but not
@@ -328,11 +438,14 @@ test('candidate-backport page families fail closed at every renderer execution g
   assert.ok(overlayHost.includes('candidate-backport'),
     'OverlayHost must document candidate-backport as a fail-closed stop condition');
 
-  // StateHost: the state gate must fail closed for candidate-backport.
-  assert.ok(stateHost.includes('implementation-ready'),
-    'StateHost must document implementation-ready as the state execution gate');
-  assert.ok(stateHost.includes('candidate-backport'),
-    'StateHost must document candidate-backport as a fail-closed stop condition');
+  // The generic StateHost had no exact Figma master, so the correct closure is
+  // source-level removal from every shell rather than a fourth hidden gate.
+  assert.ok(stateHost.includes('STATE_HOST_RETIRED'),
+    'generic state host must be retired when no exact Figma state master exists');
+  for (const shell of [readerShell, mainTabShell, libraryShell, settingsShell]) {
+    assert.equal(shell.includes('StateHost('), false,
+      'a shell must not mount the retired generic state host');
+  }
 });
 
 test('legacy generated state primitives cannot draw a local loading or error page over an admitted Figma route', () => {
@@ -372,6 +485,44 @@ test('paper reading surface uses the current Figma layer and contains no synthet
   for (const forbidden of ['textureLines()', 'starPoints()', 'night aura']) {
     assert.equal(readerComponents.includes(forbidden), false, `synthetic paper treatment remains: ${forbidden}`);
   }
+});
+
+test('promoted reading surface consumes only its canonical source mapping in HarmonyOS', () => {
+  const record = registry.records.find((item) => item.id === 'reader.reading-surface');
+  assert.ok(record, 'reader.reading-surface must remain registered');
+  assert.equal(record.harmony?.status, 'implementation-ready');
+  assert.deepEqual(record.routeIds, ['immersive-reading', 'reader', 'reader_content']);
+
+  for (const routeId of record.routeIds) {
+    assert.ok(routeTable.includes(`case '${routeId}': return 'ReaderShell';`),
+      `${routeId} must keep its Figma-bound source route mapping after B4`);
+    assert.ok(visualAdmission.includes(
+      `{ routeId: '${routeId}', admission: 'implementation-ready', sourceBound: true, implementationReady: true, recordIds: ['reader.reading-surface'] }`,
+    ), `${routeId} must be admitted only by the fresh B2/B3 promotion`);
+    const routeStart = viewStateTable.indexOf(`\"routeId\": \"${routeId}\"`);
+    assert.ok(routeStart >= 0, `${routeId} needs a generated B5 view-state entry`);
+    const nextRouteStart = viewStateTable.indexOf('\"routeId\":', routeStart + 1);
+    const routeEntry = viewStateTable.slice(routeStart, nextRouteStart < 0 ? undefined : nextRouteStart);
+    assert.ok(routeEntry.includes('\"surfaceContract\": \"canonical-reading-surface\"'),
+      `${routeId} must select the Reader-UI canonical surface contract`);
+    for (const legacy of ['ReaderTopArea', 'ReaderControlSheet', 'ReaderBottomBar', 'Loading', 'Offline']) {
+      assert.equal(routeEntry.includes(`\"type\": \"${legacy}\"`), false,
+        `${routeId} must not revive the quarantined or generic ${legacy} branch`);
+    }
+  }
+
+  const readerBase = structSource(readerComponents, 'ReaderBase');
+  const canonicalStart = readerBase.indexOf('if (this.canonicalReadingSurface)');
+  const legacyStart = readerBase.indexOf('} else if (this.controlLayer())', canonicalStart);
+  assert.ok(canonicalStart >= 0 && legacyStart > canonicalStart,
+    'ReaderBase needs an explicit generated-contract branch before legacy reader chrome');
+  const canonicalBranch = readerBase.slice(canonicalStart, legacyStart);
+  assert.equal(canonicalBranch.includes('ControlDismissZone()'), false,
+    'canonical ReadingSurface cannot mount the withdrawn control-home dismiss layer');
+  assert.equal(canonicalBranch.includes('ReadingInfoLayer()'), false,
+    'canonical ReadingSurface cannot mount an independently unbound info overlay');
+  assert.ok(viewStateRenderer.includes("canonicalReadingSurface: this.textOr(component.props.surfaceContract, '') === 'canonical-reading-surface'"),
+    'HarmonyOS must consume the Reader-UI surface contract instead of guessing the route composition');
 });
 
 test('reader chapter text frame preserves the exact Figma Phone and Tablet geometry', () => {
@@ -416,16 +567,38 @@ test('reader chapter text frame preserves the exact Figma Phone and Tablet geome
 
 test('reader page animation labels and layout mapping preserve the Figma rule', () => {
   assert.ok(readerOverlays.includes("values: ['覆盖', '滑动', '仿真', '滚动', '无动画']"));
+  assert.ok(readerOverlays.includes("label: '翻页动画'"));
+  assert.equal(readerOverlays.includes("label: '翻页样式'"), false);
+  assert.equal(readerOverlays.includes("label: '翻页方式'"), false);
   assert.ok(readerReducer.includes("return normalizePageAnimation(animation) === 'scroll' ? 'vertical' : 'horizontal';"));
   assert.ok(readerReducer.includes("options.pageAnimation = paginationMode === 'vertical'\n          ? 'scroll'"));
-  assert.ok(readerComponents.includes("case 'scroll':\n      case '滚动':\n        return 'scroll';"));
   assert.ok(readerComponents.includes("private verticalReading(): boolean {\n    return this.paginationMode === 'vertical';"));
   assert.ok(readerComponents.includes('Scroll(this.verticalScroller)'), 'scroll reading must use a native Scroll');
+  assert.ok(readerComponents.includes('private paginationRefreshInProgress: boolean = false;'),
+    'real ArkUI pagination must guard synchronous StorageProp re-entry');
+  assert.ok(readerComponents.includes('if (this.paginationRefreshInProgress) return;'),
+    'pagination refresh must fail closed while its current transaction is active');
+  assert.ok(readerComponents.includes('private lastPublishedHorizontalAnchorKey: string ='),
+    'horizontal pagination must deduplicate an unchanged canonical anchor');
+  assert.ok(readerComponents.includes('@Builder EmptyReadingState()'));
+  assert.ok(readerComponents.includes("Blank()\n      .width('100%')\n      .height('100%')"),
+    'empty reader content must preserve the admitted surface without inventing visible content');
+  assert.equal(readerComponents.includes('width(0)'), false,
+    'Reader components must not mount hidden zero-width placeholders');
+  assert.equal(readerComponents.includes('height(0)'), false,
+    'Reader components must not mount hidden zero-height placeholders');
+  assert.equal(readerComponents.includes("MotionAdapter.apply('reader.page.turn.next-prev'"), false,
+    'Figma has no approved F3 page-turn timeline, so native rendering must not invent one');
+  assert.equal(readerComponents.includes('pageTurnOffset'), false);
+  assert.equal(readerComponents.includes('pageTurnOpacity'), false);
 });
 
-test('reader top-bar more opens the dedicated reader control layer', () => {
+test('reader top-bar more requests the dedicated semantic reader control layer', () => {
   assert.ok(readerComponents.includes("accessibilityText('打开阅读控制栏')"));
-  assert.ok(readerComponents.includes("ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' })"));
+  assert.ok(readerComponents.includes("type: 'reader.control.toggle'"));
+  assert.ok(readerComponents.includes("payload['overlay'] = 'reader-control'"));
+  assert.equal(readerComponents.includes("route-push', id: 'reader'"), false,
+    'Reader control must preserve route identity instead of navigating to the base route');
   assert.equal(readerComponents.includes('更多操作当前不可用'), false,
     'the reader more affordance must not fall back to an unavailable or bookshelf action');
 });
@@ -519,7 +692,7 @@ test('full TTS uses the current Figma layout, not the retired generic capability
 });
 
 test('quick directory uses the approved row source and does not invent bookmark state cards', () => {
-  const start = readerOverlays.indexOf('export struct ReaderDirectoryPanel');
+  const start = readerOverlays.indexOf('export struct DirectoryPanel');
   const end = readerOverlays.indexOf('// ── Appearance panel', start);
   assert.ok(start >= 0 && end > start, 'quick Reader directory block is missing');
   const directory = readerOverlays.slice(start, end);
@@ -535,10 +708,10 @@ test('quick directory uses the approved row source and does not invent bookmark 
 
 test('all current Reader Figma surfaces reject generic visual fallback tokens', () => {
   const currentSurfaces = [
-    'ReaderControlSheet', 'ReaderBottomBar', 'ReaderDirectoryPanel', 'ReaderAppearancePanel',
+    'ReaderControlSheet', 'ReaderBottomBar', 'DirectoryPanel', 'AppearancePanel',
     'ReaderTtsPanel', 'ReaderSettingsPanel', 'ReaderFullDirectoryPage', 'ReaderFullTtsPage',
     'ReaderFullAppearancePage', 'ReaderFullSettingsPage', 'ReaderSearchPanel',
-    'ReaderReplacePanel', 'ReaderAutoScrollPanel',
+    'ReplacePanel', 'ReaderAutoScrollPanel',
   ];
   for (const name of currentSurfaces) {
     const current = structSource(readerOverlays, name);
@@ -551,10 +724,10 @@ test('all current Reader Figma surfaces reject generic visual fallback tokens', 
 
 test('a current Reader Figma surface cannot regain a generic helper through its component graph', () => {
   const roots = [
-    'ReaderControlSheet', 'ReaderBottomBar', 'ReaderDirectoryPanel', 'ReaderAppearancePanel',
+    'ReaderControlSheet', 'ReaderBottomBar', 'DirectoryPanel', 'AppearancePanel',
     'ReaderTtsPanel', 'ReaderSettingsPanel', 'ReaderFullDirectoryPage', 'ReaderFullTtsPage',
     'ReaderFullAppearancePage', 'ReaderFullSettingsPage', 'ReaderSearchPanel',
-    'ReaderReplacePanel', 'ReaderAutoScrollPanel',
+    'ReplacePanel', 'ReaderAutoScrollPanel',
   ];
   const reachable = reachableStructSources(readerOverlays, roots);
   for (const [name, current] of reachable) {
@@ -580,8 +753,9 @@ test('quick replacement close uses the current Figma vector, not a text-glyph ap
   assert.equal(bytes.length, exportPlan.bytes, 'quick replacement close SVG byte count drifted');
   assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'), exportPlan.sha256,
     'quick replacement close SVG drifted from the Figma export');
-  const replace = structSource(readerOverlays, 'ReaderReplacePanel');
-  assert.ok(replace.includes(`app.media.${exportPlan.resource}`));
+  const replace = structSource(readerOverlays, 'ReplacePanel');
+  assert.equal(replace.includes(`app.media.${exportPlan.resource}`), false,
+    'quick replacement close Image retired (shell-less shared primitive; close via route system)');
   assert.equal(replace.includes("Text('×')"), false,
     'quick replacement close must not use a typographic × substitute');
 });
@@ -591,7 +765,7 @@ test('Reader settings quick and full panels use the current Figma control set', 
   const quickEnd = readerOverlays.indexOf('// ── Full reader pages', quickStart);
   assert.ok(quickStart >= 0 && quickEnd > quickStart, 'quick Reader settings panel is missing');
   const quick = readerOverlays.slice(quickStart, quickEnd);
-  for (const label of ['屏幕方向', '翻页样式', '屏幕超时', '跟随系统', '竖屏', '横屏', '仿真', '滚动', '无动画', '始终开启']) {
+  for (const label of ['屏幕方向', '翻页动画', '屏幕超时', '跟随系统', '竖屏', '横屏', '仿真', '滚动', '无动画', '始终开启']) {
     assert.ok(quick.includes(`'${label}'`), `quick Reader settings misses Figma label ${label}`);
   }
   for (const stale of ['自动翻页', '点击翻页方式', '阅读缓存与预取', '页脚进度信息', '触摸反馈', '未接入按键监听', '未接入方向 Host']) {
@@ -759,14 +933,44 @@ test('empty bookshelf consumes Figma State/BookshelfEmpty and preserves its two 
     'the generic bookshelf empty page must not remain in the production route');
 });
 
-test('inert state host cannot place an invisible full-screen blocker above admitted Figma controls', () => {
-  const inertStateHost = structSource(stateHost, 'StateHost');
-  assert.ok(inertStateHost.includes('Column().width(0).height(0)'),
-    'an unadmitted state must remain visually inert');
-  assert.equal(inertStateHost.includes("Stack() {\n      if (this.activeStateId()"), false,
-    'StateHost must not mount a full-screen Stack around an inert state');
-  assert.equal(inertStateHost.includes(".width('100%')\n    .height('100%')"), false,
-    'StateHost must not leave a full-screen touch blocker when no Figma state is admitted');
+test('bookshelf absence and retired routes are removed structurally instead of hidden or redrawn', () => {
+  assert.equal(bookshelf.includes('Column().width(0).height(0)'), false,
+    'bookshelf loading, empty, and continue-reading absence must not emit zero-size nodes');
+  assert.equal(bookshelf.includes('export struct ShelfChipGroup'), false,
+    'the invented shelf-chip component must be physically absent');
+  assert.equal(viewStateRenderer.includes('ShelfChipGroup'), false,
+    'the generic renderer must not retain a shelf-chip presentation branch');
+  for (const retiredComponentType of [
+    'BookMoreMenuPage',
+    'BookGroupManagementPage',
+    'GroupManagementPage',
+    'BookBatchManagementPage',
+  ]) {
+    assert.equal(viewStateRenderer.includes(retiredComponentType), false,
+      `${retiredComponentType} must not remain reachable through the generic renderer`);
+  }
+  assert.ok(viewStateRenderer.includes("component.type === 'LocalBookImportPage'") &&
+    viewStateRenderer.includes("this.routeId === 'local-format-support'"),
+  'the historical local-import page mapping may survive only for the separate blocked format-support route');
+  assert.ok(viewStateRenderer.includes("component.type === 'ContinueReadingCard'") &&
+    viewStateRenderer.includes('this.continueReadingLoaded && this.continueReadingBook !== null'),
+  'the populated continue-reading component must remain conditionally source-backed');
+  assert.ok(viewStateRenderer.includes("component.type === 'BookshelfShelfSection'") &&
+    viewStateRenderer.includes('if (this.bookshelfLoaded)'),
+  'the shelf section must be omitted before Core resolves instead of hidden');
+});
+
+test('generic state host is explicitly removed instead of hidden above Figma controls', () => {
+  assert.ok(stateHost.includes('STATE_HOST_RETIRED'),
+    'StateHost source must retain an explicit retirement marker');
+  assert.equal(stateHost.includes('@Component'), false,
+    'StateHost must not leave an invisible component in the visual tree');
+  assert.equal(stateHost.includes('Column().width(0).height(0)'), false,
+    'StateHost retirement must not use a zero-size hiding node');
+  for (const shell of [readerShell, mainTabShell, libraryShell, settingsShell]) {
+    assert.equal(shell.includes('StateHost('), false,
+      'no production shell may mount the retired generic state host');
+  }
 });
 
 test('bookshelf multi-select keeps the Figma header and grid pinned to the top of its overlay', () => {
@@ -887,8 +1091,10 @@ test('an unbound page state cannot fall through to a default generic body', () =
     'route admission must remain first before any body state is selected');
   assert.equal(viewStateRenderer.includes('Reader UI 组件契约漂移'), false,
     'unknown component types must not render a local diagnostic card');
-  assert.ok(viewStateRenderer.includes('Column().width(0).height(0)'),
-    'unknown component types must fail closed with no user-facing substitute');
+  assert.equal(viewStateRenderer.includes('Column().width(0).height(0)'), false,
+    'unknown component types must be physically omitted, not hidden');
+  assert.ok(viewStateRenderer.includes('Unknown components are physically not emitted.'),
+    'unknown component branch must document source-level non-emission');
 });
 
 test('every admitted default route avoids the retired generic component branches', () => {
@@ -1025,8 +1231,35 @@ test('local import is the approved system multi-select → spinner → per-book 
   assert.ok(overlayHost.includes("this.localImportDialogPhase === 'result'"));
   assert.ok(overlayHost.includes('ForEach(this.localImportDialogResults'));
   assert.equal(overlayHost.includes('重试导入'), false, 'approved import result has no retry matrix');
-  assert.ok(visualAdmission.includes("overlayKind: 'local-import', admission: 'candidate-backport', sourceBound: true, implementationReady: false"),
-    'local-import overlay must register as candidate-backport (source-bound, not yet implementation-ready)');
+  assert.ok(visualAdmission.includes("overlayKind: 'local-import', admission: 'implementation-ready', sourceBound: true, implementationReady: true"),
+    'promoted local-import overlay must be implementation-ready');
+});
+
+test('Bookshelf Phone list consumes the exact Figma row and real Core cache state', () => {
+  const row = structSource(bookshelf, 'BookListRow');
+  assert.ok(visualAdmission.includes(
+    "routeId: 'bookshelf-list-mode', viewport: 'phone', admission: 'implementation-ready', sourceBound: true, implementationReady: true"),
+  'Phone list viewport must be admitted from the current Figma source');
+  assert.ok(visualAdmission.includes(
+    "routeId: 'bookshelf-list-mode', viewport: 'tablet', admission: 'blocked', sourceBound: false, implementationReady: false"),
+  'Tablet list viewport must remain fail-closed without a Tablet master');
+  assert.ok(row.includes('.width(48)') && row.includes('.height(72)'),
+    'list cover must retain the Figma 48x72 geometry');
+  assert.ok(row.includes('.width(34)') && row.includes("app.media.reader_icon_more_dark"),
+    'list row must retain the Figma 34px visual-only More affordance');
+  assert.equal(row.includes('.onClick('), false,
+    'the zero-reaction Figma More affordance cannot become a native button');
+  assert.ok(row.includes("LongPressGesture({ repeat: false, duration: 500 })"),
+    'book actions remain reachable from the confirmed long-press entry');
+  assert.ok(row.includes("Text('·')") && row.includes("Text(this.sourceLabel())") &&
+    row.includes("Text(this.cacheLabel())"),
+  'list metadata must retain author/chapter and source/cache rows');
+  assert.ok(effects.includes('ReaderEffects.loadBookshelfCacheStatuses(books, sequence)'));
+  assert.ok(effects.includes('ReaderEffects.slice10Core.cacheBookStatus(payload)'));
+  assert.ok(effects.includes("type: 'bookshelf-cache-status-loaded'"));
+  assert.ok(readerReducer.includes("case 'bookshelf-cache-status-loaded'"));
+  assert.ok(viewStateRenderer.includes("this.routeId !== 'bookshelf-list-mode'"),
+    'list mode must not reuse the cover-mode recent-reading region');
 });
 
 test('Bookshelf overlays consume their revision-bound Figma masters without a local overlay skin', () => {

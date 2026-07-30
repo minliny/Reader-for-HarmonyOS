@@ -8,9 +8,11 @@
 import {
   type ReaderUIAsyncTransition,
   type ReaderUIBookOpenLayout,
+  type ReaderUICanonicalLocation,
   type ReaderUIEffect,
   type ReaderUIJSONPayload,
   type ReaderUIJSONResult,
+  type ReaderUILocationReflow,
   type ReaderUIState,
 } from 'reader_ui_runtime';
 import { CoreRuntime } from '../../bridge/CoreRuntime';
@@ -86,6 +88,8 @@ export class CoreRuntimeBookOpenGateway implements ReaderBookOpenCoreGateway {
 export interface ReaderBookOpenRuntimeGateway {
   currentState(): ReaderUIState;
   acceptBookOpenResult(coreType: string, correlationId: string, chapterCount?: number,
+    selectedChapterIndex?: number, canonicalLocation?: ReaderUICanonicalLocation,
+    reflow?: ReaderUILocationReflow,
     error?: string): ReaderUIAsyncTransition;
   acceptBookOpenJSONResult(coreType: string, correlationId: string,
     result: ReaderUIJSONResult): ReaderUIAsyncTransition;
@@ -356,15 +360,22 @@ export class ReaderBookOpenEffectExecutor {
       if (selected === undefined || detail === undefined) {
         throw new Error('book.open location requires accepted content and selected chapter context');
       }
-      const chapterOffset = this.requiredNonNegativeNumber(payload, 'chapterOffset');
-      const chapterProgress = this.requiredNonNegativeNumber(payload, 'chapterProgress');
-      const viewportWidth = this.requiredPositiveNumber(payload, 'viewportWidth');
-      const viewportHeight = this.requiredPositiveNumber(payload, 'viewportHeight');
-      const fontScale = this.requiredPositiveNumber(payload, 'fontScale');
+      const bookId = this.requiredNonBlankString(payload, 'bookId');
+      const chapterIndex = this.requiredNonNegativeInteger(payload, 'chapterIndex');
+      if (bookId !== detail.book.bookId || chapterIndex !== selected.index) {
+        throw new Error('book.open location effect identity does not match accepted book/chapter context');
+      }
+      const anchor = this.requiredObject(payload, 'anchor');
+      const measuredLayout = this.requiredObject(payload, 'layout');
+      const chapterOffset = this.requiredNonNegativeNumber(anchor, 'chapterOffset');
+      const chapterProgress = this.requiredNonNegativeNumber(anchor, 'chapterProgress');
+      const viewportWidth = this.requiredPositiveNumber(measuredLayout, 'viewportWidth');
+      const viewportHeight = this.requiredPositiveNumber(measuredLayout, 'viewportHeight');
+      const fontScale = this.requiredPositiveNumber(measuredLayout, 'fontScale');
       if (chapterProgress > 1) throw new Error('book.open measured chapterProgress must be in [0, 1]');
       this.attachHandle(context, 'reader.location.resolve', this.core.beginReaderLocationResolve(
-        detail.book.bookId,
-        selected.index,
+        bookId,
+        chapterIndex,
         chapterOffset,
         chapterProgress,
         viewportWidth,
@@ -416,7 +427,7 @@ export class ReaderBookOpenEffectExecutor {
         case 'chapter.list': {
           const toc = ReaderBookOpenDomainMapper.mapToc(data);
           if (toc.chapterCount <= 0) {
-            this.acceptStage(context, stage, { 'chapterCount': 0 });
+            this.acceptStage(context, stage, { 'chapterCount': 0, 'selectedChapterIndex': 0 });
             return;
           }
           const requestedIndex = this.runtimeRequestedChapterIndex();
@@ -430,7 +441,10 @@ export class ReaderBookOpenEffectExecutor {
           if (context.detail === undefined) throw new Error('book.open TOC has no accepted detail context');
           this.host.applyDomainEvent({ type: 'book-detail-success', book: context.detail.book });
           this.host.applyDomainEvent({ type: 'chapter-toc-loaded', chapterToc: toc.visibleEntries });
-          this.acceptStage(context, stage, { 'chapterCount': toc.chapterCount });
+          this.acceptStage(context, stage, {
+            'chapterCount': toc.chapterCount,
+            'selectedChapterIndex': context.selectedChapter.index,
+          });
           return;
         }
         case 'content.load': {
@@ -464,10 +478,11 @@ export class ReaderBookOpenEffectExecutor {
             type: 'reader-location-resolved',
             canonicalReaderLocation: context.location.canonicalLocation,
           });
-          this.acceptStage(context, stage, {
-            'canonicalLocation': context.location.canonicalLocation.locationRevision,
-            'pageIndex': this.runtime.currentState().readerPageIndex,
-          });
+          this.acceptStage(
+            context,
+            stage,
+            ReaderBookOpenDomainMapper.runtimeLocationResult(context.location),
+          );
           return;
         }
         default:
@@ -542,6 +557,27 @@ export class ReaderBookOpenEffectExecutor {
     const value = typeof raw === 'number' ? raw : Number.NaN;
     if (!Number.isFinite(value) || value < 0) throw new Error(`book.open requires ${key} >= 0`);
     return value;
+  }
+
+  private requiredNonNegativeInteger(payload: ReaderUIJSONPayload, key: string): number {
+    const value = this.requiredNonNegativeNumber(payload, key);
+    if (!Number.isSafeInteger(value)) throw new Error(`book.open requires ${key} to be a safe integer`);
+    return value;
+  }
+
+  private requiredNonBlankString(payload: ReaderUIJSONPayload, key: string): string {
+    const raw = payload[key];
+    const value = typeof raw === 'string' ? raw.trim() : '';
+    if (value.length === 0) throw new Error(`book.open requires non-blank ${key}`);
+    return value;
+  }
+
+  private requiredObject(payload: ReaderUIJSONPayload, key: string): ReaderUIJSONPayload {
+    const raw = payload[key];
+    if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+      throw new Error(`book.open requires object ${key}`);
+    }
+    return raw as ReaderUIJSONPayload;
   }
 
 }

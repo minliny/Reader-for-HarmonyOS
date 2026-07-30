@@ -2,10 +2,10 @@
 // Ported from frontend-demo (styles/00-foundation.css .fd-reading-surface /
 // .fd-ir-reading-layer / .fd-ir-info-layer / .fd-immersive-hotzone).
 //
-// Batch 1: the legacy reader.overlay control dock + module sheets are retired
-// — Reader overlays are routes now (route-push / route-pop), rendered via
-// ViewStateRenderer(stack) from ViewStateTable. ReaderBase is the factored
-// base composite used by every reader route's view-state body; theme='night'
+// The retired route-backed control dock/module sheets are not reconstructed.
+// Reader control modules preserve the canonical reading route and use semantic
+// overlay state in their separately admitted consumer. ReaderBase is the
+// factored base composite used by every reader route's view-state body; theme='night'
 // switches to night-theme tokens (step 3c-2 / D11).
 //
 // Immersive: each layer expands behind the system status / nav bars
@@ -30,6 +30,7 @@ import { ReaderThemeResolver, ReaderThemePalette } from '../tokens/ReaderThemeRe
 import { ReaderUiVisualTokens } from '../../contract/reader_ui/VisualAdmission';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 import { BookDetail, CoreReaderCanonicalLocation, ReaderContentIdentity, canSwitchBookSourceId } from '../store/ReaderUiState';
+import type { ReaderUIJSONPayload } from 'reader_ui_runtime';
 import { ViewStateExplicitBinding } from '../../contract/generated/ViewStateTable';
 import {
   ReaderUIScreenGraphTapZoneAdapter,
@@ -42,6 +43,15 @@ interface ReaderPageFragment {
   text: string;
   sourceOffset: number;
   contentIdentity: ReaderContentIdentity;
+}
+
+function requestReaderControlToggle(): void {
+  const payload: ReaderUIJSONPayload = {};
+  payload['overlay'] = 'reader-control';
+  ReaderUiStore.dispatch({
+    type: 'reader.control.toggle',
+    readerUIJSONPayload: payload,
+  });
 }
 
 interface ReaderPageModel {
@@ -158,7 +168,6 @@ export struct ReadingTextFlow {
   @StorageProp('reader.paginationMode') @Watch('onPaginationInputChange') paginationMode: string = 'horizontal';
   @StorageProp('reader.pageIndex') @Watch('onReaderPageIndexChange') readerPageIndex: number = 0;
   @StorageProp('reader.pageCount') readerPageCount: number = 1;
-  @StorageProp('reader.readerSettingOptions.pageAnimation') pageAnimation: string = 'slide';
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
   @StorageProp(ReaderUiStore.K_READER_CHAPTER_OFFSET) readerChapterOffset: number = 0;
   @StorageProp(ReaderUiStore.K_READER_CHAPTER_PROGRESS) readerChapterProgress: number = 0;
@@ -176,21 +185,25 @@ export struct ReadingTextFlow {
   @StorageProp('reader.theme.colorMode') systemColorMode: string = 'light';
   @State private horizontalPageData: ReaderPageModel[] = [{ fragments: [], chapterOffset: 0, chapterProgress: 0, contentIdentity: null }];
   @State private verticalFragmentLayouts: ReaderVerticalFragmentLayout[] = [];
-  @State private pageTurnOffset: number = 0;
-  @State private pageTurnOpacity: number = 1;
   private verticalScroller: Scroller = new Scroller();
   private lastVerticalScrollOffset: number = 0;
   private pendingVerticalRestoreOffset: number = -1;
   private suppressNextHorizontalAnchor: boolean = false;
   private ignoreNextVerticalScrollAnchor: boolean = false;
   private restoredCanonicalLocationKey: string = '';
+  // ArkUI StorageProp notifications are synchronous. Publishing a page anchor
+  // writes the reducer snapshot back to AppStorage, including the same
+  // pagination inputs watched by this component. Without a transaction guard
+  // that write re-enters pagination before the first refresh returns and
+  // eventually overflows the JS stack on a real device/emulator.
+  private paginationRefreshInProgress: boolean = false;
+  private lastPublishedHorizontalAnchorKey: string = '';
   // Layout changes must reflow from the reader's current measured anchor,
   // not from the initial canonical restore location. The latter intentionally
   // stays stable while the reader scrolls, so it can be older than the live
   // offset by many paragraphs.
   private pendingReflowAnchorOffset: number = -1;
   private pendingReflowAnchorProgress: number = 0;
-  private lastAnimatedPageIndex: number = 0;
 
   private inkColor(): string {
     if (this.readerTheme === 'paper') return ReaderUiVisualTokens.readerContentInk;
@@ -504,11 +517,11 @@ export struct ReadingTextFlow {
   }
 
   aboutToAppear(): void {
-    this.lastAnimatedPageIndex = this.readerPageIndex;
     this.refreshPagination();
   }
 
   private onPaginationInputChange(): void {
+    if (this.paginationRefreshInProgress) return;
     this.captureLiveReflowAnchor();
     // A viewport/font/mode change creates new page boundaries. Do not let a
     // prior canonical restore key suppress restoration in the new layout.
@@ -517,114 +530,63 @@ export struct ReadingTextFlow {
   }
 
   private captureLiveReflowAnchor(): void {
-    if (!this.hasReadableContent() || !Number.isFinite(this.readerChapterOffset) ||
-      this.readerChapterOffset < 0 || !Number.isFinite(this.readerChapterProgress)) {
+    const canonical = this.canonicalLocation;
+    const active = this.activeReaderContentIdentity;
+    if (!this.hasReadableContent() || canonical === null || active === null ||
+      canonical.bookId !== active.bookId || canonical.chapterIndex !== active.chapterIndex ||
+      !Number.isSafeInteger(canonical.chapterOffset) || canonical.chapterOffset < 0 ||
+      !Number.isFinite(canonical.chapterProgress) ||
+      canonical.chapterProgress < 0 || canonical.chapterProgress > 1) {
       return;
     }
-    this.pendingReflowAnchorOffset = Math.floor(this.readerChapterOffset);
-    this.pendingReflowAnchorProgress = Math.max(0, Math.min(1, this.readerChapterProgress));
+    this.pendingReflowAnchorOffset = canonical.chapterOffset;
+    this.pendingReflowAnchorProgress = canonical.chapterProgress;
   }
 
   private refreshPagination(): void {
-    let pages: ReaderPageModel[];
-    if (this.verticalReading()) {
-      const fragments: ReaderPageFragment[] = [];
-      const identity = this.activeReaderContentIdentity;
-      let offset = 0;
-      const paragraphs = this.paragraphs();
-      if (identity !== null) {
-        for (let index = 0; index < paragraphs.length; index += 1) {
-          fragments.push({ text: paragraphs[index], sourceOffset: offset, contentIdentity: identity });
-          offset += this.sourceCharacterCount(paragraphs[index]) + (index + 1 < paragraphs.length ? 1 : 0);
+    if (this.paginationRefreshInProgress) return;
+    this.paginationRefreshInProgress = true;
+    try {
+      let pages: ReaderPageModel[];
+      if (this.verticalReading()) {
+        const fragments: ReaderPageFragment[] = [];
+        const identity = this.activeReaderContentIdentity;
+        let offset = 0;
+        const paragraphs = this.paragraphs();
+        if (identity !== null) {
+          for (let index = 0; index < paragraphs.length; index += 1) {
+            fragments.push({ text: paragraphs[index], sourceOffset: offset, contentIdentity: identity });
+            offset += this.sourceCharacterCount(paragraphs[index]) + (index + 1 < paragraphs.length ? 1 : 0);
+          }
         }
+        pages = [this.pageModel(fragments, offset, identity)];
+      } else {
+        pages = this.horizontalPages();
       }
-      pages = [this.pageModel(fragments, offset, identity)];
-    } else {
-      pages = this.horizontalPages();
-    }
-    this.horizontalPageData = pages.length > 0 ? pages : [this.pageModel([], 0, null)];
-    if (this.verticalReading()) {
-      this.verticalFragmentLayouts = [];
-      this.lastVerticalScrollOffset = 0;
-    }
-    const nextCount = this.verticalReading() ? 1 : this.horizontalPageData.length;
-    const state = ReaderUiStore.snapshot();
-    if (state.readerPageCount !== nextCount) {
-      ReaderUiStore.dispatch({ type: 'set-reader-page-count', readerPageCount: nextCount });
-    }
-    if (!this.applyLiveReflowAnchor() && !this.applyCanonicalLocationRestore()) {
-      this.publishVisibleHorizontalAnchor();
+      this.horizontalPageData = pages.length > 0 ? pages : [this.pageModel([], 0, null)];
+      if (this.verticalReading()) {
+        this.verticalFragmentLayouts = [];
+        this.lastVerticalScrollOffset = 0;
+      }
+      const nextCount = this.verticalReading() ? 1 : this.horizontalPageData.length;
+      const state = ReaderUiStore.snapshot();
+      if (state.readerPageCount !== nextCount) {
+        ReaderUiStore.dispatch({ type: 'set-reader-page-count', readerPageCount: nextCount });
+      }
+      if (!this.applyLiveReflowAnchor() && !this.applyCanonicalLocationRestore()) {
+        this.publishVisibleHorizontalAnchor();
+      }
+    } finally {
+      this.paginationRefreshInProgress = false;
     }
   }
 
   private onReaderPageIndexChange(): void {
-    const previousIndex = this.lastAnimatedPageIndex;
-    this.lastAnimatedPageIndex = this.readerPageIndex;
     if (this.suppressNextHorizontalAnchor) {
       this.suppressNextHorizontalAnchor = false;
-      this.resetPageTurnVisualState();
       return;
     }
-    this.animatePageTurn(previousIndex);
     this.publishVisibleHorizontalAnchor();
-  }
-
-  private normalizedPageAnimation(): string {
-    switch (this.pageAnimation) {
-      case 'none':
-      case '无':
-      case '无动画':
-        return 'none';
-      case 'cover':
-      case '覆盖':
-        return 'cover';
-      case 'simulation':
-      case '仿真':
-        return 'simulation';
-      case 'scroll':
-      case '滚动':
-        return 'scroll';
-      case 'slide':
-      case 'smooth':
-      case '平滑':
-      case '平移':
-      case '滑动':
-      default:
-        return 'slide';
-    }
-  }
-
-  private resetPageTurnVisualState(): void {
-    this.pageTurnOffset = 0;
-    this.pageTurnOpacity = 1;
-  }
-
-  // The page index is reducer-owned. This method only animates the newly
-  // committed page subtree and never advances content or invents an anchor.
-  // Reduced-motion and the explicit "none" option settle synchronously.
-  private animatePageTurn(previousIndex: number): void {
-    const animation = this.normalizedPageAnimation();
-    if (this.verticalReading() || animation === 'none' || previousIndex === this.readerPageIndex) {
-      this.resetPageTurnVisualState();
-      return;
-    }
-    // Figma has no simulation-page-turn timeline. Preserve the selected
-    // semantic without pretending it is the slide transition; the reducer
-    // still commits the exact page target and MotionAdapter still owns
-    // reduced-motion / interruption cleanup.
-    if (animation === 'simulation') {
-      this.resetPageTurnVisualState();
-      MotionAdapter.apply('reader.page.turn.next-prev', this.reducedMotion, this.getUIContext(), () => {
-        this.resetPageTurnVisualState();
-      });
-      return;
-    }
-    this.pageTurnOffset = animation === 'cover' ? 0 : (this.readerPageIndex > previousIndex ? 28 : -28);
-    this.pageTurnOpacity = animation === 'cover' ? 0.28 : 0.7;
-    MotionAdapter.apply('reader.page.turn.next-prev', this.reducedMotion, this.getUIContext(), () => {
-      this.pageTurnOffset = 0;
-      this.pageTurnOpacity = 1;
-    });
   }
 
   private onCanonicalReaderLocationChange(): void {
@@ -684,9 +646,17 @@ export struct ReadingTextFlow {
   // only after the page model is present; the Effects layer persists that
   // anchor, never the visual `readerPageIndex`.
   private publishVisibleHorizontalAnchor(): void {
-    if (this.verticalReading() || !this.hasReadableContent()) return;
+    if (this.verticalReading() || !this.hasReadableContent()) {
+      this.lastPublishedHorizontalAnchorKey = '';
+      return;
+    }
     const page = this.horizontalPageData[this.currentPageIndex()];
     if (page === undefined || page.fragments.length === 0 || page.contentIdentity === null) return;
+    const identity = page.contentIdentity;
+    const key = identity.bookId + '|' + identity.sourceId + '|' + identity.chapterIndex +
+      '|' + page.chapterOffset + '|' + page.chapterProgress;
+    if (key === this.lastPublishedHorizontalAnchorKey) return;
+    this.lastPublishedHorizontalAnchorKey = key;
     ReaderUiStore.reportReadingAnchor(page.contentIdentity, page.chapterOffset, page.chapterProgress);
   }
 
@@ -906,7 +876,7 @@ export struct ReadingTextFlow {
           // receives the event once selection is enabled.
           .onClick(() => {
             if (this.verticalReading() && !this.controlLayer()) {
-              ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' });
+              requestReaderControlToggle();
             }
           })
           .onAreaChange((_oldArea: Area, newArea: Area) => {
@@ -921,8 +891,11 @@ export struct ReadingTextFlow {
   @Builder EmptyReadingState() {
     // There is no canonical Figma no-book / no-content reader page.  An
     // unavailable Core chapter must therefore stay visually inert instead of
-    // being substituted with a locally-authored explanation panel.
-    Column().width(0).height(0)
+    // being substituted with a locally-authored explanation panel. Preserve
+    // the admitted paper surface without mounting a hidden zero-size node.
+    Blank()
+      .width('100%')
+      .height('100%')
   }
 
   /**
@@ -1005,8 +978,6 @@ export struct ReadingTextFlow {
         }
         .width('100%')
         .height('100%')
-        .translate({ x: this.pageTurnOffset })
-        .opacity(this.pageTurnOpacity)
       }
       InteractionDebugFrame({ label: this.verticalReading() ? 'ReadingTextLayer:V' : 'ReadingTextLayer:H', tone: 'module' })
     }
@@ -1337,11 +1308,11 @@ export struct ReaderTopArea {
               .height(42)
               .justifyContent(FlexAlign.Center)
               .alignItems(VerticalAlign.Center)
-              // Reader-UI's canonical TapZones binding resolves
-              // reader.control.toggle to the reader control-home route. This
-              // is deliberately not the bookshelf long-press/action menu.
+              // Reader-UI owns this as a semantic Reader control overlay.
+              // This is deliberately not the bookshelf long-press/action menu
+              // and it must not invent a route while control-home is blocked.
               .accessibilityText('打开阅读控制栏')
-              .onClick(() => ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' }))
+              .onClick(() => requestReaderControlToggle())
               InteractionDebugBadge({ label: 'more', tone: 'action' })
             }
             .width(34)
@@ -1397,7 +1368,7 @@ export struct TapZones {
       } else if (target === 'next') {
         ReaderUiStore.dispatch({ type: 'reader-page-next' });
       } else {
-        ReaderUiStore.dispatch({ type: 'route-push', id: 'reader' });
+        requestReaderControlToggle();
       }
       return;
     }
@@ -1628,6 +1599,11 @@ export struct ReaderBase {
   // gesture directly; an invisible page-turn hot-zone above it would make a
   // long chapter look like a single, non-scrollable page.
   @StorageProp('reader.paginationMode') paginationMode: string = 'horizontal';
+  // This flag comes only from the generated Reader-UI ViewState contract for
+  // reader.reading-surface. It deliberately renders the frozen
+  // Reader/Responsive/ReadingSurface and does not pull in the independently
+  // quarantined control-home, top-area, footer, or generic state branches.
+  @Prop canonicalReadingSurface: boolean = false;
   @Prop tapZoneContractBindingsDefined: boolean = false;
   @Prop tapZoneContractBindings: ViewStateExplicitBinding[] = [];
 
@@ -1639,7 +1615,19 @@ export struct ReaderBase {
     Stack() {
       ReadingBackgroundLayer()
       ReadingTextFlow()
-      if (this.controlLayer()) {
+      if (this.canonicalReadingSurface) {
+        // The canonical master contains the paper and text frame only. Tap
+        // zones are invisible behavior-owned hit targets; they preserve the
+        // existing Reader-UI pagination events without adding an unbound
+        // visual control layer. Vertical reading receives gestures directly
+        // from ReadingTextFlow's Scroll.
+        if (this.paginationMode !== 'vertical') {
+          TapZones({
+            contractBindingsDefined: this.tapZoneContractBindingsDefined,
+            contractBindings: this.tapZoneContractBindings,
+          })
+        }
+      } else if (this.controlLayer()) {
         ControlDismissZone()
       } else {
         // The Scroll's own click handler still opens the control layer in

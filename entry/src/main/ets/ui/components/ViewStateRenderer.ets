@@ -8,12 +8,12 @@ import {
 } from '../../contract/generated/ViewStateTable';
 import { AppTopBar, BackTopBar, BottomNav,
   DemoButton, DemoList, Card, FilterBar, Overlay } from './SharedComponents';
-import { ContinueReadingCard, BookshelfShelfSection, BookshelfEmptyState, ShelfChipGroup, ShelfSectionHeader, BookCard, BookGrid, BookEntry } from './BookshelfComponents';
+import { ContinueReadingCard, BookshelfShelfSection, BookshelfEmptyState, ShelfSectionHeader, BookCard, BookGrid, BookEntry } from './BookshelfComponents';
 import { BookHero, BookSummaryCard, BookChapterList } from './BookDetailComponents';
 import { ReadingBackgroundLayer, ReadingTextFlow, ReadingInfoLayer, TapZones, ReaderBase, ReaderTopArea } from './ReaderComponents';
-import { ReaderControlSheet, ReaderBottomBar, ReaderDirectoryPanel, ReaderAppearancePanel, ReaderTtsPanel, ReaderSettingsPanel,
+import { ReaderBottomBar, DirectoryPanel, AppearancePanel,
   ReaderFullDirectoryPage, ReaderFullTtsPage, ReaderFullAppearancePage, ReaderFullSettingsPage, ReaderBookCachePage, ReaderDebugInfoPage,
-  ReaderSearchPanel, ReaderReplacePanel, ReaderAutoScrollPanel, NightToast } from './ReaderOverlayComponents';
+  ReplacePanel, ReaderAutoScrollPanel, NightToast } from './ReaderOverlayComponents';
 import { SourceImportPreviewPage, SourceGroupsPage, SourceDetectPage, SourceDebugPage,
   SourceDebugRunningPage, SourceDebugResultPage, SourceDebugContentLogPage, SourceCodeViewPage, SourceLogsPage,
   SourceDeleteConfirmPage, SourceRuleEditPage, SourceBatchPage } from './LibraryComponents';
@@ -32,8 +32,8 @@ import { AppShellStructure, MainTabsStructure, SearchHomePage, SearchResultsPage
   SyncErrorPage, SyncProgressPage, RestoreConfirmPage, RestoreProgressPage, RestoreConflictPage, RestoreResultPage,
   RemoteWebDavBooksPage, RssDetailPage, RssEmptyState, RssErrorState, GlobalStatePage,
   OfflineStatePage, PermissionRequiredPage, AboutVersionPage, AboutFeedbackPage, LocalBookImportPage, ReadingSettingsEntryPage,
-  BookMoreMenuPage, BookGroupManagementPage, GlobalSettingsPage, BackupSettingsPage,
-  RssSubscriptionManagementPage, RssSubscriptionDeleteConfirmPage, GroupManagementPage, BookBatchManagementPage, BookDirectoryPage } from './StructuralPageComponents';
+  GlobalSettingsPage, BackupSettingsPage,
+  RssSubscriptionManagementPage, RssSubscriptionDeleteConfirmPage, BookDirectoryPage } from './StructuralPageComponents';
 import { BookTitleAuthor, SourceStatus, ReadButton, DirectoryPreview, BookIntro, ConfigEntry,
   SearchEntry, SourceTypeSegment, CurrentSourceCard, SourceCategoryChips, DiscoveryContentCard, SourceStatusBar,
   SubscriptionSummaryCard, FeedStatusChips, FeedSourceChips, RssEntryItem, UnreadIndicator,
@@ -779,9 +779,7 @@ export struct ViewStateRenderer {
       // The current Figma book-search master owns its header (including the
       // system-safe back affordance, input and submit action). Rendering the
       // generated legacy AppTopBar here would create a second header above it.
-      if (this.routeId === 'book-search') {
-        Column().width(0).height(0)
-      } else {
+      if (this.routeId !== 'book-search') {
         AppTopBar({ title: this.textOr(component.props.title, '') })
       }
     } else if (component.type === 'BackTopBar') {
@@ -795,25 +793,25 @@ export struct ViewStateRenderer {
       // master) must render through its dedicated admitted component below,
       // never by promoting a generic native loading, empty, error, or offline
       // card. StateHost likewise stays inert for this legacy primitive branch.
-      Column().width(0).height(0)
+      // Intentionally emit no node. Hidden geometry would still participate in
+      // the render tree and could be revived by layout or hit-test changes.
     } else if (component.type === 'ContinueReadingCard') {
-      if (this.bookshelfLoaded && this.bookshelfBooks.length > 0 &&
+      if (this.routeId !== 'bookshelf-list-mode' &&
+        this.bookshelfLoaded && this.bookshelfBooks.length > 0 &&
         this.continueReadingLoaded && this.continueReadingBook !== null) {
         // The Figma node only describes the populated visual. The actual
         // title, cover and resume point come from the Core progress record,
         // never from a fixture carried by the generated ViewState tree.
         ContinueReadingCard()
-      } else {
-        // Figma binds only the populated card. An empty shelf or a book with
-        // no durable progress must not reserve a fake "recent reading" slot.
-        Column().width(0).height(0)
       }
     } else if (component.type === 'BookshelfShelfSection') {
-      BookshelfShelfSection({
-        title: this.textOr(component.props.title, '我的书架'),
-        books: this.extractBooks(component.children),
-        viewMode: this.textOr(component.props.viewMode, 'cover'),
-      })
+      if (this.bookshelfLoaded) {
+        BookshelfShelfSection({
+          title: this.textOr(component.props.title, '我的书架'),
+          books: this.extractBooks(component.children),
+          viewMode: this.textOr(component.props.viewMode, 'cover'),
+        })
+      }
     } else if (component.type === 'BookHero') {
       BookHero()
     } else if (component.type === 'BookSummaryCard') {
@@ -867,6 +865,7 @@ export struct ViewStateRenderer {
         )
       } else {
         ReaderBase({
+          canonicalReadingSurface: this.textOr(component.props.surfaceContract, '') === 'canonical-reading-surface',
           tapZoneContractBindingsDefined: this.readerBaseHasTapZones(component),
           tapZoneContractBindings: this.readerBaseTapZoneBindings(component),
         })
@@ -884,18 +883,14 @@ export struct ViewStateRenderer {
       } else {
         ReaderTopArea()
       }
-    } else if (component.type === 'ReaderControlSheet') {
-      ReaderControlSheet()
     } else if (component.type === 'ReaderBottomBar') {
       ReaderBottomBar()
     } else if (component.type === 'NightToast') {
       NightToast()
     } else if (component.type === 'SourceSwitchFlowPage') {
-      // Withdrawn generated state-matrix children are isolated into a zero-size
-      // column so only the live Figma window remains in the presentation path.
-      if (component.children.length > 0) {
-        Column().width(0).height(0)
-      }
+      // Source Switch owns its complete canonical window. Retired generated
+      // state-matrix children are deliberately not consumed; they are not
+      // retained behind a hidden presentation node.
       SourceSwitchFlowPage()
     } else if (component.type === 'SourceImportPreviewPage') {
       SourceImportPreviewPage()
@@ -924,13 +919,13 @@ export struct ViewStateRenderer {
       })
     } else if (component.type === 'SourceBatchPage') {
       SourceBatchPage()
-    } else if (component.type === 'ReaderDirectoryPanel') {
+    } else if (component.type === 'DirectoryPanel') {
       if (this.routeId === 'bookmarks-manager' &&
         ReaderCapabilityClosureRouteRegistry.isCoreBacked(this.routeId)) {
         // Ignore the canonical fixture row. The native panel renders only the
         // current book's Core bookmark projection and uses its real Core time
         // key for jump/delete confirmation.
-        ReaderDirectoryPanel({ standalone: true })
+        DirectoryPanel()
       } else if (ReaderCapabilityClosureRouteRegistry.isFailClosed(this.routeId)) {
         this.renderCapabilityClosureNode(
           component,
@@ -947,9 +942,9 @@ export struct ViewStateRenderer {
         )
       } else {
         // The normal directory surface stays on the existing native panel.
-        ReaderDirectoryPanel()
+        DirectoryPanel()
       }
-    } else if (component.type === 'ReaderAppearancePanel') {
+    } else if (component.type === 'AppearancePanel') {
       if (component.children.length > 0) {
         this.renderReadOnlyAppearanceState(
           this.textOr(component.props.section, 'appearance'),
@@ -957,12 +952,8 @@ export struct ViewStateRenderer {
         )
       } else {
         // The default surface remains the live native appearance panel.
-        ReaderAppearancePanel()
+        AppearancePanel()
       }
-    } else if (component.type === 'ReaderTtsPanel') {
-      ReaderTtsPanel()
-    } else if (component.type === 'ReaderSettingsPanel') {
-      ReaderSettingsPanel()
     } else if (component.type === 'ReaderFullDirectoryPage') {
       ReaderFullDirectoryPage()
     } else if (component.type === 'ReaderFullTtsPage') {
@@ -990,9 +981,7 @@ export struct ViewStateRenderer {
       }
     } else if (component.type === 'ReaderDebugInfoPage') {
       ReaderDebugInfoPage()
-    } else if (component.type === 'ReaderSearchPanel') {
-      ReaderSearchPanel()
-    } else if (component.type === 'ReaderReplacePanel') {
+    } else if (component.type === 'ReplacePanel') {
       if (ReaderCapabilityClosureRouteRegistry.has(this.routeId)) {
         this.renderCapabilityClosureNode(
           component,
@@ -1009,7 +998,7 @@ export struct ViewStateRenderer {
         )
       } else {
         // The default surface retains the production-owned native rule flow.
-        ReaderReplacePanel()
+        ReplacePanel()
       }
     } else if (component.type === 'ReaderAutoScrollPanel') {
       ReaderAutoScrollPanel()
@@ -1160,14 +1149,6 @@ export struct ViewStateRenderer {
       // generic StatePanel route was a local substitute and is intentionally
       // bypassed in favor of the canonical component.
       BookshelfEmptyState()
-    } else if (component.type === 'BookMoreMenuPage') {
-      BookMoreMenuPage()
-    } else if (component.type === 'BookGroupManagementPage') {
-      BookGroupManagementPage({ title: this.textOr(component.props.title, '分组') })
-    } else if (component.type === 'GroupManagementPage') {
-      GroupManagementPage({ variant: this.textOr(component.props.variant, 'group-flow') })
-    } else if (component.type === 'BookBatchManagementPage') {
-      BookBatchManagementPage()
     } else if (component.type === 'RssSubscriptionDeleteConfirmPage') {
       RssSubscriptionDeleteConfirmPage()
     } else if (component.type === 'BookDirectoryPage') {
@@ -1304,17 +1285,23 @@ export struct ViewStateRenderer {
     } else if (component.type === 'AboutFeedbackPage') {
       AboutFeedbackPage()
     } else if (component.type === 'LocalBookImportPage') {
-      if (component.children.length > 0) {
-        this.renderCapabilityClosureNode(
-          component,
-          component.children,
-          this.capabilityClosureTitle(component.props.title, component.props.label,
-            component.props.name, component.type),
-          this.capabilityClosureDetail(component.props.summary, component.props.state,
-            component.props.variant),
-        )
-      } else {
-        LocalBookImportPage({ title: this.textOr(component.props.title, '本地导入') })
+      // The standalone local-import route was retired in favor of the
+      // revision-bound in-place dialog. This historical component remains a
+      // contract mapping only for the separate, currently blocked
+      // local-format-support capability route.
+      if (this.routeId === 'local-format-support') {
+        if (component.children.length > 0) {
+          this.renderCapabilityClosureNode(
+            component,
+            component.children,
+            this.capabilityClosureTitle(component.props.title, component.props.label,
+              component.props.name, component.type),
+            this.capabilityClosureDetail(component.props.summary, component.props.state,
+              component.props.variant),
+          )
+        } else {
+          LocalBookImportPage({ title: this.textOr(component.props.title, '本地导入') })
+        }
       }
     } else if (component.type === 'ReadingSettingsEntryPage') {
       ReadingSettingsEntryPage({ title: this.textOr(component.props.title, '阅读设置') })
@@ -1460,8 +1447,6 @@ export struct ViewStateRenderer {
       Overlay()
     } else if (component.type === 'Error') {
       this.renderCanonicalError(component, ReaderUIScreenGraphTerminalStateAdapter.projectError(component))
-    } else if (component.type === 'ShelfChipGroup') {
-      ShelfChipGroup()
     } else if (component.type === 'ShelfSectionHeader') {
       ShelfSectionHeader({ title: this.textOr(component.props.title, '我的书架') })
     } else if (component.type === 'BookCard') {
@@ -1575,18 +1560,16 @@ export struct ViewStateRenderer {
       // second visual hierarchy.
       if (this.routeId === 'book-search') {
         SearchHomePage()
-      } else {
-        Column().width(0).height(0)
       }
     } else if (component.type === 'ScopeSelector' || component.type === 'GroupSelector' ||
       component.type === 'SearchHistoryList') {
-      Column().width(0).height(0)
+      // These historical Search fragments are physically not emitted.
     } else {
       // Unknown component types have no current Figma visual authority. Keep
       // them strictly inert instead of drawing a local diagnostic card into a
       // user-facing page; contract diagnostics belong to developer evidence,
       // not to the shipped visual hierarchy.
-      Column().width(0).height(0)
+      // Unknown components are physically not emitted.
     }
   }
 }

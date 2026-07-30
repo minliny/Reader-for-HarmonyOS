@@ -76,22 +76,23 @@ export struct RouteRenderer {
 
   build() {
     Stack() {
-      if (!this.isDisplayedRouteImplementationReady() || this.shellOfDisplayedRoute() === null) {
-        // A visible diagnostic would itself be a locally invented page. Keep
-        // the not-implementation-ready route inert until Reader-UI marks the
-        // family implementation-ready and HarmonyOS consumes the regenerated
-        // artifact. `candidate-backport` is a stop condition, not a renderable
-        // state.
-        Column().width(0).height(0)
-      } else if (this.shellOfDisplayedRoute() === 'MainTabShell') {
+      // A candidate-backport route is a stop condition, not a renderable
+      // placeholder. A3 extracts its old mapping from Reader-UI-generated
+      // RouteTable/ViewStateTable, so `shell` is null and no native shell or
+      // hidden hit node is instantiated. A visible diagnostic would be a
+      // locally invented page and is deliberately absent.
+      // ArkTS @Entry build methods may not declare a local value before their
+      // single container root. Each branch resolves the same generated
+      // mapping; quarantined routes still return null and mount nothing.
+      if (this.isDisplayedRouteImplementationReady() && this.shellOfDisplayedRoute() === 'MainTabShell') {
         MainTabShell()
-      } else if (this.shellOfDisplayedRoute() === 'ReaderShell') {
+      } else if (this.isDisplayedRouteImplementationReady() && this.shellOfDisplayedRoute() === 'ReaderShell') {
         ReaderShell()
-      } else if (this.shellOfDisplayedRoute() === 'LibraryShell') {
+      } else if (this.isDisplayedRouteImplementationReady() && this.shellOfDisplayedRoute() === 'LibraryShell') {
         LibraryShell()
-      } else if (this.shellOfDisplayedRoute() === 'SettingsShell') {
+      } else if (this.isDisplayedRouteImplementationReady() && this.shellOfDisplayedRoute() === 'SettingsShell') {
         SettingsShell()
-      } else {
+      } else if (this.isDisplayedRouteImplementationReady() && this.shellOfDisplayedRoute() === 'FlowShell') {
         FlowShell()
       }
     }

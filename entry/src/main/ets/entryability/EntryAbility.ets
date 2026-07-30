@@ -192,7 +192,7 @@ export default class EntryAbility extends UIAbility {
       this.runTtsSelfCheck(core, manifest);
       this.runReadingChainSelfCheck(core, manifest);
       this.runRssSelfCheck(core, manifest);
-      this.runLocalBookSelfCheck(core, manifest);
+      this.runLocalBookSelfCheck(core, manifest, false);
       this.runSyncWebDavSelfCheck(core, manifest);
       this.runUiAdapterSelfCheck(core, manifest);
       this.runReadingChainUiSelfCheck(manifest);
@@ -205,7 +205,7 @@ export default class EntryAbility extends UIAbility {
       // the latter intentionally enters non-admitted diagnostic routes and is
       // not a valid visible-app smoke test.
       console.info('[EntryAbility] verticalScrollCheck=true — importing only the long local-book scroll probe');
-      this.runLocalBookSelfCheck(core, core.getCapabilityManifest());
+      this.runLocalBookSelfCheck(core, core.getCapabilityManifest(), true);
     } else {
       console.info('[EntryAbility] selfCheck not requested — skipping Host self-checks (regular launch)');
     }
@@ -465,7 +465,8 @@ export default class EntryAbility extends UIAbility {
    * Out of scope (Core/UI job): full XML parsing, content rendering.
    * Best-effort: any failure is logged but does not affect app lifecycle.
    */
-  private runLocalBookSelfCheck(core: CoreRuntime, manifest: HostCapabilityManifest): void {
+  private runLocalBookSelfCheck(core: CoreRuntime, manifest: HostCapabilityManifest,
+    openVerticalProbe: boolean): void {
     Promise.resolve()
       .then(async () => {
         const fileAdapter = core.getFileAdapter();
@@ -559,6 +560,9 @@ export default class EntryAbility extends UIAbility {
         verticalShelfBook['sourceId'] = 'local';
         await core.bookshelfAdd(verticalShelfBook);
         ReaderEffects.loadBookshelf();
+        if (openVerticalProbe) {
+          this.enterVerticalScrollProbeWhenReady(verticalProbeId);
+        }
         console.info(`[LocalBookCore] verticalScrollProbe=true contentLen=${verticalProbeText.length}`);
 
         // Step 2: file.write / file.read round-trip
@@ -666,6 +670,61 @@ export default class EntryAbility extends UIAbility {
       .catch((e: Error) => {
         console.info(`[LocalBook] error=${e}`);
       });
+  }
+
+  /**
+   * The opt-in VM layout probe must exercise the same Core-backed shelf-open
+   * transaction as a user tap. It therefore waits for `bookshelf.list` to
+   * publish the exact imported identity before entering Reader, then selects
+   * the existing five-option `scroll` setting after the canonical location is
+   * ready. Normal launches and the broader selfCheck path never call this.
+   */
+  private enterVerticalScrollProbeWhenReady(bookId: string): void {
+    let elapsed = 0;
+    let enteredReader = false;
+    const intervalMs = 150;
+    const timeoutMs = 15000;
+    const poll = setInterval((): void => {
+      elapsed += intervalMs;
+      const state = ReaderUiStore.snapshot();
+      if (!enteredReader) {
+        for (let index = 0; index < state.bookshelfBooks.length; index += 1) {
+          const book = state.bookshelfBooks[index];
+          if (book.sourceId === 'local' && book.bookId === bookId) {
+            enteredReader = true;
+            ReaderUiStore.dispatchBookshelfActionToReader(bookId, 'local');
+            console.info('[verticalScrollCheck] enteredReader=true bookId=' + bookId);
+            break;
+          }
+        }
+      } else if (state.currentBook !== null && state.currentBook.bookId === bookId &&
+        state.chapterContent.length > 0) {
+        if (state.paginationMode !== 'vertical') {
+          ReaderUiStore.dispatch({
+            type: 'set-reader-setting-option',
+            optionKey: 'pageAnimation',
+            optionValue: 'scroll',
+          });
+        }
+        const updated = ReaderUiStore.snapshot();
+        if (updated.paginationMode === 'vertical' &&
+          updated.readerSettingOptions.pageAnimation === 'scroll') {
+          clearInterval(poll);
+          console.info('[verticalScrollCheck] result=ready paragraphs=' +
+            updated.chapterContent.length + ' paginationMode=' + updated.paginationMode +
+            ' pageAnimation=' + updated.readerSettingOptions.pageAnimation);
+          return;
+        }
+      }
+      if (elapsed >= timeoutMs) {
+        clearInterval(poll);
+        const terminal = ReaderUiStore.snapshot();
+        console.error('[verticalScrollCheck] failed timeout route=' + terminal.routeId +
+          ' shelf=' + terminal.bookshelfBooks.length +
+          ' paragraphs=' + terminal.chapterContent.length +
+          ' paginationMode=' + terminal.paginationMode);
+      }
+    }, intervalMs);
   }
 
   /**

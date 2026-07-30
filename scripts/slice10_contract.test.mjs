@@ -65,8 +65,11 @@ test('Slice 10 review input stays fail-closed while bookmark manager uses live C
   assert.match(routes, /coreRouteDefinition\('bookmarks-manager'/);
   assert.ok(routes.includes("Slice10CapabilityPolicy.isProduction('reading.bookmarks')"));
   assert.ok(renderer.includes("this.routeId === 'bookmarks-manager'"));
-  assert.ok(renderer.includes('ReaderDirectoryPanel({ standalone: true })'));
-  assert.ok(effects.includes("event.id === 'toc-bookmarks' || event.id === 'bookmarks-manager'"));
+  assert.ok(renderer.includes('DirectoryPanel()'),
+    'bookmarks-manager renders the retained shared DirectoryPanel primitive (reading-page shell retired)');
+  assert.ok(effects.includes("event.id === 'bookmarks-manager'"));
+  assert.equal(effects.includes("event.id === 'toc-bookmarks'"), false,
+    'the retired toc-bookmarks route must not be required by a live contract test');
 });
 
 test('Slice 10 preserves existing production search, rules, switch and unique session', async () => {
@@ -186,7 +189,7 @@ test('Slice 10 cache and undo commands have live visible UI projections', async 
   const adapter = await source('entry/src/main/ets/ui/router/ReaderUIScreenGraphButtonAdapter.ets');
   const routes = await source('entry/src/main/ets/ui/router/ReaderCapabilityClosureRouteRegistry.ets');
   const renderer = await source('entry/src/main/ets/ui/components/ViewStateRenderer.ets');
-  const overlays = await source('entry/src/main/ets/ui/components/ReaderOverlayComponents.ets');
+  const viewState = await source('entry/src/main/ets/ui/components/ViewStateRenderer.ets');
   const replacePilot = await source('entry/src/main/ets/ui/store/ReaderReplaceRulePilotExecutor.ets');
 
   for (const field of [
@@ -216,13 +219,11 @@ test('Slice 10 cache and undo commands have live visible UI projections', async 
   assert.match(routes, /plannedRouteDefinition\('download-task-detail'/);
   assert.doesNotMatch(routes, /coreRouteDefinition\('download-task-detail'/);
 
-  assert.ok(overlays.includes("action: 'prefetch-current'"));
-  assert.ok(overlays.includes("action: 'prefetch-next'"));
-  assert.ok(overlays.includes("action: 'clear-book'"));
-  assert.ok(overlays.includes('Core 状态 / 预取 / 按书清理'));
-  assert.ok(overlays.includes('undoLastPersist'));
-  assert.ok(overlays.includes('撤销上次新增'));
-  assert.equal(overlays.includes('Core 阅读缓存 command 未接入'), false);
+  assert.ok(viewState.includes('this.lastUndoToken !== null'));
+  assert.ok(viewState.includes('Core 撤销令牌已就绪'));
+  assert.ok(viewState.includes("this.coreSlice10Method === 'replace.undo'"));
+  assert.ok(viewState.includes('Core 正在撤销…'));
+  assert.ok(viewState.includes('Core 撤销已完成'));
 
   assert.ok(replacePilot.includes("executeCoreMethod('replace.persist'"));
   assert.ok(replacePilot.includes("type: 'core-slice10-undo-token-captured'"));

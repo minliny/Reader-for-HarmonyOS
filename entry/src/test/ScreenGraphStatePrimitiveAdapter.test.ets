@@ -30,9 +30,9 @@ function text(value: Object | string | number | boolean | null | undefined): str
 
 export default function ScreenGraphStatePrimitiveAdapterTests(): void {
   describe('ScreenGraphStatePrimitiveAdapter', () => {
-    it('projectsAllEighteenCanonicalStateLeavesWithoutActions', 0, () => {
+    it('projectsAllSixteenCanonicalStateLeavesWithoutActions', 0, () => {
       const types: string[] = ['Loading', 'ErrorState', 'Offline'];
-      const counts: number[] = [9, 5, 4];
+      const counts: number[] = [8, 5, 3];
       let total: number = 0;
       for (let typeIndex: number = 0; typeIndex < types.length; typeIndex += 1) {
         const components: ViewStateComponent[] = canonicalComponents(types[typeIndex]);
@@ -49,7 +49,7 @@ export default function ScreenGraphStatePrimitiveAdapterTests(): void {
           expect(projection!.retryEnabled).assertFalse();
         }
       }
-      expect(total).assertEqual(18);
+      expect(total).assertEqual(16);
     });
 
     it('rejectsChildrenBindingsAndActionTriggers', 0, () => {

@@ -44,6 +44,7 @@ function readJson(name) {
 }
 const TOKENS = readJson('token.fixtures.json');
 const ROUTE_FIXTURES = readJson('route.fixtures.json');
+const ROUTE_RECONSTRUCTION_QUARANTINE = readJson('route-reconstruction-quarantine.fixtures.json');
 const MOTIONS = readJson('motion.fixtures.json');
 const POLICIES = readJson('motion-policy.fixtures.json');
 const VIEW_STATE_FIXTURES = readJson('view-state.fixtures.json');
@@ -58,14 +59,68 @@ if (HOST_REQUEST_TYPES.length !== 58 || new Set(HOST_REQUEST_TYPES).size !== 58)
 }
 
 // Route membership comes from the canonical schema, not the lagging route
-// fixture. Reader UI 3.0 currently publishes 260 RouteIds while the
-// historical route fixture still carries the original 200 shell records.
+// fixture. The historical route fixture still carries fewer shell records
+// than the schema; frontend-demo-optimized/route-contract.js supplies the
+// canonical title/shell metadata for the expanded set.
 // frontend-demo-optimized/route-contract.js supplies the canonical title/shell
 // metadata for the expanded set. Any future schema route without metadata is
 // a generation error: the host must never silently send it to a catch-all
 // shell or render an empty page.
 const ROUTE_SCHEMA = JSON.parse(fs.readFileSync(path.resolve(CONTRACTS_DIR, '..', 'route.schema.json'), 'utf8'));
 const CANONICAL_ROUTE_IDS = ROUTE_SCHEMA.properties.id.enum;
+const READER_UI_ROOT = path.resolve(CONTRACTS_DIR, '..', '..');
+const VISUAL_ADMISSION_REGISTRY = JSON.parse(fs.readFileSync(
+  path.join(READER_UI_ROOT, 'docs', 'design', 'FIGMA_VISUAL_ADMISSION_REGISTRY.json'),
+  'utf8',
+));
+const HARMONY_STATUS_BY_RECORD_ID = new Map(
+  VISUAL_ADMISSION_REGISTRY.records.map((record) => [record.id, record.harmony?.status]),
+);
+
+function physicallyRetiredQuarantineRouteIds(document) {
+  if (document === null || Array.isArray(document) || typeof document !== 'object' ||
+    (document.status !== 'active' && document.status !== 'released') || !Array.isArray(document.entries)) {
+    throw new Error('Reader UI route reconstruction quarantine is invalid');
+  }
+  if (document.status === 'released' && document.entries.some((entry) => entry?.status === 'active')) {
+    throw new Error('a globally released Reader UI route reconstruction quarantine cannot retain an active entry');
+  }
+  const ids = new Set();
+  for (const [index, entry] of document.entries.entries()) {
+    if (entry === null || Array.isArray(entry) || typeof entry !== 'object' ||
+      typeof entry.recordId !== 'string' || !Array.isArray(entry.routeIds) || entry.blocksPromotion !== true ||
+      (entry.status !== 'active' && entry.status !== 'released')) {
+      throw new Error(`Reader UI route reconstruction quarantine entry ${index + 1} is invalid`);
+    }
+    if (!HARMONY_STATUS_BY_RECORD_ID.has(entry.recordId)) {
+      throw new Error(`Reader UI route reconstruction quarantine references missing admission record: ${entry.recordId}`);
+    }
+    // An active entry is provenance for a route that has been physically
+    // removed from the Reader-UI schema. A released entry is a current,
+    // Figma-bound canonical route and must remain generatable even while its
+    // visual admission is candidate-backport. Admission—not route removal—is
+    // what keeps that canonical surface fail-closed.
+    if (entry.status !== 'active') continue;
+    for (const routeId of entry.routeIds) {
+      if (typeof routeId !== 'string' || routeId.length === 0) {
+        throw new Error(`Reader UI route reconstruction quarantine references invalid RouteId: ${String(routeId)}`);
+      }
+      if (CANONICAL_ROUTE_IDS.includes(routeId)) {
+        throw new Error(`active Reader UI route reconstruction quarantine must be physically absent from route.schema.json: ${routeId}`);
+      }
+      if (ids.has(routeId)) {
+        throw new Error(`Reader UI route reconstruction quarantine duplicates RouteId: ${routeId}`);
+      }
+      ids.add(routeId);
+    }
+  }
+  return ids;
+}
+
+// This set is source provenance for physically removed historical routes. It
+// must never be emitted as a compatibility RouteId, RouteTable, or ViewState
+// entry. Do not recreate it in a renderer.
+const QUARANTINED_ROUTE_IDS = physicallyRetiredQuarantineRouteIds(ROUTE_RECONSTRUCTION_QUARANTINE);
 
 function readCanonicalDemoRoutes() {
   const readerUiRoot = path.resolve(CONTRACTS_DIR, '..', '..');
@@ -106,13 +161,16 @@ const ROUTES = CANONICAL_ROUTE_IDS.map((id) => {
   const metadata = ROUTE_METADATA_OVERRIDES[id] || DEMO_ROUTES[id];
   return { ...fixture, id, title: metadata.title, shell: metadata.shell };
 });
+const ACTIVE_ROUTES = ROUTES.filter((route) => !QUARANTINED_ROUTE_IDS.has(route.id));
 
-const CONTRACT_25_ROUTE_IDS = CANONICAL_ROUTE_IDS.filter((id) => !ROUTE_FIXTURE_BY_ID.has(id));
+const CONTRACT_25_ROUTE_IDS = ACTIVE_ROUTES
+  .filter((route) => !ROUTE_FIXTURE_BY_ID.has(route.id))
+  .map((route) => route.id);
 if (CONTRACT_25_ROUTE_IDS.length !== 0 && CONTRACT_25_ROUTE_IDS.length !== 35) {
   throw new Error(`Expected the legacy 35 Reader UI 2.5 route additions or a fully expanded fixture, found ${CONTRACT_25_ROUTE_IDS.length}`);
 }
 const CONTRACT_25_VIEW_STATES = CONTRACT_25_ROUTE_IDS.map((id) => {
-  const route = ROUTES.find((candidate) => candidate.id === id);
+  const route = ACTIVE_ROUTES.find((candidate) => candidate.id === id);
   return {
     routeId: id,
     pageState: 'default',
@@ -122,7 +180,8 @@ const CONTRACT_25_VIEW_STATES = CONTRACT_25_ROUTE_IDS.map((id) => {
     ],
   };
 });
-const VIEW_STATES = [...VIEW_STATE_FIXTURES, ...CONTRACT_25_VIEW_STATES];
+const VIEW_STATES = [...VIEW_STATE_FIXTURES, ...CONTRACT_25_VIEW_STATES]
+  .filter((entry) => !QUARANTINED_ROUTE_IDS.has(entry.routeId));
 
 function ensureDir(d) { fs.mkdirSync(d, { recursive: true }); }
 ensureDir(OUT_ETS);
@@ -299,17 +358,24 @@ function genTokenRegistry() {
 
 // ── RouteTable.ets ────────────────────────────────────────────────────────
 function genRouteTable() {
-  const ids = ROUTES.map((r) => r.id);
-  const idUnion = ids.map((i) => `'${i}'`).join(' | ');
-  const shells = [...new Set(ROUTES.map((r) => r.shell))];
+  // The published type is derived solely from canonical Reader-UI schema IDs.
+  // Historical quarantine IDs have already been physically removed and cannot
+  // survive as compile-time compatibility aliases.
+  const publishedIds = ROUTES.map((r) => r.id);
+  const ids = ACTIVE_ROUTES.map((r) => r.id);
+  const idUnion = publishedIds.map((i) => `'${i}'`).join(' | ');
+  const shells = [...new Set(ACTIVE_ROUTES.map((r) => r.shell))];
   const shellUnion = shells.map((s) => `'${s}'`).join(' | ');
-  const shellCases = ROUTES.map((r) => `      case '${r.id}': return '${r.shell}';`).join('\n');
-  const titleCases = ROUTES.map((r) => `      case '${r.id}': return '${esc(r.title)}';`).join('\n');
-  const mainTabCases = ROUTES.filter((r) => r.mainTab).map((r) => `      case '${r.id}': return '${r.mainTab}';`).join('\n');
+  const shellCases = ACTIVE_ROUTES.map((r) => `      case '${r.id}': return '${r.shell}';`).join('\n');
+  const titleCases = ACTIVE_ROUTES.map((r) => `      case '${r.id}': return '${esc(r.title)}';`).join('\n');
+  const mainTabCases = ACTIVE_ROUTES.filter((r) => r.mainTab).map((r) => `      case '${r.id}': return '${r.mainTab}';`).join('\n');
   // aliasFor: a route may declare aliasFor to reuse another route's ViewState
   // (e.g. discover-home aliases discover). aliasOf resolves one hop; the
   // ViewStateTable.componentsFor loop follows the chain (depth-capped).
-  const aliasCases = ROUTES.filter((r) => r.aliasFor)
+  // An active route must never resolve through a quarantined historical
+  // target. Returning null forces the generated ViewStateTable to emit no
+  // body, instead of reactivating a removed Reader overlay by alias.
+  const aliasCases = ACTIVE_ROUTES.filter((r) => r.aliasFor && !QUARANTINED_ROUTE_IDS.has(r.aliasFor))
     .map((r) => `      case '${r.id}': return '${r.aliasFor}';`).join('\n');
   const aliasMethod = aliasCases
     ? `\n  static aliasOf(id: string): string | null {\n    switch (id) {\n${aliasCases}\n      default: return null;\n    }\n  }`
@@ -612,7 +678,7 @@ writeEts('ViewStateTable.ets', genViewStateTable());
 writeEts('MotionSpecTable.ets', genMotionSpecTable());
 writeEts('MotionPolicyTable.ets', genMotionPolicyTable());
 writeEts('DemoAliasTokens.ets', genDemoAliasTokens());
-for (const name of ['Route.ets', 'ViewState.ets', 'UiEvent.ets', 'UiState.ets', 'ScreenGraph.ets', 'Appearance.ets', 'VisualAdmission.ets']) {
+for (const name of ['Route.ets', 'RouteReconstructionQuarantine.ets', 'ViewState.ets', 'UiEvent.ets', 'UiState.ets', 'ScreenGraph.ets', 'Appearance.ets', 'VisualAdmission.ets']) {
   syncReaderUiGenerated(name);
 }
 
@@ -622,4 +688,4 @@ fs.writeFileSync(path.join(OUT_RES_DARK, 'color.json'), colorJson.dark);
 console.log('  wrote entry/src/main/resources/dark/element/color.json');
 
 console.log(`\nDone. Contracts: ${CONTRACTS_DIR}`);
-console.log(`Tokens: ${TOKENS.length} | Routes: ${ROUTES.length} | ViewStates: ${VIEW_STATES.length} | Motions: ${MOTIONS.length} | Policies: ${POLICIES.filter((p) => p && p.id).length} | HostRequests: ${HOST_REQUEST_TYPES.length}`);
+console.log(`Tokens: ${TOKENS.length} | Routes: ${ACTIVE_ROUTES.length}/${ROUTES.length} active (quarantined=${QUARANTINED_ROUTE_IDS.size}) | ViewStates: ${VIEW_STATES.length} | Motions: ${MOTIONS.length} | Policies: ${POLICIES.filter((p) => p && p.id).length} | HostRequests: ${HOST_REQUEST_TYPES.length}`);

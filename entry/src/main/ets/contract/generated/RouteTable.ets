@@ -2,7 +2,7 @@
 // Source: Reader UI/contracts/fixtures/*.json (read-only contract).
 // Re-run `npm run gen:contracts` after any contract change.
 
-export type RouteId = 'bookshelf' | 'bookshelf-empty' | 'bookshelf-cover-mode' | 'bookshelf-list-mode' | 'bookshelf-book-more-menu' | 'bookshelf-group-management' | 'book-batch-management' | 'sort-filter' | 'group-management' | 'local-import' | 'book-search' | 'search-home' | 'search-results' | 'search-loading' | 'search-empty' | 'search-error' | 'book-detail' | 'book-detail-toc-preview' | 'book-directory' | 'immersive-reading' | 'reader' | 'reader_content' | 'toc-bookmarks' | 'reader-appearance' | 'reader-appearance-overlay-v2' | 'tts' | 'reader-tts-overlay-v2' | 'reader-settings' | 'reader-settings-overlay-v2' | 'reader-full-font' | 'reader-full-theme' | 'reader-full-theme-edit' | 'reader-full-layout' | 'reader-full-page-turn' | 'reader-book-cache' | 'reader-debug-info' | 'auto-page' | 'reader-auto-scroll-overlay-v2' | 'content-search' | 'reader-search-overlay-v2' | 'content-replacement' | 'reader-replace-overlay-v2' | 'source-switch' | 'source-switch-results' | 'reader-night-state-v2' | 'discover' | 'discover-home' | 'discover-control' | 'discover-sort' | 'discover-entry-category' | 'discover-entry-source' | 'discover-filter-source-type' | 'discover-filter-category' | 'discover-no-results' | 'discover-loading' | 'discover-refreshing' | 'discover-infinite-loading' | 'discover-page-two' | 'discover-cache-empty' | 'discover-cache-stale' | 'discover-cache-fresh' | 'discover-login-return' | 'discover-switching-source' | 'discover-switched-source' | 'discover-entry-error' | 'discover-empty' | 'discover-error' | 'discover-source-login' | 'discover-rule-test' | 'discover-source-bulk' | 'rss' | 'rss-all' | 'rss-starred' | 'rss-source-feed' | 'rss-source-category-novel' | 'rss-source-category-tech' | 'rss-source-category-booklist' | 'rss-refreshing' | 'rss-search' | 'rss-detail' | 'rss-original' | 'rss-original-browser' | 'rss-subscription-management' | 'rss-source-add' | 'rss-source-edit' | 'rss-source-delete-confirm' | 'rss-rule-subscription-create' | 'rss-rule-subscription-edit' | 'rss-favorite-add' | 'rss-favorite-remove' | 'rss-empty' | 'rss-error' | 'settings' | 'global-settings' | 'settings-general' | 'settings-developer' | 'bookshelf-search-settings' | 'about-feedback' | 'sync-backup' | 'webdav-config' | 'restore-scopes' | 'restore-preview' | 'restore-running' | 'restore-result' | 'source-management' | 'source-import-options' | 'source-import-preview' | 'source-detail' | 'source-edit' | 'source-add' | 'source-detect' | 'source-rule-edit' | 'source-debug' | 'source-debug-running' | 'source-debug-result' | 'source-logs' | 'source-code-view' | 'source-delete-confirm' | 'source-test-result' | 'source-settings-entry' | 'sync-settings-entry' | 'reading-settings-entry' | 'app-shell' | 'main-tabs' | 'global-loading' | 'global-empty' | 'global-error' | 'offline-state' | 'permission-required' | 'progress-sync-status' | 'sync-error' | 'backup-settings' | 'progress-sync' | 'remote-webdav-books' | 'about' | 'about-version' | 'state-error' | 'state-offline' | 'control-layer-base-v2' | 'reader-directory-overlay-v2' | 'discover-entry-ranking' | 'discover-entry-bestseller' | 'discover-entry-finished' | 'discover-entry-latest' | 'discover-entry-new' | 'discover-entry-booklist' | 'discover-filter-keyword' | 'discover-filter-male' | 'discover-filter-female' | 'discover-sort-popularity' | 'discover-sort-update' | 'discover-sort-collection' | 'discover-sort-finished' | 'discover-sort-words' | 'discover-cache-confirm' | 'discover-cache-toast' | 'rss-source-category-releases' | 'rss-source-category-issues' | 'rss-source-category-discussions' | 'rss-source-actions' | 'rss-source-debug' | 'rss-source-vars' | 'rss-source-login' | 'rss-source-login-web' | 'rss-source-login-cookie' | 'rss-source-login-clear' | 'rss-source-groups' | 'rss-source-group-edit' | 'rss-source-batch' | 'rss-source-export' | 'rss-source-export-detail' | 'rss-source-export-result' | 'rss-source-pin' | 'rss-source-disable' | 'rss-source-batch-disable' | 'rss-source-import' | 'rss-source-import-detail' | 'rss-source-import-result' | 'rss-read-record' | 'rss-record-clear' | 'rss-rule-subscription' | 'rss-rule-subscription-detail' | 'rss-rule-subscription-test' | 'rss-rule-subscription-apply' | 'rss-favorite-groups' | 'rss-favorite-group-edit' | 'rss-favorite-clear' | 'reader-full-directory' | 'reader-full-tts' | 'reader-full-appearance' | 'reader-full-settings' | 'restore-confirm' | 'restore-progress' | 'restore-conflict' | 'source-batch' | 'source-groups' | 'source-debug-search-result' | 'source-debug-detail-result' | 'source-debug-catalog-result' | 'source-debug-content-log' | 'source-edit-debug' | 'reader-font-import-confirm' | 'reader-font-delete-confirm' | 'reader-font-fallback' | 'reader-theme-new' | 'reader-theme-delete-confirm' | 'reader-typography-reset-confirm' | 'reader-replace-delete-confirm' | 'reader-replace-apply-result' | 'reader-replace-import-export' | 'reader-replace-preview' | 'reader-replace-page' | 'source-switch-empty' | 'source-switch-error' | 'source-switch-timeout' | 'source-switch-loading' | 'source-switch-rollback' | 'source-switch-preview' | 'reader-toc-loading' | 'reader-toc-offline' | 'reader-toc-error' | 'reader-content-loading' | 'reader-content-offline' | 'reader-content-error' | 'reader-page-boundary-first' | 'reader-page-boundary-last' | 'reader-progress-restore' | 'reader-background-restore' | 'import-permission-denied' | 'import-format-unsupported' | 'import-empty-file' | 'import-parsing' | 'import-duplicate' | 'import-conflict-resolve' | 'import-partial-success' | 'import-result-detail' | 'onboarding-welcome' | 'onboarding-capability-setup' | 'permission-recovery' | 'local-format-support' | 'pdf-reader' | 'manga-reader' | 'http-tts-management' | 'http-tts-editor' | 'http-tts-test' | 'content-edit' | 'book-cover-change' | 'book-cover-search' | 'chapter-reviews' | 'bookmarks-manager' | 'download-queue' | 'download-task-detail' | 'storage-management' | 'webview-login' | 'webview-captcha' | 'webview-challenge' | 'webview-cookie-return' | 'settings-tts' | 'settings-storage' | 'settings-accessibility';
+export type RouteId = 'bookshelf' | 'bookshelf-empty' | 'bookshelf-cover-mode' | 'bookshelf-list-mode' | 'bookshelf-book-more-menu' | 'bookshelf-group-management' | 'book-batch-management' | 'sort-filter' | 'group-management' | 'local-import' | 'book-search' | 'search-home' | 'search-results' | 'search-loading' | 'search-empty' | 'search-error' | 'book-detail' | 'book-detail-toc-preview' | 'book-directory' | 'immersive-reading' | 'reader' | 'reader_content' | 'reader-full-font' | 'reader-full-theme' | 'reader-full-theme-edit' | 'reader-full-layout' | 'reader-full-page-turn' | 'reader-book-cache' | 'reader-debug-info' | 'auto-page' | 'content-replacement' | 'source-switch' | 'source-switch-results' | 'reader-night-state-v2' | 'discover' | 'discover-home' | 'discover-control' | 'discover-sort' | 'discover-entry-category' | 'discover-entry-source' | 'discover-filter-source-type' | 'discover-filter-category' | 'discover-no-results' | 'discover-loading' | 'discover-refreshing' | 'discover-infinite-loading' | 'discover-page-two' | 'discover-cache-empty' | 'discover-cache-stale' | 'discover-cache-fresh' | 'discover-login-return' | 'discover-switching-source' | 'discover-switched-source' | 'discover-entry-error' | 'discover-empty' | 'discover-error' | 'discover-source-login' | 'discover-rule-test' | 'discover-source-bulk' | 'rss' | 'rss-all' | 'rss-starred' | 'rss-source-feed' | 'rss-source-category-novel' | 'rss-source-category-tech' | 'rss-source-category-booklist' | 'rss-refreshing' | 'rss-search' | 'rss-detail' | 'rss-original' | 'rss-original-browser' | 'rss-subscription-management' | 'rss-source-add' | 'rss-source-edit' | 'rss-source-delete-confirm' | 'rss-rule-subscription-create' | 'rss-rule-subscription-edit' | 'rss-favorite-add' | 'rss-favorite-remove' | 'rss-empty' | 'rss-error' | 'settings' | 'global-settings' | 'settings-general' | 'settings-developer' | 'bookshelf-search-settings' | 'about-feedback' | 'sync-backup' | 'webdav-config' | 'restore-scopes' | 'restore-preview' | 'restore-running' | 'restore-result' | 'source-management' | 'source-import-options' | 'source-import-preview' | 'source-detail' | 'source-edit' | 'source-add' | 'source-detect' | 'source-rule-edit' | 'source-debug' | 'source-debug-running' | 'source-debug-result' | 'source-logs' | 'source-code-view' | 'source-delete-confirm' | 'source-test-result' | 'source-settings-entry' | 'sync-settings-entry' | 'reading-settings-entry' | 'app-shell' | 'main-tabs' | 'global-loading' | 'global-empty' | 'global-error' | 'offline-state' | 'permission-required' | 'progress-sync-status' | 'sync-error' | 'backup-settings' | 'progress-sync' | 'remote-webdav-books' | 'about' | 'about-version' | 'state-error' | 'state-offline' | 'discover-entry-ranking' | 'discover-entry-bestseller' | 'discover-entry-finished' | 'discover-entry-latest' | 'discover-entry-new' | 'discover-entry-booklist' | 'discover-filter-keyword' | 'discover-filter-male' | 'discover-filter-female' | 'discover-sort-popularity' | 'discover-sort-update' | 'discover-sort-collection' | 'discover-sort-finished' | 'discover-sort-words' | 'discover-cache-confirm' | 'discover-cache-toast' | 'rss-source-category-releases' | 'rss-source-category-issues' | 'rss-source-category-discussions' | 'rss-source-actions' | 'rss-source-debug' | 'rss-source-vars' | 'rss-source-login' | 'rss-source-login-web' | 'rss-source-login-cookie' | 'rss-source-login-clear' | 'rss-source-groups' | 'rss-source-group-edit' | 'rss-source-batch' | 'rss-source-export' | 'rss-source-export-detail' | 'rss-source-export-result' | 'rss-source-pin' | 'rss-source-disable' | 'rss-source-batch-disable' | 'rss-source-import' | 'rss-source-import-detail' | 'rss-source-import-result' | 'rss-read-record' | 'rss-record-clear' | 'rss-rule-subscription' | 'rss-rule-subscription-detail' | 'rss-rule-subscription-test' | 'rss-rule-subscription-apply' | 'rss-favorite-groups' | 'rss-favorite-group-edit' | 'rss-favorite-clear' | 'reader-full-directory' | 'reader-full-tts' | 'reader-full-appearance' | 'reader-full-settings' | 'restore-confirm' | 'restore-progress' | 'restore-conflict' | 'source-batch' | 'source-groups' | 'source-debug-search-result' | 'source-debug-detail-result' | 'source-debug-catalog-result' | 'source-debug-content-log' | 'source-edit-debug' | 'reader-font-import-confirm' | 'reader-font-delete-confirm' | 'reader-font-fallback' | 'reader-theme-new' | 'reader-theme-delete-confirm' | 'reader-typography-reset-confirm' | 'reader-replace-delete-confirm' | 'reader-replace-apply-result' | 'reader-replace-import-export' | 'reader-replace-preview' | 'reader-replace-page' | 'source-switch-empty' | 'source-switch-error' | 'source-switch-timeout' | 'source-switch-loading' | 'source-switch-rollback' | 'source-switch-preview' | 'reader-toc-loading' | 'reader-toc-offline' | 'reader-toc-error' | 'reader-content-loading' | 'reader-content-offline' | 'reader-content-error' | 'reader-page-boundary-first' | 'reader-page-boundary-last' | 'reader-progress-restore' | 'reader-background-restore' | 'import-permission-denied' | 'import-format-unsupported' | 'import-empty-file' | 'import-parsing' | 'import-duplicate' | 'import-conflict-resolve' | 'import-partial-success' | 'import-result-detail' | 'onboarding-welcome' | 'onboarding-capability-setup' | 'permission-recovery' | 'local-format-support' | 'pdf-reader' | 'manga-reader' | 'http-tts-management' | 'http-tts-editor' | 'http-tts-test' | 'content-edit' | 'book-cover-change' | 'book-cover-search' | 'chapter-reviews' | 'bookmarks-manager' | 'download-queue' | 'download-task-detail' | 'storage-management' | 'webview-login' | 'webview-captcha' | 'webview-challenge' | 'webview-cookie-return' | 'settings-tts' | 'settings-storage' | 'settings-accessibility';
 export type ShellId = 'MainTabShell' | 'LibraryShell' | 'ReaderShell' | 'FlowShell' | 'SettingsShell';
 
 export class RouteTable {
@@ -29,13 +29,6 @@ export class RouteTable {
     'immersive-reading',
     'reader',
     'reader_content',
-    'toc-bookmarks',
-    'reader-appearance',
-    'reader-appearance-overlay-v2',
-    'tts',
-    'reader-tts-overlay-v2',
-    'reader-settings',
-    'reader-settings-overlay-v2',
     'reader-full-font',
     'reader-full-theme',
     'reader-full-theme-edit',
@@ -44,11 +37,7 @@ export class RouteTable {
     'reader-book-cache',
     'reader-debug-info',
     'auto-page',
-    'reader-auto-scroll-overlay-v2',
-    'content-search',
-    'reader-search-overlay-v2',
     'content-replacement',
-    'reader-replace-overlay-v2',
     'source-switch',
     'source-switch-results',
     'reader-night-state-v2',
@@ -145,8 +134,6 @@ export class RouteTable {
     'about-version',
     'state-error',
     'state-offline',
-    'control-layer-base-v2',
-    'reader-directory-overlay-v2',
     'discover-entry-ranking',
     'discover-entry-bestseller',
     'discover-entry-finished',
@@ -297,13 +284,6 @@ export class RouteTable {
       case 'immersive-reading': return 'ReaderShell';
       case 'reader': return 'ReaderShell';
       case 'reader_content': return 'ReaderShell';
-      case 'toc-bookmarks': return 'ReaderShell';
-      case 'reader-appearance': return 'ReaderShell';
-      case 'reader-appearance-overlay-v2': return 'ReaderShell';
-      case 'tts': return 'ReaderShell';
-      case 'reader-tts-overlay-v2': return 'ReaderShell';
-      case 'reader-settings': return 'ReaderShell';
-      case 'reader-settings-overlay-v2': return 'ReaderShell';
       case 'reader-full-font': return 'ReaderShell';
       case 'reader-full-theme': return 'ReaderShell';
       case 'reader-full-theme-edit': return 'ReaderShell';
@@ -312,11 +292,7 @@ export class RouteTable {
       case 'reader-book-cache': return 'ReaderShell';
       case 'reader-debug-info': return 'ReaderShell';
       case 'auto-page': return 'ReaderShell';
-      case 'reader-auto-scroll-overlay-v2': return 'ReaderShell';
-      case 'content-search': return 'ReaderShell';
-      case 'reader-search-overlay-v2': return 'ReaderShell';
       case 'content-replacement': return 'ReaderShell';
-      case 'reader-replace-overlay-v2': return 'ReaderShell';
       case 'source-switch': return 'FlowShell';
       case 'source-switch-results': return 'FlowShell';
       case 'reader-night-state-v2': return 'ReaderShell';
@@ -413,8 +389,6 @@ export class RouteTable {
       case 'about-version': return 'SettingsShell';
       case 'state-error': return 'SettingsShell';
       case 'state-offline': return 'SettingsShell';
-      case 'control-layer-base-v2': return 'ReaderShell';
-      case 'reader-directory-overlay-v2': return 'ReaderShell';
       case 'discover-entry-ranking': return 'MainTabShell';
       case 'discover-entry-bestseller': return 'MainTabShell';
       case 'discover-entry-finished': return 'MainTabShell';
@@ -563,13 +537,6 @@ export class RouteTable {
       case 'immersive-reading': return '沉浸阅读（Immersive Reading）';
       case 'reader': return '阅读控制层（Reader Control Layer）';
       case 'reader_content': return '阅读正文（Reader Content）';
-      case 'toc-bookmarks': return '目录与书签（TOC and Bookmarks）';
-      case 'reader-appearance': return '阅读外观（Reading Appearance）';
-      case 'reader-appearance-overlay-v2': return '阅读外观覆盖层 V2（Reader Appearance Overlay V2）';
-      case 'tts': return '朗读（Read Aloud）';
-      case 'reader-tts-overlay-v2': return '朗读覆盖层 V2（Reader TTS Overlay V2）';
-      case 'reader-settings': return '阅读设置（Reading Settings）';
-      case 'reader-settings-overlay-v2': return '阅读设置覆盖层 V2（Reader Settings Overlay V2）';
       case 'reader-full-font': return '字体完整设置（Reader Full Font）';
       case 'reader-full-theme': return '主题完整设置（Reader Full Theme）';
       case 'reader-full-theme-edit': return '自定义主题编辑（Reader Theme Edit）';
@@ -578,11 +545,7 @@ export class RouteTable {
       case 'reader-book-cache': return '书籍缓存（Book Cache）';
       case 'reader-debug-info': return '调试信息（Debug Info）';
       case 'auto-page': return '自动翻页（Auto Page）';
-      case 'reader-auto-scroll-overlay-v2': return '自动翻页覆盖层 V2（Reader Auto Scroll Overlay V2）';
-      case 'content-search': return '内容搜索（Content Search）';
-      case 'reader-search-overlay-v2': return '内容搜索覆盖层 V2（Reader Search Overlay V2）';
       case 'content-replacement': return '内容替换（Content Replacement）';
-      case 'reader-replace-overlay-v2': return '内容替换覆盖层 V2（Reader Replace Overlay V2）';
       case 'source-switch': return '换源（Source Switching）';
       case 'source-switch-results': return '换源结果（Source Switch Results）';
       case 'reader-night-state-v2': return '阅读夜间状态 V2（Reader Night State V2）';
@@ -679,8 +642,6 @@ export class RouteTable {
       case 'about-version': return '关于版本（About Version）';
       case 'state-error': return '状态错误（State Error）';
       case 'state-offline': return '状态离线（State Offline）';
-      case 'control-layer-base-v2': return '阅读控制层基线 V2（Control Layer Base V2）';
-      case 'reader-directory-overlay-v2': return '目录覆盖层 V2（Reader Directory Overlay V2）';
       case 'discover-entry-ranking': return '发现入口：排行榜（Discover Entry Ranking）';
       case 'discover-entry-bestseller': return '发现入口：畅销（Discover Entry Bestseller）';
       case 'discover-entry-finished': return '发现入口：完本（Discover Entry Finished）';
@@ -820,12 +781,6 @@ export class RouteTable {
   }
   static aliasOf(id: string): string | null {
     switch (id) {
-      case 'reader-appearance': return 'reader-appearance-overlay-v2';
-      case 'tts': return 'reader-tts-overlay-v2';
-      case 'reader-settings': return 'reader-settings-overlay-v2';
-      case 'auto-page': return 'reader-auto-scroll-overlay-v2';
-      case 'content-search': return 'reader-search-overlay-v2';
-      case 'content-replacement': return 'reader-replace-overlay-v2';
       case 'discover-home': return 'discover';
       case 'discover-control': return 'discover';
       case 'discover-sort': return 'discover';

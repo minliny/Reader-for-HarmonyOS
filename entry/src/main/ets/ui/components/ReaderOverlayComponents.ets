@@ -1,10 +1,10 @@
 // ReaderOverlayComponents — shared reader overlay families + control layer.
 // Ported from Reader UI/frontend-demo/render-runtime.js and frontend-demo/styles.
 //
-// Route-driven (Batch 1): render as body components of *-overlay-v2 view-state
-// entries via ViewStateRenderer(stack). Colors flow through ColorTokens /
-// DemoAliasTokens; sizes are bare vp (lint_tokens only forbids hex / px-unit
-// strings — bare vp is allowed, same convention as ReaderComponents base structs).
+// Reader control modules keep the canonical reading route stable and use the
+// Reader-UI semantic overlay field. Full panels and the independently admitted
+// auto-page/content-replacement pages remain real routes. Colors flow through
+// ColorTokens / DemoAliasTokens; sizes are bare vp.
 //
 // Slice scope: panel header, setting/list rows, button row, slider, segmented,
 // toggle, the live demo control sheet, bottom bar, and night toast.
@@ -49,6 +49,16 @@ function appearanceReaderFontFamily(value: string): ReaderFontFamily {
     case 'lxgw': return 'lxgw';
     default: return 'system';
   }
+}
+
+function readerPageAnimationValue(value: string): string {
+  if (value === '覆盖' || value === 'cover') return 'cover';
+  if (value === '滑动' || value === 'slide' || value === 'smooth' ||
+    value === '平滑' || value === '平移') return 'slide';
+  if (value === '仿真' || value === 'simulation') return 'simulation';
+  if (value === '滚动' || value === 'scroll') return 'scroll';
+  if (value === '无' || value === '无动画' || value === 'none') return 'none';
+  return '';
 }
 
 // ── Panel header (.reader-panel-header) ──────────────────────────────────
@@ -358,7 +368,7 @@ struct ReaderBrightnessRail {
 }
 
 // ── Control sheet (.fd-reader-sheet + .fd-reader-control-main) ────────────
-//   Live demo truth for control-layer-base-v2:
+//   Live Figma truth for Reader Control Home:
 //   - mobile portrait: bottom sheet 330vp, left/right 12, module nav floats
 //     inside the lower reserved area.
 //   - tablet/landscape: right-side 340vp dock, sheet 252vp, attached directly
@@ -392,22 +402,26 @@ export struct ReaderControlSheet {
   private readonly quickHeight: number = 75.438;
 
   private quickActions: Array<[string, string, string]> = [
-    ['搜索', 'reader_control_quick_search', 'reader-search-overlay-v2'],
-    ['自动翻页', 'reader_control_quick_auto_page', 'reader-auto-scroll-overlay-v2'],
-    ['替换', 'reader_control_quick_replace', 'reader-replace-overlay-v2'],
+    ['搜索', 'reader_control_quick_search', 'content-search'],
+    ['自动翻页', 'reader_control_quick_auto_page', 'auto-page'],
+    ['替换', 'reader_control_quick_replace', 'content-replacement'],
   ];
 
-  private moduleForRoute(routeId: string): string {
-    if (routeId === 'reader-search-overlay-v2') return 'search';
-    if (routeId === 'reader-auto-scroll-overlay-v2') return 'auto-page';
-    if (routeId === 'reader-replace-overlay-v2') return 'replacement';
-    return '';
+  private runQuickAction(action: string): void {
+    if (action === 'auto-page') {
+      ReaderUiStore.dispatch({ type: 'route-push', id: 'auto-page' });
+    } else if (action === 'content-replacement') {
+      ReaderUiStore.dispatch({ type: 'route-push', id: 'content-replacement' });
+    }
+    // Quick content search has no current admitted surface. Keep it inert
+    // until reader.quick.content-search is promoted; never substitute the
+    // unrelated book-search page or a retired content-search RouteId.
   }
 
-  private quickDebugLabel(routeId: string): string {
-    if (routeId === 'reader-search-overlay-v2') return 'search';
-    if (routeId === 'reader-auto-scroll-overlay-v2') return 'auto';
-    if (routeId === 'reader-replace-overlay-v2') return 'replace';
+  private quickDebugLabel(action: string): string {
+    if (action === 'content-search') return 'search';
+    if (action === 'auto-page') return 'auto';
+    if (action === 'content-replacement') return 'replace';
     return 'quick';
   }
 
@@ -526,7 +540,7 @@ export struct ReaderControlSheet {
                         .backgroundColor(ReaderUiVisualTokens.readerControlQuickActionSurface)
                         .borderRadius(8)
                         .onClick(() => {
-                          ReaderUiStore.dispatch({ type: 'reader-module-switch', module: this.moduleForRoute(item[2]) });
+                          this.runQuickAction(item[2]);
                         })
                         InteractionDebugBadge({ label: this.quickDebugLabel(item[2]), tone: 'action', offsetTop: 22 })
                       }
@@ -682,7 +696,7 @@ export struct ReaderBottomBar {
   @StorageProp(SafeAreaAdapter.K_BOTTOM) safeAreaBottom: number = SafeAreaAdapter.DEFAULT_BOTTOM;
   @StorageProp(ViewportAdapter.K_WIDTH) viewportWidth: number = ViewportAdapter.DEFAULT_WIDTH;
   @StorageProp(ViewportAdapter.K_HEIGHT) viewportHeight: number = ViewportAdapter.DEFAULT_HEIGHT;
-  @StorageProp('reader.displayedRouteId') routeId: string = 'control-layer-base-v2';
+  @StorageProp('reader.overlay') overlayKind: string = '';
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
 
   // Figma `Control/ModuleNav` remains 340vp in both approved viewports.
@@ -691,11 +705,11 @@ export struct ReaderBottomBar {
   private readonly dockRight: number = 25;
   private readonly navBottom: number = 33;
 
-  private items: Array<[string, string, string]> = [
-    ['directory', '目录', 'reader-directory-overlay-v2'],
-    ['tts', '朗读', 'reader-tts-overlay-v2'],
-    ['appearance', '界面', 'reader-appearance-overlay-v2'],
-    ['settings', '设置', 'reader-settings-overlay-v2'],
+  private items: Array<[string, string]> = [
+    ['directory', '目录'],
+    ['tts', '朗读'],
+    ['appearance', '界面'],
+    ['settings', '设置'],
   ];
 
   private wideControlDock(): boolean {
@@ -730,11 +744,7 @@ export struct ReaderBottomBar {
   }
 
   private active(kind: string): boolean {
-    if (kind === 'directory') return this.routeId === 'reader-directory-overlay-v2';
-    if (kind === 'tts') return this.routeId === 'reader-tts-overlay-v2';
-    if (kind === 'appearance') return this.routeId === 'reader-appearance-overlay-v2';
-    if (kind === 'settings') return this.routeId === 'reader-settings-overlay-v2';
-    return false;
+    return this.overlayKind === kind;
   }
 
   private moduleDebugLabel(kind: string): string {
@@ -757,7 +767,7 @@ export struct ReaderBottomBar {
     Stack({ alignContent: Alignment.BottomEnd }) {
       Stack({ alignContent: Alignment.TopStart }) {
         Row({ space: 4 }) {
-          ForEach(this.items, (it: [string, string, string]) => {
+          ForEach(this.items, (it: [string, string]) => {
             Stack({ alignContent: Alignment.TopStart }) {
               Column({ space: 3 }) {
                 Stack({ alignContent: Alignment.Center }) {
@@ -789,7 +799,7 @@ export struct ReaderBottomBar {
             }
             .width(77.5)
             .height(62)
-          }, (it: [string, string, string]) => it[2])
+          }, (it: [string, string]) => it[0])
         }
         .width(this.navWidth())
         .height(this.navHeightValue())
@@ -1410,7 +1420,6 @@ struct ReaderTocLiveRow {
     ReaderUiStore.dispatch({
       type: 'chapter-load', chapterId: this.chapterId, bookId: this.bookId, chapterTitle: this.title,
     });
-    ReaderUiStore.dispatch({ type: 'reader.directory.close' });
   }
 
   build() {
@@ -1664,26 +1673,30 @@ struct ReaderLiveOptionRow {
 
   private normalizedOptionValue(label: string): string {
     if (this.optionKey !== 'pageAnimation') return label;
-    if (label === '覆盖' || label === 'cover') return 'cover';
-    if (label === '滑动' || label === 'slide') return 'slide';
-    if (label === '仿真' || label === 'simulation') return 'simulation';
-    if (label === '滚动' || label === 'scroll') return 'scroll';
-    if (label === '无' || label === '无动画' || label === 'none') return 'none';
-    return 'slide';
+    return readerPageAnimationValue(label);
   }
 
   private isSelected(choice: string): boolean {
     if (this.optionKey !== 'pageAnimation') return choice === this.value;
-    return this.normalizedOptionValue(choice) === this.normalizedOptionValue(this.value);
+    const normalizedChoice = this.normalizedOptionValue(choice);
+    return normalizedChoice.length > 0 && normalizedChoice === this.normalizedOptionValue(this.value);
   }
 
   // 根据选项 key 将选中的标签值分发到对应的 reducer action。
   private applyOptionChoice(label: string): void {
-    if (this.optionKey === 'tapMode' || this.optionKey === 'pageAnimation' || this.optionKey === 'pageMode') {
+    if (this.optionKey === 'tapMode') {
       ReaderUiStore.dispatch({
         type: 'set-reader-setting-option',
-        optionKey: this.optionKey as ReaderSettingOptionKey,
-        optionValue: this.normalizedOptionValue(label),
+        optionKey: 'tapMode',
+        optionValue: label,
+      });
+    } else if (this.optionKey === 'pageAnimation') {
+      const value = this.normalizedOptionValue(label);
+      if (value.length === 0) return;
+      ReaderUiStore.dispatch({
+        type: 'set-reader-setting-option',
+        optionKey: 'pageAnimation',
+        optionValue: value,
       });
     } else if (this.optionKey === 'ttsRate') {
       ReaderUiStore.dispatch({ type: 'tts-set-rate', ttsRate: parseFloat(label) });
@@ -1791,8 +1804,7 @@ struct ReaderLiveOptionRow {
 
 // ── Directory panel (.fd-reader-toc-panel) ────────────────────────────────
 @Component
-export struct ReaderDirectoryPanel {
-  @Prop standalone: boolean = false;
+export struct DirectoryPanel {
   @StorageProp('reader.currentBook') currentBook: BookDetail | null = null;
   @StorageProp('reader.chapterToc') chapterToc: ChapterTocEntry[] = [];
   @StorageProp('reader.currentChapterTitle') currentChapterTitle: string = '';
@@ -1812,13 +1824,8 @@ export struct ReaderDirectoryPanel {
     return this.currentChapterTitle.length > 0 && this.currentChapterTitle === chapter.title;
   }
 
-  private closeEvent(): string {
-    return this.standalone ? 'route-pop' : 'reader.directory.close';
-  }
-
   build() {
-    ReaderModulePanelShell({ debugLabel: 'ReaderModulePanel', closeEvent: this.closeEvent() }) {
-      Column() {
+    Column() {
         Row({ space: 0 }) {
           Stack({ alignContent: Alignment.Bottom }) {
             Text('目录')
@@ -1906,16 +1913,14 @@ export struct ReaderDirectoryPanel {
       }
       .width('100%')
       .height('100%')
-    }
   }
 }
 
 // ── Appearance panel (.fd-reader-appearance-panel) ────────────────────────
 @Component
-export struct ReaderAppearancePanel {
+export struct AppearancePanel {
   build() {
-    ReaderModulePanelShell({ debugLabel: 'ReaderModulePanel' }) {
-      Column({ space: 10 }) {
+    Column({ space: 10 }) {
         ReaderThemeSwatches()
         ReaderFontChoices()
       }
@@ -1923,7 +1928,6 @@ export struct ReaderAppearancePanel {
       .height(162.89)
       .padding({ left: 1, right: 1 })
       .alignItems(HorizontalAlign.Start)
-    }
   }
 }
 
@@ -2141,17 +2145,13 @@ struct ReaderQuickSettingsSegment {
   @Prop action: string = '';
 
   private normalizedPageAnimation(value: string): string {
-    if (value === '覆盖') return 'cover';
-    if (value === '滑动') return 'slide';
-    if (value === '仿真') return 'simulation';
-    if (value === '滚动') return 'scroll';
-    if (value === '无动画') return 'none';
-    return 'slide';
+    return readerPageAnimationValue(value);
   }
 
   private selected(value: string): boolean {
     if (this.action !== 'pageAnimation') return value === this.active;
-    return this.normalizedPageAnimation(value) === this.normalizedPageAnimation(this.active);
+    const normalizedValue = this.normalizedPageAnimation(value);
+    return normalizedValue.length > 0 && normalizedValue === this.normalizedPageAnimation(this.active);
   }
 
   private actionable(): boolean {
@@ -2160,10 +2160,12 @@ struct ReaderQuickSettingsSegment {
 
   private choose(value: string): void {
     if (this.action === 'pageAnimation') {
+      const normalized = this.normalizedPageAnimation(value);
+      if (normalized.length === 0) return;
       ReaderUiStore.dispatch({
         type: 'set-reader-setting-option',
         optionKey: 'pageAnimation',
-        optionValue: this.normalizedPageAnimation(value),
+        optionValue: normalized,
       });
     } else if (this.action === 'screenTimeout' && value === '始终开启') {
       // The current Host can truthfully keep the screen on. It cannot force an
@@ -2238,7 +2240,7 @@ export struct ReaderSettingsPanel {
           active: '跟随系统',
         })
         ReaderQuickSettingsSegment({
-          label: '翻页样式',
+          label: '翻页动画',
           values: ['覆盖', '滑动', '仿真', '滚动', '无动画'],
           active: this.pageAnimationLabel(),
           action: 'pageAnimation',
@@ -2260,13 +2262,12 @@ export struct ReaderSettingsPanel {
 // Live demo truth for reader-full-* / reader-book-cache / reader-debug-info:
 // these are expanded full panels in the reader full host. They do not render
 // ReaderBottomBar or the module nav; the grabber/header collapses back to the
-// corresponding quick/module route.
+// corresponding semantic module.
 @Component
 struct ReaderFullPanelShell {
   @StorageProp(ViewportAdapter.K_WIDTH) viewportWidth: number = ViewportAdapter.DEFAULT_WIDTH;
   @StorageProp(ViewportAdapter.K_HEIGHT) viewportHeight: number = ViewportAdapter.DEFAULT_HEIGHT;
   @Prop title: string = '';
-  @Prop quickRoute: string = 'reader';
   @Prop debugLabel: string = 'ReaderExpandedPanel';
   @Prop utility: boolean = false;
   @BuilderParam content: () => void;
@@ -2435,7 +2436,9 @@ struct ReaderFullChoiceRow {
     if (this.choiceKey === 'tapMode') {
       ReaderUiStore.dispatch({ type: 'set-reader-setting-option', optionKey: 'tapMode', optionValue: value });
     } else if (this.choiceKey === 'pageAnimation') {
-      ReaderUiStore.dispatch({ type: 'set-reader-setting-option', optionKey: 'pageAnimation', optionValue: this.pageAnimationValue(value) });
+      const normalized = this.pageAnimationValue(value);
+      if (normalized.length === 0) return;
+      ReaderUiStore.dispatch({ type: 'set-reader-setting-option', optionKey: 'pageAnimation', optionValue: normalized });
     } else if (this.choiceKey === 'ttsRate') {
       ReaderUiStore.dispatch({ type: 'tts-set-rate', ttsRate: parseFloat(value) });
     } else if (this.choiceKey === 'screenTimeout' && value === '始终开启') {
@@ -2451,17 +2454,13 @@ struct ReaderFullChoiceRow {
   }
 
   private pageAnimationValue(value: string): string {
-    if (value === '覆盖' || value === 'cover') return 'cover';
-    if (value === '滑动' || value === 'slide') return 'slide';
-    if (value === '仿真' || value === 'simulation') return 'simulation';
-    if (value === '滚动' || value === 'scroll') return 'scroll';
-    if (value === '无' || value === '无动画' || value === 'none') return 'none';
-    return 'slide';
+    return readerPageAnimationValue(value);
   }
 
   private isActive(value: string): boolean {
     if (this.choiceKey !== 'pageAnimation') return value === this.active;
-    return this.pageAnimationValue(value) === this.pageAnimationValue(this.active);
+    const normalizedValue = this.pageAnimationValue(value);
+    return normalizedValue.length > 0 && normalizedValue === this.pageAnimationValue(this.active);
   }
 
   build() {
@@ -2977,7 +2976,7 @@ export struct ReaderFullDirectoryPage {
   }
 
   build() {
-    ReaderFullPanelShell({ title: '目录', quickRoute: 'toc-bookmarks', debugLabel: 'ReaderExpandedPanel' }) {
+    ReaderFullPanelShell({ title: '目录', debugLabel: 'ReaderExpandedPanel' }) {
       Column() {
         Row({ space: 0 }) {
           Column({ space: 0 }) {
@@ -3385,7 +3384,6 @@ export struct ReaderFullTtsPage {
     // backed by the current Reader-UI/Core/Host contract.
     ReaderFullPanelShell({
       title: '朗读',
-      quickRoute: 'tts',
       debugLabel: 'ReaderExpandedPanel',
     }) {
       Scroll() {
@@ -3871,7 +3869,7 @@ export struct ReaderFullAppearancePage {
   }
 
   build() {
-    ReaderFullPanelShell({ title: '界面', quickRoute: 'reader-appearance', debugLabel: 'ReaderExpandedPanel' }) {
+    ReaderFullPanelShell({ title: '界面', debugLabel: 'ReaderExpandedPanel' }) {
       Scroll() {
         Column({ space: 0 }) {
           ReaderFullBlock({ title: '主题库', meta: '日间：纸纹 · 夜间：夜纹' }) {
@@ -4019,7 +4017,7 @@ export struct ReaderFullSettingsPage {
   }
 
   build() {
-    ReaderFullPanelShell({ title: '设置', quickRoute: 'reader-settings', debugLabel: 'ReaderExpandedPanel' }) {
+    ReaderFullPanelShell({ title: '设置', debugLabel: 'ReaderExpandedPanel' }) {
       Scroll() {
         Column({ space: 0 }) {
           ReaderFullBlock({ title: '屏幕样式' }) {
@@ -4030,7 +4028,7 @@ export struct ReaderFullSettingsPage {
                 active: '跟随系统',
               })
               ReaderFullFigmaChoiceRow({
-                label: '翻页样式',
+                label: '翻页动画',
                 values: ['覆盖', '滑动', '仿真', '滚动', '无动画'],
                 active: this.pageAnimation,
                 choiceKey: 'pageAnimation',
@@ -4311,7 +4309,7 @@ export struct ReaderBookCachePage {
   }
 
   build() {
-    ReaderFullPanelShell({ title: '书籍缓存', quickRoute: 'reader', debugLabel: 'ReaderUtilityPage', utility: true }) {
+    ReaderFullPanelShell({ title: '书籍缓存', debugLabel: 'ReaderUtilityPage', utility: true }) {
       Scroll() {
         Column({ space: 10 }) {
           Row({ space: 8 }) {
@@ -4533,7 +4531,7 @@ export struct ReaderDebugInfoPage {
   }
 
   build() {
-    ReaderFullPanelShell({ title: '调试信息', quickRoute: 'reader', debugLabel: 'ReaderUtilityPage', utility: true }) {
+    ReaderFullPanelShell({ title: '调试信息', debugLabel: 'ReaderUtilityPage', utility: true }) {
       Scroll() {
         Column({ space: 10 }) {
           Row({ space: 8 }) {
@@ -4781,12 +4779,11 @@ struct ReaderReplaceFigmaRuleRow {
 // import/export, and management pages have no admitted Figma target here, so
 // they are intentionally not rendered as extra native controls.
 @Component
-export struct ReaderReplacePanel {
+export struct ReplacePanel {
   @StorageProp('reader.replaceRules') rules: ReplaceRule[] = [];
 
   build() {
-    ReaderQuickPanelShell({ debugLabel: 'ReaderQuickPanel', contentHeight: 190 }) {
-      Column({ space: 4 }) {
+    Column({ space: 4 }) {
         Row() {
           Text('替换规则')
             .fontSize(13)
@@ -4794,10 +4791,6 @@ export struct ReaderReplacePanel {
             .fontColor(ReaderUiVisualTokens.readerControlInk)
             .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
             .layoutWeight(1)
-          Image($r('app.media.figma_reader_replace_close'))
-            .width(28)
-            .height(28)
-            .onClick(() => ReaderUiStore.dispatch({ type: 'route-pop' }))
         }
         .width('100%')
         .height(28)
@@ -4815,42 +4808,12 @@ export struct ReaderReplacePanel {
           .height(93)
           .padding({ left: 7, right: 7 })
           .clip(true)
-
-          Row({ space: 6 }) {
-            Text('预览效果')
-              .fontSize(8)
-              .fontWeight(600)
-              .fontColor(ReaderUiVisualTokens.readerControlInk)
-              .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
-              .width(97.59)
-              .height(28)
-              .border({ width: 1, color: ReaderUiVisualTokens.readerControlBorder })
-              .borderRadius(8)
-              .backgroundColor(ReaderUiVisualTokens.readerControlTranslucentSurface)
-              .textAlign(TextAlign.Center)
-            // No target is admitted for replacement management; retain the
-            // current Figma affordance as inert visual evidence rather than
-            // routing into a locally invented page.
-            Text('完整管理')
-              .fontSize(8)
-              .fontWeight(600)
-              .fontColor(ReaderUiVisualTokens.readerControlSurface)
-              .fontFamily(ReaderUiVisualTokens.readerControlFontFamily)
-              .layoutWeight(1)
-              .height(28)
-              .borderRadius(8)
-              .backgroundColor(ReaderUiVisualTokens.readerModuleActive)
-              .textAlign(TextAlign.Center)
-          }
-          .width('100%')
-          .height(28)
         }
         .width('100%')
         .height(132)
       }
       .width('100%')
       .height(164)
-    }
   }
 }
 // ── Auto-page panel (.fd-reader-auto-page-quick-panel) ────────────────────
