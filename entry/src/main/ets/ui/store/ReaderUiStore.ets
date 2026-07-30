@@ -66,6 +66,7 @@ import {
   ReaderControlCandidateResult,
   ReaderControlCandidateRuntimeFactory,
 } from './ReaderControlCandidateAdapter';
+import { ReaderUiVisualAdmission } from '../../contract/reader_ui/VisualAdmission';
 
 // ArkTS does not permit structural object literals for interface values. Keep
 // the Store callbacks in a nominal class so the executor receives one stable
@@ -679,6 +680,7 @@ export class ReaderUiStore {
       ReaderEffects.requestReaderExit();
       return;
     }
+    if (ReaderUiStore.dispatchAdmittedReaderControl(event)) return;
     const bookOpenCancellation: ReaderUIBookOpenPilotResult =
       ReaderUiStore.runtimeShadow.dispatchBookOpenCancellation(event, ReaderUiStore.state);
     if (bookOpenCancellation.handled) {
@@ -814,6 +816,37 @@ export class ReaderUiStore {
     ReaderThemeState.setReducedMotion(ReaderUiStore.state.reducedMotion);
   }
 
+  /**
+   * The generated Reader-UI runtime owns the semantic control-home toggle only
+   * after the exact Figma overlay has passed visual admission. A rejected
+   * transition is still handled here and cannot fall through to the legacy
+   * reducer or create a route-backed substitute.
+   *
+   * Reader module switching is deliberately not handled here: directory, TTS,
+   * appearance and settings each have a separate candidate-backport record.
+   */
+  private static dispatchAdmittedReaderControl(event: UiEvent): boolean {
+    // Canonical module events are a separate admission family. Swallow them
+    // here until those records are promoted so the reducer cannot expose the
+    // older generic overlays through a direct dispatch.
+    if (event.type === 'reader.module.switch') return true;
+    if (event.type !== 'reader.control.toggle') return false;
+    if (!ReaderUiVisualAdmission.isOverlayAdmitted('reader-control')) return true;
+
+    const result: ReaderControlCandidateResult =
+      ReaderControlCandidateAdapter.consume(event, ReaderUiStore.state);
+    if (result.succeeded && result.changed) ReaderUiStore.state = result.state;
+    ReaderUiStore.writeAll();
+    AppStorage.setOrCreate<string>(
+      ReaderUiStore.K_LAST_OP,
+      result.succeeded
+        ? `reader-control:${result.canonicalEvent}:${result.motionKind}`
+        : `reader-control:rejected:${result.errorCode}`,
+    );
+    ReaderThemeState.setReducedMotion(ReaderUiStore.state.reducedMotion);
+    return true;
+  }
+
   static snapshot(): ReaderUiState {
     return ReaderUiStore.state;
   }
@@ -825,11 +858,11 @@ export class ReaderUiStore {
   }
 
   /**
-   * Explicit local-candidate entry for schema 3 reader control validation.
+   * Explicit test seam for schema 3 reader control validation.
    *
-   * Production dispatch remains bound to the schema 2 consumer lock and never
-   * calls this method. The adapter projects into the existing native route
-   * stack, so it does not create a second overlay/module authority.
+   * Production dispatch uses the same adapter for the admitted control-home
+   * toggle. Tests may inject a runtime factory here to exercise rejection and
+   * projection cases without creating a second overlay/module authority.
    */
   static setReaderControlCandidateRuntimeFactoryForTest(
     factory?: ReaderControlCandidateRuntimeFactory): void {

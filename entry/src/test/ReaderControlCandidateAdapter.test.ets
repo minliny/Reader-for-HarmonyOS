@@ -100,7 +100,7 @@ export default function ReaderControlCandidateAdapterTests(): void {
       expect(GENERATED_RUNTIME_ACTIONS['reader.module.switch']?.action).assertEqual('switchReaderModule');
     });
 
-    it('production dispatch does not activate the candidate-only adapter', 0, () => {
+    it('production dispatch consumes only the admitted control-home toggle', 0, () => {
       ReaderUiStore.init();
       enterImmersiveReader();
       const beforeRoutes: string = routeStack(ReaderUiStore.snapshot());
@@ -111,9 +111,14 @@ export default function ReaderControlCandidateAdapterTests(): void {
       const after: ReaderUiState = ReaderUiStore.snapshot();
       expect(after.routeId).assertEqual('immersive-reading');
       expect(routeStack(after)).assertEqual(beforeRoutes);
-      expect(after.overlay).assertEqual('');
+      expect(after.overlay).assertEqual('reader-control');
       expect(ReaderUiStore.runtimeShadowSnapshot().metrics.lastCanonicalEvent).assertEqual('');
       expect(ReaderUiStore.runtimeShadowSnapshot().metrics.runtimeError).assertEqual(0);
+
+      ReaderUiStore.dispatch(controlToggle());
+      expect(ReaderUiStore.snapshot().routeId).assertEqual('immersive-reading');
+      expect(ReaderUiStore.snapshot().overlay).assertEqual('');
+      expect(routeStack(ReaderUiStore.snapshot())).assertEqual(beforeRoutes);
     });
 
     it('dispatches real runtime actions and derives show switch no-op hide motion', 0, () => {

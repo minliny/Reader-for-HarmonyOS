@@ -1338,8 +1338,9 @@ export struct ReaderTopArea {
   }
 }
 
-// .fd-immersive-hotzone: prev 26% / center 48% / next 26%. Center opens the
-// live reader control layer (route-push reader); side zones dispatch page prev/next.
+// .fd-immersive-hotzone: prev 26% / center 48% / next 26%. Center toggles the
+// semantic reader-control overlay without changing route identity; side zones
+// dispatch page prev/next.
 @Component
 export struct TapZones {
   @StorageProp(InteractionDebugAdapter.K_VISIBLE) interactionDebugVisible: boolean = InteractionDebugAdapter.DEFAULT_VISIBLE;
