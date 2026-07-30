@@ -779,9 +779,7 @@ export struct ViewStateRenderer {
       // The current Figma book-search master owns its header (including the
       // system-safe back affordance, input and submit action). Rendering the
       // generated legacy AppTopBar here would create a second header above it.
-      if (this.routeId === 'book-search') {
-        Column().width(0).height(0)
-      } else {
+      if (this.routeId !== 'book-search') {
         AppTopBar({ title: this.textOr(component.props.title, '') })
       }
     } else if (component.type === 'BackTopBar') {
@@ -795,9 +793,11 @@ export struct ViewStateRenderer {
       // master) must render through its dedicated admitted component below,
       // never by promoting a generic native loading, empty, error, or offline
       // card. StateHost likewise stays inert for this legacy primitive branch.
-      Column().width(0).height(0)
+      // Intentionally emit no node. Hidden geometry would still participate in
+      // the render tree and could be revived by layout or hit-test changes.
     } else if (component.type === 'ContinueReadingCard') {
-      if (this.bookshelfLoaded && this.bookshelfBooks.length > 0 &&
+      if (this.routeId !== 'bookshelf-list-mode' &&
+        this.bookshelfLoaded && this.bookshelfBooks.length > 0 &&
         this.continueReadingLoaded && this.continueReadingBook !== null) {
         // The Figma node only describes the populated visual. The actual
         // title, cover and resume point come from the Core progress record,
@@ -1560,18 +1560,16 @@ export struct ViewStateRenderer {
       // second visual hierarchy.
       if (this.routeId === 'book-search') {
         SearchHomePage()
-      } else {
-        Column().width(0).height(0)
       }
     } else if (component.type === 'ScopeSelector' || component.type === 'GroupSelector' ||
       component.type === 'SearchHistoryList') {
-      Column().width(0).height(0)
+      // These historical Search fragments are physically not emitted.
     } else {
       // Unknown component types have no current Figma visual authority. Keep
       // them strictly inert instead of drawing a local diagnostic card into a
       // user-facing page; contract diagnostics belong to developer evidence,
       // not to the shipped visual hierarchy.
-      Column().width(0).height(0)
+      // Unknown components are physically not emitted.
     }
   }
 }

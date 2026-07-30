@@ -5,7 +5,11 @@
 import { ReaderUiVisualTokens } from '../../contract/reader_ui/VisualAdmission';
 import { ReaderUiStore } from '../store/ReaderUiStore';
 import { MotionAdapter } from '../adapters/MotionAdapter';
-import { CoreBookshelfBook } from '../store/ReaderUiState';
+import {
+  BookshelfCacheStatus,
+  CoreBookshelfBook,
+  isLocalBookSourceId,
+} from '../store/ReaderUiState';
 import { SourceCoverImage } from './SourceCoverImage';
 
 // Book entry passed from ViewStateRenderer (extracted from fixture BookCard children).
@@ -17,6 +21,7 @@ export interface BookEntry {
   coverKey: string;
   coverUrl?: string;
   latestChapter?: string;
+  cacheStatus?: BookshelfCacheStatus;
 }
 
 // Whether the ContinueReadingCard should reserve a slot on the shelf view.
@@ -34,11 +39,11 @@ export function shouldRenderContinueReadingForShelf(
 }
 
 // Whether a bookshelf route should embed the ContinueReadingCard itself.
-// The cover and list presentation routes own the card through their generated
-// ViewState tree; the default and filter routes already include it via their
-// own ViewState tree, so embedding it again would duplicate the card.
+// Only cover presentation owns the recent-reading card. The current Figma
+// Phone list master begins directly with the shelf rows, so list mode must not
+// reserve or render a second recent-reading region.
 export function shouldEmbedContinueReadingForBookshelfRoute(routeId: string): boolean {
-  return routeId === 'bookshelf-cover-mode' || routeId === 'bookshelf-list-mode';
+  return routeId === 'bookshelf-cover-mode';
 }
 
 // A bookId is loadable when it is a real source path (e.g. '/book/123' or a
@@ -276,6 +281,7 @@ export struct BookshelfShelfSection {
         coverKey: '',
         coverUrl: book.coverUrl,
         latestChapter: book.lastChapter,
+        cacheStatus: book.cacheStatus ?? 'unknown',
       });
     }
     return result;
@@ -369,6 +375,15 @@ export struct BookCard {
         coverKey: this.coverKey,
         coverUrl: this.coverUrl,
       })
+      .gesture(
+        GestureGroup(
+          GestureMode.Exclusive,
+          LongPressGesture({ repeat: false, duration: 500 })
+            .onAction(() => this.openBookActions()),
+          TapGesture()
+            .onAction(() => this.openReader())
+        )
+      )
       Text(this.title)
         .fontSize(15)
         .fontWeight(700)
@@ -387,19 +402,6 @@ export struct BookCard {
       }
     }
     .alignItems(HorizontalAlign.Start)
-    .gesture(
-      // A long press and a tap must be mutually exclusive.  Keeping the old
-      // generic onClick beside LongPressGesture made the emulator emit the
-      // normal book-open click when the finger lifted, closing the action
-      // sheet before it could become visible.
-      GestureGroup(
-        GestureMode.Exclusive,
-        LongPressGesture({ repeat: false, duration: 500 })
-          .onAction(() => this.openBookActions()),
-        TapGesture()
-          .onAction(() => this.openReader())
-      )
-    )
   }
 }
 
@@ -453,6 +455,7 @@ export struct BookListRow {
   @Prop title: string = '';
   @Prop author: string = '';
   @Prop latestChapter: string = '';
+  @Prop cacheStatus: BookshelfCacheStatus = 'unknown';
   @StorageProp('reader.reducedMotion') reducedMotion: boolean = false;
 
   private canOpen(): boolean {
@@ -471,6 +474,21 @@ export struct BookListRow {
     });
   }
 
+  private sourceLabel(): string {
+    return isLocalBookSourceId(this.sourceId) ? '本地书' : '网络书';
+  }
+
+  private cacheLabel(): string {
+    if (isLocalBookSourceId(this.sourceId)) return '离线可读';
+    if (this.cacheStatus === 'cached') return '已缓存';
+    if (this.cacheStatus === 'missing') return '未缓存';
+    return '';
+  }
+
+  private cacheReadable(): boolean {
+    return isLocalBookSourceId(this.sourceId) || this.cacheStatus === 'cached';
+  }
+
   build() {
     Row({ space: 10 }) {
       // 48×72 封面（列表模式封面比网格模式矮）
@@ -485,7 +503,16 @@ export struct BookListRow {
       .height(72)
       .borderRadius(6)
       .shadow({ radius: 12, color: ReaderUiVisualTokens.bookshelfListCoverShadow, offsetX: 0, offsetY: 6 })
-      Column({ space: 3 }) {
+      .gesture(
+        GestureGroup(
+          GestureMode.Exclusive,
+          LongPressGesture({ repeat: false, duration: 500 })
+            .onAction(() => this.openBookActions()),
+          TapGesture()
+            .onAction(() => this.openReader())
+        )
+      )
+      Column({ space: 2 }) {
         Text(this.title)
           .fontSize(15)
           .fontWeight(700)
@@ -493,22 +520,64 @@ export struct BookListRow {
           .fontFamily(ReaderUiVisualTokens.bookshelfBookTitleFontFamily)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-        if (this.author.length > 0) {
-          Text(this.author)
-            .fontSize(12)
-            .fontColor(ReaderUiVisualTokens.bookshelfMuted)
-            .fontFamily(ReaderUiVisualTokens.bookshelfControlFontFamily)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Row({ space: 4 }) {
+          if (this.author.length > 0) {
+            Text(this.author)
+              .fontSize(12)
+              .fontColor(ReaderUiVisualTokens.bookshelfMuted)
+              .fontFamily(ReaderUiVisualTokens.bookshelfControlFontFamily)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+          }
+          if (this.author.length > 0 && this.latestChapter.length > 0) {
+            Text('·')
+              .fontSize(11)
+              .fontColor(ReaderUiVisualTokens.bookshelfMuted)
+          }
+          if (this.latestChapter.length > 0) {
+            Text(this.latestChapter)
+              .fontSize(11)
+              .fontColor(ReaderUiVisualTokens.bookshelfMuted)
+              .fontFamily(ReaderUiVisualTokens.bookshelfControlFontFamily)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .layoutWeight(1)
+          }
         }
-        if (this.latestChapter !== '') {
-          Text(this.latestChapter)
-            .fontSize(11)
-            .fontColor(ReaderUiVisualTokens.bookshelfActionPrimary)
+        .width('100%')
+        Row({ space: 6 }) {
+          Text(this.sourceLabel())
+            .fontSize(10)
             .fontFamily(ReaderUiVisualTokens.bookshelfControlFontFamily)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .fontColor(isLocalBookSourceId(this.sourceId)
+              ? ReaderUiVisualTokens.bookshelfActionPrimary
+              : ReaderUiVisualTokens.bookshelfMuted)
+            .height(18)
+            .padding({ left: 6, right: 6 })
+            .borderRadius(9)
+            .backgroundColor(isLocalBookSourceId(this.sourceId)
+              ? ReaderUiVisualTokens.bookshelfEmptySecondarySurface
+              : ReaderUiVisualTokens.bookshelfSectionSurface)
+          if (this.cacheLabel().length > 0) {
+            Text(this.cacheLabel())
+              .fontSize(10)
+              .fontFamily(ReaderUiVisualTokens.bookshelfControlFontFamily)
+              .fontColor(this.cacheReadable()
+                ? ReaderUiVisualTokens.bookshelfActionPrimary
+                : ReaderUiVisualTokens.bookshelfMuted)
+              .height(18)
+              .padding({ left: 6, right: 6 })
+              .border({
+                width: this.cacheReadable() ? 0 : 1,
+                color: ReaderUiVisualTokens.bookshelfBorder,
+              })
+              .borderRadius(9)
+              .backgroundColor(this.cacheReadable()
+                ? ReaderUiVisualTokens.bookshelfEmptySecondarySurface
+                : Color.Transparent)
+          }
         }
+        .width('100%')
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
@@ -524,24 +593,10 @@ export struct BookListRow {
       .height(34)
       .justifyContent(FlexAlign.Center)
       .alignItems(HorizontalAlign.Center)
-      .onClick(() => {
-        if (!this.canOpen()) return;
-        ReaderUiStore.requestBookshelfBookActions(this.bookId, this.sourceId);
-      })
-      .accessibilityText('书籍操作')
     }
     .width('100%')
     .height(72)
     .alignItems(VerticalAlign.Center)
-    .gesture(
-      GestureGroup(
-        GestureMode.Exclusive,
-        LongPressGesture({ repeat: false, duration: 500 })
-          .onAction(() => this.openBookActions()),
-        TapGesture()
-          .onAction(() => this.openReader())
-      )
-    )
   }
 }
 
@@ -565,6 +620,7 @@ export struct BookList {
               coverKey: book.coverKey,
               coverUrl: book.coverUrl ?? '',
               latestChapter: book.latestChapter ?? '',
+              cacheStatus: book.cacheStatus ?? 'unknown',
             })
           }
         }, (book: BookEntry, index: number) => `${book.bookId}-${book.title}-${index}`)

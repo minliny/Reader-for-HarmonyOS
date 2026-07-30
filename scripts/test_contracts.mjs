@@ -1091,8 +1091,10 @@ test('an unbound page state cannot fall through to a default generic body', () =
     'route admission must remain first before any body state is selected');
   assert.equal(viewStateRenderer.includes('Reader UI 组件契约漂移'), false,
     'unknown component types must not render a local diagnostic card');
-  assert.ok(viewStateRenderer.includes('Column().width(0).height(0)'),
-    'unknown component types must fail closed with no user-facing substitute');
+  assert.equal(viewStateRenderer.includes('Column().width(0).height(0)'), false,
+    'unknown component types must be physically omitted, not hidden');
+  assert.ok(viewStateRenderer.includes('Unknown components are physically not emitted.'),
+    'unknown component branch must document source-level non-emission');
 });
 
 test('every admitted default route avoids the retired generic component branches', () => {
@@ -1229,8 +1231,35 @@ test('local import is the approved system multi-select → spinner → per-book 
   assert.ok(overlayHost.includes("this.localImportDialogPhase === 'result'"));
   assert.ok(overlayHost.includes('ForEach(this.localImportDialogResults'));
   assert.equal(overlayHost.includes('重试导入'), false, 'approved import result has no retry matrix');
-  assert.ok(visualAdmission.includes("overlayKind: 'local-import', admission: 'candidate-backport', sourceBound: true, implementationReady: false"),
-    'local-import overlay must register as candidate-backport (source-bound, not yet implementation-ready)');
+  assert.ok(visualAdmission.includes("overlayKind: 'local-import', admission: 'implementation-ready', sourceBound: true, implementationReady: true"),
+    'promoted local-import overlay must be implementation-ready');
+});
+
+test('Bookshelf Phone list consumes the exact Figma row and real Core cache state', () => {
+  const row = structSource(bookshelf, 'BookListRow');
+  assert.ok(visualAdmission.includes(
+    "routeId: 'bookshelf-list-mode', viewport: 'phone', admission: 'implementation-ready', sourceBound: true, implementationReady: true"),
+  'Phone list viewport must be admitted from the current Figma source');
+  assert.ok(visualAdmission.includes(
+    "routeId: 'bookshelf-list-mode', viewport: 'tablet', admission: 'blocked', sourceBound: false, implementationReady: false"),
+  'Tablet list viewport must remain fail-closed without a Tablet master');
+  assert.ok(row.includes('.width(48)') && row.includes('.height(72)'),
+    'list cover must retain the Figma 48x72 geometry');
+  assert.ok(row.includes('.width(34)') && row.includes("app.media.reader_icon_more_dark"),
+    'list row must retain the Figma 34px visual-only More affordance');
+  assert.equal(row.includes('.onClick('), false,
+    'the zero-reaction Figma More affordance cannot become a native button');
+  assert.ok(row.includes("LongPressGesture({ repeat: false, duration: 500 })"),
+    'book actions remain reachable from the confirmed long-press entry');
+  assert.ok(row.includes("Text('·')") && row.includes("Text(this.sourceLabel())") &&
+    row.includes("Text(this.cacheLabel())"),
+  'list metadata must retain author/chapter and source/cache rows');
+  assert.ok(effects.includes('ReaderEffects.loadBookshelfCacheStatuses(books, sequence)'));
+  assert.ok(effects.includes('ReaderEffects.slice10Core.cacheBookStatus(payload)'));
+  assert.ok(effects.includes("type: 'bookshelf-cache-status-loaded'"));
+  assert.ok(readerReducer.includes("case 'bookshelf-cache-status-loaded'"));
+  assert.ok(viewStateRenderer.includes("this.routeId !== 'bookshelf-list-mode'"),
+    'list mode must not reuse the cover-mode recent-reading region');
 });
 
 test('Bookshelf overlays consume their revision-bound Figma masters without a local overlay skin', () => {

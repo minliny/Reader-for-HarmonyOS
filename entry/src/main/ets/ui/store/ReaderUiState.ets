@@ -223,6 +223,8 @@ export interface CoreDiscoverBook {
   lastChapter: string;
 }
 
+export type BookshelfCacheStatus = 'unknown' | 'cached' | 'missing';
+
 export interface CoreBookshelfBook {
   sourceId: string;
   bookId: string;
@@ -236,6 +238,10 @@ export interface CoreBookshelfBook {
   // Core returns this only after a durable reading-progress write. It remains
   // optional because unstarted books intentionally have no last-read time.
   lastReadAt?: number;
+  // Remote cache state is projected only from Core `cache.book.status`.
+  // Local books are `cached` by their transport identity; a failed or pending
+  // remote query remains `unknown` and must not be displayed as "未缓存".
+  cacheStatus?: BookshelfCacheStatus;
 }
 
 // `local` is a Core-owned transport identity, not a display label.  Every
@@ -767,6 +773,7 @@ export interface UiEvent {
   sourceIds?: string[]; // source-select-all 时的全部书源 id 列表
   sources?: CoreSourceEntry[]; // source-list-loaded
   bookshelfBooks?: CoreBookshelfBook[]; // bookshelf-list-loaded
+  bookshelfCacheStatus?: BookshelfCacheStatus; // bookshelf-cache-status-loaded
   continueReadingBook?: CoreBookshelfBook | null;
   continueReadingError?: string;
   bookGroups?: CoreBookGroup[]; // book-group-list-loaded

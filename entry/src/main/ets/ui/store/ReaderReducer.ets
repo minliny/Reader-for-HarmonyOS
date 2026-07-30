@@ -3,7 +3,7 @@
 // new ReaderUiState literal field-by-field (array spread is still allowed).
 import { RouteId, RouteTable } from '../../contract/generated/RouteTable';
 import { ReaderAppearanceSpecRegistry, ReaderAppearanceStepper } from '../../contract/reader_ui/Appearance';
-import { ReaderUiState, UiEvent, MainTab, Overlay, PageState, ReaderMode, ReaderPaginationMode, ReaderFontFamily, ReaderRenderMetric, RouteEntry, ReaderError, SearchResultEntry, BookDetail, ActiveSession, TtsPlaybackState, TtsScope, TtsTimer, TocMode, ReaderToggleKey, ReaderSettingOptionKey, ReaderTogglesMap, ReaderSettingOptionsMap, BookshelfView, BookshelfFilterState, DiscoverFilterState, CoreDiscoverKind, CoreDiscoverBook, CoreSourceEntry, CoreSourceCheckResult, CoreSourceDebugResult, CoreContentSearchResult, CoreBookmark, SettingsTogglesMap, ReplaceRule, CoreRssSubscription, CoreRssItem, RssItemFilter, ChapterTocEntry, CoreStorageBackupInfo, CoreStorageBackupHistoryEntry, CoreReaderCanonicalLocation, CANONICAL_RESOLVER_VERSION, LocalImportDialogResult, LocalImportDialogResultStatus, BookshelfSelectionTarget, BookshelfRemovalReceipt, isLocalBookSourceId } from './ReaderUiState';
+import { ReaderUiState, UiEvent, MainTab, Overlay, PageState, ReaderMode, ReaderPaginationMode, ReaderFontFamily, ReaderRenderMetric, RouteEntry, ReaderError, SearchResultEntry, BookDetail, ActiveSession, TtsPlaybackState, TtsScope, TtsTimer, TocMode, ReaderToggleKey, ReaderSettingOptionKey, ReaderTogglesMap, ReaderSettingOptionsMap, BookshelfView, BookshelfFilterState, DiscoverFilterState, CoreDiscoverKind, CoreDiscoverBook, CoreSourceEntry, CoreSourceCheckResult, CoreSourceDebugResult, CoreContentSearchResult, CoreBookmark, SettingsTogglesMap, ReplaceRule, BookshelfCacheStatus, CoreBookshelfBook, CoreRssSubscription, CoreRssItem, RssItemFilter, ChapterTocEntry, CoreStorageBackupInfo, CoreStorageBackupHistoryEntry, CoreReaderCanonicalLocation, CANONICAL_RESOLVER_VERSION, LocalImportDialogResult, LocalImportDialogResultStatus, BookshelfSelectionTarget, BookshelfRemovalReceipt, isLocalBookSourceId } from './ReaderUiState';
 import { CoreStorageBackupHistory } from './CoreStorageBackupHistory';
 import type { ReaderUIJSONPayload } from 'reader_ui_runtime';
 
@@ -784,6 +784,13 @@ export class ReaderReducer {
         }
         return next;
       }
+      case 'bookshelf-cache-status-loaded':
+        return ReaderReducer.setBookshelfCacheStatus(
+          state,
+          event.sourceId ?? '',
+          event.bookId ?? '',
+          event.bookshelfCacheStatus ?? 'unknown',
+        );
       case 'continue-reading-loaded': {
         const next = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
         next.continueReadingBook = event.continueReadingBook ?? null;
@@ -3079,6 +3086,46 @@ export class ReaderReducer {
     next.sourceDebugError = message;
     next.sourceDebugMessage = '';
     next.sourceDebugResult = null;
+    return next;
+  }
+
+  private static setBookshelfCacheStatus(
+    state: ReaderUiState,
+    requestedSourceId: string,
+    requestedBookId: string,
+    cacheStatus: BookshelfCacheStatus,
+  ): ReaderUiState {
+    const sourceId = requestedSourceId.trim();
+    const bookId = requestedBookId.trim();
+    if (sourceId.length === 0 || bookId.length === 0 ||
+      (cacheStatus !== 'cached' && cacheStatus !== 'missing')) return state;
+    const books: CoreBookshelfBook[] = [];
+    let matched = false;
+    for (let index = 0; index < state.bookshelfBooks.length; index += 1) {
+      const book = state.bookshelfBooks[index];
+      if (book.sourceId !== sourceId || book.bookId !== bookId) {
+        books.push(book);
+        continue;
+      }
+      const updated: CoreBookshelfBook = {
+        sourceId: book.sourceId,
+        bookId: book.bookId,
+        title: book.title,
+        author: book.author,
+        coverUrl: book.coverUrl,
+        intro: book.intro,
+        kind: book.kind,
+        lastChapter: book.lastChapter,
+        group: book.group,
+        cacheStatus: cacheStatus,
+      };
+      if (book.lastReadAt !== undefined) updated.lastReadAt = book.lastReadAt;
+      books.push(updated);
+      matched = true;
+    }
+    if (!matched) return state;
+    const next = ReaderReducer.clone(state, state.routeId, state.tab, state.overlay, state.stack, state.pageState);
+    next.bookshelfBooks = books;
     return next;
   }
 

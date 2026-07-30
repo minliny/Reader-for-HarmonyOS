@@ -411,7 +411,8 @@ if (missingRendererMappings.length > 0) {
 // from the shipped visual tree rather than showing a native diagnostic card:
 // diagnostics belong to developer evidence, never to a user-facing fallback.
 if (!rendererSource.includes('Unknown component types have no current Figma visual authority') ||
-  !rendererSource.includes('Column().width(0).height(0)')) {
+  !rendererSource.includes('Unknown components are physically not emitted.') ||
+  rendererSource.includes('Column().width(0).height(0)')) {
   failures.push('unknown ComponentType is not strictly inert fail-closed');
 }
 if (rendererSource.includes('Reader UI 组件契约漂移')) {
@@ -618,7 +619,8 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
     ? rendererSource.slice(genericStateBranchStart, genericStateBranchEnd)
     : '';
   if (!genericStateBranch.includes('These old generated primitives have no component-level Figma master') ||
-    !genericStateBranch.includes('Column().width(0).height(0)') ||
+    !genericStateBranch.includes('Intentionally emit no node.') ||
+    genericStateBranch.includes('Column().width(0).height(0)') ||
     genericStateBranch.includes('this.statePrimitiveTitle(component)') ||
     genericStateBranch.includes('this.statePrimitiveMessage(component)') ||
     genericStateBranch.includes('ErrorState({')) {
@@ -1359,7 +1361,8 @@ if (fs.existsSync(COVERAGE_REGISTRY)) {
     }
   }
   if (!genericStateBranch.includes("component.type === 'Empty'") ||
-    !genericStateBranch.includes('Column().width(0).height(0)') ||
+    !genericStateBranch.includes('Intentionally emit no node.') ||
+    genericStateBranch.includes('Column().width(0).height(0)') ||
     genericSet.has('Empty') || partialSet.has('Empty')) {
     failures.push('Figma-unbound Empty primitive must remain semantic evidence only, not a locally drawn page');
   }

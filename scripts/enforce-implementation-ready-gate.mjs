@@ -225,9 +225,11 @@ for (const routeId of physicallyRetiredRouteIds) {
 }
 assert.ok(routeRenderer.includes("this.isDisplayedRouteImplementationReady() && this.shellOfDisplayedRoute() === 'ReaderShell'"),
   'RouteRenderer must require both implementation readiness and a source-generated Reader shell mapping');
-for (const source of [routeRenderer, overlayHost, stateHost]) {
+for (const source of [routeRenderer, viewStateRenderer, overlayHost, stateHost]) {
   assert.ok(!source.includes('Column().width(0).height(0)'),
-    'RouteRenderer, OverlayHost, and the retired StateHost must not use a zero-size hiding node');
+    'RouteRenderer, ViewStateRenderer, OverlayHost, and the retired StateHost must not use a zero-size hiding node');
+  assert.equal(/(?:width\(0\)[\s\S]{0,120}height\(0\)|height\(0\)[\s\S]{0,120}width\(0\))/.test(source), false,
+    'active renderer hosts must physically omit rejected nodes, not hide them behind reordered or multiline zero-size geometry');
 }
 assert.ok(stateHost.includes('STATE_HOST_RETIRED') && !stateHost.includes('@Component'),
   'generic StateHost must be explicitly retired, not preserved as an inert visual component');

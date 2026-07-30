@@ -17,7 +17,7 @@
 // (e.g. during first UI build before EntryAbility.init). We guard with
 // try/catch and the promise rejects — the caller surfaces an error state and
 // the user can retry once CoreRuntime is ready.
-import { ReaderUiState, UiEvent, SearchResultEntry, BookDetail, CoreSourceEntry, CoreSourceCheckResult, CoreSourceDebugResult, CoreSourceDebugStage, CoreSourceDebugLog, CoreContentSearchResult, CoreBookmark, CoreDiscoverKind, CoreDiscoverBook, ReplaceRule, CoreBookshelfBook, CoreBookGroup, CoreRssSubscription, CoreRssItem, ChapterTocEntry, CoreStorageBackupInfo, CoreStorageBackupHistoryEntry, CoreReaderCanonicalLocation, ReaderContentIdentity, CANONICAL_RESOLVER_VERSION, LocalImportDialogResult, BookshelfSelectionTarget, BookshelfRemovalReceipt, isLocalBookSourceId } from './ReaderUiState';
+import { ReaderUiState, UiEvent, SearchResultEntry, BookDetail, CoreSourceEntry, CoreSourceCheckResult, CoreSourceDebugResult, CoreSourceDebugStage, CoreSourceDebugLog, CoreContentSearchResult, CoreBookmark, CoreDiscoverKind, CoreDiscoverBook, ReplaceRule, BookshelfCacheStatus, CoreBookshelfBook, CoreBookGroup, CoreRssSubscription, CoreRssItem, ChapterTocEntry, CoreStorageBackupInfo, CoreStorageBackupHistoryEntry, CoreReaderCanonicalLocation, ReaderContentIdentity, CANONICAL_RESOLVER_VERSION, LocalImportDialogResult, BookshelfSelectionTarget, BookshelfRemovalReceipt, isLocalBookSourceId } from './ReaderUiState';
 import { ReaderUiStore } from './ReaderUiStore';
 import { CoreStorageBackupHistory } from './CoreStorageBackupHistory';
 import { RouteTable } from '../../contract/generated/RouteTable';
@@ -173,6 +173,7 @@ export class ReaderEffects {
   // Continue-reading has its own global Core projection. It must not be
   // overwritten by a late request started under an older shelf filter/sort.
   private static continueReadingRequestSequence: number = 0;
+  private static bookshelfRequestSequence: number = 0;
   // A source switch can issue several Core commands (candidate search,
   // detail/TOC/content, progress + shelf replacement). Keep only the newest
   // transaction authoritative so a cancelled/obsolete response cannot replace
@@ -2534,6 +2535,8 @@ export class ReaderEffects {
     // initialized the NAPI runtime. Startup hydration replays this load once
     // Core is live, so do not surface a false initialization error.
     if (!CoreRuntime.isInitialized()) return;
+    const sequence = ReaderEffects.bookshelfRequestSequence + 1;
+    ReaderEffects.bookshelfRequestSequence = sequence;
     // Keep the continue card independent of the visible shelf's current
     // group/sort. It gets its own `hasReadingProgress + lastReadAt` query.
     ReaderEffects.loadContinueReading();
@@ -2564,6 +2567,7 @@ export class ReaderEffects {
     params['offset'] = 0;
     try {
       CoreRuntime.get().executeCoreMethod('bookshelf.list', params, 5000).then((data: JsonObject): void => {
+        if (sequence !== ReaderEffects.bookshelfRequestSequence) return;
         const arrayFields = data as Object as Record<string, Object[]>;
         const rawBooks: Object[] = arrayFields['books'];
         const books: CoreBookshelfBook[] = [];
@@ -2575,13 +2579,16 @@ export class ReaderEffects {
           }
         }
         ReaderUiStore.dispatch({ type: 'bookshelf-list-loaded', bookshelfBooks: books });
+        ReaderEffects.loadBookshelfCacheStatuses(books, sequence);
       }).catch((e: Error): void => {
+        if (sequence !== ReaderEffects.bookshelfRequestSequence) return;
         ReaderUiStore.dispatch({
           type: 'set-error',
           error: { code: 'BOOKSHELF_LIST_FAILED', message: e.message, retryable: true },
         });
       });
     } catch (e) {
+      if (sequence !== ReaderEffects.bookshelfRequestSequence) return;
       ReaderUiStore.dispatch({
         type: 'set-error',
         error: { code: 'BOOKSHELF_LIST_FAILED', message: (e as Error).message, retryable: true },
@@ -2605,8 +2612,33 @@ export class ReaderEffects {
       lastChapter: ReaderEffects.getString(raw, 'lastChapter'),
       group: ReaderEffects.getString(raw, 'group'),
     };
+    if (isLocalBookSourceId(sourceId)) result.cacheStatus = 'cached';
     if (Number.isFinite(lastReadAt) && lastReadAt > 0) result.lastReadAt = Math.floor(lastReadAt);
     return result;
+  }
+
+  private static loadBookshelfCacheStatuses(books: CoreBookshelfBook[], sequence: number): void {
+    for (let index = 0; index < books.length; index += 1) {
+      const book = books[index];
+      if (isLocalBookSourceId(book.sourceId)) continue;
+      const payload: ReaderUIJSONPayload = {};
+      payload['sourceId'] = book.sourceId;
+      payload['bookId'] = book.bookId;
+      ReaderEffects.slice10Core.cacheBookStatus(payload).then((result: JsonObject): void => {
+        if (sequence !== ReaderEffects.bookshelfRequestSequence) return;
+        const cachedCount = ReaderEffects.getNumber(result, 'cachedCount', 0);
+        const cacheStatus: BookshelfCacheStatus = cachedCount > 0 ? 'cached' : 'missing';
+        ReaderUiStore.dispatch({
+          type: 'bookshelf-cache-status-loaded',
+          sourceId: book.sourceId,
+          bookId: book.bookId,
+          bookshelfCacheStatus: cacheStatus,
+        });
+      }).catch((_error: Error): void => {
+        // Unknown is not equivalent to missing. A failed status request leaves
+        // the badge absent and never fabricates a "未缓存" result.
+      });
+    }
   }
 
   // The continue card is not a visual alias for the first visible shelf row.
