@@ -720,7 +720,7 @@ export class ReaderUiVisualTokens {
 export class ReaderUiVisualAdmission {
   static readonly SOURCE_FILE_KEY: string = 'klhs2jMM4MncaJFqZMfqEK';
   static readonly SOURCE_REVISION: string = '2379851596474967636';
-  static readonly REGISTRY_SHA256: string = '35eb56388e51cca54c0a76d95a4bfe59cda373bede906b9de8722562322a9ec0';
+  static readonly REGISTRY_SHA256: string = 'f783f4a9536ffd6306fddbce1655d093257583469809c2409ccd8a1b037354e5';
   static readonly ROUTE_ADMISSIONS: ReaderUiVisualRouteAdmissionEntry[] = [
     { routeId: 'about', admission: 'retired', sourceBound: false, implementationReady: false, recordIds: ['about.withdrawn'] },
     { routeId: 'about-feedback', admission: 'retired', sourceBound: false, implementationReady: false, recordIds: ['about.withdrawn'] },
@@ -975,6 +975,7 @@ export class ReaderUiVisualAdmission {
     { overlayKind: 'bookshelf-multiselect', admission: 'implementation-ready', sourceBound: true, implementationReady: true, recordIds: ['bookshelf.multi-select'] },
     { overlayKind: 'dialog', admission: 'implementation-ready', sourceBound: true, implementationReady: true, recordIds: ['bookshelf.action-sheet'] },
     { overlayKind: 'local-import', admission: 'implementation-ready', sourceBound: true, implementationReady: true, recordIds: ['bookshelf.local-import-dialog'] },
+    { overlayKind: 'reader-control', admission: 'implementation-ready', sourceBound: true, implementationReady: true, recordIds: ['reader.control-home'] },
   ];
   static readonly VIEWPORT_ROUTE_ADMISSIONS: ReaderUiVisualViewportRouteAdmissionEntry[] = [
     { routeId: 'bookshelf-list-mode', viewport: 'phone', admission: 'implementation-ready', sourceBound: true, implementationReady: true, recordIds: ['bookshelf.list-mode'] },
