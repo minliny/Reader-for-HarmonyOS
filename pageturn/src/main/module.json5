@@ -1,0 +1,12 @@
+{
+  "module": {
+    "name": "pageturn",
+    "type": "har",
+    "description": "Reader page-turn pure-logic subsystem - registry, transaction coordinator, providers, contract read-surface. No NAPI/HAR/UI dependencies.",
+    "deviceTypes": [
+      "phone",
+      "tablet",
+      "2in1"
+    ]
+  }
+}

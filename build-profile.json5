@@ -83,6 +83,30 @@
           ]
         }
       ]
+    },
+    {
+      "name": "pageturn",
+      "srcPath": "./pageturn",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "pageturn_tests",
+      "srcPath": "./pageturn_tests",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
     }
   ]
 }

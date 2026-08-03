@@ -36,6 +36,10 @@ function resolveContractsDir() {
 const CONTRACTS_DIR = resolveContractsDir();
 const OUT_ETS = path.resolve(REPO_ROOT, 'entry/src/main/ets/contract/generated');
 const OUT_READER_UI_ETS = path.resolve(REPO_ROOT, 'entry/src/main/ets/contract/reader_ui');
+// Motion.ets (the pageTurn contract artifact) lives in the pageturn HAR module
+// now - it is consumed only by pageturn, so it is generated there to keep the
+// module self-contained and independently compilable (no entry/NAPI/HAR dep).
+const OUT_PAGETURN_CONTRACT_ETS = path.resolve(REPO_ROOT, 'pageturn/src/main/ets/contract');
 const OUT_RES_BASE = path.resolve(REPO_ROOT, 'entry/src/main/resources/base/element');
 const OUT_RES_DARK = path.resolve(REPO_ROOT, 'entry/src/main/resources/dark/element');
 
@@ -663,6 +667,18 @@ function syncReaderUiGenerated(name) {
   fs.copyFileSync(source, path.join(OUT_READER_UI_ETS, name));
   console.log(`  synced entry/src/main/ets/contract/reader_ui/${name}`);
 }
+
+// Motion.ets (the pageTurn contract artifact) is consumed only by the
+// pageturn HAR module; sync it there so that module is self-contained.
+function syncMotionToPageturn() {
+  const source = path.resolve(CONTRACTS_DIR, '..', '..', 'generated', 'arkts', 'Motion.ets');
+  if (!fs.existsSync(source)) {
+    throw new Error(`missing canonical Reader UI ArkTS artifact: ${source}`);
+  }
+  fs.mkdirSync(OUT_PAGETURN_CONTRACT_ETS, { recursive: true });
+  fs.copyFileSync(source, path.join(OUT_PAGETURN_CONTRACT_ETS, 'Motion.ets'));
+  console.log('  synced pageturn/src/main/ets/contract/Motion.ets');
+}
 const colorJson = genColorJson();
 
 writeEts('ColorTokens.ets', genColorTokens());
@@ -681,6 +697,7 @@ writeEts('DemoAliasTokens.ets', genDemoAliasTokens());
 for (const name of ['Route.ets', 'RouteReconstructionQuarantine.ets', 'ViewState.ets', 'UiEvent.ets', 'UiState.ets', 'ScreenGraph.ets', 'Appearance.ets', 'VisualAdmission.ets']) {
   syncReaderUiGenerated(name);
 }
+syncMotionToPageturn();
 
 fs.writeFileSync(path.join(OUT_RES_BASE, 'color.json'), colorJson.base);
 console.log('  wrote entry/src/main/resources/base/element/color.json');

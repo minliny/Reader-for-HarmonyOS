@@ -1,0 +1,14 @@
+{
+  "name": "pageturn_tests",
+  "version": "1.0.0",
+  "description": "Dedicated test-host HAP for the pageturn HAR library. Runs the page-turn pure-logic suites on device via hypium. No NAPI/Core/Host dependencies.",
+  "main": "",
+  "author": "Reader",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "pageturn": "file:../pageturn"
+  },
+  "devDependencies": {
+    "@ohos/hypium": "1.0.22"
+  }
+}

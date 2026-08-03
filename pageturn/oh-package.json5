@@ -1,0 +1,11 @@
+{
+  "name": "pageturn",
+  "version": "1.0.0",
+  "description": "Reader page-turn pure-logic subsystem (registry/coordinator/providers/contract). Independently compilable - no NAPI/HAR/UI deps.",
+  "main": "src/main/ets/Index.ets",
+  "author": "Reader",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@ohos/hypium": "1.0.22"
+  }
+}
