@@ -1,7 +1,0 @@
-{
-  "string": [
-    { "name": "app_name", "value": "Reader" },
-    { "name": "main_ability_desc", "value": "pageturn test host default ability" },
-    { "name": "main_ability_label", "value": "PageTurn Tests" }
-  ]
-}

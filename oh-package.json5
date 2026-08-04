@@ -1,9 +1,0 @@
-{
-  "modelVersion": "6.0.2",
-  "description": "Reader for HarmonyOS - ebook reader application",
-  "dependencies": {
-  },
-  "devDependencies": {
-    "@ohos/hypium": "1.0.22"
-  }
-}
