@@ -54,12 +54,32 @@ export class SourceGateway {
     return sources;
   }
 
+  /**
+   * Persist a source toggle via the real `source.update` RPC. Only the raw
+   * `bookSource.enabled` key is rewritten Core-side (rules and unknown Legado
+   * fields are preserved). Rejects when `enabled` is absent, on RPC failure,
+   * or when Core echoes a mismatched state — the page keeps a non-optimistic
+   * toggle and reloads the list only after a confirmed success.
+   */
   async updateSource(sourceId: string, patch: SourcePatch): Promise<void> {
-    // SS-SOURCE-TOGGLE-01: the Core protocol has no `source.update` command
-    // (only source.list/import/export/delete/check). There is no real toggle,
-    // so this deliberately does NOT emit a non-existent RPC. The page keeps a
-    // client-side visual toggle only and logs the gap.
-    throw new Error(`source.update not available: sourceId=${sourceId}, enabled=${patch.enabled}`);
+    if (patch.enabled === undefined) {
+      throw new Error('source.update requires an enabled flag');
+    }
+    const result = await this.runtimeOwner.request('source.update', {
+      sourceId,
+      enabled: patch.enabled,
+    });
+    const updated = result.data['source'];
+    if (typeof updated !== 'object' || updated === null || Array.isArray(updated)) {
+      throw new Error('source.update returned invalid data');
+    }
+    const source = updated as JsonObject;
+    if (source['enabled'] !== patch.enabled) {
+      throw new Error(
+        `source.update echoed a mismatched enabled state: requested=${patch.enabled} ` +
+          `got=${source['enabled']}`,
+      );
+    }
   }
 
   private optionalString(value: JsonObject, key: string): string | undefined {

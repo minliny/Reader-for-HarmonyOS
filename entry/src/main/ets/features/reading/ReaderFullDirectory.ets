@@ -19,9 +19,15 @@ export struct ReaderFullDirectory {
   @Prop entries: LocalReadingTocEntry[] = [];
   @Prop currentChapterIndex: number = -1;
   @Prop isTablet: boolean = false;
+  // Source switch is only reachable for remote books (sourceId !== 'local');
+  // local books render the top-bar 换源 affordance disabled. This is the
+  // third copy of the LOCAL_SOURCE_ID sentinel (also Index.ets:70 and
+  // LocalReadingFlowGateway.ts:89) — consolidated if those files are touched.
+  @Prop sourceId: string = '';
   // R-LOCAL-TOC-01: forward the chapter tap from the panel body to the
   // owning flow so a full-directory tap actually enters that chapter.
   onSelectChapter: (index: number) => void = (_index: number): void => {};
+  onSwitchSource: () => void = (): void => {};
 
   aboutToAppear(): void {
     const font = this.getUIContext().getFont();
@@ -106,7 +112,13 @@ export struct ReaderFullDirectory {
       }
       .width(62)
       .height(42)
-      .position({ x: this.sourceSwitchLeft(), y: 6 });
+      .position({ x: this.sourceSwitchLeft(), y: 6 })
+      .opacity(this.isLocalBook() ? 0.4 : 1)
+      .onClick((): void => {
+        if (!this.isLocalBook()) {
+          this.onSwitchSource();
+        }
+      });
 
       Stack({ alignContent: Alignment.Center }) {
         Image($r('app.media.reader_directory_more'))
@@ -139,6 +151,10 @@ export struct ReaderFullDirectory {
 
   private sourceSwitchLeft(): number {
     return this.isTablet ? 585 : 243;
+  }
+
+  private isLocalBook(): boolean {
+    return this.sourceId === 'local';
   }
 
   private moreLeft(): number {
