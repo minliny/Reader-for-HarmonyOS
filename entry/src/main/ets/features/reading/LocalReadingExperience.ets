@@ -470,6 +470,13 @@ export struct LocalReadingExperience {
     // overwrite a later selection when several rows are tapped in a row.
     this.chapterSelectionToken += 1;
     const selectionToken = this.chapterSelectionToken;
+    // Invalidate any in-flight measurement from the previously selected
+    // chapter. Its didLayout/deadline callbacks compare against
+    // measurementGeneration, so bumping it now (before the next chapter's
+    // beginMeasurement) stops a stale measurement error from failing the
+    // newly selected chapter's flow.
+    this.measurementGeneration += 1;
+    this.cancelMeasurementDeadline();
     // A manual directory selection is not a restore; start the chapter at its
     // natural first scalar.
     this.restoredProgress = undefined;
