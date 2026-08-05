@@ -1,4 +1,4 @@
-import type { JsonObject } from '@reader/core-harmony';
+import type { JsonObject, RequestOptions } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 
 /**
@@ -89,21 +89,35 @@ export type LocalReadingResolvedLocation = {
 const LOCAL_SOURCE_ID = 'local';
 
 /**
+ * A reader transaction supplies this guard instead of exposing NAPI request
+ * identifiers to ArkUI. Once it returns false, the SDK cancels a still-pending
+ * Core command before it can delay a newer chapter selection.
+ */
+type LocalReadingRequestGuard = () => boolean;
+
+/**
  * The only local-reading Core boundary for ArkUI pages. Local-book import
  * materializes the book in Core storage; this gateway reads that materialized
  * state and maps it to page data without exposing Core envelopes or protocol
  * fields that the pages do not need.
  */
 export class LocalReadingFlowGateway {
+  /**
+   * Progress is current-book, last-write-wins state in Core. Keep the narrow
+   * local-reader resolve/update pair ordered across component remounts in this
+   * app process, so Directory Back followed by a fresh reader cannot overlap
+   * an older instance's pending write.
+   */
+  private static progressCommitTail: Promise<void> = Promise.resolve();
   private readonly runtimeOwner: ReaderRuntimeOwner;
 
   constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
     this.runtimeOwner = runtimeOwner;
   }
 
-  async loadToc(bookId: string): Promise<LocalReadingToc> {
+  async loadToc(bookId: string, isCurrent?: LocalReadingRequestGuard): Promise<LocalReadingToc> {
     this.assertNonBlankString(bookId, 'bookId');
-    const result = await this.runtimeOwner.request('local_book.toc', { bookId });
+    const result = await this.runtimeOwner.request('local_book.toc', { bookId }, this.requestOptions(isCurrent));
     this.assertLocalSource(result.data, 'local_book.toc');
     this.assertMatchingBookId(result.data, bookId, 'local_book.toc');
 
@@ -132,13 +146,17 @@ export class LocalReadingFlowGateway {
     return { bookId, entries };
   }
 
-  async loadChapter(bookId: string, chapterIndex: number): Promise<LocalReadingChapter> {
+  async loadChapter(
+    bookId: string,
+    chapterIndex: number,
+    isCurrent?: LocalReadingRequestGuard,
+  ): Promise<LocalReadingChapter> {
     this.assertNonBlankString(bookId, 'bookId');
     this.assertNonNegativeInteger(chapterIndex, 'chapterIndex');
     const result = await this.runtimeOwner.request('local_book.chapter.content', {
       bookId,
       chapterIndex,
-    });
+    }, this.requestOptions(isCurrent));
     this.assertLocalSource(result.data, 'local_book.chapter.content');
     this.assertMatchingBookId(result.data, bookId, 'local_book.chapter.content');
     const returnedIndex = this.requireNonNegativeInteger(
@@ -157,12 +175,12 @@ export class LocalReadingFlowGateway {
     };
   }
 
-  async loadProgress(bookId: string): Promise<LocalReadingProgressState> {
+  async loadProgress(bookId: string, isCurrent?: LocalReadingRequestGuard): Promise<LocalReadingProgressState> {
     this.assertNonBlankString(bookId, 'bookId');
     const result = await this.runtimeOwner.request('reading.progress.get', {
       bookId,
       sourceId: LOCAL_SOURCE_ID,
-    });
+    }, this.requestOptions(isCurrent));
     const found = result.data['found'];
     if (typeof found !== 'boolean') {
       throw new Error('reading.progress.get returned invalid found');
@@ -190,6 +208,7 @@ export class LocalReadingFlowGateway {
     chapterTitle: string | undefined,
     anchor: LocalReadingAnchor,
     layout: LocalReadingLayout,
+    isCurrent?: LocalReadingRequestGuard,
   ): Promise<LocalReadingResolvedLocation> {
     this.assertNonBlankString(bookId, 'bookId');
     if (chapterTitle !== undefined && typeof chapterTitle !== 'string') {
@@ -216,7 +235,11 @@ export class LocalReadingFlowGateway {
     if (chapterTitle !== undefined && chapterTitle.length > 0) {
       params['chapterTitle'] = chapterTitle;
     }
-    const result = await this.runtimeOwner.request('reader.location.resolve', params);
+    const result = await this.runtimeOwner.request(
+      'reader.location.resolve',
+      params,
+      this.requestOptions(isCurrent),
+    );
     if (result.data['resolved'] !== true) {
       throw new Error('reader.location.resolve did not confirm resolution');
     }
@@ -261,7 +284,11 @@ export class LocalReadingFlowGateway {
     };
   }
 
-  async updateProgress(bookId: string, update: LocalReadingProgressUpdate): Promise<LocalReadingProgress> {
+  async updateProgress(
+    bookId: string,
+    update: LocalReadingProgressUpdate,
+    isCurrent?: LocalReadingRequestGuard,
+  ): Promise<LocalReadingProgress> {
     this.assertNonBlankString(bookId, 'bookId');
     this.assertChapterIndex(update.chapterIndex, 'chapterIndex');
     this.assertNonNegativeInteger(update.chapterOffset, 'chapterOffset');
@@ -280,11 +307,47 @@ export class LocalReadingFlowGateway {
     if (update.locationRevision !== undefined) {
       params['locationRevision'] = update.locationRevision;
     }
-    const result = await this.runtimeOwner.request('reading.progress.update', params);
+    const result = await this.runtimeOwner.request(
+      'reading.progress.update',
+      params,
+      this.requestOptions(isCurrent),
+    );
     if (result.data['stored'] !== true) {
       throw new Error('reading.progress.update did not confirm storage');
     }
-    return this.decodeProgress(result.data, bookId, 'reading.progress.update');
+    const stored = this.decodeProgress(result.data, bookId, 'reading.progress.update');
+    // Core storage may retain a newer current row under its timestamp LWW
+    // policy. `stored: true` confirms command handling, not that this caller's
+    // anchor won; never let the page treat a different retained chapter/offset
+    // as its own successful first-page commit.
+    if (stored.chapterIndex !== update.chapterIndex || stored.chapterOffset !== update.chapterOffset ||
+      (update.locationRevision !== undefined && stored.locationRevision !== update.locationRevision)) {
+      throw new Error('reading.progress.update retained a different current progress row');
+    }
+    return stored;
+  }
+
+  async runProgressCommitSerial(operation: () => Promise<void>): Promise<void> {
+    const predecessor = LocalReadingFlowGateway.progressCommitTail;
+    let release: () => void = (): void => {};
+    LocalReadingFlowGateway.progressCommitTail = new Promise<void>((resolve: () => void): void => {
+      release = resolve;
+    });
+    try {
+      await predecessor;
+      await operation();
+    } finally {
+      release();
+    }
+  }
+
+  private requestOptions(isCurrent: LocalReadingRequestGuard | undefined): RequestOptions {
+    if (isCurrent === undefined) {
+      return {};
+    }
+    return {
+      shouldCancel: (): boolean => !isCurrent(),
+    };
   }
 
   private decodeProgress(value: unknown, expectedBookId: string, command: string): LocalReadingProgress {

@@ -225,6 +225,24 @@ const MAX_MEASUREMENT_BATCH_PARAGRAPHS = 8;
 const MAX_MEASUREMENT_BATCH_UTF16 = 12 * 1024;
 /** No source-approved loading state exists, so a missing layout must fail closed. */
 const MEASUREMENT_LAYOUT_TIMEOUT_MS = 6000;
+/**
+ * The UTF-16 probe branch can transiently report zero lines while the hidden
+ * Text settles, but a stably empty probe must not stall the measurement until
+ * the 6s deadline. After this many consecutive zero-line observations within
+ * one generation, fail closed with a specific reason instead of retrying.
+ * The threshold is intentionally generous: the probe's own line settles within
+ * the first didLayout after the hidden tree mounts, so a handful of unrelated
+ * didLayouts during that window must not false-fail a normal layout.
+ */
+const UNICODE_PROBE_EMPTY_ATTEMPT_LIMIT = 5;
+/**
+ * The hidden-layout deadline stops at the first Core persistence boundary.
+ * Keep a separate, non-visual upper bound for an initial page that still has
+ * no visible body while its chapter read, location resolution, or first
+ * progress write is pending. This is an engineering recovery guard, not a
+ * Figma loading/error state.
+ */
+const FIRST_PAGE_READY_TIMEOUT_MS = 30000;
 
 /**
  * Feature-local immersive reading implementation for an imported local book.
@@ -258,14 +276,15 @@ export struct LocalReadingExperience {
    * first real page has been measured and written to Core.  This is a route
    * readiness signal, not a new visual loading/error state.
   */
-  onReadingReady: () => void = (): void => {};
+  onReadingReady: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   onReadingCommitted: (commit: LocalReadingCommit) => void = (_commit: LocalReadingCommit): void => {};
   /**
-   * Reports only the already materialized Core chapter identity to a
-   * Figma-specified overlay such as Full Directory. It does not change the
-   * page, create a second reading model, or write progress.
+   * Reports a chapter only after its first physical page has been measured and
+   * its Unicode-scalar anchor has been accepted by Core.  Full Directory may
+   * use this as its selected-row state; it must never treat a merely loaded
+   * chapter as safe to reveal on the ReadingSurface.
    */
-  onChapterMaterialized: (chapterIndex: number, chapterTitle: string) => void =
+  onChapterCommitted: (chapterIndex: number, chapterTitle: string) => void =
     (_chapterIndex: number, _chapterTitle: string): void => {};
 
   @State private phase: ReadingPhase = 'loading';
@@ -292,6 +311,10 @@ export struct LocalReadingExperience {
   private firstRangeStartScalar: number = 0;
   private batchProcessing: boolean = false;
   private measurementDeadlineTimer: number = -1;
+  /** Bounds a first entry that has no previously committed visible body. */
+  private firstPageReadyDeadlineTimer: number = -1;
+  /** Makes a cleared first-page deadline unable to fail a later selection. */
+  private firstPageReadyDeadlineGeneration: number = 0;
   private chapter: LocalReadingChapter | undefined = undefined;
   private restoredProgress: LocalReadingProgressState | undefined = undefined;
   private tocEntries: LocalReadingTocEntry[] = [];
@@ -304,11 +327,19 @@ export struct LocalReadingExperience {
   private remeasurePending: boolean = false;
   private commitInFlight: boolean = false;
   private unicodeProbeVerifiedGeneration: number = -1;
+  /** Consecutive zero-line probe observations within the current generation. */
+  private unicodeProbeEmptyAttempts: number = 0;
   private didLayoutListener: (() => void) | undefined = undefined;
   /** Invalidates every continuation captured by a prior mounted instance. */
   private lifecycleToken: number = 0;
   /** Bumped per directory chapter selection so stale loads cannot win. */
   private chapterSelectionToken: number = 0;
+  /** The selection token that owns `chapter` and its layout map. */
+  private materializedChapterSelectionToken: number = -1;
+  /** The selection token that owns the currently mounted hidden measurement tree. */
+  private measurementSelectionToken: number = -1;
+  /** The selection token that owns the visible physical page. */
+  private visiblePageSelectionToken: number = -1;
   private mounted: boolean = false;
   private exitRequested: boolean = false;
   private exitDelivered: boolean = false;
@@ -334,6 +365,11 @@ export struct LocalReadingExperience {
     this.didLayoutListener = (): void => this.captureMeasurementAfterLayout();
     this.getUIContext().getUIObserver().on('didLayout', this.didLayoutListener);
     this.onExitRequestHandler((): void => this.requestExit());
+    // The Detail/Directory parent keeps this first entry visually hidden until
+    // `onReadingReady`, but its body work must still be bounded so a failed
+    // chapter read or first Core commit cannot leave the reader session alive
+    // forever with no recoverable path back.
+    this.armFirstPageReadyDeadline(lifecycleToken, this.chapterSelectionToken);
     void this.loadInitialChapter(lifecycleToken);
   }
 
@@ -343,6 +379,7 @@ export struct LocalReadingExperience {
     this.mounted = false;
     this.lifecycleToken += 1;
     this.cancelMeasurementDeadline();
+    this.cancelFirstPageReadyDeadline();
     if (this.didLayoutListener !== undefined) {
       this.getUIContext().getUIObserver().off('didLayout', this.didLayoutListener);
       this.didLayoutListener = undefined;
@@ -386,7 +423,7 @@ export struct LocalReadingExperience {
       }
       this.viewportWidth = width;
       this.viewportHeight = height;
-      if (this.chapter !== undefined) {
+      if (this.hasCurrentMaterializedChapter() && this.phase !== 'failed') {
         // The hidden Text layout and its initial Core write are one atomic
         // generation. Starting another one here would race two writes against
         // the same Core snapshot revision.
@@ -430,12 +467,18 @@ export struct LocalReadingExperience {
   }
 
   private async loadInitialChapter(lifecycleToken: number): Promise<void> {
+    // The initial restore is also a chapter-selection transaction. A manual
+    // choice made while these two Core reads are pending must win completely:
+    // neither an old progress row nor an old error may mutate/fail the newer
+    // selection.
+    const selectionToken = this.chapterSelectionToken;
+    const isCurrent = (): boolean => this.isSelectionActive(lifecycleToken, selectionToken);
     try {
       const initialLoad = await Promise.all([
-        this.gateway.loadToc(this.bookId),
-        this.gateway.loadProgress(this.bookId),
+        this.gateway.loadToc(this.bookId, isCurrent),
+        this.gateway.loadProgress(this.bookId, isCurrent),
       ]);
-      if (!this.isSessionActive(lifecycleToken)) {
+      if (!isCurrent()) {
         return;
       }
       const toc = initialLoad[0];
@@ -446,8 +489,11 @@ export struct LocalReadingExperience {
       const target = requested === undefined ? restored?.chapterIndex : requested;
       const chapterIndex = this.requireKnownChapter(target);
       this.restoredProgress = progress;
-      await this.openChapter(chapterIndex, true, lifecycleToken);
+      await this.openChapter(chapterIndex, true, lifecycleToken, selectionToken);
     } catch (error) {
+      if (!isCurrent()) {
+        return;
+      }
       this.fail(error as Error, lifecycleToken);
     }
   }
@@ -470,47 +516,64 @@ export struct LocalReadingExperience {
     // overwrite a later selection when several rows are tapped in a row.
     this.chapterSelectionToken += 1;
     const selectionToken = this.chapterSelectionToken;
-    // Fully reset the in-flight measurement of the previously selected
-    // chapter. The old chapter's async submit may have already set
-    // measurementCompleting=true; if we leave it, the new chapter's
-    // beginMeasurement only queues remeasurePending and never measures again
-    // (blank / stale surface). Clearing the batch also stops a stale tree's
-    // didLayout from being consumed as the current generation's measurement.
+    this.resetForChapterSelection();
+    // A manual directory selection is not a restore; start the chapter at its
+    // natural first scalar.
+    this.restoredProgress = undefined;
+    this.armFirstPageReadyDeadline(lifecycleToken, selectionToken);
+    void this.openChapter(requested, false, lifecycleToken, selectionToken);
+  }
+
+  /**
+   * A directory pick is a new reader transaction, not a reflow of the old
+   * chapter.  Invalidate every old continuation before awaiting its successor.
+   * The parent keeps the already-admitted Directory panel visible until this
+   * transaction emits a persisted first page, so this creates no new loading
+   * screen or title-only PaperLayer.
+   */
+  private resetForChapterSelection(): void {
+    this.measurementGeneration += 1;
+    this.measurementSelectionToken = -1;
+    this.materializedChapterSelectionToken = -1;
     this.measurementCompleting = false;
     this.remeasurePending = false;
     this.batchProcessing = false;
     this.measurementBatch.length = 0;
     this.paragraphRanges.length = 0;
-    this.pendingPageFragments.length = 0;
-    this.pendingPageStartScalar = -1;
-    this.pendingPageEndScalar = -1;
-    this.visiblePage = undefined;
-    this.visibleFragments = [];
+    this.resetPendingPage();
+    this.nextRangeIndex = 0;
+    this.firstRangeStartScalar = 0;
+    this.chapter = undefined;
+    this.chapterLayoutMap = undefined;
+    this.desiredChapterOffset = 0;
+    this.desiredChapterProgress = 0;
+    // Full Directory is not an opaque loading shell. Keep the previously
+    // committed title/body snapshot behind it until the new chapter has a
+    // committed physical page. Its old selection token no longer authorizes
+    // any Core write because `chapterSelectionToken` has already advanced.
+    this.measurementEpoch += 1;
     this.phase = 'loading';
     this.cancelMeasurementDeadline();
-    // A manual directory selection is not a restore; start the chapter at its
-    // natural first scalar.
-    this.restoredProgress = undefined;
-    void this.openChapter(requested, false, lifecycleToken, selectionToken);
+    this.cancelFirstPageReadyDeadline();
   }
 
   private async openChapter(
     chapterIndex: number,
     isInitial: boolean,
     lifecycleToken: number,
-    selectionToken: number = 0,
+    selectionToken: number,
   ): Promise<void> {
     try {
       if (!isInitial && this.tocEntries.length > 0) {
         this.requireKnownChapter(chapterIndex);
       }
-      const chapter = await this.gateway.loadChapter(this.bookId, chapterIndex);
-      if (!this.isSessionActive(lifecycleToken) || selectionToken !== this.chapterSelectionToken) {
+      const isCurrent = (): boolean => this.isSelectionActive(lifecycleToken, selectionToken);
+      const chapter = await this.gateway.loadChapter(this.bookId, chapterIndex, isCurrent);
+      if (!isCurrent()) {
         return;
       }
       this.chapter = chapter;
-      this.chapterTitle = chapter.chapterTitle;
-      this.onChapterMaterialized(chapter.chapterIndex, chapter.chapterTitle);
+      this.materializedChapterSelectionToken = selectionToken;
       this.configureRestoredAnchor(chapter, isInitial);
       // Never lay out against the Phone/Tablet fallback constants. If Area
       // has already arrived, start once now; otherwise the first real Area
@@ -521,7 +584,7 @@ export struct LocalReadingExperience {
     } catch (error) {
       // A stale selection (or unmounted session) must not fail the current
       // reading flow; only a current request's error is surfaced.
-      if (!this.isSessionActive(lifecycleToken) || selectionToken !== this.chapterSelectionToken) {
+      if (!this.isSelectionActive(lifecycleToken, selectionToken)) {
         return;
       }
       this.fail(error as Error, lifecycleToken);
@@ -544,8 +607,31 @@ export struct LocalReadingExperience {
     const scalarCount = chapterMap.scalarCount();
     const offset = restored.chapterOffset <= scalarCount ? restored.chapterOffset :
       Math.round(restored.chapterProgress * scalarCount);
-    this.desiredChapterOffset = Math.max(0, Math.min(scalarCount - 1, offset));
+    // Normalize the restored anchor to a visible glyph now, not only when
+    // beginMeasurement clamps it. A chapter ending in blank lines makes
+    // scalarCount - 1 point at invisible CR/LF/space, so a stale EOF anchor
+    // must not wait for the later pagination pass to be pulled back to real
+    // content.
+    const lastVisible = this.lastVisibleScalar(chapter.content, chapterMap);
+    this.desiredChapterOffset = Math.max(0, Math.min(lastVisible, offset));
     this.desiredChapterProgress = scalarCount === 0 ? 0 : this.desiredChapterOffset / scalarCount;
+  }
+
+  /**
+   * Last non-whitespace scalar of the chapter content. Used to pull a stale
+   * EOF/blank-line restore anchor back to a visible glyph; the paragraph-range
+   * clamp inside beginMeasurement applies the same upper bound later.
+   */
+  private lastVisibleScalar(content: string, map: ReadingSurfaceLayoutMap): number {
+    const scalarCount = map.scalarCount();
+    for (let scalar = scalarCount - 1; scalar >= 0; scalar -= 1) {
+      const startUtf16 = map.utf16ForScalar(scalar);
+      const endUtf16 = map.utf16ForScalar(scalar + 1);
+      if (content.substring(startUtf16, endUtf16).trim().length > 0) {
+        return scalar;
+      }
+    }
+    return 0;
   }
 
   private beginMeasurement(lifecycleToken: number): void {
@@ -560,7 +646,8 @@ export struct LocalReadingExperience {
       return;
     }
     const chapter = this.chapter;
-    if (chapter === undefined) {
+    const selectionToken = this.materializedChapterSelectionToken;
+    if (chapter === undefined || !this.isSelectionCurrent(selectionToken)) {
       return;
     }
     try {
@@ -577,9 +664,12 @@ export struct LocalReadingExperience {
       // scalar; the next successful commit normalizes Core to that real page
       // start rather than leaving a permanently empty reader surface.
       const firstRange = this.paragraphRanges[0];
-      const lastRange = this.paragraphRanges[this.paragraphRanges.length - 1];
       const firstRenderableScalar = firstRange.startScalar;
-      const lastRenderableScalar = lastRange.endScalar - 1;
+      // An EOF anchor may point at trailing CR/LF/space content that produces
+      // no visible line once the ReadingSurface removes terminal delimiters.
+      // Normalize only that upper bound to the last scalar belonging to a
+      // measurable paragraph; Core's unmodified chapter text is never edited.
+      const lastRenderableScalar = this.lastMeasurableScalar();
       this.desiredChapterOffset = Math.max(firstRenderableScalar, Math.min(
         lastRenderableScalar,
         this.desiredChapterOffset,
@@ -588,12 +678,19 @@ export struct LocalReadingExperience {
       this.nextRangeIndex = this.rangeIndexForOffset(this.desiredChapterOffset);
       this.firstRangeStartScalar = this.desiredChapterOffset;
       this.resetPendingPage();
-      const hasCommittedPage = this.visiblePage !== undefined && this.phase === 'ready';
-      if (!hasCommittedPage) {
+      // A chapter selection may be in progress behind the non-opaque Full
+      // Directory panel. Preserve an already committed display snapshot until
+      // its replacement is persisted; do not expose an empty PaperLayer or a
+      // new title with an old body.
+      const hasDisplayPage = this.visiblePage !== undefined && this.visibleFragments.length > 0;
+      if (!hasDisplayPage) {
         this.visiblePage = undefined;
         this.visibleFragments = [];
+        this.ensureFirstPageReadyDeadline(lifecycleToken, selectionToken);
       }
       this.measurementGeneration += 1;
+      this.unicodeProbeEmptyAttempts = 0;
+      this.measurementSelectionToken = selectionToken;
       this.measurementCompleting = false;
       this.batchProcessing = false;
       this.phase = 'measuring';
@@ -604,7 +701,7 @@ export struct LocalReadingExperience {
       // Bumping the epoch unmounts any predecessor before this new batch
       // becomes the sole hidden layout tree.
       this.measurementEpoch += 1;
-      this.armMeasurementDeadline(this.measurementGeneration, lifecycleToken);
+      this.armMeasurementDeadline(this.measurementGeneration, selectionToken, lifecycleToken);
     } catch (error) {
       this.fail(error as Error, lifecycleToken);
     }
@@ -612,22 +709,22 @@ export struct LocalReadingExperience {
 
   private captureMeasurementAfterLayout(): void {
     const lifecycleToken = this.lifecycleToken;
-    if (!this.isSessionActive(lifecycleToken) || this.phase !== 'measuring' ||
+    const generation = this.measurementGeneration;
+    const selectionToken = this.measurementSelectionToken;
+    if (!this.isMeasurementCurrent(generation, selectionToken, lifecycleToken) ||
       this.measurementCompleting || this.batchProcessing) {
       return;
     }
     if (!this.hasValidUnicodeProbe(lifecycleToken) || !this.allBatchParagraphsHaveLayout()) {
       return;
     }
-    const generation = this.measurementGeneration;
     this.batchProcessing = true;
-    this.consumeMeasuredBatch(generation, lifecycleToken);
+    this.consumeMeasuredBatch(generation, selectionToken, lifecycleToken);
   }
 
-  private consumeMeasuredBatch(generation: number, lifecycleToken: number): void {
+  private consumeMeasuredBatch(generation: number, selectionToken: number, lifecycleToken: number): void {
     try {
-      if (!this.isSessionActive(lifecycleToken) || generation !== this.measurementGeneration ||
-        this.phase !== 'measuring') {
+      if (!this.isMeasurementCurrent(generation, selectionToken, lifecycleToken)) {
         return;
       }
       const lineCapacity = this.bodyCapacity();
@@ -642,7 +739,7 @@ export struct LocalReadingExperience {
             FIGMA_PARAGRAPH_SPACE : 0;
           if (this.pendingPageFragments.length > 0 &&
             this.pendingPageHeight + paragraphSpace + line.height > lineCapacity) {
-            this.beginFirstPageCommit(generation, lifecycleToken);
+            this.beginFirstPageCommit(generation, selectionToken, lifecycleToken);
             return;
           }
           if (this.pendingPageFragments.length === 0) {
@@ -650,8 +747,13 @@ export struct LocalReadingExperience {
           }
           this.pendingPageHeight += paragraphSpace + line.height;
           this.pendingPageEndScalar = line.endScalar;
+          // ReadingSurface uses this id as its ArkUI ForEach identity. A
+          // paragraph starts at zero in every chapter, so the local paragraph
+          // id alone would let a new chapter reuse an old visible Text child.
+          // Bind the fragment to the Core-returned chapter identity; this is
+          // presentation identity only and never changes the scalar anchor.
           this.pendingPageFragments.push(new ReadingSurfacePageFragment(
-            `${paragraph.id}:${line.startScalar}-${line.endScalar}`,
+            `chapter-${this.requireChapter().chapterIndex}:${paragraph.id}:${line.startScalar}-${line.endScalar}`,
             this.presentationLineText(paragraph.text.substring(line.startUtf16, line.endUtf16)),
             isParagraphStart,
           ));
@@ -672,9 +774,9 @@ export struct LocalReadingExperience {
         this.measurementEpoch += 1;
         return;
       }
-      this.beginFirstPageCommit(generation, lifecycleToken);
+      this.beginFirstPageCommit(generation, selectionToken, lifecycleToken);
     } catch (error) {
-      if (generation === this.measurementGeneration) {
+      if (this.isMeasurementCurrent(generation, selectionToken, lifecycleToken)) {
         this.fail(error as Error, lifecycleToken);
       }
     }
@@ -693,30 +795,48 @@ export struct LocalReadingExperience {
       return false;
     }
     if (lineCount === 0) {
+      // A pending probe branch can report zero lines for a layout pass or
+      // two, but a stably empty probe (broken ArkUI line layout for the probe
+      // string) must not stall measurement until the 6s deadline. Fail closed
+      // with a specific reason after a bounded number of retries.
+      this.unicodeProbeEmptyAttempts += 1;
+      if (this.unicodeProbeEmptyAttempts >= UNICODE_PROBE_EMPTY_ATTEMPT_LIMIT) {
+        this.fail(new Error('PAGINATION_UNICODE_PROBE_NO_LINES'), lifecycleToken);
+        return false;
+      }
+      return false;
+    }
+    if (lineCount !== 1) {
+      this.fail(new Error('PAGINATION_INDEX_UNIT_UNSUPPORTED'), lifecycleToken);
       return false;
     }
     try {
-      if (lineCount !== 1) {
-        throw new Error('PAGINATION_INDEX_UNIT_UNSUPPORTED');
-      }
       const metric = manager.getLineMetrics(0);
       const map = new ReadingSurfaceLayoutMap(UNICODE_PROBE);
-      const line = map.linesFromArkUI([this.toLineMetric(metric)])[0];
+      const lines = map.linesFromArkUI([this.toLineMetric(metric)]);
+      if (lines.length !== 1) {
+        this.fail(new Error('PAGINATION_INDEX_UNIT_UNSUPPORTED'), lifecycleToken);
+        return false;
+      }
+      const line = lines[0];
       if (metric.startIndex !== 0 || metric.endIndex !== map.utf16Length() ||
         map.utf16Length() !== 4 || map.scalarCount() !== 3 ||
         line.startScalar !== 0 || line.endScalar !== 3) {
-        throw new Error('PAGINATION_INDEX_UNIT_UNSUPPORTED');
+        this.fail(new Error('PAGINATION_INDEX_UNIT_UNSUPPORTED'), lifecycleToken);
+        return false;
       }
       if (this.unicodeProbeVerifiedGeneration !== this.measurementGeneration) {
         this.unicodeProbeVerifiedGeneration = this.measurementGeneration;
         console.info('LocalReadingExperience UTF-16 probe passed: A😀B = 4 UTF-16 / 3 Unicode scalars');
       }
+      this.unicodeProbeEmptyAttempts = 0;
       return true;
-    } catch (_) {
-      // Metrics exist, so this is not a layout-pending signal.  In particular,
-      // a UTF-16 line boundary that splits a surrogate must never be retried
-      // until the hidden page silently waits forever.
-      this.fail(new Error('PAGINATION_INDEX_UNIT_UNSUPPORTED'), lifecycleToken);
+    } catch (error) {
+      // Metrics exist, so this is not a layout-pending signal. Preserve the
+      // conversion error (for example, a UTF-16 boundary splitting a
+      // surrogate) instead of collapsing it into a retryable/pending state or
+      // hiding the actual reason behind a generic probe failure.
+      this.fail(error instanceof Error ? error : new Error('PAGINATION_INDEX_UNIT_UNSUPPORTED'), lifecycleToken);
       return false;
     }
   }
@@ -773,7 +893,10 @@ export struct LocalReadingExperience {
     return new ArkUILineMetric(metric);
   }
 
-  private beginFirstPageCommit(generation: number, lifecycleToken: number): void {
+  private beginFirstPageCommit(generation: number, selectionToken: number, lifecycleToken: number): void {
+    if (!this.isMeasurementCurrent(generation, selectionToken, lifecycleToken)) {
+      return;
+    }
     if (this.pendingPageFragments.length === 0 || this.pendingPageStartScalar < 0 ||
       this.pendingPageEndScalar < this.pendingPageStartScalar) {
       this.fail(new Error('PAGINATION_NO_PHYSICAL_PAGE'), lifecycleToken);
@@ -791,64 +914,69 @@ export struct LocalReadingExperience {
     // Unmount the hidden controller tree while Core resolves and stores the
     // actual visible scalar anchor.  No subsequent batch exists in memory.
     this.measurementEpoch += 1;
-    void this.completeFirstPage(page, generation, lifecycleToken);
+    void this.completeFirstPage(page, generation, selectionToken, lifecycleToken);
   }
 
   private async completeFirstPage(
     visiblePage: PhysicalReadingPage,
     generation: number,
+    selectionToken: number,
     lifecycleToken: number,
   ): Promise<void> {
     try {
-      if (!this.isSessionActive(lifecycleToken) || generation !== this.measurementGeneration ||
-        this.phase !== 'measuring') {
-        return;
-      }
-      const chapter = this.requireChapter();
-      const scalarCount = this.requireChapterLayoutMap().scalarCount();
-      const visibleProgress = scalarCount === 0 ? 0 : visiblePage.startScalar / scalarCount;
-      const resolved = await this.gateway.resolveLocation(
-        this.bookId,
-        chapter.chapterTitle,
-        new CoreReadingAnchor(chapter.chapterIndex, visiblePage.startScalar, visibleProgress),
-        this.coreLayout(),
-      );
-      if (!this.isSessionActive(lifecycleToken) || generation !== this.measurementGeneration ||
-        this.phase !== 'measuring') {
-        return;
-      }
-      // Persistence precedes visibility: a process stop once the static page
-      // is shown always has a Core-owned scalar anchor to restore from.
-      const stored = await this.gateway.updateProgress(this.bookId, new CoreReadingProgressUpdate(
-        resolved.chapterIndex,
-        resolved.chapterOffset,
-        resolved.chapterProgress,
-        resolved.locationRevision,
-      ));
-      if (!this.isSessionActive(lifecycleToken) || generation !== this.measurementGeneration ||
-        this.phase !== 'measuring') {
-        return;
-      }
-      if (stored.chapterIndex !== chapter.chapterIndex || stored.chapterOffset !== visiblePage.startScalar) {
-        throw new Error('READING_INITIAL_PROGRESS_ANCHOR_MISMATCH');
-      }
-      this.desiredChapterOffset = visiblePage.startScalar;
-      this.desiredChapterProgress = visibleProgress;
-      this.visiblePage = visiblePage;
-      this.visibleFragments = visiblePage.fragments;
-      this.phase = 'ready';
-      this.measurementCompleting = false;
-      this.onReadingReady();
-      this.onReadingCommitted(new LocalReadingCommit(
-        this.bookId,
-        stored.chapterIndex,
-        stored.chapterOffset,
-        stored.chapterProgress,
-        stored.locationRevision,
-      ));
-      this.resumeDeferredMeasurement(lifecycleToken);
+      await this.gateway.runProgressCommitSerial(async (): Promise<void> => {
+        if (!this.isMeasurementCurrent(generation, selectionToken, lifecycleToken)) {
+          return;
+        }
+        const chapter = this.requireChapter();
+        const scalarCount = this.requireChapterLayoutMap().scalarCount();
+        const visibleProgress = scalarCount === 0 ? 0 : visiblePage.startScalar / scalarCount;
+        const resolved = await this.gateway.resolveLocation(
+          this.bookId,
+          chapter.chapterTitle,
+          new CoreReadingAnchor(chapter.chapterIndex, visiblePage.startScalar, visibleProgress),
+          this.coreLayout(),
+          (): boolean => this.isMeasurementCurrent(generation, selectionToken, lifecycleToken),
+        );
+        if (!this.isMeasurementCurrent(generation, selectionToken, lifecycleToken)) {
+          return;
+        }
+        // Persistence precedes visibility: a process stop once the static page
+        // is shown always has a Core-owned scalar anchor to restore from.
+        const stored = await this.gateway.updateProgress(this.bookId, new CoreReadingProgressUpdate(
+          resolved.chapterIndex,
+          resolved.chapterOffset,
+          resolved.chapterProgress,
+          resolved.locationRevision,
+        ), (): boolean => this.isMeasurementCurrent(generation, selectionToken, lifecycleToken));
+        if (!this.isMeasurementCurrent(generation, selectionToken, lifecycleToken)) {
+          return;
+        }
+        if (stored.chapterIndex !== chapter.chapterIndex || stored.chapterOffset !== visiblePage.startScalar) {
+          throw new Error('READING_INITIAL_PROGRESS_ANCHOR_MISMATCH');
+        }
+        this.desiredChapterOffset = visiblePage.startScalar;
+        this.desiredChapterProgress = visibleProgress;
+        this.visiblePage = visiblePage;
+        this.visiblePageSelectionToken = selectionToken;
+        this.visibleFragments = visiblePage.fragments;
+        this.phase = 'ready';
+        this.measurementCompleting = false;
+        this.cancelFirstPageReadyDeadline();
+        this.chapterTitle = chapter.chapterTitle;
+        this.onChapterCommitted(chapter.chapterIndex, chapter.chapterTitle);
+        this.onReadingReady(chapter.chapterIndex);
+        this.onReadingCommitted(new LocalReadingCommit(
+          this.bookId,
+          stored.chapterIndex,
+          stored.chapterOffset,
+          stored.chapterProgress,
+          stored.locationRevision,
+        ));
+        this.resumeDeferredMeasurement(lifecycleToken);
+      });
     } catch (error) {
-      if (generation === this.measurementGeneration) {
+      if (this.isMeasurementCurrent(generation, selectionToken, lifecycleToken)) {
         this.fail(error as Error, lifecycleToken);
       }
     }
@@ -865,6 +993,7 @@ export struct LocalReadingExperience {
       return;
     }
     this.exitRequested = true;
+    this.cancelFirstPageReadyDeadline();
     void this.finishExit(lifecycleToken);
   }
 
@@ -888,36 +1017,46 @@ export struct LocalReadingExperience {
       return;
     }
     const page = this.visiblePage;
+    const chapter = this.chapter;
+    const selectionToken = this.visiblePageSelectionToken;
+    if (!this.isVisiblePageCurrent(page, chapter, selectionToken, lifecycleToken)) {
+      return;
+    }
     this.commitInFlight = true;
     try {
-      const chapter = this.chapter;
-      const scalarCount = this.requireChapterLayoutMap().scalarCount();
-      const chapterProgress = scalarCount === 0 ? 0 : page.startScalar / scalarCount;
-      const resolved = await this.gateway.resolveLocation(
-        this.bookId,
-        chapter.chapterTitle,
-        new CoreReadingAnchor(chapter.chapterIndex, page.startScalar, chapterProgress),
-        this.coreLayout(),
-      );
-      if (!this.isMountedToken(lifecycleToken)) {
-        return;
-      }
-      const stored = await this.gateway.updateProgress(this.bookId, new CoreReadingProgressUpdate(
-        resolved.chapterIndex,
-        resolved.chapterOffset,
-        resolved.chapterProgress,
-        resolved.locationRevision,
-      ));
-      if (!this.isMountedToken(lifecycleToken)) {
-        return;
-      }
-      this.onReadingCommitted(new LocalReadingCommit(
-        this.bookId,
-        stored.chapterIndex,
-        stored.chapterOffset,
-        stored.chapterProgress,
-        stored.locationRevision,
-      ));
+      await this.gateway.runProgressCommitSerial(async (): Promise<void> => {
+        if (!this.isVisiblePageCurrent(page, chapter, selectionToken, lifecycleToken)) {
+          return;
+        }
+        const scalarCount = this.requireChapterLayoutMap().scalarCount();
+        const chapterProgress = scalarCount === 0 ? 0 : page.startScalar / scalarCount;
+        const resolved = await this.gateway.resolveLocation(
+          this.bookId,
+          chapter.chapterTitle,
+          new CoreReadingAnchor(chapter.chapterIndex, page.startScalar, chapterProgress),
+          this.coreLayout(),
+          (): boolean => this.isVisiblePageCurrent(page, chapter, selectionToken, lifecycleToken),
+        );
+        if (!this.isVisiblePageCurrent(page, chapter, selectionToken, lifecycleToken)) {
+          return;
+        }
+        const stored = await this.gateway.updateProgress(this.bookId, new CoreReadingProgressUpdate(
+          resolved.chapterIndex,
+          resolved.chapterOffset,
+          resolved.chapterProgress,
+          resolved.locationRevision,
+        ), (): boolean => this.isVisiblePageCurrent(page, chapter, selectionToken, lifecycleToken));
+        if (!this.isVisiblePageCurrent(page, chapter, selectionToken, lifecycleToken)) {
+          return;
+        }
+        this.onReadingCommitted(new LocalReadingCommit(
+          this.bookId,
+          stored.chapterIndex,
+          stored.chapterOffset,
+          stored.chapterProgress,
+          stored.locationRevision,
+        ));
+      });
     } catch (error) {
       // The visible static reading page remains valid. Persistence failures are
       // logged rather than replaced by an unapproved visual state.
@@ -962,6 +1101,13 @@ export struct LocalReadingExperience {
     chapterMap: ReadingSurfaceLayoutMap,
   ): void {
     if (endUtf16 <= startUtf16) {
+      return;
+    }
+    // A separator followed only by trailing whitespace is not a measurable
+    // paragraph. Keeping it would allow an EOF restore to start a physical
+    // page from an empty line.
+    const content = this.requireChapter().content;
+    if (content.substring(startUtf16, endUtf16).trim().length === 0) {
       return;
     }
     const index = this.paragraphRanges.length;
@@ -1064,6 +1210,27 @@ export struct LocalReadingExperience {
     return Math.max(0, this.paragraphRanges.length - 1);
   }
 
+  /**
+   * Finds the final non-whitespace Unicode scalar among the already admitted
+   * paragraph ranges. This is used only to clamp a stale EOF restore anchor;
+   * pagination continues to measure the original Core text and offsets.
+   */
+  private lastMeasurableScalar(): number {
+    const chapter = this.requireChapter();
+    const map = this.requireChapterLayoutMap();
+    for (let rangeIndex = this.paragraphRanges.length - 1; rangeIndex >= 0; rangeIndex -= 1) {
+      const range = this.paragraphRanges[rangeIndex];
+      for (let scalar = range.endScalar - 1; scalar >= range.startScalar; scalar -= 1) {
+        const startUtf16 = map.utf16ForScalar(scalar);
+        const endUtf16 = map.utf16ForScalar(scalar + 1);
+        if (chapter.content.substring(startUtf16, endUtf16).trim().length > 0) {
+          return scalar;
+        }
+      }
+    }
+    throw new Error('READING_CONTENT_EMPTY');
+  }
+
   private resetPendingPage(): void {
     this.pendingPageFragments = [];
     this.pendingPageStartScalar = -1;
@@ -1150,11 +1317,11 @@ export struct LocalReadingExperience {
     this.beginMeasurement(lifecycleToken);
   }
 
-  private armMeasurementDeadline(generation: number, lifecycleToken: number): void {
+  private armMeasurementDeadline(generation: number, selectionToken: number, lifecycleToken: number): void {
     this.cancelMeasurementDeadline();
     this.measurementDeadlineTimer = setTimeout((): void => {
-      if (!this.isSessionActive(lifecycleToken) || generation !== this.measurementGeneration ||
-        this.phase !== 'measuring' || this.measurementCompleting) {
+      if (!this.isMeasurementCurrent(generation, selectionToken, lifecycleToken) ||
+        this.measurementCompleting) {
         return;
       }
       this.fail(new Error('PAGINATION_LAYOUT_METRICS_UNAVAILABLE'), lifecycleToken);
@@ -1167,6 +1334,40 @@ export struct LocalReadingExperience {
     }
     clearTimeout(this.measurementDeadlineTimer);
     this.measurementDeadlineTimer = -1;
+  }
+
+  private ensureFirstPageReadyDeadline(lifecycleToken: number, selectionToken: number): void {
+    if (this.visibleFragments.length > 0 || this.phase === 'ready' || this.firstPageReadyDeadlineTimer >= 0) {
+      return;
+    }
+    this.armFirstPageReadyDeadline(lifecycleToken, selectionToken);
+  }
+
+  private armFirstPageReadyDeadline(lifecycleToken: number, selectionToken: number): void {
+    if (this.visibleFragments.length > 0) {
+      return;
+    }
+    this.cancelFirstPageReadyDeadline();
+    const deadlineGeneration = this.firstPageReadyDeadlineGeneration;
+    this.firstPageReadyDeadlineTimer = setTimeout((): void => {
+      if (deadlineGeneration !== this.firstPageReadyDeadlineGeneration) {
+        return;
+      }
+      this.firstPageReadyDeadlineTimer = -1;
+      if (!this.isSelectionActive(lifecycleToken, selectionToken) || this.phase === 'ready' ||
+        this.visibleFragments.length > 0) {
+        return;
+      }
+      this.fail(new Error('PAGINATION_FIRST_PAGE_READY_TIMEOUT'), lifecycleToken);
+    }, FIRST_PAGE_READY_TIMEOUT_MS);
+  }
+
+  private cancelFirstPageReadyDeadline(): void {
+    this.firstPageReadyDeadlineGeneration += 1;
+    if (this.firstPageReadyDeadlineTimer >= 0) {
+      clearTimeout(this.firstPageReadyDeadlineTimer);
+      this.firstPageReadyDeadlineTimer = -1;
+    }
   }
 
   private effectiveViewportHeight(): number {
@@ -1197,6 +1398,37 @@ export struct LocalReadingExperience {
     return typeof value === 'number' && Number.isFinite(value) ? value : 0;
   }
 
+  private isSelectionCurrent(selectionToken: number): boolean {
+    return selectionToken === this.chapterSelectionToken;
+  }
+
+  private hasCurrentMaterializedChapter(): boolean {
+    return this.chapter !== undefined && this.chapterLayoutMap !== undefined &&
+      this.isSelectionCurrent(this.materializedChapterSelectionToken);
+  }
+
+  private isSelectionActive(lifecycleToken: number, selectionToken: number): boolean {
+    return this.isSessionActive(lifecycleToken) && this.isSelectionCurrent(selectionToken);
+  }
+
+  private isMeasurementCurrent(generation: number, selectionToken: number, lifecycleToken: number): boolean {
+    return this.isSessionActive(lifecycleToken) && generation === this.measurementGeneration &&
+      selectionToken === this.measurementSelectionToken && this.isSelectionCurrent(selectionToken) &&
+      this.materializedChapterSelectionToken === selectionToken && this.phase === 'measuring';
+  }
+
+  private isVisiblePageCurrent(
+    page: PhysicalReadingPage,
+    chapter: LocalReadingChapter,
+    selectionToken: number,
+    lifecycleToken: number,
+  ): boolean {
+    return this.isMountedToken(lifecycleToken) && this.phase === 'ready' &&
+      this.visiblePage === page && this.chapter === chapter &&
+      this.visiblePageSelectionToken === selectionToken &&
+      this.materializedChapterSelectionToken === selectionToken && this.isSelectionCurrent(selectionToken);
+  }
+
   private isMountedToken(lifecycleToken: number): boolean {
     return this.mounted && lifecycleToken === this.lifecycleToken;
   }
@@ -1211,10 +1443,12 @@ export struct LocalReadingExperience {
     }
     this.failureCode = this.errorMessage(error);
     this.cancelMeasurementDeadline();
+    this.cancelFirstPageReadyDeadline();
     this.phase = 'failed';
     this.measurementCompleting = false;
     this.remeasurePending = false;
     this.measurementGeneration += 1;
+    this.measurementSelectionToken = -1;
     console.error(`LocalReadingExperience failed: ${this.failureCode}`);
     // Figma has no admitted error surface. Leave via the same serialized exit
     // path instead of retaining a blank/failed page.
