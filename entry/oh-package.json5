@@ -1,0 +1,11 @@
+{
+  "name": "entry",
+  "version": "1.0.0",
+  "description": "Reader HarmonyOS application entry",
+  "main": "",
+  "author": "",
+  "license": "",
+  "dependencies": {
+    "@reader/core-harmony": "file:./vendor/core-harmony"
+  }
+}
