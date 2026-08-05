@@ -141,6 +141,15 @@ struct Index {
   private navigationGeneration: number = 0;
   /** Rejects a stale source-list reload after a newer toggle has started. */
   private sourceToggleGeneration: number = 0;
+  /**
+   * Serializes source toggles. Core rejects a new `source.update` while any
+   * earlier Host operation is still pending (its before-image is unsafe), so
+   * a "latest wins" drop of the older callback is not enough — the older
+   * toggle must fully settle before the next starts. Each queued toggle also
+   * carries the navigation session that started it, so a completion callback
+   * can never write back into a later re-entry of Source Management.
+   */
+  private sourceToggleChain: Promise<void> = Promise.resolve();
   /** Distinguishes one mounted Search page from a later re-entry. */
   private searchSessionGeneration: number = 0;
   /** Lets an early submit wait for the real `source.list` instead of failing empty. */
@@ -578,32 +587,33 @@ struct Index {
   private onSourceToggled(id: string, enabled: boolean): void {
     // SS-SOURCE-TOGGLE-01: backed by the real `source.update` RPC. The toggle is
     // non-optimistic — the row keeps its previous state until Core confirms the
-    // persisted snapshot, then the list is reloaded. A generation guard rejects
-    // a stale reload that would otherwise overwrite a newer toggle's result.
+    // persisted snapshot, then the list is reloaded. Toggles run on a serial
+    // chain (Core rejects `source.update` while an earlier Host operation is
+    // pending), and every write-back is gated on the navigation session that
+    // started the toggle so a stale completion never repaints a re-entry.
     this.sourceToggleGeneration += 1;
     const generation = this.sourceToggleGeneration;
-    void this.applySourceToggle(id, enabled, generation)
+    const navigation = this.navigationGeneration;
+    this.sourceToggleChain = this.sourceToggleChain
+      .then((): Promise<void> => this.applySourceToggle(id, enabled, generation, navigation))
       .catch((error: Error): void => {
-        if (generation !== this.sourceToggleGeneration) {
-          return; // superseded by a newer toggle; its own flow owns the outcome.
-        }
         hilog.error(DOMAIN, 'Reader',
           'Source toggle failed; row unchanged: sourceId=%{public}s enabled=%{public}s err=%{public}s',
           id, enabled, error.message);
       });
   }
 
-  private async applySourceToggle(id: string, enabled: boolean, generation: number): Promise<void> {
+  private async applySourceToggle(
+    id: string, enabled: boolean, generation: number, navigation: number,
+  ): Promise<void> {
     const gateway = new SourceGateway(ReaderRuntimeOwner.current());
     await gateway.updateSource(id, { enabled });
     // `updateSource` resolved → the toggle IS persisted (Core awaits the Host
     // snapshot put). Reflect it locally even if the reload below fails, so a
-    // reload failure is never reported as "nothing changed". This local flip is
-    // NOT generation-gated: Core serializes mutators via its persistence
-    // transaction gate, so an older toggle's updateSource always resolves
-    // before a newer one starts — its flip is always the current persisted truth
-    // and must not be dropped just because a newer toggle is now in flight.
-    if (this.route === 'source') {
+    // reload failure is never reported as "nothing changed". The flip and the
+    // reload share the session guard: leaving and re-entering Source
+    // Management starts a fresh list load that supersedes this write-back.
+    if (this.route === 'source' && navigation === this.navigationGeneration) {
       this.sourceSources = this.sourceSources.map((source) => {
         if (source.sourceId !== id) {
           return source;
@@ -627,7 +637,8 @@ struct Index {
         id, enabled, (error as Error).message);
       return;
     }
-    if (this.route === 'source' && generation === this.sourceToggleGeneration) {
+    if (this.route === 'source' && navigation === this.navigationGeneration
+        && generation === this.sourceToggleGeneration) {
       this.sourceSources = sources;
     }
   }
