@@ -80,7 +80,7 @@ export class ReaderHostRegistry {
    */
   async selectLocalBookInputs(): Promise<LocalBookPreparation[]> {
     const options = new picker.DocumentSelectOptions();
-    options.fileSuffixFilters = ['TXT、EPUB|.txt,.epub'];
+    options.fileSuffixFilters = ['TXT、EPUB、MOBI、AZW、AZW3、KF8|.txt,.epub,.mobi,.azw,.azw3,.kf8'];
     options.maxSelectNumber = ReaderHostRegistry.LocalBookSelectionLimit;
 
     const uris = await new picker.DocumentViewPicker(this.context).select(options);
