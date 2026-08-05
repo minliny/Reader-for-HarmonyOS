@@ -1,20 +1,20 @@
-import type { JsonObject } from '@reader/core-harmony';
+import type { JsonObject, RequestOptions } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 
 /**
- * A single search result book, decoded from the Core `SearchBookData` wire
- * shape. The page consumes only the fields the Figma Search ResultCard draws.
+ * A single `book.search` result. Reader Core serializes the domain `Book`
+ * shape (`bookId`, `title`, `lastChapter`); the source identity is supplied by
+ * the request that produced it, not guessed from a stale search cache.
  */
 export type SearchBook = {
-  bookUrl: string;
-  origin: string;
-  originName: string;
-  name: string;
+  sourceId: string;
+  sourceName: string;
+  bookId: string;
+  title: string;
   author: string;
   coverUrl?: string;
   intro?: string;
   latestChapterTitle?: string;
-  wordCount?: string;
 };
 
 export type SearchHistory = {
@@ -22,19 +22,28 @@ export type SearchHistory = {
   count: number;
 };
 
+/**
+ * A single `source.list` entry used by search intent selection. `enabled`
+ * is the persisted Core state, not a presentation-derived default: callers
+ * decide which of the returned sources may be searched.
+ */
 export type SearchSource = {
   sourceId: string;
   name: string;
+  enabled: boolean;
 };
 
 export type SearchOutcome =
   | { ok: true; results: SearchBook[] }
   | { ok: false; error: string };
 
+type SearchRequestGuard = () => boolean;
+
 /**
  * Feature-local gateway for the Search page. It owns the Core protocol
- * boundary for `search.history.*` and `search-book.*` and validates every
- * JSON envelope before the page sees it. It never creates a runtime.
+ * boundary for `search.history.*`, `source.list`, and `book.search`, and
+ * validates every JSON envelope before the page sees it. It never creates a
+ * runtime or turns `search-book.list` cache records into live query results.
  */
 export class SearchGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
@@ -60,19 +69,6 @@ export class SearchGateway {
     return { keywords, count: total };
   }
 
-  async loadSearchBooks(): Promise<SearchBook[]> {
-    const result = await this.runtimeOwner.request('search-book.list', {});
-    const rawBooks = result.data['books'];
-    if (!Array.isArray(rawBooks)) {
-      throw new Error('search-book.list returned invalid data');
-    }
-    const books: SearchBook[] = [];
-    for (const raw of rawBooks) {
-      books.push(this.decodeSearchBook(raw));
-    }
-    return books;
-  }
-
   async addHistory(keyword: string): Promise<void> {
     if (typeof keyword !== 'string' || keyword.trim().length === 0) {
       throw new Error('search.history.add requires a non-blank keyword');
@@ -85,36 +81,40 @@ export class SearchGateway {
   }
 
   /**
-   * `book.search` is a real Core call that needs `http.execute` for live
-   * network search across sources. The current Host only registers
-   * `persistence.get/put`, so the call will fail unless the result was
-   * already cached. On failure we fall back to `search-book.list` and
-   * surface an explicit error so the UI shows the error state rather
-   * than silently masking the host gap.
+   * `book.search` is a real Core call that routes live source requests through
+   * the Host. The Harmony Host deliberately rejects transport semantics it
+   * cannot honor (for example followRedirects=false); the caller receives that
+   * failure explicitly and must render its admitted error state rather than
+   * relabeling unrelated cached `search-book.list` data as this keyword.
    */
-  async searchBySource(sourceId: string, keyword: string): Promise<SearchOutcome> {
+  async searchBySource(
+    source: SearchSource,
+    keyword: string,
+    isCurrent?: SearchRequestGuard,
+  ): Promise<SearchOutcome> {
     if (typeof keyword !== 'string' || keyword.trim().length === 0) {
       return { ok: false, error: 'empty keyword' };
     }
-    if (typeof sourceId !== 'string' || sourceId.length === 0) {
+    if (typeof source.sourceId !== 'string' || source.sourceId.length === 0) {
       return { ok: false, error: 'empty sourceId' };
     }
     try {
       const result = await this.runtimeOwner.request('book.search', {
-        sourceId: sourceId,
+        sourceId: source.sourceId,
         keyword: keyword,
-      });
+      }, this.requestOptions(isCurrent));
       const data = result.data;
+      const returnedSourceId = this.requiredString(data, 'sourceId');
+      if (returnedSourceId !== source.sourceId) {
+        return { ok: false, error: 'book.search returned a mismatched sourceId' };
+      }
       const rawBooks = data['books'];
       if (!Array.isArray(rawBooks)) {
-        return { ok: true, results: [] };
+        return { ok: false, error: 'book.search returned invalid books' };
       }
       const books: SearchBook[] = [];
       for (const raw of rawBooks) {
-        const decoded = this.decodeBookSearchResult(raw, keyword);
-        if (decoded !== undefined) {
-          books.push(decoded);
-        }
+        books.push(this.decodeBookSearchResult(raw, source));
       }
       return { ok: true, results: books };
     } catch (error) {
@@ -123,26 +123,25 @@ export class SearchGateway {
     }
   }
 
-  private decodeBookSearchResult(value: unknown, keyword: string): SearchBook | undefined {
+  private decodeBookSearchResult(value: unknown, source: SearchSource): SearchBook {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-      return undefined;
+      throw new Error('book.search returned a non-object book');
     }
     const book = value as JsonObject;
-    const name = this.optionalString(book, 'name');
-    if (name === undefined) {
-      return undefined;
-    }
     const decoded: SearchBook = {
-      bookUrl: this.optionalString(book, 'bookUrl') ?? keyword,
-      origin: this.optionalString(book, 'origin') ?? '',
-      originName: this.optionalString(book, 'originName') ?? '',
-      name: name,
+      sourceId: source.sourceId,
+      sourceName: source.name,
+      // A blank remote identity or title would create a non-actionable, empty
+      // Figma card. Core's live book.search contract supplies both; reject a
+      // malformed response as a source failure instead of rendering a fake
+      // result.
+      bookId: this.requiredNonBlankString(book, 'bookId'),
+      title: this.requiredNonBlankString(book, 'title'),
       author: this.optionalString(book, 'author') ?? '',
     };
     const coverUrl = this.optionalString(book, 'coverUrl');
     const intro = this.optionalString(book, 'intro');
-    const latestChapterTitle = this.optionalString(book, 'latestChapterTitle');
-    const wordCount = this.optionalString(book, 'wordCount');
+    const latestChapterTitle = this.optionalString(book, 'lastChapter');
     if (coverUrl !== undefined) {
       decoded.coverUrl = coverUrl;
     }
@@ -151,9 +150,6 @@ export class SearchGateway {
     }
     if (latestChapterTitle !== undefined) {
       decoded.latestChapterTitle = latestChapterTitle;
-    }
-    if (wordCount !== undefined) {
-      decoded.wordCount = wordCount;
     }
     return decoded;
   }
@@ -170,52 +166,33 @@ export class SearchGateway {
         throw new Error('source.list returned a non-object source');
       }
       const source = raw as JsonObject;
-      const name = this.optionalString(source, 'name');
-      const sourceId = this.optionalString(source, 'sourceId');
-      const enabled = source['enabled'];
-      if (name === undefined || sourceId === undefined || enabled === true) {
-        if (name !== undefined && sourceId !== undefined) {
-          sources.push({ sourceId, name });
-        }
-      }
+      const sourceId = this.requiredString(source, 'sourceId');
+      const name = this.requiredString(source, 'name');
+      const enabled = this.requiredBoolean(source, 'enabled');
+      sources.push({ sourceId, name, enabled });
     }
     return sources;
-  }
-
-  private decodeSearchBook(value: unknown): SearchBook {
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-      throw new Error('search-book.list returned a non-object book');
-    }
-    const book = value as JsonObject;
-    const decoded: SearchBook = {
-      bookUrl: this.requiredString(book, 'bookUrl'),
-      origin: this.optionalString(book, 'origin') ?? '',
-      originName: this.optionalString(book, 'originName') ?? '',
-      name: this.requiredString(book, 'name'),
-      author: this.optionalString(book, 'author') ?? '',
-    };
-    const coverUrl = this.optionalString(book, 'coverUrl');
-    const intro = this.optionalString(book, 'intro');
-    const latestChapterTitle = this.optionalString(book, 'latestChapterTitle');
-    const wordCount = this.optionalString(book, 'wordCount');
-    if (coverUrl !== undefined) {
-      decoded.coverUrl = coverUrl;
-    }
-    if (intro !== undefined) {
-      decoded.intro = intro;
-    }
-    if (latestChapterTitle !== undefined) {
-      decoded.latestChapterTitle = latestChapterTitle;
-    }
-    if (wordCount !== undefined) {
-      decoded.wordCount = wordCount;
-    }
-    return decoded;
   }
 
   private requiredString(value: JsonObject, key: string): string {
     const candidate = value[key];
     if (typeof candidate !== 'string') {
+      throw new Error(`search protocol returned invalid ${key}`);
+    }
+    return candidate;
+  }
+
+  private requiredNonBlankString(value: JsonObject, key: string): string {
+    const candidate = this.requiredString(value, key);
+    if (candidate.trim().length === 0) {
+      throw new Error(`search protocol returned blank ${key}`);
+    }
+    return candidate;
+  }
+
+  private requiredBoolean(value: JsonObject, key: string): boolean {
+    const candidate = value[key];
+    if (typeof candidate !== 'boolean') {
       throw new Error(`search protocol returned invalid ${key}`);
     }
     return candidate;
@@ -230,5 +207,9 @@ export class SearchGateway {
       throw new Error(`search protocol returned invalid ${key}`);
     }
     return candidate;
+  }
+
+  private requestOptions(isCurrent: SearchRequestGuard | undefined): RequestOptions {
+    return isCurrent === undefined ? {} : { shouldCancel: (): boolean => !isCurrent() };
   }
 }

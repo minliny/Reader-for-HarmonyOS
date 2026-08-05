@@ -312,7 +312,8 @@ export struct SearchPage {
           ListItem() {
             this.resultCard(book);
           }
-        }, (book: SearchBook): string => `search-result-${book.bookUrl}`);
+        }, (book: SearchBook, index: number): string =>
+          `search-result-${book.sourceId}:${book.bookId}:${book.title}:${index}`);
       }
       .width('100%')
       .layoutWeight(1)
@@ -338,7 +339,7 @@ export struct SearchPage {
           // rule exists, so the sole primary gradient is reused as the
           // DESIGN_FIXTURE no-cover placeholder.
           Stack({ alignContent: Alignment.Bottom }) {
-            Text(book.name)
+            Text(book.title)
               .width('100%')
               .fontFamily('ReaderNotoSerifSCBold')
               .fontWeight(FontWeight.Bold)
@@ -364,7 +365,7 @@ export struct SearchPage {
       .borderRadius(6);
 
       Column({ space: 5 }) {
-        Text(book.name)
+        Text(book.title)
           .width('100%')
           .fontFamily('ReaderNotoSerifSCBold')
           .fontWeight(FontWeight.Bold)
@@ -410,7 +411,7 @@ export struct SearchPage {
         }
 
         Row({ space: 6 }) {
-          Text(book.originName.length > 0 ? book.originName : book.origin)
+          Text(book.sourceName.length > 0 ? book.sourceName : book.sourceId)
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Bold)
             .fontSize(10)
