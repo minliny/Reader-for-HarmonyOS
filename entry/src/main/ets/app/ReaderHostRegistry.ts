@@ -10,6 +10,7 @@ import {
   type JsonObject,
   type ReaderCoreHostRequestEvent,
 } from '@reader/core-harmony';
+import { HttpExecuteHost } from './HttpExecuteHost';
 
 type SnapshotEncoding = 'value' | 'valueBase64';
 
@@ -37,8 +38,8 @@ export type LocalBookPreparation =
  *
  * The Core snapshot can contain whole local-book bodies, so it is stored as an
  * atomic sandbox file instead of a size-limited preference value. This class
- * deliberately exposes only persistence callbacks plus the narrow,
- * Host-owned local-import service admitted for this slice.
+ * exposes the persistence callbacks, the `http.execute` transport, and the
+ * narrow, Host-owned local-import service admitted for this slice.
  */
 export class ReaderHostRegistry {
   private static readonly SnapshotNamespace = 'reader-core.storage';
@@ -69,6 +70,9 @@ export class ReaderHostRegistry {
     });
     router.register('persistence.put', (event: ReaderCoreHostRequestEvent): Promise<JsonObject> => {
       return this.writeSnapshot(event);
+    });
+    router.register('http.execute', (event: ReaderCoreHostRequestEvent): Promise<JsonObject> => {
+      return HttpExecuteHost.instance.execute(event.params);
     });
     return router;
   }
@@ -320,30 +324,43 @@ export class ReaderHostRegistry {
     await this.ensureDirectory(this.snapshotDirectory());
     const file = new fileIo.AtomicFile(this.snapshotPath());
     const payload = JSON.stringify(snapshot);
-    await new Promise<void>((resolve: () => void, reject: (reason?: Error) => void): void => {
-      try {
-        const stream = file.startWrite();
-        stream.write(payload, 'utf-8', (): void => {
-          try {
-            file.finishWrite();
-            resolve();
-          } catch (error) {
-            try {
-              file.failWrite();
-            } catch (_) {
-              // The primary write failure remains the useful error.
-            }
-            reject(error as Error);
+    try {
+      const stream = file.startWrite();
+      const expectedBytes = new util.TextEncoder().encodeInto(payload).length;
+      await new Promise<void>((resolve: () => void, reject: (reason?: Error) => void): void => {
+        let settled = false;
+        const rejectOnce = (error: Error): void => {
+          if (settled) {
+            return;
           }
-        });
-      } catch (error) {
+          settled = true;
+          reject(error);
+        };
+        stream.on('error', (): void => rejectOnce(new Error('Reader Core snapshot stream write failed')));
         try {
-          file.failWrite();
-        } catch (_) {
-          // There may be no temporary file when startWrite itself failed.
+          stream.end(payload, 'utf-8', (): void => {
+            if (settled) {
+              return;
+            }
+            if (stream.bytesWritten !== expectedBytes) {
+              rejectOnce(new Error('Reader Core snapshot write was incomplete'));
+              return;
+            }
+            settled = true;
+            resolve();
+          });
+        } catch (error) {
+          rejectOnce(error as Error);
         }
-        reject(error as Error);
+      });
+      file.finishWrite();
+    } catch (error) {
+      try {
+        file.failWrite();
+      } catch (_) {
+        // There may be no temporary file when startWrite itself failed.
       }
-    });
+      throw error;
+    }
   }
 }
