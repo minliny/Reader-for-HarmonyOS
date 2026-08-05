@@ -153,6 +153,10 @@ export struct SyncPage {
         .width('100%')
         .height(32)
         .margin({ top: 4 })
+        // Credentials must never be rendered as ordinary readable page text.
+        // They remain transient page state; this does not introduce a storage
+        // policy for WebDAV secrets.
+        .type(InputType.Password)
         .fontFamily('ReaderInter')
         .fontSize(13)
         .fontColor('#1F1B17')

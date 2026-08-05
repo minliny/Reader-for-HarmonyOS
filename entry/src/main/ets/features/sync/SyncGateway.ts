@@ -34,11 +34,10 @@ export const DEFAULT_SYNC_SNAPSHOT: SyncSnapshot = {
 
 /**
  * Feature-local gateway for the Sync page. Owns the `sync.*` boundary.
- * `sync.backup`, `sync.merge`, `sync.webdav.plan` need `http.execute`
- * (WebDAV) and `file.read/write` (local). The current Host only
- * registers `persistence.*`, so the calls fail with a real Core error
- * and the page renders the empty config + no history. The Gateway is
- * real, not a stub.
+ * `sync.webdav.plan` and `sync.backup` are Core planners, not network
+ * operations. A real WebDAV flow still needs a host-side executor plus Core
+ * response parsing and a Figma-approved result state. This gateway therefore
+ * reports that no connection/backup was executed rather than fabricating one.
  */
 export class SyncGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
@@ -76,8 +75,8 @@ export class SyncGateway {
       }
       await this.runtimeOwner.request('sync.webdav.plan', params);
       return {
-        ok: true,
-        note: 'sync.webdav.plan built the PROPFIND request; network execution requires http.execute (not registered in this slice)',
+        ok: false,
+        error: 'WebDAV connection was not tested: sync.webdav.plan only builds request descriptors',
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : `${error}`;
@@ -92,9 +91,8 @@ export class SyncGateway {
   }
 
   async triggerBackup(): Promise<SyncBackupResult> {
-    // `sync.backup` is a pure planner (Core never opens sockets). The real
-    // WebDAV upload happens via `http.execute`, which this Host slice does
-    // not register. Reporting ok would fabricate a backup that never ran.
+    // `sync.backup` is a pure planner (Core never opens sockets). Reporting ok
+    // would fabricate a backup that never ran.
     try {
       await this.runtimeOwner.request('sync.backup', {
         package: {
@@ -112,18 +110,10 @@ export class SyncGateway {
           overwriteExisting: false,
         },
       });
-      return { ok: false, error: 'sync.backup built a plan only; http.execute host not registered (no upload executed)' };
+      return { ok: false, error: 'sync.backup built a plan only; no package upload was executed' };
     } catch (error) {
       const message = error instanceof Error ? error.message : `${error}`;
       return { ok: false, error: message };
     }
-  }
-
-  private optionalNumber(value: JsonObject, key: string): number | undefined {
-    const candidate = value[key];
-    if (typeof candidate !== 'number' || !Number.isFinite(candidate)) {
-      return undefined;
-    }
-    return candidate;
   }
 }

@@ -49,22 +49,6 @@ export class RssGateway {
     return subs;
   }
 
-  /**
-   * `rss.subscription.refresh` is a real Core call that resolves the
-   * subscription, emits `http.execute`, then parses the response on
-   * continuation. The current Host only registers `persistence.*`, so
-   * the call returns an error and we fall back to cached state.
-   */
-  async refreshSubscription(subscriptionId: string): Promise<{ ok: true } | { ok: false; error: string }> {
-    try {
-      await this.runtimeOwner.request('rss.subscription.refresh', { subscriptionId: subscriptionId });
-      return { ok: true };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : `${error}`;
-      return { ok: false, error: message };
-    }
-  }
-
   async loadRecentUnread(subscriptions: RssSubscription[]): Promise<RssItem[]> {
     const sampled = subscriptions.slice(0, MAX_RECENT_UNREAD_SUBSCRIPTIONS);
     const grouped = await Promise.all(sampled.map((sub) => this.loadItems(sub.subscriptionId)));

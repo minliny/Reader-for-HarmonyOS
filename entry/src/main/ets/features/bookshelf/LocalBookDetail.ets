@@ -1,5 +1,6 @@
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import type { LocalReadingTocEntry } from '../reading/LocalReadingFlowGateway';
+import { NoCoverCover } from './NoCoverCover';
 
 const PHONE_CONTENT_WIDTH = 350;
 const TABLET_CONTENT_WIDTH = 720;
@@ -113,16 +114,17 @@ export struct LocalBookDetail {
   @Builder
   private heroCard() {
     Row({ space: 14 }) {
-      // N-COVER-HERO-01: BookDetail Hero has no Figma NoCover variant (the
-      // `BookCover` NoCover `3612:1796` applies to shelf cards, not this
-      // Hero assembly). Do not fabricate a cover; render the text column and
-      // leave the cover slot unoccupied.
+      // N-COVER-HERO-01 (user decision 2026-08-05): reuse the shelf-card
+      // `BookCover` NoCover `3612:1796` scaled into the 86×122 Hero cover slot
+      // when the local book has no cover; no new Figma variant drawn.
       if (this.hasCover()) {
         Image(this.book.coverUrl as string)
           .width(86)
           .height(122)
           .objectFit(ImageFit.Cover)
           .borderRadius(6);
+      } else {
+        NoCoverCover({ coverWidth: 86, coverHeight: 122 });
       }
 
       Column() {
