@@ -115,7 +115,12 @@
 
 - **构建产物**：unsigned HAP（无 signingConfig）；回归以 VM 最新安装为准。
 - **NAPI 库**：HAP 内只有一个经 Native Strip 的 `libreader_core_napi.so`（SHA 754c…）。`entry/libs`（9912f5da）与 Core target 一致；`vendor/core-harmony/libs` 保留旧副本（ced5b79a），**未见双重打包，但是维护风险**。
-- **Git 可追溯性**：`Reader-for-HarmonyOS` `git ls-files = 0`（未纳入版本控制）；Reader-UI 与 Reader-Core-Native 有未提交改动。这是本地实现进度，不是可回溯的出版基线；是否提交由仓库负责人决策。
-- **VM 时间线**：已将本会话最终构建（含第四轮修复）安装到 VM，并用真实书《湛蓝权杖》(txt) 完成设备回归：NoCover 渲染、Full Directory 真实目录选章→章节正文、Detail 真实数据。VM 导入路径：把 txt 推到 `/data/local/tmp`（shell 可写）后驱动 DocumentViewPicker。仍需真机验证 Tablet/TabletExpanded 布局。
+- **Git 可追溯性**：`Reader-for-HarmonyOS` 已纳入 git（分支 `feat/reader-module-directory-a2`，含源码/资源/文档/NAPI 库）；Reader-UI 与 Reader-Core-Native 有各自未提交/已提交改动。可回溯性以各仓库 git 为准。
+- **VM 时间线**：已将含第四轮修复的构建安装到 VM，并用真实书《湛蓝权杖》(txt) 完成设备回归（NoCover 渲染、Full Directory 真实目录选章→章节正文、Detail 真实数据）。**第五/六轮修复（测量重置等）未安装到 VM 做当前构建设备回归**。VM 导入路径：推 txt 到 `/data/local/tmp` 后驱动 DocumentViewPicker。
 - **字体**：BookDetail 标题 Figma 指定 Songti SC，当前以 Noto Serif SC 临时桥接（`B-DETAIL-01`）。
 - **VM 为 Phone 形态**：Tablet/TabletExpanded 布局未做运行验收。
+- **阅读核心独立实现缺陷（非 Figma 缺口，待专项调试）**：
+  1. 非 ready 阶段 ReadingSurface 收到空 `visibleFragments`（不暴露 loading 态的设计），布局失败依赖 deadline 兜底，无独立失败上限；
+  2. `hasValidUnicodeProbe` 把 `lineCount === 0` 一律当"尚未布局"（`LocalReadingExperience.ets` 度量路径），若度量稳定返回 0 会延误到 deadline；
+  3. 章节末尾空行时阅读位置恢复锚点可能定位失败（`configureRestoredAnchor` 依赖 `beginMeasurement` 的 clamp 兜底，未逐字节验证末尾空行场景）。
+  这三项均在阅读核心，改错会破坏已验证的真实书阅读链路，需专项复现后单独修复。
