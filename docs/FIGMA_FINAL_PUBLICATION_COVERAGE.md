@@ -22,7 +22,7 @@
 | Bookshelf（empty） | `07 States` `286:31`（参考） | Phone | CORE | `bookshelf.list` | 导入入口 | ✅（Phone） | ✅ | ✅（Phone） | ✅（Phone） | 缺 Tablet Final Empty 节点（`H-NOTE-1`：Tablet 复用 Phone 参考布局 350.903 宽，非推断 720） | `BookshelfEmptyPage.ets` | HAP+VM(Phone) |
 | **Book Detail（local）** | `23 · Pages · Final` `943:651`(Phone) `943:855`(Tablet) | Phone/Tablet | CORE | `bookshelf.get`、`local_book.toc`、`reading.progress.get` | 书架→详情；返回=书架 | ✅ | ✅ | ✅（Phone） | ✅（Phone）/⊘(Tablet) | NoCover：书架卡基准（96.66×145.44）已对齐 Figma `3612:1796`；62×93/Tablet 缩放实例无 Figma 规则（子元素为 MIN/MIN 非比例缩放）；Hero 无 NoCover 变体（`N-COVER-HERO-01`）；Songti `B-DETAIL-01` 桥接 | `LocalBookDetail.ets` | HAP+VM(Phone,真实书) |
 | **ReadingSurface** | `15 · Reader 2` `1023:18355`(Phone) `1023:18371`(TabletExpanded) | Phone/TabletExpanded | CORE | `local_book.chapter.content`、`reading.progress.get/update`、`reader.location.resolve` | 详情→阅读；返回=详情 | ✅ | ✅ | ✅(Phone) | ✅（Phone）/⊘(TabletExpanded) | 翻页动效按 `M-REVIEW-01` 暂停 | `LocalReadingExperience.ets`、`ReadingSurface.ets` | HAP+VM(Phone) |
-| **Full Directory** | `23 · Pages · Final` `943:9888`/`943:10196` + `15 · Reader 2` `1023:18662`/`1023:18664` | Phone/Tablet | CORE | `local_book.toc` | 详情→目录；选章→该章正文；返回=详情 | ✅ | ⚠️（单次选章链路接通 + `chapterSelectionToken` 防并发 + 过期 catch 不失败；设备已用真实书《湛蓝权杖》验证选章→正文） | ✅（Phone） | ⊘Core阻塞（视觉合同未闭合：`R-LOCAL-TOC-01` 无 prototype reaction/固定样例/无本地目录字段映射；"新标题旧正文"转场仍开） | `R-LOCAL-TOC-01` | `ReaderFullDirectory.ets` + `FullDirectoryPanel.ets` | HAP+VM(Phone,真实书) |
+| **Full Directory** | `23 · Pages · Final` `943:9888`/`943:10196`（当前 Figma 无本地目录动态字段映射） | Phone/Tablet | CORE | `local_book.toc` | 详情→目录；选章→该章正文；返回=详情 | ✅ | ⚠️（选章链路接通 + `chapterSelectionToken` 防过期加载 + 选章时重置测量状态（stale-submit/测量归属已修）；设备已用真实书《湛蓝权杖》验证选章→正文） | ✅（Phone） | ⊘Core阻塞（视觉合同未闭合：`R-LOCAL-TOC-01` 无 prototype reaction/固定样例/无本地目录字段映射；"新标题旧正文"转场仍开；设备回归未做当前构建） | `R-LOCAL-TOC-01` | `ReaderFullDirectory.ets` + `FullDirectoryPanel.ets` | HAP+VM(Phone,真实书) |
 | **Import** | `23 · Pages · Final` + `08 Library&Import` | Phone | CORE | `local_book.import`、`bookshelf.add`（Host picker + rollback） | 书架→导入 | ✅ | ✅ | ✅(Phone) | ✅（Phone） | 格式支持：txt/epub 完整（IndexedText）；mobi/azw/azw3/kf8 检测+文本片段（Core TextBoundary，KF8/DRM 需外部解码器） | `LocalImportDialog.ets` | HAP+VM(Phone,真实书) |
 | **Search** | `11 · Search` `2635:58749`~`2635:59599` | Phone/Tablet | CORE | `search.history.*`、`search-book.list`（缓存）、`source.list` | 书架搜索→搜索页；返回=书架 | ✅ | ⊘（输入关键词只写历史，未传 Core `book.search`；未接 `http.execute` 远程搜索） | ✅ | ⊘Core阻塞（http） | `S-SEARCH-EMPTY-HISTORY-01`、`S-SEARCH-RESULT-COVER-01` | `SearchPage.ets`、`SearchGateway.ts` | HAP+VM（壳） |
 | **RSS** | `10 · Reference · RSS` `F2 · Canonical · RSS` `2305:267`/`2305:529` + CanonicalState `2305:738`/`2305:789`/`2305:849` | Phone/Tablet | CORE | `rss.subscription.list`、`rss.subscription.items`（缓存） | 书架底部导航→RSS；返回=书架 | ✅ | ⊘（"刷新"只重读缓存；订阅管理/详情只记 GAP；未接 `rss.subscription.refresh` 与 `http.execute`） | ✅ | ⊘Core阻塞（http） | — | `RssPage.ets`、`RssGateway.ts` | HAP+VM（壳） |
@@ -40,7 +40,7 @@
 **三层都 ✅（真实业务闭环）**：
 1. **Bookshelf → 本地 Book Detail → TOC → 真实章节正文 → ReadingSurface**：`local_book.import`（真实 EPUB/TXT）、`bookshelf.get`、`local_book.toc`、`local_book.chapter.content`、`reading.progress.get/update`、`reader.location.resolve`。重启恢复同一位置。
 2. **Bookshelf ReadingProgress=None**：`continueReading === undefined` 时整块不渲染，书架自然上移（Figma 已补 `3579:11530`/`3579:11575`）。
-3. **空书架**（Phone 参考；Tablet 复用 Phone 350 宽居中，非推断 720）：空 Core 书架显示空态与导入入口（`H-NOTE-1`）。
+3. **空书架**（Phone 参考；Tablet 复用 Phone 350.903 宽内容、靠左对齐）：空 Core 书架显示空态与导入入口（`H-NOTE-1`，Tablet 无 Figma 终态）。
 4. **Book Detail（local）**：真实 `bookshelf.get` + `local_book.toc`；无封面书按 `N-COVER-REMAP-01` 放行（Figma `3612:1796` NoCover）。
 5. **Full Directory 选章**：`FullDirectoryPanel.chapterRow.onClick` → `ReaderFullDirectory.onSelectChapter` → `Index.onDirectoryChapterSelected` → `LocalReadingExperience.onRequestedChapterChanged`（@Watch）→ `openChapter`。选章真实重载 + `chapterSelectionToken` 防并发覆盖。**但 `R-LOCAL-TOC-01` 仍存**：Phone/Tablet 实例无 prototype reaction，章节行固定样例，无本地目录字段→正文映射；设备回归未做（VM 无书）。
 6. **Settings General**：`SettingsGateway` 经 `@ohos.data.preferences` 持久化 4 开关；`Index` 读写 `settingsSnapshot`。
@@ -81,7 +81,7 @@
 独立审计（只读源码/Figma/构建/VM 原生树，不用截图）指出此前把"静态页存在"写成 `VERIFIED` 是过度声明。已全量纠正：
 
 1. **三层标记**（§1）：视觉 / 真实 Core / VM 三列独立勾选，不再混写。
-2. **Tablet 空书架与导入（`H-NOTE-1`）**：`Index` 不再按 `!isTablet` 跳过空书架；`BookshelfEmptyPage` 复用 Phone 参考布局（固定 350.903 宽居中）；导入弹窗不再被排除。
+2. **Tablet 空书架与导入（`H-NOTE-1`）**：`Index` 不再按 `!isTablet` 跳过空书架；`BookshelfEmptyPage` 复用 Phone 参考布局（固定 350.903 宽、靠左对齐，**未居中**——非推断）；导入弹窗不再被排除。
 3. **无封面重映射（`N-COVER-REMAP-01`）**：`applyBookshelfState` 删除 `hasDeclaredCoverUrl` 全体拒绝；无封面书软警告并放行。
 4. **Full Directory 选章（`R-LOCAL-TOC-01`）**：章节行 → `onSelectChapter` → 该章正文路由。
 5. **Settings 持久化**：`SettingsGateway`（`@ohos.data.preferences`）+ `Index` 读写。
@@ -93,7 +93,7 @@
 第二轮独立审计复核后再次指出过度声明，已修复：
 
 1. **NoCover 视觉重映射（防崩溃已修，视觉部分闭合）**：书架 `bookCard`/`continueReadingCard` 用 Figma `3612:1796` NoCover（奶油 `#F5ECE6` + 两条横线 + "暂无封面"），不再 `Image(undefined as string)` 也不再绿色渐变。**BookDetail Hero 无 NoCover 变体（`N-COVER-HERO-01`），不补画**，空封面槽只显示文字列。
-2. **Full Directory 选章**：`requestedChapterIndex` @Watch → `openChapter`；`chapterSelectionToken` 防并发覆盖。**竞态已修、Figma 视觉合同未闭合（`R-LOCAL-TOC-01`）**，设备回归未做（VM 无书）。
+2. **Full Directory 选章**：`requestedChapterIndex` @Watch → `openChapter`；`chapterSelectionToken` 防过期加载 + 选章时重置测量状态（stale-submit 清理、测量归属已修）。**竞态部分修复、Figma 视觉合同未闭合（`R-LOCAL-TOC-01`）**，当前构建设备回归未做。
 3. **Sync 参数修正**：`sync.webdav.plan` → `{baseUrl, requests:[PROPFIND]}`；`sync.backup` → `{package, policy}`。**但两者均为纯计划命令，不执行网络**；`triggerBackup` 不再插入 0 字节"备份成功"假历史，`连接测试` 如实报告"计划已构建，未执行网络（需 http host）"。**Sync 当前不可用**，须先接 Host HTTP 执行与结果回传。
 4. **Source 开关诚实化（`SS-SOURCE-TOGGLE-01`）**：Core 无 `source.update`。`onSourceToggled` 不再乐观切换（避免未持久化假状态），保持原状并记录缺口。
 5. **Tablet 空书架**：撤销 720px 推断，Tablet 复用 Phone 350 参考布局；导入弹窗不再被排除。**入口可用、视觉缺口未关闭**（Figma 无 Tablet Empty）。
@@ -106,7 +106,7 @@
 
 - `close()`：✅ 已修。
 - NoCover：**防崩溃已修、视觉未闭合**（书架已按 Figma NoCover；Detail Hero 无变体）。
-- 目录：**单次代码路径存在、竞态已修、Figma 视觉合同/设备回归未完成**。
+- 目录：**选章代码路径存在、竞态部分修复（测量归属/stale-submit 已修，设备回归未做）、Figma 视觉合同未闭合**。
 - Tablet：**入口可用、视觉缺口未关闭**。
 - Sync：**不可用，必须先接 Host HTTP 执行与结果回传**。
 - Source Toggle：**不可持久化，不应伪装成功**（已不乐观切换）。

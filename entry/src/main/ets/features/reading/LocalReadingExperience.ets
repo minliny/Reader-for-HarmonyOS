@@ -470,12 +470,23 @@ export struct LocalReadingExperience {
     // overwrite a later selection when several rows are tapped in a row.
     this.chapterSelectionToken += 1;
     const selectionToken = this.chapterSelectionToken;
-    // Invalidate any in-flight measurement from the previously selected
-    // chapter. Its didLayout/deadline callbacks compare against
-    // measurementGeneration, so bumping it now (before the next chapter's
-    // beginMeasurement) stops a stale measurement error from failing the
-    // newly selected chapter's flow.
-    this.measurementGeneration += 1;
+    // Fully reset the in-flight measurement of the previously selected
+    // chapter. The old chapter's async submit may have already set
+    // measurementCompleting=true; if we leave it, the new chapter's
+    // beginMeasurement only queues remeasurePending and never measures again
+    // (blank / stale surface). Clearing the batch also stops a stale tree's
+    // didLayout from being consumed as the current generation's measurement.
+    this.measurementCompleting = false;
+    this.remeasurePending = false;
+    this.batchProcessing = false;
+    this.measurementBatch.length = 0;
+    this.paragraphRanges.length = 0;
+    this.pendingPageFragments.length = 0;
+    this.pendingPageStartScalar = -1;
+    this.pendingPageEndScalar = -1;
+    this.visiblePage = undefined;
+    this.visibleFragments = [];
+    this.phase = 'loading';
     this.cancelMeasurementDeadline();
     // A manual directory selection is not a restore; start the chapter at its
     // natural first scalar.
