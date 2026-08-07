@@ -1,9 +1,11 @@
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import {
+  TOK_ACTION_DIVIDER,
   TOK_BORDER,
   TOK_BORDER_W,
   TOK_CARD_BG,
   TOK_CARD_BG_HI,
+  TOK_CHAPTER_DIVIDER,
   TOK_CONTENT_MAX_W_PHONE,
   TOK_CONTENT_MAX_W_TABLET,
   TOK_DANGER,
@@ -346,7 +348,7 @@ export struct LocalBookDetail {
       .width('100%')
       .height(CHAPTER_ROW_HEIGHT)
       .padding({ left: TOK_SPACE_CARD_PADDING, right: TOK_SPACE_CARD_PADDING })
-      .border({ width: { top: 1 }, color: { top: '#47B4A697' } })
+      .border({ width: { top: TOK_BORDER_W }, color: { top: TOK_CHAPTER_DIVIDER } })
       .alignItems(VerticalAlign.Center)
       .onClick((): void => this.onSelectChapter(entry.index));
   }
@@ -383,7 +385,7 @@ export struct LocalBookDetail {
       .width(this.actionButtonWidth())
       .height(46)
       .backgroundColor(TOK_CARD_BG_HI)
-      .border({ width: TOK_BORDER_W, color: '#6BB4A697' })
+      .border({ width: TOK_BORDER_W, color: TOK_ACTION_DIVIDER })
       .borderRadius(999);
     }
     .width(this.contentWidth())

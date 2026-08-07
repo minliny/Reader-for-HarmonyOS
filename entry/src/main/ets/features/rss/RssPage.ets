@@ -22,6 +22,7 @@ import {
   TOK_PAPER,
   TOK_PRIMARY_BG,
   TOK_PRIMARY_DARK,
+  TOK_ROW_DIVIDER,
   TOK_SCREEN_INSET,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_LG,
@@ -85,7 +86,6 @@ const ERROR_CARD_BG = '#14D62222';
 const CARD_BORDER = '#4DB4A697';       // rgba(180,166,151,0.3)
 const FILTER_BORDER = '#7AB4A697';     // rgba(180,166,151,0.48)
 const PILL_BORDER = '#6BB4A697';       // rgba(180,166,151,0.42)
-const ROW_DIVIDER = '#33B4A697';       // rgba(180,166,151,0.2)
 
 /**
  * Figma-backed RSS page for `10 · Reference · RSS` `F2 · Canonical · RSS`:
@@ -485,7 +485,7 @@ export struct RssPage {
     .height(62)
     .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
     .alignItems(VerticalAlign.Center)
-    .border({ width: { top: index > 0 ? 0.5 : 0 }, color: ROW_DIVIDER })
+    .border({ width: { top: index > 0 ? TOK_BORDER_W : 0 }, color: TOK_ROW_DIVIDER })
     .onClick((): void => this.onSelectSubscription(sub.subscriptionId));
   }
 
@@ -586,7 +586,7 @@ export struct RssPage {
     .width('100%')
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: TOK_SPACE_CONTROL_INLINE, bottom: TOK_SPACE_CONTROL_INLINE })
     .alignItems(VerticalAlign.Top)
-    .border({ width: { top: index > 0 ? 0.5 : 0 }, color: ROW_DIVIDER })
+    .border({ width: { top: index > 0 ? TOK_BORDER_W : 0 }, color: TOK_ROW_DIVIDER })
     .onClick((): void => this.onSelectItem(item.guid));
   }
 

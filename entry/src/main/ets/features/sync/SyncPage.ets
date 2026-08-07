@@ -20,12 +20,14 @@ import {
   TOK_PAPER,
   TOK_PRIMARY_DARK,
   TOK_SCREEN_INSET,
+  TOK_SETTING_ICON_BG,
   TOK_SPACE_CARD_PADDING,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_LG,
   TOK_SPACE_MD,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
+  TOK_SURFACE_PANEL_SOFT,
 } from '../common/ReaderTokens';
 
 // Sync Backup — rebuilt 2026-08-05 against live Figma nodes
@@ -38,12 +40,10 @@ const CARD_BG_SOLID = '#FFFCF8';   // solid — Auto/History cards
 const CARD_BORDER_SOFT = '#D8D0C3';
 const ROW_BG = '#B3FFFCF8';        // rgba(255,252,248,0.7) — labelled row
 const ROW_BORDER = '#4DB4A697';    // rgba(180,166,151,0.3)
-const ICON_BG = '#172379A4';       // rgba(35,121,164,0.09) — row icon circle
 const GHOST_BG = '#14236179';      // rgba(35,97,121,0.08) — test button
 const GHOST_BORDER = '#38236179';  // rgba(35,97,121,0.22)
 const SOLID_BG = '#243D30';        // save button
 const BADGE_BG = '#EEE7DB';
-const EXPAND_BG = '#A3EEE7DB';     // rgba(238,230,219,0.64)
 
 @Component
 export struct SyncPage {
@@ -172,7 +172,7 @@ export struct SyncPage {
       .width(28)
       .height(28)
       .borderRadius(14)
-      .backgroundColor(ICON_BG);
+      .backgroundColor(TOK_SETTING_ICON_BG);
 
       Column({ space: 5 }) {
         Text(label)
@@ -435,7 +435,7 @@ export struct SyncPage {
       }
       .height(26)
       .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
-      .backgroundColor(EXPAND_BG)
+      .backgroundColor(TOK_SURFACE_PANEL_SOFT)
       .borderRadius(8);
     }
     .width('100%')

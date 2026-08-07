@@ -370,7 +370,7 @@ export struct DiscoverPage {
     .height(98)
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: TOK_SPACE_SM, bottom: TOK_SPACE_SM })
     .alignItems(VerticalAlign.Top)
-    .border({ width: { top: 0.5 }, color: TOK_LINE_STRONG });
+    .border({ width: { top: TOK_BORDER_W }, color: TOK_LINE_STRONG });
   }
 
   private onMainTab(key: string): void {

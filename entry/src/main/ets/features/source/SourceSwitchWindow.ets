@@ -11,6 +11,13 @@ import {
   TOK_READ_INK,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
+  TOK_SS_CLOSE_BG,
+  TOK_SS_COLUMN_HEADER_BG,
+  TOK_SS_FOOTER_TEXT,
+  TOK_SS_MUTED,
+  TOK_SS_SORT_PILL_BG,
+  TOK_SS_WINDOW_BG,
+  TOK_SS_WINDOW_BORDER,
 } from '../common/ReaderTokens';
 
 import { registerReaderFonts } from '../common/ReaderFonts';
@@ -96,8 +103,8 @@ export struct SourceSwitchWindow {
     }
     .width(300)
     .height(385)
-    .backgroundColor('#FFFCF8')
-    .border({ width: TOK_BORDER_W, color: '#3D9B8466' })
+    .backgroundColor(TOK_SS_WINDOW_BG)
+    .border({ width: TOK_BORDER_W, color: TOK_SS_WINDOW_BORDER })
     .borderRadius(20);
   }
 
@@ -130,12 +137,12 @@ export struct SourceSwitchWindow {
           Stack({ alignContent: Alignment.Center }) {
             Text('✕')
               .fontSize(14)
-              .fontColor('#8D8378');
+              .fontColor(TOK_SS_MUTED);
           }
           .width(22)
           .height(22)
           .borderRadius(8)
-          .backgroundColor('#6BEEE6DB');
+          .backgroundColor(TOK_SS_CLOSE_BG);
         }
         .width(44)
         .height(44)
@@ -165,13 +172,13 @@ export struct SourceSwitchWindow {
         .fontWeight(FontWeight.Regular)
         .fontSize(9)
         .lineHeight(12)
-        .fontColor('#8D8378')
+        .fontColor(TOK_SS_MUTED)
         .textAlign(TextAlign.Center);
     }
     .width(60)
     .height(20)
     .borderRadius(10)
-    .backgroundColor('#1A9B8466')
+    .backgroundColor(TOK_SS_SORT_PILL_BG)
     .margin({ left: 41 });
   }
 
@@ -207,7 +214,7 @@ export struct SourceSwitchWindow {
     .width(300)
     .height(20)
     .alignItems(VerticalAlign.Center)
-    .backgroundColor('#0D9B8466');
+    .backgroundColor(TOK_SS_COLUMN_HEADER_BG);
   }
 
   @Builder
@@ -387,7 +394,7 @@ export struct SourceSwitchWindow {
       .fontWeight(FontWeight.Regular)
       .fontSize(8)
       .lineHeight(12)
-      .fontColor('#C8BFB5')
+      .fontColor(TOK_SS_FOOTER_TEXT)
       .textAlign(TextAlign.Center);
   }
 

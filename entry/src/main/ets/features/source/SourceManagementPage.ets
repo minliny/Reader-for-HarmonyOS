@@ -279,7 +279,7 @@ export struct SourceManagementPage {
     .height(70)
     .padding({ left: TOK_SPACE_SM })
     .alignItems(VerticalAlign.Center)
-    .border({ width: { top: 0.5 }, color: TOK_ROW_DIVIDER });
+    .border({ width: { top: TOK_BORDER_W }, color: TOK_ROW_DIVIDER });
   }
 
   @Builder

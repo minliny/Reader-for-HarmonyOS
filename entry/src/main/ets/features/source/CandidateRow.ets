@@ -1,5 +1,6 @@
 import { LatencyBar } from './LatencyBar';
 import {
+  TOK_BORDER_W,
   TOK_LINE,
   TOK_READ_HANDLE,
   TOK_READ_MUTED,
@@ -79,7 +80,7 @@ export struct CandidateRow {
     .height(28)
     .alignItems(VerticalAlign.Center)
     .backgroundColor(this.rowBackground())
-    .border({ width: { bottom: 1 }, color: TOK_LINE })
+    .border({ width: { bottom: TOK_BORDER_W }, color: TOK_LINE })
     .onClick((): void => {
       if (this.kind() === 'available') {
         this.onSelect();

@@ -75,6 +75,10 @@ export const TOK_LINE = '#2E9B8466';
 export const TOK_LINE_STRONG = '#57B4A697';
 // Figma: color/runtime/line/hard rgba(190,174,156,0.40)
 export const TOK_LINE_HARD = '#66BEAE9C';
+// Figma: color/runtime/line/book-detail rgba(180,166,151,0.28) — LocalBookDetail 章节行顶分隔
+export const TOK_CHAPTER_DIVIDER = '#47B4A697';
+// Figma: color/runtime/line/book-detail-strong rgba(180,166,151,0.42) — LocalBookDetail 操作栏按钮边
+export const TOK_ACTION_DIVIDER = '#6BB4A697';
 // Figma: color/runtime/primary/soft rgba(45,74,62,0.10)
 export const TOK_PRIMARY_SOFT = '#172D4A3E';
 // Figma: color/runtime/primary/border rgba(45,74,62,0.42)
@@ -185,6 +189,24 @@ export const TOK_READ_DISABLED_BG = '#8FEEE6DB';
 export const TOK_READ_SURFACE = '#FAFFFAF4';
 // Figma: reading elevated  阅读浮起
 export const TOK_READ_ELEVATED = '#BDFFFCF8';
+
+// ----------------------------------------------------------------------------
+// Source Switch — 换源浮窗专用 (SourceSwitchWindow 共享组件此前内联, 现抽取)
+// ----------------------------------------------------------------------------
+// Figma: source-switch window surface  换源窗表面
+export const TOK_SS_WINDOW_BG = '#FFFCF8';
+// Figma: source-switch window border rgba(155,132,102,0.24)
+export const TOK_SS_WINDOW_BORDER = '#3D9B8466';
+// Figma: source-switch muted text  排序/关闭字形次级文字
+export const TOK_SS_MUTED = '#8D8378';
+// Figma: source-switch footer count text  底部书源计数
+export const TOK_SS_FOOTER_TEXT = '#C8BFB5';
+// Figma: source-switch close button pill rgba(238,230,219,0.42)
+export const TOK_SS_CLOSE_BG = '#6BEEE6DB';
+// Figma: source-switch sort pill rgba(155,132,102,0.10)
+export const TOK_SS_SORT_PILL_BG = '#1A9B8466';
+// Figma: source-switch column header rgba(155,132,102,0.05)
+export const TOK_SS_COLUMN_HEADER_BG = '#0D9B8466';
 
 // ----------------------------------------------------------------------------
 // HarmonyOS Calibration — 平台局部校准 (不回写 Figma, 不扩散, 不冒充设计参数)

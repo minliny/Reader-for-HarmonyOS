@@ -1,4 +1,5 @@
 import {
+  TOK_BORDER_W,
   TOK_INK,
   TOK_ROW_DIVIDER,
   TOK_SETTING_ICON_BG,
@@ -44,7 +45,7 @@ export struct CategoryRow {
     .constraintSize({ minHeight: 57 })
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
     .alignItems(VerticalAlign.Center)
-    .border({ width: { top: 1 }, color: TOK_ROW_DIVIDER })
+    .border({ width: { top: TOK_BORDER_W }, color: TOK_ROW_DIVIDER })
     .onClick((): void => this.onRowClick());
   }
 }

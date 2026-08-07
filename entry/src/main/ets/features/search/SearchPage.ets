@@ -5,6 +5,7 @@ import {
 import { registerReaderFonts } from '../common/ReaderFonts';
 import {
   TOK_BORDER,
+  TOK_BORDER_W,
   TOK_CARD_BG,
   TOK_CONTENT_RAIL_W_TABLET,
   TOK_GREEN,
@@ -188,7 +189,7 @@ export struct SearchPage {
     .height(this.isTablet ? 56 : 52)
     .padding({ left: this.isTablet ? 20 : TOK_SPACE_MD, right: this.isTablet ? 20 : TOK_SPACE_MD, top: TOK_SPACE_XS })
     .alignItems(VerticalAlign.Center)
-    .border({ width: { bottom: 0.5 }, color: { bottom: TOK_BORDER } });
+    .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: TOK_BORDER } });
   }
 
   @Builder
@@ -203,7 +204,7 @@ export struct SearchPage {
     .height(41)
     .padding({ left: this.isTablet ? 20 : TOK_SPACE_MD, right: this.isTablet ? 20 : TOK_SPACE_MD, top: 9 })
     .alignItems(VerticalAlign.Top)
-    .border({ width: { bottom: 0.5 }, color: { bottom: TOK_BORDER } });
+    .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: TOK_BORDER } });
   }
 
   @Builder
@@ -368,7 +369,7 @@ export struct SearchPage {
       .width(this.contentWidth())
       .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: 6, bottom: 6 })
       .alignItems(VerticalAlign.Center)
-      .border({ width: { bottom: 0.5 }, color: { bottom: TOK_BORDER } });
+      .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: TOK_BORDER } });
 
       List() {
         ForEach(results, (book: SearchBook) => {
@@ -501,7 +502,7 @@ export struct SearchPage {
     .width(this.contentWidth())
     .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: TOK_SPACE_CARD_PADDING, bottom: 14.5 })
     .alignItems(VerticalAlign.Top)
-    .border({ width: { bottom: 0.5 }, color: { bottom: TOK_BORDER } })
+    .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: TOK_BORDER } })
     .onClick((): void => this.onSelectResult(book));
   }
 

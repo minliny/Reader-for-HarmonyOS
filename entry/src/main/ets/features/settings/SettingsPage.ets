@@ -11,6 +11,7 @@ import { StatusBadge } from '../common/StatusBadge';
 import { CategorySection } from './CategorySection';
 import { CategoryRow } from './CategoryRow';
 import {
+  TOK_BORDER_W,
   TOK_CONTENT_MAX_W_TABLET,
   TOK_DANGER,
   TOK_GREEN,
@@ -199,7 +200,7 @@ export struct SettingsPage {
     .constraintSize({ minHeight: SELECT_ROW_H })
     .padding({ left: TOK_SPACE_SM, right: CONTROL_INSET })
     .alignItems(VerticalAlign.Top)
-    .border({ width: { top: 1 }, color: TOK_ROW_DIVIDER });
+    .border({ width: { top: TOK_BORDER_W }, color: TOK_ROW_DIVIDER });
   }
 
   @Builder
