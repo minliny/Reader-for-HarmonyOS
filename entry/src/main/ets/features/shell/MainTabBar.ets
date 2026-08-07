@@ -13,7 +13,7 @@ import {
 // 公共主导航 —— 数据驱动的 tab 栏。四个主页面（书架/发现/RSS/设置）复用。
 // tab 列表来自单一配置（MAIN_TABS）：增删 tab 只改配置，宽度按数量自适应平分。
 // 选中态由 current 驱动；点击非当前 tab 回调 onSelect(key)，由宿主页映射到各自回调。
-// Figma 重绘版：公共主导航 360×68 r24 bg #E6FFFCF8 border #C1C7CD，item 高 52.9 r24，
+// Figma 重绘版：公共主导航 362×68 r24 bg #E6FFFCF8 border #C1C7CD，item 高 52.9 r24，
 // 选中 bg #1F3528 + 文字 #FFFAF4，未选中文字 #756F69；icon 24，标签 Inter ExtraBold 11。
 const MAIN_TAB_BG = TOK_CARD_BG;
 const MAIN_TAB_BORDER = TOK_BORDER;
@@ -48,7 +48,8 @@ export struct MainTabBar {
         this.tabItem(tab, this.current === tab.key);
       }, (tab: MainTabDef): string => `main-tab-${tab.key}`);
     }
-    .width(360)
+    .width('100%')
+    .constraintSize({ maxWidth: 362 })
     .height(68)
     .padding(TOK_SPACE_XS)
     .backgroundColor(MAIN_TAB_BG)
