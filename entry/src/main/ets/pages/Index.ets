@@ -19,11 +19,10 @@ import {
 import type {
   LocalImportBatch,
 } from '../features/bookshelf/LocalBookImportGateway';
-import {
-  LocalReadingExperience,
-  type LocalReadingCommit,
+import type {
+  LocalReadingCommit,
 } from '../features/reading/LocalReadingExperience';
-import { ReaderFullDirectory } from '../features/reading/ReaderFullDirectory';
+import { ReaderShell } from '../features/shell/ReaderShell';
 import {
   LocalReadingFlowGateway,
   type LocalReadingTocEntry,
@@ -62,9 +61,8 @@ import {
   type SourceSwitchTargetToc,
 } from '../features/source/SourceSwitchGateway';
 import { SourceManagementPage } from '../features/source/SourceManagementPage';
-import {
-  SourceSwitchPanel,
-  type SourceSwitchPanelState,
+import type {
+  SourceSwitchPanelState,
 } from '../features/reading/SourceSwitchPanel';
 import { SyncPage } from '../features/sync/SyncPage';
 import type { SyncSnapshot } from '../features/sync/SyncGateway';
@@ -309,58 +307,48 @@ struct Index {
           onBack: (): void => this.returnToBookshelf(),
         });
       }
-      // This stable nested layer prevents the reader component from being
-      // remounted when the Detail sibling is replaced by ReadingSurface.
-      // Opacity 0 still receives the true viewport/layout pass; `Visibility`
-      // would make the TextController metrics unavailable.
-      Stack({ alignContent: Alignment.TopStart }) {
-        if (this.readingSessionActive && this.detailBook !== undefined) {
-          LocalReadingExperience({
-            bookId: this.detailBook.bookId,
-            requestedChapterIndex: this.requestedChapterIndex,
-            isTablet: deviceInfo.deviceType === 'tablet',
-            bookTitle: this.detailBook.title,
-            sourceName: this.detailBook.sourceId,
-            totalChapters: this.detailToc.length,
-            onExitRequestHandler: (requestExit: () => void): void => {
-              this.readingExitRequest = requestExit;
-            },
-            onExit: (): void => {
-              this.readingExitRequest = undefined;
-              if (this.exitToBookshelfAfterReader) {
-                this.exitToBookshelfAfterReader = false;
-                this.returnToBookshelf();
-                return;
-              }
-              this.returnToDetail();
-            },
-            onReadingReady: (chapterIndex: number): void => this.presentPreparedReading(chapterIndex),
-            onReadingCommitted: (commit: LocalReadingCommit): void => this.applyReadingCommit(commit),
-            onChapterCommitted: (chapterIndex: number, chapterTitle: string): void => {
-              this.applyDirectoryChapter(chapterIndex, chapterTitle);
-            },
-          })
-            .width('100%')
-            .height('100%')
-            .opacity(this.route === 'reading' || this.route === 'directory' ? 1 : 0);
-        }
-      }
-      .width('100%')
-      .height('100%')
-      // A transparent lifecycle container must never become an invisible
-      // input shield over Bookshelf or Local Book Detail.
-      .hitTestBehavior(HitTestMode.Transparent);
-      if (this.route === 'directory' && this.detailBook !== undefined) {
-        ReaderFullDirectory({
+      // Batch 2: the reading session UI (ReadingSurface + control layer +
+      // directory + source-switch overlays) is composed by ReaderShell; Index
+      // keeps the business state and drives it through props + callbacks.
+      if (this.readingSessionActive && this.detailBook !== undefined) {
+        ReaderShell({
+          bookId: this.detailBook.bookId,
           bookTitle: this.detailBook.title,
-          chapterTitle: this.directoryChapterTitle,
-          entries: this.detailToc,
-          currentChapterIndex: this.directoryCurrentChapterIndex,
-          isTablet: deviceInfo.deviceType === 'tablet',
           sourceId: this.detailBook.sourceId,
+          sourceName: this.detailBook.sourceId,
+          totalChapters: this.detailToc.length,
+          requestedChapterIndex: this.requestedChapterIndex,
+          isTablet: deviceInfo.deviceType === 'tablet',
+          route: this.preparedReaderRoute,
+          tocEntries: this.detailToc,
+          directoryCurrentChapterIndex: this.directoryCurrentChapterIndex,
+          directoryChapterTitle: this.directoryChapterTitle,
+          sourceSwitchVisible: this.sourceSwitchVisible,
+          sourceSwitchState: this.sourceSwitchState,
+          onExitRequestHandler: (requestExit: () => void): void => {
+            this.readingExitRequest = requestExit;
+          },
+          onExit: (): void => {
+            this.readingExitRequest = undefined;
+            if (this.exitToBookshelfAfterReader) {
+              this.exitToBookshelfAfterReader = false;
+              this.returnToBookshelf();
+              return;
+            }
+            this.returnToDetail();
+          },
+          onReadingReady: (chapterIndex: number): void => this.presentPreparedReading(chapterIndex),
+          onReadingCommitted: (commit: LocalReadingCommit): void => this.applyReadingCommit(commit),
+          onChapterCommitted: (chapterIndex: number, chapterTitle: string): void => {
+            this.applyDirectoryChapter(chapterIndex, chapterTitle);
+          },
           onSelectChapter: (chapterIndex: number): void => this.onDirectoryChapterSelected(chapterIndex),
+          onCloseDirectory: (): void => this.closeDirectory(),
           onSwitchSource: (): void => this.openSourceSwitch(),
-          onExit: (): void => this.closeDirectory(),
+          onCloseSourceSwitch: (): void => this.closeSourceSwitch(),
+          onRetrySourceSwitch: (): void => this.retrySourceSwitch(),
+          onPickSource: (candidate: SourceSwitchCandidate): void => this.onPickSource(candidate),
+          onRollbackSourceSwitch: (): void => this.onRollbackSourceSwitch(),
         });
       }
       if (this.route === 'bookshelf' && this.hasVisibleImportDialog()) {
@@ -370,26 +358,6 @@ struct Index {
           onSelectFiles: (): void => this.beginImport(),
           onClose: (): void => this.closeImportDialog(),
         });
-      }
-      if (this.sourceSwitchVisible) {
-        Stack({ alignContent: Alignment.Center }) {
-          Stack()
-            .width('100%')
-            .height('100%')
-            .backgroundColor('#40FFFFFF')
-            .onClick((): void => this.closeSourceSwitch());
-          SourceSwitchPanel({
-            state: this.sourceSwitchState,
-            currentSourceId: this.detailBook === undefined ? '' : this.detailBook.sourceId,
-            isTablet: deviceInfo.deviceType === 'tablet',
-            onClose: (): void => this.closeSourceSwitch(),
-            onRetry: (): void => this.retrySourceSwitch(),
-            onSelectCandidate: (candidate: SourceSwitchCandidate): void => this.onPickSource(candidate),
-            onRollback: (): void => this.onRollbackSourceSwitch(),
-          });
-        }
-        .width('100%')
-        .height('100%');
       }
     }
       .width('100%')
