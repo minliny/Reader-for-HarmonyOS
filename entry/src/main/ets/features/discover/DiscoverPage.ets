@@ -27,16 +27,11 @@ import {
 
 const PHONE_CONTENT_WIDTH = 350.903;
 const TABLET_CONTENT_WIDTH = 722;
-const CURRENT_SOURCE_BG = TOK_CARD_BG_HI;   // rgba(255,252,248,0.92)
 const CURRENT_SOURCE_BORDER = '#5CB4A697'; // rgba(180,166,151,0.36)
 const ICON_BOX_BG = '#1A2D4A3E';         // rgba(45,74,62,0.10)
 const CHIP_BG = '#D1EEE8DF';             // rgba(238,232,223,0.82)
-const CARD_BG = TOK_CARD_BG;             // rgba(255,252,248,0.9)
 const FILTER_BORDER = '#7AB4A697';       // rgba(180,166,151,0.48)
 const APPLY_BORDER = '#C72D5D76';        // rgba(45,93,118,0.78)
-const RESULT_BORDER = TOK_LINE_STRONG;       // rgba(180,166,151,0.34)
-const TEXT_DARK = TOK_INK;
-const TEXT_MUTED = TOK_MUTED;
 
 export interface DiscoverPresentation {
   currentSourceName: string;
@@ -91,7 +86,7 @@ export struct DiscoverPage {
         .fontWeight(FontWeight.Bold)
         .fontSize(29)
         .lineHeight(38)
-        .fontColor(TEXT_DARK)
+        .fontColor(TOK_INK)
         .maxLines(1);
 
       ReaderIconButton({
@@ -148,7 +143,7 @@ export struct DiscoverPage {
           .fontWeight(FontWeight.Bold)
           .fontSize(15)
           .lineHeight(18)
-          .fontColor(TEXT_DARK)
+          .fontColor(TOK_INK)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
@@ -158,7 +153,7 @@ export struct DiscoverPage {
           .fontWeight(600)
           .fontSize(11)
           .lineHeight(13.2)
-          .fontColor(TEXT_MUTED)
+          .fontColor(TOK_MUTED)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
       }
@@ -171,7 +166,7 @@ export struct DiscoverPage {
     .height(58)
     .padding({ left: TOK_SPACE_SM, right: 13.1 })
     .alignItems(VerticalAlign.Center)
-    .backgroundColor(CURRENT_SOURCE_BG)
+    .backgroundColor(TOK_CARD_BG_HI)
     .border({ width: 1, color: CURRENT_SOURCE_BORDER })
     .borderRadius(8);
   }
@@ -222,7 +217,7 @@ export struct DiscoverPage {
           .fontWeight(800)
           .fontSize(11)
           .lineHeight(15.56)
-          .fontColor(TEXT_MUTED)
+          .fontColor(TOK_MUTED)
           .textAlign(TextAlign.RIGHT)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -233,7 +228,7 @@ export struct DiscoverPage {
       .height(34)
       .padding({ left: TOK_SPACE_CONTROL_INLINE, right: 5 })
       .alignItems(VerticalAlign.Center)
-      .backgroundColor(CARD_BG)
+      .backgroundColor(TOK_CARD_BG)
       .border({ width: 1, color: FILTER_BORDER })
       .borderRadius(8);
 
@@ -272,7 +267,7 @@ export struct DiscoverPage {
       .fontWeight(FontWeight.Bold)
       .fontSize(15)
       .lineHeight(18.75)
-      .fontColor(TEXT_DARK)
+      .fontColor(TOK_INK)
       .maxLines(1)
       .padding({ left: 2, right: 2 });
   }
@@ -288,7 +283,7 @@ export struct DiscoverPage {
               .fontWeight(800)
               .fontSize(14)
               .lineHeight(18)
-              .fontColor(TEXT_MUTED)
+              .fontColor(TOK_MUTED)
               .maxLines(1);
             Text('书架 · 发现功能待接入')
               .fontFamily('ReaderInter')
@@ -309,8 +304,8 @@ export struct DiscoverPage {
       }
     }
     .width('100%')
-    .backgroundColor(CARD_BG)
-    .border({ width: 1, color: RESULT_BORDER })
+    .backgroundColor(TOK_CARD_BG)
+    .border({ width: 1, color: TOK_LINE_STRONG })
     .borderRadius(8)
     .clip(true);
   }
@@ -341,7 +336,7 @@ export struct DiscoverPage {
           .fontWeight(FontWeight.Bold)
           .fontSize(15)
           .lineHeight(18.75)
-          .fontColor(TEXT_DARK)
+          .fontColor(TOK_INK)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         if (book.author !== '') {
@@ -351,7 +346,7 @@ export struct DiscoverPage {
             .fontWeight(FontWeight.Bold)
             .fontSize(11)
             .lineHeight(15.56)
-            .fontColor(TEXT_MUTED)
+            .fontColor(TOK_MUTED)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
@@ -374,7 +369,7 @@ export struct DiscoverPage {
     .height(98)
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: TOK_SPACE_SM, bottom: TOK_SPACE_SM })
     .alignItems(VerticalAlign.Top)
-    .border({ width: { top: 0.5 }, color: RESULT_BORDER });
+    .border({ width: { top: 0.5 }, color: TOK_LINE_STRONG });
   }
 
   private onMainTab(key: string): void {

@@ -58,20 +58,13 @@ const PHONE_CONTENT_WIDTH = 350;
 const TABLET_CONTENT_WIDTH = 620;
 
 // Figma tokens (AARRGGBB)
-const PRIMARY_DARK = TOK_PRIMARY_DARK;
-const GREEN = TOK_GREEN;
-const INK = TOK_INK;
-const MUTED = TOK_MUTED;
 const MUTED_DEEP = '#6F655D';
 const SEARCH_HINT = '#817A72';
 const PILL_TEXT = '#554C43';
 const FILTER_TEXT = '#3F372F';
-const BORDER = TOK_BORDER;
 
 // rgba(255,252,248,0.92)  cards
-const CARD_BG = TOK_CARD_BG_HI;
 // rgba(255,252,248,0.90)  filter bar / state card
-const FILTER_BG = TOK_CARD_BG;
 // rgba(255,252,248,0.86)  top-bar pills
 const PILL_BG = '#DBFFFCF8';
 // rgba(238,232,223,0.84)  inactive tabs / import-new pills
@@ -81,7 +74,6 @@ const SEARCH_BG = '#94FFFFFF';
 // rgba(45,74,62,0.1)      view-all pill
 const VIEW_ALL_BG = '#1A2D4A3E';
 // rgba(45,74,62,0.12)     source icon chip
-const SOURCE_ICON_BG = TOK_PRIMARY_BG;
 // rgba(54,121,91,0.12)    enabled source status
 const STATUS_ENABLED_BG = '#1F36795B';
 // rgba(127,118,108,0.12)  disabled source status
@@ -94,7 +86,6 @@ const CARD_BORDER = '#4DB4A697';       // rgba(180,166,151,0.3)
 const FILTER_BORDER = '#7AB4A697';     // rgba(180,166,151,0.48)
 const PILL_BORDER = '#6BB4A697';       // rgba(180,166,151,0.42)
 const ROW_DIVIDER = '#33B4A697';       // rgba(180,166,151,0.2)
-const STATE_CARD_BORDER = TOK_LINE_STRONG; // rgba(180,166,151,0.34)
 
 /**
  * Figma-backed RSS page for `10 · Reference · RSS` `F2 · Canonical · RSS`:
@@ -184,7 +175,7 @@ export struct RssPage {
         .fontWeight(FontWeight.Bold)
         .fontSize(29)
         .lineHeight(41)
-        .fontColor(PRIMARY_DARK)
+        .fontColor(TOK_PRIMARY_DARK)
         .maxLines(1)
         .margin({ left: 20 });
 
@@ -207,19 +198,19 @@ export struct RssPage {
         .width(9)
         .height(9)
         .borderRadius(4.5)
-        .backgroundColor(GREEN);
+        .backgroundColor(TOK_GREEN);
       Text(this.enabledSourceSummary())
         .fontFamily('ReaderInter')
         .fontWeight(900)
         .fontSize(12)
-        .fontColor(PRIMARY_DARK)
+        .fontColor(TOK_PRIMARY_DARK)
         .maxLines(1);
       if (this.lastUpdateSuffix() !== '') {
         Text(this.lastUpdateSuffix())
           .fontFamily('ReaderInter')
           .fontWeight(900)
           .fontSize(12)
-          .fontColor(PRIMARY_DARK)
+          .fontColor(TOK_PRIMARY_DARK)
           .maxLines(1);
       }
       Image($r('app.media.rss_refresh'))
@@ -245,7 +236,7 @@ export struct RssPage {
         .fontFamily('ReaderInter')
         .fontWeight(900)
         .fontSize(12)
-        .fontColor(PRIMARY_DARK)
+        .fontColor(TOK_PRIMARY_DARK)
         .maxLines(1);
     }
     .width(64)
@@ -276,7 +267,7 @@ export struct RssPage {
     .height(44)
     .padding({ left: 15, right: 15 })
     .backgroundColor(SEARCH_BG)
-    .border({ width: 1, color: BORDER })
+    .border({ width: 1, color: TOK_BORDER })
     .borderRadius(999)
     .alignItems(VerticalAlign.Center)
     .margin({ top: TOK_SPACE_XS, left: TOK_SCREEN_INSET });
@@ -309,7 +300,7 @@ export struct RssPage {
     }
     .height(30)
     .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
-    .backgroundColor(active ? GREEN : SOFT_PILL_BG)
+    .backgroundColor(active ? TOK_GREEN : SOFT_PILL_BG)
     .borderRadius(999);
   }
 
@@ -344,7 +335,7 @@ export struct RssPage {
         .fontFamily('ReaderInter')
         .fontWeight(800)
         .fontSize(12)
-        .fontColor(MUTED)
+        .fontColor(TOK_MUTED)
         .maxLines(1);
     }
     .width(this.contentWidth())
@@ -361,7 +352,7 @@ export struct RssPage {
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Bold)
           .fontSize(15)
-          .fontColor(INK)
+          .fontColor(TOK_INK)
           .maxLines(1);
         Row({ space: 6 }) {
           this.actionPill('导入', $r('app.media.import_document'));
@@ -374,7 +365,7 @@ export struct RssPage {
       .padding({ left: 11, right: 11 })
       .justifyContent(FlexAlign.SpaceBetween)
       .alignItems(VerticalAlign.Center)
-      .backgroundColor(CARD_BG)
+      .backgroundColor(TOK_CARD_BG_HI)
       .border({ width: 1, color: CARD_BORDER })
       .borderRadius(8);
 
@@ -406,7 +397,7 @@ export struct RssPage {
       .height(34)
       .padding({ left: 11, right: 11 })
       .alignItems(VerticalAlign.Center)
-      .backgroundColor(FILTER_BG)
+      .backgroundColor(TOK_CARD_BG)
       .border({ width: 1, color: FILTER_BORDER })
       .borderRadius(8);
 
@@ -416,7 +407,7 @@ export struct RssPage {
         }, (sub: RssSubscription): string => `rss-sub-${sub.subscriptionId}`);
       }
       .width('100%')
-      .backgroundColor(CARD_BG)
+      .backgroundColor(TOK_CARD_BG_HI)
       .border({ width: 1, color: CARD_BORDER })
       .borderRadius(8);
     }
@@ -453,7 +444,7 @@ export struct RssPage {
       }
       .width(32)
       .height(32)
-      .backgroundColor(SOURCE_ICON_BG)
+      .backgroundColor(TOK_PRIMARY_BG)
       .borderRadius(16);
 
       Column({ space: 3 }) {
@@ -462,7 +453,7 @@ export struct RssPage {
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Bold)
           .fontSize(13)
-          .fontColor(INK)
+          .fontColor(TOK_INK)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         Text(sub.feedUrl)
@@ -470,7 +461,7 @@ export struct RssPage {
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Regular)
           .fontSize(10)
-          .fontColor(MUTED)
+          .fontColor(TOK_MUTED)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
       }
@@ -481,12 +472,12 @@ export struct RssPage {
         .fontFamily('ReaderInter')
         .fontWeight(900)
         .fontSize(16)
-        .fontColor(PRIMARY_DARK)
+        .fontColor(TOK_PRIMARY_DARK)
         .maxLines(1);
 
       StatusBadge({
         bg: sub.enabled ? STATUS_ENABLED_BG : STATUS_DISABLED_BG,
-        dot: sub.enabled ? '#2F6B52' : MUTED,
+        dot: sub.enabled ? '#2F6B52' : TOK_MUTED,
         radius: 999,
       });
     }
@@ -507,7 +498,7 @@ export struct RssPage {
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Bold)
           .fontSize(15)
-          .fontColor(INK)
+          .fontColor(TOK_INK)
           .maxLines(1);
         Row({ space: 5 }) {
           Image($r('app.media.rss_chevron'))
@@ -517,7 +508,7 @@ export struct RssPage {
             .fontFamily('ReaderInter')
             .fontWeight(900)
             .fontSize(11)
-            .fontColor(PRIMARY_DARK)
+            .fontColor(TOK_PRIMARY_DARK)
             .maxLines(1);
         }
         .height(28)
@@ -537,7 +528,7 @@ export struct RssPage {
         }, (item: RssItem): string => `rss-item-${item.guid}`);
       }
       .width('100%')
-      .backgroundColor(CARD_BG)
+      .backgroundColor(TOK_CARD_BG_HI)
       .border({ width: 1, color: CARD_BORDER })
       .borderRadius(8);
     }
@@ -551,7 +542,7 @@ export struct RssPage {
         .width(7)
         .height(7)
         .borderRadius(3.5)
-        .backgroundColor(GREEN);
+        .backgroundColor(TOK_GREEN);
 
       Column({ space: 3 }) {
         Text(item.title)
@@ -560,7 +551,7 @@ export struct RssPage {
           .fontWeight(FontWeight.Bold)
           .fontSize(13)
           .lineHeight(16.25)
-          .fontColor(INK)
+          .fontColor(TOK_INK)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         if (item.pubDate !== undefined) {
@@ -569,7 +560,7 @@ export struct RssPage {
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Regular)
             .fontSize(10)
-            .fontColor(MUTED)
+            .fontColor(TOK_MUTED)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
@@ -656,7 +647,7 @@ export struct RssPage {
         .fontWeight(FontWeight.Bold)
         .fontSize(17)
         .lineHeight(21.25)
-        .fontColor(INK)
+        .fontColor(TOK_INK)
         .textAlign(TextAlign.Center);
 
       Text(body)
@@ -666,7 +657,7 @@ export struct RssPage {
         .fontWeight(FontWeight.Regular)
         .fontSize(12)
         .lineHeight(18.6)
-        .fontColor(MUTED)
+        .fontColor(TOK_MUTED)
         .textAlign(TextAlign.Center);
 
       if (failedSources.length > 0) {
@@ -682,8 +673,8 @@ export struct RssPage {
       this.stateButtons(primaryLabel, primaryAction);
     }
     .width('100%')
-    .backgroundColor(FILTER_BG)
-    .border({ width: 1, color: STATE_CARD_BORDER })
+    .backgroundColor(TOK_CARD_BG)
+    .border({ width: 1, color: TOK_LINE_STRONG })
     .borderRadius(8)
     .padding({ top: 26, bottom: 26, left: 18, right: 18 })
     .alignItems(HorizontalAlign.Center);
@@ -721,7 +712,7 @@ export struct RssPage {
       }
       .height(34)
       .padding({ left: 18, right: 18 })
-      .backgroundColor(GREEN)
+      .backgroundColor(TOK_GREEN)
       .borderRadius(999)
       .onClick((): void => primaryAction());
 
@@ -730,12 +721,12 @@ export struct RssPage {
           .fontFamily('ReaderInter')
           .fontWeight(800)
           .fontSize(14)
-          .fontColor(INK)
+          .fontColor(TOK_INK)
           .maxLines(1);
       }
       .height(44)
       .padding({ left: 18, right: 18 })
-      .border({ width: 1, color: BORDER })
+      .border({ width: 1, color: TOK_BORDER })
       .borderRadius(8)
       .onClick((): void => this.onManage());
     }

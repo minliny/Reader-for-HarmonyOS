@@ -27,16 +27,10 @@ import {
 const PHONE_CONTENT_WIDTH = 350;   // 390 - 2*19
 const TABLET_CONTENT_WIDTH = 722;  // 760 - 2*19
 const GROUP_FILTER_WIDTH = 350;
-const ROW_DIVIDER = TOK_ROW_DIVIDER;
 const SEARCH_FIELD_BG = '#D1FFFCF8';      // rgba(255,252,248,0.82)
 const SEARCH_FIELD_BORDER = '#75B4A697';  // rgba(180,166,151,0.46)
-const CHIP_SELECTED_BG = TOK_PRIMARY_DARK;
-const CHIP_BG = TOK_CARD_BG;              // rgba(255,252,248,0.9)
 const CHIP_BORDER = '#85B4A697';   // rgba(180,166,151,0.52)
 const FIELD_BG = '#FFFCF8';        // surface
-const PRIMARY_DARK = TOK_PRIMARY_DARK;
-const INK = TOK_INK;
-const MUTED = TOK_MUTED;
 const STATUS_GOOD_BG = '#212B895C';   // rgba(43,137,92,0.13)
 const STATUS_GOOD_DOT = '#28704E';
 const STATUS_MUTED_BG = '#1F8C8276';  // rgba(140,130,118,0.12)
@@ -89,7 +83,7 @@ export struct SourceManagementPage {
         .fontWeight(FontWeight.Bold)
         .fontSize(24)
         .lineHeight(33)
-        .fontColor(INK)
+        .fontColor(TOK_INK)
         .maxLines(1)
         .layoutWeight(1);
 
@@ -115,7 +109,7 @@ export struct SourceManagementPage {
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Regular)
         .fontSize(12)
-        .fontColor(MUTED)
+        .fontColor(TOK_MUTED)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
     }
@@ -137,7 +131,7 @@ export struct SourceManagementPage {
       .fontWeight(FontWeight.Regular)
       .fontSize(10)
       .lineHeight(12.5)
-      .fontColor(MUTED)
+      .fontColor(TOK_MUTED)
       .maxLines(1)
       .margin({ top: TOK_SPACE_XS });
   }
@@ -186,9 +180,9 @@ export struct SourceManagementPage {
       .fontFamily('ReaderNotoSansSC')
       .fontWeight(FontWeight.Bold)
       .fontSize(11)
-      .fontColor(active ? '#FFFFFF' : INK)
-      .backgroundColor(active ? CHIP_SELECTED_BG : CHIP_BG)
-      .border({ width: 1, color: active ? CHIP_SELECTED_BG : CHIP_BORDER })
+      .fontColor(active ? '#FFFFFF' : TOK_INK)
+      .backgroundColor(active ? TOK_PRIMARY_DARK : TOK_CARD_BG)
+      .border({ width: 1, color: active ? TOK_PRIMARY_DARK : CHIP_BORDER })
       .borderRadius(16)
       .maxLines(1);
   }
@@ -202,7 +196,7 @@ export struct SourceManagementPage {
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
         .fontSize(13)
-        .fontColor(INK)
+        .fontColor(TOK_INK)
         .maxLines(1);
       ReaderSelect({
         value: this.groupValue,
@@ -248,7 +242,7 @@ export struct SourceManagementPage {
           .fontWeight(FontWeight.Bold)
           .fontSize(13)
           .lineHeight(15.34)
-          .fontColor(INK)
+          .fontColor(TOK_INK)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         Text(this.sourceMeta(source))
@@ -257,7 +251,7 @@ export struct SourceManagementPage {
           .fontWeight(FontWeight.Regular)
           .fontSize(10)
           .lineHeight(12.5)
-          .fontColor(MUTED)
+          .fontColor(TOK_MUTED)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
       }
@@ -284,7 +278,7 @@ export struct SourceManagementPage {
     .height(70)
     .padding({ left: TOK_SPACE_SM })
     .alignItems(VerticalAlign.Center)
-    .border({ width: { top: 0.5 }, color: ROW_DIVIDER });
+    .border({ width: { top: 0.5 }, color: TOK_ROW_DIVIDER });
   }
 
   @Builder
@@ -294,13 +288,13 @@ export struct SourceManagementPage {
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
         .fontSize(11)
-        .fontColor(INK)
+        .fontColor(TOK_INK)
         .maxLines(1);
     }
     .width(44)
     .height(28)
     .borderRadius(7)
-    .backgroundColor(CHIP_BG)
+    .backgroundColor(TOK_CARD_BG)
     .border({ width: 1, color: CHIP_BORDER });
   }
 
@@ -322,7 +316,7 @@ export struct SourceManagementPage {
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Bold)
           .fontSize(13)
-          .fontColor(INK)
+          .fontColor(TOK_INK)
           .maxLines(1);
       }
       .layoutWeight(1)
@@ -350,7 +344,7 @@ export struct SourceManagementPage {
       .layoutWeight(1)
       .height(44)
       .borderRadius(8)
-      .backgroundColor(PRIMARY_DARK);
+      .backgroundColor(TOK_PRIMARY_DARK);
     }
     .width(this.contentWidth())
     .height(44)

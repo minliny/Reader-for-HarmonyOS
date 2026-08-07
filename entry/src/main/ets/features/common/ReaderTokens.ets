@@ -136,7 +136,8 @@ export const TOK_RADIUS_PILL = 999;
 // ----------------------------------------------------------------------------
 // Responsive — 响应式参数 (内容屏边距 / 内容最大宽度)
 // ----------------------------------------------------------------------------
-// Figma: 本地 Figma 节点实测; 变量 screen/padding=16 但节点用 19
+// HarmonyOS calibration: 屏边距 19 (Figma 变量 screen/padding=16, 但节点实测用 19。
+// 该值为节点实测/校准值, 非正式 Figma Variable 来源, 与 TOK_ON_* 等 Variable 绑定区分)。
 export const TOK_SCREEN_INSET = 19;
 // Figma: 内容最大宽度 (Phone 390−2×19)
 export const TOK_CONTENT_MAX_W_PHONE = 352;

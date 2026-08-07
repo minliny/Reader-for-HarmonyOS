@@ -33,20 +33,16 @@ import {
 // 11px tracked section titles.
 const PHONE_CONTENT_WIDTH = 350;   // 390 - 2*19 (Figma container px 19)
 const TABLET_CONTENT_WIDTH = 720;  // 760 - 2*19
-const CARD_BG = TOK_CARD_BG;       // rgba(255,252,248,0.9) — WebDAV card
 const CARD_BG_SOLID = '#FFFCF8';   // solid — Auto/History cards
-const CARD_BORDER = TOK_BORDER;
 const CARD_BORDER_SOFT = '#D8D0C3';
 const ROW_BG = '#B3FFFCF8';        // rgba(255,252,248,0.7) — labelled row
 const ROW_BORDER = '#4DB4A697';    // rgba(180,166,151,0.3)
 const ICON_BG = '#172379A4';       // rgba(35,121,164,0.09) — row icon circle
-const FIELD_BG = TOK_FIELD_SURFACE;      // rgba(255,248,239,0.82) — input fill
 const GHOST_BG = '#14236179';      // rgba(35,97,121,0.08) — test button
 const GHOST_BORDER = '#38236179';  // rgba(35,97,121,0.22)
 const SOLID_BG = '#243D30';        // save button
 const BADGE_BG = '#EEE7DB';
 const EXPAND_BG = '#A3EEE7DB';     // rgba(238,230,219,0.64)
-const FIELD_TEXT = TOK_CONTROL_INK;
 
 @Component
 export struct SyncPage {
@@ -158,8 +154,8 @@ export struct SyncPage {
       }
       .width('100%')
       .padding({ left: 11, right: 11, top: TOK_SPACE_CONTROL_INLINE, bottom: 11 })
-      .backgroundColor(CARD_BG)
-      .border({ width: 1, color: CARD_BORDER })
+      .backgroundColor(TOK_CARD_BG)
+      .border({ width: 1, color: TOK_BORDER })
       .borderRadius(8);
     }
     .width('100%');
@@ -197,9 +193,9 @@ export struct SyncPage {
             .fontFamily('ReaderInter')
             .fontWeight(600)
             .fontSize(12)
-            .fontColor(FIELD_TEXT)
-            .backgroundColor(FIELD_BG)
-            .border({ width: 1, color: CARD_BORDER })
+            .fontColor(TOK_CONTROL_INK)
+            .backgroundColor(TOK_FIELD_SURFACE)
+            .border({ width: 1, color: TOK_BORDER })
             .borderRadius(6)
             .padding({ left: 11, right: 11 })
             .placeholderColor('#9C9488')
@@ -211,9 +207,9 @@ export struct SyncPage {
             .fontFamily('ReaderInter')
             .fontWeight(600)
             .fontSize(12)
-            .fontColor(FIELD_TEXT)
-            .backgroundColor(FIELD_BG)
-            .border({ width: 1, color: CARD_BORDER })
+            .fontColor(TOK_CONTROL_INK)
+            .backgroundColor(TOK_FIELD_SURFACE)
+            .border({ width: 1, color: TOK_BORDER })
             .borderRadius(6)
             .padding({ left: 11, right: 11 })
             .placeholderColor('#9C9488')

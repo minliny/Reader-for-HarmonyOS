@@ -24,11 +24,6 @@ import {
 
 const SEARCH_FIELD_BG = '#121F1B17';   // rgba(31,27,23,0.07) — Figma field fill
 const SEARCH_BTN_BG = '#382D4A3E';     // rgba(45,74,62,0.22) — Initial search button
-const PRIMARY = TOK_GREEN;
-const INK = TOK_INK;
-const MUTED = TOK_MUTED;
-const BORDER = TOK_BORDER;
-const SURFACE = TOK_CARD_BG;           // rgba(255,252,248,0.9)
 const TABLET_CONTENT_WIDTH = 620;
 
 /**
@@ -125,9 +120,9 @@ export struct SearchPage {
           .height(21)
           .fontFamily('ReaderInter')
           .fontSize(14)
-          .fontColor(this.keyword.length > 0 ? INK : '#801F1B17')
+          .fontColor(this.keyword.length > 0 ? TOK_INK : '#801F1B17')
           .backgroundColor(Color.Transparent)
-          .caretColor(INK)
+          .caretColor(TOK_INK)
           .placeholderColor('#801F1B17')
           .placeholderFont({ size: 14, family: 'ReaderInter' })
           .onChange((value: string): void => {
@@ -180,7 +175,7 @@ export struct SearchPage {
       }
       .height(this.isTablet ? 40 : 36)
       .padding({ left: this.isTablet ? 18 : TOK_SPACE_CARD_PADDING, right: this.isTablet ? 18 : TOK_SPACE_CARD_PADDING })
-      .backgroundColor(this.presentation.kind === 'initial' ? SEARCH_BTN_BG : PRIMARY)
+      .backgroundColor(this.presentation.kind === 'initial' ? SEARCH_BTN_BG : TOK_GREEN)
       .opacity(this.presentation.kind === 'initial' ? 0.75 : 1)
       .borderRadius(999)
       .onClick((): void => {
@@ -193,7 +188,7 @@ export struct SearchPage {
     .height(this.isTablet ? 56 : 52)
     .padding({ left: this.isTablet ? 20 : TOK_SPACE_MD, right: this.isTablet ? 20 : TOK_SPACE_MD, top: TOK_SPACE_XS })
     .alignItems(VerticalAlign.Center)
-    .border({ width: { bottom: 0.5 }, color: { bottom: BORDER } });
+    .border({ width: { bottom: 0.5 }, color: { bottom: TOK_BORDER } });
   }
 
   @Builder
@@ -208,7 +203,7 @@ export struct SearchPage {
     .height(41)
     .padding({ left: this.isTablet ? 20 : TOK_SPACE_MD, right: this.isTablet ? 20 : TOK_SPACE_MD, top: 9 })
     .alignItems(VerticalAlign.Top)
-    .border({ width: { bottom: 0.5 }, color: { bottom: BORDER } });
+    .border({ width: { bottom: 0.5 }, color: { bottom: TOK_BORDER } });
   }
 
   @Builder
@@ -218,10 +213,10 @@ export struct SearchPage {
       .fontWeight(FontWeight.Bold)
       .fontSize(12)
       .lineHeight(12)
-      .fontColor(active ? TOK_ON_PRIMARY : MUTED)
+      .fontColor(active ? TOK_ON_PRIMARY : TOK_MUTED)
       .padding({ left: 12.5, right: 12.5, top: 5.5, bottom: 5.5 })
-      .backgroundColor(active ? PRIMARY : SURFACE)
-      .border({ width: 0.5, color: active ? PRIMARY : BORDER })
+      .backgroundColor(active ? TOK_GREEN : TOK_CARD_BG)
+      .border({ width: 0.5, color: active ? TOK_GREEN : TOK_BORDER })
       .borderRadius(999)
       .textAlign(TextAlign.Center)
       .maxLines(1);
@@ -252,14 +247,14 @@ export struct SearchPage {
             .fontWeight(FontWeight.Bold)
             .fontSize(13)
             .lineHeight(19.5)
-            .fontColor(INK)
+            .fontColor(TOK_INK)
             .layoutWeight(1);
           Text('清空记录')
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Medium)
             .fontSize(12)
             .lineHeight(18)
-            .fontColor(MUTED)
+            .fontColor(TOK_MUTED)
             .onClick((): void => this.onClearHistory());
         }
         .width('100%')
@@ -276,10 +271,10 @@ export struct SearchPage {
               .fontWeight(FontWeight.Medium)
               .fontSize(13)
               .lineHeight(19.5)
-              .fontColor(INK)
+              .fontColor(TOK_INK)
               .padding({ left: 14.5, right: 14.5, top: 7.5, bottom: 7.5 })
-              .backgroundColor(SURFACE)
-              .border({ width: 0.5, color: BORDER })
+              .backgroundColor(TOK_CARD_BG)
+              .border({ width: 0.5, color: TOK_BORDER })
               .borderRadius(999)
               .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
               .onClick((): void => this.onSearch(keyword));
@@ -309,14 +304,14 @@ export struct SearchPage {
         .fontWeight(FontWeight.Bold)
         .fontSize(12)
         .lineHeight(18)
-        .fontColor(PRIMARY)
+        .fontColor(TOK_GREEN)
         .textAlign(TextAlign.Center)
         .maxLines(1);
       Image($r('app.media.rss_chevron')).width(12).height(12);
     }
     .padding({ left: 12.5, right: 12.5, top: 7.5, bottom: 7.5 })
     .alignItems(VerticalAlign.Center)
-    .border({ width: 0.5, color: PRIMARY })
+    .border({ width: 0.5, color: TOK_GREEN })
     .borderRadius(999)
     .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS });
   }
@@ -338,7 +333,7 @@ export struct SearchPage {
         .fontWeight(FontWeight.Regular)
         .fontSize(13)
         .lineHeight(19.5)
-        .fontColor(MUTED)
+        .fontColor(TOK_MUTED)
         .textAlign(TextAlign.Center);
     }
     .width('100%')
@@ -356,24 +351,24 @@ export struct SearchPage {
           .fontWeight(FontWeight.Regular)
           .fontSize(11)
           .lineHeight(16.5)
-          .fontColor(MUTED);
+          .fontColor(TOK_MUTED);
         Text(`${results.length}`)
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Bold)
           .fontSize(11)
           .lineHeight(16.5)
-          .fontColor(PRIMARY);
+          .fontColor(TOK_GREEN);
         Text(' 本相关书籍')
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Regular)
           .fontSize(11)
           .lineHeight(16.5)
-          .fontColor(MUTED);
+          .fontColor(TOK_MUTED);
       }
       .width(this.contentWidth())
       .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: 6, bottom: 6 })
       .alignItems(VerticalAlign.Center)
-      .border({ width: { bottom: 0.5 }, color: { bottom: BORDER } });
+      .border({ width: { bottom: 0.5 }, color: { bottom: TOK_BORDER } });
 
       List() {
         ForEach(results, (book: SearchBook) => {
@@ -439,7 +434,7 @@ export struct SearchPage {
           .fontWeight(FontWeight.Bold)
           .fontSize(15)
           .lineHeight(19.5)
-          .fontColor(INK)
+          .fontColor(TOK_INK)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
@@ -449,7 +444,7 @@ export struct SearchPage {
           .fontWeight(FontWeight.Regular)
           .fontSize(12)
           .lineHeight(12)
-          .fontColor(MUTED)
+          .fontColor(TOK_MUTED)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
@@ -461,7 +456,7 @@ export struct SearchPage {
             .fontWeight(FontWeight.Regular)
             .fontSize(11)
             .lineHeight(11)
-            .fontColor(MUTED)
+            .fontColor(TOK_MUTED)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
@@ -484,7 +479,7 @@ export struct SearchPage {
             .fontWeight(FontWeight.Bold)
             .fontSize(10)
             .lineHeight(10)
-            .fontColor(PRIMARY)
+            .fontColor(TOK_GREEN)
             .padding({ left: 6, right: 6, top: 2, bottom: 2 })
             .backgroundColor(TOK_PRIMARY_SOFT)
             .borderRadius(4)
@@ -494,7 +489,7 @@ export struct SearchPage {
             .fontWeight(FontWeight.Regular)
             .fontSize(11)
             .lineHeight(16.5)
-            .fontColor(MUTED)
+            .fontColor(TOK_MUTED)
             .maxLines(1);
         }
         .width('100%')
@@ -506,7 +501,7 @@ export struct SearchPage {
     .width(this.contentWidth())
     .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: TOK_SPACE_CARD_PADDING, bottom: 14.5 })
     .alignItems(VerticalAlign.Top)
-    .border({ width: { bottom: 0.5 }, color: { bottom: BORDER } })
+    .border({ width: { bottom: 0.5 }, color: { bottom: TOK_BORDER } })
     .onClick((): void => this.onSelectResult(book));
   }
 
@@ -525,7 +520,7 @@ export struct SearchPage {
           .fontWeight(FontWeight.Bold)
           .fontSize(17)
           .lineHeight(25.5)
-          .fontColor(INK)
+          .fontColor(TOK_INK)
           .textAlign(TextAlign.Center);
 
         Text(`所有书源均未搜索到「${keyword}」的相关结果`)
@@ -535,7 +530,7 @@ export struct SearchPage {
           .fontWeight(FontWeight.Regular)
           .fontSize(13)
           .lineHeight(21.125)
-          .fontColor(MUTED)
+          .fontColor(TOK_MUTED)
           .textAlign(TextAlign.Center)
           .maxLines(3);
 
@@ -546,7 +541,7 @@ export struct SearchPage {
             .fontWeight(FontWeight.Bold)
             .fontSize(12)
             .lineHeight(18)
-            .fontColor(INK)
+            .fontColor(TOK_INK)
             .maxLines(1);
           this.suggestion('检查书名拼写是否正确');
           this.suggestion('尝试更短的关键词或作者名');
@@ -555,8 +550,8 @@ export struct SearchPage {
         .width(this.isTablet ? 300 : 190)
         .padding({ left: 18.5, right: 18.5, top: 14.5, bottom: 14.5 })
         .margin({ top: 22 })
-        .backgroundColor(SURFACE)
-        .border({ width: 0.5, color: BORDER })
+        .backgroundColor(TOK_CARD_BG)
+        .border({ width: 0.5, color: TOK_BORDER })
         .borderRadius(12)
         .alignItems(HorizontalAlign.Start)
         .alignSelf(ItemAlign.Center);
@@ -569,17 +564,17 @@ export struct SearchPage {
             .lineHeight(13)
             .fontColor(TOK_ON_PRIMARY)
             .padding({ left: 18, right: 18, top: 11.5, bottom: 11.5 })
-            .backgroundColor(PRIMARY)
+            .backgroundColor(TOK_GREEN)
             .borderRadius(999);
           Text('重新搜索')
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Bold)
             .fontSize(13)
             .lineHeight(13)
-            .fontColor(MUTED)
+            .fontColor(TOK_MUTED)
             .padding({ left: 18.5, right: 18.5, top: 11.5, bottom: 11.5 })
-            .backgroundColor(SURFACE)
-            .border({ width: 0.5, color: BORDER })
+            .backgroundColor(TOK_CARD_BG)
+            .border({ width: 0.5, color: TOK_BORDER })
             .borderRadius(999)
             .onClick((): void => this.onRetry());
         }
@@ -602,13 +597,13 @@ export struct SearchPage {
         .fontWeight(FontWeight.Regular)
         .fontSize(11)
         .lineHeight(16.5)
-        .fontColor(PRIMARY);
+        .fontColor(TOK_GREEN);
       Text(text)
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Regular)
         .fontSize(12)
         .lineHeight(19.5)
-        .fontColor(MUTED)
+        .fontColor(TOK_MUTED)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
     }
@@ -630,7 +625,7 @@ export struct SearchPage {
         .fontWeight(FontWeight.Bold)
         .fontSize(17)
         .lineHeight(25.5)
-        .fontColor(INK)
+        .fontColor(TOK_INK)
         .textAlign(TextAlign.Center);
 
       Text('请检查网络后重试')
@@ -639,7 +634,7 @@ export struct SearchPage {
         .fontWeight(FontWeight.Regular)
         .fontSize(13)
         .lineHeight(19.5)
-        .fontColor(MUTED)
+        .fontColor(TOK_MUTED)
         .textAlign(TextAlign.Center);
 
       Stack({ alignContent: Alignment.Center }) {
@@ -653,7 +648,7 @@ export struct SearchPage {
       .height(40)
       .margin({ top: TOK_SPACE_LG })
       .padding({ left: 28, right: 28 })
-      .backgroundColor(PRIMARY)
+      .backgroundColor(TOK_GREEN)
       .borderRadius(999)
       .onClick((): void => this.onRetry());
     }
