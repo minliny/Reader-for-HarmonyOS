@@ -1,63 +1,182 @@
-// 核心设计令牌 —— 对齐 Figma 语义色变量 (Reader · App Color, Day 模式)。
+// ============================================================================
+// ReaderTokens — 共享设计令牌 (对齐 Figma 语义色变量, Reader · App Color, Day 模式)。
+// 分类: App / Reader / Navigation / Settings / Surface / Text / Border / Spacing /
+//       Radius / Responsive / State / Motion / HarmonyOS Calibration。
 // 命名对应 Figma 变量: color/runtime/paper/solid -> TOK_PAPER 等。
-// 颜色为 AARRGGBB 十六进制。页面应别名引用这些令牌;仅当某值在该页确有差异时才保留页内值。
-export const TOK_PAPER = '#F8F4EC';            // color/runtime/paper/solid 页面背景
-export const TOK_SURFACE = '#F8F4EC';          // 同 TOK_PAPER (旧别名, 保持兼容)
-export const TOK_INK = '#1F1B17';              // color/text/ink 主文字
-export const TOK_MUTED = '#756F69';            // color/text/muted 次级文字
-export const TOK_CONTROL_INK = '#41484C';      // color/control/ink
-export const TOK_BORDER = '#C1C7CD';           // color/border/default 卡片描边
-export const TOK_CARD_BG = '#E6FFFCF8';        // color/runtime/surface rgba(255,252,248,0.90)
-export const TOK_CARD_BG_HI = '#EBFFFCF8';     // color/runtime/surface/solid rgba(255,252,248,0.92)
-export const TOK_PRIMARY_DARK = '#1F3528';     // color/action/primary-dark 深绿主色
-export const TOK_GREEN = '#2D4A3E';            // color/action/primary 中绿主色
-export const TOK_ON_PRIMARY = '#FFFAF4';       // color/runtime/on/primary 主色上文字
-export const TOK_ACCENT = '#F48B13';           // color/accent
-export const TOK_DANGER = '#D62222';           // color/runtime/danger
-export const TOK_FOREST = '#367A4D';           // color/runtime/forest
-export const TOK_ROW_DIVIDER = '#38B4A697';    // color/settings/row-divider rgba(180,166,151,0.22)
-export const TOK_LINE = '#2E9B8466';           // color/runtime/line rgba(180,166,151,0.18)
-export const TOK_LINE_STRONG = '#57B4A697';    // color/runtime/line/strong rgba(180,166,151,0.34)
-export const TOK_LINE_HARD = '#66BEAE9C';      // color/runtime/line/hard rgba(190,174,156,0.40)
-export const TOK_PRIMARY_SOFT = '#172D4A3E';   // color/runtime/primary/soft
-export const TOK_PRIMARY_BG = '#1F2D4A3E';     // color/runtime/primary/bg
-export const TOK_PRIMARY_STRONG = '#472D4A3E'; // color/runtime/primary/strong
-export const TOK_PRIMARY_BORDER = '#6B2D4A3E'; // color/runtime/primary/border
-export const TOK_SURFACE_PANEL = '#9EFFFCF8';  // color/runtime/surface/panel rgba(255,252,248,0.62)
-export const TOK_SURFACE_PANEL_SOFT = '#A3EEE6DB'; // color/runtime/surface/panel/soft rgba(238,230,219,0.64)
-export const TOK_SURFACE_ELEVATED = '#C7FFFFFF';   // color/runtime/surface/elevated rgba(255,255,255,0.78)
-export const TOK_SURFACE_FIELD = '#C7FFF8EF';  // color/runtime/surface/field rgba(255,248,239,0.78)
-export const TOK_SURFACE_SOLID_OPAQUE = '#FAFFFCF8'; // 近不透明 surface
-export const TOK_SURFACE_TRANSLUCENT = '#6BFFFCF8'; // color/runtime/surface/translucent rgba(255,252,248,0.42)
-export const TOK_FIELD_SURFACE = '#D1FFF8EF';  // color/control/field/surface rgba(255,248,239,0.82)
-export const TOK_BOTTOM_BG = '#FBF2EB';        // color/navigation/bottom-bg
-export const TOK_META_BG = '#F5ECE6';          // color/meta/bg
+// 颜色为 AARRGGBB 十六进制。
+// 规则 (FIGMA_NATIVE_UI_ARCHITECTURE_PLAN §四/§十三):
+//   - 每个共享 Token 标注来源 `// Figma: collection/name` 或 `// HarmonyOS calibration`。
+//   - 页面禁止建立共享 Token 的二次别名; 页面直接使用语义 Token 或使用共享组件。
+//   - 未定义模式保持 UNSPECIFIED, 不得复制默认值冒充完成状态。
+// ============================================================================
 
-// 间距令牌 —— 对齐 Figma Dimensions (space/* 刻度)。页面 padding/margin/space 应引用。
-export const TOK_SPACE_XS = 8;              // space/xs
-export const TOK_SPACE_SM = 12;             // space/sm (≈ control/gap)
-export const TOK_SPACE_MD = 16;             // space/md (≈ screen/padding)
-export const TOK_SPACE_LG = 24;             // space/lg
-export const TOK_SPACE_XL = 48;             // space/xl
-export const TOK_SPACE_CARD_PADDING = 14;   // space/card/padding
-export const TOK_SPACE_CONTROL_INLINE = 10; // space/control/inline
-export const TOK_SPACE_ROW_BLOCK = 4;       // space/control/row/block
-export const TOK_SCREEN_INSET = 19;         // 内容屏边距 (本地 Figma 节点实测; 变量 screen/padding=16 但节点用 19)
-// 圆角令牌 —— 对齐 runtime/radius 刻度。
-export const TOK_RADIUS_SM = 6;             // runtime/radius/sm
-export const TOK_RADIUS_MD = 8;             // runtime/radius/md
-export const TOK_RADIUS_LG = 12;            // runtime/radius/lg
-export const TOK_RADIUS_XL = 24;            // runtime/radius/xl
-export const TOK_RADIUS_PILL = 999;         // runtime/radius/pill
+// ----------------------------------------------------------------------------
+// App — 应用级语义 (主色 / 强调色 / 主色上的文字)
+// ----------------------------------------------------------------------------
+// Figma: color/action/primary-dark  深绿主色
+export const TOK_PRIMARY_DARK = '#1F3528';
+// Figma: color/action/primary       中绿主色
+export const TOK_GREEN = '#2D4A3E';
+// Figma: color/runtime/on/primary   主色上文字
+export const TOK_ON_PRIMARY = '#FFFAF4';
+// Figma: color/accent
+export const TOK_ACCENT = '#F48B13';
 
-// 阅读调色板 —— 对齐 Figma Reading Palette/Reading Scheme (阅读层语义色)。
+// ----------------------------------------------------------------------------
+// Text — 文字层级 (主文字 / 次级文字 / 控件文字 / 阅读文字)
+// ----------------------------------------------------------------------------
+// Figma: color/text/ink     主文字
+export const TOK_INK = '#1F1B17';
+// Figma: color/text/muted   次级文字
+export const TOK_MUTED = '#756F69';
+// Figma: color/control/ink
+export const TOK_CONTROL_INK = '#41484C';
+
+// ----------------------------------------------------------------------------
+// Surface — 表面层级 (页面 / 卡片 / 面板 / 浮起 / 字段 / 透明白)
+// ----------------------------------------------------------------------------
+// Figma: color/runtime/paper/solid  页面背景
+export const TOK_PAPER = '#F8F4EC';
+// Figma: color/runtime/paper/solid  同 TOK_PAPER (旧别名, 保持兼容)
+export const TOK_SURFACE = '#F8F4EC';
+// Figma: color/runtime/surface      rgba(255,252,248,0.90)
+export const TOK_CARD_BG = '#E6FFFCF8';
+// Figma: color/runtime/surface/solid rgba(255,252,248,0.92)
+export const TOK_CARD_BG_HI = '#EBFFFCF8';
+// Figma: color/runtime/surface/panel rgba(255,252,248,0.62)
+export const TOK_SURFACE_PANEL = '#9EFFFCF8';
+// Figma: color/runtime/surface/panel/soft rgba(238,230,219,0.64)
+export const TOK_SURFACE_PANEL_SOFT = '#A3EEE6DB';
+// Figma: color/runtime/surface/elevated rgba(255,255,255,0.78)
+export const TOK_SURFACE_ELEVATED = '#C7FFFFFF';
+// Figma: color/runtime/surface/field rgba(255,248,239,0.78)
+export const TOK_SURFACE_FIELD = '#C7FFF8EF';
+// Figma: color/runtime/surface/solid/near-opaque
+export const TOK_SURFACE_SOLID_OPAQUE = '#FAFFFCF8';
+// Figma: color/runtime/surface/translucent rgba(255,252,248,0.42)
+export const TOK_SURFACE_TRANSLUCENT = '#6BFFFCF8';
+// Figma: color/control/field/surface rgba(255,248,239,0.82)
+export const TOK_FIELD_SURFACE = '#D1FFF8EF';
+// Figma: color/runtime/primary/bg rgba(45,74,62,0.12)
+export const TOK_PRIMARY_BG = '#1F2D4A3E';
+// Figma: color/runtime/primary/strong rgba(45,74,62,0.28)
+export const TOK_PRIMARY_STRONG = '#472D4A3E';
+
+// ----------------------------------------------------------------------------
+// Border — 描边 / 分割线
+// ----------------------------------------------------------------------------
+// Figma: color/border/default  卡片描边
+export const TOK_BORDER = '#C1C7CD';
+// Figma: color/settings/row-divider rgba(180,166,151,0.22)
+export const TOK_ROW_DIVIDER = '#38B4A697';
+// Figma: color/runtime/line rgba(180,166,151,0.18)
+export const TOK_LINE = '#2E9B8466';
+// Figma: color/runtime/line/strong rgba(180,166,151,0.34)
+export const TOK_LINE_STRONG = '#57B4A697';
+// Figma: color/runtime/line/hard rgba(190,174,156,0.40)
+export const TOK_LINE_HARD = '#66BEAE9C';
+// Figma: color/runtime/primary/soft rgba(45,74,62,0.10)
+export const TOK_PRIMARY_SOFT = '#172D4A3E';
+// Figma: color/runtime/primary/border rgba(45,74,62,0.42)
+export const TOK_PRIMARY_BORDER = '#6B2D4A3E';
+
+// ----------------------------------------------------------------------------
+// Navigation — 主导航专用
+// ----------------------------------------------------------------------------
+// Figma: color/navigation/bottom-bg
+export const TOK_BOTTOM_BG = '#FBF2EB';
+
+// ----------------------------------------------------------------------------
+// Settings — 设置页专用
+// ----------------------------------------------------------------------------
+// Figma: color/meta/bg
+export const TOK_META_BG = '#F5ECE6';
+
+// ----------------------------------------------------------------------------
+// Spacing — 间距刻度 (space/*)
+// ----------------------------------------------------------------------------
+// Figma: space/xs
+export const TOK_SPACE_XS = 8;
+// Figma: space/sm (≈ control/gap)
+export const TOK_SPACE_SM = 12;
+// Figma: space/md (≈ screen/padding)
+export const TOK_SPACE_MD = 16;
+// Figma: space/lg
+export const TOK_SPACE_LG = 24;
+// Figma: space/xl
+export const TOK_SPACE_XL = 48;
+// Figma: space/card/padding
+export const TOK_SPACE_CARD_PADDING = 14;
+// Figma: space/control/inline
+export const TOK_SPACE_CONTROL_INLINE = 10;
+// Figma: space/control/row/block
+export const TOK_SPACE_ROW_BLOCK = 4;
+
+// ----------------------------------------------------------------------------
+// Radius — 圆角刻度 (runtime/radius/*)
+// ----------------------------------------------------------------------------
+// Figma: runtime/radius/sm
+export const TOK_RADIUS_SM = 6;
+// Figma: runtime/radius/md
+export const TOK_RADIUS_MD = 8;
+// Figma: runtime/radius/lg
+export const TOK_RADIUS_LG = 12;
+// Figma: runtime/radius/xl
+export const TOK_RADIUS_XL = 24;
+// Figma: runtime/radius/pill
+export const TOK_RADIUS_PILL = 999;
+
+// ----------------------------------------------------------------------------
+// Responsive — 响应式参数 (内容屏边距 / 内容最大宽度)
+// ----------------------------------------------------------------------------
+// Figma: 本地 Figma 节点实测; 变量 screen/padding=16 但节点用 19
+export const TOK_SCREEN_INSET = 19;
+// Figma: 内容最大宽度 (Phone 390−2×19)
+export const TOK_CONTENT_MAX_W_PHONE = 352;
+// Figma: 内容最大宽度 (Tablet 760−2×19)
+export const TOK_CONTENT_MAX_W_TABLET = 722;
+
+// ----------------------------------------------------------------------------
+// State — 状态色 (危险 / 成功)
+// ----------------------------------------------------------------------------
+// Figma: color/runtime/danger
+export const TOK_DANGER = '#D62222';
+// Figma: color/runtime/forest
+export const TOK_FOREST = '#367A4D';
+
+// ----------------------------------------------------------------------------
+// Motion — 动效参数
+// 上游方案 §十三 要求 Motion 分类。当前无正式动效设计值。
+// 未定义状态保持 UNSPECIFIED, 不复制默认值冒充完成状态。
+// Figma: motion (UNSPECIFIED — 动效设计在 Figma 侧仍搁置, 见 FIGMA_MOTION_IN_PROGRESS)
+// ----------------------------------------------------------------------------
+
+// ----------------------------------------------------------------------------
+// Reader — 阅读调色板 (Reading Palette/Reading Scheme, 阅读层语义色)
 // 此前内联于 ReaderControlPanel 的 RC_* 常量, 现抽取为共享 token 供全部阅读浮层复用。
-export const TOK_READ_INK = '#332C25';            // 阅读主文字
-export const TOK_READ_MUTED = '#5B5046';          // 阅读次级文字
-export const TOK_READ_PRIMARY = '#2F6373';        // 阅读主色 (teal)
-export const TOK_READ_ICON = '#4D463F';           // 阅读图标
-export const TOK_READ_HANDLE = '#B9AD9F';         // 阅读手柄
-export const TOK_READ_ACTIVE_SOFT = '#142F6373';  // 阅读 active 软底
-export const TOK_READ_DISABLED_BG = '#8FEEE6DB';  // 阅读禁用底
-export const TOK_READ_SURFACE = '#FAFFFAF4';      // 阅读表面
-export const TOK_READ_ELEVATED = '#BDFFFCF8';     // 阅读浮起
+// ----------------------------------------------------------------------------
+// Figma: reading ink  阅读主文字
+export const TOK_READ_INK = '#332C25';
+// Figma: reading muted  阅读次级文字
+export const TOK_READ_MUTED = '#5B5046';
+// Figma: reading primary  阅读主色 (teal)
+export const TOK_READ_PRIMARY = '#2F6373';
+// Figma: reading icon  阅读图标
+export const TOK_READ_ICON = '#4D463F';
+// Figma: reading handle  阅读手柄
+export const TOK_READ_HANDLE = '#B9AD9F';
+// Figma: reading active soft  阅读 active 软底
+export const TOK_READ_ACTIVE_SOFT = '#142F6373';
+// Figma: reading disabled bg  阅读禁用底
+export const TOK_READ_DISABLED_BG = '#8FEEE6DB';
+// Figma: reading surface  阅读表面
+export const TOK_READ_SURFACE = '#FAFFFAF4';
+// Figma: reading elevated  阅读浮起
+export const TOK_READ_ELEVATED = '#BDFFFCF8';
+
+// ----------------------------------------------------------------------------
+// HarmonyOS Calibration — 平台局部校准 (不回写 Figma, 不扩散, 不冒充设计参数)
+// ----------------------------------------------------------------------------
+// HarmonyOS calibration: Figma 0.556px 在 ArkUI 栅格化后几乎消失, 提到 1vp
+// 保证实际像素覆盖 (alpha 保持对应 line token)。
+export const TOK_BORDER_W = 1;

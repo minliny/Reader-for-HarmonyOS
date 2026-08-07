@@ -2,6 +2,7 @@ import { registerReaderFonts } from '../common/ReaderFonts';
 import {
   TOK_ACCENT,
   TOK_BORDER,
+  TOK_BORDER_W,
   TOK_LINE_STRONG,
   TOK_READ_ACTIVE_SOFT,
   TOK_READ_DISABLED_BG,
@@ -17,32 +18,15 @@ import {
 } from '../common/ReaderTokens';
 
 
-// Reader Control Home —— 适配策略: 锚定 + 固定 vp (方案 A)。
+// Reader Control Home —— 适配策略: 锚定 + 自适应尺寸 (方案 B)。
 // Figma `943:6848`(Phone 390×844) 与 `943:8028`(Tablet 760×960) 是固定画布, 节点全为
 // MIN/MIN 绝对定位, 无响应式约束 —— 我们把 Figma 坐标当作设计值, 用响应式手段实现:
 //   1. 高度: TopBar 锚定窗口顶部(状态栏下方安全区) + 19dp; ControlDock 锚定窗口底部
 //      (手势条上方安全区) + 19dp(Phone)/33dp(Tablet)。任意窗口高度都完整显示, 不超出。
-//   2. 宽度: TopBar 360 与 dock 364 在 390 画布上恰好水平居中(左右边距对称), 故水平用
-//      Stack 对齐居中 —— 随窗口宽度自适应, 而非写死 left。
+//   2. 宽度: 用 Fill / layoutWeight / constraintSize 自适应, 而非写死左宽 (见 §八)。
 //   3. DPI: 全部 vp 单位(系统已按密度换算), 内部元素位置/字号用 Figma vp 精确值。
 //   4. 面板内部: 容器 Stack 显式 alignContent(TopStart), 子元素 position 精确定位。
-// 阅读调色板已抽取到 ReaderTokens (TOK_READ_*), 此处 RC_* 为语义别名。
-const RC_SURFACE = TOK_READ_SURFACE;    // rgba(255,250,244,0.98)
-const RC_LINE = TOK_LINE_STRONG;        // rgba(180,166,151,0.34)
-const RC_PANEL = TOK_SURFACE_PANEL;     // rgba(255,252,248,0.62)
-const RC_ELEVATED = TOK_READ_ELEVATED;  // rgba(255,252,248,0.74)
-const RC_SURFACE_SOLID = TOK_SURFACE_SOLID_OPAQUE;
-const RC_HANDLE = TOK_READ_HANDLE;
-const RC_INK = TOK_READ_INK;
-const RC_MUTED = TOK_READ_MUTED;
-const RC_ICON = TOK_READ_ICON;
-const RC_PRIMARY = TOK_READ_PRIMARY;
-const RC_ACTIVE_SOFT = TOK_READ_ACTIVE_SOFT;
-const RC_DISABLED_BG = TOK_READ_DISABLED_BG;
-const RC_ACCENT = TOK_ACCENT;
-const RC_BORDER = TOK_BORDER;
-const RC_BORDER_W = 1;   // 工程校准值: Figma 0.556px 在 ArkUI 栅格化后几乎消失(对比度仅 5-20%),
-                         // 提到 1vp 保证实际像素覆盖, 重建 Figma 的区块描边对比。alpha 保持 RC_LINE 0.34。
+// 视觉色直接引用 ReaderTokens 共享 token (页面禁止二次别名, 见 §十三)。
 
 /**
  * 按 Figma 视口取阅读控制层各面板的尺寸与内部锚点。Phone 与 Tablet 共享同一组件结构,
@@ -197,14 +181,14 @@ export struct ReaderControlPanel {
           .fontFamily('ReaderNotoSerifSCBold')
           .fontWeight(FontWeight.Bold)
           .fontSize(16)
-          .fontColor(RC_INK)
+          .fontColor(TOK_READ_INK)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         Text(`${this.chapterTitle} · ${this.sourceName}`)
           .fontFamily('ReaderNotoSerifSCRegular')
           .fontWeight(FontWeight.Regular)
           .fontSize(12)
-          .fontColor(RC_MUTED)
+          .fontColor(TOK_READ_MUTED)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
       }
@@ -222,7 +206,7 @@ export struct ReaderControlPanel {
           .fontFamily('ReaderInter')
           .fontWeight(800)
           .fontSize(12)
-          .fontColor(RC_INK)
+          .fontColor(TOK_READ_INK)
           .maxLines(1);
       }
       .width(62)
@@ -250,8 +234,8 @@ export struct ReaderControlPanel {
     .width(this.geo.topBarW)
     .height(54)
     .alignItems(VerticalAlign.Center)
-    .backgroundColor(RC_SURFACE)
-    .border({ width: RC_BORDER_W, color: RC_LINE })
+    .backgroundColor(TOK_READ_SURFACE)
+    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
     .borderRadius(24)
     .margin({ top: this.geo.topBarTopGap   });
   }
@@ -266,7 +250,7 @@ export struct ReaderControlPanel {
             Row()
               .width(42)
               .height(4)
-              .backgroundColor(RC_HANDLE)
+              .backgroundColor(TOK_READ_HANDLE)
               .borderRadius(999);
           }
           .width('100%')
@@ -292,10 +276,10 @@ export struct ReaderControlPanel {
       }
       .width(this.geo.sheetW)
       .height(this.geo.sheetH)
-      // ControlSheet 外层背景 = RC_SURFACE (rgba(255,250,244,0.98) 近不透明暖奶油)。
-      // 勿误用内层 Panel 的 RC_PANEL (0.62) —— 那会过度透明、正文透入、区块压平发白发虚。
-      .backgroundColor(RC_SURFACE)
-      .border({ width: RC_BORDER_W, color: RC_LINE })
+      // ControlSheet 外层背景 = TOK_READ_SURFACE (rgba(255,250,244,0.98) 近不透明暖奶油)。
+      // 勿误用内层 Panel 的 TOK_SURFACE_PANEL (0.62) —— 那会过度透明、正文透入、区块压平发白发虚。
+      .backgroundColor(TOK_READ_SURFACE)
+      .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
       .borderRadius({
         topLeft: this.geo.sheetRadiusTop,
         topRight: this.geo.sheetRadiusTop,
@@ -326,8 +310,8 @@ export struct ReaderControlPanel {
     .width(this.geo.mainW)
     .height(75.438)
     .padding({ left: 9 })
-    .backgroundColor(RC_PANEL)
-    .border({ width: RC_BORDER_W, color: RC_LINE })
+    .backgroundColor(TOK_SURFACE_PANEL)
+    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
     .borderRadius(8);
   }
 
@@ -345,7 +329,7 @@ export struct ReaderControlPanel {
         .fontWeight(800)
         .fontSize(11)
         .lineHeight(13)
-        .fontColor(RC_INK)
+        .fontColor(TOK_READ_INK)
         .textAlign(TextAlign.Center)
         .maxLines(1)
         .margin({ top: 5.78   });
@@ -353,7 +337,7 @@ export struct ReaderControlPanel {
     .width(this.geo.actionW)
     .height(55.438)
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor(RC_ELEVATED)
+    .backgroundColor(TOK_READ_ELEVATED)
     .borderRadius(8);
   }
 
@@ -366,8 +350,8 @@ export struct ReaderControlPanel {
     .width(this.geo.progressW)
     .height(108.563)
     .alignItems(HorizontalAlign.Start)
-    .backgroundColor(RC_PANEL)
-    .border({ width: RC_BORDER_W, color: RC_LINE })
+    .backgroundColor(TOK_SURFACE_PANEL)
+    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
     .borderRadius(8);
   }
 
@@ -382,7 +366,7 @@ export struct ReaderControlPanel {
       }
       .width(34)
       .height(34)
-      .backgroundColor(RC_DISABLED_BG)
+      .backgroundColor(TOK_READ_DISABLED_BG)
       .borderRadius(999);
 
       // ChapterTitle Inter Bold 13 居中。
@@ -393,7 +377,7 @@ export struct ReaderControlPanel {
         .fontWeight(700)
         .fontSize(13)
         .lineHeight(16.25)
-        .fontColor(RC_INK)
+        .fontColor(TOK_READ_INK)
         .textAlign(TextAlign.Center)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -406,7 +390,7 @@ export struct ReaderControlPanel {
       }
       .width(34)
       .height(34)
-      .backgroundColor(RC_DISABLED_BG)
+      .backgroundColor(TOK_READ_DISABLED_BG)
       .borderRadius(999);
     }
     .width(this.geo.chapterRowW)
@@ -425,7 +409,7 @@ export struct ReaderControlPanel {
         .fontWeight(FontWeight.Regular)
         .fontSize(9)
         .lineHeight(9)
-        .fontColor(RC_MUTED)
+        .fontColor(TOK_READ_MUTED)
         .maxLines(1);
 
       // ProgressSlider: track 全宽, fill 按百分比, thumb 随 fill 右缘。
@@ -433,20 +417,20 @@ export struct ReaderControlPanel {
         Row()
           .width('100%')
           .height(5)
-          .backgroundColor(RC_BORDER)
+          .backgroundColor(TOK_BORDER)
           .borderRadius(999)
           .margin({ top: 13   });
         Row()
           .width(this.geo.fillWidth(this.progressPercent))
           .height(5)
-          .backgroundColor(RC_ACCENT)
+          .backgroundColor(TOK_ACCENT)
           .borderRadius(999)
           .margin({ top: 13   });
         Row()
           .width(18)
           .height(18)
-          .backgroundColor(RC_SURFACE_SOLID)
-          .border({ width: 2.778, color: RC_ACCENT })
+          .backgroundColor(TOK_SURFACE_SOLID_OPAQUE)
+          .border({ width: 2.778, color: TOK_ACCENT })
           .borderRadius(999)
           .margin({ left: this.geo.thumbLeft(this.progressPercent), top: 6.5   });
       }
@@ -461,7 +445,7 @@ export struct ReaderControlPanel {
         .fontWeight(FontWeight.Regular)
         .fontSize(9)
         .lineHeight(9)
-        .fontColor(RC_MUTED)
+        .fontColor(TOK_READ_MUTED)
         .textAlign(TextAlign.RIGHT)
         .maxLines(1)
         .margin({ left: 5.5   });
@@ -486,12 +470,12 @@ export struct ReaderControlPanel {
         Row()
           .width('100%')
           .height('100%')
-          .backgroundColor(RC_BORDER)
+          .backgroundColor(TOK_BORDER)
           .borderRadius(999);
         Row()
           .width('100%')
           .height('100%')
-          .backgroundColor(RC_PRIMARY)
+          .backgroundColor(TOK_READ_PRIMARY)
           .borderRadius(999);
       }
       .width(8)
@@ -508,13 +492,13 @@ export struct ReaderControlPanel {
             .fontWeight(500)
             .fontSize(13)
             .lineHeight(13)
-            .fontColor(RC_INK)
+            .fontColor(TOK_READ_INK)
             .textAlign(TextAlign.Center);
         }
         .width(20)
         .height(20)
-        .backgroundColor(RC_ELEVATED)
-        .border({ width: RC_BORDER_W, color: RC_LINE })
+        .backgroundColor(TOK_READ_ELEVATED)
+        .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
         .borderRadius(999);
       }
       .width(24)
@@ -524,8 +508,8 @@ export struct ReaderControlPanel {
     .width(38)
     .height(190)
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor(RC_PANEL)
-    .border({ width: RC_BORDER_W, color: RC_LINE })
+    .backgroundColor(TOK_SURFACE_PANEL)
+    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
     .borderRadius(999);
   }
 
@@ -541,8 +525,8 @@ export struct ReaderControlPanel {
     .height(this.geo.moduleNavH)
     .padding({ left: 9, top: 9 })
     .margin({ bottom: this.geo.moduleNavBottomGap   })
-    .backgroundColor(RC_SURFACE_SOLID)
-    .border({ width: RC_BORDER_W, color: RC_LINE })
+    .backgroundColor(TOK_SURFACE_SOLID_OPAQUE)
+    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
     .borderRadius({
       topLeft: this.geo.moduleNavRadiusTop,
       topRight: this.geo.moduleNavRadiusTop,
@@ -562,7 +546,7 @@ export struct ReaderControlPanel {
       }
       .width(42)
       .height(42)
-      .backgroundColor(RC_ACTIVE_SOFT)
+      .backgroundColor(TOK_READ_ACTIVE_SOFT)
       .borderRadius(999);
 
       // ModuleLabel Inter EB 10 全宽居中。
@@ -573,7 +557,7 @@ export struct ReaderControlPanel {
         .fontWeight(800)
         .fontSize(10)
         .lineHeight(12)
-        .fontColor(RC_ICON)
+        .fontColor(TOK_READ_ICON)
         .textAlign(TextAlign.Center)
         .maxLines(1)
         .margin({ top: 5   });

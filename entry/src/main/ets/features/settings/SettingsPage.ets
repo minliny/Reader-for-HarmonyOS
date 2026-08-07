@@ -14,6 +14,8 @@ import { StatusBadge } from '../common/StatusBadge';
 import {
   TOK_BORDER,
   TOK_CARD_BG,
+  TOK_CONTENT_MAX_W_PHONE,
+  TOK_CONTENT_MAX_W_TABLET,
   TOK_DANGER,
   TOK_FIELD_SURFACE,
   TOK_GREEN,
@@ -27,15 +29,11 @@ import {
   TOK_SPACE_XS,
 } from '../common/ReaderTokens';
 
-const PHONE_CONTENT_WIDTH = 352;   // 390 - 2*19
-const TABLET_CONTENT_WIDTH = 722;  // 760 - 2*19
+// 页面私有布局常量 (不属共享 token: 页面独有间距/图标底色/特殊宽度, 见 §四)。
 const PHONE_DANGER_WIDTH = 350.903;
 const TABLET_DANGER_WIDTH = 720;
-const ROW_DIVIDER = TOK_ROW_DIVIDER;    // rgba(180,166,151,0.22)
 const ICON_BG = '#172379A4';       // rgba(35,121,164,0.09)
 const ACTION_BG = '#1A2379A4';     // rgba(35,121,164,0.10)
-const FIELD_BG = TOK_FIELD_SURFACE;      // rgba(255,248,239,0.82)
-const CARD_BG = TOK_CARD_BG;       // rgba(255,252,248,0.9)
 const CONTROL_INSET = 14;
 
 export interface SettingsSnapshot {
@@ -134,7 +132,7 @@ export struct SettingsPage {
   private settingsHome() {
     Scroll() {
       Column({ space: TOK_SPACE_SM }) {
-        ReaderCard({ bg: CARD_BG, cardBorder: TOK_BORDER, radius: 8, cardWidth: this.contentWidth() }) {
+        ReaderCard({ bg: TOK_CARD_BG, cardBorder: TOK_BORDER, radius: 8, cardWidth: this.contentWidth() }) {
           Column() {
             ReaderSectionHeading({ title: '设置' });
             Column() {
@@ -180,7 +178,7 @@ export struct SettingsPage {
     .height(58)
     .padding({ left: TOK_SPACE_SM, right: CONTROL_INSET })
     .alignItems(VerticalAlign.Center)
-    .border({ width: { top: 0.5 }, color: ROW_DIVIDER })
+    .border({ width: { top: 0.5 }, color: TOK_ROW_DIVIDER })
     .onClick((): void => action());
   }
 
@@ -197,7 +195,7 @@ export struct SettingsPage {
 
   @Builder
   private preferenceCard() {
-    ReaderCard({ bg: CARD_BG, cardBorder: TOK_BORDER, radius: 8, cardWidth: this.contentWidth() }) {
+    ReaderCard({ bg: TOK_CARD_BG, cardBorder: TOK_BORDER, radius: 8, cardWidth: this.contentWidth() }) {
       Column() {
         ReaderSectionHeading({ title: '基础偏好' });
         Column() {
@@ -217,7 +215,7 @@ export struct SettingsPage {
 
   @Builder
   private behaviorCard() {
-    ReaderCard({ bg: CARD_BG, cardBorder: TOK_BORDER, radius: 8, cardWidth: this.contentWidth() }) {
+    ReaderCard({ bg: TOK_CARD_BG, cardBorder: TOK_BORDER, radius: 8, cardWidth: this.contentWidth() }) {
       Column() {
         ReaderSectionHeading({ title: '行为与反馈' });
         Column() {
@@ -238,7 +236,7 @@ export struct SettingsPage {
 
   @Builder
   private permissionCard() {
-    ReaderCard({ bg: CARD_BG, cardBorder: TOK_BORDER, radius: 8, cardWidth: this.contentWidth() }) {
+    ReaderCard({ bg: TOK_CARD_BG, cardBorder: TOK_BORDER, radius: 8, cardWidth: this.contentWidth() }) {
       Column() {
         ReaderSectionHeading({ title: '系统权限' });
         Column() {
@@ -285,7 +283,7 @@ export struct SettingsPage {
     .height(58)
     .padding({ left: TOK_SPACE_SM, right: CONTROL_INSET })
     .alignItems(VerticalAlign.Center)
-    .border({ width: { top: 0.5 }, color: ROW_DIVIDER });
+    .border({ width: { top: 0.5 }, color: TOK_ROW_DIVIDER });
   }
 
   @Builder
@@ -307,7 +305,7 @@ export struct SettingsPage {
       .height(58)
       .padding({ left: TOK_SPACE_SM, right: CONTROL_INSET })
       .alignItems(VerticalAlign.Center)
-      .border({ width: { top: 0.5 }, color: ROW_DIVIDER });
+      .border({ width: { top: 0.5 }, color: TOK_ROW_DIVIDER });
 
       // 下拉统一 (问题 2): 复用共享 ReaderSelect, 消除 SettingsPage.selectSurface 双实现。
       ReaderSelect({
@@ -365,7 +363,7 @@ export struct SettingsPage {
     .height(58)
     .padding({ left: TOK_SPACE_SM, right: CONTROL_INSET })
     .alignItems(VerticalAlign.Center)
-    .border({ width: { top: 0.5 }, color: ROW_DIVIDER });
+    .border({ width: { top: 0.5 }, color: TOK_ROW_DIVIDER });
   }
 
   @Builder
@@ -398,7 +396,7 @@ export struct SettingsPage {
     .height(58)
     .padding({ left: TOK_SPACE_SM, right: CONTROL_INSET })
     .alignItems(VerticalAlign.Center)
-    .border({ width: { top: 0.5 }, color: ROW_DIVIDER });
+    .border({ width: { top: 0.5 }, color: TOK_ROW_DIVIDER });
   }
 
   @Builder
@@ -481,6 +479,6 @@ export struct SettingsPage {
   }
 
   private contentWidth(): number {
-    return this.isTablet ? TABLET_CONTENT_WIDTH : PHONE_CONTENT_WIDTH;
+    return this.isTablet ? TOK_CONTENT_MAX_W_TABLET : TOK_CONTENT_MAX_W_PHONE;
   }
 }
