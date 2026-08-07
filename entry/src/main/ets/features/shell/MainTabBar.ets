@@ -1,6 +1,7 @@
 import { registerReaderFonts } from '../common/ReaderFonts';
 import {
   TOK_BORDER,
+  TOK_BORDER_W,
   TOK_CARD_BG,
   TOK_MUTED,
   TOK_ON_PRIMARY,
@@ -15,11 +16,7 @@ import {
 // 选中态由 current 驱动；点击非当前 tab 回调 onSelect(key)，由宿主页映射到各自回调。
 // Figma 重绘版：公共主导航 362×68 r24 bg #E6FFFCF8 border #C1C7CD，item 高 52.9 r24，
 // 选中 bg #1F3528 + 文字 #FFFAF4，未选中文字 #756F69；icon 24，标签 Inter ExtraBold 11。
-const MAIN_TAB_BG = TOK_CARD_BG;
-const MAIN_TAB_BORDER = TOK_BORDER;
-const MAIN_TAB_ACTIVE = TOK_PRIMARY_DARK;
-const MAIN_TAB_ACTIVE_TEXT = TOK_ON_PRIMARY;
-const MAIN_TAB_IDLE_TEXT = TOK_MUTED;
+// 颜色直接使用 TOK_* 语义 token (无二次别名)。
 
 export interface MainTabDef {
   key: string;
@@ -52,8 +49,8 @@ export struct MainTabBar {
     .constraintSize({ maxWidth: 362 })
     .height(68)
     .padding(TOK_SPACE_XS)
-    .backgroundColor(MAIN_TAB_BG)
-    .border({ width: 1, color: MAIN_TAB_BORDER })
+    .backgroundColor(TOK_CARD_BG)
+    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
     .borderRadius(24)
     .margin({ bottom: TOK_SPACE_MD });
   }
@@ -72,13 +69,13 @@ export struct MainTabBar {
         .fontWeight(FontWeight.Bold)
         .fontSize(11)
         .lineHeight(18)
-        .fontColor(active ? MAIN_TAB_ACTIVE_TEXT : MAIN_TAB_IDLE_TEXT);
+        .fontColor(active ? TOK_ON_PRIMARY : TOK_MUTED);
     }
     .layoutWeight(1)
     .height(54)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor(active ? MAIN_TAB_ACTIVE : Color.Transparent)
+    .backgroundColor(active ? TOK_PRIMARY_DARK : Color.Transparent)
     .borderRadius(24)
     .onClick((): void => {
       if (!active) {

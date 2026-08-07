@@ -1,6 +1,7 @@
 import {
   TOK_INK,
   TOK_ROW_DIVIDER,
+  TOK_SETTING_ICON_BG,
   TOK_SPACE_SM,
 } from '../common/ReaderTokens';
 
@@ -9,7 +10,6 @@ import {
 // Label Fill + Trailing Hug, 高 57, 顶部 row divider, 左右 12 inset。leading 图标盒与 label
 // 由组件统一提供; trailing 控件 (Switch/Chevron/Action) 由调用方经 @BuilderParam
 // content 注入; 导航行经 onRowClick 触发。普通页面不再复制 icon-box + row + divider 结构。
-const ROW_ICON_BG = '#172379A4'; // rgba(35,121,164,0.09)
 
 @Component
 export struct CategoryRow {
@@ -26,7 +26,7 @@ export struct CategoryRow {
       .width(28)
       .height(28)
       .borderRadius(14)
-      .backgroundColor(ROW_ICON_BG);
+      .backgroundColor(TOK_SETTING_ICON_BG);
 
       Text(this.label)
         .layoutWeight(1)

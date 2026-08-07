@@ -4,6 +4,7 @@ import {
   TOK_INK,
   TOK_PAPER,
   TOK_SCREEN_INSET,
+  TOK_SETTINGS_TOP_BAR_INSET,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
 } from '../common/ReaderTokens';
@@ -79,7 +80,7 @@ export struct SettingsShell {
     }
     .width('100%')
     .height(58)
-    .padding({ left: 20, right: 20, top: 6 })
+    .padding({ left: TOK_SETTINGS_TOP_BAR_INSET, right: TOK_SETTINGS_TOP_BAR_INSET, top: 6 })
     .alignItems(VerticalAlign.Center);
   }
 

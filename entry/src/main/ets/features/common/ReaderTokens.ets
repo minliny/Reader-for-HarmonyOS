@@ -91,6 +91,13 @@ export const TOK_BOTTOM_BG = '#FBF2EB';
 // ----------------------------------------------------------------------------
 // Figma: color/meta/bg
 export const TOK_META_BG = '#F5ECE6';
+// HarmonyOS calibration: 设置图标软底 rgba(35,121,164,0.09)。CategoryRow 图标盒与
+// SettingsPage iconBox/dangerRow 共用单源 (此前两处重复定义 #172379A4)。
+export const TOK_SETTING_ICON_BG = '#172379A4';
+// HarmonyOS calibration: 设置内联动作按钮底 rgba(35,121,164,0.10)。
+export const TOK_SETTING_ACTION_BG = '#1A2379A4';
+// HarmonyOS calibration: Settings Home TopBar 水平内边距 (Figma 返回按钮定位 x:20)。
+export const TOK_SETTINGS_TOP_BAR_INSET = 20;
 
 // ----------------------------------------------------------------------------
 // Spacing — 间距刻度 (space/*)

@@ -11,20 +11,19 @@ import { StatusBadge } from '../common/StatusBadge';
 import { CategorySection } from './CategorySection';
 import { CategoryRow } from './CategoryRow';
 import {
-  TOK_CONTENT_MAX_W_PHONE,
   TOK_CONTENT_MAX_W_TABLET,
   TOK_DANGER,
   TOK_GREEN,
   TOK_INK,
   TOK_ROW_DIVIDER,
+  TOK_SETTING_ACTION_BG,
+  TOK_SETTING_ICON_BG,
   TOK_SPACE_CARD_PADDING,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_SM,
 } from '../common/ReaderTokens';
 
-// 页面私有布局常量 (不属共享 token: 页面独有图标底色/内联动作底/对齐常量)。
-const ICON_BG = '#172379A4';       // rgba(35,121,164,0.09)，与 CategoryRow 图标盒同值
-const ACTION_BG = '#1A2379A4';     // rgba(35,121,164,0.10)
+// 页面私有布局常量 (不属共享 token: 页面独有下拉行对齐常量)。
 const CONTROL_INSET = 14;
 // selectRow 专用: 下拉(ReaderSelect 36 高触发)在 57 行内垂直居中, 展开时下拉撑高行。
 // 偏移 = (57-36)/2, 派生自布局常量, 非页面坐标。
@@ -85,7 +84,7 @@ export struct SettingsPage {
 
   @Builder
   private buildHome() {
-    CategorySection({ title: '设置', cardWidth: this.contentWidth() }) {
+    CategorySection({ title: '设置' }) {
       this.navRow('通用设置', $r('app.media.settings_row_general'), (): void => {
         this.activeSection = 'general';
       });
@@ -106,7 +105,7 @@ export struct SettingsPage {
 
   @Builder
   private preferenceCard() {
-    CategorySection({ title: '基础偏好', cardWidth: this.contentWidth() }) {
+    CategorySection({ title: '基础偏好' }) {
       this.selectRow('App主题', $r('app.media.settings_gen_theme'), 'theme', ['跟随系统', '浅色', '深色']);
       this.selectRow('语言', $r('app.media.settings_gen_language'), 'language',
         ['简体中文', '繁体中文', 'English', '日本語', '한국어']);
@@ -117,7 +116,7 @@ export struct SettingsPage {
 
   @Builder
   private behaviorCard() {
-    CategorySection({ title: '行为与反馈', cardWidth: this.contentWidth() }) {
+    CategorySection({ title: '行为与反馈' }) {
       this.switchRow('自动检查更新', $r('app.media.settings_gen_update'), 'autoCheckUpdate', this.snapshot.autoCheckUpdate);
       this.switchRow('点击当前底栏回顶部', $r('app.media.settings_gen_tap_top'), 'tapBottomScrollTop', this.snapshot.tapBottomScrollTop);
       this.switchRow('减少动态效果', $r('app.media.settings_gen_motion'), 'reduceMotion', this.snapshot.reduceMotion);
@@ -129,7 +128,7 @@ export struct SettingsPage {
 
   @Builder
   private permissionCard() {
-    CategorySection({ title: '系统权限', cardWidth: this.contentWidth() }) {
+    CategorySection({ title: '系统权限' }) {
       this.permissionRow('文件访问', $r('app.media.settings_gen_file'), '#212B895C', '#28704E');
       this.permissionRow('通知权限', $r('app.media.settings_gen_notification'), '#24B0661D', '#8C521D');
       this.permissionRow('电池优化', $r('app.media.settings_gen_battery'), '#212379A4', TOK_GREEN);
@@ -209,11 +208,10 @@ export struct SettingsPage {
   @Builder
   private permissionRow(label: string, icon: Resource, badgeBg: string, badgeDot: string) {
     CategoryRow({ icon: icon, label: label }) {
-      Row() {
+      // Figma Article trailing 是 fit-content 聚簇 (状态徽标 + 去设置 + chevron), 6 间距。
+      Row({ space: 6 }) {
         this.statusBadge(badgeBg, badgeDot);
-        Row().width(55);
         this.inlineAction('去设置', 55);
-        Row().width(6);
         Stack({ alignContent: Alignment.Center }) {
           Image($r('app.media.rss_chevron')).width(14).height(14);
         }
@@ -232,7 +230,7 @@ export struct SettingsPage {
     .width(28)
     .height(28)
     .borderRadius(14)
-    .backgroundColor(ICON_BG);
+    .backgroundColor(TOK_SETTING_ICON_BG);
   }
 
   private currentValue(key: string): string {
@@ -270,7 +268,7 @@ export struct SettingsPage {
     .width(width)
     .height(34)
     .borderRadius(6)
-    .backgroundColor(ACTION_BG);
+    .backgroundColor(TOK_SETTING_ACTION_BG);
   }
 
   @Builder
@@ -288,7 +286,7 @@ export struct SettingsPage {
       .width(28)
       .height(28)
       .borderRadius(14)
-      .backgroundColor(ICON_BG);
+      .backgroundColor(TOK_SETTING_ICON_BG);
 
       Text('恢复默认')
         .layoutWeight(1)
@@ -301,15 +299,12 @@ export struct SettingsPage {
 
       Image($r('app.media.rss_chevron')).width(14).height(14);
     }
-    .width(this.contentWidth())
-    .constraintSize({ minHeight: 57 })
+    .width('100%')
+    .constraintSize({ minHeight: 57, maxWidth: TOK_CONTENT_MAX_W_TABLET })
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_CARD_PADDING })
     .alignItems(VerticalAlign.Center)
     .backgroundColor('#E0FFFFFF')
     .borderRadius(8);
   }
 
-  private contentWidth(): number {
-    return this.isTablet ? TOK_CONTENT_MAX_W_TABLET : TOK_CONTENT_MAX_W_PHONE;
-  }
 }
