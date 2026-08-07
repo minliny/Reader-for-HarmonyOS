@@ -78,4 +78,4 @@ Source of truth for "new abstractions must be consumed by the current production
 - 2026-08-07: baseline frozen (594530d).
 - 2026-08-07: Batch 1 done (56e1df1) — ReaderTokens 13 categories + Figma source markers + 3 new tokens; ReaderControlPanel RC_* → TOK_*; SettingsPage aliases purged. Compile-verified (assembleHap API 23).
   - Deferred to Batch 3/5: page aliases in RssPage/SearchPage/SyncPage/DiscoverPage/SourceManagementPage migrate with each page (avoid double-touch).
-  - Open (needs confirmation): ReaderCard `.border({ width: 0.556 })` platform calibration → TOK_BORDER_W (visual, touches all ReaderCard consumers).
+  - Resolved: ReaderCard `.border({ width: 0.556 })` + SourceSwitchPanel window border calibrated to TOK_BORDER_W (1vp, §八 platform calibration).

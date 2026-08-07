@@ -1,6 +1,7 @@
 import type { SourceSwitchCandidate } from '../source/SourceSwitchGateway';
 import {
   TOK_BORDER,
+  TOK_BORDER_W,
   TOK_CARD_BG,
   TOK_INK,
   TOK_LINE,
@@ -109,7 +110,7 @@ export struct SourceSwitchPanel {
     .width(300)
     .height(385)
     .backgroundColor('#FFFCF8')
-    .border({ width: 0.556, color: '#3D9B8466' })
+    .border({ width: TOK_BORDER_W, color: '#3D9B8466' })
     .borderRadius(20);
   }
 
