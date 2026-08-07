@@ -30,8 +30,8 @@ Source of truth for "new abstractions must be consumed by the current production
 - PageBackBar.ets · ReaderCard.ets · ReaderFonts.ets · ReaderIconButton.ets
 - ReaderSectionHeading.ets · ReaderSelect.ets · ReaderToggle.ets · ReaderTokens.ets · StatusBadge.ets
 
-### features/shell (2)
-- MainTabBar.ets · ReaderShell.ets
+### features/shell (4)
+- MainTabBar.ets · ReaderShell.ets · MainTabShell.ets · SettingsShell.ets
 
 ### features/bookshelf (7)
 - BookshelfEmptyCard.ets · BookshelfEmptyPage.ets · BookshelfFlowGateway.ts · BookshelfPage.ets
@@ -82,3 +82,4 @@ Source of truth for "new abstractions must be consumed by the current production
 - 2026-08-07: Batch 2 local side done (5fd612a + 54dc15a) — ReaderControlGeometry fixed-canvas widths (dockW/sheetW/mainW/progressW/chapterRowW/sliderW/actionW) removed; Dock/Sheet/ModuleNav adaptive via width 100% + constraintSize(maxWidth) + bottom-center, Main layoutWeight(1), progress fill/thumb percentage-mapped to live slider width. New features/shell/ReaderShell.ets composes LocalReadingExperience + directory + source-switch overlays; Index reading route now a single ReaderShell call (business state + gateways stay in Index). Compile-verified (assembleHap).
   - Deferred: state bar / safe-area separation for Reader (shares Index root Stack padding to avoid double-padding); three-viewport visual verification requires device/VM (marked pending).
 - 2026-08-07: Batch 3 Task 3 done — SettingsPage converged to CategorySection (Card+Heading+rows) + CategoryRow (icon盒+label+trailing via @BuilderParam content); `.position({x,y})` select placement removed. selectRow stays page-private (dropdown grows the row → generic CategoryRow can't express; left label fixed 57 centered + right ReaderSelect top + margin (57-36)/2 keeps trigger aligned with label center); dangerRow stays page-private (standalone card). Compile-verified (assembleHap), LEDGER pending VM visual.
+- 2026-08-07: Batch 3 Tasks 4+5 done — new features/shell/MainTabShell.ets (page bg + content area layoutWeight(1) + MainTabBar + showBottomNav prop for Tablet bookshelf left-rail) and SettingsShell.ets (Home TopBar / BackTopBar + Scroll content + BottomNav + home/general subpage switch via activeSection prop + responsive margins). Bookshelf/Discover/Rss/Settings pages now render their shell internally (page-as-host: pages are structs, can't be passed up as @BuilderParam content slots to Index, so the page hosts the shell — same "页面不复制公共骨架" outcome, Index routing unchanged). Status bar padding + bottom safe area stay in Index root Stack (Batch 2 deferred, avoids double-padding); overlay host stays in Index root (import dialog). Compile-verified.

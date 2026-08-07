@@ -3,9 +3,8 @@
 // Batch 3: 设置/偏好/行为/权限四个区块收敛到 CategorySection(Card+Heading+rows)，
 // 行收敛到 CategoryRow(icon盒+label+trailing)。仅 selectRow 与 dangerRow 保留为
 // 页私有 —— 下拉展开会撑高行(见下), 通用 CategoryRow 无法表达; 危险行是独立卡片。
-import { MainTabBar } from '../shell/MainTabBar';
+import { SettingsShell } from '../shell/SettingsShell';
 import { registerReaderFonts } from '../common/ReaderFonts';
-import { PageBackBar } from '../common/PageBackBar';
 import { ReaderToggle } from '../common/ReaderToggle';
 import { ReaderSelect } from '../common/ReaderSelect';
 import { StatusBadge } from '../common/StatusBadge';
@@ -17,13 +16,10 @@ import {
   TOK_DANGER,
   TOK_GREEN,
   TOK_INK,
-  TOK_PAPER,
   TOK_ROW_DIVIDER,
-  TOK_SCREEN_INSET,
   TOK_SPACE_CARD_PADDING,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_SM,
-  TOK_SPACE_XS,
 } from '../common/ReaderTokens';
 
 // 页面私有布局常量 (不属共享 token: 页面独有图标底色/内联动作底/对齐常量)。
@@ -72,94 +68,40 @@ export struct SettingsPage {
   }
 
   build() {
-    Column() {
-      if (this.activeSection === 'home') {
-        this.homeTopBar();
-      } else {
-        this.generalBackBar();
-      }
-      if (this.activeSection === 'home') {
-        this.settingsHome();
-        MainTabBar({ current: 'settings', onSelect: (key: string): void => this.onMainTab(key) });
-      } else {
-        Scroll() {
-          Column({ space: TOK_SPACE_SM }) {
-            this.preferenceCard();
-            this.behaviorCard();
-            this.permissionCard();
-            this.dangerRow();
-          }
-          .width('100%')
-          .padding({ left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET, top: TOK_SPACE_XS, bottom: TOK_SPACE_SM });
-        }
-        .layoutWeight(1)
-        .width('100%')
-        .scrollBar(BarState.Off);
-      }
-    }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(TOK_PAPER);
-  }
-
-  @Builder
-  private generalBackBar() {
-    PageBackBar({
-      title: '通用设置',
-      onBack: (): void => {
-        this.activeSection = 'home';
+    SettingsShell({
+      activeSection: this.activeSection,
+      onSectionChange: (section: 'home' | 'general'): void => {
+        this.activeSection = section;
       },
+      onBack: this.onBack,
+      onOpenSourceManagement: this.onOpenSourceManagement,
+      onOpenSync: this.onOpenSync,
+      onRssRequested: this.onRssRequested,
+      onDiscoverRequested: this.onDiscoverRequested,
+      homeContent: this.buildHome,
+      generalContent: this.buildGeneral,
     });
   }
 
   @Builder
-  private homeTopBar() {
-    Row() {
-      Text('设置')
-        .fontFamily('ReaderNotoSerifSCBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(29)
-        .lineHeight(38)
-        .fontColor(TOK_INK);
+  private buildHome() {
+    CategorySection({ title: '设置', cardWidth: this.contentWidth() }) {
+      this.navRow('通用设置', $r('app.media.settings_row_general'), (): void => {
+        this.activeSection = 'general';
+      });
+      this.navRow('书架与搜索设置', $r('app.media.settings_row_shelf_search'), (): void => {});
+      this.navRow('书源管理', $r('app.media.settings_row_source'), (): void => this.onOpenSourceManagement());
+      this.navRow('同步与备份', $r('app.media.settings_row_sync'), (): void => this.onOpenSync());
+      this.navRow('关于与反馈', $r('app.media.settings_row_about'), (): void => {});
     }
-    .width('100%')
-    .height(58)
-    .padding({ left: 20, right: 20, top: 6 })
-    .alignItems(VerticalAlign.Center);
   }
 
   @Builder
-  private settingsHome() {
-    Scroll() {
-      Column({ space: TOK_SPACE_SM }) {
-        CategorySection({ title: '设置', cardWidth: this.contentWidth() }) {
-          this.navRow('通用设置', $r('app.media.settings_row_general'), (): void => {
-            this.activeSection = 'general';
-          });
-          this.navRow('书架与搜索设置', $r('app.media.settings_row_shelf_search'), (): void => {});
-          this.navRow('书源管理', $r('app.media.settings_row_source'), (): void => this.onOpenSourceManagement());
-          this.navRow('同步与备份', $r('app.media.settings_row_sync'), (): void => this.onOpenSync());
-          this.navRow('关于与反馈', $r('app.media.settings_row_about'), (): void => {});
-        }
-      }
-      .width('100%')
-      .padding({ left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET, top: TOK_SPACE_XS, bottom: TOK_SPACE_SM });
-    }
-    .layoutWeight(1)
-    .width('100%')
-    .align(Alignment.Top)
-    .scrollBar(BarState.Off);
-  }
-
-  private onMainTab(key: string): void {
-    if (key === 'bookshelf') {
-      this.onBack();
-    } else if (key === 'discover') {
-      this.onDiscoverRequested();
-    } else if (key === 'rss') {
-      this.onRssRequested();
-    }
-    // 'settings' is this page; MainTabBar suppresses the current tab.
+  private buildGeneral() {
+    this.preferenceCard();
+    this.behaviorCard();
+    this.permissionCard();
+    this.dangerRow();
   }
 
   @Builder

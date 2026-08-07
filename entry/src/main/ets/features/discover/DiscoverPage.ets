@@ -5,7 +5,7 @@
 // empty state. No book rows are fabricated.
 // Icons: existing media only (no new SVG assets).
 
-import { MainTabBar } from '../shell/MainTabBar';
+import { MainTabShell } from '../shell/MainTabShell';
 import { ReaderIconButton } from '../common/ReaderIconButton';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import {
@@ -15,7 +15,6 @@ import {
   TOK_INK,
   TOK_LINE_STRONG,
   TOK_MUTED,
-  TOK_PAPER,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_ROW_BLOCK,
   TOK_SPACE_SM,
@@ -64,14 +63,22 @@ export struct DiscoverPage {
   }
 
   build() {
+    MainTabShell({
+      activeTab: 'discover',
+      onMainTab: (key: string): void => this.onMainTab(key),
+    }) {
+      this.discoverTabContent();
+    }
+  }
+
+  @Builder
+  private discoverTabContent() {
     Column() {
       this.homeTopBar();
       this.discoverContent();
-      MainTabBar({ current: 'discover', onSelect: (key: string): void => this.onMainTab(key) });
     }
     .width('100%')
-    .height('100%')
-    .backgroundColor(TOK_PAPER);
+    .height('100%');
   }
 
   @Builder

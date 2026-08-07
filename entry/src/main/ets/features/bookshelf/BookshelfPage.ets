@@ -6,7 +6,6 @@ import {
   TOK_INK,
   TOK_MUTED,
   TOK_ON_PRIMARY,
-  TOK_PAPER,
   TOK_PRIMARY_DARK,
   TOK_SCREEN_INSET,
   TOK_SPACE_CARD_PADDING,
@@ -16,7 +15,7 @@ import {
 } from '../common/ReaderTokens';
 
 import { NoCoverCover } from './NoCoverCover';
-import { MainTabBar } from '../shell/MainTabBar';
+import { MainTabShell } from '../shell/MainTabShell';
 import { ReaderIconButton } from '../common/ReaderIconButton';
 import { registerReaderFonts } from '../common/ReaderFonts';
 
@@ -50,6 +49,17 @@ export struct BookshelfPage {
   }
 
   build() {
+    MainTabShell({
+      activeTab: 'bookshelf',
+      showBottomNav: !this.isTablet,
+      onMainTab: (key: string): void => this.onMainTab(key),
+    }) {
+      this.bookshelfTabContent();
+    }
+  }
+
+  @Builder
+  private bookshelfTabContent() {
     Column() {
       this.topBar();
       Stack({ alignContent: Alignment.TopStart }) {
@@ -58,15 +68,13 @@ export struct BookshelfPage {
           this.tabletNavigation();
         } else {
           this.phoneContent();
-          this.phoneNavigation();
         }
       }
       .layoutWeight(1)
       .width('100%');
     }
     .width('100%')
-    .height('100%')
-    .backgroundColor(TOK_PAPER);
+    .height('100%');
   }
 
   @Builder
@@ -335,24 +343,6 @@ export struct BookshelfPage {
     .width(isTablet ? TABLET_BOOK_WIDTH : PHONE_BOOK_WIDTH)
     .alignItems(HorizontalAlign.Start)
     .onClick((): void => this.onBookSelected(book));
-  }
-
-  @Builder
-  private phoneNavigation() {
-    Column() {
-      Blank().layoutWeight(1);
-      Row() {
-        MainTabBar({ current: 'bookshelf', onSelect: (key: string): void => this.onMainTab(key) });
-      }
-      .width('100%')
-      .padding({ left: TOK_SPACE_CARD_PADDING, right: TOK_SPACE_MD });
-    }
-    .width('100%')
-    .height('100%')
-    // This full-height visual placement layer is painted over the Scroll.
-    // Transparent keeps its bottom-navigation descendants interactive while
-    // allowing cards behind its blank region to receive their own clicks.
-    .hitTestBehavior(HitTestMode.Transparent);
   }
 
   private onMainTab(key: string): void {

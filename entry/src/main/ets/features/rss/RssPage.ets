@@ -2,7 +2,7 @@ import {
   type RssItem,
   type RssSubscription,
 } from './RssGateway';
-import { MainTabBar } from '../shell/MainTabBar';
+import { MainTabShell } from '../shell/MainTabShell';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { PageBackBar } from '../common/PageBackBar';
 import { ReaderSelect } from '../common/ReaderSelect';
@@ -123,29 +123,52 @@ export struct RssPage {
   }
 
   build() {
-    Column() {
-      if (this.presentation.kind === 'feed') {
-        this.topBar();
-        this.searchBar();
-        this.statusTabs();
-        this.feedScroll(this.presentation.subscriptions, this.presentation.recentUnread, false);
-        MainTabBar({ current: 'rss', onSelect: (key: string): void => this.onMainTab(key) });
-      } else if (this.presentation.kind === 'refreshing') {
+    if (this.presentation.kind === 'feed') {
+      MainTabShell({
+        activeTab: 'rss',
+        onMainTab: (key: string): void => this.onMainTab(key),
+      }) {
+        this.feedTabContent(this.presentation.subscriptions, this.presentation.recentUnread);
+      }
+    } else if (this.presentation.kind === 'refreshing') {
+      Column() {
         this.backBar('刷新订阅');
         this.searchBar();
         this.statusTabs();
         this.feedScroll(this.presentation.subscriptions, this.presentation.recentUnread, true);
-      } else if (this.presentation.kind === 'empty') {
+      }
+      .width('100%')
+      .height('100%')
+      .backgroundColor(TOK_PAPER);
+    } else if (this.presentation.kind === 'empty') {
+      Column() {
         this.backBar('RSS 空状态');
         this.emptyContent();
-      } else {
+      }
+      .width('100%')
+      .height('100%')
+      .backgroundColor(TOK_PAPER);
+    } else {
+      Column() {
         this.backBar('RSS 错误');
         this.errorContent(this.presentation.failedSources);
       }
+      .width('100%')
+      .height('100%')
+      .backgroundColor(TOK_PAPER);
+    }
+  }
+
+  @Builder
+  private feedTabContent(subscriptions: RssSubscription[], recentUnread: RssItem[]) {
+    Column() {
+      this.topBar();
+      this.searchBar();
+      this.statusTabs();
+      this.feedScroll(subscriptions, recentUnread, false);
     }
     .width('100%')
-    .height('100%')
-    .backgroundColor(TOK_PAPER);
+    .height('100%');
   }
 
   @Builder
