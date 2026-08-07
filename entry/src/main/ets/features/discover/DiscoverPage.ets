@@ -9,8 +9,11 @@ import { MainTabShell } from '../shell/MainTabShell';
 import { ReaderIconButton } from '../common/ReaderIconButton';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import {
+  TOK_BORDER_W,
   TOK_CARD_BG,
   TOK_CARD_BG_HI,
+  TOK_CONTENT_MAX_W_PHONE,
+  TOK_CONTENT_RAIL_W_TABLET,
   TOK_GREEN,
   TOK_INK,
   TOK_LINE_STRONG,
@@ -25,8 +28,6 @@ import {
   type DiscoverKind,
 } from './DiscoverGateway';
 
-const PHONE_CONTENT_WIDTH = 350.903;
-const TABLET_CONTENT_WIDTH = 722;
 const CURRENT_SOURCE_BORDER = '#5CB4A697'; // rgba(180,166,151,0.36)
 const ICON_BOX_BG = '#1A2D4A3E';         // rgba(45,74,62,0.10)
 const CHIP_BG = '#D1EEE8DF';             // rgba(238,232,223,0.82)
@@ -167,7 +168,7 @@ export struct DiscoverPage {
     .padding({ left: TOK_SPACE_SM, right: 13.1 })
     .alignItems(VerticalAlign.Center)
     .backgroundColor(TOK_CARD_BG_HI)
-    .border({ width: 1, color: CURRENT_SOURCE_BORDER })
+    .border({ width: TOK_BORDER_W, color: CURRENT_SOURCE_BORDER })
     .borderRadius(8);
   }
 
@@ -229,7 +230,7 @@ export struct DiscoverPage {
       .padding({ left: TOK_SPACE_CONTROL_INLINE, right: 5 })
       .alignItems(VerticalAlign.Center)
       .backgroundColor(TOK_CARD_BG)
-      .border({ width: 1, color: FILTER_BORDER })
+      .border({ width: TOK_BORDER_W, color: FILTER_BORDER })
       .borderRadius(8);
 
       Row() {
@@ -251,7 +252,7 @@ export struct DiscoverPage {
         angle: 270,
         colors: [['#436F88', 0], ['#315F78', 1]],
       })
-      .border({ width: 1, color: APPLY_BORDER })
+      .border({ width: TOK_BORDER_W, color: APPLY_BORDER })
       .borderRadius(8);
     }
     .width('100%')
@@ -305,7 +306,7 @@ export struct DiscoverPage {
     }
     .width('100%')
     .backgroundColor(TOK_CARD_BG)
-    .border({ width: 1, color: TOK_LINE_STRONG })
+    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
     .borderRadius(8)
     .clip(true);
   }
@@ -384,7 +385,7 @@ export struct DiscoverPage {
   }
 
   private contentWidth(): number {
-    return this.isTablet ? TABLET_CONTENT_WIDTH : PHONE_CONTENT_WIDTH;
+    return this.isTablet ? TOK_CONTENT_RAIL_W_TABLET : TOK_CONTENT_MAX_W_PHONE;
   }
 
   private kindTitles(): string[] {

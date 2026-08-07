@@ -9,8 +9,11 @@ import { ReaderSelect } from '../common/ReaderSelect';
 import { StatusBadge } from '../common/StatusBadge';
 import {
   TOK_BORDER,
+  TOK_BORDER_W,
   TOK_CARD_BG,
   TOK_CARD_BG_HI,
+  TOK_CONTENT_MAX_W_PHONE,
+  TOK_CONTENT_RAIL_W_TABLET,
   TOK_GREEN,
   TOK_INK,
   TOK_LINE_STRONG,
@@ -53,9 +56,6 @@ export type RssPresentation =
   | RssRefreshingPresentation
   | RssEmptyPresentation
   | RssErrorPresentation;
-
-const PHONE_CONTENT_WIDTH = 350;
-const TABLET_CONTENT_WIDTH = 620;
 
 // Figma tokens (AARRGGBB)
 const MUTED_DEEP = '#6F655D';
@@ -221,7 +221,7 @@ export struct RssPage {
     .padding({ left: 11, right: 9 })
     .alignItems(VerticalAlign.Center)
     .backgroundColor(PILL_BG)
-    .border({ width: 1, color: PILL_BORDER })
+    .border({ width: TOK_BORDER_W, color: PILL_BORDER })
     .borderRadius(999)
     .onClick((): void => this.onRefresh());
   }
@@ -244,7 +244,7 @@ export struct RssPage {
     .justifyContent(FlexAlign.Center)
     .alignItems(VerticalAlign.Center)
     .backgroundColor(PILL_BG)
-    .border({ width: 1, color: PILL_BORDER })
+    .border({ width: TOK_BORDER_W, color: PILL_BORDER })
     .borderRadius(12)
     .onClick((): void => this.onManage());
   }
@@ -267,7 +267,7 @@ export struct RssPage {
     .height(44)
     .padding({ left: 15, right: 15 })
     .backgroundColor(SEARCH_BG)
-    .border({ width: 1, color: TOK_BORDER })
+    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
     .borderRadius(999)
     .alignItems(VerticalAlign.Center)
     .margin({ top: TOK_SPACE_XS, left: TOK_SCREEN_INSET });
@@ -366,7 +366,7 @@ export struct RssPage {
       .justifyContent(FlexAlign.SpaceBetween)
       .alignItems(VerticalAlign.Center)
       .backgroundColor(TOK_CARD_BG_HI)
-      .border({ width: 1, color: CARD_BORDER })
+      .border({ width: TOK_BORDER_W, color: CARD_BORDER })
       .borderRadius(8);
 
       Row({ space: 7 }) {
@@ -398,7 +398,7 @@ export struct RssPage {
       .padding({ left: 11, right: 11 })
       .alignItems(VerticalAlign.Center)
       .backgroundColor(TOK_CARD_BG)
-      .border({ width: 1, color: FILTER_BORDER })
+      .border({ width: TOK_BORDER_W, color: FILTER_BORDER })
       .borderRadius(8);
 
       Column() {
@@ -408,7 +408,7 @@ export struct RssPage {
       }
       .width('100%')
       .backgroundColor(TOK_CARD_BG_HI)
-      .border({ width: 1, color: CARD_BORDER })
+      .border({ width: TOK_BORDER_W, color: CARD_BORDER })
       .borderRadius(8);
     }
     .width(this.contentWidth());
@@ -529,7 +529,7 @@ export struct RssPage {
       }
       .width('100%')
       .backgroundColor(TOK_CARD_BG_HI)
-      .border({ width: 1, color: CARD_BORDER })
+      .border({ width: TOK_BORDER_W, color: CARD_BORDER })
       .borderRadius(8);
     }
     .width(this.contentWidth());
@@ -674,7 +674,7 @@ export struct RssPage {
     }
     .width('100%')
     .backgroundColor(TOK_CARD_BG)
-    .border({ width: 1, color: TOK_LINE_STRONG })
+    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
     .borderRadius(8)
     .padding({ top: 26, bottom: 26, left: 18, right: 18 })
     .alignItems(HorizontalAlign.Center);
@@ -726,7 +726,7 @@ export struct RssPage {
       }
       .height(44)
       .padding({ left: 18, right: 18 })
-      .border({ width: 1, color: TOK_BORDER })
+      .border({ width: TOK_BORDER_W, color: TOK_BORDER })
       .borderRadius(8)
       .onClick((): void => this.onManage());
     }
@@ -762,6 +762,6 @@ export struct RssPage {
   }
 
   private contentWidth(): number {
-    return this.isTablet ? TABLET_CONTENT_WIDTH : PHONE_CONTENT_WIDTH;
+    return this.isTablet ? TOK_CONTENT_RAIL_W_TABLET : TOK_CONTENT_MAX_W_PHONE;
   }
 }

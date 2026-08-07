@@ -77,8 +77,12 @@ export struct SettingsPage {
       onOpenSync: this.onOpenSync,
       onRssRequested: this.onRssRequested,
       onDiscoverRequested: this.onDiscoverRequested,
-      homeContent: this.buildHome,
-      generalContent: this.buildGeneral,
+      // ArkUI 限制: @Builder 方法引用作 @BuilderParam 时, 方法内部再建 @Builder
+      // 闭包 (CategorySection content → this.navRow) 会丢 this 绑定, 运行时崩
+      // "Cannot read property bind of undefined"。改内联闭包词法捕获 this (同
+      // BookshelfPage 尾随闭包 pattern), 内层 this.buildHome() 才正确绑定。
+      homeContent: (): void => { this.buildHome(); },
+      generalContent: (): void => { this.buildGeneral(); },
     });
   }
 

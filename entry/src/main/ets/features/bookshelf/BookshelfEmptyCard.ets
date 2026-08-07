@@ -8,6 +8,7 @@ import {
   TOK_PRIMARY_DARK,
   TOK_PRIMARY_SOFT,
   TOK_SPACE_CARD_PADDING,
+  TOK_BORDER_W,
 } from '../common/ReaderTokens';
 
 
@@ -33,7 +34,7 @@ export struct BookshelfEmptyCard {
           .width(72)
           .height(52)
           .backgroundColor(TOK_CARD_BG_HI)
-          .border({ width: 1, color: TOK_BORDER })
+          .border({ width: TOK_BORDER_W, color: TOK_BORDER })
           .borderRadius(8)
           .rotate({ angle: 8 });
       }
@@ -47,7 +48,7 @@ export struct BookshelfEmptyCard {
           .width(72)
           .height(52)
           .backgroundColor(TOK_CARD_BG_HI)
-          .border({ width: 1, color: TOK_BORDER })
+          .border({ width: TOK_BORDER_W, color: TOK_BORDER })
           .borderRadius(8)
           .rotate({ angle: -8 });
       }
@@ -62,7 +63,7 @@ export struct BookshelfEmptyCard {
       .width(62)
       .height(62)
       .backgroundColor(TOK_PRIMARY_SOFT)
-      .border({ width: 1, color: TOK_GREEN })
+      .border({ width: TOK_BORDER_W, color: TOK_GREEN })
       .borderRadius(16)
       .position({ x: 144, y: 35 });
 
@@ -108,7 +109,7 @@ export struct BookshelfEmptyCard {
       .width(316)
       .height(52)
       .backgroundColor(TOK_PRIMARY_SOFT)
-      .border({ width: 1, color: TOK_GREEN })
+      .border({ width: TOK_BORDER_W, color: TOK_GREEN })
       .borderRadius(12)
       .position({ x: 17, y: 281 })
       .onClick((): void => this.onSearchRequested());
@@ -116,7 +117,7 @@ export struct BookshelfEmptyCard {
     .width(352)
     .height(350)
     .backgroundColor(TOK_CARD_BG_HI)
-    .border({ width: 1, color: TOK_BORDER })
+    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
     .borderRadius(12);
   }
 }

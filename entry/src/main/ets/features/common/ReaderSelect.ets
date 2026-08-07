@@ -1,6 +1,7 @@
 import { registerReaderFonts } from './ReaderFonts';
 import {
   TOK_BORDER,
+  TOK_BORDER_W,
   TOK_CONTROL_INK,
   TOK_FIELD_SURFACE,
   TOK_PRIMARY_DARK,
@@ -68,7 +69,7 @@ export struct ReaderSelect {
     }
     .width(this.selectWidth())
     .backgroundColor(TOK_FIELD_SURFACE)
-    .border({ width: 1, color: TOK_BORDER })
+    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
     .borderRadius(6)
     .clip(true);
   }

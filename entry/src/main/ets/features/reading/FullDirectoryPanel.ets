@@ -14,6 +14,7 @@ import {
   TOK_SPACE_XS,
   TOK_SURFACE_PANEL,
   TOK_SURFACE_PANEL_SOFT,
+  TOK_BORDER_W,
 } from '../common/ReaderTokens';
 
 import { registerReaderFonts } from '../common/ReaderFonts';
@@ -67,7 +68,7 @@ export struct FullDirectoryPanel {
     .width(this.panelWidth())
     .height(this.panelHeight())
     .backgroundColor(TOK_READ_SURFACE)
-    .border({ width: 1, color: TOK_LINE_STRONG })
+    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
     .borderRadius(24)
     .position({ x: this.panelLeft(), y: 88 });
   }
@@ -121,7 +122,7 @@ export struct FullDirectoryPanel {
     .width(this.innerWidth())
     .height(this.bodyContentHeight())
     .backgroundColor(TOK_SURFACE_PANEL)
-    .border({ width: 1, color: TOK_LINE })
+    .border({ width: TOK_BORDER_W, color: TOK_LINE })
     .borderRadius(12)
     .clip(true);
   }

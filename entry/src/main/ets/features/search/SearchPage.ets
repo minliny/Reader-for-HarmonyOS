@@ -6,6 +6,7 @@ import { registerReaderFonts } from '../common/ReaderFonts';
 import {
   TOK_BORDER,
   TOK_CARD_BG,
+  TOK_CONTENT_RAIL_W_TABLET,
   TOK_GREEN,
   TOK_INK,
   TOK_MUTED,
@@ -24,7 +25,6 @@ import {
 
 const SEARCH_FIELD_BG = '#121F1B17';   // rgba(31,27,23,0.07) — Figma field fill
 const SEARCH_BTN_BG = '#382D4A3E';     // rgba(45,74,62,0.22) — Initial search button
-const TABLET_CONTENT_WIDTH = 620;
 
 /**
  * The search page's full presentation. `initial` is the pre-search surface
@@ -669,6 +669,6 @@ export struct SearchPage {
   }
 
   private contentWidth(): number {
-    return this.isTablet ? TABLET_CONTENT_WIDTH : 390;
+    return this.isTablet ? TOK_CONTENT_RAIL_W_TABLET : 390;
   }
 }

@@ -139,10 +139,14 @@ export const TOK_RADIUS_PILL = 999;
 // HarmonyOS calibration: 屏边距 19 (Figma 变量 screen/padding=16, 但节点实测用 19。
 // 该值为节点实测/校准值, 非正式 Figma Variable 来源, 与 TOK_ON_* 等 Variable 绑定区分)。
 export const TOK_SCREEN_INSET = 19;
-// Figma: 内容最大宽度 (Phone 390−2×19)
+// Figma: 内容列宽 (Phone 390−2×19)
 export const TOK_CONTENT_MAX_W_PHONE = 352;
-// Figma: 内容最大宽度 (Tablet 760−2×19)
-export const TOK_CONTENT_MAX_W_TABLET = 722;
+// Figma: 内容列宽 — 子页档 (无左 rail, 19px 边距; 实测 SourceMgmt 722 / Sync·BookDetail·WebDAV 720)。
+// 兼作大屏 maxWidth cap。区别于 rail 档 620。
+export const TOK_CONTENT_MAX_W_TABLET = 720;
+// Figma: 内容列宽 — rail 档 (主 tab 带左侧 BottomNav rail, 实测 Bookshelf/Discover/RSS 内容列 620)。
+// Discover 代码原 722 为 bug, 已纠正到 620。
+export const TOK_CONTENT_RAIL_W_TABLET = 620;
 
 // ----------------------------------------------------------------------------
 // State — 状态色 (危险 / 成功)

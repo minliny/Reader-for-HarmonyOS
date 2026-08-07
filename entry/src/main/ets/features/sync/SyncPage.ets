@@ -8,7 +8,10 @@ import { PageBackBar } from '../common/PageBackBar';
 import { ReaderSelect } from '../common/ReaderSelect';
 import {
   TOK_BORDER,
+  TOK_BORDER_W,
   TOK_CARD_BG,
+  TOK_CONTENT_MAX_W_PHONE,
+  TOK_CONTENT_MAX_W_TABLET,
   TOK_CONTROL_INK,
   TOK_FIELD_SURFACE,
   TOK_GREEN,
@@ -31,8 +34,6 @@ import {
 // rows (28px circular blue icon + 36px r6 input) and two action buttons;
 // Auto Backup / History = solid #FFFCF8 cards + #D8D0C3 r13 with muted
 // 11px tracked section titles.
-const PHONE_CONTENT_WIDTH = 350;   // 390 - 2*19 (Figma container px 19)
-const TABLET_CONTENT_WIDTH = 720;  // 760 - 2*19
 const CARD_BG_SOLID = '#FFFCF8';   // solid — Auto/History cards
 const CARD_BORDER_SOFT = '#D8D0C3';
 const ROW_BG = '#B3FFFCF8';        // rgba(255,252,248,0.7) — labelled row
@@ -155,7 +156,7 @@ export struct SyncPage {
       .width('100%')
       .padding({ left: 11, right: 11, top: TOK_SPACE_CONTROL_INLINE, bottom: 11 })
       .backgroundColor(TOK_CARD_BG)
-      .border({ width: 1, color: TOK_BORDER })
+      .border({ width: TOK_BORDER_W, color: TOK_BORDER })
       .borderRadius(8);
     }
     .width('100%');
@@ -195,7 +196,7 @@ export struct SyncPage {
             .fontSize(12)
             .fontColor(TOK_CONTROL_INK)
             .backgroundColor(TOK_FIELD_SURFACE)
-            .border({ width: 1, color: TOK_BORDER })
+            .border({ width: TOK_BORDER_W, color: TOK_BORDER })
             .borderRadius(6)
             .padding({ left: 11, right: 11 })
             .placeholderColor('#9C9488')
@@ -209,7 +210,7 @@ export struct SyncPage {
             .fontSize(12)
             .fontColor(TOK_CONTROL_INK)
             .backgroundColor(TOK_FIELD_SURFACE)
-            .border({ width: 1, color: TOK_BORDER })
+            .border({ width: TOK_BORDER_W, color: TOK_BORDER })
             .borderRadius(6)
             .padding({ left: 11, right: 11 })
             .placeholderColor('#9C9488')
@@ -222,7 +223,7 @@ export struct SyncPage {
     .width('100%')
     .padding({ left: 11, right: 11, top: TOK_SPACE_CONTROL_INLINE, bottom: TOK_SPACE_CONTROL_INLINE })
     .backgroundColor(ROW_BG)
-    .border({ width: 1, color: ROW_BORDER })
+    .border({ width: TOK_BORDER_W, color: ROW_BORDER })
     .borderRadius(8);
   }
 
@@ -239,7 +240,7 @@ export struct SyncPage {
       .height(42)
       .layoutWeight(1)
       .backgroundColor(GHOST_BG)
-      .border({ width: 1, color: GHOST_BORDER })
+      .border({ width: TOK_BORDER_W, color: GHOST_BORDER })
       .borderRadius(8)
       .onClick((): void => this.onTestConnection(this.webdavUrl.trim(), this.webdavUser.trim(), this.webdavPass));
 
@@ -253,7 +254,7 @@ export struct SyncPage {
       .height(42)
       .layoutWeight(1)
       .backgroundColor(SOLID_BG)
-      .border({ width: 1, color: SOLID_BG })
+      .border({ width: TOK_BORDER_W, color: SOLID_BG })
       .borderRadius(12)
       // 保存配置 is visual-only: the host has no WebDAV-config persistence
       // callback (see coverage matrix, Sync ⊘Core阻塞), so it must NOT trigger
@@ -277,7 +278,7 @@ export struct SyncPage {
       }
       .width(this.contentWidth())
       .backgroundColor(CARD_BG_SOLID)
-      .border({ width: 1, color: CARD_BORDER_SOFT })
+      .border({ width: TOK_BORDER_W, color: CARD_BORDER_SOFT })
       .borderRadius(13);
     }
     .width('100%');
@@ -360,7 +361,7 @@ export struct SyncPage {
     }
     .width(this.contentWidth())
     .backgroundColor(CARD_BG_SOLID)
-    .border({ width: 1, color: CARD_BORDER_SOFT })
+    .border({ width: TOK_BORDER_W, color: CARD_BORDER_SOFT })
     .borderRadius(13);
   }
 
@@ -418,7 +419,7 @@ export struct SyncPage {
     .padding({ left: 13, right: 13, top: TOK_SPACE_SM })
     .alignItems(HorizontalAlign.Start)
     .backgroundColor(CARD_BG_SOLID)
-    .border({ width: 1, color: CARD_BORDER_SOFT })
+    .border({ width: TOK_BORDER_W, color: CARD_BORDER_SOFT })
     .borderRadius(13);
   }
 
@@ -443,6 +444,6 @@ export struct SyncPage {
   }
 
   private contentWidth(): number {
-    return this.isTablet ? TABLET_CONTENT_WIDTH : PHONE_CONTENT_WIDTH;
+    return this.isTablet ? TOK_CONTENT_MAX_W_TABLET : TOK_CONTENT_MAX_W_PHONE;
   }
 }

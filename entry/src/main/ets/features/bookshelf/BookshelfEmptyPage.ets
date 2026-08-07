@@ -7,6 +7,7 @@
  */
 import { MainTabBar } from '../shell/MainTabBar';
 import {
+  TOK_CONTENT_MAX_W_PHONE,
   TOK_INK,
   TOK_PAPER,
   TOK_SCREEN_INSET,
@@ -15,8 +16,6 @@ import {
 
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { BookshelfEmptyCard } from './BookshelfEmptyCard';
-
-const PHONE_CONTENT_WIDTH = 352;
 
 @Component
 export struct BookshelfEmptyPage {
@@ -148,6 +147,6 @@ export struct BookshelfEmptyPage {
     // Figma supplies only the Phone `State/BookshelfEmpty` card; no Tablet
     // empty assembly, so Tablet reuses the Phone-width layout. Card is 352
     // wide (matches Settings page 390 - 2*19), replacing the old 350.9 value.
-    return PHONE_CONTENT_WIDTH;
+    return TOK_CONTENT_MAX_W_PHONE;
   }
 }

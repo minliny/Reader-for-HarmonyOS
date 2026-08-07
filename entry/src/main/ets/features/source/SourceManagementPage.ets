@@ -12,7 +12,10 @@ import { ReaderToggle } from '../common/ReaderToggle';
 import { ReaderSelect } from '../common/ReaderSelect';
 import { StatusBadge } from '../common/StatusBadge';
 import {
+  TOK_BORDER_W,
   TOK_CARD_BG,
+  TOK_CONTENT_MAX_W_PHONE,
+  TOK_CONTENT_MAX_W_TABLET,
   TOK_INK,
   TOK_MUTED,
   TOK_PAPER,
@@ -24,8 +27,6 @@ import {
   TOK_SPACE_XS,
 } from '../common/ReaderTokens';
 
-const PHONE_CONTENT_WIDTH = 350;   // 390 - 2*19
-const TABLET_CONTENT_WIDTH = 722;  // 760 - 2*19
 const GROUP_FILTER_WIDTH = 350;
 const SEARCH_FIELD_BG = '#D1FFFCF8';      // rgba(255,252,248,0.82)
 const SEARCH_FIELD_BORDER = '#75B4A697';  // rgba(180,166,151,0.46)
@@ -117,7 +118,7 @@ export struct SourceManagementPage {
     .height(38)
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
     .backgroundColor(SEARCH_FIELD_BG)
-    .border({ width: 1, color: SEARCH_FIELD_BORDER })
+    .border({ width: TOK_BORDER_W, color: SEARCH_FIELD_BORDER })
     .borderRadius(8)
     .alignItems(VerticalAlign.Center)
     .margin({ top: TOK_SPACE_XS });
@@ -182,7 +183,7 @@ export struct SourceManagementPage {
       .fontSize(11)
       .fontColor(active ? '#FFFFFF' : TOK_INK)
       .backgroundColor(active ? TOK_PRIMARY_DARK : TOK_CARD_BG)
-      .border({ width: 1, color: active ? TOK_PRIMARY_DARK : CHIP_BORDER })
+      .border({ width: TOK_BORDER_W, color: active ? TOK_PRIMARY_DARK : CHIP_BORDER })
       .borderRadius(16)
       .maxLines(1);
   }
@@ -295,7 +296,7 @@ export struct SourceManagementPage {
     .height(28)
     .borderRadius(7)
     .backgroundColor(TOK_CARD_BG)
-    .border({ width: 1, color: CHIP_BORDER });
+    .border({ width: TOK_BORDER_W, color: CHIP_BORDER });
   }
 
   @Builder
@@ -323,7 +324,7 @@ export struct SourceManagementPage {
       .height(44)
       .borderRadius(8)
       .backgroundColor(FIELD_BG)
-      .border({ width: 1, color: SEARCH_FIELD_BORDER });
+      .border({ width: TOK_BORDER_W, color: SEARCH_FIELD_BORDER });
 
       Stack({ alignContent: Alignment.Center }) {
         Row({ space: TOK_SPACE_XS }) {
@@ -364,6 +365,6 @@ export struct SourceManagementPage {
   }
 
   private contentWidth(): number {
-    return this.isTablet ? TABLET_CONTENT_WIDTH : PHONE_CONTENT_WIDTH;
+    return this.isTablet ? TOK_CONTENT_MAX_W_TABLET : TOK_CONTENT_MAX_W_PHONE;
   }
 }

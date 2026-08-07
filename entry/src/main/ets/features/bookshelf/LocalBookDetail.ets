@@ -1,8 +1,11 @@
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import {
   TOK_BORDER,
+  TOK_BORDER_W,
   TOK_CARD_BG,
   TOK_CARD_BG_HI,
+  TOK_CONTENT_MAX_W_PHONE,
+  TOK_CONTENT_MAX_W_TABLET,
   TOK_DANGER,
   TOK_GREEN,
   TOK_INK,
@@ -22,8 +25,6 @@ import { NoCoverCover } from './NoCoverCover';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { PageBackBar } from '../common/PageBackBar';
 
-const PHONE_CONTENT_WIDTH = 350;
-const TABLET_CONTENT_WIDTH = 720;
 const PHONE_SUMMARY_HEIGHT = 120.313;
 const TABLET_SUMMARY_HEIGHT = 98.875;
 const CHAPTER_SECTION_HEIGHT = 282;
@@ -205,7 +206,7 @@ export struct LocalBookDetail {
     .height(152)
     .padding(15)
     .backgroundColor(TOK_CARD_BG)
-    .border({ width: 1, color: TOK_BORDER })
+    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
     .borderRadius(8)
     .alignItems(VerticalAlign.Top);
   }
@@ -241,7 +242,7 @@ export struct LocalBookDetail {
     .height(this.summaryHeight())
     .padding(15)
     .backgroundColor(TOK_CARD_BG)
-    .border({ width: 1, color: TOK_BORDER })
+    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
     .borderRadius(8)
     .alignItems(HorizontalAlign.Start);
   }
@@ -278,7 +279,7 @@ export struct LocalBookDetail {
           .height(30)
           .padding({ left: 11, right: 11 })
           .backgroundColor('#A3FFFCF8')
-          .border({ width: 1, color: TOK_BORDER })
+          .border({ width: TOK_BORDER_W, color: TOK_BORDER })
           .borderRadius(999)
           .alignItems(VerticalAlign.Center);
         }
@@ -325,7 +326,7 @@ export struct LocalBookDetail {
     .height(CHAPTER_SECTION_HEIGHT)
     .padding(1)
     .backgroundColor(TOK_CARD_BG)
-    .border({ width: 1, color: TOK_BORDER })
+    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
     .borderRadius(8)
     .clip(true);
   }
@@ -364,7 +365,7 @@ export struct LocalBookDetail {
       .width(this.actionButtonWidth())
       .height(46)
       .backgroundColor(TOK_PRIMARY_DARK)
-      .border({ width: 1, color: TOK_PRIMARY_DARK })
+      .border({ width: TOK_BORDER_W, color: TOK_PRIMARY_DARK })
       .borderRadius(999)
       .onClick((): void => this.onContinue());
 
@@ -382,7 +383,7 @@ export struct LocalBookDetail {
       .width(this.actionButtonWidth())
       .height(46)
       .backgroundColor(TOK_CARD_BG_HI)
-      .border({ width: 1, color: '#6BB4A697' })
+      .border({ width: TOK_BORDER_W, color: '#6BB4A697' })
       .borderRadius(999);
     }
     .width(this.contentWidth())
@@ -403,7 +404,7 @@ export struct LocalBookDetail {
   }
 
   private contentWidth(): number {
-    return this.isTablet ? TABLET_CONTENT_WIDTH : PHONE_CONTENT_WIDTH;
+    return this.isTablet ? TOK_CONTENT_MAX_W_TABLET : TOK_CONTENT_MAX_W_PHONE;
   }
 
   private summaryHeight(): number {

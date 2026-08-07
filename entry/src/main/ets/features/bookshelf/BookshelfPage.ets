@@ -1,7 +1,10 @@
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import {
   TOK_BORDER,
+  TOK_BORDER_W,
   TOK_CARD_BG,
+  TOK_CONTENT_MAX_W_PHONE,
+  TOK_CONTENT_RAIL_W_TABLET,
   TOK_GREEN,
   TOK_INK,
   TOK_MUTED,
@@ -19,8 +22,6 @@ import { MainTabShell } from '../shell/MainTabShell';
 import { ReaderIconButton } from '../common/ReaderIconButton';
 import { registerReaderFonts } from '../common/ReaderFonts';
 
-const PHONE_CONTENT_WIDTH = 350;
-const TABLET_CONTENT_WIDTH = 620;
 const PHONE_BOOK_WIDTH = 96.656;
 const TABLET_BOOK_WIDTH = 186.672;
 
@@ -121,11 +122,11 @@ export struct BookshelfPage {
     Scroll() {
       Column({ space: TOK_SPACE_XS }) {
         if (this.continueReading !== undefined) {
-          this.continueReadingCard(this.continueReading, PHONE_CONTENT_WIDTH);
+          this.continueReadingCard(this.continueReading, TOK_CONTENT_MAX_W_PHONE);
         }
-        this.bookshelfSection(PHONE_CONTENT_WIDTH, false);
+        this.bookshelfSection(TOK_CONTENT_MAX_W_PHONE, false);
       }
-      .width(PHONE_CONTENT_WIDTH)
+      .width(TOK_CONTENT_MAX_W_PHONE)
       .padding({ top: TOK_SPACE_XS, bottom: 628 });
     }
     .width('100%')
@@ -139,11 +140,11 @@ export struct BookshelfPage {
     Scroll() {
       Column({ space: TOK_SPACE_XS }) {
         if (this.continueReading !== undefined) {
-          this.continueReadingCard(this.continueReading, TABLET_CONTENT_WIDTH);
+          this.continueReadingCard(this.continueReading, TOK_CONTENT_RAIL_W_TABLET);
         }
-        this.bookshelfSection(TABLET_CONTENT_WIDTH, true);
+        this.bookshelfSection(TOK_CONTENT_RAIL_W_TABLET, true);
       }
-      .width(TABLET_CONTENT_WIDTH)
+      .width(TOK_CONTENT_RAIL_W_TABLET)
       .padding({ top: TOK_SPACE_XS, bottom: 744 });
     }
     .width('100%')
@@ -225,7 +226,7 @@ export struct BookshelfPage {
     .padding({ left: 16.554, right: 16.554 })
     .alignItems(VerticalAlign.Center)
     .backgroundColor(TOK_CARD_BG)
-    .border({ width: 1, color: TOK_BORDER })
+    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
     .borderRadius(8)
     .onClick((): void => this.onBookSelected(book));
   }
@@ -372,7 +373,7 @@ export struct BookshelfPage {
       .justifyContent(FlexAlign.Center)
       .alignItems(HorizontalAlign.Center)
       .backgroundColor(TOK_CARD_BG)
-      .border({ width: 1, color: TOK_BORDER })
+      .border({ width: TOK_BORDER_W, color: TOK_BORDER })
       .borderRadius(24);
     }
     .width(98)

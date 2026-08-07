@@ -4,6 +4,7 @@ import {
   TOK_READ_INK,
   TOK_READ_MUTED,
   TOK_READ_SURFACE,
+  TOK_BORDER_W,
 } from '../common/ReaderTokens';
 
 import { FullDirectoryPanel } from './FullDirectoryPanel';
@@ -135,7 +136,7 @@ export struct ReaderFullDirectory {
     .height(54)
     .alignItems(VerticalAlign.Center)
     .backgroundColor(TOK_READ_SURFACE)
-    .border({ width: 1, color: TOK_LINE_STRONG })
+    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
     .borderRadius(24)
     .position({ x: this.topBarLeft(), y: 18 });
   }

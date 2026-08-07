@@ -10,6 +10,7 @@ import {
   TOK_SPACE_MD,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
+  TOK_BORDER_W,
 } from '../common/ReaderTokens';
 
 import { registerReaderFonts } from '../common/ReaderFonts';
@@ -163,7 +164,7 @@ export struct LocalImportDialog {
           .height(44)
           .padding({ left: 21, right: 21 })
           .justifyContent(FlexAlign.Center)
-          .border({ width: 1, color: TOK_BORDER })
+          .border({ width: TOK_BORDER_W, color: TOK_BORDER })
           .borderRadius(22)
           .onClick((): void => this.onClose());
         }
@@ -310,7 +311,7 @@ export struct LocalImportDialog {
       .height(52)
       .padding({ left: 17, right: 17, top: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
       .backgroundColor(TOK_PAPER)
-      .border({ width: 1, color: '#E8E2D9' })
+      .border({ width: TOK_BORDER_W, color: '#E8E2D9' })
       .borderRadius(12);
     }
     .width('100%')
@@ -331,7 +332,7 @@ export struct LocalImportDialog {
       .width('100%')
       .height(410)
       .padding(1)
-      .border({ width: 1, color: '#E8E2D9' })
+      .border({ width: TOK_BORDER_W, color: '#E8E2D9' })
       .borderRadius(12)
       .scrollBar(BarState.Off);
     }
