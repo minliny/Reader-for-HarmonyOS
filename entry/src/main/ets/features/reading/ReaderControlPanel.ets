@@ -18,39 +18,40 @@ import {
 } from '../common/ReaderTokens';
 
 
-// Reader Control Home —— 适配策略: 锚定 + 自适应尺寸 (方案 B)。
+// Reader Control Home —— 适配策略: 锚定 + 自适应尺寸 (方案 B, §八)。
 // Figma `943:6848`(Phone 390×844) 与 `943:8028`(Tablet 760×960) 是固定画布, 节点全为
 // MIN/MIN 绝对定位, 无响应式约束 —— 我们把 Figma 坐标当作设计值, 用响应式手段实现:
 //   1. 高度: TopBar 锚定窗口顶部(状态栏下方安全区) + 19dp; ControlDock 锚定窗口底部
 //      (手势条上方安全区) + 19dp(Phone)/33dp(Tablet)。任意窗口高度都完整显示, 不超出。
-//   2. 宽度: 用 Fill / layoutWeight / constraintSize 自适应, 而非写死左宽 (见 §八)。
-//   3. DPI: 全部 vp 单位(系统已按密度换算), 内部元素位置/字号用 Figma vp 精确值。
-//   4. 面板内部: 容器 Stack 显式 alignContent(TopStart), 子元素 position 精确定位。
+//   2. 宽度: 移除固定画布宽字段 (dockW/sheetW/mainW/progressW/chapterRowW/sliderW),
+//      改用 Fill + layoutWeight + constraintSize + padding 自适应 (§八):
+//        Dock width    = available - 2×inline inset, ≤ max dock width
+//        Main width    = Dock - padding - brightness width - gap
+//        Progress width = Main width
+//        Slider width   = Progress row remaining width
+//      进度条 fill/thumb 改为百分比映射 (相对 slider 实际宽), 不再依赖固定 sliderW。
+//   3. DPI: 全部 vp 单位(系统已按密度换算), 内部元素字号用 Figma vp 精确值。
 // 视觉色直接引用 ReaderTokens 共享 token (页面禁止二次别名, 见 §十三)。
 
 /**
  * 按 Figma 视口取阅读控制层各面板的尺寸与内部锚点。Phone 与 Tablet 共享同一组件结构,
- * 仅尺寸/锚点不同; 值全部取自 live Figma 节点属性。
+ * 仅尺寸/锚点不同。容器级宽度 (Dock/Sheet/Main/Progress/Slider) 不再提供固定值,
+ * 由布局用 Fill + layoutWeight + constraintSize 自适应; 仅保留内部固定尺寸与最大宽。
  */
 class ReaderControlGeometry {
   // 顶部/底部锚定间距(相对窗口安全区边缘)。
   topBarTopGap: number;
   dockBottomGap: number;
-  // 面板尺寸与内部锚点(相对各自容器)。
+  // Dock/Sheet/ModuleNav 的最大宽度 (constraintSize 上限; 居中于可用宽)。
+  dockMaxW: number;
+  // 顶部栏内部尺寸。
   topBarW: number;
   textW: number;
-  dockW: number;
-  sheetW: number;
+  // ControlSheet 高度与圆角。
   sheetH: number;
   sheetRadiusTop: number;
   sheetRadiusBottom: number;
-  mainW: number;
-  actionW: number;
-  progressW: number;
-  chapterRowW: number;
-  chapterTitleW: number;
-  progressRowW: number;
-  sliderW: number;
+  // ModuleNav 尺寸与圆角。
   moduleNavH: number;
   moduleNavBottomGap: number;
   moduleNavRadiusTop: number;
@@ -60,20 +61,12 @@ class ReaderControlGeometry {
     if (tablet) {
       this.topBarTopGap = 19;
       this.dockBottomGap = 33;
+      this.dockMaxW = 340;
       this.topBarW = 702;
       this.textW = 512;
-      this.dockW = 340;
-      this.sheetW = 340;
       this.sheetH = 252;
       this.sheetRadiusTop = 24;
       this.sheetRadiusBottom = 0;
-      this.mainW = 262;
-      this.actionW = 76;
-      this.progressW = 262;
-      this.chapterRowW = 240;
-      this.chapterTitleW = 156;
-      this.progressRowW = 240;
-      this.sliderW = 169;
       this.moduleNavH = 79;
       this.moduleNavBottomGap = 0;
       this.moduleNavRadiusTop = 0;
@@ -81,35 +74,17 @@ class ReaderControlGeometry {
     } else {
       this.topBarTopGap = 19;
       this.dockBottomGap = 19;
+      this.dockMaxW = 364;
       this.topBarW = 360;
       this.textW = 170;
-      this.dockW = 364;
-      this.sheetW = 364;
       this.sheetH = 330;
       this.sheetRadiusTop = 24;
       this.sheetRadiusBottom = 24;
-      this.mainW = 286;
-      this.actionW = 84;
-      this.progressW = 286;
-      this.chapterRowW = 264;
-      this.chapterTitleW = 180;
-      this.progressRowW = 264;
-      this.sliderW = 193;
       this.moduleNavH = 80;
       this.moduleNavBottomGap = 14;
       this.moduleNavRadiusTop = 12;
       this.moduleNavRadiusBottom = 12;
     }
-  }
-
-  // 进度条已填宽度(px), 按 progressPercent 线性映射到 sliderW。
-  fillWidth(percent: number): number {
-    return Math.max(0, Math.min(100, percent)) / 100 * this.sliderW;
-  }
-
-  // 滑块圆点 left, 对齐 Figma 38% 实例: fill 右缘 - 6。
-  thumbLeft(percent: number): number {
-    return Math.max(0, this.fillWidth(percent) - 6);
   }
 }
 
@@ -242,62 +217,65 @@ export struct ReaderControlPanel {
 
   @Builder
   private controlDock() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      // ControlSheet: grabber 居中 + (ControlMain + BrightnessRail) 行。
-      Stack({ alignContent: Alignment.Top }) {
-        Column() {
-          Stack({ alignContent: Alignment.Top }) {
-            Row()
-              .width(42)
-              .height(4)
-              .backgroundColor(TOK_READ_HANDLE)
-              .borderRadius(999);
-          }
-          .width('100%')
-          .margin({ top: 10   });
-
-          Row({ space: 14 }) {
-            // ControlMain: QuickActionPanel + ChapterProgress 纵向。
-            Column({ space: 6 }) {
-              this.quickActionPanel();
-              this.chapterProgress();
-            }
-            .width(this.geo.mainW)
-            .height(190)
-            .alignItems(HorizontalAlign.Start);
-
-            this.brightnessRail();
-          }
-          .margin({ left: 13, top: 15   });
-        }
-        .width('100%')
-        .height('100%')
-        .alignItems(HorizontalAlign.Start);
-      }
-      .width(this.geo.sheetW)
-      .height(this.geo.sheetH)
-      // ControlSheet 外层背景 = TOK_READ_SURFACE (rgba(255,250,244,0.98) 近不透明暖奶油)。
-      // 勿误用内层 Panel 的 TOK_SURFACE_PANEL (0.62) —— 那会过度透明、正文透入、区块压平发白发虚。
-      .backgroundColor(TOK_READ_SURFACE)
-      .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
-      .borderRadius({
-        topLeft: this.geo.sheetRadiusTop,
-        topRight: this.geo.sheetRadiusTop,
-        bottomLeft: this.geo.sheetRadiusBottom,
-        bottomRight: this.geo.sheetRadiusBottom,
-      })
-      .clip(true);
-
-      // ModuleNav 浮于 sheet 底部区域: 底部锚定 + 居中 (340 宽在 dock 364 → 左右各 12)。
-      Stack({ alignContent: Alignment.Bottom }) {
-        this.moduleNav();
-      }
-      .width('100%')
-      .height('100%');
+    Stack({ alignContent: Alignment.Bottom }) {
+      this.controlSheet();
+      this.moduleNav();
     }
-    .width(this.geo.dockW)
+    .width('100%')
     .height(330)
     .margin({ bottom: this.geo.dockBottomGap   });
+  }
+
+  @Builder
+  private controlSheet() {
+    Stack({ alignContent: Alignment.Top }) {
+      Column() {
+        // grabber 居中 (42×4 pill)。
+        Stack({ alignContent: Alignment.Top }) {
+          Row()
+            .width(42)
+            .height(4)
+            .backgroundColor(TOK_READ_HANDLE)
+            .borderRadius(999);
+        }
+        .width('100%')
+        .margin({ top: 10   });
+
+        // ControlMain + BrightnessRail 行: Main 用 layoutWeight 吃剩余宽 (§八)。
+        Row({ space: 14 }) {
+          Column({ space: 6 }) {
+            this.quickActionPanel();
+            this.chapterProgress();
+          }
+          .layoutWeight(1)
+          .height(190)
+          .alignItems(HorizontalAlign.Start);
+
+          this.brightnessRail();
+        }
+        .width('100%')
+        .height(190)
+        .padding({ left: 13, top: 15   })
+        .alignItems(VerticalAlign.Top);
+      }
+      .width('100%')
+      .height('100%')
+      .alignItems(HorizontalAlign.Start);
+    }
+    .width('100%')
+    .constraintSize({ maxWidth: this.geo.dockMaxW })
+    .height(this.geo.sheetH)
+    // ControlSheet 外层背景 = TOK_READ_SURFACE (rgba(255,250,244,0.98) 近不透明暖奶油)。
+    // 勿误用内层 Panel 的 TOK_SURFACE_PANEL (0.62) —— 那会过度透明、正文透入、区块压平发白发虚。
+    .backgroundColor(TOK_READ_SURFACE)
+    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    .borderRadius({
+      topLeft: this.geo.sheetRadiusTop,
+      topRight: this.geo.sheetRadiusTop,
+      bottomLeft: this.geo.sheetRadiusBottom,
+      bottomRight: this.geo.sheetRadiusBottom,
+    })
+    .clip(true);
   }
 
   @Builder
@@ -307,7 +285,7 @@ export struct ReaderControlPanel {
       this.quickAction('rc_autopage', '自动翻页', 1);
       this.quickAction('rc_replace', '替换', 2);
     }
-    .width(this.geo.mainW)
+    .width('100%')
     .height(75.438)
     .padding({ left: 9 })
     .backgroundColor(TOK_SURFACE_PANEL)
@@ -323,7 +301,7 @@ export struct ReaderControlPanel {
         .height(24)
         .margin({ top: 4.72   });
       Text(label)
-        .width(this.geo.actionW)
+        .width('100%')
         .height(13)
         .fontFamily('ReaderInter')
         .fontWeight(800)
@@ -334,7 +312,7 @@ export struct ReaderControlPanel {
         .maxLines(1)
         .margin({ top: 5.78   });
     }
-    .width(this.geo.actionW)
+    .layoutWeight(1)
     .height(55.438)
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(TOK_READ_ELEVATED)
@@ -347,7 +325,7 @@ export struct ReaderControlPanel {
       this.chapterRow();
       this.progressRow();
     }
-    .width(this.geo.progressW)
+    .width('100%')
     .height(108.563)
     .alignItems(HorizontalAlign.Start)
     .backgroundColor(TOK_SURFACE_PANEL)
@@ -369,9 +347,9 @@ export struct ReaderControlPanel {
       .backgroundColor(TOK_READ_DISABLED_BG)
       .borderRadius(999);
 
-      // ChapterTitle Inter Bold 13 居中。
+      // ChapterTitle Inter Bold 13 居中 (layoutWeight 吃剩余宽)。
       Text(this.chapterTitle)
-        .width(this.geo.chapterTitleW)
+        .layoutWeight(1)
         .height(34)
         .fontFamily('ReaderInter')
         .fontWeight(700)
@@ -393,10 +371,10 @@ export struct ReaderControlPanel {
       .backgroundColor(TOK_READ_DISABLED_BG)
       .borderRadius(999);
     }
-    .width(this.geo.chapterRowW)
+    .width('100%')
     .height(52.563)
-    .alignItems(VerticalAlign.Center)
-    .margin({ left: 11, top: 10   });
+    .padding({ left: 11, right: 11, top: 10 })
+    .alignItems(VerticalAlign.Center);
   }
 
   @Builder
@@ -412,7 +390,7 @@ export struct ReaderControlPanel {
         .fontColor(TOK_READ_MUTED)
         .maxLines(1);
 
-      // ProgressSlider: track 全宽, fill 按百分比, thumb 随 fill 右缘。
+      // ProgressSlider: track 全宽, fill 按百分比, thumb 随 fill 右缘 (相对 slider 实际宽)。
       Stack({ alignContent: Alignment.TopStart }) {
         Row()
           .width('100%')
@@ -421,7 +399,7 @@ export struct ReaderControlPanel {
           .borderRadius(999)
           .margin({ top: 13   });
         Row()
-          .width(this.geo.fillWidth(this.progressPercent))
+          .width(`${this.clampedPercent()}%`)
           .height(5)
           .backgroundColor(TOK_ACCENT)
           .borderRadius(999)
@@ -432,9 +410,10 @@ export struct ReaderControlPanel {
           .backgroundColor(TOK_SURFACE_SOLID_OPAQUE)
           .border({ width: 2.778, color: TOK_ACCENT })
           .borderRadius(999)
-          .margin({ left: this.geo.thumbLeft(this.progressPercent), top: 6.5   });
+          .margin({ left: `${this.clampedPercent()}%`, top: 6.5   })
+          .translate({ x: -6 });
       }
-      .width(this.geo.sliderW)
+      .layoutWeight(1)
       .height(30);
 
       // 共 N 章 Inter Regular 9 右对齐。
@@ -450,10 +429,15 @@ export struct ReaderControlPanel {
         .maxLines(1)
         .margin({ left: 5.5   });
     }
-    .width(this.geo.progressRowW)
+    .width('100%')
     .height(30)
-    .alignItems(VerticalAlign.Center)
-    .margin({ left: 11, top: 6   });
+    .padding({ left: 11, right: 11, top: 6 })
+    .alignItems(VerticalAlign.Center);
+  }
+
+  // 进度百分比夹取到 [0,100], 供 fill/thumb 相对 slider 宽的百分比映射。
+  private clampedPercent(): number {
+    return Math.max(0, Math.min(100, this.progressPercent));
   }
 
   @Builder
@@ -521,7 +505,8 @@ export struct ReaderControlPanel {
       this.moduleButton('rc_palette', '界面', 'appearance');
       this.moduleButton('rc_settings', '设置', 'settings');
     }
-    .width(340)
+    .width('100%')
+    .constraintSize({ maxWidth: this.geo.dockMaxW })
     .height(this.geo.moduleNavH)
     .padding({ left: 9, top: 9 })
     .margin({ bottom: this.geo.moduleNavBottomGap   })
@@ -551,7 +536,7 @@ export struct ReaderControlPanel {
 
       // ModuleLabel Inter EB 10 全宽居中。
       Text(label)
-        .width(77.5)
+        .width('100%')
         .height(12)
         .fontFamily('ReaderInter')
         .fontWeight(800)
@@ -562,7 +547,7 @@ export struct ReaderControlPanel {
         .maxLines(1)
         .margin({ top: 5   });
     }
-    .width(77.5)
+    .layoutWeight(1)
     .height(62)
     .alignItems(HorizontalAlign.Center)
     .borderRadius(12)
