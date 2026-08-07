@@ -125,6 +125,51 @@
 - **`RC-READER-CONTROL-01` 触发/返回已定**：控制层点击沉浸阅读页中间竖栏唤起；返回按钮/系统返回/点击正文退出（面板装配/切换契约仍开放）。
 - **Search/Sync/WebDAV 为真实功能**（非占位）：Search 的查询命令已接通；Sync/WebDAV 仍缺 planner 执行编排、响应回传与结果页面状态。
 
+## 8. 2026-08-06 静态页像素级重建记录
+
+用户审计发现静态壳页面与 live Figma 大面积不匹配（此前"视觉✅"仅代表页面存在，未逐像素对照）。本轮对除已确认忠实的 Bookshelf populated / ReadingSurface 之外的全部交付页面做了像素级重建（Phone+Tablet），逐页 `get_design_context` 对照，VM 用原生布局树+文字度量验收（符合 §4 阶段 E，不用截图作结论）。
+
+| 页面 | 重建前 | 重建后 | VM 验收 |
+|---|---|---|---|
+| Settings General | MAJOR 漂移（无分节卡片/行高48/控件简化/绿图标底色/文案错） | 分节卡片、行58、switch 44×24、Segmented 3段、Select 字段+chevron、InlineAction、StatusBadge、蓝图标底色、文案对齐 | ✅ |
+| Source Management | MAJOR（行高48/搜索框/3chip/缺分组/缺徽标/底栏错） | 行70、搜索框 h38 r8、5 chip、GroupFilter、StatusBadge、44×24 switch、批量管理/新增书源 | ✅ |
+| Sync Backup | MAJOR（WebDAV 单按钮/输入框/文案/历史卡） | WebDAV 双按钮+连接信息+4行、Auto/History 卡、85h 历史卡+徽标+展开 | ✅ |
+| RSS | MAJOR（标题/无 pill/搜索框/缺筛选/状态态错） | Songti 29 标题、刷新/管理/导入 pill、筛选栏、卡片+分隔线、状态态 back-bar | ✅ |
+| Search | MODERATE（透明度/缺 border/缩进/N条更多） | 字段透明度、3 处 border-b、最近搜索缩进、N 条更多、按钮态色、loading 13px 文案 | ✅ |
+| Book Detail | MODERATE（缺 Hero 书源行/ActionBar 渐隐） | 补 书源：优书网 + 更换书源 pill + ActionBar 渐隐 | ✅ |
+| Bookshelf Empty | 重漂移（字体/颜色/文案/结构） | Noto Sans SC、绿图标底色(286:35)、文案、双按钮、352×350 r12 | ✅ |
+| Import Dialog | 未对照 | 标题改真实文字、drop zone、选择文件 211 宽、结果行 61、完成按钮 | ✅ |
+| Full Directory | ~95% 已对齐 | 顶栏/面板/grip/tab 字重/章行字重微调（静态容器） | ✅ |
+| Source Switch | 未对照 | Window 静态对齐（sortPill/列头/延迟条/行分隔）；结果态保留代码定义 | ⊘ 需远程书 |
+
+**仍存偏差（诚实记录，非伪装）：**
+- Sync「保存配置」：无 host 侧 WebDAV 配置持久化回调，已改**惰性按钮**（不触发备份，注释说明）。**发现并修复**了初版把保存配置接到 onTriggerBackup 的行为违规。
+- Sync 备份频率显示真实 snapshot 值「12小时」（Figma 示例「12h」由 SyncGateway 默认值持有，不改 gateway）；历史 scope 行无 `SyncHistoryEntry.scope` 字段，以真实 ok 状态替代。
+- Settings 已按 Figma `301:2` 重建入口页：设置标题(无返回)+5 行菜单(通用设置/书架与搜索设置/书源管理/同步与备份/关于与反馈)+公共底栏(设置选中)；通用设置(943:2897)为子页(返回栏+四节)。书架与搜索设置/关于与反馈 无目标页，行保持惰性。`S-SETTINGS-NAV-01` 闭合。
+- Source Mgmt 统计省略「N 个异常 · 检测时间」（BookSource 无字段）；Book Detail 更换书源 pill 无回调保持惰性；Search「N 条更多」chip 无回调。
+- Bookshelf Empty 图标底色为绿色 rgba(45,74,62,0.09)（实时 Figma 节点 286:35，非蓝）。
+- Full Directory 章节行仍绑定真实 TOC 数据（R-LOCAL-TOC-01 动态字段契约仍开放）；Source Switch 结果态 Figma 未画全，保留代码定义。
+- 字体：Songti SC 不可再分发，统一 ReaderNotoSerifSCBold 桥（既有 B-DETAIL-01 约定）；Inter 字重用数值（Black 900/ExtraBold 800）。
+
+**执行合规：** 每个页面组件独立 agent 重建，仅改分配文件；props/callback 接口全部保留（Index.ets 调用点未变）；无新共享组件/设计系统（§5 防越界）；无新 SVG 资源（全部复用现有 media）；每批 hvigor 编译通过。
+
+## 9. 2026-08-06 四个主页面按重绘版重建
+
+用户指出四个主页面（书架/发现/RSS/设置）需按 Figma 重绘版（`19 · Reference · Phone` 等 Reference 区）实现，而非旧 `23 · Pages · Final` 节点。已用 use_figma 全量遍历找到各节点并重建：
+
+| 主页面 | 重绘版节点 | 现状 |
+|---|---|---|
+| 书架 | `287:9` Reference/Phone/bookshelf | 已对齐：书架 Songti 29 + 搜索/更多、继续阅读卡、我的书架+5操作按钮、3列封面网格、底栏书架选中 |
+| 发现 | `376:2` Reference/Discover/Phone | **新建 DiscoverPage**：发现+刷新、书源卡、6分类chips(排行榜选中)、筛选/应用、排行榜header、结果列表、底栏发现选中。数据态（source.explore）未接，书源卡/列表为空态占位（诚实） |
+| RSS | `378:2` Reference/RSS/Phone | 已对齐：RSS+刷新/管理pill、搜索栏、状态tab、订阅源+导入/新建、筛选、最近未读+查看全部、底栏RSS选中；新增 onSettingsRequested/onDiscoverRequested 接线 |
+| 设置 | `301:2` Reference/Phone/settings | ✅（此前已完成） |
+
+四页均为顶栏 Songti 29 无返回 + 公共底栏（当前项选中）。Index 新增 `discover` 路由 + `openDiscover()`；书架/空书架/设置/RSS 底栏「发现」均接 onDiscoverRequested。
+
+**公共底栏组件化（同日）：** 用户指出 tab 栏写死四个按钮。已抽共享 `features/shell/MainTabBar.ets`：tab 列表来自单一 `MAIN_TABS` 配置数组，`layoutWeight(1)` 按数量自适应平分宽度，选中态由 `current` prop 驱动，点击非当前 tab 回调 `onSelect(key)` 由宿主页映射。五个主页面（书架/空书架/发现/RSS/设置）统一复用，删除了各自的 bottomNav/navItem/phoneNavigationItem/navigation 重复代码。增删 tab 只改 MAIN_TABS 一处。
+
+**设置页修复（同日）：** ① Scroll 短内容被垂直居中导致卡片下沉 → 各主页面 Scroll 加 `.align(Alignment.Top)`；② 设置页行图标原为同一 `bookshelf_settings` 齿轮，已从 Figma 下载 18 个 Tabler 图标 SVG 入 media（`settings_row_*` 5 个入口页 + `settings_gen_*` 13 个基础设置页），每行传各自 icon；③ 下拉修复：App主题 由分段控件改为**下拉选择框**显示「跟随系统」（重绘版 299:2），四个下拉（App主题/语言/启动时打开/动画效果）改为自定义下拉（点开选项、选中回显），值符合 Figma（跟随系统/简体中文/书架/标准）。
+
 ## 7. 已知限制（审计披露）
 
 - **构建产物**：unsigned HAP（无 signingConfig）；回归以 VM 最新安装为准。

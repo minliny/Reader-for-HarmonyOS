@@ -1,10 +1,28 @@
 import type { LocalImportBatch, LocalImportItem } from './LocalBookImportGateway';
+import {
+  TOK_BORDER,
+  TOK_GREEN,
+  TOK_INK,
+  TOK_MUTED,
+  TOK_ON_PRIMARY,
+  TOK_PAPER,
+  TOK_SPACE_CONTROL_INLINE,
+  TOK_SPACE_MD,
+  TOK_SPACE_SM,
+  TOK_SPACE_XS,
+} from '../common/ReaderTokens';
+
+import { registerReaderFonts } from '../common/ReaderFonts';
 
 export type LocalImportDialogState = 'fileSelection' | 'importing' | 'result';
 
 /**
- * Phone-only Figma `Library/LocalImportDialog` component. It consumes plain
- * page state and forwards user intent; Core/Host work stays in its gateway.
+ * Phone-only Figma `Library/LocalImportDialog` (node 2657:918, 390×844).
+ * State symbols: File Selection 2657:916 / Importing 2899:58923 / Import Result 2657:917.
+ * Dialog container: 350 wide at x20, corner 20, shadow 0 25 50 -12 rgba(0,0,0,0.25),
+ * File Selection 399.75 @y222.13 / Importing 228 @y308 / Result 636 @y104.
+ * Titles are fixed Songti SC Bold text (2657:761 "导入本地书籍" / 2657:805 "导入结果"),
+ * mapped to ReaderNotoSerifSCBold. Rebuilt 2026-08-06 against live Figma nodes.
  */
 @Component
 export struct LocalImportDialog {
@@ -14,10 +32,7 @@ export struct LocalImportDialog {
   onClose: () => void = (): void => {};
 
   aboutToAppear(): void {
-    this.getUIContext().getFont().registerFont({
-      familyName: 'ReaderInter',
-      familySrc: $rawfile('InterVariable.ttf'),
-    });
+    registerReaderFonts(this.getUIContext().getFont());
   }
 
   build() {
@@ -42,20 +57,23 @@ export struct LocalImportDialog {
   private fileSelectionPanel() {
     Column() {
       Row() {
-        Image($r('app.media.import_dialog_title'))
-          .width(107)
-          .height(17)
-          .objectFit(ImageFit.Contain);
+        Text('导入本地书籍')
+          .fontFamily('ReaderNotoSerifSCBold')
+          .fontWeight(FontWeight.Bold)
+          .fontSize(18)
+          .lineHeight(24.75)
+          .fontColor(TOK_INK)
+          .maxLines(1);
       }
       .width('100%')
-      .height(65)
       .padding({ left: 20, right: 20, top: 20, bottom: 17 })
       .alignItems(VerticalAlign.Center);
 
       Blank().width('100%').height(1).backgroundColor('#E8E2D9');
 
       Column({ space: 0 }) {
-        Column({ space: 12 }) {
+        // Drop zone: 310 wide, dashed 2px #C1C7CD on #F8F4EC, radius 14.
+        Column({ space: TOK_SPACE_SM }) {
           Stack({ alignContent: Alignment.Center }) {
             Image($r('app.media.import_select_system')).width(20).height(20);
           }
@@ -64,54 +82,58 @@ export struct LocalImportDialog {
           .backgroundColor('#D8E8E2')
           .borderRadius(22);
 
-          Column({ space: 2 }) {
+          Column({ space: 0 }) {
             Text('从系统文件中选择')
               .fontFamily('ReaderInter')
-              .fontWeight(700)
+              .fontWeight(FontWeight.Bold)
               .fontSize(13)
               .lineHeight(19.5)
               .letterSpacing(-0.0762)
-              .fontColor('#1F1B17');
+              .fontColor(TOK_INK);
             Text('支持多选 TXT、EPUB 文件')
               .fontFamily('ReaderInter')
-              .fontWeight(400)
+              .fontWeight(FontWeight.Regular)
               .fontSize(11)
               .lineHeight(16.5)
               .letterSpacing(0.0645)
-              .fontColor('#756F69');
+              .fontColor(TOK_MUTED)
+              .margin({ top: 2 });
           }
           .alignItems(HorizontalAlign.Center);
 
           Row({ space: 6 }) {
-            this.formatBadge('TXT', '#2D4A3E');
+            this.formatBadge('TXT', TOK_GREEN);
             this.formatBadge('EPUB', '#5A4A2A');
           }
         }
-        .width(310)
-        .height(168)
+        .width('100%')
         .padding({ top: 30, bottom: 30, left: 2, right: 2 })
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
-        .backgroundColor('#F8F4EC')
-        .border({ width: 2, color: '#C1C7CD', style: BorderStyle.Dashed })
+        .backgroundColor(TOK_PAPER)
+        .border({ width: 2, color: TOK_BORDER, style: BorderStyle.Dashed })
         .borderRadius(14);
 
-        Row({ space: 8 }) {
-          Image($r('app.media.import_info')).width(13).height(13);
+        Row({ space: TOK_SPACE_XS }) {
+          Image($r('app.media.import_info'))
+            .width(13)
+            .height(13)
+            .margin({ top: 2 });
           Text('支持从系统文件中多选 TXT、EPUB。导入后书籍将保存至本地书库。')
             .width(289)
             .fontFamily('ReaderInter')
-            .fontWeight(400)
+            .fontWeight(FontWeight.Regular)
             .fontSize(11)
             .lineHeight(16.5)
             .letterSpacing(0.0645)
-            .fontColor('#756F69');
+            .fontColor(TOK_MUTED);
         }
-        .width(310)
-        .padding({ top: 16 });
+        .width('100%')
+        .padding({ top: TOK_SPACE_MD });
 
-        Row({ space: 12 }) {
-          Row({ space: 8 }) {
+        // Primary 211 / outlined cancel; row height 84 (20 top + 44 + 20 bottom).
+        Row({ space: TOK_SPACE_SM }) {
+          Row({ space: TOK_SPACE_XS }) {
             Image($r('app.media.import_choose_file')).width(15).height(15);
             Text('选择文件')
               .fontFamily('ReaderInter')
@@ -119,12 +141,12 @@ export struct LocalImportDialog {
               .fontSize(13)
               .lineHeight(19.5)
               .letterSpacing(-0.0762)
-              .fontColor('#FFFAF4');
+              .fontColor(TOK_ON_PRIMARY);
           }
-          .layoutWeight(1)
+          .width(211)
           .height(44)
           .justifyContent(FlexAlign.Center)
-          .backgroundColor('#2D4A3E')
+          .backgroundColor(TOK_GREEN)
           .borderRadius(22)
           .onClick((): void => this.onSelectFiles());
 
@@ -136,17 +158,17 @@ export struct LocalImportDialog {
               .fontSize(13)
               .lineHeight(19.5)
               .letterSpacing(-0.0762)
-              .fontColor('#756F69');
+              .fontColor(TOK_MUTED);
           }
           .height(44)
           .padding({ left: 21, right: 21 })
           .justifyContent(FlexAlign.Center)
-          .border({ width: 1, color: '#C1C7CD' })
+          .border({ width: 1, color: TOK_BORDER })
           .borderRadius(22)
           .onClick((): void => this.onClose());
         }
-        .width(310)
-        .padding({ top: 20 });
+        .width('100%')
+        .padding({ top: 20, bottom: 20 });
       }
       .width('100%')
       .padding({ left: 20, right: 20, top: 20 });
@@ -161,27 +183,35 @@ export struct LocalImportDialog {
 
   @Builder
   private importingPanel() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Image($r('app.media.importing_halo')).width(56).height(56).position({ x: 147, y: 35 });
-      Image($r('app.media.importing_spinner_track')).width(32).height(32).position({ x: 159, y: 47 });
-      Image($r('app.media.importing_spinner_arc')).width(32).height(32).position({ x: 159, y: 47 });
+    Column() {
+      Stack({ alignContent: Alignment.Center }) {
+        Image($r('app.media.importing_halo')).width(56).height(56);
+        Image($r('app.media.importing_spinner_track')).width(32).height(32);
+        Image($r('app.media.importing_spinner_arc')).width(32).height(32);
+      }
+      .width(56)
+      .height(56)
+      .margin({ top: 35 });
+
       Text('正在导入')
         .fontFamily('ReaderInter')
         .fontWeight(600)
         .fontSize(14)
         .lineHeight(21)
-        .fontColor('#1F1B17')
-        .position({ x: 147, y: 111 });
+        .fontColor(TOK_INK)
+        .margin({ top: 20 });
+
       Text('请稍候')
         .fontFamily('ReaderInter')
-        .fontWeight(400)
+        .fontWeight(FontWeight.Regular)
         .fontSize(11)
         .lineHeight(16.5)
-        .fontColor('#756F69')
-        .position({ x: 158.5, y: 140 });
+        .fontColor(TOK_MUTED)
+        .margin({ top: 8 });
     }
     .width(350)
     .height(228)
+    .alignItems(HorizontalAlign.Center)
     .backgroundColor('#FFFCF8')
     .borderRadius(20)
     .shadow({ radius: 50, color: '#40000000', offsetX: 0, offsetY: 25 })
@@ -192,39 +222,46 @@ export struct LocalImportDialog {
   private resultPanel() {
     Column() {
       Row() {
-        Image($r('app.media.import_result_title'))
-          .width(71)
-          .height(17)
-          .objectFit(ImageFit.Contain);
+        Text('导入结果')
+          .fontFamily('ReaderNotoSerifSCBold')
+          .fontWeight(FontWeight.Bold)
+          .fontSize(18)
+          .lineHeight(24.75)
+          .fontColor(TOK_INK)
+          .maxLines(1);
       }
       .width('100%')
-      .height(65)
       .padding({ left: 20, right: 20, top: 20, bottom: 17 })
       .alignItems(VerticalAlign.Center);
       Blank().width('100%').height(1).backgroundColor('#E8E2D9');
       this.resultSummary();
       this.resultItemsPanel();
-      Row({ space: 6 }) {
-        Image($r('app.media.import_done')).width(14).height(14);
-        Text('完成')
-          .fontFamily('ReaderInter')
-          .fontWeight(800)
-          .fontSize(13)
-          .lineHeight(19.5)
-          .letterSpacing(-0.0762)
-          .fontColor('#FFFAF4');
+      // "完成" button: 201 wide, left-aligned at px16, h40 r20.
+      Column() {
+        Row({ space: 6 }) {
+          Image($r('app.media.import_done')).width(14).height(14);
+          Text('完成')
+            .fontFamily('ReaderInter')
+            .fontWeight(800)
+            .fontSize(13)
+            .lineHeight(19.5)
+            .letterSpacing(-0.0762)
+            .fontColor(TOK_ON_PRIMARY);
+        }
+        .width(201)
+        .height(40)
+        .justifyContent(FlexAlign.Center)
+        .backgroundColor(TOK_GREEN)
+        .borderRadius(20)
+        .onClick((): void => this.onClose());
       }
-      .width(318)
-      .height(40)
-      .justifyContent(FlexAlign.Center)
-      .backgroundColor('#2D4A3E')
-      .borderRadius(22)
-      .margin({ top: 12 })
-      .onClick((): void => this.onClose());
+      .width('100%')
+      .padding({ left: TOK_SPACE_MD, right: TOK_SPACE_MD, top: TOK_SPACE_MD, bottom: 20 })
+      .alignItems(HorizontalAlign.Start);
     }
     .width(350)
     .height(636)
-    .alignItems(HorizontalAlign.Center)
+    .alignItems(HorizontalAlign.Start)
     .backgroundColor('#FFFCF8')
     .borderRadius(20)
     .shadow({ radius: 50, color: '#40000000', offsetX: 0, offsetY: 25 })
@@ -233,79 +270,85 @@ export struct LocalImportDialog {
 
   @Builder
   private resultSummary() {
-    Row({ space: 12 }) {
-      Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.import_summary')).width(18).height(18);
+    Column() {
+      Row({ space: TOK_SPACE_SM }) {
+        Stack({ alignContent: Alignment.Center }) {
+          Image($r('app.media.import_summary')).width(18).height(18);
+        }
+        .width(36)
+        .height(36)
+        .backgroundColor('#FDECEA')
+        .borderRadius(18);
+        Column({ space: 1 }) {
+          Text('导入完成')
+            .fontFamily('ReaderInter')
+            .fontWeight(FontWeight.Bold)
+            .fontSize(13)
+            .lineHeight(19.5)
+            .letterSpacing(-0.0762)
+            .fontColor(TOK_INK);
+          Text(this.resultCountText())
+            .fontFamily('ReaderInter')
+            .fontWeight(FontWeight.Regular)
+            .fontSize(11)
+            .lineHeight(16.5)
+            .letterSpacing(0.0645)
+            .fontColor(TOK_MUTED);
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start);
+        Stack({ alignContent: Alignment.Center }) {
+          Image($r('app.media.import_refresh'))
+            .width(18)
+            .height(18)
+            .rotate({ angle: -113.93 });
+        }
+        .width(18)
+        .height(18);
       }
-      .width(36)
-      .height(36)
-      .backgroundColor('#FDECEA')
-      .borderRadius(18);
-      Column({ space: 1 }) {
-        Text('导入完成')
-          .fontFamily('ReaderInter')
-          .fontWeight(700)
-          .fontSize(13)
-          .lineHeight(19.5)
-          .letterSpacing(-0.0762)
-          .fontColor('#1F1B17');
-        Text(this.resultCountText())
-          .fontFamily('ReaderInter')
-          .fontWeight(400)
-          .fontSize(11)
-          .lineHeight(16.5)
-          .letterSpacing(0.0645)
-          .fontColor('#756F69');
-      }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start);
-      Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.import_refresh'))
-          .width(18)
-          .height(18)
-          .rotate({ angle: -113.93 });
-      }
-      .width(18)
-      .height(18);
+      .width('100%')
+      .height(52)
+      .padding({ left: 17, right: 17, top: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
+      .backgroundColor(TOK_PAPER)
+      .border({ width: 1, color: '#E8E2D9' })
+      .borderRadius(12);
     }
-    .width(318)
-    .height(52)
-    .padding({ left: 17, right: 17, top: 8, bottom: 8 })
-    .backgroundColor('#F8F4EC')
-    .border({ width: 1, color: '#E8E2D9' })
-    .borderRadius(12)
-    .margin({ top: 16 });
+    .width('100%')
+    .padding({ left: TOK_SPACE_MD, right: TOK_SPACE_MD, top: TOK_SPACE_MD });
   }
 
   @Builder
   private resultItemsPanel() {
-    Scroll() {
-      Column() {
-        ForEach(this.resultItems(), (item: LocalImportItem, index: number): void => {
-          this.resultItem(item, index !== this.resultItems().length - 1);
-        }, (item: LocalImportItem, index: number): string => `${item.fileName}-${index}`);
+    Column() {
+      Scroll() {
+        Column() {
+          ForEach(this.resultItems(), (item: LocalImportItem, index: number): void => {
+            this.resultItem(item, index !== this.resultItems().length - 1);
+          }, (item: LocalImportItem, index: number): string => `${item.fileName}-${index}`);
+        }
+        .width(316);
       }
-      .width(316);
+      .width('100%')
+      .height(410)
+      .padding(1)
+      .border({ width: 1, color: '#E8E2D9' })
+      .borderRadius(12)
+      .scrollBar(BarState.Off);
     }
-    .width(318)
-    .height(410)
-    .margin({ top: 12 })
-    .padding(1)
-    .border({ width: 1, color: '#E8E2D9' })
-    .borderRadius(12)
-    .scrollBar(BarState.Off);
+    .width('100%')
+    .padding({ left: TOK_SPACE_MD, right: TOK_SPACE_MD, top: TOK_SPACE_SM });
   }
 
   @Builder
   private resultItem(item: LocalImportItem, hasDivider: boolean) {
     Column({ space: 0 }) {
-      Row({ space: 12 }) {
+      Row({ space: TOK_SPACE_SM }) {
         Stack({ alignContent: Alignment.Center }) {
           Image($r('app.media.import_document')).width(16).height(16);
         }
         .width(32)
         .height(32)
-        .backgroundColor('#F8F4EC')
+        .backgroundColor(TOK_PAPER)
         .borderRadius(8);
         Column({ space: 3 }) {
           Text(item.fileName)
@@ -314,10 +357,10 @@ export struct LocalImportDialog {
             .fontWeight(600)
             .fontSize(12)
             .lineHeight(18)
-            .fontColor('#1F1B17')
+            .fontColor(TOK_INK)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
-          this.resultBadge(item.state === 'success' ? '成功' : '失败', item.state === 'success' ? '#2D4A3E' : '#5A4A2A');
+          this.resultBadge(item.state === 'success' ? '成功' : '失败', item.state === 'success' ? TOK_GREEN : '#5A4A2A');
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start);
@@ -328,8 +371,8 @@ export struct LocalImportDialog {
         }
       }
       .width('100%')
-      .height(hasDivider ? 63 : 64)
-      .padding({ left: 16, right: 16, top: 10, bottom: 10 })
+      .height(61)
+      .padding({ left: TOK_SPACE_MD, right: TOK_SPACE_MD, top: TOK_SPACE_CONTROL_INLINE, bottom: 11 })
       .alignItems(VerticalAlign.Center);
       if (hasDivider) {
         Divider()
@@ -345,11 +388,11 @@ export struct LocalImportDialog {
   private resultBadge(label: string, color: string) {
     Text(label)
       .fontFamily('ReaderInter')
-      .fontWeight(700)
+      .fontWeight(FontWeight.Bold)
       .fontSize(10)
       .lineHeight(15)
       .letterSpacing(0.3672)
-      .fontColor('#FFFAF4')
+      .fontColor(TOK_ON_PRIMARY)
       .padding({ left: 6, right: 6, top: 2, bottom: 2 })
       .backgroundColor(color)
       .borderRadius(4);
@@ -359,11 +402,11 @@ export struct LocalImportDialog {
   private formatBadge(label: string, color: string) {
     Text(label)
       .fontFamily('ReaderInter')
-      .fontWeight(700)
+      .fontWeight(FontWeight.Bold)
       .fontSize(10)
       .lineHeight(15)
       .letterSpacing(0.3672)
-      .fontColor('#FFFAF4')
+      .fontColor(TOK_ON_PRIMARY)
       .padding({ left: 6, right: 6, top: 2, bottom: 2 })
       .backgroundColor(color)
       .borderRadius(4);

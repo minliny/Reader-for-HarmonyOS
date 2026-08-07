@@ -2,10 +2,34 @@ import {
   type SearchBook,
   type SearchSource,
 } from './SearchGateway';
+import { registerReaderFonts } from '../common/ReaderFonts';
+import {
+  TOK_BORDER,
+  TOK_CARD_BG,
+  TOK_GREEN,
+  TOK_INK,
+  TOK_MUTED,
+  TOK_ON_PRIMARY,
+  TOK_PAPER,
+  TOK_PRIMARY_DARK,
+  TOK_PRIMARY_SOFT,
+  TOK_SPACE_CARD_PADDING,
+  TOK_SPACE_CONTROL_INLINE,
+  TOK_SPACE_LG,
+  TOK_SPACE_MD,
+  TOK_SPACE_ROW_BLOCK,
+  TOK_SPACE_SM,
+  TOK_SPACE_XS,
+} from '../common/ReaderTokens';
 
-const PHONE_ROW_PAD_LEFT = 18;
+const SEARCH_FIELD_BG = '#121F1B17';   // rgba(31,27,23,0.07) — Figma field fill
+const SEARCH_BTN_BG = '#382D4A3E';     // rgba(45,74,62,0.22) — Initial search button
+const PRIMARY = TOK_GREEN;
+const INK = TOK_INK;
+const MUTED = TOK_MUTED;
+const BORDER = TOK_BORDER;
+const SURFACE = TOK_CARD_BG;           // rgba(255,252,248,0.9)
 const TABLET_CONTENT_WIDTH = 620;
-const TABLET_CONTENT_LEFT = 70;
 
 /**
  * The search page's full presentation. `initial` is the pre-search surface
@@ -67,15 +91,7 @@ export struct SearchPage {
   @State keyword: string = '';
 
   aboutToAppear(): void {
-    const font = this.getUIContext().getFont();
-    font.registerFont({
-      familyName: 'ReaderInter',
-      familySrc: $rawfile('InterVariable.ttf'),
-    });
-    font.registerFont({
-      familyName: 'ReaderNotoSerifSCBold',
-      familySrc: $rawfile('NotoSerifSC-Bold.ttf'),
-    });
+    registerReaderFonts(this.getUIContext().getFont());
   }
 
   build() {
@@ -88,12 +104,12 @@ export struct SearchPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F8F4EC');
+    .backgroundColor(TOK_PAPER);
   }
 
   @Builder
   private searchBar() {
-    Row({ space: 10 }) {
+    Row({ space: TOK_SPACE_CONTROL_INLINE }) {
       Stack({ alignContent: Alignment.Center }) {
         Image($r('app.media.search_back')).width(20).height(20);
       }
@@ -102,16 +118,16 @@ export struct SearchPage {
       .borderRadius(16)
       .onClick((): void => this.onBack());
 
-      Row({ space: 8 }) {
+      Row({ space: TOK_SPACE_XS }) {
         Image($r('app.media.search_mag')).width(14).height(14);
         TextInput({ placeholder: '搜索书名、作者...', text: this.keyword })
           .layoutWeight(1)
           .height(21)
           .fontFamily('ReaderInter')
           .fontSize(14)
-          .fontColor(this.keyword.length > 0 ? '#1F1B17' : '#801F1B17')
+          .fontColor(this.keyword.length > 0 ? INK : '#801F1B17')
           .backgroundColor(Color.Transparent)
-          .caretColor('#1F1B17')
+          .caretColor(INK)
           .placeholderColor('#801F1B17')
           .placeholderFont({ size: 14, family: 'ReaderInter' })
           .onChange((value: string): void => {
@@ -128,31 +144,44 @@ export struct SearchPage {
       }
       .layoutWeight(1)
       .height(this.isTablet ? 40 : 36)
-      .padding({ left: 12, right: 12 })
-      .backgroundColor('#1A1F1B17')
+      .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
+      .backgroundColor(SEARCH_FIELD_BG)
       .borderRadius(999)
       .alignItems(VerticalAlign.Center);
 
+      // Initial state: 22%-alpha primary at 75% opacity (Figma rgba(45,74,62,0.22)
+      // + opacity 75). Every post-search state (Loading/Results/Empty/Error) uses
+      // a solid primary pill; Loading additionally inlines a 13px spinner.
       Stack({ alignContent: Alignment.Center }) {
         if (this.presentation.kind === 'loading') {
-          Stack({ alignContent: Alignment.Center }) {
-            Image($r('app.media.importing_spinner_track')).width(32).height(32);
-            Image($r('app.media.importing_spinner_arc')).width(32).height(32);
+          Row({ space: 6 }) {
+            Stack({ alignContent: Alignment.Center }) {
+              Image($r('app.media.importing_spinner_track')).width(13).height(13);
+              Image($r('app.media.importing_spinner_arc')).width(13).height(13);
+            }
+            .width(13)
+            .height(13);
+            Text('搜索')
+              .fontFamily('ReaderInter')
+              .fontWeight(800)
+              .fontSize(this.isTablet ? 14 : 13)
+              .lineHeight(this.isTablet ? 14 : 13)
+              .fontColor(TOK_ON_PRIMARY);
           }
-          .width(32)
-          .height(32);
+          .alignItems(VerticalAlign.Center);
+        } else {
+          Text('搜索')
+            .fontFamily('ReaderInter')
+            .fontWeight(800)
+            .fontSize(this.isTablet ? 14 : 13)
+            .lineHeight(this.isTablet ? 14 : 13)
+            .fontColor(TOK_ON_PRIMARY);
         }
-        Text('搜索')
-          .fontFamily('ReaderInter')
-          .fontWeight(800)
-          .fontSize(13)
-          .lineHeight(13)
-          .fontColor('#FFFAF4');
       }
       .height(this.isTablet ? 40 : 36)
-      .padding({ left: 14, right: 14 })
-      .backgroundColor('#382D4A3E')
-      .opacity(0.75)
+      .padding({ left: this.isTablet ? 18 : TOK_SPACE_CARD_PADDING, right: this.isTablet ? 18 : TOK_SPACE_CARD_PADDING })
+      .backgroundColor(this.presentation.kind === 'initial' ? SEARCH_BTN_BG : PRIMARY)
+      .opacity(this.presentation.kind === 'initial' ? 0.75 : 1)
       .borderRadius(999)
       .onClick((): void => {
         if (this.presentation.kind !== 'loading' && this.keyword.trim().length > 0) {
@@ -162,13 +191,14 @@ export struct SearchPage {
     }
     .width(this.contentWidth())
     .height(this.isTablet ? 56 : 52)
-    .padding({ left: this.isTablet ? 20 : 16, right: this.isTablet ? 20 : 16, top: this.isTablet ? 8 : 8 })
-    .alignItems(VerticalAlign.Center);
+    .padding({ left: this.isTablet ? 20 : TOK_SPACE_MD, right: this.isTablet ? 20 : TOK_SPACE_MD, top: TOK_SPACE_XS })
+    .alignItems(VerticalAlign.Center)
+    .border({ width: { bottom: 0.5 }, color: { bottom: BORDER } });
   }
 
   @Builder
   private sourceChips() {
-    Row({ space: 8 }) {
+    Row({ space: TOK_SPACE_XS }) {
       this.sourceChip('全部', true);
       ForEach(this.sources, (source: SearchSource) => {
         this.sourceChip(source.name, false);
@@ -176,8 +206,9 @@ export struct SearchPage {
     }
     .width(this.contentWidth())
     .height(41)
-    .padding({ left: this.isTablet ? 20 : 16, right: this.isTablet ? 20 : 16, top: 9 })
-    .alignItems(VerticalAlign.Top);
+    .padding({ left: this.isTablet ? 20 : TOK_SPACE_MD, right: this.isTablet ? 20 : TOK_SPACE_MD, top: 9 })
+    .alignItems(VerticalAlign.Top)
+    .border({ width: { bottom: 0.5 }, color: { bottom: BORDER } });
   }
 
   @Builder
@@ -187,10 +218,10 @@ export struct SearchPage {
       .fontWeight(FontWeight.Bold)
       .fontSize(12)
       .lineHeight(12)
-      .fontColor(active ? '#FFFAF4' : '#756F69')
+      .fontColor(active ? TOK_ON_PRIMARY : MUTED)
       .padding({ left: 12.5, right: 12.5, top: 5.5, bottom: 5.5 })
-      .backgroundColor(active ? '#2D4A3E' : '#E6FFFCF8')
-      .border({ width: 0.5, color: active ? '#2D4A3E' : '#C1C7CD' })
+      .backgroundColor(active ? PRIMARY : SURFACE)
+      .border({ width: 0.5, color: active ? PRIMARY : BORDER })
       .borderRadius(999)
       .textAlign(TextAlign.Center)
       .maxLines(1);
@@ -221,62 +252,99 @@ export struct SearchPage {
             .fontWeight(FontWeight.Bold)
             .fontSize(13)
             .lineHeight(19.5)
-            .fontColor('#1F1B17')
+            .fontColor(INK)
             .layoutWeight(1);
           Text('清空记录')
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Medium)
             .fontSize(12)
             .lineHeight(18)
-            .fontColor('#756F69')
+            .fontColor(MUTED)
             .onClick((): void => this.onClearHistory());
         }
-        .width(this.contentWidth())
+        .width('100%')
         .height(26)
         .alignItems(VerticalAlign.Center);
 
+        // History chips are capped at 4; when more remain, a primary-outline
+        // "N 条更多" chip follows (Figma 2635:58745). No dedicated callback
+        // exists, so it is presentational.
         Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
-          ForEach(history, (keyword: string) => {
+          ForEach(history.slice(0, 4), (keyword: string) => {
             Text(keyword)
               .fontFamily('ReaderInter')
               .fontWeight(FontWeight.Medium)
               .fontSize(13)
               .lineHeight(19.5)
-              .fontColor('#1F1B17')
+              .fontColor(INK)
               .padding({ left: 14.5, right: 14.5, top: 7.5, bottom: 7.5 })
-              .backgroundColor('#E6FFFCF8')
-              .border({ width: 0.5, color: '#C1C7CD' })
+              .backgroundColor(SURFACE)
+              .border({ width: 0.5, color: BORDER })
               .borderRadius(999)
-              .margin({ right: 8, bottom: 8 })
+              .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
               .onClick((): void => this.onSearch(keyword));
           }, (keyword: string): string => `search-history-${keyword}`);
+          if (history.length > 4) {
+            this.moreChip(history.length - 4);
+          }
         }
-        .width(this.contentWidth())
-        .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: 14 });
+        .width('100%')
+        .padding({ top: TOK_SPACE_CARD_PADDING });
       }
     }
     .width('100%')
-    .padding({ top: 28 });
+    .padding({
+      left: this.isTablet ? 20 : 18,
+      right: this.isTablet ? 20 : 18,
+      top: 28,
+      bottom: 20,
+    });
+  }
+
+  @Builder
+  private moreChip(count: number) {
+    Row({ space: TOK_SPACE_ROW_BLOCK }) {
+      Text(`${count} 条更多`)
+        .fontFamily('ReaderInter')
+        .fontWeight(FontWeight.Bold)
+        .fontSize(12)
+        .lineHeight(18)
+        .fontColor(PRIMARY)
+        .textAlign(TextAlign.Center)
+        .maxLines(1);
+      Image($r('app.media.rss_chevron')).width(12).height(12);
+    }
+    .padding({ left: 12.5, right: 12.5, top: 7.5, bottom: 7.5 })
+    .alignItems(VerticalAlign.Center)
+    .border({ width: 0.5, color: PRIMARY })
+    .borderRadius(999)
+    .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS });
   }
 
   @Builder
   private loadingContent() {
+    // Figma Loading (2635:58801): spinner + caption are top-anchored at 120
+    // (not vertically centered). Caption is leading 19.5 with an 18px gap.
     Column({ space: 0 }) {
-      Blank().layoutWeight(1);
-      Image($r('app.media.importing_spinner_track')).width(36).height(36);
-      Image($r('app.media.importing_spinner_arc')).width(36).height(36);
+      Stack({ alignContent: Alignment.Center }) {
+        Image($r('app.media.importing_spinner_track')).width(36).height(36);
+        Image($r('app.media.importing_spinner_arc')).width(36).height(36);
+      }
+      .width(36)
+      .height(36);
       Text('正在搜索所有书源…')
-        .margin({ top: 20 })
+        .margin({ top: 18 })
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Regular)
         .fontSize(13)
-        .lineHeight(20)
-        .fontColor('#756F69')
+        .lineHeight(19.5)
+        .fontColor(MUTED)
         .textAlign(TextAlign.Center);
-      Blank().layoutWeight(1);
     }
     .width('100%')
-    .layoutWeight(1);
+    .layoutWeight(1)
+    .alignItems(HorizontalAlign.Center)
+    .padding({ top: 120 });
   }
 
   @Builder
@@ -288,29 +356,29 @@ export struct SearchPage {
           .fontWeight(FontWeight.Regular)
           .fontSize(11)
           .lineHeight(16.5)
-          .fontColor('#756F69');
+          .fontColor(MUTED);
         Text(`${results.length}`)
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Bold)
           .fontSize(11)
           .lineHeight(16.5)
-          .fontColor('#2D4A3E');
+          .fontColor(PRIMARY);
         Text(' 本相关书籍')
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Regular)
           .fontSize(11)
           .lineHeight(16.5)
-          .fontColor('#756F69');
+          .fontColor(MUTED);
       }
       .width(this.contentWidth())
-      .height(29)
-      .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: 6 })
-      .alignItems(VerticalAlign.Top);
+      .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: 6, bottom: 6 })
+      .alignItems(VerticalAlign.Center)
+      .border({ width: { bottom: 0.5 }, color: { bottom: BORDER } });
 
       List() {
         ForEach(results, (book: SearchBook) => {
           ListItem() {
-            this.resultCard(book);
+            this.resultCard(book, this.countBySource(results, book.sourceId));
           }
         }, (book: SearchBook, index: number): string =>
           `search-result-${book.sourceId}:${book.bookId}:${book.title}:${index}`);
@@ -324,8 +392,8 @@ export struct SearchPage {
   }
 
   @Builder
-  private resultCard(book: SearchBook) {
-    Row({ space: 12 }) {
+  private resultCard(book: SearchBook, sourceCount: number) {
+    Row({ space: TOK_SPACE_SM }) {
       Stack({ alignContent: Alignment.Bottom }) {
         if (book.coverUrl !== undefined && book.coverUrl.trim().length > 0) {
           Image(book.coverUrl)
@@ -349,13 +417,13 @@ export struct SearchPage {
               .textAlign(TextAlign.Center)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .padding({ left: 4, right: 4, bottom: 6 });
+              .padding({ left: TOK_SPACE_ROW_BLOCK, right: TOK_SPACE_ROW_BLOCK, bottom: 6 });
           }
           .width(this.isTablet ? 68 : 60)
           .height(this.isTablet ? 92 : 82)
           .linearGradient({
             angle: 141.7,
-            colors: [['#3D5A4C', 0.077], ['#1F3528', 0.923]],
+            colors: [['#3D5A4C', 0.077], [TOK_PRIMARY_DARK, 0.923]],
           })
           .borderRadius(6);
         }
@@ -371,7 +439,7 @@ export struct SearchPage {
           .fontWeight(FontWeight.Bold)
           .fontSize(15)
           .lineHeight(19.5)
-          .fontColor('#1F1B17')
+          .fontColor(INK)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
@@ -381,7 +449,7 @@ export struct SearchPage {
           .fontWeight(FontWeight.Regular)
           .fontSize(12)
           .lineHeight(12)
-          .fontColor('#756F69')
+          .fontColor(MUTED)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
@@ -393,7 +461,7 @@ export struct SearchPage {
             .fontWeight(FontWeight.Regular)
             .fontSize(11)
             .lineHeight(11)
-            .fontColor('#756F69')
+            .fontColor(MUTED)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
@@ -416,10 +484,17 @@ export struct SearchPage {
             .fontWeight(FontWeight.Bold)
             .fontSize(10)
             .lineHeight(10)
-            .fontColor('#2D4A3E')
+            .fontColor(PRIMARY)
             .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-            .backgroundColor('#172D4A3E')
+            .backgroundColor(TOK_PRIMARY_SOFT)
             .borderRadius(4)
+            .maxLines(1);
+          Text(`共 ${sourceCount} 个书源`)
+            .fontFamily('ReaderInter')
+            .fontWeight(FontWeight.Regular)
+            .fontSize(11)
+            .lineHeight(16.5)
+            .fontColor(MUTED)
             .maxLines(1);
         }
         .width('100%')
@@ -429,9 +504,9 @@ export struct SearchPage {
       .alignItems(HorizontalAlign.Start);
     }
     .width(this.contentWidth())
-    .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: 14, bottom: 14.5 })
+    .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: TOK_SPACE_CARD_PADDING, bottom: 14.5 })
     .alignItems(VerticalAlign.Top)
-    .border({ width: { bottom: 0.5 }, color: { bottom: '#C1C7CD' } })
+    .border({ width: { bottom: 0.5 }, color: { bottom: BORDER } })
     .onClick((): void => this.onSelectResult(book));
   }
 
@@ -445,21 +520,22 @@ export struct SearchPage {
           .alignSelf(ItemAlign.Center);
 
         Text('没有找到相关书籍')
-          .margin({ top: 20 })
+          .margin({ top: 28 })
           .fontFamily('ReaderNotoSerifSCBold')
           .fontWeight(FontWeight.Bold)
           .fontSize(17)
           .lineHeight(25.5)
-          .fontColor('#1F1B17')
+          .fontColor(INK)
           .textAlign(TextAlign.Center);
 
         Text(`所有书源均未搜索到「${keyword}」的相关结果`)
-          .margin({ top: 8 })
+          .margin({ top: TOK_SPACE_CONTROL_INLINE })
+          .width('100%')
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Regular)
           .fontSize(13)
           .lineHeight(21.125)
-          .fontColor('#756F69')
+          .fontColor(MUTED)
           .textAlign(TextAlign.Center)
           .maxLines(3);
 
@@ -470,40 +546,40 @@ export struct SearchPage {
             .fontWeight(FontWeight.Bold)
             .fontSize(12)
             .lineHeight(18)
-            .fontColor('#1F1B17')
+            .fontColor(INK)
             .maxLines(1);
           this.suggestion('检查书名拼写是否正确');
           this.suggestion('尝试更短的关键词或作者名');
           this.suggestion('前往发现页手动添加书源');
         }
         .width(this.isTablet ? 300 : 190)
-        .padding(14.5)
+        .padding({ left: 18.5, right: 18.5, top: 14.5, bottom: 14.5 })
         .margin({ top: 22 })
-        .backgroundColor('#E6FFFCF8')
-        .border({ width: 0.5, color: '#C1C7CD' })
+        .backgroundColor(SURFACE)
+        .border({ width: 0.5, color: BORDER })
         .borderRadius(12)
         .alignItems(HorizontalAlign.Start)
         .alignSelf(ItemAlign.Center);
 
-        Row({ space: 10 }) {
+        Row({ space: TOK_SPACE_CONTROL_INLINE }) {
           Text('添加书源')
             .fontFamily('ReaderInter')
             .fontWeight(800)
             .fontSize(13)
             .lineHeight(13)
-            .fontColor('#FFFAF4')
+            .fontColor(TOK_ON_PRIMARY)
             .padding({ left: 18, right: 18, top: 11.5, bottom: 11.5 })
-            .backgroundColor('#2D4A3E')
+            .backgroundColor(PRIMARY)
             .borderRadius(999);
           Text('重新搜索')
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Bold)
             .fontSize(13)
             .lineHeight(13)
-            .fontColor('#756F69')
+            .fontColor(MUTED)
             .padding({ left: 18.5, right: 18.5, top: 11.5, bottom: 11.5 })
-            .backgroundColor('#E6FFFCF8')
-            .border({ width: 0.5, color: '#C1C7CD' })
+            .backgroundColor(SURFACE)
+            .border({ width: 0.5, color: BORDER })
             .borderRadius(999)
             .onClick((): void => this.onRetry());
         }
@@ -526,61 +602,75 @@ export struct SearchPage {
         .fontWeight(FontWeight.Regular)
         .fontSize(11)
         .lineHeight(16.5)
-        .fontColor('#2D4A3E');
+        .fontColor(PRIMARY);
       Text(text)
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Regular)
         .fontSize(12)
         .lineHeight(19.5)
-        .fontColor('#756F69')
+        .fontColor(MUTED)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
     }
     .width('100%')
-    .margin({ top: 8 })
+    .margin({ top: TOK_SPACE_XS })
     .alignItems(VerticalAlign.Top);
   }
 
   @Builder
   private errorContent() {
+    // Figma Error (2635:59125): content is top-anchored at 96, retry is a solid
+    // primary pill (not the outline used before the rebuild).
     Column({ space: 0 }) {
-      Blank().layoutWeight(1);
       Image($r('app.media.search_error')).width(80).height(80);
 
       Text('搜索失败')
-        .margin({ top: 16 })
+        .margin({ top: 20 })
         .fontFamily('ReaderNotoSerifSCBold')
         .fontWeight(FontWeight.Bold)
         .fontSize(17)
         .lineHeight(25.5)
-        .fontColor('#1F1B17')
+        .fontColor(INK)
         .textAlign(TextAlign.Center);
 
       Text('请检查网络后重试')
-        .margin({ top: 8 })
+        .margin({ top: TOK_SPACE_XS })
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Regular)
         .fontSize(13)
-        .lineHeight(20)
-        .fontColor('#756F69')
+        .lineHeight(19.5)
+        .fontColor(MUTED)
         .textAlign(TextAlign.Center);
 
-      Text('重新搜索')
-        .margin({ top: 20 })
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(13)
-        .lineHeight(13)
-        .fontColor('#756F69')
-        .padding({ left: 28, right: 28, top: 13, bottom: 13 })
-        .backgroundColor('#E6FFFCF8')
-        .border({ width: 0.5, color: '#C1C7CD' })
-        .borderRadius(999)
-        .onClick((): void => this.onRetry());
-      Blank().layoutWeight(1);
+      Stack({ alignContent: Alignment.Center }) {
+        Text('重新搜索')
+          .fontFamily('ReaderInter')
+          .fontWeight(800)
+          .fontSize(14)
+          .lineHeight(14)
+          .fontColor(TOK_ON_PRIMARY);
+      }
+      .height(40)
+      .margin({ top: TOK_SPACE_LG })
+      .padding({ left: 28, right: 28 })
+      .backgroundColor(PRIMARY)
+      .borderRadius(999)
+      .onClick((): void => this.onRetry());
     }
     .width('100%')
-    .layoutWeight(1);
+    .layoutWeight(1)
+    .alignItems(HorizontalAlign.Center)
+    .padding({ top: 96, bottom: 40 });
+  }
+
+  private countBySource(results: SearchBook[], sourceId: string): number {
+    let count = 0;
+    for (const book of results) {
+      if (book.sourceId === sourceId) {
+        count++;
+      }
+    }
+    return count;
   }
 
   private contentWidth(): number {

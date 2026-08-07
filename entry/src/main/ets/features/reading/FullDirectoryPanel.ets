@@ -1,9 +1,27 @@
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
+import {
+  TOK_ACCENT,
+  TOK_LINE,
+  TOK_LINE_STRONG,
+  TOK_READ_ACTIVE_SOFT,
+  TOK_READ_HANDLE,
+  TOK_READ_INK,
+  TOK_READ_MUTED,
+  TOK_READ_PRIMARY,
+  TOK_READ_SURFACE,
+  TOK_SPACE_CONTROL_INLINE,
+  TOK_SPACE_SM,
+  TOK_SPACE_XS,
+  TOK_SURFACE_PANEL,
+  TOK_SURFACE_PANEL_SOFT,
+} from '../common/ReaderTokens';
+
+import { registerReaderFonts } from '../common/ReaderFonts';
 
 /**
  * Source-backed presentation layer for the expanded reader directory panel:
- * - Phone: Figma `1995:60567`, positioned at x=12, y=88, 364px wide.
- * - Tablet: Figma `1995:60899`, positioned at x=26, y=88, 720px wide.
+ * - Phone: Figma `943:11617`, Section `I943:11617;927:66`, at x=12, y=88, 364px wide.
+ * - Tablet: Figma `943:11949`, Section `I943:11949;929:62`, at x=26, y=88, 720px wide.
  *
  * The panel deliberately consumes already materialized page state only. It
  * does not call Core, select chapters, commit reading progress, or infer
@@ -21,12 +39,12 @@ export struct FullDirectoryPanel {
   // R-LOCAL-TOC-01: allow the owning flow to react to a chapter tap so the
   // full-directory can be wired back into the actual reading flow.
   onSelectChapter: (index: number) => void = (_index: number): void => {};
+  // R-LOCAL-TOC-01: the collapse affordance closes the directory overlay back
+  // to the owning flow (reader control Home is undelivered; collapse = return).
+  onExit: () => void = (): void => {};
 
   aboutToAppear(): void {
-    this.getUIContext().getFont().registerFont({
-      familyName: 'ReaderInter',
-      familySrc: $rawfile('InterVariable.ttf'),
-    });
+    registerReaderFonts(this.getUIContext().getFont());
   }
 
   build() {
@@ -34,22 +52,22 @@ export struct FullDirectoryPanel {
       Text('')
         .width(42)
         .height(4)
-        .backgroundColor('#B9AD9F')
+        .backgroundColor(TOK_READ_HANDLE)
         .borderRadius(999)
-        .position({ x: this.gripLeft(), y: 9 });
+        .margin({ left: this.gripLeft(), top: 9 });
 
-      Column({ space: 8 }) {
+      Column({ space: TOK_SPACE_XS }) {
         this.panelHeader();
         this.directoryBody();
       }
       .width(this.innerWidth())
       .height(this.contentHeight())
-      .position({ x: 13, y: 19 });
+      .margin({ left: 13, top: 6 });
     }
     .width(this.panelWidth())
     .height(this.panelHeight())
-    .backgroundColor('#FAFFFAF4')
-    .border({ width: 1, color: '#57B4A697' })
+    .backgroundColor(TOK_READ_SURFACE)
+    .border({ width: 1, color: TOK_LINE_STRONG })
     .borderRadius(24)
     .position({ x: this.panelLeft(), y: 88 });
   }
@@ -57,7 +75,7 @@ export struct FullDirectoryPanel {
   @Builder
   private panelHeader() {
     Row() {
-      Row({ space: 8 }) {
+      Row({ space: TOK_SPACE_XS }) {
         Image($r('app.media.reader_directory_directory'))
           .width(20)
           .height(20);
@@ -66,7 +84,7 @@ export struct FullDirectoryPanel {
           .fontWeight(FontWeight.Bold)
           .fontSize(14)
           .lineHeight(16.8)
-          .fontColor('#332C25');
+          .fontColor(TOK_READ_INK);
       }
       .layoutWeight(1)
       .height(30)
@@ -78,13 +96,14 @@ export struct FullDirectoryPanel {
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Bold)
           .fontSize(10)
-          .fontColor('#2F6373')
+          .fontColor(TOK_READ_PRIMARY)
           .textAlign(TextAlign.Center);
       }
       .width(40)
       .height(26)
-      .backgroundColor('#A3EEE6DB')
-      .borderRadius(8);
+      .backgroundColor(TOK_SURFACE_PANEL_SOFT)
+      .borderRadius(8)
+      .onClick((): void => this.onExit());
     }
     .width(this.innerWidth())
     .height(30)
@@ -101,27 +120,26 @@ export struct FullDirectoryPanel {
     }
     .width(this.innerWidth())
     .height(this.bodyContentHeight())
-    .backgroundColor('#9EFFFCF8')
-    .border({ width: 1, color: '#2E9B8466' })
+    .backgroundColor(TOK_SURFACE_PANEL)
+    .border({ width: 1, color: TOK_LINE })
     .borderRadius(12)
     .clip(true);
   }
 
   @Builder
   private tabs() {
-    Stack({ alignContent: Alignment.TopStart }) {
+    Column({ space: 0 }) {
       Row() {
         this.directoryTab();
         this.bookmarkTab();
       }
       .width('100%')
-      .height(42)
-      .padding({ left: 8, right: 8, top: 5, bottom: 1 });
+      .height(41)
+      .padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS, top: 5 });
       Text('')
         .width('100%')
         .height(1)
-        .backgroundColor('#2E9B8466')
-        .position({ x: 0, y: 41 });
+        .backgroundColor(TOK_LINE);
     }
     .width('100%')
     .height(42);
@@ -134,9 +152,9 @@ export struct FullDirectoryPanel {
         Text('目录')
           .width('100%')
           .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(600)
           .fontSize(11)
-          .fontColor('#2F6373')
+          .fontColor(TOK_READ_PRIMARY)
           .textAlign(TextAlign.Center);
       }
         .width('100%')
@@ -144,7 +162,7 @@ export struct FullDirectoryPanel {
       Text('')
         .width(this.activeTabLineWidth())
         .height(2)
-        .backgroundColor('#2F6373')
+        .backgroundColor(TOK_READ_PRIMARY)
         .borderRadius(999);
     }
     .layoutWeight(1)
@@ -159,9 +177,9 @@ export struct FullDirectoryPanel {
         .height(15);
       Text('书签')
         .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Medium)
+        .fontWeight(600)
         .fontSize(11)
-        .fontColor('#5B5046');
+        .fontColor(TOK_READ_MUTED);
     }
     .layoutWeight(1)
     .height(36)
@@ -171,7 +189,7 @@ export struct FullDirectoryPanel {
 
   @Builder
   private searchControls() {
-    Stack({ alignContent: Alignment.TopStart }) {
+    Column({ space: 0 }) {
       Row({ space: 5 }) {
         Row({ space: 5 }) {
           Image($r('app.media.reader_directory_input_search'))
@@ -189,7 +207,7 @@ export struct FullDirectoryPanel {
         .layoutWeight(1)
         .height(32)
         .padding({ left: 9, right: 9 })
-        .backgroundColor('#A3EEE6DB')
+        .backgroundColor(TOK_SURFACE_PANEL_SOFT)
         .borderRadius(8)
         .alignItems(VerticalAlign.Center);
 
@@ -199,13 +217,12 @@ export struct FullDirectoryPanel {
         this.controlButton('sort');
       }
       .width('100%')
-      .height(51)
-      .padding({ left: 10, right: 10, top: 9, bottom: 10 });
+      .height(50)
+      .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE, top: 9 });
       Text('')
         .width('100%')
         .height(1)
-        .backgroundColor('#2E9B8466')
-        .position({ x: 0, y: 50 });
+        .backgroundColor(TOK_LINE);
     }
     .width('100%')
     .height(51);
@@ -226,7 +243,7 @@ export struct FullDirectoryPanel {
     }
     .width(32)
     .height(32)
-    .backgroundColor('#A3EEE6DB')
+    .backgroundColor(TOK_SURFACE_PANEL_SOFT)
     .borderRadius(8);
   }
 
@@ -239,7 +256,7 @@ export struct FullDirectoryPanel {
         }, (entry: LocalReadingTocEntry): string => `toc-entry-${entry.index}`);
       }
       .width('100%')
-      .padding({ left: 10, right: 10, top: 5, bottom: 5 });
+      .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE, top: 5, bottom: 5 });
     }
     .width('100%')
     .height(this.chapterListHeight())
@@ -248,53 +265,56 @@ export struct FullDirectoryPanel {
 
   @Builder
   private chapterRow(entry: LocalReadingTocEntry) {
-    Stack({ alignContent: Alignment.TopStart }) {
+    Row() {
+      if (this.isCurrent(entry)) {
+        Text('')
+          .width(3)
+          .height(40)
+          .backgroundColor(TOK_ACCENT)
+          .borderRadius(999);
+      }
       Stack({ alignContent: Alignment.Center }) {
         Text(entry.title)
           .width('100%')
           .padding({ left: 9, right: 9 })
           .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(500)
           .fontSize(11)
-          .fontColor('#332C25')
+          .fontColor(TOK_READ_INK)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
       }
-        .width('100%')
-        .height(40);
-      if (this.isCurrent(entry)) {
-        Text('')
-          .width(3)
-          .height(40)
-          .backgroundColor('#F48B13')
-          .borderRadius(999)
-          .position({ x: 0, y: 0 });
-      }
+      .layoutWeight(1)
+      .height(40);
     }
     .width('100%')
     .height(40)
-    .backgroundColor(this.isCurrent(entry) ? '#142F6373' : Color.Transparent)
+    .backgroundColor(this.isCurrent(entry) ? TOK_READ_ACTIVE_SOFT : Color.Transparent)
     .borderRadius(6)
     .onClick((): void => this.onSelectChapter(entry.index));
   }
 
   @Builder
   private statusFooter() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Row({ space: 10 }) {
+    Column({ space: 0 }) {
+      Text('')
+        .width('100%')
+        .height(1)
+        .backgroundColor(TOK_LINE);
+      Row({ space: TOK_SPACE_CONTROL_INLINE }) {
         Row({ space: 9 }) {
           Text('当前章节')
             .width(36)
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Regular)
             .fontSize(9)
-            .fontColor('#5B5046');
+            .fontColor(TOK_READ_MUTED);
           Text(this.currentTitle())
             .layoutWeight(1)
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Bold)
             .fontSize(11)
-            .fontColor('#332C25')
+            .fontColor(TOK_READ_INK)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
@@ -307,19 +327,14 @@ export struct FullDirectoryPanel {
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Regular)
           .fontSize(9)
-          .fontColor('#5B5046')
+          .fontColor(TOK_READ_MUTED)
           .textAlign(TextAlign.End);
       }
       .width('100%')
-      .height(48)
-      .padding({ left: 12, right: 12, top: 1 })
-      .backgroundColor('#A3EEE6DB')
+      .height(47)
+      .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: 1 })
+      .backgroundColor(TOK_SURFACE_PANEL_SOFT)
       .alignItems(VerticalAlign.Center);
-      Text('')
-        .width('100%')
-        .height(1)
-        .backgroundColor('#2E9B8466')
-        .position({ x: 0, y: 0 });
     }
     .width('100%')
     .height(48);
@@ -354,7 +369,7 @@ export struct FullDirectoryPanel {
   }
 
   private gripLeft(): number {
-    return this.isTablet ? 476 : 133;
+    return this.isTablet ? 489 : 134;
   }
 
   private activeTabLineWidth(): number {

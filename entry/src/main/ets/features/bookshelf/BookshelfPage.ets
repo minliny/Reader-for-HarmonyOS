@@ -1,5 +1,24 @@
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
+import {
+  TOK_BORDER,
+  TOK_CARD_BG,
+  TOK_GREEN,
+  TOK_INK,
+  TOK_MUTED,
+  TOK_ON_PRIMARY,
+  TOK_PAPER,
+  TOK_PRIMARY_DARK,
+  TOK_SCREEN_INSET,
+  TOK_SPACE_CARD_PADDING,
+  TOK_SPACE_CONTROL_INLINE,
+  TOK_SPACE_MD,
+  TOK_SPACE_XS,
+} from '../common/ReaderTokens';
+
 import { NoCoverCover } from './NoCoverCover';
+import { MainTabBar } from '../shell/MainTabBar';
+import { ReaderIconButton } from '../common/ReaderIconButton';
+import { registerReaderFonts } from '../common/ReaderFonts';
 
 const PHONE_CONTENT_WIDTH = 350;
 const TABLET_CONTENT_WIDTH = 620;
@@ -23,22 +42,11 @@ export struct BookshelfPage {
   onSearchRequested: () => void = (): void => {};
   onRssRequested: () => void = (): void => {};
   onSettingsRequested: () => void = (): void => {};
+  onDiscoverRequested: () => void = (): void => {};
   onBookSelected: (book: ShelfBook) => void = (_book: ShelfBook): void => {};
 
   aboutToAppear(): void {
-    const font = this.getUIContext().getFont();
-    font.registerFont({
-      familyName: 'ReaderNotoSerifSCRegular',
-      familySrc: $rawfile('NotoSerifSC-Regular.ttf'),
-    });
-    font.registerFont({
-      familyName: 'ReaderNotoSerifSCBold',
-      familySrc: $rawfile('NotoSerifSC-Bold.ttf'),
-    });
-    font.registerFont({
-      familyName: 'ReaderNotoSansSC',
-      familySrc: $rawfile('NotoSansSC-VF.otf'),
-    });
+    registerReaderFonts(this.getUIContext().getFont());
   }
 
   build() {
@@ -58,7 +66,7 @@ export struct BookshelfPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F8F4EC');
+    .backgroundColor(TOK_PAPER);
   }
 
   @Builder
@@ -71,31 +79,27 @@ export struct BookshelfPage {
         .fontWeight(FontWeight.Bold)
         .fontSize(29)
         .lineHeight(38)
-        .fontColor('#1F1B17');
+        .fontColor(TOK_INK);
 
-      Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.bookshelf_search'))
-          .width(24)
-          .height(24);
-      }
-      .width(44)
-      .height(44)
-      .borderRadius(22)
-      .onClick((): void => this.onSearchRequested());
+      ReaderIconButton({
+        icon: $r('app.media.bookshelf_search'),
+        boxSize: 44,
+        iconSize: 24,
+        radius: 22,
+        onTap: (): void => this.onSearchRequested(),
+      });
 
-      Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.bookshelf_more'))
-          .width(24)
-          .height(24);
-      }
-      .width(44)
-      .height(44)
-      .borderRadius(22)
-      .onClick((): void => {
-        // H-NOTE-1: Tablet import was previously disabled. Until Figma
-        // supplies a Tablet import final assembly, open the import dialog
-        // on Tablet as well so the user has a working entry point.
-        this.onImportRequested();
+      ReaderIconButton({
+        icon: $r('app.media.bookshelf_more'),
+        boxSize: 44,
+        iconSize: 24,
+        radius: 22,
+        onTap: (): void => {
+          // H-NOTE-1: Tablet import was previously disabled. Until Figma
+          // supplies a Tablet import final assembly, open the import dialog
+          // on Tablet as well so the user has a working entry point.
+          this.onImportRequested();
+        },
       });
     }
     .height(58)
@@ -107,32 +111,32 @@ export struct BookshelfPage {
   @Builder
   private phoneContent() {
     Scroll() {
-      Column({ space: 8 }) {
+      Column({ space: TOK_SPACE_XS }) {
         if (this.continueReading !== undefined) {
           this.continueReadingCard(this.continueReading, PHONE_CONTENT_WIDTH);
         }
         this.bookshelfSection(PHONE_CONTENT_WIDTH, false);
       }
       .width(PHONE_CONTENT_WIDTH)
-      .padding({ top: 8, bottom: 628 });
+      .padding({ top: TOK_SPACE_XS, bottom: 628 });
     }
     .width('100%')
     .height('100%')
-    .padding({ left: 19, right: 21 })
+    .padding({ left: TOK_SCREEN_INSET, right: 21 })
     .scrollBar(BarState.Off);
   }
 
   @Builder
   private tabletContent() {
     Scroll() {
-      Column({ space: 8 }) {
+      Column({ space: TOK_SPACE_XS }) {
         if (this.continueReading !== undefined) {
           this.continueReadingCard(this.continueReading, TABLET_CONTENT_WIDTH);
         }
         this.bookshelfSection(TABLET_CONTENT_WIDTH, true);
       }
       .width(TABLET_CONTENT_WIDTH)
-      .padding({ top: 8, bottom: 744 });
+      .padding({ top: TOK_SPACE_XS, bottom: 744 });
     }
     .width('100%')
     .height('100%')
@@ -142,7 +146,7 @@ export struct BookshelfPage {
 
   @Builder
   private continueReadingCard(book: ShelfBook, width: number) {
-    Row({ space: 14 }) {
+    Row({ space: TOK_SPACE_CARD_PADDING }) {
       if (this.hasCover(book)) {
         Image(book.coverUrl as string)
           .width(62)
@@ -159,11 +163,11 @@ export struct BookshelfPage {
       Column({ space: 0 }) {
         Text('继续阅读')
           .width('100%')
-          .fontFamily('ReaderNotoSansSC')
+          .fontFamily('ReaderInter')
           .fontWeight(900)
           .fontSize(13)
           .lineHeight(15.6)
-          .fontColor('#2D4A3E')
+          .fontColor(TOK_GREEN)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
@@ -175,7 +179,7 @@ export struct BookshelfPage {
           .fontWeight(FontWeight.Bold)
           .fontSize(20)
           .lineHeight(24)
-          .fontColor('#1F1B17')
+          .fontColor(TOK_INK)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
@@ -183,10 +187,11 @@ export struct BookshelfPage {
 
         Text(book.author)
           .width('100%')
-          .fontFamily('ReaderNotoSansSC')
+          .fontFamily('ReaderInter')
+          .fontWeight(FontWeight.Regular)
           .fontSize(14)
           .lineHeight(16.8)
-          .fontColor('#756F69')
+          .fontColor(TOK_MUTED)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
       }
@@ -196,40 +201,40 @@ export struct BookshelfPage {
 
       Stack({ alignContent: Alignment.Center }) {
         Text('阅读')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
+          .fontFamily('ReaderInter')
+          .fontWeight(800)
           .fontSize(13)
           .lineHeight(15.6)
-          .fontColor('#FFFAF4');
+          .fontColor(TOK_ON_PRIMARY);
       }
       .width(82)
       .height(40)
-      .backgroundColor('#2D4A3E')
+      .backgroundColor(TOK_GREEN)
       .borderRadius(20);
     }
     .width(width)
     .height(100)
     .padding({ left: 16.554, right: 16.554 })
     .alignItems(VerticalAlign.Center)
-    .backgroundColor('#E0FFFFFF')
-    .border({ width: 1, color: '#C1C7CD' })
+    .backgroundColor(TOK_CARD_BG)
+    .border({ width: 1, color: TOK_BORDER })
     .borderRadius(8)
     .onClick((): void => this.onBookSelected(book));
   }
 
   @Builder
   private bookshelfSection(width: number, isTablet: boolean) {
-    Column({ space: 10 }) {
+    Column({ space: TOK_SPACE_CONTROL_INLINE }) {
       Row() {
         Text('我的书架')
           .layoutWeight(1)
-          .fontFamily('ReaderNotoSansSC')
+          .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Bold)
           .fontSize(15)
           .lineHeight(18)
-          .fontColor('#1F1B17');
+          .fontColor(TOK_INK);
 
-        Row({ space: 8 }) {
+        Row({ space: TOK_SPACE_XS }) {
           this.sectionAction('bookshelf_grid');
           this.sectionAction('bookshelf_list');
           this.sectionAction('bookshelf_filter');
@@ -242,7 +247,7 @@ export struct BookshelfPage {
       .height(38)
       .alignItems(VerticalAlign.Center);
 
-      Column({ space: 16 }) {
+      Column({ space: TOK_SPACE_MD }) {
         ForEach(this.bookRows(3), (row: ShelfBook[], rowIndex: number) => {
           Row({ space: 30 }) {
             ForEach(row, (book: ShelfBook) => {
@@ -302,7 +307,7 @@ export struct BookshelfPage {
       .height(isTablet ? 280 : 145.443)
       .linearGradient({
         angle: 141.7,
-        colors: [['#3D5A4C', 0.077], ['#1F3528', 0.923]],
+        colors: [['#3D5A4C', 0.077], [TOK_PRIMARY_DARK, 0.923]],
       })
       .borderRadius(8)
       .clip(true);
@@ -313,16 +318,17 @@ export struct BookshelfPage {
         .fontWeight(FontWeight.Bold)
         .fontSize(15)
         .lineHeight(18.3)
-        .fontColor('#1F1B17')
+        .fontColor(TOK_INK)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
 
       Text(book.author)
         .width(isTablet ? TABLET_BOOK_WIDTH : PHONE_BOOK_WIDTH)
-        .fontFamily('ReaderNotoSansSC')
+        .fontFamily('ReaderInter')
+        .fontWeight(FontWeight.Regular)
         .fontSize(12)
         .lineHeight(15)
-        .fontColor('#756F69')
+        .fontColor(TOK_MUTED)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
     }
@@ -336,68 +342,28 @@ export struct BookshelfPage {
     Column() {
       Blank().layoutWeight(1);
       Row() {
-        Row({ space: 0 }) {
-          this.phoneNavigationItem('bookshelf_library', '书架', true);
-          this.phoneNavigationItem('bookshelf_compass', '发现', false);
-          this.phoneNavigationItem('bookshelf_rss', 'RSS', false);
-          this.phoneNavigationItem('bookshelf_settings', '设置', false);
-        }
-        .width(360)
-        .height(68)
-        .padding(8)
-        .backgroundColor('#E6FFFCF8')
-        .border({ width: 1, color: '#C1C7CD' })
-        .borderRadius(24);
+        MainTabBar({ current: 'bookshelf', onSelect: (key: string): void => this.onMainTab(key) });
       }
       .width('100%')
-      .padding({ left: 14, right: 16 });
+      .padding({ left: TOK_SPACE_CARD_PADDING, right: TOK_SPACE_MD });
     }
     .width('100%')
     .height('100%')
-    .padding({ bottom: 16 })
     // This full-height visual placement layer is painted over the Scroll.
     // Transparent keeps its bottom-navigation descendants interactive while
     // allowing cards behind its blank region to receive their own clicks.
     .hitTestBehavior(HitTestMode.Transparent);
   }
 
-  @Builder
-  private phoneNavigationItem(assetName: string, label: string, active: boolean) {
-    Column({ space: 2 }) {
-      Stack({ alignContent: Alignment.Center }) {
-        if (assetName === 'bookshelf_library') {
-          Image($r('app.media.bookshelf_library')).width(24).height(24);
-        } else if (assetName === 'bookshelf_compass') {
-          Image($r('app.media.bookshelf_compass')).width(24).height(24);
-        } else if (assetName === 'bookshelf_rss') {
-          Image($r('app.media.bookshelf_rss')).width(24).height(24);
-        } else {
-          Image($r('app.media.bookshelf_settings')).width(24).height(24);
-        }
-      }
-      .width(30)
-      .height(30);
-
-      Text(label)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(11)
-        .lineHeight(18)
-        .fontColor(active ? '#FFFAF4' : '#756F69');
+  private onMainTab(key: string): void {
+    if (key === 'discover') {
+      this.onDiscoverRequested();
+    } else if (key === 'rss') {
+      this.onRssRequested();
+    } else if (key === 'settings') {
+      this.onSettingsRequested();
     }
-    .width(86.5)
-    .height(54)
-    .justifyContent(FlexAlign.Center)
-    .alignItems(HorizontalAlign.Center)
-    .backgroundColor(active ? '#1F3528' : Color.Transparent)
-    .borderRadius(24)
-    .onClick((): void => {
-      if (assetName === 'bookshelf_rss') {
-        this.onRssRequested();
-      } else if (assetName === 'bookshelf_settings') {
-        this.onSettingsRequested();
-      }
-    });
+    // 'bookshelf' is this page; MainTabBar suppresses the current tab.
   }
 
   @Builder
@@ -412,16 +378,16 @@ export struct BookshelfPage {
       }
       .width(82)
       .height(268)
-      .padding(8)
+      .padding(TOK_SPACE_XS)
       .justifyContent(FlexAlign.Center)
       .alignItems(HorizontalAlign.Center)
-      .backgroundColor('#E6FFFCF8')
-      .border({ width: 1, color: '#C1C7CD' })
+      .backgroundColor(TOK_CARD_BG)
+      .border({ width: 1, color: TOK_BORDER })
       .borderRadius(24);
     }
     .width(98)
     .height('100%')
-    .padding({ left: 16 })
+    .padding({ left: TOK_SPACE_MD })
     // Same placement rule as the Phone rail: do not turn its transparent
     // full-height region into a hit-test shield over shelf content.
     .hitTestBehavior(HitTestMode.Transparent);
@@ -445,17 +411,17 @@ export struct BookshelfPage {
       .height(32);
 
       Text(label)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
+        .fontFamily('ReaderInter')
+        .fontWeight(800)
         .fontSize(11)
         .lineHeight(18)
-        .fontColor(active ? '#FFFAF4' : '#756F69');
+        .fontColor(active ? TOK_ON_PRIMARY : TOK_MUTED);
     }
     .width(66)
     .height(58)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor(active ? '#1F3528' : Color.Transparent)
+    .backgroundColor(active ? TOK_PRIMARY_DARK : Color.Transparent)
     .borderRadius(24);
   }
 

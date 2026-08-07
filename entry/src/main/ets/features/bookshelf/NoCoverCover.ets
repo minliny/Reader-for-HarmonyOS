@@ -1,3 +1,7 @@
+import {
+  TOK_INK,
+  TOK_META_BG,
+} from '../common/ReaderTokens';
 /**
  * Figma `Library/BookCover` `Book=NoCover` variant (`3612:1796`): cream
  * `#F5ECE6` background, two horizontal rules, and a centered "暂无封面"
@@ -24,7 +28,7 @@ export struct NoCoverCover {
         .fontWeight(FontWeight.Bold)
         .fontSize(15 * this.coverWidth / 96.96)
         .lineHeight(18.3 * this.coverWidth / 96.96)
-        .fontColor('#1F1B17')
+        .fontColor(TOK_INK)
         .textAlign(TextAlign.Center)
         .position({ x: (this.coverWidth - this.labelWidth()) / 2, y: 63.57 / 145.44 * this.coverHeight })
         .maxLines(1);
@@ -38,7 +42,7 @@ export struct NoCoverCover {
     }
     .width(this.coverWidth)
     .height(this.coverHeight)
-    .backgroundColor('#F5ECE6')
+    .backgroundColor(TOK_META_BG)
     .borderRadius(8)
     .clip(true);
   }

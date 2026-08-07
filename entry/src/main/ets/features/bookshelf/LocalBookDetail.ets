@@ -1,6 +1,26 @@
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
+import {
+  TOK_BORDER,
+  TOK_CARD_BG,
+  TOK_CARD_BG_HI,
+  TOK_DANGER,
+  TOK_GREEN,
+  TOK_INK,
+  TOK_MUTED,
+  TOK_PAPER,
+  TOK_PRIMARY_DARK,
+  TOK_SCREEN_INSET,
+  TOK_SPACE_CARD_PADDING,
+  TOK_SPACE_CONTROL_INLINE,
+  TOK_SPACE_MD,
+  TOK_SPACE_SM,
+  TOK_SPACE_XS,
+} from '../common/ReaderTokens';
+
 import type { LocalReadingTocEntry } from '../reading/LocalReadingFlowGateway';
 import { NoCoverCover } from './NoCoverCover';
+import { registerReaderFonts } from '../common/ReaderFonts';
+import { PageBackBar } from '../common/PageBackBar';
 
 const PHONE_CONTENT_WIDTH = 350;
 const TABLET_CONTENT_WIDTH = 720;
@@ -34,19 +54,7 @@ export struct LocalBookDetail {
   onBack: () => void = (): void => {};
 
   aboutToAppear(): void {
-    const font = this.getUIContext().getFont();
-    font.registerFont({
-      familyName: 'ReaderInter',
-      familySrc: $rawfile('InterVariable.ttf'),
-    });
-    font.registerFont({
-      familyName: 'ReaderNotoSerifSCRegular',
-      familySrc: $rawfile('NotoSerifSC-Regular.ttf'),
-    });
-    font.registerFont({
-      familyName: 'ReaderNotoSerifSCBold',
-      familySrc: $rawfile('NotoSerifSC-Bold.ttf'),
-    });
+    registerReaderFonts(this.getUIContext().getFont());
   }
 
   build() {
@@ -61,59 +69,40 @@ export struct LocalBookDetail {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F8F4EC');
+    .backgroundColor(TOK_PAPER);
   }
 
   @Builder
   private backBar() {
-    Row({ space: 10 }) {
-      Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.book_detail_back'))
-          .width(24)
-          .height(24);
-      }
-      .width(44)
-      .height(44)
-      .borderRadius(22)
-      .onClick((): void => this.onBack());
-
-      Text('书籍详情')
-        // See B-DETAIL-01 above: Figma specifies Songti SC Bold here.
-        .fontFamily('ReaderNotoSerifSCBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(24)
-        .lineHeight(33)
-        .fontColor('#1F1B17')
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .layoutWeight(1);
-    }
-    .width('100%')
-    .height(58)
-    .padding({ left: 20, right: 20 })
-    .alignItems(VerticalAlign.Center);
+    // B-DETAIL-01: Figma specifies Songti SC Bold for the title; the shared
+    // PageBackBar uses the ReaderNotoSerifSCBold temporary bridge.
+    PageBackBar({
+      title: '书籍详情',
+      backIcon: $r('app.media.book_detail_back'),
+      onBack: (): void => this.onBack(),
+    });
   }
 
   @Builder
   private detailScroll() {
     Scroll() {
-      Column({ space: 8 }) {
+      Column({ space: TOK_SPACE_XS }) {
         this.heroCard();
         this.summaryCard();
         this.chapterSection();
       }
       .width(this.contentWidth())
-      .padding({ top: 8, bottom: 112 });
+      .padding({ top: TOK_SPACE_XS, bottom: 112 });
     }
     .layoutWeight(1)
     .width('100%')
-    .padding({ left: 19, right: 19 })
+    .padding({ left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET })
     .scrollBar(BarState.Off);
   }
 
   @Builder
   private heroCard() {
-    Row({ space: 14 }) {
+    Row({ space: TOK_SPACE_CARD_PADDING }) {
       // N-COVER-HERO-01 (user decision 2026-08-05): reuse the shelf-card
       // `BookCover` NoCover `3612:1796` scaled into the 86×122 Hero cover slot
       // when the local book has no cover; no new Figma variant drawn.
@@ -135,18 +124,18 @@ export struct LocalBookDetail {
           .fontWeight(FontWeight.Bold)
           .fontSize(22)
           .lineHeight(25.96)
-          .fontColor('#1F1B17')
+          .fontColor(TOK_INK)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
         Text(this.book.author)
           .width('100%')
-          .margin({ top: 8 })
+          .margin({ top: TOK_SPACE_XS })
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Regular)
           .fontSize(13)
           .lineHeight(17.55)
-          .fontColor('#756F69')
+          .fontColor(TOK_MUTED)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
@@ -157,7 +146,7 @@ export struct LocalBookDetail {
             .fontWeight(800)
             .fontSize(11)
             .lineHeight(16.188)
-            .fontColor('#756F69')
+            .fontColor(TOK_MUTED)
             .maxLines(1);
           Text(this.book.lastChapter ?? '')
             .layoutWeight(1)
@@ -165,13 +154,48 @@ export struct LocalBookDetail {
             .fontWeight(FontWeight.Regular)
             .fontSize(12)
             .lineHeight(16.188)
-            .fontColor('#1F1B17')
+            .fontColor(TOK_INK)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
         .width('100%')
         .height(16.188)
-        .margin({ top: 10 });
+        .margin({ top: TOK_SPACE_CONTROL_INLINE });
+
+        // Figma `2260:1432`/`2260:1433`: the Hero's 4th row — source label +
+        // 更换书源 pill.  Rendered as the Final-demo literal (`书源：优书网`);
+        // ShelfBook has no sourceName field and LocalBookDetail has no
+        // source-switch callback, so the pill is painted inert (same rule as
+        // the 移除书架 terminal visual).
+        Row({ space: TOK_SPACE_XS }) {
+          Text('书源：优书网')
+            .width(72)
+            .height(15)
+            .fontFamily('ReaderInter')
+            .fontWeight(FontWeight.Bold)
+            .fontSize(12)
+            .lineHeight(15)
+            .fontColor(TOK_MUTED)
+            .maxLines(1);
+
+          Stack({ alignContent: Alignment.Center }) {
+            Text('更换书源')
+              .fontFamily('ReaderInter')
+              .fontWeight(900)
+              .fontSize(9)
+              .lineHeight(18)
+              .fontColor(TOK_GREEN)
+              .textAlign(TextAlign.Center)
+              .padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS });
+          }
+          .width(52)
+          .height(18)
+          .borderRadius(999)
+          .backgroundColor('#1A2379A4');
+        }
+        .width('100%')
+        .height(18)
+        .margin({ top: TOK_SPACE_XS });
       }
       .layoutWeight(1)
       .height(122)
@@ -180,15 +204,15 @@ export struct LocalBookDetail {
     .width(this.contentWidth())
     .height(152)
     .padding(15)
-    .backgroundColor('#E6FFFCF8')
-    .border({ width: 1, color: '#C1C7CD' })
+    .backgroundColor(TOK_CARD_BG)
+    .border({ width: 1, color: TOK_BORDER })
     .borderRadius(8)
     .alignItems(VerticalAlign.Top);
   }
 
   @Builder
   private summaryCard() {
-    Column({ space: 8 }) {
+    Column({ space: TOK_SPACE_XS }) {
       Text('简介')
         .width('100%')
         .height(18)
@@ -196,7 +220,7 @@ export struct LocalBookDetail {
         .fontWeight(FontWeight.Bold)
         .fontSize(15)
         .lineHeight(18)
-        .fontColor('#1F1B17')
+        .fontColor(TOK_INK)
         .maxLines(1);
 
       // Core may legitimately omit EPUB/TXT description metadata.  Do not
@@ -209,15 +233,15 @@ export struct LocalBookDetail {
         .fontWeight(FontWeight.Regular)
         .fontSize(13)
         .lineHeight(21.45)
-        .fontColor('#756F69')
+        .fontColor(TOK_MUTED)
         .maxLines(this.isTablet ? 2 : 3)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
     }
     .width(this.contentWidth())
     .height(this.summaryHeight())
     .padding(15)
-    .backgroundColor('#E6FFFCF8')
-    .border({ width: 1, color: '#C1C7CD' })
+    .backgroundColor(TOK_CARD_BG)
+    .border({ width: 1, color: TOK_BORDER })
     .borderRadius(8)
     .alignItems(HorizontalAlign.Start);
   }
@@ -226,20 +250,20 @@ export struct LocalBookDetail {
   private chapterSection() {
     Stack({ alignContent: Alignment.TopStart }) {
       Column() {
-        Row({ space: 12 }) {
+        Row({ space: TOK_SPACE_SM }) {
           Text('章节信息')
             .layoutWeight(1)
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Bold)
             .fontSize(15)
             .lineHeight(18)
-            .fontColor('#1F1B17')
+            .fontColor(TOK_INK)
             .maxLines(1);
 
           // This is the 94 × 30 painted capsule from the Final component.
           // Its 94 × 44 prototype target is a separate Figma RECTANGLE
           // layered below, not an enlarged replacement for this visual.
-          Row({ space: 8 }) {
+          Row({ space: TOK_SPACE_XS }) {
             Image($r('app.media.book_detail_directory'))
               .width(20)
               .height(20);
@@ -247,20 +271,20 @@ export struct LocalBookDetail {
               .fontFamily('ReaderInter')
               .fontWeight(900)
               .fontSize(12)
-              .fontColor('#1F3528')
+              .fontColor(TOK_PRIMARY_DARK)
               .maxLines(1);
           }
           .width(94)
           .height(30)
           .padding({ left: 11, right: 11 })
           .backgroundColor('#A3FFFCF8')
-          .border({ width: 1, color: '#C1C7CD' })
+          .border({ width: 1, color: TOK_BORDER })
           .borderRadius(999)
           .alignItems(VerticalAlign.Center);
         }
         .width('100%')
         .height(48)
-        .padding({ left: 14, right: 14 })
+        .padding({ left: TOK_SPACE_CARD_PADDING, right: TOK_SPACE_CARD_PADDING })
         .alignItems(VerticalAlign.Center);
 
         ForEach(this.visibleToc(), (entry: LocalReadingTocEntry) => {
@@ -300,8 +324,8 @@ export struct LocalBookDetail {
     .width(this.contentWidth())
     .height(CHAPTER_SECTION_HEIGHT)
     .padding(1)
-    .backgroundColor('#E6FFFCF8')
-    .border({ width: 1, color: '#C1C7CD' })
+    .backgroundColor(TOK_CARD_BG)
+    .border({ width: 1, color: TOK_BORDER })
     .borderRadius(8)
     .clip(true);
   }
@@ -314,13 +338,13 @@ export struct LocalBookDetail {
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Regular)
         .fontSize(14)
-        .fontColor('#1F1B17')
+        .fontColor(TOK_INK)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
     }
       .width('100%')
       .height(CHAPTER_ROW_HEIGHT)
-      .padding({ left: 14, right: 14 })
+      .padding({ left: TOK_SPACE_CARD_PADDING, right: TOK_SPACE_CARD_PADDING })
       .border({ width: { top: 1 }, color: { top: '#47B4A697' } })
       .alignItems(VerticalAlign.Center)
       .onClick((): void => this.onSelectChapter(entry.index));
@@ -328,7 +352,7 @@ export struct LocalBookDetail {
 
   @Builder
   private actionArea() {
-    Row({ space: 10 }) {
+    Row({ space: TOK_SPACE_CONTROL_INLINE }) {
       Stack({ alignContent: Alignment.Center }) {
         Text('继续阅读')
           .fontFamily('ReaderInter')
@@ -339,8 +363,8 @@ export struct LocalBookDetail {
       }
       .width(this.actionButtonWidth())
       .height(46)
-      .backgroundColor('#1F3528')
-      .border({ width: 1, color: '#1F3528' })
+      .backgroundColor(TOK_PRIMARY_DARK)
+      .border({ width: 1, color: TOK_PRIMARY_DARK })
       .borderRadius(999)
       .onClick((): void => this.onContinue());
 
@@ -353,18 +377,29 @@ export struct LocalBookDetail {
           .fontWeight(900)
           .fontSize(13)
           .lineHeight(14.3)
-          .fontColor('#D62222');
+          .fontColor(TOK_DANGER);
       }
       .width(this.actionButtonWidth())
       .height(46)
-      .backgroundColor('#EBFFFCF8')
+      .backgroundColor(TOK_CARD_BG_HI)
       .border({ width: 1, color: '#6BB4A697' })
       .borderRadius(999);
     }
     .width(this.contentWidth())
     .height(77)
-    .padding({ top: 16, bottom: 15 })
-    .alignItems(VerticalAlign.Top);
+    .padding({ top: TOK_SPACE_MD, bottom: 15 })
+    .alignItems(VerticalAlign.Top)
+    // Figma `860:105`: vertical fade behind the ActionBar — transparent →
+    // rgba(249,240,230,0.96) at 42% → #f9f0e6, so scrolled content dissolves
+    // into the page background beneath the two buttons.
+    .linearGradient({
+      direction: GradientDirection.Bottom,
+      colors: [
+        ['#00F9F0E6', 0.0],
+        ['#F5F9F0E6', 0.42],
+        ['#FFF9F0E6', 1.0],
+      ],
+    });
   }
 
   private contentWidth(): number {

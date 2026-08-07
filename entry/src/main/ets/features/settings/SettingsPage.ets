@@ -1,5 +1,42 @@
-const PHONE_CONTENT_WIDTH = 350;
-const TABLET_CONTENT_WIDTH = 620;
+// Settings General — rebuilt 2026-08-05 against live Figma nodes
+// 943:2897 (Phone 390×844) / 943:3369 (Tablet 760×960).
+// Structural notes: sections are rounded white cards (#E6FFFCF8 + 1px #C1C7CD);
+// rows are 58 tall with a top divider; row controls are right-aligned with a
+// 14vp inset from the card inner edge (matches Figma switch right edge 336/706).
+import { MainTabBar } from '../shell/MainTabBar';
+import { registerReaderFonts } from '../common/ReaderFonts';
+import { PageBackBar } from '../common/PageBackBar';
+import { ReaderToggle } from '../common/ReaderToggle';
+import { ReaderSelect } from '../common/ReaderSelect';
+import { ReaderCard } from '../common/ReaderCard';
+import { ReaderSectionHeading } from '../common/ReaderSectionHeading';
+import { StatusBadge } from '../common/StatusBadge';
+import {
+  TOK_BORDER,
+  TOK_CARD_BG,
+  TOK_DANGER,
+  TOK_FIELD_SURFACE,
+  TOK_GREEN,
+  TOK_INK,
+  TOK_PAPER,
+  TOK_ROW_DIVIDER,
+  TOK_SCREEN_INSET,
+  TOK_SPACE_CARD_PADDING,
+  TOK_SPACE_CONTROL_INLINE,
+  TOK_SPACE_SM,
+  TOK_SPACE_XS,
+} from '../common/ReaderTokens';
+
+const PHONE_CONTENT_WIDTH = 352;   // 390 - 2*19
+const TABLET_CONTENT_WIDTH = 722;  // 760 - 2*19
+const PHONE_DANGER_WIDTH = 350.903;
+const TABLET_DANGER_WIDTH = 720;
+const ROW_DIVIDER = TOK_ROW_DIVIDER;    // rgba(180,166,151,0.22)
+const ICON_BG = '#172379A4';       // rgba(35,121,164,0.09)
+const ACTION_BG = '#1A2379A4';     // rgba(35,121,164,0.10)
+const FIELD_BG = TOK_FIELD_SURFACE;      // rgba(255,248,239,0.82)
+const CARD_BG = TOK_CARD_BG;       // rgba(255,252,248,0.9)
+const CONTROL_INSET = 14;
 
 export interface SettingsSnapshot {
   autoCheckUpdate: boolean;
@@ -10,6 +47,8 @@ export interface SettingsSnapshot {
 
 @Component
 export struct SettingsPage {
+  @State private activeSection: 'home' | 'general' = 'home';
+
   @Prop snapshot: SettingsSnapshot = {
     autoCheckUpdate: true,
     tapBottomScrollTop: true,
@@ -17,252 +56,428 @@ export struct SettingsPage {
     crashLog: true,
   };
   @Prop isTablet: boolean;
+  @State private themeValue: string = '跟随系统';
+  @State private languageValue: string = '简体中文';
+  @State private startupValue: string = '书架';
+  @State private animationValue: string = '标准';
+  @State private openSelect: string = '';
   onBack: () => void = (): void => {};
   onOpenSourceManagement: () => void = (): void => {};
   onOpenSync: () => void = (): void => {};
+  onRssRequested: () => void = (): void => {};
+  onDiscoverRequested: () => void = (): void => {};
   onToggle: (key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog', value: boolean) => void =
     (_key: string, _value: boolean): void => {};
 
   aboutToAppear(): void {
-    const font = this.getUIContext().getFont();
-    font.registerFont({
-      familyName: 'ReaderInter',
-      familySrc: $rawfile('InterVariable.ttf'),
-    });
+    registerReaderFonts(this.getUIContext().getFont());
   }
 
   build() {
     Column() {
-      this.backBar();
-      Scroll() {
-        Column({ space: 0 }) {
-          this.sectionHeader('基础偏好');
-          this.row('app.theme', 'App主题', 'segmented', '日间');
-          this.row('app.language', '语言', 'select', '简体中文');
-          this.row('app.startup', '启动时打开', 'select', '书架');
-
-          this.sectionHeader('行为与反馈');
-          this.switchRow('autoCheckUpdate', '自动检查更新', this.snapshot.autoCheckUpdate);
-          this.switchRow('tapBottomScrollTop', '点击当前底栏回顶部', this.snapshot.tapBottomScrollTop);
-          this.switchRow('reduceMotion', '减少动态效果', this.snapshot.reduceMotion);
-          this.switchRow('crashLog', '崩溃日志', this.snapshot.crashLog);
-          this.row('app.animation', '动画效果', 'select', '跟随系统');
-          this.row('app.cache', '缓存清理', 'inline', '清理');
-
-          this.sectionHeader('系统权限');
-          this.row('app.fileAccess', '文件访问', 'inline', '已授权');
-          this.row('app.notification', '通知权限', 'inline', '未授权');
-          this.row('app.battery', '电池优化', 'inline', '受系统管理');
-
-          this.sectionHeader('书源');
-          this.navRow('书源管理', (): void => this.onOpenSourceManagement());
-
-          this.sectionHeader('同步');
-          this.navRow('同步与备份', (): void => this.onOpenSync());
-
-          this.sectionHeader('设置操作');
-          this.dangerRow();
-        }
-        .width('100%')
-        .padding({ top: 4, bottom: 120 });
+      if (this.activeSection === 'home') {
+        this.homeTopBar();
+      } else {
+        this.generalBackBar();
       }
-      .layoutWeight(1)
-      .width('100%')
-      .scrollBar(BarState.Off);
+      if (this.activeSection === 'home') {
+        this.settingsHome();
+        MainTabBar({ current: 'settings', onSelect: (key: string): void => this.onMainTab(key) });
+      } else {
+        Scroll() {
+          Column({ space: TOK_SPACE_SM }) {
+            this.preferenceCard();
+            this.behaviorCard();
+            this.permissionCard();
+            this.dangerRow();
+          }
+          .width('100%')
+          .padding({ left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET, top: TOK_SPACE_XS, bottom: TOK_SPACE_SM });
+        }
+        .layoutWeight(1)
+        .width('100%')
+        .scrollBar(BarState.Off);
+      }
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F8F4EC');
+    .backgroundColor(TOK_PAPER);
   }
 
   @Builder
-  private backBar() {
-    Row({ space: 10 }) {
-      Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.search_back')).width(20).height(20);
-      }
-      .width(44)
-      .height(44)
-      .borderRadius(22)
-      .onClick((): void => this.onBack());
+  private generalBackBar() {
+    PageBackBar({
+      title: '通用设置',
+      onBack: (): void => {
+        this.activeSection = 'home';
+      },
+    });
+  }
 
-      Text('通用设置')
-        .fontFamily('ReaderInter')
+  @Builder
+  private homeTopBar() {
+    Row() {
+      Text('设置')
+        .fontFamily('ReaderNotoSerifSCBold')
         .fontWeight(FontWeight.Bold)
-        .fontSize(24)
-        .lineHeight(33)
-        .fontColor('#1F1B17')
-        .maxLines(1)
-        .layoutWeight(1);
+        .fontSize(29)
+        .lineHeight(38)
+        .fontColor(TOK_INK);
     }
     .width('100%')
     .height(58)
-    .padding({ left: 20, right: 20 })
+    .padding({ left: 20, right: 20, top: 6 })
     .alignItems(VerticalAlign.Center);
   }
 
   @Builder
-  private sectionHeader(title: string) {
-    Text(title)
-      .width(this.contentWidth())
-      .fontFamily('ReaderInter')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(13)
-      .lineHeight(18)
-      .fontColor('#1F1B17')
-      .padding({ left: this.isTablet ? 20 : 14, right: this.isTablet ? 20 : 14, top: 12, bottom: 4 });
+  private settingsHome() {
+    Scroll() {
+      Column({ space: TOK_SPACE_SM }) {
+        ReaderCard({ bg: CARD_BG, cardBorder: TOK_BORDER, radius: 8, cardWidth: this.contentWidth() }) {
+          Column() {
+            ReaderSectionHeading({ title: '设置' });
+            Column() {
+              this.homeRow('通用设置', $r('app.media.settings_row_general'), (): void => {
+                this.activeSection = 'general';
+              });
+              this.homeRow('书架与搜索设置', $r('app.media.settings_row_shelf_search'), (): void => {});
+              this.homeRow('书源管理', $r('app.media.settings_row_source'), (): void => this.onOpenSourceManagement());
+              this.homeRow('同步与备份', $r('app.media.settings_row_sync'), (): void => this.onOpenSync());
+              this.homeRow('关于与反馈', $r('app.media.settings_row_about'), (): void => {});
+            }
+            .width('100%')
+            .margin({ top: 5 });
+          }
+          .width('100%')
+          .padding({ top: TOK_SPACE_CONTROL_INLINE, bottom: 1 });
+        }
+      }
+      .width('100%')
+      .padding({ left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET, top: TOK_SPACE_XS, bottom: TOK_SPACE_SM });
+    }
+    .layoutWeight(1)
+    .width('100%')
+    .align(Alignment.Top)
+    .scrollBar(BarState.Off);
   }
 
   @Builder
-  private row(icon: string, label: string, control: string, value: string) {
+  private homeRow(label: string, icon: Resource, action: () => void) {
     Row() {
-      Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.bookshelf_settings')).width(16).height(16);
-      }
-      .width(28)
-      .height(28)
-      .backgroundColor('#1F2D4A3E')
-      .borderRadius(14);
-
+      this.iconBox(icon);
       Text(label)
         .layoutWeight(1)
         .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(14)
-        .lineHeight(20)
-        .fontColor('#1F1B17')
+        .fontWeight(800)
+        .fontSize(13)
+        .lineHeight(15.34)
+        .fontColor(TOK_INK)
         .maxLines(1);
-
-      this.controlView(control, value);
+      Image($r('app.media.rss_chevron')).width(16).height(14);
     }
-    .width(this.contentWidth())
-    .height(48)
-    .padding({ left: this.isTablet ? 20 : 14, right: this.isTablet ? 20 : 14 })
-    .alignItems(VerticalAlign.Center);
-  }
-
-  @Builder
-  private controlView(control: string, value: string) {
-    if (control === 'switch') {
-      Text('')
-        .width(36)
-        .height(20)
-        .backgroundColor('#2D4A3E')
-        .borderRadius(10);
-    } else if (control === 'segmented') {
-      Row({ space: 2 }) {
-        Text('日间')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(12)
-          .fontColor('#FFFFFF')
-          .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-          .backgroundColor('#2D4A3E')
-          .borderRadius(8);
-        Text('夜间')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(12)
-          .fontColor('#564D44')
-          .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-          .backgroundColor('#EEE8DF')
-          .borderRadius(8);
-      }
-      .padding(2)
-      .backgroundColor('#EEE8DF')
-      .borderRadius(10);
-    } else {
-      Text(value)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(12)
-        .fontColor('#756F69')
-        .maxLines(1);
-    }
-  }
-
-  @Builder
-  private switchRow(key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
-    label: string, value: boolean) {
-    Row() {
-      Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.bookshelf_settings')).width(16).height(16);
-      }
-      .width(28)
-      .height(28)
-      .backgroundColor('#1F2D4A3E')
-      .borderRadius(14);
-
-      Text(label)
-        .layoutWeight(1)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(14)
-        .lineHeight(20)
-        .fontColor('#1F1B17')
-        .maxLines(1);
-
-      Stack({ alignContent: Alignment.Center }) {
-        Text('')
-          .width(32)
-          .height(18)
-          .backgroundColor(value ? '#2D4A3E' : '#C1C7CD')
-          .borderRadius(9);
-        Text('')
-          .width(14)
-          .height(14)
-          .backgroundColor('#FFFCF8')
-          .borderRadius(7)
-          .position({ x: value ? 16 : 2, y: 2 });
-      }
-      .width(36)
-      .height(22)
-      .onClick((): void => this.onToggle(key, !value));
-    }
-    .width(this.contentWidth())
-    .height(48)
-    .padding({ left: this.isTablet ? 20 : 14, right: this.isTablet ? 20 : 14 })
-    .alignItems(VerticalAlign.Center);
-  }
-
-  @Builder
-  private navRow(label: string, action: () => void) {
-    Row() {
-      Text(label)
-        .layoutWeight(1)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(14)
-        .lineHeight(20)
-        .fontColor('#1F1B17')
-        .maxLines(1);
-      Image($r('app.media.rss_chevron'))
-        .width(20)
-        .height(20);
-    }
-    .width(this.contentWidth())
-    .height(48)
-    .padding({ left: this.isTablet ? 20 : 14, right: this.isTablet ? 20 : 14 })
+    .width('100%')
+    .height(58)
+    .padding({ left: TOK_SPACE_SM, right: CONTROL_INSET })
     .alignItems(VerticalAlign.Center)
+    .border({ width: { top: 0.5 }, color: ROW_DIVIDER })
     .onClick((): void => action());
+  }
+
+  private onMainTab(key: string): void {
+    if (key === 'bookshelf') {
+      this.onBack();
+    } else if (key === 'discover') {
+      this.onDiscoverRequested();
+    } else if (key === 'rss') {
+      this.onRssRequested();
+    }
+    // 'settings' is this page; MainTabBar suppresses the current tab.
+  }
+
+  @Builder
+  private preferenceCard() {
+    ReaderCard({ bg: CARD_BG, cardBorder: TOK_BORDER, radius: 8, cardWidth: this.contentWidth() }) {
+      Column() {
+        ReaderSectionHeading({ title: '基础偏好' });
+        Column() {
+          this.selectRow('App主题', $r('app.media.settings_gen_theme'), 'theme', ['跟随系统', '浅色', '深色']);
+          this.selectRow('语言', $r('app.media.settings_gen_language'), 'language',
+            ['简体中文', '繁体中文', 'English', '日本語', '한국어']);
+          this.selectRow('启动时打开', $r('app.media.settings_gen_startup'), 'startup',
+            ['书架', '发现', 'RSS', '设置']);
+        }
+        .width('100%')
+        .margin({ top: 5 });
+      }
+      .width('100%')
+      .padding({ top: TOK_SPACE_CONTROL_INLINE, bottom: 1 });
+    }
+  }
+
+  @Builder
+  private behaviorCard() {
+    ReaderCard({ bg: CARD_BG, cardBorder: TOK_BORDER, radius: 8, cardWidth: this.contentWidth() }) {
+      Column() {
+        ReaderSectionHeading({ title: '行为与反馈' });
+        Column() {
+          this.switchRow('自动检查更新', $r('app.media.settings_gen_update'), 'autoCheckUpdate', this.snapshot.autoCheckUpdate);
+          this.switchRow('点击当前底栏回顶部', $r('app.media.settings_gen_tap_top'), 'tapBottomScrollTop', this.snapshot.tapBottomScrollTop);
+          this.switchRow('减少动态效果', $r('app.media.settings_gen_motion'), 'reduceMotion', this.snapshot.reduceMotion);
+          this.switchRow('崩溃日志', $r('app.media.settings_gen_crash'), 'crashLog', this.snapshot.crashLog);
+          this.selectRow('动画效果', $r('app.media.settings_gen_animation'), 'animation', ['标准', '减弱', '关闭']);
+          this.actionRow('缓存清理', $r('app.media.settings_gen_cache'), '清理缓存');
+        }
+        .width('100%')
+        .margin({ top: 5 });
+      }
+      .width('100%')
+      .padding({ top: TOK_SPACE_CONTROL_INLINE, bottom: 1 });
+    }
+  }
+
+  @Builder
+  private permissionCard() {
+    ReaderCard({ bg: CARD_BG, cardBorder: TOK_BORDER, radius: 8, cardWidth: this.contentWidth() }) {
+      Column() {
+        ReaderSectionHeading({ title: '系统权限' });
+        Column() {
+          this.permissionRow('文件访问', $r('app.media.settings_gen_file'), '#212B895C', '#28704E');
+          this.permissionRow('通知权限', $r('app.media.settings_gen_notification'), '#24B0661D', '#8C521D');
+          this.permissionRow('电池优化', $r('app.media.settings_gen_battery'), '#212379A4', TOK_GREEN);
+        }
+        .width('100%')
+        .margin({ top: 5 });
+      }
+      .width('100%')
+      .padding({ top: TOK_SPACE_CONTROL_INLINE, bottom: 1 });
+    }
+  }
+
+  @Builder
+  private iconBox(icon: Resource) {
+    Stack({ alignContent: Alignment.Center }) {
+      Image(icon).width(15).height(15);
+    }
+    .width(28)
+    .height(28)
+    .borderRadius(14)
+    .backgroundColor(ICON_BG);
+  }
+
+  @Builder
+  private switchRow(label: string, icon: Resource, key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
+    value: boolean) {
+    Row() {
+      this.iconBox(icon);
+      Text(label)
+        .layoutWeight(1)
+        .fontFamily('ReaderInter')
+        .fontWeight(800)
+        .fontSize(13)
+        .lineHeight(15.34)
+        .fontColor(TOK_INK)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis });
+      this.settingsSwitch(value, (): void => this.onToggle(key, !value));
+    }
+    .width('100%')
+    .height(58)
+    .padding({ left: TOK_SPACE_SM, right: CONTROL_INSET })
+    .alignItems(VerticalAlign.Center)
+    .border({ width: { top: 0.5 }, color: ROW_DIVIDER });
+  }
+
+  @Builder
+  private selectRow(label: string, icon: Resource, key: string, options: string[]) {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Row() {
+        this.iconBox(icon);
+        Text(label)
+          .layoutWeight(1)
+          .fontFamily('ReaderInter')
+          .fontWeight(800)
+          .fontSize(13)
+          .lineHeight(15.34)
+          .fontColor(TOK_INK)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis });
+      }
+      .width('100%')
+      .height(58)
+      .padding({ left: TOK_SPACE_SM, right: CONTROL_INSET })
+      .alignItems(VerticalAlign.Center)
+      .border({ width: { top: 0.5 }, color: ROW_DIVIDER });
+
+      // 下拉统一 (问题 2): 复用共享 ReaderSelect, 消除 SettingsPage.selectSurface 双实现。
+      ReaderSelect({
+        value: this.currentValue(key),
+        options: options,
+        isOpen: this.openSelect === key,
+        onToggle: (): void => {
+          this.openSelect = this.openSelect === key ? '' : key;
+        },
+        onSelect: (opt: string): void => {
+          this.setSelectValue(key, opt);
+          this.openSelect = '';
+        },
+      })
+        .position({ x: this.contentWidth() - CONTROL_INSET - this.selectWidth(options), y: 11 });
+    }
+    .width('100%')
+    .height(this.surfaceStackHeight(key, options));
+  }
+
+  // 统一下拉已收敛到共享 ReaderSelect(动效 1506:8807); 此处不再有私有复制。
+  private selectWidth(options: string[]): number {
+    let maxLen = 0;
+    for (const opt of options) {
+      if (opt.length > maxLen) {
+        maxLen = opt.length;
+      }
+    }
+    return maxLen * 12 + 44;
+  }
+
+  private surfaceStackHeight(key: string, options: string[]): number {
+    if (this.openSelect === key) {
+      return 11 + options.length * 36;
+    }
+    return 58;
+  }
+
+  @Builder
+  private actionRow(label: string, icon: Resource, actionLabel: string) {
+    Row() {
+      this.iconBox(icon);
+      Text(label)
+        .layoutWeight(1)
+        .fontFamily('ReaderInter')
+        .fontWeight(800)
+        .fontSize(13)
+        .lineHeight(15.34)
+        .fontColor(TOK_INK)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis });
+      this.inlineAction(actionLabel, 66);
+    }
+    .width('100%')
+    .height(58)
+    .padding({ left: TOK_SPACE_SM, right: CONTROL_INSET })
+    .alignItems(VerticalAlign.Center)
+    .border({ width: { top: 0.5 }, color: ROW_DIVIDER });
+  }
+
+  @Builder
+  private permissionRow(label: string, icon: Resource, badgeBg: string, badgeDot: string) {
+    Row() {
+      this.iconBox(icon);
+      Text(label)
+        .layoutWeight(1)
+        .fontFamily('ReaderInter')
+        .fontWeight(800)
+        .fontSize(13)
+        .lineHeight(15.34)
+        .fontColor(TOK_INK)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis });
+      Row() {
+        this.statusBadge(badgeBg, badgeDot);
+        Row().width(55);
+        this.inlineAction('去设置', 55);
+        Row().width(6);
+        Stack({ alignContent: Alignment.Center }) {
+          Image($r('app.media.rss_chevron')).width(14).height(14);
+        }
+        .width(16)
+        .height(16);
+      }
+      .alignItems(VerticalAlign.Center);
+    }
+    .width('100%')
+    .height(58)
+    .padding({ left: TOK_SPACE_SM, right: CONTROL_INSET })
+    .alignItems(VerticalAlign.Center)
+    .border({ width: { top: 0.5 }, color: ROW_DIVIDER });
+  }
+
+  @Builder
+  private settingsSwitch(value: boolean, onTap: () => void) {
+    ReaderToggle({ value: value, radius: 12, onToggle: onTap });
+  }
+
+  private currentValue(key: string): string {
+    if (key === 'theme') {
+      return this.themeValue;
+    } else if (key === 'language') {
+      return this.languageValue;
+    } else if (key === 'startup') {
+      return this.startupValue;
+    }
+    return this.animationValue;
+  }
+
+  private setSelectValue(key: string, value: string): void {
+    if (key === 'theme') {
+      this.themeValue = value;
+    } else if (key === 'language') {
+      this.languageValue = value;
+    } else if (key === 'startup') {
+      this.startupValue = value;
+    } else if (key === 'animation') {
+      this.animationValue = value;
+    }
+  }
+
+  @Builder
+  private inlineAction(label: string, width: number) {
+    Stack({ alignContent: Alignment.Center }) {
+      Text(label)
+        .fontFamily('ReaderInter')
+        .fontWeight(800)
+        .fontSize(11)
+        .fontColor(TOK_GREEN);
+    }
+    .width(width)
+    .height(34)
+    .borderRadius(6)
+    .backgroundColor(ACTION_BG);
+  }
+
+  @Builder
+  private statusBadge(bg: string, dot: string) {
+    StatusBadge({ bg: bg, dot: dot, radius: 9 });
   }
 
   @Builder
   private dangerRow() {
     Row() {
-      Text('重置默认设置')
+      Stack({ alignContent: Alignment.Center }) {
+        Image($r('app.media.settings_gen_refresh')).width(15).height(15);
+      }
+      .width(28)
+      .height(28)
+      .borderRadius(14)
+      .backgroundColor(ICON_BG);
+
+      Text('恢复默认')
         .layoutWeight(1)
         .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(14)
-        .lineHeight(20)
-        .fontColor('#D62222')
-        .maxLines(1);
+        .fontWeight(FontWeight.Regular)
+        .fontSize(16)
+        .lineHeight(19.2)
+        .fontColor(TOK_DANGER)
+        .maxLines(1)
+        .margin({ left: TOK_SPACE_CONTROL_INLINE });
+
+      Image($r('app.media.rss_chevron')).width(14).height(14);
     }
-    .width(this.contentWidth())
-    .height(48)
-    .padding({ left: this.isTablet ? 20 : 14, right: this.isTablet ? 20 : 14 })
-    .alignItems(VerticalAlign.Center);
+    .width(this.isTablet ? TABLET_DANGER_WIDTH : PHONE_DANGER_WIDTH)
+    .height(58)
+    .padding({ left: 12.55, right: TOK_SPACE_CARD_PADDING })
+    .alignItems(VerticalAlign.Center)
+    .backgroundColor('#E0FFFFFF')
+    .borderRadius(8);
   }
 
   private contentWidth(): number {

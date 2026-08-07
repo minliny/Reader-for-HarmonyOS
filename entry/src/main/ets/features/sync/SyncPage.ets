@@ -3,9 +3,50 @@ import {
   type SyncSnapshot,
   DEFAULT_SYNC_SNAPSHOT,
 } from './SyncGateway';
+import { registerReaderFonts } from '../common/ReaderFonts';
+import { PageBackBar } from '../common/PageBackBar';
+import { ReaderSelect } from '../common/ReaderSelect';
+import {
+  TOK_BORDER,
+  TOK_CARD_BG,
+  TOK_CONTROL_INK,
+  TOK_FIELD_SURFACE,
+  TOK_GREEN,
+  TOK_INK,
+  TOK_MUTED,
+  TOK_PAPER,
+  TOK_PRIMARY_DARK,
+  TOK_SCREEN_INSET,
+  TOK_SPACE_CARD_PADDING,
+  TOK_SPACE_CONTROL_INLINE,
+  TOK_SPACE_LG,
+  TOK_SPACE_MD,
+  TOK_SPACE_SM,
+  TOK_SPACE_XS,
+} from '../common/ReaderTokens';
 
-const PHONE_CONTENT_WIDTH = 350;
-const TABLET_CONTENT_WIDTH = 620;
+// Sync Backup — rebuilt 2026-08-05 against live Figma nodes
+// 943:4982 (Phone 390×844) / 943:5462 (Tablet 760×960).
+// Structural notes: WebDAV card = #E6FFFCF8 + 1px #C1C7CD r8 with 4 labelled
+// rows (28px circular blue icon + 36px r6 input) and two action buttons;
+// Auto Backup / History = solid #FFFCF8 cards + #D8D0C3 r13 with muted
+// 11px tracked section titles.
+const PHONE_CONTENT_WIDTH = 350;   // 390 - 2*19 (Figma container px 19)
+const TABLET_CONTENT_WIDTH = 720;  // 760 - 2*19
+const CARD_BG = TOK_CARD_BG;       // rgba(255,252,248,0.9) — WebDAV card
+const CARD_BG_SOLID = '#FFFCF8';   // solid — Auto/History cards
+const CARD_BORDER = TOK_BORDER;
+const CARD_BORDER_SOFT = '#D8D0C3';
+const ROW_BG = '#B3FFFCF8';        // rgba(255,252,248,0.7) — labelled row
+const ROW_BORDER = '#4DB4A697';    // rgba(180,166,151,0.3)
+const ICON_BG = '#172379A4';       // rgba(35,121,164,0.09) — row icon circle
+const FIELD_BG = TOK_FIELD_SURFACE;      // rgba(255,248,239,0.82) — input fill
+const GHOST_BG = '#14236179';      // rgba(35,97,121,0.08) — test button
+const GHOST_BORDER = '#38236179';  // rgba(35,97,121,0.22)
+const SOLID_BG = '#243D30';        // save button
+const BADGE_BG = '#EEE7DB';
+const EXPAND_BG = '#A3EEE7DB';     // rgba(238,230,219,0.64)
+const FIELD_TEXT = TOK_CONTROL_INK;
 
 @Component
 export struct SyncPage {
@@ -18,13 +59,11 @@ export struct SyncPage {
   @State webdavUrl: string = '';
   @State webdavUser: string = '';
   @State webdavPass: string = '';
+  @State webdavPath: string = '';
+  @State private openSelect: string = '';
 
   aboutToAppear(): void {
-    const font = this.getUIContext().getFont();
-    font.registerFont({
-      familyName: 'ReaderInter',
-      familySrc: $rawfile('InterVariable.ttf'),
-    });
+    registerReaderFonts(this.getUIContext().getFont());
     this.webdavUrl = this.snapshot.webdavUrl;
     this.webdavUser = this.snapshot.webdavUser;
     this.webdavPass = this.snapshot.webdavPass;
@@ -34,13 +73,13 @@ export struct SyncPage {
     Column() {
       this.backBar();
       Scroll() {
-        Column({ space: 0 }) {
+        Column({ space: TOK_SPACE_MD }) {
           this.webdavSection();
           this.autoBackupSection();
           this.historySection();
         }
         .width('100%')
-        .padding({ bottom: 120 });
+        .padding({ left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET, top: TOK_SPACE_XS, bottom: 18 });
       }
       .layoutWeight(1)
       .width('100%')
@@ -48,255 +87,363 @@ export struct SyncPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F8F4EC');
+    .backgroundColor(TOK_PAPER);
   }
 
   @Builder
   private backBar() {
-    Row({ space: 10 }) {
-      Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.search_back')).width(20).height(20);
-      }
-      .width(44)
-      .height(44)
-      .borderRadius(22)
-      .onClick((): void => this.onBack());
-
-      Text('同步与备份')
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(24)
-        .lineHeight(33)
-        .fontColor('#1F1B17')
-        .maxLines(1)
-        .layoutWeight(1);
-    }
-    .width('100%')
-    .height(58)
-    .padding({ left: 20, right: 20 })
-    .alignItems(VerticalAlign.Center);
+    PageBackBar({
+      title: '同步与备份',
+      titleColor: '#1A1612',
+      onBack: (): void => this.onBack(),
+    });
   }
 
+  // Section title inside the WebDAV section (dark 13px Inter Black).
   @Builder
-  private sectionTitle(title: string) {
+  private sectionHeadingDark(title: string) {
     Text(title)
-      .width(this.contentWidth())
+      .width('100%')
+      .height(16)
       .fontFamily('ReaderInter')
-      .fontWeight(FontWeight.Bold)
+      .fontWeight(900)
       .fontSize(13)
-      .lineHeight(18)
-      .fontColor('#1F1B17')
-      .padding({ left: this.isTablet ? 20 : 14, right: this.isTablet ? 20 : 14, top: 16, bottom: 8 });
+      .lineHeight(15.6)
+      .fontColor(TOK_INK)
+      .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM });
+  }
+
+  // Auto Backup / History section titles: muted 11px tracked caps.
+  @Builder
+  private sectionHeadingMuted(title: string) {
+    Text(title)
+      .width('100%')
+      .fontFamily('ReaderInter')
+      .fontWeight(900)
+      .fontSize(11)
+      .fontColor('#9C9488')
+      .letterSpacing(1.1)
+      .padding({ left: TOK_SPACE_SM });
   }
 
   @Builder
   private webdavSection() {
-    this.sectionTitle('WebDAV 配置');
-    Column({ space: 0 }) {
-      this.inputRow('服务器地址', this.webdavUrl, (value: string): void => {
-        this.webdavUrl = value;
-      });
-      this.inputRow('用户名', this.webdavUser, (value: string): void => {
-        this.webdavUser = value;
-      });
-      this.passwordRow();
-      this.rowValue('连接测试', '测试', (): void => this.onTestConnection(this.webdavUrl.trim(), this.webdavUser.trim(), this.webdavPass));
+    Column({ space: TOK_SPACE_XS }) {
+      this.sectionHeadingDark('WebDAV 配置');
+      Column({ space: TOK_SPACE_XS }) {
+        Text('连接信息')
+          .width('100%')
+          .fontFamily('ReaderInter')
+          .fontWeight(900)
+          .fontSize(13)
+          .lineHeight(15.6)
+          .fontColor(TOK_INK);
+        this.webdavInputRow($r('app.media.bookshelf_rss'), '服务器地址', this.webdavUrl,
+          'https://dav.example.com/reader/backup', false, (value: string): void => {
+            this.webdavUrl = value;
+          });
+        this.webdavInputRow($r('app.media.directory_bookmark'), '账号', this.webdavUser,
+          'reader@example.com', false, (value: string): void => {
+            this.webdavUser = value;
+          });
+        this.webdavInputRow($r('app.media.directory_bookmark_on'), '密码', this.webdavPass,
+          '••••••••••••', true, (value: string): void => {
+            this.webdavPass = value;
+          });
+        this.webdavInputRow($r('app.media.reader_directory_directory'), '同步目录', this.webdavPath,
+          '/ReaderBackup/ReaderAndroid', false, (value: string): void => {
+            this.webdavPath = value;
+          });
+        this.configActions();
+      }
+      .width('100%')
+      .padding({ left: 11, right: 11, top: TOK_SPACE_CONTROL_INLINE, bottom: 11 })
+      .backgroundColor(CARD_BG)
+      .border({ width: 1, color: CARD_BORDER })
+      .borderRadius(8);
     }
-    .width(this.contentWidth())
-    .padding({ left: this.isTablet ? 20 : 14, right: this.isTablet ? 20 : 14 })
-    .backgroundColor('#E6FFFCF8')
-    .border({ width: 0.5, color: '#C1C7CD' })
+    .width('100%');
+  }
+
+  @Builder
+  private webdavInputRow(icon: Resource, label: string, value: string, placeholder: string,
+    isPassword: boolean, onChange: (value: string) => void) {
+    Row({ space: 9 }) {
+      Stack({ alignContent: Alignment.Center }) {
+        Image(icon).width(15).height(15);
+      }
+      .width(28)
+      .height(28)
+      .borderRadius(14)
+      .backgroundColor(ICON_BG);
+
+      Column({ space: 5 }) {
+        Text(label)
+          .width('100%')
+          .fontFamily('ReaderInter')
+          .fontWeight(800)
+          .fontSize(13)
+          .lineHeight(15.34)
+          .fontColor(TOK_INK)
+          .maxLines(1);
+        if (isPassword) {
+          TextInput({ text: value, placeholder: placeholder })
+            .width('100%')
+            .height(36)
+            // Credentials must never be rendered as ordinary readable page
+            // text. They remain transient page state; this does not introduce
+            // a storage policy for WebDAV secrets.
+            .type(InputType.Password)
+            .fontFamily('ReaderInter')
+            .fontWeight(600)
+            .fontSize(12)
+            .fontColor(FIELD_TEXT)
+            .backgroundColor(FIELD_BG)
+            .border({ width: 1, color: CARD_BORDER })
+            .borderRadius(6)
+            .padding({ left: 11, right: 11 })
+            .placeholderColor('#9C9488')
+            .onChange((newValue: string): void => onChange(newValue));
+        } else {
+          TextInput({ text: value, placeholder: placeholder })
+            .width('100%')
+            .height(36)
+            .fontFamily('ReaderInter')
+            .fontWeight(600)
+            .fontSize(12)
+            .fontColor(FIELD_TEXT)
+            .backgroundColor(FIELD_BG)
+            .border({ width: 1, color: CARD_BORDER })
+            .borderRadius(6)
+            .padding({ left: 11, right: 11 })
+            .placeholderColor('#9C9488')
+            .onChange((newValue: string): void => onChange(newValue));
+        }
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start);
+    }
+    .width('100%')
+    .padding({ left: 11, right: 11, top: TOK_SPACE_CONTROL_INLINE, bottom: TOK_SPACE_CONTROL_INLINE })
+    .backgroundColor(ROW_BG)
+    .border({ width: 1, color: ROW_BORDER })
     .borderRadius(8);
   }
 
   @Builder
-  private inputRow(label: string, value: string, onChange: (value: string) => void) {
-    Column({ space: 0 }) {
-      Text(label)
-        .width('100%')
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(13)
-        .lineHeight(18)
-        .fontColor('#1F1B17')
-        .maxLines(1);
-      TextInput({ text: value })
-        .width('100%')
-        .height(32)
-        .margin({ top: 4 })
-        .fontFamily('ReaderInter')
-        .fontSize(13)
-        .fontColor('#1F1B17')
-        .backgroundColor('#1A1F1B17')
-        .borderRadius(8)
-        .placeholderColor('#801F1B17')
-        .onChange((newValue: string): void => onChange(newValue));
-    }
-    .width('100%')
-    .padding({ top: 8, bottom: 8 })
-    .border({ width: { bottom: 0.5 }, color: { bottom: '#C1C7CD' } })
-    .alignItems(HorizontalAlign.Start);
-  }
+  private configActions() {
+    Row({ space: TOK_SPACE_XS }) {
+      Stack({ alignContent: Alignment.Center }) {
+        Text('测试网络连通性')
+          .fontFamily('ReaderInter')
+          .fontWeight(900)
+          .fontSize(12)
+          .fontColor(TOK_PRIMARY_DARK);
+      }
+      .height(42)
+      .layoutWeight(1)
+      .backgroundColor(GHOST_BG)
+      .border({ width: 1, color: GHOST_BORDER })
+      .borderRadius(8)
+      .onClick((): void => this.onTestConnection(this.webdavUrl.trim(), this.webdavUser.trim(), this.webdavPass));
 
-  @Builder
-  private passwordRow() {
-    Column({ space: 0 }) {
-      Text('密码')
-        .width('100%')
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(13)
-        .lineHeight(18)
-        .fontColor('#1F1B17')
-        .maxLines(1);
-      TextInput({ text: this.webdavPass })
-        .width('100%')
-        .height(32)
-        .margin({ top: 4 })
-        // Credentials must never be rendered as ordinary readable page text.
-        // They remain transient page state; this does not introduce a storage
-        // policy for WebDAV secrets.
-        .type(InputType.Password)
-        .fontFamily('ReaderInter')
-        .fontSize(13)
-        .fontColor('#1F1B17')
-        .backgroundColor('#1A1F1B17')
-        .borderRadius(8)
-        .placeholderColor('#801F1B17')
-        .onChange((value: string): void => {
-          this.webdavPass = value;
-        });
+      Stack({ alignContent: Alignment.Center }) {
+        Text('保存配置')
+          .fontFamily('ReaderInter')
+          .fontWeight(900)
+          .fontSize(12)
+          .fontColor('#FFFFFF');
+      }
+      .height(42)
+      .layoutWeight(1)
+      .backgroundColor(SOLID_BG)
+      .border({ width: 1, color: SOLID_BG })
+      .borderRadius(12)
+      // 保存配置 is visual-only: the host has no WebDAV-config persistence
+      // callback (see coverage matrix, Sync ⊘Core阻塞), so it must NOT trigger
+      // a backup or fake a save. Keep it inert until the executor/result-page
+      // contract is delivered.
+      .onClick((): void => {});
     }
-    .width('100%')
-    .padding({ top: 8, bottom: 8 })
-    .alignItems(HorizontalAlign.Start);
-  }
-
-  @Builder
-  private rowValue(label: string, value: string, action?: () => void) {
-    Row() {
-      Text(label)
-        .layoutWeight(1)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(14)
-        .lineHeight(20)
-        .fontColor('#1F1B17')
-        .maxLines(1);
-      Text(value)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(12)
-        .fontColor('#2D4A3E')
-        .maxLines(1)
-        .onClick((): void => {
-          if (action !== undefined) {
-            action();
-          }
-        });
-    }
-    .width('100%')
-    .height(48)
-    .alignItems(VerticalAlign.Center);
+    .width('100%');
   }
 
   @Builder
   private autoBackupSection() {
-    this.sectionTitle('自动备份配置');
-    Column({ space: 0 }) {
-      this.rowValue('保存位置', 'WebDAV');
-      this.rowValue('备份频率', '12小时');
-      this.rowValue('备份范围', '书架、进度');
+    Column({ space: TOK_SPACE_XS }) {
+      this.sectionHeadingMuted('自动备份配置');
+      Column() {
+        this.autoRow('保存位置', this.snapshot.saveLocation, 'location', ['WebDAV', '本地']);
+        Row().width('100%').height(1).backgroundColor(CARD_BORDER_SOFT);
+        this.autoRow('备份频率', this.snapshot.backupFrequency, 'frequency', ['12h', '24h', '每周']);
+        Row().width('100%').height(1).backgroundColor(CARD_BORDER_SOFT);
+        this.autoRow('备份范围', this.snapshot.backupScope, 'scope', ['书架、进度', '书架、进度、设置、书源']);
+      }
+      .width(this.contentWidth())
+      .backgroundColor(CARD_BG_SOLID)
+      .border({ width: 1, color: CARD_BORDER_SOFT })
+      .borderRadius(13);
     }
-    .width(this.contentWidth())
-    .padding({ left: this.isTablet ? 20 : 14, right: this.isTablet ? 20 : 14 })
-    .backgroundColor('#E6FFFCF8')
-    .border({ width: 0.5, color: '#C1C7CD' })
-    .borderRadius(8);
+    .width('100%');
+  }
+
+  @Builder
+  private autoRow(label: string, value: string, key: string, options: string[]) {
+    Row() {
+      Text(label)
+        .layoutWeight(1)
+        .fontFamily('ReaderInter')
+        .fontWeight(600)
+        .fontSize(13)
+        .fontColor('#1A1612')
+        .maxLines(1);
+      ReaderSelect({
+        value: value,
+        options: options,
+        isOpen: this.openSelect === key,
+        onToggle: (): void => {
+          this.openSelect = this.openSelect === key ? '' : key;
+        },
+        onSelect: (opt: string): void => {
+          this.openSelect = '';
+        },
+      });
+    }
+    .width('100%')
+    .height(50)
+    .padding({ left: TOK_SPACE_CARD_PADDING, right: TOK_SPACE_CARD_PADDING })
+    .alignItems(VerticalAlign.Center);
   }
 
   @Builder
   private historySection() {
-    this.sectionTitle('历史备份');
-    if (this.snapshot.history.length === 0) {
-      Column({ space: 0 }) {
-        Text('暂无备份记录')
-          .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(13)
-          .lineHeight(20)
-          .fontColor('#756F69')
-          .textAlign(TextAlign.Center)
-          .padding({ top: 24, bottom: 12 });
-        Text('立即备份')
-          .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(13)
-          .lineHeight(16)
-          .fontColor('#FFFFFF')
-          .textAlign(TextAlign.Center)
-          .padding({ top: 9, bottom: 9 })
-          .backgroundColor('#2D4A3E')
-          .borderRadius(999)
-          .margin({ bottom: 16, left: 16, right: 16 })
-          .onClick((): void => this.onTriggerBackup());
+    Column({ space: TOK_SPACE_XS }) {
+      this.sectionHeadingMuted('历史备份');
+      if (this.snapshot.history.length === 0) {
+        this.emptyState();
+      } else {
+        Column({ space: 9 }) {
+          ForEach(this.snapshot.history, (entry: SyncHistoryEntry) => {
+            this.historyRow(entry);
+          }, (entry: SyncHistoryEntry): string => `sync-history-${entry.timestamp}`);
+          this.expandRow();
+        }
+        .width('100%');
       }
-      .width(this.contentWidth())
-      .padding({ left: this.isTablet ? 20 : 14, right: this.isTablet ? 20 : 14 })
-      .backgroundColor('#E6FFFCF8')
-      .border({ width: 0.5, color: '#C1C7CD' })
-      .borderRadius(8);
-    } else {
-      Column({ space: 0 }) {
-        ForEach(this.snapshot.history, (entry: SyncHistoryEntry) => {
-          this.historyRow(entry);
-        }, (entry: SyncHistoryEntry): string => `sync-history-${entry.timestamp}`);
-      }
-      .width(this.contentWidth())
-      .padding({ left: this.isTablet ? 20 : 14, right: this.isTablet ? 20 : 14 })
-      .backgroundColor('#E6FFFCF8')
-      .border({ width: 0.5, color: '#C1C7CD' })
-      .borderRadius(8);
     }
+    .width('100%');
+  }
+
+  // Empty state is real app behavior (not present in the populated Figma
+  // node) and is kept as-is, restyled to the new card tokens.
+  @Builder
+  private emptyState() {
+    Column({ space: 0 }) {
+      Text('暂无备份记录')
+        .width('100%')
+        .fontFamily('ReaderInter')
+        .fontWeight(FontWeight.Regular)
+        .fontSize(13)
+        .lineHeight(20)
+        .fontColor(TOK_MUTED)
+        .textAlign(TextAlign.Center)
+        .padding({ top: TOK_SPACE_LG, bottom: TOK_SPACE_SM });
+      Text('立即备份')
+        .width('100%')
+        .fontFamily('ReaderInter')
+        .fontWeight(FontWeight.Bold)
+        .fontSize(13)
+        .lineHeight(16)
+        .fontColor('#FFFFFF')
+        .textAlign(TextAlign.Center)
+        .padding({ top: 9, bottom: 9 })
+        .backgroundColor(TOK_GREEN)
+        .borderRadius(999)
+        .margin({ bottom: TOK_SPACE_MD, left: TOK_SPACE_MD, right: TOK_SPACE_MD })
+        .onClick((): void => this.onTriggerBackup());
+    }
+    .width(this.contentWidth())
+    .backgroundColor(CARD_BG_SOLID)
+    .border({ width: 1, color: CARD_BORDER_SOFT })
+    .borderRadius(13);
   }
 
   @Builder
   private historyRow(entry: SyncHistoryEntry) {
-    Row() {
-      Column({ space: 3 }) {
+    Column() {
+      Row() {
+        Stack({ alignContent: Alignment.Center }) {
+          Text(entry.destination)
+            .fontFamily('ReaderInter')
+            .fontWeight(FontWeight.Bold)
+            .fontSize(11)
+            .fontColor('#243D30')
+            .maxLines(1);
+        }
+        .width(64)
+        .height(24)
+        .borderRadius(12)
+        .backgroundColor(BADGE_BG);
+
         Text(entry.timestamp)
-          .width('100%')
           .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(13)
-          .lineHeight(18)
-          .fontColor('#1F1B17')
-          .maxLines(1);
-        Text(`${entry.destination} · ${(entry.size / 1024).toFixed(1)} KB`)
-          .width('100%')
+          .fontWeight(600)
+          .fontSize(12)
+          .fontColor('#5C564E')
+          .maxLines(1)
+          .margin({ left: TOK_SPACE_CONTROL_INLINE });
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center);
+
+      Row() {
+        // Figma's scope line (e.g. "书架、分组、设置") has no backing field on
+        // SyncHistoryEntry; the entry's ok flag is shown as a real status.
+        Text(entry.ok ? '成功' : '失败')
+          .layoutWeight(1)
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Regular)
-          .fontSize(11)
-          .lineHeight(14)
-          .fontColor('#756F69')
+          .fontSize(12)
+          .fontColor('#5C564E')
+          .maxLines(1);
+        Text(`${(entry.size / 1048576).toFixed(1)} MB`)
+          .fontFamily('ReaderInter')
+          .fontWeight(600)
+          .fontSize(12)
+          .fontColor('#9C9488')
           .maxLines(1);
       }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start);
-
-      Text(entry.ok ? '成功' : '失败')
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(12)
-        .fontColor(entry.ok ? '#2D4A3E' : '#D62222')
-        .maxLines(1);
+      .width('100%')
+      .margin({ top: 15 })
+      .alignItems(VerticalAlign.Center);
     }
     .width('100%')
-    .height(48)
-    .border({ width: { bottom: 0.5 }, color: { bottom: '#C1C7CD' } })
-    .alignItems(VerticalAlign.Center);
+    .height(85)
+    .padding({ left: 13, right: 13, top: TOK_SPACE_SM })
+    .alignItems(HorizontalAlign.Start)
+    .backgroundColor(CARD_BG_SOLID)
+    .border({ width: 1, color: CARD_BORDER_SOFT })
+    .borderRadius(13);
+  }
+
+  @Builder
+  private expandRow() {
+    Row() {
+      Stack({ alignContent: Alignment.Center }) {
+        Text('展开')
+          .fontFamily('ReaderInter')
+          .fontWeight(FontWeight.Bold)
+          .fontSize(10)
+          .fontColor('#2F6373');
+      }
+      .height(26)
+      .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
+      .backgroundColor(EXPAND_BG)
+      .borderRadius(8);
+    }
+    .width('100%')
+    .height(32)
+    .justifyContent(FlexAlign.End);
   }
 
   private contentWidth(): number {

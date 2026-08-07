@@ -1,3 +1,5 @@
+import { registerReaderFonts } from '../common/ReaderFonts';
+
 /**
  * Figma-backed static reading body for `15 · Reader 2`:
  * - Phone `1023:18355` (390 × 844)
@@ -49,15 +51,7 @@ export struct ReadingSurface {
   @Prop surfaceWidth: number = 0;
 
   aboutToAppear(): void {
-    const font = this.getUIContext().getFont();
-    font.registerFont({
-      familyName: 'ReaderNotoSerifSCRegular',
-      familySrc: $rawfile('NotoSerifSC-Regular.ttf'),
-    });
-    font.registerFont({
-      familyName: 'ReaderNotoSerifSCBold',
-      familySrc: $rawfile('NotoSerifSC-Bold.ttf'),
-    });
+    registerReaderFonts(this.getUIContext().getFont());
   }
 
   build() {

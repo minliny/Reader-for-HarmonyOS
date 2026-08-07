@@ -8,6 +8,8 @@ import {
   BookshelfFlowGateway,
 } from '../features/bookshelf/BookshelfFlowGateway';
 import { BookshelfPage } from '../features/bookshelf/BookshelfPage';
+import { DiscoverPage, type DiscoverPresentation } from '../features/discover/DiscoverPage';
+import { DiscoverGateway } from '../features/discover/DiscoverGateway';
 import { BookshelfEmptyPage } from '../features/bookshelf/BookshelfEmptyPage';
 import { LocalBookDetail } from '../features/bookshelf/LocalBookDetail';
 import {
@@ -26,12 +28,11 @@ import {
   LocalReadingFlowGateway,
   type LocalReadingTocEntry,
 } from '../features/reading/LocalReadingFlowGateway';
-import {
-  SearchGateway,
-  type SearchBook,
-  type SearchHistory,
-  type SearchSource,
+import type {
+  SearchBook,
+  SearchSource,
 } from '../features/search/SearchGateway';
+import { SearchOrchestrator } from '../features/search/SearchOrchestrator';
 import {
   SearchPage,
   type SearchPresentation,
@@ -45,11 +46,12 @@ import {
   type RssPresentation,
 } from '../features/rss/RssPage';
 import { SettingsPage, type SettingsSnapshot } from '../features/settings/SettingsPage';
-import { SettingsGateway } from '../features/settings/SettingsGateway';
+import { SettingsOrchestrator } from '../features/settings/SettingsOrchestrator';
 import {
   SourceGateway,
   type BookSource,
 } from '../features/source/SourceGateway';
+import { SourceOrchestrator } from '../features/source/SourceOrchestrator';
 import {
   buildSourceSwitchCommitParams,
   SourceSwitchGateway,
@@ -65,13 +67,8 @@ import {
   type SourceSwitchPanelState,
 } from '../features/reading/SourceSwitchPanel';
 import { SyncPage } from '../features/sync/SyncPage';
-import {
-  type SyncBackupResult,
-  type SyncHistoryEntry,
-  type SyncSnapshot,
-  type SyncTestResult,
-  SyncGateway,
-} from '../features/sync/SyncGateway';
+import type { SyncSnapshot } from '../features/sync/SyncGateway';
+import { SyncOrchestrator } from '../features/sync/SyncOrchestrator';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import deviceInfo from '@ohos.deviceInfo';
 
@@ -80,7 +77,7 @@ const IMPORT_PRESENTATION_KEY = 'reader.bookshelf.import.presentation.v1';
 const MAX_IMPORT_RESULT_ITEMS = 50;
 const LOCAL_SOURCE_ID = 'local';
 
-type ReaderRoute = 'bookshelf' | 'detail' | 'reading' | 'directory' | 'search' | 'rss' | 'settings' | 'source' | 'sync';
+type ReaderRoute = 'bookshelf' | 'discover' | 'detail' | 'reading' | 'directory' | 'search' | 'rss' | 'settings' | 'source' | 'sync';
 type PreparedReaderRoute = 'reading' | 'directory';
 
 class LocalImportPresentation {
@@ -96,6 +93,7 @@ class LocalImportPresentation {
 @Entry
 @Component
 struct Index {
+  @StorageLink('statusBarHeightPx') statusBarHeightPx: number = 0;
   @State private shelfBooks: ShelfBook[] = [];
   @State private continueReading: ShelfBook | undefined = undefined;
   @State private isBookshelfVisualAdmitted: boolean = false;
@@ -111,6 +109,7 @@ struct Index {
   @State private searchSources: SearchSource[] = [];
   @State private rssPresentation: RssPresentation = { kind: 'feed', subscriptions: [], recentUnread: [] };
   @State private sourceSources: BookSource[] = [];
+  @State private discoverPresentation: DiscoverPresentation = { currentSourceName: '', kinds: [], books: [] };
   @State private settingsSnapshot: SettingsSnapshot = {
     autoCheckUpdate: true,
     tapBottomScrollTop: true,
@@ -126,8 +125,6 @@ struct Index {
     backupScope: '书架、进度',
     history: [],
   };
-  private settingsGateway: SettingsGateway | undefined;
-  private syncGateway: SyncGateway | undefined;
   /** Source-switch overlay presentation + the gateway that drives it. */
   @State private sourceSwitchVisible: boolean = false;
   @State private sourceSwitchState: SourceSwitchPanelState = { kind: 'discovering' };
@@ -139,26 +136,12 @@ struct Index {
    */
   @State private readingSessionActive: boolean = false;
   private navigationGeneration: number = 0;
-  /** Rejects a stale source-list reload after a newer toggle has started. */
-  private sourceToggleGeneration: number = 0;
-  /**
-   * Serializes source toggles. Core rejects a new `source.update` while any
-   * earlier Host operation is still pending (its before-image is unsafe), so
-   * a "latest wins" drop of the older callback is not enough — the older
-   * toggle must fully settle before the next starts. Each queued toggle also
-   * carries the navigation session that started it, so a completion callback
-   * can never write back into a later re-entry of Source Management.
-   */
-  private sourceToggleChain: Promise<void> = Promise.resolve();
-  /** Distinguishes one mounted Search page from a later re-entry. */
-  private searchSessionGeneration: number = 0;
-  /** Lets an early submit wait for the real `source.list` instead of failing empty. */
-  private searchSourceLoad: Promise<SearchSource[]> | undefined = undefined;
-  private searchSourceLoadSession: number = 0;
   /** Rejects a late shelf read after a newer import/refresh has completed. */
   private bookshelfLoadGeneration: number = 0;
-  /** Latest optimistic settings intent; older writes must not repaint it. */
-  private settingsWriteGeneration: number = 0;
+  private searchOrchestrator: SearchOrchestrator | undefined;
+  private settingsOrchestrator: SettingsOrchestrator | undefined;
+  private syncOrchestrator: SyncOrchestrator | undefined;
+  private sourceOrchestrator: SourceOrchestrator | undefined;
   /**
    * Installed only by the mounted ReadingSurface.  System Back calls this
    * guarded request so Core position persistence settles before the route is
@@ -240,6 +223,7 @@ struct Index {
           onSearchRequested: (): void => this.openSearch(),
           onRssRequested: (): void => this.openRss(),
           onSettingsRequested: (): void => this.openSettings(),
+          onDiscoverRequested: (): void => this.openDiscover(),
           onBookSelected: (book: ShelfBook): void => this.openLocalBookDetail(book),
         });
       } else if (this.route === 'bookshelf' && this.isCoreShelfEmpty) {
@@ -251,6 +235,10 @@ struct Index {
         BookshelfEmptyPage({
           isTablet: deviceInfo.deviceType === 'tablet',
           onImportRequested: (): void => this.openImportDialog(),
+          onSearchRequested: (): void => this.openSearch(),
+          onRssRequested: (): void => this.openRss(),
+          onSettingsRequested: (): void => this.openSettings(),
+          onDiscoverRequested: (): void => this.openDiscover(),
         });
       } else if (this.route === 'search') {
         SearchPage({
@@ -272,6 +260,16 @@ struct Index {
           onManage: (): void => this.onRssManage(),
           onSelectSubscription: (_id: string): void => this.onRssSubscriptionSelected(),
           onSelectItem: (_guid: string): void => this.onRssItemSelected(),
+          onSettingsRequested: (): void => this.openSettings(),
+          onDiscoverRequested: (): void => this.openDiscover(),
+        });
+      } else if (this.route === 'discover') {
+        DiscoverPage({
+          presentation: this.discoverPresentation,
+          isTablet: deviceInfo.deviceType === 'tablet',
+          onBack: (): void => this.returnToBookshelf(),
+          onRssRequested: (): void => this.openRss(),
+          onSettingsRequested: (): void => this.openSettings(),
         });
       } else if (this.route === 'settings') {
         SettingsPage({
@@ -280,6 +278,8 @@ struct Index {
           onBack: (): void => this.returnToBookshelf(),
           onOpenSourceManagement: (): void => this.openSourceManagement(),
           onOpenSync: (): void => this.openSync(),
+          onRssRequested: (): void => this.openRss(),
+          onDiscoverRequested: (): void => this.openDiscover(),
           onToggle: (key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
             value: boolean): void => this.onSettingToggled(key, value),
         });
@@ -319,6 +319,9 @@ struct Index {
             bookId: this.detailBook.bookId,
             requestedChapterIndex: this.requestedChapterIndex,
             isTablet: deviceInfo.deviceType === 'tablet',
+            bookTitle: this.detailBook.title,
+            sourceName: this.detailBook.sourceId,
+            totalChapters: this.detailToc.length,
             onExitRequestHandler: (requestExit: () => void): void => {
               this.readingExitRequest = requestExit;
             },
@@ -357,6 +360,7 @@ struct Index {
           sourceId: this.detailBook.sourceId,
           onSelectChapter: (chapterIndex: number): void => this.onDirectoryChapterSelected(chapterIndex),
           onSwitchSource: (): void => this.openSourceSwitch(),
+          onExit: (): void => this.closeDirectory(),
         });
       }
       if (this.route === 'bookshelf' && this.hasVisibleImportDialog()) {
@@ -391,6 +395,9 @@ struct Index {
       .width('100%')
       .height('100%')
       .backgroundColor($r('app.color.reader_surface'))
+      // 顶部: padding 状态栏高, 内容避让状态栏不上移; 底部: 内容延伸到手势条(沉浸式底部,不留安全区空白)。
+      .padding({ top: px2vp(this.statusBarHeightPx) })
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
   }
 
   private openRss(): void {
@@ -402,178 +409,118 @@ struct Index {
     this.route = 'rss';
   }
 
+  private openDiscover(): void {
+    this.nextNavigationGeneration();
+    this.readingSessionActive = false;
+    this.readingExitRequest = undefined;
+    this.exitToBookshelfAfterReader = false;
+    this.route = 'discover';
+    void this.loadDiscover();
+  }
+
+  private async loadDiscover(): Promise<void> {
+    const generation = this.navigationGeneration;
+    let source: BookSource | undefined;
+    try {
+      const sources = await new SourceGateway(ReaderRuntimeOwner.current()).loadSources();
+      for (const s of sources) {
+        if (s.enabled && s.enabledExplore) {
+          source = s;
+          break;
+        }
+      }
+    } catch (error) {
+      source = undefined;
+    }
+    if (source === undefined) {
+      if (this.isCurrentRoute(generation, 'discover')) {
+        this.discoverPresentation = { currentSourceName: '', kinds: [], books: [] };
+      }
+      return;
+    }
+    const gateway = new DiscoverGateway(ReaderRuntimeOwner.current());
+    try {
+      const kinds = await gateway.loadExploreKinds(source.sourceId);
+      const books = kinds.length > 0 ? await gateway.loadExplore(source.sourceId, kinds[0].url) : [];
+      if (this.isCurrentRoute(generation, 'discover')) {
+        this.discoverPresentation = { currentSourceName: source.name, kinds, books };
+      }
+    } catch (error) {
+      if (this.isCurrentRoute(generation, 'discover')) {
+        this.discoverPresentation = { currentSourceName: source.name, kinds: [], books: [] };
+      }
+    }
+  }
+
   private openSettings(): void {
-    const generation = this.nextNavigationGeneration();
+    this.nextNavigationGeneration();
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
     this.exitToBookshelfAfterReader = false;
     this.route = 'settings';
-    this.loadSettings(generation, this.settingsWriteGeneration);
-  }
-
-  private loadSettings(generation: number, expectedWriteGeneration: number): void {
-    const gateway = this.getSettingsGateway();
-    gateway.load()
-      .then((snapshot: SettingsSnapshot): void => {
-        // A read started before a switch write may return an older coherent
-        // snapshot. Do not repaint a newer user intent with it.
-        if (!this.isCurrentRoute(generation, 'settings') ||
-          expectedWriteGeneration !== this.settingsWriteGeneration) {
-          return;
-        }
-        this.settingsSnapshot = snapshot;
-      })
-      .catch((error: Error): void => {
-        if (!this.isCurrentRoute(generation, 'settings') ||
-          expectedWriteGeneration !== this.settingsWriteGeneration) {
-          return;
-        }
-        hilog.error(DOMAIN, 'Reader', 'Settings load failed: %{public}s', error.message);
-      });
+    this.getSettingsOrchestrator().open();
   }
 
   private onSettingToggled(
     key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
     value: boolean,
   ): void {
-    // Optimistic in-page update; persist asynchronously to the Host
-    // preferences store (app-level settings, not Core-owned).
-    const intent = this.withSetting(key, value);
-    const writeGeneration = this.settingsWriteGeneration + 1;
-    this.settingsWriteGeneration = writeGeneration;
-    this.settingsSnapshot = intent;
-    const gateway = this.getSettingsGateway();
-    gateway.update(intent)
-      .then((snapshot: SettingsSnapshot): void => {
-        if (writeGeneration !== this.settingsWriteGeneration || this.route !== 'settings') {
-          return;
-        }
-        this.settingsSnapshot = snapshot;
-      })
-      .catch((error: Error): void => {
-        if (writeGeneration !== this.settingsWriteGeneration || this.route !== 'settings') {
-          return;
-        }
-        hilog.error(DOMAIN, 'Reader', 'Settings update failed: %{public}s', error.message);
-        // No Figma failure affordance exists for this row. Restore the actual
-        // Host-owned values rather than leaving the optimistic switch in a
-        // state that did not persist.
-        gateway.load()
-          .then((snapshot: SettingsSnapshot): void => {
-            if (writeGeneration === this.settingsWriteGeneration && this.route === 'settings') {
-              this.settingsSnapshot = snapshot;
-            }
-          })
-          .catch((reloadError: Error): void => {
-            hilog.error(DOMAIN, 'Reader', 'Settings recovery load failed: %{public}s', reloadError.message);
-          });
-      });
+    this.getSettingsOrchestrator().toggle(key, value);
   }
 
-  private getSettingsGateway(): SettingsGateway {
-    if (this.settingsGateway === undefined) {
-      this.settingsGateway = new SettingsGateway(ReaderRuntimeOwner.current().getUIAbilityContext());
+  private getSettingsOrchestrator(): SettingsOrchestrator {
+    if (this.settingsOrchestrator === undefined) {
+      this.settingsOrchestrator = new SettingsOrchestrator(
+        (snapshot: SettingsSnapshot): void => {
+          this.settingsSnapshot = snapshot;
+        },
+        (): SettingsSnapshot => this.settingsSnapshot,
+        (): boolean => this.route === 'settings',
+        ReaderRuntimeOwner.current().getUIAbilityContext(),
+      );
     }
-    return this.settingsGateway;
-  }
-
-  private withSetting(
-    key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
-    value: boolean,
-  ): SettingsSnapshot {
-    return {
-      autoCheckUpdate: key === 'autoCheckUpdate' ? value : this.settingsSnapshot.autoCheckUpdate,
-      tapBottomScrollTop: key === 'tapBottomScrollTop' ? value : this.settingsSnapshot.tapBottomScrollTop,
-      reduceMotion: key === 'reduceMotion' ? value : this.settingsSnapshot.reduceMotion,
-      crashLog: key === 'crashLog' ? value : this.settingsSnapshot.crashLog,
-    };
-  }
-
-  private withHistoryEntry(entry: SyncHistoryEntry): SyncSnapshot {
-    return {
-      webdavUrl: this.syncSnapshot.webdavUrl,
-      webdavUser: this.syncSnapshot.webdavUser,
-      webdavPass: this.syncSnapshot.webdavPass,
-      saveLocation: this.syncSnapshot.saveLocation,
-      backupFrequency: this.syncSnapshot.backupFrequency,
-      backupScope: this.syncSnapshot.backupScope,
-      history: [entry].concat(this.syncSnapshot.history),
-    };
-  }
-
-  private getSyncGateway(): SyncGateway {
-    if (this.syncGateway === undefined) {
-      this.syncGateway = new SyncGateway();
-    }
-    return this.syncGateway;
+    return this.settingsOrchestrator;
   }
 
   private onSyncTestConnection(url: string, user: string, pass: string): void {
-    const gateway = this.getSyncGateway();
-    gateway.planWebdav(url, user, pass)
-      .then((outcome: SyncTestResult): void => {
-        if (outcome.ok) {
-          // Honest: the PROPFIND plan was built (with auth when supplied),
-          // but no network executed.
-          hilog.info(DOMAIN, 'Reader', '%{public}s', outcome.note ?? 'webdav plan built');
-        } else {
-          hilog.warn(DOMAIN, 'Reader', 'sync.webdav.plan failed: %{public}s', outcome.error);
-        }
-      })
-      .catch((error: Error): void => {
-        hilog.error(DOMAIN, 'Reader', 'sync.webdav.plan error: %{public}s', error.message);
-      });
+    this.getSyncOrchestrator().testConnection(url, user, pass);
   }
 
   private onSyncTriggerBackup(): void {
-    const gateway = this.getSyncGateway();
-    gateway.triggerBackup()
-      .then((outcome: SyncBackupResult): void => {
-        if (outcome.ok) {
-          const entry: SyncHistoryEntry = {
-            timestamp: this.formatNow(),
-            destination: this.syncSnapshot.saveLocation,
-            size: outcome.size ?? 0,
-            ok: true,
-          };
-          this.syncSnapshot = this.withHistoryEntry(entry);
-        } else {
-          hilog.warn(DOMAIN, 'Reader', 'sync.backup failed: %{public}s', outcome.error);
-        }
-      })
-      .catch((error: Error): void => {
-        hilog.error(DOMAIN, 'Reader', 'sync.backup error: %{public}s', error.message);
-      });
+    this.getSyncOrchestrator().triggerBackup();
   }
 
-  private formatNow(): string {
-    const d = new Date();
-    const pad = (n: number): string => n < 10 ? `0${n}` : `${n}`;
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  private getSyncOrchestrator(): SyncOrchestrator {
+    if (this.syncOrchestrator === undefined) {
+      this.syncOrchestrator = new SyncOrchestrator(
+        (snapshot: SyncSnapshot): void => {
+          this.syncSnapshot = snapshot;
+        },
+        (): SyncSnapshot => this.syncSnapshot,
+      );
+    }
+    return this.syncOrchestrator;
   }
 
   private openSourceManagement(): void {
-    const generation = this.nextNavigationGeneration();
+    this.nextNavigationGeneration();
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
     this.exitToBookshelfAfterReader = false;
-    this.sourceSources = [];
     this.route = 'source';
-    const gateway = new SourceGateway(ReaderRuntimeOwner.current());
-    gateway.loadSources()
-      .then((sources: BookSource[]): void => {
-        if (!this.isCurrentRoute(generation, 'source')) {
-          return;
-        }
-        this.sourceSources = sources;
-      })
-      .catch((error: Error): void => {
-        if (!this.isCurrentRoute(generation, 'source')) {
-          return;
-        }
-        hilog.error(DOMAIN, 'Reader', 'Source management load failed: %{public}s', error.message);
-        this.sourceSources = [];
-      });
+    this.getSourceOrchestrator().open();
+  }
+
+  private getSourceOrchestrator(): SourceOrchestrator {
+    if (this.sourceOrchestrator === undefined) {
+      this.sourceOrchestrator = new SourceOrchestrator(
+        (sources: BookSource[]): void => {
+          this.sourceSources = sources;
+        },
+        (): boolean => this.route === 'source',
+      );
+    }
+    return this.sourceOrchestrator;
   }
 
   private returnToSettings(): void {
@@ -585,62 +532,9 @@ struct Index {
   }
 
   private onSourceToggled(id: string, enabled: boolean): void {
-    // SS-SOURCE-TOGGLE-01: backed by the real `source.update` RPC. The toggle is
-    // non-optimistic — the row keeps its previous state until Core confirms the
-    // persisted snapshot, then the list is reloaded. Toggles run on a serial
-    // chain (Core rejects `source.update` while an earlier Host operation is
-    // pending), and every write-back is gated on the navigation session that
-    // started the toggle so a stale completion never repaints a re-entry.
-    this.sourceToggleGeneration += 1;
-    const generation = this.sourceToggleGeneration;
-    const navigation = this.navigationGeneration;
-    this.sourceToggleChain = this.sourceToggleChain
-      .then((): Promise<void> => this.applySourceToggle(id, enabled, generation, navigation))
-      .catch((error: Error): void => {
-        hilog.error(DOMAIN, 'Reader',
-          'Source toggle failed; row unchanged: sourceId=%{public}s enabled=%{public}s err=%{public}s',
-          id, enabled, error.message);
-      });
-  }
-
-  private async applySourceToggle(
-    id: string, enabled: boolean, generation: number, navigation: number,
-  ): Promise<void> {
-    const gateway = new SourceGateway(ReaderRuntimeOwner.current());
-    await gateway.updateSource(id, { enabled });
-    // `updateSource` resolved → the toggle IS persisted (Core awaits the Host
-    // snapshot put). Reflect it locally even if the reload below fails, so a
-    // reload failure is never reported as "nothing changed". The flip and the
-    // reload share the session guard: leaving and re-entering Source
-    // Management starts a fresh list load that supersedes this write-back.
-    if (this.route === 'source' && navigation === this.navigationGeneration) {
-      this.sourceSources = this.sourceSources.map((source) => {
-        if (source.sourceId !== id) {
-          return source;
-        }
-        const updated: BookSource = {
-          sourceId: source.sourceId,
-          name: source.name,
-          baseUrl: source.baseUrl,
-          enabled,
-          enabledExplore: source.enabledExplore,
-        };
-        return updated;
-      });
-    }
-    let sources: BookSource[];
-    try {
-      sources = await gateway.loadSources();
-    } catch (error) {
-      hilog.warn(DOMAIN, 'Reader',
-        'Source toggle persisted but list reload failed: sourceId=%{public}s enabled=%{public}s err=%{public}s',
-        id, enabled, (error as Error).message);
-      return;
-    }
-    if (this.route === 'source' && navigation === this.navigationGeneration
-        && generation === this.sourceToggleGeneration) {
-      this.sourceSources = sources;
-    }
+    // SS-SOURCE-TOGGLE-01 orchestration (serial chain, Core-idle retry, session
+    // guards) lives in SourceOrchestrator; Index only forwards the intent.
+    this.getSourceOrchestrator().toggleSource(id, enabled);
   }
 
   private openSync(): void {
@@ -681,217 +575,43 @@ struct Index {
   }
 
   private openSearch(): void {
-    const generation = this.nextNavigationGeneration();
-    const session = this.searchSessionGeneration + 1;
-    this.searchSessionGeneration = session;
+    this.nextNavigationGeneration();
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
     this.exitToBookshelfAfterReader = false;
-    this.searchPresentation = this.searchInitialPresentation([]);
-    this.searchSources = [];
     this.route = 'search';
-    const gateway = new SearchGateway(ReaderRuntimeOwner.current());
-    // Source and history are independent Core facts. In particular, a
-    // history failure must not make a valid source list disappear, and an
-    // early submit must be able to await this very source-list transaction.
-    const sourceLoad = gateway.loadSources();
-    this.searchSourceLoad = sourceLoad;
-    this.searchSourceLoadSession = session;
-    sourceLoad
-      .then((sources: SearchSource[]): void => {
-        if (!this.isCurrentSearchSession(session)) {
-          return;
-        }
-        this.searchSources = sources;
-      })
-      .catch((error: Error): void => {
-        if (!this.isCurrentSearchSession(session)) {
-          return;
-        }
-        hilog.error(DOMAIN, 'Reader', 'Search source list failed to load: %{public}s', error.message);
-        this.searchSources = [];
-      });
-    gateway.loadHistory()
-      .then((history: SearchHistory): void => {
-        if (!this.isCurrentSearchSession(session) || this.searchPresentation.kind !== 'initial') {
-          return;
-        }
-        this.searchPresentation = this.searchInitialPresentation(history.keywords);
-      })
-      .catch((error: Error): void => {
-        if (!this.isCurrentSearchSession(session)) {
-          return;
-        }
-        hilog.error(DOMAIN, 'Reader', 'Search history failed to load: %{public}s', error.message);
-        // An unavailable history has no admitted error state. Keep the empty
-        // Initial Figma state; it must not block a real search.
-      });
+    this.getSearchOrchestrator().open();
   }
 
   private performSearch(keyword: string): void {
-    if (keyword.trim().length === 0) {
-      return;
-    }
-    const generation = this.nextNavigationGeneration();
-    const session = this.searchSessionGeneration;
-    this.searchPresentation = this.searchLoadingPresentation(keyword);
-    const gateway = new SearchGateway(ReaderRuntimeOwner.current());
-    void this.performSearchForGeneration(gateway, keyword, generation, session);
+    this.nextNavigationGeneration();
+    this.getSearchOrchestrator().search(keyword);
   }
 
-  private async performSearchForGeneration(
-    gateway: SearchGateway,
-    keyword: string,
-    generation: number,
-    session: number,
-  ): Promise<void> {
-    // Search history is auxiliary. Do not wait for a persistence failure
-    // before issuing the user-requested source search.
-    void gateway.addHistory(keyword)
-      .catch((error: Error): void => {
-        if (this.isCurrentSearchWork(generation, session)) {
-          hilog.warn(DOMAIN, 'Reader', 'Search history add failed: %{public}s', error.message);
-        }
-      });
-    try {
-      const sources = await this.searchSourcesForSession(session);
-      if (!this.isCurrentSearchWork(generation, session)) {
-        return;
-      }
-      this.searchSources = sources;
-      const enabled = sources.filter((source) => source.enabled && source.name.trim().length > 0);
-      if (enabled.length === 0) {
-        this.searchPresentation = this.searchErrorPresentation(keyword);
-        return;
-      }
-      const results: SearchBook[] = [];
-      for (const source of enabled) {
-        const outcome = await gateway.searchBySource(
-          source,
-          keyword,
-          (): boolean => this.isCurrentSearchWork(generation, session),
-        );
-        if (!this.isCurrentSearchWork(generation, session)) {
-          return;
-        }
-        if (outcome.ok === false) {
-          // Figma provides only a whole-search error surface, not a partial
-          // result state naming failed sources. Do not label a partial list as
-          // an "all sources" result.
-          hilog.warn(DOMAIN, 'Reader', 'Search source %{public}s failed: %{public}s',
-            source.sourceId, outcome.error);
-          this.searchPresentation = this.searchErrorPresentation(keyword);
-          return;
-        }
-        for (const book of outcome.results) {
-          results.push(book);
-        }
-      }
-      const deduped = this.dedupeSearchResults(results);
-      if (deduped.length === 0) {
-        this.searchPresentation = this.searchEmptyPresentation(keyword);
-        return;
-      }
-      this.searchPresentation = this.searchResultsPresentation(keyword, deduped);
-    } catch (error) {
-      if (!this.isCurrentSearchWork(generation, session)) {
-        return;
-      }
-      const message = error instanceof Error ? error.message : `${error}`;
-      hilog.error(DOMAIN, 'Reader', 'Search failed: %{public}s', message);
-      this.searchPresentation = this.searchErrorPresentation(keyword);
+  private getSearchOrchestrator(): SearchOrchestrator {
+    if (this.searchOrchestrator === undefined) {
+      this.searchOrchestrator = new SearchOrchestrator(
+        (presentation: SearchPresentation): void => {
+          this.searchPresentation = presentation;
+        },
+        (sources: SearchSource[]): void => {
+          this.searchSources = sources;
+        },
+        (): boolean => this.route === 'search',
+      );
     }
+    return this.searchOrchestrator;
   }
 
   private retrySearch(): void {
-    if (this.searchPresentation.kind === 'empty' || this.searchPresentation.kind === 'error') {
-      this.performSearch(this.searchPresentation.keyword);
-    }
+    this.getSearchOrchestrator().retry();
   }
 
   private clearSearchHistory(): void {
-    const generation = this.nextNavigationGeneration();
-    const session = this.searchSessionGeneration;
-    const gateway = new SearchGateway(ReaderRuntimeOwner.current());
-    gateway.clearHistory()
-      .then((): Promise<SearchHistory> => gateway.loadHistory())
-      .then((history: SearchHistory): void => {
-        if (!this.isCurrentSearchWork(generation, session)) {
-          return;
-        }
-        this.searchPresentation = this.searchInitialPresentation(history.keywords);
-      })
-      .catch((error: Error): void => {
-        if (!this.isCurrentSearchWork(generation, session)) {
-          return;
-        }
-        hilog.error(DOMAIN, 'Reader', 'Search history clear failed: %{public}s', error.message);
-      });
+    this.nextNavigationGeneration();
+    this.getSearchOrchestrator().clearHistory();
   }
 
-  private isCurrentSearchSession(session: number): boolean {
-    return this.route === 'search' && session === this.searchSessionGeneration;
-  }
-
-  private isCurrentSearchWork(generation: number, session: number): boolean {
-    return this.isCurrentRoute(generation, 'search') && this.isCurrentSearchSession(session);
-  }
-
-  private async searchSourcesForSession(session: number): Promise<SearchSource[]> {
-    if (!this.isCurrentSearchSession(session)) {
-      throw new Error('search session is no longer active');
-    }
-    const loading = this.searchSourceLoad;
-    if (loading !== undefined && this.searchSourceLoadSession === session) {
-      return await loading;
-    }
-    return this.searchSources;
-  }
-
-  private dedupeSearchResults(results: SearchBook[]): SearchBook[] {
-    const deduped: SearchBook[] = [];
-    const seenKeys: string[] = [];
-    for (const result of results) {
-      const key = `${result.sourceId}\u0000${result.bookId}`;
-      let seen = false;
-      for (const existingKey of seenKeys) {
-        if (existingKey === key) {
-          seen = true;
-          break;
-        }
-      }
-      if (!seen) {
-        seenKeys.push(key);
-        deduped.push(result);
-      }
-    }
-    return deduped;
-  }
-
-  private searchInitialPresentation(history: string[]): SearchPresentation {
-    const presentation: SearchPresentation = { kind: 'initial', history: history };
-    return presentation;
-  }
-
-  private searchLoadingPresentation(keyword: string): SearchPresentation {
-    const presentation: SearchPresentation = { kind: 'loading', keyword: keyword };
-    return presentation;
-  }
-
-  private searchResultsPresentation(keyword: string, results: SearchBook[]): SearchPresentation {
-    const presentation: SearchPresentation = { kind: 'results', keyword: keyword, results: results };
-    return presentation;
-  }
-
-  private searchEmptyPresentation(keyword: string): SearchPresentation {
-    const presentation: SearchPresentation = { kind: 'empty', keyword: keyword };
-    return presentation;
-  }
-
-  private searchErrorPresentation(keyword: string): SearchPresentation {
-    const presentation: SearchPresentation = { kind: 'error', keyword: keyword };
-    return presentation;
-  }
 
   private onSearchResultSelected(book: SearchBook): void {
     // A search result is a remote Core record. There is no admitted remote
@@ -1047,6 +767,19 @@ struct Index {
     this.directoryCurrentChapterIndex = -1;
     this.directoryChapterTitle = '';
     this.route = 'detail';
+  }
+
+  // R-LOCAL-TOC-01: 收起 closes the directory overlay the same way system Back
+  // does for the directory route: let the reader settle/persist, else return
+  // to Detail. Reader Control Home (the eventual collapse target) is not yet
+  // delivered (RC-READER-CONTROL-01).
+  private closeDirectory(): void {
+    const requestExit = this.readingExitRequest;
+    if (requestExit !== undefined) {
+      requestExit();
+    } else {
+      this.returnToDetail();
+    }
   }
 
   private getSourceSwitchGateway(): SourceSwitchGateway {

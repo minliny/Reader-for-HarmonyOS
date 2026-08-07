@@ -8,10 +8,12 @@ import {
   type LocalReadingTocEntry,
 } from './LocalReadingFlowGateway';
 import { ReadingSurface, ReadingSurfacePageFragment } from './ReadingSurface';
+import { ReaderControlPanel } from './ReaderControlPanel';
 import {
   ReadingSurfaceLayoutMap,
   type ReadingSurfaceLineMetric,
 } from './ReadingSurfaceLayoutMap';
+import { registerReaderFonts } from '../common/ReaderFonts';
 
 /**
  * The only progress datum emitted by the immersive reader. Its offset is a
@@ -296,6 +298,10 @@ export struct LocalReadingExperience {
   @State private measurementEpoch: number = 0;
   /** Logged for diagnostics only; there is no Figma error surface to invent here. */
   @State private failureCode: string = '';
+  @Prop bookTitle: string = '';
+  @Prop sourceName: string = '';
+  @Prop totalChapters: number = 0;
+  @State private controlVisible: boolean = false;
 
   private readonly gateway: LocalReadingFlowGateway = new LocalReadingFlowGateway();
   private readonly unicodeProbeController: TextController = new TextController();
@@ -353,15 +359,7 @@ export struct LocalReadingExperience {
     this.commitInFlight = false;
     this.measurementCompleting = false;
     this.remeasurePending = false;
-    const font = this.getUIContext().getFont();
-    font.registerFont({
-      familyName: 'ReaderNotoSerifSCRegular',
-      familySrc: $rawfile('NotoSerifSC-Regular.ttf'),
-    });
-    font.registerFont({
-      familyName: 'ReaderNotoSerifSCBold',
-      familySrc: $rawfile('NotoSerifSC-Bold.ttf'),
-    });
+    registerReaderFonts(this.getUIContext().getFont());
     this.didLayoutListener = (): void => this.captureMeasurementAfterLayout();
     this.getUIContext().getUIObserver().on('didLayout', this.didLayoutListener);
     this.onExitRequestHandler((): void => this.requestExit());
@@ -405,6 +403,40 @@ export struct LocalReadingExperience {
       });
       if (this.phase === 'measuring' && this.measurementEpoch > 0) {
         this.hiddenMeasurementTree();
+      }
+      // Reader Control (RC-READER-CONTROL-01): tapping the center vertical band
+      // raises the control layer, which overlays the reading surface.
+      if (this.controlVisible) {
+        ReaderControlPanel({
+          bookTitle: this.bookTitle,
+          chapterTitle: this.chapterTitle,
+          sourceName: this.sourceName,
+          progressPercent: this.controlProgress(),
+          totalChapters: this.totalChapters,
+          isTablet: this.isTablet,
+          onBack: (): void => {
+            this.controlVisible = false;
+            this.requestExit();
+          },
+          onDismiss: (): void => {
+            this.controlVisible = false;
+          },
+          onSourceSwitch: (): void => {
+            this.controlVisible = false;
+          },
+          onModuleSelect: (_module: string): void => {
+            this.controlVisible = false;
+          },
+        });
+      } else {
+        Row()
+          .width('34%')
+          .height('100%')
+          .position({ x: '33%', y: 0 })
+          .backgroundColor('#00000000')
+          .onClick((): void => {
+            this.controlVisible = true;
+          });
       }
     }
     .width('100%')
@@ -1396,6 +1428,15 @@ export struct LocalReadingExperience {
 
   private numericAreaLength(value: Length): number {
     return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+  }
+
+  // Reader Control progress: current chapter over total (rough, from the TOC).
+  private controlProgress(): number {
+    if (this.totalChapters <= 0) {
+      return 0;
+    }
+    const chapter = this.requestedChapterIndex !== undefined ? this.requestedChapterIndex + 1 : 1;
+    return Math.min(100, Math.max(0, Math.round((chapter / this.totalChapters) * 100)));
   }
 
   private isSelectionCurrent(selectionToken: number): boolean {

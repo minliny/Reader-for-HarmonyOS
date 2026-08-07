@@ -1,5 +1,13 @@
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
+import {
+  TOK_LINE_STRONG,
+  TOK_READ_INK,
+  TOK_READ_MUTED,
+  TOK_READ_SURFACE,
+} from '../common/ReaderTokens';
+
 import { FullDirectoryPanel } from './FullDirectoryPanel';
+import { registerReaderFonts } from '../common/ReaderFonts';
 
 /**
  * The non-body layers of the two Final Reader Full Directory variants.
@@ -9,8 +17,8 @@ import { FullDirectoryPanel } from './FullDirectoryPanel';
  * reading position, or a local directory fixture.
  *
  * Figma source:
- * - Phone `1995:60567`, inner instance `I1995:60568;927:36`
- * - Tablet `1995:60899`, inner instance `I1995:60900;929:32`
+ * - Phone `943:11617`, Section `I943:11617;927:36` (left-14, top-18, 360×54)
+ * - Tablet `943:11949`, Section `I943:11949;929:32` (left-28, top-18, 702×54)
  */
 @Component
 export struct ReaderFullDirectory {
@@ -28,23 +36,14 @@ export struct ReaderFullDirectory {
   // owning flow so a full-directory tap actually enters that chapter.
   onSelectChapter: (index: number) => void = (_index: number): void => {};
   onSwitchSource: () => void = (): void => {};
+  // R-LOCAL-TOC-01: 收起 collapses the directory overlay back to the reading
+  // flow (Reader Control Home is undelivered; collapse = close the directory).
+  onExit: () => void = (): void => {};
 
   aboutToAppear(): void {
-    const font = this.getUIContext().getFont();
     // Figma maps the Reader control’s Songti faces to the shipped Noto Serif
     // SC pair.  Do not fall back to a system or synthetic font here.
-    font.registerFont({
-      familyName: 'ReaderNotoSerifSCRegular',
-      familySrc: $rawfile('NotoSerifSC-Regular.ttf'),
-    });
-    font.registerFont({
-      familyName: 'ReaderNotoSerifSCBold',
-      familySrc: $rawfile('NotoSerifSC-Bold.ttf'),
-    });
-    font.registerFont({
-      familyName: 'ReaderInter',
-      familySrc: $rawfile('InterVariable.ttf'),
-    });
+    registerReaderFonts(this.getUIContext().getFont());
   }
 
   build() {
@@ -55,6 +54,7 @@ export struct ReaderFullDirectory {
         currentChapterIndex: this.currentChapterIndex,
         isTablet: this.isTablet,
         onSelectChapter: (index: number): void => this.onSelectChapter(index),
+        onExit: (): void => this.onExit(),
       });
     }
     .width('100%')
@@ -63,7 +63,7 @@ export struct ReaderFullDirectory {
 
   @Builder
   private topBar() {
-    Stack({ alignContent: Alignment.TopStart }) {
+    Row() {
       Stack({ alignContent: Alignment.Center }) {
         Image($r('app.media.reader_directory_back'))
           .width(24)
@@ -71,48 +71,50 @@ export struct ReaderFullDirectory {
       }
       .width(44)
       .height(42)
-      .position({ x: 13, y: 6 });
+      .margin({ left: 13 });
 
-      Text(this.bookTitle)
-        .width(this.titleWidth())
-        .height(22)
-        .fontFamily('ReaderNotoSerifSCBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(16)
-        .fontColor('#332C25')
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .position({ x: 65, y: 4.5 });
+      Column({ space: 6 }) {
+        Text(this.bookTitle)
+          .width(this.titleWidth())
+          .height(22)
+          .fontFamily('ReaderNotoSerifSCBold')
+          .fontWeight(FontWeight.Bold)
+          .fontSize(16)
+          .fontColor(TOK_READ_INK)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis });
 
-      Text(this.chapterTitle)
-        .width(this.titleWidth())
-        .height(17)
-        .fontFamily('ReaderNotoSerifSCRegular')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(12)
-        .fontColor('#5B5046')
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .position({ x: 65, y: 32.5 });
+        Text(this.chapterTitle)
+          .width(this.titleWidth())
+          .height(17)
+          .fontFamily('ReaderNotoSerifSCRegular')
+          .fontWeight(FontWeight.Regular)
+          .fontSize(12)
+          .fontColor(TOK_READ_MUTED)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis });
+      }
+      .margin({ left: 8 });
 
-      Stack({ alignContent: Alignment.TopStart }) {
+      Column({ space: 3.5 }) {
         Image($r('app.media.reader_directory_switch'))
           .width(20)
           .height(20)
-          .position({ x: 21, y: 1.25 });
+          .alignSelf(ItemAlign.Center)
+          .margin({ top: 1.25 });
         Text('换源')
           .width(24)
           .height(15)
           .fontFamily('ReaderInter')
           .fontWeight(800)
           .fontSize(12)
-          .fontColor('#332C25')
+          .fontColor(TOK_READ_INK)
           .textAlign(TextAlign.Center)
-          .position({ x: 19, y: 24.75 });
+          .alignSelf(ItemAlign.Center);
       }
       .width(62)
       .height(42)
-      .position({ x: this.sourceSwitchLeft(), y: 6 })
+      .margin({ left: 8 })
       .opacity(this.isLocalBook() ? 0.4 : 1)
       .onClick((): void => {
         if (!this.isLocalBook()) {
@@ -127,14 +129,15 @@ export struct ReaderFullDirectory {
       }
       .width(34)
       .height(42)
-      .position({ x: this.moreLeft(), y: 6 });
+      .margin({ left: 8 });
     }
     .width(this.topBarWidth())
     .height(54)
-    .backgroundColor('#FAFFFAF4')
-    .border({ width: 1, color: '#57B4A697' })
+    .alignItems(VerticalAlign.Center)
+    .backgroundColor(TOK_READ_SURFACE)
+    .border({ width: 1, color: TOK_LINE_STRONG })
     .borderRadius(24)
-    .position({ x: this.topBarLeft(), y: 19 });
+    .position({ x: this.topBarLeft(), y: 18 });
   }
 
   private topBarWidth(): number {
@@ -142,22 +145,14 @@ export struct ReaderFullDirectory {
   }
 
   private topBarLeft(): number {
-    return this.isTablet ? 29 : 15;
+    return this.isTablet ? 28 : 14;
   }
 
   private titleWidth(): number {
     return this.isTablet ? 512 : 170;
   }
 
-  private sourceSwitchLeft(): number {
-    return this.isTablet ? 585 : 243;
-  }
-
   private isLocalBook(): boolean {
     return this.sourceId === 'local';
-  }
-
-  private moreLeft(): number {
-    return this.isTablet ? 655 : 313;
   }
 }
