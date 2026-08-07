@@ -15,12 +15,15 @@ import type { LocalReadingTocEntry } from '../reading/LocalReadingFlowGateway';
 // 挂载契约 (与改造前 Index 内联阅读段一致):
 //   - 仅当 readingSessionActive 且 book 已就绪时挂载; LocalReadingExperience 保持挂载,
 //     opacity 随 route 在 reading/directory 间切换, 避免阅读会话被 remount。
-//   - 状态栏顶部 padding 与底部安全区由 Index 根 Stack 统一处理 (普通页面与阅读共享),
-//     此处不重复叠加, 防止双 padding 回归。
+//   - 状态栏顶部 inset 由本 Shell 自行管理 (读取 @StorageLink('statusBarHeightPx')),
+//     阅读路由 Index 根 Stack 置 0 防双 padding; 底部安全区仍由 Index 根 Stack 统一沉浸。
+//     保持非沉浸式观感: 阅读面与各 overlay 均避让状态栏, 不越界上移。
 type PreparedReaderRoute = 'reading' | 'directory';
 
 @Component
 export struct ReaderShell {
+  // 状态栏高度 (px), 用于本 Shell 自行避让顶部 inset。
+  @StorageLink('statusBarHeightPx') statusBarHeightPx: number = 0;
   // 阅读内容。
   @Prop bookId: string = '';
   @Prop bookTitle: string = '';
@@ -121,6 +124,8 @@ export struct ReaderShell {
       }
     }
     .width('100%')
-    .height('100%');
+    .height('100%')
+    // 顶部 inset 本 Shell 自行管理 (Index 置 0): 阅读面与各 overlay 统一避让状态栏。
+    .padding({ top: px2vp(this.statusBarHeightPx) });
   }
 }

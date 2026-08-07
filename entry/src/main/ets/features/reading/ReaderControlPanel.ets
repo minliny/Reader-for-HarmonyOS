@@ -44,9 +44,8 @@ class ReaderControlGeometry {
   dockBottomGap: number;
   // Dock/Sheet/ModuleNav 的最大宽度 (constraintSize 上限; 居中于可用宽)。
   dockMaxW: number;
-  // 顶部栏内部尺寸。
-  topBarW: number;
-  textW: number;
+  // 顶部栏最大宽 (constraintSize 上限; 宽度 Fill 相应, 窄屏自动收窄)。
+  topBarMaxW: number;
   // ControlSheet 高度与圆角。
   sheetH: number;
   sheetRadiusTop: number;
@@ -62,8 +61,7 @@ class ReaderControlGeometry {
       this.topBarTopGap = 19;
       this.dockBottomGap = 33;
       this.dockMaxW = 340;
-      this.topBarW = 702;
-      this.textW = 512;
+      this.topBarMaxW = 702;
       this.sheetH = 252;
       this.sheetRadiusTop = 24;
       this.sheetRadiusBottom = 0;
@@ -75,8 +73,7 @@ class ReaderControlGeometry {
       this.topBarTopGap = 19;
       this.dockBottomGap = 19;
       this.dockMaxW = 364;
-      this.topBarW = 360;
-      this.textW = 170;
+      this.topBarMaxW = 360;
       this.sheetH = 330;
       this.sheetRadiusTop = 24;
       this.sheetRadiusBottom = 24;
@@ -167,7 +164,7 @@ export struct ReaderControlPanel {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
       }
-      .width(this.geo.textW)
+      .layoutWeight(1)
       .height(45)
       .margin({ left: 8   });
 
@@ -206,8 +203,9 @@ export struct ReaderControlPanel {
       .height(42)
       .margin({ left: 8   });
     }
-    .width(this.geo.topBarW)
+    .width('100%')
     .height(54)
+    .constraintSize({ maxWidth: this.geo.topBarMaxW })
     .alignItems(VerticalAlign.Center)
     .backgroundColor(TOK_READ_SURFACE)
     .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })

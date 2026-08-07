@@ -363,8 +363,9 @@ struct Index {
       .width('100%')
       .height('100%')
       .backgroundColor($r('app.color.reader_surface'))
-      // 顶部: padding 状态栏高, 内容避让状态栏不上移; 底部: 内容延伸到手势条(沉浸式底部,不留安全区空白)。
-      .padding({ top: px2vp(this.statusBarHeightPx) })
+      // 顶部: padding 状态栏高, 内容避让状态栏不上移; 阅读路由的顶部 inset 由 ReaderShell
+      // 自行管理 (此处置 0 防双 padding), 其余路由仍由根 Stack 避让; 底部: 内容延伸到手势条(沉浸式底部,不留安全区空白)。
+      .padding({ top: this.readingSessionActive ? 0 : px2vp(this.statusBarHeightPx) })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
   }
 
