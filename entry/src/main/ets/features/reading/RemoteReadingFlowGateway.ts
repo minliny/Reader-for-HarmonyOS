@@ -264,7 +264,7 @@ export class RemoteReadingFlowGateway {
     const document = await materializeReadingDocument(
       result.data,
       identity.sourceId,
-      selected.url,
+      this.chapterResponseBaseUrl(result.data) ?? selected.url,
       this.runtimeOwner,
       isCurrent,
     );
@@ -278,6 +278,15 @@ export class RemoteReadingFlowGateway {
       contentVersion: document.contentVersion,
       extractionVia: via === 'cache' ? 'rule' : via,
     };
+  }
+
+  /** Prefer the Host's exact redirect/WebView completion URL for relative media. */
+  private chapterResponseBaseUrl(data: JsonObject): string | undefined {
+    const http = data['http'];
+    if (http === null || typeof http !== 'object' || Array.isArray(http)) {
+      return undefined;
+    }
+    return this.optionalString(http as JsonObject, 'finalUrl', 'chapter.content http');
   }
 
   async loadProgress(

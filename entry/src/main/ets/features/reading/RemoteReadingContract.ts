@@ -13,7 +13,7 @@ export type RemoteReadingHostCapabilityId =
   'httpExecute' | 'responseCharsetDecoding' | 'platformCookieJar' |
   'session' | 'nonUtf8RequestBody' | 'redirectFinalUrl';
 
-export type RemoteReadingHostCapabilityStatus = 'registeredUnverified' | 'unsupported';
+export type RemoteReadingHostCapabilityStatus = 'verifiedVm' | 'registeredUnverified' | 'unsupported';
 
 export type RemoteReadingHostCapabilityFact = {
   id: RemoteReadingHostCapabilityId;
@@ -58,47 +58,48 @@ export class RemoteReadingGatewayError extends Error {
 /**
  * Current source-grounded HarmonyOS Host capability facts.
  *
- * `registeredUnverified` only authorizes a real attempt. It is deliberately
- * weaker than device acceptance. The other entries mirror HttpExecuteHost's
- * explicit fail-closed branches and must not be promoted by this gateway.
+ * `verifiedVm` records a production-HAP virtual-device journey;
+ * `registeredUnverified` only authorizes a real attempt and remains weaker
+ * than device acceptance. This projection must follow the Host rather than
+ * preserving obsolete fail-closed claims after a capability is implemented.
  */
 export function remoteReadingHostCapabilitySnapshot(): RemoteReadingHostCapabilityFact[] {
   return [
     {
       id: 'httpExecute',
-      status: 'registeredUnverified',
+      status: 'verifiedVm',
       attemptable: true,
-      reason: 'http.execute is registered, but real-device network acceptance is still pending',
+      reason: 'production HAP completed real-source L1-L5 HTTP journeys on the Phone VM',
     },
     {
       id: 'responseCharsetDecoding',
-      status: 'registeredUnverified',
+      status: 'verifiedVm',
       attemptable: true,
-      reason: 'the Host attempts Content-Type response decoding, but non-UTF-8 device proof is pending',
+      reason: 'a GBK response source completed L1-L5 on the Phone VM',
     },
     {
       id: 'platformCookieJar',
-      status: 'unsupported',
-      attemptable: false,
-      reason: 'HttpExecuteHost rejects usePlatformCookieJar',
+      status: 'verifiedVm',
+      attemptable: true,
+      reason: 'the source-scoped Host cookie jar passed reuse, persistence, and isolation on the Phone VM',
     },
     {
       id: 'session',
-      status: 'unsupported',
-      attemptable: false,
-      reason: 'HttpExecuteHost rejects session',
+      status: 'verifiedVm',
+      attemptable: true,
+      reason: 'opaque source sessions are connected to the shared Host cookie store',
     },
     {
       id: 'nonUtf8RequestBody',
-      status: 'unsupported',
-      attemptable: false,
-      reason: 'HttpExecuteHost only encodes request bodies as UTF-8',
+      status: 'registeredUnverified',
+      attemptable: true,
+      reason: 'the Host uses Core shared text encoding; a real non-UTF-8 POST source is still unverified',
     },
     {
       id: 'redirectFinalUrl',
-      status: 'unsupported',
-      attemptable: false,
-      reason: 'the API-23 transport does not expose a trustworthy post-redirect final URL',
+      status: 'verifiedVm',
+      attemptable: true,
+      reason: 'manual redirect hops and finalUrl completed a real-source L1-L5 journey on the Phone VM',
     },
   ];
 }

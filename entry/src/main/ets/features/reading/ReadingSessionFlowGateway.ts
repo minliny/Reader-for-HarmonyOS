@@ -17,6 +17,7 @@ import {
 import type { ReadingSessionChapter, ReadingSessionImage } from './ReadingChapterWindow';
 import { materializeReadingDocument } from './ReadingDocumentProjection';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
+import type { image } from '@kit.ImageKit';
 
 /**
  * The source-specific acquisition state admitted into one reader instance.
@@ -193,6 +194,7 @@ export class ReadingSessionFlowGateway {
         isCurrent,
       );
       if (isCurrent !== undefined && !isCurrent()) {
+        this.runtimeOwner.releaseReadingImage?.(payload.pixelMap);
         throw new Error('reading body image request was cancelled');
       }
       return {
@@ -212,6 +214,10 @@ export class ReadingSessionFlowGateway {
       }
       return this.failedReadingImage(image);
     }
+  }
+
+  releaseReadingImage(pixelMap: image.PixelMap): void {
+    this.runtimeOwner.releaseReadingImage?.(pixelMap);
   }
 
   async resolveLocation(

@@ -17,6 +17,7 @@ import { HarmonySystemTtsHost } from './HarmonySystemTtsHost';
 import { LocalEpubResourceHost } from './LocalEpubResourceHost';
 import { ReadingBodyImageHost, type ReadingBodyImagePayload } from './ReadingBodyImageHost';
 import { ArkWebExecutor } from './ArkWebExecutor';
+import { image } from '@kit.ImageKit';
 
 type RuntimeState = 'new' | 'starting' | 'ready' | 'closing' | 'closed';
 
@@ -130,14 +131,12 @@ export class ReaderRuntimeOwner {
   ): Promise<ReadingBodyImagePayload> {
     this.assertReadingImageCurrent(shouldCancel);
     if (imageUrl.trim().toLowerCase().startsWith('data:image/')) {
-      const embedded = await ReadingBodyImageHost.instance.loadDataUri(imageUrl);
-      this.assertReadingImageCurrent(shouldCancel);
-      return embedded;
+      const embedded = await ReadingBodyImageHost.instance.loadDataUri(imageUrl, shouldCancel);
+      return this.admitReadingImage(embedded, shouldCancel);
     }
     if (sourceId === 'local' && imageUrl.startsWith('reader-local-epub://')) {
       const localImage = await this.localEpubResourceHost.load(imageUrl);
-      this.assertReadingImageCurrent(shouldCancel);
-      return localImage;
+      return this.admitReadingImage(localImage, shouldCancel);
     }
     const params: JsonObject = { sourceId, imageUrl };
     if (baseUrl !== undefined && baseUrl.trim().length > 0) {
@@ -152,9 +151,13 @@ export class ReaderRuntimeOwner {
     if (request === null || typeof request !== 'object' || Array.isArray(request)) {
       throw new Error('source.imageRequest returned an invalid Host request descriptor');
     }
-    const payload = await ReadingBodyImageHost.instance.loadRequest(request as JsonObject);
-    this.assertReadingImageCurrent(shouldCancel);
-    return payload;
+    const payload = await ReadingBodyImageHost.instance.loadRequest(request as JsonObject, shouldCancel);
+    return this.admitReadingImage(payload, shouldCancel);
+  }
+
+  /** Release one Host-created native image after session eviction/teardown. */
+  releaseReadingImage(pixelMap: image.PixelMap): void {
+    ReadingBodyImageHost.instance.release(pixelMap);
   }
 
   async flush(): Promise<void> {
@@ -245,6 +248,19 @@ export class ReaderRuntimeOwner {
     }
     if (this.state === 'closing' || this.state === 'closed') {
       throw new Error('Reader Host is no longer available after teardown');
+    }
+  }
+
+  private admitReadingImage(
+    payload: ReadingBodyImagePayload,
+    shouldCancel?: () => boolean,
+  ): ReadingBodyImagePayload {
+    try {
+      this.assertReadingImageCurrent(shouldCancel);
+      return payload;
+    } catch (error) {
+      ReadingBodyImageHost.instance.release(payload.pixelMap);
+      throw error;
     }
   }
 

@@ -450,6 +450,8 @@ export struct ReadingExperience {
   private readonly measurementBatch: MeasurementParagraph[] = [];
   private readonly paginationIndex: ReadingPaginationIndex = new ReadingPaginationIndex();
   private readonly chapterWindow: ReadingChapterWindow = new ReadingChapterWindow();
+  /** Unique Host-created PixelMaps owned by this mounted reader session. */
+  private readonly readingImageResources: ReadingSessionImage[] = [];
   private readonly knownContentVersions: KnownReadingContentVersion[] = [];
   private chapterLayoutMap: ReadingSurfaceLayoutMap | undefined = undefined;
   private visiblePage: PhysicalReadingPage | undefined = undefined;
@@ -568,6 +570,7 @@ export struct ReadingExperience {
     this.ttsCoordinator = undefined;
     this.ttsGateway = undefined;
     this.previousChapterMeasurement = undefined;
+    this.releaseAllReadingImages();
     this.chapterWindow.clear();
     this.sessionGateway = undefined;
     if (ttsCoordinator !== undefined) void ttsCoordinator.dispose();
@@ -1482,8 +1485,10 @@ export struct ReadingExperience {
     void this.activeGateway().resolveReadingImage(image, isCurrent)
       .then((resolved: ReadingSessionImage): void => {
         if (!isCurrent()) {
+          this.releaseUnadmittedReadingImage(resolved);
           return;
         }
+        this.adoptReadingImage(resolved);
         this.replaceResolvedReadingImage(image, resolved);
         this.armMeasurementDeadline(generation, selectionToken, lifecycleToken);
         this.consumeMeasuredBatch(generation, selectionToken, lifecycleToken);
@@ -1673,6 +1678,7 @@ export struct ReadingExperience {
         this.visiblePage = visiblePage;
         this.visiblePageSelectionToken = selectionToken;
         this.visibleFragments = visiblePage.fragments;
+        this.releaseUnretainedReadingImages();
         this.showChapterTitle = this.isChapterFirstPageStart(visiblePage.startScalar);
         this.phase = 'ready';
         this.measurementCompleting = false;
@@ -1904,6 +1910,66 @@ export struct ReadingExperience {
         this.knownContentVersions.splice(index, 1);
       }
     }
+    this.releaseUnretainedReadingImages();
+  }
+
+  private adoptReadingImage(image: ReadingSessionImage): void {
+    if (image.state !== 'ready' || image.pixelMap === undefined) {
+      return;
+    }
+    for (const retained of this.readingImageResources) {
+      if (retained.pixelMap === image.pixelMap) {
+        return;
+      }
+    }
+    this.readingImageResources.push(image);
+  }
+
+  private releaseUnadmittedReadingImage(image: ReadingSessionImage): void {
+    if (image.pixelMap !== undefined) {
+      ReaderRuntimeOwner.current().releaseReadingImage(image.pixelMap);
+    }
+  }
+
+  private releaseUnretainedReadingImages(): void {
+    for (let index = this.readingImageResources.length - 1; index >= 0; index -= 1) {
+      const resource = this.readingImageResources[index];
+      if (resource.pixelMap !== undefined && this.isReadingImageRetained(resource)) {
+        continue;
+      }
+      if (resource.pixelMap !== undefined) {
+        ReaderRuntimeOwner.current().releaseReadingImage(resource.pixelMap);
+      }
+      this.readingImageResources.splice(index, 1);
+    }
+  }
+
+  private isReadingImageRetained(resource: ReadingSessionImage): boolean {
+    const pixelMap = resource.pixelMap;
+    if (pixelMap === undefined) {
+      return false;
+    }
+    const chapterImages = this.chapter?.images ?? [];
+    for (const image of chapterImages.concat(this.chapterWindow.retainedImages())) {
+      if (image.pixelMap === pixelMap) {
+        return true;
+      }
+    }
+    for (const fragment of this.visibleFragments.concat(this.pendingPageFragments)) {
+      if (fragment.imageSource === pixelMap) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private releaseAllReadingImages(): void {
+    for (const resource of this.readingImageResources) {
+      if (resource.pixelMap !== undefined) {
+        ReaderRuntimeOwner.current().releaseReadingImage(resource.pixelMap);
+      }
+    }
+    this.readingImageResources.splice(0, this.readingImageResources.length);
   }
 
   /**

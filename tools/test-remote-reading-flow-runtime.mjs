@@ -267,12 +267,46 @@ await assert.rejects(
   'a stale image request must cancel instead of publishing a failed placeholder',
 );
 
+let imageStillCurrent = true;
+let stalePixelReleaseCount = 0;
+const stalePixel = { fixture: 'stale-pixel-map' };
+const staleImageGateway = new ReadingSessionFlowGateway(
+  SOURCE_ID,
+  BOOK_ID,
+  { kind: 'remote', session },
+  {
+    async request() {
+      throw new Error('request is not used by the stale image test');
+    },
+    async loadReadingImage() {
+      imageStillCurrent = false;
+      return { pixelMap: stalePixel, width: 10, height: 10, revision: 'stale-r1' };
+    },
+    releaseReadingImage(pixelMap) {
+      assert.equal(pixelMap, stalePixel);
+      stalePixelReleaseCount += 1;
+    },
+  },
+);
+await assert.rejects(
+  staleImageGateway.resolveReadingImage(pendingImage, () => imageStillCurrent),
+  /cancelled/,
+  'an image that becomes stale after decode must not publish its native handle',
+);
+assert.equal(stalePixelReleaseCount, 1,
+  'a decoded PixelMap that loses ownership before admission must be released exactly once');
+
 const chapterWindow = new ReadingChapterWindow();
 chapterWindow.configure(SOURCE_ID, BOOK_ID, [0, 1]);
 chapterWindow.setCurrent(currentChapter);
 assert.equal(chapterWindow.admitNeighbour(previousChapter), true);
 assert.equal(chapterWindow.previous()?.chapterIndex, 0,
   'the online reading session must retain its real TOC predecessor');
+const imageWindow = new ReadingChapterWindow();
+imageWindow.configure(SOURCE_ID, BOOK_ID, [0]);
+imageWindow.setCurrent({ ...previousChapter, images: [readyImage] });
+assert.equal(imageWindow.retainedImages()[0].pixelMap, PIXEL_MAP,
+  'the bounded window must expose the native handles that remain live');
 
 const pagination = new ReadingPaginationIndex();
 const layoutSignature = 'runtime-test-layout-v1';

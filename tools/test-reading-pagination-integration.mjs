@@ -9,6 +9,14 @@ const sessionGateway = readFileSync(
   new URL('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts', import.meta.url),
   'utf8',
 );
+const imageHost = readFileSync(
+  new URL('../entry/src/main/ets/app/ReadingBodyImageHost.ts', import.meta.url),
+  'utf8',
+);
+const httpHost = readFileSync(
+  new URL('../entry/src/main/ets/app/HttpExecuteHost.ts', import.meta.url),
+  'utf8',
+);
 
 assert.match(source, /createReadingPaginationLayoutSignature\(\{[\s\S]*?deviceForm:[\s\S]*?viewportWidth:[\s\S]*?viewportHeight:[\s\S]*?fontFamily:[\s\S]*?fontSize:[\s\S]*?lineHeight:[\s\S]*?topInset:[\s\S]*?bottomInset:[\s\S]*?leftInset:[\s\S]*?rightInset:/,
   'the production key must include viewport, device form, typography, and all four insets');
@@ -24,6 +32,14 @@ assert.match(source, /readingImageForParagraph\(/,
   'the physical-page measurement path must recognize canonical image-object paragraphs');
 assert.match(source, /bodyImage\.state === 'pending'[\s\S]*resolvePendingReadingImage\(/,
   'pagination must pause at—not preload past—the first unresolved body image');
+assert.match(httpHost, /isCancelled\?: \(\) => boolean[\s\S]*cancelDeadline\(deadline,[\s\S]*destroy/,
+  'a stale direct image fetch must reach the underlying HttpRequest cancellation state');
+assert.match(imageHost, /MAX_READING_IMAGE_PIXELS[\s\S]*options\.desiredSize[\s\S]*createPixelMap\(options\)/,
+  'oversized compressed images must be downsampled before their PixelMap is allocated');
+assert.match(imageHost, /release\(pixelMap: image\.PixelMap\)[\s\S]*pixelMap\.release\(\)/,
+  'the Host adapter must expose explicit native PixelMap release');
+assert.match(source, /readingImageResources:[\s\S]*releaseUnretainedReadingImages\(\)/,
+  'the reader session must bound native image lifetime to its active chapter window');
 assert.match(source, /scaledReadingImageHeight\(/,
   'inline images must contribute intrinsic aspect-ratio height to the same paginator');
 assert.match(source, /bodyImage\.state === 'ready' \? bodyImage\.pixelMap : undefined/,

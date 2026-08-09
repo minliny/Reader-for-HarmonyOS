@@ -30,4 +30,7 @@ export interface ReadingGatewayRuntime {
     baseUrl: string | undefined,
     shouldCancel?: () => boolean,
   ): Promise<ReadingGatewayImage>;
+
+  /** Releases one native image after the bounded chapter window evicts it. */
+  releaseReadingImage?(pixelMap: image.PixelMap): void;
 }

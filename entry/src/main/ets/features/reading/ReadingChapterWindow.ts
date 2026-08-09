@@ -103,6 +103,17 @@ export class ReadingChapterWindow {
     return this.chapters.map((chapter: ReadingSessionChapter): number => chapter.chapterIndex);
   }
 
+  /** Native image handles still reachable from the bounded three-chapter set. */
+  retainedImages(): ReadingSessionImage[] {
+    const retained: ReadingSessionImage[] = [];
+    for (const chapter of this.chapters) {
+      for (const image of chapter.images) {
+        retained.push(copyImage(image));
+      }
+    }
+    return retained;
+  }
+
   clear(): void {
     this.currentChapterIndex = -1;
     this.chapters = [];
@@ -167,19 +178,23 @@ function copyChapter(chapter: ReadingSessionChapter): ReadingSessionChapter {
     chapterIndex: chapter.chapterIndex,
     chapterTitle: chapter.chapterTitle,
     content: chapter.content,
-    images: chapter.images.map((image: ReadingSessionImage): ReadingSessionImage => ({
-      source: image.source,
-      baseUrl: image.baseUrl,
-      startScalar: image.startScalar,
-      endScalar: image.endScalar,
-      state: image.state,
-      pixelMap: image.pixelMap,
-      intrinsicWidth: image.intrinsicWidth,
-      intrinsicHeight: image.intrinsicHeight,
-      revision: image.revision,
-    })),
+    images: chapter.images.map(copyImage),
     contentVersion: chapter.contentVersion,
     extractionVia: chapter.extractionVia,
+  };
+}
+
+function copyImage(image: ReadingSessionImage): ReadingSessionImage {
+  return {
+    source: image.source,
+    baseUrl: image.baseUrl,
+    startScalar: image.startScalar,
+    endScalar: image.endScalar,
+    state: image.state,
+    pixelMap: image.pixelMap,
+    intrinsicWidth: image.intrinsicWidth,
+    intrinsicHeight: image.intrinsicHeight,
+    revision: image.revision,
   };
 }
 

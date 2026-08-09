@@ -27,19 +27,19 @@ assert.throws(
 const capabilityById = new Map(
   remoteReadingHostCapabilitySnapshot().map((fact) => [fact.id, fact]),
 );
-assert.equal(capabilityById.get('httpExecute')?.status, 'registeredUnverified');
+assert.equal(capabilityById.get('httpExecute')?.status, 'verifiedVm');
 assert.equal(capabilityById.get('httpExecute')?.attemptable, true);
-assert.equal(capabilityById.get('responseCharsetDecoding')?.status, 'registeredUnverified');
-for (const blocked of ['platformCookieJar', 'session', 'nonUtf8RequestBody', 'redirectFinalUrl']) {
-  assert.equal(capabilityById.get(blocked)?.status, 'unsupported', `${blocked} must stay fail-closed`);
-  assert.equal(capabilityById.get(blocked)?.attemptable, false);
+assert.equal(capabilityById.get('responseCharsetDecoding')?.status, 'verifiedVm');
+for (const verified of ['platformCookieJar', 'session', 'redirectFinalUrl']) {
+  assert.equal(capabilityById.get(verified)?.status, 'verifiedVm', `${verified} must expose its VM proof`);
+  assert.equal(capabilityById.get(verified)?.attemptable, true);
 }
+assert.equal(capabilityById.get('nonUtf8RequestBody')?.status, 'registeredUnverified');
+assert.equal(capabilityById.get('nonUtf8RequestBody')?.attemptable, true);
 assert.doesNotThrow(() => assertRemoteReadingHostRequirements(['httpExecute']));
-assert.throws(
-  () => assertRemoteReadingHostRequirements(['platformCookieJar']),
-  (error) => error instanceof RemoteReadingGatewayError &&
-    error.code === 'unsupportedHostCapability' && error.capability === 'platformCookieJar',
-);
+assert.doesNotThrow(() => assertRemoteReadingHostRequirements([
+  'platformCookieJar', 'session', 'nonUtf8RequestBody', 'redirectFinalUrl',
+]));
 
 assert.deepEqual(decodeRemoteReadingVariables(undefined, 'optional', true), []);
 assert.deepEqual(decodeRemoteReadingVariables({ token: 'old', page: '1' }, 'detail'), [
@@ -122,6 +122,8 @@ assert.match(loadChapter, /via !== 'rule' && via !== 'js' && via !== 'cache'/,
   'canonical cache hits must remain an admitted chapter acquisition path');
 assert.match(loadChapter, /materializeReadingDocument\(/,
   'remote and local bodies must enter the shared reading-document projection');
+assert.match(loadChapter, /chapterResponseBaseUrl\(result\.data\) \?\? selected\.url/,
+  'relative body images must prefer the exact Host finalUrl after redirects');
 assert.match(loadChapter, /images:\s*document\.images/,
   'body images must stay on the canonical reading-session chapter model');
 assert.match(loadChapter, /contentVersion:\s*document\.contentVersion/,

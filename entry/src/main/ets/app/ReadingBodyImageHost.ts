@@ -11,6 +11,11 @@ export type ReadingBodyImagePayload = {
 };
 
 const MAX_READING_IMAGE_BYTES = 16 * 1024 * 1024;
+// Four million decoded RGBA pixels keep one body image near a 16 MiB native
+// surface while retaining enough density for a TabletExpanded page. Very
+// tall/wide images also receive an explicit longest-edge cap.
+const MAX_READING_IMAGE_PIXELS = 4 * 1024 * 1024;
+const MAX_READING_IMAGE_DIMENSION = 4096;
 
 /**
  * Narrow Host adapter for one body image already admitted by Core.
@@ -25,8 +30,17 @@ const MAX_READING_IMAGE_BYTES = 16 * 1024 * 1024;
 export class ReadingBodyImageHost {
   static readonly instance: ReadingBodyImageHost = new ReadingBodyImageHost();
 
-  async loadRequest(request: JsonObject): Promise<ReadingBodyImagePayload> {
-    const response = await HttpExecuteHost.instance.execute(request);
+  async loadRequest(
+    request: JsonObject,
+    isCurrent?: () => boolean,
+  ): Promise<ReadingBodyImagePayload> {
+    this.assertCurrent(isCurrent);
+    const response = await HttpExecuteHost.instance.execute(
+      request,
+      undefined,
+      (): boolean => isCurrent !== undefined && !isCurrent(),
+    );
+    this.assertCurrent(isCurrent);
     const status = response['status'];
     if (typeof status !== 'number' || !Number.isSafeInteger(status) || status < 200 || status >= 300) {
       throw new Error('reading body image request returned a non-success HTTP status');
@@ -35,30 +49,49 @@ export class ReadingBodyImageHost {
     if (typeof bodyBase64 !== 'string' || bodyBase64.length === 0) {
       throw new Error('reading body image response did not contain bytes');
     }
-    return this.decodeBase64(bodyBase64);
+    return this.decodeBase64(bodyBase64, isCurrent);
   }
 
-  async loadDataUri(value: string): Promise<ReadingBodyImagePayload> {
+  async loadDataUri(value: string, isCurrent?: () => boolean): Promise<ReadingBodyImagePayload> {
+    this.assertCurrent(isCurrent);
     const match = /^data:(image\/[a-z0-9.+-]+);base64,([\s\S]+)$/i.exec(value.trim());
     if (match === null) {
       throw new Error('reading body image data URI must be base64 image data');
     }
-    return this.decodeBase64(match[2]);
+    return this.decodeBase64(match[2], isCurrent);
   }
 
-  async loadBytes(bytes: Uint8Array): Promise<ReadingBodyImagePayload> {
+  async loadBytes(bytes: Uint8Array, isCurrent?: () => boolean): Promise<ReadingBodyImagePayload> {
+    this.assertCurrent(isCurrent);
     if (bytes.length === 0 || bytes.length > MAX_READING_IMAGE_BYTES) {
       throw new Error(`reading body image must contain 1..${MAX_READING_IMAGE_BYTES} bytes`);
     }
-    return this.decodeBytes(bytes);
+    return this.decodeBytes(bytes, isCurrent);
   }
 
-  private async decodeBase64(bodyBase64: string): Promise<ReadingBodyImagePayload> {
+  release(pixelMap: image.PixelMap): void {
+    try {
+      pixelMap.release();
+    } catch (_) {
+      // Idempotent best effort at a teardown/eviction boundary.
+    }
+  }
+
+  private async decodeBase64(
+    bodyBase64: string,
+    isCurrent?: () => boolean,
+  ): Promise<ReadingBodyImagePayload> {
+    this.assertCurrent(isCurrent);
     const bytes = new util.Base64Helper().decodeSync(bodyBase64, util.Type.MIME);
-    return this.decodeBytes(bytes);
+    this.assertCurrent(isCurrent);
+    return this.decodeBytes(bytes, isCurrent);
   }
 
-  private async decodeBytes(bytes: Uint8Array): Promise<ReadingBodyImagePayload> {
+  private async decodeBytes(
+    bytes: Uint8Array,
+    isCurrent?: () => boolean,
+  ): Promise<ReadingBodyImagePayload> {
+    this.assertCurrent(isCurrent);
     if (bytes.length === 0 || bytes.length > MAX_READING_IMAGE_BYTES) {
       throw new Error(`reading body image must contain 1..${MAX_READING_IMAGE_BYTES} bytes`);
     }
@@ -73,7 +106,27 @@ export class ReadingBodyImageHost {
       if (!Number.isSafeInteger(width) || width <= 0 || !Number.isSafeInteger(height) || height <= 0) {
         throw new Error('reading body image returned invalid intrinsic dimensions');
       }
-      const pixelMap = await imageSource.createPixelMap();
+      const pixelCount = width * height;
+      if (!Number.isSafeInteger(pixelCount) || pixelCount <= 0) {
+        throw new Error('reading body image dimensions exceed the safe decode range');
+      }
+      const dimensionScale = MAX_READING_IMAGE_DIMENSION / Math.max(width, height);
+      const pixelScale = Math.sqrt(MAX_READING_IMAGE_PIXELS / pixelCount);
+      const scale = Math.min(1, dimensionScale, pixelScale);
+      const options: image.DecodingOptions = { editable: false };
+      if (scale < 1) {
+        options.desiredSize = {
+          width: Math.max(1, Math.floor(width * scale)),
+          height: Math.max(1, Math.floor(height * scale)),
+        };
+      }
+      const pixelMap = await imageSource.createPixelMap(options);
+      try {
+        this.assertCurrent(isCurrent);
+      } catch (error) {
+        this.release(pixelMap);
+        throw error;
+      }
       return {
         pixelMap,
         width,
@@ -82,6 +135,12 @@ export class ReadingBodyImageHost {
       };
     } finally {
       await imageSource.release();
+    }
+  }
+
+  private assertCurrent(isCurrent?: () => boolean): void {
+    if (isCurrent !== undefined && !isCurrent()) {
+      throw new Error('reading body image request was cancelled');
     }
   }
 

@@ -122,7 +122,11 @@ export class HttpExecuteHost {
   static readonly instance: HttpExecuteHost = new HttpExecuteHost();
   private readonly activeByRequestId = new Map<number, DeadlineState>();
 
-  async execute(params: JsonObject, requestId?: number): Promise<JsonObject> {
+  async execute(
+    params: JsonObject,
+    requestId?: number,
+    isCancelled?: () => boolean,
+  ): Promise<JsonObject> {
     const requestUrl = params['url'];
     if (typeof requestUrl !== 'string' || requestUrl.trim().length === 0) {
       throw new Error('http.execute requires non-empty url');
@@ -146,8 +150,28 @@ export class HttpExecuteHost {
     // `diagnostic` is opaque recorder context; operationId is the only
     // protocol correlation key for host.complete / host.error.
     const deadline = this.createDeadline(TOTAL_DEADLINE_MS);
+    let cancellationPoll: number | undefined = undefined;
     if (requestId !== undefined) {
       this.activeByRequestId.set(requestId, deadline);
+    }
+    if (isCancelled !== undefined) {
+      const pollCancellation = (): void => {
+        if (deadline.cancelled) {
+          return;
+        }
+        let cancelled = true;
+        try {
+          cancelled = isCancelled();
+        } catch (_) {
+          // A failed ownership probe cannot authorize more network work.
+        }
+        if (cancelled) {
+          this.cancelDeadline(deadline, 'http.execute: cancelled by caller');
+          return;
+        }
+        cancellationPoll = setTimeout(pollCancellation, 50);
+      };
+      pollCancellation();
     }
     try {
       // Race guarantees the caller settles on time even if the platform's
@@ -162,6 +186,9 @@ export class HttpExecuteHost {
         deadline.expired,
       ]);
     } finally {
+      if (cancellationPoll !== undefined) {
+        clearTimeout(cancellationPoll);
+      }
       if (requestId !== undefined && this.activeByRequestId.get(requestId) === deadline) {
         this.activeByRequestId.delete(requestId);
       }
