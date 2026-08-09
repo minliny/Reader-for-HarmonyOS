@@ -394,6 +394,7 @@ struct Index {
           isTablet: deviceInfo.deviceType === 'tablet',
           onBack: (): void => this.returnToSettings(),
           onToggleSource: (id: string, enabled: boolean): void => this.onSourceToggled(id, enabled),
+          onDetectSource: (id: string): void => this.onSourceDetectionRequested(id),
           onAddSource: (): void => this.onBookSourceImportRequested(),
         });
       } else if (this.route === 'sync') {
@@ -654,6 +655,10 @@ struct Index {
     // SS-SOURCE-TOGGLE-01 orchestration (serial chain, Core-idle retry, session
     // guards) lives in SourceOrchestrator; Index only forwards the intent.
     this.getSourceOrchestrator().toggleSource(id, enabled);
+  }
+
+  private onSourceDetectionRequested(id: string): void {
+    this.getSourceOrchestrator().checkSource(id);
   }
 
   private onBookSourceImportRequested(): void {

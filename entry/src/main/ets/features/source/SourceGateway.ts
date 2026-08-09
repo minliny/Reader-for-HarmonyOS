@@ -7,6 +7,9 @@ export type BookSource = {
   baseUrl: string;
   enabled: boolean;
   enabledExplore: boolean;
+  checkState?: 'unchecked' | 'checking' | 'passed' | 'failed';
+  checkLevels?: string[];
+  checkMessage?: string;
 };
 
 export type SourcePatch = {
@@ -16,6 +19,14 @@ export type SourcePatch = {
 export type SourceImportSummary = {
   importedCount: number;
   sourceIds: string[];
+};
+
+export type SourceCheckOutcome = {
+  sourceId: string;
+  available: boolean;
+  levelsPassed: string[];
+  failureReason?: string;
+  durationMs: number;
 };
 
 const MAX_BOOK_SOURCE_DOCUMENT_ENTRIES = 5000;
@@ -154,6 +165,83 @@ export class SourceGateway {
           `got=${source['enabled']}`,
       );
     }
+  }
+
+  /** Delete sources in Core, then idempotently remove their Host sessions. */
+  async deleteSources(sourceIds: string[]): Promise<number> {
+    if (sourceIds.length === 0) {
+      throw new Error('source.delete requires at least one sourceId');
+    }
+    const result = await this.runtimeOwner.request('source.delete', { sourceIds });
+    const deleted = result.data['deleted'];
+    if (typeof deleted !== 'number' || !Number.isInteger(deleted) || deleted < 0 ||
+      deleted > sourceIds.length) {
+      throw new Error('source.delete returned invalid deleted count');
+    }
+    for (const sourceId of sourceIds) {
+      await this.runtimeOwner.clearSourceCookieSession(sourceId);
+    }
+    return deleted;
+  }
+
+  /**
+   * Run the persisted source through Core's production L1-L5 pipeline. Core
+   * resolves `ruleSearch.checkKeyWord` per source (falling back to Legado's
+   * global "我的"); the page never owns rule semantics or sample keywords.
+   */
+  async checkSource(
+    sourceId: string,
+    shouldContinue: () => boolean = (): boolean => true,
+  ): Promise<SourceCheckOutcome> {
+    if (sourceId.trim().length === 0) {
+      throw new Error('source.check.run requires a non-empty sourceId');
+    }
+    const result = await this.runtimeOwner.request('source.check.run', {
+      sourceIds: [sourceId],
+      timeoutMs: 180000,
+      levels: ['L1', 'L2', 'L3', 'L4', 'L5'],
+    }, {
+      timeoutMs: 185000,
+      shouldCancel: (): boolean => !shouldContinue(),
+    });
+    const rawResults = result.data['results'];
+    if (!Array.isArray(rawResults) || rawResults.length !== 1) {
+      throw new Error('source.check.run returned invalid result count');
+    }
+    const raw = rawResults[0];
+    if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+      throw new Error('source.check.run returned a non-object result');
+    }
+    const outcome = raw as JsonObject;
+    const echoedSourceId = this.optionalString(outcome, 'sourceId');
+    const available = outcome['available'];
+    const levels = outcome['levelsPassed'];
+    const failureReason = this.optionalString(outcome, 'failureReason');
+    const durationMs = outcome['durationMs'];
+    if (echoedSourceId !== sourceId || typeof available !== 'boolean' ||
+      !Array.isArray(levels) || typeof durationMs !== 'number' || !Number.isFinite(durationMs)) {
+      throw new Error('source.check.run returned invalid or mismatched data');
+    }
+    const levelsPassed: string[] = [];
+    for (const level of levels) {
+      if (typeof level !== 'string') {
+        throw new Error('source.check.run returned an invalid level');
+      }
+      levelsPassed.push(level);
+    }
+    if (available && levelsPassed.length !== 5) {
+      throw new Error('source.check.run marked an incomplete L1-L5 result available');
+    }
+    if (!available && (failureReason === undefined || failureReason.trim().length === 0)) {
+      throw new Error('source.check.run failed without a failure reason');
+    }
+    return {
+      sourceId,
+      available,
+      levelsPassed,
+      failureReason,
+      durationMs,
+    };
   }
 
   private optionalString(value: JsonObject, key: string): string | undefined {

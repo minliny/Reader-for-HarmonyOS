@@ -17,6 +17,7 @@ import {
 
 export {
   CapabilityRouter,
+  type CapabilityCancellationHandler,
   ReaderCoreRequestError,
   ReaderCoreRuntime,
   parseReaderCoreEvent,
@@ -62,6 +63,18 @@ export function readLocalEpubEntry(
   maxBytes: number
 ): Uint8Array {
   return nativeReaderCore.readEpubEntry(archivePath, entryPath, maxBytes);
+}
+
+/**
+ * Encode a bounded request body with Core's shared source-charset mapping.
+ * HarmonyOS owns transport bytes; Core owns the cross-platform charset truth.
+ */
+export function encodeSharedText(
+  text: string,
+  charset: string,
+  maxBytes: number
+): Uint8Array {
+  return nativeReaderCore.encodeText(text, charset, maxBytes);
 }
 
 export async function runHarmonyNapiSmoke(

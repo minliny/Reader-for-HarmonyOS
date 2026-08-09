@@ -1,7 +1,9 @@
 import http from '@ohos.net.http';
+import url from '@ohos.url';
 import util from '@ohos.util';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import type { JsonObject } from '@reader/core-harmony';
+import { encodeSharedText, type JsonObject } from '@reader/core-harmony';
+import { CookieSessionStore } from './CookieSessionStore';
 
 const LOG_DOMAIN = 0x5244;
 const DEFAULT_CONNECT_TIMEOUT_MS = 30000;
@@ -14,6 +16,7 @@ const DEFAULT_MAX_REDIRECTS = 10;
 // roughly triple peak memory). The platform has already buffered the bytes at
 // this point, so this is a post-hoc guard, not an allocation preventer.
 const MAX_RESPONSE_BYTES = 64 * 1024 * 1024;
+const MAX_REQUEST_BODY_BYTES = 16 * 1024 * 1024;
 // Host total deadline must not exceed Core's default 30s request timeout, so
 // a Core caller that gives up never leaves this Host running in the
 // background beyond its own budget.
@@ -32,12 +35,34 @@ type DeadlineState = {
   activeRequest: http.HttpRequest | null;
   timer: number | undefined;
   expired: Promise<JsonObject>;
+  rejectExpired: (reason?: Error) => void;
 };
 
 type EncodedBody =
   | { kind: 'none' }
   | { kind: 'text'; text: string }
+  | { kind: 'form'; fields: Array<[string, string]> }
   | { kind: 'multipart'; contentType: string; bytes: Uint8Array };
+
+type ParsedMethod = {
+  wireMethod: string;
+  enumMethod: http.RequestMethod;
+  customVerb: string | undefined;
+};
+
+type RedirectHop = {
+  status: number;
+  fromUrl: string;
+  toUrl: string;
+  headers: ResponseHeaders;
+};
+
+type HopResponse = {
+  status: number;
+  headers: ResponseHeaders;
+  rawHeaders: Object;
+  bytes: Uint8Array;
+};
 
 type MultipartFileWire = {
   fieldName: string;
@@ -48,6 +73,23 @@ type MultipartFileWire = {
 };
 
 /**
+ * API 23 exposes redirect interception before the platform follows a hop.
+ * Returning false terminates the platform chain and returns that redirect
+ * response to `request()`, which lets the Host apply method/header/cookie
+ * policy itself without relying on the unsupported `maxRedirects: 0` trick.
+ */
+class StopBeforeRedirectInterceptor implements http.HttpInterceptor {
+  interceptorType: http.InterceptorType = http.InterceptorType.REDIRECTION;
+
+  async interceptorHandle(
+    _request: http.HttpRequestContext,
+    _response: http.HttpResponse,
+  ): Promise<http.ChainContinue> {
+    return false;
+  }
+}
+
+/**
  * Host-side `http.execute` adapter for the API-23 HarmonyOS transport.
  *
  * Wire contract (`HostHttpRequest`, camelCase): url, method, headers,
@@ -55,58 +97,58 @@ type MultipartFileWire = {
  * charset (request-body encoding), followRedirects, maxRedirects, retry,
  * usePlatformCookieJar, session, diagnostic (opaque, ignored).
  *
- * Redirects: the API-23 transport follows redirects and exposes
- * `HttpRequestOptions.maxRedirects`. The Host always enforces a cap — Core's
- * explicit value, or a controlled default of 10 — for both `true` and omitted
- * `followRedirects`; `false` maps to 0 (best effort). It never delegates to
- * an unbounded platform default. The Host total deadline (25s, ≤ Core's 30s
- * default request timeout) cancels the in-flight request and suppresses
- * further retries, so a Core caller that gives up does not leave this Host
- * running behind.
+ * Redirects are stopped one hop at a time through API-23's REDIRECTION
+ * interceptor, so Core receives an accurate finalUrl and hop list. Method rewriting follows the
+ * browser/Legado-compatible 301/302/303/307/308 rules; cross-origin hops drop
+ * authorization, proxy authorization, cookie, and origin headers. Cookies
+ * are applied and captured on every hop through the shared Host store.
  *
  * Custom verbs: the RequestMethod enum has no PATCH or WebDAV verbs.
  * API 23's `customMethod` passes those through verbatim; nothing is
  * substituted.
  *
- * Charset is separated: this Host can safely send Raw/Form text only as
- * UTF-8, because the platform TextEncoder contract is UTF-8. A requested
- * non-UTF-8 request charset is rejected rather than mislabeled. Responses are
- * decoded using their Content-Type charset or UTF-8; bytes are retained as
- * `bodyBase64` for Core.
+ * Non-UTF-8 request bytes use Core's bounded shared encoder; ArkTS carries no
+ * private GBK/Big5 tables. Responses are decoded using Content-Type charset
+ * or UTF-8 and retained as bodyBase64 for Core.
  *
- * Fail-closed, never silently substituted: usePlatformCookieJar, session,
- * and Multipart `filePath` (Core turns a source `@/path` verbatim into
+ * Fail-closed, never silently substituted: Multipart `filePath` (Core turns a
+ * source `@/path` verbatim into
  * `filePath`; with no user-authorized attachment-handle mapping this Host
  * refuses to read a source-supplied path — inline `data` is the only accepted
- * upload form). The platform does not report the post-redirect final URL, so
- * `finalUrl` is omitted — Core's relative-link resolution after a redirect
- * falls back to the request URL (a device-verification gap). A fresh
- * HttpRequest is created/destroyed per attempt; every failure throws so the
- * SDK routes `host.error`.
+ * upload form). A fresh HttpRequest is created/destroyed per hop; every
+ * failure throws so the SDK routes `host.error`.
  */
 export class HttpExecuteHost {
   static readonly instance: HttpExecuteHost = new HttpExecuteHost();
+  private readonly activeByRequestId = new Map<number, DeadlineState>();
 
-  async execute(params: JsonObject): Promise<JsonObject> {
-    const url = params['url'];
-    if (typeof url !== 'string' || url.trim().length === 0) {
+  async execute(params: JsonObject, requestId?: number): Promise<JsonObject> {
+    const requestUrl = params['url'];
+    if (typeof requestUrl !== 'string' || requestUrl.trim().length === 0) {
       throw new Error('http.execute requires non-empty url');
     }
+    this.requireHttpUrl(requestUrl);
     const parsedMethod = this.parseMethod(params['method']);
     const headers = this.parseHeaders(params['headers']);
     const body = this.parseBody(params['body']);
     const requestCharset = this.parseCharset(params['charset']);
     const retry = this.parseRetry(params['retry']);
     const maxRedirects = this.parseRedirect(params['followRedirects'], params['maxRedirects']);
-    if (params['usePlatformCookieJar'] === true) {
-      throw new Error('http.execute: usePlatformCookieJar is not supported by this Host');
+    const sessionId = this.parseSession(params['session']);
+    const useCookieJar = params['usePlatformCookieJar'] === true || sessionId !== null;
+    if (params['usePlatformCookieJar'] !== undefined && params['usePlatformCookieJar'] !== null &&
+      typeof params['usePlatformCookieJar'] !== 'boolean') {
+      throw new Error('http.execute: usePlatformCookieJar must be a boolean');
     }
-    if (params['session'] !== undefined && params['session'] !== null) {
-      throw new Error('http.execute: session is not supported by this Host');
+    if (useCookieJar && sessionId === null) {
+      throw new Error('http.execute: platform cookie jar requires opaque session.id');
     }
     // `diagnostic` is opaque recorder context; operationId is the only
     // protocol correlation key for host.complete / host.error.
     const deadline = this.createDeadline(TOTAL_DEADLINE_MS);
+    if (requestId !== undefined) {
+      this.activeByRequestId.set(requestId, deadline);
+    }
     try {
       // Race guarantees the caller settles on time even if the platform's
       // destroy() does not settle request.request() promptly; the shared
@@ -114,13 +156,23 @@ export class HttpExecuteHost {
       // check rejects a success that lands after the deadline.
       return await Promise.race([
         this.requestWithPolicy(
-          url, parsedMethod.enumMethod, parsedMethod.customVerb,
-          headers, body, requestCharset, maxRedirects, retry, deadline,
+          requestUrl, parsedMethod, headers, body, requestCharset,
+          maxRedirects, retry, deadline, useCookieJar ? sessionId : null,
         ),
         deadline.expired,
       ]);
     } finally {
+      if (requestId !== undefined && this.activeByRequestId.get(requestId) === deadline) {
+        this.activeByRequestId.delete(requestId);
+      }
       this.disposeDeadline(deadline);
+    }
+  }
+
+  cancel(requestId: number): void {
+    const state = this.activeByRequestId.get(requestId);
+    if (state !== undefined) {
+      this.cancelDeadline(state, 'http.execute: cancelled by Core request');
     }
   }
 
@@ -144,20 +196,28 @@ export class HttpExecuteHost {
       activeRequest: null,
       timer: undefined,
       expired,
+      rejectExpired: rejectDeadline,
     };
     state.timer = setTimeout((): void => {
-      state.cancelled = true;
-      const active = state.activeRequest;
-      if (active !== null) {
-        try {
-          active.destroy();
-        } catch (_) {
-          // destroy may already be running; cancellation is already marked.
-        }
-      }
-      rejectDeadline(new Error('http.execute: exceeded total deadline'));
+      this.cancelDeadline(state, 'http.execute: exceeded total deadline');
     }, deadlineMs);
     return state;
+  }
+
+  private cancelDeadline(state: DeadlineState, message: string): void {
+    if (state.cancelled) {
+      return;
+    }
+    state.cancelled = true;
+    const active = state.activeRequest;
+    if (active !== null) {
+      try {
+        active.destroy();
+      } catch (_) {
+        // destroy may already be running; cancellation is already marked.
+      }
+    }
+    state.rejectExpired(new Error(message));
   }
 
   private disposeDeadline(state: DeadlineState): void {
@@ -175,24 +235,26 @@ export class HttpExecuteHost {
 
   private async requestWithPolicy(
     url: string,
-    method: http.RequestMethod,
-    customVerb: string | undefined,
+    method: ParsedMethod,
     headers: Record<string, string>,
     body: EncodedBody,
     requestCharset: string | undefined,
     maxRedirects: number,
     retry: RetryPolicy | null,
     deadline: DeadlineState,
+    sessionId: string | null,
   ): Promise<JsonObject> {
     const attempts = retry === null ? 1 : Math.max(1, Math.floor(retry.maxAttempts));
     let lastError: Error | null = null;
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
       this.assertWithinDeadline(deadline);
       try {
-        return await this.singleRequest(url, method, customVerb, headers, body, requestCharset, maxRedirects, deadline);
+        return await this.requestRedirectChain(
+          url, method, headers, body, requestCharset, maxRedirects, deadline, sessionId,
+        );
       } catch (error) {
         if (deadline.cancelled) {
-          throw new Error('http.execute: exceeded total deadline; cancelled');
+          throw new Error('http.execute: cancelled');
         }
         lastError = error instanceof Error ? error : new Error(`${error}`);
         if (attempt < attempts) {
@@ -209,25 +271,99 @@ export class HttpExecuteHost {
     throw lastError ?? new Error('http.execute request failed');
   }
 
-  private async singleRequest(
-    url: string,
-    method: http.RequestMethod,
-    customVerb: string | undefined,
+  private async requestRedirectChain(
+    initialUrl: string,
+    initialMethod: ParsedMethod,
     headers: Record<string, string>,
     body: EncodedBody,
     requestCharset: string | undefined,
     maxRedirects: number,
     deadline: DeadlineState,
+    sessionId: string | null,
   ): Promise<JsonObject> {
+    let currentUrl = initialUrl;
+    let currentMethod = initialMethod;
+    let currentBody = body;
+    let currentHeaders = this.copyHeaders(headers);
+    const redirects: RedirectHop[] = [];
+    const observedCookies: JsonObject[] = [];
+    while (true) {
+      this.assertWithinDeadline(deadline);
+      const effectiveHeaders = this.copyHeaders(currentHeaders);
+      if (sessionId !== null) {
+        const cookieHeader = await CookieSessionStore.instance.cookieHeader(sessionId, currentUrl);
+        if (cookieHeader.length > 0) {
+          const explicitCookie = this.headerValue(effectiveHeaders, 'cookie');
+          this.setHeader(effectiveHeaders, 'Cookie', explicitCookie === null || explicitCookie.length === 0 ?
+            cookieHeader : `${explicitCookie}; ${cookieHeader}`);
+        }
+      }
+      const response = await this.singleHop(
+        currentUrl, currentMethod, effectiveHeaders, currentBody, requestCharset, deadline,
+      );
+      if (sessionId !== null) {
+        const setCookies = this.headerValues(response.rawHeaders, 'set-cookie');
+        const stored = await CookieSessionStore.instance.storeResponseCookies(
+          sessionId, currentUrl, setCookies,
+        );
+        observedCookies.push(...stored);
+      }
+      const location = this.headerValue(response.headers, 'location');
+      if (!this.isRedirectStatus(response.status) || location === null || maxRedirects === 0) {
+        return this.buildResponse(
+          response, currentUrl, redirects, observedCookies, sessionId,
+        );
+      }
+      if (redirects.length >= maxRedirects) {
+        throw new Error(`http.execute: exceeded redirect limit ${maxRedirects}`);
+      }
+      const nextUrl = this.resolveRedirectUrl(location, currentUrl);
+      const hop: RedirectHop = {
+        status: response.status,
+        fromUrl: currentUrl,
+        toUrl: nextUrl,
+        headers: response.headers,
+      };
+      redirects.push(hop);
+      const rewritten = this.redirectMethod(response.status, currentMethod, currentBody);
+      currentMethod = rewritten.method;
+      currentBody = rewritten.body;
+      if (rewritten.body.kind === 'none') {
+        this.deleteHeader(currentHeaders, 'content-type');
+        this.deleteHeader(currentHeaders, 'content-length');
+        this.deleteHeader(currentHeaders, 'transfer-encoding');
+      }
+      if (!this.sameOrigin(currentUrl, nextUrl)) {
+        this.deleteHeader(currentHeaders, 'authorization');
+        this.deleteHeader(currentHeaders, 'proxy-authorization');
+        this.deleteHeader(currentHeaders, 'cookie');
+        this.deleteHeader(currentHeaders, 'origin');
+      }
+      currentUrl = nextUrl;
+    }
+  }
+
+  private async singleHop(
+    requestUrl: string,
+    method: ParsedMethod,
+    headers: Record<string, string>,
+    body: EncodedBody,
+    requestCharset: string | undefined,
+    deadline: DeadlineState,
+  ): Promise<HopResponse> {
     const request = http.createHttp();
     deadline.activeRequest = request;
     try {
-      this.assertWithinDeadline(deadline);
-      const effectiveHeaders: Record<string, string> = {};
-      for (const key of Object.keys(headers)) {
-        effectiveHeaders[key] = headers[key];
+      const interceptors = new http.HttpInterceptorChain();
+      if (!interceptors.addChain([new StopBeforeRedirectInterceptor()]) ||
+        !interceptors.apply(request)) {
+        throw new Error('http.execute: cannot attach redirect interceptor');
       }
-      const payload: string | ArrayBuffer | undefined = this.requestPayload(body, requestCharset, effectiveHeaders);
+      this.assertWithinDeadline(deadline);
+      const effectiveHeaders = this.copyHeaders(headers);
+      const payload: string | ArrayBuffer | undefined = this.requestPayload(
+        body, requestCharset, effectiveHeaders,
+      );
       const remaining = deadline.deadlineAt - Date.now();
       if (remaining <= 0) {
         // The deadline may have elapsed while a (large) payload was built;
@@ -235,7 +371,7 @@ export class HttpExecuteHost {
         throw new Error('http.execute: exceeded total deadline');
       }
       const options: http.HttpRequestOptions = {
-        method,
+        method: method.enumMethod,
         header: effectiveHeaders,
         // Preserve bytes so the Host—not an undocumented platform default—
         // owns the Core response conversion decision.
@@ -244,44 +380,31 @@ export class HttpExecuteHost {
         // Clamp every per-request timeout to the remaining deadline budget.
         connectTimeout: Math.min(DEFAULT_CONNECT_TIMEOUT_MS, remaining),
         readTimeout: Math.min(DEFAULT_READ_TIMEOUT_MS, remaining),
-        maxRedirects,
+        // The REDIRECTION interceptor stops before each automatic hop. A
+        // positive platform limit is still required; zero is surfaced by
+        // NetStack as 2300047 before returning the 3xx response.
+        maxRedirects: MAX_REDIRECTS,
       };
-      if (customVerb !== undefined) {
-        options.customMethod = customVerb;
+      if (method.customVerb !== undefined) {
+        options.customMethod = method.customVerb;
       }
       if (payload !== undefined) {
         options.extraData = payload;
       }
-      const response = await request.request(url, options);
+      const response = await request.request(requestUrl, options);
       // A response that lands after the deadline is a stale success: reject
       // it so a cancelled cycle never returns a late result.
       this.assertWithinDeadline(deadline);
-      const responseHeaders = this.flattenHeaders(response.header);
       const bytes = this.requireResponseBytes(response.result);
       if (bytes.length > MAX_RESPONSE_BYTES) {
         throw new Error(`http.execute: response exceeds ${MAX_RESPONSE_BYTES} byte limit`);
       }
-      const responseCharset = this.resolveResponseCharset(responseHeaders);
-      let decoded: string;
-      try {
-        decoded = util.TextDecoder.create(responseCharset, { fatal: true }).decodeToString(bytes);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : `${error}`;
-        throw new Error(`http.execute: cannot decode response as ${responseCharset}: ${message}`);
-      }
-      const result: JsonObject = {
+      return {
         status: response.responseCode,
-        body: decoded,
-        headers: responseHeaders,
-        charsetHint: responseCharset,
+        headers: this.flattenHeaders(response.header),
+        rawHeaders: response.header,
+        bytes,
       };
-      if (bytes.length > 0) {
-        result['bodyBase64'] = new util.Base64Helper().encodeToStringSync(bytes);
-      }
-      // The API gives no trustworthy final URL or redirect-hop chain. Omit
-      // both fields; pretending the initial URL is final would corrupt Core
-      // redirect-sensitive rules.
-      return result;
     } finally {
       if (deadline.activeRequest === request) {
         deadline.activeRequest = null;
@@ -294,6 +417,39 @@ export class HttpExecuteHost {
         hilog.warn(LOG_DOMAIN, 'Reader', 'http.execute request cleanup failed');
       }
     }
+  }
+
+  private buildResponse(
+    response: HopResponse,
+    finalUrl: string,
+    redirects: RedirectHop[],
+    cookies: JsonObject[],
+    sessionId: string | null,
+  ): JsonObject {
+    const responseCharset = this.resolveResponseCharset(response.headers);
+    let decoded: string;
+    try {
+      decoded = util.TextDecoder.create(responseCharset, { fatal: true }).decodeToString(response.bytes);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : `${error}`;
+      throw new Error(`http.execute: cannot decode response as ${responseCharset}: ${message}`);
+    }
+    const result: JsonObject = {
+      status: response.status,
+      body: decoded,
+      headers: response.headers,
+      charsetHint: responseCharset,
+      finalUrl,
+      redirects,
+      cookies,
+    };
+    if (response.bytes.length > 0) {
+      result['bodyBase64'] = new util.Base64Helper().encodeToStringSync(response.bytes);
+    }
+    if (sessionId !== null) {
+      result['session'] = { id: sessionId };
+    }
+    return result;
   }
 
   /**
@@ -310,43 +466,84 @@ export class HttpExecuteHost {
       return undefined;
     }
     if (body.kind === 'multipart') {
+      if (body.bytes.length > MAX_REQUEST_BODY_BYTES) {
+        throw new Error(`http.execute: multipart body exceeds ${MAX_REQUEST_BODY_BYTES} byte limit`);
+      }
       headers['Content-Type'] = body.contentType;
       return body.bytes.buffer;
+    }
+    if (body.kind === 'form') {
+      const bytes = this.encodeFormFields(body.fields, requestCharset);
+      return bytes.buffer;
     }
     return this.encodeRequestText(body.text, requestCharset);
   }
 
-  private encodeRequestText(text: string, requestCharset: string | undefined): string {
+  private encodeRequestText(text: string, requestCharset: string | undefined): string | ArrayBuffer {
     const charset = requestCharset === undefined ? 'utf-8' : requestCharset;
     const normalized = charset.toLowerCase();
     if (normalized === 'utf-8' || normalized === 'utf8') {
+      const length = new util.TextEncoder('utf-8').encode(text).length;
+      if (length > MAX_REQUEST_BODY_BYTES) {
+        throw new Error(`http.execute: request body exceeds ${MAX_REQUEST_BODY_BYTES} byte limit`);
+      }
       return text;
     }
-    throw new Error(`http.execute: non-UTF-8 request charset is not supported: ${charset}`);
+    return encodeSharedText(text, charset, MAX_REQUEST_BODY_BYTES).buffer;
   }
 
-  private parseMethod(value: unknown): { enumMethod: http.RequestMethod; customVerb: string | undefined } {
+  private encodeFormFields(
+    fields: Array<[string, string]>,
+    requestCharset: string | undefined,
+  ): Uint8Array {
+    const charset = requestCharset === undefined ? 'utf-8' : requestCharset;
+    const parts: string[] = [];
+    for (const [name, fieldValue] of fields) {
+      parts.push(`${this.formPercentEncode(name, charset)}=${this.formPercentEncode(fieldValue, charset)}`);
+    }
+    return new util.TextEncoder('utf-8').encode(parts.join('&'));
+  }
+
+  private formPercentEncode(value: string, charset: string): string {
+    const bytes = encodeSharedText(value, charset, MAX_REQUEST_BODY_BYTES);
+    let out = '';
+    for (let index = 0; index < bytes.length; index += 1) {
+      const byte = bytes[index];
+      const alphaNumeric = byte >= 0x30 && byte <= 0x39 || byte >= 0x41 && byte <= 0x5a ||
+        byte >= 0x61 && byte <= 0x7a;
+      if (alphaNumeric || byte === 0x2d || byte === 0x2e || byte === 0x5f || byte === 0x2a) {
+        out += String.fromCharCode(byte);
+      } else if (byte === 0x20) {
+        out += '+';
+      } else {
+        out += `%${byte.toString(16).toUpperCase().padStart(2, '0')}`;
+      }
+    }
+    return out;
+  }
+
+  private parseMethod(value: unknown): ParsedMethod {
     const raw = typeof value === 'string' ? value.trim() : 'GET';
     if (raw.length === 0) {
       throw new Error('http.execute: method must be a non-empty HTTP token');
     }
     switch (raw.toUpperCase()) {
       case 'GET':
-        return { enumMethod: http.RequestMethod.GET, customVerb: undefined };
+        return { wireMethod: 'GET', enumMethod: http.RequestMethod.GET, customVerb: undefined };
       case 'POST':
-        return { enumMethod: http.RequestMethod.POST, customVerb: undefined };
+        return { wireMethod: 'POST', enumMethod: http.RequestMethod.POST, customVerb: undefined };
       case 'PUT':
-        return { enumMethod: http.RequestMethod.PUT, customVerb: undefined };
+        return { wireMethod: 'PUT', enumMethod: http.RequestMethod.PUT, customVerb: undefined };
       case 'DELETE':
-        return { enumMethod: http.RequestMethod.DELETE, customVerb: undefined };
+        return { wireMethod: 'DELETE', enumMethod: http.RequestMethod.DELETE, customVerb: undefined };
       case 'HEAD':
-        return { enumMethod: http.RequestMethod.HEAD, customVerb: undefined };
+        return { wireMethod: 'HEAD', enumMethod: http.RequestMethod.HEAD, customVerb: undefined };
       case 'OPTIONS':
-        return { enumMethod: http.RequestMethod.OPTIONS, customVerb: undefined };
+        return { wireMethod: 'OPTIONS', enumMethod: http.RequestMethod.OPTIONS, customVerb: undefined };
       case 'CONNECT':
-        return { enumMethod: http.RequestMethod.CONNECT, customVerb: undefined };
+        return { wireMethod: 'CONNECT', enumMethod: http.RequestMethod.CONNECT, customVerb: undefined };
       case 'TRACE':
-        return { enumMethod: http.RequestMethod.TRACE, customVerb: undefined };
+        return { wireMethod: 'TRACE', enumMethod: http.RequestMethod.TRACE, customVerb: undefined };
       default:
         if (!this.isValidHttpToken(raw)) {
           throw new Error('http.execute: method must be a valid HTTP token');
@@ -354,7 +551,107 @@ export class HttpExecuteHost {
         // WebDAV/PATCH verbs are not in the enum; API 23's customMethod passes
         // the exact token through (HTTP methods are case-sensitive). Never
         // send a wrong substitute method.
-        return { enumMethod: http.RequestMethod.GET, customVerb: raw };
+        return { wireMethod: raw, enumMethod: http.RequestMethod.GET, customVerb: raw };
+    }
+  }
+
+  private redirectMethod(
+    status: number,
+    method: ParsedMethod,
+    body: EncodedBody,
+  ): { method: ParsedMethod; body: EncodedBody } {
+    const upper = method.wireMethod.toUpperCase();
+    const shouldBecomeGet = status === 303 && upper !== 'HEAD' ||
+      (status === 301 || status === 302) && upper === 'POST';
+    if (!shouldBecomeGet) {
+      return { method, body };
+    }
+    return {
+      method: this.parseMethod('GET'),
+      body: { kind: 'none' },
+    };
+  }
+
+  private isRedirectStatus(status: number): boolean {
+    return status === 301 || status === 302 || status === 303 || status === 307 || status === 308;
+  }
+
+  private resolveRedirectUrl(location: string, baseUrl: string): string {
+    let resolved: string;
+    try {
+      resolved = url.URL.parseURL(location, baseUrl).toString();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : `${error}`;
+      throw new Error(`http.execute: invalid redirect Location: ${message}`);
+    }
+    this.requireHttpUrl(resolved);
+    return resolved;
+  }
+
+  private sameOrigin(left: string, right: string): boolean {
+    return url.URL.parseURL(left).origin.toLowerCase() === url.URL.parseURL(right).origin.toLowerCase();
+  }
+
+  private requireHttpUrl(value: string): void {
+    let parsed: url.URL;
+    try {
+      parsed = url.URL.parseURL(value);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : `${error}`;
+      throw new Error(`http.execute: invalid url: ${message}`);
+    }
+    const protocol = parsed.protocol.toLowerCase();
+    if ((protocol !== 'http:' && protocol !== 'https:') || parsed.hostname.length === 0) {
+      throw new Error('http.execute: url must use http or https');
+    }
+  }
+
+  private parseSession(value: unknown): string | null {
+    if (value === undefined || value === null) {
+      return null;
+    }
+    if (typeof value !== 'object' || Array.isArray(value)) {
+      throw new Error('http.execute: session must be an object');
+    }
+    const id = (value as Record<string, unknown>)['id'];
+    if (typeof id !== 'string' || id.trim().length === 0) {
+      throw new Error('http.execute: session.id must be a non-empty string');
+    }
+    return id.trim();
+  }
+
+  private copyHeaders(headers: Record<string, string>): Record<string, string> {
+    const copy: Record<string, string> = {};
+    for (const key of Object.keys(headers)) {
+      copy[key] = headers[key];
+    }
+    return copy;
+  }
+
+  private headerValue(headers: ResponseHeaders, wanted: string): string | null {
+    for (const key of Object.keys(headers)) {
+      if (key.toLowerCase() === wanted.toLowerCase()) {
+        return headers[key];
+      }
+    }
+    return null;
+  }
+
+  private setHeader(headers: Record<string, string>, preferredName: string, value: string): void {
+    for (const key of Object.keys(headers)) {
+      if (key.toLowerCase() === preferredName.toLowerCase()) {
+        headers[key] = value;
+        return;
+      }
+    }
+    headers[preferredName] = value;
+  }
+
+  private deleteHeader(headers: Record<string, string>, wanted: string): void {
+    for (const key of Object.keys(headers)) {
+      if (key.toLowerCase() === wanted.toLowerCase()) {
+        delete headers[key];
+      }
     }
   }
 
@@ -447,7 +744,7 @@ export class HttpExecuteHost {
         return { kind: 'multipart', contentType: multipart.contentType, bytes: multipart.bytes };
       }
       if (obj['fields'] !== undefined) {
-        return { kind: 'text', text: this.buildFormEncoded(this.parseFormFields(obj['fields'])) };
+        return { kind: 'form', fields: this.parseFormFields(obj['fields']) };
       }
     }
     throw new Error('http.execute: unsupported body shape');
@@ -515,14 +812,6 @@ export class HttpExecuteHost {
       });
     }
     return files;
-  }
-
-  private buildFormEncoded(fields: Array<[string, string]>): string {
-    const pairs: string[] = [];
-    for (const [name, fieldValue] of fields) {
-      pairs.push(`${encodeURIComponent(name)}=${encodeURIComponent(fieldValue)}`);
-    }
-    return pairs.join('&');
   }
 
   private buildMultipart(
@@ -643,19 +932,72 @@ export class HttpExecuteHost {
     for (const key of Object.keys(header)) {
       const value = (header as Record<string, unknown>)[key];
       if (Array.isArray(value)) {
-        // RFC 7230 §3.2.2: combine repeated fields with a comma. Core reads
-        // response headers via `Value::as_str()`, so an array value would be
-        // treated as absent.
         const parts: string[] = [];
         for (const item of value) {
           parts.push(typeof item === 'string' ? item : `${item}`);
         }
-        out[key] = parts.join(', ');
+        // Set-Cookie cannot be comma-folded because Expires itself contains a
+        // comma. Cookie metadata is returned separately; newline keeps the
+        // diagnostic header readable without inventing a different cookie.
+        out[key] = key.toLowerCase() === 'set-cookie' ? parts.join('\n') : parts.join(', ');
       } else {
         out[key] = typeof value === 'string' ? value : `${value}`;
       }
     }
     return out;
+  }
+
+  private headerValues(header: Object, wanted: string): string[] {
+    const values: string[] = [];
+    for (const key of Object.keys(header)) {
+      if (key.toLowerCase() !== wanted.toLowerCase()) {
+        continue;
+      }
+      const value = (header as Record<string, unknown>)[key];
+      if (Array.isArray(value)) {
+        for (const item of value) {
+          values.push(...this.splitCombinedSetCookie(typeof item === 'string' ? item : `${item}`));
+        }
+      } else {
+        values.push(...this.splitCombinedSetCookie(typeof value === 'string' ? value : `${value}`));
+      }
+    }
+    return values;
+  }
+
+  private splitCombinedSetCookie(value: string): string[] {
+    // Some transports collapse repeated Set-Cookie headers. Split only at a
+    // comma followed by a new cookie-name token and '=', never at the comma
+    // inside `Expires=Wed, 09 Jun ...`.
+    const parts: string[] = [];
+    let start = 0;
+    for (let index = 0; index < value.length; index += 1) {
+      if (value.charAt(index) !== ',') {
+        continue;
+      }
+      let cursor = index + 1;
+      while (cursor < value.length && value.charAt(cursor) === ' ') {
+        cursor += 1;
+      }
+      const tokenStart = cursor;
+      while (cursor < value.length &&
+        ('!#$%&\'*+-.^_`|~'.indexOf(value.charAt(cursor)) >= 0 ||
+          /[A-Za-z0-9]/.test(value.charAt(cursor)))) {
+        cursor += 1;
+      }
+      if (cursor > tokenStart && value.charAt(cursor) === '=') {
+        const part = value.substring(start, index).trim();
+        if (part.length > 0) {
+          parts.push(part);
+        }
+        start = index + 1;
+      }
+    }
+    const tail = value.substring(start).trim();
+    if (tail.length > 0) {
+      parts.push(tail);
+    }
+    return parts;
   }
 
   private resolveResponseCharset(headers: ResponseHeaders): string {

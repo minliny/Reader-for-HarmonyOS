@@ -6,6 +6,7 @@ export type NativeReaderCoreModule = {
   abiVersion(): number;
   lastError(): { code: number; message: string };
   readEpubEntry(archivePath: string, entryPath: string, maxBytes: number): Uint8Array;
+  encodeText(text: string, charset: string, maxBytes: number): Uint8Array;
   createRuntime(config?: JsonObject | string): NativeRuntimeHandle;
   releaseRuntime(runtime: NativeRuntimeHandle): void;
   sendCommand(runtime: NativeRuntimeHandle, command: JsonObject | string): void;
@@ -82,9 +83,9 @@ export type RequestOptions = {
   pollMs?: number;
   hostRequest?: HostRequestHandler;
   /**
-   * Polled while waiting for the matching Core event. Returning true cancels
-   * the native request before this Promise rejects, so an obsolete page intent
-   * cannot keep executing behind a newer route or chapter selection.
+   * Polled while waiting for Core or an active Host capability. Returning
+   * true cancels both layers before this Promise rejects, so obsolete route,
+   * source, or chapter work cannot continue behind the replacement request.
    */
   shouldCancel?: () => boolean;
 };
@@ -92,6 +93,10 @@ export type RequestOptions = {
 export type CapabilityHandler = (
   event: ReaderCoreHostRequestEvent
 ) => JsonObject | Promise<JsonObject>;
+
+export type CapabilityCancellationHandler = (
+  event: ReaderCoreHostRequestEvent
+) => void;
 
 /**
  * Host-owned HTTP fetch mechanism. The adapter calls this to actually perform
@@ -119,6 +124,7 @@ export class CapabilityRouter {
   static readonly httpExecuteCapability = "http.execute";
 
   private readonly handlers = new Map<string, CapabilityHandler>();
+  private readonly cancellationHandlers = new Map<string, CapabilityCancellationHandler>();
   private readonly httpFetch: HttpFetch | null;
 
   constructor(options: { httpFetch?: HttpFetch } = {}) {
@@ -131,14 +137,26 @@ export class CapabilityRouter {
     }
   }
 
-  register(capability: string, handler: CapabilityHandler): void {
+  register(
+    capability: string,
+    handler: CapabilityHandler,
+    cancellationHandler?: CapabilityCancellationHandler
+  ): void {
     if (typeof capability !== "string" || capability.length === 0) {
       throw new Error("capability must be a non-empty string");
     }
     if (typeof handler !== "function") {
       throw new Error("handler must be a function");
     }
+    if (cancellationHandler !== undefined && typeof cancellationHandler !== "function") {
+      throw new Error("cancellationHandler must be a function");
+    }
     this.handlers.set(capability, handler);
+    if (cancellationHandler === undefined) {
+      this.cancellationHandlers.delete(capability);
+    } else {
+      this.cancellationHandlers.set(capability, cancellationHandler);
+    }
   }
 
   has(capability: string): boolean {
@@ -151,6 +169,10 @@ export class CapabilityRouter {
       throw new Error(`no handler registered for capability: ${event.capability}`);
     }
     return handler(event);
+  }
+
+  cancel(event: ReaderCoreHostRequestEvent): void {
+    this.cancellationHandlers.get(event.capability)?.(event);
   }
 
   private async handleHttpExecute(
@@ -182,16 +204,12 @@ export class ReaderCoreRuntime {
   private readonly native: NativeReaderCoreModule;
   private readonly runtime: NativeRuntimeHandle;
   private readonly pendingEvents: ReaderCoreEvent[] = [];
-  /**
-   * Request ids abandoned by `waitForResult` itself. They are deliberately
-   * distinct from the public `cancel()` API: an external caller can still
-   * cancel a request and observe its terminal CANCELLED event through the
-   * normal event APIs.
-   */
-  private readonly abandonedRequestIds: Set<number> = new Set<number>();
+  /** Requests whose waiter has already returned after timeout/cancellation. */
+  private readonly abandonedRequestIds = new Set<number>();
   private nextRequestId = 1;
   private closed = false;
   private capabilityRouter: CapabilityRouter | null = null;
+  private readonly activeHostRequests = new Map<number, ReaderCoreHostRequestEvent>();
 
   constructor(nativeModule: NativeReaderCoreModule, config: JsonObject = {}) {
     this.native = nativeModule;
@@ -219,8 +237,12 @@ export class ReaderCoreRuntime {
     if (this.closed) {
       return;
     }
+    for (const event of this.activeHostRequests.values()) {
+      this.capabilityRouter?.cancel(event);
+    }
     this.native.releaseRuntime(this.runtime);
     this.pendingEvents.length = 0;
+    this.activeHostRequests.clear();
     this.abandonedRequestIds.clear();
     this.closed = true;
   }
@@ -236,6 +258,7 @@ export class ReaderCoreRuntime {
       method,
       params,
     };
+    this.abandonedRequestIds.delete(requestId);
     this.native.sendCommand(this.runtime, command);
     return requestId;
   }
@@ -243,6 +266,10 @@ export class ReaderCoreRuntime {
   cancel(requestId: number): void {
     this.ensureOpen();
     assertNonNegativeSafeInteger(requestId, "requestId");
+    const active = this.activeHostRequests.get(requestId);
+    if (active !== undefined) {
+      this.capabilityRouter?.cancel(active);
+    }
     this.native.cancelRequest(this.runtime, requestId);
   }
 
@@ -312,8 +339,6 @@ export class ReaderCoreRuntime {
     const deadline = Date.now() + timeoutMs;
 
     while (Date.now() <= deadline) {
-      // `close()` can run while this async wait yielded. Never read from a
-      // released native runtime on the next poll iteration.
       this.ensureOpen();
       if (options.shouldCancel?.()) {
         this.cancelPendingRequest(requestId);
@@ -338,34 +363,27 @@ export class ReaderCoreRuntime {
           : undefined;
         const inlineHandler = options.hostRequest;
         if (routerHandler === undefined && inlineHandler === undefined) {
-          // This host operation belongs to the request currently being waited
-          // on. Re-queueing it and throwing leaves the native Core request
-          // pending forever; cancel it before returning the actionable error.
           this.cancelPendingRequest(requestId);
           throw new Error(`Reader-Core host.request requires a handler: ${event.operationId}`);
         }
-        let result: JsonObject;
         try {
-          result = routerHandler !== undefined
-            ? await routerHandler.route(event)
-            : await inlineHandler!(event);
-        } catch (error) {
-          this.failHostRequest(event, normalizeHostError(error));
-          continue;
-        }
-        // A page/selection can become obsolete while its Host handler awaited
-        // I/O. Do not complete that old Core continuation after the caller has
-        // cancelled it; a completion here could revive stale remote work.
-        if (options.shouldCancel?.()) {
-          this.cancelPendingRequest(requestId);
-          throw new Error(`Reader-Core request cancelled by caller: ${requestId}`);
-        }
-        try {
-          this.completeHostRequest(event, result);
-        } catch (error) {
+          const result = await this.awaitHostHandler(
+            event,
+            routerHandler !== undefined
+              ? () => routerHandler.route(event)
+              : () => inlineHandler!(event),
+            deadline,
+            pollMs,
+            options.shouldCancel
+          );
           if (options.shouldCancel?.()) {
             this.cancelPendingRequest(requestId);
             throw new Error(`Reader-Core request cancelled by caller: ${requestId}`);
+          }
+          this.completeHostRequest(event, result);
+        } catch (error) {
+          if (this.abandonedRequestIds.has(requestId)) {
+            throw error;
           }
           this.failHostRequest(event, normalizeHostError(error));
         }
@@ -387,22 +405,62 @@ export class ReaderCoreRuntime {
     throw new Error(`Reader-Core request timed out: ${requestId}`);
   }
 
+  private async awaitHostHandler(
+    event: ReaderCoreHostRequestEvent,
+    handler: () => JsonObject | Promise<JsonObject>,
+    deadline: number,
+    pollMs: number,
+    shouldCancel: (() => boolean) | undefined
+  ): Promise<JsonObject> {
+    let settled = false;
+    let rejected = false;
+    let result: JsonObject | undefined;
+    let failure: unknown;
+    this.activeHostRequests.set(event.requestId, event);
+    Promise.resolve()
+      .then(handler)
+      .then(
+        (value) => {
+          result = value;
+          settled = true;
+        },
+        (error) => {
+          failure = error;
+          rejected = true;
+          settled = true;
+        }
+      );
+    try {
+      while (!settled) {
+        this.ensureOpen();
+        if (shouldCancel?.()) {
+          this.cancelPendingRequest(event.requestId);
+          throw new Error(`Reader-Core request cancelled by caller: ${event.requestId}`);
+        }
+        const remaining = deadline - Date.now();
+        if (remaining <= 0) {
+          this.cancelPendingRequest(event.requestId);
+          throw new Error(`Reader-Core request timed out: ${event.requestId}`);
+        }
+        await delay(Math.min(pollMs, remaining));
+      }
+      if (rejected) {
+        throw failure;
+      }
+      return result as JsonObject;
+    } finally {
+      if (this.activeHostRequests.get(event.requestId) === event) {
+        this.activeHostRequests.delete(event.requestId);
+      }
+    }
+  }
+
   private cancelPendingRequest(requestId: number): void {
-    // `cancelRequest` causes Core to emit a terminal CANCELLED error on the
-    // original request id. This path is used only after this SDK has already
-    // rejected a wait because its page intent became obsolete, timed out, or
-    // lacked a required Host handler; the terminal event must not be retained
-    // and later surface as an unrelated queued event.
     this.abandonedRequestIds.add(requestId);
     this.discardAbandonedPendingEvents();
-    // A close may race an abandoned page request. Preserve the caller's
-    // cancellation/timeout error even when the runtime has just been released.
     try {
       this.cancel(requestId);
     } catch (_) {
-      // `cancel` is best effort for an already completed or closed request.
-      // A closed runtime cannot emit the terminal event that would otherwise
-      // retire this id.
       if (this.closed) {
         this.abandonedRequestIds.delete(requestId);
       }
@@ -459,10 +517,7 @@ export class ReaderCoreRuntime {
 
   private discardAbandonedPendingEvents(): void {
     const terminalRequestIds: number[] = [];
-    // Keep the abandoned-id set unchanged until this scan finishes. If a
-    // queued host.request and its terminal event are both present, deleting
-    // the id at the terminal event must not let the earlier event survive.
-    for (let index = this.pendingEvents.length - 1; index >= 0; index--) {
+    for (let index = this.pendingEvents.length - 1; index >= 0; index -= 1) {
       const event = this.pendingEvents[index] as ReaderCoreEvent;
       if (!this.abandonedRequestIds.has(event.requestId)) {
         continue;

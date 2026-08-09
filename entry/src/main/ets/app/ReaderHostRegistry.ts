@@ -11,6 +11,7 @@ import {
   type ReaderCoreHostRequestEvent,
 } from '@reader/core-harmony';
 import { HttpExecuteHost } from './HttpExecuteHost';
+import { CookieSessionStore } from './CookieSessionStore';
 
 type SnapshotEncoding = 'value' | 'valueBase64';
 
@@ -74,6 +75,11 @@ export class ReaderHostRegistry {
     return this.context;
   }
 
+  /** Clear every Host-owned credential for one opaque source/session id. */
+  async clearSourceCookieSession(sourceId: string): Promise<void> {
+    await CookieSessionStore.instance.clearSession(sourceId);
+  }
+
   async needsLegacySnapshotMigration(): Promise<boolean> {
     return await fileIo.access(this.snapshotPath()) && !(await fileIo.access(this.snapshotMigrationMarkerPath()));
   }
@@ -107,7 +113,15 @@ export class ReaderHostRegistry {
       return this.writeSnapshot(event);
     });
     router.register('http.execute', (event: ReaderCoreHostRequestEvent): Promise<JsonObject> => {
-      return HttpExecuteHost.instance.execute(event.params);
+      return HttpExecuteHost.instance.execute(event.params, event.requestId);
+    }, (event: ReaderCoreHostRequestEvent): void => {
+      HttpExecuteHost.instance.cancel(event.requestId);
+    });
+    router.register('cookie.get', (event: ReaderCoreHostRequestEvent): Promise<JsonObject> => {
+      return CookieSessionStore.instance.getCapability(event.params);
+    });
+    router.register('cookie.set', (event: ReaderCoreHostRequestEvent): Promise<JsonObject> => {
+      return CookieSessionStore.instance.setCapability(event.params);
     });
     return router;
   }

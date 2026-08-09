@@ -99,6 +99,14 @@ export class ReaderRuntimeOwner {
   }
 
   /**
+   * Coordinated Host cleanup after Core has durably disabled/deleted a source.
+   * The opaque source id scopes the jar; no cookie plaintext crosses Core.
+   */
+  async clearSourceCookieSession(sourceId: string): Promise<void> {
+    await this.host.clearSourceCookieSession(sourceId);
+  }
+
+  /**
    * Resolve one normalized body-image URL through Core's source semantics,
    * then execute the resulting request with the already-owned Host transport.
    * A stale selection is checked before and after both async boundaries, so a
@@ -270,7 +278,13 @@ export class ReaderRuntimeOwner {
     runtime.setCapabilityRouter(this.host.createCapabilityRouter());
     try {
       await runtime.request('runtime.setHostCapabilities', {
-        capabilities: ['persistence.get', 'http.execute'],
+        capabilities: [
+          'persistence.get',
+          'persistence.put',
+          'http.execute',
+          'cookie.get',
+          'cookie.set',
+        ],
         platform: 'harmonyos',
       }, { timeoutMs: 5000 });
       if (await this.host.needsLegacySnapshotMigration()) {

@@ -1,6 +1,7 @@
 import {
   SourceGateway,
   type BookSource,
+  type SourceCheckOutcome,
 } from './SourceGateway';
 import type { BookSourceJsonSelection } from '../../app/ReaderHostRegistry';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
@@ -50,10 +51,13 @@ export class SourceOrchestrator {
   private session: number = 0;
   /** Bumped per toggle; an older toggle's reload must not overwrite a newer. */
   private toggleSeq: number = 0;
-  /** Serializes source toggles across entries. */
-  private toggleChain: Promise<void> = Promise.resolve();
+  /** Serializes Core source operations across entries. */
+  private operationChain: Promise<void> = Promise.resolve();
   /** Prevents repeated taps from opening multiple system pickers. */
   private importActive: boolean = false;
+  /** Session-local source-check projections; Core remains authoritative. */
+  private checkResults: Map<string, BookSource> = new Map<string, BookSource>();
+  private checkingSourceIds: Set<string> = new Set<string>();
 
   constructor(
     emit: (sources: BookSource[]) => void,
@@ -70,6 +74,8 @@ export class SourceOrchestrator {
   open(): void {
     this.session += 1;
     const session = this.session;
+    this.checkResults.clear();
+    this.checkingSourceIds.clear();
     this.presentSources([]);
     void this.loadList(session);
   }
@@ -105,12 +111,36 @@ export class SourceOrchestrator {
     this.toggleSeq += 1;
     const seq = this.toggleSeq;
     const session = this.session;
-    this.toggleChain = this.toggleChain
+    this.operationChain = this.operationChain
       .then((): Promise<void> => this.applyToggle(id, enabled, seq, session))
       .catch((error: Error): void => {
         hilog.error(DOMAIN, 'Reader',
           'Source toggle failed; row unchanged: sourceId=%{public}s enabled=%{public}s err=%{public}s',
           id, enabled, error.message);
+      });
+  }
+
+  /** Queue one production L1-L5 diagnostic; repeated taps never duplicate it. */
+  checkSource(id: string): void {
+    if (this.checkingSourceIds.has(id)) {
+      return;
+    }
+    const session = this.session;
+    this.checkingSourceIds.add(id);
+    this.setCheckProjection(id, 'checking', [], '检测中');
+    this.operationChain = this.operationChain
+      .then((): Promise<void> => this.applySourceCheck(id, session))
+      .catch((error: Error): void => {
+        if (this.isCurrentSession(session)) {
+          this.setCheckProjection(id, 'failed', [], error.message);
+        }
+        hilog.error(DOMAIN, 'Reader',
+          'Source check failed: sourceId=%{public}s err=%{public}s', id, error.message);
+      })
+      .finally((): void => {
+        if (session === this.session) {
+          this.checkingSourceIds.delete(id);
+        }
       });
   }
 
@@ -126,7 +156,7 @@ export class SourceOrchestrator {
     }
     this.importActive = true;
     const session = this.session;
-    this.toggleChain = this.toggleChain
+    this.operationChain = this.operationChain
       .then((): Promise<void> => this.applyBookSourceImport(session))
       .catch((error: Error): void => {
         hilog.error(DOMAIN, 'Reader',
@@ -227,6 +257,17 @@ export class SourceOrchestrator {
     // the serial chain means this retry only waits out the external operation,
     // never a concurrent toggle.
     await this.updateSourceWithRetry(id, enabled);
+    if (!enabled) {
+      try {
+        // Security policy: disabling a source removes both session and
+        // persistent cookies. Re-enabling starts a fresh login/session.
+        await this.owner.clearSourceCookieSession(id);
+      } catch (error) {
+        hilog.error(DOMAIN, 'Reader',
+          'Source disabled but cookie-session cleanup failed: sourceId=%{public}s err=%{public}s',
+          id, (error as Error).message);
+      }
+    }
     // `updateSource` resolved → the toggle IS persisted (Core awaits the Host
     // snapshot put). Reflect it locally even if the reload below fails, so a
     // reload failure is never reported as "nothing changed". The flip and the
@@ -243,6 +284,9 @@ export class SourceOrchestrator {
           baseUrl: source.baseUrl,
           enabled,
           enabledExplore: source.enabledExplore,
+          checkState: source.checkState,
+          checkLevels: source.checkLevels,
+          checkMessage: source.checkMessage,
         };
         return updated;
       }));
@@ -259,6 +303,65 @@ export class SourceOrchestrator {
     if (this.isCurrentSession(session) && seq === this.toggleSeq) {
       this.presentSources(sources);
     }
+  }
+
+  private async applySourceCheck(id: string, session: number): Promise<void> {
+    if (!this.isCurrentSession(session)) {
+      return;
+    }
+    const outcome = await this.gateway.checkSource(
+      id,
+      (): boolean => this.isCurrentSession(session),
+    );
+    if (!this.isCurrentSession(session)) {
+      return;
+    }
+    this.applySourceCheckOutcome(outcome);
+    hilog.info(DOMAIN, 'Reader',
+      'Source check completed: sourceId=%{public}s available=%{public}s levels=%{public}s durationMs=%{public}d reason=%{public}s',
+      id, outcome.available, outcome.levelsPassed.join(','), outcome.durationMs,
+      outcome.failureReason ?? '');
+  }
+
+  private applySourceCheckOutcome(outcome: SourceCheckOutcome): void {
+    if (outcome.available) {
+      this.setCheckProjection(
+        outcome.sourceId,
+        'passed',
+        outcome.levelsPassed,
+        `L1–L5 通过 · ${outcome.durationMs}ms`,
+      );
+      return;
+    }
+    this.setCheckProjection(
+      outcome.sourceId,
+      'failed',
+      outcome.levelsPassed,
+      outcome.failureReason ?? '检测失败',
+    );
+  }
+
+  private setCheckProjection(
+    id: string,
+    state: 'unchecked' | 'checking' | 'passed' | 'failed',
+    levels: string[],
+    message: string,
+  ): void {
+    const source = this.sources.find((candidate: BookSource): boolean => candidate.sourceId === id);
+    if (source === undefined) {
+      return;
+    }
+    this.checkResults.set(id, {
+      sourceId: source.sourceId,
+      name: source.name,
+      baseUrl: source.baseUrl,
+      enabled: source.enabled,
+      enabledExplore: source.enabledExplore,
+      checkState: state,
+      checkLevels: levels,
+      checkMessage: message,
+    });
+    this.presentSources(this.sources);
   }
 
   private async updateSourceWithRetry(id: string, enabled: boolean): Promise<void> {
@@ -323,7 +426,7 @@ export class SourceOrchestrator {
    * authoritative load; bounded so a stuck toggle cannot strand the entry.
    */
   private waitForSourceToggles(maxMillis: number): Promise<void> {
-    return Promise.race([this.toggleChain, delay(maxMillis)]);
+    return Promise.race([this.operationChain, delay(maxMillis)]);
   }
 
   private isCurrentSession(session: number): boolean {
@@ -331,7 +434,19 @@ export class SourceOrchestrator {
   }
 
   private presentSources(sources: BookSource[]): void {
-    this.sources = sources;
-    this.emit(sources);
+    this.sources = sources.map((source: BookSource): BookSource => {
+      const checked = this.checkResults.get(source.sourceId);
+      return {
+        sourceId: source.sourceId,
+        name: source.name,
+        baseUrl: source.baseUrl,
+        enabled: source.enabled,
+        enabledExplore: source.enabledExplore,
+        checkState: checked?.checkState ?? source.checkState ?? 'unchecked',
+        checkLevels: checked?.checkLevels ?? source.checkLevels ?? [],
+        checkMessage: checked?.checkMessage ?? source.checkMessage,
+      };
+    });
+    this.emit(this.sources);
   }
 }

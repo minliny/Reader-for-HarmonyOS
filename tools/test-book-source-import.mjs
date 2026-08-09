@@ -145,7 +145,7 @@ assert.match(page, /onAddSource: \(\) => void/);
 assert.match(page, /\.onClick\(\(\): void => this\.onAddSource\(\)\)/);
 assert.match(index, /onAddSource: \(\): void => this\.onBookSourceImportRequested\(\)/);
 assert.match(index, /this\.getSourceOrchestrator\(\)\.importBookSources\(\)/);
-assert.match(orchestrator, /this\.toggleChain = this\.toggleChain[\s\S]*applyBookSourceImport/);
+assert.match(orchestrator, /this\.operationChain = this\.operationChain[\s\S]*applyBookSourceImport/);
 assert.match(orchestrator, /applyBookSourceImport\(session: number\)[\s\S]*if \(!this\.isCurrentSession\(session\)\)[\s\S]*selectBookSourceJson\(\)/);
 assert.match(orchestrator, /selection === undefined \|\| !this\.isCurrentSession\(session\)/,
   'a picker completion from an old page session must not begin Core imports');

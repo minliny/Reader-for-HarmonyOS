@@ -40,6 +40,8 @@ const STATUS_GOOD_BG = '#212B895C';   // rgba(43,137,92,0.13)
 const STATUS_GOOD_DOT = '#28704E';
 const STATUS_MUTED_BG = '#1F8C8276';  // rgba(140,130,118,0.12)
 const STATUS_MUTED_DOT = '#8C8276';
+const STATUS_ERROR_BG = '#21A8584D';
+const STATUS_ERROR_DOT = '#A8584D';
 
 @Component
 export struct SourceManagementPage {
@@ -50,6 +52,7 @@ export struct SourceManagementPage {
   @Prop isTablet: boolean;
   onBack: () => void = (): void => {};
   onToggleSource: (id: string, enabled: boolean) => void = (_id: string, _enabled: boolean): void => {};
+  onDetectSource: (id: string) => void = (_id: string): void => {};
   onAddSource: () => void = (): void => {};
   @State private groupValue: string = '全部分组';
   @State private groupOpen: boolean = false;
@@ -249,7 +252,8 @@ export struct SourceManagementPage {
         ListItem() {
           this.sourceRow(source);
         }
-      }, (source: BookSource): string => `source-${source.sourceId}`);
+      }, (source: BookSource): string =>
+        `source-${source.sourceId}-${source.enabled}-${source.checkState}-${source.checkMessage}`);
     }
     .width('100%')
     .layoutWeight(1)
@@ -283,11 +287,11 @@ export struct SourceManagementPage {
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start);
 
-      this.detectButton();
+      this.detectButton(source);
 
       this.statusBadge(
-        source.enabled ? STATUS_GOOD_BG : STATUS_MUTED_BG,
-        source.enabled ? STATUS_GOOD_DOT : STATUS_MUTED_DOT,
+        this.statusBadgeBackground(source),
+        this.statusBadgeDot(source),
       );
 
       this.sourceSwitch(source.enabled, (): void => this.onToggleSource(source.sourceId, !source.enabled));
@@ -307,9 +311,9 @@ export struct SourceManagementPage {
   }
 
   @Builder
-  private detectButton() {
+  private detectButton(source: BookSource) {
     Stack({ alignContent: Alignment.Center }) {
-      Text('检测')
+      Text(source.checkState === 'checking' ? '检测中' : '检测')
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
         .fontSize(11)
@@ -320,7 +324,13 @@ export struct SourceManagementPage {
     .height(28)
     .borderRadius(7)
     .backgroundColor(TOK_CARD_BG)
-    .border({ width: TOK_BORDER_W, color: CHIP_BORDER });
+    .border({ width: TOK_BORDER_W, color: CHIP_BORDER })
+    .opacity(source.checkState === 'checking' ? 0.62 : 1)
+    .onClick((): void => {
+      if (source.checkState !== 'checking') {
+        this.onDetectSource(source.sourceId);
+      }
+    });
   }
 
   @Builder
@@ -379,10 +389,34 @@ export struct SourceManagementPage {
   }
 
   private sourceMeta(source: BookSource): string {
+    if (source.checkState !== undefined && source.checkState !== 'unchecked' &&
+      source.checkMessage !== undefined && source.checkMessage.length > 0) {
+      return source.checkMessage;
+    }
     if (source.baseUrl.length > 0) {
       return source.baseUrl;
     }
     return source.enabled ? '已启用' : '已禁用';
+  }
+
+  private statusBadgeBackground(source: BookSource): string {
+    if (source.checkState === 'passed') {
+      return STATUS_GOOD_BG;
+    }
+    if (source.checkState === 'failed') {
+      return STATUS_ERROR_BG;
+    }
+    return STATUS_MUTED_BG;
+  }
+
+  private statusBadgeDot(source: BookSource): string {
+    if (source.checkState === 'passed') {
+      return STATUS_GOOD_DOT;
+    }
+    if (source.checkState === 'failed') {
+      return STATUS_ERROR_DOT;
+    }
+    return STATUS_MUTED_DOT;
   }
 
   private enabledCount(): number {
