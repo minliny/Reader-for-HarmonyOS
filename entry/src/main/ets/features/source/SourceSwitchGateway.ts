@@ -68,14 +68,14 @@ export type SourceSwitchRollbackResult = {
 
 /**
  * Feature-local gateway for the source-switch flow. Owns the
- * `change.bookSource` / `book.toc` / `source.switch.commit` /
+ * `change.bookSource` / `book.detail` / `book.toc` / `source.switch.commit` /
  * `source.switch.rollback` boundary and validates every JSON envelope before
  * the panel sees it.
  *
- * `change.bookSource` and `book.toc` are remote commands that delegate the
- * HTTP round-trip to the Host via `http.execute`. Host transport limits surface
- * as a plain Error, which Index presents through the admitted discovery/failure
- * state. The wire contract is authoritative regardless.
+ * `change.bookSource`, `book.detail`, and `book.toc` are remote commands that
+ * delegate the HTTP round-trip to the Host via `http.execute`. Host transport
+ * limits surface as a plain Error, which Index presents through the admitted
+ * discovery/failure state. The wire contract is authoritative regardless.
  */
 export class SourceSwitchGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
@@ -90,10 +90,12 @@ export class SourceSwitchGateway {
    * `sourceIds` (Core rejects it); that resolves to `{kind:'noSources'}`.
    */
   async discoverCandidates(
+    sourceId: string,
     bookId: string,
     keyword: string,
     isCurrent: (() => boolean) | undefined = undefined,
   ): Promise<SourceSwitchDiscoveryOutcome> {
+    this.assertNonBlankString(sourceId, 'sourceId');
     this.assertNonBlankString(bookId, 'bookId');
     this.assertNonBlankString(keyword, 'keyword');
     const list = await this.runtimeOwner.request(
@@ -124,7 +126,7 @@ export class SourceSwitchGateway {
     }
     const result = await this.runtimeOwner.request(
       'change.bookSource',
-      { bookId, keyword, sourceIds },
+      { sourceId, bookId, keyword, sourceIds },
       this.requestOptions(isCurrent),
     );
     const rawCandidates = result.data['candidates'];
@@ -168,8 +170,10 @@ export class SourceSwitchGateway {
   }
 
   /**
-   * Fetches the target source's chapter table to build the commit `newToc`.
-   * Remote command; needs the `http.execute` host.
+   * Resolves the target detail before fetching its chapter table. `book.toc`
+   * cannot infer a TOC request from `{sourceId, bookId}` alone: the Core wire
+   * contract requires the `tocUrl` and rule variables produced by
+   * `book.detail`. Both remote commands need the `http.execute` host.
    */
   async fetchTargetToc(
     sourceId: string,
@@ -178,9 +182,30 @@ export class SourceSwitchGateway {
   ): Promise<SourceSwitchTargetToc> {
     this.assertNonBlankString(sourceId, 'sourceId');
     this.assertNonBlankString(bookId, 'bookId');
+
+    const detail = await this.runtimeOwner.request(
+      'book.detail',
+      {
+        sourceId,
+        book: { bookId },
+        bookUrl: bookId,
+      },
+      this.requestOptions(isCurrent),
+    );
+    const detailBook = this.requireObject(detail.data['book'], 'book.detail book');
+    const detailSourceId = this.requireString(detail.data, 'sourceId', 'book.detail');
+    const detailBookId = this.requireString(detailBook, 'bookId', 'book.detail book');
+    if (detailSourceId !== sourceId || detailBookId !== bookId) {
+      throw new Error('book.detail returned a mismatched composite key');
+    }
+    // An absent/blank TOC URL is not recoverable by `book.toc`; fail before a
+    // knowingly invalid Core request instead of silently substituting bookId.
+    const tocUrl = this.requireString(detail.data, 'tocUrl', 'book.detail');
+    const variables = this.requireStringMap(detail.data['variables'], 'variables', 'book.detail');
+
     const result = await this.runtimeOwner.request(
       'book.toc',
-      { sourceId, bookId },
+      { sourceId, bookId, tocUrl, variables },
       this.requestOptions(isCurrent),
     );
     const rawSourceId = result.data['sourceId'];
@@ -358,14 +383,34 @@ export class SourceSwitchGateway {
 
   private requireString(value: JsonObject, key: string, command: string): string {
     const candidate = value[key];
-    if (typeof candidate !== 'string' || candidate.length === 0) {
+    if (typeof candidate !== 'string' || candidate.trim().length === 0) {
       throw new Error(`${command} returned an invalid ${key}`);
     }
     return candidate;
   }
 
+  private requireObject(value: unknown, context: string): JsonObject {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      throw new Error(`${context} returned a non-object value`);
+    }
+    return value as JsonObject;
+  }
+
+  private requireStringMap(value: unknown, key: string, command: string): JsonObject {
+    const raw = this.requireObject(value, `${command} ${key}`);
+    const decoded: JsonObject = {};
+    for (const variableName of Object.keys(raw)) {
+      const variableValue = raw[variableName];
+      if (typeof variableValue !== 'string') {
+        throw new Error(`${command} returned invalid ${key}`);
+      }
+      decoded[variableName] = variableValue;
+    }
+    return decoded;
+  }
+
   private assertNonBlankString(value: string, field: string): void {
-    if (typeof value !== 'string' || value.length === 0) {
+    if (typeof value !== 'string' || value.trim().length === 0) {
       throw new Error(`${field} must be a non-blank string`);
     }
   }

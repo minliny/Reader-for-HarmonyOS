@@ -5,7 +5,9 @@ import {
 } from './SyncGateway';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { PageBackBar } from '../common/PageBackBar';
+import { ReaderCard } from '../common/ReaderCard';
 import { ReaderSelect } from '../common/ReaderSelect';
+import { ReaderSelectPanel, SelectAnchor } from '../common/ReaderSelectPanel';
 import {
   TOK_BORDER,
   TOK_BORDER_W,
@@ -17,8 +19,11 @@ import {
   TOK_GREEN,
   TOK_INK,
   TOK_MUTED,
+  TOK_ON_PRIMARY,
   TOK_PAPER,
   TOK_PRIMARY_DARK,
+  TOK_RADIUS_MD,
+  TOK_READ_PRIMARY,
   TOK_SCREEN_INSET,
   TOK_SETTING_ICON_BG,
   TOK_SPACE_CARD_PADDING,
@@ -28,6 +33,7 @@ import {
   TOK_SPACE_SM,
   TOK_SPACE_XS,
   TOK_SURFACE_PANEL_SOFT,
+  TOK_SURFACE_SOLID,
 } from '../common/ReaderTokens';
 
 // Sync Backup — rebuilt 2026-08-05 against live Figma nodes
@@ -36,7 +42,6 @@ import {
 // rows (28px circular blue icon + 36px r6 input) and two action buttons;
 // Auto Backup / History = solid #FFFCF8 cards + #D8D0C3 r13 with muted
 // 11px tracked section titles.
-const CARD_BG_SOLID = '#FFFCF8';   // solid — Auto/History cards
 const CARD_BORDER_SOFT = '#D8D0C3';
 const ROW_BG = '#B3FFFCF8';        // rgba(255,252,248,0.7) — labelled row
 const ROW_BORDER = '#4DB4A697';    // rgba(180,166,151,0.3)
@@ -58,6 +63,12 @@ export struct SyncPage {
   @State webdavPass: string = '';
   @State webdavPath: string = '';
   @State private openSelect: string = '';
+  // 展开面板锚点: 触发条全局坐标 - 根 Stack 原点 = 面板相对根 Stack 位置。
+  @State private anchorX: number = 0;
+  @State private anchorY: number = 0;
+  @State private originX: number = 0;
+  @State private originY: number = 0;
+  private selectAnchors: Record<string, SelectAnchor> = {};
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -67,24 +78,39 @@ export struct SyncPage {
   }
 
   build() {
-    Column() {
-      this.backBar();
-      Scroll() {
-        Column({ space: TOK_SPACE_MD }) {
-          this.webdavSection();
-          this.autoBackupSection();
-          this.historySection();
+    // 根 Stack = 下拉面板 overlay 宿主: 展开面板必须挂在全高容器才可点 (ArkUI 命中测试
+    // 裁到父边界, 固定高行内面板下层选项不可点)。
+    Stack({ alignContent: Alignment.TopStart }) {
+      Column() {
+        this.backBar();
+        Scroll() {
+          Column({ space: TOK_SPACE_MD }) {
+            this.webdavSection();
+            this.autoBackupSection();
+            this.historySection();
+          }
+          .width('100%')
+          .padding({ left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET, top: TOK_SPACE_XS, bottom: 18 });
         }
+        .layoutWeight(1)
         .width('100%')
-        .padding({ left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET, top: TOK_SPACE_XS, bottom: 18 });
+        .scrollBar(BarState.Off);
       }
-      .layoutWeight(1)
       .width('100%')
-      .scrollBar(BarState.Off);
+      .height('100%')
+      .backgroundColor(TOK_PAPER)
+      .onAreaChange((_oldValue: Area, newValue: Area): void => {
+        // Area.globalPosition 已是 vp 单位, 直接取用 (曾 px2vp 二次÷3.5 致面板错位)。
+        this.originX = Number(newValue.globalPosition.x);
+        this.originY = Number(newValue.globalPosition.y);
+      });
+
+      if (this.openSelect !== '') {
+        this.buildOverlay();
+      }
     }
     .width('100%')
-    .height('100%')
-    .backgroundColor(TOK_PAPER);
+    .height('100%');
   }
 
   @Builder
@@ -127,37 +153,36 @@ export struct SyncPage {
   private webdavSection() {
     Column({ space: TOK_SPACE_XS }) {
       this.sectionHeadingDark('WebDAV 配置');
-      Column({ space: TOK_SPACE_XS }) {
-        Text('连接信息')
-          .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(900)
-          .fontSize(13)
-          .lineHeight(15.6)
-          .fontColor(TOK_INK);
-        this.webdavInputRow($r('app.media.bookshelf_rss'), '服务器地址', this.webdavUrl,
-          'https://dav.example.com/reader/backup', false, (value: string): void => {
-            this.webdavUrl = value;
-          });
-        this.webdavInputRow($r('app.media.directory_bookmark'), '账号', this.webdavUser,
-          'reader@example.com', false, (value: string): void => {
-            this.webdavUser = value;
-          });
-        this.webdavInputRow($r('app.media.directory_bookmark_on'), '密码', this.webdavPass,
-          '••••••••••••', true, (value: string): void => {
-            this.webdavPass = value;
-          });
-        this.webdavInputRow($r('app.media.reader_directory_directory'), '同步目录', this.webdavPath,
-          '/ReaderBackup/ReaderAndroid', false, (value: string): void => {
-            this.webdavPath = value;
-          });
-        this.configActions();
+      ReaderCard({ bg: TOK_CARD_BG, cardBorder: TOK_BORDER, radius: TOK_RADIUS_MD, cardWidth: this.contentWidth() }) {
+        Column({ space: TOK_SPACE_XS }) {
+          Text('连接信息')
+            .width('100%')
+            .fontFamily('ReaderInter')
+            .fontWeight(900)
+            .fontSize(13)
+            .lineHeight(15.6)
+            .fontColor(TOK_INK);
+          this.webdavInputRow($r('app.media.bookshelf_rss'), '服务器地址', this.webdavUrl,
+            'https://dav.example.com/reader/backup', false, (value: string): void => {
+              this.webdavUrl = value;
+            });
+          this.webdavInputRow($r('app.media.directory_bookmark'), '账号', this.webdavUser,
+            'reader@example.com', false, (value: string): void => {
+              this.webdavUser = value;
+            });
+          this.webdavInputRow($r('app.media.directory_bookmark_on'), '密码', this.webdavPass,
+            '••••••••••••', true, (value: string): void => {
+              this.webdavPass = value;
+            });
+          this.webdavInputRow($r('app.media.reader_directory_directory'), '同步目录', this.webdavPath,
+            '/ReaderBackup/ReaderAndroid', false, (value: string): void => {
+              this.webdavPath = value;
+            });
+          this.configActions();
+        }
+        .width('100%')
+        .padding({ left: 11, right: 11, top: TOK_SPACE_CONTROL_INLINE, bottom: 11 });
       }
-      .width('100%')
-      .padding({ left: 11, right: 11, top: TOK_SPACE_CONTROL_INLINE, bottom: 11 })
-      .backgroundColor(TOK_CARD_BG)
-      .border({ width: TOK_BORDER_W, color: TOK_BORDER })
-      .borderRadius(8);
     }
     .width('100%');
   }
@@ -165,7 +190,7 @@ export struct SyncPage {
   @Builder
   private webdavInputRow(icon: Resource, label: string, value: string, placeholder: string,
     isPassword: boolean, onChange: (value: string) => void) {
-    Row({ space: 9 }) {
+    Row({ space: 12 }) {
       Stack({ alignContent: Alignment.Center }) {
         Image(icon).width(15).height(15);
       }
@@ -249,7 +274,7 @@ export struct SyncPage {
           .fontFamily('ReaderInter')
           .fontWeight(900)
           .fontSize(12)
-          .fontColor('#FFFFFF');
+          .fontColor(TOK_ON_PRIMARY);
       }
       .height(42)
       .layoutWeight(1)
@@ -269,17 +294,16 @@ export struct SyncPage {
   private autoBackupSection() {
     Column({ space: TOK_SPACE_XS }) {
       this.sectionHeadingMuted('自动备份配置');
-      Column() {
-        this.autoRow('保存位置', this.snapshot.saveLocation, 'location', ['WebDAV', '本地']);
-        Row().width('100%').height(1).backgroundColor(CARD_BORDER_SOFT);
-        this.autoRow('备份频率', this.snapshot.backupFrequency, 'frequency', ['12h', '24h', '每周']);
-        Row().width('100%').height(1).backgroundColor(CARD_BORDER_SOFT);
-        this.autoRow('备份范围', this.snapshot.backupScope, 'scope', ['书架、进度', '书架、进度、设置、书源']);
+      ReaderCard({ bg: TOK_SURFACE_SOLID, cardBorder: CARD_BORDER_SOFT, radius: 13, cardWidth: this.contentWidth() }) {
+        Column() {
+          this.autoRow('保存位置', this.snapshot.saveLocation, 'location', ['WebDAV', '本地']);
+          Row().width('100%').height(1).backgroundColor(CARD_BORDER_SOFT);
+          this.autoRow('备份频率', this.snapshot.backupFrequency, 'frequency', ['12h', '24h', '每周']);
+          Row().width('100%').height(1).backgroundColor(CARD_BORDER_SOFT);
+          this.scopeRow();
+        }
+        .width('100%');
       }
-      .width(this.contentWidth())
-      .backgroundColor(CARD_BG_SOLID)
-      .border({ width: TOK_BORDER_W, color: CARD_BORDER_SOFT })
-      .borderRadius(13);
     }
     .width('100%');
   }
@@ -300,11 +324,61 @@ export struct SyncPage {
         isOpen: this.openSelect === key,
         onToggle: (): void => {
           this.openSelect = this.openSelect === key ? '' : key;
+          const a = this.selectAnchors[key];
+          if (a !== undefined) {
+            this.anchorX = a.x;
+            this.anchorY = a.y;
+          }
         },
-        onSelect: (opt: string): void => {
-          this.openSelect = '';
-        },
+      })
+      .onAreaChange((_oldValue: Area, newValue: Area): void => {
+        // Area.globalPosition 已是 vp 单位, 直接取用 (曾 px2vp 二次÷3.5 致面板错位)。
+        this.selectAnchors[key] = {
+          x: Number(newValue.globalPosition.x),
+          y: Number(newValue.globalPosition.y),
+        };
       });
+    }
+    .width('100%')
+    .height(50)
+    .padding({ left: TOK_SPACE_CARD_PADDING, right: TOK_SPACE_CARD_PADDING })
+    .alignItems(VerticalAlign.Center);
+  }
+
+  // FIGMA_MULTISELECT_EXPANDED_STATE_MISSING: “N项已选”是多选触发语义，不能再用
+  // ReaderSelect 的单选预制字符串冒充。展开面板与持久化契约确认前保持不可编辑。
+  @Builder
+  private scopeRow() {
+    Row() {
+      Text('备份范围')
+        .layoutWeight(1)
+        .fontFamily('ReaderInter')
+        .fontWeight(600)
+        .fontSize(13)
+        .fontColor('#1A1612')
+        .maxLines(1);
+      Row({ space: 8 }) {
+        Text(this.scopeSummary())
+          .layoutWeight(1)
+          .fontFamily('ReaderNotoSansSC')
+          .fontWeight(FontWeight.Bold)
+          .fontSize(12)
+          .fontColor(TOK_PRIMARY_DARK)
+          .textAlign(TextAlign.End)
+          .maxLines(1);
+        Image($r('app.media.reader_chevron_down')).width(12).height(8);
+      }
+      .width(86)
+      .height(36)
+      .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
+      .backgroundColor(TOK_SURFACE_PANEL_SOFT)
+      .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+      .borderRadius(6)
+      .alignItems(VerticalAlign.Center)
+      .opacity(0.62)
+      .hitTestBehavior(HitTestMode.None)
+      .accessibilityText('备份范围')
+      .accessibilityDescription('多选展开设计和持久化契约待确认，当前不可编辑');
     }
     .width('100%')
     .height(50)
@@ -335,92 +409,90 @@ export struct SyncPage {
   // node) and is kept as-is, restyled to the new card tokens.
   @Builder
   private emptyState() {
-    Column({ space: 0 }) {
-      Text('暂无备份记录')
-        .width('100%')
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(13)
-        .lineHeight(20)
-        .fontColor(TOK_MUTED)
-        .textAlign(TextAlign.Center)
-        .padding({ top: TOK_SPACE_LG, bottom: TOK_SPACE_SM });
-      Text('立即备份')
-        .width('100%')
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(13)
-        .lineHeight(16)
-        .fontColor('#FFFFFF')
-        .textAlign(TextAlign.Center)
-        .padding({ top: 9, bottom: 9 })
-        .backgroundColor(TOK_GREEN)
-        .borderRadius(999)
-        .margin({ bottom: TOK_SPACE_MD, left: TOK_SPACE_MD, right: TOK_SPACE_MD })
-        .onClick((): void => this.onTriggerBackup());
+    ReaderCard({ bg: TOK_SURFACE_SOLID, cardBorder: CARD_BORDER_SOFT, radius: 13, cardWidth: this.contentWidth() }) {
+      Column({ space: 0 }) {
+        Text('暂无备份记录')
+          .width('100%')
+          .fontFamily('ReaderInter')
+          .fontWeight(FontWeight.Regular)
+          .fontSize(13)
+          .lineHeight(20)
+          .fontColor(TOK_MUTED)
+          .textAlign(TextAlign.Center)
+          .padding({ top: TOK_SPACE_LG, bottom: TOK_SPACE_SM });
+        Text('立即备份')
+          .width('100%')
+          .fontFamily('ReaderInter')
+          .fontWeight(FontWeight.Bold)
+          .fontSize(13)
+          .lineHeight(16)
+          .fontColor(TOK_ON_PRIMARY)
+          .textAlign(TextAlign.Center)
+          .padding({ top: 9, bottom: 9 })
+          .backgroundColor(TOK_GREEN)
+          .borderRadius(999)
+          .margin({ bottom: TOK_SPACE_MD, left: TOK_SPACE_MD, right: TOK_SPACE_MD })
+          .onClick((): void => this.onTriggerBackup());
+      }
+      .width('100%');
     }
-    .width(this.contentWidth())
-    .backgroundColor(CARD_BG_SOLID)
-    .border({ width: TOK_BORDER_W, color: CARD_BORDER_SOFT })
-    .borderRadius(13);
   }
 
   @Builder
   private historyRow(entry: SyncHistoryEntry) {
-    Column() {
-      Row() {
-        Stack({ alignContent: Alignment.Center }) {
-          Text(entry.destination)
+    ReaderCard({ bg: TOK_SURFACE_SOLID, cardBorder: CARD_BORDER_SOFT, radius: 13 }) {
+      Column() {
+        Row() {
+          Stack({ alignContent: Alignment.Center }) {
+            Text(entry.destination)
+              .fontFamily('ReaderInter')
+              .fontWeight(FontWeight.Bold)
+              .fontSize(11)
+              .fontColor('#243D30')
+              .maxLines(1);
+          }
+          .width(64)
+          .height(24)
+          .borderRadius(12)
+          .backgroundColor(BADGE_BG);
+
+          Text(entry.timestamp)
             .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(11)
-            .fontColor('#243D30')
+            .fontWeight(600)
+            .fontSize(12)
+            .fontColor('#5C564E')
+            .maxLines(1)
+            .margin({ left: TOK_SPACE_CONTROL_INLINE });
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center);
+
+        Row() {
+          // Figma's scope line (e.g. "书架、分组、设置") has no backing field on
+          // SyncHistoryEntry; the entry's ok flag is shown as a real status.
+          Text(entry.ok ? '成功' : '失败')
+            .layoutWeight(1)
+            .fontFamily('ReaderInter')
+            .fontWeight(FontWeight.Regular)
+            .fontSize(12)
+            .fontColor('#5C564E')
+            .maxLines(1);
+          Text(`${(entry.size / 1048576).toFixed(1)} MB`)
+            .fontFamily('ReaderInter')
+            .fontWeight(600)
+            .fontSize(12)
+            .fontColor('#9C9488')
             .maxLines(1);
         }
-        .width(64)
-        .height(24)
-        .borderRadius(12)
-        .backgroundColor(BADGE_BG);
-
-        Text(entry.timestamp)
-          .fontFamily('ReaderInter')
-          .fontWeight(600)
-          .fontSize(12)
-          .fontColor('#5C564E')
-          .maxLines(1)
-          .margin({ left: TOK_SPACE_CONTROL_INLINE });
+        .width('100%')
+        .margin({ top: 15 })
+        .alignItems(VerticalAlign.Center);
       }
       .width('100%')
-      .alignItems(VerticalAlign.Center);
-
-      Row() {
-        // Figma's scope line (e.g. "书架、分组、设置") has no backing field on
-        // SyncHistoryEntry; the entry's ok flag is shown as a real status.
-        Text(entry.ok ? '成功' : '失败')
-          .layoutWeight(1)
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(12)
-          .fontColor('#5C564E')
-          .maxLines(1);
-        Text(`${(entry.size / 1048576).toFixed(1)} MB`)
-          .fontFamily('ReaderInter')
-          .fontWeight(600)
-          .fontSize(12)
-          .fontColor('#9C9488')
-          .maxLines(1);
-      }
-      .width('100%')
-      .margin({ top: 15 })
-      .alignItems(VerticalAlign.Center);
+      .height(85)
+      .padding({ left: 13, right: 13, top: TOK_SPACE_SM })
+      .alignItems(HorizontalAlign.Start);
     }
-    .width('100%')
-    .height(85)
-    .padding({ left: 13, right: 13, top: TOK_SPACE_SM })
-    .alignItems(HorizontalAlign.Start)
-    .backgroundColor(CARD_BG_SOLID)
-    .border({ width: TOK_BORDER_W, color: CARD_BORDER_SOFT })
-    .borderRadius(13);
   }
 
   @Builder
@@ -431,7 +503,7 @@ export struct SyncPage {
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Bold)
           .fontSize(10)
-          .fontColor('#2F6373');
+          .fontColor(TOK_READ_PRIMARY);
       }
       .height(26)
       .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
@@ -441,6 +513,49 @@ export struct SyncPage {
     .width('100%')
     .height(32)
     .justifyContent(FlexAlign.End);
+  }
+
+  private autoOptions(key: string): string[] {
+    if (key === 'location') {
+      return ['WebDAV', '本地'];
+    } else if (key === 'frequency') {
+      return ['12h', '24h', '每周'];
+    }
+    return [];
+  }
+
+  private autoValue(key: string): string {
+    if (key === 'location') {
+      return this.snapshot.saveLocation;
+    } else if (key === 'frequency') {
+      return this.snapshot.backupFrequency;
+    }
+    return '';
+  }
+
+  // 展开面板: 根 Stack 即全高 overlay 宿主, 面板相对位置 = 触发条全局坐标 - 宿主原点。
+  // 与现有行为一致: 选择只收起, 不写回 snapshot (自动备份配置无持久化)。
+  @Builder
+  private buildOverlay() {
+    if (this.openSelect === 'location' || this.openSelect === 'frequency') {
+      ReaderSelectPanel({
+        value: this.autoValue(this.openSelect),
+        options: this.autoOptions(this.openSelect),
+        x: this.anchorX - this.originX,
+        y: this.anchorY - this.originY,
+        onSelect: (_opt: string): void => {
+          this.openSelect = '';
+        },
+      });
+    }
+  }
+
+  private scopeSummary(): string {
+    if (this.snapshot.backupScope.trim() === '') {
+      return '未选择';
+    }
+    const scopes = this.snapshot.backupScope.split('、').filter((scope: string): boolean => scope.trim() !== '');
+    return `${scopes.length}项已选`;
   }
 
   private contentWidth(): number {

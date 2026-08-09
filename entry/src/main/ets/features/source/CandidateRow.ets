@@ -2,6 +2,7 @@ import { LatencyBar } from './LatencyBar';
 import {
   TOK_BORDER_W,
   TOK_LINE,
+  TOK_READ_BODY_INK,
   TOK_READ_HANDLE,
   TOK_READ_MUTED,
 } from '../common/ReaderTokens';
@@ -108,7 +109,7 @@ export struct CandidateRow {
   private nameColor(): string {
     // Figma: only the current row is green; every other row (available /
     // offline / timeout) uses the ink #2B241D.
-    return this.kind() === 'current' ? '#2A7A5A' : '#2B241D';
+    return this.kind() === 'current' ? '#2A7A5A' : TOK_READ_BODY_INK;
   }
 
   private dotColor(): string {

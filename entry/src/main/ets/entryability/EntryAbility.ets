@@ -7,6 +7,7 @@ const DOMAIN = 0x5244;
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+    AppStorage.setOrCreate('readerAppForeground', true);
     const owner = ReaderRuntimeOwner.install(this.context);
     owner.start().catch((error: Error): void => {
       hilog.error(DOMAIN, 'Reader', 'Core startup failed: %{public}s', error.message);
@@ -37,13 +38,19 @@ export default class EntryAbility extends UIAbility {
     });
   }
 
+  onForeground(): void {
+    AppStorage.setOrCreate('readerAppForeground', true);
+  }
+
   onBackground(): void {
+    AppStorage.setOrCreate('readerAppForeground', false);
     ReaderRuntimeOwner.current().flush().catch((error: Error): void => {
       hilog.error(DOMAIN, 'Reader', 'Core storage flush failed: %{public}s', error.message);
     });
   }
 
   onDestroy(): void {
+    AppStorage.setOrCreate('readerAppForeground', false);
     ReaderRuntimeOwner.current().close().catch((error: Error): void => {
       hilog.error(DOMAIN, 'Reader', 'Core close failed: %{public}s', error.message);
     });

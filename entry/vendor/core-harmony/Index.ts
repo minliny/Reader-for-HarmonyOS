@@ -56,6 +56,14 @@ export function createReaderCoreRuntime(config: JsonObject = {}): ReaderCoreRunt
   return new ReaderCoreRuntime(nativeReaderCore, config);
 }
 
+export function readLocalEpubEntry(
+  archivePath: string,
+  entryPath: string,
+  maxBytes: number
+): Uint8Array {
+  return nativeReaderCore.readEpubEntry(archivePath, entryPath, maxBytes);
+}
+
 export async function runHarmonyNapiSmoke(
   config: JsonObject = {}
 ): Promise<HarmonyNapiSmokeResult> {

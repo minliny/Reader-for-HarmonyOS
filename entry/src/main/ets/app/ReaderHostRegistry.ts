@@ -26,20 +26,32 @@ const LOG_DOMAIN = 0x5244;
 export type LocalBookInput = {
   fileName: string;
   bookId: string;
-  bytesBase64: string;
+  stagedPath: string;
+  assetKind: 'epub' | 'none';
+};
+
+export type LocalBookAssetCommit = {
+  bookId: string;
+  assetKind: 'epub' | 'none';
+  path: string;
+  created: boolean;
 };
 
 export type LocalBookPreparation =
   | { state: 'ready'; input: LocalBookInput }
   | { state: 'failed'; fileName: string };
 
+export type BookSourceJsonSelection = {
+  fileName: string;
+  text: string;
+};
+
 /**
  * The only Host capability registry in this application slice.
  *
- * The Core snapshot can contain whole local-book bodies, so it is stored as an
- * atomic sandbox file instead of a size-limited preference value. This class
- * exposes the persistence callbacks, the `http.execute` transport, and the
- * narrow, Host-owned local-import service admitted for this slice.
+ * Core owns its live SQLite database. The snapshot callbacks remain only for
+ * one-time migration from older builds and explicit compatibility tooling.
+ * This class also owns `http.execute` and the narrow local file-picker bridge.
  */
 export class ReaderHostRegistry {
   private static readonly SnapshotNamespace = 'reader-core.storage';
@@ -47,10 +59,9 @@ export class ReaderHostRegistry {
   private static readonly SnapshotFormatVersion = 1;
 
   private static readonly LocalBookSelectionLimit = 50;
-  // Reader-Core accepts at most 24 MiB of Base64 command data. Base64 expands
-  // every three source bytes to four wire bytes, so a staged source document
-  // must not exceed 18 MiB before it is encoded.
-  private static readonly LocalBookRawImportLimitBytes = 18 * 1024 * 1024;
+  private static readonly BookSourceDocumentLimitBytes = 16 * 1024 * 1024;
+  private static readonly BookSourceReadChunkBytes = 64 * 1024;
+  private static readonly HashChunkBytes = 1024 * 1024;
   private readonly context: common.UIAbilityContext;
   private writeTail: Promise<void> = Promise.resolve();
   private stageSequence: number = 0;
@@ -61,6 +72,30 @@ export class ReaderHostRegistry {
 
   getContext(): common.UIAbilityContext {
     return this.context;
+  }
+
+  async needsLegacySnapshotMigration(): Promise<boolean> {
+    return await fileIo.access(this.snapshotPath()) && !(await fileIo.access(this.snapshotMigrationMarkerPath()));
+  }
+
+  async markLegacySnapshotMigrated(): Promise<void> {
+    await this.ensureDirectory(this.snapshotDirectory());
+    const marker = new fileIo.AtomicFile(this.snapshotMigrationMarkerPath());
+    try {
+      const stream = marker.startWrite();
+      await new Promise<void>((resolve: () => void, reject: (reason?: Error) => void): void => {
+        stream.on('error', (): void => reject(new Error('Reader Core migration marker write failed')));
+        stream.end('sqlite-v1', 'utf-8', resolve);
+      });
+      marker.finishWrite();
+    } catch (error) {
+      try {
+        marker.failWrite();
+      } catch (_) {
+        // There may be no temporary file when startWrite itself failed.
+      }
+      throw error;
+    }
   }
 
   createCapabilityRouter(): CapabilityRouter {
@@ -94,7 +129,7 @@ export class ReaderHostRegistry {
       try {
         prepared.push({
           state: 'ready',
-          input: await this.stageAndEncodeLocalBook(uri, fileName),
+          input: await this.stageLocalBook(uri, fileName),
         });
       } catch (error) {
         // The Figma result state represents per-file failure but does not
@@ -107,6 +142,82 @@ export class ReaderHostRegistry {
       }
     }
     return prepared;
+  }
+
+  /**
+   * Select and decode one Legado BookSource JSON document. The Host owns only
+   * document authorization and bounded UTF-8 byte access; JSON shape and
+   * `source.import` semantics remain in the source feature gateway / Rust Core.
+   */
+  async selectBookSourceJson(): Promise<BookSourceJsonSelection | undefined> {
+    const options = new picker.DocumentSelectOptions();
+    options.fileSuffixFilters = ['Legado 书源 JSON|.json'];
+    options.maxSelectNumber = 1;
+
+    const uris = await new picker.DocumentViewPicker(this.context).select(options);
+    if (uris.length === 0) {
+      return undefined;
+    }
+    const uri = uris[0];
+    const fileName = this.requireSelectedFileName(uri);
+    return {
+      fileName,
+      text: await this.readBoundedUtf8Document(
+        uri,
+        ReaderHostRegistry.BookSourceDocumentLimitBytes,
+      ),
+    };
+  }
+
+  /**
+   * Commit the Host-owned source asset only after Core has accepted and
+   * persisted the parsed book. Text-like imports need no long-lived file;
+   * EPUB keeps the original archive so body resources can be read lazily.
+   */
+  async commitLocalBookInput(input: LocalBookInput): Promise<LocalBookAssetCommit> {
+    if (input.assetKind === 'none') {
+      await this.discardLocalBookInput(input);
+      return { bookId: input.bookId, assetKind: 'none', path: '', created: false };
+    }
+    const hash = this.requireLocalBookHash(input.bookId);
+    await this.ensureDirectory(this.localBookAssetDirectory());
+    const finalPath = `${this.localBookAssetDirectory()}/${hash}.epub`;
+    if (await fileIo.access(finalPath)) {
+      await this.discardLocalBookInput(input);
+      return { bookId: input.bookId, assetKind: 'epub', path: finalPath, created: false };
+    }
+    try {
+      await fileIo.moveFile(input.stagedPath, finalPath);
+      return { bookId: input.bookId, assetKind: 'epub', path: finalPath, created: true };
+    } catch (error) {
+      // A second, identical import may have committed between access and
+      // move. Accept only the concrete final file and discard our stage.
+      if (await fileIo.access(finalPath)) {
+        await this.discardLocalBookInput(input);
+        return { bookId: input.bookId, assetKind: 'epub', path: finalPath, created: false };
+      }
+      throw error;
+    }
+  }
+
+  async discardLocalBookInput(input: LocalBookInput): Promise<void> {
+    await this.unlinkIfPresent(input.stagedPath);
+  }
+
+  async rollbackLocalBookAsset(commit: LocalBookAssetCommit): Promise<void> {
+    if (commit.assetKind === 'epub' && commit.created && commit.path.length > 0) {
+      await this.unlinkIfPresent(commit.path);
+    }
+  }
+
+  /**
+   * Release the Host-owned source archive after Core has committed a local
+   * book deletion. Text/MOBI imports have no retained archive, so the same
+   * deterministic EPUB path is safely idempotent for every local book id.
+   */
+  async releaseLocalBookAsset(bookId: string): Promise<void> {
+    const hash = this.requireLocalBookHash(bookId);
+    await this.unlinkIfPresent(`${this.localBookAssetDirectory()}/${hash}.epub`);
   }
 
   private async readSnapshot(event: ReaderCoreHostRequestEvent): Promise<JsonObject> {
@@ -137,56 +248,50 @@ export class ReaderHostRegistry {
     return fileName;
   }
 
-  private async stageAndEncodeLocalBook(uri: string, fileName: string): Promise<LocalBookInput> {
+  private async stageLocalBook(uri: string, fileName: string): Promise<LocalBookInput> {
     const stagePath = this.nextStagePath();
     const stageUri = fileUri.getUriFromPath(stagePath);
     await this.ensureDirectory(this.localBookStageDirectory());
     try {
       await fileIo.copy(uri, stageUri);
-      const bytes = await this.readStagedBytes(stagePath);
-      const [bytesBase64, contentHash] = await Promise.all([
-        new util.Base64Helper().encodeToString(bytes),
-        this.sha256Hex(bytes),
-      ]);
+      const contentHash = await this.sha256File(stagePath);
       return {
         fileName,
         bookId: `local:${contentHash}`,
-        bytesBase64,
+        stagedPath: stagePath,
+        assetKind: fileName.trim().toLowerCase().endsWith('.epub') ? 'epub' : 'none',
       };
-    } finally {
-      try {
-        await fileIo.unlink(stagePath);
-      } catch (_) {
-        // Copy or read errors can leave no staging file. The primary error is
-        // still the useful one for the per-file result state.
-      }
+    } catch (error) {
+      await this.unlinkIfPresent(stagePath);
+      throw error;
     }
   }
 
-  private async readStagedBytes(path: string): Promise<Uint8Array> {
+  private async sha256File(path: string): Promise<string> {
     const stat = await fileIo.stat(path);
-    if (!Number.isSafeInteger(stat.size) || stat.size < 0) {
+    if (!Number.isSafeInteger(stat.size) || stat.size <= 0) {
       throw new Error('Selected document has invalid file size');
     }
-    if (stat.size > ReaderHostRegistry.LocalBookRawImportLimitBytes) {
-      throw new Error('Selected document exceeds Core import transport limit');
-    }
-    const buffer = new ArrayBuffer(stat.size);
+    const digest = cryptoFramework.createMd('SHA256');
+    const buffer = new ArrayBuffer(ReaderHostRegistry.HashChunkBytes);
     const file = await fileIo.open(path, fileIo.OpenMode.READ_ONLY);
     try {
-      const bytesRead = await fileIo.read(file.fd, buffer);
-      if (bytesRead !== stat.size) {
-        throw new Error('Selected document changed while being staged');
+      let totalBytes = 0;
+      while (true) {
+        const bytesRead = await fileIo.read(file.fd, buffer);
+        if (bytesRead === 0) {
+          break;
+        }
+        totalBytes += bytesRead;
+        const chunk = new Uint8Array(buffer, 0, bytesRead);
+        await digest.update({ data: chunk });
       }
-      return new Uint8Array(buffer);
+      if (totalBytes !== stat.size) {
+        throw new Error('Selected document changed while being hashed');
+      }
     } finally {
       await fileIo.close(file);
     }
-  }
-
-  private async sha256Hex(bytes: Uint8Array): Promise<string> {
-    const digest = cryptoFramework.createMd('SHA256');
-    await digest.update({ data: bytes });
     const output = await digest.digest();
     const alphabet = '0123456789abcdef';
     let hex = '';
@@ -197,8 +302,72 @@ export class ReaderHostRegistry {
     return hex;
   }
 
+  private async readBoundedUtf8Document(uri: string, limitBytes: number): Promise<string> {
+    const stat = await fileIo.stat(uri);
+    if (!Number.isSafeInteger(stat.size) || stat.size <= 0) {
+      throw new Error('Selected book-source document has invalid file size');
+    }
+    if (stat.size > limitBytes) {
+      throw new Error(`Selected book-source document exceeds ${limitBytes} byte limit`);
+    }
+
+    const bytes = new Uint8Array(stat.size);
+    const chunkBuffer = new ArrayBuffer(
+      Math.min(ReaderHostRegistry.BookSourceReadChunkBytes, stat.size),
+    );
+    const file = await fileIo.open(uri, fileIo.OpenMode.READ_ONLY);
+    try {
+      let totalBytes = 0;
+      while (totalBytes < stat.size) {
+        const bytesRead = await fileIo.read(file.fd, chunkBuffer, {
+          length: Math.min(chunkBuffer.byteLength, stat.size - totalBytes),
+        });
+        if (bytesRead === 0) {
+          break;
+        }
+        bytes.set(new Uint8Array(chunkBuffer, 0, bytesRead), totalBytes);
+        totalBytes += bytesRead;
+      }
+      if (totalBytes !== stat.size) {
+        throw new Error('Selected book-source document changed while being read');
+      }
+      // Do not silently truncate a document that grew after the bounded stat.
+      if (await fileIo.read(file.fd, new ArrayBuffer(1)) !== 0) {
+        throw new Error('Selected book-source document changed while being read');
+      }
+    } finally {
+      await fileIo.close(file);
+    }
+
+    try {
+      return util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(bytes);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : `${error}`;
+      throw new Error(`Selected book-source document is not valid UTF-8: ${message}`);
+    }
+  }
+
   private localBookStageDirectory(): string {
     return `${this.context.filesDir}/reader-import/staging`;
+  }
+
+  private localBookAssetDirectory(): string {
+    return `${this.context.filesDir}/reader-import/books`;
+  }
+
+  private requireLocalBookHash(bookId: string): string {
+    const match = /^local:([0-9a-f]{64})$/.exec(bookId);
+    if (match === null) {
+      throw new Error('Local book identity is not a SHA-256 content identity');
+    }
+    return match[1];
+  }
+
+  private async unlinkIfPresent(path: string): Promise<void> {
+    if (!(await fileIo.access(path))) {
+      return;
+    }
+    await fileIo.unlink(path);
   }
 
   private async ensureDirectory(directory: string): Promise<void> {
@@ -294,6 +463,10 @@ export class ReaderHostRegistry {
 
   private snapshotPath(): string {
     return `${this.snapshotDirectory()}/snapshot-v1.json`;
+  }
+
+  private snapshotMigrationMarkerPath(): string {
+    return `${this.snapshotDirectory()}/snapshot-v1.migrated-to-sqlite-v1`;
   }
 
   private async readStoredSnapshot(): Promise<StoredSnapshot | null> {

@@ -10,6 +10,7 @@ import {
   TOK_MUTED,
   TOK_ON_PRIMARY,
   TOK_PRIMARY_DARK,
+  TOK_PRIMARY_GRADIENT_START,
   TOK_SCREEN_INSET,
   TOK_SPACE_CARD_PADDING,
   TOK_SPACE_CONTROL_INLINE,
@@ -20,6 +21,7 @@ import {
 import { NoCoverCover } from './NoCoverCover';
 import { MainTabShell } from '../shell/MainTabShell';
 import { ReaderIconButton } from '../common/ReaderIconButton';
+import { AppTopBar } from '../common/AppTopBar';
 import { registerReaderFonts } from '../common/ReaderFonts';
 
 const PHONE_BOOK_WIDTH = 96.656;
@@ -80,41 +82,30 @@ export struct BookshelfPage {
 
   @Builder
   private topBar() {
-    Row({ space: 18 }) {
-      Text('书架')
-        .layoutWeight(1)
-        .height(38)
-        .fontFamily('ReaderNotoSerifSCBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(29)
-        .lineHeight(38)
-        .fontColor(TOK_INK);
+    AppTopBar({ title: '书架' }) {
+      Row({ space: 18 }) {
+        ReaderIconButton({
+          icon: $r('app.media.bookshelf_search'),
+          boxSize: 44,
+          iconSize: 24,
+          radius: 22,
+          onTap: (): void => this.onSearchRequested(),
+        });
 
-      ReaderIconButton({
-        icon: $r('app.media.bookshelf_search'),
-        boxSize: 44,
-        iconSize: 24,
-        radius: 22,
-        onTap: (): void => this.onSearchRequested(),
-      });
-
-      ReaderIconButton({
-        icon: $r('app.media.bookshelf_more'),
-        boxSize: 44,
-        iconSize: 24,
-        radius: 22,
-        onTap: (): void => {
-          // H-NOTE-1: Tablet import was previously disabled. Until Figma
-          // supplies a Tablet import final assembly, open the import dialog
-          // on Tablet as well so the user has a working entry point.
-          this.onImportRequested();
-        },
-      });
+        ReaderIconButton({
+          icon: $r('app.media.bookshelf_more'),
+          boxSize: 44,
+          iconSize: 24,
+          radius: 22,
+          onTap: (): void => {
+            // H-NOTE-1: Tablet import was previously disabled. Until Figma
+            // supplies a Tablet import final assembly, open the import dialog
+            // on Tablet as well so the user has a working entry point.
+            this.onImportRequested();
+          },
+        });
+      }
     }
-    .height(58)
-    .width('100%')
-    .padding({ left: 20, right: 20, top: 6 })
-    .alignItems(VerticalAlign.Center);
   }
 
   @Builder
@@ -316,7 +307,7 @@ export struct BookshelfPage {
       .height(isTablet ? 280 : 145.443)
       .linearGradient({
         angle: 141.7,
-        colors: [['#3D5A4C', 0.077], [TOK_PRIMARY_DARK, 0.923]],
+        colors: [[TOK_PRIMARY_GRADIENT_START, 0.077], [TOK_PRIMARY_DARK, 0.923]],
       })
       .borderRadius(8)
       .clip(true);

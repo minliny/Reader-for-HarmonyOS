@@ -3,6 +3,7 @@ import { ReaderSectionHeading } from '../common/ReaderSectionHeading';
 import {
   TOK_BORDER,
   TOK_CARD_BG,
+  TOK_RADIUS_MD,
 } from '../common/ReaderTokens';
 
 
@@ -17,7 +18,7 @@ export struct CategorySection {
   @BuilderParam content: () => void;
 
   build() {
-    ReaderCard({ bg: TOK_CARD_BG, cardBorder: TOK_BORDER, radius: 8, cardWidth: this.cardWidth }) {
+    ReaderCard({ bg: TOK_CARD_BG, cardBorder: TOK_BORDER, radius: TOK_RADIUS_MD, cardWidth: this.cardWidth }) {
       Column() {
         ReaderSectionHeading({ title: this.title });
         Column() {

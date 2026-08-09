@@ -7,6 +7,7 @@
 
 import { MainTabShell } from '../shell/MainTabShell';
 import { ReaderIconButton } from '../common/ReaderIconButton';
+import { AppTopBar } from '../common/AppTopBar';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import {
   TOK_BORDER_W,
@@ -18,6 +19,7 @@ import {
   TOK_INK,
   TOK_LINE_STRONG,
   TOK_MUTED,
+  TOK_ON_PRIMARY,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_ROW_BLOCK,
   TOK_SPACE_SM,
@@ -79,17 +81,7 @@ export struct DiscoverPage {
 
   @Builder
   private homeTopBar() {
-    Row() {
-      Text('发现')
-        .layoutWeight(1)
-        .height(38)
-        .fontFamily('ReaderNotoSerifSCBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(29)
-        .lineHeight(38)
-        .fontColor(TOK_INK)
-        .maxLines(1);
-
+    AppTopBar({ title: '发现' }) {
       ReaderIconButton({
         icon: $r('app.media.rss_refresh'),
         boxSize: 44,
@@ -100,10 +92,6 @@ export struct DiscoverPage {
         },
       });
     }
-    .width('100%')
-    .height(58)
-    .padding({ left: 20, right: 20, top: 6 })
-    .alignItems(VerticalAlign.Center);
   }
 
   @Builder
@@ -161,7 +149,7 @@ export struct DiscoverPage {
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start);
 
-      Image($r('app.media.rss_chevron')).width(20).height(20);
+      Image($r('app.media.reader_chevron_right')).width(20).height(20);
     }
     .width('100%')
     .height(58)
@@ -182,7 +170,7 @@ export struct DiscoverPage {
             .fontWeight(800)
             .fontSize(12)
             .lineHeight(15.6)
-            .fontColor(this.activeCategory === index ? '#FFFFFF' : '#3F372F')
+            .fontColor(this.activeCategory === index ? TOK_ON_PRIMARY : '#3F372F')
             .maxLines(1);
         }
         .height(32)
@@ -223,7 +211,7 @@ export struct DiscoverPage {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .padding({ left: 7 });
-        Image($r('app.media.rss_chevron')).width(20).height(20);
+        Image($r('app.media.reader_chevron_right')).width(20).height(20);
       }
       .layoutWeight(1)
       .height(34)
@@ -240,7 +228,7 @@ export struct DiscoverPage {
           .fontWeight(900)
           .fontSize(12)
           .lineHeight(15.6)
-          .fontColor('#FFFFFF')
+          .fontColor(TOK_ON_PRIMARY)
           .maxLines(1)
           .margin({ left: TOK_SPACE_ROW_BLOCK });
       }

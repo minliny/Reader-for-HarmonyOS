@@ -5,6 +5,7 @@ export type NativeRuntimeHandle = unknown;
 export type NativeReaderCoreModule = {
   abiVersion(): number;
   lastError(): { code: number; message: string };
+  readEpubEntry(archivePath: string, entryPath: string, maxBytes: number): Uint8Array;
   createRuntime(config?: JsonObject | string): NativeRuntimeHandle;
   releaseRuntime(runtime: NativeRuntimeHandle): void;
   sendCommand(runtime: NativeRuntimeHandle, command: JsonObject | string): void;

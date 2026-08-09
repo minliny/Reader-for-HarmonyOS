@@ -1,5 +1,5 @@
 import type { JsonObject, RequestOptions } from '@reader/core-harmony';
-import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 
 /**
  * Page-facing, materialized local-book TOC entry. The Core-owned local URL
@@ -9,6 +9,28 @@ import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 export type LocalReadingTocEntry = {
   index: number;
   title: string;
+  downloadState: LocalReadingDownloadState;
+  // `undefined` means the bookmark projection has not been admitted yet;
+  // an empty array is the Core-confirmed "no bookmarks" result.
+  bookmarks?: LocalReadingBookmark[];
+};
+
+export type LocalReadingDownloadState =
+  'unknown' | 'missing' | 'queued' | 'inProgress' | 'cached' | 'completed' | 'failed' | 'cancelled';
+
+export type LocalReadingBookmark = {
+  time: number;
+  chapterIndex: number;
+  chapterOffset: number;
+  chapterTitle: string;
+  content: string;
+};
+
+export type LocalReadingChapterStartBookmarkInput = {
+  bookName: string;
+  bookAuthor: string;
+  chapterIndex: number;
+  chapterTitle: string;
 };
 
 export type LocalReadingToc = {
@@ -25,6 +47,25 @@ export type LocalReadingChapter = {
   chapterIndex: number;
   chapterTitle: string;
   content: string;
+  blocks?: unknown[];
+};
+
+/**
+ * One half-open Unicode-scalar interval in Core's exact processed chapter
+ * output. These are content metrics, not ArkUI layout/page measurements.
+ */
+export type LocalReadingChapterContentMetric = {
+  chapterIndex: number;
+  scalarLength: number;
+  cumulativeStart: number;
+  cumulativeEnd: number;
+};
+
+/** Core-owned whole-book scalar index for a fully materialized local book. */
+export type LocalReadingContentMetrics = {
+  bookId: string;
+  totalScalarLength: number;
+  chapters: LocalReadingChapterContentMetric[];
 };
 
 /**
@@ -109,9 +150,9 @@ export class LocalReadingFlowGateway {
    * an older instance's pending write.
    */
   private static progressCommitTail: Promise<void> = Promise.resolve();
-  private readonly runtimeOwner: ReaderRuntimeOwner;
+  private readonly runtimeOwner: ReadingGatewayRuntime;
 
-  constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
+  constructor(runtimeOwner: ReadingGatewayRuntime) {
     this.runtimeOwner = runtimeOwner;
   }
 
@@ -141,9 +182,160 @@ export class LocalReadingFlowGateway {
       entries.push({
         index,
         title: this.requireString(entry, 'title', 'local_book.toc entry'),
+        downloadState: 'unknown',
       });
     }
     return { bookId, entries };
+  }
+
+  /**
+   * Joins the Core-owned bookmark and cache/download facts onto an already
+   * validated local TOC. No absence is inferred before both commands return.
+   */
+  async loadDirectoryProjection(
+    bookId: string,
+    bookName: string,
+    bookAuthor: string,
+    entries: LocalReadingTocEntry[],
+    isCurrent?: LocalReadingRequestGuard,
+  ): Promise<LocalReadingTocEntry[]> {
+    this.assertNonBlankString(bookId, 'bookId');
+    this.assertNonBlankString(bookName, 'bookName');
+    if (typeof bookAuthor !== 'string') {
+      throw new Error('bookAuthor must be a string');
+    }
+    const requests = await Promise.all([
+      this.runtimeOwner.request('cache.book.status', {
+        sourceId: LOCAL_SOURCE_ID,
+        bookId,
+      }, this.requestOptions(isCurrent)),
+      this.runtimeOwner.request('bookmark.list', {
+        bookName,
+        bookAuthor,
+      }, this.requestOptions(isCurrent)),
+    ]);
+    const cacheData = requests[0].data;
+    this.assertLocalSource(cacheData, 'cache.book.status');
+    this.assertMatchingBookId(cacheData, bookId, 'cache.book.status');
+    const rawStatuses = cacheData['chapters'];
+    if (!Array.isArray(rawStatuses)) {
+      throw new Error('cache.book.status returned invalid chapters');
+    }
+    const statusEntries: JsonObject[] = [];
+    for (const rawStatus of rawStatuses) {
+      const status = this.requireObject(rawStatus, 'cache.book.status chapter');
+      this.requireNonNegativeInteger(status, 'chapterIndex', 'cache.book.status chapter');
+      this.requireDownloadState(status, 'state', 'cache.book.status chapter');
+      statusEntries.push(status);
+    }
+
+    const rawBookmarks = requests[1].data['bookmarks'];
+    if (!Array.isArray(rawBookmarks)) {
+      throw new Error('bookmark.list returned invalid bookmarks');
+    }
+    const bookmarks: LocalReadingBookmark[] = [];
+    for (const rawBookmark of rawBookmarks) {
+      const bookmark = this.requireObject(rawBookmark, 'bookmark.list bookmark');
+      if (this.requireString(bookmark, 'bookName', 'bookmark.list bookmark') !== bookName ||
+        this.requireString(bookmark, 'bookAuthor', 'bookmark.list bookmark') !== bookAuthor) {
+        throw new Error('bookmark.list returned a bookmark for a different book');
+      }
+      const chapterIndex = this.requireSafeInteger(bookmark, 'chapterIndex', 'bookmark.list bookmark');
+      if (chapterIndex < 0) {
+        continue;
+      }
+      bookmarks.push({
+        time: this.requireSafeInteger(bookmark, 'time', 'bookmark.list bookmark'),
+        chapterIndex,
+        chapterOffset: this.requireNonNegativeInteger(bookmark, 'chapterPos', 'bookmark.list bookmark'),
+        chapterTitle: this.requireString(bookmark, 'chapterName', 'bookmark.list bookmark'),
+        content: this.requireString(bookmark, 'content', 'bookmark.list bookmark'),
+      });
+    }
+
+    const projected: LocalReadingTocEntry[] = [];
+    for (const entry of entries) {
+      let downloadState: LocalReadingDownloadState = 'unknown';
+      for (const status of statusEntries) {
+        if (status['chapterIndex'] === entry.index) {
+          downloadState = this.requireDownloadState(status, 'state', 'cache.book.status chapter');
+          break;
+        }
+      }
+      projected.push({
+        index: entry.index,
+        title: entry.title,
+        downloadState,
+        bookmarks: bookmarks.filter((bookmark: LocalReadingBookmark): boolean =>
+          bookmark.chapterIndex === entry.index),
+      });
+    }
+    return projected;
+  }
+
+  /**
+   * Creates the exact chapter-start bookmark represented by an empty TOC-row
+   * marker. `chapterPos: 0` is the unique Unicode-scalar anchor for the start
+   * of that chapter; optional note/text fields retain Core's empty defaults.
+   */
+  async createChapterStartBookmark(
+    input: LocalReadingChapterStartBookmarkInput,
+    isCurrent?: LocalReadingRequestGuard,
+  ): Promise<LocalReadingBookmark> {
+    this.assertNonBlankString(input.bookName, 'bookName');
+    if (typeof input.bookAuthor !== 'string') {
+      throw new Error('bookAuthor must be a string');
+    }
+    this.assertNonNegativeInteger(input.chapterIndex, 'chapterIndex');
+    this.assertNonBlankString(input.chapterTitle, 'chapterTitle');
+    const result = await this.runtimeOwner.request('bookmark.create', {
+      bookName: input.bookName,
+      bookAuthor: input.bookAuthor,
+      chapterIndex: input.chapterIndex,
+      chapterPos: 0,
+      chapterName: input.chapterTitle,
+    }, this.requestOptions(isCurrent));
+    const rawBookmark = this.requireObject(result.data['bookmark'], 'bookmark.create bookmark');
+    const time = this.requireSafeInteger(rawBookmark, 'time', 'bookmark.create bookmark');
+    const bookName = this.requireString(rawBookmark, 'bookName', 'bookmark.create bookmark');
+    const bookAuthor = this.requireString(rawBookmark, 'bookAuthor', 'bookmark.create bookmark');
+    const chapterIndex = this.requireSafeInteger(rawBookmark, 'chapterIndex', 'bookmark.create bookmark');
+    const chapterOffset = this.requireNonNegativeInteger(
+      rawBookmark,
+      'chapterPos',
+      'bookmark.create bookmark',
+    );
+    const chapterTitle = this.requireString(rawBookmark, 'chapterName', 'bookmark.create bookmark');
+    this.requireString(rawBookmark, 'bookText', 'bookmark.create bookmark');
+    const content = this.requireString(rawBookmark, 'content', 'bookmark.create bookmark');
+    if (bookName !== input.bookName || bookAuthor !== input.bookAuthor ||
+      chapterIndex !== input.chapterIndex || chapterOffset !== 0 ||
+      chapterTitle !== input.chapterTitle) {
+      throw new Error('bookmark.create returned a mismatched chapter-start bookmark');
+    }
+    return { time, chapterIndex, chapterOffset, chapterTitle, content };
+  }
+
+  /** Deletes one already-projected bookmark by its Core-owned primary key. */
+  async deleteBookmark(
+    time: number,
+    isCurrent?: LocalReadingRequestGuard,
+  ): Promise<boolean> {
+    if (!Number.isSafeInteger(time)) {
+      throw new Error('time must be a safe integer');
+    }
+    const result = await this.runtimeOwner.request('bookmark.delete', {
+      time,
+    }, this.requestOptions(isCurrent));
+    const returnedTime = this.requireSafeInteger(result.data, 'time', 'bookmark.delete');
+    if (returnedTime !== time) {
+      throw new Error('bookmark.delete returned a mismatched time');
+    }
+    const deleted = result.data['deleted'];
+    if (typeof deleted !== 'boolean') {
+      throw new Error('bookmark.delete returned invalid deleted');
+    }
+    return deleted;
   }
 
   async loadChapter(
@@ -172,7 +364,94 @@ export class LocalReadingFlowGateway {
       chapterIndex: returnedIndex,
       chapterTitle: this.requireString(result.data, 'chapterTitle', 'local_book.chapter.content'),
       content: this.requireString(result.data, 'content', 'local_book.chapter.content'),
+      blocks: this.optionalArray(result.data, 'blocks', 'local_book.chapter.content'),
     };
+  }
+
+  private optionalArray(value: JsonObject, field: string, context: string): unknown[] | undefined {
+    const raw = value[field];
+    if (raw === undefined) {
+      return undefined;
+    }
+    if (!Array.isArray(raw)) {
+      throw new Error(`${context} returned invalid ${field}`);
+    }
+    return raw;
+  }
+
+  /**
+   * Reads exact whole-book progress metrics without loading chapter bodies
+   * into ArkUI. Core applies the same ContentEdit/ContentProcessor path as
+   * `local_book.chapter.content` before counting Unicode scalars.
+   */
+  async loadContentMetrics(
+    bookId: string,
+    isCurrent?: LocalReadingRequestGuard,
+  ): Promise<LocalReadingContentMetrics> {
+    this.assertNonBlankString(bookId, 'bookId');
+    const result = await this.runtimeOwner.request(
+      'local_book.content.metrics',
+      { bookId },
+      this.requestOptions(isCurrent),
+    );
+    this.assertLocalSource(result.data, 'local_book.content.metrics');
+    this.assertMatchingBookId(result.data, bookId, 'local_book.content.metrics');
+    const totalScalarLength = this.requireNonNegativeInteger(
+      result.data,
+      'totalScalarLength',
+      'local_book.content.metrics',
+    );
+    const rawChapters = result.data['chapters'];
+    if (!Array.isArray(rawChapters)) {
+      throw new Error('local_book.content.metrics returned invalid chapters');
+    }
+
+    const chapters: LocalReadingChapterContentMetric[] = [];
+    const seenIndices: number[] = [];
+    let expectedStart = 0;
+    for (const rawChapter of rawChapters) {
+      const chapter = this.requireObject(rawChapter, 'local_book.content.metrics chapter');
+      const chapterIndex = this.requireNonNegativeInteger(
+        chapter,
+        'chapterIndex',
+        'local_book.content.metrics chapter',
+      );
+      if (seenIndices.indexOf(chapterIndex) >= 0) {
+        throw new Error('local_book.content.metrics returned duplicate chapterIndex');
+      }
+      seenIndices.push(chapterIndex);
+      const scalarLength = this.requireNonNegativeInteger(
+        chapter,
+        'scalarLength',
+        'local_book.content.metrics chapter',
+      );
+      const cumulativeStart = this.requireNonNegativeInteger(
+        chapter,
+        'cumulativeStart',
+        'local_book.content.metrics chapter',
+      );
+      const cumulativeEnd = this.requireNonNegativeInteger(
+        chapter,
+        'cumulativeEnd',
+        'local_book.content.metrics chapter',
+      );
+      if (cumulativeStart !== expectedStart ||
+        !Number.isSafeInteger(cumulativeStart + scalarLength) ||
+        cumulativeEnd !== cumulativeStart + scalarLength) {
+        throw new Error('local_book.content.metrics returned a non-contiguous scalar index');
+      }
+      chapters.push({
+        chapterIndex,
+        scalarLength,
+        cumulativeStart,
+        cumulativeEnd,
+      });
+      expectedStart = cumulativeEnd;
+    }
+    if (expectedStart !== totalScalarLength) {
+      throw new Error('local_book.content.metrics returned a mismatched totalScalarLength');
+    }
+    return { bookId, totalScalarLength, chapters };
   }
 
   async loadProgress(bookId: string, isCurrent?: LocalReadingRequestGuard): Promise<LocalReadingProgressState> {
@@ -269,9 +548,10 @@ export class LocalReadingFlowGateway {
       'chapterProgress',
       'reader.location.resolve canonicalLocation',
     );
-    if (resolvedProgress !== anchor.chapterProgress) {
-      throw new Error('reader.location.resolve returned a mismatched chapterProgress');
-    }
+    // Core owns the canonical location. Keep the layout-independent chapter
+    // index and Unicode-scalar offset exact, but consume Core's bounded
+    // progress fallback: an f64 JSON round trip may legitimately move its
+    // final decimal digit even when the primary anchor is unchanged.
     const reflow = this.requireOffsetAnchorReflow(result.data['reflow']);
     return {
       bookId,
@@ -409,6 +689,28 @@ export class LocalReadingFlowGateway {
       throw new Error(`${context} returned invalid ${key}`);
     }
     return candidate;
+  }
+
+  private requireSafeInteger(value: JsonObject, key: string, context: string): number {
+    const candidate = value[key];
+    if (typeof candidate !== 'number' || !Number.isSafeInteger(candidate)) {
+      throw new Error(`${context} returned invalid ${key}`);
+    }
+    return candidate;
+  }
+
+  private requireDownloadState(
+    value: JsonObject,
+    key: string,
+    context: string,
+  ): LocalReadingDownloadState {
+    const candidate = value[key];
+    if (candidate === 'missing' || candidate === 'queued' || candidate === 'inProgress' ||
+      candidate === 'cached' || candidate === 'completed' || candidate === 'failed' ||
+      candidate === 'cancelled') {
+      return candidate;
+    }
+    throw new Error(`${context} returned invalid ${key}`);
   }
 
   private requireProgress(value: JsonObject, key: string, context: string): number {

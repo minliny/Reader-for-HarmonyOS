@@ -4,13 +4,12 @@ import {
 } from './ReaderTokens';
 
 // 44×24 开关:20 白旋钮在 24 高的轨道上左右滑动。选中态为深绿 #1F3528。
-// 曾被 SettingsPage.settingsSwitch 与 SourceManagementPage.sourceSwitch
-// 各自复制实现,仅外圆角不同(12 与 999)。
+// 全站统一胶囊圆角 999 (Settings/SourceManagement 两处调用点均显式传 999)。
 @Component
 export struct ReaderToggle {
   @Prop value: boolean = false;
-  /** 轨道外圆角:Settings 为 12,SourceManagement 为 999(胶囊)。 */
-  @Prop radius: number = 12;
+  /** 轨道外圆角:统一 999(胶囊)。 */
+  @Prop radius: number = 999;
   onToggle: () => void = (): void => {};
 
   build() {

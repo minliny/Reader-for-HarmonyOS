@@ -10,11 +10,21 @@ export type SearchBook = {
   sourceId: string;
   sourceName: string;
   bookId: string;
+  /** Exact detail URL/path emitted as Core's non-blank remote `bookId`. */
+  detailUrl: string;
   title: string;
   author: string;
   coverUrl?: string;
   intro?: string;
+  kind?: string;
   latestChapterTitle?: string;
+  /** Typed continuation variables emitted by this exact search result. */
+  variables: SearchBookVariable[];
+};
+
+export type SearchBookVariable = {
+  name: string;
+  value: string;
 };
 
 export type SearchHistory = {
@@ -104,7 +114,7 @@ export class SearchGateway {
         keyword: keyword,
       }, this.requestOptions(isCurrent));
       const data = result.data;
-      const returnedSourceId = this.requiredString(data, 'sourceId');
+      const returnedSourceId = requiredString(data, 'sourceId');
       if (returnedSourceId !== source.sourceId) {
         return { ok: false, error: 'book.search returned a mismatched sourceId' };
       }
@@ -114,44 +124,13 @@ export class SearchGateway {
       }
       const books: SearchBook[] = [];
       for (const raw of rawBooks) {
-        books.push(this.decodeBookSearchResult(raw, source));
+        books.push(decodeBookSearchResult(raw, source));
       }
       return { ok: true, results: books };
     } catch (error) {
       const message = error instanceof Error ? error.message : `${error}`;
       return { ok: false, error: message };
     }
-  }
-
-  private decodeBookSearchResult(value: unknown, source: SearchSource): SearchBook {
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-      throw new Error('book.search returned a non-object book');
-    }
-    const book = value as JsonObject;
-    const decoded: SearchBook = {
-      sourceId: source.sourceId,
-      sourceName: source.name,
-      // A blank remote identity or title would create a non-actionable, empty
-      // Figma card. Core's live book.search contract supplies both; reject a
-      // malformed response as a source failure instead of rendering a fake
-      // result.
-      bookId: this.requiredNonBlankString(book, 'bookId'),
-      title: this.requiredNonBlankString(book, 'title'),
-      author: this.optionalString(book, 'author') ?? '',
-    };
-    const coverUrl = this.optionalString(book, 'coverUrl');
-    const intro = this.optionalString(book, 'intro');
-    const latestChapterTitle = this.optionalString(book, 'lastChapter');
-    if (coverUrl !== undefined) {
-      decoded.coverUrl = coverUrl;
-    }
-    if (intro !== undefined) {
-      decoded.intro = intro;
-    }
-    if (latestChapterTitle !== undefined) {
-      decoded.latestChapterTitle = latestChapterTitle;
-    }
-    return decoded;
   }
 
   async loadSources(): Promise<SearchSource[]> {
@@ -166,50 +145,111 @@ export class SearchGateway {
         throw new Error('source.list returned a non-object source');
       }
       const source = raw as JsonObject;
-      const sourceId = this.requiredString(source, 'sourceId');
-      const name = this.requiredString(source, 'name');
-      const enabled = this.requiredBoolean(source, 'enabled');
+      const sourceId = requiredString(source, 'sourceId');
+      const name = requiredString(source, 'name');
+      const enabled = requiredBoolean(source, 'enabled');
       sources.push({ sourceId, name, enabled });
     }
     return sources;
   }
 
-  private requiredString(value: JsonObject, key: string): string {
-    const candidate = value[key];
-    if (typeof candidate !== 'string') {
-      throw new Error(`search protocol returned invalid ${key}`);
-    }
-    return candidate;
-  }
-
-  private requiredNonBlankString(value: JsonObject, key: string): string {
-    const candidate = this.requiredString(value, key);
-    if (candidate.trim().length === 0) {
-      throw new Error(`search protocol returned blank ${key}`);
-    }
-    return candidate;
-  }
-
-  private requiredBoolean(value: JsonObject, key: string): boolean {
-    const candidate = value[key];
-    if (typeof candidate !== 'boolean') {
-      throw new Error(`search protocol returned invalid ${key}`);
-    }
-    return candidate;
-  }
-
-  private optionalString(value: JsonObject, key: string): string | undefined {
-    const candidate = value[key];
-    if (candidate === undefined || candidate === null) {
-      return undefined;
-    }
-    if (typeof candidate !== 'string') {
-      throw new Error(`search protocol returned invalid ${key}`);
-    }
-    return candidate;
-  }
-
   private requestOptions(isCurrent: SearchRequestGuard | undefined): RequestOptions {
     return isCurrent === undefined ? {} : { shouldCancel: (): boolean => !isCurrent() };
   }
+}
+
+/**
+ * Decode one live Core search item without deriving a second remote identity.
+ * The domain `bookId` is also the exact detail URL/path consumed by
+ * `book.detail`, so both fields deliberately retain the same validated value.
+ */
+function decodeBookSearchResult(value: unknown, source: SearchSource): SearchBook {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error('book.search returned a non-object book');
+  }
+  const book = value as JsonObject;
+  // A blank remote identity or title would create a non-actionable, empty
+  // Figma card. Reject malformed source data rather than fabricating a route.
+  const bookId = requiredNonBlankString(book, 'bookId');
+  const decoded: SearchBook = {
+    sourceId: source.sourceId,
+    sourceName: source.name,
+    bookId,
+    detailUrl: bookId,
+    title: requiredNonBlankString(book, 'title'),
+    author: optionalString(book, 'author') ?? '',
+    variables: decodeBookSearchVariables(book['variables']),
+  };
+  const coverUrl = optionalString(book, 'coverUrl');
+  const intro = optionalString(book, 'intro');
+  const kind = optionalString(book, 'kind');
+  const latestChapterTitle = optionalString(book, 'lastChapter');
+  if (coverUrl !== undefined) {
+    decoded.coverUrl = coverUrl;
+  }
+  if (intro !== undefined) {
+    decoded.intro = intro;
+  }
+  if (kind !== undefined) {
+    decoded.kind = kind;
+  }
+  if (latestChapterTitle !== undefined) {
+    decoded.latestChapterTitle = latestChapterTitle;
+  }
+  return decoded;
+}
+
+function decodeBookSearchVariables(value: unknown): SearchBookVariable[] {
+  if (value === undefined) {
+    return [];
+  }
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error('book.search returned invalid variables');
+  }
+  const rawVariables = value as JsonObject;
+  const names = Object.keys(rawVariables).sort();
+  const variables: SearchBookVariable[] = [];
+  for (const name of names) {
+    const variableValue = rawVariables[name];
+    if (typeof variableValue !== 'string') {
+      throw new Error('book.search returned non-string variables');
+    }
+    variables.push({ name, value: variableValue });
+  }
+  return variables;
+}
+
+function requiredString(value: JsonObject, key: string): string {
+  const candidate = value[key];
+  if (typeof candidate !== 'string') {
+    throw new Error(`search protocol returned invalid ${key}`);
+  }
+  return candidate;
+}
+
+function requiredNonBlankString(value: JsonObject, key: string): string {
+  const candidate = requiredString(value, key);
+  if (candidate.trim().length === 0) {
+    throw new Error(`search protocol returned blank ${key}`);
+  }
+  return candidate;
+}
+
+function requiredBoolean(value: JsonObject, key: string): boolean {
+  const candidate = value[key];
+  if (typeof candidate !== 'boolean') {
+    throw new Error(`search protocol returned invalid ${key}`);
+  }
+  return candidate;
+}
+
+function optionalString(value: JsonObject, key: string): string | undefined {
+  const candidate = value[key];
+  if (candidate === undefined || candidate === null) {
+    return undefined;
+  }
+  if (typeof candidate !== 'string') {
+    throw new Error(`search protocol returned invalid ${key}`);
+  }
+  return candidate;
 }

@@ -33,6 +33,7 @@ export const MAIN_TABS: MainTabDef[] = [
 @Component
 export struct MainTabBar {
   @Prop current: string = 'bookshelf';
+  @Prop vertical: boolean = false;
   onSelect: (key: string) => void = (_key: string): void => {};
 
   aboutToAppear(): void {
@@ -40,13 +41,22 @@ export struct MainTabBar {
   }
 
   build() {
+    if (this.vertical) {
+      this.verticalRail();
+    } else {
+      this.bottomBar();
+    }
+  }
+
+  @Builder
+  private bottomBar() {
     Row() {
       ForEach(MAIN_TABS, (tab: MainTabDef) => {
-        this.tabItem(tab, this.current === tab.key);
+        this.bottomTabItem(tab, this.current === tab.key);
       }, (tab: MainTabDef): string => `main-tab-${tab.key}`);
     }
     .width('100%')
-    .constraintSize({ maxWidth: 362 })
+    .constraintSize({ maxWidth: 360 })
     .height(68)
     .padding(TOK_SPACE_XS)
     .backgroundColor(TOK_CARD_BG)
@@ -56,7 +66,24 @@ export struct MainTabBar {
   }
 
   @Builder
-  private tabItem(tab: MainTabDef, active: boolean) {
+  private verticalRail() {
+    Column({ space: 16 }) {
+      ForEach(MAIN_TABS, (tab: MainTabDef) => {
+        this.railTabItem(tab, this.current === tab.key);
+      }, (tab: MainTabDef): string => `main-rail-tab-${tab.key}`);
+    }
+    .width(82)
+    .height(332)
+    .padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS })
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+    .backgroundColor(TOK_CARD_BG)
+    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+    .borderRadius(24);
+  }
+
+  @Builder
+  private bottomTabItem(tab: MainTabDef, active: boolean) {
     Column({ space: 2 }) {
       Stack({ alignContent: Alignment.Center }) {
         this.tabIcon(tab.key, active);
@@ -73,6 +100,35 @@ export struct MainTabBar {
     }
     .layoutWeight(1)
     .height(54)
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+    .backgroundColor(active ? TOK_PRIMARY_DARK : Color.Transparent)
+    .borderRadius(24)
+    .onClick((): void => {
+      if (!active) {
+        this.onSelect(tab.key);
+      }
+    });
+  }
+
+  @Builder
+  private railTabItem(tab: MainTabDef, active: boolean) {
+    Column({ space: 4 }) {
+      Stack({ alignContent: Alignment.Center }) {
+        this.tabIcon(tab.key, active);
+      }
+      .width(30)
+      .height(30);
+
+      Text(tab.label)
+        .fontFamily('ReaderInter')
+        .fontWeight(FontWeight.Bold)
+        .fontSize(11)
+        .lineHeight(18)
+        .fontColor(active ? TOK_ON_PRIMARY : TOK_MUTED);
+    }
+    .width(66)
+    .height(68)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(active ? TOK_PRIMARY_DARK : Color.Transparent)

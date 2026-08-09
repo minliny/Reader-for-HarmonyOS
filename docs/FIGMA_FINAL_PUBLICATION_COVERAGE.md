@@ -1,6 +1,6 @@
 # Figma Final 静态出版覆盖矩阵
 
-记录日期：2026-08-05（审计纠正后）
+记录日期：2026-08-10（审计纠正后；A 组真实书源 Phone VM 回归）
 唯一视觉来源：[Reader UI - Phase 2 Design System](https://www.figma.com/design/klhs2jMM4MncaJFqZMfqEK)（file key `klhs2jMM4MncaJFqZMfqEK`）
 本表只记录来源与实施状态，不是设计稿、导出物、Token 或生成输入。所有坐标以实时 Figma 节点为准。
 
@@ -17,21 +17,21 @@
 
 | 页面族 | Figma 页面/节点 | 视口 | 内容模式 | 核心命令 / Host 能力 | 路由入口与返回 | 视觉 | 真实 Core | VM | 状态 | Gap ID | 原生代码路径 | 验证层 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| **Bookshelf（populated）** | `23 · Pages · Final` `943:11`(Phone) `943:437`(Tablet) | Phone/Tablet | CORE | `bookshelf.list`、`bookshelf.get`、`reading.progress.get` | 首页；返回=退出 | ✅ | ✅（真实书架与进度） | ✅(Phone) | ✅（Phone）/⊘(Tablet) | — | `features/bookshelf/BookshelfPage.ets` | HAP+VM(Phone) |
+| **Bookshelf（populated）** | `23 · Pages · Final` `943:11`(Phone) `943:437`(Tablet) | Phone/Tablet | CORE | `bookshelf.add/list/get`、`reading.progress.get` | 首页；返回=退出 | ✅ | ✅（本地/远程复合身份书架与进度） | ✅(Phone，本地+真实远程源、重启) | ✅（Phone）/⊘(Tablet) | — | `features/bookshelf/BookshelfPage.ets`、`app/ReaderCoreGateway.ts` | HAP+VM(Phone) |
 | Bookshelf（ReadingProgress=None） | `3579:11530`/`3579:11575` | Phone/Tablet | CORE | `bookshelf.list`(hasReadingProgress) | 同上 | ✅ | ✅ | ✅(Phone) | ✅（Phone）/⊘(Tablet) | — | `BookshelfPage.ets`（`continueReading === undefined`） | HAP+VM(Phone) |
 | Bookshelf（empty） | `07 States` `286:31`（参考） | Phone | CORE | `bookshelf.list` | 导入入口 | ✅（Phone） | ✅ | ✅（Phone） | ✅（Phone） | 缺 Tablet Final Empty 节点（`H-NOTE-1` ✅已关闭：Tablet 复用 Phone 空态，见缺口登记 §7.2） | `BookshelfEmptyPage.ets` | HAP+VM(Phone) |
 | **Book Detail（local）** | `23 · Pages · Final` `943:651`(Phone) `943:855`(Tablet) | Phone/Tablet | CORE | `bookshelf.get`、`local_book.toc`、`reading.progress.get` | 书架→详情；返回=书架 | ✅ | ✅ | ✅（Phone） | ✅（Phone）/⊘(Tablet) | NoCover：书架卡基准（96.66×145.44）已对齐 Figma `3612:1796`；62×93/Tablet 缩放实例无 Figma 规则（子元素为 MIN/MIN 非比例缩放）；Hero 无 NoCover 变体（`N-COVER-HERO-01` ✅已关闭：复用卡片 NoCover 缩放 86×122，代码已改待验）；Songti `B-DETAIL-01` 桥接 | `LocalBookDetail.ets` | HAP+VM(Phone,真实书) |
-| **ReadingSurface** | `15 · Reader 2` `1023:18355`(Phone) `1023:18371`(TabletExpanded) | Phone/TabletExpanded | CORE | `local_book.chapter.content`、`reading.progress.get/update`、`reader.location.resolve` | 详情→阅读；返回=详情 | ✅ | ✅ | ✅(Phone) | ✅（Phone）/⊘(TabletExpanded) | 翻页动效按 `M-REVIEW-01` 暂停 | `LocalReadingExperience.ets`、`ReadingSurface.ets` | HAP+VM(Phone) |
+| **ReadingSurface** | `15 · Reader 2` `1023:18355`(Phone) `1023:18371`(TabletExpanded) | Phone/TabletExpanded | CORE | `local_book.chapter.content` / `chapter.content`、`reading.progress.get/update`、`reader.location.resolve` | 详情→阅读；返回=详情 | ✅ | ✅（本地/在线共用分页与 canonical scalar anchor） | ✅(Phone，本地+真实远程源；章内/跨章/重启) | ✅（Phone）/⊘(TabletExpanded) | 翻页动效按 `M-REVIEW-01` 暂停 | `LocalReadingExperience.ets`、`ReadingSurface.ets`、`ReadingPaginationIndex.ts` | HAP+VM(Phone) |
 | **Full Directory** | `23 · Pages · Final` `943:11617`(Phone)/`943:11949`(Tablet)（当前无本地目录动态字段映射或 prototype reaction） | Phone/Tablet | CORE | `local_book.toc`、`local_book.chapter.content`、`reader.location.resolve`、`reading.progress.update` | 详情→目录；选章保持现有 Directory 终态→新章首屏真实提交后正文；返回=详情 | ✅（静态终态） | ✅（选章 token 覆盖 load/测量/提交，进度写入串行；EPUB 同文档 fragment 正确切章） | ✅（Phone，当前 HAP + 新导入 EPUB） | ⚠️（本地业务/VM 已闭环；`R-LOCAL-TOC-01` 的 Figma 动态字段/原型仍缺） | `R-LOCAL-TOC-01` | `ReaderFullDirectory.ets` + `FullDirectoryPanel.ets` + `LocalReadingExperience.ets` | HAP+VM(Phone,当前) |
 | **Import** | `23 · Pages · Final` + `08 Library&Import` | Phone | CORE | `local_book.import`、`bookshelf.add`（Host picker + rollback） | 书架→导入 | ✅ | ✅ | ✅(Phone) | ✅（Phone） | 格式支持：txt/epub 完整（IndexedText）；mobi/azw 无 DRM PalmDOC 已修复——正确书名/作者/真实文本预览（2026-08-05 Core 修解压变体+DRM误判+EXTH定位）；KF8/AZW3/DRM/HUFF 需外部解码器 | `LocalImportDialog.ets` | HAP+VM(Phone,真实书) |
-| **Search** | `11 · Search` `2635:58749`~`2635:59599` | Phone/Tablet | CORE | `search.history.*`、`source.list`、`book.search`；`http.execute` | 书架搜索→搜索页；返回=书架 | ✅ | ⚠️（所有 enabled 书源顺序真实查询、失败不伪装为全量结果） | ✅（Phone，真实错误态） | ⚠️（远程成功结果与远程 Detail 尚未设备验收） | 远程 Detail 未有 admitted route | `SearchPage.ets`、`SearchGateway.ts` | HAP+VM(Phone,error) |
-| **RSS** | `10 · Reference · RSS` `F2 · Canonical · RSS` `2305:267`/`2305:529` + CanonicalState `2305:738`/`2305:789`/`2305:849` | Phone/Tablet | CORE | 无刷新命令（占位-only） | 书架底部导航→RSS；返回=书架 | ✅ | ⊘（按缺口登记 §7.1 冻结；刷新只记录 GAP、不触发 `rss.subscription.refresh`） | ✅（Phone，当前 HAP） | 占位-only（缺口登记 §7.1） | 占位-only | `RssPage.ets`、`RssGateway.ts` | HAP+VM(Phone,placeholder) |
+| **Search / Remote Reading** | `11 · Search` `2635:58749`~`2635:59599` + 既有 Detail/Reading Surface | Phone/Tablet | CORE | `source.import/list`、`book.search`、`book.detail`、`book.toc`、`chapter.content`、`bookshelf.add`、`reading.progress.*`；Host JSON picker、`http.execute` | 书源管理正式导入→书架搜索→结果→远程详情→目录/正文→共用阅读页；返回按既有详情/阅读链 | ✅（既有页面复用） | ✅（A 组真实源；远程书通过 Core upsert 进入共用书架） | ✅（Phone：实时搜索 10 本、详情、1449 章目录、正文、跨章、重启恢复） | ✅（Phone A 组）/⚠️（B/C、Tablet、真机） | B/C Host 能力与设备证据 | `SourceManagementPage.ets`、`SourceGateway.ts`、`RemoteReadingFlowGateway.ts`、`ReaderCoreGateway.ts`、`Index.ets` | static+HAP+VM(Phone,A组) |
+| **RSS** | `10 · Reference · RSS`：Shell `2305:530`、SourceFeed `4054:65492`、EntryDetail `4087:2674`、Prototype `4105:3588` | Phone/Tablet | CORE | `rss.subscription.list/items` 只读缓存；刷新/写入未接 | 书架→RSS；订阅源→SourceFeed；条目→EntryDetail；按入口上下文返回 | ✅（Figma 基础链路） | ⚠️（缓存读取与真子路由已接；刷新、管理、已读/收藏、源设置、外链打开仍记录 GAP） | ⊘（无设备目标） | ⚠️（Phone/Tablet Flow Prototype + static/HAP；未验真实交互） | Partial/FatalError、SubscriptionManagement、RuleEdit、Host 写入/外链合同 | `RssPage.ets`、`RssSourceFeedPage.ets`、`RssEntryDetailPage.ets`、`RssGateway.ts` | Figma+static+HAP（无 VM） |
 | **Settings General** | `23 · Pages · Final` `943:2897`(Phone) `943:3369`(Tablet) | Phone/Tablet | CORE | `persistence.put`（preferences 设置持久化，`SettingsGateway`）、`source.list` 入口 | 书架底部导航→设置；返回=书架 | ✅ | ✅（4 开关经 `SettingsGateway` 持久化） | ✅(Phone) | ✅（Phone）/⊘(Tablet) | 其余 Select/InlineAction 仍静态 | `SettingsPage.ets`、`SettingsGateway.ts` | HAP+VM(Phone) |
-| **Source Management** | `23 · Pages · Final` `943:4281`(Phone) `943:4745`(Tablet) | Phone/Tablet | CORE | `source.list` | 设置→书源管理；返回=设置 | ✅ | ✅（`source.update` RPC 真实持久化，不乐观切换；`book.search`/`source.explore` 拒绝 disabled，检测/调试不受影响） | ✅（Phone） | ✅ | `SS-SOURCE-TOGGLE-01` | `SourceManagementPage.ets`、`SourceGateway.ts` | HAP+VM(Phone 壳) |
+| **Source Management** | `23 · Pages · Final` `943:4281`(Phone) `943:4745`(Tablet) | Phone/Tablet | CORE | `source.import/list/update`；Host JSON picker + 有界 UTF-8 读取 | 设置→书源管理→新增书源；返回=设置 | ✅ | ✅（稳定 `bookSourceUrl` 身份逐项导入；Core 确认后刷新列表；开关不乐观更新） | ✅（Phone：正式 picker 导入；重复导入仍 1 个） | ✅（Phone）/⊘(Tablet) | `SS-SOURCE-TOGGLE-01` 仅剩视觉/Tablet 边界 | `SourceManagementPage.ets`、`SourceGateway.ts`、`SourceOrchestrator.ets`、`ReaderHostRegistry.ts` | static+HAP+VM(Phone,真实JSON) |
 | **Sync Backup** | `23 · Pages · Final` `943:4982`(Phone) `943:5462`(Tablet) | Phone/Tablet | CORE | `sync.backup`、`sync.webdav.plan`（均为纯计划命令；执行需 executor + Core 回传） | 设置→同步与备份；返回=设置 | ✅ | ⊘（Host 已有受限 `http.execute`，但 planner 未被执行、响应未解析；不伪装成功） | ⊘（当前构建未回归） | ⊘Core阻塞（缺执行编排/结果页面合同） | 执行编排 + 结果回传/状态 | `SyncPage.ets`、`SyncGateway.ts` | HAP(static) |
 | **WebDAV Config** | `23 · Pages · Final` `943:5704`(Phone) `943:6116`(Tablet) | Phone/Tablet | CORE | `sync.webdav.*`（需 http） | 同步→WebDAV | ⊘ | ⊘ | ⊘ | ⊘缺口 | 需 http host（Figma Final 节点已存在 943:5704/942:42-44，非缺画稿） | — | — |
 | **Discover** | `23 · Pages · Final` `943:1312`(Phone) `943:1684`(Tablet) + `09 · Reference · Discover` | Phone/Tablet | CORE | `source.exploreKinds`、`source.explore` | 书架底部导航→发现 | ⊘ | ⊘ | ⊘ | 占位-only（缺口登记 §7.1） | `D-DISCOVER-STATES-01`（占位-only） | — | — |
-| **Source Switch** | `23 · Pages · Final` `943:15215`(Phone) `943:15705`(Tablet) | Phone/Tablet | CORE | `change.bookSource`、`book.toc`、`source.switch.commit`、`source.switch.rollback` | 完整目录顶栏「换源」→overlay；本地书置灰不可点；返回=✕/遮罩点击/系统返回 | ⊘（Figma 缺换源按钮 Disabled 变体 + overlay 结果态画稿 + 延迟/当前章节数据契约） | ⚠️（gateway 已按契约接通 4 命令；`change.bookSource`/`book.toc` 依赖 http（host 已注册），`source.switch.commit` 需远程 from 书架条目——真实链路待在线书路径） | ✅（Phone：置灰按钮 + dev-seed overlay 五候选行/结果态） | ⚠️（代码已定义触发/返回/结果态 + 本地置灰；真实切换链路未交付） | `SS-SOURCE-SWITCH-01` | `SourceSwitchPanel.ets`、`SourceSwitchGateway.ts`、`ReaderFullDirectory.ets`、`Index.ets` | HAP+VM(Phone) |
+| **Source Switch** | `23 · Pages · Final` `943:15215`(Phone) `943:15705`(Tablet) | Phone/Tablet | CORE | `change.bookSource`、`book.detail`、`book.toc`、`source.switch.commit`、`source.switch.rollback` | 完整目录顶栏「换源」→overlay；本地书置灰不可点；返回=✕/遮罩点击/系统返回 | ⊘（Figma 缺换源按钮 Disabled 变体 + overlay 结果态画稿 + 延迟/当前章节数据契约） | ⚠️（Gateway/事务和在线阅读入口已接；真实候选/提交依赖已导入远程书源与 VM 网络） | ✅（Phone：仅本地置灰与历史 dev-seed 视觉，不代证真实候选） | ⚠️（真实远程换源旅程未验收） | `SS-SOURCE-SWITCH-01` + 真实源 VM 证据 | `SourceSwitchPanel.ets`、`SourceSwitchGateway.ts`、`ReaderFullDirectory.ets`、`Index.ets` | static+HAP+VM(Phone,local-only) |
 | **Reader Control Home** | `23 · Pages · Final` `943:6848`(Phone) `943:8028`(Tablet) | Phone/Tablet | CORE | reader control 静态终态 | 阅读→控制 | ⊘ | ⊘ | ⊘ | ⊘缺口 | `RC-READER-CONTROL-01` | — | — |
 | **Reader Quick/Module/Full** | `23 · Pages · Final` `943:8625`~`943:15055` | Phone/Tablet | CORE/静态终态 | 目录/TTS/排版/设置/替换/搜索 | 阅读→Quick/Module/Full | ⊘ | ⊘ | ⊘ | ⊘缺口 | `RC-READER-CONTROL-01`、`PT-*` | — | — |
 
@@ -45,27 +45,27 @@
 5. **Full Directory 选章**：`FullDirectoryPanel.chapterRow.onClick` → `ReaderFullDirectory.onSelectChapter` → `Index.onDirectoryChapterSelected` → `LocalReadingExperience.onRequestedChapterChanged`（@Watch）→ `openChapter`。当前代码以 selection token 隔离旧 load/测量/提交，并把同书进度写入串行化；当前 HAP 在 VM 新导入 Gutenberg EPUB `18174` 后，选择 `I. THE WOODLANDS IN JANUARY` 的正文从该 fragment 的 `Humanity has always…` 开始，退出后恢复同章位置。`R-LOCAL-TOC-01` 仍存：Phone/Tablet 实例无 prototype reaction，章节行固定样例，无本地目录字段→正文映射。
 6. **Settings General**：`SettingsGateway` 经 `@ohos.data.preferences` 持久化 4 开关；`Index` 读写 `settingsSnapshot`。
 
-**视觉壳（视觉 ✅，真实 Core ⊘，VM ✅）**：
-7. **Search**：五态视觉完整；`source.list` 与所有启用书源的真实 `book.search` 顺序执行，历史写入失败不阻断搜索，任一书源失败收敛到既有 Error（不伪装为“全部”结果）。当前 VM 已验真实错误态，未验远程成功结果。
-8. **RSS**：按用户范围决定保持占位-only；"刷新"不接 `rss.subscription.refresh`，只记录 `FIGMA_VISUAL_GAP`。
-9. **Source Management**：真实 `source.list` 展示 + 真实 `source.update` RPC 开关（`SourceGateway.updateSource`，不乐观切换，成功后才重载列表）。
+**已接 Core、但仍有分层边界的页面**：
+7. **Search / Remote Reading**：五态视觉完整；2026-08-10 Phone VM 通过正式 JSON picker 导入 A 组真实源，关键词 `魔女` 实时返回 10 本，《诡秘：善魔女》详情、1449 章目录和真实正文进入共用阅读会话。章内 A→B→A、跨章第 3 章章首→第 2 章末页→第 3 章章首、进程重启恢复均通过。搜索选书复用 Core `bookshelf.add` upsert，远程书卡与继续阅读卡重启后仍存在。B/C、Tablet、真机与三端 parity 未验。
+8. **RSS**：2026-08-09 范围更新为只读缓存页与真子路由：`subscription.list/items` 可展示，SourceFeed/EntryDetail 可导航；F3 提供 `RSS · Phone` / `RSS · Tablet` 两个 Flow Starting Point，覆盖 Main→SourceFeed/EntryDetail→返回及 inline filter，10 个独立紧凑控件有 44vp 响应区并通过 HAP 编译。"刷新"、管理、写动作和外链宿主仍不接，只记录 `FIGMA_VISUAL_GAP`。
+9. **Source Management**：真实 `source.import/list/update` 已接。新增按钮只通过 Host 有界读取 JSON，原始 `bookSourceUrl` 作为稳定 `sourceId`，raw BookSource 交给 Rust Core；导入和开关都只在 Core 确认后重载列表。2026-08-10 Phone VM 正式 picker 导入成功，重复导入同一文件后仍为 `1 个书源 · 1 个启用`。
 10. **Sync Backup**：`SyncGateway` 参数已按 Core 合约修正；`sync.backup`/`webdav.plan` 均为纯计划命令，`triggerBackup` 不插入 0 字节假历史。`连接测试` 结果**仅写 hilog，页面无可见成功/失败状态**；WebDAV 配置未持久化。**当前不可用**，须先接 Host HTTP 执行与结果回传。
 
 ## 3. 阻塞项（Figma 缺口 / 需 host 能力）
 
 - **Discover**（占位-only，见缺口登记 §7.1）：`D-DISCOVER-STATES-01` 并入占位，不推进。
 - **Reader Control Home/Quick/Module/Full** `RC-READER-CONTROL-01`：控制层触发/返回契约已定（点击沉浸阅读页中间竖栏唤起，见缺口登记 §7.2）；面板装配、Quick↔Module↔Full 切换契约未定义；TTS/AutoPage/翻页受 `PT-*`、`M-REVIEW-01` 动效暂停。
-- **Source Switch** `SS-SOURCE-SWITCH-01`：换源代码已交付（本地置灰 + overlay 全结果态，2026-08-05）；真实切换链路待远程书架条目 + 在线阅读路径（`change.bookSource`/`book.toc` 已走真实 http，host 已注册）。
+- **Source Switch** `SS-SOURCE-SWITCH-01`：换源 Gateway/事务、在线阅读入口和正式书源导入代码已接；真实切换验收待 VM 导入远程书源、产生远程书架条目并跑网络旅程。
 - **WebDAV**：Host 已注册 API-23 `http.execute` 子集（含 `customMethod`/`maxRedirects`），但 Sync planner 仍缺执行编排、响应解析与 Figma 结果态；Figma Final 节点已存在。
-- **Search 远程详情**：搜索命令已接通；远程 Book Detail/章节路由尚无 admitted Figma 流。
+- **Search 复杂源与设备边界**：A 组真实源 Phone VM 成功旅程已通过；B/C 组 charset、Cookie/session、redirect/finalUrl、WebView/challenge，以及 Tablet/真机/三端 parity 仍缺证据。
 - **响应式**：Tablet/TabletExpanded 布局未做运行验收（`R-COMPACT-01` 折叠屏降级已 out-of-scope，见缺口登记 §7.2）。
 
 ## 4. 实施顺序
 
 1. **批次 A（已实现，分层验收）**：Bookshelf、Book Detail、ReadingSurface、Import、Full Directory、空书架；Full Directory 已在当前 HAP + 新导入 EPUB VM 回归。
-2. **批次 B（分层）**：Search 五态已接真实多书源调用（成功结果待设备网络验收）；RSS 保持占位-only。
+2. **批次 B（分层）**：Search 五态已接真实多书源调用（成功结果待设备网络验收）；RSS 已接只读缓存查询与 SourceFeed/EntryDetail 真子路由，刷新/写入仍阻塞。
 3. **批次 C（✅ 真实闭环或壳）**：Settings 持久化、Source Management、Sync 网关。
-4. **批次 D（阻塞）**：Reader Control、Source Switch（代码已交付，真实切换链路待在线书路径）、WebDAV 执行编排、远程 Search Detail——待补齐 Figma 契约或业务链路。（Discover/RSS 已按缺口登记 §7.1 占位-only 撤出。）
+4. **批次 D（部分闭合）**：正式书源导入和 A 组远程阅读 Phone VM 已闭合；当前剩余 Source Switch 真实远程验收、B/C Host 能力、WebDAV 执行编排，以及 RSS 错误态/管理/规则/写入/外链宿主——分别待设备证据、业务接线或 Figma 合同。（Discover 仍为占位-only；RSS 的只读范围已于 2026-08-09 解冻。）
 
 ## 5. 每次改动的防越界检查
 
@@ -115,7 +115,7 @@
 
 用户拍板范围决定（详见缺口登记 §7）：
 
-- **Discover / RSS 占位-only**：设计初期已定「暂时不做，仅保留占位」，不推进真实实现；本矩阵中两页的 `⊘Core阻塞（http）` / `⊘缺口` 记录修正为 out-of-scope 占位。
+- **Discover / RSS 原占位-only 决策**：这是 2026-08-05 的历史范围。Discover 仍保持占位；RSS 于 2026-08-09 解冻 `subscription.list/items` 只读缓存展示、SourceFeed/EntryDetail 真子路由和对应基础 Prototype；刷新、管理、规则编辑、已读/收藏与外链宿主仍不在已交付范围。
 - **`N-COVER-HERO-01` 已关闭**：Hero 无封面复用书架卡 NoCover 缩放至 86×122（`LocalBookDetail.ets` 已改，待编译/VM 验证）。
 - **`H-NOTE-1` 已关闭**：Tablet 空书架复用 Phone 空态组件。
 - **`B-BOOKSHELF-LIST-02` 已关闭**：Tablet List 与 Phone 样式一致。
@@ -171,6 +171,8 @@
 **设置页修复（同日）：** ① Scroll 短内容被垂直居中导致卡片下沉 → 各主页面 Scroll 加 `.align(Alignment.Top)`；② 设置页行图标原为同一 `bookshelf_settings` 齿轮，已从 Figma 下载 18 个 Tabler 图标 SVG 入 media（`settings_row_*` 5 个入口页 + `settings_gen_*` 13 个基础设置页），每行传各自 icon；③ 下拉修复：App主题 由分段控件改为**下拉选择框**显示「跟随系统」（重绘版 299:2），四个下拉（App主题/语言/启动时打开/动画效果）改为自定义下拉（点开选项、选中回显），值符合 Figma（跟随系统/简体中文/书架/标准）。
 
 ## 7. 已知限制（审计披露）
+
+- **产品范围**：PDF 阅读/OCR/renderer 明确 out-of-scope，不列入本地导入或阅读缺口；在线阅读与 RSS 仍是核心能力。
 
 - **构建产物**：unsigned HAP（无 signingConfig）；回归以 VM 最新安装为准。
 - **NAPI 库**：本轮 Core 重编译后，`entry/libs` 与 Core target 同为 `b72f6c9821fb6ae02c400613366aaa353b64b4c8aac3da693a2e6e5f63ff4bf1`；HAP 内唯一经 Strip 的库为 `069f94b1cb9d7c4a7e52310f206c9ab09794dd5d8726d9a94fec5a80a6df1f68`（与本次 build intermediate 一致）。

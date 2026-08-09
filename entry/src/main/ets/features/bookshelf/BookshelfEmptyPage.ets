@@ -5,11 +5,10 @@
  * pills, and wrong card size). Page chrome (top bar, section header, bottom
  * navigation) is unchanged. Empty-state text uses ReaderNotoSansSC per Figma.
  */
-import { MainTabBar } from '../shell/MainTabBar';
+import { MainTabShell } from '../shell/MainTabShell';
 import {
   TOK_CONTENT_MAX_W_PHONE,
   TOK_INK,
-  TOK_PAPER,
   TOK_SCREEN_INSET,
   TOK_SPACE_XS,
 } from '../common/ReaderTokens';
@@ -31,29 +30,34 @@ export struct BookshelfEmptyPage {
   }
 
   build() {
-    Column() {
-      this.topBar();
-      Scroll() {
-        Column({ space: 9 }) {
-          this.sectionHeader();
-          BookshelfEmptyCard({
-            onImportRequested: (): void => this.onImportRequested(),
-            onSearchRequested: (): void => this.onSearchRequested(),
-          })
+    MainTabShell({
+      activeTab: 'bookshelf',
+      // Tablet empty has no Figma variant (phone-reuse), so keep the bottom
+      // nav here; BookshelfPage's tablet rail branch does not apply.
+      showBottomNav: true,
+      onMainTab: (key: string): void => this.onMainTab(key),
+    }) {
+      Column() {
+        this.topBar();
+        Scroll() {
+          Column({ space: 9 }) {
+            this.sectionHeader();
+            BookshelfEmptyCard({
+              onImportRequested: (): void => this.onImportRequested(),
+              onSearchRequested: (): void => this.onSearchRequested(),
+            })
+          }
+          .width(this.contentWidth())
+          .padding({ top: TOK_SPACE_XS, bottom: 116 });
         }
-        .width(this.contentWidth())
-        .padding({ top: TOK_SPACE_XS, bottom: 116 });
+        .layoutWeight(1)
+        .width('100%')
+        .padding({ left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET })
+        .scrollBar(BarState.Off);
       }
-      .layoutWeight(1)
       .width('100%')
-      .padding({ left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET })
-      .scrollBar(BarState.Off);
-
-      MainTabBar({ current: 'bookshelf', onSelect: (key: string): void => this.onMainTab(key) });
+      .height('100%');
     }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(TOK_PAPER);
   }
 
   @Builder

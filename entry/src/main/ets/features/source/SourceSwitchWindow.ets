@@ -24,12 +24,11 @@ import { registerReaderFonts } from '../common/ReaderFonts';
 
 /**
  * SourceSwitch overlay window state (Window State 7态, SS-SOURCE-SWITCH-01).
- * `candidates` is the only state with a Figma V2 drawing (SourceSwitch/Window,
- * Phone 943:15215 / Tablet 943:15705 — both mount the same 568:656 window
- * instance); the remaining result states are the code-side definition of
- * switching / success / failure / discovery failure, following the app's
- * existing loading/error idioms. The owning Index drives every transition via
- * a real gateway.
+ * The seven states follow the Source Switch state contract. Candidate-state
+ * geometry comes from SourceSwitch/Window (Phone 943:15215 / Tablet 943:15705,
+ * both mounting 568:656). States without a dedicated visible Figma frame stay
+ * fail-closed for visual acceptance; the owning Index still drives the real
+ * gateway transitions.
  */
 export interface SourceSwitchDiscoveringState {
   kind: 'discovering';
@@ -129,15 +128,13 @@ export struct SourceSwitchWindow {
 
         this.sortPill();
 
-        // Close: Figma SourceSwitch/CloseButton — visible 22×22 pill
-        // rgba(238,230,219,0.42) r8 centered inside a 44×44 hit target
-        // (ActionId sourceSwitch.close). No close glyph asset exists, so the
-        // Tabler x is approximated with the '✕' glyph.
+        // Figma SourceSwitch/CloseButton 568:40: 22×22 pill with the exact
+        // 20×20 Icon/Close asset, centered inside its 44×44 hit target.
         Stack({ alignContent: Alignment.Center }) {
           Stack({ alignContent: Alignment.Center }) {
-            Text('✕')
-              .fontSize(14)
-              .fontColor(TOK_SS_MUTED);
+            Image($r('app.media.source_switch_close'))
+              .width(20)
+              .height(20);
           }
           .width(22)
           .height(22)
@@ -312,7 +309,7 @@ export struct SourceSwitchWindow {
         .fontColor(TOK_MUTED)
         .padding({ left: 26, right: 26, top: TOK_SPACE_SM, bottom: TOK_SPACE_SM })
         .backgroundColor(TOK_CARD_BG)
-        .border({ width: 0.5, color: TOK_BORDER })
+        .border({ width: TOK_BORDER_W, color: TOK_BORDER })
         .borderRadius(999)
         .onClick((): void => this.onRetry());
       Blank().layoutWeight(1);
@@ -353,7 +350,7 @@ export struct SourceSwitchWindow {
           .fontColor(TOK_MUTED)
           .padding({ left: 26, right: 26, top: TOK_SPACE_SM, bottom: TOK_SPACE_SM })
           .backgroundColor(TOK_CARD_BG)
-          .border({ width: 0.5, color: TOK_BORDER })
+          .border({ width: TOK_BORDER_W, color: TOK_BORDER })
           .borderRadius(999)
           .onClick((): void => this.onRollback());
       }

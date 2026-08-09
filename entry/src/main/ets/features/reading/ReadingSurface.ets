@@ -1,4 +1,6 @@
+import type { image } from '@kit.ImageKit';
 import { registerReaderFonts } from '../common/ReaderFonts';
+import { TOK_READ_BODY_INK } from '../common/ReaderTokens';
 
 /**
  * Figma-backed static reading body for `15 · Reader 2`:
@@ -22,11 +24,37 @@ export class ReadingSurfacePageFragment {
   id: string;
   text: string;
   isParagraphStart: boolean;
+  startScalar: number;
+  endScalar: number;
+  imageSource: image.PixelMap | undefined;
+  imageHeight: number;
 
-  constructor(id: string, text: string, isParagraphStart: boolean) {
+  constructor(
+    id: string,
+    text: string,
+    isParagraphStart: boolean,
+    startScalar: number = 0,
+    endScalar?: number,
+    imageSource?: image.PixelMap,
+    imageHeight: number = 0,
+  ) {
     this.id = id;
     this.text = text;
     this.isParagraphStart = isParagraphStart;
+    this.startScalar = startScalar;
+    this.endScalar = endScalar ?? startScalar + text.length;
+    this.imageSource = imageSource;
+    this.imageHeight = imageHeight;
+  }
+}
+
+class ReadingSurfaceHighlightRange {
+  startUtf16: number;
+  endUtf16: number;
+
+  constructor(startUtf16: number, endUtf16: number) {
+    this.startUtf16 = startUtf16;
+    this.endUtf16 = endUtf16;
   }
 }
 
@@ -34,6 +62,8 @@ export class ReadingSurfacePageFragment {
 export struct ReadingSurface {
   /** Core-materialized title for the current pagination-manifest page. */
   @Prop chapterTitle: string;
+  /** The semantic chapter heading belongs only to the first physical page. */
+  @Prop showChapterTitle: boolean = true;
   /**
    * Exact paragraph slices selected by the local pagination manifest for this
    * page. Each string is rendered verbatim: Core/newline/scalar normalization
@@ -49,6 +79,8 @@ export struct ReadingSurface {
   @Prop isTablet: boolean;
   /** Optional host-provided Figma canvas width; 0 fills the containing page. */
   @Prop surfaceWidth: number = 0;
+  @Prop ttsHighlightStart: number | undefined = undefined;
+  @Prop ttsHighlightEnd: number | undefined = undefined;
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -90,18 +122,20 @@ export struct ReadingSurface {
         .backgroundImagePosition(Alignment.TopStart);
 
       Column({ space: 18 }) {
+        if (this.showChapterTitle) {
           Text(this.chapterTitle)
             .width('100%')
             .fontFamily('ReaderNotoSerifSCBold')
             .fontWeight(FontWeight.Bold)
             .fontSize(23)
             .lineHeight(28.75)
-            .fontColor('#2B241D')
+            .fontColor(TOK_READ_BODY_INK)
             .textAlign(TextAlign.Center)
             // The static ReadingSurface title track is exactly one Figma
             // line; wrapping would change the measured body origin.
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
+        }
 
         Column() {
           if (this.pageFragments.length > 0) {
@@ -111,7 +145,19 @@ export struct ReadingSurface {
               if (index > 0 && fragment.isParagraphStart) {
                 Blank().height(15.8);
               }
-              this.fragmentText(fragment);
+              if (fragment.imageSource !== undefined) {
+                Image(fragment.imageSource)
+                  .width('100%')
+                  .height(fragment.imageHeight)
+                  .objectFit(ImageFit.Contain)
+                  .interpolation(ImageInterpolation.High);
+              } else if (fragment.imageHeight > 0) {
+                // One stable, measurable failed-resource block. Resource
+                // failure must not discard the rest of the chapter.
+                Blank().height(fragment.imageHeight);
+              } else {
+                this.fragmentText(fragment);
+              }
             }, (fragment: ReadingSurfacePageFragment): string => fragment.id);
           } else {
             // Retain the original public input for existing static callers.
@@ -149,15 +195,67 @@ export struct ReadingSurface {
 
   @Builder
   private fragmentText(fragment: ReadingSurfacePageFragment) {
-    Text(fragment.text)
+    Text() {
+      if (this.highlightPrefix(fragment).length > 0) {
+        Span(this.highlightPrefix(fragment));
+      }
+      if (this.highlightBody(fragment).length > 0) {
+        Span(this.highlightBody(fragment))
+          .decoration({ type: TextDecorationType.Underline, color: TOK_READ_BODY_INK });
+      }
+      if (this.highlightSuffix(fragment).length > 0) {
+        Span(this.highlightSuffix(fragment));
+      }
+    }
       .width('100%')
       .fontFamily('ReaderNotoSerifSCRegular')
       .fontWeight(FontWeight.Regular)
       .fontSize(18)
       .lineHeight(35.28)
-      .fontColor('#2B241D')
+      .fontColor(TOK_READ_BODY_INK)
       // Figma's Double indent is 2em: 36px at the supplied 18px body size.
       .textIndent(fragment.isParagraphStart ? 36 : 0);
+  }
+
+  private highlightPrefix(fragment: ReadingSurfacePageFragment): string {
+    const range = this.fragmentHighlightRange(fragment);
+    return fragment.text.substring(0, range.startUtf16);
+  }
+
+  private highlightBody(fragment: ReadingSurfacePageFragment): string {
+    const range = this.fragmentHighlightRange(fragment);
+    return fragment.text.substring(range.startUtf16, range.endUtf16);
+  }
+
+  private highlightSuffix(fragment: ReadingSurfacePageFragment): string {
+    const range = this.fragmentHighlightRange(fragment);
+    return fragment.text.substring(range.endUtf16);
+  }
+
+  private fragmentHighlightRange(fragment: ReadingSurfacePageFragment): ReadingSurfaceHighlightRange {
+    const highlightStart = this.ttsHighlightStart;
+    const highlightEnd = this.ttsHighlightEnd;
+    if (highlightStart === undefined || highlightEnd === undefined || highlightEnd <= fragment.startScalar ||
+      highlightStart >= fragment.endScalar) {
+      return new ReadingSurfaceHighlightRange(0, 0);
+    }
+    const startScalar = Math.max(fragment.startScalar, highlightStart) - fragment.startScalar;
+    const endScalar = Math.min(fragment.endScalar, highlightEnd) - fragment.startScalar;
+    return new ReadingSurfaceHighlightRange(
+      this.utf16ForScalar(fragment.text, startScalar),
+      this.utf16ForScalar(fragment.text, endScalar),
+    );
+  }
+
+  private utf16ForScalar(text: string, scalarOffset: number): number {
+    let scalar = 0;
+    let utf16 = 0;
+    while (utf16 < text.length && scalar < scalarOffset) {
+      const codePoint = text.codePointAt(utf16);
+      utf16 += codePoint !== undefined && codePoint > 0xFFFF ? 2 : 1;
+      scalar += 1;
+    }
+    return utf16;
   }
 
   private paperTexture(): Resource {

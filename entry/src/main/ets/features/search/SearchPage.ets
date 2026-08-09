@@ -14,6 +14,7 @@ import {
   TOK_ON_PRIMARY,
   TOK_PAPER,
   TOK_PRIMARY_DARK,
+  TOK_PRIMARY_GRADIENT_START,
   TOK_PRIMARY_SOFT,
   TOK_SPACE_CARD_PADDING,
   TOK_SPACE_CONTROL_INLINE,
@@ -217,7 +218,7 @@ export struct SearchPage {
       .fontColor(active ? TOK_ON_PRIMARY : TOK_MUTED)
       .padding({ left: 12.5, right: 12.5, top: 5.5, bottom: 5.5 })
       .backgroundColor(active ? TOK_GREEN : TOK_CARD_BG)
-      .border({ width: 0.5, color: active ? TOK_GREEN : TOK_BORDER })
+      .border({ width: TOK_BORDER_W, color: active ? TOK_GREEN : TOK_BORDER })
       .borderRadius(999)
       .textAlign(TextAlign.Center)
       .maxLines(1);
@@ -275,7 +276,7 @@ export struct SearchPage {
               .fontColor(TOK_INK)
               .padding({ left: 14.5, right: 14.5, top: 7.5, bottom: 7.5 })
               .backgroundColor(TOK_CARD_BG)
-              .border({ width: 0.5, color: TOK_BORDER })
+              .border({ width: TOK_BORDER_W, color: TOK_BORDER })
               .borderRadius(999)
               .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
               .onClick((): void => this.onSearch(keyword));
@@ -308,11 +309,11 @@ export struct SearchPage {
         .fontColor(TOK_GREEN)
         .textAlign(TextAlign.Center)
         .maxLines(1);
-      Image($r('app.media.rss_chevron')).width(12).height(12);
+      Image($r('app.media.reader_chevron_right')).width(12).height(12);
     }
     .padding({ left: 12.5, right: 12.5, top: 7.5, bottom: 7.5 })
     .alignItems(VerticalAlign.Center)
-    .border({ width: 0.5, color: TOK_GREEN })
+    .border({ width: TOK_BORDER_W, color: TOK_GREEN })
     .borderRadius(999)
     .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS });
   }
@@ -419,7 +420,7 @@ export struct SearchPage {
           .height(this.isTablet ? 92 : 82)
           .linearGradient({
             angle: 141.7,
-            colors: [['#3D5A4C', 0.077], [TOK_PRIMARY_DARK, 0.923]],
+            colors: [[TOK_PRIMARY_GRADIENT_START, 0.077], [TOK_PRIMARY_DARK, 0.923]],
           })
           .borderRadius(6);
         }
@@ -552,7 +553,7 @@ export struct SearchPage {
         .padding({ left: 18.5, right: 18.5, top: 14.5, bottom: 14.5 })
         .margin({ top: 22 })
         .backgroundColor(TOK_CARD_BG)
-        .border({ width: 0.5, color: TOK_BORDER })
+        .border({ width: TOK_BORDER_W, color: TOK_BORDER })
         .borderRadius(12)
         .alignItems(HorizontalAlign.Start)
         .alignSelf(ItemAlign.Center);
@@ -575,7 +576,7 @@ export struct SearchPage {
             .fontColor(TOK_MUTED)
             .padding({ left: 18.5, right: 18.5, top: 11.5, bottom: 11.5 })
             .backgroundColor(TOK_CARD_BG)
-            .border({ width: 0.5, color: TOK_BORDER })
+            .border({ width: TOK_BORDER_W, color: TOK_BORDER })
             .borderRadius(999)
             .onClick((): void => this.onRetry());
         }
@@ -669,7 +670,9 @@ export struct SearchPage {
     return count;
   }
 
-  private contentWidth(): number {
-    return this.isTablet ? TOK_CONTENT_RAIL_W_TABLET : 390;
+  private contentWidth(): Length {
+    // 手机为全宽 (Figma 2635:58749/2635:58985 各层 Container 均横跨整 390 画布:
+    // 搜索栏 x:0 w:390、结果卡 x:0 w:390), 故用 '100%' 自适应而非固定 390; 平板收敛到内容 rail。
+    return this.isTablet ? TOK_CONTENT_RAIL_W_TABLET : '100%';
   }
 }

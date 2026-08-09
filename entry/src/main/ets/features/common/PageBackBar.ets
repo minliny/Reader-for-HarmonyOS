@@ -13,6 +13,8 @@ export struct PageBackBar {
   /** 标题颜色,默认 ink #1F1B17;个别页(Sync)用更深 #1A1612。 */
   titleColor: string = TOK_INK;
   onBack: () => void = (): void => {};
+  /** 可选尾部槽 (如 SourceManagement 的 44×44 more 钮); 未传时不渲染。 */
+  @BuilderParam trailing?: () => void;
 
   build() {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
@@ -35,6 +37,10 @@ export struct PageBackBar {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .layoutWeight(1);
+
+      if (this.trailing !== undefined) {
+        this.trailing();
+      }
     }
     .width('100%')
     .height(58)

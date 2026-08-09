@@ -1,6 +1,10 @@
 import type { JsonObject, ReaderCoreResultEvent } from '@reader/core-harmony';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import type { LocalBookInput, LocalBookPreparation } from '../../app/ReaderHostRegistry';
+import type {
+  LocalBookAssetCommit,
+  LocalBookInput,
+  LocalBookPreparation,
+} from '../../app/ReaderHostRegistry';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 
 const DOMAIN = 0x5244;
@@ -20,7 +24,7 @@ export type LocalImportBatch = {
 /**
  * Page-facing local-import boundary. It owns the Core command envelope and
  * turns a Host selection into plain import state; ArkUI never sees URIs,
- * Base64, rollback tokens, or Core result envelopes.
+ * file paths, rollback tokens, or Core result envelopes.
  */
 export class LocalBookImportGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
@@ -59,6 +63,7 @@ export class LocalBookImportGateway {
     }
 
     let rollbackToken: JsonObject | undefined = undefined;
+    let assetCommit: LocalBookAssetCommit | undefined = undefined;
     try {
       const parsed = await this.runtimeOwner.request('import.parse', {
         kind: 'localBook',
@@ -70,6 +75,7 @@ export class LocalBookImportGateway {
       });
       rollbackToken = this.requiredObject(persisted.data, 'rollbackToken');
       const shelfParams = this.shelfAddParams(persisted);
+      assetCommit = await this.runtimeOwner.commitLocalBookInput(selection.input);
       await this.runtimeOwner.request('bookshelf.add', shelfParams);
       return { fileName: selection.input.fileName, state: 'success' };
     } catch (error) {
@@ -87,6 +93,16 @@ export class LocalBookImportGateway {
           // The designed result state only distinguishes success from failure.
         }
       }
+      try {
+        if (assetCommit !== undefined) {
+          await this.runtimeOwner.rollbackLocalBookAsset(assetCommit);
+        } else {
+          await this.runtimeOwner.discardLocalBookInput(selection.input);
+        }
+      } catch (_) {
+        // Keep the visible result failed. A later import with the same
+        // content identity safely reuses or replaces the Host asset.
+      }
       return { fileName: selection.input.fileName, state: 'failed' };
     }
   }
@@ -94,7 +110,7 @@ export class LocalBookImportGateway {
   private localBookParseParams(input: LocalBookInput): JsonObject {
     return {
       bookId: input.bookId,
-      bytesBase64: input.bytesBase64,
+      filePath: input.stagedPath,
       fileName: input.fileName,
     };
   }

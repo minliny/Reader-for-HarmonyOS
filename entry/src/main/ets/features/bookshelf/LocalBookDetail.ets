@@ -1,4 +1,4 @@
-import type { ShelfBook } from '../../app/ReaderCoreGateway';
+import type { ReadingBookDetail } from '../reading/ReadingBookDetail';
 import {
   TOK_ACTION_DIVIDER,
   TOK_BORDER,
@@ -12,9 +12,11 @@ import {
   TOK_GREEN,
   TOK_INK,
   TOK_MUTED,
+  TOK_ON_PRIMARY,
   TOK_PAPER,
   TOK_PRIMARY_DARK,
   TOK_SCREEN_INSET,
+  TOK_SETTING_ACTION_BG,
   TOK_SPACE_CARD_PADDING,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_MD,
@@ -41,14 +43,13 @@ const CHAPTER_ROW_HEIGHT = 58;
  * validated Core `ShelfBook` and materialized TOC; it neither creates a
  * runtime nor knows Core envelopes, import storage, or directory routing.
  *
- * B-DETAIL-01: both variants specify dynamic heading/title text in Songti SC
- * Bold. The shipped HarmonyOS asset set has no redistributable Songti SC.
- * `ReaderNotoSerifSCBold` below is therefore an explicit temporary bridge,
- * not a claim that the Figma font mapping is closed.
+ * The original variants used Songti SC Bold. The current Figma file and the
+ * product decision map that role to Noto Serif SC, so dynamic titles use the
+ * bundled `ReaderNotoSerifSCBold` face directly.
  */
 @Component
 export struct LocalBookDetail {
-  @Prop book: ShelfBook;
+  @Prop book: ReadingBookDetail;
   @Prop toc: LocalReadingTocEntry[] = [];
   @Prop isTablet: boolean = false;
   onContinue: () => void = (): void => {};
@@ -77,8 +78,7 @@ export struct LocalBookDetail {
 
   @Builder
   private backBar() {
-    // B-DETAIL-01: Figma specifies Songti SC Bold for the title; the shared
-    // PageBackBar uses the ReaderNotoSerifSCBold temporary bridge.
+    // Current Figma maps the former Songti title role to Noto Serif SC Bold.
     PageBackBar({
       title: '书籍详情',
       backIcon: $r('app.media.book_detail_back'),
@@ -121,7 +121,7 @@ export struct LocalBookDetail {
 
       Column() {
         Text(this.book.title)
-          // See B-DETAIL-01 above: Figma specifies Songti SC Bold here.
+          // Current Figma maps the former Songti title role to Noto Serif SC Bold.
           .width('100%')
           .fontFamily('ReaderNotoSerifSCBold')
           .fontWeight(FontWeight.Bold)
@@ -166,12 +166,10 @@ export struct LocalBookDetail {
         .margin({ top: TOK_SPACE_CONTROL_INLINE });
 
         // Figma `2260:1432`/`2260:1433`: the Hero's 4th row — source label +
-        // 更换书源 pill.  Rendered as the Final-demo literal (`书源：优书网`);
-        // ShelfBook has no sourceName field and LocalBookDetail has no
-        // source-switch callback, so the pill is painted inert (same rule as
-        // the 移除书架 terminal visual).
+        // 更换书源 pill. The geometry stays shared, while the label is the
+        // source identity admitted by the local or remote reading session.
         Row({ space: TOK_SPACE_XS }) {
-          Text('书源：优书网')
+          Text(`书源：${this.book.sourceName}`)
             .width(72)
             .height(15)
             .fontFamily('ReaderInter')
@@ -179,7 +177,8 @@ export struct LocalBookDetail {
             .fontSize(12)
             .lineHeight(15)
             .fontColor(TOK_MUTED)
-            .maxLines(1);
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis });
 
           Stack({ alignContent: Alignment.Center }) {
             Text('更换书源')
@@ -194,7 +193,7 @@ export struct LocalBookDetail {
           .width(52)
           .height(18)
           .borderRadius(999)
-          .backgroundColor('#1A2379A4');
+          .backgroundColor(TOK_SETTING_ACTION_BG);
         }
         .width('100%')
         .height(18)
@@ -362,7 +361,7 @@ export struct LocalBookDetail {
           .fontWeight(900)
           .fontSize(13)
           .lineHeight(14.3)
-          .fontColor('#FFFFFF');
+          .fontColor(TOK_ON_PRIMARY);
       }
       .width(this.actionButtonWidth())
       .height(46)
@@ -431,6 +430,6 @@ export struct LocalBookDetail {
     if (this.book.coverUrl === undefined) {
       return false;
     }
-    return /^(data:image\/(png|jpeg|bmp|webp);base64,|file:\/\/)/.test(this.book.coverUrl.trim());
+    return /^(https?:\/\/|data:image\/(png|jpeg|bmp|webp);base64,|file:\/\/)/.test(this.book.coverUrl.trim());
   }
 }

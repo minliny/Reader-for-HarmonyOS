@@ -23,6 +23,11 @@ export type BookshelfImportOutcome = {
   shelf: BookshelfDataState;
 };
 
+export type BookshelfRemoveOutcome = {
+  removed: boolean;
+  shelf: BookshelfDataState;
+};
+
 /**
  * Keeps the bookshelf page on plain state and user-intent boundaries. It is
  * deliberately a feature-local gateway rather than a reusable page engine.
@@ -50,6 +55,11 @@ export class BookshelfFlowGateway {
     // existing book, and a cancelled batch must still expose the restored
     // Core-owned shelf instead of retaining a UI-side copy.
     return { batch, shelf: await this.load() };
+  }
+
+  async remove(sourceId: string, bookId: string): Promise<BookshelfRemoveOutcome> {
+    const removed = await this.bookshelf.removeBook(sourceId, bookId);
+    return { removed, shelf: await this.load() };
   }
 
   private classify(shelf: BookshelfState, continueReading: ShelfBook | undefined): BookshelfDataState {

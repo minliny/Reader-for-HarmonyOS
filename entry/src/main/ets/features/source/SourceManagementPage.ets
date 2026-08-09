@@ -8,8 +8,10 @@ import {
   type BookSource,
 } from './SourceGateway';
 import { registerReaderFonts } from '../common/ReaderFonts';
+import { PageBackBar } from '../common/PageBackBar';
 import { ReaderToggle } from '../common/ReaderToggle';
 import { ReaderSelect } from '../common/ReaderSelect';
+import { ReaderSelectPanel } from '../common/ReaderSelectPanel';
 import { StatusBadge } from '../common/StatusBadge';
 import {
   TOK_BORDER_W,
@@ -18,6 +20,7 @@ import {
   TOK_CONTENT_MAX_W_TABLET,
   TOK_INK,
   TOK_MUTED,
+  TOK_ON_PRIMARY,
   TOK_PAPER,
   TOK_PRIMARY_DARK,
   TOK_ROW_DIVIDER,
@@ -25,13 +28,14 @@ import {
   TOK_SPACE_MD,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
+  TOK_SURFACE_SOLID,
 } from '../common/ReaderTokens';
 
 const GROUP_FILTER_WIDTH = 350;
+const GROUP_SELECT_WIDTH = 277;
 const SEARCH_FIELD_BG = '#D1FFFCF8';      // rgba(255,252,248,0.82)
 const SEARCH_FIELD_BORDER = '#75B4A697';  // rgba(180,166,151,0.46)
 const CHIP_BORDER = '#85B4A697';   // rgba(180,166,151,0.52)
-const FIELD_BG = '#FFFCF8';        // surface
 const STATUS_GOOD_BG = '#212B895C';   // rgba(43,137,92,0.13)
 const STATUS_GOOD_DOT = '#28704E';
 const STATUS_MUTED_BG = '#1F8C8276';  // rgba(140,130,118,0.12)
@@ -40,54 +44,74 @@ const STATUS_MUTED_DOT = '#8C8276';
 @Component
 export struct SourceManagementPage {
   @Prop sources: BookSource[];
+  // Core 的 BookSource 当前没有分组字段。宿主只有在拿到真实分组数据后才传入；
+  // 默认不以启用状态伪造分组选项。
+  @Prop groups: string[] = [];
   @Prop isTablet: boolean;
   onBack: () => void = (): void => {};
   onToggleSource: (id: string, enabled: boolean) => void = (_id: string, _enabled: boolean): void => {};
+  onAddSource: () => void = (): void => {};
   @State private groupValue: string = '全部分组';
   @State private groupOpen: boolean = false;
+  // 展开面板锚点: 触发条全局坐标 - 根 Stack 原点 = 面板相对根 Stack 位置。
+  @State private groupX: number = 0;
+  @State private groupY: number = 0;
+  @State private originX: number = 0;
+  @State private originY: number = 0;
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
   }
 
   build() {
-    Column() {
-      this.backBar();
+    // 根 Stack = 下拉面板 overlay 宿主: 展开面板必须挂在全高容器才可点 (ArkUI 命中测试
+    // 裁到父边界, 固定高行内面板下层选项不可点)。
+    Stack({ alignContent: Alignment.TopStart }) {
       Column() {
-        this.searchField();
-        this.statsRow();
-        this.filterArea();
-        this.sourceList();
-        this.bottomActionBar();
+        this.backBar();
+        Column() {
+          this.searchField();
+          this.statsRow();
+          this.filterArea();
+          this.sourceList();
+          this.bottomActionBar();
+        }
+        .layoutWeight(1)
+        .width('100%');
       }
-      .layoutWeight(1)
-      .width('100%');
+      .width('100%')
+      .height('100%')
+      .backgroundColor(TOK_PAPER)
+      .onAreaChange((_oldValue: Area, newValue: Area): void => {
+        // Area.globalPosition 已是 vp 单位, 直接取用 (曾 px2vp 二次÷3.5 致面板错位)。
+        this.originX = Number(newValue.globalPosition.x);
+        this.originY = Number(newValue.globalPosition.y);
+      });
+
+      if (this.groupOpen) {
+        ReaderSelectPanel({
+          value: this.groupValue,
+          options: this.groupOptions(),
+          controlWidth: GROUP_SELECT_WIDTH,
+          x: this.groupX - this.originX,
+          y: this.groupY - this.originY,
+          onSelect: (opt: string): void => {
+            this.groupValue = opt;
+            this.groupOpen = false;
+          },
+        });
+      }
     }
     .width('100%')
-    .height('100%')
-    .backgroundColor(TOK_PAPER);
+    .height('100%');
   }
 
   @Builder
   private backBar() {
-    Row({ space: TOK_SPACE_CONTROL_INLINE }) {
-      Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.search_back')).width(24).height(24);
-      }
-      .width(44)
-      .height(44)
-      .borderRadius(22)
-      .onClick((): void => this.onBack());
-
-      Text('书源管理')
-        .fontFamily('ReaderNotoSerifSCBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(24)
-        .lineHeight(33)
-        .fontColor(TOK_INK)
-        .maxLines(1)
-        .layoutWeight(1);
-
+    PageBackBar({
+      title: '书源管理',
+      onBack: (): void => this.onBack(),
+    }) {
       Stack({ alignContent: Alignment.Center }) {
         Image($r('app.media.bookshelf_more')).width(20).height(20);
       }
@@ -95,10 +119,6 @@ export struct SourceManagementPage {
       .height(44)
       .borderRadius(22);
     }
-    .width('100%')
-    .height(58)
-    .padding({ left: 20, right: 20 })
-    .alignItems(VerticalAlign.Center);
   }
 
   @Builder
@@ -181,7 +201,7 @@ export struct SourceManagementPage {
       .fontFamily('ReaderNotoSansSC')
       .fontWeight(FontWeight.Bold)
       .fontSize(11)
-      .fontColor(active ? '#FFFFFF' : TOK_INK)
+      .fontColor(active ? TOK_ON_PRIMARY : TOK_INK)
       .backgroundColor(active ? TOK_PRIMARY_DARK : TOK_CARD_BG)
       .border({ width: TOK_BORDER_W, color: active ? TOK_PRIMARY_DARK : CHIP_BORDER })
       .borderRadius(16)
@@ -193,7 +213,7 @@ export struct SourceManagementPage {
     Row() {
       Image($r('app.media.directory_directory')).width(15).height(15);
       Text('分组')
-        .margin({ left: 11 })
+        .margin({ left: 12 })
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
         .fontSize(13)
@@ -201,17 +221,21 @@ export struct SourceManagementPage {
         .maxLines(1);
       ReaderSelect({
         value: this.groupValue,
-        options: ['全部分组', '已启用', '已禁用'],
+        options: this.groupOptions(),
+        controlWidth: GROUP_SELECT_WIDTH,
         isOpen: this.groupOpen,
         onToggle: (): void => {
-          this.groupOpen = !this.groupOpen;
-        },
-        onSelect: (opt: string): void => {
-          this.groupValue = opt;
-          this.groupOpen = false;
+          if (this.groupOptions().length > 1) {
+            this.groupOpen = !this.groupOpen;
+          }
         },
       })
-      .margin({ left: 22 });
+      .margin({ left: 22 })
+      .onAreaChange((_oldValue: Area, newValue: Area): void => {
+        // Area.globalPosition 已是 vp 单位, 直接取用 (曾 px2vp 二次÷3.5 致面板错位)。
+        this.groupX = Number(newValue.globalPosition.x);
+        this.groupY = Number(newValue.globalPosition.y);
+      });
     }
     .width(GROUP_FILTER_WIDTH)
     .height(36)
@@ -323,7 +347,7 @@ export struct SourceManagementPage {
       .layoutWeight(1)
       .height(44)
       .borderRadius(8)
-      .backgroundColor(FIELD_BG)
+      .backgroundColor(TOK_SURFACE_SOLID)
       .border({ width: TOK_BORDER_W, color: SEARCH_FIELD_BORDER });
 
       Stack({ alignContent: Alignment.Center }) {
@@ -332,12 +356,12 @@ export struct SourceManagementPage {
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Regular)
             .fontSize(20)
-            .fontColor('#FFFFFF');
+            .fontColor(TOK_ON_PRIMARY);
           Text('新增书源')
             .fontFamily('ReaderNotoSansSC')
             .fontWeight(FontWeight.Bold)
             .fontSize(13)
-            .fontColor('#FFFFFF')
+            .fontColor(TOK_ON_PRIMARY)
             .maxLines(1);
         }
         .alignItems(VerticalAlign.Center);
@@ -345,7 +369,8 @@ export struct SourceManagementPage {
       .layoutWeight(1)
       .height(44)
       .borderRadius(8)
-      .backgroundColor(TOK_PRIMARY_DARK);
+      .backgroundColor(TOK_PRIMARY_DARK)
+      .onClick((): void => this.onAddSource());
     }
     .width(this.contentWidth())
     .height(44)
@@ -362,6 +387,17 @@ export struct SourceManagementPage {
 
   private enabledCount(): number {
     return this.sources.filter((source) => source.enabled).length;
+  }
+
+  private groupOptions(): string[] {
+    const options: string[] = ['全部分组'];
+    for (let i = 0; i < this.groups.length; i++) {
+      const group = this.groups[i].trim();
+      if (group !== '' && group !== '全部分组' && options.indexOf(group) < 0) {
+        options.push(group);
+      }
+    }
+    return options;
   }
 
   private contentWidth(): number {

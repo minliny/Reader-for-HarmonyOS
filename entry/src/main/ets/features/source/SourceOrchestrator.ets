@@ -2,6 +2,7 @@ import {
   SourceGateway,
   type BookSource,
 } from './SourceGateway';
+import type { BookSourceJsonSelection } from '../../app/ReaderHostRegistry';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
@@ -51,6 +52,8 @@ export class SourceOrchestrator {
   private toggleSeq: number = 0;
   /** Serializes source toggles across entries. */
   private toggleChain: Promise<void> = Promise.resolve();
+  /** Prevents repeated taps from opening multiple system pickers. */
+  private importActive: boolean = false;
 
   constructor(
     emit: (sources: BookSource[]) => void,
@@ -109,6 +112,110 @@ export class SourceOrchestrator {
           'Source toggle failed; row unchanged: sourceId=%{public}s enabled=%{public}s err=%{public}s',
           id, enabled, error.message);
       });
+  }
+
+  /**
+   * Select and import one production Legado JSON document. The task joins the
+   * same serialized mutation chain as toggles so Core never sees overlapping
+   * source writes. With no admitted Figma error state, failures are logged and
+   * the current page remains visible; no success state is fabricated.
+   */
+  importBookSources(): void {
+    if (this.importActive) {
+      return;
+    }
+    this.importActive = true;
+    const session = this.session;
+    this.toggleChain = this.toggleChain
+      .then((): Promise<void> => this.applyBookSourceImport(session))
+      .catch((error: Error): void => {
+        hilog.error(DOMAIN, 'Reader',
+          'Book-source import failed; page kept unchanged: %{public}s', error.message);
+      })
+      .finally((): void => {
+        this.importActive = false;
+      });
+  }
+
+  private async applyBookSourceImport(session: number): Promise<void> {
+    if (!this.isCurrentSession(session)) {
+      return;
+    }
+    let selection: BookSourceJsonSelection | undefined;
+    try {
+      selection = await this.owner.selectBookSourceJson();
+    } catch (error) {
+      if (!this.isCurrentSession(session)) {
+        return;
+      }
+      throw error instanceof Error ? error : new Error(`${error}`);
+    }
+    if (selection === undefined || !this.isCurrentSession(session)) {
+      return;
+    }
+    let importedCount = 0;
+    try {
+      const summary = await this.gateway.importBookSourceDocument(
+        selection.text,
+        (): boolean => this.isCurrentSession(session),
+      );
+      importedCount = summary.importedCount;
+    } catch (error) {
+      const importError = error instanceof Error ? error : new Error(`${error}`);
+      if (!this.isCurrentSession(session)) {
+        return;
+      }
+      // Earlier items in a multi-source document may already be durable. A
+      // best-effort authoritative reload reflects that truth without hiding
+      // the original item-level Core failure.
+      await this.reloadAfterImportFailure(session, selection.fileName);
+      if (!this.isCurrentSession(session)) {
+        return;
+      }
+      throw importError;
+    }
+
+    if (!this.isCurrentSession(session)) {
+      return;
+    }
+    let sources: BookSource[];
+    try {
+      sources = await this.gateway.loadSources();
+    } catch (error) {
+      if (!this.isCurrentSession(session)) {
+        return;
+      }
+      hilog.warn(DOMAIN, 'Reader',
+        'Book-source import persisted but source.list refresh failed: file=%{public}s count=%{public}d err=%{public}s',
+        selection.fileName, importedCount, (error as Error).message);
+      return;
+    }
+    if (!this.isCurrentSession(session)) {
+      return;
+    }
+    this.presentSources(sources);
+    hilog.info(DOMAIN, 'Reader',
+      'Book-source import completed: file=%{public}s count=%{public}d',
+      selection.fileName, importedCount);
+  }
+
+  private async reloadAfterImportFailure(session: number, fileName: string): Promise<void> {
+    if (!this.isCurrentSession(session)) {
+      return;
+    }
+    try {
+      const sources = await this.gateway.loadSources();
+      if (this.isCurrentSession(session)) {
+        this.presentSources(sources);
+      }
+    } catch (reloadError) {
+      if (!this.isCurrentSession(session)) {
+        return;
+      }
+      hilog.warn(DOMAIN, 'Reader',
+        'Book-source import failure reload also failed: file=%{public}s err=%{public}s',
+        fileName, (reloadError as Error).message);
+    }
   }
 
   private async applyToggle(

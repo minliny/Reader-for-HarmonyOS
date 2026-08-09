@@ -20,13 +20,23 @@ import type {
   LocalImportBatch,
 } from '../features/bookshelf/LocalBookImportGateway';
 import type {
-  LocalReadingCommit,
+  ReadingCommit,
 } from '../features/reading/LocalReadingExperience';
 import { ReaderShell } from '../features/shell/ReaderShell';
 import {
   LocalReadingFlowGateway,
   type LocalReadingTocEntry,
 } from '../features/reading/LocalReadingFlowGateway';
+import type { ReadingBookDetail } from '../features/reading/ReadingBookDetail';
+import {
+  RemoteReadingFlowGateway,
+  type RemoteReadingBookSeed,
+  type RemoteReadingSession,
+} from '../features/reading/RemoteReadingFlowGateway';
+import type { RemoteReadingVariable } from '../features/reading/RemoteReadingContract';
+import type {
+  ReaderDirectoryChapterStartBookmarkRequest,
+} from '../features/reading/ReaderDirectoryMarkerState';
 import type {
   SearchBook,
   SearchSource,
@@ -36,12 +46,30 @@ import {
   SearchPage,
   type SearchPresentation,
 } from '../features/search/SearchPage';
-import type {
-  RssItem,
-  RssSubscription,
+import {
+  RssGateway,
+  type RssItem,
+  type RssSubscription,
 } from '../features/rss/RssGateway';
 import {
+  RssEntryDetailPage,
+  type RssFavoritePresentation,
+} from '../features/rss/RssEntryDetailPage';
+import {
+  RssSourceFeedPage,
+} from '../features/rss/RssSourceFeedPage';
+import {
+  RssSubscriptionManagementPage,
+  type RssSubscriptionManagementItem,
+} from '../features/rss/RssSubscriptionManagementPage';
+import {
+  RssOrchestrator,
+  type RssEntrySnapshot,
+  type RssSourceSnapshot,
+} from '../features/rss/RssOrchestrator';
+import {
   RssPage,
+  type RssMode,
   type RssPresentation,
 } from '../features/rss/RssPage';
 import { SettingsPage, type SettingsSnapshot } from '../features/settings/SettingsPage';
@@ -75,8 +103,13 @@ const IMPORT_PRESENTATION_KEY = 'reader.bookshelf.import.presentation.v1';
 const MAX_IMPORT_RESULT_ITEMS = 50;
 const LOCAL_SOURCE_ID = 'local';
 
-type ReaderRoute = 'bookshelf' | 'discover' | 'detail' | 'reading' | 'directory' | 'search' | 'rss' | 'settings' | 'source' | 'sync';
+type ReaderRoute = 'bookshelf' | 'discover' | 'detail' | 'reading' | 'directory' | 'search' |
+  'rss' | 'rssSubscriptionManagement' | 'rssSourceFeed' | 'rssEntryDetail' |
+  'settings' | 'source' | 'sync';
 type PreparedReaderRoute = 'reading' | 'directory';
+type DirectoryReturnTarget = 'detail' | 'readerControl';
+type RssDetailReturnTarget = 'rss' | 'rssSourceFeed';
+type RssSourceFeedReturnTarget = 'rss' | 'rssSubscriptionManagement';
 
 class LocalImportPresentation {
   state: LocalImportDialogState;
@@ -97,15 +130,24 @@ struct Index {
   @State private isBookshelfVisualAdmitted: boolean = false;
   @State private isCoreShelfEmpty: boolean = false;
   @State private route: ReaderRoute = 'bookshelf';
-  @State private detailBook: ShelfBook | undefined = undefined;
+  @State private detailBook: ReadingBookDetail | undefined = undefined;
   @State private detailToc: LocalReadingTocEntry[] = [];
+  @State private remoteReadingSession: RemoteReadingSession | undefined = undefined;
   @State private requestedChapterIndex: number | undefined = undefined;
   @State private preparedReaderRoute: PreparedReaderRoute = 'reading';
   @State private directoryCurrentChapterIndex: number = -1;
   @State private directoryChapterTitle: string = '';
+  @State private directoryReturnTarget: DirectoryReturnTarget = 'detail';
   @State private searchPresentation: SearchPresentation = { kind: 'initial', history: [] };
   @State private searchSources: SearchSource[] = [];
   @State private rssPresentation: RssPresentation = { kind: 'feed', subscriptions: [], recentUnread: [] };
+  @State private selectedRssSubscription: RssSubscription | undefined = undefined;
+  @State private selectedRssItems: RssItem[] = [];
+  @State private selectedRssItem: RssItem | undefined = undefined;
+  @State private selectedRssFavoriteState: RssFavoritePresentation = 'loading';
+  @State private rssDetailReturnTarget: RssDetailReturnTarget = 'rss';
+  @State private rssSourceFeedReturnTarget: RssSourceFeedReturnTarget = 'rss';
+  @State private rssManagementFocusSubscriptionId: string = '';
   @State private sourceSources: BookSource[] = [];
   @State private discoverPresentation: DiscoverPresentation = { currentSourceName: '', kinds: [], books: [] };
   @State private settingsSnapshot: SettingsSnapshot = {
@@ -134,12 +176,16 @@ struct Index {
    */
   @State private readingSessionActive: boolean = false;
   private navigationGeneration: number = 0;
+  /** Prevents repeated marker taps from issuing duplicate bookmark mutations. */
+  private directoryBookmarkMutationGeneration: number = 0;
+  private directoryBookmarkMutationActiveKey: string = '';
   /** Rejects a late shelf read after a newer import/refresh has completed. */
   private bookshelfLoadGeneration: number = 0;
   private searchOrchestrator: SearchOrchestrator | undefined;
   private settingsOrchestrator: SettingsOrchestrator | undefined;
   private syncOrchestrator: SyncOrchestrator | undefined;
   private sourceOrchestrator: SourceOrchestrator | undefined;
+  private rssOrchestrator: RssOrchestrator | undefined;
   /**
    * Installed only by the mounted ReadingSurface.  System Back calls this
    * guarded request so Core position persistence settles before the route is
@@ -167,6 +213,18 @@ struct Index {
       this.closeSourceSwitch();
       return true;
     }
+    if (this.route === 'rssEntryDetail') {
+      this.returnFromRssEntryDetail();
+      return true;
+    }
+    if (this.route === 'rssSourceFeed') {
+      this.returnFromRssSourceFeed();
+      return true;
+    }
+    if (this.route === 'rssSubscriptionManagement') {
+      this.returnToRss();
+      return true;
+    }
     if (this.route === 'search' || this.route === 'rss' || this.route === 'settings') {
       this.returnToBookshelf();
       return true;
@@ -175,7 +233,11 @@ struct Index {
       this.returnToSettings();
       return true;
     }
-    if (this.route === 'reading' || this.route === 'directory') {
+    if (this.route === 'directory') {
+      this.closeDirectory();
+      return true;
+    }
+    if (this.route === 'reading') {
       const requestExit = this.readingExitRequest;
       if (requestExit !== undefined) {
         requestExit();
@@ -222,7 +284,7 @@ struct Index {
           onRssRequested: (): void => this.openRss(),
           onSettingsRequested: (): void => this.openSettings(),
           onDiscoverRequested: (): void => this.openDiscover(),
-          onBookSelected: (book: ShelfBook): void => this.openLocalBookDetail(book),
+          onBookSelected: (book: ShelfBook): void => this.openBookDetail(book),
         });
       } else if (this.route === 'bookshelf' && this.isCoreShelfEmpty) {
         // H-NOTE-1: Tablet empty has no Figma Final variant. Until Figma
@@ -253,13 +315,58 @@ struct Index {
         RssPage({
           presentation: this.rssPresentation,
           isTablet: deviceInfo.deviceType === 'tablet',
+          activeMode: 'sources',
           onBack: (): void => this.returnToBookshelf(),
           onRefresh: (): void => this.refreshRss(),
           onManage: (): void => this.onRssManage(),
-          onSelectSubscription: (_id: string): void => this.onRssSubscriptionSelected(),
-          onSelectItem: (_guid: string): void => this.onRssItemSelected(),
+          onSelectSubscription: (id: string): void => this.onRssSubscriptionSelected(id),
+          onSelectItem: (subscriptionId: string, guid: string): void =>
+            this.onRssItemSelected(subscriptionId, guid),
+          onModeRequested: (mode: RssMode): void => this.onRssModeRequested(mode),
           onSettingsRequested: (): void => this.openSettings(),
           onDiscoverRequested: (): void => this.openDiscover(),
+        });
+      } else if (this.route === 'rssSubscriptionManagement') {
+        RssSubscriptionManagementPage({
+          items: this.rssSubscriptionManagementItems(),
+          isTablet: deviceInfo.deviceType === 'tablet',
+          focusedSubscriptionId: this.rssManagementFocusSubscriptionId,
+          onBack: (): void => this.returnToRss(),
+          onAdd: (): void => this.onRssSubscriptionAddRequested(),
+          onToggle: (id: string, enabled: boolean): void =>
+            this.getRssOrchestrator().toggleSubscription(id, enabled),
+          onViewArticles: (id: string): void => this.onRssManagementViewArticles(id),
+          onEditSource: (id: string): void => this.onRssSubscriptionEditRequested(id),
+          onRefresh: (id: string): void => this.getRssOrchestrator().refreshSubscription(id),
+          onDelete: (id: string): void => this.requestRssSubscriptionDelete(id),
+        });
+      } else if (this.route === 'rssSourceFeed' && this.selectedRssSubscription !== undefined) {
+        RssSourceFeedPage({
+          subscription: this.selectedRssSubscription,
+          items: this.selectedRssItems,
+          isTablet: deviceInfo.deviceType === 'tablet',
+          onBack: (): void => this.returnFromRssSourceFeed(),
+          onSelectItem: (item: RssItem): void => this.onRssSourceItemSelected(item),
+          onRefresh: (): void => this.refreshRssSourceFeed(),
+          onEditSource: (): void =>
+            this.openRssManagementForSubscription(this.selectedRssSubscription?.subscriptionId),
+          onSourceOperations: (): void =>
+            this.openRssManagementForSubscription(this.selectedRssSubscription?.subscriptionId),
+        });
+      } else if (this.route === 'rssEntryDetail' && this.selectedRssSubscription !== undefined &&
+        this.selectedRssItem !== undefined) {
+        RssEntryDetailPage({
+          subscription: this.selectedRssSubscription,
+          item: this.selectedRssItem,
+          isTablet: deviceInfo.deviceType === 'tablet',
+          favoriteState: this.selectedRssFavoriteState,
+          onBack: (): void => this.returnFromRssEntryDetail(),
+          onViewSource: (): void => this.returnToRssSourceFeed(),
+          onFavoriteRequested: (favorite: boolean): void =>
+            this.onRssEntryFavoriteRequested(favorite),
+          onSourceSettings: (): void =>
+            this.openRssManagementForSubscription(this.selectedRssSubscription?.subscriptionId),
+          onOpenOriginal: (): void => this.onRssOpenOriginalRequested(),
         });
       } else if (this.route === 'discover') {
         DiscoverPage({
@@ -287,6 +394,7 @@ struct Index {
           isTablet: deviceInfo.deviceType === 'tablet',
           onBack: (): void => this.returnToSettings(),
           onToggleSource: (id: string, enabled: boolean): void => this.onSourceToggled(id, enabled),
+          onAddSource: (): void => this.onBookSourceImportRequested(),
         });
       } else if (this.route === 'sync') {
         SyncPage({
@@ -301,8 +409,8 @@ struct Index {
           book: this.detailBook,
           toc: this.detailToc,
           isTablet: deviceInfo.deviceType === 'tablet',
-          onContinue: (): void => this.openLocalReading(undefined),
-          onSelectChapter: (chapterIndex: number): void => this.openLocalReading(chapterIndex),
+          onContinue: (): void => this.openReading(undefined),
+          onSelectChapter: (chapterIndex: number): void => this.openReading(chapterIndex),
           onOpenDirectory: (): void => this.openFullDirectory(),
           onBack: (): void => this.returnToBookshelf(),
         });
@@ -315,14 +423,19 @@ struct Index {
           bookId: this.detailBook.bookId,
           bookTitle: this.detailBook.title,
           sourceId: this.detailBook.sourceId,
-          sourceName: this.detailBook.sourceId,
+          sourceName: this.detailBook.sourceName,
+          remoteSession: this.remoteReadingSession,
           totalChapters: this.detailToc.length,
           requestedChapterIndex: this.requestedChapterIndex,
           isTablet: deviceInfo.deviceType === 'tablet',
-          route: this.preparedReaderRoute,
+          reduceMotion: this.settingsSnapshot.reduceMotion,
+          visible: this.route === 'reading' || this.route === 'directory',
+          route: this.route === 'directory' ? 'directory' : 'reading',
           tocEntries: this.detailToc,
           directoryCurrentChapterIndex: this.directoryCurrentChapterIndex,
           directoryChapterTitle: this.directoryChapterTitle,
+          directoryOpenedFromControl: this.directoryReturnTarget === 'readerControl',
+          chapterStartBookmarkCreationEnabled: this.detailBook.sourceId === LOCAL_SOURCE_ID,
           sourceSwitchVisible: this.sourceSwitchVisible,
           sourceSwitchState: this.sourceSwitchState,
           onExitRequestHandler: (requestExit: () => void): void => {
@@ -338,12 +451,16 @@ struct Index {
             this.returnToDetail();
           },
           onReadingReady: (chapterIndex: number): void => this.presentPreparedReading(chapterIndex),
-          onReadingCommitted: (commit: LocalReadingCommit): void => this.applyReadingCommit(commit),
+          onReadingCommitted: (commit: ReadingCommit): void => this.applyReadingCommit(commit),
           onChapterCommitted: (chapterIndex: number, chapterTitle: string): void => {
             this.applyDirectoryChapter(chapterIndex, chapterTitle);
           },
           onSelectChapter: (chapterIndex: number): void => this.onDirectoryChapterSelected(chapterIndex),
+          onDeleteBookmarks: (bookmarkTimes: number[]): void => this.deleteDirectoryBookmarks(bookmarkTimes),
+          onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
+            this.createDirectoryChapterStartBookmark(request),
           onCloseDirectory: (): void => this.closeDirectory(),
+          onOpenDirectory: (): void => this.openReaderControlDirectory(),
           onSwitchSource: (): void => this.openSourceSwitch(),
           onCloseSourceSwitch: (): void => this.closeSourceSwitch(),
           onRetrySourceSwitch: (): void => this.retrySourceSwitch(),
@@ -370,12 +487,45 @@ struct Index {
   }
 
   private openRss(): void {
-    this.nextNavigationGeneration();
+    const generation = this.nextNavigationGeneration();
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
     this.exitToBookshelfAfterReader = false;
+    this.selectedRssSubscription = undefined;
+    this.selectedRssItems = [];
+    this.selectedRssItem = undefined;
+    this.selectedRssFavoriteState = 'loading';
+    this.rssDetailReturnTarget = 'rss';
+    this.rssSourceFeedReturnTarget = 'rss';
+    this.rssManagementFocusSubscriptionId = '';
     this.rssPresentation = this.feedPresentation([], []);
     this.route = 'rss';
+    void this.loadRss(generation);
+  }
+
+  private async loadRss(generation: number): Promise<void> {
+    const gateway = new RssGateway(ReaderRuntimeOwner.current());
+    try {
+      const subscriptions = await gateway.loadSubscriptions();
+      if (!this.isCurrentRoute(generation, 'rss')) {
+        return;
+      }
+      // A true "recent unread" list requires one Core-owned, globally ordered
+      // subscription-scoped query. Keep the slot empty until rss.entries.query
+      // is formally admitted; do not fan out per-source reads and present the
+      // concatenation as a global recent result.
+      this.rssPresentation = this.feedPresentation(subscriptions, []);
+    } catch (error) {
+      // Partial/Fatal error visuals remain blocked in Figma. Preserve the
+      // admitted RSS shell instead of presenting the obsolete full-page
+      // error capture as a new route.
+      if (this.isCurrentRoute(generation, 'rss')) {
+        this.rssPresentation = this.feedPresentation([], []);
+      }
+      const message = error instanceof Error ? error.message : `${error}`;
+      hilog.error(DOMAIN, 'Reader',
+        'RSS subscription projection failed: %{public}s', message);
+    }
   }
 
   private openDiscover(): void {
@@ -506,6 +656,10 @@ struct Index {
     this.getSourceOrchestrator().toggleSource(id, enabled);
   }
 
+  private onBookSourceImportRequested(): void {
+    this.getSourceOrchestrator().importBookSources();
+  }
+
   private openSync(): void {
     this.nextNavigationGeneration();
     this.readingSessionActive = false;
@@ -522,15 +676,339 @@ struct Index {
   }
 
   private onRssManage(): void {
-    hilog.warn(DOMAIN, 'Reader', 'FIGMA_VISUAL_GAP: RSS subscription management has no admitted route');
+    this.nextNavigationGeneration();
+    this.selectedRssSubscription = undefined;
+    this.selectedRssItems = [];
+    this.selectedRssItem = undefined;
+    this.selectedRssFavoriteState = 'loading';
+    this.rssDetailReturnTarget = 'rss';
+    this.rssSourceFeedReturnTarget = 'rss';
+    this.rssManagementFocusSubscriptionId = '';
+    this.route = 'rssSubscriptionManagement';
+    this.getRssOrchestrator().open();
   }
 
-  private onRssSubscriptionSelected(): void {
-    hilog.warn(DOMAIN, 'Reader', 'FIGMA_VISUAL_GAP: RSS source feed detail has no admitted route');
+  private getRssOrchestrator(): RssOrchestrator {
+    if (this.rssOrchestrator === undefined) {
+      this.rssOrchestrator = new RssOrchestrator(
+        (subscriptions: RssSubscription[]): void => {
+          this.rssPresentation = this.feedPresentation(subscriptions, []);
+        },
+        (): boolean => this.route === 'rssSubscriptionManagement',
+      );
+    }
+    return this.rssOrchestrator;
   }
 
-  private onRssItemSelected(): void {
-    hilog.warn(DOMAIN, 'Reader', 'FIGMA_VISUAL_GAP: RSS item detail has no admitted route');
+  private onRssManagementViewArticles(subscriptionId: string): void {
+    this.onRssSubscriptionSelected(subscriptionId, 'rssSubscriptionManagement');
+  }
+
+  private onRssSubscriptionSelected(
+    subscriptionId: string,
+    returnTarget: RssSourceFeedReturnTarget = 'rss',
+  ): void {
+    const subscription = this.rssSubscriptions().find(
+      (candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId,
+    );
+    if (subscription === undefined) {
+      hilog.warn(DOMAIN, 'Reader',
+        'RSS SourceFeed ignored unknown subscriptionId=%{public}s', subscriptionId);
+      return;
+    }
+    const generation = this.nextNavigationGeneration();
+    this.selectedRssSubscription = subscription;
+    this.selectedRssItems = [];
+    this.selectedRssItem = undefined;
+    this.selectedRssFavoriteState = 'loading';
+    this.rssSourceFeedReturnTarget = returnTarget;
+    this.route = 'rssSourceFeed';
+    this.loadRssSourceItems(generation, subscriptionId);
+  }
+
+  private onRssSubscriptionAddRequested(): void {
+    // The editor's visual/data contract is not frozen. Fail closed instead of
+    // sending a partially inferred `rss.subscription.persist(create)` request.
+    hilog.warn(DOMAIN, 'Reader',
+      'FIGMA_VISUAL_GAP: RSS subscription add editor is not admitted; intent rejected');
+  }
+
+  private onRssSubscriptionEditRequested(subscriptionId: string): void {
+    // Keep identity in the intent, but do not infer fields or a route before
+    // the editor is visually admitted.
+    hilog.warn(DOMAIN, 'Reader',
+      'FIGMA_VISUAL_GAP: RSS subscription edit editor is not admitted; intent rejected for subscriptionId=%{public}s',
+      subscriptionId);
+  }
+
+  private requestRssSubscriptionDelete(subscriptionId: string): void {
+    const subscription = this.rssSubscriptions().find(
+      (candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId,
+    );
+    if (this.route !== 'rssSubscriptionManagement' || subscription === undefined) {
+      hilog.warn(DOMAIN, 'Reader',
+        'RSS delete confirmation ignored stale subscriptionId=%{public}s', subscriptionId);
+      return;
+    }
+    this.getUIContext().showAlertDialog({
+      title: '删除订阅源',
+      message: `确定删除“${subscription.title}”吗？删除后无法恢复。`,
+      autoCancel: true,
+      primaryButton: {
+        value: '取消',
+        action: (): void => {},
+      },
+      secondaryButton: {
+        value: '删除',
+        action: (): void => this.confirmRssSubscriptionDelete(subscriptionId),
+      },
+    });
+  }
+
+  private confirmRssSubscriptionDelete(subscriptionId: string): void {
+    const stillPresent = this.rssSubscriptions().some(
+      (candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId,
+    );
+    if (this.route !== 'rssSubscriptionManagement' || !stillPresent) {
+      return;
+    }
+    this.getRssOrchestrator().removeSubscription(subscriptionId);
+  }
+
+  private loadRssSourceItems(generation: number, subscriptionId: string): void {
+    const isCurrent = (): boolean => this.isCurrentRssSourceFeed(generation, subscriptionId);
+    this.getRssOrchestrator().loadSourceFeed(
+      subscriptionId,
+      (snapshot: RssSourceSnapshot): void => this.applyRssSourceSnapshot(snapshot),
+      (error: Error): void => {
+        hilog.error(DOMAIN, 'Reader',
+          'RSS SourceFeed cached read failed: %{public}s', error.message);
+      },
+      isCurrent,
+    );
+  }
+
+  private refreshRssSourceFeed(): void {
+    const subscriptionId = this.selectedRssSubscription?.subscriptionId;
+    if (subscriptionId === undefined || this.route !== 'rssSourceFeed') {
+      return;
+    }
+    const generation = this.navigationGeneration;
+    const isCurrent = (): boolean => this.isCurrentRssSourceFeed(generation, subscriptionId);
+    this.getRssOrchestrator().refreshSourceFeed(
+      subscriptionId,
+      (snapshot: RssSourceSnapshot): void => this.applyRssSourceSnapshot(snapshot),
+      (error: Error): void => {
+        hilog.error(DOMAIN, 'Reader',
+          'RSS SourceFeed refresh failed; cached projection retained: %{public}s', error.message);
+      },
+      isCurrent,
+    );
+  }
+
+  private isCurrentRssSourceFeed(generation: number, subscriptionId: string): boolean {
+    return this.isCurrentRoute(generation, 'rssSourceFeed') &&
+      this.selectedRssSubscription?.subscriptionId === subscriptionId;
+  }
+
+  private applyRssSourceSnapshot(snapshot: RssSourceSnapshot): void {
+    this.rssPresentation = this.feedPresentation(snapshot.subscriptions, []);
+    this.selectedRssSubscription = snapshot.subscription;
+    this.selectedRssItems = snapshot.items;
+  }
+
+  private onRssItemSelected(subscriptionId: string, guid: string): void {
+    const item = this.rssRecentUnread().find(
+      (candidate: RssItem): boolean => candidate.subscriptionId === subscriptionId &&
+        candidate.guid === guid,
+    );
+    if (item === undefined) {
+      hilog.warn(DOMAIN, 'Reader',
+        'RSS EntryDetail ignored unknown identity=%{public}s:%{public}s', subscriptionId, guid);
+      return;
+    }
+    this.openRssEntryDetail(item, 'rss');
+  }
+
+  private onRssSourceItemSelected(item: RssItem): void {
+    const selected = this.selectedRssItems.find(
+      (candidate: RssItem): boolean => candidate.subscriptionId === item.subscriptionId &&
+        candidate.guid === item.guid,
+    );
+    if (selected !== undefined) {
+      this.openRssEntryDetail(selected, 'rssSourceFeed');
+    }
+  }
+
+  private openRssEntryDetail(item: RssItem, returnTarget: RssDetailReturnTarget): void {
+    const subscription = this.selectedRssSubscription?.subscriptionId === item.subscriptionId
+      ? this.selectedRssSubscription
+      : this.rssSubscriptions().find(
+        (candidate: RssSubscription): boolean => candidate.subscriptionId === item.subscriptionId,
+      );
+    if (subscription === undefined) {
+      hilog.warn(DOMAIN, 'Reader',
+        'RSS EntryDetail has no subscription for guid=%{public}s', item.guid);
+      return;
+    }
+    const generation = this.nextNavigationGeneration();
+    this.selectedRssSubscription = subscription;
+    this.selectedRssItem = item;
+    this.selectedRssFavoriteState = 'loading';
+    this.rssDetailReturnTarget = returnTarget;
+    this.route = 'rssEntryDetail';
+    const subscriptionId = item.subscriptionId;
+    const guid = item.guid;
+    const isCurrent = (): boolean => this.isCurrentRssEntryDetail(
+      generation, subscriptionId, guid,
+    );
+    this.getRssOrchestrator().openEntry(
+      subscriptionId,
+      guid,
+      (snapshot: RssEntrySnapshot): void => this.applyRssEntrySnapshot(snapshot),
+      (error: Error): void => this.failRssEntryOperation('read', error),
+      isCurrent,
+    );
+  }
+
+  private onRssEntryFavoriteRequested(favorite: boolean): void {
+    const item = this.selectedRssItem;
+    if (item === undefined || this.route !== 'rssEntryDetail' ||
+      (this.selectedRssFavoriteState !== 'favorited' &&
+        this.selectedRssFavoriteState !== 'notFavorited')) {
+      return;
+    }
+    const generation = this.navigationGeneration;
+    const subscriptionId = item.subscriptionId;
+    const guid = item.guid;
+    this.selectedRssFavoriteState = 'loading';
+    const isCurrent = (): boolean => this.isCurrentRssEntryDetail(
+      generation, subscriptionId, guid,
+    );
+    this.getRssOrchestrator().setEntryFavorite(
+      subscriptionId,
+      guid,
+      favorite,
+      (snapshot: RssEntrySnapshot): void => this.applyRssEntrySnapshot(snapshot),
+      (error: Error): void => this.failRssEntryOperation('favorite', error),
+      isCurrent,
+    );
+  }
+
+  private isCurrentRssEntryDetail(
+    generation: number,
+    subscriptionId: string,
+    guid: string,
+  ): boolean {
+    return this.isCurrentRoute(generation, 'rssEntryDetail') &&
+      this.selectedRssItem?.subscriptionId === subscriptionId &&
+      this.selectedRssItem?.guid === guid;
+  }
+
+  private applyRssEntrySnapshot(snapshot: RssEntrySnapshot): void {
+    this.rssPresentation = this.feedPresentation(snapshot.subscriptions, []);
+    this.selectedRssSubscription = snapshot.subscription;
+    this.selectedRssItems = snapshot.items;
+    this.selectedRssItem = snapshot.item;
+    this.selectedRssFavoriteState = snapshot.favorite ? 'favorited' : 'notFavorited';
+  }
+
+  private failRssEntryOperation(action: string, error: Error): void {
+    this.selectedRssFavoriteState = 'unavailable';
+    hilog.error(DOMAIN, 'Reader',
+      'RSS EntryDetail %{public}s failed; no optimistic state applied: %{public}s',
+      action, error.message);
+  }
+
+  private returnFromRssEntryDetail(): void {
+    if (this.rssDetailReturnTarget === 'rssSourceFeed') {
+      this.returnToRssSourceFeed();
+      return;
+    }
+    this.returnToRss();
+  }
+
+  private returnToRssSourceFeed(): void {
+    if (this.selectedRssSubscription === undefined) {
+      this.returnToRss();
+      return;
+    }
+    const subscriptionId = this.selectedRssSubscription.subscriptionId;
+    const generation = this.nextNavigationGeneration();
+    this.selectedRssItem = undefined;
+    this.selectedRssFavoriteState = 'loading';
+    this.rssDetailReturnTarget = 'rssSourceFeed';
+    this.route = 'rssSourceFeed';
+    this.loadRssSourceItems(generation, subscriptionId);
+  }
+
+  private returnFromRssSourceFeed(): void {
+    if (this.rssSourceFeedReturnTarget === 'rssSubscriptionManagement') {
+      const focusedSubscriptionId = this.selectedRssSubscription?.subscriptionId ?? '';
+      this.nextNavigationGeneration();
+      this.selectedRssSubscription = undefined;
+      this.selectedRssItems = [];
+      this.selectedRssItem = undefined;
+      this.selectedRssFavoriteState = 'loading';
+      this.rssDetailReturnTarget = 'rss';
+      this.rssSourceFeedReturnTarget = 'rss';
+      this.rssManagementFocusSubscriptionId = focusedSubscriptionId;
+      this.route = 'rssSubscriptionManagement';
+      this.getRssOrchestrator().open();
+      return;
+    }
+    this.returnToRss();
+  }
+
+  private returnToRss(): void {
+    this.nextNavigationGeneration();
+    this.selectedRssSubscription = undefined;
+    this.selectedRssItems = [];
+    this.selectedRssItem = undefined;
+    this.selectedRssFavoriteState = 'loading';
+    this.rssDetailReturnTarget = 'rss';
+    this.rssSourceFeedReturnTarget = 'rss';
+    this.rssManagementFocusSubscriptionId = '';
+    this.route = 'rss';
+  }
+
+  private openRssManagementForSubscription(subscriptionId: string | undefined): void {
+    if (subscriptionId === undefined || !this.rssSubscriptions().some(
+      (candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId,
+    )) {
+      return;
+    }
+    this.nextNavigationGeneration();
+    this.rssManagementFocusSubscriptionId = subscriptionId;
+    this.selectedRssSubscription = undefined;
+    this.selectedRssItems = [];
+    this.selectedRssItem = undefined;
+    this.selectedRssFavoriteState = 'loading';
+    this.rssDetailReturnTarget = 'rss';
+    this.rssSourceFeedReturnTarget = 'rss';
+    this.route = 'rssSubscriptionManagement';
+    this.getRssOrchestrator().open();
+  }
+
+  private onRssOpenOriginalRequested(): void {
+    if (this.selectedRssItem?.link === undefined ||
+      this.selectedRssItem.link.trim().length === 0) {
+      hilog.warn(DOMAIN, 'Reader', 'RSS original link intent ignored because the entry has no link');
+      return;
+    }
+    hilog.warn(DOMAIN, 'Reader',
+      'HOST_CAPABILITY_GAP: RSS original link requires webview.open Host wiring');
+  }
+
+  private onRssModeRequested(mode: RssMode): void {
+    if (mode === 'sources') {
+      return;
+    }
+    // All/Favorites/Rules are modes of the existing RSS page, not routes.
+    // Their data contracts are not admitted yet, so keep Sources selected and
+    // surface the missing boundary instead of showing invented local data.
+    hilog.warn(DOMAIN, 'Reader',
+      'FIGMA_VISUAL_GAP: RSS mode %{public}s has no admitted data contract', mode);
   }
 
   private feedPresentation(
@@ -541,6 +1019,55 @@ struct Index {
       kind: 'feed', subscriptions: subscriptions, recentUnread: recentUnread,
     };
     return presentation;
+  }
+
+  private rssSubscriptions(): RssSubscription[] {
+    if (this.rssPresentation.kind === 'fatalError') {
+      return [];
+    }
+    return this.rssPresentation.subscriptions;
+  }
+
+  private rssRecentUnread(): RssItem[] {
+    if (this.rssPresentation.kind === 'feed' || this.rssPresentation.kind === 'refreshing') {
+      return this.rssPresentation.recentUnread;
+    }
+    return [];
+  }
+
+  private rssSubscriptionManagementItems(): RssSubscriptionManagementItem[] {
+    return this.rssSubscriptions().map(
+      (subscription: RssSubscription): RssSubscriptionManagementItem => ({
+        subscriptionId: subscription.subscriptionId,
+        title: subscription.title,
+        meta: this.rssSubscriptionManagementMeta(subscription),
+        enabled: subscription.enabled,
+      }),
+    );
+  }
+
+  /** Management metadata is a projection of Core fields only. */
+  private rssSubscriptionManagementMeta(subscription: RssSubscription): string {
+    const parts: string[] = [];
+    const siteUrl = subscription.siteUrl;
+    parts.push(siteUrl !== undefined && siteUrl.trim().length > 0 ? siteUrl : subscription.feedUrl);
+    if (subscription.lastFetchAt !== undefined && subscription.lastFetchAt > 0) {
+      parts.push(`上次刷新 ${this.formatRssManagementTime(subscription.lastFetchAt)}`);
+    }
+    if (!subscription.enabled) {
+      parts.push('已停用');
+    }
+    return parts.join(' · ');
+  }
+
+  private formatRssManagementTime(timestamp: number): string {
+    const date = new Date(timestamp);
+    return `${date.getFullYear()}-${this.twoDigit(date.getMonth() + 1)}-${this.twoDigit(date.getDate())} ` +
+      `${this.twoDigit(date.getHours())}:${this.twoDigit(date.getMinutes())}`;
+  }
+
+  private twoDigit(value: number): string {
+    return value < 10 ? `0${value}` : `${value}`;
   }
 
   private openSearch(): void {
@@ -583,24 +1110,49 @@ struct Index {
 
 
   private onSearchResultSelected(book: SearchBook): void {
-    // A search result is a remote Core record. There is no admitted remote
-    // Book Detail / chapter flow in this slice, so keep the selection inert
-    // rather than fabricating a local-lookup route.
-    hilog.warn(DOMAIN, 'Reader',
-      'FIGMA_VISUAL_GAP: remote search result has no admitted detail flow for sourceId=%{public}s bookId=%{public}s',
-      book.sourceId, book.bookId);
+    this.openRemoteBookDetail({
+      sourceId: book.sourceId,
+      bookId: book.bookId,
+      detailUrl: book.detailUrl,
+      title: book.title,
+      author: book.author,
+      coverUrl: book.coverUrl,
+      intro: book.intro,
+      kind: book.kind,
+      lastChapter: book.latestChapterTitle,
+      searchVariables: book.variables.map((variable): RemoteReadingVariable => ({
+        name: variable.name,
+        value: variable.value,
+      })),
+    }, book.sourceName);
+  }
+
+  private openBookDetail(selection: ShelfBook): void {
+    if (selection.sourceId === LOCAL_SOURCE_ID) {
+      this.openLocalBookDetail(selection);
+      return;
+    }
+    this.openRemoteBookDetail({
+      sourceId: selection.sourceId,
+      bookId: selection.bookId,
+      detailUrl: selection.bookId,
+      title: selection.title,
+      author: selection.author,
+      coverUrl: selection.coverUrl,
+      intro: selection.intro,
+      lastChapter: selection.lastChapter,
+    }, selection.sourceId);
   }
 
   private openLocalBookDetail(selection: ShelfBook): void {
     if (selection.sourceId !== LOCAL_SOURCE_ID) {
-      // The only admitted Detail contract in this slice is the Local Book
-      // variant. Do not reinterpret a remote shelf record as local data.
-      hilog.warn(DOMAIN, 'Reader',
-        'FIGMA_VISUAL_GAP: no admitted remote Book Detail state for sourceId=%{public}s', selection.sourceId);
+      hilog.error(DOMAIN, 'Reader',
+        'Local detail dispatcher received remote sourceId=%{public}s', selection.sourceId);
       return;
     }
     const generation = this.nextNavigationGeneration();
     this.readingSessionActive = false;
+    this.remoteReadingSession = undefined;
     this.readingExitRequest = undefined;
     this.exitToBookshelfAfterReader = false;
     const owner = ReaderRuntimeOwner.current();
@@ -630,13 +1182,31 @@ struct Index {
             'No declared coverUrl for bookId=%{public}s; using NoCover placeholder',
             book.bookId);
         }
-        this.detailBook = book;
+        this.detailBook = this.readingDetailForShelf(book);
         this.detailToc = toc.entries;
         this.requestedChapterIndex = undefined;
         this.preparedReaderRoute = 'reading';
         this.directoryCurrentChapterIndex = -1;
         this.directoryChapterTitle = '';
         this.route = 'detail';
+        void reading.loadDirectoryProjection(
+          book.bookId,
+          book.title,
+          book.author,
+          toc.entries,
+          (): boolean => this.detailBook?.sourceId === book.sourceId && this.detailBook?.bookId === book.bookId,
+        )
+          .then((entries: LocalReadingTocEntry[]): void => {
+            if (this.detailBook?.sourceId === book.sourceId && this.detailBook?.bookId === book.bookId) {
+              this.detailToc = entries;
+            }
+          })
+          .catch((error: Error): void => {
+            if (this.detailBook?.sourceId === book.sourceId && this.detailBook?.bookId === book.bookId) {
+              hilog.error(DOMAIN, 'Reader',
+                'Directory bookmark/cache projection failed: %{public}s', error.message);
+            }
+          });
       })
       .catch((error: Error): void => {
         if (generation !== this.navigationGeneration) {
@@ -646,9 +1216,97 @@ struct Index {
       });
   }
 
-  private openLocalReading(chapterIndex: number | undefined): void {
+  private openRemoteBookDetail(seed: RemoteReadingBookSeed, sourceName: string): void {
+    const generation = this.nextNavigationGeneration();
+    this.readingSessionActive = false;
+    this.readingExitRequest = undefined;
+    this.exitToBookshelfAfterReader = false;
+    this.remoteReadingSession = undefined;
+    const owner = ReaderRuntimeOwner.current();
+    const gateway = new RemoteReadingFlowGateway(owner);
+    const bookshelf = new ReaderCoreGateway(owner);
+    const isCurrent = (): boolean => generation === this.navigationGeneration;
+    void gateway.openSession(seed, { isCurrent })
+      .then(async (session: RemoteReadingSession): Promise<void> => {
+        if (!isCurrent()) {
+          return;
+        }
+        // The only admitted remote-detail visual is the on-shelf terminal
+        // state. Reuse Core's existing composite shelf before that state
+        // becomes visible; do not maintain a second UI-side shelf. Existing
+        // entries are not needlessly upserted, which preserves their Core-owned
+        // lastReadAt/group/sort metadata when reopening from Bookshelf.
+        const storedBook = await bookshelf.loadShelfBook(session.identity.sourceId, session.identity.bookId);
+        if (!isCurrent()) {
+          return;
+        }
+        if (storedBook === undefined) {
+          await bookshelf.upsertBook({
+            sourceId: session.identity.sourceId,
+            bookId: session.identity.bookId,
+            title: session.book.title,
+            author: session.book.author,
+            coverUrl: session.book.coverUrl,
+            intro: session.book.intro,
+            kind: session.book.kind,
+            lastChapter: session.book.lastChapter,
+          });
+        }
+        if (!isCurrent()) {
+          return;
+        }
+        let admittedSourceName = sourceName.trim();
+        if (admittedSourceName.length === 0 || admittedSourceName === session.identity.sourceId) {
+          try {
+            const sources = await new SourceGateway(owner).loadSources();
+            if (!isCurrent()) {
+              return;
+            }
+            for (const source of sources) {
+              if (source.sourceId === session.identity.sourceId) {
+                admittedSourceName = source.name;
+                break;
+              }
+            }
+          } catch (_error) {
+            // Source identity is still valid if the optional display-name
+            // projection fails; keep the stable id rather than blocking read.
+          }
+        }
+        this.remoteReadingSession = session;
+        this.detailBook = {
+          sourceId: session.identity.sourceId,
+          sourceName: admittedSourceName.length > 0 ? admittedSourceName : session.identity.sourceId,
+          bookId: session.identity.bookId,
+          title: session.book.title,
+          author: session.book.author,
+          coverUrl: session.book.coverUrl,
+          intro: session.book.intro,
+          lastChapter: session.book.lastChapter,
+        };
+        this.detailToc = session.entries.map((entry): LocalReadingTocEntry => ({
+          index: entry.index,
+          title: entry.title,
+          downloadState: 'unknown',
+        }));
+        this.requestedChapterIndex = undefined;
+        this.preparedReaderRoute = 'reading';
+        this.directoryCurrentChapterIndex = -1;
+        this.directoryChapterTitle = '';
+        this.route = 'detail';
+      })
+      .catch((error: Error): void => {
+        if (isCurrent()) {
+          hilog.error(DOMAIN, 'Reader',
+            'Remote Book Detail state failed to load: %{public}s', error.message);
+        }
+      });
+  }
+
+  private openReading(chapterIndex: number | undefined): void {
     const book = this.detailBook;
-    if (book === undefined || !this.isKnownDetailChapter(chapterIndex)) {
+    if (book === undefined || !this.isKnownDetailChapter(chapterIndex) ||
+      (book.sourceId !== LOCAL_SOURCE_ID && this.remoteReadingSession === undefined)) {
       return;
     }
     this.nextNavigationGeneration();
@@ -658,7 +1316,7 @@ struct Index {
     this.preparedReaderRoute = 'reading';
     this.directoryCurrentChapterIndex = -1;
     this.directoryChapterTitle = '';
-    // Keep the admitted Local Book Detail static state on screen until the
+    // Keep the admitted Book Detail static state on screen until the
     // same reader instance has a measured, persisted first page.  There is no
     // inferred loading state and no new motion here.
     this.readingSessionActive = true;
@@ -685,7 +1343,7 @@ struct Index {
     this.preparedReaderRoute = 'reading';
     // Keep the existing Figma Full Directory static state visible while the
     // reader loads, measures, and persists the new chapter's first page. The
-    // route changes only from LocalReadingExperience.onReadingReady, so a
+    // route changes only from ReadingExperience.onReadingReady, so a
     // directory pick cannot expose an empty PaperLayer or old chapter body.
     // Full Directory has no approved loading/selection variant and its panel
     // is not opaque. Keep the last committed row/header/body snapshot visible
@@ -699,14 +1357,25 @@ struct Index {
     this.nextNavigationGeneration();
     this.readingExitRequest = undefined;
     this.exitToBookshelfAfterReader = false;
-    // LocalReadingExperience resolves the real persisted chapter itself. The
+    // ReadingExperience resolves the real persisted chapter itself. The
     // overlay gets that exact identity through onChapterMaterialized rather
     // than choosing a Figma sample chapter or copying Core text into Index.
     this.requestedChapterIndex = undefined;
     this.preparedReaderRoute = 'directory';
+    this.directoryReturnTarget = 'detail';
     this.directoryCurrentChapterIndex = -1;
     this.directoryChapterTitle = '';
     this.readingSessionActive = true;
+  }
+
+  private openReaderControlDirectory(): void {
+    if (!this.readingSessionActive || this.detailBook === undefined || this.detailToc.length === 0 ||
+      this.route !== 'reading') {
+      return;
+    }
+    this.directoryReturnTarget = 'readerControl';
+    this.preparedReaderRoute = 'directory';
+    this.route = 'directory';
   }
 
   private presentPreparedReading(chapterIndex: number): void {
@@ -738,16 +1407,192 @@ struct Index {
     this.route = 'detail';
   }
 
-  // R-LOCAL-TOC-01: 收起 closes the directory overlay the same way system Back
-  // does for the directory route: let the reader settle/persist, else return
-  // to Detail. Reader Control Home (the eventual collapse target) is not yet
-  // delivered (RC-READER-CONTROL-01).
   private closeDirectory(): void {
+    if (this.directoryReturnTarget === 'readerControl' && this.readingSessionActive) {
+      this.preparedReaderRoute = 'reading';
+      this.route = 'reading';
+      return;
+    }
     const requestExit = this.readingExitRequest;
     if (requestExit !== undefined) {
       requestExit();
     } else {
       this.returnToDetail();
+    }
+  }
+
+  private deleteDirectoryBookmarks(bookmarkTimes: number[]): void {
+    const book = this.detailBook;
+    if (book === undefined || book.sourceId !== LOCAL_SOURCE_ID || bookmarkTimes.length === 0) {
+      return;
+    }
+    const uniqueTimes: number[] = [];
+    for (const time of bookmarkTimes) {
+      if (!Number.isSafeInteger(time) || uniqueTimes.indexOf(time) >= 0) {
+        continue;
+      }
+      uniqueTimes.push(time);
+    }
+    if (uniqueTimes.length === 0) {
+      return;
+    }
+    const mutationGeneration = this.beginDirectoryBookmarkMutation(book);
+    if (mutationGeneration < 0) {
+      return;
+    }
+    const mutationKey = this.directoryBookmarkMutationKey(book);
+    const gateway = new LocalReadingFlowGateway(ReaderRuntimeOwner.current());
+    const isCurrent = (): boolean => this.detailBook?.sourceId === book.sourceId &&
+      this.detailBook?.bookId === book.bookId &&
+      this.isDirectoryBookmarkMutationCurrent(mutationGeneration, mutationKey);
+    void this.performDirectoryBookmarkDeletion(
+      gateway,
+      book,
+      uniqueTimes,
+      isCurrent,
+      mutationGeneration,
+      mutationKey,
+    );
+  }
+
+  private createDirectoryChapterStartBookmark(
+    request: ReaderDirectoryChapterStartBookmarkRequest,
+  ): void {
+    const book = this.detailBook;
+    if (book === undefined || book.sourceId !== LOCAL_SOURCE_ID ||
+      !Number.isSafeInteger(request.chapterIndex) || request.chapterIndex < 0 ||
+      request.chapterTitle.trim().length === 0) {
+      return;
+    }
+    let knownChapter = false;
+    for (const entry of this.detailToc) {
+      if (entry.index === request.chapterIndex && entry.title === request.chapterTitle) {
+        knownChapter = true;
+        break;
+      }
+    }
+    if (!knownChapter) {
+      return;
+    }
+    const mutationGeneration = this.beginDirectoryBookmarkMutation(book);
+    if (mutationGeneration < 0) {
+      return;
+    }
+    const mutationKey = this.directoryBookmarkMutationKey(book);
+    const gateway = new LocalReadingFlowGateway(ReaderRuntimeOwner.current());
+    const isCurrent = (): boolean => this.detailBook?.sourceId === book.sourceId &&
+      this.detailBook?.bookId === book.bookId &&
+      this.isDirectoryBookmarkMutationCurrent(mutationGeneration, mutationKey);
+    void this.performDirectoryChapterStartBookmarkCreation(
+      gateway,
+      book,
+      request,
+      isCurrent,
+      mutationGeneration,
+      mutationKey,
+    );
+  }
+
+  private directoryBookmarkMutationKey(book: ReadingBookDetail): string {
+    return `${book.sourceId.length}:${book.sourceId}:${book.bookId}`;
+  }
+
+  /** Returns -1 when the same book already owns an unfinished mutation. */
+  private beginDirectoryBookmarkMutation(book: ReadingBookDetail): number {
+    const key = this.directoryBookmarkMutationKey(book);
+    if (this.directoryBookmarkMutationActiveKey === key) {
+      return -1;
+    }
+    this.directoryBookmarkMutationGeneration = this.directoryBookmarkMutationGeneration >=
+      Number.MAX_SAFE_INTEGER ? 1 : this.directoryBookmarkMutationGeneration + 1;
+    this.directoryBookmarkMutationActiveKey = key;
+    return this.directoryBookmarkMutationGeneration;
+  }
+
+  private finishDirectoryBookmarkMutation(generation: number, key: string): void {
+    if (this.isDirectoryBookmarkMutationCurrent(generation, key)) {
+      this.directoryBookmarkMutationActiveKey = '';
+    }
+  }
+
+  private isDirectoryBookmarkMutationCurrent(generation: number, key: string): boolean {
+    return generation === this.directoryBookmarkMutationGeneration &&
+      key === this.directoryBookmarkMutationActiveKey;
+  }
+
+  private async performDirectoryChapterStartBookmarkCreation(
+    gateway: LocalReadingFlowGateway,
+    book: ReadingBookDetail,
+    request: ReaderDirectoryChapterStartBookmarkRequest,
+    isCurrent: () => boolean,
+    mutationGeneration: number,
+    mutationKey: string,
+  ): Promise<void> {
+    try {
+      await gateway.createChapterStartBookmark({
+        bookName: book.title,
+        bookAuthor: book.author,
+        chapterIndex: request.chapterIndex,
+        chapterTitle: request.chapterTitle,
+      }, isCurrent);
+      if (!isCurrent()) {
+        return;
+      }
+      const entries = await gateway.loadDirectoryProjection(
+        book.bookId,
+        book.title,
+        book.author,
+        this.detailToc,
+        isCurrent,
+      );
+      if (isCurrent()) {
+        this.detailToc = entries;
+      }
+    } catch (error) {
+      if (isCurrent()) {
+        hilog.error(DOMAIN, 'Reader', 'Directory bookmark create failed: %{public}s',
+          (error as Error).message);
+      }
+    } finally {
+      this.finishDirectoryBookmarkMutation(mutationGeneration, mutationKey);
+    }
+  }
+
+  private async performDirectoryBookmarkDeletion(
+    gateway: LocalReadingFlowGateway,
+    book: ReadingBookDetail,
+    bookmarkTimes: number[],
+    isCurrent: () => boolean,
+    mutationGeneration: number,
+    mutationKey: string,
+  ): Promise<void> {
+    try {
+      for (const time of bookmarkTimes) {
+        const deleted = await gateway.deleteBookmark(time, isCurrent);
+        if (!isCurrent()) {
+          return;
+        }
+        if (!deleted) {
+          throw new Error(`bookmark.delete did not delete ${time}`);
+        }
+      }
+      const entries = await gateway.loadDirectoryProjection(
+        book.bookId,
+        book.title,
+        book.author,
+        this.detailToc,
+        isCurrent,
+      );
+      if (isCurrent()) {
+        this.detailToc = entries;
+      }
+    } catch (error) {
+      if (isCurrent()) {
+        hilog.error(DOMAIN, 'Reader', 'Directory bookmark delete failed: %{public}s',
+          (error as Error).message);
+      }
+    } finally {
+      this.finishDirectoryBookmarkMutation(mutationGeneration, mutationKey);
     }
   }
 
@@ -767,7 +1612,6 @@ struct Index {
       return;
     }
     const generation = this.nextNavigationGeneration();
-    this.readingExitRequest = undefined;
     this.exitToBookshelfAfterReader = false;
     // SS-SOURCE-SWITCH-01: the window floats over the reading surface (Figma
     // 3572:41345), so close the directory and let the surface be the backdrop.
@@ -793,7 +1637,7 @@ struct Index {
       return;
     }
     const gateway = this.getSourceSwitchGateway();
-    gateway.discoverCandidates(this.detailBook.bookId, this.detailBook.title,
+    gateway.discoverCandidates(this.detailBook.sourceId, this.detailBook.bookId, this.detailBook.title,
       (): boolean => this.isSourceSwitchActive(generation))
       .then((outcome: SourceSwitchDiscoveryOutcome): void => {
         if (!this.isSourceSwitchActive(generation)) {
@@ -928,20 +1772,7 @@ struct Index {
   }
 
   private reopenSwitchedBook(book: ShelfBook): void {
-    if (book.sourceId === LOCAL_SOURCE_ID) {
-      this.openLocalBookDetail(book);
-      return;
-    }
-    // SS-SOURCE-SWITCH-01 seam: the committed book now lives on a remote
-    // source, but the reading/detail paths are local-only in this slice.
-    // When the online reading path lands, this is the single call site to
-    // swap detailBook/detailToc and mount the remote reader. Do not route a
-    // remote bookId into LocalReadingExperience — it issues local-book
-    // commands against a remote identity.
-    hilog.warn(DOMAIN, 'Reader',
-      'SS-SOURCE-SWITCH-01: committed switch to sourceId=%{public}s bookId=%{public}s; remote reading not yet wired',
-      book.sourceId, book.bookId);
-    this.returnToBookshelf();
+    this.openBookDetail(book);
   }
 
   private returnToBookshelf(): void {
@@ -955,21 +1786,43 @@ struct Index {
     this.directoryChapterTitle = '';
     this.detailToc = [];
     this.detailBook = undefined;
+    this.remoteReadingSession = undefined;
+    this.selectedRssSubscription = undefined;
+    this.selectedRssItems = [];
+    this.selectedRssItem = undefined;
+    this.selectedRssFavoriteState = 'loading';
+    this.rssDetailReturnTarget = 'rss';
+    this.rssSourceFeedReturnTarget = 'rss';
+    this.rssManagementFocusSubscriptionId = '';
     this.route = 'bookshelf';
     this.refreshBookshelf();
   }
 
-  private applyReadingCommit(commit: LocalReadingCommit): void {
-    if (commit.bookId.trim().length === 0) {
+  private applyReadingCommit(commit: ReadingCommit): void {
+    if (commit.sourceId.trim().length === 0 || commit.bookId.trim().length === 0 ||
+      this.detailBook?.sourceId !== commit.sourceId || this.detailBook?.bookId !== commit.bookId) {
       return;
     }
-    // `reading.progress.update` has completed in LocalReadingExperience. A
+    // `reading.progress.update` has completed in ReadingExperience. A
     // fresh shelf query is the only source of the Continue Reading state.
     this.refreshBookshelf();
   }
 
+  private readingDetailForShelf(book: ShelfBook): ReadingBookDetail {
+    return {
+      sourceId: book.sourceId,
+      sourceName: book.sourceId,
+      bookId: book.bookId,
+      title: book.title,
+      author: book.author,
+      coverUrl: book.coverUrl,
+      intro: book.intro,
+      lastChapter: book.lastChapter,
+    };
+  }
+
   private applyDirectoryChapter(chapterIndex: number, chapterTitle: string): void {
-    if (this.preparedReaderRoute !== 'directory' && this.route !== 'directory') {
+    if (!this.readingSessionActive || !this.isKnownDetailChapter(chapterIndex)) {
       return;
     }
     this.directoryCurrentChapterIndex = chapterIndex;

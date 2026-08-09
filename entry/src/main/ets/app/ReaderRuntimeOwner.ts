@@ -6,13 +6,22 @@ import {
   type ReaderCoreRuntime,
   type RequestOptions,
 } from '@reader/core-harmony';
-import { type LocalBookPreparation, ReaderHostRegistry } from './ReaderHostRegistry';
+import {
+  type BookSourceJsonSelection,
+  type LocalBookAssetCommit,
+  type LocalBookInput,
+  type LocalBookPreparation,
+  ReaderHostRegistry,
+} from './ReaderHostRegistry';
+import { HarmonySystemTtsHost } from './HarmonySystemTtsHost';
+import { LocalEpubResourceHost } from './LocalEpubResourceHost';
+import { ReadingBodyImageHost, type ReadingBodyImagePayload } from './ReadingBodyImageHost';
 
 type RuntimeState = 'new' | 'starting' | 'ready' | 'closing' | 'closed';
 
-// Local import and materialized chapter reads may carry multi-megabyte text.
-// The SDK's generic 2s default is unsuitable for this application's admitted
-// 18MiB Host input limit; callers may still opt into a narrower explicit limit.
+// Local import and materialized chapter reads may perform file and parsing I/O.
+// The SDK's generic 2s default is unsuitable; callers may still opt into a
+// narrower explicit limit.
 const DEFAULT_CORE_REQUEST_TIMEOUT_MS = 30000;
 
 /**
@@ -23,6 +32,8 @@ export class ReaderRuntimeOwner {
   private static instance: ReaderRuntimeOwner | undefined = undefined;
 
   private readonly host: ReaderHostRegistry;
+  private readonly ttsHost: HarmonySystemTtsHost;
+  private readonly localEpubResourceHost: LocalEpubResourceHost;
   private runtime: ReaderCoreRuntime | undefined = undefined;
   private startup: Promise<void> | undefined = undefined;
   /** Serializes background storage flushes with teardown. */
@@ -33,6 +44,8 @@ export class ReaderRuntimeOwner {
 
   private constructor(context: common.UIAbilityContext) {
     this.host = new ReaderHostRegistry(context);
+    this.ttsHost = new HarmonySystemTtsHost();
+    this.localEpubResourceHost = new LocalEpubResourceHost(context);
   }
 
   static install(context: common.UIAbilityContext): ReaderRuntimeOwner {
@@ -85,6 +98,47 @@ export class ReaderRuntimeOwner {
     });
   }
 
+  /**
+   * Resolve one normalized body-image URL through Core's source semantics,
+   * then execute the resulting request with the already-owned Host transport.
+   * A stale selection is checked before and after both async boundaries, so a
+   * superseded chapter can never publish image bytes or dimensions.
+   */
+  async loadReadingImage(
+    sourceId: string,
+    imageUrl: string,
+    baseUrl: string | undefined,
+    shouldCancel?: () => boolean,
+  ): Promise<ReadingBodyImagePayload> {
+    this.assertReadingImageCurrent(shouldCancel);
+    if (imageUrl.trim().toLowerCase().startsWith('data:image/')) {
+      const embedded = await ReadingBodyImageHost.instance.loadDataUri(imageUrl);
+      this.assertReadingImageCurrent(shouldCancel);
+      return embedded;
+    }
+    if (sourceId === 'local' && imageUrl.startsWith('reader-local-epub://')) {
+      const localImage = await this.localEpubResourceHost.load(imageUrl);
+      this.assertReadingImageCurrent(shouldCancel);
+      return localImage;
+    }
+    const params: JsonObject = { sourceId, imageUrl };
+    if (baseUrl !== undefined && baseUrl.trim().length > 0) {
+      params['baseUrl'] = baseUrl;
+    }
+    const descriptor = await this.request('source.imageRequest', params, {
+      shouldCancel,
+      timeoutMs: DEFAULT_CORE_REQUEST_TIMEOUT_MS,
+    });
+    this.assertReadingImageCurrent(shouldCancel);
+    const request = descriptor.data['request'];
+    if (request === null || typeof request !== 'object' || Array.isArray(request)) {
+      throw new Error('source.imageRequest returned an invalid Host request descriptor');
+    }
+    const payload = await ReadingBodyImageHost.instance.loadRequest(request as JsonObject);
+    this.assertReadingImageCurrent(shouldCancel);
+    return payload;
+  }
+
   async flush(): Promise<void> {
     const previousFlush = this.flushTail;
     let releaseFlush: (() => void) | undefined = undefined;
@@ -118,11 +172,41 @@ export class ReaderRuntimeOwner {
     return this.host.getContext();
   }
 
+  getTtsHost(): HarmonySystemTtsHost {
+    if (this.state === 'closing' || this.state === 'closed') {
+      throw new Error('Reader system TTS Host is no longer available after teardown');
+    }
+    return this.ttsHost;
+  }
+
   async selectLocalBookInputs(): Promise<LocalBookPreparation[]> {
     if (this.state === 'closing' || this.state === 'closed') {
       throw new Error('Reader Host is no longer available after teardown');
     }
     return this.host.selectLocalBookInputs();
+  }
+
+  async selectBookSourceJson(): Promise<BookSourceJsonSelection | undefined> {
+    if (this.state === 'closing' || this.state === 'closed') {
+      throw new Error('Reader Host is no longer available after teardown');
+    }
+    return this.host.selectBookSourceJson();
+  }
+
+  async commitLocalBookInput(input: LocalBookInput): Promise<LocalBookAssetCommit> {
+    return this.host.commitLocalBookInput(input);
+  }
+
+  async discardLocalBookInput(input: LocalBookInput): Promise<void> {
+    return this.host.discardLocalBookInput(input);
+  }
+
+  async rollbackLocalBookAsset(commit: LocalBookAssetCommit): Promise<void> {
+    return this.host.rollbackLocalBookAsset(commit);
+  }
+
+  async releaseLocalBookAsset(bookId: string): Promise<void> {
+    return this.host.releaseLocalBookAsset(bookId);
   }
 
   async close(): Promise<void> {
@@ -135,6 +219,15 @@ export class ReaderRuntimeOwner {
     this.state = 'closing';
     this.closeTask = this.closeRuntime();
     return this.closeTask;
+  }
+
+  private assertReadingImageCurrent(shouldCancel?: () => boolean): void {
+    if (shouldCancel !== undefined && !shouldCancel()) {
+      throw new Error('reading body image request was cancelled');
+    }
+    if (this.state === 'closing' || this.state === 'closed') {
+      throw new Error('Reader Host is no longer available after teardown');
+    }
   }
 
   private async closeRuntime(): Promise<void> {
@@ -150,6 +243,9 @@ export class ReaderRuntimeOwner {
       // before the runtime is released. Later flush calls see `closing` and
       // become no-ops, so they cannot race this final flush/close pair.
       await this.flushTail;
+      // Host callbacks must be invalidated before Core is released, otherwise
+      // a late platform completion could attempt to advance a closed queue.
+      await this.ttsHost.close();
       const runtime = this.runtime;
       this.runtime = undefined;
       if (runtime !== undefined) {
@@ -168,14 +264,19 @@ export class ReaderRuntimeOwner {
   }
 
   private async startRuntime(): Promise<void> {
-    const runtime = createReaderCoreRuntime();
+    const runtime = createReaderCoreRuntime({
+      dataDirectory: `${this.host.getContext().filesDir}/reader-core`,
+    });
     runtime.setCapabilityRouter(this.host.createCapabilityRouter());
     try {
       await runtime.request('runtime.setHostCapabilities', {
-        capabilities: ['persistence.get', 'persistence.put', 'http.execute'],
+        capabilities: ['persistence.get', 'http.execute'],
         platform: 'harmonyos',
       }, { timeoutMs: 5000 });
-      await runtime.request('runtime.storage.restore', {}, { timeoutMs: 30000 });
+      if (await this.host.needsLegacySnapshotMigration()) {
+        await runtime.request('runtime.storage.restore', {}, { timeoutMs: 30000 });
+        await this.host.markLegacySnapshotMigrated();
+      }
       // `close()` may have begun while Host capability setup/restore awaited.
       // Never publish a ready runtime after teardown has claimed this owner.
       if (this.state !== 'starting') {

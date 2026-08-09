@@ -1,19 +1,21 @@
-import { LocalReadingExperience, LocalReadingCommit } from '../reading/LocalReadingExperience';
+import { ReadingExperience, ReadingCommit } from '../reading/LocalReadingExperience';
 import { ReaderFullDirectory } from '../reading/ReaderFullDirectory';
 import { SourceSwitchPanel, SourceSwitchPanelState } from '../reading/SourceSwitchPanel';
 import type { SourceSwitchCandidate } from '../source/SourceSwitchGateway';
 import type { LocalReadingTocEntry } from '../reading/LocalReadingFlowGateway';
+import type { ReaderDirectoryChapterStartBookmarkRequest } from '../reading/ReaderDirectoryMarkerState';
+import type { RemoteReadingSession } from '../reading/RemoteReadingFlowGateway';
 
 
 // ReaderShell —— 阅读会话的 UI 组合层 (Batch 2, FIGMA_NATIVE_UI_ARCHITECTURE_PLAN §六)。
-// 把阅读区 (LocalReadingExperience: ReadingSurface + ReaderControlPanel)、目录 overlay
+// 把阅读区 (ReadingExperience: ReadingSurface + ReaderControlPanel)、目录 overlay
 // (ReaderFullDirectory)、换源 overlay (SourceSwitchPanel) 收进同一个 Shell, 让 Index 对
 // 阅读路由只暴露一个组件。阅读会话的业务状态 (detailBook/detailToc/route/generation/
 // source-switch gateway) 与持久化仍由 Index 持有, 经 props + 回调透传 —— Shell 只负责
 // UI 骨架与 overlay 宿主, 不复制业务数据。
 //
 // 挂载契约 (与改造前 Index 内联阅读段一致):
-//   - 仅当 readingSessionActive 且 book 已就绪时挂载; LocalReadingExperience 保持挂载,
+//   - 仅当 readingSessionActive 且 book 已就绪时挂载; ReadingExperience 保持挂载,
 //     opacity 随 route 在 reading/directory 间切换, 避免阅读会话被 remount。
 //   - 状态栏顶部 inset 由本 Shell 自行管理 (读取 @StorageLink('statusBarHeightPx')),
 //     阅读路由 Index 根 Stack 置 0 防双 padding; 底部安全区仍由 Index 根 Stack 统一沉浸。
@@ -29,15 +31,20 @@ export struct ReaderShell {
   @Prop bookTitle: string = '';
   @Prop sourceId: string = '';
   @Prop sourceName: string = '';
+  @Prop remoteSession: RemoteReadingSession | undefined = undefined;
   @Prop totalChapters: number = 0;
   @Prop requestedChapterIndex: number | undefined = undefined;
   @Prop isTablet: boolean = false;
-  // 阅读会话可见性: route 决定 LocalReadingExperience 是否露出版面。
+  @Prop reduceMotion: boolean = false;
+  // 阅读会话可见性: route 决定 ReadingExperience 是否露出版面。
+  @Prop visible: boolean = false;
   @Prop route: PreparedReaderRoute = 'reading';
   // 目录 overlay。
   @Prop tocEntries: LocalReadingTocEntry[] = [];
   @Prop directoryCurrentChapterIndex: number = -1;
   @Prop directoryChapterTitle: string = '';
+  @Prop directoryOpenedFromControl: boolean = false;
+  @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   // 换源 overlay。
   @Prop sourceSwitchVisible: boolean = false;
   @Prop sourceSwitchState: SourceSwitchPanelState = { kind: 'discovering' };
@@ -46,11 +53,15 @@ export struct ReaderShell {
   onExitRequestHandler: (requestExit: () => void) => void = (): void => {};
   onExit: () => void = (): void => {};
   onReadingReady: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
-  onReadingCommitted: (commit: LocalReadingCommit) => void = (_commit: LocalReadingCommit): void => {};
+  onReadingCommitted: (commit: ReadingCommit) => void = (_commit: ReadingCommit): void => {};
   onChapterCommitted: (chapterIndex: number, chapterTitle: string) => void =
     (_chapterIndex: number, _chapterTitle: string): void => {};
   onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
+  onDeleteBookmarks: (bookmarkTimes: number[]) => void = (_bookmarkTimes: number[]): void => {};
+  onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void =
+    (_request: ReaderDirectoryChapterStartBookmarkRequest): void => {};
   onCloseDirectory: () => void = (): void => {};
+  onOpenDirectory: () => void = (): void => {};
   onSwitchSource: () => void = (): void => {};
   onCloseSourceSwitch: () => void = (): void => {};
   onRetrySourceSwitch: () => void = (): void => {};
@@ -64,19 +75,30 @@ export struct ReaderShell {
       // true viewport/layout pass; `Visibility` would make the TextController
       // metrics unavailable.
       Stack({ alignContent: Alignment.TopStart }) {
-        LocalReadingExperience({
+        ReadingExperience({
+          sourceId: this.sourceId,
           bookId: this.bookId,
+          remoteSession: this.remoteSession,
           requestedChapterIndex: this.requestedChapterIndex,
           isTablet: this.isTablet,
           bookTitle: this.bookTitle,
           sourceName: this.sourceName,
           totalChapters: this.totalChapters,
+          directoryEntries: this.tocEntries,
+          controlObscured: this.route === 'directory',
+          reduceMotion: this.reduceMotion,
           onExitRequestHandler: (requestExit: () => void): void => this.onExitRequestHandler(requestExit),
           onExit: (): void => this.onExit(),
           onReadingReady: (chapterIndex: number): void => this.onReadingReady(chapterIndex),
-          onReadingCommitted: (commit: LocalReadingCommit): void => this.onReadingCommitted(commit),
+          onReadingCommitted: (commit: ReadingCommit): void => this.onReadingCommitted(commit),
           onChapterCommitted: (chapterIndex: number, chapterTitle: string): void =>
             this.onChapterCommitted(chapterIndex, chapterTitle),
+          onOpenDirectory: (): void => this.onOpenDirectory(),
+          onSwitchSource: (): void => this.onSwitchSource(),
+          onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
+          chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
+          onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
+            this.onCreateChapterStartBookmark(request),
         })
           .width('100%')
           .height('100%')
@@ -96,7 +118,13 @@ export struct ReaderShell {
           currentChapterIndex: this.directoryCurrentChapterIndex,
           isTablet: this.isTablet,
           sourceId: this.sourceId,
+          animateFromControl: this.directoryOpenedFromControl,
+          reduceMotion: this.reduceMotion,
           onSelectChapter: (chapterIndex: number): void => this.onSelectChapter(chapterIndex),
+          onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
+          chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
+          onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
+            this.onCreateChapterStartBookmark(request),
           onSwitchSource: (): void => this.onSwitchSource(),
           onExit: (): void => this.onCloseDirectory(),
         });
@@ -126,6 +154,8 @@ export struct ReaderShell {
     .width('100%')
     .height('100%')
     // 顶部 inset 本 Shell 自行管理 (Index 置 0): 阅读面与各 overlay 统一避让状态栏。
-    .padding({ top: px2vp(this.statusBarHeightPx) });
+    .padding({ top: px2vp(this.statusBarHeightPx) })
+    .opacity(this.visible ? 1 : 0)
+    .hitTestBehavior(this.visible ? HitTestMode.Default : HitTestMode.Transparent);
   }
 }

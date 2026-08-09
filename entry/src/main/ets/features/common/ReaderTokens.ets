@@ -19,6 +19,9 @@ export const TOK_PRIMARY_DARK = '#1F3528';
 export const TOK_GREEN = '#2D4A3E';
 // Figma: color/runtime/on/primary   主色上文字
 export const TOK_ON_PRIMARY = '#FFFAF4';
+// HarmonyOS calibration: 书架/搜索页头主色渐变起点 (Figma 页面实测渐变起色, 非正式变量)。
+// 两页共享 (BookshelfPage/SearchPage 同值 linearGradient 起点)。
+export const TOK_PRIMARY_GRADIENT_START = '#3D5A4C';
 // Figma: color/accent
 export const TOK_ACCENT = '#F48B13';
 
@@ -53,6 +56,9 @@ export const TOK_SURFACE_ELEVATED = '#C7FFFFFF';
 export const TOK_SURFACE_FIELD = '#C7FFF8EF';
 // Figma: color/runtime/surface/solid/near-opaque
 export const TOK_SURFACE_SOLID_OPAQUE = '#FAFFFCF8';
+// Figma: color/runtime/surface rgba(255,252,248,1.0) 固实表面 (Sync 卡/导入对话框/源字段)。
+// 与 TOK_SURFACE_SOLID_OPAQUE(0.98) 区分: 本值为 100% 不透明。
+export const TOK_SURFACE_SOLID = '#FFFCF8';
 // Figma: color/runtime/surface/translucent rgba(255,252,248,0.42)
 export const TOK_SURFACE_TRANSLUCENT = '#6BFFFCF8';
 // Figma: color/control/field/surface rgba(255,248,239,0.82)
@@ -100,8 +106,8 @@ export const TOK_META_BG = '#F5ECE6';
 export const TOK_SETTING_ICON_BG = '#172379A4';
 // HarmonyOS calibration: 设置内联动作按钮底 rgba(35,121,164,0.10)。
 export const TOK_SETTING_ACTION_BG = '#1A2379A4';
-// HarmonyOS calibration: Settings Home TopBar 水平内边距 (Figma 返回按钮定位 x:20)。
-export const TOK_SETTINGS_TOP_BAR_INSET = 20;
+// HarmonyOS calibration: 首页顶部栏 (AppTopBar) 水平内边距 (Figma 标题定位 x:20)。
+export const TOK_HOME_TOP_BAR_INSET = 20;
 
 // ----------------------------------------------------------------------------
 // Spacing — 间距刻度 (space/*)
@@ -157,22 +163,25 @@ export const TOK_CONTENT_RAIL_W_TABLET = 620;
 // ----------------------------------------------------------------------------
 // Figma: color/runtime/danger
 export const TOK_DANGER = '#D62222';
-// Figma: color/runtime/forest
-export const TOK_FOREST = '#367A4D';
 
 // ----------------------------------------------------------------------------
 // Motion — 动效参数
-// 上游方案 §十三 要求 Motion 分类。当前无正式动效设计值。
-// 未定义状态保持 UNSPECIFIED, 不复制默认值冒充完成状态。
-// Figma: motion (UNSPECIFIED — 动效设计在 Figma 侧仍搁置, 见 FIGMA_MOTION_IN_PROGRESS)
+// 动效的 duration/easing 不在此列 token, 统一注册于 ./MotionSpec.ets
+// (权威源 = Figma "25 · Motion Reference" MR1 Production Motion Contract)。
+// 此分类保留 UNSPECIFIED, 避免 token 与注册表双份权威。
 // ----------------------------------------------------------------------------
 
 // ----------------------------------------------------------------------------
 // Reader — 阅读调色板 (Reading Palette/Reading Scheme, 阅读层语义色)
 // 此前内联于 ReaderControlPanel 的 RC_* 常量, 现抽取为共享 token 供全部阅读浮层复用。
 // ----------------------------------------------------------------------------
-// Figma: reading ink  阅读主文字
+// Figma: reading ink  阅读控制层浮层文字 (dark surface 上次级文字)。
+// 与正文 TOK_READ_BODY_INK (#2B241D) 区分: 浮层较浅。
 export const TOK_READ_INK = '#332C25';
+// Figma: reading/palette/ink/day (Paper mode)  阅读正文 ink。
+// 页面级正文 #2B241D 收敛至此 (ReadingSurface 章节/正文、ReadingExperience 测量树、
+// CandidateRow 非当前行书名)。
+export const TOK_READ_BODY_INK = '#2B241D';
 // Figma: reading muted  阅读次级文字
 export const TOK_READ_MUTED = '#5B5046';
 // Figma: reading primary  阅读主色 (teal)

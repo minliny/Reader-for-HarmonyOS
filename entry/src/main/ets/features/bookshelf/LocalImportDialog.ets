@@ -11,6 +11,7 @@ import {
   TOK_SPACE_SM,
   TOK_SPACE_XS,
   TOK_BORDER_W,
+  TOK_SURFACE_SOLID,
 } from '../common/ReaderTokens';
 
 import { registerReaderFonts } from '../common/ReaderFonts';
@@ -22,8 +23,8 @@ export type LocalImportDialogState = 'fileSelection' | 'importing' | 'result';
  * State symbols: File Selection 2657:916 / Importing 2899:58923 / Import Result 2657:917.
  * Dialog container: 350 wide at x20, corner 20, shadow 0 25 50 -12 rgba(0,0,0,0.25),
  * File Selection 399.75 @y222.13 / Importing 228 @y308 / Result 636 @y104.
- * Titles are fixed Songti SC Bold text (2657:761 "导入本地书籍" / 2657:805 "导入结果"),
- * mapped to ReaderNotoSerifSCBold. Rebuilt 2026-08-06 against live Figma nodes.
+ * The title role at 2657:761 / 2657:805 is mapped by the current Figma file
+ * to Noto Serif SC Bold and rendered with `ReaderNotoSerifSCBold`.
  */
 @Component
 export struct LocalImportDialog {
@@ -176,7 +177,7 @@ export struct LocalImportDialog {
     }
     .width(350)
     .height(399.75)
-    .backgroundColor('#FFFCF8')
+    .backgroundColor(TOK_SURFACE_SOLID)
     .borderRadius(20)
     .shadow({ radius: 50, color: '#40000000', offsetX: 0, offsetY: 25 })
     .position({ x: 20, y: 222.13 });
@@ -213,7 +214,7 @@ export struct LocalImportDialog {
     .width(350)
     .height(228)
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor('#FFFCF8')
+    .backgroundColor(TOK_SURFACE_SOLID)
     .borderRadius(20)
     .shadow({ radius: 50, color: '#40000000', offsetX: 0, offsetY: 25 })
     .position({ x: 20, y: 308 });
@@ -263,7 +264,7 @@ export struct LocalImportDialog {
     .width(350)
     .height(636)
     .alignItems(HorizontalAlign.Start)
-    .backgroundColor('#FFFCF8')
+    .backgroundColor(TOK_SURFACE_SOLID)
     .borderRadius(20)
     .shadow({ radius: 50, color: '#40000000', offsetX: 0, offsetY: 25 })
     .position({ x: 20, y: 104 });
@@ -345,7 +346,7 @@ export struct LocalImportDialog {
     Column({ space: 0 }) {
       Row({ space: TOK_SPACE_SM }) {
         Stack({ alignContent: Alignment.Center }) {
-          Image($r('app.media.import_document')).width(16).height(16);
+          Image($r('app.media.import_doc')).width(16).height(16);
         }
         .width(32)
         .height(32)
