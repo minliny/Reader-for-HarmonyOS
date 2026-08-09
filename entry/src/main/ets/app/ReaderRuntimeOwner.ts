@@ -16,6 +16,11 @@ import {
 import { HarmonySystemTtsHost } from './HarmonySystemTtsHost';
 import { LocalEpubResourceHost } from './LocalEpubResourceHost';
 import { ReadingBodyImageHost, type ReadingBodyImagePayload } from './ReadingBodyImageHost';
+import {
+  ReadingImageDiskCache,
+  type ReadingImageCacheIdentity,
+  type ReadingImageChapterIdentity,
+} from './ReadingImageDiskCache';
 import { ArkWebExecutor } from './ArkWebExecutor';
 import { image } from '@kit.ImageKit';
 
@@ -36,6 +41,7 @@ export class ReaderRuntimeOwner {
   private readonly host: ReaderHostRegistry;
   private readonly ttsHost: HarmonySystemTtsHost;
   private readonly localEpubResourceHost: LocalEpubResourceHost;
+  private readonly readingImageDiskCache: ReadingImageDiskCache;
   private runtime: ReaderCoreRuntime | undefined = undefined;
   private startup: Promise<void> | undefined = undefined;
   /** Serializes background storage flushes with teardown. */
@@ -48,6 +54,7 @@ export class ReaderRuntimeOwner {
     this.host = new ReaderHostRegistry(context);
     this.ttsHost = new HarmonySystemTtsHost();
     this.localEpubResourceHost = new LocalEpubResourceHost(context);
+    this.readingImageDiskCache = new ReadingImageDiskCache(context);
   }
 
   static install(context: common.UIAbilityContext): ReaderRuntimeOwner {
@@ -125,8 +132,12 @@ export class ReaderRuntimeOwner {
    */
   async loadReadingImage(
     sourceId: string,
+    bookId: string,
+    chapterIndex: number,
+    contentVersion: string,
     imageUrl: string,
     baseUrl: string | undefined,
+    allowNetwork: boolean,
     shouldCancel?: () => boolean,
   ): Promise<ReadingBodyImagePayload> {
     this.assertReadingImageCurrent(shouldCancel);
@@ -138,6 +149,101 @@ export class ReaderRuntimeOwner {
       const localImage = await this.localEpubResourceHost.load(imageUrl);
       return this.admitReadingImage(localImage, shouldCancel);
     }
+    const identity = this.readingImageCacheIdentity(
+      sourceId,
+      bookId,
+      chapterIndex,
+      contentVersion,
+      imageUrl,
+      baseUrl,
+    );
+    const cachedBytes = await this.readingImageDiskCache.loadResource(identity);
+    if (cachedBytes !== undefined) {
+      try {
+        const cached = await ReadingBodyImageHost.instance.loadBytes(cachedBytes, shouldCancel);
+        return this.admitReadingImage(cached, shouldCancel);
+      } catch (error) {
+        await this.readingImageDiskCache.removeResource(identity);
+        if (!allowNetwork) {
+          throw error;
+        }
+      }
+    }
+    if (!allowNetwork) {
+      throw new Error('REMOTE_READING_IMAGE_NOT_DOWNLOADED');
+    }
+    const request = await this.resolveReadingImageRequest(sourceId, imageUrl, baseUrl, shouldCancel);
+    const bytes = await ReadingBodyImageHost.instance.fetchRequestBytes(request, shouldCancel);
+    const payload = await ReadingBodyImageHost.instance.loadBytes(bytes, shouldCancel);
+    try {
+      await this.readingImageDiskCache.storeResource(identity, bytes);
+    } catch (error) {
+      // An ordinary online read remains usable when persistent storage is
+      // full. Explicit offline prefetch uses the strict method below and
+      // surfaces the same write failure instead of publishing completion.
+      console.error(`Reader body image cache write failed: ${(error as Error).message}`);
+    }
+    return this.admitReadingImage(payload, shouldCancel);
+  }
+
+  /** Persist and decode-validate one image before an offline chapter completes. */
+  async prefetchReadingImage(
+    identity: ReadingImageCacheIdentity,
+    shouldCancel?: () => boolean,
+  ): Promise<void> {
+    this.assertReadingImageCurrent(shouldCancel);
+    const cachedBytes = await this.readingImageDiskCache.loadResource(identity);
+    if (cachedBytes !== undefined) {
+      try {
+        const payload = await ReadingBodyImageHost.instance.loadBytes(cachedBytes, shouldCancel);
+        ReadingBodyImageHost.instance.release(payload.pixelMap);
+        return;
+      } catch (_) {
+        await this.readingImageDiskCache.removeResource(identity);
+      }
+    }
+    const request = await this.resolveReadingImageRequest(
+      identity.sourceId,
+      identity.imageUrl,
+      identity.baseUrl,
+      shouldCancel,
+    );
+    const bytes = await ReadingBodyImageHost.instance.fetchRequestBytes(request, shouldCancel);
+    const payload = await ReadingBodyImageHost.instance.loadBytes(bytes, shouldCancel);
+    ReadingBodyImageHost.instance.release(payload.pixelMap);
+    this.assertReadingImageCurrent(shouldCancel);
+    await this.readingImageDiskCache.storeResource(identity, bytes);
+  }
+
+  async markOfflineImageChapterComplete(
+    chapter: ReadingImageChapterIdentity,
+    resources: ReadingImageCacheIdentity[],
+  ): Promise<void> {
+    await this.readingImageDiskCache.markChapterComplete(chapter, resources);
+  }
+
+  async isOfflineImageChapterComplete(chapter: ReadingImageChapterIdentity): Promise<boolean> {
+    return this.readingImageDiskCache.isChapterComplete(chapter);
+  }
+
+  async isOfflineImageChapterMaterialized(
+    sourceId: string,
+    bookId: string,
+    chapterIndex: number,
+  ): Promise<boolean> {
+    return this.readingImageDiskCache.isChapterMaterialized(sourceId, bookId, chapterIndex);
+  }
+
+  async clearOfflineBookImages(sourceId: string, bookId: string): Promise<void> {
+    await this.readingImageDiskCache.clearBook(sourceId, bookId);
+  }
+
+  private async resolveReadingImageRequest(
+    sourceId: string,
+    imageUrl: string,
+    baseUrl: string | undefined,
+    shouldCancel?: () => boolean,
+  ): Promise<JsonObject> {
     const params: JsonObject = { sourceId, imageUrl };
     if (baseUrl !== undefined && baseUrl.trim().length > 0) {
       params['baseUrl'] = baseUrl;
@@ -151,8 +257,18 @@ export class ReaderRuntimeOwner {
     if (request === null || typeof request !== 'object' || Array.isArray(request)) {
       throw new Error('source.imageRequest returned an invalid Host request descriptor');
     }
-    const payload = await ReadingBodyImageHost.instance.loadRequest(request as JsonObject, shouldCancel);
-    return this.admitReadingImage(payload, shouldCancel);
+    return request as JsonObject;
+  }
+
+  private readingImageCacheIdentity(
+    sourceId: string,
+    bookId: string,
+    chapterIndex: number,
+    contentVersion: string,
+    imageUrl: string,
+    baseUrl: string | undefined,
+  ): ReadingImageCacheIdentity {
+    return { sourceId, bookId, chapterIndex, contentVersion, imageUrl, baseUrl };
   }
 
   /** Release one Host-created native image after session eviction/teardown. */

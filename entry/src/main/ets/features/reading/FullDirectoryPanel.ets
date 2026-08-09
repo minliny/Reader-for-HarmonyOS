@@ -41,6 +41,7 @@ import { registerReaderFonts } from '../common/ReaderFonts';
 export struct FullDirectoryPanel {
   @Prop entries: LocalReadingTocEntry[] = [];
   @Prop currentChapterIndex: number = -1;
+  @Prop chapterDownloadEnabled: boolean = false;
   @Prop isTablet: boolean = false;
   // ReaderShell lays out below the status bar. Phone full-sheet geometry is
   // therefore capped by the real host viewport while retaining the Figma
@@ -54,6 +55,7 @@ export struct FullDirectoryPanel {
   // R-LOCAL-TOC-01: allow the owning flow to react to a chapter tap so the
   // full-directory can be wired back into the actual reading flow.
   onSelectChapter: (index: number) => void = (_index: number): void => {};
+  onDownloadChapter: (index: number) => void = (_index: number): void => {};
   // The marker is chapter-level while Core identities are bookmark-level.
   // Forward every existing identity represented by the marker so the owner
   // can perform explicit deletes and reload the projection without guessing.
@@ -373,8 +375,9 @@ export struct FullDirectoryPanel {
     .width(26)
     .height(26)
     .borderRadius(6)
-    .enabled(false)
-    .accessibilityText(this.downloadMarkerLabel(entry));
+    .enabled(this.chapterDownloadEnabled && this.downloadMarkerEnabled(entry))
+    .accessibilityText(this.downloadMarkerLabel(entry))
+    .onClick((): void => this.onDownloadChapter(entry.index));
   }
 
   @Builder
@@ -505,12 +508,36 @@ export struct FullDirectoryPanel {
   }
 
   private downloadMarker(entry: LocalReadingTocEntry): string {
-    return entry.downloadState === 'cached' || entry.downloadState === 'completed' ?
+    return entry.downloadState === 'completed' ?
       'reader_directory_marker_check' : 'reader_directory_marker_download';
   }
 
   private downloadMarkerLabel(entry: LocalReadingTocEntry): string {
-    return entry.downloadState === 'cached' || entry.downloadState === 'completed' ? '已下载' : '未下载';
+    if (entry.downloadState === 'completed' ||
+      (!this.chapterDownloadEnabled && entry.downloadState === 'cached')) {
+      return '已下载';
+    }
+    if (entry.downloadState === 'cached') {
+      return '正文已缓存，补齐离线资源';
+    }
+    if (entry.downloadState === 'queued') {
+      return '等待下载';
+    }
+    if (entry.downloadState === 'inProgress') {
+      return '下载中';
+    }
+    if (entry.downloadState === 'failed') {
+      return '下载失败，点按重试';
+    }
+    if (entry.downloadState === 'cancelled') {
+      return '下载已取消，点按重试';
+    }
+    return '未下载，点按下载';
+  }
+
+  private downloadMarkerEnabled(entry: LocalReadingTocEntry): boolean {
+    return entry.downloadState === 'missing' || entry.downloadState === 'cached' ||
+      entry.downloadState === 'failed' || entry.downloadState === 'cancelled';
   }
 
   private bookmarkMarkerEnabled(state: ReaderDirectoryBookmarkMarkerState): boolean {

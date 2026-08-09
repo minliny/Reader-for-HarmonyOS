@@ -24,8 +24,10 @@ import {
 export struct ReaderDirectoryModulePanel {
   @Prop entries: LocalReadingTocEntry[] = [];
   @Prop currentChapterIndex: number = -1;
+  @Prop chapterDownloadEnabled: boolean = false;
   @State private activeTab: string = 'directory';
   onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
+  onDownloadChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   // A filled chapter marker represents every existing Core bookmark projected
   // onto that chapter. An empty marker may emit only the exact chapter-start
   // request; the owner adds book identity and reloads after Core confirmation.
@@ -176,8 +178,9 @@ export struct ReaderDirectoryModulePanel {
     .width(26)
     .height(26)
     .borderRadius(6)
-    .enabled(false)
-    .accessibilityText(this.downloadMarkerLabel(entry));
+    .enabled(this.chapterDownloadEnabled && this.downloadMarkerEnabled(entry))
+    .accessibilityText(this.downloadMarkerLabel(entry))
+    .onClick((): void => this.onDownloadChapter(entry.index));
   }
 
   @Builder
@@ -262,12 +265,36 @@ export struct ReaderDirectoryModulePanel {
   }
 
   private downloadMarker(entry: LocalReadingTocEntry): string {
-    return entry.downloadState === 'cached' || entry.downloadState === 'completed' ?
+    return entry.downloadState === 'completed' ?
       'reader_directory_marker_check' : 'reader_directory_marker_download';
   }
 
   private downloadMarkerLabel(entry: LocalReadingTocEntry): string {
-    return entry.downloadState === 'cached' || entry.downloadState === 'completed' ? '已下载' : '未下载';
+    if (entry.downloadState === 'completed' ||
+      (!this.chapterDownloadEnabled && entry.downloadState === 'cached')) {
+      return '已下载';
+    }
+    if (entry.downloadState === 'cached') {
+      return '正文已缓存，补齐离线资源';
+    }
+    if (entry.downloadState === 'queued') {
+      return '等待下载';
+    }
+    if (entry.downloadState === 'inProgress') {
+      return '下载中';
+    }
+    if (entry.downloadState === 'failed') {
+      return '下载失败，点按重试';
+    }
+    if (entry.downloadState === 'cancelled') {
+      return '下载已取消，点按重试';
+    }
+    return '未下载，点按下载';
+  }
+
+  private downloadMarkerEnabled(entry: LocalReadingTocEntry): boolean {
+    return entry.downloadState === 'missing' || entry.downloadState === 'cached' ||
+      entry.downloadState === 'failed' || entry.downloadState === 'cancelled';
   }
 
   private bookmarkMarker(entry: LocalReadingTocEntry): string {

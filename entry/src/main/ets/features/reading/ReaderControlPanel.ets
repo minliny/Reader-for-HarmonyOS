@@ -140,6 +140,7 @@ export struct ReaderControlPanel {
   @Prop tocEntries: LocalReadingTocEntry[] = [];
   @Prop currentChapterIndex: number = -1;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
+  @Prop chapterDownloadEnabled: boolean = false;
   @Prop searchQuery: string = '';
   @Prop searchState: ReaderQuickSearchState = { kind: 'idle' };
   @Prop brightnessPercent: number = 100;
@@ -164,6 +165,7 @@ export struct ReaderControlPanel {
   onPageChange: (page: ReaderControlPage) => void = (_page: ReaderControlPage): void => {};
   onModuleSelect: (module: string) => void = (_module: string): void => {};
   onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
+  onDownloadChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   onDeleteBookmarks: (bookmarkTimes: number[]) => void = (_bookmarkTimes: number[]): void => {};
   onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void =
     (_request: ReaderDirectoryChapterStartBookmarkRequest): void => {};
@@ -793,8 +795,10 @@ export struct ReaderControlPanel {
         ReaderDirectoryModulePanel({
           entries: this.tocEntries,
           currentChapterIndex: this.currentChapterIndex,
+          chapterDownloadEnabled: this.chapterDownloadEnabled,
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
           onSelectChapter: (chapterIndex: number): void => this.onSelectChapter(chapterIndex),
+          onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
           onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
             this.onCreateChapterStartBookmark(request),

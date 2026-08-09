@@ -42,6 +42,7 @@ export struct ReaderFullDirectory {
   // R-LOCAL-TOC-01: forward the chapter tap from the panel body to the
   // owning flow so a full-directory tap actually enters that chapter.
   onSelectChapter: (index: number) => void = (_index: number): void => {};
+  onDownloadChapter: (index: number) => void = (_index: number): void => {};
   // The owning reading session performs the Core mutation and refreshes the
   // projected TOC. This overlay only forwards exact existing bookmark ids.
   onDeleteBookmarks: (bookmarkTimes: number[]) => void = (_bookmarkTimes: number[]): void => {};
@@ -91,9 +92,11 @@ export struct ReaderFullDirectory {
         FullDirectoryPanel({
           entries: this.entries,
           currentChapterIndex: this.currentChapterIndex,
+          chapterDownloadEnabled: this.sourceId !== 'local',
           isTablet: this.isTablet,
           panelHeightOverride: this.fullPanelHeight(),
           onSelectChapter: (index: number): void => this.onSelectChapter(index),
+          onDownloadChapter: (index: number): void => this.onDownloadChapter(index),
           onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>

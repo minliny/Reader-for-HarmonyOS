@@ -399,6 +399,7 @@ export struct ReadingExperience {
   onOpenDirectory: () => void = (): void => {};
   onSwitchSource: () => void = (): void => {};
   onDeleteBookmarks: (bookmarkTimes: number[]) => void = (_bookmarkTimes: number[]): void => {};
+  onDownloadChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void =
     (_request: ReaderDirectoryChapterStartBookmarkRequest): void => {};
@@ -642,6 +643,7 @@ export struct ReadingExperience {
         tocEntries: this.controlDirectoryEntries(),
         currentChapterIndex: this.currentChapterIndex(),
         chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
+        chapterDownloadEnabled: this.remoteSession !== undefined,
         searchQuery: this.quickSearchQuery,
         searchState: this.quickSearchState,
         brightnessPercent: this.brightnessPercent,
@@ -672,6 +674,7 @@ export struct ReadingExperience {
         onPageChange: (page: ReaderControlPage): void => this.setControlPage(page),
         onModuleSelect: (_module: string): void => {},
         onSelectChapter: (chapterIndex: number): void => this.selectControlChapter(chapterIndex),
+        onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
         onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
         onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
           this.onCreateChapterStartBookmark(request),
@@ -1482,7 +1485,7 @@ export struct ReadingExperience {
     this.cancelMeasurementDeadline();
     const isCurrent = (): boolean =>
       this.isMeasurementCurrent(generation, selectionToken, lifecycleToken);
-    void this.activeGateway().resolveReadingImage(image, isCurrent)
+    void this.activeGateway().resolveReadingImage(this.requireChapter(), image, isCurrent)
       .then((resolved: ReadingSessionImage): void => {
         if (!isCurrent()) {
           this.releaseUnadmittedReadingImage(resolved);

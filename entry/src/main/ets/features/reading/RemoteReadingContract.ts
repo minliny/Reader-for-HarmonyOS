@@ -2,12 +2,14 @@ import type { JsonObject } from '@reader/core-harmony';
 
 export type RemoteReadingCommand =
   'book.detail' | 'book.toc' | 'chapter.content' |
-  'reading.progress.get' | 'reader.location.resolve' | 'reading.progress.update';
+  'reading.progress.get' | 'reader.location.resolve' | 'reading.progress.update' |
+  'cache.book.status';
 
 export type RemoteReadingErrorCode =
   'invalidInput' | 'unsupportedHostCapability' | 'invalidResponse' |
   'identityMismatch' | 'missingTocUrl' | 'emptyToc' |
-  'chapterNotFound' | 'nonTextChapter' | 'commandFailed';
+  'chapterNotFound' | 'chapterNotDownloaded' | 'cachedSessionUnavailable' |
+  'nonTextChapter' | 'commandFailed';
 
 export type RemoteReadingHostCapabilityId =
   'httpExecute' | 'responseCharsetDecoding' | 'platformCookieJar' |

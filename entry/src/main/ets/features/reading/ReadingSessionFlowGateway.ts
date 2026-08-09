@@ -177,9 +177,13 @@ export class ReadingSessionFlowGateway {
    * stable failed block, not a failed chapter; stale requests still cancel.
    */
   async resolveReadingImage(
+    chapter: ReadingSessionChapter,
     image: ReadingSessionImage,
     isCurrent?: () => boolean,
   ): Promise<ReadingSessionImage> {
+    if (chapter.sourceId !== this.sourceId || chapter.bookId !== this.bookId) {
+      throw new Error('reading image chapter identity mismatch');
+    }
     if (image.state !== 'pending') {
       return image;
     }
@@ -189,8 +193,12 @@ export class ReadingSessionFlowGateway {
     try {
       const payload = await this.runtimeOwner.loadReadingImage(
         this.sourceId,
+        this.bookId,
+        chapter.chapterIndex,
+        chapter.contentVersion,
         image.source,
         image.baseUrl,
+        this.source.kind !== 'remote' || this.source.session.acquisitionMode !== 'offline',
         isCurrent,
       );
       if (isCurrent !== undefined && !isCurrent()) {

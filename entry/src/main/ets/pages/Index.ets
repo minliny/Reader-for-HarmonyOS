@@ -33,6 +33,7 @@ import {
   type RemoteReadingBookSeed,
   type RemoteReadingSession,
 } from '../features/reading/RemoteReadingFlowGateway';
+import { ReadingOfflineGateway } from '../features/reading/ReadingOfflineGateway';
 import type { RemoteReadingVariable } from '../features/reading/RemoteReadingContract';
 import type {
   ReaderDirectoryChapterStartBookmarkRequest,
@@ -180,6 +181,9 @@ struct Index {
   /** Prevents repeated marker taps from issuing duplicate bookmark mutations. */
   private directoryBookmarkMutationGeneration: number = 0;
   private directoryBookmarkMutationActiveKey: string = '';
+  /** One UI mutation gate over Core's already-durable download queue. */
+  private offlineMutationGeneration: number = 0;
+  private offlineMutationActiveKey: string = '';
   /** Rejects a late shelf read after a newer import/refresh has completed. */
   private bookshelfLoadGeneration: number = 0;
   private searchOrchestrator: SearchOrchestrator | undefined;
@@ -459,6 +463,7 @@ struct Index {
             this.applyDirectoryChapter(chapterIndex, chapterTitle);
           },
           onSelectChapter: (chapterIndex: number): void => this.onDirectoryChapterSelected(chapterIndex),
+          onDownloadChapter: (chapterIndex: number): void => this.downloadDirectoryChapter(chapterIndex),
           onDeleteBookmarks: (bookmarkTimes: number[]): void => this.deleteDirectoryBookmarks(bookmarkTimes),
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
             this.createDirectoryChapterStartBookmark(request),
@@ -1238,9 +1243,20 @@ struct Index {
     this.remoteReadingSession = undefined;
     const owner = ReaderRuntimeOwner.current();
     const gateway = new RemoteReadingFlowGateway(owner);
+    const offline = new ReadingOfflineGateway(owner);
     const bookshelf = new ReaderCoreGateway(owner);
     const isCurrent = (): boolean => generation === this.navigationGeneration;
+    this.offlineMutationGeneration += 1;
+    this.offlineMutationActiveKey = '';
     void gateway.openSession(seed, { isCurrent })
+      .catch(async (onlineError: Error): Promise<RemoteReadingSession> => {
+        if (!isCurrent()) {
+          throw onlineError;
+        }
+        hilog.warn(DOMAIN, 'Reader',
+          'Online detail unavailable; attempting exact cached session: %{public}s', onlineError.message);
+        return gateway.openCachedSession(seed, isCurrent);
+      })
       .then(async (session: RemoteReadingSession): Promise<void> => {
         if (!isCurrent()) {
           return;
@@ -1308,11 +1324,68 @@ struct Index {
         this.directoryCurrentChapterIndex = -1;
         this.directoryChapterTitle = '';
         this.route = 'detail';
+        void offline.loadProjection(session, isCurrent)
+          .then((entries: LocalReadingTocEntry[]): void => {
+            if (isCurrent() && this.remoteReadingSession === session) {
+              this.detailToc = entries;
+            }
+          })
+          .catch((error: Error): void => {
+            if (isCurrent()) {
+              hilog.error(DOMAIN, 'Reader',
+                'Remote download projection failed: %{public}s', error.message);
+            }
+          });
       })
       .catch((error: Error): void => {
         if (isCurrent()) {
           hilog.error(DOMAIN, 'Reader',
             'Remote Book Detail state failed to load: %{public}s', error.message);
+        }
+      });
+  }
+
+  private downloadDirectoryChapter(chapterIndex: number): void {
+    const session = this.remoteReadingSession;
+    if (session === undefined || !this.isKnownDetailChapter(chapterIndex) ||
+      this.offlineMutationActiveKey.length > 0) {
+      return;
+    }
+    const generation = ++this.offlineMutationGeneration;
+    const key = `${session.identity.sourceId}\u0000${session.identity.bookId}\u0000${chapterIndex}`;
+    this.offlineMutationActiveKey = key;
+    this.detailToc = this.detailToc.map((entry: LocalReadingTocEntry): LocalReadingTocEntry =>
+      entry.index === chapterIndex ? {
+        index: entry.index,
+        title: entry.title,
+        downloadState: 'queued',
+        bookmarks: entry.bookmarks,
+      } : entry);
+    const isCurrent = (): boolean => generation === this.offlineMutationGeneration &&
+      this.remoteReadingSession?.identity.sourceId === session.identity.sourceId &&
+      this.remoteReadingSession?.identity.bookId === session.identity.bookId;
+    void new ReadingOfflineGateway(ReaderRuntimeOwner.current())
+      .prefetchChapter(session, chapterIndex, isCurrent)
+      .then((entries: LocalReadingTocEntry[]): void => {
+        if (isCurrent()) {
+          this.detailToc = entries;
+        }
+      })
+      .catch((error: Error): void => {
+        if (isCurrent()) {
+          this.detailToc = this.detailToc.map((entry: LocalReadingTocEntry): LocalReadingTocEntry =>
+            entry.index === chapterIndex ? {
+              index: entry.index,
+              title: entry.title,
+              downloadState: 'failed',
+              bookmarks: entry.bookmarks,
+            } : entry);
+          hilog.error(DOMAIN, 'Reader', 'Chapter offline download failed: %{public}s', error.message);
+        }
+      })
+      .finally((): void => {
+        if (generation === this.offlineMutationGeneration && this.offlineMutationActiveKey === key) {
+          this.offlineMutationActiveKey = '';
         }
       });
   }

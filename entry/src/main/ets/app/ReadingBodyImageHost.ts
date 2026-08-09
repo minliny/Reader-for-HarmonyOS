@@ -24,8 +24,8 @@ const MAX_READING_IMAGE_DIMENSION = 4096;
  * work ArkUI pagination needs: bounded byte validation, intrinsic dimensions,
  * and one decoded PixelMap. Base64 is accepted only as a transient JSON
  * transport representation for remote/data-URI images; it is never retained
- * in reading-session state. This adapter owns no retry queue, disk cache, or
- * alternate URL semantics.
+ * in reading-session state. Durable offline bytes remain owned by the narrow
+ * ReadingImageDiskCache; this decoder owns no queue or URL semantics.
  */
 export class ReadingBodyImageHost {
   static readonly instance: ReadingBodyImageHost = new ReadingBodyImageHost();
@@ -34,6 +34,14 @@ export class ReadingBodyImageHost {
     request: JsonObject,
     isCurrent?: () => boolean,
   ): Promise<ReadingBodyImagePayload> {
+    return this.decodeBytes(await this.fetchRequestBytes(request, isCurrent), isCurrent);
+  }
+
+  /** Fetch bounded response bytes without allocating a PixelMap. */
+  async fetchRequestBytes(
+    request: JsonObject,
+    isCurrent?: () => boolean,
+  ): Promise<Uint8Array> {
     this.assertCurrent(isCurrent);
     const response = await HttpExecuteHost.instance.execute(
       request,
@@ -49,7 +57,12 @@ export class ReadingBodyImageHost {
     if (typeof bodyBase64 !== 'string' || bodyBase64.length === 0) {
       throw new Error('reading body image response did not contain bytes');
     }
-    return this.decodeBase64(bodyBase64, isCurrent);
+    const bytes = new util.Base64Helper().decodeSync(bodyBase64, util.Type.MIME);
+    this.assertCurrent(isCurrent);
+    if (bytes.length === 0 || bytes.length > MAX_READING_IMAGE_BYTES) {
+      throw new Error(`reading body image must contain 1..${MAX_READING_IMAGE_BYTES} bytes`);
+    }
+    return bytes;
   }
 
   async loadDataUri(value: string, isCurrent?: () => boolean): Promise<ReadingBodyImagePayload> {

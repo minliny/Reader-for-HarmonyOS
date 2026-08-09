@@ -57,6 +57,7 @@ export struct ReaderShell {
   onChapterCommitted: (chapterIndex: number, chapterTitle: string) => void =
     (_chapterIndex: number, _chapterTitle: string): void => {};
   onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
+  onDownloadChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   onDeleteBookmarks: (bookmarkTimes: number[]) => void = (_bookmarkTimes: number[]): void => {};
   onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void =
     (_request: ReaderDirectoryChapterStartBookmarkRequest): void => {};
@@ -95,6 +96,7 @@ export struct ReaderShell {
             this.onChapterCommitted(chapterIndex, chapterTitle),
           onOpenDirectory: (): void => this.onOpenDirectory(),
           onSwitchSource: (): void => this.onSwitchSource(),
+          onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
           onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
@@ -121,6 +123,7 @@ export struct ReaderShell {
           animateFromControl: this.directoryOpenedFromControl,
           reduceMotion: this.reduceMotion,
           onSelectChapter: (chapterIndex: number): void => this.onSelectChapter(chapterIndex),
+          onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
           onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>

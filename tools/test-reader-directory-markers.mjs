@@ -16,7 +16,10 @@ assert.match(modulePanel, /this\.activeTab = 'bookmarks'/);
 assert.match(modulePanel, /if \(this\.activeTab === 'directory'\) \{\s*return this\.entries;/);
 assert.match(modulePanel, /if \(this\.hasBookmark\(entry\)\) \{\s*bookmarkedEntries\.push\(entry\);/);
 assert.match(modulePanel, /private downloadMarkerHitTarget\(entry: LocalReadingTocEntry\)/);
-assert.match(modulePanel, /\.enabled\(false\)\s*\.accessibilityText\(this\.downloadMarkerLabel\(entry\)\)/);
+assert.match(modulePanel, /chapterDownloadEnabled: boolean = false/);
+assert.match(modulePanel, /\.enabled\(this\.chapterDownloadEnabled && this\.downloadMarkerEnabled\(entry\)\)/);
+assert.match(modulePanel, /\.onClick\(\(\): void => this\.onDownloadChapter\(entry\.index\)\)/);
+assert.match(modulePanel, /entry\.downloadState === 'missing' \|\| entry\.downloadState === 'cached'/);
 assert.match(modulePanel, /private bookmarkMarkerHitTarget\(entry: LocalReadingTocEntry\)/);
 assert.match(modulePanel, /onDeleteBookmarks: \(bookmarkTimes: number\[\]\) => void/);
 assert.match(modulePanel, /onCreateChapterStartBookmark: \(request: ReaderDirectoryChapterStartBookmarkRequest\) => void/);
@@ -35,7 +38,9 @@ assert.match(fullPanel, /onCreateChapterStartBookmark: \(request: ReaderDirector
 assert.match(fullPanel, /chapterStartBookmarkCreationEnabled: boolean = false/);
 assert.match(fullPanel, /this\.onDeleteBookmarks\(markerState\.bookmarkTimes\)/);
 assert.match(fullPanel, /this\.onCreateChapterStartBookmark\(markerState\.createRequest\)/);
-assert.match(fullPanel, /\.enabled\(false\)\s*\.accessibilityText\(this\.downloadMarkerLabel\(entry\)\)/);
+assert.match(fullPanel, /chapterDownloadEnabled: boolean = false/);
+assert.match(fullPanel, /\.enabled\(this\.chapterDownloadEnabled && this\.downloadMarkerEnabled\(entry\)\)/);
+assert.match(fullPanel, /\.onClick\(\(\): void => this\.onDownloadChapter\(entry\.index\)\)/);
 assert.match(fullPanel, /\.accessibilityText\(`打开章节：\$\{entry\.title\}`\)\s*\.onClick\(\(\): void => this\.onSelectChapter\(entry\.index\)\)/);
 
 const fullDirectory = read('entry/src/main/ets/features/reading/ReaderFullDirectory.ets');
@@ -44,6 +49,8 @@ assert.match(fullDirectory, /onDeleteBookmarks: \(bookmarkTimes: number\[\]\): v
 assert.match(fullDirectory, /chapterStartBookmarkCreationEnabled: boolean = false/);
 assert.match(fullDirectory, /onCreateChapterStartBookmark: \(request: ReaderDirectoryChapterStartBookmarkRequest\) => void/);
 assert.match(fullDirectory, /chapterStartBookmarkCreationEnabled: this\.chapterStartBookmarkCreationEnabled/);
+assert.match(fullDirectory, /chapterDownloadEnabled: this\.sourceId !== 'local'/);
+assert.match(fullDirectory, /onDownloadChapter: \(index: number\): void => this\.onDownloadChapter\(index\)/);
 
 const gateway = read('entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
 assert.match(gateway, /async createChapterStartBookmark\(/);
@@ -58,6 +65,7 @@ assert.doesNotMatch(gateway, /request\('cache\.book\.prefetch'/);
 const index = read('entry/src/main/ets/pages/Index.ets');
 assert.match(index, /private directoryBookmarkMutationGeneration: number = 0/);
 assert.match(index, /private directoryBookmarkMutationActiveKey: string = ''/);
+assert.match(index, /new ReadingOfflineGateway\(ReaderRuntimeOwner\.current\(\)\)[\s\S]*\.prefetchChapter\(session, chapterIndex, isCurrent\)/);
 assert.match(index, /private beginDirectoryBookmarkMutation\(book: ReadingBookDetail\): number/,
   'bookmark mutation identity must accept the shared detail model while remaining local-source gated');
 assert.match(index, /if \(this\.directoryBookmarkMutationActiveKey === key\) \{\s*return -1;/,

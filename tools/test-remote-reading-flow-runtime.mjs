@@ -37,9 +37,22 @@ const calls = [];
 const PIXEL_MAP = { fixture: 'pixel-map' };
 
 class FakeRemoteReadingRuntime {
-  async loadReadingImage(sourceId, imageUrl, baseUrl, shouldStayCurrent) {
+  async loadReadingImage(
+    sourceId,
+    bookId,
+    chapterIndex,
+    contentVersion,
+    imageUrl,
+    baseUrl,
+    allowNetwork,
+    shouldStayCurrent,
+  ) {
     assert.equal(sourceId, SOURCE_ID);
+    assert.equal(bookId, BOOK_ID);
+    assert.equal(chapterIndex, 0);
+    assert.equal(contentVersion, previousChapter.contentVersion);
     assert.equal(baseUrl, '/chapter/1');
+    assert.equal(allowNetwork, true);
     if (shouldStayCurrent !== undefined && !shouldStayCurrent()) {
       throw new Error('reading body image request was cancelled');
     }
@@ -257,19 +270,19 @@ const pendingImage = {
   intrinsicHeight: 0,
   revision: 'pending',
 };
-const readyImage = await readingSessionGateway.resolveReadingImage(pendingImage, isCurrent);
+const readyImage = await readingSessionGateway.resolveReadingImage(previousChapter, pendingImage, isCurrent);
 assert.equal(readyImage.state, 'ready');
 assert.equal(readyImage.pixelMap, PIXEL_MAP);
 assert.equal(readyImage.intrinsicWidth, 320);
 assert.equal(readyImage.revision, 'image-r1');
-const failedImage = await readingSessionGateway.resolveReadingImage({
+const failedImage = await readingSessionGateway.resolveReadingImage(previousChapter, {
   ...pendingImage,
   source: 'failed.png',
 }, isCurrent);
 assert.equal(failedImage.state, 'failed', 'one failed image must not reject its chapter');
 assert.equal(failedImage.pixelMap, undefined);
 await assert.rejects(
-  readingSessionGateway.resolveReadingImage(pendingImage, () => false),
+  readingSessionGateway.resolveReadingImage(previousChapter, pendingImage, () => false),
   /cancelled/,
   'a stale image request must cancel instead of publishing a failed placeholder',
 );
@@ -296,7 +309,7 @@ const staleImageGateway = new ReadingSessionFlowGateway(
   },
 );
 await assert.rejects(
-  staleImageGateway.resolveReadingImage(pendingImage, () => imageStillCurrent),
+  staleImageGateway.resolveReadingImage(previousChapter, pendingImage, () => imageStillCurrent),
   /cancelled/,
   'an image that becomes stale after decode must not publish its native handle',
 );
