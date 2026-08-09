@@ -87,6 +87,7 @@ import {
   type SourceSwitchCommitOutcome,
   type SourceSwitchDiscoveryOutcome,
   type SourceSwitchRollbackResult,
+  type SourceSwitchRollbackToken,
   type SourceSwitchTargetToc,
 } from '../features/source/SourceSwitchGateway';
 import { SourceManagementPage } from '../features/source/SourceManagementPage';
@@ -112,6 +113,31 @@ type PreparedReaderRoute = 'reading' | 'directory';
 type DirectoryReturnTarget = 'detail' | 'readerControl';
 type RssDetailReturnTarget = 'rss' | 'rssSourceFeed';
 type RssSourceFeedReturnTarget = 'rss' | 'rssSubscriptionManagement';
+
+class PendingSourceSwitchTransaction {
+  fromSourceId: string;
+  fromBookId: string;
+  targetSourceId: string;
+  targetBookId: string;
+  targetChapterIndex: number;
+  rollbackToken: SourceSwitchRollbackToken;
+
+  constructor(
+    fromSourceId: string,
+    fromBookId: string,
+    targetSourceId: string,
+    targetBookId: string,
+    targetChapterIndex: number,
+    rollbackToken: SourceSwitchRollbackToken,
+  ) {
+    this.fromSourceId = fromSourceId;
+    this.fromBookId = fromBookId;
+    this.targetSourceId = targetSourceId;
+    this.targetBookId = targetBookId;
+    this.targetChapterIndex = targetChapterIndex;
+    this.rollbackToken = rollbackToken;
+  }
+}
 
 class LocalImportPresentation {
   state: LocalImportDialogState;
@@ -171,6 +197,9 @@ struct Index {
   @State private sourceSwitchVisible: boolean = false;
   @State private sourceSwitchState: SourceSwitchPanelState = { kind: 'discovering' };
   private sourceSwitchGateway: SourceSwitchGateway | undefined;
+  /** Retained until the target chapter's first measured progress commit. */
+  private pendingSourceSwitch: PendingSourceSwitchTransaction | undefined = undefined;
+  private sourceSwitchRollbackInFlight: boolean = false;
   /**
    * Keeps the single reader instance mounted behind Local Book Detail while
    * it measures and persists its first real page.  The Figma ReadingSurface
@@ -459,6 +488,8 @@ struct Index {
           },
           onReadingReady: (chapterIndex: number): void => this.presentPreparedReading(chapterIndex),
           onReadingCommitted: (commit: ReadingCommit): void => this.applyReadingCommit(commit),
+          onReadingFailure: (sourceId: string, bookId: string, message: string): void =>
+            this.onReadingFailure(sourceId, bookId, message),
           onChapterCommitted: (chapterIndex: number, chapterTitle: string): void => {
             this.applyDirectoryChapter(chapterIndex, chapterTitle);
           },
@@ -1336,11 +1367,27 @@ struct Index {
                 'Remote download projection failed: %{public}s', error.message);
             }
           });
+        const pending = this.pendingSourceSwitch;
+        if (pending !== undefined && pending.targetSourceId === session.identity.sourceId &&
+          pending.targetBookId === session.identity.bookId) {
+          if (!this.isKnownDetailChapter(pending.targetChapterIndex)) {
+            this.rollbackPendingSourceSwitch('TARGET_MATCHED_CHAPTER_MISSING');
+            return;
+          }
+          // Reuse the normal reader. Its first-page callback is the commit
+          // barrier that finalizes this switch transaction below.
+          this.openReading(pending.targetChapterIndex);
+        }
       })
       .catch((error: Error): void => {
         if (isCurrent()) {
           hilog.error(DOMAIN, 'Reader',
             'Remote Book Detail state failed to load: %{public}s', error.message);
+          const pending = this.pendingSourceSwitch;
+          if (pending !== undefined && pending.targetSourceId === seed.sourceId &&
+            pending.targetBookId === seed.bookId) {
+            this.rollbackPendingSourceSwitch(error.message);
+          }
         }
       });
   }
@@ -1779,6 +1826,14 @@ struct Index {
           return;
         }
         if (outcome.status === 'success') {
+          this.pendingSourceSwitch = new PendingSourceSwitchTransaction(
+            book.sourceId,
+            book.bookId,
+            outcome.book.sourceId,
+            outcome.book.bookId,
+            outcome.matchedChapter.order,
+            outcome.rollbackToken,
+          );
           this.sourceSwitchState = { kind: 'success' };
           this.performSourceSwitchSeam(outcome.book);
           return;
@@ -1846,6 +1901,11 @@ struct Index {
     if (!this.sourceSwitchVisible) {
       return;
     }
+    if (this.sourceSwitchState.kind === 'switching') {
+      // Closing after Core has entered the atomic commit but before the token
+      // is retained could strand a migrated shelf row without compensation.
+      return;
+    }
     this.nextNavigationGeneration();
     this.sourceSwitchVisible = false;
     this.sourceSwitchState = { kind: 'discovering' };
@@ -1854,8 +1914,59 @@ struct Index {
   private performSourceSwitchSeam(book: ShelfBook): void {
     this.sourceSwitchVisible = false;
     this.sourceSwitchState = { kind: 'discovering' };
-    this.refreshBookshelf();
     this.reopenSwitchedBook(book);
+  }
+
+  private onReadingFailure(sourceId: string, bookId: string, message: string): void {
+    const pending = this.pendingSourceSwitch;
+    if (pending === undefined || pending.targetSourceId !== sourceId || pending.targetBookId !== bookId) {
+      return;
+    }
+    this.rollbackPendingSourceSwitch(message);
+  }
+
+  private rollbackPendingSourceSwitch(reason: string): void {
+    const pending = this.pendingSourceSwitch;
+    if (pending === undefined || this.sourceSwitchRollbackInFlight) {
+      return;
+    }
+    this.sourceSwitchRollbackInFlight = true;
+    hilog.warn(DOMAIN, 'Reader',
+      'Source switch target admission failed; rolling back: %{public}s', reason);
+    const gateway = this.getSourceSwitchGateway();
+    void gateway.rollbackSwitch(
+      pending.rollbackToken,
+      (): boolean => this.pendingSourceSwitch === pending,
+    )
+      .then((result: SourceSwitchRollbackResult): void => {
+        if (this.pendingSourceSwitch !== pending) {
+          return;
+        }
+        this.pendingSourceSwitch = undefined;
+        this.sourceSwitchVisible = false;
+        this.sourceSwitchState = { kind: 'discovering' };
+        this.refreshBookshelf();
+        this.reopenSwitchedBook(result.restoredBook);
+      })
+      .catch((error: Error): void => {
+        if (this.pendingSourceSwitch !== pending) {
+          return;
+        }
+        hilog.error(DOMAIN, 'Reader', 'Source switch automatic rollback failed: %{public}s', error.message);
+        // Core rejects stale compensation rather than overwriting newer
+        // progress. Return to the canonical shelf projection; retain the token
+        // in memory for the existing explicit rollback path.
+        this.sourceSwitchVisible = false;
+        this.sourceSwitchState = {
+          kind: 'failure',
+          message: error.message,
+          rollbackToken: pending.rollbackToken,
+        };
+        this.returnToBookshelf();
+      })
+      .finally((): void => {
+        this.sourceSwitchRollbackInFlight = false;
+      });
   }
 
   private reopenSwitchedBook(book: ShelfBook): void {
@@ -1890,8 +2001,23 @@ struct Index {
       this.detailBook?.sourceId !== commit.sourceId || this.detailBook?.bookId !== commit.bookId) {
       return;
     }
-    // `reading.progress.update` has completed in ReadingExperience. A
-    // fresh shelf query is the only source of the Continue Reading state.
+    const pending = this.pendingSourceSwitch;
+    if (pending !== undefined && pending.targetSourceId === commit.sourceId &&
+      pending.targetBookId === commit.bookId && pending.targetChapterIndex === commit.chapterIndex) {
+      this.pendingSourceSwitch = undefined;
+      this.sourceSwitchRollbackInFlight = false;
+      // The target has now loaded, paginated, and durably committed its first
+      // canonical scalar anchor. Old per-book body/image caches are no longer
+      // reachable and can be cleared without touching the source-wide cookie
+      // session that other books may share.
+      void new ReadingOfflineGateway(ReaderRuntimeOwner.current())
+        .clearBookIdentity(pending.fromSourceId, pending.fromBookId)
+        .catch((error: Error): void => {
+          hilog.warn(DOMAIN, 'Reader', 'Old source book cache cleanup failed: %{public}s', error.message);
+        });
+    }
+    // `reading.progress.update` has completed in ReadingExperience. A fresh
+    // shelf query is the only source of the Continue Reading state.
     this.refreshBookshelf();
   }
 

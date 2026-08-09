@@ -58,9 +58,17 @@ export type SourceSwitchCommitParams = {
   updatedAt: number;
 };
 
+/** Core-owned opaque compensation journal. Harmony only retains and echoes it. */
+export type SourceSwitchRollbackToken = JsonObject;
+
 export type SourceSwitchCommitOutcome =
-  | { status: 'success'; book: ShelfBook; rollbackToken: string }
-  | { status: 'failed'; error: string; rollbackToken?: string };
+  | {
+    status: 'success';
+    book: ShelfBook;
+    matchedChapter: SourceSwitchNewTocEntry;
+    rollbackToken: SourceSwitchRollbackToken;
+  }
+  | { status: 'failed'; error: string; rollbackToken?: SourceSwitchRollbackToken };
 
 export type SourceSwitchRollbackResult = {
   restoredBook: ShelfBook;
@@ -232,10 +240,9 @@ export class SourceSwitchGateway {
   }
 
   /**
-   * Atomically re-points the shelf book to the target source. Storage-only
-   * command (no `http.execute`), but today fails with INVALID_PARAMS because
-   * the `from` remote shelf entry does not exist yet — surfaced as
-   * `{ok:false}` without a rollback token.
+   * Atomically re-points an existing shelf book to the target source. This is
+   * a storage-only command; its structured rollback journal stays opaque to
+   * Harmony and remains live until the target reader commits its first page.
    */
   async commitSwitch(
     params: SourceSwitchCommitParams,
@@ -264,10 +271,16 @@ export class SourceSwitchGateway {
       if (typeof rawBook !== 'object' || rawBook === null || Array.isArray(rawBook)) {
         throw new Error('source.switch.commit returned an invalid book');
       }
-      if (typeof rawToken !== 'string' || rawToken.length === 0) {
+      if (typeof rawToken !== 'object' || rawToken === null || Array.isArray(rawToken)) {
         throw new Error('source.switch.commit returned an invalid rollback token');
       }
-      return { status: 'success', book: this.decodeShelfBook(rawBook), rollbackToken: rawToken };
+      const matchedChapter = this.decodeMatchedChapter(result.data['matchedChapter']);
+      return {
+        status: 'success',
+        book: this.decodeShelfBook(rawBook),
+        matchedChapter,
+        rollbackToken: rawToken as JsonObject,
+      };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return { status: 'failed', error: message };
@@ -279,10 +292,12 @@ export class SourceSwitchGateway {
    * tokens are rejected by Core (the current reader state was overwritten).
    */
   async rollbackSwitch(
-    rollbackToken: string,
+    rollbackToken: SourceSwitchRollbackToken,
     isCurrent: (() => boolean) | undefined = undefined,
   ): Promise<SourceSwitchRollbackResult> {
-    this.assertNonBlankString(rollbackToken, 'rollbackToken');
+    if (typeof rollbackToken !== 'object' || rollbackToken === null || Array.isArray(rollbackToken)) {
+      throw new Error('rollbackToken must be a Core rollback journal object');
+    }
     const result = await this.runtimeOwner.request(
       'source.switch.rollback',
       { rollbackToken },
@@ -293,6 +308,16 @@ export class SourceSwitchGateway {
       throw new Error('source.switch.rollback returned an invalid restored book');
     }
     return { restoredBook: this.decodeShelfBook(rawBook) };
+  }
+
+  private decodeMatchedChapter(value: unknown): SourceSwitchNewTocEntry {
+    const chapter = this.requireObject(value, 'source.switch matchedChapter');
+    return {
+      chapterId: this.requireString(chapter, 'chapterId', 'source.switch matchedChapter'),
+      chapterTitle: this.requireString(chapter, 'chapterTitle', 'source.switch matchedChapter'),
+      chapterUrl: this.requireString(chapter, 'chapterUrl', 'source.switch matchedChapter'),
+      order: this.requireNonNegativeInteger(chapter, 'order', 'source.switch matchedChapter'),
+    };
   }
 
   private requestOptions(isCurrent: (() => boolean) | undefined): RequestOptions {

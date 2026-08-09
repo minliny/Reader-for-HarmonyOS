@@ -54,6 +54,8 @@ export struct ReaderShell {
   onExit: () => void = (): void => {};
   onReadingReady: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   onReadingCommitted: (commit: ReadingCommit) => void = (_commit: ReadingCommit): void => {};
+  onReadingFailure: (sourceId: string, bookId: string, message: string) => void =
+    (_sourceId: string, _bookId: string, _message: string): void => {};
   onChapterCommitted: (chapterIndex: number, chapterTitle: string) => void =
     (_chapterIndex: number, _chapterTitle: string): void => {};
   onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
@@ -92,6 +94,8 @@ export struct ReaderShell {
           onExit: (): void => this.onExit(),
           onReadingReady: (chapterIndex: number): void => this.onReadingReady(chapterIndex),
           onReadingCommitted: (commit: ReadingCommit): void => this.onReadingCommitted(commit),
+          onReadingFailure: (sourceId: string, bookId: string, message: string): void =>
+            this.onReadingFailure(sourceId, bookId, message),
           onChapterCommitted: (chapterIndex: number, chapterTitle: string): void =>
             this.onChapterCommitted(chapterIndex, chapterTitle),
           onOpenDirectory: (): void => this.onOpenDirectory(),

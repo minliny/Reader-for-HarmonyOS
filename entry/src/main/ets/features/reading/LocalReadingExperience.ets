@@ -388,6 +388,8 @@ export struct ReadingExperience {
   */
   onReadingReady: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   onReadingCommitted: (commit: ReadingCommit) => void = (_commit: ReadingCommit): void => {};
+  onReadingFailure: (sourceId: string, bookId: string, message: string) => void =
+    (_sourceId: string, _bookId: string, _message: string): void => {};
   /**
    * Reports a chapter only after its first physical page has been measured and
    * its Unicode-scalar anchor has been accepted by Core.  Full Directory may
@@ -3498,6 +3500,7 @@ export struct ReadingExperience {
     this.measurementGeneration += 1;
     this.measurementSelectionToken = -1;
     console.error(`ReadingExperience failed: ${this.failureCode}`);
+    this.onReadingFailure(this.sourceId, this.bookId, this.failureCode);
     // Figma has no admitted error surface. Leave via the same serialized exit
     // path instead of retaining a blank/failed page.
     this.beginExit();

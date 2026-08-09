@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { stripTypeScriptTypes } from 'node:module';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const gateway = readFileSync(
@@ -29,5 +30,61 @@ assert.doesNotMatch(fetchTargetToc, /'book\.toc',\s*\{\s*sourceId,\s*bookId\s*\}
 assert.match(gateway, /private requireStringMap\([\s\S]*typeof variableValue !== 'string'/);
 assert.match(gateway, /candidate\.trim\(\)\.length === 0/);
 assert.match(gateway, /'change\.bookSource',[\s\S]*\{ sourceId, bookId, keyword, sourceIds \}/);
+assert.match(gateway, /typeof rawToken !== 'object' \|\| rawToken === null \|\| Array\.isArray\(rawToken\)/);
+assert.match(gateway, /const matchedChapter = this\.decodeMatchedChapter\(result\.data\['matchedChapter'\]\)/);
+assert.match(gateway, /\{ rollbackToken \}/,
+  'the Core-owned structured rollback journal must be echoed without string conversion');
+
+const executable = stripTypeScriptTypes(
+  gateway
+    .replace(/^import type \{ JsonObject, RequestOptions \} from ['"]@reader\/core-harmony['"];$/m, '')
+    .replace(/^import \{ ReaderRuntimeOwner \} from ['"]\.\.\/\.\.\/app\/ReaderRuntimeOwner['"];$/m, '')
+    .replace(/^import type \{ ShelfBook \} from ['"]\.\.\/\.\.\/app\/ReaderCoreGateway['"];$/m, ''),
+);
+const moduleUrl = `data:text/javascript;base64,${Buffer.from(executable).toString('base64')}`;
+const { SourceSwitchGateway } = await import(moduleUrl);
+const rollbackToken = {
+  oldBook: { sourceId: 'old', bookId: 'old-book' },
+  committedBook: { sourceId: 'new', bookId: 'new-book' },
+};
+const runtime = {
+  async request(method, params) {
+    if (method === 'source.switch.commit') {
+      return { data: {
+        book: {
+          sourceId: 'new', bookId: 'new-book', title: 'Book', author: 'Author', addedAt: 1,
+        },
+        matchedChapter: {
+          chapterId: '/chapter/4', chapterTitle: 'Chapter 4', chapterUrl: '/chapter/4', order: 4,
+        },
+        rollbackToken,
+      } };
+    }
+    if (method === 'source.switch.rollback') {
+      assert.strictEqual(params.rollbackToken, rollbackToken,
+        'rollback must echo the same structured Core journal object');
+      return { data: {
+        restoredBook: {
+          sourceId: 'old', bookId: 'old-book', title: 'Book', author: 'Author', addedAt: 1,
+        },
+      } };
+    }
+    throw new Error(`unexpected method: ${method}`);
+  },
+};
+const liveGateway = new SourceSwitchGateway(runtime);
+const committed = await liveGateway.commitSwitch({
+  from: { sourceId: 'old', bookId: 'old-book' },
+  target: { sourceId: 'new', bookId: 'new-book', title: 'Book' },
+  newToc: [{ chapterId: '/chapter/4', chapterTitle: 'Chapter 4', chapterUrl: '/chapter/4', order: 4 }],
+  currentChapterTitle: 'Chapter 4',
+  currentChapterIndex: 4,
+  updatedAt: 1,
+});
+assert.equal(committed.status, 'success');
+assert.strictEqual(committed.rollbackToken, rollbackToken);
+assert.equal(committed.matchedChapter.order, 4);
+const rolledBack = await liveGateway.rollbackSwitch(committed.rollbackToken);
+assert.equal(rolledBack.restoredBook.sourceId, 'old');
 
 console.log('source-switch gateway contract: PASS');

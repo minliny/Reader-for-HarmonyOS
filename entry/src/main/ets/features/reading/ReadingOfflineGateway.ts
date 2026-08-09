@@ -111,14 +111,29 @@ export class ReadingOfflineGateway {
   }
 
   async clearBook(session: RemoteReadingSession, isCurrent?: OfflineRequestGuard): Promise<void> {
+    return this.clearBookIdentity(
+      session.identity.sourceId,
+      session.identity.bookId,
+      isCurrent,
+    );
+  }
+
+  async clearBookIdentity(
+    sourceId: string,
+    bookId: string,
+    isCurrent?: OfflineRequestGuard,
+  ): Promise<void> {
+    if (sourceId.trim().length === 0 || bookId.trim().length === 0) {
+      throw new Error('offline book identity must be non-blank');
+    }
     if (this.runtime.clearOfflineBookImages === undefined) {
       throw new Error('offline reading image clear capability is unavailable');
     }
     this.assertCurrent(isCurrent);
     const result = await this.runtime.request('cache.clear', {
       scope: 'book',
-      sourceId: session.identity.sourceId,
-      bookId: session.identity.bookId,
+      sourceId,
+      bookId,
     }, this.requestOptions(isCurrent));
     if (result.data['scope'] !== 'book') {
       throw new Error('cache.clear did not confirm the exact book scope');
@@ -126,7 +141,7 @@ export class ReadingOfflineGateway {
     this.assertCurrent(isCurrent);
     // Core clears first, so a Host cleanup failure can only leave unreachable
     // files; retrying the same exact book clear remains safe and monotonic.
-    await this.runtime.clearOfflineBookImages(session.identity.sourceId, session.identity.bookId);
+    await this.runtime.clearOfflineBookImages(sourceId, bookId);
     this.assertCurrent(isCurrent);
   }
 

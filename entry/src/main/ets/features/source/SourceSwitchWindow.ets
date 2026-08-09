@@ -1,5 +1,6 @@
 import { CandidateRow } from './CandidateRow';
 import type { SourceSwitchCandidate } from './SourceSwitchGateway';
+import type { SourceSwitchRollbackToken } from './SourceSwitchGateway';
 import {
   TOK_BORDER,
   TOK_BORDER_W,
@@ -60,7 +61,7 @@ export interface SourceSwitchSuccessState {
 export interface SourceSwitchFailureState {
   kind: 'failure';
   message: string;
-  rollbackToken?: string;
+  rollbackToken?: SourceSwitchRollbackToken;
 }
 
 export type SourceSwitchPanelState =
