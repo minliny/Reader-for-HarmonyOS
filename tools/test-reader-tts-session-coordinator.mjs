@@ -2,15 +2,16 @@ import assert from 'node:assert/strict';
 
 import { ReaderTtsSessionCoordinator } from '../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts';
 
-const chapter = { sourceId: 'local', bookId: 'book-1', chapterIndex: 0, chapterTitle: '第一章' };
+const chapter = { sourceId: 'source-1', bookId: 'book-1', chapterIndex: 0, chapterTitle: '第一章' };
+const canonicalRemoteContent = '第一句。\n\n\uFFFC\n\n第二句。';
 const plan = {
   chapter,
   strategy: 'paragraph-then-sentence',
   slices: [
     { index: 0, text: '第一句。', charStart: 0, charEnd: 4, paragraphIndex: 0 },
-    { index: 1, text: '第二句。', charStart: 4, charEnd: 8, paragraphIndex: 0 },
+    { index: 1, text: '第二句。', charStart: 9, charEnd: 13, paragraphIndex: 1 },
   ],
-  sourceCharCount: 8,
+  sourceCharCount: 13,
 };
 
 class FakeGateway {
@@ -62,7 +63,7 @@ const coordinator = new ReaderTtsSessionCoordinator(
   async update => { progress.push(update.charEnd); },
 );
 
-await coordinator.start({ chapter, content: '第一句。第二句。', contentVersion: 1, scalarPosition: 4 });
+await coordinator.start({ chapter, content: canonicalRemoteContent, contentVersion: 1, scalarPosition: 6 });
 assert.equal(coordinator.getState().status, 'preparing', 'speak() return is not audible start');
 assert.equal(host.requests[0].text, '第二句。');
 assert.ok(gateway.calls.includes('rate:5'));
@@ -80,11 +81,11 @@ assert.equal(progress.length, 0, 'synthesis completion cannot advance');
 host.emit({ type: 'complete', requestId, completion: 'audio' });
 host.emit({ type: 'complete', requestId, completion: 'audio' });
 await coordinator.whenSettled();
-assert.deepEqual(progress, [8], 'duplicate completion must commit once');
+assert.deepEqual(progress, [13], 'duplicate completion must commit one canonical scalar end');
 assert.equal(coordinator.getState().status, 'completed');
 assert.equal(gateway.calls.filter(call => call === 'next').length, 1);
 
-await coordinator.start({ chapter, content: '第一句。第二句。', contentVersion: 2, scalarPosition: 0 });
+await coordinator.start({ chapter, content: canonicalRemoteContent, contentVersion: 2, scalarPosition: 0 });
 const staleRequestId = host.requests.at(-1).requestId;
 await coordinator.pause();
 host.emit({ type: 'start', requestId: staleRequestId });

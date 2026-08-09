@@ -238,6 +238,13 @@ assert.equal(previousChapter.sourceId, SOURCE_ID);
 assert.equal(previousChapter.bookId, BOOK_ID);
 assert.equal(previousChapter.extractionVia, 'rule');
 assert.match(previousChapter.contentVersion, /^reader-content-v1:/);
+assert.equal(
+  Array.from(previousChapter.content)
+    .slice(matches[0].chapterOffset, matches[0].chapterOffset + matches[0].matchLength)
+    .join(''),
+  'remote',
+  'an online search result must select the exact scalar range rendered by the shared ReadingDocument',
+);
 
 const pendingImage = {
   source: 'body.png',
