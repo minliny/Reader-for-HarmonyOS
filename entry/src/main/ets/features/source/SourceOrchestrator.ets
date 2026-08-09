@@ -144,6 +144,45 @@ export class SourceOrchestrator {
       });
   }
 
+  /** Open the source-owned login/challenge URL on the shared Host session. */
+  loginSource(id: string): void {
+    const source = this.sources.find((candidate: BookSource): boolean => candidate.sourceId === id);
+    if (source === undefined || source.loginUrl === undefined || this.checkingSourceIds.has(id)) {
+      return;
+    }
+    const loginUrl = source.loginUrl;
+    const session = this.session;
+    this.checkingSourceIds.add(id);
+    this.setCheckProjection(id, 'checking', [], '等待登录 / 验证');
+    this.operationChain = this.operationChain
+      .then(async (): Promise<void> => {
+        await this.owner.openSourceLogin(source.sourceId, loginUrl, source.name);
+        if (!this.isCurrentSession(session)) {
+          return;
+        }
+        const outcome = await this.gateway.checkSource(
+          source.sourceId,
+          (): boolean => this.isCurrentSession(session),
+        );
+        if (this.isCurrentSession(session)) {
+          this.applySourceCheckOutcome(outcome);
+        }
+      })
+      .catch((error: Error): void => {
+        if (this.isCurrentSession(session)) {
+          this.setCheckProjection(id, 'unchecked', [], '登录 / 验证已取消');
+        }
+        hilog.warn(DOMAIN, 'Reader',
+          'Source login/challenge ended without completion: sourceId=%{public}s err=%{public}s',
+          id, error.message);
+      })
+      .finally((): void => {
+        if (session === this.session) {
+          this.checkingSourceIds.delete(id);
+        }
+      });
+  }
+
   /**
    * Select and import one production Legado JSON document. The task joins the
    * same serialized mutation chain as toggles so Core never sees overlapping
@@ -284,6 +323,7 @@ export class SourceOrchestrator {
           baseUrl: source.baseUrl,
           enabled,
           enabledExplore: source.enabledExplore,
+          loginUrl: source.loginUrl,
           checkState: source.checkState,
           checkLevels: source.checkLevels,
           checkMessage: source.checkMessage,
@@ -357,6 +397,7 @@ export class SourceOrchestrator {
       baseUrl: source.baseUrl,
       enabled: source.enabled,
       enabledExplore: source.enabledExplore,
+      loginUrl: source.loginUrl,
       checkState: state,
       checkLevels: levels,
       checkMessage: message,
@@ -442,6 +483,7 @@ export class SourceOrchestrator {
         baseUrl: source.baseUrl,
         enabled: source.enabled,
         enabledExplore: source.enabledExplore,
+        loginUrl: source.loginUrl,
         checkState: checked?.checkState ?? source.checkState ?? 'unchecked',
         checkLevels: checked?.checkLevels ?? source.checkLevels ?? [],
         checkMessage: checked?.checkMessage ?? source.checkMessage,

@@ -7,6 +7,7 @@ export type BookSource = {
   baseUrl: string;
   enabled: boolean;
   enabledExplore: boolean;
+  loginUrl?: string;
   checkState?: 'unchecked' | 'checking' | 'passed' | 'failed';
   checkLevels?: string[];
   checkMessage?: string;
@@ -58,6 +59,11 @@ export class SourceGateway {
       const sourceId = this.optionalString(source, 'sourceId');
       const name = this.optionalString(source, 'name');
       const baseUrl = this.optionalString(source, 'baseUrl');
+      const rawBookSource = source['bookSource'];
+      let loginUrl: string | undefined = undefined;
+      if (rawBookSource !== null && typeof rawBookSource === 'object' && !Array.isArray(rawBookSource)) {
+        loginUrl = this.optionalString(rawBookSource as JsonObject, 'loginUrl');
+      }
       if (sourceId === undefined || name === undefined) {
         continue;
       }
@@ -67,6 +73,7 @@ export class SourceGateway {
         baseUrl: baseUrl ?? '',
         enabled: source['enabled'] === true,
         enabledExplore: source['enabledExplore'] === true,
+        loginUrl,
       });
     }
     return sources;

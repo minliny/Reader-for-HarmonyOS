@@ -12,6 +12,7 @@ import {
 } from '@reader/core-harmony';
 import { HttpExecuteHost } from './HttpExecuteHost';
 import { CookieSessionStore } from './CookieSessionStore';
+import { ArkWebExecutor } from './ArkWebExecutor';
 
 type SnapshotEncoding = 'value' | 'valueBase64';
 
@@ -123,6 +124,13 @@ export class ReaderHostRegistry {
     router.register('cookie.set', (event: ReaderCoreHostRequestEvent): Promise<JsonObject> => {
       return CookieSessionStore.instance.setCapability(event.params);
     });
+    router.register('webview.evaluateJavaScript',
+      (event: ReaderCoreHostRequestEvent): Promise<JsonObject> => {
+        return ArkWebExecutor.instance.execute(event.params, event.requestId);
+      },
+      (event: ReaderCoreHostRequestEvent): void => {
+        ArkWebExecutor.instance.cancel(event.requestId);
+      });
     return router;
   }
 

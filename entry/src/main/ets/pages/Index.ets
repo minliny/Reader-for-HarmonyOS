@@ -97,6 +97,7 @@ import type { SyncSnapshot } from '../features/sync/SyncGateway';
 import { SyncOrchestrator } from '../features/sync/SyncOrchestrator';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import deviceInfo from '@ohos.deviceInfo';
+import { ArkWebExecutionHost } from '../app/ArkWebExecutionHost';
 
 const DOMAIN = 0x5244;
 const IMPORT_PRESENTATION_KEY = 'reader.bookshelf.import.presentation.v1';
@@ -395,6 +396,7 @@ struct Index {
           onBack: (): void => this.returnToSettings(),
           onToggleSource: (id: string, enabled: boolean): void => this.onSourceToggled(id, enabled),
           onDetectSource: (id: string): void => this.onSourceDetectionRequested(id),
+          onLoginSource: (id: string): void => this.onSourceLoginRequested(id),
           onAddSource: (): void => this.onBookSourceImportRequested(),
         });
       } else if (this.route === 'sync') {
@@ -477,6 +479,9 @@ struct Index {
           onClose: (): void => this.closeImportDialog(),
         });
       }
+      // Host capability surface only: mounted for ArkWeb controller lifecycle,
+      // never used as the reading-body renderer.
+      ArkWebExecutionHost()
     }
       .width('100%')
       .height('100%')
@@ -659,6 +664,10 @@ struct Index {
 
   private onSourceDetectionRequested(id: string): void {
     this.getSourceOrchestrator().checkSource(id);
+  }
+
+  private onSourceLoginRequested(id: string): void {
+    this.getSourceOrchestrator().loginSource(id);
   }
 
   private onBookSourceImportRequested(): void {

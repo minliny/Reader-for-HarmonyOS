@@ -16,6 +16,7 @@ import {
 import { HarmonySystemTtsHost } from './HarmonySystemTtsHost';
 import { LocalEpubResourceHost } from './LocalEpubResourceHost';
 import { ReadingBodyImageHost, type ReadingBodyImagePayload } from './ReadingBodyImageHost';
+import { ArkWebExecutor } from './ArkWebExecutor';
 
 type RuntimeState = 'new' | 'starting' | 'ready' | 'closing' | 'closed';
 
@@ -104,6 +105,15 @@ export class ReaderRuntimeOwner {
    */
   async clearSourceCookieSession(sourceId: string): Promise<void> {
     await this.host.clearSourceCookieSession(sourceId);
+  }
+
+  /** Open a user-operated source login/challenge page on the shared Host jar. */
+  async openSourceLogin(sourceId: string, loginUrl: string, sourceName: string): Promise<void> {
+    await ArkWebExecutor.instance.openInteractive(
+      loginUrl,
+      sourceId,
+      `${sourceName} · 登录 / 验证`,
+    );
   }
 
   /**
@@ -284,6 +294,7 @@ export class ReaderRuntimeOwner {
           'http.execute',
           'cookie.get',
           'cookie.set',
+          'webview.evaluateJavaScript',
         ],
         platform: 'harmonyos',
       }, { timeoutMs: 5000 });

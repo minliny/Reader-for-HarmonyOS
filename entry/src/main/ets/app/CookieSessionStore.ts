@@ -30,6 +30,26 @@ type PersistedCookieEnvelope = {
   cookies: StoredCookie[];
 };
 
+export type ArkWebCookieSeed = {
+  name: string;
+  domain: string;
+  path: string;
+  url: string;
+  header: string;
+};
+
+export type ArkWebObservedCookie = {
+  name: string;
+  value: string;
+  domain: string;
+  path: string;
+  expiresAt?: string;
+  secure: boolean;
+  httpOnly: boolean;
+  sameSite?: 'Strict' | 'Lax' | 'None';
+  hostOnly: boolean;
+};
+
 /**
  * Host-owned cookie/session boundary shared by HTTP and the later ArkWeb
  * executor. Core supplies only an opaque session id; ArkUI never sees or
@@ -189,6 +209,104 @@ export class CookieSessionStore {
     if (persistentChanged) {
       await this.schedulePersist();
     }
+  }
+
+  /** Seed ArkWeb's incognito jar without exposing cookies to ArkUI. */
+  async arkWebSeeds(sessionId: string): Promise<ArkWebCookieSeed[]> {
+    await this.ensureLoaded();
+    const normalizedSessionId = this.requireSessionId(sessionId);
+    const now = Date.now();
+    await this.removeExpiredAndPersist(now);
+    const seeds: ArkWebCookieSeed[] = [];
+    for (const cookie of this.cookies) {
+      if (cookie.sessionId !== normalizedSessionId) {
+        continue;
+      }
+      const attributes: string[] = [`${cookie.name}=${cookie.value}`, `Path=${cookie.path}`];
+      if (!cookie.hostOnly) {
+        attributes.push(`Domain=${cookie.domain}`);
+      }
+      if (cookie.expiresAtMs !== null) {
+        attributes.push(`Expires=${new Date(cookie.expiresAtMs).toUTCString()}`);
+      }
+      if (cookie.secure) {
+        attributes.push('Secure');
+      }
+      if (cookie.httpOnly) {
+        attributes.push('HttpOnly');
+      }
+      if (cookie.sameSite !== null) {
+        attributes.push(`SameSite=${cookie.sameSite}`);
+      }
+      seeds.push({
+        name: cookie.name,
+        domain: cookie.domain,
+        path: cookie.path,
+        url: this.arkWebSeedUrl(cookie.domain, cookie.path),
+        header: attributes.join('; '),
+      });
+    }
+    return seeds;
+  }
+
+  /**
+   * Reconcile the incognito ArkWeb task back into the same source-scoped jar.
+   * Only identities seeded into this task are removed when absent; cookies on
+   * unrelated source domains remain untouched.
+   */
+  async reconcileArkWebCookies(
+    sessionId: string,
+    seeds: ArkWebCookieSeed[],
+    observed: ArkWebObservedCookie[],
+  ): Promise<void> {
+    await this.ensureLoaded();
+    const normalizedSessionId = this.requireSessionId(sessionId);
+    let persistentChanged = false;
+    for (let index = this.cookies.length - 1; index >= 0; index -= 1) {
+      const cookie = this.cookies[index];
+      if (cookie.sessionId !== normalizedSessionId || !seeds.some((seed: ArkWebCookieSeed): boolean => {
+        return seed.name === cookie.name && seed.domain === cookie.domain && seed.path === cookie.path;
+      })) {
+        continue;
+      }
+      persistentChanged = persistentChanged || cookie.expiresAtMs !== null;
+      this.cookies.splice(index, 1);
+    }
+    for (const record of observed) {
+      const domain = this.normalizeDomain(record.domain);
+      const path = this.normalizePath(record.path);
+      const sameSite = this.normalizeSameSite(record.sameSite);
+      if (sameSite === 'None' && !record.secure) {
+        continue;
+      }
+      const cookie: StoredCookie = {
+        sessionId: normalizedSessionId,
+        name: this.requireCookieName(record.name),
+        value: record.value,
+        domain,
+        path,
+        expiresAtMs: this.parseWireExpiry(record.expiresAt),
+        secure: record.secure,
+        httpOnly: record.httpOnly,
+        sameSite,
+        hostOnly: record.hostOnly,
+        createdAt: this.nextCreationSequence(),
+      };
+      persistentChanged = this.upsert(cookie) || persistentChanged;
+    }
+    if (persistentChanged) {
+      await this.schedulePersist();
+    }
+  }
+
+  /**
+   * ArkWeb requires a URL whose host accepts the Set-Cookie line. HTTPS is a
+   * safe seed origin for both Secure and non-Secure cookies; later navigation
+   * still applies each cookie's own Secure/Domain/Path constraints.
+   */
+  private arkWebSeedUrl(domain: string, path: string): string {
+    const host = domain.indexOf(':') !== -1 && !domain.startsWith('[') ? `[${domain}]` : domain;
+    return `https://${host}${path}`;
   }
 
   private ensureLoaded(): Promise<void> {

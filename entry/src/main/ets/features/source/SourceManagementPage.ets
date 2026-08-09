@@ -53,6 +53,7 @@ export struct SourceManagementPage {
   onBack: () => void = (): void => {};
   onToggleSource: (id: string, enabled: boolean) => void = (_id: string, _enabled: boolean): void => {};
   onDetectSource: (id: string) => void = (_id: string): void => {};
+  onLoginSource: (id: string) => void = (_id: string): void => {};
   onAddSource: () => void = (): void => {};
   @State private groupValue: string = '全部分组';
   @State private groupOpen: boolean = false;
@@ -296,12 +297,16 @@ export struct SourceManagementPage {
 
       this.sourceSwitch(source.enabled, (): void => this.onToggleSource(source.sourceId, !source.enabled));
 
-      Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.bookshelf_more')).width(20).height(20);
+      if (source.loginUrl !== undefined) {
+        this.loginButton(source);
+      } else {
+        Stack({ alignContent: Alignment.Center }) {
+          Image($r('app.media.bookshelf_more')).width(20).height(20);
+        }
+        .width(44)
+        .height(44)
+        .borderRadius(22);
       }
-      .width(44)
-      .height(44)
-      .borderRadius(22);
     }
     .width(this.contentWidth())
     .height(70)
@@ -331,6 +336,24 @@ export struct SourceManagementPage {
         this.onDetectSource(source.sourceId);
       }
     });
+  }
+
+  @Builder
+  private loginButton(source: BookSource) {
+    Stack({ alignContent: Alignment.Center }) {
+      Text('登录')
+        .fontFamily('ReaderNotoSansSC')
+        .fontWeight(FontWeight.Bold)
+        .fontSize(11)
+        .fontColor(TOK_PRIMARY_DARK)
+        .maxLines(1);
+    }
+    .width(44)
+    .height(28)
+    .borderRadius(7)
+    .backgroundColor(TOK_CARD_BG)
+    .border({ width: TOK_BORDER_W, color: CHIP_BORDER })
+    .onClick((): void => this.onLoginSource(source.sourceId));
   }
 
   @Builder
