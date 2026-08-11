@@ -14,8 +14,12 @@ import {
   EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT,
   type BookshelfManagementSnapshot,
 } from '../features/bookshelf/BookshelfManagementOrchestrator';
-import { DiscoverPage, type DiscoverPresentation } from '../features/discover/DiscoverPage';
-import { DiscoverGateway } from '../features/discover/DiscoverGateway';
+import { DiscoverPage } from '../features/discover/DiscoverPage';
+import {
+  DiscoverOrchestrator,
+  EMPTY_DISCOVER_PRESENTATION,
+  type DiscoverPresentation,
+} from '../features/discover/DiscoverOrchestrator';
 import { BookshelfEmptyPage } from '../features/bookshelf/BookshelfEmptyPage';
 import { LocalBookDetail } from '../features/bookshelf/LocalBookDetail';
 import {
@@ -199,7 +203,7 @@ struct Index {
   @State private rssEditorSnapshot: RssSubscriptionEditorSnapshot = EMPTY_RSS_EDITOR_SNAPSHOT;
   @State private sourceSources: BookSource[] = [];
   @State private sourceToolsSnapshot: SourceToolsSnapshot = EMPTY_SOURCE_TOOLS_SNAPSHOT;
-  @State private discoverPresentation: DiscoverPresentation = { currentSourceName: '', kinds: [], books: [] };
+  @State private discoverPresentation: DiscoverPresentation = EMPTY_DISCOVER_PRESENTATION;
   @State private settingsSnapshot: SettingsSnapshot = {
     autoCheckUpdate: true,
     tapBottomScrollTop: true,
@@ -242,6 +246,7 @@ struct Index {
   /** Rejects a late shelf read after a newer import/refresh has completed. */
   private bookshelfLoadGeneration: number = 0;
   private searchOrchestrator: SearchOrchestrator | undefined;
+  private discoverOrchestrator: DiscoverOrchestrator | undefined;
   private bookshelfManagementOrchestrator: BookshelfManagementOrchestrator | undefined;
   private settingsOrchestrator: SettingsOrchestrator | undefined;
   private syncOrchestrator: SyncOrchestrator | undefined;
@@ -482,6 +487,11 @@ struct Index {
           onBack: (): void => this.returnToBookshelf(),
           onRssRequested: (): void => this.openRss(),
           onSettingsRequested: (): void => this.openSettings(),
+          onRefresh: (): void => this.getDiscoverOrchestrator().refresh(),
+          onCycleSource: (): void => this.getDiscoverOrchestrator().cycleSource(),
+          onSelectKind: (index: number): void => this.getDiscoverOrchestrator().selectKind(index),
+          onPreviousPage: (): void => this.getDiscoverOrchestrator().previousPage(),
+          onNextPage: (): void => this.getDiscoverOrchestrator().nextPage(),
         });
       } else if (this.route === 'settings') {
         SettingsPage({
@@ -682,41 +692,19 @@ struct Index {
     this.readingExitRequest = undefined;
     this.exitToBookshelfAfterReader = false;
     this.route = 'discover';
-    void this.loadDiscover();
+    this.getDiscoverOrchestrator().open();
   }
 
-  private async loadDiscover(): Promise<void> {
-    const generation = this.navigationGeneration;
-    let source: BookSource | undefined;
-    try {
-      const sources = await new SourceGateway(ReaderRuntimeOwner.current()).loadSources();
-      for (const s of sources) {
-        if (s.enabled && s.enabledExplore) {
-          source = s;
-          break;
-        }
-      }
-    } catch (error) {
-      source = undefined;
+  private getDiscoverOrchestrator(): DiscoverOrchestrator {
+    if (this.discoverOrchestrator === undefined) {
+      this.discoverOrchestrator = new DiscoverOrchestrator(
+        (presentation: DiscoverPresentation): void => {
+          this.discoverPresentation = presentation;
+        },
+        (): boolean => this.route === 'discover',
+      );
     }
-    if (source === undefined) {
-      if (this.isCurrentRoute(generation, 'discover')) {
-        this.discoverPresentation = { currentSourceName: '', kinds: [], books: [] };
-      }
-      return;
-    }
-    const gateway = new DiscoverGateway(ReaderRuntimeOwner.current());
-    try {
-      const kinds = await gateway.loadExploreKinds(source.sourceId);
-      const books = kinds.length > 0 ? await gateway.loadExplore(source.sourceId, kinds[0].url) : [];
-      if (this.isCurrentRoute(generation, 'discover')) {
-        this.discoverPresentation = { currentSourceName: source.name, kinds, books };
-      }
-    } catch (error) {
-      if (this.isCurrentRoute(generation, 'discover')) {
-        this.discoverPresentation = { currentSourceName: source.name, kinds: [], books: [] };
-      }
-    }
+    return this.discoverOrchestrator;
   }
 
   private openSettings(): void {

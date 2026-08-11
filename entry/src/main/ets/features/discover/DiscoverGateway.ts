@@ -15,6 +15,11 @@ export type DiscoverBook = {
   intro: string;
 };
 
+export type DiscoverSource = {
+  sourceId: string;
+  name: string;
+};
+
 /**
  * Feature-local gateway for Discover. Owns the `source.exploreKinds` and
  * `source.explore` boundary. Both commands need a stored + enabled source that
@@ -50,8 +55,11 @@ export class DiscoverGateway {
     return kinds;
   }
 
-  async loadExplore(sourceId: string, url: string): Promise<DiscoverBook[]> {
-    const result = await this.runtimeOwner.request('source.explore', { sourceId, url });
+  async loadExplore(sourceId: string, url: string, page: number): Promise<DiscoverBook[]> {
+    if (!Number.isSafeInteger(page) || page < 1) {
+      throw new Error('source.explore page must be a positive safe integer');
+    }
+    const result = await this.runtimeOwner.request('source.explore', { sourceId, url, page });
     const raw = result.data['books'];
     if (!Array.isArray(raw)) {
       throw new Error('source.explore returned invalid data');

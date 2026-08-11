@@ -29,6 +29,10 @@ import {
   type DiscoverBook,
   type DiscoverKind,
 } from './DiscoverGateway';
+import {
+  EMPTY_DISCOVER_PRESENTATION,
+  type DiscoverPresentation,
+} from './DiscoverOrchestrator';
 
 const CURRENT_SOURCE_BORDER = '#5CB4A697'; // rgba(180,166,151,0.36)
 const ICON_BOX_BG = '#1A2D4A3E';         // rgba(45,74,62,0.10)
@@ -36,25 +40,18 @@ const CHIP_BG = '#D1EEE8DF';             // rgba(238,232,223,0.82)
 const FILTER_BORDER = '#7AB4A697';       // rgba(180,166,151,0.48)
 const APPLY_BORDER = '#C72D5D76';        // rgba(45,93,118,0.78)
 
-export interface DiscoverPresentation {
-  currentSourceName: string;
-  kinds: DiscoverKind[];
-  books: DiscoverBook[];
-}
-
 @Component
 export struct DiscoverPage {
-  @Prop presentation: DiscoverPresentation = {
-    currentSourceName: '',
-    kinds: [],
-    books: [],
-  };
+  @Prop presentation: DiscoverPresentation = EMPTY_DISCOVER_PRESENTATION;
   @Prop isTablet: boolean;
   onBack: () => void = (): void => {};
   onRssRequested: () => void = (): void => {};
   onSettingsRequested: () => void = (): void => {};
-
-  @State private activeCategory: number = 0;
+  onRefresh: () => void = (): void => {};
+  onCycleSource: () => void = (): void => {};
+  onSelectKind: (index: number) => void = (_index: number): void => {};
+  onPreviousPage: () => void = (): void => {};
+  onNextPage: () => void = (): void => {};
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -87,9 +84,7 @@ export struct DiscoverPage {
         boxSize: 44,
         iconSize: 24,
         radius: 22,
-        onTap: (): void => {
-          // Refresh is inert until the discovery pipeline is wired.
-        },
+        onTap: (): void => this.onRefresh(),
       });
     }
   }
@@ -126,7 +121,7 @@ export struct DiscoverPage {
       .backgroundColor(ICON_BOX_BG);
 
       Column({ space: 3 }) {
-        Text(this.presentation.currentSourceName !== '' ? this.presentation.currentSourceName : '书源')
+        Text(this.currentSourceName())
           .width('100%')
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Bold)
@@ -136,7 +131,9 @@ export struct DiscoverPage {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
-        Text(this.presentation.currentSourceName !== '' ? '已启用发现' : '发现功能待接入')
+        Text(this.presentation.sources.length > 0 ?
+          `${this.presentation.activeSourceIndex + 1}/${this.presentation.sources.length} · 点击切换书源` :
+          '没有已启用发现的书源')
           .width('100%')
           .fontFamily('ReaderInter')
           .fontWeight(600)
@@ -157,7 +154,8 @@ export struct DiscoverPage {
     .alignItems(VerticalAlign.Center)
     .backgroundColor(TOK_CARD_BG_HI)
     .border({ width: TOK_BORDER_W, color: CURRENT_SOURCE_BORDER })
-    .borderRadius(8);
+    .borderRadius(8)
+    .onClick((): void => this.onCycleSource());
   }
 
   @Builder
@@ -170,15 +168,15 @@ export struct DiscoverPage {
             .fontWeight(800)
             .fontSize(12)
             .lineHeight(15.6)
-            .fontColor(this.activeCategory === index ? TOK_ON_PRIMARY : '#3F372F')
+            .fontColor(this.presentation.activeKindIndex === index ? TOK_ON_PRIMARY : '#3F372F')
             .maxLines(1);
         }
         .height(32)
         .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
-        .backgroundColor(this.activeCategory === index ? TOK_GREEN : CHIP_BG)
+        .backgroundColor(this.presentation.activeKindIndex === index ? TOK_GREEN : CHIP_BG)
         .borderRadius(999)
         .onClick((): void => {
-          this.activeCategory = index;
+          this.onSelectKind(index);
         });
       }, (label: string): string => `discover-chip-${label}`);
     }
@@ -200,7 +198,7 @@ export struct DiscoverPage {
           .fontColor('#3F372F')
           .maxLines(1)
           .margin({ left: 3 });
-        Text('男频 · 人气')
+        Text(this.currentFilterText())
           .layoutWeight(1)
           .fontFamily('ReaderInter')
           .fontWeight(800)
@@ -241,7 +239,8 @@ export struct DiscoverPage {
         colors: [['#436F88', 0], ['#315F78', 1]],
       })
       .border({ width: TOK_BORDER_W, color: APPLY_BORDER })
-      .borderRadius(8);
+      .borderRadius(8)
+      .onClick((): void => this.onRefresh());
     }
     .width('100%')
     .height(34)
@@ -274,7 +273,7 @@ export struct DiscoverPage {
               .lineHeight(18)
               .fontColor(TOK_MUTED)
               .maxLines(1);
-            Text('书架 · 发现功能待接入')
+            Text(this.presentation.statusMessage)
               .fontFamily('ReaderInter')
               .fontWeight(FontWeight.Regular)
               .fontSize(12)
@@ -291,12 +290,49 @@ export struct DiscoverPage {
           this.resultRow(book);
         }, (book: DiscoverBook): string => `discover-book-${book.bookId}`);
       }
+      this.paginationRow();
     }
     .width('100%')
     .backgroundColor(TOK_CARD_BG)
     .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
     .borderRadius(8)
     .clip(true);
+  }
+
+  @Builder
+  private paginationRow() {
+    Row({ space: TOK_SPACE_SM }) {
+      this.pageAction('上一页', this.presentation.hasPrevious, (): void => this.onPreviousPage());
+      Text(`第 ${this.presentation.page} 页`)
+        .layoutWeight(1)
+        .textAlign(TextAlign.Center)
+        .fontFamily('ReaderInter')
+        .fontWeight(FontWeight.Bold)
+        .fontSize(12)
+        .fontColor(TOK_INK);
+      this.pageAction('下一页', this.presentation.hasNext, (): void => this.onNextPage());
+    }
+    .width('100%')
+    .height(48)
+    .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
+    .alignItems(VerticalAlign.Center)
+    .border({ width: { top: TOK_BORDER_W }, color: TOK_LINE_STRONG });
+  }
+
+  @Builder
+  private pageAction(label: string, enabled: boolean, action: () => void) {
+    Text(label)
+      .fontFamily('ReaderInter')
+      .fontWeight(FontWeight.Bold)
+      .fontSize(11)
+      .fontColor(enabled ? TOK_ON_PRIMARY : TOK_MUTED)
+      .backgroundColor(enabled ? TOK_GREEN : CHIP_BG)
+      .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: 8, bottom: 8 })
+      .borderRadius(999)
+      .opacity(this.presentation.loading ? 0.6 : 1)
+      .onClick((): void => {
+        if (enabled && !this.presentation.loading) action();
+      });
   }
 
   @Builder
@@ -381,5 +417,14 @@ export struct DiscoverPage {
       return this.presentation.kinds.map((k: DiscoverKind): string => k.title);
     }
     return ['排行榜', '书源', '分类', '完本', '最新', '书单'];
+  }
+
+  private currentSourceName(): string {
+    return this.presentation.sources[this.presentation.activeSourceIndex]?.name ?? '书源';
+  }
+
+  private currentFilterText(): string {
+    const kind = this.presentation.kinds[this.presentation.activeKindIndex]?.title ?? '未选择分类';
+    return `${kind} · 第 ${this.presentation.page} 页`;
   }
 }
