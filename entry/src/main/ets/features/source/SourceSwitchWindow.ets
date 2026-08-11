@@ -1,6 +1,5 @@
 import { CandidateRow } from './CandidateRow';
 import type { SourceSwitchCandidate } from './SourceSwitchGateway';
-import type { SourceSwitchRollbackToken } from './SourceSwitchGateway';
 import {
   TOK_BORDER,
   TOK_BORDER_W,
@@ -61,7 +60,7 @@ export interface SourceSwitchSuccessState {
 export interface SourceSwitchFailureState {
   kind: 'failure';
   message: string;
-  rollbackToken?: SourceSwitchRollbackToken;
+  transactionId?: string;
 }
 
 export type SourceSwitchPanelState =
@@ -228,7 +227,7 @@ export struct SourceSwitchWindow {
     } else if (this.state.kind === 'success') {
       this.messageBody('已切换书源', '');
     } else if (this.state.kind === 'failure') {
-      this.failureBody(this.state.message, this.state.rollbackToken !== undefined);
+      this.failureBody(this.state.message, this.state.transactionId !== undefined);
     }
   }
 

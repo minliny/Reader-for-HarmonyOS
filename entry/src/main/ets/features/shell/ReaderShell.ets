@@ -32,6 +32,7 @@ export struct ReaderShell {
   @Prop sourceId: string = '';
   @Prop sourceName: string = '';
   @Prop remoteSession: RemoteReadingSession | undefined = undefined;
+  @Prop sourceSwitchTransactionId: string | undefined = undefined;
   @Prop totalChapters: number = 0;
   @Prop requestedChapterIndex: number | undefined = undefined;
   @Prop isTablet: boolean = false;
@@ -82,6 +83,7 @@ export struct ReaderShell {
           sourceId: this.sourceId,
           bookId: this.bookId,
           remoteSession: this.remoteSession,
+          sourceSwitchTransactionId: this.sourceSwitchTransactionId,
           requestedChapterIndex: this.requestedChapterIndex,
           isTablet: this.isTablet,
           bookTitle: this.bookTitle,

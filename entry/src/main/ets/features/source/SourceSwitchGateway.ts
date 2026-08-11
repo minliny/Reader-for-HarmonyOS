@@ -58,19 +58,21 @@ export type SourceSwitchCommitParams = {
   updatedAt: number;
 };
 
-/** Core-owned opaque compensation journal. Harmony only retains and echoes it. */
-export type SourceSwitchRollbackToken = JsonObject;
+/** Core-owned durable transaction identity. Harmony never receives the journal. */
+export type SourceSwitchTransactionId = string;
 
 export type SourceSwitchCommitOutcome =
   | {
     status: 'success';
     book: ShelfBook;
     matchedChapter: SourceSwitchNewTocEntry;
-    rollbackToken: SourceSwitchRollbackToken;
+    transactionId: SourceSwitchTransactionId;
   }
-  | { status: 'failed'; error: string; rollbackToken?: SourceSwitchRollbackToken };
+  | { status: 'failed'; error: string; transactionId?: SourceSwitchTransactionId };
 
 export type SourceSwitchRollbackResult = {
+  transactionId: SourceSwitchTransactionId;
+  changed: boolean;
   restoredBook: ShelfBook;
 };
 
@@ -249,8 +251,8 @@ export class SourceSwitchGateway {
 
   /**
    * Atomically re-points an existing shelf book to the target source. This is
-   * a storage-only command; its structured rollback journal stays opaque to
-   * Harmony and remains live until the target reader commits its first page.
+   * a storage-only command; its structured rollback journal remains inside
+   * Core and Harmony receives only an opaque transaction id.
    */
   async commitSwitch(
     params: SourceSwitchCommitParams,
@@ -268,6 +270,7 @@ export class SourceSwitchGateway {
     if (!Number.isInteger(params.currentChapterIndex) || params.currentChapterIndex < 0) {
       throw new Error('source.switch.commit requires a non-negative currentChapterIndex');
     }
+    let transactionId: string | undefined = undefined;
     try {
       const result = await this.runtimeOwner.request(
         'source.switch.commit',
@@ -275,47 +278,55 @@ export class SourceSwitchGateway {
         this.requestOptions(isCurrent),
       );
       const rawBook = result.data['book'];
-      const rawToken = result.data['rollbackToken'];
+      transactionId = this.requireString(result.data, 'transactionId', 'source.switch.commit');
+      if (result.data['phase'] !== 'pending') {
+        throw new Error('source.switch.commit returned an invalid phase');
+      }
       if (typeof rawBook !== 'object' || rawBook === null || Array.isArray(rawBook)) {
         throw new Error('source.switch.commit returned an invalid book');
-      }
-      if (typeof rawToken !== 'object' || rawToken === null || Array.isArray(rawToken)) {
-        throw new Error('source.switch.commit returned an invalid rollback token');
       }
       const matchedChapter = this.decodeMatchedChapter(result.data['matchedChapter']);
       return {
         status: 'success',
         book: this.decodeShelfBook(rawBook),
         matchedChapter,
-        rollbackToken: rawToken as JsonObject,
+        transactionId,
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      return { status: 'failed', error: message };
+      return transactionId === undefined
+        ? { status: 'failed', error: message }
+        : { status: 'failed', error: message, transactionId };
     }
   }
 
   /**
-   * Compensates a previous commit via its verbatim rollback token. Stale
-   * tokens are rejected by Core (the current reader state was overwritten).
+   * Compensates a previous commit via its opaque durable transaction id.
+   * Finalized or stale transactions are rejected without overwriting progress.
    */
   async rollbackSwitch(
-    rollbackToken: SourceSwitchRollbackToken,
+    transactionId: SourceSwitchTransactionId,
     isCurrent: (() => boolean) | undefined = undefined,
   ): Promise<SourceSwitchRollbackResult> {
-    if (typeof rollbackToken !== 'object' || rollbackToken === null || Array.isArray(rollbackToken)) {
-      throw new Error('rollbackToken must be a Core rollback journal object');
-    }
+    this.assertNonBlankString(transactionId, 'transactionId');
     const result = await this.runtimeOwner.request(
       'source.switch.rollback',
-      { rollbackToken },
+      { transactionId },
       this.requestOptions(isCurrent),
     );
+    if (result.data['transactionId'] !== transactionId || result.data['phase'] !== 'rolledBack' ||
+      typeof result.data['changed'] !== 'boolean') {
+      throw new Error('source.switch.rollback returned an invalid transaction result');
+    }
     const rawBook = result.data['restoredBook'];
     if (typeof rawBook !== 'object' || rawBook === null || Array.isArray(rawBook)) {
       throw new Error('source.switch.rollback returned an invalid restored book');
     }
-    return { restoredBook: this.decodeShelfBook(rawBook) };
+    return {
+      transactionId,
+      changed: result.data['changed'] as boolean,
+      restoredBook: this.decodeShelfBook(rawBook),
+    };
   }
 
   private decodeMatchedChapter(value: unknown): SourceSwitchNewTocEntry {

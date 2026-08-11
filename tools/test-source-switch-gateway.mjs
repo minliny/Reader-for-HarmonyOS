@@ -32,10 +32,11 @@ assert.doesNotMatch(fetchTargetToc, /'book\.toc',\s*\{\s*sourceId,\s*bookId\s*\}
 assert.match(gateway, /private requireStringMap\([\s\S]*typeof variableValue !== 'string'/);
 assert.match(gateway, /candidate\.trim\(\)\.length === 0/);
 assert.match(gateway, /'change\.bookSource',[\s\S]*\{ sourceId, bookId, keyword, sourceIds \}/);
-assert.match(gateway, /typeof rawToken !== 'object' \|\| rawToken === null \|\| Array\.isArray\(rawToken\)/);
+assert.match(gateway, /requireString\(result\.data, 'transactionId', 'source\.switch\.commit'\)/);
+assert.match(gateway, /result\.data\['phase'\] !== 'pending'/);
 assert.match(gateway, /const matchedChapter = this\.decodeMatchedChapter\(result\.data\['matchedChapter'\]\)/);
-assert.match(gateway, /\{ rollbackToken \}/,
-  'the Core-owned structured rollback journal must be echoed without string conversion');
+assert.doesNotMatch(gateway, /rollbackToken|SourceSwitchRollbackToken/,
+  'the Core-owned compensation journal must never cross into Harmony');
 
 const executable = stripTypeScriptTypes(
   gateway
@@ -45,10 +46,7 @@ const executable = stripTypeScriptTypes(
 );
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(executable).toString('base64')}`;
 const { SourceSwitchGateway } = await import(moduleUrl);
-const rollbackToken = {
-  oldBook: { sourceId: 'old', bookId: 'old-book' },
-  committedBook: { sourceId: 'new', bookId: 'new-book' },
-};
+const transactionId = 'ss-core-owned-transaction';
 const runtime = {
   async request(method, params) {
     if (method === 'source.switch.commit') {
@@ -59,13 +57,17 @@ const runtime = {
         matchedChapter: {
           chapterId: '/chapter/4', chapterTitle: 'Chapter 4', chapterUrl: '/chapter/4', order: 4,
         },
-        rollbackToken,
+        transactionId,
+        phase: 'pending',
       } };
     }
     if (method === 'source.switch.rollback') {
-      assert.strictEqual(params.rollbackToken, rollbackToken,
-        'rollback must echo the same structured Core journal object');
+      assert.strictEqual(params.transactionId, transactionId,
+        'rollback must echo only the opaque Core transaction id');
       return { data: {
+        transactionId,
+        phase: 'rolledBack',
+        changed: true,
         restoredBook: {
           sourceId: 'old', bookId: 'old-book', title: 'Book', author: 'Author', addedAt: 1,
         },
@@ -84,9 +86,10 @@ const committed = await liveGateway.commitSwitch({
   updatedAt: 1,
 });
 assert.equal(committed.status, 'success');
-assert.strictEqual(committed.rollbackToken, rollbackToken);
+assert.strictEqual(committed.transactionId, transactionId);
 assert.equal(committed.matchedChapter.order, 4);
-const rolledBack = await liveGateway.rollbackSwitch(committed.rollbackToken);
+const rolledBack = await liveGateway.rollbackSwitch(committed.transactionId);
+assert.equal(rolledBack.changed, true);
 assert.equal(rolledBack.restoredBook.sourceId, 'old');
 
 console.log('source-switch gateway contract: PASS');

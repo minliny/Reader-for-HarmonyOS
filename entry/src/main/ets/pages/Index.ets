@@ -87,7 +87,6 @@ import {
   type SourceSwitchCommitOutcome,
   type SourceSwitchDiscoveryOutcome,
   type SourceSwitchRollbackResult,
-  type SourceSwitchRollbackToken,
   type SourceSwitchTargetToc,
 } from '../features/source/SourceSwitchGateway';
 import { SourceManagementPage } from '../features/source/SourceManagementPage';
@@ -120,7 +119,7 @@ class PendingSourceSwitchTransaction {
   targetSourceId: string;
   targetBookId: string;
   targetChapterIndex: number;
-  rollbackToken: SourceSwitchRollbackToken;
+  transactionId: string;
 
   constructor(
     fromSourceId: string,
@@ -128,14 +127,14 @@ class PendingSourceSwitchTransaction {
     targetSourceId: string,
     targetBookId: string,
     targetChapterIndex: number,
-    rollbackToken: SourceSwitchRollbackToken,
+    transactionId: string,
   ) {
     this.fromSourceId = fromSourceId;
     this.fromBookId = fromBookId;
     this.targetSourceId = targetSourceId;
     this.targetBookId = targetBookId;
     this.targetChapterIndex = targetChapterIndex;
-    this.rollbackToken = rollbackToken;
+    this.transactionId = transactionId;
   }
 }
 
@@ -461,6 +460,7 @@ struct Index {
           sourceId: this.detailBook.sourceId,
           sourceName: this.detailBook.sourceName,
           remoteSession: this.remoteReadingSession,
+          sourceSwitchTransactionId: this.currentSourceSwitchTransactionId(),
           totalChapters: this.detailToc.length,
           requestedChapterIndex: this.requestedChapterIndex,
           isTablet: deviceInfo.deviceType === 'tablet',
@@ -1834,7 +1834,7 @@ struct Index {
             outcome.book.sourceId,
             outcome.book.bookId,
             outcome.matchedChapter.order,
-            outcome.rollbackToken,
+            outcome.transactionId,
           );
           this.sourceSwitchState = { kind: 'success' };
           this.performSourceSwitchSeam(outcome.book);
@@ -1843,7 +1843,7 @@ struct Index {
         this.sourceSwitchState = {
           kind: 'failure',
           message: outcome.error,
-          rollbackToken: outcome.rollbackToken,
+          transactionId: outcome.transactionId,
         };
       })
       .catch((error: Error): void => {
@@ -1876,14 +1876,14 @@ struct Index {
   }
 
   private onRollbackSourceSwitch(): void {
-    if (this.sourceSwitchState.kind !== 'failure' || this.sourceSwitchState.rollbackToken === undefined) {
+    if (this.sourceSwitchState.kind !== 'failure' || this.sourceSwitchState.transactionId === undefined) {
       return;
     }
-    const token = this.sourceSwitchState.rollbackToken;
+    const transactionId = this.sourceSwitchState.transactionId;
     const generation = this.nextNavigationGeneration();
     this.sourceSwitchState = { kind: 'switching', targetSourceId: '' };
     const gateway = this.getSourceSwitchGateway();
-    gateway.rollbackSwitch(token, (): boolean => this.isSourceSwitchActive(generation))
+    gateway.rollbackSwitch(transactionId, (): boolean => this.isSourceSwitchActive(generation))
       .then((result: SourceSwitchRollbackResult): void => {
         if (!this.isSourceSwitchActive(generation)) {
           return;
@@ -1895,7 +1895,7 @@ struct Index {
           return;
         }
         hilog.warn(DOMAIN, 'Reader', 'SS-SOURCE-SWITCH-01: rollback failed: %{public}s', error.message);
-        this.sourceSwitchState = { kind: 'failure', message: error.message, rollbackToken: token };
+        this.sourceSwitchState = { kind: 'failure', message: error.message, transactionId };
       });
   }
 
@@ -1903,9 +1903,10 @@ struct Index {
     if (!this.sourceSwitchVisible) {
       return;
     }
-    if (this.sourceSwitchState.kind === 'switching') {
-      // Closing after Core has entered the atomic commit but before the token
-      // is retained could strand a migrated shelf row without compensation.
+    if (this.sourceSwitchState.kind === 'switching' ||
+      (this.sourceSwitchState.kind === 'failure' && this.sourceSwitchState.transactionId !== undefined)) {
+      // Closing after Core has entered the durable commit, or while its opaque
+      // transaction still needs rollback, could strand a pending shelf move.
       return;
     }
     this.nextNavigationGeneration();
@@ -1937,7 +1938,7 @@ struct Index {
       'Source switch target admission failed; rolling back: %{public}s', reason);
     const gateway = this.getSourceSwitchGateway();
     void gateway.rollbackSwitch(
-      pending.rollbackToken,
+      pending.transactionId,
       (): boolean => this.pendingSourceSwitch === pending,
     )
       .then((result: SourceSwitchRollbackResult): void => {
@@ -1955,14 +1956,14 @@ struct Index {
           return;
         }
         hilog.error(DOMAIN, 'Reader', 'Source switch automatic rollback failed: %{public}s', error.message);
-        // Core rejects stale compensation rather than overwriting newer
-        // progress. Return to the canonical shelf projection; retain the token
-        // in memory for the existing explicit rollback path.
+        // Core rejects finalized/stale compensation rather than overwriting
+        // newer progress. Return to the canonical shelf projection; retain
+        // only the opaque transaction id for an explicit retry.
         this.sourceSwitchVisible = false;
         this.sourceSwitchState = {
           kind: 'failure',
           message: error.message,
-          rollbackToken: pending.rollbackToken,
+          transactionId: pending.transactionId,
         };
         this.returnToBookshelf();
       })
@@ -2021,6 +2022,16 @@ struct Index {
     // `reading.progress.update` has completed in ReadingExperience. A fresh
     // shelf query is the only source of the Continue Reading state.
     this.refreshBookshelf();
+  }
+
+  private currentSourceSwitchTransactionId(): string | undefined {
+    const pending = this.pendingSourceSwitch;
+    const detail = this.detailBook;
+    if (pending === undefined || detail === undefined || pending.targetSourceId !== detail.sourceId ||
+      pending.targetBookId !== detail.bookId) {
+      return undefined;
+    }
+    return pending.transactionId;
   }
 
   private readingDetailForShelf(book: ShelfBook): ReadingBookDetail {

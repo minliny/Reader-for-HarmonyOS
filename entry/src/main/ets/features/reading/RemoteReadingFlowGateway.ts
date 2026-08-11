@@ -529,6 +529,7 @@ export class RemoteReadingFlowGateway {
     identityValue: RemoteReadingIdentity,
     update: RemoteReadingProgressUpdate,
     isCurrent?: () => boolean,
+    sourceSwitchTransactionId?: string,
   ): Promise<RemoteReadingProgress> {
     const identity = createRemoteReadingIdentity(identityValue.sourceId, identityValue.bookId);
     this.assertChapterIndex(update.chapterIndex, 'update.chapterIndex');
@@ -536,6 +537,16 @@ export class RemoteReadingFlowGateway {
     this.assertProgress(update.chapterProgress, 'update.chapterProgress');
     if (update.locationRevision !== undefined) {
       assertRemoteReadingNonBlankString(update.locationRevision, 'update.locationRevision');
+    }
+    if (sourceSwitchTransactionId !== undefined) {
+      assertRemoteReadingNonBlankString(sourceSwitchTransactionId, 'sourceSwitchTransactionId');
+      if (update.locationRevision === undefined) {
+        throw new RemoteReadingGatewayError(
+          'invalidResponse',
+          'source switch finalization requires canonical locationRevision',
+          'reading.progress.update',
+        );
+      }
     }
     const params: JsonObject = {
       sourceId: identity.sourceId,
@@ -546,6 +557,9 @@ export class RemoteReadingFlowGateway {
     };
     if (update.locationRevision !== undefined) {
       params['locationRevision'] = update.locationRevision;
+    }
+    if (sourceSwitchTransactionId !== undefined) {
+      params['transactionId'] = sourceSwitchTransactionId;
     }
     const result = await this.request('reading.progress.update', params, isCurrent);
     if (result.data['stored'] !== true) {
@@ -561,6 +575,15 @@ export class RemoteReadingFlowGateway {
       throw new RemoteReadingGatewayError(
         'identityMismatch',
         'reading.progress.update retained a different current progress row',
+        'reading.progress.update',
+      );
+    }
+    if (sourceSwitchTransactionId !== undefined &&
+      (result.data['transactionId'] !== sourceSwitchTransactionId ||
+        result.data['sourceSwitchFinalized'] !== true)) {
+      throw new RemoteReadingGatewayError(
+        'invalidResponse',
+        'reading.progress.update did not atomically finalize the source switch',
         'reading.progress.update',
       );
     }

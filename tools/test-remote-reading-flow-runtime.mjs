@@ -206,6 +206,10 @@ class FakeRemoteReadingRuntime {
           chapterProgress: 0.5000000000000001,
           updatedAt: 101,
           locationRevision: 'revision-new',
+          ...(params.transactionId === undefined ? {} : {
+            transactionId: params.transactionId,
+            sourceSwitchFinalized: true,
+          }),
         } };
       default:
         throw new Error(`unexpected command: ${method}`);
@@ -405,6 +409,31 @@ assert.deepEqual(calls.map((call) => call.method), [
   'reader.location.resolve',
   'reading.progress.update',
 ]);
+
+const sourceSwitchTransactionId = 'ss-first-canonical-progress';
+const sourceSwitchSessionGateway = new ReadingSessionFlowGateway(
+  SOURCE_ID,
+  BOOK_ID,
+  { kind: 'remote', session },
+  runtime,
+  sourceSwitchTransactionId,
+);
+await sourceSwitchSessionGateway.updateProgress(BOOK_ID, {
+  chapterIndex: resolved.chapterIndex,
+  chapterOffset: resolved.chapterOffset,
+  chapterProgress: resolved.chapterProgress,
+  locationRevision: resolved.locationRevision,
+}, isCurrent);
+assert.equal(calls.at(-1).params.transactionId, sourceSwitchTransactionId,
+  'the first canonical target progress must carry the Core transaction id');
+await sourceSwitchSessionGateway.updateProgress(BOOK_ID, {
+  chapterIndex: resolved.chapterIndex,
+  chapterOffset: resolved.chapterOffset,
+  chapterProgress: resolved.chapterProgress,
+  locationRevision: resolved.locationRevision,
+}, isCurrent);
+assert.equal(calls.at(-1).params.transactionId, undefined,
+  'a successful atomic finalize must consume the session transaction id exactly once');
 
 let staleRequestCount = 0;
 const staleGateway = new RemoteReadingFlowGateway({

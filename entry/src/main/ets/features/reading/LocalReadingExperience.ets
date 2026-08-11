@@ -369,6 +369,7 @@ export struct ReadingExperience {
   @Prop sourceId: string = LOCAL_READING_SOURCE_ID;
   @Prop bookId: string;
   @Prop remoteSession: RemoteReadingSession | undefined = undefined;
+  @Prop sourceSwitchTransactionId: string | undefined = undefined;
   @Prop @Watch('onRequestedChapterChanged') requestedChapterIndex: number | undefined = undefined;
   @Prop @Watch('onDeviceFormChanged') isTablet: boolean;
   @Prop reduceMotion: boolean = false;
@@ -543,6 +544,7 @@ export struct ReadingExperience {
       this.bookId,
       this.readingSessionSource(),
       ReaderRuntimeOwner.current(),
+      this.sourceSwitchTransactionId,
     );
     this.initializeTtsSession(lifecycleToken);
     registerReaderFonts(this.getUIContext().getFont());

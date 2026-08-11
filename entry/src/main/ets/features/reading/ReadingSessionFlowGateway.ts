@@ -59,12 +59,14 @@ export class ReadingSessionFlowGateway {
   private readonly runtimeOwner: ReadingGatewayRuntime;
   private readonly local: LocalReadingFlowGateway;
   private readonly remote: RemoteReadingFlowGateway;
+  private sourceSwitchTransactionId: string | undefined;
 
   constructor(
     sourceId: string,
     bookId: string,
     source: ReadingSessionSource,
     runtimeOwner: ReadingGatewayRuntime,
+    sourceSwitchTransactionId: string | undefined = undefined,
   ) {
     requireNonBlank(sourceId, 'sourceId');
     requireNonBlank(bookId, 'bookId');
@@ -75,12 +77,19 @@ export class ReadingSessionFlowGateway {
       (source.session.identity.sourceId !== sourceId || source.session.identity.bookId !== bookId)) {
       throw new Error('remote reading session identity mismatch');
     }
+    if (sourceSwitchTransactionId !== undefined) {
+      requireNonBlank(sourceSwitchTransactionId, 'sourceSwitchTransactionId');
+      if (source.kind !== 'remote') {
+        throw new Error('local reading session cannot finalize a source switch');
+      }
+    }
     this.sourceId = sourceId;
     this.bookId = bookId;
     this.source = source;
     this.runtimeOwner = runtimeOwner;
     this.local = new LocalReadingFlowGateway(runtimeOwner);
     this.remote = new RemoteReadingFlowGateway(runtimeOwner);
+    this.sourceSwitchTransactionId = sourceSwitchTransactionId;
   }
 
   supportsExactContentMetrics(): boolean {
@@ -259,7 +268,16 @@ export class ReadingSessionFlowGateway {
     if (this.source.kind === 'local') {
       return this.local.updateProgress(bookId, update, isCurrent);
     }
-    const stored = await this.remote.updateProgress(this.source.session.identity, update, isCurrent);
+    const transactionId = this.sourceSwitchTransactionId;
+    const stored = await this.remote.updateProgress(
+      this.source.session.identity,
+      update,
+      isCurrent,
+      transactionId,
+    );
+    if (transactionId !== undefined) {
+      this.sourceSwitchTransactionId = undefined;
+    }
     return {
       bookId: stored.bookId,
       chapterIndex: stored.chapterIndex,

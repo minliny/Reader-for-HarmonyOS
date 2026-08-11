@@ -463,6 +463,13 @@ export class ReaderRuntimeOwner {
         await runtime.request('runtime.storage.restore', {}, { timeoutMs: 30000 });
         await this.host.markLegacySnapshotMigrated();
       }
+      // A source switch is not admitted to the restored route until its first
+      // canonical target progress atomically finalizes the Core transaction.
+      // Recover before publishing this runtime so a cold-start page can never
+      // observe the tentative shelf identity or retain a UI-owned journal.
+      const recovery = await runtime.request('source.switch.recover', {}, { timeoutMs: 30000 });
+      const recoveredCount = this.requireSourceSwitchRecoveryCount(recovery.data['recovered']);
+      hilog.info(LOG_DOMAIN, 'Reader', 'Core source-switch startup recovery count: %{public}d', recoveredCount);
       // `close()` may have begun while Host capability setup/restore awaited.
       // Never publish a ready runtime after teardown has claimed this owner.
       if (this.state !== 'starting') {
@@ -507,6 +514,24 @@ export class ReaderRuntimeOwner {
       protocolSha256: identity['protocolSha256'],
       rustProfile: identity['rustProfile'],
     };
+  }
+
+  private requireSourceSwitchRecoveryCount(value: unknown): number {
+    if (!Array.isArray(value)) {
+      throw new Error('source.switch.recover returned invalid recovered data');
+    }
+    for (const raw of value) {
+      if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+        throw new Error('source.switch.recover returned a non-object transaction');
+      }
+      const transaction = raw as Record<string, unknown>;
+      if (typeof transaction['transactionId'] !== 'string' ||
+        transaction['transactionId'].trim().length === 0 ||
+        transaction['phase'] !== 'rolledBack' || typeof transaction['changed'] !== 'boolean') {
+        throw new Error('source.switch.recover returned an invalid transaction result');
+      }
+    }
+    return value.length;
   }
 
   private isLowerHex(value: unknown, minLength: number, maxLength: number): value is string {
