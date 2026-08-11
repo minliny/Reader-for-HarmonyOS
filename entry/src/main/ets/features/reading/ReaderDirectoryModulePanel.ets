@@ -44,7 +44,8 @@ export struct ReaderDirectoryModulePanel {
       Column() {
         ForEach(this.visibleEntries(), (entry: LocalReadingTocEntry) => {
           this.chapterRow(entry);
-        }, (entry: LocalReadingTocEntry): string => `reader-module-toc-${entry.index}`);
+        }, (entry: LocalReadingTocEntry): string =>
+          `reader-module-toc-${entry.index}-${entry.downloadState}`);
       }
       .width('100%')
       .height(128)
@@ -153,7 +154,7 @@ export struct ReaderDirectoryModulePanel {
       .height(32)
       .accessibilityText(`打开章节：${entry.title}`)
       .onClick((): void => this.onSelectChapter(entry.index));
-      if (entry.downloadState !== 'unknown') {
+      if (this.chapterDownloadEnabled && entry.downloadState !== 'unknown') {
         this.downloadMarkerHitTarget(entry);
       }
       if (entry.bookmarks !== undefined) {

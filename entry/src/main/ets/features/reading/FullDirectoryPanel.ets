@@ -313,7 +313,8 @@ export struct FullDirectoryPanel {
       Column() {
         ForEach(this.visibleEntries(), (entry: LocalReadingTocEntry) => {
           this.chapterRow(entry);
-        }, (entry: LocalReadingTocEntry): string => `toc-entry-${entry.index}`);
+        }, (entry: LocalReadingTocEntry): string =>
+          `toc-entry-${entry.index}-${entry.downloadState}`);
       }
       .width('100%')
       .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE, top: 5, bottom: 5 });
@@ -352,7 +353,7 @@ export struct FullDirectoryPanel {
       .height(40)
       .accessibilityText(`打开章节：${entry.title}`)
       .onClick((): void => this.onSelectChapter(entry.index));
-      if (entry.downloadState !== 'unknown') {
+      if (this.chapterDownloadEnabled && entry.downloadState !== 'unknown') {
         this.downloadMarkerHitTarget(entry);
       }
       if (entry.bookmarks !== undefined) {

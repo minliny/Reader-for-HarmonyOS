@@ -44,6 +44,8 @@ assert.match(imageHost, /MAX_READING_DISPLAY_FILE_BYTES[\s\S]*statSync\(tmpPath\
   'downsampled display files must remain byte-bounded and clean partial writes');
 assert.match(imageHost, /configureDisplayCache[\s\S]*listFileSync\(directory\)[\s\S]*unlinkBestEffort/,
   'a new process must reclaim crash-left display files before reading starts');
+assert.match(imageHost, /listFileSync\(cacheDir\)[\s\S]*LEGACY_DISPLAY_FILE_PREFIX[\s\S]*LEGACY_DISPLAY_TEMP_PREFIX[\s\S]*unlinkBestEffort/,
+  'an upgraded process must reclaim legacy root-level display and partial files');
 assert.match(source, /readingImageResources:[\s\S]*releaseUnretainedReadingImages\(\)/,
   'the reader session must bound display-file lifetime to its active chapter window');
 assert.match(source, /scaledReadingImageHeight\(/,

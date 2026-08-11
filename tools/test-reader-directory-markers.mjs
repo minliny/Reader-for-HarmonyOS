@@ -17,6 +17,10 @@ assert.match(modulePanel, /if \(this\.activeTab === 'directory'\) \{\s*return th
 assert.match(modulePanel, /if \(this\.hasBookmark\(entry\)\) \{\s*bookmarkedEntries\.push\(entry\);/);
 assert.match(modulePanel, /private downloadMarkerHitTarget\(entry: LocalReadingTocEntry\)/);
 assert.match(modulePanel, /chapterDownloadEnabled: boolean = false/);
+assert.match(modulePanel, /reader-module-toc-\$\{entry\.index\}-\$\{entry\.downloadState\}/,
+  'module rows must remount when a download state changes in the active reader session');
+assert.match(modulePanel, /if \(this\.chapterDownloadEnabled && entry\.downloadState !== 'unknown'\)/,
+  'local books must not render remote chapter download markers');
 assert.match(modulePanel, /\.enabled\(this\.chapterDownloadEnabled && this\.downloadMarkerEnabled\(entry\)\)/);
 assert.match(modulePanel, /\.onClick\(\(\): void => this\.onDownloadChapter\(entry\.index\)\)/);
 assert.match(modulePanel, /entry\.downloadState === 'missing' \|\| entry\.downloadState === 'cached'/);
@@ -39,6 +43,10 @@ assert.match(fullPanel, /chapterStartBookmarkCreationEnabled: boolean = false/);
 assert.match(fullPanel, /this\.onDeleteBookmarks\(markerState\.bookmarkTimes\)/);
 assert.match(fullPanel, /this\.onCreateChapterStartBookmark\(markerState\.createRequest\)/);
 assert.match(fullPanel, /chapterDownloadEnabled: boolean = false/);
+assert.match(fullPanel, /toc-entry-\$\{entry\.index\}-\$\{entry\.downloadState\}/,
+  'full-directory rows must remount when a download state changes');
+assert.match(fullPanel, /if \(this\.chapterDownloadEnabled && entry\.downloadState !== 'unknown'\)/,
+  'full directory must hide remote download markers for local books');
 assert.match(fullPanel, /\.enabled\(this\.chapterDownloadEnabled && this\.downloadMarkerEnabled\(entry\)\)/);
 assert.match(fullPanel, /\.onClick\(\(\): void => this\.onDownloadChapter\(entry\.index\)\)/);
 assert.match(fullPanel, /\.accessibilityText\(`打开章节：\$\{entry\.title\}`\)\s*\.onClick\(\(\): void => this\.onSelectChapter\(entry\.index\)\)/);
