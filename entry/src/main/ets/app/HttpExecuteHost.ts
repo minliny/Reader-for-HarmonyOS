@@ -4,6 +4,13 @@ import util from '@ohos.util';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { encodeSharedText, type JsonObject } from '@reader/core-harmony';
 import { CookieSessionStore } from './CookieSessionStore';
+import {
+  allowNextRedirect,
+  isCrossOriginSensitiveHeader,
+  mergeCookieHeader,
+  redirectMethodDecision,
+  retryBackoffMillis,
+} from './HttpTransportPolicy';
 
 const LOG_DOMAIN = 0x5244;
 const DEFAULT_CONNECT_TIMEOUT_MS = 30000;
@@ -321,8 +328,7 @@ export class HttpExecuteHost {
         const cookieHeader = await CookieSessionStore.instance.cookieHeader(sessionId, currentUrl);
         if (cookieHeader.length > 0) {
           const explicitCookie = this.headerValue(effectiveHeaders, 'cookie');
-          this.setHeader(effectiveHeaders, 'Cookie', explicitCookie === null || explicitCookie.length === 0 ?
-            cookieHeader : `${explicitCookie}; ${cookieHeader}`);
+          this.setHeader(effectiveHeaders, 'Cookie', mergeCookieHeader(explicitCookie ?? '', cookieHeader));
         }
       }
       const response = await this.singleHop(
@@ -341,7 +347,7 @@ export class HttpExecuteHost {
           response, currentUrl, redirects, observedCookies, sessionId,
         );
       }
-      if (redirects.length >= maxRedirects) {
+      if (!allowNextRedirect(true, maxRedirects, redirects.length)) {
         throw new Error(`http.execute: exceeded redirect limit ${maxRedirects}`);
       }
       const nextUrl = this.resolveRedirectUrl(location, currentUrl);
@@ -361,10 +367,11 @@ export class HttpExecuteHost {
         this.deleteHeader(currentHeaders, 'transfer-encoding');
       }
       if (!this.sameOrigin(currentUrl, nextUrl)) {
-        this.deleteHeader(currentHeaders, 'authorization');
-        this.deleteHeader(currentHeaders, 'proxy-authorization');
-        this.deleteHeader(currentHeaders, 'cookie');
-        this.deleteHeader(currentHeaders, 'origin');
+        for (const name of Object.keys(currentHeaders)) {
+          if (isCrossOriginSensitiveHeader(name)) {
+            delete currentHeaders[name];
+          }
+        }
       }
       currentUrl = nextUrl;
     }
@@ -605,10 +612,8 @@ export class HttpExecuteHost {
     method: ParsedMethod,
     body: EncodedBody,
   ): { method: ParsedMethod; body: EncodedBody } {
-    const upper = method.wireMethod.toUpperCase();
-    const shouldBecomeGet = status === 303 && upper !== 'HEAD' ||
-      (status === 301 || status === 302) && upper === 'POST';
-    if (!shouldBecomeGet) {
+    const decision = redirectMethodDecision(status, method.wireMethod, body.kind !== 'none');
+    if (decision.method === method.wireMethod) {
       return { method, body };
     }
     return {
@@ -956,7 +961,12 @@ export class HttpExecuteHost {
     if (retry === null || retry.backoffMillis === null || retry.backoffMillis <= 0) {
       return;
     }
-    const backoff = Math.min(retry.backoffMillis * attempt, MAX_RETRY_BACKOFF_MILLIS, remainingMs);
+    const backoff = retryBackoffMillis(
+      retry.backoffMillis,
+      attempt,
+      MAX_RETRY_BACKOFF_MILLIS,
+      remainingMs,
+    );
     if (backoff <= 0) {
       throw new Error('http.execute: exceeded total deadline');
     }

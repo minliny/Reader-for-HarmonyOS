@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 1,
+  "name": "reader-http-transport-conformance",
+  "cases": [
+    {
+      "id": "redirect-301-post-becomes-get",
+      "kind": "redirectMethod",
+      "input": { "status": 301, "method": "POST", "body": "a=1" },
+      "expected": { "method": "GET", "body": null }
+    },
+    {
+      "id": "redirect-301-put-preserved",
+      "kind": "redirectMethod",
+      "input": { "status": 301, "method": "PUT", "body": "a=1" },
+      "expected": { "method": "PUT", "body": "a=1" }
+    },
+    {
+      "id": "redirect-302-post-becomes-get",
+      "kind": "redirectMethod",
+      "input": { "status": 302, "method": "POST", "body": "a=1" },
+      "expected": { "method": "GET", "body": null }
+    },
+    {
+      "id": "redirect-303-post-becomes-get",
+      "kind": "redirectMethod",
+      "input": { "status": 303, "method": "POST", "body": "a=1" },
+      "expected": { "method": "GET", "body": null }
+    },
+    {
+      "id": "redirect-303-head-preserved",
+      "kind": "redirectMethod",
+      "input": { "status": 303, "method": "HEAD", "body": null },
+      "expected": { "method": "HEAD", "body": null }
+    },
+    {
+      "id": "redirect-307-post-preserved",
+      "kind": "redirectMethod",
+      "input": { "status": 307, "method": "POST", "body": "a=1" },
+      "expected": { "method": "POST", "body": "a=1" }
+    },
+    {
+      "id": "redirect-308-post-preserved",
+      "kind": "redirectMethod",
+      "input": { "status": 308, "method": "POST", "body": "a=1" },
+      "expected": { "method": "POST", "body": "a=1" }
+    },
+    {
+      "id": "relative-location-resolves-against-current-hop",
+      "kind": "resolveLocation",
+      "input": {
+        "currentUrl": "https://a.example/books/chapter/1",
+        "location": "../final?from=redirect"
+      },
+      "expected": { "url": "https://a.example/books/final?from=redirect" }
+    },
+    {
+      "id": "redirect-limit-denies-next-hop-at-cap",
+      "kind": "redirectLimit",
+      "input": { "followRedirects": true, "maxRedirects": 2, "observedHops": 2 },
+      "expected": { "allowNext": false }
+    },
+    {
+      "id": "redirect-disabled-denies-first-hop",
+      "kind": "redirectLimit",
+      "input": { "followRedirects": false, "maxRedirects": 10, "observedHops": 0 },
+      "expected": { "allowNext": false }
+    },
+    {
+      "id": "cross-origin-drops-sensitive-headers",
+      "kind": "crossOriginHeaders",
+      "input": {
+        "sameOrigin": false,
+        "headers": {
+          "Authorization": "Bearer secret",
+          "Proxy-Authorization": "Basic secret",
+          "Cookie": "sid=secret",
+          "Origin": "https://a.example",
+          "Content-Type": "application/json",
+          "Content-Length": "7",
+          "X-Keep": "yes"
+        }
+      },
+      "expected": {
+        "headers": {
+          "Content-Type": "application/json",
+          "Content-Length": "7",
+          "X-Keep": "yes"
+        }
+      }
+    },
+    {
+      "id": "same-origin-keeps-headers",
+      "kind": "crossOriginHeaders",
+      "input": {
+        "sameOrigin": true,
+        "headers": { "Authorization": "Bearer token", "X-Keep": "yes" }
+      },
+      "expected": {
+        "headers": { "Authorization": "Bearer token", "X-Keep": "yes" }
+      }
+    },
+    {
+      "id": "per-hop-cookie-merge-and-observation",
+      "kind": "cookieHop",
+      "input": {
+        "explicitCookie": "manual=1",
+        "jarCookie": "session=abc",
+        "setCookie": ["next=2; Path=/; HttpOnly", "theme=dark; Path=/"]
+      },
+      "expected": {
+        "outboundCookie": "manual=1; session=abc",
+        "observedCookieNames": ["next", "theme"]
+      }
+    },
+    {
+      "id": "gbk-request-body",
+      "kind": "charsetEncode",
+      "input": { "charset": "GBK", "text": "中文" },
+      "expected": { "hex": "d6d0cec4" }
+    },
+    {
+      "id": "big5-request-body",
+      "kind": "charsetEncode",
+      "input": { "charset": "Big5", "text": "中文" },
+      "expected": { "hex": "a4a4a4e5" }
+    },
+    {
+      "id": "gbk-response-body",
+      "kind": "charsetDecode",
+      "input": { "charset": "GBK", "hex": "d6d0cec4" },
+      "expected": { "text": "中文" }
+    },
+    {
+      "id": "big5-response-body",
+      "kind": "charsetDecode",
+      "input": { "charset": "Big5", "hex": "a4a4a4e5" },
+      "expected": { "text": "中文" }
+    },
+    {
+      "id": "multipart-field-and-file-bytes",
+      "kind": "multipart",
+      "input": {
+        "boundary": "ReaderBoundaryV1",
+        "fields": { "q": "中文" },
+        "files": [
+          {
+            "fieldName": "file",
+            "filename": "a.txt",
+            "contentType": "text/plain",
+            "hex": "414243"
+          }
+        ]
+      },
+      "expected": {
+        "bytes": 210,
+        "hex": "2d2d526561646572426f756e6461727956310d0a436f6e74656e742d446973706f736974696f6e3a20666f726d2d646174613b206e616d653d2271220d0a0d0ae4b8ade696870d0a2d2d526561646572426f756e6461727956310d0a436f6e74656e742d446973706f736974696f6e3a20666f726d2d646174613b206e616d653d2266696c65223b2066696c656e616d653d22612e747874220d0a436f6e74656e742d547970653a20746578742f706c61696e0d0a0d0a4142430d0a2d2d526561646572426f756e6461727956312d2d0d0a"
+      }
+    },
+    {
+      "id": "retry-backoff-clamps-to-deadline",
+      "kind": "retryBackoff",
+      "input": { "baseMillis": 100, "attempt": 3, "maxMillis": 2000, "remainingMillis": 250 },
+      "expected": { "millis": 250 }
+    },
+    {
+      "id": "retry-backoff-clamps-to-policy-cap",
+      "kind": "retryBackoff",
+      "input": { "baseMillis": 900, "attempt": 3, "maxMillis": 2000, "remainingMillis": 10000 },
+      "expected": { "millis": 2000 }
+    },
+    {
+      "id": "cancel-wins-before-deadline",
+      "kind": "deadline",
+      "input": { "cancelled": true, "nowMillis": 1000, "deadlineAtMillis": 2000 },
+      "expected": { "state": "cancelled" }
+    },
+    {
+      "id": "deadline-is-inclusive",
+      "kind": "deadline",
+      "input": { "cancelled": false, "nowMillis": 2000, "deadlineAtMillis": 2000 },
+      "expected": { "state": "expired" }
+    },
+    {
+      "id": "deadline-active-before-cap",
+      "kind": "deadline",
+      "input": { "cancelled": false, "nowMillis": 1999, "deadlineAtMillis": 2000 },
+      "expected": { "state": "active" }
+    }
+  ]
+}
