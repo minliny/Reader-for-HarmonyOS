@@ -2,6 +2,7 @@ import http from 'node:http';
 
 const port = Number.parseInt(process.argv[2] ?? '18080', 10);
 let aInitialized = false;
+let cInitialized = false;
 const evidence = {
   requests: 0,
   aFirstBootstraps: 0,
@@ -11,6 +12,13 @@ const evidence = {
   aMissingPersistentAfterBootstrap: 0,
   bIsolationPasses: 0,
   bLeakFailures: 0,
+  cFirstBootstraps: 0,
+  cCleanBootstraps: 0,
+  cPersistentReused: 0,
+  cMissingPersistentAfterBootstrap: 0,
+  cCleanupLeakFailures: 0,
+  dIsolationPasses: 0,
+  dLeakFailures: 0,
 };
 
 function cookies(request) {
@@ -50,11 +58,12 @@ const server = http.createServer((request, response) => {
   }
   if (requestUrl.pathname === '/status') {
     response.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-    response.end(JSON.stringify({ aInitialized, ...evidence }));
+    response.end(JSON.stringify({ aInitialized, cInitialized, ...evidence }));
     return;
   }
   if (requestUrl.pathname === '/reset') {
     aInitialized = false;
+    cInitialized = false;
     for (const key of Object.keys(evidence)) evidence[key] = 0;
     send(response, 200, 'reset');
     return;
@@ -133,6 +142,79 @@ const server = http.createServer((request, response) => {
       jar.has('persist')) return;
     send(response, 200,
       '<div class="content">Cookie B content is also longer than fifty characters and proves its isolated source session completed the production chain.</div>');
+    return;
+  }
+
+  // Versioned C/D routes provide a clean source identity for repeatable VM
+  // restart evidence without inheriting cookies from older A/B fixture runs.
+  if (requestUrl.pathname === '/c/search') {
+    if (cInitialized && jar.get('persist3') !== 'c-persistent') {
+      evidence.cMissingPersistentAfterBootstrap += 1;
+      send(response, 428, 'persistent cookie was not restored');
+      return;
+    }
+    if (cInitialized) {
+      evidence.cPersistentReused += 1;
+    } else {
+      if (jar.has('sid3') || jar.has('persist3')) {
+        evidence.cCleanupLeakFailures += 1;
+      } else {
+        evidence.cCleanBootstraps += 1;
+      }
+      cInitialized = true;
+      evidence.cFirstBootstraps += 1;
+    }
+    send(response, 200,
+      '<ul class="results"><li class="book"><span class="name">Cookie C</span>' +
+      '<span class="author">Reader</span><a class="detail" href="/c/book/1">detail</a></li></ul>',
+      { 'Set-Cookie': [
+        'sid3=c-session; Path=/c; HttpOnly; SameSite=Lax',
+        'persist3=c-persistent; Max-Age=3600; Path=/; HttpOnly; SameSite=Lax',
+      ] });
+    return;
+  }
+  if (requestUrl.pathname === '/c/book/1') {
+    if (!requireCookie(response, jar, 'sid3', 'c-session', 'c detail/toc') ||
+      !requireCookie(response, jar, 'persist3', 'c-persistent', 'c detail/toc')) return;
+    send(response, 200,
+      '<article><h1>Cookie C</h1><ol class="toc"><li>' +
+      '<a href="/c/chapter/1">C Chapter</a></li></ol></article>');
+    return;
+  }
+  if (requestUrl.pathname === '/c/chapter/1') {
+    if (!requireCookie(response, jar, 'sid3', 'c-session', 'c content') ||
+      !requireCookie(response, jar, 'persist3', 'c-persistent', 'c content')) return;
+    send(response, 200,
+      '<div class="content">Cookie C content remains longer than fifty characters so L5 validates the same source session after an active force stop.</div>');
+    return;
+  }
+
+  if (requestUrl.pathname === '/d/search') {
+    if (jar.has('sid3') || jar.has('persist3')) {
+      evidence.dLeakFailures += 1;
+      send(response, 409, 'source C cookie leaked into source D');
+      return;
+    }
+    evidence.dIsolationPasses += 1;
+    send(response, 200,
+      '<ul class="results"><li class="book"><span class="name">Cookie D</span>' +
+      '<span class="author">Reader</span><a class="detail" href="/d/book/1">detail</a></li></ul>',
+      { 'Set-Cookie': 'sid3=d-session; Path=/d; HttpOnly; SameSite=Strict' });
+    return;
+  }
+  if (requestUrl.pathname === '/d/book/1') {
+    if (!requireCookie(response, jar, 'sid3', 'd-session', 'd detail/toc') ||
+      jar.has('persist3')) return;
+    send(response, 200,
+      '<article><h1>Cookie D</h1><ol class="toc"><li>' +
+      '<a href="/d/chapter/1">D Chapter</a></li></ol></article>');
+    return;
+  }
+  if (requestUrl.pathname === '/d/chapter/1') {
+    if (!requireCookie(response, jar, 'sid3', 'd-session', 'd content') ||
+      jar.has('persist3')) return;
+    send(response, 200,
+      '<div class="content">Cookie D content is also longer than fifty characters and proves the versioned cross-source session stayed isolated.</div>');
     return;
   }
 
