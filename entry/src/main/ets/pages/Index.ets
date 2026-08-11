@@ -91,6 +91,18 @@ import {
 } from '../features/rss/RssPage';
 import { SettingsPage, type SettingsSnapshot } from '../features/settings/SettingsPage';
 import { SettingsOrchestrator } from '../features/settings/SettingsOrchestrator';
+import { RulesManagementPage } from '../features/settings/RulesManagementPage';
+import {
+  EMPTY_RULES_MANAGEMENT_SNAPSHOT,
+  RulesManagementOrchestrator,
+  type RulesManagementSnapshot,
+} from '../features/settings/RulesManagementOrchestrator';
+import type {
+  DictRuleDraft,
+  ReplaceRuleDraft,
+  RuleSubscriptionDraft,
+  TxtTocRuleDraft,
+} from '../features/settings/RulesManagementGateway';
 import {
   SourceGateway,
   type BookSource,
@@ -130,7 +142,7 @@ const LOCAL_SOURCE_ID = 'local';
 type ReaderRoute = 'bookshelf' | 'discover' | 'detail' | 'reading' | 'directory' | 'search' |
   'bookshelfManagement' |
   'rss' | 'rssSubscriptionManagement' | 'rssSourceFeed' | 'rssEntryDetail' |
-  'rssSubscriptionEditor' | 'settings' | 'source' | 'sourceTools' | 'sync';
+  'rssSubscriptionEditor' | 'settings' | 'rulesManagement' | 'source' | 'sourceTools' | 'sync';
 type PreparedReaderRoute = 'reading' | 'directory';
 type DirectoryReturnTarget = 'detail' | 'readerControl';
 type RssDetailReturnTarget = 'rss' | 'rssSourceFeed';
@@ -203,6 +215,7 @@ struct Index {
   @State private rssEditorSnapshot: RssSubscriptionEditorSnapshot = EMPTY_RSS_EDITOR_SNAPSHOT;
   @State private sourceSources: BookSource[] = [];
   @State private sourceToolsSnapshot: SourceToolsSnapshot = EMPTY_SOURCE_TOOLS_SNAPSHOT;
+  @State private rulesManagementSnapshot: RulesManagementSnapshot = EMPTY_RULES_MANAGEMENT_SNAPSHOT;
   @State private discoverPresentation: DiscoverPresentation = EMPTY_DISCOVER_PRESENTATION;
   @State private settingsSnapshot: SettingsSnapshot = {
     autoCheckUpdate: true,
@@ -249,6 +262,7 @@ struct Index {
   private discoverOrchestrator: DiscoverOrchestrator | undefined;
   private bookshelfManagementOrchestrator: BookshelfManagementOrchestrator | undefined;
   private settingsOrchestrator: SettingsOrchestrator | undefined;
+  private rulesManagementOrchestrator: RulesManagementOrchestrator | undefined;
   private syncOrchestrator: SyncOrchestrator | undefined;
   private sourceOrchestrator: SourceOrchestrator | undefined;
   private sourceToolsOrchestrator: SourceToolsOrchestrator | undefined;
@@ -299,6 +313,10 @@ struct Index {
     }
     if (this.route === 'sourceTools') {
       this.returnToSourceManagement();
+      return true;
+    }
+    if (this.route === 'rulesManagement') {
+      this.returnToSettings();
       return true;
     }
     if (this.route === 'bookshelfManagement') {
@@ -499,12 +517,32 @@ struct Index {
           isTablet: deviceInfo.deviceType === 'tablet',
           onBack: (): void => this.returnToBookshelf(),
           onOpenSourceManagement: (): void => this.openSourceManagement(),
+          onOpenRulesManagement: (): void => this.openRulesManagement(),
           onOpenSync: (): void => this.openSync(),
           onRssRequested: (): void => this.openRss(),
           onDiscoverRequested: (): void => this.openDiscover(),
           onToggle: (key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
             value: boolean): void => this.onSettingToggled(key, value),
           onClearCache: (): Promise<boolean> => this.clearTextCache(),
+        });
+      } else if (this.route === 'rulesManagement') {
+        RulesManagementPage({
+          snapshot: this.rulesManagementSnapshot,
+          onBack: (): void => this.returnToSettings(),
+          onSaveReplace: (draft: ReplaceRuleDraft): void =>
+            this.getRulesManagementOrchestrator().saveReplaceRule(draft),
+          onDeleteReplace: (id: number): void => this.getRulesManagementOrchestrator().deleteReplaceRule(id),
+          onSaveTxtToc: (draft: TxtTocRuleDraft): void =>
+            this.getRulesManagementOrchestrator().saveTxtTocRule(draft),
+          onDeleteTxtToc: (id: number): void => this.getRulesManagementOrchestrator().deleteTxtTocRule(id),
+          onSaveDict: (draft: DictRuleDraft): void => this.getRulesManagementOrchestrator().saveDictRule(draft),
+          onDeleteDict: (name: string): void => this.getRulesManagementOrchestrator().deleteDictRule(name),
+          onSaveSubscription: (draft: RuleSubscriptionDraft): void =>
+            this.getRulesManagementOrchestrator().saveRuleSubscription(draft),
+          onDeleteSubscription: (id: number): void =>
+            this.getRulesManagementOrchestrator().deleteRuleSubscription(id),
+          onExportBundle: (): void => this.getRulesManagementOrchestrator().exportBundle(),
+          onImportBundle: (): void => this.getRulesManagementOrchestrator().importBundle(),
         });
       } else if (this.route === 'source') {
         SourceManagementPage({
@@ -723,6 +761,27 @@ struct Index {
     this.exitToBookshelfAfterReader = false;
     this.route = 'bookshelfManagement';
     this.getBookshelfManagementOrchestrator().open();
+  }
+
+  private openRulesManagement(): void {
+    this.nextNavigationGeneration();
+    this.readingSessionActive = false;
+    this.readingExitRequest = undefined;
+    this.exitToBookshelfAfterReader = false;
+    this.route = 'rulesManagement';
+    this.getRulesManagementOrchestrator().open();
+  }
+
+  private getRulesManagementOrchestrator(): RulesManagementOrchestrator {
+    if (this.rulesManagementOrchestrator === undefined) {
+      this.rulesManagementOrchestrator = new RulesManagementOrchestrator(
+        (snapshot: RulesManagementSnapshot): void => {
+          this.rulesManagementSnapshot = snapshot;
+        },
+        (): boolean => this.route === 'rulesManagement',
+      );
+    }
+    return this.rulesManagementOrchestrator;
   }
 
   private getBookshelfManagementOrchestrator(): BookshelfManagementOrchestrator {

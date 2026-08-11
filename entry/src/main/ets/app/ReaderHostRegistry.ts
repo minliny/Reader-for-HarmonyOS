@@ -141,7 +141,9 @@ export class ReaderHostRegistry {
    */
   async selectLocalBookInputs(): Promise<LocalBookPreparation[]> {
     const options = new picker.DocumentSelectOptions();
-    options.fileSuffixFilters = ['TXT、EPUB、MOBI、AZW、AZW3、KF8|.txt,.epub,.mobi,.azw,.azw3,.kf8'];
+    options.fileSuffixFilters = [
+      'TXT、EPUB、MOBI、AZW、AZW3、KF8、UMD|.txt,.epub,.mobi,.azw,.azw3,.kf8,.umd',
+    ];
     options.maxSelectNumber = ReaderHostRegistry.LocalBookSelectionLimit;
 
     const uris = await new picker.DocumentViewPicker(this.context).select(options);
@@ -172,8 +174,17 @@ export class ReaderHostRegistry {
    * `source.import` semantics remain in the source feature gateway / Rust Core.
    */
   async selectBookSourceJson(): Promise<BookSourceJsonSelection | undefined> {
+    return this.selectBoundedJsonDocument('Legado 书源 JSON');
+  }
+
+  /** Select one Core-owned portable rule bundle; Host only transports bytes. */
+  async selectRuleBundleJson(): Promise<BookSourceJsonSelection | undefined> {
+    return this.selectBoundedJsonDocument('Reader 规则包 JSON');
+  }
+
+  private async selectBoundedJsonDocument(label: string): Promise<BookSourceJsonSelection | undefined> {
     const options = new picker.DocumentSelectOptions();
-    options.fileSuffixFilters = ['Legado 书源 JSON|.json'];
+    options.fileSuffixFilters = [`${label}|.json`];
     options.maxSelectNumber = 1;
 
     const uris = await new picker.DocumentViewPicker(this.context).select(options);
@@ -197,16 +208,30 @@ export class ReaderHostRegistry {
    * destination selection and byte-exact UTF-8 I/O.
    */
   async saveBookSourceJson(text: string, suggestedFileName: string): Promise<string | undefined> {
+    return this.saveBoundedJsonDocument(text, suggestedFileName, 'Legado 书源 JSON', 'Book-source');
+  }
+
+  /** Save a byte-exact Core rule bundle through the system document picker. */
+  async saveRuleBundleJson(text: string, suggestedFileName: string): Promise<string | undefined> {
+    return this.saveBoundedJsonDocument(text, suggestedFileName, 'Reader 规则包 JSON', 'Rule-bundle');
+  }
+
+  private async saveBoundedJsonDocument(
+    text: string,
+    suggestedFileName: string,
+    label: string,
+    subject: string,
+  ): Promise<string | undefined> {
     const bytes = new util.TextEncoder('utf-8').encode(text);
     if (bytes.byteLength === 0 || bytes.byteLength > ReaderHostRegistry.BookSourceDocumentLimitBytes) {
       throw new Error(
-        `Book-source export must contain 1-${ReaderHostRegistry.BookSourceDocumentLimitBytes} UTF-8 bytes`,
+        `${subject} export must contain 1-${ReaderHostRegistry.BookSourceDocumentLimitBytes} UTF-8 bytes`,
       );
     }
     const safeFileName = this.requireExportFileName(suggestedFileName);
     const options = new picker.DocumentSaveOptions();
     options.newFileNames = [safeFileName];
-    options.fileSuffixChoices = ['Legado 书源 JSON|.json'];
+    options.fileSuffixChoices = [`${label}|.json`];
     const uris = await new picker.DocumentViewPicker(this.context).save(options);
     if (uris.length === 0) {
       return undefined;
@@ -222,7 +247,7 @@ export class ReaderHostRegistry {
         const chunk = bytes.slice(writtenBytes);
         const written = await fileIo.write(file.fd, chunk.buffer);
         if (!Number.isSafeInteger(written) || written <= 0 || written > chunk.byteLength) {
-          throw new Error('Book-source export destination stopped accepting bytes');
+          throw new Error(`${subject} export destination stopped accepting bytes`);
         }
         writtenBytes += written;
       }

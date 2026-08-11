@@ -16,6 +16,7 @@ const index = read('entry/src/main/ets/pages/Index.ets');
 // Exercise the real gateway decoder/contract logic with an injected owner.
 const executableGateway = stripTypeScriptTypes(
   gatewaySource
+    .replace(/^import url from ['"]@ohos\.url['"];$/m, 'const url = { URL };')
     .replace(/^import type \{ JsonObject \} from ['"]@reader\/core-harmony['"];$/m, '')
     .replace(/^import \{ ReaderRuntimeOwner \} from ['"]\.\.\/\.\.\/app\/ReaderRuntimeOwner['"];$/m, ''),
 );
@@ -124,7 +125,8 @@ await assert.rejects(
 assert.equal(cancellationCalls, 1, 'a stale page must not submit the next source.import');
 
 // Host: one JSON picker, bounded bytes, chunked read, fatal UTF-8, no staging.
-assert.match(host, /fileSuffixFilters = \['Legado 书源 JSON\|\.json'\]/);
+assert.match(host, /selectBoundedJsonDocument\('Legado 书源 JSON'\)/);
+assert.match(host, /fileSuffixFilters = \[`\$\{label\}\|\.json`\]/);
 assert.match(host, /options\.maxSelectNumber = 1/);
 assert.match(host, /BookSourceDocumentLimitBytes = 16 \* 1024 \* 1024/);
 assert.match(host, /BookSourceReadChunkBytes = 64 \* 1024/);
