@@ -1817,7 +1817,7 @@ struct Index {
           toc,
           this.currentSourceSwitchChapterTitle(),
           Math.max(0, this.directoryCurrentChapterIndex),
-          Date.now(),
+          Math.floor(Date.now() / 1000),
         );
         return gateway.commitSwitch(params, isCurrent);
       })

@@ -23,7 +23,9 @@ assert.match(fetchTargetToc, /book:\s*\{\s*bookId\s*\}/);
 assert.match(fetchTargetToc, /bookUrl:\s*bookId/);
 assert.match(fetchTargetToc, /detailSourceId !== sourceId \|\| detailBookId !== bookId/);
 assert.match(fetchTargetToc, /requireString\(detail\.data, 'tocUrl', 'book\.detail'\)/);
-assert.match(fetchTargetToc, /requireStringMap\(detail\.data\['variables'\], 'variables', 'book\.detail'\)/);
+assert.match(fetchTargetToc, /rawVariables === undefined \|\| rawVariables === null/,
+  'book.detail variables are optional per the Core contract; missing/null must not fail-closed');
+assert.match(fetchTargetToc, /requireStringMap\(rawVariables, 'variables', 'book\.detail'\)/);
 assert.match(fetchTargetToc, /\{\s*sourceId,\s*bookId,\s*tocUrl,\s*variables\s*\}/);
 assert.doesNotMatch(fetchTargetToc, /'book\.toc',\s*\{\s*sourceId,\s*bookId\s*\}/);
 

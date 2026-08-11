@@ -209,7 +209,15 @@ export class SourceSwitchGateway {
     // An absent/blank TOC URL is not recoverable by `book.toc`; fail before a
     // knowingly invalid Core request instead of silently substituting bookId.
     const tocUrl = this.requireString(detail.data, 'tocUrl', 'book.detail');
-    const variables = this.requireStringMap(detail.data['variables'], 'variables', 'book.detail');
+    // `book.toc` variables are optional in the Core contract (serde default
+    // empty map); `book.detail` only emits them when the source's rules produce
+    // any. Requiring an object here would fail-closed against real sources
+    // whose detail rules carry no variables.
+    const rawVariables = detail.data['variables'];
+    const variables: JsonObject =
+      rawVariables === undefined || rawVariables === null
+        ? {}
+        : this.requireStringMap(rawVariables, 'variables', 'book.detail');
 
     const result = await this.runtimeOwner.request(
       'book.toc',
