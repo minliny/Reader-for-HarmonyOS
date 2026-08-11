@@ -10,6 +10,8 @@ export type ReadingSessionChapter = {
   readonly bookId: string;
   readonly chapterIndex: number;
   readonly chapterTitle: string;
+  /** Exact remote TOC URL used by source-backed chapter tools. */
+  readonly chapterUrl: string | undefined;
   readonly content: string;
   readonly images: ReadingSessionImage[];
   readonly contentVersion: string;
@@ -178,6 +180,7 @@ function copyChapter(chapter: ReadingSessionChapter): ReadingSessionChapter {
     bookId: chapter.bookId,
     chapterIndex: chapter.chapterIndex,
     chapterTitle: chapter.chapterTitle,
+    chapterUrl: chapter.chapterUrl,
     content: chapter.content,
     images: chapter.images.map(copyImage),
     contentVersion: chapter.contentVersion,

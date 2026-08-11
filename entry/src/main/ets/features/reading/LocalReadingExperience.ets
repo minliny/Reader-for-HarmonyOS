@@ -85,6 +85,14 @@ import {
 } from './ReaderTtsSessionCoordinator';
 import { createReaderTtsState, type ReaderTtsState } from './ReaderTtsState';
 import { ReadingRecordGateway } from './ReadingRecordGateway';
+import {
+  ReaderContentBusinessGateway,
+  type ReaderChapterReview,
+} from './ReaderContentBusinessGateway';
+import {
+  ReaderContentBusinessPanel,
+  type ReaderChapterReviewStatus,
+} from './ReaderContentBusinessPanel';
 
 type ReaderPageTurnResult = 'started' | 'busy' | 'bookEnd';
 
@@ -451,12 +459,21 @@ export struct ReadingExperience {
   @State private ttsFailurePolicy: 'skip' | 'stop' = 'stop';
   @State private ttsEngine: string = 'system';
   @State private ttsHttpEngines: ReaderHttpTtsConfig[] = [];
+  @State private contentBusinessVisible: boolean = false;
+  @State private contentBusinessDraft: string = '';
+  @State private contentBusinessEditId: number = -1;
+  @State private contentBusinessBusy: boolean = false;
+  @State private contentBusinessStatusText: string = '';
+  @State private contentBusinessReviewStatus: ReaderChapterReviewStatus = 'idle';
+  @State private contentBusinessReviews: ReaderChapterReview[] = [];
 
   private sessionGateway: ReadingSessionFlowGateway | undefined = undefined;
   private readonly replaceGateway: ReaderReplaceQuickGateway =
     new ReaderReplaceQuickGateway(ReaderRuntimeOwner.current());
   private readonly readingRecordGateway: ReadingRecordGateway =
     new ReadingRecordGateway(ReaderRuntimeOwner.current());
+  private readonly contentBusinessGateway: ReaderContentBusinessGateway =
+    new ReaderContentBusinessGateway(ReaderRuntimeOwner.current());
   private ttsGateway: ReaderTtsGateway | undefined = undefined;
   private ttsHttpGateway: ReaderHttpTtsGateway | undefined = undefined;
   private ttsCoordinator: ReaderTtsSessionCoordinator | undefined = undefined;
@@ -537,6 +554,7 @@ export struct ReadingExperience {
   private readingRecordPendingMillis: number = 0;
   private readingRecordTimer: number = -1;
   private readingRecordFlushTail: Promise<void> = Promise.resolve();
+  private contentBusinessGeneration: number = 0;
 
   aboutToAppear(): void {
     this.lifecycleToken += 1;
@@ -547,6 +565,7 @@ export struct ReadingExperience {
     this.readingRecordActiveSinceMs = 0;
     this.readingRecordPendingMillis = 0;
     this.clearReadingRecordTimer();
+    this.resetContentBusinessState();
     this.commitInFlight = false;
     this.measurementCompleting = false;
     this.remeasurePending = false;
@@ -593,6 +612,7 @@ export struct ReadingExperience {
     this.clearReadingRecordTimer();
     this.readingRecordActiveSinceMs = 0;
     this.readingRecordPendingMillis = 0;
+    this.resetContentBusinessState();
     const ttsCoordinator = this.ttsCoordinator;
     this.ttsCoordinator = undefined;
     this.ttsGateway = undefined;
@@ -700,6 +720,7 @@ export struct ReadingExperience {
           this.hideControl();
           this.onSwitchSource();
         },
+        onMore: (): void => this.openContentBusiness(),
         onPageChange: (page: ReaderControlPage): void => this.setControlPage(page),
         onModuleSelect: (_module: string): void => {},
         onSelectChapter: (chapterIndex: number): void => this.selectControlChapter(chapterIndex),
@@ -744,7 +765,28 @@ export struct ReadingExperience {
         onTtsHttpEnginePut: (config: ReaderHttpTtsConfig): void => this.saveHttpTtsEngine(config),
         onTtsHttpEngineDelete: (id: number): void => this.deleteHttpTtsEngine(id),
       });
-      if (!this.controlVisible) {
+      if (this.contentBusinessVisible) {
+        ReaderContentBusinessPanel({
+          bookTitle: this.bookTitle,
+          chapterTitle: this.chapterTitle,
+          draft: this.contentBusinessDraft,
+          hasEdit: this.contentBusinessEditId >= 0,
+          busy: this.contentBusinessBusy,
+          statusText: this.contentBusinessStatusText,
+          reviewsEnabled: this.sourceId !== LOCAL_READING_SOURCE_ID,
+          reviewStatus: this.contentBusinessReviewStatus,
+          reviews: this.contentBusinessReviews,
+          isTablet: this.isTablet,
+          onClose: (): void => this.closeContentBusiness(),
+          onDraftChange: (value: string): void => {
+            this.contentBusinessDraft = value;
+          },
+          onSave: (): void => this.saveContentBusinessEdit(),
+          onRestore: (): void => this.restoreContentBusinessOriginal(),
+          onLoadReviews: (): void => this.loadContentBusinessReviews(),
+        });
+      }
+      if (!this.controlVisible && !this.contentBusinessVisible) {
         // Figma reader.page.turn.none: left/right bands request the adjacent
         // real page while the center band retains Reader Control entry. The
         // page swap itself has no animation and occurs only after Core stores
@@ -1564,6 +1606,7 @@ export struct ReadingExperience {
       bookId: chapter.bookId,
       chapterIndex: chapter.chapterIndex,
       chapterTitle: chapter.chapterTitle,
+      chapterUrl: chapter.chapterUrl,
       content: chapter.content,
       images,
       contentVersion: chapter.contentVersion,
@@ -1750,6 +1793,13 @@ export struct ReadingExperience {
    * ownership back through `onExit`.
    */
   private requestExit(): void {
+    if (this.contentBusinessVisible) {
+      if (!this.contentBusinessBusy) {
+        this.closeContentBusiness();
+        this.controlVisible = true;
+      }
+      return;
+    }
     if (this.controlVisible) {
       if (this.controlPage !== 'home') {
         this.setControlPage('home');
@@ -3147,6 +3197,187 @@ export struct ReadingExperience {
     this.replacePanelGeneration += 1;
     this.controlPage = 'home';
     this.controlVisible = false;
+  }
+
+  private openContentBusiness(): void {
+    const chapter = this.chapter;
+    if (!this.mounted || this.phase !== 'ready' || chapter === undefined) {
+      return;
+    }
+    const lifecycleToken = this.lifecycleToken;
+    const generation = this.nextContentBusinessGeneration();
+    const chapterIndex = chapter.chapterIndex;
+    this.hideControl();
+    this.contentBusinessVisible = true;
+    this.contentBusinessDraft = chapter.content;
+    this.contentBusinessEditId = -1;
+    this.contentBusinessBusy = true;
+    this.contentBusinessStatusText = '正在读取 Core 编辑状态…';
+    this.contentBusinessReviewStatus = this.sourceId === LOCAL_READING_SOURCE_ID ? 'unsupported' : 'idle';
+    this.contentBusinessReviews = [];
+    void this.contentBusinessGateway.loadEdit(this.sourceId, this.bookId, chapterIndex)
+      .then((edit): void => {
+        if (!this.isContentBusinessCurrent(generation, lifecycleToken, chapterIndex)) {
+          return;
+        }
+        if (edit !== undefined) {
+          this.contentBusinessDraft = edit.editedContent;
+          this.contentBusinessEditId = edit.editId;
+          this.contentBusinessStatusText = '当前显示 Core 已保存的编辑版本';
+        } else {
+          this.contentBusinessStatusText = '当前无编辑覆盖';
+        }
+        this.contentBusinessBusy = false;
+      })
+      .catch((error: Error): void => {
+        if (!this.isContentBusinessCurrent(generation, lifecycleToken, chapterIndex)) {
+          return;
+        }
+        this.contentBusinessBusy = false;
+        this.contentBusinessStatusText = `读取编辑状态失败：${this.errorMessage(error)}`;
+      });
+  }
+
+  private closeContentBusiness(): void {
+    this.nextContentBusinessGeneration();
+    this.contentBusinessVisible = false;
+    this.contentBusinessBusy = false;
+    this.contentBusinessReviews = [];
+    this.contentBusinessReviewStatus = 'idle';
+  }
+
+  private saveContentBusinessEdit(): void {
+    const chapter = this.chapter;
+    if (!this.contentBusinessVisible || this.contentBusinessBusy || chapter === undefined ||
+      this.contentBusinessDraft.trim().length === 0) {
+      return;
+    }
+    const lifecycleToken = this.lifecycleToken;
+    const generation = this.contentBusinessGeneration;
+    const chapterIndex = chapter.chapterIndex;
+    const draft = this.contentBusinessDraft;
+    this.contentBusinessBusy = true;
+    this.contentBusinessStatusText = '正在保存…';
+    void this.contentBusinessGateway.saveEdit(this.sourceId, this.bookId, chapterIndex, draft)
+      .then((edit): void => {
+        if (!this.isContentBusinessCurrent(generation, lifecycleToken, chapterIndex)) {
+          return;
+        }
+        this.contentBusinessEditId = edit.editId;
+        this.closeContentBusiness();
+        this.reloadCurrentPageAfterContentMutation(lifecycleToken, chapterIndex);
+      })
+      .catch((error: Error): void => {
+        if (!this.isContentBusinessCurrent(generation, lifecycleToken, chapterIndex)) {
+          return;
+        }
+        this.contentBusinessBusy = false;
+        this.contentBusinessStatusText = `保存失败：${this.errorMessage(error)}`;
+      });
+  }
+
+  private restoreContentBusinessOriginal(): void {
+    const chapter = this.chapter;
+    const editId = this.contentBusinessEditId;
+    if (!this.contentBusinessVisible || this.contentBusinessBusy || chapter === undefined || editId < 0) {
+      return;
+    }
+    const lifecycleToken = this.lifecycleToken;
+    const generation = this.contentBusinessGeneration;
+    const chapterIndex = chapter.chapterIndex;
+    this.contentBusinessBusy = true;
+    this.contentBusinessStatusText = '正在恢复原文…';
+    void this.contentBusinessGateway.deleteEdit(editId)
+      .then((): void => {
+        if (!this.isContentBusinessCurrent(generation, lifecycleToken, chapterIndex)) {
+          return;
+        }
+        this.closeContentBusiness();
+        this.reloadCurrentPageAfterContentMutation(lifecycleToken, chapterIndex);
+      })
+      .catch((error: Error): void => {
+        if (!this.isContentBusinessCurrent(generation, lifecycleToken, chapterIndex)) {
+          return;
+        }
+        this.contentBusinessBusy = false;
+        this.contentBusinessStatusText = `恢复失败：${this.errorMessage(error)}`;
+      });
+  }
+
+  private loadContentBusinessReviews(): void {
+    const chapter = this.chapter;
+    if (!this.contentBusinessVisible || chapter === undefined || this.sourceId === LOCAL_READING_SOURCE_ID ||
+      this.contentBusinessReviewStatus === 'loading') {
+      return;
+    }
+    const chapterUrl = chapter.chapterUrl;
+    if (chapterUrl === undefined || chapterUrl.trim().length === 0) {
+      this.contentBusinessReviewStatus = 'failed';
+      this.contentBusinessStatusText = '当前章节缺少可用于段评规则的远程地址。';
+      return;
+    }
+    const lifecycleToken = this.lifecycleToken;
+    const generation = this.contentBusinessGeneration;
+    const chapterIndex = chapter.chapterIndex;
+    this.contentBusinessReviewStatus = 'loading';
+    this.contentBusinessStatusText = '';
+    void this.contentBusinessGateway.loadChapterReviews(this.sourceId, this.bookId, chapterUrl)
+      .then((reviews: ReaderChapterReview[]): void => {
+        if (!this.isContentBusinessCurrent(generation, lifecycleToken, chapterIndex)) {
+          return;
+        }
+        this.contentBusinessReviews = reviews;
+        this.contentBusinessReviewStatus = 'ready';
+      })
+      .catch((error: Error): void => {
+        if (!this.isContentBusinessCurrent(generation, lifecycleToken, chapterIndex)) {
+          return;
+        }
+        this.contentBusinessReviews = [];
+        this.contentBusinessReviewStatus = 'failed';
+        this.contentBusinessStatusText = `段评加载失败：${this.errorMessage(error)}`;
+      });
+  }
+
+  private reloadCurrentPageAfterContentMutation(lifecycleToken: number, chapterIndex: number): void {
+    if (!this.isSessionActive(lifecycleToken) || this.chapter?.chapterIndex !== chapterIndex) {
+      return;
+    }
+    this.contentMetrics = undefined;
+    this.paginationIndex.invalidateBook(this.sourceId, this.bookId);
+    this.chapterWindow.clear();
+    this.knownContentVersions.splice(0, this.knownContentVersions.length);
+    this.resetPaginationDraft();
+    const page = this.visiblePage;
+    if (page !== undefined) {
+      this.selectChapterAnchor(chapterIndex, page.startScalar, false);
+    }
+  }
+
+  private resetContentBusinessState(): void {
+    this.nextContentBusinessGeneration();
+    this.contentBusinessVisible = false;
+    this.contentBusinessDraft = '';
+    this.contentBusinessEditId = -1;
+    this.contentBusinessBusy = false;
+    this.contentBusinessStatusText = '';
+    this.contentBusinessReviewStatus = 'idle';
+    this.contentBusinessReviews = [];
+  }
+
+  private nextContentBusinessGeneration(): number {
+    this.contentBusinessGeneration = this.contentBusinessGeneration >= Number.MAX_SAFE_INTEGER ?
+      1 : this.contentBusinessGeneration + 1;
+    return this.contentBusinessGeneration;
+  }
+
+  private isContentBusinessCurrent(
+    generation: number,
+    lifecycleToken: number,
+    chapterIndex: number,
+  ): boolean {
+    return this.contentBusinessVisible && generation === this.contentBusinessGeneration &&
+      this.isSessionActive(lifecycleToken) && this.chapter?.chapterIndex === chapterIndex;
   }
 
   private openQuickReplace(): void {

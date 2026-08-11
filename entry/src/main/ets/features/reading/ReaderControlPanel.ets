@@ -164,6 +164,7 @@ export struct ReaderControlPanel {
   onBack: () => void = (): void => {};
   onDismiss: () => void = (): void => {};
   onSourceSwitch: () => void = (): void => {};
+  onMore: () => void = (): void => {};
   onPageChange: (page: ReaderControlPage) => void = (_page: ReaderControlPage): void => {};
   onModuleSelect: (module: string) => void = (_module: string): void => {};
   onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
@@ -519,8 +520,8 @@ export struct ReaderControlPanel {
       .width(34)
       .height(42)
       .margin({ left: 8   })
-      .enabled(false)
-      .accessibilityText('更多');
+      .accessibilityText('正文工具')
+      .onClick((): void => this.onMore());
     }
     .width('100%')
     .height(54)

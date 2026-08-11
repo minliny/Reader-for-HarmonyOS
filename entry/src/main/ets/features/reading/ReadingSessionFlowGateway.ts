@@ -174,6 +174,7 @@ export class ReadingSessionFlowGateway {
       bookId: chapter.bookId,
       chapterIndex: chapter.chapterIndex,
       chapterTitle: chapter.chapterTitle,
+      chapterUrl: undefined,
       content: document.content,
       images: document.images,
       contentVersion: document.contentVersion,

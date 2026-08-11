@@ -350,6 +350,7 @@ export class RemoteReadingFlowGateway {
       bookId: identity.bookId,
       chapterIndex,
       chapterTitle: returnedTitle,
+      chapterUrl: selected.url,
       content: document.content,
       images: document.images,
       contentVersion: document.contentVersion,

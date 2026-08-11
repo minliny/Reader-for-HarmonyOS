@@ -9,6 +9,7 @@ function chapter(chapterIndex, contentVersion = `body-${chapterIndex}`) {
     bookId: 'book-1',
     chapterIndex,
     chapterTitle: `Chapter ${chapterIndex}`,
+    chapterUrl: undefined,
     content: `Body ${chapterIndex}`,
     images: [],
     contentVersion,
