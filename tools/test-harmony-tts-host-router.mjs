@@ -63,7 +63,14 @@ const httpHostSource = await readFile(
   'utf8',
 );
 assert.match(httpHostSource, /gateway\.buildRequest\(configId, request\.text\)/);
-assert.match(httpHostSource, /media\.createMediaSourceWithUrl\(descriptor\.url, descriptor\.headers\)/);
+assert.match(httpHostSource, /expectDataType: http\.HttpDataType\.ARRAY_BUFFER/);
+assert.match(httpHostSource, /HTTP_TTS_MAX_AUDIO_BYTES/);
+assert.match(httpHostSource, /request\.destroy\(\)/);
+assert.match(httpHostSource, /player\.dataSrc = this\.createDataSource\(bytes\)/);
+assert.match(httpHostSource, /fileSize: bytes\.length/);
+assert.match(httpHostSource, /target\.set\(bytes\.subarray\(start, start \+ count\), 0\)/);
+assert.match(httpHostSource, /generation !== this\.speakGeneration/);
+assert.doesNotMatch(httpHostSource, /createMediaSourceWithUrl/);
 assert.match(httpHostSource, /await player\.prepare\(\)/);
 assert.match(httpHostSource, /await player\.play\(\)/);
 assert.match(httpHostSource, /type: 'complete', requestId, completion: 'audio'/);
