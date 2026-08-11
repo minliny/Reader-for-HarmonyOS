@@ -132,8 +132,8 @@ assert.match(orchestrator, /this\.mutationChain = this\.mutationChain[\s\S]*this
 assert.match(orchestrator, /await this\.runMutationWithRetry\(mutation\);[\s\S]*await this\.loadSubscriptionsWithRetry\(\)/);
 assert.match(orchestrator, /if \(this\.isCurrentSession\(session\)\) \{\s*this\.emit\(subscriptions\);/);
 assert.match(orchestrator, /owner\.request\('runtime\.status', \{\}\)/);
-assert.match(orchestrator, /transaction is pending/);
-assert.match(orchestrator, /no pending Host operations/);
+assert.match(orchestrator, /isReaderCoreTransactionPendingError\(error\)/);
+assert.doesNotMatch(orchestrator, /error\.message\.indexOf|error\.message\.includes/);
 assert.doesNotMatch(orchestrator, /mutationSeq|seq ===/);
 assert.doesNotMatch(orchestrator, /this\.emit\([^\n]*\.map\(/);
 assert.doesNotMatch(orchestrator, /private (subscriptions|items):/);

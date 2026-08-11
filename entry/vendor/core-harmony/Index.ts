@@ -18,6 +18,7 @@ import {
 export {
   CapabilityRouter,
   type CapabilityCancellationHandler,
+  isReaderCoreTransactionPendingError,
   ReaderCoreRequestError,
   ReaderCoreRuntime,
   parseReaderCoreEvent,
@@ -34,6 +35,8 @@ export {
   type ReaderCoreHostRequestEvent,
   type ReaderCoreLastError,
   type ReaderCoreResultEvent,
+  type ReaderCoreTransactionKind,
+  type ReaderCoreTransactionPendingDetails,
   type RequestOptions,
 } from './sdk/reader_core';
 export {

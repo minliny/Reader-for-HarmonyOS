@@ -151,6 +151,8 @@ assert.match(orchestrator, /selection === undefined \|\| !this\.isCurrentSession
   'a picker completion from an old page session must not begin Core imports');
 assert.match(orchestrator, /importBookSourceDocument\([\s\S]*this\.isCurrentSession\(session\)[\s\S]*gateway\.loadSources\(\)/);
 assert.match(orchestrator, /Book-source import failed; page kept unchanged/);
+assert.match(orchestrator, /isReaderCoreTransactionPendingError\(error\)/);
+assert.doesNotMatch(orchestrator, /error\.message\.indexOf|error\.message\.includes/);
 assert.doesNotMatch(orchestrator, /devSeed|fixture|mock|fake/i);
 
 console.log('book-source production import contract: PASS');

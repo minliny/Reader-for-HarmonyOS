@@ -6,6 +6,7 @@ import {
 } from './RssGateway';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { isReaderCoreTransactionPendingError } from '@reader/core-harmony';
 
 const DOMAIN = 0x5244;
 
@@ -16,12 +17,11 @@ function delay(millis: number): Promise<void> {
 }
 
 /**
- * Core exposes its temporary persistence/Host-operation gate through stable
- * error messages. This mirrors SourceOrchestrator's bounded idle retry.
+ * Core exposes its temporary persistence/Host-operation gate through the
+ * stable typed `TRANSACTION_PENDING` error.
  */
 function isPendingTransactionError(error: Error): boolean {
-  return error.message.indexOf('transaction is pending') !== -1 ||
-    error.message.indexOf('no pending Host operations') !== -1;
+  return isReaderCoreTransactionPendingError(error);
 }
 
 type RssMutation = () => Promise<void>;

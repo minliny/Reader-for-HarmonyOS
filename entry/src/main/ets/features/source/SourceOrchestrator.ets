@@ -6,6 +6,7 @@ import {
 import type { BookSourceJsonSelection } from '../../app/ReaderHostRegistry';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { isReaderCoreTransactionPendingError } from '@reader/core-harmony';
 
 const DOMAIN = 0x5244;
 
@@ -17,15 +18,11 @@ function delay(millis: number): Promise<void> {
 }
 
 /**
- * Core rejects unrelated commands while a persistence transaction is awaiting
- * Host durability ("transaction is pending") and rejects `source.update` while
- * any Host operation is in flight ("no pending Host operations"). Both are
- * transient busy conditions, but Core encodes them as non-retryable
- * INVALID_PARAMS, so the stable message is the only discriminator there is.
+ * Core exposes persistence/Host-operation contention through a stable typed
+ * `TRANSACTION_PENDING` error. Human-readable message text is not an ABI.
  */
 function isPendingTransactionError(error: Error): boolean {
-  return error.message.indexOf('transaction is pending') !== -1
-    || error.message.indexOf('no pending Host operations') !== -1;
+  return isReaderCoreTransactionPendingError(error);
 }
 
 /**

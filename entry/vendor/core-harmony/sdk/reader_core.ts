@@ -60,6 +60,17 @@ export type ReaderCoreErrorEvent = {
   error: ReaderCoreError;
 };
 
+export type ReaderCoreTransactionKind =
+  | "storageApply"
+  | "persistenceMutation"
+  | "hostOperationDrain";
+
+export type ReaderCoreTransactionPendingDetails = {
+  transactionKind: ReaderCoreTransactionKind;
+  pendingHostOperationCount: number;
+  retryAfterMillis: number;
+};
+
 export type ReaderCoreHostRequestEvent = {
   protocolVersion: 1;
   requestId: number;
@@ -561,6 +572,17 @@ export class ReaderCoreRequestError extends Error {
     this.name = "ReaderCoreRequestError";
     this.event = event;
   }
+
+  get transactionPendingDetails(): ReaderCoreTransactionPendingDetails | undefined {
+    return readTransactionPendingDetails(this.event.error);
+  }
+}
+
+export function isReaderCoreTransactionPendingError(
+  error: unknown
+): error is ReaderCoreRequestError {
+  return error instanceof ReaderCoreRequestError &&
+    error.transactionPendingDetails !== undefined;
 }
 
 export function parseReaderCoreEvent(raw: string): ReaderCoreEvent {
@@ -675,6 +697,35 @@ function isReaderCoreError(value: unknown): value is ReaderCoreError {
     typeof candidate.retryable === "boolean" &&
     (candidate.details === undefined || isJsonObject(candidate.details))
   );
+}
+
+function readTransactionPendingDetails(
+  error: ReaderCoreError
+): ReaderCoreTransactionPendingDetails | undefined {
+  if (error.code !== "TRANSACTION_PENDING" || !isJsonObject(error.details)) {
+    return undefined;
+  }
+  const transactionKind = error.details.transactionKind;
+  const pendingHostOperationCount = error.details.pendingHostOperationCount;
+  const retryAfterMillis = error.details.retryAfterMillis;
+  if (
+    transactionKind !== "storageApply" &&
+    transactionKind !== "persistenceMutation" &&
+    transactionKind !== "hostOperationDrain"
+  ) {
+    return undefined;
+  }
+  if (
+    !isNonNegativeSafeInteger(pendingHostOperationCount) ||
+    !isNonNegativeSafeInteger(retryAfterMillis)
+  ) {
+    return undefined;
+  }
+  return {
+    transactionKind,
+    pendingHostOperationCount,
+    retryAfterMillis,
+  };
 }
 
 function isJsonObject(value: unknown): value is JsonObject {
