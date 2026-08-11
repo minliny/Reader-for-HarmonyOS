@@ -1,13 +1,12 @@
 import {
   type SyncHistoryEntry,
+  type SyncRestoreConflict,
   type SyncSnapshot,
   DEFAULT_SYNC_SNAPSHOT,
 } from './SyncGateway';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { PageBackBar } from '../common/PageBackBar';
 import { ReaderCard } from '../common/ReaderCard';
-import { ReaderSelect } from '../common/ReaderSelect';
-import { ReaderSelectPanel, SelectAnchor } from '../common/ReaderSelectPanel';
 import {
   TOK_BORDER,
   TOK_BORDER_W,
@@ -52,65 +51,48 @@ const BADGE_BG = '#EEE7DB';
 
 @Component
 export struct SyncPage {
-  @Prop snapshot: SyncSnapshot = DEFAULT_SYNC_SNAPSHOT;
+  @Prop @Watch('onSnapshotChanged') snapshot: SyncSnapshot = DEFAULT_SYNC_SNAPSHOT;
   @Prop isTablet: boolean;
   onBack: () => void = (): void => {};
-  onTestConnection: (url: string, user: string, pass: string) => void =
-    (_url: string, _user: string, _pass: string): void => {};
+  onSaveConfig: (url: string, user: string, pass: string, backupPass: string, path: string) => void =
+    (_url: string, _user: string, _pass: string, _backupPass: string, _path: string): void => {};
+  onTestConnection: (url: string, user: string, pass: string, path: string) => void =
+    (_url: string, _user: string, _pass: string, _path: string): void => {};
   onTriggerBackup: () => void = (): void => {};
+  onRestoreLatest: () => void = (): void => {};
+  onResolveRestore: (overwriteLocal: boolean) => void = (_overwriteLocal: boolean): void => {};
   @State webdavUrl: string = '';
   @State webdavUser: string = '';
   @State webdavPass: string = '';
+  @State backupPass: string = '';
   @State webdavPath: string = '';
-  @State private openSelect: string = '';
-  // 展开面板锚点: 触发条全局坐标 - 根 Stack 原点 = 面板相对根 Stack 位置。
-  @State private anchorX: number = 0;
-  @State private anchorY: number = 0;
-  @State private originX: number = 0;
-  @State private originY: number = 0;
-  private selectAnchors: Record<string, SelectAnchor> = {};
+  private appliedSnapshotIdentity: string = '';
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
-    this.webdavUrl = this.snapshot.webdavUrl;
-    this.webdavUser = this.snapshot.webdavUser;
-    this.webdavPass = this.snapshot.webdavPass;
+    this.syncSnapshotInputs();
   }
 
   build() {
-    // 根 Stack = 下拉面板 overlay 宿主: 展开面板必须挂在全高容器才可点 (ArkUI 命中测试
-    // 裁到父边界, 固定高行内面板下层选项不可点)。
-    Stack({ alignContent: Alignment.TopStart }) {
-      Column() {
-        this.backBar();
-        Scroll() {
-          Column({ space: TOK_SPACE_MD }) {
-            this.webdavSection();
-            this.autoBackupSection();
-            this.historySection();
-          }
-          .width('100%')
-          .padding({ left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET, top: TOK_SPACE_XS, bottom: 18 });
+    Column() {
+      this.backBar();
+      Scroll() {
+        Column({ space: TOK_SPACE_MD }) {
+          this.webdavSection();
+          this.manualActionsSection();
+          this.autoBackupSection();
+          this.historySection();
         }
-        .layoutWeight(1)
         .width('100%')
-        .scrollBar(BarState.Off);
+        .padding({ left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET, top: TOK_SPACE_XS, bottom: 18 });
       }
+      .layoutWeight(1)
       .width('100%')
-      .height('100%')
-      .backgroundColor(TOK_PAPER)
-      .onAreaChange((_oldValue: Area, newValue: Area): void => {
-        // Area.globalPosition 已是 vp 单位, 直接取用 (曾 px2vp 二次÷3.5 致面板错位)。
-        this.originX = Number(newValue.globalPosition.x);
-        this.originY = Number(newValue.globalPosition.y);
-      });
-
-      if (this.openSelect !== '') {
-        this.buildOverlay();
-      }
+      .scrollBar(BarState.Off);
     }
     .width('100%')
-    .height('100%');
+    .height('100%')
+    .backgroundColor(TOK_PAPER);
   }
 
   @Builder
@@ -173,6 +155,10 @@ export struct SyncPage {
           this.webdavInputRow($r('app.media.directory_bookmark_on'), '密码', this.webdavPass,
             '••••••••••••', true, (value: string): void => {
               this.webdavPass = value;
+            });
+          this.webdavInputRow($r('app.media.directory_bookmark_on'), '备份加密密码', this.backupPass,
+            '与 WebDAV 登录密码分开保存', true, (value: string): void => {
+              this.backupPass = value;
             });
           this.webdavInputRow($r('app.media.reader_directory_directory'), '同步目录', this.webdavPath,
             '/ReaderBackup/ReaderAndroid', false, (value: string): void => {
@@ -267,7 +253,8 @@ export struct SyncPage {
       .backgroundColor(GHOST_BG)
       .border({ width: TOK_BORDER_W, color: GHOST_BORDER })
       .borderRadius(8)
-      .onClick((): void => this.onTestConnection(this.webdavUrl.trim(), this.webdavUser.trim(), this.webdavPass));
+      .onClick((): void => this.onTestConnection(
+        this.webdavUrl.trim(), this.webdavUser.trim(), this.webdavPass, this.webdavPath.trim()));
 
       Stack({ alignContent: Alignment.Center }) {
         Text('保存配置')
@@ -281,24 +268,98 @@ export struct SyncPage {
       .backgroundColor(SOLID_BG)
       .border({ width: TOK_BORDER_W, color: SOLID_BG })
       .borderRadius(12)
-      // 保存配置 is visual-only: the host has no WebDAV-config persistence
-      // callback (see coverage matrix, Sync ⊘Core阻塞), so it must NOT trigger
-      // a backup or fake a save. Keep it inert until the executor/result-page
-      // contract is delivered.
-      .onClick((): void => {});
+      .onClick((): void => this.onSaveConfig(
+        this.webdavUrl.trim(), this.webdavUser.trim(), this.webdavPass,
+        this.backupPass, this.webdavPath.trim()));
     }
     .width('100%');
   }
 
   @Builder
+  private manualActionsSection() {
+    Column({ space: TOK_SPACE_XS }) {
+      this.sectionHeadingMuted('前台手动备份');
+      ReaderCard({ bg: TOK_SURFACE_SOLID, cardBorder: CARD_BORDER_SOFT, radius: 13,
+        cardWidth: this.contentWidth() }) {
+        Column({ space: TOK_SPACE_SM }) {
+          if (this.snapshot.statusMessage.length > 0) {
+            Text(this.snapshot.statusMessage)
+              .width('100%')
+              .fontFamily('ReaderNotoSansSC')
+              .fontSize(12)
+              .lineHeight(18)
+              .fontColor(TOK_PRIMARY_DARK);
+          }
+          Row({ space: TOK_SPACE_XS }) {
+            this.manualActionButton('立即备份', true, (): void => this.onTriggerBackup());
+            this.manualActionButton('恢复最新备份', false, (): void => this.onRestoreLatest());
+          }
+          .width('100%');
+          if (this.snapshot.restoreConflict !== undefined) {
+            this.restoreConflictCard(this.snapshot.restoreConflict as SyncRestoreConflict);
+          }
+        }
+        .width('100%')
+        .padding(TOK_SPACE_CARD_PADDING);
+      }
+    }
+    .width('100%');
+  }
+
+  @Builder
+  private manualActionButton(label: string, primary: boolean, action: () => void) {
+    Stack({ alignContent: Alignment.Center }) {
+      Text(label)
+        .fontFamily('ReaderInter')
+        .fontWeight(900)
+        .fontSize(12)
+        .fontColor(primary ? TOK_ON_PRIMARY : TOK_PRIMARY_DARK);
+    }
+    .height(40)
+    .layoutWeight(1)
+    .backgroundColor(primary ? SOLID_BG : GHOST_BG)
+    .border({ width: TOK_BORDER_W, color: primary ? SOLID_BG : GHOST_BORDER })
+    .borderRadius(10)
+    .onClick(action);
+  }
+
+  @Builder
+  private restoreConflictCard(conflict: SyncRestoreConflict) {
+    Column({ space: TOK_SPACE_XS }) {
+      Text('检测到本机与远端完整备份不同')
+        .width('100%')
+        .fontFamily('ReaderNotoSansSC')
+        .fontWeight(FontWeight.Bold)
+        .fontSize(13)
+        .fontColor(TOK_INK);
+      Text(`备份 ${conflict.backupId} · 本机 ${conflict.localChecksum.substring(0, 8)}… · 远端 ${conflict.remoteChecksum.substring(0, 8)}…`)
+        .width('100%')
+        .fontFamily('ReaderInter')
+        .fontSize(11)
+        .lineHeight(17)
+        .fontColor(TOK_MUTED);
+      Row({ space: TOK_SPACE_XS }) {
+        this.manualActionButton('取消', false, (): void => this.onResolveRestore(false));
+        this.manualActionButton('覆盖本机', true, (): void => this.onResolveRestore(true));
+      }
+      .width('100%');
+    }
+    .width('100%')
+    .padding(TOK_SPACE_SM)
+    .backgroundColor(TOK_SURFACE_PANEL_SOFT)
+    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+    .borderRadius(8);
+  }
+
+  @Builder
   private autoBackupSection() {
     Column({ space: TOK_SPACE_XS }) {
-      this.sectionHeadingMuted('自动备份配置');
+      this.sectionHeadingMuted('自动备份（尚未启用）');
       ReaderCard({ bg: TOK_SURFACE_SOLID, cardBorder: CARD_BORDER_SOFT, radius: 13, cardWidth: this.contentWidth() }) {
         Column() {
-          this.autoRow('保存位置', this.snapshot.saveLocation, 'location', ['WebDAV', '本地']);
+          this.gatedRow('保存位置', this.snapshot.saveLocation);
           Row().width('100%').height(1).backgroundColor(CARD_BORDER_SOFT);
-          this.autoRow('备份频率', this.snapshot.backupFrequency, 'frequency', ['12h', '24h', '每周']);
+          this.gatedRow('备份频率', this.snapshot.backupFrequency);
           Row().width('100%').height(1).backgroundColor(CARD_BORDER_SOFT);
           this.scopeRow();
         }
@@ -309,40 +370,25 @@ export struct SyncPage {
   }
 
   @Builder
-  private autoRow(label: string, value: string, key: string, options: string[]) {
+  private gatedRow(label: string, value: string) {
     Row() {
       Text(label)
         .layoutWeight(1)
         .fontFamily('ReaderInter')
         .fontWeight(600)
         .fontSize(13)
-        .fontColor('#1A1612')
-        .maxLines(1);
-      ReaderSelect({
-        value: value,
-        options: options,
-        isOpen: this.openSelect === key,
-        onToggle: (): void => {
-          this.openSelect = this.openSelect === key ? '' : key;
-          const a = this.selectAnchors[key];
-          if (a !== undefined) {
-            this.anchorX = a.x;
-            this.anchorY = a.y;
-          }
-        },
-      })
-      .onAreaChange((_oldValue: Area, newValue: Area): void => {
-        // Area.globalPosition 已是 vp 单位, 直接取用 (曾 px2vp 二次÷3.5 致面板错位)。
-        this.selectAnchors[key] = {
-          x: Number(newValue.globalPosition.x),
-          y: Number(newValue.globalPosition.y),
-        };
-      });
+        .fontColor('#1A1612');
+      Text(value)
+        .fontFamily('ReaderNotoSansSC')
+        .fontWeight(FontWeight.Bold)
+        .fontSize(12)
+        .fontColor(TOK_MUTED);
     }
     .width('100%')
     .height(50)
     .padding({ left: TOK_SPACE_CARD_PADDING, right: TOK_SPACE_CARD_PADDING })
-    .alignItems(VerticalAlign.Center);
+    .opacity(0.72)
+    .hitTestBehavior(HitTestMode.None);
   }
 
   // FIGMA_MULTISELECT_EXPANDED_STATE_MISSING: “N项已选”是多选触发语义，不能再用
@@ -515,41 +561,6 @@ export struct SyncPage {
     .justifyContent(FlexAlign.End);
   }
 
-  private autoOptions(key: string): string[] {
-    if (key === 'location') {
-      return ['WebDAV', '本地'];
-    } else if (key === 'frequency') {
-      return ['12h', '24h', '每周'];
-    }
-    return [];
-  }
-
-  private autoValue(key: string): string {
-    if (key === 'location') {
-      return this.snapshot.saveLocation;
-    } else if (key === 'frequency') {
-      return this.snapshot.backupFrequency;
-    }
-    return '';
-  }
-
-  // 展开面板: 根 Stack 即全高 overlay 宿主, 面板相对位置 = 触发条全局坐标 - 宿主原点。
-  // 与现有行为一致: 选择只收起, 不写回 snapshot (自动备份配置无持久化)。
-  @Builder
-  private buildOverlay() {
-    if (this.openSelect === 'location' || this.openSelect === 'frequency') {
-      ReaderSelectPanel({
-        value: this.autoValue(this.openSelect),
-        options: this.autoOptions(this.openSelect),
-        x: this.anchorX - this.originX,
-        y: this.anchorY - this.originY,
-        onSelect: (_opt: string): void => {
-          this.openSelect = '';
-        },
-      });
-    }
-  }
-
   private scopeSummary(): string {
     if (this.snapshot.backupScope.trim() === '') {
       return '未选择';
@@ -560,5 +571,22 @@ export struct SyncPage {
 
   private contentWidth(): number {
     return this.isTablet ? TOK_CONTENT_MAX_W_TABLET : TOK_CONTENT_MAX_W_PHONE;
+  }
+
+  private onSnapshotChanged(): void {
+    this.syncSnapshotInputs();
+  }
+
+  private syncSnapshotInputs(): void {
+    const identity = `${this.snapshot.webdavUrl}\n${this.snapshot.webdavUser}\n${this.snapshot.webdavPath}`;
+    if (identity === this.appliedSnapshotIdentity) {
+      return;
+    }
+    this.appliedSnapshotIdentity = identity;
+    this.webdavUrl = this.snapshot.webdavUrl;
+    this.webdavUser = this.snapshot.webdavUser;
+    this.webdavPass = '';
+    this.backupPass = '';
+    this.webdavPath = this.snapshot.webdavPath;
   }
 }

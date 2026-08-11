@@ -187,10 +187,13 @@ struct Index {
     webdavUrl: '',
     webdavUser: '',
     webdavPass: '',
+    backupPass: '',
+    webdavPath: '/ReaderBackup/ReaderHarmony',
     saveLocation: 'WebDAV',
-    backupFrequency: '12小时',
-    backupScope: '书架、进度',
+    backupFrequency: '手动',
+    backupScope: '完整 Core 数据（AES 加密）',
     history: [],
+    statusMessage: '',
   };
   /** Source-switch overlay presentation + the gateway that drives it. */
   @State private sourceSwitchVisible: boolean = false;
@@ -437,8 +440,13 @@ struct Index {
           snapshot: this.syncSnapshot,
           isTablet: deviceInfo.deviceType === 'tablet',
           onBack: (): void => this.returnToSettings(),
-          onTestConnection: (url: string, user: string, pass: string): void => this.onSyncTestConnection(url, user, pass),
+          onSaveConfig: (url: string, user: string, pass: string, backupPass: string, path: string): void =>
+            this.onSyncSaveConfig(url, user, pass, backupPass, path),
+          onTestConnection: (url: string, user: string, pass: string, path: string): void =>
+            this.onSyncTestConnection(url, user, pass, path),
           onTriggerBackup: (): void => this.onSyncTriggerBackup(),
+          onRestoreLatest: (): void => this.onSyncRestoreLatest(),
+          onResolveRestore: (overwriteLocal: boolean): void => this.onSyncResolveRestore(overwriteLocal),
         });
       } else if (this.route === 'detail' && this.detailBook !== undefined) {
         LocalBookDetail({
@@ -663,12 +671,24 @@ struct Index {
     return this.settingsOrchestrator;
   }
 
-  private onSyncTestConnection(url: string, user: string, pass: string): void {
-    this.getSyncOrchestrator().testConnection(url, user, pass);
+  private onSyncSaveConfig(url: string, user: string, pass: string, backupPass: string, path: string): void {
+    this.getSyncOrchestrator().saveConfig(url, user, pass, backupPass, path);
+  }
+
+  private onSyncTestConnection(url: string, user: string, pass: string, path: string): void {
+    this.getSyncOrchestrator().testConnection(url, user, pass, path);
   }
 
   private onSyncTriggerBackup(): void {
     this.getSyncOrchestrator().triggerBackup();
+  }
+
+  private onSyncRestoreLatest(): void {
+    this.getSyncOrchestrator().restoreLatest();
+  }
+
+  private onSyncResolveRestore(overwriteLocal: boolean): void {
+    this.getSyncOrchestrator().resolveRestore(overwriteLocal);
   }
 
   private getSyncOrchestrator(): SyncOrchestrator {
@@ -736,6 +756,7 @@ struct Index {
     this.readingExitRequest = undefined;
     this.exitToBookshelfAfterReader = false;
     this.route = 'sync';
+    this.getSyncOrchestrator().open();
   }
 
   private refreshRss(): void {
