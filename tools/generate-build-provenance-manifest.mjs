@@ -112,9 +112,9 @@ function treeRecord(root) {
     const bytes = readFileSync(path);
     const relativePath = relative(root, path);
     hash.update(relativePath);
-    hash.update([0]);
+    hash.update(Buffer.from([0]));
     hash.update(bytes);
-    hash.update([0]);
+    hash.update(Buffer.from([0]));
     return { path: relativePath, bytes: bytes.length, sha256: sha256(bytes) };
   });
   return { root, sha256: hash.digest('hex'), entries };
