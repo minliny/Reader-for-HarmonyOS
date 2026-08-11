@@ -353,10 +353,10 @@ export struct BookshelfPage {
     Column({ space: 0 }) {
       Blank().height(238);
       Column({ space: 6 }) {
-        this.tabletNavigationItem('bookshelf_library', '书架', true);
-        this.tabletNavigationItem('bookshelf_compass', '发现', false);
-        this.tabletNavigationItem('bookshelf_rss', 'RSS', false);
-        this.tabletNavigationItem('bookshelf_settings', '设置', false);
+        this.tabletNavigationItem('bookshelf_library', '书架', 'bookshelf', true);
+        this.tabletNavigationItem('bookshelf_compass', '发现', 'discover', false);
+        this.tabletNavigationItem('bookshelf_rss', 'RSS', 'rss', false);
+        this.tabletNavigationItem('bookshelf_settings', '设置', 'settings', false);
       }
       .width(82)
       .height(268)
@@ -376,7 +376,7 @@ export struct BookshelfPage {
   }
 
   @Builder
-  private tabletNavigationItem(assetName: string, label: string, active: boolean) {
+  private tabletNavigationItem(assetName: string, label: string, navKey: string, active: boolean) {
     Column({ space: 2 }) {
       Stack({ alignContent: Alignment.Center }) {
         if (assetName === 'bookshelf_library') {
@@ -404,7 +404,12 @@ export struct BookshelfPage {
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(active ? TOK_PRIMARY_DARK : Color.Transparent)
-    .borderRadius(24);
+    .borderRadius(24)
+    .onClick((): void => {
+      if (!active) {
+        this.onMainTab(navKey);
+      }
+    });
   }
 
   private bookRows(columns: number): ShelfBook[][] {
