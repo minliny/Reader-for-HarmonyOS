@@ -25,6 +25,37 @@ const http = require('http');
 const PORT = Number(process.argv[2] || process.env.PORT || 8000);
 // "中文" encoded as GBK (D6 D0 / CE C4).
 const GBK_BYTES = Buffer.from([0xd6, 0xd0, 0xce, 0xc4]);
+const evidence = {
+  requests: 0,
+  redirectInitials: 0,
+  redirectFinals: 0,
+  gbkPosts: 0,
+  gbkRequestBodyBase64: [],
+  post307Initials: 0,
+  post307Finals: 0,
+  post307FinalMethods: [],
+  post307FinalBodyBase64: [],
+  post307ProbeHeaderPresent: 0,
+};
+
+function resetEvidence() {
+  for (const key of Object.keys(evidence)) {
+    evidence[key] = Array.isArray(evidence[key]) ? [] : 0;
+  }
+}
+
+function sourceSearchHtml(name = 'VM Boundary Book') {
+  return '<ul class="results"><li class="book"><span class="name">' + name +
+    '</span><span class="author">Reader</span><a class="detail" href="/source/book/1">detail</a></li></ul>';
+}
+
+function gbkSourceSearchHtml() {
+  return Buffer.concat([
+    Buffer.from('<ul class="results"><li class="book"><span class="name">', 'ascii'),
+    GBK_BYTES,
+    Buffer.from('</span><span class="author">Reader</span><a class="detail" href="/source/book/1">detail</a></li></ul>', 'ascii'),
+  ]);
+}
 
 function log(line) {
   // ISO timestamp so the observer can correlate request ordering with
@@ -53,10 +84,61 @@ const server = http.createServer((req, res) => {
       res.end('invalid url');
       return;
     }
-    log(`REQ ${req.method} ${req.url} ctype=${req.headers['content-type'] || '-'} body=${body.toString('utf8').slice(0, 160)}`);
     const path = url.pathname;
+    if (path === '/reset') {
+      resetEvidence();
+      res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('reset');
+      return;
+    }
+    if (path === '/status') {
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify(evidence));
+      return;
+    }
 
-    if (path === '/echo') {
+    evidence.requests += 1;
+    log(`REQ ${JSON.stringify({
+      method: req.method,
+      path: req.url,
+      contentType: req.headers['content-type'] || null,
+      bodyBase64: body.toString('base64'),
+      headerNames: Object.keys(req.headers).sort(),
+    })}`);
+
+    if (path === '/source/redirect/search') {
+      evidence.redirectInitials += 1;
+      res.writeHead(302, { Location: './final/search' });
+      res.end();
+    } else if (path === '/source/redirect/final/search') {
+      evidence.redirectFinals += 1;
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(sourceSearchHtml('VM Redirect Book'));
+    } else if (path === '/source/gbk/search') {
+      evidence.gbkPosts += 1;
+      evidence.gbkRequestBodyBase64.push(body.toString('base64'));
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=gbk' });
+      res.end(gbkSourceSearchHtml());
+    } else if (path === '/source/post307/search') {
+      evidence.post307Initials += 1;
+      res.writeHead(307, { Location: '../post307-final/search' });
+      res.end();
+    } else if (path === '/source/post307-final/search') {
+      evidence.post307Finals += 1;
+      evidence.post307FinalMethods.push(req.method || '');
+      evidence.post307FinalBodyBase64.push(body.toString('base64'));
+      if (req.headers['x-vm-probe'] === 'header-relative') {
+        evidence.post307ProbeHeaderPresent += 1;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(sourceSearchHtml('VM 307 Book'));
+    } else if (path === '/source/book/1') {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end('<article><h1>VM Boundary Book</h1><ol class="toc"><li><a href="/source/chapter/1">Chapter</a></li></ol></article>');
+    } else if (path === '/source/chapter/1') {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end('<div class="content">VM boundary fixture text is deliberately longer than fifty characters so the production L5 parser accepts this controlled non-image chapter.</div>');
+    } else if (path === '/echo') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({
         method: req.method,

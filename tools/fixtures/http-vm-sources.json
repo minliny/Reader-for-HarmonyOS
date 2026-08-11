@@ -1,0 +1,59 @@
+[
+  {
+    "bookSourceName": "VM 相对重定向",
+    "bookSourceUrl": "http://10.0.2.2:18080#vm-relative-redirect",
+    "searchUrl": "http://10.0.2.2:18080/source/redirect/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "ul.results li.book",
+      "name": "span.name@text",
+      "author": "span.author@text",
+      "bookUrl": "a.detail@href",
+      "checkKeyWord": "book"
+    },
+    "ruleBookInfo": { "name": "h1@text" },
+    "ruleToc": {
+      "chapterList": "ol.toc li",
+      "chapterName": "a@text",
+      "chapterUrl": "a@href"
+    },
+    "ruleContent": { "content": "div.content@html" }
+  },
+  {
+    "bookSourceName": "VM GBK POST",
+    "bookSourceUrl": "http://10.0.2.2:18080#vm-gbk-post",
+    "searchUrl": "http://10.0.2.2:18080/source/gbk/search,{\"method\":\"POST\",\"body\":\"searchkey={{key}}\",\"charset\":\"GBK\"}",
+    "ruleSearch": {
+      "bookList": "ul.results li.book",
+      "name": "span.name@text",
+      "author": "span.author@text",
+      "bookUrl": "a.detail@href",
+      "checkKeyWord": "中文"
+    },
+    "ruleBookInfo": { "name": "h1@text" },
+    "ruleToc": {
+      "chapterList": "ol.toc li",
+      "chapterName": "a@text",
+      "chapterUrl": "a@href"
+    },
+    "ruleContent": { "content": "div.content@html" }
+  },
+  {
+    "bookSourceName": "VM 307 POST Header",
+    "bookSourceUrl": "http://10.0.2.2:18080#vm-307-post-header",
+    "searchUrl": "http://10.0.2.2:18080/source/post307/search,{\"method\":\"POST\",\"body\":\"probe={{key}}\",\"headers\":{\"X-VM-Probe\":\"header-relative\"}}",
+    "ruleSearch": {
+      "bookList": "ul.results li.book",
+      "name": "span.name@text",
+      "author": "span.author@text",
+      "bookUrl": "a.detail@href",
+      "checkKeyWord": "book"
+    },
+    "ruleBookInfo": { "name": "h1@text" },
+    "ruleToc": {
+      "chapterList": "ol.toc li",
+      "chapterName": "a@text",
+      "chapterUrl": "a@href"
+    },
+    "ruleContent": { "content": "div.content@html" }
+  }
+]
