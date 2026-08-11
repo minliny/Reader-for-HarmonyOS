@@ -62,6 +62,8 @@ export struct SettingsPage {
   @State private tapBottomScrollTopValue: boolean = true;
   @State private reduceMotionValue: boolean = false;
   @State private crashLogValue: boolean = true;
+  @State private cacheActionLabel: string = '清理文字缓存';
+  @State private cacheCleanupInFlight: boolean = false;
   @State private openSelect: string = '';
   // 展开面板锚点: 触发条全局坐标减去宿主 Stack 原点, 得面板相对宿主 Stack 的位置。
   // selectAnchors 为普通 map(非 @State): 逐行 onAreaChange 写入, 打开时读入 anchorX/Y。
@@ -75,6 +77,7 @@ export struct SettingsPage {
   onOpenSync: () => void = (): void => {};
   onRssRequested: () => void = (): void => {};
   onDiscoverRequested: () => void = (): void => {};
+  onClearCache: () => Promise<boolean> = async (): Promise<boolean> => false;
   onToggle: (key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog', value: boolean) => void =
     (_key: string, _value: boolean): void => {};
 
@@ -149,7 +152,8 @@ export struct SettingsPage {
       this.switchRow('减少动态效果', $r('app.media.settings_gen_motion'), 'reduceMotion');
       this.switchRow('崩溃日志', $r('app.media.settings_gen_crash'), 'crashLog');
       this.selectRow('动画效果', $r('app.media.settings_gen_animation'), 'animation', ['标准', '减弱', '关闭']);
-      this.actionRow('缓存清理', $r('app.media.settings_gen_cache'), '清理缓存');
+      this.actionRow('缓存清理', $r('app.media.settings_gen_cache'), this.cacheActionLabel,
+        (): void => this.clearTextCache());
     }
   }
 
@@ -310,10 +314,28 @@ export struct SettingsPage {
   }
 
   @Builder
-  private actionRow(label: string, icon: Resource, actionLabel: string) {
-    CategoryRow({ icon: icon, label: label }) {
+  private actionRow(label: string, icon: Resource, actionLabel: string, action: () => void) {
+    CategoryRow({ icon: icon, label: label, onRowClick: action }) {
       this.inlineAction(actionLabel, 66);
     }
+  }
+
+  private clearTextCache(): void {
+    if (this.cacheCleanupInFlight) {
+      return;
+    }
+    this.cacheCleanupInFlight = true;
+    this.cacheActionLabel = '清理中';
+    void this.onClearCache()
+      .then((cleared: boolean): void => {
+        this.cacheActionLabel = cleared ? '已清理' : '清理失败';
+      })
+      .catch((): void => {
+        this.cacheActionLabel = '清理失败';
+      })
+      .finally((): void => {
+        this.cacheCleanupInFlight = false;
+      });
   }
 
   @Builder

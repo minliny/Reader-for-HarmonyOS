@@ -420,6 +420,7 @@ struct Index {
           onDiscoverRequested: (): void => this.openDiscover(),
           onToggle: (key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
             value: boolean): void => this.onSettingToggled(key, value),
+          onClearCache: (): Promise<boolean> => this.clearTextCache(),
         });
       } else if (this.route === 'source') {
         SourceManagementPage({
@@ -627,6 +628,25 @@ struct Index {
     value: boolean,
   ): void {
     this.getSettingsOrchestrator().toggle(key, value);
+  }
+
+  private async clearTextCache(): Promise<boolean> {
+    try {
+      const result = await ReaderRuntimeOwner.current().request('cache.clear', { scope: 'cache' });
+      if (result.data['scope'] !== 'cache') {
+        throw new Error('cache.clear returned an unexpected scope');
+      }
+      hilog.info(DOMAIN, 'Reader',
+        'Text cache cleanup completed: cache=%{public}s chapters=%{public}s queue=%{public}s',
+        `${result.data['cacheEntriesRemoved'] ?? 0}`,
+        `${result.data['chapterEntriesRemoved'] ?? 0}`,
+        `${result.data['queueEntriesRemoved'] ?? 0}`);
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : `${error}`;
+      hilog.error(DOMAIN, 'Reader', 'Text cache cleanup failed: %{public}s', message);
+      return false;
+    }
   }
 
   private getSettingsOrchestrator(): SettingsOrchestrator {
