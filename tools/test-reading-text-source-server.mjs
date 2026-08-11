@@ -111,20 +111,20 @@ const server = http.createServer((request, response) => {
   if (requestUrl.pathname === '/text/book/1/toc') {
     send(response, 200,
       '<ol class="toc"><li><a href="/text/chapter/offline">离线文字</a></li>' +
-      '<li><a href="/text/chapter/slow">慢正文中断</a></li>' +
+      '<li><a href="/text/chapter/clear">缓存清理文字</a></li>' +
       '<li><a href="/text/chapter/missing">未下载文字</a></li>' +
-      '<li><a href="/text/chapter/clear">缓存清理文字</a></li></ol>');
+      '<li><a href="/text/chapter/slow">慢正文中断</a></li></ol>');
     return;
   }
   if (requestUrl.pathname === '/text/chapter/slow') {
     evidence.slowTextRequests += 1;
-    let finished = false;
-    request.on('close', () => {
+    response.on('close', () => {
+      const finished = response.writableFinished;
       if (!finished) evidence.slowTextAbortedRequests += 1;
       process.stdout.write(`${JSON.stringify({ slowTextClosed: true, finished })}\n`);
     });
     setTimeout(() => {
-      finished = true;
+      if (response.destroyed) return;
       if (variant === 'b') evidence.sourceBChapterLoads += 1;
       else evidence.sourceAChapterLoads += 1;
       send(response, 200, body(variant, '慢正文完成'));
