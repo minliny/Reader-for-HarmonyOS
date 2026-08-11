@@ -319,9 +319,20 @@ export struct SettingsPage {
       label: '缓存清理',
       onRowClick: (): void => this.clearTextCache(),
     }) {
-      // Read @State directly in this builder. Passing the value through a
-      // generic @Builder argument leaves the trailing label stale on device.
-      this.inlineAction(this.cacheActionLabel, 66);
+      // Keep the reactive state read in the concrete component tree. ArkUI
+      // does not invalidate this slot when the value crosses a @Builder
+      // argument boundary.
+      Stack({ alignContent: Alignment.Center }) {
+        Text(this.cacheActionLabel)
+          .fontFamily('ReaderInter')
+          .fontWeight(800)
+          .fontSize(11)
+          .fontColor(TOK_GREEN);
+      }
+      .width(66)
+      .height(34)
+      .borderRadius(6)
+      .backgroundColor(TOK_SETTING_ACTION_BG);
     }
   }
 
