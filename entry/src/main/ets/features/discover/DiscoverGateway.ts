@@ -47,7 +47,11 @@ export class DiscoverGateway {
       const obj = item as JsonObject;
       const title = this.string(obj, 'title');
       const url = this.string(obj, 'url');
-      if (title === undefined || url === undefined) {
+      // Legado exploreUrl arrays commonly include group headings whose URL is
+      // intentionally blank. Core preserves those source semantics; this
+      // executable-only product list must not dispatch a heading as
+      // `source.explore`, which requires a concrete category URL.
+      if (title === undefined || url === undefined || url.trim().length === 0) {
         continue;
       }
       kinds.push({ title, url });

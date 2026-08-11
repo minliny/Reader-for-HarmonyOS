@@ -14,6 +14,8 @@ const index = read('entry/src/main/ets/pages/Index.ets');
 assert.match(gateway, /request\('source\.exploreKinds', \{ sourceId \}\)/);
 assert.match(gateway, /request\('source\.explore', \{ sourceId, url, page \}\)/);
 assert.match(gateway, /page must be a positive safe integer/);
+assert.match(gateway, /url\.trim\(\)\.length === 0/,
+  'Legado explore group headings with blank URLs must never be dispatched as categories');
 assert.match(orchestrator, /source\.enabled && source\.enabledExplore/);
 assert.match(orchestrator, /private operationTail: Promise<void> = Promise\.resolve\(\)/);
 assert.match(orchestrator, /loadPage\(session, index, 1, false\)/);
