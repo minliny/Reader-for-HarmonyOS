@@ -112,7 +112,8 @@ const server = http.createServer((request, response) => {
     send(response, 200,
       '<ol class="toc"><li><a href="/text/chapter/offline">离线文字</a></li>' +
       '<li><a href="/text/chapter/clear">缓存清理文字</a></li>' +
-      '<li><a href="/text/chapter/missing">未下载文字</a></li>' +
+      '<li><a href="/text/chapter/download">离线下载文字</a></li>' +
+      '<li><a href="/text/chapter/missing">未下载失败文字</a></li>' +
       '<li><a href="/text/chapter/slow">慢正文中断</a></li></ol>');
     return;
   }
@@ -133,6 +134,7 @@ const server = http.createServer((request, response) => {
   }
   const labels = new Map([
     ['/text/chapter/offline', '离线文字已缓存'],
+    ['/text/chapter/download', '离线下载完成'],
     ['/text/chapter/missing', '未下载章节只允许在线读取'],
     ['/text/chapter/clear', '缓存清理前正文'],
   ]);
