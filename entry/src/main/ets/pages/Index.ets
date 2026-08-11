@@ -8,6 +8,12 @@ import {
   BookshelfFlowGateway,
 } from '../features/bookshelf/BookshelfFlowGateway';
 import { BookshelfPage } from '../features/bookshelf/BookshelfPage';
+import { BookshelfManagementPage } from '../features/bookshelf/BookshelfManagementPage';
+import {
+  BookshelfManagementOrchestrator,
+  EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT,
+  type BookshelfManagementSnapshot,
+} from '../features/bookshelf/BookshelfManagementOrchestrator';
 import { DiscoverPage, type DiscoverPresentation } from '../features/discover/DiscoverPage';
 import { DiscoverGateway } from '../features/discover/DiscoverGateway';
 import { BookshelfEmptyPage } from '../features/bookshelf/BookshelfEmptyPage';
@@ -118,6 +124,7 @@ const MAX_IMPORT_RESULT_ITEMS = 50;
 const LOCAL_SOURCE_ID = 'local';
 
 type ReaderRoute = 'bookshelf' | 'discover' | 'detail' | 'reading' | 'directory' | 'search' |
+  'bookshelfManagement' |
   'rss' | 'rssSubscriptionManagement' | 'rssSourceFeed' | 'rssEntryDetail' |
   'rssSubscriptionEditor' | 'settings' | 'source' | 'sourceTools' | 'sync';
 type PreparedReaderRoute = 'reading' | 'directory';
@@ -168,6 +175,8 @@ struct Index {
   @State private continueReading: ShelfBook | undefined = undefined;
   @State private isBookshelfVisualAdmitted: boolean = false;
   @State private isCoreShelfEmpty: boolean = false;
+  @State private bookshelfManagementSnapshot: BookshelfManagementSnapshot =
+    EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT;
   @State private route: ReaderRoute = 'bookshelf';
   @State private detailBook: ReadingBookDetail | undefined = undefined;
   @State private detailToc: LocalReadingTocEntry[] = [];
@@ -233,6 +242,7 @@ struct Index {
   /** Rejects a late shelf read after a newer import/refresh has completed. */
   private bookshelfLoadGeneration: number = 0;
   private searchOrchestrator: SearchOrchestrator | undefined;
+  private bookshelfManagementOrchestrator: BookshelfManagementOrchestrator | undefined;
   private settingsOrchestrator: SettingsOrchestrator | undefined;
   private syncOrchestrator: SyncOrchestrator | undefined;
   private sourceOrchestrator: SourceOrchestrator | undefined;
@@ -284,6 +294,10 @@ struct Index {
     }
     if (this.route === 'sourceTools') {
       this.returnToSourceManagement();
+      return true;
+    }
+    if (this.route === 'bookshelfManagement') {
+      this.returnToBookshelf();
       return true;
     }
     if (this.route === 'search' || this.route === 'rss' || this.route === 'settings') {
@@ -345,7 +359,30 @@ struct Index {
           onRssRequested: (): void => this.openRss(),
           onSettingsRequested: (): void => this.openSettings(),
           onDiscoverRequested: (): void => this.openDiscover(),
+          onManageRequested: (): void => this.openBookshelfManagement(),
           onBookSelected: (book: ShelfBook): void => this.openBookDetail(book),
+        });
+      } else if (this.route === 'bookshelfManagement') {
+        BookshelfManagementPage({
+          snapshot: this.bookshelfManagementSnapshot,
+          onBack: (): void => this.returnToBookshelf(),
+          onGroupNameChanged: (value: string): void =>
+            this.getBookshelfManagementOrchestrator().updateGroupName(value),
+          onGroupOrderChanged: (value: string): void =>
+            this.getBookshelfManagementOrchestrator().updateGroupOrder(value),
+          onSelectGroup: (groupId: number): void =>
+            this.getBookshelfManagementOrchestrator().selectGroup(groupId),
+          onClearGroupEditor: (): void => this.getBookshelfManagementOrchestrator().clearGroupEditor(),
+          onSaveGroup: (): void => this.getBookshelfManagementOrchestrator().saveGroup(),
+          onToggleGroupShown: (groupId: number): void =>
+            this.getBookshelfManagementOrchestrator().toggleGroupShown(groupId),
+          onDeleteGroup: (groupId: number): void =>
+            this.getBookshelfManagementOrchestrator().deleteGroup(groupId),
+          onSelectBook: (sourceId: string, bookId: string): void =>
+            this.getBookshelfManagementOrchestrator().selectBook(sourceId, bookId),
+          onAssignmentGroupChanged: (value: string): void =>
+            this.getBookshelfManagementOrchestrator().updateAssignmentGroup(value),
+          onAssignBook: (): void => this.getBookshelfManagementOrchestrator().assignSelectedBook(),
         });
       } else if (this.route === 'bookshelf' && this.isCoreShelfEmpty) {
         // H-NOTE-1: Tablet empty has no Figma Final variant. Until Figma
@@ -689,6 +726,27 @@ struct Index {
     this.exitToBookshelfAfterReader = false;
     this.route = 'settings';
     this.getSettingsOrchestrator().open();
+  }
+
+  private openBookshelfManagement(): void {
+    this.nextNavigationGeneration();
+    this.readingSessionActive = false;
+    this.readingExitRequest = undefined;
+    this.exitToBookshelfAfterReader = false;
+    this.route = 'bookshelfManagement';
+    this.getBookshelfManagementOrchestrator().open();
+  }
+
+  private getBookshelfManagementOrchestrator(): BookshelfManagementOrchestrator {
+    if (this.bookshelfManagementOrchestrator === undefined) {
+      this.bookshelfManagementOrchestrator = new BookshelfManagementOrchestrator(
+        (snapshot: BookshelfManagementSnapshot): void => {
+          this.bookshelfManagementSnapshot = snapshot;
+        },
+        (): boolean => this.route === 'bookshelfManagement',
+      );
+    }
+    return this.bookshelfManagementOrchestrator;
   }
 
   private onSettingToggled(

@@ -45,6 +45,7 @@ export struct BookshelfPage {
   onRssRequested: () => void = (): void => {};
   onSettingsRequested: () => void = (): void => {};
   onDiscoverRequested: () => void = (): void => {};
+  onManageRequested: () => void = (): void => {};
   onBookSelected: (book: ShelfBook) => void = (_book: ShelfBook): void => {};
 
   aboutToAppear(): void {
@@ -235,11 +236,11 @@ export struct BookshelfPage {
           .fontColor(TOK_INK);
 
         Row({ space: TOK_SPACE_XS }) {
-          this.sectionAction('bookshelf_grid');
-          this.sectionAction('bookshelf_list');
-          this.sectionAction('bookshelf_filter');
-          this.sectionAction('bookshelf_search');
-          this.sectionAction('bookshelf_settings');
+          this.sectionAction('bookshelf_grid', (): void => {});
+          this.sectionAction('bookshelf_list', (): void => {});
+          this.sectionAction('bookshelf_filter', (): void => {});
+          this.sectionAction('bookshelf_search', (): void => this.onSearchRequested());
+          this.sectionAction('bookshelf_settings', (): void => this.onManageRequested());
         }
         .height(34);
       }
@@ -264,7 +265,7 @@ export struct BookshelfPage {
   }
 
   @Builder
-  private sectionAction(assetName: string) {
+  private sectionAction(assetName: string, action: () => void) {
     Stack({ alignContent: Alignment.Center }) {
       if (assetName === 'bookshelf_grid') {
         Image($r('app.media.bookshelf_grid')).width(20).height(20);
@@ -280,7 +281,8 @@ export struct BookshelfPage {
     }
     .width(34)
     .height(34)
-    .borderRadius(17);
+    .borderRadius(17)
+    .onClick(action);
   }
 
   @Builder

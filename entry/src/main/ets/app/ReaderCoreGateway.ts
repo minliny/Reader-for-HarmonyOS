@@ -11,6 +11,8 @@ export type ShelfBook = {
   lastChapter?: string;
   addedAt: number;
   lastReadAt?: number;
+  group?: string;
+  sortIndex?: number;
 };
 
 export type BookshelfState = {
@@ -200,11 +202,13 @@ export class ReaderCoreGateway {
       title: this.requiredString(book, 'title'),
       author: this.requiredString(book, 'author'),
       addedAt: this.requiredNumber(book, 'addedAt'),
+      sortIndex: this.requiredNumber(book, 'sortIndex'),
     };
     const coverUrl = this.optionalString(book, 'coverUrl');
     const intro = this.optionalString(book, 'intro');
     const lastChapter = this.optionalString(book, 'lastChapter');
     const lastReadAt = this.optionalNumber(book, 'lastReadAt');
+    const group = this.optionalString(book, 'group');
     if (coverUrl !== undefined) {
       decoded.coverUrl = coverUrl;
     }
@@ -216,6 +220,9 @@ export class ReaderCoreGateway {
     }
     if (lastReadAt !== undefined) {
       decoded.lastReadAt = lastReadAt;
+    }
+    if (group !== undefined) {
+      decoded.group = group;
     }
     return decoded;
   }
