@@ -12,6 +12,7 @@ assert.match(fullPanel, /@Prop httpEngines: ReaderTtsEngineOption\[\] = \[\]/);
 assert.match(fullPanel, /this\.onEngineChange\('system'\)/);
 assert.match(fullPanel, /`http-tts:\$\{next\.id\}`/);
 assert.match(fullPanel, /this\.onSeek\(Math\.round\(value\)\)/);
+assert.match(fullPanel, /Column\(\) \{\s*ReaderHttpTtsManagerPanel\(\{/);
 assert.match(controls, /onTtsEngineChange: \(engine: string\)/);
 assert.match(controls, /onTtsSeek: \(sliceIndex: number\)/);
 assert.doesNotMatch(controls, /module === 'tts' && this\.ttsState\.status === 'unavailable'\) \{\s*return/);
