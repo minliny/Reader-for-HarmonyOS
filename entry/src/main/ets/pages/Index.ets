@@ -90,6 +90,12 @@ import {
   type SourceSwitchTargetToc,
 } from '../features/source/SourceSwitchGateway';
 import { SourceManagementPage } from '../features/source/SourceManagementPage';
+import { SourceToolsPage } from '../features/source/SourceToolsPage';
+import {
+  EMPTY_SOURCE_TOOLS_SNAPSHOT,
+  SourceToolsOrchestrator,
+  type SourceToolsSnapshot,
+} from '../features/source/SourceToolsOrchestrator';
 import type {
   SourceSwitchPanelState,
 } from '../features/reading/SourceSwitchPanel';
@@ -107,7 +113,7 @@ const LOCAL_SOURCE_ID = 'local';
 
 type ReaderRoute = 'bookshelf' | 'discover' | 'detail' | 'reading' | 'directory' | 'search' |
   'rss' | 'rssSubscriptionManagement' | 'rssSourceFeed' | 'rssEntryDetail' |
-  'settings' | 'source' | 'sync';
+  'settings' | 'source' | 'sourceTools' | 'sync';
 type PreparedReaderRoute = 'reading' | 'directory';
 type DirectoryReturnTarget = 'detail' | 'readerControl';
 type RssDetailReturnTarget = 'rss' | 'rssSourceFeed';
@@ -176,6 +182,7 @@ struct Index {
   @State private rssSourceFeedReturnTarget: RssSourceFeedReturnTarget = 'rss';
   @State private rssManagementFocusSubscriptionId: string = '';
   @State private sourceSources: BookSource[] = [];
+  @State private sourceToolsSnapshot: SourceToolsSnapshot = EMPTY_SOURCE_TOOLS_SNAPSHOT;
   @State private discoverPresentation: DiscoverPresentation = { currentSourceName: '', kinds: [], books: [] };
   @State private settingsSnapshot: SettingsSnapshot = {
     autoCheckUpdate: true,
@@ -222,6 +229,7 @@ struct Index {
   private settingsOrchestrator: SettingsOrchestrator | undefined;
   private syncOrchestrator: SyncOrchestrator | undefined;
   private sourceOrchestrator: SourceOrchestrator | undefined;
+  private sourceToolsOrchestrator: SourceToolsOrchestrator | undefined;
   private rssOrchestrator: RssOrchestrator | undefined;
   /**
    * Installed only by the mounted ReadingSurface.  System Back calls this
@@ -260,6 +268,10 @@ struct Index {
     }
     if (this.route === 'rssSubscriptionManagement') {
       this.returnToRss();
+      return true;
+    }
+    if (this.route === 'sourceTools') {
+      this.returnToSourceManagement();
       return true;
     }
     if (this.route === 'search' || this.route === 'rss' || this.route === 'settings') {
@@ -435,6 +447,22 @@ struct Index {
           onDetectSource: (id: string): void => this.onSourceDetectionRequested(id),
           onLoginSource: (id: string): void => this.onSourceLoginRequested(id),
           onAddSource: (): void => this.onBookSourceImportRequested(),
+          onOpenTools: (): void => this.openSourceTools(),
+        });
+      } else if (this.route === 'sourceTools') {
+        SourceToolsPage({
+          snapshot: this.sourceToolsSnapshot,
+          onBack: (): void => this.returnToSourceManagement(),
+          onExportAll: (): void => this.getSourceToolsOrchestrator().exportAll(),
+          onOpenEditor: (sourceId: string): void => this.getSourceToolsOrchestrator().openEditor(sourceId),
+          onEditorDraftChanged: (text: string): void => this.getSourceToolsOrchestrator().updateEditorDraft(text),
+          onSaveEditor: (): void => this.getSourceToolsOrchestrator().saveEditor(),
+          onCancelEditor: (): void => this.getSourceToolsOrchestrator().cancelEditor(),
+          onDebugKeyChanged: (value: string): void => this.getSourceToolsOrchestrator().updateDebugKey(value),
+          onDebugSource: (sourceId: string): void => this.getSourceToolsOrchestrator().debugSource(sourceId),
+          onPutSubscription: (name: string, url: string, autoUpdate: boolean): void =>
+            this.getSourceToolsOrchestrator().putSubscription(name, url, autoUpdate),
+          onDeleteSubscription: (id: number): void => this.getSourceToolsOrchestrator().deleteSubscription(id),
         });
       } else if (this.route === 'sync') {
         if (this.syncSnapshotReady) {
@@ -734,6 +762,33 @@ struct Index {
       );
     }
     return this.sourceOrchestrator;
+  }
+
+  private getSourceToolsOrchestrator(): SourceToolsOrchestrator {
+    if (this.sourceToolsOrchestrator === undefined) {
+      this.sourceToolsOrchestrator = new SourceToolsOrchestrator(
+        (snapshot: SourceToolsSnapshot): void => {
+          this.sourceToolsSnapshot = snapshot;
+        },
+        (): boolean => this.route === 'sourceTools',
+      );
+    }
+    return this.sourceToolsOrchestrator;
+  }
+
+  private openSourceTools(): void {
+    this.nextNavigationGeneration();
+    this.readingSessionActive = false;
+    this.readingExitRequest = undefined;
+    this.exitToBookshelfAfterReader = false;
+    this.route = 'sourceTools';
+    this.getSourceToolsOrchestrator().open();
+  }
+
+  private returnToSourceManagement(): void {
+    this.nextNavigationGeneration();
+    this.route = 'source';
+    this.getSourceOrchestrator().open();
   }
 
   private returnToSettings(): void {

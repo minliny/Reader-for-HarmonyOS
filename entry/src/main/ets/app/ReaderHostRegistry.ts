@@ -192,6 +192,48 @@ export class ReaderHostRegistry {
   }
 
   /**
+   * Save a Core-produced Legado BookSource JSON document through the system
+   * document picker. Core owns serialization; Host owns only user-authorized
+   * destination selection and byte-exact UTF-8 I/O.
+   */
+  async saveBookSourceJson(text: string, suggestedFileName: string): Promise<string | undefined> {
+    const bytes = new util.TextEncoder('utf-8').encode(text);
+    if (bytes.byteLength === 0 || bytes.byteLength > ReaderHostRegistry.BookSourceDocumentLimitBytes) {
+      throw new Error(
+        `Book-source export must contain 1-${ReaderHostRegistry.BookSourceDocumentLimitBytes} UTF-8 bytes`,
+      );
+    }
+    const safeFileName = this.requireExportFileName(suggestedFileName);
+    const options = new picker.DocumentSaveOptions();
+    options.newFileNames = [safeFileName];
+    options.fileSuffixChoices = ['Legado 书源 JSON|.json'];
+    const uris = await new picker.DocumentViewPicker(this.context).save(options);
+    if (uris.length === 0) {
+      return undefined;
+    }
+    const uri = uris[0];
+    const file = await fileIo.open(
+      uri,
+      fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC,
+    );
+    try {
+      let writtenBytes = 0;
+      while (writtenBytes < bytes.byteLength) {
+        const chunk = bytes.slice(writtenBytes);
+        const written = await fileIo.write(file.fd, chunk.buffer);
+        if (!Number.isSafeInteger(written) || written <= 0 || written > chunk.byteLength) {
+          throw new Error('Book-source export destination stopped accepting bytes');
+        }
+        writtenBytes += written;
+      }
+      await fileIo.fsync(file.fd);
+    } finally {
+      await fileIo.close(file);
+    }
+    return this.requireSelectedFileName(uri);
+  }
+
+  /**
    * Commit the Host-owned source asset only after Core has accepted and
    * persisted the parsed book. Text-like imports need no long-lived file;
    * EPUB keeps the original archive so body resources can be read lazily.
@@ -268,6 +310,14 @@ export class ReaderHostRegistry {
       throw new Error('Selected document has no file name');
     }
     return fileName;
+  }
+
+  private requireExportFileName(value: string): string {
+    const trimmed = value.trim();
+    if (!/^[^\\/:*?"<>|]{1,120}\.json$/i.test(trimmed)) {
+      throw new Error('Book-source export file name is invalid');
+    }
+    return trimmed;
   }
 
   private async stageLocalBook(uri: string, fileName: string): Promise<LocalBookInput> {

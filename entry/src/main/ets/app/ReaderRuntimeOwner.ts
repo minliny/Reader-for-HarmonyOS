@@ -362,6 +362,13 @@ export class ReaderRuntimeOwner {
     return this.host.selectBookSourceJson();
   }
 
+  async saveBookSourceJson(text: string, suggestedFileName: string): Promise<string | undefined> {
+    if (this.state === 'closing' || this.state === 'closed') {
+      throw new Error('Reader Host is no longer available after teardown');
+    }
+    return this.host.saveBookSourceJson(text, suggestedFileName);
+  }
+
   async commitLocalBookInput(input: LocalBookInput): Promise<LocalBookAssetCommit> {
     return this.host.commitLocalBookInput(input);
   }

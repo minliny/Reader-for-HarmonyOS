@@ -1,4 +1,5 @@
 import type { JsonObject } from '@reader/core-harmony';
+import url from '@ohos.url';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 
 export type BookSource = {
@@ -28,6 +29,37 @@ export type SourceCheckOutcome = {
   levelsPassed: string[];
   failureReason?: string;
   durationMs: number;
+};
+
+export type SourceExportResult = {
+  data: string;
+  count: number;
+  format: 'json';
+};
+
+export type SourceDebugLog = {
+  state: number;
+  message: string;
+  timestampMs: number;
+  step?: string;
+  extractedCount?: number;
+  errorKind?: string;
+};
+
+export type SourceDebugOutcome = {
+  logs: SourceDebugLog[];
+  finalState: number;
+  durationMs: number;
+};
+
+export type RuleSubscription = {
+  id: number;
+  name: string;
+  url: string;
+  type: number;
+  customOrder: number;
+  autoUpdate: boolean;
+  update: number;
 };
 
 const MAX_BOOK_SOURCE_DOCUMENT_ENTRIES = 5000;
@@ -146,6 +178,147 @@ export class SourceGateway {
     return { importedCount: sourceIds.length, sourceIds };
   }
 
+  /** Core serializes the exact persisted raw BookSource objects. */
+  async exportBookSources(sourceIds?: string[]): Promise<SourceExportResult> {
+    const params: JsonObject = { format: 'json' };
+    if (sourceIds !== undefined) {
+      if (sourceIds.length === 0) {
+        throw new Error('source.export selection must not be empty');
+      }
+      params['sourceIds'] = sourceIds;
+    }
+    const result = await this.runtimeOwner.request('source.export', params);
+    const data = result.data['data'];
+    const count = result.data['count'];
+    const format = result.data['format'];
+    if (typeof data !== 'string' || typeof count !== 'number' || !Number.isSafeInteger(count) ||
+      count < 0 || format !== 'json') {
+      throw new Error('source.export returned invalid data');
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(data) as unknown;
+    } catch (error) {
+      throw new Error(`source.export returned invalid JSON: ${(error as Error).message}`);
+    }
+    if (!Array.isArray(parsed) || parsed.length !== count) {
+      throw new Error('source.export count does not match its JSON array');
+    }
+    return { data, count, format: 'json' };
+  }
+
+  async loadEditableSource(sourceId: string): Promise<string> {
+    const exported = await this.exportBookSources([sourceId]);
+    const parsed = JSON.parse(exported.data) as unknown[];
+    if (parsed.length !== 1) {
+      throw new Error('source.export did not return exactly one source for editing');
+    }
+    return JSON.stringify(parsed[0], null, 2);
+  }
+
+  /**
+   * Persist an edited raw source through the existing Core import command.
+   * Primary-key migration is intentionally fail-closed: deleting the old id
+   * is a separate destructive action and must not be inferred from an edit.
+   */
+  async saveEditableSource(sourceId: string, text: string): Promise<void> {
+    let value: unknown;
+    try {
+      value = JSON.parse(text) as unknown;
+    } catch (error) {
+      throw new Error(`Edited book source is not valid JSON: ${(error as Error).message}`);
+    }
+    const bookSource = this.requireBookSourceObject(value, 0);
+    const editedId = this.requireBookSourceUrl(bookSource, 0);
+    if (editedId !== sourceId) {
+      throw new Error('书源地址是主键；编辑器不允许隐式迁移 bookSourceUrl');
+    }
+    const summary = await this.importBookSourceDocument(JSON.stringify(bookSource));
+    if (summary.importedCount !== 1 || summary.sourceIds[0] !== sourceId) {
+      throw new Error('source.import did not confirm the edited source identity');
+    }
+  }
+
+  /** Core-owned structured debug log projection; network health remains source.check.run. */
+  async debugSource(sourceId: string, key: string): Promise<SourceDebugOutcome> {
+    const result = await this.runtimeOwner.request('source.debug', {
+      sourceId,
+      key,
+      responses: {},
+    });
+    const rawLogs = result.data['logs'];
+    const finalState = result.data['finalState'];
+    const durationMs = result.data['durationMs'];
+    if (!Array.isArray(rawLogs) || typeof finalState !== 'number' ||
+      !Number.isSafeInteger(finalState) || typeof durationMs !== 'number' ||
+      !Number.isFinite(durationMs) || durationMs < 0) {
+      throw new Error('source.debug returned invalid data');
+    }
+    const logs: SourceDebugLog[] = [];
+    for (const raw of rawLogs) {
+      const row = this.requireObject(raw, 'source.debug log');
+      const state = row['state'];
+      const message = row['msg'];
+      const timestampMs = row['timestampMs'];
+      if (typeof state !== 'number' || !Number.isSafeInteger(state) || typeof message !== 'string' ||
+        typeof timestampMs !== 'number' || !Number.isFinite(timestampMs) || timestampMs < 0) {
+        throw new Error('source.debug returned an invalid log entry');
+      }
+      const log: SourceDebugLog = { state, message, timestampMs };
+      const step = row['step'];
+      const extractedCount = row['extractedCount'];
+      const errorKind = row['errorKind'];
+      if (typeof step === 'string') {
+        log.step = step;
+      }
+      if (typeof extractedCount === 'number' && Number.isSafeInteger(extractedCount) && extractedCount >= 0) {
+        log.extractedCount = extractedCount;
+      }
+      if (typeof errorKind === 'string') {
+        log.errorKind = errorKind;
+      }
+      logs.push(log);
+    }
+    if (logs.length === 0 || logs[logs.length - 1].state !== finalState) {
+      throw new Error('source.debug final state does not match its log stream');
+    }
+    return { logs, finalState, durationMs };
+  }
+
+  async listRuleSubscriptions(): Promise<RuleSubscription[]> {
+    const result = await this.runtimeOwner.request('rule-sub.list', {});
+    const rawSubs = result.data['subs'];
+    if (!Array.isArray(rawSubs)) {
+      throw new Error('rule-sub.list returned invalid data');
+    }
+    return rawSubs.map((raw: unknown): RuleSubscription => this.decodeRuleSubscription(raw));
+  }
+
+  async putRuleSubscription(subscription: RuleSubscription): Promise<RuleSubscription> {
+    this.validateRuleSubscription(subscription);
+    const result = await this.runtimeOwner.request('rule-sub.put', {
+      id: subscription.id,
+      name: subscription.name,
+      url: subscription.url,
+      type: subscription.type,
+      customOrder: subscription.customOrder,
+      autoUpdate: subscription.autoUpdate,
+      update: subscription.update,
+    });
+    return this.decodeRuleSubscription(result.data['sub']);
+  }
+
+  async deleteRuleSubscription(id: number): Promise<boolean> {
+    if (!Number.isSafeInteger(id)) {
+      throw new Error('rule-sub.delete requires a safe integer id');
+    }
+    const result = await this.runtimeOwner.request('rule-sub.delete', { id });
+    if (result.data['id'] !== id || typeof result.data['deleted'] !== 'boolean') {
+      throw new Error('rule-sub.delete returned invalid data');
+    }
+    return result.data['deleted'] as boolean;
+  }
+
   /**
    * Persist a source toggle via the real `source.update` RPC. Only the raw
    * `bookSource.enabled` key is rewritten Core-side (rules and unknown Legado
@@ -260,6 +433,64 @@ export class SourceGateway {
       throw new Error(`source protocol returned invalid ${key}`);
     }
     return candidate;
+  }
+
+  private requireObject(value: unknown, label: string): JsonObject {
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+      throw new Error(`${label} must be an object`);
+    }
+    return value as JsonObject;
+  }
+
+  private decodeRuleSubscription(value: unknown): RuleSubscription {
+    const raw = this.requireObject(value, 'rule subscription');
+    const subscription: RuleSubscription = {
+      id: this.requireSafeInteger(raw['id'], 'rule subscription id'),
+      name: this.requireString(raw['name'], 'rule subscription name'),
+      url: this.requireString(raw['url'], 'rule subscription URL'),
+      type: this.requireSafeInteger(raw['type'], 'rule subscription type'),
+      customOrder: this.requireSafeInteger(raw['customOrder'], 'rule subscription customOrder'),
+      autoUpdate: raw['autoUpdate'] === true,
+      update: this.requireSafeInteger(raw['update'], 'rule subscription update'),
+    };
+    if (typeof raw['autoUpdate'] !== 'boolean') {
+      throw new Error('rule subscription autoUpdate must be boolean');
+    }
+    this.validateRuleSubscription(subscription);
+    return subscription;
+  }
+
+  private validateRuleSubscription(subscription: RuleSubscription): void {
+    if (!Number.isSafeInteger(subscription.id) || !Number.isSafeInteger(subscription.type) ||
+      !Number.isSafeInteger(subscription.customOrder) || !Number.isSafeInteger(subscription.update)) {
+      throw new Error('rule subscription numeric fields must be safe integers');
+    }
+    if (subscription.name.trim().length === 0 || subscription.url.trim().length === 0) {
+      throw new Error('规则订阅名称和 URL 不能为空');
+    }
+    let parsed: url.URL;
+    try {
+      parsed = new url.URL(subscription.url.trim());
+    } catch (_) {
+      throw new Error('规则订阅 URL 无效');
+    }
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      throw new Error('规则订阅 URL 仅支持 HTTP/HTTPS');
+    }
+  }
+
+  private requireSafeInteger(value: unknown, label: string): number {
+    if (typeof value !== 'number' || !Number.isSafeInteger(value)) {
+      throw new Error(`${label} must be a safe integer`);
+    }
+    return value;
+  }
+
+  private requireString(value: unknown, label: string): string {
+    if (typeof value !== 'string') {
+      throw new Error(`${label} must be a string`);
+    }
+    return value;
   }
 
   private requireBookSourceObject(value: unknown, index: number): JsonObject {

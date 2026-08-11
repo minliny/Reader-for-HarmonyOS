@@ -55,6 +55,7 @@ export struct SourceManagementPage {
   onDetectSource: (id: string) => void = (_id: string): void => {};
   onLoginSource: (id: string) => void = (_id: string): void => {};
   onAddSource: () => void = (): void => {};
+  onOpenTools: () => void = (): void => {};
   @State private groupValue: string = '全部分组';
   @State private groupOpen: boolean = false;
   // 展开面板锚点: 触发条全局坐标 - 根 Stack 原点 = 面板相对根 Stack 位置。
@@ -121,7 +122,8 @@ export struct SourceManagementPage {
       }
       .width(44)
       .height(44)
-      .borderRadius(22);
+      .borderRadius(22)
+      .onClick((): void => this.onOpenTools());
     }
   }
 
@@ -370,7 +372,7 @@ export struct SourceManagementPage {
   private bottomActionBar() {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
       Stack({ alignContent: Alignment.Center }) {
-        Text('批量管理')
+        Text('产品工具')
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Bold)
           .fontSize(13)
@@ -381,7 +383,8 @@ export struct SourceManagementPage {
       .height(44)
       .borderRadius(8)
       .backgroundColor(TOK_SURFACE_SOLID)
-      .border({ width: TOK_BORDER_W, color: SEARCH_FIELD_BORDER });
+      .border({ width: TOK_BORDER_W, color: SEARCH_FIELD_BORDER })
+      .onClick((): void => this.onOpenTools());
 
       Stack({ alignContent: Alignment.Center }) {
         Row({ space: TOK_SPACE_XS }) {
