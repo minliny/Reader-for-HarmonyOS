@@ -52,6 +52,8 @@ assert.match(orchestrator, /operationInFlight/);
 assert.match(orchestrator, /saveConfig\(url, user, pass, backupPass, directory\)/);
 
 assert.match(page, /onSaveConfig/);
+assert.match(page, /aboutToAppear\(\)[\s\S]*this\.appliedSnapshotIdentity\s*=\s*'';[\s\S]*this\.syncSnapshotInputs\(\)/,
+  'mount must re-project secure-loaded non-secret identity after an early @Watch');
 assert.match(page, /备份加密密码/);
 assert.match(page, /恢复最新备份/);
 assert.match(page, /覆盖本机/);

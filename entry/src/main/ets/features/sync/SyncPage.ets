@@ -70,6 +70,10 @@ export struct SyncPage {
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
+    // @Watch can run before this component is fully mounted. An early write to
+    // the identity guard is observable even when the matching @State writes
+    // are not, so force one mount-time projection of the latest snapshot.
+    this.appliedSnapshotIdentity = '';
     this.syncSnapshotInputs();
   }
 
