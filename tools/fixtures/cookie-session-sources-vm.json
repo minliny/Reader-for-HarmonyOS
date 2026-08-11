@@ -1,7 +1,7 @@
 [
   {
-    "bookSourceName": "VM Cookie 会话 A",
-    "bookSourceUrl": "http://10.0.2.2:18081#cookie-a",
+    "bookSourceName": "VM Cookie 会话 A session-v2",
+    "bookSourceUrl": "http://10.0.2.2:18081#cookie-a-session-v2",
     "enabledCookieJar": true,
     "searchUrl": "http://10.0.2.2:18081/a/search?q={{key}}",
     "ruleSearch": {
@@ -20,8 +20,8 @@
     "ruleContent": { "content": "div.content@html" }
   },
   {
-    "bookSourceName": "VM Cookie 隔离 B",
-    "bookSourceUrl": "http://10.0.2.2:18081#cookie-b",
+    "bookSourceName": "VM Cookie 隔离 B session-v2",
+    "bookSourceUrl": "http://10.0.2.2:18081#cookie-b-session-v2",
     "enabledCookieJar": true,
     "searchUrl": "http://10.0.2.2:18081/b/search?q={{key}}",
     "ruleSearch": {
