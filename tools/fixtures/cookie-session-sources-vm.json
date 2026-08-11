@@ -2,6 +2,7 @@
   {
     "bookSourceName": "VM Cookie 会话 A",
     "bookSourceUrl": "http://10.0.2.2:18081#cookie-a",
+    "enabledCookieJar": true,
     "searchUrl": "http://10.0.2.2:18081/a/search?q={{key}}",
     "ruleSearch": {
       "bookList": "ul.results li.book",
@@ -21,6 +22,7 @@
   {
     "bookSourceName": "VM Cookie 隔离 B",
     "bookSourceUrl": "http://10.0.2.2:18081#cookie-b",
+    "enabledCookieJar": true,
     "searchUrl": "http://10.0.2.2:18081/b/search?q={{key}}",
     "ruleSearch": {
       "bookList": "ul.results li.book",
