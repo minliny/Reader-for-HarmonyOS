@@ -8,6 +8,8 @@ const evidence = {
   loginPageLoads: 0,
   loginCookieSearches: 0,
   missingCookieFailures: 0,
+  timeoutLoads: 0,
+  timeoutAbortedRequests: 0,
 };
 
 const loginSourceFixture = {
@@ -30,6 +32,14 @@ const loginSourceFixture = {
   ruleBookInfo: { name: 'h1@text', tocUrl: '' },
   ruleToc: { chapterList: 'ol.toc li', chapterName: 'a@text', chapterUrl: 'a@href' },
   ruleContent: { content: '.content@html' },
+};
+
+const timeoutSourceFixture = {
+  ...loginSourceFixture,
+  bookSourceUrl: `http://127.0.0.1:${port}#arkweb-timeout-source`,
+  bookSourceName: 'ArkWeb 超时源',
+  loginUrl: '',
+  searchUrl: `@js:java.webView(null, "http://127.0.0.1:${port}/timeout", "document.title"); "http://127.0.0.1:${port}/search?key=" + encodeURIComponent(key)`,
 };
 
 function cookies(request) {
@@ -71,12 +81,25 @@ const server = http.createServer((request, response) => {
     response.end(JSON.stringify(evidence));
     return;
   }
+  if (requestUrl.pathname === '/reset') {
+    for (const key of Object.keys(evidence)) evidence[key] = 0;
+    send(response, 200, 'reset');
+    return;
+  }
   if (requestUrl.pathname === '/arkweb-login-source.json') {
     response.writeHead(200, {
       'Content-Type': 'application/json; charset=utf-8',
       'Content-Disposition': 'attachment; filename="arkweb-login-source.json"',
     });
     response.end(JSON.stringify(loginSourceFixture, null, 2));
+    return;
+  }
+  if (requestUrl.pathname === '/arkweb-timeout-source.json') {
+    response.writeHead(200, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Content-Disposition': 'attachment; filename="arkweb-timeout-source.json"',
+    });
+    response.end(JSON.stringify(timeoutSourceFixture, null, 2));
     return;
   }
   if (requestUrl.pathname === '/bootstrap') {
@@ -95,6 +118,17 @@ const server = http.createServer((request, response) => {
       'onclick="document.cookie=\'logintoken=user-complete; Path=/; SameSite=Lax\';' +
       'document.title=\'Login Complete\';this.textContent=\'登录已完成\'">授权登录</button>' +
       '</main></body></html>');
+    return;
+  }
+  if (requestUrl.pathname === '/timeout') {
+    evidence.timeoutLoads += 1;
+    response.on('close', () => {
+      if (!response.writableFinished) {
+        evidence.timeoutAbortedRequests += 1;
+      }
+    });
+    // Deliberately leave the response pending. ArkWebExecutor's 30 second
+    // deadline must stop the navigation and close this connection.
     return;
   }
   if (requestUrl.pathname === '/search') {
