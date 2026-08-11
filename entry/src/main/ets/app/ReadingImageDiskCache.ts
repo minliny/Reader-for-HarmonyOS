@@ -213,13 +213,16 @@ export class ReadingImageDiskCache {
     // ("Invalid argument"), so write the exact backing ArrayBuffer with the
     // proven writeSync path and commit via an atomic same-directory rename.
     const tmpPath = `${path}.tmp`;
-    const file = fileIo.openSync(tmpPath, fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC);
     try {
-      fileIo.writeSync(file.fd, bytes.buffer, { offset: bytes.byteOffset, length: bytes.byteLength });
-    } finally {
-      fileIo.closeSync(file);
-    }
-    try {
+      const file = fileIo.openSync(
+        tmpPath,
+        fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC,
+      );
+      try {
+        fileIo.writeSync(file.fd, bytes.buffer, { offset: bytes.byteOffset, length: bytes.byteLength });
+      } finally {
+        fileIo.closeSync(file);
+      }
       fileIo.renameSync(tmpPath, path);
     } catch (error) {
       try {
