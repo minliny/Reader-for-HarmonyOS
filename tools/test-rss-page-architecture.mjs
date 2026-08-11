@@ -197,14 +197,17 @@ assert.match(entryDetail, /private hasOriginalLink\(\): boolean/);
 assert.equal((entryDetail.match(/\.enabled\(this\.hasOriginalLink\(\)\)/g) ?? []).length, 2);
 assert.doesNotMatch(entryDetail, /private bodyCard\(|bodyParagraphs\(|已解析正文/);
 
-// Management rows are projections of real subscription fields only. Add and
-// edit route through one editor coordinator into Core-owned create/update.
+// Management rows are projections of full Core source truth. Add/edit and
+// document import/export use the full-source protocol without an ArkUI store.
 const managementMeta = index.match(
   /private rssSubscriptionManagementMeta\(subscription: RssSubscription\): string \{[\s\S]*?\n  \}/,
 )?.[0] ?? '';
 assert.match(managementMeta, /subscription\.siteUrl/);
 assert.match(managementMeta, /subscription\.feedUrl/);
 assert.match(managementMeta, /subscription\.lastFetchAt/);
+assert.match(managementMeta, /subscription\.sourceGroup/);
+assert.match(managementMeta, /subscription\.customOrder/);
+assert.match(managementMeta, /subscription\.ruleArticles/);
 assert.match(managementMeta, /已停用/);
 assert.doesNotMatch(managementMeta, /unreadCount|正常|健康|文章|条/);
 assert.match(index, /route = 'rssSubscriptionEditor'/);
@@ -214,8 +217,18 @@ assert.match(editor, /export struct RssSubscriptionEditorPage/);
 assert.match(editor, /constraintSize\(\{ minHeight: 60 \}\)/);
 assert.match(editorOrchestrator, /gateway\.createSubscription/);
 assert.match(editorOrchestrator, /gateway\.updateSubscription/);
-assert.match(gateway, /request\('rss\.subscription\.create'/);
-assert.match(gateway, /request\('rss\.subscription\.update'/);
+assert.match(gateway, /request\('rss-source\.list'/);
+assert.equal((gateway.match(/request\('rss-source\.put'/g) ?? []).length, 2);
+assert.match(gateway, /request\('rss-source\.import'/);
+assert.match(gateway, /request\('rss-source\.export'/);
+assert.match(gateway, /selectRssSourceJson\(\)/);
+assert.match(gateway, /saveRssSourceJson\(json, 'reader-rss-sources\.json'\)/);
+assert.match(editor, /来源组织与刷新/);
+assert.match(editor, /规则型 RSS（HTML）/);
+assert.match(editorOrchestrator, /sourceGroup: subscription\.sourceGroup/);
+assert.match(index, /private requestRssSourceImport\(\): void/);
+assert.match(index, /private exportRssSources\(\): void/);
+assert.match(orchestrator, /private mutationChain: Promise<void> = Promise\.resolve\(\)/);
 
 // Aggregate main-page modes, main-page refresh, and URL Host opening
 // remain explicit gaps. Scoped SourceFeed/EntryDetail actions must not regress

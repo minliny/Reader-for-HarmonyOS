@@ -26,6 +26,8 @@ assert.match(page, /private readonly pageScroller: Scroller = new Scroller\(\)/)
 assert.match(page, /Scroll\(this\.pageScroller\)/);
 assert.match(page, /private focusSubscriptionIfNeeded\([\s\S]*this\.pageScroller\.scrollTo\(\{/);
 assert.match(page, /onAdd: \(\) => void/);
+assert.match(page, /onImport: \(\) => void/);
+assert.match(page, /onExport: \(\) => void/);
 assert.match(page, /onToggle: \(subscriptionId: string, enabled: boolean\) => void/);
 assert.match(page, /onViewArticles: \(subscriptionId: string\) => void/);
 assert.match(page, /onEditSource: \(subscriptionId: string\) => void/);
@@ -41,6 +43,8 @@ assert.match(page, /this\.actionTarget\('查看文章'/);
 assert.match(page, /this\.actionTarget\('编辑来源'/);
 assert.match(page, /this\.actionTarget\('立即刷新'/);
 assert.match(page, /this\.actionTarget\('删除'/);
+assert.match(page, /this\.sourceDocumentAction\('导入 RSS 源'/);
+assert.match(page, /this\.sourceDocumentAction\('导出全部'/);
 
 // Reuse supplied assets; deletion is danger-colored but has no danger background.
 assert.match(page, /app\.media\.rss_source/);
@@ -53,7 +57,8 @@ assert.match(page, /danger \? TOK_DANGER : TOK_PRIMARY_DARK/);
 assert.doesNotMatch(page, /backgroundColor\(TOK_DANGER\)/);
 assert.doesNotMatch(page, /\.svg['"]/);
 
-// Explicitly reject the removed or unsupported management concepts.
-assert.doesNotMatch(page, /搜索|分类|正常|需登录|规则|导入/);
+// Explicitly reject unrelated status/search concepts. Source document import
+// is admitted, but the page still never invents health/auth/rule state.
+assert.doesNotMatch(page, /搜索|分类|正常|需登录/);
 
 console.log('rss subscription management page contract: PASS');

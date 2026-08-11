@@ -383,6 +383,20 @@ export class ReaderRuntimeOwner {
     return this.host.saveRuleBundleJson(text, suggestedFileName);
   }
 
+  async selectRssSourceJson(): Promise<BookSourceJsonSelection | undefined> {
+    if (this.state === 'closing' || this.state === 'closed') {
+      throw new Error('Reader Host is no longer available after teardown');
+    }
+    return this.host.selectRssSourceJson();
+  }
+
+  async saveRssSourceJson(text: string, suggestedFileName: string): Promise<string | undefined> {
+    if (this.state === 'closing' || this.state === 'closed') {
+      throw new Error('Reader Host is no longer available after teardown');
+    }
+    return this.host.saveRssSourceJson(text, suggestedFileName);
+  }
+
   async commitLocalBookInput(input: LocalBookInput): Promise<LocalBookAssetCommit> {
     return this.host.commitLocalBookInput(input);
   }

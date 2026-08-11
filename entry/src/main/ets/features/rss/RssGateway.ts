@@ -9,6 +9,48 @@ export type RssSubscription = {
   enabled: boolean;
   lastFetchAt?: number;
   unreadCount: number;
+  sourceGroup?: string;
+  customOrder?: number;
+  updateIntervalMinutes?: number;
+  header?: string;
+  enabledCookieJar?: boolean;
+  ruleArticles?: string;
+  ruleNextPage?: string;
+  ruleTitle?: string;
+  rulePubDate?: string;
+  ruleDescription?: string;
+  ruleImage?: string;
+  ruleLink?: string;
+  ruleContent?: string;
+};
+
+export type RssSourceDraft = {
+  feedUrl: string;
+  title: string;
+  enabled: boolean;
+  sourceGroup: string;
+  customOrder?: number;
+  updateIntervalMinutes?: number;
+  header: string;
+  enabledCookieJar: boolean;
+  ruleArticles: string;
+  ruleNextPage: string;
+  ruleTitle: string;
+  rulePubDate: string;
+  ruleDescription: string;
+  ruleImage: string;
+  ruleLink: string;
+  ruleContent: string;
+};
+
+export type RssSourceImportResult = {
+  imported: number;
+  replaceExisting: boolean;
+};
+
+export type RssSourceExportResult = {
+  count: number;
+  destination?: string;
 };
 
 export type RssItem = {
@@ -80,17 +122,24 @@ export class RssGateway {
   }
 
   async loadSubscriptions(): Promise<RssSubscription[]> {
-    const result = await this.runtimeOwner.request('rss.subscription.list', {});
-    const rawSubs = result.data['subscriptions'];
-    if (!Array.isArray(rawSubs)) {
-      throw new Error('rss.subscription.list returned invalid data');
+    const result = await this.runtimeOwner.request('rss-source.list', {});
+    const rawSources = result.data['sources'];
+    if (!Array.isArray(rawSources)) {
+      throw new Error('rss-source.list returned invalid data');
     }
     const subs: RssSubscription[] = [];
     const seenIds: string[] = [];
-    for (const raw of rawSubs) {
-      const subscription = this.decodeSubscription(raw);
+    for (const raw of rawSources) {
+      if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+        throw new Error('rss-source.list returned a non-object source');
+      }
+      const sourceData = raw as JsonObject;
+      const subscription = this.decodeSubscription(
+        this.requiredObject(sourceData, 'subscription'),
+        this.requiredObject(sourceData, 'source'),
+      );
       if (seenIds.includes(subscription.subscriptionId)) {
-        throw new Error('rss.subscription.list returned a duplicate subscriptionId');
+        throw new Error('rss-source.list returned a duplicate subscriptionId');
       }
       seenIds.push(subscription.subscriptionId);
       subs.push(subscription);
@@ -98,45 +147,70 @@ export class RssGateway {
     return subs;
   }
 
-  /** Create with Core-owned opaque identity and normalized feed URL. */
-  async createSubscription(
-    feedUrl: string,
-    title: string,
-    enabled: boolean,
-  ): Promise<RssSubscriptionSaveResult> {
-    const normalizedFeedUrl = this.requireFeedUrl(feedUrl);
-    const result = await this.runtimeOwner.request('rss.subscription.create', {
-      feedUrl: normalizedFeedUrl,
-      title: title.trim(),
-      enabled,
+  /** Create one complete source with Core-owned opaque identity. */
+  async createSubscription(draft: RssSourceDraft): Promise<RssSubscriptionSaveResult> {
+    const result = await this.runtimeOwner.request('rss-source.put', {
+      source: this.encodeSource(draft),
     });
     const created = this.requiredBoolean(result.data, 'created');
-    const subscription = this.decodeSubscription(this.requiredObject(result.data, 'subscription'));
-    if (subscription.feedUrl.trim().length === 0) {
-      throw new Error('rss.subscription.create returned an empty feed URL');
-    }
+    const sourceData = this.requiredObject(result.data, 'source');
+    const subscription = this.decodeSubscription(
+      this.requiredObject(sourceData, 'subscription'),
+      this.requiredObject(sourceData, 'source'),
+    );
     return { created, subscription };
   }
 
-  /** Edit only caller-owned fields; fetch metadata and unread state remain Core-owned. */
+  /** Replace caller-owned source configuration; fetch/read metadata remains Core-owned. */
   async updateSubscription(
     subscriptionId: string,
-    feedUrl: string,
-    title: string,
-    enabled: boolean,
+    draft: RssSourceDraft,
   ): Promise<RssSubscription> {
     this.requireSubscriptionId(subscriptionId);
-    const result = await this.runtimeOwner.request('rss.subscription.update', {
+    const result = await this.runtimeOwner.request('rss-source.put', {
       subscriptionId,
-      feedUrl: this.requireFeedUrl(feedUrl),
-      title: title.trim(),
-      enabled,
+      source: this.encodeSource(draft),
     });
-    const subscription = this.decodeSubscription(this.requiredObject(result.data, 'subscription'));
-    if (subscription.subscriptionId !== subscriptionId || subscription.enabled !== enabled) {
-      throw new Error('rss.subscription.update returned a mismatched subscription');
+    const sourceData = this.requiredObject(result.data, 'source');
+    const subscription = this.decodeSubscription(
+      this.requiredObject(sourceData, 'subscription'),
+      this.requiredObject(sourceData, 'source'),
+    );
+    if (subscription.subscriptionId !== subscriptionId || subscription.enabled !== draft.enabled) {
+      throw new Error('rss-source.put returned a mismatched subscription');
     }
     return subscription;
+  }
+
+  async importSources(replaceExisting: boolean): Promise<RssSourceImportResult | undefined> {
+    const selection = await this.runtimeOwner.selectRssSourceJson();
+    if (selection === undefined) {
+      return undefined;
+    }
+    const result = await this.runtimeOwner.request('rss-source.import', {
+      json: selection.text,
+      replaceExisting,
+    });
+    const imported = this.nonNegativeInteger(result.data, 'imported');
+    const echoedReplace = this.requiredBoolean(result.data, 'replaceExisting');
+    if (echoedReplace !== replaceExisting) {
+      throw new Error('rss-source.import returned a mismatched replaceExisting');
+    }
+    return { imported, replaceExisting: echoedReplace };
+  }
+
+  async exportSources(): Promise<RssSourceExportResult> {
+    const result = await this.runtimeOwner.request('rss-source.export', {
+      exportedAt: Date.now(),
+    });
+    const json = this.requiredNonEmptyString(result.data, 'json');
+    const count = this.nonNegativeInteger(result.data, 'count');
+    const destination = await this.runtimeOwner.saveRssSourceJson(json, 'reader-rss-sources.json');
+    const exported: RssSourceExportResult = { count };
+    if (destination !== undefined) {
+      exported.destination = destination;
+    }
+    return exported;
   }
 
   /**
@@ -382,7 +456,7 @@ export class RssGateway {
     };
   }
 
-  private decodeSubscription(value: unknown): RssSubscription {
+  private decodeSubscription(value: unknown, source?: JsonObject): RssSubscription {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
       throw new Error('rss.subscription.list returned a non-object subscription');
     }
@@ -402,7 +476,84 @@ export class RssGateway {
     if (lastFetchAt !== undefined) {
       decoded.lastFetchAt = lastFetchAt;
     }
+    if (source !== undefined) {
+      const sourceGroup = this.optionalString(source, 'sourceGroup');
+      const customOrder = this.optionalNumber(source, 'customOrder');
+      const updateIntervalMinutes = this.optionalNumber(source, 'updateIntervalMinutes');
+      const header = this.optionalString(source, 'header');
+      const enabledCookieJar = this.optionalBoolean(source, 'enabledCookieJar');
+      const ruleArticles = this.optionalString(source, 'ruleArticles');
+      const ruleNextPage = this.optionalString(source, 'ruleNextPage');
+      const ruleTitle = this.optionalString(source, 'ruleTitle');
+      const rulePubDate = this.optionalString(source, 'rulePubDate');
+      const ruleDescription = this.optionalString(source, 'ruleDescription');
+      const ruleImage = this.optionalString(source, 'ruleImage');
+      const ruleLink = this.optionalString(source, 'ruleLink');
+      const ruleContent = this.optionalString(source, 'ruleContent');
+      if (sourceGroup !== undefined) decoded.sourceGroup = sourceGroup;
+      if (customOrder !== undefined) decoded.customOrder = customOrder;
+      if (updateIntervalMinutes !== undefined) decoded.updateIntervalMinutes = updateIntervalMinutes;
+      if (header !== undefined) decoded.header = header;
+      if (enabledCookieJar !== undefined) decoded.enabledCookieJar = enabledCookieJar;
+      if (ruleArticles !== undefined) decoded.ruleArticles = ruleArticles;
+      if (ruleNextPage !== undefined) decoded.ruleNextPage = ruleNextPage;
+      if (ruleTitle !== undefined) decoded.ruleTitle = ruleTitle;
+      if (rulePubDate !== undefined) decoded.rulePubDate = rulePubDate;
+      if (ruleDescription !== undefined) decoded.ruleDescription = ruleDescription;
+      if (ruleImage !== undefined) decoded.ruleImage = ruleImage;
+      if (ruleLink !== undefined) decoded.ruleLink = ruleLink;
+      if (ruleContent !== undefined) decoded.ruleContent = ruleContent;
+    }
     return decoded;
+  }
+
+  private encodeSource(draft: RssSourceDraft): JsonObject {
+    const source: JsonObject = {
+      sourceUrl: this.requireFeedUrl(draft.feedUrl),
+      sourceName: draft.title.trim(),
+      enabled: draft.enabled,
+      enabledCookieJar: draft.enabledCookieJar,
+    };
+    this.putNonEmptyString(source, 'sourceGroup', draft.sourceGroup);
+    this.putOptionalNonNegativeInteger(source, 'customOrder', draft.customOrder);
+    this.putOptionalPositiveInteger(source, 'updateIntervalMinutes', draft.updateIntervalMinutes);
+    this.putNonEmptyString(source, 'header', draft.header);
+    this.putNonEmptyString(source, 'ruleArticles', draft.ruleArticles);
+    this.putNonEmptyString(source, 'ruleNextPage', draft.ruleNextPage);
+    this.putNonEmptyString(source, 'ruleTitle', draft.ruleTitle);
+    this.putNonEmptyString(source, 'rulePubDate', draft.rulePubDate);
+    this.putNonEmptyString(source, 'ruleDescription', draft.ruleDescription);
+    this.putNonEmptyString(source, 'ruleImage', draft.ruleImage);
+    this.putNonEmptyString(source, 'ruleLink', draft.ruleLink);
+    this.putNonEmptyString(source, 'ruleContent', draft.ruleContent);
+    return source;
+  }
+
+  private putNonEmptyString(target: JsonObject, key: string, value: string): void {
+    const trimmed = value.trim();
+    if (trimmed.length > 0) {
+      target[key] = trimmed;
+    }
+  }
+
+  private putOptionalNonNegativeInteger(target: JsonObject, key: string, value: number | undefined): void {
+    if (value === undefined) {
+      return;
+    }
+    if (!Number.isSafeInteger(value) || value < 0) {
+      throw new Error(`${key} 必须是非负整数`);
+    }
+    target[key] = value;
+  }
+
+  private putOptionalPositiveInteger(target: JsonObject, key: string, value: number | undefined): void {
+    if (value === undefined) {
+      return;
+    }
+    if (!Number.isSafeInteger(value) || value <= 0) {
+      throw new Error(`${key} 必须是正整数`);
+    }
+    target[key] = value;
   }
 
   private requireFeedUrl(value: string): string {
@@ -554,6 +705,17 @@ export class RssGateway {
       return undefined;
     }
     if (typeof candidate !== 'number' || !Number.isSafeInteger(candidate)) {
+      throw new Error(`rss protocol returned invalid ${key}`);
+    }
+    return candidate;
+  }
+
+  private optionalBoolean(value: JsonObject, key: string): boolean | undefined {
+    const candidate = value[key];
+    if (candidate === undefined) {
+      return undefined;
+    }
+    if (typeof candidate !== 'boolean') {
       throw new Error(`rss protocol returned invalid ${key}`);
     }
     return candidate;

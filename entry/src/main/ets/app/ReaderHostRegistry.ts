@@ -182,6 +182,10 @@ export class ReaderHostRegistry {
     return this.selectBoundedJsonDocument('Reader 规则包 JSON');
   }
 
+  async selectRssSourceJson(): Promise<BookSourceJsonSelection | undefined> {
+    return this.selectBoundedJsonDocument('Legado RSS 源 JSON');
+  }
+
   private async selectBoundedJsonDocument(label: string): Promise<BookSourceJsonSelection | undefined> {
     const options = new picker.DocumentSelectOptions();
     options.fileSuffixFilters = [`${label}|.json`];
@@ -214,6 +218,10 @@ export class ReaderHostRegistry {
   /** Save a byte-exact Core rule bundle through the system document picker. */
   async saveRuleBundleJson(text: string, suggestedFileName: string): Promise<string | undefined> {
     return this.saveBoundedJsonDocument(text, suggestedFileName, 'Reader 规则包 JSON', 'Rule-bundle');
+  }
+
+  async saveRssSourceJson(text: string, suggestedFileName: string): Promise<string | undefined> {
+    return this.saveBoundedJsonDocument(text, suggestedFileName, 'Legado RSS 源 JSON', 'RSS-source');
   }
 
   private async saveBoundedJsonDocument(

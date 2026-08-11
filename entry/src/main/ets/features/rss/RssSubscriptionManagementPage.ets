@@ -43,6 +43,8 @@ export struct RssSubscriptionManagementPage {
   @Prop focusedSubscriptionId: string = '';
   onBack: () => void = (): void => {};
   onAdd: () => void = (): void => {};
+  onImport: () => void = (): void => {};
+  onExport: () => void = (): void => {};
   onToggle: (subscriptionId: string, enabled: boolean) => void =
     (_subscriptionId: string, _enabled: boolean): void => {};
   onViewArticles: (subscriptionId: string) => void = (_subscriptionId: string): void => {};
@@ -118,15 +120,39 @@ export struct RssSubscriptionManagementPage {
 
   @Builder
   private stats() {
-    Text(`${this.items.length} 个订阅源 · ${this.enabledCount()} 个启用 · ${this.disabledCount()} 个停用`)
-      .width('100%')
+    Column({ space: TOK_SPACE_XS }) {
+      Text(`${this.items.length} 个订阅源 · ${this.enabledCount()} 个启用 · ${this.disabledCount()} 个停用`)
+        .width('100%')
+        .fontFamily('ReaderNotoSansSC')
+        .fontWeight(FontWeight.Regular)
+        .fontSize(10)
+        .lineHeight(12.5)
+        .fontColor(TOK_MUTED)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis });
+      Row({ space: TOK_SPACE_XS }) {
+        this.sourceDocumentAction('导入 RSS 源', (): void => this.onImport());
+        this.sourceDocumentAction('导出全部', (): void => this.onExport());
+      }
+      .width('100%');
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start);
+  }
+
+  @Builder
+  private sourceDocumentAction(label: string, action: () => void) {
+    Text(label)
+      .layoutWeight(1)
+      .height(36)
+      .textAlign(TextAlign.Center)
       .fontFamily('ReaderNotoSansSC')
-      .fontWeight(FontWeight.Regular)
-      .fontSize(10)
-      .lineHeight(12.5)
-      .fontColor(TOK_MUTED)
-      .maxLines(1)
-      .textOverflow({ overflow: TextOverflow.Ellipsis });
+      .fontWeight(FontWeight.Bold)
+      .fontSize(11)
+      .fontColor(TOK_PRIMARY_DARK)
+      .backgroundColor(TOK_PRIMARY_SOFT)
+      .borderRadius(8)
+      .onClick((): void => action());
   }
 
   @Builder

@@ -84,6 +84,7 @@ import {
   type ReaderTtsProgressCommit,
 } from './ReaderTtsSessionCoordinator';
 import { createReaderTtsState, type ReaderTtsState } from './ReaderTtsState';
+import { ReadingRecordGateway } from './ReadingRecordGateway';
 
 type ReaderPageTurnResult = 'started' | 'busy' | 'bookEnd';
 
@@ -355,6 +356,8 @@ const UNICODE_PROBE_EMPTY_ATTEMPT_LIMIT = 5;
  * Figma loading/error state.
  */
 const FIRST_PAGE_READY_TIMEOUT_MS = 30000;
+/** Persist real foreground reading time in bounded atomic deltas. */
+const READING_RECORD_FLUSH_INTERVAL_MS = 30000;
 
 /**
  * Shared immersive reading implementation for local and remote sessions.
@@ -452,6 +455,8 @@ export struct ReadingExperience {
   private sessionGateway: ReadingSessionFlowGateway | undefined = undefined;
   private readonly replaceGateway: ReaderReplaceQuickGateway =
     new ReaderReplaceQuickGateway(ReaderRuntimeOwner.current());
+  private readonly readingRecordGateway: ReadingRecordGateway =
+    new ReadingRecordGateway(ReaderRuntimeOwner.current());
   private ttsGateway: ReaderTtsGateway | undefined = undefined;
   private ttsHttpGateway: ReaderHttpTtsGateway | undefined = undefined;
   private ttsCoordinator: ReaderTtsSessionCoordinator | undefined = undefined;
@@ -528,6 +533,10 @@ export struct ReadingExperience {
   private mounted: boolean = false;
   private exitRequested: boolean = false;
   private exitDelivered: boolean = false;
+  private readingRecordActiveSinceMs: number = 0;
+  private readingRecordPendingMillis: number = 0;
+  private readingRecordTimer: number = -1;
+  private readingRecordFlushTail: Promise<void> = Promise.resolve();
 
   aboutToAppear(): void {
     this.lifecycleToken += 1;
@@ -535,6 +544,9 @@ export struct ReadingExperience {
     this.mounted = true;
     this.exitRequested = false;
     this.exitDelivered = false;
+    this.readingRecordActiveSinceMs = 0;
+    this.readingRecordPendingMillis = 0;
+    this.clearReadingRecordTimer();
     this.commitInFlight = false;
     this.measurementCompleting = false;
     this.remeasurePending = false;
@@ -578,6 +590,9 @@ export struct ReadingExperience {
     this.autoPageState = invalidateReaderAutoPageState(this.autoPageState);
     this.clearAutoPageTimer();
     this.clearAutoPageSessionTimer();
+    this.clearReadingRecordTimer();
+    this.readingRecordActiveSinceMs = 0;
+    this.readingRecordPendingMillis = 0;
     const ttsCoordinator = this.ttsCoordinator;
     this.ttsCoordinator = undefined;
     this.ttsGateway = undefined;
@@ -1704,6 +1719,7 @@ export struct ReadingExperience {
         this.releaseUnretainedReadingImages();
         this.showChapterTitle = this.isChapterFirstPageStart(visiblePage.startScalar);
         this.phase = 'ready';
+        this.beginReadingRecordClock(lifecycleToken);
         this.measurementCompleting = false;
         this.cancelFirstPageReadyDeadline();
         this.chapterTitle = chapter.chapterTitle;
@@ -1751,6 +1767,8 @@ export struct ReadingExperience {
       return;
     }
     this.exitRequested = true;
+    this.captureReadingRecordElapsed(false);
+    this.clearReadingRecordTimer();
     this.autoPageState = invalidateReaderAutoPageState(this.autoPageState);
     this.clearAutoPageTimer();
     this.clearAutoPageSessionTimer();
@@ -1762,6 +1780,7 @@ export struct ReadingExperience {
     try {
       const coordinator = this.ttsCoordinator;
       if (coordinator !== undefined) await coordinator.stop('lifecycle');
+      await this.flushReadingRecordForExit();
       // A loading/measuring failure has no materialized physical page, so this
       // is deliberately a no-op commit that still completes before exit.
       await this.commitVisiblePage(lifecycleToken);
@@ -3012,12 +3031,98 @@ export struct ReadingExperience {
 
   private onAppForegroundChanged(): void {
     if (!this.appForeground) {
+      this.captureReadingRecordElapsed(false);
+      this.clearReadingRecordTimer();
+      void this.flushReadingRecord();
       this.pauseAutoPage('background');
       const coordinator = this.ttsCoordinator;
       if (coordinator !== undefined) {
         void coordinator.pauseForBackground()
           .catch((error: Error): void => this.logTtsFailure('background pause', error));
       }
+      return;
+    }
+    if (this.phase === 'ready') {
+      this.beginReadingRecordClock(this.lifecycleToken);
+    }
+  }
+
+  private beginReadingRecordClock(lifecycleToken: number): void {
+    if (!this.isSessionActive(lifecycleToken) || !this.appForeground || this.exitRequested) {
+      return;
+    }
+    if (this.readingRecordActiveSinceMs <= 0) {
+      this.readingRecordActiveSinceMs = Date.now();
+    }
+    this.armReadingRecordTimer(lifecycleToken);
+  }
+
+  private armReadingRecordTimer(lifecycleToken: number): void {
+    this.clearReadingRecordTimer();
+    if (!this.isSessionActive(lifecycleToken) || this.readingRecordActiveSinceMs <= 0) {
+      return;
+    }
+    this.readingRecordTimer = setTimeout((): void => {
+      this.readingRecordTimer = -1;
+      if (!this.isSessionActive(lifecycleToken) || !this.appForeground || this.exitRequested) {
+        return;
+      }
+      this.captureReadingRecordElapsed(true);
+      void this.flushReadingRecord();
+      this.armReadingRecordTimer(lifecycleToken);
+    }, READING_RECORD_FLUSH_INTERVAL_MS);
+  }
+
+  private clearReadingRecordTimer(): void {
+    if (this.readingRecordTimer >= 0) {
+      clearTimeout(this.readingRecordTimer);
+      this.readingRecordTimer = -1;
+    }
+  }
+
+  private captureReadingRecordElapsed(continueClock: boolean): void {
+    if (this.readingRecordActiveSinceMs <= 0) {
+      return;
+    }
+    const now = Date.now();
+    const elapsed = Math.max(0, now - this.readingRecordActiveSinceMs);
+    this.readingRecordActiveSinceMs = continueClock ? now : 0;
+    if (elapsed <= 0) {
+      return;
+    }
+    const accumulated = this.readingRecordPendingMillis + elapsed;
+    this.readingRecordPendingMillis = Number.isSafeInteger(accumulated) ? accumulated : Number.MAX_SAFE_INTEGER;
+  }
+
+  private flushReadingRecord(): Promise<void> {
+    if (this.readingRecordPendingMillis <= 0) {
+      return this.readingRecordFlushTail;
+    }
+    const elapsedMillis = this.readingRecordPendingMillis;
+    const readAt = Date.now();
+    const bookName = this.bookTitle.trim().length > 0 ? this.bookTitle.trim() : this.bookId;
+    const lifecycleToken = this.lifecycleToken;
+    this.readingRecordPendingMillis = 0;
+    this.readingRecordFlushTail = this.readingRecordFlushTail
+      .then(async (): Promise<void> => {
+        await this.readingRecordGateway.accumulate(bookName, elapsedMillis, readAt);
+      })
+      .catch((error: Error): void => {
+        if (this.isMountedToken(lifecycleToken) && !this.exitDelivered) {
+          const restored = this.readingRecordPendingMillis + elapsedMillis;
+          this.readingRecordPendingMillis = Number.isSafeInteger(restored) ? restored : Number.MAX_SAFE_INTEGER;
+        }
+        console.error(`ReadingExperience read-record flush failed: ${this.errorMessage(error)}`);
+      });
+    return this.readingRecordFlushTail;
+  }
+
+  private async flushReadingRecordForExit(): Promise<void> {
+    await this.flushReadingRecord();
+    // One bounded retry covers a transient Core transaction boundary while
+    // preserving the exit guarantee that no new write starts after unmount.
+    if (this.readingRecordPendingMillis > 0) {
+      await this.flushReadingRecord();
     }
   }
 

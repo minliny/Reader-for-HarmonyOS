@@ -1,6 +1,8 @@
 import {
   RssGateway,
   type RssItem,
+  type RssSourceExportResult,
+  type RssSourceImportResult,
   type RssSubscription,
   type RssSubscriptionItemsResult,
 } from './RssGateway';
@@ -106,6 +108,49 @@ export class RssOrchestrator {
       async (): Promise<void> => {
         await this.gateway.removeSubscription(subscriptionId);
       },
+    );
+  }
+
+  importSources(
+    replaceExisting: boolean,
+    onComplete: (result: RssSourceImportResult | undefined) => void,
+    onFailure: RssOperationFailure,
+  ): void {
+    const session = this.session;
+    this.enqueueRouteTask(
+      'source-import',
+      replaceExisting ? 'replace' : 'merge',
+      async (): Promise<void> => {
+        const result = await this.gateway.importSources(replaceExisting);
+        if (result === undefined) {
+          if (this.isCurrentSession(session)) onComplete(undefined);
+          return;
+        }
+        const subscriptions = await this.loadSubscriptionsWithRetry();
+        if (this.isCurrentSession(session)) {
+          this.emit(subscriptions);
+          onComplete(result);
+        }
+      },
+      onFailure,
+      (): boolean => this.isCurrentSession(session),
+    );
+  }
+
+  exportSources(
+    onComplete: (result: RssSourceExportResult) => void,
+    onFailure: RssOperationFailure,
+  ): void {
+    const session = this.session;
+    this.enqueueRouteTask(
+      'source-export',
+      'all',
+      async (): Promise<void> => {
+        const result = await this.gateway.exportSources();
+        if (this.isCurrentSession(session)) onComplete(result);
+      },
+      onFailure,
+      (): boolean => this.isCurrentSession(session),
     );
   }
 

@@ -60,6 +60,8 @@ import {
 import {
   RssGateway,
   type RssItem,
+  type RssSourceExportResult,
+  type RssSourceImportResult,
   type RssSubscription,
 } from '../features/rss/RssGateway';
 import {
@@ -77,6 +79,7 @@ import { RssSubscriptionEditorPage } from '../features/rss/RssSubscriptionEditor
 import {
   EMPTY_RSS_EDITOR_SNAPSHOT,
   RssSubscriptionEditorOrchestrator,
+  type RssSourceTextField,
   type RssSubscriptionEditorSnapshot,
 } from '../features/rss/RssSubscriptionEditorOrchestrator';
 import {
@@ -454,6 +457,8 @@ struct Index {
           focusedSubscriptionId: this.rssManagementFocusSubscriptionId,
           onBack: (): void => this.returnToRss(),
           onAdd: (): void => this.onRssSubscriptionAddRequested(),
+          onImport: (): void => this.requestRssSourceImport(),
+          onExport: (): void => this.exportRssSources(),
           onToggle: (id: string, enabled: boolean): void =>
             this.getRssOrchestrator().toggleSubscription(id, enabled),
           onViewArticles: (id: string): void => this.onRssManagementViewArticles(id),
@@ -468,6 +473,10 @@ struct Index {
           onFeedUrlChanged: (value: string): void => this.getRssEditorOrchestrator().updateFeedUrl(value),
           onTitleChanged: (value: string): void => this.getRssEditorOrchestrator().updateTitle(value),
           onEnabledChanged: (value: boolean): void => this.getRssEditorOrchestrator().updateEnabled(value),
+          onEnabledCookieJarChanged: (value: boolean): void =>
+            this.getRssEditorOrchestrator().updateEnabledCookieJar(value),
+          onSourceFieldChanged: (field: RssSourceTextField, value: string): void =>
+            this.getRssEditorOrchestrator().updateSourceField(field, value),
           onSave: (): void => this.getRssEditorOrchestrator().save(),
         });
       } else if (this.route === 'rssSourceFeed' && this.selectedRssSubscription !== undefined) {
@@ -1081,6 +1090,64 @@ struct Index {
     });
   }
 
+  private requestRssSourceImport(): void {
+    if (this.route !== 'rssSubscriptionManagement') {
+      return;
+    }
+    this.getUIContext().showAlertDialog({
+      title: '导入 RSS 源',
+      message: '“合并导入”保留现有来源；“覆盖全部”会原子替换当前 RSS 来源与阅读状态。',
+      autoCancel: true,
+      primaryButton: {
+        value: '合并导入',
+        action: (): void => this.importRssSources(false),
+      },
+      secondaryButton: {
+        value: '覆盖全部',
+        fontColor: '#B42318',
+        action: (): void => this.importRssSources(true),
+      },
+    });
+  }
+
+  private importRssSources(replaceExisting: boolean): void {
+    this.getRssOrchestrator().importSources(
+      replaceExisting,
+      (result: RssSourceImportResult | undefined): void => {
+        if (result !== undefined) {
+          this.showRssOperationResult('RSS 源导入完成', `Core 已原子导入 ${result.imported} 个来源。`);
+        }
+      },
+      (error: Error): void => this.showRssOperationResult('RSS 源导入失败', error.message),
+    );
+  }
+
+  private exportRssSources(): void {
+    this.getRssOrchestrator().exportSources(
+      (result: RssSourceExportResult): void => {
+        if (result.destination !== undefined) {
+          this.showRssOperationResult('RSS 源导出完成', `已导出 ${result.count} 个来源。`);
+        }
+      },
+      (error: Error): void => this.showRssOperationResult('RSS 源导出失败', error.message),
+    );
+  }
+
+  private showRssOperationResult(title: string, message: string): void {
+    if (this.route !== 'rssSubscriptionManagement') {
+      return;
+    }
+    this.getUIContext().showAlertDialog({
+      title,
+      message,
+      autoCancel: true,
+      primaryButton: {
+        value: '知道了',
+        action: (): void => {},
+      },
+    });
+  }
+
   private confirmRssSubscriptionDelete(subscriptionId: string): void {
     const stillPresent = this.rssSubscriptions().some(
       (candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId,
@@ -1365,6 +1432,15 @@ struct Index {
   /** Management metadata is a projection of Core fields only. */
   private rssSubscriptionManagementMeta(subscription: RssSubscription): string {
     const parts: string[] = [];
+    if (subscription.sourceGroup !== undefined && subscription.sourceGroup.trim().length > 0) {
+      parts.push(subscription.sourceGroup);
+    }
+    if (subscription.customOrder !== undefined) {
+      parts.push(`排序 ${subscription.customOrder}`);
+    }
+    if (subscription.ruleArticles !== undefined && subscription.ruleArticles.trim().length > 0) {
+      parts.push('规则型');
+    }
     const siteUrl = subscription.siteUrl;
     parts.push(siteUrl !== undefined && siteUrl.trim().length > 0 ? siteUrl : subscription.feedUrl);
     if (subscription.lastFetchAt !== undefined && subscription.lastFetchAt > 0) {

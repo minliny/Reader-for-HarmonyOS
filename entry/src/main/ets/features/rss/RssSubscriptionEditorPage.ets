@@ -18,6 +18,7 @@ import {
 } from '../common/ReaderTokens';
 import {
   type RssSubscriptionEditorSnapshot,
+  type RssSourceTextField,
   EMPTY_RSS_EDITOR_SNAPSHOT,
 } from './RssSubscriptionEditorOrchestrator';
 
@@ -28,6 +29,9 @@ export struct RssSubscriptionEditorPage {
   onFeedUrlChanged: (value: string) => void = (_value: string): void => {};
   onTitleChanged: (value: string) => void = (_value: string): void => {};
   onEnabledChanged: (value: boolean) => void = (_value: boolean): void => {};
+  onEnabledCookieJarChanged: (value: boolean) => void = (_value: boolean): void => {};
+  onSourceFieldChanged: (field: RssSourceTextField, value: string) => void =
+    (_field: RssSourceTextField, _value: string): void => {};
   onSave: () => void = (): void => {};
 
   aboutToAppear(): void {
@@ -57,6 +61,13 @@ export struct RssSubscriptionEditorPage {
               (value: string): void => this.onTitleChanged(value));
             this.editorField('Feed URL', this.snapshot.feedUrl, 'https://example.com/feed.xml',
               (value: string): void => this.onFeedUrlChanged(value));
+            this.sectionTitle('来源组织与刷新');
+            this.editorField('分组', this.snapshot.sourceGroup, '例如：技术 / 新闻',
+              (value: string): void => this.onSourceFieldChanged('sourceGroup', value));
+            this.editorField('自定义排序', this.snapshot.customOrder, '非负整数，数值小的在前',
+              (value: string): void => this.onSourceFieldChanged('customOrder', value));
+            this.editorField('更新间隔（分钟）', this.snapshot.updateIntervalMinutes, '正整数；留空由 Core 决定',
+              (value: string): void => this.onSourceFieldChanged('updateIntervalMinutes', value));
             Row() {
               Column({ space: TOK_SPACE_XS }) {
                 Text('启用订阅')
@@ -79,6 +90,47 @@ export struct RssSubscriptionEditorPage {
             .width('100%')
             .height(60)
             .alignItems(VerticalAlign.Center);
+            Row() {
+              Column({ space: TOK_SPACE_XS }) {
+                Text('启用 Cookie 会话')
+                  .fontFamily('ReaderNotoSansSC')
+                  .fontWeight(FontWeight.Bold)
+                  .fontSize(13)
+                  .fontColor(TOK_INK);
+                Text('由 Host 隔离存储；导出不包含 Cookie 明文')
+                  .fontFamily('ReaderNotoSansSC')
+                  .fontSize(11)
+                  .fontColor(TOK_MUTED);
+              }
+              .layoutWeight(1)
+              .alignItems(HorizontalAlign.Start);
+              ReaderToggle({
+                value: this.snapshot.enabledCookieJar,
+                onToggle: (): void => this.onEnabledCookieJarChanged(!this.snapshot.enabledCookieJar),
+              });
+            }
+            .width('100%')
+            .height(60)
+            .alignItems(VerticalAlign.Center);
+            this.editorField('请求头规则', this.snapshot.header, 'JSON 对象；动态 JS 规则会由 Core fail-closed',
+              (value: string): void => this.onSourceFieldChanged('header', value));
+            this.sectionTitle('规则型 RSS（HTML）');
+            this.editorField('文章列表规则', this.snapshot.ruleArticles, '.article',
+              (value: string): void => this.onSourceFieldChanged('ruleArticles', value));
+            this.editorField('标题规则', this.snapshot.ruleTitle, '.title@text',
+              (value: string): void => this.onSourceFieldChanged('ruleTitle', value));
+            this.editorField('链接规则', this.snapshot.ruleLink, '.title@href',
+              (value: string): void => this.onSourceFieldChanged('ruleLink', value));
+            this.editorField('发布日期规则', this.snapshot.rulePubDate, '.date@text',
+              (value: string): void => this.onSourceFieldChanged('rulePubDate', value));
+            this.editorField('摘要规则', this.snapshot.ruleDescription, '.summary@text',
+              (value: string): void => this.onSourceFieldChanged('ruleDescription', value));
+            this.editorField('图片规则', this.snapshot.ruleImage, '.cover@src',
+              (value: string): void => this.onSourceFieldChanged('ruleImage', value));
+            this.editorField('正文规则', this.snapshot.ruleContent, '.content@html',
+              (value: string): void => this.onSourceFieldChanged('ruleContent', value));
+            this.editorField('下一页规则', this.snapshot.ruleNextPage, '.next@href',
+              (value: string): void => this.onSourceFieldChanged('ruleNextPage', value));
             Text('保存')
               .width('100%')
               .height(44)
@@ -101,7 +153,7 @@ export struct RssSubscriptionEditorPage {
           .backgroundColor(TOK_SURFACE_SOLID)
           .border({ width: TOK_BORDER_W, color: TOK_BORDER })
           .borderRadius(10);
-          Text('规则型 RSS、排序/分组及导入导出属于后续独立 gate，本编辑器不伪造这些字段。')
+          Text('完整来源配置由 Core 归一化并持久化；XML/Atom 与静态 HTML 规则共用同一订阅身份。')
             .width('100%')
             .fontFamily('ReaderNotoSansSC')
             .fontSize(10)
@@ -118,6 +170,17 @@ export struct RssSubscriptionEditorPage {
     .width('100%')
     .height('100%')
     .backgroundColor(TOK_PAPER);
+  }
+
+  @Builder
+  private sectionTitle(label: string) {
+    Text(label)
+      .width('100%')
+      .fontFamily('ReaderNotoSansSC')
+      .fontWeight(FontWeight.Bold)
+      .fontSize(14)
+      .fontColor(TOK_PRIMARY_DARK)
+      .margin({ top: TOK_SPACE_XS });
   }
 
   @Builder
