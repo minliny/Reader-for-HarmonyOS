@@ -83,6 +83,10 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
     this.listener = listener;
   }
 
+  async selectEngine(engine?: string): Promise<boolean> {
+    return engine === undefined || !engine.startsWith('http-tts:');
+  }
+
   async isAvailable(): Promise<boolean> {
     if (this.closed) return false;
     try {

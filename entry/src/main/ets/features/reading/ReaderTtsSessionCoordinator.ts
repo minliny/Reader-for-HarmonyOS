@@ -36,6 +36,7 @@ export type ReaderTtsHostEvent =
 
 export interface ReaderTtsHost {
   setEventListener(listener: ((event: ReaderTtsHostEvent) => void) | undefined): void;
+  selectEngine(engine?: string): Promise<boolean>;
   isAvailable(): Promise<boolean>;
   activateAudioSession(allowMixing: boolean): Promise<void>;
   deactivateAudioSession(): Promise<void>;
@@ -409,6 +410,16 @@ export class ReaderTtsSessionCoordinator {
       await this.host.deactivateAudioSession();
     }
     if (!this.isSessionCurrent(identity)) return;
+    const active = this.active;
+    if (active === undefined || !this.isSessionCurrent(identity)) return;
+    active.config = await this.gateway.getConfig();
+    if (!this.isSessionCurrent(identity)) return;
+    await this.host.selectEngine(active.config?.engine);
+    if (!this.isSessionCurrent(identity)) return;
+    this.transport = {
+      ...this.transport,
+      engine: active.config?.engine?.startsWith('http-tts:') ? 'http' : 'system',
+    };
     const available = await this.host.isAvailable();
     if (!this.isSessionCurrent(identity)) return;
     if (!available) {
@@ -422,14 +433,6 @@ export class ReaderTtsSessionCoordinator {
       return;
     }
     this.setState({ ...this.state, stopReason: undefined, errorMessage: undefined });
-    const active = this.active;
-    if (active === undefined || !this.isSessionCurrent(identity)) return;
-    active.config = await this.gateway.getConfig();
-    if (!this.isSessionCurrent(identity)) return;
-    this.transport = {
-      ...this.transport,
-      engine: active.config?.engine?.startsWith('http-tts:') ? 'http' : 'system',
-    };
     active.plan = await this.gateway.slice(active.input.chapter, active.input.content, 'paragraph-then-sentence');
     if (!this.isSessionCurrent(identity)) return;
     const startIndex = this.firstSliceIndex(active.plan, active.input.scalarPosition);

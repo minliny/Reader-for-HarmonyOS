@@ -15,6 +15,8 @@ import {
   ReaderHostRegistry,
 } from './ReaderHostRegistry';
 import { HarmonySystemTtsHost } from './HarmonySystemTtsHost';
+import { HarmonyHttpTtsHost } from './HarmonyHttpTtsHost';
+import { HarmonyTtsHostRouter } from './HarmonyTtsHostRouter';
 import { LocalEpubResourceHost } from './LocalEpubResourceHost';
 import { ReadingBodyImageHost, type ReadingBodyImagePayload } from './ReadingBodyImageHost';
 import {
@@ -52,7 +54,7 @@ export class ReaderRuntimeOwner {
   private static instance: ReaderRuntimeOwner | undefined = undefined;
 
   private readonly host: ReaderHostRegistry;
-  private readonly ttsHost: HarmonySystemTtsHost;
+  private readonly ttsHost: HarmonyTtsHostRouter;
   private readonly localEpubResourceHost: LocalEpubResourceHost;
   private readonly readingImageDiskCache: ReadingImageDiskCache;
   private runtime: ReaderCoreRuntime | undefined = undefined;
@@ -65,7 +67,7 @@ export class ReaderRuntimeOwner {
 
   private constructor(context: common.UIAbilityContext) {
     this.host = new ReaderHostRegistry(context);
-    this.ttsHost = new HarmonySystemTtsHost();
+    this.ttsHost = new HarmonyTtsHostRouter(new HarmonySystemTtsHost(), new HarmonyHttpTtsHost(this));
     this.localEpubResourceHost = new LocalEpubResourceHost(context);
     this.readingImageDiskCache = new ReadingImageDiskCache(context);
     ReadingBodyImageHost.setDisplayCacheDir(context.cacheDir);
@@ -334,7 +336,7 @@ export class ReaderRuntimeOwner {
     return this.host.getContext();
   }
 
-  getTtsHost(): HarmonySystemTtsHost {
+  getTtsHost(): HarmonyTtsHostRouter {
     if (this.state === 'closing' || this.state === 'closed') {
       throw new Error('Reader system TTS Host is no longer available after teardown');
     }
