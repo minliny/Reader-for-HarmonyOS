@@ -152,6 +152,11 @@ export class ReaderTtsGateway {
     return this.requestSnapshot('tts.queue.prev', { chapter }, chapter);
   }
 
+  async seek(chapter: ReaderTtsChapterRef, sliceIndex: number): Promise<ReaderTtsQueueSnapshot> {
+    this.assertNonNegativeInteger(sliceIndex, 'tts.queue.seek sliceIndex');
+    return this.requestSnapshot('tts.queue.seek', { chapter, sliceIndex }, chapter);
+  }
+
   async skip(chapter: ReaderTtsChapterRef): Promise<ReaderTtsQueueSnapshot> {
     return this.requestSnapshot('tts.queue.skip', { chapter }, chapter);
   }

@@ -1,22 +1,7 @@
 import {
-  advanceReaderTtsChapter,
-  beginReaderTtsSession,
-  beginStoppingReaderTts,
-  completeReaderTtsSession,
   createReaderTtsState,
-  finishStoppingReaderTts,
-  invalidateReaderTtsUtterance,
-  isReaderTtsSessionCurrent,
-  isReaderTtsUtteranceCurrent,
-  markReaderTtsStarted,
-  pauseReaderTtsSession,
-  prepareReaderTtsUtterance,
-  readerTtsSessionIdentity,
-  readerTtsUtteranceToken,
-  resumeReaderTtsSession,
-  scheduleReaderTtsTimer,
-  setReaderTtsAvailability,
-  setReaderTtsRate,
+  READER_TTS_RATE_MAX,
+  READER_TTS_RATE_MIN,
   type ReaderTtsContentVersion,
   type ReaderTtsSessionIdentity,
   type ReaderTtsState,
@@ -92,6 +77,7 @@ export interface ReaderTtsCoordinatorGateway {
   stop(chapter: ReaderTtsChapterRef): Promise<ReaderTtsQueueSnapshot>;
   next(chapter: ReaderTtsChapterRef): Promise<ReaderTtsQueueSnapshot>;
   previous(chapter: ReaderTtsChapterRef): Promise<ReaderTtsQueueSnapshot>;
+  seek(chapter: ReaderTtsChapterRef, sliceIndex: number): Promise<ReaderTtsQueueSnapshot>;
   skip(chapter: ReaderTtsChapterRef): Promise<ReaderTtsQueueSnapshot>;
   setRate(chapter: ReaderTtsChapterRef, rate: number): Promise<ReaderTtsQueueSnapshot>;
   chapterPlan(
@@ -129,6 +115,27 @@ type CorrelatedUtterance = {
   failurePolicy: 'skip' | 'stop';
 };
 
+export type HostTtsTransportState = {
+  engine: 'system' | 'http';
+  audioSession: 'inactive' | 'active';
+  focus: 'none' | 'held' | 'interrupted';
+  sessionGeneration: number;
+  utteranceGeneration: number;
+  currentRequestId?: string;
+  interruption?: 'systemInterruption' | 'routeBackground' | 'deviceChange';
+  timerDeadlineMs?: number;
+};
+
+function createHostTtsTransportState(): HostTtsTransportState {
+  return {
+    engine: 'system',
+    audioSession: 'inactive',
+    focus: 'none',
+    sessionGeneration: 0,
+    utteranceGeneration: 0,
+  };
+}
+
 /**
  * Serial bridge between Core's queue and the actual Harmony system engine.
  * Every public intent and every Host callback enters one operation tail.
@@ -142,6 +149,8 @@ export class ReaderTtsSessionCoordinator {
     ((chapter: ReaderTtsChapterRef) => Promise<ReaderTtsChapterAdvanceInput | undefined>) | undefined;
   private operationTail: Promise<void> = Promise.resolve();
   private state: ReaderTtsState = createReaderTtsState(false);
+  private transport: HostTtsTransportState = createHostTtsTransportState();
+  private coreSnapshot: ReaderTtsQueueSnapshot | undefined = undefined;
   private active: ActiveSession | undefined = undefined;
   private disposed: boolean = false;
   private timerHandle: number = -1;
@@ -169,9 +178,18 @@ export class ReaderTtsSessionCoordinator {
     return { ...this.state };
   }
 
+  getTransportState(): HostTtsTransportState {
+    return { ...this.transport };
+  }
+
   async probeAvailability(): Promise<boolean> {
     const available = await this.host.isAvailable();
-    this.setState(setReaderTtsAvailability(this.state, available));
+    this.setState({
+      ...this.state,
+      status: available ? (this.active === undefined ? 'idle' : this.state.status) : 'unavailable',
+      stopReason: available ? undefined : 'engineUnavailable',
+      errorMessage: undefined,
+    });
     return available;
   }
 
@@ -180,15 +198,28 @@ export class ReaderTtsSessionCoordinator {
     const chapterKey = this.chapterKey(input.chapter);
     const rate = input.rate ?? 1;
     this.utterances.clear();
-    this.setState(beginReaderTtsSession(
-      this.state,
+    this.transport = {
+      ...this.transport,
+      sessionGeneration: this.nextGeneration(this.transport.sessionGeneration),
+      utteranceGeneration: this.nextGeneration(this.transport.utteranceGeneration),
+      currentRequestId: undefined,
+      interruption: undefined,
+    };
+    this.coreSnapshot = undefined;
+    this.setState({
+      status: 'preparing',
+      sessionGeneration: this.transport.sessionGeneration,
+      utteranceGeneration: this.transport.utteranceGeneration,
+      contentVersion: input.contentVersion,
       chapterKey,
-      input.chapter.chapterIndex,
-      input.contentVersion,
+      chapterIndex: input.chapter.chapterIndex,
+      totalSlices: 0,
       rate,
-    ));
+      consecutiveFailures: 0,
+      timerDeadlineMs: this.transport.timerDeadlineMs,
+    });
     this.configureTimer(input.timerDurationMs);
-    const identity = readerTtsSessionIdentity(this.state);
+    const identity = this.sessionIdentity(input.contentVersion, chapterKey);
     const prior = this.active;
     this.active = { identity, input: { ...input, rate } };
     return this.enqueue(async (): Promise<void> => this.prepareNewSession(identity, prior));
@@ -204,29 +235,37 @@ export class ReaderTtsSessionCoordinator {
 
   private pauseForReason(reason: 'user' | 'routeBackground'): Promise<void> {
     const active = this.active;
-    const nextState = pauseReaderTtsSession(this.state, reason);
-    if (nextState === this.state || active === undefined) return Promise.resolve();
-    this.setState(nextState);
+    if (active === undefined || !this.canPause()) return Promise.resolve();
+    this.invalidateUtterance(reason === 'user' ? undefined : reason);
+    this.setState({
+      ...this.state,
+      status: reason === 'user' ? 'paused' : 'interrupted',
+      requestId: undefined,
+      pauseReason: reason,
+    });
     return this.enqueue(async (): Promise<void> => {
       await this.host.stop();
-      if (isReaderTtsSessionCurrent(this.state, active.identity)) {
-        await this.gateway.pause(active.input.chapter);
+      if (this.isSessionCurrent(active.identity)) {
+        const snapshot = await this.gateway.pause(active.input.chapter);
+        this.applyCoreSnapshot(snapshot, undefined, reason);
       }
       await this.host.deactivateAudioSession();
+      this.transport = { ...this.transport, audioSession: 'inactive', focus: 'none' };
     });
   }
 
   resume(): Promise<void> {
     const active = this.active;
-    const nextState = resumeReaderTtsSession(this.state);
-    if (nextState === this.state || active === undefined || active.plan === undefined ||
+    if ((this.state.status !== 'paused' && this.state.status !== 'interrupted') ||
+      active === undefined || active.plan === undefined ||
       this.state.sliceIndex === undefined) return Promise.resolve();
-    this.setState(nextState);
+    this.setState({ ...this.state, status: 'resuming', pauseReason: undefined, requestId: undefined });
     const identity = active.identity;
     return this.enqueue(async (): Promise<void> => {
-      if (!isReaderTtsSessionCurrent(this.state, identity)) return;
+      if (!this.isSessionCurrent(identity)) return;
       const snapshot = await this.gateway.resume(active.input.chapter);
-      if (!isReaderTtsSessionCurrent(this.state, identity)) return;
+      if (!this.isSessionCurrent(identity)) return;
+      this.applyCoreSnapshot(snapshot);
       const index = this.requireSnapshotIndex(snapshot, 'tts.queue.resume');
       await this.speakSlice(active, index, 'resuming');
     });
@@ -240,10 +279,34 @@ export class ReaderTtsSessionCoordinator {
     return this.skipToAdjacent('previous');
   }
 
+  seek(sliceIndex: number): Promise<void> {
+    if (!Number.isSafeInteger(sliceIndex) || sliceIndex < 0) {
+      return Promise.reject(new Error('Reader TTS seek requires a non-negative safe slice index'));
+    }
+    const active = this.active;
+    if (active === undefined || active.plan === undefined) return Promise.resolve();
+    const wasPaused = this.state.status === 'paused' || this.state.status === 'interrupted';
+    this.invalidateUtterance();
+    const identity = active.identity;
+    return this.enqueue(async (): Promise<void> => {
+      await this.host.stop();
+      if (!this.isSessionCurrent(identity)) return;
+      const snapshot = await this.gateway.seek(active.input.chapter, sliceIndex);
+      if (!this.isSessionCurrent(identity)) return;
+      this.applyCoreSnapshot(snapshot);
+      if (wasPaused || snapshot.state === 'paused') return;
+      await this.speakSlice(active, this.requireSnapshotIndex(snapshot, 'tts.queue.seek'), 'preparing');
+    });
+  }
+
   setRate(rate: number): Promise<void> {
     const active = this.active;
     const priorRate = this.state.rate;
-    this.setState(setReaderTtsRate(this.state, rate));
+    if (!Number.isFinite(rate) || rate < READER_TTS_RATE_MIN || rate > READER_TTS_RATE_MAX) {
+      return Promise.reject(new Error('Reader TTS rate must be between 0.5 and 2.0'));
+    }
+    this.invalidateUtterance();
+    this.setState({ ...this.state, rate, requestId: undefined });
     if (active === undefined || active.plan === undefined || this.state.sliceIndex === undefined || priorRate === rate) {
       return Promise.resolve();
     }
@@ -252,9 +315,10 @@ export class ReaderTtsSessionCoordinator {
     const index = this.state.sliceIndex;
     return this.enqueue(async (): Promise<void> => {
       await this.host.stop();
-      if (!isReaderTtsSessionCurrent(this.state, identity)) return;
-      await this.gateway.setRate(active.input.chapter, this.coreRateForMultiplier(rate));
-      if (!isReaderTtsSessionCurrent(this.state, identity)) return;
+      if (!this.isSessionCurrent(identity)) return;
+      const snapshot = await this.gateway.setRate(active.input.chapter, this.coreRateForMultiplier(rate));
+      if (!this.isSessionCurrent(identity)) return;
+      this.applyCoreSnapshot(snapshot);
       await this.speakSlice(active, index, 'resuming');
     });
   }
@@ -274,7 +338,21 @@ export class ReaderTtsSessionCoordinator {
   stop(reason: 'user' | 'timer' | 'lifecycle' | 'contentChanged' = 'user'): Promise<void> {
     const active = this.active;
     this.clearTimer();
-    this.setState(beginStoppingReaderTts(this.state, reason));
+    this.transport = {
+      ...this.transport,
+      sessionGeneration: this.nextGeneration(this.transport.sessionGeneration),
+      utteranceGeneration: this.nextGeneration(this.transport.utteranceGeneration),
+      currentRequestId: undefined,
+    };
+    this.setState({
+      ...this.state,
+      status: 'stopping',
+      sessionGeneration: this.transport.sessionGeneration,
+      utteranceGeneration: this.transport.utteranceGeneration,
+      requestId: undefined,
+      timerDeadlineMs: undefined,
+      stopReason: reason,
+    });
     this.active = undefined;
     this.utterances.clear();
     return this.enqueue(async (): Promise<void> => {
@@ -287,8 +365,22 @@ export class ReaderTtsSessionCoordinator {
         }
       }
       await this.host.deactivateAudioSession();
+      this.transport = { ...this.transport, audioSession: 'inactive', focus: 'none' };
       if (this.state.status === 'stopping') {
-        this.setState(finishStoppingReaderTts(this.state));
+        this.coreSnapshot = undefined;
+        this.setState({
+          ...this.state,
+          status: 'idle',
+          chapterKey: undefined,
+          chapterIndex: undefined,
+          sliceIndex: undefined,
+          totalSlices: 0,
+          charStart: undefined,
+          charEnd: undefined,
+          requestId: undefined,
+          pauseReason: undefined,
+          errorMessage: undefined,
+        });
       }
     });
   }
@@ -316,26 +408,39 @@ export class ReaderTtsSessionCoordinator {
       }
       await this.host.deactivateAudioSession();
     }
-    if (!isReaderTtsSessionCurrent(this.state, identity)) return;
+    if (!this.isSessionCurrent(identity)) return;
     const available = await this.host.isAvailable();
-    if (!isReaderTtsSessionCurrent(this.state, identity)) return;
+    if (!this.isSessionCurrent(identity)) return;
     if (!available) {
       this.clearTimer();
-      this.setState(setReaderTtsAvailability(this.state, false));
+      this.setState({
+        ...this.state,
+        status: 'unavailable',
+        requestId: undefined,
+        stopReason: 'engineUnavailable',
+      });
       return;
     }
-    this.setState(setReaderTtsAvailability(this.state, true));
+    this.setState({ ...this.state, stopReason: undefined, errorMessage: undefined });
     const active = this.active;
-    if (active === undefined || !isReaderTtsSessionCurrent(this.state, identity)) return;
+    if (active === undefined || !this.isSessionCurrent(identity)) return;
     active.config = await this.gateway.getConfig();
-    if (!isReaderTtsSessionCurrent(this.state, identity)) return;
+    if (!this.isSessionCurrent(identity)) return;
+    this.transport = {
+      ...this.transport,
+      engine: active.config?.engine?.startsWith('http-tts:') ? 'http' : 'system',
+    };
     active.plan = await this.gateway.slice(active.input.chapter, active.input.content, 'paragraph-then-sentence');
-    if (!isReaderTtsSessionCurrent(this.state, identity)) return;
+    if (!this.isSessionCurrent(identity)) return;
     const startIndex = this.firstSliceIndex(active.plan, active.input.scalarPosition);
     const snapshot = await this.gateway.play(active.plan, startIndex);
-    if (!isReaderTtsSessionCurrent(this.state, identity)) return;
-    await this.gateway.setRate(active.input.chapter, this.coreRateForMultiplier(active.input.rate ?? 1));
-    if (!isReaderTtsSessionCurrent(this.state, identity)) return;
+    if (!this.isSessionCurrent(identity)) return;
+    const ratedSnapshot = await this.gateway.setRate(
+      active.input.chapter,
+      this.coreRateForMultiplier(active.input.rate ?? 1),
+    );
+    if (!this.isSessionCurrent(identity)) return;
+    this.applyCoreSnapshot(ratedSnapshot);
     const index = this.requireSnapshotIndex(snapshot, 'tts.queue.play');
     await this.speakSlice(active, index, 'preparing');
   }
@@ -345,16 +450,30 @@ export class ReaderTtsSessionCoordinator {
     if (plan === undefined) throw new Error('Reader TTS has no active slice plan');
     const slice = plan.slices[index];
     if (slice === undefined) throw new Error('Reader TTS Core cursor is outside the slice plan');
-    if (!isReaderTtsSessionCurrent(this.state, active.identity)) return;
-    this.setState(prepareReaderTtsUtterance(
-      this.state,
-      slice.index,
-      plan.slices.length,
-      slice.charStart,
-      slice.charEnd,
+    if (!this.isSessionCurrent(active.identity)) return;
+    const utteranceGeneration = this.nextGeneration(this.transport.utteranceGeneration);
+    const requestId = `tts-s${this.transport.sessionGeneration}-u${utteranceGeneration}` +
+      `-c${active.input.chapter.chapterIndex}-i${slice.index}`;
+    this.transport = {
+      ...this.transport,
+      utteranceGeneration,
+      currentRequestId: requestId,
+      interruption: undefined,
+    };
+    this.setState({
+      ...this.state,
       status,
-    ));
-    const token = readerTtsUtteranceToken(this.state);
+      utteranceGeneration,
+      sliceIndex: slice.index,
+      totalSlices: plan.slices.length,
+      charStart: slice.charStart,
+      charEnd: slice.charEnd,
+      requestId,
+      pauseReason: undefined,
+      stopReason: undefined,
+      errorMessage: undefined,
+    });
+    const token = this.utteranceToken(active.identity, active.input.chapter, slice.index, requestId);
     this.utterances.set(token.requestId, {
       identity: active.identity,
       chapter: active.input.chapter,
@@ -363,7 +482,8 @@ export class ReaderTtsSessionCoordinator {
       failurePolicy: active.input.failurePolicy ?? 'stop',
     });
     await this.host.activateAudioSession(active.input.allowMixing ?? false);
-    if (!isReaderTtsUtteranceCurrent(this.state, token)) return;
+    this.transport = { ...this.transport, audioSession: 'active', focus: 'held' };
+    if (!this.isUtteranceCurrent(token)) return;
     try {
       await this.host.speak({
         requestId: token.requestId,
@@ -374,7 +494,7 @@ export class ReaderTtsSessionCoordinator {
         engine: active.config?.engine,
       });
     } catch (error) {
-      if (!isReaderTtsUtteranceCurrent(this.state, token)) return;
+      if (!this.isUtteranceCurrent(token)) return;
       const message = error instanceof Error ? error.message : `${error}`;
       await this.handleUtteranceFailure(active, token, message);
     }
@@ -408,9 +528,9 @@ export class ReaderTtsSessionCoordinator {
     if (event.type === 'start') {
       const result = await this.reportCorrelatedCallback(correlated, event.requestId, 'start', 'speaking');
       if (active !== undefined && result.callbackDisposition === 'applied' &&
-        isReaderTtsUtteranceCurrent(this.state, token)) {
+        this.isUtteranceCurrent(token)) {
         this.applyCoreSnapshot(result.snapshot);
-        this.setState(markReaderTtsStarted(this.state, token));
+        this.setState({ ...this.state, status: 'playing', consecutiveFailures: 0 });
       }
       return;
     }
@@ -446,26 +566,32 @@ export class ReaderTtsSessionCoordinator {
 
   private async pauseForSystem(reason: 'systemInterruption' | 'deviceChange'): Promise<void> {
     const active = this.active;
-    if (active === undefined) return;
-    const nextState = pauseReaderTtsSession(this.state, reason);
-    if (nextState === this.state) return;
-    this.setState(nextState);
+    if (active === undefined || !this.canPause()) return;
+    this.invalidateUtterance(reason);
+    this.setState({
+      ...this.state,
+      status: 'interrupted',
+      requestId: undefined,
+      pauseReason: reason,
+    });
     await this.host.stop();
-    if (isReaderTtsSessionCurrent(this.state, active.identity) && active.plan !== undefined) {
-      await this.gateway.pause(active.input.chapter);
+    if (this.isSessionCurrent(active.identity) && active.plan !== undefined) {
+      const snapshot = await this.gateway.pause(active.input.chapter);
+      this.applyCoreSnapshot(snapshot, undefined, reason);
     }
     await this.host.deactivateAudioSession();
+    this.transport = { ...this.transport, audioSession: 'inactive', focus: 'interrupted' };
   }
 
   private async resumeAfterSystemInterruption(): Promise<void> {
     const active = this.active;
     if (active === undefined || active.plan === undefined || this.state.status !== 'interrupted' ||
       this.state.pauseReason !== 'systemInterruption' || this.state.sliceIndex === undefined) return;
-    const nextState = resumeReaderTtsSession(this.state);
-    this.setState(nextState);
+    this.setState({ ...this.state, status: 'resuming', pauseReason: undefined, requestId: undefined });
     const identity = active.identity;
     const snapshot = await this.gateway.resume(active.input.chapter);
-    if (!isReaderTtsSessionCurrent(this.state, identity)) return;
+    if (!this.isSessionCurrent(identity)) return;
+    this.applyCoreSnapshot(snapshot);
     await this.speakSlice(active, this.requireSnapshotIndex(snapshot, 'tts.queue.resume'), 'resuming');
   }
 
@@ -502,24 +628,35 @@ export class ReaderTtsSessionCoordinator {
     }
     try {
       const next = await loader(active.input.chapter);
-      if (!isReaderTtsSessionCurrent(this.state, active.identity)) return;
+      if (!this.isSessionCurrent(active.identity)) return;
       const transition = await this.gateway.chapterPlan(
         active.input.chapter,
         next?.chapter,
         snapshot.drainBehavior,
       );
-      if (!isReaderTtsSessionCurrent(this.state, active.identity)) return;
+      if (!this.isSessionCurrent(active.identity)) return;
       if (next === undefined || transition.next === undefined || transition.drainBehavior !== 'advance-to-next') {
         await this.completeSession();
         return;
       }
       next.onAdmitted?.();
-      this.setState(advanceReaderTtsChapter(
-        this.state,
-        this.chapterKey(next.chapter),
-        next.chapter.chapterIndex,
-        next.contentVersion,
-      ));
+      const nextChapterKey = this.chapterKey(next.chapter);
+      this.setState({
+        ...this.state,
+        status: 'preparing',
+        contentVersion: next.contentVersion,
+        chapterKey: nextChapterKey,
+        chapterIndex: next.chapter.chapterIndex,
+        sliceIndex: undefined,
+        totalSlices: 0,
+        charStart: undefined,
+        charEnd: undefined,
+        requestId: undefined,
+        consecutiveFailures: 0,
+        pauseReason: undefined,
+        stopReason: undefined,
+        errorMessage: undefined,
+      });
       active.input = {
         ...active.input,
         chapter: next.chapter,
@@ -527,13 +664,17 @@ export class ReaderTtsSessionCoordinator {
         contentVersion: next.contentVersion,
         scalarPosition: 0,
       };
-      active.identity = readerTtsSessionIdentity(this.state);
+      active.identity = this.sessionIdentity(next.contentVersion, nextChapterKey);
       active.plan = await this.gateway.slice(next.chapter, next.content, 'paragraph-then-sentence');
-      if (!isReaderTtsSessionCurrent(this.state, active.identity)) return;
+      if (!this.isSessionCurrent(active.identity)) return;
       const nextSnapshot = await this.gateway.play(active.plan, 0);
-      if (!isReaderTtsSessionCurrent(this.state, active.identity)) return;
-      await this.gateway.setRate(next.chapter, this.coreRateForMultiplier(active.input.rate ?? 1));
-      if (!isReaderTtsSessionCurrent(this.state, active.identity)) return;
+      if (!this.isSessionCurrent(active.identity)) return;
+      const ratedSnapshot = await this.gateway.setRate(
+        next.chapter,
+        this.coreRateForMultiplier(active.input.rate ?? 1),
+      );
+      if (!this.isSessionCurrent(active.identity)) return;
+      this.applyCoreSnapshot(ratedSnapshot);
       await this.speakSlice(active, this.requireSnapshotIndex(nextSnapshot, 'tts.queue.play'), 'preparing');
     } catch (error) {
       const detail = error instanceof Error ? error.message : `${error}`;
@@ -544,14 +685,29 @@ export class ReaderTtsSessionCoordinator {
 
   private async completeSession(): Promise<void> {
     this.clearTimer();
-    this.setState(completeReaderTtsSession(this.state));
+    this.invalidateUtterance();
+    this.setState({
+      ...this.state,
+      status: 'completed',
+      requestId: undefined,
+      timerDeadlineMs: undefined,
+      stopReason: 'completed',
+    });
     this.active = undefined;
     await this.host.deactivateAudioSession();
+    this.transport = { ...this.transport, audioSession: 'inactive', focus: 'none' };
   }
 
   private async stopAfterFailure(active: ActiveSession, reason: 'user' | 'failureLimit'): Promise<void> {
     this.clearTimer();
-    this.setState(beginStoppingReaderTts(this.state, reason));
+    this.invalidateUtterance();
+    this.setState({
+      ...this.state,
+      status: 'stopping',
+      requestId: undefined,
+      timerDeadlineMs: undefined,
+      stopReason: reason,
+    });
     this.active = undefined;
     await this.host.stop();
     try {
@@ -560,7 +716,20 @@ export class ReaderTtsSessionCoordinator {
       // Preserve the original system vocalization failure.
     }
     await this.host.deactivateAudioSession();
-    this.setState(finishStoppingReaderTts(this.state));
+    this.transport = { ...this.transport, audioSession: 'inactive', focus: 'none' };
+    this.setState({
+      ...this.state,
+      status: 'idle',
+      chapterKey: undefined,
+      chapterIndex: undefined,
+      sliceIndex: undefined,
+      totalSlices: 0,
+      charStart: undefined,
+      charEnd: undefined,
+      requestId: undefined,
+      pauseReason: undefined,
+      errorMessage: undefined,
+    });
   }
 
   private async stopAfterCoreFailure(
@@ -571,6 +740,7 @@ export class ReaderTtsSessionCoordinator {
     this.active = undefined;
     await this.host.stop();
     await this.host.deactivateAudioSession();
+    this.transport = { ...this.transport, audioSession: 'inactive', focus: 'none', currentRequestId: undefined };
     this.setState({
       ...this.state,
       status: 'failed',
@@ -584,15 +754,17 @@ export class ReaderTtsSessionCoordinator {
   private skipToAdjacent(direction: 'next' | 'previous'): Promise<void> {
     const active = this.active;
     if (active === undefined || active.plan === undefined) return Promise.resolve();
-    this.setState(invalidateReaderTtsUtterance(this.state));
+    this.invalidateUtterance();
+    this.setState({ ...this.state, status: 'preparing', requestId: undefined, errorMessage: undefined });
     const identity = active.identity;
     return this.enqueue(async (): Promise<void> => {
       await this.host.stop();
-      if (!isReaderTtsSessionCurrent(this.state, identity)) return;
+      if (!this.isSessionCurrent(identity)) return;
       const snapshot = direction === 'next'
         ? await this.gateway.skip(active.input.chapter)
         : await this.gateway.previous(active.input.chapter);
-      if (!isReaderTtsSessionCurrent(this.state, identity)) return;
+      if (!this.isSessionCurrent(identity)) return;
+      this.applyCoreSnapshot(snapshot);
       if (snapshot.state === 'completed') {
         await this.advanceOrComplete(active, snapshot);
         return;
@@ -625,16 +797,22 @@ export class ReaderTtsSessionCoordinator {
   }
 
   private isCorrelatedSessionCurrent(correlated: CorrelatedUtterance): boolean {
-    return this.active !== undefined && isReaderTtsSessionCurrent(this.state, correlated.identity);
+    return this.active !== undefined && this.isSessionCurrent(correlated.identity);
   }
 
-  private applyCoreSnapshot(snapshot: ReaderTtsQueueSnapshot, errorMessage?: string): void {
+  private applyCoreSnapshot(
+    snapshot: ReaderTtsQueueSnapshot,
+    errorMessage?: string,
+    pauseReason?: 'user' | 'systemInterruption' | 'routeBackground' | 'deviceChange',
+  ): void {
+    this.coreSnapshot = snapshot;
     const active = this.active;
     const currentSlice = active?.plan?.slices[snapshot.currentSliceIndex ?? -1];
     const currentRequestStillValid = snapshot.currentSliceIndex === this.state.sliceIndex &&
-      snapshot.state === 'playing';
+      snapshot.state === 'playing' && this.transport.currentRequestId === this.state.requestId;
     const status = snapshot.state === 'playing' ? 'playing' :
-      snapshot.state === 'paused' ? 'paused' :
+      snapshot.state === 'paused' && pauseReason !== undefined && pauseReason !== 'user' ? 'interrupted' :
+        snapshot.state === 'paused' ? 'paused' :
         snapshot.state === 'completed' ? 'completed' :
           snapshot.state === 'stopped' && errorMessage !== undefined ? 'failed' : 'idle';
     this.setState({
@@ -646,8 +824,9 @@ export class ReaderTtsSessionCoordinator {
       totalSlices: snapshot.totalSlices,
       charStart: currentSlice?.charStart,
       charEnd: currentSlice?.charEnd,
-      requestId: currentRequestStillValid ? this.state.requestId : undefined,
+      requestId: currentRequestStillValid ? this.transport.currentRequestId : undefined,
       consecutiveFailures: snapshot.consecutiveFailures,
+      pauseReason: snapshot.state === 'paused' ? pauseReason ?? this.state.pauseReason : undefined,
       errorMessage,
     });
   }
@@ -664,10 +843,81 @@ export class ReaderTtsSessionCoordinator {
     return `${chapter.sourceId}\u0000${chapter.bookId}\u0000${chapter.chapterIndex}`;
   }
 
+  private canPause(): boolean {
+    return this.state.status === 'playing' || this.state.status === 'preparing' ||
+      this.state.status === 'resuming' || this.state.status === 'interrupted';
+  }
+
+  private invalidateUtterance(
+    interruption?: 'systemInterruption' | 'routeBackground' | 'deviceChange',
+  ): void {
+    if (this.transport.currentRequestId === undefined && interruption === undefined) return;
+    this.transport = {
+      ...this.transport,
+      utteranceGeneration: this.nextGeneration(this.transport.utteranceGeneration),
+      currentRequestId: undefined,
+      interruption,
+    };
+  }
+
+  private sessionIdentity(
+    contentVersion: ReaderTtsContentVersion,
+    chapterKey: string,
+  ): ReaderTtsSessionIdentity {
+    return {
+      sessionGeneration: this.transport.sessionGeneration,
+      contentVersion,
+      chapterKey,
+    };
+  }
+
+  private utteranceToken(
+    identity: ReaderTtsSessionIdentity,
+    chapter: ReaderTtsChapterRef,
+    sliceIndex: number,
+    requestId: string,
+  ): ReaderTtsUtteranceToken {
+    return {
+      ...identity,
+      utteranceGeneration: this.transport.utteranceGeneration,
+      requestId,
+      chapterIndex: chapter.chapterIndex,
+      sliceIndex,
+    };
+  }
+
+  private isSessionCurrent(identity: ReaderTtsSessionIdentity): boolean {
+    return this.transport.sessionGeneration === identity.sessionGeneration &&
+      this.state.contentVersion === identity.contentVersion &&
+      this.state.chapterKey === identity.chapterKey;
+  }
+
+  private isUtteranceCurrent(token: ReaderTtsUtteranceToken): boolean {
+    return this.isSessionCurrent(token) &&
+      this.transport.utteranceGeneration === token.utteranceGeneration &&
+      this.transport.currentRequestId === token.requestId &&
+      this.state.chapterIndex === token.chapterIndex &&
+      this.state.sliceIndex === token.sliceIndex;
+  }
+
+  private nextGeneration(generation: number): number {
+    return generation >= Number.MAX_SAFE_INTEGER ? 1 : generation + 1;
+  }
+
   private configureTimer(durationMs: number | undefined): void {
     this.clearTimer();
-    this.setState(scheduleReaderTtsTimer(this.state, Date.now(), durationMs));
-    if (durationMs === undefined) return;
+    if (durationMs === undefined) {
+      this.transport = { ...this.transport, timerDeadlineMs: undefined };
+      this.setState({ ...this.state, timerDeadlineMs: undefined });
+      return;
+    }
+    if (!Number.isSafeInteger(durationMs) || durationMs <= 0) {
+      throw new Error('Reader TTS timer duration must be a positive safe integer');
+    }
+    const deadline = Date.now() + durationMs;
+    if (!Number.isSafeInteger(deadline)) throw new Error('Reader TTS timer deadline exceeds the safe integer range');
+    this.transport = { ...this.transport, timerDeadlineMs: deadline };
+    this.setState({ ...this.state, timerDeadlineMs: deadline });
     const generation = this.timerGeneration;
     this.timerHandle = setTimeout((): void => {
       this.timerHandle = -1;
@@ -683,6 +933,7 @@ export class ReaderTtsSessionCoordinator {
     }
     this.timerGeneration += 1;
     if (this.timerGeneration >= Number.MAX_SAFE_INTEGER) this.timerGeneration = 1;
+    this.transport = { ...this.transport, timerDeadlineMs: undefined };
   }
 
   private coreRateForMultiplier(rate: number): number {

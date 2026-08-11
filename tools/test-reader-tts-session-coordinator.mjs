@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 
 import { ReaderTtsSessionCoordinator } from '../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts';
 
@@ -28,6 +29,7 @@ class FakeGateway {
   async stop() { this.calls.push('stop'); this.queueState = 'stopped'; return this.snapshot('stopped'); }
   async setRate(_chapter, rate) { this.calls.push(`rate:${rate}`); return this.snapshot('playing'); }
   async previous() { this.calls.push('previous'); this.cursor = Math.max(0, this.cursor - 1); return this.snapshot('playing'); }
+  async seek(_chapter, index) { this.calls.push(`seek:${index}`); this.cursor = index; return this.snapshot(this.queueState); }
   async skip() { this.calls.push('skip'); this.cursor += 1; return this.cursor >= 2 ? this.snapshot('completed') : this.snapshot('playing'); }
   async next() { this.calls.push('next'); this.cursor += 1; return this.cursor >= 2 ? this.snapshot('completed') : this.snapshot('playing'); }
   async reportStatus(_chapter, index, status) { this.calls.push(`report:${index}:${status}`); return this.snapshot('playing'); }
@@ -88,6 +90,7 @@ const coordinator = new ReaderTtsSessionCoordinator(
 
 await coordinator.start({ chapter, content: canonicalRemoteContent, contentVersion: 1, scalarPosition: 6 });
 assert.equal(coordinator.getState().status, 'preparing', 'speak() return is not audible start');
+assert.equal(coordinator.getTransportState().audioSession, 'active');
 assert.equal(host.requests[0].text, '第二句。');
 assert.ok(gateway.calls.includes('rate:5'));
 const requestId = host.requests[0].requestId;
@@ -126,6 +129,12 @@ host.emit({ type: 'start', requestId: resumedRequestId });
 await coordinator.whenSettled();
 assert.equal(coordinator.getState().status, 'playing');
 
+await coordinator.pause();
+await coordinator.seek(1);
+assert.ok(gateway.calls.includes('seek:1'));
+assert.equal(coordinator.getState().status, 'paused', 'seek in a paused queue must not restart Host playback');
+await coordinator.resume();
+
 host.emit({ type: 'interruption', action: 'pause' });
 await coordinator.whenSettled();
 assert.equal(coordinator.getState().status, 'interrupted');
@@ -139,5 +148,16 @@ assert.ok(gateway.calls.includes('rate:7'));
 await coordinator.stop();
 assert.equal(coordinator.getState().status, 'idle');
 await coordinator.dispose();
+
+const coordinatorSource = await readFile(
+  new URL('../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts', import.meta.url),
+  'utf8',
+);
+assert.match(coordinatorSource, /export type HostTtsTransportState/);
+assert.doesNotMatch(
+  coordinatorSource,
+  /beginReaderTtsSession|prepareReaderTtsUtterance|advanceReaderTtsChapter|failReaderTtsUtterance/,
+  'production coordinator must project Core snapshots instead of running a second queue reducer',
+);
 
 console.log('reader TTS fake-host coordinator: PASS');

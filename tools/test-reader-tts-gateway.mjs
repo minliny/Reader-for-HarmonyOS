@@ -35,6 +35,9 @@ const runtime = {
         },
       };
     }
+    if (method === 'tts.queue.seek') {
+      return { data: { snapshot: snapshot('playing', params.sliceIndex) } };
+    }
     if (method === 'tts.queue.set-rate') {
       return { data: { rate: params.rate, snapshot: snapshot('playing', 0) } };
     }
@@ -48,6 +51,7 @@ assert.deepEqual(await gateway.slice(chapter, '第一句。第二句。'), plan)
 assert.equal((await gateway.play(plan, 1)).currentSliceIndex, 1);
 await gateway.reportStatus(chapter, 1, 'speaking');
 assert.equal((await gateway.reportCallback(chapter, 1, 'done', 'request-1:done', 'stop')).callbackDisposition, 'applied');
+assert.equal((await gateway.seek(chapter, 0)).currentSliceIndex, 0);
 assert.equal((await gateway.setRate(chapter, 7)).state, 'playing');
 assert.deepEqual(calls.map(call => call.method), [
   'tts.config.get',
@@ -55,6 +59,7 @@ assert.deepEqual(calls.map(call => call.method), [
   'tts.queue.play',
   'tts.queue.report-status',
   'tts.queue.report-callback',
+  'tts.queue.seek',
   'tts.queue.set-rate',
 ]);
 
