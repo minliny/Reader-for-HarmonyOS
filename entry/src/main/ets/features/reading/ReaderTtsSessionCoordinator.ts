@@ -4,7 +4,6 @@ import {
   beginStoppingReaderTts,
   completeReaderTtsSession,
   createReaderTtsState,
-  failReaderTtsUtterance,
   finishStoppingReaderTts,
   invalidateReaderTtsUtterance,
   isReaderTtsSessionCurrent,
@@ -26,10 +25,10 @@ import {
 import {
   type ReaderTtsChapterRef,
   type ReaderTtsChapterTransition,
+  type ReaderTtsCallbackResult,
   type ReaderTtsConfig,
   type ReaderTtsGateway,
   type ReaderTtsQueueSnapshot,
-  type ReaderTtsSlice,
   type ReaderTtsSlicePlan,
 } from './ReaderTtsGateway.ts';
 
@@ -105,6 +104,14 @@ export interface ReaderTtsCoordinatorGateway {
     sliceIndex: number,
     status: 'speaking' | 'done' | 'failed',
   ): Promise<ReaderTtsQueueSnapshot>;
+  reportCallback(
+    chapter: ReaderTtsChapterRef,
+    sliceIndex: number,
+    status: 'speaking' | 'done' | 'failed',
+    callbackId: string,
+    failurePolicy: 'skip' | 'stop',
+    failureLimit?: number,
+  ): Promise<ReaderTtsCallbackResult>;
 }
 
 type ActiveSession = {
@@ -114,7 +121,13 @@ type ActiveSession = {
   config?: ReaderTtsConfig;
 };
 
-const MAX_CONSECUTIVE_FAILURES = 3;
+type CorrelatedUtterance = {
+  identity: ReaderTtsSessionIdentity;
+  chapter: ReaderTtsChapterRef;
+  sliceIndex: number;
+  charEnd: number;
+  failurePolicy: 'skip' | 'stop';
+};
 
 /**
  * Serial bridge between Core's queue and the actual Harmony system engine.
@@ -133,6 +146,7 @@ export class ReaderTtsSessionCoordinator {
   private disposed: boolean = false;
   private timerHandle: number = -1;
   private timerGeneration: number = 0;
+  private readonly utterances: Map<string, CorrelatedUtterance> = new Map();
 
   constructor(
     gateway: ReaderTtsCoordinatorGateway | ReaderTtsGateway,
@@ -165,6 +179,7 @@ export class ReaderTtsSessionCoordinator {
     this.assertStartInput(input);
     const chapterKey = this.chapterKey(input.chapter);
     const rate = input.rate ?? 1;
+    this.utterances.clear();
     this.setState(beginReaderTtsSession(
       this.state,
       chapterKey,
@@ -261,6 +276,7 @@ export class ReaderTtsSessionCoordinator {
     this.clearTimer();
     this.setState(beginStoppingReaderTts(this.state, reason));
     this.active = undefined;
+    this.utterances.clear();
     return this.enqueue(async (): Promise<void> => {
       await this.host.stop();
       if (active !== undefined && active.plan !== undefined) {
@@ -339,6 +355,13 @@ export class ReaderTtsSessionCoordinator {
       status,
     ));
     const token = readerTtsUtteranceToken(this.state);
+    this.utterances.set(token.requestId, {
+      identity: active.identity,
+      chapter: active.input.chapter,
+      sliceIndex: token.sliceIndex,
+      charEnd: slice.charEnd,
+      failurePolicy: active.input.failurePolicy ?? 'stop',
+    });
     await this.host.activateAudioSession(active.input.allowMixing ?? false);
     if (!isReaderTtsUtteranceCurrent(this.state, token)) return;
     try {
@@ -373,35 +396,49 @@ export class ReaderTtsSessionCoordinator {
       return;
     }
     const active = this.active;
-    if (active === undefined || this.state.requestId !== event.requestId) return;
-    const token = readerTtsUtteranceToken(this.state);
-    if (!isReaderTtsUtteranceCurrent(this.state, token)) return;
+    const correlated = this.utterances.get(event.requestId);
+    if (correlated === undefined) return;
+    const token: ReaderTtsUtteranceToken = {
+      ...correlated.identity,
+      utteranceGeneration: this.state.requestId === event.requestId ? this.state.utteranceGeneration : -1,
+      requestId: event.requestId,
+      chapterIndex: correlated.chapter.chapterIndex,
+      sliceIndex: correlated.sliceIndex,
+    };
     if (event.type === 'start') {
-      if (this.state.status !== 'preparing' && this.state.status !== 'resuming') return;
-      await this.gateway.reportStatus(active.input.chapter, token.sliceIndex, 'speaking');
-      if (isReaderTtsUtteranceCurrent(this.state, token)) {
+      const result = await this.reportCorrelatedCallback(correlated, event.requestId, 'start', 'speaking');
+      if (active !== undefined && result.callbackDisposition === 'applied' &&
+        isReaderTtsUtteranceCurrent(this.state, token)) {
+        this.applyCoreSnapshot(result.snapshot);
         this.setState(markReaderTtsStarted(this.state, token));
       }
       return;
     }
     if (event.type === 'complete') {
       if (event.completion !== 'audio') return;
-      await this.gateway.reportStatus(active.input.chapter, token.sliceIndex, 'done');
-      if (!isReaderTtsUtteranceCurrent(this.state, token)) return;
-      const slice = this.requireActiveSlice(active, token.sliceIndex);
-      await this.progressCommit({ chapter: active.input.chapter, charEnd: slice.charEnd });
-      if (!isReaderTtsUtteranceCurrent(this.state, token)) return;
-      const snapshot = await this.gateway.next(active.input.chapter);
-      if (!isReaderTtsUtteranceCurrent(this.state, token)) return;
-      if (snapshot.state === 'completed') {
-        await this.advanceOrComplete(active);
+      const result = await this.reportCorrelatedCallback(correlated, event.requestId, 'done', 'done');
+      if (active === undefined || result.callbackDisposition !== 'applied' ||
+        !this.isCorrelatedSessionCurrent(correlated)) return;
+      this.applyCoreSnapshot(result.snapshot);
+      await this.progressCommit({ chapter: correlated.chapter, charEnd: correlated.charEnd });
+      if (!this.isCorrelatedSessionCurrent(correlated)) return;
+      if (result.snapshot.state === 'completed') {
+        await this.advanceOrComplete(active, result.snapshot);
         return;
       }
-      await this.speakSlice(active, this.requireSnapshotIndex(snapshot, 'tts.queue.next'), 'preparing');
+      await this.speakSlice(
+        active,
+        this.requireSnapshotIndex(result.snapshot, 'tts.queue.report-callback'),
+        'preparing',
+      );
       return;
     }
     if (event.type === 'error') {
-      await this.handleUtteranceFailure(active, token, event.message);
+      if (active === undefined) {
+        await this.reportCorrelatedCallback(correlated, event.requestId, 'error', 'failed');
+      } else {
+        await this.handleUtteranceFailure(active, token, event.message);
+      }
     }
     // `stop` is an acknowledgement only. Pause/skip/stop intents already
     // invalidated this request before asking the engine to stop.
@@ -437,24 +474,27 @@ export class ReaderTtsSessionCoordinator {
     token: ReaderTtsUtteranceToken,
     message: string,
   ): Promise<void> {
-    await this.gateway.reportStatus(active.input.chapter, token.sliceIndex, 'failed');
-    if (!isReaderTtsUtteranceCurrent(this.state, token)) return;
-    this.setState(failReaderTtsUtterance(this.state, token, message));
-    const failureCount = this.state.consecutiveFailures;
-    if ((active.input.failurePolicy ?? 'stop') !== 'skip' || failureCount >= MAX_CONSECUTIVE_FAILURES) {
-      await this.stopAfterFailure(active, failureCount >= MAX_CONSECUTIVE_FAILURES ? 'failureLimit' : 'user');
+    const correlated = this.utterances.get(token.requestId);
+    if (correlated === undefined) return;
+    const result = await this.reportCorrelatedCallback(correlated, token.requestId, 'error', 'failed');
+    if (result.callbackDisposition !== 'applied' || !this.isCorrelatedSessionCurrent(correlated)) return;
+    this.applyCoreSnapshot(result.snapshot, message);
+    if (result.failureAction === 'stop' || result.snapshot.state === 'stopped') {
+      await this.stopAfterCoreFailure(result.snapshot, message);
       return;
     }
-    const snapshot = await this.gateway.skip(active.input.chapter);
-    if (!isReaderTtsSessionCurrent(this.state, active.identity)) return;
-    if (snapshot.state === 'completed') {
-      await this.advanceOrComplete(active);
+    if (result.snapshot.state === 'completed') {
+      await this.advanceOrComplete(active, result.snapshot);
       return;
     }
-    await this.speakSlice(active, this.requireSnapshotIndex(snapshot, 'tts.queue.skip'), 'preparing');
+    await this.speakSlice(
+      active,
+      this.requireSnapshotIndex(result.snapshot, 'tts.queue.report-callback'),
+      'preparing',
+    );
   }
 
-  private async advanceOrComplete(active: ActiveSession): Promise<void> {
+  private async advanceOrComplete(active: ActiveSession, snapshot: ReaderTtsQueueSnapshot): Promise<void> {
     const loader = this.chapterAdvance;
     if (loader === undefined) {
       await this.completeSession();
@@ -466,7 +506,7 @@ export class ReaderTtsSessionCoordinator {
       const transition = await this.gateway.chapterPlan(
         active.input.chapter,
         next?.chapter,
-        'advance-to-next',
+        snapshot.drainBehavior,
       );
       if (!isReaderTtsSessionCurrent(this.state, active.identity)) return;
       if (next === undefined || transition.next === undefined || transition.drainBehavior !== 'advance-to-next') {
@@ -490,11 +530,11 @@ export class ReaderTtsSessionCoordinator {
       active.identity = readerTtsSessionIdentity(this.state);
       active.plan = await this.gateway.slice(next.chapter, next.content, 'paragraph-then-sentence');
       if (!isReaderTtsSessionCurrent(this.state, active.identity)) return;
-      const snapshot = await this.gateway.play(active.plan, 0);
+      const nextSnapshot = await this.gateway.play(active.plan, 0);
       if (!isReaderTtsSessionCurrent(this.state, active.identity)) return;
       await this.gateway.setRate(next.chapter, this.coreRateForMultiplier(active.input.rate ?? 1));
       if (!isReaderTtsSessionCurrent(this.state, active.identity)) return;
-      await this.speakSlice(active, this.requireSnapshotIndex(snapshot, 'tts.queue.play'), 'preparing');
+      await this.speakSlice(active, this.requireSnapshotIndex(nextSnapshot, 'tts.queue.play'), 'preparing');
     } catch (error) {
       const detail = error instanceof Error ? error.message : `${error}`;
       console.error(`Reader TTS chapter advance failed: ${detail}`);
@@ -523,6 +563,24 @@ export class ReaderTtsSessionCoordinator {
     this.setState(finishStoppingReaderTts(this.state));
   }
 
+  private async stopAfterCoreFailure(
+    snapshot: ReaderTtsQueueSnapshot,
+    message: string,
+  ): Promise<void> {
+    this.clearTimer();
+    this.active = undefined;
+    await this.host.stop();
+    await this.host.deactivateAudioSession();
+    this.setState({
+      ...this.state,
+      status: 'failed',
+      requestId: undefined,
+      consecutiveFailures: snapshot.consecutiveFailures,
+      stopReason: snapshot.consecutiveFailures >= snapshot.failureLimit ? 'failureLimit' : 'user',
+      errorMessage: message.length > 0 ? message : 'Harmony system TTS failed',
+    });
+  }
+
   private skipToAdjacent(direction: 'next' | 'previous'): Promise<void> {
     const active = this.active;
     if (active === undefined || active.plan === undefined) return Promise.resolve();
@@ -536,7 +594,7 @@ export class ReaderTtsSessionCoordinator {
         : await this.gateway.previous(active.input.chapter);
       if (!isReaderTtsSessionCurrent(this.state, identity)) return;
       if (snapshot.state === 'completed') {
-        await this.advanceOrComplete(active);
+        await this.advanceOrComplete(active, snapshot);
         return;
       }
       await this.speakSlice(active, this.requireSnapshotIndex(snapshot, `tts.queue.${direction}`), 'preparing');
@@ -550,10 +608,48 @@ export class ReaderTtsSessionCoordinator {
     return snapshot.currentSliceIndex;
   }
 
-  private requireActiveSlice(active: ActiveSession, index: number): ReaderTtsSlice {
-    const slice = active.plan?.slices[index];
-    if (slice === undefined) throw new Error('Reader TTS active slice is missing');
-    return slice;
+  private reportCorrelatedCallback(
+    correlated: CorrelatedUtterance,
+    requestId: string,
+    phase: 'start' | 'done' | 'error',
+    status: 'speaking' | 'done' | 'failed',
+  ): Promise<ReaderTtsCallbackResult> {
+    return this.gateway.reportCallback(
+      correlated.chapter,
+      correlated.sliceIndex,
+      status,
+      `${requestId}:${phase}`,
+      correlated.failurePolicy,
+      3,
+    );
+  }
+
+  private isCorrelatedSessionCurrent(correlated: CorrelatedUtterance): boolean {
+    return this.active !== undefined && isReaderTtsSessionCurrent(this.state, correlated.identity);
+  }
+
+  private applyCoreSnapshot(snapshot: ReaderTtsQueueSnapshot, errorMessage?: string): void {
+    const active = this.active;
+    const currentSlice = active?.plan?.slices[snapshot.currentSliceIndex ?? -1];
+    const currentRequestStillValid = snapshot.currentSliceIndex === this.state.sliceIndex &&
+      snapshot.state === 'playing';
+    const status = snapshot.state === 'playing' ? 'playing' :
+      snapshot.state === 'paused' ? 'paused' :
+        snapshot.state === 'completed' ? 'completed' :
+          snapshot.state === 'stopped' && errorMessage !== undefined ? 'failed' : 'idle';
+    this.setState({
+      ...this.state,
+      status,
+      chapterKey: this.chapterKey(snapshot.chapter),
+      chapterIndex: snapshot.chapter.chapterIndex,
+      sliceIndex: snapshot.currentSliceIndex,
+      totalSlices: snapshot.totalSlices,
+      charStart: currentSlice?.charStart,
+      charEnd: currentSlice?.charEnd,
+      requestId: currentRequestStillValid ? this.state.requestId : undefined,
+      consecutiveFailures: snapshot.consecutiveFailures,
+      errorMessage,
+    });
   }
 
   private firstSliceIndex(plan: ReaderTtsSlicePlan, scalarPosition: number): number {

@@ -39,6 +39,17 @@ export type ReaderTtsQueueSnapshot = {
   completedSlices: number;
   chapter: ReaderTtsChapterRef;
   sliceStatuses: ReaderTtsSliceStatus[];
+  failurePolicy: 'skip' | 'stop';
+  consecutiveFailures: number;
+  failureLimit: number;
+  drainBehavior: 'stop-on-boundary' | 'advance-to-next';
+  restartPolicy: 'reset-on-core-restart';
+};
+
+export type ReaderTtsCallbackResult = {
+  snapshot: ReaderTtsQueueSnapshot;
+  callbackDisposition: 'applied' | 'duplicate' | 'stale';
+  failureAction?: 'skip' | 'stop';
 };
 
 export type ReaderTtsConfig = {
@@ -172,6 +183,41 @@ export class ReaderTtsGateway {
     return snapshot;
   }
 
+  async reportCallback(
+    chapter: ReaderTtsChapterRef,
+    sliceIndex: number,
+    status: 'speaking' | 'done' | 'failed',
+    callbackId: string,
+    failurePolicy: 'skip' | 'stop',
+    failureLimit: number = 3,
+  ): Promise<ReaderTtsCallbackResult> {
+    this.assertNonNegativeInteger(sliceIndex, 'tts.queue.report-callback sliceIndex');
+    if (callbackId.trim().length === 0 || !Number.isSafeInteger(failureLimit) || failureLimit <= 0) {
+      throw new Error('tts.queue.report-callback requires callbackId and a positive failureLimit');
+    }
+    const result = await this.runtime.request('tts.queue.report-callback', {
+      chapter,
+      sliceIndex,
+      status,
+      callbackId,
+      failurePolicy,
+      failureLimit,
+    });
+    const snapshot = this.decodeSnapshot(result.data['snapshot'], 'tts.queue.report-callback');
+    this.assertSameChapter(snapshot.chapter, chapter, 'tts.queue.report-callback');
+    const disposition = result.data['callbackDisposition'];
+    if (disposition !== 'applied' && disposition !== 'duplicate' && disposition !== 'stale') {
+      throw new Error('tts.queue.report-callback returned invalid callbackDisposition');
+    }
+    const action = result.data['failureAction'];
+    if (action !== undefined && action !== null && action !== 'skip' && action !== 'stop') {
+      throw new Error('tts.queue.report-callback returned invalid failureAction');
+    }
+    const decoded: ReaderTtsCallbackResult = { snapshot, callbackDisposition: disposition };
+    if (action === 'skip' || action === 'stop') decoded.failureAction = action;
+    return decoded;
+  }
+
   async chapterPlan(
     chapter: ReaderTtsChapterRef,
     nextChapter: ReaderTtsChapterRef | undefined,
@@ -246,7 +292,10 @@ export class ReaderTtsGateway {
     const snapshot = this.requireObject(value, `${command} snapshot`);
     this.assertAllowedKeys(
       snapshot,
-      ['state', 'currentSliceIndex', 'totalSlices', 'completedSlices', 'chapter', 'sliceStatuses'],
+      [
+        'state', 'currentSliceIndex', 'totalSlices', 'completedSlices', 'chapter', 'sliceStatuses',
+        'failurePolicy', 'consecutiveFailures', 'failureLimit', 'drainBehavior', 'restartPolicy',
+      ],
       `${command} snapshot`,
     );
     const state = snapshot['state'];
@@ -280,12 +329,32 @@ export class ReaderTtsGateway {
         sliceStatuses.push(rawStatus);
       }
     }
+    const failurePolicy = snapshot['failurePolicy'];
+    const drainBehavior = snapshot['drainBehavior'];
+    const restartPolicy = snapshot['restartPolicy'];
+    if ((failurePolicy !== 'skip' && failurePolicy !== 'stop') ||
+      (drainBehavior !== 'stop-on-boundary' && drainBehavior !== 'advance-to-next') ||
+      restartPolicy !== 'reset-on-core-restart') {
+      throw new Error(`${command} returned invalid queue policy`);
+    }
+    const consecutiveFailures = this.requireNonNegativeInteger(
+      snapshot,
+      'consecutiveFailures',
+      `${command} snapshot`,
+    );
+    const failureLimit = this.requireNonNegativeInteger(snapshot, 'failureLimit', `${command} snapshot`);
+    if (failureLimit === 0) throw new Error(`${command} returned zero failureLimit`);
     const decoded: ReaderTtsQueueSnapshot = {
       state,
       totalSlices,
       completedSlices,
       chapter: this.decodeChapter(snapshot['chapter'], `${command} snapshot.chapter`),
       sliceStatuses,
+      failurePolicy,
+      consecutiveFailures,
+      failureLimit,
+      drainBehavior,
+      restartPolicy,
     };
     if (currentSliceIndex !== undefined) {
       decoded.currentSliceIndex = currentSliceIndex;

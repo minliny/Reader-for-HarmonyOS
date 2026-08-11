@@ -17,19 +17,37 @@ const plan = {
 class FakeGateway {
   calls = [];
   cursor = 0;
+  callbacks = new Set();
+  queueState = 'idle';
 
   async getConfig() { this.calls.push('config'); return { rate: 5, pitch: 0, followSys: false }; }
   async slice() { this.calls.push('slice'); return plan; }
-  async play(_plan, index) { this.calls.push(`play:${index}`); this.cursor = index; return this.snapshot('playing'); }
-  async pause() { this.calls.push('pause'); return this.snapshot('paused'); }
-  async resume() { this.calls.push('resume'); return this.snapshot('playing'); }
-  async stop() { this.calls.push('stop'); return this.snapshot('stopped'); }
+  async play(_plan, index) { this.calls.push(`play:${index}`); this.cursor = index; this.queueState = 'playing'; return this.snapshot('playing'); }
+  async pause() { this.calls.push('pause'); this.queueState = 'paused'; return this.snapshot('paused'); }
+  async resume() { this.calls.push('resume'); this.queueState = 'playing'; return this.snapshot('playing'); }
+  async stop() { this.calls.push('stop'); this.queueState = 'stopped'; return this.snapshot('stopped'); }
   async setRate(_chapter, rate) { this.calls.push(`rate:${rate}`); return this.snapshot('playing'); }
   async previous() { this.calls.push('previous'); this.cursor = Math.max(0, this.cursor - 1); return this.snapshot('playing'); }
   async skip() { this.calls.push('skip'); this.cursor += 1; return this.cursor >= 2 ? this.snapshot('completed') : this.snapshot('playing'); }
   async next() { this.calls.push('next'); this.cursor += 1; return this.cursor >= 2 ? this.snapshot('completed') : this.snapshot('playing'); }
   async reportStatus(_chapter, index, status) { this.calls.push(`report:${index}:${status}`); return this.snapshot('playing'); }
-  snapshot(state) {
+  async reportCallback(_chapter, index, status, callbackId, failurePolicy, failureLimit) {
+    this.calls.push(`callback:${index}:${status}:${callbackId}`);
+    if (this.callbacks.has(callbackId)) {
+      return { snapshot: this.snapshot(this.cursor >= 2 ? 'completed' : 'playing'), callbackDisposition: 'duplicate' };
+    }
+    this.callbacks.add(callbackId);
+    if (this.queueState !== 'playing') {
+      return { snapshot: this.snapshot(this.queueState), callbackDisposition: 'stale' };
+    }
+    if (status === 'done') this.cursor += 1;
+    if (this.cursor >= 2) this.queueState = 'completed';
+    return {
+      snapshot: this.snapshot(this.queueState, failurePolicy, failureLimit),
+      callbackDisposition: 'applied',
+    };
+  }
+  snapshot(state, failurePolicy = 'stop', failureLimit = 3) {
     return {
       state,
       currentSliceIndex: state === 'completed' ? 1 : this.cursor,
@@ -37,6 +55,11 @@ class FakeGateway {
       completedSlices: state === 'completed' ? 2 : this.cursor,
       chapter,
       sliceStatuses: [],
+      failurePolicy,
+      consecutiveFailures: 0,
+      failureLimit,
+      drainBehavior: 'advance-to-next',
+      restartPolicy: 'reset-on-core-restart',
     };
   }
 }
@@ -72,7 +95,7 @@ const requestId = host.requests[0].requestId;
 host.emit({ type: 'start', requestId });
 await coordinator.whenSettled();
 assert.equal(coordinator.getState().status, 'playing');
-assert.ok(gateway.calls.includes('report:1:speaking'));
+assert.ok(gateway.calls.some(call => call.includes('callback:1:speaking:')));
 
 host.emit({ type: 'complete', requestId, completion: 'synthesis' });
 await coordinator.whenSettled();
@@ -83,7 +106,9 @@ host.emit({ type: 'complete', requestId, completion: 'audio' });
 await coordinator.whenSettled();
 assert.deepEqual(progress, [13], 'duplicate completion must commit one canonical scalar end');
 assert.equal(coordinator.getState().status, 'completed');
-assert.equal(gateway.calls.filter(call => call === 'next').length, 1);
+assert.equal(gateway.calls.filter(call => call === 'next').length, 0);
+assert.equal(gateway.calls.filter(call => call.includes(':done:')).length, 2,
+  'duplicate audio completion must reach Core correlation twice');
 
 await coordinator.start({ chapter, content: canonicalRemoteContent, contentVersion: 2, scalarPosition: 0 });
 const staleRequestId = host.requests.at(-1).requestId;
@@ -92,7 +117,7 @@ host.emit({ type: 'start', requestId: staleRequestId });
 host.emit({ type: 'complete', requestId: staleRequestId, completion: 'audio' });
 await coordinator.whenSettled();
 assert.equal(coordinator.getState().status, 'paused');
-assert.equal(gateway.calls.filter(call => call === 'next').length, 1, 'late paused callback cannot advance');
+assert.equal(gateway.calls.filter(call => call === 'next').length, 0, 'late paused callback cannot advance');
 
 await coordinator.resume();
 const resumedRequestId = host.requests.at(-1).requestId;
