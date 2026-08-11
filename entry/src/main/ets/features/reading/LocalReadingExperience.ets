@@ -453,7 +453,7 @@ export struct ReadingExperience {
   private readonly measurementBatch: MeasurementParagraph[] = [];
   private readonly paginationIndex: ReadingPaginationIndex = new ReadingPaginationIndex();
   private readonly chapterWindow: ReadingChapterWindow = new ReadingChapterWindow();
-  /** Unique Host-created PixelMaps owned by this mounted reader session. */
+  /** Unique Host-created display resources owned by this reader session. */
   private readonly readingImageResources: ReadingSessionImage[] = [];
   private readonly knownContentVersions: KnownReadingContentVersion[] = [];
   private chapterLayoutMap: ReadingSurfaceLayoutMap | undefined = undefined;
@@ -1285,6 +1285,7 @@ export struct ReadingExperience {
             bodyImage.endScalar,
             bodyImage.state === 'ready' ? bodyImage.pixelMap : undefined,
             imageHeight,
+            bodyImage.state === 'ready' ? bodyImage.fileUri : undefined,
           ));
           continue;
         }
@@ -1521,6 +1522,7 @@ export struct ReadingExperience {
         endScalar: image.endScalar,
         state: resolved.state,
         pixelMap: resolved.pixelMap,
+        fileUri: resolved.fileUri,
         intrinsicWidth: resolved.intrinsicWidth,
         intrinsicHeight: resolved.intrinsicHeight,
         revision: resolved.revision,
@@ -1919,11 +1921,14 @@ export struct ReadingExperience {
   }
 
   private adoptReadingImage(image: ReadingSessionImage): void {
-    if (image.state !== 'ready' || image.pixelMap === undefined) {
+    if (image.state !== 'ready' || (image.fileUri.length === 0 && image.pixelMap === undefined)) {
       return;
     }
     for (const retained of this.readingImageResources) {
-      if (retained.pixelMap === image.pixelMap) {
+      if (this.sameReadingImageResource(retained, image)) {
+        // Each Host load acquires one file reference. The session retains one
+        // owner for identical bytes even when several anchors share them.
+        ReaderRuntimeOwner.current().releaseReadingImage(image.fileUri, image.pixelMap);
         return;
       }
     }
@@ -1931,37 +1936,37 @@ export struct ReadingExperience {
   }
 
   private releaseUnadmittedReadingImage(image: ReadingSessionImage): void {
-    if (image.pixelMap !== undefined) {
-      ReaderRuntimeOwner.current().releaseReadingImage(image.pixelMap);
+    if (image.fileUri.length > 0 || image.pixelMap !== undefined) {
+      ReaderRuntimeOwner.current().releaseReadingImage(image.fileUri, image.pixelMap);
     }
   }
 
   private releaseUnretainedReadingImages(): void {
     for (let index = this.readingImageResources.length - 1; index >= 0; index -= 1) {
       const resource = this.readingImageResources[index];
-      if (resource.pixelMap !== undefined && this.isReadingImageRetained(resource)) {
+      if (this.isReadingImageRetained(resource)) {
         continue;
       }
-      if (resource.pixelMap !== undefined) {
-        ReaderRuntimeOwner.current().releaseReadingImage(resource.pixelMap);
+      if (resource.fileUri.length > 0 || resource.pixelMap !== undefined) {
+        ReaderRuntimeOwner.current().releaseReadingImage(resource.fileUri, resource.pixelMap);
       }
       this.readingImageResources.splice(index, 1);
     }
   }
 
   private isReadingImageRetained(resource: ReadingSessionImage): boolean {
-    const pixelMap = resource.pixelMap;
-    if (pixelMap === undefined) {
+    if (resource.fileUri.length === 0 && resource.pixelMap === undefined) {
       return false;
     }
     const chapterImages = this.chapter?.images ?? [];
     for (const image of chapterImages.concat(this.chapterWindow.retainedImages())) {
-      if (image.pixelMap === pixelMap) {
+      if (this.sameReadingImageResource(resource, image)) {
         return true;
       }
     }
     for (const fragment of this.visibleFragments.concat(this.pendingPageFragments)) {
-      if (fragment.imageSource === pixelMap) {
+      if ((resource.fileUri.length > 0 && fragment.fileUri === resource.fileUri) ||
+        (resource.pixelMap !== undefined && fragment.imageSource === resource.pixelMap)) {
         return true;
       }
     }
@@ -1970,11 +1975,18 @@ export struct ReadingExperience {
 
   private releaseAllReadingImages(): void {
     for (const resource of this.readingImageResources) {
-      if (resource.pixelMap !== undefined) {
-        ReaderRuntimeOwner.current().releaseReadingImage(resource.pixelMap);
+      if (resource.fileUri.length > 0 || resource.pixelMap !== undefined) {
+        ReaderRuntimeOwner.current().releaseReadingImage(resource.fileUri, resource.pixelMap);
       }
     }
     this.readingImageResources.splice(0, this.readingImageResources.length);
+  }
+
+  private sameReadingImageResource(left: ReadingSessionImage, right: ReadingSessionImage): boolean {
+    if (left.fileUri.length > 0 || right.fileUri.length > 0) {
+      return left.fileUri.length > 0 && left.fileUri === right.fileUri;
+    }
+    return left.pixelMap !== undefined && left.pixelMap === right.pixelMap;
   }
 
   /**

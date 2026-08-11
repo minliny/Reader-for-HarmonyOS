@@ -36,20 +36,26 @@ assert.match(httpHost, /isCancelled\?: \(\) => boolean[\s\S]*cancelDeadline\(dea
   'a stale direct image fetch must reach the underlying HttpRequest cancellation state');
 assert.match(imageHost, /MAX_READING_IMAGE_PIXELS[\s\S]*options\.desiredSize[\s\S]*createPixelMap\(options\)/,
   'oversized compressed images must be downsampled before their PixelMap is allocated');
-assert.match(imageHost, /release\(pixelMap: image\.PixelMap\)[\s\S]*pixelMap\.release\(\)/,
-  'the Host adapter must expose explicit native PixelMap release');
+assert.match(imageHost, /finally \{[\s\S]*pixelMap\.release\(\)[\s\S]*imageSource\.release\(\)/,
+  'decode-only PixelMap and ImageSource objects must be released before publication');
+assert.match(imageHost, /displayFileReferences[\s\S]*release\(fileUri:[\s\S]*unlinkBestEffort\(path\)/,
+  'display files must be reference-counted and removed at their final session release');
+assert.match(imageHost, /MAX_READING_DISPLAY_FILE_BYTES[\s\S]*statSync\(tmpPath\)\.size[\s\S]*unlinkBestEffort\(tmpPath\)/,
+  'downsampled display files must remain byte-bounded and clean partial writes');
+assert.match(imageHost, /configureDisplayCache[\s\S]*listFileSync\(directory\)[\s\S]*unlinkBestEffort/,
+  'a new process must reclaim crash-left display files before reading starts');
 assert.match(source, /readingImageResources:[\s\S]*releaseUnretainedReadingImages\(\)/,
-  'the reader session must bound native image lifetime to its active chapter window');
+  'the reader session must bound display-file lifetime to its active chapter window');
 assert.match(source, /scaledReadingImageHeight\(/,
   'inline images must contribute intrinsic aspect-ratio height to the same paginator');
-assert.match(source, /bodyImage\.state === 'ready' \? bodyImage\.pixelMap : undefined/,
-  'measured image fragments must carry one Host-decoded PixelMap into the physical page');
+assert.match(source, /bodyImage\.state === 'ready' \? bodyImage\.fileUri : undefined/,
+  'measured image fragments must carry the bounded Host display URI into the physical page');
 const surface = readFileSync(
   new URL('../entry/src/main/ets/features/reading/ReadingSurface.ets', import.meta.url),
   'utf8',
 );
-assert.match(surface, /Image\(fragment\.imageSource\)/,
-  'the reading surface must render image fragments from the same measured page list');
+assert.match(surface, /Image\(fragment\.fileUri\)/,
+  'the reading surface must render file-backed image fragments from the same measured page list');
 assert.match(surface, /else if \(fragment\.imageHeight > 0\)[\s\S]*Blank\(\)\.height\(fragment\.imageHeight\)/,
   'one image failure must retain a stable measurable block instead of aborting the chapter');
 assert.match(surface, /if \(this\.showChapterTitle\) \{[\s\S]*Text\(this\.chapterTitle\)/,

@@ -21,6 +21,7 @@ import {
   type ReadingImageCacheIdentity,
   type ReadingImageChapterIdentity,
 } from './ReadingImageDiskCache';
+import { canonicalReadingImageBaseUrl } from '../common/ReadingImageIdentity';
 import { ArkWebExecutor } from './ArkWebExecutor';
 import { image } from '@kit.ImageKit';
 
@@ -55,6 +56,7 @@ export class ReaderRuntimeOwner {
     this.ttsHost = new HarmonySystemTtsHost();
     this.localEpubResourceHost = new LocalEpubResourceHost(context);
     this.readingImageDiskCache = new ReadingImageDiskCache(context);
+    ReadingBodyImageHost.setDisplayCacheDir(context.cacheDir);
   }
 
   static install(context: common.UIAbilityContext): ReaderRuntimeOwner {
@@ -127,8 +129,10 @@ export class ReaderRuntimeOwner {
   /**
    * Resolve one normalized body-image URL through Core's source semantics,
    * then execute the resulting request with the already-owned Host transport.
-   * A stale selection is checked before and after both async boundaries, so a
-   * superseded chapter can never publish image bytes or dimensions.
+   * `isCurrent` uses keep-going semantics (true = the resolving selection is
+   * still current) and is checked before and after both async boundaries, so a
+   * superseded chapter can never publish image bytes or dimensions. The SDK's
+   * shouldCancel slot is the logical inverse, applied only at that boundary.
    */
   async loadReadingImage(
     sourceId: string,
@@ -138,16 +142,16 @@ export class ReaderRuntimeOwner {
     imageUrl: string,
     baseUrl: string | undefined,
     allowNetwork: boolean,
-    shouldCancel?: () => boolean,
+    isCurrent?: () => boolean,
   ): Promise<ReadingBodyImagePayload> {
-    this.assertReadingImageCurrent(shouldCancel);
+    this.assertReadingImageCurrent(isCurrent);
     if (imageUrl.trim().toLowerCase().startsWith('data:image/')) {
-      const embedded = await ReadingBodyImageHost.instance.loadDataUri(imageUrl, shouldCancel);
-      return this.admitReadingImage(embedded, shouldCancel);
+      const embedded = await ReadingBodyImageHost.instance.loadDataUri(imageUrl, isCurrent);
+      return this.admitReadingImage(embedded, isCurrent);
     }
     if (sourceId === 'local' && imageUrl.startsWith('reader-local-epub://')) {
       const localImage = await this.localEpubResourceHost.load(imageUrl);
-      return this.admitReadingImage(localImage, shouldCancel);
+      return this.admitReadingImage(localImage, isCurrent);
     }
     const identity = this.readingImageCacheIdentity(
       sourceId,
@@ -160,8 +164,8 @@ export class ReaderRuntimeOwner {
     const cachedBytes = await this.readingImageDiskCache.loadResource(identity);
     if (cachedBytes !== undefined) {
       try {
-        const cached = await ReadingBodyImageHost.instance.loadBytes(cachedBytes, shouldCancel);
-        return this.admitReadingImage(cached, shouldCancel);
+        const cached = await ReadingBodyImageHost.instance.loadBytes(cachedBytes, isCurrent);
+        return this.admitReadingImage(cached, isCurrent);
       } catch (error) {
         await this.readingImageDiskCache.removeResource(identity);
         if (!allowNetwork) {
@@ -172,9 +176,9 @@ export class ReaderRuntimeOwner {
     if (!allowNetwork) {
       throw new Error('REMOTE_READING_IMAGE_NOT_DOWNLOADED');
     }
-    const request = await this.resolveReadingImageRequest(sourceId, imageUrl, baseUrl, shouldCancel);
-    const bytes = await ReadingBodyImageHost.instance.fetchRequestBytes(request, shouldCancel);
-    const payload = await ReadingBodyImageHost.instance.loadBytes(bytes, shouldCancel);
+    const request = await this.resolveReadingImageRequest(sourceId, imageUrl, identity.baseUrl, isCurrent);
+    const bytes = await ReadingBodyImageHost.instance.fetchRequestBytes(request, isCurrent);
+    const payload = await ReadingBodyImageHost.instance.loadBytes(bytes, isCurrent);
     try {
       await this.readingImageDiskCache.storeResource(identity, bytes);
     } catch (error) {
@@ -183,20 +187,19 @@ export class ReaderRuntimeOwner {
       // surfaces the same write failure instead of publishing completion.
       console.error(`Reader body image cache write failed: ${(error as Error).message}`);
     }
-    return this.admitReadingImage(payload, shouldCancel);
+    return this.admitReadingImage(payload, isCurrent);
   }
 
   /** Persist and decode-validate one image before an offline chapter completes. */
   async prefetchReadingImage(
     identity: ReadingImageCacheIdentity,
-    shouldCancel?: () => boolean,
+    isCurrent?: () => boolean,
   ): Promise<void> {
-    this.assertReadingImageCurrent(shouldCancel);
+    this.assertReadingImageCurrent(isCurrent);
     const cachedBytes = await this.readingImageDiskCache.loadResource(identity);
     if (cachedBytes !== undefined) {
       try {
-        const payload = await ReadingBodyImageHost.instance.loadBytes(cachedBytes, shouldCancel);
-        ReadingBodyImageHost.instance.release(payload.pixelMap);
+        await ReadingBodyImageHost.instance.validateBytes(cachedBytes, isCurrent);
         return;
       } catch (_) {
         await this.readingImageDiskCache.removeResource(identity);
@@ -206,12 +209,11 @@ export class ReaderRuntimeOwner {
       identity.sourceId,
       identity.imageUrl,
       identity.baseUrl,
-      shouldCancel,
+      isCurrent,
     );
-    const bytes = await ReadingBodyImageHost.instance.fetchRequestBytes(request, shouldCancel);
-    const payload = await ReadingBodyImageHost.instance.loadBytes(bytes, shouldCancel);
-    ReadingBodyImageHost.instance.release(payload.pixelMap);
-    this.assertReadingImageCurrent(shouldCancel);
+    const bytes = await ReadingBodyImageHost.instance.fetchRequestBytes(request, isCurrent);
+    await ReadingBodyImageHost.instance.validateBytes(bytes, isCurrent);
+    this.assertReadingImageCurrent(isCurrent);
     await this.readingImageDiskCache.storeResource(identity, bytes);
   }
 
@@ -242,17 +244,21 @@ export class ReaderRuntimeOwner {
     sourceId: string,
     imageUrl: string,
     baseUrl: string | undefined,
-    shouldCancel?: () => boolean,
+    isCurrent?: () => boolean,
   ): Promise<JsonObject> {
     const params: JsonObject = { sourceId, imageUrl };
-    if (baseUrl !== undefined && baseUrl.trim().length > 0) {
-      params['baseUrl'] = baseUrl;
+    const canonicalBaseUrl = canonicalReadingImageBaseUrl(baseUrl);
+    if (canonicalBaseUrl !== undefined) {
+      params['baseUrl'] = canonicalBaseUrl;
     }
+    // The SDK's shouldCancel is the logical inverse of the isCurrent guard
+    // that the rest of the image chain already agrees on; without the flip a
+    // still-current selection cancels its own request on the first poll.
     const descriptor = await this.request('source.imageRequest', params, {
-      shouldCancel,
+      shouldCancel: isCurrent === undefined ? undefined : (): boolean => !isCurrent(),
       timeoutMs: DEFAULT_CORE_REQUEST_TIMEOUT_MS,
     });
-    this.assertReadingImageCurrent(shouldCancel);
+    this.assertReadingImageCurrent(isCurrent);
     const request = descriptor.data['request'];
     if (request === null || typeof request !== 'object' || Array.isArray(request)) {
       throw new Error('source.imageRequest returned an invalid Host request descriptor');
@@ -268,12 +274,19 @@ export class ReaderRuntimeOwner {
     imageUrl: string,
     baseUrl: string | undefined,
   ): ReadingImageCacheIdentity {
-    return { sourceId, bookId, chapterIndex, contentVersion, imageUrl, baseUrl };
+    return {
+      sourceId,
+      bookId,
+      chapterIndex,
+      contentVersion,
+      imageUrl,
+      baseUrl: canonicalReadingImageBaseUrl(baseUrl),
+    };
   }
 
-  /** Release one Host-created native image after session eviction/teardown. */
-  releaseReadingImage(pixelMap: image.PixelMap): void {
-    ReadingBodyImageHost.instance.release(pixelMap);
+  /** Release one Host-created display resource after session eviction/teardown. */
+  releaseReadingImage(fileUri: string, pixelMap?: image.PixelMap): void {
+    ReadingBodyImageHost.instance.release(fileUri, pixelMap);
   }
 
   async flush(): Promise<void> {
@@ -358,8 +371,8 @@ export class ReaderRuntimeOwner {
     return this.closeTask;
   }
 
-  private assertReadingImageCurrent(shouldCancel?: () => boolean): void {
-    if (shouldCancel !== undefined && !shouldCancel()) {
+  private assertReadingImageCurrent(isCurrent?: () => boolean): void {
+    if (isCurrent !== undefined && !isCurrent()) {
       throw new Error('reading body image request was cancelled');
     }
     if (this.state === 'closing' || this.state === 'closed') {
@@ -369,13 +382,13 @@ export class ReaderRuntimeOwner {
 
   private admitReadingImage(
     payload: ReadingBodyImagePayload,
-    shouldCancel?: () => boolean,
+    isCurrent?: () => boolean,
   ): ReadingBodyImagePayload {
     try {
-      this.assertReadingImageCurrent(shouldCancel);
+      this.assertReadingImageCurrent(isCurrent);
       return payload;
     } catch (error) {
-      ReadingBodyImageHost.instance.release(payload.pixelMap);
+      ReadingBodyImageHost.instance.release(payload.fileUri, payload.pixelMap);
       throw error;
     }
   }
@@ -406,6 +419,7 @@ export class ReaderRuntimeOwner {
         }
       }
     } finally {
+      ReadingBodyImageHost.instance.releaseAllDisplayFiles();
       // Runs even when flush throws, so a rebuilt UIAbility in the same
       // process gets a fresh runtime rather than a half-closed one.
       this.state = 'closed';

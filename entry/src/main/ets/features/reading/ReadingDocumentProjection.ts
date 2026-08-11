@@ -2,6 +2,7 @@ import type { JsonObject } from '@reader/core-harmony';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 import type { ReadingSessionImage } from './ReadingChapterWindow';
 import { deriveReadingContentVersion } from './ReadingPaginationIndex';
+import { canonicalReadingImageBaseUrl } from '../../common/ReadingImageIdentity';
 
 export type MaterializedReadingDocument = {
   content: string;
@@ -46,15 +47,17 @@ export async function materializeReadingDocument(
   if (imageBlocks.length === 0) {
     return { content, images: [], contentVersion: deriveReadingContentVersion(content) };
   }
+  const canonicalBaseUrl = canonicalReadingImageBaseUrl(baseUrl);
   const images: ReadingSessionImage[] = [];
   for (const block of imageBlocks) {
     images.push({
       source: block.source,
-      baseUrl,
+      baseUrl: canonicalBaseUrl,
       startScalar: block.startScalar,
       endScalar: block.endScalar,
       state: 'pending',
       pixelMap: undefined,
+      fileUri: '',
       intrinsicWidth: 0,
       intrinsicHeight: 0,
       revision: 'pending',

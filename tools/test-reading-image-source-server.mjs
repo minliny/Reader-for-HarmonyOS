@@ -2,7 +2,13 @@ import http from 'node:http';
 import zlib from 'node:zlib';
 
 const port = Number.parseInt(process.argv[2] ?? '18083', 10);
-const base = `http://127.0.0.1:${port}`;
+const baseIp = process.argv.find((value, index) => index > 0 && process.argv[index - 1] === '--base-ip')
+  ?? '127.0.0.1';
+const base = `http://${baseIp}:${port}`;
+const slowMs = Number.parseInt(
+  process.argv.find((value, index) => index > 0 && process.argv[index - 1] === '--slow-ms')
+    ?? '15000',
+  10);
 const evidence = {
   requests: 0,
   authenticatedImages: 0,
@@ -13,7 +19,11 @@ const evidence = {
   missingRequests: 0,
   corruptRequests: 0,
   slowRequests: 0,
+  slowAbortedRequests: 0,
   rejectedImageRequests: 0,
+  sourceAChapterLoads: 0,
+  sourceBChapterLoads: 0,
+  sourceBDetailLoads: 0,
 };
 
 const source = {
@@ -28,25 +38,57 @@ const source = {
   searchUrl: `${base}/search?key={{key}}`,
   ruleSearch: {
     bookList: 'li.book', name: '.name@text', author: '.author@text',
-    bookUrl: '.detail@href', checkKeyWord: '图片验收',
+    bookUrl: '.detail@href',
   },
   ruleBookInfo: { name: 'h1@text', tocUrl: '.toc@href' },
   ruleToc: { chapterList: 'ol.toc li', chapterName: 'a@text', chapterUrl: 'a@href' },
   ruleContent: { content: '.content@html' },
 };
 
+// Second live HTTP source indexing the SAME book. It differs from the first
+// only by the `X-Reader-Source: b` header it injects, which the handlers use
+// to emit observably different title/body text so a completed source switch
+// is verifiable on-screen and in the fixture log.
+const sourceB = {
+  bookSourceUrl: `${base}#reading-image-source-b`,
+  bookSourceName: 'Reader 正文图片验收源 B',
+  bookSourceGroup: 'Reader Acceptance',
+  bookSourceType: 0,
+  enabled: true,
+  enabledExplore: false,
+  enabledCookieJar: true,
+  header: { Referer: `${base}/reader`, 'X-Reader-Image': 'allowed', 'X-Reader-Source': 'b' },
+  searchUrl: `${base}/search?key={{key}}`,
+  ruleSearch: source.ruleSearch,
+  ruleBookInfo: source.ruleBookInfo,
+  ruleToc: source.ruleToc,
+  ruleContent: source.ruleContent,
+};
+
+function sourceVariant(request) {
+  return request.headers['x-reader-source'] === 'b' ? 'b' : 'a';
+}
+
+function bookTitle(variant) {
+  return variant === 'b' ? '图片验收书（源 B）' : '图片验收书';
+}
+
+function bodyMarker(variant) {
+  return variant === 'b' ? '<p>〔来自源 B 的正文〕</p>' : '';
+}
+
 // Small valid format fixtures. The large PNG below is generated as a 1-bit
 // grayscale image so its compressed wire size stays tiny while its intrinsic
 // 6000x6000 dimensions exercise pre-decode downsampling.
 const PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFElEQVR42mP8z8AARAwMDAwMDAwAAAwBAQDJ/pLvAAAAAElFTkSuQmCC',
+  'iVBORw0KGgoAAAANSUhEUgAAAZAAAAEsCAIAAABi1XKVAAAD8ElEQVR4nO3UMQ0AIADAMEAI/kUhBgt8ZEmrYNfm2XsAFKzfAQCvDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLCDDsIAMwwIyDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLCDDsIAMwwIyDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLCDDsIAMwwIyDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLCDDsIAMwwIyDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLCDDsIAMwwIyDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLCDDsIAMwwIyDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLCDDsIAMwwIyDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLCDDsIAMwwIyDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLCDDsIAMwwIyDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLCDDsIAMwwIyDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLCDDsIAMwwIyDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLCDDsIAMwwIyDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLCDDsIAMwwIyDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLCDDsIAMwwIyDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLCDDsIAMwwIyDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLCDDsIAMwwIyDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLCDDsIAMwwIyDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLCDDsIAMwwIyDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLCDDsIAMwwIyDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLCDDsIAMwwIyDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLCDDsIAMwwIyDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLCDDsIAMwwIyDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLCDDsIAMwwIyDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLCDDsIAMwwIyDAvIMCwgw7CADMMCMgwLyDAsIMOwgAzDAjIMC8gwLGBUXOnQA3CYTXFkAAAAAElFTkSuQmCC',
   'base64',
 );
 const JPEG = Buffer.from(
-  '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAX/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAF//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABBQJ//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAwEBPwF//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAgEBPwF//9k=',
+  '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/2wBDAQMDAwQDBAgEBAgQCwkLEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBD/wAARCAEsAZADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDh6KKK/Gj+bAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD//2Q==',
   'base64',
 );
-const WEBP = Buffer.from('UklGRkoAAABXRUJQVlA4ID4AAADQAQCdASoBAAEAAUAmJaQAA3AA/v89WAAAAA==', 'base64');
+const WEBP = Buffer.from('UklGRiYBAABXRUJQVlA4IBoBAAAwHQCdASqQASwBPjEYjESiIaEQFAAgAwS0t3C7sI9uA/AAAAtLZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk4UAAD+/+EzL//+TZfJsvk2X/Jsv//5glfkG65AAAAAAAAAAAAAAAAAAAA=', 'base64');
 const HUGE_PNG = makeLargePng(6000, 6000);
 
 function crc32(bytes) {
@@ -138,6 +180,12 @@ const server = http.createServer((request, response) => {
     });
     return;
   }
+  if (requestUrl.pathname === '/reading-image-source-b.json') {
+    send(response, 200, 'application/json; charset=utf-8', JSON.stringify(sourceB, null, 2), {
+      'Content-Disposition': 'attachment; filename="reading-image-source-b.json"',
+    });
+    return;
+  }
   if (requestUrl.pathname === '/search') {
     send(response, 200, 'text/html; charset=utf-8',
       '<ul><li class="book"><span class="name">图片验收书</span>' +
@@ -146,14 +194,21 @@ const server = http.createServer((request, response) => {
     return;
   }
   if (requestUrl.pathname === '/book/1') {
+    const variant = sourceVariant(request);
+    if (variant === 'b') {
+      evidence.sourceBDetailLoads += 1;
+    }
     send(response, 200, 'text/html; charset=utf-8',
-      '<article><h1>图片验收书</h1><a class="toc" href="/book/1/toc">目录</a></article>');
+      `<article><h1>${bookTitle(variant)}</h1><a class="toc" href="/book/1/toc">目录</a></article>`);
     return;
   }
   if (requestUrl.pathname === '/book/1/toc') {
     send(response, 200, 'text/html; charset=utf-8',
       '<ol class="toc"><li><a href="/chapter-redirect/1">格式与失败</a></li>' +
-      '<li><a href="/chapters/slow.html">取消慢图</a></li></ol>');
+      '<li><a href="/chapters/slow.html">取消慢图</a></li>' +
+      '<li><a href="/chapters/good.html">双图完成</a></li>' +
+      '<li><a href="/chapters/unread.html">未下载测试</a></li></ol>',
+      { 'Set-Cookie': 'imageSession=ready; Path=/; HttpOnly; SameSite=Lax' });
     return;
   }
   if (requestUrl.pathname === '/chapter-redirect/1') {
@@ -162,8 +217,14 @@ const server = http.createServer((request, response) => {
     return;
   }
   if (requestUrl.pathname === '/chapters/volume/1.html') {
+    const variant = sourceVariant(request);
+    if (variant === 'b') {
+      evidence.sourceBChapterLoads += 1;
+    } else {
+      evidence.sourceAChapterLoads += 1;
+    }
     send(response, 200, 'text/html; charset=utf-8',
-      '<div class="content"><p>重定向后的相对 PNG。</p><img src="../../media/sample.png">' +
+      `<div class="content">${bodyMarker(variant)}<p>重定向后的相对 PNG。</p><img src="../../media/sample.png">` +
       '<p>JPEG 后的正文。</p><img src="/media/sample.jpg"><p>WebP 后的正文。</p>' +
       '<img src="/media/sample.webp"><p>超大图会预解码缩放。</p><img src="/media/huge.png">' +
       '<p>404 保留占位。</p><img src="/media/missing.png"><p>损坏图片保留占位。</p>' +
@@ -171,12 +232,66 @@ const server = http.createServer((request, response) => {
     return;
   }
   if (requestUrl.pathname === '/chapters/slow.html') {
+    const variant = sourceVariant(request);
+    if (variant === 'b') {
+      evidence.sourceBChapterLoads += 1;
+    } else {
+      evidence.sourceAChapterLoads += 1;
+    }
     send(response, 200, 'text/html; charset=utf-8',
-      '<div class="content"><p>切章时必须取消下面的慢图。</p><img src="/media/slow.png">' +
+      `<div class="content">${bodyMarker(variant)}<p>切章时必须取消下面的慢图。</p><img src="/media/slow.png">` +
       '<p>慢图后的文字。</p></div>');
     return;
   }
-  if (requestUrl.pathname.startsWith('/media/') && !admitImage(request, response)) return;
+  if (requestUrl.pathname === '/chapters/good.html') {
+    const variant = sourceVariant(request);
+    if (variant === 'b') {
+      evidence.sourceBChapterLoads += 1;
+    } else {
+      evidence.sourceAChapterLoads += 1;
+    }
+    send(response, 200, 'text/html; charset=utf-8',
+      `<div class="content">${bodyMarker(variant)}<p>双图完整下载章节。</p><img src="/media/sample.png">` +
+      '<p>第二张图。</p><img src="/media/sample.jpg"><p>双图完成尾文。</p></div>');
+    return;
+  }
+  if (requestUrl.pathname === '/chapters/unread.html') {
+    const variant = sourceVariant(request);
+    if (variant === 'b') {
+      evidence.sourceBChapterLoads += 1;
+    } else {
+      evidence.sourceAChapterLoads += 1;
+    }
+    send(response, 200, 'text/html; charset=utf-8',
+      `<div class="content">${bodyMarker(variant)}<p>从未阅读的离线章节正文。</p></div>`);
+    return;
+  }
+  if (requestUrl.pathname === '/media/slow.png') {
+    // Slow image intentionally bypasses the auth gate: the app's
+    // offline-download request path sends source headers but NOT the cookie
+    // jar (observed cookie null), so gating would 403 before the stall. The
+    // stall is the task-interruption vehicle; all other images stay gated.
+    evidence.slowRequests += 1;
+    const responseAt = Date.now() + slowMs;
+    request.on('close', () => {
+      const elapsed = Date.now() - (responseAt - slowMs);
+      process.stdout.write(`${JSON.stringify({ slowAbort: true, elapsedMs: elapsed })}\n`);
+      if (Date.now() < responseAt) {
+        evidence.slowAbortedRequests = (evidence.slowAbortedRequests ?? 0) + 1;
+      }
+    });
+    setTimeout(() => send(response, 200, 'image/png', PNG), slowMs);
+    return;
+  }
+  if (requestUrl.pathname.startsWith('/media/')) {
+    process.stdout.write(`${JSON.stringify({
+      image: requestUrl.pathname,
+      referer: request.headers.referer ?? null,
+      xReaderImage: request.headers['x-reader-image'] ?? null,
+      cookie: request.headers.cookie ?? null,
+    })}\n`);
+    if (!admitImage(request, response)) return;
+  }
   if (requestUrl.pathname === '/media/sample.png') {
     evidence.pngRequests += 1;
     send(response, 200, 'image/png', PNG);
@@ -205,11 +320,6 @@ const server = http.createServer((request, response) => {
   if (requestUrl.pathname === '/media/corrupt.png') {
     evidence.corruptRequests += 1;
     send(response, 200, 'image/png', Buffer.from('not a png'));
-    return;
-  }
-  if (requestUrl.pathname === '/media/slow.png') {
-    evidence.slowRequests += 1;
-    setTimeout(() => send(response, 200, 'image/png', PNG), 15000);
     return;
   }
   send(response, 404, 'text/plain; charset=utf-8', 'not found');

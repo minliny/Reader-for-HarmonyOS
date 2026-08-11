@@ -1357,7 +1357,9 @@ struct Index {
         this.route = 'detail';
         void offline.loadProjection(session, isCurrent)
           .then((entries: LocalReadingTocEntry[]): void => {
-            if (isCurrent() && this.remoteReadingSession === session) {
+            const stillSame = this.remoteReadingSession?.identity.sourceId === session.identity.sourceId &&
+              this.remoteReadingSession?.identity.bookId === session.identity.bookId;
+            if (isCurrent() && stillSame) {
               this.detailToc = entries;
             }
           })

@@ -67,6 +67,7 @@ assert.deepEqual(projected.images, [{
   endScalar: 5,
   state: 'pending',
   pixelMap: undefined,
+  fileUri: '',
   intrinsicWidth: 0,
   intrinsicHeight: 0,
   revision: 'pending',
@@ -74,6 +75,18 @@ assert.deepEqual(projected.images, [{
 assert.deepEqual(loads, [], 'chapter materialization must not eagerly fetch body images');
 assert.match(projected.contentVersion, /^reader-document-v1:/,
   'image anchors and sources must participate in pagination identity');
+
+const canonicalBase = await materializeReadingDocument(
+  {
+    content: '\uFFFC',
+    blocks: [{ kind: 'image', source: 'same.png', startScalar: 0, endScalar: 1 }],
+  },
+  'source-a',
+  ' https://books.example.test/chapter/1.html#reader-position ',
+  runtime,
+);
+assert.equal(canonicalBase.images[0].baseUrl, 'https://books.example.test/chapter/1.html',
+  'live and cached image identities must ignore non-request URL fragments');
 
 const duplicate = await materializeReadingDocument(
   {

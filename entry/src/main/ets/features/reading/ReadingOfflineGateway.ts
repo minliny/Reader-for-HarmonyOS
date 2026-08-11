@@ -101,7 +101,7 @@ export class ReadingOfflineGateway {
       this.assertCurrent(isCurrent);
       const resources = this.imageResources(chapter);
       for (const resource of resources) {
-        await this.runtime.prefetchReadingImage!(resource, this.shouldCancel(isCurrent));
+        await this.runtime.prefetchReadingImage!(resource, isCurrent);
         this.assertCurrent(isCurrent);
       }
       await this.runtime.markOfflineImageChapterComplete!(this.chapterIdentity(chapter), resources);
@@ -269,10 +269,6 @@ export class ReadingOfflineGateway {
       options.timeoutMs = timeoutMs;
     }
     return options;
-  }
-
-  private shouldCancel(isCurrent: OfflineRequestGuard | undefined): (() => boolean) | undefined {
-    return isCurrent === undefined ? undefined : (): boolean => !isCurrent();
   }
 
   private assertCurrent(isCurrent: OfflineRequestGuard | undefined): void {

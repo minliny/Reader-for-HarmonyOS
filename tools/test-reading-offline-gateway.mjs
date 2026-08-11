@@ -97,8 +97,8 @@ class FakeRuntime {
     throw new Error(`unexpected command: ${method}`);
   }
 
-  async prefetchReadingImage(identity, shouldCancel) {
-    assert.equal(shouldCancel?.(), false);
+  async prefetchReadingImage(identity, isCurrent) {
+    assert.equal(isCurrent?.(), true);
     if (failImage) {
       throw new Error('fixture image unavailable');
     }

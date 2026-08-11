@@ -6,7 +6,8 @@ import type {
 } from '@reader/core-harmony';
 
 export type ReadingGatewayImage = {
-  pixelMap: image.PixelMap;
+  pixelMap: image.PixelMap | undefined;
+  fileUri: string;
   width: number;
   height: number;
   revision: string;
@@ -48,12 +49,12 @@ export interface ReadingGatewayRuntime {
     imageUrl: string,
     baseUrl: string | undefined,
     allowNetwork: boolean,
-    shouldCancel?: () => boolean,
+    isCurrent?: () => boolean,
   ): Promise<ReadingGatewayImage>;
 
   prefetchReadingImage?(
     identity: ReadingGatewayImageCacheIdentity,
-    shouldCancel?: () => boolean,
+    isCurrent?: () => boolean,
   ): Promise<void>;
 
   markOfflineImageChapterComplete?(
@@ -67,6 +68,6 @@ export interface ReadingGatewayRuntime {
 
   clearOfflineBookImages?(sourceId: string, bookId: string): Promise<void>;
 
-  /** Releases one native image after the bounded chapter window evicts it. */
-  releaseReadingImage?(pixelMap: image.PixelMap): void;
+  /** Releases one display file/native fallback after the chapter window evicts it. */
+  releaseReadingImage?(fileUri: string, pixelMap?: image.PixelMap): void;
 }

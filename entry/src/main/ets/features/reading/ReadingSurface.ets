@@ -27,6 +27,7 @@ export class ReadingSurfacePageFragment {
   startScalar: number;
   endScalar: number;
   imageSource: image.PixelMap | undefined;
+  fileUri: string | undefined;
   imageHeight: number;
 
   constructor(
@@ -37,6 +38,7 @@ export class ReadingSurfacePageFragment {
     endScalar?: number,
     imageSource?: image.PixelMap,
     imageHeight: number = 0,
+    fileUri?: string,
   ) {
     this.id = id;
     this.text = text;
@@ -45,6 +47,7 @@ export class ReadingSurfacePageFragment {
     this.endScalar = endScalar ?? startScalar + text.length;
     this.imageSource = imageSource;
     this.imageHeight = imageHeight;
+    this.fileUri = fileUri;
   }
 }
 
@@ -145,7 +148,13 @@ export struct ReadingSurface {
               if (index > 0 && fragment.isParagraphStart) {
                 Blank().height(15.8);
               }
-              if (fragment.imageSource !== undefined) {
+              if (fragment.fileUri !== undefined && fragment.fileUri.length > 0) {
+                Image(fragment.fileUri)
+                  .width('100%')
+                  .height(fragment.imageHeight)
+                  .objectFit(ImageFit.Contain)
+                  .interpolation(ImageInterpolation.High);
+              } else if (fragment.imageSource !== undefined) {
                 Image(fragment.imageSource)
                   .width('100%')
                   .height(fragment.imageHeight)

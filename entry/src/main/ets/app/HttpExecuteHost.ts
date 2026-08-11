@@ -422,7 +422,17 @@ export class HttpExecuteHost {
       // A response that lands after the deadline is a stale success: reject
       // it so a cancelled cycle never returns a late result.
       this.assertWithinDeadline(deadline);
-      const bytes = this.requireResponseBytes(response.result);
+      let bytes: Uint8Array;
+      if (response.result instanceof ArrayBuffer) {
+        bytes = new Uint8Array(response.result);
+      } else if (this.isRedirectStatus(response.responseCode)) {
+        // An intercepted 3xx hop has no body the Host consumes: the platform
+        // surfaces it with an empty result instead of the requested
+        // ArrayBuffer. Keep the Location header flowing to the redirect chain.
+        bytes = new Uint8Array(0);
+      } else {
+        throw new Error('http.execute: platform did not return the requested raw response bytes');
+      }
       if (bytes.length > MAX_RESPONSE_BYTES) {
         throw new Error(`http.execute: response exceeds ${MAX_RESPONSE_BYTES} byte limit`);
       }
@@ -454,12 +464,20 @@ export class HttpExecuteHost {
     sessionId: string | null,
   ): JsonObject {
     const responseCharset = this.resolveResponseCharset(response.headers);
-    let decoded: string;
-    try {
-      decoded = util.TextDecoder.create(responseCharset, { fatal: true }).decodeToString(response.bytes);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : `${error}`;
-      throw new Error(`http.execute: cannot decode response as ${responseCharset}: ${message}`);
+    const contentType = this.headerValue(response.headers, 'content-type');
+    // Binary payloads (images, fonts, downloads) have no text representation;
+    // the strict TextDecoder below must never be asked to fail on them. The
+    // reading body image flow consumes `bodyBase64`, so `body` is left empty
+    // and the raw bytes remain the authoritative transport value.
+    const binaryBody = contentType !== null && this.isBinaryContentType(contentType);
+    let decoded = '';
+    if (!binaryBody) {
+      try {
+        decoded = util.TextDecoder.create(responseCharset, { fatal: true }).decodeToString(response.bytes);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : `${error}`;
+        throw new Error(`http.execute: cannot decode response as ${responseCharset}: ${message}`);
+      }
     }
     const result: JsonObject = {
       status: response.status,
@@ -947,13 +965,6 @@ export class HttpExecuteHost {
     });
   }
 
-  private requireResponseBytes(result: string | Object | ArrayBuffer): Uint8Array {
-    if (!(result instanceof ArrayBuffer)) {
-      throw new Error('http.execute: platform did not return the requested raw response bytes');
-    }
-    return new Uint8Array(result);
-  }
-
   private flattenHeaders(header: Object): ResponseHeaders {
     const out: ResponseHeaders = {};
     for (const key of Object.keys(header)) {
@@ -1025,6 +1036,16 @@ export class HttpExecuteHost {
       parts.push(tail);
     }
     return parts;
+  }
+
+  private isBinaryContentType(contentType: string): boolean {
+    const normalized = contentType.trim().toLowerCase();
+    if (normalized.startsWith('image/') || normalized.startsWith('audio/') ||
+      normalized.startsWith('video/') || normalized.startsWith('font/')) {
+      return true;
+    }
+    return normalized === 'application/octet-stream' || normalized === 'application/pdf' ||
+      normalized === 'application/zip' || normalized === 'application/gzip';
   }
 
   private resolveResponseCharset(headers: ResponseHeaders): string {

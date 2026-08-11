@@ -61,6 +61,7 @@ class FakeRemoteReadingRuntime {
     }
     return {
       pixelMap: PIXEL_MAP,
+      fileUri: 'file:///fixture/body.png',
       width: 320,
       height: 180,
       revision: 'image-r1',
@@ -266,6 +267,7 @@ const pendingImage = {
   endScalar: 5,
   state: 'pending',
   pixelMap: undefined,
+  fileUri: '',
   intrinsicWidth: 0,
   intrinsicHeight: 0,
   revision: 'pending',
@@ -300,9 +302,16 @@ const staleImageGateway = new ReadingSessionFlowGateway(
     },
     async loadReadingImage() {
       imageStillCurrent = false;
-      return { pixelMap: stalePixel, width: 10, height: 10, revision: 'stale-r1' };
+      return {
+        pixelMap: stalePixel,
+        fileUri: 'file:///fixture/stale.png',
+        width: 10,
+        height: 10,
+        revision: 'stale-r1',
+      };
     },
-    releaseReadingImage(pixelMap) {
+    releaseReadingImage(fileUri, pixelMap) {
+      assert.equal(fileUri, 'file:///fixture/stale.png');
       assert.equal(pixelMap, stalePixel);
       stalePixelReleaseCount += 1;
     },

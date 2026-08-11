@@ -22,10 +22,12 @@ assert.doesNotMatch(cache, /bodyBase64|PixelMap/,
 
 const diskLookup = owner.indexOf('this.readingImageDiskCache.loadResource(identity)');
 const offlineFailure = owner.indexOf("if (!allowNetwork) {");
-const networkDescriptor = owner.indexOf('this.resolveReadingImageRequest(sourceId, imageUrl, baseUrl');
+const networkDescriptor = owner.indexOf('this.resolveReadingImageRequest(sourceId, imageUrl, identity.baseUrl');
 assert.ok(diskLookup >= 0 && offlineFailure > diskLookup && networkDescriptor > offlineFailure,
   'offline image resolution must try exact disk bytes and reject before source/HTTP request construction');
 assert.match(owner, /storeResource\(identity, bytes\)[\s\S]*ordinary online read remains usable/);
 assert.match(owner, /async prefetchReadingImage\([\s\S]*await this\.readingImageDiskCache\.storeResource\(identity, bytes\)/);
+assert.match(cache, /canonicalReadingImageBaseUrl\(identity\.baseUrl\)/,
+  'offline disk keys must use the same fragment-free canonical base URL as live requests');
 
 console.log('reading offline image cache architecture: PASS');

@@ -2,6 +2,7 @@ import common from '@ohos.app.ability.common';
 import fileIo from '@ohos.file.fs';
 import cryptoFramework from '@ohos.security.cryptoFramework';
 import util from '@ohos.util';
+import { canonicalReadingImageBaseUrl } from '../common/ReadingImageIdentity';
 
 const CACHE_FORMAT_VERSION = 1;
 const MAX_READING_IMAGE_BYTES = 16 * 1024 * 1024;
@@ -22,6 +23,7 @@ export type ReadingImageChapterIdentity = {
   contentVersion: string;
 };
 
+/** One canonical identity form shared by projection, requests, and disk keys. */
 type ReadingImageChapterManifest = {
   formatVersion: number;
   sourceId: string;
@@ -185,7 +187,8 @@ export class ReadingImageDiskCache {
   }
 
   private async resourceHash(identity: ReadingImageCacheIdentity): Promise<string> {
-    return this.sha256(`${identity.contentVersion}\u0000${identity.imageUrl}\u0000${identity.baseUrl ?? ''}`);
+    const baseUrl = canonicalReadingImageBaseUrl(identity.baseUrl);
+    return this.sha256(`${identity.contentVersion}\u0000${identity.imageUrl}\u0000${baseUrl ?? ''}`);
   }
 
   private async sha256(value: string): Promise<string> {
@@ -206,22 +209,22 @@ export class ReadingImageDiskCache {
   }
 
   private async writeAtomicBytes(path: string, bytes: Uint8Array): Promise<void> {
-    const file = new fileIo.AtomicFile(path);
+    // The fs WriteStream.end rejects a Uint8Array at runtime on this build
+    // ("Invalid argument"), so write the exact backing ArrayBuffer with the
+    // proven writeSync path and commit via an atomic same-directory rename.
+    const tmpPath = `${path}.tmp`;
+    const file = fileIo.openSync(tmpPath, fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC);
     try {
-      const stream = file.startWrite();
-      await new Promise<void>((resolve: () => void, reject: (reason?: Error) => void): void => {
-        stream.on('error', (): void => reject(new Error('offline reading image write failed')));
-        stream.end(bytes, undefined, (): void => resolve());
-      });
-      if (stream.bytesWritten !== bytes.length) {
-        throw new Error('offline reading image write was incomplete');
-      }
-      file.finishWrite();
+      fileIo.writeSync(file.fd, bytes.buffer, { offset: bytes.byteOffset, length: bytes.byteLength });
+    } finally {
+      fileIo.closeSync(file);
+    }
+    try {
+      fileIo.renameSync(tmpPath, path);
     } catch (error) {
       try {
-        file.failWrite();
+        fileIo.unlink(tmpPath);
       } catch (_) {
-        // startWrite may fail before an atomic temporary file exists.
       }
       throw error;
     }

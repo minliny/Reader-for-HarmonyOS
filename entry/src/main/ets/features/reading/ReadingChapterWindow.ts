@@ -24,6 +24,7 @@ export type ReadingSessionImage = {
   readonly endScalar: number;
   readonly state: 'pending' | 'ready' | 'failed';
   readonly pixelMap: image.PixelMap | undefined;
+  readonly fileUri: string;
   readonly intrinsicWidth: number;
   readonly intrinsicHeight: number;
   readonly revision: string;
@@ -192,6 +193,7 @@ function copyImage(image: ReadingSessionImage): ReadingSessionImage {
     endScalar: image.endScalar,
     state: image.state,
     pixelMap: image.pixelMap,
+    fileUri: image.fileUri,
     intrinsicWidth: image.intrinsicWidth,
     intrinsicHeight: image.intrinsicHeight,
     revision: image.revision,

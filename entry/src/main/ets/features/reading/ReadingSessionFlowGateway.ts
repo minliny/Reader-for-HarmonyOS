@@ -202,7 +202,7 @@ export class ReadingSessionFlowGateway {
         isCurrent,
       );
       if (isCurrent !== undefined && !isCurrent()) {
-        this.runtimeOwner.releaseReadingImage?.(payload.pixelMap);
+        this.runtimeOwner.releaseReadingImage?.(payload.fileUri, payload.pixelMap);
         throw new Error('reading body image request was cancelled');
       }
       return {
@@ -212,6 +212,7 @@ export class ReadingSessionFlowGateway {
         endScalar: image.endScalar,
         state: 'ready',
         pixelMap: payload.pixelMap,
+        fileUri: payload.fileUri,
         intrinsicWidth: payload.width,
         intrinsicHeight: payload.height,
         revision: payload.revision,
@@ -220,12 +221,13 @@ export class ReadingSessionFlowGateway {
       if (isCurrent !== undefined && !isCurrent()) {
         throw error;
       }
+      console.error(`reading image resolve failed: ${error instanceof Error ? error.message : `${error}`}`);
       return this.failedReadingImage(image);
     }
   }
 
-  releaseReadingImage(pixelMap: image.PixelMap): void {
-    this.runtimeOwner.releaseReadingImage?.(pixelMap);
+  releaseReadingImage(fileUri: string, pixelMap?: image.PixelMap): void {
+    this.runtimeOwner.releaseReadingImage?.(fileUri, pixelMap);
   }
 
   async resolveLocation(
@@ -329,6 +331,7 @@ export class ReadingSessionFlowGateway {
       endScalar: image.endScalar,
       state: 'failed',
       pixelMap: undefined,
+      fileUri: '',
       intrinsicWidth: 0,
       intrinsicHeight: 0,
       revision: 'body-image-failed-v1',
