@@ -152,8 +152,7 @@ export struct SettingsPage {
       this.switchRow('减少动态效果', $r('app.media.settings_gen_motion'), 'reduceMotion');
       this.switchRow('崩溃日志', $r('app.media.settings_gen_crash'), 'crashLog');
       this.selectRow('动画效果', $r('app.media.settings_gen_animation'), 'animation', ['标准', '减弱', '关闭']);
-      this.actionRow('缓存清理', $r('app.media.settings_gen_cache'), this.cacheActionLabel,
-        (): void => this.clearTextCache());
+      this.cacheActionRow();
     }
   }
 
@@ -314,9 +313,15 @@ export struct SettingsPage {
   }
 
   @Builder
-  private actionRow(label: string, icon: Resource, actionLabel: string, action: () => void) {
-    CategoryRow({ icon: icon, label: label, onRowClick: action }) {
-      this.inlineAction(actionLabel, 66);
+  private cacheActionRow() {
+    CategoryRow({
+      icon: $r('app.media.settings_gen_cache'),
+      label: '缓存清理',
+      onRowClick: (): void => this.clearTextCache(),
+    }) {
+      // Read @State directly in this builder. Passing the value through a
+      // generic @Builder argument leaves the trailing label stale on device.
+      this.inlineAction(this.cacheActionLabel, 66);
     }
   }
 
