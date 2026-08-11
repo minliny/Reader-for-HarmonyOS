@@ -10,6 +10,8 @@ const rss = read('entry/src/main/ets/features/rss/RssPage.ets');
 const sourceFeed = read('entry/src/main/ets/features/rss/RssSourceFeedPage.ets');
 const entryDetail = read('entry/src/main/ets/features/rss/RssEntryDetailPage.ets');
 const management = read('entry/src/main/ets/features/rss/RssSubscriptionManagementPage.ets');
+const editor = read('entry/src/main/ets/features/rss/RssSubscriptionEditorPage.ets');
+const editorOrchestrator = read('entry/src/main/ets/features/rss/RssSubscriptionEditorOrchestrator.ets');
 const gateway = read('entry/src/main/ets/features/rss/RssGateway.ts');
 const orchestrator = read('entry/src/main/ets/features/rss/RssOrchestrator.ets');
 const index = read('entry/src/main/ets/pages/Index.ets');
@@ -196,7 +198,7 @@ assert.equal((entryDetail.match(/\.enabled\(this\.hasOriginalLink\(\)\)/g) ?? []
 assert.doesNotMatch(entryDetail, /private bodyCard\(|bodyParagraphs\(|已解析正文/);
 
 // Management rows are projections of real subscription fields only. Add and
-// edit remain explicitly fail-closed until their editor contract is frozen.
+// edit route through one editor coordinator into Core-owned create/update.
 const managementMeta = index.match(
   /private rssSubscriptionManagementMeta\(subscription: RssSubscription\): string \{[\s\S]*?\n  \}/,
 )?.[0] ?? '';
@@ -205,11 +207,17 @@ assert.match(managementMeta, /subscription\.feedUrl/);
 assert.match(managementMeta, /subscription\.lastFetchAt/);
 assert.match(managementMeta, /已停用/);
 assert.doesNotMatch(managementMeta, /unreadCount|正常|健康|文章|条/);
-assert.match(index, /RSS subscription add editor is not admitted; intent rejected/);
-assert.match(index, /RSS subscription edit editor is not admitted; intent rejected/);
-assert.doesNotMatch(gateway, /operation: 'create'/);
+assert.match(index, /route = 'rssSubscriptionEditor'/);
+assert.match(index, /getRssEditorOrchestrator\(\)\.openCreate\(\)/);
+assert.match(index, /getRssEditorOrchestrator\(\)\.openEdit\(subscriptionId\)/);
+assert.match(editor, /export struct RssSubscriptionEditorPage/);
+assert.match(editor, /constraintSize\(\{ minHeight: 60 \}\)/);
+assert.match(editorOrchestrator, /gateway\.createSubscription/);
+assert.match(editorOrchestrator, /gateway\.updateSubscription/);
+assert.match(gateway, /request\('rss\.subscription\.create'/);
+assert.match(gateway, /request\('rss\.subscription\.update'/);
 
-// Aggregate main-page modes, main-page refresh, Add/Edit, and URL Host opening
+// Aggregate main-page modes, main-page refresh, and URL Host opening
 // remain explicit gaps. Scoped SourceFeed/EntryDetail actions must not regress
 // to the removed generic no-op dispatchers.
 assert.doesNotMatch(index, /RSS SourceFeed action %\{public\}s has no admitted transaction/);

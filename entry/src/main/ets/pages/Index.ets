@@ -63,6 +63,12 @@ import {
   RssSubscriptionManagementPage,
   type RssSubscriptionManagementItem,
 } from '../features/rss/RssSubscriptionManagementPage';
+import { RssSubscriptionEditorPage } from '../features/rss/RssSubscriptionEditorPage';
+import {
+  EMPTY_RSS_EDITOR_SNAPSHOT,
+  RssSubscriptionEditorOrchestrator,
+  type RssSubscriptionEditorSnapshot,
+} from '../features/rss/RssSubscriptionEditorOrchestrator';
 import {
   RssOrchestrator,
   type RssEntrySnapshot,
@@ -113,7 +119,7 @@ const LOCAL_SOURCE_ID = 'local';
 
 type ReaderRoute = 'bookshelf' | 'discover' | 'detail' | 'reading' | 'directory' | 'search' |
   'rss' | 'rssSubscriptionManagement' | 'rssSourceFeed' | 'rssEntryDetail' |
-  'settings' | 'source' | 'sourceTools' | 'sync';
+  'rssSubscriptionEditor' | 'settings' | 'source' | 'sourceTools' | 'sync';
 type PreparedReaderRoute = 'reading' | 'directory';
 type DirectoryReturnTarget = 'detail' | 'readerControl';
 type RssDetailReturnTarget = 'rss' | 'rssSourceFeed';
@@ -181,6 +187,7 @@ struct Index {
   @State private rssDetailReturnTarget: RssDetailReturnTarget = 'rss';
   @State private rssSourceFeedReturnTarget: RssSourceFeedReturnTarget = 'rss';
   @State private rssManagementFocusSubscriptionId: string = '';
+  @State private rssEditorSnapshot: RssSubscriptionEditorSnapshot = EMPTY_RSS_EDITOR_SNAPSHOT;
   @State private sourceSources: BookSource[] = [];
   @State private sourceToolsSnapshot: SourceToolsSnapshot = EMPTY_SOURCE_TOOLS_SNAPSHOT;
   @State private discoverPresentation: DiscoverPresentation = { currentSourceName: '', kinds: [], books: [] };
@@ -231,6 +238,7 @@ struct Index {
   private sourceOrchestrator: SourceOrchestrator | undefined;
   private sourceToolsOrchestrator: SourceToolsOrchestrator | undefined;
   private rssOrchestrator: RssOrchestrator | undefined;
+  private rssEditorOrchestrator: RssSubscriptionEditorOrchestrator | undefined;
   /**
    * Installed only by the mounted ReadingSurface.  System Back calls this
    * guarded request so Core position persistence settles before the route is
@@ -268,6 +276,10 @@ struct Index {
     }
     if (this.route === 'rssSubscriptionManagement') {
       this.returnToRss();
+      return true;
+    }
+    if (this.route === 'rssSubscriptionEditor') {
+      this.returnToRssSubscriptionManagement();
       return true;
     }
     if (this.route === 'sourceTools') {
@@ -388,6 +400,15 @@ struct Index {
           onEditSource: (id: string): void => this.onRssSubscriptionEditRequested(id),
           onRefresh: (id: string): void => this.getRssOrchestrator().refreshSubscription(id),
           onDelete: (id: string): void => this.requestRssSubscriptionDelete(id),
+        });
+      } else if (this.route === 'rssSubscriptionEditor') {
+        RssSubscriptionEditorPage({
+          snapshot: this.rssEditorSnapshot,
+          onBack: (): void => this.returnToRssSubscriptionManagement(),
+          onFeedUrlChanged: (value: string): void => this.getRssEditorOrchestrator().updateFeedUrl(value),
+          onTitleChanged: (value: string): void => this.getRssEditorOrchestrator().updateTitle(value),
+          onEnabledChanged: (value: boolean): void => this.getRssEditorOrchestrator().updateEnabled(value),
+          onSave: (): void => this.getRssEditorOrchestrator().save(),
         });
       } else if (this.route === 'rssSourceFeed' && this.selectedRssSubscription !== undefined) {
         RssSourceFeedPage({
@@ -859,6 +880,19 @@ struct Index {
     return this.rssOrchestrator;
   }
 
+  private getRssEditorOrchestrator(): RssSubscriptionEditorOrchestrator {
+    if (this.rssEditorOrchestrator === undefined) {
+      this.rssEditorOrchestrator = new RssSubscriptionEditorOrchestrator(
+        (snapshot: RssSubscriptionEditorSnapshot): void => {
+          this.rssEditorSnapshot = snapshot;
+        },
+        (subscriptionId: string): void => this.finishRssSubscriptionEdit(subscriptionId),
+        (): boolean => this.route === 'rssSubscriptionEditor',
+      );
+    }
+    return this.rssEditorOrchestrator;
+  }
+
   private onRssManagementViewArticles(subscriptionId: string): void {
     this.onRssSubscriptionSelected(subscriptionId, 'rssSubscriptionManagement');
   }
@@ -886,18 +920,36 @@ struct Index {
   }
 
   private onRssSubscriptionAddRequested(): void {
-    // The editor's visual/data contract is not frozen. Fail closed instead of
-    // sending a partially inferred `rss.subscription.persist(create)` request.
-    hilog.warn(DOMAIN, 'Reader',
-      'FIGMA_VISUAL_GAP: RSS subscription add editor is not admitted; intent rejected');
+    this.nextNavigationGeneration();
+    this.route = 'rssSubscriptionEditor';
+    this.getRssEditorOrchestrator().openCreate();
   }
 
   private onRssSubscriptionEditRequested(subscriptionId: string): void {
-    // Keep identity in the intent, but do not infer fields or a route before
-    // the editor is visually admitted.
-    hilog.warn(DOMAIN, 'Reader',
-      'FIGMA_VISUAL_GAP: RSS subscription edit editor is not admitted; intent rejected for subscriptionId=%{public}s',
-      subscriptionId);
+    if (!this.rssSubscriptions().some(
+      (candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId,
+    )) {
+      return;
+    }
+    this.nextNavigationGeneration();
+    this.route = 'rssSubscriptionEditor';
+    this.getRssEditorOrchestrator().openEdit(subscriptionId);
+  }
+
+  private finishRssSubscriptionEdit(subscriptionId: string): void {
+    if (this.route !== 'rssSubscriptionEditor') {
+      return;
+    }
+    this.nextNavigationGeneration();
+    this.rssManagementFocusSubscriptionId = subscriptionId;
+    this.route = 'rssSubscriptionManagement';
+    this.getRssOrchestrator().open();
+  }
+
+  private returnToRssSubscriptionManagement(): void {
+    this.nextNavigationGeneration();
+    this.route = 'rssSubscriptionManagement';
+    this.getRssOrchestrator().open();
   }
 
   private requestRssSubscriptionDelete(subscriptionId: string): void {

@@ -62,6 +62,11 @@ export type RssRefreshResult = {
   evaluatedAt: number;
 };
 
+export type RssSubscriptionSaveResult = {
+  created: boolean;
+  subscription: RssSubscription;
+};
+
 /**
  * Feature-local gateway for the RSS page. Owns the Core protocol boundary for
  * `rss.subscription.*` and validates every JSON envelope before the page sees
@@ -91,6 +96,47 @@ export class RssGateway {
       subs.push(subscription);
     }
     return subs;
+  }
+
+  /** Create with Core-owned opaque identity and normalized feed URL. */
+  async createSubscription(
+    feedUrl: string,
+    title: string,
+    enabled: boolean,
+  ): Promise<RssSubscriptionSaveResult> {
+    const normalizedFeedUrl = this.requireFeedUrl(feedUrl);
+    const result = await this.runtimeOwner.request('rss.subscription.create', {
+      feedUrl: normalizedFeedUrl,
+      title: title.trim(),
+      enabled,
+    });
+    const created = this.requiredBoolean(result.data, 'created');
+    const subscription = this.decodeSubscription(this.requiredObject(result.data, 'subscription'));
+    if (subscription.feedUrl.trim().length === 0) {
+      throw new Error('rss.subscription.create returned an empty feed URL');
+    }
+    return { created, subscription };
+  }
+
+  /** Edit only caller-owned fields; fetch metadata and unread state remain Core-owned. */
+  async updateSubscription(
+    subscriptionId: string,
+    feedUrl: string,
+    title: string,
+    enabled: boolean,
+  ): Promise<RssSubscription> {
+    this.requireSubscriptionId(subscriptionId);
+    const result = await this.runtimeOwner.request('rss.subscription.update', {
+      subscriptionId,
+      feedUrl: this.requireFeedUrl(feedUrl),
+      title: title.trim(),
+      enabled,
+    });
+    const subscription = this.decodeSubscription(this.requiredObject(result.data, 'subscription'));
+    if (subscription.subscriptionId !== subscriptionId || subscription.enabled !== enabled) {
+      throw new Error('rss.subscription.update returned a mismatched subscription');
+    }
+    return subscription;
   }
 
   /**
@@ -357,6 +403,18 @@ export class RssGateway {
       decoded.lastFetchAt = lastFetchAt;
     }
     return decoded;
+  }
+
+  private requireFeedUrl(value: string): string {
+    const trimmed = value.trim();
+    if (trimmed.length === 0 || trimmed.length > 8192) {
+      throw new Error('RSS Feed URL 不能为空且不得超过 8192 字符');
+    }
+    const scheme = trimmed.toLowerCase();
+    if (!scheme.startsWith('https://') && !scheme.startsWith('http://')) {
+      throw new Error('RSS Feed URL 仅支持 HTTP/HTTPS');
+    }
+    return trimmed;
   }
 
   private decodeItem(value: unknown): RssItem {
