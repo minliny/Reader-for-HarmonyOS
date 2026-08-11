@@ -54,6 +54,13 @@ assert.match(orchestrator, /saveConfig\(url, user, pass, backupPass, directory\)
 assert.match(page, /onSaveConfig/);
 assert.match(page, /aboutToAppear\(\)[\s\S]*this\.appliedSnapshotIdentity\s*=\s*'';[\s\S]*this\.syncSnapshotInputs\(\)/,
   'mount must re-project secure-loaded non-secret identity after an early @Watch');
+for (const field of ['Url', 'User', 'Path']) {
+  assert.match(page, new RegExp(`private effectiveWebdav${field}\\(\\): string`));
+  assert.match(page, new RegExp(`this\\.effectiveWebdav${field}\\(\\)`));
+}
+assert.match(page, /return this\.webdavUrlEdited \? this\.webdavUrl : this\.snapshot\.webdavUrl/);
+assert.match(page, /return this\.webdavUserEdited \? this\.webdavUser : this\.snapshot\.webdavUser/);
+assert.match(page, /return this\.webdavPathEdited \? this\.webdavPath : this\.snapshot\.webdavPath/);
 assert.match(page, /备份加密密码/);
 assert.match(page, /恢复最新备份/);
 assert.match(page, /覆盖本机/);

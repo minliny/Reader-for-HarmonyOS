@@ -66,6 +66,9 @@ export struct SyncPage {
   @State webdavPass: string = '';
   @State backupPass: string = '';
   @State webdavPath: string = '';
+  @State private webdavUrlEdited: boolean = false;
+  @State private webdavUserEdited: boolean = false;
+  @State private webdavPathEdited: boolean = false;
   private appliedSnapshotIdentity: string = '';
 
   aboutToAppear(): void {
@@ -73,6 +76,9 @@ export struct SyncPage {
     // @Watch can run before this component is fully mounted. An early write to
     // the identity guard is observable even when the matching @State writes
     // are not, so force one mount-time projection of the latest snapshot.
+    this.webdavUrlEdited = false;
+    this.webdavUserEdited = false;
+    this.webdavPathEdited = false;
     this.appliedSnapshotIdentity = '';
     this.syncSnapshotInputs();
   }
@@ -148,12 +154,14 @@ export struct SyncPage {
             .fontSize(13)
             .lineHeight(15.6)
             .fontColor(TOK_INK);
-          this.webdavInputRow($r('app.media.bookshelf_rss'), '服务器地址', this.webdavUrl,
+          this.webdavInputRow($r('app.media.bookshelf_rss'), '服务器地址', this.effectiveWebdavUrl(),
             'https://dav.example.com/reader/backup', false, (value: string): void => {
+              this.webdavUrlEdited = true;
               this.webdavUrl = value;
             });
-          this.webdavInputRow($r('app.media.directory_bookmark'), '账号', this.webdavUser,
+          this.webdavInputRow($r('app.media.directory_bookmark'), '账号', this.effectiveWebdavUser(),
             'reader@example.com', false, (value: string): void => {
+              this.webdavUserEdited = true;
               this.webdavUser = value;
             });
           this.webdavInputRow($r('app.media.directory_bookmark_on'), '密码', this.webdavPass,
@@ -164,8 +172,9 @@ export struct SyncPage {
             '与 WebDAV 登录密码分开保存', true, (value: string): void => {
               this.backupPass = value;
             });
-          this.webdavInputRow($r('app.media.reader_directory_directory'), '同步目录', this.webdavPath,
+          this.webdavInputRow($r('app.media.reader_directory_directory'), '同步目录', this.effectiveWebdavPath(),
             '/ReaderBackup/ReaderAndroid', false, (value: string): void => {
+              this.webdavPathEdited = true;
               this.webdavPath = value;
             });
           this.configActions();
@@ -258,7 +267,8 @@ export struct SyncPage {
       .border({ width: TOK_BORDER_W, color: GHOST_BORDER })
       .borderRadius(8)
       .onClick((): void => this.onTestConnection(
-        this.webdavUrl.trim(), this.webdavUser.trim(), this.webdavPass, this.webdavPath.trim()));
+        this.effectiveWebdavUrl().trim(), this.effectiveWebdavUser().trim(),
+        this.webdavPass, this.effectiveWebdavPath().trim()));
 
       Stack({ alignContent: Alignment.Center }) {
         Text('保存配置')
@@ -273,8 +283,8 @@ export struct SyncPage {
       .border({ width: TOK_BORDER_W, color: SOLID_BG })
       .borderRadius(12)
       .onClick((): void => this.onSaveConfig(
-        this.webdavUrl.trim(), this.webdavUser.trim(), this.webdavPass,
-        this.backupPass, this.webdavPath.trim()));
+        this.effectiveWebdavUrl().trim(), this.effectiveWebdavUser().trim(), this.webdavPass,
+        this.backupPass, this.effectiveWebdavPath().trim()));
     }
     .width('100%');
   }
@@ -577,6 +587,18 @@ export struct SyncPage {
     return this.isTablet ? TOK_CONTENT_MAX_W_TABLET : TOK_CONTENT_MAX_W_PHONE;
   }
 
+  private effectiveWebdavUrl(): string {
+    return this.webdavUrlEdited ? this.webdavUrl : this.snapshot.webdavUrl;
+  }
+
+  private effectiveWebdavUser(): string {
+    return this.webdavUserEdited ? this.webdavUser : this.snapshot.webdavUser;
+  }
+
+  private effectiveWebdavPath(): string {
+    return this.webdavPathEdited ? this.webdavPath : this.snapshot.webdavPath;
+  }
+
   private onSnapshotChanged(): void {
     this.syncSnapshotInputs();
   }
@@ -587,10 +609,16 @@ export struct SyncPage {
       return;
     }
     this.appliedSnapshotIdentity = identity;
-    this.webdavUrl = this.snapshot.webdavUrl;
-    this.webdavUser = this.snapshot.webdavUser;
+    if (!this.webdavUrlEdited) {
+      this.webdavUrl = this.snapshot.webdavUrl;
+    }
+    if (!this.webdavUserEdited) {
+      this.webdavUser = this.snapshot.webdavUser;
+    }
     this.webdavPass = '';
     this.backupPass = '';
-    this.webdavPath = this.snapshot.webdavPath;
+    if (!this.webdavPathEdited) {
+      this.webdavPath = this.snapshot.webdavPath;
+    }
   }
 }
