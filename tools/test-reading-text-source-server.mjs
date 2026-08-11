@@ -60,6 +60,15 @@ function body(variant, label) {
   return `<div class="content"><p>${marker}${label}。这是受控纯文字章节，正文长度超过五十个字符，用于验证离线读取、任务取消、缓存清理和跨章节换源，而不触发任何图片路径。</p></div>`;
 }
 
+function paginationBody(variant) {
+  const marker = variant === 'b' ? '〔纯文字源 B〕' : '〔纯文字源 A〕';
+  const paragraphs = Array.from({ length: 80 }, (_value, index) =>
+    `<p>${marker}分页长文段落 ${String(index + 1).padStart(2, '0')}。` +
+    '这是不含图片的稳定受控文本，用于验证 Tablet 分页、页索引变化和前后页往返。</p>',
+  ).join('');
+  return `<div class="content">${paragraphs}</div>`;
+}
+
 const server = http.createServer((request, response) => {
   const requestUrl = new URL(request.url ?? '/', base);
   if (requestUrl.pathname === '/reset') {
@@ -114,7 +123,8 @@ const server = http.createServer((request, response) => {
       '<li><a href="/text/chapter/clear">缓存清理文字</a></li>' +
       '<li><a href="/text/chapter/download">离线下载文字</a></li>' +
       '<li><a href="/text/chapter/missing">未下载失败文字</a></li>' +
-      '<li><a href="/text/chapter/slow">慢正文中断</a></li></ol>');
+      '<li><a href="/text/chapter/slow">慢正文中断</a></li>' +
+      '<li><a href="/text/chapter/pagination">分页长文</a></li></ol>');
     return;
   }
   if (requestUrl.pathname === '/text/chapter/slow') {
@@ -130,6 +140,12 @@ const server = http.createServer((request, response) => {
       else evidence.sourceAChapterLoads += 1;
       send(response, 200, body(variant, '慢正文完成'));
     }, slowMs);
+    return;
+  }
+  if (requestUrl.pathname === '/text/chapter/pagination') {
+    if (variant === 'b') evidence.sourceBChapterLoads += 1;
+    else evidence.sourceAChapterLoads += 1;
+    send(response, 200, paginationBody(variant));
     return;
   }
   const labels = new Map([
