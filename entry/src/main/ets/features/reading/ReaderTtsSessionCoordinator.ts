@@ -32,7 +32,8 @@ export type ReaderTtsHostEvent =
   | { type: 'stop'; requestId: string }
   | { type: 'error'; requestId: string; message: string }
   | { type: 'interruption'; action: 'pause' | 'resume' | 'stop' | 'duck' | 'unduck' }
-  | { type: 'deviceChange'; action: 'continue' | 'stop' };
+  | { type: 'deviceChange'; action: 'continue' | 'stop' }
+  | { type: 'mediaControl'; action: 'play' | 'pause' | 'stop' | 'next' | 'previous' };
 
 export interface ReaderTtsHost {
   setEventListener(listener: ((event: ReaderTtsHostEvent) => void) | undefined): void;
@@ -42,6 +43,7 @@ export interface ReaderTtsHost {
   deactivateAudioSession(): Promise<void>;
   speak(request: ReaderTtsHostSpeakRequest): Promise<void>;
   stop(): Promise<void>;
+  publishPlaybackState(state: 'preparing' | 'playing' | 'paused' | 'completed' | 'stopped' | 'error'): void;
 }
 
 export type ReaderTtsStartInput = {
@@ -476,6 +478,7 @@ export class ReaderTtsSessionCoordinator {
       stopReason: undefined,
       errorMessage: undefined,
     });
+    this.host.publishPlaybackState('preparing');
     const token = this.utteranceToken(active.identity, active.input.chapter, slice.index, requestId);
     this.utterances.set(token.requestId, {
       identity: active.identity,
@@ -504,6 +507,14 @@ export class ReaderTtsSessionCoordinator {
   }
 
   private async handleHostEvent(event: ReaderTtsHostEvent): Promise<void> {
+    if (event.type === 'mediaControl') {
+      if (event.action === 'play') void this.resume();
+      else if (event.action === 'pause') void this.pause();
+      else if (event.action === 'stop') void this.stop('user');
+      else if (event.action === 'next') void this.next();
+      else void this.previous();
+      return;
+    }
     if (event.type === 'interruption') {
       if (event.action === 'pause' || event.action === 'stop') {
         await this.pauseForSystem('systemInterruption');
@@ -832,6 +843,11 @@ export class ReaderTtsSessionCoordinator {
       pauseReason: snapshot.state === 'paused' ? pauseReason ?? this.state.pauseReason : undefined,
       errorMessage,
     });
+    const published = snapshot.state === 'playing' ? 'playing' :
+      snapshot.state === 'paused' ? 'paused' :
+        snapshot.state === 'completed' ? 'completed' :
+          snapshot.state === 'stopped' && errorMessage !== undefined ? 'error' : 'stopped';
+    this.host.publishPlaybackState(published);
   }
 
   private firstSliceIndex(plan: ReaderTtsSlicePlan, scalarPosition: number): number {

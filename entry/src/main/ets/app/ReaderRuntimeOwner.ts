@@ -17,6 +17,7 @@ import {
 import { HarmonySystemTtsHost } from './HarmonySystemTtsHost';
 import { HarmonyHttpTtsHost } from './HarmonyHttpTtsHost';
 import { HarmonyTtsHostRouter } from './HarmonyTtsHostRouter';
+import { HarmonyTtsMediaSession } from './HarmonyTtsMediaSession';
 import { LocalEpubResourceHost } from './LocalEpubResourceHost';
 import { ReadingBodyImageHost, type ReadingBodyImagePayload } from './ReadingBodyImageHost';
 import {
@@ -67,7 +68,11 @@ export class ReaderRuntimeOwner {
 
   private constructor(context: common.UIAbilityContext) {
     this.host = new ReaderHostRegistry(context);
-    this.ttsHost = new HarmonyTtsHostRouter(new HarmonySystemTtsHost(), new HarmonyHttpTtsHost(this));
+    this.ttsHost = new HarmonyTtsHostRouter(
+      new HarmonySystemTtsHost(),
+      new HarmonyHttpTtsHost(this),
+      new HarmonyTtsMediaSession(context),
+    );
     this.localEpubResourceHost = new LocalEpubResourceHost(context);
     this.readingImageDiskCache = new ReadingImageDiskCache(context);
     ReadingBodyImageHost.setDisplayCacheDir(context.cacheDir);

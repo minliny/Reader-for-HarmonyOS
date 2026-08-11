@@ -17,13 +17,23 @@ class FakeHost {
   async deactivateAudioSession() { this.calls.push('deactivate'); }
   async speak(request) { this.calls.push(`speak:${request.requestId}`); }
   async stop() { this.calls.push('stop'); }
+  publishPlaybackState(state) { this.calls.push(`publish:${state}`); }
   async close() { this.calls.push('close'); }
   emit(event) { this.listener?.(event); }
 }
 
 const system = new FakeHost('system');
 const http = new FakeHost('http');
-const router = new HarmonyTtsHostRouter(system, http);
+const media = {
+  calls: [],
+  listener: undefined,
+  setEventListener(listener) { this.listener = listener; },
+  async activate() { this.calls.push('activate'); },
+  publish(state) { this.calls.push(`publish:${state}`); },
+  async close() { this.calls.push('close'); },
+  emit(action) { this.listener?.({ type: 'mediaControl', action }); },
+};
+const router = new HarmonyTtsHostRouter(system, http, media);
 const events = [];
 router.setEventListener(event => events.push(event));
 
@@ -35,6 +45,10 @@ http.emit({ type: 'start', requestId: 'http-1' });
 assert.deepEqual(events, [{ type: 'start', requestId: 'http-1' }]);
 assert.ok(http.calls.includes('activate:false'));
 assert.ok(http.calls.includes('speak:http-1'));
+router.publishPlaybackState('playing');
+assert.ok(media.calls.includes('publish:playing'));
+media.emit('next');
+assert.deepEqual(events.at(-1), { type: 'mediaControl', action: 'next' });
 
 assert.equal(await router.selectEngine(undefined), true);
 await router.speak({ requestId: 'system-1', text: '第二句。', rate: 1, pitch: 1, language: 'zh-CN' });
@@ -42,6 +56,7 @@ assert.ok(system.calls.includes('speak:system-1'));
 await router.close();
 assert.ok(system.calls.includes('close'));
 assert.ok(http.calls.includes('close'));
+assert.ok(media.calls.includes('close'));
 
 const httpHostSource = await readFile(
   new URL('../entry/src/main/ets/app/HarmonyHttpTtsHost.ts', import.meta.url),

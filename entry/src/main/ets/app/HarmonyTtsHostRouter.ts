@@ -3,6 +3,10 @@ import {
   type ReaderTtsHostEvent,
   type ReaderTtsHostSpeakRequest,
 } from '../features/reading/ReaderTtsSessionCoordinator.ts';
+import type {
+  ReaderTtsMediaSessionBridge,
+  ReaderTtsPublishedPlaybackState,
+} from './HarmonyTtsMediaSession.ts';
 
 export interface ReaderTtsClosableHost extends ReaderTtsHost {
   close(): Promise<void>;
@@ -13,14 +17,21 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
   private readonly system: ReaderTtsClosableHost;
   private readonly http: ReaderTtsClosableHost;
   private active: ReaderTtsHost;
+  private readonly mediaSession: ReaderTtsMediaSessionBridge;
   private listener: ((event: ReaderTtsHostEvent) => void) | undefined = undefined;
 
-  constructor(system: ReaderTtsClosableHost, http: ReaderTtsClosableHost) {
+  constructor(
+    system: ReaderTtsClosableHost,
+    http: ReaderTtsClosableHost,
+    mediaSession: ReaderTtsMediaSessionBridge,
+  ) {
     this.system = system;
     this.http = http;
     this.active = system;
+    this.mediaSession = mediaSession;
     this.system.setEventListener((event: ReaderTtsHostEvent): void => this.forward(this.system, event));
     this.http.setEventListener((event: ReaderTtsHostEvent): void => this.forward(this.http, event));
+    this.mediaSession.setEventListener((event: ReaderTtsHostEvent): void => this.listener?.(event));
   }
 
   setEventListener(listener: ((event: ReaderTtsHostEvent) => void) | undefined): void {
@@ -43,7 +54,10 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
   }
 
   activateAudioSession(allowMixing: boolean): Promise<void> {
-    return this.active.activateAudioSession(allowMixing);
+    return Promise.all([
+      this.active.activateAudioSession(allowMixing),
+      this.mediaSession.activate(),
+    ]).then((): void => {});
   }
 
   deactivateAudioSession(): Promise<void> {
@@ -58,10 +72,15 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
     return this.active.stop();
   }
 
+  publishPlaybackState(state: ReaderTtsPublishedPlaybackState): void {
+    this.mediaSession.publish(state);
+  }
+
   async close(): Promise<void> {
     this.listener = undefined;
     await this.system.close();
     await this.http.close();
+    await this.mediaSession.close();
   }
 
   private forward(source: ReaderTtsHost, event: ReaderTtsHostEvent): void {

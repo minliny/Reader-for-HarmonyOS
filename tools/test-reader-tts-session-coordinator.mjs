@@ -71,11 +71,13 @@ class FakeHost {
   listener;
   requests = [];
   setEventListener(listener) { this.listener = listener; }
+  async selectEngine(engine) { this.calls.push(`engine:${engine ?? 'system'}`); return true; }
   async isAvailable() { this.calls.push('available'); return true; }
   async activateAudioSession(mix) { this.calls.push(`activate:${mix}`); }
   async deactivateAudioSession() { this.calls.push('deactivate'); }
   async speak(request) { this.calls.push(`speak:${request.requestId}`); this.requests.push(request); }
   async stop() { this.calls.push('stop'); }
+  publishPlaybackState(state) { this.calls.push(`media:${state}`); }
   emit(event) { this.listener?.(event); }
 }
 
@@ -134,6 +136,14 @@ await coordinator.seek(1);
 assert.ok(gateway.calls.includes('seek:1'));
 assert.equal(coordinator.getState().status, 'paused', 'seek in a paused queue must not restart Host playback');
 await coordinator.resume();
+
+host.emit({ type: 'mediaControl', action: 'pause' });
+await coordinator.whenSettled();
+await coordinator.whenSettled();
+assert.equal(coordinator.getState().status, 'paused');
+host.emit({ type: 'mediaControl', action: 'play' });
+await coordinator.whenSettled();
+await coordinator.whenSettled();
 
 host.emit({ type: 'interruption', action: 'pause' });
 await coordinator.whenSettled();

@@ -155,6 +155,8 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
     }
   }
 
+  publishPlaybackState(_state: 'preparing' | 'playing' | 'paused' | 'completed' | 'stopped' | 'error'): void {}
+
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
