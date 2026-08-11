@@ -195,6 +195,7 @@ struct Index {
     history: [],
     statusMessage: '',
   };
+  @State private syncSnapshotReady: boolean = false;
   /** Source-switch overlay presentation + the gateway that drives it. */
   @State private sourceSwitchVisible: boolean = false;
   @State private sourceSwitchState: SourceSwitchPanelState = { kind: 'discovering' };
@@ -436,18 +437,28 @@ struct Index {
           onAddSource: (): void => this.onBookSourceImportRequested(),
         });
       } else if (this.route === 'sync') {
-        SyncPage({
-          snapshot: this.syncSnapshot,
-          isTablet: deviceInfo.deviceType === 'tablet',
-          onBack: (): void => this.returnToSettings(),
-          onSaveConfig: (url: string, user: string, pass: string, backupPass: string, path: string): void =>
-            this.onSyncSaveConfig(url, user, pass, backupPass, path),
-          onTestConnection: (url: string, user: string, pass: string, path: string): void =>
-            this.onSyncTestConnection(url, user, pass, path),
-          onTriggerBackup: (): void => this.onSyncTriggerBackup(),
-          onRestoreLatest: (): void => this.onSyncRestoreLatest(),
-          onResolveRestore: (overwriteLocal: boolean): void => this.onSyncResolveRestore(overwriteLocal),
-        });
+        if (this.syncSnapshotReady) {
+          SyncPage({
+            snapshot: this.syncSnapshot,
+            isTablet: deviceInfo.deviceType === 'tablet',
+            onBack: (): void => this.returnToSettings(),
+            onSaveConfig: (url: string, user: string, pass: string, backupPass: string, path: string): void =>
+              this.onSyncSaveConfig(url, user, pass, backupPass, path),
+            onTestConnection: (url: string, user: string, pass: string, path: string): void =>
+              this.onSyncTestConnection(url, user, pass, path),
+            onTriggerBackup: (): void => this.onSyncTriggerBackup(),
+            onRestoreLatest: (): void => this.onSyncRestoreLatest(),
+            onResolveRestore: (overwriteLocal: boolean): void => this.onSyncResolveRestore(overwriteLocal),
+          });
+        } else {
+          Column() {
+            Text('正在读取安全配置…');
+          }
+          .width('100%')
+          .height('100%')
+          .justifyContent(FlexAlign.Center)
+          .backgroundColor('#FFF8F4EC');
+        }
       } else if (this.route === 'detail' && this.detailBook !== undefined) {
         LocalBookDetail({
           book: this.detailBook,
@@ -696,6 +707,7 @@ struct Index {
       this.syncOrchestrator = new SyncOrchestrator(
         (snapshot: SyncSnapshot): void => {
           this.syncSnapshot = snapshot;
+          this.syncSnapshotReady = true;
         },
         (): SyncSnapshot => this.syncSnapshot,
       );
@@ -755,6 +767,7 @@ struct Index {
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
     this.exitToBookshelfAfterReader = false;
+    this.syncSnapshotReady = false;
     this.route = 'sync';
     this.getSyncOrchestrator().open();
   }
