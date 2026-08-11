@@ -1,4 +1,5 @@
 import common from '@ohos.app.ability.common';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import {
   createReaderCoreRuntime,
   type JsonObject,
@@ -31,6 +32,17 @@ type RuntimeState = 'new' | 'starting' | 'ready' | 'closing' | 'closed';
 // The SDK's generic 2s default is unsuitable; callers may still opt into a
 // narrower explicit limit.
 const DEFAULT_CORE_REQUEST_TIMEOUT_MS = 30000;
+const LOG_DOMAIN = 0x5244;
+
+type CoreBuildIdentity = {
+  schemaVersion: number;
+  buildId: string;
+  gitCommit: string;
+  gitDirty: boolean;
+  cargoLockSha256: string;
+  protocolSha256: string;
+  rustProfile: string;
+};
 
 /**
  * Owns the one and only native Core runtime for the full application process.
@@ -444,6 +456,9 @@ export class ReaderRuntimeOwner {
         ],
         platform: 'harmonyos',
       }, { timeoutMs: 5000 });
+      const coreInfo = await runtime.request('core.info', {}, { timeoutMs: 5000 });
+      const buildIdentity = this.requireCoreBuildIdentity(coreInfo.data['buildIdentity']);
+      hilog.info(LOG_DOMAIN, 'Reader', 'Core build identity: %{public}s', JSON.stringify(buildIdentity));
       if (await this.host.needsLegacySnapshotMigration()) {
         await runtime.request('runtime.storage.restore', {}, { timeoutMs: 30000 });
         await this.host.markLegacySnapshotMigrated();
@@ -466,5 +481,36 @@ export class ReaderRuntimeOwner {
       }
       throw error;
     }
+  }
+
+  private requireCoreBuildIdentity(value: unknown): CoreBuildIdentity {
+    if (typeof value !== 'object' || value === null) {
+      throw new Error('core.info did not return buildIdentity');
+    }
+    const identity = value as Record<string, unknown>;
+    const gitCommit = identity['gitCommit'];
+    if (identity['schemaVersion'] !== 1 ||
+      !this.isLowerHex(identity['buildId'], 64, 64) ||
+      !(gitCommit === 'unknown' || this.isLowerHex(gitCommit, 40, 64)) ||
+      typeof identity['gitDirty'] !== 'boolean' ||
+      !this.isLowerHex(identity['cargoLockSha256'], 64, 64) ||
+      !this.isLowerHex(identity['protocolSha256'], 64, 64) ||
+      typeof identity['rustProfile'] !== 'string' || identity['rustProfile'].trim().length === 0) {
+      throw new Error('core.info returned an invalid buildIdentity');
+    }
+    return {
+      schemaVersion: 1,
+      buildId: identity['buildId'],
+      gitCommit: gitCommit,
+      gitDirty: identity['gitDirty'],
+      cargoLockSha256: identity['cargoLockSha256'],
+      protocolSha256: identity['protocolSha256'],
+      rustProfile: identity['rustProfile'],
+    };
+  }
+
+  private isLowerHex(value: unknown, minLength: number, maxLength: number): value is string {
+    return typeof value === 'string' && value.length >= minLength && value.length <= maxLength &&
+      /^[0-9a-f]+$/.test(value);
   }
 }

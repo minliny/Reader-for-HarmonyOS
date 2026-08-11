@@ -57,11 +57,7 @@ export function buildHarmonyNapiSmokeReport(
       `abiVersion=${String(result.abiVersion)}`
     ),
     buildNativeLifecycleCheck(result.nativeLifecycle),
-    check(
-      "core.info",
-      isResultEvent(result.coreInfo),
-      eventDetail(result.coreInfo)
-    ),
+    buildCoreInfoCheck(result.coreInfo),
     check(
       "runtime.ping",
       isResultEvent(result.ping) && result.ping.data.pong === true,
@@ -153,6 +149,42 @@ function buildNativeLifecycleCheck(nativeLifecycle: JsonObject): HarmonyNapiSmok
     "native.lifecycle",
     pass,
     `iterations=${String(iterations)} lastEvent=${eventDetail(lastEvent)}`
+  );
+}
+
+function buildCoreInfoCheck(value: unknown): HarmonyNapiSmokeCheck {
+  const resultEvent = isResultEvent(value);
+  const identity = resultEvent ? value.data.buildIdentity : undefined;
+  const pass = resultEvent && isCoreBuildIdentity(identity);
+  const detail = pass
+    ? `buildId=${String(identity.buildId)} gitCommit=${String(identity.gitCommit)} gitDirty=${String(identity.gitDirty)}`
+    : `${eventDetail(value)} buildIdentity=<invalid>`;
+  return check("core.info", pass, detail);
+}
+
+function isCoreBuildIdentity(value: unknown): value is JsonObject {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const identity = value as JsonObject;
+  return (
+    identity.schemaVersion === 1 &&
+    isLowerHex(identity.buildId, 64, 64) &&
+    (identity.gitCommit === "unknown" || isLowerHex(identity.gitCommit, 40, 64)) &&
+    typeof identity.gitDirty === "boolean" &&
+    isLowerHex(identity.cargoLockSha256, 64, 64) &&
+    isLowerHex(identity.protocolSha256, 64, 64) &&
+    typeof identity.rustProfile === "string" &&
+    identity.rustProfile.trim().length > 0
+  );
+}
+
+function isLowerHex(value: unknown, minLength: number, maxLength: number): value is string {
+  return (
+    typeof value === "string" &&
+    value.length >= minLength &&
+    value.length <= maxLength &&
+    /^[0-9a-f]+$/.test(value)
   );
 }
 
