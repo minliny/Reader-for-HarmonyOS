@@ -11,7 +11,7 @@ import { ReaderAutoPageFullPanel } from './ReaderAutoPageFullPanel';
 import { ReaderAutoPagePanel } from './ReaderAutoPagePanel';
 import type { ReaderAutoPageStatus } from './ReaderAutoPageState';
 import { ReaderDirectoryModulePanel } from './ReaderDirectoryModulePanel';
-import { ReaderTtsFullPanel } from './ReaderTtsFullPanel';
+import { ReaderTtsFullPanel, type ReaderTtsEngineOption } from './ReaderTtsFullPanel';
 import { ReaderTtsModulePanel } from './ReaderTtsModulePanel';
 import { createReaderTtsState, type ReaderTtsState } from './ReaderTtsState';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from './ReaderDirectoryMarkerState';
@@ -158,6 +158,8 @@ export struct ReaderControlPanel {
   @Prop ttsFollowHighlight: boolean = true;
   @Prop ttsAllowMixing: boolean = false;
   @Prop ttsFailurePolicy: 'skip' | 'stop' = 'stop';
+  @Prop ttsEngine: string = 'system';
+  @Prop ttsHttpEngines: ReaderTtsEngineOption[] = [];
   @Prop reduceMotion: boolean = false;
   onBack: () => void = (): void => {};
   onDismiss: () => void = (): void => {};
@@ -194,6 +196,7 @@ export struct ReaderControlPanel {
   onTtsStop: () => void = (): void => {};
   onTtsPrevious: () => void = (): void => {};
   onTtsNext: () => void = (): void => {};
+  onTtsSeek: (sliceIndex: number) => void = (_sliceIndex: number): void => {};
   onTtsRateChange: (rate: number) => void = (_rate: number): void => {};
   onTtsTimerChange: (minutes: number, seconds: number) => void =
     (_minutes: number, _seconds: number): void => {};
@@ -201,6 +204,7 @@ export struct ReaderControlPanel {
   onTtsAllowMixingChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
   onTtsFailurePolicyChange: (policy: 'skip' | 'stop') => void =
     (_policy: 'skip' | 'stop'): void => {};
+  onTtsEngineChange: (engine: string) => void = (_engine: string): void => {};
 
   @State private progressPreviewPercent: number = -1;
   @State private brightnessPreviewPercent: number = -1;
@@ -550,16 +554,20 @@ export struct ReaderControlPanel {
       followHighlight: this.ttsFollowHighlight,
       allowMixing: this.ttsAllowMixing,
       failurePolicy: this.ttsFailurePolicy,
+      engine: this.ttsEngine,
+      httpEngines: this.ttsHttpEngines,
       onCollapse: (): void => this.requestCollapseTts(),
       onToggle: (): void => this.onTtsToggle(),
       onStop: (): void => this.onTtsStop(),
       onPrevious: (): void => this.onTtsPrevious(),
       onNext: (): void => this.onTtsNext(),
+      onSeek: (sliceIndex: number): void => this.onTtsSeek(sliceIndex),
       onRateChange: (rate: number): void => this.onTtsRateChange(rate),
       onTimerChange: (minutes: number, seconds: number): void => this.onTtsTimerChange(minutes, seconds),
       onFollowHighlightChange: (enabled: boolean): void => this.onTtsFollowHighlightChange(enabled),
       onAllowMixingChange: (enabled: boolean): void => this.onTtsAllowMixingChange(enabled),
       onFailurePolicyChange: (policy: 'skip' | 'stop'): void => this.onTtsFailurePolicyChange(policy),
+      onEngineChange: (engine: string): void => this.onTtsEngineChange(engine),
     })
       .margin({ bottom: 19 })
       .transition(this.reduceMotion ? TransitionEffect.IDENTITY :

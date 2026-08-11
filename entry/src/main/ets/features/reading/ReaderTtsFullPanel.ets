@@ -16,6 +16,11 @@ import {
   TOK_SURFACE_PANEL_SOFT,
 } from '../common/ReaderTokens';
 
+export interface ReaderTtsEngineOption {
+  id: number;
+  name: string;
+}
+
 /** Figma full TTS sheets: Phone `942:78`, Tablet `942:80`. */
 @Component
 export struct ReaderTtsFullPanel {
@@ -26,17 +31,21 @@ export struct ReaderTtsFullPanel {
   @Prop followHighlight: boolean = true;
   @Prop allowMixing: boolean = false;
   @Prop failurePolicy: 'skip' | 'stop' = 'stop';
+  @Prop engine: string = 'system';
+  @Prop httpEngines: ReaderTtsEngineOption[] = [];
   onCollapse: () => void = (): void => {};
   onToggle: () => void = (): void => {};
   onStop: () => void = (): void => {};
   onPrevious: () => void = (): void => {};
   onNext: () => void = (): void => {};
+  onSeek: (sliceIndex: number) => void = (_sliceIndex: number): void => {};
   onTimerChange: (minutes: number, seconds: number) => void =
     (_minutes: number, _seconds: number): void => {};
   onRateChange: (rate: number) => void = (_rate: number): void => {};
   onFollowHighlightChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
   onAllowMixingChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
   onFailurePolicyChange: (policy: 'skip' | 'stop') => void = (_policy: 'skip' | 'stop'): void => {};
+  onEngineChange: (engine: string) => void = (_engine: string): void => {};
   @State private ratePreview: number = -1;
 
   build() {
@@ -148,9 +157,27 @@ export struct ReaderTtsFullPanel {
       .height(62)
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center);
+
+      if (this.state.totalSlices > 1) {
+        Slider({
+          value: this.state.sliceIndex ?? 0,
+          min: 0,
+          max: this.state.totalSlices - 1,
+          step: 1,
+          style: SliderStyle.OutSet,
+          direction: Axis.Horizontal,
+          reverse: false,
+        })
+          .width('100%')
+          .height(18)
+          .accessibilityText('跳转朗读句子')
+          .onChange((value: number, mode: SliderChangeMode): void => {
+            if (mode === SliderChangeMode.End) this.onSeek(Math.round(value));
+          });
+      }
     }
     .width('100%')
-    .height(128)
+    .height(this.state.totalSlices > 1 ? 160 : 128)
     .padding({ top: 28, left: 4, right: 4 })
     .alignItems(HorizontalAlign.Start);
   }
@@ -416,22 +443,32 @@ export struct ReaderTtsFullPanel {
           .fontColor(TOK_READ_INK)
           .textAlign(TextAlign.Center)
           .border({ width: TOK_BORDER_W, color: TOK_READ_PRIMARY })
-          .borderRadius(6);
-        Text('在线 TTS')
+          .borderRadius(6)
+          .opacity(this.isHttpEngineSelected() ? 0.58 : 1)
+          .onClick((): void => this.onEngineChange('system'));
+        Text(this.httpEngineLabel())
           .layoutWeight(1)
           .height(52)
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Bold)
           .fontSize(12)
-          .fontColor(TOK_READ_MUTED)
-          .opacity(0.42)
+          .fontColor(this.isHttpEngineSelected() ? TOK_READ_INK : TOK_READ_MUTED)
+          .opacity(this.httpEngines.length > 0 ? 1 : 0.42)
           .textAlign(TextAlign.Center)
-          .border({ width: TOK_BORDER_W, color: TOK_LINE })
-          .borderRadius(6);
+          .border({
+            width: TOK_BORDER_W,
+            color: this.isHttpEngineSelected() ? TOK_READ_PRIMARY : TOK_LINE,
+          })
+          .borderRadius(6)
+          .enabled(this.httpEngines.length > 0)
+          .onClick((): void => {
+            const engine = this.nextHttpEngine();
+            if (engine !== undefined) this.onEngineChange(engine);
+          });
       }
       .width('100%')
       .padding({ top: 8, bottom: 8 });
-      this.selectorRow('系统引擎', '离线');
+      this.selectorRow('当前引擎', this.currentEngineLabel());
       this.selectorRow('语言', 'zh-CN');
       this.selectorRow('音频会话', this.allowMixing ? '混音' : '媒体独占');
       this.selectorRow('不可用处理', this.failurePolicy === 'skip' ? '跳过' : '停止');
@@ -549,6 +586,33 @@ export struct ReaderTtsFullPanel {
 
   private effectiveRate(): number {
     return this.ratePreview >= 0.5 ? this.ratePreview : this.state.rate;
+  }
+
+  private isHttpEngineSelected(): boolean {
+    return this.engine.startsWith('http-tts:');
+  }
+
+  private currentEngineLabel(): string {
+    if (!this.isHttpEngineSelected()) return '系统离线';
+    const id = Number(this.engine.slice('http-tts:'.length));
+    return this.httpEngines.find((option: ReaderTtsEngineOption): boolean => option.id === id)?.name ?? '在线配置失效';
+  }
+
+  private httpEngineLabel(): string {
+    if (this.httpEngines.length === 0) return '在线 TTS（未配置）';
+    if (this.isHttpEngineSelected()) return this.currentEngineLabel();
+    return this.httpEngines.length === 1 ? this.httpEngines[0].name : `在线 TTS（${this.httpEngines.length}）`;
+  }
+
+  private nextHttpEngine(): string | undefined {
+    if (this.httpEngines.length === 0) return undefined;
+    if (!this.isHttpEngineSelected()) return `http-tts:${this.httpEngines[0].id}`;
+    const currentId = Number(this.engine.slice('http-tts:'.length));
+    const index = this.httpEngines.findIndex(
+      (option: ReaderTtsEngineOption): boolean => option.id === currentId,
+    );
+    const next = this.httpEngines[(index + 1 + this.httpEngines.length) % this.httpEngines.length];
+    return `http-tts:${next.id}`;
   }
 
   private statusText(): string {

@@ -1,7 +1,5 @@
 import {
   createReaderTtsState,
-  READER_TTS_RATE_MAX,
-  READER_TTS_RATE_MIN,
   type ReaderTtsContentVersion,
   type ReaderTtsSessionIdentity,
   type ReaderTtsState,
@@ -16,6 +14,9 @@ import {
   type ReaderTtsQueueSnapshot,
   type ReaderTtsSlicePlan,
 } from './ReaderTtsGateway.ts';
+
+const TTS_RATE_MIN = 0.5;
+const TTS_RATE_MAX = 2;
 
 export type ReaderTtsHostSpeakRequest = {
   requestId: string;
@@ -186,6 +187,12 @@ export class ReaderTtsSessionCoordinator {
   }
 
   async probeAvailability(): Promise<boolean> {
+    const config = await this.gateway.getConfig();
+    await this.host.selectEngine(config?.engine);
+    this.transport = {
+      ...this.transport,
+      engine: config?.engine?.startsWith('http-tts:') ? 'http' : 'system',
+    };
     const available = await this.host.isAvailable();
     this.setState({
       ...this.state,
@@ -305,7 +312,7 @@ export class ReaderTtsSessionCoordinator {
   setRate(rate: number): Promise<void> {
     const active = this.active;
     const priorRate = this.state.rate;
-    if (!Number.isFinite(rate) || rate < READER_TTS_RATE_MIN || rate > READER_TTS_RATE_MAX) {
+    if (!Number.isFinite(rate) || rate < TTS_RATE_MIN || rate > TTS_RATE_MAX) {
       return Promise.reject(new Error('Reader TTS rate must be between 0.5 and 2.0'));
     }
     this.invalidateUtterance();
