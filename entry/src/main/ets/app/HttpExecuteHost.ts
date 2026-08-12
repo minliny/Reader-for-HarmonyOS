@@ -115,8 +115,8 @@ class StopBeforeRedirectInterceptor implements http.HttpInterceptor {
  * substituted.
  *
  * Non-UTF-8 request bytes use Core's bounded shared encoder; ArkTS carries no
- * private GBK/Big5 tables. Responses are decoded using Content-Type charset
- * or UTF-8 and retained as bodyBase64 for Core.
+ * private GBK/Big5 tables. Responses retain their raw bytes as bodyBase64 and
+ * expose only a Content-Type charset hint; Core owns final response decoding.
  *
  * Fail-closed, never silently substituted: Multipart `filePath` (Core turns a
  * source `@/path` verbatim into
@@ -471,30 +471,20 @@ export class HttpExecuteHost {
     sessionId: string | null,
   ): JsonObject {
     const responseCharset = this.resolveResponseCharset(response.headers);
-    const contentType = this.headerValue(response.headers, 'content-type');
-    // Binary payloads (images, fonts, downloads) have no text representation;
-    // the strict TextDecoder below must never be asked to fail on them. The
-    // reading body image flow consumes `bodyBase64`, so `body` is left empty
-    // and the raw bytes remain the authoritative transport value.
-    const binaryBody = contentType !== null && this.isBinaryContentType(contentType);
-    let decoded = '';
-    if (!binaryBody) {
-      try {
-        decoded = util.TextDecoder.create(responseCharset, { fatal: true }).decodeToString(response.bytes);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : `${error}`;
-        throw new Error(`http.execute: cannot decode response as ${responseCharset}: ${message}`);
-      }
-    }
+    // `body` remains required by the v1 wire shape, but it is only a legacy
+    // compatibility fallback. The bundled Core prefers bodyBase64 whenever
+    // raw bytes are present and owns charset detection/normalization.
     const result: JsonObject = {
       status: response.status,
-      body: decoded,
+      body: '',
       headers: response.headers,
-      charsetHint: responseCharset,
       finalUrl,
       redirects,
       cookies,
     };
+    if (responseCharset !== undefined) {
+      result['charsetHint'] = responseCharset;
+    }
     if (response.bytes.length > 0) {
       result['bodyBase64'] = new util.Base64Helper().encodeToStringSync(response.bytes);
     }
@@ -1048,17 +1038,7 @@ export class HttpExecuteHost {
     return parts;
   }
 
-  private isBinaryContentType(contentType: string): boolean {
-    const normalized = contentType.trim().toLowerCase();
-    if (normalized.startsWith('image/') || normalized.startsWith('audio/') ||
-      normalized.startsWith('video/') || normalized.startsWith('font/')) {
-      return true;
-    }
-    return normalized === 'application/octet-stream' || normalized === 'application/pdf' ||
-      normalized === 'application/zip' || normalized === 'application/gzip';
-  }
-
-  private resolveResponseCharset(headers: ResponseHeaders): string {
+  private resolveResponseCharset(headers: ResponseHeaders): string | undefined {
     for (const key of Object.keys(headers)) {
       if (key.toLowerCase() !== 'content-type') {
         continue;
@@ -1068,6 +1048,6 @@ export class HttpExecuteHost {
         return match[1].trim();
       }
     }
-    return 'utf-8';
+    return undefined;
   }
 }
