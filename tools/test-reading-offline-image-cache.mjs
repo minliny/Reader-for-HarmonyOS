@@ -10,12 +10,19 @@ const owner = readFileSync(resolve(repo,
   'entry/src/main/ets/app/ReaderRuntimeOwner.ts'), 'utf8');
 
 assert.match(cache, /const MAX_READING_IMAGE_BYTES = 16 \* 1024 \* 1024/);
+assert.match(cache, /const MIN_READING_IMAGE_FREE_RESERVE_BYTES = 16 \* 1024 \* 1024/);
+assert.match(cache, /import statfs from '@ohos\.file\.statvfs'/);
+assert.match(cache, /interface ReadingImageFreeSpaceProbe/);
+assert.match(cache, /freeSpaceProbe: ReadingImageFreeSpaceProbe = new HarmonyReadingImageFreeSpaceProbe\(\)/);
+assert.match(cache, /assertReadingOfflineWriteCapacity\([\s\S]*MIN_READING_IMAGE_FREE_RESERVE_BYTES/);
+assert.match(cache, /FILE_SYSTEM_NO_SPACE_ERROR = 13900025/);
+assert.match(cache, /ReadingOfflineMaterializationError\([\s\S]*'storage_full'/);
 assert.match(cache, /reader-offline\/images-v1/);
 assert.match(cache, /return this\.sha256\(`\$\{sourceId\}\\u0000\$\{bookId\}`\)/,
   'book paths must use opaque hashes rather than source URLs or credentials');
 assert.match(cache, /new fileIo\.AtomicFile\(path\)/);
 assert.match(cache, /manifest cannot reference missing bytes/);
-assert.match(cache, /writeAtomicText\(`\$\{directory\}\/manifest\.json`/);
+assert.match(cache, /writeAtomicBytes\(`\$\{directory\}\/manifest\.json`, manifestBytes\)/);
 assert.match(
   cache,
   /try \{[\s\S]*fileIo\.openSync\([\s\S]*fileIo\.writeSync\([\s\S]*fileIo\.renameSync\(tmpPath, path\);[\s\S]*\} catch \(error\) \{[\s\S]*fileIo\.unlink\(tmpPath\);/,

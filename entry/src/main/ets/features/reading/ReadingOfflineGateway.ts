@@ -10,12 +10,22 @@ import type {
   ReadingGatewayRuntime,
 } from './ReadingGatewayRuntime';
 import type { ReadingSessionChapter, ReadingSessionImage } from './ReadingChapterWindow';
+import {
+  normalizeReadingOfflineMaterializationError,
+  ReadingOfflineMaterializationError,
+  type ReadingOfflineMaterializationErrorCode,
+} from './ReadingOfflineContract';
 
 type OfflineRequestGuard = () => boolean;
 
 type CacheChapterProjection = {
   chapterIndex: number;
   state: LocalReadingDownloadState;
+};
+
+type CacheChapterMaterializationLease = {
+  chapterIndex: number;
+  token: string;
 };
 
 /**
@@ -49,7 +59,7 @@ export class ReadingOfflineGateway {
           break;
         }
       }
-      if ((state === 'cached' || state === 'completed') &&
+      if (state === 'completed' &&
         this.runtime.isOfflineImageChapterMaterialized !== undefined) {
         this.assertCurrent(isCurrent);
         const materialized = await this.runtime.isOfflineImageChapterMaterialized(
@@ -93,19 +103,43 @@ export class ReadingOfflineGateway {
       priority: 0,
       requestedAt: Date.now(),
     }, this.requestOptions(isCurrent, 300000));
-    this.assertPrefetchResult(result, session, startInclusive, endExclusive);
+    const materializations = this.assertPrefetchResult(
+      result,
+      session,
+      startInclusive,
+      endExclusive,
+    );
     this.assertCurrent(isCurrent);
 
-    for (let chapterIndex = startInclusive; chapterIndex < endExclusive; chapterIndex += 1) {
-      const chapter = await this.remote.loadChapter(session, chapterIndex, isCurrent);
-      this.assertCurrent(isCurrent);
-      const resources = this.imageResources(chapter);
-      for (const resource of resources) {
-        await this.runtime.prefetchReadingImage!(resource, isCurrent);
+    for (const materialization of materializations) {
+      try {
+        const chapter = await this.remote.loadChapter(session, materialization.chapterIndex, isCurrent);
         this.assertCurrent(isCurrent);
+        const resources = this.imageResources(chapter);
+        for (const resource of resources) {
+          await this.runtime.prefetchReadingImage!(resource, isCurrent);
+          this.assertCurrent(isCurrent);
+        }
+        await this.runtime.markOfflineImageChapterComplete!(this.chapterIdentity(chapter), resources);
+        this.assertCurrent(isCurrent);
+      } catch (error) {
+        const failure = normalizeReadingOfflineMaterializationError(error as Error);
+        try {
+          await this.reportMaterialization(
+            session,
+            materialization,
+            'failed',
+            failure.code,
+          );
+        } catch (reportError) {
+          throw new ReadingOfflineMaterializationError(
+            failure.code,
+            `${failure.message}; Core materialization failure report failed: ${(reportError as Error).message}`,
+          );
+        }
+        throw failure;
       }
-      await this.runtime.markOfflineImageChapterComplete!(this.chapterIdentity(chapter), resources);
-      this.assertCurrent(isCurrent);
+      await this.reportMaterialization(session, materialization, 'completed');
     }
     return this.loadProjection(session, isCurrent);
   }
@@ -206,7 +240,7 @@ export class ReadingOfflineGateway {
     session: RemoteReadingSession,
     startInclusive: number,
     endExclusive: number,
-  ): void {
+  ): CacheChapterMaterializationLease[] {
     if (result.data['sourceId'] !== session.identity.sourceId ||
       result.data['bookId'] !== session.identity.bookId) {
       throw new Error('cache.book.prefetch returned a mismatched book identity');
@@ -216,6 +250,66 @@ export class ReadingOfflineGateway {
       range[0] !== startInclusive || range[1] !== endExclusive) {
       throw new Error('cache.book.prefetch returned a mismatched chapter range');
     }
+    const rawMaterializations = result.data['materializations'];
+    if (!Array.isArray(rawMaterializations)) {
+      throw new Error('cache.book.prefetch returned invalid materializations');
+    }
+    const materializations: CacheChapterMaterializationLease[] = [];
+    const seenIndexes = new Set<number>();
+    for (const rawValue of rawMaterializations) {
+      const raw = this.requireObject(rawValue, 'cache.book.prefetch materialization');
+      const chapterIndex = this.requireNonNegativeInteger(raw['chapterIndex'], 'chapterIndex');
+      const token = raw['token'];
+      if (chapterIndex < startInclusive || chapterIndex >= endExclusive ||
+        seenIndexes.has(chapterIndex) || typeof token !== 'string' || token.trim().length === 0) {
+        throw new Error('cache.book.prefetch returned an invalid materialization lease');
+      }
+      seenIndexes.add(chapterIndex);
+      materializations.push({ chapterIndex, token });
+    }
+    return materializations;
+  }
+
+  private async reportMaterialization(
+    session: RemoteReadingSession,
+    materialization: CacheChapterMaterializationLease,
+    outcome: 'completed' | 'failed',
+    errorCode?: ReadingOfflineMaterializationErrorCode,
+  ): Promise<void> {
+    const params: JsonObject = {
+      sourceId: session.identity.sourceId,
+      bookId: session.identity.bookId,
+      chapterIndex: materialization.chapterIndex,
+      token: materialization.token,
+      outcome,
+      reportedAt: Date.now(),
+    };
+    if (errorCode !== undefined) {
+      params['errorCode'] = errorCode;
+    }
+    // This terminal report deliberately has no route cancellation guard. The
+    // opaque token makes it safe after navigation and prevents a stale task
+    // from changing a newer attempt.
+    let lastError: Error | undefined = undefined;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const result = await this.runtime.request(
+          'cache.chapter.materialization.report',
+          params,
+          { timeoutMs: 30000 },
+        );
+        if (result.data['sourceId'] !== session.identity.sourceId ||
+          result.data['bookId'] !== session.identity.bookId ||
+          result.data['chapterIndex'] !== materialization.chapterIndex ||
+          result.data['state'] !== outcome || result.data['retainedCachedBody'] !== true) {
+          throw new Error('cache.chapter.materialization.report returned a mismatched result');
+        }
+        return;
+      } catch (error) {
+        lastError = error as Error;
+      }
+    }
+    throw lastError ?? new Error('cache.chapter.materialization.report failed');
   }
 
   private assertRange(session: RemoteReadingSession, startInclusive: number, endExclusive: number): void {

@@ -20,13 +20,31 @@ const { ReadingOfflineGateway } = await import(
 const { RemoteReadingFlowGateway } = await import(
   '../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts'
 );
+const {
+  assertReadingOfflineWriteCapacity,
+  ReadingOfflineMaterializationError,
+} = await import(
+  '../entry/src/main/ets/features/reading/ReadingOfflineContract.ts'
+);
 
 const SOURCE_ID = 'offline-source';
 const BOOK_ID = '/offline-book';
 const calls = [];
 const persistedImages = [];
 const completedManifests = new Set();
+const coreStates = ['missing', 'missing'];
+const materializationReports = [];
+let materializationGeneration = 0;
 let failImage = false;
+let dropNextReportResult = false;
+let supersedeAfterImage = false;
+let requestCurrent = true;
+
+assert.doesNotThrow(() => assertReadingOfflineWriteCapacity(48, 16, 32));
+assert.throws(
+  () => assertReadingOfflineWriteCapacity(47, 16, 32),
+  (error) => error instanceof ReadingOfflineMaterializationError && error.code === 'storage_full',
+);
 
 const session = {
   acquisitionMode: 'online',
@@ -45,14 +63,43 @@ const session = {
 class FakeRuntime {
   async request(method, params = {}, options = {}) {
     calls.push({ method, params, options });
-    assert.equal(options.shouldCancel?.(), false);
+    if (method !== 'cache.chapter.materialization.report') {
+      assert.equal(options.shouldCancel?.(), false);
+    }
     if (method === 'cache.book.prefetch') {
+      const materializations = [];
+      for (let chapterIndex = params.chapterRange[0]; chapterIndex < params.chapterRange[1]; chapterIndex += 1) {
+        coreStates[chapterIndex] = 'inProgress';
+        materializationGeneration += 1;
+        materializations.push({
+          chapterIndex,
+          token: `token-${chapterIndex}-${materializationGeneration}`,
+        });
+      }
       return { data: {
         sourceId: SOURCE_ID,
         bookId: BOOK_ID,
         chapterRange: params.chapterRange,
         chapterCount: 2,
         prefetchedCount: 2,
+        materializations,
+      } };
+    }
+    if (method === 'cache.chapter.materialization.report') {
+      assert.equal(options.shouldCancel, undefined,
+        'terminal materialization reports must outlive a stale route guard');
+      materializationReports.push(params);
+      coreStates[params.chapterIndex] = params.outcome;
+      if (dropNextReportResult) {
+        dropNextReportResult = false;
+        throw new Error('fixture lost terminal report result');
+      }
+      return { data: {
+        sourceId: SOURCE_ID,
+        bookId: BOOK_ID,
+        chapterIndex: params.chapterIndex,
+        state: params.outcome,
+        retainedCachedBody: true,
       } };
     }
     if (method === 'chapter.content') {
@@ -85,8 +132,8 @@ class FakeRuntime {
         bookId: BOOK_ID,
         tocAvailable: true,
         chapters: [
-          { chapterIndex: 0, title: 'Chapter 0', url: '/chapter/0', state: 'completed' },
-          { chapterIndex: 1, title: 'Chapter 1', url: '/chapter/1', state: 'completed' },
+          { chapterIndex: 0, title: 'Chapter 0', url: '/chapter/0', state: coreStates[0] },
+          { chapterIndex: 1, title: 'Chapter 1', url: '/chapter/1', state: coreStates[1] },
         ],
       } };
     }
@@ -100,9 +147,12 @@ class FakeRuntime {
   async prefetchReadingImage(identity, isCurrent) {
     assert.equal(isCurrent?.(), true);
     if (failImage) {
-      throw new Error('fixture image unavailable');
+      throw new ReadingOfflineMaterializationError('storage_full', 'fixture disk is full');
     }
     persistedImages.push(identity);
+    if (supersedeAfterImage) {
+      requestCurrent = false;
+    }
   }
 
   async markOfflineImageChapterComplete(chapter, resources) {
@@ -129,14 +179,52 @@ assert.equal(persistedImages.length, 1);
 assert.equal(persistedImages[0].imageUrl, 'images/a.webp');
 assert.equal(persistedImages[0].baseUrl, 'https://fixture.invalid/chapter/0');
 assert.deepEqual(calls.find((call) => call.method === 'cache.book.prefetch').params.chapterRange, [0, 2]);
+assert.deepEqual(materializationReports.map((report) => report.outcome), ['completed', 'completed']);
+assert.ok(materializationReports.every((report) => report.errorCode === undefined));
 
 completedManifests.clear();
 failImage = true;
-await assert.rejects(() => gateway.prefetchRange(session, 0, 1, () => true), /fixture image unavailable/);
+dropNextReportResult = true;
+await assert.rejects(
+  () => gateway.prefetchRange(session, 0, 1, () => true),
+  (error) => error instanceof ReadingOfflineMaterializationError && error.code === 'storage_full',
+);
 assert.equal(completedManifests.has(0), false, 'a failed image must not publish chapter completion');
+assert.equal(coreStates[0], 'failed');
+const storageFullReport = materializationReports.at(-1);
+assert.equal(storageFullReport.outcome, 'failed');
+assert.equal(storageFullReport.errorCode, 'storage_full');
+assert.equal(materializationReports.at(-2).token, storageFullReport.token,
+  'a lost terminal result must retry the exact idempotent token');
 failImage = false;
 const retryProjection = await gateway.prefetchRange(session, 0, 1, () => true);
 assert.equal(retryProjection[0].downloadState, 'completed');
+assert.equal(materializationReports.at(-1).outcome, 'completed');
+
+completedManifests.clear();
+requestCurrent = true;
+supersedeAfterImage = true;
+await assert.rejects(
+  () => gateway.prefetchRange(session, 0, 1, () => requestCurrent),
+  (error) => error instanceof ReadingOfflineMaterializationError && error.code === 'cancelled',
+);
+supersedeAfterImage = false;
+requestCurrent = true;
+assert.equal(completedManifests.has(0), false);
+assert.equal(materializationReports.at(-1).outcome, 'failed');
+assert.equal(materializationReports.at(-1).errorCode, 'cancelled');
+
+coreStates[0] = 'cached';
+coreStates[1] = 'completed';
+completedManifests.add(0);
+completedManifests.add(1);
+const authoritativeProjection = await gateway.loadProjection(session, () => true);
+assert.deepEqual(authoritativeProjection.map((entry) => entry.downloadState), ['cached', 'completed'],
+  'an orphan Host manifest must not promote a Core body-only cache to completed');
+completedManifests.delete(1);
+const missingManifestProjection = await gateway.loadProjection(session, () => true);
+assert.deepEqual(missingManifestProjection.map((entry) => entry.downloadState), ['cached', 'cached'],
+  'Core completion without a Host manifest must remain cached');
 
 await gateway.clearBook(session, () => true);
 assert.equal(completedManifests.size, 0);

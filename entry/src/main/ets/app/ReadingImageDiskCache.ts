@@ -1,11 +1,29 @@
 import common from '@ohos.app.ability.common';
 import fileIo from '@ohos.file.fs';
+import statfs from '@ohos.file.statvfs';
 import cryptoFramework from '@ohos.security.cryptoFramework';
 import util from '@ohos.util';
+import type { BusinessError } from '@ohos.base';
 import { canonicalReadingImageBaseUrl } from '../common/ReadingImageIdentity';
+import {
+  assertReadingOfflineWriteCapacity,
+  ReadingOfflineMaterializationError,
+} from '../features/reading/ReadingOfflineContract';
 
 const CACHE_FORMAT_VERSION = 1;
 const MAX_READING_IMAGE_BYTES = 16 * 1024 * 1024;
+const MIN_READING_IMAGE_FREE_RESERVE_BYTES = 16 * 1024 * 1024;
+const FILE_SYSTEM_NO_SPACE_ERROR = 13900025;
+
+export interface ReadingImageFreeSpaceProbe {
+  getFreeBytes(path: string): Promise<number>;
+}
+
+class HarmonyReadingImageFreeSpaceProbe implements ReadingImageFreeSpaceProbe {
+  async getFreeBytes(path: string): Promise<number> {
+    return statfs.getFreeSize(path);
+  }
+}
 
 export type ReadingImageCacheIdentity = {
   sourceId: string;
@@ -45,9 +63,14 @@ type ReadingImageChapterManifest = {
  */
 export class ReadingImageDiskCache {
   private readonly context: common.UIAbilityContext;
+  private readonly freeSpaceProbe: ReadingImageFreeSpaceProbe;
 
-  constructor(context: common.UIAbilityContext) {
+  constructor(
+    context: common.UIAbilityContext,
+    freeSpaceProbe: ReadingImageFreeSpaceProbe = new HarmonyReadingImageFreeSpaceProbe(),
+  ) {
     this.context = context;
+    this.freeSpaceProbe = freeSpaceProbe;
   }
 
   async loadResource(identity: ReadingImageCacheIdentity): Promise<Uint8Array | undefined> {
@@ -75,6 +98,7 @@ export class ReadingImageDiskCache {
     }
     const chapterDirectory = await this.chapterDirectory(identity);
     await this.ensureDirectory(chapterDirectory);
+    await this.assertWriteCapacity(chapterDirectory, bytes.byteLength);
     await this.writeAtomicBytes(await this.resourcePath(identity), bytes);
   }
 
@@ -109,7 +133,10 @@ export class ReadingImageDiskCache {
     };
     const directory = await this.chapterDirectory(chapter);
     await this.ensureDirectory(directory);
-    await this.writeAtomicText(`${directory}/manifest.json`, JSON.stringify(manifest));
+    const manifestText = JSON.stringify(manifest);
+    const manifestBytes = new util.TextEncoder().encodeInto(manifestText);
+    await this.assertWriteCapacity(directory, manifestBytes.byteLength);
+    await this.writeAtomicBytes(`${directory}/manifest.json`, manifestBytes);
     try {
       await this.pruneUnreferencedResources(directory, resourceHashes);
     } catch (_) {
@@ -229,13 +256,23 @@ export class ReadingImageDiskCache {
         fileIo.unlink(tmpPath);
       } catch (_) {
       }
+      if ((error as BusinessError).code === FILE_SYSTEM_NO_SPACE_ERROR) {
+        throw new ReadingOfflineMaterializationError(
+          'storage_full',
+          'offline reading image storage is full',
+        );
+      }
       throw error;
     }
   }
 
-  private async writeAtomicText(path: string, value: string): Promise<void> {
-    const bytes = new util.TextEncoder().encodeInto(value);
-    await this.writeAtomicBytes(path, bytes);
+  private async assertWriteCapacity(directory: string, writeBytes: number): Promise<void> {
+    const freeBytes = await this.freeSpaceProbe.getFreeBytes(directory);
+    assertReadingOfflineWriteCapacity(
+      freeBytes,
+      writeBytes,
+      MIN_READING_IMAGE_FREE_RESERVE_BYTES,
+    );
   }
 
   private async ensureDirectory(path: string): Promise<void> {

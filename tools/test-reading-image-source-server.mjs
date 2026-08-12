@@ -272,15 +272,21 @@ const server = http.createServer((request, response) => {
     // jar (observed cookie null), so gating would 403 before the stall. The
     // stall is the task-interruption vehicle; all other images stay gated.
     evidence.slowRequests += 1;
-    const responseAt = Date.now() + slowMs;
-    request.on('close', () => {
-      const elapsed = Date.now() - (responseAt - slowMs);
-      process.stdout.write(`${JSON.stringify({ slowAbort: true, elapsedMs: elapsed })}\n`);
-      if (Date.now() < responseAt) {
+    const startedAt = Date.now();
+    let timer;
+    response.on('close', () => {
+      const elapsed = Date.now() - startedAt;
+      const finished = response.writableFinished;
+      process.stdout.write(`${JSON.stringify({ slowImageClosed: true, finished, elapsedMs: elapsed })}\n`);
+      if (!finished && elapsed < slowMs) {
         evidence.slowAbortedRequests = (evidence.slowAbortedRequests ?? 0) + 1;
+        if (timer !== undefined) clearTimeout(timer);
       }
     });
-    setTimeout(() => send(response, 200, 'image/png', PNG), slowMs);
+    timer = setTimeout(() => {
+      if (response.destroyed) return;
+      send(response, 200, 'image/png', PNG);
+    }, slowMs);
     return;
   }
   if (requestUrl.pathname.startsWith('/media/')) {
