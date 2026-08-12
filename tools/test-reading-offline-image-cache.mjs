@@ -16,6 +16,11 @@ assert.match(cache, /return this\.sha256\(`\$\{sourceId\}\\u0000\$\{bookId\}`\)/
 assert.match(cache, /new fileIo\.AtomicFile\(path\)/);
 assert.match(cache, /manifest cannot reference missing bytes/);
 assert.match(cache, /writeAtomicText\(`\$\{directory\}\/manifest\.json`/);
+assert.match(
+  cache,
+  /try \{[\s\S]*fileIo\.openSync\([\s\S]*fileIo\.writeSync\([\s\S]*fileIo\.renameSync\(tmpPath, path\);[\s\S]*\} catch \(error\) \{[\s\S]*fileIo\.unlink\(tmpPath\);/,
+  'open, write, close, or rename failures must remove the partial offline image temp file',
+);
 assert.match(cache, /pruneUnreferencedResources/);
 assert.doesNotMatch(cache, /bodyBase64|PixelMap/,
   'persistent offline image storage must contain bounded bytes, not protocol Base64 or native handles');

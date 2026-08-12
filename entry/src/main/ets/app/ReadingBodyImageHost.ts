@@ -29,6 +29,8 @@ const MAX_READING_IMAGE_PIXELS = 4 * 1024 * 1024;
 const MAX_READING_IMAGE_DIMENSION = 4096;
 const MAX_READING_DISPLAY_FILE_BYTES = 32 * 1024 * 1024;
 const DISPLAY_CACHE_DIRECTORY = 'reader-body-display-v1';
+const LEGACY_DISPLAY_FILE_PREFIX = 'reading-body-';
+const LEGACY_DISPLAY_TEMP_PREFIX = '.reading-body-tmp-';
 
 /**
  * Narrow Host adapter for one body image already admitted by Core.
@@ -327,6 +329,13 @@ export class ReadingBodyImageHost {
   private configureDisplayCache(cacheDir: string): void {
     if (cacheDir.trim().length === 0) {
       throw new Error('reading body image display cache is not configured');
+    }
+    // Older builds materialized display files directly in cacheDir. Reclaim
+    // only their exact prefixes so unrelated app-cache files remain untouched.
+    for (const name of fs.listFileSync(cacheDir)) {
+      if (name.startsWith(LEGACY_DISPLAY_FILE_PREFIX) || name.startsWith(LEGACY_DISPLAY_TEMP_PREFIX)) {
+        this.unlinkBestEffort(`${cacheDir}/${name}`);
+      }
     }
     const directory = `${cacheDir}/${DISPLAY_CACHE_DIRECTORY}`;
     if (!fs.accessSync(directory)) {
