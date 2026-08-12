@@ -205,10 +205,9 @@ export struct SearchPage {
   private sourceChips() {
     Scroll() {
       Row({ space: TOK_SPACE_XS }) {
-        this.sourceChip('全部', undefined, this.presentation.scopeSourceId === undefined);
+        this.sourceChip('全部', undefined);
         ForEach(this.sources, (source: SearchSource) => {
-          this.sourceChip(source.name, source.sourceId,
-            this.presentation.scopeSourceId === source.sourceId);
+          this.sourceChip(source.name, source.sourceId);
         }, (source: SearchSource): string => `search-source-${source.sourceId}`);
       }
       .padding({ left: this.isTablet ? 20 : TOK_SPACE_MD, right: this.isTablet ? 20 : TOK_SPACE_MD, top: 9 })
@@ -222,20 +221,23 @@ export struct SearchPage {
   }
 
   @Builder
-  private sourceChip(label: string, sourceId: SearchScope, active: boolean) {
+  private sourceChip(label: string, sourceId: SearchScope) {
     Stack({ alignContent: Alignment.Center }) {
       Text(label)
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Bold)
         .fontSize(12)
         .lineHeight(12)
-        .fontColor(active ? TOK_ON_PRIMARY : TOK_MUTED)
+        .fontColor(this.presentation.scopeSourceId === sourceId ? TOK_ON_PRIMARY : TOK_MUTED)
         .textAlign(TextAlign.Center)
         .maxLines(1);
     }
       .padding({ left: 12.5, right: 12.5, top: 5.5, bottom: 5.5 })
-      .backgroundColor(active ? TOK_GREEN : TOK_CARD_BG)
-      .border({ width: TOK_BORDER_W, color: active ? TOK_GREEN : TOK_BORDER })
+      .backgroundColor(this.presentation.scopeSourceId === sourceId ? TOK_GREEN : TOK_CARD_BG)
+      .border({
+        width: TOK_BORDER_W,
+        color: this.presentation.scopeSourceId === sourceId ? TOK_GREEN : TOK_BORDER,
+      })
       .borderRadius(999)
       .accessibilityText(label)
       .onClick((): void => this.onScopeChange(sourceId));

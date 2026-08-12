@@ -21,15 +21,19 @@ const chips = page.slice(chipsStart, chipsEnd);
 assert.match(chips, /Scroll\(\)/, 'source chips must use a horizontal viewport');
 assert.match(chips, /\.scrollable\(ScrollDirection\.Horizontal\)/);
 assert.match(chips, /\.scrollBar\(BarState\.Off\)/);
-assert.match(chips, /this\.presentation\.scopeSourceId === undefined/,
-  'the all chip must reflect the selected scope');
-assert.match(chips, /this\.presentation\.scopeSourceId === source\.sourceId/,
-  'a source chip must reflect its exact selected sourceId');
+assert.match(chips, /this\.sourceChip\('全部', undefined\)/,
+  'the all chip must keep the undefined all-source identity');
+assert.match(chips, /this\.sourceChip\(source\.name, source\.sourceId\)/,
+  'a source chip must keep its exact opaque source identity');
 assert.match(chips, /\.onClick\(\(\): void => this\.onScopeChange\(sourceId\)\)/,
   'chips must emit the existing scope-change intent');
 const sourceChipStart = chips.indexOf('private sourceChip(');
 assert.ok(sourceChipStart >= 0, 'source chip builder must remain present');
 const sourceChip = chips.slice(sourceChipStart);
+assert.doesNotMatch(sourceChip, /active: boolean/,
+  'a builder value parameter must not freeze the reactive active presentation');
+assert.ok((sourceChip.match(/this\.presentation\.scopeSourceId === sourceId/g) ?? []).length >= 3,
+  'chip text, background and border must directly observe the authoritative scope presentation');
 assert.match(sourceChip,
   /Stack\(\{ alignContent: Alignment\.Center \}\) \{[\s\S]*?Text\(label\)[\s\S]*?\n    \}\s*\.padding\([\s\S]*?\.accessibilityText\(label\)\s*\.onClick\(\(\): void => this\.onScopeChange\(sourceId\)\)/,
   'the chip container, not its Text child, must own the full painted hit target');
