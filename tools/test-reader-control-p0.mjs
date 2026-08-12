@@ -103,6 +103,9 @@ assert.match(fullDirectory, /return Math\.max\(330, this\.containerHeight - 88 -
 assert.match(fullDirectory, /motionAnimateParam\('reader\.panel\.collapse'/);
 assert.match(fullDirectory, /return this\.animateFromControl && !this\.isTablet && !this\.reduceMotion/);
 assert.match(fullDirectory, /\.accessibilityText\('收起目录'\)/);
+assert.match(fullDirectory,
+  /\.width\('100%'\)\s+\.height\('100%'\)\s+\.zIndex\(1\)\s+\.onAreaChange/,
+  'full-directory overlay must render above the mounted reading lifecycle layer');
 
 const fullDirectoryPanel = read('entry/src/main/ets/features/reading/FullDirectoryPanel.ets');
 assert.match(fullDirectoryPanel, /return Math\.max\(117, this\.bodyContentHeight\(\) - 143\)/);

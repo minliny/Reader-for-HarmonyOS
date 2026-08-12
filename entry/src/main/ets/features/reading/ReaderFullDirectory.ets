@@ -112,6 +112,7 @@ export struct ReaderFullDirectory {
     }
     .width('100%')
     .height('100%')
+    .zIndex(1)
     .onAreaChange((_oldValue: Area, newValue: Area): void => {
       const height = this.numericAreaLength(newValue.height);
       if (height > 0 && Math.abs(height - this.containerHeight) >= 0.01) {
