@@ -61,6 +61,7 @@ const discoveryRuntime = {
         sources: [
           ...Array.from({ length: 10 }, (_, index) => ({
             sourceId: `candidate-${index}`,
+            name: `Candidate Source ${index}`,
             enabled: true,
           })),
           { sourceId: 'disabled-source', enabled: false },
@@ -108,6 +109,13 @@ assert.deepEqual(
   ['candidate-0', 'candidate-1', 'candidate-2', 'candidate-4', 'candidate-5',
     'candidate-6', 'candidate-7', 'candidate-8', 'candidate-9'],
   'one failed source is skipped and registry order remains stable',
+);
+assert.deepEqual(
+  discovered.candidates.map((candidate) => candidate.sourceName),
+  ['Candidate Source 0', 'Candidate Source 1', 'Candidate Source 2', 'Candidate Source 4',
+    'Candidate Source 5', 'Candidate Source 6', 'Candidate Source 7', 'Candidate Source 8',
+    'Candidate Source 9'],
+  'the source column must render source.list names instead of repeating the book title',
 );
 
 const runtime = {

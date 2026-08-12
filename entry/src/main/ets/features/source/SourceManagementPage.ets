@@ -415,8 +415,7 @@ export struct SourceManagementPage {
   }
 
   private sourceMeta(source: BookSource): string {
-    if (source.checkState !== undefined && source.checkState !== 'unchecked' &&
-      source.checkMessage !== undefined && source.checkMessage.length > 0) {
+    if (source.checkMessage !== undefined && source.checkMessage.length > 0) {
       return source.checkMessage;
     }
     if (source.baseUrl.length > 0) {

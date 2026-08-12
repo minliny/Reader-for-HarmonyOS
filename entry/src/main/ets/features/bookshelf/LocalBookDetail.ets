@@ -55,6 +55,7 @@ export struct LocalBookDetail {
   onContinue: () => void = (): void => {};
   onSelectChapter: (index: number) => void = (_index: number): void => {};
   onOpenDirectory: () => void = (): void => {};
+  onSwitchSource: () => void = (): void => {};
   onBack: () => void = (): void => {};
 
   aboutToAppear(): void {
@@ -193,7 +194,8 @@ export struct LocalBookDetail {
           .width(52)
           .height(18)
           .borderRadius(999)
-          .backgroundColor(TOK_SETTING_ACTION_BG);
+          .backgroundColor(TOK_SETTING_ACTION_BG)
+          .onClick((): void => this.onSwitchSource());
         }
         .width('100%')
         .height(18)

@@ -367,7 +367,7 @@ export struct SourceSwitchWindow {
         (candidate: SourceSwitchCandidate): void => {
           CandidateRow({
             sourceId: candidate.sourceId,
-            bookName: candidate.bookName,
+            sourceName: candidate.sourceName,
             latencyMs: candidate.latencyMs,
             offline: candidate.offline === true,
             timeout: candidate.timeout === true,

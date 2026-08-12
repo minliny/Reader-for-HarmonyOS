@@ -25,6 +25,11 @@ function isPendingTransactionError(error: Error): boolean {
   return isReaderCoreTransactionPendingError(error);
 }
 
+interface SourceLoginFailure {
+  code?: string;
+  message: string;
+}
+
 /**
  * Owns the Source Management page's orchestration. A plain class: a serial
  * toggle chain (Core rejects `source.update` while an earlier Host operation
@@ -165,13 +170,18 @@ export class SourceOrchestrator {
           this.applySourceCheckOutcome(outcome);
         }
       })
-      .catch((error: Error): void => {
+      .catch((error: SourceLoginFailure): void => {
+        const message = error.message;
         if (this.isCurrentSession(session)) {
-          this.setCheckProjection(id, 'unchecked', [], '登录 / 验证已取消');
+          if (error.code === 'CANCELLED') {
+            this.setCheckProjection(id, 'unchecked', [], '登录 / 验证已取消');
+          } else {
+            this.setCheckProjection(id, 'failed', [], message);
+          }
         }
         hilog.warn(DOMAIN, 'Reader',
           'Source login/challenge ended without completion: sourceId=%{public}s err=%{public}s',
-          id, error.message);
+          id, message);
       })
       .finally((): void => {
         if (session === this.session) {

@@ -242,6 +242,10 @@ struct Index {
   /** Source-switch overlay presentation + the gateway that drives it. */
   @State private sourceSwitchVisible: boolean = false;
   @State private sourceSwitchState: SourceSwitchPanelState = { kind: 'discovering' };
+  /** Detail intent waits for the reader to restore and commit the exact chapter. */
+  private sourceSwitchPendingFromDetail: boolean = false;
+  /** Closing a switch window opened from Detail must return to Detail. */
+  private sourceSwitchOpenedFromDetail: boolean = false;
   private sourceSwitchGateway: SourceSwitchGateway | undefined;
   /** Retained until the target chapter's first measured progress commit. */
   private pendingSourceSwitch: PendingSourceSwitchTransaction | undefined = undefined;
@@ -610,6 +614,7 @@ struct Index {
           onContinue: (): void => this.openReading(undefined),
           onSelectChapter: (chapterIndex: number): void => this.openReading(chapterIndex),
           onOpenDirectory: (): void => this.openFullDirectory(),
+          onSwitchSource: (): void => this.openSourceSwitchFromDetail(),
           onBack: (): void => this.returnToBookshelf(),
         });
       }
@@ -653,9 +658,8 @@ struct Index {
           onReadingCommitted: (commit: ReadingCommit): void => this.applyReadingCommit(commit),
           onReadingFailure: (sourceId: string, bookId: string, message: string): void =>
             this.onReadingFailure(sourceId, bookId, message),
-          onChapterCommitted: (chapterIndex: number, chapterTitle: string): void => {
-            this.applyDirectoryChapter(chapterIndex, chapterTitle);
-          },
+          onChapterCommitted: (chapterIndex: number, chapterTitle: string): void =>
+            this.onReaderChapterCommitted(chapterIndex, chapterTitle),
           onSelectChapter: (chapterIndex: number): void => this.onDirectoryChapterSelected(chapterIndex),
           onDownloadChapter: (chapterIndex: number): void => this.downloadDirectoryChapter(chapterIndex),
           onDeleteBookmarks: (bookmarkTimes: number[]): void => this.deleteDirectoryBookmarks(bookmarkTimes),
@@ -1787,6 +1791,7 @@ struct Index {
       (book.sourceId !== LOCAL_SOURCE_ID && this.remoteReadingSession === undefined)) {
       return;
     }
+    this.sourceSwitchPendingFromDetail = false;
     this.nextNavigationGeneration();
     this.readingExitRequest = undefined;
     this.exitToBookshelfAfterReader = false;
@@ -1832,6 +1837,7 @@ struct Index {
     if (this.detailBook === undefined || this.detailToc.length === 0) {
       return;
     }
+    this.sourceSwitchPendingFromDetail = false;
     this.nextNavigationGeneration();
     this.readingExitRequest = undefined;
     this.exitToBookshelfAfterReader = false;
@@ -1878,6 +1884,8 @@ struct Index {
     this.readingExitRequest = undefined;
     this.exitToBookshelfAfterReader = false;
     this.readingSessionActive = false;
+    this.sourceSwitchPendingFromDetail = false;
+    this.sourceSwitchOpenedFromDetail = false;
     this.requestedChapterIndex = undefined;
     this.preparedReaderRoute = 'reading';
     this.directoryCurrentChapterIndex = -1;
@@ -2085,10 +2093,27 @@ struct Index {
     return generation === this.navigationGeneration && this.sourceSwitchVisible;
   }
 
+  private openSourceSwitchFromDetail(): void {
+    const book = this.detailBook;
+    if (this.route !== 'detail' || book === undefined || book.sourceId === LOCAL_SOURCE_ID ||
+      this.sourceSwitchVisible || this.sourceSwitchPendingFromDetail) {
+      return;
+    }
+    // Reuse the normal reader preparation, but do not expose discovery until
+    // onReaderChapterCommitted has restored the exact Core-owned chapter.
+    this.openReading(undefined);
+    if (!this.readingSessionActive) {
+      return;
+    }
+    this.sourceSwitchPendingFromDetail = true;
+  }
+
   private openSourceSwitch(): void {
     if (this.detailBook === undefined || this.detailBook.sourceId === LOCAL_SOURCE_ID || this.sourceSwitchVisible) {
       return;
     }
+    this.sourceSwitchPendingFromDetail = false;
+    this.sourceSwitchOpenedFromDetail = false;
     const generation = this.nextNavigationGeneration();
     this.exitToBookshelfAfterReader = false;
     // SS-SOURCE-SWITCH-01: the window floats over the reading surface (Figma
@@ -2139,7 +2164,8 @@ struct Index {
   }
 
   private onPickSource(candidate: SourceSwitchCandidate): void {
-    if (this.sourceSwitchState.kind !== 'candidates' || this.detailBook === undefined) {
+    if (this.sourceSwitchState.kind !== 'candidates' || this.detailBook === undefined ||
+      this.directoryCurrentChapterIndex < 0 || this.directoryChapterTitle.length === 0) {
       return;
     }
     const book = this.detailBook;
@@ -2159,8 +2185,8 @@ struct Index {
           { sourceId: book.sourceId, bookId: book.bookId },
           candidate,
           toc,
-          this.currentSourceSwitchChapterTitle(),
-          Math.max(0, this.directoryCurrentChapterIndex),
+          this.directoryChapterTitle,
+          this.directoryCurrentChapterIndex,
           Math.floor(Date.now() / 1000),
         );
         return gateway.commitSwitch(params, isCurrent);
@@ -2197,26 +2223,6 @@ struct Index {
       });
   }
 
-  private currentSourceSwitchChapterTitle(): string {
-    if (this.directoryChapterTitle.length > 0) {
-      return this.directoryChapterTitle;
-    }
-    if (this.detailToc.length === 0) {
-      return '';
-    }
-    const index = Math.max(0, this.directoryCurrentChapterIndex);
-    let fallback: string = '';
-    for (const entry of this.detailToc) {
-      if (entry.index === index) {
-        return entry.title;
-      }
-      if (fallback.length === 0) {
-        fallback = entry.title;
-      }
-    }
-    return fallback;
-  }
-
   private onRollbackSourceSwitch(): void {
     if (this.sourceSwitchState.kind !== 'failure' || this.sourceSwitchState.transactionId === undefined) {
       return;
@@ -2251,18 +2257,39 @@ struct Index {
       // transaction still needs rollback, could strand a pending shelf move.
       return;
     }
+    const returnToDetail = this.sourceSwitchOpenedFromDetail;
     this.nextNavigationGeneration();
     this.sourceSwitchVisible = false;
     this.sourceSwitchState = { kind: 'discovering' };
+    this.sourceSwitchPendingFromDetail = false;
+    this.sourceSwitchOpenedFromDetail = false;
+    if (returnToDetail) {
+      const requestExit = this.readingExitRequest;
+      if (requestExit !== undefined) {
+        requestExit();
+      } else {
+        this.returnToDetail();
+      }
+    }
   }
 
   private performSourceSwitchSeam(book: ShelfBook): void {
     this.sourceSwitchVisible = false;
     this.sourceSwitchState = { kind: 'discovering' };
+    this.sourceSwitchPendingFromDetail = false;
+    this.sourceSwitchOpenedFromDetail = false;
     this.reopenSwitchedBook(book);
   }
 
   private onReadingFailure(sourceId: string, bookId: string, message: string): void {
+    if (this.sourceSwitchPendingFromDetail) {
+      this.sourceSwitchPendingFromDetail = false;
+      hilog.warn(DOMAIN, 'Reader',
+        'Detail source-switch reader preparation failed: sourceId=%{public}s bookId=%{public}s err=%{public}s',
+        sourceId, bookId, message);
+      this.returnToDetail();
+      return;
+    }
     const pending = this.pendingSourceSwitch;
     if (pending === undefined || pending.targetSourceId !== sourceId || pending.targetBookId !== bookId) {
       return;
@@ -2323,6 +2350,8 @@ struct Index {
     this.readingExitRequest = undefined;
     this.exitToBookshelfAfterReader = false;
     this.readingSessionActive = false;
+    this.sourceSwitchPendingFromDetail = false;
+    this.sourceSwitchOpenedFromDetail = false;
     this.requestedChapterIndex = undefined;
     this.preparedReaderRoute = 'reading';
     this.directoryCurrentChapterIndex = -1;
@@ -2395,6 +2424,17 @@ struct Index {
     }
     this.directoryCurrentChapterIndex = chapterIndex;
     this.directoryChapterTitle = chapterTitle;
+  }
+
+  private onReaderChapterCommitted(chapterIndex: number, chapterTitle: string): void {
+    this.applyDirectoryChapter(chapterIndex, chapterTitle);
+    if (!this.sourceSwitchPendingFromDetail || this.directoryCurrentChapterIndex !== chapterIndex ||
+      this.directoryChapterTitle !== chapterTitle) {
+      return;
+    }
+    this.sourceSwitchPendingFromDetail = false;
+    this.openSourceSwitch();
+    this.sourceSwitchOpenedFromDetail = this.sourceSwitchVisible;
   }
 
   private refreshBookshelf(): void {
