@@ -2,6 +2,11 @@ import type { JsonObject, RequestOptions } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 
+// Legado caps ChangeBookSourceDialog at nine workers. Keep one lane in reserve
+// for the foreground reading session while avoiding one unbounded request per
+// imported source.
+const SOURCE_SWITCH_DISCOVERY_CONCURRENCY = 8;
+
 /**
  * Page-facing source-switch candidate. Only the first three fields are real
  * Core `change.bookSource` data today; `latencyMs`/`offline`/`timeout` are
@@ -134,12 +139,50 @@ export class SourceSwitchGateway {
     if (sourceIds.length === 0) {
       return { kind: 'noSources' };
     }
-    const result = await this.runtimeOwner.request(
-      'change.bookSource',
-      { sourceId, bookId, keyword, sourceIds },
-      this.requestOptions(isCurrent),
-    );
-    const rawCandidates = result.data['candidates'];
+    const candidates: SourceSwitchCandidate[] = [];
+    for (let start = 0; start < sourceIds.length; start += SOURCE_SWITCH_DISCOVERY_CONCURRENCY) {
+      if (isCurrent !== undefined && !isCurrent()) {
+        return { kind: 'noSources' };
+      }
+      const end = Math.min(start + SOURCE_SWITCH_DISCOVERY_CONCURRENCY, sourceIds.length);
+      const pending: Promise<SourceSwitchCandidate[]>[] = [];
+      for (let index = start; index < end; index += 1) {
+        pending.push(this.discoverFromSource(sourceId, bookId, keyword, sourceIds[index], isCurrent));
+      }
+      const groups = await Promise.all(pending);
+      for (const group of groups) {
+        candidates.push(...group);
+      }
+    }
+    return { kind: 'sources', candidates };
+  }
+
+  private async discoverFromSource(
+    sourceId: string,
+    bookId: string,
+    keyword: string,
+    candidateSourceId: string,
+    isCurrent: (() => boolean) | undefined,
+  ): Promise<SourceSwitchCandidate[]> {
+    try {
+      const result = await this.runtimeOwner.request(
+        'change.bookSource',
+        { sourceId, bookId, keyword, sourceIds: [candidateSourceId] },
+        this.requestOptions(isCurrent),
+      );
+      return this.decodeDiscoveryCandidates(result.data);
+    } catch (error) {
+      if (isCurrent !== undefined && !isCurrent()) {
+        throw error;
+      }
+      // A source-switch search is a batch. One dead, challenged, or malformed
+      // source must not erase candidates from the remaining enabled sources.
+      return [];
+    }
+  }
+
+  private decodeDiscoveryCandidates(data: JsonObject): SourceSwitchCandidate[] {
+    const rawCandidates = data['candidates'];
     if (!Array.isArray(rawCandidates)) {
       throw new Error('change.bookSource returned invalid data');
     }
@@ -176,7 +219,7 @@ export class SourceSwitchGateway {
       }
       candidates.push(entry);
     }
-    return { kind: 'sources', candidates };
+    return candidates;
   }
 
   /**

@@ -357,9 +357,9 @@ export class ReaderCoreRuntime {
       }
       const event =
         this.takePendingForRequest(requestId) ??
-        this.readNativeEvent(Math.min(pollMs, Math.max(0, deadline - Date.now())));
+        this.readNativeEvent(0);
       if (event === null) {
-        await delay(0);
+        await delay(Math.min(pollMs, Math.max(0, deadline - Date.now())));
         continue;
       }
 
