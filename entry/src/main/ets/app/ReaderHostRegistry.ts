@@ -10,7 +10,7 @@ import {
   type JsonObject,
   type ReaderCoreHostRequestEvent,
 } from '@reader/core-harmony';
-import { HttpExecuteHost } from './HttpExecuteHost';
+import { HttpExecuteHost, type SourceHttpDiagnosticRecord } from './HttpExecuteHost';
 import { CookieSessionStore } from './CookieSessionStore';
 import { ArkWebExecutor } from './ArkWebExecutor';
 
@@ -48,6 +48,9 @@ export type BookSourceJsonSelection = {
   text: string;
 };
 
+/** Shared local/online transport envelope for portable JSON imports. */
+export type JsonImportDocument = BookSourceJsonSelection;
+
 /**
  * The only Host capability registry in this application slice.
  *
@@ -61,8 +64,8 @@ export class ReaderHostRegistry {
   private static readonly SnapshotFormatVersion = 1;
 
   private static readonly LocalBookSelectionLimit = 50;
-  private static readonly BookSourceDocumentLimitBytes = 16 * 1024 * 1024;
-  private static readonly BookSourceReadChunkBytes = 64 * 1024;
+  private static readonly JsonDocumentLimitBytes = 16 * 1024 * 1024;
+  private static readonly JsonDocumentReadChunkBytes = 64 * 1024;
   private static readonly HashChunkBytes = 1024 * 1024;
   private readonly context: common.UIAbilityContext;
   private writeTail: Promise<void> = Promise.resolve();
@@ -79,6 +82,11 @@ export class ReaderHostRegistry {
   /** Clear every Host-owned credential for one opaque source/session id. */
   async clearSourceCookieSession(sourceId: string): Promise<void> {
     await CookieSessionStore.instance.clearSession(sourceId);
+  }
+
+  /** Consume sanitized evidence captured during one original Core request. */
+  takeSourceHttpDiagnostics(requestId: number): SourceHttpDiagnosticRecord[] {
+    return HttpExecuteHost.instance.takeSourceDiagnostics(requestId);
   }
 
   async needsLegacySnapshotMigration(): Promise<boolean> {
@@ -186,6 +194,53 @@ export class ReaderHostRegistry {
     return this.selectBoundedJsonDocument('Legado RSS 源 JSON');
   }
 
+  /**
+   * Download one user-provided HTTP(S) JSON document through the production
+   * Host transport. Redirect, timeout and retry policy are shared with real
+   * source requests; feature gateways still own JSON schema and persistence.
+   */
+  async loadOnlineJsonDocument(onlineUrl: string): Promise<JsonImportDocument> {
+    const response = await HttpExecuteHost.instance.execute({
+      url: onlineUrl.trim(),
+      method: 'GET',
+      headers: {
+        Accept: 'application/json, text/json, text/plain;q=0.9, */*;q=0.1',
+      },
+      followRedirects: true,
+      maxRedirects: 10,
+      retry: { maxAttempts: 2, backoffMillis: 250 },
+    });
+    const status = response['status'];
+    if (typeof status !== 'number' || !Number.isSafeInteger(status) || status < 200 || status >= 300) {
+      throw new Error(`在线 JSON 请求失败：HTTP ${typeof status === 'number' ? status : '未知'}`);
+    }
+    const bodyBase64 = response['bodyBase64'];
+    if (typeof bodyBase64 !== 'string' || bodyBase64.length === 0) {
+      throw new Error('在线 JSON 响应为空');
+    }
+    let bytes: Uint8Array;
+    try {
+      bytes = new util.Base64Helper().decodeSync(bodyBase64, util.Type.MIME);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : `${error}`;
+      throw new Error(`在线 JSON 响应无法解码：${message}`);
+    }
+    if (bytes.byteLength === 0 || bytes.byteLength > ReaderHostRegistry.JsonDocumentLimitBytes) {
+      throw new Error(`在线 JSON 响应超过 ${ReaderHostRegistry.JsonDocumentLimitBytes} 字节限制`);
+    }
+    let text: string;
+    try {
+      text = util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(bytes);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : `${error}`;
+      throw new Error(`在线 JSON 不是有效 UTF-8：${message}`);
+    }
+    if (text.trimStart().startsWith('<')) {
+      throw new Error('在线地址返回网页而不是 JSON；GitHub 仓库文件请使用 Raw 链接');
+    }
+    return { fileName: 'online.json', text };
+  }
+
   private async selectBoundedJsonDocument(label: string): Promise<BookSourceJsonSelection | undefined> {
     const options = new picker.DocumentSelectOptions();
     options.fileSuffixFilters = [`${label}|.json`];
@@ -201,7 +256,7 @@ export class ReaderHostRegistry {
       fileName,
       text: await this.readBoundedUtf8Document(
         uri,
-        ReaderHostRegistry.BookSourceDocumentLimitBytes,
+        ReaderHostRegistry.JsonDocumentLimitBytes,
       ),
     };
   }
@@ -231,9 +286,9 @@ export class ReaderHostRegistry {
     subject: string,
   ): Promise<string | undefined> {
     const bytes = new util.TextEncoder('utf-8').encode(text);
-    if (bytes.byteLength === 0 || bytes.byteLength > ReaderHostRegistry.BookSourceDocumentLimitBytes) {
+    if (bytes.byteLength === 0 || bytes.byteLength > ReaderHostRegistry.JsonDocumentLimitBytes) {
       throw new Error(
-        `${subject} export must contain 1-${ReaderHostRegistry.BookSourceDocumentLimitBytes} UTF-8 bytes`,
+        `${subject} export must contain 1-${ReaderHostRegistry.JsonDocumentLimitBytes} UTF-8 bytes`,
       );
     }
     const safeFileName = this.requireExportFileName(suggestedFileName);
@@ -418,7 +473,7 @@ export class ReaderHostRegistry {
 
     const bytes = new Uint8Array(stat.size);
     const chunkBuffer = new ArrayBuffer(
-      Math.min(ReaderHostRegistry.BookSourceReadChunkBytes, stat.size),
+      Math.min(ReaderHostRegistry.JsonDocumentReadChunkBytes, stat.size),
     );
     const file = await fileIo.open(uri, fileIo.OpenMode.READ_ONLY);
     try {

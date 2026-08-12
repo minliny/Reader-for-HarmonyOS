@@ -32,9 +32,13 @@ export interface ManagedRuleSubscription {
   id: number;
   name: string;
   url: string;
+  type: RuleSubscriptionType;
   autoUpdate: boolean;
   customOrder: number;
+  update: number;
 }
+
+export type RuleSubscriptionType = 0 | 1 | 2;
 
 export interface ReplaceRuleDraft {
   id?: number;
@@ -67,8 +71,10 @@ export interface RuleSubscriptionDraft {
   id?: number;
   name: string;
   url: string;
+  type: RuleSubscriptionType;
   autoUpdate: boolean;
   customOrder: number;
+  update?: number;
 }
 
 export interface RuleBundleExport {
@@ -178,15 +184,54 @@ export class RulesManagementGateway {
   }
 
   async saveRuleSubscription(draft: RuleSubscriptionDraft): Promise<void> {
+    const name = draft.name.trim();
+    const subscriptionUrl = draft.url.trim();
+    const update = draft.update ?? 0;
+    if (name.length === 0) {
+      throw new Error('规则订阅名称不能为空');
+    }
+    const lowerUrl = subscriptionUrl.toLowerCase();
+    if (!lowerUrl.startsWith('https://') && !lowerUrl.startsWith('http://')) {
+      throw new Error('规则订阅 URL 仅支持 HTTP/HTTPS');
+    }
+    this.requireRuleSubscriptionType(draft.type);
+    this.assertSafeInteger(draft.customOrder, 'rule subscription customOrder');
+    this.assertSafeInteger(update, 'rule subscription update');
+    if (update < 0) {
+      throw new Error('rule subscription update must not be negative');
+    }
     await this.owner.request('rule-sub.put', {
       id: draft.id ?? Date.now(),
-      name: draft.name.trim(),
-      url: draft.url.trim(),
-      type: 0,
+      name,
+      url: subscriptionUrl,
+      type: draft.type,
       customOrder: draft.customOrder,
       autoUpdate: draft.autoUpdate,
-      update: 0,
+      update,
     });
+  }
+
+  /**
+   * Adapt a public Legado ReplaceRule object/array into Core's existing
+   * portable bundle envelope. Host/UI do not decode rule fields: Rust Core
+   * remains responsible for strict schema validation and atomic merge.
+   */
+  async importReplaceRuleDocument(json: string): Promise<string> {
+    const document = json.trim();
+    if (document.length === 0) {
+      throw new Error('替换规则订阅返回空文档');
+    }
+    let rulesJson: string;
+    if (document.startsWith('[')) {
+      rulesJson = document;
+    } else if (document.startsWith('{')) {
+      rulesJson = `[${document}]`;
+    } else {
+      throw new Error('替换规则订阅必须返回 JSON 对象或数组');
+    }
+    const bundle = `{"schemaVersion":1,"replaceRules":${rulesJson},` +
+      `"dictRules":[],"txtTocRules":[],"ruleSubscriptions":[]}`;
+    return this.importBundle(bundle, false);
   }
 
   async deleteRuleSubscription(id: number): Promise<void> {
@@ -262,12 +307,15 @@ export class RulesManagementGateway {
 
   private decodeRuleSubscription(value: unknown): ManagedRuleSubscription {
     const row = this.requireObject(value, 'rule subscription');
+    const type = this.requireRuleSubscriptionType(this.requireInteger(row, 'type'));
     return {
       id: this.requireInteger(row, 'id'),
       name: this.requireString(row, 'name'),
       url: this.requireString(row, 'url'),
+      type,
       autoUpdate: this.requireBoolean(row, 'autoUpdate'),
       customOrder: this.requireInteger(row, 'customOrder'),
+      update: this.requireInteger(row, 'update'),
     };
   }
 
@@ -309,5 +357,12 @@ export class RulesManagementGateway {
 
   private assertSafeInteger(value: number, label: string): void {
     if (!Number.isSafeInteger(value)) throw new Error(`${label} must be a safe integer`);
+  }
+
+  private requireRuleSubscriptionType(value: number): RuleSubscriptionType {
+    if (value !== 0 && value !== 1 && value !== 2) {
+      throw new Error('规则订阅类型仅支持书源、RSS 源或替换规则');
+    }
+    return value as RuleSubscriptionType;
   }
 }

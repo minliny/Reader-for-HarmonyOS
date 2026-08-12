@@ -10,6 +10,13 @@ import { isReaderCoreTransactionPendingError } from '@reader/core-harmony';
 
 const DOMAIN = 0x5244;
 
+export type SourceManagementStatusKind = 'idle' | 'loading' | 'success' | 'warning' | 'error';
+
+export interface SourceImportCompletion {
+  importedCount: number;
+  refreshWarning?: string;
+}
+
 /** Resolves after `millis`, used for bounded backoff in transient-Core retries. */
 function delay(millis: number): Promise<void> {
   return new Promise<void>((resolve: () => void): void => {
@@ -41,6 +48,7 @@ export class SourceOrchestrator {
   private owner: ReaderRuntimeOwner;
   private gateway: SourceGateway;
   private emit: (sources: BookSource[]) => void;
+  private emitStatus: (kind: SourceManagementStatusKind, message: string) => void;
   private isCurrent: () => boolean;
   /** Authoritative mirror; Index's @State is a projection of it. */
   private sources: BookSource[] = [];
@@ -59,11 +67,14 @@ export class SourceOrchestrator {
   constructor(
     emit: (sources: BookSource[]) => void,
     isCurrent: () => boolean,
+    emitStatus: (kind: SourceManagementStatusKind, message: string) => void =
+      (_kind: SourceManagementStatusKind, _message: string): void => {},
     owner: ReaderRuntimeOwner = ReaderRuntimeOwner.current(),
   ) {
     this.owner = owner;
     this.gateway = new SourceGateway(owner);
     this.emit = emit;
+    this.emitStatus = emitStatus;
     this.isCurrent = isCurrent;
   }
 
@@ -74,7 +85,14 @@ export class SourceOrchestrator {
     this.checkResults.clear();
     this.checkingSourceIds.clear();
     this.presentSources([]);
+    this.publishStatus('loading', '正在读取 Core 书源数据…');
     void this.loadList(session);
+  }
+
+  retryLoad(): void {
+    if (this.isCurrent()) {
+      this.open();
+    }
   }
 
   private async loadList(session: number): Promise<void> {
@@ -89,6 +107,7 @@ export class SourceOrchestrator {
       sources = await this.loadSourcesWithRetry();
     } catch (error) {
       if (this.isCurrentSession(session)) {
+        this.publishStatus('error', `书源列表读取失败：${(error as Error).message}`);
         hilog.error(DOMAIN, 'Reader',
           'Source management load failed: %{public}s', (error as Error).message);
       }
@@ -96,6 +115,7 @@ export class SourceOrchestrator {
     }
     if (this.isCurrentSession(session)) {
       this.presentSources(sources);
+      this.publishStatus('idle', '');
     }
   }
 
@@ -111,6 +131,9 @@ export class SourceOrchestrator {
     this.operationChain = this.operationChain
       .then((): Promise<void> => this.applyToggle(id, enabled, seq, session))
       .catch((error: Error): void => {
+        if (this.isCurrentSession(session)) {
+          this.publishStatus('error', `书源启停失败：${error.message}`);
+        }
         hilog.error(DOMAIN, 'Reader',
           'Source toggle failed; row unchanged: sourceId=%{public}s enabled=%{public}s err=%{public}s',
           id, enabled, error.message);
@@ -186,15 +209,30 @@ export class SourceOrchestrator {
    * source writes. With no admitted Figma error state, failures are logged and
    * the current page remains visible; no success state is fabricated.
    */
-  importBookSources(): void {
+  importBookSources(
+    onlineUrl?: string,
+    onComplete: (completion: SourceImportCompletion) => void =
+      (_completion: SourceImportCompletion): void => {},
+    onFailure: (error: Error) => void = (_error: Error): void => {},
+  ): void {
     if (this.importActive) {
       return;
     }
     this.importActive = true;
     const session = this.session;
+    this.publishStatus('loading', onlineUrl === undefined ? '正在导入本地书源…' : '正在导入在线书源…');
     this.operationChain = this.operationChain
-      .then((): Promise<void> => this.applyBookSourceImport(session))
+      .then(async (): Promise<void> => {
+        const completion = await this.applyBookSourceImport(session, onlineUrl);
+        if (completion !== undefined && this.isCurrentSession(session)) {
+          onComplete(completion);
+        }
+      })
       .catch((error: Error): void => {
+        if (this.isCurrentSession(session)) {
+          this.publishStatus('error', `书源导入失败：${error.message}`);
+          onFailure(error);
+        }
         hilog.error(DOMAIN, 'Reader',
           'Book-source import failed; page kept unchanged: %{public}s', error.message);
       })
@@ -203,13 +241,18 @@ export class SourceOrchestrator {
       });
   }
 
-  private async applyBookSourceImport(session: number): Promise<void> {
+  private async applyBookSourceImport(
+    session: number,
+    onlineUrl?: string,
+  ): Promise<SourceImportCompletion | undefined> {
     if (!this.isCurrentSession(session)) {
       return;
     }
     let selection: BookSourceJsonSelection | undefined;
     try {
-      selection = await this.owner.selectBookSourceJson();
+      selection = onlineUrl === undefined ?
+        await this.owner.selectBookSourceJson() :
+        await this.owner.loadOnlineJsonDocument(onlineUrl);
     } catch (error) {
       if (!this.isCurrentSession(session)) {
         return;
@@ -254,7 +297,9 @@ export class SourceOrchestrator {
       hilog.warn(DOMAIN, 'Reader',
         'Book-source import persisted but source.list refresh failed: file=%{public}s count=%{public}d err=%{public}s',
         selection.fileName, importedCount, (error as Error).message);
-      return;
+      const refreshWarning = `Core 已导入 ${importedCount} 个书源，但列表刷新失败：${(error as Error).message}`;
+      this.publishStatus('warning', refreshWarning);
+      return { importedCount, refreshWarning };
     }
     if (!this.isCurrentSession(session)) {
       return;
@@ -263,6 +308,8 @@ export class SourceOrchestrator {
     hilog.info(DOMAIN, 'Reader',
       'Book-source import completed: file=%{public}s count=%{public}d',
       selection.fileName, importedCount);
+    this.publishStatus('success', `已导入 ${importedCount} 个书源`);
+    return { importedCount };
   }
 
   private async reloadAfterImportFailure(session: number, fileName: string): Promise<void> {
@@ -320,6 +367,7 @@ export class SourceOrchestrator {
           baseUrl: source.baseUrl,
           enabled,
           enabledExplore: source.enabledExplore,
+          group: source.group,
           loginUrl: source.loginUrl,
           checkState: source.checkState,
           checkLevels: source.checkLevels,
@@ -394,6 +442,7 @@ export class SourceOrchestrator {
       baseUrl: source.baseUrl,
       enabled: source.enabled,
       enabledExplore: source.enabledExplore,
+      group: source.group,
       loginUrl: source.loginUrl,
       checkState: state,
       checkLevels: levels,
@@ -480,6 +529,7 @@ export class SourceOrchestrator {
         baseUrl: source.baseUrl,
         enabled: source.enabled,
         enabledExplore: source.enabledExplore,
+        group: source.group,
         loginUrl: source.loginUrl,
         checkState: checked?.checkState ?? source.checkState ?? 'unchecked',
         checkLevels: checked?.checkLevels ?? source.checkLevels ?? [],
@@ -487,5 +537,11 @@ export class SourceOrchestrator {
       };
     });
     this.emit(this.sources);
+  }
+
+  private publishStatus(kind: SourceManagementStatusKind, message: string): void {
+    if (this.isCurrent()) {
+      this.emitStatus(kind, message);
+    }
   }
 }

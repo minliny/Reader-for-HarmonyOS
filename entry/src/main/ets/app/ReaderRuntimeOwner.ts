@@ -28,6 +28,7 @@ import {
 } from './ReadingImageDiskCache';
 import { canonicalReadingImageBaseUrl } from '../common/ReadingImageIdentity';
 import { ArkWebExecutor } from './ArkWebExecutor';
+import type { SourceHttpDiagnosticRecord } from './HttpExecuteHost';
 import { image } from '@kit.ImageKit';
 
 type RuntimeState = 'new' | 'starting' | 'ready' | 'closing' | 'closed';
@@ -136,6 +137,11 @@ export class ReaderRuntimeOwner {
    */
   async clearSourceCookieSession(sourceId: string): Promise<void> {
     await this.host.clearSourceCookieSession(sourceId);
+  }
+
+  /** Return recorder-only evidence for the same completed Core command. */
+  takeSourceHttpDiagnostics(requestId: number): SourceHttpDiagnosticRecord[] {
+    return this.host.takeSourceHttpDiagnostics(requestId);
   }
 
   /** Open a user-operated source login/challenge page on the shared Host jar. */
@@ -390,6 +396,14 @@ export class ReaderRuntimeOwner {
       throw new Error('Reader Host is no longer available after teardown');
     }
     return this.host.selectRssSourceJson();
+  }
+
+  /** Acquire a portable JSON document from an HTTP(S) URL through Host I/O. */
+  async loadOnlineJsonDocument(onlineUrl: string): Promise<BookSourceJsonSelection> {
+    if (this.state === 'closing' || this.state === 'closed') {
+      throw new Error('Reader Host is no longer available after teardown');
+    }
+    return this.host.loadOnlineJsonDocument(onlineUrl);
   }
 
   async saveRssSourceJson(text: string, suggestedFileName: string): Promise<string | undefined> {

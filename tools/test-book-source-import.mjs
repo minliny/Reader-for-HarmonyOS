@@ -124,12 +124,133 @@ await assert.rejects(
 );
 assert.equal(cancellationCalls, 1, 'a stale page must not submit the next source.import');
 
+// List projection exposes the real Legado group from the raw Core payload.
+const listGateway = new SourceGateway({
+  request: async (method) => {
+    assert.equal(method, 'source.list');
+    return {
+      data: {
+        sources: [{
+          sourceId: single.bookSourceUrl,
+          name: single.bookSourceName,
+          baseUrl: 'https://source-a.example',
+          enabled: true,
+          enabledExplore: true,
+          bookSource: {
+            bookSourceGroup: '小说',
+            loginUrl: 'https://source-a.example/login',
+          },
+        }],
+      },
+    };
+  },
+});
+assert.deepEqual(await listGateway.loadSources(), [{
+  sourceId: single.bookSourceUrl,
+  name: single.bookSourceName,
+  baseUrl: 'https://source-a.example',
+  enabled: true,
+  enabledExplore: true,
+  group: '小说',
+  loginUrl: 'https://source-a.example/login',
+}]);
+
+// Product debug consumes the Host evidence captured by the same real
+// source.check.run command; no second empty-response replay is needed.
+let checkParams;
+const checkGateway = new SourceGateway({
+  request: async (method, params) => {
+    assert.equal(method, 'source.check.run');
+    checkParams = params;
+    return {
+      requestId: 91,
+      data: {
+        traceId: 'source.check.run:91:1',
+        results: [{
+          sourceId: single.bookSourceUrl,
+          available: true,
+          levelsPassed: ['L1', 'L2', 'L3', 'L4', 'L5'],
+          durationMs: 88,
+          debugLogs: [{
+            state: 1,
+            msg: 'L2 搜索解析完成：1 本书',
+            timestampMs: 12,
+            step: 'search',
+            extractedCount: 1,
+          }, {
+            state: 1000,
+            msg: '真实检测完成（88ms）',
+            timestampMs: 88,
+            step: 'content',
+          }],
+        }],
+      },
+    };
+  },
+  takeSourceHttpDiagnostics: (requestId) => {
+    assert.equal(requestId, 91);
+    return [{
+      traceId: 'source.check.run:91:1',
+      requestId: 91,
+      sourceId: single.bookSourceUrl,
+      stage: 'L2',
+      method: 'GET',
+      url: 'https://source-a.example/search',
+      timestampMs: 1000,
+      durationMs: 12,
+      statusCode: 200,
+    }];
+  },
+});
+const checked = await checkGateway.checkSource(single.bookSourceUrl, () => true, '读者');
+assert.equal(checkParams.keyword, '读者');
+assert.equal(checked.available, true);
+assert.equal(checked.traceId, 'source.check.run:91:1');
+assert.equal(checked.hostEvidenceCount, 1);
+assert.equal(checked.logs.length, 3);
+assert.match(checked.logs[0].message, /\[Core\] L2 搜索解析完成/);
+assert.equal(checked.logs[0].extractedCount, 1);
+assert.match(checked.logs[2].message, /\[Host\] L2 GET https:\/\/source-a\.example\/search → HTTP 200/);
+assert.ok(checked.logs.every((log) => log.traceId === checked.traceId));
+
+const mismatchGateway = new SourceGateway({
+  request: async () => ({
+    requestId: 92,
+    data: {
+      traceId: 'source.check.run:92:1',
+      results: [{
+        sourceId: single.bookSourceUrl,
+        available: false,
+        levelsPassed: ['L1'],
+        failureReason: 'L2: host HTTP failed',
+        durationMs: 5,
+        debugLogs: [{ state: -1, msg: 'L2 failed', timestampMs: 5, step: 'search' }],
+      }],
+    },
+  }),
+  takeSourceHttpDiagnostics: () => [{
+    traceId: 'wrong-trace',
+    requestId: 92,
+    sourceId: single.bookSourceUrl,
+    stage: 'L2',
+    method: 'GET',
+    url: 'https://source-a.example/search',
+    timestampMs: 1000,
+    durationMs: 5,
+    statusCode: 500,
+  }],
+});
+await assert.rejects(
+  () => mismatchGateway.checkSource(single.bookSourceUrl),
+  /Host evidence correlation mismatch/,
+);
+
 // Host: one JSON picker, bounded bytes, chunked read, fatal UTF-8, no staging.
 assert.match(host, /selectBoundedJsonDocument\('Legado 书源 JSON'\)/);
 assert.match(host, /fileSuffixFilters = \[`\$\{label\}\|\.json`\]/);
 assert.match(host, /options\.maxSelectNumber = 1/);
-assert.match(host, /BookSourceDocumentLimitBytes = 16 \* 1024 \* 1024/);
-assert.match(host, /BookSourceReadChunkBytes = 64 \* 1024/);
+assert.match(host, /JsonDocumentLimitBytes = 16 \* 1024 \* 1024/);
+assert.match(host, /JsonDocumentReadChunkBytes = 64 \* 1024/);
 assert.match(host, /readBoundedUtf8Document\([\s\S]*fileIo\.stat\(uri\)/);
 assert.match(host, /while \(totalBytes < stat\.size\)[\s\S]*fileIo\.read/);
 assert.match(host, /new ArrayBuffer\(1\)[\s\S]*changed while being read/);
@@ -145,14 +266,17 @@ assert.match(owner, /async selectBookSourceJson\(\)[\s\S]*this\.host\.selectBook
 // UI/orchestration: real button intent, serialized mutation, refresh, real log.
 assert.match(page, /onAddSource: \(\) => void/);
 assert.match(page, /\.onClick\(\(\): void => this\.onAddSource\(\)\)/);
-assert.match(index, /onAddSource: \(\): void => this\.onBookSourceImportRequested\(\)/);
-assert.match(index, /this\.getSourceOrchestrator\(\)\.importBookSources\(\)/);
+assert.match(index, /onAddSource: \(\): void => this\.openJsonImport\('bookSource'\)/);
+assert.match(index, /this\.getSourceOrchestrator\(\)\.importBookSources\(/);
 assert.match(orchestrator, /this\.operationChain = this\.operationChain[\s\S]*applyBookSourceImport/);
-assert.match(orchestrator, /applyBookSourceImport\(session: number\)[\s\S]*if \(!this\.isCurrentSession\(session\)\)[\s\S]*selectBookSourceJson\(\)/);
+assert.match(orchestrator,
+  /applyBookSourceImport\([\s\S]*session: number,[\s\S]*onlineUrl\?: string,[\s\S]*selectBookSourceJson\(\)[\s\S]*loadOnlineJsonDocument\(onlineUrl\)/);
 assert.match(orchestrator, /selection === undefined \|\| !this\.isCurrentSession\(session\)/,
   'a picker completion from an old page session must not begin Core imports');
 assert.match(orchestrator, /importBookSourceDocument\([\s\S]*this\.isCurrentSession\(session\)[\s\S]*gateway\.loadSources\(\)/);
 assert.match(orchestrator, /Book-source import failed; page kept unchanged/);
+assert.match(orchestrator, /Core 已导入 \$\{importedCount\} 个书源，但列表刷新失败/);
+assert.match(orchestrator, /publishStatus\('error', `书源列表读取失败/);
 assert.match(orchestrator, /isReaderCoreTransactionPendingError\(error\)/);
 assert.doesNotMatch(orchestrator, /error\.message\.indexOf|error\.message\.includes/);
 assert.doesNotMatch(orchestrator, /devSeed|fixture|mock|fake/i);

@@ -1,5 +1,7 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import { RssGateway } from '../rss/RssGateway';
+import { SourceGateway } from '../source/SourceGateway';
 import {
   RulesManagementGateway,
   type DictRuleDraft,
@@ -44,6 +46,8 @@ export const EMPTY_RULES_MANAGEMENT_SNAPSHOT: RulesManagementSnapshot = {
 /** Serial UI coordinator; all validation, persistence and bundle semantics stay in Core. */
 export class RulesManagementOrchestrator {
   private readonly gateway: RulesManagementGateway;
+  private readonly sourceGateway: SourceGateway;
+  private readonly rssGateway: RssGateway;
   private readonly owner: ReaderRuntimeOwner;
   private readonly emit: (snapshot: RulesManagementSnapshot) => void;
   private readonly isCurrent: () => boolean;
@@ -58,6 +62,8 @@ export class RulesManagementOrchestrator {
   ) {
     this.owner = owner;
     this.gateway = new RulesManagementGateway(owner);
+    this.sourceGateway = new SourceGateway(owner);
+    this.rssGateway = new RssGateway(owner);
     this.emit = emit;
     this.isCurrent = isCurrent;
   }
@@ -102,6 +108,62 @@ export class RulesManagementOrchestrator {
     this.mutate('删除规则订阅', async (): Promise<void> => this.gateway.deleteRuleSubscription(id));
   }
 
+  /** Download one stored RuleSub and route its Legado payload by persisted type. */
+  refreshRuleSubscription(subscription: ManagedRuleSubscription): void {
+    const session = this.session;
+    this.enqueue(async (): Promise<void> => {
+      const typeLabel = this.subscriptionTypeLabel(subscription.type);
+      this.publishIfCurrent(session, {
+        busy: true,
+        statusMessage: `正在拉取${typeLabel}订阅：${subscription.name}…`,
+      });
+      let importedStatus: string = '';
+      try {
+        const document = await this.owner.loadOnlineJsonDocument(subscription.url);
+        if (!this.isCurrentSession(session)) {
+          return;
+        }
+        if (subscription.type === 0) {
+          const summary = await this.sourceGateway.importBookSourceDocument(
+            document.text,
+            (): boolean => this.isCurrentSession(session),
+          );
+          importedStatus = `已导入 ${summary.importedCount} 个书源`;
+        } else if (subscription.type === 1) {
+          const result = await this.rssGateway.importSourcesDocument(document.text, false);
+          importedStatus = `已合并 ${result.imported} 个 RSS 源`;
+        } else {
+          importedStatus = await this.gateway.importReplaceRuleDocument(document.text);
+        }
+      } catch (error) {
+        this.fail(session, `${typeLabel}订阅拉取失败`, error as Error);
+        return;
+      }
+      if (!this.isCurrentSession(session)) {
+        return;
+      }
+      try {
+        await this.gateway.saveRuleSubscription({
+          id: subscription.id,
+          name: subscription.name,
+          url: subscription.url,
+          type: subscription.type,
+          autoUpdate: subscription.autoUpdate,
+          customOrder: subscription.customOrder,
+          update: Date.now(),
+        });
+      } catch (error) {
+        this.fail(session, `${importedStatus}，但订阅更新时间保存失败`, error as Error);
+        return;
+      }
+      try {
+        await this.reload(session, `${importedStatus}；订阅更新时间已保存`);
+      } catch (error) {
+        this.fail(session, `${importedStatus}，但规则实体刷新失败`, error as Error);
+      }
+    });
+  }
+
   exportBundle(): void {
     const session = this.session;
     this.enqueue(async (): Promise<void> => {
@@ -121,12 +183,17 @@ export class RulesManagementOrchestrator {
     });
   }
 
-  importBundle(): void {
+  importBundle(onlineUrl?: string): void {
     const session = this.session;
     this.enqueue(async (): Promise<void> => {
-      this.publishIfCurrent(session, { busy: true, statusMessage: '请选择 Core 规则包…' });
+      this.publishIfCurrent(session, {
+        busy: true,
+        statusMessage: onlineUrl === undefined ? '请选择本地 Core 规则包…' : '正在下载在线 Core 规则包…',
+      });
       try {
-        const selected = await this.owner.selectRuleBundleJson();
+        const selected = onlineUrl === undefined ?
+          await this.owner.selectRuleBundleJson() :
+          await this.owner.loadOnlineJsonDocument(onlineUrl);
         if (selected === undefined) {
           this.publishIfCurrent(session, { busy: false, statusMessage: '已取消导入' });
           return;
@@ -204,5 +271,11 @@ export class RulesManagementOrchestrator {
 
   private isCurrentSession(session: number): boolean {
     return this.isCurrent() && this.session === session;
+  }
+
+  private subscriptionTypeLabel(type: number): string {
+    if (type === 0) return '书源';
+    if (type === 1) return 'RSS 源';
+    return '替换规则';
   }
 }

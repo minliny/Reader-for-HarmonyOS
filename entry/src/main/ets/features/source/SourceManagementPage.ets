@@ -7,6 +7,7 @@
 import {
   type BookSource,
 } from './SourceGateway';
+import type { SourceManagementStatusKind } from './SourceOrchestrator';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { PageBackBar } from '../common/PageBackBar';
 import { ReaderToggle } from '../common/ReaderToggle';
@@ -46,16 +47,21 @@ const STATUS_ERROR_DOT = '#A8584D';
 @Component
 export struct SourceManagementPage {
   @Prop sources: BookSource[];
-  // Core 的 BookSource 当前没有分组字段。宿主只有在拿到真实分组数据后才传入；
-  // 默认不以启用状态伪造分组选项。
+  // 额外分组可由调用方补充；常规选项直接来自 Core 返回的原始
+  // bookSource.bookSourceGroup，不按启用状态等 UI 属性伪造。
   @Prop groups: string[] = [];
   @Prop isTablet: boolean;
+  @Prop statusKind: SourceManagementStatusKind = 'idle';
+  @Prop statusMessage: string = '';
   onBack: () => void = (): void => {};
   onToggleSource: (id: string, enabled: boolean) => void = (_id: string, _enabled: boolean): void => {};
   onDetectSource: (id: string) => void = (_id: string): void => {};
   onLoginSource: (id: string) => void = (_id: string): void => {};
   onAddSource: () => void = (): void => {};
   onOpenTools: () => void = (): void => {};
+  onRetryLoad: () => void = (): void => {};
+  @State private searchQuery: string = '';
+  @State private statusValue: string = '全部';
   @State private groupValue: string = '全部分组';
   @State private groupOpen: boolean = false;
   // 展开面板锚点: 触发条全局坐标 - 根 Stack 原点 = 面板相对根 Stack 位置。
@@ -77,6 +83,9 @@ export struct SourceManagementPage {
         Column() {
           this.searchField();
           this.statsRow();
+          if (this.statusKind !== 'idle') {
+            this.statusBanner();
+          }
           this.filterArea();
           this.sourceList();
           this.bottomActionBar();
@@ -131,14 +140,17 @@ export struct SourceManagementPage {
   private searchField() {
     Row({ space: TOK_SPACE_XS }) {
       Image($r('app.media.search_mag')).width(13).height(13);
-      Text('搜索书源名称或域名')
+      TextInput({ text: this.searchQuery, placeholder: '搜索书源名称或域名' })
         .layoutWeight(1)
+        .height(36)
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Regular)
         .fontSize(12)
-        .fontColor(TOK_MUTED)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis });
+        .fontColor(TOK_INK)
+        .placeholderColor(TOK_MUTED)
+        .backgroundColor('#00FFFFFF')
+        .padding(0)
+        .onChange((value: string): void => { this.searchQuery = value; });
     }
     .width(this.contentWidth())
     .height(38)
@@ -152,7 +164,7 @@ export struct SourceManagementPage {
 
   @Builder
   private statsRow() {
-    Text(`${this.sources.length} 个书源 · ${this.enabledCount()} 个启用`)
+    Text(this.statsText())
       .width(this.contentWidth())
       .fontFamily('ReaderInter')
       .fontWeight(FontWeight.Regular)
@@ -161,6 +173,33 @@ export struct SourceManagementPage {
       .fontColor(TOK_MUTED)
       .maxLines(1)
       .margin({ top: TOK_SPACE_XS });
+  }
+
+  @Builder
+  private statusBanner() {
+    Row({ space: TOK_SPACE_XS }) {
+      Text(this.statusMessage)
+        .layoutWeight(1)
+        .fontFamily('ReaderNotoSansSC')
+        .fontSize(11)
+        .lineHeight(16)
+        .fontColor(this.statusKind === 'error' ? STATUS_ERROR_DOT : TOK_INK)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis });
+      if (this.statusKind === 'error') {
+        Text('重试')
+          .fontFamily('ReaderNotoSansSC')
+          .fontSize(11)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(TOK_PRIMARY_DARK)
+          .onClick((): void => this.onRetryLoad());
+      }
+    }
+    .width(this.contentWidth())
+    .padding(TOK_SPACE_XS)
+    .margin({ top: TOK_SPACE_XS })
+    .backgroundColor(this.statusKind === 'error' ? STATUS_ERROR_BG : TOK_CARD_BG)
+    .borderRadius(7);
   }
 
   @Builder
@@ -187,11 +226,12 @@ export struct SourceManagementPage {
   @Builder
   private statusFilter() {
     Row({ space: TOK_SPACE_XS }) {
-      this.chip('全部', 58, true);
-      this.chip('启用', 58, false);
-      this.chip('异常', 58, false);
-      this.chip('未检测', 72, false);
-      this.chip('自定义', 72, false);
+      this.chip('全部', 58, this.statusValue === '全部', true);
+      this.chip('启用', 58, this.statusValue === '启用', true);
+      this.chip('异常', 58, this.statusValue === '异常', true);
+      this.chip('未检测', 72, this.statusValue === '未检测', true);
+      // 原稿保留该视觉位，但没有稳定业务定义；禁用比伪造筛选语义更诚实。
+      this.chip('自定义', 72, false, false);
     }
     .width(GROUP_FILTER_WIDTH)
     .height(32)
@@ -199,7 +239,7 @@ export struct SourceManagementPage {
   }
 
   @Builder
-  private chip(label: string, width: number, active: boolean) {
+  private chip(label: string, width: number, active: boolean, enabled: boolean) {
     Text(label)
       .width(width)
       .height(32)
@@ -211,7 +251,13 @@ export struct SourceManagementPage {
       .backgroundColor(active ? TOK_PRIMARY_DARK : TOK_CARD_BG)
       .border({ width: TOK_BORDER_W, color: active ? TOK_PRIMARY_DARK : CHIP_BORDER })
       .borderRadius(16)
-      .maxLines(1);
+      .maxLines(1)
+      .opacity(enabled ? 1 : 0.45)
+      .onClick((): void => {
+        if (enabled) {
+          this.statusValue = label;
+        }
+      });
   }
 
   @Builder
@@ -251,7 +297,7 @@ export struct SourceManagementPage {
   @Builder
   private sourceList() {
     List() {
-      ForEach(this.sources, (source: BookSource) => {
+      ForEach(this.filteredSources(), (source: BookSource) => {
         ListItem() {
           this.sourceRow(source);
         }
@@ -372,7 +418,7 @@ export struct SourceManagementPage {
   private bottomActionBar() {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
       Stack({ alignContent: Alignment.Center }) {
-        Text('产品工具')
+        Text('批量管理')
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Bold)
           .fontSize(13)
@@ -449,10 +495,46 @@ export struct SourceManagementPage {
     return this.sources.filter((source) => source.enabled).length;
   }
 
+  private statsText(): string {
+    const filteredCount = this.filteredSources().length;
+    const prefix = filteredCount === this.sources.length ? `${this.sources.length} 个书源` :
+      `显示 ${filteredCount}/${this.sources.length} 个书源`;
+    return `${prefix} · ${this.enabledCount()} 个启用`;
+  }
+
+  private filteredSources(): BookSource[] {
+    const query = this.searchQuery.trim().toLowerCase();
+    return this.sources.filter((source: BookSource): boolean => {
+      const matchesQuery = query.length === 0 || source.name.toLowerCase().includes(query) ||
+        source.baseUrl.toLowerCase().includes(query);
+      const matchesGroup = this.groupValue === '全部分组' || source.group === this.groupValue;
+      return matchesQuery && matchesGroup && this.matchesStatus(source);
+    });
+  }
+
+  private matchesStatus(source: BookSource): boolean {
+    if (this.statusValue === '启用') {
+      return source.enabled;
+    }
+    if (this.statusValue === '异常') {
+      return source.checkState === 'failed';
+    }
+    if (this.statusValue === '未检测') {
+      return source.checkState === undefined || source.checkState === 'unchecked';
+    }
+    return true;
+  }
+
   private groupOptions(): string[] {
     const options: string[] = ['全部分组'];
     for (let i = 0; i < this.groups.length; i++) {
       const group = this.groups[i].trim();
+      if (group !== '' && group !== '全部分组' && options.indexOf(group) < 0) {
+        options.push(group);
+      }
+    }
+    for (const source of this.sources) {
+      const group = source.group?.trim() ?? '';
       if (group !== '' && group !== '全部分组' && options.indexOf(group) < 0) {
         options.push(group);
       }

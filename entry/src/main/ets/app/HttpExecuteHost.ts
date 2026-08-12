@@ -79,6 +79,33 @@ type MultipartFileWire = {
   filePath?: string;
 };
 
+type SourceHttpDiagnosticContext = {
+  traceId: string;
+  requestId: number;
+  sourceId: string;
+  stage: string;
+};
+
+/**
+ * Sanitized, bounded Host evidence for one real `source.check.run` request.
+ * Response bodies, headers, cookies, query strings, URL fragments, and raw
+ * platform error text are deliberately excluded to reduce credential
+ * exposure in the product debug view.
+ */
+export type SourceHttpDiagnosticRecord = {
+  traceId: string;
+  requestId: number;
+  sourceId: string;
+  stage: string;
+  method: string;
+  url: string;
+  timestampMs: number;
+  durationMs: number;
+  statusCode?: number;
+  finalUrl?: string;
+  errorMessage?: string;
+};
+
 /**
  * API 23 exposes redirect interception before the platform follows a hop.
  * Returning false terminates the platform chain and returns that redirect
@@ -102,7 +129,7 @@ class StopBeforeRedirectInterceptor implements http.HttpInterceptor {
  * Wire contract (`HostHttpRequest`, camelCase): url, method, headers,
  * body (Raw=string | Form={fields:[[k,v]]} | Multipart={fields,files}),
  * charset (request-body encoding), followRedirects, maxRedirects, retry,
- * usePlatformCookieJar, session, diagnostic (opaque, ignored).
+ * usePlatformCookieJar, session, diagnostic (opaque recorder context).
  *
  * Redirects are stopped one hop at a time through API-23's REDIRECTION
  * interceptor, so Core receives an accurate finalUrl and hop list. Method rewriting follows the
@@ -128,6 +155,7 @@ class StopBeforeRedirectInterceptor implements http.HttpInterceptor {
 export class HttpExecuteHost {
   static readonly instance: HttpExecuteHost = new HttpExecuteHost();
   private readonly activeByRequestId = new Map<number, DeadlineState>();
+  private readonly sourceDiagnosticsByRequestId = new Map<number, SourceHttpDiagnosticRecord[]>();
 
   async execute(
     params: JsonObject,
@@ -154,8 +182,10 @@ export class HttpExecuteHost {
     if (useCookieJar && sessionId === null) {
       throw new Error('http.execute: platform cookie jar requires opaque session.id');
     }
-    // `diagnostic` is opaque recorder context; operationId is the only
-    // protocol correlation key for host.complete / host.error.
+    // `diagnostic` is recorder-only context. The Host request `requestId`
+    // argument remains the sole operation key for host.complete / host.error.
+    const diagnostic = this.parseSourceDiagnostic(params['diagnostic']);
+    const diagnosticStartedAt = Date.now();
     const deadline = this.createDeadline(TOTAL_DEADLINE_MS);
     let cancellationPoll: number | undefined = undefined;
     if (requestId !== undefined) {
@@ -185,13 +215,31 @@ export class HttpExecuteHost {
       // destroy() does not settle request.request() promptly; the shared
       // `cancelled` flag still stops background retries and the post-await
       // check rejects a success that lands after the deadline.
-      return await Promise.race([
+      const response = await Promise.race([
         this.requestWithPolicy(
           requestUrl, parsedMethod, headers, body, requestCharset,
           maxRedirects, retry, deadline, useCookieJar ? sessionId : null,
         ),
         deadline.expired,
       ]);
+      this.recordSourceDiagnostic(
+        diagnostic,
+        parsedMethod.wireMethod,
+        requestUrl,
+        diagnosticStartedAt,
+        response,
+      );
+      return response;
+    } catch (error) {
+      this.recordSourceDiagnostic(
+        diagnostic,
+        parsedMethod.wireMethod,
+        requestUrl,
+        diagnosticStartedAt,
+        undefined,
+        error instanceof Error ? error.message : `${error}`,
+      );
+      throw error;
     } finally {
       if (cancellationPoll !== undefined) {
         clearTimeout(cancellationPoll);
@@ -208,6 +256,113 @@ export class HttpExecuteHost {
     if (state !== undefined) {
       this.cancelDeadline(state, 'http.execute: cancelled by Core request');
     }
+  }
+
+  /** Consume all HTTP evidence captured for one original Core command. */
+  takeSourceDiagnostics(requestId: number): SourceHttpDiagnosticRecord[] {
+    const records = this.sourceDiagnosticsByRequestId.get(requestId) ?? [];
+    this.sourceDiagnosticsByRequestId.delete(requestId);
+    return records.map((record: SourceHttpDiagnosticRecord): SourceHttpDiagnosticRecord => ({ ...record }));
+  }
+
+  private parseSourceDiagnostic(value: unknown): SourceHttpDiagnosticContext | undefined {
+    if (value === undefined || value === null || typeof value !== 'object' || Array.isArray(value)) {
+      return undefined;
+    }
+    const diagnostic = value as JsonObject;
+    const traceId = diagnostic['traceId'];
+    const requestId = diagnostic['requestId'];
+    const sourceId = diagnostic['sourceId'];
+    const stage = diagnostic['stage'];
+    if (typeof traceId !== 'string' || traceId.trim().length === 0 ||
+      typeof requestId !== 'number' || !Number.isSafeInteger(requestId) || requestId <= 0 ||
+      typeof sourceId !== 'string' || sourceId.trim().length === 0 ||
+      typeof stage !== 'string' || !['L2', 'L3', 'L4', 'L5'].includes(stage)) {
+      return undefined;
+    }
+    return { traceId, requestId, sourceId, stage };
+  }
+
+  private recordSourceDiagnostic(
+    diagnostic: SourceHttpDiagnosticContext | undefined,
+    method: string,
+    requestUrl: string,
+    startedAt: number,
+    response?: JsonObject,
+    errorMessage?: string,
+  ): void {
+    if (diagnostic === undefined) {
+      return;
+    }
+    const timestampMs = Date.now();
+    const record: SourceHttpDiagnosticRecord = {
+      traceId: diagnostic.traceId,
+      requestId: diagnostic.requestId,
+      sourceId: diagnostic.sourceId,
+      stage: diagnostic.stage,
+      method,
+      url: this.sanitizeDiagnosticUrl(requestUrl),
+      timestampMs,
+      durationMs: Math.max(0, timestampMs - startedAt),
+    };
+    const statusCode = response?.['status'];
+    const finalUrl = response?.['finalUrl'];
+    if (typeof statusCode === 'number' && Number.isSafeInteger(statusCode)) {
+      record.statusCode = statusCode;
+    }
+    if (typeof finalUrl === 'string' && finalUrl.length > 0) {
+      record.finalUrl = this.sanitizeDiagnosticUrl(finalUrl);
+    }
+    if (errorMessage !== undefined && errorMessage.length > 0) {
+      record.errorMessage = this.sanitizeDiagnosticError(errorMessage);
+    }
+
+    let records = this.sourceDiagnosticsByRequestId.get(diagnostic.requestId);
+    if (records === undefined) {
+      // Core request ids are monotonic, but keep the recorder bounded even if
+      // a caller never consumes an old command's evidence.
+      if (this.sourceDiagnosticsByRequestId.size >= 64) {
+        for (const oldestRequestId of this.sourceDiagnosticsByRequestId.keys()) {
+          this.sourceDiagnosticsByRequestId.delete(oldestRequestId);
+          break;
+        }
+      }
+      records = [];
+      this.sourceDiagnosticsByRequestId.set(diagnostic.requestId, records);
+    }
+    if (records.length < 32) {
+      records.push(record);
+    }
+  }
+
+  private sanitizeDiagnosticUrl(value: string): string {
+    try {
+      const parsed = url.URL.parseURL(value);
+      const port = parsed.port.length > 0 ? `:${parsed.port}` : '';
+      return `${parsed.protocol}//${parsed.hostname}${port}${parsed.pathname}`;
+    } catch (_) {
+      return '[invalid URL]';
+    }
+  }
+
+  private sanitizeDiagnosticError(value: string): string {
+    const normalized = value.toLowerCase();
+    if (normalized.includes('cancel')) {
+      return 'Host 请求已取消';
+    }
+    if (normalized.includes('deadline') || normalized.includes('timeout')) {
+      return 'Host 请求超时';
+    }
+    if (normalized.includes('decode') || normalized.includes('charset')) {
+      return 'Host 响应解码失败';
+    }
+    if (normalized.includes('response exceeds')) {
+      return 'Host 响应体超过限制';
+    }
+    if (normalized.includes('redirect')) {
+      return 'Host 重定向失败';
+    }
+    return 'Host 网络请求失败';
   }
 
   /**

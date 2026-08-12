@@ -182,13 +182,26 @@ export class RssGateway {
     return subscription;
   }
 
-  async importSources(replaceExisting: boolean): Promise<RssSourceImportResult | undefined> {
-    const selection = await this.runtimeOwner.selectRssSourceJson();
+  async importSources(
+    replaceExisting: boolean,
+    onlineUrl?: string,
+  ): Promise<RssSourceImportResult | undefined> {
+    const selection = onlineUrl === undefined ?
+      await this.runtimeOwner.selectRssSourceJson() :
+      await this.runtimeOwner.loadOnlineJsonDocument(onlineUrl);
     if (selection === undefined) {
       return undefined;
     }
+    return this.importSourcesDocument(selection.text, replaceExisting);
+  }
+
+  /** Apply already-acquired RSS JSON; Core owns schema and atomic merge/replace. */
+  async importSourcesDocument(
+    json: string,
+    replaceExisting: boolean,
+  ): Promise<RssSourceImportResult> {
     const result = await this.runtimeOwner.request('rss-source.import', {
-      json: selection.text,
+      json,
       replaceExisting,
     });
     const imported = this.nonNegativeInteger(result.data, 'imported');

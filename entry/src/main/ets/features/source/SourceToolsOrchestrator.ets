@@ -3,7 +3,6 @@ import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import {
   SourceGateway,
   type BookSource,
-  type RuleSubscription,
   type SourceCheckOutcome,
   type SourceDebugLog,
 } from './SourceGateway';
@@ -12,43 +11,46 @@ const DOMAIN = 0x5244;
 
 export interface SourceToolsSnapshot {
   sources: BookSource[];
+  selectedSourceIds: string[];
+  selectedSourceCount: number;
   editorSourceId: string;
   editorText: string;
   debugSourceId: string;
   debugKey: string;
   debugLogs: SourceDebugLog[];
-  subscriptions: RuleSubscription[];
   busy: boolean;
   statusMessage: string;
 }
 
 interface SourceToolsPatch {
   sources?: BookSource[];
+  selectedSourceIds?: string[];
+  selectedSourceCount?: number;
   editorSourceId?: string;
   editorText?: string;
   debugSourceId?: string;
   debugKey?: string;
   debugLogs?: SourceDebugLog[];
-  subscriptions?: RuleSubscription[];
   busy?: boolean;
   statusMessage?: string;
 }
 
 export const EMPTY_SOURCE_TOOLS_SNAPSHOT: SourceToolsSnapshot = {
   sources: [],
+  selectedSourceIds: [],
+  selectedSourceCount: 0,
   editorSourceId: '',
   editorText: '',
   debugSourceId: '',
   debugKey: '我的',
   debugLogs: [],
-  subscriptions: [],
   busy: false,
   statusMessage: '',
 };
 
 /**
  * UI coordinator for existing Core source tools. It owns no source rules,
- * export serialization, debug parsing, or subscription persistence.
+ * export serialization, source checking, or persistence.
  */
 export class SourceToolsOrchestrator {
   private readonly gateway: SourceGateway;
@@ -58,7 +60,8 @@ export class SourceToolsOrchestrator {
   private snapshot: SourceToolsSnapshot = EMPTY_SOURCE_TOOLS_SNAPSHOT;
   private session: number = 0;
   private operationTail: Promise<void> = Promise.resolve();
-  private idSequence: number = 0;
+  /** Counts admitted operations, including those queued behind a prior page session. */
+  private pendingOperations: number = 0;
 
   constructor(
     emit: (snapshot: SourceToolsSnapshot) => void,
@@ -71,30 +74,57 @@ export class SourceToolsOrchestrator {
     this.isCurrent = isCurrent;
   }
 
-  open(): void {
+  open(seedSources: BookSource[] = []): void {
     this.session += 1;
     const session = this.session;
     this.snapshot = this.copySnapshot(EMPTY_SOURCE_TOOLS_SNAPSHOT);
+    // The source-management page already holds the last Core-authoritative
+    // list. Seed the first frame with it so ArkUI never renders a stale 0/0
+    // header while the fresh Core read is in flight.
+    this.snapshot.sources = seedSources.slice();
     this.publish({ busy: true, statusMessage: '正在读取 Core 书源工具数据…' });
     this.enqueue(async (): Promise<void> => {
       try {
         const sources = await this.gateway.loadSources();
-        const subscriptions = await this.gateway.listRuleSubscriptions();
         if (this.isCurrentSession(session)) {
-          this.publish({ sources, subscriptions, busy: false, statusMessage: '已读取 Core 数据' });
+          this.publish({ sources, busy: false, statusMessage: '已读取 Core 数据' });
         }
       } catch (error) {
         this.fail(session, '书源工具数据读取失败', error as Error);
       }
-    });
+    }, true);
   }
 
   exportAll(): void {
+    this.exportSources(undefined);
+  }
+
+  setSelection(sourceIds: string[]): void {
+    if (this.snapshot.busy || this.pendingOperations > 0) {
+      return;
+    }
+    const selection = this.normalizeSourceIds(sourceIds);
+    this.publish({
+      selectedSourceIds: selection,
+      selectedSourceCount: selection.length,
+      statusMessage: selection.length === 0 ? '已清空选择' : `已选择 ${selection.length} 个书源`,
+    });
+  }
+
+  exportSelected(sourceIds: string[]): void {
+    const selection = this.normalizeSourceIds(sourceIds);
+    if (selection.length === 0) {
+      return;
+    }
+    this.exportSources(selection);
+  }
+
+  private exportSources(sourceIds: string[] | undefined): void {
     const session = this.session;
     this.enqueue(async (): Promise<void> => {
       this.publishIfCurrent(session, { busy: true, statusMessage: '正在由 Core 导出书源…' });
       try {
-        const exported = await this.gateway.exportBookSources();
+        const exported = await this.gateway.exportBookSources(sourceIds);
         const fileName = await this.owner.saveBookSourceJson(
           exported.data,
           `reader-book-sources-${Date.now()}.json`,
@@ -108,6 +138,131 @@ export class SourceToolsOrchestrator {
         });
       } catch (error) {
         this.fail(session, '书源导出失败', error as Error);
+      }
+    });
+  }
+
+  setSelectedEnabled(sourceIds: string[], enabled: boolean): void {
+    const selection = this.normalizeSourceIds(sourceIds);
+    if (selection.length === 0) {
+      return;
+    }
+    const session = this.session;
+    this.enqueue(async (): Promise<void> => {
+      this.publishIfCurrent(session, {
+        busy: true,
+        statusMessage: `正在${enabled ? '启用' : '停用'} ${selection.length} 个书源…`,
+      });
+      let updatedCount = 0;
+      try {
+        for (const sourceId of selection) {
+          await this.gateway.updateSource(sourceId, { enabled });
+          updatedCount += 1;
+          if (!enabled) {
+            try {
+              await this.owner.clearSourceCookieSession(sourceId);
+            } catch (error) {
+              hilog.error(DOMAIN, 'Reader',
+                'Source disabled but cookie cleanup failed: sourceId=%{public}s err=%{public}s',
+                sourceId, (error as Error).message);
+            }
+          }
+        }
+        const sources = await this.gateway.loadSources();
+        if (this.isCurrentSession(session)) {
+          this.publish({
+            sources,
+            busy: false,
+            statusMessage: `已${enabled ? '启用' : '停用'} ${selection.length} 个书源`,
+          });
+        }
+      } catch (error) {
+        const updateError = error as Error;
+        // Repeated source.update calls are intentionally not presented as one
+        // atomic Core command. If an item fails, reload durable truth so the
+        // page never hides an already-applied prefix.
+        try {
+          const sources = await this.gateway.loadSources();
+          if (this.isCurrentSession(session)) {
+            this.publish({
+              sources,
+              busy: false,
+              statusMessage: `批量更新中断：已完成 ${updatedCount}/${selection.length}；${updateError.message}`,
+            });
+          }
+        } catch (_) {
+          this.fail(session, `批量更新书源失败（已完成 ${updatedCount}/${selection.length}）`, updateError);
+        }
+      }
+    });
+  }
+
+  checkSelected(sourceIds: string[]): void {
+    const selection = this.normalizeSourceIds(sourceIds);
+    if (selection.length === 0) {
+      return;
+    }
+    const session = this.session;
+    const key = this.snapshot.debugKey.trim();
+    this.enqueue(async (): Promise<void> => {
+      this.publishIfCurrent(session, {
+        busy: true,
+        debugSourceId: '',
+        debugLogs: [],
+        statusMessage: `正在逐个检测 ${selection.length} 个书源…`,
+      });
+      try {
+        const logs: SourceDebugLog[] = [];
+        let passed = 0;
+        for (const sourceId of selection) {
+          if (!this.isCurrentSession(session)) {
+            return;
+          }
+          const outcome = await this.gateway.checkSource(
+            sourceId,
+            (): boolean => this.isCurrentSession(session),
+            key,
+          );
+          logs.push(...outcome.logs);
+          if (outcome.available) {
+            passed += 1;
+          }
+        }
+        if (this.isCurrentSession(session)) {
+          this.publish({
+            debugLogs: logs,
+            busy: false,
+            statusMessage: `批量检测完成：${passed}/${selection.length} 个书源通过 L1–L5`,
+          });
+        }
+      } catch (error) {
+        this.fail(session, '批量检测书源失败', error as Error);
+      }
+    });
+  }
+
+  deleteSelected(sourceIds: string[]): void {
+    const selection = this.normalizeSourceIds(sourceIds);
+    if (selection.length === 0) {
+      return;
+    }
+    const session = this.session;
+    this.enqueue(async (): Promise<void> => {
+      this.publishIfCurrent(session, { busy: true, statusMessage: `正在删除 ${selection.length} 个书源…` });
+      try {
+        const deleted = await this.gateway.deleteSources(selection);
+        const sources = await this.gateway.loadSources();
+        if (this.isCurrentSession(session)) {
+          const cleanup = deleted.cookieCleanupFailures === 0 ? '' :
+            `；${deleted.cookieCleanupFailures} 个 Host 登录会话清理失败`;
+          this.publish({
+            sources,
+            busy: false,
+            statusMessage: `已删除 ${deleted.deletedCount} 个书源${cleanup}`,
+          });
+        }
+      } catch (error) {
+        this.fail(session, '书源删除失败', error as Error);
       }
     });
   }
@@ -128,13 +283,17 @@ export class SourceToolsOrchestrator {
   }
 
   updateEditorDraft(text: string): void {
-    if (this.snapshot.editorSourceId.length === 0 || text.length > 16 * 1024 * 1024) {
+    if (this.snapshot.busy || this.pendingOperations > 0 ||
+      this.snapshot.editorSourceId.length === 0 || text.length > 16 * 1024 * 1024) {
       return;
     }
     this.publish({ editorText: text });
   }
 
   cancelEditor(): void {
+    if (this.snapshot.busy || this.pendingOperations > 0) {
+      return;
+    }
     this.publish({ editorSourceId: '', editorText: '', statusMessage: '已取消编辑' });
   }
 
@@ -166,7 +325,7 @@ export class SourceToolsOrchestrator {
   }
 
   updateDebugKey(value: string): void {
-    if (value.length <= 4096) {
+    if (!this.snapshot.busy && this.pendingOperations === 0 && value.length <= 4096) {
       this.publish({ debugKey: value });
     }
   }
@@ -182,15 +341,18 @@ export class SourceToolsOrchestrator {
         statusMessage: '正在执行真实 L1–L5 检测与 Core 调试…',
       });
       try {
-        const health = await this.gateway.checkSource(sourceId, (): boolean => this.isCurrentSession(session));
-        const debug = await this.gateway.debugSource(sourceId, key);
+        const health = await this.gateway.checkSource(
+          sourceId,
+          (): boolean => this.isCurrentSession(session),
+          key,
+        );
         if (!this.isCurrentSession(session)) {
           return;
         }
         this.publish({
-          debugLogs: debug.logs,
+          debugLogs: health.logs,
           busy: false,
-          statusMessage: this.debugSummary(health, debug.finalState, debug.durationMs),
+          statusMessage: this.debugSummary(health),
         });
       } catch (error) {
         this.fail(session, '书源调试失败', error as Error);
@@ -198,60 +360,41 @@ export class SourceToolsOrchestrator {
     });
   }
 
-  putSubscription(name: string, url: string, autoUpdate: boolean): void {
-    const session = this.session;
-    this.idSequence += 1;
-    const id = Date.now() + this.idSequence;
-    this.enqueue(async (): Promise<void> => {
-      this.publishIfCurrent(session, { busy: true, statusMessage: '正在保存规则订阅…' });
-      try {
-        await this.gateway.putRuleSubscription({
-          id,
-          name: name.trim(),
-          url: url.trim(),
-          type: 0,
-          customOrder: this.snapshot.subscriptions.length,
-          autoUpdate,
-          update: 0,
-        });
-        const subscriptions = await this.gateway.listRuleSubscriptions();
-        if (this.isCurrentSession(session)) {
-          this.publish({ subscriptions, busy: false, statusMessage: '规则订阅已由 Core 保存' });
-        }
-      } catch (error) {
-        this.fail(session, '规则订阅保存失败', error as Error);
-      }
-    });
-  }
-
-  deleteSubscription(id: number): void {
-    const session = this.session;
-    this.enqueue(async (): Promise<void> => {
-      this.publishIfCurrent(session, { busy: true, statusMessage: '正在删除规则订阅…' });
-      try {
-        await this.gateway.deleteRuleSubscription(id);
-        const subscriptions = await this.gateway.listRuleSubscriptions();
-        if (this.isCurrentSession(session)) {
-          this.publish({ subscriptions, busy: false, statusMessage: '规则订阅已删除' });
-        }
-      } catch (error) {
-        this.fail(session, '规则订阅删除失败', error as Error);
-      }
-    });
-  }
-
-  private debugSummary(health: SourceCheckOutcome, finalState: number, durationMs: number): string {
+  private debugSummary(health: SourceCheckOutcome): string {
     const levels = health.levelsPassed.length === 0 ? '无通过级别' : health.levelsPassed.join('、');
     if (!health.available) {
-      return `检测未通过（${levels}）：${health.failureReason ?? '未知错误'}；调试状态 ${finalState}`;
+      const evidence = health.hostEvidenceCount === 0 ? 'Core 在发起网络前结束' :
+        `${health.hostEvidenceCount} 条同次 Host 网络证据`;
+      return `真实检测未通过（${levels}，${evidence}）：${health.failureReason ?? '未知错误'}`;
     }
-    return `真实检测 ${levels} 通过（${health.durationMs}ms）；Core 调试完成（${durationMs}ms）`;
+    return `真实检测 ${levels} 通过（${health.durationMs}ms）；trace=${health.traceId}，` +
+      `${health.hostEvidenceCount} 条同次 Host 网络证据`;
   }
 
-  private enqueue(operation: () => Promise<void>): void {
-    this.operationTail = this.operationTail.then(operation).catch((error: Error): void => {
-      hilog.error(DOMAIN, 'Reader', 'Source tools operation failed: %{public}s', error.message);
-    });
+  private normalizeSourceIds(sourceIds: string[]): string[] {
+    const available = new Set(this.snapshot.sources.map((source: BookSource): string => source.sourceId));
+    const normalized: string[] = [];
+    for (const sourceId of sourceIds) {
+      if (available.has(sourceId) && normalized.indexOf(sourceId) < 0) {
+        normalized.push(sourceId);
+      }
+    }
+    return normalized;
+  }
+
+  private enqueue(operation: () => Promise<void>, allowQueued: boolean = false): void {
+    if (!allowQueued && (this.snapshot.busy || this.pendingOperations > 0)) {
+      return;
+    }
+    this.pendingOperations += 1;
+    this.operationTail = this.operationTail
+      .then(operation)
+      .catch((error: Error): void => {
+        hilog.error(DOMAIN, 'Reader', 'Source tools operation failed: %{public}s', error.message);
+      })
+      .finally((): void => {
+        this.pendingOperations = Math.max(0, this.pendingOperations - 1);
+      });
   }
 
   private fail(session: number, label: string, error: Error): void {
@@ -271,12 +414,13 @@ export class SourceToolsOrchestrator {
   private publish(patch: SourceToolsPatch): void {
     this.snapshot = {
       sources: patch.sources ?? this.snapshot.sources,
+      selectedSourceIds: patch.selectedSourceIds ?? this.snapshot.selectedSourceIds,
+      selectedSourceCount: patch.selectedSourceCount ?? this.snapshot.selectedSourceCount,
       editorSourceId: patch.editorSourceId ?? this.snapshot.editorSourceId,
       editorText: patch.editorText ?? this.snapshot.editorText,
       debugSourceId: patch.debugSourceId ?? this.snapshot.debugSourceId,
       debugKey: patch.debugKey ?? this.snapshot.debugKey,
       debugLogs: patch.debugLogs ?? this.snapshot.debugLogs,
-      subscriptions: patch.subscriptions ?? this.snapshot.subscriptions,
       busy: patch.busy ?? this.snapshot.busy,
       statusMessage: patch.statusMessage ?? this.snapshot.statusMessage,
     };
@@ -288,12 +432,13 @@ export class SourceToolsOrchestrator {
   private copySnapshot(source: SourceToolsSnapshot): SourceToolsSnapshot {
     return {
       sources: source.sources.slice(),
+      selectedSourceIds: source.selectedSourceIds.slice(),
+      selectedSourceCount: source.selectedSourceCount,
       editorSourceId: source.editorSourceId,
       editorText: source.editorText,
       debugSourceId: source.debugSourceId,
       debugKey: source.debugKey,
       debugLogs: source.debugLogs.slice(),
-      subscriptions: source.subscriptions.slice(),
       busy: source.busy,
       statusMessage: source.statusMessage,
     };

@@ -1,5 +1,4 @@
 import type { JsonObject } from '@reader/core-harmony';
-import url from '@ohos.url';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 
 export type BookSource = {
@@ -8,6 +7,7 @@ export type BookSource = {
   baseUrl: string;
   enabled: boolean;
   enabledExplore: boolean;
+  group?: string;
   loginUrl?: string;
   checkState?: 'unchecked' | 'checking' | 'passed' | 'failed';
   checkLevels?: string[];
@@ -25,16 +25,24 @@ export type SourceImportSummary = {
 
 export type SourceCheckOutcome = {
   sourceId: string;
+  traceId: string;
   available: boolean;
   levelsPassed: string[];
   failureReason?: string;
   durationMs: number;
+  hostEvidenceCount: number;
+  logs: SourceDebugLog[];
 };
 
 export type SourceExportResult = {
   data: string;
   count: number;
   format: 'json';
+};
+
+export type SourceDeleteOutcome = {
+  deletedCount: number;
+  cookieCleanupFailures: number;
 };
 
 export type SourceDebugLog = {
@@ -44,22 +52,19 @@ export type SourceDebugLog = {
   step?: string;
   extractedCount?: number;
   errorKind?: string;
+  sourceId?: string;
+  traceId?: string;
+  requestId?: number;
+  method?: string;
+  url?: string;
+  statusCode?: number;
+  durationMs?: number;
 };
 
 export type SourceDebugOutcome = {
   logs: SourceDebugLog[];
   finalState: number;
   durationMs: number;
-};
-
-export type RuleSubscription = {
-  id: number;
-  name: string;
-  url: string;
-  type: number;
-  customOrder: number;
-  autoUpdate: boolean;
-  update: number;
 };
 
 const MAX_BOOK_SOURCE_DOCUMENT_ENTRIES = 5000;
@@ -93,8 +98,14 @@ export class SourceGateway {
       const baseUrl = this.optionalString(source, 'baseUrl');
       const rawBookSource = source['bookSource'];
       let loginUrl: string | undefined = undefined;
+      let group: string | undefined = undefined;
       if (rawBookSource !== null && typeof rawBookSource === 'object' && !Array.isArray(rawBookSource)) {
-        loginUrl = this.optionalString(rawBookSource as JsonObject, 'loginUrl');
+        const bookSource = rawBookSource as JsonObject;
+        loginUrl = this.optionalString(bookSource, 'loginUrl');
+        const sourceGroup = this.optionalString(bookSource, 'bookSourceGroup');
+        if (sourceGroup !== undefined && sourceGroup.trim().length > 0) {
+          group = sourceGroup.trim();
+        }
       }
       if (sourceId === undefined || name === undefined) {
         continue;
@@ -105,6 +116,7 @@ export class SourceGateway {
         baseUrl: baseUrl ?? '',
         enabled: source['enabled'] === true,
         enabledExplore: source['enabledExplore'] === true,
+        group,
         loginUrl,
       });
     }
@@ -239,7 +251,7 @@ export class SourceGateway {
     }
   }
 
-  /** Core-owned structured debug log projection; network health remains source.check.run. */
+  /** Replay-only compatibility API. Product debug uses real `source.check.run` evidence. */
   async debugSource(sourceId: string, key: string): Promise<SourceDebugOutcome> {
     const result = await this.runtimeOwner.request('source.debug', {
       sourceId,
@@ -285,40 +297,6 @@ export class SourceGateway {
     return { logs, finalState, durationMs };
   }
 
-  async listRuleSubscriptions(): Promise<RuleSubscription[]> {
-    const result = await this.runtimeOwner.request('rule-sub.list', {});
-    const rawSubs = result.data['subs'];
-    if (!Array.isArray(rawSubs)) {
-      throw new Error('rule-sub.list returned invalid data');
-    }
-    return rawSubs.map((raw: unknown): RuleSubscription => this.decodeRuleSubscription(raw));
-  }
-
-  async putRuleSubscription(subscription: RuleSubscription): Promise<RuleSubscription> {
-    this.validateRuleSubscription(subscription);
-    const result = await this.runtimeOwner.request('rule-sub.put', {
-      id: subscription.id,
-      name: subscription.name,
-      url: subscription.url,
-      type: subscription.type,
-      customOrder: subscription.customOrder,
-      autoUpdate: subscription.autoUpdate,
-      update: subscription.update,
-    });
-    return this.decodeRuleSubscription(result.data['sub']);
-  }
-
-  async deleteRuleSubscription(id: number): Promise<boolean> {
-    if (!Number.isSafeInteger(id)) {
-      throw new Error('rule-sub.delete requires a safe integer id');
-    }
-    const result = await this.runtimeOwner.request('rule-sub.delete', { id });
-    if (result.data['id'] !== id || typeof result.data['deleted'] !== 'boolean') {
-      throw new Error('rule-sub.delete returned invalid data');
-    }
-    return result.data['deleted'] as boolean;
-  }
-
   /**
    * Persist a source toggle via the real `source.update` RPC. Only the raw
    * `bookSource.enabled` key is rewritten Core-side (rules and unknown Legado
@@ -348,7 +326,7 @@ export class SourceGateway {
   }
 
   /** Delete sources in Core, then idempotently remove their Host sessions. */
-  async deleteSources(sourceIds: string[]): Promise<number> {
+  async deleteSources(sourceIds: string[]): Promise<SourceDeleteOutcome> {
     if (sourceIds.length === 0) {
       throw new Error('source.delete requires at least one sourceId');
     }
@@ -358,10 +336,17 @@ export class SourceGateway {
       deleted > sourceIds.length) {
       throw new Error('source.delete returned invalid deleted count');
     }
+    let cookieCleanupFailures = 0;
     for (const sourceId of sourceIds) {
-      await this.runtimeOwner.clearSourceCookieSession(sourceId);
+      try {
+        await this.runtimeOwner.clearSourceCookieSession(sourceId);
+      } catch (_) {
+        // Core deletion is already durable. Surface cleanup separately rather
+        // than misreporting the whole destructive operation as rolled back.
+        cookieCleanupFailures += 1;
+      }
     }
-    return deleted;
+    return { deletedCount: deleted, cookieCleanupFailures };
   }
 
   /**
@@ -372,20 +357,29 @@ export class SourceGateway {
   async checkSource(
     sourceId: string,
     shouldContinue: () => boolean = (): boolean => true,
+    keyword?: string,
   ): Promise<SourceCheckOutcome> {
     if (sourceId.trim().length === 0) {
       throw new Error('source.check.run requires a non-empty sourceId');
     }
-    const result = await this.runtimeOwner.request('source.check.run', {
+    const params: JsonObject = {
       sourceIds: [sourceId],
       timeoutMs: 180000,
       levels: ['L1', 'L2', 'L3', 'L4', 'L5'],
-    }, {
+    };
+    const normalizedKeyword = keyword?.trim();
+    if (normalizedKeyword !== undefined && normalizedKeyword.length > 0) {
+      params['keyword'] = normalizedKeyword;
+    }
+    const result = await this.runtimeOwner.request('source.check.run', params, {
       timeoutMs: 185000,
       shouldCancel: (): boolean => !shouldContinue(),
     });
+    const diagnostics = this.runtimeOwner.takeSourceHttpDiagnostics(result.requestId);
+    const traceId = this.optionalString(result.data, 'traceId');
     const rawResults = result.data['results'];
-    if (!Array.isArray(rawResults) || rawResults.length !== 1) {
+    if (traceId === undefined || traceId.trim().length === 0 ||
+      !Array.isArray(rawResults) || rawResults.length !== 1) {
       throw new Error('source.check.run returned invalid result count');
     }
     const raw = rawResults[0];
@@ -415,12 +409,78 @@ export class SourceGateway {
     if (!available && (failureReason === undefined || failureReason.trim().length === 0)) {
       throw new Error('source.check.run failed without a failure reason');
     }
+    const rawCoreLogs = outcome['debugLogs'];
+    if (!Array.isArray(rawCoreLogs) || rawCoreLogs.length === 0) {
+      throw new Error('source.check.run returned no structured Core debug logs');
+    }
+    const coreLogs: SourceDebugLog[] = rawCoreLogs.map((rawLog: unknown): SourceDebugLog => {
+      const row = this.requireObject(rawLog, 'source.check.run debug log');
+      const state = row['state'];
+      const message = row['msg'];
+      const timestampMs = row['timestampMs'];
+      if (typeof state !== 'number' || !Number.isSafeInteger(state) || typeof message !== 'string' ||
+        typeof timestampMs !== 'number' || !Number.isFinite(timestampMs) || timestampMs < 0) {
+        throw new Error('source.check.run returned an invalid Core debug log');
+      }
+      const log: SourceDebugLog = {
+        state,
+        message: `[Core] ${message}`,
+        timestampMs,
+        sourceId,
+        traceId,
+        requestId: result.requestId,
+      };
+      const step = this.optionalString(row, 'step');
+      const errorKind = this.optionalString(row, 'errorKind');
+      const extractedCount = row['extractedCount'];
+      if (step !== undefined) log.step = step;
+      if (errorKind !== undefined) log.errorKind = errorKind;
+      if (typeof extractedCount === 'number' && Number.isSafeInteger(extractedCount) && extractedCount >= 0) {
+        log.extractedCount = extractedCount;
+      }
+      return log;
+    });
+    const hostLogs: SourceDebugLog[] = diagnostics
+      .map((record): SourceDebugLog => {
+        if (record.sourceId !== sourceId || record.traceId !== traceId ||
+          record.requestId !== result.requestId) {
+          throw new Error('source.check.run Host evidence correlation mismatch');
+        }
+        const status = record.errorMessage === undefined ? record.statusCode : undefined;
+        const target = record.finalUrl !== undefined && record.finalUrl !== record.url ?
+          `${record.url} → ${record.finalUrl}` : record.url;
+        const message = record.errorMessage === undefined ?
+          `[Host] ${record.stage} ${record.method} ${target} → HTTP ${status ?? '未知'}（${record.durationMs}ms）` :
+          `[Host] ${record.stage} ${record.method} ${target} → ${record.errorMessage}`;
+        const log: SourceDebugLog = {
+          state: record.errorMessage === undefined ? 1 : -1,
+          message,
+          timestampMs: record.timestampMs,
+          step: record.stage,
+          sourceId: record.sourceId,
+          traceId: record.traceId,
+          requestId: record.requestId,
+          method: record.method,
+          url: record.url,
+          durationMs: record.durationMs,
+        };
+        if (record.statusCode !== undefined) {
+          log.statusCode = record.statusCode;
+        }
+        if (record.errorMessage !== undefined) {
+          log.errorKind = 'HOST_HTTP';
+        }
+        return log;
+      });
     return {
       sourceId,
+      traceId,
       available,
       levelsPassed,
       failureReason,
       durationMs,
+      hostEvidenceCount: hostLogs.length,
+      logs: coreLogs.concat(hostLogs),
     };
   }
 
@@ -440,57 +500,6 @@ export class SourceGateway {
       throw new Error(`${label} must be an object`);
     }
     return value as JsonObject;
-  }
-
-  private decodeRuleSubscription(value: unknown): RuleSubscription {
-    const raw = this.requireObject(value, 'rule subscription');
-    const subscription: RuleSubscription = {
-      id: this.requireSafeInteger(raw['id'], 'rule subscription id'),
-      name: this.requireString(raw['name'], 'rule subscription name'),
-      url: this.requireString(raw['url'], 'rule subscription URL'),
-      type: this.requireSafeInteger(raw['type'], 'rule subscription type'),
-      customOrder: this.requireSafeInteger(raw['customOrder'], 'rule subscription customOrder'),
-      autoUpdate: raw['autoUpdate'] === true,
-      update: this.requireSafeInteger(raw['update'], 'rule subscription update'),
-    };
-    if (typeof raw['autoUpdate'] !== 'boolean') {
-      throw new Error('rule subscription autoUpdate must be boolean');
-    }
-    this.validateRuleSubscription(subscription);
-    return subscription;
-  }
-
-  private validateRuleSubscription(subscription: RuleSubscription): void {
-    if (!Number.isSafeInteger(subscription.id) || !Number.isSafeInteger(subscription.type) ||
-      !Number.isSafeInteger(subscription.customOrder) || !Number.isSafeInteger(subscription.update)) {
-      throw new Error('rule subscription numeric fields must be safe integers');
-    }
-    if (subscription.name.trim().length === 0 || subscription.url.trim().length === 0) {
-      throw new Error('规则订阅名称和 URL 不能为空');
-    }
-    let parsed: url.URL;
-    try {
-      parsed = new url.URL(subscription.url.trim());
-    } catch (_) {
-      throw new Error('规则订阅 URL 无效');
-    }
-    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-      throw new Error('规则订阅 URL 仅支持 HTTP/HTTPS');
-    }
-  }
-
-  private requireSafeInteger(value: unknown, label: string): number {
-    if (typeof value !== 'number' || !Number.isSafeInteger(value)) {
-      throw new Error(`${label} must be a safe integer`);
-    }
-    return value;
-  }
-
-  private requireString(value: unknown, label: string): string {
-    if (typeof value !== 'string') {
-      throw new Error(`${label} must be a string`);
-    }
-    return value;
   }
 
   private requireBookSourceObject(value: unknown, index: number): JsonObject {

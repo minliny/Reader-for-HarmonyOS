@@ -115,13 +115,14 @@ export class RssOrchestrator {
     replaceExisting: boolean,
     onComplete: (result: RssSourceImportResult | undefined) => void,
     onFailure: RssOperationFailure,
+    onlineUrl?: string,
   ): void {
     const session = this.session;
     this.enqueueRouteTask(
       'source-import',
       replaceExisting ? 'replace' : 'merge',
       async (): Promise<void> => {
-        const result = await this.gateway.importSources(replaceExisting);
+        const result = await this.gateway.importSources(replaceExisting, onlineUrl);
         if (result === undefined) {
           if (this.isCurrentSession(session)) onComplete(undefined);
           return;

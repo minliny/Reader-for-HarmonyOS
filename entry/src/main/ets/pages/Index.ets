@@ -106,6 +106,7 @@ import {
 } from '../features/settings/RulesManagementOrchestrator';
 import type {
   DictRuleDraft,
+  ManagedRuleSubscription,
   ReplaceRuleDraft,
   RuleSubscriptionDraft,
   TxtTocRuleDraft,
@@ -114,7 +115,11 @@ import {
   SourceGateway,
   type BookSource,
 } from '../features/source/SourceGateway';
-import { SourceOrchestrator } from '../features/source/SourceOrchestrator';
+import {
+  SourceOrchestrator,
+  type SourceImportCompletion,
+  type SourceManagementStatusKind,
+} from '../features/source/SourceOrchestrator';
 import {
   buildSourceSwitchCommitParams,
   sourceSwitchCandidateKey,
@@ -141,6 +146,7 @@ import { SyncOrchestrator } from '../features/sync/SyncOrchestrator';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import deviceInfo from '@ohos.deviceInfo';
 import { ArkWebExecutionHost } from '../app/ArkWebExecutionHost';
+import { JsonImportDialog } from '../features/common/JsonImportDialog';
 
 const DOMAIN = 0x5244;
 const IMPORT_PRESENTATION_KEY = 'reader.bookshelf.import.presentation.v1';
@@ -155,7 +161,7 @@ type PreparedReaderRoute = 'reading' | 'directory';
 type DirectoryReturnTarget = 'detail' | 'readerControl';
 type RssDetailReturnTarget = 'rss' | 'rssSourceFeed';
 type RssSourceFeedReturnTarget = 'rss' | 'rssSubscriptionManagement';
-
+type JsonImportContext = 'bookSource' | 'ruleBundle' | 'rssMerge' | 'rssReplace';
 type RulesManagementReturnTarget = 'settings' | 'reader';
 
 class SourceSwitchAnchor {
@@ -214,6 +220,8 @@ struct Index {
   @State private bookshelfManagementSnapshot: BookshelfManagementSnapshot =
     EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT;
   @State private route: ReaderRoute = 'bookshelf';
+  @State private jsonImportVisible: boolean = false;
+  @State private jsonImportContext: JsonImportContext = 'bookSource';
   @State private detailBook: ReadingBookDetail | undefined = undefined;
   @State private detailToc: LocalReadingTocEntry[] = [];
   @State private remoteReadingSession: RemoteReadingSession | undefined = undefined;
@@ -234,6 +242,8 @@ struct Index {
   @State private rssManagementFocusSubscriptionId: string = '';
   @State private rssEditorSnapshot: RssSubscriptionEditorSnapshot = EMPTY_RSS_EDITOR_SNAPSHOT;
   @State private sourceSources: BookSource[] = [];
+  @State private sourceStatusKind: SourceManagementStatusKind = 'idle';
+  @State private sourceStatusMessage: string = '';
   @State private sourceToolsSnapshot: SourceToolsSnapshot = EMPTY_SOURCE_TOOLS_SNAPSHOT;
   @State private rulesManagementSnapshot: RulesManagementSnapshot = EMPTY_RULES_MANAGEMENT_SNAPSHOT;
   @State private discoverPresentation: DiscoverPresentation = EMPTY_DISCOVER_PRESENTATION;
@@ -313,6 +323,10 @@ struct Index {
   }
 
   onBackPress(): boolean {
+    if (this.jsonImportVisible) {
+      this.dismissJsonImport();
+      return true;
+    }
     if (this.sourceSwitchVisible) {
       // The detail/reading overlay must win over the route-specific exit
       // branch so Back only closes the source-switch panel.
@@ -571,34 +585,44 @@ struct Index {
             this.getRulesManagementOrchestrator().saveRuleSubscription(draft),
           onDeleteSubscription: (id: number): void =>
             this.getRulesManagementOrchestrator().deleteRuleSubscription(id),
+          onRefreshSubscription: (subscription: ManagedRuleSubscription): void =>
+            this.getRulesManagementOrchestrator().refreshRuleSubscription(subscription),
           onExportBundle: (): void => this.getRulesManagementOrchestrator().exportBundle(),
-          onImportBundle: (): void => this.getRulesManagementOrchestrator().importBundle(),
+          onImportBundle: (): void => this.openJsonImport('ruleBundle'),
         });
       } else if (this.route === 'source') {
         SourceManagementPage({
           sources: this.sourceSources,
+          statusKind: this.sourceStatusKind,
+          statusMessage: this.sourceStatusMessage,
           isTablet: deviceInfo.deviceType === 'tablet',
           onBack: (): void => this.returnToSettings(),
           onToggleSource: (id: string, enabled: boolean): void => this.onSourceToggled(id, enabled),
           onDetectSource: (id: string): void => this.onSourceDetectionRequested(id),
           onLoginSource: (id: string): void => this.onSourceLoginRequested(id),
-          onAddSource: (): void => this.onBookSourceImportRequested(),
+          onAddSource: (): void => this.openJsonImport('bookSource'),
           onOpenTools: (): void => this.openSourceTools(),
+          onRetryLoad: (): void => this.getSourceOrchestrator().retryLoad(),
         });
       } else if (this.route === 'sourceTools') {
         SourceToolsPage({
           snapshot: this.sourceToolsSnapshot,
+          onSelectAll: (): void => this.selectAllSourceTools(),
+          onClearSelection: (): void => this.updateSourceToolsSelection([]),
+          onToggleSelection: (sourceId: string): void => this.toggleSourceToolsSelection(sourceId),
           onBack: (): void => this.returnToSourceManagement(),
           onExportAll: (): void => this.getSourceToolsOrchestrator().exportAll(),
+          onExportSelected: (sourceIds: string[]): void => this.exportSelectedSources(sourceIds),
+          onCheckSelected: (sourceIds: string[]): void => this.checkSelectedSources(sourceIds),
+          onSetSelectedEnabled: (sourceIds: string[], enabled: boolean): void =>
+            this.setSelectedSourcesEnabled(sourceIds, enabled),
+          onDeleteSelected: (sourceIds: string[]): void => this.requestSourceDelete(sourceIds),
           onOpenEditor: (sourceId: string): void => this.getSourceToolsOrchestrator().openEditor(sourceId),
           onEditorDraftChanged: (text: string): void => this.getSourceToolsOrchestrator().updateEditorDraft(text),
           onSaveEditor: (): void => this.getSourceToolsOrchestrator().saveEditor(),
           onCancelEditor: (): void => this.getSourceToolsOrchestrator().cancelEditor(),
           onDebugKeyChanged: (value: string): void => this.getSourceToolsOrchestrator().updateDebugKey(value),
           onDebugSource: (sourceId: string): void => this.getSourceToolsOrchestrator().debugSource(sourceId),
-          onPutSubscription: (name: string, url: string, autoUpdate: boolean): void =>
-            this.getSourceToolsOrchestrator().putSubscription(name, url, autoUpdate),
-          onDeleteSubscription: (id: number): void => this.getSourceToolsOrchestrator().deleteSubscription(id),
         });
       } else if (this.route === 'sync') {
         if (this.syncSnapshotReady) {
@@ -730,6 +754,16 @@ struct Index {
           batch: this.visibleImportBatch(),
           onSelectFiles: (): void => this.beginImport(),
           onClose: (): void => this.closeImportDialog(),
+        });
+      }
+      if (this.jsonImportVisible) {
+        JsonImportDialog({
+          title: this.jsonImportTitle(),
+          description: this.jsonImportDescription(),
+          isTablet: deviceInfo.deviceType === 'tablet',
+          onDismiss: (): void => this.dismissJsonImport(),
+          onSelectLocal: (): void => this.selectLocalJsonImport(),
+          onImportOnline: (onlineUrl: string): void => this.importOnlineJson(onlineUrl),
         });
       }
       // Host capability surface only: mounted for ArkWeb controller lifecycle,
@@ -972,6 +1006,10 @@ struct Index {
           this.sourceSources = sources;
         },
         (): boolean => this.route === 'source',
+        (kind: SourceManagementStatusKind, message: string): void => {
+          this.sourceStatusKind = kind;
+          this.sourceStatusMessage = message;
+        },
       );
     }
     return this.sourceOrchestrator;
@@ -994,8 +1032,51 @@ struct Index {
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
     this.exitToBookshelfAfterReader = false;
+    this.updateSourceToolsSelection([]);
     this.route = 'sourceTools';
-    this.getSourceToolsOrchestrator().open();
+    this.getSourceToolsOrchestrator().open(this.sourceSources);
+  }
+
+  private updateSourceToolsSelection(sourceIds: string[]): void {
+    this.getSourceToolsOrchestrator().setSelection(sourceIds);
+  }
+
+  private selectAllSourceTools(): void {
+    this.updateSourceToolsSelection(this.sourceToolsSnapshot.sources.map(
+      (source: BookSource): string => source.sourceId,
+    ));
+  }
+
+  private toggleSourceToolsSelection(sourceId: string): void {
+    const selection = this.sourceToolsSnapshot.selectedSourceIds;
+    if (selection.indexOf(sourceId) >= 0) {
+      this.updateSourceToolsSelection(selection.filter(
+        (candidate: string): boolean => candidate !== sourceId,
+      ));
+      return;
+    }
+    this.updateSourceToolsSelection(selection.concat([sourceId]));
+  }
+
+  private consumeSourceToolsSelection(sourceIds: string[]): string[] {
+    const available = new Set(this.sourceToolsSnapshot.sources.map(
+      (source: BookSource): string => source.sourceId,
+    ));
+    const selection = sourceIds.filter((sourceId: string): boolean => available.has(sourceId));
+    this.updateSourceToolsSelection([]);
+    return selection;
+  }
+
+  private exportSelectedSources(sourceIds: string[]): void {
+    this.getSourceToolsOrchestrator().exportSelected(this.consumeSourceToolsSelection(sourceIds));
+  }
+
+  private checkSelectedSources(sourceIds: string[]): void {
+    this.getSourceToolsOrchestrator().checkSelected(this.consumeSourceToolsSelection(sourceIds));
+  }
+
+  private setSelectedSourcesEnabled(sourceIds: string[], enabled: boolean): void {
+    this.getSourceToolsOrchestrator().setSelectedEnabled(this.consumeSourceToolsSelection(sourceIds), enabled);
   }
 
   private returnToSourceManagement(): void {
@@ -1037,8 +1118,109 @@ struct Index {
     this.getSourceOrchestrator().loginSource(id);
   }
 
-  private onBookSourceImportRequested(): void {
-    this.getSourceOrchestrator().importBookSources();
+  private openJsonImport(context: JsonImportContext): void {
+    this.jsonImportContext = context;
+    this.jsonImportVisible = true;
+  }
+
+  private dismissJsonImport(): void {
+    this.jsonImportVisible = false;
+  }
+
+  private selectLocalJsonImport(): void {
+    const context = this.jsonImportContext;
+    this.dismissJsonImport();
+    this.executeJsonImport(context);
+  }
+
+  private importOnlineJson(onlineUrl: string): void {
+    const context = this.jsonImportContext;
+    this.dismissJsonImport();
+    this.executeJsonImport(context, onlineUrl);
+  }
+
+  private executeJsonImport(context: JsonImportContext, onlineUrl?: string): void {
+    if (context === 'bookSource' && this.route === 'source') {
+      this.getSourceOrchestrator().importBookSources(
+        onlineUrl,
+        (completion: SourceImportCompletion): void => this.showSourceImportResult(
+          '书源导入完成', completion.refreshWarning ??
+            `Core 已导入 ${completion.importedCount} 个书源。`,
+        ),
+        (error: Error): void => this.showSourceImportResult('书源导入失败', error.message),
+      );
+      return;
+    }
+    if (context === 'ruleBundle' && this.route === 'rulesManagement') {
+      this.getRulesManagementOrchestrator().importBundle(onlineUrl);
+      return;
+    }
+    if ((context === 'rssMerge' || context === 'rssReplace') &&
+      this.route === 'rssSubscriptionManagement') {
+      this.importRssSources(context === 'rssReplace', onlineUrl);
+    }
+  }
+
+  private jsonImportTitle(): string {
+    if (this.jsonImportContext === 'bookSource') return '导入书源';
+    if (this.jsonImportContext === 'ruleBundle') return '导入规则包';
+    return '导入 RSS 源';
+  }
+
+  private jsonImportDescription(): string {
+    if (this.jsonImportContext === 'ruleBundle') {
+      return '本地和在线导入共用 Core 规则包校验；同主键以导入值为准。';
+    }
+    if (this.jsonImportContext === 'rssReplace') {
+      return '覆盖导入会原子替换当前 RSS 来源与阅读状态。';
+    }
+    if (this.jsonImportContext === 'rssMerge') {
+      return '合并导入会保留现有 RSS 来源。';
+    }
+    return '支持 Legado 书源 JSON；本地文件和在线链接共用 Core 导入校验。';
+  }
+
+  private showSourceImportResult(title: string, message: string): void {
+    if (this.route !== 'source') {
+      return;
+    }
+    this.getUIContext().showAlertDialog({
+      title,
+      message,
+      autoCancel: true,
+      primaryButton: {
+        value: '知道了',
+        action: (): void => {},
+      },
+    });
+  }
+
+  private requestSourceDelete(sourceIds: string[]): void {
+    if (this.route !== 'sourceTools' || sourceIds.length === 0) {
+      return;
+    }
+    const selection = this.consumeSourceToolsSelection(sourceIds);
+    if (selection.length === 0) {
+      return;
+    }
+    this.getUIContext().showAlertDialog({
+      title: '删除书源',
+      message: `确定删除所选 ${selection.length} 个书源吗？相关 Host 登录会话也会清除，删除后无法恢复。`,
+      autoCancel: true,
+      primaryButton: {
+        value: '取消',
+        action: (): void => {},
+      },
+      secondaryButton: {
+        value: '删除',
+        fontColor: '#B42318',
+        action: (): void => {
+          if (this.route === 'sourceTools') {
+            this.getSourceToolsOrchestrator().deleteSelected(selection);
+          }
+        },
+      },
+    });
   }
 
   private openSync(): void {
@@ -1189,17 +1371,17 @@ struct Index {
       autoCancel: true,
       primaryButton: {
         value: '合并导入',
-        action: (): void => this.importRssSources(false),
+        action: (): void => this.openJsonImport('rssMerge'),
       },
       secondaryButton: {
         value: '覆盖全部',
         fontColor: '#B42318',
-        action: (): void => this.importRssSources(true),
+        action: (): void => this.openJsonImport('rssReplace'),
       },
     });
   }
 
-  private importRssSources(replaceExisting: boolean): void {
+  private importRssSources(replaceExisting: boolean, onlineUrl?: string): void {
     this.getRssOrchestrator().importSources(
       replaceExisting,
       (result: RssSourceImportResult | undefined): void => {
@@ -1208,6 +1390,7 @@ struct Index {
         }
       },
       (error: Error): void => this.showRssOperationResult('RSS 源导入失败', error.message),
+      onlineUrl,
     );
   }
 
