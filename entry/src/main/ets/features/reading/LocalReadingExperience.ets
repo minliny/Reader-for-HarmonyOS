@@ -786,7 +786,7 @@ export struct ReadingExperience {
           onLoadReviews: (): void => this.loadContentBusinessReviews(),
         });
       }
-      if (!this.controlVisible && !this.contentBusinessVisible) {
+      if (!this.controlVisible && !this.contentBusinessVisible && !this.controlObscured) {
         // Figma reader.page.turn.none: left/right bands request the adjacent
         // real page while the center band retains Reader Control entry. The
         // page swap itself has no animation and occurs only after Core stores

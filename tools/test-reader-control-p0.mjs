@@ -65,6 +65,9 @@ assert.match(experience, /this\.pauseAutoPageForInteraction\(\);\s*this\.turnPre
 assert.match(experience, /this\.pauseAutoPageForInteraction\(\);\s*this\.turnNextPage\(\)/);
 assert.doesNotMatch(experience, /reader\.page\.turn\.none.*animateTo/);
 assert.match(experience, /visible: this\.controlVisible && !this\.controlObscured/);
+assert.match(experience,
+  /if \(!this\.controlVisible && !this\.contentBusinessVisible && !this\.controlObscured\) \{[\s\S]*?\.accessibilityText\('上一页'\)[\s\S]*?\.accessibilityText\('打开阅读控制'\)[\s\S]*?\.accessibilityText\('下一页'\)/,
+  'full-screen page-turn hit targets must be absent while the directory overlay obscures the reader');
 assert.match(experience, /reduceMotion: this\.reduceMotion/);
 assert.match(experience, /autoPageStatus: this\.autoPageState\.status/);
 assert.match(experience, /private armAutoPageTimer\(resetDeadline: boolean\): void/);
