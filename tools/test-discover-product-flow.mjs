@@ -14,6 +14,10 @@ const index = read('entry/src/main/ets/pages/Index.ets');
 assert.match(gateway, /request\('source\.exploreKinds', \{ sourceId \}\)/);
 assert.match(gateway, /request\('source\.explore', \{ sourceId, url, page \}\)/);
 assert.match(gateway, /page must be a positive safe integer/);
+assert.match(gateway, /const name = this\.string\(obj, 'title'\)/,
+  'Core source.explore books use the stable BookSearchBookData title field');
+assert.doesNotMatch(gateway, /const name = this\.string\(obj, 'name'\)/,
+  'Harmony must not filter valid Core explore books by a non-existent name field');
 assert.match(gateway, /url\.trim\(\)\.length === 0/,
   'Legado explore group headings with blank URLs must never be dispatched as categories');
 assert.match(orchestrator, /source\.enabled && source\.enabledExplore/);

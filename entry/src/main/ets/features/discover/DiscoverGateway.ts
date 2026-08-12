@@ -75,7 +75,10 @@ export class DiscoverGateway {
       }
       const obj = item as JsonObject;
       const bookId = this.string(obj, 'bookId');
-      const name = this.string(obj, 'name');
+      // `source.explore` deliberately mirrors Core's `BookSearchBookData`
+      // wire shape.  The stable title field is `title`; `name` is only a
+      // presentation label inside this Harmony feature.
+      const name = this.string(obj, 'title');
       if (bookId === undefined || name === undefined) {
         continue;
       }
