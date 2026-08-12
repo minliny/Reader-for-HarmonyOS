@@ -6,11 +6,21 @@ import {
 } from './SearchGateway';
 import type {
   SearchPresentation,
+  SearchScope,
 } from './SearchPage';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
 const DOMAIN = 0x5244;
+// Match the already-admitted source-switch fan-out: eight remote probes keep
+// all-source search responsive without issuing one unbounded request per
+// imported source.
+const SEARCH_SOURCE_CONCURRENCY = 8;
+
+interface SearchBatchOutcome {
+  results: SearchBook[];
+  succeeded: boolean;
+}
 
 /**
  * Owns the Search page's orchestration. A plain class, not a component:
@@ -36,6 +46,10 @@ export class SearchOrchestrator {
   private work: number = 0;
   private sourceLoad: Promise<SearchSource[]> | undefined = undefined;
   private sourceLoadSession: number = 0;
+  /** Session-local UI intent. Undefined means all enabled sources. */
+  private scopeSourceId: SearchScope = undefined;
+  /** Last submitted keyword; changing scope re-runs only a real search. */
+  private keyword: string = '';
 
   constructor(
     emitPresentation: (presentation: SearchPresentation) => void,
@@ -54,6 +68,8 @@ export class SearchOrchestrator {
     this.session += 1;
     const session = this.session;
     this.work = 0;
+    this.scopeSourceId = undefined;
+    this.keyword = '';
     // Source and history are independent Core facts. In particular, a
     // history failure must not make a valid source list disappear, and an
     // early submit must be able to await this very source-list transaction.
@@ -83,7 +99,7 @@ export class SearchOrchestrator {
         if (!this.isCurrentSession(session) || this.presentation.kind !== 'initial') {
           return;
         }
-        this.present({ kind: 'initial', history: history.keywords });
+        this.presentWithScope({ kind: 'initial', history: history.keywords });
       })
       .catch((error: Error): void => {
         if (!this.isCurrentSession(session)) {
@@ -97,14 +113,34 @@ export class SearchOrchestrator {
 
   /** Begin a real search across enabled sources. */
   search(keyword: string): void {
-    if (keyword.trim().length === 0) {
+    const normalizedKeyword = keyword.trim();
+    if (normalizedKeyword.length === 0) {
       return;
     }
+    this.keyword = normalizedKeyword;
     this.work += 1;
     const work = this.work;
     const session = this.session;
-    this.present({ kind: 'loading', keyword: keyword });
-    void this.performSearch(work, session, keyword);
+    this.presentWithScope({ kind: 'loading', keyword: normalizedKeyword });
+    void this.performSearch(work, session, normalizedKeyword);
+  }
+
+  /** Select all sources (`undefined`) or one exact source and re-run the query. */
+  changeScope(sourceId: SearchScope): void {
+    if (sourceId !== undefined && sourceId.trim().length === 0) {
+      return;
+    }
+    if (this.scopeSourceId === sourceId) {
+      return;
+    }
+    // sourceId is an opaque Core registry identity; validate blankness without
+    // trimming or otherwise deriving a second identity in the UI layer.
+    this.scopeSourceId = sourceId;
+    if (this.keyword.length > 0 && this.presentation.kind !== 'initial') {
+      this.search(this.keyword);
+      return;
+    }
+    this.presentCurrentWithScope();
   }
 
   /** Re-run the last failed or empty search. */
@@ -126,7 +162,7 @@ export class SearchOrchestrator {
         if (!this.isCurrentWork(work, session)) {
           return;
         }
-        this.present({ kind: 'initial', history: history.keywords });
+        this.presentWithScope({ kind: 'initial', history: history.keywords });
       })
       .catch((error: Error): void => {
         if (!this.isCurrentWork(work, session)) {
@@ -151,48 +187,94 @@ export class SearchOrchestrator {
         return;
       }
       this.presentSources(sources);
-      const enabled = sources.filter((source) => source.enabled && source.name.trim().length > 0);
-      if (enabled.length === 0) {
-        this.present({ kind: 'error', keyword: keyword });
+      const selected = this.selectedSources(sources);
+      if (selected.length === 0) {
+        this.presentWithScope({ kind: 'error', keyword: keyword });
         return;
       }
       const results: SearchBook[] = [];
-      for (const source of enabled) {
-        const outcome = await this.gateway.searchBySource(
-          source,
-          keyword,
-          (): boolean => this.isCurrentWork(work, session),
-        );
+      let succeededCount = 0;
+      for (let start = 0; start < selected.length; start += SEARCH_SOURCE_CONCURRENCY) {
         if (!this.isCurrentWork(work, session)) {
           return;
         }
-        if (outcome.ok === false) {
-          // Figma provides only a whole-search error surface, not a partial
-          // result state naming failed sources. Do not label a partial list as
-          // an "all sources" result.
-          hilog.warn(DOMAIN, 'Reader', 'Search source %{public}s failed: %{public}s',
-            source.sourceId, outcome.error);
-          this.present({ kind: 'error', keyword: keyword });
+        const end = Math.min(start + SEARCH_SOURCE_CONCURRENCY, selected.length);
+        const pending: Promise<SearchBatchOutcome>[] = [];
+        for (let index = start; index < end; index += 1) {
+          pending.push(this.searchSource(
+            selected[index],
+            keyword,
+            work,
+            session,
+          ));
+        }
+        const outcomes = await Promise.all(pending);
+        if (!this.isCurrentWork(work, session)) {
           return;
         }
-        for (const book of outcome.results) {
-          results.push(book);
+        for (const outcome of outcomes) {
+          if (outcome.succeeded) {
+            succeededCount += 1;
+          }
+          for (const book of outcome.results) {
+            results.push(book);
+          }
         }
       }
       const deduped = this.dedupeSearchResults(results);
-      if (deduped.length === 0) {
-        this.present({ kind: 'empty', keyword: keyword });
+      if (deduped.length > 0) {
+        this.presentWithScope({ kind: 'results', keyword: keyword, results: deduped });
         return;
       }
-      this.present({ kind: 'results', keyword: keyword, results: deduped });
+      if (succeededCount === selected.length) {
+        this.presentWithScope({ kind: 'empty', keyword: keyword });
+        return;
+      }
+      this.presentWithScope({ kind: 'error', keyword: keyword });
     } catch (error) {
       if (!this.isCurrentWork(work, session)) {
         return;
       }
       const message = error instanceof Error ? error.message : `${error}`;
       hilog.error(DOMAIN, 'Reader', 'Search failed: %{public}s', message);
-      this.present({ kind: 'error', keyword: keyword });
+      this.presentWithScope({ kind: 'error', keyword: keyword });
     }
+  }
+
+  private async searchSource(
+    source: SearchSource,
+    keyword: string,
+    work: number,
+    session: number,
+  ): Promise<SearchBatchOutcome> {
+    const outcome = await this.gateway.searchBySource(
+      source,
+      keyword,
+      (): boolean => this.isCurrentWork(work, session),
+    );
+    if (outcome.ok === false) {
+      if (this.isCurrentWork(work, session)) {
+        hilog.warn(DOMAIN, 'Reader', 'Search source %{public}s failed: %{public}s',
+          source.sourceId, outcome.error);
+      }
+      const failed: SearchBatchOutcome = { results: [], succeeded: false };
+      return failed;
+    }
+    const succeeded: SearchBatchOutcome = { results: outcome.results, succeeded: true };
+    return succeeded;
+  }
+
+  private selectedSources(sources: SearchSource[]): SearchSource[] {
+    const selected: SearchSource[] = [];
+    for (const source of sources) {
+      if (!source.enabled || source.name.trim().length === 0) {
+        continue;
+      }
+      if (this.scopeSourceId === undefined || source.sourceId === this.scopeSourceId) {
+        selected.push(source);
+      }
+    }
+    return selected;
   }
 
   private isCurrentSession(session: number): boolean {
@@ -235,8 +317,31 @@ export class SearchOrchestrator {
   }
 
   private presentInitial(): void {
-    this.presentation = { kind: 'initial', history: [] };
+    this.presentation = { kind: 'initial', history: [], scopeSourceId: this.scopeSourceId };
     this.emitPresentation(this.presentation);
+  }
+
+  private presentWithScope(presentation: SearchPresentation): void {
+    if (presentation.kind === 'initial') {
+      this.present({ kind: 'initial', history: presentation.history, scopeSourceId: this.scopeSourceId });
+    } else if (presentation.kind === 'loading') {
+      this.present({ kind: 'loading', keyword: presentation.keyword, scopeSourceId: this.scopeSourceId });
+    } else if (presentation.kind === 'results') {
+      this.present({
+        kind: 'results',
+        keyword: presentation.keyword,
+        results: presentation.results,
+        scopeSourceId: this.scopeSourceId,
+      });
+    } else if (presentation.kind === 'empty') {
+      this.present({ kind: 'empty', keyword: presentation.keyword, scopeSourceId: this.scopeSourceId });
+    } else {
+      this.present({ kind: 'error', keyword: presentation.keyword, scopeSourceId: this.scopeSourceId });
+    }
+  }
+
+  private presentCurrentWithScope(): void {
+    this.presentWithScope(this.presentation);
   }
 
   private present(presentation: SearchPresentation): void {
@@ -245,7 +350,13 @@ export class SearchOrchestrator {
   }
 
   private presentSources(sources: SearchSource[]): void {
-    this.sources = sources;
-    this.emitSources(sources);
+    const visible: SearchSource[] = [];
+    for (const source of sources) {
+      if (source.enabled && source.name.trim().length > 0) {
+        visible.push(source);
+      }
+    }
+    this.sources = visible;
+    this.emitSources(visible);
   }
 }

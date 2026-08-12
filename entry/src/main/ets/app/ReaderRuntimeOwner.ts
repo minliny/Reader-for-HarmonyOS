@@ -31,6 +31,17 @@ import { image } from '@kit.ImageKit';
 
 type RuntimeState = 'new' | 'starting' | 'ready' | 'closing' | 'closed';
 
+export type ReaderStartupFailureKind = 'storageIncompatible' | 'unavailable';
+
+export type ReaderStartupFailure = {
+  kind: ReaderStartupFailureKind;
+};
+
+// NAPI intentionally throws an ordinary Error rather than introducing a
+// second SDK error hierarchy for runtime creation. Keep the Host dependency
+// on its stable string code, not on the numeric C ABI status.
+const NATIVE_STORAGE_INCOMPATIBLE_ERROR_CODE = 'RC_CREATE_STORAGE_INCOMPATIBLE';
+
 // Local import and materialized chapter reads may perform file and parsing I/O.
 // The SDK's generic 2s default is unsuitable; callers may still opt into a
 // narrower explicit limit.
@@ -90,6 +101,17 @@ export class ReaderRuntimeOwner {
       throw new Error('ReaderRuntimeOwner must be installed by EntryAbility');
     }
     return ReaderRuntimeOwner.instance;
+  }
+
+  /** Project a native create failure into the small startup UI vocabulary. */
+  static classifyStartupFailure(error: unknown): ReaderStartupFailure {
+    if (typeof error === 'object' && error !== null) {
+      const code = (error as Record<string, unknown>)['code'];
+      if (code === NATIVE_STORAGE_INCOMPATIBLE_ERROR_CODE) {
+        return { kind: 'storageIncompatible' };
+      }
+    }
+    return { kind: 'unavailable' };
   }
 
   async start(): Promise<void> {
@@ -482,11 +504,16 @@ export class ReaderRuntimeOwner {
   }
 
   private async startRuntime(): Promise<void> {
-    const runtime = createReaderCoreRuntime({
-      dataDirectory: `${this.host.getContext().filesDir}/reader-core`,
-    });
-    runtime.setCapabilityRouter(this.host.createCapabilityRouter());
+    let runtime: ReaderCoreRuntime | undefined = undefined;
     try {
+      // Runtime creation can fail synchronously (for example when a newer
+      // storage schema is present). It belongs inside the same recovery
+      // boundary as async setup so every startup failure returns this owner to
+      // `new` and a user-requested retry can create a fresh candidate.
+      runtime = createReaderCoreRuntime({
+        dataDirectory: `${this.host.getContext().filesDir}/reader-core`,
+      });
+      runtime.setCapabilityRouter(this.host.createCapabilityRouter());
       await runtime.request('runtime.setHostCapabilities', {
         capabilities: [
           'persistence.get',
@@ -520,10 +547,12 @@ export class ReaderRuntimeOwner {
       this.runtime = runtime;
       this.state = 'ready';
     } catch (error) {
-      try {
-        runtime.close();
-      } catch (_) {
-        // Preserve the setup/restore failure that the caller can act on.
+      if (runtime !== undefined) {
+        try {
+          runtime.close();
+        } catch (_) {
+          // Preserve the setup/restore failure that the caller can act on.
+        }
       }
       if (this.state === 'starting') {
         this.state = 'new';

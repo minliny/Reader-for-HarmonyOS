@@ -28,6 +28,8 @@ import {
 const SEARCH_FIELD_BG = '#121F1B17';   // rgba(31,27,23,0.07) — Figma field fill
 const SEARCH_BTN_BG = '#382D4A3E';     // rgba(45,74,62,0.22) — Initial search button
 
+export type SearchScope = string | undefined;
+
 /**
  * The search page's full presentation. `initial` is the pre-search surface
  * (recent history); the remaining states are reached by a real search
@@ -37,27 +39,32 @@ const SEARCH_BTN_BG = '#382D4A3E';     // rgba(45,74,62,0.22) — Initial search
 export interface SearchInitialPresentation {
   kind: 'initial';
   history: string[];
+  scopeSourceId?: string;
 }
 
 export interface SearchLoadingPresentation {
   kind: 'loading';
   keyword: string;
+  scopeSourceId?: string;
 }
 
 export interface SearchResultsPresentation {
   kind: 'results';
   keyword: string;
   results: SearchBook[];
+  scopeSourceId?: string;
 }
 
 export interface SearchEmptyPresentation {
   kind: 'empty';
   keyword: string;
+  scopeSourceId?: string;
 }
 
 export interface SearchErrorPresentation {
   kind: 'error';
   keyword: string;
+  scopeSourceId?: string;
 }
 
 export type SearchPresentation =
@@ -85,6 +92,7 @@ export struct SearchPage {
   onClearHistory: () => void = (): void => {};
   onSelectResult: (book: SearchBook) => void = (_book: SearchBook): void => {};
   onRetry: () => void = (): void => {};
+  onScopeChange: (sourceId: SearchScope) => void = (_sourceId: SearchScope): void => {};
   @State keyword: string = '';
 
   aboutToAppear(): void {
@@ -195,21 +203,26 @@ export struct SearchPage {
 
   @Builder
   private sourceChips() {
-    Row({ space: TOK_SPACE_XS }) {
-      this.sourceChip('全部', true);
-      ForEach(this.sources, (source: SearchSource) => {
-        this.sourceChip(source.name, false);
-      }, (source: SearchSource): string => `search-source-${source.sourceId}`);
+    Scroll() {
+      Row({ space: TOK_SPACE_XS }) {
+        this.sourceChip('全部', undefined, this.presentation.scopeSourceId === undefined);
+        ForEach(this.sources, (source: SearchSource) => {
+          this.sourceChip(source.name, source.sourceId,
+            this.presentation.scopeSourceId === source.sourceId);
+        }, (source: SearchSource): string => `search-source-${source.sourceId}`);
+      }
+      .padding({ left: this.isTablet ? 20 : TOK_SPACE_MD, right: this.isTablet ? 20 : TOK_SPACE_MD, top: 9 })
+      .alignItems(VerticalAlign.Top);
     }
     .width(this.contentWidth())
     .height(41)
-    .padding({ left: this.isTablet ? 20 : TOK_SPACE_MD, right: this.isTablet ? 20 : TOK_SPACE_MD, top: 9 })
-    .alignItems(VerticalAlign.Top)
+    .scrollable(ScrollDirection.Horizontal)
+    .scrollBar(BarState.Off)
     .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: TOK_BORDER } });
   }
 
   @Builder
-  private sourceChip(label: string, active: boolean) {
+  private sourceChip(label: string, sourceId: SearchScope, active: boolean) {
     Text(label)
       .fontFamily('ReaderInter')
       .fontWeight(FontWeight.Bold)
@@ -221,7 +234,8 @@ export struct SearchPage {
       .border({ width: TOK_BORDER_W, color: active ? TOK_GREEN : TOK_BORDER })
       .borderRadius(999)
       .textAlign(TextAlign.Center)
-      .maxLines(1);
+      .maxLines(1)
+      .onClick((): void => this.onScopeChange(sourceId));
   }
 
   @Builder
@@ -229,11 +243,11 @@ export struct SearchPage {
     if (this.presentation.kind === 'initial') {
       this.initialContent(this.presentation.history);
     } else if (this.presentation.kind === 'loading') {
-      this.loadingContent();
+      this.loadingContent(this.presentation.scopeSourceId);
     } else if (this.presentation.kind === 'results') {
       this.resultsContent(this.presentation.keyword, this.presentation.results);
     } else if (this.presentation.kind === 'empty') {
-      this.emptyContent(this.presentation.keyword);
+      this.emptyContent(this.presentation.keyword, this.presentation.scopeSourceId);
     } else {
       this.errorContent();
     }
@@ -319,7 +333,7 @@ export struct SearchPage {
   }
 
   @Builder
-  private loadingContent() {
+  private loadingContent(scopeSourceId: SearchScope) {
     // Figma Loading (2635:58801): spinner + caption are top-anchored at 120
     // (not vertically centered). Caption is leading 19.5 with an 18px gap.
     Column({ space: 0 }) {
@@ -329,7 +343,7 @@ export struct SearchPage {
       }
       .width(36)
       .height(36);
-      Text('正在搜索所有书源…')
+      Text(`正在搜索${scopeSourceId === undefined ? '所有书源' : '所选书源'}…`)
         .margin({ top: 18 })
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Regular)
@@ -375,7 +389,7 @@ export struct SearchPage {
       List() {
         ForEach(results, (book: SearchBook) => {
           ListItem() {
-            this.resultCard(book, this.countBySource(results, book.sourceId));
+            this.resultCard(book);
           }
         }, (book: SearchBook, index: number): string =>
           `search-result-${book.sourceId}:${book.bookId}:${book.title}:${index}`);
@@ -389,7 +403,7 @@ export struct SearchPage {
   }
 
   @Builder
-  private resultCard(book: SearchBook, sourceCount: number) {
+  private resultCard(book: SearchBook) {
     Row({ space: TOK_SPACE_SM }) {
       Stack({ alignContent: Alignment.Bottom }) {
         if (book.coverUrl !== undefined && book.coverUrl.trim().length > 0) {
@@ -486,7 +500,7 @@ export struct SearchPage {
             .backgroundColor(TOK_PRIMARY_SOFT)
             .borderRadius(4)
             .maxLines(1);
-          Text(`共 ${sourceCount} 个书源`)
+          Text('共 1 个书源')
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Regular)
             .fontSize(11)
@@ -508,7 +522,7 @@ export struct SearchPage {
   }
 
   @Builder
-  private emptyContent(keyword: string) {
+  private emptyContent(keyword: string, scopeSourceId: SearchScope) {
     Scroll() {
       Column({ space: 0 }) {
         Image($r('app.media.search_empty'))
@@ -525,7 +539,7 @@ export struct SearchPage {
           .fontColor(TOK_INK)
           .textAlign(TextAlign.Center);
 
-        Text(`所有书源均未搜索到「${keyword}」的相关结果`)
+        Text(`${scopeSourceId === undefined ? '所有书源' : '所选书源'}均未搜索到「${keyword}」的相关结果`)
           .margin({ top: TOK_SPACE_CONTROL_INLINE })
           .width('100%')
           .fontFamily('ReaderInter')
@@ -658,16 +672,6 @@ export struct SearchPage {
     .layoutWeight(1)
     .alignItems(HorizontalAlign.Center)
     .padding({ top: 96, bottom: 40 });
-  }
-
-  private countBySource(results: SearchBook[], sourceId: string): number {
-    let count = 0;
-    for (const book of results) {
-      if (book.sourceId === sourceId) {
-        count++;
-      }
-    }
-    return count;
   }
 
   private contentWidth(): Length {

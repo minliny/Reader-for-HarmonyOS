@@ -1,4 +1,7 @@
-import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
+import {
+  ReaderRuntimeOwner,
+  type ReaderStartupFailure,
+} from '../app/ReaderRuntimeOwner';
 import {
   ReaderCoreGateway,
   type ShelfBook,
@@ -57,6 +60,7 @@ import {
   SearchPage,
   type SearchPresentation,
 } from '../features/search/SearchPage';
+import { ReaderStartupFailurePage } from '../features/startup/ReaderStartupFailurePage';
 import {
   RssGateway,
   type RssItem,
@@ -190,6 +194,7 @@ class LocalImportPresentation {
 @Component
 struct Index {
   @StorageLink('statusBarHeightPx') statusBarHeightPx: number = 0;
+  @State private startupFailure: ReaderStartupFailure | undefined = undefined;
   @State private shelfBooks: ShelfBook[] = [];
   @State private continueReading: ShelfBook | undefined = undefined;
   @State private isBookshelfVisualAdmitted: boolean = false;
@@ -292,7 +297,7 @@ struct Index {
 
   aboutToAppear(): void {
     this.reconcileImportPresentation();
-    this.refreshBookshelf();
+    void this.startApplication();
   }
 
   onBackPress(): boolean {
@@ -379,7 +384,12 @@ struct Index {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      if (this.route === 'bookshelf' && this.isBookshelfVisualAdmitted) {
+      if (this.startupFailure !== undefined) {
+        ReaderStartupFailurePage({
+          failureKind: this.startupFailure.kind,
+          onRetry: (): void => this.retryApplicationStartup(),
+        });
+      } else if (this.route === 'bookshelf' && this.isBookshelfVisualAdmitted) {
         BookshelfPage({
           books: this.shelfBooks,
           continueReading: this.continueReading,
@@ -435,6 +445,7 @@ struct Index {
           isTablet: deviceInfo.deviceType === 'tablet',
           onBack: (): void => this.returnToBookshelf(),
           onSearch: (keyword: string): void => this.performSearch(keyword),
+          onScopeChange: (sourceId: string | undefined): void => this.changeSearchScope(sourceId),
           onClearHistory: (): void => this.clearSearchHistory(),
           onSelectResult: (book: SearchBook): void => this.onSearchResultSelected(book),
           onRetry: (): void => this.retrySearch(),
@@ -621,7 +632,7 @@ struct Index {
       // Batch 2: the reading session UI (ReadingSurface + control layer +
       // directory + source-switch overlays) is composed by ReaderShell; Index
       // keeps the business state and drives it through props + callbacks.
-      if (this.readingSessionActive && this.detailBook !== undefined) {
+      if (this.startupFailure === undefined && this.readingSessionActive && this.detailBook !== undefined) {
         ReaderShell({
           bookId: this.detailBook.bookId,
           bookTitle: this.detailBook.title,
@@ -674,7 +685,7 @@ struct Index {
           onRollbackSourceSwitch: (): void => this.onRollbackSourceSwitch(),
         });
       }
-      if (this.route === 'bookshelf' && this.hasVisibleImportDialog()) {
+      if (this.startupFailure === undefined && this.route === 'bookshelf' && this.hasVisibleImportDialog()) {
         LocalImportDialog({
           state: this.visibleImportDialogState(),
           batch: this.visibleImportBatch(),
@@ -684,7 +695,9 @@ struct Index {
       }
       // Host capability surface only: mounted for ArkWeb controller lifecycle,
       // never used as the reading-body renderer.
-      ArkWebExecutionHost()
+      if (this.startupFailure === undefined) {
+        ArkWebExecutionHost()
+      }
     }
       .width('100%')
       .height('100%')
@@ -1480,6 +1493,11 @@ struct Index {
     this.getSearchOrchestrator().search(keyword);
   }
 
+  private changeSearchScope(sourceId: string | undefined): void {
+    this.nextNavigationGeneration();
+    this.getSearchOrchestrator().changeScope(sourceId);
+  }
+
   private getSearchOrchestrator(): SearchOrchestrator {
     if (this.searchOrchestrator === undefined) {
       this.searchOrchestrator = new SearchOrchestrator(
@@ -1521,6 +1539,22 @@ struct Index {
         value: variable.value,
       })),
     }, book.sourceName);
+  }
+
+  private retryApplicationStartup(): void {
+    void this.startApplication();
+  }
+
+  private async startApplication(): Promise<void> {
+    this.startupFailure = undefined;
+    try {
+      await ReaderRuntimeOwner.current().start();
+      this.refreshBookshelf();
+    } catch (error) {
+      this.startupFailure = ReaderRuntimeOwner.classifyStartupFailure(error);
+      const message = error instanceof Error ? error.message : `${error}`;
+      hilog.error(DOMAIN, 'Reader', 'Core startup failed: %{public}s', message);
+    }
   }
 
   private openBookDetail(selection: ShelfBook): void {
