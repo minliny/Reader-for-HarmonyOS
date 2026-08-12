@@ -223,18 +223,21 @@ export struct SearchPage {
 
   @Builder
   private sourceChip(label: string, sourceId: SearchScope, active: boolean) {
-    Text(label)
-      .fontFamily('ReaderInter')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(12)
-      .lineHeight(12)
-      .fontColor(active ? TOK_ON_PRIMARY : TOK_MUTED)
+    Stack({ alignContent: Alignment.Center }) {
+      Text(label)
+        .fontFamily('ReaderInter')
+        .fontWeight(FontWeight.Bold)
+        .fontSize(12)
+        .lineHeight(12)
+        .fontColor(active ? TOK_ON_PRIMARY : TOK_MUTED)
+        .textAlign(TextAlign.Center)
+        .maxLines(1);
+    }
       .padding({ left: 12.5, right: 12.5, top: 5.5, bottom: 5.5 })
       .backgroundColor(active ? TOK_GREEN : TOK_CARD_BG)
       .border({ width: TOK_BORDER_W, color: active ? TOK_GREEN : TOK_BORDER })
       .borderRadius(999)
-      .textAlign(TextAlign.Center)
-      .maxLines(1)
+      .accessibilityText(label)
       .onClick((): void => this.onScopeChange(sourceId));
   }
 

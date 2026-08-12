@@ -27,6 +27,14 @@ assert.match(chips, /this\.presentation\.scopeSourceId === source\.sourceId/,
   'a source chip must reflect its exact selected sourceId');
 assert.match(chips, /\.onClick\(\(\): void => this\.onScopeChange\(sourceId\)\)/,
   'chips must emit the existing scope-change intent');
+const sourceChipStart = chips.indexOf('private sourceChip(');
+assert.ok(sourceChipStart >= 0, 'source chip builder must remain present');
+const sourceChip = chips.slice(sourceChipStart);
+assert.match(sourceChip,
+  /Stack\(\{ alignContent: Alignment\.Center \}\) \{[\s\S]*?Text\(label\)[\s\S]*?\n    \}\s*\.padding\([\s\S]*?\.accessibilityText\(label\)\s*\.onClick\(\(\): void => this\.onScopeChange\(sourceId\)\)/,
+  'the chip container, not its Text child, must own the full painted hit target');
+assert.equal((sourceChip.match(/\.onClick\(/g) ?? []).length, 1,
+  'a source chip must expose one container-owned click handler');
 
 assert.match(page, /Text\('共 1 个书源'\)/,
   'one raw result card represents one exact source hit');
