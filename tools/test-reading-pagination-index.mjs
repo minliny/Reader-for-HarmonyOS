@@ -24,6 +24,8 @@ const layoutFacts = {
   titleToBodySpacing: 18,
   paragraphSpacing: 15.8,
   paragraphIndent: 36,
+  letterSpacing: 0,
+  textAlignment: 'start',
   writingMode: 'horizontal-tb',
 };
 
@@ -47,6 +49,8 @@ for (const [field, value] of [
   ['titleToBodySpacing', 19],
   ['paragraphSpacing', 16],
   ['paragraphIndent', 37],
+  ['letterSpacing', 0.5],
+  ['textAlignment', 'justify'],
   ['writingMode', 'vertical-rl'],
 ]) {
   assert.notEqual(createReadingPaginationLayoutSignature({ ...layoutFacts, [field]: value }), layoutSignature,
@@ -54,6 +58,10 @@ for (const [field, value] of [
 }
 assert.throws(() => createReadingPaginationLayoutSignature({ ...layoutFacts, viewportWidth: 0 }),
   /viewportWidth/);
+assert.throws(() => createReadingPaginationLayoutSignature({ ...layoutFacts, letterSpacing: Number.NaN }),
+  /letterSpacing/);
+assert.throws(() => createReadingPaginationLayoutSignature({ ...layoutFacts, textAlignment: 'center' }),
+  /textAlignment/);
 
 const actualBody = '第一段\n\n第二段😀';
 assert.equal(deriveReadingContentVersion(actualBody), deriveReadingContentVersion(actualBody),
@@ -100,6 +108,16 @@ assert.equal(prefix.previousRequestForPageStart(70), 30,
   'later pages must return the preceding page original request, not estimate its start');
 assert.equal(prefix.previousRequestForPageStart(2), undefined,
   'a measured prefix cannot fabricate a page before its chapter-head page');
+assert.equal(prefix.containsAnchor(45), true,
+  'the continuous prefix must recognize a non-linear anchor inside a measured page');
+assert.equal(prefix.previousRequestForAnchor(45), 2,
+  'a non-linear anchor must resolve to the exact request for the preceding physical page');
+assert.equal(prefix.previousRequestForAnchor(75), 30,
+  'later non-linear anchors must retain the preceding observation request');
+assert.equal(prefix.previousRequestForAnchor(10), undefined,
+  'an anchor in the first physical page cannot fabricate a same-chapter predecessor');
+assert.equal(prefix.containsAnchor(120), false,
+  'an unmeasured suffix must remain outside the pagination truth');
 assert.equal(prefix.admit({
   requestScalar: 30,
   startScalar: 32,

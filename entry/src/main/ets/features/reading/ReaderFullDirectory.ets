@@ -39,10 +39,13 @@ export struct ReaderFullDirectory {
   // keeps its existing route semantics and does not borrow the Phone motion.
   @Prop animateFromControl: boolean = false;
   @Prop reduceMotion: boolean = false;
+  @Prop offlineBookOperationActive: boolean = false;
   // R-LOCAL-TOC-01: forward the chapter tap from the panel body to the
   // owning flow so a full-directory tap actually enters that chapter.
   onSelectChapter: (index: number) => void = (_index: number): void => {};
   onDownloadChapter: (index: number) => void = (_index: number): void => {};
+  onDownloadBook: () => void = (): void => {};
+  onClearBookOffline: () => void = (): void => {};
   // The owning reading session performs the Core mutation and refreshes the
   // projected TOC. This overlay only forwards exact existing bookmark ids.
   onDeleteBookmarks: (bookmarkTimes: number[]) => void = (_bookmarkTimes: number[]): void => {};
@@ -56,6 +59,7 @@ export struct ReaderFullDirectory {
 
   @State private panelProgress: number = 1;
   @State private containerHeight: number = 0;
+  @State private offlineMenuVisible: boolean = false;
   private animationGeneration: number = 0;
   private collapseStarted: boolean = false;
 
@@ -109,6 +113,7 @@ export struct ReaderFullDirectory {
       .position({ x: this.panelLeft(), y: this.panelTop() })
       .opacity(this.shouldAnimatePanel() ? this.panelProgress : 1)
       .clip(true);
+      this.offlineBookMenu();
     }
     .width('100%')
     .height('100%')
@@ -196,8 +201,14 @@ export struct ReaderFullDirectory {
         .width(34)
         .height(42)
         .margin({ left: 8 })
-        .enabled(false)
-        .accessibilityText('更多');
+        .opacity(this.isLocalBook() || this.offlineBookOperationActive ? 0.4 : 1)
+        .enabled(!this.isLocalBook() && !this.offlineBookOperationActive)
+        .accessibilityText(this.offlineBookOperationActive ? '离线操作进行中' : '离线管理')
+        .onClick((): void => {
+          if (!this.isLocalBook() && !this.offlineBookOperationActive) {
+            this.offlineMenuVisible = !this.offlineMenuVisible;
+          }
+        });
       }
       .width('100%')
       .height(54)
@@ -210,6 +221,52 @@ export struct ReaderFullDirectory {
     .height(54)
     .padding({ left: this.topBarLeft(), right: this.topBarRight() })
     .margin({ top: 18 });
+  }
+
+  @Builder
+  private offlineBookMenu() {
+    if (this.offlineMenuVisible && !this.isLocalBook()) {
+      Column() {
+        Text('下载整书')
+          .width('100%')
+          .height(42)
+          .padding({ left: 16 })
+          .fontFamily('ReaderNotoSansSC')
+          .fontWeight(FontWeight.Medium)
+          .fontSize(13)
+          .fontColor(TOK_READ_INK)
+          .textAlign(TextAlign.Start)
+          .accessibilityText('下载整书')
+          .onClick((): void => {
+            this.offlineMenuVisible = false;
+            this.onDownloadBook();
+          });
+        Divider()
+          .color(TOK_LINE_STRONG)
+          .strokeWidth(TOK_BORDER_W);
+        Text('清除本书离线')
+          .width('100%')
+          .height(42)
+          .padding({ left: 16 })
+          .fontFamily('ReaderNotoSansSC')
+          .fontWeight(FontWeight.Medium)
+          .fontSize(13)
+          .fontColor(TOK_READ_INK)
+          .textAlign(TextAlign.Start)
+          .accessibilityText('清除本书离线内容')
+          .onClick((): void => {
+            this.offlineMenuVisible = false;
+            this.onClearBookOffline();
+          });
+      }
+      .width(142)
+      .height(85)
+      .backgroundColor(TOK_READ_SURFACE)
+      .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+      .borderRadius(12)
+      .position({ x: this.isTablet ? 548 : 206, y: 74 })
+      .zIndex(8);
+    }
   }
 
   private topBarLeft(): number {

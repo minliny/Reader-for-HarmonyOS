@@ -21,27 +21,32 @@ function rule(id, order, name = `规则 ${id}`, isEnabled = true) {
   };
 }
 
-assert.deepEqual(createReaderReplaceQuickState([]), {
-  kind: 'hidden',
-  reason: 'insufficientRules',
+const empty = createReaderReplaceQuickState([]);
+assert.deepEqual(empty, {
+  kind: 'ready',
+  rules: [],
+  previewAvailable: false,
+  fullManagementAvailable: false,
 });
-assert.deepEqual(createReaderReplaceQuickState([rule(1, 1), rule(2, 2)]), {
-  kind: 'hidden',
-  reason: 'insufficientRules',
-});
-assert.deepEqual(createReaderReplaceQuickState([
+const single = createReaderReplaceQuickState([rule(1, 1)]);
+assert.equal(single.kind, 'ready');
+assert.deepEqual(single.rules.map((entry) => entry.id), [1]);
+const pair = createReaderReplaceQuickState([rule(2, 20), rule(1, 10)]);
+assert.equal(pair.kind, 'ready');
+assert.deepEqual(pair.rules.map((entry) => entry.id), [1, 2]);
+const unnamed = createReaderReplaceQuickState([
   rule(1, 1),
   rule(2, 2, '   '),
   rule(3, 3),
-]), {
-  kind: 'hidden',
-  reason: 'unnamedVisibleRule',
-});
+]);
+assert.equal(unnamed.kind, 'ready', 'a real rule is not discarded only because its name is blank');
+assert.deepEqual(unnamed.rules.map((entry) => entry.id), [1, 2, 3]);
 
 const sourceRules = [rule(4, 40), rule(2, 20), rule(1, 10), rule(5, 50), rule(3, 30)];
 const ready = createReaderReplaceQuickState(sourceRules);
 assert.equal(ready.kind, 'ready');
-assert.deepEqual(ready.rules.map((entry) => entry.id), [1, 2, 3, 4]);
+assert.deepEqual(ready.rules.map((entry) => entry.id), [1, 2, 3],
+  'Quick Replace must expose only the first three canonical order/id rows');
 assert.equal(ready.previewAvailable, false);
 assert.equal(ready.fullManagementAvailable, false);
 assert.deepEqual(sourceRules.map((entry) => entry.id), [4, 2, 1, 5, 3],
@@ -64,17 +69,28 @@ assert.match(panel, /Phone `942:54` \/ `912:68`/);
 assert.match(panel, /Tablet `942:56` \/ `914:64`/);
 assert.match(panel, /if \(this\.state\.kind === 'ready'\)/,
   'non-ready states must render no invented visual');
-assert.match(panel, /\.width\(this\.panelWidth\(\)\)[\s\S]*\.height\(190\)/);
-assert.match(panel, /return this\.isTablet \? 262 : 286/);
-assert.match(panel, /\.height\(93\)[\s\S]*\.clip\(true\)/,
-  'the fourth real row may continue only below the exact Figma clip');
-assert.match(panel, /return this\.isTablet \? 88 : 97\.59/);
-assert.match(panel, /return this\.isTablet \? 132 : 146\.41/);
+assert.match(panel, /\.width\(this\.panelWidth\(\)\)[\s\S]*\.height\(REPLACE_PANEL_HEIGHT\)/);
+assert.match(panel, /REPLACE_PANEL_WIDTH_PHONE = 286/);
+assert.match(panel, /REPLACE_PANEL_WIDTH_TABLET = 262/);
+assert.match(panel, /\.height\(REPLACE_RULES_VIEWPORT_HEIGHT\)[\s\S]*\.clip\(true\)/,
+  'the bounded three-row viewport must retain the source geometry');
+assert.match(panel, /if \(this\.state\.rules\.length === 0\) \{[\s\S]*Text\('暂无替换规则'\)/,
+  'a valid empty Core list must render the minimum visible empty state');
+assert.match(panel, /REPLACE_PREVIEW_WIDTH_PHONE = 97\.59/);
+assert.match(panel, /REPLACE_PREVIEW_WIDTH_TABLET = 88/);
+assert.match(panel, /return this\.contentWidth\(\) - REPLACE_RULE_BODY_PADDING_X \* 2 - REPLACE_FOOTER_BUTTON_GAP -[\s\S]*this\.previewButtonWidth\(\)/);
 assert.match(panel, /app\.media\.reader_replace_close/);
 assert.match(panel, /app\.media\.reader_replace_preview/);
 assert.match(panel, /app\.media\.reader_replace_manage/);
-assert.match(panel, /\.enabled\(false\)/,
-  'preview and complete management must remain fail-closed');
+assert.match(panel, /\.enabled\(kind === 'management'\)/,
+  'Preview must remain fail-closed while the existing management page is reachable');
+assert.match(panel, /Text\(kind === 'preview' \? '预览效果' : '完整管理'\)/,
+  'deferred Preview and Full-management entries must remain visible');
+assert.match(panel, /打开完整替换规则管理/,
+  'Full management must be described as the existing reachable capability');
+assert.match(panel, /onOpenManagement\(\)/,
+  'the reader entry must delegate navigation instead of creating another management page');
+assert.doesNotMatch(panel, /完整替换页尚未提供/);
 assert.doesNotMatch(panel, /雨容称呼|旧称统一|标点清理|广告过滤/,
   'Figma sample copy must not become business rule data');
 
@@ -98,6 +114,8 @@ assert.match(experience, /private replacePanelGeneration: number = 0/,
   'panel continuations need their own generation');
 assert.match(experience, /private replaceMutationGeneration: number = 0/,
   'persisted mutations need a generation independent from the panel');
+assert.match(experience, /private openRulesManagement\(\): void/);
+assert.match(experience, /this\.onOpenRulesManagement\(\)/);
 assert.doesNotMatch(experience, /replaceMutationInFlight/,
   'panel close must not release a shared in-flight boolean');
 

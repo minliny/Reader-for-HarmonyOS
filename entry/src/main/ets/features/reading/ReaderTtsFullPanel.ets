@@ -1,4 +1,13 @@
-import type { ReaderTtsState } from './ReaderTtsState';
+import {
+  READER_TTS_RATE_MAX,
+  READER_TTS_RATE_MIN,
+  READER_TTS_RATE_STEP,
+  READER_TTS_RATE_STEP_SCALE,
+  READER_TTS_TIMER_MAX_MINUTES,
+  READER_TTS_TIMER_MAX_SECONDS,
+  READER_TTS_TIMER_MIN,
+  type ReaderTtsState,
+} from './ReaderTtsState';
 import {
   TOK_BORDER,
   TOK_BORDER_W,
@@ -16,6 +25,28 @@ import {
   TOK_SURFACE_PANEL_SOFT,
 } from '../common/ReaderTokens';
 import { ReaderHttpTtsManagerPanel } from './ReaderHttpTtsManagerPanel';
+
+const TTS_FULL_PANEL_WIDTH_PHONE = 364;
+const TTS_FULL_PANEL_WIDTH_TABLET = 720;
+const TTS_FULL_PANEL_HEIGHT_PHONE = 736;
+const TTS_FULL_PANEL_HEIGHT_TABLET = 852;
+const TTS_FULL_GRABBER_WIDTH = 42;
+const TTS_FULL_GRABBER_HEIGHT = 4;
+const TTS_FULL_GRABBER_Y = 9;
+const TTS_FULL_HEADER_WIDTH_PHONE = 336;
+const TTS_FULL_HEADER_WIDTH_TABLET = 692;
+const TTS_FULL_HEADER_HEIGHT = 30;
+const TTS_FULL_HEADER_X = 14;
+const TTS_FULL_HEADER_Y = 20;
+const TTS_FULL_SCROLL_WIDTH_PHONE = 338;
+const TTS_FULL_SCROLL_WIDTH_TABLET = 692;
+const TTS_FULL_SCROLL_X = 14;
+const TTS_FULL_SCROLL_TOP = 58;
+const TTS_FULL_SCROLL_BOTTOM_INSET_PHONE = 13;
+const TTS_FULL_SCROLL_BOTTOM_INSET_TABLET = 12;
+const TTS_FULL_SCROLL_PADDING_X_PHONE = 11;
+const TTS_FULL_SCROLL_PADDING_X_TABLET = 12;
+const TTS_FULL_SCROLL_PADDING_BOTTOM = 24;
 
 export interface ReaderTtsEngineOption {
   id: number;
@@ -48,19 +79,20 @@ export struct ReaderTtsFullPanel {
   onFollowHighlightChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
   onAllowMixingChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
   onFailurePolicyChange: (policy: 'skip' | 'stop') => void = (_policy: 'skip' | 'stop'): void => {};
-  onEngineChange: (engine: string) => void = (_engine: string): void => {};
-  onHttpEnginePut: (config: ReaderTtsEngineOption) => void = (_config: ReaderTtsEngineOption): void => {};
-  onHttpEngineDelete: (id: number) => void = (_id: number): void => {};
+  onEngineChange: (engine: string) => Promise<void> = (_engine: string): Promise<void> => Promise.resolve();
+  onHttpEnginePut: (config: ReaderTtsEngineOption) => Promise<void> =
+    (_config: ReaderTtsEngineOption): Promise<void> => Promise.resolve();
+  onHttpEngineDelete: (id: number) => Promise<void> = (_id: number): Promise<void> => Promise.resolve();
   @State private ratePreview: number = -1;
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       Row()
-        .width(42)
-        .height(4)
+        .width(TTS_FULL_GRABBER_WIDTH)
+        .height(TTS_FULL_GRABBER_HEIGHT)
         .backgroundColor(TOK_READ_HANDLE)
         .borderRadius(999)
-        .position({ x: this.isTablet ? 339 : 161, y: 9 });
+        .position({ x: this.grabberX(), y: TTS_FULL_GRABBER_Y });
 
       this.header();
 
@@ -69,9 +101,9 @@ export struct ReaderTtsFullPanel {
           ReaderHttpTtsManagerPanel({
             engines: this.httpEngines,
             selectedEngine: this.engine,
-            onSelect: (engine: string): void => this.onEngineChange(engine),
-            onPut: (config: ReaderTtsEngineOption): void => this.onHttpEnginePut(config),
-            onDelete: (id: number): void => this.onHttpEngineDelete(id),
+            onSelect: (engine: string): Promise<void> => this.onEngineChange(engine),
+            onPut: (config: ReaderTtsEngineOption): Promise<void> => this.onHttpEnginePut(config),
+            onDelete: (id: number): Promise<void> => this.onHttpEngineDelete(id),
           });
           this.sectionDivider();
           this.playbackSection();
@@ -85,20 +117,24 @@ export struct ReaderTtsFullPanel {
           this.systemSection();
         }
         .width('100%')
-        .padding({ left: this.isTablet ? 12 : 11, right: this.isTablet ? 12 : 11, bottom: 24 })
+        .padding({
+          left: this.scrollPaddingX(),
+          right: this.scrollPaddingX(),
+          bottom: TTS_FULL_SCROLL_PADDING_BOTTOM,
+        })
         .alignItems(HorizontalAlign.Start);
       }
-      .width(this.isTablet ? 692 : 338)
-      .height(this.isTablet ? 782 : 665)
-      .position({ x: 14, y: 58 })
+      .width(this.scrollWidth())
+      .height(this.scrollHeight())
+      .position({ x: TTS_FULL_SCROLL_X, y: TTS_FULL_SCROLL_TOP })
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.None)
       .backgroundColor(TOK_SURFACE_PANEL)
       .border({ width: TOK_BORDER_W, color: TOK_LINE })
       .borderRadius(12);
     }
-    .width(this.isTablet ? 720 : 364)
-    .height(this.isTablet ? 852 : 736)
+    .width(this.panelWidth())
+    .height(this.panelHeight())
     .backgroundColor(TOK_READ_SURFACE)
     .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
     .borderRadius(24)
@@ -136,10 +172,10 @@ export struct ReaderTtsFullPanel {
         .accessibilityText('收起朗读完整控制')
         .onClick((): void => this.onCollapse());
     }
-    .width(this.isTablet ? 692 : 336)
-    .height(30)
+    .width(this.isTablet ? TTS_FULL_HEADER_WIDTH_TABLET : TTS_FULL_HEADER_WIDTH_PHONE)
+    .height(TTS_FULL_HEADER_HEIGHT)
     .alignItems(VerticalAlign.Center)
-    .position({ x: 14, y: 20 });
+    .position({ x: TTS_FULL_HEADER_X, y: TTS_FULL_HEADER_Y });
   }
 
   @Builder
@@ -170,6 +206,16 @@ export struct ReaderTtsFullPanel {
       .height(62)
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center);
+
+      if (this.state.errorMessage !== undefined && this.state.errorMessage.length > 0) {
+        Text(this.state.errorMessage)
+          .width('100%')
+          .fontFamily('ReaderNotoSansSC')
+          .fontSize(10)
+          .fontColor('#B93D35')
+          .maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis });
+      }
 
       if (this.state.totalSlices > 1) {
         Slider({
@@ -395,9 +441,9 @@ export struct ReaderTtsFullPanel {
       .width('100%');
       Slider({
         value: this.effectiveRate(),
-        min: 0.5,
-        max: 2,
-        step: 0.1,
+        min: READER_TTS_RATE_MIN,
+        max: READER_TTS_RATE_MAX,
+        step: READER_TTS_RATE_STEP,
         style: SliderStyle.OutSet,
         direction: Axis.Horizontal,
         reverse: false,
@@ -407,7 +453,8 @@ export struct ReaderTtsFullPanel {
         .opacity(0.001)
         .accessibilityText('调整朗读语速')
         .onChange((value: number, mode: SliderChangeMode): void => {
-          this.ratePreview = Math.round(value * 10) / 10;
+          this.ratePreview = Math.round(value * READER_TTS_RATE_STEP_SCALE) /
+            READER_TTS_RATE_STEP_SCALE;
           if (mode === SliderChangeMode.End) {
             const rate = this.ratePreview;
             this.ratePreview = -1;
@@ -415,8 +462,10 @@ export struct ReaderTtsFullPanel {
           }
         });
       Row() {
-        Text('0.5x').layoutWeight(1).fontFamily('ReaderInter').fontSize(9).fontColor(TOK_READ_MUTED);
-        Text('2.0x').fontFamily('ReaderInter').fontSize(9).fontColor(TOK_READ_MUTED);
+        Text(`${READER_TTS_RATE_MIN.toFixed(1)}x`)
+          .layoutWeight(1).fontFamily('ReaderInter').fontSize(9).fontColor(TOK_READ_MUTED);
+        Text(`${READER_TTS_RATE_MAX.toFixed(1)}x`)
+          .fontFamily('ReaderInter').fontSize(9).fontColor(TOK_READ_MUTED);
       }
       .width('100%');
     }
@@ -458,7 +507,7 @@ export struct ReaderTtsFullPanel {
           .border({ width: TOK_BORDER_W, color: TOK_READ_PRIMARY })
           .borderRadius(6)
           .opacity(this.isHttpEngineSelected() ? 0.58 : 1)
-          .onClick((): void => this.onEngineChange('system'));
+          .onClick((): void => this.requestEngineChange('system'));
         Text(this.httpEngineLabel())
           .layoutWeight(1)
           .height(52)
@@ -476,7 +525,7 @@ export struct ReaderTtsFullPanel {
           .enabled(this.httpEngines.length > 0)
           .onClick((): void => {
             const engine = this.nextHttpEngine();
-            if (engine !== undefined) this.onEngineChange(engine);
+            if (engine !== undefined) this.requestEngineChange(engine);
           });
       }
       .width('100%')
@@ -581,24 +630,52 @@ export struct ReaderTtsFullPanel {
   }
 
   private wheelValue(minutes: boolean, delta: number): string {
-    const maximum = minutes ? 99 : 59;
+    const maximum = minutes ? READER_TTS_TIMER_MAX_MINUTES : READER_TTS_TIMER_MAX_SECONDS;
     const current = minutes ? this.timerMinutes : this.timerSeconds;
-    return this.twoDigits(Math.max(0, Math.min(maximum, current + delta)));
+    return this.twoDigits(Math.max(READER_TTS_TIMER_MIN, Math.min(maximum, current + delta)));
   }
 
   private stepTimer(minutes: boolean, delta: number): void {
-    const nextMinutes = minutes ? Math.max(0, Math.min(99, this.timerMinutes + delta)) : this.timerMinutes;
-    const nextSeconds = minutes ? this.timerSeconds : Math.max(0, Math.min(59, this.timerSeconds + delta));
+    const nextMinutes = minutes ? Math.max(READER_TTS_TIMER_MIN,
+      Math.min(READER_TTS_TIMER_MAX_MINUTES, this.timerMinutes + delta)) : this.timerMinutes;
+    const nextSeconds = minutes ? this.timerSeconds : Math.max(READER_TTS_TIMER_MIN,
+      Math.min(READER_TTS_TIMER_MAX_SECONDS, this.timerSeconds + delta));
     this.onTimerChange(nextMinutes, nextSeconds);
   }
 
   private twoDigits(value: number): string {
-    const normalized = Math.max(0, Math.trunc(value));
+    const normalized = Math.max(READER_TTS_TIMER_MIN, Math.trunc(value));
     return normalized < 10 ? `0${normalized}` : `${normalized}`;
   }
 
   private effectiveRate(): number {
-    return this.ratePreview >= 0.5 ? this.ratePreview : this.state.rate;
+    return this.ratePreview >= READER_TTS_RATE_MIN ? this.ratePreview : this.state.rate;
+  }
+
+  private panelWidth(): number {
+    return this.isTablet ? TTS_FULL_PANEL_WIDTH_TABLET : TTS_FULL_PANEL_WIDTH_PHONE;
+  }
+
+  private panelHeight(): number {
+    return this.isTablet ? TTS_FULL_PANEL_HEIGHT_TABLET : TTS_FULL_PANEL_HEIGHT_PHONE;
+  }
+
+  private grabberX(): number {
+    return (this.panelWidth() - TTS_FULL_GRABBER_WIDTH) / 2;
+  }
+
+  private scrollWidth(): number {
+    return this.isTablet ? TTS_FULL_SCROLL_WIDTH_TABLET : TTS_FULL_SCROLL_WIDTH_PHONE;
+  }
+
+  private scrollHeight(): number {
+    const bottomInset = this.isTablet ? TTS_FULL_SCROLL_BOTTOM_INSET_TABLET :
+      TTS_FULL_SCROLL_BOTTOM_INSET_PHONE;
+    return this.panelHeight() - TTS_FULL_SCROLL_TOP - bottomInset;
+  }
+
+  private scrollPaddingX(): number {
+    return this.isTablet ? TTS_FULL_SCROLL_PADDING_X_TABLET : TTS_FULL_SCROLL_PADDING_X_PHONE;
   }
 
   private isHttpEngineSelected(): boolean {
@@ -634,7 +711,17 @@ export struct ReaderTtsFullPanel {
     if (this.state.status === 'interrupted') return '已中断';
     if (this.state.status === 'preparing' || this.state.status === 'resuming') return '准备中';
     if (this.state.status === 'completed') return '已完成';
+    if (this.state.status === 'stopping') return '停止中';
+    if (this.state.status === 'failed') return '播放失败';
+    if (this.state.status === 'unavailable') return '当前引擎不可用';
     return '未开始';
+  }
+
+  private requestEngineChange(engine: string): void {
+    void this.onEngineChange(engine).catch((_error: Error): void => {
+      // The owner projects the same failure into ReaderTtsState; the manager
+      // variant additionally keeps its inline draft/error surface.
+    });
   }
 
   private controlText(kind: 'previous' | 'toggle' | 'stop' | 'next'): string {

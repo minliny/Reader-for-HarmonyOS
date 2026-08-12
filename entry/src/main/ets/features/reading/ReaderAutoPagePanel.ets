@@ -9,6 +9,39 @@ import {
   TOK_SURFACE_PANEL_SOFT,
 } from '../common/ReaderTokens';
 
+const QUICK_AUTO_PAGE_PANEL_PADDING_X = 11;
+const QUICK_AUTO_PAGE_PANEL_PADDING_Y = 13;
+const QUICK_AUTO_PAGE_HEADER_HEIGHT = 24;
+const QUICK_AUTO_PAGE_GAP_PHONE = 5;
+const QUICK_AUTO_PAGE_GAP_TABLET = 6;
+const QUICK_AUTO_PAGE_PLAYBACK_HEIGHT_PHONE = 104;
+const QUICK_AUTO_PAGE_PLAYBACK_HEIGHT_TABLET = 94;
+const QUICK_AUTO_PAGE_SPEED_HEIGHT_PHONE = 32;
+const QUICK_AUTO_PAGE_SPEED_HEIGHT_TABLET = 34;
+const QUICK_AUTO_PAGE_PANEL_HEIGHT_PHONE = QUICK_AUTO_PAGE_PANEL_PADDING_Y * 2 +
+  QUICK_AUTO_PAGE_HEADER_HEIGHT + QUICK_AUTO_PAGE_GAP_PHONE * 2 +
+  QUICK_AUTO_PAGE_PLAYBACK_HEIGHT_PHONE + QUICK_AUTO_PAGE_SPEED_HEIGHT_PHONE;
+const QUICK_AUTO_PAGE_PANEL_HEIGHT_TABLET = QUICK_AUTO_PAGE_PANEL_PADDING_Y * 2 +
+  QUICK_AUTO_PAGE_HEADER_HEIGHT + QUICK_AUTO_PAGE_GAP_TABLET * 2 +
+  QUICK_AUTO_PAGE_PLAYBACK_HEIGHT_TABLET + QUICK_AUTO_PAGE_SPEED_HEIGHT_TABLET;
+const QUICK_AUTO_PAGE_CHAPTER_WIDTH_PHONE = 62;
+const QUICK_AUTO_PAGE_CHAPTER_WIDTH_TABLET = 56;
+const QUICK_AUTO_PAGE_PREVIOUS_X = 7.75;
+const QUICK_AUTO_PAGE_NEXT_X_PHONE = 192.25;
+const QUICK_AUTO_PAGE_NEXT_X_TABLET = 174.25;
+const QUICK_AUTO_PAGE_CONTROL_Y_PHONE = 25;
+const QUICK_AUTO_PAGE_CONTROL_Y_TABLET = 20;
+const QUICK_AUTO_PAGE_RUNNING_WIDTH_PHONE = 82;
+const QUICK_AUTO_PAGE_RUNNING_WIDTH_TABLET = 74;
+const QUICK_AUTO_PAGE_RUNNING_X_PHONE = 90;
+const QUICK_AUTO_PAGE_RUNNING_X_TABLET = 82;
+const QUICK_AUTO_PAGE_STOP_X_PHONE = 160;
+const QUICK_AUTO_PAGE_STOP_X_TABLET = 144;
+const QUICK_AUTO_PAGE_STOP_Y_PHONE = 35.5;
+const QUICK_AUTO_PAGE_STOP_Y_TABLET = 30.5;
+const QUICK_AUTO_PAGE_SPEED_PADDING_PHONE = 7;
+const QUICK_AUTO_PAGE_SPEED_PADDING_TABLET = 8;
+
 /**
  * Figma Reader Quick Auto Page content area.
  *
@@ -35,14 +68,19 @@ export struct ReaderAutoPagePanel {
   onSpeedUp: () => void = (): void => {};
 
   build() {
-    Column({ space: this.isTablet ? 6 : 5 }) {
+    Column({ space: this.isTablet ? QUICK_AUTO_PAGE_GAP_TABLET : QUICK_AUTO_PAGE_GAP_PHONE }) {
       this.header();
       this.playbackControls();
       this.speedControl();
     }
     .width('100%')
-    .height(this.isTablet ? 190 : 196)
-    .padding({ left: 11, right: 11, top: 13, bottom: 13 })
+    .height(this.isTablet ? QUICK_AUTO_PAGE_PANEL_HEIGHT_TABLET : QUICK_AUTO_PAGE_PANEL_HEIGHT_PHONE)
+    .padding({
+      left: QUICK_AUTO_PAGE_PANEL_PADDING_X,
+      right: QUICK_AUTO_PAGE_PANEL_PADDING_X,
+      top: QUICK_AUTO_PAGE_PANEL_PADDING_Y,
+      bottom: QUICK_AUTO_PAGE_PANEL_PADDING_Y,
+    })
     .alignItems(HorizontalAlign.Start)
     .backgroundColor(TOK_SURFACE_PANEL)
     .border({ width: TOK_BORDER_W, color: TOK_LINE })
@@ -64,7 +102,7 @@ export struct ReaderAutoPagePanel {
           .lineHeight(10)
           .fontColor(TOK_READ_PRIMARY);
       }
-      .height(24)
+      .height(QUICK_AUTO_PAGE_HEADER_HEIGHT)
       .padding({ left: 9, right: 9 })
       .backgroundColor(TOK_SURFACE_PANEL)
       .borderRadius(8)
@@ -73,7 +111,7 @@ export struct ReaderAutoPagePanel {
       .onClick((): void => this.onBack());
     }
     .width('100%')
-    .height(24)
+    .height(QUICK_AUTO_PAGE_HEADER_HEIGHT)
     .alignItems(VerticalAlign.Center);
   }
 
@@ -86,7 +124,8 @@ export struct ReaderAutoPagePanel {
       this.stopControl();
     }
     .width('100%')
-    .height(this.isTablet ? 94 : 104)
+    .height(this.isTablet ? QUICK_AUTO_PAGE_PLAYBACK_HEIGHT_TABLET :
+      QUICK_AUTO_PAGE_PLAYBACK_HEIGHT_PHONE)
     .backgroundColor(TOK_SURFACE_PANEL_SOFT)
     .border({ width: TOK_BORDER_W, color: TOK_LINE })
     .borderRadius(8)
@@ -120,12 +159,13 @@ export struct ReaderAutoPagePanel {
         .textAlign(TextAlign.Center)
         .maxLines(1);
     }
-    .width(this.isTablet ? 56 : 62)
+    .width(this.isTablet ? QUICK_AUTO_PAGE_CHAPTER_WIDTH_TABLET : QUICK_AUTO_PAGE_CHAPTER_WIDTH_PHONE)
     .height(52)
     .alignItems(HorizontalAlign.Center)
     .position({
-      x: previous ? 7.75 : (this.isTablet ? 174.25 : 192.25),
-      y: this.isTablet ? 20 : 25,
+      x: previous ? QUICK_AUTO_PAGE_PREVIOUS_X :
+        (this.isTablet ? QUICK_AUTO_PAGE_NEXT_X_TABLET : QUICK_AUTO_PAGE_NEXT_X_PHONE),
+      y: this.isTablet ? QUICK_AUTO_PAGE_CONTROL_Y_TABLET : QUICK_AUTO_PAGE_CONTROL_Y_PHONE,
     })
     .enabled(previous ? this.canPreviousChapter : this.canNextChapter)
     .opacity((previous ? this.canPreviousChapter : this.canNextChapter) ? 1 : 0.4)
@@ -164,10 +204,13 @@ export struct ReaderAutoPagePanel {
         .textAlign(TextAlign.Center)
         .maxLines(1);
     }
-    .width(this.isTablet ? 74 : 82)
+    .width(this.isTablet ? QUICK_AUTO_PAGE_RUNNING_WIDTH_TABLET : QUICK_AUTO_PAGE_RUNNING_WIDTH_PHONE)
     .height(52)
     .alignItems(HorizontalAlign.Center)
-    .position({ x: this.isTablet ? 82 : 90, y: this.isTablet ? 20 : 25 })
+    .position({
+      x: this.isTablet ? QUICK_AUTO_PAGE_RUNNING_X_TABLET : QUICK_AUTO_PAGE_RUNNING_X_PHONE,
+      y: this.isTablet ? QUICK_AUTO_PAGE_CONTROL_Y_TABLET : QUICK_AUTO_PAGE_CONTROL_Y_PHONE,
+    })
     .accessibilityText(this.status === 'running' ? '暂停自动翻页' :
       (this.status === 'paused' ? '继续自动翻页' : '开始自动翻页'))
     .onClick((): void => this.onToggleRunning());
@@ -199,7 +242,10 @@ export struct ReaderAutoPagePanel {
     .width(24)
     .height(42)
     .alignItems(HorizontalAlign.Center)
-    .position({ x: this.isTablet ? 144 : 160, y: this.isTablet ? 30.5 : 35.5 })
+    .position({
+      x: this.isTablet ? QUICK_AUTO_PAGE_STOP_X_TABLET : QUICK_AUTO_PAGE_STOP_X_PHONE,
+      y: this.isTablet ? QUICK_AUTO_PAGE_STOP_Y_TABLET : QUICK_AUTO_PAGE_STOP_Y_PHONE,
+    })
     .enabled(this.status !== 'stopped')
     .opacity(this.status === 'stopped' ? 0.4 : 1)
     .accessibilityText('停止自动翻页')
@@ -235,8 +281,11 @@ export struct ReaderAutoPagePanel {
       this.speedButton('+', '加快自动翻页', false);
     }
     .width('100%')
-    .height(this.isTablet ? 34 : 32)
-    .padding({ left: this.isTablet ? 8 : 7, right: this.isTablet ? 8 : 7 })
+    .height(this.isTablet ? QUICK_AUTO_PAGE_SPEED_HEIGHT_TABLET : QUICK_AUTO_PAGE_SPEED_HEIGHT_PHONE)
+    .padding({
+      left: this.isTablet ? QUICK_AUTO_PAGE_SPEED_PADDING_TABLET : QUICK_AUTO_PAGE_SPEED_PADDING_PHONE,
+      right: this.isTablet ? QUICK_AUTO_PAGE_SPEED_PADDING_TABLET : QUICK_AUTO_PAGE_SPEED_PADDING_PHONE,
+    })
     .backgroundColor(TOK_SURFACE_PANEL_SOFT)
     .border({ width: TOK_BORDER_W, color: TOK_LINE })
     .borderRadius(6)

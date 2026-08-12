@@ -2,6 +2,14 @@ export type ReaderTtsSessionStatus =
   'unavailable' | 'idle' | 'preparing' | 'playing' | 'paused' | 'resuming' |
   'interrupted' | 'stopping' | 'completed' | 'failed';
 
+export const READER_TTS_RATE_MIN = 0.5;
+export const READER_TTS_RATE_MAX = 2;
+export const READER_TTS_RATE_STEP = 0.1;
+export const READER_TTS_RATE_STEP_SCALE = 1 / READER_TTS_RATE_STEP;
+export const READER_TTS_TIMER_MIN = 0;
+export const READER_TTS_TIMER_MAX_MINUTES = 99;
+export const READER_TTS_TIMER_MAX_SECONDS = 59;
+
 export type ReaderTtsPauseReason = 'user' | 'systemInterruption' | 'routeBackground' | 'deviceChange';
 
 export type ReaderTtsStopReason =
@@ -401,7 +409,7 @@ function assertScalarRange(start: number, end: number): void {
 }
 
 function assertSpeechRate(rate: number): void {
-  if (!Number.isFinite(rate) || rate < 0.5 || rate > 2) {
+  if (!Number.isFinite(rate) || rate < READER_TTS_RATE_MIN || rate > READER_TTS_RATE_MAX) {
     throw new Error('Reader TTS rate must be between 0.5 and 2.0');
   }
 }

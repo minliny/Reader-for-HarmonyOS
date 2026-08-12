@@ -184,6 +184,8 @@ export const TOK_READ_INK = '#332C25';
 export const TOK_READ_BODY_INK = '#2B241D';
 // Figma: reading muted  阅读次级文字
 export const TOK_READ_MUTED = '#5B5046';
+// Figma: 目录未读章节标题 (make `unread` state, #8a7d6e)
+export const TOK_READ_UNREAD = '#8A7D6E';
 // Figma: reading primary  阅读主色 (teal)
 export const TOK_READ_PRIMARY = '#2F6373';
 // Figma: reading icon  阅读图标

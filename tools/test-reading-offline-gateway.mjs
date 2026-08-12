@@ -33,6 +33,7 @@ const calls = [];
 const persistedImages = [];
 const completedManifests = new Set();
 const coreStates = ['missing', 'missing'];
+const coreCachedBytes = [0, 0];
 const materializationReports = [];
 let materializationGeneration = 0;
 let failImage = false;
@@ -70,6 +71,7 @@ class FakeRuntime {
       const materializations = [];
       for (let chapterIndex = params.chapterRange[0]; chapterIndex < params.chapterRange[1]; chapterIndex += 1) {
         coreStates[chapterIndex] = 'inProgress';
+        coreCachedBytes[chapterIndex] = chapterIndex === 0 ? 12 : 9;
         materializationGeneration += 1;
         materializations.push({
           chapterIndex,
@@ -132,8 +134,8 @@ class FakeRuntime {
         bookId: BOOK_ID,
         tocAvailable: true,
         chapters: [
-          { chapterIndex: 0, title: 'Chapter 0', url: '/chapter/0', state: coreStates[0] },
-          { chapterIndex: 1, title: 'Chapter 1', url: '/chapter/1', state: coreStates[1] },
+          { chapterIndex: 0, title: 'Chapter 0', url: '/chapter/0', state: coreStates[0], cachedBytes: coreCachedBytes[0] },
+          { chapterIndex: 1, title: 'Chapter 1', url: '/chapter/1', state: coreStates[1], cachedBytes: coreCachedBytes[1] },
         ],
       } };
     }
@@ -185,10 +187,9 @@ assert.ok(materializationReports.every((report) => report.errorCode === undefine
 completedManifests.clear();
 failImage = true;
 dropNextReportResult = true;
-await assert.rejects(
-  () => gateway.prefetchRange(session, 0, 1, () => true),
-  (error) => error instanceof ReadingOfflineMaterializationError && error.code === 'storage_full',
-);
+const storageFullProjection = await gateway.prefetchRange(session, 0, 1, () => true);
+assert.equal(storageFullProjection[0].downloadState, 'cached',
+  'an image storage failure must retain the already cached text body');
 assert.equal(completedManifests.has(0), false, 'a failed image must not publish chapter completion');
 assert.equal(coreStates[0], 'failed');
 const storageFullReport = materializationReports.at(-1);
@@ -226,8 +227,104 @@ const missingManifestProjection = await gateway.loadProjection(session, () => tr
 assert.deepEqual(missingManifestProjection.map((entry) => entry.downloadState), ['cached', 'cached'],
   'Core completion without a Host manifest must remain cached');
 
+let textOnlyState = 'missing';
+let textOnlyBytes = 0;
+const textOnlyRuntime = {
+  async request(method, params = {}) {
+    if (method === 'cache.book.prefetch') {
+      textOnlyState = 'inProgress';
+      textOnlyBytes = 9;
+      return { data: {
+        sourceId: SOURCE_ID,
+        bookId: BOOK_ID,
+        chapterRange: params.chapterRange,
+        materializations: [{ chapterIndex: 1, token: 'text-only-token' }],
+      } };
+    }
+    if (method === 'chapter.content') {
+      return { data: {
+        sourceId: SOURCE_ID,
+        bookId: BOOK_ID,
+        chapterTitle: 'Chapter 1',
+        content: 'text only',
+        via: 'cache',
+      } };
+    }
+    if (method === 'cache.chapter.materialization.report') {
+      textOnlyState = params.outcome;
+      return { data: {
+        sourceId: SOURCE_ID,
+        bookId: BOOK_ID,
+        chapterIndex: 1,
+        state: params.outcome,
+        retainedCachedBody: true,
+      } };
+    }
+    if (method === 'cache.book.status') {
+      return { data: {
+        sourceId: SOURCE_ID,
+        bookId: BOOK_ID,
+        chapters: [{ chapterIndex: 1, state: textOnlyState, cachedBytes: textOnlyBytes }],
+      } };
+    }
+    throw new Error(`unexpected text-only command: ${method}`);
+  },
+};
+const textOnlyGateway = new ReadingOfflineGateway(textOnlyRuntime);
+const textOnlyProjection = await textOnlyGateway.prefetchRange(session, 1, 2, () => true);
+assert.equal(textOnlyProjection[1].downloadState, 'cached',
+  'a text-only chapter must prefetch without any image persistence callbacks');
+
 await gateway.clearBook(session, () => true);
 assert.equal(completedManifests.size, 0);
+
+const wholeBookChapterCount = 45;
+const wholeBookRanges = [];
+const wholeBookProgress = [];
+const wholeBookSession = {
+  ...session,
+  entries: Array.from({ length: wholeBookChapterCount }, (_value, index) => ({
+    index,
+    title: `Chapter ${index}`,
+    url: `/chapter/${index}`,
+    variables: [],
+  })),
+};
+const wholeBookRuntime = {
+  async request(method, params = {}) {
+    if (method === 'cache.book.prefetch') {
+      wholeBookRanges.push(params.chapterRange);
+      return { data: {
+        sourceId: SOURCE_ID,
+        bookId: BOOK_ID,
+        chapterRange: params.chapterRange,
+        materializations: [],
+      } };
+    }
+    if (method === 'cache.book.status') {
+      return { data: {
+        sourceId: SOURCE_ID,
+        bookId: BOOK_ID,
+        chapters: wholeBookSession.entries.map((entry) => ({
+          chapterIndex: entry.index,
+          state: 'cached',
+          cachedBytes: 1,
+        })),
+      } };
+    }
+    throw new Error(`unexpected whole-book command: ${method}`);
+  },
+};
+const wholeBookProjection = await new ReadingOfflineGateway(wholeBookRuntime).prefetchBook(
+  wholeBookSession,
+  () => true,
+  progress => wholeBookProgress.push([progress.completedChapters, progress.totalChapters]),
+);
+assert.deepEqual(wholeBookRanges, [[0, 20], [20, 40], [40, 45]],
+  'whole-book download must reuse the bounded Core range command');
+assert.deepEqual(wholeBookProgress, [[20, 45], [40, 45], [45, 45]]);
+assert.equal(wholeBookProjection.length, wholeBookChapterCount);
+assert.ok(wholeBookProjection.every(entry => entry.downloadState === 'cached'));
 
 let offlineChapterRequests = 0;
 const cachedRuntime = {

@@ -14,6 +14,10 @@ const control = read('entry/src/main/ets/features/reading/ReaderControlPanel.ets
 assert.match(control, /ReaderDirectoryModulePanel\(\{/);
 assert.match(control, /ReaderQuickSearchPanel\(\{/);
 assert.match(control, /ReaderAutoPagePanel\(\{/);
+assert.match(control, /ReaderAppearanceModulePanel\(\{/);
+assert.match(control, /ReaderAppearanceFullPanel\(\{/);
+assert.match(control, /ReaderSettingsModulePanel\(\{/);
+assert.match(control, /ReaderSettingsFullPanel\(\{/);
 assert.match(control, /this\.onExpandDirectory\(\)/);
 assert.match(control, /Slider\(\{\s*value: this\.effectiveProgressPercent\(\)/);
 assert.match(control, /onPreviousChapter\(\)/);
@@ -23,7 +27,11 @@ assert.match(control, /this\.promoteAutoPage\(\)/);
 assert.match(control, /this\.onOpenReplace\(\)/);
 assert.doesNotMatch(control, /action === 'replace'[\s\S]{0,180}this\.onSourceSwitch\(\)/);
 assert.doesNotMatch(control, /currently exist only as Review frames/);
-assert.match(control, /const page: ReaderControlPage = module === 'tts' \? 'moduleTts' : 'moduleDirectory'/);
+for (const page of ['moduleDirectory', 'moduleTts', 'moduleAppearance', 'moduleSettings',
+  'fullAppearance', 'fullSettings']) {
+  assert.ok(control.includes(page), `Reader control state machine is missing ${page}`);
+}
+assert.match(control, /module !== 'directory'[\s\S]*module !== 'settings'/);
 assert.match(control, /if \(this\.reduceMotion\) \{\s*this\.onPageChange\(page\)/);
 assert.match(control, /if \(this\.reduceMotion\) \{\s*this\.onPageChange\('quickSearch'\)/);
 assert.match(control, /this\.reduceMotion \? TransitionEffect\.IDENTITY/);
@@ -51,6 +59,9 @@ assert.match(experience, /if \(this\.controlPage !== 'home'\) \{/);
 assert.match(experience, /this\.activeGateway\(\)\.searchContent\(this\.bookId, keyword, 50, isCurrent\)/);
 assert.match(experience, /this\.selectChapterAnchor\(result\.chapterIndex, result\.chapterOffset, false\)/);
 assert.match(experience, /onExpandDirectory: \(\): void => this\.onOpenDirectory\(\)/);
+assert.match(experience, /void this\.loadReaderSettingsSnapshot\(lifecycleToken\)/);
+assert.match(experience, /settingsSnapshot: this\.readerSettingsSnapshot/);
+assert.match(experience, /onSettingsToggleChange: \(key: ReaderSettingsToggleKey, value: boolean\)/);
 assert.match(experience, /private turnNextPage\(\): ReaderPageTurnResult/);
 assert.match(experience, /private turnPreviousPage\(\): void/);
 assert.match(experience, /this\.measureCommittedPageAt\(nextOffset\)/);
@@ -103,7 +114,7 @@ assert.match(fullDirectory, /\.accessibilityText\('收起目录'\)/);
 
 const fullDirectoryPanel = read('entry/src/main/ets/features/reading/FullDirectoryPanel.ets');
 assert.match(fullDirectoryPanel, /return Math\.max\(117, this\.bodyContentHeight\(\) - 143\)/);
-assert.match(fullDirectoryPanel, /Scroll\(this\.listScroller\)/);
+assert.match(fullDirectoryPanel, /List\(\{ space: 0, scroller: this\.listScroller \}\)[\s\S]*Repeat\(this\.projectedEntries\)[\s\S]*\.virtualScroll\(\{ reusable: true \}\)/);
 assert.match(fullDirectoryPanel, /this\.listScroller\.scrollEdge\(Edge\.Bottom\)/);
 assert.match(fullDirectoryPanel, /this\.activeTab === 'bookmarks'/);
 assert.match(fullDirectoryPanel, /TextInput\(\{ text: this\.searchDraft/);

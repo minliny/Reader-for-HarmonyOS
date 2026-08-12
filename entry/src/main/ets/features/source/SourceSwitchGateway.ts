@@ -21,7 +21,29 @@ export type SourceSwitchCandidate = {
   latencyMs?: number;
   offline?: boolean;
   timeout?: boolean;
+  isCurrent?: boolean;
 };
+
+/** Stable identity shared by discovery, rendering, and click admission. */
+export function sourceSwitchCandidateKey(sourceId: string, bookUrl: string): string {
+  return `${sourceId.length}:${sourceId}:${bookUrl.length}:${bookUrl}`;
+}
+
+function deduplicateSourceSwitchCandidates(
+  candidates: SourceSwitchCandidate[],
+): SourceSwitchCandidate[] {
+  const result: SourceSwitchCandidate[] = [];
+  const seen = new Set<string>();
+  for (const candidate of candidates) {
+    const key = sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    result.push(candidate);
+  }
+  return result;
+}
 
 export type SourceSwitchDiscoveryOutcome =
   | { kind: 'sources'; candidates: SourceSwitchCandidate[] }
@@ -79,6 +101,14 @@ export type SourceSwitchRollbackResult = {
   transactionId: SourceSwitchTransactionId;
   changed: boolean;
   restoredBook: ShelfBook;
+};
+
+export type PendingSourceSwitch = {
+  transactionId: SourceSwitchTransactionId;
+  fromSourceId: string;
+  fromBookId: string;
+  targetSourceId: string;
+  targetBookId: string;
 };
 
 /**
@@ -154,7 +184,12 @@ export class SourceSwitchGateway {
         candidates.push(...group);
       }
     }
-    return { kind: 'sources', candidates };
+    const uniqueCandidates = deduplicateSourceSwitchCandidates(candidates);
+    const currentCandidateKey = sourceSwitchCandidateKey(sourceId, bookId);
+    for (const candidate of uniqueCandidates) {
+      candidate.isCurrent = sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl) === currentCandidateKey;
+    }
+    return { kind: 'sources', candidates: uniqueCandidates };
   }
 
   private async discoverFromSource(
@@ -370,6 +405,45 @@ export class SourceSwitchGateway {
       changed: result.data['changed'] as boolean,
       restoredBook: this.decodeShelfBook(rawBook),
     };
+  }
+
+  /**
+   * Reads Core's opaque pending-transaction projection for lifecycle
+   * reconciliation. Harmony receives only the exact from/target identities
+   * and transaction id; the durable journal remains owned by Core.
+   */
+  async listPendingSwitches(
+    isCurrent: (() => boolean) | undefined = undefined,
+  ): Promise<PendingSourceSwitch[]> {
+    const result = await this.runtimeOwner.request(
+      'source.switch.pending.list',
+      {},
+      this.requestOptions(isCurrent),
+    );
+    const rawPending = result.data['pending'];
+    if (!Array.isArray(rawPending)) {
+      throw new Error('source.switch.pending.list returned invalid pending');
+    }
+    const pending: PendingSourceSwitch[] = [];
+    const transactionIds = new Set<string>();
+    for (const value of rawPending) {
+      const row = this.requireObject(value, 'source.switch.pending.list row');
+      const transactionId = this.requireString(row, 'transactionId', 'source.switch.pending.list');
+      if (row['phase'] !== 'pending' || transactionIds.has(transactionId)) {
+        throw new Error('source.switch.pending.list returned an invalid transaction row');
+      }
+      const from = this.requireObject(row['from'], 'source.switch.pending.list from');
+      const target = this.requireObject(row['target'], 'source.switch.pending.list target');
+      transactionIds.add(transactionId);
+      pending.push({
+        transactionId,
+        fromSourceId: this.requireString(from, 'sourceId', 'source.switch.pending.list from'),
+        fromBookId: this.requireString(from, 'bookId', 'source.switch.pending.list from'),
+        targetSourceId: this.requireString(target, 'sourceId', 'source.switch.pending.list target'),
+        targetBookId: this.requireString(target, 'bookId', 'source.switch.pending.list target'),
+      });
+    }
+    return pending;
   }
 
   private decodeMatchedChapter(value: unknown): SourceSwitchNewTocEntry {

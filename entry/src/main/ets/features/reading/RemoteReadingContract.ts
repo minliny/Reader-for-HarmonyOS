@@ -231,6 +231,16 @@ export function classifyRemoteReadingCommandFailure(
   return new RemoteReadingGatewayError('commandFailed', `${command} failed: ${message}`, command);
 }
 
+/**
+ * Only an unavailable online execution may fall back to an exact Core cache.
+ * Contract, identity, and content-shape failures must remain visible instead
+ * of being disguised by an older cached projection.
+ */
+export function isRemoteReadingCacheFallbackEligible(error: unknown): boolean {
+  return error instanceof RemoteReadingGatewayError &&
+    (error.code === 'commandFailed' || error.code === 'unsupportedHostCapability');
+}
+
 function upsertRemoteReadingVariable(
   variables: RemoteReadingVariable[],
   candidate: RemoteReadingVariable,

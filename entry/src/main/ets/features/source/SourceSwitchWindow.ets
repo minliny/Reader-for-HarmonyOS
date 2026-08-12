@@ -1,4 +1,5 @@
 import { CandidateRow } from './CandidateRow';
+import { sourceSwitchCandidateKey } from './SourceSwitchGateway';
 import type { SourceSwitchCandidate } from './SourceSwitchGateway';
 import {
   TOK_BORDER,
@@ -371,11 +372,12 @@ export struct SourceSwitchWindow {
             latencyMs: candidate.latencyMs,
             offline: candidate.offline === true,
             timeout: candidate.timeout === true,
-            currentSourceId: this.currentSourceId,
+            isCurrent: candidate.isCurrent === true,
             onSelect: (): void => this.onSelectCandidate(candidate),
           });
         },
-        (candidate: SourceSwitchCandidate): string => candidate.sourceId);
+        (candidate: SourceSwitchCandidate): string =>
+          sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl));
     }
     .width('100%')
     .layoutWeight(1)

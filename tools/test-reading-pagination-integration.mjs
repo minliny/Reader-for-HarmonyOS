@@ -44,6 +44,8 @@ assert.match(imageHost, /MAX_READING_DISPLAY_FILE_BYTES[\s\S]*statSync\(tmpPath\
   'downsampled display files must remain byte-bounded and clean partial writes');
 assert.match(imageHost, /configureDisplayCache[\s\S]*listFileSync\(directory\)[\s\S]*unlinkBestEffort/,
   'a new process must reclaim crash-left display files before reading starts');
+assert.match(imageHost, /configureDisplayCache[\s\S]*listFileSync\(cacheDir\)[\s\S]*LEGACY_DISPLAY_FILE_PREFIX[\s\S]*LEGACY_DISPLAY_TEMP_PREFIX[\s\S]*unlinkBestEffort/,
+  'an upgraded process must reclaim legacy display files from the cache root');
 assert.match(source, /readingImageResources:[\s\S]*releaseUnretainedReadingImages\(\)/,
   'the reader session must bound display-file lifetime to its active chapter window');
 assert.match(source, /scaledReadingImageHeight\(/,
@@ -97,8 +99,8 @@ assert.match(previousTurn[1], /prefix\.previousRequestForPageStart\(page\.startS
   'page two and later must use the exact continuously measured prefix before a full manifest exists');
 assert.match(previousTurn[1], /measureCommittedPageAt\(previousRequest\)/,
   'the prefix path must remeasure the exact request that produced the preceding page');
-assert.match(previousTurn[1], /continuous measurement or complete manifest required/,
-  'restore/search/seek must still fail closed before any exact predecessor has been measured');
+assert.match(previousTurn[1], /startCurrentChapterPredecessorMeasurement\(chapter\.chapterIndex, page\.startScalar\)/,
+  'restore/search/directory jumps must start a chapter-head measurement for an exact predecessor');
 assert.match(previousTurn[1], /measureCommittedPageAt\(previous\.page\.startScalar\)/,
   'an indexed previous page must reuse the existing real ArkUI measurement and Core commit path');
 assert.match(previousTurn[1], /turnToPreviousChapter\(previousChapterIndex/,
@@ -123,6 +125,12 @@ const predecessorMeasurement = source.match(
 assert.ok(predecessorMeasurement, 'the cold predecessor measurement path must exist');
 assert.match(predecessorMeasurement[1], /measuredPage\.endScalar/,
   'cold measurement must advance from the real preceding physical-page end');
+assert.match(predecessorMeasurement[1], /draft\.containsAnchor\(pending\.originalChapterOffset\)/,
+  'same-chapter predecessor measurement must stop once the real prefix contains the jumped anchor');
+assert.match(predecessorMeasurement[1], /paginationIndex\.findContainingPage\([\s\S]*pending\.originalChapterOffset/,
+  'a jump into the final page must survive promotion of the prefix into a completed manifest');
+assert.match(predecessorMeasurement[1], /draft\.previousRequestForAnchor\(pending\.originalChapterOffset\)/,
+  'the jumped anchor must resolve through continuous layout observations rather than session history');
 assert.match(predecessorMeasurement[1], /paginationIndex\.findLastPage\(this\.currentPaginationKey\(\)\)/,
   'the cold path must enter the exact indexed final page only after EOF');
 assert.doesNotMatch(predecessorMeasurement[1], /updateProgress|resolveLocation/,

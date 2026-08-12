@@ -70,15 +70,52 @@ class FakeHost {
   calls = [];
   listener;
   requests = [];
+  speakGate;
   setEventListener(listener) { this.listener = listener; }
   async selectEngine(engine) { this.calls.push(`engine:${engine ?? 'system'}`); return true; }
   async isAvailable() { this.calls.push('available'); return true; }
   async activateAudioSession(mix) { this.calls.push(`activate:${mix}`); }
   async deactivateAudioSession() { this.calls.push('deactivate'); }
-  async speak(request) { this.calls.push(`speak:${request.requestId}`); this.requests.push(request); }
+  async speak(request) {
+    this.calls.push(`speak:${request.requestId}`);
+    this.requests.push(request);
+    const gate = this.speakGate;
+    if (gate !== undefined) {
+      this.speakGate = undefined;
+      gate.markEntered();
+      await gate.blocked;
+    }
+  }
   async stop() { this.calls.push('stop'); }
   publishPlaybackState(state) { this.calls.push(`media:${state}`); }
   emit(event) { this.listener?.(event); }
+  blockNextSpeak() {
+    let markEntered = () => {};
+    let release = () => {};
+    const entered = new Promise(resolve => { markEntered = resolve; });
+    const blocked = new Promise(resolve => { release = resolve; });
+    this.speakGate = { blocked, markEntered };
+    return { entered, release };
+  }
+}
+
+async function startBlockedSession(contentVersion) {
+  const blockedGateway = new FakeGateway();
+  const blockedHost = new FakeHost();
+  const blockedCoordinator = new ReaderTtsSessionCoordinator(
+    blockedGateway,
+    blockedHost,
+    async () => {},
+  );
+  const speak = blockedHost.blockNextSpeak();
+  const startTask = blockedCoordinator.start({
+    chapter,
+    content: canonicalRemoteContent,
+    contentVersion,
+    scalarPosition: 0,
+  });
+  await speak.entered;
+  return { coordinator: blockedCoordinator, gateway: blockedGateway, host: blockedHost, speak, startTask };
 }
 
 const gateway = new FakeGateway();
@@ -157,13 +194,96 @@ assert.ok(gateway.calls.includes('rate:7'));
 
 await coordinator.stop();
 assert.equal(coordinator.getState().status, 'idle');
+assert.ok(host.calls.includes('media:stopped'), 'ordinary stop must publish AVSession stopped');
 await coordinator.dispose();
+
+const slowStop = await startBlockedSession(3);
+const slowStopTask = slowStop.coordinator.stop();
+assert.equal(slowStop.coordinator.getState().status, 'stopping');
+assert.equal(
+  slowStop.host.calls.filter(call => call === 'stop').length,
+  1,
+  'Host stop must run immediately instead of waiting behind an in-flight speak',
+);
+assert.equal(slowStop.host.calls.at(-1), 'media:stopped');
+slowStop.speak.release();
+await slowStop.startTask;
+await slowStopTask;
+assert.equal(slowStop.coordinator.getState().status, 'idle');
+
+const immediateTransportIntents = [
+  { name: 'pause', invoke: current => current.pause() },
+  { name: 'background pause', invoke: current => current.pauseForBackground() },
+  { name: 'seek', invoke: current => current.seek(1) },
+  { name: 'next', invoke: current => current.next() },
+  { name: 'previous', invoke: current => current.previous() },
+  { name: 'rate', invoke: current => current.setRate(1.4) },
+];
+let blockedContentVersion = 4;
+for (const scenario of immediateTransportIntents) {
+  const blocked = await startBlockedSession(blockedContentVersion);
+  blockedContentVersion += 1;
+  const intentTask = scenario.invoke(blocked.coordinator);
+  assert.equal(
+    blocked.host.calls.filter(call => call === 'stop').length,
+    1,
+    `${scenario.name} must stop Host transport before the blocked speak settles`,
+  );
+  blocked.speak.release();
+  await blocked.startTask;
+  await intentTask;
+}
+
+const immediateHostEvents = [
+  { name: 'media pause', event: { type: 'mediaControl', action: 'pause' } },
+  { name: 'media stop', event: { type: 'mediaControl', action: 'stop' } },
+  { name: 'media next', event: { type: 'mediaControl', action: 'next' } },
+  { name: 'media previous', event: { type: 'mediaControl', action: 'previous' } },
+  { name: 'interruption pause', event: { type: 'interruption', action: 'pause' } },
+  { name: 'interruption stop', event: { type: 'interruption', action: 'stop' } },
+  { name: 'device stop', event: { type: 'deviceChange', action: 'stop' } },
+];
+for (const scenario of immediateHostEvents) {
+  const blocked = await startBlockedSession(blockedContentVersion);
+  blockedContentVersion += 1;
+  blocked.host.emit(scenario.event);
+  assert.equal(
+    blocked.host.calls.filter(call => call === 'stop').length,
+    1,
+    `${scenario.name} must stop Host transport before the blocked speak settles`,
+  );
+  blocked.speak.release();
+  await blocked.startTask;
+  await blocked.coordinator.whenSettled();
+  await blocked.coordinator.whenSettled();
+}
+
+const replacement = await startBlockedSession(blockedContentVersion);
+const replacementTask = replacement.coordinator.start({
+  chapter,
+  content: canonicalRemoteContent,
+  contentVersion: blockedContentVersion + 1,
+  scalarPosition: 0,
+});
+assert.equal(
+  replacement.host.calls.filter(call => call === 'stop').length,
+  1,
+  'a replacement start must stop the prior Host transport before its speak settles',
+);
+replacement.speak.release();
+await replacement.startTask;
+await replacementTask;
+assert.equal(replacement.host.requests.length, 2);
 
 const coordinatorSource = await readFile(
   new URL('../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts', import.meta.url),
   'utf8',
 );
 assert.match(coordinatorSource, /export type HostTtsTransportState/);
+assert.match(coordinatorSource, /private stopHostTransportImmediately\(\): Promise<Error \| undefined>/);
+assert.match(coordinatorSource, /private routeHostEvent\(event: ReaderTtsHostEvent\): void/);
+assert.match(coordinatorSource, /void this\.pauseForSystem\('systemInterruption'\)/,
+  'system interruption must enter the immediate transport-cancel path before serialization');
 assert.doesNotMatch(
   coordinatorSource,
   /beginReaderTtsSession|prepareReaderTtsUtterance|advanceReaderTtsChapter|failReaderTtsUtterance/,

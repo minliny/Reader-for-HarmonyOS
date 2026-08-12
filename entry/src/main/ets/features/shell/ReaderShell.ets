@@ -45,6 +45,7 @@ export struct ReaderShell {
   @Prop directoryCurrentChapterIndex: number = -1;
   @Prop directoryChapterTitle: string = '';
   @Prop directoryOpenedFromControl: boolean = false;
+  @Prop offlineBookOperationActive: boolean = false;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   // 换源 overlay。
   @Prop sourceSwitchVisible: boolean = false;
@@ -61,12 +62,17 @@ export struct ReaderShell {
     (_chapterIndex: number, _chapterTitle: string): void => {};
   onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   onDownloadChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
+  onDownloadBook: () => void = (): void => {};
+  onClearBookOffline: () => void = (): void => {};
   onDeleteBookmarks: (bookmarkTimes: number[]) => void = (_bookmarkTimes: number[]): void => {};
+  onDirectoryProjectionChanged: (entries: LocalReadingTocEntry[]) => void =
+    (_entries: LocalReadingTocEntry[]): void => {};
   onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void =
     (_request: ReaderDirectoryChapterStartBookmarkRequest): void => {};
   onCloseDirectory: () => void = (): void => {};
   onOpenDirectory: () => void = (): void => {};
   onSwitchSource: () => void = (): void => {};
+  onOpenRulesManagement: () => void = (): void => {};
   onCloseSourceSwitch: () => void = (): void => {};
   onRetrySourceSwitch: () => void = (): void => {};
   onPickSource: (candidate: SourceSwitchCandidate) => void = (_candidate: SourceSwitchCandidate): void => {};
@@ -102,8 +108,11 @@ export struct ReaderShell {
             this.onChapterCommitted(chapterIndex, chapterTitle),
           onOpenDirectory: (): void => this.onOpenDirectory(),
           onSwitchSource: (): void => this.onSwitchSource(),
+          onOpenRulesManagement: (): void => this.onOpenRulesManagement(),
           onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
           onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
+          onDirectoryProjectionChanged: (entries: LocalReadingTocEntry[]): void =>
+            this.onDirectoryProjectionChanged(entries),
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
             this.onCreateChapterStartBookmark(request),
@@ -128,8 +137,11 @@ export struct ReaderShell {
           sourceId: this.sourceId,
           animateFromControl: this.directoryOpenedFromControl,
           reduceMotion: this.reduceMotion,
+          offlineBookOperationActive: this.offlineBookOperationActive,
           onSelectChapter: (chapterIndex: number): void => this.onSelectChapter(chapterIndex),
           onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
+          onDownloadBook: (): void => this.onDownloadBook(),
+          onClearBookOffline: (): void => this.onClearBookOffline(),
           onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>

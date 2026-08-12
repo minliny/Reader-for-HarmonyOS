@@ -6,9 +6,19 @@ import {
   TOK_READ_INK,
   TOK_READ_MUTED,
   TOK_READ_PRIMARY,
+  TOK_RADIUS_MD,
   TOK_SURFACE_PANEL,
   TOK_SURFACE_PANEL_SOFT,
 } from '../common/ReaderTokens';
+
+const QUICK_SEARCH_PANEL_PADDING_X = 11;
+const QUICK_SEARCH_PANEL_PADDING_Y = 13;
+const QUICK_SEARCH_HEADER_HEIGHT = 24;
+const QUICK_SEARCH_HEADER_BODY_GAP_PHONE = 5;
+const QUICK_SEARCH_HEADER_BODY_GAP_TABLET = 6;
+const QUICK_SEARCH_RESULTS_HEIGHT_PHONE = 141;
+const QUICK_SEARCH_RESULTS_HEIGHT_TABLET = 134;
+const QUICK_SEARCH_RESULT_ROW_HEIGHT = 54;
 
 export interface ReaderQuickSearchIdleState {
   kind: 'idle';
@@ -42,9 +52,10 @@ export type ReaderQuickSearchState =
   | ReaderQuickSearchEmptyState
   | ReaderQuickSearchErrorState;
 
-/** Figma Reader Quick Search / Phone (`943:8625`) content area only. */
+/** Figma Reader Quick Search content: Phone `943:8625`, Tablet `942:48`. */
 @Component
 export struct ReaderQuickSearchPanel {
+  @Prop isTablet: boolean = false;
   @Prop query: string = '';
   @Prop state: ReaderQuickSearchState = { kind: 'idle' };
   onBack: () => void = (): void => {};
@@ -58,11 +69,16 @@ export struct ReaderQuickSearchPanel {
       this.resultsBody();
     }
     .width('100%')
-    .height(196)
-    .padding({ left: 11, right: 11, top: 13, bottom: 13 })
+    .height(this.panelHeight())
+    .padding({
+      left: QUICK_SEARCH_PANEL_PADDING_X,
+      right: QUICK_SEARCH_PANEL_PADDING_X,
+      top: QUICK_SEARCH_PANEL_PADDING_Y,
+      bottom: QUICK_SEARCH_PANEL_PADDING_Y,
+    })
     .backgroundColor(TOK_SURFACE_PANEL)
     .border({ width: TOK_BORDER_W, color: TOK_LINE })
-    .borderRadius(8)
+    .borderRadius(TOK_RADIUS_MD)
     .clip(true);
   }
 
@@ -80,7 +96,7 @@ export struct ReaderQuickSearchPanel {
           .fontColor(TOK_READ_PRIMARY);
       }
       .width(51)
-      .height(24)
+      .height(QUICK_SEARCH_HEADER_HEIGHT)
       .padding({ left: 8 })
       .alignItems(VerticalAlign.Center)
       .onClick((): void => this.onBack());
@@ -102,10 +118,10 @@ export struct ReaderQuickSearchPanel {
           .onChange((value: string): void => this.onQueryChange(value));
       }
       .layoutWeight(1)
-      .height(24)
+      .height(QUICK_SEARCH_HEADER_HEIGHT)
       .padding({ left: 7, right: 7 })
       .backgroundColor(TOK_SURFACE_PANEL_SOFT)
-      .borderRadius(8)
+      .borderRadius(TOK_RADIUS_MD)
       .alignItems(VerticalAlign.Center);
 
       Stack({ alignContent: Alignment.Center }) {
@@ -116,9 +132,9 @@ export struct ReaderQuickSearchPanel {
           .fontColor('#FFFAF4');
       }
       .width(36)
-      .height(24)
+      .height(QUICK_SEARCH_HEADER_HEIGHT)
       .backgroundColor(TOK_READ_PRIMARY)
-      .borderRadius(8)
+      .borderRadius(TOK_RADIUS_MD)
       .opacity(this.canSearch() ? 1 : 0.4)
       .onClick((): void => {
         if (this.canSearch()) {
@@ -127,7 +143,7 @@ export struct ReaderQuickSearchPanel {
       });
     }
     .width('100%')
-    .height(24)
+    .height(QUICK_SEARCH_HEADER_HEIGHT)
     .alignItems(VerticalAlign.Center);
   }
 
@@ -145,7 +161,7 @@ export struct ReaderQuickSearchPanel {
           .width('100%');
         }
         .width('100%')
-        .height(141)
+        .height(this.resultsHeight())
         .scrollBar(BarState.Off);
       } else {
         Stack({ alignContent: Alignment.Center }) {
@@ -159,14 +175,14 @@ export struct ReaderQuickSearchPanel {
             .maxLines(2);
         }
         .width('100%')
-        .height(141);
+        .height(this.resultsHeight());
       }
     }
     .width('100%')
-    .height(141)
-    .margin({ top: 5 })
+    .height(this.resultsHeight())
+    .margin({ top: this.headerBodyGap() })
     .border({ width: TOK_BORDER_W, color: TOK_LINE })
-    .borderRadius(8)
+    .borderRadius(TOK_RADIUS_MD)
     .clip(true);
   }
 
@@ -184,7 +200,7 @@ export struct ReaderQuickSearchPanel {
       this.resultSnippet(result);
     }
     .width('100%')
-    .height(54)
+    .height(QUICK_SEARCH_RESULT_ROW_HEIGHT)
     .padding({ left: 8, right: 8, top: 6 })
     .border({ width: { bottom: 1 }, color: TOK_LINE })
     .onClick((): void => this.onSelectResult(result));
@@ -230,6 +246,19 @@ export struct ReaderQuickSearchPanel {
 
   private canSearch(): boolean {
     return this.query.trim().length > 0 && this.state.kind !== 'loading';
+  }
+
+  private headerBodyGap(): number {
+    return this.isTablet ? QUICK_SEARCH_HEADER_BODY_GAP_TABLET : QUICK_SEARCH_HEADER_BODY_GAP_PHONE;
+  }
+
+  private resultsHeight(): number {
+    return this.isTablet ? QUICK_SEARCH_RESULTS_HEIGHT_TABLET : QUICK_SEARCH_RESULTS_HEIGHT_PHONE;
+  }
+
+  private panelHeight(): number {
+    return QUICK_SEARCH_PANEL_PADDING_Y * 2 + QUICK_SEARCH_HEADER_HEIGHT +
+      this.headerBodyGap() + this.resultsHeight();
   }
 
   private resultTitle(result: ReadingContentSearchResult): string {

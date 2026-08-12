@@ -28,7 +28,7 @@ export function createDefaultReaderAutoPageFullConfiguration(): ReaderAutoPageFu
     timerMinutes: 15,
     timerSeconds: 0,
     speedSeconds: 8,
-    followHighlight: true,
+    followHighlight: false,
   };
 }
 
@@ -42,7 +42,7 @@ export function normalizeReaderAutoPageFullConfiguration(
       READER_AUTO_PAGE_FULL_MIN_SECONDS, READER_AUTO_PAGE_FULL_MAX_SECONDS),
     speedSeconds: clampInteger(value.speedSeconds,
       READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS, READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS),
-    followHighlight: value.followHighlight,
+    followHighlight: false,
   };
 }
 
@@ -80,12 +80,12 @@ export function setReaderAutoPageFullSpeed(
 
 export function setReaderAutoPageFullFollowHighlight(
   value: ReaderAutoPageFullConfiguration,
-  followHighlight: boolean,
+  _followHighlight: boolean,
 ): ReaderAutoPageFullConfiguration {
   const current = normalizeReaderAutoPageFullConfiguration(value);
   return {
     ...current,
-    followHighlight,
+    followHighlight: false,
   };
 }
 

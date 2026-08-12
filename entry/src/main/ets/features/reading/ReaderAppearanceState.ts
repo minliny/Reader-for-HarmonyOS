@@ -4,7 +4,7 @@
  * The state deliberately contains only options that the current HarmonyOS
  * bundle can render without a Host/Core capability. Imported fonts and every
  * page-turn mode except `none` are therefore excluded from the writable type
- * and are normalized back to the safe built-in values on load.
+ * and are normalized back to safe built-in values on load.
  */
 export type ReaderAppearanceTheme =
   | 'day'
@@ -21,9 +21,9 @@ export type ReaderAppearanceTheme =
  * Noto Serif SC files. `SourceHanSerif / 思源宋体` remains a separate visual
  * slot and must not be marked active merely because it shares that face.
  */
-export type ReaderAppearanceFont = 'serif';
+export type ReaderAppearanceFont = 'system' | 'serif' | 'sans' | 'lxgwWenKai';
 
-export type ReaderAppearanceIndent = 'none' | 'firstLine';
+export type ReaderAppearanceIndent = 'none' | 'single' | 'firstLine';
 
 export type ReaderAppearanceAlignment = 'start' | 'justify';
 
@@ -72,8 +72,7 @@ export function createDefaultReaderAppearanceSnapshot(): ReaderAppearanceSnapsho
 /**
  * Sanitizes a value decoded from preferences. Missing/corrupt fields fall
  * back independently, while unavailable font/page-turn values always fail
- * closed to the Figma Serif slot (backed by Noto Serif SC) and the
- * instantaneous `none` mode.
+ * closed to the bundled Serif slot and the instantaneous `none` mode.
  */
 export function normalizeReaderAppearanceSnapshot(
   candidate: ReaderAppearanceSnapshot,
@@ -84,7 +83,7 @@ export function normalizeReaderAppearanceSnapshot(
     activeTheme: isReaderAppearanceTheme(candidate.activeTheme) ? candidate.activeTheme : fallback.activeTheme,
     dayTheme: isReaderAppearanceTheme(candidate.dayTheme) ? candidate.dayTheme : fallback.dayTheme,
     nightTheme: isReaderAppearanceTheme(candidate.nightTheme) ? candidate.nightTheme : fallback.nightTheme,
-    font: 'serif',
+    font: isReaderAppearanceFont(candidate.font) ? candidate.font : fallback.font,
     fontSize: isPositiveFinite(candidate.fontSize) ? candidate.fontSize : fallback.fontSize,
     lineHeightMultiplier: isPositiveFinite(candidate.lineHeightMultiplier) ?
       candidate.lineHeightMultiplier : fallback.lineHeightMultiplier,
@@ -105,7 +104,7 @@ export function setReaderAppearanceTheme(
   snapshot: ReaderAppearanceSnapshot,
   theme: ReaderAppearanceTheme,
 ): ReaderAppearanceSnapshot {
-  return copyWith(snapshot, theme, snapshot.dayTheme, snapshot.nightTheme, snapshot.indent,
+  return copyWith(snapshot, theme, snapshot.dayTheme, snapshot.nightTheme, snapshot.font, snapshot.indent,
     snapshot.alignment, undefined, undefined);
 }
 
@@ -113,7 +112,7 @@ export function setReaderAppearanceDayTheme(
   snapshot: ReaderAppearanceSnapshot,
   theme: ReaderAppearanceTheme,
 ): ReaderAppearanceSnapshot {
-  return copyWith(snapshot, snapshot.activeTheme, theme, snapshot.nightTheme, snapshot.indent,
+  return copyWith(snapshot, snapshot.activeTheme, theme, snapshot.nightTheme, snapshot.font, snapshot.indent,
     snapshot.alignment, undefined, undefined);
 }
 
@@ -121,24 +120,23 @@ export function setReaderAppearanceNightTheme(
   snapshot: ReaderAppearanceSnapshot,
   theme: ReaderAppearanceTheme,
 ): ReaderAppearanceSnapshot {
-  return copyWith(snapshot, snapshot.activeTheme, snapshot.dayTheme, theme, snapshot.indent,
+  return copyWith(snapshot, snapshot.activeTheme, snapshot.dayTheme, theme, snapshot.font, snapshot.indent,
     snapshot.alignment, undefined, undefined);
 }
 
 export function setReaderAppearanceFont(
   snapshot: ReaderAppearanceSnapshot,
-  _font: ReaderAppearanceFont,
+  font: ReaderAppearanceFont,
 ): ReaderAppearanceSnapshot {
-  // There is one admitted bundled font today. Keeping this transition explicit
-  // gives the owner a stable API without pretending unsupported slots work.
-  return copyReaderAppearanceSnapshot(snapshot);
+  return copyWith(snapshot, snapshot.activeTheme, snapshot.dayTheme, snapshot.nightTheme, font,
+    snapshot.indent, snapshot.alignment, undefined, undefined);
 }
 
 export function setReaderAppearanceIndent(
   snapshot: ReaderAppearanceSnapshot,
   indent: ReaderAppearanceIndent,
 ): ReaderAppearanceSnapshot {
-  return copyWith(snapshot, snapshot.activeTheme, snapshot.dayTheme, snapshot.nightTheme, indent,
+  return copyWith(snapshot, snapshot.activeTheme, snapshot.dayTheme, snapshot.nightTheme, snapshot.font, indent,
     snapshot.alignment, undefined, undefined);
 }
 
@@ -146,7 +144,8 @@ export function setReaderAppearanceAlignment(
   snapshot: ReaderAppearanceSnapshot,
   alignment: ReaderAppearanceAlignment,
 ): ReaderAppearanceSnapshot {
-  return copyWith(snapshot, snapshot.activeTheme, snapshot.dayTheme, snapshot.nightTheme, snapshot.indent,
+  return copyWith(snapshot, snapshot.activeTheme, snapshot.dayTheme, snapshot.nightTheme, snapshot.font,
+    snapshot.indent,
     alignment, undefined, undefined);
 }
 
@@ -171,7 +170,8 @@ export function setReaderAppearanceMetric(
   } else if (!Number.isFinite(value)) {
     throw new RangeError('letterSpacing must be a finite number');
   }
-  return copyWith(snapshot, snapshot.activeTheme, snapshot.dayTheme, snapshot.nightTheme, snapshot.indent,
+  return copyWith(snapshot, snapshot.activeTheme, snapshot.dayTheme, snapshot.nightTheme, snapshot.font,
+    snapshot.indent,
     snapshot.alignment, metric, value);
 }
 
@@ -180,8 +180,12 @@ export function isReaderAppearanceTheme(value: string): value is ReaderAppearanc
     value === 'paper' || value === 'green' || value === 'paperNight' || value === 'greenNight';
 }
 
+function isReaderAppearanceFont(value: string): value is ReaderAppearanceFont {
+  return value === 'system' || value === 'serif' || value === 'sans' || value === 'lxgwWenKai';
+}
+
 function isReaderAppearanceIndent(value: string): value is ReaderAppearanceIndent {
-  return value === 'none' || value === 'firstLine';
+  return value === 'none' || value === 'single' || value === 'firstLine';
 }
 
 function isReaderAppearanceAlignment(value: string): value is ReaderAppearanceAlignment {
@@ -201,6 +205,7 @@ function copyWith(
   activeTheme: ReaderAppearanceTheme,
   dayTheme: ReaderAppearanceTheme,
   nightTheme: ReaderAppearanceTheme,
+  font: ReaderAppearanceFont,
   indent: ReaderAppearanceIndent,
   alignment: ReaderAppearanceAlignment,
   metric: ReaderAppearanceMetric | undefined,
@@ -211,7 +216,7 @@ function copyWith(
     activeTheme,
     dayTheme,
     nightTheme,
-    font: 'serif',
+    font,
     fontSize: snapshot.fontSize,
     lineHeightMultiplier: snapshot.lineHeightMultiplier,
     paragraphSpacing: snapshot.paragraphSpacing,

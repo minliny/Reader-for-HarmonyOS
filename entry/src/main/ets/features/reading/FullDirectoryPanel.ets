@@ -39,7 +39,7 @@ import { registerReaderFonts } from '../common/ReaderFonts';
  */
 @Component
 export struct FullDirectoryPanel {
-  @Prop entries: LocalReadingTocEntry[] = [];
+  @Prop @Watch('onEntriesChanged') entries: LocalReadingTocEntry[] = [];
   @Prop currentChapterIndex: number = -1;
   @Prop chapterDownloadEnabled: boolean = false;
   @Prop isTablet: boolean = false;
@@ -51,6 +51,7 @@ export struct FullDirectoryPanel {
   @State private searchDraft: string = '';
   @State private searchQuery: string = '';
   @State private ascending: boolean = true;
+  @State private projectedEntries: LocalReadingTocEntry[] = [];
   private readonly listScroller: Scroller = new Scroller();
   // R-LOCAL-TOC-01: allow the owning flow to react to a chapter tap so the
   // full-directory can be wired back into the actual reading flow.
@@ -71,6 +72,7 @@ export struct FullDirectoryPanel {
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
+    this.rebuildProjection();
   }
 
   build() {
@@ -199,6 +201,7 @@ export struct FullDirectoryPanel {
     .accessibilityText('目录')
     .onClick((): void => {
       this.activeTab = 'directory';
+      this.rebuildProjection();
       this.listScroller.scrollEdge(Edge.Top);
     });
   }
@@ -233,6 +236,7 @@ export struct FullDirectoryPanel {
     .accessibilityText('书签')
     .onClick((): void => {
       this.activeTab = 'bookmarks';
+      this.rebuildProjection();
       this.listScroller.scrollEdge(Edge.Top);
     });
   }
@@ -309,17 +313,21 @@ export struct FullDirectoryPanel {
 
   @Builder
   private chapterList() {
-    Scroll(this.listScroller) {
-      Column() {
-        ForEach(this.visibleEntries(), (entry: LocalReadingTocEntry) => {
-          this.chapterRow(entry);
-        }, (entry: LocalReadingTocEntry): string => `toc-entry-${entry.index}`);
-      }
-      .width('100%')
-      .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE, top: 5, bottom: 5 });
+    List({ space: 0, scroller: this.listScroller }) {
+      Repeat(this.projectedEntries)
+        .each((repeatItem: RepeatItem<LocalReadingTocEntry>) => {
+          ListItem() {
+            this.chapterRow(repeatItem.item);
+          }
+          .width('100%')
+          .height(40);
+        })
+        .key((entry: LocalReadingTocEntry): string => `toc-entry-${entry.index}`)
+        .virtualScroll({ reusable: true });
     }
     .width('100%')
     .height(this.chapterListHeight())
+    .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE, top: 5, bottom: 5 })
     .scrollBar(BarState.Off);
   }
 
@@ -352,7 +360,7 @@ export struct FullDirectoryPanel {
       .height(40)
       .accessibilityText(`打开章节：${entry.title}`)
       .onClick((): void => this.onSelectChapter(entry.index));
-      if (entry.downloadState !== 'unknown') {
+      if (this.chapterDownloadEnabled && entry.downloadState !== 'unknown') {
         this.downloadMarkerHitTarget(entry);
       }
       if (entry.bookmarks !== undefined) {
@@ -452,6 +460,7 @@ export struct FullDirectoryPanel {
 
   private applySearch(): void {
     this.searchQuery = this.searchDraft.trim();
+    this.rebuildProjection();
     this.listScroller.scrollEdge(Edge.Top);
   }
 
@@ -469,6 +478,7 @@ export struct FullDirectoryPanel {
       return;
     }
     this.ascending = !this.ascending;
+    this.rebuildProjection();
     this.listScroller.scrollEdge(Edge.Top);
   }
 
@@ -485,7 +495,11 @@ export struct FullDirectoryPanel {
     return this.ascending ? '按章节倒序排列' : '按章节正序排列';
   }
 
-  private visibleEntries(): LocalReadingTocEntry[] {
+  private onEntriesChanged(): void {
+    this.rebuildProjection();
+  }
+
+  private rebuildProjection(): void {
     const query = this.searchQuery.toLocaleLowerCase();
     const visible: LocalReadingTocEntry[] = [];
     for (const entry of this.entries) {
@@ -500,7 +514,7 @@ export struct FullDirectoryPanel {
     if (!this.ascending) {
       visible.reverse();
     }
-    return visible;
+    this.projectedEntries = visible;
   }
 
   private hasBookmark(entry: LocalReadingTocEntry): boolean {
@@ -552,7 +566,7 @@ export struct FullDirectoryPanel {
     if (state.kind === 'empty' && this.chapterStartBookmarkCreationEnabled) {
       return '添加本章章首书签';
     }
-    return state.kind === 'unknown' ? '书签状态尚未载入' : '添加书签尚未接线';
+    return state.kind === 'unknown' ? '书签状态尚未载入' : '当前章节不支持添加书签';
   }
 
   private bookmarkMarker(entry: LocalReadingTocEntry): string {

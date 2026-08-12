@@ -283,6 +283,48 @@ export class RemoteReadingFlowGateway {
     };
   }
 
+  /**
+   * Re-project cached TOC titles after a Core display-setting change.
+   * `cache.book.status` reads the canonical cached TOC and performs no source
+   * request, so changing Chinese conversion never refetches a real book source.
+   */
+  async loadCachedTocProjection(
+    session: RemoteReadingSession,
+    isCurrent?: () => boolean,
+  ): Promise<RemoteReadingTocEntry[]> {
+    const identity = createRemoteReadingIdentity(session.identity.sourceId, session.identity.bookId);
+    const result = await this.request('cache.book.status', {
+      sourceId: identity.sourceId,
+      bookId: identity.bookId,
+    }, isCurrent);
+    this.assertIdentity(result.data, identity, 'cache.book.status');
+    const rawChapters = result.data['chapters'];
+    if (!Array.isArray(rawChapters) || rawChapters.length !== session.entries.length) {
+      throw new RemoteReadingGatewayError(
+        'invalidResponse',
+        'cache.book.status returned an incomplete cached TOC projection',
+        'cache.book.status',
+      );
+    }
+    return rawChapters.map((value: unknown, position: number): RemoteReadingTocEntry => {
+      const raw = this.requireObject(value, 'cache.book.status chapter');
+      const index = this.requireChapterIndex(raw, 'chapterIndex', 'cache.book.status chapter');
+      if (index !== position || session.entries[position].index !== index) {
+        throw new RemoteReadingGatewayError(
+          'invalidResponse',
+          'cache.book.status returned a non-contiguous cached TOC projection',
+          'cache.book.status',
+        );
+      }
+      return {
+        index,
+        title: this.requireNonBlankString(raw, 'title', 'cache.book.status chapter'),
+        url: this.requireNonBlankString(raw, 'url', 'cache.book.status chapter'),
+        variables: session.entries[position].variables,
+      };
+    });
+  }
+
   async loadChapter(
     session: RemoteReadingSession,
     chapterIndex: number,
@@ -319,14 +361,10 @@ export class RemoteReadingFlowGateway {
       variables: encodeRemoteReadingVariables(variables),
     }, isCurrent);
     this.assertIdentity(result.data, identity, 'chapter.content');
-    const returnedTitle = this.requireString(result.data, 'chapterTitle', 'chapter.content');
-    if (returnedTitle !== selected.title) {
-      throw new RemoteReadingGatewayError(
-        'identityMismatch',
-        'chapter.content returned a mismatched chapterTitle',
-        'chapter.content',
-      );
-    }
+    // chapter index is the navigation identity; title is a Core-projected
+    // display value and can legitimately change after a Chinese conversion
+    // mode switch.
+    const returnedTitle = this.requireNonBlankString(result.data, 'chapterTitle', 'chapter.content');
     if (typeof result.data['content'] !== 'string') {
       throw new RemoteReadingGatewayError(
         'nonTextChapter',
@@ -382,7 +420,10 @@ export class RemoteReadingFlowGateway {
         continue;
       }
       const state = this.requireString(raw, 'state', 'cache.book.status chapter');
-      if (state === 'cached' || state === 'completed') {
+      const cachedBytesValue = raw['cachedBytes'];
+      const cachedBytes = typeof cachedBytesValue === 'number' && Number.isSafeInteger(cachedBytesValue) &&
+        cachedBytesValue >= 0 ? cachedBytesValue : 0;
+      if (state === 'cached' || state === 'completed' || cachedBytes > 0) {
         return;
       }
       break;

@@ -1,4 +1,10 @@
-import type { ReaderTtsState } from './ReaderTtsState';
+import {
+  READER_TTS_RATE_MAX,
+  READER_TTS_RATE_MIN,
+  READER_TTS_RATE_STEP,
+  READER_TTS_RATE_STEP_SCALE,
+  type ReaderTtsState,
+} from './ReaderTtsState';
 import {
   TOK_BORDER,
   TOK_BORDER_W,
@@ -11,6 +17,21 @@ import {
   TOK_READ_PRIMARY,
   TOK_SURFACE_PANEL,
 } from '../common/ReaderTokens';
+
+// Phone and Tablet outer heights are separate Figma surfaces. Their equal
+// inner section geometry does not make either outer height derivable.
+const TTS_MODULE_PANEL_HEIGHT_PHONE = 196;
+const TTS_MODULE_PANEL_HEIGHT_TABLET = 190;
+const TTS_MODULE_PANEL_PADDING_X = 11;
+const TTS_MODULE_PANEL_PADDING_Y = 13;
+const TTS_MODULE_SECTION_GAP = 8;
+const TTS_MODULE_PLAYBACK_HEIGHT = 66;
+const TTS_MODULE_TIMER_HEIGHT = 42;
+const TTS_MODULE_RATE_HEIGHT = 42;
+const TTS_MODULE_PLAYBACK_LABEL_WIDTH = 106;
+const TTS_MODULE_PLAYBACK_CONTROL_WIDTH = 128;
+const TTS_MODULE_RATE_LABEL_WIDTH = 72;
+const TTS_MODULE_RATE_SLIDER_WIDTH = 116;
 
 /** Figma quick TTS panel: Phone `942:62`, Tablet `942:64`. */
 @Component
@@ -26,14 +47,19 @@ export struct ReaderTtsModulePanel {
   @State private ratePreview: number = -1;
 
   build() {
-    Column({ space: 8 }) {
+    Column({ space: TTS_MODULE_SECTION_GAP }) {
       this.playbackRow();
       this.timerRow();
       this.rateRow();
     }
     .width('100%')
-    .height(this.isTablet ? 190 : 196)
-    .padding({ left: 11, right: 11, top: 13, bottom: 13 })
+    .height(this.isTablet ? TTS_MODULE_PANEL_HEIGHT_TABLET : TTS_MODULE_PANEL_HEIGHT_PHONE)
+    .padding({
+      left: TTS_MODULE_PANEL_PADDING_X,
+      right: TTS_MODULE_PANEL_PADDING_X,
+      top: TTS_MODULE_PANEL_PADDING_Y,
+      bottom: TTS_MODULE_PANEL_PADDING_Y,
+    })
     .alignItems(HorizontalAlign.Start)
     .backgroundColor(TOK_SURFACE_PANEL)
     .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
@@ -55,7 +81,7 @@ export struct ReaderTtsModulePanel {
           .lineHeight(12)
           .fontColor(TOK_READ_INK);
       }
-      .width(106)
+      .width(TTS_MODULE_PLAYBACK_LABEL_WIDTH)
       .height(64)
       .alignItems(VerticalAlign.Center);
 
@@ -65,11 +91,11 @@ export struct ReaderTtsModulePanel {
         this.stopButton();
         this.nextButton();
       }
-      .width(128)
+      .width(TTS_MODULE_PLAYBACK_CONTROL_WIDTH)
       .height(32);
     }
     .width('100%')
-    .height(66)
+    .height(TTS_MODULE_PLAYBACK_HEIGHT)
     .padding({ left: 11, right: 11 })
     .alignItems(VerticalAlign.Center)
     .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
@@ -195,7 +221,7 @@ export struct ReaderTtsModulePanel {
       .accessibilityText(`朗读将在 ${this.timerMinutes} 分钟后停止`);
     }
     .width('100%')
-    .height(42)
+    .height(TTS_MODULE_TIMER_HEIGHT)
     .padding({ left: 11, right: 11 })
     .alignItems(VerticalAlign.Center)
     .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
@@ -216,26 +242,27 @@ export struct ReaderTtsModulePanel {
           .lineHeight(12)
           .fontColor(TOK_READ_INK);
       }
-      .width(72)
+      .width(TTS_MODULE_RATE_LABEL_WIDTH)
       .alignItems(VerticalAlign.Center);
 
       Slider({
         value: this.effectiveRate(),
-        min: 0.5,
-        max: 2,
-        step: 0.1,
+        min: READER_TTS_RATE_MIN,
+        max: READER_TTS_RATE_MAX,
+        step: READER_TTS_RATE_STEP,
         style: SliderStyle.OutSet,
         direction: Axis.Horizontal,
         reverse: false,
       })
-        .width(116)
+        .width(TTS_MODULE_RATE_SLIDER_WIDTH)
         .height(32)
         // The source master reserves this semantic range without a visible
         // track/thumb in the default variant.
         .opacity(0.001)
         .accessibilityText('调整朗读语速')
         .onChange((value: number, mode: SliderChangeMode): void => {
-          this.ratePreview = Math.round(value * 10) / 10;
+          this.ratePreview = Math.round(value * READER_TTS_RATE_STEP_SCALE) /
+            READER_TTS_RATE_STEP_SCALE;
           if (mode === SliderChangeMode.End) {
             const rate = this.ratePreview;
             this.ratePreview = -1;
@@ -253,7 +280,7 @@ export struct ReaderTtsModulePanel {
         .textAlign(TextAlign.End);
     }
     .width('100%')
-    .height(42)
+    .height(TTS_MODULE_RATE_HEIGHT)
     .padding({ left: 11, right: 11 })
     .alignItems(VerticalAlign.Center)
     .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
@@ -261,7 +288,7 @@ export struct ReaderTtsModulePanel {
   }
 
   private effectiveRate(): number {
-    return this.ratePreview >= 0.5 ? this.ratePreview : this.state.rate;
+    return this.ratePreview >= READER_TTS_RATE_MIN ? this.ratePreview : this.state.rate;
   }
 
   private isActivelySpeaking(): boolean {

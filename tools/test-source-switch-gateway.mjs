@@ -34,8 +34,13 @@ assert.match(gateway, /candidate\.trim\(\)\.length === 0/);
 assert.match(gateway, /'change\.bookSource',[\s\S]*sourceIds:\s*\[candidateSourceId\]/);
 assert.match(gateway, /SOURCE_SWITCH_DISCOVERY_CONCURRENCY\s*=\s*8/);
 assert.match(gateway, /await Promise\.all\(pending\)/);
+assert.match(gateway, /sourceSwitchCandidateKey\(candidate\.sourceId, candidate\.bookUrl\)/);
+assert.match(gateway, /deduplicateSourceSwitchCandidates\(candidates\)/);
 assert.match(gateway, /requireString\(result\.data, 'transactionId', 'source\.switch\.commit'\)/);
 assert.match(gateway, /result\.data\['phase'\] !== 'pending'/);
+assert.match(gateway, /'source\.switch\.pending\.list'/);
+assert.match(gateway, /const pending: PendingSourceSwitch\[\]/);
+assert.match(gateway, /pending\.push\(\{/);
 assert.match(gateway, /const matchedChapter = this\.decodeMatchedChapter\(result\.data\['matchedChapter'\]\)/);
 assert.doesNotMatch(gateway, /rollbackToken|SourceSwitchRollbackToken/,
   'the Core-owned compensation journal must never cross into Harmony');
@@ -47,8 +52,14 @@ const executable = stripTypeScriptTypes(
     .replace(/^import type \{ ShelfBook \} from ['"]\.\.\/\.\.\/app\/ReaderCoreGateway['"];$/m, ''),
 );
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(executable).toString('base64')}`;
-const { SourceSwitchGateway } = await import(moduleUrl);
+const { SourceSwitchGateway, sourceSwitchCandidateKey } = await import(moduleUrl);
 const transactionId = 'ss-core-owned-transaction';
+
+assert.notEqual(
+  sourceSwitchCandidateKey('a', 'bc'),
+  sourceSwitchCandidateKey('ab', 'c'),
+  'composite identity must not collapse ambiguous sourceId/bookUrl concatenations',
+);
 
 let activeDiscoveries = 0;
 let maxActiveDiscoveries = 0;
@@ -110,6 +121,51 @@ assert.deepEqual(
   'one failed source is skipped and registry order remains stable',
 );
 
+const identityRuntime = {
+  async request(method, params) {
+    if (method === 'source.list') {
+      return { data: { sources: [
+        { sourceId: 'current-source', enabled: true },
+        { sourceId: 'other-source', enabled: true },
+      ] } };
+    }
+    if (method === 'change.bookSource') {
+      if (params.sourceIds[0] === 'current-source') {
+        return { data: { candidates: [
+          { sourceId: 'current-source', bookUrl: 'current-book', bookName: 'Current Book' },
+          { sourceId: 'current-source', bookUrl: 'current-book', bookName: 'Duplicate' },
+          { sourceId: 'current-source', bookUrl: 'alternate-book', bookName: 'Alternate Book' },
+        ] } };
+      }
+      return { data: { candidates: [
+        { sourceId: 'other-source', bookUrl: 'other-book', bookName: 'Other Book' },
+        { sourceId: 'other-source', bookUrl: 'other-book', bookName: 'Duplicate Other' },
+      ] } };
+    }
+    throw new Error(`unexpected identity method: ${method}`);
+  },
+};
+const identityGateway = new SourceSwitchGateway(identityRuntime);
+const identityDiscovery = await identityGateway.discoverCandidates(
+  'current-source', 'current-book', 'Current Book', () => true,
+);
+assert.equal(identityDiscovery.kind, 'sources');
+assert.deepEqual(
+  identityDiscovery.candidates.map((candidate) =>
+    sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl)),
+  [
+    sourceSwitchCandidateKey('current-source', 'current-book'),
+    sourceSwitchCandidateKey('current-source', 'alternate-book'),
+    sourceSwitchCandidateKey('other-source', 'other-book'),
+  ],
+  'only exact (sourceId, bookUrl) duplicates are removed and first-seen order is retained',
+);
+assert.deepEqual(
+  identityDiscovery.candidates.map((candidate) => candidate.isCurrent),
+  [true, false, false],
+  'current status must use exact composite identity so same-source alternate URLs stay selectable',
+);
+
 const runtime = {
   async request(method, params) {
     if (method === 'source.switch.commit') {
@@ -136,6 +192,14 @@ const runtime = {
         },
       } };
     }
+    if (method === 'source.switch.pending.list') {
+      return { data: { pending: [{
+        transactionId,
+        phase: 'pending',
+        from: { sourceId: 'old', bookId: 'old-book' },
+        target: { sourceId: 'new', bookId: 'new-book' },
+      }] } };
+    }
     throw new Error(`unexpected method: ${method}`);
   },
 };
@@ -154,5 +218,9 @@ assert.equal(committed.matchedChapter.order, 4);
 const rolledBack = await liveGateway.rollbackSwitch(committed.transactionId);
 assert.equal(rolledBack.changed, true);
 assert.equal(rolledBack.restoredBook.sourceId, 'old');
+const pending = await liveGateway.listPendingSwitches();
+assert.deepEqual(pending.map((entry) => [entry.transactionId, entry.fromBookId, entry.targetBookId]), [
+  [transactionId, 'old-book', 'new-book'],
+]);
 
 console.log('source-switch gateway contract: PASS');

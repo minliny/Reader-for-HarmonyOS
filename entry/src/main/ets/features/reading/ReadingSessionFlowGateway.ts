@@ -105,9 +105,10 @@ export class ReadingSessionFlowGateway {
     if (this.source.kind === 'local') {
       return this.local.loadToc(bookId, isCurrent);
     }
+    const entries = await this.remote.loadCachedTocProjection(this.source.session, isCurrent);
     return {
       bookId,
-      entries: this.source.session.entries.map((entry) => ({
+      entries: entries.map((entry) => ({
         index: entry.index,
         title: entry.title,
         downloadState: 'unknown',

@@ -174,8 +174,32 @@ export class ReaderTtsSessionCoordinator {
     this.stateListener = stateListener;
     this.chapterAdvance = chapterAdvance;
     this.host.setEventListener((event: ReaderTtsHostEvent): void => {
-      void this.enqueue(async (): Promise<void> => this.handleHostEvent(event));
+      this.routeHostEvent(event);
     });
+  }
+
+  private routeHostEvent(event: ReaderTtsHostEvent): void {
+    if (event.type === 'mediaControl') {
+      if (event.action === 'play') void this.resume();
+      else if (event.action === 'pause') void this.pause();
+      else if (event.action === 'stop') void this.stop('user');
+      else if (event.action === 'next') void this.next();
+      else void this.previous();
+      return;
+    }
+    if (event.type === 'interruption') {
+      if (event.action === 'pause' || event.action === 'stop') {
+        void this.pauseForSystem('systemInterruption');
+      } else if (event.action === 'resume') {
+        void this.resume();
+      }
+      return;
+    }
+    if (event.type === 'deviceChange') {
+      if (event.action === 'stop') void this.pauseForSystem('deviceChange');
+      return;
+    }
+    void this.enqueue(async (): Promise<void> => this.handleHostEvent(event));
   }
 
   getState(): ReaderTtsState {
@@ -231,8 +255,9 @@ export class ReaderTtsSessionCoordinator {
     this.configureTimer(input.timerDurationMs);
     const identity = this.sessionIdentity(input.contentVersion, chapterKey);
     const prior = this.active;
+    const hostStopTask = prior === undefined ? undefined : this.stopHostTransportImmediately();
     this.active = { identity, input: { ...input, rate } };
-    return this.enqueue(async (): Promise<void> => this.prepareNewSession(identity, prior));
+    return this.enqueue(async (): Promise<void> => this.prepareNewSession(identity, prior, hostStopTask));
   }
 
   pause(): Promise<void> {
@@ -253,8 +278,10 @@ export class ReaderTtsSessionCoordinator {
       requestId: undefined,
       pauseReason: reason,
     });
+    const hostStopTask = this.stopHostTransportImmediately();
     return this.enqueue(async (): Promise<void> => {
-      await this.host.stop();
+      const hostStopError = await hostStopTask;
+      if (hostStopError !== undefined) throw hostStopError;
       if (this.isSessionCurrent(active.identity)) {
         const snapshot = await this.gateway.pause(active.input.chapter);
         this.applyCoreSnapshot(snapshot, undefined, reason);
@@ -298,8 +325,10 @@ export class ReaderTtsSessionCoordinator {
     const wasPaused = this.state.status === 'paused' || this.state.status === 'interrupted';
     this.invalidateUtterance();
     const identity = active.identity;
+    const hostStopTask = this.stopHostTransportImmediately();
     return this.enqueue(async (): Promise<void> => {
-      await this.host.stop();
+      const hostStopError = await hostStopTask;
+      if (hostStopError !== undefined) throw hostStopError;
       if (!this.isSessionCurrent(identity)) return;
       const snapshot = await this.gateway.seek(active.input.chapter, sliceIndex);
       if (!this.isSessionCurrent(identity)) return;
@@ -323,8 +352,10 @@ export class ReaderTtsSessionCoordinator {
     active.input = { ...active.input, rate };
     const identity = active.identity;
     const index = this.state.sliceIndex;
+    const hostStopTask = this.stopHostTransportImmediately();
     return this.enqueue(async (): Promise<void> => {
-      await this.host.stop();
+      const hostStopError = await hostStopTask;
+      if (hostStopError !== undefined) throw hostStopError;
       if (!this.isSessionCurrent(identity)) return;
       const snapshot = await this.gateway.setRate(active.input.chapter, this.coreRateForMultiplier(rate));
       if (!this.isSessionCurrent(identity)) return;
@@ -365,8 +396,10 @@ export class ReaderTtsSessionCoordinator {
     });
     this.active = undefined;
     this.utterances.clear();
+    const hostStopTask = this.stopHostTransportImmediately();
+    this.host.publishPlaybackState('stopped');
     return this.enqueue(async (): Promise<void> => {
-      await this.host.stop();
+      const hostStopError = await hostStopTask;
       if (active !== undefined && active.plan !== undefined) {
         try {
           await this.gateway.stop(active.input.chapter);
@@ -392,6 +425,7 @@ export class ReaderTtsSessionCoordinator {
           errorMessage: undefined,
         });
       }
+      if (hostStopError !== undefined) throw hostStopError;
     });
   }
 
@@ -406,9 +440,15 @@ export class ReaderTtsSessionCoordinator {
     return this.operationTail;
   }
 
-  private async prepareNewSession(identity: ReaderTtsSessionIdentity, prior: ActiveSession | undefined): Promise<void> {
+  private async prepareNewSession(
+    identity: ReaderTtsSessionIdentity,
+    prior: ActiveSession | undefined,
+    hostStopTask: Promise<Error | undefined> | undefined,
+  ): Promise<void> {
     if (prior !== undefined) {
-      await this.host.stop();
+      if (hostStopTask === undefined) throw new Error('Reader TTS prior session has no Host stop task');
+      const hostStopError = await hostStopTask;
+      if (hostStopError !== undefined) throw hostStopError;
       if (prior.plan !== undefined) {
         try {
           await this.gateway.stop(prior.input.chapter);
@@ -514,26 +554,7 @@ export class ReaderTtsSessionCoordinator {
   }
 
   private async handleHostEvent(event: ReaderTtsHostEvent): Promise<void> {
-    if (event.type === 'mediaControl') {
-      if (event.action === 'play') void this.resume();
-      else if (event.action === 'pause') void this.pause();
-      else if (event.action === 'stop') void this.stop('user');
-      else if (event.action === 'next') void this.next();
-      else void this.previous();
-      return;
-    }
-    if (event.type === 'interruption') {
-      if (event.action === 'pause' || event.action === 'stop') {
-        await this.pauseForSystem('systemInterruption');
-      } else if (event.action === 'resume') {
-        await this.resumeAfterSystemInterruption();
-      }
-      // TextToSpeechEngine exposes no safe per-session duck control. The
-      // audio manager owns duck/unduck hints after focus activation.
-      return;
-    }
-    if (event.type === 'deviceChange') {
-      if (event.action === 'stop') await this.pauseForSystem('deviceChange');
+    if (event.type === 'mediaControl' || event.type === 'interruption' || event.type === 'deviceChange') {
       return;
     }
     const active = this.active;
@@ -595,25 +616,17 @@ export class ReaderTtsSessionCoordinator {
       requestId: undefined,
       pauseReason: reason,
     });
-    await this.host.stop();
-    if (this.isSessionCurrent(active.identity) && active.plan !== undefined) {
-      const snapshot = await this.gateway.pause(active.input.chapter);
-      this.applyCoreSnapshot(snapshot, undefined, reason);
-    }
-    await this.host.deactivateAudioSession();
-    this.transport = { ...this.transport, audioSession: 'inactive', focus: 'interrupted' };
-  }
-
-  private async resumeAfterSystemInterruption(): Promise<void> {
-    const active = this.active;
-    if (active === undefined || active.plan === undefined || this.state.status !== 'interrupted' ||
-      this.state.pauseReason !== 'systemInterruption' || this.state.sliceIndex === undefined) return;
-    this.setState({ ...this.state, status: 'resuming', pauseReason: undefined, requestId: undefined });
-    const identity = active.identity;
-    const snapshot = await this.gateway.resume(active.input.chapter);
-    if (!this.isSessionCurrent(identity)) return;
-    this.applyCoreSnapshot(snapshot);
-    await this.speakSlice(active, this.requireSnapshotIndex(snapshot, 'tts.queue.resume'), 'resuming');
+    const hostStopTask = this.stopHostTransportImmediately();
+    return this.enqueue(async (): Promise<void> => {
+      const hostStopError = await hostStopTask;
+      if (hostStopError !== undefined) throw hostStopError;
+      if (this.isSessionCurrent(active.identity) && active.plan !== undefined) {
+        const snapshot = await this.gateway.pause(active.input.chapter);
+        this.applyCoreSnapshot(snapshot, undefined, reason);
+      }
+      await this.host.deactivateAudioSession();
+      this.transport = { ...this.transport, audioSession: 'inactive', focus: 'interrupted' };
+    });
   }
 
   private async handleUtteranceFailure(
@@ -778,8 +791,10 @@ export class ReaderTtsSessionCoordinator {
     this.invalidateUtterance();
     this.setState({ ...this.state, status: 'preparing', requestId: undefined, errorMessage: undefined });
     const identity = active.identity;
+    const hostStopTask = this.stopHostTransportImmediately();
     return this.enqueue(async (): Promise<void> => {
-      await this.host.stop();
+      const hostStopError = await hostStopTask;
+      if (hostStopError !== undefined) throw hostStopError;
       if (!this.isSessionCurrent(identity)) return;
       const snapshot = direction === 'next'
         ? await this.gateway.skip(active.input.chapter)
@@ -975,6 +990,13 @@ export class ReaderTtsSessionCoordinator {
     const task = this.operationTail.then(operation, operation);
     this.operationTail = task.catch((): void => {});
     return task;
+  }
+
+  private stopHostTransportImmediately(): Promise<Error | undefined> {
+    return this.host.stop().then(
+      (): Error | undefined => undefined,
+      (error: Error): Error => error,
+    );
   }
 
   private assertStartInput(input: ReaderTtsStartInput): void {

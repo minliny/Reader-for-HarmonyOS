@@ -38,6 +38,7 @@ type ReaderSettingsFullSegmentGroup = 'direction' | 'pageTurn' | 'timeout';
 export struct ReaderSettingsFullPanel {
   @Prop isTablet: boolean = false;
   @Prop snapshot: ReaderSettingsSnapshot = createDefaultReaderSettingsSnapshot();
+  @Prop justifyText: boolean = true;
   onCollapse: () => void = (): void => {};
   onScreenDirectionChange: (direction: ReaderScreenDirection) => void =
     (_direction: ReaderScreenDirection): void => {};
@@ -47,6 +48,7 @@ export struct ReaderSettingsFullPanel {
     (_timeout: ReaderScreenTimeout): void => {};
   onToggleChange: (key: ReaderSettingsToggleKey, value: boolean) => void =
     (_key: ReaderSettingsToggleKey, _value: boolean): void => {};
+  onJustifyTextChange: (value: boolean) => void = (_value: boolean): void => {};
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -221,7 +223,7 @@ export struct ReaderSettingsFullPanel {
     Stack({ alignContent: Alignment.TopStart }) {
       this.sectionTitle('排版', true);
       Stack({ alignContent: Alignment.TopStart }) {
-        this.toggleRow('文字两端对齐', 'justifyText', 0);
+        this.justifyToggleRow(0);
         this.toggleRow('底部对齐', 'alignPageBottom', 1);
       }
       .width(this.sectionWidth())
@@ -287,12 +289,35 @@ export struct ReaderSettingsFullPanel {
     .alignItems(VerticalAlign.Center)
     .position({ x: 0, y: index * 38 })
     .enabled(isReaderSettingsToggleAvailable(key))
+    .opacity(isReaderSettingsToggleAvailable(key) ? 1 : 0.55)
     .accessibilityText(this.toggleAccessibilityText(label, key))
     .onClick((): void => {
       if (isReaderSettingsToggleAvailable(key)) {
         this.onToggleChange(key, !this.toggleValue(key));
       }
     });
+  }
+
+  @Builder
+  private justifyToggleRow(index: number) {
+    Row() {
+      Text('文字两端对齐')
+        .layoutWeight(1)
+        .height(13)
+        .fontFamily('ReaderNotoSansSC')
+        .fontWeight(FontWeight.Medium)
+        .fontSize(11)
+        .lineHeight(13.2)
+        .fontColor(TOK_READ_INK)
+        .maxLines(1);
+      this.toggleTrack(this.justifyText);
+    }
+    .width(this.sectionWidth())
+    .height(38)
+    .alignItems(VerticalAlign.Center)
+    .position({ x: 0, y: index * 38 })
+    .accessibilityText(`文字两端对齐，${this.justifyText ? '已开启' : '已关闭'}，与阅读样式同步`)
+    .onClick((): void => this.onJustifyTextChange(!this.justifyText));
   }
 
   @Builder

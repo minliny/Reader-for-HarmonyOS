@@ -21,11 +21,11 @@ assert.deepEqual(initial, {
   hideStatusBar: false,
   hideNavigationBar: false,
   extendIntoCutout: false,
-  justifyText: true,
+  justifyText: false,
   alignPageBottom: false,
   volumeKeysTurnPage: false,
   stopTtsOnScreenOff: false,
-  longPressSelectText: true,
+  longPressSelectText: false,
 });
 
 const normalized = normalizeReaderSettingsSnapshot({
@@ -51,17 +51,13 @@ assert.equal(normalized.extendIntoCutout, false);
 assert.equal(normalized.volumeKeysTurnPage, false);
 assert.equal(normalized.stopTtsOnScreenOff, false);
 assert.equal(normalized.justifyText, false);
-assert.equal(normalized.alignPageBottom, true);
+assert.equal(normalized.alignPageBottom, false);
 assert.equal(normalized.longPressSelectText, false);
 
-let next = setReaderSettingsToggle(initial, 'justifyText', false);
-next = setReaderSettingsToggle(next, 'alignPageBottom', true);
-next = setReaderSettingsToggle(next, 'longPressSelectText', false);
-assert.equal(next.justifyText, false);
-assert.equal(next.alignPageBottom, true);
-assert.equal(next.longPressSelectText, false);
-assert.equal(initial.justifyText, true, 'pure transitions must not mutate their input');
-assert.notStrictEqual(copyReaderSettingsSnapshot(next), next);
+assert.notStrictEqual(copyReaderSettingsSnapshot(initial), initial);
+assert.throws(() => setReaderSettingsToggle(initial, 'justifyText', true), /unavailable Reader Host/);
+assert.throws(() => setReaderSettingsToggle(initial, 'alignPageBottom', true), /unavailable Reader Host/);
+assert.throws(() => setReaderSettingsToggle(initial, 'longPressSelectText', true), /unavailable Reader Host/);
 assert.throws(() => setReaderSettingsToggle(initial, 'hideStatusBar', true), /unavailable Reader Host/);
 assert.throws(() => setReaderSettingsToggle(initial, 'volumeKeysTurnPage', true), /unavailable Reader Host/);
 
@@ -71,15 +67,17 @@ assert.equal(isReaderPageTurnStyleAvailable('none'), true);
 assert.equal(isReaderPageTurnStyleAvailable('scroll'), false);
 assert.equal(isReaderScreenTimeoutAvailable('system'), true);
 assert.equal(isReaderScreenTimeoutAvailable('fiveMinutes'), false);
-assert.equal(isReaderSettingsToggleAvailable('justifyText'), true);
-assert.equal(isReaderSettingsToggleAvailable('alignPageBottom'), true);
-assert.equal(isReaderSettingsToggleAvailable('longPressSelectText'), true);
+assert.equal(isReaderSettingsToggleAvailable('justifyText'), false);
+assert.equal(isReaderSettingsToggleAvailable('alignPageBottom'), false);
+assert.equal(isReaderSettingsToggleAvailable('longPressSelectText'), false);
 assert.equal(isReaderSettingsToggleAvailable('stopTtsOnScreenOff'), false);
 
 const readingDir = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
 const quickPanel = await readFile(new URL('ReaderSettingsModulePanel.ets', readingDir), 'utf8');
 const fullPanel = await readFile(new URL('ReaderSettingsFullPanel.ets', readingDir), 'utf8');
 const gateway = await readFile(new URL('ReaderSettingsGateway.ts', readingDir), 'utf8');
+const controlPanel = await readFile(new URL('ReaderControlPanel.ets', readingDir), 'utf8');
+const experience = await readFile(new URL('LocalReadingExperience.ets', readingDir), 'utf8');
 
 assert.match(quickPanel, /Phone `942:70` \/ `924:69`; Tablet `942:72` \/ `926:65`/);
 assert.match(quickPanel, /return this\.isTablet \? 262 : 286/);
@@ -107,11 +105,26 @@ for (const label of ['隐藏状态栏', '隐藏导航栏', '拓展到刘海（�
   assert.ok(fullPanel.includes(label), `missing Figma settings row: ${label}`);
 }
 assert.match(fullPanel, /\.enabled\(isReaderSettingsToggleAvailable\(key\)\)/);
+assert.match(fullPanel, /justifyText: boolean/);
+assert.match(fullPanel, /onJustifyTextChange/);
+assert.match(fullPanel, /与阅读样式同步/);
 
 assert.match(gateway, /ReaderRuntimeOwner/);
 assert.match(gateway, /getUIAbilityContext\(\)/);
 assert.match(gateway, /reader_reading_settings_v1/);
 assert.doesNotMatch(gateway, /\.request\(/,
   'Reader Settings must not misuse Reader Core or invent a Host command');
+
+assert.match(controlPanel, /moduleSettings/);
+assert.match(controlPanel, /fullSettings/);
+assert.match(controlPanel, /ReaderSettingsModulePanel\(\{/);
+assert.match(controlPanel, /ReaderSettingsFullPanel\(\{/);
+assert.match(controlPanel, /justifyText: this\.appearanceSnapshot\.alignment === 'justify'/,
+  'Settings justification must derive from the Appearance single truth');
+assert.match(controlPanel, /onAppearanceAlignmentRequest\(this\.appearanceSnapshot\.alignment\)/,
+  'Settings justification must reuse the existing Appearance mutation path');
+assert.match(experience, /void this\.loadReaderSettingsSnapshot\(lifecycleToken\)/);
+assert.match(experience, /this\.readerSettingsGateway\.update\(snapshot\)/);
+assert.match(experience, /settingsSnapshot: this\.readerSettingsSnapshot/);
 
 console.log('reader settings pure/static contract: PASS');

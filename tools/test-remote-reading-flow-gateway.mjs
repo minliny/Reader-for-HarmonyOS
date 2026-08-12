@@ -12,6 +12,7 @@ import {
   mergeRemoteReadingVariables,
   RemoteReadingGatewayError,
   remoteReadingHostCapabilitySnapshot,
+  isRemoteReadingCacheFallbackEligible,
 } from '../entry/src/main/ets/features/reading/RemoteReadingContract.ts';
 
 assert.deepEqual(createRemoteReadingIdentity('source-a', '/book/42'), {
@@ -78,6 +79,15 @@ for (const [message, capability] of [
 const transportError = classifyRemoteReadingCommandFailure('book.toc', new Error('network down'));
 assert.equal(transportError.code, 'commandFailed');
 assert.equal(transportError.command, 'book.toc');
+assert.equal(isRemoteReadingCacheFallbackEligible(transportError), true);
+assert.equal(isRemoteReadingCacheFallbackEligible(new RemoteReadingGatewayError(
+  'unsupportedHostCapability', 'host unavailable', 'book.toc')),
+true);
+for (const code of ['invalidInput', 'invalidResponse', 'identityMismatch', 'missingTocUrl', 'emptyToc']) {
+  assert.equal(isRemoteReadingCacheFallbackEligible(new RemoteReadingGatewayError(
+    code, code, 'book.toc')),
+  false, `${code} must not be hidden behind stale cached detail data`);
+}
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const gateway = readFileSync(

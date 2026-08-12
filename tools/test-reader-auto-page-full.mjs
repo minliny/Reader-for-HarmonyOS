@@ -11,13 +11,30 @@ import {
   setReaderAutoPageFullSpeed,
   stepReaderAutoPageFullTimer,
 } from '../entry/src/main/ets/features/reading/ReaderAutoPageFullState.ts';
+import {
+  READER_AUTO_PAGE_ACTOR_HOLD_RATIO,
+  READER_AUTO_PAGE_COLLAPSED_BACK_TRANSLATE_Y,
+  READER_AUTO_PAGE_COLLAPSED_SURFACE_WIDTH,
+  READER_AUTO_PAGE_COLLAPSED_SURFACE_X,
+  READER_AUTO_PAGE_COLLAPSED_SURFACE_Y,
+  READER_AUTO_PAGE_DETAILS_SECTION_Y,
+  READER_AUTO_PAGE_FULL_BODY_HEIGHT,
+  READER_AUTO_PAGE_FULL_BODY_WIDTH,
+  READER_AUTO_PAGE_FULL_CONTENT_HEIGHT,
+  READER_AUTO_PAGE_FULL_HEIGHT,
+  READER_AUTO_PAGE_FULL_WIDTH,
+  READER_AUTO_PAGE_PERSISTENT_PLAY_LABEL_TRANSLATE_X,
+  READER_AUTO_PAGE_PERSISTENT_SPEED_TRANSLATE_X,
+  READER_AUTO_PAGE_PERSISTENT_SPEED_TRANSLATE_Y,
+  READER_AUTO_PAGE_PERSISTENT_STOP_TRANSLATE_X,
+} from '../entry/src/main/ets/features/reading/ReaderAutoPageMotionGeometry.ts';
 
 const initial = createDefaultReaderAutoPageFullConfiguration();
 assert.deepEqual(initial, {
   timerMinutes: 15,
   timerSeconds: 0,
   speedSeconds: 8,
-  followHighlight: true,
+  followHighlight: false,
 });
 
 assert.deepEqual(normalizeReaderAutoPageFullConfiguration({
@@ -43,11 +60,23 @@ assert.equal(stepReaderAutoPageFullTimer({ ...initial, timerSeconds: 59 }, 'seco
 assert.equal(setReaderAutoPageFullSpeed(initial, 100).speedSeconds, 20);
 assert.equal(setReaderAutoPageFullSpeed(initial, 1).speedSeconds, 2);
 assert.equal(setReaderAutoPageFullFollowHighlight(initial, false).followHighlight, false);
+assert.equal(setReaderAutoPageFullFollowHighlight(initial, true).followHighlight, false,
+  'unimplemented follow highlight must fail closed even for legacy callers');
 assert.equal(formatReaderAutoPageFullWheelValue(0), '00');
 assert.equal(formatReaderAutoPageFullWheelValue(8), '08');
 assert.equal(formatReaderAutoPageFullWheelValue(180), '180');
 assert.equal(readerAutoPageFullTimerDurationSeconds(initial), 15 * 60);
 assert.equal(formatReaderAutoPageFullTimerSummary(initial), '15:00');
+assert.equal(READER_AUTO_PAGE_FULL_WIDTH, 364);
+assert.equal(READER_AUTO_PAGE_FULL_HEIGHT, 736);
+assert.equal(READER_AUTO_PAGE_FULL_BODY_WIDTH, 336);
+assert.equal(READER_AUTO_PAGE_FULL_BODY_HEIGHT, 665);
+assert.equal(READER_AUTO_PAGE_FULL_CONTENT_HEIGHT, 435.17);
+assert.equal(READER_AUTO_PAGE_DETAILS_SECTION_Y, 285.78);
+assert.equal(READER_AUTO_PAGE_ACTOR_HOLD_RATIO, 0.14815);
+assert.equal(READER_AUTO_PAGE_COLLAPSED_SURFACE_WIDTH, 364.896);
+assert.equal(READER_AUTO_PAGE_COLLAPSED_SURFACE_X, -0.448);
+assert.equal(READER_AUTO_PAGE_COLLAPSED_SURFACE_Y, 406.443);
 
 const root = new URL('../entry/src/main/', import.meta.url);
 const panel = await readFile(new URL('ets/features/reading/ReaderAutoPageFullPanel.ets', root), 'utf8');
@@ -58,14 +87,17 @@ assert.match(panel, /Content master `1764:10223`/);
 assert.match(panel, /Motion sources `1938:6245` and `1979:21744`/);
 assert.match(panel, /if \(!this\.isTablet\) \{[\s\S]*this\.phonePanel\(\)/,
   'Tablet must not render a scaled Phone Full panel');
-assert.match(panel, /\.width\(364\)[\s\S]*\.height\(736\)/);
-assert.match(panel, /\.width\(336\)[\s\S]*\.height\(665\)/);
-assert.match(panel, /\.position\(\{ x: 14, y: 58 \}\)/);
+assert.match(panel, /\.width\(READER_AUTO_PAGE_FULL_WIDTH\)[\s\S]*\.height\(READER_AUTO_PAGE_FULL_HEIGHT\)/);
+assert.match(panel, /\.width\(READER_AUTO_PAGE_FULL_BODY_WIDTH\)[\s\S]*\.height\(READER_AUTO_PAGE_FULL_BODY_HEIGHT\)/);
+assert.match(panel, /x: READER_AUTO_PAGE_FULL_BODY_X, y: READER_AUTO_PAGE_FULL_BODY_Y/);
 assert.match(panel, /Text\('自动翻页控制'\)/);
 assert.match(panel, /Text\('定时'\)/);
 assert.match(panel, /Text\('自动停止'\)/);
 assert.match(panel, /Text\('详细配置'\)/);
 assert.match(panel, /Text\('跟随高亮'\)/);
+assert.match(panel, /跟随高亮，当前能力未接入，已关闭/);
+assert.match(panel, /\.enabled\(false\)[\s\S]*addedActorOpacity\(\) \* 0\.55/,
+  'follow highlight must remain visible but disabled until a consumer exists');
 assert.match(panel, /\.fontFamily\('ReaderInter'\)/);
 assert.match(panel, /collapsedBackActor\(\)[\s\S]*ReaderNotoSansSC/,
   'the outgoing Quick Back actor retains the Quick endpoint font');
@@ -75,19 +107,22 @@ assert.match(panel, /\.opacity\(0\.001\)/,
   'the empty Figma speed frame must not gain an invented visible slider');
 assert.doesNotMatch(panel, /animateTo|animation\(/,
   'the panel must expose actor endpoints while the owner keeps production timing');
-assert.match(panel, /persistentActorTranslateX\(-31\.492\)/);
-assert.match(panel, /persistentActorTranslateX\(-33\.106\)/);
-assert.match(panel, /persistentActorTranslateX\(-5\.45\)/);
-assert.match(panel, /persistentActorTranslateY\(-208\.623\)/);
-assert.match(panel, /addedActorTranslateY\(22\)/);
-assert.match(panel, /outgoingActorTranslateY\(14\)/);
+assert.equal(READER_AUTO_PAGE_PERSISTENT_PLAY_LABEL_TRANSLATE_X, -31.492);
+assert.equal(READER_AUTO_PAGE_PERSISTENT_STOP_TRANSLATE_X, -33.106);
+assert.equal(READER_AUTO_PAGE_PERSISTENT_SPEED_TRANSLATE_X, -5.45);
+assert.equal(READER_AUTO_PAGE_PERSISTENT_SPEED_TRANSLATE_Y, -208.623);
+assert.equal(READER_AUTO_PAGE_COLLAPSED_BACK_TRANSLATE_Y, 14);
+assert.match(panel, /persistentActorTranslateX\(READER_AUTO_PAGE_PERSISTENT_PLAY_LABEL_TRANSLATE_X\)/);
+assert.match(panel, /persistentActorTranslateX\(READER_AUTO_PAGE_PERSISTENT_STOP_TRANSLATE_X\)/);
+assert.match(panel, /persistentActorTranslateX\(READER_AUTO_PAGE_PERSISTENT_SPEED_TRANSLATE_X\)/);
+assert.match(panel, /persistentActorTranslateY\(READER_AUTO_PAGE_PERSISTENT_SPEED_TRANSLATE_Y\)/);
 
 const control = await readFile(new URL('ets/features/reading/ReaderControlPanel.ets', root), 'utf8');
 assert.match(control, /'fullAutoPage'/);
-assert.match(control, /AUTO_PAGE_ACTOR_HOLD_RATIO = 0\.14815/);
-assert.match(control, /AUTO_PAGE_COLLAPSED_SURFACE_WIDTH = 364\.896/);
-assert.match(control, /AUTO_PAGE_COLLAPSED_SURFACE_X = -0\.448/);
-assert.match(control, /AUTO_PAGE_COLLAPSED_SURFACE_Y = 406\.443/);
+assert.match(control, /READER_AUTO_PAGE_ACTOR_HOLD_RATIO/);
+assert.match(control, /READER_AUTO_PAGE_COLLAPSED_SURFACE_WIDTH/);
+assert.match(control, /READER_AUTO_PAGE_COLLAPSED_SURFACE_X/);
+assert.match(control, /READER_AUTO_PAGE_COLLAPSED_SURFACE_Y/);
 assert.match(control, /this\.autoPageStatus !== 'stopped'/,
   'only the Figma-defined stopped visual may expand');
 assert.match(control, /this\.isTablet \|\| this\.activePage !== 'quickAutoPage'/,

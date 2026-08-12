@@ -11,7 +11,7 @@ import {
 // CandidateRow —— 换源候选行 (Figma SourceSwitch/CandidateRow): 5px 状态点 + 自适应
 // 名称列 (layoutWeight 吃剩余宽) + 语义宽延迟列 (LatencyBar 36 + 延迟文本 28) + 语义宽
 // 当前章节列 (100, 右对齐) + 1px 行 divider。行高 28。点击可用 (available) 行触发 onSelect。
-// 纯展示: 状态 (current/available/offline/timeout) 由 currentSourceId + offline/timeout 派生。
+// 纯展示: 状态 (current/available/offline/timeout) 由复合身份判定结果 + offline/timeout 派生。
 const LATENCY_TEXT_W = 28;   // 语义宽: 延迟文本列
 const CHAPTER_TEXT_W = 100;  // 语义宽: 当前章节列 (右对齐)
 
@@ -24,7 +24,7 @@ export struct CandidateRow {
   @Prop latencyMs: number | undefined = undefined;
   @Prop offline: boolean = false;
   @Prop timeout: boolean = false;
-  @Prop currentSourceId: string = '';
+  @Prop isCurrent: boolean = false;
   onSelect: () => void = (): void => {};
 
   build() {
@@ -90,7 +90,7 @@ export struct CandidateRow {
   }
 
   private kind(): SourceSwitchRowKind {
-    if (this.sourceId === this.currentSourceId) {
+    if (this.isCurrent) {
       return 'current';
     }
     if (this.offline === true) {

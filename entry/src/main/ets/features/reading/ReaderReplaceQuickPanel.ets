@@ -13,14 +13,37 @@ import {
   type ReaderReplaceRule,
 } from './ReaderReplaceQuickState';
 
+const REPLACE_PANEL_WIDTH_PHONE = 286;
+const REPLACE_PANEL_WIDTH_TABLET = 262;
+const REPLACE_PANEL_PADDING_X = 11;
+const REPLACE_PANEL_PADDING_Y = 13;
+const REPLACE_HEADER_HEIGHT = 28;
+const REPLACE_CLOSE_SIZE = 28;
+const REPLACE_HEADER_BODY_GAP = 4;
+const REPLACE_RULES_VIEWPORT_HEIGHT = 93;
+const REPLACE_RULE_ROW_HEIGHT = 28;
+const REPLACE_RULE_BODY_PADDING_X = 7;
+const REPLACE_RULE_BODY_PADDING_TOP = 3;
+const REPLACE_RULE_BODY_PADDING_BOTTOM = 5;
+const REPLACE_RULE_FOOTER_GAP = 3;
+const REPLACE_FOOTER_HEIGHT = 28;
+const REPLACE_FOOTER_BUTTON_GAP = 6;
+const REPLACE_PREVIEW_WIDTH_PHONE = 97.59;
+const REPLACE_PREVIEW_WIDTH_TABLET = 88;
+const REPLACE_RULE_TEXT_RESERVED_WIDTH = 61;
+const REPLACE_RULE_BODY_HEIGHT = REPLACE_RULE_BODY_PADDING_TOP + REPLACE_RULES_VIEWPORT_HEIGHT +
+  REPLACE_RULE_FOOTER_GAP + REPLACE_FOOTER_HEIGHT + REPLACE_RULE_BODY_PADDING_BOTTOM;
+const REPLACE_PANEL_HEIGHT = REPLACE_PANEL_PADDING_Y * 2 + REPLACE_HEADER_HEIGHT +
+  REPLACE_HEADER_BODY_GAP + REPLACE_RULE_BODY_HEIGHT;
+
 /**
  * Figma Quick Replace content only: Phone `942:54` / `912:68`,
  * Tablet `942:56` / `914:64`.
  *
- * Hidden state deliberately renders nothing because Figma defines no empty,
- * loading, short-list, or error visual. Preview has no raw pre-processing
- * text, and Full Replace has no production page, so both footer actions remain
- * non-interactive without inventing a disabled design.
+ * Hidden state is reserved for not-loaded or failed data. A valid Core list,
+ * including zero, one, or two rules, renders this panel. Preview has no raw
+ * pre-processing text, so Preview remains visible and non-interactive. Full
+ * management reuses the application's existing RulesManagementPage.
  */
 @Component
 export struct ReaderReplaceQuickPanel {
@@ -29,6 +52,7 @@ export struct ReaderReplaceQuickPanel {
   onClose: () => void = (): void => {};
   onToggleRule: (ruleId: number, isEnabled: boolean) => void =
     (_ruleId: number, _isEnabled: boolean): void => {};
+  onOpenManagement: () => void = (): void => {};
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -42,13 +66,18 @@ export struct ReaderReplaceQuickPanel {
 
   @Builder
   private readyPanel() {
-    Column({ space: 4 }) {
+    Column({ space: REPLACE_HEADER_BODY_GAP }) {
       this.header();
       this.ruleBody();
     }
     .width(this.panelWidth())
-    .height(190)
-    .padding({ left: 11, right: 11, top: 13, bottom: 13 })
+    .height(REPLACE_PANEL_HEIGHT)
+    .padding({
+      left: REPLACE_PANEL_PADDING_X,
+      right: REPLACE_PANEL_PADDING_X,
+      top: REPLACE_PANEL_PADDING_Y,
+      bottom: REPLACE_PANEL_PADDING_Y,
+    })
     .alignItems(HorizontalAlign.Start)
     .backgroundColor(TOK_SURFACE_PANEL)
     .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
@@ -75,38 +104,54 @@ export struct ReaderReplaceQuickPanel {
           .width(11)
           .height(11);
       }
-      .width(28)
-      .height(28)
+      .width(REPLACE_CLOSE_SIZE)
+      .height(REPLACE_CLOSE_SIZE)
       .borderRadius(6)
       .position({ x: this.contentWidth() - 36, y: 0 })
       .accessibilityText('关闭替换规则')
       .onClick((): void => this.onClose());
     }
     .width(this.contentWidth())
-    .height(28)
+    .height(REPLACE_HEADER_HEIGHT)
     .border({ width: { bottom: TOK_BORDER_W }, color: TOK_LINE });
   }
 
   @Builder
   private ruleBody() {
-    Column({ space: 3 }) {
+    Column({ space: REPLACE_RULE_FOOTER_GAP }) {
       Column() {
         if (this.state.kind === 'ready') {
-          ForEach(this.state.rules, (rule: ReaderReplaceRule) => {
-            this.ruleRow(rule);
-          }, (rule: ReaderReplaceRule): string => `reader-replace-quick-${rule.id}`);
+          if (this.state.rules.length === 0) {
+            Text('暂无替换规则')
+              .width('100%')
+              .height(REPLACE_RULES_VIEWPORT_HEIGHT)
+              .fontFamily('ReaderNotoSansSC')
+              .fontWeight(FontWeight.Regular)
+              .fontSize(9)
+              .fontColor(TOK_READ_INK)
+              .textAlign(TextAlign.Center);
+          } else {
+            ForEach(this.state.rules, (rule: ReaderReplaceRule) => {
+              this.ruleRow(rule);
+            }, (rule: ReaderReplaceRule): string => `reader-replace-quick-${rule.id}`);
+          }
         }
       }
       .width('100%')
-      .height(93)
+      .height(REPLACE_RULES_VIEWPORT_HEIGHT)
       .alignItems(HorizontalAlign.Start)
       .clip(true);
 
       this.footer();
     }
     .width(this.contentWidth())
-    .height(132)
-    .padding({ left: 7, right: 7, top: 3, bottom: 5 })
+    .height(REPLACE_RULE_BODY_HEIGHT)
+    .padding({
+      left: REPLACE_RULE_BODY_PADDING_X,
+      right: REPLACE_RULE_BODY_PADDING_X,
+      top: REPLACE_RULE_BODY_PADDING_TOP,
+      bottom: REPLACE_RULE_BODY_PADDING_BOTTOM,
+    })
     .alignItems(HorizontalAlign.Start);
   }
 
@@ -140,7 +185,7 @@ export struct ReaderReplaceQuickPanel {
         .position({ x: 42, y: 7.5 });
     }
     .width('100%')
-    .height(28)
+    .height(REPLACE_RULE_ROW_HEIGHT)
     .border({ width: { bottom: TOK_BORDER_W }, color: TOK_LINE })
     .accessibilityText(`${rule.name}，${rule.isEnabled ? '已开启' : '已关闭'}`)
     .onClick((): void => this.onToggleRule(rule.id, !rule.isEnabled));
@@ -148,12 +193,12 @@ export struct ReaderReplaceQuickPanel {
 
   @Builder
   private footer() {
-    Row({ space: 6 }) {
+    Row({ space: REPLACE_FOOTER_BUTTON_GAP }) {
       this.footerButton('preview');
       this.footerButton('management');
     }
     .width('100%')
-    .height(28);
+    .height(REPLACE_FOOTER_HEIGHT);
   }
 
   @Builder
@@ -172,7 +217,7 @@ export struct ReaderReplaceQuickPanel {
         .maxLines(1);
     }
     .width(kind === 'preview' ? this.previewButtonWidth() : this.managementButtonWidth())
-    .height(28)
+    .height(REPLACE_FOOTER_HEIGHT)
     .justifyContent(FlexAlign.Center)
     .alignItems(VerticalAlign.Center)
     .backgroundColor(kind === 'preview' ? TOK_SURFACE_PANEL : TOK_READ_PRIMARY)
@@ -181,28 +226,35 @@ export struct ReaderReplaceQuickPanel {
       color: kind === 'preview' ? TOK_LINE_STRONG : Color.Transparent,
     })
     .borderRadius(8)
-    .enabled(false)
+    .enabled(kind === 'management')
+    .opacity(kind === 'management' ? 1 : 0.55)
     .accessibilityText(kind === 'preview' ?
-      '预览效果，原始正文不可用' : '完整管理，完整替换页尚未提供');
+      '预览效果，原始正文不可用' : '打开完整替换规则管理')
+    .onClick((): void => {
+      if (kind === 'management') {
+        this.onOpenManagement();
+      }
+    });
   }
 
   private panelWidth(): number {
-    return this.isTablet ? 262 : 286;
+    return this.isTablet ? REPLACE_PANEL_WIDTH_TABLET : REPLACE_PANEL_WIDTH_PHONE;
   }
 
   private contentWidth(): number {
-    return this.isTablet ? 240 : 264;
+    return this.panelWidth() - REPLACE_PANEL_PADDING_X * 2;
   }
 
   private ruleTextWidth(): number {
-    return this.isTablet ? 179 : 203;
+    return this.contentWidth() - REPLACE_RULE_TEXT_RESERVED_WIDTH;
   }
 
   private previewButtonWidth(): number {
-    return this.isTablet ? 88 : 97.59;
+    return this.isTablet ? REPLACE_PREVIEW_WIDTH_TABLET : REPLACE_PREVIEW_WIDTH_PHONE;
   }
 
   private managementButtonWidth(): number {
-    return this.isTablet ? 132 : 146.41;
+    return this.contentWidth() - REPLACE_RULE_BODY_PADDING_X * 2 - REPLACE_FOOTER_BUTTON_GAP -
+      this.previewButtonWidth();
   }
 }

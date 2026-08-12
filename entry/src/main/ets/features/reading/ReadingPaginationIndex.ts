@@ -24,6 +24,8 @@ export type ReadingPaginationLayoutFacts = {
   readonly titleToBodySpacing: number;
   readonly paragraphSpacing: number;
   readonly paragraphIndent: number;
+  readonly letterSpacing: number;
+  readonly textAlignment: 'start' | 'justify';
   readonly writingMode: string;
 };
 
@@ -37,6 +39,9 @@ export function createReadingPaginationLayoutSignature(
   requireNonBlank(facts.fontFamily, 'fontFamily');
   requireNonBlank(facts.fontWeight, 'fontWeight');
   requireNonBlank(facts.writingMode, 'writingMode');
+  if (facts.textAlignment !== 'start' && facts.textAlignment !== 'justify') {
+    throw new Error('textAlignment must be start or justify');
+  }
   requirePositiveFinite(facts.viewportWidth, 'viewportWidth');
   requirePositiveFinite(facts.viewportHeight, 'viewportHeight');
   requirePositiveFinite(facts.fontSize, 'fontSize');
@@ -50,8 +55,9 @@ export function createReadingPaginationLayoutSignature(
   requireNonNegativeFinite(facts.titleToBodySpacing, 'titleToBodySpacing');
   requireNonNegativeFinite(facts.paragraphSpacing, 'paragraphSpacing');
   requireNonNegativeFinite(facts.paragraphIndent, 'paragraphIndent');
+  requireFinite(facts.letterSpacing, 'letterSpacing');
   return [
-    'reader-layout-v1',
+    'reader-layout-v2',
     `device=${facts.deviceForm}`,
     `viewport=${canonicalNumber(facts.viewportWidth)}x${canonicalNumber(facts.viewportHeight)}`,
     `font=${facts.fontFamily}`,
@@ -63,6 +69,8 @@ export function createReadingPaginationLayoutSignature(
       `${canonicalNumber(facts.bottomInset)},${canonicalNumber(facts.leftInset)}`,
     `title=${canonicalNumber(facts.titleLineHeight)},${canonicalNumber(facts.titleToBodySpacing)}`,
     `paragraph=${canonicalNumber(facts.paragraphSpacing)},${canonicalNumber(facts.paragraphIndent)}`,
+    `letter=${canonicalNumber(facts.letterSpacing)}`,
+    `align=${facts.textAlignment}`,
     `writing=${facts.writingMode}`,
   ].join('|');
 }
@@ -180,6 +188,33 @@ export class ReadingPaginationPrefix {
     for (let index = 1; index < this.observations.length; index += 1) {
       if (this.observations[index].startScalar === startScalar) {
         return this.observations[index - 1].requestScalar;
+      }
+    }
+    return undefined;
+  }
+
+  /** Whether this continuous measured prefix already contains `anchor`. */
+  containsAnchor(anchorScalar: number): boolean {
+    validateAnchor(anchorScalar);
+    for (const observation of this.observations) {
+      if (anchorScalar >= observation.startScalar && anchorScalar < observation.endScalarExclusive) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Exact request that produced the page before the page containing `anchor`.
+   * This is derived from continuous layout observations, never navigation
+   * history. The first measured page intentionally has no predecessor here.
+   */
+  previousRequestForAnchor(anchorScalar: number): number | undefined {
+    validateAnchor(anchorScalar);
+    for (let index = 0; index < this.observations.length; index += 1) {
+      const observation = this.observations[index];
+      if (anchorScalar >= observation.startScalar && anchorScalar < observation.endScalarExclusive) {
+        return index > 0 ? this.observations[index - 1].requestScalar : undefined;
       }
     }
     return undefined;
@@ -502,6 +537,12 @@ function requirePositiveFinite(value: number, field: string): void {
 function requireNonNegativeFinite(value: number, field: string): void {
   if (!Number.isFinite(value) || value < 0) {
     throw new RangeError(`${field} must be a non-negative finite number`);
+  }
+}
+
+function requireFinite(value: number, field: string): void {
+  if (!Number.isFinite(value)) {
+    throw new RangeError(`${field} must be a finite number`);
   }
 }
 

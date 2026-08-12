@@ -17,15 +17,16 @@ import {
 } from './ReaderAppearanceState';
 
 /**
- * Figma Reader Quick Appearance content area (`1505:18040` / `1505:18349`).
+ * Figma Reader Quick Appearance content: Phone `942:66`, Tablet `942:68`.
  *
- * This is the 286×190 module content only. Its owner places it in the existing
+ * This is the responsive 286/262×190 module content. Its owner places it in the existing
  * Reader Control dock and owns state/persistence. Every visual font slot from
  * Figma remains present. The active `宋体` slot is backed by the bundled
  * Noto Serif SC files, per the product font substitution decision.
  */
 @Component
 export struct ReaderAppearanceModulePanel {
+  @Prop isTablet: boolean = false;
   @Prop snapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   onThemeChange: (theme: ReaderAppearanceTheme) => void = (_theme: ReaderAppearanceTheme): void => {};
   onFontChange: (font: ReaderAppearanceFont) => void = (_font: ReaderAppearanceFont): void => {};
@@ -39,7 +40,7 @@ export struct ReaderAppearanceModulePanel {
       this.themeSection();
       this.fontSection();
     }
-    .width(286)
+    .width(this.panelWidth())
     .height(190)
     .backgroundColor(TOK_SURFACE_PANEL)
     .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
@@ -51,7 +52,7 @@ export struct ReaderAppearanceModulePanel {
   private themeSection() {
     Stack({ alignContent: Alignment.TopStart }) {
       Text('主题库')
-        .width(168.5)
+        .width(this.themeTitleWidth())
         .height(10)
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
@@ -65,25 +66,25 @@ export struct ReaderAppearanceModulePanel {
         .height(9)
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Medium)
-        .fontSize(7.5)
+        .fontSize(this.isTablet ? 8 : 7.5)
         .lineHeight(8)
         .fontColor(TOK_READ_MUTED)
         .textAlign(TextAlign.End)
         .maxLines(1)
-        .position({ x: 174, y: 6.95 });
+        .position({ x: this.themeSummaryX(), y: 6.95 });
 
       Stack({ alignContent: Alignment.TopStart }) {
         ForEach(this.themeIds(), (theme: ReaderAppearanceTheme, index: number) => {
           this.compactThemeCell(theme, index);
         }, (theme: ReaderAppearanceTheme): string => `reader-appearance-quick-theme-${theme}`);
       }
-      .width(262)
+      .width(this.sectionWidth())
       .height(52)
       .position({ x: 0, y: 21.9 });
     }
-    .width(262)
+    .width(this.sectionWidth())
     .height(75.9)
-    .position({ x: 11, y: 12 });
+    .position({ x: this.sectionX(), y: this.themeSectionY() });
   }
 
   @Builder
@@ -99,10 +100,10 @@ export struct ReaderAppearanceModulePanel {
         })
         .borderRadius(6);
     }
-    .width(62.5)
+    .width(this.cellWidth())
     .height(24)
     .borderRadius(8)
-    .position({ x: (index % 4) * 66.5, y: Math.floor(index / 4) * 28 })
+    .position({ x: (index % 4) * this.cellStride(), y: Math.floor(index / 4) * 28 })
     .accessibilityText(`切换到${this.themeLabel(theme)}主题`)
     .onClick((): void => this.onThemeChange(theme));
   }
@@ -111,13 +112,13 @@ export struct ReaderAppearanceModulePanel {
   private fontSection() {
     Stack({ alignContent: Alignment.TopStart }) {
       Row()
-        .width(262)
+        .width(this.sectionWidth())
         .height(1)
         .backgroundColor(TOK_LINE)
         .position({ x: 0, y: 0 });
 
       Text('字体库')
-        .width(256)
+        .width(this.sectionWidth() - 6)
         .height(10)
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
@@ -131,20 +132,20 @@ export struct ReaderAppearanceModulePanel {
           this.compactFontCell(fontId, index);
         }, (fontId: string): string => `reader-appearance-quick-font-${fontId}`);
       }
-      .width(262)
+      .width(this.sectionWidth())
       .height(58)
       .position({ x: 0, y: 17 });
     }
-    .width(262)
+    .width(this.sectionWidth())
     .height(77)
-    .position({ x: 11, y: 97.9 });
+    .position({ x: this.sectionX(), y: this.fontSectionY() });
   }
 
   @Builder
   private compactFontCell(fontId: string, index: number) {
     Stack({ alignContent: Alignment.Center }) {
       Row()
-        .width(55)
+        .width(this.fontPillWidth())
         .height(22)
         .backgroundColor(this.isActiveFont(fontId) ? TOK_READ_PRIMARY : TOK_SURFACE_SOLID)
         .border({
@@ -153,10 +154,11 @@ export struct ReaderAppearanceModulePanel {
         })
         .borderRadius(11);
       Text(this.fontLabel(fontId))
-        .width(54.5)
+        .width(this.fontPillWidth() - 0.5)
         .height(10)
-        .fontFamily(fontId === 'sourceHanSerif' || fontId === 'serif' ?
-          'ReaderNotoSerifSCRegular' : 'ReaderNotoSansSC')
+        .fontFamily(fontId === 'lxgwWenKai' ? 'ReaderLXGWWenKaiLite' :
+          (fontId === 'sourceHanSerif' || fontId === 'serif' ?
+            'ReaderNotoSerifSCRegular' : 'ReaderNotoSansSC'))
         .fontWeight(FontWeight.Regular)
         .fontSize(8)
         .lineHeight(10)
@@ -164,14 +166,15 @@ export struct ReaderAppearanceModulePanel {
         .textAlign(TextAlign.Center)
         .maxLines(1);
     }
-    .width(62.5)
+    .width(this.cellWidth())
     .height(27)
-    .position({ x: (index % 4) * 66.5, y: Math.floor(index / 4) * 31 })
-    .enabled(fontId === 'serif')
-    .accessibilityText(fontId === 'serif' ? '宋体，使用思源宋体字形' : `${this.fontLabel(fontId)}，暂不可用`)
+    .position({ x: (index % 4) * this.cellStride(), y: Math.floor(index / 4) * 31 })
+    .enabled(this.isSelectableFont(fontId))
+    .accessibilityText(this.isSelectableFont(fontId) ? `切换到${this.fontLabel(fontId)}` :
+      `${this.fontLabel(fontId)}，暂不可用`)
     .onClick((): void => {
-      if (fontId === 'serif') {
-        this.onFontChange('serif');
+      if (fontId === 'system' || fontId === 'serif' || fontId === 'sans' || fontId === 'lxgwWenKai') {
+        this.onFontChange(fontId);
       }
     });
   }
@@ -180,12 +183,56 @@ export struct ReaderAppearanceModulePanel {
     return ['day', 'warm', 'night', 'warmNight', 'paper', 'green', 'paperNight', 'greenNight'];
   }
 
+  private panelWidth(): number {
+    return this.isTablet ? 262 : 286;
+  }
+
+  private sectionWidth(): number {
+    return this.isTablet ? 238 : 262;
+  }
+
+  private sectionX(): number {
+    return this.isTablet ? 12 : 11;
+  }
+
+  private themeSectionY(): number {
+    return this.isTablet ? 13 : 12;
+  }
+
+  private fontSectionY(): number {
+    return this.isTablet ? 98.89 : 97.9;
+  }
+
+  private themeTitleWidth(): number {
+    return this.isTablet ? 144.48 : 168.5;
+  }
+
+  private themeSummaryX(): number {
+    return this.isTablet ? 150 : 174;
+  }
+
+  private cellWidth(): number {
+    return this.isTablet ? 56.5 : 62.5;
+  }
+
+  private cellStride(): number {
+    return this.isTablet ? 60.5 : 66.5;
+  }
+
+  private fontPillWidth(): number {
+    return this.isTablet ? 49 : 55;
+  }
+
   private fontIds(): string[] {
     return ['system', 'serif', 'sans', 'kai', 'fangSong', 'mono', 'sourceHanSerif', 'lxgwWenKai'];
   }
 
   private isActiveFont(fontId: string): boolean {
-    return fontId === 'serif' && this.snapshot.font === 'serif';
+    return fontId === this.snapshot.font;
+  }
+
+  private isSelectableFont(fontId: string): boolean {
+    return fontId === 'system' || fontId === 'serif' || fontId === 'sans' || fontId === 'lxgwWenKai';
   }
 
   private themeSummary(): string {
@@ -264,6 +311,6 @@ export struct ReaderAppearanceModulePanel {
     if (fontId === 'sourceHanSerif') {
       return '思源宋体';
     }
-    return '霞鹜文楷';
+    return '文楷 Lite';
   }
 }

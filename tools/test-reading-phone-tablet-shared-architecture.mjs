@@ -20,6 +20,10 @@ assert.match(shell, /ReadingExperience\(\{[\s\S]*?remoteSession:\s*this\.remoteS
   'local/remote acquisition and the device form must converge before physical pagination');
 assert.match(shell, /onDownloadChapter:[\s\S]*?this\.onDownloadChapter/,
   'both device forms must forward the same offline intent');
+assert.match(shell, /onDownloadBook:[\s\S]*?this\.onDownloadBook/,
+  'both device forms must forward the same whole-book offline intent');
+assert.match(shell, /onClearBookOffline:[\s\S]*?this\.onClearBookOffline/,
+  'both device forms must forward the same exact-book clear intent');
 assert.match(shell, /onReadingFailure:[\s\S]*?this\.onReadingFailure/,
   'both device forms must forward the same source-switch rollback seam');
 
@@ -33,6 +37,10 @@ assert.doesNotMatch(sessionGateway, /isTablet|TabletExpanded|deviceForm/,
   'Core command routing must not fork by device form');
 assert.doesNotMatch(offline, /isTablet|TabletExpanded|deviceForm/,
   'download/offline orchestration must not fork by device form');
+assert.match(offline, /prefetchBook\([\s\S]*?this\.prefetchRange\(/,
+  'whole-book download must reuse the existing bounded range path');
+assert.doesNotMatch(offline, /class .*Queue|new .*Queue|AppStorage/,
+  'Harmony must not create a second durable download queue');
 assert.doesNotMatch(sourceSwitch, /isTablet|TabletExpanded|deviceForm/,
   'source-switch transactions must not fork by device form');
 assert.doesNotMatch(pagination, /FIGMA_PHONE|FIGMA_TABLET|TabletExpanded/,

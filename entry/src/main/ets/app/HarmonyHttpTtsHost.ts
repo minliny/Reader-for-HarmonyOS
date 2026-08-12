@@ -28,6 +28,8 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
   private readonly outputDeviceChangedCallback: (event: audio.CurrentOutputDeviceChangedEvent) => void;
   private listener: ((event: ReaderTtsHostEvent) => void) | undefined = undefined;
   private player: media.AVPlayer | undefined = undefined;
+  private activeRequest: http.HttpRequest | null = null;
+  private rejectActiveRequest: ((reason?: Error) => void) | undefined = undefined;
   private configId: number | undefined = undefined;
   private currentRequestId: string | undefined = undefined;
   private audioBytes: Uint8Array | undefined = undefined;
@@ -103,12 +105,14 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
   async speak(request: ReaderTtsHostSpeakRequest): Promise<void> {
     this.assertOpen();
     const generation = ++this.speakGeneration;
+    this.cancelActiveRequest('Reader HttpTTS audio request superseded');
     const configId = this.configId;
     if (configId === undefined) throw new Error('Reader HttpTTS has no selected Core config');
     if (request.requestId.trim().length === 0 || request.text.trim().length === 0) {
       throw new Error('Reader HttpTTS requires requestId and text');
     }
     const descriptor = await this.gateway.buildRequest(configId, request.text);
+    if (this.closed || generation !== this.speakGeneration) return;
     if (descriptor.body !== undefined) {
       throw new Error('Reader HttpTTS Host does not accept a body for a GET descriptor');
     }
@@ -149,6 +153,7 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
 
   async stop(): Promise<void> {
     this.speakGeneration += 1;
+    this.cancelActiveRequest('Reader HttpTTS audio request stopped');
     this.currentRequestId = undefined;
     this.startReported = false;
     await this.releasePlayer();
@@ -160,6 +165,7 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
     if (this.closed) return;
     this.closed = true;
     this.speakGeneration += 1;
+    this.cancelActiveRequest('Reader HttpTTS audio request closed');
     this.listener = undefined;
     this.currentRequestId = undefined;
     await this.releasePlayer();
@@ -209,16 +215,28 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
 
   private async fetchAudio(url: string, headers: Record<string, string>): Promise<Uint8Array> {
     const request = http.createHttp();
+    let rejectCancellation: (reason?: Error) => void = (): void => undefined;
+    const cancellation = new Promise<http.HttpResponse>((
+      _resolve: (value: http.HttpResponse) => void,
+      reject: (reason?: Error) => void,
+    ): void => {
+      rejectCancellation = reject;
+    });
+    this.activeRequest = request;
+    this.rejectActiveRequest = rejectCancellation;
     try {
-      const response = await request.request(url, {
-        method: http.RequestMethod.GET,
-        header: headers,
-        expectDataType: http.HttpDataType.ARRAY_BUFFER,
-        usingCache: false,
-        connectTimeout: HTTP_TTS_CONNECT_TIMEOUT_MS,
-        readTimeout: HTTP_TTS_READ_TIMEOUT_MS,
-        maxRedirects: HTTP_TTS_MAX_REDIRECTS,
-      });
+      const response = await Promise.race([
+        request.request(url, {
+          method: http.RequestMethod.GET,
+          header: headers,
+          expectDataType: http.HttpDataType.ARRAY_BUFFER,
+          usingCache: false,
+          connectTimeout: HTTP_TTS_CONNECT_TIMEOUT_MS,
+          readTimeout: HTTP_TTS_READ_TIMEOUT_MS,
+          maxRedirects: HTTP_TTS_MAX_REDIRECTS,
+        }),
+        cancellation,
+      ]);
       if (response.responseCode < 200 || response.responseCode >= 300) {
         throw new Error(`Reader HttpTTS audio request failed with HTTP ${response.responseCode}`);
       }
@@ -231,8 +249,31 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
       }
       return bytes;
     } finally {
-      request.destroy();
+      if (this.activeRequest === request) {
+        this.activeRequest = null;
+        this.rejectActiveRequest = undefined;
+      }
+      try {
+        request.destroy();
+      } catch (_) {
+        // stop() may already be destroying this request; generation remains authoritative.
+      }
     }
+  }
+
+  private cancelActiveRequest(message: string): void {
+    const request = this.activeRequest;
+    const reject = this.rejectActiveRequest;
+    this.activeRequest = null;
+    this.rejectActiveRequest = undefined;
+    if (request !== null) {
+      try {
+        request.destroy();
+      } catch (_) {
+        // A concurrent fetch cleanup may already own destroy().
+      }
+    }
+    if (reject !== undefined) reject(new Error(message));
   }
 
   private createDataSource(bytes: Uint8Array): media.AVDataSrcDescriptor {

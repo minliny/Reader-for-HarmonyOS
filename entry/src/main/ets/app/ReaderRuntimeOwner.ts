@@ -18,6 +18,7 @@ import { HarmonySystemTtsHost } from './HarmonySystemTtsHost';
 import { HarmonyHttpTtsHost } from './HarmonyHttpTtsHost';
 import { HarmonyTtsHostRouter } from './HarmonyTtsHostRouter';
 import { HarmonyTtsMediaSession } from './HarmonyTtsMediaSession';
+import { HarmonyTtsBackgroundSession } from './HarmonyTtsBackgroundSession';
 import { LocalEpubResourceHost } from './LocalEpubResourceHost';
 import { ReadingBodyImageHost, type ReadingBodyImagePayload } from './ReadingBodyImageHost';
 import {
@@ -72,6 +73,7 @@ export class ReaderRuntimeOwner {
       new HarmonySystemTtsHost(),
       new HarmonyHttpTtsHost(this),
       new HarmonyTtsMediaSession(context),
+      new HarmonyTtsBackgroundSession(context),
     );
     this.localEpubResourceHost = new LocalEpubResourceHost(context);
     this.readingImageDiskCache = new ReadingImageDiskCache(context);

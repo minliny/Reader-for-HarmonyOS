@@ -47,11 +47,11 @@ export function createDefaultReaderSettingsSnapshot(): ReaderSettingsSnapshot {
     hideStatusBar: false,
     hideNavigationBar: false,
     extendIntoCutout: false,
-    justifyText: true,
+    justifyText: false,
     alignPageBottom: false,
     volumeKeysTurnPage: false,
     stopTtsOnScreenOff: false,
-    longPressSelectText: true,
+    longPressSelectText: false,
   };
 }
 
@@ -75,11 +75,14 @@ export function normalizeReaderSettingsSnapshot(
     hideStatusBar: false,
     hideNavigationBar: false,
     extendIntoCutout: false,
-    justifyText: booleanOrFallback(candidate.justifyText, fallback.justifyText),
-    alignPageBottom: booleanOrFallback(candidate.alignPageBottom, fallback.alignPageBottom),
+    // Legacy V1 fields remain decodable but are no longer a second layout
+    // truth. Justification is owned by ReaderAppearance; the other two
+    // interactions have no admitted implementation yet.
+    justifyText: false,
+    alignPageBottom: false,
     volumeKeysTurnPage: false,
     stopTtsOnScreenOff: false,
-    longPressSelectText: booleanOrFallback(candidate.longPressSelectText, fallback.longPressSelectText),
+    longPressSelectText: false,
   };
 }
 
@@ -125,9 +128,5 @@ export function isReaderScreenTimeoutAvailable(timeout: ReaderScreenTimeout): bo
 }
 
 export function isReaderSettingsToggleAvailable(key: ReaderSettingsToggleKey): boolean {
-  return key === 'justifyText' || key === 'alignPageBottom' || key === 'longPressSelectText';
-}
-
-function booleanOrFallback(value: boolean, fallback: boolean): boolean {
-  return typeof value === 'boolean' ? value : fallback;
+  return false;
 }

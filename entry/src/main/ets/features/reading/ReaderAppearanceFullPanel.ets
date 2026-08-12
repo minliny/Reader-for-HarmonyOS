@@ -4,6 +4,7 @@ import {
   TOK_LINE,
   TOK_LINE_STRONG,
   TOK_READ_ACTIVE_SOFT,
+  TOK_READ_ELEVATED,
   TOK_READ_HANDLE,
   TOK_READ_INK,
   TOK_READ_MUTED,
@@ -23,28 +24,33 @@ import {
   type ReaderAppearanceStepDirection,
   type ReaderAppearanceTheme,
 } from './ReaderAppearanceState';
+import type { ReaderChineseConversionMode } from './ReaderChineseConversionGateway';
 
 /**
- * Figma Reader Full Appearance sheet / Phone (`1505:18040` / `1505:18349`).
+ * Figma Reader Full Appearance sheet: Phone `942:82`, Tablet `942:84`.
  *
  * The component is presentation-only. The reading experience owns applying
- * the returned settings and the gateway owns persistence. Figma does not
- * define a production Tablet full-sheet geometry at this node, so this file
- * intentionally implements only the specified 364×736 Phone sheet.
+ * the returned settings and the gateway owns persistence. Phone and Tablet
+ * are one semantic panel. Only the outer geometry and the
+ * widths of the same internal rows/cards vary with the viewport profile.
  */
 @Component
 export struct ReaderAppearanceFullPanel {
+  @Prop isTablet: boolean = false;
   @Prop snapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
+  @Prop chineseConversionMode: ReaderChineseConversionMode = 'none';
   onCollapse: () => void = (): void => {};
   onThemeChange: (theme: ReaderAppearanceTheme) => void = (_theme: ReaderAppearanceTheme): void => {};
   onSetDayTheme: (theme: ReaderAppearanceTheme) => void = (_theme: ReaderAppearanceTheme): void => {};
   onSetNightTheme: (theme: ReaderAppearanceTheme) => void = (_theme: ReaderAppearanceTheme): void => {};
   onFontChange: (font: ReaderAppearanceFont) => void = (_font: ReaderAppearanceFont): void => {};
-  onIndentRequest: (current: ReaderAppearanceIndent) => void = (_current: ReaderAppearanceIndent): void => {};
+  onIndentRequest: (indent: ReaderAppearanceIndent) => void = (_indent: ReaderAppearanceIndent): void => {};
   onAlignmentRequest: (current: ReaderAppearanceAlignment) => void =
     (_current: ReaderAppearanceAlignment): void => {};
   onMetricStep: (metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection) => void =
     (_metric: ReaderAppearanceMetric, _direction: ReaderAppearanceStepDirection): void => {};
+  onChineseConversionChange: (mode: ReaderChineseConversionMode) => void =
+    (_mode: ReaderChineseConversionMode): void => {};
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -57,13 +63,13 @@ export struct ReaderAppearanceFullPanel {
         .height(4)
         .backgroundColor(TOK_READ_HANDLE)
         .borderRadius(999)
-        .position({ x: 161, y: 9 });
+        .position({ x: this.handleX(), y: 9 });
 
       this.header();
 
       Row()
-        .width(338)
-        .height(666)
+        .width(this.viewportWidth())
+        .height(this.viewportHeight())
         .backgroundColor(TOK_SURFACE_PANEL)
         .border({ width: TOK_BORDER_W, color: TOK_LINE })
         .borderRadius(12)
@@ -72,19 +78,19 @@ export struct ReaderAppearanceFullPanel {
       Scroll() {
         Stack({ alignContent: Alignment.TopStart }) {
           this.themeLibrary();
-          this.fontLibrary();
           this.typographyLibrary();
+          this.fontLibrary();
         }
-        .width(338)
-        .height(989);
+        .width(this.viewportWidth())
+        .height(this.contentHeight());
       }
-      .width(338)
-      .height(666)
+      .width(this.viewportWidth())
+      .height(this.viewportHeight())
       .scrollBar(BarState.Off)
       .position({ x: 13, y: 57 });
     }
-    .width(364)
-    .height(736)
+    .width(this.sheetWidth())
+    .height(this.sheetHeight())
     .backgroundColor(TOK_READ_SURFACE)
     .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
     .borderRadius(24)
@@ -95,8 +101,8 @@ export struct ReaderAppearanceFullPanel {
   private header() {
     Row() {
       Image($r('app.media.rc_palette'))
-        .width(16)
-        .height(16);
+        .width(20)
+        .height(20);
       Text('界面')
         .margin({ left: 8 })
         .fontFamily('ReaderNotoSansSC')
@@ -119,7 +125,7 @@ export struct ReaderAppearanceFullPanel {
         .accessibilityText('收起界面设置')
         .onClick((): void => this.onCollapse());
     }
-    .width(338)
+    .width(this.headerWidth())
     .height(30)
     .alignItems(VerticalAlign.Center)
     .position({ x: 13, y: 19 });
@@ -129,7 +135,7 @@ export struct ReaderAppearanceFullPanel {
   private themeLibrary() {
     Stack({ alignContent: Alignment.TopStart }) {
       Text('主题库')
-        .width(180)
+        .width(this.sectionInnerWidth() - 132)
         .height(20)
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
@@ -138,16 +144,16 @@ export struct ReaderAppearanceFullPanel {
         .fontColor(TOK_READ_INK)
         .position({ x: 2, y: 11 });
       Text(this.themeSummary())
-        .width(140)
+        .width(109)
         .height(20)
         .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(9)
+        .fontWeight(FontWeight.Medium)
+        .fontSize(10)
         .lineHeight(13)
         .fontColor(TOK_READ_MUTED)
         .textAlign(TextAlign.End)
         .maxLines(1)
-        .position({ x: 174, y: 13 });
+        .position({ x: this.sectionInnerWidth() - 107, y: 13 });
 
       ForEach(this.themeIds(), (theme: ReaderAppearanceTheme, index: number) => {
         this.fullThemeCard(theme, index);
@@ -157,12 +163,12 @@ export struct ReaderAppearanceFullPanel {
       this.themeAction(false);
 
       Row()
-        .width(316)
+        .width(this.sectionWidth())
         .height(1)
         .backgroundColor(TOK_LINE)
         .position({ x: 0, y: 209 });
     }
-    .width(316)
+    .width(this.sectionWidth())
     .height(210)
     .position({ x: 11, y: 11 });
   }
@@ -171,21 +177,18 @@ export struct ReaderAppearanceFullPanel {
   private fullThemeCard(theme: ReaderAppearanceTheme, index: number) {
     Stack({ alignContent: Alignment.TopStart }) {
       Row()
-        .width(46)
-        .height(18)
+        .width(this.fullCardWidth() - 10)
+        .height(24)
         .backgroundColor(this.themeColor(theme))
         .border({
           width: this.snapshot.activeTheme === theme ? 2 : TOK_BORDER_W,
           color: this.snapshot.activeTheme === theme ? TOK_READ_PRIMARY : TOK_LINE_STRONG,
         })
         .borderRadius(6)
-        .position({
-          x: this.snapshot.activeTheme === theme ? 12.75 : 13.75,
-          y: this.snapshot.activeTheme === theme ? 11 : 12,
-        });
+        .position({ x: 5, y: 10 });
       Text(this.themeLabel(theme))
-        .width(63.5)
-        .height(13)
+        .width(this.fullCardWidth() - 10)
+        .height(11)
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Regular)
         .fontSize(9)
@@ -193,9 +196,9 @@ export struct ReaderAppearanceFullPanel {
         .fontColor(TOK_READ_MUTED)
         .textAlign(TextAlign.Center)
         .maxLines(1)
-        .position({ x: 5, y: this.snapshot.activeTheme === theme ? 38 : 39 });
+        .position({ x: 5, y: 42.9 });
     }
-    .width(73.5)
+    .width(this.fullCardWidth())
     .height(58.8)
     .backgroundColor(this.snapshot.activeTheme === theme ? TOK_READ_ACTIVE_SOFT : TOK_SURFACE_PANEL_SOFT)
     .border({
@@ -203,7 +206,10 @@ export struct ReaderAppearanceFullPanel {
       color: TOK_READ_PRIMARY,
     })
     .borderRadius(8)
-    .position({ x: 2 + (index % 4) * 79.5, y: 32.4 + Math.floor(index / 4) * 64.8 })
+    .position({
+      x: 2 + (index % 4) * this.fullCardStride(),
+      y: 32.4 + Math.floor(index / 4) * 64.8,
+    })
     .accessibilityText(`切换到${this.themeLabel(theme)}主题`)
     .onClick((): void => this.onThemeChange(theme));
   }
@@ -221,7 +227,7 @@ export struct ReaderAppearanceFullPanel {
       .textAlign(TextAlign.Center)
       .border({ width: TOK_BORDER_W, color: TOK_LINE })
       .borderRadius(6)
-      .position({ x: day ? 160 : 240, y: 172 })
+      .position({ x: day ? this.sectionInnerWidth() - 152 : this.sectionInnerWidth() - 72, y: 172 })
       .accessibilityText(day ? '将当前主题设为日间主题' : '将当前主题设为夜间主题')
       .onClick((): void => {
         if (day) {
@@ -236,63 +242,68 @@ export struct ReaderAppearanceFullPanel {
   private fontLibrary() {
     Stack({ alignContent: Alignment.TopStart }) {
       Text('字体库')
-        .width(180)
-        .height(16)
+        .width(this.sectionInnerWidth() - 78)
+        .height(14)
+        .fontFamily('ReaderNotoSansSC')
+        .fontWeight(FontWeight.Bold)
+        .fontSize(12)
+        .lineHeight(14.4)
+        .fontColor(TOK_READ_INK)
+        .position({ x: 2, y: 11 });
+      Text('可拖动调整位置')
+        .width(70)
+        .height(14)
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Medium)
-        .fontSize(13)
-        .fontColor(TOK_READ_INK)
-        .position({ x: 2, y: 0 });
-      Text('可拖动调整位置')
-        .width(126)
-        .height(16)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Regular)
         .fontSize(10)
-        .fontColor('#807366')
+        .fontColor(TOK_READ_MUTED)
         .textAlign(TextAlign.End)
-        .position({ x: 188, y: 0 });
+        .position({ x: this.sectionWidth() - 72, y: 11 });
 
       Stack({ alignContent: Alignment.TopStart }) {
         ForEach(this.fullFontIds(), (fontId: string, index: number) => {
           this.fullFontCell(fontId, index);
         }, (fontId: string): string => `reader-appearance-full-font-${fontId}`);
       }
-      .width(316)
-      .height(106)
-      .position({ x: 0, y: 30 });
+      .width(this.sectionInnerWidth())
+      .height(126)
+      .position({ x: 2, y: 33.39 });
     }
-    .width(316)
-    .height(136)
-    .position({ x: 11, y: 221 });
+    .width(this.sectionWidth())
+    .height(169.39)
+    .border({ width: { top: TOK_BORDER_W }, color: TOK_LINE })
+    .position({ x: 11, y: 600.98 });
   }
 
   @Builder
   private fullFontCell(fontId: string, index: number) {
     Text(this.fontLabel(fontId))
-      .width(73)
-      .height(30)
-      .backgroundColor(this.isActiveFont(fontId) ? TOK_READ_PRIMARY :
+      .width(this.fullCardWidth())
+      .height(38)
+      .backgroundColor(this.isActiveFont(fontId) ? TOK_READ_ACTIVE_SOFT :
         (fontId === 'import' ? Color.Transparent : TOK_SURFACE_SOLID))
       .border({
-        width: this.isActiveFont(fontId) ? 0 : TOK_BORDER_W,
-        color: fontId === 'import' ? '#808C8073' : TOK_LINE_STRONG,
+        width: TOK_BORDER_W,
+        color: this.isActiveFont(fontId) ? TOK_READ_PRIMARY :
+          (fontId === 'import' ? '#808C8073' : TOK_LINE_STRONG),
         style: fontId === 'import' ? BorderStyle.Dashed : BorderStyle.Solid,
       })
-      .borderRadius(12)
-      .fontFamily(fontId === 'sourceHanSerif' || fontId === 'serif' ?
-        'ReaderNotoSerifSCRegular' : 'ReaderNotoSansSC')
+      .borderRadius(6)
+      .fontFamily(fontId === 'lxgwWenKai' ? 'ReaderLXGWWenKaiLite' :
+        (fontId === 'sourceHanSerif' || fontId === 'serif' ?
+          'ReaderNotoSerifSCRegular' : 'ReaderNotoSansSC'))
       .fontWeight(FontWeight.Regular)
-      .fontSize(12)
-      .fontColor(this.isActiveFont(fontId) ? '#FFFAF4' : (fontId === 'import' ? '#736659' : TOK_READ_INK))
+      .fontSize(10)
+      .fontColor(fontId === 'import' ? '#736659' : TOK_READ_INK)
       .textAlign(TextAlign.Center)
       .maxLines(1)
-      .position({ x: (index % 4) * 81, y: Math.floor(index / 4) * 38 })
-      .enabled(fontId === 'serif')
-      .accessibilityText(fontId === 'serif' ? '宋体，使用思源宋体字形' : `${this.fontLabel(fontId)}，暂不可用`)
+      .position({ x: (index % 4) * this.fullCardStride(), y: Math.floor(index / 4) * 44 })
+      .enabled(this.isSelectableFont(fontId))
+      .accessibilityText(this.isSelectableFont(fontId) ? `切换到${this.fontLabel(fontId)}` :
+        `${this.fontLabel(fontId)}，暂不可用`)
       .onClick((): void => {
-        if (fontId === 'serif') {
-          this.onFontChange('serif');
+        if (fontId === 'system' || fontId === 'serif' || fontId === 'sans' || fontId === 'lxgwWenKai') {
+          this.onFontChange(fontId);
         }
       });
   }
@@ -318,17 +329,17 @@ export struct ReaderAppearanceFullPanel {
         .lineHeight(13)
         .fontColor(TOK_READ_MUTED)
         .textAlign(TextAlign.End)
-        .position({ x: 174, y: 13 });
+        .position({ x: this.sectionWidth() - 56, y: 13 });
 
       Stack({ alignContent: Alignment.TopStart }) {
-        this.selectField('indent', 0);
-        this.selectField('language', 1);
-        this.selectField('pageTurn', 2);
-        this.selectField('alignment', 3);
+        this.indentRow();
+        this.selectField('language', 9, 61);
+        this.selectField('pageTurn', this.isTablet ? 339 : 161, 61);
+        this.selectField('alignment', 9, 113);
       }
-      .width(312)
-      .height(200)
-      .position({ x: 2, y: 54 });
+      .width(this.sectionInnerWidth())
+      .height(168)
+      .position({ x: 2, y: 44 });
 
       Stack({ alignContent: Alignment.TopStart }) {
         this.stepperRow('fontSize', 0);
@@ -336,23 +347,23 @@ export struct ReaderAppearanceFullPanel {
         this.stepperRow('paragraphSpacing', 2);
         this.stepperRow('letterSpacing', 3);
       }
-      .width(312)
-      .height(144)
-      .padding({ bottom: 2 })
+      .width(this.stepperPanelWidth())
+      .height(140)
       .backgroundColor(TOK_SURFACE_PANEL)
       .border({ width: TOK_BORDER_W, color: TOK_LINE })
       .borderRadius(8)
-      .position({ x: 2, y: 262 });
+      .position({ x: 2, y: 228 });
     }
-    .width(316)
-    .height(406)
-    .position({ x: 11, y: 367 });
+    .width(this.sectionWidth())
+    .height(380)
+    .border({ width: { top: TOK_BORDER_W }, color: TOK_LINE })
+    .position({ x: 11, y: 220.98 });
   }
 
   @Builder
-  private selectField(kind: string, index: number) {
+  private indentRow() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Text(this.selectLabel(kind))
+      Text('首行缩进')
         .height(14)
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
@@ -362,41 +373,88 @@ export struct ReaderAppearanceFullPanel {
         .position({ x: 9, y: 15 });
 
       Row() {
+        this.indentOption('不缩进', 'none');
+        this.indentOption('单字缩进', 'single');
+        this.indentOption('双字缩进', 'firstLine');
+      }
+      .width(200)
+      .height(36)
+      .padding({ top: 6, bottom: 6 })
+      .backgroundColor(TOK_SURFACE_PANEL_SOFT)
+      .border({ width: TOK_BORDER_W, color: TOK_LINE })
+      .borderRadius(6)
+      .position({ x: this.indentRowWidth() - 209, y: 4 });
+    }
+    .width(this.indentRowWidth())
+    .height(44)
+    .position({ x: 9, y: 9 });
+  }
+
+  @Builder
+  private indentOption(label: string, value: string) {
+    Text(label)
+      .layoutWeight(1)
+      .height(24)
+      .backgroundColor(this.indentOptionActive(value) ? TOK_READ_ELEVATED : Color.Transparent)
+      .borderRadius(6)
+      .fontFamily('ReaderNotoSansSC')
+      .fontWeight(this.indentOptionActive(value) ? FontWeight.Bold : FontWeight.Medium)
+      .fontSize(9)
+      .fontColor(this.indentOptionActive(value) ? TOK_READ_PRIMARY : TOK_READ_MUTED)
+      .textAlign(TextAlign.Center)
+      .accessibilityText(label)
+      .onClick((): void => {
+        if ((value === 'none' || value === 'single' || value === 'firstLine') &&
+          this.snapshot.indent !== value) {
+          this.onIndentRequest(value);
+        }
+      });
+  }
+
+  @Builder
+  private selectField(kind: string, x: number, y: number) {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Text(this.selectLabel(kind))
+        .height(14)
+        .fontFamily('ReaderNotoSansSC')
+        .fontWeight(FontWeight.Bold)
+        .fontSize(10)
+        .lineHeight(14)
+        .fontColor(TOK_READ_INK)
+        .position({ x: 9, y: 14 });
+
+      Row() {
         Text(this.selectValue(kind))
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Bold)
-          .fontSize(12)
+          .fontSize(10)
           .fontColor(TOK_READ_INK);
         Blank();
-        Text('▾')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(10)
-          .fontColor(TOK_READ_PRIMARY);
+        Image($r('app.media.reader_chevron_down'))
+          .width(12)
+          .height(12)
+          .fillColor(TOK_READ_PRIMARY);
       }
-      .width(88)
-      .height(32)
-      .padding({ left: 12, right: 12 })
+      .width(56)
+      .height(36)
+      .padding({ left: 8, right: 6 })
       .alignItems(VerticalAlign.Center)
       .backgroundColor('#FFFDF8')
       .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
       .borderRadius(10)
-      .position({ x: 214, y: 6 });
+      .position({ x: this.selectRowWidth() - 64, y: 3 });
 
       Row()
-        .width(88)
+        .width(56)
         .height(44)
-        .position({ x: 214, y: 0 })
+        .position({ x: this.selectRowWidth() - 64, y: 0 })
         .enabled(this.selectEnabled(kind))
         .accessibilityText(this.selectAccessibilityText(kind))
         .onClick((): void => this.handleSelectRequest(kind));
     }
-    .width(312)
+    .width(this.selectRowWidth())
     .height(44)
-    .backgroundColor(TOK_SURFACE_PANEL)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE })
-    .borderRadius(6)
-    .position({ x: 0, y: index * 52 });
+    .position({ x, y });
   }
 
   @Builder
@@ -409,47 +467,114 @@ export struct ReaderAppearanceFullPanel {
         .fontSize(10)
         .lineHeight(14)
         .fontColor(TOK_READ_INK)
-        .position({ x: 17, y: 10 });
+        .position({ x: 8, y: index === 0 ? 9 : 9.5 });
 
-      Text(this.metricValue(metric))
-        .width(48)
-        .height(14)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(10)
-        .lineHeight(14)
-        .fontColor(TOK_READ_INK)
-        .textAlign(TextAlign.Center)
-        .position({ x: 216, y: 10 });
-
-      this.stepHitTarget(metric, -1, 174);
-      this.stepHitTarget(metric, 1, 254);
+      Row({ space: 4 }) {
+        this.stepButton(metric, -1);
+        Text(this.metricValue(metric))
+          .width(42)
+          .height(13)
+          .fontFamily('ReaderInter')
+          .fontWeight(FontWeight.Bold)
+          .fontSize(11)
+          .fontColor(TOK_READ_INK)
+          .textAlign(TextAlign.Center);
+        this.stepButton(metric, 1);
+      }
+      .width(110)
+      .height(28)
+      .alignItems(VerticalAlign.Center)
+      .position({ x: this.stepperRowWidth() - 118, y: 3 });
     }
-    .width(312)
+    .width(this.stepperRowWidth())
     .height(34)
-    .position({ x: 0, y: index * 36 });
+    .border({ width: { top: index === 0 ? 0 : TOK_BORDER_W }, color: TOK_LINE })
+    .position({ x: 9, y: 2 + index * 34 });
   }
 
   @Builder
-  private stepHitTarget(metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection, x: number) {
+  private stepButton(metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection) {
     Stack({ alignContent: Alignment.Center }) {
       Text(direction < 0 ? '-' : '+')
         .width(24)
         .height(28)
         .backgroundColor(TOK_SURFACE_PANEL_SOFT)
         .borderRadius(8)
-        .fontFamily('ReaderNotoSansSC')
+        .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Bold)
         .fontSize(10)
         .lineHeight(14)
         .fontColor(TOK_READ_INK)
         .textAlign(TextAlign.Center);
     }
-    .width(44)
-    .height(44)
-    .position({ x, y: -5 })
+    .width(30)
+    .height(28)
     .accessibilityText(`${this.metricLabel(metric)}${direction < 0 ? '减小' : '增大'}`)
     .onClick((): void => this.onMetricStep(metric, direction));
+  }
+
+  private sheetWidth(): number {
+    return this.isTablet ? 720 : 364;
+  }
+
+  private sheetHeight(): number {
+    return this.isTablet ? 852 : 840;
+  }
+
+  private headerWidth(): number {
+    return this.isTablet ? 694 : 338;
+  }
+
+  private viewportWidth(): number {
+    return this.isTablet ? 694 : 338;
+  }
+
+  private viewportHeight(): number {
+    return this.isTablet ? 834 : 772;
+  }
+
+  private contentHeight(): number {
+    return this.isTablet ? 832 : 769.375;
+  }
+
+  private handleX(): number {
+    return this.isTablet ? 489 : 134;
+  }
+
+  private sectionWidth(): number {
+    return this.isTablet ? 672 : 316;
+  }
+
+  private sectionInnerWidth(): number {
+    return this.isTablet ? 668 : 312;
+  }
+
+  private fullCardWidth(): number {
+    return this.isTablet ? 162.5 : 73.5;
+  }
+
+  private fullCardStride(): number {
+    return this.isTablet ? 168.5 : 79.5;
+  }
+
+  private indentRowWidth(): number {
+    return this.isTablet ? 648 : 292;
+  }
+
+  private indentOptionActive(value: string): boolean {
+    return value === this.snapshot.indent;
+  }
+
+  private selectRowWidth(): number {
+    return this.isTablet ? 318 : 140;
+  }
+
+  private stepperPanelWidth(): number {
+    return this.isTablet ? 666 : 310;
+  }
+
+  private stepperRowWidth(): number {
+    return this.isTablet ? 648 : 292;
   }
 
   private themeIds(): ReaderAppearanceTheme[] {
@@ -461,18 +586,28 @@ export struct ReaderAppearanceFullPanel {
   }
 
   private isActiveFont(fontId: string): boolean {
-    return fontId === 'serif' && this.snapshot.font === 'serif';
+    return fontId === this.snapshot.font;
+  }
+
+  private isSelectableFont(fontId: string): boolean {
+    return fontId === 'system' || fontId === 'serif' || fontId === 'sans' || fontId === 'lxgwWenKai';
   }
 
   private selectEnabled(kind: string): boolean {
-    return kind === 'indent' || kind === 'alignment';
+    return kind === 'indent' || kind === 'alignment' || kind === 'language';
   }
 
   private handleSelectRequest(kind: string): void {
     if (kind === 'indent') {
-      this.onIndentRequest(this.snapshot.indent);
+      const next: ReaderAppearanceIndent = this.snapshot.indent === 'none' ? 'single' :
+        (this.snapshot.indent === 'single' ? 'firstLine' : 'none');
+      this.onIndentRequest(next);
     } else if (kind === 'alignment') {
       this.onAlignmentRequest(this.snapshot.alignment);
+    } else if (kind === 'language') {
+      const next: ReaderChineseConversionMode = this.chineseConversionMode === 'none' ? 't2s' :
+        (this.chineseConversionMode === 't2s' ? 's2t' : 'none');
+      this.onChineseConversionChange(next);
     }
   }
 
@@ -486,28 +621,35 @@ export struct ReaderAppearanceFullPanel {
     if (kind === 'pageTurn') {
       return '翻页动画';
     }
-    return '文字对齐';
+    return '文字两端对齐';
   }
 
   private selectValue(kind: string): string {
     if (kind === 'indent') {
-      return this.snapshot.indent === 'none' ? '无' : '首行';
+      if (this.snapshot.indent === 'none') {
+        return '无';
+      }
+      return this.snapshot.indent === 'single' ? '单字' : '双字';
     }
     if (kind === 'language') {
-      return '简体';
+      if (this.chineseConversionMode === 'none') {
+        return '原文';
+      }
+      return this.chineseConversionMode === 't2s' ? '繁转简' : '简转繁';
     }
     if (kind === 'pageTurn') {
-      return '无动画';
+      // Figma `1150:10317` displays the approved selector value `平移`.
+      // The selector remains disabled until the separate page-turn runtime is
+      // admitted; keeping its visible skeleton source-exact does not claim
+      // that this P1 appearance slice implements that runtime.
+      return '平移';
     }
     return this.snapshot.alignment === 'justify' ? '开启' : '关闭';
   }
 
   private selectAccessibilityText(kind: string): string {
-    if (kind === 'language') {
-      return '简繁转换暂不可用';
-    }
     if (kind === 'pageTurn') {
-      return '当前仅支持无动画翻页';
+      return '平移翻页设计项暂未接通';
     }
     return `${this.selectLabel(kind)}，当前${this.selectValue(kind)}`;
   }
@@ -527,15 +669,15 @@ export struct ReaderAppearanceFullPanel {
 
   private metricValue(metric: ReaderAppearanceMetric): string {
     if (metric === 'fontSize') {
-      return `${this.snapshot.fontSize}px`;
+      return `${this.snapshot.fontSize}`;
     }
     if (metric === 'lineHeightMultiplier') {
       return this.snapshot.lineHeightMultiplier.toFixed(2);
     }
     if (metric === 'paragraphSpacing') {
-      return `${this.snapshot.paragraphSpacing}px`;
+      return `${this.snapshot.paragraphSpacing}`;
     }
-    return `${this.snapshot.letterSpacing}px`;
+    return `${this.snapshot.letterSpacing}`;
   }
 
   private themeSummary(): string {
@@ -615,8 +757,8 @@ export struct ReaderAppearanceFullPanel {
       return '思源宋体';
     }
     if (fontId === 'lxgwWenKai') {
-      return '霞鹜文楷';
+      return '文楷 Lite';
     }
-    return '+ 导入';
+    return '导入';
   }
 }

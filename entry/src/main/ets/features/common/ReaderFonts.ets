@@ -20,4 +20,8 @@ export function registerReaderFonts(font: Font): void {
     familyName: 'ReaderNotoSansSC',
     familySrc: $rawfile('NotoSansSC-VF.otf'),
   });
+  font.registerFont({
+    familyName: 'ReaderLXGWWenKaiLite',
+    familySrc: $rawfile('LXGWWenKaiLite-Regular.ttf'),
+  });
 }

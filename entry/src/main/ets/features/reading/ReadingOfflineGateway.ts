@@ -21,12 +21,21 @@ type OfflineRequestGuard = () => boolean;
 type CacheChapterProjection = {
   chapterIndex: number;
   state: LocalReadingDownloadState;
+  cachedBytes: number;
 };
 
 type CacheChapterMaterializationLease = {
   chapterIndex: number;
   token: string;
 };
+
+export type ReadingOfflineBookProgress = {
+  completedChapters: number;
+  totalChapters: number;
+  entries: LocalReadingTocEntry[];
+};
+
+const READER_OFFLINE_BOOK_CHUNK_SIZE = 20;
 
 /**
  * Feature orchestration over Core's existing durable download queue.
@@ -50,15 +59,17 @@ export class ReadingOfflineGateway {
     isCurrent?: OfflineRequestGuard,
   ): Promise<LocalReadingTocEntry[]> {
     const statuses = await this.loadCoreStatuses(session, isCurrent);
+    const stateByChapter = new Map<number, LocalReadingDownloadState>();
+    for (const status of statuses) {
+      // A failed/cancelled image materialization must not hide the already
+      // durable text body. Core remains the byte-level truth; `cached` means
+      // text is readable while external images may still need a retry.
+      stateByChapter.set(status.chapterIndex,
+        status.cachedBytes > 0 && status.state !== 'completed' ? 'cached' : status.state);
+    }
     const entries: LocalReadingTocEntry[] = [];
     for (const tocEntry of session.entries) {
-      let state: LocalReadingDownloadState = 'missing';
-      for (const status of statuses) {
-        if (status.chapterIndex === tocEntry.index) {
-          state = status.state;
-          break;
-        }
-      }
+      let state: LocalReadingDownloadState = stateByChapter.get(tocEntry.index) ?? 'missing';
       if (state === 'completed' &&
         this.runtime.isOfflineImageChapterMaterialized !== undefined) {
         this.assertCurrent(isCurrent);
@@ -87,6 +98,36 @@ export class ReadingOfflineGateway {
     return this.prefetchRange(session, chapterIndex, chapterIndex + 1, isCurrent);
   }
 
+  /**
+   * Resumes a whole-book request in bounded slices while Core remains the only
+   * durable queue and byte store. Re-entering this method is safe: Core skips
+   * bodies that are already durable and returns fresh materialization leases
+   * only for the chapters that still need Host image work.
+   */
+  async prefetchBook(
+    session: RemoteReadingSession,
+    isCurrent?: OfflineRequestGuard,
+    onProgress?: (progress: ReadingOfflineBookProgress) => void,
+  ): Promise<LocalReadingTocEntry[]> {
+    const totalChapters = session.entries.length;
+    if (totalChapters === 0) {
+      return this.loadProjection(session, isCurrent);
+    }
+    let projection: LocalReadingTocEntry[] = [];
+    for (let startInclusive = 0; startInclusive < totalChapters;
+      startInclusive += READER_OFFLINE_BOOK_CHUNK_SIZE) {
+      const endExclusive = Math.min(totalChapters, startInclusive + READER_OFFLINE_BOOK_CHUNK_SIZE);
+      projection = await this.prefetchRange(session, startInclusive, endExclusive, isCurrent);
+      this.assertCurrent(isCurrent);
+      onProgress?.({
+        completedChapters: endExclusive,
+        totalChapters,
+        entries: projection,
+      });
+    }
+    return projection;
+  }
+
   async prefetchRange(
     session: RemoteReadingSession,
     startInclusive: number,
@@ -94,7 +135,6 @@ export class ReadingOfflineGateway {
     isCurrent?: OfflineRequestGuard,
   ): Promise<LocalReadingTocEntry[]> {
     this.assertRange(session, startInclusive, endExclusive);
-    this.requireImagePersistenceCapabilities();
     this.assertCurrent(isCurrent);
     const result = await this.runtime.request('cache.book.prefetch', {
       sourceId: session.identity.sourceId,
@@ -116,12 +156,17 @@ export class ReadingOfflineGateway {
         const chapter = await this.remote.loadChapter(session, materialization.chapterIndex, isCurrent);
         this.assertCurrent(isCurrent);
         const resources = this.imageResources(chapter);
+        if (resources.length > 0) {
+          this.requireImagePersistenceCapabilities();
+        }
         for (const resource of resources) {
           await this.runtime.prefetchReadingImage!(resource, isCurrent);
           this.assertCurrent(isCurrent);
         }
-        await this.runtime.markOfflineImageChapterComplete!(this.chapterIdentity(chapter), resources);
-        this.assertCurrent(isCurrent);
+        if (this.runtime.markOfflineImageChapterComplete !== undefined) {
+          await this.runtime.markOfflineImageChapterComplete(this.chapterIdentity(chapter), resources);
+          this.assertCurrent(isCurrent);
+        }
       } catch (error) {
         const failure = normalizeReadingOfflineMaterializationError(error as Error);
         try {
@@ -137,7 +182,14 @@ export class ReadingOfflineGateway {
             `${failure.message}; Core materialization failure report failed: ${(reportError as Error).message}`,
           );
         }
-        throw failure;
+        if (failure.code === 'cancelled') {
+          throw failure;
+        }
+        // The Core prefetch already made the chapter body durable. Keep the
+        // download usable as `cached` and let a later user retry complete L2
+        // images instead of promoting an image failure to a text failure.
+        console.warn(`ReadingOfflineGateway image materialization incomplete: ${failure.message}`);
+        continue;
       }
       await this.reportMaterialization(session, materialization, 'completed');
     }
@@ -199,7 +251,11 @@ export class ReadingOfflineGateway {
     for (const rawValue of rawChapters) {
       const raw = this.requireObject(rawValue, 'cache.book.status chapter');
       const chapterIndex = this.requireNonNegativeInteger(raw['chapterIndex'], 'chapterIndex');
-      statuses.push({ chapterIndex, state: this.requireDownloadState(raw['state']) });
+      statuses.push({
+        chapterIndex,
+        state: this.requireDownloadState(raw['state']),
+        cachedBytes: this.requireNonNegativeInteger(raw['cachedBytes'] ?? 0, 'cachedBytes'),
+      });
     }
     return statuses;
   }

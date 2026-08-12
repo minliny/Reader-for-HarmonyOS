@@ -33,7 +33,15 @@ const media = {
   async close() { this.calls.push('close'); },
   emit(action) { this.listener?.({ type: 'mediaControl', action }); },
 };
-const router = new HarmonyTtsHostRouter(system, http, media);
+const background = {
+  calls: [],
+  active: false,
+  async activate() { this.calls.push('activate'); this.active = true; return true; },
+  async deactivate() { this.calls.push('deactivate'); this.active = false; },
+  isActive() { return this.active; },
+  async close() { this.calls.push('close'); this.active = false; },
+};
+const router = new HarmonyTtsHostRouter(system, http, media, background);
 const events = [];
 router.setEventListener(event => events.push(event));
 
@@ -45,6 +53,11 @@ http.emit({ type: 'start', requestId: 'http-1' });
 assert.deepEqual(events, [{ type: 'start', requestId: 'http-1' }]);
 assert.ok(http.calls.includes('activate:false'));
 assert.ok(http.calls.includes('speak:http-1'));
+assert.equal(router.isBackgroundPlaybackActive(), true);
+assert.ok(background.calls.includes('activate'));
+await router.deactivateAudioSession();
+assert.equal(router.isBackgroundPlaybackActive(), false);
+assert.ok(background.calls.includes('deactivate'));
 router.publishPlaybackState('playing');
 assert.ok(media.calls.includes('publish:playing'));
 media.emit('next');
@@ -57,6 +70,7 @@ await router.close();
 assert.ok(system.calls.includes('close'));
 assert.ok(http.calls.includes('close'));
 assert.ok(media.calls.includes('close'));
+assert.ok(background.calls.includes('close'));
 
 const httpHostSource = await readFile(
   new URL('../entry/src/main/ets/app/HarmonyHttpTtsHost.ts', import.meta.url),
@@ -66,14 +80,36 @@ assert.match(httpHostSource, /gateway\.buildRequest\(configId, request\.text\)/)
 assert.match(httpHostSource, /expectDataType: http\.HttpDataType\.ARRAY_BUFFER/);
 assert.match(httpHostSource, /HTTP_TTS_MAX_AUDIO_BYTES/);
 assert.match(httpHostSource, /request\.destroy\(\)/);
+assert.match(httpHostSource, /private activeRequest: http\.HttpRequest \| null = null/);
+assert.match(httpHostSource, /private rejectActiveRequest:/);
+assert.match(httpHostSource, /this\.cancelActiveRequest\('Reader HttpTTS audio request stopped'\)/);
+assert.match(httpHostSource, /const response = await Promise\.race\(\[/);
+assert.match(httpHostSource, /if \(this\.activeRequest === request\)/);
 assert.match(httpHostSource, /player\.dataSrc = this\.createDataSource\(bytes\)/);
 assert.match(httpHostSource, /fileSize: bytes\.length/);
 assert.match(httpHostSource, /target\.set\(bytes\.subarray\(start, start \+ count\), 0\)/);
 assert.match(httpHostSource, /generation !== this\.speakGeneration/);
+assert.match(
+  httpHostSource,
+  /gateway\.buildRequest\(configId, request\.text\);\s+if \(this\.closed \|\| generation !== this\.speakGeneration\) return;/,
+  'a stop during descriptor construction must not start a late audio request',
+);
 assert.doesNotMatch(httpHostSource, /createMediaSourceWithUrl/);
 assert.match(httpHostSource, /await player\.prepare\(\)/);
 assert.match(httpHostSource, /await player\.play\(\)/);
 assert.match(httpHostSource, /type: 'complete', requestId, completion: 'audio'/);
 assert.match(httpHostSource, /await player\.release\(\)/);
+
+const backgroundSource = await readFile(
+  new URL('../entry/src/main/ets/app/HarmonyTtsBackgroundSession.ts', import.meta.url),
+  'utf8',
+);
+assert.match(backgroundSource, /backgroundTaskManager\.startBackgroundRunning\([\s\S]*?\['audioPlayback'\]/);
+assert.match(backgroundSource, /backgroundTaskManager\.stopBackgroundRunning\(this\.context\)/);
+assert.match(backgroundSource, /wantAgent\.OperationType\.START_ABILITY/);
+assert.match(backgroundSource, /this\.context\.abilityInfo\.bundleName/);
+assert.match(backgroundSource, /canIUse\('SystemCapability\.ResourceSchedule\.BackgroundTaskManager\.ContinuousTask'\)/);
+assert.doesNotMatch(backgroundSource, /ReaderTtsSessionCoordinator|tts\.queue|ReaderCoreRuntime/,
+  'the platform lease must not become another TTS state machine');
 
 console.log('Harmony TTS Host router and HttpTTS transport contract: PASS');

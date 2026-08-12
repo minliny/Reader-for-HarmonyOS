@@ -52,9 +52,11 @@ export struct LocalBookDetail {
   @Prop book: ReadingBookDetail;
   @Prop toc: LocalReadingTocEntry[] = [];
   @Prop isTablet: boolean = false;
+  @Prop sourceSwitchEnabled: boolean = false;
   onContinue: () => void = (): void => {};
   onSelectChapter: (index: number) => void = (_index: number): void => {};
   onOpenDirectory: () => void = (): void => {};
+  onSwitchSource: () => void = (): void => {};
   onBack: () => void = (): void => {};
 
   aboutToAppear(): void {
@@ -193,7 +195,15 @@ export struct LocalBookDetail {
           .width(52)
           .height(18)
           .borderRadius(999)
-          .backgroundColor(TOK_SETTING_ACTION_BG);
+          .backgroundColor(TOK_SETTING_ACTION_BG)
+          .opacity(this.sourceSwitchEnabled ? 1 : 0.4)
+          .enabled(this.sourceSwitchEnabled)
+          .accessibilityText(this.sourceSwitchEnabled ? '更换书源' : '本地书籍暂不支持更换书源')
+          .onClick((): void => {
+            if (this.sourceSwitchEnabled) {
+              this.onSwitchSource();
+            }
+          });
         }
         .width('100%')
         .height(18)

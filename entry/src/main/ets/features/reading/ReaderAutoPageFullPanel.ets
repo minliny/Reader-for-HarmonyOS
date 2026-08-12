@@ -22,6 +22,58 @@ import {
   READER_AUTO_PAGE_FULL_MIN_SECONDS,
   READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS,
 } from './ReaderAutoPageFullState';
+import {
+  READER_AUTO_PAGE_ADDED_CONTROL_TITLE_TRANSLATE_Y,
+  READER_AUTO_PAGE_ADDED_DETAILS_TITLE_TRANSLATE_Y,
+  READER_AUTO_PAGE_ADDED_FOLLOW_HIGHLIGHT_TRANSLATE_Y,
+  READER_AUTO_PAGE_ADDED_HEADER_TRANSLATE_Y,
+  READER_AUTO_PAGE_ADDED_TIMER_TRANSLATE_Y,
+  READER_AUTO_PAGE_COLLAPSED_BACK_TRANSLATE_Y,
+  READER_AUTO_PAGE_COLLAPSED_CHAPTER_WIDTH,
+  READER_AUTO_PAGE_COLLAPSED_PLAY_HEIGHT,
+  READER_AUTO_PAGE_COLLAPSED_PLAY_WIDTH,
+  READER_AUTO_PAGE_COLLAPSED_SPEED_HEIGHT,
+  READER_AUTO_PAGE_COLLAPSED_SPEED_WIDTH,
+  READER_AUTO_PAGE_CONTROL_SECTION_HEIGHT,
+  READER_AUTO_PAGE_DETAILS_SECTION_HEIGHT,
+  READER_AUTO_PAGE_DETAILS_SECTION_Y,
+  READER_AUTO_PAGE_EXPANDED_CHAPTER_WIDTH,
+  READER_AUTO_PAGE_EXPANDED_PLAY_HEIGHT,
+  READER_AUTO_PAGE_EXPANDED_PLAY_WIDTH,
+  READER_AUTO_PAGE_EXPANDED_SPEED_HEIGHT,
+  READER_AUTO_PAGE_EXPANDED_SPEED_WIDTH,
+  READER_AUTO_PAGE_FULL_BODY_HEIGHT,
+  READER_AUTO_PAGE_FULL_BODY_WIDTH,
+  READER_AUTO_PAGE_FULL_BODY_X,
+  READER_AUTO_PAGE_FULL_BODY_Y,
+  READER_AUTO_PAGE_FULL_CONTENT_HEIGHT,
+  READER_AUTO_PAGE_FULL_CONTENT_WIDTH,
+  READER_AUTO_PAGE_FULL_CONTENT_X,
+  READER_AUTO_PAGE_FULL_CONTENT_Y,
+  READER_AUTO_PAGE_FULL_GRABBER_HEIGHT,
+  READER_AUTO_PAGE_FULL_GRABBER_WIDTH,
+  READER_AUTO_PAGE_FULL_GRABBER_X,
+  READER_AUTO_PAGE_FULL_GRABBER_Y,
+  READER_AUTO_PAGE_FULL_HEADER_WIDTH,
+  READER_AUTO_PAGE_FULL_HEADER_X,
+  READER_AUTO_PAGE_FULL_HEADER_Y,
+  READER_AUTO_PAGE_FULL_HEIGHT,
+  READER_AUTO_PAGE_FULL_WIDTH,
+  READER_AUTO_PAGE_PERSISTENT_NEXT_TRANSLATE_X,
+  READER_AUTO_PAGE_PERSISTENT_NEXT_TRANSLATE_Y,
+  READER_AUTO_PAGE_PERSISTENT_PLAY_LABEL_TRANSLATE_X,
+  READER_AUTO_PAGE_PERSISTENT_PLAY_LABEL_TRANSLATE_Y,
+  READER_AUTO_PAGE_PERSISTENT_PLAY_TRANSLATE_X,
+  READER_AUTO_PAGE_PERSISTENT_PLAY_TRANSLATE_Y,
+  READER_AUTO_PAGE_PERSISTENT_PREVIOUS_TRANSLATE_X,
+  READER_AUTO_PAGE_PERSISTENT_PREVIOUS_TRANSLATE_Y,
+  READER_AUTO_PAGE_PERSISTENT_SPEED_TRANSLATE_X,
+  READER_AUTO_PAGE_PERSISTENT_SPEED_TRANSLATE_Y,
+  READER_AUTO_PAGE_PERSISTENT_STOP_TRANSLATE_X,
+  READER_AUTO_PAGE_PERSISTENT_STOP_TRANSLATE_Y,
+  READER_AUTO_PAGE_TIMER_SECTION_HEIGHT,
+  READER_AUTO_PAGE_TIMER_SECTION_Y,
+} from './ReaderAutoPageMotionGeometry';
 
 /**
  * Figma Full Auto Page sheet / Phone only.
@@ -48,7 +100,7 @@ export struct ReaderAutoPageFullPanel {
   @Prop timerMinutes: number = 15;
   @Prop timerSeconds: number = 0;
   @Prop speedSeconds: number = 8;
-  @Prop followHighlight: boolean = true;
+  @Prop followHighlight: boolean = false;
   /** True only while mounted inside ReaderControlPanel's unified sheet actor. */
   @Prop embeddedInUnifiedSurface: boolean = false;
   /** False is the exact Quick endpoint; true is the exact Phone Full endpoint. */
@@ -80,11 +132,11 @@ export struct ReaderAutoPageFullPanel {
   private phonePanel() {
     Stack({ alignContent: Alignment.TopStart }) {
       Row()
-        .width(42)
-        .height(4)
+        .width(READER_AUTO_PAGE_FULL_GRABBER_WIDTH)
+        .height(READER_AUTO_PAGE_FULL_GRABBER_HEIGHT)
         .backgroundColor(TOK_READ_HANDLE)
         .borderRadius(999)
-        .position({ x: 160, y: 9 });
+        .position({ x: READER_AUTO_PAGE_FULL_GRABBER_X, y: READER_AUTO_PAGE_FULL_GRABBER_Y });
 
       this.header();
 
@@ -94,24 +146,24 @@ export struct ReaderAutoPageFullPanel {
       this.collapsedBackActor();
 
       Row()
-        .width(336)
-        .height(665)
+        .width(READER_AUTO_PAGE_FULL_BODY_WIDTH)
+        .height(READER_AUTO_PAGE_FULL_BODY_HEIGHT)
         .backgroundColor(TOK_SURFACE_PANEL)
         .border({ width: TOK_BORDER_W, color: TOK_LINE })
         .borderRadius(12)
-        .position({ x: 14, y: 58 });
+        .position({ x: READER_AUTO_PAGE_FULL_BODY_X, y: READER_AUTO_PAGE_FULL_BODY_Y });
 
       Stack({ alignContent: Alignment.TopStart }) {
         this.controlSection();
         this.timerSection();
         this.detailsSection();
       }
-      .width(314)
-      .height(435.17)
-      .position({ x: 25, y: 69 });
+      .width(READER_AUTO_PAGE_FULL_CONTENT_WIDTH)
+      .height(READER_AUTO_PAGE_FULL_CONTENT_HEIGHT)
+      .position({ x: READER_AUTO_PAGE_FULL_CONTENT_X, y: READER_AUTO_PAGE_FULL_CONTENT_Y });
     }
-    .width(364)
-    .height(736)
+    .width(READER_AUTO_PAGE_FULL_WIDTH)
+    .height(READER_AUTO_PAGE_FULL_HEIGHT)
     .backgroundColor(this.embeddedInUnifiedSurface ? Color.Transparent : TOK_READ_SURFACE)
     .border({
       width: this.embeddedInUnifiedSurface ? 0 : TOK_BORDER_W,
@@ -157,12 +209,12 @@ export struct ReaderAutoPageFullPanel {
         .accessibilityText('收起自动翻页完整控制')
         .onClick((): void => this.onCollapse());
     }
-    .width(336)
+    .width(READER_AUTO_PAGE_FULL_HEADER_WIDTH)
     .height(30)
     .alignItems(VerticalAlign.Center)
-    .position({ x: 14, y: 20 })
+    .position({ x: READER_AUTO_PAGE_FULL_HEADER_X, y: READER_AUTO_PAGE_FULL_HEADER_Y })
     .opacity(this.addedActorOpacity())
-    .translate({ y: this.addedActorTranslateY(18) });
+    .translate({ y: this.addedActorTranslateY(READER_AUTO_PAGE_ADDED_HEADER_TRANSLATE_Y) });
   }
 
   @Builder
@@ -185,7 +237,7 @@ export struct ReaderAutoPageFullPanel {
     .alignItems(VerticalAlign.Center)
     .position({ x: 23.44, y: 41 })
     .opacity(this.outgoingActorOpacity())
-    .translate({ y: this.outgoingActorTranslateY(14) })
+    .translate({ y: this.outgoingActorTranslateY(READER_AUTO_PAGE_COLLAPSED_BACK_TRANSLATE_Y) })
     .enabled(false)
     .accessibilityText('返回阅读控制首页');
   }
@@ -219,7 +271,7 @@ export struct ReaderAutoPageFullPanel {
       .height(14.4)
       .position({ x: 4, y: 10 })
       .opacity(this.addedActorOpacity())
-      .translate({ y: this.addedActorTranslateY(14) });
+      .translate({ y: this.addedActorTranslateY(READER_AUTO_PAGE_ADDED_CONTROL_TITLE_TRANSLATE_Y) });
 
       Stack({ alignContent: Alignment.TopStart }) {
         this.chapterButton(true);
@@ -233,8 +285,8 @@ export struct ReaderAutoPageFullPanel {
       .clip(true)
       .position({ x: 4, y: 32.4 });
     }
-    .width(314)
-    .height(104.39)
+    .width(READER_AUTO_PAGE_FULL_CONTENT_WIDTH)
+    .height(READER_AUTO_PAGE_CONTROL_SECTION_HEIGHT)
     .position({ x: 0, y: 0 });
   }
 
@@ -276,7 +328,8 @@ export struct ReaderAutoPageFullPanel {
     .position({ x: previous ? 9.75 : 224.25, y: 5 })
     .translate({
       x: this.persistentChapterTranslateX(previous),
-      y: this.persistentActorTranslateY(-9.841),
+      y: this.persistentActorTranslateY(previous ? READER_AUTO_PAGE_PERSISTENT_PREVIOUS_TRANSLATE_Y :
+        READER_AUTO_PAGE_PERSISTENT_NEXT_TRANSLATE_Y),
     })
     .accessibilityText(previous ? '上一章' : '下一章')
     .onClick((): void => {
@@ -313,8 +366,8 @@ export struct ReaderAutoPageFullPanel {
         .textAlign(TextAlign.Center)
         .maxLines(1)
         .translate({
-          x: this.persistentActorTranslateX(-31.492),
-          y: this.persistentActorTranslateY(-2.5),
+          x: this.persistentActorTranslateX(READER_AUTO_PAGE_PERSISTENT_PLAY_LABEL_TRANSLATE_X),
+          y: this.persistentActorTranslateY(READER_AUTO_PAGE_PERSISTENT_PLAY_LABEL_TRANSLATE_Y),
         });
     }
     .width(this.persistentPlayWidth())
@@ -322,8 +375,8 @@ export struct ReaderAutoPageFullPanel {
     .alignItems(HorizontalAlign.Center)
     .position({ x: 105.49, y: 5 })
     .translate({
-      x: this.persistentActorTranslateX(5.058),
-      y: this.persistentActorTranslateY(-7.341),
+      x: this.persistentActorTranslateX(READER_AUTO_PAGE_PERSISTENT_PLAY_TRANSLATE_X),
+      y: this.persistentActorTranslateY(READER_AUTO_PAGE_PERSISTENT_PLAY_TRANSLATE_Y),
     })
     .accessibilityText(this.status === 'running' ? '暂停自动翻页' :
       (this.status === 'paused' ? '继续自动翻页' : '开始自动翻页'))
@@ -342,8 +395,8 @@ export struct ReaderAutoPageFullPanel {
       .height(24)
       .borderRadius(12)
       .translate({
-        x: this.persistentActorTranslateX(-33.106),
-        y: this.persistentActorTranslateY(-9.841),
+        x: this.persistentActorTranslateX(READER_AUTO_PAGE_PERSISTENT_STOP_TRANSLATE_X),
+        y: this.persistentActorTranslateY(READER_AUTO_PAGE_PERSISTENT_STOP_TRANSLATE_Y),
       });
       Text('停止')
         .width(18)
@@ -357,8 +410,8 @@ export struct ReaderAutoPageFullPanel {
         .textAlign(TextAlign.Center)
         .maxLines(1)
         .translate({
-          x: this.persistentActorTranslateX(-33.106),
-          y: this.persistentActorTranslateY(-9.841),
+          x: this.persistentActorTranslateX(READER_AUTO_PAGE_PERSISTENT_STOP_TRANSLATE_X),
+          y: this.persistentActorTranslateY(READER_AUTO_PAGE_PERSISTENT_STOP_TRANSLATE_Y),
         });
     }
     .width(24)
@@ -446,12 +499,12 @@ export struct ReaderAutoPageFullPanel {
       .borderRadius(10)
       .position({ x: 4, y: 33.39 });
     }
-    .width(314)
-    .height(181.39)
+    .width(READER_AUTO_PAGE_FULL_CONTENT_WIDTH)
+    .height(READER_AUTO_PAGE_TIMER_SECTION_HEIGHT)
     .border({ width: { top: TOK_BORDER_W }, color: TOK_LINE })
-    .position({ x: 0, y: 104.39 })
+    .position({ x: 0, y: READER_AUTO_PAGE_TIMER_SECTION_Y })
     .opacity(this.addedActorOpacity())
-    .translate({ y: this.addedActorTranslateY(22) });
+    .translate({ y: this.addedActorTranslateY(READER_AUTO_PAGE_ADDED_TIMER_TRANSLATE_Y) });
   }
 
   @Builder
@@ -534,15 +587,15 @@ export struct ReaderAutoPageFullPanel {
       .height(14.4)
       .position({ x: 4, y: 11 })
       .opacity(this.addedActorOpacity())
-      .translate({ y: this.addedActorTranslateY(18) });
+      .translate({ y: this.addedActorTranslateY(READER_AUTO_PAGE_ADDED_DETAILS_TITLE_TRANSLATE_Y) });
 
       this.speedRow();
       this.followHighlightRow();
     }
-    .width(314)
-    .height(149.39)
+    .width(READER_AUTO_PAGE_FULL_CONTENT_WIDTH)
+    .height(READER_AUTO_PAGE_DETAILS_SECTION_HEIGHT)
     .border({ width: { top: TOK_BORDER_W }, color: TOK_LINE })
-    .position({ x: 0, y: 285.78 });
+    .position({ x: 0, y: READER_AUTO_PAGE_DETAILS_SECTION_Y });
   }
 
   @Builder
@@ -635,8 +688,8 @@ export struct ReaderAutoPageFullPanel {
     .borderRadius(6)
     .position({ x: 4, y: 33.39 })
     .translate({
-      x: this.persistentActorTranslateX(-5.45),
-      y: this.persistentActorTranslateY(-208.623),
+      x: this.persistentActorTranslateX(READER_AUTO_PAGE_PERSISTENT_SPEED_TRANSLATE_X),
+      y: this.persistentActorTranslateY(READER_AUTO_PAGE_PERSISTENT_SPEED_TRANSLATE_Y),
     });
   }
 
@@ -665,8 +718,7 @@ export struct ReaderAutoPageFullPanel {
       .margin({ left: 8 })
       .backgroundColor(this.followHighlight ? TOK_READ_PRIMARY : TOK_SURFACE_PANEL_SOFT)
       .borderRadius(999)
-      .accessibilityText(`跟随高亮，${this.followHighlight ? '已开启' : '已关闭'}`)
-      .onClick((): void => this.onFollowHighlightChange(!this.followHighlight));
+      .accessibilityText('跟随高亮，当前能力未接入，已关闭');
     }
     .width(306)
     .height(36)
@@ -676,8 +728,9 @@ export struct ReaderAutoPageFullPanel {
     .borderRadius(6)
     .alignItems(VerticalAlign.Center)
     .position({ x: 4, y: 103.39 })
-    .opacity(this.addedActorOpacity())
-    .translate({ y: this.addedActorTranslateY(18) });
+    .enabled(false)
+    .opacity(this.addedActorOpacity() * 0.55)
+    .translate({ y: this.addedActorTranslateY(READER_AUTO_PAGE_ADDED_FOLLOW_HIGHLIGHT_TRANSLATE_Y) });
   }
 
   // The values below are copied from the authoritative paired timelines:
@@ -708,27 +761,31 @@ export struct ReaderAutoPageFullPanel {
   }
 
   private persistentChapterWidth(): number {
-    return this.motionExpanded ? 72 : 62;
+    return this.motionExpanded ? READER_AUTO_PAGE_EXPANDED_CHAPTER_WIDTH :
+      READER_AUTO_PAGE_COLLAPSED_CHAPTER_WIDTH;
   }
 
   private persistentChapterTranslateX(previous: boolean): number {
-    return this.persistentActorTranslateX(previous ? -6.45 : -36.4);
+    return this.persistentActorTranslateX(previous ? READER_AUTO_PAGE_PERSISTENT_PREVIOUS_TRANSLATE_X :
+      READER_AUTO_PAGE_PERSISTENT_NEXT_TRANSLATE_X);
   }
 
   private persistentPlayWidth(): number {
-    return this.motionExpanded ? 95 : 32;
+    return this.motionExpanded ? READER_AUTO_PAGE_EXPANDED_PLAY_WIDTH : READER_AUTO_PAGE_COLLAPSED_PLAY_WIDTH;
   }
 
   private persistentPlayHeight(): number {
-    return this.motionExpanded ? 52 : 32;
+    return this.motionExpanded ? READER_AUTO_PAGE_EXPANDED_PLAY_HEIGHT : READER_AUTO_PAGE_COLLAPSED_PLAY_HEIGHT;
   }
 
   private persistentPageSpeedWidth(): number {
-    return this.motionExpanded ? 306 : 264;
+    return this.motionExpanded ? READER_AUTO_PAGE_EXPANDED_SPEED_WIDTH :
+      READER_AUTO_PAGE_COLLAPSED_SPEED_WIDTH;
   }
 
   private persistentPageSpeedHeight(): number {
-    return this.motionExpanded ? 64 : 32;
+    return this.motionExpanded ? READER_AUTO_PAGE_EXPANDED_SPEED_HEIGHT :
+      READER_AUTO_PAGE_COLLAPSED_SPEED_HEIGHT;
   }
 
   private effectiveSpeedSeconds(): number {

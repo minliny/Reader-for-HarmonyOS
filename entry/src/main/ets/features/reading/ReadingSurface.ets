@@ -1,6 +1,17 @@
 import type { image } from '@kit.ImageKit';
 import { registerReaderFonts } from '../common/ReaderFonts';
-import { TOK_READ_BODY_INK } from '../common/ReaderTokens';
+import {
+  createDefaultReaderAppearanceSnapshot,
+  type ReaderAppearanceSnapshot,
+} from './ReaderAppearanceState';
+import {
+  readerAppearanceFontFamily,
+  readerAppearanceLineHeight,
+  readerAppearanceParagraphIndent,
+  readerAppearanceThemeStyle,
+  readerAppearanceUsesJustify,
+  type ReaderAppearanceThemeStyle,
+} from './ReaderAppearanceRenderStyle';
 
 /**
  * Figma-backed static reading body for `15 · Reader 2`:
@@ -82,6 +93,8 @@ export struct ReadingSurface {
   @Prop isTablet: boolean;
   /** Optional host-provided Figma canvas width; 0 fills the containing page. */
   @Prop surfaceWidth: number = 0;
+  /** UI-owned persisted appearance snapshot; no business/content state lives here. */
+  @Prop appearance: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   @Prop ttsHighlightStart: number | undefined = undefined;
   @Prop ttsHighlightEnd: number | undefined = undefined;
 
@@ -95,17 +108,19 @@ export struct ReadingSurface {
       // gradient, highlight, shade. Stack children paint back-to-front, so
       // keep the equivalent order explicit here rather than coalescing the
       // texture with the gradient and accidentally covering it with lighting.
-      Image(this.paperShade())
-        .width('100%')
-        .height('100%')
-        .objectFit(ImageFit.Fill)
-        .interpolation(ImageInterpolation.High);
+      if (this.themeStyle().sourcePaperLighting) {
+        Image(this.paperShade())
+          .width('100%')
+          .height('100%')
+          .objectFit(ImageFit.Fill)
+          .interpolation(ImageInterpolation.High);
 
-      Image(this.paperHighlight())
-        .width('100%')
-        .height('100%')
-        .objectFit(ImageFit.Fill)
-        .interpolation(ImageInterpolation.High);
+        Image(this.paperHighlight())
+          .width('100%')
+          .height('100%')
+          .objectFit(ImageFit.Fill)
+          .interpolation(ImageInterpolation.High);
+      }
 
       Stack() {
       }
@@ -113,16 +128,18 @@ export struct ReadingSurface {
         .height('100%')
         .linearGradient({
           direction: GradientDirection.Bottom,
-          colors: [['#FBF4E9', 0], ['#EFE2D0', 1]],
+          colors: [[this.themeStyle().paperStart, 0], [this.themeStyle().paperEnd, 1]],
         });
 
-      Stack() {
+      if (this.themeStyle().paperTexture) {
+        Stack() {
+        }
+          .width('100%')
+          .height('100%')
+          .backgroundImage(this.paperTexture(), ImageRepeat.XY)
+          .backgroundImageSize({ width: 100, height: 100 })
+          .backgroundImagePosition(Alignment.TopStart);
       }
-        .width('100%')
-        .height('100%')
-        .backgroundImage(this.paperTexture(), ImageRepeat.XY)
-        .backgroundImageSize({ width: 100, height: 100 })
-        .backgroundImagePosition(Alignment.TopStart);
 
       Column({ space: 18 }) {
         if (this.showChapterTitle) {
@@ -132,7 +149,7 @@ export struct ReadingSurface {
             .fontWeight(FontWeight.Bold)
             .fontSize(23)
             .lineHeight(28.75)
-            .fontColor(TOK_READ_BODY_INK)
+            .fontColor(this.themeStyle().ink)
             .textAlign(TextAlign.Center)
             // The static ReadingSurface title track is exactly one Figma
             // line; wrapping would change the measured body origin.
@@ -146,7 +163,7 @@ export struct ReadingSurface {
               // A continuation is not a new semantic paragraph: it must not
               // acquire either a fresh 15.8px gap or a second 2em indent.
               if (index > 0 && fragment.isParagraphStart) {
-                Blank().height(15.8);
+                Blank().height(this.appearance.paragraphSpacing);
               }
               if (fragment.fileUri !== undefined && fragment.fileUri.length > 0) {
                 Image(fragment.fileUri)
@@ -172,7 +189,7 @@ export struct ReadingSurface {
             // Retain the original public input for existing static callers.
             ForEach(this.pageParagraphs, (paragraph: string, index: number) => {
               if (index > 0) {
-                Blank().height(15.8);
+                Blank().height(this.appearance.paragraphSpacing);
               }
               this.fragmentText(new ReadingSurfacePageFragment(`legacy-${index}`, paragraph, true));
             }, (paragraph: string, index: number): string => `${index}:${paragraph}`);
@@ -210,20 +227,22 @@ export struct ReadingSurface {
       }
       if (this.highlightBody(fragment).length > 0) {
         Span(this.highlightBody(fragment))
-          .decoration({ type: TextDecorationType.Underline, color: TOK_READ_BODY_INK });
+          .decoration({ type: TextDecorationType.Underline, color: this.themeStyle().ink });
       }
       if (this.highlightSuffix(fragment).length > 0) {
         Span(this.highlightSuffix(fragment));
       }
     }
       .width('100%')
-      .fontFamily('ReaderNotoSerifSCRegular')
+      .fontFamily(readerAppearanceFontFamily(this.appearance.font))
       .fontWeight(FontWeight.Regular)
-      .fontSize(18)
-      .lineHeight(35.28)
-      .fontColor(TOK_READ_BODY_INK)
-      // Figma's Double indent is 2em: 36px at the supplied 18px body size.
-      .textIndent(fragment.isParagraphStart ? 36 : 0);
+      .fontSize(this.appearance.fontSize)
+      .lineHeight(readerAppearanceLineHeight(this.appearance))
+      .letterSpacing(this.appearance.letterSpacing)
+      .fontColor(this.themeStyle().ink)
+      .textAlign(readerAppearanceUsesJustify(this.appearance.alignment) ? TextAlign.JUSTIFY : TextAlign.Start)
+      .textIndent(fragment.isParagraphStart ?
+        readerAppearanceParagraphIndent(this.appearance.fontSize, this.appearance.indent) : 0);
   }
 
   private highlightPrefix(fragment: ReadingSurfacePageFragment): string {
@@ -279,5 +298,9 @@ export struct ReadingSurface {
   private paperShade(): Resource {
     return this.isTablet ? $r('app.media.reading_paper_tablet_shade') :
       $r('app.media.reading_paper_phone_shade');
+  }
+
+  private themeStyle(): ReaderAppearanceThemeStyle {
+    return readerAppearanceThemeStyle(this.appearance.activeTheme);
   }
 }

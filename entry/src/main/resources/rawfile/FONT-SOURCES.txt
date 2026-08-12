@@ -1,0 +1,21 @@
+Bundled font provenance
+=======================
+
+Inter Variable 4.1
+Source: https://github.com/rsms/inter/tree/v4.1
+File SHA-256: 4989b125924991b90d05b2d16e0e388c48f7d5bb8b30539bbf9c755278d0ccaf
+License: Inter-OFL.txt
+
+Noto Sans SC / Noto Serif SC
+Source family: https://github.com/notofonts/noto-cjk
+NotoSansSC-VF.otf SHA-256: d13ed01ec8aa45d6178999b648e96fb92150683e9f8e2a581f2acf208dcbe44b
+NotoSerifSC-Regular.ttf SHA-256: 9502147ceba7b5bc7fd3415083f6a5d133f22d8f9efb4974d4b85f3a97ea2d3a
+NotoSerifSC-Bold.ttf SHA-256: 3fb07709c24ed05993636d0b137917ea0bae5cf976f157d5e258fd068399a894
+License: Noto-OFL.txt
+
+LXGW WenKai Lite Regular 1.522
+Source: https://github.com/lxgw/LxgwWenKai-Lite/releases/tag/v1.522
+File SHA-256: 140c99ba4e28e817cec49bf82a0c5fcdc4fe633fb9dfda16d0ee8d59a8545f15
+License: LXGWWenKaiLite-OFL.txt
+
+KaiTi and FangSong are not bundled. Their visible UI slots remain disabled.

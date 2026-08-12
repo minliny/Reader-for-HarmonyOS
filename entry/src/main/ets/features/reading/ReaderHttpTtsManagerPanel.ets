@@ -15,13 +15,16 @@ import {
 export struct ReaderHttpTtsManagerPanel {
   @Prop engines: ReaderTtsEngineOption[] = [];
   @Prop selectedEngine: string = 'system';
-  onSelect: (engine: string) => void = (_engine: string): void => {};
-  onPut: (config: ReaderTtsEngineOption) => void = (_config: ReaderTtsEngineOption): void => {};
-  onDelete: (id: number) => void = (_id: number): void => {};
+  onSelect: (engine: string) => Promise<void> = (_engine: string): Promise<void> => Promise.resolve();
+  onPut: (config: ReaderTtsEngineOption) => Promise<void> =
+    (_config: ReaderTtsEngineOption): Promise<void> => Promise.resolve();
+  onDelete: (id: number) => Promise<void> = (_id: number): Promise<void> => Promise.resolve();
 
   @State private draftId: number = -1;
   @State private draftName: string = '';
   @State private draftUrl: string = '';
+  @State private busy: boolean = false;
+  @State private errorText: string = '';
 
   build() {
     Column({ space: 8 }) {
@@ -61,7 +64,8 @@ export struct ReaderHttpTtsManagerPanel {
             .backgroundColor(this.isSelected(engine) ? TOK_READ_PRIMARY : TOK_FIELD_SURFACE)
             .border({ width: TOK_BORDER_W, color: TOK_READ_PRIMARY })
             .borderRadius(6)
-            .onClick((): void => this.onSelect(`http-tts:${engine.id}`));
+            .enabled(!this.busy)
+            .onClick((): void => this.selectEngine(`http-tts:${engine.id}`));
           Text('编辑')
             .width(46)
             .height(28)
@@ -85,7 +89,8 @@ export struct ReaderHttpTtsManagerPanel {
             .backgroundColor(TOK_FIELD_SURFACE)
             .border({ width: TOK_BORDER_W, color: TOK_BORDER })
             .borderRadius(6)
-            .onClick((): void => this.onDelete(engine.id));
+            .enabled(!this.busy)
+            .onClick((): void => this.deleteEngine(engine.id));
         }
         .width('100%')
         .height(40)
@@ -121,6 +126,17 @@ export struct ReaderHttpTtsManagerPanel {
           this.draftUrl = value;
         });
 
+      if (this.errorText.length > 0) {
+        Text(this.errorText)
+          .width('100%')
+          .fontFamily('ReaderNotoSansSC')
+          .fontSize(10)
+          .fontColor('#B93D35')
+          .maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .accessibilityText(`在线 TTS 操作失败：${this.errorText}`);
+      }
+
       Row({ space: 8 }) {
         Text(this.draftId >= 0 ? '保存修改' : '新增配置')
           .layoutWeight(1)
@@ -132,8 +148,8 @@ export struct ReaderHttpTtsManagerPanel {
           .textAlign(TextAlign.Center)
           .backgroundColor(TOK_READ_PRIMARY)
           .borderRadius(6)
-          .enabled(this.canSubmit())
-          .opacity(this.canSubmit() ? 1 : 0.42)
+          .enabled(this.canSubmit() && !this.busy)
+          .opacity(this.canSubmit() && !this.busy ? 1 : 0.42)
           .onClick((): void => this.submit());
         Text('清空')
           .width(64)
@@ -172,20 +188,56 @@ export struct ReaderHttpTtsManagerPanel {
   }
 
   private submit(): void {
-    if (!this.canSubmit()) return;
+    if (!this.canSubmit() || this.busy) return;
     const now = Date.now();
-    this.onPut({
+    const config: ReaderTtsEngineOption = {
       id: this.draftId >= 0 ? this.draftId : now,
       name: this.draftName.trim(),
       url: this.draftUrl.trim(),
       lastUpdateTime: now,
-    });
-    this.clearDraft();
+    };
+    this.busy = true;
+    this.errorText = '';
+    void this.onPut(config)
+      .then((): void => this.clearDraft())
+      .catch((error: Error): void => {
+        this.errorText = error.message;
+      })
+      .finally((): void => {
+        this.busy = false;
+      });
+  }
+
+  private selectEngine(engine: string): void {
+    if (this.busy) return;
+    this.busy = true;
+    this.errorText = '';
+    void this.onSelect(engine)
+      .catch((error: Error): void => {
+        this.errorText = error.message;
+      })
+      .finally((): void => {
+        this.busy = false;
+      });
+  }
+
+  private deleteEngine(id: number): void {
+    if (this.busy) return;
+    this.busy = true;
+    this.errorText = '';
+    void this.onDelete(id)
+      .catch((error: Error): void => {
+        this.errorText = error.message;
+      })
+      .finally((): void => {
+        this.busy = false;
+      });
   }
 
   private clearDraft(): void {
     this.draftId = -1;
     this.draftName = '';
     this.draftUrl = '';
+    this.errorText = '';
   }
 }

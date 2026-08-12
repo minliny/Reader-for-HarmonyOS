@@ -22,8 +22,6 @@ export type ReaderReplaceRule = {
 
 export type ReaderReplaceQuickHiddenReason =
   | 'notLoaded'
-  | 'insufficientRules'
-  | 'unnamedVisibleRule'
   | 'invalidResponse'
   | 'loadFailed';
 
@@ -34,11 +32,11 @@ export type ReaderReplaceQuickHiddenState = {
 
 export type ReaderReplaceQuickReadyState = {
   kind: 'ready';
-  /** Three rows are visible; a fourth real row may continue below the clip. */
+  /** Quick access contains at most the first three canonical rules. */
   rules: ReaderReplaceRule[];
   /** Raw pre-processing chapter text is not available at this boundary. */
   previewAvailable: false;
-  /** No Figma Full Replace production page exists yet. */
+  /** Full management is not connected from the reader in this priority. */
   fullManagementAvailable: false;
 };
 
@@ -51,13 +49,12 @@ export function createHiddenReaderReplaceQuickState(
 }
 
 /**
- * Creates the only Figma-admitted visible state.
+ * Creates the reader's bounded Quick Replace projection.
  *
- * The inspected Quick panel has three fully visible rows and no empty,
- * loading, partial-list, invalid-name, or error visual. Consequently fewer
- * than three real named rules fail closed and render no panel. Rules are
- * ordered by the canonical `order` field (then id), and at most one clipped
- * continuation row is retained because that is the source frame structure.
+ * Rules are ordered by the canonical `order` field (then id), and the panel
+ * exposes at most three real rules. A valid empty list is still ready so the
+ * visible entry can open an honest empty state; transport/decoding failures
+ * continue to use the hidden state.
  */
 export function createReaderReplaceQuickState(rules: ReaderReplaceRule[]): ReaderReplaceQuickState {
   const ordered = rules.map((rule: ReaderReplaceRule): ReaderReplaceRule => copyReaderReplaceRule(rule));
@@ -67,17 +64,9 @@ export function createReaderReplaceQuickState(rules: ReaderReplaceRule[]): Reade
     }
     return left.id - right.id;
   });
-  if (ordered.length < 3) {
-    return createHiddenReaderReplaceQuickState('insufficientRules');
-  }
-  for (let index = 0; index < 3; index += 1) {
-    if (ordered[index].name.trim().length === 0) {
-      return createHiddenReaderReplaceQuickState('unnamedVisibleRule');
-    }
-  }
   return {
     kind: 'ready',
-    rules: ordered.slice(0, 4),
+    rules: ordered.slice(0, 3),
     previewAvailable: false,
     fullManagementAvailable: false,
   };

@@ -209,10 +209,7 @@ export class LocalReadingFlowGateway {
         sourceId: LOCAL_SOURCE_ID,
         bookId,
       }, this.requestOptions(isCurrent)),
-      this.runtimeOwner.request('bookmark.list', {
-        bookName,
-        bookAuthor,
-      }, this.requestOptions(isCurrent)),
+      this.loadBookmarkProjection(bookName, bookAuthor, entries, isCurrent),
     ]);
     const cacheData = requests[0].data;
     this.assertLocalSource(cacheData, 'cache.book.status');
@@ -221,15 +218,53 @@ export class LocalReadingFlowGateway {
     if (!Array.isArray(rawStatuses)) {
       throw new Error('cache.book.status returned invalid chapters');
     }
-    const statusEntries: JsonObject[] = [];
+    const stateByChapter = new Map<number, LocalReadingDownloadState>();
     for (const rawStatus of rawStatuses) {
       const status = this.requireObject(rawStatus, 'cache.book.status chapter');
-      this.requireNonNegativeInteger(status, 'chapterIndex', 'cache.book.status chapter');
-      this.requireDownloadState(status, 'state', 'cache.book.status chapter');
-      statusEntries.push(status);
+      const chapterIndex = this.requireNonNegativeInteger(
+        status,
+        'chapterIndex',
+        'cache.book.status chapter',
+      );
+      stateByChapter.set(
+        chapterIndex,
+        this.requireDownloadState(status, 'state', 'cache.book.status chapter'),
+      );
     }
 
-    const rawBookmarks = requests[1].data['bookmarks'];
+    const bookmarkEntries = requests[1];
+    const projected: LocalReadingTocEntry[] = [];
+    for (const entry of bookmarkEntries) {
+      projected.push({
+        index: entry.index,
+        title: entry.title,
+        downloadState: stateByChapter.get(entry.index) ?? 'unknown',
+        bookmarks: entry.bookmarks,
+      });
+    }
+    return projected;
+  }
+
+  /**
+   * Joins source-independent Core bookmarks onto any validated reading TOC.
+   * Existing download state is preserved because local and remote offline
+   * projections have different owners.
+   */
+  async loadBookmarkProjection(
+    bookName: string,
+    bookAuthor: string,
+    entries: LocalReadingTocEntry[],
+    isCurrent?: LocalReadingRequestGuard,
+  ): Promise<LocalReadingTocEntry[]> {
+    this.assertNonBlankString(bookName, 'bookName');
+    if (typeof bookAuthor !== 'string') {
+      throw new Error('bookAuthor must be a string');
+    }
+    const result = await this.runtimeOwner.request('bookmark.list', {
+      bookName,
+      bookAuthor,
+    }, this.requestOptions(isCurrent));
+    const rawBookmarks = result.data['bookmarks'];
     if (!Array.isArray(rawBookmarks)) {
       throw new Error('bookmark.list returned invalid bookmarks');
     }
@@ -253,21 +288,23 @@ export class LocalReadingFlowGateway {
       });
     }
 
+    const bookmarksByChapter = new Map<number, LocalReadingBookmark[]>();
+    for (const bookmark of bookmarks) {
+      const grouped = bookmarksByChapter.get(bookmark.chapterIndex);
+      if (grouped === undefined) {
+        bookmarksByChapter.set(bookmark.chapterIndex, [bookmark]);
+      } else {
+        grouped.push(bookmark);
+      }
+    }
+
     const projected: LocalReadingTocEntry[] = [];
     for (const entry of entries) {
-      let downloadState: LocalReadingDownloadState = 'unknown';
-      for (const status of statusEntries) {
-        if (status['chapterIndex'] === entry.index) {
-          downloadState = this.requireDownloadState(status, 'state', 'cache.book.status chapter');
-          break;
-        }
-      }
       projected.push({
         index: entry.index,
         title: entry.title,
-        downloadState,
-        bookmarks: bookmarks.filter((bookmark: LocalReadingBookmark): boolean =>
-          bookmark.chapterIndex === entry.index),
+        downloadState: entry.downloadState,
+        bookmarks: bookmarksByChapter.get(entry.index) ?? [],
       });
     }
     return projected;
@@ -381,7 +418,7 @@ export class LocalReadingFlowGateway {
 
   /**
    * Reads exact whole-book progress metrics without loading chapter bodies
-   * into ArkUI. Core applies the same ContentEdit/ContentProcessor path as
+   * into ArkUI. Core applies the same canonical ContentProcessor path as
    * `local_book.chapter.content` before counting Unicode scalars.
    */
   async loadContentMetrics(
