@@ -27,7 +27,10 @@ assert.match(sync, /FIGMA_MULTISELECT_EXPANDED_STATE_MISSING/);
 assert.match(sync, /this\.scopeRow\(\)/);
 assert.doesNotMatch(sync, /this\.autoRow\('备份范围'/);
 assert.doesNotMatch(sync, /this\.openSelect === 'scope'/);
-assert.match(sync, /this\.openSelect === 'location' \|\| this\.openSelect === 'frequency'/);
+assert.doesNotMatch(sync, /this\.openSelect === 'location'|this\.openSelect === 'frequency'/,
+  'disabled automatic-backup rows must not retain selectable state');
+assert.match(sync, /this\.gatedRow\('保存位置'/);
+assert.match(sync, /this\.gatedRow\('备份频率'/);
 
 const select = read('entry/src/main/ets/features/common/ReaderSelect.ets');
 const panel = read('entry/src/main/ets/features/common/ReaderSelectPanel.ets');

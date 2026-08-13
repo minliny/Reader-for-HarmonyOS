@@ -47,8 +47,10 @@ assert.doesNotMatch(returnToShelf, /this\.remoteReadingSession = undefined/,
 
 const detail = read('entry/src/main/ets/features/bookshelf/LocalBookDetail.ets');
 assert.match(detail, /private readingActionsReady\(\): boolean \{\s*return this\.toc\.length > 0;/);
-assert.equal((detail.match(/\.enabled\(this\.readingActionsReady\(\)\)/g) ?? []).length, 2,
-  'both directory and continue actions must remain inert while the TOC is loading');
+assert.match(detail, /\.enabled\(this\.readingActionsReady\(\)\)/,
+  'the directory action must remain inert while the TOC is loading');
+assert.match(detail, /\.enabled\(this\.readingActionsReady\(\) && !this\.removing\)/,
+  'continue reading must remain inert while the TOC loads or removal is active');
 
 const reading = read('entry/src/main/ets/features/reading/LocalReadingExperience.ets');
 assert.match(reading, /this\.loadInitialToc\(isCurrent\)/);
