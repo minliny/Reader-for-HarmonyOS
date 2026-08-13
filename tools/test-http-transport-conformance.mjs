@@ -102,11 +102,26 @@ for (const vector of fixture.cases) {
 }
 
 assert.equal(delegatedCharsetCases, 4);
+assert.equal(policy.resolveResponseCharset(
+  { 'Content-Type': 'text/html; charset=utf-8' }, 'GBK',
+), 'utf-8', 'response header charset must win over the Core descriptor');
+assert.equal(policy.resolveResponseCharset(
+  { 'Content-Type': 'text/html' }, 'GBK',
+), 'GBK', 'Core descriptor charset must fill a missing response charset');
+assert.equal(policy.resolveResponseCharset(
+  {}, 'Big5',
+), 'Big5', 'Core descriptor charset must fill a missing Content-Type');
+assert.equal(policy.resolveResponseCharset(
+  {}, undefined,
+), 'utf-8', 'UTF-8 remains the final default');
 assert.match(hostSource, /redirectMethodDecision\(/);
 assert.match(hostSource, /allowNextRedirect\(/);
 assert.match(hostSource, /isCrossOriginSensitiveHeader\(/);
 assert.match(hostSource, /mergeCookieHeader\(/);
 assert.match(hostSource, /retryBackoffMillis\(/);
+assert.match(hostSource,
+  /resolveResponseCharset\(\s*response\.headers,\s*binaryBody \? undefined : requestCharset,\s*\)/,
+  'production Host must use the Core descriptor charset only for text responses');
 
 console.log(`http transport conformance: PASS (${fixture.cases.length} vectors, ${vectorSha})`);
 

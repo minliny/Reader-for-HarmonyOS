@@ -9,6 +9,7 @@ import {
   isCrossOriginSensitiveHeader,
   mergeCookieHeader,
   redirectMethodDecision,
+  resolveResponseCharset,
   retryBackoffMillis,
 } from './HttpTransportPolicy';
 
@@ -142,8 +143,9 @@ class StopBeforeRedirectInterceptor implements http.HttpInterceptor {
  * substituted.
  *
  * Non-UTF-8 request bytes use Core's bounded shared encoder; ArkTS carries no
- * private GBK/Big5 tables. Responses are decoded using Content-Type charset
- * or UTF-8 and retained as bodyBase64 for Core.
+ * private GBK/Big5 tables. Text responses are decoded using response
+ * Content-Type charset, then the Core descriptor charset, then UTF-8. Raw
+ * bytes are retained as bodyBase64 for Core.
  *
  * Fail-closed, never silently substituted: Multipart `filePath` (Core turns a
  * source `@/path` verbatim into
@@ -499,7 +501,7 @@ export class HttpExecuteHost {
       const location = this.headerValue(response.headers, 'location');
       if (!this.isRedirectStatus(response.status) || location === null || maxRedirects === 0) {
         return this.buildResponse(
-          response, currentUrl, redirects, observedCookies, sessionId,
+          response, currentUrl, redirects, observedCookies, sessionId, requestCharset,
         );
       }
       if (!allowNextRedirect(true, maxRedirects, redirects.length)) {
@@ -624,14 +626,18 @@ export class HttpExecuteHost {
     redirects: RedirectHop[],
     cookies: JsonObject[],
     sessionId: string | null,
+    requestCharset: string | undefined,
   ): JsonObject {
-    const responseCharset = this.resolveResponseCharset(response.headers);
     const contentType = this.headerValue(response.headers, 'content-type');
     // Binary payloads (images, fonts, downloads) have no text representation;
     // the strict TextDecoder below must never be asked to fail on them. The
     // reading body image flow consumes `bodyBase64`, so `body` is left empty
     // and the raw bytes remain the authoritative transport value.
     const binaryBody = contentType !== null && this.isBinaryContentType(contentType);
+    const responseCharset = resolveResponseCharset(
+      response.headers,
+      binaryBody ? undefined : requestCharset,
+    );
     let decoded = '';
     if (!binaryBody) {
       try {
@@ -1213,16 +1219,4 @@ export class HttpExecuteHost {
       normalized === 'application/zip' || normalized === 'application/gzip';
   }
 
-  private resolveResponseCharset(headers: ResponseHeaders): string {
-    for (const key of Object.keys(headers)) {
-      if (key.toLowerCase() !== 'content-type') {
-        continue;
-      }
-      const match = /charset\s*=\s*([^;\s]+)/i.exec(headers[key]);
-      if (match !== null && match[1].trim().length > 0) {
-        return match[1].trim();
-      }
-    }
-    return 'utf-8';
-  }
 }

@@ -5,6 +5,8 @@ export type RedirectMethodDecision = {
 
 export type HttpDeadlineState = 'active' | 'cancelled' | 'expired';
 
+export type HttpResponseHeaders = Record<string, string>;
+
 const CROSS_ORIGIN_SENSITIVE_HEADERS: string[] = [
   'authorization',
   'proxy-authorization',
@@ -56,6 +58,26 @@ export function observedCookieNames(setCookie: string[]): string[] {
     }
   }
   return names;
+}
+
+/** Response header wins; the Core descriptor is the fallback for legacy pages. */
+export function resolveResponseCharset(
+  headers: HttpResponseHeaders,
+  descriptorCharset: string | undefined,
+): string {
+  for (const key of Object.keys(headers)) {
+    if (key.toLowerCase() !== 'content-type') {
+      continue;
+    }
+    const match = /charset\s*=\s*([^;\s]+)/i.exec(headers[key]);
+    if (match !== null && match[1].trim().length > 0) {
+      return match[1].trim();
+    }
+  }
+  if (descriptorCharset !== undefined && descriptorCharset.trim().length > 0) {
+    return descriptorCharset.trim();
+  }
+  return 'utf-8';
 }
 
 export function retryBackoffMillis(

@@ -117,7 +117,9 @@ const server = http.createServer((req, res) => {
     } else if (path === '/source/gbk/search') {
       evidence.gbkPosts += 1;
       evidence.gbkRequestBodyBase64.push(body.toString('base64'));
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=gbk' });
+      // The source descriptor declares GBK. Omit the response charset so the
+      // production Host must apply the descriptor fallback instead of UTF-8.
+      res.writeHead(200, { 'Content-Type': 'text/html' });
       res.end(gbkSourceSearchHtml());
     } else if (path === '/source/post307/search') {
       evidence.post307Initials += 1;
