@@ -20,6 +20,12 @@ const DOMAIN = 0x5244;
  */
 const MAX_SEARCH_CONCURRENCY = 4;
 
+/** A failing worker reports which source failed and why. */
+type WorkerFailure = {
+  source: SearchSource;
+  error: string;
+};
+
 /**
  * Owns the Search page's orchestration. A plain class, not a component:
  * per-entry `session` and per-submit `work` counters guard every async write-back,
@@ -170,17 +176,19 @@ export class SearchOrchestrator {
       // slot, keeping the final result order stable.
       const outcomes: Array<SearchOutcome | undefined> = new Array(enabled.length);
       let nextSourceIndex = 0;
+      // Shared cancellation flag. Read and written only inside the worker
+      // closures; the failure itself flows out through the worker return value
+      // so the post-await code reads a fresh local, never a captured variable.
       let failedSource: SearchSource | undefined = undefined;
-      let failedError: string | undefined = undefined;
-      const worker = async (): Promise<void> => {
+      const worker = async (): Promise<WorkerFailure | undefined> => {
         while (true) {
           if (!this.isCurrentWork(work, session) || failedSource !== undefined) {
-            return;
+            return undefined;
           }
           const index = nextSourceIndex;
           nextSourceIndex += 1;
           if (index >= enabled.length) {
-            return;
+            return undefined;
           }
           const source = enabled[index];
           const outcome = await this.gateway.searchBySource(
@@ -189,31 +197,35 @@ export class SearchOrchestrator {
             (): boolean => this.isCurrentWork(work, session) && failedSource === undefined,
           );
           if (!this.isCurrentWork(work, session)) {
-            return;
+            return undefined;
           }
           if (outcome.ok === false) {
-            // Figma provides only a whole-search error surface, not a partial
-            // result state naming failed sources. Do not label a partial list
-            // as an "all sources" result.
             failedSource = source;
-            failedError = outcome.error;
-            return;
+            const failure: WorkerFailure = { source: source, error: outcome.error };
+            return failure;
           }
           outcomes[index] = outcome;
         }
       };
       const workerCount = Math.min(MAX_SEARCH_CONCURRENCY, enabled.length);
-      const workers: Array<Promise<void>> = [];
+      const workerPromises: Array<Promise<WorkerFailure | undefined>> = [];
       for (let index = 0; index < workerCount; index += 1) {
-        workers.push(worker());
+        workerPromises.push(worker());
       }
-      await Promise.all(workers);
+      const failures: Array<WorkerFailure | undefined> = await Promise.all(workerPromises);
       if (!this.isCurrentWork(work, session)) {
         return;
       }
-      if (failedSource !== undefined) {
+      let failed: WorkerFailure | undefined = undefined;
+      for (const failure of failures) {
+        if (failure !== undefined) {
+          failed = failure;
+          break;
+        }
+      }
+      if (failed !== undefined) {
         hilog.warn(DOMAIN, 'Reader', 'Search source %{public}s failed: %{public}s',
-          failedSource.sourceId, failedError ?? 'unknown failure');
+          failed.source.sourceId, failed.error);
         this.present({ kind: 'error', keyword: keyword });
         return;
       }
