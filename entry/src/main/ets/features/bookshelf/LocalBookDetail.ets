@@ -53,10 +53,13 @@ export struct LocalBookDetail {
   @Prop toc: LocalReadingTocEntry[] = [];
   @Prop isTablet: boolean = false;
   @Prop sourceSwitchEnabled: boolean = false;
+  @Prop removalEnabled: boolean = true;
+  @Prop removing: boolean = false;
   onContinue: () => void = (): void => {};
   onSelectChapter: (index: number) => void = (_index: number): void => {};
   onOpenDirectory: () => void = (): void => {};
   onSwitchSource: () => void = (): void => {};
+  onRemove: () => void = (): void => {};
   onBack: () => void = (): void => {};
 
   aboutToAppear(): void {
@@ -383,19 +386,16 @@ export struct LocalBookDetail {
       .backgroundColor(TOK_PRIMARY_DARK)
       .border({ width: TOK_BORDER_W, color: TOK_PRIMARY_DARK })
       .borderRadius(999)
-      .opacity(this.readingActionsReady() ? 1 : 0.5)
-      .enabled(this.readingActionsReady())
+      .opacity(this.readingActionsReady() && !this.removing ? 1 : 0.5)
+      .enabled(this.readingActionsReady() && !this.removing)
       .onClick((): void => {
-        if (this.readingActionsReady()) {
+        if (this.readingActionsReady() && !this.removing) {
           this.onContinue();
         }
       });
 
-      // Removal has its own Figma confirmation/rollback states and Core
-      // command.  Those are outside this reading-path task, so render only
-      // the supplied terminal visual and do not fabricate a destructive flow.
       Stack({ alignContent: Alignment.Center }) {
-        Text('移除书架')
+        Text(this.removing ? '正在移除…' : '移除书架')
           .fontFamily('ReaderInter')
           .fontWeight(900)
           .fontSize(13)
@@ -406,7 +406,15 @@ export struct LocalBookDetail {
       .height(46)
       .backgroundColor(TOK_CARD_BG_HI)
       .border({ width: TOK_BORDER_W, color: TOK_ACTION_DIVIDER })
-      .borderRadius(999);
+      .borderRadius(999)
+      .enabled(this.removalEnabled && !this.removing)
+      .opacity(this.removalEnabled && !this.removing ? 1 : 0.4)
+      .accessibilityText(this.removing ? '正在移除书架' : '移除书架')
+      .onClick((): void => {
+        if (this.removalEnabled && !this.removing) {
+          this.onRemove();
+        }
+      });
     }
     .width(this.contentWidth())
     .height(77)
