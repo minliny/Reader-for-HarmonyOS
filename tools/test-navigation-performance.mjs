@@ -26,11 +26,24 @@ assert.doesNotMatch(localDetail, /loadShelfBook|new ReaderCoreGateway/,
   'a Core-derived shelf card must not be read a second time on local detail admission');
 const remoteDetail = method(index, 'private openRemoteBookDetail(', 'private resolveRemoteDetailSourceName(');
 assert.match(remoteDetail, /shelfSnapshot: ShelfBook \| undefined = undefined/);
+assert.match(remoteDetail,
+  /const reusableRemoteSession = shelfSnapshot !== undefined &&[\s\S]*?identity\.sourceId === seed\.sourceId &&[\s\S]*?identity\.bookId === seed\.bookId/,
+  'only an exact shelf identity may reuse the already admitted remote session');
+assert.match(remoteDetail,
+  /const sessionAdmission: Promise<RemoteReadingSession> = reusableRemoteSession === undefined \?[\s\S]*?gateway\.openSession\(seed, \{ isCurrent \}\)[\s\S]*?: Promise\.resolve\(reusableRemoteSession\)/,
+  'same-process shelf re-entry must reuse the exact session instead of repeating detail and TOC requests');
 assert.ok(remoteDetail.indexOf("this.route = 'detail'") < remoteDetail.indexOf('gateway.openSession(seed, { isCurrent })'),
   'remote detail must project its inert shell before network/session admission');
 assert.match(remoteDetail, /const suppliedShelfBook = shelfSnapshot\?\.sourceId === session\.identity\.sourceId/);
 assert.doesNotMatch(remoteDetail, /new SourceGateway\(owner\)\.loadSources/,
   'optional source-name lookup must not stay on the route-admission critical path');
+const returnToShelf = method(index, 'private returnToBookshelf(', 'private applyReadingCommit(');
+assert.match(returnToShelf,
+  /const retainedRemoteSession = this\.detailBook !== undefined &&[\s\S]*?this\.detailBook\.sourceId !== LOCAL_SOURCE_ID &&[\s\S]*?identity\.sourceId === this\.detailBook\.sourceId &&[\s\S]*?identity\.bookId === this\.detailBook\.bookId/,
+  'leaving an exact remote detail may retain only its already admitted session');
+assert.match(returnToShelf, /this\.remoteReadingSession = retainedRemoteSession/);
+assert.doesNotMatch(returnToShelf, /this\.remoteReadingSession = undefined/,
+  'the exact remote session must not be discarded on an immediate shelf round-trip');
 
 const detail = read('entry/src/main/ets/features/bookshelf/LocalBookDetail.ets');
 assert.match(detail, /private readingActionsReady\(\): boolean \{\s*return this\.toc\.length > 0;/);

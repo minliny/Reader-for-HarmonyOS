@@ -1886,12 +1886,15 @@ struct Index {
     sourceName: string,
     shelfSnapshot: ShelfBook | undefined = undefined,
   ): void {
+    const reusableRemoteSession = shelfSnapshot !== undefined &&
+      this.remoteReadingSession?.identity.sourceId === seed.sourceId &&
+      this.remoteReadingSession?.identity.bookId === seed.bookId ? this.remoteReadingSession : undefined;
     const originRoute = this.route;
     const generation = this.nextNavigationGeneration();
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
     this.exitToBookshelfAfterReader = false;
-    this.remoteReadingSession = undefined;
+    this.remoteReadingSession = reusableRemoteSession;
     // The selected search/shelf item is already a validated Core projection.
     // Show its detail shell immediately; an empty TOC keeps reading actions
     // inert until the remote session and required shelf persistence settle.
@@ -1909,15 +1912,22 @@ struct Index {
     const isCurrent = (): boolean => generation === this.navigationGeneration;
     this.offlineMutationGeneration += 1;
     this.offlineMutationActiveKey = '';
-    void gateway.openSession(seed, { isCurrent })
-      .catch(async (onlineError: Error): Promise<RemoteReadingSession> => {
-        if (!isCurrent() || !isRemoteReadingCacheFallbackEligible(onlineError)) {
-          throw onlineError;
-        }
-        hilog.warn(DOMAIN, 'Reader',
-          'Online detail unavailable; attempting exact cached session: %{public}s', onlineError.message);
-        return gateway.openCachedSession(seed, isCurrent);
-      })
+    // A session that just drove this exact shelf book already carries the
+    // parsed detail, full TOC, continuation variables, and per-chapter
+    // variables. Reusing it avoids throwing that proven work away on an
+    // immediate shelf round-trip. Search results and different shelf books
+    // stay online-first; no second cache or persisted session is introduced.
+    const sessionAdmission: Promise<RemoteReadingSession> = reusableRemoteSession === undefined ?
+      gateway.openSession(seed, { isCurrent })
+        .catch(async (onlineError: Error): Promise<RemoteReadingSession> => {
+          if (!isCurrent() || !isRemoteReadingCacheFallbackEligible(onlineError)) {
+            throw onlineError;
+          }
+          hilog.warn(DOMAIN, 'Reader',
+            'Online detail unavailable; attempting exact cached session: %{public}s', onlineError.message);
+          return gateway.openCachedSession(seed, isCurrent);
+        }) : Promise.resolve(reusableRemoteSession);
+    void sessionAdmission
       .then(async (session: RemoteReadingSession): Promise<void> => {
         if (!isCurrent()) {
           return;
@@ -2936,6 +2946,10 @@ struct Index {
   }
 
   private returnToBookshelf(): void {
+    const retainedRemoteSession = this.detailBook !== undefined &&
+      this.detailBook.sourceId !== LOCAL_SOURCE_ID &&
+      this.remoteReadingSession?.identity.sourceId === this.detailBook.sourceId &&
+      this.remoteReadingSession?.identity.bookId === this.detailBook.bookId ? this.remoteReadingSession : undefined;
     this.nextNavigationGeneration();
     this.readingExitRequest = undefined;
     this.exitToBookshelfAfterReader = false;
@@ -2946,7 +2960,7 @@ struct Index {
     this.directoryChapterTitle = '';
     this.detailToc = [];
     this.detailBook = undefined;
-    this.remoteReadingSession = undefined;
+    this.remoteReadingSession = retainedRemoteSession;
     this.selectedRssSubscription = undefined;
     this.selectedRssItems = [];
     this.selectedRssItem = undefined;
