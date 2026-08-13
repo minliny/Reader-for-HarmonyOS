@@ -649,13 +649,15 @@ export class HttpExecuteHost {
     }
     const result: JsonObject = {
       status: response.status,
-      body: decoded,
+      body: '',
       headers: response.headers,
-      charsetHint: responseCharset,
       finalUrl,
       redirects,
       cookies,
     };
+    if (responseCharset !== undefined) {
+      result['charsetHint'] = responseCharset;
+    }
     if (response.bytes.length > 0) {
       result['bodyBase64'] = new util.Base64Helper().encodeToStringSync(response.bytes);
     }

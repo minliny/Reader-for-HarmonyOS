@@ -74,8 +74,11 @@ for (const vector of fixture.cases) {
       const text = new TextDecoder(input.charset).decode(Buffer.from(input.hex, 'hex'));
       assert.equal(text, expected.text, vector.id);
       assert.match(hostSource,
-        /TextDecoder\.create\(responseCharset, \{ fatal: true \}\)/,
-        `${vector.id}: Harmony must decode the declared response charset strictly`);
+        /result\['bodyBase64'\] = new util\.Base64Helper\(\)\.encodeToStringSync\(response\.bytes\)/,
+        `${vector.id}: Harmony must preserve raw response bytes for Core decoding`);
+      assert.doesNotMatch(hostSource,
+        /TextDecoder\.create\(responseCharset/,
+        `${vector.id}: Harmony must not take final response-decoding ownership`);
       break;
     }
     case 'multipart': {

@@ -12,6 +12,7 @@ const owner = read('entry/src/main/ets/app/ReaderRuntimeOwner.ts');
 const orchestrator = read('entry/src/main/ets/features/source/SourceOrchestrator.ets');
 const page = read('entry/src/main/ets/features/source/SourceManagementPage.ets');
 const index = read('entry/src/main/ets/pages/Index.ets');
+const detail = read('entry/src/main/ets/features/bookshelf/LocalBookDetail.ets');
 
 // Exercise the real gateway decoder/contract logic with an injected owner.
 const executableGateway = stripTypeScriptTypes(
@@ -280,5 +281,42 @@ assert.match(orchestrator, /publishStatus\('error', `书源列表读取失败/);
 assert.match(orchestrator, /isReaderCoreTransactionPendingError\(error\)/);
 assert.doesNotMatch(orchestrator, /error\.message\.indexOf|error\.message\.includes/);
 assert.doesNotMatch(orchestrator, /devSeed|fixture|mock|fake/i);
+assert.match(detail, /onSwitchSource: \(\) => void/);
+assert.match(detail, /\.onClick\(\(\): void => this\.onSwitchSource\(\)\)/);
+assert.match(index, /onSwitchSource: \(\): void => this\.openSourceSwitchFromDetail\(\)/);
+const detailSwitchStart = index.indexOf('private openSourceSwitchFromDetail(): void');
+const detailSwitchEnd = index.indexOf('private openSourceSwitch(): void', detailSwitchStart);
+assert.ok(detailSwitchStart >= 0 && detailSwitchEnd > detailSwitchStart,
+  'the Detail source-switch lifecycle must stay explicit');
+const detailSwitch = index.slice(detailSwitchStart, detailSwitchEnd);
+assert.match(detailSwitch, /this\.openReading\(undefined\)/,
+  'Detail must activate the existing ReaderShell before opening its overlay');
+assert.match(detailSwitch, /this\.sourceSwitchPendingFromDetail = true/);
+assert.ok(detailSwitch.indexOf('this.openReading(undefined)') <
+  detailSwitch.indexOf('this.sourceSwitchPendingFromDetail = true'),
+  'the pending intent is admitted only after normal reader preparation succeeds');
+assert.doesNotMatch(detailSwitch, /this\.openSourceSwitch\(\)/,
+  'candidate discovery must not open before the reader restores the exact chapter');
+const committedStart = index.indexOf('private onReaderChapterCommitted(');
+const committedEnd = index.indexOf('private refreshBookshelf(', committedStart);
+assert.ok(committedStart >= 0 && committedEnd > committedStart);
+const committed = index.slice(committedStart, committedEnd);
+const applyCommitted = committed.indexOf('this.applyDirectoryChapter(chapterIndex, chapterTitle)');
+const openCommitted = committed.indexOf('this.openSourceSwitch()');
+assert.ok(applyCommitted >= 0 && openCommitted > applyCommitted,
+  'the exact committed chapter must be projected before candidate selection becomes possible');
+assert.match(committed, /this\.sourceSwitchOpenedFromDetail = this\.sourceSwitchVisible/);
+const closeSwitchStart = index.indexOf('private closeSourceSwitch(): void');
+const closeSwitchEnd = index.indexOf('private performSourceSwitchSeam(', closeSwitchStart);
+const closeSwitch = index.slice(closeSwitchStart, closeSwitchEnd);
+assert.match(closeSwitch, /const returnToDetail = this\.sourceSwitchOpenedFromDetail/);
+assert.match(closeSwitch, /requestExit\(\)[\s\S]*this\.returnToDetail\(\)/,
+  'closing a Detail-owned switch window must tear down the hidden reader and return to Detail');
+assert.match(page, /source\.checkMessage !== undefined && source\.checkMessage\.length > 0/);
+assert.doesNotMatch(page, /source\.checkState !== 'unchecked'/,
+  'an unchecked cancellation projection must remain visible to the user');
+assert.match(orchestrator, /code === 'CANCELLED'[\s\S]*登录 \/ 验证已取消/);
+assert.match(orchestrator, /setCheckProjection\(id, 'failed', \[\], message\)/,
+  'TIMEOUT and other host failures must not be mislabeled as user cancellation');
 
 console.log('book-source production import contract: PASS');

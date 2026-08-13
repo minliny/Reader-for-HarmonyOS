@@ -20,7 +20,7 @@ type SourceSwitchRowKind = 'current' | 'available' | 'offline' | 'timeout';
 @Component
 export struct CandidateRow {
   @Prop sourceId: string = '';
-  @Prop bookName: string = '';
+  @Prop sourceName: string = '';
   @Prop latencyMs: number | undefined = undefined;
   @Prop offline: boolean = false;
   @Prop timeout: boolean = false;
@@ -36,7 +36,7 @@ export struct CandidateRow {
         .backgroundColor(this.dotColor())
         .margin({ left: 10 });
 
-      Text(this.bookName)
+      Text(this.sourceName)
         .layoutWeight(1)
         .height(15)
         .fontFamily('ReaderInter')

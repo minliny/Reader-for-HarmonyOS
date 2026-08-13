@@ -1,4 +1,7 @@
-import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
+import {
+  ReaderRuntimeOwner,
+  type ReaderStartupFailure,
+} from '../app/ReaderRuntimeOwner';
 import {
   ReaderCoreGateway,
   type ShelfBook,
@@ -61,6 +64,7 @@ import {
   SearchPage,
   type SearchPresentation,
 } from '../features/search/SearchPage';
+import { ReaderStartupFailurePage } from '../features/startup/ReaderStartupFailurePage';
 import {
   RssGateway,
   type RssItem,
@@ -213,6 +217,7 @@ class LocalImportPresentation {
 @Component
 struct Index {
   @StorageLink('statusBarHeightPx') statusBarHeightPx: number = 0;
+  @State private startupFailure: ReaderStartupFailure | undefined = undefined;
   @State private shelfBooks: ShelfBook[] = [];
   @State private continueReading: ShelfBook | undefined = undefined;
   @State private isBookshelfVisualAdmitted: boolean = false;
@@ -269,6 +274,10 @@ struct Index {
   /** Source-switch overlay presentation + the gateway that drives it. */
   @State private sourceSwitchVisible: boolean = false;
   @State private sourceSwitchState: SourceSwitchPanelState = { kind: 'discovering' };
+  /** Detail intent waits for the reader to restore and commit the exact chapter. */
+  private sourceSwitchPendingFromDetail: boolean = false;
+  /** Closing a switch window opened from Detail must return to Detail. */
+  private sourceSwitchOpenedFromDetail: boolean = false;
   private sourceSwitchGateway: SourceSwitchGateway | undefined;
   /** Retained until the target chapter's first measured progress commit. */
   private pendingSourceSwitch: PendingSourceSwitchTransaction | undefined = undefined;
@@ -410,7 +419,12 @@ struct Index {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      if (this.route === 'bookshelf' && this.isBookshelfVisualAdmitted) {
+      if (this.startupFailure !== undefined) {
+        ReaderStartupFailurePage({
+          failureKind: this.startupFailure.kind,
+          onRetry: (): void => this.retryApplicationStartup(),
+        });
+      } else if (this.route === 'bookshelf' && this.isBookshelfVisualAdmitted) {
         BookshelfPage({
           books: this.shelfBooks,
           continueReading: this.continueReading,
@@ -466,6 +480,7 @@ struct Index {
           isTablet: deviceInfo.deviceType === 'tablet',
           onBack: (): void => this.returnToBookshelf(),
           onSearch: (keyword: string): void => this.performSearch(keyword),
+          onScopeChange: (sourceId: string | undefined): void => this.changeSearchScope(sourceId),
           onClearHistory: (): void => this.clearSearchHistory(),
           onSelectResult: (book: SearchBook): void => this.onSearchResultSelected(book),
           onRetry: (): void => this.retrySearch(),
@@ -664,7 +679,7 @@ struct Index {
       // Batch 2: the reading session UI (ReadingSurface + control layer +
       // directory + source-switch overlays) is composed by ReaderShell; Index
       // keeps the business state and drives it through props + callbacks.
-      if (this.readingSessionActive && this.detailBook !== undefined) {
+      if (this.startupFailure === undefined && this.readingSessionActive && this.detailBook !== undefined) {
         ReaderShell({
           bookId: this.detailBook.bookId,
           bookTitle: this.detailBook.title,
@@ -707,9 +722,8 @@ struct Index {
           onReadingCommitted: (commit: ReadingCommit): void => this.applyReadingCommit(commit),
           onReadingFailure: (sourceId: string, bookId: string, message: string): void =>
             this.onReadingFailure(sourceId, bookId, message),
-          onChapterCommitted: (chapterIndex: number, chapterTitle: string): void => {
-            this.applyDirectoryChapter(chapterIndex, chapterTitle);
-          },
+          onChapterCommitted: (chapterIndex: number, chapterTitle: string): void =>
+            this.onReaderChapterCommitted(chapterIndex, chapterTitle),
           onSelectChapter: (chapterIndex: number): void => this.onDirectoryChapterSelected(chapterIndex),
           onDownloadChapter: (chapterIndex: number): void => this.downloadDirectoryChapter(chapterIndex),
           onDownloadBook: (): void => this.downloadDirectoryBook(),
@@ -769,7 +783,9 @@ struct Index {
       }
       // Host capability surface only: mounted for ArkWeb controller lifecycle,
       // never used as the reading-body renderer.
-      ArkWebExecutionHost()
+      if (this.startupFailure === undefined) {
+        ArkWebExecutionHost()
+      }
     }
       .width('100%')
       .height('100%')
@@ -1749,6 +1765,11 @@ struct Index {
     this.getSearchOrchestrator().search(keyword);
   }
 
+  private changeSearchScope(sourceId: string | undefined): void {
+    this.nextNavigationGeneration();
+    this.getSearchOrchestrator().changeScope(sourceId);
+  }
+
   private getSearchOrchestrator(): SearchOrchestrator {
     if (this.searchOrchestrator === undefined) {
       this.searchOrchestrator = new SearchOrchestrator(
@@ -1790,6 +1811,22 @@ struct Index {
         value: variable.value,
       })),
     }, book.sourceName);
+  }
+
+  private retryApplicationStartup(): void {
+    void this.startApplication();
+  }
+
+  private async startApplication(): Promise<void> {
+    this.startupFailure = undefined;
+    try {
+      await ReaderRuntimeOwner.current().start();
+      this.refreshBookshelf();
+    } catch (error) {
+      this.startupFailure = ReaderRuntimeOwner.classifyStartupFailure(error);
+      const message = error instanceof Error ? error.message : `${error}`;
+      hilog.error(DOMAIN, 'Reader', 'Core startup failed: %{public}s', message);
+    }
   }
 
   private openBookDetail(selection: ShelfBook): void {
@@ -2246,6 +2283,7 @@ struct Index {
       (book.sourceId !== LOCAL_SOURCE_ID && this.remoteReadingSession === undefined)) {
       return;
     }
+    this.sourceSwitchPendingFromDetail = false;
     this.nextNavigationGeneration();
     this.readingExitRequest = undefined;
     this.exitToBookshelfAfterReader = false;
@@ -2291,6 +2329,7 @@ struct Index {
     if (this.detailBook === undefined || this.detailToc.length === 0) {
       return;
     }
+    this.sourceSwitchPendingFromDetail = false;
     this.nextNavigationGeneration();
     this.readingExitRequest = undefined;
     this.exitToBookshelfAfterReader = false;
@@ -2337,6 +2376,8 @@ struct Index {
     this.readingExitRequest = undefined;
     this.exitToBookshelfAfterReader = false;
     this.readingSessionActive = false;
+    this.sourceSwitchPendingFromDetail = false;
+    this.sourceSwitchOpenedFromDetail = false;
     this.requestedChapterIndex = undefined;
     this.preparedReaderRoute = 'reading';
     this.directoryCurrentChapterIndex = -1;
@@ -2599,10 +2640,27 @@ struct Index {
     return generation === this.navigationGeneration && this.sourceSwitchVisible;
   }
 
+  private openSourceSwitchFromDetail(): void {
+    const book = this.detailBook;
+    if (this.route !== 'detail' || book === undefined || book.sourceId === LOCAL_SOURCE_ID ||
+      this.sourceSwitchVisible || this.sourceSwitchPendingFromDetail) {
+      return;
+    }
+    // Reuse the normal reader preparation, but do not expose discovery until
+    // onReaderChapterCommitted has restored the exact Core-owned chapter.
+    this.openReading(undefined);
+    if (!this.readingSessionActive) {
+      return;
+    }
+    this.sourceSwitchPendingFromDetail = true;
+  }
+
   private openSourceSwitch(): void {
     if (this.detailBook === undefined || this.detailBook.sourceId === LOCAL_SOURCE_ID || this.sourceSwitchVisible) {
       return;
     }
+    this.sourceSwitchPendingFromDetail = false;
+    this.sourceSwitchOpenedFromDetail = false;
     const generation = this.nextNavigationGeneration();
     this.exitToBookshelfAfterReader = false;
     // SS-SOURCE-SWITCH-01: the window floats over the reading surface (Figma
@@ -2665,7 +2723,8 @@ struct Index {
   }
 
   private onPickSource(candidate: SourceSwitchCandidate): void {
-    if (this.sourceSwitchState.kind !== 'candidates' || this.detailBook === undefined) {
+    if (this.sourceSwitchState.kind !== 'candidates' || this.detailBook === undefined ||
+      this.directoryCurrentChapterIndex < 0 || this.directoryChapterTitle.length === 0) {
       return;
     }
     const book = this.detailBook;
@@ -2819,18 +2878,39 @@ struct Index {
       // transaction still needs rollback, could strand a pending shelf move.
       return;
     }
+    const returnToDetail = this.sourceSwitchOpenedFromDetail;
     this.nextNavigationGeneration();
     this.sourceSwitchVisible = false;
     this.sourceSwitchState = { kind: 'discovering' };
+    this.sourceSwitchPendingFromDetail = false;
+    this.sourceSwitchOpenedFromDetail = false;
+    if (returnToDetail) {
+      const requestExit = this.readingExitRequest;
+      if (requestExit !== undefined) {
+        requestExit();
+      } else {
+        this.returnToDetail();
+      }
+    }
   }
 
   private performSourceSwitchSeam(book: ShelfBook): void {
     this.sourceSwitchVisible = false;
     this.sourceSwitchState = { kind: 'discovering' };
+    this.sourceSwitchPendingFromDetail = false;
+    this.sourceSwitchOpenedFromDetail = false;
     this.reopenSwitchedBook(book);
   }
 
   private onReadingFailure(sourceId: string, bookId: string, message: string): void {
+    if (this.sourceSwitchPendingFromDetail) {
+      this.sourceSwitchPendingFromDetail = false;
+      hilog.warn(DOMAIN, 'Reader',
+        'Detail source-switch reader preparation failed: sourceId=%{public}s bookId=%{public}s err=%{public}s',
+        sourceId, bookId, message);
+      this.returnToDetail();
+      return;
+    }
     const pending = this.pendingSourceSwitch;
     if (pending === undefined || pending.targetSourceId !== sourceId || pending.targetBookId !== bookId) {
       this.showReadingFailure('阅读失败', message);
@@ -2954,6 +3034,8 @@ struct Index {
     this.readingExitRequest = undefined;
     this.exitToBookshelfAfterReader = false;
     this.readingSessionActive = false;
+    this.sourceSwitchPendingFromDetail = false;
+    this.sourceSwitchOpenedFromDetail = false;
     this.requestedChapterIndex = undefined;
     this.preparedReaderRoute = 'reading';
     this.directoryCurrentChapterIndex = -1;

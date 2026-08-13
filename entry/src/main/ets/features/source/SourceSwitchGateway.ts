@@ -8,12 +8,14 @@ import type { ShelfBook } from '../../app/ReaderCoreGateway';
 const SOURCE_SWITCH_DISCOVERY_CONCURRENCY = 8;
 
 /**
- * Page-facing source-switch candidate. Only the first three fields are real
- * Core `change.bookSource` data today; `latencyMs`/`offline`/`timeout` are
- * future-data hooks the panel renders as "—"/normal when absent.
+ * Page-facing source-switch candidate. `sourceName` comes from the existing
+ * source registry while the book identity comes from `change.bookSource`;
+ * `latencyMs`/`offline`/`timeout` are future-data hooks the panel renders as
+ * "—"/normal when absent.
  */
 export type SourceSwitchCandidate = {
   sourceId: string;
+  sourceName: string;
   bookUrl: string;
   bookName: string;
   author?: string;
@@ -153,6 +155,7 @@ export class SourceSwitchGateway {
       throw new Error('source.list returned invalid data');
     }
     const sourceIds: string[] = [];
+    const sourceNames: Map<string, string> = new Map<string, string>();
     for (const raw of rawSources) {
       if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
         continue;
@@ -164,6 +167,7 @@ export class SourceSwitchGateway {
       const sourceId = this.optionalString(source, 'sourceId');
       if (sourceId !== undefined && sourceId.length > 0) {
         sourceIds.push(sourceId);
+        sourceNames.set(sourceId, this.optionalString(source, 'name') ?? sourceId);
       }
     }
     if (sourceIds.length === 0) {
@@ -177,7 +181,15 @@ export class SourceSwitchGateway {
       const end = Math.min(start + SOURCE_SWITCH_DISCOVERY_CONCURRENCY, sourceIds.length);
       const pending: Promise<SourceSwitchCandidate[]>[] = [];
       for (let index = start; index < end; index += 1) {
-        pending.push(this.discoverFromSource(sourceId, bookId, keyword, sourceIds[index], isCurrent));
+        const candidateSourceId = sourceIds[index];
+        pending.push(this.discoverFromSource(
+          sourceId,
+          bookId,
+          keyword,
+          candidateSourceId,
+          sourceNames.get(candidateSourceId) ?? candidateSourceId,
+          isCurrent,
+        ));
       }
       const groups = await Promise.all(pending);
       for (const group of groups) {
@@ -197,6 +209,7 @@ export class SourceSwitchGateway {
     bookId: string,
     keyword: string,
     candidateSourceId: string,
+    candidateSourceName: string,
     isCurrent: (() => boolean) | undefined,
   ): Promise<SourceSwitchCandidate[]> {
     try {
@@ -205,7 +218,7 @@ export class SourceSwitchGateway {
         { sourceId, bookId, keyword, sourceIds: [candidateSourceId] },
         this.requestOptions(isCurrent),
       );
-      return this.decodeDiscoveryCandidates(result.data);
+      return this.decodeDiscoveryCandidates(result.data, candidateSourceName);
     } catch (error) {
       if (isCurrent !== undefined && !isCurrent()) {
         throw error;
@@ -216,7 +229,7 @@ export class SourceSwitchGateway {
     }
   }
 
-  private decodeDiscoveryCandidates(data: JsonObject): SourceSwitchCandidate[] {
+  private decodeDiscoveryCandidates(data: JsonObject, sourceName: string): SourceSwitchCandidate[] {
     const rawCandidates = data['candidates'];
     if (!Array.isArray(rawCandidates)) {
       throw new Error('change.bookSource returned invalid data');
@@ -233,7 +246,7 @@ export class SourceSwitchGateway {
       if (sourceId === undefined || bookUrl === undefined || bookName === undefined) {
         continue;
       }
-      const entry: SourceSwitchCandidate = { sourceId, bookUrl, bookName };
+      const entry: SourceSwitchCandidate = { sourceId, sourceName, bookUrl, bookName };
       const author = this.optionalString(candidate, 'author');
       const coverUrl = this.optionalString(candidate, 'coverUrl');
       if (author !== undefined) {

@@ -41,6 +41,13 @@ assert.match(index, /clearBookIdentity\(pending\.fromSourceId, pending\.fromBook
   'old per-book body/image cache is cleared only after target admission succeeds');
 assert.match(index, /this\.sourceSwitchState\.kind === 'switching'[\s\S]*transactionId !== undefined[\s\S]*return;/,
   'the switch overlay cannot close while Core commit might be publishing its journal');
+assert.match(index,
+  /this\.directoryCurrentChapterIndex < 0 \|\| this\.directoryChapterTitle\.length === 0[\s\S]*return;/,
+  'source switch must fail closed until the reader has committed an exact chapter identity');
+assert.match(index,
+  /buildSourceSwitchCommitParams\([\s\S]*this\.directoryChapterTitle,[\s\S]*this\.directoryCurrentChapterIndex,/,
+  'the switch transaction must receive the exact committed chapter without a first-chapter fallback');
+assert.doesNotMatch(index, /currentSourceSwitchChapterTitle|Math\.max\(0, this\.directoryCurrentChapterIndex\)/);
 
 assert.match(reader, /this\.onReadingFailure\(this\.sourceId, this\.bookId, this\.failureCode\)[\s\S]*this\.beginExit\(\)/,
   'reader failure must notify the transaction owner before its normal exit seam');
