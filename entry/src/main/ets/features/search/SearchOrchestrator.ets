@@ -20,7 +20,7 @@ const DOMAIN = 0x5244;
  */
 const MAX_SEARCH_CONCURRENCY = 4;
 
-/** A failing worker reports which source failed and why. */
+/** One isolated source failure; healthy sources continue in the same search. */
 interface WorkerFailure {
   source: SearchSource;
   error: string;
@@ -176,56 +176,54 @@ export class SearchOrchestrator {
       // slot, keeping the final result order stable.
       const outcomes: Array<SearchOutcome | undefined> = new Array(enabled.length);
       let nextSourceIndex = 0;
-      // Shared cancellation flag. Read and written only inside the worker
-      // closures; the failure itself flows out through the worker return value
-      // so the post-await code reads a fresh local, never a captured variable.
-      let failedSource: SearchSource | undefined = undefined;
-      const worker = async (): Promise<WorkerFailure | undefined> => {
+      // A broken source is normal in a user-managed Legado source set. Keep
+      // its failure isolated so later healthy sources still run and any valid
+      // results remain usable. The whole-search error surface is reserved for
+      // the case where every enabled source failed.
+      const failures: WorkerFailure[] = [];
+      const worker = async (): Promise<void> => {
         while (true) {
-          if (!this.isCurrentWork(work, session) || failedSource !== undefined) {
-            return undefined;
+          if (!this.isCurrentWork(work, session)) {
+            return;
           }
           const index = nextSourceIndex;
           nextSourceIndex += 1;
           if (index >= enabled.length) {
-            return undefined;
+            return;
           }
           const source = enabled[index];
           const outcome = await this.gateway.searchBySource(
             source,
             keyword,
-            (): boolean => this.isCurrentWork(work, session) && failedSource === undefined,
+            (): boolean => this.isCurrentWork(work, session),
           );
           if (!this.isCurrentWork(work, session)) {
-            return undefined;
+            return;
           }
           if (outcome.ok === false) {
-            failedSource = source;
-            const failure: WorkerFailure = { source: source, error: outcome.error };
-            return failure;
+            failures.push({ source: source, error: outcome.error });
+            continue;
           }
           outcomes[index] = outcome;
         }
       };
       const workerCount = Math.min(MAX_SEARCH_CONCURRENCY, enabled.length);
-      const workerPromises: Array<Promise<WorkerFailure | undefined>> = [];
+      const workerPromises: Array<Promise<void>> = [];
       for (let index = 0; index < workerCount; index += 1) {
         workerPromises.push(worker());
       }
-      const failures: Array<WorkerFailure | undefined> = await Promise.all(workerPromises);
+      await Promise.all(workerPromises);
       if (!this.isCurrentWork(work, session)) {
         return;
       }
-      let failed: WorkerFailure | undefined = undefined;
       for (const failure of failures) {
-        if (failure !== undefined) {
-          failed = failure;
-          break;
-        }
-      }
-      if (failed !== undefined) {
         hilog.warn(DOMAIN, 'Reader', 'Search source %{public}s failed: %{public}s',
-          failed.source.sourceId, failed.error);
+          failure.source.sourceId, failure.error);
+      }
+      const successfulSourceCount = outcomes.filter(
+        (outcome: SearchOutcome | undefined): boolean => outcome !== undefined,
+      ).length;
+      if (successfulSourceCount === 0 && failures.length > 0) {
         this.present({ kind: 'error', keyword: keyword });
         return;
       }

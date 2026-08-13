@@ -166,7 +166,7 @@ const last = (presentations) => presentations[presentations.length - 1];
     'same bookId under different sourceIds is not merged');
 }
 
-// 2. Any single source failure keeps the whole-search error surface.
+// 2. One broken source is isolated; healthy sources still finish and display.
 {
   const sources = makeSources(4);
   const owner = fakeOwner({
@@ -182,13 +182,34 @@ const last = (presentations) => presentations[presentations.length - 1];
   await settle(owner.state, 4);
 
   const present = last(presentations);
-  assert.equal(present.kind, 'error', 'one failing source yields whole-search error');
-  assert.ok(
-    presentations.every((p) => p.kind !== 'results'),
-    'no partial results are ever presented when a source fails');
+  assert.equal(present.kind, 'results', 'one failing source must not hide healthy-source results');
+  assert.equal(owner.state.calls.length, 4, 'a broken source must not cancel later sources');
+  assert.deepEqual(
+    present.results.map((result) => result.sourceId),
+    ['source-0', 'source-1', 'source-3'],
+    'only the failed source is absent and healthy-source order stays stable');
 }
 
-// 3. All sources empty yields the empty surface.
+// 3. Only an all-source failure yields the whole-search error surface.
+{
+  const sources = makeSources(4);
+  const owner = fakeOwner({
+    sources,
+    delayForSource: () => 10,
+    failFor: () => true,
+    resultsFor: () => [],
+  });
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open();
+  search.search('关键字');
+  await settle(owner.state, 4);
+
+  assert.equal(last(presentations).kind, 'error', 'all failing sources yield whole-search error');
+  assert.equal(owner.state.calls.length, 4, 'every enabled source is attempted before the error surface');
+}
+
+// 4. All sources empty yields the empty surface.
 {
   const owner = fakeOwner({
     sources: makeSources(3),
@@ -204,7 +225,7 @@ const last = (presentations) => presentations[presentations.length - 1];
   assert.equal(last(presentations).kind, 'empty', 'all-success-with-no-results is empty');
 }
 
-// 4. A newer search supersedes an older one; late results never overwrite.
+// 5. A newer search supersedes an older one; late results never overwrite.
 {
   const owner = fakeOwner({
     sources: makeSources(4),
