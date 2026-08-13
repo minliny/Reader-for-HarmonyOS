@@ -177,8 +177,10 @@ assert.match(readingSurface, /\.lineHeight\(readerAppearanceLineHeight\(this\.ap
 assert.match(readingSurface, /\.letterSpacing\(this\.appearance\.letterSpacing\)/);
 assert.match(readingSurface, /\.textIndent\(fragment\.isParagraphStart \?[\s\S]*?readerAppearanceParagraphIndent/);
 
-assert.match(experience, /void this\.loadAppearanceSnapshot\(lifecycleToken\)/);
-assert.match(experience, /void this\.loadChineseConversionMode\(lifecycleToken\)/);
+assert.match(experience, /await this\.loadAppearanceSnapshot\(lifecycleToken\)/,
+  'layout-affecting appearance must settle before initial pagination');
+assert.match(experience, /page === 'moduleAppearance' \|\| page === 'fullAppearance'[\s\S]*?loadChineseConversionMode/,
+  'conversion controls may load only when the user enters Appearance');
 assert.match(experience, /reloadCurrentChapterAfterContentProjectionChange/);
 assert.match(experience, /this\.appearanceGateway\.update\(snapshot\)/);
 assert.match(experience, /currentVisibleAnchor[\s\S]*?this\.visiblePage\.startScalar/);

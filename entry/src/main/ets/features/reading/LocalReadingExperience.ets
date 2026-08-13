@@ -582,7 +582,7 @@ export struct ReadingExperience {
   /** Invalidates an old-style page that completed while a newer appearance reflow was queued. */
   private appearanceReflowInvalidateCurrentLayout: boolean = false;
   private commitInFlight: boolean = false;
-  private unicodeProbeVerifiedGeneration: number = -1;
+  private unicodeProbeVerified: boolean = false;
   /** Consecutive zero-line probe observations within the current generation. */
   private unicodeProbeEmptyAttempts: number = 0;
   private didLayoutListener: (() => void) | undefined = undefined;
@@ -617,6 +617,15 @@ export struct ReadingExperience {
   private readingRecordTimer: number = -1;
   private readingRecordFlushTail: Promise<void> = Promise.resolve();
   private chineseConversionMutationGeneration: number = 0;
+  private contentMetricsLoading: boolean = false;
+  private controlDirectoryParentSource: LocalReadingTocEntry[] | undefined = undefined;
+  private controlDirectoryTocSource: LocalReadingTocEntry[] | undefined = undefined;
+  private controlDirectoryProjection: LocalReadingTocEntry[] = [];
+  private lastCommittedProgress: ReadingCommit | undefined = undefined;
+  private ttsInitialization: Promise<boolean> | undefined = undefined;
+  private ttsAvailabilityResolved: boolean = false;
+  private chineseConversionLoaded: boolean = false;
+  private readerSettingsLoaded: boolean = false;
 
   aboutToAppear(): void {
     this.lifecycleToken += 1;
@@ -645,10 +654,13 @@ export struct ReadingExperience {
       ReaderRuntimeOwner.current(),
       this.sourceSwitchTransactionId,
     );
-    this.initializeTtsSession(lifecycleToken);
-    void this.loadAppearanceSnapshot(lifecycleToken);
-    void this.loadChineseConversionMode(lifecycleToken);
-    void this.loadReaderSettingsSnapshot(lifecycleToken);
+    this.contentMetrics = undefined;
+    this.contentMetricsLoading = false;
+    this.lastCommittedProgress = undefined;
+    this.ttsInitialization = undefined;
+    this.ttsAvailabilityResolved = false;
+    this.chineseConversionLoaded = false;
+    this.readerSettingsLoaded = false;
     registerReaderFonts(this.getUIContext().getFont());
     this.didLayoutListener = (): void => this.captureMeasurementAfterLayout();
     this.getUIContext().getUIObserver().on('didLayout', this.didLayoutListener);
@@ -658,7 +670,7 @@ export struct ReadingExperience {
     // chapter read or first Core commit cannot leave the reader session alive
     // forever with no recoverable path back.
     this.armFirstPageReadyDeadline(lifecycleToken, this.chapterSelectionToken);
-    void this.loadInitialChapter(lifecycleToken);
+    void this.loadInitialReading(lifecycleToken);
   }
 
   aboutToDisappear(): void {
@@ -681,6 +693,8 @@ export struct ReadingExperience {
     this.ttsCoordinator = undefined;
     this.ttsGateway = undefined;
     this.ttsHttpGateway = undefined;
+    this.ttsInitialization = undefined;
+    this.ttsAvailabilityResolved = false;
     this.previousChapterMeasurement = undefined;
     this.releaseAllReadingImages();
     this.chapterWindow.clear();
@@ -876,6 +890,7 @@ export struct ReadingExperience {
               this.pauseAutoPageForInteraction();
               this.controlPage = 'home';
               this.controlVisible = true;
+              void this.loadContentMetricsIfNeeded(this.lifecycleToken);
               this.refreshReaderBrightness();
             });
           Row()
@@ -939,16 +954,18 @@ export struct ReadingExperience {
     // would make TextController's LayoutManager unavailable and a timer would
     // race layout; UIObserver.didLayout below is therefore the only read point.
     Column() {
-      Text(UNICODE_PROBE, { controller: this.unicodeProbeController })
-        .width(this.measurementTextWidth())
-        .fontFamily(readerAppearanceFontFamily(this.appearanceSnapshot.font))
-        .fontWeight(FontWeight.Regular)
-        .fontSize(this.appearanceSnapshot.fontSize)
-        .lineHeight(readerAppearanceLineHeight(this.appearanceSnapshot))
-        .letterSpacing(this.appearanceSnapshot.letterSpacing)
-        .fontColor(readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink)
-        .textAlign(readerAppearanceUsesJustify(this.appearanceSnapshot.alignment) ?
-          TextAlign.JUSTIFY : TextAlign.Start);
+      if (!this.unicodeProbeVerified) {
+        Text(UNICODE_PROBE, { controller: this.unicodeProbeController })
+          .width(this.measurementTextWidth())
+          .fontFamily(readerAppearanceFontFamily(this.appearanceSnapshot.font))
+          .fontWeight(FontWeight.Regular)
+          .fontSize(this.appearanceSnapshot.fontSize)
+          .lineHeight(readerAppearanceLineHeight(this.appearanceSnapshot))
+          .letterSpacing(this.appearanceSnapshot.letterSpacing)
+          .fontColor(readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink)
+          .textAlign(readerAppearanceUsesJustify(this.appearanceSnapshot.alignment) ?
+            TextAlign.JUSTIFY : TextAlign.Start);
+      }
 
       ForEach(this.measurementBatch, (paragraph: MeasurementParagraph) => {
         Text(this.measurementNodeText(paragraph), { controller: paragraph.controller })
@@ -970,6 +987,14 @@ export struct ReadingExperience {
     .position({ x: this.horizontalInset(), y: this.topInset() });
   }
 
+  private async loadInitialReading(lifecycleToken: number): Promise<void> {
+    await this.loadAppearanceSnapshot(lifecycleToken);
+    if (!this.isSessionActive(lifecycleToken)) {
+      return;
+    }
+    await this.loadInitialChapter(lifecycleToken);
+  }
+
   private async loadInitialChapter(lifecycleToken: number): Promise<void> {
     // The initial restore is also a chapter-selection transaction. A manual
     // choice made while these two Core reads are pending must win completely:
@@ -981,24 +1006,18 @@ export struct ReadingExperience {
       const initialLoad = await Promise.all([
         this.loadInitialToc(isCurrent),
         this.activeGateway().loadProgress(this.bookId, isCurrent),
-        this.activeGateway().loadContentMetrics(this.bookId, isCurrent),
       ]);
       if (!isCurrent()) {
         return;
       }
       const toc = initialLoad[0];
       const progress = initialLoad[1];
-      const contentMetrics = initialLoad[2];
-      if (contentMetrics !== undefined) {
-        validateContentMetricsAgainstToc(contentMetrics, toc.entries);
-      }
-      this.tocEntries = toc.entries;
+      this.admitTocEntries(toc.entries);
       this.chapterWindow.configure(
         this.sourceId,
         this.bookId,
         toc.entries.map((entry: LocalReadingTocEntry): number => entry.index),
       );
-      this.contentMetrics = contentMetrics;
       const requested = this.normalizedRequestedChapter();
       const restored = progress.kind === 'restored' ? progress.progress : undefined;
       const target = requested === undefined ? restored?.chapterIndex : requested;
@@ -1021,6 +1040,12 @@ export struct ReadingExperience {
     // be opened. Reuse the parent projection instead of asking the single Core
     // worker to decode the same local/cache TOC once more on every entry.
     return Promise.resolve(new InitialReadingToc(this.bookId, this.directoryEntries.slice()));
+  }
+
+  private admitTocEntries(entries: LocalReadingTocEntry[]): void {
+    this.tocEntries = entries;
+    this.controlDirectoryTocSource = undefined;
+    this.controlDirectoryProjection = [];
   }
 
   /**
@@ -1116,7 +1141,11 @@ export struct ReadingExperience {
       if (!isCurrent()) {
         return;
       }
-      if (!await this.ensureCurrentContentMetrics(chapter, isCurrent)) {
+      const chapterMap = new ReadingSurfaceLayoutMap(chapter.content);
+      if (chapterMap.scalarCount() === 0) {
+        throw new Error('READING_CONTENT_EMPTY');
+      }
+      if (!await this.ensureCurrentContentMetrics(chapter, chapterMap, isCurrent)) {
         return;
       }
       this.admitChapterContentVersion(chapter.chapterIndex, chapter.contentVersion);
@@ -1124,7 +1153,7 @@ export struct ReadingExperience {
       this.retainCurrentChapterWindow();
       this.chapter = chapter;
       this.materializedChapterSelectionToken = selectionToken;
-      this.configureRestoredAnchor(chapter, isInitial, requestedOffset, requestedProgress);
+      this.configureRestoredAnchor(chapter, chapterMap, isInitial, requestedOffset, requestedProgress);
       // Never lay out against the Phone/Tablet fallback constants. If Area
       // has already arrived, start once now; otherwise the first real Area
       // callback below owns the initial measurement generation.
@@ -1153,44 +1182,37 @@ export struct ReadingExperience {
   }
 
   /**
-   * Loads only the two TOC neighbours into the active session window.
-   * Failures are non-fatal because the visible current chapter is already
-   * committed; an explicit turn retries through the same guarded loader.
+   * Prefetch only the forward neighbour after the visible page is committed.
+   * Backward acquisition remains demand-driven so optional work cannot queue
+   * ahead of the next user intent on Core's single stateful worker.
    */
-  private prefetchAdjacentChapters(
+  private prefetchNextChapter(
     current: ReadingSessionChapter,
     lifecycleToken: number,
     selectionToken: number,
   ): void {
-    const targets: number[] = [];
-    const previous = this.adjacentChapterIndex(current.chapterIndex, -1);
     const next = this.adjacentChapterIndex(current.chapterIndex, 1);
-    if (previous !== undefined && this.chapterWindow.get(previous) === undefined) {
-      targets.push(previous);
+    if (next === undefined || this.chapterWindow.get(next) !== undefined) {
+      return;
     }
-    if (next !== undefined && this.chapterWindow.get(next) === undefined) {
-      targets.push(next);
-    }
-    for (const target of targets) {
-      const isCurrent = (): boolean => this.isVisiblePageCurrent(
-        this.visiblePage as PhysicalReadingPage,
-        current,
-        selectionToken,
-        lifecycleToken,
-      );
-      void this.activeGateway().loadChapter(this.bookId, target, isCurrent)
-        .then((chapter: ReadingSessionChapter): void => {
-          if (!isCurrent()) {
-            return;
-          }
-          this.admitChapterContentVersion(chapter.chapterIndex, chapter.contentVersion);
-          this.chapterWindow.admitNeighbour(chapter);
-          this.retainCurrentChapterWindow();
-        })
-        .catch((_error: Error): void => {
-          // The explicit previous/next request remains the retry boundary.
-        });
-    }
+    const isCurrent = (): boolean => this.isVisiblePageCurrent(
+      this.visiblePage as PhysicalReadingPage,
+      current,
+      selectionToken,
+      lifecycleToken,
+    );
+    void this.activeGateway().loadChapter(this.bookId, next, isCurrent)
+      .then((chapter: ReadingSessionChapter): void => {
+        if (!isCurrent()) {
+          return;
+        }
+        this.admitChapterContentVersion(chapter.chapterIndex, chapter.contentVersion);
+        this.chapterWindow.admitNeighbour(chapter);
+        this.retainCurrentChapterWindow();
+      })
+      .catch((_error: Error): void => {
+        // The explicit next request remains the retry boundary.
+      });
   }
 
   /**
@@ -1201,15 +1223,18 @@ export struct ReadingExperience {
    */
   private async ensureCurrentContentMetrics(
     chapter: ReadingSessionChapter,
+    chapterMap: ReadingSurfaceLayoutMap,
     isCurrent: () => boolean,
   ): Promise<boolean> {
-    const scalarCount = new ReadingSurfaceLayoutMap(chapter.content).scalarCount();
     if (!this.activeGateway().supportsExactContentMetrics()) {
       return true;
     }
     let metrics = this.contentMetrics;
-    let metric = metrics === undefined ? undefined :
-      contentMetricForChapter(metrics, chapter.chapterIndex);
+    if (metrics === undefined) {
+      return true;
+    }
+    const scalarCount = chapterMap.scalarCount();
+    let metric = contentMetricForChapter(metrics, chapter.chapterIndex);
     if (metric !== undefined && metric.scalarLength === scalarCount) {
       return true;
     }
@@ -1229,16 +1254,49 @@ export struct ReadingExperience {
     return true;
   }
 
+  private async loadContentMetricsIfNeeded(lifecycleToken: number): Promise<void> {
+    if (!this.isSessionActive(lifecycleToken) || this.contentMetrics !== undefined ||
+      this.contentMetricsLoading || !this.activeGateway().supportsExactContentMetrics()) {
+      return;
+    }
+    this.contentMetricsLoading = true;
+    try {
+      const isCurrent = (): boolean => this.isSessionActive(lifecycleToken);
+      const metrics = await this.activeGateway().loadContentMetrics(this.bookId, isCurrent);
+      if (!isCurrent() || metrics === undefined) {
+        return;
+      }
+      validateContentMetricsAgainstToc(metrics, this.tocEntries);
+      const chapter = this.chapter;
+      const chapterMap = this.chapterLayoutMap;
+      if (chapter !== undefined && chapterMap !== undefined) {
+        const metric = contentMetricForChapter(metrics, chapter.chapterIndex);
+        if (metric === undefined || metric.scalarLength !== chapterMap.scalarCount()) {
+          return;
+        }
+      }
+      this.contentMetrics = metrics;
+    } catch (_error) {
+      // Exact local metrics improve whole-book controls but are not required
+      // to render or navigate the already materialized current chapter.
+    } finally {
+      if (this.isMountedToken(lifecycleToken)) {
+        this.contentMetricsLoading = false;
+      }
+    }
+  }
+
   private configureRestoredAnchor(
     chapter: ReadingSessionChapter,
+    chapterMap: ReadingSurfaceLayoutMap,
     isInitial: boolean,
     requestedOffset?: number,
     requestedProgress?: number,
   ): void {
-    const chapterMap = new ReadingSurfaceLayoutMap(chapter.content);
-    if (chapterMap.scalarCount() === 0) {
-      throw new Error('READING_CONTENT_EMPTY');
-    }
+    // A newly admitted chapter body owns a fresh location revision. Even when
+    // its visible scalar offset matches the prior body, the next ready-page
+    // commit must cross Core once before exit deduplication is allowed again.
+    this.lastCommittedProgress = undefined;
     this.chapterLayoutMap = chapterMap;
     this.materializedContentVersion = chapter.contentVersion;
     if (requestedOffset !== undefined) {
@@ -1353,7 +1411,9 @@ export struct ReadingExperience {
         this.ensureFirstPageReadyDeadline(lifecycleToken, selectionToken);
       }
       this.measurementGeneration += 1;
-      this.unicodeProbeEmptyAttempts = 0;
+      if (!this.unicodeProbeVerified) {
+        this.unicodeProbeEmptyAttempts = 0;
+      }
       this.measurementSelectionToken = selectionToken;
       this.measurementCompleting = false;
       this.batchProcessing = false;
@@ -1517,6 +1577,9 @@ export struct ReadingExperience {
   }
 
   private hasValidUnicodeProbe(lifecycleToken: number): boolean {
+    if (this.unicodeProbeVerified) {
+      return true;
+    }
     let manager: LayoutManager;
     let lineCount: number;
     try {
@@ -1559,10 +1622,8 @@ export struct ReadingExperience {
         this.fail(new Error('PAGINATION_INDEX_UNIT_UNSUPPORTED'), lifecycleToken);
         return false;
       }
-      if (this.unicodeProbeVerifiedGeneration !== this.measurementGeneration) {
-        this.unicodeProbeVerifiedGeneration = this.measurementGeneration;
-        console.info('ReadingExperience UTF-16 probe passed: A😀B = 4 UTF-16 / 3 Unicode scalars');
-      }
+      this.unicodeProbeVerified = true;
+      console.info('ReadingExperience UTF-16 probe passed: A😀B = 4 UTF-16 / 3 Unicode scalars');
       this.unicodeProbeEmptyAttempts = 0;
       return true;
     } catch (error) {
@@ -1929,15 +1990,8 @@ export struct ReadingExperience {
         this.chapterTitle = chapter.chapterTitle;
         this.onChapterCommitted(chapter.chapterIndex, chapter.chapterTitle);
         this.onReadingReady(chapter.chapterIndex);
-        this.onReadingCommitted(new ReadingCommit(
-          this.sourceId,
-          this.bookId,
-          stored.chapterIndex,
-          stored.chapterOffset,
-          stored.chapterProgress,
-          stored.locationRevision,
-        ));
-        this.prefetchAdjacentChapters(chapter, lifecycleToken, selectionToken);
+        this.admitCommittedProgress(stored);
+        this.prefetchNextChapter(chapter, lifecycleToken, selectionToken);
         this.onAutoPagePageCommitted();
         this.resumeDeferredMeasurement(lifecycleToken);
       });
@@ -2008,6 +2062,12 @@ export struct ReadingExperience {
     if (!this.isVisiblePageCurrent(page, chapter, selectionToken, lifecycleToken)) {
       return;
     }
+    if (this.lastCommittedProgress?.sourceId === this.sourceId &&
+      this.lastCommittedProgress.bookId === this.bookId &&
+      this.lastCommittedProgress.chapterIndex === chapter.chapterIndex &&
+      this.lastCommittedProgress.chapterOffset === page.startScalar) {
+      return;
+    }
     this.commitInFlight = true;
     try {
       await this.activeGateway().runProgressCommitSerial(async (): Promise<void> => {
@@ -2035,14 +2095,7 @@ export struct ReadingExperience {
         if (!this.isVisiblePageCurrent(page, chapter, selectionToken, lifecycleToken)) {
           return;
         }
-        this.onReadingCommitted(new ReadingCommit(
-          this.sourceId,
-          this.bookId,
-          stored.chapterIndex,
-          stored.chapterOffset,
-          stored.chapterProgress,
-          stored.locationRevision,
-        ));
+        this.admitCommittedProgress(stored);
       });
     } catch (error) {
       // The visible static reading page remains valid. Persistence failures are
@@ -2053,6 +2106,19 @@ export struct ReadingExperience {
         this.commitInFlight = false;
       }
     }
+  }
+
+  private admitCommittedProgress(stored: LocalReadingProgress): void {
+    const commit = new ReadingCommit(
+      this.sourceId,
+      this.bookId,
+      stored.chapterIndex,
+      stored.chapterOffset,
+      stored.chapterProgress,
+      stored.locationRevision,
+    );
+    this.lastCommittedProgress = commit;
+    this.onReadingCommitted(commit);
   }
 
   private coreLayout(): CoreReadingLayout {
@@ -2502,10 +2568,8 @@ export struct ReadingExperience {
     if (requested === undefined) {
       return this.tocEntries[0].index;
     }
-    for (const entry of this.tocEntries) {
-      if (entry.index === requested) {
-        return requested;
-      }
+    if (this.chapterWindow.contains(requested)) {
+      return requested;
     }
     throw new Error('LOCAL_TOC_CHAPTER_NOT_FOUND');
   }
@@ -2663,12 +2727,11 @@ export struct ReadingExperience {
     if (count === 0) {
       return 0;
     }
-    for (let position = 0; position < count; position += 1) {
-      if (this.tocEntries[position].index === this.currentChapterIndex()) {
-        return Math.max(READER_CONTROL_PROGRESS_MIN, Math.min(READER_CONTROL_PROGRESS_MAX,
-          ((position + this.normalizedProgress(this.desiredChapterProgress)) / count) *
-          READER_CONTROL_PROGRESS_MAX));
-      }
+    const position = this.chapterWindow.position(this.currentChapterIndex());
+    if (position >= 0) {
+      return Math.max(READER_CONTROL_PROGRESS_MIN, Math.min(READER_CONTROL_PROGRESS_MAX,
+        ((position + this.normalizedProgress(this.desiredChapterProgress)) / count) *
+        READER_CONTROL_PROGRESS_MAX));
     }
     return 0;
   }
@@ -2684,11 +2747,15 @@ export struct ReadingExperience {
     if (this.directoryEntries.length === 0) {
       return this.tocEntries;
     }
+    if (this.controlDirectoryParentSource === this.directoryEntries &&
+      this.controlDirectoryTocSource === this.tocEntries) {
+      return this.controlDirectoryProjection;
+    }
     const projectedByChapter = new Map<number, LocalReadingTocEntry>();
     for (const projected of this.tocEntries) {
       projectedByChapter.set(projected.index, projected);
     }
-    return this.directoryEntries.map((entry: LocalReadingTocEntry): LocalReadingTocEntry => {
+    const projection = this.directoryEntries.map((entry: LocalReadingTocEntry): LocalReadingTocEntry => {
       const projected = projectedByChapter.get(entry.index);
       return projected === undefined ? entry : {
         index: entry.index,
@@ -2697,9 +2764,16 @@ export struct ReadingExperience {
         bookmarks: entry.bookmarks,
       };
     });
+    this.controlDirectoryParentSource = this.directoryEntries;
+    this.controlDirectoryTocSource = this.tocEntries;
+    this.controlDirectoryProjection = projection;
+    return projection;
   }
 
-  private initializeTtsSession(lifecycleToken: number): void {
+  private initializeTtsSession(lifecycleToken: number): Promise<boolean> {
+    if (this.ttsInitialization !== undefined) {
+      return this.ttsInitialization;
+    }
     const owner = ReaderRuntimeOwner.current();
     const gateway = new ReaderTtsGateway(owner);
     const httpGateway = new ReaderHttpTtsGateway(owner);
@@ -2718,10 +2792,10 @@ export struct ReadingExperience {
     this.ttsGateway = gateway;
     this.ttsHttpGateway = httpGateway;
     this.ttsCoordinator = coordinator;
-    void coordinator.probeAvailability()
+    const initialization = coordinator.probeAvailability()
       .then(async (available: boolean): Promise<void> => {
         if (!this.isMountedToken(lifecycleToken) || this.ttsCoordinator !== coordinator) return;
-        const config = await gateway.getConfig();
+        const config = coordinator.getProbedConfig();
         const httpEngines = await httpGateway.list();
         if (!this.isMountedToken(lifecycleToken) || this.ttsCoordinator !== coordinator) return;
         this.ttsConfig = config;
@@ -2729,12 +2803,33 @@ export struct ReadingExperience {
         this.ttsHttpEngines = httpEngines;
         if (available && config !== undefined) await coordinator.setRate(this.multiplierForCoreRate(config.rate));
       })
-      .catch((error: Error): void => {
+      .then((): boolean => {
+        if (this.isMountedToken(lifecycleToken) && this.ttsCoordinator === coordinator) {
+          this.ttsAvailabilityResolved = true;
+        }
+        return this.ttsState.status !== 'unavailable';
+      })
+      .catch((error: Error): boolean => {
+        if (this.isMountedToken(lifecycleToken) && this.ttsCoordinator === coordinator) {
+          this.ttsAvailabilityResolved = true;
+        }
         this.logTtsFailure('initialization', error);
+        return false;
       });
+    this.ttsInitialization = initialization;
+    return initialization;
   }
 
   private toggleTts(): void {
+    if (!this.ttsAvailabilityResolved) {
+      const lifecycleToken = this.lifecycleToken;
+      void this.initializeTtsSession(lifecycleToken).then((available: boolean): void => {
+        if (available && this.isSessionActive(lifecycleToken)) {
+          this.toggleTts();
+        }
+      });
+      return;
+    }
     const coordinator = this.ttsCoordinator;
     if (coordinator === undefined || this.ttsState.status === 'unavailable') return;
     if (this.ttsState.status === 'playing' || this.ttsState.status === 'preparing' ||
@@ -2979,14 +3074,7 @@ export struct ReadingExperience {
           resolved.locationRevision,
         ), isCurrent);
         if (!isCurrent()) return;
-        this.onReadingCommitted(new ReadingCommit(
-          this.sourceId,
-          this.bookId,
-          stored.chapterIndex,
-          stored.chapterOffset,
-          stored.chapterProgress,
-          stored.locationRevision,
-        ));
+        this.admitCommittedProgress(stored);
       });
     } catch (error) {
       this.logTtsFailure('progress', error as Error);
@@ -3410,6 +3498,14 @@ export struct ReadingExperience {
       this.replacePanelGeneration += 1;
     }
     this.controlPage = page;
+    const lifecycleToken = this.lifecycleToken;
+    if (page === 'moduleTts' || page === 'fullTts') {
+      void this.initializeTtsSession(lifecycleToken);
+    } else if (page === 'moduleAppearance' || page === 'fullAppearance') {
+      void this.loadChineseConversionMode(lifecycleToken);
+    } else if (page === 'moduleSettings' || page === 'fullSettings') {
+      void this.loadReaderSettingsSnapshot(lifecycleToken);
+    }
   }
 
   private async loadAppearanceSnapshot(lifecycleToken: number): Promise<void> {
@@ -3427,6 +3523,9 @@ export struct ReadingExperience {
   }
 
   private async loadChineseConversionMode(lifecycleToken: number): Promise<void> {
+    if (this.chineseConversionLoaded) {
+      return;
+    }
     const mutationGeneration = this.chineseConversionMutationGeneration;
     try {
       const mode = await this.chineseConversionGateway.getMode();
@@ -3435,6 +3534,7 @@ export struct ReadingExperience {
         return;
       }
       this.chineseConversionMode = mode;
+      this.chineseConversionLoaded = true;
     } catch (_error) {
       // Core defaults to no conversion. Keep the already-rendered mode when
       // startup is unavailable; the reading error boundary remains unchanged.
@@ -3456,6 +3556,7 @@ export struct ReadingExperience {
           return;
         }
         this.chineseConversionMode = storedMode;
+        this.chineseConversionLoaded = true;
         this.searchGeneration += 1;
         const chapter = this.chapter;
         if (chapter === undefined) {
@@ -3469,7 +3570,7 @@ export struct ReadingExperience {
             if (!isCurrent()) {
               return;
             }
-            this.tocEntries = toc.entries;
+            this.admitTocEntries(toc.entries);
             this.onDirectoryProjectionChanged(toc.entries);
             this.reloadCurrentChapterAfterContentProjectionChange(lifecycleToken, chapterIndex);
           })
@@ -3486,6 +3587,9 @@ export struct ReadingExperience {
   }
 
   private async loadReaderSettingsSnapshot(lifecycleToken: number): Promise<void> {
+    if (this.readerSettingsLoaded) {
+      return;
+    }
     const mutationGeneration = this.readerSettingsMutationGeneration;
     try {
       const snapshot = await this.readerSettingsGateway.load();
@@ -3494,6 +3598,7 @@ export struct ReadingExperience {
         return;
       }
       this.readerSettingsSnapshot = snapshot;
+      this.readerSettingsLoaded = true;
     } catch (_error) {
       // Figma defines no Settings loading/error surface. Keep the exact
       // default state already rendered by the approved component.
@@ -3505,6 +3610,7 @@ export struct ReadingExperience {
     this.readerSettingsMutationGeneration = this.readerSettingsMutationGeneration >= Number.MAX_SAFE_INTEGER ?
       1 : this.readerSettingsMutationGeneration + 1;
     this.readerSettingsSnapshot = snapshot;
+    this.readerSettingsLoaded = true;
     void this.readerSettingsGateway.update(snapshot).catch((_error: Error): void => {
       // The admitted local state remains usable; Figma provides no inline
       // persistence-failure state to add to the Settings sheet.
@@ -4149,23 +4255,11 @@ export struct ReadingExperience {
   }
 
   private adjacentChapterIndex(chapterIndex: number, delta: number): number | undefined {
-    for (let position = 0; position < this.tocEntries.length; position += 1) {
-      if (this.tocEntries[position].index !== chapterIndex) {
-        continue;
-      }
-      const target = position + delta;
-      return target >= 0 && target < this.tocEntries.length ? this.tocEntries[target].index : undefined;
-    }
-    return undefined;
+    return this.chapterWindow.adjacentChapterIndex(chapterIndex, delta);
   }
 
   private isKnownControlChapter(chapterIndex: number): boolean {
-    for (const entry of this.tocEntries) {
-      if (entry.index === chapterIndex) {
-        return true;
-      }
-    }
-    return false;
+    return this.chapterWindow.contains(chapterIndex);
   }
 
   private isSelectionCurrent(selectionToken: number): boolean {

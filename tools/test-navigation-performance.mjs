@@ -44,6 +44,40 @@ assert.match(reading, /return Promise\.resolve\(new InitialReadingToc\(this\.boo
 assert.match(reading, /this\.requestedChapterIndex === undefined && restored !== undefined/);
 assert.match(reading, /stored = await this\.activeGateway\(\)\.updateProgress/,
   'changed/explicit anchors must retain persistence-before-visibility');
+const appear = method(reading, 'aboutToAppear(): void {', 'aboutToDisappear(): void {');
+assert.match(appear, /this\.loadInitialReading\(lifecycleToken\)/);
+assert.doesNotMatch(appear, /initializeTtsSession|loadChineseConversionMode|loadReaderSettingsSnapshot/,
+  'optional TTS and control settings must not compete with first-page admission');
+const initialReading = method(reading, 'private async loadInitialReading(', 'private async loadInitialChapter(');
+assert.match(initialReading, /await this\.loadAppearanceSnapshot\(lifecycleToken\)/,
+  'layout-affecting appearance must settle before the first chapter measurement');
+const initialChapter = method(reading, 'private async loadInitialChapter(', 'private loadInitialToc(');
+assert.doesNotMatch(initialChapter, /loadContentMetrics/,
+  'whole-book metrics must not remain on the first-page critical path');
+assert.match(reading, /private lastCommittedProgress: ReadingCommit \| undefined/);
+assert.match(reading, /this\.lastCommittedProgress\.chapterOffset === page\.startScalar[\s\S]*?return;/,
+  'exit must skip an identical durable visible-page commit');
+assert.match(reading,
+  /configureRestoredAnchor\([\s\S]*?this\.lastCommittedProgress = undefined;[\s\S]*?this\.chapterLayoutMap = chapterMap;/,
+  'a reloaded chapter body must earn a fresh durable commit before exit deduplication');
+assert.match(reading, /private unicodeProbeVerified: boolean = false/);
+assert.match(reading, /if \(this\.unicodeProbeVerified\) \{\s*return true;/,
+  'the UTF-16/scalar contract probe must be reused after its first proof');
+assert.match(reading, /private prefetchNextChapter\(/);
+assert.doesNotMatch(reading, /private prefetchAdjacentChapters\(/,
+  'backward chapter acquisition must remain demand-driven');
+
+const localGateway = read('entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
+assert.equal((localGateway.match(/new Set<number>\(\)/g) ?? []).length, 2,
+  'TOC and content metrics validation must use linear-time duplicate checks');
+assert.doesNotMatch(localGateway, /seenIndices\.indexOf/);
+const chapterWindow = read('entry/src/main/ets/features/reading/ReadingChapterWindow.ts');
+assert.match(chapterWindow, /private chapterPositions: Map<number, number>/);
+assert.match(chapterWindow, /return this\.chapterPositions\.get\(chapterIndex\) \?\? -1/);
+assert.doesNotMatch(chapterWindow, /this\.chapterOrder\.indexOf/);
+const remoteGateway = read('entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
+assert.match(remoteGateway, /private chapterByIndex: Map<number, RemoteReadingTocEntry>/);
+assert.match(remoteGateway, /const selected = this\.chapterEntry\(session, chapterIndex\)/);
 
 const search = read('entry/src/main/ets/features/search/SearchPage.ets');
 assert.match(search, /Repeat\(results\)[\s\S]*\.virtualScroll\(\{ reusable: true \}\)/);

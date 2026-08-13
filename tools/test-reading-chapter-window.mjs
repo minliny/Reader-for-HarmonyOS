@@ -19,6 +19,12 @@ function chapter(chapterIndex, contentVersion = `body-${chapterIndex}`) {
 
 const window = new ReadingChapterWindow();
 window.configure('local', 'book-1', [10, 20, 30, 40, 50]);
+assert.equal(window.position(30), 2);
+assert.equal(window.contains(40), true);
+assert.equal(window.contains(99), false);
+assert.equal(window.adjacentChapterIndex(30, -1), 20);
+assert.equal(window.adjacentChapterIndex(30, 1), 40);
+assert.equal(window.adjacentChapterIndex(50, 1), undefined);
 window.setCurrent(chapter(30));
 assert.equal(window.admitNeighbour(chapter(20)), true);
 assert.equal(window.admitNeighbour(chapter(40)), true);

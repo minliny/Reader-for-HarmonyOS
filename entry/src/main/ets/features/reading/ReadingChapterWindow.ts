@@ -43,6 +43,7 @@ export class ReadingChapterWindow {
   private sourceId: string = '';
   private bookId: string = '';
   private chapterOrder: number[] = [];
+  private chapterPositions: Map<number, number> = new Map();
   private currentChapterIndex: number = -1;
   private chapters: ReadingSessionChapter[] = [];
 
@@ -58,6 +59,7 @@ export class ReadingChapterWindow {
     this.sourceId = sourceId;
     this.bookId = bookId;
     this.chapterOrder = chapterOrder.slice();
+    this.chapterPositions = buildChapterPositions(this.chapterOrder);
     this.currentChapterIndex = -1;
     this.chapters = [];
   }
@@ -104,6 +106,21 @@ export class ReadingChapterWindow {
 
   retainedChapterIndexes(): number[] {
     return this.chapters.map((chapter: ReadingSessionChapter): number => chapter.chapterIndex);
+  }
+
+  contains(chapterIndex: number): boolean {
+    return this.chapterPositions.has(chapterIndex);
+  }
+
+  position(chapterIndex: number): number {
+    return this.positionOf(chapterIndex);
+  }
+
+  adjacentChapterIndex(chapterIndex: number, delta: number): number | undefined {
+    const position = this.positionOf(chapterIndex);
+    const target = position + delta;
+    return position >= 0 && target >= 0 && target < this.chapterOrder.length ?
+      this.chapterOrder[target] : undefined;
   }
 
   /** Native image handles still reachable from the bounded three-chapter set. */
@@ -170,7 +187,7 @@ export class ReadingChapterWindow {
   }
 
   private positionOf(chapterIndex: number): number {
-    return this.chapterOrder.indexOf(chapterIndex);
+    return this.chapterPositions.get(chapterIndex) ?? -1;
   }
 }
 
@@ -207,16 +224,24 @@ function validateChapterOrder(chapterOrder: number[]): void {
   if (chapterOrder.length === 0) {
     throw new Error('chapterOrder must contain at least one chapter');
   }
-  const seen: number[] = [];
+  const seen = new Set<number>();
   for (const chapterIndex of chapterOrder) {
     if (!Number.isSafeInteger(chapterIndex) || chapterIndex < 0) {
       throw new Error('chapterOrder must contain non-negative safe integers');
     }
-    if (seen.indexOf(chapterIndex) >= 0) {
+    if (seen.has(chapterIndex)) {
       throw new Error('chapterOrder must not contain duplicate chapters');
     }
-    seen.push(chapterIndex);
+    seen.add(chapterIndex);
   }
+}
+
+function buildChapterPositions(chapterOrder: number[]): Map<number, number> {
+  const positions = new Map<number, number>();
+  for (let position = 0; position < chapterOrder.length; position += 1) {
+    positions.set(chapterOrder[position], position);
+  }
+  return positions;
 }
 
 function sameChapterOrder(left: number[], right: number[]): boolean {

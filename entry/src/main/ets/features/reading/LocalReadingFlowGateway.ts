@@ -168,14 +168,14 @@ export class LocalReadingFlowGateway {
     }
 
     const entries: LocalReadingTocEntry[] = [];
-    const seenIndices: number[] = [];
+    const seenIndices = new Set<number>();
     for (const rawEntry of rawToc) {
       const entry = this.requireObject(rawEntry, 'local_book.toc entry');
       const index = this.requireNonNegativeInteger(entry, 'index', 'local_book.toc entry');
-      if (seenIndices.indexOf(index) >= 0) {
+      if (seenIndices.has(index)) {
         throw new Error('local_book.toc returned duplicate chapter index');
       }
-      seenIndices.push(index);
+      seenIndices.add(index);
       // Although the URL is not page state, validate the complete required
       // Core entry shape before using its title and index.
       this.requireString(entry, 'url', 'local_book.toc entry');
@@ -444,7 +444,7 @@ export class LocalReadingFlowGateway {
     }
 
     const chapters: LocalReadingChapterContentMetric[] = [];
-    const seenIndices: number[] = [];
+    const seenIndices = new Set<number>();
     let expectedStart = 0;
     for (const rawChapter of rawChapters) {
       const chapter = this.requireObject(rawChapter, 'local_book.content.metrics chapter');
@@ -453,10 +453,10 @@ export class LocalReadingFlowGateway {
         'chapterIndex',
         'local_book.content.metrics chapter',
       );
-      if (seenIndices.indexOf(chapterIndex) >= 0) {
+      if (seenIndices.has(chapterIndex)) {
         throw new Error('local_book.content.metrics returned duplicate chapterIndex');
       }
-      seenIndices.push(chapterIndex);
+      seenIndices.add(chapterIndex);
       const scalarLength = this.requireNonNegativeInteger(
         chapter,
         'scalarLength',

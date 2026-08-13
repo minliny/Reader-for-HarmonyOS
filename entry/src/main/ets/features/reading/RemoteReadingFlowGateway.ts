@@ -131,6 +131,8 @@ export type RemoteReadingOpenOptions = {
 export class RemoteReadingFlowGateway {
   private static progressCommitTail: Promise<void> = Promise.resolve();
   private readonly runtimeOwner: ReadingGatewayRuntime;
+  private indexedEntries: RemoteReadingTocEntry[] | undefined = undefined;
+  private chapterByIndex: Map<number, RemoteReadingTocEntry> = new Map();
 
   constructor(runtimeOwner: ReadingGatewayRuntime) {
     this.runtimeOwner = runtimeOwner;
@@ -333,13 +335,7 @@ export class RemoteReadingFlowGateway {
     const identity = createRemoteReadingIdentity(session.identity.sourceId, session.identity.bookId);
     this.assertChapterIndex(chapterIndex, 'chapterIndex');
     assertRemoteReadingHostRequirements(session.hostRequirements);
-    let selected: RemoteReadingTocEntry | undefined = undefined;
-    for (const entry of session.entries) {
-      if (entry.index === chapterIndex) {
-        selected = entry;
-        break;
-      }
-    }
+    const selected = this.chapterEntry(session, chapterIndex);
     if (selected === undefined) {
       throw new RemoteReadingGatewayError(
         'chapterNotFound',
@@ -394,6 +390,21 @@ export class RemoteReadingFlowGateway {
       contentVersion: document.contentVersion,
       extractionVia: via === 'cache' ? 'rule' : via,
     };
+  }
+
+  private chapterEntry(
+    session: RemoteReadingSession,
+    chapterIndex: number,
+  ): RemoteReadingTocEntry | undefined {
+    if (this.indexedEntries !== session.entries) {
+      const chapterByIndex = new Map<number, RemoteReadingTocEntry>();
+      for (const entry of session.entries) {
+        chapterByIndex.set(entry.index, entry);
+      }
+      this.indexedEntries = session.entries;
+      this.chapterByIndex = chapterByIndex;
+    }
+    return this.chapterByIndex.get(chapterIndex);
   }
 
   private async assertOfflineChapterAvailable(

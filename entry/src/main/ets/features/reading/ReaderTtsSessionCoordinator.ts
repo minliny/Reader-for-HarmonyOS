@@ -155,6 +155,7 @@ export class ReaderTtsSessionCoordinator {
   private state: ReaderTtsState = createReaderTtsState(false);
   private transport: HostTtsTransportState = createHostTtsTransportState();
   private coreSnapshot: ReaderTtsQueueSnapshot | undefined = undefined;
+  private probedConfig: ReaderTtsConfig | undefined = undefined;
   private active: ActiveSession | undefined = undefined;
   private disposed: boolean = false;
   private timerHandle: number = -1;
@@ -210,8 +211,13 @@ export class ReaderTtsSessionCoordinator {
     return { ...this.transport };
   }
 
+  getProbedConfig(): ReaderTtsConfig | undefined {
+    return this.probedConfig;
+  }
+
   async probeAvailability(): Promise<boolean> {
     const config = await this.gateway.getConfig();
+    this.probedConfig = config;
     await this.host.selectEngine(config?.engine);
     this.transport = {
       ...this.transport,

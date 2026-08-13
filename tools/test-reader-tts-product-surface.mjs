@@ -29,6 +29,12 @@ assert.match(controls, /onTtsSeek: \(sliceIndex: number\)/);
 assert.doesNotMatch(controls, /module === 'tts' && this\.ttsState\.status === 'unavailable'\) \{\s*return/);
 assert.match(experience, /new ReaderHttpTtsGateway\(owner\)/);
 assert.match(experience, /const httpEngines = await httpGateway\.list\(\)/);
+assert.match(experience, /const config = coordinator\.getProbedConfig\(\)/,
+  'TTS initialization must reuse the config already read by the availability probe');
+assert.doesNotMatch(experience, /const config = await gateway\.getConfig\(\)/,
+  'TTS initialization must not issue a duplicate config request');
+assert.match(experience, /page === 'moduleTts' \|\| page === 'fullTts'/,
+  'TTS initialization must be scoped to the user entering the TTS controls');
 assert.match(experience, /gateway\.putConfig\(\{/);
 assert.match(experience, /await coordinator\.probeAvailability\(\)/);
 assert.match(experience, /coordinator\.seek\(sliceIndex\)/);

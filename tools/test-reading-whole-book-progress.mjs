@@ -76,5 +76,13 @@ assert.match(experienceSource, /Remote sessions[\s\S]*must not download the whol
   'the chapter-position fallback must be documented and limited to unopened remote bodies');
 assert.doesNotMatch(experienceSource, /loadChapter\([^\n]*for|Promise\.all\([^)]*loadChapter/,
   'whole-book progress must not bulk-load chapter bodies in ArkUI');
+const initialStart = experienceSource.indexOf('private async loadInitialChapter(');
+const initialEnd = experienceSource.indexOf('private loadInitialToc(', initialStart);
+assert.ok(initialStart >= 0 && initialEnd > initialStart);
+assert.doesNotMatch(experienceSource.slice(initialStart, initialEnd), /loadContentMetrics/,
+  'exact whole-book metrics must be removed from first-page admission');
+assert.match(experienceSource, /private async loadContentMetricsIfNeeded\(/);
+assert.match(experienceSource, /this\.controlVisible = true;\s*void this\.loadContentMetricsIfNeeded/,
+  'exact metrics may load on demand when the user opens whole-book controls');
 
 console.log('reading whole-book processed-scalar progress: PASS');

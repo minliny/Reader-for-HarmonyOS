@@ -74,26 +74,31 @@ export async function materializeReadingDocument(
 }
 
 function validateBlocks(content: string, values: unknown[]): ImageBlock[] {
-  const scalarLength = scalarCount(content);
   let expectedStart = 0;
+  let startUtf16 = 0;
   const images: ImageBlock[] = [];
   for (const raw of values) {
     const block = requireObject(raw, 'reading block');
     const kind = block['kind'];
     const startScalar = requireNonNegativeInteger(block['startScalar'], 'reading block startScalar');
     const endScalar = requireNonNegativeInteger(block['endScalar'], 'reading block endScalar');
-    if (startScalar !== expectedStart || endScalar <= startScalar || endScalar > scalarLength) {
+    if (startScalar !== expectedStart || endScalar <= startScalar) {
       throw new Error('reading blocks do not form one contiguous canonical scalar projection');
     }
+    const endUtf16 = advanceUtf16ByScalars(content, startUtf16, endScalar - startScalar);
+    if (endUtf16 < 0) {
+      throw new Error('reading blocks do not form one contiguous canonical scalar projection');
+    }
+    const projectedText = content.substring(startUtf16, endUtf16);
     if (kind === 'text') {
       const text = block['text'];
-      if (typeof text !== 'string' || scalarSlice(content, startScalar, endScalar) !== text) {
+      if (typeof text !== 'string' || projectedText !== text) {
         throw new Error('reading text block does not match canonical chapter content');
       }
     } else if (kind === 'image') {
       const source = block['source'];
       if (typeof source !== 'string' || source.trim().length === 0 || endScalar !== startScalar + 1 ||
-        scalarSlice(content, startScalar, endScalar) !== '\uFFFC') {
+        projectedText !== '\uFFFC') {
         throw new Error('reading image block does not match its canonical object scalar');
       }
       images.push({ source, startScalar, endScalar });
@@ -101,8 +106,9 @@ function validateBlocks(content: string, values: unknown[]): ImageBlock[] {
       throw new Error('reading block returned an unsupported kind');
     }
     expectedStart = endScalar;
+    startUtf16 = endUtf16;
   }
-  if (expectedStart !== scalarLength) {
+  if (startUtf16 !== content.length) {
     throw new Error('reading blocks do not cover the complete canonical chapter content');
   }
   return images;
@@ -122,32 +128,14 @@ function requireNonNegativeInteger(value: unknown, context: string): number {
   return value;
 }
 
-function scalarCount(text: string): number {
-  let count = 0;
-  for (const _value of text) {
-    count += 1;
-  }
-  return count;
-}
-
-function scalarSlice(text: string, startScalar: number, endScalar: number): string {
-  let scalar = 0;
-  let startUtf16 = text.length;
-  let endUtf16 = text.length;
-  for (let utf16 = 0; utf16 <= text.length;) {
-    if (scalar === startScalar) {
-      startUtf16 = utf16;
-    }
-    if (scalar === endScalar) {
-      endUtf16 = utf16;
-      break;
-    }
-    if (utf16 === text.length) {
-      break;
+function advanceUtf16ByScalars(text: string, startUtf16: number, scalarLength: number): number {
+  let utf16 = startUtf16;
+  for (let scalar = 0; scalar < scalarLength; scalar += 1) {
+    if (utf16 >= text.length) {
+      return -1;
     }
     const point = text.codePointAt(utf16);
     utf16 += point !== undefined && point > 0xFFFF ? 2 : 1;
-    scalar += 1;
   }
-  return text.substring(startUtf16, endUtf16);
+  return utf16;
 }

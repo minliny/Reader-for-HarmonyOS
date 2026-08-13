@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { registerHooks } from 'node:module';
 
 registerHooks({
@@ -18,6 +19,13 @@ registerHooks({
 const { materializeReadingDocument } = await import(
   '../entry/src/main/ets/features/reading/ReadingDocumentProjection.ts'
 );
+const projectionSource = readFileSync(
+  new URL('../entry/src/main/ets/features/reading/ReadingDocumentProjection.ts', import.meta.url),
+  'utf8',
+);
+assert.match(projectionSource, /advanceUtf16ByScalars/);
+assert.doesNotMatch(projectionSource, /function scalarSlice|function scalarCount/,
+  'contiguous block validation must scan the chapter only once');
 
 const loads = [];
 const runtime = {
@@ -44,6 +52,18 @@ const textOnly = await materializeReadingDocument(
 assert.equal(textOnly.content, 'A😀B');
 assert.deepEqual(textOnly.images, []);
 assert.equal(loads.length, 0, 'text-only chapters must not touch the image Host');
+
+const longUnicodeText = 'A😀'.repeat(2048);
+const longUnicode = await materializeReadingDocument(
+  {
+    content: longUnicodeText,
+    blocks: [{ kind: 'text', text: longUnicodeText, startScalar: 0, endScalar: 4096 }],
+  },
+  'source-a',
+  undefined,
+  runtime,
+);
+assert.equal(longUnicode.content, longUnicodeText);
 
 const content = 'A😀\n\n\uFFFC\n\nB';
 const projected = await materializeReadingDocument(
