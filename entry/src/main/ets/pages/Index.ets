@@ -9,6 +9,7 @@ import {
 import {
   type BookshelfDataState,
   BookshelfFlowGateway,
+  type BookshelfRemoveOutcome,
 } from '../features/bookshelf/BookshelfFlowGateway';
 import { BookshelfPage } from '../features/bookshelf/BookshelfPage';
 import { BookshelfManagementPage } from '../features/bookshelf/BookshelfManagementPage';
@@ -296,6 +297,9 @@ struct Index {
   /** One UI mutation gate over Core's already-durable download queue. */
   private offlineMutationGeneration: number = 0;
   @State private offlineMutationActiveKey: string = '';
+  /** Serializes the destructive detail-page removal for one exact book. */
+  private bookshelfRemovalGeneration: number = 0;
+  @State private bookshelfRemovalActiveKey: string = '';
   /** Rejects a late shelf read after a newer import/refresh has completed. */
   private bookshelfLoadGeneration: number = 0;
   private searchOrchestrator: SearchOrchestrator | undefined;
@@ -673,6 +677,7 @@ struct Index {
           onSelectChapter: (chapterIndex: number): void => this.openReading(chapterIndex),
           onOpenDirectory: (): void => this.openFullDirectory(),
           onSwitchSource: (): void => this.openDetailSourceSwitch(),
+          onRemove: (): void => this.requestRemoveDetailBook(),
           onBack: (): void => this.returnToBookshelf(),
         });
       }
@@ -2277,9 +2282,167 @@ struct Index {
       });
   }
 
+  private detailBookKey(book: ReadingBookDetail): string {
+    return `${book.sourceId}\u0000${book.bookId}`;
+  }
+
+  private isSameDetailBook(book: ReadingBookDetail): boolean {
+    return this.detailBook?.sourceId === book.sourceId && this.detailBook?.bookId === book.bookId;
+  }
+
+  private canRemoveDetailBook(book: ReadingBookDetail): boolean {
+    return this.route === 'detail' && this.isSameDetailBook(book) && !this.readingSessionActive &&
+      !this.sourceSwitchVisible && this.pendingSourceSwitch === undefined &&
+      this.offlineMutationActiveKey.length === 0 &&
+      this.bookshelfRemovalActiveKey.length === 0;
+  }
+
+  private requestRemoveDetailBook(): void {
+    const book = this.detailBook;
+    if (book === undefined || !this.canRemoveDetailBook(book)) {
+      return;
+    }
+    const message = book.sourceId === LOCAL_SOURCE_ID ?
+      `确定将“${book.title}”从书架移除吗？应用内解析内容、阅读进度和离线任务将一并删除；系统中的原始文件不受影响。` :
+      `确定将“${book.title}”从书架移除吗？书源、阅读进度和已缓存正文不会删除，可再次通过搜索加入书架。`;
+    this.getUIContext().showAlertDialog({
+      title: '移除书架',
+      message,
+      autoCancel: true,
+      primaryButton: {
+        value: '取消',
+        action: (): void => {},
+      },
+      secondaryButton: {
+        value: '移除',
+        fontColor: '#B42318',
+        action: (): void => {
+          if (this.canRemoveDetailBook(book)) {
+            this.removeDetailBook(book);
+          }
+        },
+      },
+    });
+  }
+
+  private removeDetailBook(book: ReadingBookDetail): void {
+    if (!this.canRemoveDetailBook(book)) {
+      return;
+    }
+    const generation = ++this.bookshelfRemovalGeneration;
+    const key = this.detailBookKey(book);
+    this.bookshelfRemovalActiveKey = key;
+    const owner = ReaderRuntimeOwner.current();
+    const gateway = new BookshelfFlowGateway(owner);
+    const isCurrent = (): boolean => generation === this.bookshelfRemovalGeneration &&
+      this.bookshelfRemovalActiveKey === key;
+    void gateway.remove(book.sourceId, book.bookId)
+      .then((outcome: BookshelfRemoveOutcome): void => {
+        if (isCurrent()) {
+          this.applyDetailBookRemoval(book, outcome.shelf);
+        }
+      })
+      .catch((error: Error): Promise<void> =>
+        this.reconcileDetailBookRemovalFailure(book, error, owner, gateway, isCurrent))
+      .finally((): void => {
+        if (isCurrent()) {
+          this.bookshelfRemovalActiveKey = '';
+        }
+      });
+  }
+
+  /**
+   * `removeBook` commits Core before releasing a retained local EPUB. If the
+   * Host cleanup or the following shelf read fails, query the exact composite
+   * key before deciding whether the destructive command itself failed.
+   */
+  private async reconcileDetailBookRemovalFailure(
+    book: ReadingBookDetail,
+    originalError: Error,
+    owner: ReaderRuntimeOwner,
+    gateway: BookshelfFlowGateway,
+    isCurrent: () => boolean,
+  ): Promise<void> {
+    try {
+      const stored = await new ReaderCoreGateway(owner).loadShelfBook(book.sourceId, book.bookId);
+      if (!isCurrent()) {
+        return;
+      }
+      if (stored !== undefined) {
+        this.showReadingFailure('移除书架失败', originalError.message);
+        return;
+      }
+
+      let cleanupError: Error | undefined = undefined;
+      if (book.sourceId === LOCAL_SOURCE_ID) {
+        try {
+          // Idempotent retry for the Core-committed / Host-cleanup-failed window.
+          await owner.releaseLocalBookAsset(book.bookId);
+        } catch (error) {
+          cleanupError = error instanceof Error ? error : new Error(`${error}`);
+        }
+      }
+      let shelf: BookshelfDataState;
+      try {
+        shelf = await gateway.load();
+      } catch (loadError) {
+        if (!isCurrent()) {
+          return;
+        }
+        // The exact key already proved the destructive Core commit. Never
+        // leave a deleted book open or relabel that committed fact as failure.
+        if (this.route === 'detail' && this.isSameDetailBook(book)) {
+          this.returnToBookshelf();
+        } else if (this.route === 'bookshelf') {
+          this.refreshBookshelf();
+        }
+        const loadMessage = loadError instanceof Error ? loadError.message : `${loadError}`;
+        this.showReadingFailure('已移出书架',
+          `书籍已从书架移除，但书架状态刷新未完成：${loadMessage}`);
+        if (cleanupError !== undefined) {
+          hilog.error(DOMAIN, 'Reader',
+            'Local EPUB cleanup also failed after bookshelf removal: %{public}s', cleanupError.message);
+        }
+        return;
+      }
+      if (!isCurrent()) {
+        return;
+      }
+      this.applyDetailBookRemoval(book, shelf);
+      if (cleanupError !== undefined) {
+        this.showReadingFailure('已移出书架',
+          `书籍已从书架移除，但应用内 EPUB 文件清理未完成：${cleanupError.message}`);
+      }
+    } catch (probeError) {
+      if (isCurrent()) {
+        const probeMessage = probeError instanceof Error ? probeError.message : `${probeError}`;
+        hilog.error(DOMAIN, 'Reader',
+          'Bookshelf removal reconciliation failed: %{public}s', probeMessage);
+        this.showReadingFailure('移除书架失败', originalError.message);
+      }
+    }
+  }
+
+  private applyDetailBookRemoval(book: ReadingBookDetail, shelf: BookshelfDataState): void {
+    // The mutation result is newer than every shelf read already in flight.
+    this.bookshelfLoadGeneration += 1;
+    if (this.route === 'detail' && this.isSameDetailBook(book)) {
+      this.returnToBookshelf();
+      // `returnToBookshelf` starts its own read; prefer the exact state already
+      // returned by the completed mutation and invalidate that redundant read.
+      this.bookshelfLoadGeneration += 1;
+      this.applyBookshelfState(shelf);
+      return;
+    }
+    if (this.route === 'bookshelf') {
+      this.applyBookshelfState(shelf);
+    }
+  }
+
   private openReading(chapterIndex: number | undefined): void {
     const book = this.detailBook;
     if (book === undefined || !this.isKnownDetailChapter(chapterIndex) ||
+      this.bookshelfRemovalActiveKey.length > 0 ||
       (book.sourceId !== LOCAL_SOURCE_ID && this.remoteReadingSession === undefined)) {
       return;
     }
@@ -2326,7 +2489,8 @@ struct Index {
   }
 
   private openFullDirectory(): void {
-    if (this.detailBook === undefined || this.detailToc.length === 0) {
+    if (this.detailBook === undefined || this.detailToc.length === 0 ||
+      this.bookshelfRemovalActiveKey.length > 0) {
       return;
     }
     this.sourceSwitchPendingFromDetail = false;
@@ -2674,7 +2838,8 @@ struct Index {
 
   private openDetailSourceSwitch(): void {
     if (this.route !== 'detail' || this.detailBook === undefined ||
-      this.detailBook.sourceId === LOCAL_SOURCE_ID || this.sourceSwitchVisible) {
+      this.detailBook.sourceId === LOCAL_SOURCE_ID || this.sourceSwitchVisible ||
+      this.bookshelfRemovalActiveKey.length > 0) {
       return;
     }
     const generation = this.nextNavigationGeneration();
@@ -3194,6 +3359,8 @@ struct Index {
 
   private applyBookshelfState(state: BookshelfDataState): void {
     this.isCoreShelfEmpty = state.kind === 'empty';
+    this.shelfBooks = state.shelf.books;
+    this.continueReading = state.continueReading;
     if (state.kind !== 'populated') {
       this.isBookshelfVisualAdmitted = false;
       return;
@@ -3203,8 +3370,6 @@ struct Index {
     // a missing visual. Re-admit no-cover books and let the detail/result
     // pages use the shared NoCover gradient placeholder rather than
     // silently dropping the entire shelf.
-    this.shelfBooks = state.shelf.books;
-    this.continueReading = state.continueReading;
     this.isBookshelfVisualAdmitted = true;
   }
 
