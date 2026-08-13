@@ -330,7 +330,12 @@ export struct LocalBookDetail {
         .border({ width: 0 })
         .borderRadius(0)
         .stateEffect(false)
-        .onClick((): void => this.onOpenDirectory());
+        .enabled(this.readingActionsReady())
+        .onClick((): void => {
+          if (this.readingActionsReady()) {
+            this.onOpenDirectory();
+          }
+        });
 
     }
     .width(this.contentWidth())
@@ -378,7 +383,13 @@ export struct LocalBookDetail {
       .backgroundColor(TOK_PRIMARY_DARK)
       .border({ width: TOK_BORDER_W, color: TOK_PRIMARY_DARK })
       .borderRadius(999)
-      .onClick((): void => this.onContinue());
+      .opacity(this.readingActionsReady() ? 1 : 0.5)
+      .enabled(this.readingActionsReady())
+      .onClick((): void => {
+        if (this.readingActionsReady()) {
+          this.onContinue();
+        }
+      });
 
       // Removal has its own Figma confirmation/rollback states and Core
       // command.  Those are outside this reading-path task, so render only
@@ -434,6 +445,10 @@ export struct LocalBookDetail {
     // The Final Detail component draws exactly four 58px rows.  Expanding it
     // into a scrolling or paged directory would create an unsourced state.
     return this.toc.slice(0, 4);
+  }
+
+  private readingActionsReady(): boolean {
+    return this.toc.length > 0;
   }
 
   private hasCover(): boolean {

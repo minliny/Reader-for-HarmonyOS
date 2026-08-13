@@ -297,12 +297,15 @@ export struct SourceManagementPage {
   @Builder
   private sourceList() {
     List() {
-      ForEach(this.filteredSources(), (source: BookSource) => {
-        ListItem() {
-          this.sourceRow(source);
-        }
-      }, (source: BookSource): string =>
-        `source-${source.sourceId}-${source.enabled}-${source.checkState}-${source.checkMessage}`);
+      Repeat(this.filteredSources())
+        .each((repeatItem: RepeatItem<BookSource>) => {
+          ListItem() {
+            this.sourceRow(repeatItem.item);
+          }
+        })
+        .key((source: BookSource): string =>
+          `source-${source.sourceId}-${source.enabled}-${source.checkState}-${source.checkMessage}`)
+        .virtualScroll({ reusable: true });
     }
     .width('100%')
     .layoutWeight(1)

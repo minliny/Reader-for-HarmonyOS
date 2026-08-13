@@ -2,6 +2,7 @@ import {
   type LocalReadingAnchor,
   type LocalReadingContentMetrics,
   type LocalReadingLayout,
+  type LocalReadingProgress,
   type LocalReadingProgressUpdate,
   type LocalReadingProgressState,
   type LocalReadingToc,
@@ -315,6 +316,16 @@ class CoreReadingProgressUpdate implements LocalReadingProgressUpdate {
     this.chapterOffset = chapterOffset;
     this.chapterProgress = chapterProgress;
     this.locationRevision = locationRevision;
+  }
+}
+
+class InitialReadingToc implements LocalReadingToc {
+  bookId: string;
+  entries: LocalReadingTocEntry[];
+
+  constructor(bookId: string, entries: LocalReadingTocEntry[]) {
+    this.bookId = bookId;
+    this.entries = entries;
   }
 }
 
@@ -968,7 +979,7 @@ export struct ReadingExperience {
     const isCurrent = (): boolean => this.isSelectionActive(lifecycleToken, selectionToken);
     try {
       const initialLoad = await Promise.all([
-        this.activeGateway().loadToc(this.bookId, isCurrent),
+        this.loadInitialToc(isCurrent),
         this.activeGateway().loadProgress(this.bookId, isCurrent),
         this.activeGateway().loadContentMetrics(this.bookId, isCurrent),
       ]);
@@ -1000,6 +1011,16 @@ export struct ReadingExperience {
       }
       this.fail(error as Error, lifecycleToken);
     }
+  }
+
+  private loadInitialToc(isCurrent: () => boolean): Promise<LocalReadingToc> {
+    if (this.directoryEntries.length === 0) {
+      return this.activeGateway().loadToc(this.bookId, isCurrent);
+    }
+    // Detail admission already validated this exact TOC before the reader can
+    // be opened. Reuse the parent projection instead of asking the single Core
+    // worker to decode the same local/cache TOC once more on every entry.
+    return Promise.resolve(new InitialReadingToc(this.bookId, this.directoryEntries.slice()));
   }
 
   /**
@@ -1868,14 +1889,26 @@ export struct ReadingExperience {
         if (!this.isMeasurementCurrent(generation, selectionToken, lifecycleToken)) {
           return;
         }
-        // Persistence precedes visibility: a process stop once the static page
-        // is shown always has a Core-owned scalar anchor to restore from.
-        const stored = await this.activeGateway().updateProgress(this.bookId, new CoreReadingProgressUpdate(
-          resolved.chapterIndex,
-          resolved.chapterOffset,
-          resolved.chapterProgress,
-          resolved.locationRevision,
-        ), (): boolean => this.isMeasurementCurrent(generation, selectionToken, lifecycleToken));
+        // A normal reopen often resolves to the exact already-durable anchor.
+        // Do not rewrite the same row before showing it. Explicit chapter
+        // choices, new books and layout/revision changes still persist before
+        // visibility, preserving the existing restart guarantee.
+        const restored = this.restoredProgress?.kind === 'restored' ? this.restoredProgress.progress : undefined;
+        let stored: LocalReadingProgress;
+        if (this.requestedChapterIndex === undefined && restored !== undefined &&
+          restored.chapterIndex === resolved.chapterIndex &&
+          restored.chapterOffset === resolved.chapterOffset &&
+          restored.chapterProgress === resolved.chapterProgress &&
+          restored.locationRevision === resolved.locationRevision) {
+          stored = restored;
+        } else {
+          stored = await this.activeGateway().updateProgress(this.bookId, new CoreReadingProgressUpdate(
+            resolved.chapterIndex,
+            resolved.chapterOffset,
+            resolved.chapterProgress,
+            resolved.locationRevision,
+          ), (): boolean => this.isMeasurementCurrent(generation, selectionToken, lifecycleToken));
+        }
         if (!this.isMeasurementCurrent(generation, selectionToken, lifecycleToken)) {
           return;
         }

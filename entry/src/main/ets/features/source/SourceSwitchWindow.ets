@@ -364,20 +364,23 @@ export struct SourceSwitchWindow {
   @Builder
   private candidateList() {
     List({ space: 0 }) {
-      ForEach(this.candidates(),
-        (candidate: SourceSwitchCandidate): void => {
+      Repeat(this.candidates())
+        .each((repeatItem: RepeatItem<SourceSwitchCandidate>) => {
+          ListItem() {
           CandidateRow({
-            sourceId: candidate.sourceId,
-            bookName: candidate.bookName,
-            latencyMs: candidate.latencyMs,
-            offline: candidate.offline === true,
-            timeout: candidate.timeout === true,
-            isCurrent: candidate.isCurrent === true,
-            onSelect: (): void => this.onSelectCandidate(candidate),
+            sourceId: repeatItem.item.sourceId,
+            bookName: repeatItem.item.bookName,
+            latencyMs: repeatItem.item.latencyMs,
+            offline: repeatItem.item.offline === true,
+            timeout: repeatItem.item.timeout === true,
+            isCurrent: repeatItem.item.isCurrent === true,
+            onSelect: (): void => this.onSelectCandidate(repeatItem.item),
           });
-        },
-        (candidate: SourceSwitchCandidate): string =>
-          sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl));
+          }
+        })
+        .key((candidate: SourceSwitchCandidate): string =>
+          sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl))
+        .virtualScroll({ reusable: true });
     }
     .width('100%')
     .layoutWeight(1)

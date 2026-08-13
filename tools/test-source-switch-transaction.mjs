@@ -76,8 +76,9 @@ assert.doesNotMatch(detailOpen, /this\.route\s*=\s*'reading'/,
 
 assert.match(window,
   /sourceSwitchCandidateKey\(candidate\.sourceId, candidate\.bookUrl\)/,
-  'ForEach must key candidates by exact composite identity');
-assert.match(window, /isCurrent: candidate\.isCurrent === true/);
+  'Repeat must key candidates by exact composite identity');
+assert.match(window, /isCurrent: repeatItem\.item\.isCurrent === true/);
+assert.match(window, /Repeat\(this\.candidates\(\)\)[\s\S]*\.virtualScroll\(\{ reusable: true \}\)/);
 assert.match(candidateRow, /@Prop isCurrent: boolean = false/);
 assert.match(candidateRow, /if \(this\.isCurrent\)/);
 assert.doesNotMatch(candidateRow, /currentSourceId/,

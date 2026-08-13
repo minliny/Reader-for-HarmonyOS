@@ -1,9 +1,15 @@
 import { Font } from '@ohos.arkui.UIContext';
 
-// 全局字体注册 —— 每个页面组件曾各自在 aboutToAppear 里重复注册同一批字体。
-// 组件挂载时调用 `registerReaderFonts(this.getUIContext().getFont())` 即可。
-// 注册未使用的字体族无害;统一注册保证任意页面引用任一字族都有字体可用。
+// All Reader pages share one main ArkUI context. Page components keep the
+// small, local `aboutToAppear` call, while this module-level latch prevents a
+// route remount (and the nested reader panels) from reopening and registering
+// the same five bundled font files dozens of times in one process.
+let readerFontsRegistered: boolean = false;
+
 export function registerReaderFonts(font: Font): void {
+  if (readerFontsRegistered) {
+    return;
+  }
   font.registerFont({
     familyName: 'ReaderInter',
     familySrc: $rawfile('InterVariable.ttf'),
@@ -24,4 +30,5 @@ export function registerReaderFonts(font: Font): void {
     familyName: 'ReaderLXGWWenKaiLite',
     familySrc: $rawfile('LXGWWenKaiLite-Regular.ttf'),
   });
+  readerFontsRegistered = true;
 }

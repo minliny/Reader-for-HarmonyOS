@@ -18,11 +18,13 @@ assert.match(index, /await bookshelf\.loadShelfBook\(session\.identity\.sourceId
   'reopening a shelf book must reuse the existing composite entry without resetting Core metadata');
 assert.match(index, /if \(storedBook === undefined\) \{[\s\S]*await bookshelf\.upsertBook\(\{[\s\S]*sourceId: session\.identity\.sourceId,[\s\S]*bookId: session\.identity\.bookId/,
   'a selected remote result must reuse Core bookshelf.add before the on-shelf detail state is shown');
-assert.match(index, /new SourceGateway\(owner\)\.loadSources\(\)[\s\S]*source\.sourceId === session\.identity\.sourceId/,
+assert.match(index, /new SourceGateway\(owner\)\.loadSources\(\)[\s\S]*source\.sourceId !== session\.identity\.sourceId/,
   'a persisted shelf book must resolve its display name from the existing Core source registry');
 const remoteOpen = index.slice(index.indexOf('private openRemoteBookDetail('), index.indexOf('private openReading('));
-assert.ok(remoteOpen.indexOf('await bookshelf.upsertBook(') < remoteOpen.indexOf("this.route = 'detail'"),
-  'the detail terminal state must not appear before Core confirms the shelf upsert');
+assert.ok(remoteOpen.indexOf("this.route = 'detail'") < remoteOpen.indexOf('gateway.openSession(seed, { isCurrent })'),
+  'remote navigation must mount the inert detail shell before serialized Core/network admission completes');
+assert.match(index, /sourceSwitchEnabled: this\.detailBook\.sourceId !== LOCAL_SOURCE_ID &&\s*this\.remoteReadingSession !== undefined && this\.detailToc\.length > 0/,
+  'the provisional detail shell must not expose reading/source-switch actions before session and TOC readiness');
 assert.doesNotMatch(remoteOpen, /remoteShelf|remoteBookshelf|new Map/,
   'remote books must not create a second UI-owned shelf store');
 assert.match(index, /this\.remoteReadingSession = session/);

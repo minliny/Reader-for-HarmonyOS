@@ -373,12 +373,17 @@ export struct SearchPage {
       .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: TOK_BORDER } });
 
       List() {
-        ForEach(results, (book: SearchBook) => {
-          ListItem() {
-            this.resultCard(book, this.countBySource(results, book.sourceId));
-          }
-        }, (book: SearchBook, index: number): string =>
-          `search-result-${book.sourceId}:${book.bookId}:${book.title}:${index}`);
+        Repeat(results)
+          .each((repeatItem: RepeatItem<SearchBook>) => {
+            ListItem() {
+              // A raw SearchBook has one exact source identity. Cross-source
+              // work grouping is not part of this page contract.
+              this.resultCard(repeatItem.item, 1);
+            }
+          })
+          .key((book: SearchBook): string =>
+            `search-result-${book.sourceId}:${book.bookId}:${book.title}`)
+          .virtualScroll({ reusable: true });
       }
       .width('100%')
       .layoutWeight(1)
@@ -658,16 +663,6 @@ export struct SearchPage {
     .layoutWeight(1)
     .alignItems(HorizontalAlign.Center)
     .padding({ top: 96, bottom: 40 });
-  }
-
-  private countBySource(results: SearchBook[], sourceId: string): number {
-    let count = 0;
-    for (const book of results) {
-      if (book.sourceId === sourceId) {
-        count++;
-      }
-    }
-    return count;
   }
 
   private contentWidth(): Length {

@@ -652,7 +652,8 @@ struct Index {
           book: this.detailBook,
           toc: this.detailToc,
           isTablet: deviceInfo.deviceType === 'tablet',
-          sourceSwitchEnabled: this.detailBook.sourceId !== LOCAL_SOURCE_ID,
+          sourceSwitchEnabled: this.detailBook.sourceId !== LOCAL_SOURCE_ID &&
+            this.remoteReadingSession !== undefined && this.detailToc.length > 0,
           onContinue: (): void => this.openReading(undefined),
           onSelectChapter: (chapterIndex: number): void => this.openReading(chapterIndex),
           onOpenDirectory: (): void => this.openFullDirectory(),
@@ -1805,7 +1806,7 @@ struct Index {
       coverUrl: selection.coverUrl,
       intro: selection.intro,
       lastChapter: selection.lastChapter,
-    }, selection.sourceId);
+    }, selection.sourceId, selection);
   }
 
   private openLocalBookDetail(selection: ShelfBook): void {
@@ -1814,59 +1815,55 @@ struct Index {
         'Local detail dispatcher received remote sourceId=%{public}s', selection.sourceId);
       return;
     }
+    const originRoute = this.route;
     const generation = this.nextNavigationGeneration();
     this.readingSessionActive = false;
     this.remoteReadingSession = undefined;
     this.readingExitRequest = undefined;
     this.exitToBookshelfAfterReader = false;
+    // The card is already the current Core-derived shelf projection. Mount the
+    // detail shell in this frame and load only the TOC; re-reading the same
+    // shelf row before changing route was a redundant serialized Core call.
+    this.detailBook = this.readingDetailForShelf(selection);
+    this.detailToc = [];
+    this.requestedChapterIndex = undefined;
+    this.preparedReaderRoute = 'reading';
+    this.directoryCurrentChapterIndex = -1;
+    this.directoryChapterTitle = '';
+    this.route = 'detail';
     const owner = ReaderRuntimeOwner.current();
-    const bookshelf = new ReaderCoreGateway(owner);
     const reading = new LocalReadingFlowGateway(owner);
-    Promise.all([
-      bookshelf.loadShelfBook(selection.sourceId, selection.bookId),
-      reading.loadToc(selection.bookId),
-    ])
-      .then((loaded): void => {
-        const book = loaded[0];
-        const toc = loaded[1];
+    reading.loadToc(selection.bookId)
+      .then((toc): void => {
         if (generation !== this.navigationGeneration) {
           return;
         }
-        if (book === undefined) {
-          // The shelf changed after the card was rendered. Re-read only the
-          // Core-owned shelf state instead of retaining a UI-side book copy.
-          this.refreshBookshelf();
-          return;
-        }
-        if (!this.hasDeclaredCoverUrl(book)) {
+        if (!this.hasDeclaredCoverUrl(selection)) {
           // N-COVER-REMAP-01: Figma NoCover variant `3612:1796` exists.
           // Admit the route and let the detail/result pages use the shared
           // NoCover gradient placeholder. We only log a soft notice.
           hilog.info(DOMAIN, 'Reader',
             'No declared coverUrl for bookId=%{public}s; using NoCover placeholder',
-            book.bookId);
+            selection.bookId);
         }
-        this.detailBook = this.readingDetailForShelf(book);
         this.detailToc = toc.entries;
-        this.requestedChapterIndex = undefined;
-        this.preparedReaderRoute = 'reading';
-        this.directoryCurrentChapterIndex = -1;
-        this.directoryChapterTitle = '';
-        this.route = 'detail';
         void reading.loadDirectoryProjection(
-          book.bookId,
-          book.title,
-          book.author,
+          selection.bookId,
+          selection.title,
+          selection.author,
           toc.entries,
-          (): boolean => this.detailBook?.sourceId === book.sourceId && this.detailBook?.bookId === book.bookId,
+          (): boolean => this.detailBook?.sourceId === selection.sourceId &&
+            this.detailBook?.bookId === selection.bookId,
         )
           .then((entries: LocalReadingTocEntry[]): void => {
-            if (this.detailBook?.sourceId === book.sourceId && this.detailBook?.bookId === book.bookId) {
+            if (this.detailBook?.sourceId === selection.sourceId &&
+              this.detailBook?.bookId === selection.bookId) {
               this.detailToc = entries;
             }
           })
           .catch((error: Error): void => {
-            if (this.detailBook?.sourceId === book.sourceId && this.detailBook?.bookId === book.bookId) {
+            if (this.detailBook?.sourceId === selection.sourceId &&
+              this.detailBook?.bookId === selection.bookId) {
               hilog.error(DOMAIN, 'Reader',
                 'Directory bookmark/cache projection failed: %{public}s', error.message);
             }
@@ -1877,15 +1874,34 @@ struct Index {
           return;
         }
         hilog.error(DOMAIN, 'Reader', 'Local Book Detail state failed to load: %{public}s', error.message);
+        this.detailBook = undefined;
+        this.detailToc = [];
+        this.route = originRoute;
+        this.showReadingFailure('详情加载失败', error.message);
       });
   }
 
-  private openRemoteBookDetail(seed: RemoteReadingBookSeed, sourceName: string): void {
+  private openRemoteBookDetail(
+    seed: RemoteReadingBookSeed,
+    sourceName: string,
+    shelfSnapshot: ShelfBook | undefined = undefined,
+  ): void {
+    const originRoute = this.route;
     const generation = this.nextNavigationGeneration();
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
     this.exitToBookshelfAfterReader = false;
     this.remoteReadingSession = undefined;
+    // The selected search/shelf item is already a validated Core projection.
+    // Show its detail shell immediately; an empty TOC keeps reading actions
+    // inert until the remote session and required shelf persistence settle.
+    this.detailBook = this.readingDetailForRemoteSeed(seed, sourceName);
+    this.detailToc = [];
+    this.requestedChapterIndex = undefined;
+    this.preparedReaderRoute = 'reading';
+    this.directoryCurrentChapterIndex = -1;
+    this.directoryChapterTitle = '';
+    this.route = 'detail';
     const owner = ReaderRuntimeOwner.current();
     const gateway = new RemoteReadingFlowGateway(owner);
     const offline = new ReadingOfflineGateway(owner);
@@ -1911,7 +1927,10 @@ struct Index {
         // becomes visible; do not maintain a second UI-side shelf. Existing
         // entries are not needlessly upserted, which preserves their Core-owned
         // lastReadAt/group/sort metadata when reopening from Bookshelf.
-        const storedBook = await bookshelf.loadShelfBook(session.identity.sourceId, session.identity.bookId);
+        const suppliedShelfBook = shelfSnapshot?.sourceId === session.identity.sourceId &&
+          shelfSnapshot?.bookId === session.identity.bookId ? shelfSnapshot : undefined;
+        const storedBook = suppliedShelfBook ??
+          await bookshelf.loadShelfBook(session.identity.sourceId, session.identity.bookId);
         if (!isCurrent()) {
           return;
         }
@@ -1930,24 +1949,7 @@ struct Index {
         if (!isCurrent()) {
           return;
         }
-        let admittedSourceName = sourceName.trim();
-        if (admittedSourceName.length === 0 || admittedSourceName === session.identity.sourceId) {
-          try {
-            const sources = await new SourceGateway(owner).loadSources();
-            if (!isCurrent()) {
-              return;
-            }
-            for (const source of sources) {
-              if (source.sourceId === session.identity.sourceId) {
-                admittedSourceName = source.name;
-                break;
-              }
-            }
-          } catch (_error) {
-            // Source identity is still valid if the optional display-name
-            // projection fails; keep the stable id rather than blocking read.
-          }
-        }
+        const admittedSourceName = sourceName.trim().length > 0 ? sourceName.trim() : session.identity.sourceId;
         this.remoteReadingSession = session;
         this.detailBook = {
           sourceId: session.identity.sourceId,
@@ -1968,7 +1970,9 @@ struct Index {
         this.preparedReaderRoute = 'reading';
         this.directoryCurrentChapterIndex = -1;
         this.directoryChapterTitle = '';
-        this.route = 'detail';
+        if (admittedSourceName === session.identity.sourceId) {
+          void this.resolveRemoteDetailSourceName(owner, session, isCurrent);
+        }
         void this.loadRemoteDirectoryProjection(offline, owner, session, isCurrent)
           .then((entries: LocalReadingTocEntry[]): void => {
             const stillSame = this.remoteReadingSession?.identity.sourceId === session.identity.sourceId &&
@@ -2005,8 +2009,49 @@ struct Index {
             this.rollbackPendingSourceSwitch(error.message);
             return;
           }
-          this.showReadingFailure('打开书籍失败', error.message);
+          this.detailBook = undefined;
+          this.detailToc = [];
+          this.remoteReadingSession = undefined;
+          this.route = originRoute;
+          this.showReadingFailure('详情加载失败', error.message);
         }
+      });
+  }
+
+  private resolveRemoteDetailSourceName(
+    owner: ReaderRuntimeOwner,
+    session: RemoteReadingSession,
+    isCurrent: () => boolean,
+  ): Promise<void> {
+    return new SourceGateway(owner).loadSources()
+      .then((sources: BookSource[]): void => {
+        if (!isCurrent()) {
+          return;
+        }
+        for (const source of sources) {
+          if (source.sourceId !== session.identity.sourceId) {
+            continue;
+          }
+          const current = this.detailBook;
+          if (current !== undefined && current.sourceId === session.identity.sourceId &&
+            current.bookId === session.identity.bookId) {
+            this.detailBook = {
+              sourceId: current.sourceId,
+              sourceName: source.name,
+              bookId: current.bookId,
+              title: current.title,
+              author: current.author,
+              coverUrl: current.coverUrl,
+              intro: current.intro,
+              lastChapter: current.lastChapter,
+            };
+          }
+          return;
+        }
+      })
+      .catch((): void => {
+        // The stable source id remains a valid display fallback. Optional name
+        // projection must never delay or fail detail/reader readiness.
       });
   }
 
@@ -2958,6 +3003,20 @@ struct Index {
       coverUrl: book.coverUrl,
       intro: book.intro,
       lastChapter: book.lastChapter,
+    };
+  }
+
+  private readingDetailForRemoteSeed(seed: RemoteReadingBookSeed, sourceName: string): ReadingBookDetail {
+    const projectedSourceName = sourceName.trim();
+    return {
+      sourceId: seed.sourceId,
+      sourceName: projectedSourceName.length > 0 ? projectedSourceName : seed.sourceId,
+      bookId: seed.bookId,
+      title: seed.title,
+      author: seed.author,
+      coverUrl: seed.coverUrl,
+      intro: seed.intro,
+      lastChapter: seed.lastChapter,
     };
   }
 
