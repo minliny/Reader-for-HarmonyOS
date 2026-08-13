@@ -1,6 +1,7 @@
 import { audio } from '@kit.AudioKit';
 import { media } from '@kit.MediaKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import http from '@ohos.net.http';
 import {
   type ReaderTtsHost,
   type ReaderTtsHostEvent,
@@ -13,6 +14,10 @@ import {
 
 const LOG_DOMAIN = 0x5244;
 const HTTP_TTS_ENGINE_PREFIX = 'http-tts:';
+const HTTP_TTS_CONNECT_TIMEOUT_MS = 15000;
+const HTTP_TTS_READ_TIMEOUT_MS = 30000;
+const HTTP_TTS_MAX_REDIRECTS = 10;
+const HTTP_TTS_MAX_AUDIO_BYTES = 16 * 1024 * 1024;
 
 /** Host-only network/audio transport for a Core-owned HttpTTS descriptor. */
 export class HarmonyHttpTtsHost implements ReaderTtsHost {
@@ -25,6 +30,8 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
   private player: media.AVPlayer | undefined = undefined;
   private configId: number | undefined = undefined;
   private currentRequestId: string | undefined = undefined;
+  private audioBytes: Uint8Array | undefined = undefined;
+  private speakGeneration: number = 0;
   private startReported: boolean = false;
   private audioListenersInstalled: boolean = false;
   private audioSessionActive: boolean = false;
@@ -95,6 +102,7 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
 
   async speak(request: ReaderTtsHostSpeakRequest): Promise<void> {
     this.assertOpen();
+    const generation = ++this.speakGeneration;
     const configId = this.configId;
     if (configId === undefined) throw new Error('Reader HttpTTS has no selected Core config');
     if (request.requestId.trim().length === 0 || request.text.trim().length === 0) {
@@ -104,7 +112,10 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
     if (descriptor.body !== undefined) {
       throw new Error('Reader HttpTTS Host does not accept a body for a GET descriptor');
     }
+    const bytes = await this.fetchAudio(descriptor.url, descriptor.headers);
+    if (this.closed || generation !== this.speakGeneration) return;
     await this.releasePlayer();
+    if (this.closed || generation !== this.speakGeneration) return;
     const player = await media.createAVPlayer();
     this.player = player;
     this.currentRequestId = request.requestId;
@@ -117,9 +128,10 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
       this.emit({ type: 'error', requestId: request.requestId, message: error.message });
     });
     try {
-      const source = media.createMediaSourceWithUrl(descriptor.url, descriptor.headers);
-      await player.setMediaSource(source);
-      if (this.player !== player || this.currentRequestId !== request.requestId) return;
+      this.audioBytes = bytes;
+      player.dataSrc = this.createDataSource(bytes);
+      if (this.player !== player || this.currentRequestId !== request.requestId ||
+        generation !== this.speakGeneration) return;
       player.audioRendererInfo = {
         usage: audio.StreamUsage.STREAM_USAGE_AUDIOBOOK,
         rendererFlags: 0,
@@ -136,6 +148,7 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
   }
 
   async stop(): Promise<void> {
+    this.speakGeneration += 1;
     this.currentRequestId = undefined;
     this.startReported = false;
     await this.releasePlayer();
@@ -146,6 +159,7 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
+    this.speakGeneration += 1;
     this.listener = undefined;
     this.currentRequestId = undefined;
     await this.releasePlayer();
@@ -172,7 +186,10 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
   private async releasePlayer(): Promise<void> {
     const player = this.player;
     this.player = undefined;
-    if (player === undefined) return;
+    if (player === undefined) {
+      this.audioBytes = undefined;
+      return;
+    }
     try {
       if (player.state === 'playing' || player.state === 'paused' || player.state === 'prepared' ||
         player.state === 'completed') {
@@ -185,7 +202,55 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
       await player.release();
     } catch (error) {
       this.logError('HttpTTS AVPlayer release failed', error);
+    } finally {
+      this.audioBytes = undefined;
     }
+  }
+
+  private async fetchAudio(url: string, headers: Record<string, string>): Promise<Uint8Array> {
+    const request = http.createHttp();
+    try {
+      const response = await request.request(url, {
+        method: http.RequestMethod.GET,
+        header: headers,
+        expectDataType: http.HttpDataType.ARRAY_BUFFER,
+        usingCache: false,
+        connectTimeout: HTTP_TTS_CONNECT_TIMEOUT_MS,
+        readTimeout: HTTP_TTS_READ_TIMEOUT_MS,
+        maxRedirects: HTTP_TTS_MAX_REDIRECTS,
+      });
+      if (response.responseCode < 200 || response.responseCode >= 300) {
+        throw new Error(`Reader HttpTTS audio request failed with HTTP ${response.responseCode}`);
+      }
+      if (!(response.result instanceof ArrayBuffer)) {
+        throw new Error('Reader HttpTTS audio response must be binary');
+      }
+      const bytes = new Uint8Array(response.result);
+      if (bytes.length === 0 || bytes.length > HTTP_TTS_MAX_AUDIO_BYTES) {
+        throw new Error(`Reader HttpTTS audio response size ${bytes.length} is outside the allowed range`);
+      }
+      return bytes;
+    } finally {
+      request.destroy();
+    }
+  }
+
+  private createDataSource(bytes: Uint8Array): media.AVDataSrcDescriptor {
+    let sequentialPosition = 0;
+    return {
+      fileSize: bytes.length,
+      callback: (buffer: ArrayBuffer, length: number, pos?: number): number => {
+        const start = pos === undefined ? sequentialPosition : pos;
+        if (!Number.isSafeInteger(start) || start < 0) return -2;
+        if (start >= bytes.length) return -1;
+        const target = new Uint8Array(buffer);
+        const count = Math.min(length, target.length, bytes.length - start);
+        if (count <= 0) return -2;
+        target.set(bytes.subarray(start, start + count), 0);
+        sequentialPosition = start + count;
+        return count;
+      },
+    };
   }
 
   private emit(event: ReaderTtsHostEvent): void {
