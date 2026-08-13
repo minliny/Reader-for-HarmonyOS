@@ -16,5 +16,9 @@ assert.match(gateway, /request\('import\.parse'/);
 assert.match(gateway, /request\('import\.persist'/);
 assert.match(gateway, /filePath: input\.stagedPath/,
   'all formats must continue through the Core-owned parser instead of an ArkUI parser');
+assert.match(dialog, /Stack\(\{ alignContent: Alignment\.Center \}\)/,
+  'the import panels must be centered in the actual Phone or Tablet viewport');
+assert.doesNotMatch(dialog, /\.position\(\{ x: 20, y:/,
+  'the Phone Figma coordinates must not clip the result action on a shorter Tablet viewport');
 
 console.log('local book format picker contract: PASS');

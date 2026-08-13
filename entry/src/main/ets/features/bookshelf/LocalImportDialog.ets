@@ -19,7 +19,8 @@ import { registerReaderFonts } from '../common/ReaderFonts';
 export type LocalImportDialogState = 'fileSelection' | 'importing' | 'result';
 
 /**
- * Phone-only Figma `Library/LocalImportDialog` (node 2657:918, 390×844).
+ * Figma `Library/LocalImportDialog` (node 2657:918, 390×844), centered in
+ * the actual safe viewport so the same panels remain operable on Tablet.
  * State symbols: File Selection 2657:916 / Importing 2899:58923 / Import Result 2657:917.
  * Dialog container: 350 wide at x20, corner 20, shadow 0 25 50 -12 rgba(0,0,0,0.25),
  * File Selection 399.75 @y222.13 / Importing 228 @y308 / Result 636 @y104.
@@ -38,7 +39,7 @@ export struct LocalImportDialog {
   }
 
   build() {
-    Stack({ alignContent: Alignment.TopStart }) {
+    Stack({ alignContent: Alignment.Center }) {
       Text('')
         .width('100%')
         .height('100%')
@@ -182,8 +183,7 @@ export struct LocalImportDialog {
     .height(399.75)
     .backgroundColor(TOK_SURFACE_SOLID)
     .borderRadius(20)
-    .shadow({ radius: 50, color: '#40000000', offsetX: 0, offsetY: 25 })
-    .position({ x: 20, y: 222.13 });
+    .shadow({ radius: 50, color: '#40000000', offsetX: 0, offsetY: 25 });
   }
 
   @Builder
@@ -219,8 +219,7 @@ export struct LocalImportDialog {
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(TOK_SURFACE_SOLID)
     .borderRadius(20)
-    .shadow({ radius: 50, color: '#40000000', offsetX: 0, offsetY: 25 })
-    .position({ x: 20, y: 308 });
+    .shadow({ radius: 50, color: '#40000000', offsetX: 0, offsetY: 25 });
   }
 
   @Builder
@@ -269,8 +268,7 @@ export struct LocalImportDialog {
     .alignItems(HorizontalAlign.Start)
     .backgroundColor(TOK_SURFACE_SOLID)
     .borderRadius(20)
-    .shadow({ radius: 50, color: '#40000000', offsetX: 0, offsetY: 25 })
-    .position({ x: 20, y: 104 });
+    .shadow({ radius: 50, color: '#40000000', offsetX: 0, offsetY: 25 });
   }
 
   @Builder
