@@ -2,6 +2,7 @@ import {
   SearchGateway,
   type SearchBook,
   type SearchHistory,
+  type SearchOutcome,
   type SearchSource,
 } from './SearchGateway';
 import type {
