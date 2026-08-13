@@ -15,10 +15,13 @@ import {
   TOK_SURFACE_PANEL,
   TOK_SURFACE_PANEL_SOFT,
 } from '../common/ReaderTokens';
+import { ReaderHttpTtsManagerPanel } from './ReaderHttpTtsManagerPanel';
 
 export interface ReaderTtsEngineOption {
   id: number;
   name: string;
+  url: string;
+  lastUpdateTime: number;
 }
 
 /** Figma full TTS sheets: Phone `942:78`, Tablet `942:80`. */
@@ -46,6 +49,8 @@ export struct ReaderTtsFullPanel {
   onAllowMixingChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
   onFailurePolicyChange: (policy: 'skip' | 'stop') => void = (_policy: 'skip' | 'stop'): void => {};
   onEngineChange: (engine: string) => void = (_engine: string): void => {};
+  onHttpEnginePut: (config: ReaderTtsEngineOption) => void = (_config: ReaderTtsEngineOption): void => {};
+  onHttpEngineDelete: (id: number) => void = (_id: number): void => {};
   @State private ratePreview: number = -1;
 
   build() {
@@ -472,6 +477,13 @@ export struct ReaderTtsFullPanel {
       this.selectorRow('语言', 'zh-CN');
       this.selectorRow('音频会话', this.allowMixing ? '混音' : '媒体独占');
       this.selectorRow('不可用处理', this.failurePolicy === 'skip' ? '跳过' : '停止');
+      ReaderHttpTtsManagerPanel({
+        engines: this.httpEngines,
+        selectedEngine: this.engine,
+        onSelect: (engine: string): void => this.onEngineChange(engine),
+        onPut: (config: ReaderTtsEngineOption): void => this.onHttpEnginePut(config),
+        onDelete: (id: number): void => this.onHttpEngineDelete(id),
+      });
     }
     .width('100%')
     .padding({ top: 18, left: 4, right: 4, bottom: 24 })

@@ -205,6 +205,8 @@ export struct ReaderControlPanel {
   onTtsFailurePolicyChange: (policy: 'skip' | 'stop') => void =
     (_policy: 'skip' | 'stop'): void => {};
   onTtsEngineChange: (engine: string) => void = (_engine: string): void => {};
+  onTtsHttpEnginePut: (config: ReaderTtsEngineOption) => void = (_config: ReaderTtsEngineOption): void => {};
+  onTtsHttpEngineDelete: (id: number) => void = (_id: number): void => {};
 
   @State private progressPreviewPercent: number = -1;
   @State private brightnessPreviewPercent: number = -1;
@@ -222,9 +224,6 @@ export struct ReaderControlPanel {
   // ease[0.25,0.1,0.25,1]。页面状态由 ReadingExperience 持有。
   private activateModule(module: string): void {
     if (module !== 'directory' && module !== 'tts') {
-      return;
-    }
-    if (module === 'tts' && this.ttsState.status === 'unavailable') {
       return;
     }
     const page: ReaderControlPage = module === 'tts' ? 'moduleTts' : 'moduleDirectory';
@@ -568,6 +567,8 @@ export struct ReaderControlPanel {
       onAllowMixingChange: (enabled: boolean): void => this.onTtsAllowMixingChange(enabled),
       onFailurePolicyChange: (policy: 'skip' | 'stop'): void => this.onTtsFailurePolicyChange(policy),
       onEngineChange: (engine: string): void => this.onTtsEngineChange(engine),
+      onHttpEnginePut: (config: ReaderTtsEngineOption): void => this.onTtsHttpEnginePut(config),
+      onHttpEngineDelete: (id: number): void => this.onTtsHttpEngineDelete(id),
     })
       .margin({ bottom: 19 })
       .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
@@ -1181,8 +1182,8 @@ export struct ReaderControlPanel {
     .height(62)
     .alignItems(HorizontalAlign.Center)
     .borderRadius(12)
-    .enabled(module === 'directory' || (module === 'tts' && this.ttsState.status !== 'unavailable'))
-    .opacity(module === 'tts' && this.ttsState.status === 'unavailable' ? 0.42 : 1)
+    .enabled(module === 'directory' || module === 'tts')
+    .opacity(module === 'tts' && this.ttsState.status === 'unavailable' ? 0.72 : 1)
     .accessibilityText(label)
     .onClick((): void => this.activateModule(module));
   }
