@@ -22,6 +22,10 @@ assert.doesNotMatch(modulePanel, /Scroll\(this\.listScroller\)[\s\S]*ForEach\(/,
   'module directory must not eagerly materialize every chapter row');
 assert.match(modulePanel, /private downloadMarkerHitTarget\(entry: LocalReadingTocEntry\)/);
 assert.match(modulePanel, /chapterDownloadEnabled: boolean = false/);
+assert.match(modulePanel, /reader-module-toc-\$\{entry\.index\}-\$\{entry\.downloadState\}/,
+  'module rows must remount when a download state changes in the active reader session');
+assert.match(modulePanel, /if \(this\.chapterDownloadEnabled && entry\.downloadState !== 'unknown'\)/,
+  'local books must not render remote chapter download markers');
 assert.match(modulePanel, /\.enabled\(this\.chapterDownloadEnabled && this\.downloadMarkerEnabled\(entry\)\)/);
 assert.match(modulePanel, /reader-module-toc-\$\{entry\.index\}/,
   'module rows must use stable chapter identity');
@@ -57,6 +61,10 @@ assert.match(fullPanel, /this\.onDeleteBookmarks\(markerState\.bookmarkTimes\)/)
 assert.match(fullPanel, /this\.onCreateChapterStartBookmark\(markerState\.createRequest\)/);
 assert.doesNotMatch(fullPanel, /添加书签尚未接线/);
 assert.match(fullPanel, /chapterDownloadEnabled: boolean = false/);
+assert.match(fullPanel, /toc-entry-\$\{entry\.index\}-\$\{entry\.downloadState\}/,
+  'full-directory rows must remount when a download state changes');
+assert.match(fullPanel, /if \(this\.chapterDownloadEnabled && entry\.downloadState !== 'unknown'\)/,
+  'full directory must hide remote download markers for local books');
 assert.match(fullPanel, /\.enabled\(this\.chapterDownloadEnabled && this\.downloadMarkerEnabled\(entry\)\)/);
 assert.match(fullPanel, /toc-entry-\$\{entry\.index\}/,
   'full-directory rows must use stable chapter identity');
