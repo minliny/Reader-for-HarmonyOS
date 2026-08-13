@@ -41,6 +41,8 @@ assert.match(search, /right\.sourceCount - left\.sourceCount/,
   'multi-origin search results must be promoted like Legado');
 assert.match(search, /Text\('已在书架'\)/,
   'grouped search results must expose current shelf membership');
+assert.match(search, /private sourceChips\(\)[\s\S]*Scroll\(\)[\s\S]*scrollable\(ScrollDirection\.Horizontal\)/,
+  'all enabled source chips must remain discoverable when a large source set exceeds the viewport');
 assert.match(shelf, /Text\(`更新 \$\{book\.unreadCount\} 章`\)/);
 assert.match(shelf, /Text\(`已读 \$\{Math\.floor\(\(book\.readProgress \?\? 0\) \/ 100\)\}%`\)/);
 

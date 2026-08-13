@@ -211,16 +211,21 @@ export struct SearchPage {
 
   @Builder
   private sourceChips() {
-    Row({ space: TOK_SPACE_XS }) {
-      this.sourceChip('全部', true);
-      ForEach(this.sources, (source: SearchSource) => {
-        this.sourceChip(source.name, false);
-      }, (source: SearchSource): string => `search-source-${source.sourceId}`);
+    Scroll() {
+      Row({ space: TOK_SPACE_XS }) {
+        this.sourceChip('全部', true);
+        ForEach(this.sources, (source: SearchSource) => {
+          this.sourceChip(source.name, false);
+        }, (source: SearchSource): string => `search-source-${source.sourceId}`);
+      }
+      .height(40)
+      .padding({ left: this.isTablet ? 20 : TOK_SPACE_MD, right: this.isTablet ? 20 : TOK_SPACE_MD, top: 9 })
+      .alignItems(VerticalAlign.Top);
     }
     .width(this.contentWidth())
     .height(41)
-    .padding({ left: this.isTablet ? 20 : TOK_SPACE_MD, right: this.isTablet ? 20 : TOK_SPACE_MD, top: 9 })
-    .alignItems(VerticalAlign.Top)
+    .scrollable(ScrollDirection.Horizontal)
+    .scrollBar(BarState.Off)
     .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: TOK_BORDER } });
   }
 
