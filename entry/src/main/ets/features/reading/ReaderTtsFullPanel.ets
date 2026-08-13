@@ -534,6 +534,13 @@ export struct ReaderTtsFullPanel {
       this.selectorRow('语言', 'zh-CN');
       this.selectorRow('音频会话', this.allowMixing ? '混音' : '媒体独占');
       this.selectorRow('不可用处理', this.failurePolicy === 'skip' ? '跳过' : '停止');
+      ReaderHttpTtsManagerPanel({
+        engines: this.httpEngines,
+        selectedEngine: this.engine,
+        onSelect: (engine: string): void => this.onEngineChange(engine),
+        onPut: (config: ReaderTtsEngineOption): void => this.onHttpEnginePut(config),
+        onDelete: (id: number): void => this.onHttpEngineDelete(id),
+      });
     }
     .width('100%')
     .padding({ top: 18, left: 4, right: 4, bottom: 24 })

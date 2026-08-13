@@ -3047,6 +3047,66 @@ export struct ReadingExperience {
     await coordinator.probeAvailability();
   }
 
+  private saveHttpTtsEngine(config: ReaderHttpTtsConfig): void {
+    const gateway = this.ttsHttpGateway;
+    if (gateway === undefined) return;
+    const existing = this.ttsHttpEngines.find(
+      (engine: ReaderHttpTtsConfig): boolean => engine.id === config.id,
+    );
+    const merged: ReaderHttpTtsConfig = {
+      id: config.id,
+      name: config.name,
+      url: config.url,
+      lastUpdateTime: config.lastUpdateTime,
+    };
+    if (existing?.contentType !== undefined) merged.contentType = existing.contentType;
+    if (existing?.concurrentRate !== undefined) merged.concurrentRate = existing.concurrentRate;
+    if (existing?.loginUrl !== undefined) merged.loginUrl = existing.loginUrl;
+    if (existing?.loginUi !== undefined) merged.loginUi = existing.loginUi;
+    if (existing?.header !== undefined) merged.header = existing.header;
+    if (existing?.jsLib !== undefined) merged.jsLib = existing.jsLib;
+    if (existing?.enabledCookieJar !== undefined) merged.enabledCookieJar = existing.enabledCookieJar;
+    if (existing?.loginCheckJs !== undefined) merged.loginCheckJs = existing.loginCheckJs;
+    void gateway.put(merged)
+      .then(async (saved: ReaderHttpTtsConfig): Promise<void> => {
+        this.ttsHttpEngines = await gateway.list();
+        if (this.ttsEngine !== `http-tts:${saved.id}`) this.changeTtsEngine(`http-tts:${saved.id}`);
+      })
+      .catch((error: Error): void => this.logTtsFailure('http-engine-put', error));
+  }
+
+  private deleteHttpTtsEngine(id: number): void {
+    const httpGateway = this.ttsHttpGateway;
+    const configGateway = this.ttsGateway;
+    const coordinator = this.ttsCoordinator;
+    if (httpGateway === undefined || configGateway === undefined || coordinator === undefined) return;
+    void this.deleteHttpTtsEngineCoreFirst(id, httpGateway, configGateway, coordinator)
+      .catch((error: Error): void => this.logTtsFailure('http-engine-delete', error));
+  }
+
+  private async deleteHttpTtsEngineCoreFirst(
+    id: number,
+    httpGateway: ReaderHttpTtsGateway,
+    configGateway: ReaderTtsGateway,
+    coordinator: ReaderTtsSessionCoordinator,
+  ): Promise<void> {
+    if (this.ttsEngine === `http-tts:${id}`) {
+      await coordinator.stop('user');
+      const prior = this.ttsConfig;
+      const config = await configGateway.putConfig({
+        engine: 'system',
+        rate: prior?.rate ?? this.coreRateForMultiplier(this.ttsState.rate),
+        pitch: prior?.pitch ?? 0,
+        followSys: prior?.followSys ?? false,
+      });
+      this.ttsConfig = config;
+      this.ttsEngine = 'system';
+    }
+    await httpGateway.delete(id);
+    this.ttsHttpEngines = await httpGateway.list();
+    await coordinator.probeAvailability();
+  }
+
   private async persistTtsConfig(rate: number): Promise<void> {
     const gateway = this.ttsGateway;
     if (gateway === undefined) return;
