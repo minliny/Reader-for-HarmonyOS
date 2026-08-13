@@ -249,6 +249,11 @@ export class RemoteReadingFlowGateway {
       );
     }
     const entries: RemoteReadingTocEntry[] = [];
+    const continuationVariables = decodeRemoteReadingVariables(
+      result.data['continuationVariables'],
+      'cache.book.status',
+      true,
+    );
     for (let position = 0; position < rawChapters.length; position += 1) {
       const raw = this.requireObject(rawChapters[position], 'cache.book.status chapter');
       const index = this.requireChapterIndex(raw, 'chapterIndex', 'cache.book.status chapter');
@@ -263,7 +268,11 @@ export class RemoteReadingFlowGateway {
         index,
         title: this.requireNonBlankString(raw, 'title', 'cache.book.status chapter'),
         url: this.requireNonBlankString(raw, 'url', 'cache.book.status chapter'),
-        variables: [],
+        variables: decodeRemoteReadingVariables(
+          raw['variables'],
+          'cache.book.status chapter',
+          true,
+        ),
       });
     }
     return {
@@ -279,9 +288,34 @@ export class RemoteReadingFlowGateway {
         kind: seed.kind,
         lastChapter: seed.lastChapter,
       },
-      continuationVariables: mergeRemoteReadingVariables([], seed.searchVariables ?? []),
+      continuationVariables: mergeRemoteReadingVariables(
+        seed.searchVariables ?? [],
+        continuationVariables,
+      ),
       entries,
       hostRequirements: [],
+    };
+  }
+
+  /**
+   * Admit a shelf book from Core's durable catalog without waiting for an
+   * online detail/TOC refresh. Chapter loading remains cache-first and may
+   * use the source transport when a body was explicitly cleared.
+   */
+  async openCachedCatalogSession(
+    seed: RemoteReadingBookSeed,
+    isCurrent?: () => boolean,
+  ): Promise<RemoteReadingSession> {
+    const cached = await this.openCachedSession(seed, isCurrent);
+    return {
+      acquisitionMode: 'online',
+      identity: cached.identity,
+      detailUrl: cached.detailUrl,
+      tocUrl: cached.tocUrl,
+      book: cached.book,
+      continuationVariables: cached.continuationVariables,
+      entries: cached.entries,
+      hostRequirements: ['httpExecute'],
     };
   }
 

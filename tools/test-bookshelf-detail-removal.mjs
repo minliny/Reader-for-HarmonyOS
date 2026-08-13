@@ -9,14 +9,19 @@ const core = read('entry/src/main/ets/app/ReaderCoreGateway.ts');
 const host = read('entry/src/main/ets/app/ReaderHostRegistry.ts');
 
 assert.match(detail, /@Prop removalEnabled: boolean = true;/);
+assert.match(detail, /@Prop inBookshelf: boolean = true;/);
 assert.match(detail, /@Prop removing: boolean = false;/);
 assert.match(detail, /onRemove: \(\) => void/);
-assert.match(detail, /Text\(this\.removing \? '正在移除…' : '移除书架'\)/);
+assert.match(detail, /Text\(this\.shelfActionLabel\(\)\)/);
+assert.match(detail, /return this\.inBookshelf \? '移除书架' : '加入书架';/,
+  'the same admitted detail action must support explicit shelf join and removal');
 assert.match(detail, /\.enabled\(this\.removalEnabled && !this\.removing\)/);
 assert.match(detail, /if \(this\.removalEnabled && !this\.removing\) \{\s*this\.onRemove\(\);/,
   'the destructive visual must dispatch only through the admitted removal callback');
 
-assert.match(index, /onRemove: \(\): void => this\.requestRemoveDetailBook\(\)/);
+assert.match(index, /onRemove: \(\): void => this\.requestDetailShelfMutation\(\)/);
+assert.match(index, /if \(this\.detailInBookshelf\) \{\s*this\.requestRemoveDetailBook\(\);/,
+  'the detail action must choose add/remove from the current Core-derived shelf state');
 assert.match(index, /pendingSourceSwitch === undefined && this\.offlineMutationActiveKey\.length === 0/,
   'removal must stay unavailable while source-switch or offline work owns the book');
 assert.match(index, /this\.route === 'detail' && this\.isSameDetailBook\(book\) && !this\.readingSessionActive/,

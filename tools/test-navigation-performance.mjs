@@ -30,9 +30,9 @@ assert.match(remoteDetail,
   /const reusableRemoteSession = shelfSnapshot !== undefined &&[\s\S]*?identity\.sourceId === seed\.sourceId &&[\s\S]*?identity\.bookId === seed\.bookId/,
   'only an exact shelf identity may reuse the already admitted remote session');
 assert.match(remoteDetail,
-  /const sessionAdmission: Promise<RemoteReadingSession> = reusableRemoteSession === undefined \?[\s\S]*?gateway\.openSession\(seed, \{ isCurrent \}\)[\s\S]*?: Promise\.resolve\(reusableRemoteSession\)/,
-  'same-process shelf re-entry must reuse the exact session instead of repeating detail and TOC requests');
-assert.ok(remoteDetail.indexOf("this.route = 'detail'") < remoteDetail.indexOf('gateway.openSession(seed, { isCurrent })'),
+  /const sessionAdmission: Promise<RemoteReadingSession> = reusableRemoteSession !== undefined \?[\s\S]*?Promise\.resolve\(reusableRemoteSession\) : shelfSnapshot !== undefined \?[\s\S]*?gateway\.openCachedCatalogSession\(seed, isCurrent\)[\s\S]*?gateway\.openSession\(seed, \{ isCurrent \}\)/,
+  'shelf re-entry must reuse a live session or admit the durable Core catalog before any network refresh');
+assert.ok(remoteDetail.indexOf("this.route = 'detail'") < remoteDetail.indexOf('gateway.openCachedCatalogSession(seed, isCurrent)'),
   'remote detail must project its inert shell before network/session admission');
 assert.match(remoteDetail, /const suppliedShelfBook = shelfSnapshot\?\.sourceId === session\.identity\.sourceId/);
 assert.doesNotMatch(remoteDetail, /new SourceGateway\(owner\)\.loadSources/,

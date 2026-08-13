@@ -16,8 +16,11 @@ assert.match(index, /gateway\.openSession\(seed, \{ isCurrent \}\)/,
   'remote detail and TOC must retain the route-generation cancellation guard');
 assert.match(index, /await bookshelf\.loadShelfBook\(session\.identity\.sourceId, session\.identity\.bookId\)/,
   'reopening a shelf book must reuse the existing composite entry without resetting Core metadata');
-assert.match(index, /if \(storedBook === undefined\) \{[\s\S]*await bookshelf\.upsertBook\(\{[\s\S]*sourceId: session\.identity\.sourceId,[\s\S]*bookId: session\.identity\.bookId/,
-  'a selected remote result must reuse Core bookshelf.add before the on-shelf detail state is shown');
+assert.doesNotMatch(index.slice(index.indexOf('private openRemoteBookDetail('), index.indexOf('private resolveRemoteDetailSourceName(')),
+  /await bookshelf\.upsertBook\(/,
+  'opening a search result is a preview and must not mutate the bookshelf');
+assert.match(index, /private addDetailBook\(\): void \{[\s\S]*new ReaderCoreGateway\(owner\)\.upsertBook\(\{[\s\S]*sourceId: session\.identity\.sourceId,[\s\S]*bookId: session\.identity\.bookId/,
+  'only the explicit detail action may join a remote book to the shelf');
 assert.match(index, /new SourceGateway\(owner\)\.loadSources\(\)[\s\S]*source\.sourceId !== session\.identity\.sourceId/,
   'a persisted shelf book must resolve its display name from the existing Core source registry');
 const remoteOpen = index.slice(index.indexOf('private openRemoteBookDetail('), index.indexOf('private openReading('));
@@ -33,8 +36,8 @@ assert.match(index, /this\.route = 'detail'/,
   'a validated remote session must enter the shared detail route');
 assert.doesNotMatch(index, /remote search result has no admitted detail flow/);
 assert.doesNotMatch(index, /remote reading not yet wired/);
-assert.match(index, /private reopenSwitchedBook\(book: ShelfBook\): void \{\s*this\.openBookDetail\(book\)/,
-  'source-switch success must re-enter the same local-or-remote detail dispatcher');
+assert.match(index, /private reopenSwitchedBook\(book: ShelfBook\): void \{\s*this\.openShelfBook\(book\)/,
+  'source-switch success must re-enter the cache-first shelf reading dispatcher');
 
 assert.match(shell, /remoteSession: this\.remoteSession/);
 assert.match(shell, /sourceId: this\.sourceId/);

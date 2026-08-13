@@ -13,6 +13,13 @@ export type ShelfBook = {
   lastReadAt?: number;
   group?: string;
   sortIndex?: number;
+  unreadCount?: number;
+  lastCheckAt?: number;
+  currentChapterTitle?: string;
+  currentChapterIndex?: number;
+  chapterCount?: number;
+  /** Whole-book progress in basis points, 0..10000. */
+  readProgress?: number;
 };
 
 export type BookshelfState = {
@@ -203,12 +210,18 @@ export class ReaderCoreGateway {
       author: this.requiredString(book, 'author'),
       addedAt: this.requiredNumber(book, 'addedAt'),
       sortIndex: this.requiredNumber(book, 'sortIndex'),
+      unreadCount: this.optionalNonNegativeInteger(book, 'unreadCount', 'bookshelf.list') ?? 0,
+      chapterCount: this.optionalNonNegativeInteger(book, 'chapterCount', 'bookshelf.list') ?? 0,
     };
     const coverUrl = this.optionalString(book, 'coverUrl');
     const intro = this.optionalString(book, 'intro');
     const lastChapter = this.optionalString(book, 'lastChapter');
     const lastReadAt = this.optionalNumber(book, 'lastReadAt');
     const group = this.optionalString(book, 'group');
+    const lastCheckAt = this.optionalNumber(book, 'lastCheckAt');
+    const currentChapterTitle = this.optionalString(book, 'currentChapterTitle');
+    const currentChapterIndex = this.optionalNumber(book, 'currentChapterIndex');
+    const readProgress = this.optionalNumber(book, 'readProgress');
     if (coverUrl !== undefined) {
       decoded.coverUrl = coverUrl;
     }
@@ -223,6 +236,18 @@ export class ReaderCoreGateway {
     }
     if (group !== undefined) {
       decoded.group = group;
+    }
+    if (lastCheckAt !== undefined) {
+      decoded.lastCheckAt = lastCheckAt;
+    }
+    if (currentChapterTitle !== undefined) {
+      decoded.currentChapterTitle = currentChapterTitle;
+    }
+    if (currentChapterIndex !== undefined) {
+      decoded.currentChapterIndex = currentChapterIndex;
+    }
+    if (readProgress !== undefined) {
+      decoded.readProgress = readProgress;
     }
     return decoded;
   }
@@ -256,6 +281,21 @@ export class ReaderCoreGateway {
 
   private requiredNonNegativeInteger(value: JsonObject, key: string, context: string): number {
     const candidate = value[key];
+    if (typeof candidate !== 'number' || !Number.isSafeInteger(candidate) || candidate < 0) {
+      throw new Error(`${context} returned invalid ${key}`);
+    }
+    return candidate;
+  }
+
+  private optionalNonNegativeInteger(
+    value: JsonObject,
+    key: string,
+    context: string,
+  ): number | undefined {
+    const candidate = value[key];
+    if (candidate === undefined || candidate === null) {
+      return undefined;
+    }
     if (typeof candidate !== 'number' || !Number.isSafeInteger(candidate) || candidate < 0) {
       throw new Error(`${context} returned invalid ${key}`);
     }

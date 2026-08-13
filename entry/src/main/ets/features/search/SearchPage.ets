@@ -2,6 +2,7 @@ import {
   type SearchBook,
   type SearchSource,
 } from './SearchGateway';
+import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import {
   TOK_BORDER,
@@ -67,6 +68,20 @@ export type SearchPresentation =
   | SearchEmptyPresentation
   | SearchErrorPresentation;
 
+class SearchBookGroup {
+  book: SearchBook;
+  sourceCount: number;
+  inBookshelf: boolean;
+  sourceIds: string[];
+
+  constructor(book: SearchBook, sourceCount: number, inBookshelf: boolean) {
+    this.book = book;
+    this.sourceCount = sourceCount;
+    this.inBookshelf = inBookshelf;
+    this.sourceIds = [book.sourceId];
+  }
+}
+
 /**
  * Figma-backed Book Search for `11 · Search`:
  * `2635:58749`(Phone) / `2635:59195`(Tablet) Initial, `2635:58809` Loading,
@@ -79,6 +94,7 @@ export type SearchPresentation =
 export struct SearchPage {
   @Prop presentation: SearchPresentation;
   @Prop sources: SearchSource[];
+  @Prop shelfBooks: ShelfBook[] = [];
   @Prop isTablet: boolean;
   onBack: () => void = (): void => {};
   onSearch: (keyword: string) => void = (_keyword: string): void => {};
@@ -231,7 +247,7 @@ export struct SearchPage {
     } else if (this.presentation.kind === 'loading') {
       this.loadingContent();
     } else if (this.presentation.kind === 'results') {
-      this.resultsContent(this.presentation.keyword, this.presentation.results);
+      this.resultsContent(this.presentation.keyword, this.groupResults(this.presentation.results));
     } else if (this.presentation.kind === 'empty') {
       this.emptyContent(this.presentation.keyword);
     } else {
@@ -345,7 +361,7 @@ export struct SearchPage {
   }
 
   @Builder
-  private resultsContent(keyword: string, results: SearchBook[]) {
+  private resultsContent(keyword: string, results: SearchBookGroup[]) {
     Column() {
       Row() {
         Text('找到 ')
@@ -374,15 +390,14 @@ export struct SearchPage {
 
       List() {
         Repeat(results)
-          .each((repeatItem: RepeatItem<SearchBook>) => {
+          .each((repeatItem: RepeatItem<SearchBookGroup>) => {
             ListItem() {
-              // A raw SearchBook has one exact source identity. Cross-source
-              // work grouping is not part of this page contract.
-              this.resultCard(repeatItem.item, 1);
+              this.resultCard(repeatItem.item.book, repeatItem.item.sourceCount,
+                repeatItem.item.inBookshelf);
             }
           })
-          .key((book: SearchBook): string =>
-            `search-result-${book.sourceId}:${book.bookId}:${book.title}`)
+          .key((group: SearchBookGroup): string =>
+            `search-result-${this.normalizedBookKey(group.book.title, group.book.author)}`)
           .virtualScroll({ reusable: true });
       }
       .width('100%')
@@ -394,7 +409,7 @@ export struct SearchPage {
   }
 
   @Builder
-  private resultCard(book: SearchBook, sourceCount: number) {
+  private resultCard(book: SearchBook, sourceCount: number, inBookshelf: boolean) {
     Row({ space: TOK_SPACE_SM }) {
       Stack({ alignContent: Alignment.Bottom }) {
         if (book.coverUrl !== undefined && book.coverUrl.trim().length > 0) {
@@ -498,6 +513,14 @@ export struct SearchPage {
             .lineHeight(16.5)
             .fontColor(TOK_MUTED)
             .maxLines(1);
+          if (inBookshelf) {
+            Text('已在书架')
+              .fontFamily('ReaderInter')
+              .fontWeight(FontWeight.Bold)
+              .fontSize(10)
+              .fontColor(TOK_GREEN)
+              .maxLines(1);
+          }
         }
         .width('100%')
         .alignItems(VerticalAlign.Center);
@@ -510,6 +533,38 @@ export struct SearchPage {
     .alignItems(VerticalAlign.Top)
     .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: TOK_BORDER } })
     .onClick((): void => this.onSelectResult(book));
+  }
+
+  private groupResults(results: SearchBook[]): SearchBookGroup[] {
+    const byBook = new Map<string, SearchBookGroup>();
+    for (const book of results) {
+      const key = this.normalizedBookKey(book.title, book.author);
+      const existing = byBook.get(key);
+      if (existing === undefined) {
+        byBook.set(key, new SearchBookGroup(book, 1, this.isBookOnShelf(book)));
+      } else {
+        if (existing.sourceIds.indexOf(book.sourceId) < 0) {
+          existing.sourceIds.push(book.sourceId);
+          existing.sourceCount += 1;
+        }
+        existing.inBookshelf = existing.inBookshelf || this.isBookOnShelf(book);
+      }
+    }
+    // Legado keeps one card per exact title/author and promotes books found
+    // by more origins. Preserve discovery order for equal source counts.
+    return Array.from(byBook.values()).sort((left: SearchBookGroup, right: SearchBookGroup): number =>
+      right.sourceCount - left.sourceCount);
+  }
+
+  private normalizedBookKey(title: string, author: string): string {
+    return `${title.trim().toLocaleLowerCase()}\u0000${author.trim().toLocaleLowerCase()}`;
+  }
+
+  private isBookOnShelf(book: SearchBook): boolean {
+    const key = this.normalizedBookKey(book.title, book.author);
+    return this.shelfBooks.some((shelf: ShelfBook): boolean =>
+      (shelf.sourceId === book.sourceId && shelf.bookId === book.bookId) ||
+      this.normalizedBookKey(shelf.title, shelf.author) === key);
   }
 
   @Builder

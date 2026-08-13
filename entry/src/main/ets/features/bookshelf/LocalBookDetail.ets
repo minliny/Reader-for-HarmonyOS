@@ -53,8 +53,10 @@ export struct LocalBookDetail {
   @Prop toc: LocalReadingTocEntry[] = [];
   @Prop isTablet: boolean = false;
   @Prop sourceSwitchEnabled: boolean = false;
+  @Prop inBookshelf: boolean = true;
   @Prop removalEnabled: boolean = true;
   @Prop removing: boolean = false;
+  @Prop loadingMessage: string = '';
   onContinue: () => void = (): void => {};
   onSelectChapter: (index: number) => void = (_index: number): void => {};
   onOpenDirectory: () => void = (): void => {};
@@ -374,7 +376,7 @@ export struct LocalBookDetail {
   private actionArea() {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
       Stack({ alignContent: Alignment.Center }) {
-        Text('继续阅读')
+        Text(this.readingActionsReady() ? '继续阅读' : this.pendingReadingLabel())
           .fontFamily('ReaderInter')
           .fontWeight(900)
           .fontSize(13)
@@ -388,6 +390,7 @@ export struct LocalBookDetail {
       .borderRadius(999)
       .opacity(this.readingActionsReady() && !this.removing ? 1 : 0.5)
       .enabled(this.readingActionsReady() && !this.removing)
+      .accessibilityText(this.readingActionsReady() ? '继续阅读' : this.pendingReadingLabel())
       .onClick((): void => {
         if (this.readingActionsReady() && !this.removing) {
           this.onContinue();
@@ -395,12 +398,12 @@ export struct LocalBookDetail {
       });
 
       Stack({ alignContent: Alignment.Center }) {
-        Text(this.removing ? '正在移除…' : '移除书架')
+        Text(this.shelfActionLabel())
           .fontFamily('ReaderInter')
           .fontWeight(900)
           .fontSize(13)
           .lineHeight(14.3)
-          .fontColor(TOK_DANGER);
+          .fontColor(this.inBookshelf ? TOK_DANGER : TOK_GREEN);
       }
       .width(this.actionButtonWidth())
       .height(46)
@@ -409,7 +412,7 @@ export struct LocalBookDetail {
       .borderRadius(999)
       .enabled(this.removalEnabled && !this.removing)
       .opacity(this.removalEnabled && !this.removing ? 1 : 0.4)
-      .accessibilityText(this.removing ? '正在移除书架' : '移除书架')
+      .accessibilityText(this.shelfActionLabel())
       .onClick((): void => {
         if (this.removalEnabled && !this.removing) {
           this.onRemove();
@@ -457,6 +460,17 @@ export struct LocalBookDetail {
 
   private readingActionsReady(): boolean {
     return this.toc.length > 0;
+  }
+
+  private pendingReadingLabel(): string {
+    return this.loadingMessage.trim().length > 0 ? this.loadingMessage : '正在准备阅读…';
+  }
+
+  private shelfActionLabel(): string {
+    if (this.removing) {
+      return this.inBookshelf ? '正在移除…' : '正在加入…';
+    }
+    return this.inBookshelf ? '移除书架' : '加入书架';
   }
 
   private hasCover(): boolean {

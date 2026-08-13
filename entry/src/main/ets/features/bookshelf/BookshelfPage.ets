@@ -304,6 +304,18 @@ export struct BookshelfPage {
             coverHeight: isTablet ? 280 : 145.443,
           });
         }
+        if ((book.unreadCount ?? 0) > 0) {
+          Text(`更新 ${book.unreadCount} 章`)
+            .fontFamily('ReaderInter')
+            .fontWeight(FontWeight.Bold)
+            .fontSize(10)
+            .fontColor(TOK_ON_PRIMARY)
+            .padding({ left: 7, right: 7, top: 3, bottom: 3 })
+            .backgroundColor(TOK_GREEN)
+            .borderRadius(999)
+            .align(Alignment.TopEnd)
+            .margin({ top: 7, right: 7 });
+        }
       }
       .width(isTablet ? TABLET_BOOK_WIDTH : PHONE_BOOK_WIDTH)
       .height(isTablet ? 280 : 145.443)
@@ -333,6 +345,15 @@ export struct BookshelfPage {
         .fontColor(TOK_MUTED)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
+
+      if ((book.readProgress ?? 0) > 0) {
+        Text(`已读 ${Math.floor((book.readProgress ?? 0) / 100)}%`)
+          .width(isTablet ? TABLET_BOOK_WIDTH : PHONE_BOOK_WIDTH)
+          .fontFamily('ReaderInter')
+          .fontSize(10)
+          .fontColor(TOK_GREEN)
+          .maxLines(1);
+      }
     }
     .width(isTablet ? TABLET_BOOK_WIDTH : PHONE_BOOK_WIDTH)
     .alignItems(HorizontalAlign.Start)

@@ -100,6 +100,7 @@ assert.doesNotMatch(gateway, localGatewayLeak,
   'remote reading must not reuse or impersonate the local gateway');
 
 const openStart = gateway.indexOf('async openSession(');
+const cachedStart = gateway.indexOf('async openCachedSession(', openStart);
 const chapterStart = gateway.indexOf('async loadChapter(', openStart);
 assert.ok(openStart >= 0 && chapterStart > openStart, 'openSession must remain present');
 const openSession = gateway.slice(openStart, chapterStart);
@@ -115,6 +116,17 @@ assert.match(openSession, /mergeRemoteReadingVariables\(searchVariables, detailV
 assert.match(openSession, /variables:\s*encodeRemoteReadingVariables\(continuationVariables\)/);
 assert.match(openSession, /detailResult\.data\['sourceId'\]\s*!==\s*identity\.sourceId/);
 assert.match(openSession, /book\.detail returned a mismatched bookId/);
+
+const cachedEnd = gateway.indexOf('async loadCachedTocProjection(', cachedStart);
+assert.ok(cachedStart > openStart && cachedEnd > cachedStart,
+  'the durable cached-session reconstruction path must remain present');
+const cachedSession = gateway.slice(cachedStart, cachedEnd);
+assert.match(cachedSession, /result\.data\['continuationVariables'\]/,
+  'cold-start sessions must restore detail-scoped Legado variables from Core');
+assert.match(cachedSession, /raw\['variables'\]/,
+  'cold-start sessions must restore chapter-scoped Legado variables from Core');
+assert.match(cachedSession, /mergeRemoteReadingVariables\([\s\S]*seed\.searchVariables \?\? \[\],[\s\S]*continuationVariables/,
+  'an explicitly supplied seed may augment but not discard Core continuation state');
 
 const progressStart = gateway.indexOf('async loadProgress(', chapterStart);
 assert.ok(progressStart > chapterStart, 'loadChapter must remain present');
