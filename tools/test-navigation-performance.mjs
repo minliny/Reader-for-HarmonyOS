@@ -40,7 +40,16 @@ assert.equal((detail.match(/\.enabled\(this\.readingActionsReady\(\)\)/g) ?? [])
 const reading = read('entry/src/main/ets/features/reading/LocalReadingExperience.ets');
 assert.match(reading, /this\.loadInitialToc\(isCurrent\)/);
 assert.match(reading, /if \(this\.directoryEntries\.length === 0\) \{\s*return this\.activeGateway\(\)\.loadToc/);
-assert.match(reading, /return Promise\.resolve\(new InitialReadingToc\(this\.bookId, this\.directoryEntries\.slice\(\)\)\)/);
+assert.match(reading, /return Promise\.resolve\(new InitialReadingToc\(this\.bookId, this\.directoryEntries\)\)/);
+assert.doesNotMatch(reading, /new InitialReadingToc\(this\.bookId, this\.directoryEntries\.slice\(\)\)/,
+  'detail-admitted TOC identity must not be broken by an unnecessary array copy');
+assert.match(reading,
+  /tocEntries: this\.controlVisible \?\s*this\.controlDirectoryEntries\(\) : EMPTY_CONTROL_DIRECTORY_ENTRIES/,
+  'the hidden Reader Control shell must not project the full directory on first-page admission');
+const controlDirectory = method(reading, 'private controlDirectoryEntries(', 'private initializeTtsSession(');
+assert.ok(controlDirectory.indexOf('this.tocEntries === this.directoryEntries') <
+  controlDirectory.indexOf('new Map<number, LocalReadingTocEntry>()'),
+  'an identical parent/session TOC must return before building the marker/title projection');
 assert.match(reading, /this\.requestedChapterIndex === undefined && restored !== undefined/);
 assert.match(reading, /stored = await this\.activeGateway\(\)\.updateProgress/,
   'changed/explicit anchors must retain persistence-before-visibility');

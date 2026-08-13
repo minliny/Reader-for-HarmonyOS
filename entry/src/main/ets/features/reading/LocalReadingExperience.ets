@@ -394,6 +394,8 @@ const READER_APPEARANCE_LETTER_SPACING_STEP = 0.5;
 const READING_WRITING_MODE = 'horizontal-tb';
 const LOCAL_READING_SOURCE_ID = 'local';
 const UNICODE_PROBE = 'A😀B';
+/** Stable empty input for the mounted-but-hidden Reader Control shell. */
+const EMPTY_CONTROL_DIRECTORY_ENTRIES: LocalReadingTocEntry[] = [];
 /** Engineering ceiling only; it has no visual meaning or design authority. */
 const MAX_MEASUREMENT_BATCH_PARAGRAPHS = 8;
 const MAX_MEASUREMENT_BATCH_UTF16 = 12 * 1024;
@@ -766,7 +768,12 @@ export struct ReadingExperience {
         isTablet: this.isTablet,
         visible: this.controlVisible && !this.controlObscured,
         activePage: this.controlPage,
-        tocEntries: this.controlDirectoryEntries(),
+        // ReaderControlPanel deliberately stays mounted for its transitions,
+        // but its directory subtree is not visible before the control opens.
+        // Do not build a thousands-row marker/title projection for that hidden
+        // shell on the first reading frame.
+        tocEntries: this.controlVisible ?
+          this.controlDirectoryEntries() : EMPTY_CONTROL_DIRECTORY_ENTRIES,
         currentChapterIndex: this.currentChapterIndex(),
         chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
         chapterDownloadEnabled: this.remoteSession !== undefined,
@@ -1039,7 +1046,7 @@ export struct ReadingExperience {
     // Detail admission already validated this exact TOC before the reader can
     // be opened. Reuse the parent projection instead of asking the single Core
     // worker to decode the same local/cache TOC once more on every entry.
-    return Promise.resolve(new InitialReadingToc(this.bookId, this.directoryEntries.slice()));
+    return Promise.resolve(new InitialReadingToc(this.bookId, this.directoryEntries));
   }
 
   private admitTocEntries(entries: LocalReadingTocEntry[]): void {
@@ -2746,6 +2753,12 @@ export struct ReadingExperience {
     // while retaining the parent's marker and offline state.
     if (this.directoryEntries.length === 0) {
       return this.tocEntries;
+    }
+    // Detail admission and the initial reader share the exact validated TOC.
+    // Preserve that identity so the common path does not rebuild an equal
+    // Map plus one projected object per chapter merely for Reader Control.
+    if (this.tocEntries === this.directoryEntries) {
+      return this.directoryEntries;
     }
     if (this.controlDirectoryParentSource === this.directoryEntries &&
       this.controlDirectoryTocSource === this.tocEntries) {
