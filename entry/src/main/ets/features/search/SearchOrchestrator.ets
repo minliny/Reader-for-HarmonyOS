@@ -21,10 +21,10 @@ const DOMAIN = 0x5244;
 const MAX_SEARCH_CONCURRENCY = 4;
 
 /** A failing worker reports which source failed and why. */
-type WorkerFailure = {
+interface WorkerFailure {
   source: SearchSource;
   error: string;
-};
+}
 
 /**
  * Owns the Search page's orchestration. A plain class, not a component:
