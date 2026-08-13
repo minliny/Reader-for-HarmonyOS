@@ -1291,9 +1291,10 @@ export struct ReadingExperience {
       return;
     }
     try {
-      this.paragraphRanges.length = 0;
       this.measurementBatch.length = 0;
-      this.collectParagraphRanges(chapter.content);
+      if (this.paragraphRanges.length === 0) {
+        this.collectParagraphRanges(chapter.content);
+      }
       if (this.paragraphRanges.length === 0) {
         throw new Error('READING_CONTENT_EMPTY');
       }
