@@ -2933,9 +2933,9 @@ struct Index {
           hilog.warn(DOMAIN, 'Reader', 'Old source book cache cleanup failed: %{public}s', error.message);
         });
     }
-    // `reading.progress.update` has completed in ReadingExperience. A fresh
-    // shelf query is the only source of the Continue Reading state.
-    this.refreshBookshelf();
+    // `reading.progress.update` has completed in ReadingExperience. The shelf
+    // is not re-queried per page commit; it is refreshed at the explicit
+    // boundaries (return to shelf, import/remove, source switch, cold start).
   }
 
   private currentSourceSwitchTransactionId(): string | undefined {
