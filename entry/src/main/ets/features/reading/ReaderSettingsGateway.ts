@@ -54,6 +54,13 @@ export class ReaderSettingsGateway {
     }
   }
 
+  async clear(): Promise<void> {
+    await this.updateTail;
+    const store = await this.ensureStore();
+    await store.delete(READER_SETTINGS_SNAPSHOT_KEY);
+    await store.flush();
+  }
+
   private async readSnapshot(store: preferences.Preferences): Promise<ReaderSettingsSnapshot> {
     const fallback = createDefaultReaderSettingsSnapshot();
     const raw = (await store.get(READER_SETTINGS_SNAPSHOT_KEY, '')) as string;

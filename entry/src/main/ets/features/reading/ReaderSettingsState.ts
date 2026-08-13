@@ -1,11 +1,10 @@
 /**
  * Pure, versioned state for the Reader Settings module.
  *
- * Figma defines the complete option vocabulary. The current Harmony bundle,
- * however, has no admitted window/audio Host for orientation, screen timeout,
- * system bars, volume keys, or TTS lifecycle. Those values remain visible in
- * the panels but normalize to their safe no-op values here. Only layout/text
- * options that the reading surface can apply locally are writable today.
+ * Figma defines the complete option vocabulary. Harmony owns the window and
+ * key-event side effects; this value object owns only persisted user intent.
+ * TTS screen-off lifecycle remains fail-closed until a screen-state Host is
+ * admitted separately.
  */
 export type ReaderScreenDirection = 'system' | 'portrait' | 'landscape';
 
@@ -69,18 +68,51 @@ export function normalizeReaderSettingsSnapshot(
   }
   return {
     version: 1,
-    screenDirection: 'system',
-    pageTurnStyle: 'none',
-    screenTimeout: 'system',
-    hideStatusBar: false,
-    hideNavigationBar: false,
-    extendIntoCutout: false,
+    screenDirection: isReaderScreenDirection(candidate.screenDirection) ?
+      candidate.screenDirection : fallback.screenDirection,
+    pageTurnStyle: isReaderPageTurnStyle(candidate.pageTurnStyle) ?
+      candidate.pageTurnStyle : fallback.pageTurnStyle,
+    screenTimeout: isReaderScreenTimeout(candidate.screenTimeout) ?
+      candidate.screenTimeout : fallback.screenTimeout,
+    hideStatusBar: booleanOrFallback(candidate.hideStatusBar, fallback.hideStatusBar),
+    hideNavigationBar: booleanOrFallback(candidate.hideNavigationBar, fallback.hideNavigationBar),
+    extendIntoCutout: booleanOrFallback(candidate.extendIntoCutout, fallback.extendIntoCutout),
     justifyText: booleanOrFallback(candidate.justifyText, fallback.justifyText),
     alignPageBottom: booleanOrFallback(candidate.alignPageBottom, fallback.alignPageBottom),
-    volumeKeysTurnPage: false,
+    volumeKeysTurnPage: booleanOrFallback(candidate.volumeKeysTurnPage, fallback.volumeKeysTurnPage),
     stopTtsOnScreenOff: false,
     longPressSelectText: booleanOrFallback(candidate.longPressSelectText, fallback.longPressSelectText),
   };
+}
+
+export function setReaderScreenDirection(
+  snapshot: ReaderSettingsSnapshot,
+  direction: ReaderScreenDirection,
+): ReaderSettingsSnapshot {
+  if (!isReaderScreenDirection(direction)) {
+    throw new RangeError(`unsupported Reader screen direction: ${direction}`);
+  }
+  return normalizeReaderSettingsSnapshot({ ...snapshot, screenDirection: direction });
+}
+
+export function setReaderPageTurnStyle(
+  snapshot: ReaderSettingsSnapshot,
+  style: ReaderPageTurnStyle,
+): ReaderSettingsSnapshot {
+  if (!isReaderPageTurnStyle(style)) {
+    throw new RangeError(`unsupported Reader page-turn style: ${style}`);
+  }
+  return normalizeReaderSettingsSnapshot({ ...snapshot, pageTurnStyle: style });
+}
+
+export function setReaderScreenTimeout(
+  snapshot: ReaderSettingsSnapshot,
+  timeout: ReaderScreenTimeout,
+): ReaderSettingsSnapshot {
+  if (!isReaderScreenTimeout(timeout)) {
+    throw new RangeError(`unsupported Reader screen timeout: ${timeout}`);
+  }
+  return normalizeReaderSettingsSnapshot({ ...snapshot, screenTimeout: timeout });
 }
 
 export function copyReaderSettingsSnapshot(snapshot: ReaderSettingsSnapshot): ReaderSettingsSnapshot {
@@ -101,31 +133,44 @@ export function setReaderSettingsToggle(
     screenDirection: current.screenDirection,
     pageTurnStyle: current.pageTurnStyle,
     screenTimeout: current.screenTimeout,
-    hideStatusBar: current.hideStatusBar,
-    hideNavigationBar: current.hideNavigationBar,
-    extendIntoCutout: current.extendIntoCutout,
+    hideStatusBar: key === 'hideStatusBar' ? value : current.hideStatusBar,
+    hideNavigationBar: key === 'hideNavigationBar' ? value : current.hideNavigationBar,
+    extendIntoCutout: key === 'extendIntoCutout' ? value : current.extendIntoCutout,
     justifyText: key === 'justifyText' ? value : current.justifyText,
     alignPageBottom: key === 'alignPageBottom' ? value : current.alignPageBottom,
-    volumeKeysTurnPage: current.volumeKeysTurnPage,
+    volumeKeysTurnPage: key === 'volumeKeysTurnPage' ? value : current.volumeKeysTurnPage,
     stopTtsOnScreenOff: current.stopTtsOnScreenOff,
     longPressSelectText: key === 'longPressSelectText' ? value : current.longPressSelectText,
   });
 }
 
 export function isReaderScreenDirectionAvailable(direction: ReaderScreenDirection): boolean {
-  return direction === 'system';
+  return isReaderScreenDirection(direction);
 }
 
 export function isReaderPageTurnStyleAvailable(style: ReaderPageTurnStyle): boolean {
-  return style === 'none';
+  return isReaderPageTurnStyle(style);
 }
 
 export function isReaderScreenTimeoutAvailable(timeout: ReaderScreenTimeout): boolean {
-  return timeout === 'system';
+  return isReaderScreenTimeout(timeout);
 }
 
 export function isReaderSettingsToggleAvailable(key: ReaderSettingsToggleKey): boolean {
-  return key === 'justifyText' || key === 'alignPageBottom' || key === 'longPressSelectText';
+  return key !== 'stopTtsOnScreenOff';
+}
+
+function isReaderScreenDirection(value: string): value is ReaderScreenDirection {
+  return value === 'system' || value === 'portrait' || value === 'landscape';
+}
+
+function isReaderPageTurnStyle(value: string): value is ReaderPageTurnStyle {
+  return value === 'cover' || value === 'slide' || value === 'simulation' || value === 'scroll' || value === 'none';
+}
+
+function isReaderScreenTimeout(value: string): value is ReaderScreenTimeout {
+  return value === 'system' || value === 'oneMinute' || value === 'fiveMinutes' ||
+    value === 'tenMinutes' || value === 'alwaysOn';
 }
 
 function booleanOrFallback(value: boolean, fallback: boolean): boolean {
