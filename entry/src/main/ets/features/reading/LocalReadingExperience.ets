@@ -75,6 +75,10 @@ import { window } from '@kit.ArkUI';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { ReaderTtsGateway, type ReaderTtsChapterRef, type ReaderTtsConfig } from './ReaderTtsGateway';
 import {
+  ReaderHttpTtsGateway,
+  type ReaderHttpTtsConfig,
+} from './ReaderHttpTtsGateway';
+import {
   ReaderTtsSessionCoordinator,
   type ReaderTtsChapterAdvanceInput,
   type ReaderTtsProgressCommit,
@@ -442,6 +446,8 @@ export struct ReadingExperience {
   @State private ttsFollowHighlight: boolean = true;
   @State private ttsAllowMixing: boolean = false;
   @State private ttsFailurePolicy: 'skip' | 'stop' = 'stop';
+  @State private ttsEngine: string = 'system';
+  @State private ttsHttpEngines: ReaderHttpTtsConfig[] = [];
 
   private sessionGateway: ReadingSessionFlowGateway | undefined = undefined;
   private readonly replaceGateway: ReaderReplaceQuickGateway =
@@ -665,6 +671,8 @@ export struct ReadingExperience {
         ttsFollowHighlight: this.ttsFollowHighlight,
         ttsAllowMixing: this.ttsAllowMixing,
         ttsFailurePolicy: this.ttsFailurePolicy,
+        ttsEngine: this.ttsEngine,
+        ttsHttpEngines: this.ttsHttpEngines,
         reduceMotion: this.reduceMotion,
         onBack: (): void => {
           this.hideControl();
@@ -707,6 +715,7 @@ export struct ReadingExperience {
         onTtsStop: (): void => this.stopTts(),
         onTtsPrevious: (): void => this.previousTtsUtterance(),
         onTtsNext: (): void => this.nextTtsUtterance(),
+        onTtsSeek: (sliceIndex: number): void => this.seekTtsUtterance(sliceIndex),
         onTtsRateChange: (rate: number): void => this.changeTtsRate(rate),
         onTtsTimerChange: (minutes: number, seconds: number): void => this.changeTtsTimer(minutes, seconds),
         onTtsFollowHighlightChange: (enabled: boolean): void => {
@@ -714,6 +723,7 @@ export struct ReadingExperience {
         },
         onTtsAllowMixingChange: (enabled: boolean): void => this.changeTtsAllowMixing(enabled),
         onTtsFailurePolicyChange: (policy: 'skip' | 'stop'): void => this.changeTtsFailurePolicy(policy),
+        onTtsEngineChange: (engine: string): void => this.changeTtsEngine(engine),
       });
       if (!this.controlVisible) {
         // Figma reader.page.turn.none: left/right bands request the adjacent
@@ -2436,6 +2446,7 @@ export struct ReadingExperience {
   private initializeTtsSession(lifecycleToken: number): void {
     const owner = ReaderRuntimeOwner.current();
     const gateway = new ReaderTtsGateway(owner);
+    const httpGateway = new ReaderHttpTtsGateway(owner);
     const coordinator = new ReaderTtsSessionCoordinator(
       gateway,
       owner.getTtsHost(),
@@ -2452,11 +2463,14 @@ export struct ReadingExperience {
     this.ttsCoordinator = coordinator;
     void coordinator.probeAvailability()
       .then(async (available: boolean): Promise<void> => {
-        if (!available || !this.isMountedToken(lifecycleToken) || this.ttsCoordinator !== coordinator) return;
+        if (!this.isMountedToken(lifecycleToken) || this.ttsCoordinator !== coordinator) return;
         const config = await gateway.getConfig();
+        const httpEngines = await httpGateway.list();
         if (!this.isMountedToken(lifecycleToken) || this.ttsCoordinator !== coordinator) return;
         this.ttsConfig = config;
-        if (config !== undefined) await coordinator.setRate(this.multiplierForCoreRate(config.rate));
+        this.ttsEngine = config?.engine ?? 'system';
+        this.ttsHttpEngines = httpEngines;
+        if (available && config !== undefined) await coordinator.setRate(this.multiplierForCoreRate(config.rate));
       })
       .catch((error: Error): void => {
         console.error(`Reader TTS initialization failed: ${error.message}`);
@@ -2537,6 +2551,13 @@ export struct ReadingExperience {
     }
   }
 
+  private seekTtsUtterance(sliceIndex: number): void {
+    const coordinator = this.ttsCoordinator;
+    if (coordinator !== undefined) {
+      void coordinator.seek(sliceIndex).catch((error: Error): void => this.logTtsFailure('seek', error));
+    }
+  }
+
   private changeTtsRate(rate: number): void {
     const normalized = Math.max(0.5, Math.min(2, Math.round(rate * 10) / 10));
     const coordinator = this.ttsCoordinator;
@@ -2564,12 +2585,33 @@ export struct ReadingExperience {
     this.ttsCoordinator?.setFailurePolicy(policy);
   }
 
+  private changeTtsEngine(engine: string): void {
+    if (engine !== 'system' && !/^http-tts:\d+$/.test(engine)) return;
+    const gateway = this.ttsGateway;
+    const coordinator = this.ttsCoordinator;
+    if (gateway === undefined || coordinator === undefined || engine === this.ttsEngine) return;
+    void coordinator.stop('user')
+      .then(async (): Promise<void> => {
+        const prior = this.ttsConfig;
+        const config = await gateway.putConfig({
+          engine,
+          rate: prior?.rate ?? this.coreRateForMultiplier(this.ttsState.rate),
+          pitch: prior?.pitch ?? 0,
+          followSys: prior?.followSys ?? false,
+        });
+        this.ttsConfig = config;
+        this.ttsEngine = config.engine ?? 'system';
+        await coordinator.probeAvailability();
+      })
+      .catch((error: Error): void => this.logTtsFailure('engine', error));
+  }
+
   private async persistTtsConfig(rate: number): Promise<void> {
     const gateway = this.ttsGateway;
     if (gateway === undefined) return;
     const prior = this.ttsConfig;
     const config = await gateway.putConfig({
-      engine: prior?.engine,
+      engine: this.ttsEngine,
       rate: this.coreRateForMultiplier(rate),
       pitch: prior?.pitch ?? 0,
       followSys: prior?.followSys ?? false,
