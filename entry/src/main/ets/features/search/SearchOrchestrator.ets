@@ -13,6 +13,13 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 const DOMAIN = 0x5244;
 
 /**
+ * Feature-local bound on how many `book.search` source requests run at once.
+ * Bounded so a slow or stuck source cannot stack latency across every enabled
+ * source; outcomes are still assembled in source registration order.
+ */
+const MAX_SEARCH_CONCURRENCY = 4;
+
+/**
  * Owns the Search page's orchestration. A plain class, not a component:
  * per-entry `session` and per-submit `work` counters guard every async write-back,
  * source/history loading and result dedup live here, and it emits typed
@@ -156,27 +163,65 @@ export class SearchOrchestrator {
         this.present({ kind: 'error', keyword: keyword });
         return;
       }
+      // Bounded, feature-local concurrency: up to MAX_SEARCH_CONCURRENCY
+      // workers pull the next enabled source, so wall time tracks the longest
+      // sources instead of their sum. Each outcome lands in its registration
+      // slot, keeping the final result order stable.
+      const outcomes: Array<SearchOutcome | undefined> = new Array(enabled.length);
+      let nextSourceIndex = 0;
+      let failedSource: SearchSource | undefined = undefined;
+      let failedError: string | undefined = undefined;
+      const worker = async (): Promise<void> => {
+        while (true) {
+          if (!this.isCurrentWork(work, session) || failedSource !== undefined) {
+            return;
+          }
+          const index = nextSourceIndex;
+          nextSourceIndex += 1;
+          if (index >= enabled.length) {
+            return;
+          }
+          const source = enabled[index];
+          const outcome = await this.gateway.searchBySource(
+            source,
+            keyword,
+            (): boolean => this.isCurrentWork(work, session) && failedSource === undefined,
+          );
+          if (!this.isCurrentWork(work, session)) {
+            return;
+          }
+          if (outcome.ok === false) {
+            // Figma provides only a whole-search error surface, not a partial
+            // result state naming failed sources. Do not label a partial list
+            // as an "all sources" result.
+            failedSource = source;
+            failedError = outcome.error;
+            return;
+          }
+          outcomes[index] = outcome;
+        }
+      };
+      const workerCount = Math.min(MAX_SEARCH_CONCURRENCY, enabled.length);
+      const workers: Array<Promise<void>> = [];
+      for (let index = 0; index < workerCount; index += 1) {
+        workers.push(worker());
+      }
+      await Promise.all(workers);
+      if (!this.isCurrentWork(work, session)) {
+        return;
+      }
+      if (failedSource !== undefined) {
+        hilog.warn(DOMAIN, 'Reader', 'Search source %{public}s failed: %{public}s',
+          failedSource.sourceId, failedError ?? 'unknown failure');
+        this.present({ kind: 'error', keyword: keyword });
+        return;
+      }
       const results: SearchBook[] = [];
-      for (const source of enabled) {
-        const outcome = await this.gateway.searchBySource(
-          source,
-          keyword,
-          (): boolean => this.isCurrentWork(work, session),
-        );
-        if (!this.isCurrentWork(work, session)) {
-          return;
-        }
-        if (outcome.ok === false) {
-          // Figma provides only a whole-search error surface, not a partial
-          // result state naming failed sources. Do not label a partial list as
-          // an "all sources" result.
-          hilog.warn(DOMAIN, 'Reader', 'Search source %{public}s failed: %{public}s',
-            source.sourceId, outcome.error);
-          this.present({ kind: 'error', keyword: keyword });
-          return;
-        }
-        for (const book of outcome.results) {
-          results.push(book);
+      for (const outcome of outcomes) {
+        if (outcome !== undefined && outcome.ok === true) {
+          for (const book of outcome.results) {
+            results.push(book);
+          }
         }
       }
       const deduped = this.dedupeSearchResults(results);
@@ -216,18 +261,11 @@ export class SearchOrchestrator {
 
   private dedupeSearchResults(results: SearchBook[]): SearchBook[] {
     const deduped: SearchBook[] = [];
-    const seenKeys: string[] = [];
+    const seenKeys = new Set<string>();
     for (const result of results) {
       const key = `${result.sourceId} ${result.bookId}`;
-      let seen = false;
-      for (const existingKey of seenKeys) {
-        if (existingKey === key) {
-          seen = true;
-          break;
-        }
-      }
-      if (!seen) {
-        seenKeys.push(key);
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
         deduped.push(result);
       }
     }
