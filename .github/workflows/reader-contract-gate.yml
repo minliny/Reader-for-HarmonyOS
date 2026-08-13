@@ -1,0 +1,143 @@
+name: Reader contract gate
+
+# Reader contract gate — the CI backstop that local gates cannot provide.
+#
+# Local gates (enforce-implementation-ready-gate.mjs, pre-hooks, runner
+# preflight) can all be bypassed by an agent with write access to the working
+# tree. This workflow runs from a clean checkout on GitHub, where the agent
+# cannot edit the gate files or the registry without the change being visible
+# in the PR diff.
+#
+# This workflow verifies the three layers defined in Section 9 of
+# FIGMA_TO_NATIVE_AGENT_EXECUTION_PROTOCOL.md:
+#   1. Reader-UI's atomic promotion transaction (promote-family.mjs --check)
+#   2. Artifact ↔ registry synchronization (generator --check)
+#   3. local.status === harmony.status for every implementation-ready record
+#
+# Branch protection MUST require this check to pass before merge. Without
+# branch protection, this workflow is advisory only — an agent can merge a
+# bypass without waiting for it.
+
+on:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reader-contract-gate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  contract-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out HarmonyOS host
+        uses: actions/checkout@v4
+        with:
+          path: Reader-for-HarmonyOS
+          persist-credentials: false
+
+      - name: Check out Reader-UI (contract authority)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/Reader-UI
+          # Reader-UI is a separate repo — it does NOT share branch names with
+          # Reader-for-HarmonyOS. Always check out Reader-UI's default branch
+          # (main). Cross-repo PR coordination happens via the dispatch workflow
+          # (reader-ui-consumer.yml), not here. This gate verifies the current
+          # shipped contract authority, not a pending Reader-UI PR.
+          ref: main
+          path: Reader-UI
+          persist-credentials: false
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Verify promotion ledger integrity (Reader-UI)
+        working-directory: Reader-UI
+        run: |
+          set -euo pipefail
+          node tools/design/promote-family.mjs --check
+
+      - name: Verify generated artifact is synchronized to registry (Reader-UI)
+        working-directory: Reader-UI
+        run: |
+          set -euo pipefail
+          node tools/design/generate-visual-admission-contract.mjs --check
+
+      - name: Verify upstream and HarmonyOS consumer copy are byte-identical
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import crypto from 'node:crypto';
+          import fs from 'node:fs';
+          const upstream = 'Reader-UI/generated/arkts/VisualAdmission.ets';
+          const consumer = 'Reader-for-HarmonyOS/entry/src/main/ets/contract/reader_ui/VisualAdmission.ets';
+          if (!fs.existsSync(upstream)) throw new Error(`upstream missing: ${upstream}`);
+          if (!fs.existsSync(consumer)) throw new Error(`consumer missing: ${consumer}`);
+          const upstreamHash = crypto.createHash('sha256').update(fs.readFileSync(upstream)).digest('hex');
+          const consumerHash = crypto.createHash('sha256').update(fs.readFileSync(consumer)).digest('hex');
+          if (upstreamHash !== consumerHash) {
+            throw new Error(`upstream and consumer VisualAdmission.ets diverged:\n  upstream: ${upstreamHash}\n  consumer: ${consumerHash}`);
+          }
+          console.log(`✓ upstream == consumer (${upstreamHash.slice(0, 16)}...)`);
+          NODE
+
+      - name: Verify local.status === harmony.status for every implementation-ready record
+        working-directory: Reader-UI
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const registry = JSON.parse(fs.readFileSync('docs/design/FIGMA_VISUAL_ADMISSION_REGISTRY.json', 'utf8'));
+          const mismatches = [];
+          for (const record of registry.records) {
+            if (record.classification !== 'exact-figma-binding') continue;
+            if (record.harmony?.status === 'implementation-ready' && record.local?.status !== 'implementation-ready') {
+              mismatches.push(`${record.id}: harmony.status='implementation-ready' but local.status='${record.local?.status}'`);
+            }
+          }
+          if (mismatches.length > 0) {
+            console.error(`✗ ${mismatches.length} record(s) have hand-edited harmony.status without source-side completion:`);
+            for (const mismatch of mismatches) console.error(`  - ${mismatch}`);
+            console.error('  Use `node tools/design/promote-family.mjs <recordId>` to promote atomically.');
+            process.exit(1);
+          }
+          console.log(`✓ every implementation-ready record has local.status === implementation-ready`);
+          NODE
+
+      - name: Run the full implementation-ready gate (HarmonyOS)
+        working-directory: Reader-for-HarmonyOS
+        env:
+          READER_UI_ROOT: ${{ github.workspace }}/Reader-UI
+        run: |
+          set -euo pipefail
+          npm run enforce:implementation-ready-gate
+
+      - name: Run static contract tests (HarmonyOS)
+        working-directory: Reader-for-HarmonyOS
+        env:
+          READER_UI_ROOT: ${{ github.workspace }}/Reader-UI
+        run: |
+          set -euo pipefail
+          node --test scripts/test_contracts.mjs
+
+      - name: Gate summary
+        if: always()
+        run: |
+          echo '### Reader contract gate' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo 'This gate verifies that no agent hand-edited `harmony.status` to `implementation-ready` without:' >> "$GITHUB_STEP_SUMMARY"
+          echo '1. Completing Reader-UI source-side conversion (`local.status`)' >> "$GITHUB_STEP_SUMMARY"
+          echo '2. Running `promote-family.mjs` (tamper-evident ledger entry)' >> "$GITHUB_STEP_SUMMARY"
+          echo '3. Regenerating `VisualAdmission.ets` (artifact ↔ registry sync)' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Local gates can be bypassed by an agent with write access. This CI gate runs from a clean checkout and cannot be bypassed by editing local files. **Branch protection must require this check to pass before merge.**' >> "$GITHUB_STEP_SUMMARY"

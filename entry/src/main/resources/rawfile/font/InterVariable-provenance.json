@@ -1,0 +1,9 @@
+{
+  "file": "InterVariable.ttf",
+  "family": "Inter",
+  "source": "https://github.com/rsms/inter/raw/master/docs/font-files/InterVariable.ttf",
+  "license": "SIL Open Font License 1.1",
+  "licenseFile": "Inter-OFL.txt",
+  "sha256": "4989b125924991b90d05b2d16e0e388c48f7d5bb8b30539bbf9c755278d0ccaf",
+  "purpose": "Current Figma Settings General master uses Inter for section, row, and control labels."
+}

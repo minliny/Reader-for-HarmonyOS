@@ -1,0 +1,255 @@
+{
+  "evidence": {
+    "HostManifest": {
+      "description": "Capability manifest broadcast at init + post-self-check evidence drive",
+      "capabilities": [],
+      "logLineCount": 44,
+      "status": "verified",
+      "sampleLines": [
+        "07-08 23:23:44.311  9741  9741 I A03d00/JSAPP: [HostManifest]   device.screen.release            ui-contract-only reducer-direct   ScreenHostAdapter        reqs=uiCtx                avail=true verified=false",
+        "07-08 23:24:14.535  9741  9741 I A03d00/JSAPP: [HostManifest] post-self-check summary total=41 registry=15 reducerDirect=25 unimplemented=1 available=40 deviceVerified=12",
+        "07-08 23:24:14.535  9741  9741 I A03d00/JSAPP: [EntryAbility] self-check evidence drive complete — see [HostManifest] post-self-check line"
+      ]
+    },
+    "CoreSelfCheck": {
+      "description": "Core NAPI runtime ping/coreInfo/hostSmoke",
+      "capabilities": [
+        "host.smoke.echo"
+      ],
+      "logLineCount": 4,
+      "status": "verified",
+      "sampleLines": [
+        "07-08 23:23:44.545  9741  9741 I A03d00/JSAPP: [CoreSelfCheck] ping ok=true",
+        "07-08 23:23:44.546  9741  9741 I A03d00/JSAPP: [CoreSelfCheck] coreInfo={\"abiVersion\":1,\"buildVersion\":\"reader-core-native 0.1.0\",\"capabilities\":[\"core.info\",\"runtime.ping\",\"runtime.hostSmoke\",\"runtime.cancel\",\"runtime.status\",\"runtime.shutdown\",\"runtime.setHostCapabilities\",\"host.complete\",\"host.error\",\"host.bus.v1\",\"http.execute\",\"runtime.config.v1\",\"remote.reading.v1\",\"rss.v1\",\"sync.v1\",\"local_book.v1\",\"bookshelf.v1\"],\"protocolVersion\":1}",
+        "07-08 23:23:44.546  9741  9741 I A03d00/JSAPP: [CoreSelfCheck] hostSmoke type=result data={\"capability\":\"host.smoke.echo\",\"params\":{\"source\":\"harmony-sdk\"},\"status\":\"ok\"}"
+      ]
+    },
+    "ReadingChain": {
+      "description": "Minimal reading chain: http + cookie + file",
+      "capabilities": [
+        "http.execute",
+        "cookie.set",
+        "cookie.get",
+        "file.write",
+        "file.read"
+      ],
+      "logLineCount": 5,
+      "status": "verified",
+      "sampleLines": [
+        "07-08 23:23:45.061  9741  9741 I A03d00/JSAPP: [ReadingChain] step=3a file.write path=cache://reading-chain/yodu-search.html written=true bytes=32137",
+        "07-08 23:23:45.061  9741  9741 I A03d00/JSAPP: [ReadingChain] step=3b file.read path=cache://reading-chain/yodu-search.html bytes=32137 contentLen=26121 roundTripMatch=true",
+        "07-08 23:23:45.061  9741  9741 I A03d00/JSAPP: [ReadingChain] DONE transport+cache verified (extraction is Core's job, webview is Phase 7)"
+      ]
+    },
+    "ReadingChainUi": {
+      "description": "Reading chain UI path: reducer + ReaderEffects + Host HTTP round-trip",
+      "capabilities": [
+        "http.execute"
+      ],
+      "logLineCount": 4,
+      "status": "verified",
+      "sampleLines": [
+        "07-08 23:23:44.311  9741  9741 I A03d00/JSAPP: [ReadingChainUi] before: searchQuery=\"\"",
+        "07-08 23:23:46.034  9741  9741 I A03d00/JSAPP: [ReadingChainUi] poll elapsed=1500ms searchQuery=\"斗破\" results=15 loading=false errorCode=",
+        "07-08 23:23:46.035  9741  9741 I A03d00/JSAPP: [ReadingChainUi] DONE search-success results=15 first=\"第一百零八章 退敌\""
+      ]
+    },
+    "RssChain": {
+      "description": "RSS ingestion: http + item-count + file cache",
+      "capabilities": [
+        "http.execute",
+        "file.write",
+        "file.read"
+      ],
+      "logLineCount": 5,
+      "status": "verified",
+      "sampleLines": [
+        "07-08 23:23:51.174  9741  9741 I A03d00/JSAPP: [RssChain] step=3a file.write path=cache://rss/hnrss-frontpage.xml written=true bytes=15894",
+        "07-08 23:23:51.174  9741  9741 I A03d00/JSAPP: [RssChain] step=3b file.read path=cache://rss/hnrss-frontpage.xml bytes=15894 contentLen=15890 roundTripMatch=true",
+        "07-08 23:23:51.174  9741  9741 I A03d00/JSAPP: [RssChain] DONE transport+cache verified (full RSS parse is Core's job)"
+      ]
+    },
+    "LocalBook": {
+      "description": "local_book TXT + EPUB: file + persistence + zlib",
+      "capabilities": [
+        "file.write",
+        "file.read",
+        "persistence.put",
+        "persistence.get"
+      ],
+      "logLineCount": 11,
+      "status": "verified",
+      "sampleLines": [
+        "07-08 23:23:44.671  9741  9741 I A03d00/JSAPP: [LocalBook] step=7 opf bytes=732 title=\"Host Self-Check EPUB Sample\" creator=\"Reader-for-HarmonyOS\"",
+        "07-08 23:23:44.671  9741  9741 I A03d00/JSAPP: [LocalBook] step=8 persistence round-trip found=true revision=1 valueMatch=true",
+        "07-08 23:23:44.671  9741  9741 I A03d00/JSAPP: [LocalBook] DONE txt+epub local_book verified (full XML render is Core/UI job)"
+      ]
+    },
+    "SyncWebDav": {
+      "description": "sync/WebDAV: credential.get + http PUT/GET + file",
+      "capabilities": [
+        "credential.get",
+        "http.execute",
+        "file.write"
+      ],
+      "logLineCount": 2,
+      "status": "partial",
+      "sampleLines": [
+        "07-08 23:23:44.673  9741  9741 I A03d00/JSAPP: [SyncWebDav] step=1 credential.get url.exists=false user.exists=false password.exists=false",
+        "07-08 23:23:44.673  9741  9741 I A03d00/JSAPP: [SyncWebDav] step=2 SKIP missing webdav.url/webdav.user/webdav.password credential state"
+      ]
+    },
+    "UiAdapter": {
+      "description": "UI-only adapters: WebView + permission + notification",
+      "capabilities": [
+        "webview.open",
+        "webview.close",
+        "permission.check",
+        "notification.show",
+        "notification.cancel"
+      ],
+      "logLineCount": 4,
+      "status": "partial",
+      "sampleLines": [
+        "07-08 23:23:44.545  9741  9741 I A03d00/JSAPP: [UiAdapter] webview.close closed=false profileId=self-check",
+        "07-08 23:23:44.671  9741  9741 I A03d00/JSAPP: [UiAdapter] permission.check INTERNET granted=true",
+        "07-08 23:23:44.673  9741  9741 I A03d00/JSAPP: [UiAdapter] permission.check KEEP_BACKGROUND_RUNNING granted=true"
+      ]
+    },
+    "TtsSelfCheck": {
+      "description": "TTS TextReader: start/pause/resume/stop/progress",
+      "capabilities": [
+        "tts.system.start",
+        "tts.system.pause",
+        "tts.system.resume",
+        "tts.system.stop"
+      ],
+      "logLineCount": 6,
+      "status": "verified",
+      "sampleLines": [
+        "07-08 23:23:48.547  9741  9741 I A03d00/JSAPP: [TtsSelfCheck] resume acknowledged=true",
+        "07-08 23:23:50.547  9741  9741 I A03d00/JSAPP: [TtsSelfCheck] stop acknowledged=true",
+        "07-08 23:23:50.547  9741  9741 I A03d00/JSAPP: [TtsSelfCheck] shutdown done"
+      ]
+    }
+  },
+  "matrix": {
+    "host.smoke.echo": {
+      "tags": [
+        "CoreSelfCheck"
+      ],
+      "status": "verified"
+    },
+    "http.execute": {
+      "tags": [
+        "ReadingChain",
+        "ReadingChainUi",
+        "RssChain",
+        "SyncWebDav"
+      ],
+      "status": "verified"
+    },
+    "cookie.set": {
+      "tags": [
+        "ReadingChain"
+      ],
+      "status": "verified"
+    },
+    "cookie.get": {
+      "tags": [
+        "ReadingChain"
+      ],
+      "status": "verified"
+    },
+    "file.write": {
+      "tags": [
+        "ReadingChain",
+        "RssChain",
+        "LocalBook",
+        "SyncWebDav"
+      ],
+      "status": "verified"
+    },
+    "file.read": {
+      "tags": [
+        "ReadingChain",
+        "RssChain",
+        "LocalBook"
+      ],
+      "status": "verified"
+    },
+    "persistence.put": {
+      "tags": [
+        "LocalBook"
+      ],
+      "status": "verified"
+    },
+    "persistence.get": {
+      "tags": [
+        "LocalBook"
+      ],
+      "status": "verified"
+    },
+    "credential.get": {
+      "tags": [
+        "SyncWebDav"
+      ],
+      "status": "partial"
+    },
+    "webview.open": {
+      "tags": [
+        "UiAdapter"
+      ],
+      "status": "partial"
+    },
+    "webview.close": {
+      "tags": [
+        "UiAdapter"
+      ],
+      "status": "partial"
+    },
+    "permission.check": {
+      "tags": [
+        "UiAdapter"
+      ],
+      "status": "partial"
+    },
+    "notification.show": {
+      "tags": [
+        "UiAdapter"
+      ],
+      "status": "partial"
+    },
+    "notification.cancel": {
+      "tags": [
+        "UiAdapter"
+      ],
+      "status": "partial"
+    },
+    "tts.system.start": {
+      "tags": [
+        "TtsSelfCheck"
+      ],
+      "status": "verified"
+    },
+    "tts.system.pause": {
+      "tags": [
+        "TtsSelfCheck"
+      ],
+      "status": "verified"
+    },
+    "tts.system.resume": {
+      "tags": [
+        "TtsSelfCheck"
+      ],
+      "status": "verified"
+    },
+    "tts.system.stop": {
+      "tags": [
+        "TtsSelfCheck"
+      ],
+      "status": "verified"
+    }
+  },
+  "capturedAt": "2026-07-08T15:49:10.749Z"
+}

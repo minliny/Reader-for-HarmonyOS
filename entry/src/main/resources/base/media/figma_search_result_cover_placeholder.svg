@@ -1,0 +1,9 @@
+<svg width="60" height="82" viewBox="0 0 60 82" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="search-result-cover" x1="12.6795" y1="0.00000094847" x2="65.8468" y2="67.3819" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3D5A4C"/>
+      <stop offset="1" stop-color="#1F3528"/>
+    </linearGradient>
+  </defs>
+  <path d="M0 6C0 2.68629 2.68629 0 6 0H54C57.3137 0 60 2.68629 60 6V76C60 79.3137 57.3137 82 54 82H6C2.68629 82 0 79.3137 0 76V6Z" fill="url(#search-result-cover)"/>
+</svg>

@@ -1,0 +1,7 @@
+{
+  "string": [
+    { "name": "module_test_desc", "value": "Reader ArkTS test package" },
+    { "name": "test_ability_desc", "value": "Reader test ability" },
+    { "name": "test_ability_label", "value": "Reader Tests" }
+  ]
+}
