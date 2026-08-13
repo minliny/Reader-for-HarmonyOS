@@ -55,6 +55,11 @@ export interface ReaderTtsEngineOption {
   lastUpdateTime: number;
 }
 
+export interface ReaderTtsEngineOption {
+  id: number;
+  name: string;
+}
+
 /** Figma full TTS sheets: Phone `942:78`, Tablet `942:80`. */
 @Component
 export struct ReaderTtsFullPanel {
@@ -676,6 +681,33 @@ export struct ReaderTtsFullPanel {
 
   private scrollPaddingX(): number {
     return this.isTablet ? TTS_FULL_SCROLL_PADDING_X_TABLET : TTS_FULL_SCROLL_PADDING_X_PHONE;
+  }
+
+  private isHttpEngineSelected(): boolean {
+    return this.engine.startsWith('http-tts:');
+  }
+
+  private currentEngineLabel(): string {
+    if (!this.isHttpEngineSelected()) return '系统离线';
+    const id = Number(this.engine.slice('http-tts:'.length));
+    return this.httpEngines.find((option: ReaderTtsEngineOption): boolean => option.id === id)?.name ?? '在线配置失效';
+  }
+
+  private httpEngineLabel(): string {
+    if (this.httpEngines.length === 0) return '在线 TTS（未配置）';
+    if (this.isHttpEngineSelected()) return this.currentEngineLabel();
+    return this.httpEngines.length === 1 ? this.httpEngines[0].name : `在线 TTS（${this.httpEngines.length}）`;
+  }
+
+  private nextHttpEngine(): string | undefined {
+    if (this.httpEngines.length === 0) return undefined;
+    if (!this.isHttpEngineSelected()) return `http-tts:${this.httpEngines[0].id}`;
+    const currentId = Number(this.engine.slice('http-tts:'.length));
+    const index = this.httpEngines.findIndex(
+      (option: ReaderTtsEngineOption): boolean => option.id === currentId,
+    );
+    const next = this.httpEngines[(index + 1 + this.httpEngines.length) % this.httpEngines.length];
+    return `http-tts:${next.id}`;
   }
 
   private isHttpEngineSelected(): boolean {
