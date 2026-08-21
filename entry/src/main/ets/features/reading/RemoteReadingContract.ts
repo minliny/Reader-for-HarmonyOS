@@ -15,12 +15,11 @@ export type RemoteReadingHostCapabilityId =
   'httpExecute' | 'responseCharsetDecoding' | 'platformCookieJar' |
   'session' | 'nonUtf8RequestBody' | 'redirectFinalUrl';
 
-export type RemoteReadingHostCapabilityStatus = 'verifiedVm' | 'registeredUnverified' | 'unsupported';
+export type RemoteReadingHostCapabilityStatus = 'attemptable' | 'unsupported';
 
 export type RemoteReadingHostCapabilityFact = {
   id: RemoteReadingHostCapabilityId;
   status: RemoteReadingHostCapabilityStatus;
-  attemptable: boolean;
   reason: string;
 };
 
@@ -60,48 +59,41 @@ export class RemoteReadingGatewayError extends Error {
 /**
  * Current source-grounded HarmonyOS Host capability facts.
  *
- * `verifiedVm` records a production-HAP virtual-device journey;
- * `registeredUnverified` only authorizes a real attempt and remains weaker
- * than device acceptance. This projection must follow the Host rather than
- * preserving obsolete fail-closed claims after a capability is implemented.
+ * This product contract records only whether the current Host implementation
+ * can attempt a capability. VM/device evidence belongs in the root audit and
+ * must never be embedded as a runtime fact.
  */
 export function remoteReadingHostCapabilitySnapshot(): RemoteReadingHostCapabilityFact[] {
   return [
     {
       id: 'httpExecute',
-      status: 'verifiedVm',
-      attemptable: true,
-      reason: 'production HAP completed real-source L1-L5 HTTP journeys on the Phone VM',
+      status: 'attemptable',
+      reason: 'Harmony Host registers bounded http.execute request handling',
     },
     {
       id: 'responseCharsetDecoding',
-      status: 'verifiedVm',
-      attemptable: true,
-      reason: 'a GBK response source completed L1-L5 on the Phone VM',
+      status: 'attemptable',
+      reason: 'Harmony Host decodes response bytes through the shared charset policy',
     },
     {
       id: 'platformCookieJar',
-      status: 'verifiedVm',
-      attemptable: true,
-      reason: 'the source-scoped Host cookie jar passed reuse, persistence, and isolation on the Phone VM',
+      status: 'attemptable',
+      reason: 'Harmony Host owns a source-scoped persistent cookie session store',
     },
     {
       id: 'session',
-      status: 'verifiedVm',
-      attemptable: true,
-      reason: 'opaque source sessions are connected to the shared Host cookie store',
+      status: 'attemptable',
+      reason: 'opaque source sessions are routed through the Host cookie store',
     },
     {
       id: 'nonUtf8RequestBody',
-      status: 'registeredUnverified',
-      attemptable: true,
-      reason: 'the Host uses Core shared text encoding; a real non-UTF-8 POST source is still unverified',
+      status: 'attemptable',
+      reason: 'Harmony Host encodes request bodies through the shared text encoding policy',
     },
     {
       id: 'redirectFinalUrl',
-      status: 'verifiedVm',
-      attemptable: true,
-      reason: 'manual redirect hops and finalUrl completed a real-source L1-L5 journey on the Phone VM',
+      status: 'attemptable',
+      reason: 'Harmony Host follows bounded redirects and returns the final URL',
     },
   ];
 }
@@ -120,7 +112,7 @@ export function assertRemoteReadingHostRequirements(requirements: RemoteReadingH
     if (matched === undefined) {
       throw new RemoteReadingGatewayError('invalidInput', `unknown remote-reading Host capability: ${requirement}`);
     }
-    if (!matched.attemptable) {
+    if (matched.status === 'unsupported') {
       throw new RemoteReadingGatewayError(
         'unsupportedHostCapability',
         matched.reason,

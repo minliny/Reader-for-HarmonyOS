@@ -28,15 +28,19 @@ assert.throws(
 const capabilityById = new Map(
   remoteReadingHostCapabilitySnapshot().map((fact) => [fact.id, fact]),
 );
-assert.equal(capabilityById.get('httpExecute')?.status, 'verifiedVm');
-assert.equal(capabilityById.get('httpExecute')?.attemptable, true);
-assert.equal(capabilityById.get('responseCharsetDecoding')?.status, 'verifiedVm');
-for (const verified of ['platformCookieJar', 'session', 'redirectFinalUrl']) {
-  assert.equal(capabilityById.get(verified)?.status, 'verifiedVm', `${verified} must expose its VM proof`);
-  assert.equal(capabilityById.get(verified)?.attemptable, true);
+for (const capability of [
+  'httpExecute',
+  'responseCharsetDecoding',
+  'platformCookieJar',
+  'session',
+  'nonUtf8RequestBody',
+  'redirectFinalUrl',
+]) {
+  const fact = capabilityById.get(capability);
+  assert.equal(fact?.status, 'attemptable', `${capability} must expose source-grounded availability`);
+  assert.doesNotMatch(fact?.reason ?? '', /\b(?:VM|verified|journey)\b/i,
+    `${capability} must not embed acceptance evidence in the runtime contract`);
 }
-assert.equal(capabilityById.get('nonUtf8RequestBody')?.status, 'registeredUnverified');
-assert.equal(capabilityById.get('nonUtf8RequestBody')?.attemptable, true);
 assert.doesNotThrow(() => assertRemoteReadingHostRequirements(['httpExecute']));
 assert.doesNotThrow(() => assertRemoteReadingHostRequirements([
   'platformCookieJar', 'session', 'nonUtf8RequestBody', 'redirectFinalUrl',
