@@ -9,12 +9,15 @@ assert.match(sourcePage,
   /@Prop @Watch\('onSourcesChanged'\) sources: BookSource\[\];/,
   'Core source snapshots must refresh the observable list projection');
 assert.match(sourcePage,
-  /Repeat\(this\.projectedSources\)[\s\S]*this\.sourceRenderKey\(source\)[\s\S]*virtualScroll\(\{ reusable: true \}\)/,
-  'the virtual source list must consume a stable observable projection');
+  /class SourceListDataSource implements IDataSource[\s\S]*replace\(items: BookSource\[\]\)[\s\S]*listener\.onDataReloaded\(\)/,
+  'the lazy source list must explicitly notify ArkUI when its projection is replaced');
+assert.match(sourcePage,
+  /LazyForEach\(this\.sourceDataSource,[\s\S]*this\.sourceRow\(source\)[\s\S]*this\.sourceRenderKey\(source\)/,
+  'the variable-length source list must consume the notified lazy data source');
 assert.doesNotMatch(sourcePage, /Repeat\(this\.filteredSources\(\)\)/,
   'a reusable virtual Repeat must not consume a fresh derived array on every render');
 assert.match(sourcePage,
-  /private rebuildSourceProjection\(\): void \{\s*this\.projectedSources = this\.filteredSources\(\);\s*\}/,
+  /private rebuildSourceProjection\(\): void \{\s*const projected = this\.filteredSources\(\);\s*this\.sourceDataSource\.replace\(projected\);\s*this\.projectedSources = projected;\s*\}/,
   'filters and Core snapshots must atomically replace the projected source array');
 assert.match(sourcePage,
   /private sourceRenderKey\(source: BookSource\): string \{[\s\S]*source\.sourceId[\s\S]*source\.enabled[\s\S]*source\.checkState/,

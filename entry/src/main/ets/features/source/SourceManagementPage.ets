@@ -44,6 +44,39 @@ const STATUS_MUTED_DOT = '#8C8276';
 const STATUS_ERROR_BG = '#21A8584D';
 const STATUS_ERROR_DOT = '#A8584D';
 
+class SourceListDataSource implements IDataSource {
+  private items: BookSource[] = [];
+  private listeners: DataChangeListener[] = [];
+
+  totalCount(): number {
+    return this.items.length;
+  }
+
+  getData(index: number): BookSource {
+    return this.items[index];
+  }
+
+  registerDataChangeListener(listener: DataChangeListener): void {
+    if (this.listeners.indexOf(listener) < 0) {
+      this.listeners.push(listener);
+    }
+  }
+
+  unregisterDataChangeListener(listener: DataChangeListener): void {
+    const index = this.listeners.indexOf(listener);
+    if (index >= 0) {
+      this.listeners.splice(index, 1);
+    }
+  }
+
+  replace(items: BookSource[]): void {
+    this.items = items;
+    for (const listener of this.listeners) {
+      listener.onDataReloaded();
+    }
+  }
+}
+
 @Component
 export struct SourceManagementPage {
   @Prop @Watch('onSourcesChanged') sources: BookSource[];
@@ -65,6 +98,7 @@ export struct SourceManagementPage {
   @State private groupValue: string = '全部分组';
   @State private groupOpen: boolean = false;
   @State private projectedSources: BookSource[] = [];
+  private readonly sourceDataSource: SourceListDataSource = new SourceListDataSource();
   // 展开面板锚点: 触发条全局坐标 - 根 Stack 原点 = 面板相对根 Stack 位置。
   @State private groupX: number = 0;
   @State private groupY: number = 0;
@@ -304,17 +338,15 @@ export struct SourceManagementPage {
   @Builder
   private sourceList() {
     List() {
-      // Repeat virtualization needs a stable observable array. Passing a new
-      // derived array on every render can leave reusable rows attached to the
-      // previous filter even while the count text has recomputed.
-      Repeat(this.projectedSources)
-        .each((repeatItem: RepeatItem<BookSource>) => {
-          ListItem() {
-            this.sourceRow(repeatItem.item);
-          }
-        })
-        .key((source: BookSource): string => this.sourceRenderKey(source))
-        .virtualScroll({ reusable: true });
+      // LazyForEach owns an explicit data source so an empty-to-populated Core
+      // load and later filter replacements can notify ArkUI after mount. A
+      // reusable Repeat over a derived array retained zero stale rows on API
+      // 23 even though the surrounding count text had already updated.
+      LazyForEach(this.sourceDataSource, (source: BookSource) => {
+        ListItem() {
+          this.sourceRow(source);
+        }
+      }, (source: BookSource): string => this.sourceRenderKey(source));
     }
     .width('100%')
     .layoutWeight(1)
@@ -535,7 +567,9 @@ export struct SourceManagementPage {
   }
 
   private rebuildSourceProjection(): void {
-    this.projectedSources = this.filteredSources();
+    const projected = this.filteredSources();
+    this.sourceDataSource.replace(projected);
+    this.projectedSources = projected;
   }
 
   private matchesStatus(source: BookSource): boolean {

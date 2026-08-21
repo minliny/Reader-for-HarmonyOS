@@ -108,13 +108,11 @@ assert.match(search, /Repeat\(results\)[\s\S]*\.virtualScroll\(\{ reusable: true
 assert.doesNotMatch(search, /countBySource/,
   'raw result cards must not repeat an O(n) source scan for every row');
 
-for (const relative of [
-  'entry/src/main/ets/features/source/SourceManagementPage.ets',
-  'entry/src/main/ets/features/source/SourceSwitchWindow.ets',
-]) {
-  const source = read(relative);
-  assert.match(source, /Repeat\([\s\S]*\.virtualScroll\(\{ reusable: true \}\)/,
-    `${relative} must virtualize its variable-length list`);
-}
+const sourceManagement = read('entry/src/main/ets/features/source/SourceManagementPage.ets');
+assert.match(sourceManagement, /LazyForEach\(this\.sourceDataSource,/,
+  'Source Management must lazily materialize its variable-length list');
+const sourceSwitch = read('entry/src/main/ets/features/source/SourceSwitchWindow.ets');
+assert.match(sourceSwitch, /Repeat\([\s\S]*\.virtualScroll\(\{ reusable: true \}\)/,
+  'Source Switch must virtualize its variable-length list');
 
 console.log('navigation performance static contract: PASS');
