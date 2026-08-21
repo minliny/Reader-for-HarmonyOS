@@ -45,9 +45,9 @@ assert.match(rss, /return this\.viewportWidth >= RSS_WIDE_BREAKPOINT/);
 assert.match(mainTabShell, /@Prop showTabletRail: boolean = false/);
 assert.match(mainTabShell, /vertical: true/);
 assert.match(mainTabBar, /@Prop vertical: boolean = false/);
-assert.match(mainTabBar, /Column\(\{ space: 16 \}\)/);
-assert.match(mainTabBar, /\.width\(82\)\s*\.height\(332\)/);
-assert.match(mainTabBar, /\.width\(66\)\s*\.height\(68\)/);
+assert.match(mainTabBar, /Column\(\{ space: 6 \}\)/);
+assert.match(mainTabBar, /\.width\(82\)\s*\.height\(266\)/);
+assert.match(mainTabBar, /\.width\(66\)\s*\.height\(58\)/);
 
 // Status metadata is static at Tablet width. Phone gets a bounded marquee,
 // which only animates when its combined text actually overflows the slot.

@@ -14,8 +14,8 @@ import {
 // 公共主导航 —— 数据驱动的 tab 栏。四个主页面（书架/发现/RSS/设置）复用。
 // tab 列表来自单一配置（MAIN_TABS）：增删 tab 只改配置，宽度按数量自适应平分。
 // 选中态由 current 驱动；点击非当前 tab 回调 onSelect(key)，由宿主页映射到各自回调。
-// Figma 重绘版：公共主导航 362×68 r24 bg #E6FFFCF8 border #C1C7CD，item 高 52.9 r24，
-// 选中 bg #1F3528 + 文字 #FFFAF4，未选中文字 #756F69；icon 24，标签 Inter ExtraBold 11。
+// Figma 重绘版：Phone 362×68、Tablet 82×266，r24 bg #E6FFFCF8 border #C1C7CD；
+// 选中 bg #1F3528 + 文字 #FFFAF4，未选中文字 #756F69；icon 24，标签 Noto Sans SC Bold 11。
 // 颜色直接使用 TOK_* 语义 token (无二次别名)。
 
 export interface MainTabDef {
@@ -56,7 +56,7 @@ export struct MainTabBar {
       }, (tab: MainTabDef): string => `main-tab-${tab.key}`);
     }
     .width('100%')
-    .constraintSize({ maxWidth: 360 })
+    .constraintSize({ maxWidth: 362 })
     .height(68)
     .padding(TOK_SPACE_XS)
     .backgroundColor(TOK_CARD_BG)
@@ -67,14 +67,14 @@ export struct MainTabBar {
 
   @Builder
   private verticalRail() {
-    Column({ space: 16 }) {
+    Column({ space: 6 }) {
       ForEach(MAIN_TABS, (tab: MainTabDef) => {
         this.railTabItem(tab, this.current === tab.key);
       }, (tab: MainTabDef): string => `main-rail-tab-${tab.key}`);
     }
     .width(82)
-    .height(332)
-    .padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS })
+    .height(266)
+    .padding(TOK_SPACE_XS)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(TOK_CARD_BG)
@@ -92,7 +92,7 @@ export struct MainTabBar {
       .height(30);
 
       Text(tab.label)
-        .fontFamily('ReaderInter')
+        .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
         .fontSize(11)
         .lineHeight(18)
@@ -113,22 +113,22 @@ export struct MainTabBar {
 
   @Builder
   private railTabItem(tab: MainTabDef, active: boolean) {
-    Column({ space: 4 }) {
+    Column({ space: 2 }) {
       Stack({ alignContent: Alignment.Center }) {
         this.tabIcon(tab.key, active);
       }
-      .width(30)
-      .height(30);
+      .width(32)
+      .height(32);
 
       Text(tab.label)
-        .fontFamily('ReaderInter')
+        .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
         .fontSize(11)
         .lineHeight(18)
         .fontColor(active ? TOK_ON_PRIMARY : TOK_MUTED);
     }
     .width(66)
-    .height(68)
+    .height(58)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(active ? TOK_PRIMARY_DARK : Color.Transparent)

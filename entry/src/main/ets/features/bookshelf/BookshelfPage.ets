@@ -382,7 +382,7 @@ export struct BookshelfPage {
         this.tabletNavigationItem('bookshelf_settings', '设置', 'settings', false);
       }
       .width(82)
-      .height(268)
+      .height(266)
       .padding(TOK_SPACE_XS)
       .justifyContent(FlexAlign.Center)
       .alignItems(HorizontalAlign.Center)
@@ -416,8 +416,8 @@ export struct BookshelfPage {
       .height(32);
 
       Text(label)
-        .fontFamily('ReaderInter')
-        .fontWeight(800)
+        .fontFamily('ReaderNotoSansSC')
+        .fontWeight(FontWeight.Bold)
         .fontSize(11)
         .lineHeight(18)
         .fontColor(active ? TOK_ON_PRIMARY : TOK_MUTED);
@@ -460,6 +460,6 @@ export struct BookshelfPage {
     if (book.coverUrl === undefined) {
       return false;
     }
-    return /^(data:image\/(png|jpeg|bmp|webp);base64,|file:\/\/)/.test(book.coverUrl.trim());
+    return /^(https?:\/\/|data:image\/(png|jpeg|bmp|webp);base64,|file:\/\/)/.test(book.coverUrl.trim());
   }
 }

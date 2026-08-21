@@ -16,8 +16,9 @@ assert.match(modulePanel, /this\.activeTab = 'bookmarks'/);
 assert.match(modulePanel, /if \(this\.activeTab === 'directory'\) \{\s*this\.projectedEntries = this\.entries;/);
 assert.match(modulePanel, /if \(this\.hasBookmark\(entry\)\) \{\s*bookmarkedEntries\.push\(entry\);/);
 assert.match(modulePanel, /List\(\{ space: 0, scroller: this\.listScroller \}\)/);
-assert.match(modulePanel, /Repeat\(this\.projectedEntries\)[\s\S]*\.virtualScroll\(\{ reusable: true \}\)/,
-  'module directory must use the SDK-native virtual list');
+assert.match(modulePanel,
+  /Repeat\(this\.projectedEntries\)[\s\S]*\.virtualScroll\(\{ totalCount: this\.projectedEntries\.length, reusable: false \}\)/,
+  'module directory must keep lazy creation without the phone runtime row-reuse corruption');
 assert.doesNotMatch(modulePanel, /Scroll\(this\.listScroller\)[\s\S]*ForEach\(/,
   'module directory must not eagerly materialize every chapter row');
 assert.match(modulePanel, /private downloadMarkerHitTarget\(entry: LocalReadingTocEntry\)/);

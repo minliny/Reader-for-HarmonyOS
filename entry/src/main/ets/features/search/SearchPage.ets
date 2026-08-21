@@ -135,9 +135,14 @@ export struct SearchPage {
         Image($r('app.media.search_mag')).width(14).height(14);
         TextInput({ placeholder: '搜索书名、作者...', text: this.keyword })
           .layoutWeight(1)
-          .height(21)
+          // ArkUI TextInput owns internal vertical insets. Give it the field's
+          // full height and remove those insets so 14/21 text is never clipped.
+          .height(this.isTablet ? 40 : 36)
+          .padding(0)
           .fontFamily('ReaderInter')
           .fontSize(14)
+          .lineHeight(21)
+          .maxLines(1)
           .fontColor(this.keyword.length > 0 ? TOK_INK : '#801F1B17')
           .backgroundColor(Color.Transparent)
           .caretColor(TOK_INK)
@@ -168,12 +173,11 @@ export struct SearchPage {
       Stack({ alignContent: Alignment.Center }) {
         if (this.presentation.kind === 'loading') {
           Row({ space: 6 }) {
-            Stack({ alignContent: Alignment.Center }) {
-              Image($r('app.media.importing_spinner_track')).width(13).height(13);
-              Image($r('app.media.importing_spinner_arc')).width(13).height(13);
-            }
-            .width(13)
-            .height(13);
+            LoadingProgress()
+              .width(13)
+              .height(13)
+              .color(TOK_ON_PRIMARY)
+              .enableLoading(true);
             Text('搜索')
               .fontFamily('ReaderInter')
               .fontWeight(800)
@@ -344,12 +348,11 @@ export struct SearchPage {
     // Figma Loading (2635:58801): spinner + caption are top-anchored at 120
     // (not vertically centered). Caption is leading 19.5 with an 18px gap.
     Column({ space: 0 }) {
-      Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.importing_spinner_track')).width(36).height(36);
-        Image($r('app.media.importing_spinner_arc')).width(36).height(36);
-      }
-      .width(36)
-      .height(36);
+      LoadingProgress()
+        .width(36)
+        .height(36)
+        .color(TOK_GREEN)
+        .enableLoading(true);
       Text('正在搜索所有书源…')
         .margin({ top: 18 })
         .fontFamily('ReaderInter')

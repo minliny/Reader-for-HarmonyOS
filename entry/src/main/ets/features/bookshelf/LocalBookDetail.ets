@@ -376,7 +376,7 @@ export struct LocalBookDetail {
   private actionArea() {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
       Stack({ alignContent: Alignment.Center }) {
-        Text(this.readingActionsReady() ? '继续阅读' : this.pendingReadingLabel())
+        Text(this.readingActionLabel())
           .fontFamily('ReaderInter')
           .fontWeight(900)
           .fontSize(13)
@@ -390,7 +390,7 @@ export struct LocalBookDetail {
       .borderRadius(999)
       .opacity(this.readingActionsReady() && !this.removing ? 1 : 0.5)
       .enabled(this.readingActionsReady() && !this.removing)
-      .accessibilityText(this.readingActionsReady() ? '继续阅读' : this.pendingReadingLabel())
+      .accessibilityText(this.readingActionLabel())
       .onClick((): void => {
         if (this.readingActionsReady() && !this.removing) {
           this.onContinue();
@@ -464,6 +464,13 @@ export struct LocalBookDetail {
 
   private pendingReadingLabel(): string {
     return this.loadingMessage.trim().length > 0 ? this.loadingMessage : '正在准备阅读…';
+  }
+
+  private readingActionLabel(): string {
+    if (!this.readingActionsReady()) {
+      return this.pendingReadingLabel();
+    }
+    return this.inBookshelf ? '继续阅读' : '开始阅读';
   }
 
   private shelfActionLabel(): string {

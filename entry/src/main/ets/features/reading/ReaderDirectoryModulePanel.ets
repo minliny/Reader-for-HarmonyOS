@@ -90,7 +90,11 @@ export struct ReaderDirectoryModulePanel {
               .height(READER_DIRECTORY_ROW_HEIGHT);
             })
             .key((entry: LocalReadingTocEntry): string => `reader-module-toc-${entry.index}`)
-            .virtualScroll({ reusable: true });
+            // On the current phone runtime, reusable Repeat nodes cycle the
+            // roughly 18 materialized rows through a long TOC without
+            // refreshing their text. Keep lazy creation, but do not reuse
+            // those chapter rows: Core's complete order remains untouched.
+            .virtualScroll({ totalCount: this.projectedEntries.length, reusable: false });
         }
         .width('100%')
         .height(READER_DIRECTORY_VIEWPORT_HEIGHT)

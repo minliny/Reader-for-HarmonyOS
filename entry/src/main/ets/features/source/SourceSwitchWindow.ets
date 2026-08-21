@@ -236,8 +236,11 @@ export struct SourceSwitchWindow {
   private loadingBody(isSwitching: boolean) {
     Column({ space: 0 }) {
       Blank().layoutWeight(1);
-      Image($r('app.media.importing_spinner_track')).width(36).height(36);
-      Image($r('app.media.importing_spinner_arc')).width(36).height(36);
+      LoadingProgress()
+        .width(36)
+        .height(36)
+        .color(TOK_READ_INK)
+        .enableLoading(true);
       Text(isSwitching ? '正在切换书源…' : '正在搜索书源…')
         .margin({ top: 20 })
         .fontFamily('ReaderInter')
