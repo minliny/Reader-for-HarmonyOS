@@ -257,7 +257,7 @@ export struct BookshelfPage {
           }
           .width(width)
           .alignItems(VerticalAlign.Top);
-        }, (_: ShelfBook[], rowIndex: number): string => `bookshelf-row-${rowIndex}`);
+        }, (row: ShelfBook[], rowIndex: number): string => this.bookRowRenderKey(row, rowIndex));
       }
       .width(width);
     }
@@ -441,6 +441,19 @@ export struct BookshelfPage {
       rows.push(this.books.slice(index, index + columns));
     }
     return rows;
+  }
+
+  private bookRowRenderKey(row: ShelfBook[], rowIndex: number): string {
+    // The row index alone is not a content identity: an import can replace
+    // the books in row 0 while ForEach keeps the old row builder alive.  Bind
+    // the key to every field rendered by bookCard so imports, progress, cover,
+    // and catalog badges all redraw from the latest Core projection.
+    let key = `bookshelf-row-${rowIndex}`;
+    for (const book of row) {
+      key += `|${book.sourceId}:${book.bookId}:${book.title}:${book.author}:` +
+        `${book.coverUrl ?? ''}:${book.unreadCount ?? 0}:${book.readProgress ?? 0}`;
+    }
+    return key;
   }
 
   private hasCover(book: ShelfBook): boolean {

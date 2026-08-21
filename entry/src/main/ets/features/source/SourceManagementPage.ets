@@ -46,7 +46,7 @@ const STATUS_ERROR_DOT = '#A8584D';
 
 @Component
 export struct SourceManagementPage {
-  @Prop sources: BookSource[];
+  @Prop @Watch('onSourcesChanged') sources: BookSource[];
   // 额外分组可由调用方补充；常规选项直接来自 Core 返回的原始
   // bookSource.bookSourceGroup，不按启用状态等 UI 属性伪造。
   @Prop groups: string[] = [];
@@ -64,6 +64,7 @@ export struct SourceManagementPage {
   @State private statusValue: string = '全部';
   @State private groupValue: string = '全部分组';
   @State private groupOpen: boolean = false;
+  @State private projectedSources: BookSource[] = [];
   // 展开面板锚点: 触发条全局坐标 - 根 Stack 原点 = 面板相对根 Stack 位置。
   @State private groupX: number = 0;
   @State private groupY: number = 0;
@@ -72,6 +73,7 @@ export struct SourceManagementPage {
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
+    this.rebuildSourceProjection();
   }
 
   build() {
@@ -111,6 +113,7 @@ export struct SourceManagementPage {
           y: this.groupY - this.originY,
           onSelect: (opt: string): void => {
             this.groupValue = opt;
+            this.rebuildSourceProjection();
             this.groupOpen = false;
           },
         });
@@ -150,7 +153,10 @@ export struct SourceManagementPage {
         .placeholderColor(TOK_MUTED)
         .backgroundColor('#00FFFFFF')
         .padding(0)
-        .onChange((value: string): void => { this.searchQuery = value; });
+        .onChange((value: string): void => {
+          this.searchQuery = value;
+          this.rebuildSourceProjection();
+        });
     }
     .width(this.contentWidth())
     .height(38)
@@ -256,6 +262,7 @@ export struct SourceManagementPage {
       .onClick((): void => {
         if (enabled) {
           this.statusValue = label;
+          this.rebuildSourceProjection();
         }
       });
   }
@@ -297,14 +304,16 @@ export struct SourceManagementPage {
   @Builder
   private sourceList() {
     List() {
-      Repeat(this.filteredSources())
+      // Repeat virtualization needs a stable observable array. Passing a new
+      // derived array on every render can leave reusable rows attached to the
+      // previous filter even while the count text has recomputed.
+      Repeat(this.projectedSources)
         .each((repeatItem: RepeatItem<BookSource>) => {
           ListItem() {
             this.sourceRow(repeatItem.item);
           }
         })
-        .key((source: BookSource): string =>
-          `source-${source.sourceId}-${source.enabled}-${source.checkState}-${source.checkMessage}`)
+        .key((source: BookSource): string => this.sourceRenderKey(source))
         .virtualScroll({ reusable: true });
     }
     .width('100%')
@@ -474,6 +483,12 @@ export struct SourceManagementPage {
     return source.enabled ? '已启用' : '已禁用';
   }
 
+  private sourceRenderKey(source: BookSource): string {
+    return `source-${source.sourceId}-${source.name}-${source.baseUrl}-${source.group ?? ''}-` +
+      `${source.loginUrl ?? ''}-${source.enabled}-${source.checkState ?? 'unchecked'}-` +
+      `${source.checkMessage ?? ''}`;
+  }
+
   private statusBadgeBackground(source: BookSource): string {
     if (source.checkState === 'passed') {
       return STATUS_GOOD_BG;
@@ -499,7 +514,7 @@ export struct SourceManagementPage {
   }
 
   private statsText(): string {
-    const filteredCount = this.filteredSources().length;
+    const filteredCount = this.projectedSources.length;
     const prefix = filteredCount === this.sources.length ? `${this.sources.length} 个书源` :
       `显示 ${filteredCount}/${this.sources.length} 个书源`;
     return `${prefix} · ${this.enabledCount()} 个启用`;
@@ -513,6 +528,14 @@ export struct SourceManagementPage {
       const matchesGroup = this.groupValue === '全部分组' || source.group === this.groupValue;
       return matchesQuery && matchesGroup && this.matchesStatus(source);
     });
+  }
+
+  private onSourcesChanged(): void {
+    this.rebuildSourceProjection();
+  }
+
+  private rebuildSourceProjection(): void {
+    this.projectedSources = this.filteredSources();
   }
 
   private matchesStatus(source: BookSource): boolean {
