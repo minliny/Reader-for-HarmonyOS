@@ -27,7 +27,6 @@ import {
 } from '../common/ReaderTokens';
 
 const SEARCH_FIELD_BG = '#121F1B17';   // rgba(31,27,23,0.07) — Figma field fill
-const SEARCH_BTN_BG = '#382D4A3E';     // rgba(45,74,62,0.22) — Initial search button
 
 /**
  * The search page's full presentation. `initial` is the pre-search surface
@@ -120,6 +119,16 @@ export struct SearchPage {
     .backgroundColor(TOK_PAPER);
   }
 
+  private submitSearch(): void {
+    if (this.presentation.kind === 'loading') {
+      return;
+    }
+    const keyword = this.keyword.trim();
+    if (keyword.length > 0) {
+      this.onSearch(keyword);
+    }
+  }
+
   @Builder
   private searchBar() {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
@@ -150,7 +159,9 @@ export struct SearchPage {
           .placeholderFont({ size: 14, family: 'ReaderInter' })
           .onChange((value: string): void => {
             this.keyword = value;
-          });
+          })
+          .enterKeyType(EnterKeyType.Search)
+          .onSubmit((_enterKey: EnterKeyType): void => this.submitSearch());
         if (this.keyword.length > 0) {
           Image($r('app.media.search_clear'))
             .width(14)
@@ -167,9 +178,8 @@ export struct SearchPage {
       .borderRadius(999)
       .alignItems(VerticalAlign.Center);
 
-      // Initial state: 22%-alpha primary at 75% opacity (Figma rgba(45,74,62,0.22)
-      // + opacity 75). Every post-search state (Loading/Results/Empty/Error) uses
-      // a solid primary pill; Loading additionally inlines a 13px spinner.
+      // The search action stays visually enabled in every state. Loading
+      // additionally inlines a 13px spinner and submitSearch prevents re-entry.
       Stack({ alignContent: Alignment.Center }) {
         if (this.presentation.kind === 'loading') {
           Row({ space: 6 }) {
@@ -197,14 +207,10 @@ export struct SearchPage {
       }
       .height(this.isTablet ? 40 : 36)
       .padding({ left: this.isTablet ? 18 : TOK_SPACE_CARD_PADDING, right: this.isTablet ? 18 : TOK_SPACE_CARD_PADDING })
-      .backgroundColor(this.presentation.kind === 'initial' ? SEARCH_BTN_BG : TOK_GREEN)
-      .opacity(this.presentation.kind === 'initial' ? 0.75 : 1)
+      .backgroundColor(TOK_GREEN)
+      .opacity(1)
       .borderRadius(999)
-      .onClick((): void => {
-        if (this.presentation.kind !== 'loading' && this.keyword.trim().length > 0) {
-          this.onSearch(this.keyword.trim());
-        }
-      });
+      .onClick((): void => this.submitSearch());
     }
     .width(this.contentWidth())
     .height(this.isTablet ? 56 : 52)

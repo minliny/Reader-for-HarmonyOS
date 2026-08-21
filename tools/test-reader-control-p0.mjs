@@ -19,6 +19,16 @@ assert.match(control, /ReaderAppearanceFullPanel\(\{/);
 assert.match(control, /ReaderSettingsModulePanel\(\{/);
 assert.match(control, /ReaderSettingsFullPanel\(\{/);
 assert.match(control, /this\.onExpandDirectory\(\)/);
+assert.match(control, /this\.activePage === 'home'[\s\S]{0,160}this\.onExpandDirectory\(\)/,
+  'the grabber on the default quick control must expand the full directory');
+assert.match(control, /READER_CONTROL_GRABBER_HIT_WIDTH = 72/,
+  'the visual grabber must expose a practical direct hit target');
+assert.match(control, /\.hitTestBehavior\(HitTestMode\.Block\)\s*\.accessibilityText\(this\.controlGrabberAccessibilityText\(\)\)/,
+  'the expanded grabber target must own hits even when the visible child row is tapped');
+assert.match(control, /PanGesture\(\{ direction: PanDirection\.Up, distance: READER_CONTROL_GRABBER_PAN_DISTANCE \}\)[\s\S]{0,160}this\.expandCurrentControl\(\)/,
+  'an upward pull on the grabber must use the same expansion path as a click');
+assert.match(control, /this\.activePage === 'quickReplace'[\s\S]{0,100}this\.onOpenRulesManagement\(\)/,
+  'the Replace quick panel grabber must open its corresponding full management surface');
 assert.match(control, /Slider\(\{\s*value: this\.effectiveProgressPercent\(\)/);
 assert.match(control, /onPreviousChapter\(\)/);
 assert.match(control, /onNextChapter\(\)/);

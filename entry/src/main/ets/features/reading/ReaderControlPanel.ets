@@ -106,6 +106,9 @@ export type ReaderControlPage = 'home' | 'quickSearch' | 'quickAutoPage' | 'quic
   'moduleDirectory' | 'moduleTts' | 'moduleAppearance' | 'moduleSettings' |
   'fullAutoPage' | 'fullTts' | 'fullAppearance' | 'fullSettings';
 type ReaderQuickAction = 'search' | 'autoPage' | 'replace';
+const READER_CONTROL_GRABBER_HIT_WIDTH = 72;
+const READER_CONTROL_GRABBER_HIT_HEIGHT = 28;
+const READER_CONTROL_GRABBER_PAN_DISTANCE = 12;
 
 // Both Figma timelines hold every actor at its source endpoint until 14.815%
 // and then apply the production direction's easing. The 1.35s review canvas
@@ -324,6 +327,23 @@ export struct ReaderControlPanel {
     this.getUIContext().animateTo(motionAnimateParam('reader.panel.expand'), (): void => {
       this.onPageChange('fullTts');
     });
+  }
+
+  private expandCurrentControl(): void {
+    if (this.activePage === 'home' || this.activePage === 'moduleDirectory' ||
+      this.activePage === 'quickSearch') {
+      this.onExpandDirectory();
+    } else if (this.activePage === 'quickAutoPage') {
+      this.requestExpandAutoPage();
+    } else if (this.activePage === 'quickReplace') {
+      this.onOpenRulesManagement();
+    } else if (this.activePage === 'moduleTts') {
+      this.requestExpandTts();
+    } else if (this.activePage === 'moduleAppearance') {
+      this.requestExpandAppearance();
+    } else if (this.activePage === 'moduleSettings') {
+      this.requestExpandSettings();
+    }
   }
 
   private requestCollapseTts(): void {
@@ -812,29 +832,29 @@ export struct ReaderControlPanel {
       Column() {
         // grabber 位于 y=9；内容区从 y=28 开始，与 Phone/Tablet Final 对齐。
         Stack({ alignContent: Alignment.Top }) {
-          Row()
-            .width(42)
-            .height(4)
-            .backgroundColor(TOK_READ_HANDLE)
-            .borderRadius(999)
-            .margin({ top: 9 });
+          Stack({ alignContent: Alignment.Top }) {
+            Row()
+              .width(42)
+              .height(4)
+              .backgroundColor(TOK_READ_HANDLE)
+              .borderRadius(999)
+              .margin({ top: 9 });
+          }
+          .width(READER_CONTROL_GRABBER_HIT_WIDTH)
+          .height(READER_CONTROL_GRABBER_HIT_HEIGHT)
+          // The visible 42×4 row is presentation-only. Make this expanded
+          // target the sole hit-test owner so tapping directly on the row
+          // cannot be consumed by its child node.
+          .hitTestBehavior(HitTestMode.Block)
+          .accessibilityText(this.controlGrabberAccessibilityText())
+          .onClick((): void => this.expandCurrentControl())
+          .gesture(
+            PanGesture({ direction: PanDirection.Up, distance: READER_CONTROL_GRABBER_PAN_DISTANCE })
+              .onActionEnd((_event: GestureEvent): void => this.expandCurrentControl())
+          );
         }
         .width('100%')
-        .height(28)
-        .onClick((): void => {
-          if (this.activePage === 'moduleDirectory' || this.activePage === 'quickSearch') {
-            this.onExpandDirectory();
-          } else if (this.activePage === 'quickAutoPage') {
-            this.requestExpandAutoPage();
-          } else if (this.activePage === 'moduleTts') {
-            this.requestExpandTts();
-          } else if (this.activePage === 'moduleAppearance') {
-            this.requestExpandAppearance();
-          } else if (this.activePage === 'moduleSettings') {
-            this.requestExpandSettings();
-          }
-        })
-        .accessibilityText(this.controlGrabberAccessibilityText());
+        .height(READER_CONTROL_GRABBER_HIT_HEIGHT);
 
         // State-owned content replacement. Conditional mounting prevents an
         // invisible predecessor from retaining hit targets over the live panel.
@@ -886,6 +906,9 @@ export struct ReaderControlPanel {
     }
     if (this.activePage === 'moduleSettings') {
       return '展开设置完整控制';
+    }
+    if (this.activePage === 'quickReplace') {
+      return '打开替换规则管理';
     }
     return this.activePage === 'quickSearch' ? '展开搜索对应完整目录' : '展开完整目录';
   }

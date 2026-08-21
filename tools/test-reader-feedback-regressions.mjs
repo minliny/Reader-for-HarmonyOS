@@ -22,6 +22,12 @@ assert.match(shelf, /private tabletNavigation\(\)[\s\S]*\.width\(82\)\s*\.height
 
 assert.match(search, /TextInput\([\s\S]*?\.height\(this\.isTablet \? 40 : 36\)\s*\.padding\(0\)[\s\S]*?\.lineHeight\(21\)/,
   'search text must use the full field height without ArkUI internal clipping');
+assert.match(search, /\.enterKeyType\(EnterKeyType\.Search\)\s*\.onSubmit\(\(_enterKey: EnterKeyType\): void => this\.submitSearch\(\)\)/,
+  'the IME search action must use the same search submission path as the button');
+assert.match(search, /\.backgroundColor\(TOK_GREEN\)\s*\.opacity\(1\)[\s\S]*?\.onClick\(\(\): void => this\.submitSearch\(\)\)/,
+  'the search action must stay dark and visibly enabled before the first search');
+assert.doesNotMatch(search, /SEARCH_BTN_BG/,
+  'the initial search action must not fall back to the misleading pale disabled treatment');
 assert.equal((search.match(/LoadingProgress\(\)/g) ?? []).length, 2,
   'both search loading affordances must be animated progress indicators');
 assert.doesNotMatch(search, /importing_spinner_(track|arc)/,
