@@ -2,12 +2,21 @@ import {
   type RssItem,
   type RssSubscription,
 } from './RssGateway';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { PageBackBar } from '../common/PageBackBar';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import {
+  SurfaceHorizontalFrame,
+  SurfaceWidthSpec,
+  resolveHorizontalFrame,
+} from '../common/SurfaceHorizontalGeometry';
+import {
+  readerVisualSafeLeft,
+  readerVisualSafeRight,
+} from '../common/ReaderWindowMetrics';
+import {
   TOK_BORDER_W,
   TOK_CARD_BG_HI,
-  TOK_CONTENT_MAX_W_PHONE,
   TOK_CONTENT_MAX_W_TABLET,
   TOK_GREEN,
   TOK_INK,
@@ -24,7 +33,6 @@ import {
   TOK_SPACE_XS,
 } from '../common/ReaderTokens';
 
-const RSS_CHILD_WIDE_BREAKPOINT = 600;
 const CARD_BORDER = '#4DB4A697';
 const ACTION_BG = '#D6EEE8DF';
 
@@ -34,6 +42,7 @@ const ACTION_BG = '#D6EEE8DF';
  */
 @Component
 export struct RssSourceFeedPage {
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop subscription: RssSubscription;
   @Prop items: RssItem[];
   @Prop isTablet: boolean;
@@ -64,13 +73,14 @@ export struct RssSourceFeedPage {
             this.entryList();
           }
         }
-        .width(this.contentWidth())
+        .width(this.contentFrame().width)
         .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_LG });
       }
       .layoutWeight(1)
       .width('100%')
       .scrollBar(BarState.Off)
-      .align(Alignment.Top);
+      .align(Alignment.Top)
+      .padding({ left: this.contentFrame().left, right: this.contentFrame().right });
     }
     .width('100%')
     .height('100%')
@@ -293,18 +303,28 @@ export struct RssSourceFeedPage {
     return parts.join(' · ');
   }
 
-  private contentWidth(): number {
-    return this.isWideViewport() ? TOK_CONTENT_MAX_W_TABLET : TOK_CONTENT_MAX_W_PHONE;
-  }
-
-  private isWideViewport(): boolean {
-    if (this.viewportWidth > 0) {
-      return this.viewportWidth >= RSS_CHILD_WIDE_BREAKPOINT;
+  private contentFrame(): SurfaceHorizontalFrame {
+    if (this.readerWindowMetricsRevision < 0) {
+      return new SurfaceHorizontalFrame(0, 0, 0);
     }
-    return this.isTablet;
+    const metrics = ReaderWindowCoordinator.metrics();
+    const containerWidth = this.viewportWidth > 0 ? this.viewportWidth : metrics.windowRect.width;
+    return resolveHorizontalFrame(
+      containerWidth,
+      readerVisualSafeLeft(metrics),
+      readerVisualSafeRight(metrics),
+      new SurfaceWidthSpec(TOK_CONTENT_MAX_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
+    );
   }
 
   private numericAreaLength(value: Length): number {
-    return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : 0;
+    }
+    if (typeof value === 'string') {
+      const parsed = Number.parseFloat(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    return 0;
   }
 }

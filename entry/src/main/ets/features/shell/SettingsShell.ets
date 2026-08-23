@@ -1,7 +1,18 @@
 import { MainTabBar } from './MainTabBar';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { PageBackBar } from '../common/PageBackBar';
 import { AppTopBar } from '../common/AppTopBar';
 import {
+  SurfaceHorizontalFrame,
+  SurfaceWidthSpec,
+  resolveHorizontalFrame,
+} from '../common/SurfaceHorizontalGeometry';
+import {
+  readerVisualSafeLeft,
+  readerVisualSafeRight,
+} from '../common/ReaderWindowMetrics';
+import {
+  TOK_CONTENT_MAX_W_TABLET,
   TOK_PAPER,
   TOK_SCREEN_INSET,
   TOK_SPACE_SM,
@@ -19,6 +30,7 @@ import {
 // onOverlayOriginChange 上报宿主 Stack 全局坐标, 供页面换算触发条相对位置。
 @Component
 export struct SettingsShell {
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop activeSection: 'home' | 'general' = 'home';
   @Prop showOverlay: boolean = false;
   onSectionChange: (section: 'home' | 'general') => void = (_section: 'home' | 'general'): void => {};
@@ -49,7 +61,12 @@ export struct SettingsShell {
               this.homeContent();
             }
             .width('100%')
-            .padding({ left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET, top: TOK_SPACE_XS, bottom: TOK_SPACE_SM });
+            .padding({
+              left: this.contentFrame().left,
+              right: this.contentFrame().right,
+              top: TOK_SPACE_XS,
+              bottom: TOK_SPACE_SM,
+            });
           }
           .layoutWeight(1)
           .width('100%')
@@ -62,7 +79,12 @@ export struct SettingsShell {
               this.generalContent();
             }
             .width('100%')
-            .padding({ left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET, top: TOK_SPACE_XS, bottom: TOK_SPACE_SM });
+            .padding({
+              left: this.contentFrame().left,
+              right: this.contentFrame().right,
+              top: TOK_SPACE_XS,
+              bottom: TOK_SPACE_SM,
+            });
           }
           .layoutWeight(1)
           .width('100%')
@@ -101,5 +123,18 @@ export struct SettingsShell {
       this.onRssRequested();
     }
     // 'settings' is this page; MainTabBar suppresses the current tab.
+  }
+
+  private contentFrame(): SurfaceHorizontalFrame {
+    if (this.readerWindowMetricsRevision < 0) {
+      return new SurfaceHorizontalFrame(0, 0, 0);
+    }
+    const metrics = ReaderWindowCoordinator.metrics();
+    return resolveHorizontalFrame(
+      metrics.windowRect.width,
+      readerVisualSafeLeft(metrics),
+      readerVisualSafeRight(metrics),
+      new SurfaceWidthSpec(TOK_CONTENT_MAX_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
+    );
   }
 }

@@ -6,6 +6,18 @@
  * navigation) is unchanged. Empty-state text uses ReaderNotoSansSC per Figma.
  */
 import { MainTabShell } from '../shell/MainTabShell';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import {
+  SurfaceHorizontalFrame,
+  SurfaceWidthSpec,
+  resolveHorizontalFrame,
+} from '../common/SurfaceHorizontalGeometry';
+import {
+  readerInteractiveSafeLeft,
+  readerInteractiveSafeRight,
+  readerVisualSafeLeft,
+  readerVisualSafeRight,
+} from '../common/ReaderWindowMetrics';
 import {
   TOK_CONTENT_MAX_W_PHONE,
   TOK_INK,
@@ -18,12 +30,13 @@ import { BookshelfEmptyCard } from './BookshelfEmptyCard';
 
 @Component
 export struct BookshelfEmptyPage {
-  @Prop isTablet: boolean;
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   onImportRequested: () => void = (): void => {};
   onSearchRequested: () => void = (): void => {};
   onRssRequested: () => void = (): void => {};
   onSettingsRequested: () => void = (): void => {};
   onDiscoverRequested: () => void = (): void => {};
+  @State private viewportWidth: number = 0;
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -43,20 +56,28 @@ export struct BookshelfEmptyPage {
           Column({ space: 9 }) {
             this.sectionHeader();
             BookshelfEmptyCard({
+              cardWidth: this.contentFrame().width,
               onImportRequested: (): void => this.onImportRequested(),
               onSearchRequested: (): void => this.onSearchRequested(),
             })
           }
-          .width(this.contentWidth())
+          .width(this.contentFrame().width)
           .padding({ top: TOK_SPACE_XS, bottom: 116 });
         }
         .layoutWeight(1)
         .width('100%')
-        .padding({ left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET })
+        .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
         .scrollBar(BarState.Off);
       }
       .width('100%')
-      .height('100%');
+      .height('100%')
+      .clip(true)
+      .onAreaChange((_oldValue: Area, newValue: Area): void => {
+        const width = this.numericAreaLength(newValue.width);
+        if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
+          this.viewportWidth = width;
+        }
+      });
     }
   }
 
@@ -86,7 +107,7 @@ export struct BookshelfEmptyPage {
     }
     .width('100%')
     .height(58)
-    .padding({ left: 20, right: 20, top: 6 })
+    .padding({ left: this.topBarLeftInset(), right: this.topBarRightInset(), top: 6 })
     .alignItems(VerticalAlign.Center);
   }
 
@@ -110,7 +131,7 @@ export struct BookshelfEmptyPage {
       }
       .height(34);
     }
-    .width(this.contentWidth())
+    .width(this.contentFrame().width)
     .height(38)
     .alignItems(VerticalAlign.Center);
   }
@@ -147,10 +168,39 @@ export struct BookshelfEmptyPage {
     // 'bookshelf' is this page; MainTabBar suppresses the current tab.
   }
 
-  private contentWidth(): number {
+  private contentFrame(): SurfaceHorizontalFrame {
     // Figma supplies only the Phone `State/BookshelfEmpty` card; no Tablet
     // empty assembly, so Tablet reuses the Phone-width layout. Card is 352
     // wide (matches Settings page 390 - 2*19), replacing the old 350.9 value.
-    return TOK_CONTENT_MAX_W_PHONE;
+    if (this.readerWindowMetricsRevision < 0) {
+      return new SurfaceHorizontalFrame(0, 0, 0);
+    }
+    const metrics = ReaderWindowCoordinator.metrics();
+    const containerWidth = this.viewportWidth > 0 ? this.viewportWidth : metrics.windowRect.width;
+    return resolveHorizontalFrame(
+      containerWidth,
+      readerVisualSafeLeft(metrics),
+      readerVisualSafeRight(metrics),
+      new SurfaceWidthSpec(TOK_CONTENT_MAX_W_PHONE, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
+    );
+  }
+
+  private topBarLeftInset(): number {
+    return Math.max(20, readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics()));
+  }
+
+  private topBarRightInset(): number {
+    return Math.max(20, readerInteractiveSafeRight(ReaderWindowCoordinator.metrics()));
+  }
+
+  private numericAreaLength(value: Length): number {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : 0;
+    }
+    if (typeof value === 'string') {
+      const parsed = Number.parseFloat(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    return 0;
   }
 }

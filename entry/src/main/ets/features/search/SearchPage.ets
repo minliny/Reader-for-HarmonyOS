@@ -3,7 +3,18 @@ import {
   type SearchSource,
 } from './SearchGateway';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { registerReaderFonts } from '../common/ReaderFonts';
+import { ReaderSearchField } from '../common/ReaderSearchField';
+import {
+  SurfaceHorizontalFrame,
+  SurfaceWidthSpec,
+  resolveHorizontalFrame,
+} from '../common/SurfaceHorizontalGeometry';
+import {
+  readerVisualSafeLeft,
+  readerVisualSafeRight,
+} from '../common/ReaderWindowMetrics';
 import {
   TOK_BORDER,
   TOK_BORDER_W,
@@ -25,8 +36,6 @@ import {
   TOK_SPACE_SM,
   TOK_SPACE_XS,
 } from '../common/ReaderTokens';
-
-const SEARCH_FIELD_BG = '#121F1B17';   // rgba(31,27,23,0.07) — Figma field fill
 
 /**
  * The search page's full presentation. `initial` is the pre-search surface
@@ -91,6 +100,7 @@ class SearchBookGroup {
  */
 @Component
 export struct SearchPage {
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop presentation: SearchPresentation;
   @Prop sources: SearchSource[];
   @Prop shelfBooks: ShelfBook[] = [];
@@ -116,6 +126,7 @@ export struct SearchPage {
     }
     .width('100%')
     .height('100%')
+    .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
     .backgroundColor(TOK_PAPER);
   }
 
@@ -140,42 +151,24 @@ export struct SearchPage {
       .borderRadius(16)
       .onClick((): void => this.onBack());
 
-      Row({ space: TOK_SPACE_XS }) {
-        Image($r('app.media.search_mag')).width(14).height(14);
-        TextInput({ placeholder: '搜索书名、作者...', text: this.keyword })
-          .layoutWeight(1)
-          // ArkUI TextInput owns internal vertical insets. Give it the field's
-          // full height and remove those insets so 14/21 text is never clipped.
-          .height(this.isTablet ? 40 : 36)
-          .padding(0)
-          .fontFamily('ReaderInter')
-          .fontSize(14)
-          .lineHeight(21)
-          .maxLines(1)
-          .fontColor(this.keyword.length > 0 ? TOK_INK : '#801F1B17')
-          .backgroundColor(Color.Transparent)
-          .caretColor(TOK_INK)
-          .placeholderColor('#801F1B17')
-          .placeholderFont({ size: 14, family: 'ReaderInter' })
-          .onChange((value: string): void => {
+      Row() {
+        ReaderSearchField({
+          variant: 'bookPage',
+          mode: 'submit',
+          text: this.keyword,
+          placeholder: '搜索书名、作者...',
+          accessibilityLabel: '搜索书名或作者',
+          isTablet: this.isTablet,
+          clearable: true,
+          submitEnabled: this.presentation.kind !== 'loading',
+          onTextChange: (value: string): void => {
             this.keyword = value;
-          })
-          .enterKeyType(EnterKeyType.Search)
-          .onSubmit((_enterKey: EnterKeyType): void => this.submitSearch());
-        if (this.keyword.length > 0) {
-          Image($r('app.media.search_clear'))
-            .width(14)
-            .height(14)
-            .onClick((): void => {
-              this.keyword = '';
-            });
-        }
+          },
+          onSubmit: (): void => this.submitSearch(),
+        });
       }
       .layoutWeight(1)
       .height(this.isTablet ? 40 : 36)
-      .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
-      .backgroundColor(SEARCH_FIELD_BG)
-      .borderRadius(999)
       .alignItems(VerticalAlign.Center);
 
       // The search action stays visually enabled in every state. Loading
@@ -212,7 +205,7 @@ export struct SearchPage {
       .borderRadius(999)
       .onClick((): void => this.submitSearch());
     }
-    .width(this.contentWidth())
+    .width(this.contentFrame().width)
     .height(this.isTablet ? 56 : 52)
     .padding({ left: this.isTablet ? 20 : TOK_SPACE_MD, right: this.isTablet ? 20 : TOK_SPACE_MD, top: TOK_SPACE_XS })
     .alignItems(VerticalAlign.Center)
@@ -232,7 +225,7 @@ export struct SearchPage {
       .padding({ left: this.isTablet ? 20 : TOK_SPACE_MD, right: this.isTablet ? 20 : TOK_SPACE_MD, top: 9 })
       .alignItems(VerticalAlign.Top);
     }
-    .width(this.contentWidth())
+    .width(this.contentFrame().width)
     .height(41)
     .scrollable(ScrollDirection.Horizontal)
     .scrollBar(BarState.Off)
@@ -397,7 +390,7 @@ export struct SearchPage {
           .lineHeight(16.5)
           .fontColor(TOK_MUTED);
       }
-      .width(this.contentWidth())
+      .width(this.contentFrame().width)
       .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: 6, bottom: 6 })
       .alignItems(VerticalAlign.Center)
       .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: TOK_BORDER } });
@@ -542,7 +535,7 @@ export struct SearchPage {
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start);
     }
-    .width(this.contentWidth())
+    .width(this.contentFrame().width)
     .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: TOK_SPACE_CARD_PADDING, bottom: 14.5 })
     .alignItems(VerticalAlign.Top)
     .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: TOK_BORDER } })
@@ -734,9 +727,18 @@ export struct SearchPage {
     .padding({ top: 96, bottom: 40 });
   }
 
-  private contentWidth(): Length {
+  private contentFrame(): SurfaceHorizontalFrame {
     // 手机为全宽 (Figma 2635:58749/2635:58985 各层 Container 均横跨整 390 画布:
     // 搜索栏 x:0 w:390、结果卡 x:0 w:390), 故用 '100%' 自适应而非固定 390; 平板收敛到内容 rail。
-    return this.isTablet ? TOK_CONTENT_RAIL_W_TABLET : '100%';
+    if (this.readerWindowMetricsRevision < 0) {
+      return new SurfaceHorizontalFrame(0, 0, 0);
+    }
+    const metrics = ReaderWindowCoordinator.metrics();
+    return resolveHorizontalFrame(
+      metrics.windowRect.width,
+      readerVisualSafeLeft(metrics),
+      readerVisualSafeRight(metrics),
+      new SurfaceWidthSpec(TOK_CONTENT_RAIL_W_TABLET),
+    );
   }
 }

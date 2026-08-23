@@ -1,5 +1,15 @@
 import { PageBackBar } from '../common/PageBackBar';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { registerReaderFonts } from '../common/ReaderFonts';
+import {
+  SurfaceHorizontalFrame,
+  SurfaceWidthSpec,
+  resolveHorizontalFrame,
+} from '../common/SurfaceHorizontalGeometry';
+import {
+  readerVisualSafeLeft,
+  readerVisualSafeRight,
+} from '../common/ReaderWindowMetrics';
 import {
   TOK_BORDER,
   TOK_BORDER_W,
@@ -24,6 +34,7 @@ import {
 
 @Component
 export struct BookshelfManagementPage {
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop snapshot: BookshelfManagementSnapshot = EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT;
   onBack: () => void = (): void => {};
   onGroupNameChanged: (value: string) => void = (_value: string): void => {};
@@ -60,7 +71,12 @@ export struct BookshelfManagementPage {
             .fontColor(TOK_MUTED);
         }
         .width('100%')
-        .padding({ left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET, top: TOK_SPACE_XS, bottom: TOK_SPACE_MD });
+        .padding({
+          left: this.contentFrame().left,
+          right: this.contentFrame().right,
+          top: TOK_SPACE_XS,
+          bottom: TOK_SPACE_MD,
+        });
       }
       .layoutWeight(1)
       .width('100%')
@@ -165,12 +181,16 @@ export struct BookshelfManagementPage {
       this.heading('书籍分组');
       TextInput({ text: this.snapshot.assignmentGroupDraft, placeholder: '分组名；留空清除' })
         .width('100%').height(44).onChange(this.onAssignmentGroupChanged);
-      Row({ space: TOK_SPACE_XS }) {
-        ForEach(this.snapshot.data.groups, (group: BookGroup) => {
-          this.smallAction(group.groupName, (): void => this.onAssignmentGroupChanged(group.groupName));
-        }, (group: BookGroup): string => `assign-group-${group.groupId}`);
+      Scroll() {
+        Row({ space: TOK_SPACE_XS }) {
+          ForEach(this.snapshot.data.groups, (group: BookGroup) => {
+            this.smallAction(group.groupName, (): void => this.onAssignmentGroupChanged(group.groupName));
+          }, (group: BookGroup): string => `assign-group-${group.groupId}`);
+        }
       }
-      .width('100%');
+      .width('100%')
+      .scrollable(ScrollDirection.Horizontal)
+      .scrollBar(BarState.Off);
       ForEach(this.snapshot.data.books, (book: ShelfBook) => {
         Row() {
           Column({ space: 2 }) {
@@ -243,6 +263,19 @@ export struct BookshelfManagementPage {
 
   private isSelectedBook(book: ShelfBook): boolean {
     return book.sourceId === this.snapshot.selectedSourceId && book.bookId === this.snapshot.selectedBookId;
+  }
+
+  private contentFrame(): SurfaceHorizontalFrame {
+    if (this.readerWindowMetricsRevision < 0) {
+      return new SurfaceHorizontalFrame(0, 0, 0);
+    }
+    const metrics = ReaderWindowCoordinator.metrics();
+    return resolveHorizontalFrame(
+      metrics.windowRect.width,
+      readerVisualSafeLeft(metrics),
+      readerVisualSafeRight(metrics),
+      new SurfaceWidthSpec(metrics.windowRect.width, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
+    );
   }
 
   private formatDuration(milliseconds: number): string {

@@ -1,5 +1,12 @@
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { PageBackBar } from '../common/PageBackBar';
+import {
+  SurfaceHorizontalFrame,
+  SurfaceWidthSpec,
+  resolveHorizontalFrame,
+} from '../common/SurfaceHorizontalGeometry';
+import { readerVisualSafeLeft, readerVisualSafeRight } from '../common/ReaderWindowMetrics';
 import {
   TOK_BORDER,
   TOK_BORDER_W,
@@ -22,6 +29,7 @@ import { type SourceToolsSnapshot, EMPTY_SOURCE_TOOLS_SNAPSHOT } from './SourceT
 
 @Component
 export struct SourceToolsPage {
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop snapshot: SourceToolsSnapshot = EMPTY_SOURCE_TOOLS_SNAPSHOT;
   onBack: () => void = (): void => {};
   onExportAll: () => void = (): void => {};
@@ -61,7 +69,12 @@ export struct SourceToolsPage {
           this.debugCard();
         }
         .width('100%')
-        .padding({ left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET, top: TOK_SPACE_XS, bottom: TOK_SPACE_MD });
+        .padding({
+          left: this.contentFrame().left,
+          right: this.contentFrame().right,
+          top: TOK_SPACE_XS,
+          bottom: TOK_SPACE_MD,
+        });
       }
       .layoutWeight(1)
       .width('100%')
@@ -323,6 +336,19 @@ export struct SourceToolsPage {
           action();
         }
       });
+  }
+
+  private contentFrame(): SurfaceHorizontalFrame {
+    if (this.readerWindowMetricsRevision < 0) {
+      return new SurfaceHorizontalFrame(0, 0, 0);
+    }
+    const metrics = ReaderWindowCoordinator.metrics();
+    return resolveHorizontalFrame(
+      metrics.windowRect.width,
+      readerVisualSafeLeft(metrics),
+      readerVisualSafeRight(metrics),
+      new SurfaceWidthSpec(metrics.windowRect.width, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
+    );
   }
 
   private isSelected(sourceId: string, selectedSourceIds: string[]): boolean {

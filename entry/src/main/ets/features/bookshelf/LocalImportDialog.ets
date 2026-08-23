@@ -1,4 +1,14 @@
 import type { LocalImportBatch, LocalImportItem } from './LocalBookImportGateway';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import {
+  SurfaceHorizontalFrame,
+  SurfaceWidthSpec,
+  resolveHorizontalFrame,
+} from '../common/SurfaceHorizontalGeometry';
+import {
+  readerInteractiveSafeLeft,
+  readerInteractiveSafeRight,
+} from '../common/ReaderWindowMetrics';
 import {
   TOK_BORDER,
   TOK_GREEN,
@@ -16,6 +26,9 @@ import {
 
 import { registerReaderFonts } from '../common/ReaderFonts';
 
+const LOCAL_IMPORT_PANEL_MAX_WIDTH = 350;
+const LOCAL_IMPORT_EDGE_GAP = 20;
+
 export type LocalImportDialogState = 'fileSelection' | 'importing' | 'result';
 
 /**
@@ -29,8 +42,10 @@ export type LocalImportDialogState = 'fileSelection' | 'importing' | 'result';
  */
 @Component
 export struct LocalImportDialog {
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop state: LocalImportDialogState;
   @Prop batch: LocalImportBatch | undefined;
+  @State private viewportWidth: number = 0;
   onSelectFiles: () => void = (): void => {};
   onClose: () => void = (): void => {};
 
@@ -44,16 +59,29 @@ export struct LocalImportDialog {
         .width('100%')
         .height('100%')
         .backgroundColor('#661F1B17');
-      if (this.state === 'fileSelection') {
-        this.fileSelectionPanel();
-      } else if (this.state === 'importing') {
-        this.importingPanel();
-      } else {
-        this.resultPanel();
+
+      Stack({ alignContent: Alignment.Center }) {
+        if (this.state === 'fileSelection') {
+          this.fileSelectionPanel();
+        } else if (this.state === 'importing') {
+          this.importingPanel();
+        } else {
+          this.resultPanel();
+        }
       }
+      .width('100%')
+      .height('100%')
+      .padding({ left: this.panelFrame().left, right: this.panelFrame().right });
     }
     .width('100%')
-    .height('100%');
+    .height('100%')
+    .clip(true)
+    .onAreaChange((_oldValue: Area, newValue: Area): void => {
+      const width = this.numericAreaLength(newValue.width);
+      if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
+        this.viewportWidth = width;
+      }
+    });
   }
 
   @Builder
@@ -126,7 +154,7 @@ export struct LocalImportDialog {
             .height(13)
             .margin({ top: 2 });
           Text('支持从系统文件中多选 TXT、EPUB、MOBI/AZW 与 UMD。解析、目录和正文均由 Rust Core 处理。')
-            .width(289)
+            .layoutWeight(1)
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Regular)
             .fontSize(11)
@@ -149,7 +177,7 @@ export struct LocalImportDialog {
               .letterSpacing(-0.0762)
               .fontColor(TOK_ON_PRIMARY);
           }
-          .width(211)
+          .layoutWeight(1)
           .height(44)
           .justifyContent(FlexAlign.Center)
           .backgroundColor(TOK_GREEN)
@@ -179,7 +207,7 @@ export struct LocalImportDialog {
       .width('100%')
       .padding({ left: 20, right: 20, top: 20 });
     }
-    .width(350)
+    .width(this.panelFrame().width)
     .height(399.75)
     .backgroundColor(TOK_SURFACE_SOLID)
     .borderRadius(20)
@@ -214,7 +242,7 @@ export struct LocalImportDialog {
         .fontColor(TOK_MUTED)
         .margin({ top: 8 });
     }
-    .width(350)
+    .width(this.panelFrame().width)
     .height(228)
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(TOK_SURFACE_SOLID)
@@ -252,7 +280,7 @@ export struct LocalImportDialog {
             .letterSpacing(-0.0762)
             .fontColor(TOK_ON_PRIMARY);
         }
-        .width(201)
+        .width(this.resultButtonWidth())
         .height(40)
         .justifyContent(FlexAlign.Center)
         .backgroundColor(TOK_GREEN)
@@ -263,7 +291,7 @@ export struct LocalImportDialog {
       .padding({ left: TOK_SPACE_MD, right: TOK_SPACE_MD, top: TOK_SPACE_MD, bottom: 20 })
       .alignItems(HorizontalAlign.Start);
     }
-    .width(350)
+    .width(this.panelFrame().width)
     .height(636)
     .alignItems(HorizontalAlign.Start)
     .backgroundColor(TOK_SURFACE_SOLID)
@@ -329,7 +357,7 @@ export struct LocalImportDialog {
             this.resultItem(item, index !== this.resultItems().length - 1);
           }, (item: LocalImportItem, index: number): string => `${item.fileName}-${index}`);
         }
-        .width(316);
+        .width('100%');
       }
       .width('100%')
       .height(410)
@@ -355,7 +383,7 @@ export struct LocalImportDialog {
         .borderRadius(8);
         Column({ space: 3 }) {
           Text(item.fileName)
-            .width(211)
+            .width('100%')
             .fontFamily('ReaderInter')
             .fontWeight(600)
             .fontSize(12)
@@ -417,6 +445,39 @@ export struct LocalImportDialog {
 
   private resultItems(): LocalImportItem[] {
     return this.batch === undefined ? [] : this.batch.items;
+  }
+
+  private panelFrame(): SurfaceHorizontalFrame {
+    if (this.readerWindowMetricsRevision < 0) {
+      return new SurfaceHorizontalFrame(0, 0, 0);
+    }
+    const metrics = ReaderWindowCoordinator.metrics();
+    const containerWidth = this.viewportWidth > 0 ? this.viewportWidth : metrics.windowRect.width;
+    return resolveHorizontalFrame(
+      containerWidth,
+      readerInteractiveSafeLeft(metrics),
+      readerInteractiveSafeRight(metrics),
+      new SurfaceWidthSpec(
+        LOCAL_IMPORT_PANEL_MAX_WIDTH,
+        LOCAL_IMPORT_EDGE_GAP,
+        LOCAL_IMPORT_EDGE_GAP,
+      ),
+    );
+  }
+
+  private resultButtonWidth(): number {
+    return Math.min(201, Math.max(0, this.panelFrame().width - TOK_SPACE_MD * 2));
+  }
+
+  private numericAreaLength(value: Length): number {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : 0;
+    }
+    if (typeof value === 'string') {
+      const parsed = Number.parseFloat(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    return 0;
   }
 
   private resultCountText(): string {

@@ -1,4 +1,14 @@
 import { registerReaderFonts } from './ReaderFonts';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import {
+  SurfaceHorizontalFrame,
+  SurfaceWidthSpec,
+  resolveHorizontalFrame,
+} from './SurfaceHorizontalGeometry';
+import {
+  readerInteractiveSafeLeft,
+  readerInteractiveSafeRight,
+} from './ReaderWindowMetrics';
 import {
   TOK_BORDER,
   TOK_BORDER_W,
@@ -14,6 +24,9 @@ import {
   TOK_SURFACE_SOLID,
 } from './ReaderTokens';
 
+const JSON_IMPORT_DIALOG_MAX_WIDTH = 520;
+const JSON_IMPORT_DIALOG_EDGE_GAP = 20;
+
 /**
  * Shared acquisition surface for portable JSON imports.
  *
@@ -23,6 +36,7 @@ import {
  */
 @Component
 export struct JsonImportDialog {
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   title: string = '导入 JSON';
   description: string = '支持选择本地 JSON 文件，或从在线链接下载后导入。';
   isTablet: boolean = false;
@@ -118,7 +132,7 @@ export struct JsonImportDialog {
         // click reads the current draft and performs the actual admission.
         this.actionButton('从在线链接导入', true, (): void => this.submitOnlineImport());
       }
-      .width(this.isTablet ? 520 : '90%')
+      .width(this.dialogFrame().width)
       .padding(TOK_SPACE_MD)
       .backgroundColor(TOK_SURFACE_SOLID)
       .border({ width: TOK_BORDER_W, color: TOK_BORDER })
@@ -126,6 +140,7 @@ export struct JsonImportDialog {
     }
     .width('100%')
     .height('100%')
+    .padding({ left: this.dialogFrame().left, right: this.dialogFrame().right })
     .backgroundColor('#66000000')
     .zIndex(200);
   }
@@ -155,5 +170,22 @@ export struct JsonImportDialog {
       return;
     }
     this.onImportOnline(onlineUrl);
+  }
+
+  private dialogFrame(): SurfaceHorizontalFrame {
+    if (this.readerWindowMetricsRevision < 0) {
+      return new SurfaceHorizontalFrame(0, 0, 0);
+    }
+    const metrics = ReaderWindowCoordinator.metrics();
+    return resolveHorizontalFrame(
+      metrics.windowRect.width,
+      readerInteractiveSafeLeft(metrics, true),
+      readerInteractiveSafeRight(metrics, true),
+      new SurfaceWidthSpec(
+        JSON_IMPORT_DIALOG_MAX_WIDTH,
+        JSON_IMPORT_DIALOG_EDGE_GAP,
+        JSON_IMPORT_DIALOG_EDGE_GAP,
+      ),
+    );
   }
 }

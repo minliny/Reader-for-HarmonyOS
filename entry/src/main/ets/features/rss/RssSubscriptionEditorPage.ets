@@ -1,6 +1,16 @@
 import { PageBackBar } from '../common/PageBackBar';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { ReaderToggle } from '../common/ReaderToggle';
 import { registerReaderFonts } from '../common/ReaderFonts';
+import {
+  SurfaceHorizontalFrame,
+  SurfaceWidthSpec,
+  resolveHorizontalFrame,
+} from '../common/SurfaceHorizontalGeometry';
+import {
+  readerVisualSafeLeft,
+  readerVisualSafeRight,
+} from '../common/ReaderWindowMetrics';
 import {
   TOK_BORDER,
   TOK_BORDER_W,
@@ -24,6 +34,7 @@ import {
 
 @Component
 export struct RssSubscriptionEditorPage {
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop snapshot: RssSubscriptionEditorSnapshot = EMPTY_RSS_EDITOR_SNAPSHOT;
   onBack: () => void = (): void => {};
   onFeedUrlChanged: (value: string) => void = (_value: string): void => {};
@@ -161,7 +172,12 @@ export struct RssSubscriptionEditorPage {
             .fontColor(TOK_MUTED);
         }
         .width('100%')
-        .padding({ left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET, top: TOK_SPACE_XS, bottom: TOK_SPACE_MD });
+        .padding({
+          left: this.contentFrame().left,
+          right: this.contentFrame().right,
+          top: TOK_SPACE_XS,
+          bottom: TOK_SPACE_MD,
+        });
       }
       .layoutWeight(1)
       .width('100%')
@@ -206,5 +222,18 @@ export struct RssSubscriptionEditorPage {
     }
     .width('100%')
     .constraintSize({ minHeight: 60 });
+  }
+
+  private contentFrame(): SurfaceHorizontalFrame {
+    if (this.readerWindowMetricsRevision < 0) {
+      return new SurfaceHorizontalFrame(0, 0, 0);
+    }
+    const metrics = ReaderWindowCoordinator.metrics();
+    return resolveHorizontalFrame(
+      metrics.windowRect.width,
+      readerVisualSafeLeft(metrics),
+      readerVisualSafeRight(metrics),
+      new SurfaceWidthSpec(metrics.windowRect.width, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
+    );
   }
 }

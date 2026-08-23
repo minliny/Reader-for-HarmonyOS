@@ -467,7 +467,6 @@ struct Index {
         // the rule, so we reuse the available Phone assembly rather than
         // leave the Tablet user staring at a blank page).
         BookshelfEmptyPage({
-          isTablet: deviceInfo.deviceType === 'tablet',
           onImportRequested: (): void => this.openImportDialog(),
           onSearchRequested: (): void => this.openSearch(),
           onRssRequested: (): void => this.openRss(),

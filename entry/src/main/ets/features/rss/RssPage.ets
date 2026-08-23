@@ -2,15 +2,25 @@ import {
   type RssItem,
   type RssSubscription,
 } from './RssGateway';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { MainTabShell } from '../shell/MainTabShell';
 import { registerReaderFonts } from '../common/ReaderFonts';
+import { ReaderSearchField } from '../common/ReaderSearchField';
 import { StatusBadge } from '../common/StatusBadge';
+import {
+  SurfaceHorizontalFrame,
+  SurfaceWidthSpec,
+  resolveHorizontalFrame,
+} from '../common/SurfaceHorizontalGeometry';
+import {
+  readerVisualSafeLeft,
+  readerVisualSafeRight,
+} from '../common/ReaderWindowMetrics';
 import {
   TOK_BORDER,
   TOK_BORDER_W,
   TOK_CARD_BG,
   TOK_CARD_BG_HI,
-  TOK_CONTENT_MAX_W_PHONE,
   TOK_CONTENT_RAIL_W_TABLET,
   TOK_GREEN,
   TOK_INK,
@@ -67,7 +77,6 @@ export type RssPresentation =
 
 // Figma tokens (AARRGGBB)
 const MUTED_DEEP = '#6F655D';
-const SEARCH_HINT = '#817A72';
 const FILTER_TEXT = '#3F372F';
 
 // rgba(255,252,248,0.92)  cards
@@ -76,8 +85,6 @@ const FILTER_TEXT = '#3F372F';
 const PILL_BG = '#DBFFFCF8';
 // rgba(238,232,223,0.84)  inactive tabs / import-new pills
 const SOFT_PILL_BG = '#D6EEE8DF';
-// rgba(255,255,255,0.58)  search field
-const SEARCH_BG = '#94FFFFFF';
 // rgba(45,74,62,0.1)      view-all pill
 const VIEW_ALL_BG = '#172D4A3E';    // rgba(45,74,62,0.09) 设计稿
 // rgba(45,74,62,0.12)     source icon chip
@@ -90,6 +97,7 @@ const STATUS_PAUSED_OPACITY = 0.62;
 // rgba(214,34,34,0.08)    error source card
 const ERROR_CARD_BG = '#14D62222';
 const RSS_WIDE_BREAKPOINT = 600;
+const RSS_TABLET_RAIL_WIDTH = 100;
 
 // borders
 const CARD_BORDER = '#4DB4A697';       // rgba(180,166,151,0.3)
@@ -108,6 +116,7 @@ const PILL_BORDER = '#6BB4A697';       // rgba(180,166,151,0.42)
  */
 @Component
 export struct RssPage {
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop presentation: RssPresentation;
   @Prop isTablet: boolean;
   @Prop activeMode: RssMode = 'sources';
@@ -137,7 +146,7 @@ export struct RssPage {
     }) {
       Row() {
         if (this.isWideViewport()) {
-          Blank().width(100);
+          Blank().width(RSS_TABLET_RAIL_WIDTH);
         }
 
         Column() {
@@ -221,6 +230,7 @@ export struct RssPage {
           src: this.refreshStatusText(),
         })
           .width(132.5625)
+          .constraintSize({ maxWidth: this.refreshMarqueeWidth() })
           .fontFamily('ReaderInter')
           .fontWeight(900)
           .fontSize(12)
@@ -266,26 +276,18 @@ export struct RssPage {
 
   @Builder
   private searchBar() {
-    Row({ space: TOK_SPACE_CONTROL_INLINE }) {
-      Image($r('app.media.search_mag'))
-        .width(20)
-        .height(20);
-      Text('搜索订阅源、文章标题或分组')
-        .layoutWeight(1)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(14)
-        .fontColor(SEARCH_HINT)
-        .maxLines(1);
+    Row() {
+      ReaderSearchField({
+        variant: 'rssPassive',
+        mode: 'passive',
+        placeholder: '搜索订阅源、文章标题或分组',
+        accessibilityLabel: '搜索订阅源、文章标题或分组',
+      });
     }
-    .width(this.contentWidth())
+    .width(this.contentFrame().width)
     .height(44)
-    .padding({ left: 15, right: 15 })
-    .backgroundColor(SEARCH_BG)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
-    .borderRadius(999)
     .alignItems(VerticalAlign.Center)
-    .margin({ top: TOK_SPACE_XS, left: TOK_SCREEN_INSET });
+    .margin({ top: TOK_SPACE_XS, left: this.contentFrame().left });
   }
 
   @Builder
@@ -296,10 +298,10 @@ export struct RssPage {
       this.statusTab('收藏', 'favorites');
       this.statusTab('规则订阅', 'rules');
     }
-    .width(this.contentWidth())
+    .width(this.contentFrame().width)
     .height(30)
     .alignItems(VerticalAlign.Center)
-    .margin({ top: TOK_SPACE_XS, left: TOK_SCREEN_INSET });
+    .margin({ top: TOK_SPACE_XS, left: this.contentFrame().left });
   }
 
   @Builder
@@ -331,13 +333,13 @@ export struct RssPage {
         this.subscriptionSection(subscriptions);
         this.recentUnreadSection(subscriptions, recentUnread);
       }
-      .width(this.contentWidth())
+      .width(this.contentFrame().width)
       .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_LG });
     }
     .width('100%')
     .layoutWeight(1)
     .align(Alignment.Top)
-    .padding({ left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET })
+    .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
     .scrollBar(BarState.Off);
   }
 
@@ -356,7 +358,7 @@ export struct RssPage {
         .fontColor(TOK_MUTED)
         .maxLines(1);
     }
-    .width(this.contentWidth())
+    .width(this.contentFrame().width)
     .height(30)
     .justifyContent(FlexAlign.Center)
     .alignItems(VerticalAlign.Center);
@@ -434,7 +436,7 @@ export struct RssPage {
       .border({ width: TOK_BORDER_W, color: CARD_BORDER })
       .borderRadius(8);
     }
-    .width(this.contentWidth());
+    .width(this.contentFrame().width);
   }
 
   // 筛选展开区: 状态胶囊内联排布 (复用 statusTab 选中语言 = 绿底白字), 包换行。
@@ -546,7 +548,7 @@ export struct RssPage {
       .border({ width: TOK_BORDER_W, color: CARD_BORDER })
       .borderRadius(8);
     }
-    .width(this.contentWidth());
+    .width(this.contentFrame().width);
   }
 
   @Builder
@@ -657,13 +659,13 @@ export struct RssPage {
         this.subscriptionSection(subscriptions);
         this.emptyUnreadSection();
       }
-      .width(this.contentWidth())
+      .width(this.contentFrame().width)
       .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_LG });
     }
     .width('100%')
     .layoutWeight(1)
     .align(Alignment.Top)
-    .padding({ left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET })
+    .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
     .scrollBar(BarState.Off);
   }
 
@@ -679,7 +681,7 @@ export struct RssPage {
         '查看全部',
         (): void => this.onModeRequested('all'));
     }
-    .width(this.contentWidth());
+    .width(this.contentFrame().width);
   }
 
   @Builder
@@ -695,7 +697,11 @@ export struct RssPage {
     }
     .width('100%')
     .layoutWeight(1)
-    .padding({ top: TOK_SPACE_XS, left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET });
+    .padding({
+      top: TOK_SPACE_XS,
+      left: this.contentFrame().left,
+      right: this.contentFrame().right,
+    });
   }
 
   @Builder
@@ -717,7 +723,8 @@ export struct RssPage {
 
       Text(body)
         .margin({ top: TOK_SPACE_XS })
-        .width(314)
+        .width('100%')
+        .constraintSize({ maxWidth: 314 })
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Regular)
         .fontSize(12)
@@ -846,20 +853,54 @@ export struct RssPage {
     return `· ${hh}:${mm} 更新`;
   }
 
-  private contentWidth(): number {
-    return this.isWideViewport() ? TOK_CONTENT_RAIL_W_TABLET : TOK_CONTENT_MAX_W_PHONE;
+  private contentFrame(): SurfaceHorizontalFrame {
+    if (this.readerWindowMetricsRevision < 0) {
+      return new SurfaceHorizontalFrame(0, 0, 0);
+    }
+    const metrics = ReaderWindowCoordinator.metrics();
+    const railWidth = this.isWideViewport() ? RSS_TABLET_RAIL_WIDTH : 0;
+    const containerWidth = Math.max(0, this.effectiveViewportWidth() - railWidth);
+    const safeLeft = Math.max(0, readerVisualSafeLeft(metrics) - railWidth);
+    return resolveHorizontalFrame(
+      containerWidth,
+      safeLeft,
+      readerVisualSafeRight(metrics),
+      new SurfaceWidthSpec(TOK_CONTENT_RAIL_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
+    );
+  }
+
+  private refreshMarqueeWidth(): number {
+    const viewportWidth = this.effectiveViewportWidth();
+    if (viewportWidth <= 0) {
+      return 132.5625;
+    }
+    // Figma's 390vp top bar has a 132.5625vp status slot. Keep a conservative
+    // 240vp budget for the title, controls, gaps and 20vp edges; only the
+    // scrolling status slot contracts on narrower physical viewports.
+    return Math.max(0, Math.min(132.5625, viewportWidth - 240));
   }
 
   private isWideViewport(): boolean {
-    if (this.viewportWidth > 0) {
-      return this.viewportWidth >= RSS_WIDE_BREAKPOINT;
+    return this.effectiveViewportWidth() >= RSS_WIDE_BREAKPOINT;
+  }
+
+  private effectiveViewportWidth(): number {
+    if (this.readerWindowMetricsRevision < 0) {
+      return 0;
     }
-    // First-layout fallback only; onAreaChange replaces this with real width.
-    return this.isTablet;
+    const metricsWidth = ReaderWindowCoordinator.metrics().windowRect.width;
+    return this.viewportWidth > 0 ? this.viewportWidth : metricsWidth;
   }
 
   private numericAreaLength(value: Length): number {
-    return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : 0;
+    }
+    if (typeof value === 'string') {
+      const parsed = Number.parseFloat(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    return 0;
   }
 
   /** Core subscription subtitle: prefer the declared site URL, then the feed URL. */

@@ -4,14 +4,23 @@ import {
   type SyncSnapshot,
   DEFAULT_SYNC_SNAPSHOT,
 } from './SyncGateway';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { PageBackBar } from '../common/PageBackBar';
 import { ReaderCard } from '../common/ReaderCard';
 import {
+  SurfaceHorizontalFrame,
+  SurfaceWidthSpec,
+  resolveHorizontalFrame,
+} from '../common/SurfaceHorizontalGeometry';
+import {
+  readerVisualSafeLeft,
+  readerVisualSafeRight,
+} from '../common/ReaderWindowMetrics';
+import {
   TOK_BORDER,
   TOK_BORDER_W,
   TOK_CARD_BG,
-  TOK_CONTENT_MAX_W_PHONE,
   TOK_CONTENT_MAX_W_TABLET,
   TOK_CONTROL_INK,
   TOK_FIELD_SURFACE,
@@ -51,6 +60,7 @@ const BADGE_BG = '#EEE7DB';
 
 @Component
 export struct SyncPage {
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onSnapshotChanged') snapshot: SyncSnapshot = DEFAULT_SYNC_SNAPSHOT;
   @Prop isTablet: boolean;
   onBack: () => void = (): void => {};
@@ -69,6 +79,7 @@ export struct SyncPage {
   @State private webdavUrlEdited: boolean = false;
   @State private webdavUserEdited: boolean = false;
   @State private webdavPathEdited: boolean = false;
+  @State private viewportWidth: number = 0;
   private appliedSnapshotIdentity: string = '';
 
   aboutToAppear(): void {
@@ -94,7 +105,12 @@ export struct SyncPage {
           this.historySection();
         }
         .width('100%')
-        .padding({ left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET, top: TOK_SPACE_XS, bottom: 18 });
+        .padding({
+          left: this.contentFrame().left,
+          right: this.contentFrame().right,
+          top: TOK_SPACE_XS,
+          bottom: 18,
+        });
       }
       .layoutWeight(1)
       .width('100%')
@@ -102,7 +118,14 @@ export struct SyncPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(TOK_PAPER);
+    .backgroundColor(TOK_PAPER)
+    .clip(true)
+    .onAreaChange((_oldValue: Area, newValue: Area): void => {
+      const width = this.numericAreaLength(newValue.width);
+      if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
+        this.viewportWidth = width;
+      }
+    });
   }
 
   @Builder
@@ -145,7 +168,8 @@ export struct SyncPage {
   private webdavSection() {
     Column({ space: TOK_SPACE_XS }) {
       this.sectionHeadingDark('WebDAV 配置');
-      ReaderCard({ bg: TOK_CARD_BG, cardBorder: TOK_BORDER, radius: TOK_RADIUS_MD, cardWidth: this.contentWidth() }) {
+      ReaderCard({ bg: TOK_CARD_BG, cardBorder: TOK_BORDER, radius: TOK_RADIUS_MD,
+        cardWidth: this.contentFrame().width }) {
         Column({ space: TOK_SPACE_XS }) {
           Text('连接信息')
             .width('100%')
@@ -294,7 +318,7 @@ export struct SyncPage {
     Column({ space: TOK_SPACE_XS }) {
       this.sectionHeadingMuted('前台手动备份');
       ReaderCard({ bg: TOK_SURFACE_SOLID, cardBorder: CARD_BORDER_SOFT, radius: 13,
-        cardWidth: this.contentWidth() }) {
+        cardWidth: this.contentFrame().width }) {
         Column({ space: TOK_SPACE_SM }) {
           if (this.snapshot.statusMessage.length > 0) {
             Text(this.snapshot.statusMessage)
@@ -369,7 +393,8 @@ export struct SyncPage {
   private autoBackupSection() {
     Column({ space: TOK_SPACE_XS }) {
       this.sectionHeadingMuted('自动备份（尚未启用）');
-      ReaderCard({ bg: TOK_SURFACE_SOLID, cardBorder: CARD_BORDER_SOFT, radius: 13, cardWidth: this.contentWidth() }) {
+      ReaderCard({ bg: TOK_SURFACE_SOLID, cardBorder: CARD_BORDER_SOFT, radius: 13,
+        cardWidth: this.contentFrame().width }) {
         Column() {
           this.gatedRow('保存位置', this.snapshot.saveLocation);
           Row().width('100%').height(1).backgroundColor(CARD_BORDER_SOFT);
@@ -469,7 +494,8 @@ export struct SyncPage {
   // node) and is kept as-is, restyled to the new card tokens.
   @Builder
   private emptyState() {
-    ReaderCard({ bg: TOK_SURFACE_SOLID, cardBorder: CARD_BORDER_SOFT, radius: 13, cardWidth: this.contentWidth() }) {
+    ReaderCard({ bg: TOK_SURFACE_SOLID, cardBorder: CARD_BORDER_SOFT, radius: 13,
+      cardWidth: this.contentFrame().width }) {
       Column({ space: 0 }) {
         Text('暂无备份记录')
           .width('100%')
@@ -500,7 +526,12 @@ export struct SyncPage {
 
   @Builder
   private historyRow(entry: SyncHistoryEntry) {
-    ReaderCard({ bg: TOK_SURFACE_SOLID, cardBorder: CARD_BORDER_SOFT, radius: 13 }) {
+    ReaderCard({
+      bg: TOK_SURFACE_SOLID,
+      cardBorder: CARD_BORDER_SOFT,
+      radius: 13,
+      cardWidth: this.contentFrame().width,
+    }) {
       Column() {
         Row() {
           Stack({ alignContent: Alignment.Center }) {
@@ -583,8 +614,29 @@ export struct SyncPage {
     return `${scopes.length}项已选`;
   }
 
-  private contentWidth(): number {
-    return this.isTablet ? TOK_CONTENT_MAX_W_TABLET : TOK_CONTENT_MAX_W_PHONE;
+  private contentFrame(): SurfaceHorizontalFrame {
+    if (this.readerWindowMetricsRevision < 0) {
+      return new SurfaceHorizontalFrame(0, 0, 0);
+    }
+    const metrics = ReaderWindowCoordinator.metrics();
+    const containerWidth = this.viewportWidth > 0 ? this.viewportWidth : metrics.windowRect.width;
+    return resolveHorizontalFrame(
+      containerWidth,
+      readerVisualSafeLeft(metrics),
+      readerVisualSafeRight(metrics),
+      new SurfaceWidthSpec(TOK_CONTENT_MAX_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
+    );
+  }
+
+  private numericAreaLength(value: Length): number {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : 0;
+    }
+    if (typeof value === 'string') {
+      const parsed = Number.parseFloat(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    return 0;
   }
 
   private effectiveWebdavUrl(): string {

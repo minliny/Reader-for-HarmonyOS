@@ -19,6 +19,7 @@ import {
  */
 @Component
 export struct BookshelfEmptyCard {
+  @Prop cardWidth: number = 352;
   onImportRequested: () => void = (): void => {};
   onSearchRequested: () => void = (): void => {};
 
@@ -40,7 +41,7 @@ export struct BookshelfEmptyCard {
       }
       .width(78.536)
       .height(61.514)
-      .position({ x: 117.76, y: 59 });
+      .position({ x: this.cardCenterX() - 58.24, y: 59 });
 
       // Rotated book placeholder (right, -8°): Figma 286:34
       Stack({ alignContent: Alignment.Center }) {
@@ -54,7 +55,7 @@ export struct BookshelfEmptyCard {
       }
       .width(78.536)
       .height(61.514)
-      .position({ x: 153, y: 48.98 });
+      .position({ x: this.cardCenterX() - 23, y: 48.98 });
 
       // Library icon frame: Figma 286:35 (green primary-soft, r16, 32 icon)
       Stack({ alignContent: Alignment.Center }) {
@@ -65,21 +66,25 @@ export struct BookshelfEmptyCard {
       .backgroundColor(TOK_PRIMARY_SOFT)
       .border({ width: TOK_BORDER_W, color: TOK_GREEN })
       .borderRadius(16)
-      .position({ x: 144, y: 35 });
+      .position({ x: this.cardCenterX() - 32, y: 35 });
 
       Text('书架还是空的')
+        .width('100%')
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
         .fontSize(19)
         .fontColor(TOK_INK)
-        .position({ x: 118, y: 137 });
+        .textAlign(TextAlign.Center)
+        .position({ x: 0, y: 137 });
 
       Text('导入本地书籍或通过搜索加入书架。')
+        .width('100%')
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Regular)
         .fontSize(13)
         .fontColor(TOK_MUTED)
-        .position({ x: 71, y: 173 });
+        .textAlign(TextAlign.Center)
+        .position({ x: 0, y: 173 });
 
       // Primary action — 导入本地书籍 (solid): Figma 286:144
       Stack({ alignContent: Alignment.Start }) {
@@ -90,7 +95,7 @@ export struct BookshelfEmptyCard {
           .fontColor(TOK_CARD_BG_HI)
           .margin({ left: TOK_SPACE_CARD_PADDING });
       }
-      .width(316)
+      .width(this.actionWidth())
       .height(52)
       .backgroundColor(TOK_GREEN)
       .borderRadius(12)
@@ -106,7 +111,7 @@ export struct BookshelfEmptyCard {
           .fontColor(TOK_PRIMARY_DARK)
           .margin({ left: 13 });
       }
-      .width(316)
+      .width(this.actionWidth())
       .height(52)
       .backgroundColor(TOK_PRIMARY_SOFT)
       .border({ width: TOK_BORDER_W, color: TOK_GREEN })
@@ -114,10 +119,18 @@ export struct BookshelfEmptyCard {
       .position({ x: 17, y: 281 })
       .onClick((): void => this.onSearchRequested());
     }
-    .width(352)
+    .width(this.cardWidth)
     .height(350)
     .backgroundColor(TOK_CARD_BG_HI)
     .border({ width: TOK_BORDER_W, color: TOK_BORDER })
     .borderRadius(12);
+  }
+
+  private cardCenterX(): number {
+    return this.cardWidth / 2;
+  }
+
+  private actionWidth(): number {
+    return Math.max(0, this.cardWidth - 34);
   }
 }

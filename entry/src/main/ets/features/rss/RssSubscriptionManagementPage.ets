@@ -1,10 +1,19 @@
 import { PageBackBar } from '../common/PageBackBar';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { ReaderToggle } from '../common/ReaderToggle';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import {
+  SurfaceHorizontalFrame,
+  SurfaceWidthSpec,
+  resolveHorizontalFrame,
+} from '../common/SurfaceHorizontalGeometry';
+import {
+  readerVisualSafeLeft,
+  readerVisualSafeRight,
+} from '../common/ReaderWindowMetrics';
+import {
   TOK_BORDER_W,
   TOK_CARD_BG_HI,
-  TOK_CONTENT_MAX_W_PHONE,
   TOK_CONTENT_MAX_W_TABLET,
   TOK_DANGER,
   TOK_INK,
@@ -14,6 +23,7 @@ import {
   TOK_PRIMARY_DARK,
   TOK_PRIMARY_SOFT,
   TOK_ROW_DIVIDER,
+  TOK_SCREEN_INSET,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_LG,
   TOK_SPACE_XS,
@@ -37,6 +47,7 @@ export interface RssSubscriptionManagementItem {
  */
 @Component
 export struct RssSubscriptionManagementPage {
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop items: RssSubscriptionManagementItem[];
   @Prop isTablet: boolean;
   /** Optional route identity: expands the matching row without mutating it. */
@@ -73,13 +84,15 @@ export struct RssSubscriptionManagementPage {
           this.stats();
           this.subscriptionList();
         }
-        .width(this.contentWidth())
+        .width('100%')
+        .constraintSize({ maxWidth: this.contentFrame().width })
         .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_LG })
         .alignItems(HorizontalAlign.Start);
       }
       .width('100%')
       .layoutWeight(1)
       .align(Alignment.Top)
+      .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
       .scrollBar(BarState.Off);
     }
     .width('100%')
@@ -328,7 +341,16 @@ export struct RssSubscriptionManagementPage {
     return this.items.length - this.enabledCount();
   }
 
-  private contentWidth(): number {
-    return this.isTablet ? TOK_CONTENT_MAX_W_TABLET : TOK_CONTENT_MAX_W_PHONE;
+  private contentFrame(): SurfaceHorizontalFrame {
+    if (this.readerWindowMetricsRevision < 0) {
+      return new SurfaceHorizontalFrame(0, 0, 0);
+    }
+    const metrics = ReaderWindowCoordinator.metrics();
+    return resolveHorizontalFrame(
+      metrics.windowRect.width,
+      readerVisualSafeLeft(metrics),
+      readerVisualSafeRight(metrics),
+      new SurfaceWidthSpec(TOK_CONTENT_MAX_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
+    );
   }
 }

@@ -1,6 +1,16 @@
 import { registerReaderFonts } from '../common/ReaderFonts';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { PageBackBar } from '../common/PageBackBar';
 import { ReaderToggle } from '../common/ReaderToggle';
+import {
+  SurfaceHorizontalFrame,
+  SurfaceWidthSpec,
+  resolveHorizontalFrame,
+} from '../common/SurfaceHorizontalGeometry';
+import {
+  readerVisualSafeLeft,
+  readerVisualSafeRight,
+} from '../common/ReaderWindowMetrics';
 import {
   TOK_BORDER,
   TOK_BORDER_W,
@@ -34,6 +44,7 @@ import type {
 
 @Component
 export struct RulesManagementPage {
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop snapshot: RulesManagementSnapshot = EMPTY_RULES_MANAGEMENT_SNAPSHOT;
   onBack: () => void = (): void => {};
   onSaveReplace: (draft: ReplaceRuleDraft) => void = (_draft: ReplaceRuleDraft): void => {};
@@ -95,7 +106,12 @@ export struct RulesManagementPage {
           this.subscriptionCard();
         }
         .width('100%')
-        .padding({ left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET, top: TOK_SPACE_XS, bottom: TOK_SPACE_MD });
+        .padding({
+          left: this.contentFrame().left,
+          right: this.contentFrame().right,
+          top: TOK_SPACE_XS,
+          bottom: TOK_SPACE_MD,
+        });
       }
       .layoutWeight(1)
       .width('100%')
@@ -388,5 +404,18 @@ export struct RulesManagementPage {
   private integerOrZero(value: string): number {
     const parsed = Number(value);
     return Number.isSafeInteger(parsed) ? parsed : 0;
+  }
+
+  private contentFrame(): SurfaceHorizontalFrame {
+    if (this.readerWindowMetricsRevision < 0) {
+      return new SurfaceHorizontalFrame(0, 0, 0);
+    }
+    const metrics = ReaderWindowCoordinator.metrics();
+    return resolveHorizontalFrame(
+      metrics.windowRect.width,
+      readerVisualSafeLeft(metrics),
+      readerVisualSafeRight(metrics),
+      new SurfaceWidthSpec(metrics.windowRect.width, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
+    );
   }
 }

@@ -6,20 +6,30 @@
 // Icons: existing media only (no new SVG assets).
 
 import { MainTabShell } from '../shell/MainTabShell';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { ReaderIconButton } from '../common/ReaderIconButton';
 import { AppTopBar } from '../common/AppTopBar';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import {
+  SurfaceHorizontalFrame,
+  SurfaceWidthSpec,
+  resolveHorizontalFrame,
+} from '../common/SurfaceHorizontalGeometry';
+import {
+  readerVisualSafeLeft,
+  readerVisualSafeRight,
+} from '../common/ReaderWindowMetrics';
+import {
   TOK_BORDER_W,
   TOK_CARD_BG,
   TOK_CARD_BG_HI,
-  TOK_CONTENT_MAX_W_PHONE,
   TOK_CONTENT_RAIL_W_TABLET,
   TOK_GREEN,
   TOK_INK,
   TOK_LINE_STRONG,
   TOK_MUTED,
   TOK_ON_PRIMARY,
+  TOK_SCREEN_INSET,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_ROW_BLOCK,
   TOK_SPACE_SM,
@@ -42,6 +52,7 @@ const APPLY_BORDER = '#C72D5D76';        // rgba(45,93,118,0.78)
 
 @Component
 export struct DiscoverPage {
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop presentation: DiscoverPresentation = EMPTY_DISCOVER_PRESENTATION;
   @Prop isTablet: boolean;
   onBack: () => void = (): void => {};
@@ -99,13 +110,14 @@ export struct DiscoverPage {
         this.rankingHeader();
         this.resultList();
       }
-      .width(this.contentWidth())
+      .width('100%')
+      .constraintSize({ maxWidth: this.contentFrame().width })
       .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_SM });
     }
     .layoutWeight(1)
     .width('100%')
     .align(Alignment.Top)
-    .padding({ left: 18.99, right: 20.11 })
+    .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
     .scrollBar(BarState.Off);
   }
 
@@ -160,29 +172,35 @@ export struct DiscoverPage {
 
   @Builder
   private categoryChips() {
-    Row({ space: 7 }) {
-      ForEach(this.kindTitles(), (label: string, index: number) => {
-        Stack({ alignContent: Alignment.Center }) {
-          Text(label)
-            .fontFamily('ReaderInter')
-            .fontWeight(800)
-            .fontSize(12)
-            .lineHeight(15.6)
-            .fontColor(this.presentation.activeKindIndex === index ? TOK_ON_PRIMARY : '#3F372F')
-            .maxLines(1);
-        }
-        .height(32)
-        .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
-        .backgroundColor(this.presentation.activeKindIndex === index ? TOK_GREEN : CHIP_BG)
-        .borderRadius(999)
-        .onClick((): void => {
-          this.onSelectKind(index);
-        });
-      }, (label: string): string => `discover-chip-${label}`);
+    Scroll() {
+      Row({ space: 7 }) {
+        ForEach(this.kindTitles(), (label: string, index: number) => {
+          Stack({ alignContent: Alignment.Center }) {
+            Text(label)
+              .fontFamily('ReaderInter')
+              .fontWeight(800)
+              .fontSize(12)
+              .lineHeight(15.6)
+              .fontColor(this.presentation.activeKindIndex === index ? TOK_ON_PRIMARY : '#3F372F')
+              .maxLines(1);
+          }
+          .height(32)
+          .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
+          .backgroundColor(this.presentation.activeKindIndex === index ? TOK_GREEN : CHIP_BG)
+          .borderRadius(999)
+          .onClick((): void => {
+            this.onSelectKind(index);
+          });
+        }, (label: string): string => `discover-chip-${label}`);
+      }
+      .height(32)
+      .padding({ right: TOK_SPACE_XS })
+      .alignItems(VerticalAlign.Center);
     }
     .width('100%')
     .height(32)
-    .alignItems(VerticalAlign.Center);
+    .scrollable(ScrollDirection.Horizontal)
+    .scrollBar(BarState.Off);
   }
 
   @Builder
@@ -408,8 +426,17 @@ export struct DiscoverPage {
     // 'discover' is this page; MainTabBar suppresses the current tab.
   }
 
-  private contentWidth(): number {
-    return this.isTablet ? TOK_CONTENT_RAIL_W_TABLET : TOK_CONTENT_MAX_W_PHONE;
+  private contentFrame(): SurfaceHorizontalFrame {
+    if (this.readerWindowMetricsRevision < 0) {
+      return new SurfaceHorizontalFrame(0, 0, 0);
+    }
+    const metrics = ReaderWindowCoordinator.metrics();
+    return resolveHorizontalFrame(
+      metrics.windowRect.width,
+      readerVisualSafeLeft(metrics),
+      readerVisualSafeRight(metrics),
+      new SurfaceWidthSpec(TOK_CONTENT_RAIL_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
+    );
   }
 
   private kindTitles(): string[] {
