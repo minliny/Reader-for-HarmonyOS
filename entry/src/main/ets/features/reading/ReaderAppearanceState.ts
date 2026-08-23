@@ -37,6 +37,25 @@ export type ReaderAppearanceMetric =
 
 export type ReaderAppearanceStepDirection = -1 | 1;
 
+/** User-facing safety range for one persisted reader metric. */
+export class ReaderAppearanceMetricRange {
+  readonly minimum: number;
+  readonly maximum: number;
+
+  constructor(minimum: number, maximum: number) {
+    this.minimum = minimum;
+    this.maximum = maximum;
+  }
+}
+
+// These are interaction bounds, not replacements for the current value. They
+// keep corrupt preferences and repeated step presses inside a usable paging
+// envelope while leaving the existing defaults and step sizes unchanged.
+export const READER_APPEARANCE_FONT_SIZE_RANGE = new ReaderAppearanceMetricRange(12, 40);
+export const READER_APPEARANCE_LINE_HEIGHT_RANGE = new ReaderAppearanceMetricRange(1.2, 2.8);
+export const READER_APPEARANCE_PARAGRAPH_SPACING_RANGE = new ReaderAppearanceMetricRange(0, 32);
+export const READER_APPEARANCE_LETTER_SPACING_RANGE = new ReaderAppearanceMetricRange(-2, 4);
+
 export type ReaderAppearanceSnapshot = {
   version: 1;
   activeTheme: ReaderAppearanceTheme;
@@ -84,12 +103,15 @@ export function normalizeReaderAppearanceSnapshot(
     dayTheme: isReaderAppearanceTheme(candidate.dayTheme) ? candidate.dayTheme : fallback.dayTheme,
     nightTheme: isReaderAppearanceTheme(candidate.nightTheme) ? candidate.nightTheme : fallback.nightTheme,
     font: isReaderAppearanceFont(candidate.font) ? candidate.font : fallback.font,
-    fontSize: isPositiveFinite(candidate.fontSize) ? candidate.fontSize : fallback.fontSize,
+    fontSize: isPositiveFinite(candidate.fontSize) ?
+      clampReaderAppearanceMetric('fontSize', candidate.fontSize) : fallback.fontSize,
     lineHeightMultiplier: isPositiveFinite(candidate.lineHeightMultiplier) ?
-      candidate.lineHeightMultiplier : fallback.lineHeightMultiplier,
+      clampReaderAppearanceMetric('lineHeightMultiplier', candidate.lineHeightMultiplier) :
+      fallback.lineHeightMultiplier,
     paragraphSpacing: isNonNegativeFinite(candidate.paragraphSpacing) ?
-      candidate.paragraphSpacing : fallback.paragraphSpacing,
-    letterSpacing: Number.isFinite(candidate.letterSpacing) ? candidate.letterSpacing : fallback.letterSpacing,
+      clampReaderAppearanceMetric('paragraphSpacing', candidate.paragraphSpacing) : fallback.paragraphSpacing,
+    letterSpacing: Number.isFinite(candidate.letterSpacing) ?
+      clampReaderAppearanceMetric('letterSpacing', candidate.letterSpacing) : fallback.letterSpacing,
     indent: isReaderAppearanceIndent(candidate.indent) ? candidate.indent : fallback.indent,
     alignment: isReaderAppearanceAlignment(candidate.alignment) ? candidate.alignment : fallback.alignment,
     pageTurn: 'none',
@@ -170,9 +192,33 @@ export function setReaderAppearanceMetric(
   } else if (!Number.isFinite(value)) {
     throw new RangeError('letterSpacing must be a finite number');
   }
+  const boundedValue = clampReaderAppearanceMetric(metric, value);
   return copyWith(snapshot, snapshot.activeTheme, snapshot.dayTheme, snapshot.nightTheme, snapshot.font,
     snapshot.indent,
-    snapshot.alignment, metric, value);
+    snapshot.alignment, metric, boundedValue);
+}
+
+export function readerAppearanceMetricRange(metric: ReaderAppearanceMetric): ReaderAppearanceMetricRange {
+  if (metric === 'fontSize') {
+    return READER_APPEARANCE_FONT_SIZE_RANGE;
+  }
+  if (metric === 'lineHeightMultiplier') {
+    return READER_APPEARANCE_LINE_HEIGHT_RANGE;
+  }
+  if (metric === 'paragraphSpacing') {
+    return READER_APPEARANCE_PARAGRAPH_SPACING_RANGE;
+  }
+  return READER_APPEARANCE_LETTER_SPACING_RANGE;
+}
+
+export function readerAppearanceCanStep(
+  snapshot: ReaderAppearanceSnapshot,
+  metric: ReaderAppearanceMetric,
+  direction: ReaderAppearanceStepDirection,
+): boolean {
+  const range = readerAppearanceMetricRange(metric);
+  const value = readerAppearanceMetricValue(snapshot, metric);
+  return direction < 0 ? value > range.minimum : value < range.maximum;
 }
 
 export function isReaderAppearanceTheme(value: string): value is ReaderAppearanceTheme {
@@ -198,6 +244,27 @@ function isPositiveFinite(value: number): boolean {
 
 function isNonNegativeFinite(value: number): boolean {
   return Number.isFinite(value) && value >= 0;
+}
+
+function clampReaderAppearanceMetric(metric: ReaderAppearanceMetric, value: number): number {
+  const range = readerAppearanceMetricRange(metric);
+  return Math.min(range.maximum, Math.max(range.minimum, value));
+}
+
+function readerAppearanceMetricValue(
+  snapshot: ReaderAppearanceSnapshot,
+  metric: ReaderAppearanceMetric,
+): number {
+  if (metric === 'fontSize') {
+    return snapshot.fontSize;
+  }
+  if (metric === 'lineHeightMultiplier') {
+    return snapshot.lineHeightMultiplier;
+  }
+  if (metric === 'paragraphSpacing') {
+    return snapshot.paragraphSpacing;
+  }
+  return snapshot.letterSpacing;
 }
 
 function copyWith(

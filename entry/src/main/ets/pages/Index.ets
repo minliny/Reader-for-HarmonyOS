@@ -612,6 +612,7 @@ struct Index {
           statusKind: this.sourceStatusKind,
           statusMessage: this.sourceStatusMessage,
           isTablet: deviceInfo.deviceType === 'tablet',
+          reduceMotion: this.settingsSnapshot.reduceMotion,
           onBack: (): void => this.returnToSettings(),
           onToggleSource: (id: string, enabled: boolean): void => this.onSourceToggled(id, enabled),
           onDetectSource: (id: string): void => this.onSourceDetectionRequested(id),

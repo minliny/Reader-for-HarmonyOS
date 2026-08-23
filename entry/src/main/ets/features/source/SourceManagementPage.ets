@@ -8,16 +8,26 @@ import {
   type BookSource,
 } from './SourceGateway';
 import type { SourceManagementStatusKind } from './SourceOrchestrator';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { PageBackBar } from '../common/PageBackBar';
+import { ReaderSearchField } from '../common/ReaderSearchField';
 import { ReaderToggle } from '../common/ReaderToggle';
 import { ReaderSelect } from '../common/ReaderSelect';
 import { ReaderSelectPanel } from '../common/ReaderSelectPanel';
 import { StatusBadge } from '../common/StatusBadge';
 import {
+  SurfaceHorizontalFrame,
+  SurfaceWidthSpec,
+  resolveHorizontalFrame,
+} from '../common/SurfaceHorizontalGeometry';
+import {
+  readerVisualSafeLeft,
+  readerVisualSafeRight,
+} from '../common/ReaderWindowMetrics';
+import {
   TOK_BORDER_W,
   TOK_CARD_BG,
-  TOK_CONTENT_MAX_W_PHONE,
   TOK_CONTENT_MAX_W_TABLET,
   TOK_INK,
   TOK_MUTED,
@@ -25,6 +35,7 @@ import {
   TOK_PAPER,
   TOK_PRIMARY_DARK,
   TOK_ROW_DIVIDER,
+  TOK_SCREEN_INSET,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_MD,
   TOK_SPACE_SM,
@@ -34,8 +45,7 @@ import {
 
 const GROUP_FILTER_WIDTH = 350;
 const GROUP_SELECT_WIDTH = 277;
-const SEARCH_FIELD_BG = '#D1FFFCF8';      // rgba(255,252,248,0.82)
-const SEARCH_FIELD_BORDER = '#75B4A697';  // rgba(180,166,151,0.46)
+const SEARCH_FIELD_BORDER = '#75B4A697';  // shared search/action field outline
 const CHIP_BORDER = '#85B4A697';   // rgba(180,166,151,0.52)
 const STATUS_GOOD_BG = '#212B895C';   // rgba(43,137,92,0.13)
 const STATUS_GOOD_DOT = '#28704E';
@@ -79,11 +89,13 @@ class SourceListDataSource implements IDataSource {
 
 @Component
 export struct SourceManagementPage {
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onSourcesChanged') sources: BookSource[];
   // 额外分组可由调用方补充；常规选项直接来自 Core 返回的原始
   // bookSource.bookSourceGroup，不按启用状态等 UI 属性伪造。
   @Prop groups: string[] = [];
   @Prop isTablet: boolean;
+  @Prop reduceMotion: boolean = false;
   @Prop statusKind: SourceManagementStatusKind = 'idle';
   @Prop statusMessage: string = '';
   onBack: () => void = (): void => {};
@@ -104,6 +116,7 @@ export struct SourceManagementPage {
   @State private groupY: number = 0;
   @State private originX: number = 0;
   @State private originY: number = 0;
+  @State private viewportWidth: number = 0;
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -127,7 +140,8 @@ export struct SourceManagementPage {
           this.bottomActionBar();
         }
         .layoutWeight(1)
-        .width('100%');
+        .width('100%')
+        .padding({ left: this.contentFrame().left, right: this.contentFrame().right });
       }
       .width('100%')
       .height('100%')
@@ -136,13 +150,19 @@ export struct SourceManagementPage {
         // Area.globalPosition 已是 vp 单位, 直接取用 (曾 px2vp 二次÷3.5 致面板错位)。
         this.originX = Number(newValue.globalPosition.x);
         this.originY = Number(newValue.globalPosition.y);
+        const width = this.numericAreaLength(newValue.width);
+        if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
+          this.viewportWidth = width;
+        }
       });
 
       if (this.groupOpen) {
         ReaderSelectPanel({
           value: this.groupValue,
           options: this.groupOptions(),
-          controlWidth: GROUP_SELECT_WIDTH,
+          variant: 'sourceGroup',
+          controlWidth: this.groupSelectWidth(),
+          reduceMotion: this.reduceMotion,
           x: this.groupX - this.originX,
           y: this.groupY - this.originY,
           onSelect: (opt: string): void => {
@@ -154,7 +174,8 @@ export struct SourceManagementPage {
       }
     }
     .width('100%')
-    .height('100%');
+    .height('100%')
+    .clip(true);
   }
 
   @Builder
@@ -175,29 +196,22 @@ export struct SourceManagementPage {
 
   @Builder
   private searchField() {
-    Row({ space: TOK_SPACE_XS }) {
-      Image($r('app.media.search_mag')).width(13).height(13);
-      TextInput({ text: this.searchQuery, placeholder: '搜索书源名称或域名' })
-        .layoutWeight(1)
-        .height(36)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(12)
-        .fontColor(TOK_INK)
-        .placeholderColor(TOK_MUTED)
-        .backgroundColor('#00FFFFFF')
-        .padding(0)
-        .onChange((value: string): void => {
+    Row() {
+      ReaderSearchField({
+        variant: 'sourceManagement',
+        mode: 'live',
+        text: this.searchQuery,
+        placeholder: '搜索书源名称或域名',
+        accessibilityLabel: '搜索书源名称或域名',
+        onTextChange: (value: string): void => {
           this.searchQuery = value;
           this.rebuildSourceProjection();
-        });
+        },
+        onSubmit: (): void => this.rebuildSourceProjection(),
+      });
     }
-    .width(this.contentWidth())
+    .width(this.contentFrame().width)
     .height(38)
-    .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
-    .backgroundColor(SEARCH_FIELD_BG)
-    .border({ width: TOK_BORDER_W, color: SEARCH_FIELD_BORDER })
-    .borderRadius(8)
     .alignItems(VerticalAlign.Center)
     .margin({ top: TOK_SPACE_XS });
   }
@@ -205,7 +219,7 @@ export struct SourceManagementPage {
   @Builder
   private statsRow() {
     Text(this.statsText())
-      .width(this.contentWidth())
+      .width(this.contentFrame().width)
       .fontFamily('ReaderInter')
       .fontWeight(FontWeight.Regular)
       .fontSize(10)
@@ -235,7 +249,7 @@ export struct SourceManagementPage {
           .onClick((): void => this.onRetryLoad());
       }
     }
-    .width(this.contentWidth())
+    .width(this.contentFrame().width)
     .padding(TOK_SPACE_XS)
     .margin({ top: TOK_SPACE_XS })
     .backgroundColor(this.statusKind === 'error' ? STATUS_ERROR_BG : TOK_CARD_BG)
@@ -249,7 +263,7 @@ export struct SourceManagementPage {
         this.statusFilter();
         this.groupFilter();
       }
-      .width(this.contentWidth())
+      .width(this.contentFrame().width)
       .height(36)
       .alignItems(VerticalAlign.Top)
       .margin({ top: TOK_SPACE_XS });
@@ -258,7 +272,7 @@ export struct SourceManagementPage {
         this.statusFilter();
         this.groupFilter();
       }
-      .width(this.contentWidth())
+      .width(this.contentFrame().width)
       .margin({ top: TOK_SPACE_XS });
     }
   }
@@ -273,7 +287,7 @@ export struct SourceManagementPage {
       // 原稿保留该视觉位，但没有稳定业务定义；禁用比伪造筛选语义更诚实。
       this.chip('自定义', 72, false, false);
     }
-    .width(GROUP_FILTER_WIDTH)
+    .width(this.filterControlWidth())
     .height(32)
     .alignItems(VerticalAlign.Center);
   }
@@ -281,7 +295,7 @@ export struct SourceManagementPage {
   @Builder
   private chip(label: string, width: number, active: boolean, enabled: boolean) {
     Text(label)
-      .width(width)
+      .width(this.statusChipWidth(width))
       .height(32)
       .textAlign(TextAlign.Center)
       .fontFamily('ReaderNotoSansSC')
@@ -315,8 +329,10 @@ export struct SourceManagementPage {
       ReaderSelect({
         value: this.groupValue,
         options: this.groupOptions(),
-        controlWidth: GROUP_SELECT_WIDTH,
+        controlWidth: this.groupSelectWidth(),
         isOpen: this.groupOpen,
+        variant: 'sourceGroup',
+        reduceMotion: this.reduceMotion,
         onToggle: (): void => {
           if (this.groupOptions().length > 1) {
             this.groupOpen = !this.groupOpen;
@@ -330,7 +346,7 @@ export struct SourceManagementPage {
         this.groupY = Number(newValue.globalPosition.y);
       });
     }
-    .width(GROUP_FILTER_WIDTH)
+    .width(this.filterControlWidth())
     .height(36)
     .alignItems(VerticalAlign.Center);
   }
@@ -400,7 +416,7 @@ export struct SourceManagementPage {
         .borderRadius(22);
       }
     }
-    .width(this.contentWidth())
+    .width(this.contentFrame().width)
     .height(70)
     .padding({ left: TOK_SPACE_SM })
     .alignItems(VerticalAlign.Center)
@@ -498,7 +514,7 @@ export struct SourceManagementPage {
       .backgroundColor(TOK_PRIMARY_DARK)
       .onClick((): void => this.onAddSource());
     }
-    .width(this.contentWidth())
+    .width(this.contentFrame().width)
     .height(44)
     .alignItems(VerticalAlign.Center)
     .margin({ top: TOK_SPACE_SM, bottom: TOK_SPACE_MD });
@@ -602,7 +618,45 @@ export struct SourceManagementPage {
     return options;
   }
 
-  private contentWidth(): number {
-    return this.isTablet ? TOK_CONTENT_MAX_W_TABLET : TOK_CONTENT_MAX_W_PHONE;
+  private contentFrame(): SurfaceHorizontalFrame {
+    if (this.readerWindowMetricsRevision < 0) {
+      return new SurfaceHorizontalFrame(0, 0, 0);
+    }
+    const metrics = ReaderWindowCoordinator.metrics();
+    const containerWidth = this.viewportWidth > 0 ? this.viewportWidth : metrics.windowRect.width;
+    return resolveHorizontalFrame(
+      containerWidth,
+      readerVisualSafeLeft(metrics),
+      readerVisualSafeRight(metrics),
+      new SurfaceWidthSpec(TOK_CONTENT_MAX_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
+    );
+  }
+
+  private filterControlWidth(): number {
+    if (!this.isTablet) {
+      return this.contentFrame().width;
+    }
+    return Math.max(0, (this.contentFrame().width - 20) / 2);
+  }
+
+  private statusChipWidth(designWidth: number): number {
+    const gapWidth = TOK_SPACE_XS * 4;
+    const availableForChips = Math.max(0, this.filterControlWidth() - gapWidth);
+    return designWidth * Math.min(1, availableForChips / 318);
+  }
+
+  private groupSelectWidth(): number {
+    return Math.max(0, this.filterControlWidth() - (GROUP_FILTER_WIDTH - GROUP_SELECT_WIDTH));
+  }
+
+  private numericAreaLength(value: Length): number {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : 0;
+    }
+    if (typeof value === 'string') {
+      const parsed = Number.parseFloat(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    return 0;
   }
 }

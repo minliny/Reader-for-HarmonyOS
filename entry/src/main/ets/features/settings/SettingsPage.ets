@@ -14,7 +14,6 @@ import { CategorySection } from './CategorySection';
 import { CategoryRow } from './CategoryRow';
 import {
   TOK_BORDER_W,
-  TOK_CONTENT_MAX_W_TABLET,
   TOK_DANGER,
   TOK_GREEN,
   TOK_INK,
@@ -27,11 +26,10 @@ import {
 
 // 页面私有布局常量 (不属共享 token: 页面独有下拉行对齐常量)。
 // Figma Article 行右内距 12 (= TOK_SPACE_SM, 直引)。
-// selectRow 专用: 下拉(ReaderSelect 36 高触发)在 58 行内垂直居中, 展开时下拉撑高行。
-// 偏移 = (58-36)/2, 派生自布局常量, 非页面坐标。58/36 为 selectRow 页私有例外
-// (ledger 预批), 其中 36 与 ReaderSelect 触发高耦合, 列为共享控件高度 P3 候补。
+// selectRow 专用: Figma Settings/SelectTrigger (`4104:3585`) 为 34 高，
+// 在 58 行内垂直居中。Phone 用右箭头，Tablet 用下/上箭头。
 const SELECT_ROW_H = 58;
-const SELECT_TRIGGER_H = 36;
+const SELECT_TRIGGER_H = 34;
 const SELECT_TRIGGER_OFFSET = (SELECT_ROW_H - SELECT_TRIGGER_H) / 2;
 // App主题 为分段控件 (Figma ThemeSegment 2114:20635), 非下拉; 标签用 Figma 原文。
 const SEG_OPTIONS: string[] = ['跟随', '浅色', '深色'];
@@ -248,6 +246,8 @@ export struct SettingsPage {
         value: this.currentValue(key),
         options: options,
         isOpen: this.openSelect === key,
+        variant: this.isTablet ? 'settingsTablet' : 'settingsPhone',
+        reduceMotion: this.reduceMotionValue,
         onToggle: (): void => {
           this.openSelect = this.openSelect === key ? '' : key;
           const a = this.selectAnchors[key];
@@ -427,6 +427,8 @@ export struct SettingsPage {
         options: this.selectOptions(this.openSelect),
         x: this.anchorX - this.originX,
         y: this.anchorY - this.originY,
+        variant: this.isTablet ? 'settingsTablet' : 'settingsPhone',
+        reduceMotion: this.reduceMotionValue,
         onSelect: (opt: string): void => {
           this.setSelectValue(this.openSelect, opt);
           this.openSelect = '';
@@ -479,7 +481,7 @@ export struct SettingsPage {
       Image($r('app.media.reader_chevron_right')).width(14).height(14);
     }
     .width('100%')
-    .constraintSize({ minHeight: 58, maxWidth: TOK_CONTENT_MAX_W_TABLET })
+    .constraintSize({ minHeight: 58 })
     .padding({ left: 13, right: TOK_SPACE_SM })
     .alignItems(VerticalAlign.Center)
     .backgroundColor('#E0FFFFFF')

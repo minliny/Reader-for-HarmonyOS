@@ -8,6 +8,14 @@ import {
   TOK_SPACE_CONTROL_INLINE,
   TOK_SURFACE_PANEL_SOFT,
 } from '../common/ReaderTokens';
+import { motionAnimateParam } from './MotionSpec';
+import type { ReaderSelectVariant } from './ReaderSelect';
+import {
+  TYPE_SELECT_APPEARANCE_VALUE,
+  TYPE_SELECT_DEFAULT_VALUE,
+  TYPE_SELECT_OPTION,
+  TYPE_SELECT_SETTINGS_VALUE,
+} from './ReaderTypography';
 
 // 展开下拉面板 — 宿主页在全高 overlay Stack 内定位渲染, position 相对宿主 Stack。
 // 全部选项行都落在宿主 Stack bounds 内 → 可点 (ArkUI 命中测试裁到父边界, 行内面板
@@ -36,11 +44,15 @@ export struct ReaderSelectPanel {
   @Prop options: string[] = [];
   @Prop x: number = 0;
   @Prop y: number = 0;
+  @Prop variant: ReaderSelectVariant = 'default';
+  @Prop reduceMotion: boolean = false;
   // 与 ReaderSelect.controlWidth 成对使用；0 保持按内容测量。
   @Prop controlWidth: number = 0;
   // true = x 为面板右缘 (宿主触发条整行右对齐场景, 如 RSS 筛选)。
   @Prop alignRight: boolean = false;
   onSelect: (option: string) => void = (_option: string): void => {};
+  @State private expandedHeight: number = OPTION_H;
+  @State private chevronAngle: number = 0;
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -55,27 +67,68 @@ export struct ReaderSelectPanel {
     }
     .position({ x: this.alignRight ? this.x - this.resolvedWidth() : this.x, y: this.y })
     .width(this.resolvedWidth())
+    .height(this.expandedHeight)
     .zIndex(10)
-    .backgroundColor(TOK_FIELD_SURFACE)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
-    .borderRadius(6);
+    .backgroundColor(this.variant === 'appearanceCompact' ? '#D1FFF8EF' : TOK_FIELD_SURFACE)
+    .border({
+      width: TOK_BORDER_W,
+      color: this.variant === 'appearanceCompact' ? '#C1C7CD' : TOK_BORDER,
+    })
+    .borderRadius(6)
+    .clip(true)
+    .onAppear((): void => this.expandPanel());
   }
 
   // 已选行 = 触发条展开态 (panel-soft 高亮 + 上旋 chevron)。点它 = 选中当前值并收起。
   @Builder
   private selectedRow() {
+    if (this.variant === 'appearanceCompact') {
+      this.appearanceSelectedRow();
+    } else {
+      this.defaultSelectedRow();
+    }
+  }
+
+  @Builder
+  private appearanceSelectedRow() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Text(this.value)
+        .width(Math.max(0, this.resolvedWidth() - 28))
+        .height(14)
+        .fontFamily(TYPE_SELECT_APPEARANCE_VALUE.fontFamily)
+        .fontWeight(TYPE_SELECT_APPEARANCE_VALUE.fontWeight)
+        .fontSize(TYPE_SELECT_APPEARANCE_VALUE.fontSizeFp)
+        .lineHeight(TYPE_SELECT_APPEARANCE_VALUE.lineHeightFp as number)
+        .fontColor(TOK_PRIMARY_DARK)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .position({ x: 10, y: 11 });
+      Image($r('app.media.reader_chevron_down'))
+        .width(8)
+        .height(4)
+        .rotate({ angle: this.chevronAngle })
+        .position({ x: this.resolvedWidth() - 14, y: 16 });
+    }
+    .width('100%')
+    .height(OPTION_H)
+    .backgroundColor(TOK_SURFACE_PANEL_SOFT)
+    .onClick((): void => this.onSelect(this.value));
+  }
+
+  @Builder
+  private defaultSelectedRow() {
     Row({ space: CHEVRON_GAP }) {
       Text(this.value)
         .layoutWeight(1)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(12)
+        .fontFamily(TYPE_SELECT_DEFAULT_VALUE.fontFamily)
+        .fontWeight(TYPE_SELECT_DEFAULT_VALUE.fontWeight)
+        .fontSize(TYPE_SELECT_DEFAULT_VALUE.fontSizeFp)
         .fontColor(TOK_PRIMARY_DARK)
         .textAlign(TextAlign.Start)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       Image($r('app.media.reader_chevron_down')).width(CHEVRON_W).height(CHEVRON_H)
-        .rotate({ angle: 180 });
+        .rotate({ angle: this.chevronAngle });
     }
     .width('100%')
     .height(OPTION_H)
@@ -90,9 +143,9 @@ export struct ReaderSelectPanel {
     Row() {
       Text(opt)
         .layoutWeight(1)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(12)
+        .fontFamily(TYPE_SELECT_OPTION.fontFamily)
+        .fontWeight(TYPE_SELECT_OPTION.fontWeight)
+        .fontSize(TYPE_SELECT_OPTION.fontSizeFp)
         .fontColor(TOK_CONTROL_INK)
         .textAlign(TextAlign.Start)
         .maxLines(1)
@@ -117,13 +170,53 @@ export struct ReaderSelectPanel {
     for (let i = 0; i < texts.length; i++) {
       const w = utils.measureText({
         textContent: texts[i],
-        fontSize: 12,
-        fontFamily: 'ReaderNotoSansSC',
+        fontSize: this.measureTextStyle().fontSizeFp,
+        fontFamily: this.measureTextStyle().fontFamily,
       });
       if (w > maxPx) {
         maxPx = w;
       }
     }
-    return Math.ceil(ctx.px2vp(maxPx)) + SELECT_CHROME;
+    return Math.ceil(ctx.px2vp(maxPx)) + this.resolvedChrome();
+  }
+
+  private resolvedChrome(): number {
+    if (this.variant === 'settingsPhone' || this.variant === 'settingsTablet') {
+      return 10 + 8 + 6 + (this.variant === 'settingsTablet' ? 10 : 7);
+    }
+    return SELECT_CHROME;
+  }
+
+  private measureTextStyle() {
+    if (this.variant === 'settingsPhone' || this.variant === 'settingsTablet') {
+      return TYPE_SELECT_SETTINGS_VALUE;
+    }
+    if (this.variant === 'appearanceCompact') {
+      return TYPE_SELECT_APPEARANCE_VALUE;
+    }
+    return TYPE_SELECT_DEFAULT_VALUE;
+  }
+
+  private expandPanel(): void {
+    const targetHeight = this.fullPanelHeight();
+    if (this.reduceMotion) {
+      this.expandedHeight = targetHeight;
+      this.chevronAngle = -180;
+      return;
+    }
+    this.getUIContext().animateTo(motionAnimateParam('dropdown.menu.expand'), (): void => {
+      this.expandedHeight = targetHeight;
+      this.chevronAngle = -180;
+    });
+  }
+
+  private fullPanelHeight(): number {
+    let unselectedCount = 0;
+    for (const option of this.options) {
+      if (option !== this.value) {
+        unselectedCount += 1;
+      }
+    }
+    return OPTION_H * (1 + unselectedCount);
   }
 }

@@ -29,6 +29,9 @@ const ENTRIES: MotionSpecEntry[] = [
   { id: 'reader.panel.expand', durationMs: 420, curve: Curve.EaseOut },
   // Figma: 25 · Motion Reference · Full -> Quick, Phone production contract.
   { id: 'reader.panel.collapse', durationMs: 360, curve: Curve.EaseIn },
+  // Figma: Review · J1 `1506:8807`, production dropdown expansion.
+  // Same panel grows 36→full height with a fixed top anchor; no fade/translate.
+  { id: 'dropdown.menu.expand', durationMs: 160, curve: curves.cubicBezierCurve(0.16, 1, 0.3, 1) },
 ];
 
 export function motionSpecGet(id: string): MotionSpecEntry | undefined {

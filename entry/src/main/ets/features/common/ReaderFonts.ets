@@ -1,4 +1,11 @@
 import { Font } from '@ohos.arkui.UIContext';
+import {
+  READER_FONT_INTER,
+  READER_FONT_LXGW_WENKAI_LITE,
+  READER_FONT_NOTO_SANS_SC,
+  READER_FONT_NOTO_SERIF_SC_BOLD,
+  READER_FONT_NOTO_SERIF_SC_REGULAR,
+} from './ReaderFontFamilies.ts';
 
 // All Reader pages share one main ArkUI context. Page components keep the
 // small, local `aboutToAppear` call, while this module-level latch prevents a
@@ -11,23 +18,23 @@ export function registerReaderFonts(font: Font): void {
     return;
   }
   font.registerFont({
-    familyName: 'ReaderInter',
+    familyName: READER_FONT_INTER,
     familySrc: $rawfile('InterVariable.ttf'),
   });
   font.registerFont({
-    familyName: 'ReaderNotoSerifSCBold',
+    familyName: READER_FONT_NOTO_SERIF_SC_BOLD,
     familySrc: $rawfile('NotoSerifSC-Bold.ttf'),
   });
   font.registerFont({
-    familyName: 'ReaderNotoSerifSCRegular',
+    familyName: READER_FONT_NOTO_SERIF_SC_REGULAR,
     familySrc: $rawfile('NotoSerifSC-Regular.ttf'),
   });
   font.registerFont({
-    familyName: 'ReaderNotoSansSC',
+    familyName: READER_FONT_NOTO_SANS_SC,
     familySrc: $rawfile('NotoSansSC-VF.otf'),
   });
   font.registerFont({
-    familyName: 'ReaderLXGWWenKaiLite',
+    familyName: READER_FONT_LXGW_WENKAI_LITE,
     familySrc: $rawfile('LXGWWenKaiLite-Regular.ttf'),
   });
   readerFontsRegistered = true;

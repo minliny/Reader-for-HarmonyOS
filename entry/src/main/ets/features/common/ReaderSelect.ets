@@ -2,10 +2,22 @@ import { registerReaderFonts } from './ReaderFonts';
 import {
   TOK_BORDER,
   TOK_BORDER_W,
+  TOK_GREEN,
+  TOK_INK,
+  TOK_MUTED,
   TOK_PRIMARY_DARK,
   TOK_SPACE_CONTROL_INLINE,
+  TOK_SURFACE_FIELD,
   TOK_SURFACE_PANEL_SOFT,
 } from '../common/ReaderTokens';
+import { motionAnimateParam } from './MotionSpec';
+import {
+  TYPE_SELECT_APPEARANCE_VALUE,
+  TYPE_SELECT_DEFAULT_VALUE,
+  TYPE_SELECT_SETTINGS_VALUE,
+  TYPE_SELECT_SOURCE_GROUP_CHEVRON,
+  TYPE_SELECT_SOURCE_GROUP_VALUE,
+} from './ReaderTypography';
 
 // 统一下拉触发条 — 对齐 Primitive/Select MD Selected (282:124): panel-soft 高亮底 +
 // 边框 + r6 + 容器 padding 10 + 文字-chevron gap 8, 值右对齐 Noto Sans SC Bold 12。
@@ -22,11 +34,22 @@ const CHEVRON_W = 12;
 const CHEVRON_H = 8;
 const SELECT_CHROME = SELECT_PAD * 2 + CHEVRON_GAP + CHEVRON_W; // 40
 
+export type ReaderSelectVariant =
+  | 'default'
+  | 'appearanceCompact'
+  | 'settingsPhone'
+  | 'settingsTablet'
+  | 'sourceGroup';
+
 @Component
 export struct ReaderSelect {
   @Prop value: string = '';
   @Prop options: string[] = [];
   @Prop isOpen: boolean = false;
+  // One variant selects a complete visual contract. This replaces the old
+  // independent booleans, which could describe contradictory combinations.
+  @Prop variant: ReaderSelectVariant = 'default';
+  @Prop reduceMotion: boolean = false;
   // 仅用于设计明确要求占满剩余行宽的真实单选字段（如书源分组）。
   // 0 保持按最长选项测量；正值固定触发条宽度并对长文本截断。
   @Prop controlWidth: number = 0;
@@ -42,23 +65,131 @@ export struct ReaderSelect {
       this.trigger();
     }
     .width(this.resolvedWidth())
-    .height(TRIGGER_H);
+    .height(this.triggerHeight());
   }
 
   @Builder
   private trigger() {
+    if (this.variant === 'appearanceCompact') {
+      this.appearanceTrigger();
+    } else if (this.variant === 'settingsPhone' || this.variant === 'settingsTablet') {
+      this.settingsTrigger();
+    } else if (this.variant === 'sourceGroup') {
+      this.sourceGroupTrigger();
+    } else {
+      this.defaultTrigger();
+    }
+  }
+
+  @Builder
+  private appearanceTrigger() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Text(this.value)
+        .width(Math.max(0, this.resolvedWidth() - 28))
+        .height(14)
+        .fontFamily(TYPE_SELECT_APPEARANCE_VALUE.fontFamily)
+        .fontWeight(TYPE_SELECT_APPEARANCE_VALUE.fontWeight)
+        .fontSize(TYPE_SELECT_APPEARANCE_VALUE.fontSizeFp)
+        .lineHeight(TYPE_SELECT_APPEARANCE_VALUE.lineHeightFp as number)
+        .fontColor(TOK_PRIMARY_DARK)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .position({ x: 10, y: 11 });
+      Image($r('app.media.reader_chevron_down'))
+        .width(8)
+        .height(4)
+        .rotate({ angle: this.isOpen ? 180 : 0 })
+        .animation(this.dropdownAnimation())
+        .position({ x: this.resolvedWidth() - 14, y: 16 });
+    }
+    .width('100%')
+    .height(TRIGGER_H)
+    .backgroundColor(TOK_SURFACE_FIELD)
+    .border({ width: TOK_BORDER_W, color: '#C1C7CD' })
+    .borderRadius(6)
+    .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
+    .onClick((): void => this.onToggle());
+  }
+
+  @Builder
+  private settingsTrigger() {
+    Row({ space: 6 }) {
+      Text(this.value)
+        .fontFamily(TYPE_SELECT_SETTINGS_VALUE.fontFamily)
+        .fontWeight(TYPE_SELECT_SETTINGS_VALUE.fontWeight)
+        .fontSize(TYPE_SELECT_SETTINGS_VALUE.fontSizeFp)
+        .lineHeight(TYPE_SELECT_SETTINGS_VALUE.lineHeightFp as number)
+        .fontColor(TOK_INK)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis });
+      if (this.variant === 'settingsTablet') {
+        Image($r('app.media.reader_chevron_down'))
+          .width(10)
+          .height(6)
+          .rotate({ angle: this.isOpen ? 180 : 0 })
+          .animation(this.dropdownAnimation());
+      } else {
+        Image($r('app.media.reader_chevron_right'))
+          .width(7)
+          .height(12);
+      }
+    }
+    .height(34)
+    .padding({ left: 10, right: 8 })
+    .alignItems(VerticalAlign.Center)
+    .backgroundColor('#0F2D4A3E')
+    .border({ width: TOK_BORDER_W, color: TOK_GREEN })
+    .borderRadius(7)
+    .onClick((): void => this.onToggle());
+  }
+
+  @Builder
+  private sourceGroupTrigger() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Text(this.value)
+        .width(Math.max(0, this.resolvedWidth() - 42))
+        .height(15)
+        .fontFamily(TYPE_SELECT_SOURCE_GROUP_VALUE.fontFamily)
+        .fontWeight(TYPE_SELECT_SOURCE_GROUP_VALUE.fontWeight)
+        .fontSize(TYPE_SELECT_SOURCE_GROUP_VALUE.fontSizeFp)
+        .lineHeight(TYPE_SELECT_SOURCE_GROUP_VALUE.lineHeightFp as number)
+        .fontColor(TOK_INK)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .position({ x: 14, y: 10 });
+      Text('⌄')
+        .width(9)
+        .height(19)
+        .fontFamily(TYPE_SELECT_SOURCE_GROUP_CHEVRON.fontFamily)
+        .fontWeight(TYPE_SELECT_SOURCE_GROUP_CHEVRON.fontWeight)
+        .fontSize(TYPE_SELECT_SOURCE_GROUP_CHEVRON.fontSizeFp)
+        .lineHeight(TYPE_SELECT_SOURCE_GROUP_CHEVRON.lineHeightFp as number)
+        .fontColor(TOK_MUTED)
+        .position({ x: this.resolvedWidth() - 20, y: 7 });
+    }
+    .width('100%')
+    .height(TRIGGER_H)
+    .backgroundColor('#FFFCF8')
+    .border({ width: TOK_BORDER_W, color: '#85B4A697' })
+    .borderRadius(8)
+    .onClick((): void => this.onToggle());
+  }
+
+  @Builder
+  private defaultTrigger() {
     Row({ space: CHEVRON_GAP }) {
       Text(this.value)
         .layoutWeight(1)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(12)
+        .fontFamily(TYPE_SELECT_DEFAULT_VALUE.fontFamily)
+        .fontWeight(TYPE_SELECT_DEFAULT_VALUE.fontWeight)
+        .fontSize(TYPE_SELECT_DEFAULT_VALUE.fontSizeFp)
         .fontColor(TOK_PRIMARY_DARK)
         .textAlign(TextAlign.End)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       Image($r('app.media.reader_chevron_down')).width(CHEVRON_W).height(CHEVRON_H)
-        .rotate({ angle: this.isOpen ? 180 : 0 });
+        .rotate({ angle: this.isOpen ? 180 : 0 })
+        .animation(this.dropdownAnimation());
     }
     .width('100%')
     .height(TRIGGER_H)
@@ -82,13 +213,48 @@ export struct ReaderSelect {
     for (let i = 0; i < texts.length; i++) {
       const w = utils.measureText({
         textContent: texts[i],
-        fontSize: 12,
-        fontFamily: 'ReaderNotoSansSC',
+        fontSize: this.measureTextStyle().fontSizeFp,
+        fontFamily: this.measureTextStyle().fontFamily,
       });
       if (w > maxPx) {
         maxPx = w;
       }
     }
-    return Math.ceil(ctx.px2vp(maxPx)) + SELECT_CHROME;
+    return Math.ceil(ctx.px2vp(maxPx)) + this.resolvedChrome();
+  }
+
+  private triggerHeight(): number {
+    return this.isSettingsVariant() ? 34 : TRIGGER_H;
+  }
+
+  private resolvedChrome(): number {
+    if (this.isSettingsVariant()) {
+      return 10 + 8 + 6 + (this.variant === 'settingsTablet' ? 10 : 7);
+    }
+    return SELECT_CHROME;
+  }
+
+  private isSettingsVariant(): boolean {
+    return this.variant === 'settingsPhone' || this.variant === 'settingsTablet';
+  }
+
+  private measureTextStyle() {
+    if (this.isSettingsVariant()) {
+      return TYPE_SELECT_SETTINGS_VALUE;
+    }
+    if (this.variant === 'sourceGroup') {
+      return TYPE_SELECT_SOURCE_GROUP_VALUE;
+    }
+    if (this.variant === 'appearanceCompact') {
+      return TYPE_SELECT_APPEARANCE_VALUE;
+    }
+    return TYPE_SELECT_DEFAULT_VALUE;
+  }
+
+  private dropdownAnimation(): AnimateParam {
+    if (this.reduceMotion) {
+      return { duration: 0, curve: Curve.Linear };
+    }
+    return motionAnimateParam('dropdown.menu.expand');
   }
 }

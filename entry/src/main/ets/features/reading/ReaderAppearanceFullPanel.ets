@@ -1,4 +1,6 @@
 import { registerReaderFonts } from '../common/ReaderFonts';
+import { ReaderSelect } from '../common/ReaderSelect';
+import { ReaderSelectPanel } from '../common/ReaderSelectPanel';
 import {
   TOK_BORDER_W,
   TOK_LINE,
@@ -12,10 +14,12 @@ import {
   TOK_READ_SURFACE,
   TOK_SURFACE_PANEL,
   TOK_SURFACE_PANEL_SOFT,
+  TOK_SURFACE_FIELD,
   TOK_SURFACE_SOLID,
 } from '../common/ReaderTokens';
 import {
   createDefaultReaderAppearanceSnapshot,
+  readerAppearanceCanStep,
   type ReaderAppearanceAlignment,
   type ReaderAppearanceFont,
   type ReaderAppearanceIndent,
@@ -25,6 +29,13 @@ import {
   type ReaderAppearanceTheme,
 } from './ReaderAppearanceState';
 import type { ReaderChineseConversionMode } from './ReaderChineseConversionGateway';
+import {
+  READER_FULL_PANEL_HEIGHT_TABLET,
+  READER_FULL_PANEL_MAX_WIDTH_PHONE,
+  READER_FULL_PANEL_MAX_WIDTH_TABLET,
+} from './ReaderLayoutGeometry';
+
+const READER_APPEARANCE_FULL_PANEL_HEIGHT_PHONE = 840;
 
 /**
  * Figma Reader Full Appearance sheet: Phone `942:82`, Tablet `942:84`.
@@ -37,6 +48,9 @@ import type { ReaderChineseConversionMode } from './ReaderChineseConversionGatew
 @Component
 export struct ReaderAppearanceFullPanel {
   @Prop isTablet: boolean = false;
+  @Prop availableWidth: number = 0;
+  @Prop availableHeight: number = 0;
+  @Prop reduceMotion: boolean = false;
   @Prop snapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   @Prop chineseConversionMode: ReaderChineseConversionMode = 'none';
   onCollapse: () => void = (): void => {};
@@ -51,6 +65,11 @@ export struct ReaderAppearanceFullPanel {
     (_metric: ReaderAppearanceMetric, _direction: ReaderAppearanceStepDirection): void => {};
   onChineseConversionChange: (mode: ReaderChineseConversionMode) => void =
     (_mode: ReaderChineseConversionMode): void => {};
+  @State private openSelect: string = '';
+  @State private selectAnchorX: number = 0;
+  @State private selectAnchorY: number = 0;
+  @State private panelOriginX: number = 0;
+  @State private panelOriginY: number = 0;
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -87,14 +106,23 @@ export struct ReaderAppearanceFullPanel {
       .width(this.viewportWidth())
       .height(this.viewportHeight())
       .scrollBar(BarState.Off)
+      .onScrollStart((): void => {
+        this.openSelect = '';
+      })
       .position({ x: 13, y: 57 });
+
+      this.selectOverlay();
     }
     .width(this.sheetWidth())
     .height(this.sheetHeight())
     .backgroundColor(TOK_READ_SURFACE)
     .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
     .borderRadius(24)
-    .clip(true);
+    .clip(true)
+    .onAreaChange((_oldValue: Area, newValue: Area): void => {
+      this.panelOriginX = Number(newValue.globalPosition.x);
+      this.panelOriginY = Number(newValue.globalPosition.y);
+    });
   }
 
   @Builder
@@ -334,7 +362,7 @@ export struct ReaderAppearanceFullPanel {
       Stack({ alignContent: Alignment.TopStart }) {
         this.indentRow();
         this.selectField('language', 9, 61);
-        this.selectField('pageTurn', this.isTablet ? 339 : 161, 61);
+        this.selectField('pageTurn', 21 + this.selectRowWidth(), 61);
         this.selectField('alignment', 9, 113);
       }
       .width(this.sectionInnerWidth())
@@ -415,46 +443,94 @@ export struct ReaderAppearanceFullPanel {
   private selectField(kind: string, x: number, y: number) {
     Stack({ alignContent: Alignment.TopStart }) {
       Text(this.selectLabel(kind))
+        .width(this.selectLabelWidth(kind))
         .height(14)
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
         .fontSize(10)
         .lineHeight(14)
         .fontColor(TOK_READ_INK)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
         .position({ x: 9, y: 14 });
 
-      Row() {
-        Text(this.selectValue(kind))
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(10)
-          .fontColor(TOK_READ_INK);
-        Blank();
-        Image($r('app.media.reader_chevron_down'))
-          .width(12)
-          .height(12)
-          .fillColor(TOK_READ_PRIMARY);
+      if (this.selectEnabled(kind)) {
+        ReaderSelect({
+          value: this.selectValue(kind),
+          options: this.selectOptions(kind),
+          isOpen: this.openSelect === kind,
+          variant: 'appearanceCompact',
+          reduceMotion: this.reduceMotion,
+          controlWidth: this.selectControlWidth(kind),
+          onToggle: (): void => {
+            this.openSelect = this.openSelect === kind ? '' : kind;
+          },
+        })
+          .position({ x: this.selectRowWidth() - this.selectControlWidth(kind) - 8, y: 3 })
+          .accessibilityText(this.selectAccessibilityText(kind))
+          .onAreaChange((_oldValue: Area, newValue: Area): void => {
+            this.selectAnchorX = Number(newValue.globalPosition.x);
+            this.selectAnchorY = Number(newValue.globalPosition.y);
+          });
+      } else {
+        Row() {
+          Text(this.selectValue(kind))
+            .fontFamily('ReaderNotoSansSC')
+            .fontWeight(FontWeight.Bold)
+            .fontSize(10)
+            .fontColor(TOK_READ_INK);
+          Blank();
+          Image($r('app.media.reader_chevron_down'))
+            .width(8)
+            .height(4)
+            .fillColor(TOK_READ_PRIMARY);
+        }
+        .width(this.selectControlWidth(kind))
+        .height(36)
+        .padding({ left: 8, right: 6 })
+        .alignItems(VerticalAlign.Center)
+        .backgroundColor(TOK_SURFACE_FIELD)
+        .border({ width: TOK_BORDER_W, color: '#C1C7CD' })
+        .borderRadius(6)
+        .opacity(0.38)
+        .position({ x: this.selectRowWidth() - this.selectControlWidth(kind) - 8, y: 3 })
+        .enabled(false)
+        .accessibilityText(this.selectAccessibilityText(kind));
       }
-      .width(56)
-      .height(36)
-      .padding({ left: 8, right: 6 })
-      .alignItems(VerticalAlign.Center)
-      .backgroundColor('#FFFDF8')
-      .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
-      .borderRadius(10)
-      .position({ x: this.selectRowWidth() - 64, y: 3 });
-
-      Row()
-        .width(56)
-        .height(44)
-        .position({ x: this.selectRowWidth() - 64, y: 0 })
-        .enabled(this.selectEnabled(kind))
-        .accessibilityText(this.selectAccessibilityText(kind))
-        .onClick((): void => this.handleSelectRequest(kind));
     }
     .width(this.selectRowWidth())
     .height(44)
     .position({ x, y });
+  }
+
+  @Builder
+  private selectOverlay() {
+    if (this.openSelect !== '') {
+      Row()
+        .width('100%')
+        .height('100%')
+        .backgroundColor(Color.Transparent)
+        .hitTestBehavior(HitTestMode.Default)
+        .zIndex(9)
+        .onClick((): void => {
+          this.openSelect = '';
+        });
+
+      ReaderSelectPanel({
+        value: this.selectValue(this.openSelect),
+        options: this.selectOptions(this.openSelect),
+        x: this.selectAnchorX - this.panelOriginX,
+        y: this.selectAnchorY - this.panelOriginY,
+        variant: 'appearanceCompact',
+        reduceMotion: this.reduceMotion,
+        controlWidth: this.selectControlWidth(this.openSelect),
+        onSelect: (option: string): void => {
+          const kind = this.openSelect;
+          this.openSelect = '';
+          this.applySelectValue(kind, option);
+        },
+      });
+    }
   }
 
   @Builder
@@ -509,28 +585,38 @@ export struct ReaderAppearanceFullPanel {
     }
     .width(30)
     .height(28)
+    .opacity(readerAppearanceCanStep(this.snapshot, metric, direction) ? 1 : 0.38)
+    .enabled(readerAppearanceCanStep(this.snapshot, metric, direction))
     .accessibilityText(`${this.metricLabel(metric)}${direction < 0 ? '减小' : '增大'}`)
-    .onClick((): void => this.onMetricStep(metric, direction));
+    .onClick((): void => {
+      if (readerAppearanceCanStep(this.snapshot, metric, direction)) {
+        this.onMetricStep(metric, direction);
+      }
+    });
   }
 
   private sheetWidth(): number {
-    return this.isTablet ? 720 : 364;
+    const designWidth = this.isTablet ? READER_FULL_PANEL_MAX_WIDTH_TABLET :
+      READER_FULL_PANEL_MAX_WIDTH_PHONE;
+    return this.availableWidth > 0 ? Math.min(designWidth, this.availableWidth) : designWidth;
   }
 
   private sheetHeight(): number {
-    return this.isTablet ? 852 : 840;
+    const designHeight = this.isTablet ? READER_FULL_PANEL_HEIGHT_TABLET :
+      READER_APPEARANCE_FULL_PANEL_HEIGHT_PHONE;
+    return this.availableHeight > 0 ? Math.min(designHeight, this.availableHeight) : designHeight;
   }
 
   private headerWidth(): number {
-    return this.isTablet ? 694 : 338;
+    return Math.max(0, this.sheetWidth() - 26);
   }
 
   private viewportWidth(): number {
-    return this.isTablet ? 694 : 338;
+    return Math.max(0, this.sheetWidth() - 26);
   }
 
   private viewportHeight(): number {
-    return this.isTablet ? 834 : 772;
+    return Math.max(0, this.sheetHeight() - 68);
   }
 
   private contentHeight(): number {
@@ -538,27 +624,28 @@ export struct ReaderAppearanceFullPanel {
   }
 
   private handleX(): number {
-    return this.isTablet ? 489 : 134;
+    const designX = this.isTablet ? 489 : 134;
+    return Math.min(designX, Math.max(0, this.sheetWidth() - 42));
   }
 
   private sectionWidth(): number {
-    return this.isTablet ? 672 : 316;
+    return Math.max(0, this.viewportWidth() - 22);
   }
 
   private sectionInnerWidth(): number {
-    return this.isTablet ? 668 : 312;
+    return Math.max(0, this.sectionWidth() - 4);
   }
 
   private fullCardWidth(): number {
-    return this.isTablet ? 162.5 : 73.5;
+    return Math.max(0, (this.sectionInnerWidth() - 18) / 4);
   }
 
   private fullCardStride(): number {
-    return this.isTablet ? 168.5 : 79.5;
+    return this.fullCardWidth() + 6;
   }
 
   private indentRowWidth(): number {
-    return this.isTablet ? 648 : 292;
+    return Math.max(0, this.sectionInnerWidth() - 20);
   }
 
   private indentOptionActive(value: string): boolean {
@@ -566,15 +653,15 @@ export struct ReaderAppearanceFullPanel {
   }
 
   private selectRowWidth(): number {
-    return this.isTablet ? 318 : 140;
+    return Math.max(0, (this.indentRowWidth() - 12) / 2);
   }
 
   private stepperPanelWidth(): number {
-    return this.isTablet ? 666 : 310;
+    return Math.max(0, this.sectionInnerWidth() - 2);
   }
 
   private stepperRowWidth(): number {
-    return this.isTablet ? 648 : 292;
+    return Math.max(0, this.sectionInnerWidth() - 20);
   }
 
   private themeIds(): ReaderAppearanceTheme[] {
@@ -594,20 +681,40 @@ export struct ReaderAppearanceFullPanel {
   }
 
   private selectEnabled(kind: string): boolean {
-    return kind === 'indent' || kind === 'alignment' || kind === 'language';
+    return kind === 'alignment' || kind === 'language';
   }
 
-  private handleSelectRequest(kind: string): void {
-    if (kind === 'indent') {
-      const next: ReaderAppearanceIndent = this.snapshot.indent === 'none' ? 'single' :
-        (this.snapshot.indent === 'single' ? 'firstLine' : 'none');
-      this.onIndentRequest(next);
+  private selectOptions(kind: string): string[] {
+    if (kind === 'language') {
+      return ['原文', '繁转简', '简转繁'];
+    }
+    if (kind === 'alignment') {
+      return ['开启', '关闭'];
+    }
+    return ['平移'];
+  }
+
+  private selectControlWidth(kind: string): number {
+    return 56;
+  }
+
+  private selectLabelWidth(kind: string): number {
+    const controlX = this.selectRowWidth() - this.selectControlWidth(kind) - 8;
+    return Math.max(0, controlX - 13);
+  }
+
+  private applySelectValue(kind: string, option: string): void {
+    if (kind === 'language') {
+      const next: ReaderChineseConversionMode = option === '繁转简' ? 't2s' :
+        (option === '简转繁' ? 's2t' : 'none');
+      if (next !== this.chineseConversionMode) {
+        this.onChineseConversionChange(next);
+      }
     } else if (kind === 'alignment') {
-      this.onAlignmentRequest(this.snapshot.alignment);
-    } else if (kind === 'language') {
-      const next: ReaderChineseConversionMode = this.chineseConversionMode === 'none' ? 't2s' :
-        (this.chineseConversionMode === 't2s' ? 's2t' : 'none');
-      this.onChineseConversionChange(next);
+      const next: ReaderAppearanceAlignment = option === '开启' ? 'justify' : 'start';
+      if (next !== this.snapshot.alignment) {
+        this.onAlignmentRequest(this.snapshot.alignment);
+      }
     }
   }
 
@@ -757,7 +864,7 @@ export struct ReaderAppearanceFullPanel {
       return '思源宋体';
     }
     if (fontId === 'lxgwWenKai') {
-      return '文楷 Lite';
+      return '霞鹜文楷';
     }
     return '导入';
   }

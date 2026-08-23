@@ -5,6 +5,12 @@ import type {
   ReaderAppearanceSnapshot,
   ReaderAppearanceTheme,
 } from './ReaderAppearanceState';
+import {
+  READER_FONT_HARMONYOS_SANS,
+  READER_FONT_LXGW_WENKAI_LITE,
+  READER_FONT_NOTO_SANS_SC,
+  READER_FONT_NOTO_SERIF_SC_REGULAR,
+} from '../common/ReaderFontFamilies.ts';
 
 /**
  * Reading-surface values resolved from the authoritative Figma variables:
@@ -48,21 +54,27 @@ export function readerAppearanceThemeStyle(theme: ReaderAppearanceTheme): Reader
   return themeStyle('#FFFFFF', '#FFFFFF', '#2B241D', false, false);
 }
 
+export function readerAppearanceChromeTone(theme: ReaderAppearanceTheme): 'light' | 'dark' {
+  return theme === 'night' || theme === 'warmNight' || theme === 'paperNight' || theme === 'greenNight' ?
+    'light' : 'dark';
+}
+
 export function readerAppearanceFontFamily(font: ReaderAppearanceFont): string {
   if (font === 'system') {
-    // An empty family lets ArkUI resolve the current system reading face.
-    return '';
+    // ArkUI's documented default family. Keep this explicit because the same
+    // value is part of the non-blank pagination layout signature.
+    return READER_FONT_HARMONYOS_SANS;
   }
   if (font === 'sans') {
-    return 'ReaderNotoSansSC';
+    return READER_FONT_NOTO_SANS_SC;
   }
   if (font === 'serif') {
-    return 'ReaderNotoSerifSCRegular';
+    return READER_FONT_NOTO_SERIF_SC_REGULAR;
   }
   if (font === 'lxgwWenKai') {
-    return 'ReaderLXGWWenKaiLite';
+    return READER_FONT_LXGW_WENKAI_LITE;
   }
-  return 'ReaderNotoSerifSCRegular';
+  return READER_FONT_NOTO_SERIF_SC_REGULAR;
 }
 
 export function readerAppearanceLineHeight(snapshot: ReaderAppearanceSnapshot): number {
@@ -81,6 +93,18 @@ export function readerAppearanceParagraphIndent(
     return fontSize;
   }
   return indent === 'firstLine' ? fontSize * 2 : 0;
+}
+
+/**
+ * ArkUI numeric fontSize values are fp while a bare numeric Length is vp.
+ * Keep first-line indentation in the same font-scaled unit as the glyphs so
+ * the one- and two-character choices remain true 1em/2em at every font scale.
+ */
+export function readerAppearanceParagraphIndentLength(
+  fontSize: number,
+  indent: ReaderAppearanceIndent,
+): string {
+  return `${readerAppearanceParagraphIndent(fontSize, indent)}fp`;
 }
 
 export function readerAppearanceUsesJustify(alignment: ReaderAppearanceAlignment): boolean {
