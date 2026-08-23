@@ -1,6 +1,11 @@
-<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="8.4" height="8.4" viewBox="0 0 8.4 8.4" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g id="Tabler/refresh/outline">
-<path id="Vector" d="M7 3.85C6.9144 3.23408 6.62867 2.66338 6.18682 2.22582C5.74497 1.78827 5.17151 1.50812 4.55478 1.42854C3.93805 1.34897 3.31227 1.47437 2.77382 1.78544C2.23537 2.0965 1.81414 2.57598 1.575 3.15M1.4 1.75V3.15H2.8" stroke="#2D4A3E" stroke-width="0.6125" stroke-linecap="round" stroke-linejoin="round"/>
-<path id="Vector_2" d="M1.4 4.55C1.4856 5.16592 1.77133 5.73662 2.21318 6.17418C2.65503 6.61173 3.22849 6.89188 3.84522 6.97146C4.46194 7.05104 5.08773 6.92563 5.62618 6.61456C6.16463 6.3035 6.58586 5.82402 6.825 5.25M7 6.65V5.25H5.6" stroke="#2D4A3E" stroke-width="0.6125" stroke-linecap="round" stroke-linejoin="round"/>
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_271_404)">
+<path d="M40 22C39.5109 18.4805 37.8781 15.2193 35.3533 12.719C32.8284 10.2187 29.5515 8.61786 26.0273 8.16313C22.5032 7.7084 18.9272 8.42499 15.8504 10.2025C12.7736 11.98 10.3665 14.7199 9 18M8 10V18H16" stroke="#2D4A3E" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M8 26C8.48912 29.5196 10.1219 32.7807 12.6467 35.281C15.1716 37.7813 18.4485 39.3822 21.9727 39.8369C25.4968 40.2916 29.0728 39.575 32.1496 37.7975C35.2264 36.02 37.6335 33.2801 39 30M40 38V30H32" stroke="#2D4A3E" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
 </g>
+<defs>
+<clipPath id="clip0_271_404">
+<rect width="48" height="48" fill="white"/>
+</clipPath>
+</defs>
 </svg>

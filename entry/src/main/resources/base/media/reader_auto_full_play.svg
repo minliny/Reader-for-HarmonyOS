@@ -1,12 +1,10 @@
-<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g id="Tabler/player-play/outline" clip-path="url(#clip0_0_52)">
-<g id="Vector">
-</g>
-<path id="Vector_2" d="M5.83333 3.33333V16.6667L16.6667 10L5.83333 3.33333Z" stroke="white" stroke-width="1.45833" stroke-linecap="round" stroke-linejoin="round"/>
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_271_392)">
+<path d="M14 8V40L40 24L14 8Z" stroke="#FFFAF4" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
 </g>
 <defs>
-<clipPath id="clip0_0_52">
-<rect width="20" height="20" fill="white"/>
+<clipPath id="clip0_271_392">
+<rect width="48" height="48" fill="white"/>
 </clipPath>
 </defs>
 </svg>
