@@ -131,6 +131,7 @@ import {
   type SourceSwitchCommitOutcome,
   type SourceSwitchDiscoveryOutcome,
   type PendingSourceSwitch,
+  type SourceSwitchProbeQuery,
   type SourceSwitchRollbackResult,
   type SourceSwitchTargetToc,
 } from '../features/source/SourceSwitchGateway';
@@ -750,6 +751,7 @@ struct Index {
           onOpenRulesManagement: (): void => this.requestRulesManagementFromReader(),
           onCloseSourceSwitch: (): void => this.closeSourceSwitch(),
           onRetrySourceSwitch: (): void => this.retrySourceSwitch(),
+          onRefreshSourceSwitch: (): void => this.refreshSourceSwitch(),
           onPickSource: (candidate: SourceSwitchCandidate): void => this.onPickSource(candidate),
           onRollbackSourceSwitch: (): void => this.onRollbackSourceSwitch(),
         });
@@ -764,9 +766,9 @@ struct Index {
           SourceSwitchPanel({
             state: this.sourceSwitchState,
             currentSourceId: this.detailBook.sourceId,
-            isTablet: deviceInfo.deviceType === 'tablet',
             onClose: (): void => this.closeSourceSwitch(),
             onRetry: (): void => this.retrySourceSwitch(),
+            onRefresh: (): void => this.refreshSourceSwitch(),
             onSelectCandidate: (candidate: SourceSwitchCandidate): void => this.onPickSource(candidate),
             onRollback: (): void => this.onRollbackSourceSwitch(),
           });
@@ -3036,38 +3038,112 @@ struct Index {
     }
     const generation = this.nextNavigationGeneration();
     this.sourceSwitchState = { kind: 'discovering' };
-    this.startSourceDiscovery(generation);
+    this.startSourceDiscovery(generation, false, true);
   }
 
-  private startSourceDiscovery(generation: number, autoPickFirst: boolean = false): void {
+  private refreshSourceSwitch(): void {
+    if (!this.sourceSwitchVisible || this.sourceSwitchState.kind !== 'candidates' ||
+      this.sourceSwitchState.refreshing === true) {
+      return;
+    }
+    const generation = this.nextNavigationGeneration();
+    this.startSourceDiscovery(generation, false, true);
+  }
+
+  private startSourceDiscovery(
+    generation: number,
+    autoPickFirst: boolean = false,
+    forceRefresh: boolean = false,
+  ): void {
     if (this.detailBook === undefined) {
       return;
     }
+    let query: SourceSwitchProbeQuery;
+    try {
+      query = this.sourceSwitchProbeQuery();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.sourceSwitchState = { kind: 'discoveryError', message };
+      return;
+    }
     const gateway = this.getSourceSwitchGateway();
-    gateway.discoverCandidates(this.detailBook.sourceId, this.detailBook.bookId, this.detailBook.title,
-      (): boolean => this.isSourceSwitchActive(generation))
+    const isCurrent = (): boolean => this.isSourceSwitchActive(generation);
+    const previousCandidates = this.sourceSwitchState.kind === 'candidates'
+      ? this.sourceSwitchState.candidates
+      : [];
+    if (forceRefresh && previousCandidates.length > 0) {
+      this.sourceSwitchState = { kind: 'candidates', candidates: previousCandidates, refreshing: true };
+    }
+    const load = forceRefresh
+      ? gateway.refreshCandidates(query, isCurrent)
+      : gateway.loadCachedCandidates(query, isCurrent)
+        .then((cached: SourceSwitchCandidate[]): Promise<SourceSwitchDiscoveryOutcome> |
+          SourceSwitchDiscoveryOutcome => cached.length > 0
+          ? { kind: 'sources', candidates: cached }
+          : gateway.refreshCandidates(query, isCurrent));
+    load
       .then((outcome: SourceSwitchDiscoveryOutcome): void => {
-        if (!this.isSourceSwitchActive(generation)) {
+        if (!isCurrent()) {
           return;
         }
         if (outcome.kind === 'noSources' || outcome.candidates.length === 0) {
           this.sourceSwitchState = { kind: 'empty' };
           return;
         }
-        this.sourceSwitchState = { kind: 'candidates', candidates: outcome.candidates };
+        this.sourceSwitchState = { kind: 'candidates', candidates: outcome.candidates, refreshing: false };
         if (autoPickFirst) {
-          this.onPickSource(outcome.candidates[0]);
+          const candidate = outcome.candidates.find((value: SourceSwitchCandidate): boolean =>
+            value.isCurrent !== true && value.offline !== true && value.timeout !== true);
+          if (candidate !== undefined) {
+            this.onPickSource(candidate);
+          }
         }
       })
       .catch((error: Error): void => {
-        if (!this.isSourceSwitchActive(generation)) {
+        if (!isCurrent()) {
           return;
         }
         // change.bookSource is remote. Any Host transport constraint is
         // surfaced through the admitted discovery failure state.
         hilog.warn(DOMAIN, 'Reader', 'SS-SOURCE-SWITCH-01: candidate discovery failed: %{public}s', error.message);
-        this.sourceSwitchState = { kind: 'discoveryError', message: error.message };
+        if (forceRefresh && previousCandidates.length > 0) {
+          this.sourceSwitchState = {
+            kind: 'candidates',
+            candidates: previousCandidates,
+            refreshing: false,
+            refreshError: error.message,
+          };
+        } else {
+          this.sourceSwitchState = { kind: 'discoveryError', message: error.message };
+        }
       });
+  }
+
+  private sourceSwitchProbeQuery(): SourceSwitchProbeQuery {
+    const book = this.detailBook;
+    if (book === undefined || this.detailToc.length === 0) {
+      throw new Error('换源探测需要当前书籍目录');
+    }
+    let anchor = this.detailToc[this.detailToc.length - 1];
+    if (this.readingSessionActive) {
+      const requestedIndex = this.directoryCurrentChapterIndex >= 0
+        ? this.directoryCurrentChapterIndex
+        : this.requestedChapterIndex ?? this.detailToc[0].index;
+      for (const entry of this.detailToc) {
+        if (entry.index === requestedIndex) {
+          anchor = entry;
+          break;
+        }
+      }
+    }
+    return {
+      sourceId: book.sourceId,
+      bookId: book.bookId,
+      bookName: book.title,
+      author: book.author,
+      currentChapterIndex: anchor.index,
+      currentChapterTitle: anchor.title,
+    };
   }
 
   private onPickSource(candidate: SourceSwitchCandidate): void {

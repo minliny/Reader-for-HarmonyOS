@@ -22,6 +22,18 @@ import {
 } from '../common/ReaderTokens';
 
 import { registerReaderFonts } from '../common/ReaderFonts';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import {
+  readerInteractiveSafeBottom,
+  readerInteractiveSafeLeft,
+  readerInteractiveSafeRight,
+  readerVisualSafeTop,
+} from '../common/ReaderWindowMetrics';
+import {
+  SurfaceHorizontalFrame,
+  SurfaceWidthSpec,
+  resolveHorizontalFrame,
+} from '../common/SurfaceHorizontalGeometry';
 
 /**
  * SourceSwitch overlay window state (Window State 7态, SS-SOURCE-SWITCH-01).
@@ -38,6 +50,8 @@ export interface SourceSwitchDiscoveringState {
 export interface SourceSwitchCandidatesState {
   kind: 'candidates';
   candidates: SourceSwitchCandidate[];
+  refreshing?: boolean;
+  refreshError?: string;
 }
 
 export interface SourceSwitchEmptyState {
@@ -77,15 +91,16 @@ export type SourceSwitchPanelState =
  * Source-switch window (Figma `568:656`, 300×385 r20): 34px header, 20px column
  * header, 28px candidate rows (CandidateRow), 22px footer. Candidate rows switch
  * directly on tap — no confirmation footer. Latency and current-chapter columns
- * render "—" today because `change.bookSource` candidates carry no such data.
+ * render the durable SearchBook probe projection when one is available.
  */
 @Component
 export struct SourceSwitchWindow {
+  @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   @Prop state: SourceSwitchPanelState;
   @Prop currentSourceId: string = '';
-  @Prop isTablet: boolean = false;
   onClose: () => void = (): void => {};
   onRetry: () => void = (): void => {};
+  onRefresh: () => void = (): void => {};
   onSelectCandidate: (candidate: SourceSwitchCandidate) => void =
     (_candidate: SourceSwitchCandidate): void => {};
   onRollback: () => void = (): void => {};
@@ -101,11 +116,12 @@ export struct SourceSwitchWindow {
       this.body();
       this.footer();
     }
-    .width(300)
-    .height(385)
+    .width(this.windowWidth())
+    .height(this.windowHeight())
     .backgroundColor(TOK_SS_WINDOW_BG)
     .border({ width: TOK_BORDER_W, color: TOK_SS_WINDOW_BORDER })
-    .borderRadius(20);
+    .borderRadius(20)
+    .translate({ x: this.windowTranslateX(), y: this.windowTranslateY() });
   }
 
   @Builder
@@ -118,7 +134,8 @@ export struct SourceSwitchWindow {
           .margin({ left: 9 });
 
         Text('换源')
-          .width(120)
+          .layoutWeight(1)
+          .constraintSize({ minWidth: 0 })
           .height(16)
           .fontFamily('ReaderNotoSerifSCRegular')
           .fontWeight(FontWeight.Medium)
@@ -147,16 +164,16 @@ export struct SourceSwitchWindow {
         .margin({ left: 1 })
         .onClick((): void => this.onClose());
       }
-      .width(300)
+      .width('100%')
       .height(33)
       .alignItems(VerticalAlign.Center);
 
       Text('')
-        .width(299)
+        .width(Math.max(0, this.windowWidth() - 1))
         .height(1)
         .backgroundColor(TOK_LINE);
     }
-    .width(300)
+    .width('100%')
     .height(34);
   }
 
@@ -177,14 +194,14 @@ export struct SourceSwitchWindow {
     .height(20)
     .borderRadius(10)
     .backgroundColor(TOK_SS_SORT_PILL_BG)
-    .margin({ left: 41 });
+    .margin({ left: 0 });
   }
 
   @Builder
   private columnHeader() {
     Row() {
       Text('书源')
-        .width(107)
+        .width(this.sourceHeaderWidth())
         .height(12)
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Regular)
@@ -209,7 +226,7 @@ export struct SourceSwitchWindow {
         .fontColor(TOK_READ_HANDLE)
         .textAlign(TextAlign.End);
     }
-    .width(300)
+    .width('100%')
     .height(20)
     .alignItems(VerticalAlign.Center)
     .backgroundColor(TOK_SS_COLUMN_HEADER_BG);
@@ -295,7 +312,7 @@ export struct SourceSwitchWindow {
         .textAlign(TextAlign.Center);
       Text(message)
         .margin({ top: TOK_SPACE_XS })
-        .width(240)
+        .width(this.messageWidth())
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Regular)
         .fontSize(11)
@@ -335,7 +352,7 @@ export struct SourceSwitchWindow {
         .textAlign(TextAlign.Center);
       Text(message)
         .margin({ top: TOK_SPACE_XS })
-        .width(240)
+        .width(this.messageWidth())
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Regular)
         .fontSize(11)
@@ -366,34 +383,47 @@ export struct SourceSwitchWindow {
 
   @Builder
   private candidateList() {
-    List({ space: 0 }) {
-      Repeat(this.candidates())
-        .each((repeatItem: RepeatItem<SourceSwitchCandidate>) => {
-          ListItem() {
-          CandidateRow({
-            sourceId: repeatItem.item.sourceId,
-            bookName: repeatItem.item.bookName,
-            latencyMs: repeatItem.item.latencyMs,
-            offline: repeatItem.item.offline === true,
-            timeout: repeatItem.item.timeout === true,
-            isCurrent: repeatItem.item.isCurrent === true,
-            onSelect: (): void => this.onSelectCandidate(repeatItem.item),
-          });
-          }
-        })
-        .key((candidate: SourceSwitchCandidate): string =>
-          sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl))
-        .virtualScroll({ reusable: true });
+    Refresh({ refreshing: this.isRefreshing(), promptText: '正在刷新书源…' }) {
+      List({ space: 0 }) {
+        Repeat(this.candidates())
+          .each((repeatItem: RepeatItem<SourceSwitchCandidate>) => {
+            ListItem() {
+            CandidateRow({
+              sourceId: repeatItem.item.sourceId,
+              sourceName: repeatItem.item.sourceName ?? repeatItem.item.sourceId,
+              bookName: repeatItem.item.bookName,
+              currentChapterTitle: repeatItem.item.currentChapterTitle ??
+                repeatItem.item.latestChapterTitle ?? '',
+              latencyMs: repeatItem.item.latencyMs,
+              offline: repeatItem.item.offline === true,
+              timeout: repeatItem.item.timeout === true,
+              isCurrent: repeatItem.item.isCurrent === true,
+              onSelect: (): void => this.onSelectCandidate(repeatItem.item),
+            });
+            }
+          })
+          .key((candidate: SourceSwitchCandidate): string =>
+            sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl))
+          .virtualScroll({ reusable: true });
+      }
+      .width('100%')
+      .height('100%')
+      .scrollBar(BarState.Off);
     }
+    .onRefreshing((): void => {
+      if (!this.isRefreshing()) {
+        this.onRefresh();
+      }
+    })
     .width('100%')
     .layoutWeight(1)
-    .scrollBar(BarState.Off);
+    .pullToRefresh(true);
   }
 
   @Builder
   private footer() {
-    Text(`共 ${this.count()} 个书源`)
-      .width(300)
+    Text(this.footerText())
+      .width('100%')
       .height(22)
       .fontFamily('ReaderInter')
       .fontWeight(FontWeight.Regular)
@@ -407,7 +437,85 @@ export struct SourceSwitchWindow {
     return this.state.kind === 'candidates' ? this.state.candidates : [];
   }
 
-  private count(): number {
-    return this.state.kind === 'candidates' ? this.state.candidates.length : 0;
+  private isRefreshing(): boolean {
+    return this.state.kind === 'candidates' && this.state.refreshing === true;
+  }
+
+  private footerText(): string {
+    if (this.state.kind !== 'candidates') {
+      return '共 0 个书源';
+    }
+    if (this.state.refreshError !== undefined && this.state.refreshError.length > 0) {
+      return `刷新失败 · 已保留 ${this.state.candidates.length} 个本地记录`;
+    }
+    return this.state.refreshing === true
+      ? `正在刷新 · 已有 ${this.state.candidates.length} 个书源`
+      : `共 ${this.state.candidates.length} 个书源`;
+  }
+
+  private horizontalFrame(): SurfaceHorizontalFrame {
+    const metrics = ReaderWindowCoordinator.metrics();
+    return resolveHorizontalFrame(
+      this.liveWindowWidth(),
+      readerInteractiveSafeLeft(metrics),
+      readerInteractiveSafeRight(metrics),
+      new SurfaceWidthSpec(300, 0, 0, 'center'),
+    );
+  }
+
+  private windowWidth(): number {
+    return this.horizontalFrame().width;
+  }
+
+  private windowHeight(): number {
+    const metrics = ReaderWindowCoordinator.metrics();
+    const available = Math.max(
+      0,
+      this.liveWindowHeight() - readerVisualSafeTop(metrics) - readerInteractiveSafeBottom(metrics, true),
+    );
+    return Math.min(385, available);
+  }
+
+  private windowTranslateX(): number {
+    const frame = this.horizontalFrame();
+    return (frame.left - frame.right) / 2;
+  }
+
+  private windowTranslateY(): number {
+    const metrics = ReaderWindowCoordinator.metrics();
+    const height = this.windowHeight();
+    const windowHeight = this.liveWindowHeight();
+    const safeTop = readerVisualSafeTop(metrics);
+    const safeBottom = readerInteractiveSafeBottom(metrics, true);
+    const available = Math.max(0, windowHeight - safeTop - safeBottom);
+    const top = safeTop + Math.max(0, (available - height) / 2);
+    return top + height / 2 - windowHeight / 2;
+  }
+
+  private messageWidth(): number {
+    return Math.min(240, Math.max(0, this.windowWidth() - 32));
+  }
+
+  private sourceHeaderWidth(): number {
+    // Preserve the 107vp Figma column at 300vp while allowing only the name
+    // column to contract on a narrower safe window. The trailing 11vp remains
+    // the source component's reference right padding.
+    return Math.min(107, Math.max(0, this.windowWidth() - 193));
+  }
+
+  private liveWindowWidth(): number {
+    if (this.readerWindowMetricsRevision < 0) {
+      return 0;
+    }
+    const width = ReaderWindowCoordinator.metrics().windowRect.width;
+    return Number.isFinite(width) && width > 0 ? width : 0;
+  }
+
+  private liveWindowHeight(): number {
+    if (this.readerWindowMetricsRevision < 0) {
+      return 0;
+    }
+    const height = ReaderWindowCoordinator.metrics().windowRect.height;
+    return Number.isFinite(height) && height > 0 ? height : 0;
   }
 }

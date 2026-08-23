@@ -6,22 +6,50 @@ import type { ShelfBook } from '../../app/ReaderCoreGateway';
 // for the foreground reading session while avoiding one unbounded request per
 // imported source.
 const SOURCE_SWITCH_DISCOVERY_CONCURRENCY = 8;
+const SOURCE_SWITCH_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 /**
- * Page-facing source-switch candidate. Only the first three fields are real
- * Core `change.bookSource` data today; `latencyMs`/`offline`/`timeout` are
- * future-data hooks the panel renders as "—"/normal when absent.
+ * Page-facing source-switch candidate. Discovery supplies the stable book
+ * identity; the detail/TOC/content probe supplies the chapter and response
+ * time fields persisted through Core `search-book.*` storage.
  */
 export type SourceSwitchCandidate = {
   sourceId: string;
+  sourceName?: string;
+  sourceOrder?: number;
   bookUrl: string;
   bookName: string;
   author?: string;
   coverUrl?: string;
+  latestChapterTitle?: string;
+  currentChapterTitle?: string;
+  currentChapterIndex?: number;
+  chapterWordCount?: number;
+  checkedAt?: number;
   latencyMs?: number;
   offline?: boolean;
   timeout?: boolean;
   isCurrent?: boolean;
+};
+
+export type SourceSwitchProbeQuery = {
+  sourceId: string;
+  bookId: string;
+  bookName: string;
+  author: string;
+  currentChapterIndex: number;
+  currentChapterTitle: string;
+};
+
+type SourceSwitchRegistryEntry = {
+  sourceId: string;
+  sourceName: string;
+  sourceOrder: number;
+};
+
+type SourceSwitchCachedChapter = {
+  title: string;
+  index?: number;
 };
 
 /** Stable identity shared by discovery, rendering, and click admission. */
@@ -53,11 +81,18 @@ export type SourceSwitchTargetTocEntry = {
   index: number;
   title: string;
   url: string;
+  variables: JsonObject;
 };
 
 export type SourceSwitchTargetToc = {
   sourceId: string;
   bookId: string;
+  bookName: string;
+  author: string;
+  coverUrl?: string;
+  latestChapterTitle?: string;
+  tocUrl: string;
+  variables: JsonObject;
   entries: SourceSwitchTargetTocEntry[];
 };
 
@@ -130,6 +165,102 @@ export class SourceSwitchGateway {
   }
 
   /**
+   * Legado-compatible first paint: read durable SearchBook rows, hide disabled
+   * sources, and treat the one-day cache window as empty after expiry. No
+   * source HTTP is attempted from this path.
+   */
+  async loadCachedCandidates(
+    query: SourceSwitchProbeQuery,
+    isCurrent: (() => boolean) | undefined = undefined,
+  ): Promise<SourceSwitchCandidate[]> {
+    this.validateProbeQuery(query);
+    const enabledSources = await this.loadEnabledSources(isCurrent);
+    const result = await this.runtimeOwner.request(
+      'search-book.list',
+      {},
+      this.requestOptions(isCurrent),
+    );
+    const rawBooks = result.data['books'];
+    if (!Array.isArray(rawBooks)) {
+      throw new Error('search-book.list returned invalid data');
+    }
+    const now = Date.now();
+    const staleBookUrls: string[] = [];
+    const candidates: SourceSwitchCandidate[] = [];
+    for (const raw of rawBooks) {
+      if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+        throw new Error('search-book.list returned a non-object row');
+      }
+      const book = raw as JsonObject;
+      if (!this.matchesCachedBook(book, query)) {
+        continue;
+      }
+      const bookUrl = this.requireString(book, 'bookUrl', 'search-book.list');
+      const checkedAt = this.optionalNumber(book, 'time') ?? 0;
+      if (checkedAt <= 0 || now - checkedAt >= SOURCE_SWITCH_CACHE_TTL_MS) {
+        staleBookUrls.push(bookUrl);
+        continue;
+      }
+      const sourceId = this.requireString(book, 'origin', 'search-book.list');
+      const source = enabledSources.get(sourceId);
+      if (source === undefined) {
+        continue;
+      }
+      candidates.push(this.decodeCachedCandidate(book, query, checkedAt, source));
+    }
+    if (staleBookUrls.length > 0) {
+      await Promise.all(staleBookUrls.map((bookUrl: string): Promise<unknown> =>
+        this.runtimeOwner.request(
+          'search-book.delete',
+          { bookUrl },
+          this.requestOptions(isCurrent),
+        )));
+    }
+    return this.sortCandidates(candidates);
+  }
+
+  /**
+   * Full refresh: remove this book's prior SearchBook projection, rediscover
+   * every enabled source, probe the mapped chapter body, and upsert each
+   * completed candidate. This is the operation bound to pull-to-refresh.
+   */
+  async refreshCandidates(
+    query: SourceSwitchProbeQuery,
+    isCurrent: (() => boolean) | undefined = undefined,
+  ): Promise<SourceSwitchDiscoveryOutcome> {
+    this.validateProbeQuery(query);
+    await this.deleteCachedCandidates(query, isCurrent);
+    const discovery = await this.discoverCandidates(
+      query.sourceId,
+      query.bookId,
+      query.bookName,
+      isCurrent,
+    );
+    if (discovery.kind === 'noSources') {
+      return discovery;
+    }
+    const matching = discovery.candidates.filter((candidate: SourceSwitchCandidate): boolean =>
+      this.matchesCandidateBook(candidate, query));
+    const probed: SourceSwitchCandidate[] = [];
+    for (let start = 0; start < matching.length; start += SOURCE_SWITCH_DISCOVERY_CONCURRENCY) {
+      const end = Math.min(start + SOURCE_SWITCH_DISCOVERY_CONCURRENCY, matching.length);
+      const pending: Promise<SourceSwitchCandidate | undefined>[] = [];
+      for (let index = start; index < end; index += 1) {
+        pending.push(this.probeAndPersistCandidate(matching[index], query, isCurrent));
+      }
+      const batch = await Promise.all(pending);
+      for (const candidate of batch) {
+        if (candidate !== undefined) {
+          probed.push(candidate);
+        }
+      }
+    }
+    return probed.length === 0
+      ? { kind: 'noSources' }
+      : { kind: 'sources', candidates: this.sortCandidates(probed) };
+  }
+
+  /**
    * Discovery: enabled source registry → `change.bookSource` candidates for
    * the given book. Never invokes `change.bookSource` with an empty
    * `sourceIds` (Core rejects it); that resolves to `{kind:'noSources'}`.
@@ -152,8 +283,9 @@ export class SourceSwitchGateway {
     if (!Array.isArray(rawSources)) {
       throw new Error('source.list returned invalid data');
     }
-    const sourceIds: string[] = [];
-    for (const raw of rawSources) {
+    const sources: SourceSwitchRegistryEntry[] = [];
+    for (let sourceOrder = 0; sourceOrder < rawSources.length; sourceOrder += 1) {
+      const raw = rawSources[sourceOrder];
       if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
         continue;
       }
@@ -163,21 +295,26 @@ export class SourceSwitchGateway {
       }
       const sourceId = this.optionalString(source, 'sourceId');
       if (sourceId !== undefined && sourceId.length > 0) {
-        sourceIds.push(sourceId);
+        const sourceName = this.optionalString(source, 'name');
+        sources.push({
+          sourceId,
+          sourceName: sourceName === undefined || sourceName.trim().length === 0 ? sourceId : sourceName,
+          sourceOrder,
+        });
       }
     }
-    if (sourceIds.length === 0) {
+    if (sources.length === 0) {
       return { kind: 'noSources' };
     }
     const candidates: SourceSwitchCandidate[] = [];
-    for (let start = 0; start < sourceIds.length; start += SOURCE_SWITCH_DISCOVERY_CONCURRENCY) {
+    for (let start = 0; start < sources.length; start += SOURCE_SWITCH_DISCOVERY_CONCURRENCY) {
       if (isCurrent !== undefined && !isCurrent()) {
         return { kind: 'noSources' };
       }
-      const end = Math.min(start + SOURCE_SWITCH_DISCOVERY_CONCURRENCY, sourceIds.length);
+      const end = Math.min(start + SOURCE_SWITCH_DISCOVERY_CONCURRENCY, sources.length);
       const pending: Promise<SourceSwitchCandidate[]>[] = [];
       for (let index = start; index < end; index += 1) {
-        pending.push(this.discoverFromSource(sourceId, bookId, keyword, sourceIds[index], isCurrent));
+        pending.push(this.discoverFromSource(sourceId, bookId, keyword, sources[index], isCurrent));
       }
       const groups = await Promise.all(pending);
       for (const group of groups) {
@@ -196,16 +333,17 @@ export class SourceSwitchGateway {
     sourceId: string,
     bookId: string,
     keyword: string,
-    candidateSourceId: string,
+    source: SourceSwitchRegistryEntry,
     isCurrent: (() => boolean) | undefined,
   ): Promise<SourceSwitchCandidate[]> {
     try {
+      const candidateSourceId = source.sourceId;
       const result = await this.runtimeOwner.request(
         'change.bookSource',
         { sourceId, bookId, keyword, sourceIds: [candidateSourceId] },
         this.requestOptions(isCurrent),
       );
-      return this.decodeDiscoveryCandidates(result.data);
+      return this.decodeDiscoveryCandidates(result.data, source);
     } catch (error) {
       if (isCurrent !== undefined && !isCurrent()) {
         throw error;
@@ -216,7 +354,10 @@ export class SourceSwitchGateway {
     }
   }
 
-  private decodeDiscoveryCandidates(data: JsonObject): SourceSwitchCandidate[] {
+  private decodeDiscoveryCandidates(
+    data: JsonObject,
+    source: SourceSwitchRegistryEntry,
+  ): SourceSwitchCandidate[] {
     const rawCandidates = data['candidates'];
     if (!Array.isArray(rawCandidates)) {
       throw new Error('change.bookSource returned invalid data');
@@ -233,7 +374,13 @@ export class SourceSwitchGateway {
       if (sourceId === undefined || bookUrl === undefined || bookName === undefined) {
         continue;
       }
-      const entry: SourceSwitchCandidate = { sourceId, bookUrl, bookName };
+      const entry: SourceSwitchCandidate = {
+        sourceId,
+        sourceName: source.sourceName,
+        sourceOrder: source.sourceOrder,
+        bookUrl,
+        bookName,
+      };
       const author = this.optionalString(candidate, 'author');
       const coverUrl = this.optionalString(candidate, 'coverUrl');
       if (author !== undefined) {
@@ -289,6 +436,10 @@ export class SourceSwitchGateway {
     // An absent/blank TOC URL is not recoverable by `book.toc`; fail before a
     // knowingly invalid Core request instead of silently substituting bookId.
     const tocUrl = this.requireString(detail.data, 'tocUrl', 'book.detail');
+    const bookName = this.requireString(detailBook, 'title', 'book.detail book');
+    const author = this.optionalString(detailBook, 'author') ?? '';
+    const coverUrl = this.optionalString(detailBook, 'coverUrl');
+    const latestChapterTitle = this.optionalString(detailBook, 'lastChapter');
     // `book.toc` variables are optional in the Core contract (serde default
     // empty map); `book.detail` only emits them when the source's rules produce
     // any. Requiring an object here would fail-closed against real sources
@@ -322,9 +473,153 @@ export class SourceSwitchGateway {
       const index = this.requireNonNegativeInteger(entry, 'index', 'book.toc');
       const title = this.requireString(entry, 'title', 'book.toc');
       const url = this.requireString(entry, 'url', 'book.toc');
-      entries.push({ index, title, url });
+      const rawEntryVariables = entry['variables'];
+      const entryVariables = rawEntryVariables === undefined || rawEntryVariables === null
+        ? {}
+        : this.requireStringMap(rawEntryVariables, 'variables', 'book.toc');
+      entries.push({ index, title, url, variables: entryVariables });
     }
-    return { sourceId, bookId, entries };
+    const target: SourceSwitchTargetToc = {
+      sourceId,
+      bookId,
+      bookName,
+      author,
+      tocUrl,
+      variables,
+      entries,
+    };
+    if (coverUrl !== undefined) {
+      target.coverUrl = coverUrl;
+    }
+    if (latestChapterTitle !== undefined) {
+      target.latestChapterTitle = latestChapterTitle;
+    }
+    return target;
+  }
+
+  private async probeAndPersistCandidate(
+    candidate: SourceSwitchCandidate,
+    query: SourceSwitchProbeQuery,
+    isCurrent: (() => boolean) | undefined,
+  ): Promise<SourceSwitchCandidate | undefined> {
+    try {
+      const toc = await this.fetchTargetToc(candidate.sourceId, candidate.bookUrl, isCurrent);
+      if (toc.entries.length === 0) {
+        return undefined;
+      }
+      const chapter = this.matchProbeChapter(toc.entries, query);
+      const startedAt = Date.now();
+      let wordCount = -1;
+      let failureMessage: string | undefined = undefined;
+      try {
+        const content = await this.runtimeOwner.request(
+          'chapter.content',
+          {
+            sourceId: candidate.sourceId,
+            bookId: candidate.bookUrl,
+            chapterTitle: chapter.title,
+            chapterIndex: chapter.index,
+            chapterUrl: chapter.url,
+            variables: this.mergeVariables(toc.variables, chapter.variables),
+          },
+          this.requestOptions(isCurrent),
+        );
+        if (content.data['sourceId'] !== candidate.sourceId || content.data['bookId'] !== candidate.bookUrl ||
+          typeof content.data['content'] !== 'string') {
+          throw new Error('chapter.content returned invalid probe data');
+        }
+        wordCount = (content.data['content'] as string).length;
+      } catch (error) {
+        if (isCurrent !== undefined && !isCurrent()) {
+          throw error;
+        }
+        failureMessage = error instanceof Error ? error.message : String(error);
+      }
+      const latencyMs = Math.max(0, Date.now() - startedAt);
+      const displayTitle = chapter.title.length > 20 ? `${chapter.title.substring(0, 20)}…` : chapter.title;
+      const chapterWordCountText = failureMessage === undefined
+        ? `[${chapter.index + 1}] ${displayTitle}\n字数：${wordCount}`
+        : `[${chapter.index + 1}] ${displayTitle}\n获取字数失败：${failureMessage}`;
+      const probed: SourceSwitchCandidate = {
+        ...candidate,
+        bookName: toc.bookName,
+        author: toc.author,
+        currentChapterTitle: chapter.title,
+        currentChapterIndex: chapter.index,
+        chapterWordCount: wordCount,
+        latestChapterTitle: toc.latestChapterTitle ?? toc.entries[toc.entries.length - 1].title,
+        latencyMs,
+        checkedAt: Date.now(),
+      };
+      if (toc.coverUrl !== undefined) {
+        probed.coverUrl = toc.coverUrl;
+      }
+      await this.persistCandidate(probed, toc.tocUrl, chapterWordCountText, isCurrent);
+      return probed;
+    } catch (error) {
+      if (isCurrent !== undefined && !isCurrent()) {
+        throw error;
+      }
+      // Legado's parallel refresh treats one broken detail/TOC chain as a
+      // source-local failure and keeps the remaining candidates progressing.
+      return undefined;
+    }
+  }
+
+  private async persistCandidate(
+    candidate: SourceSwitchCandidate,
+    tocUrl: string,
+    chapterWordCountText: string,
+    isCurrent: (() => boolean) | undefined,
+  ): Promise<void> {
+    const params: JsonObject = {
+      bookUrl: candidate.bookUrl,
+      origin: candidate.sourceId,
+      originName: candidate.sourceName ?? candidate.sourceId,
+      type: 0,
+      name: candidate.bookName,
+      author: candidate.author ?? '',
+      tocUrl,
+      time: candidate.checkedAt ?? Date.now(),
+      originOrder: candidate.sourceOrder ?? 0,
+      chapterWordCountText,
+      chapterWordCount: candidate.chapterWordCount ?? -1,
+      respondTime: candidate.latencyMs ?? -1,
+    };
+    if (candidate.coverUrl !== undefined) {
+      params['coverUrl'] = candidate.coverUrl;
+    }
+    if (candidate.latestChapterTitle !== undefined) {
+      params['latestChapterTitle'] = candidate.latestChapterTitle;
+    }
+    await this.runtimeOwner.request(
+      'search-book.put',
+      params,
+      this.requestOptions(isCurrent),
+    );
+  }
+
+  private matchProbeChapter(
+    entries: SourceSwitchTargetTocEntry[],
+    query: SourceSwitchProbeQuery,
+  ): SourceSwitchTargetTocEntry {
+    for (const entry of entries) {
+      if (entry.title === query.currentChapterTitle) {
+        return entry;
+      }
+    }
+    const normalizedTitle = this.normalizeChapterTitle(query.currentChapterTitle);
+    for (const entry of entries) {
+      if (this.normalizeChapterTitle(entry.title) === normalizedTitle) {
+        return entry;
+      }
+    }
+    for (const entry of entries) {
+      if (entry.index === query.currentChapterIndex) {
+        return entry;
+      }
+    }
+    return entries[0];
   }
 
   /**
@@ -568,6 +863,205 @@ export class SourceSwitchGateway {
       decoded[variableName] = variableValue;
     }
     return decoded;
+  }
+
+  private async loadEnabledSources(
+    isCurrent: (() => boolean) | undefined,
+  ): Promise<Map<string, SourceSwitchRegistryEntry>> {
+    const result = await this.runtimeOwner.request(
+      'source.list',
+      { enabledOnly: true },
+      this.requestOptions(isCurrent),
+    );
+    const rawSources = result.data['sources'];
+    if (!Array.isArray(rawSources)) {
+      throw new Error('source.list returned invalid data');
+    }
+    const sources = new Map<string, SourceSwitchRegistryEntry>();
+    for (let sourceOrder = 0; sourceOrder < rawSources.length; sourceOrder += 1) {
+      const raw = rawSources[sourceOrder];
+      if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+        continue;
+      }
+      const source = raw as JsonObject;
+      const sourceId = this.optionalString(source, 'sourceId');
+      if (source['enabled'] === true && sourceId !== undefined && sourceId.trim().length > 0) {
+        const sourceName = this.optionalString(source, 'name');
+        sources.set(sourceId, {
+          sourceId,
+          sourceName: sourceName === undefined || sourceName.trim().length === 0 ? sourceId : sourceName,
+          sourceOrder,
+        });
+      }
+    }
+    return sources;
+  }
+
+  private async deleteCachedCandidates(
+    query: SourceSwitchProbeQuery,
+    isCurrent: (() => boolean) | undefined,
+  ): Promise<void> {
+    const result = await this.runtimeOwner.request(
+      'search-book.list',
+      {},
+      this.requestOptions(isCurrent),
+    );
+    const rawBooks = result.data['books'];
+    if (!Array.isArray(rawBooks)) {
+      throw new Error('search-book.list returned invalid data');
+    }
+    const bookUrls: string[] = [];
+    for (const raw of rawBooks) {
+      if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+        throw new Error('search-book.list returned a non-object row');
+      }
+      const book = raw as JsonObject;
+      if (this.matchesCachedBook(book, query)) {
+        bookUrls.push(this.requireString(book, 'bookUrl', 'search-book.list'));
+      }
+    }
+    await Promise.all(bookUrls.map((bookUrl: string): Promise<unknown> =>
+      this.runtimeOwner.request(
+        'search-book.delete',
+        { bookUrl },
+        this.requestOptions(isCurrent),
+      )));
+  }
+
+  private matchesCachedBook(book: JsonObject, query: SourceSwitchProbeQuery): boolean {
+    const cachedName = this.optionalString(book, 'name');
+    if (cachedName === undefined ||
+      this.normalizeBookName(cachedName) !== this.normalizeBookName(query.bookName)) {
+      return false;
+    }
+    return this.matchesAuthor(this.optionalString(book, 'author'), query.author);
+  }
+
+  private matchesCandidateBook(
+    candidate: SourceSwitchCandidate,
+    query: SourceSwitchProbeQuery,
+  ): boolean {
+    return this.normalizeBookName(candidate.bookName) === this.normalizeBookName(query.bookName) &&
+      this.matchesAuthor(candidate.author, query.author);
+  }
+
+  private decodeCachedCandidate(
+    book: JsonObject,
+    query: SourceSwitchProbeQuery,
+    checkedAt: number,
+    source: SourceSwitchRegistryEntry,
+  ): SourceSwitchCandidate {
+    const sourceId = this.requireString(book, 'origin', 'search-book.list');
+    const bookUrl = this.requireString(book, 'bookUrl', 'search-book.list');
+    const bookName = this.requireString(book, 'name', 'search-book.list');
+    const candidate: SourceSwitchCandidate = {
+      sourceId,
+      sourceName: source.sourceName,
+      sourceOrder: source.sourceOrder,
+      bookUrl,
+      bookName,
+      checkedAt,
+      isCurrent: sourceSwitchCandidateKey(sourceId, bookUrl) ===
+        sourceSwitchCandidateKey(query.sourceId, query.bookId),
+    };
+    const author = this.optionalString(book, 'author');
+    const coverUrl = this.optionalString(book, 'coverUrl');
+    const latestChapterTitle = this.optionalString(book, 'latestChapterTitle');
+    const latencyMs = this.optionalNumber(book, 'respondTime');
+    const chapterWordCount = this.optionalNumber(book, 'chapterWordCount');
+    const cachedChapter = this.parseCachedChapter(this.optionalString(book, 'chapterWordCountText'));
+    if (author !== undefined && author.length > 0) {
+      candidate.author = author;
+    }
+    if (coverUrl !== undefined && coverUrl.length > 0) {
+      candidate.coverUrl = coverUrl;
+    }
+    if (latestChapterTitle !== undefined && latestChapterTitle.length > 0) {
+      candidate.latestChapterTitle = latestChapterTitle;
+    }
+    if (latencyMs !== undefined && latencyMs >= 0) {
+      candidate.latencyMs = latencyMs;
+    }
+    if (chapterWordCount !== undefined && chapterWordCount >= 0) {
+      candidate.chapterWordCount = chapterWordCount;
+    }
+    if (cachedChapter !== undefined) {
+      candidate.currentChapterTitle = cachedChapter.title;
+      if (cachedChapter.index !== undefined) {
+        candidate.currentChapterIndex = cachedChapter.index;
+      }
+    }
+    return candidate;
+  }
+
+  private parseCachedChapter(value: string | undefined): SourceSwitchCachedChapter | undefined {
+    if (value === undefined || value.trim().length === 0) {
+      return undefined;
+    }
+    const firstLine = value.split('\n')[0].trim();
+    const match = /^\[(\d+)]\s*(.*)$/.exec(firstLine);
+    if (match === null) {
+      return { title: firstLine };
+    }
+    const oneBasedIndex = Number(match[1]);
+    const title = match[2].trim();
+    if (!Number.isInteger(oneBasedIndex) || oneBasedIndex <= 0 || title.length === 0) {
+      return { title: firstLine };
+    }
+    return { title, index: oneBasedIndex - 1 };
+  }
+
+  private sortCandidates(candidates: SourceSwitchCandidate[]): SourceSwitchCandidate[] {
+    return candidates.slice().sort((left: SourceSwitchCandidate, right: SourceSwitchCandidate): number => {
+      const order = (left.sourceOrder ?? 0) - (right.sourceOrder ?? 0);
+      if (order !== 0) {
+        return order;
+      }
+      const leftKey = sourceSwitchCandidateKey(left.sourceId, left.bookUrl);
+      const rightKey = sourceSwitchCandidateKey(right.sourceId, right.bookUrl);
+      return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
+    });
+  }
+
+  private normalizeBookName(value: string): string {
+    return value.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+  }
+
+  private matchesAuthor(candidateAuthor: string | undefined, queryAuthor: string): boolean {
+    const expected = this.normalizeAuthor(queryAuthor);
+    if (expected.length === 0) {
+      return true;
+    }
+    return candidateAuthor !== undefined && this.normalizeAuthor(candidateAuthor).includes(expected);
+  }
+
+  private normalizeAuthor(value: string): string {
+    return value.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+  }
+
+  private normalizeChapterTitle(value: string): string {
+    return value.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+  }
+
+  private mergeVariables(base: JsonObject, override: JsonObject): JsonObject {
+    const merged: JsonObject = {};
+    for (const key of Object.keys(base)) {
+      merged[key] = base[key];
+    }
+    for (const key of Object.keys(override)) {
+      merged[key] = override[key];
+    }
+    return merged;
+  }
+
+  private validateProbeQuery(query: SourceSwitchProbeQuery): void {
+    this.assertNonBlankString(query.sourceId, 'sourceId');
+    this.assertNonBlankString(query.bookId, 'bookId');
+    this.assertNonBlankString(query.bookName, 'bookName');
+    this.assertNonBlankString(query.currentChapterTitle, 'currentChapterTitle');
+    if (!Number.isInteger(query.currentChapterIndex) || query.currentChapterIndex < 0) {
+      throw new Error('currentChapterIndex must be a non-negative integer');
+    }
   }
 
   private assertNonBlankString(value: string, field: string): void {

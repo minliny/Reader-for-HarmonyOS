@@ -20,7 +20,9 @@ type SourceSwitchRowKind = 'current' | 'available' | 'offline' | 'timeout';
 @Component
 export struct CandidateRow {
   @Prop sourceId: string = '';
+  @Prop sourceName: string = '';
   @Prop bookName: string = '';
+  @Prop currentChapterTitle: string = '';
   @Prop latencyMs: number | undefined = undefined;
   @Prop offline: boolean = false;
   @Prop timeout: boolean = false;
@@ -36,7 +38,7 @@ export struct CandidateRow {
         .backgroundColor(this.dotColor())
         .margin({ left: 10 });
 
-      Text(this.bookName)
+      Text(this.sourceName.length > 0 ? this.sourceName : this.bookName)
         .layoutWeight(1)
         .height(15)
         .fontFamily('ReaderInter')
@@ -165,9 +167,7 @@ export struct CandidateRow {
   }
 
   private chapterText(): string {
-    // `change.bookSource` candidates carry no per-source chapter; render "—"
-    // until a data contract exists (user decision 2026-08-05).
-    return '—';
+    return this.currentChapterTitle.trim().length > 0 ? this.currentChapterTitle : '—';
   }
 
   private chapterColor(): string {

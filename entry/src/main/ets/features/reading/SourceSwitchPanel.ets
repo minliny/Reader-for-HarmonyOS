@@ -34,9 +34,9 @@ export {
 export struct SourceSwitchPanel {
   @Prop state: SourceSwitchPanelState;
   @Prop currentSourceId: string = '';
-  @Prop isTablet: boolean = false;
   onClose: () => void = (): void => {};
   onRetry: () => void = (): void => {};
+  onRefresh: () => void = (): void => {};
   onSelectCandidate: (candidate: SourceSwitchCandidate) => void =
     (_candidate: SourceSwitchCandidate): void => {};
   onRollback: () => void = (): void => {};
@@ -45,9 +45,9 @@ export struct SourceSwitchPanel {
     SourceSwitchWindow({
       state: this.state,
       currentSourceId: this.currentSourceId,
-      isTablet: this.isTablet,
       onClose: this.onClose,
       onRetry: this.onRetry,
+      onRefresh: this.onRefresh,
       onSelectCandidate: this.onSelectCandidate,
       onRollback: this.onRollback,
     });
