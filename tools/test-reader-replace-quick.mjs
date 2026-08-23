@@ -69,7 +69,9 @@ assert.match(panel, /Phone `942:54` \/ `912:68`/);
 assert.match(panel, /Tablet `942:56` \/ `914:64`/);
 assert.match(panel, /if \(this\.state\.kind === 'ready'\)/,
   'non-ready states must render no invented visual');
-assert.match(panel, /\.width\(this\.panelWidth\(\)\)[\s\S]*\.height\(REPLACE_PANEL_HEIGHT\)/);
+assert.match(panel,
+  /\.width\('100%'\)\s*\.constraintSize\(\{ maxWidth: this\.panelWidth\(\) \}\)\s*\.height\(REPLACE_PANEL_HEIGHT\)/,
+  'the replacement panel must shrink inside a narrow control slot and retain its Figma cap');
 assert.match(panel, /REPLACE_PANEL_WIDTH_PHONE = 286/);
 assert.match(panel, /REPLACE_PANEL_WIDTH_TABLET = 262/);
 assert.match(panel, /\.height\(REPLACE_RULES_VIEWPORT_HEIGHT\)[\s\S]*\.clip\(true\)/,

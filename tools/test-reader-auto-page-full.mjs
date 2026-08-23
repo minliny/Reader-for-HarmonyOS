@@ -87,9 +87,18 @@ assert.match(panel, /Content master `1764:10223`/);
 assert.match(panel, /Motion sources `1938:6245` and `1979:21744`/);
 assert.match(panel, /if \(!this\.isTablet\) \{[\s\S]*this\.phonePanel\(\)/,
   'Tablet must not render a scaled Phone Full panel');
-assert.match(panel, /\.width\(READER_AUTO_PAGE_FULL_WIDTH\)[\s\S]*\.height\(READER_AUTO_PAGE_FULL_HEIGHT\)/);
-assert.match(panel, /\.width\(READER_AUTO_PAGE_FULL_BODY_WIDTH\)[\s\S]*\.height\(READER_AUTO_PAGE_FULL_BODY_HEIGHT\)/);
-assert.match(panel, /x: READER_AUTO_PAGE_FULL_BODY_X, y: READER_AUTO_PAGE_FULL_BODY_Y/);
+assert.match(panel, /@Prop availableWidth: number = 0/);
+assert.match(panel, /@Prop availableHeight: number = 0/);
+assert.match(panel, /\.width\(this\.panelWidth\(\)\)[\s\S]*\.height\(this\.panelHeight\(\)\)/);
+assert.match(panel, /Scroll\(\) \{[\s\S]*\.width\(this\.bodyWidth\(\)\)[\s\S]*\.height\(READER_AUTO_PAGE_FULL_BODY_HEIGHT\)/);
+assert.match(panel, /\.height\(this\.bodyViewportHeight\(\)\)[\s\S]*READER_AUTO_PAGE_FULL_BODY_Y/,
+  'the fixed header must own a bounded scroll viewport on short phones');
+assert.match(panel,
+  /private bodyViewportHeight\(\): number \{[\s\S]*this\.panelHeight\(\) - READER_AUTO_PAGE_FULL_BODY_Y - 13/);
+assert.match(panel, /READER_AUTO_PAGE_FULL_CONTENT_Y - READER_AUTO_PAGE_FULL_BODY_Y/,
+  'the full-height endpoint must preserve the original global actor coordinates');
+assert.match(panel, /private panelWidth\(\): number \{[\s\S]*Math\.min\(READER_AUTO_PAGE_FULL_WIDTH, this\.availableWidth\)/,
+  'the phone-only motion surface must clamp its outer actor to the physical viewport');
 assert.match(panel, /Text\('自动翻页控制'\)/);
 assert.match(panel, /Text\('定时'\)/);
 assert.match(panel, /Text\('自动停止'\)/);
@@ -125,8 +134,10 @@ assert.match(control, /READER_AUTO_PAGE_COLLAPSED_SURFACE_X/);
 assert.match(control, /READER_AUTO_PAGE_COLLAPSED_SURFACE_Y/);
 assert.match(control, /this\.autoPageStatus !== 'stopped'/,
   'only the Figma-defined stopped visual may expand');
-assert.match(control, /this\.isTablet \|\| this\.activePage !== 'quickAutoPage'/,
+assert.match(control, /this\.isExpanded\(\) \|\| this\.activePage !== 'quickAutoPage'/,
   'Tablet Full remains fail-closed');
+assert.match(control, /availableHeight: this\.autoPageSurfaceHeight\(\)/,
+  'the auto-page full actor must receive the same live height budget as its owner surface');
 assert.match(control, /motionSpecGet\('reader\.panel\.expand'\)|autoPageActorHoldMs\('reader\.panel\.expand'\)/);
 assert.match(control, /autoPageActorAnimateParam\('reader\.panel\.collapse'/);
 assert.match(control, /ReaderAutoPageFullPanel\(\{/);

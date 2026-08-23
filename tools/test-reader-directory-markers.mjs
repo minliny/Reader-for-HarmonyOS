@@ -19,6 +19,9 @@ assert.match(modulePanel, /List\(\{ space: 0, scroller: this\.listScroller \}\)/
 assert.match(modulePanel,
   /Repeat\(this\.projectedEntries\)[\s\S]*\.virtualScroll\(\{ totalCount: this\.projectedEntries\.length, reusable: false \}\)/,
   'module directory must keep lazy creation without the phone runtime row-reuse corruption');
+assert.match(modulePanel, /this\.chapterRow\(repeatItem\)/);
+assert.match(modulePanel, /private chapterRow\(repeatItem: RepeatItem<LocalReadingTocEntry>\)/,
+  'Repeat builders must forward the complete reactive RepeatItem into a Builder');
 assert.doesNotMatch(modulePanel, /Scroll\(this\.listScroller\)[\s\S]*ForEach\(/,
   'module directory must not eagerly materialize every chapter row');
 assert.match(modulePanel, /private downloadMarkerHitTarget\(entry: LocalReadingTocEntry\)/);
@@ -39,14 +42,33 @@ assert.match(modulePanel, /chapterStartBookmarkCreationEnabled: boolean = false/
 assert.match(modulePanel, /markerState\.kind === 'bookmarked'[\s\S]*this\.onDeleteBookmarks\(markerState\.bookmarkTimes\)/);
 assert.match(modulePanel, /markerState\.kind === 'empty' && this\.chapterStartBookmarkCreationEnabled[\s\S]*this\.onCreateChapterStartBookmark\(markerState\.createRequest\)/);
 assert.doesNotMatch(modulePanel, /添加书签尚未接线/);
-assert.match(modulePanel, /\.accessibilityText\(`打开章节：\$\{entry\.title\}`\)\s*\.onClick\(\(\): void => this\.onSelectChapter\(entry\.index\)\)/);
+assert.match(modulePanel, /\.accessibilityText\(`打开章节：\$\{repeatItem\.item\.title\}`\)\s*\.onClick\(\(\): void => this\.onSelectChapter\(repeatItem\.item\.index\)\)/);
 
 const fullPanel = read('entry/src/main/ets/features/reading/FullDirectoryPanel.ets');
+const typography = read('entry/src/main/ets/features/common/ReaderTypography.ets');
+const ascendingSortIcon = read('entry/src/main/resources/base/media/reader_directory_sort_ascending.svg');
+const descendingSortIcon = read('entry/src/main/resources/base/media/reader_directory_sort_descending.svg');
 assert.match(fullPanel, /this\.activeTab = 'bookmarks'/);
-assert.match(fullPanel, /this\.activeTab === 'bookmarks' && !this\.hasBookmark\(entry\)/);
+assert.match(fullPanel, /@State private projectedBookmarks: LocalReadingBookmark\[\] = \[\]/);
+assert.match(fullPanel, /@State private projectionMountPrimary: boolean = true/);
+assert.match(fullPanel, /projectReaderDirectoryBookmarks\(this\.entries, this\.searchQuery\)/,
+  'bookmark tab must use the behavior-tested projection');
+assert.match(fullPanel, /projectReaderDirectoryEntries\(this\.entries, this\.searchQuery, ascending\)/,
+  'sort and search must use the behavior-tested complete TOC projection');
 assert.match(fullPanel, /List\(\{ space: 0, scroller: this\.listScroller \}\)/);
-assert.match(fullPanel, /Repeat\(this\.projectedEntries\)[\s\S]*\.virtualScroll\(\{ reusable: true \}\)/,
-  'full directory must use the SDK-native virtual list');
+assert.match(fullPanel,
+  /Repeat\(this\.projectedEntries\)[\s\S]*\.virtualScroll\(\{ totalCount: this\.projectedEntries\.length, reusable: false \}\)/,
+  'full directory must keep lazy creation while disabling unsafe row-node reuse');
+assert.match(fullPanel,
+  /if \(this\.projectionMountPrimary\) \{\s*this\.chapterList\(\);\s*\} else \{\s*this\.chapterList\(\);\s*\}/,
+  'projection changes must remount the virtual List branch on the physical-device runtime');
+assert.match(fullPanel, /this\.projectionMountPrimary = !this\.projectionMountPrimary/);
+assert.match(fullPanel, /this\.chapterRow\(repeatItem\)/);
+assert.match(fullPanel, /private chapterRow\(repeatItem: RepeatItem<LocalReadingTocEntry>\)/,
+  'full directory must forward the complete reactive RepeatItem into its Builder');
+assert.match(fullPanel,
+  /Repeat\(this\.projectedBookmarks\)[\s\S]*\.virtualScroll\(\{ totalCount: this\.projectedBookmarks\.length, reusable: false \}\)/,
+  'bookmark rows must use the same safe virtual-list policy');
 assert.doesNotMatch(fullPanel, /Scroll\(this\.listScroller\)[\s\S]*ForEach\(/,
   'full directory must not eagerly materialize every filtered chapter row');
 assert.match(fullPanel, /private downloadMarkerHitTarget\(entry: LocalReadingTocEntry\)/);
@@ -63,10 +85,41 @@ assert.match(fullPanel, /toc-entry-\$\{entry\.index\}/,
   'full-directory rows must use stable chapter identity');
 assert.doesNotMatch(fullPanel, /toc-entry-\$\{entry\.index\}-\$\{entry\.downloadState\}/,
   'mutable download state must not become virtual-list identity');
-assert.match(fullPanel, /if \(this\.chapterDownloadEnabled && entry\.downloadState !== 'unknown'\)/,
+assert.match(fullPanel, /if \(this\.chapterDownloadEnabled && repeatItem\.item\.downloadState !== 'unknown'\)/,
   'the full local directory must not render download markers');
 assert.match(fullPanel, /\.onClick\(\(\): void => this\.onDownloadChapter\(entry\.index\)\)/);
-assert.match(fullPanel, /\.accessibilityText\(`打开章节：\$\{entry\.title\}`\)\s*\.onClick\(\(\): void => this\.onSelectChapter\(entry\.index\)\)/);
+assert.match(fullPanel, /\.accessibilityText\(`打开章节：\$\{repeatItem\.item\.title\}`\)\s*\.onClick\(\(\): void => this\.onSelectChapter\(repeatItem\.item\.index\)\)/);
+assert.match(fullPanel,
+  /if \(this\.ascending\) \{\s*Image\(\$r\('app\.media\.reader_directory_sort_ascending'\)\)[\s\S]*?\} else \{\s*Image\(\$r\('app\.media\.reader_directory_sort_descending'\)\)/,
+  'ascending and descending must render two explicit icon resources');
+assert.doesNotMatch(fullPanel, /reader_directory_sort[\s\S]*?\.rotate\(/,
+  'sort direction must not be synthesized by rotating one icon');
+assert.match(ascendingSortIcon, /M10 10L12 12L14 10/,
+  'ascending icon must keep the list bars and point its arrow down');
+assert.match(descendingSortIcon, /M10 6L12 4L14 6/,
+  'descending icon must keep the list bars and point its arrow up');
+assert.notEqual(ascendingSortIcon, descendingSortIcon,
+  'sort directions must remain separate source assets');
+assert.match(fullPanel,
+  /const nextAscending = !this\.ascending;[\s\S]*this\.ascending = nextAscending;[\s\S]*this\.rebuildProjection\(nextAscending\);/,
+  'sort must project from the explicit next value instead of reading stale ArkUI state back');
+assert.match(fullPanel, /private rebuildProjection\(ascending: boolean\): void/);
+assert.doesNotMatch(fullPanel, /rebuildProjection\(\)/,
+  'every projection rebuild must receive an explicit order value');
+assert.match(fullPanel, /ReaderSearchField\(\{[\s\S]*variant: 'readerDirectory'/,
+  'directory and bookmark tabs must enter the same typed search-field path');
+assert.match(typography,
+  /TYPE_SEARCH_DIRECTORY_INPUT = new ReaderTextStyle\([\s\S]*?10, undefined, undefined, 'system', 'figmaNode'\)/,
+  'directory search must retain its 10fp role while leaving line height on ArkUI AUTO');
+assert.doesNotMatch(fullPanel, /DIRECTORY_SEARCH_(FONT_SIZE|LINE_HEIGHT)/,
+  'directory typography must not regress to a page-local hard-coded pair');
+assert.match(fullPanel,
+  /private scheduleProjectionTopScroll\(\): void \{[\s\S]*const generation = this\.projectionScrollGeneration;[\s\S]*generation !== this\.projectionScrollGeneration[\s\S]*this\.listScroller\.scrollEdge\(Edge\.Top\);[\s\S]*\}, 0\);/,
+  'projection scrolling must wait for the remounted List and ignore stale rapid-tap work');
+assert.match(fullPanel,
+  /this\.ascending = nextAscending;[\s\S]*this\.rebuildProjection\(nextAscending\);[\s\S]*this\.scheduleProjectionTopScroll\(\);/,
+  'sort must schedule its top scroll after the projection change');
+assert.match(fullPanel, /reader_directory_marker_bookmark_active/);
 
 const fullDirectory = read('entry/src/main/ets/features/reading/ReaderFullDirectory.ets');
 assert.match(fullDirectory, /onDeleteBookmarks: \(bookmarkTimes: number\[\]\) => void/);
@@ -81,6 +134,11 @@ assert.match(fullDirectory, /onClearBookOffline: \(\) => void/);
 assert.match(fullDirectory, /Text\('下载整书'\)/);
 assert.match(fullDirectory, /Text\('清除本书离线'\)/);
 assert.match(fullDirectory, /this\.offlineMenuVisible = !this\.offlineMenuVisible/);
+assert.match(fullDirectory, /@State private containerWidth: number = 0/);
+assert.match(fullDirectory, /panelWidthOverride: this\.panelWidth\(\)/);
+assert.match(fullDirectory,
+  /new SurfaceWidthSpec\(720, 27, 13, 'right'\)[\s\S]*new SurfaceWidthSpec\(364, 12, 12, 'center'\)[\s\S]*resolveHorizontalFrame\(/,
+  'full directory must treat 364/720 as shared-geometry maxima rather than layout gates');
 
 const gateway = read('entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
 assert.match(gateway, /async createChapterStartBookmark\(/);

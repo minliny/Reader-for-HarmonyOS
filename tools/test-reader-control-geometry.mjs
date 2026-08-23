@@ -7,7 +7,6 @@ import {
   READER_CONTROL_BRIGHTNESS_MIN,
   READER_CONTROL_BRIGHTNESS_RAIL_HEIGHT,
   READER_CONTROL_CONTENT_SLOT_HEIGHT,
-  READER_CONTROL_FULL_PANEL_TOP_GAP,
   READER_CONTROL_FULL_TTS_BOTTOM_GAP,
   READER_CONTROL_HOME_CHAPTER_PROGRESS_HEIGHT,
   READER_CONTROL_HOME_QUICK_ACTION_HEIGHT,
@@ -17,8 +16,14 @@ import {
   READER_CONTROL_PROGRESS_MIN,
   READER_CONTROL_PROGRESS_STEP,
   READER_CONTROL_REGULAR_DOCK_HEIGHT,
-  READER_CONTROL_TOP_BAR_TOP_GAP,
 } from '../entry/src/main/ets/features/reading/ReaderControlGeometry.ts';
+import {
+  READER_FULL_PANEL_TOP,
+  resolveReaderControlLayout,
+} from '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
+import {
+  createDefaultReaderWindowMetrics,
+} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import {
   readerDirectoryContentHeight,
   readerDirectoryIsScrollable,
@@ -38,8 +43,11 @@ import {
   READER_TTS_TIMER_MIN,
 } from '../entry/src/main/ets/features/reading/ReaderTtsState.ts';
 
-assert.equal(READER_CONTROL_TOP_BAR_TOP_GAP, 19);
-assert.equal(READER_CONTROL_FULL_PANEL_TOP_GAP, 88);
+const phoneLayout = resolveReaderControlLayout(390, 844, false, createDefaultReaderWindowMetrics());
+const tabletLayout = resolveReaderControlLayout(760, 960, true, createDefaultReaderWindowMetrics());
+assert.equal(phoneLayout.topBarTop, 19);
+assert.equal(READER_FULL_PANEL_TOP, 88);
+assert.equal(phoneLayout.fullPanelTop, READER_FULL_PANEL_TOP);
 assert.equal(READER_CONTROL_REGULAR_DOCK_HEIGHT, 330);
 assert.equal(READER_CONTROL_CONTENT_SLOT_HEIGHT, 196);
 assert.equal(READER_CONTROL_HOME_TOP_ROW_HEIGHT, 190);
@@ -54,11 +62,6 @@ assert.equal(READER_CONTROL_FULL_TTS_BOTTOM_GAP, 19,
 const phone = new ReaderControlGeometry(false);
 const tablet = new ReaderControlGeometry(true);
 assert.deepEqual({ ...phone }, {
-  dockBottomGap: 19,
-  dockRightGap: 0,
-  fullPanelRightGap: 0,
-  dockMaxW: 364,
-  topBarMaxW: 360,
   sheetH: 330,
   sheetRadiusBottom: 24,
   moduleNavH: 80,
@@ -66,11 +69,6 @@ assert.deepEqual({ ...phone }, {
   moduleNavRadiusTop: 12,
 });
 assert.deepEqual({ ...tablet }, {
-  dockBottomGap: 33,
-  dockRightGap: 25,
-  fullPanelRightGap: 14,
-  dockMaxW: 340,
-  topBarMaxW: 702,
   sheetH: 252,
   sheetRadiusBottom: 0,
   moduleNavH: 79,
@@ -127,9 +125,13 @@ assert.match(directory, /\.height\(READER_DIRECTORY_VIEWPORT_HEIGHT\)[\s\S]*\.hi
 assert.doesNotMatch(directory, /currentIndex \* 29 - 67 \+ 14\.5/);
 
 const controlPanel = await readFile(new URL('ReaderControlPanel.ets', readingDir), 'utf8');
-assert.match(controlPanel, /private moduleNav\(\)[\s\S]*maxWidth: this\.geo\.dockMaxW[\s\S]*left: READER_CONTROL_CONTENT_PADDING_LEFT \+ TOK_BORDER_W[\s\S]*right: READER_CONTROL_CONTENT_PADDING_RIGHT \+ TOK_BORDER_W[\s\S]*private moduleNavBar\(\)/);
-assert.match(controlPanel, /this\.usesTopAnchoredFullPanel\(\) \? READER_CONTROL_FULL_PANEL_TOP_GAP : 0/);
-assert.match(controlPanel, /this\.geo\.fullPanelRightGap : this\.geo\.dockRightGap/);
+assert.match(controlPanel, /private moduleNav\(\)[\s\S]*maxWidth: this\.dockWidth\(\)[\s\S]*left: READER_CONTROL_CONTENT_PADDING_LEFT \+ TOK_BORDER_W[\s\S]*right: READER_CONTROL_CONTENT_PADDING_RIGHT \+ TOK_BORDER_W[\s\S]*private moduleNavBar\(\)/);
+assert.match(controlPanel, /@Prop @Watch\('onLayoutChanged'\) layout: ReaderControlLayoutSnapshot/,
+  'all reader-control states must consume one owner-resolved layout snapshot');
+assert.match(controlPanel, /private dockWidth\(\): number \{\s*return this\.layout\.dockWidth;/,
+  'all regular reader-control states must use the one clamped dock width');
+assert.match(controlPanel, /this\.usesTopAnchoredFullPanel\(\) \? this\.layout\.fullPanelTop : 0/);
+assert.match(controlPanel, /this\.layout\.fullPanelRightGap : this\.layout\.dockRightGap/);
 assert.doesNotMatch(controlPanel, /READER_CONTROL_MODULE_NAV_MAX_WIDTH/);
 
 const search = await readFile(new URL('ReaderQuickSearchPanel.ets', readingDir), 'utf8');
@@ -150,6 +152,8 @@ assert.match(ttsModule, /max: READER_TTS_RATE_MAX/);
 const ttsFull = await readFile(new URL('ReaderTtsFullPanel.ets', readingDir), 'utf8');
 assert.match(ttsFull, /return \(this\.panelWidth\(\) - TTS_FULL_GRABBER_WIDTH\) \/ 2/);
 assert.match(ttsFull, /return this\.panelHeight\(\) - TTS_FULL_SCROLL_TOP - bottomInset/);
+assert.match(ttsFull, /Math\.min\(designHeight, this\.availableHeight\)/,
+  'full TTS must clamp its Figma height to the live panel budget');
 assert.match(ttsFull, /READER_TTS_TIMER_MAX_MINUTES/);
 assert.match(ttsFull, /READER_TTS_TIMER_MAX_SECONDS/);
 

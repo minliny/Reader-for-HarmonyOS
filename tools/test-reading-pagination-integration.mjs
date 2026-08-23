@@ -66,10 +66,16 @@ assert.match(source, /showChapterTitle:\s*this\.showChapterTitle/,
   'the reading session must pass its physical-page title decision to the presentation surface');
 assert.match(source, /this\.showChapterTitle = this\.isChapterFirstPageStart\(visiblePage\.startScalar\)/,
   'only the physical page beginning at the chapter head may expose the chapter heading');
-assert.match(source, /const titleTrackHeight = this\.isChapterFirstPageStart\(pageStartScalar\) \?[\s\S]*FIGMA_TITLE_LINE_HEIGHT \+ FIGMA_TITLE_TO_BODY_SPACE : 0/,
-  'only the first physical page may reserve chapter-title height in pagination');
-assert.doesNotMatch(source, /private bodyCapacity\(\): number \{[\s\S]*FIGMA_TITLE_LINE_HEIGHT/,
-  'continuation pages must not retain the former unconditional title-height deduction');
+assert.match(source,
+  /return this\.readingLayout\(\)\.bodyHeight\(this\.isChapterFirstPageStart\(pageStartScalar\)\)/,
+  'the shared layout snapshot must reserve its scaled title track only on the chapter-first page');
+assert.match(source, /ReadingSurface\(\{[\s\S]*layout: this\.readingLayout\(\)/,
+  'visible rendering must consume the same owner-resolved layout as pagination');
+assert.match(source,
+  /titleLineHeight: layout\.titleLineHeightFp,[\s\S]*titleToBodySpacing: layout\.titleToBodySpacingVp/,
+  'the pagination key must be derived from the same title metrics rendered by ReadingSurface');
+assert.doesNotMatch(source, /FIGMA_(PHONE|TABLET|TITLE)_(WIDTH|HEIGHT|TOP|BOTTOM|HORIZONTAL|LINE)/,
+  'the reading owner must not retain a second copy of Figma viewport or title geometry');
 
 const observation = source.match(
   /private observeMeasuredPhysicalPage\(page: PhysicalReadingPage\): void \{([\s\S]*?)\n  \}\n\n  private resetPaginationDraft/,
@@ -87,7 +93,7 @@ assert.match(observation[1], /activeDraft\.startsAtRequest\(chapterStartRequest\
   'only a continuous run that began at chapter head may become a full manifest');
 
 const previousTurn = source.match(
-  /private turnPreviousPage\(\): void \{([\s\S]*?)\n  \}\n\n  private canTurnPage/,
+  /private turnPreviousPage\(\): ReaderPageTurnOutcome \{([\s\S]*?)\n  \}\n\n  private turnToPreviousChapter/,
 );
 assert.ok(previousTurn, 'the previous-page production handler must exist');
 assert.match(previousTurn[1], /paginationIndex\.findContainingPage/);

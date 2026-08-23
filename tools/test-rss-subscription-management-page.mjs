@@ -36,7 +36,10 @@ assert.match(page, /onDelete: \(subscriptionId: string\) => void/);
 assert.match(page, /this\.onToggle\(item\.subscriptionId, !item\.enabled\)/);
 
 // Phone and Tablet share one compact responsive assembly.
-assert.match(page, /return this\.isTablet \? TOK_CONTENT_MAX_W_TABLET : TOK_CONTENT_MAX_W_PHONE/);
+assert.match(page,
+  /new SurfaceWidthSpec\(TOK_CONTENT_MAX_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET\)/);
+assert.match(page,
+  /padding\(\{ left: this\.contentFrame\(\)\.left, right: this\.contentFrame\(\)\.right \}\)/);
 assert.match(page, /\.height\(56\)/);
 assert.match(page, /private actionBar\(subscriptionId: string\)[\s\S]*\.height\(44\)/);
 assert.match(page, /this\.actionTarget\('查看文章'/);

@@ -166,6 +166,153 @@ assert.deepEqual(
   'current status must use exact composite identity so same-source alternate URLs stay selectable',
 );
 
+const cacheCalls = [];
+const cachedAt = Date.now();
+const cacheRuntime = {
+  async request(method, params) {
+    cacheCalls.push([method, params]);
+    if (method === 'source.list') {
+      return { data: { sources: [
+        { sourceId: 'cache-source', name: '缓存书源', enabled: true },
+        { sourceId: 'disabled-source', name: '停用书源', enabled: false },
+      ] } };
+    }
+    if (method === 'search-book.list') {
+      return { data: { books: [
+        {
+          bookUrl: 'current-book', origin: 'cache-source', originName: '缓存书源',
+          name: 'Current Book', author: 'Writer', time: cachedAt, originOrder: 2,
+          latestChapterTitle: 'Chapter 20', chapterWordCountText: '[5] Chapter 5\n字数：1234',
+          chapterWordCount: 1234, respondTime: 88,
+        },
+        {
+          bookUrl: 'expired-book', origin: 'cache-source', originName: '缓存书源',
+          name: 'Current Book', author: 'Writer', time: cachedAt - 25 * 60 * 60 * 1000,
+          chapterWordCount: -1, respondTime: -1,
+        },
+        {
+          bookUrl: 'disabled-book', origin: 'disabled-source', originName: '停用书源',
+          name: 'Current Book', author: 'Writer', time: cachedAt,
+          chapterWordCount: -1, respondTime: -1,
+        },
+        {
+          bookUrl: 'same-name-other-author', origin: 'cache-source', originName: '缓存书源',
+          name: 'Current Book', author: 'Other Person', time: cachedAt,
+          chapterWordCount: 456, respondTime: 77,
+        },
+        { bookUrl: 'other-book', origin: 'cache-source', name: 'Other Book', time: cachedAt },
+      ] } };
+    }
+    if (method === 'search-book.delete') {
+      assert.equal(params.bookUrl, 'expired-book');
+      return { data: { bookUrl: params.bookUrl, deleted: true } };
+    }
+    throw new Error(`cache-first path unexpectedly called ${method}`);
+  },
+};
+const cacheGateway = new SourceSwitchGateway(cacheRuntime);
+const cachedCandidates = await cacheGateway.loadCachedCandidates({
+  sourceId: 'cache-source',
+  bookId: 'current-book',
+  bookName: 'Current Book',
+  author: 'Writer',
+  currentChapterIndex: 4,
+  currentChapterTitle: 'Chapter 5',
+});
+assert.equal(cachedCandidates.length, 1);
+assert.equal(cachedCandidates[0].sourceName, '缓存书源');
+assert.equal(cachedCandidates[0].latencyMs, 88);
+assert.equal(cachedCandidates[0].currentChapterIndex, 4);
+assert.equal(cachedCandidates[0].currentChapterTitle, 'Chapter 5');
+assert.equal(cachedCandidates[0].isCurrent, true);
+assert.equal(cacheCalls.some(([method]) => method === 'change.bookSource'), false,
+  'a valid local projection must not start source HTTP discovery');
+
+let persistedProbe;
+const refreshRuntime = {
+  async request(method, params) {
+    if (method === 'search-book.list') {
+      return { data: { books: [
+        {
+          bookUrl: 'old-book', origin: 'old-source', name: 'Current Book', author: 'Writer',
+          time: cachedAt,
+        },
+        {
+          bookUrl: 'same-name-other-author', origin: 'other-author-source', name: 'Current Book',
+          author: 'Other Person', time: cachedAt,
+        },
+      ] } };
+    }
+    if (method === 'search-book.delete') {
+      assert.equal(params.bookUrl, 'old-book');
+      return { data: { bookUrl: params.bookUrl, deleted: true } };
+    }
+    if (method === 'source.list') {
+      return { data: { sources: [{ sourceId: 'fresh-source', name: '新书源', enabled: true }] } };
+    }
+    if (method === 'change.bookSource') {
+      return { data: { candidates: [{
+        sourceId: 'fresh-source', bookUrl: 'fresh-book', bookName: 'Current Book', author: 'Writer',
+      }] } };
+    }
+    if (method === 'book.detail') {
+      return { data: {
+        sourceId: 'fresh-source',
+        book: {
+          bookId: 'fresh-book', title: 'Current Book', author: 'Writer',
+          coverUrl: 'https://img.test/current.jpg', lastChapter: 'Chapter 9',
+        },
+        tocUrl: '/fresh/toc',
+        variables: { token: 'detail-token' },
+      } };
+    }
+    if (method === 'book.toc') {
+      assert.deepEqual(params.variables, { token: 'detail-token' });
+      return { data: {
+        sourceId: 'fresh-source', bookId: 'fresh-book',
+        toc: [
+          { index: 0, title: 'Chapter 1', url: '/fresh/1' },
+          { index: 1, title: 'Chapter 2', url: '/fresh/2', variables: { chapter: 'two' } },
+        ],
+      } };
+    }
+    if (method === 'chapter.content') {
+      assert.equal(params.chapterIndex, 1);
+      assert.equal(params.chapterTitle, 'Chapter 2');
+      assert.deepEqual(params.variables, { token: 'detail-token', chapter: 'two' });
+      return { data: {
+        sourceId: 'fresh-source', bookId: 'fresh-book', chapterTitle: 'Chapter 2',
+        content: '123456789', via: 'rule',
+      } };
+    }
+    if (method === 'search-book.put') {
+      persistedProbe = params;
+      return { data: { book: params } };
+    }
+    throw new Error(`unexpected refresh method: ${method}`);
+  },
+};
+const refreshGateway = new SourceSwitchGateway(refreshRuntime);
+const refreshed = await refreshGateway.refreshCandidates({
+  sourceId: 'old-source',
+  bookId: 'old-book',
+  bookName: 'Current Book',
+  author: 'Writer',
+  currentChapterIndex: 1,
+  currentChapterTitle: 'Chapter 2',
+});
+assert.equal(refreshed.kind, 'sources');
+assert.equal(refreshed.candidates.length, 1);
+assert.equal(refreshed.candidates[0].sourceName, '新书源');
+assert.equal(refreshed.candidates[0].currentChapterTitle, 'Chapter 2');
+assert.equal(refreshed.candidates[0].chapterWordCount, 9);
+assert.equal(persistedProbe.origin, 'fresh-source');
+assert.equal(persistedProbe.originName, '新书源');
+assert.equal(persistedProbe.latestChapterTitle, 'Chapter 9');
+assert.equal(persistedProbe.chapterWordCount, 9);
+assert.match(persistedProbe.chapterWordCountText, /^\[2] Chapter 2\n字数：9$/);
+assert.ok(persistedProbe.respondTime >= 0);
+
 const runtime = {
   async request(method, params) {
     if (method === 'source.switch.commit') {

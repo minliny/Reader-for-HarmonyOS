@@ -7,6 +7,7 @@ const index = read('entry/src/main/ets/pages/Index.ets');
 const shell = read('entry/src/main/ets/features/shell/ReaderShell.ets');
 const experience = read('entry/src/main/ets/features/reading/LocalReadingExperience.ets');
 const surface = read('entry/src/main/ets/features/reading/ReadingSurface.ets');
+const geometry = read('entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
 const sessionGateway = read('entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
 const pagination = read('entry/src/main/ets/features/reading/ReadingPaginationIndex.ts');
 const offline = read('entry/src/main/ets/features/reading/ReadingOfflineGateway.ts');
@@ -46,18 +47,23 @@ assert.doesNotMatch(sourceSwitch, /isTablet|TabletExpanded|deviceForm/,
 assert.doesNotMatch(pagination, /FIGMA_PHONE|FIGMA_TABLET|TabletExpanded/,
   'the pagination index must consume an opaque layout signature rather than own viewport constants');
 
-assert.match(experience, /deviceForm:\s*this\.isTablet \? 'tablet' : 'phone'/,
-  'the exact device form must participate in the pagination signature');
-assert.match(experience, /viewportWidth:\s*this\.effectiveViewportWidth\(\)/);
-assert.match(experience, /viewportHeight:\s*this\.effectiveViewportHeight\(\)/);
+assert.match(geometry, /viewportWidth >= READER_EXPANDED_MIN_WIDTH \? 'expanded' : 'compact'/,
+  'the live window width, not physical device type, must select the layout class');
+assert.match(experience, /deviceForm:\s*layout\.widthClass === 'expanded' \? 'tablet' : 'phone'/,
+  'the resolved width class must participate in the pagination signature');
+assert.match(experience, /viewportWidth:\s*layout\.viewportWidth/);
+assert.match(experience, /viewportHeight:\s*layout\.viewportHeight/);
 assert.match(experience, /onAreaChange\([\s\S]*?previousLayoutSignature[\s\S]*?invalidateLayout\([\s\S]*?beginMeasurement\(lifecycleToken\)/,
   'rotation or window resize must invalidate old physical pages and reflow through the same measurement path');
 assert.match(experience, /this\.showChapterTitle = this\.isChapterFirstPageStart\(visiblePage\.startScalar\)/,
   'chapter-title visibility must be derived from the measured page start on both device forms');
-assert.match(experience, /const titleTrackHeight = this\.isChapterFirstPageStart\(pageStartScalar\) \?/, 
-  'only the chapter-first page may reserve title height on either device form');
+assert.match(experience,
+  /readingLayout\(\)\.bodyHeight\(this\.isChapterFirstPageStart\(pageStartScalar\)\)/,
+  'only the chapter-first page may reserve the shared title track on either width class');
 assert.match(surface, /if \(this\.showChapterTitle\) \{[\s\S]*?Text\(this\.chapterTitle\)/,
   'the presentation layer must not independently repeat the chapter heading');
+assert.match(surface, /@Prop layout: ReaderReadingLayoutSnapshot/,
+  'the presentation layer must receive owner-resolved geometry instead of selecting its own device form');
 assert.doesNotMatch(surface, /this\.isTablet[\s\S]{0,120}showChapterTitle|showChapterTitle[\s\S]{0,120}this\.isTablet/,
   'chapter-title semantics must not differ between Phone and TabletExpanded');
 

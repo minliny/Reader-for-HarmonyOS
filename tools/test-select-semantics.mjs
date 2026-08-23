@@ -15,11 +15,18 @@ assert.match(rss, /if \(this\.filterOpen\) \{\s*this\.filterExpand\(\)/);
 const settings = read('entry/src/main/ets/features/settings/SettingsPage.ets');
 assert.match(settings, /this\.segmentRow\('App主题'/);
 assert.doesNotMatch(settings, /this\.selectRow\('App主题'/);
+assert.equal((settings.match(/variant: this\.isTablet \? 'settingsTablet' : 'settingsPhone'/g) ?? []).length, 2,
+  'Settings trigger and anchored Tablet panel must share the same width contract');
+assert.match(settings, /const SELECT_TRIGGER_H = 34/);
 
 const source = read('entry/src/main/ets/features/source/SourceManagementPage.ets');
 assert.match(source, /@Prop groups: string\[\] = \[\]/);
 assert.match(source, /options: this\.groupOptions\(\)/);
-assert.match(source, /controlWidth: GROUP_SELECT_WIDTH/);
+assert.equal((source.match(/variant: 'sourceGroup'/g) ?? []).length, 2,
+  'Source trigger and panel must select one complete source-group contract');
+assert.equal((source.match(/controlWidth: this\.groupSelectWidth\(\)/g) ?? []).length, 2,
+  'the trigger and overlay must share the same viewport-clamped width');
+assert.match(source, /return Math\.max\(0, this\.filterControlWidth\(\) - \(GROUP_FILTER_WIDTH - GROUP_SELECT_WIDTH\)\)/);
 assert.doesNotMatch(source, /\['全部分组', '已启用', '已禁用'\]/);
 
 const sync = read('entry/src/main/ets/features/sync/SyncPage.ets');
@@ -34,7 +41,42 @@ assert.match(sync, /this\.gatedRow\('备份频率'/);
 
 const select = read('entry/src/main/ets/features/common/ReaderSelect.ets');
 const panel = read('entry/src/main/ets/features/common/ReaderSelectPanel.ets');
+const motion = read('entry/src/main/ets/features/common/MotionSpec.ets');
 assert.match(select, /@Prop controlWidth: number = 0/);
 assert.match(panel, /@Prop controlWidth: number = 0/);
+assert.match(select, /export type ReaderSelectVariant =[\s\S]*'appearanceCompact'[\s\S]*'settingsPhone'[\s\S]*'settingsTablet'[\s\S]*'sourceGroup'/);
+assert.match(select, /@Prop variant: ReaderSelectVariant = 'default'/);
+assert.match(panel, /@Prop variant: ReaderSelectVariant = 'default'/);
+assert.doesNotMatch(select, /@Prop (appearanceCompact|settingsPage|settingsTablet|sourceGroup): boolean/,
+  'the trigger must not allow contradictory independent visual flags');
+assert.doesNotMatch(panel, /@Prop (appearanceCompact|settingsPage|settingsTablet|sourceGroup): boolean/,
+  'the overlay must consume the same typed variant contract');
+assert.match(select, /@Prop reduceMotion: boolean = false/);
+assert.match(panel, /@Prop reduceMotion: boolean = false/);
+assert.match(select,
+  /private settingsTrigger[\s\S]*?\.height\(34\)[\s\S]*?\.backgroundColor\('#0F2D4A3E'\)[\s\S]*?\.borderRadius\(7\)/,
+  'Settings/SelectTrigger must use its page-specific Figma geometry and surface');
+assert.match(select,
+  /private sourceGroupTrigger[\s\S]*?TYPE_SELECT_SOURCE_GROUP_VALUE\.fontFamily[\s\S]*?TYPE_SELECT_SOURCE_GROUP_VALUE\.fontSizeFp[\s\S]*?\.backgroundColor\('#FFFCF8'\)[\s\S]*?\.borderRadius\(8\)/,
+  'SourceManagement/GroupFilter must not inherit the generic Reader select styling');
+assert.match(select, /TOK_SURFACE_FIELD[\s\S]*'#C1C7CD'[\s\S]*responseRegion\(\{ x: 0, y: -4, width: '100%', height: 44 \}\)/,
+  'the final Reader Appearance dropdown must keep its Figma surface, border, and hit target');
+assert.match(motion,
+  /id: 'dropdown\.menu\.expand', durationMs: 160, curve: curves\.cubicBezierCurve\(0\.16, 1, 0\.3, 1\)/,
+  'the shared registry must preserve the Figma production duration and easing');
+assert.match(panel,
+  /@State private expandedHeight: number = OPTION_H[\s\S]*?\.height\(this\.expandedHeight\)[\s\S]*?\.clip\(true\)[\s\S]*?\.onAppear\(\(\): void => this\.expandPanel\(\)\)/,
+  'the same panel must reveal from its selected 36vp row without opacity or translation');
+assert.match(panel,
+  /private expandPanel\(\): void[\s\S]*?if \(this\.reduceMotion\)[\s\S]*?animateTo\(motionAnimateParam\('dropdown\.menu\.expand'\)/,
+  'the Figma motion must animate once and switch directly under reduced motion');
+assert.match(panel, /this\.chevronAngle = -180/,
+  'the selected-row chevron must rotate around its fixed center while the panel expands');
+assert.doesNotMatch(panel, /\.opacity\(|\.translate\(/,
+  'the Figma dropdown expansion explicitly forbids opacity and translation');
+assert.equal((settings.match(/reduceMotion: this\.reduceMotionValue/g) ?? []).length, 2,
+  'Settings trigger and panel must honor the app reduced-motion setting');
+assert.equal((source.match(/reduceMotion: this\.reduceMotion/g) ?? []).length, 2,
+  'Source trigger and panel must share their reduced-motion contract');
 
 console.log('select semantic contract: PASS');

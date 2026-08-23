@@ -57,7 +57,7 @@ assert.match(orchestrator, /pendingOperations/);
 assert.match(orchestrator, /if \(!allowQueued && \(this\.snapshot\.busy \|\| this\.pendingOperations > 0\)\)/);
 
 assert.match(sourcePage, /onOpenTools/);
-assert.match(sourcePage, /TextInput\(\{ text: this\.searchQuery/);
+assert.match(sourcePage, /ReaderSearchField\(\{[\s\S]*variant: 'sourceManagement'[\s\S]*mode: 'live'/);
 assert.match(sourcePage, /filteredSources\(\)/);
 assert.match(sourcePage, /source\.group === this\.groupValue/);
 assert.match(sourcePage, /Text\('批量管理'\)/);

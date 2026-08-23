@@ -6,6 +6,9 @@ const index = read('entry/src/main/ets/pages/Index.ets');
 const search = read('entry/src/main/ets/features/search/SearchPage.ets');
 const shelf = read('entry/src/main/ets/features/bookshelf/BookshelfPage.ets');
 const remote = read('entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
+const sourceSwitchGateway = read('entry/src/main/ets/features/source/SourceSwitchGateway.ts');
+const sourceSwitchWindow = read('entry/src/main/ets/features/source/SourceSwitchWindow.ets');
+const sourceSwitchRow = read('entry/src/main/ets/features/source/CandidateRow.ets');
 
 for (const declaration of [
   /const READING_CACHE_BEFORE = 2;/,
@@ -30,8 +33,24 @@ assert.match(index, /for \(let start = 0; start < books\.length; start \+= 2\)[\
   'bookshelf updates must use a bounded two-book batch');
 assert.match(index, /private onReadingFailure\([\s\S]*this\.startSourceDiscovery\(generation, true\)/,
   'remote read failure must enter the ranked automatic source-recovery seam');
-assert.match(index, /if \(autoPickFirst\) \{\s*this\.onPickSource\(outcome\.candidates\[0\]\);/,
-  'automatic recovery may attempt the first ranked candidate through the normal transaction');
+assert.match(index,
+  /if \(autoPickFirst\) \{[\s\S]*value\.isCurrent !== true[\s\S]*this\.onPickSource\(candidate\);/,
+  'automatic recovery must skip the failed/current identity and use the normal transaction');
+assert.match(index,
+  /gateway\.loadCachedCandidates\(query, isCurrent\)[\s\S]*cached\.length > 0[\s\S]*gateway\.refreshCandidates/,
+  'opening source switch must admit durable candidates before any remote refresh');
+assert.match(sourceSwitchGateway, /const SOURCE_SWITCH_CACHE_TTL_MS = 24 \* 60 \* 60 \* 1000;/);
+assert.match(sourceSwitchGateway,
+  /'chapter\.content',[\s\S]*const latencyMs = Math\.max\(0, Date\.now\(\) - startedAt\)/,
+  'response time must measure the mapped chapter body probe instead of a source ping');
+assert.match(sourceSwitchGateway,
+  /chapterWordCountText,[\s\S]*respondTime:[\s\S]*'search-book\.put'/,
+  'chapter and response-time projections must be persisted through Core SearchBook storage');
+assert.match(sourceSwitchWindow, /Refresh\(\{ refreshing: this\.isRefreshing\(\)/);
+assert.match(sourceSwitchWindow, /\.onRefreshing\([\s\S]*this\.onRefresh\(\)/,
+  'the candidate list pull gesture must own the explicit full refresh');
+assert.match(sourceSwitchRow, /return this\.currentChapterTitle\.trim\(\)\.length > 0/,
+  'the current-chapter column must render the persisted probe result');
 
 assert.match(remote, /async openCachedCatalogSession\([\s\S]*acquisitionMode: 'online'/,
   'a cached catalog must retain online body fallback semantics');

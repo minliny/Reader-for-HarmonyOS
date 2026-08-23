@@ -89,11 +89,18 @@ assert.match(quickPanel, /isReaderScreenDirectionAvailable/);
 assert.match(quickPanel, /isReaderScreenTimeoutAvailable/);
 
 assert.match(fullPanel, /Phone `942:86` \/ `936:66`; Tablet `942:88` \/ `938:62`/);
-assert.match(fullPanel, /return this\.isTablet \? 720 : 364/);
-assert.match(fullPanel, /return this\.isTablet \? 852 : 736/);
-assert.match(fullPanel, /return this\.isTablet \? 694 : 338/);
-assert.match(fullPanel, /return this\.isTablet \? 782 : 666/);
-assert.match(fullPanel, /return this\.isTablet \? 664 : 308/);
+assert.match(fullPanel, /@Prop availableWidth: number = 0/);
+assert.match(fullPanel, /@Prop availableHeight: number = 0/);
+assert.match(fullPanel,
+  /const designWidth = this\.isTablet \? READER_FULL_PANEL_MAX_WIDTH_TABLET :[\s\S]*READER_FULL_PANEL_MAX_WIDTH_PHONE;[\s\S]*Math\.min\(designWidth, this\.availableWidth\)/,
+  'settings sheet must preserve Figma width as a maximum and shrink to the live viewport');
+assert.match(fullPanel,
+  /const designHeight = this\.isTablet \? READER_FULL_PANEL_HEIGHT_TABLET : READER_FULL_PANEL_HEIGHT_PHONE;[\s\S]*Math\.min\(designHeight, this\.availableHeight\)/,
+  'settings sheet must clamp its own Figma height to the shared live budget');
+assert.match(fullPanel, /return Math\.max\(0, this\.sheetHeight\(\) - 70\)/);
+assert.equal((fullPanel.match(/return Math\.max\(0, this\.sheetWidth\(\) - 26\)/g) ?? []).length, 2,
+  'settings header and viewport must both derive from the actual sheet width');
+assert.match(fullPanel, /return Math\.max\(0, this\.viewportWidth\(\) - 30\)/);
 assert.match(fullPanel, /Image\(\$r\('app\.media\.rc_settings'\)\)[\s\S]*\.fillColor\(TOK_READ_INK\)/,
   'the scaled shared gear glyph must use the Figma full-panel ink color');
 assert.match(fullPanel, /this\.sectionTitle\('屏幕样式', false\)/);

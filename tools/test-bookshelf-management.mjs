@@ -34,7 +34,8 @@ assert.doesNotMatch(gateway, /preferences|relationalStore|fileIo/);
 assert.match(page, /export struct BookshelfManagementPage/);
 assert.match(page, /Legado 对照：BookGroup \/ BookDao group \/ ReadRecord/);
 assert.match(shelfPage, /onManageRequested: \(\) => void/);
-assert.match(shelfPage, /this\.sectionAction\('bookshelf_settings', \(\): void => this\.onManageRequested\(\)\)/);
+assert.match(shelfPage,
+  /this\.sectionAction\('bookshelf_settings', \(\): void => this\.onManageRequested\(\), false\)/);
 assert.match(index, /'bookshelfManagement'/);
 assert.match(index, /route = 'bookshelfManagement'/);
 assert.match(index, /BookshelfManagementPage\(\{/);

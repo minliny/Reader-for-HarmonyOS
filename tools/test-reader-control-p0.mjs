@@ -72,8 +72,9 @@ assert.match(experience, /onExpandDirectory: \(\): void => this\.onOpenDirectory
 assert.match(experience, /void this\.loadReaderSettingsSnapshot\(lifecycleToken\)/);
 assert.match(experience, /settingsSnapshot: this\.readerSettingsSnapshot/);
 assert.match(experience, /onSettingsToggleChange: \(key: ReaderSettingsToggleKey, value: boolean\)/);
-assert.match(experience, /private turnNextPage\(\): ReaderPageTurnResult/);
-assert.match(experience, /private turnPreviousPage\(\): void/);
+assert.match(experience, /private requestPageTurn\(direction: ReaderPageTurnDirection\): ReaderPageTurnOutcome/);
+assert.match(experience, /private turnNextPage\(\): ReaderPageTurnOutcome/);
+assert.match(experience, /private turnPreviousPage\(\): ReaderPageTurnOutcome/);
 assert.match(experience, /this\.measureCommittedPageAt\(nextOffset\)/);
 assert.match(experience, /this\.paginationIndex\.findContainingPage\(key, page\.startScalar\)/);
 assert.match(experience, /this\.paginationIndex\.findPreviousPage\(key, page\.startScalar, previousChapterKey\)/);
@@ -82,8 +83,11 @@ assert.match(experience, /private seekControlProgress\(percent: number\): void/)
 assert.match(experience, /private stepControlChapter\(delta: number\): void/);
 assert.match(experience, /readerWindow\.setWindowBrightness\(normalized\)/);
 assert.match(experience, /readerWindow\.setWindowBrightness\(-1\)/);
-assert.match(experience, /this\.pauseAutoPageForInteraction\(\);\s*this\.turnPreviousPage\(\)/);
-assert.match(experience, /this\.pauseAutoPageForInteraction\(\);\s*this\.turnNextPage\(\)/);
+assert.match(experience, /ReaderPageInteractionLayer\(\{/);
+assert.match(experience, /onTurn: \(direction: ReaderPageTurnDirection\): ReaderPageTurnOutcome =>\s*this\.requestPageTurn\(direction\)/);
+assert.match(experience, /onManualInteraction: \(\): void => this\.pauseAutoPageForInteraction\(\)/);
+assert.doesNotMatch(experience, /\.onClick\(\(\): void => \{\s*this\.pauseAutoPageForInteraction\(\);\s*this\.turn(Previous|Next)Page\(\)/,
+  'tap and pan must not retain separate direct page-turn paths');
 assert.doesNotMatch(experience, /reader\.page\.turn\.none.*animateTo/);
 assert.match(experience, /visible: this\.controlVisible && !this\.controlObscured/);
 assert.match(experience, /reduceMotion: this\.reduceMotion/);
@@ -91,13 +95,42 @@ assert.match(experience, /autoPageStatus: this\.autoPageState\.status/);
 assert.match(experience, /private armAutoPageTimer\(resetDeadline: boolean\): void/);
 assert.match(experience, /private onAppForegroundChanged\(\): void/);
 assert.match(experience, /endReaderAutoPageAtBookEnd\(this\.autoPageState, generation\)/);
-assert.match(experience, /\.accessibilityText\('上一页'\)/);
-assert.match(experience, /\.accessibilityText\('打开阅读控制'\)/);
-assert.match(experience, /\.accessibilityText\('下一页'\)/);
+assert.doesNotMatch(experience, /\.width\('(33|34)%'\)/,
+  'page-turn hit regions must not be separate percentage-width click rows');
+assert.match(experience, /private numericAreaLength\(value: Length\): number \{[\s\S]*typeof value === 'string'[\s\S]*Number\.parseFloat\(value\)/,
+  'physical-device vp string Areas must drive the real pagination viewport');
+
+const pageInteraction = read('entry/src/main/ets/features/reading/ReaderPageInteractionLayer.ets');
+assert.match(pageInteraction, /GestureGroup\(\s*GestureMode\.Exclusive,\s*PanGesture\(\{/,
+  'the horizontal pan must compete exclusively with tap and be registered first');
+assert.match(pageInteraction, /direction: PanDirection\.Horizontal/);
+assert.match(pageInteraction, /distance: READER_PAGE_PAN_DISTANCE/);
+assert.match(pageInteraction, /\.onActionStart\([\s\S]*\.onActionUpdate\([\s\S]*\.onActionEnd\([\s\S]*\.onActionCancel\(/);
+assert.match(pageInteraction, /TapGesture\(\{ fingers: 1, count: 1 \}\)/);
+assert.match(pageInteraction, /event\.fingerList\[0\]\.localX/,
+  'tap zones must use element-local rather than global screen coordinates');
+assert.match(pageInteraction, /event\.target\.area\.width/,
+  'tap zones must prefer the width from the same local gesture target');
+assert.match(pageInteraction, /this\.onManualInteraction\(\)/,
+  'manual touch must pause auto-page before dispatching a page turn');
+assert.match(pageInteraction, /左侧上一页，中间打开阅读控制，右侧下一页/);
+assert.doesNotMatch(pageInteraction, /setTimeout|pendingTurn|queuedTurn/,
+  'a busy manual turn must not be queued or replayed');
+
+const requestTurn = experience.match(
+  /private requestPageTurn\(direction: ReaderPageTurnDirection\): ReaderPageTurnOutcome \{([\s\S]*?)\n  \}\n\n  private turnNextPage/,
+);
+assert.ok(requestTurn, 'the unified page-turn request gate must exist');
+assert.match(requestTurn[1], /interactionBlocked \|\| this\.controlObscured[\s\S]*kind: 'blocked', reason: 'overlay'/);
+assert.match(requestTurn[1], /this\.controlVisible[\s\S]*kind: 'blocked', reason: 'control'/);
+assert.ok(requestTurn[1].indexOf("reason: 'overlay'") < requestTurn[1].indexOf('this.turnPreviousPage()'),
+  'an overlay must block before either production page-turn handler can run');
 
 const shell = read('entry/src/main/ets/features/shell/ReaderShell.ets');
 assert.match(shell, /animateFromControl: this\.directoryOpenedFromControl/);
 assert.match(shell, /controlObscured: this\.route === 'directory'/);
+assert.match(shell, /interactionBlocked: !this\.visible \|\| this\.route !== 'reading' \|\| this\.sourceSwitchVisible/,
+  'hidden, directory, and source-switch layers must transfer pointer ownership away from reading');
 assert.match(shell, /onDeleteBookmarks: \(bookmarkTimes: number\[\]\): void => this\.onDeleteBookmarks\(bookmarkTimes\)/);
 assert.equal((shell.match(/reduceMotion: this\.reduceMotion/g) ?? []).length, 2);
 assert.match(shell, /\.opacity\(this\.visible \? 1 : 0\)/);
@@ -115,21 +148,25 @@ assert.match(settings, /onRowClick: \(\): void => this\.toggleSetting\(key, !thi
 assert.match(settings, /this\.reduceMotionValue = value/);
 
 const fullDirectory = read('entry/src/main/ets/features/reading/ReaderFullDirectory.ets');
-assert.match(fullDirectory, /return 330 \+ \(this\.panelHeightDelta\(\) \* this\.panelProgress\)/);
-assert.match(fullDirectory, /return 88 \+ \(this\.panelHeightDelta\(\) \* \(1 - this\.panelProgress\)\)/);
-assert.match(fullDirectory, /return Math\.max\(330, this\.containerHeight - 88 - 20\)/);
+assert.match(fullDirectory,
+  /return this\.collapsedPanelHeight\(\) \+ \(this\.panelHeightDelta\(\) \* this\.panelProgress\)/);
+assert.match(fullDirectory,
+  /return this\.fullPanelTop\(\) \+ \(this\.panelHeightDelta\(\) \* \(1 - this\.panelProgress\)\)/);
+assert.match(fullDirectory,
+  /const available = Math\.max\(0, this\.liveContainerHeight\(\) - this\.fullPanelTop\(\) - safeBottom\);\s*return Math\.min\(designHeight, available\)/,
+  'full directory height must clamp its Figma endpoint to the live safe viewport');
 assert.match(fullDirectory, /motionAnimateParam\('reader\.panel\.collapse'/);
-assert.match(fullDirectory, /return this\.animateFromControl && !this\.isTablet && !this\.reduceMotion/);
+assert.match(fullDirectory, /return this\.animateFromControl && !this\.usesExpandedLayout\(\) && !this\.reduceMotion/);
 assert.match(fullDirectory, /\.accessibilityText\('收起目录'\)/);
 
 const fullDirectoryPanel = read('entry/src/main/ets/features/reading/FullDirectoryPanel.ets');
 assert.match(fullDirectoryPanel, /return Math\.max\(117, this\.bodyContentHeight\(\) - 143\)/);
-assert.match(fullDirectoryPanel, /List\(\{ space: 0, scroller: this\.listScroller \}\)[\s\S]*Repeat\(this\.projectedEntries\)[\s\S]*\.virtualScroll\(\{ reusable: true \}\)/);
+assert.match(fullDirectoryPanel, /List\(\{ space: 0, scroller: this\.listScroller \}\)[\s\S]*Repeat\(this\.projectedEntries\)[\s\S]*\.virtualScroll\(\{ totalCount: this\.projectedEntries\.length, reusable: false \}\)/);
 assert.match(fullDirectoryPanel, /this\.listScroller\.scrollEdge\(Edge\.Bottom\)/);
 assert.match(fullDirectoryPanel, /this\.activeTab === 'bookmarks'/);
-assert.match(fullDirectoryPanel, /TextInput\(\{ text: this\.searchDraft/);
+assert.match(fullDirectoryPanel, /ReaderSearchField\(\{[\s\S]*variant: 'readerDirectory'/);
 assert.match(fullDirectoryPanel, /private controlButtonLabel\(kind: string\): string/);
-assert.match(fullDirectoryPanel, /\.accessibilityText\(`打开章节：\$\{entry\.title\}`\)/);
+assert.match(fullDirectoryPanel, /\.accessibilityText\(`打开章节：\$\{repeatItem\.item\.title\}`\)/);
 assert.match(fullDirectoryPanel, /this\.onDeleteBookmarks\(markerState\.bookmarkTimes\)/);
 
 const entryAbility = read('entry/src/main/ets/entryability/EntryAbility.ets');

@@ -18,8 +18,10 @@ assert.doesNotMatch(experienceSource,
   /ReaderContentBusiness|contentBusiness|content-edit\.|chapterReview|saveContentBusinessEdit|restoreContentBusinessOriginal/,
   'the production reader must not retain a dormant ContentEdit or chapter-review route');
 assert.match(controlSource, /onMore: \(\) => void/);
-assert.match(controlSource, /enabled\(false\)[\s\S]{0,100}accessibilityText\('更多功能，暂不可用'\)/,
-  'the generic future entry remains visible but must not imply a ContentEdit product');
+const moreActor = controlSource.match(/\/\/ MoreHitArea 34×42[\s\S]*?\.accessibilityText\('更多'\);/);
+assert.ok(moreActor, 'the Figma More actor must remain present');
+assert.doesNotMatch(moreActor[0], /\.opacity\(0\.4\)|\.enabled\(false\)/,
+  'Figma `933:59` defines a normal More actor, not an invented disabled state');
 assert.match(experienceSource, /onMore:\s*\(\): void => \{\}/,
   'the visible future entry must stay disconnected until a product capability is specified');
 

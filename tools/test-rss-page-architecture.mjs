@@ -38,15 +38,19 @@ assert.doesNotMatch(rss, /private emptyContent\(/);
 // vertical rail, reserves the 100vp content gutter, and removes BottomNav.
 assert.match(rss, /showBottomNav: !this\.isWideViewport\(\)/);
 assert.match(rss, /showTabletRail: this\.isWideViewport\(\)/);
-assert.match(rss, /if \(this\.isWideViewport\(\)\) \{\s*Blank\(\)\.width\(100\);/);
+assert.match(rss,
+  /if \(this\.isWideViewport\(\)\) \{\s*Blank\(\)\.width\(RSS_TABLET_RAIL_WIDTH\);/);
+assert.match(rss,
+  /new SurfaceWidthSpec\(TOK_CONTENT_RAIL_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET\)/);
 assert.match(rss, /const RSS_WIDE_BREAKPOINT = 600/);
+assert.match(rss, /const RSS_TABLET_RAIL_WIDTH = 100/);
 assert.match(rss, /\.onAreaChange\(\(_oldValue: Area, newValue: Area\)/);
-assert.match(rss, /return this\.viewportWidth >= RSS_WIDE_BREAKPOINT/);
+assert.match(rss, /return this\.effectiveViewportWidth\(\) >= RSS_WIDE_BREAKPOINT/);
 assert.match(mainTabShell, /@Prop showTabletRail: boolean = false/);
 assert.match(mainTabShell, /vertical: true/);
 assert.match(mainTabBar, /@Prop vertical: boolean = false/);
 assert.match(mainTabBar, /Column\(\{ space: 6 \}\)/);
-assert.match(mainTabBar, /\.width\(82\)\s*\.height\(266\)/);
+assert.match(mainTabBar, /\.width\(82\)\s*\.height\(332\)/);
 assert.match(mainTabBar, /\.width\(66\)\s*\.height\(58\)/);
 
 // Status metadata is static at Tablet width. Phone gets a bounded marquee,
