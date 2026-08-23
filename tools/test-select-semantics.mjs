@@ -64,6 +64,9 @@ assert.match(select, /TOK_SURFACE_FIELD[\s\S]*'#C1C7CD'[\s\S]*responseRegion\(\{
 assert.match(motion,
   /id: 'dropdown\.menu\.expand', durationMs: 160, curve: curves\.cubicBezierCurve\(0\.16, 1, 0\.3, 1\)/,
   'the shared registry must preserve the Figma production duration and easing');
+assert.match(motion,
+  /id: 'dropdown\.menu\.collapse', durationMs: 120, curve: curves\.cubicBezierCurve\(0\.5, 0, 1, 1\)/,
+  'the shared registry must preserve the Figma production collapse duration and easing');
 assert.match(panel,
   /@State private expandedHeight: number = OPTION_H[\s\S]*?\.height\(this\.expandedHeight\)[\s\S]*?\.clip\(true\)[\s\S]*?\.onAppear\(\(\): void => this\.expandPanel\(\)\)/,
   'the same panel must reveal from its selected 36vp row without opacity or translation');
@@ -72,6 +75,12 @@ assert.match(panel,
   'the Figma motion must animate once and switch directly under reduced motion');
 assert.match(panel, /this\.chevronAngle = -180/,
   'the selected-row chevron must rotate around its fixed center while the panel expands');
+assert.match(panel,
+  /private collapsePanel\(onFinish: \(\) => void\): void[\s\S]*?motionAnimateParam\('dropdown\.menu\.collapse'[\s\S]*?this\.expandedHeight = OPTION_H[\s\S]*?this\.chevronAngle = 0/,
+  'selection and outside-dismissal must contract the same fixed-top panel before unmounting it');
+assert.match(select,
+  /motionAnimateParam\(this\.isOpen \? 'dropdown\.menu\.expand' : 'dropdown\.menu\.collapse'\)/,
+  'the trigger chevron must use asymmetric Figma expand/collapse timing');
 assert.doesNotMatch(panel, /\.opacity\(|\.translate\(/,
   'the Figma dropdown expansion explicitly forbids opacity and translation');
 assert.equal((settings.match(/reduceMotion: this\.reduceMotionValue/g) ?? []).length, 2,

@@ -46,13 +46,16 @@ export struct ReaderSelectPanel {
   @Prop y: number = 0;
   @Prop variant: ReaderSelectVariant = 'default';
   @Prop reduceMotion: boolean = false;
+  @Prop @Watch('onClosingChanged') closing: boolean = false;
   // 与 ReaderSelect.controlWidth 成对使用；0 保持按内容测量。
   @Prop controlWidth: number = 0;
   // true = x 为面板右缘 (宿主触发条整行右对齐场景, 如 RSS 筛选)。
   @Prop alignRight: boolean = false;
   onSelect: (option: string) => void = (_option: string): void => {};
+  onDismiss: () => void = (): void => {};
   @State private expandedHeight: number = OPTION_H;
   @State private chevronAngle: number = 0;
+  @State private closeInFlight: boolean = false;
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -112,7 +115,7 @@ export struct ReaderSelectPanel {
     .width('100%')
     .height(OPTION_H)
     .backgroundColor(TOK_SURFACE_PANEL_SOFT)
-    .onClick((): void => this.onSelect(this.value));
+    .onClick((): void => this.selectAndCollapse(this.value));
   }
 
   @Builder
@@ -135,7 +138,7 @@ export struct ReaderSelectPanel {
     .padding({ left: SELECT_PAD, right: SELECT_PAD })
     .backgroundColor(TOK_SURFACE_PANEL_SOFT)
     .alignItems(VerticalAlign.Center)
-    .onClick((): void => this.onSelect(this.value));
+    .onClick((): void => this.selectAndCollapse(this.value));
   }
 
   @Builder
@@ -155,7 +158,7 @@ export struct ReaderSelectPanel {
     .height(OPTION_H)
     .padding({ left: SELECT_PAD, right: SELECT_PAD })
     .alignItems(VerticalAlign.Center)
-    .onClick((): void => this.onSelect(opt));
+    .onClick((): void => this.selectAndCollapse(opt));
   }
 
   // 最长文本(值 ∪ 选项)实测宽 + chrome, px→vp。
@@ -208,6 +211,41 @@ export struct ReaderSelectPanel {
       this.expandedHeight = targetHeight;
       this.chevronAngle = -180;
     });
+  }
+
+  private onClosingChanged(): void {
+    if (!this.closing) {
+      return;
+    }
+    this.collapsePanel((): void => this.onDismiss());
+  }
+
+  private selectAndCollapse(option: string): void {
+    this.collapsePanel((): void => this.onSelect(option));
+  }
+
+  private collapsePanel(onFinish: () => void): void {
+    if (this.closeInFlight) {
+      return;
+    }
+    this.closeInFlight = true;
+    if (this.reduceMotion) {
+      this.expandedHeight = OPTION_H;
+      this.chevronAngle = 0;
+      this.closeInFlight = false;
+      onFinish();
+      return;
+    }
+    this.getUIContext().animateTo(
+      motionAnimateParam('dropdown.menu.collapse', (): void => {
+        this.closeInFlight = false;
+        onFinish();
+      }),
+      (): void => {
+        this.expandedHeight = OPTION_H;
+        this.chevronAngle = 0;
+      },
+    );
   }
 
   private fullPanelHeight(): number {

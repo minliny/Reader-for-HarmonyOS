@@ -255,6 +255,6 @@ export struct ReaderSelect {
     if (this.reduceMotion) {
       return { duration: 0, curve: Curve.Linear };
     }
-    return motionAnimateParam('dropdown.menu.expand');
+    return motionAnimateParam(this.isOpen ? 'dropdown.menu.expand' : 'dropdown.menu.collapse');
   }
 }

@@ -66,6 +66,7 @@ export struct ReaderAppearanceFullPanel {
   onChineseConversionChange: (mode: ReaderChineseConversionMode) => void =
     (_mode: ReaderChineseConversionMode): void => {};
   @State private openSelect: string = '';
+  @State private selectClosing: boolean = false;
   @State private selectAnchorX: number = 0;
   @State private selectAnchorY: number = 0;
   @State private panelOriginX: number = 0;
@@ -108,6 +109,7 @@ export struct ReaderAppearanceFullPanel {
       .scrollBar(BarState.Off)
       .onScrollStart((): void => {
         this.openSelect = '';
+        this.selectClosing = false;
       })
       .position({ x: 13, y: 57 });
 
@@ -463,7 +465,12 @@ export struct ReaderAppearanceFullPanel {
           reduceMotion: this.reduceMotion,
           controlWidth: this.selectControlWidth(kind),
           onToggle: (): void => {
-            this.openSelect = this.openSelect === kind ? '' : kind;
+            if (this.openSelect === kind) {
+              this.requestCloseSelect();
+            } else {
+              this.selectClosing = false;
+              this.openSelect = kind;
+            }
           },
         })
           .position({ x: this.selectRowWidth() - this.selectControlWidth(kind) - 8, y: 3 })
@@ -513,7 +520,7 @@ export struct ReaderAppearanceFullPanel {
         .hitTestBehavior(HitTestMode.Default)
         .zIndex(9)
         .onClick((): void => {
-          this.openSelect = '';
+          this.requestCloseSelect();
         });
 
       ReaderSelectPanel({
@@ -523,14 +530,32 @@ export struct ReaderAppearanceFullPanel {
         y: this.selectAnchorY - this.panelOriginY,
         variant: 'appearanceCompact',
         reduceMotion: this.reduceMotion,
+        closing: this.selectClosing,
         controlWidth: this.selectControlWidth(this.openSelect),
         onSelect: (option: string): void => {
           const kind = this.openSelect;
           this.openSelect = '';
+          this.selectClosing = false;
           this.applySelectValue(kind, option);
+        },
+        onDismiss: (): void => {
+          this.openSelect = '';
+          this.selectClosing = false;
         },
       });
     }
+  }
+
+  private requestCloseSelect(): void {
+    if (this.openSelect === '') {
+      return;
+    }
+    if (this.reduceMotion) {
+      this.openSelect = '';
+      this.selectClosing = false;
+      return;
+    }
+    this.selectClosing = true;
   }
 
   @Builder
