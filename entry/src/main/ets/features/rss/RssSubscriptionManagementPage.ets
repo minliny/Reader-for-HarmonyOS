@@ -108,11 +108,9 @@ export struct RssSubscriptionManagementPage {
       onBack: (): void => this.onBack(),
     }) {
       Row({ space: 3 }) {
-        Text('＋')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(18)
-          .fontColor(TOK_PRIMARY_DARK);
+        Image($r('app.media.rss_add'))
+          .width(14)
+          .height(14);
         Text('添加')
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Bold)

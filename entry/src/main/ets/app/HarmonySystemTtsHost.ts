@@ -6,6 +6,7 @@ import {
   type ReaderTtsHostEvent,
   type ReaderTtsHostSpeakRequest,
 } from '../features/reading/ReaderTtsSessionCoordinator';
+import type { ReaderTtsVoiceOption } from '../features/reading/ReaderTtsPreferencesState';
 
 const LOG_DOMAIN = 0x5244;
 const DEFAULT_LANGUAGE = 'zh-CN';
@@ -58,6 +59,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
   private readonly outputDeviceChangedCallback: (event: audio.CurrentOutputDeviceChangedEvent) => void;
   private engine: textToSpeech.TextToSpeechEngine | undefined = undefined;
   private engineLanguage: string | undefined = undefined;
+  private enginePerson: number | undefined = undefined;
   private listener: ((event: ReaderTtsHostEvent) => void) | undefined = undefined;
   private currentRequestId: string | undefined = undefined;
   private audioListenersInstalled: boolean = false;
@@ -90,7 +92,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
   async isAvailable(): Promise<boolean> {
     if (this.closed) return false;
     try {
-      await this.ensureEngine(DEFAULT_LANGUAGE);
+      await this.ensureEngine(DEFAULT_LANGUAGE, DEFAULT_PERSON);
       return true;
     } catch (error) {
       this.logError('system TTS engine unavailable', error);
@@ -122,7 +124,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
 
   async speak(request: ReaderTtsHostSpeakRequest): Promise<void> {
     this.assertSpeakRequest(request);
-    const engine = await this.ensureEngine(request.language);
+    const engine = await this.ensureEngine(request.language, request.person);
     this.currentRequestId = request.requestId;
     const params: textToSpeech.SpeakParams = {
       requestId: request.requestId,
@@ -142,6 +144,37 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
       if (this.currentRequestId === request.requestId) this.currentRequestId = undefined;
       throw error;
     }
+  }
+
+  async listVoices(): Promise<ReaderTtsVoiceOption[]> {
+    this.assertOpen();
+    const voices = await textToSpeech.listVoices({
+      requestId: `reader-list-voices-${Date.now()}`,
+      online: OFFLINE_ENGINE,
+      extraParams: {
+        'locate': 'CN',
+        'name': 'ReaderInAppTts',
+      },
+    });
+    const options: ReaderTtsVoiceOption[] = [];
+    for (const voice of voices) {
+      if (voice.language.trim().length === 0 || !Number.isSafeInteger(voice.person) || voice.person < 0) continue;
+      if (options.some((option: ReaderTtsVoiceOption): boolean =>
+        option.language === voice.language && option.person === voice.person)) continue;
+      const description = voice.description.trim();
+      const style = voice.style.trim();
+      const label = description.length > 0 ? description :
+        (style.length > 0 ? `${voice.language} · ${style}` : `${voice.language} · 音色 ${voice.person}`);
+      options.push({ language: voice.language, person: voice.person, label });
+    }
+    options.sort((left: ReaderTtsVoiceOption, right: ReaderTtsVoiceOption): number => {
+      const languageOrder = left.language.localeCompare(right.language);
+      return languageOrder !== 0 ? languageOrder : left.person - right.person;
+    });
+    if (options.length === 0) {
+      options.push({ language: DEFAULT_LANGUAGE, person: DEFAULT_PERSON, label: '系统默认' });
+    }
+    return options;
   }
 
   async stop(): Promise<void> {
@@ -165,6 +198,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
     const engine = this.engine;
     this.engine = undefined;
     this.engineLanguage = undefined;
+    this.enginePerson = undefined;
     if (engine !== undefined) {
       try {
         engine.stop();
@@ -185,12 +219,15 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
     this.removeAudioListeners();
   }
 
-  private async ensureEngine(language: string): Promise<textToSpeech.TextToSpeechEngine> {
+  private async ensureEngine(language: string, person: number): Promise<textToSpeech.TextToSpeechEngine> {
     this.assertOpen();
-    if (this.engine !== undefined && this.engineLanguage === language) return this.engine;
+    if (this.engine !== undefined && this.engineLanguage === language && this.enginePerson === person) {
+      return this.engine;
+    }
     const previous = this.engine;
     this.engine = undefined;
     this.engineLanguage = undefined;
+    this.enginePerson = undefined;
     this.currentRequestId = undefined;
     if (previous !== undefined) {
       try {
@@ -202,7 +239,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
     }
     const engine = await textToSpeech.createEngine({
       language,
-      person: DEFAULT_PERSON,
+      person,
       online: OFFLINE_ENGINE,
       extraParams: {
         'style': 'interaction-broadcast',
@@ -217,6 +254,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
     }
     this.engine = engine;
     this.engineLanguage = language;
+    this.enginePerson = person;
     return engine;
   }
 
@@ -269,6 +307,9 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
     if (!Number.isFinite(request.rate) || request.rate <= 0 ||
       !Number.isFinite(request.pitch) || request.pitch <= 0) {
       throw new Error('Reader system TTS requires positive finite rate and pitch');
+    }
+    if (!Number.isSafeInteger(request.person) || request.person < 0) {
+      throw new Error('Reader system TTS requires a non-negative voice person');
     }
   }
 

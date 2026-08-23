@@ -1,10 +1,13 @@
 import { Font } from '@ohos.arkui.UIContext';
 import {
+  READER_FONT_BPMF_ZIHI_KAI_STD,
   READER_FONT_INTER,
   READER_FONT_LXGW_WENKAI_LITE,
   READER_FONT_NOTO_SANS_SC,
   READER_FONT_NOTO_SERIF_SC_BOLD,
   READER_FONT_NOTO_SERIF_SC_REGULAR,
+  READER_FONT_SARASA_MONO_SC,
+  READER_FONT_ZHUQUE_FANGSONG,
 } from './ReaderFontFamilies.ts';
 
 // All Reader pages share one main ArkUI context. Page components keep the
@@ -36,6 +39,18 @@ export function registerReaderFonts(font: Font): void {
   font.registerFont({
     familyName: READER_FONT_LXGW_WENKAI_LITE,
     familySrc: $rawfile('LXGWWenKaiLite-Regular.ttf'),
+  });
+  font.registerFont({
+    familyName: READER_FONT_BPMF_ZIHI_KAI_STD,
+    familySrc: $rawfile('BpmfZihiKaiStd-Regular.ttf'),
+  });
+  font.registerFont({
+    familyName: READER_FONT_ZHUQUE_FANGSONG,
+    familySrc: $rawfile('ZhuqueFangsong-Regular.ttf'),
+  });
+  font.registerFont({
+    familyName: READER_FONT_SARASA_MONO_SC,
+    familySrc: $rawfile('SarasaMonoSC-Regular.ttf'),
   });
   readerFontsRegistered = true;
 }

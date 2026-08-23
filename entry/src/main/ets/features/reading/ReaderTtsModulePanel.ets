@@ -210,13 +210,10 @@ export struct ReaderTtsModulePanel {
           .fontWeight(FontWeight.Bold)
           .fontSize(12)
           .fontColor('#41484C');
-        Text('⌃')
-          .width(14)
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(12)
-          .fontColor('#41484C')
-          .textAlign(TextAlign.Center);
+        Image($r('app.media.reader_chevron_down'))
+          .width(12)
+          .height(12)
+          .rotate({ angle: 180 });
       }
       .width(86)
       .height(30)

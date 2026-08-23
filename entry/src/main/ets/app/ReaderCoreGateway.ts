@@ -6,6 +6,8 @@ export type ShelfBook = {
   bookId: string;
   title: string;
   author: string;
+  /** Core-owned book kind. Local imports use values such as `TXT` / `EPUB`. */
+  kind?: string;
   coverUrl?: string;
   intro?: string;
   lastChapter?: string;
@@ -215,6 +217,7 @@ export class ReaderCoreGateway {
     };
     const coverUrl = this.optionalString(book, 'coverUrl');
     const intro = this.optionalString(book, 'intro');
+    const kind = this.optionalString(book, 'kind');
     const lastChapter = this.optionalString(book, 'lastChapter');
     const lastReadAt = this.optionalNumber(book, 'lastReadAt');
     const group = this.optionalString(book, 'group');
@@ -227,6 +230,9 @@ export class ReaderCoreGateway {
     }
     if (intro !== undefined) {
       decoded.intro = intro;
+    }
+    if (kind !== undefined) {
+      decoded.kind = kind;
     }
     if (lastChapter !== undefined) {
       decoded.lastChapter = lastChapter;

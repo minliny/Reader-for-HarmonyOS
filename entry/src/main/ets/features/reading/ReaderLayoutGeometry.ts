@@ -189,21 +189,33 @@ export function resolveReaderReadingLayout(
   viewportHeight: number,
   expandedHint: boolean,
   metrics: ReaderWindowMetricsSnapshot,
+  extendIntoCutout: boolean = false,
 ): ReaderReadingLayoutSnapshot {
   const widthClass = readerWidthClass(viewportWidth, expandedHint);
   const profile = new ReaderDesignProfile(widthClass === 'expanded');
   const width = viewportWidth > 0 ? viewportWidth : profile.referenceWidth;
   const height = viewportHeight > 0 ? viewportHeight : profile.referenceHeight;
-  const contentLeft = Math.max(profile.contentHorizontal, readerVisualSafeLeft(metrics));
-  const contentRight = Math.max(profile.contentHorizontal, readerVisualSafeRight(metrics));
+  const cutoutSafeLeft = extendIntoCutout ? 0 : Math.max(0, metrics.cutoutInsets.left);
+  const cutoutSafeTop = extendIntoCutout ? 0 : Math.max(0, metrics.cutoutInsets.top);
+  const cutoutSafeRight = extendIntoCutout ? 0 : Math.max(0, metrics.cutoutInsets.right);
+  const cutoutSafeBottom = extendIntoCutout ? 0 : Math.max(0, metrics.cutoutInsets.bottom);
+  const contentLeft = Math.max(profile.contentHorizontal, Math.max(metrics.systemInsets.left, cutoutSafeLeft));
+  const contentRight = Math.max(profile.contentHorizontal, Math.max(metrics.systemInsets.right, cutoutSafeRight));
+  const contentTop = Math.max(metrics.systemInsets.top, cutoutSafeTop);
+  const contentBottom = Math.max(
+    metrics.systemInsets.bottom,
+    cutoutSafeBottom,
+    metrics.gestureInsets.bottom,
+    metrics.navigationInsets.bottom,
+  );
   const systemFontScale = metrics.systemFontScale > 0 ? metrics.systemFontScale : 1;
   return new ReaderReadingLayoutSnapshot(
     widthClass,
     width,
     height,
-    Math.max(profile.contentTop, readerContentSafeTop(metrics)),
+    Math.max(profile.contentTop, contentTop),
     contentRight,
-    Math.max(profile.contentBottom, readerInteractiveSafeBottom(metrics)),
+    Math.max(profile.contentBottom, contentBottom),
     contentLeft,
     systemFontScale,
   );

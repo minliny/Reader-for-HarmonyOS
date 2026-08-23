@@ -11,10 +11,12 @@ import {
 } from '../common/ReaderTokens';
 import {
   createDefaultReaderAppearanceSnapshot,
+  isReaderAppearanceFont,
   type ReaderAppearanceFont,
   type ReaderAppearanceSnapshot,
   type ReaderAppearanceTheme,
 } from './ReaderAppearanceState';
+import { readerAppearanceFontFamily } from './ReaderAppearanceRenderStyle';
 
 /**
  * Figma Reader Quick Appearance content: Phone `942:66`, Tablet `942:68`.
@@ -192,9 +194,7 @@ export struct ReaderAppearanceModulePanel {
         .width('100%')
         .constraintSize({ maxWidth: this.fontPillWidth() - 0.5 })
         .height(10)
-        .fontFamily(fontId === 'lxgwWenKai' ? 'ReaderLXGWWenKaiLite' :
-          (fontId === 'sourceHanSerif' || fontId === 'serif' ?
-            'ReaderNotoSerifSCRegular' : 'ReaderNotoSansSC'))
+        .fontFamily(this.fontCellFamily(fontId))
         .fontWeight(FontWeight.Regular)
         .fontSize(8)
         .lineHeight(10)
@@ -209,7 +209,7 @@ export struct ReaderAppearanceModulePanel {
     .accessibilityText(this.isSelectableFont(fontId) ? `切换到${this.fontLabel(fontId)}` :
       `${this.fontLabel(fontId)}，暂不可用`)
     .onClick((): void => {
-      if (fontId === 'system' || fontId === 'serif' || fontId === 'sans' || fontId === 'lxgwWenKai') {
+      if (isReaderAppearanceFont(fontId)) {
         this.onFontChange(fontId);
       }
     });
@@ -272,7 +272,11 @@ export struct ReaderAppearanceModulePanel {
   }
 
   private isSelectableFont(fontId: string): boolean {
-    return fontId === 'system' || fontId === 'serif' || fontId === 'sans' || fontId === 'lxgwWenKai';
+    return isReaderAppearanceFont(fontId);
+  }
+
+  private fontCellFamily(fontId: string): string {
+    return isReaderAppearanceFont(fontId) ? readerAppearanceFontFamily(fontId) : 'ReaderNotoSansSC';
   }
 
   private themeSummary(): string {

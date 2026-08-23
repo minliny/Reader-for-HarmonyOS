@@ -13,7 +13,8 @@ export const READER_TTS_TIMER_MAX_SECONDS = 59;
 export type ReaderTtsPauseReason = 'user' | 'systemInterruption' | 'routeBackground' | 'deviceChange';
 
 export type ReaderTtsStopReason =
-  'user' | 'timer' | 'completed' | 'lifecycle' | 'contentChanged' | 'engineUnavailable' | 'failureLimit';
+  'user' | 'timer' | 'completed' | 'lifecycle' | 'contentChanged' | 'screenOff' |
+  'systemInterruption' | 'engineUnavailable' | 'failureLimit';
 
 export type ReaderTtsContentVersion = number | string;
 

@@ -23,6 +23,8 @@ assert.doesNotMatch(settings, /ReaderSelectPanel\(\{/,
 assert.match(settings, /const SELECT_TRIGGER_H = 34/);
 
 const source = read('entry/src/main/ets/features/source/SourceManagementPage.ets');
+assert.match(source, /const GROUP_SELECT_WIDTH = 276/,
+  'SourceManagement group select keeps the final 276vp Figma width at the 390vp reference viewport');
 assert.match(source, /@Prop groups: string\[\] = \[\]/);
 assert.match(source, /options: this\.groupOptions\(\)/);
 assert.equal((source.match(/variant: 'sourceGroup'/g) ?? []).length, 2,
@@ -78,6 +80,12 @@ assert.match(panel,
   'the Figma motion must animate once and switch directly under reduced motion');
 assert.match(panel, /this\.chevronAngle = -180/,
   'the selected-row chevron must rotate around its fixed center while the panel expands');
+assert.match(panel,
+  /private sourceGroupSelectedRow[\s\S]*?TYPE_SELECT_SOURCE_GROUP_VALUE\.fontFamily[\s\S]*?app\.media\.source_group_chevron[\s\S]*?\.backgroundColor\('#FFFCF8'\)/,
+  'the expanded source-group selected row must preserve the trigger typography, icon, and surface');
+assert.match(panel,
+  /private panelBorderColor[\s\S]*?this\.variant === 'sourceGroup'[\s\S]*?return '#85B4A697'/,
+  'the expanded source-group panel must preserve the source-management field border');
 assert.match(panel,
   /private collapsePanel\(onFinish: \(\) => void\): void[\s\S]*?motionAnimateParam\('dropdown\.menu\.collapse'[\s\S]*?this\.expandedHeight = OPTION_H[\s\S]*?this\.chevronAngle = 0/,
   'selection and outside-dismissal must contract the same fixed-top panel before unmounting it');

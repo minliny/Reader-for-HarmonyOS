@@ -41,6 +41,7 @@ export default class EntryAbility extends UIAbility {
   onForeground(): void {
     AppStorage.setOrCreate('readerAppForeground', true);
     ReaderWindowCoordinator.reapplyChrome();
+    ReaderWindowCoordinator.reapplyWindowPolicy();
   }
 
   onBackground(): void {

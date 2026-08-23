@@ -51,6 +51,10 @@ const cutoutReading = resolveReaderReadingLayout(390, 844, false, metrics({ cuto
 assert.equal(cutoutReading.contentLeft, 40);
 assert.equal(cutoutReading.contentRight, 32,
   'a one-sided cutout must not waste the unobstructed edge of the reading track');
+const extendedCutoutReading = resolveReaderReadingLayout(390, 844, false,
+  metrics({ cutoutLeft: 40 }), true);
+assert.equal(extendedCutoutReading.contentLeft, 32,
+  'extend-into-cutout removes only the cutout constraint while preserving the authored content inset');
 
 const phoneControl = resolveReaderControlLayout(
   390,
@@ -87,11 +91,14 @@ const ability = read('entry/src/main/ets/entryability/EntryAbility.ets');
 const index = read('entry/src/main/ets/pages/Index.ets');
 const shell = read('entry/src/main/ets/features/shell/ReaderShell.ets');
 const experience = read('entry/src/main/ets/features/reading/LocalReadingExperience.ets');
+const pageTurnStage = read('entry/src/main/ets/features/reading/ReaderPageTurnStage.ets');
 const surface = read('entry/src/main/ets/features/reading/ReadingSurface.ets');
 const control = read('entry/src/main/ets/features/reading/ReaderControlPanel.ets');
 
 assert.match(ability, /ReaderWindowCoordinator\.install\(win\)/,
   'the Ability must delegate all window setup to the single coordinator');
+assert.match(ability, /ReaderWindowCoordinator\.reapplyWindowPolicy\(\)/,
+  'foreground restoration must reapply the active reader/app window policy');
 assert.doesNotMatch(ability, /statusBarHeightPx|setWindowSystemBarProperties/,
   'the Ability must not retain a second status-bar snapshot or style writer');
 assert.match(coordinator, /windowSizeChange/);
@@ -117,7 +124,10 @@ assert.match(shell,
 assert.match(shell, /windowChromeOverlayActive:[\s\S]*this\.route === 'directory'[\s\S]*this\.sourceSwitchVisible/,
   'fixed-light reader overlays must explicitly own a dark system-content tone');
 
-assert.match(experience, /ReadingSurface\(\{[\s\S]*layout: this\.readingLayout\(\)/);
+assert.match(experience, /ReaderPageTurnStage\(\{[\s\S]*layout: this\.readingLayout\(\)/,
+  'the reading owner must pass its single layout snapshot into the page-turn stage');
+assert.match(pageTurnStage, /ReadingSurface\(\{[\s\S]*layout: this\.layout/,
+  'the page-turn stage must forward that same layout snapshot to every physical page');
 assert.match(experience, /ReaderControlPanel\(\{[\s\S]*layout: this\.controlLayout\(\)/);
 assert.match(experience, /@StorageLink\('readerWindowMetricsRevision'\)/);
 assert.match(experience, /reflowAfterWindowGeometryChange\(\)/);

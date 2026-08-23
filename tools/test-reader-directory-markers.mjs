@@ -94,10 +94,10 @@ assert.match(fullPanel,
   'ascending and descending must render two explicit icon resources');
 assert.doesNotMatch(fullPanel, /reader_directory_sort[\s\S]*?\.rotate\(/,
   'sort direction must not be synthesized by rotating one icon');
-assert.match(ascendingSortIcon, /M10 10L12 12L14 10/,
-  'ascending icon must keep the list bars and point its arrow down');
-assert.match(descendingSortIcon, /M10 6L12 4L14 6/,
-  'descending icon must keep the list bars and point its arrow up');
+assert.match(ascendingSortIcon, /M30 18L36 12L42 18/,
+  'ascending icon must keep the list bars and point its arrow up');
+assert.match(descendingSortIcon, /M30 30L36 36L42 30/,
+  'descending icon must keep the list bars and point its arrow down');
 assert.notEqual(ascendingSortIcon, descendingSortIcon,
   'sort directions must remain separate source assets');
 assert.match(fullPanel,

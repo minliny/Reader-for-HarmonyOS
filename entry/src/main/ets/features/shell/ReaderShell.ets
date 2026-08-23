@@ -29,6 +29,7 @@ export struct ReaderShell {
   @Prop bookTitle: string = '';
   @Prop sourceId: string = '';
   @Prop sourceName: string = '';
+  @Prop bookKind: string | undefined = undefined;
   @Prop remoteSession: RemoteReadingSession | undefined = undefined;
   @Prop sourceSwitchTransactionId: string | undefined = undefined;
   @Prop totalChapters: number = 0;
@@ -87,6 +88,7 @@ export struct ReaderShell {
         ReadingExperience({
           sourceId: this.sourceId,
           bookId: this.bookId,
+          bookKind: this.bookKind,
           remoteSession: this.remoteSession,
           sourceSwitchTransactionId: this.sourceSwitchTransactionId,
           requestedChapterIndex: this.requestedChapterIndex,

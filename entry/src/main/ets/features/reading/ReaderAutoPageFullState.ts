@@ -42,7 +42,7 @@ export function normalizeReaderAutoPageFullConfiguration(
       READER_AUTO_PAGE_FULL_MIN_SECONDS, READER_AUTO_PAGE_FULL_MAX_SECONDS),
     speedSeconds: clampInteger(value.speedSeconds,
       READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS, READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS),
-    followHighlight: false,
+    followHighlight: value.followHighlight === true,
   };
 }
 
@@ -80,12 +80,12 @@ export function setReaderAutoPageFullSpeed(
 
 export function setReaderAutoPageFullFollowHighlight(
   value: ReaderAutoPageFullConfiguration,
-  _followHighlight: boolean,
+  followHighlight: boolean,
 ): ReaderAutoPageFullConfiguration {
   const current = normalizeReaderAutoPageFullConfiguration(value);
   return {
     ...current,
-    followHighlight: false,
+    followHighlight,
   };
 }
 

@@ -18,4 +18,24 @@ Source: https://github.com/lxgw/LxgwWenKai-Lite/releases/tag/v1.522
 File SHA-256: 140c99ba4e28e817cec49bf82a0c5fcdc4fe633fb9dfda16d0ee8d59a8545f15
 License: LXGWWenKaiLite-OFL.txt
 
-KaiTi and FangSong are not bundled. Their visible UI slots remain disabled.
+Bpmf Zihi Kai Std Regular 1.501
+Source: https://github.com/ButTaiwan/bpmfvs/releases/tag/v1.500
+Release archive SHA-256: 728723239116c2a2f44fee3ef7137f3f8537a19a6f707c823d0345c5a1d234af
+File SHA-256: b5de180c456840edc57d07256d7d167a95306c81ab1936677c4706491a9e7d37
+Licenses: BpmfZihiKaiStd-LICENSE.txt, BpmfZihiKaiStd-APACHE-2.0.txt
+Notice: BpmfZihiKaiStd-NOTICE.txt
+
+Zhuque Fangsong Regular 0.212
+Source: https://github.com/TrionesType/zhuque/releases/tag/v0.212
+Release archive SHA-256: bb8b661a7643d2296a72d9d10530a00949419c4e527fb61783f73c2ba1a8c062
+File SHA-256: 558c62730844fe54ba220146ed62f859d4e2880188d92d985f8921c6e3743bc4
+License: ZhuqueFangsong-OFL.txt
+
+Sarasa Mono SC Regular 1.0.41
+Source: https://github.com/be5invis/Sarasa-Gothic/releases/tag/v1.0.41
+Release archive SHA-256: cd078f6103af293c8943f9a333beee2ecf1fe5b6901950a4f610eb37e1b3c0f2
+File SHA-256: 95718854631c2386845e618aa5bc37908e5fb8a919eb56e40f70e1170d80af94
+License: SarasaGothic-OFL.txt
+
+The Figma Source Han Serif slot uses Noto Serif SC. It therefore reuses the
+bundled NotoSerifSC-Regular.ttf instead of duplicating the same CJK face.

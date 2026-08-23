@@ -13,6 +13,7 @@ import {
   isReaderPageTurnStyleAvailable,
   isReaderScreenDirectionAvailable,
   isReaderScreenTimeoutAvailable,
+  readerPageTurnStyle,
   type ReaderPageTurnStyle,
   type ReaderScreenDirection,
   type ReaderScreenTimeout,
@@ -25,8 +26,9 @@ type ReaderSettingsSegmentGroup = 'direction' | 'pageTurn' | 'timeout';
  * Figma Reader Settings quick content only.
  *
  * Sources: Phone `942:70` / `924:69`; Tablet `942:72` / `926:65`.
- * The owner supplies state and persistence. Options without a current Host are
- * retained at their exact Figma positions but cannot receive input.
+ * The owner supplies state, Host application and persistence. Privileged or
+ * unimplemented options remain at their exact Figma positions but cannot
+ * receive input.
  */
 @Component
 export struct ReaderSettingsModulePanel {
@@ -185,7 +187,7 @@ export struct ReaderSettingsModulePanel {
       return this.snapshot.screenDirection === option;
     }
     if (group === 'pageTurn') {
-      return this.snapshot.pageTurnStyle === option;
+      return readerPageTurnStyle(this.snapshot) === option;
     }
     return this.snapshot.screenTimeout === option;
   }

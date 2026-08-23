@@ -171,6 +171,29 @@ export function commitReaderAutoPageTurn(
   };
 }
 
+/**
+ * Rejects a prepared page turn which failed to commit and starts a complete
+ * countdown interval. Only the admitted generation may recover the session;
+ * a stale asynchronous failure cannot reset a newer timer.
+ */
+export function retryReaderAutoPageTurn(
+  state: ReaderAutoPageState,
+  generation: number,
+): ReaderAutoPageState {
+  if (generation !== state.generation || !state.awaitingPageCommit || state.status === 'stopped') {
+    return state;
+  }
+  return {
+    status: state.status,
+    speedSeconds: state.speedSeconds,
+    remainingSeconds: state.speedSeconds,
+    generation: nextGeneration(state.generation),
+    awaitingPageCommit: false,
+    pauseReason: state.pauseReason,
+    stopReason: undefined,
+  };
+}
+
 /** Stops only the current generation when the reading surface reaches EOF. */
 export function endReaderAutoPageAtBookEnd(
   state: ReaderAutoPageState,

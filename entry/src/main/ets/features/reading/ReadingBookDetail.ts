@@ -8,6 +8,8 @@ export type ReadingBookDetail = {
   bookId: string;
   title: string;
   author: string;
+  /** Core-owned source kind; local readers use it to preserve parser semantics. */
+  kind?: string;
   coverUrl?: string;
   intro?: string;
   lastChapter?: string;

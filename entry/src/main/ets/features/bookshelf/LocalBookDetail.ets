@@ -337,11 +337,7 @@ export struct LocalBookDetail {
       // Button is only an event host for that existing invisible rectangle:
       // it has no label, no state effect, and does not replace the 94 × 30
       // painted capsule above.
-      Button() {
-        Image($r('app.media.book_detail_full_directory_hit'))
-          .width(94)
-          .height(44);
-      }
+      Button()
         .type(ButtonType.Normal)
         .width(94)
         .height(44)

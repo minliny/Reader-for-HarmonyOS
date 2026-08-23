@@ -81,11 +81,17 @@ assert.match(experience, /this\.paginationIndex\.findPreviousPage\(key, page\.st
 assert.doesNotMatch(experience, /pageBackStack|ReadingPageHistoryAnchor/);
 assert.match(experience, /private seekControlProgress\(percent: number\): void/);
 assert.match(experience, /private stepControlChapter\(delta: number\): void/);
-assert.match(experience, /readerWindow\.setWindowBrightness\(normalized\)/);
-assert.match(experience, /readerWindow\.setWindowBrightness\(-1\)/);
+assert.match(experience, /this\.enqueueReaderBrightness\(normalized, 'manual'\)/);
+assert.match(experience, /this\.enqueueReaderBrightness\(-1, 'automatic'\)/);
+assert.match(experience, /private brightnessMutationQueue: Promise<void> = Promise\.resolve\(\)/,
+  'brightness side effects must be serialized so the last user intent wins');
+assert.match(experience, /return readerWindow\.setWindowBrightness\(target\)/);
+assert.match(experience, /private restoreInitialWindowBrightness\(\): void/,
+  'the reader must restore the pre-reader window brightness policy on exit');
 assert.match(experience, /ReaderPageInteractionLayer\(\{/);
 assert.match(experience, /onTurn: \(direction: ReaderPageTurnDirection\): ReaderPageTurnOutcome =>\s*this\.requestPageTurn\(direction\)/);
-assert.match(experience, /onManualInteraction: \(\): void => this\.pauseAutoPageForInteraction\(\)/);
+assert.match(experience, /onManualInteraction: \(\): void => this\.onReaderManualInteraction\(\)/);
+assert.match(experience, /private onReaderManualInteraction\(\): void \{[\s\S]*screenAwakeLease\?\.rearm\(\)[\s\S]*pauseAutoPageForInteraction/);
 assert.doesNotMatch(experience, /\.onClick\(\(\): void => \{\s*this\.pauseAutoPageForInteraction\(\);\s*this\.turn(Previous|Next)Page\(\)/,
   'tap and pan must not retain separate direct page-turn paths');
 assert.doesNotMatch(experience, /reader\.page\.turn\.none.*animateTo/);

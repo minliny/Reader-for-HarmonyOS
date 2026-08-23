@@ -8,6 +8,30 @@ import {
 
 export type ReaderWindowChromeOwner = 'app' | 'reader' | 'overlay';
 export type ReaderWindowChromeTone = 'light' | 'dark';
+export type ReaderWindowOrientationPolicy = 'system' | 'portrait' | 'landscape';
+
+/** Semantic reader-owned window behavior; raw Harmony enums stay in this host. */
+export class ReaderWindowPolicy {
+  orientation: ReaderWindowOrientationPolicy;
+  keepScreenOn: boolean;
+  hideStatusBar: boolean;
+  hideNavigationBar: boolean;
+  extendIntoCutout: boolean;
+
+  constructor(
+    orientation: ReaderWindowOrientationPolicy = 'system',
+    keepScreenOn: boolean = false,
+    hideStatusBar: boolean = false,
+    hideNavigationBar: boolean = false,
+    extendIntoCutout: boolean = false,
+  ) {
+    this.orientation = orientation;
+    this.keepScreenOn = keepScreenOn;
+    this.hideStatusBar = hideStatusBar;
+    this.hideNavigationBar = hideNavigationBar;
+    this.extendIntoCutout = extendIntoCutout;
+  }
+}
 
 /** One atomic system-bar visual: the painted underlay and its matching icon tone. */
 export class ReaderWindowChromeStyle {
@@ -49,10 +73,19 @@ export class ReaderWindowCoordinator {
   private static desiredChromeRevision: number = 0;
   private static appliedChromeRevision: number = -1;
   private static chromeFlushRunning: boolean = false;
+  private static appOrientation: window.Orientation = window.Orientation.UNSPECIFIED;
+  private static appKeepScreenOn: boolean = false;
+  private static windowPolicyRevision: number = 0;
+  private static windowPolicyTail: Promise<void> = Promise.resolve();
+  private static desiredWindowPolicyOwner: 'app' | 'reader' = 'app';
+  private static desiredReaderWindowPolicy: ReaderWindowPolicy = new ReaderWindowPolicy();
 
   static async install(win: window.Window): Promise<void> {
     ReaderWindowCoordinator.detach();
     ReaderWindowCoordinator.mainWindow = win;
+    ReaderWindowCoordinator.desiredWindowPolicyOwner = 'app';
+    ReaderWindowCoordinator.appOrientation = win.getPreferredOrientation();
+    ReaderWindowCoordinator.appKeepScreenOn = win.getWindowProperties().isKeepScreenOn;
     await win.setWindowLayoutFullScreen(true);
     await win.setWindowSystemBarEnable(['status', 'navigation']);
     ReaderWindowCoordinator.registerWindowListeners(win);
@@ -76,6 +109,7 @@ export class ReaderWindowCoordinator {
       }
     }
     ReaderWindowCoordinator.mainWindow = undefined;
+    ReaderWindowCoordinator.windowPolicyRevision += 1;
     ReaderWindowCoordinator.windowSizeListener = undefined;
     ReaderWindowCoordinator.avoidAreaListener = undefined;
     ReaderWindowCoordinator.appliedChromeRevision = -1;
@@ -100,6 +134,48 @@ export class ReaderWindowCoordinator {
     ReaderWindowCoordinator.requestChrome(new ReaderWindowChromeRequest('overlay', inheritedReaderStyle));
   }
 
+  /**
+   * Serialize orientation, keep-screen and system-bar writes through the
+   * Ability-owned main window. A superseded request never starts; an already
+   * running request is followed by the newest revision, so the last intent is
+   * also the final device state.
+   */
+  static requestReaderWindowPolicy(policy: ReaderWindowPolicy): Promise<void> {
+    ReaderWindowCoordinator.desiredWindowPolicyOwner = 'reader';
+    ReaderWindowCoordinator.desiredReaderWindowPolicy = policy;
+    const revision = ReaderWindowCoordinator.nextWindowPolicyRevision();
+    AppStorage.setOrCreate<string>('readerWindowOrientation', policy.orientation);
+    AppStorage.setOrCreate<boolean>('readerWindowKeepScreenOn', policy.keepScreenOn);
+    AppStorage.setOrCreate<boolean>('readerWindowHideStatusBar', policy.hideStatusBar);
+    AppStorage.setOrCreate<boolean>('readerWindowHideNavigationBar', policy.hideNavigationBar);
+    AppStorage.setOrCreate<boolean>('readerWindowExtendIntoCutout', policy.extendIntoCutout);
+    return ReaderWindowCoordinator.enqueueWindowPolicy(revision,
+      (win: window.Window): Promise<void> => ReaderWindowCoordinator.applyReaderWindowPolicy(win, policy));
+  }
+
+  /** Restore the app policy captured when the Ability installed the window. */
+  static requestAppWindowPolicy(): Promise<void> {
+    ReaderWindowCoordinator.desiredWindowPolicyOwner = 'app';
+    const revision = ReaderWindowCoordinator.nextWindowPolicyRevision();
+    AppStorage.setOrCreate<string>('readerWindowOrientation', 'app');
+    AppStorage.setOrCreate<boolean>('readerWindowKeepScreenOn', ReaderWindowCoordinator.appKeepScreenOn);
+    AppStorage.setOrCreate<boolean>('readerWindowHideStatusBar', false);
+    AppStorage.setOrCreate<boolean>('readerWindowHideNavigationBar', false);
+    AppStorage.setOrCreate<boolean>('readerWindowExtendIntoCutout', false);
+    return ReaderWindowCoordinator.enqueueWindowPolicy(revision,
+      (win: window.Window): Promise<void> => ReaderWindowCoordinator.applyAppWindowPolicy(win));
+  }
+
+  /** Reapply the latest semantic policy after foreground/window restoration. */
+  static reapplyWindowPolicy(): void {
+    if (ReaderWindowCoordinator.desiredWindowPolicyOwner === 'reader') {
+      void ReaderWindowCoordinator.requestReaderWindowPolicy(
+        ReaderWindowCoordinator.desiredReaderWindowPolicy);
+      return;
+    }
+    void ReaderWindowCoordinator.requestAppWindowPolicy();
+  }
+
   static reapplyChrome(): void {
     ReaderWindowCoordinator.desiredChromeRevision += 1;
     void ReaderWindowCoordinator.flushChrome();
@@ -119,6 +195,68 @@ export class ReaderWindowCoordinator {
     };
     win.on('windowSizeChange', ReaderWindowCoordinator.windowSizeListener);
     win.on('avoidAreaChange', ReaderWindowCoordinator.avoidAreaListener);
+  }
+
+  private static nextWindowPolicyRevision(): number {
+    ReaderWindowCoordinator.windowPolicyRevision =
+      ReaderWindowCoordinator.windowPolicyRevision >= Number.MAX_SAFE_INTEGER ?
+        1 : ReaderWindowCoordinator.windowPolicyRevision + 1;
+    return ReaderWindowCoordinator.windowPolicyRevision;
+  }
+
+  private static enqueueWindowPolicy(
+    revision: number,
+    apply: (win: window.Window) => Promise<void>,
+  ): Promise<void> {
+    const operation = ReaderWindowCoordinator.windowPolicyTail
+      .catch((_error: Error): void => {})
+      .then((): Promise<void> => {
+        const win = ReaderWindowCoordinator.mainWindow;
+        if (revision !== ReaderWindowCoordinator.windowPolicyRevision) {
+          return Promise.resolve();
+        }
+        if (win === undefined) {
+          return Promise.reject(new Error('Reader main window is unavailable'));
+        }
+        return apply(win)
+          .then((): void => {
+            if (win === ReaderWindowCoordinator.mainWindow &&
+              revision === ReaderWindowCoordinator.windowPolicyRevision) {
+              ReaderWindowCoordinator.refreshMetrics();
+            }
+          });
+      });
+    ReaderWindowCoordinator.windowPolicyTail = operation.catch((_error: Error): void => {});
+    return operation;
+  }
+
+  private static async applyReaderWindowPolicy(
+    win: window.Window,
+    policy: ReaderWindowPolicy,
+  ): Promise<void> {
+    await win.setPreferredOrientation(ReaderWindowCoordinator.orientationValue(policy.orientation));
+    await win.setWindowKeepScreenOn(policy.keepScreenOn);
+    await win.setSpecificSystemBarEnabled('status', !policy.hideStatusBar, false);
+    await win.setSpecificSystemBarEnabled('navigation', !policy.hideNavigationBar, false);
+    await win.setSpecificSystemBarEnabled('navigationIndicator', !policy.hideNavigationBar, false);
+  }
+
+  private static async applyAppWindowPolicy(win: window.Window): Promise<void> {
+    await win.setPreferredOrientation(ReaderWindowCoordinator.appOrientation);
+    await win.setWindowKeepScreenOn(ReaderWindowCoordinator.appKeepScreenOn);
+    await win.setSpecificSystemBarEnabled('status', true, false);
+    await win.setSpecificSystemBarEnabled('navigation', true, false);
+    await win.setSpecificSystemBarEnabled('navigationIndicator', true, false);
+  }
+
+  private static orientationValue(policy: ReaderWindowOrientationPolicy): window.Orientation {
+    if (policy === 'portrait') {
+      return window.Orientation.PORTRAIT;
+    }
+    if (policy === 'landscape') {
+      return window.Orientation.LANDSCAPE;
+    }
+    return window.Orientation.AUTO_ROTATION_UNSPECIFIED;
   }
 
   private static refreshMetrics(): void {

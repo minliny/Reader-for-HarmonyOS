@@ -6,10 +6,14 @@ import type {
   ReaderAppearanceTheme,
 } from './ReaderAppearanceState';
 import {
+  READER_FONT_BPMF_ZIHI_KAI_STD,
   READER_FONT_HARMONYOS_SANS,
   READER_FONT_LXGW_WENKAI_LITE,
   READER_FONT_NOTO_SANS_SC,
   READER_FONT_NOTO_SERIF_SC_REGULAR,
+  READER_FONT_SARASA_MONO_SC,
+  READER_FONT_SOURCE_HAN_SERIF,
+  READER_FONT_ZHUQUE_FANGSONG,
 } from '../common/ReaderFontFamilies.ts';
 
 /**
@@ -71,10 +75,32 @@ export function readerAppearanceFontFamily(font: ReaderAppearanceFont): string {
   if (font === 'serif') {
     return READER_FONT_NOTO_SERIF_SC_REGULAR;
   }
+  if (font === 'kai') {
+    return READER_FONT_BPMF_ZIHI_KAI_STD;
+  }
+  if (font === 'fangSong') {
+    return READER_FONT_ZHUQUE_FANGSONG;
+  }
+  if (font === 'mono') {
+    return READER_FONT_SARASA_MONO_SC;
+  }
+  if (font === 'sourceHanSerif') {
+    return READER_FONT_SOURCE_HAN_SERIF;
+  }
   if (font === 'lxgwWenKai') {
     return READER_FONT_LXGW_WENKAI_LITE;
   }
+  // A custom family is snapshot-scoped and must be resolved through
+  // readerAppearanceSnapshotFontFamily(). The enum-only helper remains the
+  // built-in preview mapping and therefore fails closed here.
   return READER_FONT_NOTO_SERIF_SC_REGULAR;
+}
+
+export function readerAppearanceSnapshotFontFamily(snapshot: ReaderAppearanceSnapshot): string {
+  if (snapshot.font === 'custom' && snapshot.customFont !== undefined) {
+    return snapshot.customFont.familyName;
+  }
+  return readerAppearanceFontFamily(snapshot.font);
 }
 
 export function readerAppearanceLineHeight(snapshot: ReaderAppearanceSnapshot): number {
@@ -96,15 +122,37 @@ export function readerAppearanceParagraphIndent(
 }
 
 /**
- * ArkUI numeric fontSize values are fp while a bare numeric Length is vp.
- * Keep first-line indentation in the same font-scaled unit as the glyphs so
- * the one- and two-character choices remain true 1em/2em at every font scale.
+ * The visible reader is projected as one Text node per already-measured line.
+ * ArkUI's paragraph-level textIndent is therefore not a reliable primitive
+ * for that surface.  Use explicit ideographic spaces in both the hidden
+ * measurement text and the visible first-line Text so both layouts share the
+ * same one-character/two-character contract without changing Core offsets.
  */
-export function readerAppearanceParagraphIndentLength(
-  fontSize: number,
+export function readerAppearanceParagraphIndentPrefix(
   indent: ReaderAppearanceIndent,
 ): string {
-  return `${readerAppearanceParagraphIndent(fontSize, indent)}fp`;
+  if (indent === 'single') {
+    return '\u3000';
+  }
+  return indent === 'firstLine' ? '\u3000\u3000' : '';
+}
+
+export function readerAppearanceParagraphDisplayText(
+  text: string,
+  isParagraphStart: boolean,
+  indent: ReaderAppearanceIndent,
+): string {
+  return isParagraphStart ? `${readerAppearanceParagraphIndentPrefix(indent)}${text}` : text;
+}
+
+export function readerAppearanceParagraphContentScalarOffset(
+  displayScalarOffset: number,
+  contentScalarCount: number,
+  isParagraphStart: boolean,
+  indent: ReaderAppearanceIndent,
+): number {
+  const prefixScalarCount = isParagraphStart ? readerAppearanceParagraphIndentPrefix(indent).length : 0;
+  return Math.max(0, Math.min(contentScalarCount, displayScalarOffset - prefixScalarCount));
 }
 
 export function readerAppearanceUsesJustify(alignment: ReaderAppearanceAlignment): boolean {

@@ -2,6 +2,7 @@ import {
   READER_FONT_INTER,
   READER_FONT_NOTO_SANS_SC,
   READER_FONT_NOTO_SERIF_SC_BOLD,
+  READER_FONT_NOTO_SERIF_SC_REGULAR,
 } from './ReaderFontFamilies.ts';
 
 /** The owner of a text size: app/system scaling or the reader appearance snapshot. */
@@ -69,8 +70,6 @@ export const TYPE_SELECT_SETTINGS_VALUE = new ReaderTextStyle(
   READER_FONT_NOTO_SANS_SC, 400, 13, 15.6, undefined, 'system', 'figmaNode');
 export const TYPE_SELECT_SOURCE_GROUP_VALUE = new ReaderTextStyle(
   READER_FONT_INTER, 400, 12, 14.52, undefined, 'system', 'figmaNode');
-export const TYPE_SELECT_SOURCE_GROUP_CHEVRON = new ReaderTextStyle(
-  READER_FONT_INTER, 700, 16, 19.36, undefined, 'system', 'platformCalibration');
 export const TYPE_SELECT_DEFAULT_VALUE = new ReaderTextStyle(
   READER_FONT_NOTO_SANS_SC, 700, 12, undefined, undefined, 'system', 'figmaNode');
 export const TYPE_SELECT_OPTION = new ReaderTextStyle(
@@ -92,3 +91,9 @@ export const TYPE_SEARCH_RSS_HINT = new ReaderTextStyle(
 // Its line height remains owned by the responsive ReadingSurface layout map.
 export const TYPE_READER_CHAPTER_TITLE = new ReaderTextStyle(
   READER_FONT_NOTO_SERIF_SC_BOLD, 700, 23, undefined, undefined, 'system', 'figmaNode');
+export const TYPE_READER_CONTROL_BOOK_TITLE = new ReaderTextStyle(
+  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 16, undefined, undefined, 'system', 'figmaNode');
+export const TYPE_READER_CONTROL_CHAPTER_SOURCE = new ReaderTextStyle(
+  READER_FONT_NOTO_SERIF_SC_REGULAR, 400, 12, undefined, undefined, 'system', 'figmaNode');
+export const TYPE_READER_CONTROL_SOURCE_ACTION = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 700, 12, undefined, undefined, 'system', 'figmaNode');

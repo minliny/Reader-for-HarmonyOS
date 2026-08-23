@@ -17,6 +17,7 @@ import {
   isReaderScreenDirectionAvailable,
   isReaderScreenTimeoutAvailable,
   isReaderSettingsToggleAvailable,
+  readerPageTurnStyle,
   type ReaderPageTurnStyle,
   type ReaderScreenDirection,
   type ReaderScreenTimeout,
@@ -36,9 +37,9 @@ type ReaderSettingsFullSegmentGroup = 'direction' | 'pageTurn' | 'timeout';
  * Figma Reader Settings complete control sheet.
  *
  * Sources: Phone `942:86` / `936:66`; Tablet `942:88` / `938:62`.
- * The component is presentation-only. Host-backed controls stay in the exact
- * Figma rows but remain disabled until a formal window/audio capability is
- * admitted by the owner.
+ * The component is presentation-only. ReaderWindowCoordinator-backed controls
+ * are enabled by the pure availability contract; privileged or unimplemented
+ * rows remain visible but disabled.
  */
 @Component
 export struct ReaderSettingsFullPanel {
@@ -441,7 +442,7 @@ export struct ReaderSettingsFullPanel {
       return this.snapshot.screenDirection === option;
     }
     if (group === 'pageTurn') {
-      return this.snapshot.pageTurnStyle === option;
+      return readerPageTurnStyle(this.snapshot) === option;
     }
     return this.snapshot.screenTimeout === option;
   }

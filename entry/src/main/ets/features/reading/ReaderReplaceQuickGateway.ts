@@ -23,13 +23,50 @@ export class ReaderReplaceQuickGatewayError extends Error {
   }
 }
 
+export class ReaderReplacePreview {
+  sourceId: string;
+  bookId: string;
+  chapterIndex: number;
+  chapterTitle: string;
+  before: string;
+  after: string;
+  changed: boolean;
+  truncated: boolean;
+  storedRuleCount: number;
+  enabledRuleCount: number;
+
+  constructor(
+    sourceId: string,
+    bookId: string,
+    chapterIndex: number,
+    chapterTitle: string,
+    before: string,
+    after: string,
+    changed: boolean,
+    truncated: boolean,
+    storedRuleCount: number,
+    enabledRuleCount: number,
+  ) {
+    this.sourceId = sourceId;
+    this.bookId = bookId;
+    this.chapterIndex = chapterIndex;
+    this.chapterTitle = chapterTitle;
+    this.before = before;
+    this.after = after;
+    this.changed = changed;
+    this.truncated = truncated;
+    this.storedRuleCount = storedRuleCount;
+    this.enabledRuleCount = enabledRuleCount;
+  }
+}
+
 /**
  * Typed Core boundary for the independent Quick Replace panel.
  *
  * List data comes only from canonical `replace-rule.list`. A switch persists
- * only after `replace.persist` confirms the canonical update DTO. Preview is
- * intentionally absent: the reading surface currently exposes processed text,
- * and sending that through `replace.apply` again would double-transform it.
+ * only after `replace.persist` confirms the canonical update DTO. Preview asks
+ * Core to read its canonical raw chapter cache, so processed ArkUI text never
+ * crosses back into the replacement pipeline a second time.
  */
 export class ReaderReplaceQuickGateway {
   private readonly runtimeOwner: ReadingGatewayRuntime;
@@ -94,6 +131,60 @@ export class ReaderReplaceQuickGateway {
       }
       const message = error instanceof Error ? error.message : String(error);
       throw new ReaderReplaceQuickGatewayError('commandFailed', `replace.persist failed: ${message}`);
+    }
+  }
+
+  async preview(
+    sourceId: string,
+    bookId: string,
+    chapterIndex: number,
+    maxScalars: number = 160,
+  ): Promise<ReaderReplacePreview> {
+    if (sourceId.trim().length === 0 || bookId.trim().length === 0) {
+      throw new ReaderReplaceQuickGatewayError('invalidInput', 'preview identity must not be blank');
+    }
+    this.assertSafeInteger(chapterIndex, 'chapterIndex');
+    this.assertSafeInteger(maxScalars, 'maxScalars');
+    if (chapterIndex < 0 || maxScalars < 1 || maxScalars > 2048) {
+      throw new ReaderReplaceQuickGatewayError('invalidInput', 'preview bounds are invalid');
+    }
+    try {
+      const result = await this.runtimeOwner.request('replace.preview', {
+        sourceId,
+        bookId,
+        chapterIndex,
+        maxScalars,
+      });
+      const data = result.data;
+      const returnedSourceId = this.requireString(data, 'sourceId', 'replace.preview');
+      const returnedBookId = this.requireString(data, 'bookId', 'replace.preview');
+      const returnedChapterIndex = this.requireSafeInteger(data, 'chapterIndex', 'replace.preview');
+      if (returnedSourceId !== sourceId || returnedBookId !== bookId || returnedChapterIndex !== chapterIndex) {
+        throw new ReaderReplaceQuickGatewayError('identityMismatch', 'replace.preview returned another chapter');
+      }
+      const storedRuleCount = this.requireSafeInteger(data, 'storedRuleCount', 'replace.preview');
+      const enabledRuleCount = this.requireSafeInteger(data, 'enabledRuleCount', 'replace.preview');
+      if (storedRuleCount < 0 || enabledRuleCount < 0 || enabledRuleCount > storedRuleCount) {
+        throw new ReaderReplaceQuickGatewayError('invalidResponse', 'replace.preview returned invalid rule counts');
+      }
+      return new ReaderReplacePreview(
+        returnedSourceId,
+        returnedBookId,
+        returnedChapterIndex,
+        this.requireString(data, 'chapterTitle', 'replace.preview'),
+        this.requireString(data, 'before', 'replace.preview'),
+        this.requireString(data, 'after', 'replace.preview'),
+        this.requireBoolean(data, 'changed', 'replace.preview'),
+        this.requireBoolean(data, 'truncated', 'replace.preview'),
+        storedRuleCount,
+        enabledRuleCount,
+      );
+    } catch (error) {
+      if (error instanceof ReaderReplaceQuickGatewayError) {
+        throw error;
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      throw new ReaderReplaceQuickGatewayError('commandFailed', `replace.preview failed: ${message}`);
     }
   }
 

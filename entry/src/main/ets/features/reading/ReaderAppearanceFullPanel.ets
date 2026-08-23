@@ -19,6 +19,7 @@ import {
 } from '../common/ReaderTokens';
 import {
   createDefaultReaderAppearanceSnapshot,
+  isReaderAppearanceFont,
   readerAppearanceCanStep,
   type ReaderAppearanceAlignment,
   type ReaderAppearanceFont,
@@ -28,7 +29,9 @@ import {
   type ReaderAppearanceStepDirection,
   type ReaderAppearanceTheme,
 } from './ReaderAppearanceState';
+import { readerAppearanceFontFamily } from './ReaderAppearanceRenderStyle';
 import type { ReaderChineseConversionMode } from './ReaderChineseConversionGateway';
+import type { ReaderPageTurnStyle } from './ReaderSettingsState';
 import {
   READER_FULL_PANEL_HEIGHT_TABLET,
   READER_FULL_PANEL_MAX_WIDTH_PHONE,
@@ -53,11 +56,13 @@ export struct ReaderAppearanceFullPanel {
   @Prop reduceMotion: boolean = false;
   @Prop snapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   @Prop chineseConversionMode: ReaderChineseConversionMode = 'none';
+  @Prop pageTurnStyle: ReaderPageTurnStyle = 'slide';
   onCollapse: () => void = (): void => {};
   onThemeChange: (theme: ReaderAppearanceTheme) => void = (_theme: ReaderAppearanceTheme): void => {};
   onSetDayTheme: (theme: ReaderAppearanceTheme) => void = (_theme: ReaderAppearanceTheme): void => {};
   onSetNightTheme: (theme: ReaderAppearanceTheme) => void = (_theme: ReaderAppearanceTheme): void => {};
   onFontChange: (font: ReaderAppearanceFont) => void = (_font: ReaderAppearanceFont): void => {};
+  onCustomFontImport: () => void = (): void => {};
   onIndentRequest: (indent: ReaderAppearanceIndent) => void = (_indent: ReaderAppearanceIndent): void => {};
   onAlignmentRequest: (current: ReaderAppearanceAlignment) => void =
     (_current: ReaderAppearanceAlignment): void => {};
@@ -65,6 +70,8 @@ export struct ReaderAppearanceFullPanel {
     (_metric: ReaderAppearanceMetric, _direction: ReaderAppearanceStepDirection): void => {};
   onChineseConversionChange: (mode: ReaderChineseConversionMode) => void =
     (_mode: ReaderChineseConversionMode): void => {};
+  onPageTurnStyleChange: (style: ReaderPageTurnStyle) => void =
+    (_style: ReaderPageTurnStyle): void => {};
   @State private openSelect: string = '';
   @State private selectClosing: boolean = false;
   @State private selectAnchorX: number = 0;
@@ -319,9 +326,7 @@ export struct ReaderAppearanceFullPanel {
         style: fontId === 'import' ? BorderStyle.Dashed : BorderStyle.Solid,
       })
       .borderRadius(6)
-      .fontFamily(fontId === 'lxgwWenKai' ? 'ReaderLXGWWenKaiLite' :
-        (fontId === 'sourceHanSerif' || fontId === 'serif' ?
-          'ReaderNotoSerifSCRegular' : 'ReaderNotoSansSC'))
+      .fontFamily(this.fontCellFamily(fontId))
       .fontWeight(FontWeight.Regular)
       .fontSize(10)
       .fontColor(fontId === 'import' ? '#736659' : TOK_READ_INK)
@@ -332,7 +337,9 @@ export struct ReaderAppearanceFullPanel {
       .accessibilityText(this.isSelectableFont(fontId) ? `切换到${this.fontLabel(fontId)}` :
         `${this.fontLabel(fontId)}，暂不可用`)
       .onClick((): void => {
-        if (fontId === 'system' || fontId === 'serif' || fontId === 'sans' || fontId === 'lxgwWenKai') {
+        if (fontId === 'import') {
+          this.onCustomFontImport();
+        } else if (isReaderAppearanceFont(fontId)) {
           this.onFontChange(fontId);
         }
       });
@@ -698,15 +705,22 @@ export struct ReaderAppearanceFullPanel {
   }
 
   private isActiveFont(fontId: string): boolean {
-    return fontId === this.snapshot.font;
+    return fontId === 'import' ? this.snapshot.font === 'custom' : fontId === this.snapshot.font;
   }
 
   private isSelectableFont(fontId: string): boolean {
-    return fontId === 'system' || fontId === 'serif' || fontId === 'sans' || fontId === 'lxgwWenKai';
+    return fontId === 'import' || (isReaderAppearanceFont(fontId) && fontId !== 'custom');
+  }
+
+  private fontCellFamily(fontId: string): string {
+    if (fontId === 'import' && this.snapshot.customFont !== undefined) {
+      return this.snapshot.customFont.familyName;
+    }
+    return isReaderAppearanceFont(fontId) ? readerAppearanceFontFamily(fontId) : 'ReaderNotoSansSC';
   }
 
   private selectEnabled(kind: string): boolean {
-    return kind === 'alignment' || kind === 'language';
+    return kind === 'alignment' || kind === 'language' || kind === 'pageTurn';
   }
 
   private selectOptions(kind: string): string[] {
@@ -716,7 +730,7 @@ export struct ReaderAppearanceFullPanel {
     if (kind === 'alignment') {
       return ['开启', '关闭'];
     }
-    return ['平移'];
+    return ['覆盖', '平移', '仿真', '滚动', '无动画'];
   }
 
   private selectControlWidth(kind: string): number {
@@ -739,6 +753,13 @@ export struct ReaderAppearanceFullPanel {
       const next: ReaderAppearanceAlignment = option === '开启' ? 'justify' : 'start';
       if (next !== this.snapshot.alignment) {
         this.onAlignmentRequest(this.snapshot.alignment);
+      }
+    } else if (kind === 'pageTurn') {
+      const next: ReaderPageTurnStyle = option === '覆盖' ? 'cover' :
+        (option === '仿真' ? 'simulation' :
+          (option === '滚动' ? 'scroll' : (option === '无动画' ? 'none' : 'slide')));
+      if (next !== this.pageTurnStyle) {
+        this.onPageTurnStyleChange(next);
       }
     }
   }
@@ -770,18 +791,23 @@ export struct ReaderAppearanceFullPanel {
       return this.chineseConversionMode === 't2s' ? '繁转简' : '简转繁';
     }
     if (kind === 'pageTurn') {
-      // Figma `1150:10317` displays the approved selector value `平移`.
-      // The selector remains disabled until the separate page-turn runtime is
-      // admitted; keeping its visible skeleton source-exact does not claim
-      // that this P1 appearance slice implements that runtime.
-      return '平移';
+      if (this.pageTurnStyle === 'cover') {
+        return '覆盖';
+      }
+      if (this.pageTurnStyle === 'simulation') {
+        return '仿真';
+      }
+      if (this.pageTurnStyle === 'scroll') {
+        return '滚动';
+      }
+      return this.pageTurnStyle === 'none' ? '无动画' : '平移';
     }
     return this.snapshot.alignment === 'justify' ? '开启' : '关闭';
   }
 
   private selectAccessibilityText(kind: string): string {
     if (kind === 'pageTurn') {
-      return '平移翻页设计项暂未接通';
+      return `翻页动画，当前${this.selectValue(kind)}`;
     }
     return `${this.selectLabel(kind)}，当前${this.selectValue(kind)}`;
   }
@@ -890,6 +916,9 @@ export struct ReaderAppearanceFullPanel {
     }
     if (fontId === 'lxgwWenKai') {
       return '霞鹜文楷';
+    }
+    if (fontId === 'import' && this.snapshot.customFont !== undefined) {
+      return this.snapshot.customFont.displayName;
     }
     return '导入';
   }

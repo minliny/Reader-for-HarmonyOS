@@ -44,7 +44,7 @@ import {
 } from '../common/ReaderTokens';
 
 const GROUP_FILTER_WIDTH = 350;
-const GROUP_SELECT_WIDTH = 277;
+const GROUP_SELECT_WIDTH = 276;
 const SEARCH_FIELD_BORDER = '#75B4A697';  // shared search/action field outline
 const CHIP_BORDER = '#85B4A697';   // rgba(180,166,151,0.52)
 const STATUS_GOOD_BG = '#212B895C';   // rgba(43,137,92,0.13)
@@ -494,11 +494,9 @@ export struct SourceManagementPage {
 
       Stack({ alignContent: Alignment.Center }) {
         Row({ space: TOK_SPACE_XS }) {
-          Text('＋')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(20)
-            .fontColor(TOK_ON_PRIMARY);
+          Image($r('app.media.source_add'))
+            .width(18)
+            .height(18);
           Text('新增书源')
             .fontFamily('ReaderNotoSansSC')
             .fontWeight(FontWeight.Bold)

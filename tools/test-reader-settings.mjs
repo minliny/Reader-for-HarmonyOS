@@ -9,14 +9,20 @@ import {
   isReaderScreenTimeoutAvailable,
   isReaderSettingsToggleAvailable,
   normalizeReaderSettingsSnapshot,
+  readerPageTransitionUsesPreparedPages,
+  readerPageTurnStyle,
+  setReaderPageTurnStyle,
+  setReaderScreenDirection,
+  setReaderScreenTimeout,
   setReaderSettingsToggle,
 } from '../entry/src/main/ets/features/reading/ReaderSettingsState.ts';
 
 const initial = createDefaultReaderSettingsSnapshot();
 assert.deepEqual(initial, {
-  version: 1,
+  version: 2,
   screenDirection: 'system',
-  pageTurnStyle: 'none',
+  navigationMode: 'paged',
+  pageTransition: 'slide',
   screenTimeout: 'system',
   hideStatusBar: false,
   hideNavigationBar: false,
@@ -31,7 +37,8 @@ assert.deepEqual(initial, {
 const normalized = normalizeReaderSettingsSnapshot({
   ...initial,
   screenDirection: 'landscape',
-  pageTurnStyle: 'cover',
+  navigationMode: 'paged',
+  pageTransition: 'cover',
   screenTimeout: 'alwaysOn',
   hideStatusBar: true,
   hideNavigationBar: true,
@@ -42,35 +49,81 @@ const normalized = normalizeReaderSettingsSnapshot({
   stopTtsOnScreenOff: true,
   longPressSelectText: false,
 });
-assert.equal(normalized.screenDirection, 'system');
-assert.equal(normalized.pageTurnStyle, 'none');
-assert.equal(normalized.screenTimeout, 'system');
-assert.equal(normalized.hideStatusBar, false);
-assert.equal(normalized.hideNavigationBar, false);
-assert.equal(normalized.extendIntoCutout, false);
-assert.equal(normalized.volumeKeysTurnPage, false);
-assert.equal(normalized.stopTtsOnScreenOff, false);
+assert.equal(normalized.screenDirection, 'landscape');
+assert.equal(readerPageTurnStyle(normalized), 'cover');
+assert.equal(normalized.screenTimeout, 'alwaysOn');
+assert.equal(normalized.hideStatusBar, true);
+assert.equal(normalized.hideNavigationBar, true);
+assert.equal(normalized.extendIntoCutout, true);
+assert.equal(normalized.volumeKeysTurnPage, true);
+assert.equal(normalized.stopTtsOnScreenOff, true);
 assert.equal(normalized.justifyText, false);
-assert.equal(normalized.alignPageBottom, false);
+assert.equal(normalized.alignPageBottom, true);
 assert.equal(normalized.longPressSelectText, false);
 
+const migratedV1 = normalizeReaderSettingsSnapshot({
+  version: 1,
+  screenDirection: 'portrait',
+  pageTurnStyle: 'scroll',
+  screenTimeout: 'fiveMinutes',
+  hideStatusBar: true,
+  hideNavigationBar: false,
+  extendIntoCutout: false,
+  justifyText: true,
+  alignPageBottom: true,
+  volumeKeysTurnPage: true,
+  stopTtsOnScreenOff: true,
+  longPressSelectText: true,
+});
+assert.equal(migratedV1.version, 2);
+assert.equal(migratedV1.navigationMode, 'continuous');
+assert.equal(migratedV1.pageTransition, 'slide');
+assert.equal(readerPageTurnStyle(migratedV1), 'scroll');
+assert.equal(migratedV1.justifyText, false, 'Appearance remains the only justification owner');
+
 assert.notStrictEqual(copyReaderSettingsSnapshot(initial), initial);
+const noAnimation = setReaderPageTurnStyle(initial, 'none');
+assert.equal(readerPageTurnStyle(noAnimation), 'none');
+assert.notStrictEqual(noAnimation, initial);
+for (const style of ['cover', 'slide', 'simulation', 'scroll', 'none']) {
+  const changed = setReaderPageTurnStyle(initial, style);
+  assert.equal(readerPageTurnStyle(changed), style);
+}
+assert.equal(setReaderPageTurnStyle(initial, 'scroll').navigationMode, 'continuous');
+assert.equal(setReaderPageTurnStyle(initial, 'cover').pageTransition, 'cover');
+assert.equal(readerPageTransitionUsesPreparedPages(setReaderPageTurnStyle(initial, 'cover')), true);
+assert.equal(readerPageTransitionUsesPreparedPages(setReaderPageTurnStyle(initial, 'scroll')), false);
 assert.throws(() => setReaderSettingsToggle(initial, 'justifyText', true), /unavailable Reader Host/);
-assert.throws(() => setReaderSettingsToggle(initial, 'alignPageBottom', true), /unavailable Reader Host/);
-assert.throws(() => setReaderSettingsToggle(initial, 'longPressSelectText', true), /unavailable Reader Host/);
-assert.throws(() => setReaderSettingsToggle(initial, 'hideStatusBar', true), /unavailable Reader Host/);
-assert.throws(() => setReaderSettingsToggle(initial, 'volumeKeysTurnPage', true), /unavailable Reader Host/);
+assert.equal(setReaderSettingsToggle(initial, 'alignPageBottom', true).alignPageBottom, true);
+assert.equal(setReaderSettingsToggle(initial, 'longPressSelectText', true).longPressSelectText, true);
+assert.equal(setReaderSettingsToggle(initial, 'volumeKeysTurnPage', true).volumeKeysTurnPage, true);
+assert.equal(setReaderSettingsToggle(initial, 'stopTtsOnScreenOff', true).stopTtsOnScreenOff, true);
+assert.equal(setReaderSettingsToggle(initial, 'hideStatusBar', true).hideStatusBar, true);
+assert.equal(setReaderSettingsToggle(initial, 'hideNavigationBar', true).hideNavigationBar, true);
+assert.equal(setReaderSettingsToggle(initial, 'extendIntoCutout', true).extendIntoCutout, true);
+assert.equal(setReaderScreenDirection(initial, 'portrait').screenDirection, 'portrait');
+assert.equal(setReaderScreenDirection(initial, 'landscape').screenDirection, 'landscape');
+assert.equal(setReaderScreenTimeout(initial, 'alwaysOn').screenTimeout, 'alwaysOn');
+assert.equal(setReaderScreenTimeout(initial, 'fiveMinutes').screenTimeout, 'fiveMinutes');
 
 assert.equal(isReaderScreenDirectionAvailable('system'), true);
-assert.equal(isReaderScreenDirectionAvailable('portrait'), false);
+assert.equal(isReaderScreenDirectionAvailable('portrait'), true);
+assert.equal(isReaderScreenDirectionAvailable('landscape'), true);
+assert.equal(isReaderPageTurnStyleAvailable('slide'), true);
 assert.equal(isReaderPageTurnStyleAvailable('none'), true);
-assert.equal(isReaderPageTurnStyleAvailable('scroll'), false);
+assert.equal(isReaderPageTurnStyleAvailable('cover'), true);
+assert.equal(isReaderPageTurnStyleAvailable('simulation'), true);
+assert.equal(isReaderPageTurnStyleAvailable('scroll'), true);
 assert.equal(isReaderScreenTimeoutAvailable('system'), true);
-assert.equal(isReaderScreenTimeoutAvailable('fiveMinutes'), false);
+assert.equal(isReaderScreenTimeoutAvailable('alwaysOn'), true);
+assert.equal(isReaderScreenTimeoutAvailable('fiveMinutes'), true);
+assert.equal(isReaderSettingsToggleAvailable('hideStatusBar'), true);
+assert.equal(isReaderSettingsToggleAvailable('hideNavigationBar'), true);
+assert.equal(isReaderSettingsToggleAvailable('extendIntoCutout'), true);
 assert.equal(isReaderSettingsToggleAvailable('justifyText'), false);
-assert.equal(isReaderSettingsToggleAvailable('alignPageBottom'), false);
-assert.equal(isReaderSettingsToggleAvailable('longPressSelectText'), false);
-assert.equal(isReaderSettingsToggleAvailable('stopTtsOnScreenOff'), false);
+assert.equal(isReaderSettingsToggleAvailable('alignPageBottom'), true);
+assert.equal(isReaderSettingsToggleAvailable('longPressSelectText'), true);
+assert.equal(isReaderSettingsToggleAvailable('stopTtsOnScreenOff'), true);
 
 const readingDir = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
 const quickPanel = await readFile(new URL('ReaderSettingsModulePanel.ets', readingDir), 'utf8');
@@ -78,6 +131,7 @@ const fullPanel = await readFile(new URL('ReaderSettingsFullPanel.ets', readingD
 const gateway = await readFile(new URL('ReaderSettingsGateway.ts', readingDir), 'utf8');
 const controlPanel = await readFile(new URL('ReaderControlPanel.ets', readingDir), 'utf8');
 const experience = await readFile(new URL('LocalReadingExperience.ets', readingDir), 'utf8');
+const coordinator = await readFile(new URL('../../app/ReaderWindowCoordinator.ts', readingDir), 'utf8');
 
 assert.match(quickPanel, /Phone `942:70` \/ `924:69`; Tablet `942:72` \/ `926:65`/);
 assert.match(quickPanel, /return this\.isTablet \? 262 : 286/);
@@ -133,5 +187,18 @@ assert.match(controlPanel, /onAppearanceAlignmentRequest\(this\.appearanceSnapsh
 assert.match(experience, /void this\.loadReaderSettingsSnapshot\(lifecycleToken\)/);
 assert.match(experience, /this\.readerSettingsGateway\.update\(snapshot\)/);
 assert.match(experience, /settingsSnapshot: this\.readerSettingsSnapshot/);
+assert.match(controlPanel, /onScreenDirectionChange/);
+assert.match(controlPanel, /onScreenTimeoutChange/);
+assert.match(experience, /ReaderWindowCoordinator\.requestReaderWindowPolicy/);
+assert.match(experience, /ReaderWindowCoordinator\.requestAppWindowPolicy/);
+assert.match(experience, /ReaderScreenAwakeLease/);
+assert.match(experience, /this\.screenAwakeLease\?\.configure\(snapshot\.screenTimeout, this\.appForeground\)/);
+assert.match(experience, /this\.screenAwakeLease\?\.rearm\(\)/);
+assert.match(coordinator, /setPreferredOrientation/);
+assert.match(coordinator, /setWindowKeepScreenOn/);
+assert.equal((coordinator.match(/setSpecificSystemBarEnabled/g) ?? []).length, 6,
+  'reader/app policies must each own status, navigation and navigation-indicator restoration');
+assert.match(coordinator, /AUTO_ROTATION_UNSPECIFIED/,
+  'follow-system orientation must respect the user rotation-lock policy');
 
 console.log('reader settings pure/static contract: PASS');

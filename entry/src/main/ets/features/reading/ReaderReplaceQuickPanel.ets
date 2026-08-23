@@ -41,9 +41,9 @@ const REPLACE_PANEL_HEIGHT = REPLACE_PANEL_PADDING_Y * 2 + REPLACE_HEADER_HEIGHT
  * Tablet `942:56` / `914:64`.
  *
  * Hidden state is reserved for not-loaded or failed data. A valid Core list,
- * including zero, one, or two rules, renders this panel. Preview has no raw
- * pre-processing text, so Preview remains visible and non-interactive. Full
- * management reuses the application's existing RulesManagementPage.
+ * including zero, one, or two rules, renders this panel. Preview delegates to
+ * Core's raw chapter cache. Full management reuses the application's existing
+ * RulesManagementPage.
  */
 @Component
 export struct ReaderReplaceQuickPanel {
@@ -52,6 +52,7 @@ export struct ReaderReplaceQuickPanel {
   onClose: () => void = (): void => {};
   onToggleRule: (ruleId: number, isEnabled: boolean) => void =
     (_ruleId: number, _isEnabled: boolean): void => {};
+  onPreview: () => void = (): void => {};
   onOpenManagement: () => void = (): void => {};
 
   aboutToAppear(): void {
@@ -238,12 +239,14 @@ export struct ReaderReplaceQuickPanel {
       color: kind === 'preview' ? TOK_LINE_STRONG : Color.Transparent,
     })
     .borderRadius(8)
-    .enabled(kind === 'management')
-    .opacity(kind === 'management' ? 1 : 0.55)
+    .enabled(kind === 'management' || (this.state.kind === 'ready' && this.state.previewAvailable))
+    .opacity(1)
     .accessibilityText(kind === 'preview' ?
-      '预览效果，原始正文不可用' : '打开完整替换规则管理')
+      '预览当前章节替换效果' : '打开完整替换规则管理')
     .onClick((): void => {
-      if (kind === 'management') {
+      if (kind === 'preview') {
+        this.onPreview();
+      } else {
         this.onOpenManagement();
       }
     });

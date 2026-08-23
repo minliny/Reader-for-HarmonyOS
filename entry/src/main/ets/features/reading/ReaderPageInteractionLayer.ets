@@ -6,6 +6,7 @@ import {
   startReaderPagePan,
   updateReaderPagePan,
   type ReaderPageGestureState,
+  type ReaderPageGestureDecision,
   type ReaderPageTurnDirection,
   type ReaderPageTurnOutcome,
 } from './ReaderPageGestureState';
@@ -13,21 +14,26 @@ import {
 const READER_PAGE_PAN_DISTANCE = 12;
 
 /**
- * The single pointer owner above the no-animation reading surface.
+ * The single pointer owner above the reading page-turn stage.
  *
- * Pan MOVE only updates local transient state. A pagination request is emitted
- * once, on a valid end, so neither a cancelled gesture nor an in-flight busy
- * result can be replayed later.
+ * Pan MOVE only updates transient gesture state. A pagination request is
+ * emitted once, on a valid end; the owner decides whether a measured neighbour
+ * slides or the existing committed fallback runs without animation.
  */
 @Component
 export struct ReaderPageInteractionLayer {
   @Prop @Watch('onInteractionEnabledChanged') interactionEnabled: boolean = true;
   @Prop viewportWidth: number = 0;
+  @Prop allowTextSelection: boolean = false;
 
   onTurn: (direction: ReaderPageTurnDirection) => ReaderPageTurnOutcome =
     (_direction: ReaderPageTurnDirection): ReaderPageTurnOutcome => ({ kind: 'busy' });
   onOpenControl: () => void = (): void => {};
   onManualInteraction: () => void = (): void => {};
+  onGestureStateChange: (state: ReaderPageGestureState) => void =
+    (_state: ReaderPageGestureState): void => {};
+  onGestureDecision: (decision: ReaderPageGestureDecision) => void =
+    (_decision: ReaderPageGestureDecision): void => {};
 
   private gestureState: ReaderPageGestureState = createReaderPageGestureState();
 
@@ -36,7 +42,8 @@ export struct ReaderPageInteractionLayer {
       .width('100%')
       .height('100%')
       .backgroundColor('#00000000')
-      .hitTestBehavior(this.interactionEnabled ? HitTestMode.Block : HitTestMode.None)
+      .hitTestBehavior(this.interactionEnabled ?
+        (this.allowTextSelection ? HitTestMode.Transparent : HitTestMode.Block) : HitTestMode.None)
       .accessibilityText('阅读翻页区域')
       .accessibilityTextHint('左侧上一页，中间打开阅读控制，右侧下一页')
       .gesture(
@@ -47,9 +54,12 @@ export struct ReaderPageInteractionLayer {
             direction: PanDirection.Horizontal,
             distance: READER_PAGE_PAN_DISTANCE,
           })
-            .onActionStart((event: GestureEvent): void => this.startPan(event.offsetX))
-            .onActionUpdate((event: GestureEvent): void => this.updatePan(event.offsetX))
-            .onActionEnd((event: GestureEvent): void => this.finishPan(event.offsetX))
+            .onActionStart((event: GestureEvent): void =>
+              this.startPan(event.offsetX, event.offsetY))
+            .onActionUpdate((event: GestureEvent): void =>
+              this.updatePan(event.offsetX, event.offsetY, event.velocityX))
+            .onActionEnd((event: GestureEvent): void =>
+              this.finishPan(event.offsetX, event.offsetY, event.velocityX))
             .onActionCancel((): void => this.cancelPan()),
           TapGesture({ fingers: 1, count: 1 })
             .onAction((event: GestureEvent): void => this.handleTap(event)),
@@ -57,37 +67,46 @@ export struct ReaderPageInteractionLayer {
       );
   }
 
-  private startPan(offsetX: number): void {
+  private startPan(offsetX: number, offsetY: number): void {
     if (!this.interactionEnabled) {
       this.cancelPan();
       return;
     }
-    this.gestureState = startReaderPagePan(offsetX);
+    this.gestureState = startReaderPagePan(offsetX, this.viewportWidth, offsetY);
+    this.onGestureStateChange(this.gestureState);
     this.onManualInteraction();
   }
 
-  private updatePan(offsetX: number): void {
+  private updatePan(offsetX: number, offsetY: number, velocityX: number): void {
     if (!this.interactionEnabled) {
       this.cancelPan();
       return;
     }
-    this.gestureState = updateReaderPagePan(this.gestureState, offsetX);
+    this.gestureState = updateReaderPagePan(this.gestureState, offsetX, offsetY, velocityX);
+    this.onGestureStateChange(this.gestureState);
   }
 
-  private finishPan(offsetX: number): void {
+  private finishPan(offsetX: number, offsetY: number, velocityX: number): void {
     if (!this.interactionEnabled) {
       this.cancelPan();
       return;
     }
-    const decision = finishReaderPagePan(this.gestureState, offsetX);
+    const decision = finishReaderPagePan(this.gestureState, offsetX, offsetY, velocityX);
     this.gestureState = decision.state;
+    this.onGestureStateChange(this.gestureState);
+    this.onGestureDecision(decision);
     if (decision.direction !== undefined) {
       this.onTurn(decision.direction);
     }
   }
 
   private cancelPan(): void {
-    this.gestureState = cancelReaderPagePan(this.gestureState);
+    const cancelled = cancelReaderPagePan(this.gestureState);
+    if (cancelled === this.gestureState) {
+      return;
+    }
+    this.gestureState = cancelled;
+    this.onGestureStateChange(this.gestureState);
   }
 
   private handleTap(event: GestureEvent): void {

@@ -720,6 +720,7 @@ struct Index {
           bookTitle: this.detailBook.title,
           sourceId: this.detailBook.sourceId,
           sourceName: this.detailBook.sourceName,
+          bookKind: this.detailBook.kind,
           remoteSession: this.remoteReadingSession,
           sourceSwitchTransactionId: this.currentSourceSwitchTransactionId(),
           totalChapters: this.detailToc.length,
@@ -1883,7 +1884,7 @@ struct Index {
       coverUrl: selection.coverUrl,
       intro: selection.intro,
       lastChapter: selection.lastChapter,
-    }, selection.sourceId, selection, true);
+    }, this.sourceDisplayName(selection.sourceId), selection, true);
   }
 
   private openShelfBookInfo(selection: ShelfBook): void {
@@ -1900,7 +1901,7 @@ struct Index {
       coverUrl: selection.coverUrl,
       intro: selection.intro,
       lastChapter: selection.lastChapter,
-    }, selection.sourceId, selection, false);
+    }, this.sourceDisplayName(selection.sourceId), selection, false);
   }
 
   private openLocalBookDetail(selection: ShelfBook, resumeImmediately: boolean = false): void {
@@ -2063,6 +2064,7 @@ struct Index {
           bookId: session.identity.bookId,
           title: session.book.title,
           author: session.book.author,
+          kind: session.book.kind,
           coverUrl: session.book.coverUrl,
           intro: session.book.intro,
           lastChapter: session.book.lastChapter,
@@ -2153,6 +2155,7 @@ struct Index {
               bookId: current.bookId,
               title: current.title,
               author: current.author,
+              kind: current.kind,
               coverUrl: current.coverUrl,
               intro: current.intro,
               lastChapter: current.lastChapter,
@@ -3641,14 +3644,37 @@ struct Index {
   private readingDetailForShelf(book: ShelfBook): ReadingBookDetail {
     return {
       sourceId: book.sourceId,
-      sourceName: book.sourceId,
+      sourceName: this.sourceDisplayName(book.sourceId),
       bookId: book.bookId,
       title: book.title,
       author: book.author,
+      kind: book.kind,
       coverUrl: book.coverUrl,
       intro: book.intro,
       lastChapter: book.lastChapter,
     };
+  }
+
+  private sourceDisplayName(sourceId: string): string {
+    if (sourceId === LOCAL_SOURCE_ID) {
+      return '本地书籍';
+    }
+    for (const source of this.searchSources) {
+      if (source.sourceId === sourceId && source.name.trim().length > 0) {
+        return source.name.trim();
+      }
+    }
+    for (const source of this.sourceSources) {
+      if (source.sourceId === sourceId && source.name.trim().length > 0) {
+        return source.name.trim();
+      }
+    }
+    for (const source of this.sourceToolsSnapshot.sources) {
+      if (source.sourceId === sourceId && source.name.trim().length > 0) {
+        return source.name.trim();
+      }
+    }
+    return sourceId;
   }
 
   private readingDetailForRemoteSeed(seed: RemoteReadingBookSeed, sourceName: string): ReadingBookDetail {
@@ -3659,6 +3685,7 @@ struct Index {
       bookId: seed.bookId,
       title: seed.title,
       author: seed.author,
+      kind: seed.kind,
       coverUrl: seed.coverUrl,
       intro: seed.intro,
       lastChapter: seed.lastChapter,
@@ -3739,6 +3766,7 @@ struct Index {
           bookId: refreshed.identity.bookId,
           title: refreshed.book.title,
           author: refreshed.book.author,
+          kind: refreshed.book.kind,
           coverUrl: refreshed.book.coverUrl,
           intro: refreshed.book.intro,
           lastChapter: refreshed.book.lastChapter,

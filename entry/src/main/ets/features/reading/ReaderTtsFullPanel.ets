@@ -30,6 +30,7 @@ import {
   READER_FULL_PANEL_MAX_WIDTH_PHONE,
   READER_FULL_PANEL_MAX_WIDTH_TABLET,
 } from './ReaderLayoutGeometry';
+import type { ReaderTtsVoiceOption } from './ReaderTtsPreferencesState';
 
 const TTS_FULL_GRABBER_WIDTH = 42;
 const TTS_FULL_GRABBER_HEIGHT = 4;
@@ -62,10 +63,14 @@ export struct ReaderTtsFullPanel {
   @Prop timerMinutes: number = 15;
   @Prop timerSeconds: number = 0;
   @Prop followHighlight: boolean = true;
+  @Prop pauseOnInterruption: boolean = true;
   @Prop allowMixing: boolean = false;
   @Prop failurePolicy: 'skip' | 'stop' = 'stop';
   @Prop engine: string = 'system';
   @Prop httpEngines: ReaderTtsEngineOption[] = [];
+  @Prop voiceOptions: ReaderTtsVoiceOption[] = [];
+  @Prop language: string = 'zh-CN';
+  @Prop person: number = 0;
   onCollapse: () => void = (): void => {};
   onToggle: () => void = (): void => {};
   onStop: () => void = (): void => {};
@@ -76,8 +81,11 @@ export struct ReaderTtsFullPanel {
     (_minutes: number, _seconds: number): void => {};
   onRateChange: (rate: number) => void = (_rate: number): void => {};
   onFollowHighlightChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
+  onPauseOnInterruptionChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
   onAllowMixingChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
   onFailurePolicyChange: (policy: 'skip' | 'stop') => void = (_policy: 'skip' | 'stop'): void => {};
+  onVoiceChange: (language: string, person: number) => void =
+    (_language: string, _person: number): void => {};
   onEngineChange: (engine: string) => Promise<void> = (_engine: string): Promise<void> => Promise.resolve();
   onHttpEnginePut: (config: ReaderTtsEngineOption) => Promise<void> =
     (_config: ReaderTtsEngineOption): Promise<void> => Promise.resolve();
@@ -470,10 +478,13 @@ export struct ReaderTtsFullPanel {
   private detailSection() {
     Column({ space: 0 }) {
       this.sectionHeader('详细配置', '即时生效');
-      this.selectorRow('音色选项', '系统默认');
+      this.selectorRow('音色选项', this.currentVoiceLabel(),
+        !this.isHttpEngineSelected() && this.voiceOptions.length > 1,
+        (): void => this.selectNextVoice());
       this.toggleRow('跟随高亮', this.followHighlight, true,
         (enabled: boolean): void => this.onFollowHighlightChange(enabled));
-      this.toggleRow('来电暂停', true, false, (_enabled: boolean): void => {});
+      this.toggleRow('来电暂停', this.pauseOnInterruption, true,
+        (enabled: boolean): void => this.onPauseOnInterruptionChange(enabled));
       this.toggleRow('允许与其他应用同时播放', this.allowMixing, true,
         (enabled: boolean): void => this.onAllowMixingChange(enabled));
     }
@@ -521,10 +532,13 @@ export struct ReaderTtsFullPanel {
       }
       .width('100%')
       .padding({ top: 8, bottom: 8 });
-      this.selectorRow('当前引擎', this.currentEngineLabel());
-      this.selectorRow('语言', 'zh-CN');
-      this.selectorRow('音频会话', this.allowMixing ? '混音' : '媒体独占');
-      this.selectorRow('不可用处理', this.failurePolicy === 'skip' ? '跳过' : '停止');
+      this.selectorRow('当前引擎', this.currentEngineLabel(), false, (): void => {});
+      this.selectorRow('语言', this.language,
+        !this.isHttpEngineSelected() && this.languageCount() > 1,
+        (): void => this.selectNextLanguage());
+      this.selectorRow('音频会话', this.allowMixing ? '混音' : '媒体独占', false, (): void => {});
+      this.selectorRow('不可用处理', this.failurePolicy === 'skip' ? '跳过' : '停止', true,
+        (): void => this.onFailurePolicyChange(this.failurePolicy === 'skip' ? 'stop' : 'skip'));
     }
     .width('100%')
     .padding({ top: 18, left: 4, right: 4, bottom: 24 })
@@ -551,7 +565,7 @@ export struct ReaderTtsFullPanel {
   }
 
   @Builder
-  private selectorRow(label: string, value: string) {
+  private selectorRow(label: string, value: string, enabled: boolean, onSelect: () => void) {
     Row() {
       Text(label)
         .layoutWeight(1)
@@ -576,7 +590,9 @@ export struct ReaderTtsFullPanel {
     .padding({ left: 10, right: 10 })
     .alignItems(VerticalAlign.Center)
     .border({ width: { bottom: TOK_BORDER_W }, color: TOK_BORDER })
-    .enabled(false);
+    .enabled(enabled)
+    .opacity(enabled ? 1 : 0.72)
+    .onClick((): void => onSelect());
   }
 
   @Builder
@@ -714,6 +730,41 @@ export struct ReaderTtsFullPanel {
     );
     const next = this.httpEngines[(index + 1 + this.httpEngines.length) % this.httpEngines.length];
     return `http-tts:${next.id}`;
+  }
+
+  private currentVoiceLabel(): string {
+    return this.voiceOptions.find((option: ReaderTtsVoiceOption): boolean =>
+      option.language === this.language && option.person === this.person)?.label ??
+      `${this.language} · 音色 ${this.person}`;
+  }
+
+  private selectNextVoice(): void {
+    if (this.voiceOptions.length === 0) return;
+    const index = this.voiceOptions.findIndex((option: ReaderTtsVoiceOption): boolean =>
+      option.language === this.language && option.person === this.person);
+    const next = this.voiceOptions[(index + 1 + this.voiceOptions.length) % this.voiceOptions.length];
+    this.onVoiceChange(next.language, next.person);
+  }
+
+  private languageCount(): number {
+    return this.languages().length;
+  }
+
+  private selectNextLanguage(): void {
+    const languages = this.languages();
+    if (languages.length === 0) return;
+    const current = languages.indexOf(this.language);
+    const language = languages[(current + 1 + languages.length) % languages.length];
+    const voice = this.voiceOptions.find((option: ReaderTtsVoiceOption): boolean => option.language === language);
+    if (voice !== undefined) this.onVoiceChange(voice.language, voice.person);
+  }
+
+  private languages(): string[] {
+    const languages: string[] = [];
+    for (const option of this.voiceOptions) {
+      if (!languages.includes(option.language)) languages.push(option.language);
+    }
+    return languages;
   }
 
   private statusText(): string {

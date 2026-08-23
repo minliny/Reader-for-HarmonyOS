@@ -3,6 +3,7 @@ import {
   type ReaderTtsHostEvent,
   type ReaderTtsHostSpeakRequest,
 } from '../features/reading/ReaderTtsSessionCoordinator.ts';
+import type { ReaderTtsVoiceOption } from '../features/reading/ReaderTtsPreferencesState';
 import type {
   ReaderTtsMediaSessionBridge,
   ReaderTtsPublishedPlaybackState,
@@ -10,6 +11,10 @@ import type {
 
 export interface ReaderTtsClosableHost extends ReaderTtsHost {
   close(): Promise<void>;
+}
+
+export interface ReaderTtsSystemHost extends ReaderTtsClosableHost {
+  listVoices(): Promise<ReaderTtsVoiceOption[]>;
 }
 
 export interface ReaderTtsBackgroundSessionBridge {
@@ -21,7 +26,7 @@ export interface ReaderTtsBackgroundSessionBridge {
 
 /** Chooses one Host transport from the Core-persisted `tts.config.engine`. */
 export class HarmonyTtsHostRouter implements ReaderTtsHost {
-  private readonly system: ReaderTtsClosableHost;
+  private readonly system: ReaderTtsSystemHost;
   private readonly http: ReaderTtsClosableHost;
   private active: ReaderTtsHost;
   private readonly mediaSession: ReaderTtsMediaSessionBridge;
@@ -29,7 +34,7 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
   private listener: ((event: ReaderTtsHostEvent) => void) | undefined = undefined;
 
   constructor(
-    system: ReaderTtsClosableHost,
+    system: ReaderTtsSystemHost,
     http: ReaderTtsClosableHost,
     mediaSession: ReaderTtsMediaSessionBridge,
     backgroundSession?: ReaderTtsBackgroundSessionBridge,
@@ -86,6 +91,10 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
 
   speak(request: ReaderTtsHostSpeakRequest): Promise<void> {
     return this.active.speak(request);
+  }
+
+  listSystemVoices(): Promise<ReaderTtsVoiceOption[]> {
+    return this.system.listVoices();
   }
 
   stop(): Promise<void> {

@@ -26,12 +26,24 @@ for (const family of [
   'READER_FONT_NOTO_SERIF_SC_REGULAR',
   'READER_FONT_NOTO_SANS_SC',
   'READER_FONT_LXGW_WENKAI_LITE',
+  'READER_FONT_BPMF_ZIHI_KAI_STD',
+  'READER_FONT_ZHUQUE_FANGSONG',
+  'READER_FONT_SARASA_MONO_SC',
+  'READER_FONT_SOURCE_HAN_SERIF',
   'READER_FONT_HARMONYOS_SANS',
 ]) {
   assert.match(families, new RegExp(`export const ${family}`));
 }
 assert.match(fonts, /from '\.\/ReaderFontFamilies\.ts'/,
   'font registration and runtime render helpers must share a TS-safe physical-family layer');
+for (const rawfile of [
+  'BpmfZihiKaiStd-Regular.ttf',
+  'ZhuqueFangsong-Regular.ttf',
+  'SarasaMonoSC-Regular.ttf',
+]) {
+  assert.match(fonts, new RegExp(`\\$rawfile\\('${rawfile.replace('.', '\\.')}'\\)`),
+    `${rawfile} must be registered before a Figma font slot is enabled`);
+}
 
 assert.match(typography,
   /export class ReaderTextStyle[\s\S]*lineHeightFp: number \| undefined[\s\S]*letterSpacingFp: number \| undefined[\s\S]*scalePolicy: ReaderFontScalePolicy[\s\S]*source: ReaderTypographySource/,

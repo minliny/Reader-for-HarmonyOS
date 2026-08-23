@@ -24,6 +24,7 @@ export type ReaderTtsHostSpeakRequest = {
   rate: number;
   pitch: number;
   language: string;
+  person: number;
   engine?: string;
 };
 
@@ -55,6 +56,8 @@ export type ReaderTtsStartInput = {
   rate?: number;
   pitch?: number;
   language?: string;
+  person?: number;
+  pauseOnInterruption?: boolean;
   allowMixing?: boolean;
   failurePolicy?: 'skip' | 'stop';
   timerDurationMs?: number;
@@ -190,7 +193,11 @@ export class ReaderTtsSessionCoordinator {
     }
     if (event.type === 'interruption') {
       if (event.action === 'pause' || event.action === 'stop') {
-        void this.pauseForSystem('systemInterruption');
+        if (this.active?.input.pauseOnInterruption ?? true) {
+          void this.pauseForSystem('systemInterruption');
+        } else {
+          void this.stop('systemInterruption');
+        }
       } else if (event.action === 'resume') {
         void this.resume();
       }
@@ -382,7 +389,34 @@ export class ReaderTtsSessionCoordinator {
     if (this.active !== undefined) this.active.input = { ...this.active.input, failurePolicy };
   }
 
-  stop(reason: 'user' | 'timer' | 'lifecycle' | 'contentChanged' = 'user'): Promise<void> {
+  setPauseOnInterruption(pauseOnInterruption: boolean): void {
+    if (this.active !== undefined) this.active.input = { ...this.active.input, pauseOnInterruption };
+  }
+
+  setVoice(language: string, person: number): Promise<void> {
+    const normalizedLanguage = language.trim();
+    if (normalizedLanguage.length === 0 || !Number.isSafeInteger(person) || person < 0) {
+      return Promise.reject(new Error('Reader TTS voice requires a language and non-negative person'));
+    }
+    const active = this.active;
+    if (active === undefined) return Promise.resolve();
+    active.input = { ...active.input, language: normalizedLanguage, person };
+    if (active.plan === undefined || this.state.sliceIndex === undefined ||
+      this.state.status === 'paused' || this.state.status === 'interrupted') return Promise.resolve();
+    const identity = active.identity;
+    const index = this.state.sliceIndex;
+    this.invalidateUtterance();
+    const hostStopTask = this.stopHostTransportImmediately();
+    return this.enqueue(async (): Promise<void> => {
+      const hostStopError = await hostStopTask;
+      if (hostStopError !== undefined) throw hostStopError;
+      if (!this.isSessionCurrent(identity)) return;
+      await this.speakSlice(active, index, 'resuming');
+    });
+  }
+
+  stop(reason: 'user' | 'timer' | 'lifecycle' | 'contentChanged' | 'screenOff' |
+    'systemInterruption' = 'user'): Promise<void> {
     const active = this.active;
     this.clearTimer();
     this.transport = {
@@ -550,6 +584,7 @@ export class ReaderTtsSessionCoordinator {
         rate: active.input.rate ?? 1,
         pitch: active.input.pitch ?? 1,
         language: active.input.language ?? 'zh-CN',
+        person: active.input.person ?? 0,
         engine: active.config?.engine,
       });
     } catch (error) {
@@ -1015,6 +1050,12 @@ export class ReaderTtsSessionCoordinator {
       input.contentVersion.trim().length > 0 : Number.isSafeInteger(input.contentVersion) && input.contentVersion >= 0;
     if (!contentVersionValid || !Number.isSafeInteger(input.scalarPosition) || input.scalarPosition < 0) {
       throw new Error('Reader TTS start requires safe content version and scalar position');
+    }
+    if (input.language !== undefined && input.language.trim().length === 0) {
+      throw new Error('Reader TTS start requires a non-blank language');
+    }
+    if (input.person !== undefined && (!Number.isSafeInteger(input.person) || input.person < 0)) {
+      throw new Error('Reader TTS start requires a non-negative voice person');
     }
   }
 }

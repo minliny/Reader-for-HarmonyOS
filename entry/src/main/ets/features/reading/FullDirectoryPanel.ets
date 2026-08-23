@@ -221,10 +221,7 @@ export struct FullDirectoryPanel {
   @Builder
   private directoryTab() {
     Stack({ alignContent: Alignment.Bottom }) {
-      Row({ space: 5 }) {
-        Image($r('app.media.reader_directory_directory'))
-          .width(15)
-          .height(15);
+      Row() {
         Text('目录')
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(600)

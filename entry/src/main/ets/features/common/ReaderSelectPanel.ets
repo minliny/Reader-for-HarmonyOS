@@ -4,6 +4,7 @@ import {
   TOK_BORDER_W,
   TOK_CONTROL_INK,
   TOK_FIELD_SURFACE,
+  TOK_INK,
   TOK_PRIMARY_DARK,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SURFACE_PANEL_SOFT,
@@ -15,6 +16,7 @@ import {
   TYPE_SELECT_DEFAULT_VALUE,
   TYPE_SELECT_OPTION,
   TYPE_SELECT_SETTINGS_VALUE,
+  TYPE_SELECT_SOURCE_GROUP_VALUE,
 } from './ReaderTypography';
 
 // 展开下拉面板 — 宿主页在全高 overlay Stack 内定位渲染, position 相对宿主 Stack。
@@ -72,12 +74,12 @@ export struct ReaderSelectPanel {
     .width(this.resolvedWidth())
     .height(this.expandedHeight)
     .zIndex(10)
-    .backgroundColor(this.variant === 'appearanceCompact' ? '#D1FFF8EF' : TOK_FIELD_SURFACE)
+    .backgroundColor(this.panelBackgroundColor())
     .border({
       width: TOK_BORDER_W,
-      color: this.variant === 'appearanceCompact' ? '#C1C7CD' : TOK_BORDER,
+      color: this.panelBorderColor(),
     })
-    .borderRadius(6)
+    .borderRadius(this.variant === 'sourceGroup' ? 8 : 6)
     .clip(true)
     .onAppear((): void => this.expandPanel());
   }
@@ -87,9 +89,37 @@ export struct ReaderSelectPanel {
   private selectedRow() {
     if (this.variant === 'appearanceCompact') {
       this.appearanceSelectedRow();
+    } else if (this.variant === 'sourceGroup') {
+      this.sourceGroupSelectedRow();
     } else {
       this.defaultSelectedRow();
     }
+  }
+
+  @Builder
+  private sourceGroupSelectedRow() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Text(this.value)
+        .width(Math.max(0, this.resolvedWidth() - 42))
+        .height(15)
+        .fontFamily(TYPE_SELECT_SOURCE_GROUP_VALUE.fontFamily)
+        .fontWeight(TYPE_SELECT_SOURCE_GROUP_VALUE.fontWeight)
+        .fontSize(TYPE_SELECT_SOURCE_GROUP_VALUE.fontSizeFp)
+        .lineHeight(TYPE_SELECT_SOURCE_GROUP_VALUE.lineHeightFp as number)
+        .fontColor(TOK_INK)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .position({ x: 14, y: 10 });
+      Image($r('app.media.source_group_chevron'))
+        .width(12)
+        .height(12)
+        .rotate({ angle: this.chevronAngle })
+        .position({ x: this.resolvedWidth() - 21, y: 12 });
+    }
+    .width('100%')
+    .height(OPTION_H)
+    .backgroundColor('#FFFCF8')
+    .onClick((): void => this.selectAndCollapse(this.value));
   }
 
   @Builder
@@ -146,17 +176,21 @@ export struct ReaderSelectPanel {
     Row() {
       Text(opt)
         .layoutWeight(1)
-        .fontFamily(TYPE_SELECT_OPTION.fontFamily)
-        .fontWeight(TYPE_SELECT_OPTION.fontWeight)
-        .fontSize(TYPE_SELECT_OPTION.fontSizeFp)
-        .fontColor(TOK_CONTROL_INK)
+        .fontFamily(this.optionTextStyle().fontFamily)
+        .fontWeight(this.optionTextStyle().fontWeight)
+        .fontSize(this.optionTextStyle().fontSizeFp)
+        .lineHeight(this.optionTextStyle().lineHeightFp as number)
+        .fontColor(this.variant === 'sourceGroup' ? TOK_INK : TOK_CONTROL_INK)
         .textAlign(TextAlign.Start)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
     }
     .width('100%')
     .height(OPTION_H)
-    .padding({ left: SELECT_PAD, right: SELECT_PAD })
+    .padding({
+      left: this.variant === 'sourceGroup' ? 14 : SELECT_PAD,
+      right: this.variant === 'sourceGroup' ? 14 : SELECT_PAD,
+    })
     .alignItems(VerticalAlign.Center)
     .onClick((): void => this.selectAndCollapse(opt));
   }
@@ -190,12 +224,39 @@ export struct ReaderSelectPanel {
     return SELECT_CHROME;
   }
 
+  private panelBackgroundColor(): ResourceColor {
+    if (this.variant === 'appearanceCompact') {
+      return '#D1FFF8EF';
+    }
+    if (this.variant === 'sourceGroup') {
+      return '#FFFCF8';
+    }
+    return TOK_FIELD_SURFACE;
+  }
+
+  private panelBorderColor(): ResourceColor {
+    if (this.variant === 'appearanceCompact') {
+      return '#C1C7CD';
+    }
+    if (this.variant === 'sourceGroup') {
+      return '#85B4A697';
+    }
+    return TOK_BORDER;
+  }
+
+  private optionTextStyle() {
+    return this.variant === 'sourceGroup' ? TYPE_SELECT_SOURCE_GROUP_VALUE : TYPE_SELECT_OPTION;
+  }
+
   private measureTextStyle() {
     if (this.variant === 'settingsPhone' || this.variant === 'settingsTablet') {
       return TYPE_SELECT_SETTINGS_VALUE;
     }
     if (this.variant === 'appearanceCompact') {
       return TYPE_SELECT_APPEARANCE_VALUE;
+    }
+    if (this.variant === 'sourceGroup') {
+      return TYPE_SELECT_SOURCE_GROUP_VALUE;
     }
     return TYPE_SELECT_DEFAULT_VALUE;
   }

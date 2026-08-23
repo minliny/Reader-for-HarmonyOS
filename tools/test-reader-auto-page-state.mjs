@@ -7,6 +7,7 @@ import {
   invalidateReaderAutoPageState,
   isReaderAutoPageTurnDue,
   pauseReaderAutoPage,
+  retryReaderAutoPageTurn,
   resumeReaderAutoPage,
   setReaderAutoPageSpeed,
   startReaderAutoPage,
@@ -125,5 +126,28 @@ assert.strictEqual(tickReaderAutoPage(state, detachedGeneration), state,
 
 assert.throws(() => tickReaderAutoPage(state, state.generation, 0), /positive safe integer/);
 assert.throws(() => setReaderAutoPageSpeed(state, Number.NaN), /positive safe integer/);
+
+let failedCommitState = startReaderAutoPage(createReaderAutoPageState(9));
+failedCommitState = tickReaderAutoPage(failedCommitState, 1, 9);
+assert.equal(failedCommitState.awaitingPageCommit, true);
+assert.strictEqual(retryReaderAutoPageTurn(failedCommitState, 0), failedCommitState,
+  'a stale prepared-turn failure cannot reset the admitted generation');
+
+const retriedRunningState = retryReaderAutoPageTurn(failedCommitState, 1);
+assert.equal(retriedRunningState.status, 'running');
+assert.equal(retriedRunningState.remainingSeconds, 9);
+assert.equal(retriedRunningState.awaitingPageCommit, false);
+assert.equal(retriedRunningState.generation, 2);
+assert.strictEqual(commitReaderAutoPageTurn(retriedRunningState, 1), retriedRunningState,
+  'the failed prepared-turn token must be invalid after retry');
+
+const pausedFailedCommitState = pauseReaderAutoPage(failedCommitState, 'background');
+assert.equal(pausedFailedCommitState.generation, 1);
+const retriedPausedState = retryReaderAutoPageTurn(pausedFailedCommitState, 1);
+assert.equal(retriedPausedState.status, 'paused');
+assert.equal(retriedPausedState.pauseReason, 'background');
+assert.equal(retriedPausedState.remainingSeconds, 9);
+assert.equal(retriedPausedState.awaitingPageCommit, false);
+assert.equal(retriedPausedState.generation, 2);
 
 console.log('reader auto-page pure state: PASS');

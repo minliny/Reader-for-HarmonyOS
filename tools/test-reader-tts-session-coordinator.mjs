@@ -189,6 +189,10 @@ host.emit({ type: 'interruption', action: 'resume' });
 await coordinator.whenSettled();
 assert.equal(coordinator.getState().status, 'resuming');
 
+await coordinator.setVoice('en-US', 7);
+assert.equal(host.requests.at(-1).language, 'en-US');
+assert.equal(host.requests.at(-1).person, 7);
+
 await coordinator.setRate(1.4);
 assert.ok(gateway.calls.includes('rate:7'));
 
@@ -218,6 +222,7 @@ const immediateTransportIntents = [
   { name: 'next', invoke: current => current.next() },
   { name: 'previous', invoke: current => current.previous() },
   { name: 'rate', invoke: current => current.setRate(1.4) },
+  { name: 'voice', invoke: current => current.setVoice('en-US', 7) },
 ];
 let blockedContentVersion = 4;
 for (const scenario of immediateTransportIntents) {
@@ -274,6 +279,23 @@ replacement.speak.release();
 await replacement.startTask;
 await replacementTask;
 assert.equal(replacement.host.requests.length, 2);
+
+const stopOnCallGateway = new FakeGateway();
+const stopOnCallHost = new FakeHost();
+const stopOnCallCoordinator = new ReaderTtsSessionCoordinator(stopOnCallGateway, stopOnCallHost);
+await stopOnCallCoordinator.start({
+  chapter,
+  content: canonicalRemoteContent,
+  contentVersion: blockedContentVersion + 2,
+  scalarPosition: 0,
+  pauseOnInterruption: false,
+});
+stopOnCallHost.emit({ type: 'interruption', action: 'pause' });
+await stopOnCallCoordinator.whenSettled();
+await stopOnCallCoordinator.whenSettled();
+assert.equal(stopOnCallCoordinator.getState().status, 'idle');
+assert.equal(stopOnCallCoordinator.getState().stopReason, 'systemInterruption');
+assert.ok(stopOnCallGateway.calls.includes('stop'));
 
 const coordinatorSource = await readFile(
   new URL('../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts', import.meta.url),

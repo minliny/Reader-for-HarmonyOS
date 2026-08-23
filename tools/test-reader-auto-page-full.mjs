@@ -60,8 +60,8 @@ assert.equal(stepReaderAutoPageFullTimer({ ...initial, timerSeconds: 59 }, 'seco
 assert.equal(setReaderAutoPageFullSpeed(initial, 100).speedSeconds, 20);
 assert.equal(setReaderAutoPageFullSpeed(initial, 1).speedSeconds, 2);
 assert.equal(setReaderAutoPageFullFollowHighlight(initial, false).followHighlight, false);
-assert.equal(setReaderAutoPageFullFollowHighlight(initial, true).followHighlight, false,
-  'unimplemented follow highlight must fail closed even for legacy callers');
+assert.equal(setReaderAutoPageFullFollowHighlight(initial, true).followHighlight, true,
+  'follow highlight must retain the user selection once the reading consumer is wired');
 assert.equal(formatReaderAutoPageFullWheelValue(0), '00');
 assert.equal(formatReaderAutoPageFullWheelValue(8), '08');
 assert.equal(formatReaderAutoPageFullWheelValue(180), '180');
@@ -104,9 +104,9 @@ assert.match(panel, /Text\('定时'\)/);
 assert.match(panel, /Text\('自动停止'\)/);
 assert.match(panel, /Text\('详细配置'\)/);
 assert.match(panel, /Text\('跟随高亮'\)/);
-assert.match(panel, /跟随高亮，当前能力未接入，已关闭/);
-assert.match(panel, /\.enabled\(false\)[\s\S]*addedActorOpacity\(\) \* 0\.55/,
-  'follow highlight must remain visible but disabled until a consumer exists');
+assert.match(panel, /onFollowHighlightChange\(!this\.followHighlight\)/);
+assert.match(panel, /\.enabled\(this\.interactionEnabled && this\.status === 'stopped'\)/,
+  'follow highlight is editable only before an automatic-page session starts');
 assert.match(panel, /\.fontFamily\('ReaderInter'\)/);
 assert.match(panel, /collapsedBackActor\(\)[\s\S]*ReaderNotoSansSC/,
   'the outgoing Quick Back actor retains the Quick endpoint font');

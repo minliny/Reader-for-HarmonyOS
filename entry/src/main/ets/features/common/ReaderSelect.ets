@@ -4,7 +4,6 @@ import {
   TOK_BORDER_W,
   TOK_GREEN,
   TOK_INK,
-  TOK_MUTED,
   TOK_PRIMARY_DARK,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SURFACE_FIELD,
@@ -15,7 +14,6 @@ import {
   TYPE_SELECT_APPEARANCE_VALUE,
   TYPE_SELECT_DEFAULT_VALUE,
   TYPE_SELECT_SETTINGS_VALUE,
-  TYPE_SELECT_SOURCE_GROUP_CHEVRON,
   TYPE_SELECT_SOURCE_GROUP_VALUE,
 } from './ReaderTypography';
 
@@ -157,15 +155,12 @@ export struct ReaderSelect {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .position({ x: 14, y: 10 });
-      Text('⌄')
-        .width(9)
-        .height(19)
-        .fontFamily(TYPE_SELECT_SOURCE_GROUP_CHEVRON.fontFamily)
-        .fontWeight(TYPE_SELECT_SOURCE_GROUP_CHEVRON.fontWeight)
-        .fontSize(TYPE_SELECT_SOURCE_GROUP_CHEVRON.fontSizeFp)
-        .lineHeight(TYPE_SELECT_SOURCE_GROUP_CHEVRON.lineHeightFp as number)
-        .fontColor(TOK_MUTED)
-        .position({ x: this.resolvedWidth() - 20, y: 7 });
+      Image($r('app.media.source_group_chevron'))
+        .width(12)
+        .height(12)
+        .rotate({ angle: this.isOpen ? 180 : 0 })
+        .animation(this.dropdownAnimation())
+        .position({ x: this.resolvedWidth() - 21, y: 12 });
     }
     .width('100%')
     .height(TRIGGER_H)

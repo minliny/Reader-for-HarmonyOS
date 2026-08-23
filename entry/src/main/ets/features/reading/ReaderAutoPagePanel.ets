@@ -168,11 +168,17 @@ export struct ReaderAutoPagePanel {
   @Builder
   private chapterControl(previous: boolean) {
     Column() {
-      Stack({ alignContent: Alignment.Center }) {
+      Stack({ alignContent: Alignment.TopStart }) {
         Image($r(previous ?
-          'app.media.reader_auto_previous_chapter' : 'app.media.reader_auto_next_chapter'))
-          .width(25)
-          .height(17);
+          'app.media.reader_auto_full_chevron_left' : 'app.media.reader_auto_full_chevron_right'))
+          .width(16)
+          .height(16)
+          .position({ x: 3, y: 5.5 });
+        Image($r(previous ?
+          'app.media.reader_auto_full_chevron_left' : 'app.media.reader_auto_full_chevron_right'))
+          .width(16)
+          .height(16)
+          .position({ x: 8, y: 5.5 });
       }
       .width(27)
       .height(27)

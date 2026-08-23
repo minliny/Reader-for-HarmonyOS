@@ -6,9 +6,9 @@ import {
   type ReaderAppearanceSnapshot,
 } from './ReaderAppearanceState';
 import {
-  readerAppearanceFontFamily,
+  readerAppearanceSnapshotFontFamily,
   readerAppearanceLineHeight,
-  readerAppearanceParagraphIndentLength,
+  readerAppearanceParagraphIndentPrefix,
   readerAppearanceThemeStyle,
   readerAppearanceUsesJustify,
   type ReaderAppearanceThemeStyle,
@@ -45,6 +45,7 @@ export class ReadingSurfacePageFragment {
   imageSource: image.PixelMap | undefined;
   fileUri: string | undefined;
   imageHeight: number;
+  layoutHeight: number;
 
   constructor(
     id: string,
@@ -55,6 +56,7 @@ export class ReadingSurfacePageFragment {
     imageSource?: image.PixelMap,
     imageHeight: number = 0,
     fileUri?: string,
+    layoutHeight: number = imageHeight,
   ) {
     this.id = id;
     this.text = text;
@@ -64,6 +66,7 @@ export class ReadingSurfacePageFragment {
     this.imageSource = imageSource;
     this.imageHeight = imageHeight;
     this.fileUri = fileUri;
+    this.layoutHeight = layoutHeight;
   }
 }
 
@@ -74,6 +77,116 @@ class ReadingSurfaceHighlightRange {
   constructor(startUtf16: number, endUtf16: number) {
     this.startUtf16 = startUtf16;
     this.endUtf16 = endUtf16;
+  }
+}
+
+/** Shared scalar-aware text primitive for paged and continuous reading. */
+@Component
+export struct ReaderReadingTextFragment {
+  @Prop text: string = '';
+  @Prop isParagraphStart: boolean = false;
+  @Prop startScalar: number = 0;
+  @Prop endScalar: number = 0;
+  @Prop appearance: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
+  @Prop ttsHighlightStart: number | undefined = undefined;
+  @Prop ttsHighlightEnd: number | undefined = undefined;
+  @Prop autoPageHighlightStart: number | undefined = undefined;
+  @Prop autoPageHighlightEnd: number | undefined = undefined;
+  @Prop longPressSelectText: boolean = false;
+
+  build() {
+    Text() {
+      if (this.indentPrefix().length > 0) {
+        Span(this.indentPrefix());
+      }
+      if (this.highlightPrefix().length > 0) {
+        Span(this.highlightPrefix());
+      }
+      if (this.highlightBody().length > 0) {
+        if (this.usesTtsHighlight()) {
+          Span(this.highlightBody())
+            .decoration({ type: TextDecorationType.Underline, color: this.themeStyle().ink });
+        } else {
+          Span(this.highlightBody())
+            .textBackgroundStyle({ color: '#33594632', radius: 2 });
+        }
+      }
+      if (this.highlightSuffix().length > 0) {
+        Span(this.highlightSuffix());
+      }
+    }
+      .width('100%')
+      .fontFamily(readerAppearanceSnapshotFontFamily(this.appearance))
+      .fontWeight(FontWeight.Regular)
+      .fontSize(this.appearance.fontSize)
+      .lineHeight(readerAppearanceLineHeight(this.appearance))
+      .letterSpacing(this.appearance.letterSpacing)
+      .fontColor(this.themeStyle().ink)
+      .copyOption(this.longPressSelectText ? CopyOptions.InApp : CopyOptions.None)
+      .selectedBackgroundColor('#33594632')
+      .textAlign(readerAppearanceUsesJustify(this.appearance.alignment) ? TextAlign.JUSTIFY : TextAlign.Start);
+  }
+
+  private indentPrefix(): string {
+    return this.isParagraphStart ? readerAppearanceParagraphIndentPrefix(this.appearance.indent) : '';
+  }
+
+  private highlightPrefix(): string {
+    const range = this.highlightRange();
+    return this.text.substring(0, range.startUtf16);
+  }
+
+  private highlightBody(): string {
+    const range = this.highlightRange();
+    return this.text.substring(range.startUtf16, range.endUtf16);
+  }
+
+  private highlightSuffix(): string {
+    const range = this.highlightRange();
+    return this.text.substring(range.endUtf16);
+  }
+
+  private usesTtsHighlight(): boolean {
+    const start = this.ttsHighlightStart;
+    const end = this.ttsHighlightEnd;
+    return start !== undefined && end !== undefined && Number.isFinite(start) &&
+      Number.isFinite(end) && end > start;
+  }
+
+  private highlightRange(): ReadingSurfaceHighlightRange {
+    let highlightStart = this.autoPageHighlightStart;
+    let highlightEnd = this.autoPageHighlightEnd;
+    if (this.usesTtsHighlight()) {
+      highlightStart = this.ttsHighlightStart;
+      highlightEnd = this.ttsHighlightEnd;
+    }
+    if (highlightStart === undefined || highlightEnd === undefined ||
+      !Number.isFinite(highlightStart) || !Number.isFinite(highlightEnd) ||
+      highlightEnd <= highlightStart || highlightEnd <= this.startScalar ||
+      highlightStart >= this.endScalar) {
+      return new ReadingSurfaceHighlightRange(0, 0);
+    }
+    const startScalar = Math.max(this.startScalar, highlightStart) - this.startScalar;
+    const endScalar = Math.min(this.endScalar, highlightEnd) - this.startScalar;
+    return new ReadingSurfaceHighlightRange(
+      this.utf16ForScalar(startScalar),
+      this.utf16ForScalar(endScalar),
+    );
+  }
+
+  private utf16ForScalar(scalarOffset: number): number {
+    let scalar = 0;
+    let utf16 = 0;
+    while (utf16 < this.text.length && scalar < scalarOffset) {
+      const codePoint = this.text.codePointAt(utf16);
+      utf16 += codePoint !== undefined && codePoint > 0xFFFF ? 2 : 1;
+      scalar += 1;
+    }
+    return utf16;
+  }
+
+  private themeStyle(): ReaderAppearanceThemeStyle {
+    return readerAppearanceThemeStyle(this.appearance.activeTheme);
   }
 }
 
@@ -100,6 +213,11 @@ export struct ReadingSurface {
   @Prop appearance: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   @Prop ttsHighlightStart: number | undefined = undefined;
   @Prop ttsHighlightEnd: number | undefined = undefined;
+  @Prop autoPageHighlightStart: number | undefined = undefined;
+  @Prop autoPageHighlightEnd: number | undefined = undefined;
+  /** Per-gap full-page adjustment; zero for short/image-ending pages. */
+  @Prop bottomJustifyGap: number = 0;
+  @Prop longPressSelectText: boolean = false;
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -163,6 +281,9 @@ export struct ReadingSurface {
         Column() {
           if (this.pageFragments.length > 0) {
             ForEach(this.pageFragments, (fragment: ReadingSurfacePageFragment, index: number) => {
+              if (index > 0 && this.bottomJustifyGap > 0) {
+                Blank().height(this.bottomJustifyGap);
+              }
               // A continuation is not a new semantic paragraph: it must not
               // acquire either a fresh 15.8px gap or a second 2em indent.
               if (index > 0 && fragment.isParagraphStart) {
@@ -185,7 +306,18 @@ export struct ReadingSurface {
                 // failure must not discard the rest of the chapter.
                 Blank().height(fragment.imageHeight);
               } else {
-                this.fragmentText(fragment);
+                ReaderReadingTextFragment({
+                  text: fragment.text,
+                  isParagraphStart: fragment.isParagraphStart,
+                  startScalar: fragment.startScalar,
+                  endScalar: fragment.endScalar,
+                  appearance: this.appearance,
+                  ttsHighlightStart: this.ttsHighlightStart,
+                  ttsHighlightEnd: this.ttsHighlightEnd,
+                  autoPageHighlightStart: this.autoPageHighlightStart,
+                  autoPageHighlightEnd: this.autoPageHighlightEnd,
+                  longPressSelectText: this.longPressSelectText,
+                });
               }
             }, (fragment: ReadingSurfacePageFragment): string => fragment.id);
           } else {
@@ -194,7 +326,18 @@ export struct ReadingSurface {
               if (index > 0) {
                 Blank().height(this.appearance.paragraphSpacing);
               }
-              this.fragmentText(new ReadingSurfacePageFragment(`legacy-${index}`, paragraph, true));
+              ReaderReadingTextFragment({
+                text: paragraph,
+                isParagraphStart: true,
+                startScalar: 0,
+                endScalar: Array.from(paragraph).length,
+                appearance: this.appearance,
+                ttsHighlightStart: this.ttsHighlightStart,
+                ttsHighlightEnd: this.ttsHighlightEnd,
+                autoPageHighlightStart: this.autoPageHighlightStart,
+                autoPageHighlightEnd: this.autoPageHighlightEnd,
+                longPressSelectText: this.longPressSelectText,
+              });
             }, (paragraph: string, index: number): string => `${index}:${paragraph}`);
           }
         }
@@ -218,73 +361,6 @@ export struct ReadingSurface {
       bottom: this.layout.contentBottom,
       left: this.layout.contentLeft,
     };
-  }
-
-  @Builder
-  private fragmentText(fragment: ReadingSurfacePageFragment) {
-    Text() {
-      if (this.highlightPrefix(fragment).length > 0) {
-        Span(this.highlightPrefix(fragment));
-      }
-      if (this.highlightBody(fragment).length > 0) {
-        Span(this.highlightBody(fragment))
-          .decoration({ type: TextDecorationType.Underline, color: this.themeStyle().ink });
-      }
-      if (this.highlightSuffix(fragment).length > 0) {
-        Span(this.highlightSuffix(fragment));
-      }
-    }
-      .width('100%')
-      .fontFamily(readerAppearanceFontFamily(this.appearance.font))
-      .fontWeight(FontWeight.Regular)
-      .fontSize(this.appearance.fontSize)
-      .lineHeight(readerAppearanceLineHeight(this.appearance))
-      .letterSpacing(this.appearance.letterSpacing)
-      .fontColor(this.themeStyle().ink)
-      .textAlign(readerAppearanceUsesJustify(this.appearance.alignment) ? TextAlign.JUSTIFY : TextAlign.Start)
-      .textIndent(fragment.isParagraphStart ?
-        readerAppearanceParagraphIndentLength(this.appearance.fontSize, this.appearance.indent) : '0fp');
-  }
-
-  private highlightPrefix(fragment: ReadingSurfacePageFragment): string {
-    const range = this.fragmentHighlightRange(fragment);
-    return fragment.text.substring(0, range.startUtf16);
-  }
-
-  private highlightBody(fragment: ReadingSurfacePageFragment): string {
-    const range = this.fragmentHighlightRange(fragment);
-    return fragment.text.substring(range.startUtf16, range.endUtf16);
-  }
-
-  private highlightSuffix(fragment: ReadingSurfacePageFragment): string {
-    const range = this.fragmentHighlightRange(fragment);
-    return fragment.text.substring(range.endUtf16);
-  }
-
-  private fragmentHighlightRange(fragment: ReadingSurfacePageFragment): ReadingSurfaceHighlightRange {
-    const highlightStart = this.ttsHighlightStart;
-    const highlightEnd = this.ttsHighlightEnd;
-    if (highlightStart === undefined || highlightEnd === undefined || highlightEnd <= fragment.startScalar ||
-      highlightStart >= fragment.endScalar) {
-      return new ReadingSurfaceHighlightRange(0, 0);
-    }
-    const startScalar = Math.max(fragment.startScalar, highlightStart) - fragment.startScalar;
-    const endScalar = Math.min(fragment.endScalar, highlightEnd) - fragment.startScalar;
-    return new ReadingSurfaceHighlightRange(
-      this.utf16ForScalar(fragment.text, startScalar),
-      this.utf16ForScalar(fragment.text, endScalar),
-    );
-  }
-
-  private utf16ForScalar(text: string, scalarOffset: number): number {
-    let scalar = 0;
-    let utf16 = 0;
-    while (utf16 < text.length && scalar < scalarOffset) {
-      const codePoint = text.codePointAt(utf16);
-      utf16 += codePoint !== undefined && codePoint > 0xFFFF ? 2 : 1;
-      scalar += 1;
-    }
-    return utf16;
   }
 
   private paperTexture(): Resource {

@@ -25,8 +25,8 @@ const empty = createReaderReplaceQuickState([]);
 assert.deepEqual(empty, {
   kind: 'ready',
   rules: [],
-  previewAvailable: false,
-  fullManagementAvailable: false,
+  previewAvailable: true,
+  fullManagementAvailable: true,
 });
 const single = createReaderReplaceQuickState([rule(1, 1)]);
 assert.equal(single.kind, 'ready');
@@ -47,8 +47,8 @@ const ready = createReaderReplaceQuickState(sourceRules);
 assert.equal(ready.kind, 'ready');
 assert.deepEqual(ready.rules.map((entry) => entry.id), [1, 2, 3],
   'Quick Replace must expose only the first three canonical order/id rows');
-assert.equal(ready.previewAvailable, false);
-assert.equal(ready.fullManagementAvailable, false);
+assert.equal(ready.previewAvailable, true);
+assert.equal(ready.fullManagementAvailable, true);
 assert.deepEqual(sourceRules.map((entry) => entry.id), [4, 2, 1, 5, 3],
   'state derivation must not reorder the Core-owned input array');
 
@@ -84,8 +84,10 @@ assert.match(panel, /return this\.contentWidth\(\) - REPLACE_RULE_BODY_PADDING_X
 assert.match(panel, /app\.media\.reader_replace_close/);
 assert.match(panel, /app\.media\.reader_replace_preview/);
 assert.match(panel, /app\.media\.reader_replace_manage/);
-assert.match(panel, /\.enabled\(kind === 'management'\)/,
-  'Preview must remain fail-closed while the existing management page is reachable');
+assert.match(panel, /this\.state\.previewAvailable/,
+  'Preview must be enabled only by the Core-backed ready state');
+assert.match(panel, /this\.onPreview\(\)/,
+  'the Preview actor must invoke the owner callback');
 assert.match(panel, /Text\(kind === 'preview' \? '预览效果' : '完整管理'\)/,
   'deferred Preview and Full-management entries must remain visible');
 assert.match(panel, /打开完整替换规则管理/,
@@ -98,13 +100,17 @@ assert.doesNotMatch(panel, /雨容称呼|旧称统一|标点清理|广告过滤/
 
 const listRequest = gateway.indexOf("request('replace-rule.list', {})");
 const persistRequest = gateway.indexOf("request('replace.persist'");
+const previewRequest = gateway.indexOf("request('replace.preview'");
 assert.ok(listRequest >= 0, 'Quick Replace must list canonical Core rules');
 assert.ok(persistRequest >= 0, 'Quick Replace must persist toggles through the UI transaction command');
+assert.ok(previewRequest >= 0, 'Quick Replace must request Core-owned raw chapter preview');
 assert.match(gateway, /operation: 'update',[\s\S]*id: ruleId,[\s\S]*isEnabled/);
 assert.match(gateway, /rule\.id !== ruleId \|\| rule\.isEnabled !== isEnabled/,
   'the confirmed update identity and state must be validated');
 assert.doesNotMatch(gateway, /request\('replace\.apply'/,
   'processed chapter text must not be sent through replacement a second time');
+assert.match(gateway, /returnedSourceId !== sourceId \|\| returnedBookId !== bookId \|\| returnedChapterIndex !== chapterIndex/,
+  'preview results must retain the requested chapter identity');
 assert.doesNotMatch(gateway, /replace-rule\.update/,
   'toggle mutations must retain replace.persist undo/persistence semantics');
 assert.doesNotMatch(gateway, /ReaderRuntimeOwner|\.current\(\)/,
@@ -118,6 +124,11 @@ assert.match(experience, /private replaceMutationGeneration: number = 0/,
   'persisted mutations need a generation independent from the panel');
 assert.match(experience, /private openRulesManagement\(\): void/);
 assert.match(experience, /this\.onOpenRulesManagement\(\)/);
+assert.match(experience, /private previewQuickReplace\(\): void/);
+assert.match(experience, /this\.replaceGateway\.preview\(this\.sourceId, this\.bookId, chapter\.chapterIndex\)/);
+assert.match(experience, /private showReplacePreview\(preview: ReaderReplacePreview\): void/);
+assert.match(experience, /showAlertDialog/,
+  'the Core before/after result must reach a visible user surface');
 assert.doesNotMatch(experience, /replaceMutationInFlight/,
   'panel close must not release a shared in-flight boolean');
 

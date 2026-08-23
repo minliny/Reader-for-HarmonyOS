@@ -5,6 +5,7 @@ import {
   createDefaultReaderSettingsSnapshot,
   normalizeReaderSettingsSnapshot,
   type ReaderSettingsSnapshot,
+  type ReaderSettingsSnapshotV1,
 } from './ReaderSettingsState';
 
 const READER_SETTINGS_PREFERENCES_NAME = 'reader_reading_settings_v1';
@@ -61,7 +62,7 @@ export class ReaderSettingsGateway {
       return fallback;
     }
     try {
-      const decoded = JSON.parse(raw) as ReaderSettingsSnapshot;
+      const decoded = JSON.parse(raw) as ReaderSettingsSnapshot | ReaderSettingsSnapshotV1;
       return normalizeReaderSettingsSnapshot(decoded);
     } catch (_) {
       return fallback;

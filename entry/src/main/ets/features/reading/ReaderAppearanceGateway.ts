@@ -1,9 +1,12 @@
 import preferences from '@ohos.data.preferences';
+import { Font } from '@ohos.arkui.UIContext';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import { ReaderCustomFontHost } from '../../app/ReaderCustomFontHost';
 import {
   copyReaderAppearanceSnapshot,
   createDefaultReaderAppearanceSnapshot,
   normalizeReaderAppearanceSnapshot,
+  type ReaderCustomFontDescriptor,
   type ReaderAppearanceSnapshot,
 } from './ReaderAppearanceState';
 
@@ -22,9 +25,22 @@ export class ReaderAppearanceGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
   private store: preferences.Preferences | undefined = undefined;
   private updateTail: Promise<void> = Promise.resolve();
+  private readonly customFontHost: ReaderCustomFontHost;
 
   constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
     this.runtimeOwner = runtimeOwner;
+    this.customFontHost = new ReaderCustomFontHost(runtimeOwner.getUIAbilityContext());
+  }
+
+  async importCustomFont(font: Font): Promise<ReaderCustomFontDescriptor | undefined> {
+    return this.customFontHost.selectAndRegister(font);
+  }
+
+  async registerCustomFont(font: Font, snapshot: ReaderAppearanceSnapshot): Promise<boolean> {
+    if (snapshot.font !== 'custom') {
+      return true;
+    }
+    return this.customFontHost.registerPersisted(font, snapshot.customFont);
   }
 
   async load(): Promise<ReaderAppearanceSnapshot> {

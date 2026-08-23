@@ -34,10 +34,10 @@ export type ReaderReplaceQuickReadyState = {
   kind: 'ready';
   /** Quick access contains at most the first three canonical rules. */
   rules: ReaderReplaceRule[];
-  /** Raw pre-processing chapter text is not available at this boundary. */
-  previewAvailable: false;
-  /** Full management is not connected from the reader in this priority. */
-  fullManagementAvailable: false;
+  /** Core can derive a bounded before/after view from its raw chapter cache. */
+  previewAvailable: true;
+  /** The reader routes to the existing full rules-management surface. */
+  fullManagementAvailable: true;
 };
 
 export type ReaderReplaceQuickState = ReaderReplaceQuickHiddenState | ReaderReplaceQuickReadyState;
@@ -67,8 +67,8 @@ export function createReaderReplaceQuickState(rules: ReaderReplaceRule[]): Reade
   return {
     kind: 'ready',
     rules: ordered.slice(0, 3),
-    previewAvailable: false,
-    fullManagementAvailable: false,
+    previewAvailable: true,
+    fullManagementAvailable: true,
   };
 }
 

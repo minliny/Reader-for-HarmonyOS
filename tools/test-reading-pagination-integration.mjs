@@ -56,21 +56,35 @@ const surface = readFileSync(
   new URL('../entry/src/main/ets/features/reading/ReadingSurface.ets', import.meta.url),
   'utf8',
 );
+const pageTurnStage = readFileSync(
+  new URL('../entry/src/main/ets/features/reading/ReaderPageTurnStage.ets', import.meta.url),
+  'utf8',
+);
 assert.match(surface, /Image\(fragment\.fileUri\)/,
   'the reading surface must render file-backed image fragments from the same measured page list');
 assert.match(surface, /else if \(fragment\.imageHeight > 0\)[\s\S]*Blank\(\)\.height\(fragment\.imageHeight\)/,
   'one image failure must retain a stable measurable block instead of aborting the chapter');
 assert.match(surface, /if \(this\.showChapterTitle\) \{[\s\S]*Text\(this\.chapterTitle\)/,
   'the presentation surface must mount the semantic chapter heading only when admitted by the paginator');
-assert.match(source, /showChapterTitle:\s*this\.showChapterTitle/,
-  'the reading session must pass its physical-page title decision to the presentation surface');
+assert.match(source,
+  /new ReaderPageTurnRenderPage\([\s\S]*this\.chapterTitle,[\s\S]*this\.showChapterTitle,[\s\S]*this\.visibleFragments/,
+  'the reading session must pass its physical-page title decision into the page-turn render model');
+assert.match(pageTurnStage,
+  /struct ReaderPageTurnSurface[\s\S]*showChapterTitle: this\.showChapterTitle/,
+  'the primitive page-slot component must forward each physical-page title decision to ReadingSurface');
+for (const page of ['currentPage', 'previousPage', 'nextPage']) {
+  assert.match(pageTurnStage, new RegExp(`showChapterTitle: this\\.${page}\\.showChapterTitle`),
+    `the stage must bind the ${page} title decision directly into its page slot`);
+}
 assert.match(source, /this\.showChapterTitle = this\.isChapterFirstPageStart\(visiblePage\.startScalar\)/,
   'only the physical page beginning at the chapter head may expose the chapter heading');
 assert.match(source,
   /return this\.readingLayout\(\)\.bodyHeight\(this\.isChapterFirstPageStart\(pageStartScalar\)\)/,
   'the shared layout snapshot must reserve its scaled title track only on the chapter-first page');
-assert.match(source, /ReadingSurface\(\{[\s\S]*layout: this\.readingLayout\(\)/,
-  'visible rendering must consume the same owner-resolved layout as pagination');
+assert.match(source, /ReaderPageTurnStage\(\{[\s\S]*layout: this\.readingLayout\(\)/,
+  'the page-turn stage must consume the same owner-resolved layout as pagination');
+assert.match(pageTurnStage, /ReadingSurface\(\{[\s\S]*layout: this\.layout/,
+  'every staged physical page must forward that layout to ReadingSurface');
 assert.match(source,
   /titleLineHeight: layout\.titleLineHeightFp,[\s\S]*titleToBodySpacing: layout\.titleToBodySpacingVp/,
   'the pagination key must be derived from the same title metrics rendered by ReadingSurface');
@@ -120,8 +134,8 @@ assert.match(source, /invalidateChapter\(this\.sourceId, this\.bookId, chapterIn
   'a changed materialized body must invalidate every stale chapter manifest');
 assert.match(source, /context\.px2vp\(metric\.height\)/,
   'ArkUI physical-pixel line metrics must be converted to the vp unit used by page capacity');
-assert.match(source, /reader\.page\.turn\.none/,
-  'the admitted page replacement remains the 0ms none mode');
+assert.match(source, /readerPageTransitionUsesPreparedPages\(this\.readerSettingsSnapshot\)/,
+  'the admitted page replacement must select between paged transitions and direct or continuous navigation');
 assert.doesNotMatch(previousTurn[1], /animateTo|animation\(/,
   'previous-page replacement must not invent a transition');
 

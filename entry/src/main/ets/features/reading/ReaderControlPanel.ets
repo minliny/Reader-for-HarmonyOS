@@ -28,10 +28,15 @@ import { ReaderSettingsFullPanel } from './ReaderSettingsFullPanel';
 import { ReaderSettingsModulePanel } from './ReaderSettingsModulePanel';
 import {
   createDefaultReaderSettingsSnapshot,
+  readerPageTurnStyle,
+  type ReaderPageTurnStyle,
+  type ReaderScreenDirection,
+  type ReaderScreenTimeout,
   type ReaderSettingsSnapshot,
   type ReaderSettingsToggleKey,
 } from './ReaderSettingsState';
 import { ReaderTtsFullPanel, type ReaderTtsEngineOption } from './ReaderTtsFullPanel';
+import type { ReaderTtsVoiceOption } from './ReaderTtsPreferencesState';
 import { ReaderTtsModulePanel } from './ReaderTtsModulePanel';
 import { createReaderTtsState, type ReaderTtsState } from './ReaderTtsState';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from './ReaderDirectoryMarkerState';
@@ -103,6 +108,11 @@ import {
   READER_AUTO_PAGE_FULL_WIDTH,
   READER_AUTO_PAGE_QUICK_HEIGHT,
 } from './ReaderAutoPageMotionGeometry';
+import {
+  TYPE_READER_CONTROL_BOOK_TITLE,
+  TYPE_READER_CONTROL_CHAPTER_SOURCE,
+  TYPE_READER_CONTROL_SOURCE_ACTION,
+} from '../common/ReaderTypography';
 
 export type ReaderControlPage = 'home' | 'quickSearch' | 'quickAutoPage' | 'quickReplace' |
   'moduleDirectory' | 'moduleTts' | 'moduleAppearance' | 'moduleSettings' |
@@ -166,10 +176,14 @@ export struct ReaderControlPanel {
   @Prop ttsTimerMinutes: number = 15;
   @Prop ttsTimerSeconds: number = 0;
   @Prop ttsFollowHighlight: boolean = true;
+  @Prop ttsPauseOnInterruption: boolean = true;
   @Prop ttsAllowMixing: boolean = false;
   @Prop ttsFailurePolicy: 'skip' | 'stop' = 'stop';
   @Prop ttsEngine: string = 'system';
   @Prop ttsHttpEngines: ReaderTtsEngineOption[] = [];
+  @Prop ttsVoiceOptions: ReaderTtsVoiceOption[] = [];
+  @Prop ttsLanguage: string = 'zh-CN';
+  @Prop ttsPerson: number = 0;
   @Prop reduceMotion: boolean = false;
   onBack: () => void = (): void => {};
   onDismiss: () => void = (): void => {};
@@ -201,6 +215,7 @@ export struct ReaderControlPanel {
   onAutoPageFullSpeedChange: (seconds: number) => void = (_seconds: number): void => {};
   onAutoPageFollowHighlightChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
   onOpenReplace: () => void = (): void => {};
+  onPreviewReplace: () => void = (): void => {};
   onOpenRulesManagement: () => void = (): void => {};
   onToggleReplaceRule: (ruleId: number, isEnabled: boolean) => void =
     (_ruleId: number, _isEnabled: boolean): void => {};
@@ -212,6 +227,7 @@ export struct ReaderControlPanel {
     (_theme: ReaderAppearanceTheme): void => {};
   onAppearanceFontChange: (font: ReaderAppearanceFont) => void =
     (_font: ReaderAppearanceFont): void => {};
+  onAppearanceCustomFontImport: () => void = (): void => {};
   onAppearanceIndentRequest: (indent: ReaderAppearanceIndent) => void =
     (_indent: ReaderAppearanceIndent): void => {};
   onAppearanceAlignmentRequest: (current: ReaderAppearanceAlignment) => void =
@@ -222,6 +238,12 @@ export struct ReaderControlPanel {
     (_mode: ReaderChineseConversionMode): void => {};
   onSettingsToggleChange: (key: ReaderSettingsToggleKey, value: boolean) => void =
     (_key: ReaderSettingsToggleKey, _value: boolean): void => {};
+  onScreenDirectionChange: (direction: ReaderScreenDirection) => void =
+    (_direction: ReaderScreenDirection): void => {};
+  onScreenTimeoutChange: (timeout: ReaderScreenTimeout) => void =
+    (_timeout: ReaderScreenTimeout): void => {};
+  onPageTurnStyleChange: (style: ReaderPageTurnStyle) => void =
+    (_style: ReaderPageTurnStyle): void => {};
   onTtsToggle: () => void = (): void => {};
   onTtsStop: () => void = (): void => {};
   onTtsPrevious: () => void = (): void => {};
@@ -231,9 +253,12 @@ export struct ReaderControlPanel {
   onTtsTimerChange: (minutes: number, seconds: number) => void =
     (_minutes: number, _seconds: number): void => {};
   onTtsFollowHighlightChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
+  onTtsPauseOnInterruptionChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
   onTtsAllowMixingChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
   onTtsFailurePolicyChange: (policy: 'skip' | 'stop') => void =
     (_policy: 'skip' | 'stop'): void => {};
+  onTtsVoiceChange: (language: string, person: number) => void =
+    (_language: string, _person: number): void => {};
   onTtsEngineChange: (engine: string) => Promise<void> = (_engine: string): Promise<void> => Promise.resolve();
   onTtsHttpEnginePut: (config: ReaderTtsEngineOption) => Promise<void> =
     (_config: ReaderTtsEngineOption): Promise<void> => Promise.resolve();
@@ -246,9 +271,18 @@ export struct ReaderControlPanel {
   @State private autoPageActorTransitioning: boolean = false;
   private autoPageActorGeneration: number = 0;
   private autoPageActorHoldTimer: number = -1;
+  private brightnessDragStartPercent: number = READER_CONTROL_BRIGHTNESS_MAX;
 
   private isLocalBook(): boolean {
     return this.sourceId === 'local';
+  }
+
+  private sourceLabel(): string {
+    const label = this.sourceName.trim();
+    if (this.isLocalBook()) {
+      return label.length > 0 && label !== this.sourceId ? label : '本地书籍';
+    }
+    return label.length > 0 && label !== this.sourceId ? label : '在线书源';
   }
 
   // Figma MR1 reader.module.switch: Directory 模块切换使用 360ms
@@ -573,7 +607,7 @@ export struct ReaderControlPanel {
 
   @Builder
   private topBar() {
-    Row() {
+    Row({ space: 8 }) {
       // BackHitArea 44×42 (icon 24 居中)。
       Stack({ alignContent: Alignment.Center }) {
         Image($r('app.media.rc_arrow_left'))
@@ -582,30 +616,29 @@ export struct ReaderControlPanel {
       }
       .width(44)
       .height(42)
-      .margin({ left: 12.44   })
       .accessibilityText('返回书籍详情')
       .onClick((): void => this.onBack());
 
       // TopBar/Text: 书名思源宋体 Bold 16，章节·书源思源宋体 Regular 12。
-      Column({ space: 6 }) {
+      Column({ space: 5 }) {
         Text(this.bookTitle)
-          .fontFamily('ReaderNotoSerifSCBold')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(16)
+          .fontFamily(TYPE_READER_CONTROL_BOOK_TITLE.fontFamily)
+          .fontWeight(TYPE_READER_CONTROL_BOOK_TITLE.fontWeight)
+          .fontSize(TYPE_READER_CONTROL_BOOK_TITLE.fontSizeFp)
           .fontColor(TOK_READ_INK)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
-        Text(`${this.chapterTitle} · ${this.sourceName}`)
-          .fontFamily('ReaderNotoSerifSCRegular')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(12)
+        Text(`${this.chapterTitle} · ${this.sourceLabel()}`)
+          .fontFamily(TYPE_READER_CONTROL_CHAPTER_SOURCE.fontFamily)
+          .fontWeight(TYPE_READER_CONTROL_CHAPTER_SOURCE.fontWeight)
+          .fontSize(TYPE_READER_CONTROL_CHAPTER_SOURCE.fontSizeFp)
           .fontColor(TOK_READ_MUTED)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
       }
       .layoutWeight(1)
       .height(45)
-      .margin({ left: 8   });
+      .alignItems(HorizontalAlign.Start);
 
       // SourceSwitchHitArea 62×42: icon + 换源 居中。
       Column({ space: 3.75 }) {
@@ -614,16 +647,15 @@ export struct ReaderControlPanel {
           .height(20)
           .margin({ top: 1.25   });
         Text('换源')
-          .fontFamily('ReaderInter')
-          .fontWeight(800)
-          .fontSize(12)
+          .fontFamily(TYPE_READER_CONTROL_SOURCE_ACTION.fontFamily)
+          .fontWeight(TYPE_READER_CONTROL_SOURCE_ACTION.fontWeight)
+          .fontSize(TYPE_READER_CONTROL_SOURCE_ACTION.fontSizeFp)
           .fontColor(TOK_READ_INK)
           .maxLines(1);
       }
       .width(62)
       .height(42)
       .alignItems(HorizontalAlign.Center)
-      .margin({ left: 8   })
       .opacity(this.isLocalBook() ? 0.4 : 1)
       .enabled(!this.isLocalBook())
       .accessibilityText('换源')
@@ -642,7 +674,6 @@ export struct ReaderControlPanel {
       }
       .width(34)
       .height(42)
-      .margin({ left: 8   })
       // Figma `933:59` defines the normal 34×42 More actor with a 20px
       // #332C25 icon. It does not define a disabled variant, menu, page, or
       // prototype reaction, so keep the normal visual actor without inventing
@@ -651,6 +682,7 @@ export struct ReaderControlPanel {
     }
     .width(this.layout.topBarWidth)
     .height(54)
+    .padding({ left: 13, right: 13 })
     .alignItems(VerticalAlign.Center)
     .backgroundColor(TOK_READ_SURFACE)
     .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
@@ -682,11 +714,13 @@ export struct ReaderControlPanel {
       reduceMotion: this.reduceMotion,
       snapshot: this.appearanceSnapshot,
       chineseConversionMode: this.chineseConversionMode,
+      pageTurnStyle: readerPageTurnStyle(this.settingsSnapshot),
       onCollapse: (): void => this.requestCollapseAppearance(),
       onThemeChange: (theme: ReaderAppearanceTheme): void => this.onAppearanceThemeChange(theme),
       onSetDayTheme: (theme: ReaderAppearanceTheme): void => this.onAppearanceDayThemeChange(theme),
       onSetNightTheme: (theme: ReaderAppearanceTheme): void => this.onAppearanceNightThemeChange(theme),
       onFontChange: (font: ReaderAppearanceFont): void => this.onAppearanceFontChange(font),
+      onCustomFontImport: (): void => this.onAppearanceCustomFontImport(),
       onIndentRequest: (indent: ReaderAppearanceIndent): void => this.onAppearanceIndentRequest(indent),
       onAlignmentRequest: (current: ReaderAppearanceAlignment): void =>
         this.onAppearanceAlignmentRequest(current),
@@ -694,6 +728,8 @@ export struct ReaderControlPanel {
         this.onAppearanceMetricStep(metric, direction),
       onChineseConversionChange: (mode: ReaderChineseConversionMode): void =>
         this.onChineseConversionChange(mode),
+      onPageTurnStyleChange: (style: ReaderPageTurnStyle): void =>
+        this.onPageTurnStyleChange(style),
     })
       .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
         translateYTransition('reader.panel.expand', 18));
@@ -710,6 +746,12 @@ export struct ReaderControlPanel {
       onCollapse: (): void => this.requestCollapseSettings(),
       onJustifyTextChange: (_value: boolean): void =>
         this.onAppearanceAlignmentRequest(this.appearanceSnapshot.alignment),
+      onPageTurnStyleChange: (style: ReaderPageTurnStyle): void =>
+        this.onPageTurnStyleChange(style),
+      onScreenDirectionChange: (direction: ReaderScreenDirection): void =>
+        this.onScreenDirectionChange(direction),
+      onScreenTimeoutChange: (timeout: ReaderScreenTimeout): void =>
+        this.onScreenTimeoutChange(timeout),
       onToggleChange: (key: ReaderSettingsToggleKey, value: boolean): void =>
         this.onSettingsToggleChange(key, value),
     })
@@ -727,10 +769,14 @@ export struct ReaderControlPanel {
       timerMinutes: this.ttsTimerMinutes,
       timerSeconds: this.ttsTimerSeconds,
       followHighlight: this.ttsFollowHighlight,
+      pauseOnInterruption: this.ttsPauseOnInterruption,
       allowMixing: this.ttsAllowMixing,
       failurePolicy: this.ttsFailurePolicy,
       engine: this.ttsEngine,
       httpEngines: this.ttsHttpEngines,
+      voiceOptions: this.ttsVoiceOptions,
+      language: this.ttsLanguage,
+      person: this.ttsPerson,
       onCollapse: (): void => this.requestCollapseTts(),
       onToggle: (): void => this.onTtsToggle(),
       onStop: (): void => this.onTtsStop(),
@@ -740,8 +786,11 @@ export struct ReaderControlPanel {
       onRateChange: (rate: number): void => this.onTtsRateChange(rate),
       onTimerChange: (minutes: number, seconds: number): void => this.onTtsTimerChange(minutes, seconds),
       onFollowHighlightChange: (enabled: boolean): void => this.onTtsFollowHighlightChange(enabled),
+      onPauseOnInterruptionChange: (enabled: boolean): void =>
+        this.onTtsPauseOnInterruptionChange(enabled),
       onAllowMixingChange: (enabled: boolean): void => this.onTtsAllowMixingChange(enabled),
       onFailurePolicyChange: (policy: 'skip' | 'stop'): void => this.onTtsFailurePolicyChange(policy),
+      onVoiceChange: (language: string, person: number): void => this.onTtsVoiceChange(language, person),
       onEngineChange: (engine: string): Promise<void> => this.onTtsEngineChange(engine),
       onHttpEnginePut: (config: ReaderTtsEngineOption): Promise<void> => this.onTtsHttpEnginePut(config),
       onHttpEngineDelete: (id: number): Promise<void> => this.onTtsHttpEngineDelete(id),
@@ -1011,6 +1060,7 @@ export struct ReaderControlPanel {
           onClose: (): void => this.onPageChange('home'),
           onToggleRule: (ruleId: number, isEnabled: boolean): void =>
             this.onToggleReplaceRule(ruleId, isEnabled),
+          onPreview: (): void => this.onPreviewReplace(),
           onOpenManagement: (): void => this.onOpenRulesManagement(),
         })
           .layoutWeight(1);
@@ -1051,6 +1101,12 @@ export struct ReaderControlPanel {
         ReaderSettingsModulePanel({
           isTablet: this.isExpanded(),
           snapshot: this.settingsSnapshot,
+          onPageTurnStyleChange: (style: ReaderPageTurnStyle): void =>
+            this.onPageTurnStyleChange(style),
+          onScreenDirectionChange: (direction: ReaderScreenDirection): void =>
+            this.onScreenDirectionChange(direction),
+          onScreenTimeoutChange: (timeout: ReaderScreenTimeout): void =>
+            this.onScreenTimeoutChange(timeout),
         })
           .layoutWeight(1);
       }
@@ -1277,9 +1333,9 @@ export struct ReaderControlPanel {
         .height(READER_CONTROL_BRIGHTNESS_ICON_SIZE)
         .margin({ top: READER_CONTROL_BRIGHTNESS_ICON_TOP });
 
-      // BrightnessTrack 8×92. The transparent native Slider supplies the
-      // vertical drag/tap semantics while these source-backed layers retain
-      // the exact narrow visual track.
+      // BrightnessTrack 8×92 with a 24×92 pointer target. Gesture coordinates
+      // are mapped to the whole authored track; an invisible OutSet slider
+      // would retain an implicit thumb inset and shorten the usable range.
       Stack({ alignContent: Alignment.Bottom }) {
         Row()
           .width(READER_CONTROL_BRIGHTNESS_TRACK_WIDTH)
@@ -1291,31 +1347,24 @@ export struct ReaderControlPanel {
           .height(`${this.effectiveBrightnessPercent()}%`)
           .backgroundColor(TOK_READ_PRIMARY)
           .borderRadius(999);
-        Slider({
-          value: this.effectiveBrightnessPercent(),
-          min: READER_CONTROL_BRIGHTNESS_MIN,
-          max: READER_CONTROL_BRIGHTNESS_MAX,
-          step: READER_CONTROL_BRIGHTNESS_STEP,
-          style: SliderStyle.OutSet,
-          direction: Axis.Vertical,
-          reverse: true,
-        })
-          .width(READER_CONTROL_BRIGHTNESS_TRACK_HIT_WIDTH)
-          .height(READER_CONTROL_BRIGHTNESS_TRACK_HEIGHT)
-          .opacity(0.001)
-          .accessibilityText('阅读亮度')
-          .onChange((value: number, mode: SliderChangeMode): void => {
-            this.brightnessPreviewPercent = this.clampBrightness(value);
-            if (mode === SliderChangeMode.End) {
-              const committed = this.brightnessPreviewPercent;
-              this.brightnessPreviewPercent = -1;
-              this.onBrightnessChange(committed);
-            }
-          });
       }
       .width(READER_CONTROL_BRIGHTNESS_TRACK_HIT_WIDTH)
       .height(READER_CONTROL_BRIGHTNESS_TRACK_HEIGHT)
-      .margin({ top: READER_CONTROL_BRIGHTNESS_CONTROL_GAP });
+      .margin({ top: READER_CONTROL_BRIGHTNESS_CONTROL_GAP })
+      .hitTestBehavior(HitTestMode.Block)
+      .accessibilityText('阅读亮度')
+      .gesture(
+        GestureGroup(
+          GestureMode.Exclusive,
+          PanGesture({ fingers: 1, direction: PanDirection.Vertical, distance: 1 })
+            .onActionStart((): void => this.beginBrightnessDrag())
+            .onActionUpdate((event: GestureEvent): void => this.updateBrightnessDrag(event.offsetY))
+            .onActionEnd((event: GestureEvent): void => this.finishBrightnessDrag(event.offsetY))
+            .onActionCancel((): void => this.cancelBrightnessDrag()),
+          TapGesture({ fingers: 1, count: 1 })
+            .onAction((event: GestureEvent): void => this.commitBrightnessTap(event)),
+        ),
+      );
 
       // AutoBrightnessHitArea 24×20: pill 20×20 居中 + A Inter Medium 13。
       Stack({ alignContent: Alignment.Center }) {
@@ -1327,19 +1376,19 @@ export struct ReaderControlPanel {
             .fontWeight(500)
             .fontSize(13)
             .lineHeight(13)
-            .fontColor(this.brightnessAutomatic ? Color.White : TOK_READ_INK)
+            .fontColor(TOK_READ_INK)
             .textAlign(TextAlign.Center);
         }
         .width(READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE)
         .height(READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE)
-        .backgroundColor(this.brightnessAutomatic ? TOK_READ_PRIMARY : TOK_READ_ELEVATED)
+        .backgroundColor(TOK_READ_ELEVATED)
         .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
         .borderRadius(999);
       }
       .width(READER_CONTROL_BRIGHTNESS_AUTO_HIT_WIDTH)
       .height(READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE)
       .margin({ top: READER_CONTROL_BRIGHTNESS_CONTROL_GAP })
-      .accessibilityText('跟随系统亮度')
+      .accessibilityText(this.brightnessAutomatic ? '跟随系统亮度，已开启' : '跟随系统亮度')
       .onClick((): void => this.onBrightnessAuto());
     }
     .width(READER_CONTROL_BRIGHTNESS_RAIL_WIDTH)
@@ -1357,6 +1406,52 @@ export struct ReaderControlPanel {
   private effectiveBrightnessPercent(): number {
     return this.brightnessPreviewPercent >= 0 ? this.brightnessPreviewPercent :
       this.clampBrightness(this.brightnessPercent);
+  }
+
+  private beginBrightnessDrag(): void {
+    this.brightnessDragStartPercent = this.effectiveBrightnessPercent();
+    this.brightnessPreviewPercent = this.brightnessDragStartPercent;
+  }
+
+  private updateBrightnessDrag(offsetY: number): void {
+    if (!Number.isFinite(offsetY)) {
+      return;
+    }
+    const range = READER_CONTROL_BRIGHTNESS_MAX - READER_CONTROL_BRIGHTNESS_MIN;
+    this.brightnessPreviewPercent = this.roundBrightness(
+      this.brightnessDragStartPercent - offsetY / READER_CONTROL_BRIGHTNESS_TRACK_HEIGHT * range,
+    );
+  }
+
+  private finishBrightnessDrag(offsetY: number): void {
+    this.updateBrightnessDrag(offsetY);
+    const committed = this.effectiveBrightnessPercent();
+    this.brightnessPreviewPercent = -1;
+    this.onBrightnessChange(committed);
+  }
+
+  private cancelBrightnessDrag(): void {
+    this.brightnessPreviewPercent = -1;
+  }
+
+  private commitBrightnessTap(event: GestureEvent): void {
+    if (event.fingerList.length === 0) {
+      return;
+    }
+    const localY = event.fingerList[0].localY;
+    if (!Number.isFinite(localY)) {
+      return;
+    }
+    const clampedY = Math.max(0, Math.min(READER_CONTROL_BRIGHTNESS_TRACK_HEIGHT, localY));
+    const range = READER_CONTROL_BRIGHTNESS_MAX - READER_CONTROL_BRIGHTNESS_MIN;
+    const value = READER_CONTROL_BRIGHTNESS_MIN +
+      (1 - clampedY / READER_CONTROL_BRIGHTNESS_TRACK_HEIGHT) * range;
+    this.onBrightnessChange(this.roundBrightness(value));
+  }
+
+  private roundBrightness(value: number): number {
+    const stepped = Math.round(value / READER_CONTROL_BRIGHTNESS_STEP) * READER_CONTROL_BRIGHTNESS_STEP;
+    return this.clampBrightness(stepped);
   }
 
   @Builder
@@ -1403,16 +1498,9 @@ export struct ReaderControlPanel {
     Column() {
       // IconCircle 42×42 (icon 24 居中)。
       Stack({ alignContent: Alignment.Center }) {
-        if (module === 'appearance' && this.isActiveModule(module)) {
-          Image($r('app.media.rc_palette'))
-            .width(24)
-            .height(24)
-            .fillColor('#FFFAF4');
-        } else {
-          Image($r(`app.media.${this.moduleIcon(icon, module)}`))
-            .width(24)
-            .height(24);
-        }
+        Image($r(`app.media.${this.moduleIcon(icon, module)}`))
+          .width(24)
+          .height(24);
       }
       .width(42)
       .height(42)
@@ -1464,6 +1552,8 @@ export struct ReaderControlPanel {
   private moduleIcon(icon: string, module: string): string {
     if (module === 'directory' && this.isActiveModule(module)) return 'reader_directory_list_active';
     if (module === 'tts' && this.isActiveModule(module)) return 'reader_tts_nav_active';
+    if (module === 'appearance' && this.isActiveModule(module)) return 'reader_appearance_nav_active';
+    if (module === 'settings' && this.isActiveModule(module)) return 'reader_settings_nav_active';
     return icon;
   }
 }

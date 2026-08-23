@@ -739,7 +739,7 @@ export struct ReaderAutoPageFullPanel {
       .margin({ left: 8 })
       .backgroundColor(this.followHighlight ? TOK_READ_PRIMARY : TOK_SURFACE_PANEL_SOFT)
       .borderRadius(999)
-      .accessibilityText('跟随高亮，当前能力未接入，已关闭');
+      .accessibilityText(`跟随高亮，${this.followHighlight ? '已开启' : '已关闭'}`);
     }
     .width(this.sectionInnerWidth())
     .height(36)
@@ -749,8 +749,9 @@ export struct ReaderAutoPageFullPanel {
     .borderRadius(6)
     .alignItems(VerticalAlign.Center)
     .position({ x: 4, y: 103.39 })
-    .enabled(false)
-    .opacity(this.addedActorOpacity() * 0.55)
+    .enabled(this.interactionEnabled && this.status === 'stopped')
+    .opacity(this.addedActorOpacity())
+    .onClick((): void => this.onFollowHighlightChange(!this.followHighlight))
     .translate({ y: this.addedActorTranslateY(READER_AUTO_PAGE_ADDED_FOLLOW_HIGHLIGHT_TRANSLATE_Y) });
   }
 
