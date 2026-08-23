@@ -50,14 +50,16 @@ export struct ReaderSettingsModulePanel {
         this.segmentRow('pageTurn');
         this.segmentRow('timeout');
       }
-      .width(this.contentWidth())
+      .width('100%')
+      .constraintSize({ maxWidth: this.contentWidth() })
       .height(160)
       .padding({ left: 8, right: 8, top: 7, bottom: 8 })
-      .alignItems(HorizontalAlign.Start)
-      .position({ x: 11, y: 13 });
+      .alignItems(HorizontalAlign.Start);
     }
-    .width(this.panelWidth())
+    .width('100%')
+    .constraintSize({ maxWidth: this.panelWidth() })
     .height(190)
+    .padding({ left: 11, right: 11, top: 13, bottom: 17 })
     .backgroundColor(TOK_SURFACE_PANEL)
     .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
     .borderRadius(8)

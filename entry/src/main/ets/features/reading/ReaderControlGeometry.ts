@@ -6,9 +6,6 @@
  * geometry stays beside its component; equal numbers alone never imply shared
  * ownership.
  */
-export const READER_CONTROL_TOP_BAR_TOP_GAP = 19;
-export const READER_CONTROL_FULL_PANEL_TOP_GAP = 88;
-
 export const READER_CONTROL_REGULAR_DOCK_HEIGHT = 330;
 export const READER_CONTROL_CONTENT_SLOT_HEIGHT = 196;
 export const READER_CONTROL_HOME_TOP_ROW_HEIGHT = 190;
@@ -51,11 +48,6 @@ export const READER_CONTROL_BRIGHTNESS_STEP = 1;
 
 /** Phone/Tablet values whose variation is owned by the control composition. */
 export class ReaderControlGeometry {
-  dockBottomGap: number;
-  dockRightGap: number;
-  fullPanelRightGap: number;
-  dockMaxW: number;
-  topBarMaxW: number;
   sheetH: number;
   sheetRadiusBottom: number;
   moduleNavH: number;
@@ -64,22 +56,12 @@ export class ReaderControlGeometry {
 
   constructor(tablet: boolean) {
     if (tablet) {
-      this.dockBottomGap = 33;
-      this.dockRightGap = 25;
-      this.fullPanelRightGap = 14;
-      this.dockMaxW = 340;
-      this.topBarMaxW = 702;
       this.sheetH = 252;
       this.sheetRadiusBottom = 0;
       this.moduleNavH = 79;
       this.moduleNavBottomGap = 0;
       this.moduleNavRadiusTop = 0;
     } else {
-      this.dockBottomGap = 19;
-      this.dockRightGap = 0;
-      this.fullPanelRightGap = 0;
-      this.dockMaxW = 364;
-      this.topBarMaxW = 360;
       this.sheetH = 330;
       this.sheetRadiusBottom = 24;
       this.moduleNavH = 80;

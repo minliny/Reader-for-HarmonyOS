@@ -23,6 +23,12 @@ import {
   type ReaderSettingsSnapshot,
   type ReaderSettingsToggleKey,
 } from './ReaderSettingsState';
+import {
+  READER_FULL_PANEL_HEIGHT_PHONE,
+  READER_FULL_PANEL_HEIGHT_TABLET,
+  READER_FULL_PANEL_MAX_WIDTH_PHONE,
+  READER_FULL_PANEL_MAX_WIDTH_TABLET,
+} from './ReaderLayoutGeometry';
 
 type ReaderSettingsFullSegmentGroup = 'direction' | 'pageTurn' | 'timeout';
 
@@ -37,6 +43,8 @@ type ReaderSettingsFullSegmentGroup = 'direction' | 'pageTurn' | 'timeout';
 @Component
 export struct ReaderSettingsFullPanel {
   @Prop isTablet: boolean = false;
+  @Prop availableWidth: number = 0;
+  @Prop availableHeight: number = 0;
   @Prop snapshot: ReaderSettingsSnapshot = createDefaultReaderSettingsSnapshot();
   @Prop justifyText: boolean = true;
   onCollapse: () => void = (): void => {};
@@ -340,31 +348,35 @@ export struct ReaderSettingsFullPanel {
   }
 
   private sheetWidth(): number {
-    return this.isTablet ? 720 : 364;
+    const designWidth = this.isTablet ? READER_FULL_PANEL_MAX_WIDTH_TABLET :
+      READER_FULL_PANEL_MAX_WIDTH_PHONE;
+    return this.availableWidth > 0 ? Math.min(designWidth, this.availableWidth) : designWidth;
   }
 
   private sheetHeight(): number {
-    return this.isTablet ? 852 : 736;
+    const designHeight = this.isTablet ? READER_FULL_PANEL_HEIGHT_TABLET : READER_FULL_PANEL_HEIGHT_PHONE;
+    return this.availableHeight > 0 ? Math.min(designHeight, this.availableHeight) : designHeight;
   }
 
   private headerWidth(): number {
-    return this.isTablet ? 694 : 338;
+    return Math.max(0, this.sheetWidth() - 26);
   }
 
   private viewportWidth(): number {
-    return this.isTablet ? 694 : 338;
+    return Math.max(0, this.sheetWidth() - 26);
   }
 
   private viewportHeight(): number {
-    return this.isTablet ? 782 : 666;
+    return Math.max(0, this.sheetHeight() - 70);
   }
 
   private sectionWidth(): number {
-    return this.isTablet ? 664 : 308;
+    return Math.max(0, this.viewportWidth() - 30);
   }
 
   private handleX(): number {
-    return this.isTablet ? 490 : 135;
+    const designX = this.isTablet ? 490 : 135;
+    return Math.min(designX, Math.max(0, this.sheetWidth() - 42));
   }
 
   private groupOptions(group: ReaderSettingsFullSegmentGroup): string[] {

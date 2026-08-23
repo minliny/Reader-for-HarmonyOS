@@ -1,5 +1,6 @@
 import type { image } from '@kit.ImageKit';
 import { registerReaderFonts } from '../common/ReaderFonts';
+import { TYPE_READER_CHAPTER_TITLE } from '../common/ReaderTypography';
 import {
   createDefaultReaderAppearanceSnapshot,
   type ReaderAppearanceSnapshot,
@@ -7,11 +8,15 @@ import {
 import {
   readerAppearanceFontFamily,
   readerAppearanceLineHeight,
-  readerAppearanceParagraphIndent,
+  readerAppearanceParagraphIndentLength,
   readerAppearanceThemeStyle,
   readerAppearanceUsesJustify,
   type ReaderAppearanceThemeStyle,
 } from './ReaderAppearanceRenderStyle';
+import {
+  ReaderReadingLayoutSnapshot,
+  createDefaultReaderReadingLayout,
+} from './ReaderLayoutGeometry';
 
 /**
  * Figma-backed static reading body for `15 · Reader 2`:
@@ -89,10 +94,8 @@ export struct ReadingSurface {
    * measurement pass, rather than by this presentation component.
    */
   @Prop pageFragments: ReadingSurfacePageFragment[] = [];
-  /** Selects the source-backed Phone or TabletExpanded inset variant. */
-  @Prop isTablet: boolean;
-  /** Optional host-provided Figma canvas width; 0 fills the containing page. */
-  @Prop surfaceWidth: number = 0;
+  /** One owner-computed viewport/safe-area contract shared with pagination. */
+  @Prop layout: ReaderReadingLayoutSnapshot = createDefaultReaderReadingLayout();
   /** UI-owned persisted appearance snapshot; no business/content state lives here. */
   @Prop appearance: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   @Prop ttsHighlightStart: number | undefined = undefined;
@@ -141,14 +144,14 @@ export struct ReadingSurface {
           .backgroundImagePosition(Alignment.TopStart);
       }
 
-      Column({ space: 18 }) {
+      Column({ space: this.layout.titleToBodySpacingVp }) {
         if (this.showChapterTitle) {
           Text(this.chapterTitle)
             .width('100%')
-            .fontFamily('ReaderNotoSerifSCBold')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(23)
-            .lineHeight(28.75)
+            .fontFamily(TYPE_READER_CHAPTER_TITLE.fontFamily)
+            .fontWeight(TYPE_READER_CHAPTER_TITLE.fontWeight)
+            .fontSize(TYPE_READER_CHAPTER_TITLE.fontSizeFp)
+            .lineHeight(this.layout.titleLineHeightFp)
             .fontColor(this.themeStyle().ink)
             .textAlign(TextAlign.Center)
             // The static ReadingSurface title track is exactly one Figma
@@ -203,20 +206,18 @@ export struct ReadingSurface {
       .padding(this.contentInsets())
       .clip(true);
     }
-    .width(this.resolvedSurfaceWidth())
+    .width('100%')
     .height('100%')
     .clip(true);
   }
 
   private contentInsets(): Padding {
-    if (this.isTablet) {
-      return { top: 92.44, right: 44.44, bottom: 56.44, left: 44.44 };
-    }
-    return { top: 72, right: 32, bottom: 47.99, left: 32 };
-  }
-
-  private resolvedSurfaceWidth(): Length {
-    return this.surfaceWidth > 0 ? this.surfaceWidth : '100%';
+    return {
+      top: this.layout.contentTop,
+      right: this.layout.contentRight,
+      bottom: this.layout.contentBottom,
+      left: this.layout.contentLeft,
+    };
   }
 
   @Builder
@@ -242,7 +243,7 @@ export struct ReadingSurface {
       .fontColor(this.themeStyle().ink)
       .textAlign(readerAppearanceUsesJustify(this.appearance.alignment) ? TextAlign.JUSTIFY : TextAlign.Start)
       .textIndent(fragment.isParagraphStart ?
-        readerAppearanceParagraphIndent(this.appearance.fontSize, this.appearance.indent) : 0);
+        readerAppearanceParagraphIndentLength(this.appearance.fontSize, this.appearance.indent) : '0fp');
   }
 
   private highlightPrefix(fragment: ReadingSurfacePageFragment): string {
@@ -287,16 +288,17 @@ export struct ReadingSurface {
   }
 
   private paperTexture(): Resource {
-    return this.isTablet ? $r('app.media.reading_paper_tablet') : $r('app.media.reading_paper_phone');
+    return this.layout.widthClass === 'expanded' ?
+      $r('app.media.reading_paper_tablet') : $r('app.media.reading_paper_phone');
   }
 
   private paperHighlight(): Resource {
-    return this.isTablet ? $r('app.media.reading_paper_tablet_highlight') :
+    return this.layout.widthClass === 'expanded' ? $r('app.media.reading_paper_tablet_highlight') :
       $r('app.media.reading_paper_phone_highlight');
   }
 
   private paperShade(): Resource {
-    return this.isTablet ? $r('app.media.reading_paper_tablet_shade') :
+    return this.layout.widthClass === 'expanded' ? $r('app.media.reading_paper_tablet_shade') :
       $r('app.media.reading_paper_phone_shade');
   }
 

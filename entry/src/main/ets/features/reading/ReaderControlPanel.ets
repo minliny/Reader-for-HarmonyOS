@@ -80,7 +80,6 @@ import {
   READER_CONTROL_CONTENT_PADDING_LEFT,
   READER_CONTROL_CONTENT_PADDING_RIGHT,
   READER_CONTROL_CONTENT_SLOT_HEIGHT,
-  READER_CONTROL_FULL_PANEL_TOP_GAP,
   READER_CONTROL_HOME_CHAPTER_PROGRESS_HEIGHT,
   READER_CONTROL_HOME_QUICK_ACTION_HEIGHT,
   READER_CONTROL_HOME_SECTION_GAP,
@@ -89,9 +88,12 @@ import {
   READER_CONTROL_PROGRESS_MIN,
   READER_CONTROL_PROGRESS_STEP,
   READER_CONTROL_REGULAR_DOCK_HEIGHT,
-  READER_CONTROL_TOP_BAR_TOP_GAP,
   READER_CONTROL_TOP_COMPONENT_GAP,
 } from './ReaderControlGeometry';
+import {
+  ReaderControlLayoutSnapshot,
+  createDefaultReaderControlLayout,
+} from './ReaderLayoutGeometry';
 import {
   READER_AUTO_PAGE_ACTOR_HOLD_RATIO,
   READER_AUTO_PAGE_COLLAPSED_SURFACE_WIDTH,
@@ -137,7 +139,7 @@ export struct ReaderControlPanel {
   @Prop sourceName: string = '';
   @Prop progressPercent: number = 0;
   @Prop totalChapters: number = 0;
-  @Prop isTablet: boolean = false;
+  @Prop @Watch('onLayoutChanged') layout: ReaderControlLayoutSnapshot = createDefaultReaderControlLayout();
   // 控制层可见性。宿主常驻挂载本面板, 内部按 visible 门控各层并做非对称过渡
   // (Figma MR1 reader.control.show/hide)。
   @Prop visible: boolean = false;
@@ -298,7 +300,7 @@ export struct ReaderControlPanel {
 
   private requestExpandSettings(): void {
     if (this.activePage !== 'moduleSettings') return;
-    if (this.reduceMotion || this.isTablet) {
+    if (this.reduceMotion || this.isExpanded()) {
       this.onPageChange('fullSettings');
       return;
     }
@@ -309,7 +311,7 @@ export struct ReaderControlPanel {
 
   private requestCollapseSettings(): void {
     if (this.activePage !== 'fullSettings') return;
-    if (this.reduceMotion || this.isTablet) {
+    if (this.reduceMotion || this.isExpanded()) {
       this.onPageChange('moduleSettings');
       return;
     }
@@ -320,7 +322,7 @@ export struct ReaderControlPanel {
 
   private requestExpandTts(): void {
     if (this.activePage !== 'moduleTts') return;
-    if (this.reduceMotion || this.isTablet) {
+    if (this.reduceMotion || this.isExpanded()) {
       this.onPageChange('fullTts');
       return;
     }
@@ -348,7 +350,7 @@ export struct ReaderControlPanel {
 
   private requestCollapseTts(): void {
     if (this.activePage !== 'fullTts') return;
-    if (this.reduceMotion || this.isTablet) {
+    if (this.reduceMotion || this.isExpanded()) {
       this.onPageChange('moduleTts');
       return;
     }
@@ -378,7 +380,7 @@ export struct ReaderControlPanel {
   }
 
   private requestExpandAutoPage(): void {
-    if (this.isTablet || this.activePage !== 'quickAutoPage' || this.autoPageStatus !== 'stopped' ||
+    if (this.isExpanded() || this.activePage !== 'quickAutoPage' || this.autoPageStatus !== 'stopped' ||
       this.autoPageActorTransitioning) {
       return;
     }
@@ -407,7 +409,7 @@ export struct ReaderControlPanel {
   }
 
   private requestCollapseAutoPage(): void {
-    if (this.isTablet || this.activePage !== 'fullAutoPage' || !this.autoPageActorRegistryMounted ||
+    if (this.isExpanded() || this.activePage !== 'fullAutoPage' || !this.autoPageActorRegistryMounted ||
       this.autoPageActorTransitioning) {
       return;
     }
@@ -476,7 +478,7 @@ export struct ReaderControlPanel {
   }
 
   private onActivePageChanged(): void {
-    if (this.activePage === 'fullAutoPage' && !this.isTablet) {
+    if (this.activePage === 'fullAutoPage' && !this.isExpanded()) {
       this.autoPageActorRegistryMounted = true;
       this.autoPageActorExpanded = true;
       return;
@@ -487,14 +489,30 @@ export struct ReaderControlPanel {
   }
 
   private geo: ReaderControlGeometry = new ReaderControlGeometry(false);
+  private expandedLayout: boolean = false;
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
-    this.geo = new ReaderControlGeometry(this.isTablet);
-    if (this.activePage === 'fullAutoPage' && !this.isTablet) {
+    this.expandedLayout = this.isExpanded();
+    this.geo = new ReaderControlGeometry(this.expandedLayout);
+    if (this.activePage === 'fullAutoPage' && !this.isExpanded()) {
       this.autoPageActorRegistryMounted = true;
       this.autoPageActorExpanded = true;
     }
+  }
+
+  private onLayoutChanged(): void {
+    const nextExpanded = this.isExpanded();
+    if (this.expandedLayout === nextExpanded) {
+      return;
+    }
+    this.expandedLayout = nextExpanded;
+    this.geo = new ReaderControlGeometry(nextExpanded);
+    this.onActivePageChanged();
+  }
+
+  private isExpanded(): boolean {
+    return this.layout.isExpanded();
   }
 
   aboutToDisappear(): void {
@@ -529,8 +547,8 @@ export struct ReaderControlPanel {
           showHideTransition('reader.control.show', 'reader.control.hide', -8));
         Stack({
           alignContent: this.usesTopAnchoredFullPanel() ?
-            (this.isTablet ? Alignment.TopEnd : Alignment.Top) :
-            (this.isTablet ? Alignment.BottomEnd : Alignment.Bottom),
+            (this.isExpanded() ? Alignment.TopEnd : Alignment.Top) :
+            (this.isExpanded() ? Alignment.BottomEnd : Alignment.Bottom),
         }) {
           this.controlDock();
         }
@@ -539,9 +557,9 @@ export struct ReaderControlPanel {
         .zIndex(1)
         .hitTestBehavior(HitTestMode.None)
         .padding({
-          top: this.usesTopAnchoredFullPanel() ? READER_CONTROL_FULL_PANEL_TOP_GAP : 0,
-          right: this.isTablet ?
-            (this.usesTopAnchoredFullPanel() ? this.geo.fullPanelRightGap : this.geo.dockRightGap) : 0,
+          top: this.usesTopAnchoredFullPanel() ? this.layout.fullPanelTop : 0,
+          right: this.isExpanded() ?
+            (this.usesTopAnchoredFullPanel() ? this.layout.fullPanelRightGap : this.layout.dockRightGap) : 0,
         })
         // Figma MR1: ControlDock y +18→0 (show) / 0→+18 (hide)。
         .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
@@ -625,18 +643,19 @@ export struct ReaderControlPanel {
       .width(34)
       .height(42)
       .margin({ left: 8   })
-      .opacity(0.4)
-      .enabled(false)
-      .accessibilityText('更多功能，暂不可用');
+      // Figma `933:59` defines the normal 34×42 More actor with a 20px
+      // #332C25 icon. It does not define a disabled variant, menu, page, or
+      // prototype reaction, so keep the normal visual actor without inventing
+      // either a grey state or a destination.
+      .accessibilityText('更多');
     }
-    .width('100%')
+    .width(this.layout.topBarWidth)
     .height(54)
-    .constraintSize({ maxWidth: this.geo.topBarMaxW })
     .alignItems(VerticalAlign.Center)
     .backgroundColor(TOK_READ_SURFACE)
     .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
     .borderRadius(24)
-    .margin({ top: READER_CONTROL_TOP_BAR_TOP_GAP });
+    .margin({ top: this.layout.topBarTop });
   }
 
   @Builder
@@ -657,7 +676,10 @@ export struct ReaderControlPanel {
   @Builder
   private fullAppearanceDock() {
     ReaderAppearanceFullPanel({
-      isTablet: this.isTablet,
+      isTablet: this.isExpanded(),
+      availableWidth: this.fullPanelAvailableWidth(),
+      availableHeight: this.layout.fullPanelHeight,
+      reduceMotion: this.reduceMotion,
       snapshot: this.appearanceSnapshot,
       chineseConversionMode: this.chineseConversionMode,
       onCollapse: (): void => this.requestCollapseAppearance(),
@@ -680,7 +702,9 @@ export struct ReaderControlPanel {
   @Builder
   private fullSettingsDock() {
     ReaderSettingsFullPanel({
-      isTablet: this.isTablet,
+      isTablet: this.isExpanded(),
+      availableWidth: this.fullPanelAvailableWidth(),
+      availableHeight: this.layout.fullPanelHeight,
       snapshot: this.settingsSnapshot,
       justifyText: this.appearanceSnapshot.alignment === 'justify',
       onCollapse: (): void => this.requestCollapseSettings(),
@@ -696,7 +720,9 @@ export struct ReaderControlPanel {
   @Builder
   private fullTtsDock() {
     ReaderTtsFullPanel({
-      isTablet: this.isTablet,
+      isTablet: this.isExpanded(),
+      availableWidth: this.fullPanelAvailableWidth(),
+      availableHeight: this.layout.fullPanelHeight,
       state: this.ttsState,
       timerMinutes: this.ttsTimerMinutes,
       timerSeconds: this.ttsTimerSeconds,
@@ -730,9 +756,9 @@ export struct ReaderControlPanel {
       this.controlSheet();
       this.moduleNav();
     }
-    .width(this.geo.dockMaxW)
+    .width(this.dockWidth())
     .height(READER_CONTROL_REGULAR_DOCK_HEIGHT)
-    .margin({ bottom: this.geo.dockBottomGap   });
+    .margin({ bottom: this.layout.dockBottomGap });
   }
 
   @Builder
@@ -741,6 +767,8 @@ export struct ReaderControlPanel {
       Stack({ alignContent: Alignment.TopStart }) {
         ReaderAutoPageFullPanel({
           isTablet: false,
+          availableWidth: this.autoPageSurfaceWidth(),
+          availableHeight: this.autoPageSurfaceHeight(),
           status: this.autoPageStatus,
           timerSummaryText: this.autoPageTimerSummaryText,
           timerMinutes: this.autoPageTimerMinutes,
@@ -793,18 +821,18 @@ export struct ReaderControlPanel {
         this.moduleNav();
       }
       .width('100%')
-      .height(READER_AUTO_PAGE_FULL_HEIGHT)
+      .height(this.autoPageSurfaceHeight())
       .opacity(this.autoPageOutgoingOpacity())
       .translate({ y: this.autoPageActorExpanded ? 20 : 0 })
       .enabled(!this.autoPageActorExpanded && !this.autoPageActorTransitioning);
     }
-    .width('100%')
-    .height(READER_AUTO_PAGE_FULL_HEIGHT)
-    .margin({ bottom: this.geo.dockBottomGap });
+    .width(this.dockWidth())
+    .height(this.autoPageSurfaceHeight())
+    .margin({ bottom: this.layout.dockBottomGap });
   }
 
   private usesAutoPageActorRegistry(): boolean {
-    return !this.isTablet && this.autoPageActorRegistryMounted &&
+    return !this.isExpanded() && this.autoPageActorRegistryMounted &&
       (this.activePage === 'quickAutoPage' || this.activePage === 'fullAutoPage');
   }
 
@@ -814,12 +842,22 @@ export struct ReaderControlPanel {
   }
 
   private autoPageSurfaceWidth(): number {
-    return this.autoPageActorExpanded ? READER_AUTO_PAGE_FULL_WIDTH :
+    const designWidth = this.autoPageActorExpanded ? READER_AUTO_PAGE_FULL_WIDTH :
       READER_AUTO_PAGE_COLLAPSED_SURFACE_WIDTH;
+    return Math.min(designWidth, this.dockWidth());
+  }
+
+  private dockWidth(): number {
+    return this.layout.dockWidth;
+  }
+
+  private fullPanelAvailableWidth(): number {
+    return this.layout.fullPanelWidth;
   }
 
   private autoPageSurfaceHeight(): number {
-    return this.autoPageActorExpanded ? READER_AUTO_PAGE_FULL_HEIGHT : READER_AUTO_PAGE_QUICK_HEIGHT;
+    const designHeight = this.autoPageActorExpanded ? READER_AUTO_PAGE_FULL_HEIGHT : READER_AUTO_PAGE_QUICK_HEIGHT;
+    return this.autoPageActorExpanded ? Math.min(designHeight, this.layout.fullPanelHeight) : designHeight;
   }
 
   private autoPageOutgoingOpacity(): number {
@@ -873,7 +911,7 @@ export struct ReaderControlPanel {
       .alignItems(HorizontalAlign.Start);
     }
     .width('100%')
-    .constraintSize({ maxWidth: this.geo.dockMaxW })
+    .constraintSize({ maxWidth: this.dockWidth() })
     .height(this.geo.sheetH)
     // ControlSheet 外层背景 = TOK_READ_SURFACE (rgba(255,250,244,0.98) 近不透明暖奶油)。
     // 勿误用内层 Panel 的 TOK_SURFACE_PANEL (0.62) —— 那会过度透明、正文透入、区块压平发白发虚。
@@ -890,7 +928,7 @@ export struct ReaderControlPanel {
 
   private controlGrabberAccessibilityText(): string {
     if (this.activePage === 'quickAutoPage') {
-      if (this.isTablet) {
+      if (this.isExpanded()) {
         return '自动翻页完整面板暂无平板设计';
       }
       if (this.autoPageStatus !== 'stopped') {
@@ -941,7 +979,7 @@ export struct ReaderControlPanel {
     Row({ space: READER_CONTROL_TOP_COMPONENT_GAP }) {
       if (this.activePage === 'quickSearch') {
         ReaderQuickSearchPanel({
-          isTablet: this.isTablet,
+          isTablet: this.isExpanded(),
           query: this.searchQuery,
           state: this.searchState,
           onBack: (): void => this.onPageChange('home'),
@@ -952,7 +990,7 @@ export struct ReaderControlPanel {
           .layoutWeight(1);
       } else if (this.activePage === 'quickAutoPage') {
         ReaderAutoPagePanel({
-          isTablet: this.isTablet,
+          isTablet: this.isExpanded(),
           status: this.autoPageStatus,
           speedSeconds: this.autoPageSpeedSeconds,
           canPreviousChapter: this.canStepChapter(-1),
@@ -968,7 +1006,7 @@ export struct ReaderControlPanel {
           .layoutWeight(1);
       } else if (this.activePage === 'quickReplace') {
         ReaderReplaceQuickPanel({
-          isTablet: this.isTablet,
+          isTablet: this.isExpanded(),
           state: this.replaceState,
           onClose: (): void => this.onPageChange('home'),
           onToggleRule: (ruleId: number, isEnabled: boolean): void =>
@@ -991,7 +1029,7 @@ export struct ReaderControlPanel {
           .layoutWeight(1);
       } else if (this.activePage === 'moduleTts') {
         ReaderTtsModulePanel({
-          isTablet: this.isTablet,
+          isTablet: this.isExpanded(),
           state: this.ttsState,
           timerMinutes: this.ttsTimerMinutes,
           onToggle: (): void => this.onTtsToggle(),
@@ -1003,7 +1041,7 @@ export struct ReaderControlPanel {
           .layoutWeight(1);
       } else if (this.activePage === 'moduleAppearance') {
         ReaderAppearanceModulePanel({
-          isTablet: this.isTablet,
+          isTablet: this.isExpanded(),
           snapshot: this.appearanceSnapshot,
           onThemeChange: (theme: ReaderAppearanceTheme): void => this.onAppearanceThemeChange(theme),
           onFontChange: (font: ReaderAppearanceFont): void => this.onAppearanceFontChange(font),
@@ -1011,7 +1049,7 @@ export struct ReaderControlPanel {
           .layoutWeight(1);
       } else if (this.activePage === 'moduleSettings') {
         ReaderSettingsModulePanel({
-          isTablet: this.isTablet,
+          isTablet: this.isExpanded(),
           snapshot: this.settingsSnapshot,
         })
           .layoutWeight(1);
@@ -1327,7 +1365,7 @@ export struct ReaderControlPanel {
       this.moduleNavBar();
     }
     .width('100%')
-    .constraintSize({ maxWidth: this.geo.dockMaxW })
+    .constraintSize({ maxWidth: this.dockWidth() })
     .height(this.geo.moduleNavH)
     .padding({
       // ControlSheet's top composition is measured from inside its border.

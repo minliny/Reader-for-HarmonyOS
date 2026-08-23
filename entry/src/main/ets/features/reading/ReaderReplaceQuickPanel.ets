@@ -70,7 +70,8 @@ export struct ReaderReplaceQuickPanel {
       this.header();
       this.ruleBody();
     }
-    .width(this.panelWidth())
+    .width('100%')
+    .constraintSize({ maxWidth: this.panelWidth() })
     .height(REPLACE_PANEL_HEIGHT)
     .padding({
       left: REPLACE_PANEL_PADDING_X,
@@ -87,17 +88,18 @@ export struct ReaderReplaceQuickPanel {
 
   @Builder
   private header() {
-    Stack({ alignContent: Alignment.TopStart }) {
+    Row() {
       Text('替换规则')
-        .width(this.contentWidth() - 50)
+        .layoutWeight(1)
+        .constraintSize({ maxWidth: this.contentWidth() - 50 })
         .height(14)
+        .margin({ left: 8 })
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
         .fontSize(13)
         .lineHeight(14.04)
         .fontColor(TOK_READ_INK)
-        .maxLines(1)
-        .position({ x: 8, y: 7 });
+        .maxLines(1);
 
       Stack({ alignContent: Alignment.Center }) {
         Image($r('app.media.reader_replace_close'))
@@ -106,13 +108,15 @@ export struct ReaderReplaceQuickPanel {
       }
       .width(REPLACE_CLOSE_SIZE)
       .height(REPLACE_CLOSE_SIZE)
+      .margin({ left: 6, right: 8 })
       .borderRadius(6)
-      .position({ x: this.contentWidth() - 36, y: 0 })
       .accessibilityText('关闭替换规则')
       .onClick((): void => this.onClose());
     }
-    .width(this.contentWidth())
+    .width('100%')
+    .constraintSize({ maxWidth: this.contentWidth() })
     .height(REPLACE_HEADER_HEIGHT)
+    .alignItems(VerticalAlign.Center)
     .border({ width: { bottom: TOK_BORDER_W }, color: TOK_LINE });
   }
 
@@ -144,7 +148,8 @@ export struct ReaderReplaceQuickPanel {
 
       this.footer();
     }
-    .width(this.contentWidth())
+    .width('100%')
+    .constraintSize({ maxWidth: this.contentWidth() })
     .height(REPLACE_RULE_BODY_HEIGHT)
     .padding({
       left: REPLACE_RULE_BODY_PADDING_X,
@@ -157,7 +162,7 @@ export struct ReaderReplaceQuickPanel {
 
   @Builder
   private ruleRow(rule: ReaderReplaceRule) {
-    Stack({ alignContent: Alignment.TopStart }) {
+    Row() {
       Stack({ alignContent: Alignment.TopStart }) {
         Row()
           .width(12)
@@ -168,24 +173,27 @@ export struct ReaderReplaceQuickPanel {
       }
       .width(27)
       .height(16)
+      .margin({ left: 5 })
       .backgroundColor(rule.isEnabled ? TOK_READ_PRIMARY : '#C9C5BE')
       .borderRadius(999)
-      .position({ x: 5, y: 6 });
+      .clip(true);
 
       Text(rule.name)
-        .width(this.ruleTextWidth())
+        .layoutWeight(1)
+        .constraintSize({ maxWidth: this.ruleTextWidth() })
         .height(13)
+        .margin({ left: 10, right: 5 })
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Medium)
         .fontSize(9)
         .lineHeight(13)
         .fontColor(TOK_READ_INK)
         .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .position({ x: 42, y: 7.5 });
+        .textOverflow({ overflow: TextOverflow.Ellipsis });
     }
     .width('100%')
     .height(REPLACE_RULE_ROW_HEIGHT)
+    .alignItems(VerticalAlign.Center)
     .border({ width: { bottom: TOK_BORDER_W }, color: TOK_LINE })
     .accessibilityText(`${rule.name}，${rule.isEnabled ? '已开启' : '已关闭'}`)
     .onClick((): void => this.onToggleRule(rule.id, !rule.isEnabled));
@@ -217,6 +225,10 @@ export struct ReaderReplaceQuickPanel {
         .maxLines(1);
     }
     .width(kind === 'preview' ? this.previewButtonWidth() : this.managementButtonWidth())
+    .constraintSize({
+      maxWidth: kind === 'preview' ? this.previewButtonWidth() : this.managementButtonWidth(),
+    })
+    .layoutWeight(kind === 'management' ? 1 : 0)
     .height(REPLACE_FOOTER_HEIGHT)
     .justifyContent(FlexAlign.Center)
     .alignItems(VerticalAlign.Center)

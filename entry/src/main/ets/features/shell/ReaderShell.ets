@@ -17,15 +17,13 @@ import type { RemoteReadingSession } from '../reading/RemoteReadingFlowGateway';
 // 挂载契约 (与改造前 Index 内联阅读段一致):
 //   - 仅当 readingSessionActive 且 book 已就绪时挂载; ReadingExperience 保持挂载,
 //     opacity 随 route 在 reading/directory 间切换, 避免阅读会话被 remount。
-//   - 状态栏顶部 inset 由本 Shell 自行管理 (读取 @StorageLink('statusBarHeightPx')),
-//     阅读路由 Index 根 Stack 置 0 防双 padding; 底部安全区仍由 Index 根 Stack 统一沉浸。
-//     保持非沉浸式观感: 阅读面与各 overlay 均避让状态栏, 不越界上移。
+//   - Shell owns the edge-to-edge reader background/overlay host. Window facts
+//     and content/control safe rects come from the single window coordinator;
+//     the whole reader subtree is never shifted by a second status-bar padding.
 type PreparedReaderRoute = 'reading' | 'directory';
 
 @Component
 export struct ReaderShell {
-  // 状态栏高度 (px), 用于本 Shell 自行避让顶部 inset。
-  @StorageLink('statusBarHeightPx') statusBarHeightPx: number = 0;
   // 阅读内容。
   @Prop bookId: string = '';
   @Prop bookTitle: string = '';
@@ -75,6 +73,7 @@ export struct ReaderShell {
   onOpenRulesManagement: () => void = (): void => {};
   onCloseSourceSwitch: () => void = (): void => {};
   onRetrySourceSwitch: () => void = (): void => {};
+  onRefreshSourceSwitch: () => void = (): void => {};
   onPickSource: (candidate: SourceSwitchCandidate) => void = (_candidate: SourceSwitchCandidate): void => {};
   onRollbackSourceSwitch: () => void = (): void => {};
 
@@ -92,11 +91,15 @@ export struct ReaderShell {
           sourceSwitchTransactionId: this.sourceSwitchTransactionId,
           requestedChapterIndex: this.requestedChapterIndex,
           isTablet: this.isTablet,
+          windowChromeActive: this.visible,
+          windowChromeOverlayActive: this.visible &&
+            (this.route === 'directory' || this.sourceSwitchVisible),
           bookTitle: this.bookTitle,
           sourceName: this.sourceName,
           totalChapters: this.totalChapters,
           directoryEntries: this.tocEntries,
           controlObscured: this.route === 'directory',
+          interactionBlocked: !this.visible || this.route !== 'reading' || this.sourceSwitchVisible,
           reduceMotion: this.reduceMotion,
           onExitRequestHandler: (requestExit: () => void): void => this.onExitRequestHandler(requestExit),
           onExit: (): void => this.onExit(),
@@ -133,7 +136,6 @@ export struct ReaderShell {
           chapterTitle: this.directoryChapterTitle,
           entries: this.tocEntries,
           currentChapterIndex: this.directoryCurrentChapterIndex,
-          isTablet: this.isTablet,
           sourceId: this.sourceId,
           animateFromControl: this.directoryOpenedFromControl,
           reduceMotion: this.reduceMotion,
@@ -161,9 +163,9 @@ export struct ReaderShell {
           SourceSwitchPanel({
             state: this.sourceSwitchState,
             currentSourceId: this.sourceId,
-            isTablet: this.isTablet,
             onClose: (): void => this.onCloseSourceSwitch(),
             onRetry: (): void => this.onRetrySourceSwitch(),
+            onRefresh: (): void => this.onRefreshSourceSwitch(),
             onSelectCandidate: (candidate: SourceSwitchCandidate): void => this.onPickSource(candidate),
             onRollback: (): void => this.onRollbackSourceSwitch(),
           });
@@ -174,8 +176,7 @@ export struct ReaderShell {
     }
     .width('100%')
     .height('100%')
-    // 顶部 inset 本 Shell 自行管理 (Index 置 0): 阅读面与各 overlay 统一避让状态栏。
-    .padding({ top: px2vp(this.statusBarHeightPx) })
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
     .opacity(this.visible ? 1 : 0)
     .hitTestBehavior(this.visible ? HitTestMode.Default : HitTestMode.Transparent);
   }

@@ -40,8 +40,10 @@ export struct ReaderAppearanceModulePanel {
       this.themeSection();
       this.fontSection();
     }
-    .width(this.panelWidth())
+    .width('100%')
+    .constraintSize({ maxWidth: this.panelWidth() })
     .height(190)
+    .padding({ left: this.sectionX(), right: this.sectionRightGap() })
     .backgroundColor(TOK_SURFACE_PANEL)
     .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
     .borderRadius(8)
@@ -51,47 +53,66 @@ export struct ReaderAppearanceModulePanel {
   @Builder
   private themeSection() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Text('主题库')
-        .width(this.themeTitleWidth())
-        .height(10)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(9)
-        .lineHeight(9.9)
-        .fontColor(TOK_READ_INK)
-        .position({ x: 0, y: 3 });
+      Row() {
+        Text('主题库')
+          .layoutWeight(1)
+          .constraintSize({ maxWidth: this.themeTitleWidth() })
+          .height(10)
+          .fontFamily('ReaderNotoSansSC')
+          .fontWeight(FontWeight.Bold)
+          .fontSize(9)
+          .lineHeight(9.9)
+          .fontColor(TOK_READ_INK);
 
-      Text(this.themeSummary())
-        .width(88)
-        .height(9)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Medium)
-        .fontSize(this.isTablet ? 8 : 7.5)
-        .lineHeight(8)
-        .fontColor(TOK_READ_MUTED)
-        .textAlign(TextAlign.End)
-        .maxLines(1)
-        .position({ x: this.themeSummaryX(), y: 6.95 });
-
-      Stack({ alignContent: Alignment.TopStart }) {
-        ForEach(this.themeIds(), (theme: ReaderAppearanceTheme, index: number) => {
-          this.compactThemeCell(theme, index);
-        }, (theme: ReaderAppearanceTheme): string => `reader-appearance-quick-theme-${theme}`);
+        Text(this.themeSummary())
+          .width(88)
+          .height(9)
+          .margin({ left: this.themeSummaryGap(), top: 3.95 })
+          .fontFamily('ReaderNotoSansSC')
+          .fontWeight(FontWeight.Medium)
+          .fontSize(this.isTablet ? 8 : 7.5)
+          .lineHeight(8)
+          .fontColor(TOK_READ_MUTED)
+          .textAlign(TextAlign.End)
+          .maxLines(1);
       }
-      .width(this.sectionWidth())
+      .width('100%')
+      .height(13.95)
+      .alignItems(VerticalAlign.Top)
+      .position({ x: 0, y: 3 });
+
+      Column({ space: 4 }) {
+        this.themeGridRow(0);
+        this.themeGridRow(4);
+      }
+      .width('100%')
+      .constraintSize({ maxWidth: this.sectionWidth() })
       .height(52)
       .position({ x: 0, y: 21.9 });
     }
-    .width(this.sectionWidth())
+    .width('100%')
+    .constraintSize({ maxWidth: this.sectionWidth() })
     .height(75.9)
-    .position({ x: this.sectionX(), y: this.themeSectionY() });
+    .position({ x: 0, y: this.themeSectionY() });
   }
 
   @Builder
-  private compactThemeCell(theme: ReaderAppearanceTheme, index: number) {
+  private themeGridRow(startIndex: number) {
+    Row({ space: 4 }) {
+      ForEach(this.themeIds().slice(startIndex, startIndex + 4), (theme: ReaderAppearanceTheme) => {
+        this.compactThemeCell(theme);
+      }, (theme: ReaderAppearanceTheme): string => `reader-appearance-quick-theme-${theme}`);
+    }
+    .width('100%')
+    .height(24);
+  }
+
+  @Builder
+  private compactThemeCell(theme: ReaderAppearanceTheme) {
     Stack({ alignContent: Alignment.Center }) {
       Row()
-        .width(46)
+        .width('100%')
+        .constraintSize({ maxWidth: 46 })
         .height(18)
         .backgroundColor(this.themeColor(theme))
         .border({
@@ -100,10 +121,10 @@ export struct ReaderAppearanceModulePanel {
         })
         .borderRadius(6);
     }
-    .width(this.cellWidth())
+    .layoutWeight(1)
+    .constraintSize({ maxWidth: this.cellWidth() })
     .height(24)
     .borderRadius(8)
-    .position({ x: (index % 4) * this.cellStride(), y: Math.floor(index / 4) * 28 })
     .accessibilityText(`切换到${this.themeLabel(theme)}主题`)
     .onClick((): void => this.onThemeChange(theme));
   }
@@ -118,7 +139,8 @@ export struct ReaderAppearanceModulePanel {
         .position({ x: 0, y: 0 });
 
       Text('字体库')
-        .width(this.sectionWidth() - 6)
+        .width('100%')
+        .constraintSize({ maxWidth: this.sectionWidth() - 6 })
         .height(10)
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
@@ -127,25 +149,38 @@ export struct ReaderAppearanceModulePanel {
         .fontColor(TOK_READ_INK)
         .position({ x: 0, y: 4 });
 
-      Stack({ alignContent: Alignment.TopStart }) {
-        ForEach(this.fontIds(), (fontId: string, index: number) => {
-          this.compactFontCell(fontId, index);
-        }, (fontId: string): string => `reader-appearance-quick-font-${fontId}`);
+      Column({ space: 4 }) {
+        this.fontGridRow(0);
+        this.fontGridRow(4);
       }
-      .width(this.sectionWidth())
+      .width('100%')
+      .constraintSize({ maxWidth: this.sectionWidth() })
       .height(58)
       .position({ x: 0, y: 17 });
     }
-    .width(this.sectionWidth())
+    .width('100%')
+    .constraintSize({ maxWidth: this.sectionWidth() })
     .height(77)
-    .position({ x: this.sectionX(), y: this.fontSectionY() });
+    .position({ x: 0, y: this.fontSectionY() });
   }
 
   @Builder
-  private compactFontCell(fontId: string, index: number) {
+  private fontGridRow(startIndex: number) {
+    Row({ space: 4 }) {
+      ForEach(this.fontIds().slice(startIndex, startIndex + 4), (fontId: string) => {
+        this.compactFontCell(fontId);
+      }, (fontId: string): string => `reader-appearance-quick-font-${fontId}`);
+    }
+    .width('100%')
+    .height(27);
+  }
+
+  @Builder
+  private compactFontCell(fontId: string) {
     Stack({ alignContent: Alignment.Center }) {
       Row()
-        .width(this.fontPillWidth())
+        .width('100%')
+        .constraintSize({ maxWidth: this.fontPillWidth() })
         .height(22)
         .backgroundColor(this.isActiveFont(fontId) ? TOK_READ_PRIMARY : TOK_SURFACE_SOLID)
         .border({
@@ -154,7 +189,8 @@ export struct ReaderAppearanceModulePanel {
         })
         .borderRadius(11);
       Text(this.fontLabel(fontId))
-        .width(this.fontPillWidth() - 0.5)
+        .width('100%')
+        .constraintSize({ maxWidth: this.fontPillWidth() - 0.5 })
         .height(10)
         .fontFamily(fontId === 'lxgwWenKai' ? 'ReaderLXGWWenKaiLite' :
           (fontId === 'sourceHanSerif' || fontId === 'serif' ?
@@ -166,9 +202,9 @@ export struct ReaderAppearanceModulePanel {
         .textAlign(TextAlign.Center)
         .maxLines(1);
     }
-    .width(this.cellWidth())
+    .layoutWeight(1)
+    .constraintSize({ maxWidth: this.cellWidth() })
     .height(27)
-    .position({ x: (index % 4) * this.cellStride(), y: Math.floor(index / 4) * 31 })
     .enabled(this.isSelectableFont(fontId))
     .accessibilityText(this.isSelectableFont(fontId) ? `切换到${this.fontLabel(fontId)}` :
       `${this.fontLabel(fontId)}，暂不可用`)
@@ -195,6 +231,10 @@ export struct ReaderAppearanceModulePanel {
     return this.isTablet ? 12 : 11;
   }
 
+  private sectionRightGap(): number {
+    return this.panelWidth() - this.sectionX() - this.sectionWidth();
+  }
+
   private themeSectionY(): number {
     return this.isTablet ? 13 : 12;
   }
@@ -211,12 +251,12 @@ export struct ReaderAppearanceModulePanel {
     return this.isTablet ? 150 : 174;
   }
 
-  private cellWidth(): number {
-    return this.isTablet ? 56.5 : 62.5;
+  private themeSummaryGap(): number {
+    return this.themeSummaryX() - this.themeTitleWidth();
   }
 
-  private cellStride(): number {
-    return this.isTablet ? 60.5 : 66.5;
+  private cellWidth(): number {
+    return this.isTablet ? 56.5 : 62.5;
   }
 
   private fontPillWidth(): number {

@@ -11,6 +11,8 @@ import {
 
 const QUICK_AUTO_PAGE_PANEL_PADDING_X = 11;
 const QUICK_AUTO_PAGE_PANEL_PADDING_Y = 13;
+const QUICK_AUTO_PAGE_PANEL_WIDTH_PHONE = 286;
+const QUICK_AUTO_PAGE_PANEL_WIDTH_TABLET = 262;
 const QUICK_AUTO_PAGE_HEADER_HEIGHT = 24;
 const QUICK_AUTO_PAGE_GAP_PHONE = 5;
 const QUICK_AUTO_PAGE_GAP_TABLET = 6;
@@ -74,6 +76,7 @@ export struct ReaderAutoPagePanel {
       this.speedControl();
     }
     .width('100%')
+    .constraintSize({ maxWidth: this.panelWidth() })
     .height(this.isTablet ? QUICK_AUTO_PAGE_PANEL_HEIGHT_TABLET : QUICK_AUTO_PAGE_PANEL_HEIGHT_PHONE)
     .padding({
       left: QUICK_AUTO_PAGE_PANEL_PADDING_X,
@@ -118,10 +121,8 @@ export struct ReaderAutoPagePanel {
   @Builder
   private playbackControls() {
     Stack({ alignContent: Alignment.TopStart }) {
-      this.chapterControl(true);
-      this.runningControl();
-      this.chapterControl(false);
-      this.stopControl();
+      this.primaryControls();
+      this.stopTrack();
     }
     .width('100%')
     .height(this.isTablet ? QUICK_AUTO_PAGE_PLAYBACK_HEIGHT_TABLET :
@@ -130,6 +131,38 @@ export struct ReaderAutoPagePanel {
     .border({ width: TOK_BORDER_W, color: TOK_LINE })
     .borderRadius(8)
     .clip(true);
+  }
+
+  @Builder
+  private primaryControls() {
+    Row({ space: this.primaryActorGap() }) {
+      this.chapterControl(true);
+      this.runningControl();
+      this.chapterControl(false);
+    }
+    .width('100%')
+    .height(52)
+    .padding({ left: QUICK_AUTO_PAGE_PREVIOUS_X, right: this.chapterRightGap() })
+    .alignItems(VerticalAlign.Top)
+    .position({
+      x: 0,
+      y: this.isTablet ? QUICK_AUTO_PAGE_CONTROL_Y_TABLET : QUICK_AUTO_PAGE_CONTROL_Y_PHONE,
+    });
+  }
+
+  @Builder
+  private stopTrack() {
+    Row() {
+      Blank().layoutWeight(this.stopLeftWeight());
+      this.stopControl();
+      Blank().layoutWeight(this.stopRightWeight());
+    }
+    .width('100%')
+    .height(42)
+    .position({
+      x: 0,
+      y: this.isTablet ? QUICK_AUTO_PAGE_STOP_Y_TABLET : QUICK_AUTO_PAGE_STOP_Y_PHONE,
+    });
   }
 
   @Builder
@@ -159,14 +192,12 @@ export struct ReaderAutoPagePanel {
         .textAlign(TextAlign.Center)
         .maxLines(1);
     }
-    .width(this.isTablet ? QUICK_AUTO_PAGE_CHAPTER_WIDTH_TABLET : QUICK_AUTO_PAGE_CHAPTER_WIDTH_PHONE)
+    .layoutWeight(this.isTablet ? QUICK_AUTO_PAGE_CHAPTER_WIDTH_TABLET : QUICK_AUTO_PAGE_CHAPTER_WIDTH_PHONE)
+    .constraintSize({
+      maxWidth: this.isTablet ? QUICK_AUTO_PAGE_CHAPTER_WIDTH_TABLET : QUICK_AUTO_PAGE_CHAPTER_WIDTH_PHONE,
+    })
     .height(52)
     .alignItems(HorizontalAlign.Center)
-    .position({
-      x: previous ? QUICK_AUTO_PAGE_PREVIOUS_X :
-        (this.isTablet ? QUICK_AUTO_PAGE_NEXT_X_TABLET : QUICK_AUTO_PAGE_NEXT_X_PHONE),
-      y: this.isTablet ? QUICK_AUTO_PAGE_CONTROL_Y_TABLET : QUICK_AUTO_PAGE_CONTROL_Y_PHONE,
-    })
     .enabled(previous ? this.canPreviousChapter : this.canNextChapter)
     .opacity((previous ? this.canPreviousChapter : this.canNextChapter) ? 1 : 0.4)
     .accessibilityText(previous ? '上一章' : '下一章')
@@ -204,13 +235,12 @@ export struct ReaderAutoPagePanel {
         .textAlign(TextAlign.Center)
         .maxLines(1);
     }
-    .width(this.isTablet ? QUICK_AUTO_PAGE_RUNNING_WIDTH_TABLET : QUICK_AUTO_PAGE_RUNNING_WIDTH_PHONE)
+    .layoutWeight(this.isTablet ? QUICK_AUTO_PAGE_RUNNING_WIDTH_TABLET : QUICK_AUTO_PAGE_RUNNING_WIDTH_PHONE)
+    .constraintSize({
+      maxWidth: this.isTablet ? QUICK_AUTO_PAGE_RUNNING_WIDTH_TABLET : QUICK_AUTO_PAGE_RUNNING_WIDTH_PHONE,
+    })
     .height(52)
     .alignItems(HorizontalAlign.Center)
-    .position({
-      x: this.isTablet ? QUICK_AUTO_PAGE_RUNNING_X_TABLET : QUICK_AUTO_PAGE_RUNNING_X_PHONE,
-      y: this.isTablet ? QUICK_AUTO_PAGE_CONTROL_Y_TABLET : QUICK_AUTO_PAGE_CONTROL_Y_PHONE,
-    })
     .accessibilityText(this.status === 'running' ? '暂停自动翻页' :
       (this.status === 'paused' ? '继续自动翻页' : '开始自动翻页'))
     .onClick((): void => this.onToggleRunning());
@@ -242,10 +272,6 @@ export struct ReaderAutoPagePanel {
     .width(24)
     .height(42)
     .alignItems(HorizontalAlign.Center)
-    .position({
-      x: this.isTablet ? QUICK_AUTO_PAGE_STOP_X_TABLET : QUICK_AUTO_PAGE_STOP_X_PHONE,
-      y: this.isTablet ? QUICK_AUTO_PAGE_STOP_Y_TABLET : QUICK_AUTO_PAGE_STOP_Y_PHONE,
-    })
     .enabled(this.status !== 'stopped')
     .opacity(this.status === 'stopped' ? 0.4 : 1)
     .accessibilityText('停止自动翻页')
@@ -316,5 +342,33 @@ export struct ReaderAutoPagePanel {
         this.onSpeedUp();
       }
     });
+  }
+
+  private panelWidth(): number {
+    return this.isTablet ? QUICK_AUTO_PAGE_PANEL_WIDTH_TABLET : QUICK_AUTO_PAGE_PANEL_WIDTH_PHONE;
+  }
+
+  private chapterRightGap(): number {
+    const designPanelWidth = this.panelWidth();
+    const chapterWidth = this.isTablet ? QUICK_AUTO_PAGE_CHAPTER_WIDTH_TABLET :
+      QUICK_AUTO_PAGE_CHAPTER_WIDTH_PHONE;
+    const nextX = this.isTablet ? QUICK_AUTO_PAGE_NEXT_X_TABLET : QUICK_AUTO_PAGE_NEXT_X_PHONE;
+    return designPanelWidth - QUICK_AUTO_PAGE_PANEL_PADDING_X * 2 - nextX - chapterWidth;
+  }
+
+  private primaryActorGap(): number {
+    const chapterWidth = this.isTablet ? QUICK_AUTO_PAGE_CHAPTER_WIDTH_TABLET :
+      QUICK_AUTO_PAGE_CHAPTER_WIDTH_PHONE;
+    const runningX = this.isTablet ? QUICK_AUTO_PAGE_RUNNING_X_TABLET : QUICK_AUTO_PAGE_RUNNING_X_PHONE;
+    return runningX - QUICK_AUTO_PAGE_PREVIOUS_X - chapterWidth;
+  }
+
+  private stopLeftWeight(): number {
+    return this.isTablet ? QUICK_AUTO_PAGE_STOP_X_TABLET : QUICK_AUTO_PAGE_STOP_X_PHONE;
+  }
+
+  private stopRightWeight(): number {
+    const designContentWidth = this.panelWidth() - QUICK_AUTO_PAGE_PANEL_PADDING_X * 2;
+    return designContentWidth - this.stopLeftWeight() - 24;
   }
 }

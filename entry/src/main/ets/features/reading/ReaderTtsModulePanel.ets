@@ -22,6 +22,8 @@ import {
 // inner section geometry does not make either outer height derivable.
 const TTS_MODULE_PANEL_HEIGHT_PHONE = 196;
 const TTS_MODULE_PANEL_HEIGHT_TABLET = 190;
+const TTS_MODULE_PANEL_WIDTH_PHONE = 286;
+const TTS_MODULE_PANEL_WIDTH_TABLET = 262;
 const TTS_MODULE_PANEL_PADDING_X = 11;
 const TTS_MODULE_PANEL_PADDING_Y = 13;
 const TTS_MODULE_SECTION_GAP = 8;
@@ -32,6 +34,8 @@ const TTS_MODULE_PLAYBACK_LABEL_WIDTH = 106;
 const TTS_MODULE_PLAYBACK_CONTROL_WIDTH = 128;
 const TTS_MODULE_RATE_LABEL_WIDTH = 72;
 const TTS_MODULE_RATE_SLIDER_WIDTH = 116;
+const TTS_MODULE_RATE_VALUE_WIDTH_PHONE = 54;
+const TTS_MODULE_RATE_VALUE_WIDTH_TABLET = 30;
 
 /** Figma quick TTS panel: Phone `942:62`, Tablet `942:64`. */
 @Component
@@ -53,6 +57,7 @@ export struct ReaderTtsModulePanel {
       this.rateRow();
     }
     .width('100%')
+    .constraintSize({ maxWidth: this.panelWidth() })
     .height(this.isTablet ? TTS_MODULE_PANEL_HEIGHT_TABLET : TTS_MODULE_PANEL_HEIGHT_PHONE)
     .padding({
       left: TTS_MODULE_PANEL_PADDING_X,
@@ -75,13 +80,16 @@ export struct ReaderTtsModulePanel {
           .width(20)
           .height(20);
         Text('播放')
+          .layoutWeight(1)
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Bold)
           .fontSize(12)
           .lineHeight(12)
-          .fontColor(TOK_READ_INK);
+          .fontColor(TOK_READ_INK)
+          .maxLines(1);
       }
-      .width(TTS_MODULE_PLAYBACK_LABEL_WIDTH)
+      .layoutWeight(1)
+      .constraintSize({ maxWidth: TTS_MODULE_PLAYBACK_LABEL_WIDTH })
       .height(64)
       .alignItems(VerticalAlign.Center);
 
@@ -254,7 +262,8 @@ export struct ReaderTtsModulePanel {
         direction: Axis.Horizontal,
         reverse: false,
       })
-        .width(TTS_MODULE_RATE_SLIDER_WIDTH)
+        .layoutWeight(1)
+        .constraintSize({ maxWidth: TTS_MODULE_RATE_SLIDER_WIDTH })
         .height(32)
         // The source master reserves this semantic range without a visible
         // track/thumb in the default variant.
@@ -271,7 +280,7 @@ export struct ReaderTtsModulePanel {
         });
 
       Text(`${this.effectiveRate().toFixed(1)}x`)
-        .layoutWeight(1)
+        .width(this.rateValueWidth())
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Bold)
         .fontSize(12)
@@ -289,6 +298,14 @@ export struct ReaderTtsModulePanel {
 
   private effectiveRate(): number {
     return this.ratePreview >= READER_TTS_RATE_MIN ? this.ratePreview : this.state.rate;
+  }
+
+  private panelWidth(): number {
+    return this.isTablet ? TTS_MODULE_PANEL_WIDTH_TABLET : TTS_MODULE_PANEL_WIDTH_PHONE;
+  }
+
+  private rateValueWidth(): number {
+    return this.isTablet ? TTS_MODULE_RATE_VALUE_WIDTH_TABLET : TTS_MODULE_RATE_VALUE_WIDTH_PHONE;
   }
 
   private isActivelySpeaking(): boolean {

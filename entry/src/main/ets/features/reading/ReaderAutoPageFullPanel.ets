@@ -95,6 +95,8 @@ import {
 @Component
 export struct ReaderAutoPageFullPanel {
   @Prop isTablet: boolean = false;
+  @Prop availableWidth: number = 0;
+  @Prop availableHeight: number = 0;
   @Prop status: ReaderAutoPageStatus = 'stopped';
   @Prop timerSummaryText: string = '15:00';
   @Prop timerMinutes: number = 15;
@@ -136,7 +138,7 @@ export struct ReaderAutoPageFullPanel {
         .height(READER_AUTO_PAGE_FULL_GRABBER_HEIGHT)
         .backgroundColor(TOK_READ_HANDLE)
         .borderRadius(999)
-        .position({ x: READER_AUTO_PAGE_FULL_GRABBER_X, y: READER_AUTO_PAGE_FULL_GRABBER_Y });
+        .position({ x: this.grabberX(), y: READER_AUTO_PAGE_FULL_GRABBER_Y });
 
       this.header();
 
@@ -145,25 +147,39 @@ export struct ReaderAutoPageFullPanel {
       // at its Quick coordinates and drive only the source opacity/y track.
       this.collapsedBackActor();
 
-      Row()
-        .width(READER_AUTO_PAGE_FULL_BODY_WIDTH)
-        .height(READER_AUTO_PAGE_FULL_BODY_HEIGHT)
-        .backgroundColor(TOK_SURFACE_PANEL)
-        .border({ width: TOK_BORDER_W, color: TOK_LINE })
-        .borderRadius(12)
-        .position({ x: READER_AUTO_PAGE_FULL_BODY_X, y: READER_AUTO_PAGE_FULL_BODY_Y });
+      Scroll() {
+        Stack({ alignContent: Alignment.TopStart }) {
+          Row()
+            .width(this.bodyWidth())
+            .height(READER_AUTO_PAGE_FULL_BODY_HEIGHT)
+            .backgroundColor(TOK_SURFACE_PANEL)
+            .border({ width: TOK_BORDER_W, color: TOK_LINE })
+            .borderRadius(12)
+            .position({ x: this.bodyX(), y: 0 });
 
-      Stack({ alignContent: Alignment.TopStart }) {
-        this.controlSection();
-        this.timerSection();
-        this.detailsSection();
+          Stack({ alignContent: Alignment.TopStart }) {
+            this.controlSection();
+            this.timerSection();
+            this.detailsSection();
+          }
+          .width(this.contentWidth())
+          .height(READER_AUTO_PAGE_FULL_CONTENT_HEIGHT)
+          .position({
+            x: this.contentX(),
+            y: READER_AUTO_PAGE_FULL_CONTENT_Y - READER_AUTO_PAGE_FULL_BODY_Y,
+          });
+        }
+        .width(this.panelWidth())
+        .height(READER_AUTO_PAGE_FULL_BODY_HEIGHT);
       }
-      .width(READER_AUTO_PAGE_FULL_CONTENT_WIDTH)
-      .height(READER_AUTO_PAGE_FULL_CONTENT_HEIGHT)
-      .position({ x: READER_AUTO_PAGE_FULL_CONTENT_X, y: READER_AUTO_PAGE_FULL_CONTENT_Y });
+      .width(this.panelWidth())
+      .height(this.bodyViewportHeight())
+      .position({ x: 0, y: READER_AUTO_PAGE_FULL_BODY_Y })
+      .scrollBar(BarState.Off)
+      .edgeEffect(EdgeEffect.None);
     }
-    .width(READER_AUTO_PAGE_FULL_WIDTH)
-    .height(READER_AUTO_PAGE_FULL_HEIGHT)
+    .width(this.panelWidth())
+    .height(this.panelHeight())
     .backgroundColor(this.embeddedInUnifiedSurface ? Color.Transparent : TOK_READ_SURFACE)
     .border({
       width: this.embeddedInUnifiedSurface ? 0 : TOK_BORDER_W,
@@ -191,7 +207,8 @@ export struct ReaderAutoPageFullPanel {
           .fontColor(TOK_READ_INK)
           .maxLines(1);
       }
-      .width(286)
+      .layoutWeight(1)
+      .constraintSize({ maxWidth: 286 })
       .height(30)
       .alignItems(VerticalAlign.Center);
 
@@ -209,10 +226,10 @@ export struct ReaderAutoPageFullPanel {
         .accessibilityText('收起自动翻页完整控制')
         .onClick((): void => this.onCollapse());
     }
-    .width(READER_AUTO_PAGE_FULL_HEADER_WIDTH)
+    .width(this.headerWidth())
     .height(30)
     .alignItems(VerticalAlign.Center)
-    .position({ x: READER_AUTO_PAGE_FULL_HEADER_X, y: READER_AUTO_PAGE_FULL_HEADER_Y })
+    .position({ x: this.headerX(), y: READER_AUTO_PAGE_FULL_HEADER_Y })
     .opacity(this.addedActorOpacity())
     .translate({ y: this.addedActorTranslateY(READER_AUTO_PAGE_ADDED_HEADER_TRANSLATE_Y) });
   }
@@ -247,7 +264,8 @@ export struct ReaderAutoPageFullPanel {
     Stack({ alignContent: Alignment.TopStart }) {
       Row() {
         Text('自动翻页控制')
-          .width(268)
+          .layoutWeight(1)
+          .constraintSize({ maxWidth: 268 })
           .height(14.4)
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Bold)
@@ -267,7 +285,7 @@ export struct ReaderAutoPageFullPanel {
           .textAlign(TextAlign.End)
           .maxLines(1);
       }
-      .width(306)
+      .width(this.sectionInnerWidth())
       .height(14.4)
       .position({ x: 4, y: 10 })
       .opacity(this.addedActorOpacity())
@@ -279,13 +297,13 @@ export struct ReaderAutoPageFullPanel {
         this.stopButton();
         this.chapterButton(false);
       }
-      .width(306)
+      .width(this.sectionInnerWidth())
       .height(62)
       .borderRadius(8)
       .clip(true)
       .position({ x: 4, y: 32.4 });
     }
-    .width(READER_AUTO_PAGE_FULL_CONTENT_WIDTH)
+    .width(this.contentWidth())
     .height(READER_AUTO_PAGE_CONTROL_SECTION_HEIGHT)
     .position({ x: 0, y: 0 });
   }
@@ -325,7 +343,7 @@ export struct ReaderAutoPageFullPanel {
     .width(this.persistentChapterWidth())
     .height(52)
     .alignItems(HorizontalAlign.Center)
-    .position({ x: previous ? 9.75 : 224.25, y: 5 })
+    .position({ x: this.persistentChapterX(previous), y: 5 })
     .translate({
       x: this.persistentChapterTranslateX(previous),
       y: this.persistentActorTranslateY(previous ? READER_AUTO_PAGE_PERSISTENT_PREVIOUS_TRANSLATE_Y :
@@ -427,7 +445,8 @@ export struct ReaderAutoPageFullPanel {
     Stack({ alignContent: Alignment.TopStart }) {
       Row() {
         Text('定时')
-          .width(270.2)
+          .layoutWeight(1)
+          .constraintSize({ maxWidth: 270.2 })
           .height(14.4)
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Bold)
@@ -447,7 +466,7 @@ export struct ReaderAutoPageFullPanel {
           .textAlign(TextAlign.End)
           .maxLines(1);
       }
-      .width(306)
+      .width(this.sectionInnerWidth())
       .height(14.4)
       .position({ x: 4, y: 11 });
 
@@ -492,14 +511,14 @@ export struct ReaderAutoPageFullPanel {
         .height(114)
         .position({ x: 115, y: 12 });
       }
-      .width(306)
+      .width(this.sectionInnerWidth())
       .height(138)
       .backgroundColor(TOK_SURFACE_PANEL_SOFT)
       .border({ width: TOK_BORDER_W, color: TOK_LINE })
       .borderRadius(10)
       .position({ x: 4, y: 33.39 });
     }
-    .width(READER_AUTO_PAGE_FULL_CONTENT_WIDTH)
+    .width(this.contentWidth())
     .height(READER_AUTO_PAGE_TIMER_SECTION_HEIGHT)
     .border({ width: { top: TOK_BORDER_W }, color: TOK_LINE })
     .position({ x: 0, y: READER_AUTO_PAGE_TIMER_SECTION_Y })
@@ -563,7 +582,8 @@ export struct ReaderAutoPageFullPanel {
     Stack({ alignContent: Alignment.TopStart }) {
       Row() {
         Text('详细配置')
-          .width(258)
+          .layoutWeight(1)
+          .constraintSize({ maxWidth: 258 })
           .height(14.4)
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Bold)
@@ -583,7 +603,7 @@ export struct ReaderAutoPageFullPanel {
           .textAlign(TextAlign.End)
           .maxLines(1);
       }
-      .width(306)
+      .width(this.sectionInnerWidth())
       .height(14.4)
       .position({ x: 4, y: 11 })
       .opacity(this.addedActorOpacity())
@@ -592,7 +612,7 @@ export struct ReaderAutoPageFullPanel {
       this.speedRow();
       this.followHighlightRow();
     }
-    .width(READER_AUTO_PAGE_FULL_CONTENT_WIDTH)
+    .width(this.contentWidth())
     .height(READER_AUTO_PAGE_DETAILS_SECTION_HEIGHT)
     .border({ width: { top: TOK_BORDER_W }, color: TOK_LINE })
     .position({ x: 0, y: READER_AUTO_PAGE_DETAILS_SECTION_Y });
@@ -697,7 +717,8 @@ export struct ReaderAutoPageFullPanel {
   private followHighlightRow() {
     Row() {
       Text('跟随高亮')
-        .width(236)
+        .layoutWeight(1)
+        .constraintSize({ maxWidth: 236 })
         .height(13)
           .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Bold)
@@ -720,7 +741,7 @@ export struct ReaderAutoPageFullPanel {
       .borderRadius(999)
       .accessibilityText('跟随高亮，当前能力未接入，已关闭');
     }
-    .width(306)
+    .width(this.sectionInnerWidth())
     .height(36)
     .padding({ left: 9, right: 9, top: 6, bottom: 6 })
     .backgroundColor(TOK_READ_SURFACE)
@@ -752,6 +773,56 @@ export struct ReaderAutoPageFullPanel {
     return this.motionExpanded ? expandedY : 0;
   }
 
+  private panelWidth(): number {
+    return this.availableWidth > 0 ? Math.min(READER_AUTO_PAGE_FULL_WIDTH, this.availableWidth) :
+      READER_AUTO_PAGE_FULL_WIDTH;
+  }
+
+  private panelHeight(): number {
+    return this.availableHeight > 0 ? Math.min(READER_AUTO_PAGE_FULL_HEIGHT, this.availableHeight) :
+      READER_AUTO_PAGE_FULL_HEIGHT;
+  }
+
+  private bodyWidth(): number {
+    return Math.min(READER_AUTO_PAGE_FULL_BODY_WIDTH, Math.max(0, this.panelWidth() - 26));
+  }
+
+  private bodyViewportHeight(): number {
+    return Math.min(READER_AUTO_PAGE_FULL_BODY_HEIGHT,
+      Math.max(0, this.panelHeight() - READER_AUTO_PAGE_FULL_BODY_Y - 13));
+  }
+
+  private bodyX(): number {
+    return Math.min(READER_AUTO_PAGE_FULL_BODY_X, Math.max(0, (this.panelWidth() - this.bodyWidth()) / 2));
+  }
+
+  private contentWidth(): number {
+    return Math.min(READER_AUTO_PAGE_FULL_CONTENT_WIDTH, Math.max(0, this.panelWidth() - 58));
+  }
+
+  private sectionInnerWidth(): number {
+    return Math.max(0, this.contentWidth() - 8);
+  }
+
+  private contentX(): number {
+    return Math.min(READER_AUTO_PAGE_FULL_CONTENT_X,
+      Math.max(0, (this.panelWidth() - this.contentWidth()) / 2));
+  }
+
+  private headerWidth(): number {
+    return Math.min(READER_AUTO_PAGE_FULL_HEADER_WIDTH, Math.max(0, this.panelWidth() - 28));
+  }
+
+  private headerX(): number {
+    return Math.min(READER_AUTO_PAGE_FULL_HEADER_X,
+      Math.max(0, (this.panelWidth() - this.headerWidth()) / 2));
+  }
+
+  private grabberX(): number {
+    return Math.min(READER_AUTO_PAGE_FULL_GRABBER_X,
+      Math.max(0, (this.panelWidth() - READER_AUTO_PAGE_FULL_GRABBER_WIDTH) / 2));
+  }
+
   private persistentActorTranslateX(collapsedX: number): number {
     return this.motionExpanded ? 0 : collapsedX;
   }
@@ -763,6 +834,15 @@ export struct ReaderAutoPageFullPanel {
   private persistentChapterWidth(): number {
     return this.motionExpanded ? READER_AUTO_PAGE_EXPANDED_CHAPTER_WIDTH :
       READER_AUTO_PAGE_COLLAPSED_CHAPTER_WIDTH;
+  }
+
+  private persistentChapterX(previous: boolean): number {
+    const designX = previous ? 9.75 : 224.25;
+    const rightGap = previous ? 0 : 9.75;
+    return Math.min(
+      designX,
+      Math.max(0, this.sectionInnerWidth() - this.persistentChapterWidth() - rightGap),
+    );
   }
 
   private persistentChapterTranslateX(previous: boolean): number {
@@ -779,8 +859,9 @@ export struct ReaderAutoPageFullPanel {
   }
 
   private persistentPageSpeedWidth(): number {
-    return this.motionExpanded ? READER_AUTO_PAGE_EXPANDED_SPEED_WIDTH :
+    const designWidth = this.motionExpanded ? READER_AUTO_PAGE_EXPANDED_SPEED_WIDTH :
       READER_AUTO_PAGE_COLLAPSED_SPEED_WIDTH;
+    return Math.min(designWidth, this.sectionInnerWidth());
   }
 
   private persistentPageSpeedHeight(): number {

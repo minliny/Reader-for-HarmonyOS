@@ -1,5 +1,6 @@
 import type { ReadingContentSearchResult } from './ReadingSessionFlowGateway';
 import { splitReaderSearchSnippet } from './ReaderSearchHighlight';
+import { ReaderSearchField } from '../common/ReaderSearchField';
 import {
   TOK_BORDER_W,
   TOK_LINE,
@@ -101,27 +102,20 @@ export struct ReaderQuickSearchPanel {
       .alignItems(VerticalAlign.Center)
       .onClick((): void => this.onBack());
 
-      Row({ space: 4 }) {
-        Image($r('app.media.reader_quick_search'))
-          .width(11)
-          .height(11);
-        TextInput({ text: this.query, placeholder: '搜索正文内容' })
-          .layoutWeight(1)
-          .height(22)
-          .padding(0)
-          .fontFamily('ReaderInter')
-          .fontSize(10)
-          .fontColor(TOK_READ_INK)
-          .caretColor(TOK_READ_PRIMARY)
-          .placeholderColor(TOK_READ_MUTED)
-          .backgroundColor(Color.Transparent)
-          .onChange((value: string): void => this.onQueryChange(value));
+      Row() {
+        ReaderSearchField({
+          variant: 'readerQuick',
+          mode: 'submit',
+          text: this.query,
+          placeholder: '搜索正文内容',
+          accessibilityLabel: '搜索正文内容',
+          submitEnabled: this.canSearch(),
+          onTextChange: (value: string): void => this.onQueryChange(value),
+          onSubmit: (): void => this.onSearch(),
+        });
       }
       .layoutWeight(1)
       .height(QUICK_SEARCH_HEADER_HEIGHT)
-      .padding({ left: 7, right: 7 })
-      .backgroundColor(TOK_SURFACE_PANEL_SOFT)
-      .borderRadius(TOK_RADIUS_MD)
       .alignItems(VerticalAlign.Center);
 
       Stack({ alignContent: Alignment.Center }) {

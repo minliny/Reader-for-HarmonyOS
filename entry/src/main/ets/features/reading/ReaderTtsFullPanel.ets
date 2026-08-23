@@ -25,21 +25,19 @@ import {
   TOK_SURFACE_PANEL_SOFT,
 } from '../common/ReaderTokens';
 import { ReaderHttpTtsManagerPanel } from './ReaderHttpTtsManagerPanel';
+import {
+  READER_FULL_PANEL_HEIGHT_PHONE,
+  READER_FULL_PANEL_HEIGHT_TABLET,
+  READER_FULL_PANEL_MAX_WIDTH_PHONE,
+  READER_FULL_PANEL_MAX_WIDTH_TABLET,
+} from './ReaderLayoutGeometry';
 
-const TTS_FULL_PANEL_WIDTH_PHONE = 364;
-const TTS_FULL_PANEL_WIDTH_TABLET = 720;
-const TTS_FULL_PANEL_HEIGHT_PHONE = 736;
-const TTS_FULL_PANEL_HEIGHT_TABLET = 852;
 const TTS_FULL_GRABBER_WIDTH = 42;
 const TTS_FULL_GRABBER_HEIGHT = 4;
 const TTS_FULL_GRABBER_Y = 9;
-const TTS_FULL_HEADER_WIDTH_PHONE = 336;
-const TTS_FULL_HEADER_WIDTH_TABLET = 692;
 const TTS_FULL_HEADER_HEIGHT = 30;
 const TTS_FULL_HEADER_X = 14;
 const TTS_FULL_HEADER_Y = 20;
-const TTS_FULL_SCROLL_WIDTH_PHONE = 338;
-const TTS_FULL_SCROLL_WIDTH_TABLET = 692;
 const TTS_FULL_SCROLL_X = 14;
 const TTS_FULL_SCROLL_TOP = 58;
 const TTS_FULL_SCROLL_BOTTOM_INSET_PHONE = 13;
@@ -59,6 +57,8 @@ export interface ReaderTtsEngineOption {
 @Component
 export struct ReaderTtsFullPanel {
   @Prop isTablet: boolean = false;
+  @Prop availableWidth: number = 0;
+  @Prop availableHeight: number = 0;
   @Prop state: ReaderTtsState;
   @Prop timerMinutes: number = 15;
   @Prop timerSeconds: number = 0;
@@ -172,7 +172,7 @@ export struct ReaderTtsFullPanel {
         .accessibilityText('收起朗读完整控制')
         .onClick((): void => this.onCollapse());
     }
-    .width(this.isTablet ? TTS_FULL_HEADER_WIDTH_TABLET : TTS_FULL_HEADER_WIDTH_PHONE)
+    .width(this.headerWidth())
     .height(TTS_FULL_HEADER_HEIGHT)
     .alignItems(VerticalAlign.Center)
     .position({ x: TTS_FULL_HEADER_X, y: TTS_FULL_HEADER_Y });
@@ -370,7 +370,7 @@ export struct ReaderTtsFullPanel {
         .textAlign(TextAlign.Center);
       this.timerWheel(false);
     }
-    .width(278)
+    .width(this.timerWheelsWidth())
     .height(158)
     .justifyContent(FlexAlign.Center)
     .alignItems(VerticalAlign.Center);
@@ -380,7 +380,7 @@ export struct ReaderTtsFullPanel {
   private timerWheel(minutes: boolean) {
     Column() {
       Text(this.wheelValue(minutes, -1))
-        .width(122)
+        .width(this.timerWheelWidth())
         .height(43)
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Medium)
@@ -390,7 +390,7 @@ export struct ReaderTtsFullPanel {
         .textAlign(TextAlign.Center)
         .onClick((): void => this.stepTimer(minutes, -1));
       Text(this.wheelValue(minutes, 0))
-        .width(122)
+        .width(this.timerWheelWidth())
         .height(43)
         .fontFamily('ReaderInter')
         .fontWeight(800)
@@ -399,7 +399,7 @@ export struct ReaderTtsFullPanel {
         .textAlign(TextAlign.Center)
         .border({ width: { top: TOK_BORDER_W, bottom: TOK_BORDER_W }, color: TOK_READ_PRIMARY });
       Text(this.wheelValue(minutes, 1))
-        .width(122)
+        .width(this.timerWheelWidth())
         .height(43)
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Medium)
@@ -409,14 +409,14 @@ export struct ReaderTtsFullPanel {
         .textAlign(TextAlign.Center)
         .onClick((): void => this.stepTimer(minutes, 1));
       Text(minutes ? '分' : '秒')
-        .width(122)
+        .width(this.timerWheelWidth())
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Bold)
         .fontSize(9)
         .fontColor(TOK_READ_MUTED)
         .textAlign(TextAlign.Center);
     }
-    .width(122)
+    .width(this.timerWheelWidth())
     .height(158)
     .border({ width: TOK_BORDER_W, color: TOK_BORDER })
     .borderRadius(8)
@@ -653,11 +653,14 @@ export struct ReaderTtsFullPanel {
   }
 
   private panelWidth(): number {
-    return this.isTablet ? TTS_FULL_PANEL_WIDTH_TABLET : TTS_FULL_PANEL_WIDTH_PHONE;
+    const designWidth = this.isTablet ? READER_FULL_PANEL_MAX_WIDTH_TABLET :
+      READER_FULL_PANEL_MAX_WIDTH_PHONE;
+    return this.availableWidth > 0 ? Math.min(designWidth, this.availableWidth) : designWidth;
   }
 
   private panelHeight(): number {
-    return this.isTablet ? TTS_FULL_PANEL_HEIGHT_TABLET : TTS_FULL_PANEL_HEIGHT_PHONE;
+    const designHeight = this.isTablet ? READER_FULL_PANEL_HEIGHT_TABLET : READER_FULL_PANEL_HEIGHT_PHONE;
+    return this.availableHeight > 0 ? Math.min(designHeight, this.availableHeight) : designHeight;
   }
 
   private grabberX(): number {
@@ -665,7 +668,11 @@ export struct ReaderTtsFullPanel {
   }
 
   private scrollWidth(): number {
-    return this.isTablet ? TTS_FULL_SCROLL_WIDTH_TABLET : TTS_FULL_SCROLL_WIDTH_PHONE;
+    return Math.max(0, this.panelWidth() - TTS_FULL_SCROLL_X * 2);
+  }
+
+  private headerWidth(): number {
+    return Math.max(0, this.panelWidth() - TTS_FULL_HEADER_X * 2);
   }
 
   private scrollHeight(): number {
@@ -676,6 +683,19 @@ export struct ReaderTtsFullPanel {
 
   private scrollPaddingX(): number {
     return this.isTablet ? TTS_FULL_SCROLL_PADDING_X_TABLET : TTS_FULL_SCROLL_PADDING_X_PHONE;
+  }
+
+  private timerSectionContentWidth(): number {
+    return Math.max(0, this.scrollWidth() - this.scrollPaddingX() * 2 - 8);
+  }
+
+  private timerWheelsWidth(): number {
+    return Math.min(278, this.timerSectionContentWidth());
+  }
+
+  private timerWheelWidth(): number {
+    // Two 12vp gaps plus the 8vp colon reserve 32vp inside the wheel row.
+    return Math.min(122, Math.max(0, (this.timerWheelsWidth() - 32) / 2));
   }
 
   private isHttpEngineSelected(): boolean {
