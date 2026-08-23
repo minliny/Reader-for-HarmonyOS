@@ -7,11 +7,11 @@ import { SettingsShell } from '../shell/SettingsShell';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { ReaderToggle } from '../common/ReaderToggle';
 import { ReaderSelect } from '../common/ReaderSelect';
-import { ReaderSelectPanel, SelectAnchor } from '../common/ReaderSelectPanel';
 import { ReaderSegmentedControl } from '../common/ReaderSegmentedControl';
 import { StatusBadge } from '../common/StatusBadge';
 import { CategorySection } from './CategorySection';
 import { CategoryRow } from './CategoryRow';
+import { SettingsSelectOverlay, type SettingsSelectField } from './SettingsSelectOverlay';
 import {
   TOK_BORDER_W,
   TOK_DANGER,
@@ -33,6 +33,11 @@ const SELECT_TRIGGER_H = 34;
 const SELECT_TRIGGER_OFFSET = (SELECT_ROW_H - SELECT_TRIGGER_H) / 2;
 // App主题 为分段控件 (Figma ThemeSegment 2114:20635), 非下拉; 标签用 Figma 原文。
 const SEG_OPTIONS: string[] = ['跟随', '浅色', '深色'];
+
+interface SettingsSelectAnchor {
+  right: number;
+  bottom: number;
+}
 
 export interface SettingsSnapshot {
   autoCheckUpdate: boolean;
@@ -62,14 +67,14 @@ export struct SettingsPage {
   @State private crashLogValue: boolean = true;
   @State private cacheActionLabel: string = '清理文字缓存';
   @State private cacheCleanupInFlight: boolean = false;
-  @State private openSelect: string = '';
+  @State private openSelect: SettingsSelectField | '' = '';
   // 展开面板锚点: 触发条全局坐标减去宿主 Stack 原点, 得面板相对宿主 Stack 的位置。
   // selectAnchors 为普通 map(非 @State): 逐行 onAreaChange 写入, 打开时读入 anchorX/Y。
-  @State private anchorX: number = 0;
-  @State private anchorY: number = 0;
+  @State private anchorRight: number = 0;
+  @State private anchorBottom: number = 0;
   @State private originX: number = 0;
   @State private originY: number = 0;
-  private selectAnchors: Record<string, SelectAnchor> = {};
+  private selectAnchors: Record<string, SettingsSelectAnchor> = {};
   onBack: () => void = (): void => {};
   onOpenSourceManagement: () => void = (): void => {};
   onOpenRulesManagement: () => void = (): void => {};
@@ -138,7 +143,7 @@ export struct SettingsPage {
     CategorySection({ title: '基础偏好' }) {
       this.segmentRow('App主题', $r('app.media.settings_gen_theme'));
       this.selectRow('语言', $r('app.media.settings_gen_language'), 'language',
-        ['简体中文', '繁体中文', 'English', '日本語', '한국어']);
+        ['简体中文', '繁體中文', 'English', '日本語', '한국어']);
       this.selectRow('启动时打开', $r('app.media.settings_gen_startup'), 'startup',
         ['书架', '发现', 'RSS', '设置']);
     }
@@ -238,7 +243,7 @@ export struct SettingsPage {
   // 使触发盒始终与 label 中线对齐。展开面板由 buildOverlay 在 SettingsShell 根 Stack
   // (全高 overlay 宿主) 内定位渲染 → 面板所有选项可点, 行固定高 → 页面不拉伸。
   @Builder
-  private selectRow(label: string, icon: Resource, key: string, options: string[]) {
+  private selectRow(label: string, icon: Resource, key: SettingsSelectField, options: string[]) {
     Row({ space: 12 }) {
       this.labelColumn(label, icon);
 
@@ -252,8 +257,8 @@ export struct SettingsPage {
           this.openSelect = this.openSelect === key ? '' : key;
           const a = this.selectAnchors[key];
           if (a !== undefined) {
-            this.anchorX = a.x;
-            this.anchorY = a.y;
+            this.anchorRight = a.right;
+            this.anchorBottom = a.bottom;
           }
         },
       })
@@ -261,8 +266,8 @@ export struct SettingsPage {
         .onAreaChange((_oldValue: Area, newValue: Area): void => {
           // Area.globalPosition 已是 vp 单位, 直接取用 (曾 px2vp 二次÷3.5 致面板错位)。
           this.selectAnchors[key] = {
-            x: Number(newValue.globalPosition.x),
-            y: Number(newValue.globalPosition.y),
+            right: Number(newValue.globalPosition.x) + Number(newValue.width),
+            bottom: Number(newValue.globalPosition.y) + Number(newValue.height),
           };
         });
     }
@@ -389,7 +394,7 @@ export struct SettingsPage {
     return i >= 0 ? i : 0;
   }
 
-  private currentValue(key: string): string {
+  private currentValue(key: SettingsSelectField): string {
     if (key === 'language') {
       return this.languageValue;
     } else if (key === 'startup') {
@@ -398,7 +403,7 @@ export struct SettingsPage {
     return this.animationValue;
   }
 
-  private setSelectValue(key: string, value: string): void {
+  private setSelectValue(key: SettingsSelectField, value: string): void {
     if (key === 'language') {
       this.languageValue = value;
     } else if (key === 'startup') {
@@ -408,9 +413,9 @@ export struct SettingsPage {
     }
   }
 
-  private selectOptions(key: string): string[] {
+  private selectOptions(key: SettingsSelectField): string[] {
     if (key === 'language') {
-      return ['简体中文', '繁体中文', 'English', '日本語', '한국어'];
+      return ['简体中文', '繁體中文', 'English', '日本語', '한국어'];
     } else if (key === 'startup') {
       return ['书架', '发现', 'RSS', '设置'];
     }
@@ -422,15 +427,21 @@ export struct SettingsPage {
   @Builder
   private buildOverlay() {
     if (this.openSelect !== '') {
-      ReaderSelectPanel({
+      SettingsSelectOverlay({
+        isTablet: this.isTablet,
+        field: this.openSelect,
         value: this.currentValue(this.openSelect),
         options: this.selectOptions(this.openSelect),
-        x: this.anchorX - this.originX,
-        y: this.anchorY - this.originY,
-        variant: this.isTablet ? 'settingsTablet' : 'settingsPhone',
-        reduceMotion: this.reduceMotionValue,
+        anchorRight: this.anchorRight - this.originX,
+        anchorBottom: this.anchorBottom - this.originY,
         onSelect: (opt: string): void => {
-          this.setSelectValue(this.openSelect, opt);
+          const field = this.openSelect;
+          if (field !== '') {
+            this.setSelectValue(field, opt);
+          }
+          this.openSelect = '';
+        },
+        onDismiss: (): void => {
           this.openSelect = '';
         },
       });

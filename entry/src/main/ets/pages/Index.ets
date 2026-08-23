@@ -8,9 +8,12 @@ import {
 import {
   type BookshelfDataState,
   BookshelfFlowGateway,
+  type BookshelfRemovalTarget,
+  type BookshelfRemoveBatchOutcome,
   type BookshelfRemoveOutcome,
 } from '../features/bookshelf/BookshelfFlowGateway';
 import { BookshelfPage } from '../features/bookshelf/BookshelfPage';
+import { BookshelfMultiSelectPage } from '../features/bookshelf/BookshelfMultiSelectPage';
 import { BookshelfManagementPage } from '../features/bookshelf/BookshelfManagementPage';
 import {
   BookshelfManagementOrchestrator,
@@ -162,7 +165,7 @@ const CATALOG_REFRESH_NEAR_END = 3;
 const CATALOG_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 
 type ReaderRoute = 'bookshelf' | 'discover' | 'detail' | 'reading' | 'directory' | 'search' |
-  'bookshelfManagement' |
+  'bookshelfManagement' | 'bookshelfMultiSelect' |
   'rss' | 'rssSubscriptionManagement' | 'rssSourceFeed' | 'rssEntryDetail' |
   'rssSubscriptionEditor' | 'settings' | 'rulesManagement' | 'source' | 'sourceTools' | 'sync';
 type PreparedReaderRoute = 'reading' | 'directory';
@@ -227,6 +230,8 @@ struct Index {
   @State private isCoreShelfEmpty: boolean = false;
   @State private bookshelfManagementSnapshot: BookshelfManagementSnapshot =
     EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT;
+  @State private bookshelfMultiSelectInitialKey: string = '';
+  @State private bookshelfBatchRemovalBusy: boolean = false;
   @State private route: ReaderRoute = 'bookshelf';
   @State private jsonImportVisible: boolean = false;
   @State private jsonImportContext: JsonImportContext = 'bookSource';
@@ -300,6 +305,7 @@ struct Index {
   /** Serializes the destructive detail-page removal for one exact book. */
   private bookshelfRemovalGeneration: number = 0;
   @State private bookshelfRemovalActiveKey: string = '';
+  private bookshelfBatchRemovalGeneration: number = 0;
   /** Rejects a late shelf read after a newer import/refresh has completed. */
   private bookshelfLoadGeneration: number = 0;
   private bookshelfBackgroundRefreshRunning: boolean = false;
@@ -377,6 +383,12 @@ struct Index {
       this.returnToBookshelf();
       return true;
     }
+    if (this.route === 'bookshelfMultiSelect') {
+      if (!this.bookshelfBatchRemovalBusy) {
+        this.returnToBookshelf();
+      }
+      return true;
+    }
     if (this.route === 'search' || this.route === 'rss' || this.route === 'settings') {
       this.returnToBookshelf();
       return true;
@@ -430,16 +442,26 @@ struct Index {
         BookshelfPage({
           books: this.shelfBooks,
           continueReading: this.continueReading,
+          reduceMotion: this.settingsSnapshot.reduceMotion,
           onImportRequested: (): void => this.openImportDialog(),
           onSearchRequested: (): void => this.openSearch(),
           onRssRequested: (): void => this.openRss(),
           onSettingsRequested: (): void => this.openSettings(),
           onDiscoverRequested: (): void => this.openDiscover(),
           onManageRequested: (): void => this.openBookshelfManagement(),
+          onBatchManageRequested: (): void => this.openBookshelfMultiSelect(),
           onBookSelected: (book: ShelfBook): void => this.openShelfBook(book),
-          onBookMultiSelectRequested: (_book: ShelfBook): void => this.openBookshelfManagement(),
+          onBookMultiSelectRequested: (book: ShelfBook): void => this.openBookshelfMultiSelect(book),
           onBookInfoRequested: (book: ShelfBook): void => this.openShelfBookInfo(book),
           onBookRemoveRequested: (book: ShelfBook): void => this.requestRemoveShelfBook(book),
+        });
+      } else if (this.route === 'bookshelfMultiSelect') {
+        BookshelfMultiSelectPage({
+          books: this.shelfBooks,
+          initialSelectedKey: this.bookshelfMultiSelectInitialKey,
+          busy: this.bookshelfBatchRemovalBusy,
+          onCancel: (): void => this.returnToBookshelf(),
+          onRemoveSelected: (keys: string[]): void => this.requestRemoveShelfBooks(keys),
         });
       } else if (this.route === 'bookshelfManagement') {
         BookshelfManagementPage({
@@ -470,11 +492,13 @@ struct Index {
         // the rule, so we reuse the available Phone assembly rather than
         // leave the Tablet user staring at a blank page).
         BookshelfEmptyPage({
+          reduceMotion: this.settingsSnapshot.reduceMotion,
           onImportRequested: (): void => this.openImportDialog(),
           onSearchRequested: (): void => this.openSearch(),
           onRssRequested: (): void => this.openRss(),
           onSettingsRequested: (): void => this.openSettings(),
           onDiscoverRequested: (): void => this.openDiscover(),
+          onBatchManageRequested: (): void => this.openBookshelfMultiSelect(),
         });
       } else if (this.route === 'search') {
         SearchPage({
@@ -902,6 +926,16 @@ struct Index {
     this.exitToBookshelfAfterReader = false;
     this.route = 'bookshelfManagement';
     this.getBookshelfManagementOrchestrator().open();
+  }
+
+  private openBookshelfMultiSelect(initialBook?: ShelfBook): void {
+    this.nextNavigationGeneration();
+    this.readingSessionActive = false;
+    this.readingExitRequest = undefined;
+    this.exitToBookshelfAfterReader = false;
+    this.bookshelfBatchRemovalBusy = false;
+    this.bookshelfMultiSelectInitialKey = initialBook === undefined ? '' : this.shelfBookKey(initialBook);
+    this.route = 'bookshelfMultiSelect';
   }
 
   private openRulesManagement(): void {
@@ -2312,6 +2346,10 @@ struct Index {
     return `${book.sourceId}\u0000${book.bookId}`;
   }
 
+  private shelfBookKey(book: ShelfBook): string {
+    return `${book.sourceId}\u0000${book.bookId}`;
+  }
+
   private isSameDetailBook(book: ReadingBookDetail): boolean {
     return this.detailBook?.sourceId === book.sourceId && this.detailBook?.bookId === book.bookId;
   }
@@ -2433,6 +2471,90 @@ struct Index {
         },
       },
     });
+  }
+
+  private requestRemoveShelfBooks(keys: string[]): void {
+    if (this.route !== 'bookshelfMultiSelect' || this.bookshelfBatchRemovalBusy) {
+      return;
+    }
+    const selected = this.shelfBooks.filter((book: ShelfBook): boolean => keys.includes(this.shelfBookKey(book)));
+    if (selected.length === 0) {
+      return;
+    }
+    this.getUIContext().showAlertDialog({
+      title: '移除书架',
+      message: `确定将已选择的 ${selected.length} 本书移出书架吗？本地原始文件不受影响。`,
+      autoCancel: true,
+      primaryButton: {
+        value: '取消',
+        action: (): void => {},
+      },
+      secondaryButton: {
+        value: '移除',
+        fontColor: '#B42318',
+        action: (): void => {
+          if (this.route === 'bookshelfMultiSelect' && !this.bookshelfBatchRemovalBusy) {
+            this.removeShelfBooks(selected);
+          }
+        },
+      },
+    });
+  }
+
+  private removeShelfBooks(books: ShelfBook[]): void {
+    if (this.route !== 'bookshelfMultiSelect' || this.bookshelfBatchRemovalBusy || books.length === 0) {
+      return;
+    }
+    const generation = ++this.bookshelfBatchRemovalGeneration;
+    const gateway = new BookshelfFlowGateway(ReaderRuntimeOwner.current());
+    const targets: BookshelfRemovalTarget[] = books.map((book: ShelfBook): BookshelfRemovalTarget => ({
+      sourceId: book.sourceId,
+      bookId: book.bookId,
+    }));
+    this.bookshelfBatchRemovalBusy = true;
+    const isCurrent = (): boolean => generation === this.bookshelfBatchRemovalGeneration &&
+      this.route === 'bookshelfMultiSelect';
+    void gateway.removeMany(targets)
+      .then((outcome: BookshelfRemoveBatchOutcome): void => {
+        if (!isCurrent()) {
+          return;
+        }
+        this.applyBookshelfState(outcome.shelf);
+        this.bookshelfMultiSelectInitialKey = '';
+        this.nextNavigationGeneration();
+        this.route = 'bookshelf';
+      })
+      .catch((error: Error): Promise<void> =>
+        this.reconcileShelfBookBatchRemovalFailure(error, gateway, isCurrent))
+      .finally((): void => {
+        if (generation === this.bookshelfBatchRemovalGeneration) {
+          this.bookshelfBatchRemovalBusy = false;
+        }
+      });
+  }
+
+  private async reconcileShelfBookBatchRemovalFailure(
+    error: Error,
+    gateway: BookshelfFlowGateway,
+    isCurrent: () => boolean,
+  ): Promise<void> {
+    try {
+      const shelf = await gateway.load();
+      if (!isCurrent()) {
+        return;
+      }
+      this.applyBookshelfState(shelf);
+      this.bookshelfMultiSelectInitialKey = '';
+      this.nextNavigationGeneration();
+      this.route = 'bookshelf';
+      this.showReadingFailure('批量移除未完全完成', error.message);
+    } catch (reloadError) {
+      if (!isCurrent()) {
+        return;
+      }
+      const message = reloadError instanceof Error ? reloadError.message : `${reloadError}`;
+      this.showReadingFailure('批量移除失败', `${error.message}；书架刷新失败：${message}`);
+    }
   }
 
   private canRemoveShelfBook(book: ShelfBook): boolean {
@@ -3466,6 +3588,8 @@ struct Index {
     this.rssDetailReturnTarget = 'rss';
     this.rssSourceFeedReturnTarget = 'rss';
     this.rssManagementFocusSubscriptionId = '';
+    this.bookshelfMultiSelectInitialKey = '';
+    this.bookshelfBatchRemovalBusy = false;
     this.route = 'bookshelf';
     this.refreshBookshelf();
   }

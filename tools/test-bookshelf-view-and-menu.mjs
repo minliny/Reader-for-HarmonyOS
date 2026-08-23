@@ -3,7 +3,11 @@ import { readFile } from 'node:fs/promises';
 
 const root = new URL('../entry/src/main/ets/features/', import.meta.url);
 const shelf = await readFile(new URL('bookshelf/BookshelfPage.ets', root), 'utf8');
+const emptyShelf = await readFile(new URL('bookshelf/BookshelfEmptyPage.ets', root), 'utf8');
 const actionSheet = await readFile(new URL('bookshelf/BookshelfBookActionSheet.ets', root), 'utf8');
+const moreMenu = await readFile(new URL('bookshelf/BookshelfMoreMenu.ets', root), 'utf8');
+const multiSelect = await readFile(new URL('bookshelf/BookshelfMultiSelectPage.ets', root), 'utf8');
+const shelfGateway = await readFile(new URL('bookshelf/BookshelfFlowGateway.ts', root), 'utf8');
 const directory = await readFile(new URL('reading/FullDirectoryPanel.ets', root), 'utf8');
 const index = await readFile(new URL('../pages/Index.ets', root), 'utf8');
 
@@ -63,7 +67,7 @@ assert.match(actionSheet,
   /\.height\(BOOK_ACTION_HEIGHT\)[\s\S]*?\.padding\(\{ left: 12 \}\)[\s\S]*?\.borderRadius\(12\)[\s\S]*?\.padding\(\{ left: BOOK_ACTION_INSET, right: BOOK_ACTION_INSET \}\)/,
   'each action must be 40vp high with 14vp sheet inset and 12vp text inset/radius');
 assert.match(index,
-  /onBookMultiSelectRequested: \(_book: ShelfBook\): void => this\.openBookshelfManagement\(\)/);
+  /onBookMultiSelectRequested: \(book: ShelfBook\): void => this\.openBookshelfMultiSelect\(book\)/);
 assert.match(index, /onBookInfoRequested: \(book: ShelfBook\): void => this\.openShelfBookInfo\(book\)/);
 assert.match(index, /onBookRemoveRequested: \(book: ShelfBook\): void => this\.requestRemoveShelfBook\(book\)/);
 assert.match(index,
@@ -77,12 +81,49 @@ const topBar = shelf.match(/private topBar\(\) \{([\s\S]*?)\n  \}\n\n  @Builder\
 assert.ok(topBar, 'bookshelf top bar must remain immediately before the phone content');
 assert.doesNotMatch(topBar[1], /onImportRequested/,
   'the top-right More button must not import directly');
-assert.match(topBar[1], /icon: \$r\('app\.media\.bookshelf_more'\)[\s\S]*onTap: \(\): void => \{\}/,
-  'the Figma-only More actor must remain visible without an invented business action');
-assert.doesNotMatch(shelf, /moreMenuVisible|bookshelfMoreOverlay|bookshelfMoreAction|BOOKSHELF_MORE_MENU/,
-  'no composed More menu exists in the Figma Final bookshelf page');
-assert.doesNotMatch(shelf, /'批量管理'|'关闭更多'|'本地导入'/,
-  'isolated Figma action variants must not be composed into an invented bookshelf overlay');
+assert.match(topBar[1],
+  /icon: \$r\('app\.media\.bookshelf_more'\)[\s\S]*onTap: \(\): void => \{[\s\S]*this\.moreMenuVisible = true/,
+  'the top-right More actor must open its Figma menu overlay');
+assert.match(shelf, /BookshelfMoreMenu\(\{[\s\S]*onBatchManage[\s\S]*onLocalImport[\s\S]*onBookshelfSettings/);
+assert.match(shelf,
+  /onBookshelfSettings: \(\): void => \{[\s\S]*?this\.onBookshelfSettingsRequested\(\)/,
+  'the visible settings action must stop at its dedicated evidence boundary');
+assert.doesNotMatch(shelf,
+  /onBookshelfSettings: \(\): void => \{\s*this\.moreMenuVisible = false;\s*this\.onSettingsRequested\(\)/,
+  'an unproven destination must not be inferred as the general Settings home');
+assert.doesNotMatch(emptyShelf,
+  /bookshelf_more[\s\S]{0,300}onClick\(\(\): void => this\.onImportRequested\(\)\)/,
+  'the empty-shelf More actor must not bypass the same menu contract');
+
+assert.match(moreMenu, /interaction registry `1982:313`/);
+assert.match(moreMenu, /`2236:545`, `2236:551`, `2236:553`/);
+assert.match(moreMenu, /const MENU_WIDTH = 176/);
+assert.equal((moreMenu.match(/this\.action\('/g) ?? []).length, 3,
+  'only the three visible actions belong in the menu');
+assert.match(moreMenu, /this\.action\('批量管理'/);
+assert.match(moreMenu, /this\.action\('本地导入'/);
+assert.match(moreMenu, /this\.action\('书架设置'/);
+assert.doesNotMatch(moreMenu, /this\.action\('关闭更多'/,
+  'close-more is an outside-dismiss semantic, never a fourth row');
+assert.match(moreMenu,
+  /motionAnimateParam\('dropdown\.menu\.expand'\)[\s\S]*motionAnimateParam\('dropdown\.menu\.collapse'/,
+  'the menu must use the interaction-registry motion pair');
+
+assert.match(multiSelect, /Figma `Bookshelf\/MultiSelect` \(`2956:1266`\)/);
+assert.match(multiSelect, /initialSelectedKey/);
+assert.match(multiSelect, /this\.selectedKeys = \[this\.initialSelectedKey\]/,
+  'long-press entry must preselect exactly the source book');
+assert.match(multiSelect, /Text\(`已选择 \$\{this\.selectedKeys\.length\} 本`\)/);
+assert.match(multiSelect, /this\.allSelected\(\) \? '取消全选' : '全选'/);
+assert.match(multiSelect, /Text\(this\.busy \? '正在移除' : '移除书架'\)/);
+assert.doesNotMatch(multiSelect, /新建分组|编辑分组|应用到所选书籍|Core 分组/,
+  'Figma V1 multiselect must not absorb the unrelated Core group manager');
+assert.match(index, /onBatchManageRequested: \(\): void => this\.openBookshelfMultiSelect\(\)/);
+assert.match(index, /initialSelectedKey: this\.bookshelfMultiSelectInitialKey/);
+assert.match(index, /onRemoveSelected: \(keys: string\[\]\): void => this\.requestRemoveShelfBooks\(keys\)/);
+assert.match(shelfGateway,
+  /async removeMany\(targets: BookshelfRemovalTarget\[\]\)[\s\S]*for \(const target of targets\)[\s\S]*shelf: await this\.load\(\)/,
+  'batch removal must commit each Core key then perform one coherent shelf reload');
 
 assert.doesNotMatch(directory, /Text\('当前章节'\)/,
   'the footer no longer repeats the current-chapter label');

@@ -27,16 +27,26 @@ import {
 
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { BookshelfEmptyCard } from './BookshelfEmptyCard';
+import { BookshelfMoreMenu } from './BookshelfMoreMenu';
 
 @Component
 export struct BookshelfEmptyPage {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @Prop reduceMotion: boolean = false;
   onImportRequested: () => void = (): void => {};
   onSearchRequested: () => void = (): void => {};
   onRssRequested: () => void = (): void => {};
   onSettingsRequested: () => void = (): void => {};
   onDiscoverRequested: () => void = (): void => {};
+  onBatchManageRequested: () => void = (): void => {};
+  // Figma confirms the action label, not a destination page/reaction.
+  onBookshelfSettingsRequested: () => void = (): void => {};
   @State private viewportWidth: number = 0;
+  @State private moreMenuVisible: boolean = false;
+  @State private moreAnchorRight: number = 0;
+  @State private moreAnchorBottom: number = 0;
+  @State private overlayOriginX: number = 0;
+  @State private overlayOriginY: number = 0;
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -50,24 +60,51 @@ export struct BookshelfEmptyPage {
       showBottomNav: true,
       onMainTab: (key: string): void => this.onMainTab(key),
     }) {
-      Column() {
-        this.topBar();
-        Scroll() {
-          Column({ space: 9 }) {
-            this.sectionHeader();
-            BookshelfEmptyCard({
-              cardWidth: this.contentFrame().width,
-              onImportRequested: (): void => this.onImportRequested(),
-              onSearchRequested: (): void => this.onSearchRequested(),
-            })
+      Stack({ alignContent: Alignment.TopStart }) {
+        Column() {
+          this.topBar();
+          Scroll() {
+            Column({ space: 9 }) {
+              this.sectionHeader();
+              BookshelfEmptyCard({
+                cardWidth: this.contentFrame().width,
+                onImportRequested: (): void => this.onImportRequested(),
+                onSearchRequested: (): void => this.onSearchRequested(),
+              })
+            }
+            .width(this.contentFrame().width)
+            .padding({ top: TOK_SPACE_XS, bottom: 116 });
           }
-          .width(this.contentFrame().width)
-          .padding({ top: TOK_SPACE_XS, bottom: 116 });
+          .layoutWeight(1)
+          .width('100%')
+          .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
+          .scrollBar(BarState.Off);
         }
-        .layoutWeight(1)
         .width('100%')
-        .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
-        .scrollBar(BarState.Off);
+        .height('100%');
+
+        if (this.moreMenuVisible) {
+          BookshelfMoreMenu({
+            anchorRight: this.moreAnchorRight - this.overlayOriginX,
+            anchorBottom: this.moreAnchorBottom - this.overlayOriginY,
+            reduceMotion: this.reduceMotion,
+            onBatchManage: (): void => {
+              this.moreMenuVisible = false;
+              this.onBatchManageRequested();
+            },
+            onLocalImport: (): void => {
+              this.moreMenuVisible = false;
+              this.onImportRequested();
+            },
+            onBookshelfSettings: (): void => {
+              this.moreMenuVisible = false;
+              this.onBookshelfSettingsRequested();
+            },
+            onDismiss: (): void => {
+              this.moreMenuVisible = false;
+            },
+          });
+        }
       }
       .width('100%')
       .height('100%')
@@ -77,6 +114,8 @@ export struct BookshelfEmptyPage {
         if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
           this.viewportWidth = width;
         }
+        this.overlayOriginX = Number(newValue.globalPosition.x);
+        this.overlayOriginY = Number(newValue.globalPosition.y);
       });
     }
   }
@@ -95,7 +134,8 @@ export struct BookshelfEmptyPage {
       }
       .width(44)
       .height(44)
-      .borderRadius(22);
+      .borderRadius(22)
+      .onClick((): void => this.onSearchRequested());
 
       Stack({ alignContent: Alignment.Center }) {
         Image($r('app.media.bookshelf_more')).width(24).height(24);
@@ -103,7 +143,14 @@ export struct BookshelfEmptyPage {
       .width(44)
       .height(44)
       .borderRadius(22)
-      .onClick((): void => this.onImportRequested());
+      .accessibilityText('更多')
+      .onClick((): void => {
+        this.moreMenuVisible = true;
+      })
+      .onAreaChange((_oldValue: Area, newValue: Area): void => {
+        this.moreAnchorRight = Number(newValue.globalPosition.x) + Number(newValue.width);
+        this.moreAnchorBottom = Number(newValue.globalPosition.y) + Number(newValue.height);
+      });
     }
     .width('100%')
     .height(58)

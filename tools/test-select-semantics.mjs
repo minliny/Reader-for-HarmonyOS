@@ -15,8 +15,11 @@ assert.match(rss, /if \(this\.filterOpen\) \{\s*this\.filterExpand\(\)/);
 const settings = read('entry/src/main/ets/features/settings/SettingsPage.ets');
 assert.match(settings, /this\.segmentRow\('App主题'/);
 assert.doesNotMatch(settings, /this\.selectRow\('App主题'/);
-assert.equal((settings.match(/variant: this\.isTablet \? 'settingsTablet' : 'settingsPhone'/g) ?? []).length, 2,
-  'Settings trigger and anchored Tablet panel must share the same width contract');
+assert.equal((settings.match(/variant: this\.isTablet \? 'settingsTablet' : 'settingsPhone'/g) ?? []).length, 1,
+  'Settings keeps the shared trigger but delegates its responsive overlay to its Figma-specific component');
+assert.match(settings, /SettingsSelectOverlay\(\{/);
+assert.doesNotMatch(settings, /ReaderSelectPanel\(\{/,
+  'Settings Phone sheet and Tablet popover must not inherit the generic inline dropdown panel');
 assert.match(settings, /const SELECT_TRIGGER_H = 34/);
 
 const source = read('entry/src/main/ets/features/source/SourceManagementPage.ets');
@@ -83,8 +86,8 @@ assert.match(select,
   'the trigger chevron must use asymmetric Figma expand/collapse timing');
 assert.doesNotMatch(panel, /\.opacity\(|\.translate\(/,
   'the Figma dropdown expansion explicitly forbids opacity and translation');
-assert.equal((settings.match(/reduceMotion: this\.reduceMotionValue/g) ?? []).length, 2,
-  'Settings trigger and panel must honor the app reduced-motion setting');
+assert.equal((settings.match(/reduceMotion: this\.reduceMotionValue/g) ?? []).length, 1,
+  'Settings trigger must honor the app reduced-motion setting');
 assert.equal((source.match(/reduceMotion: this\.reduceMotion/g) ?? []).length, 2,
   'Source trigger and panel must share their reduced-motion contract');
 

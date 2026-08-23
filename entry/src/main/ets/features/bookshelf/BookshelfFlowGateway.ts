@@ -28,6 +28,16 @@ export type BookshelfRemoveOutcome = {
   shelf: BookshelfDataState;
 };
 
+export interface BookshelfRemovalTarget {
+  sourceId: string;
+  bookId: string;
+}
+
+export type BookshelfRemoveBatchOutcome = {
+  removedCount: number;
+  shelf: BookshelfDataState;
+};
+
 /**
  * Keeps the bookshelf page on plain state and user-intent boundaries. It is
  * deliberately a feature-local gateway rather than a reusable page engine.
@@ -60,6 +70,18 @@ export class BookshelfFlowGateway {
   async remove(sourceId: string, bookId: string): Promise<BookshelfRemoveOutcome> {
     const removed = await this.bookshelf.removeBook(sourceId, bookId);
     return { removed, shelf: await this.load() };
+  }
+
+  async removeMany(targets: BookshelfRemovalTarget[]): Promise<BookshelfRemoveBatchOutcome> {
+    let removedCount = 0;
+    for (const target of targets) {
+      if (await this.bookshelf.removeBook(target.sourceId, target.bookId)) {
+        removedCount += 1;
+      }
+    }
+    // Re-read once after the batch rather than after every item. Core remains
+    // the source of truth and the UI receives one coherent final shelf.
+    return { removedCount, shelf: await this.load() };
   }
 
   private classify(shelf: BookshelfState, continueReading: ShelfBook | undefined): BookshelfDataState {

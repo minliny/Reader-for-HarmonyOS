@@ -24,6 +24,7 @@ import { ReaderIconButton } from '../common/ReaderIconButton';
 import { AppTopBar } from '../common/AppTopBar';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { BookshelfBookActionSheet } from './BookshelfBookActionSheet';
+import { BookshelfMoreMenu } from './BookshelfMoreMenu';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
   SurfaceHorizontalFrame,
@@ -64,12 +65,18 @@ export struct BookshelfPage {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop books: ShelfBook[];
   @Prop continueReading: ShelfBook | undefined;
+  @Prop reduceMotion: boolean = false;
   onImportRequested: () => void = (): void => {};
   onSearchRequested: () => void = (): void => {};
   onRssRequested: () => void = (): void => {};
   onSettingsRequested: () => void = (): void => {};
   onDiscoverRequested: () => void = (): void => {};
   onManageRequested: () => void = (): void => {};
+  onBatchManageRequested: () => void = (): void => {};
+  // Figma confirms the visible menu action, but no destination reaction/page.
+  // Keep a dedicated boundary so callers cannot silently route it to the
+  // unrelated Settings home or Core bookshelf-management page.
+  onBookshelfSettingsRequested: () => void = (): void => {};
   onBookSelected: (book: ShelfBook) => void = (_book: ShelfBook): void => {};
   onBookMultiSelectRequested: (book: ShelfBook) => void = (_book: ShelfBook): void => {};
   onBookInfoRequested: (book: ShelfBook) => void = (_book: ShelfBook): void => {};
@@ -78,6 +85,11 @@ export struct BookshelfPage {
   @State private viewportHeight: number = 0;
   @State private viewMode: BookshelfViewMode = 'cover';
   @State private actionBook: ShelfBook | undefined = undefined;
+  @State private moreMenuVisible: boolean = false;
+  @State private moreAnchorRight: number = 0;
+  @State private moreAnchorBottom: number = 0;
+  @State private overlayOriginX: number = 0;
+  @State private overlayOriginY: number = 0;
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -121,9 +133,36 @@ export struct BookshelfPage {
       }
       .width('100%')
       .height('100%');
+
+      if (this.moreMenuVisible) {
+        BookshelfMoreMenu({
+          anchorRight: this.moreAnchorRight - this.overlayOriginX,
+          anchorBottom: this.moreAnchorBottom - this.overlayOriginY,
+          reduceMotion: this.reduceMotion,
+          onBatchManage: (): void => {
+            this.moreMenuVisible = false;
+            this.onBatchManageRequested();
+          },
+          onLocalImport: (): void => {
+            this.moreMenuVisible = false;
+            this.onImportRequested();
+          },
+          onBookshelfSettings: (): void => {
+            this.moreMenuVisible = false;
+            this.onBookshelfSettingsRequested();
+          },
+          onDismiss: (): void => {
+            this.moreMenuVisible = false;
+          },
+        });
+      }
     }
     .width('100%')
     .height('100%')
+    .onAreaChange((_oldValue: Area, newValue: Area): void => {
+      this.overlayOriginX = Number(newValue.globalPosition.x);
+      this.overlayOriginY = Number(newValue.globalPosition.y);
+    })
     .bindSheet(this.actionBook !== undefined, this.bookActionSheetContent, {
       height: 224,
       width: '100%',
@@ -165,11 +204,15 @@ export struct BookshelfPage {
           boxSize: 44,
           iconSize: 24,
           radius: 22,
-          // Figma Final `943:11` / `943:437` contains only this More hit area.
-          // It has hover/press component reactions but no click, overlay, or
-          // expanded-menu frame. Keep the visual actor without inventing UI.
-          onTap: (): void => {},
-        });
+          onTap: (): void => {
+            this.moreMenuVisible = true;
+          },
+        })
+          .accessibilityText('更多')
+          .onAreaChange((_oldValue: Area, newValue: Area): void => {
+            this.moreAnchorRight = Number(newValue.globalPosition.x) + Number(newValue.width);
+            this.moreAnchorBottom = Number(newValue.globalPosition.y) + Number(newValue.height);
+          });
       }
     }
   }
