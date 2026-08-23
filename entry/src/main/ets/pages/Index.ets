@@ -1,4 +1,6 @@
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
+import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
+import { readerContentSafeTop } from '../features/common/ReaderWindowMetrics';
 import {
   ReaderCoreGateway,
   type ShelfBook,
@@ -217,7 +219,7 @@ class LocalImportPresentation {
 @Entry
 @Component
 struct Index {
-  @StorageLink('statusBarHeightPx') statusBarHeightPx: number = 0;
+  @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   @State private shelfBooks: ShelfBook[] = [];
   @State private continueReading: ShelfBook | undefined = undefined;
   @State private isBookshelfVisualAdmitted: boolean = false;
@@ -796,10 +798,26 @@ struct Index {
       .width('100%')
       .height('100%')
       .backgroundColor($r('app.color.reader_surface'))
-      // 顶部: padding 状态栏高, 内容避让状态栏不上移; 阅读路由的顶部 inset 由 ReaderShell
-      // 自行管理 (此处置 0 防双 padding), 其余路由仍由根 Stack 避让; 底部: 内容延伸到手势条(沉浸式底部,不留安全区空白)。
-      .padding({ top: this.readingSessionActive ? 0 : px2vp(this.statusBarHeightPx) })
+      // App pages consume the current vp window snapshot. Reader owns an
+      // edge-to-edge background and resolves its content/control rects inside
+      // ReaderLayoutGeometry, so it must not inherit this App-page padding.
+      .padding({ top: this.readerOwnsWindowEdges() ? 0 : this.appContentTopInset() })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
+  }
+
+  private readerOwnsWindowEdges(): boolean {
+    // The hidden reader warms behind Detail before its first page is admitted.
+    // Keep Detail inside the app safe top until ReaderShell is actually visible.
+    return this.readingSessionActive && (this.route === 'reading' || this.route === 'directory');
+  }
+
+  private appContentTopInset(): number {
+    // Reading the revision makes Window callbacks observable to this root;
+    // the metric values themselves remain owned by ReaderWindowCoordinator.
+    if (this.readerWindowMetricsRevision < 0) {
+      return 0;
+    }
+    return readerContentSafeTop(ReaderWindowCoordinator.metrics());
   }
 
   private openRss(): void {
