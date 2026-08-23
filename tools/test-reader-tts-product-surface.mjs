@@ -20,7 +20,13 @@ assert.match(fullPanel, /@Prop httpEngines: ReaderTtsEngineOption\[\] = \[\]/);
 assert.match(fullPanel, /this\.requestEngineChange\('system'\)/);
 assert.match(fullPanel, /`http-tts:\$\{next\.id\}`/);
 assert.match(fullPanel, /this\.onSeek\(Math\.round\(value\)\)/);
-assert.match(fullPanel, /Column\(\) \{\s*ReaderHttpTtsManagerPanel\(\{/);
+assert.doesNotMatch(fullPanel, /ReaderHttpTtsManagerPanel\(\{/,
+  'the HTTP CRUD manager has no Figma-backed placement at the top of the full TTS page');
+assert.match(fullPanel,
+  /Column\(\) \{\s*this\.playbackSection\(\);[\s\S]*?this\.timerSection\(\);[\s\S]*?this\.rateSection\(\);[\s\S]*?this\.detailSection\(\);[\s\S]*?this\.systemSection\(\);/,
+  'the full TTS page must preserve the authoritative playback, timer, rate, detail, and TTS-config order');
+assert.match(manager, /export struct ReaderHttpTtsManagerPanel/,
+  'the isolated HTTP CRUD capability must remain available for a future evidenced entry point');
 assert.match(fullPanel, /this\.state\.status === 'failed'\) return '播放失败'/);
 assert.match(fullPanel, /this\.state\.status === 'unavailable'\) return '当前引擎不可用'/);
 assert.match(fullPanel, /this\.state\.errorMessage/);

@@ -24,7 +24,6 @@ import {
   TOK_SURFACE_PANEL,
   TOK_SURFACE_PANEL_SOFT,
 } from '../common/ReaderTokens';
-import { ReaderHttpTtsManagerPanel } from './ReaderHttpTtsManagerPanel';
 import {
   READER_FULL_PANEL_HEIGHT_PHONE,
   READER_FULL_PANEL_HEIGHT_TABLET,
@@ -98,14 +97,6 @@ export struct ReaderTtsFullPanel {
 
       Scroll() {
         Column() {
-          ReaderHttpTtsManagerPanel({
-            engines: this.httpEngines,
-            selectedEngine: this.engine,
-            onSelect: (engine: string): Promise<void> => this.onEngineChange(engine),
-            onPut: (config: ReaderTtsEngineOption): Promise<void> => this.onHttpEnginePut(config),
-            onDelete: (id: number): Promise<void> => this.onHttpEngineDelete(id),
-          });
-          this.sectionDivider();
           this.playbackSection();
           this.sectionDivider();
           this.timerSection();
