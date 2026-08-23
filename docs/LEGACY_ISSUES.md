@@ -64,6 +64,44 @@ switch/rollback) 已实现, 但 6 态视觉未在真机/模拟器核验。
 
 ---
 
+## L4 · 目录复用与全局布局/排版体系剩余优化 — PARTIAL / DEFERRED
+
+**状态**: DEFERRED (2026-08-23 决策 DEFER — 先补全当前缺陷并保证基础功能可用)
+
+**延期内容**:
+
+- 将完整目录与快捷目录迁移为共享的 `ComponentV2 + @Param` 行/列表组件。
+- 在完整绑定、固定行骨架和实机行为矩阵完成后，重新评估并开启
+  `Repeat.virtualScroll({ reusable: true })`。
+- 建立跨 Page/Panel/Dialog 的全局响应式布局上下文或统一宽度框架。
+- 将剩余页面的散落文字声明逐步迁移到已建立的 Typography 语义角色，并同步绑定
+  后续确认的 Figma text style/variable；不做一次性全仓替换。
+- 建立 100/1000/5000 章的目录首屏、滚动帧率、峰值内存和 GC 性能基准。
+
+**本次约束**:
+
+- 目录继续保留 `virtualScroll`，但统一 `reusable:false` 并修正完整 `RepeatItem` 绑定。
+- 宽度问题只在已确认风险的布局所有者中按真实 viewport 动态收缩，不做全局框架迁移。
+- 搜索输入统一由 `ReaderSearchField` 管理行为语义；书籍搜索、书源、目录/书签、
+  阅读正文搜索和 RSS 使用独立 typed variant，不强制共享字号或外层工作流按钮。
+- 不修改 Core 目录事实、数据库排序或持久化协议。
+
+**已落地基础**:
+
+- `ReaderFontFamilies.ts` 隔离物理字体名，`ReaderTypography.ets` 定义 family/weight/size/
+  AUTO line-height/letter-spacing/scale-policy/source 的完整角色契约。
+- 首页标题、二级页标题、分节标题、主 Tab、Select 变体和阅读章标题已接入语义角色；
+  `ReaderSelect` / `ReaderSelectPanel` 已由互相冲突的多个布尔参数收敛为单一 variant。
+- 五个搜索入口已接入共享字段；目录/书签保持同一 10fp 搜索角色，行高恢复为 ArkUI AUTO，
+  不再使用页面内 `10/12` 硬绑定。
+- 阅读正文仍由 Appearance snapshot 动态驱动；字号等四项指标增加显式可用边界，Ability
+  配置变化会刷新 system font scale 并推进分页签名重算。
+
+**解锁条件**: 当前目录排序/书签/Figma/横向越界缺陷关闭，基础阅读链路可用，定向契约、
+非增量 HAP 构建和 signed HAP 实机验收均完成；之后作为独立架构任务重新评估投入与收益。
+
+---
+
 ## 已关条目
 
 - (无)
