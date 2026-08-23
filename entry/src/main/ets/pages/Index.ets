@@ -429,7 +429,6 @@ struct Index {
         BookshelfPage({
           books: this.shelfBooks,
           continueReading: this.continueReading,
-          isTablet: deviceInfo.deviceType === 'tablet',
           onImportRequested: (): void => this.openImportDialog(),
           onSearchRequested: (): void => this.openSearch(),
           onRssRequested: (): void => this.openRss(),
@@ -437,6 +436,9 @@ struct Index {
           onDiscoverRequested: (): void => this.openDiscover(),
           onManageRequested: (): void => this.openBookshelfManagement(),
           onBookSelected: (book: ShelfBook): void => this.openShelfBook(book),
+          onBookMultiSelectRequested: (_book: ShelfBook): void => this.openBookshelfManagement(),
+          onBookInfoRequested: (book: ShelfBook): void => this.openShelfBookInfo(book),
+          onBookRemoveRequested: (book: ShelfBook): void => this.requestRemoveShelfBook(book),
         });
       } else if (this.route === 'bookshelfManagement') {
         BookshelfManagementPage({
@@ -667,7 +669,6 @@ struct Index {
         LocalBookDetail({
           book: this.detailBook,
           toc: this.detailToc,
-          isTablet: deviceInfo.deviceType === 'tablet',
           sourceSwitchEnabled: this.detailBook.sourceId !== LOCAL_SOURCE_ID &&
             this.remoteReadingSession !== undefined && this.detailToc.length > 0 &&
             this.bookshelfRemovalActiveKey.length === 0,
@@ -1849,6 +1850,23 @@ struct Index {
     }, selection.sourceId, selection, true);
   }
 
+  private openShelfBookInfo(selection: ShelfBook): void {
+    if (selection.sourceId === LOCAL_SOURCE_ID) {
+      this.openLocalBookDetail(selection, false);
+      return;
+    }
+    this.openRemoteBookDetail({
+      sourceId: selection.sourceId,
+      bookId: selection.bookId,
+      detailUrl: selection.bookId,
+      title: selection.title,
+      author: selection.author,
+      coverUrl: selection.coverUrl,
+      intro: selection.intro,
+      lastChapter: selection.lastChapter,
+    }, selection.sourceId, selection, false);
+  }
+
   private openLocalBookDetail(selection: ShelfBook, resumeImmediately: boolean = false): void {
     if (selection.sourceId !== LOCAL_SOURCE_ID) {
       hilog.error(DOMAIN, 'Reader',
@@ -2386,6 +2404,126 @@ struct Index {
         },
       },
     });
+  }
+
+  private requestRemoveShelfBook(book: ShelfBook): void {
+    if (!this.canRemoveShelfBook(book)) {
+      return;
+    }
+    const message = book.sourceId === LOCAL_SOURCE_ID ?
+      `确定将“${book.title}”从书架移除吗？应用内解析内容、阅读进度和离线任务将一并删除；系统中的原始文件不受影响。` :
+      `确定将“${book.title}”从书架移除吗？书源、阅读进度和已缓存正文不会删除，可再次通过搜索加入书架。`;
+    this.getUIContext().showAlertDialog({
+      title: '移除书架',
+      message,
+      autoCancel: true,
+      primaryButton: {
+        value: '取消',
+        action: (): void => {},
+      },
+      secondaryButton: {
+        value: '移除',
+        fontColor: '#B42318',
+        action: (): void => {
+          if (this.canRemoveShelfBook(book)) {
+            this.removeShelfBook(book);
+          }
+        },
+      },
+    });
+  }
+
+  private canRemoveShelfBook(book: ShelfBook): boolean {
+    return this.route === 'bookshelf' && !this.readingSessionActive &&
+      this.bookshelfRemovalActiveKey.length === 0 &&
+      this.shelfBooks.some((candidate: ShelfBook): boolean =>
+        candidate.sourceId === book.sourceId && candidate.bookId === book.bookId);
+  }
+
+  private removeShelfBook(book: ShelfBook): void {
+    if (!this.canRemoveShelfBook(book)) {
+      return;
+    }
+    const generation = ++this.bookshelfRemovalGeneration;
+    const key = `${book.sourceId}\u0000${book.bookId}`;
+    this.bookshelfRemovalActiveKey = key;
+    const owner = ReaderRuntimeOwner.current();
+    const gateway = new BookshelfFlowGateway(owner);
+    const isCurrent = (): boolean => generation === this.bookshelfRemovalGeneration &&
+      this.bookshelfRemovalActiveKey === key;
+    void gateway.remove(book.sourceId, book.bookId)
+      .then((outcome: BookshelfRemoveOutcome): void => {
+        if (isCurrent()) {
+          this.applyShelfBookRemoval(outcome.shelf);
+        }
+      })
+      .catch((error: Error): Promise<void> =>
+        this.reconcileShelfBookRemovalFailure(book, error, owner, gateway, isCurrent))
+      .finally((): void => {
+        if (isCurrent()) {
+          this.bookshelfRemovalActiveKey = '';
+        }
+      });
+  }
+
+  private async reconcileShelfBookRemovalFailure(
+    book: ShelfBook,
+    originalError: Error,
+    owner: ReaderRuntimeOwner,
+    gateway: BookshelfFlowGateway,
+    isCurrent: () => boolean,
+  ): Promise<void> {
+    try {
+      const stored = await new ReaderCoreGateway(owner).loadShelfBook(book.sourceId, book.bookId);
+      if (!isCurrent()) {
+        return;
+      }
+      if (stored !== undefined) {
+        this.showReadingFailure('移除书架失败', originalError.message);
+        return;
+      }
+
+      let cleanupError: Error | undefined = undefined;
+      if (book.sourceId === LOCAL_SOURCE_ID) {
+        try {
+          await owner.releaseLocalBookAsset(book.bookId);
+        } catch (error) {
+          cleanupError = error instanceof Error ? error : new Error(`${error}`);
+        }
+      }
+      try {
+        const shelf = await gateway.load();
+        if (!isCurrent()) {
+          return;
+        }
+        this.applyShelfBookRemoval(shelf);
+      } catch (loadError) {
+        if (!isCurrent()) {
+          return;
+        }
+        this.refreshBookshelf();
+        const loadMessage = loadError instanceof Error ? loadError.message : `${loadError}`;
+        this.showReadingFailure('已移出书架', `书籍已移除，但书架状态刷新未完成：${loadMessage}`);
+      }
+      if (cleanupError !== undefined && isCurrent()) {
+        this.showReadingFailure('已移出书架',
+          `书籍已移除，但应用内 EPUB 文件清理未完成：${cleanupError.message}`);
+      }
+    } catch (probeError) {
+      if (isCurrent()) {
+        const probeMessage = probeError instanceof Error ? probeError.message : `${probeError}`;
+        hilog.error(DOMAIN, 'Reader',
+          'Shelf book removal reconciliation failed: %{public}s', probeMessage);
+        this.showReadingFailure('移除书架失败', originalError.message);
+      }
+    }
+  }
+
+  private applyShelfBookRemoval(shelf: BookshelfDataState): void {
+    this.bookshelfLoadGeneration += 1;
+    if (this.route === 'bookshelf') {
+      this.applyBookshelfState(shelf);
+    }
   }
 
   private removeDetailBook(book: ReadingBookDetail): void {

@@ -1,4 +1,14 @@
 import type { ReadingBookDetail } from '../reading/ReadingBookDetail';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import {
+  readerVisualSafeLeft,
+  readerVisualSafeRight,
+} from '../common/ReaderWindowMetrics';
+import {
+  SurfaceHorizontalFrame,
+  SurfaceWidthSpec,
+  resolveHorizontalFrame,
+} from '../common/SurfaceHorizontalGeometry';
 import {
   TOK_ACTION_DIVIDER,
   TOK_BORDER,
@@ -6,7 +16,6 @@ import {
   TOK_CARD_BG,
   TOK_CARD_BG_HI,
   TOK_CHAPTER_DIVIDER,
-  TOK_CONTENT_MAX_W_PHONE,
   TOK_CONTENT_MAX_W_TABLET,
   TOK_DANGER,
   TOK_GREEN,
@@ -15,7 +24,6 @@ import {
   TOK_ON_PRIMARY,
   TOK_PAPER,
   TOK_PRIMARY_DARK,
-  TOK_SCREEN_INSET,
   TOK_SETTING_ACTION_BG,
   TOK_SPACE_CARD_PADDING,
   TOK_SPACE_CONTROL_INLINE,
@@ -49,9 +57,9 @@ const CHAPTER_ROW_HEIGHT = 58;
  */
 @Component
 export struct LocalBookDetail {
+  @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   @Prop book: ReadingBookDetail;
   @Prop toc: LocalReadingTocEntry[] = [];
-  @Prop isTablet: boolean = false;
   @Prop sourceSwitchEnabled: boolean = false;
   @Prop inBookshelf: boolean = true;
   @Prop removalEnabled: boolean = true;
@@ -63,6 +71,7 @@ export struct LocalBookDetail {
   onSwitchSource: () => void = (): void => {};
   onRemove: () => void = (): void => {};
   onBack: () => void = (): void => {};
+  @State private viewportWidth: number = 0;
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -76,7 +85,15 @@ export struct LocalBookDetail {
         this.actionArea();
       }
       .layoutWeight(1)
-      .width('100%');
+      .width('100%')
+      .alignItems(HorizontalAlign.Center)
+      .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
+      .onAreaChange((_oldValue: Area, newValue: Area): void => {
+        const width = this.numericAreaLength(newValue.width);
+        if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
+          this.viewportWidth = width;
+        }
+      });
     }
     .width('100%')
     .height('100%')
@@ -106,7 +123,6 @@ export struct LocalBookDetail {
     }
     .layoutWeight(1)
     .width('100%')
-    .padding({ left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET })
     .scrollBar(BarState.Off);
   }
 
@@ -251,7 +267,7 @@ export struct LocalBookDetail {
         .fontSize(13)
         .lineHeight(21.45)
         .fontColor(TOK_MUTED)
-        .maxLines(this.isTablet ? 2 : 3)
+        .maxLines(this.usesWideContent() ? 2 : 3)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
     }
     .width(this.contentWidth())
@@ -437,19 +453,57 @@ export struct LocalBookDetail {
   }
 
   private contentWidth(): number {
-    return this.isTablet ? TOK_CONTENT_MAX_W_TABLET : TOK_CONTENT_MAX_W_PHONE;
+    return this.contentFrame().width;
+  }
+
+  private contentFrame(): SurfaceHorizontalFrame {
+    const metrics = ReaderWindowCoordinator.metrics();
+    return resolveHorizontalFrame(
+      this.liveViewportWidth(),
+      readerVisualSafeLeft(metrics),
+      readerVisualSafeRight(metrics),
+      new SurfaceWidthSpec(TOK_CONTENT_MAX_W_TABLET, 19, 19, 'center'),
+    );
+  }
+
+  private liveViewportWidth(): number {
+    if (this.viewportWidth > 0) {
+      return this.viewportWidth;
+    }
+    // Reading this value makes a new Window snapshot observable without
+    // inventing a 390/760 design-canvas fallback for the first detail frame.
+    if (this.readerWindowMetricsRevision < 0) {
+      return 0;
+    }
+    const width = ReaderWindowCoordinator.metrics().windowRect.width;
+    return Number.isFinite(width) && width > 0 ? width : 0;
+  }
+
+  private usesWideContent(): boolean {
+    return this.contentWidth() >= 600;
   }
 
   private summaryHeight(): number {
-    return this.isTablet ? TABLET_SUMMARY_HEIGHT : PHONE_SUMMARY_HEIGHT;
+    return this.usesWideContent() ? TABLET_SUMMARY_HEIGHT : PHONE_SUMMARY_HEIGHT;
   }
 
   private summaryTextHeight(): number {
-    return this.isTablet ? 42.875 : 64.313;
+    return this.usesWideContent() ? 42.875 : 64.313;
   }
 
   private actionButtonWidth(): number {
-    return this.isTablet ? 355 : 170;
+    return Math.min(355, Math.max(0, (this.contentWidth() - TOK_SPACE_CONTROL_INLINE) / 2));
+  }
+
+  private numericAreaLength(value: Length): number {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : 0;
+    }
+    if (typeof value === 'string') {
+      const parsed = Number.parseFloat(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    return 0;
   }
 
   private visibleToc(): LocalReadingTocEntry[] {
