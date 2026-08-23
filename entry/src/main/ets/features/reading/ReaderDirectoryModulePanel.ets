@@ -84,7 +84,7 @@ export struct ReaderDirectoryModulePanel {
           Repeat(this.projectedEntries)
             .each((repeatItem: RepeatItem<LocalReadingTocEntry>) => {
               ListItem() {
-                this.chapterRow(repeatItem.item);
+                this.chapterRow(repeatItem);
               }
               .width('100%')
               .height(READER_DIRECTORY_ROW_HEIGHT);
@@ -226,10 +226,10 @@ export struct ReaderDirectoryModulePanel {
   }
 
   @Builder
-  private chapterRow(entry: LocalReadingTocEntry) {
+  private chapterRow(repeatItem: RepeatItem<LocalReadingTocEntry>) {
     Row() {
       Row() {
-        if (this.isCurrent(entry)) {
+        if (this.isCurrent(repeatItem.item)) {
           Row()
             .width(DIRECTORY_CURRENT_BAR_WIDTH)
             .height(READER_DIRECTORY_ROW_HEIGHT)
@@ -237,14 +237,14 @@ export struct ReaderDirectoryModulePanel {
             .borderRadius(TOK_RADIUS_PILL);
         }
         Stack({ alignContent: Alignment.Center }) {
-          Text(entry.title)
+          Text(repeatItem.item.title)
             .width('100%')
-            .padding({ left: this.isCurrent(entry) ? 5 : 8, right: 8 })
+            .padding({ left: this.isCurrent(repeatItem.item) ? 5 : 8, right: 8 })
             .fontFamily('ReaderInter')
             .fontWeight(500)
             .fontSize(11)
             .lineHeight(12.32)
-            .fontColor(this.titleColor(entry))
+            .fontColor(this.titleColor(repeatItem.item))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
@@ -253,14 +253,14 @@ export struct ReaderDirectoryModulePanel {
       }
       .layoutWeight(1)
       .height(READER_DIRECTORY_ROW_HEIGHT)
-      .accessibilityText(`打开章节：${entry.title}`)
-      .onClick((): void => this.onSelectChapter(entry.index));
-      this.statusMarkerHitTarget(entry);
-      this.bookmarkMarkerHitTarget(entry);
+      .accessibilityText(`打开章节：${repeatItem.item.title}`)
+      .onClick((): void => this.onSelectChapter(repeatItem.item.index));
+      this.statusMarkerHitTarget(repeatItem.item);
+      this.bookmarkMarkerHitTarget(repeatItem.item);
     }
     .width('100%')
     .height(READER_DIRECTORY_ROW_HEIGHT)
-    .backgroundColor(this.isCurrent(entry) ? TOK_READ_ACTIVE_SOFT : Color.Transparent)
+    .backgroundColor(this.isCurrent(repeatItem.item) ? TOK_READ_ACTIVE_SOFT : Color.Transparent)
     .border({ width: { top: 1 }, color: TOK_LINE })
     .borderRadius(TOK_RADIUS_SM)
     .alignItems(VerticalAlign.Center);

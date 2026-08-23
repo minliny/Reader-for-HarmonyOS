@@ -1,5 +1,17 @@
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from './ReaderDirectoryMarkerState';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import {
+  readerInteractiveSafeBottom,
+  readerVisualSafeLeft,
+  readerVisualSafeRight,
+  readerVisualSafeTop,
+} from '../common/ReaderWindowMetrics';
+import {
+  SurfaceHorizontalFrame,
+  SurfaceWidthSpec,
+  resolveHorizontalFrame,
+} from '../common/SurfaceHorizontalGeometry';
 import {
   TOK_LINE_STRONG,
   TOK_READ_INK,
@@ -25,11 +37,11 @@ import { motionAnimateParam } from '../common/MotionSpec';
  */
 @Component
 export struct ReaderFullDirectory {
+  @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   @Prop bookTitle: string = '';
   @Prop chapterTitle: string = '';
   @Prop entries: LocalReadingTocEntry[] = [];
   @Prop currentChapterIndex: number = -1;
-  @Prop isTablet: boolean = false;
   // Source switch is only reachable for remote books (sourceId !== 'local');
   // local books render the top-bar 换源 affordance disabled. This is the
   // third copy of the LOCAL_SOURCE_ID sentinel (also Index.ets:70 and
@@ -58,6 +70,7 @@ export struct ReaderFullDirectory {
   onExit: () => void = (): void => {};
 
   @State private panelProgress: number = 1;
+  @State private containerWidth: number = 0;
   @State private containerHeight: number = 0;
   @State private offlineMenuVisible: boolean = false;
   private animationGeneration: number = 0;
@@ -97,7 +110,8 @@ export struct ReaderFullDirectory {
           entries: this.entries,
           currentChapterIndex: this.currentChapterIndex,
           chapterDownloadEnabled: this.sourceId !== 'local',
-          isTablet: this.isTablet,
+          isTablet: this.usesExpandedLayout(),
+          panelWidthOverride: this.panelWidth(),
           panelHeightOverride: this.fullPanelHeight(),
           onSelectChapter: (index: number): void => this.onSelectChapter(index),
           onDownloadChapter: (index: number): void => this.onDownloadChapter(index),
@@ -117,8 +131,13 @@ export struct ReaderFullDirectory {
     }
     .width('100%')
     .height('100%')
+    .clip(true)
     .onAreaChange((_oldValue: Area, newValue: Area): void => {
+      const width = this.numericAreaLength(newValue.width);
       const height = this.numericAreaLength(newValue.height);
+      if (width > 0 && Math.abs(width - this.containerWidth) >= 0.01) {
+        this.containerWidth = width;
+      }
       if (height > 0 && Math.abs(height - this.containerHeight) >= 0.01) {
         this.containerHeight = height;
       }
@@ -128,7 +147,7 @@ export struct ReaderFullDirectory {
   @Builder
   private topBar() {
     // 自适应:外层 Row 撑满父宽,左右内边距按 Figma 视口差 (Phone 14/16, Tablet 28/30)
-    // 决定内条宽度,替代固定 360/702 双尺寸表。标题宽度仍按 Figma 固定值 (titleWidth)。
+    // 决定内条宽度；中间标题只占剩余空间，不再用固定宽度挤出视口。
     Row() {
       Row() {
         Stack({ alignContent: Alignment.Center }) {
@@ -144,7 +163,7 @@ export struct ReaderFullDirectory {
 
         Column({ space: 6 }) {
           Text(this.bookTitle)
-            .width(this.titleWidth())
+            .width('100%')
             .height(22)
             .fontFamily('ReaderNotoSerifSCBold')
             .fontWeight(FontWeight.Bold)
@@ -154,7 +173,7 @@ export struct ReaderFullDirectory {
             .textOverflow({ overflow: TextOverflow.Ellipsis });
 
           Text(this.chapterTitle)
-            .width(this.titleWidth())
+            .width('100%')
             .height(17)
             .fontFamily('ReaderNotoSerifSCRegular')
             .fontWeight(FontWeight.Regular)
@@ -163,6 +182,8 @@ export struct ReaderFullDirectory {
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
+        .layoutWeight(1)
+        .constraintSize({ minWidth: 0 })
         .margin({ left: 8 });
 
         Column({ space: 3.5 }) {
@@ -220,7 +241,7 @@ export struct ReaderFullDirectory {
     .width('100%')
     .height(54)
     .padding({ left: this.topBarLeft(), right: this.topBarRight() })
-    .margin({ top: 18 });
+    .margin({ top: this.topBarTop() });
   }
 
   @Builder
@@ -264,27 +285,29 @@ export struct ReaderFullDirectory {
       .backgroundColor(TOK_READ_SURFACE)
       .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
       .borderRadius(12)
-      .position({ x: this.isTablet ? 548 : 206, y: 74 })
+      .position({ x: this.offlineMenuLeft(), y: this.topBarTop() + 56 })
       .zIndex(8);
     }
   }
 
   private topBarLeft(): number {
-    return this.isTablet ? 28 : 14;
+    const metrics = ReaderWindowCoordinator.metrics();
+    return Math.max(this.usesExpandedLayout() ? 28 : 14, readerVisualSafeLeft(metrics));
   }
 
   private topBarRight(): number {
-    return this.isTablet ? 30 : 16;
+    const metrics = ReaderWindowCoordinator.metrics();
+    return Math.max(this.usesExpandedLayout() ? 30 : 16, readerVisualSafeRight(metrics));
   }
 
-  private titleWidth(): number {
-    return this.isTablet ? 512 : 170;
+  private topBarTop(): number {
+    return Math.max(18, readerVisualSafeTop(ReaderWindowCoordinator.metrics()));
   }
 
   private shouldAnimatePanel(): boolean {
     // The current production motion card is Phone-specific. Tablet keeps the
     // source-backed static Full endpoint until a Tablet motion track exists.
-    return this.animateFromControl && !this.isTablet && !this.reduceMotion;
+    return this.animateFromControl && !this.usesExpandedLayout() && !this.reduceMotion;
   }
 
   private requestCollapse(): void {
@@ -307,44 +330,106 @@ export struct ReaderFullDirectory {
   }
 
   private panelWidth(): number {
-    return this.isTablet ? 720 : 364;
+    return this.panelFrame().width;
   }
 
   private panelLeft(): number {
-    return this.isTablet ? 26 : 12;
+    return this.panelFrame().left;
+  }
+
+  private panelFrame(): SurfaceHorizontalFrame {
+    const metrics = ReaderWindowCoordinator.metrics();
+    const spec = this.usesExpandedLayout()
+      ? new SurfaceWidthSpec(720, 27, 13, 'right')
+      : new SurfaceWidthSpec(364, 12, 12, 'center');
+    return resolveHorizontalFrame(
+      this.liveContainerWidth(),
+      readerVisualSafeLeft(metrics),
+      readerVisualSafeRight(metrics),
+      spec,
+    );
+  }
+
+  private offlineMenuLeft(): number {
+    const figmaLeft = this.usesExpandedLayout() ? 548 : 206;
+    return Math.max(this.topBarLeft(), Math.min(figmaLeft,
+      this.liveContainerWidth() - this.topBarRight() - 142));
   }
 
   private panelViewportHeight(): number {
     if (!this.shouldAnimatePanel()) {
       return this.fullPanelHeight();
     }
-    return 330 + (this.panelHeightDelta() * this.panelProgress);
+    return this.collapsedPanelHeight() + (this.panelHeightDelta() * this.panelProgress);
   }
 
   private panelTop(): number {
     if (!this.shouldAnimatePanel()) {
-      return 88;
+      return this.fullPanelTop();
     }
     // The source endpoint is bottom anchored (Figma full y=88,h=736 on an
     // unobstructed 844vp canvas). ReaderShell deliberately consumes the
     // status-bar inset, so derive the same 20vp bottom gap from the actual
     // content viewport instead of clipping the footer below the host.
-    return 88 + (this.panelHeightDelta() * (1 - this.panelProgress));
+    return this.fullPanelTop() + (this.panelHeightDelta() * (1 - this.panelProgress));
   }
 
   private fullPanelHeight(): number {
-    if (this.isTablet || this.containerHeight <= 0) {
-      return this.isTablet ? 852 : 736;
-    }
-    return Math.max(330, this.containerHeight - 88 - 20);
+    const designHeight = this.usesExpandedLayout() ? 852 : 736;
+    const safeBottom = Math.max(20, readerInteractiveSafeBottom(ReaderWindowCoordinator.metrics()));
+    const available = Math.max(0, this.liveContainerHeight() - this.fullPanelTop() - safeBottom);
+    return Math.min(designHeight, available);
+  }
+
+  private fullPanelTop(): number {
+    // Figma keeps 16vp between the 54vp top bar and the full directory sheet:
+    // 18 + 54 + 16 = 88. Preserve that relationship when safeTop moves.
+    return this.topBarTop() + 70;
   }
 
   private panelHeightDelta(): number {
-    return Math.max(0, this.fullPanelHeight() - 330);
+    return Math.max(0, this.fullPanelHeight() - this.collapsedPanelHeight());
+  }
+
+  private collapsedPanelHeight(): number {
+    return Math.min(330, this.fullPanelHeight());
+  }
+
+  private liveContainerWidth(): number {
+    if (this.containerWidth > 0) {
+      return this.containerWidth;
+    }
+    if (this.readerWindowMetricsRevision < 0) {
+      return 0;
+    }
+    const width = ReaderWindowCoordinator.metrics().windowRect.width;
+    return Number.isFinite(width) && width > 0 ? width : 0;
+  }
+
+  private liveContainerHeight(): number {
+    if (this.containerHeight > 0) {
+      return this.containerHeight;
+    }
+    if (this.readerWindowMetricsRevision < 0) {
+      return 0;
+    }
+    const height = ReaderWindowCoordinator.metrics().windowRect.height;
+    return Number.isFinite(height) && height > 0 ? height : 0;
+  }
+
+  private usesExpandedLayout(): boolean {
+    return this.liveContainerWidth() >= 600;
   }
 
   private numericAreaLength(value: Length): number {
-    return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : 0;
+    }
+    if (typeof value === 'string') {
+      const parsed = Number.parseFloat(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    return 0;
   }
 
   private isLocalBook(): boolean {
