@@ -72,6 +72,38 @@ assert.ok(http.calls.includes('close'));
 assert.ok(media.calls.includes('close'));
 assert.ok(background.calls.includes('close'));
 
+const resilientSystem = new FakeHost('system');
+const resilientHttp = new FakeHost('http');
+const unavailableMedia = {
+  setEventListener() {},
+  async activate() { throw new Error('AVSession unavailable'); },
+  publish() {},
+  async close() {},
+};
+const deniedBackground = {
+  async activate() { throw new Error('background lease denied'); },
+  async deactivate() {},
+  isActive() { return false; },
+  async close() {},
+};
+const resilientRouter = new HarmonyTtsHostRouter(
+  resilientSystem,
+  resilientHttp,
+  unavailableMedia,
+  deniedBackground,
+);
+await resilientRouter.activateAudioSession(false);
+await resilientRouter.speak({
+  requestId: 'foreground-without-auxiliary-sessions',
+  text: '辅助会话不可用时仍应朗读。',
+  rate: 1,
+  pitch: 1,
+  language: 'zh-CN',
+});
+assert.ok(resilientSystem.calls.includes('activate:false'));
+assert.ok(resilientSystem.calls.includes('speak:foreground-without-auxiliary-sessions'));
+await resilientRouter.close();
+
 const httpHostSource = await readFile(
   new URL('../entry/src/main/ets/app/HarmonyHttpTtsHost.ts', import.meta.url),
   'utf8',

@@ -4,6 +4,8 @@ import { readFile, stat } from 'node:fs/promises';
 import {
   copyReaderAppearanceSnapshot,
   createDefaultReaderAppearanceSnapshot,
+  moveReaderAppearanceFontSlot,
+  normalizeReaderAppearanceFontOrder,
   normalizeReaderAppearanceSnapshot,
   ReaderCustomFontDescriptor,
   readerAppearanceCanStep,
@@ -11,6 +13,7 @@ import {
   setReaderAppearanceCustomFont,
   setReaderAppearanceDayTheme,
   setReaderAppearanceFont,
+  setReaderAppearanceFontOrder,
   setReaderAppearanceIndent,
   setReaderAppearanceMetric,
   setReaderAppearanceNightTheme,
@@ -18,6 +21,8 @@ import {
 } from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
 import {
   readerAppearanceFontFamily,
+  readerAppearanceFontSlotFamily,
+  readerAppearanceFontSlotLabel,
   readerAppearanceSnapshotFontFamily,
   readerAppearanceLineHeight,
   readerAppearanceParagraphIndent,
@@ -29,12 +34,13 @@ import {
 
 const initial = createDefaultReaderAppearanceSnapshot();
 assert.deepEqual(initial, {
-  version: 2,
+  version: 3,
   activeTheme: 'paper',
   dayTheme: 'paper',
   nightTheme: 'paperNight',
   font: 'serif',
   customFont: undefined,
+  fontOrder: ['system', 'serif', 'sans', 'kai', 'fangSong', 'mono', 'sourceHanSerif', 'lxgwWenKai', 'import'],
   fontSize: 18,
   lineHeightMultiplier: 1.96,
   paragraphSpacing: 16,
@@ -42,6 +48,25 @@ assert.deepEqual(initial, {
   indent: 'none',
   alignment: 'justify',
 });
+
+const { fontOrder: _legacyFontOrder, ...legacyAppearance } = initial;
+assert.deepEqual(
+  normalizeReaderAppearanceSnapshot({ ...legacyAppearance, version: 2 }).fontOrder,
+  initial.fontOrder,
+  'v2 preferences must migrate to the complete Figma font-library order',
+);
+assert.deepEqual(
+  normalizeReaderAppearanceFontOrder(['serif', 'serif', 'import', 'missing']),
+  ['serif', 'import', 'system', 'sans', 'kai', 'fangSong', 'mono', 'sourceHanSerif', 'lxgwWenKai'],
+  'persisted order normalization must discard duplicates/unknown slots and append missing slots',
+);
+const movedFontOrder = moveReaderAppearanceFontSlot(initial.fontOrder, 0, 7);
+assert.deepEqual(movedFontOrder,
+  ['serif', 'sans', 'kai', 'fangSong', 'mono', 'sourceHanSerif', 'lxgwWenKai', 'system', 'import']);
+assert.deepEqual(setReaderAppearanceFontOrder(initial, movedFontOrder).fontOrder, movedFontOrder);
+assert.deepEqual(initial.fontOrder,
+  ['system', 'serif', 'sans', 'kai', 'fangSong', 'mono', 'sourceHanSerif', 'lxgwWenKai', 'import'],
+  'font-order transitions must not mutate the admitted snapshot');
 
 const normalized = normalizeReaderAppearanceSnapshot({
   ...initial,
@@ -68,6 +93,9 @@ const customSnapshot = setReaderAppearanceCustomFont(initial, customDescriptor);
 assert.equal(customSnapshot.font, 'custom');
 assert.equal(customSnapshot.customFont?.displayName, '我的字体');
 assert.equal(readerAppearanceSnapshotFontFamily(customSnapshot), 'ReaderCustom_0123456789abcdef');
+assert.equal(readerAppearanceFontSlotLabel(initial, 'lxgwWenKai'), '霞鹜文楷');
+assert.equal(readerAppearanceFontSlotLabel(customSnapshot, 'import'), '我的字体');
+assert.equal(readerAppearanceFontSlotFamily(customSnapshot, 'import'), 'ReaderCustom_0123456789abcdef');
 assert.equal(normalizeReaderAppearanceSnapshot({ ...customSnapshot, customFont: undefined }).font, 'serif',
   'a custom font choice without a Host-validated descriptor must fail closed');
 
@@ -135,7 +163,7 @@ assert.equal(readerAppearanceLineHeight(initial), 35.28);
 assert.equal(readerAppearanceFontFamily('system'), 'HarmonyOS Sans');
 assert.equal(readerAppearanceFontFamily('serif'), 'ReaderNotoSerifSCRegular');
 assert.equal(readerAppearanceFontFamily('sans'), 'ReaderNotoSansSC');
-assert.equal(readerAppearanceFontFamily('kai'), 'ReaderBpmfZihiKaiStd');
+assert.equal(readerAppearanceFontFamily('kai'), 'ReaderLXGWWenKaiGBLite');
 assert.equal(readerAppearanceFontFamily('fangSong'), 'ReaderZhuqueFangsong');
 assert.equal(readerAppearanceFontFamily('mono'), 'ReaderSarasaMonoSC');
 assert.equal(readerAppearanceFontFamily('sourceHanSerif'), 'ReaderNotoSerifSCRegular');
@@ -180,7 +208,7 @@ assert.equal(readerAppearanceParagraphIndent(18, 'firstLine'), 36);
 
 const rawfileDir = new URL('../entry/src/main/resources/rawfile/', import.meta.url);
 for (const [name, minimumBytes] of [
-  ['BpmfZihiKaiStd-Regular.ttf', 17_000_000],
+  ['LXGWWenKaiGBLite-Regular.ttf', 13_000_000],
   ['ZhuqueFangsong-Regular.ttf', 8_000_000],
   ['SarasaMonoSC-Regular.ttf', 25_000_000],
 ]) {
@@ -197,6 +225,7 @@ const conversionGateway = await readFile(new URL('ReaderChineseConversionGateway
 const controlPanel = await readFile(new URL('ReaderControlPanel.ets', readingDir), 'utf8');
 const readingSurface = await readFile(new URL('ReadingSurface.ets', readingDir), 'utf8');
 const experience = await readFile(new URL('LocalReadingExperience.ets', readingDir), 'utf8');
+const motion = await readFile(new URL('../common/MotionSpec.ets', readingDir), 'utf8');
 
 assert.match(quickPanel, /Phone `942:66`, Tablet `942:68`/);
 assert.match(quickPanel, /return this\.isTablet \? 262 : 286/);
@@ -206,8 +235,18 @@ assert.match(quickPanel, /'day', 'warm', 'night', 'warmNight', 'paper', 'green',
 assert.match(quickPanel, /this\.isSelectableFont\(fontId\)/);
 assert.match(quickPanel, /return isReaderAppearanceFont\(fontId\)/,
   'all eight Figma built-in font slots must be selectable');
-assert.match(quickPanel, /readerAppearanceFontFamily\(fontId\)/,
-  'font previews and reading content must share the same family mapping');
+assert.match(quickPanel, /readerAppearanceFontSlotFamily\(this\.snapshot, fontId\)/,
+  'quick font previews must use the shared product-facing slot mapping');
+assert.match(quickPanel, /readerAppearanceFontSlotLabel\(this\.snapshot, fontId\)/,
+  'quick and full grids must not duplicate or rename the Figma labels');
+assert.match(quickPanel, /TOK_PRIMARY_SOFT : Color\.Transparent/,
+  'the selected quick font slot must use the Figma green soft fill instead of the blue theme state');
+assert.match(quickPanel, /\.height\(27\)[\s\S]*\.border\(\{ width: \{ top: TOK_BORDER_W \}, color: TOK_LINE \}\)/,
+  'the quick font state belongs to the complete 62.5x27 slot');
+assert.doesNotMatch(quickPanel, /fontPillWidth|borderRadius\(11\)|'#FFFAF4'/,
+  'the rejected nested font-pill treatment must not return');
+assert.match(quickPanel, /this\.snapshot\.fontOrder\.filter/,
+  'the quick font library must project the same persisted order while excluding only the full-page import actor');
 
 assert.match(fullPanel, /Phone `942:82`, Tablet `942:84`/);
 assert.match(fullPanel, /@Prop availableWidth: number = 0/);
@@ -216,18 +255,38 @@ assert.match(fullPanel,
   /const designWidth = this\.isTablet \? READER_FULL_PANEL_MAX_WIDTH_TABLET :[\s\S]*READER_FULL_PANEL_MAX_WIDTH_PHONE;[\s\S]*Math\.min\(designWidth, this\.availableWidth\)/,
   'appearance sheet must preserve Figma width as a maximum and shrink to the live viewport');
 assert.match(fullPanel,
-  /const designHeight = this\.isTablet \? READER_FULL_PANEL_HEIGHT_TABLET :[\s\S]*READER_APPEARANCE_FULL_PANEL_HEIGHT_PHONE;[\s\S]*Math\.min\(designHeight, this\.availableHeight\)/,
-  'appearance sheet must clamp its own Figma height to the shared live budget');
+  /const designHeight = this\.isTablet \? READER_FULL_PANEL_HEIGHT_TABLET :[\s\S]*READER_APPEARANCE_FULL_PANEL_HEIGHT_PHONE;[\s\S]*return designHeight;/,
+  'the Phone appearance sheet must retain the authored 840vp frame and clip at the screen like the final Figma page');
 assert.match(fullPanel, /return Math\.max\(0, this\.sheetHeight\(\) - 68\)/);
+assert.match(fullPanel,
+  /private scrollViewportHeight\(\): number[\s\S]*Math\.min\(this\.viewportHeight\(\), this\.availableHeight - 68\)/,
+  'the interaction viewport must still shrink to the live window without visually shortening the authored sheet');
 assert.match(fullPanel, /return Math\.max\(0, this\.sheetWidth\(\) - 26\)/);
 assert.match(fullPanel, /return Math\.max\(0, \(this\.sectionInnerWidth\(\) - 18\) \/ 4\)/,
   'four-column appearance cards must reflow inside a narrowed sheet');
 assert.match(fullPanel, /this\.themeLibrary\(\);\s*this\.typographyLibrary\(\);\s*this\.fontLibrary\(\);/);
-assert.match(fullPanel, /Scroll\(\)[\s\S]*this\.themeLibrary\(\);[\s\S]*\.height\(this\.viewportHeight\(\)\)/,
+assert.match(fullPanel, /Scroll\(\)[\s\S]*this\.themeLibrary\(\);[\s\S]*\.height\(this\.scrollViewportHeight\(\)\)/,
   'the full appearance content must scroll inside the live height budget');
 assert.match(fullPanel, /Text\('主题库'\)/);
 assert.match(fullPanel, /Text\('字体库'\)/);
 assert.match(fullPanel, /Text\('排版库'\)/);
+assert.match(quickPanel,
+  /backgroundColor\(this\.snapshot\.activeTheme === theme \? TOK_READ_ACTIVE_SOFT[\s\S]*isNightTheme\(theme\) \? TOK_READ_DISABLED_BG[\s\S]*opacity\(this\.snapshot\.activeTheme === theme \? 1 : 0\.8\)/,
+  'quick theme cells must use the complete Figma state layer instead of outlining the swatch');
+assert.match(fullPanel,
+  /backgroundColor\(this\.snapshot\.activeTheme === theme \? TOK_READ_ACTIVE_SOFT : TOK_READ_DISABLED_BG\)[\s\S]*opacity\(this\.snapshot\.activeTheme === theme \? 1 : 0\.8\)/,
+  'full theme cells must preserve the authored selected fill and inactive opacity');
+assert.match(fullPanel,
+  /backgroundColor\(this\.isActiveFont\(fontId\) \? TOK_PRIMARY_SOFT : Color\.Transparent\)[\s\S]*color: this\.isActiveFont\(fontId\) \? TOK_READ_PRIMARY : TOK_LINE/,
+  'full font cells must use transparent weak-border defaults and the green selected fill');
+assert.match(fullPanel,
+  /Text\('即时应用'\)[\s\S]*\.width\(70\)[\s\S]*\.fontWeight\(FontWeight\.Medium\)[\s\S]*\.fontSize\(10\)/,
+  'the typography helper must occupy the authored 70vp header column');
+assert.match(fullPanel,
+  /\.width\(this\.stepperPanelWidth\(\)\)\s*\.height\(140\)\s*\.borderRadius\(8\)/,
+  'the metric rows must not invent an enclosing fill or border absent from Figma');
+assert.match(fullPanel, /Image\(\$r\('app\.media\.reader_appearance_header'\)\)/,
+  'the full page must use its dark Figma-derived header icon, not the blue quick-navigation asset');
 assert.match(fullPanel, /return this\.pageTurnStyle === 'none' \? '无动画' : '平移'/);
 assert.match(fullPanel, /kind === 'alignment' \|\| kind === 'language'/,
   'Chinese conversion must use the admitted Core-owned selector');
@@ -235,16 +294,22 @@ assert.match(fullPanel, /ReaderSelect\(\{/);
 assert.match(fullPanel, /ReaderSelectPanel\(\{/);
 assert.equal((fullPanel.match(/variant: 'appearanceCompact'/g) ?? []).length, 2,
   'appearance trigger and overlay must share the page-specific Figma variant');
+assert.match(fullPanel,
+  /private indentRow[\s\S]*?TOK_SURFACE_FIELD[\s\S]*?TOK_BORDER[\s\S]*?this\.indentOption\('不缩进', 'none'\)[\s\S]*?this\.indentOption\('双字缩进', 'firstLine'\)/,
+  'the indent segmented field must keep one clean field surface and three interactive options');
+assert.doesNotMatch(fullPanel, /indentPortGradient|linearGradient\(\{[\s\S]*?Color\.Transparent[\s\S]*?'#41484C'/,
+  'the dropdown chevron artwork must not be stretched across the indent segmented field');
 assert.match(fullPanel, /readerAppearanceCanStep\(this\.snapshot, metric, direction\)/,
   'metric controls must expose and enforce their admitted boundary');
-assert.match(fullPanel, /private selectControlWidth\(kind: string\): number \{\s*return 56;/,
-  'the final Phone and Tablet appearance pages use 56vp dropdown actors');
+assert.match(fullPanel,
+  /private selectControlWidth\(kind: string\): number \{\s*const narrowDelta = Math\.max\(0, READER_FULL_PANEL_MAX_WIDTH_PHONE - this\.sheetWidth\(\)\);\s*return Math\.max\(52, 56 - narrowDelta \/ 3\);/,
+  'selectors must keep 56vp at the Figma width and release label space on narrower phones');
 assert.match(fullPanel,
   /Text\(this\.selectLabel\(kind\)\)[\s\S]*?\.width\(this\.selectLabelWidth\(kind\)\)[\s\S]*?TextOverflow\.Ellipsis/,
   'live-width typography labels must not overlap their selector actors');
 assert.match(fullPanel,
-  /private selectLabelWidth\(kind: string\): number \{\s*const controlX = this\.selectRowWidth\(\) - this\.selectControlWidth\(kind\) - 8;\s*return Math\.max\(0, controlX - 13\);/,
-  'the label constraint must derive from the live control position');
+  /private selectLabelWidth\(kind: string\): number \{\s*const controlX = this\.selectRowWidth\(\) - this\.selectControlWidth\(kind\) - 8;\s*return Math\.max\(0, controlX - 9\);/,
+  'the label constraint must preserve the complete Figma label while deriving from the live control position');
 assert.match(fullPanel, /return \['原文', '繁转简', '简转繁'\]/);
 assert.match(fullPanel, /return \['开启', '关闭'\]/);
 assert.doesNotMatch(fullPanel, /handleSelectRequest/,
@@ -256,9 +321,29 @@ assert.match(fullPanel, /fontId === 'import' \|\| \(isReaderAppearanceFont\(font
   'the full panel must enable both every built-in font and the Host-owned import actor');
 assert.match(fullPanel, /this\.onCustomFontImport\(\)/,
   'the Figma Import cell must invoke the custom-font Host flow');
-assert.match(fullPanel, /readerAppearanceFontFamily\(fontId\)/);
-assert.match(fullPanel, /return '霞鹜文楷'/,
-  'the bundled LXGW slot must keep the exact Figma-facing label');
+assert.match(fullPanel,
+  /\.onTouch\(\(event: TouchEvent\): void => this\.handleFontTouch\(fontId, event\)\)[\s\S]*LongPressGesture\([\s\S]*READER_FONT_REORDER_HOLD_MS/,
+  'font reordering must arm on an intentional hold while raw touch MOVE remains available for direct following');
+assert.doesNotMatch(fullPanel, /GestureMode\.Sequence/,
+  'a sequential long-press/pan group cannot hand off while the same finger remains down');
+assert.match(fullPanel,
+  /event\.type === TouchType\.Move[\s\S]*event\.stopPropagation\(\)[\s\S]*this\.updateFontDrag\([\s\S]*this\.fontTouchCurrentX - this\.fontTouchStartX/,
+  'after the hold wins, the same touch stream must drive the lifted card and stop parent scrolling');
+assert.match(fullPanel, /enableScrollInteraction\(this\.draggedFontId === '' && !this\.fontDragSettling\)/,
+  'the parent Scroll must stop moving after the reorder gesture has taken ownership');
+assert.match(fullPanel, /this\.fontDragPlaceholder\(\)/,
+  'dragging must expose an insertion target instead of leaving an unexplained hole');
+assert.match(fullPanel,
+  /this\.draggedFontHoverIndex = targetIndex;[\s\S]*this\.previewFontOrder = nextOrder/,
+  'neighbouring cards must project the hover order before persistence');
+assert.match(fullPanel, /moveReaderAppearanceFontSlot\([\s\S]*this\.onFontOrderChange\(nextOrder\)/,
+  'font order must be normalized and committed only after the drag settles');
+assert.match(fullPanel, /return this\.snapshot\.fontOrder\.slice\(\)/,
+  'the complete font library must render the persisted shared order');
+assert.match(fullPanel, /readerAppearanceFontSlotFamily\(this\.snapshot, fontId\)/);
+assert.match(fullPanel, /readerAppearanceFontSlotLabel\(this\.snapshot, fontId\)/);
+assert.match(motion, /reader\.font\.reorder\.shift', durationMs: 120, curve: Curve\.EaseOut/);
+assert.match(motion, /reader\.font\.reorder\.settle', durationMs: 160, curve: Curve\.EaseOut/);
 assert.match(fullPanel, /this\.indentOption\('单字缩进', 'single'\)/);
 assert.doesNotMatch(fullPanel, /enabled\(value !== 'single'\)/,
   'single-character indentation must be selectable');
@@ -304,6 +389,8 @@ assert.match(experience, /page === 'moduleAppearance' \|\| page === 'fullAppeara
   'conversion controls may load only when the user enters Appearance');
 assert.match(experience, /reloadCurrentChapterAfterContentProjectionChange/);
 assert.match(experience, /this\.appearanceGateway\.update\(snapshot\)/);
+assert.match(experience, /setReaderAppearanceFontOrder\(this\.appearanceSnapshot, fontOrder\)/,
+  'dragged font order must enter the existing versioned appearance persistence path');
 assert.match(experience, /this\.appearanceGateway\.registerCustomFont/);
 assert.match(experience, /setReaderAppearanceCustomFont/);
 assert.match(experience, /fontFamily: readerAppearanceSnapshotFontFamily\(this\.appearanceSnapshot\)/,

@@ -26,7 +26,7 @@ for (const family of [
   'READER_FONT_NOTO_SERIF_SC_REGULAR',
   'READER_FONT_NOTO_SANS_SC',
   'READER_FONT_LXGW_WENKAI_LITE',
-  'READER_FONT_BPMF_ZIHI_KAI_STD',
+  'READER_FONT_LXGW_WENKAI_GB_LITE',
   'READER_FONT_ZHUQUE_FANGSONG',
   'READER_FONT_SARASA_MONO_SC',
   'READER_FONT_SOURCE_HAN_SERIF',
@@ -37,7 +37,7 @@ for (const family of [
 assert.match(fonts, /from '\.\/ReaderFontFamilies\.ts'/,
   'font registration and runtime render helpers must share a TS-safe physical-family layer');
 for (const rawfile of [
-  'BpmfZihiKaiStd-Regular.ttf',
+  'LXGWWenKaiGBLite-Regular.ttf',
   'ZhuqueFangsong-Regular.ttf',
   'SarasaMonoSC-Regular.ttf',
 ]) {

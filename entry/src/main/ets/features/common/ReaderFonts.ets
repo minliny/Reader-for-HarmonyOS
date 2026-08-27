@@ -1,8 +1,8 @@
 import { Font } from '@ohos.arkui.UIContext';
 import {
-  READER_FONT_BPMF_ZIHI_KAI_STD,
   READER_FONT_INTER,
   READER_FONT_LXGW_WENKAI_LITE,
+  READER_FONT_LXGW_WENKAI_GB_LITE,
   READER_FONT_NOTO_SANS_SC,
   READER_FONT_NOTO_SERIF_SC_BOLD,
   READER_FONT_NOTO_SERIF_SC_REGULAR,
@@ -41,8 +41,8 @@ export function registerReaderFonts(font: Font): void {
     familySrc: $rawfile('LXGWWenKaiLite-Regular.ttf'),
   });
   font.registerFont({
-    familyName: READER_FONT_BPMF_ZIHI_KAI_STD,
-    familySrc: $rawfile('BpmfZihiKaiStd-Regular.ttf'),
+    familyName: READER_FONT_LXGW_WENKAI_GB_LITE,
+    familySrc: $rawfile('LXGWWenKaiGBLite-Regular.ttf'),
   });
   font.registerFont({
     familyName: READER_FONT_ZHUQUE_FANGSONG,

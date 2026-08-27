@@ -34,6 +34,8 @@ const TTS_MODULE_PLAYBACK_LABEL_WIDTH = 106;
 const TTS_MODULE_PLAYBACK_CONTROL_WIDTH = 128;
 const TTS_MODULE_RATE_LABEL_WIDTH = 72;
 const TTS_MODULE_RATE_SLIDER_WIDTH = 116;
+const TTS_MODULE_RATE_TRACK_HEIGHT = 2;
+const TTS_MODULE_RATE_THUMB_SIZE = 18;
 const TTS_MODULE_RATE_VALUE_WIDTH_PHONE = 54;
 const TTS_MODULE_RATE_VALUE_WIDTH_TABLET = 30;
 
@@ -212,8 +214,7 @@ export struct ReaderTtsModulePanel {
           .fontColor('#41484C');
         Image($r('app.media.reader_chevron_down'))
           .width(12)
-          .height(12)
-          .rotate({ angle: 180 });
+          .height(12);
       }
       .width(86)
       .height(30)
@@ -222,6 +223,9 @@ export struct ReaderTtsModulePanel {
       .backgroundColor(TOK_FIELD_SURFACE)
       .border({ width: TOK_BORDER_W, color: TOK_BORDER })
       .borderRadius(6)
+      // Figma has only the closed SelectSmall trigger (`750:1053`) and its
+      // 86×44 hit target. No expanded options/reaction exists, so the trigger
+      // remains visibly faithful but cannot invent a timer menu.
       .enabled(false)
       .accessibilityText(`朗读将在 ${this.timerMinutes} 分钟后停止`);
     }
@@ -250,31 +254,7 @@ export struct ReaderTtsModulePanel {
       .width(TTS_MODULE_RATE_LABEL_WIDTH)
       .alignItems(VerticalAlign.Center);
 
-      Slider({
-        value: this.effectiveRate(),
-        min: READER_TTS_RATE_MIN,
-        max: READER_TTS_RATE_MAX,
-        step: READER_TTS_RATE_STEP,
-        style: SliderStyle.OutSet,
-        direction: Axis.Horizontal,
-        reverse: false,
-      })
-        .layoutWeight(1)
-        .constraintSize({ maxWidth: TTS_MODULE_RATE_SLIDER_WIDTH })
-        .height(32)
-        // The source master reserves this semantic range without a visible
-        // track/thumb in the default variant.
-        .opacity(0.001)
-        .accessibilityText('调整朗读语速')
-        .onChange((value: number, mode: SliderChangeMode): void => {
-          this.ratePreview = Math.round(value * READER_TTS_RATE_STEP_SCALE) /
-            READER_TTS_RATE_STEP_SCALE;
-          if (mode === SliderChangeMode.End) {
-            const rate = this.ratePreview;
-            this.ratePreview = -1;
-            this.onRateChange(rate);
-          }
-        });
+      this.rateSlider();
 
       Text(`${this.effectiveRate().toFixed(1)}x`)
         .width(this.rateValueWidth())
@@ -293,8 +273,69 @@ export struct ReaderTtsModulePanel {
     .borderRadius(6);
   }
 
+  /** Figma `750:1056`: 116×32, 2vp rail and an 18vp exported thumb. */
+  @Builder
+  private rateSlider() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Row()
+        .width(TTS_MODULE_RATE_SLIDER_WIDTH)
+        .height(TTS_MODULE_RATE_TRACK_HEIGHT)
+        .backgroundColor(TOK_BORDER)
+        .borderRadius(999)
+        .position({ x: 0, y: 15 });
+      Row()
+        .width(this.rateFillWidth())
+        .height(TTS_MODULE_RATE_TRACK_HEIGHT)
+        .backgroundColor(TOK_READ_PRIMARY)
+        .borderRadius(999)
+        .position({ x: 0, y: 15 });
+      Image($r('app.media.reader_tts_speed_thumb'))
+        .width(TTS_MODULE_RATE_THUMB_SIZE)
+        .height(TTS_MODULE_RATE_THUMB_SIZE)
+        .position({ x: this.rateThumbX(), y: 7 });
+      Slider({
+        value: this.effectiveRate(),
+        min: READER_TTS_RATE_MIN,
+        max: READER_TTS_RATE_MAX,
+        step: READER_TTS_RATE_STEP,
+        style: SliderStyle.OutSet,
+        direction: Axis.Horizontal,
+        reverse: false,
+      })
+        .width(TTS_MODULE_RATE_SLIDER_WIDTH)
+        .height(32)
+        .opacity(0.001)
+        .responseRegion({ x: 0, y: -6, width: '100%', height: 44 })
+        .accessibilityText('调整朗读语速')
+        .onChange((value: number, mode: SliderChangeMode): void => {
+          this.ratePreview = Math.round(value * READER_TTS_RATE_STEP_SCALE) /
+            READER_TTS_RATE_STEP_SCALE;
+          if (mode === SliderChangeMode.End) {
+            const rate = this.ratePreview;
+            this.ratePreview = -1;
+            this.onRateChange(rate);
+          }
+        });
+    }
+    .width(TTS_MODULE_RATE_SLIDER_WIDTH)
+    .height(32);
+  }
+
   private effectiveRate(): number {
     return this.ratePreview >= READER_TTS_RATE_MIN ? this.ratePreview : this.state.rate;
+  }
+
+  private rateFillWidth(): number {
+    const ratio = (this.effectiveRate() - READER_TTS_RATE_MIN) /
+      (READER_TTS_RATE_MAX - READER_TTS_RATE_MIN);
+    return Math.max(0, Math.min(TTS_MODULE_RATE_SLIDER_WIDTH, ratio * TTS_MODULE_RATE_SLIDER_WIDTH));
+  }
+
+  private rateThumbX(): number {
+    return Math.max(0, Math.min(
+      TTS_MODULE_RATE_SLIDER_WIDTH - TTS_MODULE_RATE_THUMB_SIZE,
+      this.rateFillWidth() - TTS_MODULE_RATE_THUMB_SIZE / 2,
+    ));
   }
 
   private panelWidth(): number {

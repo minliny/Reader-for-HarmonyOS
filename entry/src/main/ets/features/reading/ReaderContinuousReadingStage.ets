@@ -29,7 +29,7 @@ const CONTINUOUS_TAP_SLOP = 12;
 export struct ReaderContinuousReadingStage {
   @Prop @Watch('onChapterIdentityChanged') chapterIdentity: string = '';
   @Prop chapterTitle: string = '';
-  @Prop @Watch('onContentRevisionChanged') contentRevision: number = 0;
+  @Prop contentRevision: number = 0;
   // Keep chapter content behind a callback. ArkUI V1 may retain the first
   // complex-array value passed through @Prop even while primitive props such
   // as chapterTitle update, producing a mixed new-title/old-body frame.
@@ -109,9 +109,10 @@ export struct ReaderContinuousReadingStage {
 
         // ForEach is deliberate here. ArkUI Repeat can retain the previous
         // complex item when a one-row short chapter is replaced by another
-        // one-row chapter, even with reusable:false. The revision-bearing key
-        // below recreates only this chapter's bounded fragment rows.
-        ForEach(this.fragmentsProvider(),
+        // one-row chapter, even with reusable:false. Chapter identity replaces
+        // cross-chapter rows; stable fragment ids preserve unaffected rows
+        // when an image or progress callback refreshes this same projection.
+        ForEach(this.renderFragments(),
           (fragment: ReadingSurfacePageFragment, index: number) => {
           ListItem() {
             Column() {
@@ -152,7 +153,7 @@ export struct ReaderContinuousReadingStage {
           }
           .width('100%');
         }, (fragment: ReadingSurfacePageFragment): string =>
-          `${this.chapterIdentity}:${this.contentRevision}:${fragment.id}`);
+          `${this.chapterIdentity}:${fragment.id}`);
       }
       .width('100%')
       .height('100%')
@@ -183,8 +184,13 @@ export struct ReaderContinuousReadingStage {
     }
     .width('100%')
     .height('100%')
-    .id(`${this.chapterIdentity}:${this.contentRevision}`)
     .clip(true);
+  }
+
+  private renderFragments(): ReadingSurfacePageFragment[] {
+    // Reading this scalar makes the callback-backed array reactive without
+    // encoding the revision into every row identity or remounting the List.
+    return this.contentRevision >= 0 ? this.fragmentsProvider() : [];
   }
 
   private hasTitleItem(): boolean {
@@ -273,10 +279,6 @@ export struct ReaderContinuousReadingStage {
   }
 
   private onChapterIdentityChanged(): void {
-    this.scheduleInitialScroll();
-  }
-
-  private onContentRevisionChanged(): void {
     this.scheduleInitialScroll();
   }
 

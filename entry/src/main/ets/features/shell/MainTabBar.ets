@@ -152,17 +152,17 @@ export struct MainTabBar {
     });
   }
 
-  // 镜像 canonical Navigation/MainTabItem 语义: 选中态用 Filled(白 #FFFAF4),
-  // 未选中用 outline(灰 #756F69)。修复书架 tab 未选中时白图标"丢失"。
+  // Final Phone/Tablet 页面在选中态仍使用同一套 Tabler outline glyph，
+  // 只由资源颜色和深色胶囊表达状态；不要切换成本地 filled 轮廓。
   private tabIconResource(key: string, active: boolean): string {
     if (key === 'bookshelf') {
-      return active ? 'bookshelf_library_filled' : 'bookshelf_library_outline';
+      return active ? 'bookshelf_library_active' : 'bookshelf_library_outline';
     } else if (key === 'discover') {
-      return active ? 'bookshelf_compass_filled' : 'bookshelf_compass_outline';
+      return active ? 'bookshelf_compass_active' : 'bookshelf_compass_outline';
     } else if (key === 'rss') {
-      return active ? 'bookshelf_rss_filled' : 'bookshelf_rss_outline';
+      return active ? 'bookshelf_rss_active' : 'bookshelf_rss_outline';
     }
-    return active ? 'bookshelf_settings_filled' : 'bookshelf_settings_outline';
+    return active ? 'bookshelf_settings_active' : 'bookshelf_settings_outline';
   }
 
   @Builder

@@ -31,5 +31,8 @@ assert.match(index,
 assert.match(index,
   /readerOwnsWindowEdges\(\): boolean \{[\s\S]*this\.readingSessionActive && \(this\.route === 'reading' \|\| this\.route === 'directory'\)/,
   'a hidden reader warming behind Detail must not remove the Detail safe top');
+assert.match(experience,
+  /applyWindowPolicyForChromeOwner\(\)[\s\S]*?if \(this\.windowChromeActive\)[\s\S]*?applyReaderWindowPolicy[\s\S]*?requestAppWindowPolicy/,
+  'a hidden reader warming behind Detail must not hide the app status bar');
 
 console.log('reader window chrome P0 contract: PASS');

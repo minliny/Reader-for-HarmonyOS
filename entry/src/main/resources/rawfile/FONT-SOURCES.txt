@@ -18,12 +18,11 @@ Source: https://github.com/lxgw/LxgwWenKai-Lite/releases/tag/v1.522
 File SHA-256: 140c99ba4e28e817cec49bf82a0c5fcdc4fe633fb9dfda16d0ee8d59a8545f15
 License: LXGWWenKaiLite-OFL.txt
 
-Bpmf Zihi Kai Std Regular 1.501
-Source: https://github.com/ButTaiwan/bpmfvs/releases/tag/v1.500
-Release archive SHA-256: 728723239116c2a2f44fee3ef7137f3f8537a19a6f707c823d0345c5a1d234af
-File SHA-256: b5de180c456840edc57d07256d7d167a95306c81ab1936677c4706491a9e7d37
-Licenses: BpmfZihiKaiStd-LICENSE.txt, BpmfZihiKaiStd-APACHE-2.0.txt
-Notice: BpmfZihiKaiStd-NOTICE.txt
+LXGW WenKai GB Lite Regular 1.522
+Source: https://github.com/lxgw/LxgwWenKaiGB-Lite/releases/tag/v1.522
+File SHA-256: 1675c708cce181871d9a8adc987f35a0cabc6ff980685cd99f05d2655ea08c4c
+License: LXGWWenKaiGBLite-OFL.txt
+Purpose: Simplified-Chinese Kai slot; replaces the former zh-TW-only glyph binding.
 
 Zhuque Fangsong Regular 0.212
 Source: https://github.com/TrionesType/zhuque/releases/tag/v0.212

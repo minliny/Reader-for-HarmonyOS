@@ -449,6 +449,7 @@ struct Index {
           onSettingsRequested: (): void => this.openSettings(),
           onDiscoverRequested: (): void => this.openDiscover(),
           onManageRequested: (): void => this.openBookshelfManagement(),
+          onBookshelfSettingsRequested: (): void => this.openSettings(),
           onBatchManageRequested: (): void => this.openBookshelfMultiSelect(),
           onBookSelected: (book: ShelfBook): void => this.openShelfBook(book),
           onBookMultiSelectRequested: (book: ShelfBook): void => this.openBookshelfMultiSelect(book),
@@ -498,6 +499,7 @@ struct Index {
           onRssRequested: (): void => this.openRss(),
           onSettingsRequested: (): void => this.openSettings(),
           onDiscoverRequested: (): void => this.openDiscover(),
+          onBookshelfSettingsRequested: (): void => this.openSettings(),
           onBatchManageRequested: (): void => this.openBookshelfMultiSelect(),
         });
       } else if (this.route === 'search') {

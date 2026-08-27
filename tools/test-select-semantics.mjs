@@ -41,6 +41,8 @@ assert.doesNotMatch(sync, /this\.autoRow\('备份范围'/);
 assert.doesNotMatch(sync, /this\.openSelect === 'scope'/);
 assert.doesNotMatch(sync, /this\.openSelect === 'location'|this\.openSelect === 'frequency'/,
   'disabled automatic-backup rows must not retain selectable state');
+assert.match(sync, /private scopeRow[\s\S]*?TextAlign\.Start[\s\S]*?app\.media\.reader_chevron_down/,
+  'the disabled multi-select trigger must retain the shared left-aligned field presentation');
 assert.match(sync, /this\.gatedRow\('保存位置'/);
 assert.match(sync, /this\.gatedRow\('备份频率'/);
 
@@ -64,8 +66,15 @@ assert.match(select,
 assert.match(select,
   /private sourceGroupTrigger[\s\S]*?TYPE_SELECT_SOURCE_GROUP_VALUE\.fontFamily[\s\S]*?TYPE_SELECT_SOURCE_GROUP_VALUE\.fontSizeFp[\s\S]*?\.backgroundColor\('#FFFCF8'\)[\s\S]*?\.borderRadius\(8\)/,
   'SourceManagement/GroupFilter must not inherit the generic Reader select styling');
-assert.match(select, /TOK_SURFACE_FIELD[\s\S]*'#C1C7CD'[\s\S]*responseRegion\(\{ x: 0, y: -4, width: '100%', height: 44 \}\)/,
-  'the final Reader Appearance dropdown must keep its Figma surface, border, and hit target');
+assert.match(select,
+  /private appearanceTrigger[\s\S]*?Text\(this\.value\)[\s\S]*?TYPE_SELECT_APPEARANCE_VALUE\.fontFamily[\s\S]*?app\.media\.reader_chevron_down[\s\S]*?TOK_SURFACE_FIELD[\s\S]*?'#C1C7CD'[\s\S]*?responseRegion\(\{ x: 0, y: -4, width: '100%', height: 44 \}\)/,
+  'the Reader Appearance trigger must render its selected value, chevron, field, border, and 44vp hit target');
+assert.doesNotMatch(select,
+  /appearancePortGradient|linearGradient\(\{[\s\S]*?Color\.Transparent[\s\S]*?'#41484C'/,
+  'a chevron artwork layer must not be stretched into a hard-stop gradient across the whole trigger');
+assert.match(select,
+  /private defaultTrigger[\s\S]*?TextAlign\.Start[\s\S]*?TOK_SURFACE_PANEL_SOFT[\s\S]*?TOK_BORDER/,
+  'the unified selected row must remain left-aligned on its authored selected surface');
 assert.match(motion,
   /id: 'dropdown\.menu\.expand', durationMs: 160, curve: curves\.cubicBezierCurve\(0\.16, 1, 0\.3, 1\)/,
   'the shared registry must preserve the Figma production duration and easing');

@@ -2,10 +2,14 @@ import { registerReaderFonts } from '../common/ReaderFonts';
 import { ReaderSelect } from '../common/ReaderSelect';
 import { ReaderSelectPanel } from '../common/ReaderSelectPanel';
 import {
+  TOK_BORDER,
   TOK_BORDER_W,
   TOK_LINE,
   TOK_LINE_STRONG,
+  TOK_PRIMARY_SOFT,
   TOK_READ_ACTIVE_SOFT,
+  TOK_READ_BODY_INK,
+  TOK_READ_DISABLED_BG,
   TOK_READ_ELEVATED,
   TOK_READ_HANDLE,
   TOK_READ_INK,
@@ -15,23 +19,28 @@ import {
   TOK_SURFACE_PANEL,
   TOK_SURFACE_PANEL_SOFT,
   TOK_SURFACE_FIELD,
-  TOK_SURFACE_SOLID,
 } from '../common/ReaderTokens';
 import {
   createDefaultReaderAppearanceSnapshot,
   isReaderAppearanceFont,
+  moveReaderAppearanceFontSlot,
   readerAppearanceCanStep,
   type ReaderAppearanceAlignment,
   type ReaderAppearanceFont,
+  type ReaderAppearanceFontSlot,
   type ReaderAppearanceIndent,
   type ReaderAppearanceMetric,
   type ReaderAppearanceSnapshot,
   type ReaderAppearanceStepDirection,
   type ReaderAppearanceTheme,
 } from './ReaderAppearanceState';
-import { readerAppearanceFontFamily } from './ReaderAppearanceRenderStyle';
+import {
+  readerAppearanceFontSlotFamily,
+  readerAppearanceFontSlotLabel,
+} from './ReaderAppearanceRenderStyle';
 import type { ReaderChineseConversionMode } from './ReaderChineseConversionGateway';
 import type { ReaderPageTurnStyle } from './ReaderSettingsState';
+import { motionAnimateParam } from '../common/MotionSpec';
 import {
   READER_FULL_PANEL_HEIGHT_TABLET,
   READER_FULL_PANEL_MAX_WIDTH_PHONE,
@@ -39,6 +48,8 @@ import {
 } from './ReaderLayoutGeometry';
 
 const READER_APPEARANCE_FULL_PANEL_HEIGHT_PHONE = 840;
+const READER_FONT_REORDER_HOLD_MS = 160;
+const READER_FONT_REORDER_ROW_STRIDE = 44;
 
 /**
  * Figma Reader Full Appearance sheet: Phone `942:82`, Tablet `942:84`.
@@ -62,6 +73,8 @@ export struct ReaderAppearanceFullPanel {
   onSetDayTheme: (theme: ReaderAppearanceTheme) => void = (_theme: ReaderAppearanceTheme): void => {};
   onSetNightTheme: (theme: ReaderAppearanceTheme) => void = (_theme: ReaderAppearanceTheme): void => {};
   onFontChange: (font: ReaderAppearanceFont) => void = (_font: ReaderAppearanceFont): void => {};
+  onFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]) => void =
+    (_fontOrder: ReaderAppearanceFontSlot[]): void => {};
   onCustomFontImport: () => void = (): void => {};
   onIndentRequest: (indent: ReaderAppearanceIndent) => void = (_indent: ReaderAppearanceIndent): void => {};
   onAlignmentRequest: (current: ReaderAppearanceAlignment) => void =
@@ -78,6 +91,19 @@ export struct ReaderAppearanceFullPanel {
   @State private selectAnchorY: number = 0;
   @State private panelOriginX: number = 0;
   @State private panelOriginY: number = 0;
+  @State private draggedFontId: string = '';
+  @State private draggedFontIndex: number = -1;
+  @State private draggedFontHoverIndex: number = -1;
+  @State private draggedFontOffsetX: number = 0;
+  @State private draggedFontOffsetY: number = 0;
+  @State private previewFontOrder: ReaderAppearanceFontSlot[] = [];
+  @State private fontDragSettling: boolean = false;
+  private fontDragGeneration: number = 0;
+  private fontTouchStartX: number = 0;
+  private fontTouchStartY: number = 0;
+  private fontTouchCurrentX: number = 0;
+  private fontTouchCurrentY: number = 0;
+  private fontTouchId: number = -1;
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -112,11 +138,15 @@ export struct ReaderAppearanceFullPanel {
         .height(this.contentHeight());
       }
       .width(this.viewportWidth())
-      .height(this.viewportHeight())
+      .height(this.scrollViewportHeight())
       .scrollBar(BarState.Off)
+      .enableScrollInteraction(this.draggedFontId === '' && !this.fontDragSettling)
       .onScrollStart((): void => {
         this.openSelect = '';
         this.selectClosing = false;
+        if (this.draggedFontId !== '' && !this.fontDragSettling) {
+          this.cancelFontDrag();
+        }
       })
       .position({ x: 13, y: 57 });
 
@@ -137,7 +167,7 @@ export struct ReaderAppearanceFullPanel {
   @Builder
   private header() {
     Row() {
-      Image($r('app.media.rc_palette'))
+      Image($r('app.media.reader_appearance_header'))
         .width(20)
         .height(20);
       Text('界面')
@@ -181,7 +211,7 @@ export struct ReaderAppearanceFullPanel {
         .fontColor(TOK_READ_INK)
         .position({ x: 2, y: 11 });
       Text(this.themeSummary())
-        .width(109)
+        .width(122)
         .height(20)
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Medium)
@@ -190,7 +220,7 @@ export struct ReaderAppearanceFullPanel {
         .fontColor(TOK_READ_MUTED)
         .textAlign(TextAlign.End)
         .maxLines(1)
-        .position({ x: this.sectionInnerWidth() - 107, y: 13 });
+        .position({ x: this.sectionInnerWidth() - 120, y: 13 });
 
       ForEach(this.themeIds(), (theme: ReaderAppearanceTheme, index: number) => {
         this.fullThemeCard(theme, index);
@@ -217,10 +247,7 @@ export struct ReaderAppearanceFullPanel {
         .width(this.fullCardWidth() - 10)
         .height(24)
         .backgroundColor(this.themeColor(theme))
-        .border({
-          width: this.snapshot.activeTheme === theme ? 2 : TOK_BORDER_W,
-          color: this.snapshot.activeTheme === theme ? TOK_READ_PRIMARY : TOK_LINE_STRONG,
-        })
+        .border({ width: TOK_BORDER_W, color: '#1F5B5046' })
         .borderRadius(6)
         .position({ x: 5, y: 10 });
       Text(this.themeLabel(theme))
@@ -237,11 +264,8 @@ export struct ReaderAppearanceFullPanel {
     }
     .width(this.fullCardWidth())
     .height(58.8)
-    .backgroundColor(this.snapshot.activeTheme === theme ? TOK_READ_ACTIVE_SOFT : TOK_SURFACE_PANEL_SOFT)
-    .border({
-      width: this.snapshot.activeTheme === theme ? TOK_BORDER_W : 0,
-      color: TOK_READ_PRIMARY,
-    })
+    .backgroundColor(this.snapshot.activeTheme === theme ? TOK_READ_ACTIVE_SOFT : TOK_READ_DISABLED_BG)
+    .opacity(this.snapshot.activeTheme === theme ? 1 : 0.8)
     .borderRadius(8)
     .position({
       x: 2 + (index % 4) * this.fullCardStride(),
@@ -298,9 +322,12 @@ export struct ReaderAppearanceFullPanel {
         .position({ x: this.sectionWidth() - 72, y: 11 });
 
       Stack({ alignContent: Alignment.TopStart }) {
-        ForEach(this.fullFontIds(), (fontId: string, index: number) => {
-          this.fullFontCell(fontId, index);
-        }, (fontId: string): string => `reader-appearance-full-font-${fontId}`);
+        if (this.draggedFontId !== '') {
+          this.fontDragPlaceholder();
+        }
+        ForEach(this.fullFontIds(), (fontId: ReaderAppearanceFontSlot) => {
+          this.fullFontCell(fontId);
+        }, (fontId: ReaderAppearanceFontSlot): string => `reader-appearance-full-font-${fontId}`);
       }
       .width(this.sectionInnerWidth())
       .height(126)
@@ -313,36 +340,81 @@ export struct ReaderAppearanceFullPanel {
   }
 
   @Builder
-  private fullFontCell(fontId: string, index: number) {
-    Text(this.fontLabel(fontId))
+  private fontDragPlaceholder() {
+    Row()
       .width(this.fullCardWidth())
       .height(38)
-      .backgroundColor(this.isActiveFont(fontId) ? TOK_READ_ACTIVE_SOFT :
-        (fontId === 'import' ? Color.Transparent : TOK_SURFACE_SOLID))
+      .backgroundColor(TOK_READ_ACTIVE_SOFT)
+      .border({ width: TOK_BORDER_W, color: TOK_READ_PRIMARY, style: BorderStyle.Dashed })
+      .borderRadius(6)
+      .opacity(0.58)
+      .position({
+        x: this.fontSlotX(this.draggedFontHoverIndex),
+        y: this.fontSlotY(this.draggedFontHoverIndex),
+      })
+      .zIndex(0);
+  }
+
+  @Builder
+  private fullFontCell(fontId: ReaderAppearanceFontSlot) {
+    Text(readerAppearanceFontSlotLabel(this.snapshot, fontId))
+      .width(this.fullCardWidth())
+      .height(38)
+      .backgroundColor(this.isActiveFont(fontId) ? TOK_PRIMARY_SOFT : Color.Transparent)
       .border({
         width: TOK_BORDER_W,
-        color: this.isActiveFont(fontId) ? TOK_READ_PRIMARY :
-          (fontId === 'import' ? '#808C8073' : TOK_LINE_STRONG),
+        color: this.isActiveFont(fontId) ? TOK_READ_PRIMARY : TOK_LINE,
         style: fontId === 'import' ? BorderStyle.Dashed : BorderStyle.Solid,
       })
       .borderRadius(6)
-      .fontFamily(this.fontCellFamily(fontId))
+      .fontFamily(readerAppearanceFontSlotFamily(this.snapshot, fontId))
       .fontWeight(FontWeight.Regular)
       .fontSize(10)
-      .fontColor(fontId === 'import' ? '#736659' : TOK_READ_INK)
+      .fontColor(TOK_READ_INK)
       .textAlign(TextAlign.Center)
       .maxLines(1)
-      .position({ x: (index % 4) * this.fullCardStride(), y: Math.floor(index / 4) * 44 })
+      .textOverflow({ overflow: TextOverflow.Ellipsis })
+      .position({
+        x: this.fontSlotX(this.fontDisplayIndex(fontId)),
+        y: this.fontSlotY(this.fontDisplayIndex(fontId)),
+      })
+      .translate({
+        x: this.fontDragTranslateX(fontId),
+        y: this.fontDragTranslateY(fontId),
+      })
+      .scale({
+        x: this.draggedFontId === fontId ? 1.035 : 1,
+        y: this.draggedFontId === fontId ? 1.035 : 1,
+      })
+      .shadow(this.draggedFontId === fontId ?
+        { radius: 12, color: '#2B332C25', offsetX: 0, offsetY: 5 } :
+        { radius: 0, color: Color.Transparent, offsetX: 0, offsetY: 0 })
+      .opacity(this.draggedFontId === fontId ? 0.96 : 1)
+      .zIndex(this.draggedFontId === fontId ? 3 : 1)
       .enabled(this.isSelectableFont(fontId))
-      .accessibilityText(this.isSelectableFont(fontId) ? `切换到${this.fontLabel(fontId)}` :
-        `${this.fontLabel(fontId)}，暂不可用`)
+      .accessibilityText(this.isSelectableFont(fontId) ?
+        `切换到${readerAppearanceFontSlotLabel(this.snapshot, fontId)}` :
+        `${readerAppearanceFontSlotLabel(this.snapshot, fontId)}，暂不可用`)
       .onClick((): void => {
+        if (this.draggedFontId !== '' || this.fontDragSettling) {
+          return;
+        }
         if (fontId === 'import') {
           this.onCustomFontImport();
         } else if (isReaderAppearanceFont(fontId)) {
           this.onFontChange(fontId);
         }
-      });
+      })
+      .onTouch((event: TouchEvent): void => this.handleFontTouch(fontId, event))
+      .gesture(
+        LongPressGesture({ fingers: 1, repeat: false, duration: READER_FONT_REORDER_HOLD_MS })
+          .onAction((): void => this.beginFontDrag(fontId))
+          .onActionCancel((): void => {
+            if (this.draggedFontId === fontId) {
+              this.cancelFontDrag();
+            }
+          }),
+      );
   }
 
   @Builder
@@ -358,15 +430,15 @@ export struct ReaderAppearanceFullPanel {
         .fontColor(TOK_READ_INK)
         .position({ x: 2, y: 11 });
       Text('即时应用')
-        .width(140)
-        .height(20)
+        .width(70)
+        .height(14)
         .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(9)
-        .lineHeight(13)
+        .fontWeight(FontWeight.Medium)
+        .fontSize(10)
+        .lineHeight(14)
         .fontColor(TOK_READ_MUTED)
         .textAlign(TextAlign.End)
-        .position({ x: this.sectionWidth() - 56, y: 13 });
+        .position({ x: this.sectionInnerWidth() - 70, y: 13 });
 
       Stack({ alignContent: Alignment.TopStart }) {
         this.indentRow();
@@ -386,8 +458,6 @@ export struct ReaderAppearanceFullPanel {
       }
       .width(this.stepperPanelWidth())
       .height(140)
-      .backgroundColor(TOK_SURFACE_PANEL)
-      .border({ width: TOK_BORDER_W, color: TOK_LINE })
       .borderRadius(8)
       .position({ x: 2, y: 228 });
     }
@@ -406,8 +476,16 @@ export struct ReaderAppearanceFullPanel {
         .fontWeight(FontWeight.Bold)
         .fontSize(10)
         .lineHeight(14)
-        .fontColor(TOK_READ_INK)
+        .fontColor(TOK_READ_BODY_INK)
         .position({ x: 9, y: 15 });
+
+      Row()
+        .width(200)
+        .height(36)
+        .backgroundColor(TOK_SURFACE_FIELD)
+        .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+        .borderRadius(6)
+        .position({ x: this.indentRowWidth() - 209, y: 4 });
 
       Row() {
         this.indentOption('不缩进', 'none');
@@ -417,8 +495,6 @@ export struct ReaderAppearanceFullPanel {
       .width(200)
       .height(36)
       .padding({ top: 6, bottom: 6 })
-      .backgroundColor(TOK_SURFACE_PANEL_SOFT)
-      .border({ width: TOK_BORDER_W, color: TOK_LINE })
       .borderRadius(6)
       .position({ x: this.indentRowWidth() - 209, y: 4 });
     }
@@ -458,7 +534,7 @@ export struct ReaderAppearanceFullPanel {
         .fontWeight(FontWeight.Bold)
         .fontSize(10)
         .lineHeight(14)
-        .fontColor(TOK_READ_INK)
+        .fontColor(TOK_READ_BODY_INK)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .position({ x: 9, y: 14 });
@@ -569,12 +645,12 @@ export struct ReaderAppearanceFullPanel {
   private stepperRow(metric: ReaderAppearanceMetric, index: number) {
     Stack({ alignContent: Alignment.TopStart }) {
       Text(this.metricLabel(metric))
-        .height(14)
+        .height(16)
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Medium)
-        .fontSize(10)
-        .lineHeight(14)
-        .fontColor(TOK_READ_INK)
+        .fontSize(11)
+        .lineHeight(16)
+        .fontColor(TOK_READ_BODY_INK)
         .position({ x: 8, y: index === 0 ? 9 : 9.5 });
 
       Row({ space: 4 }) {
@@ -636,7 +712,7 @@ export struct ReaderAppearanceFullPanel {
   private sheetHeight(): number {
     const designHeight = this.isTablet ? READER_FULL_PANEL_HEIGHT_TABLET :
       READER_APPEARANCE_FULL_PANEL_HEIGHT_PHONE;
-    return this.availableHeight > 0 ? Math.min(designHeight, this.availableHeight) : designHeight;
+    return designHeight;
   }
 
   private headerWidth(): number {
@@ -649,6 +725,13 @@ export struct ReaderAppearanceFullPanel {
 
   private viewportHeight(): number {
     return Math.max(0, this.sheetHeight() - 68);
+  }
+
+  private scrollViewportHeight(): number {
+    if (this.availableHeight <= 0) {
+      return this.viewportHeight();
+    }
+    return Math.max(0, Math.min(this.viewportHeight(), this.availableHeight - 68));
   }
 
   private contentHeight(): number {
@@ -700,8 +783,228 @@ export struct ReaderAppearanceFullPanel {
     return ['day', 'warm', 'night', 'warmNight', 'paper', 'green', 'paperNight', 'greenNight'];
   }
 
-  private fullFontIds(): string[] {
-    return ['system', 'serif', 'sans', 'kai', 'fangSong', 'mono', 'sourceHanSerif', 'lxgwWenKai', 'import'];
+  private fullFontIds(): ReaderAppearanceFontSlot[] {
+    if (this.draggedFontId !== '' && this.previewFontOrder.length === this.snapshot.fontOrder.length) {
+      return this.previewFontOrder.slice();
+    }
+    return this.snapshot.fontOrder.slice();
+  }
+
+  private beginFontDrag(fontId: ReaderAppearanceFontSlot): void {
+    if (this.fontDragSettling) {
+      return;
+    }
+    const index = this.snapshot.fontOrder.indexOf(fontId);
+    if (index < 0) {
+      return;
+    }
+    this.fontDragGeneration += 1;
+    const applyLift = (): void => {
+      this.draggedFontId = fontId;
+      this.draggedFontIndex = index;
+      this.draggedFontHoverIndex = index;
+      this.draggedFontOffsetX = 0;
+      this.draggedFontOffsetY = 0;
+      this.previewFontOrder = this.snapshot.fontOrder.slice();
+      this.fontDragSettling = false;
+    };
+    if (this.reduceMotion) {
+      applyLift();
+      return;
+    }
+    this.getUIContext().animateTo(motionAnimateParam('reader.font.reorder.shift'), applyLift);
+  }
+
+  private handleFontTouch(fontId: ReaderAppearanceFontSlot, event: TouchEvent): void {
+    const touch = event.touches.length > 0 ? event.touches[0] : event.changedTouches[0];
+    if (touch === undefined) {
+      return;
+    }
+    if (event.type === TouchType.Down) {
+      this.fontTouchId = touch.id;
+      this.fontTouchStartX = touch.windowX;
+      this.fontTouchStartY = touch.windowY;
+      this.fontTouchCurrentX = touch.windowX;
+      this.fontTouchCurrentY = touch.windowY;
+      return;
+    }
+    if (this.fontTouchId >= 0 && touch.id !== this.fontTouchId) {
+      return;
+    }
+    this.fontTouchCurrentX = touch.windowX;
+    this.fontTouchCurrentY = touch.windowY;
+    if (event.type === TouchType.Move) {
+      if (this.draggedFontId === fontId && !this.fontDragSettling) {
+        event.stopPropagation();
+        this.updateFontDrag(
+          this.fontTouchCurrentX - this.fontTouchStartX,
+          this.fontTouchCurrentY - this.fontTouchStartY,
+        );
+      }
+      return;
+    }
+    if (event.type === TouchType.Up) {
+      if (this.draggedFontId === fontId && !this.fontDragSettling) {
+        event.stopPropagation();
+        this.finishFontDrag(
+          this.fontTouchCurrentX - this.fontTouchStartX,
+          this.fontTouchCurrentY - this.fontTouchStartY,
+        );
+      }
+      this.clearFontTouchState();
+      return;
+    }
+    if (event.type === TouchType.Cancel) {
+      if (this.draggedFontId === fontId && !this.fontDragSettling) {
+        this.cancelFontDrag();
+      }
+      this.clearFontTouchState();
+    }
+  }
+
+  private updateFontDrag(offsetX: number, offsetY: number): void {
+    if (this.draggedFontIndex < 0 || this.fontDragSettling) {
+      return;
+    }
+    this.draggedFontOffsetX = offsetX;
+    this.draggedFontOffsetY = offsetY;
+    const targetIndex = this.fontDragTargetIndex(offsetX, offsetY);
+    if (targetIndex === this.draggedFontHoverIndex) {
+      return;
+    }
+    const nextOrder = moveReaderAppearanceFontSlot(
+      this.snapshot.fontOrder,
+      this.draggedFontIndex,
+      targetIndex,
+    );
+    const applyPreview = (): void => {
+      this.draggedFontHoverIndex = targetIndex;
+      this.previewFontOrder = nextOrder;
+    };
+    if (this.reduceMotion) {
+      applyPreview();
+      return;
+    }
+    this.getUIContext().animateTo(motionAnimateParam('reader.font.reorder.shift'), applyPreview);
+  }
+
+  private finishFontDrag(offsetX: number, offsetY: number): void {
+    if (this.draggedFontIndex < 0 || this.fontDragSettling) {
+      this.cancelFontDrag();
+      return;
+    }
+    this.updateFontDrag(offsetX, offsetY);
+    const targetIndex = this.draggedFontHoverIndex;
+    const nextOrder = this.previewFontOrder.slice();
+    const changed = nextOrder.some((fontId: ReaderAppearanceFontSlot, index: number): boolean =>
+      fontId !== this.snapshot.fontOrder[index]);
+    const generation = this.fontDragGeneration;
+    const targetOffsetX = this.fontSlotX(targetIndex) - this.fontSlotX(this.draggedFontIndex);
+    const targetOffsetY = this.fontSlotY(targetIndex) - this.fontSlotY(this.draggedFontIndex);
+    this.fontDragSettling = true;
+    const finish = (): void => {
+      if (generation !== this.fontDragGeneration) {
+        return;
+      }
+      if (changed) {
+        this.onFontOrderChange(nextOrder);
+      }
+      this.clearFontDragState();
+    };
+    const settle = (): void => {
+      this.draggedFontOffsetX = targetOffsetX;
+      this.draggedFontOffsetY = targetOffsetY;
+    };
+    if (this.reduceMotion) {
+      settle();
+      finish();
+      return;
+    }
+    this.getUIContext().animateTo(motionAnimateParam('reader.font.reorder.settle', finish), settle);
+  }
+
+  private cancelFontDrag(): void {
+    if (this.draggedFontIndex < 0 || this.fontDragSettling) {
+      return;
+    }
+    this.fontDragGeneration += 1;
+    const generation = this.fontDragGeneration;
+    this.fontDragSettling = true;
+    const rollback = (): void => {
+      this.draggedFontHoverIndex = this.draggedFontIndex;
+      this.previewFontOrder = this.snapshot.fontOrder.slice();
+      this.draggedFontOffsetX = 0;
+      this.draggedFontOffsetY = 0;
+    };
+    const finish = (): void => {
+      if (generation === this.fontDragGeneration) {
+        this.clearFontDragState();
+      }
+    };
+    if (this.reduceMotion) {
+      rollback();
+      finish();
+      return;
+    }
+    this.getUIContext().animateTo(motionAnimateParam('reader.font.reorder.settle', finish), rollback);
+  }
+
+  private clearFontDragState(): void {
+    this.draggedFontId = '';
+    this.draggedFontIndex = -1;
+    this.draggedFontHoverIndex = -1;
+    this.draggedFontOffsetX = 0;
+    this.draggedFontOffsetY = 0;
+    this.previewFontOrder = [];
+    this.fontDragSettling = false;
+    this.clearFontTouchState();
+  }
+
+  private clearFontTouchState(): void {
+    this.fontTouchId = -1;
+    this.fontTouchStartX = 0;
+    this.fontTouchStartY = 0;
+    this.fontTouchCurrentX = 0;
+    this.fontTouchCurrentY = 0;
+  }
+
+  private fontDisplayIndex(fontId: ReaderAppearanceFontSlot): number {
+    const index = this.fullFontIds().indexOf(fontId);
+    return index >= 0 ? index : 0;
+  }
+
+  private fontSlotX(index: number): number {
+    return Math.max(0, index % 4) * this.fullCardStride();
+  }
+
+  private fontSlotY(index: number): number {
+    return Math.max(0, Math.floor(index / 4)) * READER_FONT_REORDER_ROW_STRIDE;
+  }
+
+  private fontDragTranslateX(fontId: ReaderAppearanceFontSlot): number {
+    if (this.draggedFontId !== fontId) {
+      return 0;
+    }
+    return this.draggedFontOffsetX + this.fontSlotX(this.draggedFontIndex) -
+      this.fontSlotX(this.fontDisplayIndex(fontId));
+  }
+
+  private fontDragTranslateY(fontId: ReaderAppearanceFontSlot): number {
+    if (this.draggedFontId !== fontId) {
+      return 0;
+    }
+    return this.draggedFontOffsetY + this.fontSlotY(this.draggedFontIndex) -
+      this.fontSlotY(this.fontDisplayIndex(fontId));
+  }
+
+  private fontDragTargetIndex(offsetX: number, offsetY: number): number {
+    const originColumn = this.draggedFontIndex % 4;
+    const originRow = Math.floor(this.draggedFontIndex / 4);
+    const centerX = originColumn * this.fullCardStride() + this.fullCardWidth() / 2 + offsetX;
+    const centerY = originRow * READER_FONT_REORDER_ROW_STRIDE + 19 + offsetY;
+    const column = Math.max(0, Math.min(3, Math.floor(centerX / this.fullCardStride())));
+    const row = Math.max(0, Math.min(2, Math.floor(centerY / READER_FONT_REORDER_ROW_STRIDE)));
+    return Math.max(0, Math.min(this.snapshot.fontOrder.length - 1, row * 4 + column));
   }
 
   private isActiveFont(fontId: string): boolean {
@@ -710,13 +1013,6 @@ export struct ReaderAppearanceFullPanel {
 
   private isSelectableFont(fontId: string): boolean {
     return fontId === 'import' || (isReaderAppearanceFont(fontId) && fontId !== 'custom');
-  }
-
-  private fontCellFamily(fontId: string): string {
-    if (fontId === 'import' && this.snapshot.customFont !== undefined) {
-      return this.snapshot.customFont.familyName;
-    }
-    return isReaderAppearanceFont(fontId) ? readerAppearanceFontFamily(fontId) : 'ReaderNotoSansSC';
   }
 
   private selectEnabled(kind: string): boolean {
@@ -734,12 +1030,13 @@ export struct ReaderAppearanceFullPanel {
   }
 
   private selectControlWidth(kind: string): number {
-    return 56;
+    const narrowDelta = Math.max(0, READER_FULL_PANEL_MAX_WIDTH_PHONE - this.sheetWidth());
+    return Math.max(52, 56 - narrowDelta / 3);
   }
 
   private selectLabelWidth(kind: string): number {
     const controlX = this.selectRowWidth() - this.selectControlWidth(kind) - 8;
-    return Math.max(0, controlX - 13);
+    return Math.max(0, controlX - 9);
   }
 
   private applySelectValue(kind: string, option: string): void {
@@ -892,34 +1189,4 @@ export struct ReaderAppearanceFullPanel {
     return '#263129';
   }
 
-  private fontLabel(fontId: string): string {
-    if (fontId === 'system') {
-      return '系统';
-    }
-    if (fontId === 'serif') {
-      return '宋体';
-    }
-    if (fontId === 'sans') {
-      return '黑体';
-    }
-    if (fontId === 'kai') {
-      return '楷体';
-    }
-    if (fontId === 'fangSong') {
-      return '仿宋';
-    }
-    if (fontId === 'mono') {
-      return '等宽';
-    }
-    if (fontId === 'sourceHanSerif') {
-      return '思源宋体';
-    }
-    if (fontId === 'lxgwWenKai') {
-      return '霞鹜文楷';
-    }
-    if (fontId === 'import' && this.snapshot.customFont !== undefined) {
-      return this.snapshot.customFont.displayName;
-    }
-    return '导入';
-  }
 }

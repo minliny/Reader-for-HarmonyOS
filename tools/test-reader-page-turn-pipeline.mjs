@@ -67,11 +67,15 @@ contract('adjacent preparation stops before the normal Core commit', () => {
 
 contract('prepared slide waits for both animation and durable progress before promotion', () => {
   const start = methodSection(localReading, 'startPreparedPageTurnSettlement');
+  const animate = methodSection(localReading, 'animatePreparedPageTurnSlide');
   const persist = methodSection(localReading, 'persistPreparedPageTurn');
   const finish = methodSection(localReading, 'finishPreparedPageTurnSettlement');
   const promote = methodSection(localReading, 'promotePreparedPageTurn');
 
-  assert.match(start, /animateTo\(/, 'slide settlement must start the viewport animation');
+  assert.match(start, /this\.animatePreparedPageTurnSlide\(targetOffset, settlementGeneration\)/,
+    'slide settlement must enter the shared viewport animation');
+  assert.match(animate, /animateTo\([\s\S]*this\.pageTurnOffsetX = targetOffset/,
+    'the shared slide path must animate the live page offset');
   assert.match(start, /this\.persistPreparedPageTurn\(prepared, lifecycleToken, settlementGeneration\)/,
     'slide settlement must start the durable progress transaction');
   assert.doesNotMatch(start, /promotePreparedPageTurn|this\.visiblePage\s*=/,
@@ -130,7 +134,8 @@ contract('manual, gesture, and auto page turns converge before choosing slide or
   assert.match(perform, /this\.turnPreviousPage\(\)[\s\S]*this\.turnNextPage\(\)/,
     'none mode and cold-cache taps retain the existing committed pagination fallback');
 
-  assert.match(interaction, /onTurn: \(direction: ReaderPageTurnDirection\) => ReaderPageTurnOutcome/);
+  assert.match(interaction,
+    /onTurn: \(direction: ReaderPageTurnDirection, originX\?: number, originY\?: number\) => ReaderPageTurnOutcome/);
   assert.match(interaction, /this\.onTurn\(decision\.direction\)/,
     'a committed pan must use the same onTurn command as a tap');
 });

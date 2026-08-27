@@ -1,47 +1,9 @@
-BpmfZihiKaiStd-Regular.ttf	字嗨注音標楷
-Copyright 2020 But Ko, with Reserved Font Name '字嗨' and 'Zihi'.
-
-	https://github.com/ButTaiwan/bpmfvs
-
-漢字部分 Licensed under CC-by 4.0
-	https://creativecommons.org/licenses/by/4.0/deed.zh_TW
-	https://creativecommons.org/licenses/by/4.0/
-
-漢字以外 Licensed under SIL Open Font License 1.1
-	http://scripts.sil.org/OFL
-
-
-Bopomofo IVS Font Specification (注音IVS字型規格)
-	Copyright 2020 But Ko
-	Licensed under Apache License, Version 2.0.
-	https://github.com/ButTaiwan/bpmfvs
-
-
-BpmfZihiKaiStd-Regular contains ZihiKaiStd.ttf
-	Copyright 2020 But Ko
-	https://github.com/ButTaiwan/bpmfvs
-	漢字部分 Licensed under CC-by 4.0
-	漢字以外 Licensed under SIL Open Font License 1.1
-
-
-ZihiKaiStd contains 全字庫正楷體
-
-顯名聲明
-國家發展委員會 2018 CNS11643中文標準交換碼全字庫 Ver 103.1
-此開放資料依政府資料開放授權條款 (Open Government Data License) 進行公眾釋出，
-使用者於遵守本條款各項規定之前提下，得利用之。
-政府資料開放授權條款：https://data.gov.tw/license
-
-
-ZihiKaiStd contains Source Han Serif
-
-Copyright 2014-2019 Adobe (http://www.adobe.com/), with Reserved Font
-Name 'Source'. Source is a trademark of Adobe in the United States
-and/or other countries.
+Copyright 2024-2026 LXGW (https://github.com/lxgw/LxgwWenKaiGB-Lite), with Reserved Font Name '霞鹜', '霞鶩', '落霞孤鹜', '落霞孤鶩' and 'LXGW'. [ADDITIONAL PERMISSION] The Reserved Font Names '霞鹜', '霞鶩', '落霞孤鹜', '落霞孤鶩' and 'LXGW' may continue to be used in Modified Versions recompiled from the Original Version, without modifications to the font source code; or in Modified Versions subsetted or converted to other formats (e.g., WOFF/WOFF2) solely for web font delivery, provided such Modified Versions are not made available as installable desktop fonts (e.g., on mainstream platforms like Google Fonts, or third-party non-commercial platforms recognized by the author @lxgw; other web font platforms please contact the author @lxgw for confirmation).
+Copyright 2020 The Klee Project Authors (https://github.com/fontworks-fonts/Klee)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:
-http://scripts.sil.org/OFL
+https://openfontlicense.org
 
 
 -----------------------------------------------------------

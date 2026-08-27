@@ -31,6 +31,21 @@ export type ReaderAppearanceFont =
   | 'lxgwWenKai'
   | 'custom';
 
+/** The nine reorderable slots authored in Figma's full font library. */
+export type ReaderAppearanceFontSlot = Exclude<ReaderAppearanceFont, 'custom'> | 'import';
+
+export const READER_APPEARANCE_DEFAULT_FONT_ORDER: ReaderAppearanceFontSlot[] = [
+  'system',
+  'serif',
+  'sans',
+  'kai',
+  'fangSong',
+  'mono',
+  'sourceHanSerif',
+  'lxgwWenKai',
+  'import',
+];
+
 /** Host-validated identity of one app-private TTF/OTF asset. */
 export class ReaderCustomFontDescriptor {
   displayName: string;
@@ -81,6 +96,23 @@ export const READER_APPEARANCE_PARAGRAPH_SPACING_RANGE = new ReaderAppearanceMet
 export const READER_APPEARANCE_LETTER_SPACING_RANGE = new ReaderAppearanceMetricRange(-2, 4);
 
 export type ReaderAppearanceSnapshot = {
+  version: 3;
+  activeTheme: ReaderAppearanceTheme;
+  dayTheme: ReaderAppearanceTheme;
+  nightTheme: ReaderAppearanceTheme;
+  font: ReaderAppearanceFont;
+  customFont: ReaderCustomFontDescriptor | undefined;
+  fontOrder: ReaderAppearanceFontSlot[];
+  fontSize: number;
+  lineHeightMultiplier: number;
+  paragraphSpacing: number;
+  letterSpacing: number;
+  indent: ReaderAppearanceIndent;
+  alignment: ReaderAppearanceAlignment;
+};
+
+/** Appearance shape persisted before the Figma font library admitted reordering. */
+export type ReaderAppearanceSnapshotV2 = {
   version: 2;
   activeTheme: ReaderAppearanceTheme;
   dayTheme: ReaderAppearanceTheme;
@@ -113,12 +145,13 @@ export type ReaderAppearanceSnapshotV1 = {
 
 export function createDefaultReaderAppearanceSnapshot(): ReaderAppearanceSnapshot {
   return {
-    version: 2,
+    version: 3,
     activeTheme: 'paper',
     dayTheme: 'paper',
     nightTheme: 'paperNight',
     font: 'serif',
     customFont: undefined,
+    fontOrder: READER_APPEARANCE_DEFAULT_FONT_ORDER.slice(),
     fontSize: 18,
     lineHeightMultiplier: 1.96,
     paragraphSpacing: 16,
@@ -134,19 +167,22 @@ export function createDefaultReaderAppearanceSnapshot(): ReaderAppearanceSnapsho
  * Serif slot. A legacy v1 pageTurn value is intentionally discarded.
  */
 export function normalizeReaderAppearanceSnapshot(
-  candidate: ReaderAppearanceSnapshot | ReaderAppearanceSnapshotV1,
+  candidate: ReaderAppearanceSnapshot | ReaderAppearanceSnapshotV2 | ReaderAppearanceSnapshotV1,
 ): ReaderAppearanceSnapshot {
   const fallback = createDefaultReaderAppearanceSnapshot();
-  const customFont = candidate.version === 2 ? normalizeReaderCustomFontDescriptor(candidate.customFont) : undefined;
+  const customFont = candidate.version === 2 || candidate.version === 3 ?
+    normalizeReaderCustomFontDescriptor(candidate.customFont) : undefined;
   const font = isReaderAppearanceFont(candidate.font) && (candidate.font !== 'custom' || customFont !== undefined) ?
     candidate.font : fallback.font;
   return {
-    version: 2,
+    version: 3,
     activeTheme: isReaderAppearanceTheme(candidate.activeTheme) ? candidate.activeTheme : fallback.activeTheme,
     dayTheme: isReaderAppearanceTheme(candidate.dayTheme) ? candidate.dayTheme : fallback.dayTheme,
     nightTheme: isReaderAppearanceTheme(candidate.nightTheme) ? candidate.nightTheme : fallback.nightTheme,
     font,
     customFont,
+    fontOrder: candidate.version === 3 ? normalizeReaderAppearanceFontOrder(candidate.fontOrder) :
+      fallback.fontOrder,
     fontSize: isPositiveFinite(candidate.fontSize) ?
       clampReaderAppearanceMetric('fontSize', candidate.fontSize) : fallback.fontSize,
     lineHeightMultiplier: isPositiveFinite(candidate.lineHeightMultiplier) ?
@@ -195,6 +231,33 @@ export function setReaderAppearanceFont(
 ): ReaderAppearanceSnapshot {
   return copyWith(snapshot, snapshot.activeTheme, snapshot.dayTheme, snapshot.nightTheme, font,
     snapshot.indent, snapshot.alignment, undefined, undefined);
+}
+
+export function setReaderAppearanceFontOrder(
+  snapshot: ReaderAppearanceSnapshot,
+  fontOrder: ReaderAppearanceFontSlot[],
+): ReaderAppearanceSnapshot {
+  return normalizeReaderAppearanceSnapshot({
+    ...copyReaderAppearanceSnapshot(snapshot),
+    fontOrder: normalizeReaderAppearanceFontOrder(fontOrder),
+  });
+}
+
+export function moveReaderAppearanceFontSlot(
+  fontOrder: ReaderAppearanceFontSlot[],
+  fromIndex: number,
+  toIndex: number,
+): ReaderAppearanceFontSlot[] {
+  const normalized = normalizeReaderAppearanceFontOrder(fontOrder);
+  const source = Math.max(0, Math.min(normalized.length - 1, Math.floor(fromIndex)));
+  const target = Math.max(0, Math.min(normalized.length - 1, Math.floor(toIndex)));
+  if (source === target) {
+    return normalized;
+  }
+  const next = normalized.slice();
+  const moved = next.splice(source, 1)[0];
+  next.splice(target, 0, moved);
+  return next;
 }
 
 export function setReaderAppearanceCustomFont(
@@ -290,6 +353,29 @@ export function isReaderAppearanceFont(value: string): value is ReaderAppearance
     value === 'custom';
 }
 
+export function isReaderAppearanceFontSlot(value: string): value is ReaderAppearanceFontSlot {
+  return value === 'import' || (isReaderAppearanceFont(value) && value !== 'custom');
+}
+
+export function normalizeReaderAppearanceFontOrder(
+  candidate: ReaderAppearanceFontSlot[] | undefined,
+): ReaderAppearanceFontSlot[] {
+  const normalized: ReaderAppearanceFontSlot[] = [];
+  if (candidate !== undefined && Array.isArray(candidate)) {
+    candidate.forEach((fontId: ReaderAppearanceFontSlot): void => {
+      if (isReaderAppearanceFontSlot(fontId) && !normalized.includes(fontId)) {
+        normalized.push(fontId);
+      }
+    });
+  }
+  READER_APPEARANCE_DEFAULT_FONT_ORDER.forEach((fontId: ReaderAppearanceFontSlot): void => {
+    if (!normalized.includes(fontId)) {
+      normalized.push(fontId);
+    }
+  });
+  return normalized;
+}
+
 export function normalizeReaderCustomFontDescriptor(
   candidate: ReaderCustomFontDescriptor | undefined,
 ): ReaderCustomFontDescriptor | undefined {
@@ -361,12 +447,13 @@ function copyWith(
   metricValue: number | undefined,
 ): ReaderAppearanceSnapshot {
   const next: ReaderAppearanceSnapshot = {
-    version: 2,
+    version: 3,
     activeTheme,
     dayTheme,
     nightTheme,
     font,
     customFont: normalizeReaderCustomFontDescriptor(snapshot.customFont),
+    fontOrder: normalizeReaderAppearanceFontOrder(snapshot.fontOrder),
     fontSize: snapshot.fontSize,
     lineHeightMultiplier: snapshot.lineHeightMultiplier,
     paragraphSpacing: snapshot.paragraphSpacing,

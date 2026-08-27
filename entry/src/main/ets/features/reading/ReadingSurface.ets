@@ -17,6 +17,7 @@ import {
   ReaderReadingLayoutSnapshot,
   createDefaultReaderReadingLayout,
 } from './ReaderLayoutGeometry';
+import { ReaderPageChrome } from './ReaderPageChrome';
 
 /**
  * Figma-backed static reading body for `15 · Reader 2`:
@@ -218,6 +219,15 @@ export struct ReadingSurface {
   /** Per-gap full-page adjustment; zero for short/image-ending pages. */
   @Prop bottomJustifyGap: number = 0;
   @Prop longPressSelectText: boolean = false;
+  @Prop chromeTopStartText: string = '';
+  @Prop chromeTopEndText: string = '';
+  @Prop chromeBottomStartText: string = '';
+  @Prop chromeBottomEndText: string = '';
+  @Prop chromeSessionVisible: boolean = false;
+  @Prop chromeSessionWidth: number = 0;
+  @Prop chromeSessionHeight: number = 0;
+  @Prop bodyComponentId: string = 'reader-page-body-unmanaged';
+  @Prop chromeComponentId: string = 'reader-page-chrome-unmanaged';
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -225,6 +235,7 @@ export struct ReadingSurface {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
+      Stack({ alignContent: Alignment.TopStart }) {
       // The Figma background-image list is painted front-to-back: texture,
       // gradient, highlight, shade. Stack children paint back-to-front, so
       // keep the equivalent order explicit here rather than coalescing the
@@ -348,6 +359,24 @@ export struct ReadingSurface {
       .height('100%')
       .padding(this.contentInsets())
       .clip(true);
+      }
+      .width('100%')
+      .height('100%')
+      .clip(true)
+      .id(this.bodyComponentId);
+
+      ReaderPageChrome({
+        topStartText: this.chromeTopStartText,
+        topEndText: this.chromeTopEndText,
+        bottomStartText: this.chromeBottomStartText,
+        bottomEndText: this.chromeBottomEndText,
+        sessionVisible: this.chromeSessionVisible,
+        sessionWidth: this.chromeSessionWidth,
+        sessionHeight: this.chromeSessionHeight,
+        layout: this.layout,
+        appearance: this.appearance,
+      })
+        .id(this.chromeComponentId);
     }
     .width('100%')
     .height('100%')

@@ -6,6 +6,7 @@ import {
   normalizeReaderSettingsSnapshot,
   type ReaderSettingsSnapshot,
   type ReaderSettingsSnapshotV1,
+  type ReaderSettingsSnapshotV2,
 } from './ReaderSettingsState';
 
 const READER_SETTINGS_PREFERENCES_NAME = 'reader_reading_settings_v1';
@@ -62,8 +63,19 @@ export class ReaderSettingsGateway {
       return fallback;
     }
     try {
-      const decoded = JSON.parse(raw) as ReaderSettingsSnapshot | ReaderSettingsSnapshotV1;
-      return normalizeReaderSettingsSnapshot(decoded);
+      const decoded = JSON.parse(raw) as
+        ReaderSettingsSnapshot | ReaderSettingsSnapshotV2 | ReaderSettingsSnapshotV1;
+      const normalized = normalizeReaderSettingsSnapshot(decoded);
+      if (decoded.version !== 3) {
+        try {
+          await store.put(READER_SETTINGS_SNAPSHOT_KEY, JSON.stringify(normalized));
+          await store.flush();
+        } catch (_) {
+          // A valid migrated snapshot remains usable for this session. A later
+          // load/update retries persistence without exposing mixed V2/V3 state.
+        }
+      }
+      return normalized;
     } catch (_) {
       return fallback;
     }

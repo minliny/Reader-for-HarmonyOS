@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { readerControlExpansionTarget } from
+  '../entry/src/main/ets/features/reading/ReaderControlRouting.ts';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (path) => readFileSync(resolve(repo, path), 'utf8');
@@ -11,24 +13,47 @@ assert.match(motion, /reader\.panel\.expand', durationMs: 420, curve: Curve\.Eas
 assert.match(motion, /reader\.panel\.collapse', durationMs: 360, curve: Curve\.EaseIn/);
 
 const control = read('entry/src/main/ets/features/reading/ReaderControlPanel.ets');
+assert.match(control,
+  /@Prop shellExitArmed: boolean = false;[\s\S]*private fullSearchDock\(\)[\s\S]*?\.transition\(this\.reduceMotion \|\| this\.shellExitArmed \? TransitionEffect\.IDENTITY/,
+  'a full-panel child must not run a second exit transition under the control shell');
+assert.match(control,
+  /private homeContent\(\)[\s\S]*?Shell dismissal owns the only exit transition[\s\S]*?\.transition\(this\.reduceMotion \|\| this\.shellExitArmed \? TransitionEffect\.IDENTITY/,
+  'control content and its bordered shell must leave as one actor');
 assert.match(control, /ReaderDirectoryModulePanel\(\{/);
 assert.match(control, /ReaderQuickSearchPanel\(\{/);
+assert.match(control, /ReaderSearchFullPanel\(\{/);
 assert.match(control, /ReaderAutoPagePanel\(\{/);
 assert.match(control, /ReaderAppearanceModulePanel\(\{/);
 assert.match(control, /ReaderAppearanceFullPanel\(\{/);
 assert.match(control, /ReaderSettingsModulePanel\(\{/);
 assert.match(control, /ReaderSettingsFullPanel\(\{/);
 assert.match(control, /this\.onExpandDirectory\(\)/);
-assert.match(control, /this\.activePage === 'home'[\s\S]{0,160}this\.onExpandDirectory\(\)/,
-  'the grabber on the default quick control must expand the full directory');
+assert.match(control, /readerControlExpansionTarget\(this\.activePage\)/,
+  'every grabber must resolve through the single audited routing table');
+assert.match(control, /requestExpandSearch\(\)[\s\S]*this\.onPageChange\('fullSearch'\)/,
+  'Quick Search and Full Search must be one explicit control-domain route');
 assert.match(control, /READER_CONTROL_GRABBER_HIT_WIDTH = 72/,
   'the visual grabber must expose a practical direct hit target');
 assert.match(control, /\.hitTestBehavior\(HitTestMode\.Block\)\s*\.accessibilityText\(this\.controlGrabberAccessibilityText\(\)\)/,
   'the expanded grabber target must own hits even when the visible child row is tapped');
-assert.match(control, /PanGesture\(\{ direction: PanDirection\.Up, distance: READER_CONTROL_GRABBER_PAN_DISTANCE \}\)[\s\S]{0,160}this\.expandCurrentControl\(\)/,
-  'an upward pull on the grabber must use the same expansion path as a click');
-assert.match(control, /this\.activePage === 'quickReplace'[\s\S]{0,100}this\.onOpenRulesManagement\(\)/,
-  'the Replace quick panel grabber must open its corresponding full management surface');
+assert.match(control, /PanGesture\(\{ direction: PanDirection\.Up, distance: READER_CONTROL_GRABBER_PAN_DISTANCE \}\)[\s\S]{0,220}updateControlGrabberDrag\(event\.offsetY\)[\s\S]{0,220}finishControlGrabberDrag\(event\.offsetY\)/,
+  'the dock must follow the live upward drag before release chooses expand or rollback');
+const expansionRoutes = new Map([
+  ['home', 'directory'],
+  ['moduleDirectory', 'directory'],
+  ['quickSearch', 'fullSearch'],
+  ['quickAutoPage', 'fullAutoPage'],
+  ['quickReplace', 'rulesManagement'],
+  ['moduleTts', 'fullTts'],
+  ['moduleAppearance', 'fullAppearance'],
+  ['moduleSettings', 'fullSettings'],
+]);
+for (const [page, target] of expansionRoutes) {
+  assert.equal(readerControlExpansionTarget(page), target, `${page} expansion target drifted`);
+}
+for (const page of ['fullSearch', 'fullAutoPage', 'fullTts', 'fullAppearance', 'fullSettings']) {
+  assert.equal(readerControlExpansionTarget(page), undefined, `${page} must not recursively expand`);
+}
 assert.match(control, /Slider\(\{\s*value: this\.effectiveProgressPercent\(\)/);
 assert.match(control, /onPreviousChapter\(\)/);
 assert.match(control, /onNextChapter\(\)/);
@@ -38,11 +63,13 @@ assert.match(control, /this\.onOpenReplace\(\)/);
 assert.doesNotMatch(control, /action === 'replace'[\s\S]{0,180}this\.onSourceSwitch\(\)/);
 assert.doesNotMatch(control, /currently exist only as Review frames/);
 for (const page of ['moduleDirectory', 'moduleTts', 'moduleAppearance', 'moduleSettings',
-  'fullAppearance', 'fullSettings']) {
+  'fullSearch', 'fullAppearance', 'fullSettings']) {
   assert.ok(control.includes(page), `Reader control state machine is missing ${page}`);
 }
 assert.match(control, /module !== 'directory'[\s\S]*module !== 'settings'/);
-assert.match(control, /if \(this\.reduceMotion\) \{\s*this\.onPageChange\(page\)/);
+assert.match(control, /const destination: ReaderControlPage = this\.isActiveModule\(module\) \? 'home' : page/,
+  'tapping the active main tab must return to the control home page');
+assert.match(control, /if \(this\.reduceMotion\) \{\s*this\.onPageChange\(destination\)/);
 assert.match(control, /if \(this\.reduceMotion\) \{\s*this\.onPageChange\('quickSearch'\)/);
 assert.match(control, /this\.reduceMotion \? TransitionEffect\.IDENTITY/);
 assert.match(control, /\.height\('100%'\)\s+\.zIndex\(0\)\s+\.onClick\(\(\): void => this\.onDismiss\(\)\)/);
@@ -64,9 +91,23 @@ assert.match(gateway, /request\('bookmark\.list'/);
 assert.match(gateway, /downloadState: LocalReadingDownloadState/);
 
 const experience = read('entry/src/main/ets/features/reading/LocalReadingExperience.ets');
+const hideControl = experience.match(/private hideControl\(\): void \{([\s\S]*?)\n  private reloadCurrentChapterAfterContentProjectionChange/);
+assert.ok(hideControl, 'control hide lifecycle owner must exist');
+assert.match(hideControl[1], /this\.controlVisible = false/);
+assert.doesNotMatch(hideControl[1], /this\.controlPage = 'home'/,
+  'active control content must remain mounted for the complete shell exit transition');
+assert.match(hideControl[1],
+  /this\.controlShellExitArmed = true;[\s\S]*postFrameCallback[\s\S]*this\.controlVisible = false/,
+  'the host must present nested-transition suppression before removing the unified shell');
+assert.match(experience,
+  /private openReaderControl\(\): void \{[\s\S]*?this\.controlPage = 'home';[\s\S]*?this\.controlVisible = true/,
+  'the next presentation, not the previous exit, owns the Home reset');
 assert.match(experience, /if \(this\.controlVisible\) \{/);
 assert.match(experience, /if \(this\.controlPage !== 'home'\) \{/);
 assert.match(experience, /this\.activeGateway\(\)\.searchContent\(this\.bookId, keyword, 50, isCurrent\)/);
+assert.match(experience,
+  /this\.controlPage === 'quickSearch' \|\| this\.controlPage === 'fullSearch'/,
+  'a running search must remain live while Quick Search expands into Full Search');
 assert.match(experience, /this\.selectChapterAnchor\(result\.chapterIndex, result\.chapterOffset, false\)/);
 assert.match(experience, /onExpandDirectory: \(\): void => this\.onOpenDirectory\(\)/);
 assert.match(experience, /void this\.loadReaderSettingsSnapshot\(lifecycleToken\)/);
@@ -89,7 +130,8 @@ assert.match(experience, /return readerWindow\.setWindowBrightness\(target\)/);
 assert.match(experience, /private restoreInitialWindowBrightness\(\): void/,
   'the reader must restore the pre-reader window brightness policy on exit');
 assert.match(experience, /ReaderPageInteractionLayer\(\{/);
-assert.match(experience, /onTurn: \(direction: ReaderPageTurnDirection\): ReaderPageTurnOutcome =>\s*this\.requestPageTurn\(direction\)/);
+assert.match(experience,
+  /onTurn: \([\s\S]*direction: ReaderPageTurnDirection,[\s\S]*originX\?: number,[\s\S]*originY\?: number,[\s\S]*\): ReaderPageTurnOutcome => this\.requestPageTurnFromInteraction\(direction, originX, originY\)/);
 assert.match(experience, /onManualInteraction: \(\): void => this\.onReaderManualInteraction\(\)/);
 assert.match(experience, /private onReaderManualInteraction\(\): void \{[\s\S]*screenAwakeLease\?\.rearm\(\)[\s\S]*pauseAutoPageForInteraction/);
 assert.doesNotMatch(experience, /\.onClick\(\(\): void => \{\s*this\.pauseAutoPageForInteraction\(\);\s*this\.turn(Previous|Next)Page\(\)/,
@@ -107,21 +149,46 @@ assert.match(experience, /private numericAreaLength\(value: Length\): number \{[
   'physical-device vp string Areas must drive the real pagination viewport');
 
 const pageInteraction = read('entry/src/main/ets/features/reading/ReaderPageInteractionLayer.ets');
-assert.match(pageInteraction, /GestureGroup\(\s*GestureMode\.Exclusive,\s*PanGesture\(\{/,
-  'the horizontal pan must compete exclusively with tap and be registered first');
-assert.match(pageInteraction, /direction: PanDirection\.Horizontal/);
-assert.match(pageInteraction, /distance: READER_PAGE_PAN_DISTANCE/);
-assert.match(pageInteraction, /\.onActionStart\([\s\S]*\.onActionUpdate\([\s\S]*\.onActionEnd\([\s\S]*\.onActionCancel\(/);
-assert.match(pageInteraction, /TapGesture\(\{ fingers: 1, count: 1 \}\)/);
-assert.match(pageInteraction, /event\.fingerList\[0\]\.localX/,
-  'tap zones must use element-local rather than global screen coordinates');
+assert.match(pageInteraction,
+  /\.onTouch\(\(event: TouchEvent\): void => this\.handleTouch\(event\)\)[\s\S]*TouchType\.Down[\s\S]*TouchType\.Move[\s\S]*TouchType\.Up/,
+  'one raw pointer arena must own tap, horizontal drag, control, and selection arbitration');
+assert.doesNotMatch(pageInteraction, /\bGestureGroup\(|\bPanGesture\(|\bTapGesture\(/,
+  'page input must not wait for ArkUI Pan recognition or a delayed Tap callback');
+assert.match(pageInteraction, /startReaderPagePan\([\s\S]*pointer\.x,[\s\S]*pointer\.y/,
+  'physical DOWN must be recorded before touch slop is crossed');
+assert.match(pageInteraction, /pointer\.x - this\.gestureState\.startLocalX/,
+  'tap and drag zones must use element-local rather than global screen coordinates');
 assert.match(pageInteraction, /event\.target\.area\.width/,
-  'tap zones must prefer the width from the same local gesture target');
+  'input zones must prefer the width from the same raw touch target');
+assert.match(pageInteraction, /READER_PAGE_TAP_MAX_DURATION_MS = 320/,
+  'a stationary long press belongs to text selection and must not open controls on release');
+assert.match(pageInteraction,
+  /if \(this\.activePointerId >= 0\)[\s\S]*event\.touches\.length > 1[\s\S]*return;/,
+  'a repeated DOWN must never restart an already admitted physical gesture');
+assert.match(pageInteraction, /event\.stopPropagation\(\)[\s\S]*event\.preventDefault\(\)/,
+  'only a horizontally admitted page turn may cancel underlying text input');
 assert.match(pageInteraction, /this\.onManualInteraction\(\)/,
   'manual touch must pause auto-page before dispatching a page turn');
+assert.match(pageInteraction,
+  /systemOwnsPointer\(event, pointer\)[\s\S]*Do not stop propagation/,
+  'Harmony back/home edge streams must be rejected before the reader creates gesture state');
+assert.match(pageInteraction, /event\.timestamp[\s\S]*lastSampleTimeMs/,
+  'pointer velocity and tap duration must use the platform event clock');
+assert.match(experience,
+  /systemGestureLeftInset: this\.readerSystemGestureLeftInset\(\)[\s\S]*systemGestureBottomInset: this\.readerSystemGestureBottomInset\(\)/,
+  'the page arena must consume the current Window gesture/navigation insets');
 assert.match(pageInteraction, /左侧上一页，中间打开阅读控制，右侧下一页/);
-assert.doesNotMatch(pageInteraction, /setTimeout|pendingTurn|queuedTurn/,
+assert.match(pageInteraction,
+  /READER_PAGE_POINTER_STALL_TIMEOUT_MS = 1800[\s\S]*armPointerWatchdog\(\)[\s\S]*this\.cancelPan\(\);[\s\S]*this\.resetRawPointer\(\);/,
+  'a lost UP or CANCEL must roll back and release page/control ownership');
+assert.doesNotMatch(pageInteraction, /pendingTurn|queuedTurn/,
   'a busy manual turn must not be queued or replayed');
+assert.match(experience,
+  /pageTurnInputPhase\(\): ReaderPageTurnInputPhase[\s\S]*return 'idle';[\s\S]*pageTurnOwnsReaderInput\(\)[\s\S]*pageTurnInputPhase\(\) !== 'idle'[\s\S]*openReaderControl\(\)[\s\S]*this\.pageTurnOwnsReaderInput\(\)/,
+  'the control surface must never replace an active native or host page-turn input owner');
+assert.match(experience,
+  /private beginExit\(\): void \{[\s\S]*inputPhase === 'tracking' \|\| inputPhase === 'dragging'[\s\S]*cancelReaderPagePan[\s\S]*pageTurnPendingExit = true/,
+  'back must roll an uncommitted sheet to rest before route ownership exits');
 
 const requestTurn = experience.match(
   /private requestPageTurn\(direction: ReaderPageTurnDirection\): ReaderPageTurnOutcome \{([\s\S]*?)\n  \}\n\n  private turnNextPage/,

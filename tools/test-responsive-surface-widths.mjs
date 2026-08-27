@@ -170,15 +170,14 @@ assert.match(control, /@Prop @Watch\('onLayoutChanged'\) layout: ReaderControlLa
 assert.match(control,
   /private dockWidth\(\): number \{\s*return this\.layout\.dockWidth;/,
   'all seven regular reader-control states must clamp their dock');
-assert.equal((control.match(/availableWidth: this\.fullPanelAvailableWidth\(\)/g) ?? []).length, 3,
-  'appearance, settings, and TTS full sheets must receive the same measured width');
-assert.equal((control.match(/availableHeight: this\.layout\.fullPanelHeight/g) ?? []).length, 3,
-  'appearance, settings, and TTS full sheets must receive the same live height budget');
+assert.equal((control.match(/availableWidth: this\.fullPanelAvailableWidth\(\)/g) ?? []).length, 4,
+  'search, appearance, settings, and TTS full sheets must receive the same measured width');
+assert.equal((control.match(/availableHeight: this\.layout\.fullPanelHeight/g) ?? []).length, 4,
+  'search, appearance, settings, and TTS full sheets must receive the same live height budget');
 assert.match(readerLayout, /const fullPanelHeight = Math\.max\(0, height - fullPanelTop - fullPanelBottom\)/,
   'the full-panel height budget must be derived once from the live viewport and safe bottom');
 
 for (const [name, source] of [
-  ['appearance', appearance],
   ['settings', settings],
   ['tts', tts],
   ['auto page', autoPage],
@@ -190,6 +189,16 @@ for (const [name, source] of [
   assert.match(source, /Math\.min\([^\n]+, this\.availableHeight\)/,
     `${name} must preserve its Figma height only as a maximum`);
 }
+
+assert.match(appearance, /@Prop availableWidth: number = 0/,
+  'appearance must accept a live width');
+assert.match(appearance, /@Prop availableHeight: number = 0/,
+  'appearance must accept a live height budget');
+assert.match(appearance, /Math\.min\([^\n]+, this\.availableWidth\)/,
+  'appearance must preserve its Figma width only as a maximum');
+assert.match(appearance,
+  /private scrollViewportHeight\(\): number[\s\S]*Math\.min\(this\.viewportHeight\(\), this\.availableHeight - 68\)/,
+  'appearance must preserve its authored full-sheet frame while clamping the interactive scroll viewport');
 
 // Geometry sanity for the explicit regression matrix used by this audit.
 for (const viewport of [320, 360, 365.71, 390, 600, 720, 760, 840]) {

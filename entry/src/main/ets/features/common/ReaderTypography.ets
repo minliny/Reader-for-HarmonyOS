@@ -97,3 +97,18 @@ export const TYPE_READER_CONTROL_CHAPTER_SOURCE = new ReaderTextStyle(
   READER_FONT_NOTO_SERIF_SC_REGULAR, 400, 12, undefined, undefined, 'system', 'figmaNode');
 export const TYPE_READER_CONTROL_SOURCE_ACTION = new ReaderTextStyle(
   READER_FONT_NOTO_SANS_SC, 700, 12, undefined, undefined, 'system', 'figmaNode');
+
+// Immersive page chrome. These roles currently share the Figma
+// `Reader/ImmersiveMeta` tuple, but remain separate semantic contracts so a
+// later design change to time, progress, or page ordinal does not couple the
+// other corners by accident.
+export const TYPE_READER_IMMERSIVE_TIME = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 400, 12, 14.4, 0, 'system', 'figmaNode');
+export const TYPE_READER_IMMERSIVE_PROGRESS = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 400, 12, 14.4, 0, 'system', 'figmaNode');
+export const TYPE_READER_IMMERSIVE_PAGE_ORDINAL = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 400, 12, 14.4, 0, 'system', 'figmaNode');
+export const TYPE_READER_SESSION_LABEL = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 700, 10, 12.5, 0, 'system', 'figmaNode');
+export const TYPE_READER_SESSION_COUNTDOWN = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 900, 8, 8, 0, 'system', 'figmaNode');

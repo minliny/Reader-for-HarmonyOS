@@ -69,13 +69,20 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
   }
 
   async activateAudioSession(allowMixing: boolean): Promise<void> {
-    await Promise.all([
-      this.active.activateAudioSession(allowMixing),
-      this.mediaSession.activate(),
-    ]);
-    // Background admission is additive. A denial must never regress the
-    // existing foreground transport.
-    await this.backgroundSession?.activate();
+    // The selected speech transport is the only mandatory foreground lease.
+    // Media controls and background admission are additive platform bridges;
+    // a device without either capability must still be able to speak locally.
+    await this.active.activateAudioSession(allowMixing);
+    try {
+      await this.mediaSession.activate();
+    } catch (_error) {
+      // Best effort: foreground TTS remains available without AVSession.
+    }
+    try {
+      await this.backgroundSession?.activate();
+    } catch (_error) {
+      // Best effort: a denied background lease must not block foreground TTS.
+    }
   }
 
   async deactivateAudioSession(): Promise<void> {

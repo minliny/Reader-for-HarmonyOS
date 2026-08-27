@@ -63,9 +63,14 @@ assert.match(coordinator, /this\.active\?\.input\.pauseOnInterruption \?\? true/
 assert.match(gateway, /reader_tts_preferences_v1/);
 assert.match(gateway, /await store\.flush\(\)/);
 assert.match(panel, /this\.toggleRow\('来电暂停', this\.pauseOnInterruption, true/);
-assert.match(panel, /this\.onFailurePolicyChange\(this\.failurePolicy === 'skip' \? 'stop' : 'skip'\)/);
+assert.match(panel,
+  /this\.ttsClosedConfigRow\([\s\S]*?'不可用处理',[\s\S]*?this\.failurePolicy === 'skip'/,
+  'persisted failure policy must still be projected into the Figma-backed closed field');
+assert.doesNotMatch(panel, /this\.onFailurePolicyChange\(this\.failurePolicy === 'skip'/,
+  'a closed field with no Figma option surface must not invisibly cycle persisted policy');
 assert.match(panel, /this\.selectNextVoice\(\)/);
-assert.match(panel, /this\.selectNextLanguage\(\)/);
+assert.doesNotMatch(panel, /this\.selectNextLanguage\(\)/,
+  'language must not be changed by an undisclosed tap-to-cycle interaction');
 assert.match(experience, /await this\.ttsPreferencesGateway\.load\(\)/);
 assert.match(experience, /listSystemVoices\(\)/);
 assert.match(experience, /language: this\.ttsLanguage/);

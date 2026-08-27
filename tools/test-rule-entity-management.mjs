@@ -9,6 +9,7 @@ const rssGateway = read('entry/src/main/ets/features/rss/RssGateway.ts');
 const settings = read('entry/src/main/ets/features/settings/SettingsPage.ets');
 const index = read('entry/src/main/ets/pages/Index.ets');
 const host = read('entry/src/main/ets/app/ReaderHostRegistry.ts');
+const experience = read('entry/src/main/ets/features/reading/LocalReadingExperience.ets');
 
 for (const method of [
   'replace-rule.list', 'replace.validate', 'replace.persist',
@@ -52,7 +53,10 @@ assert.match(page, /自动更新仅保存标记，不启动后台调度/);
 assert.match(page, /this\.actionButton\('书源', this\.subType === 0/);
 assert.match(page, /this\.actionButton\('RSS 源', this\.subType === 1/);
 assert.match(page, /this\.actionButton\('替换规则', this\.subType === 2/);
-assert.match(settings, /规则实体管理/);
+assert.doesNotMatch(settings, /this\.navRow\('规则实体管理'/,
+  'the final five-row Settings Home must not grow an undesigned rules entry');
+assert.match(experience, /this\.onOpenRulesManagement\(\)/,
+  'rules management remains reachable from the designed reader replacement flow');
 assert.match(index, /route === 'rulesManagement'/);
 assert.match(index, /RulesManagementPage\(/);
 assert.match(index, /refreshRuleSubscription\(subscription\)/);

@@ -152,7 +152,9 @@ assert.match(settings, /private segmentRow[\s\S]*\.width\('100%'\)/);
 
 assert.match(autoQuick, /private primaryControls\(\)[\s\S]*Row\(\{ space: this\.primaryActorGap\(\) \}\)/);
 assert.match(autoQuick, /right: this\.chapterRightGap\(\)/);
-assert.match(autoQuick, /private stopTrack\(\)[\s\S]*Blank\(\)\.layoutWeight\(this\.stopLeftWeight\(\)\)/);
+assert.match(autoQuick,
+  /private stopTrack\(\)[\s\S]*\.width\(24\)[\s\S]*x: this\.isTablet \? QUICK_AUTO_PAGE_STOP_X_TABLET : QUICK_AUTO_PAGE_STOP_X_PHONE/,
+  'Quick Auto stop actor must own only its 24vp hit column and never cover the play actor');
 assert.doesNotMatch(autoQuick, /x: previous \? QUICK_AUTO_PAGE_PREVIOUS_X/,
   'Quick Auto next must not retain an absolute x');
 
@@ -160,8 +162,8 @@ assert.match(ttsModule,
   /maxWidth: TTS_MODULE_PLAYBACK_LABEL_WIDTH[\s\S]*\.width\(TTS_MODULE_PLAYBACK_CONTROL_WIDTH\)/,
   'TTS playback label must yield to the fixed control actor');
 assert.match(ttsModule,
-  /maxWidth: TTS_MODULE_RATE_SLIDER_WIDTH[\s\S]*\.width\(this\.rateValueWidth\(\)\)/,
-  'TTS rate slider must consume only the remaining row width');
+  /this\.rateSlider\(\);[\s\S]*\.width\(this\.rateValueWidth\(\)\)[\s\S]*private rateSlider\(\)[\s\S]*\.width\(TTS_MODULE_RATE_SLIDER_WIDTH\)/,
+  'TTS rate row must keep the final 116vp Figma slider while the value width adapts by viewport');
 
 assert.match(autoFull, /position\(\{ x: this\.persistentChapterX\(previous\), y: 5 \}\)/);
 assert.match(autoFull,

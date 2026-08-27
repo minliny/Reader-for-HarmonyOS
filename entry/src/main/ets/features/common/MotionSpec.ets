@@ -25,6 +25,11 @@ const ENTRIES: MotionSpecEntry[] = [
   { id: 'reader.quick.promote', durationMs: 320, curve: Curve.EaseOut },
   // Figma: 25 · Motion Reference MR1 · reader.module.switch (交叉淡化)
   { id: 'reader.module.switch', durationMs: 360, curve: curves.cubicBezierCurve(0.25, 0.1, 0.25, 1) },
+  // Product interaction supplement: the Figma font library defines a static
+  // reorderable grid but has no authored keyframes. Keep the finger direct;
+  // only neighbouring slots and the final settle use implicit animation.
+  { id: 'reader.font.reorder.shift', durationMs: 120, curve: Curve.EaseOut },
+  { id: 'reader.font.reorder.settle', durationMs: 160, curve: Curve.EaseOut },
   // Figma: 25 · Motion Reference · Quick -> Full, Phone production contract.
   { id: 'reader.panel.expand', durationMs: 420, curve: Curve.EaseOut },
   // Figma: 25 · Motion Reference · Full -> Quick, Phone production contract.

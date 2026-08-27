@@ -449,7 +449,7 @@ export struct SyncPage {
           .fontWeight(FontWeight.Bold)
           .fontSize(12)
           .fontColor(TOK_PRIMARY_DARK)
-          .textAlign(TextAlign.End)
+          .textAlign(TextAlign.Start)
           .maxLines(1);
         Image($r('app.media.reader_chevron_down')).width(12).height(8);
       }

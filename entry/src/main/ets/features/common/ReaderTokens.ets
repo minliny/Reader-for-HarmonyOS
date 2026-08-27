@@ -200,6 +200,12 @@ export const TOK_READ_DISABLED_BG = '#8FEEE6DB';
 export const TOK_READ_SURFACE = '#FAFFFAF4';
 // Figma: reading elevated  阅读浮起
 export const TOK_READ_ELEVATED = '#BDFFFCF8';
+// Figma: reading/immersive/meta (`Reader/ImmersiveInfo`, node 654:693).
+// Page chrome is intentionally independent from the user-selected body ink.
+export const TOK_READ_IMMERSIVE_META = '#766C61';
+// Figma night-mode semantic counterpart. Kept independent so page chrome can
+// follow the paper scheme without inheriting the configurable body font role.
+export const TOK_READ_IMMERSIVE_META_NIGHT = '#C8C0B4';
 
 // ----------------------------------------------------------------------------
 // Source Switch — 换源浮窗专用 (SourceSwitchWindow 共享组件此前内联, 现抽取)

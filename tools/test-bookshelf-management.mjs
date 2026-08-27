@@ -34,8 +34,14 @@ assert.doesNotMatch(gateway, /preferences|relationalStore|fileIo/);
 assert.match(page, /export struct BookshelfManagementPage/);
 assert.match(page, /Legado 对照：BookGroup \/ BookDao group \/ ReadRecord/);
 assert.match(shelfPage, /onManageRequested: \(\) => void/);
+assert.doesNotMatch(shelfPage,
+  /this\.sectionAction\('bookshelf_settings', \(\): void => this\.onManageRequested\(\), false\)/,
+  'the shelf gear must not open the unrelated Core group/read-record manager');
 assert.match(shelfPage,
-  /this\.sectionAction\('bookshelf_settings', \(\): void => this\.onManageRequested\(\), false\)/);
+  /this\.sectionAction\('bookshelf_settings', \(\): void => this\.onBookshelfSettingsRequested\(\), false\)/);
+assert.match(index,
+  /onBookshelfSettingsRequested: \(\): void => this\.openSettings\(\)/,
+  'bookshelf settings must enter the settings flow instead of Core management');
 assert.match(index, /'bookshelfManagement'/);
 assert.match(index, /route = 'bookshelfManagement'/);
 assert.match(index, /BookshelfManagementPage\(\{/);

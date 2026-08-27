@@ -496,53 +496,153 @@ export struct ReaderTtsFullPanel {
   @Builder
   private systemSection() {
     Column({ space: 0 }) {
-      this.sectionHeader('TTS 配置', '设备引擎');
-      Row({ space: 8 }) {
-        Text('系统 TTS')
-          .layoutWeight(1)
-          .height(52)
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(12)
-          .fontColor(TOK_READ_INK)
-          .textAlign(TextAlign.Center)
-          .border({ width: TOK_BORDER_W, color: TOK_READ_PRIMARY })
-          .borderRadius(6)
-          .opacity(this.isHttpEngineSelected() ? 0.58 : 1)
-          .onClick((): void => this.requestEngineChange('system'));
-        Text(this.httpEngineLabel())
-          .layoutWeight(1)
-          .height(52)
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(12)
-          .fontColor(this.isHttpEngineSelected() ? TOK_READ_INK : TOK_READ_MUTED)
-          .opacity(this.httpEngines.length > 0 ? 1 : 0.42)
-          .textAlign(TextAlign.Center)
-          .border({
-            width: TOK_BORDER_W,
-            color: this.isHttpEngineSelected() ? TOK_READ_PRIMARY : TOK_LINE,
-          })
-          .borderRadius(6)
-          .enabled(this.httpEngines.length > 0)
-          .onClick((): void => {
-            const engine = this.nextHttpEngine();
-            if (engine !== undefined) this.requestEngineChange(engine);
-          });
-      }
-      .width('100%')
-      .padding({ top: 8, bottom: 8 });
-      this.selectorRow('当前引擎', this.currentEngineLabel(), false, (): void => {});
-      this.selectorRow('语言', this.language,
-        !this.isHttpEngineSelected() && this.languageCount() > 1,
-        (): void => this.selectNextLanguage());
-      this.selectorRow('音频会话', this.allowMixing ? '混音' : '媒体独占', false, (): void => {});
-      this.selectorRow('不可用处理', this.failurePolicy === 'skip' ? '跳过' : '停止', true,
-        (): void => this.onFailurePolicyChange(this.failurePolicy === 'skip' ? 'stop' : 'skip'));
+      this.ttsConfigHeader();
+      Blank().width('100%').height(8);
+      this.ttsServiceTypeTabs();
+      Blank().width('100%').height(12);
+      this.ttsClosedConfigPanel();
     }
     .width('100%')
-    .padding({ top: 18, left: 4, right: 4, bottom: 24 })
+    .padding({ top: 13, left: 4, right: 4, bottom: 12 })
     .alignItems(HorizontalAlign.Start);
+  }
+
+  /** Final Full TTS assembly `930:924`: header 28vp above the 310vp container. */
+  @Builder
+  private ttsConfigHeader() {
+    Row() {
+      Text('TTS 配置')
+        .layoutWeight(1)
+        .fontFamily('ReaderInter')
+        .fontWeight(FontWeight.Bold)
+        .fontSize(12)
+        .fontColor(TOK_READ_INK);
+      Text('设备引擎')
+        .fontFamily('ReaderInter')
+        .fontSize(10)
+        .fontColor(TOK_READ_MUTED);
+    }
+    .width('100%')
+    .height(28)
+    .alignItems(VerticalAlign.Center);
+  }
+
+  /** Figma `930:933`: two stacked 54vp service tabs inside a 116vp shell. */
+  @Builder
+  private ttsServiceTypeTabs() {
+    Column({ space: 2 }) {
+      this.ttsServiceTypeTab(false);
+      this.ttsServiceTypeTab(true);
+    }
+    .width('100%')
+    .height(116)
+    .padding(3)
+    .backgroundColor('#B8FFFCF8')
+    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+    .borderRadius(6);
+  }
+
+  @Builder
+  private ttsServiceTypeTab(http: boolean) {
+    Row({ space: 8 }) {
+      Stack({ alignContent: Alignment.Center }) {
+        if (http) {
+          Image($r('app.media.reader_tts_online_engine'))
+            .width(16)
+            .height(16);
+        } else {
+          Image($r('app.media.reader_tts_system_engine'))
+            .width(16)
+            .height(16);
+        }
+      }
+      .width(44)
+      .height(44)
+      .backgroundColor(this.isTtsServiceTabSelected(http) ? '#B8FFFCF8' : Color.Transparent)
+      .borderRadius(6);
+
+      Column({ space: 2 }) {
+        Text(http ? '在线 TTS' : '系统 TTS')
+          .width('100%')
+          .height(16)
+          .fontFamily('ReaderNotoSansSC')
+          .fontWeight(900)
+          .fontSize(12)
+          .lineHeight(15.6)
+          .fontColor(this.isTtsServiceTabSelected(http) ? '#1F3528' : '#756F69')
+          .maxLines(1);
+        Text(http ? '第三方或自定义服务' : '使用设备内置语音')
+          .width('100%')
+          .height(13)
+          .fontFamily('ReaderNotoSansSC')
+          .fontWeight(FontWeight.Bold)
+          .fontSize(10)
+          .lineHeight(13)
+          .fontColor('#756F69')
+          .maxLines(1);
+      }
+      .layoutWeight(1)
+      .height(31)
+      .alignItems(HorizontalAlign.Start);
+    }
+    .width('100%')
+    .height(54)
+    .padding({ left: 11, right: 11, top: 5, bottom: 5 })
+    .alignItems(VerticalAlign.Center)
+    .backgroundColor(this.isTtsServiceTabSelected(http) ? TOK_FIELD_SURFACE : Color.Transparent)
+    .border({
+      width: TOK_BORDER_W,
+      color: this.isTtsServiceTabSelected(http) ? '#2D4A3E' : Color.Transparent,
+    })
+    .borderRadius(6)
+    .accessibilityText(http ? this.onlineTtsAccessibilityText() : '系统 TTS，使用设备内置语音')
+    .onClick((): void => this.selectTtsServiceType(http));
+  }
+
+  /**
+   * Final nodes `930:964/969/974/979` define only closed 36vp triggers.
+   * There is no expanded option/menu contract, so these rows expose the real
+   * current value without the previous invisible click-to-cycle behaviour.
+   */
+  @Builder
+  private ttsClosedConfigPanel() {
+    Column({ space: 0 }) {
+      this.ttsClosedConfigRow('系统引擎', this.systemEngineDisplay(), 94);
+      this.ttsClosedConfigRow('语言', this.language, 61);
+      this.ttsClosedConfigRow('音频会话', this.allowMixing ? '混音播放' : '语音播放', 106);
+      this.ttsClosedConfigRow(
+        '不可用处理',
+        this.failurePolicy === 'skip' ? '跳过不可用内容' : '提示安装或启用',
+        106,
+      );
+    }
+    .width('100%')
+    .height(182)
+    .padding(1)
+    .backgroundColor('#B8FFFCF8')
+    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+    .borderRadius(6)
+    .clip(true);
+  }
+
+  @Builder
+  private ttsClosedConfigRow(label: string, value: string, fieldWidth: number) {
+    Row() {
+      Text(label)
+        .layoutWeight(1)
+        .fontFamily('ReaderNotoSansSC')
+        .fontWeight(FontWeight.Bold)
+        .fontSize(12)
+        .lineHeight(15.6)
+        .fontColor('#41484C')
+        .maxLines(1);
+      this.ttsSelectValueField(value, fieldWidth, `${label}：${value}，暂不可展开`);
+    }
+    .width('100%')
+    .height(45)
+    .padding({ left: 10, right: 10 })
+    .alignItems(VerticalAlign.Center)
+    .border({ width: { bottom: TOK_BORDER_W }, color: TOK_BORDER });
   }
 
   @Builder
@@ -573,17 +673,7 @@ export struct ReaderTtsFullPanel {
         .fontWeight(FontWeight.Bold)
         .fontSize(12)
         .fontColor('#41484C');
-      Text(value)
-        .height(36)
-        .padding({ left: 12, right: 12 })
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Medium)
-        .fontSize(11)
-        .fontColor('#41484C')
-        .textAlign(TextAlign.Center)
-        .backgroundColor(TOK_FIELD_SURFACE)
-        .border({ width: TOK_BORDER_W, color: TOK_BORDER })
-        .borderRadius(6);
+      this.ttsSelectValueField(value, 70, `${label}：${value}`);
     }
     .width('100%')
     .height(45)
@@ -593,6 +683,32 @@ export struct ReaderTtsFullPanel {
     .enabled(enabled)
     .opacity(enabled ? 1 : 0.72)
     .onClick((): void => onSelect());
+  }
+
+  @Builder
+  private ttsSelectValueField(value: string, fieldWidth: number, accessibilityText: string) {
+    Row({ space: 6 }) {
+      Text(value)
+        .layoutWeight(1)
+        .fontFamily('ReaderNotoSansSC')
+        .fontWeight(FontWeight.Bold)
+        .fontSize(12)
+        .lineHeight(14.4)
+        .fontColor('#1F3528')
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis });
+      Image($r('app.media.reader_chevron_down'))
+        .width(8)
+        .height(4);
+    }
+      .width(fieldWidth)
+      .height(36)
+      .padding({ left: 10, right: 8 })
+      .alignItems(VerticalAlign.Center)
+      .backgroundColor(TOK_FIELD_SURFACE)
+      .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+      .borderRadius(6)
+      .accessibilityText(accessibilityText);
   }
 
   @Builder
@@ -709,27 +825,32 @@ export struct ReaderTtsFullPanel {
     return this.engine.startsWith('http-tts:');
   }
 
+  private isTtsServiceTabSelected(http: boolean): boolean {
+    return http === this.isHttpEngineSelected();
+  }
+
+  private selectTtsServiceType(http: boolean): void {
+    if (!http) {
+      if (this.isHttpEngineSelected()) this.requestEngineChange('system');
+      return;
+    }
+    if (this.isHttpEngineSelected() || this.httpEngines.length === 0) return;
+    this.requestEngineChange(`http-tts:${this.httpEngines[0].id}`);
+  }
+
+  private onlineTtsAccessibilityText(): string {
+    if (this.httpEngines.length === 0) return '在线 TTS，尚未配置第三方或自定义服务';
+    return `在线 TTS，${this.httpEngines.length} 个已配置服务`;
+  }
+
+  private systemEngineDisplay(): string {
+    return this.isHttpEngineSelected() ? this.currentEngineLabel() : '系统默认';
+  }
+
   private currentEngineLabel(): string {
     if (!this.isHttpEngineSelected()) return '系统离线';
     const id = Number(this.engine.slice('http-tts:'.length));
     return this.httpEngines.find((option: ReaderTtsEngineOption): boolean => option.id === id)?.name ?? '在线配置失效';
-  }
-
-  private httpEngineLabel(): string {
-    if (this.httpEngines.length === 0) return '在线 TTS（未配置）';
-    if (this.isHttpEngineSelected()) return this.currentEngineLabel();
-    return this.httpEngines.length === 1 ? this.httpEngines[0].name : `在线 TTS（${this.httpEngines.length}）`;
-  }
-
-  private nextHttpEngine(): string | undefined {
-    if (this.httpEngines.length === 0) return undefined;
-    if (!this.isHttpEngineSelected()) return `http-tts:${this.httpEngines[0].id}`;
-    const currentId = Number(this.engine.slice('http-tts:'.length));
-    const index = this.httpEngines.findIndex(
-      (option: ReaderTtsEngineOption): boolean => option.id === currentId,
-    );
-    const next = this.httpEngines[(index + 1 + this.httpEngines.length) % this.httpEngines.length];
-    return `http-tts:${next.id}`;
   }
 
   private currentVoiceLabel(): string {
@@ -744,27 +865,6 @@ export struct ReaderTtsFullPanel {
       option.language === this.language && option.person === this.person);
     const next = this.voiceOptions[(index + 1 + this.voiceOptions.length) % this.voiceOptions.length];
     this.onVoiceChange(next.language, next.person);
-  }
-
-  private languageCount(): number {
-    return this.languages().length;
-  }
-
-  private selectNextLanguage(): void {
-    const languages = this.languages();
-    if (languages.length === 0) return;
-    const current = languages.indexOf(this.language);
-    const language = languages[(current + 1 + languages.length) % languages.length];
-    const voice = this.voiceOptions.find((option: ReaderTtsVoiceOption): boolean => option.language === language);
-    if (voice !== undefined) this.onVoiceChange(voice.language, voice.person);
-  }
-
-  private languages(): string[] {
-    const languages: string[] = [];
-    for (const option of this.voiceOptions) {
-      if (!languages.includes(option.language)) languages.push(option.language);
-    }
-    return languages;
   }
 
   private statusText(): string {

@@ -18,6 +18,7 @@ import {
   createDefaultReaderAppearanceSnapshot,
   type ReaderAppearanceAlignment,
   type ReaderAppearanceFont,
+  type ReaderAppearanceFontSlot,
   type ReaderAppearanceIndent,
   type ReaderAppearanceMetric,
   type ReaderAppearanceSnapshot,
@@ -41,6 +42,11 @@ import { ReaderTtsModulePanel } from './ReaderTtsModulePanel';
 import { createReaderTtsState, type ReaderTtsState } from './ReaderTtsState';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from './ReaderDirectoryMarkerState';
 import { ReaderQuickSearchPanel, type ReaderQuickSearchState } from './ReaderQuickSearchPanel';
+import { ReaderSearchFullPanel } from './ReaderSearchFullPanel';
+import {
+  readerControlExpansionTarget,
+  type ReaderControlPage,
+} from './ReaderControlRouting';
 import { ReaderReplaceQuickPanel } from './ReaderReplaceQuickPanel';
 import {
   createHiddenReaderReplaceQuickState,
@@ -114,13 +120,13 @@ import {
   TYPE_READER_CONTROL_SOURCE_ACTION,
 } from '../common/ReaderTypography';
 
-export type ReaderControlPage = 'home' | 'quickSearch' | 'quickAutoPage' | 'quickReplace' |
-  'moduleDirectory' | 'moduleTts' | 'moduleAppearance' | 'moduleSettings' |
-  'fullAutoPage' | 'fullTts' | 'fullAppearance' | 'fullSettings';
+export type { ReaderControlPage } from './ReaderControlRouting';
 type ReaderQuickAction = 'search' | 'autoPage' | 'replace';
 const READER_CONTROL_GRABBER_HIT_WIDTH = 72;
 const READER_CONTROL_GRABBER_HIT_HEIGHT = 28;
 const READER_CONTROL_GRABBER_PAN_DISTANCE = 12;
+const READER_CONTROL_GRABBER_MAX_DRAG = 48;
+const READER_CONTROL_GRABBER_EXPAND_THRESHOLD = 24;
 
 // Both Figma timelines hold every actor at its source endpoint until 14.815%
 // and then apply the production direction's easing. The 1.35s review canvas
@@ -153,6 +159,8 @@ export struct ReaderControlPanel {
   // 控制层可见性。宿主常驻挂载本面板, 内部按 visible 门控各层并做非对称过渡
   // (Figma MR1 reader.control.show/hide)。
   @Prop visible: boolean = false;
+  /** Host arms this one presented frame before removing the whole shell. */
+  @Prop shellExitArmed: boolean = false;
   @Prop @Watch('onActivePageChanged') activePage: ReaderControlPage = 'home';
   @Prop tocEntries: LocalReadingTocEntry[] = [];
   @Prop currentChapterIndex: number = -1;
@@ -227,6 +235,8 @@ export struct ReaderControlPanel {
     (_theme: ReaderAppearanceTheme): void => {};
   onAppearanceFontChange: (font: ReaderAppearanceFont) => void =
     (_font: ReaderAppearanceFont): void => {};
+  onAppearanceFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]) => void =
+    (_fontOrder: ReaderAppearanceFontSlot[]): void => {};
   onAppearanceCustomFontImport: () => void = (): void => {};
   onAppearanceIndentRequest: (indent: ReaderAppearanceIndent) => void =
     (_indent: ReaderAppearanceIndent): void => {};
@@ -269,6 +279,7 @@ export struct ReaderControlPanel {
   @State private autoPageActorRegistryMounted: boolean = false;
   @State private autoPageActorExpanded: boolean = false;
   @State private autoPageActorTransitioning: boolean = false;
+  @State private controlGrabberDragY: number = 0;
   private autoPageActorGeneration: number = 0;
   private autoPageActorHoldTimer: number = -1;
   private brightnessDragStartPercent: number = READER_CONTROL_BRIGHTNESS_MAX;
@@ -299,15 +310,43 @@ export struct ReaderControlPanel {
     } else if (module === 'settings') {
       page = 'moduleSettings';
     }
+    const destination: ReaderControlPage = this.isActiveModule(module) ? 'home' : page;
     if (this.reduceMotion) {
-      this.onPageChange(page);
-      this.onModuleSelect(module);
+      this.onPageChange(destination);
+      this.onModuleSelect(destination === 'home' ? 'home' : module);
       return;
     }
     this.getUIContext().animateTo(motionAnimateParam('reader.module.switch'), (): void => {
-      this.onPageChange(page);
+      this.onPageChange(destination);
     });
-    this.onModuleSelect(module);
+    this.onModuleSelect(destination === 'home' ? 'home' : module);
+  }
+
+  private updateControlGrabberDrag(offsetY: number): void {
+    if (!Number.isFinite(offsetY)) return;
+    this.controlGrabberDragY = Math.max(-READER_CONTROL_GRABBER_MAX_DRAG, Math.min(0, offsetY));
+  }
+
+  private finishControlGrabberDrag(offsetY: number): void {
+    this.updateControlGrabberDrag(offsetY);
+    const shouldExpand = this.controlGrabberDragY <= -READER_CONTROL_GRABBER_EXPAND_THRESHOLD;
+    if (shouldExpand) {
+      this.controlGrabberDragY = 0;
+      this.expandCurrentControl();
+      return;
+    }
+    this.resetControlGrabberDrag();
+  }
+
+  private resetControlGrabberDrag(): void {
+    if (this.controlGrabberDragY === 0) return;
+    if (this.reduceMotion) {
+      this.controlGrabberDragY = 0;
+      return;
+    }
+    this.getUIContext().animateTo(motionAnimateParam('reader.panel.collapse'), (): void => {
+      this.controlGrabberDragY = 0;
+    });
   }
 
   private requestExpandAppearance(): void {
@@ -365,19 +404,43 @@ export struct ReaderControlPanel {
     });
   }
 
+  private requestExpandSearch(): void {
+    if (this.activePage !== 'quickSearch') return;
+    if (this.reduceMotion) {
+      this.onPageChange('fullSearch');
+      return;
+    }
+    this.getUIContext().animateTo(motionAnimateParam('reader.panel.expand'), (): void => {
+      this.onPageChange('fullSearch');
+    });
+  }
+
+  private requestCollapseSearch(): void {
+    if (this.activePage !== 'fullSearch') return;
+    if (this.reduceMotion) {
+      this.onPageChange('quickSearch');
+      return;
+    }
+    this.getUIContext().animateTo(motionAnimateParam('reader.panel.collapse'), (): void => {
+      this.onPageChange('quickSearch');
+    });
+  }
+
   private expandCurrentControl(): void {
-    if (this.activePage === 'home' || this.activePage === 'moduleDirectory' ||
-      this.activePage === 'quickSearch') {
+    const target = readerControlExpansionTarget(this.activePage);
+    if (target === 'directory') {
       this.onExpandDirectory();
-    } else if (this.activePage === 'quickAutoPage') {
+    } else if (target === 'fullSearch') {
+      this.requestExpandSearch();
+    } else if (target === 'fullAutoPage') {
       this.requestExpandAutoPage();
-    } else if (this.activePage === 'quickReplace') {
+    } else if (target === 'rulesManagement') {
       this.onOpenRulesManagement();
-    } else if (this.activePage === 'moduleTts') {
+    } else if (target === 'fullTts') {
       this.requestExpandTts();
-    } else if (this.activePage === 'moduleAppearance') {
+    } else if (target === 'fullAppearance') {
       this.requestExpandAppearance();
-    } else if (this.activePage === 'moduleSettings') {
+    } else if (target === 'fullSettings') {
       this.requestExpandSettings();
     }
   }
@@ -692,7 +755,9 @@ export struct ReaderControlPanel {
 
   @Builder
   private controlDock() {
-    if (this.activePage === 'fullAppearance') {
+    if (this.activePage === 'fullSearch') {
+      this.fullSearchDock();
+    } else if (this.activePage === 'fullAppearance') {
       this.fullAppearanceDock();
     } else if (this.activePage === 'fullSettings') {
       this.fullSettingsDock();
@@ -703,6 +768,22 @@ export struct ReaderControlPanel {
     } else {
       this.regularControlDock();
     }
+  }
+
+  @Builder
+  private fullSearchDock() {
+    ReaderSearchFullPanel({
+      availableWidth: this.fullPanelAvailableWidth(),
+      availableHeight: this.layout.fullPanelHeight,
+      query: this.searchQuery,
+      state: this.searchState,
+      onCollapse: (): void => this.requestCollapseSearch(),
+      onQueryChange: (query: string): void => this.onSearchQueryChange(query),
+      onSearch: (): void => this.onSearch(),
+      onSelectResult: (result: ReadingContentSearchResult): void => this.onSearchResultSelect(result),
+    })
+      .transition(this.reduceMotion || this.shellExitArmed ? TransitionEffect.IDENTITY :
+        translateYTransition('reader.panel.expand', 18));
   }
 
   @Builder
@@ -720,6 +801,8 @@ export struct ReaderControlPanel {
       onSetDayTheme: (theme: ReaderAppearanceTheme): void => this.onAppearanceDayThemeChange(theme),
       onSetNightTheme: (theme: ReaderAppearanceTheme): void => this.onAppearanceNightThemeChange(theme),
       onFontChange: (font: ReaderAppearanceFont): void => this.onAppearanceFontChange(font),
+      onFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]): void =>
+        this.onAppearanceFontOrderChange(fontOrder),
       onCustomFontImport: (): void => this.onAppearanceCustomFontImport(),
       onIndentRequest: (indent: ReaderAppearanceIndent): void => this.onAppearanceIndentRequest(indent),
       onAlignmentRequest: (current: ReaderAppearanceAlignment): void =>
@@ -731,7 +814,7 @@ export struct ReaderControlPanel {
       onPageTurnStyleChange: (style: ReaderPageTurnStyle): void =>
         this.onPageTurnStyleChange(style),
     })
-      .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
+      .transition(this.reduceMotion || this.shellExitArmed ? TransitionEffect.IDENTITY :
         translateYTransition('reader.panel.expand', 18));
   }
 
@@ -755,7 +838,7 @@ export struct ReaderControlPanel {
       onToggleChange: (key: ReaderSettingsToggleKey, value: boolean): void =>
         this.onSettingsToggleChange(key, value),
     })
-      .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
+      .transition(this.reduceMotion || this.shellExitArmed ? TransitionEffect.IDENTITY :
         translateYTransition('reader.panel.expand', 18));
   }
 
@@ -795,7 +878,7 @@ export struct ReaderControlPanel {
       onHttpEnginePut: (config: ReaderTtsEngineOption): Promise<void> => this.onTtsHttpEnginePut(config),
       onHttpEngineDelete: (id: number): Promise<void> => this.onTtsHttpEngineDelete(id),
     })
-      .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
+      .transition(this.reduceMotion || this.shellExitArmed ? TransitionEffect.IDENTITY :
         translateYTransition('reader.panel.expand', 18));
   }
 
@@ -807,6 +890,7 @@ export struct ReaderControlPanel {
     }
     .width(this.dockWidth())
     .height(READER_CONTROL_REGULAR_DOCK_HEIGHT)
+    .translate({ y: this.controlGrabberDragY })
     .margin({ bottom: this.layout.dockBottomGap });
   }
 
@@ -886,8 +970,8 @@ export struct ReaderControlPanel {
   }
 
   private usesTopAnchoredFullPanel(): boolean {
-    return this.activePage === 'fullAppearance' || this.activePage === 'fullTts' ||
-      this.activePage === 'fullSettings';
+    return this.activePage === 'fullSearch' || this.activePage === 'fullAppearance' ||
+      this.activePage === 'fullTts' || this.activePage === 'fullSettings';
   }
 
   private autoPageSurfaceWidth(): number {
@@ -937,7 +1021,9 @@ export struct ReaderControlPanel {
           .onClick((): void => this.expandCurrentControl())
           .gesture(
             PanGesture({ direction: PanDirection.Up, distance: READER_CONTROL_GRABBER_PAN_DISTANCE })
-              .onActionEnd((_event: GestureEvent): void => this.expandCurrentControl())
+              .onActionUpdate((event: GestureEvent): void => this.updateControlGrabberDrag(event.offsetY))
+              .onActionEnd((event: GestureEvent): void => this.finishControlGrabberDrag(event.offsetY))
+              .onActionCancel((): void => this.resetControlGrabberDrag())
           );
         }
         .width('100%')
@@ -997,7 +1083,7 @@ export struct ReaderControlPanel {
     if (this.activePage === 'quickReplace') {
       return '打开替换规则管理';
     }
-    return this.activePage === 'quickSearch' ? '展开搜索对应完整目录' : '展开完整目录';
+    return this.activePage === 'quickSearch' ? '展开内容搜索完整控制' : '展开完整目录';
   }
 
   @Builder
@@ -1019,7 +1105,11 @@ export struct ReaderControlPanel {
       right: READER_CONTROL_CONTENT_PADDING_RIGHT,
     })
     .alignItems(VerticalAlign.Top)
-    .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
+    // Shell dismissal owns the only exit transition. Suppressing this nested
+    // content transition while `visible` is false keeps text, icons, surface
+    // and border in one 360 ms actor instead of removing content first and
+    // leaving the bordered sheet behind.
+    .transition(this.reduceMotion || this.shellExitArmed ? TransitionEffect.IDENTITY :
       TransitionEffect.OPACITY.animation(motionAnimateParam('reader.module.switch')));
   }
 
@@ -1119,7 +1209,7 @@ export struct ReaderControlPanel {
       right: READER_CONTROL_CONTENT_PADDING_RIGHT,
     })
     .alignItems(VerticalAlign.Top)
-    .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
+    .transition(this.reduceMotion || this.shellExitArmed ? TransitionEffect.IDENTITY :
       ((this.activePage === 'quickSearch' || this.activePage === 'quickAutoPage' ||
         this.activePage === 'quickReplace') ?
         translateYTransition('reader.quick.promote', 12) :

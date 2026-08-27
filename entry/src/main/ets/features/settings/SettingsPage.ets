@@ -124,7 +124,6 @@ export struct SettingsPage {
       });
       this.navRow('书架与搜索设置', $r('app.media.settings_row_shelf_search'), (): void => {});
       this.navRow('书源管理', $r('app.media.settings_row_source'), (): void => this.onOpenSourceManagement());
-      this.navRow('规则实体管理', $r('app.media.settings_row_source'), (): void => this.onOpenRulesManagement());
       this.navRow('同步与备份', $r('app.media.settings_row_sync'), (): void => this.onOpenSync());
       this.navRow('关于与反馈', $r('app.media.settings_row_about'), (): void => {});
     }

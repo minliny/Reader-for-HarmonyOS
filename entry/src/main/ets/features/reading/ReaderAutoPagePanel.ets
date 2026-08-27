@@ -152,15 +152,13 @@ export struct ReaderAutoPagePanel {
 
   @Builder
   private stopTrack() {
-    Row() {
-      Blank().layoutWeight(this.stopLeftWeight());
+    Stack({ alignContent: Alignment.TopStart }) {
       this.stopControl();
-      Blank().layoutWeight(this.stopRightWeight());
     }
-    .width('100%')
+    .width(24)
     .height(42)
     .position({
-      x: 0,
+      x: this.isTablet ? QUICK_AUTO_PAGE_STOP_X_TABLET : QUICK_AUTO_PAGE_STOP_X_PHONE,
       y: this.isTablet ? QUICK_AUTO_PAGE_STOP_Y_TABLET : QUICK_AUTO_PAGE_STOP_Y_PHONE,
     });
   }
@@ -369,12 +367,4 @@ export struct ReaderAutoPagePanel {
     return runningX - QUICK_AUTO_PAGE_PREVIOUS_X - chapterWidth;
   }
 
-  private stopLeftWeight(): number {
-    return this.isTablet ? QUICK_AUTO_PAGE_STOP_X_TABLET : QUICK_AUTO_PAGE_STOP_X_PHONE;
-  }
-
-  private stopRightWeight(): number {
-    const designContentWidth = this.panelWidth() - QUICK_AUTO_PAGE_PANEL_PADDING_X * 2;
-    return designContentWidth - this.stopLeftWeight() - 24;
-  }
 }

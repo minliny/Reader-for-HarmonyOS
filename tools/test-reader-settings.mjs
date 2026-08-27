@@ -19,12 +19,12 @@ import {
 
 const initial = createDefaultReaderSettingsSnapshot();
 assert.deepEqual(initial, {
-  version: 2,
+  version: 3,
   screenDirection: 'system',
   navigationMode: 'paged',
   pageTransition: 'slide',
   screenTimeout: 'system',
-  hideStatusBar: false,
+  hideStatusBar: true,
   hideNavigationBar: false,
   extendIntoCutout: false,
   justifyText: false,
@@ -40,7 +40,7 @@ const normalized = normalizeReaderSettingsSnapshot({
   navigationMode: 'paged',
   pageTransition: 'cover',
   screenTimeout: 'alwaysOn',
-  hideStatusBar: true,
+  hideStatusBar: false,
   hideNavigationBar: true,
   extendIntoCutout: true,
   justifyText: false,
@@ -52,7 +52,7 @@ const normalized = normalizeReaderSettingsSnapshot({
 assert.equal(normalized.screenDirection, 'landscape');
 assert.equal(readerPageTurnStyle(normalized), 'cover');
 assert.equal(normalized.screenTimeout, 'alwaysOn');
-assert.equal(normalized.hideStatusBar, true);
+assert.equal(normalized.hideStatusBar, false, 'V3 must preserve the explicit user choice');
 assert.equal(normalized.hideNavigationBar, true);
 assert.equal(normalized.extendIntoCutout, true);
 assert.equal(normalized.volumeKeysTurnPage, true);
@@ -75,11 +75,32 @@ const migratedV1 = normalizeReaderSettingsSnapshot({
   stopTtsOnScreenOff: true,
   longPressSelectText: true,
 });
-assert.equal(migratedV1.version, 2);
+assert.equal(migratedV1.version, 3);
 assert.equal(migratedV1.navigationMode, 'continuous');
 assert.equal(migratedV1.pageTransition, 'slide');
 assert.equal(readerPageTurnStyle(migratedV1), 'scroll');
 assert.equal(migratedV1.justifyText, false, 'Appearance remains the only justification owner');
+assert.equal(migratedV1.hideStatusBar, true, 'legacy settings migrate to the immersive default');
+
+const migratedV2 = normalizeReaderSettingsSnapshot({
+  version: 2,
+  screenDirection: 'system',
+  navigationMode: 'paged',
+  pageTransition: 'slide',
+  screenTimeout: 'system',
+  hideStatusBar: false,
+  hideNavigationBar: true,
+  extendIntoCutout: false,
+  justifyText: false,
+  alignPageBottom: false,
+  volumeKeysTurnPage: false,
+  stopTtsOnScreenOff: false,
+  longPressSelectText: false,
+});
+assert.equal(migratedV2.version, 3);
+assert.equal(migratedV2.hideStatusBar, true,
+  'V2 false was the old product default and must migrate once rather than override V3');
+assert.equal(migratedV2.hideNavigationBar, true, 'unrelated legacy choices must survive migration');
 
 assert.notStrictEqual(copyReaderSettingsSnapshot(initial), initial);
 const noAnimation = setReaderPageTurnStyle(initial, 'none');
@@ -98,7 +119,7 @@ assert.equal(setReaderSettingsToggle(initial, 'alignPageBottom', true).alignPage
 assert.equal(setReaderSettingsToggle(initial, 'longPressSelectText', true).longPressSelectText, true);
 assert.equal(setReaderSettingsToggle(initial, 'volumeKeysTurnPage', true).volumeKeysTurnPage, true);
 assert.equal(setReaderSettingsToggle(initial, 'stopTtsOnScreenOff', true).stopTtsOnScreenOff, true);
-assert.equal(setReaderSettingsToggle(initial, 'hideStatusBar', true).hideStatusBar, true);
+assert.equal(setReaderSettingsToggle(initial, 'hideStatusBar', false).hideStatusBar, false);
 assert.equal(setReaderSettingsToggle(initial, 'hideNavigationBar', true).hideNavigationBar, true);
 assert.equal(setReaderSettingsToggle(initial, 'extendIntoCutout', true).extendIntoCutout, true);
 assert.equal(setReaderScreenDirection(initial, 'portrait').screenDirection, 'portrait');
@@ -173,6 +194,8 @@ assert.match(fullPanel, /与阅读样式同步/);
 assert.match(gateway, /ReaderRuntimeOwner/);
 assert.match(gateway, /getUIAbilityContext\(\)/);
 assert.match(gateway, /reader_reading_settings_v1/);
+assert.match(gateway, /decoded\.version !== 3[\s\S]*?store\.put\(READER_SETTINGS_SNAPSHOT_KEY, JSON\.stringify\(normalized\)\)/,
+  'legacy settings migration must be persisted so V3 owns subsequent explicit choices');
 assert.doesNotMatch(gateway, /\.request\(/,
   'Reader Settings must not misuse Reader Core or invent a Host command');
 
@@ -191,6 +214,18 @@ assert.match(controlPanel, /onScreenDirectionChange/);
 assert.match(controlPanel, /onScreenTimeoutChange/);
 assert.match(experience, /ReaderWindowCoordinator\.requestReaderWindowPolicy/);
 assert.match(experience, /ReaderWindowCoordinator\.requestAppWindowPolicy/);
+assert.match(experience,
+  /aboutToAppear\(\): void \{[\s\S]*?this\.applyWindowChrome\(\);[\s\S]*?this\.applyWindowPolicyForChromeOwner\(\)/,
+  'mounting must resolve policy through visible window ownership');
+assert.match(experience,
+  /private onWindowChromeActiveChanged\(\): void \{[\s\S]*?this\.applyWindowChrome\(\);[\s\S]*?this\.applyWindowPolicyForChromeOwner\(\)/,
+  'the visible-reader transition must apply chrome and system-bar policy together');
+assert.match(experience,
+  /private applyWindowPolicyForChromeOwner\(\): void \{[\s\S]*?if \(this\.windowChromeActive\)[\s\S]*?this\.applyReaderWindowPolicy\(this\.readerSettingsSnapshot\)[\s\S]*?ReaderWindowCoordinator\.requestAppWindowPolicy\(\)/,
+  'a hidden warm reader must preserve the app policy until it owns the screen');
+assert.match(experience,
+  /safeWindowSettingsFallback\([\s\S]*?version: 3[\s\S]*?hideStatusBar: true/,
+  'a Host failure must keep the requested immersive status-bar default');
 assert.match(experience, /ReaderScreenAwakeLease/);
 assert.match(experience, /this\.screenAwakeLease\?\.configure\(snapshot\.screenTimeout, this\.appForeground\)/);
 assert.match(experience, /this\.screenAwakeLease\?\.rearm\(\)/);

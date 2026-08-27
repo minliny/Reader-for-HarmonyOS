@@ -6,7 +6,7 @@ export const READER_FONT_NOTO_SERIF_SC_BOLD = 'ReaderNotoSerifSCBold';
 export const READER_FONT_NOTO_SERIF_SC_REGULAR = 'ReaderNotoSerifSCRegular';
 export const READER_FONT_NOTO_SANS_SC = 'ReaderNotoSansSC';
 export const READER_FONT_LXGW_WENKAI_LITE = 'ReaderLXGWWenKaiLite';
-export const READER_FONT_BPMF_ZIHI_KAI_STD = 'ReaderBpmfZihiKaiStd';
+export const READER_FONT_LXGW_WENKAI_GB_LITE = 'ReaderLXGWWenKaiGBLite';
 export const READER_FONT_ZHUQUE_FANGSONG = 'ReaderZhuqueFangsong';
 export const READER_FONT_SARASA_MONO_SC = 'ReaderSarasaMonoSC';
 // Figma renders the Source Han Serif slot with Noto Serif SC. Both projects

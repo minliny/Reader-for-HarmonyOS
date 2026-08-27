@@ -17,8 +17,8 @@ import {
   TYPE_SELECT_SOURCE_GROUP_VALUE,
 } from './ReaderTypography';
 
-// 统一下拉触发条 — 对齐 Primitive/Select MD Selected (282:124): panel-soft 高亮底 +
-// 边框 + r6 + 容器 padding 10 + 文字-chevron gap 8, 值右对齐 Noto Sans SC Bold 12。
+// 统一下拉触发条 — 对齐最终下拉模板 (1506:8807/9291): panel-soft 高亮底 +
+// 边框 + r6 + 容器 padding 10 + 文字-chevron gap 8, 值左对齐 Noto Sans SC Bold 12。
 // 展开面板已拆至 ReaderSelectPanel: 本组件只渲染固定 36 高的触发条。展开面板由宿主
 // 页在全高 overlay Stack 内按触发条全局坐标定位渲染 (ReaderSelectPanel)。
 // 原因: ArkUI 把溢出父容器边界的子组件命中测试裁到父边界 — 固定高行(58/50/36)内的
@@ -179,7 +179,7 @@ export struct ReaderSelect {
         .fontWeight(TYPE_SELECT_DEFAULT_VALUE.fontWeight)
         .fontSize(TYPE_SELECT_DEFAULT_VALUE.fontSizeFp)
         .fontColor(TOK_PRIMARY_DARK)
-        .textAlign(TextAlign.End)
+        .textAlign(TextAlign.Start)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       Image($r('app.media.reader_chevron_down')).width(CHEVRON_W).height(CHEVRON_H)

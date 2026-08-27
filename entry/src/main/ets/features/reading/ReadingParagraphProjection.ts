@@ -1,10 +1,10 @@
 /**
  * Source-backed paragraph boundary semantics used before physical pagination.
  *
- * Core's local TXT parser preserves every source line with a single `\n`, so
- * each non-empty line is one natural paragraph. Structured extraction (EPUB
- * XHTML and remote HTML) reserves `\n\n` for a semantic paragraph while a
- * single `\n` may be an explicit `<br>` inside that paragraph.
+ * Core's local TXT parser and remote HTML normalizer both project natural
+ * paragraphs as non-empty lines separated by a single `\n`. Local structured
+ * extraction (currently EPUB XHTML) keeps blank lines between semantic
+ * paragraphs, while a single `\n` may be an explicit `<br>` inside one block.
  */
 export type ReadingParagraphBoundaryMode = 'lineSeparated' | 'blankLineSeparated';
 
@@ -19,8 +19,10 @@ export function readingParagraphBoundaryMode(
   bookKind: string | undefined,
 ): ReadingParagraphBoundaryMode {
   const normalizedKind = bookKind?.trim().toUpperCase();
-  return sourceId === 'local' && normalizedKind === 'TXT' ?
-    'lineSeparated' : 'blankLineSeparated';
+  if (sourceId !== 'local' || normalizedKind === 'TXT') {
+    return 'lineSeparated';
+  }
+  return 'blankLineSeparated';
 }
 
 export function collectReadingParagraphUtf16Ranges(

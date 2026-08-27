@@ -1,14 +1,15 @@
 import type {
   ReaderAppearanceAlignment,
   ReaderAppearanceFont,
+  ReaderAppearanceFontSlot,
   ReaderAppearanceIndent,
   ReaderAppearanceSnapshot,
   ReaderAppearanceTheme,
 } from './ReaderAppearanceState';
 import {
-  READER_FONT_BPMF_ZIHI_KAI_STD,
   READER_FONT_HARMONYOS_SANS,
   READER_FONT_LXGW_WENKAI_LITE,
+  READER_FONT_LXGW_WENKAI_GB_LITE,
   READER_FONT_NOTO_SANS_SC,
   READER_FONT_NOTO_SERIF_SC_REGULAR,
   READER_FONT_SARASA_MONO_SC,
@@ -76,7 +77,7 @@ export function readerAppearanceFontFamily(font: ReaderAppearanceFont): string {
     return READER_FONT_NOTO_SERIF_SC_REGULAR;
   }
   if (font === 'kai') {
-    return READER_FONT_BPMF_ZIHI_KAI_STD;
+    return READER_FONT_LXGW_WENKAI_GB_LITE;
   }
   if (font === 'fangSong') {
     return READER_FONT_ZHUQUE_FANGSONG;
@@ -94,6 +95,54 @@ export function readerAppearanceFontFamily(font: ReaderAppearanceFont): string {
   // readerAppearanceSnapshotFontFamily(). The enum-only helper remains the
   // built-in preview mapping and therefore fails closed here.
   return READER_FONT_NOTO_SERIF_SC_REGULAR;
+}
+
+/**
+ * One product-facing name table for both the quick and full Figma font grids.
+ * Import becomes the installed custom font only after the Host has admitted it.
+ */
+export function readerAppearanceFontSlotLabel(
+  snapshot: ReaderAppearanceSnapshot,
+  font: ReaderAppearanceFontSlot,
+): string {
+  if (font === 'system') {
+    return '系统';
+  }
+  if (font === 'serif') {
+    return '宋体';
+  }
+  if (font === 'sans') {
+    return '黑体';
+  }
+  if (font === 'kai') {
+    return '楷体';
+  }
+  if (font === 'fangSong') {
+    return '仿宋';
+  }
+  if (font === 'mono') {
+    return '等宽';
+  }
+  if (font === 'sourceHanSerif') {
+    return '思源宋体';
+  }
+  if (font === 'lxgwWenKai') {
+    return '霞鹜文楷';
+  }
+  if (snapshot.customFont !== undefined) {
+    return snapshot.customFont.displayName;
+  }
+  return '导入';
+}
+
+export function readerAppearanceFontSlotFamily(
+  snapshot: ReaderAppearanceSnapshot,
+  font: ReaderAppearanceFontSlot,
+): string {
+  if (font === 'import') {
+    return snapshot.customFont?.familyName ?? READER_FONT_NOTO_SANS_SC;
+  }
+  return readerAppearanceFontFamily(font);
 }
 
 export function readerAppearanceSnapshotFontFamily(snapshot: ReaderAppearanceSnapshot): string {

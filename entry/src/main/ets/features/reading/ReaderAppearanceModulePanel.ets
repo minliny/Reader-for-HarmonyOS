@@ -3,20 +3,26 @@ import {
   TOK_BORDER_W,
   TOK_LINE,
   TOK_LINE_STRONG,
+  TOK_PRIMARY_SOFT,
+  TOK_READ_ACTIVE_SOFT,
+  TOK_READ_DISABLED_BG,
   TOK_READ_INK,
   TOK_READ_MUTED,
   TOK_READ_PRIMARY,
   TOK_SURFACE_PANEL,
-  TOK_SURFACE_SOLID,
 } from '../common/ReaderTokens';
 import {
   createDefaultReaderAppearanceSnapshot,
   isReaderAppearanceFont,
   type ReaderAppearanceFont,
+  type ReaderAppearanceFontSlot,
   type ReaderAppearanceSnapshot,
   type ReaderAppearanceTheme,
 } from './ReaderAppearanceState';
-import { readerAppearanceFontFamily } from './ReaderAppearanceRenderStyle';
+import {
+  readerAppearanceFontSlotFamily,
+  readerAppearanceFontSlotLabel,
+} from './ReaderAppearanceRenderStyle';
 
 /**
  * Figma Reader Quick Appearance content: Phone `942:66`, Tablet `942:68`.
@@ -117,16 +123,19 @@ export struct ReaderAppearanceModulePanel {
         .constraintSize({ maxWidth: 46 })
         .height(18)
         .backgroundColor(this.themeColor(theme))
-        .border({
-          width: this.snapshot.activeTheme === theme ? 2 : TOK_BORDER_W,
-          color: this.snapshot.activeTheme === theme ? TOK_READ_PRIMARY : TOK_LINE_STRONG,
-        })
+        .border({ width: TOK_BORDER_W, color: '#1F5B5046' })
         .borderRadius(6);
     }
     .layoutWeight(1)
     .constraintSize({ maxWidth: this.cellWidth() })
     .height(24)
-    .borderRadius(8)
+    .backgroundColor(this.snapshot.activeTheme === theme ? TOK_READ_ACTIVE_SOFT :
+      (this.isNightTheme(theme) ? TOK_READ_DISABLED_BG : Color.Transparent))
+    .border({
+      width: { top: this.snapshot.activeTheme === theme ? TOK_BORDER_W : 0 },
+      color: TOK_READ_PRIMARY,
+    })
+    .opacity(this.snapshot.activeTheme === theme ? 1 : 0.8)
     .accessibilityText(`切换到${this.themeLabel(theme)}主题`)
     .onClick((): void => this.onThemeChange(theme));
   }
@@ -169,50 +178,42 @@ export struct ReaderAppearanceModulePanel {
   @Builder
   private fontGridRow(startIndex: number) {
     Row({ space: 4 }) {
-      ForEach(this.fontIds().slice(startIndex, startIndex + 4), (fontId: string) => {
+      ForEach(this.fontIds().slice(startIndex, startIndex + 4), (fontId: ReaderAppearanceFontSlot) => {
         this.compactFontCell(fontId);
-      }, (fontId: string): string => `reader-appearance-quick-font-${fontId}`);
+      }, (fontId: ReaderAppearanceFontSlot): string => `reader-appearance-quick-font-${fontId}`);
     }
     .width('100%')
     .height(27);
   }
 
   @Builder
-  private compactFontCell(fontId: string) {
-    Stack({ alignContent: Alignment.Center }) {
-      Row()
-        .width('100%')
-        .constraintSize({ maxWidth: this.fontPillWidth() })
-        .height(22)
-        .backgroundColor(this.isActiveFont(fontId) ? TOK_READ_PRIMARY : TOK_SURFACE_SOLID)
-        .border({
-          width: this.isActiveFont(fontId) ? 0 : TOK_BORDER_W,
-          color: TOK_LINE_STRONG,
-        })
-        .borderRadius(11);
-      Text(this.fontLabel(fontId))
-        .width('100%')
-        .constraintSize({ maxWidth: this.fontPillWidth() - 0.5 })
-        .height(10)
-        .fontFamily(this.fontCellFamily(fontId))
-        .fontWeight(FontWeight.Regular)
-        .fontSize(8)
-        .lineHeight(10)
-        .fontColor(this.isActiveFont(fontId) ? '#FFFAF4' : TOK_READ_INK)
-        .textAlign(TextAlign.Center)
-        .maxLines(1);
-    }
-    .layoutWeight(1)
-    .constraintSize({ maxWidth: this.cellWidth() })
-    .height(27)
-    .enabled(this.isSelectableFont(fontId))
-    .accessibilityText(this.isSelectableFont(fontId) ? `切换到${this.fontLabel(fontId)}` :
-      `${this.fontLabel(fontId)}，暂不可用`)
-    .onClick((): void => {
-      if (isReaderAppearanceFont(fontId)) {
-        this.onFontChange(fontId);
-      }
-    });
+  private compactFontCell(fontId: ReaderAppearanceFontSlot) {
+    Text(readerAppearanceFontSlotLabel(this.snapshot, fontId))
+      .width('100%')
+      .constraintSize({ maxWidth: this.cellWidth() })
+      .height(27)
+      .padding({ left: 4, right: 4 })
+      .backgroundColor(this.isActiveFont(fontId) ? TOK_PRIMARY_SOFT : Color.Transparent)
+      .border({ width: { top: TOK_BORDER_W }, color: TOK_LINE })
+      .fontFamily(readerAppearanceFontSlotFamily(this.snapshot, fontId))
+      .fontWeight(FontWeight.Regular)
+      .fontSize(8)
+      .lineHeight(10)
+      .fontColor(TOK_READ_INK)
+      .textAlign(TextAlign.Center)
+      .maxLines(1)
+      .textOverflow({ overflow: TextOverflow.Ellipsis })
+      .layoutWeight(1)
+      .constraintSize({ maxWidth: this.cellWidth() })
+      .enabled(this.isSelectableFont(fontId))
+      .accessibilityText(this.isSelectableFont(fontId) ?
+        `切换到${readerAppearanceFontSlotLabel(this.snapshot, fontId)}` :
+        `${readerAppearanceFontSlotLabel(this.snapshot, fontId)}，暂不可用`)
+      .onClick((): void => {
+        if (isReaderAppearanceFont(fontId)) {
+          this.onFontChange(fontId);
+        }
+      });
   }
 
   private themeIds(): ReaderAppearanceTheme[] {
@@ -259,12 +260,8 @@ export struct ReaderAppearanceModulePanel {
     return this.isTablet ? 56.5 : 62.5;
   }
 
-  private fontPillWidth(): number {
-    return this.isTablet ? 49 : 55;
-  }
-
-  private fontIds(): string[] {
-    return ['system', 'serif', 'sans', 'kai', 'fangSong', 'mono', 'sourceHanSerif', 'lxgwWenKai'];
+  private fontIds(): ReaderAppearanceFontSlot[] {
+    return this.snapshot.fontOrder.filter((fontId: ReaderAppearanceFontSlot): boolean => fontId !== 'import');
   }
 
   private isActiveFont(fontId: string): boolean {
@@ -275,8 +272,8 @@ export struct ReaderAppearanceModulePanel {
     return isReaderAppearanceFont(fontId);
   }
 
-  private fontCellFamily(fontId: string): string {
-    return isReaderAppearanceFont(fontId) ? readerAppearanceFontFamily(fontId) : 'ReaderNotoSansSC';
+  private isNightTheme(theme: ReaderAppearanceTheme): boolean {
+    return theme === 'night' || theme === 'warmNight' || theme === 'paperNight' || theme === 'greenNight';
   }
 
   private themeSummary(): string {
@@ -333,28 +330,4 @@ export struct ReaderAppearanceModulePanel {
     return '#263129';
   }
 
-  private fontLabel(fontId: string): string {
-    if (fontId === 'system') {
-      return '系统';
-    }
-    if (fontId === 'serif') {
-      return '宋体';
-    }
-    if (fontId === 'sans') {
-      return '黑体';
-    }
-    if (fontId === 'kai') {
-      return '楷体';
-    }
-    if (fontId === 'fangSong') {
-      return '仿宋';
-    }
-    if (fontId === 'mono') {
-      return '等宽';
-    }
-    if (fontId === 'sourceHanSerif') {
-      return '思源宋体';
-    }
-    return '文楷 Lite';
-  }
 }

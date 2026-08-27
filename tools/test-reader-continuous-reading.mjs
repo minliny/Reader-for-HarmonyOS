@@ -11,11 +11,17 @@ assert.match(settings, /export type ReaderNavigationMode = 'paged' \| 'continuou
 assert.match(stage, /List\(\{ space: 0, scroller: this\.listScroller \}\)/);
 assert.match(stage, /fragmentsProvider: \(\) => ReadingSurfacePageFragment\[\]/,
   'chapter arrays must cross the ArkUI V1 component boundary by live callback');
-assert.match(stage, /@Prop @Watch\('onContentRevisionChanged'\) contentRevision: number/,
+assert.match(stage, /@Prop contentRevision: number/,
   'a scalar revision must invalidate the stage after the live array is atomically replaced');
-assert.match(stage, /ForEach\(this\.fragmentsProvider\(\)/);
-assert.match(stage, /`\$\{this\.chapterIdentity\}:\$\{this\.contentRevision\}:\$\{fragment\.id\}`/,
-  'chapter replacement must recreate canonical rows even when two short chapters both contain one item');
+assert.match(stage, /ForEach\(this\.renderFragments\(\)/);
+assert.match(stage, /return this\.contentRevision >= 0 \? this\.fragmentsProvider\(\) : \[\];/,
+  'the scalar revision must reactively read the callback-backed projection');
+assert.match(stage, /`\$\{this\.chapterIdentity\}:\$\{fragment\.id\}`/,
+  'same-chapter refreshes must preserve unaffected row identities');
+assert.doesNotMatch(stage, /\.id\(`\$\{this\.chapterIdentity\}:\$\{this\.contentRevision\}`\)/,
+  'same-chapter refreshes must not remount the List and flash at rest');
+assert.doesNotMatch(stage, /onContentRevisionChanged\(\)[\s\S]*scheduleInitialScroll/,
+  'content refreshes must not jump the continuous scroller back to its initial item');
 assert.doesNotMatch(stage, /Repeat\(/,
   'Repeat may retain a stale one-row complex item across chapter replacement');
 assert.match(stage, /ReaderReadingTextFragment\(\{/,
@@ -44,6 +50,10 @@ assert.match(experience,
 assert.match(experience,
   /fragmentsProvider: \(\): ReadingSurfacePageFragment\[\] => this\.continuousFragments/);
 assert.match(experience, /@State private continuousRenderRevision: number = 0/);
+assert.doesNotMatch(experience, /@State private continuousVisibleFragmentIndex/,
+  'visible range progress must not rebuild the entire continuous reading surface');
+assert.doesNotMatch(experience, /@State private continuousVisibleEndFragmentIndex/,
+  'visible range end must remain a non-reactive progress cursor');
 assert.match(experience,
   /this\.continuousFragments = fragments;[\s\S]*?this\.continuousRenderChapterIdentity =[\s\S]*?this\.continuousRenderChapterTitle = chapter\.chapterTitle;[\s\S]*?this\.continuousRenderRevision \+= 1/,
   'title, identity, and fragment array must be committed before the only reactive revision');

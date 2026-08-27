@@ -39,7 +39,8 @@ export struct BookshelfEmptyPage {
   onSettingsRequested: () => void = (): void => {};
   onDiscoverRequested: () => void = (): void => {};
   onBatchManageRequested: () => void = (): void => {};
-  // Figma confirms the action label, not a destination page/reaction.
+  // Keep the menu action on the same semantic settings boundary as the
+  // populated shelf; the host decides the concrete route.
   onBookshelfSettingsRequested: () => void = (): void => {};
   @State private viewportWidth: number = 0;
   @State private moreMenuVisible: boolean = false;
@@ -173,7 +174,6 @@ export struct BookshelfEmptyPage {
         this.headerAction('bookshelf_grid');
         this.headerAction('bookshelf_list');
         this.headerAction('bookshelf_filter');
-        this.headerAction('bookshelf_search');
         this.headerAction('bookshelf_settings');
       }
       .height(34);
@@ -192,8 +192,6 @@ export struct BookshelfEmptyPage {
         Image($r('app.media.bookshelf_list')).width(20).height(20);
       } else if (asset === 'bookshelf_filter') {
         Image($r('app.media.bookshelf_filter')).width(20).height(20);
-      } else if (asset === 'bookshelf_search') {
-        Image($r('app.media.bookshelf_section_search')).width(20).height(20);
       } else {
         Image($r('app.media.bookshelf_settings')).width(20).height(20);
       }

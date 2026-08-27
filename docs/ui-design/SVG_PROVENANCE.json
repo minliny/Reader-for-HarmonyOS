@@ -72,24 +72,24 @@
       "sha256": "9e59b9adf2a1872af3051d10af318ba3969bc987e8ab876cd7996e3b0f171a6f"
     },
     {
-      "file": "bookshelf_compass_filled.svg",
-      "semanticRole": "bookshelf discover active",
+      "file": "bookshelf_compass_active.svg",
+      "semanticRole": "bookshelf discover active navigation",
       "originType": "figma-component-derived",
       "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
       "figmaPageNodeId": "259:4",
-      "figmaNodeId": "416:13",
-      "componentName": "Icon/Filled/Discover",
-      "upstreamName": "Filled/Discover",
+      "figmaNodeId": "271:189",
+      "componentName": "Icon/Discover",
+      "upstreamName": "Discover",
       "upstreamVersion": "3.44.0",
       "license": "MIT",
-      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Filled__Discover.svg",
-      "sourceSha256": "0e0164fa9d51a90d34477bbc15eccf6c747d0cead2c9e6e7f2a683a1bd849a03",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Discover.svg",
+      "sourceSha256": "89f397f4a1d6b44b4225ae451aef5adb08cc3de1403961743637b62c9321d6e6",
       "transform": {
         "pathMutation": "none",
         "recolor": "#FFFAF4",
         "rotationDegrees": 0
       },
-      "sha256": "5d3319099f535f470c08090e71ceff292e20d87bf7003360c89e73932e6d6770"
+      "sha256": "ea8cf0f5df6ce83609e3a01a8922a67fa8dacc1648d185e574be3eecfc4c19f4"
     },
     {
       "file": "bookshelf_compass_outline.svg",
@@ -192,24 +192,24 @@
       "sha256": "01bf345c1850c480ae5adaf68c2880c734084025beb40572b291e0fe5262b631"
     },
     {
-      "file": "bookshelf_library_filled.svg",
+      "file": "bookshelf_library_active.svg",
       "semanticRole": "bookshelf library active navigation",
       "originType": "figma-component-derived",
       "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
       "figmaPageNodeId": "259:4",
-      "figmaNodeId": "416:2",
-      "componentName": "Icon/Filled/Bookshelf",
-      "upstreamName": "Filled/Bookshelf",
+      "figmaNodeId": "271:96",
+      "componentName": "Icon/Bookshelf",
+      "upstreamName": "Bookshelf",
       "upstreamVersion": "3.44.0",
       "license": "MIT",
-      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Filled__Bookshelf.svg",
-      "sourceSha256": "2a0f67eb24c3711a2c4b50d2ccede5c126b93e36de1dbaaff4dc86cedbfa3cb8",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Bookshelf.svg",
+      "sourceSha256": "9765a88fdb5eab6ee68a5728482e5a00b1058940dfbf6e10b4eff50f0c2792d9",
       "transform": {
         "pathMutation": "none",
         "recolor": "#FFFAF4",
         "rotationDegrees": 0
       },
-      "sha256": "dbbbccee06c9fb369c13cf81503b311a0be1af65262de43f4dc0ddcf128c620f"
+      "sha256": "01bf345c1850c480ae5adaf68c2880c734084025beb40572b291e0fe5262b631"
     },
     {
       "file": "bookshelf_library_outline.svg",
@@ -312,24 +312,24 @@
       "sha256": "14e15a15fddff35f31985153812d74ab73b1c9a5901132756f9ff3b1c3bc23e2"
     },
     {
-      "file": "bookshelf_rss_filled.svg",
+      "file": "bookshelf_rss_active.svg",
       "semanticRole": "bookshelf rss active navigation",
       "originType": "figma-component-derived",
       "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
       "figmaPageNodeId": "259:4",
-      "figmaNodeId": "416:23",
-      "componentName": "Icon/Filled/Rss",
-      "upstreamName": "Filled/Rss",
+      "figmaNodeId": "271:460",
+      "componentName": "Icon/Rss",
+      "upstreamName": "Rss",
       "upstreamVersion": "3.44.0",
       "license": "MIT",
-      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Filled__Rss.svg",
-      "sourceSha256": "f3dda501cad4c0ff79952a7bccf5ccc359a1c3ff15bfdd086a647acb185688ee",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Rss.svg",
+      "sourceSha256": "0fa09ac5b9ce8c01eb40a3a98a8a641ea45cdd4e063680a24e6d0fb975b41fb0",
       "transform": {
         "pathMutation": "none",
         "recolor": "#FFFAF4",
         "rotationDegrees": 0
       },
-      "sha256": "4ba5f0b6b0f0e8707c9f40898b3b05eeb7bff13633ea6efbe3dc19242dc4076d"
+      "sha256": "c235b9fe51a846f3333c5f01fa4dc73b180d68cc5f74121655aa72f99da36fef"
     },
     {
       "file": "bookshelf_rss_outline.svg",
@@ -372,26 +372,6 @@
       "sha256": "63468f05b1c0575504cc5ec7359d6c1b439de055d279501974ac4eefa7ff2b4e"
     },
     {
-      "file": "bookshelf_section_search.svg",
-      "semanticRole": "bookshelf section search",
-      "originType": "figma-component-derived",
-      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
-      "figmaPageNodeId": "259:4",
-      "figmaNodeId": "271:466",
-      "componentName": "Icon/Search",
-      "upstreamName": "Search",
-      "upstreamVersion": "3.44.0",
-      "license": "MIT",
-      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Search.svg",
-      "sourceSha256": "63468f05b1c0575504cc5ec7359d6c1b439de055d279501974ac4eefa7ff2b4e",
-      "transform": {
-        "pathMutation": "none",
-        "recolor": "#756F69",
-        "rotationDegrees": 0
-      },
-      "sha256": "530b1f391b5251d3557eb59bd00a510b698259b1a7aab0ecda84ea1e69556c7c"
-    },
-    {
       "file": "bookshelf_settings.svg",
       "semanticRole": "bookshelf settings inactive",
       "originType": "figma-component-derived",
@@ -412,24 +392,24 @@
       "sha256": "d9e93c48b3e57ed16733197f3d50b311a720e53d864993730f557a91806abbd5"
     },
     {
-      "file": "bookshelf_settings_filled.svg",
+      "file": "bookshelf_settings_active.svg",
       "semanticRole": "bookshelf settings active navigation",
       "originType": "figma-component-derived",
       "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
       "figmaPageNodeId": "259:4",
-      "figmaNodeId": "416:33",
-      "componentName": "Icon/Filled/Settings",
-      "upstreamName": "Filled/Settings",
+      "figmaNodeId": "271:472",
+      "componentName": "Icon/Settings",
+      "upstreamName": "Settings",
       "upstreamVersion": "3.44.0",
       "license": "MIT",
-      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Filled__Settings.svg",
-      "sourceSha256": "74c6d050a1d3bcf6c60862655a0aa90bf60f521be46908e97ea811d078928409",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Settings.svg",
+      "sourceSha256": "991b85162a8e75bda30a062835181fe2c01ba5259744b3c97465796d5148fc90",
       "transform": {
         "pathMutation": "none",
         "recolor": "#FFFAF4",
         "rotationDegrees": 0
       },
-      "sha256": "4d5afc155bad9b4414dc6ceea97d7a93e7420492e8aaf89c12382201d95c9157"
+      "sha256": "306497f835b92461bba6d4fdea759a79948241517095ed893dc0efffd721d559"
     },
     {
       "file": "bookshelf_settings_outline.svg",
@@ -952,6 +932,26 @@
         "rotationDegrees": 0
       },
       "sha256": "32cfebe3d3e8cd7d6a1a1341923f6be8c2d848c43db66cbd405427636166b7c4"
+    },
+    {
+      "file": "reader_appearance_header.svg",
+      "semanticRole": "full appearance header",
+      "originType": "figma-component-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:448",
+      "componentName": "Icon/ReaderModuleAppearance",
+      "upstreamName": "ReaderModuleAppearance",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__ReaderModuleAppearance.svg",
+      "sourceSha256": "63c863ec8192a937c4e714c4193aaa20f8923670c56663b8446d2f55f87f0a75",
+      "transform": {
+        "pathMutation": "none",
+        "recolor": "#332C25",
+        "rotationDegrees": 0
+      },
+      "sha256": "920e1ee8bd3e2672107979ccfd199da7e604f598c49568ccb05d1089a5960f24"
     },
     {
       "file": "reader_appearance_nav_active.svg",
@@ -1574,6 +1574,26 @@
       "sha256": "dfe2541a911f781804d6378cbf4b4c1fb3cd273ea81b8a810d775f12f6aee796"
     },
     {
+      "file": "reader_session_pause.svg",
+      "semanticRole": "reader session capsule pause",
+      "originType": "figma-component-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:366",
+      "componentName": "Icon/Pause",
+      "upstreamName": "Pause",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Pause.svg",
+      "sourceSha256": "eeb155de6f7116b36bee179d7bd15c1ce545fc4a33859313f890a13b060e53d6",
+      "transform": {
+        "pathMutation": "none",
+        "recolor": "#FFFAF4",
+        "rotationDegrees": 0
+      },
+      "sha256": "0e8fcd5bb3cf76416cebb362de545fedb31a00d0ce4249c75cd05b40af26b822"
+    },
+    {
       "file": "reader_settings_nav_active.svg",
       "semanticRole": "reader settings module active",
       "originType": "figma-component-derived",
@@ -1674,6 +1694,20 @@
       "sha256": "9710aa7fb4cc109a3abeffe2a49961dfa78ecd36f71628481ac46571189580b1"
     },
     {
+      "file": "reader_tts_online_engine.svg",
+      "semanticRole": "reader online TTS service",
+      "originType": "figma-node-export",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "930:948",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_online_engine.svg",
+      "sourceSha256": "ad82520fc2d882921ceac5761c5f01eea90c2a389cc6c39d8e839a66629a9e89",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "ad82520fc2d882921ceac5761c5f01eea90c2a389cc6c39d8e839a66629a9e89"
+    },
+    {
       "file": "reader_tts_play.svg",
       "semanticRole": "reader tts play",
       "originType": "figma-component-derived",
@@ -1734,6 +1768,20 @@
       "sha256": "830073a1828d06451edb899a80c3bb5fba716f77d06bbc4d51126b67415b7762"
     },
     {
+      "file": "reader_tts_speed_thumb.svg",
+      "semanticRole": "reader quick TTS speed thumb",
+      "originType": "figma-node-export",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "750:1059",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_speed_thumb.svg",
+      "sourceSha256": "509543c7b5b5313732d9b77e82a5108b0a843dd342e7b56a7c641d42fc725d21",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "509543c7b5b5313732d9b77e82a5108b0a843dd342e7b56a7c641d42fc725d21"
+    },
+    {
       "file": "reader_tts_stop.svg",
       "semanticRole": "reader tts stop",
       "originType": "figma-component-derived",
@@ -1752,6 +1800,20 @@
         "rotationDegrees": 0
       },
       "sha256": "f6d89164aee10abc248d2bcb033a80e5c86dd7980990400f8bbb0c4b06600599"
+    },
+    {
+      "file": "reader_tts_system_engine.svg",
+      "semanticRole": "reader system TTS service",
+      "originType": "figma-node-export",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "930:936",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_system_engine.svg",
+      "sourceSha256": "884811ea9bce12a6e1accc3d1c8a12b0118d22f58eb99d19d2ba407716a4ceaf",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "884811ea9bce12a6e1accc3d1c8a12b0118d22f58eb99d19d2ba407716a4ceaf"
     },
     {
       "file": "reading_paper_phone_highlight.svg",

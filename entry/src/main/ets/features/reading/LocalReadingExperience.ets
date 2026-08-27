@@ -8,6 +8,7 @@ import {
   type LocalReadingToc,
   type LocalReadingTocEntry,
 } from './LocalReadingFlowGateway';
+import type { BusinessError } from '@ohos.base';
 import {
   ReadingSessionFlowGateway,
   type ReadingContentSearchResult,
@@ -23,8 +24,13 @@ import {
 import { ReadingSurfacePageFragment } from './ReadingSurface';
 import { ReaderPageInteractionLayer } from './ReaderPageInteractionLayer';
 import {
+  READER_PAGE_GESTURE_MAX_DRAG_RATIO,
+  cancelReaderPagePan,
   completeReaderPageGestureSettlement,
   createReaderPageGestureState,
+  projectReaderPageCurlGesture,
+  retargetReaderPageGestureSettlement,
+  type ReaderPageGestureDecision,
   type ReaderPageGestureState,
   type ReaderPageTurnDirection,
   type ReaderPageTurnOutcome,
@@ -35,6 +41,50 @@ import {
 } from './ReaderPageTurnStage';
 import { ReaderContinuousReadingStage } from './ReaderContinuousReadingStage';
 import { ReaderControlPanel, type ReaderControlPage } from './ReaderControlPanel';
+import {
+  READER_SESSION_CAPSULE_HEIGHT,
+  ReaderSessionCapsule,
+  readerSessionCapsuleMinimumWidth,
+} from './ReaderSessionCapsule';
+import {
+  deriveReaderSessionCapsule,
+  readerTtsSessionBlocksAutoPageStart,
+  type ReaderSessionCapsuleSnapshot,
+  type ReaderSessionCapsuleType,
+} from './ReaderSessionCapsuleModel';
+import {
+  ReaderPageChromeSnapshot,
+  ReaderPageOrdinal,
+  formatReaderPageClock,
+  formatReaderPageOrdinal,
+  formatReaderPageProgress,
+  readerComposedPageTextureKey,
+  readerPageBodyRasterKey,
+  readerPageChromeCacheKey,
+} from './ReaderPageChromeModel';
+import {
+  READER_PAGECURL_EVENT_RENDERER_READY,
+  READER_PAGECURL_EVENT_RENDER_FAILED,
+  READER_PAGECURL_EVENT_TURN_CANCELLED,
+  READER_PAGECURL_EVENT_TURN_REACHED_END,
+  READER_PAGECURL_PHASE_AWAITING_HOST_COMMIT,
+  READER_PAGECURL_PHASE_AWAITING_HOST_PRESENT,
+  READER_PAGECURL_PHASE_IDLE,
+  READER_PAGECURL_RELEASE_COMMIT,
+  READER_PAGECURL_RELEASE_REJECTED,
+  READER_PAGECURL_RELEASE_ROLLBACK,
+  type ReaderNativePageCurlContext,
+  type ReaderNativePageCurlStatus,
+} from './ReaderNativePageCurlSurface';
+import {
+  ReaderPageRasterCache,
+  ReaderPageRasterRecord,
+} from './ReaderPageRasterCache';
+import {
+  ReaderPageChromeMeasurements,
+  resolveReaderPageChromeLayout,
+  type ReaderPageChromeLayoutSnapshot,
+} from './ReaderPageChromeLayout';
 import {
   READER_CONTROL_BRIGHTNESS_MAX,
   READER_CONTROL_BRIGHTNESS_MIN,
@@ -96,7 +146,8 @@ import {
 } from './ReadingParagraphProjection';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { motionAnimateParam } from '../common/MotionSpec';
-import { window } from '@kit.ArkUI';
+import type { image } from '@kit.ImageKit';
+import { FrameCallback, window } from '@kit.ArkUI';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { ReaderReadingSystemEventHost } from '../../app/ReaderReadingSystemEventHost';
 import {
@@ -141,12 +192,14 @@ import {
   setReaderAppearanceCustomFont,
   setReaderAppearanceDayTheme,
   setReaderAppearanceFont,
+  setReaderAppearanceFontOrder,
   setReaderAppearanceIndent,
   setReaderAppearanceMetric,
   setReaderAppearanceNightTheme,
   setReaderAppearanceTheme,
   type ReaderAppearanceAlignment,
   type ReaderAppearanceFont,
+  type ReaderAppearanceFontSlot,
   type ReaderAppearanceIndent,
   type ReaderAppearanceMetric,
   type ReaderAppearanceSnapshot,
@@ -551,6 +604,24 @@ class ArkUILineMetric implements ReadingSurfaceLineMetric {
 }
 
 type ReadingPhase = 'loading' | 'measuring' | 'ready' | 'failed';
+type ReaderNativePageCurlReleaseIntent = 'commit' | 'rollback';
+type ReaderPageTurnInputPhase = 'idle' | 'tracking' | 'dragging' | 'settling' | 'awaitingHostPresent';
+type ReaderSimulationGestureMode = 'undecided' | 'native' | 'fallback';
+
+class ReaderHostPresentedFrameCallback extends FrameCallback {
+  private readonly callback: () => void;
+
+  constructor(callback: () => void) {
+    super();
+    this.callback = callback;
+  }
+
+  onFrame(_frameTimeInNano: number): void {
+    this.callback();
+  }
+
+  onIdle(_timeLeftInNano: number): void {}
+}
 
 const FIGMA_BODY_FONT_WEIGHT = 'regular';
 const READER_APPEARANCE_FONT_SIZE_STEP = 2;
@@ -588,6 +659,15 @@ const UNICODE_PROBE_EMPTY_ATTEMPT_LIMIT = 5;
 const FIRST_PAGE_READY_TIMEOUT_MS = 30000;
 /** Persist real foreground reading time in bounded atomic deltas. */
 const READING_RECORD_FLUSH_INTERVAL_MS = 30000;
+const READER_PAGECURL_STATUS_POLL_MS = 12;
+const READER_PAGECURL_RELEASE_DEADLINE_MS = 1200;
+const READER_PAGECURL_PRESENT_DEADLINE_MS = 800;
+const READER_PAGECURL_DEFAULT_ORIGIN_Y = 0.82;
+const READER_PAGECURL_PROGRAMMATIC_DRAG_X = 0.18;
+const READER_PAGECURL_PROGRAMMATIC_VELOCITY = 0.9;
+const READER_PAGE_RASTER_CAPTURE_RETRY_LIMIT = 4;
+const READER_PAGE_RASTER_CAPTURE_RETRY_STEP_MS = 32;
+const READER_PAGE_RASTER_CAPTURE_ADMISSION_MS = 48;
 
 /**
  * Shared immersive reading implementation for local and remote sessions.
@@ -667,14 +747,21 @@ export struct ReadingExperience {
   private continuousRenderChapterTitle: string = '';
   @State private continuousRenderRevision: number = 0;
   @State private continuousInitialFragmentIndex: number = 0;
-  @State private continuousVisibleFragmentIndex: number = 0;
-  @State private continuousVisibleEndFragmentIndex: number = 0;
+  // Visible indices are progress cursors, not render inputs. Keeping them
+  // non-reactive prevents every List settle callback from rebuilding the
+  // entire reading stage and flashing the already rendered rows.
+  private continuousVisibleFragmentIndex: number = 0;
+  private continuousVisibleEndFragmentIndex: number = 0;
   @State private pageTurnOffsetX: number = 0;
   @State private pageTurnPresentationWidth: number = 0;
   @State private pageTurnDirection: ReaderPageTurnDirection | undefined = undefined;
   @State private pageTurnSettlementActive: boolean = false;
   /** Assignment-only revision exposing non-reactive prepared page models to build(). */
   @State private pageTurnRenderRevision: number = 0;
+  /** Native curl remains mounted but transparent until RendererReady. */
+  @State private nativePageCurlVisible: boolean = false;
+  /** A cold simulation gesture keeps one flat follow fallback until settlement. */
+  @State private simulationPageTurnFallbackActive: boolean = false;
   @State private viewportWidth: number = 0;
   @State private viewportHeight: number = 0;
   /** Forces a fresh hidden measurement tree without recreating controllers in build. */
@@ -692,6 +779,7 @@ export struct ReadingExperience {
   /** Directory/source-switch/hidden routes explicitly transfer pointer ownership away from the reader. */
   @Prop interactionBlocked: boolean = false;
   @State private controlVisible: boolean = false;
+  @State private controlShellExitArmed: boolean = false;
   @State private controlPage: ReaderControlPage = 'home';
   @State private quickSearchQuery: string = '';
   @State private quickSearchState: ReaderQuickSearchState = { kind: 'idle' };
@@ -717,6 +805,9 @@ export struct ReadingExperience {
   @State private ttsVoiceOptions: ReaderTtsVoiceOption[] = [];
   @State private ttsLanguage: string = 'zh-CN';
   @State private ttsPerson: number = 0;
+  @State private pageChromeClockText: string = formatReaderPageClock(Date.now());
+  @State private sessionCapsuleMeasuredWidth: number = 0;
+  @State private sessionCapsuleMeasuredHeight: number = READER_SESSION_CAPSULE_HEIGHT;
 
   private sessionGateway: ReadingSessionFlowGateway | undefined = undefined;
   private readonly replaceGateway: ReaderReplaceQuickGateway =
@@ -760,7 +851,37 @@ export struct ReadingExperience {
   private pageTurnPreparation: ReaderPageTurnPreparation | undefined = undefined;
   private pageTurnPreparationQueue: ReaderPageTurnDirection[] = [];
   private pageTurnGeneration: number = 0;
+  private controlShellExitGeneration: number = 0;
   private pageTurnGestureState: ReaderPageGestureState = createReaderPageGestureState();
+  private readonly pageRasterCache: ReaderPageRasterCache = new ReaderPageRasterCache();
+  private pageRasterGeneration: number = 0;
+  private readonly pageRasterCaptureInFlight: string[] = [];
+  private pageRasterCaptureAdmissionTimer: number = -1;
+  private pageRasterCaptureRetryTimer: number = -1;
+  private nativePageCurlContext: ReaderNativePageCurlContext | undefined = undefined;
+  private nativePageCurlSessionCounter: number = 0;
+  private nativePageCurlSessionId: number = 0;
+  private nativePageCurlDirection: ReaderPageTurnDirection | undefined = undefined;
+  private nativePageCurlPendingGesture: ReaderPageGestureState | undefined = undefined;
+  private nativePageCurlStartX: number = 0;
+  private nativePageCurlStartY: number = 0;
+  private nativePageCurlCurrentX: number = 0;
+  private nativePageCurlCurrentY: number = 0;
+  private nativePageCurlBeginSent: boolean = false;
+  private nativePageCurlReleaseIntent: ReaderNativePageCurlReleaseIntent | undefined = undefined;
+  private nativePageCurlReleaseVelocity: number = 0;
+  private nativePageCurlReleaseVelocityY: number = 0;
+  private nativePageCurlProgrammaticOriginX: number | undefined = undefined;
+  private nativePageCurlProgrammaticOriginY: number | undefined = undefined;
+  private nativePageCurlReleaseSent: boolean = false;
+  private nativePageCurlStatusTimer: number = -1;
+  /** Native/fallback admission stays fixed for the complete physical pointer stream. */
+  private simulationGestureMode: ReaderSimulationGestureMode = 'undecided';
+  private nativePageCurlReleaseDeadlineTimer: number = -1;
+  private nativePageCurlPresentDeadlineTimer: number = -1;
+  private nativePageCurlDiagnosticState: string = '';
+  private nativePageCurlAwaitingHostPresentSession: number = 0;
+  private nativePageCurlPresentFramePosted: boolean = false;
   private pageTurnSettlementGeneration: number = 0;
   /** Immutable geometry shared by animation, freshness, and the Core commit join. */
   private pageTurnSettlementLayout: ReaderReadingLayoutSnapshot | undefined = undefined;
@@ -791,6 +912,14 @@ export struct ReadingExperience {
   private autoPageSessionTimer: number = -1;
   private autoPageSessionDeadlineMs: number = 0;
   private autoPageSessionTimerGeneration: number = -1;
+  private pageChromeStatusTimer: number = -1;
+  private pendingPageChromeClockText: string | undefined = undefined;
+  private measuredSessionCapsuleType: ReaderSessionCapsuleType | undefined = undefined;
+  private pendingSessionCapsuleType: ReaderSessionCapsuleType | undefined = undefined;
+  private pendingSessionCapsuleWidth: number = 0;
+  private pendingSessionCapsuleHeight: number = 0;
+  private pageTurnSessionCapsuleFrozen: boolean = false;
+  private pageTurnSessionCapsuleSnapshot: ReaderSessionCapsuleSnapshot | undefined = undefined;
   private pendingPageFragments: ReadingSurfacePageFragment[] = [];
   private pendingPageStartScalar: number = -1;
   private pendingPageEndScalar: number = -1;
@@ -840,6 +969,9 @@ export struct ReadingExperience {
   private appearanceMutationGeneration: number = 0;
   /** Prevents a late Settings load from replacing a newer in-session choice. */
   private readerSettingsMutationGeneration: number = 0;
+  /** Serializes the only cross-runtime transition: TTS teardown before auto-page starts. */
+  private autoPageStartGeneration: number = 0;
+  private autoPageStartPending: boolean = false;
   /** The selection token that owns `chapter` and its layout map. */
   private materializedChapterSelectionToken: number = -1;
   /** The selection token that owns the currently mounted hidden measurement tree. */
@@ -878,6 +1010,12 @@ export struct ReadingExperience {
     this.invalidatePageTurnRuntime(false);
     this.lastWindowMetricsLayoutKey = this.windowMetricsLayoutKey();
     this.applyWindowChrome();
+    // A reader may mount invisibly behind Book Detail while its first page is
+    // prepared. Mounting is not visual ownership: only the visible reader is
+    // allowed to hide system bars or change orientation. The @Watch below
+    // applies the immersive snapshot in the same frame that visibility is
+    // admitted, so Detail keeps the authored app status bar during warm-up.
+    this.applyWindowPolicyForChromeOwner();
     this.exitRequested = false;
     this.exitDelivered = false;
     this.readingRecordActiveSinceMs = 0;
@@ -890,6 +1028,7 @@ export struct ReadingExperience {
     this.continuousImageResolutions.length = 0;
     this.measurementCompleting = false;
     this.remeasurePending = false;
+    this.cancelPendingAutoPageStart();
     this.autoPageState = createReaderAutoPageState(this.autoPageState.speedSeconds);
     this.autoPageFullConfiguration = setReaderAutoPageFullSpeed(
       this.autoPageFullConfiguration,
@@ -898,6 +1037,8 @@ export struct ReadingExperience {
     this.resetAutoPageSessionDuration();
     this.clearAutoPageTimer();
     this.clearAutoPageSessionTimer();
+    this.refreshPageChromeClock(lifecycleToken);
+    this.armPageChromeStatusTimer(lifecycleToken);
     this.sessionGateway = new ReadingSessionFlowGateway(
       this.sourceId,
       this.bookId,
@@ -945,9 +1086,13 @@ export struct ReadingExperience {
     this.replacePanelGeneration += 1;
     this.appearanceReflowInvalidateCurrentLayout = false;
     this.invalidateReplaceMutationOwner();
+    this.cancelPendingAutoPageStart();
     this.autoPageState = invalidateReaderAutoPageState(this.autoPageState);
     this.clearAutoPageTimer();
     this.clearAutoPageSessionTimer();
+    this.clearPageChromeStatusTimer();
+    this.pendingPageChromeClockText = undefined;
+    this.pendingSessionCapsuleType = undefined;
     this.clearReadingRecordTimer();
     this.readingRecordActiveSinceMs = 0;
     this.readingRecordPendingMillis = 0;
@@ -1044,6 +1189,11 @@ export struct ReadingExperience {
           autoPageHighlightStart: this.autoPageHighlightStart(),
           autoPageHighlightEnd: this.autoPageHighlightEnd(),
           longPressSelectText: this.readerSettingsSnapshot.longPressSelectText,
+          nativeCurlVisible: this.nativePageCurlVisible,
+          simulationFallbackActive: this.simulationPageTurnFallbackActive,
+          onNativeCurlContextReady: (context: ReaderNativePageCurlContext | undefined): void =>
+            this.onNativePageCurlContextReady(context),
+          onPageReady: (identity: string): void => this.onReaderPageSurfaceReady(identity),
         });
       }
       if (this.phase === 'measuring' && this.measurementEpoch > 0) {
@@ -1061,6 +1211,7 @@ export struct ReadingExperience {
         totalChapters: this.totalChapters,
         layout: this.controlLayout(),
         visible: this.controlVisible && !this.controlObscured,
+        shellExitArmed: this.controlShellExitArmed,
         activePage: this.controlPage,
         // ReaderControlPanel deliberately stays mounted for its transitions,
         // but its directory subtree is not visible before the control opens.
@@ -1146,6 +1297,8 @@ export struct ReadingExperience {
         onAppearanceNightThemeChange: (theme: ReaderAppearanceTheme): void =>
           this.changeAppearanceNightTheme(theme),
         onAppearanceFontChange: (font: ReaderAppearanceFont): void => this.changeAppearanceFont(font),
+        onAppearanceFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]): void =>
+          this.changeAppearanceFontOrder(fontOrder),
         onAppearanceCustomFontImport: (): void => this.importReaderCustomFont(),
         onAppearanceIndentRequest: (indent: ReaderAppearanceIndent): void =>
           this.changeAppearanceIndent(indent),
@@ -1189,13 +1342,39 @@ export struct ReadingExperience {
           interactionEnabled: this.isReaderPageInteractionEnabled(),
           viewportWidth: this.viewportWidth,
           allowTextSelection: this.readerSettingsSnapshot.longPressSelectText,
-          onTurn: (direction: ReaderPageTurnDirection): ReaderPageTurnOutcome =>
-            this.requestPageTurn(direction),
+          systemGestureLeftInset: this.readerSystemGestureLeftInset(),
+          systemGestureRightInset: this.readerSystemGestureRightInset(),
+          systemGestureBottomInset: this.readerSystemGestureBottomInset(),
+          onTurn: (
+            direction: ReaderPageTurnDirection,
+            originX?: number,
+            originY?: number,
+          ): ReaderPageTurnOutcome => this.requestPageTurnFromInteraction(direction, originX, originY),
           onOpenControl: (): void => this.openReaderControl(),
           onManualInteraction: (): void => this.onReaderManualInteraction(),
           onGestureStateChange: (state: ReaderPageGestureState): void =>
             this.onReaderPageGestureStateChanged(state),
+          onGestureDecision: (decision: ReaderPageGestureDecision): ReaderPageGestureDecision =>
+            this.onReaderPageGestureDecision(decision),
         });
+      }
+      if (this.shouldShowSessionCapsule()) {
+        ReaderSessionCapsule({
+          type: this.sessionCapsuleType(),
+          sessionState: this.sessionCapsuleState(),
+          countdown: this.sessionCapsuleCountdown(),
+          surfaceColor: readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).paperStart,
+          textColor: readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink,
+          interactionEnabled: this.pageTurnInputPhase() === 'idle',
+          onToggle: (): void => this.toggleSessionCapsule(),
+          onMeasured: (width: number, height: number): void =>
+            this.onSessionCapsuleMeasured(this.sessionCapsuleType(), width, height),
+        })
+          .position({
+            x: this.sessionCapsuleLayout().sessionX,
+            y: this.sessionCapsuleLayout().sessionY,
+          })
+          .zIndex(8);
       }
     }
     .width('100%')
@@ -1445,15 +1624,39 @@ export struct ReadingExperience {
   }
 
   private currentPageTurnRenderPage(): ReaderPageTurnRenderPage {
-    const chapterIndex = this.pageTurnPreparation?.origin.chapter.chapterIndex ??
-      this.chapter?.chapterIndex ?? -1;
+    const revision = this.pageTurnRenderRevision;
+    const origin = this.pageTurnPreparation?.origin;
+    const chapterIndex = origin?.chapter.chapterIndex ?? this.chapter?.chapterIndex ?? -1;
     const pageStart = this.visiblePage?.startScalar ?? -1;
+    const contentVersion = origin?.contentVersion ?? this.materializedContentVersion;
+    const paginationDraft = origin?.paginationDraft ?? this.paginationDraft;
+    const scalarCount = origin?.layoutMap.scalarCount() ?? this.chapterLayoutMap?.scalarCount() ?? 0;
+    const key = this.pageChromePaginationKey(chapterIndex, contentVersion);
+    const stableIdentity = this.pageRasterIdentity(chapterIndex, pageStart);
+    const chrome = this.pageChromeSnapshot(chapterIndex, pageStart, scalarCount, key, paginationDraft);
+    const bodyRasterKey = readerPageBodyRasterKey(
+      stableIdentity,
+      contentVersion,
+      this.paginationLayoutSignature(),
+      this.pageBodyAppearanceIdentity(this.showChapterTitle,
+        this.visiblePage === undefined ? 0 : this.pageBottomJustifyGap(this.visiblePage), true),
+    );
+    const chromeRasterKey = readerPageChromeCacheKey(
+      stableIdentity,
+      chrome,
+      this.appearanceSnapshot.activeTheme,
+      this.pageChromeLayoutIdentity(),
+    );
     return new ReaderPageTurnRenderPage(
-      `reader-page:${chapterIndex}:${pageStart}:current`,
-      this.chapterTitle,
+      `reader-page:${chapterIndex}:${pageStart}:current:${revision}`,
+      origin?.chapter.chapterTitle ?? this.chapterTitle,
       this.showChapterTitle,
       this.visibleFragments,
       this.visiblePage === undefined ? 0 : this.pageBottomJustifyGap(this.visiblePage),
+      chrome,
+      bodyRasterKey,
+      chromeRasterKey,
+      readerComposedPageTextureKey(bodyRasterKey, chromeRasterKey),
     );
   }
 
@@ -1467,13 +1670,215 @@ export struct ReadingExperience {
     }
     const ranges = prepared.context.paragraphRanges;
     const showTitle = ranges.length > 0 && prepared.page.startScalar === ranges[0].startScalar;
+    const stableIdentity = this.pageRasterIdentity(prepared.key.chapterIndex, prepared.page.startScalar);
+    const bottomJustifyGap = this.pageBottomJustifyGap(prepared.page);
+    const chrome = this.pageChromeSnapshot(
+      prepared.key.chapterIndex,
+      prepared.page.startScalar,
+      prepared.context.layoutMap.scalarCount(),
+      prepared.key,
+      prepared.context.paginationDraft,
+    );
+    const bodyRasterKey = readerPageBodyRasterKey(
+      stableIdentity,
+      prepared.context.contentVersion,
+      this.paginationLayoutSignature(),
+      this.pageBodyAppearanceIdentity(showTitle, bottomJustifyGap, false),
+    );
+    const chromeRasterKey = readerPageChromeCacheKey(
+      stableIdentity,
+      chrome,
+      this.appearanceSnapshot.activeTheme,
+      this.pageChromeLayoutIdentity(),
+    );
     return new ReaderPageTurnRenderPage(
       `reader-page:${prepared.key.chapterIndex}:${prepared.page.startScalar}:${direction}:${revision}`,
       prepared.context.chapter.chapterTitle,
       showTitle,
       prepared.page.fragments,
-      this.pageBottomJustifyGap(prepared.page),
+      bottomJustifyGap,
+      chrome,
+      bodyRasterKey,
+      chromeRasterKey,
+      readerComposedPageTextureKey(bodyRasterKey, chromeRasterKey),
     );
+  }
+
+  private pageRasterIdentity(chapterIndex: number, pageStartScalar: number): string {
+    return `${this.sourceId}|${this.bookId}|chapter=${chapterIndex}|start=${pageStartScalar}`;
+  }
+
+  private pageBodyAppearanceIdentity(
+    showChapterTitle: boolean,
+    bottomJustifyGap: number,
+    includeLiveHighlight: boolean,
+  ): string {
+    const ttsStart = includeLiveHighlight && this.ttsFollowHighlight ? this.ttsState.charStart : undefined;
+    const ttsEnd = includeLiveHighlight && this.ttsFollowHighlight ? this.ttsState.charEnd : undefined;
+    const autoStart = includeLiveHighlight ? this.autoPageHighlightStart() : undefined;
+    const autoEnd = includeLiveHighlight ? this.autoPageHighlightEnd() : undefined;
+    return [
+      `theme=${this.appearanceSnapshot.activeTheme}`,
+      showChapterTitle ? 'title=1' : 'title=0',
+      `bottom=${bottomJustifyGap.toFixed(3)}`,
+      `tts=${ttsStart ?? -1}:${ttsEnd ?? -1}`,
+      `auto=${autoStart ?? -1}:${autoEnd ?? -1}`,
+    ].join('|');
+  }
+
+  private pageChromeLayoutIdentity(): string {
+    const layout = this.readingLayout();
+    return [
+      this.paginationLayoutSignature(),
+      `visual=${layout.pageChromeVisualSafeLeft}:${layout.pageChromeVisualSafeTop}:` +
+        `${layout.pageChromeVisualSafeRight}:${layout.pageChromeVisualSafeBottom}`,
+      `interactive=${layout.pageChromeInteractiveSafeRight}:${layout.pageChromeInteractiveSafeBottom}`,
+      `fontScale=${layout.systemFontScale}`,
+    ].join('|');
+  }
+
+  private pageTurnRenderPages(): ReaderPageTurnRenderPage[] {
+    const pages: ReaderPageTurnRenderPage[] = [this.currentPageTurnRenderPage()];
+    const previous = this.preparedPageTurnRenderPage('previous');
+    const next = this.preparedPageTurnRenderPage('next');
+    if (previous !== undefined) pages.push(previous);
+    if (next !== undefined) pages.push(next);
+    return pages;
+  }
+
+  private pageTurnRenderPageForTextureKey(key: string): ReaderPageTurnRenderPage | undefined {
+    const pages = this.pageTurnRenderPages();
+    for (let index = 0; index < pages.length; index += 1) {
+      if (pages[index].composedTextureKey === key) return pages[index];
+    }
+    return undefined;
+  }
+
+  private onReaderPageSurfaceReady(identity: string): void {
+    this.maybeAcknowledgeNativePagePresented(identity);
+    if (!this.mounted || readerPageTurnStyle(this.readerSettingsSnapshot) !== 'simulation') {
+      return;
+    }
+    // The resident window is immutable for an admitted gesture. Never enqueue
+    // new ComponentSnapshot or PixelMap work behind a 60 fps native curl; the
+    // promoted current page is acknowledged above and the next idle window is
+    // captured after settlement releases presentation ownership.
+    if (this.nativePageCurlVisible || this.pageTurnSettlementActive ||
+      this.pageTurnGestureState.phase !== 'idle') return;
+    const generation = this.pageRasterGeneration;
+    if (this.pageRasterCaptureAdmissionTimer >= 0) {
+      clearTimeout(this.pageRasterCaptureAdmissionTimer);
+    }
+    // Current/previous/next surfaces can report several short-lived render
+    // revisions while adjacent-page measurement completes. Debounce that
+    // mount burst before asking ComponentSnapshot for three composed pages;
+    // otherwise failed obsolete requests occupy the snapshot service for
+    // roughly a second and make the user's first Pan cold.
+    this.pageRasterCaptureAdmissionTimer = setTimeout((): void => {
+      this.pageRasterCaptureAdmissionTimer = -1;
+      if (!this.mounted || generation !== this.pageRasterGeneration) return;
+      this.retainPageRasterWindow();
+      this.pageTurnRenderPages().forEach((page: ReaderPageTurnRenderPage): void =>
+        this.captureReaderPage(page, generation));
+    }, READER_PAGE_RASTER_CAPTURE_ADMISSION_MS);
+  }
+
+  private retainPageRasterWindow(): void {
+    const pages = this.pageTurnRenderPages();
+    this.pageRasterCache.retain(pages.map((page: ReaderPageTurnRenderPage): string => page.composedTextureKey));
+  }
+
+  private captureReaderPage(
+    page: ReaderPageTurnRenderPage,
+    generation: number,
+    attempt: number = 0,
+  ): void {
+    const key = page.composedTextureKey;
+    const alreadyCached = this.pageRasterCache.has(key);
+    if (key.length === 0 || alreadyCached || this.pageRasterCaptureInFlight.indexOf(key) >= 0) {
+      if (alreadyCached) this.primeNativePageCurlPage(page);
+      return;
+    }
+    this.pageRasterCaptureInFlight.push(key);
+    const componentId = page.composedComponentId();
+    void this.getUIContext().getComponentSnapshot().get(componentId, {
+      scale: 1,
+      waitUntilRenderFinished: true,
+    })
+      .then((pixelMap: image.PixelMap): void => {
+        // Render revision is a component-mount identity, not raster content.
+        // A preparation completion can replace `current:7` with `current:9`
+        // while body/chrome keys remain byte-for-byte equivalent. Admit that
+        // finished snapshot by its stable content key so the first physical
+        // Pan does not hit a needless cold-cache fallback.
+        const current = this.pageTurnRenderPageForTextureKey(key);
+        if (!this.mounted || generation !== this.pageRasterGeneration || current === undefined) {
+          this.releasePageRasterPixelMap(pixelMap);
+          this.noteNativePageCurlDiagnostic(`snapshot-stale:page:${attempt}`);
+          this.scheduleReaderPageRasterCaptureRetry(attempt + 1);
+          return;
+        }
+        const record = new ReaderPageRasterRecord(key, componentId, pixelMap, generation);
+        this.pageRasterCache.admit(record);
+        this.noteNativePageCurlDiagnostic(`snapshot-ready:page:${page.identity}`);
+        this.primeNativePageCurlPage(page);
+      })
+      .catch((error: BusinessError): void => {
+        // Snapshot failure degrades this turn to the admitted non-animated
+        // path. It must never replace a valid native page with a blank raster.
+        this.noteNativePageCurlDiagnostic(
+          `snapshot-failed:page:${componentId}:${error.code}:${error.message}`,
+        );
+        this.scheduleReaderPageRasterCaptureRetry(attempt + 1);
+      })
+      .finally((): void => {
+        const index = this.pageRasterCaptureInFlight.indexOf(key);
+        if (index >= 0) this.pageRasterCaptureInFlight.splice(index, 1);
+      });
+  }
+
+  private scheduleReaderPageRasterCaptureRetry(attempt: number): void {
+    if (!this.mounted || attempt > READER_PAGE_RASTER_CAPTURE_RETRY_LIMIT ||
+      this.pageRasterCaptureRetryTimer >= 0) return;
+    const retryDelayMs = READER_PAGE_RASTER_CAPTURE_RETRY_STEP_MS * attempt;
+    this.pageRasterCaptureRetryTimer = setTimeout((): void => {
+      this.pageRasterCaptureRetryTimer = -1;
+      if (!this.mounted || readerPageTurnStyle(this.readerSettingsSnapshot) !== 'simulation') return;
+      const generation = this.pageRasterGeneration;
+      this.retainPageRasterWindow();
+      this.pageTurnRenderPages().forEach((page: ReaderPageTurnRenderPage): void =>
+        this.captureReaderPage(page, generation, attempt));
+    }, retryDelayMs);
+  }
+
+  private releasePageRasterPixelMap(pixelMap: image.PixelMap): void {
+    void pixelMap.release().catch((_error: Error): void => {});
+  }
+
+  /**
+   * PixelMap access and the GLES texture upload are deliberately completed
+   * while the mounted page window is idle. A physical
+   * Pan must only select two already resident texture keys; doing full-screen
+   * raster work in onActionUpdate makes a scripted VM drag look valid while a
+   * real finger loses its MOVE samples.
+   */
+  private primeNativePageCurlPage(page: ReaderPageTurnRenderPage): void {
+    const context = this.nativePageCurlContext;
+    if (context === undefined || page.composedTextureKey.length === 0) return;
+    const record = this.pageRasterCache.get(page.composedTextureKey);
+    if (record === undefined) return;
+    try {
+      if (!context.primePage(page.composedTextureKey, record.pixelMap)) {
+        this.noteNativePageCurlDiagnostic(`prime-rejected:${page.identity}`);
+      }
+    } catch (_error) {
+      this.noteNativePageCurlDiagnostic(`prime-failed:${page.identity}`);
+    }
+  }
+
+  private primeNativePageCurlWindow(): void {
+    this.pageTurnRenderPages().forEach((page: ReaderPageTurnRenderPage): void =>
+      this.primeNativePageCurlPage(page));
   }
 
   private pageBottomJustifyGap(page: PhysicalReadingPage): number {
@@ -2698,7 +3103,21 @@ export struct ReadingExperience {
     if (!this.isSessionActive(lifecycleToken) || this.exitRequested) {
       return;
     }
-    if (this.pageTurnSettlementActive) {
+    const inputPhase = this.pageTurnInputPhase();
+    if (inputPhase === 'tracking' || inputPhase === 'dragging') {
+      // Back wins over an uncommitted page turn, but it must first return the
+      // visible sheet to rest. The deferred exit resumes from the rollback
+      // completion, so no native surface disappears mid-frame.
+      this.pageTurnPendingExit = true;
+      const cancelled = cancelReaderPagePan(this.pageTurnGestureState);
+      if (cancelled !== this.pageTurnGestureState) {
+        this.onReaderPageGestureStateChanged(cancelled);
+        return;
+      }
+      this.cancelNativePageCurlSession();
+      this.pageTurnPendingExit = false;
+    }
+    if (this.pageTurnInputPhase() !== 'idle') {
       this.pageTurnPendingExit = true;
       return;
     }
@@ -3580,6 +3999,28 @@ export struct ReadingExperience {
     ].join('|');
   }
 
+  private readerSystemGestureLeftInset(): number {
+    const metrics = ReaderWindowCoordinator.metrics();
+    return Math.max(16, this.finiteWindowInset(metrics.gestureInsets.left),
+      this.finiteWindowInset(metrics.navigationInsets.left));
+  }
+
+  private readerSystemGestureRightInset(): number {
+    const metrics = ReaderWindowCoordinator.metrics();
+    return Math.max(16, this.finiteWindowInset(metrics.gestureInsets.right),
+      this.finiteWindowInset(metrics.navigationInsets.right));
+  }
+
+  private readerSystemGestureBottomInset(): number {
+    const metrics = ReaderWindowCoordinator.metrics();
+    return Math.max(24, this.finiteWindowInset(metrics.gestureInsets.bottom),
+      this.finiteWindowInset(metrics.navigationInsets.bottom));
+  }
+
+  private finiteWindowInset(value: number): number {
+    return Number.isFinite(value) ? Math.max(0, value) : 0;
+  }
+
   private normalizedProgress(value: number): number {
     if (!Number.isFinite(value)) {
       return 0;
@@ -3626,6 +4067,106 @@ export struct ReadingExperience {
         READER_CONTROL_PROGRESS_MAX));
     }
     return 0;
+  }
+
+  /** Build page-owned chrome from the exact page anchor, never from mutable desired progress. */
+  private pageChromeSnapshot(
+    chapterIndex: number,
+    pageStartScalar: number,
+    chapterScalarCount: number,
+    key: ReadingPaginationKey | undefined,
+    prefix: ReadingPaginationPrefix | undefined,
+  ): ReaderPageChromeSnapshot {
+    const sessionVisible = this.shouldShowSessionCapsule();
+    return new ReaderPageChromeSnapshot(
+      this.bookTitle,
+      this.pageChromeClockText,
+      formatReaderPageProgress(this.pageChromeProgress(
+        chapterIndex,
+        pageStartScalar,
+        chapterScalarCount,
+      )),
+      formatReaderPageOrdinal(this.pageChromeOrdinal(key, pageStartScalar, prefix)),
+      sessionVisible,
+      sessionVisible ? this.activeSessionCapsuleWidth() : 0,
+      sessionVisible ? this.activeSessionCapsuleHeight() : 0,
+    );
+  }
+
+  private pageChromePaginationKey(
+    chapterIndex: number,
+    contentVersion: string,
+  ): ReadingPaginationKey | undefined {
+    if (!Number.isSafeInteger(chapterIndex) || chapterIndex < 0 || contentVersion.length === 0) {
+      return undefined;
+    }
+    return {
+      sourceId: this.sourceId,
+      bookId: this.bookId,
+      chapterIndex,
+      layoutSignature: this.paginationLayoutSignature(),
+      contentVersion,
+    };
+  }
+
+  private pageChromeOrdinal(
+    key: ReadingPaginationKey | undefined,
+    pageStartScalar: number,
+    prefix: ReadingPaginationPrefix | undefined,
+  ): ReaderPageOrdinal | undefined {
+    if (key === undefined || !Number.isSafeInteger(pageStartScalar) || pageStartScalar < 0) {
+      return undefined;
+    }
+    const page = this.paginationIndex.findContainingPage(key, pageStartScalar);
+    const last = this.paginationIndex.findLastPage(key);
+    if (page !== undefined && last !== undefined) {
+      return new ReaderPageOrdinal(page.pageIndex, last.pageIndex + 1);
+    }
+    if (prefix === undefined || !prefix.matches(key) || !prefix.startsAtRequest(0)) {
+      return undefined;
+    }
+    const starts = prefix.pageStartScalars();
+    let pageIndex = -1;
+    for (let index = 0; index < starts.length; index += 1) {
+      if (starts[index] <= pageStartScalar) {
+        pageIndex = index;
+      } else {
+        break;
+      }
+    }
+    return pageIndex >= 0 ? new ReaderPageOrdinal(pageIndex) : undefined;
+  }
+
+  private pageChromeProgress(
+    chapterIndex: number,
+    pageStartScalar: number,
+    chapterScalarCount: number,
+  ): number {
+    if (chapterIndex < 0 || pageStartScalar < 0) {
+      return 0;
+    }
+    if (this.contentMetrics !== undefined) {
+      return wholeBookProgressPercent(this.contentMetrics, chapterIndex, pageStartScalar);
+    }
+    const count = this.tocEntries.length;
+    if (count === 0) {
+      return 0;
+    }
+    let position = this.chapterWindow.position(chapterIndex);
+    if (position < 0) {
+      for (let index = 0; index < this.tocEntries.length; index += 1) {
+        if (this.tocEntries[index].index === chapterIndex) {
+          position = index;
+          break;
+        }
+      }
+    }
+    if (position < 0) {
+      return 0;
+    }
+    const chapterProgress = chapterScalarCount > 0 ?
+      this.normalizedProgress(pageStartScalar / chapterScalarCount) : 0;
+    return ((position + chapterProgress) / count) * READER_CONTROL_PROGRESS_MAX;
   }
 
   private currentChapterIndex(): number {
@@ -3690,30 +4231,23 @@ export struct ReadingExperience {
     this.ttsGateway = gateway;
     this.ttsHttpGateway = httpGateway;
     this.ttsCoordinator = coordinator;
+    // Voice enumeration and HTTP-engine management populate the full settings
+    // surface, but neither is required to start foreground system speech. Load
+    // them independently so the first play tap is not held behind slow platform
+    // discovery on a physical device.
+    void this.loadTtsPresentationMetadata(owner, coordinator, httpGateway, lifecycleToken);
     const initialization = coordinator.probeAvailability()
-      .then(async (available: boolean): Promise<void> => {
-        if (!this.isMountedToken(lifecycleToken) || this.ttsCoordinator !== coordinator) return;
+      .then((available: boolean): boolean => {
+        if (!this.isMountedToken(lifecycleToken) || this.ttsCoordinator !== coordinator) return false;
         const config = coordinator.getProbedConfig();
-        const httpEngines = await httpGateway.list();
-        const preferences = await this.ttsPreferencesGateway.load();
-        let voiceOptions: ReaderTtsVoiceOption[] = [];
-        try {
-          voiceOptions = await owner.getTtsHost().listSystemVoices();
-        } catch (error) {
-          this.logTtsFailure('voice-list', error as Error);
-        }
-        if (!this.isMountedToken(lifecycleToken) || this.ttsCoordinator !== coordinator) return;
         this.ttsConfig = config;
         this.ttsEngine = config?.engine ?? 'system';
-        this.ttsHttpEngines = httpEngines;
-        this.admitTtsPreferences(preferences, voiceOptions);
-        if (available && config !== undefined) await coordinator.setRate(this.multiplierForCoreRate(config.rate));
-      })
-      .then((): boolean => {
-        if (this.isMountedToken(lifecycleToken) && this.ttsCoordinator === coordinator) {
-          this.ttsAvailabilityResolved = true;
+        if (available && config !== undefined) {
+          void coordinator.setRate(this.multiplierForCoreRate(config.rate))
+            .catch((error: Error): void => this.logTtsFailure('initial-rate', error));
         }
-        return this.ttsState.status !== 'unavailable';
+        this.ttsAvailabilityResolved = true;
+        return available;
       })
       .catch((error: Error): boolean => {
         if (this.isMountedToken(lifecycleToken) && this.ttsCoordinator === coordinator) {
@@ -3724,6 +4258,39 @@ export struct ReadingExperience {
       });
     this.ttsInitialization = initialization;
     return initialization;
+  }
+
+  private async loadTtsPresentationMetadata(
+    owner: ReaderRuntimeOwner,
+    coordinator: ReaderTtsSessionCoordinator,
+    httpGateway: ReaderHttpTtsGateway,
+    lifecycleToken: number,
+  ): Promise<void> {
+    let httpEngines: ReaderHttpTtsConfig[] = [];
+    let preferences: ReaderTtsPreferencesSnapshot | undefined = undefined;
+    let voiceOptions: ReaderTtsVoiceOption[] = [];
+    try {
+      httpEngines = await httpGateway.list();
+    } catch (error) {
+      console.error(`Reader TTS optional HTTP engine list failed: ${this.errorMessage(error)}`);
+    }
+    try {
+      preferences = await this.ttsPreferencesGateway.load();
+    } catch (error) {
+      console.error(`Reader TTS optional preferences failed: ${this.errorMessage(error)}`);
+    }
+    try {
+      voiceOptions = await owner.getTtsHost().listSystemVoices();
+    } catch (error) {
+      console.error(`Reader TTS optional voice list failed: ${this.errorMessage(error)}`);
+    }
+    if (!this.isMountedToken(lifecycleToken) || this.ttsCoordinator !== coordinator) return;
+    this.ttsHttpEngines = httpEngines;
+    if (preferences !== undefined) {
+      this.admitTtsPreferences(preferences, voiceOptions);
+    } else {
+      this.ttsVoiceOptions = voiceOptions;
+    }
   }
 
   private admitTtsPreferences(
@@ -3771,6 +4338,10 @@ export struct ReadingExperience {
   }
 
   private toggleTts(): void {
+    // A user choosing TTS cancels any auto-page start that is waiting for the
+    // preceding TTS stop barrier. Its continuation may still resolve, but its
+    // generation can no longer start a second runtime.
+    this.cancelPendingAutoPageStart();
     if (!this.ttsAvailabilityResolved) {
       const lifecycleToken = this.lifecycleToken;
       void this.initializeTtsSession(lifecycleToken).then((available: boolean): void => {
@@ -3788,9 +4359,11 @@ export struct ReadingExperience {
       return;
     }
     if (this.ttsState.status === 'paused' || this.ttsState.status === 'interrupted') {
+      this.stopAutoPage();
       void coordinator.resume().catch((error: Error): void => this.logTtsFailure('resume', error));
       return;
     }
+    if (this.ttsState.status === 'stopping') return;
     const chapter = this.chapter;
     const page = this.visiblePage;
     if (!this.mounted || this.phase !== 'ready' || chapter === undefined || page === undefined ||
@@ -3809,6 +4382,10 @@ export struct ReadingExperience {
       allowMixing: this.ttsAllowMixing,
       failurePolicy: this.ttsFailurePolicy,
       timerDurationMs: this.ttsTimerDurationMs(),
+    }).then((): void => {
+      if (this.mounted && !this.exitRequested && this.ttsCoordinator === coordinator) {
+        this.hideControl();
+      }
     }).catch((error: Error): void => this.logTtsFailure('start', error));
   }
 
@@ -4113,22 +4690,68 @@ export struct ReadingExperience {
       this.pauseAutoPage('manual');
       return;
     }
-    const startingNewSession = this.autoPageState.status === 'stopped';
-    if (startingNewSession && this.ttsCoordinator !== undefined) {
-      void this.ttsCoordinator.stop('user').catch((error: Error): void => this.logTtsFailure('stop', error));
+    if (this.autoPageState.status === 'paused') {
+      this.autoPageState = resumeReaderAutoPage(this.autoPageState);
+      this.hideControl();
+      this.armAutoPageTimer(true);
+      this.armAutoPageSessionTimer(false);
+      return;
     }
-    this.autoPageState = this.autoPageState.status === 'paused' ?
-      resumeReaderAutoPage(this.autoPageState) : startReaderAutoPage(this.autoPageState);
+    if (this.autoPageStartPending) return;
+    const coordinator = this.ttsCoordinator;
+    if (readerTtsSessionBlocksAutoPageStart(this.ttsState.status)) {
+      if (coordinator === undefined) return;
+      const generation = this.nextAutoPageStartGeneration();
+      const lifecycleToken = this.lifecycleToken;
+      this.autoPageStartPending = true;
+      void coordinator.stop('user')
+        .then((): void => {
+          if (!this.isSessionActive(lifecycleToken) || !this.autoPageStartPending ||
+            generation !== this.autoPageStartGeneration || this.ttsCoordinator !== coordinator ||
+            this.autoPageState.status !== 'stopped') {
+            return;
+          }
+          this.autoPageStartPending = false;
+          this.startAutoPageSession();
+        })
+        .catch((error: Error): void => {
+          if (generation !== this.autoPageStartGeneration) return;
+          this.autoPageStartPending = false;
+          this.logTtsFailure('stop before auto-page', error);
+        });
+      return;
+    }
+    this.startAutoPageSession();
+  }
+
+  private startAutoPageSession(): void {
+    if (!this.mounted || this.exitRequested || this.phase !== 'ready' ||
+      this.autoPageState.status !== 'stopped') {
+      return;
+    }
+    this.autoPageState = startReaderAutoPage(this.autoPageState);
     this.hideControl();
     this.armAutoPageTimer(true);
-    this.armAutoPageSessionTimer(startingNewSession);
+    this.armAutoPageSessionTimer(true);
   }
 
   private stopAutoPage(): void {
+    this.cancelPendingAutoPageStart();
     this.autoPageState = stopReaderAutoPage(this.autoPageState, 'manual');
     this.clearAutoPageTimer();
     this.clearAutoPageSessionTimer();
     this.resetAutoPageSessionDuration();
+  }
+
+  private cancelPendingAutoPageStart(): void {
+    this.nextAutoPageStartGeneration();
+    this.autoPageStartPending = false;
+  }
+
+  private nextAutoPageStartGeneration(): number {
+    this.autoPageStartGeneration = this.autoPageStartGeneration >= Number.MAX_SAFE_INTEGER ?
+      1 : this.autoPageStartGeneration + 1;
+    return this.autoPageStartGeneration;
   }
 
   private changeAutoPageSpeed(deltaSeconds: number): void {
@@ -4480,6 +5103,17 @@ export struct ReadingExperience {
 
   private onWindowChromeActiveChanged(): void {
     this.applyWindowChrome();
+    this.applyWindowPolicyForChromeOwner();
+  }
+
+  private applyWindowPolicyForChromeOwner(): void {
+    if (this.windowChromeActive) {
+      void this.applyReaderWindowPolicy(this.readerSettingsSnapshot)
+        .catch((_error: Error): void => {});
+      return;
+    }
+    void ReaderWindowCoordinator.requestAppWindowPolicy()
+      .catch((_error: Error): void => {});
   }
 
   private applyWindowChrome(): void {
@@ -4500,7 +5134,7 @@ export struct ReadingExperience {
   }
 
   private setControlPage(page: ReaderControlPage): void {
-    if (page !== 'quickSearch') {
+    if (page !== 'quickSearch' && page !== 'fullSearch') {
       this.searchGeneration += 1;
     }
     if (page !== 'quickReplace') {
@@ -4759,12 +5393,12 @@ export struct ReadingExperience {
 
   private safeWindowSettingsFallback(snapshot: ReaderSettingsSnapshot): ReaderSettingsSnapshot {
     return normalizeReaderSettingsSnapshot({
-      version: 2,
+      version: 3,
       screenDirection: 'system',
       navigationMode: snapshot.navigationMode,
       pageTransition: snapshot.pageTransition,
       screenTimeout: 'system',
-      hideStatusBar: false,
+      hideStatusBar: true,
       hideNavigationBar: false,
       extendIntoCutout: false,
       justifyText: snapshot.justifyText,
@@ -4826,6 +5460,10 @@ export struct ReadingExperience {
 
   private changeAppearanceFont(font: ReaderAppearanceFont): void {
     this.commitAppearanceSnapshot(setReaderAppearanceFont(this.appearanceSnapshot, font));
+  }
+
+  private changeAppearanceFontOrder(fontOrder: ReaderAppearanceFontSlot[]): void {
+    this.commitAppearanceSnapshot(setReaderAppearanceFontOrder(this.appearanceSnapshot, fontOrder));
   }
 
   private importReaderCustomFont(): void {
@@ -4945,16 +5583,214 @@ export struct ReadingExperience {
       left.indent === right.indent && left.alignment === right.alignment;
   }
 
+  private shouldShowSessionCapsule(): boolean {
+    return this.sessionCapsuleSnapshot() !== undefined;
+  }
+
+  private sessionCapsuleType(): ReaderSessionCapsuleType {
+    return this.sessionCapsuleSnapshot()?.type ?? 'autoPage';
+  }
+
+  private sessionCapsuleState(): 'playing' | 'paused' {
+    return this.sessionCapsuleSnapshot()?.sessionState ?? 'paused';
+  }
+
+  private sessionCapsuleCountdown(): number {
+    return this.sessionCapsuleSnapshot()?.countdown ?? 0;
+  }
+
+  private sessionCapsuleSnapshot(): ReaderSessionCapsuleSnapshot | undefined {
+    if (this.pageTurnSessionCapsuleFrozen) {
+      return this.pageTurnSessionCapsuleSnapshot;
+    }
+    return this.liveSessionCapsuleSnapshot();
+  }
+
+  private liveSessionCapsuleSnapshot(): ReaderSessionCapsuleSnapshot | undefined {
+    return deriveReaderSessionCapsule({
+      mounted: this.mounted,
+      exitRequested: this.exitRequested,
+      pageReady: this.phase === 'ready',
+      controlObscured: this.controlObscured,
+      interactionBlocked: this.interactionBlocked,
+      controlVisible: this.controlVisible,
+      autoPageStatus: this.autoPageState.status,
+      autoPageRemainingSeconds: this.autoPageState.remainingSeconds,
+      ttsStatus: this.ttsState.status,
+    });
+  }
+
+  private toggleSessionCapsule(): void {
+    if (this.pageTurnInputPhase() !== 'idle') return;
+    const snapshot = this.sessionCapsuleSnapshot();
+    if (snapshot === undefined) return;
+    if (snapshot.type === 'autoPage') {
+      this.toggleAutoPage();
+      return;
+    }
+    this.toggleTts();
+  }
+
+  private activeSessionCapsuleWidth(): number {
+    const type = this.sessionCapsuleType();
+    return this.measuredSessionCapsuleType === type && this.sessionCapsuleMeasuredWidth > 0 ?
+      this.sessionCapsuleMeasuredWidth : readerSessionCapsuleMinimumWidth(type);
+  }
+
+  private activeSessionCapsuleHeight(): number {
+    return this.sessionCapsuleMeasuredHeight > 0 ?
+      this.sessionCapsuleMeasuredHeight : READER_SESSION_CAPSULE_HEIGHT;
+  }
+
+  private sessionCapsuleLayout(): ReaderPageChromeLayoutSnapshot {
+    return resolveReaderPageChromeLayout(this.readingLayout(), new ReaderPageChromeMeasurements(
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      true,
+      this.activeSessionCapsuleWidth(),
+      this.activeSessionCapsuleHeight(),
+    ));
+  }
+
+  private onSessionCapsuleMeasured(
+    type: ReaderSessionCapsuleType,
+    width: number,
+    height: number,
+  ): void {
+    const snapshot = this.sessionCapsuleSnapshot();
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0 ||
+      snapshot === undefined || type !== snapshot.type) {
+      return;
+    }
+    if (this.pageChromeStateFrozen()) {
+      this.pendingSessionCapsuleType = type;
+      this.pendingSessionCapsuleWidth = width;
+      this.pendingSessionCapsuleHeight = height;
+      return;
+    }
+    this.admitSessionCapsuleMeasurement(type, width, height);
+  }
+
+  private admitSessionCapsuleMeasurement(
+    type: ReaderSessionCapsuleType,
+    width: number,
+    height: number,
+  ): void {
+    if (this.measuredSessionCapsuleType === type &&
+      Math.abs(this.sessionCapsuleMeasuredWidth - width) < 0.01 &&
+      Math.abs(this.sessionCapsuleMeasuredHeight - height) < 0.01) {
+      return;
+    }
+    this.measuredSessionCapsuleType = type;
+    this.sessionCapsuleMeasuredWidth = width;
+    this.sessionCapsuleMeasuredHeight = height;
+    this.pageTurnRenderRevision += 1;
+  }
+
+  private refreshPageChromeClock(lifecycleToken: number): void {
+    if (!this.isSessionActive(lifecycleToken)) {
+      return;
+    }
+    const clockText = formatReaderPageClock(Date.now());
+    if (this.pageChromeStateFrozen()) {
+      this.pendingPageChromeClockText = clockText;
+      return;
+    }
+    this.admitPageChromeClock(clockText);
+  }
+
+  private admitPageChromeClock(clockText: string): void {
+    if (this.pageChromeClockText === clockText) {
+      return;
+    }
+    this.pageChromeClockText = clockText;
+    this.pageTurnRenderRevision += 1;
+  }
+
+  private armPageChromeStatusTimer(lifecycleToken: number): void {
+    this.clearPageChromeStatusTimer();
+    const now = Date.now();
+    const nextMinuteDelay = 60050 - (now % 60000);
+    this.pageChromeStatusTimer = setTimeout((): void => {
+      this.pageChromeStatusTimer = -1;
+      if (!this.isSessionActive(lifecycleToken)) {
+        return;
+      }
+      this.refreshPageChromeClock(lifecycleToken);
+      this.armPageChromeStatusTimer(lifecycleToken);
+    }, nextMinuteDelay);
+  }
+
+  private clearPageChromeStatusTimer(): void {
+    if (this.pageChromeStatusTimer >= 0) {
+      clearTimeout(this.pageChromeStatusTimer);
+      this.pageChromeStatusTimer = -1;
+    }
+  }
+
+  private pageChromeStateFrozen(): boolean {
+    return this.pageTurnSettlementActive || this.pageTurnGestureState.phase === 'tracking' ||
+      this.pageTurnGestureState.phase === 'dragging' ||
+      this.pageTurnGestureState.phase === 'settling';
+  }
+
+  private flushDeferredPageChromeState(): void {
+    if (this.pageChromeStateFrozen()) {
+      return;
+    }
+    this.pageTurnSessionCapsuleFrozen = false;
+    this.pageTurnSessionCapsuleSnapshot = undefined;
+    const clockText = this.pendingPageChromeClockText;
+    this.pendingPageChromeClockText = undefined;
+    if (clockText !== undefined) {
+      this.admitPageChromeClock(clockText);
+    }
+    const type = this.pendingSessionCapsuleType;
+    const width = this.pendingSessionCapsuleWidth;
+    const height = this.pendingSessionCapsuleHeight;
+    this.pendingSessionCapsuleType = undefined;
+    this.pendingSessionCapsuleWidth = 0;
+    this.pendingSessionCapsuleHeight = 0;
+    const snapshot = this.sessionCapsuleSnapshot();
+    if (type !== undefined && snapshot !== undefined && type === snapshot.type && width > 0 && height > 0) {
+      this.admitSessionCapsuleMeasurement(type, width, height);
+    }
+  }
+
   private isReaderPageInteractionEnabled(): boolean {
     return this.mounted && !this.exitRequested && !this.controlVisible && !this.controlObscured &&
       !this.interactionBlocked && this.phase === 'ready' && !this.pageTurnSettlementActive &&
       this.pageTurnSettlingPrepared === undefined;
   }
 
+  /** One derived phase is the only control/page-turn ownership decision. */
+  private pageTurnInputPhase(): ReaderPageTurnInputPhase {
+    if (this.nativePageCurlAwaitingHostPresentSession !== 0) return 'awaitingHostPresent';
+    if (this.pageTurnSettlementActive || this.pageTurnSettlingPrepared !== undefined ||
+      this.pageTurnGestureState.phase === 'settling') return 'settling';
+    if (this.pageTurnGestureState.phase === 'dragging' || this.nativePageCurlSessionId !== 0 ||
+      this.nativePageCurlVisible) return 'dragging';
+    if (this.pageTurnGestureState.phase === 'tracking') return 'tracking';
+    return 'idle';
+  }
+
+  /** Page-turn and control surfaces are mutually exclusive input owners. */
+  private pageTurnOwnsReaderInput(): boolean {
+    return this.pageTurnInputPhase() !== 'idle';
+  }
+
   private openReaderControl(): void {
-    if (!this.isReaderPageInteractionEnabled()) {
+    if (!this.isReaderPageInteractionEnabled() || this.pageTurnOwnsReaderInput()) {
       return;
     }
+    this.controlShellExitGeneration += 1;
+    this.controlShellExitArmed = false;
     this.controlPage = 'home';
     this.controlVisible = true;
     void this.loadContentMetricsIfNeeded(this.lifecycleToken);
@@ -4962,16 +5798,28 @@ export struct ReadingExperience {
   }
 
   private hideControl(): void {
+    if (!this.controlVisible || this.controlShellExitArmed) {
+      return;
+    }
     this.searchGeneration += 1;
     this.replacePanelGeneration += 1;
-    this.controlPage = 'home';
-    this.controlVisible = false;
-    const generation = this.pageTurnGeneration;
-    setTimeout((): void => {
-      if (generation === this.pageTurnGeneration) {
+    // First present one frame with every nested page/content transition
+    // disabled. The next frame removes the shell, so only TopBar/ControlDock's
+    // Figma reader.control.hide transition runs; text, icons, background and
+    // border remain one visual actor for the complete 360 ms exit.
+    const exitGeneration = this.controlShellExitGeneration + 1;
+    this.controlShellExitGeneration = exitGeneration;
+    this.controlShellExitArmed = true;
+    const pageTurnGeneration = this.pageTurnGeneration;
+    this.getUIContext().postFrameCallback(new ReaderHostPresentedFrameCallback((): void => {
+      if (exitGeneration !== this.controlShellExitGeneration || !this.controlVisible) {
+        return;
+      }
+      this.controlVisible = false;
+      if (pageTurnGeneration === this.pageTurnGeneration) {
         this.drainPageTurnPreparationQueue();
       }
-    }, 0);
+    }));
   }
 
   private reloadCurrentChapterAfterContentProjectionChange(
@@ -5332,7 +6180,8 @@ export struct ReadingExperience {
 
   private runQuickSearch(): void {
     const keyword = this.quickSearchQuery.trim();
-    if (keyword.length === 0 || !this.controlVisible || this.controlPage !== 'quickSearch') {
+    if (keyword.length === 0 || !this.controlVisible ||
+      (this.controlPage !== 'quickSearch' && this.controlPage !== 'fullSearch')) {
       return;
     }
     const lifecycleToken = this.lifecycleToken;
@@ -5340,7 +6189,8 @@ export struct ReadingExperience {
     this.searchGeneration = searchGeneration;
     this.quickSearchState = { kind: 'loading', keyword };
     const isCurrent = (): boolean => this.isSessionActive(lifecycleToken) &&
-      searchGeneration === this.searchGeneration && this.controlVisible && this.controlPage === 'quickSearch';
+      searchGeneration === this.searchGeneration && this.controlVisible &&
+      (this.controlPage === 'quickSearch' || this.controlPage === 'fullSearch');
     void this.activeGateway().searchContent(this.bookId, keyword, 50, isCurrent)
       .then((results: ReadingContentSearchResult[]): void => {
         if (!isCurrent()) {
@@ -5495,6 +6345,19 @@ export struct ReadingExperience {
    */
   private invalidatePageTurnRuntime(restorePreparation: boolean): void {
     const preparation = this.pageTurnPreparation;
+    this.cancelNativePageCurlSession();
+    if (this.pageRasterCaptureAdmissionTimer >= 0) {
+      clearTimeout(this.pageRasterCaptureAdmissionTimer);
+      this.pageRasterCaptureAdmissionTimer = -1;
+    }
+    if (this.pageRasterCaptureRetryTimer >= 0) {
+      clearTimeout(this.pageRasterCaptureRetryTimer);
+      this.pageRasterCaptureRetryTimer = -1;
+    }
+    this.pageRasterGeneration = this.pageRasterGeneration >= Number.MAX_SAFE_INTEGER ?
+      1 : this.pageRasterGeneration + 1;
+    this.pageRasterCache.beginGeneration(this.pageRasterGeneration);
+    this.pageRasterCaptureInFlight.length = 0;
     this.pageTurnGeneration += 1;
     this.pageTurnSettlementGeneration += 1;
     this.pageTurnPreparation = undefined;
@@ -5512,6 +6375,9 @@ export struct ReadingExperience {
     this.pageTurnOffsetX = 0;
     this.pageTurnDirection = undefined;
     this.pageTurnGestureState = createReaderPageGestureState();
+    this.pageTurnSessionCapsuleFrozen = false;
+    this.pageTurnSessionCapsuleSnapshot = undefined;
+    this.resetSimulationGestureAdmission();
     this.pageTurnRenderRevision += 1;
     if (preparation === undefined) {
       this.releaseUnretainedReadingImages();
@@ -5698,11 +6564,124 @@ export struct ReadingExperience {
     return prepared !== undefined && this.isPreparedPageTurnFresh(prepared) ? prepared : undefined;
   }
 
+  private onNativePageCurlContextReady(context: ReaderNativePageCurlContext | undefined): void {
+    if (context === this.nativePageCurlContext) return;
+    if (this.nativePageCurlSessionId !== 0) this.cancelNativePageCurlSession();
+    this.nativePageCurlContext = context;
+    this.noteNativePageCurlDiagnostic(context === undefined ? 'context-destroyed' : 'context-ready');
+    if (context !== undefined) {
+      this.primeNativePageCurlWindow();
+    }
+  }
+
+  private onReaderPageGestureDecision(decision: ReaderPageGestureDecision): ReaderPageGestureDecision {
+    if (readerPageTurnStyle(this.readerSettingsSnapshot) !== 'simulation' || this.reduceMotion ||
+      this.simulationGestureMode !== 'native') return decision;
+    this.nativePageCurlPendingGesture = decision.state;
+    this.updateNativePageCurlPointerSnapshot(decision.state);
+    this.updateNativePageCurlPointer();
+    const context = this.nativePageCurlContext;
+    const sessionId = this.nativePageCurlSessionId;
+    const direction = decision.state.direction;
+    if (context === undefined || sessionId === 0 || direction === undefined ||
+      !this.nativePageCurlBeginSent || this.nativePageCurlReleaseSent) return decision;
+
+    const canCommit = this.preparedPageTurn(direction) !== undefined;
+    const outcome = context.release(
+      sessionId,
+      canCommit,
+      this.normalizedPageCurlVelocity(decision.state.velocityX),
+      this.normalizedPageCurlVelocityY(decision.state.velocityY),
+      this.nativePageCurlEventTimeMs(decision.state),
+    );
+    if (outcome === READER_PAGECURL_RELEASE_REJECTED ||
+      (outcome !== READER_PAGECURL_RELEASE_COMMIT && outcome !== READER_PAGECURL_RELEASE_ROLLBACK)) {
+      this.handleNativePageCurlRenderFailure();
+      this.simulationGestureMode = 'fallback';
+      return {
+        state: retargetReaderPageGestureSettlement(decision.state, 'rollback'),
+        direction: undefined,
+      };
+    }
+    const commit = outcome === READER_PAGECURL_RELEASE_COMMIT;
+    this.nativePageCurlReleaseIntent = commit ? 'commit' : 'rollback';
+    this.nativePageCurlReleaseVelocity = this.normalizedPageCurlVelocity(decision.state.velocityX);
+    this.nativePageCurlReleaseVelocityY = this.normalizedPageCurlVelocityY(decision.state.velocityY);
+    this.nativePageCurlReleaseSent = true;
+    this.armNativePageCurlStatusPoll();
+    this.armNativePageCurlReleaseDeadline(sessionId);
+    const nativeState = retargetReaderPageGestureSettlement(
+      decision.state,
+      commit ? 'commit' : 'rollback',
+    );
+    this.nativePageCurlPendingGesture = nativeState;
+    return {
+      state: nativeState,
+      direction: commit ? direction : undefined,
+    };
+  }
+
   private onReaderPageGestureStateChanged(state: ReaderPageGestureState): void {
+    if (!this.pageTurnSessionCapsuleFrozen && state.phase === 'tracking') {
+      this.pageTurnSessionCapsuleSnapshot = this.liveSessionCapsuleSnapshot();
+      this.pageTurnSessionCapsuleFrozen = true;
+    }
     this.pageTurnGestureState = state;
     if (!readerPageTransitionUsesPreparedPages(this.readerSettingsSnapshot) || this.reduceMotion) {
       this.pageTurnDirection = undefined;
       this.pageTurnOffsetX = 0;
+      if (state.phase === 'idle') this.flushDeferredPageChromeState();
+      return;
+    }
+    if (readerPageTurnStyle(this.readerSettingsSnapshot) === 'simulation') {
+      if (state.phase === 'dragging' && state.direction !== undefined) {
+        const prepared = this.preparedPageTurn(state.direction);
+        this.nativePageCurlPendingGesture = state;
+        this.updateNativePageCurlPointerSnapshot(state);
+        if (this.simulationGestureMode === 'undecided') {
+          if (prepared !== undefined && this.tryPrepareNativePageCurlGesture()) {
+            this.simulationGestureMode = 'native';
+            this.simulationPageTurnFallbackActive = false;
+            this.noteNativePageCurlDiagnostic(`gesture-admitted:native-${state.direction}`);
+          } else {
+            // Backend admission is fixed on the first page-drag sample and can
+            // never switch during the same pointer stream. If a page is
+            // genuinely cold, retain the already measured adjacent page actor
+            // under the finger.
+            this.simulationGestureMode = 'fallback';
+            this.simulationPageTurnFallbackActive = prepared !== undefined;
+            this.noteNativePageCurlDiagnostic(prepared === undefined ?
+              `prepare-blocked:prepared-${state.direction}` : `gesture-admitted:fallback-${state.direction}`);
+          }
+        }
+        if (this.simulationGestureMode === 'native') {
+          this.updateNativePageCurlPointer();
+        } else if (prepared !== undefined) {
+          this.pageTurnDirection = state.direction;
+          this.pageTurnOffsetX = this.clampedPageTurnOffset(state.direction, state.currentOffsetX);
+        } else {
+          this.pageTurnDirection = undefined;
+          this.pageTurnOffsetX = 0;
+          this.noteNativePageCurlDiagnostic(`prepare-blocked:prepared-${state.direction}`);
+        }
+        return;
+      }
+      if (state.phase === 'settling' && state.settleTarget === 'rollback') {
+        if (this.simulationGestureMode === 'native') {
+          this.nativePageCurlPendingGesture = state;
+          this.updateNativePageCurlPointerSnapshot(state);
+          this.beginNativePageCurlRollback();
+        } else {
+          this.animatePageTurnRollback();
+        }
+        return;
+      }
+      if (state.phase === 'tracking' || state.phase === 'idle') {
+        this.resetSimulationGestureAdmission();
+        this.pageTurnDirection = undefined;
+        this.pageTurnOffsetX = 0;
+        this.flushDeferredPageChromeState();
+      }
       return;
     }
     if (state.phase === 'dragging' && state.direction !== undefined) {
@@ -5726,15 +6705,386 @@ export struct ReadingExperience {
     if (state.phase === 'tracking' || state.phase === 'idle') {
       this.pageTurnDirection = undefined;
       this.pageTurnOffsetX = 0;
+      this.flushDeferredPageChromeState();
     }
+  }
+
+  private tryPrepareNativePageCurlGesture(): boolean {
+    const gesture = this.nativePageCurlPendingGesture;
+    if (gesture === undefined || gesture.phase !== 'dragging' || gesture.direction === undefined ||
+      this.preparedPageTurn(gesture.direction) === undefined) {
+      return false;
+    }
+    this.updateNativePageCurlPointerSnapshot(gesture);
+    if (this.nativePageCurlSessionId === 0) {
+      if (!this.prepareNativePageCurlSession(gesture.direction)) return false;
+    }
+    if (this.nativePageCurlDirection !== gesture.direction) return false;
+    if (this.nativePageCurlBeginSent) this.updateNativePageCurlPointer();
+    return this.nativePageCurlSessionId !== 0 && this.nativePageCurlBeginSent;
+  }
+
+  private prepareNativePageCurlSession(direction: ReaderPageTurnDirection): boolean {
+    const context = this.nativePageCurlContext;
+    const currentPage = this.currentPageTurnRenderPage();
+    const adjacentPage = this.preparedPageTurnRenderPage(direction);
+    if (context === undefined) {
+      this.noteNativePageCurlDiagnostic('prepare-blocked:context');
+      return false;
+    }
+    if (adjacentPage === undefined) {
+      this.noteNativePageCurlDiagnostic(`prepare-blocked:target-${direction}`);
+      return false;
+    }
+    // NEXT deforms the current sheet and reveals next. PREVIOUS deforms the
+    // previous sheet as it enters over the stationary current page.
+    const movingPage = direction === 'previous' ? adjacentPage : currentPage;
+    const underPage = direction === 'previous' ? currentPage : adjacentPage;
+    if (!context.isPageReady(movingPage.composedTextureKey)) {
+      this.noteNativePageCurlDiagnostic('prepare-blocked:moving-texture');
+      return false;
+    }
+    if (!context.isPageReady(underPage.composedTextureKey)) {
+      this.noteNativePageCurlDiagnostic(`prepare-blocked:under-texture-${direction}`);
+      return false;
+    }
+    const sessionId = this.nextNativePageCurlSessionId();
+    const prepared = context.prepare(
+      movingPage.composedTextureKey,
+      underPage.composedTextureKey,
+      direction === 'previous' ? -1 : 1,
+      sessionId,
+    );
+    if (!prepared) {
+      this.noteNativePageCurlDiagnostic('prepare-rejected:native');
+      return false;
+    }
+    this.noteNativePageCurlDiagnostic(`prepare-accepted:${direction}:${sessionId}`);
+    this.nativePageCurlSessionId = sessionId;
+    this.nativePageCurlDirection = direction;
+    this.nativePageCurlBeginSent = false;
+    this.nativePageCurlReleaseSent = false;
+    this.nativePageCurlVisible = false;
+    // prepare() selects two textures that were uploaded during idle time, so
+    // RendererReady is already true. Begin in this same pointer callback and
+    // do not add a setTimeout polling frame before the curl starts following.
+    this.onNativePageCurlRendererReady(sessionId);
+    return this.nativePageCurlSessionId === sessionId && this.nativePageCurlBeginSent;
+  }
+
+  private nativePageCurlResourcesReady(direction: ReaderPageTurnDirection): boolean {
+    if (this.nativePageCurlSessionId !== 0) {
+      return this.nativePageCurlDirection === direction;
+    }
+    if (this.nativePageCurlContext === undefined) return false;
+    const current = this.currentPageTurnRenderPage();
+    const adjacent = this.preparedPageTurnRenderPage(direction);
+    if (adjacent === undefined) return false;
+    const moving = direction === 'previous' ? adjacent : current;
+    const under = direction === 'previous' ? current : adjacent;
+    return this.nativePageCurlContext.isPageReady(moving.composedTextureKey) &&
+      this.nativePageCurlContext.isPageReady(under.composedTextureKey);
+  }
+
+  private beginNativePageCurlCommit(direction: ReaderPageTurnDirection): boolean {
+    if (this.nativePageCurlSessionId === 0) {
+      const defaultStartX = direction === 'next' ? 0.92 : 0.08;
+      const startX = this.nativePageCurlProgrammaticOriginX ?? defaultStartX;
+      const currentX = direction === 'next' ?
+        startX - READER_PAGECURL_PROGRAMMATIC_DRAG_X : startX + READER_PAGECURL_PROGRAMMATIC_DRAG_X;
+      const originY = this.nativePageCurlProgrammaticOriginY ?? READER_PAGECURL_DEFAULT_ORIGIN_Y;
+      this.nativePageCurlStartX = startX;
+      this.nativePageCurlStartY = originY;
+      this.nativePageCurlCurrentX = currentX;
+      this.nativePageCurlCurrentY = originY;
+      if (!this.prepareNativePageCurlSession(direction)) return false;
+    }
+    if (this.nativePageCurlDirection !== direction) return false;
+    this.nativePageCurlReleaseIntent = 'commit';
+    this.nativePageCurlReleaseVelocity = direction === 'next' ?
+      -READER_PAGECURL_PROGRAMMATIC_VELOCITY : READER_PAGECURL_PROGRAMMATIC_VELOCITY;
+    this.nativePageCurlReleaseVelocityY = 0;
+    this.sendNativePageCurlReleaseIfReady();
+    return this.nativePageCurlReleaseSent && this.nativePageCurlReleaseIntent === 'commit';
+  }
+
+  private beginNativePageCurlRollback(): void {
+    const generation = this.pageTurnSettlementGeneration + 1;
+    this.pageTurnSettlementGeneration = generation;
+    this.pageTurnSettlementLayout = this.readingLayout();
+    this.pageTurnSettlementActive = true;
+    if (this.nativePageCurlSessionId === 0) {
+      this.finishPageTurnRollback(generation);
+      return;
+    }
+    this.nativePageCurlReleaseIntent = 'rollback';
+    this.nativePageCurlReleaseVelocity = this.normalizedPageCurlVelocity(this.pageTurnGestureState.velocityX);
+    this.nativePageCurlReleaseVelocityY = this.normalizedPageCurlVelocityY(this.pageTurnGestureState.velocityY);
+    this.sendNativePageCurlReleaseIfReady();
+  }
+
+  private updateNativePageCurlPointerSnapshot(state: ReaderPageGestureState): void {
+    const projection = projectReaderPageCurlGesture(state, this.viewportHeight);
+    if (projection === undefined) return;
+    this.nativePageCurlStartX = projection.originX;
+    this.nativePageCurlStartY = projection.originY;
+    this.nativePageCurlCurrentX = projection.currentX;
+    this.nativePageCurlCurrentY = projection.currentY;
+  }
+
+  private updateNativePageCurlPointer(): void {
+    const context = this.nativePageCurlContext;
+    const sessionId = this.nativePageCurlSessionId;
+    if (context === undefined || sessionId === 0 || !this.nativePageCurlBeginSent ||
+      this.nativePageCurlReleaseSent) return;
+    context.updatePointer(
+      sessionId,
+      this.nativePageCurlCurrentX,
+      this.nativePageCurlCurrentY,
+      this.nativePageCurlEventTimeMs(this.nativePageCurlPendingGesture),
+    );
+  }
+
+  private sendNativePageCurlReleaseIfReady(): void {
+    const context = this.nativePageCurlContext;
+    const intent = this.nativePageCurlReleaseIntent;
+    const sessionId = this.nativePageCurlSessionId;
+    if (context === undefined || intent === undefined || sessionId === 0 ||
+      !this.nativePageCurlBeginSent || this.nativePageCurlReleaseSent) return;
+    this.updateNativePageCurlPointer();
+    const outcome = context.release(
+      sessionId,
+      intent === 'commit',
+      this.nativePageCurlReleaseVelocity,
+      this.nativePageCurlReleaseVelocityY,
+      this.nativePageCurlEventTimeMs(this.nativePageCurlPendingGesture),
+    );
+    this.nativePageCurlReleaseSent = outcome !== READER_PAGECURL_RELEASE_REJECTED;
+    if (!this.nativePageCurlReleaseSent) {
+      this.handleNativePageCurlRenderFailure();
+      return;
+    }
+    this.nativePageCurlReleaseIntent = outcome === READER_PAGECURL_RELEASE_COMMIT ? 'commit' : 'rollback';
+    this.armNativePageCurlStatusPoll();
+    this.armNativePageCurlReleaseDeadline(sessionId);
+  }
+
+  private armNativePageCurlStatusPoll(): void {
+    this.clearNativePageCurlStatusPoll();
+    const sessionId = this.nativePageCurlSessionId;
+    if (sessionId === 0) return;
+    this.nativePageCurlStatusTimer = setTimeout((): void => {
+      this.nativePageCurlStatusTimer = -1;
+      if (!this.mounted || sessionId !== this.nativePageCurlSessionId) return;
+      this.pollNativePageCurlStatus();
+    }, READER_PAGECURL_STATUS_POLL_MS);
+  }
+
+  private pollNativePageCurlStatus(): void {
+    const context = this.nativePageCurlContext;
+    const sessionId = this.nativePageCurlSessionId;
+    if (context === undefined || sessionId === 0) return;
+    let status: ReaderNativePageCurlStatus;
+    try {
+      status = context.getStatus();
+    } catch (_error) {
+      this.handleNativePageCurlRenderFailure();
+      return;
+    }
+    if ((status.eventMask & READER_PAGECURL_EVENT_RENDER_FAILED) !== 0) {
+      this.handleNativePageCurlRenderFailure();
+      return;
+    }
+    if ((status.eventMask & READER_PAGECURL_EVENT_RENDERER_READY) !== 0) {
+      this.onNativePageCurlRendererReady(sessionId);
+    }
+    const releaseIntent = this.nativePageCurlReleaseIntent;
+    const cancelSettled = (status.eventMask & READER_PAGECURL_EVENT_TURN_CANCELLED) !== 0 ||
+      (releaseIntent === 'rollback' && status.phase === READER_PAGECURL_PHASE_IDLE);
+    if (cancelSettled) {
+      this.onNativePageCurlTurnCancelled();
+      return;
+    }
+    const commitSettled = (status.eventMask & READER_PAGECURL_EVENT_TURN_REACHED_END) !== 0 ||
+      (releaseIntent === 'commit' &&
+        (status.phase === READER_PAGECURL_PHASE_AWAITING_HOST_COMMIT ||
+          status.phase === READER_PAGECURL_PHASE_AWAITING_HOST_PRESENT));
+    if (commitSettled) {
+      this.onNativePageCurlTurnReachedEnd();
+    }
+    if (sessionId === this.nativePageCurlSessionId &&
+      this.nativePageCurlAwaitingHostPresentSession === 0) {
+      this.armNativePageCurlStatusPoll();
+    }
+  }
+
+  private onNativePageCurlRendererReady(sessionId: number): void {
+    const context = this.nativePageCurlContext;
+    if (context === undefined || sessionId !== this.nativePageCurlSessionId || this.nativePageCurlBeginSent) return;
+    const began = context.begin(
+      sessionId,
+      this.nativePageCurlStartX,
+      this.nativePageCurlStartY,
+      this.nativePageCurlEventTimeMs(this.nativePageCurlPendingGesture),
+    );
+    if (!began) {
+      this.noteNativePageCurlDiagnostic(`begin-rejected:${sessionId}`);
+      this.handleNativePageCurlRenderFailure();
+      return;
+    }
+    this.noteNativePageCurlDiagnostic(`renderer-ready:${sessionId}`);
+    this.nativePageCurlBeginSent = true;
+    this.nativePageCurlVisible = true;
+    this.updateNativePageCurlPointer();
+    this.sendNativePageCurlReleaseIfReady();
+  }
+
+  private onNativePageCurlTurnReachedEnd(): void {
+    if (this.nativePageCurlReleaseIntent !== 'commit') return;
+    this.clearNativePageCurlReleaseDeadline();
+    this.pageTurnAnimationFinished = true;
+    this.finishPreparedPageTurnSettlement(this.pageTurnSettlementGeneration);
+  }
+
+  private onNativePageCurlTurnCancelled(): void {
+    const rollback = this.nativePageCurlReleaseIntent === 'rollback';
+    const generation = this.pageTurnSettlementGeneration;
+    this.resetNativePageCurlSessionState();
+    if (rollback) {
+      this.finishPageTurnRollback(generation);
+    } else if (this.pageTurnSettlingPrepared !== undefined) {
+      this.pageTurnAnimationFinished = true;
+      this.finishPreparedPageTurnSettlement(generation);
+    }
+  }
+
+  private handleNativePageCurlRenderFailure(): void {
+    this.noteNativePageCurlDiagnostic(`render-failed:${this.nativePageCurlSessionId}`);
+    const context = this.nativePageCurlContext;
+    const sessionId = this.nativePageCurlSessionId;
+    if (context !== undefined && sessionId !== 0) context.cancel(sessionId);
+    const rollback = this.nativePageCurlReleaseIntent === 'rollback';
+    const generation = this.pageTurnSettlementGeneration;
+    this.resetNativePageCurlSessionState();
+    if (rollback) {
+      this.finishPageTurnRollback(generation);
+    } else if (this.pageTurnSettlingPrepared !== undefined) {
+      // The Core commit may still succeed. Keep the original ArkUI page until
+      // it does, then promote without animation instead of ever exposing an
+      // empty or stale native texture.
+      this.pageTurnAnimationFinished = true;
+      this.finishPreparedPageTurnSettlement(generation);
+    }
+  }
+
+  private cancelNativePageCurlSession(): void {
+    const context = this.nativePageCurlContext;
+    if (context !== undefined && this.nativePageCurlSessionId !== 0) {
+      context.cancel(this.nativePageCurlSessionId);
+    }
+    this.resetNativePageCurlSessionState();
+  }
+
+  private resetNativePageCurlSessionState(): void {
+    this.clearNativePageCurlStatusPoll();
+    this.clearNativePageCurlReleaseDeadline();
+    this.clearNativePageCurlPresentDeadline();
+    this.nativePageCurlVisible = false;
+    this.nativePageCurlSessionId = 0;
+    this.nativePageCurlDirection = undefined;
+    this.nativePageCurlPendingGesture = undefined;
+    this.nativePageCurlBeginSent = false;
+    this.nativePageCurlReleaseIntent = undefined;
+    this.nativePageCurlReleaseVelocity = 0;
+    this.nativePageCurlReleaseVelocityY = 0;
+    this.nativePageCurlReleaseSent = false;
+    this.nativePageCurlAwaitingHostPresentSession = 0;
+    this.nativePageCurlPresentFramePosted = false;
+  }
+
+  private resetSimulationGestureAdmission(): void {
+    this.simulationGestureMode = 'undecided';
+    this.simulationPageTurnFallbackActive = false;
+    this.nativePageCurlPendingGesture = undefined;
+  }
+
+  private noteNativePageCurlDiagnostic(state: string): void {
+    if (state === this.nativePageCurlDiagnosticState) return;
+    this.nativePageCurlDiagnosticState = state;
+    console.info(`ReaderPageCurl ${state}`);
+  }
+
+  private clearNativePageCurlStatusPoll(): void {
+    if (this.nativePageCurlStatusTimer >= 0) {
+      clearTimeout(this.nativePageCurlStatusTimer);
+      this.nativePageCurlStatusTimer = -1;
+    }
+  }
+
+  private armNativePageCurlReleaseDeadline(sessionId: number): void {
+    this.clearNativePageCurlReleaseDeadline();
+    this.nativePageCurlReleaseDeadlineTimer = setTimeout((): void => {
+      this.nativePageCurlReleaseDeadlineTimer = -1;
+      if (!this.mounted || sessionId !== this.nativePageCurlSessionId ||
+        !this.nativePageCurlReleaseSent) return;
+      this.noteNativePageCurlDiagnostic(`release-timeout:${sessionId}`);
+      this.handleNativePageCurlRenderFailure();
+    }, READER_PAGECURL_RELEASE_DEADLINE_MS);
+  }
+
+  private clearNativePageCurlReleaseDeadline(): void {
+    if (this.nativePageCurlReleaseDeadlineTimer >= 0) {
+      clearTimeout(this.nativePageCurlReleaseDeadlineTimer);
+      this.nativePageCurlReleaseDeadlineTimer = -1;
+    }
+  }
+
+  private armNativePageCurlPresentDeadline(sessionId: number): void {
+    this.clearNativePageCurlPresentDeadline();
+    this.nativePageCurlPresentDeadlineTimer = setTimeout((): void => {
+      this.nativePageCurlPresentDeadlineTimer = -1;
+      if (!this.mounted || sessionId !== this.nativePageCurlAwaitingHostPresentSession) return;
+      this.noteNativePageCurlDiagnostic(`present-timeout:${sessionId}`);
+      this.acknowledgeNativePagePresented(sessionId);
+    }, READER_PAGECURL_PRESENT_DEADLINE_MS);
+  }
+
+  private clearNativePageCurlPresentDeadline(): void {
+    if (this.nativePageCurlPresentDeadlineTimer >= 0) {
+      clearTimeout(this.nativePageCurlPresentDeadlineTimer);
+      this.nativePageCurlPresentDeadlineTimer = -1;
+    }
+  }
+
+  private nextNativePageCurlSessionId(): number {
+    this.nativePageCurlSessionCounter = this.nativePageCurlSessionCounter >= Number.MAX_SAFE_INTEGER ?
+      1 : this.nativePageCurlSessionCounter + 1;
+    return this.nativePageCurlSessionCounter;
+  }
+
+  private normalizedPageCurlVelocity(value: number): number {
+    if (!Number.isFinite(value) || this.viewportWidth <= 0) return 0;
+    return value / this.viewportWidth;
+  }
+
+  private nativePageCurlEventTimeMs(state: ReaderPageGestureState | undefined): number {
+    return state !== undefined && Number.isFinite(state.eventTimeMs) && state.eventTimeMs > 0 ?
+      state.eventTimeMs : Date.now();
+  }
+
+  private normalizedPageCurlVelocityY(value: number): number {
+    if (!Number.isFinite(value) || this.viewportHeight <= 0) return 0;
+    return value / this.viewportHeight;
   }
 
   private clampedPageTurnOffset(direction: ReaderPageTurnDirection, offsetX: number): number {
     const width = Math.max(0, this.viewportWidth);
+    const maximum = readerPageTurnStyle(this.readerSettingsSnapshot) === 'simulation' ?
+      width * READER_PAGE_GESTURE_MAX_DRAG_RATIO : width;
     if (direction === 'next') {
-      return Math.max(-width, Math.min(0, offsetX));
+      return Math.max(-maximum, Math.min(0, offsetX));
     }
-    return Math.min(width, Math.max(0, offsetX));
+    return Math.min(maximum, Math.max(0, offsetX));
   }
 
   private animatePageTurnRollback(): void {
@@ -5772,6 +7122,8 @@ export struct ReadingExperience {
     this.pageTurnSettlementActive = false;
     this.pageTurnSettlementLayout = undefined;
     this.pageTurnPresentationWidth = 0;
+    this.resetSimulationGestureAdmission();
+    this.flushDeferredPageChromeState();
     this.resumeDeferredPageTurnWork();
     this.drainPageTurnPreparationQueue();
     if (this.isSessionActive(this.lifecycleToken) && this.autoPageState.status === 'running' &&
@@ -5788,6 +7140,20 @@ export struct ReadingExperience {
       this.viewportWidth <= 0) {
       return false;
     }
+    const simulationRequested = readerPageTurnStyle(this.readerSettingsSnapshot) === 'simulation' &&
+      !this.reduceMotion;
+    // A manual gesture keeps the renderer selected on its first horizontal
+    // sample. A missing native texture never changes "simulation" into a flat
+    // slide; it completes without animation after the durable commit instead.
+    const usesNativeCurl = simulationRequested && this.simulationGestureMode !== 'fallback' &&
+      this.nativePageCurlResourcesReady(direction);
+    if (simulationRequested && this.simulationGestureMode === 'native' && !usesNativeCurl) return false;
+    if (simulationRequested) {
+      this.simulationGestureMode = usesNativeCurl ? 'native' : 'fallback';
+      this.simulationPageTurnFallbackActive = !usesNativeCurl;
+    } else {
+      this.simulationPageTurnFallbackActive = false;
+    }
     const lifecycleToken = this.lifecycleToken;
     const settlementGeneration = this.pageTurnSettlementGeneration + 1;
     this.pageTurnSettlementLayout = this.readingLayout();
@@ -5803,19 +7169,29 @@ export struct ReadingExperience {
     const targetOffset = direction === 'next' ? -this.viewportWidth : this.viewportWidth;
     if (this.reduceMotion) {
       this.pageTurnOffsetX = targetOffset;
+    } else if (usesNativeCurl) {
+      this.pageTurnOffsetX = 0;
+      if (!this.beginNativePageCurlCommit(direction)) {
+        this.pageTurnSettlingPrepared = undefined;
+        this.pageTurnStoredProgress = undefined;
+        this.pageTurnAnimationFinished = false;
+        this.pageTurnCommitFinished = false;
+        this.pageTurnCommitSucceeded = false;
+        this.pageTurnSettlementActive = false;
+        this.pageTurnSettlementLayout = undefined;
+        this.pageTurnPresentationWidth = 0;
+        this.pageTurnDirection = undefined;
+        this.resetSimulationGestureAdmission();
+        return false;
+      }
     } else {
-      this.getUIContext().animateTo(
-        motionAnimateParam('reader.page.slide.commit', (): void => {
-          if (settlementGeneration !== this.pageTurnSettlementGeneration) {
-            return;
-          }
-          this.pageTurnAnimationFinished = true;
-          this.finishPreparedPageTurnSettlement(settlementGeneration);
-        }),
-        (): void => {
-          this.pageTurnOffsetX = targetOffset;
-        },
-      );
+      if (simulationRequested) {
+        this.pageTurnOffsetX = 0;
+        this.pageTurnAnimationFinished = true;
+        this.noteNativePageCurlDiagnostic(`simulation-unavailable:${direction}`);
+      } else {
+        this.animatePreparedPageTurnSlide(targetOffset, settlementGeneration);
+      }
     }
     void this.persistPreparedPageTurn(prepared, lifecycleToken, settlementGeneration)
       .then((succeeded: boolean): void => {
@@ -5824,9 +7200,32 @@ export struct ReadingExperience {
         }
         this.pageTurnCommitFinished = true;
         this.pageTurnCommitSucceeded = succeeded;
+        if (succeeded && usesNativeCurl && this.nativePageCurlSessionId !== 0) {
+          const context = this.nativePageCurlContext;
+          if (context === undefined || !context.hostCommitted(this.nativePageCurlSessionId)) {
+            if (context !== undefined) context.cancel(this.nativePageCurlSessionId);
+            this.resetNativePageCurlSessionState();
+            this.pageTurnAnimationFinished = true;
+          }
+        }
         this.finishPreparedPageTurnSettlement(settlementGeneration);
       });
     return true;
+  }
+
+  private animatePreparedPageTurnSlide(targetOffset: number, settlementGeneration: number): void {
+    this.getUIContext().animateTo(
+      motionAnimateParam('reader.page.slide.commit', (): void => {
+        if (settlementGeneration !== this.pageTurnSettlementGeneration) {
+          return;
+        }
+        this.pageTurnAnimationFinished = true;
+        this.finishPreparedPageTurnSettlement(settlementGeneration);
+      }),
+      (): void => {
+        this.pageTurnOffsetX = targetOffset;
+      },
+    );
   }
 
   private async persistPreparedPageTurn(
@@ -5903,6 +7302,7 @@ export struct ReadingExperience {
     const stored = this.pageTurnStoredProgress;
     if (!this.pageTurnCommitSucceeded || prepared === undefined || stored === undefined ||
       !this.isPreparedPageTurnFresh(prepared)) {
+      if (this.nativePageCurlSessionId !== 0) this.cancelNativePageCurlSession();
       this.pageTurnSettlingPrepared = undefined;
       this.pageTurnStoredProgress = undefined;
       const autoGeneration = this.autoPageState.generation;
@@ -5910,16 +7310,54 @@ export struct ReadingExperience {
       this.animatePageTurnRollback();
       return;
     }
+    const nativeSessionId = this.nativePageCurlSessionId;
     this.promotePreparedPageTurn(prepared, stored);
     this.pageTurnSettlingPrepared = undefined;
     this.pageTurnStoredProgress = undefined;
     this.pageTurnOffsetX = 0;
     this.pageTurnDirection = undefined;
     this.pageTurnGestureState = completeReaderPageGestureSettlement(this.pageTurnGestureState);
+    if (nativeSessionId !== 0 && this.nativePageCurlVisible) {
+      this.nativePageCurlAwaitingHostPresentSession = nativeSessionId;
+      this.nativePageCurlPresentFramePosted = false;
+      this.armNativePageCurlPresentDeadline(nativeSessionId);
+      return;
+    }
+    this.resetSimulationGestureAdmission();
     this.pageTurnSettlementActive = false;
     this.pageTurnSettlementLayout = undefined;
     this.pageTurnPresentationWidth = 0;
+    this.flushDeferredPageChromeState();
     this.resumeDeferredPageTurnWork();
+  }
+
+  private maybeAcknowledgeNativePagePresented(identity: string): void {
+    const sessionId = this.nativePageCurlAwaitingHostPresentSession;
+    if (sessionId === 0 || this.nativePageCurlPresentFramePosted ||
+      identity !== this.currentPageTurnRenderPage().identity) {
+      return;
+    }
+    this.nativePageCurlPresentFramePosted = true;
+    this.getUIContext().postFrameCallback(new ReaderHostPresentedFrameCallback((): void => {
+      this.acknowledgeNativePagePresented(sessionId);
+    }));
+  }
+
+  private acknowledgeNativePagePresented(sessionId: number): void {
+    if (sessionId === 0 || sessionId !== this.nativePageCurlAwaitingHostPresentSession) return;
+    this.clearNativePageCurlPresentDeadline();
+    const context = this.nativePageCurlContext;
+    if (context !== undefined && this.nativePageCurlSessionId === sessionId) {
+      context.hostPresented(sessionId);
+    }
+    this.resetNativePageCurlSessionState();
+    this.resetSimulationGestureAdmission();
+    this.pageTurnSettlementActive = false;
+    this.pageTurnSettlementLayout = undefined;
+    this.pageTurnPresentationWidth = 0;
+    this.flushDeferredPageChromeState();
+    this.resumeDeferredPageTurnWork();
+    this.drainPageTurnPreparationQueue();
   }
 
   private resumeDeferredPageTurnWork(): void {
@@ -6021,6 +7459,21 @@ export struct ReadingExperience {
     this.pageTurnRenderRevision += 1;
   }
 
+  private requestPageTurnFromInteraction(
+    direction: ReaderPageTurnDirection,
+    originX?: number,
+    originY?: number,
+  ): ReaderPageTurnOutcome {
+    this.nativePageCurlProgrammaticOriginX = originX;
+    this.nativePageCurlProgrammaticOriginY = originY;
+    try {
+      return this.requestPageTurn(direction);
+    } finally {
+      this.nativePageCurlProgrammaticOriginX = undefined;
+      this.nativePageCurlProgrammaticOriginY = undefined;
+    }
+  }
+
   private requestPageTurn(direction: ReaderPageTurnDirection): ReaderPageTurnOutcome {
     if (!this.mounted || this.exitRequested) {
       return { kind: 'blocked', reason: 'lifecycle' };
@@ -6093,6 +7546,7 @@ export struct ReadingExperience {
     }
     this.pageTurnDirection = undefined;
     this.pageTurnGestureState = completeReaderPageGestureSettlement(this.pageTurnGestureState);
+    this.resetSimulationGestureAdmission();
     this.drainPageTurnPreparationQueue();
   }
 

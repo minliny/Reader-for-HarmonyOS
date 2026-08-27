@@ -28,7 +28,8 @@ assert.equal(readerAppearanceParagraphContentScalarOffset(99, 12, true, 'firstLi
 assert.equal(readingParagraphBoundaryMode('local', 'TXT'), 'lineSeparated');
 assert.equal(readingParagraphBoundaryMode('local', ' txt '), 'lineSeparated');
 assert.equal(readingParagraphBoundaryMode('local', 'EPUB'), 'blankLineSeparated');
-assert.equal(readingParagraphBoundaryMode('remote-source', 'TXT'), 'blankLineSeparated');
+assert.equal(readingParagraphBoundaryMode('remote-source', 'TXT'), 'lineSeparated');
+assert.equal(readingParagraphBoundaryMode('remote-source', undefined), 'lineSeparated');
 
 const txtContent = '第一段\n第二段\r\n\r\n第三段';
 const txtRanges = collectReadingParagraphUtf16Ranges(txtContent, 'lineSeparated');
@@ -47,6 +48,18 @@ assert.deepEqual(structuredRanges.map((range) =>
   '第三段',
 ]);
 assert.deepEqual(collectReadingParagraphUtf16Ranges('\n\r\n \t\n', 'lineSeparated'), []);
+
+const remoteContent = '远程第一段\n远程第二段\n远程第三段';
+const remoteRanges = collectReadingParagraphUtf16Ranges(
+  remoteContent,
+  readingParagraphBoundaryMode('remote-source', undefined),
+);
+assert.deepEqual(remoteRanges.map((range) =>
+  remoteContent.substring(range.startUtf16, range.endUtf16)), [
+  '远程第一段',
+  '远程第二段',
+  '远程第三段',
+]);
 
 const readingDir = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
 const readingSurface = await readFile(new URL('ReadingSurface.ets', readingDir), 'utf8');

@@ -49,8 +49,10 @@ assert.equal(scaledTitle.bodyHeight(true), 844 - 72 - 47.99 - scaledTitle.titleT
 
 const cutoutReading = resolveReaderReadingLayout(390, 844, false, metrics({ cutoutLeft: 40 }));
 assert.equal(cutoutReading.contentLeft, 40);
-assert.equal(cutoutReading.contentRight, 32,
-  'a one-sided cutout must not waste the unobstructed edge of the reading track');
+assert.equal(cutoutReading.contentRight, 40,
+  'a one-sided cutout must preserve a centred text track with equal optical margins');
+assert.equal(cutoutReading.bodyWidth(), 310,
+  'pagination and rendering must consume the same symmetrically narrowed body width');
 const extendedCutoutReading = resolveReaderReadingLayout(390, 844, false,
   metrics({ cutoutLeft: 40 }), true);
 assert.equal(extendedCutoutReading.contentLeft, 32,
@@ -62,7 +64,7 @@ const phoneControl = resolveReaderControlLayout(
   false,
   metrics({ systemTop: 48, gestureBottom: 24 }),
 );
-assert.equal(phoneControl.topBarTop, 48, 'top bar starts below the visible system bar');
+assert.equal(phoneControl.topBarTop, 56, 'top bar clears the visible system/cutout edge by 8vp');
 assert.equal(phoneControl.topBarWidth, 360);
 assert.equal(phoneControl.dockBottomGap, 24);
 assert.equal(phoneControl.dockWidth, READER_FULL_PANEL_MAX_WIDTH_PHONE);

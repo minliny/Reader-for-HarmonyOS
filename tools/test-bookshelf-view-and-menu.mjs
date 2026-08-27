@@ -17,6 +17,15 @@ assert.match(shelf,
   /this\.sectionAction\('bookshelf_grid',[\s\S]*this\.viewMode = 'cover'[\s\S]*this\.viewMode === 'cover'/);
 assert.match(shelf,
   /this\.sectionAction\('bookshelf_list',[\s\S]*this\.viewMode = 'list'[\s\S]*this\.viewMode === 'list'/);
+assert.doesNotMatch(shelf,
+  /this\.sectionAction\('bookshelf_search'/,
+  'the shelf section must not duplicate the top-bar search action');
+assert.doesNotMatch(emptyShelf,
+  /this\.headerAction\('bookshelf_search'\)/,
+  'the empty shelf section must follow the same no-duplicate-search contract');
+assert.match(shelf,
+  /this\.sectionAction\('bookshelf_settings', \(\): void => this\.onBookshelfSettingsRequested\(\), false\)/,
+  'the shelf gear must emit the dedicated settings action');
 assert.match(shelf, /if \(this\.viewMode === 'list'\) \{[\s\S]*this\.listBookCard\(book, isTablet\)/,
   'the list action must render a real book-row projection');
 assert.match(shelf, /const PHONE_LIST_COVER_WIDTH = 48/);

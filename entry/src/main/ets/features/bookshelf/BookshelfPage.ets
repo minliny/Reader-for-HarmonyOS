@@ -73,9 +73,8 @@ export struct BookshelfPage {
   onDiscoverRequested: () => void = (): void => {};
   onManageRequested: () => void = (): void => {};
   onBatchManageRequested: () => void = (): void => {};
-  // Figma confirms the visible menu action, but no destination reaction/page.
-  // Keep a dedicated boundary so callers cannot silently route it to the
-  // unrelated Settings home or Core bookshelf-management page.
+  // Keep bookshelf settings separate from Core group/read-record management.
+  // The host owns the settings route; this page only emits the semantic action.
   onBookshelfSettingsRequested: () => void = (): void => {};
   onBookSelected: (book: ShelfBook) => void = (_book: ShelfBook): void => {};
   onBookMultiSelectRequested: (book: ShelfBook) => void = (_book: ShelfBook): void => {};
@@ -357,8 +356,7 @@ export struct BookshelfPage {
             this.viewMode = 'list';
           }, this.viewMode === 'list');
           this.sectionAction('bookshelf_filter', (): void => {}, false);
-          this.sectionAction('bookshelf_search', (): void => this.onSearchRequested(), false);
-          this.sectionAction('bookshelf_settings', (): void => this.onManageRequested(), false);
+          this.sectionAction('bookshelf_settings', (): void => this.onBookshelfSettingsRequested(), false);
         }
         .height(34);
       }
@@ -402,8 +400,6 @@ export struct BookshelfPage {
           .fillColor(active ? TOK_GREEN : TOK_MUTED);
       } else if (assetName === 'bookshelf_filter') {
         Image($r('app.media.bookshelf_filter')).width(20).height(20).fillColor(TOK_MUTED);
-      } else if (assetName === 'bookshelf_search') {
-        Image($r('app.media.bookshelf_section_search')).width(20).height(20).fillColor(TOK_MUTED);
       } else {
         Image($r('app.media.bookshelf_settings')).width(20).height(20).fillColor(TOK_MUTED);
       }
@@ -695,9 +691,6 @@ export struct BookshelfPage {
     }
     if (assetName === 'bookshelf_filter') {
       return '筛选书架';
-    }
-    if (assetName === 'bookshelf_search') {
-      return '搜索书架';
     }
     return '书架设置';
   }

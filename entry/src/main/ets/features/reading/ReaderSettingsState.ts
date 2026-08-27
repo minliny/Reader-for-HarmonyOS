@@ -28,7 +28,7 @@ export type ReaderSettingsToggleKey =
   | 'longPressSelectText';
 
 export type ReaderSettingsSnapshot = {
-  version: 2;
+  version: 3;
   screenDirection: ReaderScreenDirection;
   navigationMode: ReaderNavigationMode;
   pageTransition: ReaderPageTransition;
@@ -37,6 +37,23 @@ export type ReaderSettingsSnapshot = {
   hideNavigationBar: boolean;
   extendIntoCutout: boolean;
   /** Compatibility field only; ReaderAppearance remains the single owner. */
+  justifyText: boolean;
+  alignPageBottom: boolean;
+  volumeKeysTurnPage: boolean;
+  stopTtsOnScreenOff: boolean;
+  longPressSelectText: boolean;
+};
+
+/** On-disk shape written before immersive reading hid the system status bar by default. */
+export type ReaderSettingsSnapshotV2 = {
+  version: 2;
+  screenDirection: ReaderScreenDirection;
+  navigationMode: ReaderNavigationMode;
+  pageTransition: ReaderPageTransition;
+  screenTimeout: ReaderScreenTimeout;
+  hideStatusBar: boolean;
+  hideNavigationBar: boolean;
+  extendIntoCutout: boolean;
   justifyText: boolean;
   alignPageBottom: boolean;
   volumeKeysTurnPage: boolean;
@@ -72,12 +89,12 @@ class ReaderPageTurnContract {
 
 export function createDefaultReaderSettingsSnapshot(): ReaderSettingsSnapshot {
   return {
-    version: 2,
+    version: 3,
     screenDirection: 'system',
     navigationMode: 'paged',
     pageTransition: 'slide',
     screenTimeout: 'system',
-    hideStatusBar: false,
+    hideStatusBar: true,
     hideNavigationBar: false,
     extendIntoCutout: false,
     justifyText: false,
@@ -89,12 +106,14 @@ export function createDefaultReaderSettingsSnapshot(): ReaderSettingsSnapshot {
 }
 
 /**
- * Decoded preferences are not trusted. V1 is migrated once at this boundary;
- * every V2 field then validates independently and malformed values fail back
- * to the safe default without erasing valid siblings.
+ * Decoded preferences are not trusted. V1/V2 are migrated at this boundary;
+ * every field then validates independently and malformed values fail back to
+ * the safe default without erasing valid siblings. V3 is the first version in
+ * which `hideStatusBar` represents an explicit user choice: older snapshots
+ * are moved to the new immersive default once by ReaderSettingsGateway.
  */
 export function normalizeReaderSettingsSnapshot(
-  candidate: ReaderSettingsSnapshot | ReaderSettingsSnapshotV1 | undefined | null,
+  candidate: ReaderSettingsSnapshot | ReaderSettingsSnapshotV2 | ReaderSettingsSnapshotV1 | undefined | null,
 ): ReaderSettingsSnapshot {
   const fallback = createDefaultReaderSettingsSnapshot();
   if (candidate === undefined || candidate === null) {
@@ -107,13 +126,13 @@ export function normalizeReaderSettingsSnapshot(
       isReaderPageTransition(candidate.pageTransition) ? candidate.pageTransition : fallback.pageTransition,
     );
   return {
-    version: 2,
+    version: 3,
     screenDirection: candidate.screenDirection === 'portrait' || candidate.screenDirection === 'landscape' ?
       candidate.screenDirection : 'system',
     navigationMode: pageTurn.navigationMode,
     pageTransition: pageTurn.pageTransition,
     screenTimeout: isReaderScreenTimeout(candidate.screenTimeout) ? candidate.screenTimeout : fallback.screenTimeout,
-    hideStatusBar: candidate.hideStatusBar === true,
+    hideStatusBar: candidate.version === 3 ? candidate.hideStatusBar === true : true,
     hideNavigationBar: candidate.hideNavigationBar === true,
     extendIntoCutout: candidate.extendIntoCutout === true,
     // ReaderAppearance owns justification; never recreate a second truth from

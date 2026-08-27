@@ -4,8 +4,11 @@ import {
   readerContentSafeHorizontal,
   readerContentSafeTop,
   readerInteractiveSafeBottom,
+  readerInteractiveSafeRight,
+  readerVisualSafeBottom,
   readerVisualSafeLeft,
   readerVisualSafeRight,
+  readerVisualSafeTop,
 } from '../common/ReaderWindowMetrics.ts';
 
 export type ReaderWidthClass = 'compact' | 'expanded';
@@ -26,6 +29,8 @@ export const READER_FULL_PANEL_HEIGHT_TABLET = 852;
 export const READER_FULL_PANEL_TOP = 88;
 export const READER_FULL_PANEL_BOTTOM_GAP = 20;
 export const READER_FULL_PANEL_INNER_INSET_X = 13;
+/** Optical clearance below a live status/cutout edge for the 54vp control top bar. */
+export const READER_CONTROL_SAFE_TOP_GAP = 8;
 
 class ReaderDesignProfile {
   referenceWidth: number;
@@ -93,6 +98,12 @@ export class ReaderReadingLayoutSnapshot {
   titleToBodySpacingVp: number;
   titleTrackHeightVp: number;
   systemFontScale: number;
+  pageChromeVisualSafeTop: number;
+  pageChromeVisualSafeRight: number;
+  pageChromeVisualSafeBottom: number;
+  pageChromeVisualSafeLeft: number;
+  pageChromeInteractiveSafeRight: number;
+  pageChromeInteractiveSafeBottom: number;
 
   constructor(
     widthClass: ReaderWidthClass,
@@ -103,6 +114,12 @@ export class ReaderReadingLayoutSnapshot {
     contentBottom: number,
     contentLeft: number,
     systemFontScale: number,
+    pageChromeVisualSafeTop: number = 0,
+    pageChromeVisualSafeRight: number = 0,
+    pageChromeVisualSafeBottom: number = 0,
+    pageChromeVisualSafeLeft: number = 0,
+    pageChromeInteractiveSafeRight: number = 0,
+    pageChromeInteractiveSafeBottom: number = 0,
   ) {
     this.widthClass = widthClass;
     this.viewportWidth = viewportWidth;
@@ -115,6 +132,12 @@ export class ReaderReadingLayoutSnapshot {
     this.titleToBodySpacingVp = READER_TITLE_TO_BODY_SPACE_VP;
     this.systemFontScale = systemFontScale;
     this.titleTrackHeightVp = this.titleLineHeightFp * systemFontScale + this.titleToBodySpacingVp;
+    this.pageChromeVisualSafeTop = pageChromeVisualSafeTop;
+    this.pageChromeVisualSafeRight = pageChromeVisualSafeRight;
+    this.pageChromeVisualSafeBottom = pageChromeVisualSafeBottom;
+    this.pageChromeVisualSafeLeft = pageChromeVisualSafeLeft;
+    this.pageChromeInteractiveSafeRight = pageChromeInteractiveSafeRight;
+    this.pageChromeInteractiveSafeBottom = pageChromeInteractiveSafeBottom;
   }
 
   bodyWidth(): number {
@@ -195,12 +218,17 @@ export function resolveReaderReadingLayout(
   const profile = new ReaderDesignProfile(widthClass === 'expanded');
   const width = viewportWidth > 0 ? viewportWidth : profile.referenceWidth;
   const height = viewportHeight > 0 ? viewportHeight : profile.referenceHeight;
-  const cutoutSafeLeft = extendIntoCutout ? 0 : Math.max(0, metrics.cutoutInsets.left);
   const cutoutSafeTop = extendIntoCutout ? 0 : Math.max(0, metrics.cutoutInsets.top);
-  const cutoutSafeRight = extendIntoCutout ? 0 : Math.max(0, metrics.cutoutInsets.right);
   const cutoutSafeBottom = extendIntoCutout ? 0 : Math.max(0, metrics.cutoutInsets.bottom);
-  const contentLeft = Math.max(profile.contentHorizontal, Math.max(metrics.systemInsets.left, cutoutSafeLeft));
-  const contentRight = Math.max(profile.contentHorizontal, Math.max(metrics.systemInsets.right, cutoutSafeRight));
+  const systemHorizontal = Math.max(
+    Number.isFinite(metrics.systemInsets.left) ? Math.max(0, metrics.systemInsets.left) : 0,
+    Number.isFinite(metrics.systemInsets.right) ? Math.max(0, metrics.systemInsets.right) : 0,
+  );
+  const safeHorizontal = extendIntoCutout ? systemHorizontal : readerContentSafeHorizontal(metrics);
+  // Reading text is a centred optical track. A one-sided cutout or system
+  // inset therefore expands both authored margins by the same amount instead
+  // of shifting the body and making the two screen-edge gaps visibly uneven.
+  const contentHorizontal = Math.max(profile.contentHorizontal, safeHorizontal);
   const contentTop = Math.max(metrics.systemInsets.top, cutoutSafeTop);
   const contentBottom = Math.max(
     metrics.systemInsets.bottom,
@@ -214,10 +242,16 @@ export function resolveReaderReadingLayout(
     width,
     height,
     Math.max(profile.contentTop, contentTop),
-    contentRight,
+    contentHorizontal,
     Math.max(profile.contentBottom, contentBottom),
-    contentLeft,
+    contentHorizontal,
     systemFontScale,
+    readerVisualSafeTop(metrics),
+    readerVisualSafeRight(metrics),
+    readerVisualSafeBottom(metrics),
+    readerVisualSafeLeft(metrics),
+    readerInteractiveSafeRight(metrics, true),
+    readerInteractiveSafeBottom(metrics, true),
   );
 }
 
@@ -259,7 +293,7 @@ export function resolveReaderControlLayout(
     widthClass,
     width,
     height,
-    Math.max(profile.topBarTop, safeTop),
+    Math.max(profile.topBarTop, safeTop + READER_CONTROL_SAFE_TOP_GAP),
     topBarWidth,
     Math.max(profile.dockBottomGap, safeBottom),
     dockRightGap,
