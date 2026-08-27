@@ -23,6 +23,7 @@ import {
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_SM,
 } from '../common/ReaderTokens';
+import { isReaderProductSurfaceEnabled } from '../../app/ReaderProductScope';
 
 // 页面私有布局常量 (不属共享 token: 页面独有下拉行对齐常量)。
 // Figma Article 行右内距 12 (= TOK_SPACE_SM, 直引)。
@@ -122,20 +123,28 @@ export struct SettingsPage {
       this.navRow('通用设置', $r('app.media.settings_row_general'), (): void => {
         this.activeSection = 'general';
       });
-      this.navRow('书架与搜索设置', $r('app.media.settings_row_shelf_search'), (): void => {});
       this.navRow('书源管理', $r('app.media.settings_row_source'), (): void => this.onOpenSourceManagement());
       this.navRow('规则实体管理', $r('app.media.settings_row_source'), (): void => this.onOpenRulesManagement());
-      this.navRow('同步与备份', $r('app.media.settings_row_sync'), (): void => this.onOpenSync());
-      this.navRow('关于与反馈', $r('app.media.settings_row_about'), (): void => {});
+      if (isReaderProductSurfaceEnabled('sync')) {
+        this.navRow('同步与备份', $r('app.media.settings_row_sync'), (): void => this.onOpenSync());
+      }
+      if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
+        this.navRow('书架与搜索设置', $r('app.media.settings_row_shelf_search'), (): void => {});
+        this.navRow('关于与反馈', $r('app.media.settings_row_about'), (): void => {});
+      }
     }
   }
 
   @Builder
   private buildGeneral() {
-    this.preferenceCard();
+    if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
+      this.preferenceCard();
+    }
     this.behaviorCard();
-    this.permissionCard();
-    this.dangerRow();
+    if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
+      this.permissionCard();
+      this.dangerRow();
+    }
   }
 
   @Builder
@@ -153,10 +162,12 @@ export struct SettingsPage {
   private behaviorCard() {
     CategorySection({ title: '行为与反馈' }) {
       this.switchRow('自动检查更新', $r('app.media.settings_gen_update'), 'autoCheckUpdate');
-      this.switchRow('点击当前底栏回顶部', $r('app.media.settings_gen_tap_top'), 'tapBottomScrollTop');
       this.switchRow('减少动态效果', $r('app.media.settings_gen_motion'), 'reduceMotion');
-      this.switchRow('崩溃日志', $r('app.media.settings_gen_crash'), 'crashLog');
-      this.selectRow('动画效果', $r('app.media.settings_gen_animation'), 'animation', ['标准', '减弱', '关闭']);
+      if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
+        this.switchRow('点击当前底栏回顶部', $r('app.media.settings_gen_tap_top'), 'tapBottomScrollTop');
+        this.switchRow('崩溃日志', $r('app.media.settings_gen_crash'), 'crashLog');
+        this.selectRow('动画效果', $r('app.media.settings_gen_animation'), 'animation', ['标准', '减弱', '关闭']);
+      }
       this.cacheActionRow();
     }
   }

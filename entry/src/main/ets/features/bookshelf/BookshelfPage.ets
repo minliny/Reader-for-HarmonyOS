@@ -36,6 +36,7 @@ import {
   readerVisualSafeLeft,
   readerVisualSafeRight,
 } from '../common/ReaderWindowMetrics';
+import { isReaderProductSurfaceEnabled } from '../../app/ReaderProductScope';
 
 const PHONE_BOOK_WIDTH = 96.656;
 const PHONE_BOOK_HEIGHT_RATIO = 145.443 / PHONE_BOOK_WIDTH;
@@ -782,8 +783,12 @@ export struct BookshelfPage {
     Stack({ alignContent: Alignment.Start }) {
       Column({ space: 6 }) {
         this.tabletNavigationItem('bookshelf_library', '书架', 'bookshelf', true);
-        this.tabletNavigationItem('bookshelf_compass', '发现', 'discover', false);
-        this.tabletNavigationItem('bookshelf_rss', 'RSS', 'rss', false);
+        if (isReaderProductSurfaceEnabled('discover')) {
+          this.tabletNavigationItem('bookshelf_compass', '发现', 'discover', false);
+        }
+        if (isReaderProductSurfaceEnabled('rss')) {
+          this.tabletNavigationItem('bookshelf_rss', 'RSS', 'rss', false);
+        }
         this.tabletNavigationItem('bookshelf_settings', '设置', 'settings', false);
       }
       .width(82)

@@ -154,6 +154,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import deviceInfo from '@ohos.deviceInfo';
 import { ArkWebExecutionHost } from '../app/ArkWebExecutionHost';
 import { JsonImportDialog } from '../features/common/JsonImportDialog';
+import { isReaderProductSurfaceEnabled } from '../app/ReaderProductScope';
 
 const DOMAIN = 0x5244;
 const IMPORT_PRESENTATION_KEY = 'reader.bookshelf.import.presentation.v1';
@@ -849,6 +850,9 @@ struct Index {
   }
 
   private openRss(): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     const generation = this.nextNavigationGeneration();
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
@@ -891,6 +895,9 @@ struct Index {
   }
 
   private openDiscover(): void {
+    if (!isReaderProductSurfaceEnabled('discover')) {
+      return;
+    }
     this.nextNavigationGeneration();
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
@@ -1303,6 +1310,9 @@ struct Index {
   }
 
   private openSync(): void {
+    if (!isReaderProductSurfaceEnabled('sync')) {
+      return;
+    }
     this.nextNavigationGeneration();
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
