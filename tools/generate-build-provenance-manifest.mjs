@@ -2,8 +2,18 @@
 
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, relative, resolve } from 'node:path';
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, relative, resolve } from 'node:path';
 
 function parseArgs(argv) {
   const values = new Map();
@@ -132,6 +142,19 @@ function archiveEntryRecord(hap, entryPath) {
   return { path: entryPath, bytes: bytes.length, sha256: sha256(bytes) };
 }
 
+function stripAllRecord(inputPath, stripToolPath) {
+  const temporaryRoot = mkdtempSync(join(tmpdir(), 'reader-hap-native-strip-'));
+  const outputPath = join(temporaryRoot, 'libreader_core_napi.so');
+  try {
+    copyFileSync(inputPath, outputPath);
+    execFileSync(stripToolPath, ['--strip-all', outputPath], { encoding: 'utf8' });
+    const output = fileRecord(outputPath);
+    return { bytes: output.bytes, sha256: output.sha256 };
+  } finally {
+    rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+}
+
 const args = parseArgs(process.argv.slice(2));
 const coreRepo = requireArg(args, '--core-repo');
 const harmonyRepo = requireArg(args, '--harmony-repo');
@@ -143,6 +166,7 @@ const vendorRoot = requireArg(args, '--harmony-vendor');
 const hapPath = requireArg(args, '--hap');
 const outputPath = requireArg(args, '--output');
 const buildEvidencePath = requireArg(args, '--core-build-evidence');
+const nativeStripToolPath = requireArg(args, '--native-strip-tool');
 const allowDirty = args.get('--allow-dirty') === true;
 
 const coreIdentity = JSON.parse(readFileSync(identityPath, 'utf8'));
@@ -174,8 +198,9 @@ if (packageNative === undefined || packageNative.sha256 !== nativeSo.sha256 || p
   throw new Error('NAPI package manifest does not bind the supplied native library');
 }
 const embeddedNative = archiveEntryRecord(hapPath, 'libs/arm64-v8a/libreader_core_napi.so');
-if (embeddedNative.sha256 !== appNativeSo.sha256 || embeddedNative.bytes !== appNativeSo.bytes) {
-  throw new Error('HAP embedded NAPI does not match the Harmony app native input');
+const packagedNative = stripAllRecord(appNativeSoPath, nativeStripToolPath);
+if (embeddedNative.sha256 !== packagedNative.sha256 || embeddedNative.bytes !== packagedNative.bytes) {
+  throw new Error('HAP embedded NAPI does not match the reproducibly stripped Harmony app native input');
 }
 
 const manifest = {
@@ -197,6 +222,11 @@ const manifest = {
     git: harmonyGit,
     vendor: treeRecord(vendorRoot),
     nativeInput: appNativeSo,
+    nativePackaging: {
+      tool: fileRecord(nativeStripToolPath),
+      arguments: ['--strip-all'],
+      output: packagedNative,
+    },
     buildCommand: args.get('--build-command') ?? '<unspecified>',
     hvigorVersion: args.get('--hvigor-version') ?? '<unspecified>',
     sdkVersion: args.get('--sdk-version') ?? '<unspecified>',
