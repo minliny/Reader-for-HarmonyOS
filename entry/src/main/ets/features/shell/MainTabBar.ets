@@ -20,6 +20,7 @@ import {
   TOK_SPACE_XS,
 } from '../common/ReaderTokens';
 import { TYPE_MAIN_TAB_LABEL } from '../common/ReaderTypography';
+import { isReaderMainTabEnabled } from '../../app/ReaderProductScope';
 
 
 // 公共主导航 —— 数据驱动的 tab 栏。四个主页面（书架/发现/RSS/设置）复用。
@@ -34,12 +35,16 @@ export interface MainTabDef {
   label: string;
 }
 
-export const MAIN_TABS: MainTabDef[] = [
+const ALL_MAIN_TABS: MainTabDef[] = [
   { key: 'bookshelf', label: '书架' },
   { key: 'discover', label: '发现' },
   { key: 'rss', label: 'RSS' },
   { key: 'settings', label: '设置' },
 ];
+
+export const MAIN_TABS: MainTabDef[] = ALL_MAIN_TABS.filter(
+  (tab: MainTabDef): boolean => isReaderMainTabEnabled(tab.key),
+);
 
 @Component
 export struct MainTabBar {
