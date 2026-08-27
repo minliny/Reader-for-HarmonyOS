@@ -121,7 +121,7 @@ export struct LocalImportDialog {
               .lineHeight(19.5)
               .letterSpacing(-0.0762)
               .fontColor(TOK_INK);
-            Text('支持多选 TXT、EPUB、MOBI、AZW、UMD')
+            Text('支持多选 TXT、EPUB')
               .fontFamily('ReaderInter')
               .fontWeight(FontWeight.Regular)
               .fontSize(11)
@@ -135,9 +135,6 @@ export struct LocalImportDialog {
           Row({ space: 6 }) {
             this.formatBadge('TXT', TOK_GREEN);
             this.formatBadge('EPUB', '#5A4A2A');
-            this.formatBadge('MOBI', '#315F78');
-            this.formatBadge('AZW', '#755B41');
-            this.formatBadge('UMD', '#7B5267');
           }
         }
         .width('100%')
@@ -153,7 +150,7 @@ export struct LocalImportDialog {
             .width(13)
             .height(13)
             .margin({ top: 2 });
-          Text('支持从系统文件中多选 TXT、EPUB、MOBI/AZW 与 UMD。解析、目录和正文均由 Rust Core 处理。')
+          Text('支持从系统文件中多选 TXT 与 EPUB。解析、目录和正文均由 Rust Core 处理。')
             .layoutWeight(1)
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Regular)

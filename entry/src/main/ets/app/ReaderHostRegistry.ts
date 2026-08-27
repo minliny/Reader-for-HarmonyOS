@@ -13,6 +13,7 @@ import {
 import { HttpExecuteHost, type SourceHttpDiagnosticRecord } from './HttpExecuteHost';
 import { CookieSessionStore } from './CookieSessionStore';
 import { ArkWebExecutor } from './ArkWebExecutor';
+import { READER_LOCAL_BOOK_PICKER_FILTER } from './ReaderLocalBookFormatAdmission';
 
 type SnapshotEncoding = 'value' | 'valueBase64';
 
@@ -150,7 +151,7 @@ export class ReaderHostRegistry {
   async selectLocalBookInputs(): Promise<LocalBookPreparation[]> {
     const options = new picker.DocumentSelectOptions();
     options.fileSuffixFilters = [
-      'TXT、EPUB、MOBI、AZW、AZW3、KF8、UMD|.txt,.epub,.mobi,.azw,.azw3,.kf8,.umd',
+      READER_LOCAL_BOOK_PICKER_FILTER,
     ];
     options.maxSelectNumber = ReaderHostRegistry.LocalBookSelectionLimit;
 
