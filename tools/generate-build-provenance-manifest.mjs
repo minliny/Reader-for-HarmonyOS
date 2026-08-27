@@ -173,6 +173,10 @@ const packageNative = napiPackage.entries.find((entry) => entry.path === 'libs/a
 if (packageNative === undefined || packageNative.sha256 !== nativeSo.sha256 || packageNative.bytes !== nativeSo.bytes) {
   throw new Error('NAPI package manifest does not bind the supplied native library');
 }
+const embeddedNative = archiveEntryRecord(hapPath, 'libs/arm64-v8a/libreader_core_napi.so');
+if (embeddedNative.sha256 !== appNativeSo.sha256 || embeddedNative.bytes !== appNativeSo.bytes) {
+  throw new Error('HAP embedded NAPI does not match the Harmony app native input');
+}
 
 const manifest = {
   schemaVersion: 1,
@@ -199,7 +203,7 @@ const manifest = {
   },
   hap: {
     ...fileRecord(hapPath),
-    embeddedNative: archiveEntryRecord(hapPath, 'libs/arm64-v8a/libreader_core_napi.so'),
+    embeddedNative,
   },
   generator: {
     node: process.version,
