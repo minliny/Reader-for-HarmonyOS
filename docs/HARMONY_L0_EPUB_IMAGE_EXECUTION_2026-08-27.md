@@ -22,6 +22,7 @@ Core U+FFFC image block
 ```text
 Core commit=a3672b83c8a4e48088fb500ac5ad1f2d20e77935
 Harmony artifact-bearing commit=d29de2863838ca2f56b99ca259096970c33e039b
+Harmony signed checkout commit=42d1b0d78292e9832d361f3e935ee1aa8d73bf4d
 Core dirty=false
 Harmony dirty=false
 acceptanceEligible=true
@@ -43,6 +44,8 @@ HAP embedded stripped NAPI sha256=d233d0b610c5ef51e41a32950a4be700abd14f3e456b6f
 | Harmony contracts | 85/85 PASS |
 | ArkTS type check | PASS |
 | no-incremental unsigned HAP | PASS |
+| no-incremental signed HAP | PASS，`SignHap`、`BUILD SUCCESSFUL` |
+| signature verification | PASS，debug profile、codesign、SHA-256 digest、`verify-app success` |
 | Core/NAPI/HAP provenance | PASS，`acceptanceEligible=true` |
 
 unsigned HAP：
@@ -51,6 +54,18 @@ unsigned HAP：
 file=entry-default-unsigned.hap
 bytes=131705198
 sha256=944416100a2057923029db626f7d41c4ed3068f60602deba34cf85decbccf576
+```
+
+debug signed HAP：
+
+```text
+file=entry-default-signed-42d1b0d.hap
+bytes=131959303
+sha256=15f5b1964e9e806e3237a220f95c40b2983b623cd94c0b47eaf3af7de231398c
+profile=debug
+codesign=verified
+SHA-256 digest=true
+verify-app=success
 ```
 
 确定性 EPUB fixture：
@@ -69,6 +84,6 @@ image=PNG 360 x 180 RGB, valid IHDR/IDAT/IEND
 仍需完成：
 
 1. VM 导入该 fixture，验证正文图片实际显示、离开/返回和强停恢复。
-2. 对应 commit 的 signed HAP 安装。
+2. 在签名一致或全新环境安装已归档的对应 commit signed HAP。
 3. Tablet 和物理设备图片布局/清晰度验收。
 4. 用户验收。
