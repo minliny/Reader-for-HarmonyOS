@@ -27,14 +27,25 @@ export class LocalEpubResourceHost {
     this.context = context;
   }
 
-  async load(locatorValue: string): Promise<ReadingBodyImagePayload> {
+  async load(
+    locatorValue: string,
+    isCurrent?: () => boolean,
+  ): Promise<ReadingBodyImagePayload> {
+    this.assertCurrent(isCurrent);
     const locator = this.parseLocator(locatorValue);
     const archivePath = `${this.context.filesDir}/reader-import/books/${locator.hash}.epub`;
     if (!(await fileIo.access(archivePath))) {
       throw new Error('local EPUB source asset is unavailable; re-import is required');
     }
+    this.assertCurrent(isCurrent);
     const bytes = readLocalEpubEntry(archivePath, locator.archivePath, MAX_READING_IMAGE_BYTES);
-    return ReadingBodyImageHost.instance.loadBytes(bytes);
+    return ReadingBodyImageHost.instance.loadBytes(bytes, isCurrent);
+  }
+
+  private assertCurrent(isCurrent?: () => boolean): void {
+    if (isCurrent !== undefined && !isCurrent()) {
+      throw new Error('reading body image request was cancelled');
+    }
   }
 
   private parseLocator(value: string): LocalEpubResourceLocator {

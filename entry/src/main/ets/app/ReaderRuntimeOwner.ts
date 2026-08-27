@@ -177,7 +177,7 @@ export class ReaderRuntimeOwner {
       return this.admitReadingImage(embedded, isCurrent);
     }
     if (sourceId === 'local' && imageUrl.startsWith('reader-local-epub://')) {
-      const localImage = await this.localEpubResourceHost.load(imageUrl);
+      const localImage = await this.localEpubResourceHost.load(imageUrl, isCurrent);
       return this.admitReadingImage(localImage, isCurrent);
     }
     const identity = this.readingImageCacheIdentity(

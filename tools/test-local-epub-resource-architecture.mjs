@@ -9,6 +9,11 @@ const coreGateway = read('entry/src/main/ets/app/ReaderCoreGateway.ts');
 const resourceHost = read('entry/src/main/ets/app/LocalEpubResourceHost.ts');
 const imageHost = read('entry/src/main/ets/app/ReadingBodyImageHost.ts');
 const chapterWindow = read('entry/src/main/ets/features/reading/ReadingChapterWindow.ts');
+const documentProjection = read('entry/src/main/ets/features/reading/ReadingDocumentProjection.ts');
+const sessionFlow = read('entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
+const readingExperience = read('entry/src/main/ets/features/reading/LocalReadingExperience.ets');
+const pageSurface = read('entry/src/main/ets/features/reading/ReadingSurface.ets');
+const continuousStage = read('entry/src/main/ets/features/reading/ReaderContinuousReadingStage.ets');
 
 assert.match(registry, /stagedPath: string;[\s\S]*assetKind: 'epub' \| 'none';/,
   'the picker stage must remain a Host-only input until import commits');
@@ -45,15 +50,31 @@ assert.match(resourceHost, /segment === '\.' \|\| segment === '\.\.'/,
   'Host resource reads must reject path traversal independently of Core');
 assert.match(resourceHost, /ReadingBodyImageHost\.instance\.loadBytes/,
   'local and online images must converge on one byte/dimension adapter');
+assert.match(resourceHost, /loadBytes\(bytes, isCurrent\)/,
+  'local EPUB decoding must retain the active chapter cancellation boundary');
 assert.match(imageHost, /async loadBytes\(/);
-assert.match(imageHost, /pixelMap: image\.PixelMap/,
-  'decoded images must cross into the reading session as native PixelMap handles');
+assert.match(imageHost, /materializeDisplayFile\(/,
+  'validated bytes must become an ArkUI-readable display file');
+assert.match(imageHost, /pixelMap: undefined,[\s\S]*fileUri,/,
+  'production payloads must publish the validated file URI without retaining the decode PixelMap');
 assert.doesNotMatch(imageHost, /dataUri: `data:|encodeToStringSync\(bytes/,
   'the image adapter must not retain or recreate Base64 data URIs');
-assert.match(chapterWindow, /pixelMap: image\.PixelMap \| undefined/);
+assert.match(chapterWindow, /fileUri: string/);
 assert.doesNotMatch(chapterWindow, /dataUri/,
   'the bounded chapter window must not retain Base64 image payloads');
 assert.match(runtimeOwner, /sourceId === 'local' && imageUrl\.startsWith\('reader-local-epub:\/\/'\)/);
+assert.match(runtimeOwner, /localEpubResourceHost\.load\(imageUrl, isCurrent\)/,
+  'the runtime owner must propagate cancellation into local EPUB resource decoding');
+assert.match(documentProjection, /kind === 'image'[\s\S]*projectedText !== '\\uFFFC'/,
+  'Core image blocks must remain anchored to one canonical object scalar');
+assert.match(sessionFlow, /state: 'ready',[\s\S]*fileUri: payload\.fileUri/,
+  'the resolved Host file must enter the shared reading-session image shape');
+assert.match(readingExperience, /bodyImage\.state === 'ready' \? bodyImage\.fileUri : undefined/,
+  'physical pagination must retain the resolved body-image file URI');
+assert.match(pageSurface, /Image\(fragment\.fileUri\)[\s\S]*objectFit\(ImageFit\.Contain\)/,
+  'paged reading must mount the resolved local EPUB file URI');
+assert.match(continuousStage, /Image\(fragment\.fileUri\)[\s\S]*objectFit\(ImageFit\.Contain\)/,
+  'continuous reading must mount the same resolved local EPUB file URI');
 assert.match(coreGateway, /request\('bookshelf\.remove'/);
 assert.match(coreGateway, /releaseLocalBookAsset\(bookId\)/,
   'Host archive release must happen only through the Core-backed bookshelf gateway');
