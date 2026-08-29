@@ -106,9 +106,12 @@ private:
     struct BandUniforms {
         GLint pageSize = -1;
         GLint normal = -1;
+        GLint tangent = -1;
         GLint axis = -1;
-        GLint bandSide = -1;
         GLint tau = -1;
+        GLint radius = -1;
+        GLint apexDist = -1;
+        GLint sigmaGrip = -1;
         GLint bandWidth = -1;
         GLint bandPeak = -1;
         GLint poolPeak = -1;
@@ -121,11 +124,12 @@ private:
         GLint axis = -1;
         GLint radius = -1;
         GLint theta = -1;
-        GLint coneTaper = -1;
+        GLint apexDist = -1;
         GLint sigmaGrip = -1;
-        GLint beta = -1;
         GLint texture = -1;
         GLint highlightPhiWidth = -1;
+        GLint frontStripWidth = -1;
+        GLint valleyGate = -1;
         GLint paperColor = -1;
         GLint paperFallback = -1;
     };

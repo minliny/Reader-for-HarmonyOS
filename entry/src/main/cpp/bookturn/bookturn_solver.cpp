@@ -6,8 +6,9 @@
 namespace reader::bookturn {
 namespace {
 
-// §12 A/B fixture override; negative = kConeTaperDefault (host never sets it).
-float g_coneTaperCalibration = -1.0F;
+// §12 A/B fixture override; negative = kConeApexDistRatioDefault (host never
+// sets it), 0 = A-grade cylinder, >0 = apex distance as a width ratio.
+float g_coneApexDistCalibration = -1.0F;
 
 constexpr float kPi = 3.14159265358979323846F;
 constexpr float kHalfPi = 0.5F * kPi;
@@ -25,12 +26,15 @@ struct ScheduleSegment {
     float scaleEnd;
 };
 
-// Q(tau) stages S1-S5 (V2 contract §6.2). xNorm decreases monotonically from
-// 1 (flat, fold at the free edge) to 0 (fold at the binding edge); every
-// column is smoothstep-eased inside its segment so tau<->xNorm is a bijection.
+// Q(tau) stages S1-S5 (V2 contract §6.2, R column recalibrated 2026-08-30).
+// xNorm decreases monotonically from 1 (flat, fold at the free edge) to 0
+// (fold at the binding edge); every column is smoothstep-eased inside its
+// segment so tau<->xNorm is a bijection. The radius scale ramps up through
+// S1/S2 (Huawei: the roll visibly widens during the lift/flip) and holds
+// through S3, tapering into the spine.
 constexpr ScheduleSegment kSegments[5] = {
-    { 0.0F, kStageLiftEnd, 1.0F, kFoldXLiftEnd, 0.0F, kHalfPi, 1.0F, 1.0F },
-    { kStageLiftEnd, kStageFlipEnd, kFoldXLiftEnd, kFoldXFlipEnd, kHalfPi, kPi, 1.0F, 1.0F },
+    { 0.0F, kStageLiftEnd, 1.0F, kFoldXLiftEnd, 0.0F, kHalfPi, 0.55F, 0.85F },
+    { kStageLiftEnd, kStageFlipEnd, kFoldXLiftEnd, kFoldXFlipEnd, kHalfPi, kPi, 0.85F, 1.0F },
     { kStageFlipEnd, kStageRollEnd, kFoldXFlipEnd, kFoldXRollEnd, kPi, kPi, 1.0F, 1.0F },
     { kStageRollEnd, kStageSpineEnd, kFoldXRollEnd, kFoldXSpineEnd, kPi, kPi, 1.0F, kSpineTaper },
     { kStageSpineEnd, 1.0F, kFoldXSpineEnd, 0.0F, kPi, 0.0F, kSpineTaper, 0.0F },
@@ -84,17 +88,19 @@ float LimitTheta(float theta, float hardLimit = DegreesToRadians(kThetaCapDegree
     return sign * std::min(resisted, limit);
 }
 
-// Inverse of g(r) = r - N(r) for the grip landing equation, with N the
-// amended post-wrap drape projection (see MapMaterial): roll-extension arc
-// (x + sin x), S-arc (angle - tilt - sin angle), and on-pile piece are each
-// monotone in r; the first two need bisection, the pile piece is linear.
-// At tilt = pi the whole drape degenerates to the legacy mirrored hang.
-float SolveGripDistance(float delta, float radius, float tilt)
+// Inverse of N(d) = d - f_n(d) for the grip landing equation with the strict
+// three-branch mapping (see MapMaterial). On the wrap branch N = r*(phi -
+// sin(phi)) is continuous and monotone (N' = 1 - cos(phi) >= 0); past the
+// seam the sheet lies flat mirrored at height 2r, so N = 2d - pi*r is linear
+// with slope 2. Both branches meet C1 at d = pi*r (N = pi*r, N' = 2), so a
+// unique solution always exists: bisection on the wrap, closed form beyond.
+float SolveGripDistance(float delta, float radius)
 {
     if (delta <= kEpsilon) {
         return 0.0F;
     }
     if (radius <= kEpsilon) {
+        // r -> 0 collapses the wrap to the fold line: f_n = -d, N = 2d.
         return 0.5F * delta;
     }
     if (delta < kPi * radius) {
@@ -113,65 +119,7 @@ float SolveGripDistance(float delta, float radius, float tilt)
         }
         return radius * 0.5F * (low + high);
     }
-    const float sinTilt = std::sin(tilt);
-    const float cosTilt = std::cos(tilt);
-    if (sinTilt > kEpsilon) {
-        const float arc1 = radius * (kPi - tilt);
-        // tan^2(tilt/2) via (1-cos)/sin: stays finite as tilt -> pi, where
-        // the S-arc radius diverges and the drape converges to the hang.
-        const float tanHalf = (1.0F - cosTilt) / sinTilt;
-        const float rho = radius * tanHalf * tanHalf;
-        const float landS = arc1 + rho * (kPi - tilt);
-        const float landN = -(radius + rho) * sinTilt;
-        const float extWrapEnd = kPi * radius + radius * (kPi - tilt + sinTilt);
-        if (delta <= extWrapEnd) {
-            // Roll extension: x + sin(x) = (delta - pi*R)/R on [0, pi-tilt],
-            // monotone (derivative 1 + cos(x) >= 1 - cos(tilt) > 0).
-            float low = 0.0F;
-            float high = kPi - tilt;
-            const float normalizedDelta = (delta - kPi * radius) / radius;
-            for (int iteration = 0; iteration < kRootIterations; ++iteration) {
-                const float mid = 0.5F * (low + high);
-                if (mid + std::sin(mid) < normalizedDelta) {
-                    low = mid;
-                } else {
-                    high = mid;
-                }
-            }
-            return kPi * radius + radius * 0.5F * (low + high);
-        }
-        if (delta <= extWrapEnd + rho * (kPi - tilt + sinTilt)) {
-            // S-arc inverse in arc-material m: G(m) = m - 2*rho*cos(tilt +
-            // m/(2 rho))*sin(m/(2 rho)), monotone (G' = 1 - cos(tilt +
-            // m/rho) >= 1 - cos(tilt) > 0). The product form stays exact
-            // as rho diverges (tilt -> pi hang limit), where a bisection
-            // over the turn angle would lose all resolution.
-            float low = 0.0F;
-            float high = rho * (kPi - tilt);
-            const float normalizedDelta = delta - extWrapEnd;
-            for (int iteration = 0; iteration < kRootIterations; ++iteration) {
-                const float mid = 0.5F * (low + high);
-                const float half = mid / (2.0F * rho);
-                const float g = mid - 2.0F * rho * std::cos(tilt + half) * std::sin(half);
-                if (g < normalizedDelta) {
-                    low = mid;
-                } else {
-                    high = mid;
-                }
-            }
-            return kPi * radius + arc1 + 0.5F * (low + high);
-        }
-        // On-pile piece: g = 2r - (pi*R + landS + landN), linear in r.
-        return 0.5F * (delta + kPi * radius + landS + landN);
-    }
-    // Pure hang (tilt = 0 or pi): N(r) = cos(tilt)*(r - pi*R). The tilt = 0
-    // limit is degenerate (g constant); fall back to the legacy form to keep
-    // the solve deterministic.
-    const float slope = 1.0F - cosTilt;
-    if (slope <= kEpsilon) {
-        return 0.5F * (delta + kPi * radius);
-    }
-    return (delta - cosTilt * kPi * radius) / slope;
+    return 0.5F * (delta + kPi * radius);
 }
 
 float FoldNormalFor(float distance, float radius)
@@ -210,16 +158,20 @@ float SmoothStepInverse(float y)
     return 0.5F * (u + 1.0F);
 }
 
-// Cone radius r(sigma) = R * clamp(1 - coneTaper * (sigma - sigmaGrip) / W,
-// 0.5, 1.5). sigmaGrip sits at the grip, so r(sigmaGrip) == R exactly and the
-// grip equation can keep using R directly.
+// Developable cone radius law (V2 contract §6.3, 2026-08-30 rework): the
+// apex sits on the fold axis at sigmaApex = sigmaGrip - apexDist, so
+// r(sigma) = R * (sigma - sigmaApex) / apexDist is linear in sigma, equals R
+// exactly at the grip, and varies monotonically along the fold (Huawei
+// measured ~1.4:1 across a full-height fold = ~8W apex distance). No clamp:
+// the law is the isometry reference the T10 gates are derived from.
+// apexDist <= 0 selects the A-grade cylinder (r constant = R).
 float ConeRadius(const BookTurnPose& pose, float sigma)
 {
-    if (pose.radius <= kEpsilon || pose.width <= kEpsilon || pose.coneTaper == 0.0F) {
+    if (pose.radius <= kEpsilon || pose.apexDist <= kEpsilon) {
         return pose.radius;
     }
-    const float taper = 1.0F - pose.coneTaper * (sigma - pose.sigmaGrip) / pose.width;
-    return pose.radius * Clamp(taper, 0.5F, 1.5F);
+    const float sigmaApex = pose.sigmaGrip - pose.apexDist;
+    return pose.radius * (sigma - sigmaApex) / pose.apexDist;
 }
 
 CurlStage StageFromTau(float tau)
@@ -277,8 +229,7 @@ void ResolveSheet(BookTurnPose& pose, const BookTurnInput& input, float xNorm)
         const float gripNormal = Dot(pose.gripMaterial, pose.normal);
         const float targetNormal = Dot(pose.target, pose.normal);
         const float delta = std::max(0.0F, gripNormal - targetNormal);
-        const float gripDistance =
-            SolveGripDistance(delta, pose.radius, BookTurnSolver::PostWrapTilt(pose));
+        const float gripDistance = SolveGripDistance(delta, pose.radius);
         const float catchAxis = gripNormal - gripDistance;
 
         if (pose.tau < kStageFlipEnd) {
@@ -324,9 +275,9 @@ void ResolveSheet(BookTurnPose& pose, const BookTurnInput& input, float xNorm)
 
 }  // namespace
 
-void SetConeTaperCalibration(float m)
+void SetConeApexDist(float ratio)
 {
-    g_coneTaperCalibration = m;
+    g_coneApexDistCalibration = ratio;
 }
 
 BookTurnPose BookTurnSolver::Solve(const BookTurnInput& input, const BookTurnPose* previous)
@@ -406,8 +357,9 @@ BookTurnPose BookTurnSolver::Solve(const BookTurnInput& input, const BookTurnPos
     pose.beta = beta;
     pose.radius = pose.rollRadius * scale;
     pose.stage = StageFromTau(pose.tau);
-    pose.coneTaper = (g_coneTaperCalibration >= 0.0F ? g_coneTaperCalibration : kConeTaperDefault) *
-        std::sin(pose.theta);
+    const float apexRatio = g_coneApexDistCalibration >= 0.0F ?
+        g_coneApexDistCalibration : kConeApexDistRatioDefault;
+    pose.apexDist = apexRatio > kEpsilon ? apexRatio * input.width : 0.0F;
 
     ResolveSheet(pose, canonical, xNorm);
     return pose;
@@ -415,57 +367,18 @@ BookTurnPose BookTurnSolver::Solve(const BookTurnInput& input, const BookTurnPos
 
 Vec3 BookTurnSolver::MapMaterial(const BookTurnPose& pose, const Vec2& material)
 {
+    // Strict three-branch cone binding (harism-model, 2026-08-30 rework):
+    // every material point is either flat (d <= 0), wrapped on the cone
+    // (0 < d < pi*r, constant-radius half-cylinder cross-section — the
+    // silhouette is a clean C at any tilt), or flat mirrored continuation at
+    // height 2r (d >= pi*r, exactly the flipped-over plate). One curvature
+    // everywhere past the fold kills the M silhouette and the wavy back; phi
+    // stays in [0, pi] and is continuous across the seam.
     const float sigma = Dot(material, pose.tangent);
     const float distance = Dot(material, pose.normal) - pose.axis;
     const float radius = ConeRadius(pose, sigma);
-    float foldedNormal = FoldNormal(distance, radius);
-    float depth = FoldDepth(distance, radius);
-    // §6.3 projection amendment (2026-08-30): past the roll the free part
-    // drapes like paper instead of the legacy rigid slab at height 2R. With
-    // effective tilt tilt = PostWrapTilt(pose) it (1) continues around the
-    // roll to phi = 2pi - tilt (tangent-continuous exit), (2) bends back on
-    // an S-arc of radius r*tan^2(tilt/2) that lands exactly on the revealed
-    // page, (3) lies flat with a 1:1 footprint. Every piece is unit-speed
-    // and tangent-continuous, which keeps the per-column mapping isometric
-    // (T10) and kills the roll-exit crease. At tilt = pi this degenerates to
-    // the legacy mirrored hang exactly (S3+ unchanged). MapMaterial stays
-    // the exact CPU twin of the sheet vertex shader (SheetCoverage / tau_swap
-    // rely on it).
-    if (distance > kPi * radius && radius > kEpsilon) {
-        const float tilt = PostWrapTilt(pose);
-        const float sinTilt = std::sin(tilt);
-        const float cosTilt = std::cos(tilt);
-        const float beyond = distance - kPi * radius;
-        if (sinTilt <= kEpsilon) {
-            foldedNormal = cosTilt * beyond;
-            depth = 2.0F * radius;
-        } else {
-            const float arc1 = radius * (kPi - tilt);
-            // tan^2(tilt/2) via (1-cos)/sin: finite as tilt -> pi, where the
-            // S-arc radius diverges and the drape converges to the hang.
-            const float tanHalf = (1.0F - cosTilt) / sinTilt;
-            const float rho = radius * tanHalf * tanHalf;
-            const float arc2 = rho * (kPi - tilt);
-            if (beyond < arc1) {
-                const float phi = kPi + beyond / radius;
-                foldedNormal = radius * std::sin(phi);
-                depth = radius * (1.0F - std::cos(phi));
-            } else if (beyond < arc1 + arc2) {
-                // Product forms of sin(beta + s2/rho) - sin(beta) and
-                // rho*(1 + cos(beta + s2/rho)); exact as rho diverges, where
-                // the difference forms lose all precision in float.
-                const float s2 = beyond - arc1;
-                const float half = s2 / (2.0F * rho);
-                foldedNormal = -radius * sinTilt
-                    + 2.0F * rho * std::cos(tilt + half) * std::sin(half);
-                const float apex = tilt * 0.5F + half;
-                depth = 2.0F * rho * std::cos(apex) * std::cos(apex);
-            } else {
-                foldedNormal = -(radius + rho) * sinTilt - (beyond - arc1 - arc2);
-                depth = 0.0F;
-            }
-        }
-    }
+    const float foldedNormal = FoldNormal(distance, radius);
+    const float depth = FoldDepth(distance, radius);
     return {
         sigma * pose.tangent.x + (pose.axis + foldedNormal) * pose.normal.x,
         sigma * pose.tangent.y + (pose.axis + foldedNormal) * pose.normal.y,
@@ -522,16 +435,6 @@ float BookTurnSolver::SheetCoverage(const BookTurnPose& pose)
     const float low = Clamp(minX, 0.0F, width);
     const float high = Clamp(maxX, 0.0F, width);
     return Clamp((high - low) / width, 0.0F, 1.0F);
-}
-
-float BookTurnSolver::PostWrapTilt(const BookTurnPose& pose)
-{
-    // SPINE onward the tilt is pinned at pi: the S5 beta unwind is roll
-    // bookkeeping (the collapsing radius absorbs the sheet), not a physical
-    // re-tilt. The pin keeps collapse coverage monotone (T04) and the
-    // PREVIOUS start sheet mirrored off-screen; one definition feeds
-    // MapMaterial, the grip fit, and the renderer's uBeta upload.
-    return pose.stage >= CurlStage::SPINE ? kPi : Clamp(pose.beta, 0.0F, kPi);
 }
 
 void BookTurnSolver::Schedule(float tau, float& xNorm, float& beta, float& radiusScale)

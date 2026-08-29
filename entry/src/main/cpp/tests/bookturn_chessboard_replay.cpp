@@ -791,11 +791,11 @@ int main(int argc, char* argv[]) {
     const std::string outDir = argc > 1 ? argv[1] : "/tmp/bookturn_replay";
     MakeDirs(outDir);
 
-    // §12 A/B calibration: BOOKTURN_CONE_TAPER=0 renders the A-grade rigid
-    // plate; unset keeps the solver default (B grade, 0.4 full-cone).
-    if (const char* taperEnv = std::getenv("BOOKTURN_CONE_TAPER"); taperEnv && *taperEnv) {
-        reader::bookturn::SetConeTaperCalibration(std::strtof(taperEnv, nullptr));
-        std::printf("cone taper calibration override: %s\n", taperEnv);
+    // §12 A/B calibration: BOOKTURN_APEX_DIST=0 renders the A-grade cylinder;
+    // unset keeps the solver default (B grade, 8W apex distance).
+    if (const char* apexEnv = std::getenv("BOOKTURN_APEX_DIST"); apexEnv && *apexEnv) {
+        reader::bookturn::SetConeApexDist(std::strtof(apexEnv, nullptr));
+        std::printf("cone apex distance calibration override: %s\n", apexEnv);
     }
 
     const std::vector<SeqSpec> specs = {

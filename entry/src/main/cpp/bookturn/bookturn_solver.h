@@ -11,16 +11,21 @@ constexpr float kVerticalPreviousStartVp = 24.0F;
 constexpr float kThetaSoftDegrees = 48.0F;
 constexpr float kThetaCapDegrees = 60.0F;
 
-// Geometry constants (V2 contract §4.1 / §6).
-constexpr float kRollRadiusRatio = 0.057F;
-constexpr float kRollRadiusMinVp = 18.0F;
-constexpr float kRollRadiusMaxVp = 32.0F;
-// CONE-TAPER-M: A/B calibration pair (contract §12). Both constants stay
-// compiled until the acceptance branch freezes one; the solver consumes the
-// B (full-cone) value by default because the contract geometry is the cone.
-constexpr float kConeTaperA = 0.0F;
-constexpr float kConeTaperB = 0.4F;
-constexpr float kConeTaperDefault = kConeTaperB;
+// Geometry constants (V2 contract §4.1 / §6, recalibrated 2026-08-30 against
+// the Huawei recording: the roll band grows through the drag and its wrap
+// radius is far larger than the original 0.057W; r varies ~1.4:1 along the
+// fold, so the sheet is a true developable cone, not a cylinder).
+constexpr float kRollRadiusRatio = 0.11F;
+constexpr float kRollRadiusMinVp = 28.0F;
+constexpr float kRollRadiusMaxVp = 64.0F;
+// APEX-DIST A/B calibration pair (contract §12). r(sigma) = R * (sigma -
+// sigmaApex) / (sigmaGrip - sigmaApex) with the apex on the fold axis;
+// apexDist = sigmaGrip - sigmaApex as a ratio of the viewport width. A grade
+// = cylinder (apexDist disabled); B grade default 8W reproduces the measured
+// ~1.4:1 taper across a full-height fold. Both constants stay compiled until
+// the acceptance branch freezes one.
+constexpr float kConeApexDistRatioB = 8.0F;
+constexpr float kConeApexDistRatioDefault = kConeApexDistRatioB;
 constexpr float kSpineTaper = 0.6F;
 constexpr float kDragRadiusMinRatio = 0.35F;
 
@@ -125,10 +130,11 @@ struct BookTurnPose {
     Vec2 target;
     Vec3 projectedGrip;
     float targetError = 0.0F;
-    /** Tangential coordinate of the grip; anchors the cone taper. */
+    /** Tangential coordinate of the grip; anchors the cone radius law. */
     float sigmaGrip = 0.0F;
-    /** Signed cone taper M*sin(psi) consumed by the vertex mapping. */
-    float coneTaper = 0.0F;
+    /** Developable-cone apex distance (sigmaGrip - sigmaApex) in vp; <= 0
+     *  selects the A-grade cylinder (r constant = radius). */
+    float apexDist = 0.0F;
     CurlStage stage = CurlStage::FLAT;
 };
 
@@ -146,11 +152,6 @@ public:
 
     /** Q(tau): canonical schedule evaluation (contract §6.2). */
     static void Schedule(float tau, float& xNorm, float& beta, float& radiusScale);
-    /** §6.3 projection amendment: effective tilt of the post-wrap free part.
-     *  SPINE onward the tilt is pinned at pi (the S5 beta unwind is roll
-     *  bookkeeping, not a physical re-tilt); MapMaterial, the grip fit, and
-     *  the renderer's uBeta upload all consume this one definition. */
-    static float PostWrapTilt(const BookTurnPose& pose);
     /** s^-1: piecewise closed-form inverse of the xNorm schedule. */
     static float ScheduleInverse(float xNorm);
     /** Screen-x of a fold line at material offset `axis` for tilt `theta`. */
@@ -163,10 +164,11 @@ private:
     static float FoldDepth(float distance, float radius);
 };
 
-/** §12 A/B calibration hook: overrides kConeTaperDefault at runtime
- *  (BOOKTURN_CONE_TAPER=0 selects the A-grade rigid plate). Stays compiled
- *  until the stage-4 device A/B freezes one grade. */
-void SetConeTaperCalibration(float m);
+/** §12 A/B calibration hook: overrides kConeApexDistRatioDefault at runtime
+ *  (BOOKTURN_APEX_DIST=0 selects the A-grade cylinder, <0 restores the
+ *  default, >0 is the apex distance as a ratio of the viewport width). Stays
+ *  compiled until the stage-4 device A/B freezes one grade. */
+void SetConeApexDist(float ratio);
 
 }  // namespace reader::bookturn
 

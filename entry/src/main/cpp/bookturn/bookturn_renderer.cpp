@@ -41,38 +41,56 @@ void main() {
 }
 )glsl";
 
-// Draw 2: reveal shadow band (contract 8.3) + dynamic spine shadow pool
-// (contract 8.4), two independent gradients composited per fragment. The band
-// peaks at the fold line and decays over the revealed side with a two-segment
-// smoothstep (HUAWEI profile); the pool anchors at the binding edge and is
-// forbidden from merging with the band.
+// Draw 2: contact shadow (contract 8.3, HUAWEI-measured re-spec 2026-08-30)
+// + dynamic spine shadow pool (contract 8.4), two independent gradients
+// composited per fragment. The contact shadow is a narrow (~3.7%W, peak
+// ~0.11) cast shadow hugging the moving sheet's silhouette on the revealed
+// side; the old page-wide 0.05W/0.42 band (whose d<=0 side painted the whole
+// revealed page at peak) is abolished. The pool anchors at the binding edge
+// and is forbidden from merging with the contact shadow.
 constexpr char kBandFragmentShader[] = R"glsl(#version 300 es
 precision highp float;
 in vec2 vUv;
 in vec2 vPage;
 layout(location = 0) out vec4 outColor;
 uniform vec2 uNormal;
+uniform vec2 uTangent;
+uniform vec2 uPageSize;
 uniform float uAxis;
-uniform float uBandSide;
 uniform float uTau;
+uniform float uRadius;
+uniform float uApexDist;
+uniform float uSigmaGrip;
 uniform float uBandWidth;
 uniform float uBandPeak;
 uniform float uPoolPeak;
 uniform float uPoolWidthStart;
 uniform float uPoolWidthEnd;
 // Frozen schedule boundaries from bookturn_solver.h; keep in sync.
+const float HALF_PI = 1.57079632679;
 const float STAGE_FLIP_END = 0.50;
 const float STAGE_ROLL_END = 0.75;
+// Cone radius law, formula-identical to solver ConeRadius: the contact
+// shadow's inner edge must track the curved silhouette of the sheet.
+float coneRadius(vec2 page) {
+    if (uApexDist <= 0.0001 || uRadius <= 0.0001) {
+        return uRadius;
+    }
+    float sigma = dot(page, uTangent);
+    return uRadius * (sigma - (uSigmaGrip - uApexDist)) / uApexDist;
+}
 void main() {
-    // Contact shadow (§12 recalibration 2026-08-30): a tight dark core hugging
-    // the fold with a squared falloff, armed from the first drag frames -- the
-    // anchoring cue that ties the lifted sheet to the revealed page.
-    float band = 0.0;
-    if (uTau > 0.02) {
-        float d = uBandSide * (dot(vPage, uNormal) - uAxis);
+    // The silhouette sits at r*sin(phiMax) along the normal ray through the
+    // fragment, where phiMax caps the wrap at the sheet's free edge; sigma is
+    // constant along that ray because tangent is perpendicular to normal.
+    float contact = 0.0;
+    if (uTau > 0.02 && uRadius > 0.0001) {
         float gate = smoothstep(0.02, 0.08, uTau);
-        float falloff = 1.0 - smoothstep(0.0, uBandWidth, d);
-        band = uBandPeak * gate * falloff * falloff;
+        float d = dot(vPage, uNormal) - uAxis;
+        float dFree = d + (uPageSize.x - vPage.x) / max(uNormal.x, 0.5);
+        float radius = coneRadius(vPage);
+        float edge = radius * sin(clamp(dFree / max(radius, 0.0001), 0.0, HALF_PI));
+        contact = uBandPeak * gate * (1.0 - smoothstep(edge, edge + uBandWidth, d));
     }
     float pool = 0.0;
     if (uTau > STAGE_FLIP_END) {
@@ -80,28 +98,30 @@ void main() {
         float width = mix(uPoolWidthStart, uPoolWidthEnd, smoothstep(STAGE_ROLL_END, 1.0, uTau));
         pool = uPoolPeak * gate * (1.0 - smoothstep(0.0, width, vPage.x));
     }
-    float alpha = 1.0 - (1.0 - band) * (1.0 - pool);
+    float alpha = 1.0 - (1.0 - contact) * (1.0 - pool);
     outColor = vec4(0.0, 0.0, 0.0, alpha);
 }
 )glsl";
 
-// Draw 3 vertex stage: the developable-cone mapping, contract 6.3, evaluated
-// per vertex from pose uniforms. This must stay formula-identical to the
-// solver's MapMaterial/ConeRadius (single p(q) authority): same taper clamp,
-// same three branches, same fold/depth fields.
+// Draw 3 vertex stage: the strict three-branch cone binding, contract 6.3
+// (2026-08-30 rework), evaluated per vertex from pose uniforms. This must
+// stay formula-identical to the solver's MapMaterial/ConeRadius (single
+// p(q) authority): same apex law, same three branches, same fold/depth
+// fields. phi stays in [0, pi] and is continuous across the seam.
 constexpr char kSheetVertexShader[] = R"glsl(#version 300 es
 precision highp float;
 layout(location = 0) in vec2 aMaterial;
 out vec2 vUv;
 out vec3 vNormal;
 out float vPhi;
+out float vD;
+out float vRadius;
 uniform vec2 uPageSize;
 uniform float uAxis;
 uniform float uRadius;
 uniform float uTheta;
-uniform float uConeTaper;
+uniform float uApexDist;
 uniform float uSigmaGrip;
-uniform float uBeta;
 const float PI = 3.14159265358979323846;
 void main() {
     vec2 q = aMaterial * uPageSize;
@@ -109,7 +129,13 @@ void main() {
     vec2 normal = vec2(cos(uTheta), -sin(uTheta));
     float sigma = dot(q, tangent);
     float distance = dot(q, normal) - uAxis;
-    float radius = uRadius * clamp(1.0 - uConeTaper * (sigma - uSigmaGrip) / uPageSize.x, 0.5, 1.5);
+    // Developable-cone apex law: r(sigma) = R * (sigma - sigmaApex) /
+    // apexDist with the apex on the fold axis; uApexDist <= 0 selects the
+    // A-grade cylinder (r constant = R).
+    float radius = uRadius;
+    if (uApexDist > 0.0001 && uRadius > 0.0001) {
+        radius = uRadius * (sigma - (uSigmaGrip - uApexDist)) / uApexDist;
+    }
     float foldedNormal = distance;
     float depth = 0.0;
     float phi = 0.0;
@@ -122,47 +148,12 @@ void main() {
             foldedNormal = radius * sin(phi);
             depth = radius * (1.0 - cos(phi));
         } else {
-            // Post-roll drape (§6.3 projection amendment, exact CPU twin of
-            // solver MapMaterial, same stable product forms): past the wrap
-            // the free part exits the roll tangent-continuously (ext-wrap
-            // arc, phi past pi), bends back on an S-arc of radius
-            // r*tan^2(beta/2) that lands on the revealed page, then rests
-            // flat with a 1:1 footprint. As beta -> pi (SPINE pin) the S-arc
-            // radius diverges and the drape converges to the mirrored hang;
-            // the sin(beta) <= 1e-5 branch keeps that limit exact. phi is
-            // carried as the signed facing angle: the S-arc turns past the
-            // silhouette so phi goes negative (abs(phi) = facing angle).
+            // Flat mirrored continuation at height 2r: the exact
+            // flipped-over plate. One curvature everywhere past the fold --
+            // no S-arc, no signed phi, no M silhouette.
+            foldedNormal = -(distance - PI * radius);
+            depth = 2.0 * radius;
             phi = PI;
-            float beta = clamp(uBeta, 0.0, PI);
-            float sinB = sin(beta);
-            float cosB = cos(beta);
-            float beyond = distance - PI * radius;
-            if (sinB > 1.0e-5) {
-                float arc1 = radius * (PI - beta);
-                float tanHalf = (1.0 - cosB) / sinB;
-                float rho = radius * tanHalf * tanHalf;
-                float arc2 = rho * (PI - beta);
-                if (beyond < arc1) {
-                    phi = PI + beyond / radius;
-                    foldedNormal = radius * sin(phi);
-                    depth = radius * (1.0 - cos(phi));
-                } else if (beyond < arc1 + arc2) {
-                    // "half" is a GLSL ES reserved word; real drivers reject
-                    // the program (glmock never compiles the source).
-                    float halfTurn = (beyond - arc1) / (2.0 * rho);
-                    float apex = beta * 0.5 + halfTurn;
-                    foldedNormal = -radius * sinB
-                        + 2.0 * rho * cos(beta + halfTurn) * sin(halfTurn);
-                    depth = 2.0 * rho * cos(apex) * cos(apex);
-                    phi = -(beta + (beyond - arc1) / rho);
-                } else {
-                    foldedNormal = -(radius + rho) * sinB - (beyond - arc1 - arc2);
-                    depth = 0.0;
-                }
-            } else {
-                foldedNormal = cosB * beyond;
-                depth = 2.0 * radius;
-            }
         }
     }
     vec2 projected = sigma * tangent + (uAxis + foldedNormal) * normal;
@@ -170,21 +161,27 @@ void main() {
                     1.0 - 2.0 * projected.y / uPageSize.y);
     // Depth sign contract 6.3: the bulge rises toward the viewer (+z), which
     // is nearer and therefore a SMALLER NDC z. Sheet base plane 0.0, static
-    // bottom page 0.9; max bulge 2R <= 64vp maps to -0.45.
+    // bottom page 0.9; max bulge maps to -0.45.
     float depthNdc = -0.45 * clamp(depth / 64.0, 0.0, 1.0);
     gl_Position = vec4(ndc, depthNdc, 1.0);
     vUv = aMaterial;
     vNormal = vec3(-sin(phi) * normal, cos(phi));
     vPhi = phi;
+    vD = distance;
+    vRadius = radius;
 }
 )glsl";
 
-// Draw 3 fragment stage: double-sided shading, contract 8.2. The backface is
-// derived from the front texture with 96% brightness and 10% desaturation,
-// then a BF-CONTRAST boost around mid gray and cone-curvature darkening
-// (spine side -9% -> curl side -42%, the U-reference family). V1's bare
-// `mix(color, luminance, 0.10) * 0.96` line is abolished: without the
-// contrast and curvature terms the backface read as washed-out mirror noise.
+// Draw 3 fragment stage: double-sided shading, contract 8.2/8.3 (2026-08-30
+// HUAWEI-measured recalibration). Flat regions render at exactly 1.0
+// brightness -- every darkening is fold-proximity, the page-wide |vPhi|/pi
+// gradient of the previous package is abolished. The shade families:
+//   - fold-centered valley on the moving page: darkest at the crease
+//     (~15%), decaying narrowly over the flat front strip and widely across
+//     the wrap (the measured 15-25%W roll);
+//   - uniform back-plate tone (~9%) under the ghost-text chain;
+//   - modest curvature modulation only inside the wrap;
+//   - narrow silhouette highlight re-anchored at phi = pi/2.
 // Faces switch by the geometric wrap angle (phi past pi/2), never
 // gl_FrontFacing (contract 8.1); at the silhouette the surface is edge-on so
 // the narrow switch window cannot show a seam.
@@ -193,27 +190,33 @@ precision highp float;
 in vec2 vUv;
 in vec3 vNormal;
 in float vPhi;
+in float vD;
+in float vRadius;
 layout(location = 0) out vec4 outColor;
 uniform sampler2D uTexture;
 uniform vec3 uPaperColor;
 uniform float uPaperFallback;
 uniform float uHighlightPhiWidth;
+uniform float uFrontStripWidth;
+uniform float uValleyGate;
 const float PI = 3.14159265358979323846;
 const float HALF_PI = 1.57079632679;
 const float BF_BRIGHTNESS = 0.96;
 const float BF_DESAT = 0.10;
 const float BF_CONTRAST = 0.18;
-const float CURVE_DARKEN_NEAR = 0.09;
-const float CURVE_DARKEN_FAR = 0.42;
+const float VALLEY_PEAK = 0.15;
+const float BACK_PLATE_DARK = 0.09;
 void main() {
     vec3 normal = normalize(vNormal);
     vec3 light = normalize(vec3(-0.32, -0.20, 0.93));
-    // abs(vPhi): the S-arc drape carries a signed facing angle (negative past
-    // the silhouette); abs() is exact on the wrap (phi >= 0) and keeps the
-    // face switch geometric on the drape. Same narrow-window seam argument.
+    // abs(vPhi): phi is in [0, pi] under the strict three-branch model, so
+    // abs() is an exact no-op; kept as the architecture-gate literal.
     float backMix = smoothstep(HALF_PI - 0.02, HALF_PI + 0.02, abs(vPhi));
     float diffuse = mix(max(dot(normal, light), 0.0), max(dot(-normal, light), 0.0), backMix);
-    float lighting = 0.94 + 0.06 * diffuse;
+    // Curvature modulation lives only inside the wrap: sin() gates it to
+    // zero on both flat ends, so flat ground is lit at exactly 1.0.
+    float wrapGate = sin(clamp(vPhi, 0.0, PI));
+    float lighting = mix(1.0, 0.94 + 0.06 * diffuse, wrapGate);
     vec3 frontColor = texture(uTexture, vUv).rgb;
     // Paper fallback (contract 8.6): while enabled the backface paper derives
     // from the theme background color instead of the front texture; the front
@@ -223,10 +226,20 @@ void main() {
     float luminance = dot(backSource, vec3(0.2126, 0.7152, 0.0722));
     vec3 backColor = mix(backSource, vec3(luminance), BF_DESAT);
     backColor = (backColor * BF_BRIGHTNESS - 0.5) * (1.0 + BF_CONTRAST) + 0.5;
-    backColor *= 1.0 - mix(CURVE_DARKEN_NEAR, CURVE_DARKEN_FAR, min(abs(vPhi) / PI, 1.0));
     vec3 color = mix(frontColor, backColor, backMix);
-    float highlight = (1.0 - smoothstep(0.0, uHighlightPhiWidth, abs(vPhi - 1.25))) * 0.09;
-    color = color * lighting + highlight;
+    color *= lighting;
+    // Fold-centered valley: peak at the crease, narrow decay over the flat
+    // front (d < 0), wide decay across the roll diameter (d > 0). Gated out
+    // while no wrap exists (resting page, settled commit).
+    float dAbs = abs(vD);
+    float valleyWidth = vD < 0.0 ? uFrontStripWidth : 2.0 * vRadius;
+    float valley = VALLEY_PEAK * uValleyGate *
+        (1.0 - smoothstep(0.0, valleyWidth, dAbs));
+    float backPlate = BACK_PLATE_DARK * backMix;
+    color *= (1.0 - valley) * (1.0 - backPlate);
+    // Curl-crest highlight, anchored at the silhouette (phi = pi/2).
+    float highlight = (1.0 - smoothstep(0.0, uHighlightPhiWidth, abs(vPhi - HALF_PI))) * 0.04;
+    color += highlight;
     outColor = vec4(color, 1.0);
 }
 )glsl";
@@ -246,8 +259,13 @@ constexpr float kGutterWidthRatio = 0.08F;
 constexpr float kGutterAlphaA = 0.06F;
 constexpr float kGutterAlphaB = 0.10F;
 constexpr float kGutterAlphaDefault = 0.5F * (kGutterAlphaA + kGutterAlphaB);
-constexpr float kRevealBandWidthRatio = 0.05F;
-constexpr float kRevealBandPeakAlpha = 0.42F;
+// Contact shadow hugging the moving sheet's silhouette on the revealed side
+// (contract 8.3, HUAWEI-measured 2026-08-30: ~3.7%W wide, peak ~0.11).
+constexpr float kContactWidthRatio = 0.037F;
+constexpr float kContactPeakAlpha = 0.11F;
+// Front-side strip of the fold-centered valley on the moving sheet (narrow,
+// ~3.5%W, peak 0.15; the wrap side decays over the full 2r band instead).
+constexpr float kFrontStripRatio = 0.035F;
 constexpr float kSpinePoolWidthStartRatio = 0.04F;
 constexpr float kSpinePoolWidthEndRatio = 0.10F;
 constexpr float kSpinePoolPeakA = 0.10F;
@@ -563,9 +581,12 @@ bool BookTurnRenderer::InitializePrograms()
 
     bandUniforms_.pageSize = glGetUniformLocation(bandProgram_, "uPageSize");
     bandUniforms_.normal = glGetUniformLocation(bandProgram_, "uNormal");
+    bandUniforms_.tangent = glGetUniformLocation(bandProgram_, "uTangent");
     bandUniforms_.axis = glGetUniformLocation(bandProgram_, "uAxis");
-    bandUniforms_.bandSide = glGetUniformLocation(bandProgram_, "uBandSide");
     bandUniforms_.tau = glGetUniformLocation(bandProgram_, "uTau");
+    bandUniforms_.radius = glGetUniformLocation(bandProgram_, "uRadius");
+    bandUniforms_.apexDist = glGetUniformLocation(bandProgram_, "uApexDist");
+    bandUniforms_.sigmaGrip = glGetUniformLocation(bandProgram_, "uSigmaGrip");
     bandUniforms_.bandWidth = glGetUniformLocation(bandProgram_, "uBandWidth");
     bandUniforms_.bandPeak = glGetUniformLocation(bandProgram_, "uBandPeak");
     bandUniforms_.poolPeak = glGetUniformLocation(bandProgram_, "uPoolPeak");
@@ -576,24 +597,27 @@ bool BookTurnRenderer::InitializePrograms()
     sheetUniforms_.axis = glGetUniformLocation(sheetProgram_, "uAxis");
     sheetUniforms_.radius = glGetUniformLocation(sheetProgram_, "uRadius");
     sheetUniforms_.theta = glGetUniformLocation(sheetProgram_, "uTheta");
-    sheetUniforms_.coneTaper = glGetUniformLocation(sheetProgram_, "uConeTaper");
+    sheetUniforms_.apexDist = glGetUniformLocation(sheetProgram_, "uApexDist");
     sheetUniforms_.sigmaGrip = glGetUniformLocation(sheetProgram_, "uSigmaGrip");
-    sheetUniforms_.beta = glGetUniformLocation(sheetProgram_, "uBeta");
     sheetUniforms_.texture = glGetUniformLocation(sheetProgram_, "uTexture");
     sheetUniforms_.highlightPhiWidth = glGetUniformLocation(sheetProgram_, "uHighlightPhiWidth");
+    sheetUniforms_.frontStripWidth = glGetUniformLocation(sheetProgram_, "uFrontStripWidth");
+    sheetUniforms_.valleyGate = glGetUniformLocation(sheetProgram_, "uValleyGate");
     sheetUniforms_.paperColor = glGetUniformLocation(sheetProgram_, "uPaperColor");
     sheetUniforms_.paperFallback = glGetUniformLocation(sheetProgram_, "uPaperFallback");
 
     return bottomUniforms_.pageSize >= 0 && bottomUniforms_.texture >= 0 &&
         bottomUniforms_.gutterWidth >= 0 && bottomUniforms_.gutterAlpha >= 0 &&
-        bandUniforms_.pageSize >= 0 && bandUniforms_.normal >= 0 && bandUniforms_.axis >= 0 &&
-        bandUniforms_.bandSide >= 0 && bandUniforms_.tau >= 0 && bandUniforms_.bandWidth >= 0 &&
+        bandUniforms_.pageSize >= 0 && bandUniforms_.normal >= 0 && bandUniforms_.tangent >= 0 &&
+        bandUniforms_.axis >= 0 && bandUniforms_.tau >= 0 && bandUniforms_.radius >= 0 &&
+        bandUniforms_.apexDist >= 0 && bandUniforms_.sigmaGrip >= 0 &&
+        bandUniforms_.bandWidth >= 0 &&
         bandUniforms_.bandPeak >= 0 && bandUniforms_.poolPeak >= 0 &&
         bandUniforms_.poolWidthStart >= 0 && bandUniforms_.poolWidthEnd >= 0 &&
         sheetUniforms_.pageSize >= 0 && sheetUniforms_.axis >= 0 && sheetUniforms_.radius >= 0 &&
-        sheetUniforms_.theta >= 0 && sheetUniforms_.coneTaper >= 0 && sheetUniforms_.sigmaGrip >= 0 &&
-        sheetUniforms_.beta >= 0 &&
+        sheetUniforms_.theta >= 0 && sheetUniforms_.apexDist >= 0 && sheetUniforms_.sigmaGrip >= 0 &&
         sheetUniforms_.texture >= 0 && sheetUniforms_.highlightPhiWidth >= 0 &&
+        sheetUniforms_.frontStripWidth >= 0 && sheetUniforms_.valleyGate >= 0 &&
         sheetUniforms_.paperColor >= 0 && sheetUniforms_.paperFallback >= 0;
 }
 
@@ -709,16 +733,20 @@ void BookTurnRenderer::DrawBottom(const BookTurnPose& pose, TextureSlot slot)
 
 void BookTurnRenderer::DrawShadowBand(const BookTurnPose& pose)
 {
-    // uBandSide == direction as a float: NEXT (-1) shades the revealed side
-    // left of the fold, PREVIOUS (+1) the still-uncovered side right of it.
+    // Contact shadow on the revealed side hugs the sheet's curved silhouette
+    // (per-fragment cone law in the shader); the pool anchors at the binding
+    // edge from STAGE_FLIP_END onward.
     glUseProgram(bandProgram_);
     glUniform2f(bandUniforms_.pageSize, pose.width, pose.height);
     glUniform2f(bandUniforms_.normal, pose.normal.x, pose.normal.y);
+    glUniform2f(bandUniforms_.tangent, pose.tangent.x, pose.tangent.y);
     glUniform1f(bandUniforms_.axis, pose.axis);
-    glUniform1f(bandUniforms_.bandSide, static_cast<float>(pose.direction));
     glUniform1f(bandUniforms_.tau, pose.tau);
-    glUniform1f(bandUniforms_.bandWidth, kRevealBandWidthRatio * pose.width);
-    glUniform1f(bandUniforms_.bandPeak, kRevealBandPeakAlpha);
+    glUniform1f(bandUniforms_.radius, pose.radius);
+    glUniform1f(bandUniforms_.apexDist, pose.apexDist);
+    glUniform1f(bandUniforms_.sigmaGrip, pose.sigmaGrip);
+    glUniform1f(bandUniforms_.bandWidth, kContactWidthRatio * pose.width);
+    glUniform1f(bandUniforms_.bandPeak, kContactPeakAlpha);
     glUniform1f(bandUniforms_.poolPeak, kSpinePoolPeakDefault);
     glUniform1f(bandUniforms_.poolWidthStart, kSpinePoolWidthStartRatio * pose.width);
     glUniform1f(bandUniforms_.poolWidthEnd, kSpinePoolWidthEndRatio * pose.width);
@@ -733,11 +761,8 @@ void BookTurnRenderer::DrawSheet(const BookTurnPose& pose, TextureSlot slot)
     glUniform1f(sheetUniforms_.axis, pose.axis);
     glUniform1f(sheetUniforms_.radius, pose.radius);
     glUniform1f(sheetUniforms_.theta, pose.theta);
-    glUniform1f(sheetUniforms_.coneTaper, pose.coneTaper);
+    glUniform1f(sheetUniforms_.apexDist, pose.apexDist);
     glUniform1f(sheetUniforms_.sigmaGrip, pose.sigmaGrip);
-    // One tilt definition shared with solver MapMaterial / grip fit (§6.3
-    // projection amendment): SPINE onward pinned at PI.
-    glUniform1f(sheetUniforms_.beta, BookTurnSolver::PostWrapTilt(pose));
     // Curl-edge highlight width (contract 8.2): clamp(0.02W, 8vp, 16vp),
     // converted to the wrap-angle half window via the local cone radius. A
     // collapsed radius has no curl left to catch light.
@@ -748,6 +773,19 @@ void BookTurnRenderer::DrawSheet(const BookTurnPose& pose, TextureSlot slot)
         highlightPhiWidth = 0.5F * widthVp / pose.radius;
     }
     glUniform1f(sheetUniforms_.highlightPhiWidth, highlightPhiWidth);
+    glUniform1f(sheetUniforms_.frontStripWidth, kFrontStripRatio * pose.width);
+    // The fold-centered valley must not darken the resting page: at tau=0 the
+    // fold sits at the free edge and the front strip (d<=0 branch) would paint
+    // the flat sheet's edge at peak. The gate measures how far the fold line
+    // has actually moved into the sheet along +normal: dFreeMax over 2r, so a
+    // lifted tilt (tau=0, theta>0) still shades genuinely lifted material.
+    float valleyGate = 0.0F;
+    {
+        const float dFreeMax = pose.width * pose.normal.x +
+            std::max(0.0F, pose.height * pose.normal.y) - pose.axis;
+        valleyGate = std::clamp(dFreeMax / std::max(1.0F, 2.0F * pose.radius), 0.0F, 1.0F);
+    }
+    glUniform1f(sheetUniforms_.valleyGate, valleyGate);
     glUniform3f(sheetUniforms_.paperColor, fallbackPaper_[0], fallbackPaper_[1], fallbackPaper_[2]);
     glUniform1f(sheetUniforms_.paperFallback, fallbackPaperEnabled_ ? 1.0F : 0.0F);
     glActiveTexture(GL_TEXTURE0);

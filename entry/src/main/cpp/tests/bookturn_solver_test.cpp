@@ -83,6 +83,7 @@ using reader::bookturn::BookTurnPose;
 using reader::bookturn::BookTurnSolver;
 using reader::bookturn::CurlStage;
 using reader::bookturn::Direction;
+using reader::bookturn::SetConeApexDist;
 using reader::bookturn::Vec2;
 using reader::bookturn::Vec3;
 
@@ -196,9 +197,10 @@ float FoldX(const BookTurnPose& pose)
 void TestRollRadius()
 {
     const int before = g_fails;
-    CheckNear("T01 radius(390)", BookTurnSolver::RollRadius(390.0F), 22.23, 1e-3);
-    CheckNear("T01 radius(200)", BookTurnSolver::RollRadius(200.0F), 18.0, 1e-3);
-    CheckNear("T01 radius(1000)", BookTurnSolver::RollRadius(1000.0F), 32.0, 1e-3);
+    // R-ROLL = clamp(0.11W, 28, 64) vp (contract §12 recalibration 2026-08-30).
+    CheckNear("T01 radius(390)", BookTurnSolver::RollRadius(390.0F), 42.9, 1e-3);
+    CheckNear("T01 radius(200)", BookTurnSolver::RollRadius(200.0F), 28.0, 1e-3);
+    CheckNear("T01 radius(1000)", BookTurnSolver::RollRadius(1000.0F), 64.0, 1e-3);
     std::printf("T01 roll-radius %s (390->%.4f, 200->%.4f, 1000->%.4f)\n",
         g_fails == before ? "PASS" : "FAIL",
         BookTurnSolver::RollRadius(390.0F), BookTurnSolver::RollRadius(200.0F),
@@ -232,8 +234,8 @@ void TestScheduleBijection()
 
     struct ScheduleCase { float tau; float xNorm; float beta; float scale; };
     const ScheduleCase scheduleCases[] = {
-        { 0.0F, 1.0F, 0.0F, 1.0F },
-        { 0.18F, 0.8F, kHalfPi, 1.0F },
+        { 0.0F, 1.0F, 0.0F, 0.55F },
+        { 0.18F, 0.8F, kHalfPi, 0.85F },
         { 0.5F, 0.5F, kPi, 1.0F },
         { 0.75F, 0.25F, kPi, 1.0F },
         { 0.9F, 0.05F, kPi, 0.6F },
@@ -598,9 +600,10 @@ void TestMilestone()
     CheckLE("T09 gripPhi step (regular: tau <= 0.9, phi >= 1.5)", worstRegular, 0.05);
     CheckLE("T09 gripPhi step (S5 schedule descent)", worstCollapse, 0.2);
 
-    // Milestone phi = pi/2 crossing: delta = W - edge.x ~= R*(pi/2 - 1).
+    // Milestone phi = pi/2 crossing: delta = W - edge.x = r(tau)*(pi/2 - 1)
+    // where r(tau) = R-ROLL * scale(tau) rides the S1 ramp (0.55 -> 0.85), so
+    // the expected value is folded through the schedule at the crossing tau.
     const float rollRadius = BookTurnSolver::RollRadius(kW);
-    const float expectedDelta = rollRadius * (kHalfPi - 1.0F);
     float crossingDelta = -1.0F;
     float crossingPreviousPhi = BookTurnSolver::Solve(Settlement(385.0F, 0.0F)).gripPhi;
     float previousEdge = 385.0F;
@@ -616,6 +619,12 @@ void TestMilestone()
         crossingPreviousPhi = phi;
         previousEdge = edgeX;
     }
+    float crossingXNorm = 1.0F;
+    float crossingBeta = 0.0F;
+    float crossingScale = 1.0F;
+    BookTurnSolver::Schedule(BookTurnSolver::ScheduleInverse((kW - crossingDelta) / kW),
+        crossingXNorm, crossingBeta, crossingScale);
+    const float expectedDelta = rollRadius * crossingScale * (kHalfPi - 1.0F);
     CheckGE("T09 crossing found", crossingDelta, 0.0);
     CheckNear("T09 crossing delta", crossingDelta, expectedDelta, 0.5);
     CheckGE("T09 crossing edge.x in fit regime", kW - crossingDelta, 320.0);
@@ -633,11 +642,15 @@ void TestMaterialMetric()
 {
     const int before = g_fails;
 
-    // (a) Cylinder (theta = 0): exactly isometric along u-hat and v-hat.
+    // (a) A-grade cylinder (apexDist = 0 -> r' = 0): exactly isometric along
+    // u-hat and v-hat on every branch (wrap = cylinder isometry, mirror =
+    // pure reflection). Restores the default calibration before returning.
+    SetConeApexDist(0.0F);
     float worstCylinder = 0.0F;
     for (int k = 1; k <= 9; ++k) {
         const float tau = 0.1F * static_cast<float>(k);
         const BookTurnPose pose = BookTurnSolver::Solve(Settlement(EdgeForTau(tau), 0.0F));
+        CheckNear("T10a apexDist A-grade", pose.apexDist, 0.0, 0.0);
         for (float u = 0.0F; u <= kW - 1.0F; u += 8.0F) {
             for (float v = 0.0F; v <= kH - 1.0F; v += 8.0F) {
                 const Vec3 base = BookTurnSolver::MapMaterial(pose, { u, v });
@@ -651,38 +664,30 @@ void TestMaterialMetric()
         }
     }
     CheckLE("T10a cylinder metric", worstCylinder, 1e-3);
+    SetConeApexDist(-1.0F);
 
-    // (b) Cone (settledTheta = 60deg -> theta ~= 54deg, taper ~= 0.324).
-    // Contract 6.3 gate is domain-split per the 2026-08-29 user ruling (with
-    // one boundary correction, same intent): with the C1 seam frozen, taper
-    // r'<0 forces <p_sigma,p_d> = r'*(sin(phi)-phi) (chain rule on
-    // phi = d/r(sigma); monotone 0 -> -pi*r' at the seam), so the strict gate
-    // cannot hold through the deep curl. Split: strict region = phi <= pi/4
-    // (|sin(phi)-phi| <= 0.078 there; measured max 0.072% at psi=54deg, far
-    // under the 1% single-point gate); tolerance band = phi > pi/4 through
-    // drape, where u-edges stretch by the sigma-coupling of the cone taper
-    // across the accumulated tangent turn: the S-arc lands with the coupling
-    // (pi-beta-sin(beta))/cos^2(beta/2) <= 2, and the ext-wrap accumulates up
-    // to ~2.4*pi radians of turn, so the analytic band error bound is
-    // ~2.4*pi*|r'| (measured p95 0.0449 / max 0.0566 at psi=54deg,
-    // kSpineTaper=0.6; worst at tau=0.1 kink-adjacent) -> gate 6% = analytic
-    // bound + regression margin [2026-08-30 recalibration with the 6.3
-    // projection amendment; original 3.5% pre-dated the S-drape]. The
-    // original ruling boundary (d < pi*r) is refined accordingly; recorded in
-    // the contract 6.3 addendum. Readability of the tolerance band
-    // (deep-curl tube + mirror-backface strip) is judged at the stage-4
-    // device A/B.
-    // A-tier (r'=0) is strictly isometric everywhere (covered by T10a).
+    // (b) B-grade cone (default apexDist = 8W; settledTheta = 60deg ->
+    // theta ~= 54deg). Isometry gates re-derived 2026-08-30 from the apex
+    // law r' = R / apexDist = 42.9/3120 = 1.375e-2 (R-ROLL = 0.11W = 42.9):
+    //   strict region (phi <= pi/4): the only r'-driven distortion is the
+    //     sigma-coupling of f/z inside the wrap; worst measured 0.21% at
+    //     phi=pi/4 tilted (cross terms cos(phi)*dd*r'*(sin-phi*cos-phi)*ds) ->
+    //     gates p95 1e-3 / max 5e-3.
+    //   band (phi > pi/4 through the mirror plate): the plate is the sheared
+    //     reflection d -> pi*r(sigma) - d at height 2r(sigma); its metric is
+    //     [[1,0],[a,-1]]^T[[1,0],[a,-1]] with a = pi*r' = 4.3e-2, singular
+    //     values sqrt(1 + a^2/2 +- a*sqrt(1 + a^2/4)) -> stretch <= 2.2% at
+    //     the 8W apex (old taper law measured 4.5-5.7%) -> gate 2.5e-2.
+    // A-grade (r' = 0) is exactly isometric everywhere (T10a).
     std::vector<float> strictErrors;
     std::vector<float> bandErrors;
     float worstTheta = 0.0F;
-    float worstTaper = 0.0F;
+    float worstApex = 0.0F;
     for (int k = 1; k <= 9; ++k) {
         const float tau = 0.1F * static_cast<float>(k);
         const BookTurnPose pose = BookTurnSolver::Solve(Settlement(EdgeForTau(tau), DegToRad(60.0F)));
         worstTheta = std::max(worstTheta, std::abs(pose.theta - DegToRad(54.0F)));
-        worstTaper = std::max(worstTaper,
-            std::abs(pose.coneTaper - 0.4F * std::sin(pose.theta)));
+        worstApex = std::max(worstApex, std::abs(pose.apexDist - 8.0F * kW));
         for (float u = 0.0F; u <= kW - 1.0F; u += 8.0F) {
             for (float v = 0.0F; v <= kH - 1.0F; v += 8.0F) {
                 const Vec3 base = BookTurnSolver::MapMaterial(pose, { u, v });
@@ -691,14 +696,13 @@ void TestMaterialMetric()
                 const float error = std::max(
                     std::abs(Dist3(base, alongU) - 1.0F),
                     std::abs(Dist3(base, alongV) - 1.0F));
-                // Same r(sigma) as the solver's ConeRadius (public pose fields).
+                // Same cone law as the solver's ConeRadius (public pose fields).
                 const float sigma = u * pose.tangent.x + v * pose.tangent.y;
                 const float d = u * pose.normal.x + v * pose.normal.y - pose.axis;
-                const float taperFactor = std::max(0.5F, std::min(1.5F,
-                    1.0F - pose.coneTaper * (sigma - pose.sigmaGrip) / kW));
-                const float radius = pose.radius * taperFactor;
+                const float radius = pose.radius *
+                    (sigma - (pose.sigmaGrip - pose.apexDist)) / pose.apexDist;
                 const float phi = d > 0.0F ?
-                    std::min(d / radius, kPi) : 0.0F;
+                    std::min(d / std::max(radius, 1.0F), kPi) : 0.0F;
                 if (phi <= 0.25F * kPi) {
                     strictErrors.push_back(error);
                 } else {
@@ -708,7 +712,7 @@ void TestMaterialMetric()
         }
     }
     CheckNear("T10b cone theta", worstTheta, 0.0, 1e-4);
-    CheckNear("T10b cone taper identity", worstTaper, 0.0, 1e-5);
+    CheckNear("T10b apexDist identity", worstApex, 0.0, 1e-3);
 
     auto percentile95 = [](std::vector<float>& values) {
         std::sort(values.begin(), values.end());
@@ -719,14 +723,16 @@ void TestMaterialMetric()
     const float strictMax = strictErrors.empty() ? 0.0F : *std::max_element(strictErrors.begin(), strictErrors.end());
     const float bandP95 = percentile95(bandErrors);
     const float bandMax = bandErrors.empty() ? 0.0F : *std::max_element(bandErrors.begin(), bandErrors.end());
-    CheckLE("T10b cone strict p95 (phi<=pi/4)", strictP95, 5e-3);
-    CheckLE("T10b cone strict max (phi<=pi/4)", strictMax, 1e-2);
-    CheckLE("T10b cone band p95 (B-tolerance)", bandP95, 6.0e-2);
-    CheckLE("T10b cone band max (B-tolerance)", bandMax, 6.0e-2);
+    CheckLE("T10b cone strict p95 (phi<=pi/4)", strictP95, 1e-3);
+    CheckLE("T10b cone strict max (phi<=pi/4)", strictMax, 5e-3);
+    CheckLE("T10b cone band p95 (B-tolerance)", bandP95, 2.5e-2);
+    CheckLE("T10b cone band max (B-tolerance)", bandMax, 2.5e-2);
 
-    std::printf("T10 developability %s (a: cylinder worst %.2e <= 1e-3; "
-        "b: strict phi<=pi/4 p95 %.3e max %.3e vs 5e-3/1e-2; band p95 %.3e max %.3e vs 6e-2 B-tolerance [2026-08-30 recalibration])\n",
-        g_fails == before ? "PASS" : "FAIL", worstCylinder, strictP95, strictMax, bandP95, bandMax);
+    std::printf("T10 developability %s (a: A-grade cylinder worst %.2e <= 1e-3; "
+        "b: strict phi<=pi/4 p95 %.3e max %.3e vs 1e-3/5e-3; band p95 %.3e max %.3e vs 2.5e-2 "
+        "[2026-08-30 apex-law recalibration, pi*r'=%.4f])\n",
+        g_fails == before ? "PASS" : "FAIL", worstCylinder, strictP95, strictMax, bandP95, bandMax,
+        kPi * 42.9F / (8.0F * kW));
 }
 
 // ---------------------------------------------------------------- T11
@@ -865,7 +871,7 @@ bool PosesEqual(const BookTurnPose& left, const BookTurnPose& right)
         left.projectedGrip.z == right.projectedGrip.z &&
         left.targetError == right.targetError &&
         left.sigmaGrip == right.sigmaGrip &&
-        left.coneTaper == right.coneTaper && left.stage == right.stage;
+        left.apexDist == right.apexDist && left.stage == right.stage;
 }
 
 // ---------------------------------------------------------------- T14
@@ -992,6 +998,92 @@ void TestVerticalPreviousSmoke()
         g_fails == before ? "PASS" : "FAIL");
 }
 
+// ---------------------------------------------------------------- T18
+// Strict three-branch regression gates (2026-08-30 rework): the old
+// ext-wrap/S-arc/pile post-wrap construction produced (1) a wavy back face
+// (curvature sign flips along d) and (2) a |vPhi| discontinuity at the arc1
+// boundary that the fragment shading turned into a dark band. These gates pin
+// the replacement geometry.
+void TestStrictThreeBranchGeometry()
+{
+    const int before = g_fails;
+
+    // (a) Anti-M: along a fixed-sigma ray (tangent . normal = 0, so the cone
+    // radius is constant on the ray) f_n is concave on the wrap
+    // (f'' = -sin(phi)/r <= 0) and linear on the mirror plate; the second
+    // difference must never turn positive. A positive run = M silhouette.
+    float worstSecondDiff = -1e9F;
+    for (int k = 1; k <= 9; ++k) {
+        const float tau = 0.1F * static_cast<float>(k);
+        const BookTurnPose pose =
+            BookTurnSolver::Solve(Settlement(EdgeForTau(tau), DegToRad(30.0F)));
+        const float step = 1.0F;
+        constexpr int kSamples = 340;
+        auto foldNormalAt = [&](float d) {
+            const Vec2 material = { 90.0F + d * pose.normal.x, 420.0F + d * pose.normal.y };
+            if (material.x < 0.0F || material.x > kW || material.y < 0.0F ||
+                material.y > kH) {
+                return std::nanf("");  // skip via std::isnan below
+            }
+            const Vec3 mapped = BookTurnSolver::MapMaterial(pose, material);
+            return mapped.x * pose.normal.x + mapped.y * pose.normal.y - pose.axis;
+        };
+        for (int i = 1; i < kSamples - 1; ++i) {
+            const float d = -60.0F + static_cast<float>(i) * step;
+            const float left = foldNormalAt(d - step);
+            const float mid = foldNormalAt(d);
+            const float right = foldNormalAt(d + step);
+            if (std::isnan(left) || std::isnan(mid) || std::isnan(right)) {
+                continue;
+            }
+            worstSecondDiff = std::max(worstSecondDiff, left - 2.0F * mid + right);
+        }
+    }
+    CheckLE("T18 anti-M second difference", worstSecondDiff, 1e-4);
+
+    // (b) phi seam C1: f_n and z sampled across d = pi*r must both be 1-
+    // Lipschitz in d (|f'| = |cos phi| <= 1 on the wrap, = -1 on the plate;
+    // |z'| = sin phi <= 1 then 0). Any arc-boundary jump shows up as a step
+    // exceeding the material step size.
+    float worstFStep = 0.0F;
+    float worstZStep = 0.0F;
+    for (int k = 1; k <= 9; ++k) {
+        const float tau = 0.1F * static_cast<float>(k);
+        const BookTurnPose pose =
+            BookTurnSolver::Solve(Settlement(EdgeForTau(tau), DegToRad(30.0F)));
+        const float step = 0.5F;
+        constexpr int kSamples = 680;
+        auto surfaceAt = [&](float d) {
+            const Vec2 material = { 90.0F + d * pose.normal.x, 420.0F + d * pose.normal.y };
+            if (material.x < 0.0F || material.x > kW || material.y < 0.0F ||
+                material.y > kH) {
+                return Vec3 { 0.0F, 0.0F, std::nanf("") };
+            }
+            return BookTurnSolver::MapMaterial(pose, material);
+        };
+        Vec3 previous = surfaceAt(-60.0F);
+        for (int i = 1; i < kSamples; ++i) {
+            const float d = -60.0F + static_cast<float>(i) * step;
+            const Vec3 current = surfaceAt(d);
+            if (std::isnan(current.z) || std::isnan(previous.z)) {
+                previous = current;
+                continue;
+            }
+            worstFStep = std::max(worstFStep, std::abs(
+                (current.x - previous.x) * pose.normal.x +
+                (current.y - previous.y) * pose.normal.y));
+            worstZStep = std::max(worstZStep, std::abs(current.z - previous.z));
+            previous = current;
+        }
+    }
+    CheckLE("T18 seam f Lipschitz", worstFStep, 0.501F);
+    CheckLE("T18 seam z Lipschitz", worstZStep, 0.501F);
+
+    std::printf("T18 strict three-branch %s (anti-M second diff %.3e <= 1e-4; "
+        "seam steps f %.4f z %.4f <= 0.501 at step 0.5)\n",
+        g_fails == before ? "PASS" : "FAIL", worstSecondDiff, worstFStep, worstZStep);
+}
+
 }  // namespace
 
 int main()
@@ -1013,6 +1105,7 @@ int main()
     TestStageBoundaries();     // T15
     TestTiltRegressions();     // T16
     TestVerticalPreviousSmoke();  // T17
+    TestStrictThreeBranchGeometry();  // T18
 
     std::printf("%d checks, %d failures\n", g_checks, g_fails);
     return g_fails == 0 ? 0 : 1;
