@@ -1626,11 +1626,25 @@ export struct ReadingExperience {
     const current = this.currentPageTurnRenderPage();
     const previous = this.preparedPageTurnRenderPage('previous');
     const next = this.preparedPageTurnRenderPage('next');
-    if (!await this.captureBookTurnTexture(BOOK_TURN_TEXTURE_CURRENT, current, generation)) return;
+    let newlyCaptured = false;
+    const captureTracked = async (
+      slot: BookTurnTextureSlot,
+      page: ReaderPageTurnRenderPage,
+    ): Promise<boolean> => {
+      const wasAligned = this.bookTurnCapturedIdentity(slot) === page.textureIdentity;
+      const captured = await this.captureBookTurnTexture(slot, page, generation);
+      if (captured && !wasAligned) newlyCaptured = true;
+      return captured;
+    };
+    if (!await captureTracked(BOOK_TURN_TEXTURE_CURRENT, current)) return;
     if (previous !== undefined &&
-      !await this.captureBookTurnTexture(BOOK_TURN_TEXTURE_PREVIOUS, previous, generation)) return;
-    if (next !== undefined) {
-      await this.captureBookTurnTexture(BOOK_TURN_TEXTURE_NEXT, next, generation);
+      !await captureTracked(BOOK_TURN_TEXTURE_PREVIOUS, previous)) return;
+    if (next !== undefined && !await captureTracked(BOOK_TURN_TEXTURE_NEXT, next)) return;
+    if (newlyCaptured) {
+      // A capture pass that newly aligned a slot can unblock a retained tap
+      // intent: preparation completions drain before this frame callback runs,
+      // so without this retry the first tap after a measurement window dies.
+      this.drainPendingManualPageTurn();
     }
   }
 
