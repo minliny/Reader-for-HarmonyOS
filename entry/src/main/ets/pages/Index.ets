@@ -233,6 +233,10 @@ struct Index {
   @State private continueReading: ShelfBook | undefined = undefined;
   @State private isBookshelfVisualAdmitted: boolean = false;
   @State private isCoreShelfEmpty: boolean = false;
+  // SHF-03: manual shelf-wide update sweep progress, mirrored on the page.
+  @State private bookshelfUpdateRunning: boolean = false;
+  @State private bookshelfUpdateDone: number = 0;
+  @State private bookshelfUpdateTotal: number = 0;
   @State private bookshelfManagementSnapshot: BookshelfManagementSnapshot =
     EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT;
   @State private bookshelfMultiSelectInitialKey: string = '';
@@ -475,6 +479,10 @@ struct Index {
           onBookMultiSelectRequested: (book: ShelfBook): void => this.openBookshelfMultiSelect(book),
           onBookInfoRequested: (book: ShelfBook): void => this.openShelfBookInfo(book),
           onBookRemoveRequested: (book: ShelfBook): void => this.requestRemoveShelfBook(book),
+          onCheckUpdatesRequested: (): void => this.startManualBookshelfUpdate(),
+          updateRunning: this.bookshelfUpdateRunning,
+          updateProgressDone: this.bookshelfUpdateDone,
+          updateProgressTotal: this.bookshelfUpdateTotal,
         });
       } else if (this.route === 'bookshelfMultiSelect') {
         BookshelfMultiSelectPage({
@@ -4162,7 +4170,8 @@ struct Index {
   }
 
   private scheduleBookshelfBackgroundRefresh(books: ShelfBook[]): void {
-    if (this.bookshelfBackgroundRefreshRunning || !this.settingsSnapshot.autoCheckUpdate) {
+    if (this.bookshelfBackgroundRefreshRunning || this.bookshelfUpdateRunning ||
+      !this.settingsSnapshot.autoCheckUpdate) {
       return;
     }
     const now = Date.now();
@@ -4178,12 +4187,18 @@ struct Index {
       });
   }
 
-  private async refreshBookshelfCatalogBatch(books: ShelfBook[]): Promise<void> {
+  private async refreshBookshelfCatalogBatch(books: ShelfBook[],
+    onProgress?: (done: number, total: number) => void): Promise<void> {
     // Keep source I/O bounded like Legado's bookshelf updater. Two concurrent
     // books avoid serial stalls without flooding all enabled sources.
+    let completed = 0;
     for (let start = 0; start < books.length; start += 2) {
       const batch = books.slice(start, Math.min(books.length, start + 2));
       await Promise.all(batch.map((book: ShelfBook): Promise<void> => this.refreshOneShelfBook(book)));
+      completed += batch.length;
+      if (onProgress !== undefined) {
+        onProgress(completed, books.length);
+      }
     }
     try {
       const state = await new BookshelfFlowGateway(ReaderRuntimeOwner.current()).load();
@@ -4195,6 +4210,36 @@ struct Index {
       hilog.warn(DOMAIN, 'Reader', 'Bookshelf update projection failed: %{public}s',
         (error as Error).message);
     }
+  }
+
+  /**
+   * SHF-03: user-triggered foreground sweep. Deliberately ignores the
+   * background lastCheckAt throttle (the user asked for the check now) and
+   * keeps no scheduler behind it: the sweep only lives while this process
+   * runs, concurrency stays at the shared batch limit of two.
+   */
+  private startManualBookshelfUpdate(): void {
+    if (this.bookshelfUpdateRunning || this.bookshelfBackgroundRefreshRunning) {
+      return;
+    }
+    const candidates = this.shelfBooks.filter((book: ShelfBook): boolean =>
+      book.sourceId !== LOCAL_SOURCE_ID);
+    if (candidates.length === 0) {
+      hilog.info(DOMAIN, 'Reader', 'Manual bookshelf update: no network books to check');
+      return;
+    }
+    this.bookshelfUpdateRunning = true;
+    this.bookshelfUpdateDone = 0;
+    this.bookshelfUpdateTotal = candidates.length;
+    hilog.info(DOMAIN, 'Reader', 'Manual bookshelf update sweep: %{public}d books', candidates.length);
+    void this.refreshBookshelfCatalogBatch(candidates,
+      (done: number, total: number): void => {
+        this.bookshelfUpdateDone = done;
+        this.bookshelfUpdateTotal = total;
+      })
+      .finally((): void => {
+        this.bookshelfUpdateRunning = false;
+      });
   }
 
   private async refreshOneShelfBook(book: ShelfBook): Promise<void> {

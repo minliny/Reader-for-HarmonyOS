@@ -32,7 +32,9 @@ assert.match(orchestrator, /await this\.gateway\.assignGroup\(book, group\)/);
 assert.match(orchestrator, /groups: source\.data\.groups\.slice\(\)/);
 assert.doesNotMatch(gateway, /preferences|relationalStore|fileIo/);
 assert.match(page, /export struct BookshelfManagementPage/);
-assert.match(page, /Legado 对照：BookGroup \/ BookDao group \/ ReadRecord/);
+// SHF-02 made this page user-reachable from the shelf more-menu, so the
+// Legado-parity debug banner became user-facing copy describing the workflow.
+assert.match(page, /在此新建分组、为书籍设置归属；分组会出现在书架的筛选行中/);
 assert.match(shelfPage, /onManageRequested: \(\) => void/);
 assert.doesNotMatch(shelfPage,
   /this\.sectionAction\('bookshelf_settings', \(\): void => this\.onManageRequested\(\), false\)/,

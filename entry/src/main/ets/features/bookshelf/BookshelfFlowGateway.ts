@@ -52,8 +52,11 @@ export class BookshelfFlowGateway {
   }
 
   async load(): Promise<BookshelfDataState> {
+    // SHF-02: the shelf projection defaults to recent-reading order. Core
+    // already honors this pair for loadContinueReading; books never opened
+    // carry no lastReadAt and sink to the tail like Legado's default sort.
     const [shelf, continueReading] = await Promise.all([
-      this.bookshelf.loadBookshelf(),
+      this.bookshelf.loadBookshelf({ sortBy: 'lastReadAt', sortDirection: 'descending' }),
       this.bookshelf.loadContinueReading(),
     ]);
     return this.classify(shelf, continueReading);

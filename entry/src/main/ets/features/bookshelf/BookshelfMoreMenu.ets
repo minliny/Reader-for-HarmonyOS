@@ -4,7 +4,7 @@ import { registerReaderFonts } from '../common/ReaderFonts';
 const MENU_WIDTH = 176;
 const ACTION_HEIGHT = 44;
 const ACTION_GAP = 8;
-const ACTION_COUNT = 3;
+const ACTION_COUNT = 4;
 const MENU_HEIGHT = ACTION_HEIGHT * ACTION_COUNT + ACTION_GAP * (ACTION_COUNT - 1);
 const ANCHOR_GAP = 6;
 
@@ -22,6 +22,7 @@ export struct BookshelfMoreMenu {
   @Prop anchorBottom: number = 0;
   @Prop reduceMotion: boolean = false;
   onBatchManage: () => void = (): void => {};
+  onManageGroups: () => void = (): void => {};
   onLocalImport: () => void = (): void => {};
   onBookshelfSettings: () => void = (): void => {};
   onDismiss: () => void = (): void => {};
@@ -43,6 +44,7 @@ export struct BookshelfMoreMenu {
 
       Column({ space: ACTION_GAP }) {
         this.action('批量管理', (): void => this.onBatchManage());
+        this.action('分组管理', (): void => this.onManageGroups());
         this.action('本地导入', (): void => this.onLocalImport());
         this.action('书架设置', (): void => this.onBookshelfSettings());
       }

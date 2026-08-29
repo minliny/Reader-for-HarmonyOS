@@ -107,13 +107,17 @@ assert.doesNotMatch(emptyShelf,
 assert.match(moreMenu, /interaction registry `1982:313`/);
 assert.match(moreMenu, /`2236:545`, `2236:551`, `2236:553`/);
 assert.match(moreMenu, /const MENU_WIDTH = 176/);
-assert.equal((moreMenu.match(/this\.action\('/g) ?? []).length, 3,
-  'only the three visible actions belong in the menu');
+// SHF-02 supersedes the three-action frame: the approved extension adds the
+// group-management row so the shelf filter chips have a reachable source of
+// groups (the previously dead onManageRequested intent is now wired).
+assert.equal((moreMenu.match(/this\.action\('/g) ?? []).length, 4,
+  'the three Figma actions plus the SHF-02 group management row belong in the menu');
 assert.match(moreMenu, /this\.action\('批量管理'/);
+assert.match(moreMenu, /this\.action\('分组管理'/);
 assert.match(moreMenu, /this\.action\('本地导入'/);
 assert.match(moreMenu, /this\.action\('书架设置'/);
 assert.doesNotMatch(moreMenu, /this\.action\('关闭更多'/,
-  'close-more is an outside-dismiss semantic, never a fourth row');
+  'close-more is an outside-dismiss semantic, never a menu row');
 assert.match(moreMenu,
   /motionAnimateParam\('dropdown\.menu\.expand'\)[\s\S]*motionAnimateParam\('dropdown\.menu\.collapse'/,
   'the menu must use the interaction-registry motion pair');

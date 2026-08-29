@@ -5,6 +5,8 @@ const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.ur
 const index = read('entry/src/main/ets/pages/Index.ets');
 const search = read('entry/src/main/ets/features/search/SearchPage.ets');
 const shelf = read('entry/src/main/ets/features/bookshelf/BookshelfPage.ets');
+const shelfFlow = read('entry/src/main/ets/features/bookshelf/BookshelfFlowGateway.ts');
+const shelfMoreMenu = read('entry/src/main/ets/features/bookshelf/BookshelfMoreMenu.ets');
 const remote = read('entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
 const sourceSwitchGateway = read('entry/src/main/ets/features/source/SourceSwitchGateway.ts');
 const sourceSwitchWindow = read('entry/src/main/ets/features/source/SourceSwitchWindow.ets');
@@ -72,6 +74,32 @@ assert.match(search, /onStop/,
   'ACQ-02: the search page must expose a stop intent for the live sweep');
 assert.match(index, /stopSearch\(\)/,
   'ACQ-02: Index must wire the stop intent into the orchestrator');
+// SHF-02/03: the main shelf projects recent-reading order, group filtering,
+// and a foreground shelf-wide update queue; the previously dead filter control
+// now owns the tools row, so the deferral is superseded by wired intent.
+assert.match(shelfFlow, /sortBy: 'lastReadAt', sortDirection: 'descending'/,
+  'SHF-02: the shelf load must default to recent-reading order');
+assert.match(shelf, /filterRowVisible = !this\.filterRowVisible/,
+  'SHF-02: the filter control must toggle the shelf tools row');
+assert.match(shelf, /ForEach\(this\.visibleBooks\(\)/,
+  'SHF-02: the shelf must project through the group filter');
+assert.match(shelf, /groupNames\(\)/,
+  'SHF-02: group chips must derive from the books Core reports');
+assert.match(shelf, /检查更新/,
+  'SHF-03: the tools row must present a manual shelf-wide update entry');
+assert.match(shelf, /onCheckUpdatesRequested/,
+  'SHF-03: the update chip must emit an intent, not run the sweep itself');
+assert.match(index, /private startManualBookshelfUpdate\(\)/,
+  'SHF-03: Index must own the foreground update queue');
+assert.match(index, /onProgress\(completed, books\.length\)/,
+  'SHF-03: the sweep must report chunk progress for the page');
+assert.match(index, /bookshelfBackgroundRefreshRunning \|\| this\.bookshelfUpdateRunning/,
+  'SHF-03: manual and background sweeps must stay mutually exclusive');
+assert.match(shelf, /onManageGroups/,
+  'SHF-02: the shelf more-menu must reach group management');
+assert.match(shelfMoreMenu, /分组管理/,
+  'SHF-02: the more-menu must present the group management entry');
+
 assert.match(shelf, /Text\(`更新 \$\{book\.unreadCount\} 章`\)/);
 assert.match(shelf, /Text\(this\.gridProgressLabel\(book\)\)/,
   'grid progress renders through the basis-point formatter');

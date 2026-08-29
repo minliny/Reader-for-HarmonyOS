@@ -63,7 +63,7 @@ export struct BookshelfManagementPage {
           this.groupsCard();
           this.assignmentCard();
           this.recordsCard();
-          Text('Legado 对照：BookGroup / BookDao group / ReadRecord。分组、成员和记录均直接读取或写入 Rust Core；当前页只计算展示合计。')
+          Text('在此新建分组、为书籍设置归属；分组会出现在书架的筛选行中。数据直接存取 Core 书架。')
             .width('100%')
             .fontFamily('ReaderNotoSansSC')
             .fontSize(10)

@@ -11,6 +11,7 @@ import {
   TOK_ON_PRIMARY,
   TOK_PRIMARY_DARK,
   TOK_PRIMARY_GRADIENT_START,
+  TOK_PRIMARY_SOFT,
   TOK_SCREEN_INSET,
   TOK_SPACE_CARD_PADDING,
   TOK_SPACE_CONTROL_INLINE,
@@ -81,9 +82,17 @@ export struct BookshelfPage {
   onBookMultiSelectRequested: (book: ShelfBook) => void = (_book: ShelfBook): void => {};
   onBookInfoRequested: (book: ShelfBook) => void = (_book: ShelfBook): void => {};
   onBookRemoveRequested: (book: ShelfBook) => void = (_book: ShelfBook): void => {};
+  // SHF-03: the host runs the foreground update queue; the page only emits
+  // the intent and mirrors the sweep progress the host pushes back down.
+  onCheckUpdatesRequested: () => void = (): void => {};
+  @Prop updateRunning: boolean = false;
+  @Prop updateProgressDone: number = 0;
+  @Prop updateProgressTotal: number = 0;
   @State private viewportWidth: number = 0;
   @State private viewportHeight: number = 0;
   @State private viewMode: BookshelfViewMode = 'cover';
+  @State private filterRowVisible: boolean = false;
+  @State private selectedGroup: string = '';
   @State private actionBook: ShelfBook | undefined = undefined;
   @State private moreMenuVisible: boolean = false;
   @State private moreAnchorRight: number = 0;
@@ -142,6 +151,10 @@ export struct BookshelfPage {
           onBatchManage: (): void => {
             this.moreMenuVisible = false;
             this.onBatchManageRequested();
+          },
+          onManageGroups: (): void => {
+            this.moreMenuVisible = false;
+            this.onManageRequested();
           },
           onLocalImport: (): void => {
             this.moreMenuVisible = false;
@@ -356,7 +369,9 @@ export struct BookshelfPage {
           this.sectionAction('bookshelf_list', (): void => {
             this.viewMode = 'list';
           }, this.viewMode === 'list');
-          this.sectionAction('bookshelf_filter', (): void => {}, false);
+          this.sectionAction('bookshelf_filter', (): void => {
+            this.filterRowVisible = !this.filterRowVisible;
+          }, this.filterRowVisible);
           this.sectionAction('bookshelf_settings', (): void => this.onBookshelfSettingsRequested(), false);
         }
         .height(34);
@@ -365,16 +380,20 @@ export struct BookshelfPage {
       .height(38)
       .alignItems(VerticalAlign.Center);
 
+      if (this.filterRowVisible) {
+        this.filterRow();
+      }
+
       if (this.viewMode === 'list') {
         Column({ space: TOK_SPACE_CONTROL_INLINE }) {
-          ForEach(this.books, (book: ShelfBook, index: number) => {
+          ForEach(this.visibleBooks(), (book: ShelfBook, index: number) => {
             this.listBookCard(book, isTablet);
           }, (book: ShelfBook, index: number): string => this.bookListRenderKey(book, index));
         }
         .width(this.shelfContentWidth(isTablet));
       } else {
         Column({ space: TOK_SPACE_MD }) {
-          ForEach(this.bookRows(3), (row: ShelfBook[], rowIndex: number) => {
+          ForEach(this.bookRows(this.visibleBooks(), 3), (row: ShelfBook[], rowIndex: number) => {
             Row({ space: this.bookRowSpace(this.shelfContentWidth(isTablet), isTablet) }) {
               ForEach(row, (book: ShelfBook) => {
                 this.bookCard(book, isTablet);
@@ -390,6 +409,70 @@ export struct BookshelfPage {
     .width(this.shelfContentWidth(isTablet));
   }
 
+  /**
+   * SHF-02/03 shelf tools row, raised by the previously dead filter action:
+   * group filter chips plus the shelf-wide manual update entry. The row is an
+   * approved product extension (no Figma frame) so the resting surface keeps
+   * the canonical four-action toolbar.
+   */
+  @Builder
+  private filterRow() {
+    Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
+      this.filterChip('全部', this.selectedGroup === '', (): void => {
+        this.selectedGroup = '';
+      });
+      ForEach(this.groupNames(), (group: string) => {
+        this.filterChip(group, this.selectedGroup === group, (): void => {
+          this.selectedGroup = this.selectedGroup === group ? '' : group;
+        });
+      }, (group: string): string => `shelf-group-${group}`);
+      this.checkUpdatesChip();
+    }
+    .width('100%');
+  }
+
+  @Builder
+  private filterChip(label: string, selected: boolean, onToggle: () => void) {
+    Text(label)
+      .fontFamily('ReaderInter')
+      .fontWeight(FontWeight.Medium)
+      .fontSize(12)
+      .lineHeight(18)
+      .fontColor(selected ? TOK_GREEN : TOK_INK)
+      .padding({ left: 12, right: 12, top: 5, bottom: 5 })
+      .backgroundColor(selected ? TOK_PRIMARY_SOFT : TOK_CARD_BG)
+      .border({ width: TOK_BORDER_W, color: selected ? TOK_GREEN : TOK_BORDER })
+      .borderRadius(999)
+      .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
+      .maxLines(1)
+      .textOverflow({ overflow: TextOverflow.Ellipsis })
+      .constraintSize({ maxWidth: 160 })
+      .onClick((): void => onToggle())
+      .accessibilityText(selected ? `当前筛选:${label}` : `筛选:${label}`);
+  }
+
+  @Builder
+  private checkUpdatesChip() {
+    Text(this.updateActionLabel())
+      .fontFamily('ReaderInter')
+      .fontWeight(FontWeight.Bold)
+      .fontSize(12)
+      .lineHeight(18)
+      .fontColor(this.updateRunning ? TOK_MUTED : TOK_GREEN)
+      .padding({ left: 12, right: 12, top: 5, bottom: 5 })
+      .backgroundColor(TOK_CARD_BG)
+      .border({ width: TOK_BORDER_W, color: this.updateRunning ? TOK_BORDER : TOK_GREEN })
+      .borderRadius(999)
+      .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
+      .maxLines(1)
+      .onClick((): void => {
+        if (!this.updateRunning) {
+          this.onCheckUpdatesRequested();
+        }
+      })
+      .accessibilityText(this.updateRunning ? '正在检查更新' : '检查书架更新');
+  }
+
   @Builder
   private sectionAction(assetName: string, action: () => void, active: boolean) {
     Stack({ alignContent: Alignment.Center }) {
@@ -400,7 +483,8 @@ export struct BookshelfPage {
         Image($r('app.media.bookshelf_list')).width(20).height(20)
           .fillColor(active ? TOK_GREEN : TOK_MUTED);
       } else if (assetName === 'bookshelf_filter') {
-        Image($r('app.media.bookshelf_filter')).width(20).height(20).fillColor(TOK_MUTED);
+        Image($r('app.media.bookshelf_filter')).width(20).height(20)
+          .fillColor(active ? TOK_GREEN : TOK_MUTED);
       } else {
         Image($r('app.media.bookshelf_settings')).width(20).height(20).fillColor(TOK_MUTED);
       }
@@ -692,7 +776,7 @@ export struct BookshelfPage {
       return active ? '列表模式，当前已选' : '切换到列表模式';
     }
     if (assetName === 'bookshelf_filter') {
-      return '筛选书架';
+      return active ? '筛选书架，当前已选' : '筛选书架';
     }
     return '书架设置';
   }
@@ -858,10 +942,42 @@ export struct BookshelfPage {
     });
   }
 
-  private bookRows(columns: number): ShelfBook[][] {
+  /** '' selects the whole shelf; otherwise books of that group name. */
+  private visibleBooks(): ShelfBook[] {
+    if (this.selectedGroup === '') {
+      return this.books;
+    }
+    const filtered: ShelfBook[] = [];
+    for (const book of this.books) {
+      if (book.group === this.selectedGroup) {
+        filtered.push(book);
+      }
+    }
+    return filtered;
+  }
+
+  private groupNames(): string[] {
+    const names: string[] = [];
+    for (const book of this.books) {
+      const group = book.group?.trim() ?? '';
+      if (group.length > 0 && names.indexOf(group) < 0) {
+        names.push(group);
+      }
+    }
+    return names;
+  }
+
+  private updateActionLabel(): string {
+    if (this.updateRunning) {
+      return `检查中 ${this.updateProgressDone}/${this.updateProgressTotal}`;
+    }
+    return '检查更新';
+  }
+
+  private bookRows(books: ShelfBook[], columns: number): ShelfBook[][] {
     const rows: ShelfBook[][] = [];
-    for (let index = 0; index < this.books.length; index += columns) {
-      rows.push(this.books.slice(index, index + columns));
+    for (let index = 0; index < books.length; index += columns) {
+      rows.push(books.slice(index, index + columns));
     }
     return rows;
   }
