@@ -108,7 +108,8 @@ export struct SearchPage {
   onBack: () => void = (): void => {};
   onSearch: (keyword: string) => void = (_keyword: string): void => {};
   onClearHistory: () => void = (): void => {};
-  onSelectResult: (book: SearchBook) => void = (_book: SearchBook): void => {};
+  onSelectResult: (book: SearchBook, variants: SearchBook[]) => void =
+    (_book: SearchBook, _variants: SearchBook[]): void => {};
   onRetry: () => void = (): void => {};
   @State keyword: string = '';
 
@@ -539,7 +540,7 @@ export struct SearchPage {
     .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: TOK_SPACE_CARD_PADDING, bottom: 14.5 })
     .alignItems(VerticalAlign.Top)
     .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: TOK_BORDER } })
-    .onClick((): void => this.onSelectResult(book));
+    .onClick((): void => this.onSelectResult(book, this.collectBookVariants(book)));
   }
 
   private groupResults(results: SearchBook[]): SearchBookGroup[] {
@@ -565,6 +566,15 @@ export struct SearchPage {
 
   private normalizedBookKey(title: string, author: string): string {
     return `${title.trim().toLocaleLowerCase()}\u0000${author.trim().toLocaleLowerCase()}`;
+  }
+
+  private collectBookVariants(book: SearchBook): SearchBook[] {
+    if (this.presentation.kind !== 'results') {
+      return [book];
+    }
+    const key = this.normalizedBookKey(book.title, book.author);
+    return this.presentation.results.filter((candidate: SearchBook): boolean =>
+      this.normalizedBookKey(candidate.title, candidate.author) === key);
   }
 
   private isBookOnShelf(book: SearchBook): boolean {

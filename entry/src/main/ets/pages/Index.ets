@@ -57,6 +57,7 @@ import {
 } from '../features/reading/RemoteReadingContract';
 import type {
   ReaderDirectoryChapterStartBookmarkRequest,
+  ReaderPageBookmarkToggleRequest,
 } from '../features/reading/ReaderDirectoryMarkerState';
 import type {
   SearchBook,
@@ -175,6 +176,7 @@ type RssDetailReturnTarget = 'rss' | 'rssSourceFeed';
 type RssSourceFeedReturnTarget = 'rss' | 'rssSubscriptionManagement';
 type JsonImportContext = 'bookSource' | 'ruleBundle' | 'rssMerge' | 'rssReplace';
 type RulesManagementReturnTarget = 'settings' | 'reader';
+type DetailReturnRoute = 'bookshelf' | 'search';
 
 class SourceSwitchAnchor {
   chapterIndex: number;
@@ -329,9 +331,11 @@ struct Index {
    */
   private readingExitRequest: (() => void) | undefined = undefined;
   /** A Back press during hidden first-page preparation still exits serially. */
-  private exitToBookshelfAfterReader: boolean = false;
+  private exitToDetailOriginAfterReader: boolean = false;
   private openRulesManagementAfterReaderExit: boolean = false;
   private rulesManagementReturnTarget: RulesManagementReturnTarget = 'settings';
+  /** Detail is reachable from both the shelf and search results; Back follows the entry origin. */
+  private detailReturnRoute: DetailReturnRoute = 'bookshelf';
   // DocumentViewPicker can rebuild this page while the actual Core import is
   // still in flight. One atomic value lives only in AppStorage: it survives
   // page reconstruction in this process but never enters Core or persistent
@@ -390,7 +394,8 @@ struct Index {
       }
       return true;
     }
-    if (this.route === 'search' || this.route === 'rss' || this.route === 'settings') {
+    if (this.route === 'search' || this.route === 'rss' || this.route === 'settings' ||
+      this.route === 'discover') {
       this.returnToBookshelf();
       return true;
     }
@@ -420,14 +425,14 @@ struct Index {
         // before changing a second route under it.
         const requestExit = this.readingExitRequest;
         if (requestExit !== undefined) {
-          this.exitToBookshelfAfterReader = true;
+          this.exitToDetailOriginAfterReader = true;
           requestExit();
         } else {
-          this.returnToBookshelf();
+          this.returnFromDetail();
         }
         return true;
       }
-      this.returnToBookshelf();
+      this.returnFromDetail();
       return true;
     }
     if (this.hasVisibleImportDialog()) {
@@ -512,7 +517,8 @@ struct Index {
           onBack: (): void => this.returnToBookshelf(),
           onSearch: (keyword: string): void => this.performSearch(keyword),
           onClearHistory: (): void => this.clearSearchHistory(),
-          onSelectResult: (book: SearchBook): void => this.onSearchResultSelected(book),
+          onSelectResult: (book: SearchBook, variants: SearchBook[]): void =>
+            this.onSearchResultSelected(book, variants),
           onRetry: (): void => this.retrySearch(),
         });
       } else if (this.route === 'rss') {
@@ -711,7 +717,7 @@ struct Index {
           onOpenDirectory: (): void => this.openFullDirectory(),
           onSwitchSource: (): void => this.openDetailSourceSwitch(),
           onRemove: (): void => this.requestDetailShelfMutation(),
-          onBack: (): void => this.returnToBookshelf(),
+          onBack: (): void => this.returnFromDetail(),
         });
       }
       // Batch 2: the reading session UI (ReadingSurface + control layer +
@@ -750,9 +756,9 @@ struct Index {
               this.presentRulesManagementFromReader();
               return;
             }
-            if (this.exitToBookshelfAfterReader) {
-              this.exitToBookshelfAfterReader = false;
-              this.returnToBookshelf();
+            if (this.exitToDetailOriginAfterReader) {
+              this.exitToDetailOriginAfterReader = false;
+              this.returnFromDetail();
               return;
             }
             this.returnToDetail();
@@ -773,6 +779,8 @@ struct Index {
             this.applyReaderDirectoryProjection(entries),
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
             this.createDirectoryChapterStartBookmark(request),
+          onTogglePageBookmark: (request: ReaderPageBookmarkToggleRequest): void =>
+            this.toggleReaderPageBookmark(request),
           onCloseDirectory: (): void => this.closeDirectory(),
           onOpenDirectory: (): void => this.openReaderControlDirectory(),
           onSwitchSource: (): void => this.openSourceSwitch(),
@@ -858,7 +866,7 @@ struct Index {
     const generation = this.nextNavigationGeneration();
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
-    this.exitToBookshelfAfterReader = false;
+    this.exitToDetailOriginAfterReader = false;
     this.selectedRssSubscription = undefined;
     this.selectedRssItems = [];
     this.selectedRssItem = undefined;
@@ -903,7 +911,7 @@ struct Index {
     this.nextNavigationGeneration();
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
-    this.exitToBookshelfAfterReader = false;
+    this.exitToDetailOriginAfterReader = false;
     this.route = 'discover';
     this.getDiscoverOrchestrator().open();
   }
@@ -924,7 +932,7 @@ struct Index {
     this.nextNavigationGeneration();
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
-    this.exitToBookshelfAfterReader = false;
+    this.exitToDetailOriginAfterReader = false;
     this.route = 'settings';
     this.getSettingsOrchestrator().open();
   }
@@ -933,7 +941,7 @@ struct Index {
     this.nextNavigationGeneration();
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
-    this.exitToBookshelfAfterReader = false;
+    this.exitToDetailOriginAfterReader = false;
     this.route = 'bookshelfManagement';
     this.getBookshelfManagementOrchestrator().open();
   }
@@ -942,7 +950,7 @@ struct Index {
     this.nextNavigationGeneration();
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
-    this.exitToBookshelfAfterReader = false;
+    this.exitToDetailOriginAfterReader = false;
     this.bookshelfBatchRemovalBusy = false;
     this.bookshelfMultiSelectInitialKey = initialBook === undefined ? '' : this.shelfBookKey(initialBook);
     this.route = 'bookshelfMultiSelect';
@@ -953,7 +961,7 @@ struct Index {
     this.rulesManagementReturnTarget = 'settings';
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
-    this.exitToBookshelfAfterReader = false;
+    this.exitToDetailOriginAfterReader = false;
     this.route = 'rulesManagement';
     this.getRulesManagementOrchestrator().open();
   }
@@ -976,7 +984,7 @@ struct Index {
     this.rulesManagementReturnTarget = 'reader';
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
-    this.exitToBookshelfAfterReader = false;
+    this.exitToDetailOriginAfterReader = false;
     this.route = 'rulesManagement';
     this.getRulesManagementOrchestrator().open();
   }
@@ -1082,7 +1090,7 @@ struct Index {
     this.nextNavigationGeneration();
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
-    this.exitToBookshelfAfterReader = false;
+    this.exitToDetailOriginAfterReader = false;
     this.route = 'source';
     this.getSourceOrchestrator().open();
   }
@@ -1119,7 +1127,7 @@ struct Index {
     this.nextNavigationGeneration();
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
-    this.exitToBookshelfAfterReader = false;
+    this.exitToDetailOriginAfterReader = false;
     this.updateSourceToolsSelection([]);
     this.route = 'sourceTools';
     this.getSourceToolsOrchestrator().open(this.sourceSources);
@@ -1177,7 +1185,7 @@ struct Index {
     this.nextNavigationGeneration();
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
-    this.exitToBookshelfAfterReader = false;
+    this.exitToDetailOriginAfterReader = false;
     this.route = 'settings';
   }
 
@@ -1318,7 +1326,7 @@ struct Index {
     this.nextNavigationGeneration();
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
-    this.exitToBookshelfAfterReader = false;
+    this.exitToDetailOriginAfterReader = false;
     this.syncSnapshotReady = false;
     this.route = 'sync';
     this.getSyncOrchestrator().open();
@@ -1829,7 +1837,7 @@ struct Index {
     this.nextNavigationGeneration();
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
-    this.exitToBookshelfAfterReader = false;
+    this.exitToDetailOriginAfterReader = false;
     this.route = 'search';
     this.getSearchOrchestrator().open();
   }
@@ -1864,22 +1872,47 @@ struct Index {
   }
 
 
-  private onSearchResultSelected(book: SearchBook): void {
-    this.openRemoteBookDetail({
-      sourceId: book.sourceId,
-      bookId: book.bookId,
-      detailUrl: book.detailUrl,
-      title: book.title,
-      author: book.author,
-      coverUrl: book.coverUrl,
-      intro: book.intro,
-      kind: book.kind,
-      lastChapter: book.latestChapterTitle,
-      searchVariables: book.variables.map((variable): RemoteReadingVariable => ({
-        name: variable.name,
-        value: variable.value,
-      })),
-    }, book.sourceName);
+  private onSearchResultSelected(book: SearchBook, variants: SearchBook[] = []): void {
+    // The clicked source leads; same-book variants follow so one dead source
+    // (expired token, dead host) no longer dead-ends the detail journey. The
+    // cap bounds the worst case where every candidate source hangs on timeout.
+    const ordered: SearchBook[] = [book];
+    for (const candidate of variants) {
+      if (ordered.length >= 8) {
+        break;
+      }
+      if (candidate.sourceId === book.sourceId && candidate.bookId === book.bookId) {
+        continue;
+      }
+      ordered.push(candidate);
+    }
+    const seeds: RemoteReadingBookSeed[] = [];
+    const sourceNames: string[] = [];
+    for (const candidate of ordered) {
+      const duplicate = seeds.some((admitted: RemoteReadingBookSeed): boolean =>
+        admitted.sourceId === candidate.sourceId && admitted.bookId === candidate.bookId);
+      if (duplicate) {
+        continue;
+      }
+      const seed: RemoteReadingBookSeed = {
+        sourceId: candidate.sourceId,
+        bookId: candidate.bookId,
+        detailUrl: candidate.detailUrl,
+        title: candidate.title,
+        author: candidate.author,
+        coverUrl: candidate.coverUrl,
+        intro: candidate.intro,
+        kind: candidate.kind,
+        lastChapter: candidate.latestChapterTitle,
+        searchVariables: candidate.variables.map((variable): RemoteReadingVariable => ({
+          name: variable.name,
+          value: variable.value,
+        })),
+      };
+      seeds.push(seed);
+      sourceNames.push(candidate.sourceName);
+    }
+    this.openRemoteBookDetail(seeds[0], sourceNames[0], undefined, false, seeds.slice(1), sourceNames.slice(1));
   }
 
   private openShelfBook(selection: ShelfBook): void {
@@ -1924,10 +1957,11 @@ struct Index {
     }
     const originRoute = this.route;
     const generation = this.nextNavigationGeneration();
+    this.detailReturnRoute = originRoute === 'search' ? 'search' : 'bookshelf';
     this.readingSessionActive = false;
     this.remoteReadingSession = undefined;
     this.readingExitRequest = undefined;
-    this.exitToBookshelfAfterReader = false;
+    this.exitToDetailOriginAfterReader = false;
     // The card is already the current Core-derived shelf projection. Mount the
     // detail shell in this frame and load only the TOC; re-reading the same
     // shelf row before changing route was a redundant serialized Core call.
@@ -2000,15 +2034,18 @@ struct Index {
     sourceName: string,
     shelfSnapshot: ShelfBook | undefined = undefined,
     resumeImmediately: boolean = false,
+    fallbackSeeds: RemoteReadingBookSeed[] = [],
+    fallbackSourceNames: string[] = [],
   ): void {
     const reusableRemoteSession = shelfSnapshot !== undefined &&
       this.remoteReadingSession?.identity.sourceId === seed.sourceId &&
       this.remoteReadingSession?.identity.bookId === seed.bookId ? this.remoteReadingSession : undefined;
     const originRoute = this.route;
     const generation = this.nextNavigationGeneration();
+    this.detailReturnRoute = originRoute === 'search' ? 'search' : 'bookshelf';
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
-    this.exitToBookshelfAfterReader = false;
+    this.exitToDetailOriginAfterReader = false;
     this.remoteReadingSession = reusableRemoteSession;
     // The selected search/shelf item is already a validated Core projection.
     // Show its detail shell immediately; an empty TOC keeps reading actions
@@ -2040,19 +2077,13 @@ struct Index {
     // variables. Reusing it avoids throwing that proven work away on an
     // immediate shelf round-trip. Search results and different shelf books
     // stay online-first; no second cache or persisted session is introduced.
+    const candidateSeeds: RemoteReadingBookSeed[] = [seed, ...fallbackSeeds];
+    const candidateNames: string[] = [sourceName, ...fallbackSourceNames];
     const sessionAdmission: Promise<RemoteReadingSession> = reusableRemoteSession !== undefined ?
       Promise.resolve(reusableRemoteSession) : shelfSnapshot !== undefined ?
         gateway.openCachedCatalogSession(seed, isCurrent)
           .catch((): Promise<RemoteReadingSession> => gateway.openSession(seed, { isCurrent })) :
-        gateway.openSession(seed, { isCurrent })
-          .catch(async (onlineError: Error): Promise<RemoteReadingSession> => {
-            if (!isCurrent() || !isRemoteReadingCacheFallbackEligible(onlineError)) {
-              throw onlineError;
-            }
-            hilog.warn(DOMAIN, 'Reader',
-              'Online detail unavailable; attempting exact cached session: %{public}s', onlineError.message);
-            return gateway.openCachedSession(seed, isCurrent);
-          });
+        this.openSearchSessionWithFallback(gateway, candidateSeeds, candidateNames, isCurrent);
     void sessionAdmission
       .then(async (session: RemoteReadingSession): Promise<void> => {
         if (!isCurrent()) {
@@ -2068,7 +2099,12 @@ struct Index {
           return;
         }
         this.detailInBookshelf = storedBook !== undefined;
-        const admittedSourceName = sourceName.trim().length > 0 ? sourceName.trim() : session.identity.sourceId;
+        const admittedIndex = Math.max(0, candidateSeeds.findIndex((candidate: RemoteReadingBookSeed): boolean =>
+          candidate.sourceId === session.identity.sourceId &&
+          candidate.bookId === session.identity.bookId));
+        const admittedSeedName = candidateNames.length > admittedIndex ? candidateNames[admittedIndex] : '';
+        const admittedSourceName = admittedSeedName.trim().length > 0 ?
+          admittedSeedName.trim() : session.identity.sourceId;
         this.remoteReadingSession = session;
         this.detailBook = {
           sourceId: session.identity.sourceId,
@@ -2142,6 +2178,46 @@ struct Index {
           this.showReadingFailure('详情加载失败', error.message);
         }
       });
+  }
+
+  private openSearchSessionWithFallback(
+    gateway: RemoteReadingFlowGateway,
+    seeds: RemoteReadingBookSeed[],
+    sourceNames: string[],
+    isCurrent: () => boolean,
+  ): Promise<RemoteReadingSession> {
+    return (async (): Promise<RemoteReadingSession> => {
+      // Try the clicked source first, then same-book alternates, so a single
+      // dead source (expired token, dead host) cannot dead-end the journey.
+      let lastError: Error = new Error('no candidate source available');
+      for (let index = 0; index < seeds.length; index += 1) {
+        const seed = seeds[index];
+        const sourceName = sourceNames.length > index ? sourceNames[index] : '';
+        try {
+          if (index > 0) {
+            // Keep the mounted detail shell; repoint it at the next candidate.
+            this.remoteReadingSession = undefined;
+            this.detailBook = this.readingDetailForRemoteSeed(seed, sourceName);
+          }
+          return await gateway.openSession(seed, { isCurrent });
+        } catch (error) {
+          lastError = error instanceof Error ? error : new Error(`${error}`);
+          if (!isCurrent()) {
+            break;
+          }
+          hilog.warn(DOMAIN, 'Reader',
+            'Remote detail failed on %{public}s/%{public}s: %{public}s; trying alternate sources',
+            seed.sourceId, seed.bookId, lastError.message);
+        }
+      }
+      if (!isCurrent() || !isRemoteReadingCacheFallbackEligible(lastError)) {
+        throw lastError;
+      }
+      hilog.warn(DOMAIN, 'Reader',
+        'Online detail unavailable on every candidate source; attempting exact cached session: %{public}s',
+        lastError.message);
+      return gateway.openCachedSession(seeds[0], isCurrent);
+    })();
   }
 
   private resolveRemoteDetailSourceName(
@@ -2732,7 +2808,7 @@ struct Index {
         // The exact key already proved the destructive Core commit. Never
         // leave a deleted book open or relabel that committed fact as failure.
         if (this.route === 'detail' && this.isSameDetailBook(book)) {
-          this.returnToBookshelf();
+          this.returnFromDetail();
         } else if (this.route === 'bookshelf') {
           this.refreshBookshelf();
         }
@@ -2767,7 +2843,7 @@ struct Index {
     // The mutation result is newer than every shelf read already in flight.
     this.bookshelfLoadGeneration += 1;
     if (this.route === 'detail' && this.isSameDetailBook(book)) {
-      this.returnToBookshelf();
+      this.returnFromDetail();
       // `returnToBookshelf` starts its own read; prefer the exact state already
       // returned by the completed mutation and invalidate that redundant read.
       this.bookshelfLoadGeneration += 1;
@@ -2788,7 +2864,7 @@ struct Index {
     }
     this.nextNavigationGeneration();
     this.readingExitRequest = undefined;
-    this.exitToBookshelfAfterReader = false;
+    this.exitToDetailOriginAfterReader = false;
     this.requestedChapterIndex = chapterIndex;
     this.preparedReaderRoute = 'reading';
     this.directoryCurrentChapterIndex = -1;
@@ -2834,7 +2910,7 @@ struct Index {
     }
     this.nextNavigationGeneration();
     this.readingExitRequest = undefined;
-    this.exitToBookshelfAfterReader = false;
+    this.exitToDetailOriginAfterReader = false;
     // ReadingExperience resolves the real persisted chapter itself. The
     // overlay gets that exact identity through onChapterMaterialized rather
     // than choosing a Figma sample chapter or copying Core text into Index.
@@ -2876,7 +2952,7 @@ struct Index {
     }
     this.nextNavigationGeneration();
     this.readingExitRequest = undefined;
-    this.exitToBookshelfAfterReader = false;
+    this.exitToDetailOriginAfterReader = false;
     this.readingSessionActive = false;
     this.requestedChapterIndex = undefined;
     this.preparedReaderRoute = 'reading';
@@ -2971,6 +3047,48 @@ struct Index {
     );
   }
 
+  private toggleReaderPageBookmark(request: ReaderPageBookmarkToggleRequest): void {
+    const book = this.detailBook;
+    if (book === undefined || !Number.isSafeInteger(request.chapterIndex) || request.chapterIndex < 0 ||
+      !Number.isSafeInteger(request.chapterOffset) || request.chapterOffset < 0 ||
+      request.chapterTitle.trim().length === 0) return;
+    let entry: LocalReadingTocEntry | undefined = undefined;
+    for (const candidate of this.detailToc) {
+      if (candidate.index === request.chapterIndex && candidate.title === request.chapterTitle) {
+        entry = candidate;
+        break;
+      }
+    }
+    if (entry === undefined || entry.bookmarks === undefined) return;
+    const admittedTimes: number[] = [];
+    for (const time of request.bookmarkTimes) {
+      if (!Number.isSafeInteger(time) || admittedTimes.indexOf(time) >= 0) continue;
+      for (const bookmark of entry.bookmarks) {
+        if (bookmark.time === time) {
+          admittedTimes.push(time);
+          break;
+        }
+      }
+    }
+    if (admittedTimes.length !== request.bookmarkTimes.length) return;
+    const mutationGeneration = this.beginDirectoryBookmarkMutation(book);
+    if (mutationGeneration < 0) return;
+    const mutationKey = this.directoryBookmarkMutationKey(book);
+    const gateway = new LocalReadingFlowGateway(ReaderRuntimeOwner.current());
+    const isCurrent = (): boolean => this.detailBook?.sourceId === book.sourceId &&
+      this.detailBook?.bookId === book.bookId &&
+      this.isDirectoryBookmarkMutationCurrent(mutationGeneration, mutationKey);
+    if (admittedTimes.length > 0) {
+      void this.performDirectoryBookmarkDeletion(
+        gateway, book, admittedTimes, isCurrent, mutationGeneration, mutationKey,
+      );
+      return;
+    }
+    void this.performReaderPageBookmarkCreation(
+      gateway, book, request, isCurrent, mutationGeneration, mutationKey,
+    );
+  }
+
   private directoryBookmarkMutationKey(book: ReadingBookDetail): string {
     return `${book.sourceId.length}:${book.sourceId}:${book.bookId}`;
   }
@@ -3023,6 +3141,35 @@ struct Index {
     } catch (error) {
       if (isCurrent()) {
         hilog.error(DOMAIN, 'Reader', 'Directory bookmark create failed: %{public}s',
+          (error as Error).message);
+      }
+    } finally {
+      this.finishDirectoryBookmarkMutation(mutationGeneration, mutationKey);
+    }
+  }
+
+  private async performReaderPageBookmarkCreation(
+    gateway: LocalReadingFlowGateway,
+    book: ReadingBookDetail,
+    request: ReaderPageBookmarkToggleRequest,
+    isCurrent: () => boolean,
+    mutationGeneration: number,
+    mutationKey: string,
+  ): Promise<void> {
+    try {
+      await gateway.createPositionBookmark({
+        bookName: book.title,
+        bookAuthor: book.author,
+        chapterIndex: request.chapterIndex,
+        chapterOffset: request.chapterOffset,
+        chapterTitle: request.chapterTitle,
+      }, isCurrent);
+      if (!isCurrent()) return;
+      const entries = await this.reloadDirectoryBookmarkProjection(gateway, book, isCurrent);
+      if (isCurrent()) this.detailToc = entries;
+    } catch (error) {
+      if (isCurrent()) {
+        hilog.error(DOMAIN, 'Reader', 'Reader page bookmark create failed: %{public}s',
           (error as Error).message);
       }
     } finally {
@@ -3145,7 +3292,7 @@ struct Index {
       return;
     }
     const generation = this.nextNavigationGeneration();
-    this.exitToBookshelfAfterReader = false;
+    this.exitToDetailOriginAfterReader = false;
     // SS-SOURCE-SWITCH-01: the window floats over the reading surface (Figma
     // 3572:41345), so close the directory and let the surface be the backdrop.
     this.preparedReaderRoute = 'reading';
@@ -3162,7 +3309,7 @@ struct Index {
       return;
     }
     const generation = this.nextNavigationGeneration();
-    this.exitToBookshelfAfterReader = false;
+    this.exitToDetailOriginAfterReader = false;
     this.sourceSwitchVisible = true;
     this.sourceSwitchState = { kind: 'discovering' };
     this.startSourceDiscovery(generation);
@@ -3580,6 +3727,38 @@ struct Index {
     this.openShelfBook(book);
   }
 
+  private returnFromDetail(): void {
+    if (this.detailReturnRoute === 'search') {
+      this.returnToSearch();
+      return;
+    }
+    this.returnToBookshelf();
+  }
+
+  private returnToSearch(): void {
+    const retainedRemoteSession = this.detailBook !== undefined &&
+      this.detailBook.sourceId !== LOCAL_SOURCE_ID &&
+      this.remoteReadingSession?.identity.sourceId === this.detailBook.sourceId &&
+      this.remoteReadingSession?.identity.bookId === this.detailBook.bookId ? this.remoteReadingSession : undefined;
+    this.nextNavigationGeneration();
+    this.readingExitRequest = undefined;
+    this.exitToDetailOriginAfterReader = false;
+    this.readingSessionActive = false;
+    this.requestedChapterIndex = undefined;
+    this.preparedReaderRoute = 'reading';
+    this.directoryCurrentChapterIndex = -1;
+    this.directoryChapterTitle = '';
+    this.detailToc = [];
+    this.detailBook = undefined;
+    this.remoteReadingSession = retainedRemoteSession;
+    // The search orchestrator still owns the presented results; re-entering
+    // must not call open() because that would reset them to the Initial state.
+    this.route = 'search';
+    // A sweep that died while the route was away leaves searching:true behind;
+    // resumeStaleSweep re-runs it, while a live sweep keeps its course.
+    this.getSearchOrchestrator().resumeStaleSweep();
+  }
+
   private returnToBookshelf(): void {
     const retainedRemoteSession = this.detailBook !== undefined &&
       this.detailBook.sourceId !== LOCAL_SOURCE_ID &&
@@ -3587,7 +3766,7 @@ struct Index {
       this.remoteReadingSession?.identity.bookId === this.detailBook.bookId ? this.remoteReadingSession : undefined;
     this.nextNavigationGeneration();
     this.readingExitRequest = undefined;
-    this.exitToBookshelfAfterReader = false;
+    this.exitToDetailOriginAfterReader = false;
     this.readingSessionActive = false;
     this.requestedChapterIndex = undefined;
     this.preparedReaderRoute = 'reading';
