@@ -3,7 +3,10 @@ import { ReaderFullDirectory } from '../reading/ReaderFullDirectory';
 import { SourceSwitchPanel, SourceSwitchPanelState } from '../reading/SourceSwitchPanel';
 import type { SourceSwitchCandidate } from '../source/SourceSwitchGateway';
 import type { LocalReadingTocEntry } from '../reading/LocalReadingFlowGateway';
-import type { ReaderDirectoryChapterStartBookmarkRequest } from '../reading/ReaderDirectoryMarkerState';
+import type {
+  ReaderDirectoryChapterStartBookmarkRequest,
+  ReaderPageBookmarkToggleRequest,
+} from '../reading/ReaderDirectoryMarkerState';
 import type { RemoteReadingSession } from '../reading/RemoteReadingFlowGateway';
 
 
@@ -68,6 +71,8 @@ export struct ReaderShell {
     (_entries: LocalReadingTocEntry[]): void => {};
   onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void =
     (_request: ReaderDirectoryChapterStartBookmarkRequest): void => {};
+  onTogglePageBookmark: (request: ReaderPageBookmarkToggleRequest) => void =
+    (_request: ReaderPageBookmarkToggleRequest): void => {};
   onCloseDirectory: () => void = (): void => {};
   onOpenDirectory: () => void = (): void => {};
   onSwitchSource: () => void = (): void => {};
@@ -121,6 +126,8 @@ export struct ReaderShell {
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
             this.onCreateChapterStartBookmark(request),
+          onTogglePageBookmark: (request: ReaderPageBookmarkToggleRequest): void =>
+            this.onTogglePageBookmark(request),
         })
           .width('100%')
           .height('100%')
