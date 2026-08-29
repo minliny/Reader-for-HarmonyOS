@@ -269,14 +269,14 @@ napi_value UploadTexture(napi_env env, napi_callback_info info)
 
 napi_value UpdateInput(napi_env env, napi_callback_info info)
 {
-    size_t count = 14;
-    napi_value arguments[14] = {};
+    size_t count = 11;
+    napi_value arguments[11] = {};
     napi_get_cb_info(env, info, &count, arguments, nullptr, nullptr);
     std::string id;
-    double values[11] = {};
+    double values[8] = {};
     int32_t direction = -1;
     bool vertical = false;
-    if (count != 14 || !GetString(env, arguments[0], id) || !GetDouble(env, arguments[1], values[0]) ||
+    if (count != 11 || !GetString(env, arguments[0], id) || !GetDouble(env, arguments[1], values[0]) ||
         !GetInt32(env, arguments[2], direction) || !GetBool(env, arguments[3], vertical)) {
         return Boolean(env, false);
     }
@@ -285,18 +285,20 @@ napi_value UpdateInput(napi_env env, napi_callback_info info)
     }
     const std::shared_ptr<BookTurnHost> host = HostForId(id);
     if (host == nullptr) return Boolean(env, false);
-    BookTurnInput input;
-    input.generation = static_cast<uint64_t>(std::max(0.0, values[0]));
-    input.direction = DecodeDirection(direction);
-    input.verticalPrevious = vertical;
-    input.width = static_cast<float>(values[1]);
-    input.height = static_cast<float>(values[2]);
-    input.start = { static_cast<float>(values[3]), static_cast<float>(values[4]) };
-    input.pointer = { static_cast<float>(values[5]), static_cast<float>(values[6]) };
-    input.edge = { static_cast<float>(values[7]), static_cast<float>(values[8]) };
-    input.pointerVelocityX = static_cast<float>(values[9]);
-    input.eventTimeNs = static_cast<int64_t>(values[10] * 1000000.0);
-    return Boolean(env, host->UpdateInput(input));
+    // Raw gesture sample only (contract V2 §5.3): the chased edge is native
+    // state advanced on VSync, so ArkTS no longer sends edge/velocity fields.
+    BookTurnSample sample;
+    sample.generation = static_cast<uint64_t>(std::max(0.0, values[0]));
+    sample.direction = DecodeDirection(direction);
+    sample.verticalPrevious = vertical;
+    sample.width = static_cast<float>(values[1]);
+    sample.height = static_cast<float>(values[2]);
+    sample.startX = static_cast<float>(values[3]);
+    sample.startY = static_cast<float>(values[4]);
+    sample.pointerX = static_cast<float>(values[5]);
+    sample.pointerY = static_cast<float>(values[6]);
+    sample.eventTimeNs = static_cast<int64_t>(values[7] * 1000000.0);
+    return Boolean(env, host->UpdateInput(sample));
 }
 
 napi_value Settle(napi_env env, napi_callback_info info)

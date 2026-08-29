@@ -81,9 +81,6 @@ export class BookTurnPresentationSession {
       input.startY,
       input.pointerX,
       input.pointerY,
-      input.edgeX,
-      input.edgeY,
-      input.pointerVelocityX,
       input.eventTimeMs,
     );
   }
