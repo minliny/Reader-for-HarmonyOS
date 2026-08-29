@@ -38,6 +38,9 @@ const ENTRIES: MotionSpecEntry[] = [
   // The owner scales this base duration by the remaining live-width distance.
   { id: 'reader.page.slide.commit', durationMs: 240, curve: Curve.EaseOut },
   { id: 'reader.page.slide.rollback', durationMs: 180, curve: Curve.EaseOut },
+  // Frozen simulated-page contract: a released bookmark pull returns the
+  // translated page to its origin in one 160 ms compositor animation.
+  { id: 'reader.bookmark.rollback', durationMs: 160, curve: Curve.EaseOut },
   // Figma: Review · J1 `1506:8807`, production dropdown expansion.
   // Same panel grows 36→full height with a fixed top anchor; no fade/translate.
   { id: 'dropdown.menu.expand', durationMs: 160, curve: curves.cubicBezierCurve(0.16, 1, 0.3, 1) },
