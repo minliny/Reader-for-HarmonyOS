@@ -122,6 +122,7 @@ uniform float uRadius;
 uniform float uTheta;
 uniform float uApexDist;
 uniform float uSigmaGrip;
+uniform float uCameraDist;
 const float PI = 3.14159265358979323846;
 void main() {
     vec2 q = aMaterial * uPageSize;
@@ -157,6 +158,15 @@ void main() {
         }
     }
     vec2 projected = sigma * tangent + (uAxis + foldedNormal) * normal;
+    // Fixed-axis perspective (2026-08-30 user directive): the camera sits on
+    // the page-normal axis through the page center at uCameraDist. The z=0
+    // plane maps 1:1 (flat part, binding edge, contact line invariant); only
+    // the raised wrap and mirrored plate shift radially outward, so the
+    // flipped plate separates from the page below by parallax instead of
+    // coinciding with it.
+    float persp = uCameraDist / max(uCameraDist - depth, 1.0);
+    vec2 center = uPageSize * 0.5;
+    projected = center + (projected - center) * persp;
     vec2 ndc = vec2(2.0 * projected.x / uPageSize.x - 1.0,
                     1.0 - 2.0 * projected.y / uPageSize.y);
     // Depth sign contract 6.3: the bulge rises toward the viewer (+z), which
@@ -266,6 +276,11 @@ constexpr float kContactPeakAlpha = 0.11F;
 // Front-side strip of the fold-centered valley on the moving sheet (narrow,
 // ~3.5%W, peak 0.15; the wrap side decays over the full 2r band instead).
 constexpr float kFrontStripRatio = 0.035F;
+// Fixed-axis perspective (2026-08-30 user directive): camera distance as a
+// ratio of max(pageW, pageH). 4x keeps the flat z=0 sheet pixel-exact while
+// the mirrored plate (z=2r) offsets ~5-8%W at mid-screen -- the flipped part
+// reads as a parallel sheet hovering above the page instead of coinciding.
+constexpr float kSheetCameraDistRatio = 4.0F;
 constexpr float kSpinePoolWidthStartRatio = 0.04F;
 constexpr float kSpinePoolWidthEndRatio = 0.10F;
 constexpr float kSpinePoolPeakA = 0.10F;
@@ -599,6 +614,7 @@ bool BookTurnRenderer::InitializePrograms()
     sheetUniforms_.theta = glGetUniformLocation(sheetProgram_, "uTheta");
     sheetUniforms_.apexDist = glGetUniformLocation(sheetProgram_, "uApexDist");
     sheetUniforms_.sigmaGrip = glGetUniformLocation(sheetProgram_, "uSigmaGrip");
+    sheetUniforms_.cameraDist = glGetUniformLocation(sheetProgram_, "uCameraDist");
     sheetUniforms_.texture = glGetUniformLocation(sheetProgram_, "uTexture");
     sheetUniforms_.highlightPhiWidth = glGetUniformLocation(sheetProgram_, "uHighlightPhiWidth");
     sheetUniforms_.frontStripWidth = glGetUniformLocation(sheetProgram_, "uFrontStripWidth");
@@ -616,6 +632,7 @@ bool BookTurnRenderer::InitializePrograms()
         bandUniforms_.poolWidthStart >= 0 && bandUniforms_.poolWidthEnd >= 0 &&
         sheetUniforms_.pageSize >= 0 && sheetUniforms_.axis >= 0 && sheetUniforms_.radius >= 0 &&
         sheetUniforms_.theta >= 0 && sheetUniforms_.apexDist >= 0 && sheetUniforms_.sigmaGrip >= 0 &&
+        sheetUniforms_.cameraDist >= 0 &&
         sheetUniforms_.texture >= 0 && sheetUniforms_.highlightPhiWidth >= 0 &&
         sheetUniforms_.frontStripWidth >= 0 && sheetUniforms_.valleyGate >= 0 &&
         sheetUniforms_.paperColor >= 0 && sheetUniforms_.paperFallback >= 0;
@@ -763,6 +780,10 @@ void BookTurnRenderer::DrawSheet(const BookTurnPose& pose, TextureSlot slot)
     glUniform1f(sheetUniforms_.theta, pose.theta);
     glUniform1f(sheetUniforms_.apexDist, pose.apexDist);
     glUniform1f(sheetUniforms_.sigmaGrip, pose.sigmaGrip);
+    // Fixed-axis perspective (2026-08-30): camera distance scales with the
+    // page so the plate parallax offset stays a constant fraction of W.
+    glUniform1f(sheetUniforms_.cameraDist,
+        kSheetCameraDistRatio * std::max(pose.width, pose.height));
     // Curl-edge highlight width (contract 8.2): clamp(0.02W, 8vp, 16vp),
     // converted to the wrap-angle half window via the local cone radius. A
     // collapsed radius has no curl left to catch light.

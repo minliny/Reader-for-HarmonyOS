@@ -126,6 +126,7 @@ private:
         GLint theta = -1;
         GLint apexDist = -1;
         GLint sigmaGrip = -1;
+        GLint cameraDist = -1;
         GLint texture = -1;
         GLint highlightPhiWidth = -1;
         GLint frontStripWidth = -1;
