@@ -13,6 +13,8 @@ const interaction = read('entry/src/main/ets/features/reading/ReaderPageInteract
 const session = read('entry/src/main/ets/features/reading/BookTurnPresentationSession.ets');
 const cmake = read('entry/src/main/cpp/CMakeLists.txt');
 const host = read('entry/src/main/cpp/bookturn/bookturn_host.cpp');
+const hostHeader = read('entry/src/main/cpp/bookturn/bookturn_host.h');
+const motionHeader = read('entry/src/main/cpp/bookturn/bookturn_motion.h');
 const renderer = read('entry/src/main/cpp/bookturn/bookturn_renderer.cpp');
 const rendererHeader = read('entry/src/main/cpp/bookturn/bookturn_renderer.h');
 const napi = read('entry/src/main/cpp/bookturn/bookturn_napi.cpp');
@@ -111,29 +113,51 @@ assert.doesNotMatch(interaction, /ComponentSnapshot|PixelMap|uploadTexture/,
 assert.match(rendererHeader, /kMeshColumns = 64/);
 assert.match(rendererHeader, /kMeshRows = 128/);
 assert.match(renderer, /GL_RGB8/);
-assert.doesNotMatch(renderer, /gl_FrontFacing/,
+// The gl_FrontFacing ban (contract 8.1: faces switch by the geometric wrap
+// angle) applies to the GLSL itself; the C++ side may document the policy.
+const shaderSource = renderer.slice(
+  renderer.indexOf('kSheetFragmentShader[] = R"glsl('),
+  renderer.lastIndexOf(')glsl"'),
+);
+assert.notEqual(shaderSource.indexOf('R"glsl('), -1, 'shader source must be embedded');
+assert.doesNotMatch(shaderSource, /gl_FrontFacing/,
   'back-page color cannot switch per triangle or expose the mesh as a jagged boundary');
 assert.doesNotMatch(renderer, /vec3\(0\.96,\s*0\.95,\s*0\.92\)/,
   'the folded page must preserve the active page theme instead of replacing it with fixed beige');
-assert.match(renderer, /backMix = smoothstep\(HALF_PI - 0\.04, HALF_PI \+ 0\.04, vPhi\)/,
+assert.match(renderer, /backMix = smoothstep\(HALF_PI - 0\.02, HALF_PI \+ 0\.02, vPhi\)/,
   'front/back material color must cross the analytic fold continuously');
 assert.match(renderer, /glBufferData\([\s\S]*GL_STATIC_DRAW/);
 const draw = method(renderer, 'bool BookTurnRenderer::Draw(');
 assert.doesNotMatch(draw, /eglMakeCurrent|glGetUniformLocation|glGetError|glBufferData|glTexImage2D/,
   'the frame hot path must reuse all context, geometry, texture and uniform resources');
-assert.equal((draw.match(/DrawBottom\(/g) ?? []).length, 1);
+// §7.3: after the tau_swap coverage point the sheet hides and only the static
+// base draws; the visible path keeps its single sheet draw.
+assert.equal((draw.match(/DrawBottom\(/g) ?? []).length, 2,
+  'the visible frame and the hidden-sheet base-only branch each draw the bottom once');
 assert.equal((draw.match(/DrawSheet\(/g) ?? []).length, 1);
+assert.match(rendererHeader, /void SetSheetVisible\(bool visible\);/);
+assert.match(rendererHeader, /void UndoCommitSlots\(\);/);
+assert.match(hostHeader, /bool settlementSwapped_ = false;/);
 
-assert.match(host, /constexpr auto kFrameInterval = std::chrono::microseconds\(16667\)/);
-assert.match(host, /pendingInput_ = input/);
-assert.match(host, /pendingInput_\.reset\(\)/);
+// V2 §5.3: ArkTS records only the newest raw sample; the render thread owns
+// chase and frame advance on OH_NativeVSync one-shot callbacks.
+assert.match(host, /pendingSample_/);
+assert.match(host, /OH_NativeVSync/);
+assert.match(host, /UpdateFrameLoopWanted/);
+assert.match(host, /ChaseAdvance/);
+assert.match(hostHeader, /std::optional<BookTurnSample> pendingSample_;/);
+assert.doesNotMatch(host, /kFrameInterval/);
 assert.doesNotMatch(method(host, 'bool BookTurnHost::ProcessSettlementFrame('), /sleep_for|glGetError/);
 assert.match(napi, /kMaximumTexturePixels = 3'000'000ULL/);
 assert.doesNotMatch(method(napi, 'bool ReadPixelMap('), /for \(/,
   'PixelMap conversion must run on the native render thread, not block ArkTS/NAPI');
 assert.match(method(renderer, 'bool CompactRgb8('), /payload\.sourceFormat/);
 
-assert.match(session, /updateInput\([\s\S]*input\.edgeX,[\s\S]*input\.edgeY/);
+// Stage 3 dropped the edge/velocity fields: the session forwards raw gesture
+// samples (start/pointer/time) and native derives the chased edge.
+assert.match(session,
+  /updateInput\([\s\S]*input\.verticalPrevious,[\s\S]*input\.pointerX,[\s\S]*input\.pointerY/);
+assert.doesNotMatch(session, /input\.edgeX|input\.edgeY/);
 assert.match(local,
   /BOOK_TURN_EVENT_VISUAL_COMMIT_ENDPOINT[\s\S]*beginPreparedPageTurnPersistence/,
   'durable progress may start only after the native visual endpoint');
