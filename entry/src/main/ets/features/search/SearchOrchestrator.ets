@@ -50,6 +50,14 @@ export class SearchOrchestrator {
   private work: number = 0;
   private sourceLoad: Promise<SearchSource[]> | undefined = undefined;
   private sourceLoadSession: number = 0;
+  /**
+   * True while a sweep is still winding through its workers for the live
+   * session/work. Leaving the route cancels a sweep's requests and drops its
+   * terminal publish, so the last partial (searching:true) would otherwise
+   * read as a live sweep forever; resumeStaleSweep uses this flag to tell
+   * that residue apart from a genuinely running sweep.
+   */
+  private sweepAlive: boolean = false;
 
   constructor(
     emitPresentation: (presentation: SearchPresentation) => void,
@@ -68,6 +76,7 @@ export class SearchOrchestrator {
     this.session += 1;
     const session = this.session;
     this.work = 0;
+    this.sweepAlive = false;
     // Source and history are independent Core facts. In particular, a
     // history failure must not make a valid source list disappear, and an
     // early submit must be able to await this very source-list transaction.
@@ -127,6 +136,7 @@ export class SearchOrchestrator {
       return;
     }
     this.work += 1;
+    this.sweepAlive = true;
     const work = this.work;
     const session = this.session;
     this.present({ kind: 'loading', keyword: keyword });
@@ -142,6 +152,27 @@ export class SearchOrchestrator {
     if (this.presentation.kind === 'sourceLoadError') {
       this.retrySourceLoad();
     }
+  }
+
+  /**
+   * Restore a search whose route was re-entered without a fresh open(): if the
+   * visible presentation still claims an in-flight sweep but no sweep is
+   * running — leaving the route cancelled its requests and dropped its
+   * terminal publish — re-run the same keyword. A live sweep keeps its
+   * course; restoring the route re-arms its guards and it settles alone.
+   */
+  resumeStaleSweep(): void {
+    if (!this.isCurrent()) {
+      return;
+    }
+    const presentation = this.presentation;
+    if (presentation.kind !== 'results') {
+      return;
+    }
+    if (!presentation.searching || this.sweepAlive) {
+      return;
+    }
+    this.search(presentation.keyword);
   }
 
   /**
@@ -185,6 +216,7 @@ export class SearchOrchestrator {
   /** Clear recent history back to the Initial surface. */
   clearHistory(): void {
     this.work += 1;
+    this.sweepAlive = false;
     const work = this.work;
     const session = this.session;
     const gateway = this.gateway;
@@ -344,6 +376,13 @@ export class SearchOrchestrator {
       const message = error instanceof Error ? error.message : `${error}`;
       hilog.error(DOMAIN, 'Reader', 'Search failed: %{public}s', message);
       this.present({ kind: 'error', keyword: keyword, searchedSourceCount: attemptedSourceCount });
+    } finally {
+      // A sweep ended by route-leave cancellation publishes nothing: workers
+      // exit early and the terminal present is dropped. Marking it dead here
+      // is what lets resumeStaleSweep recognize the searching:true residue.
+      if (work === this.work && session === this.session) {
+        this.sweepAlive = false;
+      }
     }
   }
 

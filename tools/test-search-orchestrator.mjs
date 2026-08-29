@@ -422,4 +422,91 @@ const last = (presentations) => presentations[presentations.length - 1];
   assert.equal(last(presentations).searching, false, 'the sweep settles to closed');
 }
 
+// 13. Leaving mid-sweep cancels the sweep and drops its terminal publish;
+// resumeStaleSweep on route restore re-runs the keyword instead of leaving a
+// searching:true spinner residue behind.
+{
+  const sources = makeSources(2);
+  const owner = fakeOwner({
+    sources,
+    delayForSource: (sourceId) => (sourceId === 'source-0' ? 10 : 60),
+    resultsFor: (sourceId) => [{ bookId: `/b-${sourceId}`, title: '书', author: 'A', variables: {} }],
+  });
+  let routeIsSearch = true;
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner, () => routeIsSearch);
+  search.open();
+  search.search('关键字');
+  await waitUntil(owner.state, () => presentations.some((p) => p.kind === 'results'));
+
+  routeIsSearch = false; // leave during the sweep
+  await sleep(120); // the cancelled request unwinds; the sweep dies unpublished
+  const callsBeforeResume = owner.state.calls.length;
+  const presentationsBeforeResume = presentations.length;
+  routeIsSearch = true;
+  search.resumeStaleSweep();
+
+  await waitUntil(owner.state, () => owner.state.calls.length > callsBeforeResume);
+  assert.ok(
+    presentations.slice(presentationsBeforeResume).some((p) => p.kind === 'loading'),
+    'the searching:true residue re-enters as a fresh sweep');
+  await settle(owner.state, callsBeforeResume + 2);
+  const final = last(presentations);
+  assert.equal(final.kind, 'results');
+  assert.equal(final.searching, false, 'the re-run sweep settles to a closed slot');
+  assert.equal(final.completedSourceCount, 2);
+}
+
+// 14. A sweep that is still alive when the route returns keeps its course:
+// resumeStaleSweep must not restart it, and it settles on its own.
+{
+  const sources = makeSources(2);
+  const owner = fakeOwner({
+    sources,
+    delayForSource: (sourceId) => (sourceId === 'source-0' ? 10 : 150),
+    resultsFor: (sourceId) => [{ bookId: `/b-${sourceId}`, title: '书', author: 'A', variables: {} }],
+  });
+  let routeIsSearch = true;
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner, () => routeIsSearch);
+  search.open();
+  search.search('关键字');
+  await waitUntil(owner.state, () => presentations.some((p) => p.kind === 'results'));
+
+  routeIsSearch = false;
+  await sleep(10);
+  routeIsSearch = true;
+  const presentationsBeforeResume = presentations.length;
+  search.resumeStaleSweep();
+  assert.equal(presentations.length, presentationsBeforeResume,
+    'a live sweep is not restarted by the restore');
+
+  await settle(owner.state, 2);
+  const final = last(presentations);
+  assert.equal(final.kind, 'results');
+  assert.equal(final.searching, false, 'the surviving sweep settles alone');
+  assert.equal(owner.state.calls.length, 2, 'no source request is re-issued');
+}
+
+// 15. A settled (searching:false) surface never re-sweeps on restore.
+{
+  const owner = fakeOwner({
+    sources: makeSources(2),
+    delayForSource: () => 10,
+    resultsFor: () => [],
+  });
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open();
+  search.search('无结果');
+  await settle(owner.state, 2);
+  assert.equal(last(presentations).kind, 'empty');
+
+  const presentationsBefore = presentations.length;
+  const callsBefore = owner.state.calls.length;
+  search.resumeStaleSweep();
+  assert.equal(presentations.length, presentationsBefore, 'a settled surface never re-sweeps');
+  assert.equal(owner.state.calls.length, callsBefore, 'a settled surface issues no requests');
+}
+
 console.log('search orchestrator bounded concurrency: PASS');

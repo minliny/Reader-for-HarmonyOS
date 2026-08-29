@@ -1254,6 +1254,9 @@ struct Index {
       return;
     }
     orchestrator.refreshSources();
+    // This restore keeps the pre-leave presentation; a sweep that died while
+    // the route was away must not leave its spinner residue behind.
+    orchestrator.resumeStaleSweep();
   }
 
   private onSourceToggled(id: string, enabled: boolean): void {
