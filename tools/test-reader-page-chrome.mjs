@@ -4,13 +4,9 @@ import {
   resolveReaderPageChromeLayout,
 } from '../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts';
 import {
-  ReaderPageChromeSnapshot,
   ReaderPageOrdinal,
   formatReaderPageOrdinal,
   formatReaderPageProgress,
-  readerComposedPageTextureKey,
-  readerPageBodyRasterKey,
-  readerPageChromeCacheKey,
 } from '../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts';
 import { ReaderReadingLayoutSnapshot } from
   '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
@@ -84,18 +80,4 @@ assert.equal(formatReaderPageProgress(37.6), '38%');
 assert.equal(formatReaderPageOrdinal(new ReaderPageOrdinal(0, 7)), '第 1 / 7 页');
 assert.equal(formatReaderPageOrdinal(new ReaderPageOrdinal(8)), '第 9 页');
 
-const pageA = new ReaderPageChromeSnapshot('书名', '10:30', '38%', '第 1 / 7 页', false);
-const pageB = new ReaderPageChromeSnapshot('书名', '10:31', '42%', '第 2 / 7 页', true, 96, 24);
-const keyA = readerPageChromeCacheKey('page-a', pageA, 'paper', '390x844');
-const keyB = readerPageChromeCacheKey('page-b', pageB, 'paper', '390x844');
-assert.notEqual(keyA, keyB, 'page-specific values and session footprint must invalidate chrome only');
-assert.notEqual(
-  readerComposedPageTextureKey('same-body', keyA),
-  readerComposedPageTextureKey('same-body', keyB),
-  'composed texture identity must include the independently cacheable chrome raster');
-assert.notEqual(
-  readerPageBodyRasterKey('page-a', 'rev-1', '390x844', 'paper-18'),
-  readerPageBodyRasterKey('page-a', 'rev-2', '390x844', 'paper-18'),
-  'content revision must invalidate the body raster even when the page anchor is unchanged');
-
-console.log('reader page chrome dynamic layout and cache identity: PASS');
+console.log('reader page chrome dynamic layout: PASS');

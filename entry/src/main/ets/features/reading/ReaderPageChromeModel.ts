@@ -2,8 +2,7 @@
  * Immutable page-owned metadata rendered together with one physical page.
  *
  * Text/content acquisition remains outside this module. The model only
- * formats already-known canonical reading facts and provides stable cache
- * identities for page-chrome and composed-page rasters.
+ * formats already-known canonical reading facts for the visible page.
  */
 export class ReaderPageChromeSnapshot {
   topStartText: string;
@@ -69,53 +68,9 @@ export function formatReaderPageOrdinal(ordinal: ReaderPageOrdinal | undefined):
   return `第 ${current} 页`;
 }
 
-/** Cache identity for the page-owned chrome raster only. */
-export function readerPageChromeCacheKey(
-  pageIdentity: string,
-  snapshot: ReaderPageChromeSnapshot,
-  themeIdentity: string,
-  layoutIdentity: string,
-): string {
-  return [
-    'reader-page-chrome-v2',
-    encodeKeyPart(pageIdentity),
-    encodeKeyPart(snapshot.topStartText),
-    encodeKeyPart(snapshot.topEndText),
-    encodeKeyPart(snapshot.bottomStartText),
-    encodeKeyPart(snapshot.bottomEndText),
-    snapshot.sessionVisible ? `session=${snapshot.sessionWidth}x${snapshot.sessionHeight}` : 'session=0',
-    encodeKeyPart(themeIdentity),
-    encodeKeyPart(layoutIdentity),
-  ].join('|');
-}
-
-/** Body and chrome stay independently cacheable, then join at composition. */
-export function readerComposedPageTextureKey(bodyRasterKey: string, chromeRasterKey: string): string {
-  return `reader-page-composed-v1|body=${encodeKeyPart(bodyRasterKey)}|chrome=${encodeKeyPart(chromeRasterKey)}`;
-}
-
-export function readerPageBodyRasterKey(
-  pageIdentity: string,
-  contentRevision: string,
-  layoutIdentity: string,
-  appearanceIdentity: string,
-): string {
-  return [
-    'reader-page-body-v1',
-    encodeKeyPart(pageIdentity),
-    encodeKeyPart(contentRevision),
-    encodeKeyPart(layoutIdentity),
-    encodeKeyPart(appearanceIdentity),
-  ].join('|');
-}
-
 function clampPercent(value: number): number {
   if (!Number.isFinite(value)) {
     return 0;
   }
   return Math.max(0, Math.min(100, value));
-}
-
-function encodeKeyPart(value: string): string {
-  return `${value.length}:${value}`;
 }

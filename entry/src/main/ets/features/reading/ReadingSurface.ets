@@ -226,8 +226,6 @@ export struct ReadingSurface {
   @Prop chromeSessionVisible: boolean = false;
   @Prop chromeSessionWidth: number = 0;
   @Prop chromeSessionHeight: number = 0;
-  @Prop bodyComponentId: string = 'reader-page-body-unmanaged';
-  @Prop chromeComponentId: string = 'reader-page-chrome-unmanaged';
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -362,8 +360,7 @@ export struct ReadingSurface {
       }
       .width('100%')
       .height('100%')
-      .clip(true)
-      .id(this.bodyComponentId);
+      .clip(true);
 
       ReaderPageChrome({
         topStartText: this.chromeTopStartText,
@@ -375,8 +372,7 @@ export struct ReadingSurface {
         sessionHeight: this.chromeSessionHeight,
         layout: this.layout,
         appearance: this.appearance,
-      })
-        .id(this.chromeComponentId);
+      });
     }
     .width('100%')
     .height('100%')

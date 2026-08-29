@@ -7,6 +7,18 @@ export type ReaderDirectoryChapterStartBookmarkRequest = {
 };
 
 /**
+ * One physical-page bookmark toggle emitted by the reading gesture layer.
+ * Existing bookmarks are identified only by Core-owned primary keys; an empty
+ * list means the page-start scalar anchor must be created.
+ */
+export type ReaderPageBookmarkToggleRequest = {
+  chapterIndex: number;
+  chapterOffset: number;
+  chapterTitle: string;
+  bookmarkTimes: number[];
+};
+
+/**
  * The three states a chapter-level bookmark marker can prove from the
  * Core-backed directory projection. `unknown` is deliberately not actionable.
  */

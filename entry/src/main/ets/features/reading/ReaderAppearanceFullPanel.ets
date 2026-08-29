@@ -68,6 +68,7 @@ export struct ReaderAppearanceFullPanel {
   @Prop snapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   @Prop chineseConversionMode: ReaderChineseConversionMode = 'none';
   @Prop pageTurnStyle: ReaderPageTurnStyle = 'slide';
+  @Prop pageTurnSimulationAvailable: boolean = true;
   onCollapse: () => void = (): void => {};
   onThemeChange: (theme: ReaderAppearanceTheme) => void = (_theme: ReaderAppearanceTheme): void => {};
   onSetDayTheme: (theme: ReaderAppearanceTheme) => void = (_theme: ReaderAppearanceTheme): void => {};
@@ -1026,7 +1027,10 @@ export struct ReaderAppearanceFullPanel {
     if (kind === 'alignment') {
       return ['开启', '关闭'];
     }
-    return ['覆盖', '平移', '仿真', '滚动', '无动画'];
+    if (kind === 'pageTurn' && !this.pageTurnSimulationAvailable) {
+      return ['覆盖', '平移', '滚动', '无动画'];
+    }
+    return ['仿真', '覆盖', '平移', '滚动', '无动画'];
   }
 
   private selectControlWidth(kind: string): number {
@@ -1052,9 +1056,11 @@ export struct ReaderAppearanceFullPanel {
         this.onAlignmentRequest(this.snapshot.alignment);
       }
     } else if (kind === 'pageTurn') {
-      const next: ReaderPageTurnStyle = option === '覆盖' ? 'cover' :
-        (option === '仿真' ? 'simulation' :
-          (option === '滚动' ? 'scroll' : (option === '无动画' ? 'none' : 'slide')));
+      const next: ReaderPageTurnStyle = option === '仿真' ? 'simulation' : (option === '覆盖' ? 'cover' :
+        (option === '滚动' ? 'scroll' : (option === '无动画' ? 'none' : 'slide')));
+      if (next === 'simulation' && !this.pageTurnSimulationAvailable) {
+        return;
+      }
       if (next !== this.pageTurnStyle) {
         this.onPageTurnStyleChange(next);
       }
@@ -1088,11 +1094,11 @@ export struct ReaderAppearanceFullPanel {
       return this.chineseConversionMode === 't2s' ? '繁转简' : '简转繁';
     }
     if (kind === 'pageTurn') {
+      if (this.pageTurnStyle === 'simulation') {
+        return this.pageTurnSimulationAvailable ? '仿真' : '仿真不可用';
+      }
       if (this.pageTurnStyle === 'cover') {
         return '覆盖';
-      }
-      if (this.pageTurnStyle === 'simulation') {
-        return '仿真';
       }
       if (this.pageTurnStyle === 'scroll') {
         return '滚动';
@@ -1104,6 +1110,9 @@ export struct ReaderAppearanceFullPanel {
 
   private selectAccessibilityText(kind: string): string {
     if (kind === 'pageTurn') {
+      if (this.pageTurnStyle === 'simulation' && !this.pageTurnSimulationAvailable) {
+        return '翻页动画，仿真当前宿主能力不可用，本会话使用无动画';
+      }
       return `翻页动画，当前${this.selectValue(kind)}`;
     }
     return `${this.selectLabel(kind)}，当前${this.selectValue(kind)}`;

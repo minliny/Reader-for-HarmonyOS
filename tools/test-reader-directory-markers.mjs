@@ -142,10 +142,14 @@ assert.match(fullDirectory,
 
 const gateway = read('entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
 assert.match(gateway, /async createChapterStartBookmark\(/);
+assert.match(gateway,
+  /createPositionBookmark\(\{[\s\S]*chapterOffset: 0,[\s\S]*chapterTitle: input\.chapterTitle/,
+  'chapter markers must reuse the general exact-position Core bookmark path');
 assert.match(gateway, /async loadBookmarkProjection\(/,
   'bookmark projection must be source-independent');
-assert.match(gateway, /request\('bookmark\.create', \{\s*bookName: input\.bookName,\s*bookAuthor: input\.bookAuthor,\s*chapterIndex: input\.chapterIndex,\s*chapterPos: 0,\s*chapterName: input\.chapterTitle,/);
-assert.match(gateway, /bookmark\.create returned a mismatched chapter-start bookmark/);
+assert.match(gateway, /async createPositionBookmark\(/);
+assert.match(gateway, /request\('bookmark\.create', \{\s*bookName: input\.bookName,\s*bookAuthor: input\.bookAuthor,\s*chapterIndex: input\.chapterIndex,\s*chapterPos: input\.chapterOffset,\s*chapterName: input\.chapterTitle,/);
+assert.match(gateway, /bookmark\.create returned a mismatched position bookmark/);
 assert.match(gateway, /async deleteBookmark\(\s*time: number,/);
 assert.match(gateway, /request\('bookmark\.delete', \{\s*time,/);
 assert.match(gateway, /bookmark\.delete returned a mismatched time/);
@@ -172,14 +176,17 @@ assert.match(index, /loadRemoteDirectoryProjection\([\s\S]*loadBookmarkProjectio
   'remote offline and bookmark projections must be merged');
 assert.match(index, /if \(this\.directoryBookmarkMutationActiveKey === key\) \{\s*return -1;/,
   'repeated taps on the same book must not issue duplicate create/delete mutations');
-assert.equal((index.match(/const mutationGeneration = this\.beginDirectoryBookmarkMutation\(book\)/g) ?? []).length, 2,
-  'both create and delete entry points must acquire the same mutation guard');
-assert.equal((index.match(/this\.finishDirectoryBookmarkMutation\(mutationGeneration, mutationKey\)/g) ?? []).length, 2,
-  'both async mutation paths must release their exact guard in finally');
+assert.match(index, /private toggleReaderPageBookmark\(request: ReaderPageBookmarkToggleRequest\): void/);
+assert.match(index, /gateway\.createPositionBookmark\(\{/,
+  'the pull-down gesture must mutate the same Core bookmark truth at the physical page anchor');
+assert.equal((index.match(/const mutationGeneration = this\.beginDirectoryBookmarkMutation\(book\)/g) ?? []).length, 3,
+  'directory create/delete and page toggle must acquire the same mutation guard');
+assert.equal((index.match(/this\.finishDirectoryBookmarkMutation\(mutationGeneration, mutationKey\)/g) ?? []).length, 3,
+  'all three async mutation paths must release their exact guard in finally');
 assert.match(index, /private isDirectoryBookmarkMutationCurrent\(generation: number, key: string\): boolean \{[\s\S]*generation === this\.directoryBookmarkMutationGeneration &&[\s\S]*key === this\.directoryBookmarkMutationActiveKey/,
   'an old request must not clear the guard owned by a newer book mutation');
-assert.equal((index.match(/this\.isDirectoryBookmarkMutationCurrent\(mutationGeneration, mutationKey\)/g) ?? []).length, 2,
-  'both Core request guards must include the bookmark mutation generation');
+assert.equal((index.match(/this\.isDirectoryBookmarkMutationCurrent\(mutationGeneration, mutationKey\)/g) ?? []).length, 3,
+  'all Core request guards must include the bookmark mutation generation');
 
 const unknown = readerDirectoryBookmarkMarkerState({
   index: 7,

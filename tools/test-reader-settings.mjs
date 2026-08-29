@@ -106,7 +106,7 @@ assert.notStrictEqual(copyReaderSettingsSnapshot(initial), initial);
 const noAnimation = setReaderPageTurnStyle(initial, 'none');
 assert.equal(readerPageTurnStyle(noAnimation), 'none');
 assert.notStrictEqual(noAnimation, initial);
-for (const style of ['cover', 'slide', 'simulation', 'scroll', 'none']) {
+for (const style of ['cover', 'slide', 'scroll', 'none']) {
   const changed = setReaderPageTurnStyle(initial, style);
   assert.equal(readerPageTurnStyle(changed), style);
 }
@@ -133,7 +133,6 @@ assert.equal(isReaderScreenDirectionAvailable('landscape'), true);
 assert.equal(isReaderPageTurnStyleAvailable('slide'), true);
 assert.equal(isReaderPageTurnStyleAvailable('none'), true);
 assert.equal(isReaderPageTurnStyleAvailable('cover'), true);
-assert.equal(isReaderPageTurnStyleAvailable('simulation'), true);
 assert.equal(isReaderPageTurnStyleAvailable('scroll'), true);
 assert.equal(isReaderScreenTimeoutAvailable('system'), true);
 assert.equal(isReaderScreenTimeoutAvailable('alwaysOn'), true);

@@ -131,7 +131,7 @@ assert.match(experience, /private restoreInitialWindowBrightness\(\): void/,
   'the reader must restore the pre-reader window brightness policy on exit');
 assert.match(experience, /ReaderPageInteractionLayer\(\{/);
 assert.match(experience,
-  /onTurn: \([\s\S]*direction: ReaderPageTurnDirection,[\s\S]*originX\?: number,[\s\S]*originY\?: number,[\s\S]*\): ReaderPageTurnOutcome => this\.requestPageTurnFromInteraction\(direction, originX, originY\)/);
+  /onTurn: \(direction: ReaderPageTurnDirection\): ReaderPageTurnOutcome =>\s*this\.requestPageTurn\(direction\)/);
 assert.match(experience, /onManualInteraction: \(\): void => this\.onReaderManualInteraction\(\)/);
 assert.match(experience, /private onReaderManualInteraction\(\): void \{[\s\S]*screenAwakeLease\?\.rearm\(\)[\s\S]*pauseAutoPageForInteraction/);
 assert.doesNotMatch(experience, /\.onClick\(\(\): void => \{\s*this\.pauseAutoPageForInteraction\(\);\s*this\.turn(Previous|Next)Page\(\)/,
@@ -149,22 +149,36 @@ assert.match(experience, /private numericAreaLength\(value: Length\): number \{[
   'physical-device vp string Areas must drive the real pagination viewport');
 
 const pageInteraction = read('entry/src/main/ets/features/reading/ReaderPageInteractionLayer.ets');
+const pageGestureState = read('entry/src/main/ets/features/reading/ReaderPageGestureState.ts');
 assert.match(pageInteraction,
   /\.onTouch\(\(event: TouchEvent\): void => this\.handleTouch\(event\)\)[\s\S]*TouchType\.Down[\s\S]*TouchType\.Move[\s\S]*TouchType\.Up/,
   'one raw pointer arena must own tap, horizontal drag, control, and selection arbitration');
 assert.doesNotMatch(pageInteraction, /\bGestureGroup\(|\bPanGesture\(|\bTapGesture\(/,
   'page input must not wait for ArkUI Pan recognition or a delayed Tap callback');
-assert.match(pageInteraction, /startReaderPagePan\([\s\S]*pointer\.x,[\s\S]*pointer\.y/,
-  'physical DOWN must be recorded before touch slop is crossed');
-assert.match(pageInteraction, /pointer\.x - this\.gestureState\.startLocalX/,
-  'tap and drag zones must use element-local rather than global screen coordinates');
+assert.match(pageInteraction, /startReaderPagePan\([\s\S]*localX,[\s\S]*localY/,
+  'the normalized physical DOWN must be recorded before touch slop is crossed');
+assert.match(pageInteraction, /const offsetX = localX - this\.gestureState\.startLocalX/,
+  'tap and drag zones must stay in the page-stage local vp space');
+assert.match(pageInteraction, /readerPagePointerCoordinate\([\s\S]*pointer\.x/,
+  'touch-target coordinates must be normalized to the measured page-stage extent');
 assert.match(pageInteraction, /event\.target\.area\.width/,
   'input zones must prefer the width from the same raw touch target');
-assert.match(pageInteraction, /READER_PAGE_TAP_MAX_DURATION_MS = 320/,
+assert.match(pageInteraction,
+  /normalized\.indexOf\('%'\) < 0 \? Number\.parseFloat\(normalized\) : Number\.NaN/,
+  'a declarative 100% target length must fall back to the measured viewport instead of becoming 100vp');
+assert.match(pageInteraction,
+  /READER_PAGE_TAP_MAX_DURATION_MS = READER_PAGE_GESTURE_LONG_PRESS_MS/);
+assert.match(pageGestureState, /READER_PAGE_GESTURE_LONG_PRESS_MS = 500/,
   'a stationary long press belongs to text selection and must not open controls on release');
 assert.match(pageInteraction,
-  /if \(this\.activePointerId >= 0\)[\s\S]*event\.touches\.length > 1[\s\S]*return;/,
-  'a repeated DOWN must never restart an already admitted physical gesture');
+  /if \(this\.activePointerId >= 0\) \{\s*return;\s*\}/,
+  'later fingers must be ignored without restarting or cancelling the first pointer');
+assert.match(pageInteraction,
+  /event\.type === TouchType\.Up \?\s*this\.changedPointerForEvent\(event\) : this\.pointerForEvent\(event\)/,
+  'an UP must resolve only from changedTouches so a later finger cannot end the first pointer');
+assert.match(pageInteraction,
+  /private changedPointerForEvent\([\s\S]*event\.changedTouches[\s\S]*return undefined;/,
+  'later-finger UP must be ignored while the first pointer remains active');
 assert.match(pageInteraction, /event\.stopPropagation\(\)[\s\S]*event\.preventDefault\(\)/,
   'only a horizontally admitted page turn may cancel underlying text input');
 assert.match(pageInteraction, /this\.onManualInteraction\(\)/,
@@ -174,12 +188,34 @@ assert.match(pageInteraction,
   'Harmony back/home edge streams must be rejected before the reader creates gesture state');
 assert.match(pageInteraction, /event\.timestamp[\s\S]*lastSampleTimeMs/,
   'pointer velocity and tap duration must use the platform event clock');
+assert.match(pageInteraction, /event\.timestamp \/ 1_000_000/,
+  'ArkUI monotonic touch timestamps are nanoseconds and must be normalized before gesture math');
 assert.match(experience,
   /systemGestureLeftInset: this\.readerSystemGestureLeftInset\(\)[\s\S]*systemGestureBottomInset: this\.readerSystemGestureBottomInset\(\)/,
   'the page arena must consume the current Window gesture/navigation insets');
+assert.match(experience,
+  /const pageCanReceiveInput = this\.phase === 'ready' \|\| this\.visiblePage !== undefined;/,
+  'a committed visible page must keep centre controls touchable during neighbour preparation');
+const tapOnlyInput = experience.match(
+  /private pageTurnTapOnlyInput\(\): boolean \{([\s\S]*?)\n  \}/,
+)?.[1] ?? '';
+assert.match(tapOnlyInput,
+  /this\.pageTurnSettlementActive \|\| this\.pageTurnSettlingPrepared !== undefined/,
+  'only a non-interruptible settlement may reserve a deferred pointer segment');
+assert.doesNotMatch(tapOnlyInput, /pageTurnPreparation|phase === 'measuring'/,
+  'background neighbour preparation must not turn the whole screen into a delayed tap-only surface');
+assert.match(experience,
+  /private canStartReaderPageTurn\(direction: ReaderPageTurnDirection\): boolean \{[\s\S]*if \(!this\.canTurnPage\(\)\) return false;/,
+  'page motion must stay silent while the materialized context is speculative');
+assert.match(experience,
+  /canStartBookmark: \(\): boolean => this\.canStartReaderBookmarkGesture\(\)/,
+  'bookmark preview must use the same background-preparation readiness boundary');
+assert.match(pageInteraction,
+  /const bookmarkBlocked = this\.gestureState\.owner === 'bookmark' && !this\.canStartBookmark\(\);[\s\S]*pageOwnerBlocked \|\| bookmarkBlocked/,
+  'a blocked speculative bookmark must not mutate the visible page');
 assert.match(pageInteraction, /左侧上一页，中间打开阅读控制，右侧下一页/);
 assert.match(pageInteraction,
-  /READER_PAGE_POINTER_STALL_TIMEOUT_MS = 1800[\s\S]*armPointerWatchdog\(\)[\s\S]*this\.cancelPan\(\);[\s\S]*this\.resetRawPointer\(\);/,
+  /READER_PAGE_POINTER_STALL_TIMEOUT_MS = 15000[\s\S]*armPointerWatchdog\(\)[\s\S]*this\.cancelPan\(\);[\s\S]*this\.resetRawPointer\(\);/,
   'a lost UP or CANCEL must roll back and release page/control ownership');
 assert.doesNotMatch(pageInteraction, /pendingTurn|queuedTurn/,
   'a busy manual turn must not be queued or replayed');

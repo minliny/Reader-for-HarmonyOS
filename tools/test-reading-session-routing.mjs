@@ -10,8 +10,8 @@ const sessionGateway = read('entry/src/main/ets/features/reading/ReadingSessionF
 const localGateway = read('entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
 const remoteGateway = read('entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
 
-assert.match(index, /private onSearchResultSelected\(book: SearchBook\): void \{\s*this\.openRemoteBookDetail\(/,
-  'a live remote search result must enter the remote open transaction');
+assert.match(index, /private onSearchResultSelected\(book: SearchBook, variants: SearchBook\[\] = \[\]\): void \{/,
+  'a live remote search result enters the remote open transaction with same-book variants ordered behind it');
 assert.match(index, /gateway\.openSession\(seed, \{ isCurrent \}\)/,
   'remote detail and TOC must retain the route-generation cancellation guard');
 assert.match(index, /await bookshelf\.loadShelfBook\(session\.identity\.sourceId, session\.identity\.bookId\)/,

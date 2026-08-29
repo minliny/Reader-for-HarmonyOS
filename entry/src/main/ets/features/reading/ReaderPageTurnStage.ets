@@ -16,10 +16,6 @@ import {
   type ReadingSurfacePageFragment,
 } from './ReadingSurface';
 import { ReaderPageChromeSnapshot } from './ReaderPageChromeModel';
-import {
-  ReaderNativePageCurlSurface,
-  type ReaderNativePageCurlContext,
-} from './ReaderNativePageCurlSurface';
 
 /**
  * Immutable-by-convention input for one already measured physical page.
@@ -28,7 +24,12 @@ import {
  * only places these presentation models next to one another for a slide.
  */
 export class ReaderPageTurnRenderPage {
+  /** Stable mounted ArkUI subtree ID used only by ComponentSnapshot. */
   identity: string;
+  /** Visual-content identity stored beside the native texture handle. */
+  textureIdentity: string;
+  /** Owner epoch used to invalidate ArkUI props without changing the stable snapshot ID. */
+  renderRevision: number;
   chapterTitle: string;
   showChapterTitle: boolean;
   fragments: ReadingSurfacePageFragment[];
@@ -40,22 +41,20 @@ export class ReaderPageTurnRenderPage {
   chromeSessionVisible: boolean;
   chromeSessionWidth: number;
   chromeSessionHeight: number;
-  bodyRasterKey: string;
-  chromeRasterKey: string;
-  composedTextureKey: string;
 
   constructor(
     identity: string,
+    textureIdentity: string,
+    renderRevision: number,
     chapterTitle: string,
     showChapterTitle: boolean,
     fragments: ReadingSurfacePageFragment[],
     bottomJustifyGap: number = 0,
     chrome: ReaderPageChromeSnapshot = new ReaderPageChromeSnapshot(),
-    bodyRasterKey: string = '',
-    chromeRasterKey: string = '',
-    composedTextureKey: string = '',
   ) {
     this.identity = identity;
+    this.textureIdentity = textureIdentity;
+    this.renderRevision = renderRevision;
     this.chapterTitle = chapterTitle;
     this.showChapterTitle = showChapterTitle;
     this.fragments = fragments;
@@ -67,21 +66,6 @@ export class ReaderPageTurnRenderPage {
     this.chromeSessionVisible = chrome.sessionVisible;
     this.chromeSessionWidth = chrome.sessionWidth;
     this.chromeSessionHeight = chrome.sessionHeight;
-    this.bodyRasterKey = bodyRasterKey;
-    this.chromeRasterKey = chromeRasterKey;
-    this.composedTextureKey = composedTextureKey;
-  }
-
-  bodyComponentId(): string {
-    return `${this.identity}:body`;
-  }
-
-  chromeComponentId(): string {
-    return `${this.identity}:chrome`;
-  }
-
-  composedComponentId(): string {
-    return `${this.identity}:composed`;
   }
 }
 
@@ -98,8 +82,7 @@ export type ReaderPageTurnStageDirection = 'previous' | 'next';
  */
 @Component
 struct ReaderPageTurnSurface {
-  @Prop @Watch('onPageIdentityChanged') pageIdentity: string = '';
-  @Prop @Watch('onRasterIdentityChanged') rasterIdentity: string = '';
+  @Prop pageIdentity: string = '';
   @Prop chapterTitle: string = '';
   @Prop showChapterTitle: boolean = false;
   @Prop pageFragments: ReadingSurfacePageFragment[] = [];
@@ -120,11 +103,6 @@ struct ReaderPageTurnSurface {
   @Prop chromeSessionVisible: boolean = false;
   @Prop chromeSessionWidth: number = 0;
   @Prop chromeSessionHeight: number = 0;
-  onPageReady: (identity: string) => void = (_identity: string): void => {};
-
-  aboutToAppear(): void {
-    this.signalPageReadyAfterRenderAdmission();
-  }
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -148,13 +126,10 @@ struct ReaderPageTurnSurface {
           chromeSessionVisible: this.chromeSessionVisible,
           chromeSessionWidth: this.chromeSessionWidth,
           chromeSessionHeight: this.chromeSessionHeight,
-          bodyComponentId: `${this.pageIdentity}:body`,
-          chromeComponentId: `${this.pageIdentity}:chrome`,
         });
       }
       .width('100%')
-      .height('100%')
-      .id(`${this.pageIdentity}:composed`);
+      .height('100%');
     }
     .width('100%')
     .height('100%')
@@ -165,13 +140,6 @@ struct ReaderPageTurnSurface {
       color: this.shadowColor(),
       offsetX: -8 * this.shadowStrength,
       offsetY: 0,
-    })
-    .onAreaChange((_oldValue: Area, newValue: Area): void => {
-      const width = typeof newValue.width === 'number' ? newValue.width : Number.parseFloat(`${newValue.width}`);
-      const height = typeof newValue.height === 'number' ? newValue.height : Number.parseFloat(`${newValue.height}`);
-      if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
-        this.onPageReady(this.pageIdentity);
-      }
     });
   }
 
@@ -180,20 +148,6 @@ struct ReaderPageTurnSurface {
     return `#${alpha.toString(16).padStart(2, '0')}000000`;
   }
 
-  private onPageIdentityChanged(): void {
-    this.signalPageReadyAfterRenderAdmission();
-  }
-
-  private onRasterIdentityChanged(): void {
-    this.signalPageReadyAfterRenderAdmission();
-  }
-
-  private signalPageReadyAfterRenderAdmission(): void {
-    const identity = this.pageIdentity;
-    setTimeout((): void => {
-      if (identity === this.pageIdentity) this.onPageReady(identity);
-    }, 0);
-  }
 }
 
 /**
@@ -207,12 +161,15 @@ struct ReaderPageTurnSurface {
 @Component
 export struct ReaderPageTurnStage {
   @Prop currentPage: ReaderPageTurnRenderPage;
+  /** Short stable ID used only to snapshot the live simulation page. */
+  @Prop currentPageSnapshotId: string = '';
   @Prop previousPage: ReaderPageTurnRenderPage | undefined = undefined;
   @Prop nextPage: ReaderPageTurnRenderPage | undefined = undefined;
   @Prop pageTurnStyle: ReaderPageTurnStyle = readerPageTurnStyle(createDefaultReaderSettingsSnapshot());
   @Prop turnDirection: ReaderPageTurnStageDirection | undefined = undefined;
   @Prop offsetX: number = 0;
   @Prop viewportWidth: number = 0;
+  @Prop translateY: number = 0;
   @Prop layout: ReaderReadingLayoutSnapshot = createDefaultReaderReadingLayout();
   @Prop appearance: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   @Prop ttsHighlightStart: number | undefined = undefined;
@@ -220,20 +177,36 @@ export struct ReaderPageTurnStage {
   @Prop autoPageHighlightStart: number | undefined = undefined;
   @Prop autoPageHighlightEnd: number | undefined = undefined;
   @Prop longPressSelectText: boolean = false;
-  @Prop nativeCurlVisible: boolean = false;
-  /**
-   * Fixed for one admitted gesture. When native textures are cold, the same
-   * already measured pages follow the finger as a flat slide; the stage never
-   * swaps from this fallback into curl halfway through the drag.
-   */
-  @Prop simulationFallbackActive: boolean = false;
-  onNativeCurlContextReady: (context: ReaderNativePageCurlContext | undefined) => void =
-    (_context: ReaderNativePageCurlContext | undefined): void => {};
-  onPageReady: (identity: string) => void = (_identity: string): void => {};
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      if (this.hasLiveTurnWidth() && this.pageTurnStyle === 'cover' &&
+      if (this.pageTurnStyle === 'simulation') {
+        // Only the live page stays mounted. previous/current/next textures are
+        // built by the dedicated offscreen builder while idle, avoiding three
+        // permanently mounted full Text trees on low-end devices.
+        ReaderPageTurnSurface({
+          pageIdentity: this.currentPageSnapshotId.length > 0 ?
+            this.currentPageSnapshotId : this.currentPage.identity,
+          chapterTitle: this.currentPage.chapterTitle,
+          showChapterTitle: this.currentPage.showChapterTitle,
+          pageFragments: this.currentPage.fragments,
+          bottomJustifyGap: this.currentPage.bottomJustifyGap,
+          chromeTopStartText: this.currentPage.chromeTopStartText,
+          chromeTopEndText: this.currentPage.chromeTopEndText,
+          chromeBottomStartText: this.currentPage.chromeBottomStartText,
+          chromeBottomEndText: this.currentPage.chromeBottomEndText,
+          chromeSessionVisible: this.currentPage.chromeSessionVisible,
+          chromeSessionWidth: this.currentPage.chromeSessionWidth,
+          chromeSessionHeight: this.currentPage.chromeSessionHeight,
+          layout: this.layout,
+          appearance: this.appearance,
+          longPressSelectText: this.longPressSelectText,
+          ttsHighlightStart: this.ttsHighlightStart,
+          ttsHighlightEnd: this.ttsHighlightEnd,
+          autoPageHighlightStart: this.autoPageHighlightStart,
+          autoPageHighlightEnd: this.autoPageHighlightEnd,
+        });
+      } else if (this.hasLiveTurnWidth() && this.pageTurnStyle === 'cover' &&
         this.turnDirection === 'previous' && this.previousPage !== undefined) {
         ReaderPageTurnSurface({
           pageIdentity: this.currentPage.identity,
@@ -323,7 +296,7 @@ export struct ReaderPageTurnStage {
         this.turnDirection === 'previous' && this.previousPage !== undefined) {
         // The destination is painted first and the moving current page last.
         // Their edges stay exactly one live viewport apart, while this order
-        // also gives the shared rasterized edge a stable foreground owner.
+        // also gives the shared edge a stable foreground owner.
         ReaderPageTurnSurface({
           pageIdentity: this.previousPage.identity,
           chapterTitle: this.previousPage.chapterTitle,
@@ -406,80 +379,6 @@ export struct ReaderPageTurnStage {
           autoPageHighlightStart: this.autoPageHighlightStart,
           autoPageHighlightEnd: this.autoPageHighlightEnd,
         });
-      } else if (this.pageTurnStyle === 'simulation') {
-        if (!this.nativeCurlVisible && this.previousPage !== undefined) {
-          ReaderPageTurnSurface({
-            pageIdentity: this.previousPage.identity,
-            rasterIdentity: this.previousPage.composedTextureKey,
-            chapterTitle: this.previousPage.chapterTitle,
-            showChapterTitle: this.previousPage.showChapterTitle,
-            pageFragments: this.previousPage.fragments,
-            bottomJustifyGap: this.previousPage.bottomJustifyGap,
-            chromeTopStartText: this.previousPage.chromeTopStartText,
-            chromeTopEndText: this.previousPage.chromeTopEndText,
-            chromeBottomStartText: this.previousPage.chromeBottomStartText,
-            chromeBottomEndText: this.previousPage.chromeBottomEndText,
-            chromeSessionVisible: this.previousPage.chromeSessionVisible,
-            chromeSessionWidth: this.previousPage.chromeSessionWidth,
-            chromeSessionHeight: this.previousPage.chromeSessionHeight,
-            layout: this.layout,
-            appearance: this.appearance,
-            longPressSelectText: this.longPressSelectText,
-            translateX: this.simulationPreviousPageX(),
-            onPageReady: (identity: string): void => this.onPageReady(identity),
-          });
-        }
-        if (!this.nativeCurlVisible && this.nextPage !== undefined) {
-          ReaderPageTurnSurface({
-            pageIdentity: this.nextPage.identity,
-            rasterIdentity: this.nextPage.composedTextureKey,
-            chapterTitle: this.nextPage.chapterTitle,
-            showChapterTitle: this.nextPage.showChapterTitle,
-            pageFragments: this.nextPage.fragments,
-            bottomJustifyGap: this.nextPage.bottomJustifyGap,
-            chromeTopStartText: this.nextPage.chromeTopStartText,
-            chromeTopEndText: this.nextPage.chromeTopEndText,
-            chromeBottomStartText: this.nextPage.chromeBottomStartText,
-            chromeBottomEndText: this.nextPage.chromeBottomEndText,
-            chromeSessionVisible: this.nextPage.chromeSessionVisible,
-            chromeSessionWidth: this.nextPage.chromeSessionWidth,
-            chromeSessionHeight: this.nextPage.chromeSessionHeight,
-            layout: this.layout,
-            appearance: this.appearance,
-            longPressSelectText: this.longPressSelectText,
-            translateX: this.simulationNextPageX(),
-            onPageReady: (identity: string): void => this.onPageReady(identity),
-          });
-        }
-        ReaderPageTurnSurface({
-          pageIdentity: this.currentPage.identity,
-          rasterIdentity: this.currentPage.composedTextureKey,
-          chapterTitle: this.currentPage.chapterTitle,
-          showChapterTitle: this.currentPage.showChapterTitle,
-          pageFragments: this.currentPage.fragments,
-          bottomJustifyGap: this.currentPage.bottomJustifyGap,
-          chromeTopStartText: this.currentPage.chromeTopStartText,
-          chromeTopEndText: this.currentPage.chromeTopEndText,
-          chromeBottomStartText: this.currentPage.chromeBottomStartText,
-          chromeBottomEndText: this.currentPage.chromeBottomEndText,
-          chromeSessionVisible: this.currentPage.chromeSessionVisible,
-          chromeSessionWidth: this.currentPage.chromeSessionWidth,
-          chromeSessionHeight: this.currentPage.chromeSessionHeight,
-          layout: this.layout,
-          appearance: this.appearance,
-          longPressSelectText: this.longPressSelectText,
-          translateX: this.simulationCurrentPageX(),
-          ttsHighlightStart: this.ttsHighlightStart,
-          ttsHighlightEnd: this.ttsHighlightEnd,
-          autoPageHighlightStart: this.autoPageHighlightStart,
-          autoPageHighlightEnd: this.autoPageHighlightEnd,
-          onPageReady: (identity: string): void => this.onPageReady(identity),
-        });
-        ReaderNativePageCurlSurface({
-          rendererVisible: this.nativeCurlVisible,
-          onContextReady: (context: ReaderNativePageCurlContext | undefined): void =>
-            this.onNativeCurlContextReady(context),
-        });
       } else {
         ReaderPageTurnSurface({
           pageIdentity: this.currentPage.identity,
@@ -507,6 +406,7 @@ export struct ReaderPageTurnStage {
     }
     .width('100%')
     .height('100%')
+    .translate({ y: this.translateY })
     .clip(true);
   }
 
@@ -521,25 +421,6 @@ export struct ReaderPageTurnStage {
 
   private nextPageX(): number {
     return this.viewportWidth + this.offsetX;
-  }
-
-  private simulationPreviousPageX(): number {
-    return this.hasSimulationFallbackWidth() && this.turnDirection === 'previous' ?
-      this.previousPageX() : 0;
-  }
-
-  private simulationNextPageX(): number {
-    return this.hasSimulationFallbackWidth() && this.turnDirection === 'next' ?
-      this.nextPageX() : 0;
-  }
-
-  private simulationCurrentPageX(): number {
-    return this.hasSimulationFallbackWidth() ? this.offsetX : 0;
-  }
-
-  private hasSimulationFallbackWidth(): boolean {
-    return this.pageTurnStyle === 'simulation' && this.simulationFallbackActive &&
-      Number.isFinite(this.viewportWidth) && this.viewportWidth > 0;
   }
 
   private turnProgress(): number {

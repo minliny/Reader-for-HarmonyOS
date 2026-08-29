@@ -33,6 +33,10 @@ export type LocalReadingChapterStartBookmarkInput = {
   chapterTitle: string;
 };
 
+export type LocalReadingPositionBookmarkInput = LocalReadingChapterStartBookmarkInput & {
+  chapterOffset: number;
+};
+
 export type LocalReadingToc = {
   bookId: string;
   entries: LocalReadingTocEntry[];
@@ -319,17 +323,32 @@ export class LocalReadingFlowGateway {
     input: LocalReadingChapterStartBookmarkInput,
     isCurrent?: LocalReadingRequestGuard,
   ): Promise<LocalReadingBookmark> {
+    return this.createPositionBookmark({
+      bookName: input.bookName,
+      bookAuthor: input.bookAuthor,
+      chapterIndex: input.chapterIndex,
+      chapterOffset: 0,
+      chapterTitle: input.chapterTitle,
+    }, isCurrent);
+  }
+
+  /** Creates a bookmark at one exact Core Unicode-scalar reading anchor. */
+  async createPositionBookmark(
+    input: LocalReadingPositionBookmarkInput,
+    isCurrent?: LocalReadingRequestGuard,
+  ): Promise<LocalReadingBookmark> {
     this.assertNonBlankString(input.bookName, 'bookName');
     if (typeof input.bookAuthor !== 'string') {
       throw new Error('bookAuthor must be a string');
     }
     this.assertNonNegativeInteger(input.chapterIndex, 'chapterIndex');
+    this.assertNonNegativeInteger(input.chapterOffset, 'chapterOffset');
     this.assertNonBlankString(input.chapterTitle, 'chapterTitle');
     const result = await this.runtimeOwner.request('bookmark.create', {
       bookName: input.bookName,
       bookAuthor: input.bookAuthor,
       chapterIndex: input.chapterIndex,
-      chapterPos: 0,
+      chapterPos: input.chapterOffset,
       chapterName: input.chapterTitle,
     }, this.requestOptions(isCurrent));
     const rawBookmark = this.requireObject(result.data['bookmark'], 'bookmark.create bookmark');
@@ -346,9 +365,9 @@ export class LocalReadingFlowGateway {
     this.requireString(rawBookmark, 'bookText', 'bookmark.create bookmark');
     const content = this.requireString(rawBookmark, 'content', 'bookmark.create bookmark');
     if (bookName !== input.bookName || bookAuthor !== input.bookAuthor ||
-      chapterIndex !== input.chapterIndex || chapterOffset !== 0 ||
+      chapterIndex !== input.chapterIndex || chapterOffset !== input.chapterOffset ||
       chapterTitle !== input.chapterTitle) {
-      throw new Error('bookmark.create returned a mismatched chapter-start bookmark');
+      throw new Error('bookmark.create returned a mismatched position bookmark');
     }
     return { time, chapterIndex, chapterOffset, chapterTitle, content };
   }

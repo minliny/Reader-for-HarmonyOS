@@ -40,8 +40,8 @@ assert.match(index, /await owner\.releaseLocalBookAsset\(book\.bookId\)/,
   'local Host cleanup must get one idempotent retry after Core proves the book absent');
 assert.match(index, /The exact key already proved the destructive Core commit[\s\S]*this\.returnToBookshelf\(\)/,
   'a failed post-commit shelf refresh must not leave the deleted detail route visible');
-assert.match(index, /this\.bookshelfLoadGeneration \+= 1;[\s\S]*this\.returnToBookshelf\(\);[\s\S]*this\.applyBookshelfState\(shelf\)/,
-  'the exact mutation result must replace stale shelf reads when returning from detail');
+assert.match(index, /this\.bookshelfLoadGeneration \+= 1;\s*if \(this\.route === 'detail' && this\.isSameDetailBook\(book\)\) \{\s*this\.returnFromDetail\(\);[\s\S]*?this\.bookshelfLoadGeneration \+= 1;\s*this\.applyBookshelfState\(shelf\);/,
+  'the exact mutation result must replace stale shelf reads when returning from detail (origin-aware dispatch)');
 assert.match(index, /this\.shelfBooks = state\.shelf\.books;[\s\S]*this\.continueReading = state\.continueReading;[\s\S]*state\.kind !== 'populated'/,
   'an empty removal result must clear stale cards as well as the visual admission flag');
 

@@ -1,8 +1,8 @@
 /**
  * Pure, versioned state for the Reader Settings module.
  *
- * The five Figma page-turn choices describe two different concerns. `scroll`
- * changes the navigation model, while the other four select a transition for
+ * The page-turn choices describe two different concerns. `scroll`
+ * changes the navigation model, while the remaining choices select a transition for
  * paged navigation. Persist those facts independently so later transition
  * work never has to reinterpret a single overloaded enum.
  */
@@ -10,10 +10,10 @@ export type ReaderScreenDirection = 'system' | 'portrait' | 'landscape';
 
 export type ReaderNavigationMode = 'paged' | 'continuous';
 
-export type ReaderPageTransition = 'cover' | 'slide' | 'simulation' | 'none';
+export type ReaderPageTransition = 'simulation' | 'cover' | 'slide' | 'none';
 
 /** Presentation vocabulary used by the Figma-backed settings controls. */
-export type ReaderPageTurnStyle = 'cover' | 'slide' | 'simulation' | 'scroll' | 'none';
+export type ReaderPageTurnStyle = 'simulation' | 'cover' | 'slide' | 'scroll' | 'none';
 
 export type ReaderScreenTimeout = 'system' | 'oneMinute' | 'fiveMinutes' | 'tenMinutes' | 'alwaysOn';
 
@@ -228,7 +228,7 @@ export function isReaderScreenDirectionAvailable(direction: ReaderScreenDirectio
 }
 
 export function isReaderPageTurnStyleAvailable(style: ReaderPageTurnStyle): boolean {
-  return style === 'cover' || style === 'slide' || style === 'simulation' || style === 'scroll' || style === 'none';
+  return style === 'simulation' || style === 'cover' || style === 'slide' || style === 'scroll' || style === 'none';
 }
 
 export function isReaderScreenTimeoutAvailable(timeout: ReaderScreenTimeout): boolean {
@@ -245,14 +245,14 @@ function pageTurnContractFor(style: ReaderPageTurnStyle): ReaderPageTurnContract
   if (style === 'scroll') {
     return new ReaderPageTurnContract('continuous', 'slide');
   }
-  if (style === 'cover' || style === 'simulation' || style === 'none') {
+  if (style === 'simulation' || style === 'cover' || style === 'none') {
     return new ReaderPageTurnContract('paged', style);
   }
   return new ReaderPageTurnContract('paged', 'slide');
 }
 
 function isReaderPageTransition(value: ReaderPageTransition): boolean {
-  return value === 'cover' || value === 'slide' || value === 'simulation' || value === 'none';
+  return value === 'simulation' || value === 'cover' || value === 'slide' || value === 'none';
 }
 
 function isReaderScreenTimeout(value: ReaderScreenTimeout): boolean {

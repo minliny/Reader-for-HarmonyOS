@@ -67,8 +67,11 @@ assert.match(experience,
 assert.match(experience,
   /return deriveReaderSessionCapsule\(\{/,
   'one pure projection must own visibility, type, state and countdown');
-assert.match(experience, /interactionEnabled: this\.pageTurnInputPhase\(\) === 'idle'/,
-  'the live capsule must disable activation while page input owns the pointer');
+assert.match(experience, /interactionEnabled: !this\.pageTurnInputOwned/,
+  'the live capsule must disable activation from the one-bit input owner without rebuilding on every MOVE');
+assert.match(experience,
+  /const ownsInput = state\.phase !== 'idle';[\s\S]*if \(this\.pageTurnInputOwned !== ownsInput\) this\.pageTurnInputOwned = ownsInput;/,
+  'page input ownership must change only at the gesture boundary, never invalidate ArkUI on every MOVE');
 assert.match(experience,
   /state\.phase === 'tracking'[\s\S]*liveSessionCapsuleSnapshot\(\)[\s\S]*pageTurnSessionCapsuleFrozen = true/,
   'the capsule must retain its DOWN-frame visual state through settlement');

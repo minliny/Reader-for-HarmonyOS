@@ -47,6 +47,7 @@ export struct ReaderSettingsFullPanel {
   @Prop availableWidth: number = 0;
   @Prop availableHeight: number = 0;
   @Prop snapshot: ReaderSettingsSnapshot = createDefaultReaderSettingsSnapshot();
+  @Prop pageTurnSimulationAvailable: boolean = true;
   @Prop justifyText: boolean = true;
   onCollapse: () => void = (): void => {};
   onScreenDirectionChange: (direction: ReaderScreenDirection) => void =
@@ -385,7 +386,7 @@ export struct ReaderSettingsFullPanel {
       return ['system', 'portrait', 'landscape'];
     }
     if (group === 'pageTurn') {
-      return ['cover', 'slide', 'simulation', 'scroll', 'none'];
+      return ['simulation', 'cover', 'slide', 'scroll', 'none'];
     }
     return ['system', 'oneMinute', 'fiveMinutes', 'tenMinutes', 'alwaysOn'];
   }
@@ -408,14 +409,14 @@ export struct ReaderSettingsFullPanel {
       return option === 'portrait' ? '竖屏' : '横屏';
     }
     if (group === 'pageTurn') {
+      if (option === 'simulation') {
+        return '仿真';
+      }
       if (option === 'cover') {
         return '覆盖';
       }
       if (option === 'slide') {
         return '滑动';
-      }
-      if (option === 'simulation') {
-        return '仿真';
       }
       if (option === 'scroll') {
         return '滚动';
@@ -452,6 +453,9 @@ export struct ReaderSettingsFullPanel {
       return isReaderScreenDirectionAvailable(option as ReaderScreenDirection);
     }
     if (group === 'pageTurn') {
+      if (option === 'simulation' && !this.pageTurnSimulationAvailable) {
+        return false;
+      }
       return isReaderPageTurnStyleAvailable(option as ReaderPageTurnStyle);
     }
     return isReaderScreenTimeoutAvailable(option as ReaderScreenTimeout);

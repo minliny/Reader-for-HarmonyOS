@@ -180,6 +180,8 @@ export struct ReaderControlPanel {
   @Prop appearanceSnapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   @Prop chineseConversionMode: ReaderChineseConversionMode = 'none';
   @Prop settingsSnapshot: ReaderSettingsSnapshot = createDefaultReaderSettingsSnapshot();
+  /** Native simulation capability for this mounted reading session. */
+  @Prop pageTurnSimulationAvailable: boolean = true;
   @Prop ttsState: ReaderTtsState = createReaderTtsState(false);
   @Prop ttsTimerMinutes: number = 15;
   @Prop ttsTimerSeconds: number = 0;
@@ -796,6 +798,7 @@ export struct ReaderControlPanel {
       snapshot: this.appearanceSnapshot,
       chineseConversionMode: this.chineseConversionMode,
       pageTurnStyle: readerPageTurnStyle(this.settingsSnapshot),
+      pageTurnSimulationAvailable: this.pageTurnSimulationAvailable,
       onCollapse: (): void => this.requestCollapseAppearance(),
       onThemeChange: (theme: ReaderAppearanceTheme): void => this.onAppearanceThemeChange(theme),
       onSetDayTheme: (theme: ReaderAppearanceTheme): void => this.onAppearanceDayThemeChange(theme),
@@ -825,6 +828,7 @@ export struct ReaderControlPanel {
       availableWidth: this.fullPanelAvailableWidth(),
       availableHeight: this.layout.fullPanelHeight,
       snapshot: this.settingsSnapshot,
+      pageTurnSimulationAvailable: this.pageTurnSimulationAvailable,
       justifyText: this.appearanceSnapshot.alignment === 'justify',
       onCollapse: (): void => this.requestCollapseSettings(),
       onJustifyTextChange: (_value: boolean): void =>
@@ -1191,6 +1195,7 @@ export struct ReaderControlPanel {
         ReaderSettingsModulePanel({
           isTablet: this.isExpanded(),
           snapshot: this.settingsSnapshot,
+          pageTurnSimulationAvailable: this.pageTurnSimulationAvailable,
           onPageTurnStyleChange: (style: ReaderPageTurnStyle): void =>
             this.onPageTurnStyleChange(style),
           onScreenDirectionChange: (direction: ReaderScreenDirection): void =>
