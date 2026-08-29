@@ -58,14 +58,6 @@ sha256=5ac0e0f5b4a9c7b4a31f99fb43d130b08ec8244fc8408b4b22904605b28170e8
 | TXT 正文 | PASS：现有 TXT 书正文实际渲染 |
 | EPUB 正文 | PASS：Sample/Fixture EPUB 正文实际渲染 |
 | EPUB 图片 | OPEN：现有两个 EPUB fixture 均无图片 |
-| 仿真样式持久化 | PASS：重启前后“仿真”保持选中 |
-| 中心垂直拖动释放 | PASS（不提交）：释放前后正文摘要一致 |
-| 动态垂直视觉 | OPEN：VM 截图不能可靠证明 XComponent 实时形变 |
-| 原生短拖回滚 | PASS：`native-next:1`，摘要不变 |
-| 完整翻页 | PASS：`native-next:2`，页键 `8877 -> 9064` |
-| 连续翻页 | PASS：`native-next:3`，页键 `9064 -> 9273` |
-| 斜向反向翻页 | PASS：`native-previous:4`，页键返回 `9064` |
-| 翻页后控制恢复 | PASS：目录/朗读/界面/设置均可恢复 |
 | 强停后恢复 | PASS：重启进入书架；继续阅读恢复精确 current 页键 `1047:9064` |
 
 Reader 进程没有 FATAL 日志。远程书源请求在 VM 中存在不可达/连接拒绝，因此新鲜网络的搜索、详情、入架、下载和离线冷启链没有在本轮验收。
@@ -76,8 +68,7 @@ Reader 进程没有 FATAL 日志。远程书源请求在 VM 中存在不可达/�
 2. Tablet VM 回归。
 3. 含图片 EPUB 的导入、渲染、翻页和重启恢复。
 4. 新鲜远程网络全链与实际导入选择器边界。
-5. 物理设备 PageCurl 首帧跟手、慢拖、垂直拒绝、扇形拉伸、连续翻页和系统手势边界。
-6. 用户验收。
+5. 用户验收。
 
 ## 完整证据位置
 
@@ -93,5 +84,4 @@ Reader 进程没有 FATAL 日志。远程书源请求在 VM 中存在不可达/�
 - `execution.json`：机器可读执行结果。
 - `signed-build-provenance.json` / `vm-unsigned-build-provenance.json`：Core/NAPI/HAP 来源。
 - `signed-verification-sanitized.txt`：脱敏验签转录。
-- `vm-pagecurl-log-excerpt.txt`：原生会话与重启页键。
 - `SHA256SUMS`：目录内全部证据（除清单自身）的 SHA-256。
