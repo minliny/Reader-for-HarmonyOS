@@ -11,8 +11,20 @@
 //  * Settlement-style input: direction=NEXT, start=pointer={W,H/2}, edge.y=H/2,
 //    overrideTheta=true. With settledTheta=0 the pose theta is exactly 0, so
 //    FoldScreenX(pose.axis, 0, H) == pose.axis and pose.axis IS the screen fold-x.
-//  * PREVIOUS is mirrored internally (x' = W - x on start/pointer/edge) and emits
-//    a canonical pose; the real screen fold is W - FoldScreenX(...), sweeping 0->W.
+//  * PREVIOUS emits the real screen pose directly (contract 6.2: strict time
+//    reversal along the same Q(tau) states, NO screen mirroring): FoldScreenX
+//    IS the real fold and sweeps 0->W as edge.x chases 0->W.
+//
+// Stage-2 semantic correction (2026-08-29): stage 1 rendered PREVIOUS as the
+// screen-mirrored NEXT turn (solver mirrored inputs, renderer mirrored the
+// projection + texture u). That makes the previous sheet lie flat face-up
+// covering the screen at gesture start — the current page's behavior, not the
+// contract's (3: previous page curls IN; 6.2: time reversal, no screen
+// mirror; HW reference: mirror-symmetric fold sweep, unmirrored content).
+// Fixed by driving the canonical solve with the raw inputs (tau = s^-1(e/W),
+// fold = W*xNorm = edge 1:1, pure-schedule axis — the grip-equation fit is a
+// NEXT free-edge device) and consuming the pose unmirrored. The flat branch
+// of p(q) is the identity map, so content orientation is automatic.
 //
 // Resolved contract findings (2026-08-29 stage-1 gate, user ruling):
 //  * T10(b): contract 6.3 text was self-contradictory — with the C1 seam and
@@ -174,7 +186,7 @@ float EdgeForTau(float tau)
     return xNorm * kW;
 }
 
-// Screen fold-x of a canonical pose (for PREVIOUS the real fold is W - this).
+// Screen fold-x of the pose (the real screen fold in both directions).
 float FoldX(const BookTurnPose& pose)
 {
     return BookTurnSolver::FoldScreenX(pose.axis, pose.theta, pose.height);
@@ -269,16 +281,17 @@ void TestInv1NoFreeze()
         "some step decreased the fold by <= 1e-4vp");
     CheckLE("T03 next final fold", finalFoldNext, 2.0);
 
-    // PREVIOUS: edge.x chases 0 -> 390; real fold = W - FoldScreenX strictly increasing.
-    const float initialFoldPrev = kW -
-        FoldX(BookTurnSolver::Solve(MakeInput(Direction::PREVIOUS, 0.0F, kMidY, 0.0F, kMidY, 0.0F, kMidY)));
+    // PREVIOUS: edge.x chases 0 -> 390; the pose is the real screen pose, so
+    // FoldScreenX itself strictly increases from 0 (1:1 fold-to-touch).
+    const float initialFoldPrev = FoldX(
+        BookTurnSolver::Solve(MakeInput(Direction::PREVIOUS, 0.0F, kMidY, 0.0F, kMidY, 0.0F, kMidY)));
     float leastIncrease = 1e9F;
     float previousReal = initialFoldPrev;
     for (int i = 1; i <= 400; ++i) {
         const float edgeX = kW * static_cast<float>(i) / 400.0F;
         const BookTurnPose pose = BookTurnSolver::Solve(
             MakeInput(Direction::PREVIOUS, 0.0F, kMidY, 0.0F, kMidY, edgeX, kMidY));
-        const float realFold = kW - FoldX(pose);
+        const float realFold = FoldX(pose);
         leastIncrease = std::min(leastIncrease, realFold - previousReal);
         previousReal = realFold;
     }
@@ -330,6 +343,24 @@ void TestInv2NoCommitPop()
     CheckLE("T04 committed max screen-x", maxX, 0.03 * kW);
     CheckLE("T04 committed max |z|", maxZ, 0.5);
 
+    // PREVIOUS commit (edge W): the unrolled previous sheet must cover the
+    // revealed page flat front-up before the slot swap (T-SWAP-COVER).
+    const BookTurnPose prevCommit = BookTurnSolver::Solve(
+        MakeInput(Direction::PREVIOUS, 0.0F, kMidY, kW, kMidY, kW, kMidY));
+    float prevMaxX = -1e9F;
+    float prevMaxZ = 0.0F;
+    for (int iu = 0; iu <= 65; ++iu) {
+        const float u = 6.0F * static_cast<float>(iu);
+        for (int iv = 0; iv <= 130; ++iv) {
+            const float v = 6.0F * static_cast<float>(iv);
+            const Vec3 mapped = BookTurnSolver::MapMaterial(prevCommit, { u, v });
+            prevMaxX = std::max(prevMaxX, mapped.x);
+            prevMaxZ = std::max(prevMaxZ, std::abs(mapped.z));
+        }
+    }
+    CheckGE("T04 previous commit coverage", prevMaxX, 0.97 * kW);
+    CheckLE("T04 previous commit max |z|", prevMaxZ, 0.5);
+
     // Coverage non-increasing over the last quarter (tau in [0.75, 1], 26 samples).
     float worstIncrease = -1e9F;
     float previousCoverage = MaxMappedX(BookTurnSolver::Solve(Settlement(EdgeForTau(0.75F), 0.0F)), 3.0F, 3.0F);
@@ -341,10 +372,10 @@ void TestInv2NoCommitPop()
     }
     CheckLE("T04 coverage monotone last quarter", worstIncrease, 1e-3);
 
-    std::printf("T04 INV-2 no-commit-pop %s (tau=1: maxX %.3fvp <= %.2f, maxZ %.3f; "
-        "worst coverage step %+.3fvp over tau 0.75..1)\n",
+    std::printf("T04 INV-2 no-commit-pop %s (next tau=1: maxX %.3fvp <= %.2f, maxZ %.3f; "
+        "prev commit maxX %.3fvp, maxZ %.3f; worst coverage step %+.3fvp over tau 0.75..1)\n",
         g_fails == before ? "PASS" : "FAIL",
-        maxX, 0.03 * kW, maxZ, worstIncrease);
+        maxX, 0.03 * kW, maxZ, prevMaxX, prevMaxZ, worstIncrease);
 }
 
 // ---------------------------------------------------------------- T05
@@ -386,39 +417,102 @@ void TestInv3CancelReversal()
 void TestMirrorPointwise()
 {
     const int before = g_fails;
+
+    // Same-edge schedule identity (contract 6.2 strict time reversal): tau =
+    // s^-1(edge.x/W) for BOTH directions, so at the same chased edge the
+    // schedule state must coincide exactly (same Q(tau) state), and the
+    // previous fold follows the chased edge 1:1 (pure-schedule axis; NEXT's
+    // S1/S2 fold is the grip fit, so only schedule outputs are compared).
     float worstDiff = 0.0F;
     for (int k = 0; k <= 30; ++k) {
         const float e = 13.0F * static_cast<float>(k);
         const BookTurnPose poseP = BookTurnSolver::Solve(
             MakeInput(Direction::PREVIOUS, 0.0F, kMidY, e, kMidY, e, kMidY));
         const BookTurnPose poseN = BookTurnSolver::Solve(
-            MakeInput(Direction::NEXT, kW, kMidY, kW - e, kMidY, kW - e, kMidY));
-        worstDiff = std::max(worstDiff, std::abs(poseP.axis - poseN.axis));
+            MakeInput(Direction::NEXT, kW, kMidY, e, kMidY, e, kMidY));
         worstDiff = std::max(worstDiff, std::abs(poseP.tau - poseN.tau));
-        worstDiff = std::max(worstDiff, std::abs(poseP.radius - poseN.radius));
-        worstDiff = std::max(worstDiff, std::abs(poseP.gripDistance - poseN.gripDistance));
         worstDiff = std::max(worstDiff, std::abs(poseP.beta - poseN.beta));
-        worstDiff = std::max(worstDiff, std::abs(poseP.theta - poseN.theta));
+        worstDiff = std::max(worstDiff, std::abs(poseP.radius - poseN.radius));
+        worstDiff = std::max(worstDiff, std::abs(poseP.rollRadius - poseN.rollRadius));
+        CheckTrue(poseP.stage == poseN.stage, "T06 same-edge stage equal", "stage differs");
         CheckTrue(poseP.direction == Direction::PREVIOUS, "T06 previous direction kept",
             "poseP.direction != PREVIOUS");
         CheckTrue(poseN.direction == Direction::NEXT, "T06 next direction kept",
             "poseN.direction != NEXT");
+        CheckNear("T06 previous fold 1:1", FoldX(poseP), e, 1e-3);
     }
-    CheckLE("T06 mirror pointwise fields", worstDiff, 1e-3);
+    CheckLE("T06 same-edge schedule fields", worstDiff, 1e-3);
 
-    // e=0 regression (V1 previous-start drape defect): both sides start flat,
-    // the real previous fold sits exactly on the previous sheet's free edge.
-    const BookTurnPose flatP = BookTurnSolver::Solve(
+    // Gesture start (edge 0): tau 1, radius 0, the sheet is the flat flip
+    // about the fold line at x=0 and lies entirely at [-W, 0] — invisible
+    // (regression for the V1 previous-start drape defect).
+    const BookTurnPose startP = BookTurnSolver::Solve(
         MakeInput(Direction::PREVIOUS, 0.0F, kMidY, 0.0F, kMidY, 0.0F, kMidY));
-    const BookTurnPose flatN = BookTurnSolver::Solve(
-        MakeInput(Direction::NEXT, kW, kMidY, kW, kMidY, kW, kMidY));
-    CheckNear("T06 e=0 previous tau", flatP.tau, 0.0, 1e-6);
-    CheckNear("T06 e=0 next tau", flatN.tau, 0.0, 1e-6);
-    CheckNear("T06 e=0 real previous fold", kW - FoldX(flatP), 0.0, 1e-3);
-    CheckNear("T06 e=0 canonical next fold", FoldX(flatN), kW, 1e-3);
+    CheckNear("T06 e=0 previous tau", startP.tau, 1.0, 1e-6);
+    CheckTrue(startP.stage == CurlStage::COLLAPSE, "T06 e=0 previous stage COLLAPSE",
+        "previous gesture must start at the reversed schedule end");
+    float startMaxX = -1e9F;
+    float startMaxZ = 0.0F;
+    for (int iu = 0; iu <= 65; ++iu) {
+        const float u = 6.0F * static_cast<float>(iu);
+        for (int iv = 0; iv <= 130; ++iv) {
+            const float v = 6.0F * static_cast<float>(iv);
+            const Vec3 mapped = BookTurnSolver::MapMaterial(startP, { u, v });
+            startMaxX = std::max(startMaxX, mapped.x);
+            startMaxZ = std::max(startMaxZ, std::abs(mapped.z));
+        }
+    }
+    CheckLE("T06 e=0 previous sheet off-screen", startMaxX, 0.03 * kW);
+    CheckLE("T06 e=0 previous sheet flat", startMaxZ, 0.5);
 
-    std::printf("T06 mirror-pointwise previous==next %s (31 mirror points, worst field diff %.2e)\n",
-        g_fails == before ? "PASS" : "FAIL", worstDiff);
+    // Commit (edge W): tau 0, the previous sheet lies flat over [0, W]
+    // front-up — swap-safe coverage of the revealed page.
+    const BookTurnPose commitP = BookTurnSolver::Solve(
+        MakeInput(Direction::PREVIOUS, 0.0F, kMidY, kW, kMidY, kW, kMidY));
+    CheckNear("T06 e=W previous tau", commitP.tau, 0.0, 1e-6);
+    CheckTrue(commitP.stage == CurlStage::FLAT, "T06 e=W previous stage FLAT",
+        "previous commit must land on the flat schedule start");
+    float commitMaxX = -1e9F;
+    float commitMaxZ = 0.0F;
+    for (int iu = 0; iu <= 65; ++iu) {
+        const float u = 6.0F * static_cast<float>(iu);
+        for (int iv = 0; iv <= 130; ++iv) {
+            const float v = 6.0F * static_cast<float>(iv);
+            const Vec3 mapped = BookTurnSolver::MapMaterial(commitP, { u, v });
+            commitMaxX = std::max(commitMaxX, mapped.x);
+            commitMaxZ = std::max(commitMaxZ, std::abs(mapped.z));
+        }
+    }
+    CheckGE("T06 e=W previous coverage", commitMaxX, 0.97 * kW);
+    CheckLE("T06 e=W previous sheet flat", commitMaxZ, 0.5);
+
+    // Flat-branch identity (contract 6.3): for d<=0 p(q) is the identity map,
+    // so the unmirrored previous content lands material u at screen x=u with
+    // the binding edge pinned at x=0 — no texture flip needed.
+    const BookTurnPose midP = BookTurnSolver::Solve(
+        MakeInput(Direction::PREVIOUS, 0.0F, kMidY, 200.0F, kMidY, 200.0F, kMidY));
+    bool identity = true;
+    for (float u : { 0.0F, 10.0F, 60.0F, 120.0F, 180.0F, 199.0F }) {
+        for (float v : { 0.0F, kMidY, kH }) {
+            const Vec3 mapped = BookTurnSolver::MapMaterial(midP, { u, v });
+            if (std::abs(mapped.x - u) > 1e-3 || std::abs(mapped.z) > 1e-3) {
+                identity = false;
+            }
+        }
+    }
+    CheckTrue(identity, "T06 flat-branch identity map", "p(q) != q in the flat region");
+
+    // Mirror-symmetric pointer geometry (same |dx|, same dy, both gates
+    // saturated at 200vp travel): inclination flips sign with direction.
+    const BookTurnPose tiltP = BookTurnSolver::Solve(
+        MakeInput(Direction::PREVIOUS, 0.0F, kMidY, 200.0F, kMidY - 80.0F, 200.0F, kMidY));
+    const BookTurnPose tiltN = BookTurnSolver::Solve(
+        MakeInput(Direction::NEXT, kW, kMidY, 190.0F, kMidY - 80.0F, 190.0F, kMidY));
+    CheckNear("T06 tilt mirror theta", tiltP.theta, -tiltN.theta, 1e-5);
+
+    std::printf("T06 previous semantics %s (31 same-edge points worst schedule diff %.2e; "
+        "start maxX %.3fvp, commit maxX %.3fvp)\n",
+        g_fails == before ? "PASS" : "FAIL", worstDiff, startMaxX, commitMaxX);
 }
 
 // ---------------------------------------------------------------- T07

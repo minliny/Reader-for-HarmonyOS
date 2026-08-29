@@ -69,10 +69,11 @@ struct BookTurnInput {
     float height = 0.0F;
     Vec2 start;
     Vec2 pointer;
-    /** Chase-controller output: the fold/free-edge target along the locked
-     *  direction (V1 §5.3 x_follow). Drives tau = s^-1(x_follow/W). For
-     *  PREVIOUS the solver mirrors x internally, so the raw host value stays
-     *  in real screen coordinates (0 at gesture start, W at commit). */
+    /** Chase-controller output: the moving-edge target along the locked
+     *  direction (V1 §5.3 x_follow). Drives tau = s^-1(x_follow/W) in raw
+     *  screen coordinates for both directions: NEXT sweeps W -> 0 (the free
+     *  edge is chased), PREVIOUS sweeps 0 -> W (the fold/unroll front is
+     *  chased); the pose folds at W*xNorm either way. */
     Vec2 edge;
     float pointerVelocityX = 0.0F;
     int64_t eventTimeNs = 0;
@@ -84,12 +85,13 @@ struct BookTurnInput {
     float radiusScale = 1.0F;
 };
 
-/** One canonical pose consumed unchanged by the shader and diagnostics.
- *  All geometric fields live in the canonical frame (NEXT-like): the fold
- *  sweeps W -> 0 and the curl lies right of the fold. For Direction::PREVIOUS
- *  the real screen pose is the mirror x -> W - x (the renderer flips the
- *  projection and the texture u), so the real fold is at
- *  W - FoldScreenX(axis, theta, height) and sweeps 0 -> W. */
+/** One pose consumed unchanged by the shader and diagnostics. The pose is the
+ *  real screen pose for both directions (contract §6.2: PREVIOUS is the
+ *  strict time reversal along the same Q(tau) states, NO screen mirroring):
+ *  the fold sweeps W -> 0 for NEXT and 0 -> W for PREVIOUS, the flat branch
+ *  of p(q) is the identity map (material u lands at screen x=u, content
+ *  unmirrored, no texture flip), and PREVIOUS reverses the stage sequence
+ *  (gesture start = tau 1 COLLAPSE, commit = tau 0 FLAT). */
 struct BookTurnPose {
     uint64_t generation = 0;
     Direction direction = Direction::NEXT;

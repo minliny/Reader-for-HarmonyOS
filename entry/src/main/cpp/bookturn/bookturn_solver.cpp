@@ -185,10 +185,13 @@ bool FiniteInput(const BookTurnInput& input)
         std::isfinite(input.edge.x) && std::isfinite(input.edge.y);
 }
 
-// Fold-line placement shared by both regimes. In S0-S2 the fold follows the
-// chased target through the grip equation (V1 §6.2); in S3-S5 the schedule
-// owns the fold line and the fit solve is blended out smoothly so the
-// takeover frame is position-continuous (contract §6.4 seam rule).
+// Fold-line placement shared by both regimes. NEXT: in S0-S2 the fold follows
+// the chased target through the grip equation (V1 §6.2), in S3-S5 the
+// schedule owns the fold line and the fit solve is blended out smoothly so
+// the takeover frame is position-continuous (contract §6.4 seam rule).
+// PREVIOUS: the chased target IS the fold (the unroll front follows the
+// finger 1:1), so the schedule owns the axis across the whole gesture and the
+// grip-equation fit — a NEXT free-edge device — must never lag the fold.
 void ResolveSheet(BookTurnPose& pose, const BookTurnInput& input, float xNorm)
 {
     pose.tangent = { std::sin(pose.theta), std::cos(pose.theta) };
@@ -198,25 +201,32 @@ void ResolveSheet(BookTurnPose& pose, const BookTurnInput& input, float xNorm)
     const float vStar = (Dot(pose.target, pose.tangent) - input.width * pose.tangent.x) / tangentY;
     pose.gripMaterial = { input.width, Clamp(vStar, 0.0F, input.height) };
 
-    const float gripNormal = Dot(pose.gripMaterial, pose.normal);
-    const float targetNormal = Dot(pose.target, pose.normal);
-    const float delta = std::max(0.0F, gripNormal - targetNormal);
-    const float gripDistance = SolveGripDistance(delta, pose.radius);
-    const float catchAxis = gripNormal - gripDistance;
-
     pose.sigmaGrip = Dot(pose.gripMaterial, pose.tangent);
-    if (pose.tau < kStageFlipEnd) {
-        pose.axis = catchAxis;
-        pose.gripDistance = gripDistance;
-        pose.gripPhi = pose.radius <= kEpsilon ? kPi :
-            Clamp(gripDistance / pose.radius, 0.0F, kPi);
-    } else {
+    if (pose.direction == Direction::PREVIOUS) {
         const float foldX = xNorm * input.width;
-        const float scheduledAxis = BookTurnSolver::AxisFromFoldX(foldX, pose.theta, input.height);
-        const float blend = SmoothStep(kStageFlipEnd, 1.0F, pose.tau);
-        pose.axis = blend * scheduledAxis + (1.0F - blend) * catchAxis;
+        pose.axis = BookTurnSolver::AxisFromFoldX(foldX, pose.theta, input.height);
         pose.gripDistance = pose.beta * pose.radius;
         pose.gripPhi = Clamp(pose.beta, 0.0F, kPi);
+    } else {
+        const float gripNormal = Dot(pose.gripMaterial, pose.normal);
+        const float targetNormal = Dot(pose.target, pose.normal);
+        const float delta = std::max(0.0F, gripNormal - targetNormal);
+        const float gripDistance = SolveGripDistance(delta, pose.radius);
+        const float catchAxis = gripNormal - gripDistance;
+
+        if (pose.tau < kStageFlipEnd) {
+            pose.axis = catchAxis;
+            pose.gripDistance = gripDistance;
+            pose.gripPhi = pose.radius <= kEpsilon ? kPi :
+                Clamp(gripDistance / pose.radius, 0.0F, kPi);
+        } else {
+            const float foldX = xNorm * input.width;
+            const float scheduledAxis = BookTurnSolver::AxisFromFoldX(foldX, pose.theta, input.height);
+            const float blend = SmoothStep(kStageFlipEnd, 1.0F, pose.tau);
+            pose.axis = blend * scheduledAxis + (1.0F - blend) * catchAxis;
+            pose.gripDistance = pose.beta * pose.radius;
+            pose.gripPhi = Clamp(pose.beta, 0.0F, kPi);
+        }
     }
 
     // Contract §6.4 legal-domain projection (binding-edge fixed is priority 1):
@@ -228,7 +238,7 @@ void ResolveSheet(BookTurnPose& pose, const BookTurnInput& input, float xNorm)
     const float axisFloor = std::max(0.0F, -input.height * std::sin(pose.theta));
     if (pose.axis < axisFloor) {
         pose.axis = axisFloor;
-        if (pose.tau < kStageFlipEnd) {
+        if (pose.direction == Direction::NEXT && pose.tau < kStageFlipEnd) {
             pose.gripDistance = std::max(0.0F, Dot(pose.gripMaterial, pose.normal) - axisFloor);
             pose.gripPhi = pose.radius <= kEpsilon ? kPi :
                 Clamp(pose.gripDistance / pose.radius, 0.0F, kPi);
@@ -236,7 +246,13 @@ void ResolveSheet(BookTurnPose& pose, const BookTurnInput& input, float xNorm)
     }
 
     pose.projectedGrip = BookTurnSolver::MapMaterial(pose, pose.gripMaterial);
-    pose.targetError = Distance(pose.projectedGrip, pose.target);
+    if (pose.direction == Direction::PREVIOUS) {
+        // The target is the fold itself; report the perpendicular distance of
+        // the target from the fold line as the follow-error diagnostic.
+        pose.targetError = std::abs(Dot(pose.target, pose.normal) - pose.axis);
+    } else {
+        pose.targetError = Distance(pose.projectedGrip, pose.target);
+    }
 }
 
 }  // namespace
@@ -251,20 +267,18 @@ BookTurnPose BookTurnSolver::Solve(const BookTurnInput& input, const BookTurnPos
         return pose;
     }
 
-    // PREVIOUS runs the identical canonical geometry in mirrored screen
-    // coordinates (x' = W - x): the previous sheet un-folds exactly like a
-    // NEXT turn reflected about the vertical center line. The emitted pose is
-    // canonical (fold sweeps W -> 0, curl right of the fold); the renderer
-    // mirrors the projection and the texture u for PREVIOUS, so the real fold
-    // sweeps 0 -> W and the real tilt is -theta. This also makes tau=0 flat
-    // in both directions, which fixes the V1 previous-start drape defect.
-    BookTurnInput canonical = input;
-    canonical.direction = Direction::NEXT;
-    if (input.direction == Direction::PREVIOUS) {
-        canonical.start.x = input.width - input.start.x;
-        canonical.pointer.x = input.width - input.pointer.x;
-        canonical.edge.x = input.width - input.edge.x;
-    }
+    // PREVIOUS is the strict time reversal of the same canonical trajectory
+    // (contract §6.2: same Q(tau) states played backward, front/back and
+    // occlusion order swapped, NO screen mirroring). The raw real-screen
+    // inputs therefore drive the canonical solve directly: tau =
+    // s^-1(edge.x/W) runs 1 -> 0 over the gesture, the schedule fold sweeps
+    // 0 -> W, and the emitted pose IS the real screen pose (the flat branch
+    // of p(q) is the identity map, so material u lands at screen x=u and the
+    // page content stays unmirrored with no texture flip). At gesture start
+    // (edge 0, tau 1, radius 0) the sheet is the flat flip about the fold
+    // line and lies at [-W, 0] — invisible, which is the V2 fix for the V1
+    // previous-start drape defect.
+    const BookTurnInput& canonical = input;
 
     pose.width = input.width;
     pose.height = input.height;
@@ -278,7 +292,10 @@ BookTurnPose BookTurnSolver::Solve(const BookTurnInput& input, const BookTurnPos
     const float dx = canonical.pointer.x - canonical.start.x;
     const float dy = canonical.pointer.y - canonical.start.y;
     const float horizontal = std::max(0.0F, direction * dx);
-    const float sourceX = canonical.width;
+    // The exposure lever measures how far the moving edge has travelled from
+    // its rest position: NEXT rests at the free edge (W), PREVIOUS at the
+    // spine (0).
+    const float sourceX = canonical.direction == Direction::NEXT ? canonical.width : 0.0F;
     const float exposed = std::abs(pose.target.x - sourceX);
     float thetaVector = 0.0F;
     float intentGate = 0.0F;

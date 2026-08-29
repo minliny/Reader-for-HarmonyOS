@@ -57,11 +57,13 @@ public:
     bool Draw(const BookTurnPose& pose);
     bool Clear();
     void CommitSlots(Direction direction);
+    /** Theme-derived backface paper source (contract 8.6): consumed only while
+     *  fallback mode is on; passing a negative blue disables the fallback. */
+    void SetThemePaper(float red, float green, float blue);
 
 private:
-    // The free edge bends primarily along page height while the cylinder bends
-    // across page width. 64x128 removes visible chords on phone-density
-    // surfaces while staying below 17k triangles per frame.
+    // Contract 10.2: 65x129 vertices / 16384 triangles; the vertex shader
+    // evaluates the developable-cone mapping per frame from pose uniforms.
     static constexpr int kMeshColumns = 64;
     static constexpr int kMeshRows = 128;
 
@@ -75,10 +77,22 @@ private:
 
     struct BottomUniforms {
         GLint pageSize = -1;
+        GLint texture = -1;
+        GLint gutterWidth = -1;
+        GLint gutterAlpha = -1;
+    };
+
+    struct BandUniforms {
+        GLint pageSize = -1;
         GLint normal = -1;
         GLint axis = -1;
-        GLint pageWidth = -1;
-        GLint texture = -1;
+        GLint bandSide = -1;
+        GLint tau = -1;
+        GLint bandWidth = -1;
+        GLint bandPeak = -1;
+        GLint poolPeak = -1;
+        GLint poolWidthStart = -1;
+        GLint poolWidthEnd = -1;
     };
 
     struct SheetUniforms {
@@ -86,7 +100,12 @@ private:
         GLint axis = -1;
         GLint radius = -1;
         GLint theta = -1;
+        GLint coneTaper = -1;
+        GLint sigmaGrip = -1;
         GLint texture = -1;
+        GLint highlightPhiWidth = -1;
+        GLint paperColor = -1;
+        GLint paperFallback = -1;
     };
 
     bool InitializeEgl(void* nativeWindow);
@@ -96,6 +115,7 @@ private:
     GLuint CompileShader(GLenum type, const char* source);
     GLuint LinkProgram(GLuint vertex, GLuint fragment);
     void DrawBottom(const BookTurnPose& pose, TextureSlot slot);
+    void DrawShadowBand(const BookTurnPose& pose);
     void DrawSheet(const BookTurnPose& pose, TextureSlot slot);
     void DestroyGl();
     TextureState& Slot(TextureSlot slot);
@@ -109,8 +129,10 @@ private:
     uint64_t surfaceHeight_ = 0;
 
     GLuint bottomProgram_ = 0;
+    GLuint bandProgram_ = 0;
     GLuint sheetProgram_ = 0;
     BottomUniforms bottomUniforms_;
+    BandUniforms bandUniforms_;
     SheetUniforms sheetUniforms_;
     GLuint bottomVao_ = 0;
     GLuint bottomVbo_ = 0;
@@ -119,6 +141,8 @@ private:
     GLuint sheetIbo_ = 0;
     GLsizei sheetIndexCount_ = 0;
     std::array<TextureState, 4> textures_;
+    float fallbackPaper_[3] = { 1.0F, 1.0F, 1.0F };
+    bool fallbackPaperEnabled_ = false;
 };
 
 }  // namespace reader::bookturn

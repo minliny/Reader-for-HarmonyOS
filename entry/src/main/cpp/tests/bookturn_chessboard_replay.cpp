@@ -22,8 +22,9 @@
 // material grid (0.75 vp steps) through MapMaterial/SurfaceNormal into a
 // sheet-only z-buffer (max z wins per pixel), then composited over the base.
 // theta=0 frames are orthographic top-down; tilted frames (diagonal_psi) use
-// mapped (x, y) directly as a form approximation. PREVIOUS renders the
-// canonical pose mirrored (x -> W - x); backface stays backface (z preserved).
+// mapped (x, y) directly as a form approximation. All poses are consumed
+// unmirrored: the solver emits the real screen pose for both directions
+// (contract 6.2 strict time reversal, stage-2 semantic correction).
 
 #include "bookturn_solver.h"
 
@@ -82,13 +83,12 @@ constexpr Rgb kPaperA2{216, 205, 186};  // #D8CDBA
 constexpr Rgb kSheetB1{200, 162, 75};   // #C8A24B (frontface cell 0)
 constexpr Rgb kSheetB2{138, 109, 47};   // #8A6D2F (frontface cell 1)
 
-enum class SeqId { kSlowDrag, kFastDrag, kCancel, kTapAuto, kPreviousReverse, kDiagonalPsi };
+enum class SeqId { kSlowDrag, kFastDrag, kCancel, kTapAuto, kPreviousReverse, kDiagonalPsi, kUSample };
 
 struct SeqSpec {
     SeqId id;
     const char* name;
     int frames;
-    bool mirror;         // render canonical x -> W - x (PREVIOUS)
     bool checkInv1;
     bool checkInv2;
     bool foldIncreasing; // INV-1 direction (PREVIOUS real fold grows 0->W)
@@ -198,7 +198,8 @@ float EdgeX(SeqId id, int i, int n) {
     case SeqId::kFastDrag:
     case SeqId::kDiagonalPsi:
         return kW * (1.0F - static_cast<float>(i) / last);
-    case SeqId::kTapAuto: {
+    case SeqId::kTapAuto:
+    case SeqId::kUSample: {
         float xNorm = 1.0F;
         float beta = 0.0F;
         float scale = 1.0F;
@@ -225,7 +226,8 @@ BookTurnInput MakeInput(const SeqSpec& spec, int i) {
     in.radiusScale = 1.0F;
     const float edgeX = EdgeX(spec.id, i, spec.frames);
     if (spec.id == SeqId::kPreviousReverse) {
-        // Raw host values in real screen coordinates; solver mirrors internally.
+        // Raw real-screen values; the pose is the real screen pose for both
+        // directions (strict time reversal, no mirroring anywhere).
         in.direction = Direction::PREVIOUS;
         in.start = {0.0F, kMidY};
         in.edge = {edgeX, kMidY};
@@ -260,10 +262,16 @@ std::string InputDescription(const SeqSpec& spec) {
     case SeqId::kTapAuto:
         return "settlement input; tau 0->1 linear over 36 frames (600ms @ 60fps), "
                "edge.x = W*Schedule(tau).xNorm (pure Q(tau) replay)";
+    case SeqId::kUSample:
+        return "13-frame tau ladder tau=i/12: edge.x = W*Schedule(tau).xNorm, pointer=edge, "
+               "overrideTheta=true settledTheta=0 (pure Q(tau) fold drive); morphology fixture "
+               "paired frame-by-frame with the internal U WebGL sample (Figma 3394:10546) "
+               "13-frame flipbook t=(i/12)*2.0s (contract 13.3-1)";
     case SeqId::kPreviousReverse:
         return "direction=PREVIOUS, start={0,H/2}, pointer=edge, edge.x 0->W raw "
-               "(solver mirrors internally); rendered mirrored x->W-x; "
-               "real fold = W - FoldScreenX(pose.axis, pose.theta, H)";
+               "(strict time reversal of the same Q(tau) trajectory, NO screen mirroring); "
+               "the pose is the real screen pose: fold = FoldScreenX grows 0->W, the sheet "
+               "is the previous page unrolling from the spine over the static current page";
     case SeqId::kDiagonalPsi:
         return "direction=NEXT, pointer.x=edge.x, pointer.y=H/2+280*sin(2*pi*i/(N-1)); "
                "overrideTheta=false (live tilt psi from the solver)";
@@ -328,7 +336,7 @@ void PaintBase(Canvas& canvas) {
     }
 }
 
-void RenderPose(Canvas& canvas, const BookTurnPose& pose, bool mirror) {
+void RenderPose(Canvas& canvas, const BookTurnPose& pose) {
     std::fill(canvas.sheetZ.begin(), canvas.sheetZ.end(), kNoDepth);
     std::fill(canvas.sheetMask.begin(), canvas.sheetMask.end(), static_cast<uint8_t>(0));
     canvas.maxCanonX = kNoDepth;     // running max seeded at -inf
@@ -348,10 +356,7 @@ void RenderPose(Canvas& canvas, const BookTurnPose& pose, bool mirror) {
             canvas.maxCanonX = std::max(canvas.maxCanonX, p.x);
             canvas.minCanonX = std::min(canvas.minCanonX, p.x);
 
-            float sx = p.x * static_cast<float>(kScale);
-            if (mirror) {
-                sx = (kW - p.x) * static_cast<float>(kScale);
-            }
+            const float sx = p.x * static_cast<float>(kScale);
             const float sy = p.y * static_cast<float>(kScale);
             if (sx < -kSplatRadiusPx || sx > static_cast<float>(kImgW) + kSplatRadiusPx ||
                 sy < -kSplatRadiusPx || sy > static_cast<float>(kImgH) + kSplatRadiusPx) {
@@ -415,12 +420,11 @@ SeqReport RunPass(const SeqSpec& spec, const std::string& seqDir) {
         const BookTurnPose pose = BookTurnSolver::Solve(in, nullptr);
         rep.maxAbsThetaDeg = std::max(rep.maxAbsThetaDeg, std::fabs(pose.theta) * radToDeg);
         PaintBase(canvas);
-        RenderPose(canvas, pose, spec.mirror);
+        RenderPose(canvas, pose);
         FrameRec rec;
         rec.index = i;
         rec.tau = pose.tau;
-        const float canonicalFold = BookTurnSolver::FoldScreenX(pose.axis, pose.theta, kH);
-        rec.foldVp = spec.mirror ? kW - canonicalFold : canonicalFold;
+        rec.foldVp = BookTurnSolver::FoldScreenX(pose.axis, pose.theta, kH);
         rec.foldPctW = rec.foldVp / kW * 100.0F;
         rep.recs.push_back(rec);
         std::printf("%-16s f%03d/%03d tau=%.4f fold=%7.2fvp (%6.2f%%W)\n", spec.name, i,
@@ -483,29 +487,33 @@ void CheckInv2(SeqReport& rep) {
     if (!result.applicable) {
         return;
     }
-    // Final-frame page coverage by the moving sheet. NEXT: max screen-x.
-    // PREVIOUS (mirrored): residue past the right spine is
-    //   W - min(real-x) = W - (W - max canonical x) = max canonical x,
-    // identical form. The sheet's other extreme is reported as information:
-    // at commit it sits wholly beyond the spine (off-screen) by design.
-    const float coverage = rep.finalMaxCanonX;
-    result.worst = coverage;
-    result.worstFrame = rep.spec.frames - 1;
-    result.pass = coverage <= kInv2MaxCoverageVp;
     char buf[256];
-    if (rep.spec.mirror) {
+    result.worstFrame = rep.spec.frames - 1;
+    if (rep.spec.id == SeqId::kPreviousReverse) {
+        // PREVIOUS commit: the unrolled previous sheet lies flat over [0, W],
+        // exactly covering the revealed page — the swap replaces the bottom
+        // page with the sheet itself, so INV-2 takes the full-coverage span
+        // form (both extremes within a 3%W sliver of the spines) instead of
+        // the NEXT residue form.
+        const float leftSliver = rep.finalMinCanonX;
+        const float rightSliver = kW - rep.finalMaxCanonX;
+        result.worst = std::max(leftSliver, rightSliver);
+        result.pass = leftSliver <= kInv2MaxCoverageVp && rightSliver <= kInv2MaxCoverageVp;
         std::snprintf(buf, sizeof(buf),
-                      "final page residue = W - min real-x = max canonical x = %.3fvp "
-                      "(%.2f%%W), limit %.3fvp; real sheet span [%.1f, %.1f]vp at commit",
-                      static_cast<double>(coverage),
-                      static_cast<double>(coverage / kW * 100.0F),
-                      static_cast<double>(kInv2MaxCoverageVp),
-                      static_cast<double>(kW - rep.finalMaxCanonX),
-                      static_cast<double>(kW - rep.finalMinCanonX));
+                      "commit span [%.1f, %.1f]vp (slivers L %.3fvp / R %.3fvp, limit %.3fvp); "
+                      "sheet flat over the page by design (swap replaces bottom with sheet)",
+                      static_cast<double>(rep.finalMinCanonX),
+                      static_cast<double>(rep.finalMaxCanonX),
+                      static_cast<double>(leftSliver), static_cast<double>(rightSliver),
+                      static_cast<double>(kInv2MaxCoverageVp));
     } else {
+        // NEXT: final-frame residue of the moving sheet over the revealed page.
+        const float coverage = rep.finalMaxCanonX;
+        result.worst = coverage;
+        result.pass = coverage <= kInv2MaxCoverageVp;
         std::snprintf(buf, sizeof(buf),
                       "final max screen-x = %.3fvp (%.2f%%W), limit %.3fvp; "
-                      "canonical span [%.1f, %.1f]vp",
+                      "screen span [%.1f, %.1f]vp",
                       static_cast<double>(coverage),
                       static_cast<double>(coverage / kW * 100.0F),
                       static_cast<double>(kInv2MaxCoverageVp),
@@ -745,16 +753,28 @@ std::string BuildManifest(const std::vector<SeqReport>& reports,
          "timeline vs U-sample time base); recorded for form review only.\n\n";
 
     m += "## Notes\n\n";
-    m += "- INV-2 reading for previous_reverse: the check is implemented as page residue "
-         "= W - min(real-x) = max(canonical x) <= 3%W (equivalently min real-x >= 97%W). "
-         "The literal alternative \"max real-x = W - min(canonical x)\" evaluates to ~2W at "
-         "commit because the fully flipped canonical sheet occupies [-W, 0] (mirror of the "
-         "NEXT commit sheet), i.e. real [W, 2W]: wholly beyond the right spine and off-screen. "
-         "Both numbers are recorded in the INV-2 line; the page-residue form is the one that "
-         "expresses INV-2 (sheet must clear the revealed page within a 3%W sliver).\n";
-    m += "- Commit geometry: at tau=1 radiusScale=0 -> radius=0, fold at the spine, and the "
-         "sheet maps to canonical [-W, 0] flat backface (n.z=-1, z=0): the turned page lies "
+    m += "- previous_reverse semantics (stage-2 correction 2026-08-29): PREVIOUS is the "
+         "strict time reversal of the same Q(tau) trajectory with NO screen mirroring. The "
+         "moving sheet is the previous page unrolling from the spine over the static current "
+         "page (bottom layer); the stage sequence runs backward (gesture start tau=1 "
+         "COLLAPSE, commit tau=0 FLAT); content stays unmirrored (flat branch of p(q) is "
+         "the identity map).\n";
+    m += "- previous_reverse INV-2 reading: at commit the sheet lies flat over [0, W], "
+         "exactly covering the revealed page, so the NEXT residue form (<= 3%W) does not "
+         "apply; the check is the full-coverage span form (L sliver <= 3%W, R sliver "
+         "<= 3%W), recorded in the INV-2 line.\n";
+    m += "- previous gesture start (edge 0, tau 1, radius 0): the previous sheet maps to "
+         "[-W, 0] flat - wholly off-screen, so the current page (bottom layer) shows "
+         "unobstructed at the first frame (fixes the V1 previous-start drape defect).\n";
+    m += "- Commit geometry (NEXT): at tau=1 radiusScale=0 -> radius=0, fold at the spine, and the "
+         "sheet maps to [-W, 0] flat backface (n.z=-1, z=0): the turned page lies "
          "on the far stack with 0 sliver over the revealed page (INV-2 margin = full 3%W).\n";
+    m += "- u_sample pairing (contract 13.3-1): frame k renders tau=k/12 of the canonical "
+         "Q(tau) trajectory (NEXT roll to spine, straight fold); the reference is the internal "
+         "U WebGL sample (Figma 3394:10546) 13-frame flipbook t=(k/12)*2.0s archived at "
+         "/tmp/u_frames/f{k:02d}_t*.png. Side-by-side composites (left: chessboard replay, "
+         "right: U sample) live at evidence/bookturn-v2-replay/u_compare/f{k:02d}_side.png. "
+         "Form reference only - different content bases, no pixel-diff gate.\n";
     m += "- Sheets mapping outside the frame (curl bulge overflow, commit stack) are clipped "
          "by image bounds; the INV-2 numbers are computed from mapped coordinates over the "
          "full material grid, independent of clipping.\n";
@@ -771,12 +791,13 @@ int main(int argc, char* argv[]) {
     MakeDirs(outDir);
 
     const std::vector<SeqSpec> specs = {
-        {SeqId::kSlowDrag, "slow_drag", 240, false, true, true, false, true, 0.0F},
-        {SeqId::kFastDrag, "fast_drag", 60, false, true, true, false, true, 0.0F},
-        {SeqId::kCancel, "cancel", 180, false, false, false, false, true, 0.0F},
-        {SeqId::kTapAuto, "tap_auto", 36, false, true, true, false, true, 0.0F},
-        {SeqId::kPreviousReverse, "previous_reverse", 180, true, true, true, true, false, 0.0F},
-        {SeqId::kDiagonalPsi, "diagonal_psi", 120, false, false, true, false, false, 0.0F},
+        {SeqId::kSlowDrag, "slow_drag", 240, true, true, false, true, 0.0F},
+        {SeqId::kFastDrag, "fast_drag", 60, true, true, false, true, 0.0F},
+        {SeqId::kCancel, "cancel", 180, false, false, false, true, 0.0F},
+        {SeqId::kTapAuto, "tap_auto", 36, true, true, false, true, 0.0F},
+        {SeqId::kPreviousReverse, "previous_reverse", 180, true, true, true, false, 0.0F},
+        {SeqId::kDiagonalPsi, "diagonal_psi", 120, false, true, false, false, 0.0F},
+        {SeqId::kUSample, "u_sample", 13, true, true, false, true, 0.0F},
     };
 
     std::vector<SeqReport> reports;

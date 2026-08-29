@@ -23,24 +23,72 @@ void main() {
 }
 )glsl";
 
+// Draw 1: static bottom page with the binding-edge gutter gradient baked in
+// (contract 8.5). The fold-following shadow of V1 moves to draw 2; the gutter
+// never follows the fold.
 constexpr char kBottomFragmentShader[] = R"glsl(#version 300 es
 precision highp float;
 in vec2 vUv;
 in vec2 vPage;
 layout(location = 0) out vec4 outColor;
 uniform sampler2D uTexture;
-uniform vec2 uNormal;
-uniform float uAxis;
-uniform float uPageWidth;
+uniform float uGutterWidth;
+uniform float uGutterAlpha;
 void main() {
-    vec4 base = texture(uTexture, vUv);
-    float planeDistance = dot(vPage, uNormal) - uAxis;
-    float shadowWidth = clamp(0.06 * uPageWidth, 18.0, 36.0);
-    float shadow = (1.0 - smoothstep(0.0, shadowWidth, abs(planeDistance))) * 0.22;
-    outColor = vec4(base.rgb * (1.0 - shadow), 1.0);
+    vec3 base = texture(uTexture, vUv).rgb;
+    float gutter = (1.0 - smoothstep(0.0, uGutterWidth, vPage.x)) * uGutterAlpha;
+    outColor = vec4(base * (1.0 - gutter), 1.0);
 }
 )glsl";
 
+// Draw 2: reveal shadow band (contract 8.3) + dynamic spine shadow pool
+// (contract 8.4), two independent gradients composited per fragment. The band
+// peaks at the fold line and decays over the revealed side with a two-segment
+// smoothstep (HUAWEI profile); the pool anchors at the binding edge and is
+// forbidden from merging with the band.
+constexpr char kBandFragmentShader[] = R"glsl(#version 300 es
+precision highp float;
+in vec2 vUv;
+in vec2 vPage;
+layout(location = 0) out vec4 outColor;
+uniform vec2 uNormal;
+uniform float uAxis;
+uniform float uBandSide;
+uniform float uTau;
+uniform float uBandWidth;
+uniform float uBandPeak;
+uniform float uPoolPeak;
+uniform float uPoolWidthStart;
+uniform float uPoolWidthEnd;
+// Frozen schedule boundaries from bookturn_solver.h; keep in sync.
+const float STAGE_LIFT_END = 0.18;
+const float STAGE_FLIP_END = 0.50;
+const float STAGE_ROLL_END = 0.75;
+void main() {
+    float band = 0.0;
+    if (uTau > STAGE_LIFT_END) {
+        float d = dot(vPage, uNormal) - uAxis;
+        float bandDist = uBandSide * d;
+        float nearSeg = smoothstep(0.0, 0.4 * uBandWidth, bandDist);
+        float farSeg = smoothstep(0.4 * uBandWidth, uBandWidth, bandDist);
+        float gate = smoothstep(STAGE_LIFT_END, STAGE_LIFT_END + 0.02, uTau);
+        band = uBandPeak * gate * max(0.0, (1.0 - 0.55 * nearSeg) * (1.0 - farSeg));
+    }
+    float pool = 0.0;
+    if (uTau > STAGE_FLIP_END) {
+        float gate = smoothstep(STAGE_FLIP_END, STAGE_FLIP_END + 0.02, uTau);
+        float width = mix(uPoolWidthStart, uPoolWidthEnd, smoothstep(STAGE_ROLL_END, 1.0, uTau));
+        pool = uPoolPeak * gate * (1.0 - smoothstep(0.0, width, vPage.x));
+    }
+    float alpha = 1.0 - (1.0 - band) * (1.0 - pool);
+    outColor = vec4(0.0, 0.0, 0.0, alpha);
+}
+)glsl";
+
+// Draw 3 vertex stage: the developable-cone mapping, contract 6.3, evaluated
+// per vertex from pose uniforms. This must stay formula-identical to the
+// solver's MapMaterial/ConeRadius (single p(q) authority): same taper clamp,
+// same three branches, same fold/depth fields.
 constexpr char kSheetVertexShader[] = R"glsl(#version 300 es
 precision highp float;
 layout(location = 0) in vec2 aMaterial;
@@ -51,6 +99,8 @@ uniform vec2 uPageSize;
 uniform float uAxis;
 uniform float uRadius;
 uniform float uTheta;
+uniform float uConeTaper;
+uniform float uSigmaGrip;
 const float PI = 3.14159265358979323846;
 void main() {
     vec2 q = aMaterial * uPageSize;
@@ -58,26 +108,30 @@ void main() {
     vec2 normal = vec2(cos(uTheta), -sin(uTheta));
     float sigma = dot(q, tangent);
     float distance = dot(q, normal) - uAxis;
+    float radius = uRadius * clamp(1.0 - uConeTaper * (sigma - uSigmaGrip) / uPageSize.x, 0.5, 1.5);
     float foldedNormal = distance;
     float depth = 0.0;
     float phi = 0.0;
     if (distance > 0.0) {
-        if (uRadius <= 0.0001) {
+        if (radius <= 0.0001) {
             foldedNormal = -distance;
             phi = PI;
-        } else if (distance < PI * uRadius) {
-            phi = distance / uRadius;
-            foldedNormal = uRadius * sin(phi);
-            depth = uRadius * (1.0 - cos(phi));
+        } else if (distance < PI * radius) {
+            phi = distance / radius;
+            foldedNormal = radius * sin(phi);
+            depth = radius * (1.0 - cos(phi));
         } else {
             phi = PI;
-            foldedNormal = -(distance - PI * uRadius);
-            depth = 2.0 * uRadius;
+            foldedNormal = -(distance - PI * radius);
+            depth = 2.0 * radius;
         }
     }
     vec2 projected = sigma * tangent + (uAxis + foldedNormal) * normal;
     vec2 ndc = vec2(2.0 * projected.x / uPageSize.x - 1.0,
                     1.0 - 2.0 * projected.y / uPageSize.y);
+    // Depth sign contract 6.3: the bulge rises toward the viewer (+z), which
+    // is nearer and therefore a SMALLER NDC z. Sheet base plane 0.0, static
+    // bottom page 0.9; max bulge 2R <= 64vp maps to -0.45.
     float depthNdc = -0.45 * clamp(depth / 64.0, 0.0, 1.0);
     gl_Position = vec4(ndc, depthNdc, 1.0);
     vUv = aMaterial;
@@ -86,6 +140,15 @@ void main() {
 }
 )glsl";
 
+// Draw 3 fragment stage: double-sided shading, contract 8.2. The backface is
+// derived from the front texture with 96% brightness and 10% desaturation,
+// then a BF-CONTRAST boost around mid gray and cone-curvature darkening
+// (spine side -9% -> curl side -42%, the U-reference family). V1's bare
+// `mix(color, luminance, 0.10) * 0.96` line is abolished: without the
+// contrast and curvature terms the backface read as washed-out mirror noise.
+// Faces switch by the geometric wrap angle (phi past pi/2), never
+// gl_FrontFacing (contract 8.1); at the silhouette the surface is edge-on so
+// the narrow switch window cannot show a seam.
 constexpr char kSheetFragmentShader[] = R"glsl(#version 300 es
 precision highp float;
 in vec2 vUv;
@@ -93,25 +156,35 @@ in vec3 vNormal;
 in float vPhi;
 layout(location = 0) out vec4 outColor;
 uniform sampler2D uTexture;
+uniform vec3 uPaperColor;
+uniform float uPaperFallback;
+uniform float uHighlightPhiWidth;
+const float PI = 3.14159265358979323846;
+const float HALF_PI = 1.57079632679;
+const float BF_BRIGHTNESS = 0.96;
+const float BF_DESAT = 0.10;
+const float BF_CONTRAST = 0.18;
+const float CURVE_DARKEN_NEAR = 0.09;
+const float CURVE_DARKEN_FAR = 0.42;
 void main() {
-    vec4 sampleColor = texture(uTexture, vUv);
     vec3 normal = normalize(vNormal);
     vec3 light = normalize(vec3(-0.32, -0.20, 0.93));
-    const float HALF_PI = 1.57079632679;
-    float backMix = smoothstep(HALF_PI - 0.04, HALF_PI + 0.04, vPhi);
+    float backMix = smoothstep(HALF_PI - 0.02, HALF_PI + 0.02, vPhi);
     float diffuse = mix(max(dot(normal, light), 0.0), max(dot(-normal, light), 0.0), backMix);
     float lighting = 0.94 + 0.06 * diffuse;
-    vec3 frontColor = sampleColor.rgb;
-    float luminance = dot(frontColor, vec3(0.2126, 0.7152, 0.0722));
-    // The back is the same physical page. Preserve the active theme/background
-    // hue and only apply a small paper transmission/desaturation term; a fixed
-    // beige replacement makes night and custom backgrounds visibly wrong.
-    vec3 backColor = mix(frontColor, vec3(luminance), 0.10) * 0.96;
+    vec3 frontColor = texture(uTexture, vUv).rgb;
+    // Paper fallback (contract 8.6): while enabled the backface paper derives
+    // from the theme background color instead of the front texture; the front
+    // keeps the texture. The derivation is the same 96%/10% rule, no fixed
+    // beige or gray constants.
+    vec3 backSource = mix(frontColor, uPaperColor, uPaperFallback);
+    float luminance = dot(backSource, vec3(0.2126, 0.7152, 0.0722));
+    vec3 backColor = mix(backSource, vec3(luminance), BF_DESAT);
+    backColor = (backColor * BF_BRIGHTNESS - 0.5) * (1.0 + BF_CONTRAST) + 0.5;
+    backColor *= 1.0 - mix(CURVE_DARKEN_NEAR, CURVE_DARKEN_FAR, vPhi / PI);
     vec3 color = mix(frontColor, backColor, backMix);
-    float creaseDistance = abs(vPhi - 1.57079632679);
-    float dark = (1.0 - smoothstep(0.0, 0.42, creaseDistance)) * 0.12;
-    float highlight = (1.0 - smoothstep(0.0, 0.20, abs(vPhi - 1.25))) * 0.04;
-    color = color * lighting * (1.0 - dark + highlight);
+    float highlight = (1.0 - smoothstep(0.0, uHighlightPhiWidth, abs(vPhi - 1.25))) * 0.04;
+    color = color * lighting + highlight;
     outColor = vec4(color, 1.0);
 }
 )glsl";
@@ -122,6 +195,25 @@ constexpr std::array<float, 16> kBottomVertices = {
      1.0F,  1.0F, 1.0F, 0.0F,
      1.0F, -1.0F, 1.0F, 1.0F,
 };
+
+// Shading calibration constants (contract 8.3-8.5). Values inside a contract
+// range use the HUAWEI-reference midpoint; explicit A/B pairs stay compiled
+// until the stage-4 device A/B freezes one (B consumed by default, matching
+// the solver's taper handling).
+constexpr float kGutterWidthRatio = 0.08F;
+constexpr float kGutterAlphaA = 0.06F;
+constexpr float kGutterAlphaB = 0.10F;
+constexpr float kGutterAlphaDefault = 0.5F * (kGutterAlphaA + kGutterAlphaB);
+constexpr float kRevealBandWidthRatio = 0.13F;
+constexpr float kRevealBandPeakAlpha = 0.20F;
+constexpr float kSpinePoolWidthStartRatio = 0.04F;
+constexpr float kSpinePoolWidthEndRatio = 0.10F;
+constexpr float kSpinePoolPeakA = 0.10F;
+constexpr float kSpinePoolPeakB = 0.16F;
+constexpr float kSpinePoolPeakDefault = kSpinePoolPeakB;
+constexpr float kCurlHighlightWidthMinVp = 8.0F;
+constexpr float kCurlHighlightWidthMaxVp = 16.0F;
+static_assert(kSpinePoolPeakA < kSpinePoolPeakB, "A/B pool pair must stay ordered");
 
 uint32_t SourceBytesPerPixel(TextureSourceFormat format)
 {
@@ -289,13 +381,23 @@ bool BookTurnRenderer::Draw(const BookTurnPose& pose)
     glViewport(0, 0, static_cast<GLsizei>(surfaceWidth_), static_cast<GLsizei>(surfaceHeight_));
     glClearColor(0.0F, 0.0F, 0.0F, 0.0F);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glDisable(GL_BLEND);
     glDisable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
     const TextureSlot bottom = pose.direction == Direction::NEXT ? TextureSlot::NEXT : TextureSlot::CURRENT;
     const TextureSlot moving = pose.direction == Direction::NEXT ? TextureSlot::CURRENT : TextureSlot::PREVIOUS;
+    // Fixed 3-draw structure (contract 8.1): opaque bottom, blended shadow
+    // pass with depth writes off, opaque moving sheet. Exactly two blend
+    // switches per frame (enter draw 2, enter draw 3).
+    glDisable(GL_BLEND);
+    glDepthMask(GL_TRUE);
     DrawBottom(pose, bottom);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDepthMask(GL_FALSE);
+    DrawShadowBand(pose);
+    glDisable(GL_BLEND);
+    glDepthMask(GL_TRUE);
     DrawSheet(pose, moving);
     return eglSwapBuffers(display_, surface_) == EGL_TRUE;
 }
@@ -352,26 +454,55 @@ bool BookTurnRenderer::InitializePrograms()
     bottomProgram_ = LinkProgram(vertex, fragment);
     glDeleteShader(vertex);
     glDeleteShader(fragment);
+    vertex = CompileShader(GL_VERTEX_SHADER, kBottomVertexShader);
+    fragment = CompileShader(GL_FRAGMENT_SHADER, kBandFragmentShader);
+    bandProgram_ = LinkProgram(vertex, fragment);
+    glDeleteShader(vertex);
+    glDeleteShader(fragment);
     vertex = CompileShader(GL_VERTEX_SHADER, kSheetVertexShader);
     fragment = CompileShader(GL_FRAGMENT_SHADER, kSheetFragmentShader);
     sheetProgram_ = LinkProgram(vertex, fragment);
     glDeleteShader(vertex);
     glDeleteShader(fragment);
-    if (bottomProgram_ == 0 || sheetProgram_ == 0) return false;
+    if (bottomProgram_ == 0 || bandProgram_ == 0 || sheetProgram_ == 0) return false;
+
     bottomUniforms_.pageSize = glGetUniformLocation(bottomProgram_, "uPageSize");
-    bottomUniforms_.normal = glGetUniformLocation(bottomProgram_, "uNormal");
-    bottomUniforms_.axis = glGetUniformLocation(bottomProgram_, "uAxis");
-    bottomUniforms_.pageWidth = glGetUniformLocation(bottomProgram_, "uPageWidth");
     bottomUniforms_.texture = glGetUniformLocation(bottomProgram_, "uTexture");
+    bottomUniforms_.gutterWidth = glGetUniformLocation(bottomProgram_, "uGutterWidth");
+    bottomUniforms_.gutterAlpha = glGetUniformLocation(bottomProgram_, "uGutterAlpha");
+
+    bandUniforms_.pageSize = glGetUniformLocation(bandProgram_, "uPageSize");
+    bandUniforms_.normal = glGetUniformLocation(bandProgram_, "uNormal");
+    bandUniforms_.axis = glGetUniformLocation(bandProgram_, "uAxis");
+    bandUniforms_.bandSide = glGetUniformLocation(bandProgram_, "uBandSide");
+    bandUniforms_.tau = glGetUniformLocation(bandProgram_, "uTau");
+    bandUniforms_.bandWidth = glGetUniformLocation(bandProgram_, "uBandWidth");
+    bandUniforms_.bandPeak = glGetUniformLocation(bandProgram_, "uBandPeak");
+    bandUniforms_.poolPeak = glGetUniformLocation(bandProgram_, "uPoolPeak");
+    bandUniforms_.poolWidthStart = glGetUniformLocation(bandProgram_, "uPoolWidthStart");
+    bandUniforms_.poolWidthEnd = glGetUniformLocation(bandProgram_, "uPoolWidthEnd");
+
     sheetUniforms_.pageSize = glGetUniformLocation(sheetProgram_, "uPageSize");
     sheetUniforms_.axis = glGetUniformLocation(sheetProgram_, "uAxis");
     sheetUniforms_.radius = glGetUniformLocation(sheetProgram_, "uRadius");
     sheetUniforms_.theta = glGetUniformLocation(sheetProgram_, "uTheta");
+    sheetUniforms_.coneTaper = glGetUniformLocation(sheetProgram_, "uConeTaper");
+    sheetUniforms_.sigmaGrip = glGetUniformLocation(sheetProgram_, "uSigmaGrip");
     sheetUniforms_.texture = glGetUniformLocation(sheetProgram_, "uTexture");
-    return bottomUniforms_.pageSize >= 0 && bottomUniforms_.normal >= 0 &&
-        bottomUniforms_.axis >= 0 && bottomUniforms_.pageWidth >= 0 && bottomUniforms_.texture >= 0 &&
+    sheetUniforms_.highlightPhiWidth = glGetUniformLocation(sheetProgram_, "uHighlightPhiWidth");
+    sheetUniforms_.paperColor = glGetUniformLocation(sheetProgram_, "uPaperColor");
+    sheetUniforms_.paperFallback = glGetUniformLocation(sheetProgram_, "uPaperFallback");
+
+    return bottomUniforms_.pageSize >= 0 && bottomUniforms_.texture >= 0 &&
+        bottomUniforms_.gutterWidth >= 0 && bottomUniforms_.gutterAlpha >= 0 &&
+        bandUniforms_.pageSize >= 0 && bandUniforms_.normal >= 0 && bandUniforms_.axis >= 0 &&
+        bandUniforms_.bandSide >= 0 && bandUniforms_.tau >= 0 && bandUniforms_.bandWidth >= 0 &&
+        bandUniforms_.bandPeak >= 0 && bandUniforms_.poolPeak >= 0 &&
+        bandUniforms_.poolWidthStart >= 0 && bandUniforms_.poolWidthEnd >= 0 &&
         sheetUniforms_.pageSize >= 0 && sheetUniforms_.axis >= 0 && sheetUniforms_.radius >= 0 &&
-        sheetUniforms_.theta >= 0 && sheetUniforms_.texture >= 0;
+        sheetUniforms_.theta >= 0 && sheetUniforms_.coneTaper >= 0 && sheetUniforms_.sigmaGrip >= 0 &&
+        sheetUniforms_.texture >= 0 && sheetUniforms_.highlightPhiWidth >= 0 &&
+        sheetUniforms_.paperColor >= 0 && sheetUniforms_.paperFallback >= 0;
 }
 
 bool BookTurnRenderer::InitializeGeometry()
@@ -475,12 +606,30 @@ void BookTurnRenderer::DrawBottom(const BookTurnPose& pose, TextureSlot slot)
 {
     glUseProgram(bottomProgram_);
     glUniform2f(bottomUniforms_.pageSize, pose.width, pose.height);
-    glUniform2f(bottomUniforms_.normal, pose.normal.x, pose.normal.y);
-    glUniform1f(bottomUniforms_.axis, pose.axis);
-    glUniform1f(bottomUniforms_.pageWidth, pose.width);
+    glUniform1f(bottomUniforms_.gutterWidth, kGutterWidthRatio * pose.width);
+    glUniform1f(bottomUniforms_.gutterAlpha, kGutterAlphaDefault);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, Slot(slot).handle);
     glUniform1i(bottomUniforms_.texture, 0);
+    glBindVertexArray(bottomVao_);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+}
+
+void BookTurnRenderer::DrawShadowBand(const BookTurnPose& pose)
+{
+    // uBandSide == direction as a float: NEXT (-1) shades the revealed side
+    // left of the fold, PREVIOUS (+1) the still-uncovered side right of it.
+    glUseProgram(bandProgram_);
+    glUniform2f(bandUniforms_.pageSize, pose.width, pose.height);
+    glUniform2f(bandUniforms_.normal, pose.normal.x, pose.normal.y);
+    glUniform1f(bandUniforms_.axis, pose.axis);
+    glUniform1f(bandUniforms_.bandSide, static_cast<float>(pose.direction));
+    glUniform1f(bandUniforms_.tau, pose.tau);
+    glUniform1f(bandUniforms_.bandWidth, kRevealBandWidthRatio * pose.width);
+    glUniform1f(bandUniforms_.bandPeak, kRevealBandPeakAlpha);
+    glUniform1f(bandUniforms_.poolPeak, kSpinePoolPeakDefault);
+    glUniform1f(bandUniforms_.poolWidthStart, kSpinePoolWidthStartRatio * pose.width);
+    glUniform1f(bandUniforms_.poolWidthEnd, kSpinePoolWidthEndRatio * pose.width);
     glBindVertexArray(bottomVao_);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
@@ -492,11 +641,37 @@ void BookTurnRenderer::DrawSheet(const BookTurnPose& pose, TextureSlot slot)
     glUniform1f(sheetUniforms_.axis, pose.axis);
     glUniform1f(sheetUniforms_.radius, pose.radius);
     glUniform1f(sheetUniforms_.theta, pose.theta);
+    glUniform1f(sheetUniforms_.coneTaper, pose.coneTaper);
+    glUniform1f(sheetUniforms_.sigmaGrip, pose.sigmaGrip);
+    // Curl-edge highlight width (contract 8.2): clamp(0.02W, 8vp, 16vp),
+    // converted to the wrap-angle half window via the local cone radius. A
+    // collapsed radius has no curl left to catch light.
+    float highlightPhiWidth = 0.0F;
+    if (pose.radius > 1.0F) {
+        const float widthVp = std::clamp(0.02F * pose.width, kCurlHighlightWidthMinVp,
+            kCurlHighlightWidthMaxVp);
+        highlightPhiWidth = 0.5F * widthVp / pose.radius;
+    }
+    glUniform1f(sheetUniforms_.highlightPhiWidth, highlightPhiWidth);
+    glUniform3f(sheetUniforms_.paperColor, fallbackPaper_[0], fallbackPaper_[1], fallbackPaper_[2]);
+    glUniform1f(sheetUniforms_.paperFallback, fallbackPaperEnabled_ ? 1.0F : 0.0F);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, Slot(slot).handle);
     glUniform1i(sheetUniforms_.texture, 0);
     glBindVertexArray(sheetVao_);
     glDrawElements(GL_TRIANGLES, sheetIndexCount_, GL_UNSIGNED_SHORT, nullptr);
+}
+
+void BookTurnRenderer::SetThemePaper(float red, float green, float blue)
+{
+    if (blue < 0.0F) {
+        fallbackPaperEnabled_ = false;
+        return;
+    }
+    fallbackPaper_[0] = red;
+    fallbackPaper_[1] = green;
+    fallbackPaper_[2] = blue;
+    fallbackPaperEnabled_ = true;
 }
 
 void BookTurnRenderer::DestroyGl()
@@ -513,8 +688,10 @@ void BookTurnRenderer::DestroyGl()
     glDeleteBuffers(1, &bottomVbo_);
     glDeleteVertexArrays(1, &bottomVao_);
     glDeleteProgram(sheetProgram_);
+    glDeleteProgram(bandProgram_);
     glDeleteProgram(bottomProgram_);
     bottomProgram_ = 0;
+    bandProgram_ = 0;
     sheetProgram_ = 0;
     bottomVao_ = 0;
     bottomVbo_ = 0;
@@ -523,6 +700,7 @@ void BookTurnRenderer::DestroyGl()
     sheetIbo_ = 0;
     sheetIndexCount_ = 0;
     bottomUniforms_ = BottomUniforms {};
+    bandUniforms_ = BandUniforms {};
     sheetUniforms_ = SheetUniforms {};
 }
 
