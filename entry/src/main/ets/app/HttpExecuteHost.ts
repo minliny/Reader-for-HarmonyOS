@@ -8,6 +8,7 @@ import {
   allowNextRedirect,
   isCrossOriginSensitiveHeader,
   mergeCookieHeader,
+  normalizeCharsetLabel,
   redirectMethodDecision,
   resolveResponseCharset,
   retryBackoffMillis,
@@ -634,18 +635,11 @@ export class HttpExecuteHost {
     // reading body image flow consumes `bodyBase64`, so `body` is left empty
     // and the raw bytes remain the authoritative transport value.
     const binaryBody = contentType !== null && this.isBinaryContentType(contentType);
-    const responseCharset = resolveResponseCharset(
-      response.headers,
-      binaryBody ? undefined : requestCharset,
-    );
+    let responseCharset = 'utf-8';
     let decoded = '';
     if (!binaryBody) {
-      try {
-        decoded = util.TextDecoder.create(responseCharset, { fatal: true }).decodeToString(response.bytes);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : `${error}`;
-        throw new Error(`http.execute: cannot decode response as ${responseCharset}: ${message}`);
-      }
+      responseCharset = resolveResponseCharset(response.headers, requestCharset);
+      decoded = this.decodeTextStrictly(response.bytes, responseCharset, requestCharset);
     }
     const result: JsonObject = {
       status: response.status,
@@ -1083,6 +1077,44 @@ export class HttpExecuteHost {
     if (value.indexOf('\r') >= 0 || value.indexOf('\n') >= 0) {
       throw new Error(`http.execute: ${field} must not contain CR/LF`);
     }
+  }
+
+  /**
+   * Every candidate label is decoded strictly (fatal:true); only the label
+   * list grows. HarmonyOS TextDecoder rejects the legacy 'gb2312' label
+   * Chinese sources declare (normalizeCharsetLabel maps it to 'gbk'), some
+   * servers send unusable charset values, and legacy pages omit the header
+   * entirely — so the attempt list walks declared charsets first, then
+   * UTF-8, then GBK for undeclared GB-family pages. All candidates failing
+   * still throws, keeping the Host fail-closed.
+   */
+  private decodeTextStrictly(
+    bytes: Uint8Array,
+    primaryCharset: string,
+    descriptorCharset?: string,
+  ): string {
+    const candidates: string[] = [];
+    for (const label of [primaryCharset, descriptorCharset, 'utf-8', 'gbk']) {
+      if (label === undefined || label.trim().length === 0) {
+        continue;
+      }
+      const normalized = normalizeCharsetLabel(label);
+      if (!candidates.some((existing) => existing.toLowerCase() === normalized.toLowerCase())) {
+        candidates.push(normalized);
+      }
+    }
+    const failures: string[] = [];
+    for (const candidate of candidates) {
+      try {
+        return util.TextDecoder.create(candidate, { fatal: true }).decodeToString(bytes);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : `${error}`;
+        failures.push(`${candidate}: ${message}`);
+      }
+    }
+    throw new Error(
+      `http.execute: cannot decode response (tried ${candidates.join(', ')}): ${failures.join('; ')}`,
+    );
   }
 
   private parseCharset(value: unknown): string | undefined {

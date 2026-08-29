@@ -71,11 +71,12 @@ for (const vector of fixture.cases) {
       break;
     case 'charsetDecode': {
       delegatedCharsetCases += 1;
-      const text = new TextDecoder(input.charset).decode(Buffer.from(input.hex, 'hex'));
+      const text = new TextDecoder(input.charset === 'gb2312' ? 'gbk' : input.charset)
+        .decode(Buffer.from(input.hex, 'hex'));
       assert.equal(text, expected.text, vector.id);
       assert.match(hostSource,
-        /TextDecoder\.create\(responseCharset, \{ fatal: true \}\)/,
-        `${vector.id}: Harmony must decode the declared response charset strictly`);
+        /TextDecoder\.create\(candidate, \{ fatal: true \}\)/,
+        `${vector.id}: Harmony must decode every candidate response charset strictly`);
       break;
     }
     case 'multipart': {
@@ -114,13 +115,27 @@ assert.equal(policy.resolveResponseCharset(
 assert.equal(policy.resolveResponseCharset(
   {}, undefined,
 ), 'utf-8', 'UTF-8 remains the final default');
+assert.equal(policy.normalizeCharsetLabel('gb2312'), 'gbk',
+  'the legacy gb2312 label must map onto the platform-supported gbk superset');
+assert.equal(policy.normalizeCharsetLabel(' GBK '), 'GBK',
+  'other labels pass through trimmed and case-preserved');
+assert.equal(policy.resolveResponseCharset(
+  { 'Content-Type': 'text/html; charset=GB2312' }, undefined,
+), 'gbk', 'a gb2312 response header must normalize to gbk');
+assert.equal(policy.resolveResponseCharset(
+  {}, 'gb2312',
+), 'gbk', 'a gb2312 Core descriptor must normalize to gbk');
+assert.match(hostSource, /decodeTextStrictly\(/,
+  'production Host must decode through the strict multi-candidate path');
+assert.match(hostSource, /normalizeCharsetLabel\(/,
+  'production Host must normalize charset labels before decoding');
 assert.match(hostSource, /redirectMethodDecision\(/);
 assert.match(hostSource, /allowNextRedirect\(/);
 assert.match(hostSource, /isCrossOriginSensitiveHeader\(/);
 assert.match(hostSource, /mergeCookieHeader\(/);
 assert.match(hostSource, /retryBackoffMillis\(/);
 assert.match(hostSource,
-  /resolveResponseCharset\(\s*response\.headers,\s*binaryBody \? undefined : requestCharset,\s*\)/,
+  /resolveResponseCharset\(response\.headers, requestCharset\)/,
   'production Host must use the Core descriptor charset only for text responses');
 
 console.log(`http transport conformance: PASS (${fixture.cases.length} vectors, ${vectorSha})`);

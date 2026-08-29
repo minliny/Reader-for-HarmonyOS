@@ -60,6 +60,20 @@ export function observedCookieNames(setCookie: string[]): string[] {
   return names;
 }
 
+/**
+ * Maps charset labels the platform TextDecoder rejects onto equivalent
+ * supported labels. HarmonyOS supports gbk/gb18030/big5 but not the legacy
+ * 'gb2312' label that Chinese book sources declare; gbk is a strict superset
+ * of gb2312 and decodes it byte-for-byte identically.
+ */
+export function normalizeCharsetLabel(label: string): string {
+  const trimmed = label.trim();
+  if (trimmed.toLowerCase() === 'gb2312') {
+    return 'gbk';
+  }
+  return trimmed;
+}
+
 /** Response header wins; the Core descriptor is the fallback for legacy pages. */
 export function resolveResponseCharset(
   headers: HttpResponseHeaders,
@@ -71,11 +85,11 @@ export function resolveResponseCharset(
     }
     const match = /charset\s*=\s*([^;\s]+)/i.exec(headers[key]);
     if (match !== null && match[1].trim().length > 0) {
-      return match[1].trim();
+      return normalizeCharsetLabel(match[1].trim());
     }
   }
   if (descriptorCharset !== undefined && descriptorCharset.trim().length > 0) {
-    return descriptorCharset.trim();
+    return normalizeCharsetLabel(descriptorCharset.trim());
   }
   return 'utf-8';
 }
