@@ -21,6 +21,12 @@ size_t PayloadIndex(TextureSlot slot)
     return static_cast<size_t>(slot);
 }
 
+// Observed on the emulator: the first ~5 swaps of a fresh surface return
+// failure from the driver fence while still presenting. Eight frames of
+// grace (~130ms at 60Hz) ride the glitch out; a truly dead surface keeps
+// refusing past it and fails closed as before.
+constexpr int kMaxConsecutiveDrawFailures = 8;
+
 }  // namespace
 
 BookTurnHost::BookTurnHost() : renderThread_([this]() { Run(); })
@@ -444,12 +450,17 @@ void BookTurnHost::ProcessChaseFrame(float frameSeconds)
     liveInput_.radiusScale = 1.0F;
     pose_ = BookTurnSolver::Solve(liveInput_, &pose_);
     if (!renderer_.Draw(pose_)) {
+        if (++consecutiveDrawFailures_ <= kMaxConsecutiveDrawFailures) {
+            return;
+        }
         active_ = false;
         chaseRunning_ = false;
         renderer_.Clear();
-        Notify(HostEvent::RENDER_FAILURE, liveInput_.generation, 0);
+        Notify(HostEvent::RENDER_FAILURE, liveInput_.generation,
+            static_cast<int32_t>(renderer_.LastDrawRefusal()));
         return;
     }
+    consecutiveDrawFailures_ = 0;
     chaseRunning_ = std::abs(ChaseGap(chase_, sample)) > kCatchLockVp;
 }
 
@@ -478,7 +489,12 @@ bool BookTurnHost::ProcessSettlementFrame(float frameSeconds)
         (1.0F - Clamp(settlementElapsed_ / kTiltZeroSeconds, 0.0F, 1.0F));
     liveInput_.radiusScale = scale;
     pose_ = BookTurnSolver::Solve(liveInput_, &pose_);
-    if (SettlementSwapShouldFire(commit, liveInput_.direction, tau, pose_)) {
+    // §7.3 tau_swap: fire once per settlement. Without this guard the gate
+    // stays true on every remaining frame (tau past the spine end and the
+    // hidden sheet has near-zero coverage), re-rotating the slots each VSync
+    // until an unready slot lands in CURRENT and the draw fails.
+    if (!settlementSwapped_ &&
+        SettlementSwapShouldFire(commit, liveInput_.direction, tau, pose_)) {
         // §7.3 tau_swap: first VSync where the sheet is a thin spine strip.
         // Page index, base slot and sheet visibility swap atomically here;
         // the endpoint event semantics stay unchanged.
@@ -489,12 +505,17 @@ bool BookTurnHost::ProcessSettlementFrame(float frameSeconds)
         readyMask_.store(renderer_.ReadyMask(), std::memory_order_release);
     }
     if (!renderer_.Draw(pose_)) {
+        if (++consecutiveDrawFailures_ <= kMaxConsecutiveDrawFailures) {
+            return true;
+        }
         active_ = false;
         settlement_ = Settlement::NONE;
         renderer_.Clear();
-        Notify(HostEvent::RENDER_FAILURE, liveInput_.generation, 0);
+        Notify(HostEvent::RENDER_FAILURE, liveInput_.generation,
+            static_cast<int32_t>(renderer_.LastDrawRefusal()));
         return false;
     }
+    consecutiveDrawFailures_ = 0;
     const bool tauFinished = settlementElapsed_ >= settlementDuration_;
     const bool tiltFinished = std::abs(liveInput_.settledTheta) <= 1.0e-4F;
     if (!tauFinished || !tiltFinished) return true;

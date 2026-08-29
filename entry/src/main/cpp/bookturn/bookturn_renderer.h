@@ -41,6 +41,17 @@ struct TexturePayload {
 /** GLES3 renderer; every GL object and EGL context is owned by one render thread. */
 class BookTurnRenderer final {
 public:
+    /** Why the last Draw() refused; reported with RENDER_FAILURE so the host
+     *  side can distinguish a transient driver swap glitch from a texture
+     *  readiness gap (the cold-entry first-turn signature). */
+    enum class DrawRefusal : int32_t {
+        NONE = 0,
+        NO_CONTEXT = 1,
+        CURRENT_MISSING = 2,
+        TEXTURES_MISSING = 3,
+        SWAP_FAILED = 4,
+    };
+
     BookTurnRenderer() = default;
     ~BookTurnRenderer();
 
@@ -68,6 +79,8 @@ public:
     /** Theme-derived backface paper source (contract 8.6): consumed only while
      *  fallback mode is on; passing a negative blue disables the fallback. */
     void SetThemePaper(float red, float green, float blue);
+
+    DrawRefusal LastDrawRefusal() const { return lastRefusal_; }
 
 private:
     // Contract 10.2: 65x129 vertices / 16384 triangles; the vertex shader
@@ -152,6 +165,7 @@ private:
     float fallbackPaper_[3] = { 1.0F, 1.0F, 1.0F };
     bool fallbackPaperEnabled_ = false;
     bool sheetVisible_ = true;
+    DrawRefusal lastRefusal_ = DrawRefusal::NONE;
 };
 
 }  // namespace reader::bookturn

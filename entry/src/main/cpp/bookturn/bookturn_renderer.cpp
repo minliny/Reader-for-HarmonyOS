@@ -377,10 +377,18 @@ uint32_t BookTurnRenderer::ReadyMask() const
 
 bool BookTurnRenderer::Draw(const BookTurnPose& pose)
 {
-    if (context_ == EGL_NO_CONTEXT) return false;
+    lastRefusal_ = DrawRefusal::NONE;
+    if (context_ == EGL_NO_CONTEXT) {
+        lastRefusal_ = DrawRefusal::NO_CONTEXT;
+        return false;
+    }
     if (!sheetVisible_) {
-        if (!Slot(TextureSlot::CURRENT).ready) return false;
+        if (!Slot(TextureSlot::CURRENT).ready) {
+            lastRefusal_ = DrawRefusal::CURRENT_MISSING;
+            return false;
+        }
     } else if (!HasRequiredTextures(pose.direction)) {
+        lastRefusal_ = DrawRefusal::TEXTURES_MISSING;
         return false;
     }
     glViewport(0, 0, static_cast<GLsizei>(surfaceWidth_), static_cast<GLsizei>(surfaceHeight_));
@@ -396,7 +404,11 @@ bool BookTurnRenderer::Draw(const BookTurnPose& pose)
         glDisable(GL_BLEND);
         glDepthMask(GL_TRUE);
         DrawBottom(pose, TextureSlot::CURRENT);
-        return eglSwapBuffers(display_, surface_) == EGL_TRUE;
+        if (eglSwapBuffers(display_, surface_) != EGL_TRUE) {
+            lastRefusal_ = DrawRefusal::SWAP_FAILED;
+            return false;
+        }
+        return true;
     }
     const TextureSlot bottom = pose.direction == Direction::NEXT ? TextureSlot::NEXT : TextureSlot::CURRENT;
     const TextureSlot moving = pose.direction == Direction::NEXT ? TextureSlot::CURRENT : TextureSlot::PREVIOUS;
@@ -407,13 +419,23 @@ bool BookTurnRenderer::Draw(const BookTurnPose& pose)
     glDepthMask(GL_TRUE);
     DrawBottom(pose, bottom);
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    // Alpha channels of all three passes write 1.0, but plain GL_SRC_ALPHA
+    // blending also scales the destination ALPHA, so the shadow pass dropped
+    // the framebuffer alpha below 1 across the band region. The EGL surface
+    // has an alpha channel, and the compositor then blended the ArkUI page
+    // underneath (the outgoing page) through the band — the mid-turn
+    // double-exposure ghost. Keep RGB math identical and pin alpha to 1.
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
     glDepthMask(GL_FALSE);
     DrawShadowBand(pose);
     glDisable(GL_BLEND);
     glDepthMask(GL_TRUE);
     DrawSheet(pose, moving);
-    return eglSwapBuffers(display_, surface_) == EGL_TRUE;
+    if (eglSwapBuffers(display_, surface_) != EGL_TRUE) {
+        lastRefusal_ = DrawRefusal::SWAP_FAILED;
+        return false;
+    }
+    return true;
 }
 
 bool BookTurnRenderer::Clear()

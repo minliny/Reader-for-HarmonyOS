@@ -1,0 +1,747 @@
+08-23 16:51:48.261     0     0 I I00000/HiLog: ========Zeroth log of type: init
+08-23 16:51:53.048   403   403 I I02c01/CustCarrierMount: UpdateCotaOpkeyLink start
+08-23 16:51:53.048   403   403 W I02c01/CustCarrierMount: not exsit CUST_GLOBAL_CARRIER_DIR or COTA_PARAM_CARRIER_DIR
+08-23 16:52:00.653   403   403 I I02c01/CustCarrierMount: success to update cota carrier
+08-29 23:40:47.636 23980 23980 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [23980 2000 2000] failed
+08-29 23:40:47.636 23980 23980 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [23980 2000 2000] failed
+08-29 23:40:47.636 23980 23980 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:47.657 21767 21767 W A01c06/ICON: AppIconWeatherModel --> initWeatherListener, retryTimes: 4
+08-29 23:40:47.659   468   468 E C01707/CONCUR: [Interface] task 468 apply qos failed, errno = 4
+08-29 23:40:47.659   468   468 E C01611/QosManager: QosManager: Failed to set thread QoS to QOS_USER_INTERACTIVE, ret: -1
+08-29 23:40:47.660   833  1085 W C01123/BMSCommon: bundle not exist -n com.huawei.hmsapp.totemweather -u 100 -i 0 -f 32
+08-29 23:40:47.660   833  1085 W C01121/BMSQuery: GetBundleInfo failed -n com.huawei.hmsapp.totemweather -u 100
+08-29 23:40:47.660   468   468 E C01651/BundleMgrProxy: GetBundleInfoFromBMS: GetBundleInfo failed!bundleName is com.huawei.hmsapp.totemweather, userId is 100
+08-29 23:40:47.660   468   468 E C01651/DataProviderConfig: GetFromProxyData: Get bundleInfo failed! bundleName:com.huawei.hmsapp.totemweather, userId:100, visitedId:100, uri:******icIconInfo
+08-29 23:40:47.660   468   468 E C01651/DataShareServiceImpl: GetBMSAndMetaDataStatus: CalledInfo failed! token:0x200ba470,ret:1001,uri:******icIconInfo
+08-29 23:40:47.660   468   468 E C01651/DataShareServiceImpl: GetSilentProxyStatus: BMS or metaData not ready to complete, token:0x200ba470, uri:******icIconInfo
+08-29 23:40:47.660 21767 21767 E A01c06/ICON: AppIconWeatherModel --> get weather info failed, code: 15700010, message: The DataShareHelper is not initialized successfully.
+08-29 23:40:47.687 23983 23983 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [23983 2000 2000] failed
+08-29 23:40:47.687 23983 23983 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [23983 2000 2000] failed
+08-29 23:40:47.687 23983 23983 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:47.691 23983 23983 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [23983 2000 2000] failed
+08-29 23:40:47.691 23983 23983 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [23983 2000 2000] failed
+08-29 23:40:47.691 23983 23983 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:47.732 23980 23980 W C02c02/PARAM: Selinux check name debug.dfx.tags.enableleak in u:object_r:debug_param:s0 [23980 2000 2000] failed
+08-29 23:40:47.732 23980 23980 W C02c02/PARAM: SystemReadParam failed!name is:debug.dfx.tags.enableleak,err:1002
+08-29 23:40:47.742 23980 23980 W C02c02/PARAM: Selinux check name persist.graphic.profiler.enabled in u:object_r:debug_param:s0 [23980 2000 2000] failed
+08-29 23:40:47.742 23980 23980 E C02c02/PARAM: Forbid to read parameter persist.graphic.profiler.enabled
+08-29 23:40:47.742 23980 23980 E C02c02/PARAM: Forbid to access parameter persist.graphic.profiler.enabled
+08-29 23:40:47.742 23980 23980 W C02c02/PARAM: Selinux check name persist.graphic.profiler.betarecording in u:object_r:debug_param:s0 [23980 2000 2000] failed
+08-29 23:40:47.742 23980 23980 E C02c02/PARAM: Forbid to read parameter persist.graphic.profiler.betarecording
+08-29 23:40:47.742 23980 23980 E C02c02/PARAM: Forbid to access parameter persist.graphic.profiler.betarecording
+08-29 23:40:47.746 23980 23980 I C03100/UiTestKit_Server: [system_ui_controller.cpp:(SetItemByType)] Add touchItem, finger:0, pressed:1, location:160, 1360
+08-29 23:40:47.747 23980 23985 W C057c1/IPCWorkThread: ThreadHandler: proto:0 policy:1 name:OS_IPC_0_23985 invoker:2223008256
+08-29 23:40:47.747 23980 23986 W C057c1/IPCWorkThread: ThreadHandler: proto:0 policy:0 name:OS_IPC_1_23986 invoker:2430952320
+08-29 23:40:47.747 23980 23980 W C04201/DMS: RegisterClientDeathListener: regis reverse death
+08-29 23:40:47.747 23980 23980 I C04201/DMS: RegisterClientDeathListener: ENTER
+08-29 23:40:47.748   833  1085 E C04200/WMS: UpdateBundleInfo: Failed
+08-29 23:40:47.748   833  1085 W C04201/DMS: screen_session.cpp: call BMS
+08-29 23:40:47.748   833  1085 I C04201/DMS: screen_session.cpp: pid:0, bundle:, api:0
+08-29 23:40:47.749 23980 23980 I C02800/InputManagerImpl: [|1254]Pointer event action:2
+08-29 23:40:47.749 23980 23980 I C02802/MultimodalEventHandler: [|252]PI:10000, IP:1, P:0.00, MF:-1, WI:-1, OPI:0, SI:true, A:0
+08-29 23:40:47.750 23980 23980 E C057c6/BinderInvoker: GetDetailedErrorInfo: HMB_GET_DETAILED_ERROR failed, error:-22
+08-29 23:40:47.750 23980 23980 E C057c2/IPCObjectProxy: PrintErrorDetailedInfo: failed, handle:2 error:29201 desc:*.IMultimodalInputConnect proxy:2431006592 time:539050414203527
+08-29 23:40:47.750 23980 23980 E C02801/MultimodalInputConnect: Send request failed! result = 29201
+08-29 23:40:47.751   245   493 I C02805/InputKeyFlow: [P:D:89817|6037]PA:down,Pid:17137,TWI:64,FWI:64,EID:89817,flags:0,DID:0AWI:64,zOrder:102.000000
+08-29 23:40:47.751   245   493 I C02802/InputActiveSubscriberHandler: [P:D:89817|317]0|10000|701
+08-29 23:40:47.752   245   493 I C02800/WhitelistDataShareAccessor: [P:D:89817][Init:52] enter
+08-29 23:40:47.752   701  2558 I C0290a/PowerState: [UL_POWER] Transit from DIM to AWAKE for REFRESH ignoreLock=1
+08-29 23:40:47.752   701  2558 I C02906/PowerWakeup: [UL_POWER]HandlePreBrightState start ffrtId: 0
+08-29 23:40:47.752   701  2558 I C02982/DisplayPowerSvc: RegisterCallback
+08-29 23:40:47.752   701  2558 I C02982/DisplayPowerSvc: Callback function exist
+08-29 23:40:47.752   701  2558 I C0290a/PowerState: The reason to DMS is = 30
+08-29 23:40:47.752   701  2558 I C02982/DisplayPowerSvc: [UL_POWER] SetDisplayState 0, 2, 30, ffrtId=0
+08-29 23:40:47.752   701  2558 I C02986/DisplayPowerBrightness: SetDisplayState id=0, isAutoMode=1, isScreenOn=1, isSettingOn=1, state=2
+08-29 23:40:47.752   701  2558 I C02986/DisplayPowerBrightness: StateChangedSetAutoBrightness start, enable=1, isSensorEnabled=1, isSupport=1
+08-29 23:40:47.801   245   493 I C02800/WhitelistDataShareAccessor: [P:D:89817][Init] leave
+08-29 23:40:47.801   245   493 W C02802/KeyCommandHandler: [P:D:89817|987]io.reader.harmonyos not support long-press drag
+08-29 23:40:47.802   245   493 I C02805/InputKeyFlow: [P:D:89817|621]SendMsg:17137
+08-29 23:40:47.802   701  2558 I C02986/DisplayPowerBrightness: StateChangedSetAutoBrightness is already enabled
+08-29 23:40:47.802   701  2558 I C02986/DisplayPowerBrightness: SetDisplayState id=0, isAutoMode=1, isModeChange=1
+08-29 23:40:47.802   701  2558 I C02986/DisplayPowerBrightness: restore brightness=137
+08-29 23:40:47.802   701  2558 I C02986/DisplayPowerBrightness: SetBrightness mDisplayId=0, displayId=0 ,brightness=120
+08-29 23:40:47.803 17137 17137 I C02805/InputKeyFlow: [P:D:89817|247]ac: down: 89817
+08-29 23:40:47.804 17137 17137 I C02805/InputKeyFlow: [P:D:89817|649]recv
+08-29 23:40:47.804   607  2466 I C02515/DISP: [SetDisplayStatus:139] SetDisplayStatus devId 10
+08-29 23:40:47.804 17137 17137 I C04213/InputKeyFlow: HandleInputEvent: eid:6,InputId:89817,wid:64,ac:2
+08-29 23:40:47.806   245 23987 I C02800/WhitelistDataShareAccessor: [][InitializeImpl:66] enter
+08-29 23:40:47.806   245 23987 I C02800/WhitelistDataShareAccessor: [][ReadWhitelistFromDB:98] enter
+08-29 23:40:47.806   245 23987 I C02802/setting_DataShare: [|276]DataShare is ready
+08-29 23:40:47.806   701  2558 I C02986/DisplayPowerBrightness: UpdateBrightness, settings, value=137
+08-29 23:40:47.807   701  2558 I C02987/DisplayPowerState: [UL_POWER] UpdateState, state=2, current state=1, reason=30, ffrtId=0
+08-29 23:40:47.807   701  2558 I C02987/DisplayPowerState: [UL_POWER] Update screen state to 2, ffrtId=0
+08-29 23:40:47.807   701  2558 I C0290a/PowerState: Set display state finished, ret=1, ffrtId=0
+08-29 23:40:47.807   701  2558 I C02909/PowerActivity: reset inactive timer: 30000
+08-29 23:40:47.807   598   860 I C02511/HDF_LOG_TAG: stpS3
+08-29 23:40:47.807   701  2558 E C02906/PowerWakeup: State not changed, return
+08-29 23:40:47.807   701  2558 W C0290a/PowerState: [UL_POWER] StateController::TransitTo AWAKE ret: 0, ffrtId=0, reason=REFRESH, kp=4, kr=2
+08-29 23:40:47.808   468   468 E C01707/CONCUR: [Interface] task 468 apply qos failed, errno = 4
+08-29 23:40:47.808   468   468 E C01611/QosManager: QosManager: Failed to set thread QoS to QOS_USER_INTERACTIVE, ret: -1
+08-29 23:40:47.810   468   550 E C01707/CONCUR: [Interface] task 550 apply qos failed, errno = 4
+08-29 23:40:47.810   468   550 E C01611/QosManager: QosManager: Failed to set thread QoS to QOS_USER_INTERACTIVE, ret: -1
+08-29 23:40:47.810 17137 17137 I C03951/InputKeyFlow: [(100000:100000:scope)] ITK Id:89817, fId:10000, T:0, I=0, M=0
+08-29 23:40:47.810 21767 21767 I A04215/WMSHierarchy: request top id: 64, 5
+08-29 23:40:47.811 17137 17137 I C03951/InputKeyFlow: [(100000:100000:scope)] ITK Id:89817, TTHNI:fId: 10000{ T: Row, D: 15 };
+08-29 23:40:47.811 17137 17137 I C03951/InputKeyFlow: [(100000:100000:scope)] ITK Id:89817, TTHRTI: 
+08-29 23:40:47.813   282 23991 I C01727/SceneRecognizeExt: [a92abdfd7fc5cfe] [ReportEnterUserInteractionSceneInner]report enter user interaction scene
+08-29 23:40:47.814 21767 21767 I A04215/WMSHierarchy: onRaiseSceneToTop with persistentId:64
+08-29 23:40:47.815 21767 21767 I A04200/WINDOW: SCBSPVM: getSceneContainerSessionWithPersistentId from containerSessionList id: 64
+08-29 23:40:47.815 21767 21767 I A04200/WINDOW: SCBSPM: Remove container id: 19, 64
+08-29 23:40:47.815   468   550 E C01707/CONCUR: [Interface] task 550 apply qos failed, errno = 4
+08-29 23:40:47.815   468   550 E C01611/QosManager: QosManager: Failed to set thread QoS to QOS_USER_INTERACTIVE, ret: -1
+08-29 23:40:47.816 21767 21767 I A01b09/RECENT: RecentDockRefreshAlarm: start alarm recent dock: EntryAbility/io.reader.harmonyos/entry/0(persistentId: 64)(containerId: 19)
+08-29 23:40:47.817   468   468 E C01707/CONCUR: [Interface] task 468 apply qos failed, errno = 4
+08-29 23:40:47.817   468   468 E C01611/QosManager: QosManager: Failed to set thread QoS to QOS_USER_INTERACTIVE, ret: -1
+08-29 23:40:47.820 17137 17137 I C03919/AceInputTracking: [(100000:100000:scope)] Consumed id:89817, last id:-1
+08-29 23:40:47.820 17137 17137 I C04213/InputKeyFlow: ConsumePointerEventInner: InputId:89817,wid:64,pointId:10000,srcType:2,rect:[0,0,1320,2856],notify:1
+08-29 23:40:47.821   468   550 I C01650/SqliteConnection: CreateSlaveConnection:slave cfg:[0,1,0,0,5,0,0]set***.db:<DB,0xc8651,73728,100660><DWR,0xc8656,12288,100670><SHM,0xc863f,32768,100670><WAL,0xc863e,0,100670> master:<DB,0xc8672,73728,100660><DWR,0xc8673,12288,100670><SHM,0xc8650,32768,100670><WAL,0xc864f,0,100670>,[1,0,0,0,1]
+08-29 23:40:47.821   468   550 I C01650/SqliteConnection: SetBinlog:binlog: open /***/el1/***/set***.db
+08-29 23:40:47.822   468   550 I C01631/GaussPD:  [0] [ADAPTER] [547907705176] Not support binlog_default.readIndex file enable del monitor sysno = 25
+08-29 23:40:47.822   468   550 I C01631/GaussPD:  [0] [ADAPTER] [547907705176] Not support binlog_default.writeIndex file enable del monitor sysno = 25
+08-29 23:40:47.823   468   550 I C01650/ConnectionPool: Create:code:0 app[com.ohos.settingsdata:] area[el1] cfg[0,1,0,0,5,0,0]set***.db:<DB,0xc8672,73728,100660><DWR,0xc8673,12288,100670><SHM,0xc8650,32768,100670><WAL,0xc864f,0,100670>, pathSize:72
+08-29 23:40:47.823   468   550 W C01610/DataBaseUtilsAcl: AclFromFile: The getxattr failed. error Permission denied path /da***se/
+08-29 23:40:47.823   468   550 E C01610/DataBaseUtilsAcl: SetAcl: Failed to write into file's xattr: Operation not permitted
+08-29 23:40:47.823   468   550 E C01610/DataBaseUtilsAcl: SetAcl: Failed to write into file's xattr: Operation not permitted
+08-29 23:40:47.823   468   550 E C01610/DataBaseUtilsAcl: SetAcl: Failed to write into file's xattr: Operation not permitted
+08-29 23:40:47.823   468   550 E C01610/DataBaseUtilsAcl: SetAcl: Failed to write into file's xattr: Operation not permitted
+08-29 23:40:47.823   468   550 E C01610/DataBaseUtilsAcl: SetAcl: Failed to write into file's xattr: Operation not permitted
+08-29 23:40:47.823   468   550 E C01610/DataBaseUtilsAcl: SetAcl: Failed to write into file's xattr: Operation not permitted
+08-29 23:40:47.823   468   550 E C01610/DataBaseUtilsAcl: SetAcl: Failed to write into file's xattr: Operation not permitted
+08-29 23:40:47.823   468   550 E C01610/DataBaseUtilsAcl: SetAcl: Failed to write into file's xattr: Operation not permitted
+08-29 23:40:47.823   468   550 E C01610/DataBaseUtilsAcl: SetAcl: Failed to write into file's xattr: Operation not permitted
+08-29 23:40:47.823   468   550 E C01610/DataBaseUtilsAcl: SetAcl: Failed to write into file's xattr: Operation not permitted
+08-29 23:40:47.823   468   550 E C01610/DataBaseUtilsAcl: SetAcl: Failed to write into file's xattr: Operation not permitted
+08-29 23:40:47.823   468   550 E C01610/DataBaseUtilsAcl: SetAcl: Failed to write into file's xattr: Operation not permitted
+08-29 23:40:47.823   468   550 E C01610/DataBaseUtilsAcl: SetAcl: Failed to write into file's xattr: Operation not permitted
+08-29 23:40:47.823   468   550 W C01650/RdbStoreImpl: ExchangeSlaverToMaster:exchange st:3, set***.db,
+08-29 23:40:47.823   468 14267 I C01650/SqliteConnection: CreateSlaveConnection:slave cfg:[0,1,0,0,5,0,0]set***.db:<DB,0xc8651,73728,100660><DWR,0xc8656,12288,100670><SHM,0xc863f,32768,100670><WAL,0xc863e,0,100670> master:<DB,0xc8672,73728,100660><DWR,0xc8673,12288,100670><SHM,0xc8650,32768,100670><WAL,0xc864f,0,100670>,[1,0,0,0,1]
+08-29 23:40:47.823   468 14267 I C01650/SqliteConnection: SetBinlog:binlog: open /***/el1/***/set***.db
+08-29 23:40:47.824   468 14267 I C01631/GaussPD:  [0] [ADAPTER] [547898771800] Not support binlog_default.readLock file enable del monitor sysno = 25
+08-29 23:40:47.824   468 14267 I C01631/GaussPD:  [0] [ADAPTER] [547898771800] Not support binlog_default.readIndex file enable del monitor sysno = 25
+08-29 23:40:47.824   468 14267 I C01631/GaussPD:  [0] [ADAPTER] [547898771800] Not support binlog_default.readIndex file enable del monitor sysno = 25
+08-29 23:40:47.824   468 14267 I C01631/GaussPD:  [0] [ADAPTER] [547898771800] Not support binlog_default.writeIndex file enable del monitor sysno = 25
+08-29 23:40:47.824   468 14267 I C01631/GaussPD:  [0] [ADAPTER] [547898771800] Not support binlog_default.00002 file enable del monitor sysno = 25
+08-29 23:40:47.824   468 14267 I C01631/GaussPD:  [0] [ADAPTER] [547898771800] Not support binlog_default.writeIndex file enable del monitor sysno = 25
+08-29 23:40:47.824   468 14267 I C01631/GaussPD:  [0] [STORAGE] [547898771800] |BinlogRead||VerifyReadInfo| read binlog files finish.
+08-29 23:40:47.824   468 14267 I C01631/GaussPD:  [0] [STORAGE] [547898771800] |BinlogRead||ProcReadBeginStage| Verify read info and read finish
+08-29 23:40:47.824   468 14267 I C01631/GaussPD:  [0] [STORAGE] [547898771800] |Binlog||BinlogRead| reading all binlog files is complete
+08-29 23:40:47.824   468 14267 I C01650/SqliteConnection: CompareWithSlave:equal, main:4,slave:4
+08-29 23:40:47.824   468 14267 I C01650/RdbStoreImpl: operator():async exchange st:0,
+08-29 23:40:47.826   701 17252 I C02986/DisplayPowerBrightness: no need to set setting brightness
+08-29 23:40:47.826   701 17252 I C02986/DisplayPowerBrightness: SetSettingBrightness brightness=137
+08-29 23:40:47.826   245 23987 E C02802/WhitelistDataShareAccessor: [|102]GetStringValue UNIVERSAL_DRAG_CONFIG_WHITELIST failed, ret:2
+08-29 23:40:47.826   245 23987 I C02800/WhitelistDataShareAccessor: [][ReadWhitelistFromDB] leave
+08-29 23:40:47.826   245 23987 E C02802/WhitelistDataShareAccessor: [|73]ReadWhitelistFromDB failed
+08-29 23:40:47.826   245 23987 I C02800/WhitelistDataShareAccessor: [][InitializeImpl] leave
+08-29 23:40:47.908 23980 23980 I C03100/UiTestKit_Server: [system_ui_controller.cpp:(SetItemByType)] Add touchItem, finger:0, pressed:0, location:160, 1360
+08-29 23:40:47.909 23980 23980 I C02800/InputManagerImpl: [|1254]Pointer event action:4
+08-29 23:40:47.909 23980 23980 I C02802/MultimodalEventHandler: [|252]PI:10000, IP:0, P:0.00, MF:-1, WI:-1, OPI:0, SI:true, A:0
+08-29 23:40:47.909   245   493 I C02805/InputKeyFlow: [P:U:89818|6037]PA:up,Pid:17137,TWI:64,FWI:64,EID:89818,flags:0,DID:0AWI:64,zOrder:102.000000
+08-29 23:40:47.909   245   493 I C02805/InputKeyFlow: [P:U:89818|621]SendMsg:17137
+08-29 23:40:47.909 17137 17137 I C02805/InputKeyFlow: [P:U:89818|247]ac: up: 89818
+08-29 23:40:47.909 17137 17137 I C02805/InputKeyFlow: [P:U:89818|649]recv
+08-29 23:40:47.909 17137 17137 I C04213/InputKeyFlow: HandleInputEvent: eid:7,InputId:89818,wid:64,ac:4
+08-29 23:40:47.910 17137 17137 I C03951/InputKeyFlow: [(100000:100000:scope)] ITK Id:89818, fId:10000, T:1, I=0, M=0
+08-29 23:40:47.910 17137 17137 I C03934/AceUIEvent: [(100000:100000:scope)] TpFlush end by up event
+08-29 23:40:47.910   127   875 I C02d66/XPERF_SERVICE: [NotifyToXperf]: XperfServiceServer_NotifyToXperf domainId:6 eventId:0 msg:#TYPE:LAST_UP#TIME:1788018047910#BUNDLE_NAME:io.reader.harmonyos#PID:17137
+08-29 23:40:47.912 17137 17137 I C03919/AceInputTracking: [(100000:100000:scope)] Consumed id:89818, last id:-1
+08-29 23:40:47.912 17137 17137 I C04213/InputKeyFlow: ConsumePointerEventInner: InputId:89818,wid:64,pointId:10000,srcType:2,rect:[0,0,1320,2856],notify:1
+08-29 23:40:47.912 17137 19991 I A05244/BookTurn: settle start gen=<private> commit=<private> eased=<private> dir=<private> tau0=<private> dur=<private>
+08-29 23:40:47.914 17137 19991 E C02515/DGLES: [d_eglSwapBuffers_special@egl_gpu.cpp:729] thread output size 8883238 speed 89k/s API_num 1474
+08-29 23:40:47.914   833  1085 I C057c2/IPCObjectProxy: hd:902 ct:1 D:
+08-29 23:40:47.918 21767 21767 I A01b09/RECENT: RecentDockRefreshAlarm: refresh recent dock: EntryAbility/io.reader.harmonyos/entry/0(persistentId: 64)(containerId: 19)
+08-29 23:40:47.929 24002 24002 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24002 2000 2000] failed
+08-29 23:40:47.929 24002 24002 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24002 2000 2000] failed
+08-29 23:40:47.929 24002 24002 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:47.932 17137 17137 I C0392c/AceForEach: [(100000:100000:scope)] ForEachNode skip mark dirty. Id[240], Ids.size[17]
+08-29 23:40:47.934 24004 24004 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24004 2000 2000] failed
+08-29 23:40:47.934 24004 24004 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24004 2000 2000] failed
+08-29 23:40:47.934 24004 24004 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:47.935 24005 24005 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24005 2000 2000] failed
+08-29 23:40:47.935 24005 24005 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24005 2000 2000] failed
+08-29 23:40:47.935 24005 24005 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:47.948 24006 24006 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24006 2000 2000] failed
+08-29 23:40:47.948 24006 24006 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24006 2000 2000] failed
+08-29 23:40:47.948 24006 24006 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:47.949   701 17257 I C02986/DisplayPowerBrightness: ProcessLightLux:mIsLuxActiveWithLog=true
+08-29 23:40:47.949   701 17257 I C02986/DisplayPowerBrightness: mLux=0.000000, smoothLux=0.000000
+08-29 23:40:47.949   701 17257 I C02986/DisplayPowerBrightness: lux=[0/539040612, 0/539050612, ], bDelta=5.000000, dDelta=1.000000, size=2
+08-29 23:40:47.977 24007 24007 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24007 2000 2000] failed
+08-29 23:40:47.977 24007 24007 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24007 2000 2000] failed
+08-29 23:40:47.977 24007 24007 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:47.983   832   832 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076b, width 1320, heigt 2856
+08-29 23:40:47.983   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:47.985 24008 24008 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24008 2000 2000] failed
+08-29 23:40:47.985 24008 24008 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24008 2000 2000] failed
+08-29 23:40:47.985 24008 24008 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:47.989   125   461 I C01800/SAMGR: NF SA:65962,876_44892
+08-29 23:40:47.990   832   943 I C01406/skia: RSSurfaceRenderNodeDrawable::OnDraw name:com.ohos.sceneboardEngineServiceAbility, the number of total processedNodes: 9
+08-29 23:40:47.991   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:47.994   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:47.994   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:47.994   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:47.994   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.007   832   943 E C02515/DGLES: [d_eglSwapBuffers_special@egl_gpu.cpp:729] thread output size 634068 speed 12k/s API_num 62
+08-29 23:40:48.007   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076e, width 1320, heigt 2856
+08-29 23:40:48.007   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.008   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.008   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.008   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.008   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.008   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.008   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.014   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076b, width 1320, heigt 2856
+08-29 23:40:48.014   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.014   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.014   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.014   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.015   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.016   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.024   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.044   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076c, width 1320, heigt 2856
+08-29 23:40:48.044   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.044   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.045   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.045   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.045   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.045   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.045   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.050   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.050   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.050   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076f, width 1320, heigt 2856
+08-29 23:40:48.051   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.051   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.051   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.051   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.054   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076d, width 1320, heigt 2856
+08-29 23:40:48.054   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.056   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.056   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.056   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.056   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.064   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.064   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.070   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.071   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.071   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.071   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.071   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.073   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.073   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.086   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.087   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076e, width 1320, heigt 2856
+08-29 23:40:48.087   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.087   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.087   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.087   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.088   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.088   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.095   701 17256 I C02986/DisplayPowerBrightness: mLux=0.000000, smoothLux=0.000000
+08-29 23:40:48.102   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.103   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076b, width 1320, heigt 2856
+08-29 23:40:48.103   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.103   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.103   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.104   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.104   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.104   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.118   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.120   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076c, width 1320, heigt 2856
+08-29 23:40:48.120   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.121   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.121   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.121   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.121   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.121   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.133   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.137   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076f, width 1320, heigt 2856
+08-29 23:40:48.137   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.137   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.137   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.137   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.137   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.137   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.148   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.153   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076d, width 1320, heigt 2856
+08-29 23:40:48.153   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.153   607   644 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.153   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.153   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.154   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.154   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.165   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.170   607   644 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.170   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076e, width 1320, heigt 2856
+08-29 23:40:48.171   607   644 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.171   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.171   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.171   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.171   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.180   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.187   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076b, width 1320, heigt 2856
+08-29 23:40:48.187   607   644 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.187 24010 24010 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24010 2000 2000] failed
+08-29 23:40:48.187   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.187 24010 24010 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24010 2000 2000] failed
+08-29 23:40:48.187 24010 24010 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:48.187   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.187   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.189   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.189   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.190   125   461 I C01800/SAMGR: NF SA:65962,876_44893
+08-29 23:40:48.193 24012 24012 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24012 2000 2000] failed
+08-29 23:40:48.193 24012 24012 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24012 2000 2000] failed
+08-29 23:40:48.193 24012 24012 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:48.196   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.198 24013 24013 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24013 2000 2000] failed
+08-29 23:40:48.198 24013 24013 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24013 2000 2000] failed
+08-29 23:40:48.198 24013 24013 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:48.204   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076c, width 1320, heigt 2856
+08-29 23:40:48.204   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.204   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.204   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.204   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.205   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.205   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.213   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.220   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076f, width 1320, heigt 2856
+08-29 23:40:48.221   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.221   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.221   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.221   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.222   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.222   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.227   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.236   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076d, width 1320, heigt 2856
+08-29 23:40:48.236   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.236   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.237   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.237   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.238   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.238   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.243   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.244   701 17258 I C02986/DisplayPowerBrightness: mLux=0.000000, smoothLux=0.000000
+08-29 23:40:48.253   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076e, width 1320, heigt 2856
+08-29 23:40:48.253   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.253   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.253   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.253   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.255   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.255   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.259   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.270   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.270   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.270   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.270   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.272   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.272   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.274   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.287   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076b, width 1320, heigt 2856
+08-29 23:40:48.287   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.287   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.287   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.287   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.288   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.288   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.290   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.303   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076c, width 1320, heigt 2856
+08-29 23:40:48.303   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.303   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.303   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.303   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.304   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.304   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.306   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.320   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076f, width 1320, heigt 2856
+08-29 23:40:48.320   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.320   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.320   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.320   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.322   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.322   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.322   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.336   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076d, width 1320, heigt 2856
+08-29 23:40:48.336   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.337   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.337   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.337   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.338   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.339   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.339   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.353   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076e, width 1320, heigt 2856
+08-29 23:40:48.354   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.354   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.354   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.354   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.354   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.355   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.355   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.370   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.370   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.371   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.371   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.372   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.372   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.385   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.387   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076b, width 1320, heigt 2856
+08-29 23:40:48.387   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.387   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.387   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.387   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.388   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.388   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.390   125   461 I C01800/SAMGR: NF SA:65962,876_44894
+08-29 23:40:48.400   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.403   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076f, width 1320, heigt 2856
+08-29 23:40:48.403   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.404   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.404   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.404   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.405   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.405   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.416   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.420   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076c, width 1320, heigt 2856
+08-29 23:40:48.420   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.420   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.420   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.420   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.421   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.421   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.432   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.437   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076d, width 1320, heigt 2856
+08-29 23:40:48.437   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.437   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.437   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.437   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.438   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.438   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.447   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.453   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076e, width 1320, heigt 2856
+08-29 23:40:48.453   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.453   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.453   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.453   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.454   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.454   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.463   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.470   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076b, width 1320, heigt 2856
+08-29 23:40:48.470   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.470   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.470   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.470   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.472   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.472   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.479   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.486   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076f, width 1320, heigt 2856
+08-29 23:40:48.487   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.487   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.487   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.487   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.487   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.487   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.495   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.503   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.504   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.504   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.504   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.504   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.504   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.511   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.520   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076c, width 1320, heigt 2856
+08-29 23:40:48.520   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.521   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.521   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.521   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.521   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.521   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.526   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.537   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076d, width 1320, heigt 2856
+08-29 23:40:48.537 17137 19991 I A05244/BookTurn: endpoint gen=<private>
+08-29 23:40:48.538   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.538   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.538   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.538   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.538   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.539   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.542   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.553   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076e, width 1320, heigt 2856
+08-29 23:40:48.554   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.554   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.554   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.554   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.554   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.555   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.558   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.570   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076b, width 1320, heigt 2856
+08-29 23:40:48.570   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.571   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.571   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.571   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.572   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.572   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.573   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.587   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.587   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.587   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.587   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.588   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.588   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.590   125   461 I C01800/SAMGR: NF SA:65962,876_44895
+08-29 23:40:48.603   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.603   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.606 17137 19991 I A05244/BookTurn: commit teardown gen=<private> already=<private> mask=<private>
+08-29 23:40:48.637   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.638   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.638   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.656   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.657   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.657   832   943 I C02515/DISP: [ExpressFreeMem:317] freeMem bufferhandle gbuffer_id 96e0000076f, width 1320, heigt 2856
+08-29 23:40:48.657   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.657   607   644 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.661 21767 21767 W A01c06/ICON: AppIconWeatherModel --> initWeatherListener, retryTimes: 4
+08-29 23:40:48.666   468   550 E C01707/CONCUR: [Interface] task 550 apply qos failed, errno = 4
+08-29 23:40:48.666   468   550 E C01611/QosManager: QosManager: Failed to set thread QoS to QOS_USER_INTERACTIVE, ret: -1
+08-29 23:40:48.670   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.670   833  1085 W C01123/BMSCommon: bundle not exist -n com.huawei.hmsapp.totemweather -u 100 -i 0 -f 32
+08-29 23:40:48.670   833  1085 W C01121/BMSQuery: GetBundleInfo failed -n com.huawei.hmsapp.totemweather -u 100
+08-29 23:40:48.670   468   550 E C01651/BundleMgrProxy: GetBundleInfoFromBMS: GetBundleInfo failed!bundleName is com.huawei.hmsapp.totemweather, userId is 100
+08-29 23:40:48.670   468   550 E C01651/DataProviderConfig: GetFromProxyData: Get bundleInfo failed! bundleName:com.huawei.hmsapp.totemweather, userId:100, visitedId:100, uri:******icIconInfo
+08-29 23:40:48.670   468   550 E C01651/DataShareServiceImpl: GetBMSAndMetaDataStatus: CalledInfo failed! token:0x200ba470,ret:1001,uri:******icIconInfo
+08-29 23:40:48.670   468   550 E C01651/DataShareServiceImpl: GetSilentProxyStatus: BMS or metaData not ready to complete, token:0x200ba470, uri:******icIconInfo
+08-29 23:40:48.671 21767 21767 E A01c06/ICON: AppIconWeatherModel --> get weather info failed, code: 15700010, message: The DataShareHelper is not initialized successfully.
+08-29 23:40:48.672   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.672   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.675   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.675   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.684   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.685   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.685   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.686   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.686   607   644 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.689   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.689   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.700   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.701   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.701   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.702   607   644 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.702   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.707   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.707   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.715   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.717   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.717   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.718   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.718   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.720   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.720   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.731   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.732 17137 17137 I C03907/AceComponentSnapshot: [(100000:100000:scope)] Get ComponentSnapshot options={0.883140, false, {Localized, -1.000000, -1.000000, -1.000000, -1.000000}, {ColorSpace: 4}, {DynamicRangeMode: 2}} Id=secure_field Depth=18 Tag=Stack imageCount=0 checkImage=1 RsNodeId=73602854551684
+08-29 23:40:48.732   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.732   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.732   832 30958 E C01406/OHOS::RS: RSInterfaceCodeAccessVerifierBase::IsInterfaceCodeAccessible exclusive verification not passed.
+08-29 23:40:48.732   832 30958 E C01406/OHOS::RS: RSInterfaceCodeSecurityManager::IsInterfaceCodeAccessible verification failed.
+08-29 23:40:48.732   832 30958 E C01406/OHOS::RS: RSIRenderServiceConnectionInterfaceCode::TAKE_SURFACE_CAPTURE ipc interface code access denied: not system calling
+08-29 23:40:48.732   832   832 I C01406/RSClientToRenderConnection: TakeSurfaceCaptureForUiParallel nodeId:[73602854551684], issync:false
+08-29 23:40:48.732   832   832 I C01406/skia: RSUiCaptureTaskParallel::Capture nodeId:[73602854551684]
+08-29 23:40:48.734   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.734 17137 17137 I C0392c/AceForEach: [(100000:100000:scope)] ForEachNode skip mark dirty. Id[240], Ids.size[14]
+08-29 23:40:48.734   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.737   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.737   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.742 24017 24017 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24017 2000 2000] failed
+08-29 23:40:48.742 24017 24017 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24017 2000 2000] failed
+08-29 23:40:48.743 24017 24017 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:48.745   832   943 I C01406/skia: RSUiCaptureTaskParallel::Run: NodeId: [73602854551684], the number of total processedNodes: [33]; ExistCapturePixelMapOP: false; colorspace[4, 0], dynamicRange[2, 0], finalIsHdr[0]
+08-29 23:40:48.747   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.747 17137 17137 I C0392c/AceForEach: [(100000:100000:scope)] ForEachNode skip mark dirty. Id[240], Ids.size[14]
+08-29 23:40:48.749 24017 24017 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24017 2000 2000] failed
+08-29 23:40:48.749 24017 24017 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24017 2000 2000] failed
+08-29 23:40:48.749 24017 24017 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:48.750   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.751   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.752   245   493 I C02802/InputActiveSubscriberHandler: [|317]0|10000|701
+08-29 23:40:48.790   832   943 I C01406/skia: RSUiCaptureTaskParallel::Capture DMADisable capture success nodeId:[73602854551684], pixelMap width: 1166, height: 2523, colorSpace:4
+08-29 23:40:48.790 17137 19756 E C02b61/PixelMap: set ashmem name failed
+08-29 23:40:48.790 17137 19756 I C03907/AceComponentSnapshot: [(-1:100000:singleton)] ComponentSnapshot successful! pixelMap.width=1166 pixelMap.height=2523
+08-29 23:40:48.791   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.791   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.791   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.791   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.792   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.792   125   461 I C01800/SAMGR: NF SA:65962,876_44896
+08-29 23:40:48.792   607   644 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.794   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.794   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.795   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.795   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.795   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.812   607   644 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.812   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.873 17137 17137 I C03907/AceComponentSnapshot: [(100000:100000:scope)] Process off screen Node finished, root size = [1320.00 x 2856.00] Id=2092 Tag=Stack enableInspector=0 imageIds=
+08-29 23:40:48.874 17137 17137 I C03907/AceComponentSnapshot: [(100000:100000:scope)] Flush UI tasks with flag
+08-29 23:40:48.876 17137 17137 I C03907/AceComponentSnapshot: [(100000:100000:scope)] Begin to take surfaceCapture for ui, rootId=secure_field depth=1000000 param={0, false, 0.883140, false} dfxInfo={0, 21, 0, 1} size=[1320.00 x 2856.00], regionMode=2
+08-29 23:40:48.876   832 30958 E C01406/OHOS::RS: RSInterfaceCodeAccessVerifierBase::IsInterfaceCodeAccessible exclusive verification not passed.
+08-29 23:40:48.876   832 30958 E C01406/OHOS::RS: RSInterfaceCodeSecurityManager::IsInterfaceCodeAccessible verification failed.
+08-29 23:40:48.876   832 30958 E C01406/OHOS::RS: RSIRenderServiceConnectionInterfaceCode::TAKE_SURFACE_CAPTURE ipc interface code access denied: not system calling
+08-29 23:40:48.876   832   832 I C01406/RSClientToRenderConnection: TakeSurfaceCaptureForUiParallel nodeId:[73602854552068], issync:false
+08-29 23:40:48.876   832   832 W C01406/RSMainThread: RSMainThread::AddUiCaptureTask node nullptr, id: 73602854552068
+08-29 23:40:48.889   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.889   832   943 I C01406/skia: RSUiCaptureTaskParallel::Capture nodeId:[73602854552068]
+08-29 23:40:48.890   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.890   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.907   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.907   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.908   832   943 I C01406/skia: RSUiCaptureTaskParallel::Run: NodeId: [73602854552068], the number of total processedNodes: [20]; ExistCapturePixelMapOP: false; colorspace[4, 0], dynamicRange[2, 0], finalIsHdr[0]
+08-29 23:40:48.912   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.912   607   644 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.924 17137 19991 I A05244/BookTurn: upload slot=<private> ok=<private> mask=<private>
+08-29 23:40:48.940   832   943 I C01406/skia: RSUiCaptureTaskParallel::Capture DMADisable capture success nodeId:[73602854552068], pixelMap width: 1166, height: 2523, colorSpace:4
+08-29 23:40:48.941 17137 19755 E C02b61/PixelMap: set ashmem name failed
+08-29 23:40:48.941 17137 19755 I C03907/AceComponentSnapshot: [(-1:100000:singleton)] ComponentSnapshot successful! pixelMap.width=1166 pixelMap.height=2523
+08-29 23:40:48.951   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:48.952   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:48.952   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:48.966   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.967   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:48.969   607   644 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:48.969   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:48.971 24020 24020 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24020 2000 2000] failed
+08-29 23:40:48.971 24020 24020 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24020 2000 2000] failed
+08-29 23:40:48.971 24020 24020 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:48.976 24023 24023 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24023 2000 2000] failed
+08-29 23:40:48.976 24023 24023 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24023 2000 2000] failed
+08-29 23:40:48.976 24023 24023 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:48.977 24022 24022 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24022 2000 2000] failed
+08-29 23:40:48.977 24022 24022 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24022 2000 2000] failed
+08-29 23:40:48.977 24022 24022 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:48.982 24024 24024 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24024 2000 2000] failed
+08-29 23:40:48.982 24024 24024 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24024 2000 2000] failed
+08-29 23:40:48.982 24024 24024 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:48.987 24026 24026 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24026 2000 2000] failed
+08-29 23:40:48.987 24026 24026 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24026 2000 2000] failed
+08-29 23:40:48.987 24026 24026 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:48.987 24025 24025 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24025 2000 2000] failed
+08-29 23:40:48.988 24025 24025 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24025 2000 2000] failed
+08-29 23:40:48.988 24025 24025 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:48.992   125   461 I C01800/SAMGR: NF SA:65962,876_44897
+08-29 23:40:49.026 17137 17137 I C03907/AceComponentSnapshot: [(100000:100000:scope)] Process off screen Node finished, root size = [1320.00 x 2856.00] Id=2212 Tag=Stack enableInspector=0 imageIds=
+08-29 23:40:49.028 17137 17137 I C03907/AceComponentSnapshot: [(100000:100000:scope)] Flush UI tasks with flag
+08-29 23:40:49.029 17137 17137 I C03907/AceComponentSnapshot: [(100000:100000:scope)] Begin to take surfaceCapture for ui, rootId=secure_field depth=1000000 param={0, false, 0.883140, false} dfxInfo={0, 33, 0, 1} size=[1320.00 x 2856.00], regionMode=2
+08-29 23:40:49.029   832 30958 E C01406/OHOS::RS: RSInterfaceCodeAccessVerifierBase::IsInterfaceCodeAccessible exclusive verification not passed.
+08-29 23:40:49.029   832 30958 E C01406/OHOS::RS: RSInterfaceCodeSecurityManager::IsInterfaceCodeAccessible verification failed.
+08-29 23:40:49.029   832 30958 E C01406/OHOS::RS: RSIRenderServiceConnectionInterfaceCode::TAKE_SURFACE_CAPTURE ipc interface code access denied: not system calling
+08-29 23:40:49.029   832   832 I C01406/RSClientToRenderConnection: TakeSurfaceCaptureForUiParallel nodeId:[73602854552090], issync:false
+08-29 23:40:49.029   832   832 W C01406/RSMainThread: RSMainThread::AddUiCaptureTask node nullptr, id: 73602854552090
+08-29 23:40:49.031   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:49.031   832   943 I C01406/skia: RSUiCaptureTaskParallel::Capture nodeId:[73602854552090]
+08-29 23:40:49.032   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:49.032   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:49.032   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:49.032   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:49.034   832   943 E C02515/DGLES: [d_eglSwapBuffers_special@egl_gpu.cpp:729] thread output size 25712941 speed 24434k/s API_num 2362
+08-29 23:40:49.035   832   943 I C01406/skia: RSUiCaptureTaskParallel::Run: NodeId: [73602854552090], the number of total processedNodes: [32]; ExistCapturePixelMapOP: false; colorspace[4, 0], dynamicRange[2, 0], finalIsHdr[0]
+08-29 23:40:49.047   607  2466 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:49.048   607   644 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:49.053   832   943 I C01406/skia: RSUiCaptureTaskParallel::Capture DMADisable capture success nodeId:[73602854552090], pixelMap width: 1166, height: 2523, colorSpace:4
+08-29 23:40:49.054 17137 19761 E C02b61/PixelMap: set ashmem name failed
+08-29 23:40:49.054 17137 19761 I C03907/AceComponentSnapshot: [(-1:100000:singleton)] ComponentSnapshot successful! pixelMap.width=1166 pixelMap.height=2523
+08-29 23:40:49.061   832   832 E C01406/RSScreenManager: IsAllScreensPowerOff: screenPowerStatus_ is empty.
+08-29 23:40:49.062   832   943 W C01406/skia: DrawWithGles: DrawSurfaceBufferOpItem::DrawWithGles waitfence timeout
+08-29 23:40:49.062   832   943 E C02515/DGLES: [d_eglCreateImage_special@egl_gpu.cpp:283] createimage with ctx null opengl_context 7fa0f06300
+08-29 23:40:49.063   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:49.063   832   943 E C02515/DGLES: [d_glBindTexture_special@glv3_status.cpp:620] bind external with nullptr gbuffer 0
+08-29 23:40:49.064 17137 19991 I A05244/BookTurn: upload slot=<private> ok=<private> mask=<private>
+08-29 23:40:49.079   607   644 W C02515/DISP: [SetLayerMaskInfo:495] <private> is not supported
+08-29 23:40:49.079   607  2466 I C02515/DISP: [CommitComposeLayer:67] CommitComposeLayer! 10
+08-29 23:40:49.185 17137 19991 I A05244/BookTurn: upload slot=<private> ok=<private> mask=<private>
+08-29 23:40:49.200   125   461 I C01800/SAMGR: NF SA:65962,876_44898
+08-29 23:40:49.200   876   940 E C01810/SA_CLIENT: GetSaWrap SA:65962 not start
+08-29 23:40:49.200   876   940 I C01409/APS_MANAGER: request system service object is not ready yet!
+08-29 23:40:49.265 24028 24028 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24028 2000 2000] failed
+08-29 23:40:49.265 24028 24028 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24028 2000 2000] failed
+08-29 23:40:49.266 24028 24028 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:49.271 24030 24030 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24030 2000 2000] failed
+08-29 23:40:49.271 24030 24030 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24030 2000 2000] failed
+08-29 23:40:49.271 24030 24030 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:49.276 24031 24031 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24031 2000 2000] failed
+08-29 23:40:49.276 24031 24031 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24031 2000 2000] failed
+08-29 23:40:49.276 24031 24031 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:49.425 24033 24033 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24033 2000 2000] failed
+08-29 23:40:49.426 24033 24033 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24033 2000 2000] failed
+08-29 23:40:49.426 24033 24033 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:49.432 24035 24035 I C02d20/DumperService: SetCmdArgs# hidumper cmd:hidumper -s 1201 -a -p Faultlogger -LogSuffixWithMs , calllingUid=2000, calllingPid=24035, ppid:24033.
+08-29 23:40:49.433 24035 24036 W C057c1/IPCWorkThread: ThreadHandler: proto:0 policy:1 name:OS_IPC_0_24036 invoker:2155916032
+08-29 23:40:49.433 24035 24037 W C057c1/IPCWorkThread: ThreadHandler: proto:0 policy:0 name:OS_IPC_1_24037 invoker:2183490304
+08-29 23:40:49.435  7033 24707 I C02d20/DumperService: DelayUnloadTask# recieve new request, delay unload task begin, calllingPid=24035
+08-29 23:40:49.436   127   875 I C02d11/Faultlogger: DumpByCommands: DumpRequest: detail:0, list:0, file:, name:, time:-1
+08-29 23:40:49.437  7033 24707 I C02d20/DumperService: GetData# SA name:1201 dump success, cmd:-p Faultlogger -LogSuffixWithMs , calllingPid=24035!
+08-29 23:40:49.574  2543  2543 I C02500/Qemud: Guest heartbeat success.
+08-29 23:40:49.576   598   859 W C02943/ThermalHdi: Read node failed, title = brightness
+08-29 23:40:49.576   598   859 W C02943/ThermalHdi: Read node failed, title = 
+08-29 23:40:49.576   598   859 W C02943/ThermalHdi: Read node failed, title = 
+08-29 23:40:49.576   598   859 W C02943/ThermalHdi: Read node failed, title = 
+08-29 23:40:49.576   598   859 W C02943/ThermalHdi: Read node failed, title = 
+08-29 23:40:49.576   598   859 W C02943/ThermalHdi: Read node failed, title = 
+08-29 23:40:49.576   598   859 W C02943/ThermalHdi: Read node failed, title = 
+08-29 23:40:49.576   598   859 W C02943/ThermalHdi: Read node failed, title = 
+08-29 23:40:49.576   598   859 W C02943/ThermalHdi: Read node failed, title = 
+08-29 23:40:49.576   598   859 W C02943/ThermalHdi: Read node failed, title = 
+08-29 23:40:49.576   598   859 W C02943/ThermalHdi: Read node failed, title = 
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = 
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = 
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = 
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = 
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = 
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = 
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = 
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = 
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = 
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = 
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = 
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = 
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = 
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = 
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = ambient
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = ibat
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = vbat
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = cpu0_min_freq
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = cpu0_cur_freq
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = cpu0_max_freq
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = cpu4_min_freq
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = cpu4_cur_freq
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = cpu4_max_freq
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = cpu7_min_freq
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = cpu7_cur_freq
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = cpu7_max_freq
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = gpu_min_freq
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = gpu_cur_freq
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = gpu_max_freq
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = ddr_cur_freq
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = set_IPApower
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: Read node failed, title = cur_IPApower
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: get node failed
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: get node failed
+08-29 23:40:49.577   598   859 W C02943/ThermalHdi: get node failed
+08-29 23:40:49.673 21767 21767 W A01c06/ICON: AppIconWeatherModel --> initWeatherListener, retryTimes: 4
+08-29 23:40:49.677   468   550 E C01707/CONCUR: [Interface] task 550 apply qos failed, errno = 4
+08-29 23:40:49.677   468   550 E C01611/QosManager: QosManager: Failed to set thread QoS to QOS_USER_INTERACTIVE, ret: -1
+08-29 23:40:49.677   833  1085 W C01123/BMSCommon: bundle not exist -n com.huawei.hmsapp.totemweather -u 100 -i 0 -f 32
+08-29 23:40:49.677   833  1085 W C01121/BMSQuery: GetBundleInfo failed -n com.huawei.hmsapp.totemweather -u 100
+08-29 23:40:49.678   468   550 E C01651/BundleMgrProxy: GetBundleInfoFromBMS: GetBundleInfo failed!bundleName is com.huawei.hmsapp.totemweather, userId is 100
+08-29 23:40:49.678   468   550 E C01651/DataProviderConfig: GetFromProxyData: Get bundleInfo failed! bundleName:com.huawei.hmsapp.totemweather, userId:100, visitedId:100, uri:******icIconInfo
+08-29 23:40:49.678   468   550 E C01651/DataShareServiceImpl: GetBMSAndMetaDataStatus: CalledInfo failed! token:0x200ba470,ret:1001,uri:******icIconInfo
+08-29 23:40:49.678   468   550 E C01651/DataShareServiceImpl: GetSilentProxyStatus: BMS or metaData not ready to complete, token:0x200ba470, uri:******icIconInfo
+08-29 23:40:49.678 21767 21767 E A01c06/ICON: AppIconWeatherModel --> get weather info failed, code: 15700010, message: The DataShareHelper is not initialized successfully.
+08-29 23:40:49.804 24039 24039 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24039 2000 2000] failed
+08-29 23:40:49.804 24039 24039 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24039 2000 2000] failed
+08-29 23:40:49.805 24039 24039 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:49.809 24039 24039 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24039 2000 2000] failed
+08-29 23:40:49.809 24039 24039 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24039 2000 2000] failed
+08-29 23:40:49.809 24039 24039 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:49.811   282 23989 I C01727/SceneRecognizeExt: [a92abdfd7fc5cfe] [ReportExitUserInteractionSceneInner]report exit user interaction scene
+08-29 23:40:49.949 24042 24042 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24042 2000 2000] failed
+08-29 23:40:49.949 24042 24042 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24042 2000 2000] failed
+08-29 23:40:49.949 24042 24042 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-29 23:40:49.953 24042 24042 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24042 2000 2000] failed
+08-29 23:40:49.953 24042 24042 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [24042 2000 2000] failed
+08-29 23:40:49.953 24042 24042 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002

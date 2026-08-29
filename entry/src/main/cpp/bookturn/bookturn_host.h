@@ -135,6 +135,11 @@ private:
     // ArkTS commitSlots for the same generation is then a no-op rotation.
     bool settlementSwapped_ = false;
     uint64_t swappedGeneration_ = 0;
+    // Consecutive Draw() refusals tolerated before the runtime is declared
+    // failed. VM/low-end GPU drivers can transiently refuse eglSwapBuffers
+    // (fence sync) for the first frames of a surface's life while still
+    // presenting the frame; one refusal must not kill a committed turn.
+    int consecutiveDrawFailures_ = 0;
 };
 
 }  // namespace reader::bookturn
