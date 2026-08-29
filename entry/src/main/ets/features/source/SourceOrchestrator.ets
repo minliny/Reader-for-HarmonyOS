@@ -15,6 +15,7 @@ export type SourceManagementStatusKind = 'idle' | 'loading' | 'success' | 'warni
 export interface SourceImportCompletion {
   importedCount: number;
   refreshWarning?: string;
+  failureSummary?: string;
 }
 
 /** Resolves after `millis`, used for bounded backoff in transient-Core retries. */
@@ -263,12 +264,23 @@ export class SourceOrchestrator {
       return;
     }
     let importedCount = 0;
+    let failureSummary: string | undefined = undefined;
     try {
       const summary = await this.gateway.importBookSourceDocument(
         selection.text,
         (): boolean => this.isCurrentSession(session),
       );
       importedCount = summary.importedCount;
+      // Item failures never abort the document (non-abort admission); they are
+      // logged individually and summarized so the user sees exact counts.
+      for (const failure of summary.failures) {
+        hilog.warn(DOMAIN, 'Reader',
+          'Book-source import item %{public}d (%{public}s) failed: %{public}s',
+          failure.index + 1, failure.sourceId, failure.message);
+      }
+      if (summary.failedCount > 0) {
+        failureSummary = `失败 ${summary.failedCount} 个书源`;
+      }
     } catch (error) {
       const importError = error instanceof Error ? error : new Error(`${error}`);
       if (!this.isCurrentSession(session)) {
@@ -299,7 +311,7 @@ export class SourceOrchestrator {
         selection.fileName, importedCount, (error as Error).message);
       const refreshWarning = `Core 已导入 ${importedCount} 个书源，但列表刷新失败：${(error as Error).message}`;
       this.publishStatus('warning', refreshWarning);
-      return { importedCount, refreshWarning };
+      return { importedCount, refreshWarning, failureSummary };
     }
     if (!this.isCurrentSession(session)) {
       return;
@@ -308,8 +320,12 @@ export class SourceOrchestrator {
     hilog.info(DOMAIN, 'Reader',
       'Book-source import completed: file=%{public}s count=%{public}d',
       selection.fileName, importedCount);
-    this.publishStatus('success', `已导入 ${importedCount} 个书源`);
-    return { importedCount };
+    if (failureSummary !== undefined) {
+      this.publishStatus('warning', `已导入 ${importedCount} 个书源，${failureSummary}`);
+    } else {
+      this.publishStatus('success', `已导入 ${importedCount} 个书源`);
+    }
+    return { importedCount, failureSummary };
   }
 
   private async reloadAfterImportFailure(session: number, fileName: string): Promise<void> {

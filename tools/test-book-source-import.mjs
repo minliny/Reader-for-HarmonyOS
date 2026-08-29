@@ -48,6 +48,8 @@ const summary = await gateway.importBookSourceDocument(JSON.stringify(single));
 assert.deepEqual(summary, {
   importedCount: 1,
   sourceIds: ['https://source-a.example#remark'],
+  failedCount: 0,
+  failures: [],
 });
 assert.deepEqual(calls[0], {
   method: 'source.import',
@@ -68,6 +70,8 @@ assert.deepEqual(
   {
     importedCount: 2,
     sourceIds: ['https://source-a.example#remark', 'https://source-b.example'],
+    failedCount: 0,
+    failures: [],
   },
 );
 assert.equal(calls.length, 2, 'array imports must call Rust source.import once per item');
@@ -76,20 +80,58 @@ assert.deepEqual(calls[1].params.bookSource.unknownLegadoField, { preserved: tru
 
 await assert.rejects(() => gateway.importBookSourceDocument('{'), /not valid JSON/);
 await assert.rejects(() => gateway.importBookSourceDocument('[]'), /contains no sources/);
-await assert.rejects(() => gateway.importBookSourceDocument('null'), /must be a JSON object/);
-await assert.rejects(
-  () => gateway.importBookSourceDocument(JSON.stringify({ bookSourceName: '无稳定身份' })),
-  /requires a non-empty bookSourceUrl/,
-);
+
+// Non-abort admission: an item that fails local validation is recorded as a
+// per-item failure while the remaining items still import.
 calls.length = 0;
-await assert.rejects(
-  () => gateway.importBookSourceDocument(JSON.stringify([
+assert.deepEqual(
+  await gateway.importBookSourceDocument('null'),
+  {
+    importedCount: 0,
+    sourceIds: [],
+    failedCount: 1,
+    failures: [{ index: 0, sourceId: '', message: 'Book-source document item 1 must be a JSON object' }],
+  },
+);
+assert.equal(calls.length, 0, 'a non-object document item never reaches Core');
+
+assert.deepEqual(
+  await gateway.importBookSourceDocument(JSON.stringify({ bookSourceName: '无稳定身份' })),
+  {
+    importedCount: 0,
+    sourceIds: [],
+    failedCount: 1,
+    failures: [{
+      index: 0,
+      sourceId: '',
+      message: 'Book-source document item 1 requires a non-empty bookSourceUrl',
+    }],
+  },
+);
+
+const third = {
+  bookSourceUrl: 'https://source-c.example',
+  bookSourceName: '书源丙',
+};
+calls.length = 0;
+assert.deepEqual(
+  await gateway.importBookSourceDocument(JSON.stringify([
     single,
     { bookSourceName: '数组中无稳定身份' },
+    third,
   ])),
-  /item 2 requires a non-empty bookSourceUrl/,
+  {
+    importedCount: 2,
+    sourceIds: ['https://source-a.example#remark', 'https://source-c.example'],
+    failedCount: 1,
+    failures: [{
+      index: 1,
+      sourceId: '',
+      message: 'Book-source document item 2 requires a non-empty bookSourceUrl',
+    }],
+  },
 );
-assert.equal(calls.length, 0, 'the full local envelope must validate before the first Core write');
+assert.equal(calls.length, 2, 'an invalid item must not abort the items after it');
 
 let item = 0;
 const partialGateway = new SourceGateway({
@@ -101,9 +143,15 @@ const partialGateway = new SourceGateway({
     return { data: { sourceId: params.sourceId, name: '成功', imported: true } };
   },
 });
-await assert.rejects(
-  () => partialGateway.importBookSourceDocument(JSON.stringify([single, second])),
-  /item 2\/2 after 1 successful import\(s\): Core rejected source/,
+assert.deepEqual(
+  await partialGateway.importBookSourceDocument(JSON.stringify([single, second, third])),
+  {
+    importedCount: 2,
+    sourceIds: ['https://source-a.example#remark', 'https://source-c.example'],
+    failedCount: 1,
+    failures: [{ index: 1, sourceId: 'https://source-b.example', message: 'Core rejected source' }],
+  },
+  'a Core-level item failure must not abort later items',
 );
 
 let current = true;

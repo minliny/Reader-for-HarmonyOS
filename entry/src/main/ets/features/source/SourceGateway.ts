@@ -18,9 +18,19 @@ export type SourcePatch = {
   enabled?: boolean;
 };
 
+export type SourceImportFailure = {
+  /** 0-based position of the item in the import document. */
+  index: number;
+  /** Best-effort Legado primary key; empty when the item had no usable URL. */
+  sourceId: string;
+  message: string;
+};
+
 export type SourceImportSummary = {
   importedCount: number;
   sourceIds: string[];
+  failedCount: number;
+  failures: SourceImportFailure[];
 };
 
 export type SourceCheckOutcome = {
@@ -149,22 +159,24 @@ export class SourceGateway {
       );
     }
 
-    // Validate the whole local envelope before the first durable Core write.
-    // Core still owns BookSource field semantics; this pass only establishes
-    // object shape and Legado's stable primary key for safe addressing.
-    const bookSources: JsonObject[] = [];
-    const stableSourceIds: string[] = [];
-    for (let index = 0; index < rawSources.length; index++) {
-      const bookSource = this.requireBookSourceObject(rawSources[index], index);
-      bookSources.push(bookSource);
-      stableSourceIds.push(this.requireBookSourceUrl(bookSource, index));
-    }
-
+    // Non-abort item admission: one invalid or failing source must never
+    // prevent the remaining items from importing. Each item is validated and
+    // persisted independently; failures are collected on the summary so the
+    // caller can report exact counts instead of a single aborting error.
     const sourceIds: string[] = [];
-    for (let index = 0; index < bookSources.length; index++) {
+    const failures: SourceImportFailure[] = [];
+    for (let index = 0; index < rawSources.length; index++) {
+      let bookSource: JsonObject;
+      let sourceId: string;
+      try {
+        bookSource = this.requireBookSourceObject(rawSources[index], index);
+        sourceId = this.requireBookSourceUrl(bookSource, index);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : `${error}`;
+        failures.push({ index, sourceId: '', message });
+        continue;
+      }
       this.assertImportCurrent(shouldContinue, sourceIds.length);
-      const bookSource = bookSources[index];
-      const sourceId = stableSourceIds[index];
       try {
         const result = await this.runtimeOwner.request('source.import', {
           sourceId,
@@ -180,14 +192,15 @@ export class SourceGateway {
         sourceIds.push(echoedSourceId);
       } catch (error) {
         const message = error instanceof Error ? error.message : `${error}`;
-        throw new Error(
-          `source.import failed at item ${index + 1}/${rawSources.length} ` +
-            `after ${sourceIds.length} successful import(s): ${message}`,
-        );
+        failures.push({ index, sourceId, message });
       }
-      this.assertImportCurrent(shouldContinue, sourceIds.length);
     }
-    return { importedCount: sourceIds.length, sourceIds };
+    return {
+      importedCount: sourceIds.length,
+      sourceIds,
+      failedCount: failures.length,
+      failures,
+    };
   }
 
   /** Core serializes the exact persisted raw BookSource objects. */
@@ -246,6 +259,9 @@ export class SourceGateway {
       throw new Error('书源地址是主键；编辑器不允许隐式迁移 bookSourceUrl');
     }
     const summary = await this.importBookSourceDocument(JSON.stringify(bookSource));
+    if (summary.failedCount > 0) {
+      throw new Error(`source.import failed: ${summary.failures[0].message}`);
+    }
     if (summary.importedCount !== 1 || summary.sourceIds[0] !== sourceId) {
       throw new Error('source.import did not confirm the edited source identity');
     }

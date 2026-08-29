@@ -1296,7 +1296,9 @@ struct Index {
       this.getSourceOrchestrator().importBookSources(
         onlineUrl,
         (completion: SourceImportCompletion): void => {
-          const message = completion.refreshWarning ?? `Core 已导入 ${completion.importedCount} 个书源。`;
+          const base = completion.refreshWarning ?? `Core 已导入 ${completion.importedCount} 个书源`;
+          const message = completion.failureSummary === undefined ?
+            `${base}。` : `${base}，${completion.failureSummary}`;
           if (this.sourceManagementReturnTarget === 'search') {
             this.showSourceImportResultFromSearch('书源导入完成', message);
             return;
