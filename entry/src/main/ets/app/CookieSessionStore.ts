@@ -1,13 +1,21 @@
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import asset from '@ohos.security.asset';
 import url from '@ohos.url';
 import util from '@ohos.util';
 import type { JsonObject } from '@reader/core-harmony';
 
+const LOG_DOMAIN = 0x5244;
+const LOG_TAG = 'Reader';
 const ASSET_ALIAS = 'reader.cookie.sessions.v1';
+const ASSET_CHUNK_ALIAS_PREFIX = 'reader.cookie.sessions.v1#';
+// Platform hard limit: a single AssetStore SECRET value holds at most 1024
+// bytes, so the jar is striped across chunk records instead of one record.
+const ASSET_SECRET_CHUNK_BYTES = 1024;
 const FORMAT_VERSION = 1;
 const MAX_SESSION_ID_LENGTH = 2048;
 const MAX_PERSISTED_COOKIES = 4096;
 const MAX_PERSISTED_BYTES = 512 * 1024;
+const MAX_PERSISTED_CHUNKS = MAX_PERSISTED_BYTES / ASSET_SECRET_CHUNK_BYTES;
 
 type SameSiteValue = 'Strict' | 'Lax' | 'None' | null;
 
@@ -28,6 +36,11 @@ type StoredCookie = {
 type PersistedCookieEnvelope = {
   formatVersion: number;
   cookies: StoredCookie[];
+};
+
+type PersistedChunkHeader = {
+  formatVersion: number;
+  chunkCount: number;
 };
 
 export type ArkWebCookieSeed = {
@@ -56,7 +69,12 @@ export type ArkWebObservedCookie = {
  * persists credential plaintext.
  *
  * Session cookies stay in memory. Cookies with Expires/Max-Age are stored in
- * AssetStore, encrypted by the platform and removed with the application.
+ * AssetStore, encrypted by the platform and removed with the application. The
+ * platform caps each SECRET at 1024 bytes, so the serialized jar is striped
+ * across chunk records (`...#0..#N-1`) and the header record commits the chunk
+ * count only after every chunk landed; a legacy single-record jar is migrated
+ * on the next persist. Persistence is best-effort: a failed write keeps the
+ * in-memory jar authoritative and never fails an HTTP request.
  * `Tag.IS_PERSISTENT` is deliberately not used: that tag means surviving an
  * uninstall and would be wrong for source credentials.
  */
@@ -67,6 +85,7 @@ export class CookieSessionStore {
   private loadPromise: Promise<void> | null = null;
   private writeTail: Promise<void> = Promise.resolve();
   private creationSequence: number = Date.now();
+  private persistedChunkCount: number = 0;
 
   async cookieHeader(sessionId: string, requestUrl: string): Promise<string> {
     await this.ensureLoaded();
@@ -317,48 +336,45 @@ export class CookieSessionStore {
   }
 
   private async loadFromAssetStore(): Promise<void> {
-    const query = new Map<asset.Tag, asset.Value>();
-    query.set(asset.Tag.ALIAS, this.utf8(ASSET_ALIAS));
-    query.set(asset.Tag.RETURN_TYPE, asset.ReturnType.ALL);
-    let records: Array<asset.AssetMap>;
-    try {
-      records = await asset.query(query);
-    } catch (error) {
-      const code = this.errorCode(error);
-      if (code === asset.ErrorCode.NOT_FOUND) {
-        return;
-      }
-      throw new Error(`cookie store cannot read secure AssetStore: ${this.errorMessage(error)}`);
-    }
-    if (records.length === 0) {
+    const header = await this.readRecordSecret(ASSET_ALIAS);
+    if (header === null) {
       return;
     }
-    const secret = records[0].get(asset.Tag.SECRET);
-    if (!(secret instanceof Uint8Array)) {
-      throw new Error('cookie store AssetStore record has no secret payload');
+    const chunkHeader = this.parseChunkHeader(header);
+    let envelope: PersistedCookieEnvelope | null;
+    if (chunkHeader === null) {
+      // Legacy single-record jar written before chunked persistence.
+      envelope = this.parseEnvelope(header);
+    } else {
+      const payload = await this.readChunkedPayload(chunkHeader.chunkCount);
+      envelope = payload === null ? null : this.parseEnvelope(payload);
     }
-    let parsed: PersistedCookieEnvelope;
-    try {
-      parsed = JSON.parse(util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(secret)) as
-        PersistedCookieEnvelope;
-    } catch (error) {
-      throw new Error(`cookie store secure payload is invalid: ${this.errorMessage(error)}`);
-    }
-    if (parsed.formatVersion !== FORMAT_VERSION || !Array.isArray(parsed.cookies)) {
-      throw new Error('cookie store secure payload has unsupported format');
+    if (envelope === null) {
+      // A damaged secure payload must not poison every later cookie
+      // operation: degrade to an empty in-memory jar and keep serving.
+      hilog.warn(LOG_DOMAIN, LOG_TAG, 'cookie store secure payload is unreadable; starting from an empty jar');
+      return;
     }
     const now = Date.now();
-    for (const candidate of parsed.cookies) {
+    for (const candidate of envelope.cookies) {
       if (this.isStoredCookie(candidate) && candidate.expiresAtMs !== null && candidate.expiresAtMs > now) {
         this.cookies.push(candidate);
         this.creationSequence = Math.max(this.creationSequence, candidate.createdAt);
       }
     }
+    this.persistedChunkCount = chunkHeader === null ? 0 : chunkHeader.chunkCount;
   }
 
   private schedulePersist(): Promise<void> {
-    this.writeTail = this.writeTail.then((): Promise<void> => this.persist());
-    return this.writeTail;
+    const next = this.writeTail.then((): Promise<void> => this.persist()).catch((error: unknown): void => {
+      // Persistence is best-effort: the in-memory jar keeps serving the live
+      // session and the next mutation retries the secure write. Failing the
+      // caller here would fail an already-successful HTTP response.
+      hilog.warn(LOG_DOMAIN, LOG_TAG, 'cookie store persistence degraded, keeping in-memory jar: %{public}s',
+        error instanceof Error ? error.message : `${error}`);
+    });
+    this.writeTail = next;
+    return next;
   }
 
   private async persist(): Promise<void> {
@@ -374,26 +390,142 @@ export class CookieSessionStore {
       throw new Error(`cookie store exceeds ${MAX_PERSISTED_BYTES} secure-byte limit`);
     }
     if (persistent.length === 0) {
-      const query = new Map<asset.Tag, asset.Value>();
-      query.set(asset.Tag.ALIAS, this.utf8(ASSET_ALIAS));
-      try {
-        await asset.remove(query);
-      } catch (error) {
-        if (this.errorCode(error) !== asset.ErrorCode.NOT_FOUND) {
-          throw new Error(`cookie store cannot clear secure AssetStore: ${this.errorMessage(error)}`);
-        }
-      }
+      await this.removePersistedRecords(0);
+      this.persistedChunkCount = 0;
       return;
     }
+    const chunks = this.chunkPayload(payload);
+    for (let index = 0; index < chunks.length; index += 1) {
+      await this.writeRecord(this.chunkAlias(index), chunks[index]);
+    }
+    await this.removePersistedRecords(chunks.length);
+    // The header record is the commit marker: it names the live chunk count
+    // only after every chunk of this generation is on the store.
+    await this.writeRecord(ASSET_ALIAS, this.utf8(JSON.stringify({
+      formatVersion: FORMAT_VERSION,
+      chunkCount: chunks.length,
+    })));
+    this.persistedChunkCount = chunks.length;
+  }
+
+  private async removePersistedRecords(keptChunks: number): Promise<void> {
+    await this.removeRecord(ASSET_ALIAS);
+    for (let index = keptChunks; index < this.persistedChunkCount; index += 1) {
+      await this.removeRecord(this.chunkAlias(index));
+    }
+  }
+
+  private chunkAlias(index: number): string {
+    return `${ASSET_CHUNK_ALIAS_PREFIX}${index}`;
+  }
+
+  private chunkPayload(payload: Uint8Array): Uint8Array[] {
+    const chunks: Uint8Array[] = [];
+    for (let offset = 0; offset < payload.length; offset += ASSET_SECRET_CHUNK_BYTES) {
+      chunks.push(payload.subarray(offset, Math.min(offset + ASSET_SECRET_CHUNK_BYTES, payload.length)));
+    }
+    return chunks;
+  }
+
+  private async readChunkedPayload(chunkCount: number): Promise<Uint8Array | null> {
+    const parts: Uint8Array[] = [];
+    let total = 0;
+    for (let index = 0; index < chunkCount; index += 1) {
+      const part = await this.readRecordSecret(this.chunkAlias(index));
+      if (part === null) {
+        hilog.warn(LOG_DOMAIN, LOG_TAG, 'cookie store chunk %{public}d is missing; starting from an empty jar',
+          index);
+        return null;
+      }
+      parts.push(part);
+      total += part.length;
+    }
+    const payload = new Uint8Array(total);
+    let offset = 0;
+    for (const part of parts) {
+      payload.set(part, offset);
+      offset += part.length;
+    }
+    return payload;
+  }
+
+  private async readRecordSecret(alias: string): Promise<Uint8Array | null> {
+    const query = new Map<asset.Tag, asset.Value>();
+    query.set(asset.Tag.ALIAS, this.utf8(alias));
+    query.set(asset.Tag.RETURN_TYPE, asset.ReturnType.ALL);
+    let records: Array<asset.AssetMap>;
+    try {
+      records = await asset.query(query);
+    } catch (error) {
+      if (this.errorCode(error) === asset.ErrorCode.NOT_FOUND) {
+        return null;
+      }
+      hilog.warn(LOG_DOMAIN, LOG_TAG, 'cookie store cannot read secure AssetStore: %{public}s',
+        this.errorMessage(error));
+      return null;
+    }
+    if (records.length === 0) {
+      return null;
+    }
+    const secret = records[0].get(asset.Tag.SECRET);
+    if (!(secret instanceof Uint8Array)) {
+      hilog.warn(LOG_DOMAIN, LOG_TAG, 'cookie store AssetStore record has no secret payload');
+      return null;
+    }
+    return secret;
+  }
+
+  private async writeRecord(alias: string, secret: Uint8Array): Promise<void> {
     const attributes = new Map<asset.Tag, asset.Value>();
-    attributes.set(asset.Tag.ALIAS, this.utf8(ASSET_ALIAS));
-    attributes.set(asset.Tag.SECRET, payload);
+    attributes.set(asset.Tag.ALIAS, this.utf8(alias));
+    attributes.set(asset.Tag.SECRET, secret);
     attributes.set(asset.Tag.ACCESSIBILITY, asset.Accessibility.DEVICE_POWERED_ON);
     attributes.set(asset.Tag.CONFLICT_RESOLUTION, asset.ConflictResolution.OVERWRITE);
     try {
       await asset.add(attributes);
     } catch (error) {
       throw new Error(`cookie store cannot write secure AssetStore: ${this.errorMessage(error)}`);
+    }
+  }
+
+  private async removeRecord(alias: string): Promise<void> {
+    const query = new Map<asset.Tag, asset.Value>();
+    query.set(asset.Tag.ALIAS, this.utf8(alias));
+    try {
+      await asset.remove(query);
+    } catch (error) {
+      if (this.errorCode(error) !== asset.ErrorCode.NOT_FOUND) {
+        throw new Error(`cookie store cannot clear secure AssetStore: ${this.errorMessage(error)}`);
+      }
+    }
+  }
+
+  private parseChunkHeader(secret: Uint8Array): PersistedChunkHeader | null {
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(secret)) as
+        Record<string, unknown>;
+    } catch (error) {
+      return null;
+    }
+    const chunkCount = parsed['chunkCount'];
+    if (parsed['formatVersion'] !== FORMAT_VERSION || typeof chunkCount !== 'number' ||
+      !Number.isSafeInteger(chunkCount) || chunkCount < 1 || chunkCount > MAX_PERSISTED_CHUNKS) {
+      return null;
+    }
+    return { formatVersion: FORMAT_VERSION, chunkCount };
+  }
+
+  private parseEnvelope(secret: Uint8Array): PersistedCookieEnvelope | null {
+    try {
+      const parsed = JSON.parse(util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(secret)) as
+        PersistedCookieEnvelope;
+      if (parsed.formatVersion !== FORMAT_VERSION || !Array.isArray(parsed.cookies)) {
+        return null;
+      }
+      return parsed;
+    } catch (error) {
+      return null;
     }
   }
 
