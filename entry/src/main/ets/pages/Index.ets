@@ -1242,7 +1242,7 @@ struct Index {
     this.nextNavigationGeneration();
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
-    this.exitToBookshelfAfterReader = false;
+    this.exitToDetailOriginAfterReader = false;
     this.route = 'search';
     const orchestrator = this.getSearchOrchestrator();
     if (autoSearch && keyword.length > 0) {
