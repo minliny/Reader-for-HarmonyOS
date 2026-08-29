@@ -18,11 +18,15 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <string>
 
 namespace {
 
 using reader::bookturn::BookTurnChaseState;
+using reader::bookturn::BookTurnInput;
+using reader::bookturn::BookTurnPose;
 using reader::bookturn::BookTurnSample;
+using reader::bookturn::BookTurnSolver;
 using reader::bookturn::ChaseAdvance;
 using reader::bookturn::ChaseGap;
 using reader::bookturn::ChaseTargetX;
@@ -32,6 +36,7 @@ using reader::bookturn::ResetChase;
 using reader::bookturn::SettleDurationSeconds;
 using reader::bookturn::SettleTauAt;
 using reader::bookturn::SettleTargetTau;
+using reader::bookturn::SettlementSwapShouldFire;
 
 constexpr float kW = 390.0F;
 constexpr float kH = 780.0F;
@@ -85,6 +90,23 @@ BookTurnSample Sample(Direction direction, float startX, float pointerX, float p
     sample.pointerY = pointerY;
     sample.eventTimeNs = timeNs;
     return sample;
+}
+
+// One settlement trajectory frame exactly as the host advances it (§7.2):
+// tau from SettleTauAt, schedule outputs into edge.x/radiusScale, zero tilt.
+BookTurnPose SettlementPose(const BookTurnInput& base, float tau)
+{
+    float xNorm = 1.0F;
+    float beta = 0.0F;
+    float scale = 1.0F;
+    BookTurnSolver::Schedule(tau, xNorm, beta, scale);
+    (void)beta;
+    BookTurnInput input = base;
+    input.edge.x = kW * xNorm;
+    input.overrideTheta = true;
+    input.settledTheta = 0.0F;
+    input.radiusScale = scale;
+    return BookTurnSolver::Solve(input);
 }
 
 void TestFollowXGating()
@@ -335,6 +357,93 @@ void TestSettleTauAt()
     CheckNear("tau/zero-duration", SettleTauAt(0.3F, 0.0F, 0.0F, 0.0F, false), 0.0F, 1e-6);
 }
 
+void TestSwapCoverageGate()
+{
+    // Stage-geometry sanity for SheetCoverage itself: the canonical stage
+    // endpoints have known coverage (tau 0 FLAT = full width, tau 1
+    // COLLAPSE = nothing on screen).
+    BookTurnInput base;
+    base.generation = 7;
+    base.width = kW;
+    base.height = kH;
+    base.start = { kW, kMidY };
+    base.pointer = base.start;
+    base.edge = base.start;
+    base.direction = Direction::NEXT;
+    CheckNear("coverage/next-rest-flat", BookTurnSolver::SheetCoverage(SettlementPose(base, 0.0F)),
+        1.0F, 1e-3);
+    CheckTrue(BookTurnSolver::SheetCoverage(SettlementPose(base, 1.0F)) <=
+            reader::bookturn::kSwapCoverRatio,
+        "coverage/next-end-collapsed", "tau 1 sheet must be within the swap cover band");
+    CheckTrue(BookTurnSolver::SheetCoverage(SettlementPose(base, 0.5F)) > 0.3F,
+        "coverage/mid-flip-wide", "mid-flip sheet must cover a wide x-range");
+    base.direction = Direction::PREVIOUS;
+    base.start = { 0.0F, kMidY };
+    base.pointer = base.start;
+    base.edge = base.start;
+    CheckNear("coverage/previous-end-flat",
+        BookTurnSolver::SheetCoverage(SettlementPose(base, 0.0F)), 1.0F, 1e-3);
+
+    // 13.1 INV-2 tau-scan: over full commit/rollback trajectories, the swap
+    // decision fires at most once, only for NEXT commits, only inside the S5
+    // window, and the firing frame satisfies coverage <= 3%W.
+    const float tau0s[] = { 0.0F, 0.35F, 0.62F, 0.85F, 0.93F };
+    const float frame = 1.0F / 60.0F;
+    for (const int directionIndex : { 0, 1 }) {
+        const Direction direction = directionIndex == 0 ? Direction::NEXT : Direction::PREVIOUS;
+        base.direction = direction;
+        const float source = direction == Direction::NEXT ? kW : 0.0F;
+        base.start = { source, kMidY };
+        base.pointer = base.start;
+        base.edge = base.start;
+        for (const bool commit : { true, false }) {
+            for (const float tau0 : tau0s) {
+                const float target = SettleTargetTau(direction, commit);
+                const float duration = SettleDurationSeconds(tau0, direction, commit);
+                bool fired = false;
+                int postFireWiden = 0;
+                float fireTau = -1.0F;
+                float fireCoverage = 1.0F;
+                float elapsed = 0.0F;
+                for (int step = 0; step <= 240; ++step) {
+                    const float tau = SettleTauAt(tau0, target, elapsed, duration, false);
+                    const BookTurnPose pose = SettlementPose(base, tau);
+                    if (!fired && SettlementSwapShouldFire(commit, direction, tau, pose)) {
+                        fired = true;
+                        fireTau = tau;
+                        fireCoverage = BookTurnSolver::SheetCoverage(pose);
+                    } else if (fired && tau >= reader::bookturn::kStageSpineEnd &&
+                        BookTurnSolver::SheetCoverage(pose) > reader::bookturn::kSwapCoverRatio) {
+                        ++postFireWiden;
+                    }
+                    if (elapsed >= duration) break;
+                    elapsed += frame;
+                }
+                const std::string label = (direction == Direction::NEXT ? "next" : "previous") +
+                    std::string(commit ? "-commit-" : "-rollback-") + std::to_string(tau0);
+                const bool expectFire = direction == Direction::NEXT && commit;
+                if (expectFire) {
+                    CheckTrue(fired, ("swap/" + label + "-fires").c_str(),
+                        "NEXT commit must reach the swap criterion before the endpoint");
+                    CheckTrue(fireTau >= reader::bookturn::kStageSpineEnd,
+                        ("swap/" + label + "-in-s5").c_str(),
+                        "swap must not fire before the S5 window");
+                    CheckTrue(fireTau <= 1.0F + 1e-6, ("swap/" + label + "-before-endpoint").c_str(),
+                        "swap must not fire past tau 1");
+                    CheckTrue(fireCoverage <= reader::bookturn::kSwapCoverRatio + 1e-6,
+                        ("swap/" + label + "-inv2-cover").c_str(),
+                        "13.1 INV-2: swap frame coverage must stay within 3%W");
+                    CheckTrue(postFireWiden == 0, ("swap/" + label + "-no-reexpand").c_str(),
+                        "the collapsed strip must never re-expand inside S5");
+                } else {
+                    CheckTrue(!fired, ("swap/" + label + "-never").c_str(),
+                        "PREVIOUS commits and every rollback keep the endpoint swap");
+                }
+            }
+        }
+    }
+}
+
 }  // namespace
 
 int main()
@@ -346,6 +455,7 @@ int main()
     TestSampleVelocity();
     TestSettleTargetsAndDurations();
     TestSettleTauAt();
+    TestSwapCoverageGate();
     std::printf("bookturn_motion_test: %d checks, %d failures\n", g_checks, g_fails);
     return g_fails == 0 ? 0 : 1;
 }

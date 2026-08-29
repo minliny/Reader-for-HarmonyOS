@@ -377,13 +377,27 @@ uint32_t BookTurnRenderer::ReadyMask() const
 
 bool BookTurnRenderer::Draw(const BookTurnPose& pose)
 {
-    if (context_ == EGL_NO_CONTEXT || !HasRequiredTextures(pose.direction)) return false;
+    if (context_ == EGL_NO_CONTEXT) return false;
+    if (!sheetVisible_) {
+        if (!Slot(TextureSlot::CURRENT).ready) return false;
+    } else if (!HasRequiredTextures(pose.direction)) {
+        return false;
+    }
     glViewport(0, 0, static_cast<GLsizei>(surfaceWidth_), static_cast<GLsizei>(surfaceHeight_));
     glClearColor(0.0F, 0.0F, 0.0F, 0.0F);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glDisable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
+    if (!sheetVisible_) {
+        // §7.3 early swap: the rotated CURRENT slot already holds the
+        // admitted page, so only the static base frame is emitted (no sheet,
+        // no shadow band, zero blend switches).
+        glDisable(GL_BLEND);
+        glDepthMask(GL_TRUE);
+        DrawBottom(pose, TextureSlot::CURRENT);
+        return eglSwapBuffers(display_, surface_) == EGL_TRUE;
+    }
     const TextureSlot bottom = pose.direction == Direction::NEXT ? TextureSlot::NEXT : TextureSlot::CURRENT;
     const TextureSlot moving = pose.direction == Direction::NEXT ? TextureSlot::CURRENT : TextureSlot::PREVIOUS;
     // Fixed 3-draw structure (contract 8.1): opaque bottom, blended shadow
@@ -404,11 +418,23 @@ bool BookTurnRenderer::Draw(const BookTurnPose& pose)
 
 bool BookTurnRenderer::Clear()
 {
+    sheetVisible_ = true;
     if (context_ == EGL_NO_CONTEXT) return false;
     glDisable(GL_DEPTH_TEST);
     glClearColor(0.0F, 0.0F, 0.0F, 0.0F);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     return eglSwapBuffers(display_, surface_) == EGL_TRUE;
+}
+
+void BookTurnRenderer::SetSheetVisible(bool visible)
+{
+    sheetVisible_ = visible;
+}
+
+void BookTurnRenderer::UndoCommitSlots()
+{
+    std::swap(Slot(TextureSlot::NEXT), Slot(TextureSlot::CURRENT));
+    std::swap(Slot(TextureSlot::CURRENT), Slot(TextureSlot::PREVIOUS));
 }
 
 void BookTurnRenderer::CommitSlots(Direction direction)

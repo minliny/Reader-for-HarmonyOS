@@ -155,4 +155,11 @@ float SettleTauAt(float tau0, float targetTau, float elapsedSeconds, float durat
     return tau0 + (targetTau - tau0) * shaped;
 }
 
+bool SettlementSwapShouldFire(bool commit, Direction direction, float tau,
+    const BookTurnPose& pose)
+{
+    if (!commit || direction != Direction::NEXT || tau < kStageSpineEnd) return false;
+    return BookTurnSolver::SheetCoverage(pose) <= kSwapCoverRatio;
+}
+
 }  // namespace reader::bookturn

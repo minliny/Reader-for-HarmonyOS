@@ -57,6 +57,14 @@ public:
     bool Draw(const BookTurnPose& pose);
     bool Clear();
     void CommitSlots(Direction direction);
+    /** §7.3 tau_swap: hide the moving sheet after the early swap; Draw then
+     *  emits the static base frame from the rotated CURRENT slot alone. */
+    void SetSheetVisible(bool visible);
+    /** Inverse of the NEXT CommitSlots rotation for the §7.3 rollback replay:
+     *  restores C = pre-swap current and N = pre-swap next. Valid only right
+     *  after an early-swapped NEXT commit rotation (P is left unset, exactly
+     *  as it was before the swap invalidated it). */
+    void UndoCommitSlots();
     /** Theme-derived backface paper source (contract 8.6): consumed only while
      *  fallback mode is on; passing a negative blue disables the fallback. */
     void SetThemePaper(float red, float green, float blue);
@@ -143,6 +151,7 @@ private:
     std::array<TextureState, 4> textures_;
     float fallbackPaper_[3] = { 1.0F, 1.0F, 1.0F };
     bool fallbackPaperEnabled_ = false;
+    bool sheetVisible_ = true;
 };
 
 }  // namespace reader::bookturn

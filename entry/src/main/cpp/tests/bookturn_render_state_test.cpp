@@ -176,7 +176,111 @@ int main()
     }
     renderer.SetThemePaper(1.0F, 1.0F, -1.0F);
 
+    // §7.3 early swap: after the coverage-time rotation the hidden-sheet
+    // frame is a single static base draw from CURRENT, ignoring the
+    // invalidated NEXT slot (which a full Draw would refuse on).
+    renderer.CommitSlots(Direction::NEXT);
+    renderer.SetSheetVisible(false);
+    GLuint swappedBaseBinding = 0;
+    {
+        BookTurnInput input;
+        input.generation = generation++;
+        input.direction = Direction::NEXT;
+        input.width = kWidth;
+        input.height = kHeight;
+        input.start = { kWidth, 0.5F * kHeight };
+        input.pointer = input.start;
+        float xNorm = 0.0F;
+        float beta = 0.0F;
+        float scale = 0.0F;
+        BookTurnSolver::Schedule(0.95F, xNorm, beta, scale);
+        input.edge = { kWidth * xNorm, 0.5F * kHeight };
+        input.overrideTheta = true;
+        input.radiusScale = scale;
+        const BookTurnPose pose = BookTurnSolver::Solve(input);
+        glmock::Reset();
+        Check("draw base-only after early swap", renderer.Draw(pose));
+        Check("base-only one binding", CountName("glBindTexture") == 1);
+        Check("base-only one draw", CountName("glDrawArrays") == 1 && CountName("glDrawElements") == 0);
+        Check("base-only no blend", CountName("BLEND_SWITCH") == 0);
+        for (const glmock::Entry& entry : glmock::Log()) {
+            if (std::strcmp(entry.name, "glBindTexture") == 0) {
+                swappedBaseBinding = static_cast<GLuint>(entry.b);
+                break;
+            }
+        }
+        Check("base-only bound a texture", swappedBaseBinding != 0);
+    }
+
+    // Rollback replay after an early swap: UndoCommitSlots restores the
+    // pre-rotation layout, so the full 3-draw structure returns and the
+    // bottom slot holds the very texture the base-only frame bound.
+    renderer.UndoCommitSlots();
+    renderer.SetSheetVisible(true);
+    {
+        BookTurnInput input;
+        input.generation = generation++;
+        input.direction = Direction::NEXT;
+        input.width = kWidth;
+        input.height = kHeight;
+        input.start = { kWidth, 0.5F * kHeight };
+        input.pointer = input.start;
+        float xNorm = 0.0F;
+        float beta = 0.0F;
+        float scale = 0.0F;
+        BookTurnSolver::Schedule(0.5F, xNorm, beta, scale);
+        input.edge = { kWidth * xNorm, 0.5F * kHeight };
+        input.overrideTheta = true;
+        input.radiusScale = scale;
+        const BookTurnPose pose = BookTurnSolver::Solve(input);
+        glmock::Reset();
+        Check("draw rollback after undo", renderer.Draw(pose));
+        AssertFrameState("undo");
+        GLuint rollbackBottomBinding = 0;
+        for (const glmock::Entry& entry : glmock::Log()) {
+            if (std::strcmp(entry.name, "glBindTexture") == 0) {
+                rollbackBottomBinding = static_cast<GLuint>(entry.b);
+                break;
+            }
+        }
+        Check("undo keeps the admitted page under the sheet",
+            rollbackBottomBinding == swappedBaseBinding);
+    }
+
+    // Base-only refusal: with the sheet hidden and CURRENT invalidated, the
+    // frame refuses without emitting any draw command.
+    renderer.Invalidate(TextureSlot::CURRENT);
+    {
+        BookTurnInput input;
+        input.generation = generation++;
+        input.direction = Direction::NEXT;
+        input.width = kWidth;
+        input.height = kHeight;
+        const BookTurnPose pose = BookTurnSolver::Solve(input);
+        glmock::Reset();
+        Check("base-only refused without current", !renderer.Draw(pose));
+        Check("base-only refusal emits no draw",
+            CountName("glDrawArrays") == 0 && CountName("glDrawElements") == 0);
+    }
+    renderer.Upload(MakePayload(TextureSlot::CURRENT, "page-current-refreshed"));
+
     Check("clear", renderer.Clear());
+
+    // Clear restores the visible sheet, so a full NEXT frame draws again
+    // (NEXT texture is invalidated by the rotation above; re-upload first).
+    renderer.Upload(MakePayload(TextureSlot::NEXT, "page-next-refreshed"));
+    {
+        BookTurnInput input;
+        input.generation = generation++;
+        input.direction = Direction::NEXT;
+        input.width = kWidth;
+        input.height = kHeight;
+        input.edge = { 0.5F * kWidth, 0.5F * kHeight };
+        const BookTurnPose pose = BookTurnSolver::Solve(input);
+        glmock::Reset();
+        Check("draw full frame after clear", renderer.Draw(pose));
+        AssertFrameState("after-clear");
+    }
 
     std::printf("%d checks, %d failures\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

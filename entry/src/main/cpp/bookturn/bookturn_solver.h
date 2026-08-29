@@ -35,6 +35,11 @@ constexpr float kFoldXFlipEnd = 0.50F;
 constexpr float kFoldXRollEnd = 0.25F;
 constexpr float kFoldXSpineEnd = 0.05F;
 
+// §7.3 tau_swap: the moving sheet may take over the base slot once its
+// on-screen coverage drops to this ratio of the viewport width (T-SWAP-COVER
+// <= 3%W as a thin spine strip).
+constexpr float kSwapCoverRatio = 0.03F;
+
 enum class Direction : int32_t {
     NEXT = -1,
     PREVIOUS = 1,
@@ -133,6 +138,11 @@ public:
     static Vec3 MapMaterial(const BookTurnPose& pose, const Vec2& material);
     static Vec3 SurfaceNormal(const BookTurnPose& pose, const Vec2& material);
     static float RollRadius(float width);
+    /** §7.3 tau_swap coverage probe: screen-x extent of the drawn sheet mesh
+     *  intersected with the viewport, as a ratio of the width. Sampled on the
+     *  same 65x129 grid the renderer draws; the x-range is a conservative
+     *  upper bound of the covered area, so the swap can only fire late. */
+    static float SheetCoverage(const BookTurnPose& pose);
 
     /** Q(tau): canonical schedule evaluation (contract §6.2). */
     static void Schedule(float tau, float& xNorm, float& beta, float& radiusScale);

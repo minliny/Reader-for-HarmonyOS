@@ -375,6 +375,36 @@ float BookTurnSolver::RollRadius(float width)
     return Clamp(kRollRadiusRatio * std::max(0.0F, width), kRollRadiusMinVp, kRollRadiusMaxVp);
 }
 
+float BookTurnSolver::SheetCoverage(const BookTurnPose& pose)
+{
+    const float width = std::max(1.0F, pose.width);
+    const float height = std::max(1.0F, pose.height);
+    constexpr int kColumns = 64;
+    constexpr int kRows = 128;
+    float minX = 0.0F;
+    float maxX = 0.0F;
+    bool sampled = false;
+    for (int row = 0; row <= kRows; ++row) {
+        const float v = static_cast<float>(row) / static_cast<float>(kRows);
+        for (int column = 0; column <= kColumns; ++column) {
+            const float u = static_cast<float>(column) / static_cast<float>(kColumns);
+            const Vec3 projected = MapMaterial(pose, {u * width, v * height});
+            if (!sampled) {
+                minX = projected.x;
+                maxX = projected.x;
+                sampled = true;
+            } else {
+                minX = std::min(minX, projected.x);
+                maxX = std::max(maxX, projected.x);
+            }
+        }
+    }
+    if (!sampled) return 0.0F;
+    const float low = Clamp(minX, 0.0F, width);
+    const float high = Clamp(maxX, 0.0F, width);
+    return Clamp((high - low) / width, 0.0F, 1.0F);
+}
+
 void BookTurnSolver::Schedule(float tau, float& xNorm, float& beta, float& radiusScale)
 {
     xNorm = 1.0F;

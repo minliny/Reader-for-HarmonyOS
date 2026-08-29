@@ -234,6 +234,8 @@ void BookTurnHost::Run()
             active_ = false;
             terminalCommit_ = false;
             settlement_ = Settlement::NONE;
+            settlementSwapped_ = false;
+            swappedGeneration_ = 0;
             const uint64_t serial = detachRequestSerial_;
             detachCompleteSerial_ = serial;
             lock.unlock();
@@ -296,6 +298,15 @@ void BookTurnHost::Run()
                 if (sample.generation != chaseGeneration_) {
                     chaseGeneration_ = sample.generation;
                     fingerDown_ = true;
+                    if (settlementSwapped_) {
+                        // A new gesture after an uncommitted early swap: undo
+                        // the rotation so the live draw sees its slots again.
+                        renderer_.UndoCommitSlots();
+                        renderer_.SetSheetVisible(true);
+                        readyMask_.store(renderer_.ReadyMask(), std::memory_order_release);
+                        settlementSwapped_ = false;
+                        swappedGeneration_ = 0;
+                    }
                     ResetChase(chase_, sample);
                 }
                 RecordChaseSample(chase_, sample);
@@ -342,6 +353,16 @@ void BookTurnHost::Run()
             settlementElapsed_ = 0.0F;
             settlementStartTheta_ = pose_.theta;
             terminalCommit_ = false;
+            if (!commit && settlementSwapped_) {
+                // §7.3: a rollback after the early swap replays from the
+                // pre-rotation slot layout (bottom = old next, sheet = old
+                // current) with the sheet visible again.
+                renderer_.UndoCommitSlots();
+                renderer_.SetSheetVisible(true);
+                readyMask_.store(renderer_.ReadyMask(), std::memory_order_release);
+                settlementSwapped_ = false;
+                swappedGeneration_ = 0;
+            }
             UpdateFrameLoopWanted();
         }
 
@@ -349,8 +370,16 @@ void BookTurnHost::Run()
             const uint64_t generation = pendingCommitGeneration_;
             const Direction direction = pendingCommitDirection_;
             pendingCommitSlots_ = false;
+            // §7.3 idempotency: when this settlement already rotated the
+            // slots at the coverage-time swap, the business-confirm rotation
+            // must not double-rotate; only the frame teardown remains.
+            const bool alreadySwapped = settlementSwapped_ && swappedGeneration_ == generation;
+            settlementSwapped_ = false;
+            swappedGeneration_ = 0;
             lock.unlock();
-            renderer_.CommitSlots(direction);
+            if (!alreadySwapped) {
+                renderer_.CommitSlots(direction);
+            }
             readyMask_.store(renderer_.ReadyMask(), std::memory_order_release);
             renderer_.Clear();
             active_ = false;
@@ -449,6 +478,16 @@ bool BookTurnHost::ProcessSettlementFrame(float frameSeconds)
         (1.0F - Clamp(settlementElapsed_ / kTiltZeroSeconds, 0.0F, 1.0F));
     liveInput_.radiusScale = scale;
     pose_ = BookTurnSolver::Solve(liveInput_, &pose_);
+    if (SettlementSwapShouldFire(commit, liveInput_.direction, tau, pose_)) {
+        // §7.3 tau_swap: first VSync where the sheet is a thin spine strip.
+        // Page index, base slot and sheet visibility swap atomically here;
+        // the endpoint event semantics stay unchanged.
+        renderer_.CommitSlots(Direction::NEXT);
+        renderer_.SetSheetVisible(false);
+        settlementSwapped_ = true;
+        swappedGeneration_ = liveInput_.generation;
+        readyMask_.store(renderer_.ReadyMask(), std::memory_order_release);
+    }
     if (!renderer_.Draw(pose_)) {
         active_ = false;
         settlement_ = Settlement::NONE;

@@ -131,6 +131,10 @@ private:
     float settlementDuration_ = 0.0F;
     float settlementElapsed_ = 0.0F;
     float settlementStartTheta_ = 0.0F;
+    // §7.3 tau_swap: set when this settlement rotated the slots early; the
+    // ArkTS commitSlots for the same generation is then a no-op rotation.
+    bool settlementSwapped_ = false;
+    uint64_t swappedGeneration_ = 0;
 };
 
 }  // namespace reader::bookturn

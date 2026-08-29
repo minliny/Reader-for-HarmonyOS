@@ -80,6 +80,15 @@ float SettleDurationSeconds(float tau0, Direction direction, bool commit);
 float SettleTauAt(float tau0, float targetTau, float elapsedSeconds, float durationSeconds,
     bool easeOut);
 
+// §7.3 tau_swap decision (shared by the host and the 13.1 INV-2 gate scan):
+// only a NEXT commit may swap early — the sheet passes through a thin spine
+// strip inside the S5 window (tau >= kStageSpineEnd) once its coverage drops
+// to kSwapCoverRatio. PREVIOUS commits keep the endpoint swap (the sheet
+// covers the viewport until tau 0; at tau 1 it lies flat OFF-screen, which
+// must never read as "thin strip") and rollbacks never swap.
+bool SettlementSwapShouldFire(bool commit, Direction direction, float tau,
+    const BookTurnPose& pose);
+
 }  // namespace reader::bookturn
 
 #endif  // READER_BOOKTURN_MOTION_H
