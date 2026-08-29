@@ -57,6 +57,16 @@ export interface SearchResultsPresentation {
   kind: 'results';
   keyword: string;
   results: SearchBook[];
+  /**
+   * True while the source sweep is still running: the list already shows
+   * partial results plus a trailing in-progress slot, and keeps updating as
+   * each source lands. False once every enabled source has finished.
+   */
+  searching: boolean;
+  /** Enabled sources the sweep attempts in total. */
+  totalSourceCount: number;
+  /** Enabled sources finished (ok or failed) so far. */
+  completedSourceCount: number;
 }
 
 export interface SearchEmptyPresentation {
@@ -286,7 +296,8 @@ export struct SearchPage {
     } else if (this.presentation.kind === 'loading') {
       this.loadingContent();
     } else if (this.presentation.kind === 'results') {
-      this.resultsContent(this.presentation.keyword, this.groupResults(this.presentation.results));
+      this.resultsContent(this.presentation.keyword, this.groupResults(this.presentation.results),
+        this.presentation.searching);
     } else if (this.presentation.kind === 'sourceRequired') {
       this.sourceRequiredContent(this.presentation.reason);
     } else if (this.presentation.kind === 'sourceLoadError') {
@@ -379,8 +390,10 @@ export struct SearchPage {
 
   @Builder
   private loadingContent() {
-    // Figma Loading (2635:58801): spinner + caption are top-anchored at 120
-    // (not vertically centered). Caption is leading 19.5 with an 18px gap.
+    // Product-approved modification of Figma Loading (2635:58801): the
+    // spinner + caption anchor to the bottom of the screen (fixed gap) so the
+    // same indicator position continues as the results floating overlay once
+    // the first books land.
     Column({ space: 0 }) {
       LoadingProgress()
         .width(36)
@@ -398,53 +411,72 @@ export struct SearchPage {
     }
     .width('100%')
     .layoutWeight(1)
+    .justifyContent(FlexAlign.End)
     .alignItems(HorizontalAlign.Center)
-    .padding({ top: 120 });
+    .padding({ bottom: 48 });
   }
 
   @Builder
-  private resultsContent(keyword: string, results: SearchBookGroup[]) {
-    Column() {
-      Row() {
-        Text('找到 ')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(11)
-          .lineHeight(16.5)
-          .fontColor(TOK_MUTED);
-        Text(`${results.length}`)
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(11)
-          .lineHeight(16.5)
-          .fontColor(TOK_GREEN);
-        Text(' 本相关书籍')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(11)
-          .lineHeight(16.5)
-          .fontColor(TOK_MUTED);
-      }
-      .width(this.contentFrame().width)
-      .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: 6, bottom: 6 })
-      .alignItems(VerticalAlign.Center)
-      .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: TOK_BORDER } });
+  private resultsContent(keyword: string, results: SearchBookGroup[], searching: boolean) {
+    Stack({ alignContent: Alignment.Bottom }) {
+      Column() {
+        Row() {
+          Text('找到 ')
+            .fontFamily('ReaderInter')
+            .fontWeight(FontWeight.Regular)
+            .fontSize(11)
+            .lineHeight(16.5)
+            .fontColor(TOK_MUTED);
+          Text(`${results.length}`)
+            .fontFamily('ReaderInter')
+            .fontWeight(FontWeight.Bold)
+            .fontSize(11)
+            .lineHeight(16.5)
+            .fontColor(TOK_GREEN);
+          Text(' 本相关书籍')
+            .fontFamily('ReaderInter')
+            .fontWeight(FontWeight.Regular)
+            .fontSize(11)
+            .lineHeight(16.5)
+            .fontColor(TOK_MUTED);
+        }
+        .width(this.contentFrame().width)
+        .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: 6, bottom: 6 })
+        .alignItems(VerticalAlign.Center)
+        .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: TOK_BORDER } });
 
-      List() {
-        Repeat(results)
-          .each((repeatItem: RepeatItem<SearchBookGroup>) => {
-            ListItem() {
-              this.resultCard(repeatItem.item.book, repeatItem.item.sourceCount,
-                repeatItem.item.inBookshelf);
-            }
-          })
-          .key((group: SearchBookGroup): string =>
-            `search-result-${this.normalizedBookKey(group.book.title, group.book.author)}`)
-          .virtualScroll({ reusable: true });
+        List() {
+          Repeat(results)
+            .each((repeatItem: RepeatItem<SearchBookGroup>) => {
+              ListItem() {
+                this.resultCard(repeatItem.item.book, repeatItem.item.sourceCount,
+                  repeatItem.item.inBookshelf);
+              }
+            })
+            .key((group: SearchBookGroup): string =>
+              `search-result-${this.normalizedBookKey(group.book.title, group.book.author)}`)
+            .virtualScroll({ reusable: true });
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .scrollBar(BarState.Off);
       }
       .width('100%')
-      .layoutWeight(1)
-      .scrollBar(BarState.Off);
+      .height('100%');
+
+      // Product-approved extension (no Figma frame): while the source sweep is
+      // still running the live query indicator stays anchored at the same
+      // bottom position as the no-results loading state, as a non-interactive
+      // overlay — every touch reaches the result list beneath it.
+      if (searching) {
+        LoadingProgress()
+          .width(36)
+          .height(36)
+          .color(TOK_GREEN)
+          .enableLoading(true)
+          .margin({ bottom: 48 })
+          .hitTestBehavior(HitTestMode.None);
+      }
     }
     .width('100%')
     .layoutWeight(1);

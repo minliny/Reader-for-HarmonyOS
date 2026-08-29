@@ -151,6 +151,9 @@ const last = (presentations) => presentations[presentations.length - 1];
 
   const present = last(presentations);
   assert.equal(present.kind, 'results', 'all sources succeeded with results');
+  assert.equal(present.searching, false, 'final results close the streaming in-progress slot');
+  assert.equal(present.totalSourceCount, 8);
+  assert.equal(present.completedSourceCount, 8);
   assert.equal(owner.state.calls.length, 8, 'every enabled source was searched');
   const ids = present.results.map((r) => `${r.sourceId}:${r.bookId}`);
   assert.deepEqual(ids, [
@@ -188,6 +191,8 @@ const last = (presentations) => presentations[presentations.length - 1];
 
   const present = last(presentations);
   assert.equal(present.kind, 'results', 'one failing source must not hide healthy-source results');
+  assert.equal(present.searching, false);
+  assert.equal(present.completedSourceCount, 4, 'failures count as completed sources');
   assert.equal(owner.state.calls.length, 4, 'a broken source must not cancel later sources');
   assert.deepEqual(
     present.results.map((result) => result.sourceId),
@@ -213,6 +218,9 @@ const last = (presentations) => presentations[presentations.length - 1];
   assert.equal(last(presentations).kind, 'error', 'all failing sources yield whole-search error');
   assert.equal(last(presentations).searchedSourceCount, 4, 'error carries the attempted source count');
   assert.equal(owner.state.calls.length, 4, 'every enabled source is attempted before the error surface');
+  assert.ok(
+    !presentations.some((p) => p.kind === 'results'),
+    'a sweep with zero successful sources never shows partial results');
 }
 
 // 4. All sources empty yields the empty surface.
@@ -230,6 +238,9 @@ const last = (presentations) => presentations[presentations.length - 1];
 
   assert.equal(last(presentations).kind, 'empty', 'all-success-with-no-results is empty');
   assert.equal(last(presentations).searchedSourceCount, 3, 'empty carries the attempted source count');
+  assert.ok(
+    !presentations.some((p) => p.kind === 'results'),
+    'a zero-result sweep keeps the loading surface until the sweep completes');
 }
 
 // 5. A newer search supersedes an older one; late results never overwrite.
@@ -346,6 +357,69 @@ const last = (presentations) => presentations[presentations.length - 1];
 
   assert.equal(last(presentations).kind, 'initial', 'usable list after allDisabled re-enters Initial');
   assert.equal(sourcesSnapshots[sourcesSnapshots.length - 1].length, 2, 'refreshed sources are projected');
+}
+
+// 11. Streaming results: the first successful source publishes partial
+// results immediately (searching=true) while slower sources are still
+// running; the sweep settles to searching=false with all counters.
+{
+  const sources = makeSources(2);
+  const owner = fakeOwner({
+    sources,
+    delayForSource: (sourceId) => (sourceId === 'source-0' ? 10 : 200),
+    resultsFor: (sourceId) => [{ bookId: `/b-${sourceId}`, title: '书', author: 'A', variables: {} }],
+  });
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open();
+  search.search('关键字');
+  await waitUntil(owner.state, () => presentations.some((p) => p.kind === 'results'));
+
+  const partial = presentations.find((p) => p.kind === 'results');
+  assert.equal(partial.searching, true, 'the first landing publishes a streaming snapshot');
+  assert.equal(partial.totalSourceCount, 2, 'streaming snapshot carries the sweep total');
+  assert.equal(partial.completedSourceCount, 1, 'only the landed source is completed so far');
+  assert.deepEqual(partial.results.map((r) => r.bookId), ['/b-source-0'],
+    'partial results already carry the first source books');
+  assert.equal(last(presentations).kind, 'results', 'no empty/error clobbers a running sweep');
+
+  await settle(owner.state, 2);
+  const final = last(presentations);
+  assert.equal(final.kind, 'results');
+  assert.equal(final.searching, false, 'the sweep settles to a closed streaming slot');
+  assert.equal(final.completedSourceCount, 2);
+  assert.equal(final.results.length, 2, 'late books join the final list');
+}
+
+// 12. A failed source never publishes partial results on its own: the
+// loading surface holds until the first book lands, and its completion is
+// still reflected in the streaming counters.
+{
+  const sources = makeSources(2);
+  const owner = fakeOwner({
+    sources,
+    delayForSource: (sourceId) => (sourceId === 'source-0' ? 10 : 200),
+    failFor: (sourceId) => sourceId === 'source-0',
+    resultsFor: (sourceId) => [{ bookId: `/b-${sourceId}`, title: '书', author: 'A', variables: {} }],
+  });
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open();
+  search.search('关键字');
+  await waitUntil(owner.state, () => owner.state.calls.length === 2 && owner.state.inFlight === 1);
+  await sleep(40);
+  assert.ok(
+    !presentations.some((p) => p.kind === 'results'),
+    'a lone failed source keeps the loading surface (no slot without a first book)');
+
+  await settle(owner.state, 2);
+  const emits = presentations.filter((p) => p.kind === 'results');
+  assert.ok(emits.length >= 1, 'the healthy source still streams its results');
+  assert.equal(emits[0].searching, true);
+  assert.equal(emits[0].completedSourceCount, 2, 'the failure counts as completed');
+  assert.deepEqual(emits[0].results.map((r) => r.bookId), ['/b-source-1'],
+    'only the healthy source contributes books');
+  assert.equal(last(presentations).searching, false, 'the sweep settles to closed');
 }
 
 console.log('search orchestrator bounded concurrency: PASS');

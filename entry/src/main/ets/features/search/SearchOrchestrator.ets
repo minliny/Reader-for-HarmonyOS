@@ -235,14 +235,48 @@ export class SearchOrchestrator {
       // Bounded, feature-local concurrency: up to MAX_SEARCH_CONCURRENCY
       // workers pull the next enabled source, so wall time tracks the longest
       // sources instead of their sum. Each outcome lands in its registration
-      // slot, keeping the final result order stable.
+      // slot, so streaming partial results share the final stable order.
       const outcomes: Array<SearchOutcome | undefined> = new Array(enabled.length);
-      let nextSourceIndex = 0;
+      let completedSourceCount = 0;
+      let successfulSourceCount = 0;
       // A broken source is normal in a user-managed Legado source set. Keep
       // its failure isolated so later healthy sources still run and any valid
       // results remain usable. The whole-search error surface is reserved for
       // the case where every enabled source failed.
       const failures: WorkerFailure[] = [];
+      let nextSourceIndex = 0;
+      const flattenCollected = (): SearchBook[] => {
+        const collected: SearchBook[] = [];
+        for (const outcome of outcomes) {
+          if (outcome !== undefined && outcome.ok === true) {
+            for (const book of outcome.results) {
+              collected.push(book);
+            }
+          }
+        }
+        return collected;
+      };
+      // Streaming presentation: every finished source republishes the
+      // accumulated, deduped results so cards, per-book source counts and the
+      // source-count ranking update live. Until a book exists the Figma
+      // loading surface stays up; empty/error stay end-of-sweep verdicts.
+      const publishPartial = (): void => {
+        if (!this.isCurrentWork(work, session) || successfulSourceCount === 0) {
+          return;
+        }
+        const results = this.dedupeSearchResults(flattenCollected());
+        if (results.length === 0) {
+          return;
+        }
+        this.present({
+          kind: 'results',
+          keyword: keyword,
+          results: results,
+          searching: true,
+          totalSourceCount: attemptedSourceCount,
+          completedSourceCount: completedSourceCount,
+        });
+      };
       const worker = async (): Promise<void> => {
         while (true) {
           if (!this.isCurrentWork(work, session)) {
@@ -262,11 +296,15 @@ export class SearchOrchestrator {
           if (!this.isCurrentWork(work, session)) {
             return;
           }
+          completedSourceCount += 1;
           if (outcome.ok === false) {
             failures.push({ source: source, error: outcome.error });
+            publishPartial();
             continue;
           }
           outcomes[index] = outcome;
+          successfulSourceCount += 1;
+          publishPartial();
         }
       };
       const workerCount = Math.min(MAX_SEARCH_CONCURRENCY, enabled.length);
@@ -282,27 +320,23 @@ export class SearchOrchestrator {
         hilog.warn(DOMAIN, 'Reader', 'Search source %{public}s failed: %{public}s',
           failure.source.sourceId, failure.error);
       }
-      const successfulSourceCount = outcomes.filter(
-        (outcome: SearchOutcome | undefined): boolean => outcome !== undefined,
-      ).length;
       if (successfulSourceCount === 0 && failures.length > 0) {
         this.present({ kind: 'error', keyword: keyword, searchedSourceCount: attemptedSourceCount });
         return;
       }
-      const results: SearchBook[] = [];
-      for (const outcome of outcomes) {
-        if (outcome !== undefined && outcome.ok === true) {
-          for (const book of outcome.results) {
-            results.push(book);
-          }
-        }
-      }
-      const deduped = this.dedupeSearchResults(results);
-      if (deduped.length === 0) {
+      const results: SearchBook[] = this.dedupeSearchResults(flattenCollected());
+      if (results.length === 0) {
         this.present({ kind: 'empty', keyword: keyword, searchedSourceCount: attemptedSourceCount });
         return;
       }
-      this.present({ kind: 'results', keyword: keyword, results: deduped });
+      this.present({
+        kind: 'results',
+        keyword: keyword,
+        results: results,
+        searching: false,
+        totalSourceCount: attemptedSourceCount,
+        completedSourceCount: completedSourceCount,
+      });
     } catch (error) {
       if (!this.isCurrentWork(work, session)) {
         return;

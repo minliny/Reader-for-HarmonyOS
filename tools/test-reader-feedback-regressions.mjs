@@ -34,8 +34,8 @@ assert.match(search, /\.backgroundColor\(TOK_GREEN\)\s*\.opacity\(1\)[\s\S]*?\.o
   'the search action must stay dark and visibly enabled before the first search');
 assert.doesNotMatch(search, /SEARCH_BTN_BG/,
   'the initial search action must not fall back to the misleading pale disabled treatment');
-assert.equal((search.match(/LoadingProgress\(\)/g) ?? []).length, 2,
-  'both search loading affordances must be animated progress indicators');
+assert.equal((search.match(/LoadingProgress\(\)/g) ?? []).length, 3,
+  'every search loading affordance (submit button, bottom loading state, floating sweep overlay) must be an animated progress indicator');
 assert.doesNotMatch(search, /importing_spinner_(track|arc)/,
   'search must not present a static spinner as active work');
 
