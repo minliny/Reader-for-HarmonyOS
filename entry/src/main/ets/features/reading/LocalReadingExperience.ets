@@ -681,11 +681,13 @@ const UNICODE_PROBE_EMPTY_ATTEMPT_LIMIT = 5;
  */
 const FIRST_PAGE_READY_TIMEOUT_MS = 30000;
 /**
- * A rollback animation whose finish callback is lost (component swap, suspended
- * frame, missing motion entry) would otherwise leave pageTurnSettlementActive
- * stuck true and brick reader input. Normal rollbacks complete well under 1s.
+ * A settlement whose completing signal is lost (native visual endpoint,
+ * slot-commit event, component swap, suspended frame, missing motion entry)
+ * would otherwise leave pageTurnSettlementActive stuck true and brick reader
+ * input. Both rollback and commit settlements, including the slot-commit wait,
+ * complete well under 1s.
  */
-const PAGE_TURN_ROLLBACK_DEADLINE_MS = 2000;
+const PAGE_TURN_SETTLEMENT_DEADLINE_MS = 2000;
 /** Persist real foreground reading time in bounded atomic deltas. */
 const READING_RECORD_FLUSH_INTERVAL_MS = 30000;
 
@@ -944,7 +946,7 @@ export struct ReadingExperience {
   /** Makes a cleared first-page deadline unable to fail a later selection. */
   private firstPageReadyDeadlineGeneration: number = 0;
   /** Watchdog timer bounding a rollback animation whose finish callback may be lost. */
-  private pageTurnRollbackDeadlineTimer: number = -1;
+  private pageTurnSettlementDeadlineTimer: number = -1;
   private chapter: ReadingSessionChapter | undefined = undefined;
   /** Cold cross-chapter previous-page measurement; the old visible page stays mounted. */
   private previousChapterMeasurement: PreviousChapterMeasurement | undefined = undefined;
@@ -4252,23 +4254,46 @@ export struct ReadingExperience {
     }
   }
 
-  private armPageTurnRollbackDeadline(generation: number): void {
-    this.cancelPageTurnRollbackDeadline();
-    this.pageTurnRollbackDeadlineTimer = setTimeout((): void => {
-      this.pageTurnRollbackDeadlineTimer = -1;
+  private armPageTurnSettlementDeadline(generation: number): void {
+    this.cancelPageTurnSettlementDeadline();
+    this.pageTurnSettlementDeadlineTimer = setTimeout((): void => {
+      this.pageTurnSettlementDeadlineTimer = -1;
       if (!this.pageTurnSettlementActive || this.pageTurnSettlementGeneration !== generation) {
         return;
       }
       hilog.warn(0x5244, 'Reader',
-        'Page turn rollback deadline fired; force finishing settlement generation %{public}d', generation);
+        'Page turn settlement deadline fired; converging generation %{public}d', generation);
+      if (this.bookTurnAwaitingSlotCommit) {
+        // The visual endpoint and the durable transaction both finished; only
+        // the native slot promotion event went missing.
+        this.bookTurnAwaitingSlotCommit = false;
+        this.finishSuccessfulPageTurnPresentation(generation);
+        return;
+      }
+      if (this.pageTurnSettlingPrepared !== undefined) {
+        if (this.pageTurnCommitFinished) {
+          // The Core transaction settled but the native visual endpoint never
+          // arrived; complete the promotion so UI and progress agree.
+          this.pageTurnAnimationFinished = true;
+          this.finishPreparedPageTurnSettlement(generation);
+        } else {
+          // Persistence never started writing (every step re-validates the
+          // prepared turn); hand the rollback path its own armed deadline.
+          this.pageTurnSettlingPrepared = undefined;
+          this.pageTurnStoredProgress = undefined;
+          this.pageTurnCommitStarted = false;
+          this.animatePageTurnRollback();
+        }
+        return;
+      }
       this.finishPageTurnRollback(generation);
-    }, PAGE_TURN_ROLLBACK_DEADLINE_MS);
+    }, PAGE_TURN_SETTLEMENT_DEADLINE_MS);
   }
 
-  private cancelPageTurnRollbackDeadline(): void {
-    if (this.pageTurnRollbackDeadlineTimer >= 0) {
-      clearTimeout(this.pageTurnRollbackDeadlineTimer);
-      this.pageTurnRollbackDeadlineTimer = -1;
+  private cancelPageTurnSettlementDeadline(): void {
+    if (this.pageTurnSettlementDeadlineTimer >= 0) {
+      clearTimeout(this.pageTurnSettlementDeadlineTimer);
+      this.pageTurnSettlementDeadlineTimer = -1;
     }
   }
 
@@ -6741,7 +6766,7 @@ export struct ReadingExperience {
     this.pageTurnCommitSucceeded = false;
     this.pageTurnSettlementLayout = undefined;
     this.pageTurnSettlementActive = false;
-    this.cancelPageTurnRollbackDeadline();
+    this.cancelPageTurnSettlementDeadline();
     this.pageTurnPresentationWidth = 0;
     this.pageTurnOffsetX = 0;
     this.pageTurnDirection = undefined;
@@ -7171,7 +7196,7 @@ export struct ReadingExperience {
       this.bookTurnMotion.generation : this.pageTurnSettlementGeneration + 1;
     this.pageTurnSettlementGeneration = generation;
     this.pageTurnAnimationFinished = false;
-    this.armPageTurnRollbackDeadline(generation);
+    this.armPageTurnSettlementDeadline(generation);
     if (simulation) {
       if (this.bookTurnMotion !== undefined) stopBookTurnMotion(this.bookTurnMotion);
       if (!this.bookTurnSession.settle(generation, false)) {
@@ -7194,7 +7219,7 @@ export struct ReadingExperience {
 
   private finishPageTurnRollback(generation: number): void {
     if (generation !== this.pageTurnSettlementGeneration) return;
-    this.cancelPageTurnRollbackDeadline();
+    this.cancelPageTurnSettlementDeadline();
     this.pageTurnAnimationFinished = true;
     this.pageTurnOffsetX = 0;
     this.pageTurnDirection = undefined;
@@ -7245,6 +7270,7 @@ export struct ReadingExperience {
     this.pageTurnAnimationFinished = noAnimation && !simulation;
     this.pageTurnDirection = direction;
     this.pageTurnInputOwned = true;
+    this.armPageTurnSettlementDeadline(settlementGeneration);
 
     const targetOffset = direction === 'next' ? -this.viewportWidth : this.viewportWidth;
     if (simulation) {
@@ -7390,6 +7416,8 @@ export struct ReadingExperience {
         this.bookTurnRuntimeFailed = true;
         this.bookTurnAwaitingSlotCommit = false;
         this.finishSuccessfulPageTurnPresentation(settlementGeneration);
+      } else {
+        this.armPageTurnSettlementDeadline(settlementGeneration);
       }
       return;
     }
@@ -7408,6 +7436,7 @@ export struct ReadingExperience {
     this.pageTurnDirection = undefined;
     this.pageTurnCommitStarted = false;
     this.pageTurnSettlementActive = false;
+    this.cancelPageTurnSettlementDeadline();
     this.pageTurnSettlementLayout = undefined;
     this.pageTurnPresentationWidth = 0;
     this.bookTurnMotion = undefined;
