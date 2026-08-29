@@ -10,6 +10,7 @@ import type {
 } from './SearchPage';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { errorMessageOf } from '../../app/ErrorMessage';
 
 const DOMAIN = 0x5244;
 
@@ -373,7 +374,7 @@ export class SearchOrchestrator {
       if (!this.isCurrentWork(work, session)) {
         return;
       }
-      const message = error instanceof Error ? error.message : `${error}`;
+      const message = errorMessageOf(error);
       hilog.error(DOMAIN, 'Reader', 'Search failed: %{public}s', message);
       this.present({ kind: 'error', keyword: keyword, searchedSourceCount: attemptedSourceCount });
     } finally {

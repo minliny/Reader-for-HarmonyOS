@@ -1,3 +1,4 @@
+import { errorMessageOf } from '../../app/ErrorMessage.ts';
 import {
   createReaderTtsState,
   type ReaderTtsContentVersion,
@@ -589,7 +590,7 @@ export class ReaderTtsSessionCoordinator {
       });
     } catch (error) {
       if (!this.isUtteranceCurrent(token)) return;
-      const message = error instanceof Error ? error.message : `${error}`;
+      const message = errorMessageOf(error);
       await this.handleUtteranceFailure(active, token, message);
     }
   }
@@ -752,7 +753,7 @@ export class ReaderTtsSessionCoordinator {
       this.applyCoreSnapshot(ratedSnapshot);
       await this.speakSlice(active, this.requireSnapshotIndex(nextSnapshot, 'tts.queue.play'), 'preparing');
     } catch (error) {
-      const detail = error instanceof Error ? error.message : `${error}`;
+      const detail = errorMessageOf(error);
       console.error(`Reader TTS chapter advance failed: ${detail}`);
       await this.stopAfterFailure(active, 'user');
     }

@@ -1,4 +1,5 @@
 import type { JsonObject } from '@reader/core-harmony';
+import { errorMessageOf } from '../../app/ErrorMessage';
 import {
   LocalReadingFlowGateway,
   type LocalReadingAnchor,
@@ -232,7 +233,7 @@ export class ReadingSessionFlowGateway {
       if (isCurrent !== undefined && !isCurrent()) {
         throw error;
       }
-      console.error(`reading image resolve failed: ${error instanceof Error ? error.message : `${error}`}`);
+      console.error(`reading image resolve failed: ${errorMessageOf(error)}`);
       return this.failedReadingImage(image);
     }
   }

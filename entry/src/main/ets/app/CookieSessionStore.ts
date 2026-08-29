@@ -3,6 +3,7 @@ import asset from '@ohos.security.asset';
 import url from '@ohos.url';
 import util from '@ohos.util';
 import type { JsonObject } from '@reader/core-harmony';
+import { errorMessageOf } from './ErrorMessage';
 
 const LOG_DOMAIN = 0x5244;
 const LOG_TAG = 'Reader';
@@ -371,7 +372,7 @@ export class CookieSessionStore {
       // session and the next mutation retries the secure write. Failing the
       // caller here would fail an already-successful HTTP response.
       hilog.warn(LOG_DOMAIN, LOG_TAG, 'cookie store persistence degraded, keeping in-memory jar: %{public}s',
-        error instanceof Error ? error.message : `${error}`);
+        errorMessageOf(error));
     });
     this.writeTail = next;
     return next;
@@ -807,7 +808,7 @@ export class CookieSessionStore {
   }
 
   private errorMessage(error: unknown): string {
-    return error instanceof Error ? error.message : `${error}`;
+    return errorMessageOf(error);
   }
 
   private isStoredCookie(value: unknown): value is StoredCookie {

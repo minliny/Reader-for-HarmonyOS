@@ -1,5 +1,6 @@
 import type { JsonObject, ReaderCoreResultEvent } from '@reader/core-harmony';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { errorMessageOf } from '../../app/ErrorMessage';
 import type {
   LocalBookAssetCommit,
   LocalBookInput,
@@ -79,7 +80,7 @@ export class LocalBookImportGateway {
       await this.runtimeOwner.request('bookshelf.add', shelfParams);
       return { fileName: selection.input.fileName, state: 'success' };
     } catch (error) {
-      const message = error instanceof Error ? error.message : `${error}`;
+      const message = errorMessageOf(error);
       // The supplied Figma result state has only a filename and binary
       // success/failure marker. Keep the real failure reason in diagnostic
       // logs rather than inventing a fourth visible status or copy.

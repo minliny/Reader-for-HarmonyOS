@@ -14,8 +14,15 @@ const page = read('entry/src/main/ets/features/source/SourceManagementPage.ets')
 const index = read('entry/src/main/ets/pages/Index.ets');
 
 // Exercise the real gateway decoder/contract logic with an injected owner.
+// The helper module is inlined because data-URL loads cannot resolve
+// relative specifiers like '../../app/ErrorMessage'.
+const errorMessageModule = stripTypeScriptTypes(read('entry/src/main/ets/app/ErrorMessage.ts'))
+  .replace('export function errorMessageOf', 'function errorMessageOf');
+const errorMessageImport =
+  /^import \{ errorMessageOf \} from ['"][^'"]*ErrorMessage(\.ts)?['"];$/m;
 const executableGateway = stripTypeScriptTypes(
   gatewaySource
+    .replace(errorMessageImport, () => errorMessageModule)
     .replace(/^import url from ['"]@ohos\.url['"];$/m, 'const url = { URL };')
     .replace(/^import type \{ JsonObject \} from ['"]@reader\/core-harmony['"];$/m, '')
     .replace(/^import \{ ReaderRuntimeOwner \} from ['"]\.\.\/\.\.\/app\/ReaderRuntimeOwner['"];$/m, ''),

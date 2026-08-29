@@ -11,14 +11,23 @@ const gatewayPath = resolve(
 );
 const gatewaySource = readFileSync(gatewayPath, 'utf8');
 
+// The helper module is inlined because data-URL loads cannot resolve
+// relative specifiers like '../../app/ErrorMessage'.
+const errorMessageModule = stripTypeScriptTypes(
+  readFileSync(resolve(repo, 'entry/src/main/ets/app/ErrorMessage.ts'), 'utf8'),
+).replace('export function errorMessageOf', 'function errorMessageOf');
+
 // ReaderRuntimeOwner imports Harmony-only modules. Strip that single runtime
 // import so this contract test can exercise the real decoder and gateway with
 // an injected owner without replacing application code.
 const nodeSource = stripTypeScriptTypes(
-  gatewaySource.replace(
-    /^import \{ ReaderRuntimeOwner \} from ['"]\.\.\/\.\.\/app\/ReaderRuntimeOwner['"];$/m,
-    '',
-  ),
+  gatewaySource
+    .replace(/^import \{ errorMessageOf \} from ['"][^'"]*ErrorMessage(\.ts)?['"];$/m,
+      () => errorMessageModule)
+    .replace(
+      /^import \{ ReaderRuntimeOwner \} from ['"]\.\.\/\.\.\/app\/ReaderRuntimeOwner['"];$/m,
+      '',
+    ),
 );
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(nodeSource).toString('base64')}`;
 const { SearchGateway } = await import(moduleUrl);

@@ -1,6 +1,7 @@
 import { audio } from '@kit.AudioKit';
 import { media } from '@kit.MediaKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { errorMessageOf } from './ErrorMessage.ts';
 import http from '@ohos.net.http';
 import {
   type ReaderTtsHost,
@@ -336,7 +337,7 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
   }
 
   private logError(message: string, error: Object): void {
-    const detail = error instanceof Error ? error.message : `${error}`;
+    const detail = errorMessageOf(error);
     hilog.error(LOG_DOMAIN, 'Reader', '%{public}s: %{public}s', message, detail);
   }
 }

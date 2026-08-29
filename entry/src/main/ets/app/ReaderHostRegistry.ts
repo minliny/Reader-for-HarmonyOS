@@ -5,6 +5,7 @@ import fileUri from '@ohos.file.fileuri';
 import cryptoFramework from '@ohos.security.cryptoFramework';
 import util from '@ohos.util';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { errorMessageOf } from './ErrorMessage';
 import {
   CapabilityRouter,
   type JsonObject,
@@ -168,7 +169,7 @@ export class ReaderHostRegistry {
         // The Figma result state represents per-file failure but does not
         // define error-copy. Preserve the actual filename and let the gateway
         // map the item to its designed failure state.
-        const message = error instanceof Error ? error.message : `${error}`;
+        const message = errorMessageOf(error);
         hilog.error(LOG_DOMAIN, 'Reader', 'Local file staging failed for %{public}s: %{public}s',
           fileName, message);
         prepared.push({ state: 'failed', fileName });
@@ -223,7 +224,7 @@ export class ReaderHostRegistry {
     try {
       bytes = new util.Base64Helper().decodeSync(bodyBase64, util.Type.MIME);
     } catch (error) {
-      const message = error instanceof Error ? error.message : `${error}`;
+      const message = errorMessageOf(error);
       throw new Error(`在线 JSON 响应无法解码：${message}`);
     }
     if (bytes.byteLength === 0 || bytes.byteLength > ReaderHostRegistry.JsonDocumentLimitBytes) {
@@ -233,7 +234,7 @@ export class ReaderHostRegistry {
     try {
       text = util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(bytes);
     } catch (error) {
-      const message = error instanceof Error ? error.message : `${error}`;
+      const message = errorMessageOf(error);
       throw new Error(`在线 JSON 不是有效 UTF-8：${message}`);
     }
     if (text.trimStart().startsWith('<')) {
@@ -503,7 +504,7 @@ export class ReaderHostRegistry {
     try {
       return util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(bytes);
     } catch (error) {
-      const message = error instanceof Error ? error.message : `${error}`;
+      const message = errorMessageOf(error);
       throw new Error(`Selected book-source document is not valid UTF-8: ${message}`);
     }
   }

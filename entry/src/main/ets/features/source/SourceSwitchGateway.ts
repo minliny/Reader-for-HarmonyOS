@@ -1,4 +1,5 @@
 import type { JsonObject, RequestOptions } from '@reader/core-harmony';
+import { errorMessageOf } from '../../app/ErrorMessage';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 
@@ -533,7 +534,7 @@ export class SourceSwitchGateway {
         if (isCurrent !== undefined && !isCurrent()) {
           throw error;
         }
-        failureMessage = error instanceof Error ? error.message : String(error);
+        failureMessage = errorMessageOf(error);
       }
       const latencyMs = Math.max(0, Date.now() - startedAt);
       const displayTitle = chapter.title.length > 20 ? `${chapter.title.substring(0, 20)}…` : chapter.title;
@@ -666,7 +667,7 @@ export class SourceSwitchGateway {
         transactionId,
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorMessageOf(error);
       return transactionId === undefined
         ? { status: 'failed', error: message }
         : { status: 'failed', error: message, transactionId };

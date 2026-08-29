@@ -1,4 +1,5 @@
 import type { JsonObject, RequestOptions } from '@reader/core-harmony';
+import { errorMessageOf } from '../../app/ErrorMessage';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 
 /**
@@ -128,7 +129,7 @@ export class SearchGateway {
       }
       return { ok: true, results: books };
     } catch (error) {
-      const message = error instanceof Error ? error.message : `${error}`;
+      const message = errorMessageOf(error);
       return { ok: false, error: message };
     }
   }

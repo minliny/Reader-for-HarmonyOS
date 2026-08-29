@@ -1,4 +1,5 @@
 import type { JsonObject } from '@reader/core-harmony';
+import { errorMessageOf } from '../../app/ErrorMessage';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 import {
   createHiddenReaderReplaceQuickState,
@@ -129,7 +130,7 @@ export class ReaderReplaceQuickGateway {
       if (error instanceof ReaderReplaceQuickGatewayError) {
         throw error;
       }
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorMessageOf(error);
       throw new ReaderReplaceQuickGatewayError('commandFailed', `replace.persist failed: ${message}`);
     }
   }
@@ -183,7 +184,7 @@ export class ReaderReplaceQuickGateway {
       if (error instanceof ReaderReplaceQuickGatewayError) {
         throw error;
       }
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorMessageOf(error);
       throw new ReaderReplaceQuickGatewayError('commandFailed', `replace.preview failed: ${message}`);
     }
   }

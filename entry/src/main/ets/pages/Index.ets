@@ -1,4 +1,5 @@
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
+import { errorMessageOf } from '../app/ErrorMessage';
 import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
 import { readerContentSafeTop } from '../features/common/ReaderWindowMetrics';
 import {
@@ -912,7 +913,7 @@ struct Index {
       if (this.isCurrentRoute(generation, 'rss')) {
         this.rssPresentation = this.feedPresentation([], []);
       }
-      const message = error instanceof Error ? error.message : `${error}`;
+      const message = errorMessageOf(error);
       hilog.error(DOMAIN, 'Reader',
         'RSS subscription projection failed: %{public}s', message);
     }
@@ -1047,7 +1048,7 @@ struct Index {
         `${result.data['queueEntriesRemoved'] ?? 0}`);
       return true;
     } catch (error) {
-      const message = error instanceof Error ? error.message : `${error}`;
+      const message = errorMessageOf(error);
       hilog.error(DOMAIN, 'Reader', 'Text cache cleanup failed: %{public}s', message);
       return false;
     }
@@ -2299,7 +2300,7 @@ struct Index {
           }
           return await gateway.openSession(seed, { isCurrent });
         } catch (error) {
-          lastError = error instanceof Error ? error : new Error(`${error}`);
+          lastError = error instanceof Error ? error : new Error(errorMessageOf(error));
           if (!isCurrent()) {
             break;
           }
@@ -2801,7 +2802,7 @@ struct Index {
         try {
           await owner.releaseLocalBookAsset(book.bookId);
         } catch (error) {
-          cleanupError = error instanceof Error ? error : new Error(`${error}`);
+          cleanupError = error instanceof Error ? error : new Error(errorMessageOf(error));
         }
       }
       try {
@@ -2893,7 +2894,7 @@ struct Index {
           // Idempotent retry for the Core-committed / Host-cleanup-failed window.
           await owner.releaseLocalBookAsset(book.bookId);
         } catch (error) {
-          cleanupError = error instanceof Error ? error : new Error(`${error}`);
+          cleanupError = error instanceof Error ? error : new Error(errorMessageOf(error));
         }
       }
       let shelf: BookshelfDataState;
@@ -3444,7 +3445,7 @@ struct Index {
     try {
       query = this.sourceSwitchProbeQuery();
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorMessageOf(error);
       this.sourceSwitchState = { kind: 'discoveryError', message };
       return;
     }
@@ -3631,7 +3632,7 @@ struct Index {
       if (!isCurrent()) {
         return;
       }
-      const failure = error instanceof Error ? error.message : String(error);
+      const failure = errorMessageOf(error);
       this.sourceSwitchState = { kind: 'failure', message: failure };
     }
   }
@@ -3770,7 +3771,7 @@ struct Index {
       }
     } catch (error) {
       hilog.warn(DOMAIN, 'Reader', 'Pending source switch reconciliation failed: %{public}s',
-        error instanceof Error ? error.message : String(error));
+        errorMessageOf(error));
     }
     if (changed && isCurrent()) {
       this.refreshBookshelf();
@@ -4288,7 +4289,7 @@ struct Index {
       // result state before its real Core-derived per-file batch.
       AppStorage.setOrCreate<string>(IMPORT_PRESENTATION_KEY, JSON.stringify(presentation));
     } catch (error) {
-      const message = error instanceof Error ? error.message : `${error}`;
+      const message = errorMessageOf(error);
       hilog.error(DOMAIN, 'Reader', 'Failed to save local import presentation: %{public}s', message);
       AppStorage.setOrCreate<string>(IMPORT_PRESENTATION_KEY, '');
     }

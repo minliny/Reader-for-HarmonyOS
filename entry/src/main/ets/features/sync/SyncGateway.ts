@@ -1,4 +1,5 @@
 import type { JsonObject } from '@reader/core-harmony';
+import { errorMessageOf } from '../../app/ErrorMessage';
 import util from '@ohos.util';
 import url from '@ohos.url';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
@@ -511,6 +512,6 @@ export class SyncGateway {
   }
 
   private errorMessage(error: unknown): string {
-    return error instanceof Error ? error.message : `${error}`;
+    return errorMessageOf(error);
   }
 }

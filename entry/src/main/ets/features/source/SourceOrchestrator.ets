@@ -5,6 +5,7 @@ import {
 } from './SourceGateway';
 import type { BookSourceJsonSelection } from '../../app/ReaderHostRegistry';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import { errorMessageOf } from '../../app/ErrorMessage';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { isReaderCoreTransactionPendingError } from '@reader/core-harmony';
 
@@ -258,7 +259,7 @@ export class SourceOrchestrator {
       if (!this.isCurrentSession(session)) {
         return;
       }
-      throw error instanceof Error ? error : new Error(`${error}`);
+      throw error instanceof Error ? error : new Error(errorMessageOf(error));
     }
     if (selection === undefined || !this.isCurrentSession(session)) {
       return;
@@ -282,7 +283,7 @@ export class SourceOrchestrator {
         failureSummary = `失败 ${summary.failedCount} 个书源`;
       }
     } catch (error) {
-      const importError = error instanceof Error ? error : new Error(`${error}`);
+      const importError = error instanceof Error ? error : new Error(errorMessageOf(error));
       if (!this.isCurrentSession(session)) {
         return;
       }

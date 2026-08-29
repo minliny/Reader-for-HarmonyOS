@@ -1,6 +1,7 @@
 import { textToSpeech } from '@kit.CoreSpeechKit';
 import { audio } from '@kit.AudioKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { errorMessageOf } from './ErrorMessage.ts';
 import {
   type ReaderTtsHost,
   type ReaderTtsHostEvent,
@@ -318,7 +319,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
   }
 
   private logError(message: string, error: Object): void {
-    const detail = error instanceof Error ? error.message : `${error}`;
+    const detail = errorMessageOf(error);
     hilog.error(LOG_DOMAIN, 'Reader', '%{public}s: %{public}s', message, detail);
   }
 }

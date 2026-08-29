@@ -589,7 +589,8 @@ export struct BookshelfPage {
         .textOverflow({ overflow: TextOverflow.Ellipsis });
 
       if ((book.readProgress ?? 0) > 0) {
-        Text(`已读 ${Math.floor((book.readProgress ?? 0) / 100)}%`)
+        Text(this.gridProgressLabel(book))
+          .width(this.shelfBookCardWidth(isTablet))
           .width(this.shelfBookCardWidth(isTablet))
           .fontFamily('ReaderInter')
           .fontSize(10)
@@ -713,12 +714,31 @@ export struct BookshelfPage {
     return chapter !== undefined && chapter.length > 0 ? chapter : '尚未阅读';
   }
 
+  /**
+   * readProgress arrives in basis points (0..10000, Core remote.rs). A book
+   * read past its first pages of a long title lands under 1% and a plain
+   * floor() presented it as "已读 0%"; keep the sub-1% state visible instead.
+   */
+  private gridProgressLabel(book: ShelfBook): string {
+    return this.shelfProgressText(book.readProgress ?? 0);
+  }
+
   private listProgressLabel(book: ShelfBook): string {
     if ((book.unreadCount ?? 0) > 0) {
       return `更新 ${book.unreadCount} 章`;
     }
-    const progress = Math.floor((book.readProgress ?? 0) / 100);
-    return progress > 0 ? `已读 ${progress}%` : '未读';
+    if ((book.readProgress ?? 0) <= 0) {
+      return '未读';
+    }
+    return this.shelfProgressText(book.readProgress ?? 0);
+  }
+
+  private shelfProgressText(readProgressBasisPoints: number): string {
+    const percent = readProgressBasisPoints / 100;
+    if (readProgressBasisPoints > 0 && percent < 1) {
+      return '已读 <1%';
+    }
+    return `已读 ${Math.floor(percent)}%`;
   }
 
   private shelfBookCardWidth(isTablet: boolean): number {

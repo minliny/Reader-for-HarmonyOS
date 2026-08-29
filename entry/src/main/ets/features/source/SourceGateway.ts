@@ -1,4 +1,5 @@
 import type { JsonObject } from '@reader/core-harmony';
+import { errorMessageOf } from '../../app/ErrorMessage';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 
 export type BookSource = {
@@ -146,7 +147,7 @@ export class SourceGateway {
     try {
       parsed = JSON.parse(text) as unknown;
     } catch (error) {
-      const message = error instanceof Error ? error.message : `${error}`;
+      const message = errorMessageOf(error);
       throw new Error(`Book-source document is not valid JSON: ${message}`);
     }
     const rawSources: unknown[] = Array.isArray(parsed) ? parsed : [parsed];
@@ -172,7 +173,7 @@ export class SourceGateway {
         bookSource = this.requireBookSourceObject(rawSources[index], index);
         sourceId = this.requireBookSourceUrl(bookSource, index);
       } catch (error) {
-        const message = error instanceof Error ? error.message : `${error}`;
+        const message = errorMessageOf(error);
         failures.push({ index, sourceId: '', message });
         continue;
       }
@@ -191,7 +192,7 @@ export class SourceGateway {
         }
         sourceIds.push(echoedSourceId);
       } catch (error) {
-        const message = error instanceof Error ? error.message : `${error}`;
+        const message = errorMessageOf(error);
         failures.push({ index, sourceId, message });
       }
     }

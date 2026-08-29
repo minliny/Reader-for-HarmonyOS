@@ -1,0 +1,38 @@
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://ab.newdu.com failed: cannot auto-build searchRequest: source.searchUrl is empty
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://m.6lk.la failed: The server returned nothing (no header or data)
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://m.gashuw.com failed: The server returned nothing (no header or data)
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://m.shukuge.org failed: The server returned nothing (no header or data)
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://m.xhytd.com failed: The server returned nothing (no header or data)
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://m.yimixs.org failed: AnalyzeUrl failed: URL JS execution failed: HostCallback: host callback java.ajax failed: Cannot read property length of undefined
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://wap.wangshugu.org failed: The server returned nothing (no header or data)
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://www.3yt.la failed: The server returned nothing (no header or data)
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://www.5299txt.net failed: AnalyzeUrl failed: URL JS execution failed: HostCallback: host callback java.ajax failed: Cannot read property length of undefined
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://www.92xs.info failed: The server returned nothing (no header or data)
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://www.95dushu.net failed: The server returned nothing (no header or data)
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://www.dawensk.com failed: The server returned nothing (no header or data)
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://www.huaen.net failed: AnalyzeUrl failed: URL JS execution failed: HostCallback: host callback java.ajax failed: Cannot read property length of undefined
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://www.ibiquw.info failed: The server returned nothing (no header or data)
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://www.lewenge.cc failed: The server returned nothing (no header or data)
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://www.mayitxt.org failed: The server returned nothing (no header or data)
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://www.qiushu.info failed: The server returned nothing (no header or data)
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://www.wensang.net failed: The server returned nothing (no header or data)
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://www.wenxuem.com failed: The server returned nothing (no header or data)
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://www.xbiqugu.la failed: The server returned nothing (no header or data)
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://www.xtangsanshu.com failed: The server returned nothing (no header or data)
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://www.xuanshu.org failed: The server returned nothing (no header or data)
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://www.xuanyge.org failed: The server returned nothing (no header or data)
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://www.yiruan.info failed: The server returned nothing (no header or data)
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://www.zwduxs.com failed: The server returned nothing (no header or data)
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source http://www.zzs5.net failed: The server returned nothing (no header or data)
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source https://anduril.xmkanshu.com failed: Invalid SSL peer certificate or SSH remote key
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source https://g21.manmeng168.com failed: Internal error
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source https://m.22biqu.com failed: Internal error
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source https://m.babahome.net failed: Internal error
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source https://m.kanshullxs.xyz failed: AnalyzeUrl failed: URL JS execution failed: HostCallback: host callback java.ajax failed: Cannot read property length of undefined
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source https://www.00shu.la failed: Internal error
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source https://www.changduzw.com failed: The server returned nothing (no header or data)
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source https://www.dbxsd.com failed: Internal error
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source https://www.drxsw.com failed: Internal error
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source https://www.mayiwsk.com failed: Internal error
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source https://www.pdske.com failed: Reader-Core request timed out: 100
+08-30 06:42:05.444  7566  7566 W A05244/Reader: Search source https://www.yqxz.org failed: Internal error

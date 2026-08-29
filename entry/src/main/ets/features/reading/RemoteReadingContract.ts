@@ -1,4 +1,5 @@
 import type { JsonObject } from '@reader/core-harmony';
+import { errorMessageOf } from '../../app/ErrorMessage.ts';
 
 export type RemoteReadingCommand =
   'book.detail' | 'book.toc' | 'chapter.content' |
@@ -206,7 +207,7 @@ export function classifyRemoteReadingCommandFailure(
   if (error instanceof RemoteReadingGatewayError) {
     return error;
   }
-  const message = error instanceof Error ? error.message : String(error);
+  const message = errorMessageOf(error);
   if (message.indexOf('usePlatformCookieJar is not supported') >= 0) {
     return new RemoteReadingGatewayError(
       'unsupportedHostCapability', message, command, 'platformCookieJar',

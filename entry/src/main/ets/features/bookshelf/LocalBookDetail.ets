@@ -259,7 +259,7 @@ export struct LocalBookDetail {
       // Core may legitimately omit EPUB/TXT description metadata.  Do not
       // manufacture replacement copy; the local route still keeps the Figma
       // card geometry and shows only Core-owned text when available.
-      Text(this.book.intro ?? '')
+      Text(this.displayIntro())
         .width('100%')
         .height(this.summaryTextHeight())
         .fontFamily('ReaderInter')
@@ -446,6 +446,16 @@ export struct LocalBookDetail {
         ['#FFF9F0E6', 1.0],
       ],
     });
+  }
+
+  private displayIntro(): string {
+    const raw = this.book.intro ?? '';
+    if (raw.length === 0) {
+      return '';
+    }
+    // Sources embed HTML line breaks in intro copy; render them as real
+    // breaks and drop leading/trailing empties (e.g. a "<br>" first line).
+    return raw.replace(/<br\s*\/?>/gi, '\n').replace(/^\n+|\n+$/g, '');
   }
 
   private contentWidth(): number {

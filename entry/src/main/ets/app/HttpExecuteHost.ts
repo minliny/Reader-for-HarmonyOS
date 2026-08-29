@@ -4,6 +4,7 @@ import util from '@ohos.util';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { encodeSharedText, type JsonObject } from '@reader/core-harmony';
 import { CookieSessionStore } from './CookieSessionStore';
+import { errorMessageOf } from './ErrorMessage';
 import {
   allowNextRedirect,
   isCrossOriginSensitiveHeader,
@@ -240,7 +241,7 @@ export class HttpExecuteHost {
         requestUrl,
         diagnosticStartedAt,
         undefined,
-        error instanceof Error ? error.message : `${error}`,
+        errorMessageOf(error),
       );
       throw error;
     } finally {
@@ -448,7 +449,7 @@ export class HttpExecuteHost {
         if (deadline.cancelled) {
           throw new Error('http.execute: cancelled');
         }
-        lastError = error instanceof Error ? error : new Error(`${error}`);
+        lastError = error instanceof Error ? error : new Error(errorMessageOf(error));
         if (attempt < attempts) {
           const remaining = deadline.deadlineAt - Date.now();
           if (remaining <= 0) {
@@ -786,7 +787,7 @@ export class HttpExecuteHost {
     try {
       resolved = url.URL.parseURL(location, baseUrl).toString();
     } catch (error) {
-      const message = error instanceof Error ? error.message : `${error}`;
+      const message = errorMessageOf(error);
       throw new Error(`http.execute: invalid redirect Location: ${message}`);
     }
     this.requireHttpUrl(resolved);
@@ -802,7 +803,7 @@ export class HttpExecuteHost {
     try {
       parsed = url.URL.parseURL(value);
     } catch (error) {
-      const message = error instanceof Error ? error.message : `${error}`;
+      const message = errorMessageOf(error);
       throw new Error(`http.execute: invalid url: ${message}`);
     }
     const protocol = parsed.protocol.toLowerCase();
@@ -1108,7 +1109,7 @@ export class HttpExecuteHost {
       try {
         return util.TextDecoder.create(candidate, { fatal: true }).decodeToString(bytes);
       } catch (error) {
-        const message = error instanceof Error ? error.message : `${error}`;
+        const message = errorMessageOf(error);
         failures.push(`${candidate}: ${message}`);
       }
     }

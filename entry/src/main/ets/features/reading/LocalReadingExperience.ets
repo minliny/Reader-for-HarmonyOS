@@ -1,3 +1,4 @@
+import { errorMessageOf } from '../../app/ErrorMessage';
 import {
   type LocalReadingAnchor,
   type LocalReadingContentMetrics,
@@ -1689,7 +1690,7 @@ export struct ReadingExperience {
       this.setBookTurnCapturedIdentity(slot, page.textureIdentity);
       return true;
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorMessageOf(error);
       this.failBookTurnTextureCapture(slot, generation, message);
       return false;
     } finally {

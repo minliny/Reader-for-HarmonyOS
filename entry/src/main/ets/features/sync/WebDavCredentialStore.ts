@@ -1,5 +1,6 @@
 import asset from '@ohos.security.asset';
 import util from '@ohos.util';
+import { errorMessageOf } from '../../app/ErrorMessage';
 
 const ASSET_ALIAS = 'reader.webdav.config.v2';
 const FORMAT_VERSION = 2;
@@ -174,6 +175,6 @@ export class WebDavCredentialStore {
   }
 
   private errorMessage(error: unknown): string {
-    return error instanceof Error ? error.message : `${error}`;
+    return errorMessageOf(error);
   }
 }

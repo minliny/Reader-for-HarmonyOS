@@ -10,14 +10,22 @@ const read = (rel) => readFileSync(resolve(repo, rel), 'utf8');
 // SearchOrchestrator imports SearchGateway by value and ReaderRuntimeOwner /
 // hilog from Harmony-only modules. Strip the runtime imports, concatenate the
 // two sources into one module, and stub hilog globally so the real orchestrator
-// (including its bounded-concurrency loop) runs on plain Node.
+// (including its bounded-concurrency loop) runs on plain Node. The error
+// message helper is inlined once because data-URL loads cannot resolve
+// relative specifiers like '../../app/ErrorMessage'.
+const errorMessageModule = stripTypeScriptTypes(read('entry/src/main/ets/app/ErrorMessage.ts'))
+  .replace('export function errorMessageOf', 'function errorMessageOf');
+const errorMessageImport =
+  /^import \{ errorMessageOf \} from ['"][^'"]*ErrorMessage(\.ts)?['"];\n/m;
 const gatewaySource = read('entry/src/main/ets/features/search/SearchGateway.ts')
+  .replace(errorMessageImport, '')
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '');
 const orchestratorSource = read('entry/src/main/ets/features/search/SearchOrchestrator.ets')
   .replace(/^import \{[\s\S]*?from '\.\/SearchGateway';\n/m, '')
+  .replace(errorMessageImport, '')
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '')
   .replace(/^import \{ hilog \} from ['"]@kit\.PerformanceAnalysisKit['"];\n/m, '');
-const combined = stripTypeScriptTypes(`${gatewaySource}\n${orchestratorSource}`);
+const combined = stripTypeScriptTypes(`${errorMessageModule}\n${gatewaySource}\n${orchestratorSource}`);
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(combined).toString('base64')}`;
 
 globalThis.hilog = {

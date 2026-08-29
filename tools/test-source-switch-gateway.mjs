@@ -45,8 +45,16 @@ assert.match(gateway, /const matchedChapter = this\.decodeMatchedChapter\(result
 assert.doesNotMatch(gateway, /rollbackToken|SourceSwitchRollbackToken/,
   'the Core-owned compensation journal must never cross into Harmony');
 
+// The helper module is inlined because data-URL loads cannot resolve
+// relative specifiers like '../../app/ErrorMessage'.
+const errorMessageModule = stripTypeScriptTypes(
+  readFileSync(resolve(repo, 'entry/src/main/ets/app/ErrorMessage.ts'), 'utf8'),
+).replace('export function errorMessageOf', 'function errorMessageOf');
+
 const executable = stripTypeScriptTypes(
   gateway
+    .replace(/^import \{ errorMessageOf \} from ['"][^'"]*ErrorMessage(\.ts)?['"];$/m,
+      () => errorMessageModule)
     .replace(/^import type \{ JsonObject, RequestOptions \} from ['"]@reader\/core-harmony['"];$/m, '')
     .replace(/^import \{ ReaderRuntimeOwner \} from ['"]\.\.\/\.\.\/app\/ReaderRuntimeOwner['"];$/m, '')
     .replace(/^import type \{ ShelfBook \} from ['"]\.\.\/\.\.\/app\/ReaderCoreGateway['"];$/m, ''),
