@@ -62,11 +62,30 @@ export interface SearchResultsPresentation {
 export interface SearchEmptyPresentation {
   kind: 'empty';
   keyword: string;
+  /** Enabled sources the search actually attempted. */
+  searchedSourceCount: number;
 }
 
 export interface SearchErrorPresentation {
   kind: 'error';
   keyword: string;
+  /** Enabled sources the search actually attempted. */
+  searchedSourceCount: number;
+}
+
+/**
+ * P0 add-source flow: zero or fully-disabled sources is a configuration gap,
+ * not a search failure. Product-approved extension state (no Figma final
+ * frame); it reuses the Empty layout without fabricating source chips.
+ */
+export interface SearchSourceRequiredPresentation {
+  kind: 'sourceRequired';
+  reason: 'noSources' | 'allDisabled';
+}
+
+/** `source.list` itself failed; the search chain never started. */
+export interface SearchSourceLoadErrorPresentation {
+  kind: 'sourceLoadError';
 }
 
 export type SearchPresentation =
@@ -74,7 +93,9 @@ export type SearchPresentation =
   | SearchLoadingPresentation
   | SearchResultsPresentation
   | SearchEmptyPresentation
-  | SearchErrorPresentation;
+  | SearchErrorPresentation
+  | SearchSourceRequiredPresentation
+  | SearchSourceLoadErrorPresentation;
 
 class SearchBookGroup {
   book: SearchBook;
@@ -111,16 +132,25 @@ export struct SearchPage {
   onSelectResult: (book: SearchBook, variants: SearchBook[]) => void =
     (_book: SearchBook, _variants: SearchBook[]): void => {};
   onRetry: () => void = (): void => {};
+  onManageSources: () => void = (): void => {};
   @State keyword: string = '';
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
+    // Returning from Source Management rebuilds this page; the pre-leave
+    // presentation survives in Index, so restore its keyword into the field.
+    const presentation = this.presentation;
+    if (presentation.kind === 'loading' || presentation.kind === 'results' ||
+      presentation.kind === 'empty' || presentation.kind === 'error') {
+      this.keyword = presentation.keyword;
+    }
   }
 
   build() {
     Column() {
       this.searchBar();
-      if (this.presentation.kind !== 'initial') {
+      if (this.presentation.kind === 'loading' || this.presentation.kind === 'results' ||
+        this.presentation.kind === 'empty' || this.presentation.kind === 'error') {
         this.sourceChips();
       }
       this.stateContent();
@@ -257,10 +287,14 @@ export struct SearchPage {
       this.loadingContent();
     } else if (this.presentation.kind === 'results') {
       this.resultsContent(this.presentation.keyword, this.groupResults(this.presentation.results));
+    } else if (this.presentation.kind === 'sourceRequired') {
+      this.sourceRequiredContent(this.presentation.reason);
+    } else if (this.presentation.kind === 'sourceLoadError') {
+      this.sourceLoadErrorContent();
     } else if (this.presentation.kind === 'empty') {
-      this.emptyContent(this.presentation.keyword);
+      this.emptyContent(this.presentation.keyword, this.presentation.searchedSourceCount);
     } else {
-      this.errorContent();
+      this.errorContent(this.presentation.searchedSourceCount);
     }
   }
 
@@ -585,7 +619,7 @@ export struct SearchPage {
   }
 
   @Builder
-  private emptyContent(keyword: string) {
+  private emptyContent(keyword: string, searchedSourceCount: number) {
     Scroll() {
       Column({ space: 0 }) {
         Image($r('app.media.search_empty'))
@@ -602,7 +636,7 @@ export struct SearchPage {
           .fontColor(TOK_INK)
           .textAlign(TextAlign.Center);
 
-        Text(`所有书源均未搜索到「${keyword}」的相关结果`)
+        Text(`已搜索 ${searchedSourceCount} 个书源,未找到「${keyword}」的相关结果`)
           .margin({ top: TOK_SPACE_CONTROL_INLINE })
           .width('100%')
           .fontFamily('ReaderInter')
@@ -624,7 +658,7 @@ export struct SearchPage {
             .maxLines(1);
           this.suggestion('检查书名拼写是否正确');
           this.suggestion('尝试更短的关键词或作者名');
-          this.suggestion('前往发现页手动添加书源');
+          this.suggestion('前往书源管理添加或启用更多书源');
         }
         .width(this.isTablet ? 300 : 190)
         .padding({ left: 18.5, right: 18.5, top: 14.5, bottom: 14.5 })
@@ -636,26 +670,8 @@ export struct SearchPage {
         .alignSelf(ItemAlign.Center);
 
         Row({ space: TOK_SPACE_CONTROL_INLINE }) {
-          Text('添加书源')
-            .fontFamily('ReaderInter')
-            .fontWeight(800)
-            .fontSize(13)
-            .lineHeight(13)
-            .fontColor(TOK_ON_PRIMARY)
-            .padding({ left: 18, right: 18, top: 11.5, bottom: 11.5 })
-            .backgroundColor(TOK_GREEN)
-            .borderRadius(999);
-          Text('重新搜索')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(13)
-            .lineHeight(13)
-            .fontColor(TOK_MUTED)
-            .padding({ left: 18.5, right: 18.5, top: 11.5, bottom: 11.5 })
-            .backgroundColor(TOK_CARD_BG)
-            .border({ width: TOK_BORDER_W, color: TOK_BORDER })
-            .borderRadius(999)
-            .onClick((): void => this.onRetry());
+          this.primaryPill('添加更多书源', (): void => this.onManageSources());
+          this.secondaryPill('重新搜索', (): void => this.onRetry());
         }
         .margin({ top: 20 })
         .alignSelf(ItemAlign.Center);
@@ -666,6 +682,126 @@ export struct SearchPage {
     .width('100%')
     .layoutWeight(1)
     .scrollBar(BarState.Off);
+  }
+
+  /**
+   * P0 add-source flow extension state: the entry source list is empty or
+   * fully disabled, so search cannot run. Layout reuses the Empty surface
+   * (illustration, title/description, primary+secondary pill row) without
+   * fabricating source chips.
+   */
+  @Builder
+  private sourceRequiredContent(reason: string) {
+    Scroll() {
+      Column({ space: 0 }) {
+        Image($r('app.media.search_empty'))
+          .width(128)
+          .height(120)
+          .alignSelf(ItemAlign.Center);
+
+        Text(reason === 'noSources' ? '还没有可用书源' : '没有启用的书源')
+          .margin({ top: 28 })
+          .fontFamily('ReaderNotoSerifSCBold')
+          .fontWeight(FontWeight.Bold)
+          .fontSize(17)
+          .lineHeight(25.5)
+          .fontColor(TOK_INK)
+          .textAlign(TextAlign.Center);
+
+        Text(reason === 'noSources' ? '添加至少一个书源后才能搜索在线书籍' : '启用已有书源,或导入新的书源')
+          .margin({ top: TOK_SPACE_CONTROL_INLINE })
+          .width('100%')
+          .fontFamily('ReaderInter')
+          .fontWeight(FontWeight.Regular)
+          .fontSize(13)
+          .lineHeight(21.125)
+          .fontColor(TOK_MUTED)
+          .textAlign(TextAlign.Center)
+          .maxLines(3);
+
+        Row({ space: TOK_SPACE_CONTROL_INLINE }) {
+          this.primaryPill(reason === 'noSources' ? '添加书源' : '管理书源',
+            (): void => this.onManageSources());
+          this.secondaryPill('返回书架', (): void => this.onBack());
+        }
+        .margin({ top: 20 })
+        .alignSelf(ItemAlign.Center);
+      }
+      .width('100%')
+      .padding({ top: 50, bottom: 40 });
+    }
+    .width('100%')
+    .layoutWeight(1)
+    .scrollBar(BarState.Off);
+  }
+
+  @Builder
+  private sourceLoadErrorContent() {
+    Column({ space: 0 }) {
+      Image($r('app.media.search_error')).width(80).height(80);
+
+      Text('书源列表加载失败')
+        .margin({ top: 20 })
+        .fontFamily('ReaderNotoSerifSCBold')
+        .fontWeight(FontWeight.Bold)
+        .fontSize(17)
+        .lineHeight(25.5)
+        .fontColor(TOK_INK)
+        .textAlign(TextAlign.Center);
+
+      Text('无法获取书源列表,请重试')
+        .margin({ top: TOK_SPACE_XS })
+        .fontFamily('ReaderInter')
+        .fontWeight(FontWeight.Regular)
+        .fontSize(13)
+        .lineHeight(19.5)
+        .fontColor(TOK_MUTED)
+        .textAlign(TextAlign.Center);
+
+      Row({ space: TOK_SPACE_CONTROL_INLINE }) {
+        this.primaryPill('重试加载', (): void => this.onRetry());
+        this.secondaryPill('返回书架', (): void => this.onBack());
+      }
+      .margin({ top: TOK_SPACE_LG })
+      .alignSelf(ItemAlign.Center);
+    }
+    .width('100%')
+    .layoutWeight(1)
+    .alignItems(HorizontalAlign.Center)
+    .padding({ top: 96, bottom: 40 });
+  }
+
+  @Builder
+  private primaryPill(label: string, onTap: () => void) {
+    Text(label)
+      .fontFamily('ReaderInter')
+      .fontWeight(800)
+      .fontSize(13)
+      .lineHeight(13)
+      .fontColor(TOK_ON_PRIMARY)
+      .padding({ left: 18, right: 18, top: 11.5, bottom: 11.5 })
+      .backgroundColor(TOK_GREEN)
+      .borderRadius(999)
+      .onClick((): void => onTap())
+      .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
+      .accessibilityText(label);
+  }
+
+  @Builder
+  private secondaryPill(label: string, onTap: () => void) {
+    Text(label)
+      .fontFamily('ReaderInter')
+      .fontWeight(FontWeight.Bold)
+      .fontSize(13)
+      .lineHeight(13)
+      .fontColor(TOK_MUTED)
+      .padding({ left: 18.5, right: 18.5, top: 11.5, bottom: 11.5 })
+      .backgroundColor(TOK_CARD_BG)
+      .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+      .borderRadius(999)
+      .onClick((): void => onTap())
+      .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
+      .accessibilityText(label);
   }
 
   @Builder
@@ -692,13 +828,14 @@ export struct SearchPage {
   }
 
   @Builder
-  private errorContent() {
+  private errorContent(searchedSourceCount: number) {
     // Figma Error (2635:59125): content is top-anchored at 96, retry is a solid
-    // primary pill (not the outline used before the rebuild).
+    // primary pill (not the outline used before the rebuild). The "检查书源"
+    // secondary action is a P0 add-source flow addition.
     Column({ space: 0 }) {
       Image($r('app.media.search_error')).width(80).height(80);
 
-      Text('搜索失败')
+      Text('书源搜索失败')
         .margin({ top: 20 })
         .fontFamily('ReaderNotoSerifSCBold')
         .fontWeight(FontWeight.Bold)
@@ -707,14 +844,17 @@ export struct SearchPage {
         .fontColor(TOK_INK)
         .textAlign(TextAlign.Center);
 
-      Text('请检查网络后重试')
+      Text(searchedSourceCount > 0
+        ? `${searchedSourceCount} 个书源均请求失败,可重试或检查书源状态`
+        : '书源请求失败,可重试或检查书源状态')
         .margin({ top: TOK_SPACE_XS })
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Regular)
         .fontSize(13)
         .lineHeight(19.5)
         .fontColor(TOK_MUTED)
-        .textAlign(TextAlign.Center);
+        .textAlign(TextAlign.Center)
+        .maxLines(2);
 
       Stack({ alignContent: Alignment.Center }) {
         Text('重新搜索')
@@ -729,7 +869,24 @@ export struct SearchPage {
       .padding({ left: 28, right: 28 })
       .backgroundColor(TOK_GREEN)
       .borderRadius(999)
-      .onClick((): void => this.onRetry());
+      .onClick((): void => this.onRetry())
+      .responseRegion({ x: 0, y: -4, width: '100%', height: 48 })
+      .accessibilityText('重新搜索');
+
+      Text('检查书源')
+        .fontFamily('ReaderInter')
+        .fontWeight(FontWeight.Bold)
+        .fontSize(13)
+        .lineHeight(13)
+        .fontColor(TOK_MUTED)
+        .padding({ left: 18.5, right: 18.5, top: 11.5, bottom: 11.5 })
+        .backgroundColor(TOK_CARD_BG)
+        .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+        .borderRadius(999)
+        .margin({ top: TOK_SPACE_CONTROL_INLINE })
+        .onClick((): void => this.onManageSources())
+        .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
+        .accessibilityText('检查书源');
     }
     .width('100%')
     .layoutWeight(1)

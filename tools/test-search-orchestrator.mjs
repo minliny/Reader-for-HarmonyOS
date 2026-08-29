@@ -43,11 +43,14 @@ function makeSources(count) {
  * can assert the orchestrator's bound.
  */
 function fakeOwner({ sources, resultsFor, failFor, delayForSource }) {
-  const state = { inFlight: 0, maxInFlight: 0, calls: [] };
+  const state = { inFlight: 0, maxInFlight: 0, calls: [], failList: false };
   return {
     state,
     request: async (command, params, options) => {
       if (command === 'source.list') {
+        if (state.failList) {
+          throw new Error('source list unavailable');
+        }
         return { data: { sources } };
       }
       if (command === 'search.history.list') {
@@ -84,12 +87,14 @@ function fakeOwner({ sources, resultsFor, failFor, delayForSource }) {
 
 function capture() {
   const presentations = [];
+  const sourcesSnapshots = [];
   return {
     presentations,
+    sourcesSnapshots,
     orchestrator: (owner, isCurrent = () => true) =>
       new SearchOrchestrator(
         (presentation) => presentations.push(presentation),
-        () => {},
+        (sources) => sourcesSnapshots.push(sources),
         isCurrent,
         owner,
       ),
@@ -206,6 +211,7 @@ const last = (presentations) => presentations[presentations.length - 1];
   await settle(owner.state, 4);
 
   assert.equal(last(presentations).kind, 'error', 'all failing sources yield whole-search error');
+  assert.equal(last(presentations).searchedSourceCount, 4, 'error carries the attempted source count');
   assert.equal(owner.state.calls.length, 4, 'every enabled source is attempted before the error surface');
 }
 
@@ -223,6 +229,7 @@ const last = (presentations) => presentations[presentations.length - 1];
   await settle(owner.state, 3);
 
   assert.equal(last(presentations).kind, 'empty', 'all-success-with-no-results is empty');
+  assert.equal(last(presentations).searchedSourceCount, 3, 'empty carries the attempted source count');
 }
 
 // 5. A newer search supersedes an older one; late results never overwrite.
@@ -249,6 +256,96 @@ const last = (presentations) => presentations[presentations.length - 1];
   assert.ok(
     present.results.every((r) => r.bookId.startsWith('/b-新-')),
     `late older results must not overwrite: ${JSON.stringify(present.results.map((r) => r.bookId))}`);
+}
+
+// 6. P0 add-source flow: a fresh entry with zero sources lands on
+// sourceRequired(noSources), not the generic network error.
+{
+  const owner = fakeOwner({ sources: [], resultsFor: () => [] });
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open();
+  await waitUntil(owner.state, () => last(presentations).kind === 'sourceRequired');
+
+  const present = last(presentations);
+  assert.equal(present.kind, 'sourceRequired', 'zero sources is a configuration gap, not an error');
+  assert.equal(present.reason, 'noSources', 'zero sources reports noSources');
+}
+
+// 7. P0 add-source flow: a fresh entry whose sources are all disabled lands on
+// sourceRequired(allDisabled); searching from there re-derives the same state.
+{
+  const sources = makeSources(2).map((source) => ({ ...source, enabled: false }));
+  const owner = fakeOwner({ sources, resultsFor: () => [] });
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open();
+  await waitUntil(owner.state, () => last(presentations).kind === 'sourceRequired');
+  assert.equal(last(presentations).reason, 'allDisabled', 'disabled-only list reports allDisabled');
+
+  search.search('关键字');
+  await waitUntil(owner.state, () => last(presentations).kind === 'sourceRequired');
+  assert.equal(last(presentations).reason, 'allDisabled',
+    'a search attempt over a disabled-only list stays on sourceRequired(allDisabled)');
+  assert.equal(owner.state.calls.length, 0, 'no book.search fires without enabled sources');
+}
+
+// 8. P0 add-source flow: a failed source.list lands on sourceLoadError and
+// retry() recovers to the Initial surface once the list is available again.
+{
+  const owner = fakeOwner({ sources: makeSources(2), resultsFor: () => [] });
+  owner.state.failList = true;
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open();
+  await waitUntil(owner.state, () => last(presentations).kind === 'sourceLoadError');
+  assert.equal(last(presentations).kind, 'sourceLoadError', 'list failure is its own surface');
+
+  owner.state.failList = false;
+  search.retry();
+  await waitUntil(owner.state, () => last(presentations).kind === 'initial');
+  assert.equal(last(presentations).kind, 'initial', 'recovered list re-enters the Initial surface');
+}
+
+// 9. refreshSources preserves a non-config presentation (empty) but refreshes
+// the source chips projection.
+{
+  const sources = makeSources(3);
+  const owner = fakeOwner({ sources, delayForSource: () => 5, resultsFor: () => [] });
+  const { orchestrator, presentations, sourcesSnapshots } = capture();
+  const search = orchestrator(owner);
+  search.open();
+  search.search('无结果');
+  await settle(owner.state, 3);
+  assert.equal(last(presentations).kind, 'empty');
+
+  sources.push({ sourceId: 'source-3', name: '源3', enabled: true });
+  search.refreshSources();
+  await waitUntil(owner.state, () =>
+    sourcesSnapshots.length > 0 && sourcesSnapshots[sourcesSnapshots.length - 1].length === 4);
+
+  assert.equal(last(presentations).kind, 'empty', 'refreshSources keeps the current surface');
+  assert.equal(sourcesSnapshots[sourcesSnapshots.length - 1].length, 4, 'chips projection refreshed');
+}
+
+// 10. refreshSources resolves a resolved configuration gap: allDisabled list
+// that becomes usable re-enters the Initial surface via the normal entry reset.
+{
+  const sources = makeSources(2).map((source) => ({ ...source, enabled: false }));
+  const owner = fakeOwner({ sources, resultsFor: () => [] });
+  const { orchestrator, presentations, sourcesSnapshots } = capture();
+  const search = orchestrator(owner);
+  search.open();
+  await waitUntil(owner.state, () => last(presentations).kind === 'sourceRequired');
+  assert.equal(last(presentations).reason, 'allDisabled');
+
+  sources.length = 0;
+  sources.push(...makeSources(2));
+  search.refreshSources();
+  await waitUntil(owner.state, () => last(presentations).kind === 'initial');
+
+  assert.equal(last(presentations).kind, 'initial', 'usable list after allDisabled re-enters Initial');
+  assert.equal(sourcesSnapshots[sourcesSnapshots.length - 1].length, 2, 'refreshed sources are projected');
 }
 
 console.log('search orchestrator bounded concurrency: PASS');

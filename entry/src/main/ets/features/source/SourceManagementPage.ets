@@ -368,6 +368,28 @@ export struct SourceManagementPage {
     .layoutWeight(1)
     .margin({ top: TOK_SPACE_CONTROL_INLINE })
     .scrollBar(BarState.Off);
+    // P0 add-source flow: a first-run visit (e.g. from Search's
+    // sourceRequired state) must not land on a silent blank list; the bottom
+    // "＋ 新增书源" action stays available below.
+    if (this.sources.length === 0 && this.statusKind !== 'loading') {
+      Column({ space: TOK_SPACE_XS }) {
+        Text('暂无书源')
+          .fontFamily('ReaderNotoSerifSCBold')
+          .fontWeight(FontWeight.Bold)
+          .fontSize(15)
+          .lineHeight(22)
+          .fontColor(TOK_INK);
+        Text('点击下方「＋ 新增书源」导入 Legado 书源 JSON')
+          .fontFamily('ReaderInter')
+          .fontWeight(FontWeight.Regular)
+          .fontSize(12)
+          .lineHeight(18)
+          .fontColor(TOK_MUTED);
+      }
+      .width('100%')
+      .margin({ top: 64 })
+      .alignItems(HorizontalAlign.Center);
+    }
   }
 
   @Builder

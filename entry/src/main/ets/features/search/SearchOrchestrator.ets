@@ -82,12 +82,24 @@ export class SearchOrchestrator {
           return;
         }
         this.presentSources(sources);
+        // A fresh entry whose source list is empty or fully disabled cannot
+        // offer the Initial search surface; surface the configuration gap
+        // instead. A user who already left Initial keeps their state.
+        if (this.presentation.kind === 'initial') {
+          const entry = this.entryPresentationForSources(sources);
+          if (entry !== undefined) {
+            this.present(entry);
+          }
+        }
       })
       .catch((error: Error): void => {
         if (!this.isCurrentSession(session)) {
           return;
         }
         hilog.error(DOMAIN, 'Reader', 'Search source list failed to load: %{public}s', error.message);
+        if (this.presentation.kind === 'initial') {
+          this.present({ kind: 'sourceLoadError' });
+        }
         this.presentSources([]);
       });
     this.gateway.loadHistory()
@@ -121,11 +133,53 @@ export class SearchOrchestrator {
     void this.performSearch(work, session, keyword);
   }
 
-  /** Re-run the last failed or empty search. */
+  /** Re-run the last failed or empty search, or reload sources after a list failure. */
   retry(): void {
     if (this.presentation.kind === 'empty' || this.presentation.kind === 'error') {
       this.search(this.presentation.keyword);
+      return;
     }
+    if (this.presentation.kind === 'sourceLoadError') {
+      this.retrySourceLoad();
+    }
+  }
+
+  /**
+   * Reload sources without discarding the current presentation. Used when the
+   * user returns to Search from Source Management without an explicit
+   * re-search: chips refresh, and a resolved configuration gap re-enters the
+   * normal Initial surface.
+   */
+  refreshSources(): void {
+    const session = this.session;
+    const sourceLoad = this.gateway.loadSources();
+    this.sourceLoad = sourceLoad;
+    this.sourceLoadSession = session;
+    sourceLoad
+      .then((sources: SearchSource[]): void => {
+        if (!this.isCurrentSession(session)) {
+          return;
+        }
+        this.presentSources(sources);
+        const kind = this.presentation.kind;
+        if (kind === 'sourceRequired' || kind === 'sourceLoadError') {
+          const entry = this.entryPresentationForSources(sources);
+          if (entry === undefined) {
+            // The configuration gap is resolved; the normal entry reset keeps
+            // Initial, history and sources coherent.
+            this.open();
+            return;
+          }
+          this.present(entry);
+        }
+      })
+      .catch((error: Error): void => {
+        if (!this.isCurrentSession(session)) {
+          return;
+        }
+        hilog.error(DOMAIN, 'Reader', 'Search source list failed to refresh: %{public}s', error.message);
+        // Keep the current presentation; the next explicit action retries.
+      });
   }
 
   /** Clear recent history back to the Initial surface. */
@@ -159,6 +213,7 @@ export class SearchOrchestrator {
           hilog.warn(DOMAIN, 'Reader', 'Search history add failed: %{public}s', error.message);
         }
       });
+    let attemptedSourceCount = 0;
     try {
       const sources = await this.sourcesForSession(session);
       if (!this.isCurrentWork(work, session)) {
@@ -166,8 +221,15 @@ export class SearchOrchestrator {
       }
       this.presentSources(sources);
       const enabled = sources.filter((source) => source.enabled && source.name.trim().length > 0);
+      attemptedSourceCount = enabled.length;
       if (enabled.length === 0) {
-        this.present({ kind: 'error', keyword: keyword });
+        // Zero enabled sources is a configuration gap, not a network failure:
+        // route the user to the add/enable-source flow instead of the generic
+        // search-error surface.
+        this.present({
+          kind: 'sourceRequired',
+          reason: sources.length === 0 ? 'noSources' : 'allDisabled',
+        });
         return;
       }
       // Bounded, feature-local concurrency: up to MAX_SEARCH_CONCURRENCY
@@ -224,7 +286,7 @@ export class SearchOrchestrator {
         (outcome: SearchOutcome | undefined): boolean => outcome !== undefined,
       ).length;
       if (successfulSourceCount === 0 && failures.length > 0) {
-        this.present({ kind: 'error', keyword: keyword });
+        this.present({ kind: 'error', keyword: keyword, searchedSourceCount: attemptedSourceCount });
         return;
       }
       const results: SearchBook[] = [];
@@ -237,7 +299,7 @@ export class SearchOrchestrator {
       }
       const deduped = this.dedupeSearchResults(results);
       if (deduped.length === 0) {
-        this.present({ kind: 'empty', keyword: keyword });
+        this.present({ kind: 'empty', keyword: keyword, searchedSourceCount: attemptedSourceCount });
         return;
       }
       this.present({ kind: 'results', keyword: keyword, results: deduped });
@@ -247,7 +309,7 @@ export class SearchOrchestrator {
       }
       const message = error instanceof Error ? error.message : `${error}`;
       hilog.error(DOMAIN, 'Reader', 'Search failed: %{public}s', message);
-      this.present({ kind: 'error', keyword: keyword });
+      this.present({ kind: 'error', keyword: keyword, searchedSourceCount: attemptedSourceCount });
     }
   }
 
@@ -268,6 +330,52 @@ export class SearchOrchestrator {
       return await loading;
     }
     return this.sources;
+  }
+
+  /**
+   * Entry-surface decision for a freshly loaded source list: `undefined` means
+   * the list is usable and the caller keeps its current surface (Initial), any
+   * result is the configuration gap the entry must show instead.
+   */
+  private entryPresentationForSources(sources: SearchSource[]): SearchPresentation | undefined {
+    if (sources.length === 0) {
+      return { kind: 'sourceRequired', reason: 'noSources' };
+    }
+    const enabled = sources.filter((source) => source.enabled && source.name.trim().length > 0);
+    if (enabled.length === 0) {
+      return { kind: 'sourceRequired', reason: 'allDisabled' };
+    }
+    return undefined;
+  }
+
+  /** Re-run the source-list load after a sourceLoadError, staying on the same session. */
+  private retrySourceLoad(): void {
+    const session = this.session;
+    const sourceLoad = this.gateway.loadSources();
+    this.sourceLoad = sourceLoad;
+    this.sourceLoadSession = session;
+    sourceLoad
+      .then((sources: SearchSource[]): void => {
+        if (!this.isCurrentSession(session)) {
+          return;
+        }
+        this.presentSources(sources);
+        const entry = this.entryPresentationForSources(sources);
+        if (entry !== undefined) {
+          this.present(entry);
+          return;
+        }
+        // Sources recovered; the normal entry reset keeps Initial, history and
+        // sources coherent.
+        this.open();
+      })
+      .catch((error: Error): void => {
+        if (!this.isCurrentSession(session)) {
+          return;
+        }
+        hilog.error(DOMAIN, 'Reader', 'Search source list retry failed: %{public}s', error.message);
+        this.present({ kind: 'sourceLoadError' });
+      });
   }
 
   private dedupeSearchResults(results: SearchBook[]): SearchBook[] {

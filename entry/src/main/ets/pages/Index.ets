@@ -177,6 +177,7 @@ type RssSourceFeedReturnTarget = 'rss' | 'rssSubscriptionManagement';
 type JsonImportContext = 'bookSource' | 'ruleBundle' | 'rssMerge' | 'rssReplace';
 type RulesManagementReturnTarget = 'settings' | 'reader';
 type DetailReturnRoute = 'bookshelf' | 'search';
+type SourceManagementReturnTarget = 'settings' | 'search';
 
 class SourceSwitchAnchor {
   chapterIndex: number;
@@ -336,6 +337,14 @@ struct Index {
   private rulesManagementReturnTarget: RulesManagementReturnTarget = 'settings';
   /** Detail is reachable from both the shelf and search results; Back follows the entry origin. */
   private detailReturnRoute: DetailReturnRoute = 'bookshelf';
+  /** P0 add-source flow: how the Source Management page was entered. */
+  private sourceManagementReturnTarget: SourceManagementReturnTarget = 'settings';
+  /**
+   * Keyword of the search that led into Source Management. Survives the trip
+   * so the post-import dialog can offer "用新书源搜索「kw」" and the return
+   * can restore it; never enters Core or persistent reader data.
+   */
+  private sourceManagementSearchKeyword: string = '';
   // DocumentViewPicker can rebuild this page while the actual Core import is
   // still in flight. One atomic value lives only in AppStorage: it survives
   // page reconstruction in this process but never enters Core or persistent
@@ -399,7 +408,11 @@ struct Index {
       this.returnToBookshelf();
       return true;
     }
-    if (this.route === 'source' || this.route === 'sync') {
+    if (this.route === 'source') {
+      this.returnFromSourceManagement();
+      return true;
+    }
+    if (this.route === 'sync') {
       this.returnToSettings();
       return true;
     }
@@ -520,6 +533,7 @@ struct Index {
           onSelectResult: (book: SearchBook, variants: SearchBook[]): void =>
             this.onSearchResultSelected(book, variants),
           onRetry: (): void => this.retrySearch(),
+          onManageSources: (): void => this.manageSourcesFromSearch(),
         });
       } else if (this.route === 'rss') {
         RssPage({
@@ -648,7 +662,7 @@ struct Index {
           statusMessage: this.sourceStatusMessage,
           isTablet: deviceInfo.deviceType === 'tablet',
           reduceMotion: this.settingsSnapshot.reduceMotion,
-          onBack: (): void => this.returnToSettings(),
+          onBack: (): void => this.returnFromSourceManagement(),
           onToggleSource: (id: string, enabled: boolean): void => this.onSourceToggled(id, enabled),
           onDetectSource: (id: string): void => this.onSourceDetectionRequested(id),
           onLoginSource: (id: string): void => this.onSourceLoginRequested(id),
@@ -1086,13 +1100,24 @@ struct Index {
     return this.syncOrchestrator;
   }
 
-  private openSourceManagement(): void {
+  private openSourceManagement(returnTarget: SourceManagementReturnTarget = 'settings',
+    searchKeyword: string = ''): void {
     this.nextNavigationGeneration();
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
+    this.sourceManagementReturnTarget = returnTarget;
+    this.sourceManagementSearchKeyword = searchKeyword;
     this.route = 'source';
     this.getSourceOrchestrator().open();
+  }
+
+  /** Enter Source Management from the Search page's add/manage-source intents. */
+  private manageSourcesFromSearch(): void {
+    const presentation = this.searchPresentation;
+    const keyword = presentation.kind === 'loading' || presentation.kind === 'results' ||
+      presentation.kind === 'empty' || presentation.kind === 'error' ? presentation.keyword : '';
+    this.openSourceManagement('search', keyword);
   }
 
   private getSourceOrchestrator(): SourceOrchestrator {
@@ -1200,6 +1225,37 @@ struct Index {
     this.openReading(undefined);
   }
 
+  /**
+   * P0 add-source flow exit: `autoSearch` (post-import primary action) returns
+   * to Search, restores the keyword and re-searches once; a plain return only
+   * restores the pre-leave state and never fires a request.
+   */
+  private returnFromSourceManagement(autoSearch: boolean = false): void {
+    const returnTarget = this.sourceManagementReturnTarget;
+    const keyword = this.sourceManagementSearchKeyword;
+    this.sourceManagementReturnTarget = 'settings';
+    this.sourceManagementSearchKeyword = '';
+    if (returnTarget !== 'search') {
+      this.returnToSettings();
+      return;
+    }
+    this.nextNavigationGeneration();
+    this.readingSessionActive = false;
+    this.readingExitRequest = undefined;
+    this.exitToBookshelfAfterReader = false;
+    this.route = 'search';
+    const orchestrator = this.getSearchOrchestrator();
+    if (autoSearch && keyword.length > 0) {
+      // A fresh entry reloads sources; the search itself re-checks the enabled
+      // set, so a still-disabled configuration lands on sourceRequired instead
+      // of firing doomed requests.
+      orchestrator.open();
+      orchestrator.search(keyword);
+      return;
+    }
+    orchestrator.refreshSources();
+  }
+
   private onSourceToggled(id: string, enabled: boolean): void {
     // SS-SOURCE-TOGGLE-01 orchestration (serial chain, Core-idle retry, session
     // guards) lives in SourceOrchestrator; Index only forwards the intent.
@@ -1239,10 +1295,14 @@ struct Index {
     if (context === 'bookSource' && this.route === 'source') {
       this.getSourceOrchestrator().importBookSources(
         onlineUrl,
-        (completion: SourceImportCompletion): void => this.showSourceImportResult(
-          '书源导入完成', completion.refreshWarning ??
-            `Core 已导入 ${completion.importedCount} 个书源。`,
-        ),
+        (completion: SourceImportCompletion): void => {
+          const message = completion.refreshWarning ?? `Core 已导入 ${completion.importedCount} 个书源。`;
+          if (this.sourceManagementReturnTarget === 'search') {
+            this.showSourceImportResultFromSearch('书源导入完成', message);
+            return;
+          }
+          this.showSourceImportResult('书源导入完成', message);
+        },
         (error: Error): void => this.showSourceImportResult('书源导入失败', error.message),
       );
       return;
@@ -1287,6 +1347,39 @@ struct Index {
       primaryButton: {
         value: '知道了',
         action: (): void => {},
+      },
+    });
+  }
+
+  /**
+   * P0 add-source flow: after an import that started from Search, offer the
+   * one-tap re-search with the original keyword. With no keyword recorded
+   * (entry from a sourceRequired state) the plain result dialog applies.
+   */
+  private showSourceImportResultFromSearch(title: string, message: string): void {
+    if (this.route !== 'source') {
+      return;
+    }
+    const keyword = this.sourceManagementSearchKeyword;
+    if (keyword.length === 0) {
+      this.showSourceImportResult(title, message);
+      return;
+    }
+    this.getUIContext().showAlertDialog({
+      title,
+      message,
+      autoCancel: true,
+      primaryButton: {
+        value: '继续管理',
+        action: (): void => {},
+      },
+      secondaryButton: {
+        value: `用新书源搜索「${keyword}」`,
+        action: (): void => {
+          if (this.route === 'source') {
+            this.returnFromSourceManagement(true);
+          }
+        },
       },
     });
   }
@@ -3782,6 +3875,8 @@ struct Index {
     this.rssDetailReturnTarget = 'rss';
     this.rssSourceFeedReturnTarget = 'rss';
     this.rssManagementFocusSubscriptionId = '';
+    this.sourceManagementReturnTarget = 'settings';
+    this.sourceManagementSearchKeyword = '';
     this.bookshelfMultiSelectInitialKey = '';
     this.bookshelfBatchRemovalBusy = false;
     this.route = 'bookshelf';
