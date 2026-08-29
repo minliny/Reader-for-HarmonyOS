@@ -86,7 +86,7 @@ export interface SearchErrorPresentation {
 /**
  * P0 add-source flow: zero or fully-disabled sources is a configuration gap,
  * not a search failure. Product-approved extension state (no Figma final
- * frame); it reuses the Empty layout without fabricating source chips.
+ * frame); it reuses the Empty layout.
  */
 export interface SearchSourceRequiredPresentation {
   kind: 'sourceRequired';
@@ -144,6 +144,7 @@ export struct SearchPage {
   onRetry: () => void = (): void => {};
   onManageSources: () => void = (): void => {};
   @State keyword: string = '';
+  @State historyExpanded: boolean = false;
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -159,10 +160,6 @@ export struct SearchPage {
   build() {
     Column() {
       this.searchBar();
-      if (this.presentation.kind === 'loading' || this.presentation.kind === 'results' ||
-        this.presentation.kind === 'empty' || this.presentation.kind === 'error') {
-        this.sourceChips();
-      }
       this.stateContent();
     }
     .width('100%')
@@ -254,42 +251,6 @@ export struct SearchPage {
   }
 
   @Builder
-  private sourceChips() {
-    Scroll() {
-      Row({ space: TOK_SPACE_XS }) {
-        this.sourceChip('全部', true);
-        ForEach(this.sources, (source: SearchSource) => {
-          this.sourceChip(source.name, false);
-        }, (source: SearchSource): string => `search-source-${source.sourceId}`);
-      }
-      .height(40)
-      .padding({ left: this.isTablet ? 20 : TOK_SPACE_MD, right: this.isTablet ? 20 : TOK_SPACE_MD, top: 9 })
-      .alignItems(VerticalAlign.Top);
-    }
-    .width(this.contentFrame().width)
-    .height(41)
-    .scrollable(ScrollDirection.Horizontal)
-    .scrollBar(BarState.Off)
-    .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: TOK_BORDER } });
-  }
-
-  @Builder
-  private sourceChip(label: string, active: boolean) {
-    Text(label)
-      .fontFamily('ReaderInter')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(12)
-      .lineHeight(12)
-      .fontColor(active ? TOK_ON_PRIMARY : TOK_MUTED)
-      .padding({ left: 12.5, right: 12.5, top: 5.5, bottom: 5.5 })
-      .backgroundColor(active ? TOK_GREEN : TOK_CARD_BG)
-      .border({ width: TOK_BORDER_W, color: active ? TOK_GREEN : TOK_BORDER })
-      .borderRadius(999)
-      .textAlign(TextAlign.Center)
-      .maxLines(1);
-  }
-
-  @Builder
   private stateContent() {
     if (this.presentation.kind === 'initial') {
       this.initialContent(this.presentation.history);
@@ -333,11 +294,11 @@ export struct SearchPage {
         .height(26)
         .alignItems(VerticalAlign.Center);
 
-        // History chips are capped at 4; when more remain, a primary-outline
-        // "N 条更多" chip follows (Figma 2635:58745). No dedicated callback
-        // exists, so it is presentational.
+        // History chips show the first 4; when more remain, a primary-outline
+        // "N 条更多" chip follows (Figma 2635:58745) and expands the rest in
+        // place — its wired intent per P0-DEAD-CONTROL-CLEANUP.
         Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
-          ForEach(history.slice(0, 4), (keyword: string) => {
+          ForEach(this.historyExpanded ? history : history.slice(0, 4), (keyword: string) => {
             Text(keyword)
               .fontFamily('ReaderInter')
               .fontWeight(FontWeight.Medium)
@@ -351,7 +312,7 @@ export struct SearchPage {
               .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
               .onClick((): void => this.onSearch(keyword));
           }, (keyword: string): string => `search-history-${keyword}`);
-          if (history.length > 4) {
+          if (history.length > 4 && !this.historyExpanded) {
             this.moreChip(history.length - 4);
           }
         }
@@ -385,7 +346,11 @@ export struct SearchPage {
     .alignItems(VerticalAlign.Center)
     .border({ width: TOK_BORDER_W, color: TOK_GREEN })
     .borderRadius(999)
-    .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS });
+    .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
+    .onClick((): void => {
+      this.historyExpanded = true;
+    })
+    .accessibilityText(`展开其余 ${count} 条搜索历史`);
   }
 
   @Builder
@@ -719,8 +684,7 @@ export struct SearchPage {
   /**
    * P0 add-source flow extension state: the entry source list is empty or
    * fully disabled, so search cannot run. Layout reuses the Empty surface
-   * (illustration, title/description, primary+secondary pill row) without
-   * fabricating source chips.
+   * (illustration, title/description, primary+secondary pill row).
    */
   @Builder
   private sourceRequiredContent(reason: string) {
@@ -877,8 +841,8 @@ export struct SearchPage {
         .textAlign(TextAlign.Center);
 
       Text(searchedSourceCount > 0
-        ? `${searchedSourceCount} 个书源均请求失败,可重试或检查书源状态`
-        : '书源请求失败,可重试或检查书源状态')
+        ? `${searchedSourceCount} 个书源均请求失败,可检查网络连接或书源状态`
+        : '书源请求失败,可检查网络连接或书源状态')
         .margin({ top: TOK_SPACE_XS })
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Regular)

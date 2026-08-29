@@ -2,8 +2,9 @@
 // 943:4281 (Phone 390×844) / 943:4745 (Tablet 760×960).
 // Structural notes: search field h38 r8 + status filter (5 chips h32 r16)
 // + group filter (folder icon + select) above a 70-tall source list whose
-// rows carry status badge + bordered 检测 button + 44×24 switch + more;
-// bottom action bar = 批量管理 + ＋新增书源. Content inset is 19vp.
+// rows carry status badge + bordered 检测 button + 44×24 switch + login
+// button (when the source declares loginUrl); bottom action bar = 批量管理
+// + ＋新增书源. Content inset is 19vp.
 import {
   type BookSource,
 } from './SourceGateway';
@@ -429,13 +430,6 @@ export struct SourceManagementPage {
 
       if (source.loginUrl !== undefined) {
         this.loginButton(source);
-      } else {
-        Stack({ alignContent: Alignment.Center }) {
-          Image($r('app.media.bookshelf_more')).width(20).height(20);
-        }
-        .width(44)
-        .height(44)
-        .borderRadius(22);
       }
     }
     .width(this.contentFrame().width)

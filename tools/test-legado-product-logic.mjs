@@ -60,8 +60,8 @@ assert.match(search, /right\.sourceCount - left\.sourceCount/,
   'multi-origin search results must be promoted like Legado');
 assert.match(search, /Text\('已在书架'\)/,
   'grouped search results must expose current shelf membership');
-assert.match(search, /private sourceChips\(\)[\s\S]*Scroll\(\)[\s\S]*scrollable\(ScrollDirection\.Horizontal\)/,
-  'all enabled source chips must remain discoverable when a large source set exceeds the viewport');
+assert.doesNotMatch(search, /sourceChip/,
+  'P0-DEAD-CONTROL-CLEANUP: source chips must not render as interactive-looking controls without a wired filter intent (deferred to P1 source-scoped search)');
 assert.match(shelf, /Text\(`更新 \$\{book\.unreadCount\} 章`\)/);
 assert.match(shelf, /Text\(`已读 \$\{Math\.floor\(\(book\.readProgress \?\? 0\) \/ 100\)\}%`\)/);
 
