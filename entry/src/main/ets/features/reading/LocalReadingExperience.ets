@@ -7191,6 +7191,15 @@ export struct ReadingExperience {
         this.pageTurnDirection = state.direction;
         this.pageTurnOffsetX = this.clampedPageTurnOffset(state.direction, state.currentOffsetX);
       } else {
+        // Symmetric with the tap path: a drag that arrives without a prepared
+        // page must enqueue the preparation instead of being dropped, so the
+        // next gesture can follow. The drain's own gesture guard keeps the
+        // actual measurement work out of the active gesture.
+        if (this.pageTurnPreparationQueue.indexOf(state.direction) < 0) {
+          hilog.info(0x5244, 'Reader',
+            `DRAGFOLLOW gate-miss dir=%{public}s queued=true`, state.direction);
+        }
+        this.queuePageTurnPreparation(state.direction);
         this.pageTurnDirection = undefined;
         this.pageTurnOffsetX = 0;
       }
@@ -7204,6 +7213,9 @@ export struct ReadingExperience {
       this.pageTurnDirection = undefined;
       this.pageTurnOffsetX = 0;
       this.flushDeferredPageChromeState();
+      if (state.phase === 'idle' && this.pageTurnPreparationQueue.length > 0) {
+        this.drainPageTurnPreparationQueue();
+      }
     }
   }
 
@@ -7211,7 +7223,17 @@ export struct ReadingExperience {
     this.pageTurnOffsetX = 0;
     if (state.phase === 'dragging' && state.direction !== undefined &&
       (state.owner === 'horizontalPage' || state.owner === 'verticalPrevious')) {
-      if (this.preparedPageTurn(state.direction) === undefined) return;
+      if (this.preparedPageTurn(state.direction) === undefined) {
+        // Symmetric with the tap path (performPageTurn preparing branch): queue
+        // the missing preparation instead of a silent drop. The drain's own
+        // gesture guard defers the work until the gesture returns to idle.
+        if (this.pageTurnPreparationQueue.indexOf(state.direction) < 0) {
+          hilog.info(0x5244, 'Reader',
+            `DRAGFOLLOW gate-miss dir=%{public}s queued=true`, state.direction);
+        }
+        this.queuePageTurnPreparation(state.direction);
+        return;
+      }
       this.pageTurnDirection = state.direction;
       if (this.bookTurnMotion === undefined) {
         this.bookTurnMotion = beginBookTurnMotion(
@@ -7247,6 +7269,9 @@ export struct ReadingExperience {
       this.pageTurnDirection = undefined;
       this.bookTurnMotion = undefined;
       this.flushDeferredPageChromeState();
+      if (state.phase === 'idle' && this.pageTurnPreparationQueue.length > 0) {
+        this.drainPageTurnPreparationQueue();
+      }
     }
   }
 

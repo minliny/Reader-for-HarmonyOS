@@ -191,8 +191,16 @@ contract('cold-cache pans remain actionable and both directions are prepared', (
 
   assert.match(schedule, /\['next', 'previous'\]/,
     'each committed page must prepare both adjacent directions when their exact boundaries are known');
-  assert.doesNotMatch(gesture, /queuePageTurnPreparation|beginPageTurnPreparation|drainPageTurnPreparationQueue/,
-    'an active Pan must not synchronously enter hidden measurement and disable itself before release');
+  assert.doesNotMatch(gesture, /beginPageTurnPreparation/,
+    'an active Pan must never synchronously begin hidden measurement');
+  const drains = [...gesture.matchAll(/this\.drainPageTurnPreparationQueue\(\)/g)];
+  assert.ok(drains.length >= 1,
+    'the gesture callback must re-drain queued preparations once it settles back to idle');
+  for (const match of drains) {
+    const prefix = gesture.slice(Math.max(0, match.index - 200), match.index);
+    assert.match(prefix, /state\.phase === 'idle' && this\.pageTurnPreparationQueue\.length > 0/,
+      'a drain inside the gesture callback is only allowed behind the idle guard, never during an active Pan');
+  }
   assert.match(drain, /this\.pageTurnGestureState\.phase !== 'idle'/,
     'an asynchronously completed chapter prefetch must not start hidden measurement during a Pan');
   assert.match(directFinish, /completeReaderPageGestureSettlement[\s\S]*drainPageTurnPreparationQueue/,
