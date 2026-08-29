@@ -626,6 +626,12 @@ class ArkUILineMetric implements ReadingSurfaceLineMetric {
 
 type ReadingPhase = 'loading' | 'measuring' | 'ready' | 'failed';
 type ReaderPageTurnInputPhase = 'idle' | 'tracking' | 'dragging' | 'settling';
+/**
+ * Outcome of one preparation attempt: begun (measuring the target),
+ * retry (transiently busy, re-drain with backoff), abandon (target does not
+ * exist and no discovery lane exists for it).
+ */
+type ReaderPageTurnPreparationOutcome = 'begun' | 'retry' | 'abandon';
 
 class ReaderUIFrameCallback extends FrameCallback {
   private readonly callback: () => void;
@@ -688,6 +694,18 @@ const FIRST_PAGE_READY_TIMEOUT_MS = 30000;
  * complete well under 1s.
  */
 const PAGE_TURN_SETTLEMENT_DEADLINE_MS = 2000;
+/**
+ * consumeMeasuredBatch cancels the layout deadline before completeFirstPage
+ * resolves the location anchor (an online-source RPC that can suspend
+ * indefinitely). Without a watchdog a suspended anchor leaves
+ * measurementCompleting stuck true, canTurnPage false forever, and every
+ * tap/drag silently dropped. Normal completion is well under 1s.
+ */
+const FIRST_PAGE_COMPLETION_DEADLINE_MS = 10000;
+const FIRST_PAGE_COMPLETION_MAX_RETRIES = 3;
+const PAGE_TURN_PREPARATION_RETRY_BASE_MS = 250;
+const PAGE_TURN_PREPARATION_RETRY_MAX_MS = 2000;
+const PAGE_TURN_PREPARATION_RETRY_LIMIT = 16;
 /** Persist real foreground reading time in bounded atomic deltas. */
 const READING_RECORD_FLUSH_INTERVAL_MS = 30000;
 
@@ -947,6 +965,15 @@ export struct ReadingExperience {
   private firstPageReadyDeadlineGeneration: number = 0;
   /** Watchdog timer bounding a rollback animation whose finish callback may be lost. */
   private pageTurnSettlementDeadlineTimer: number = -1;
+  /** Bounds completeFirstPage once the layout deadline has been cancelled. */
+  private firstPageCompletionDeadlineTimer: number = -1;
+  /** Bounded re-measurement attempts after a suspended first-page anchor. */
+  private firstPageCompletionRetryCount: number = 0;
+  /** Snapshot that stale watchdog fires cannot act on a newer selection. */
+  private firstPageCompletionGeneration: number = 0;
+  /** Backoff timer re-draining a preparation attempt rejected while busy. */
+  private pageTurnPreparationRetryTimer: number = -1;
+  private pageTurnPreparationRetryCount: number = 0;
   private chapter: ReadingSessionChapter | undefined = undefined;
   /** Cold cross-chapter previous-page measurement; the old visible page stays mounted. */
   private previousChapterMeasurement: PreviousChapterMeasurement | undefined = undefined;
@@ -1136,6 +1163,9 @@ export struct ReadingExperience {
     this.resetPaginationDraft();
     this.cancelMeasurementDeadline();
     this.cancelFirstPageReadyDeadline();
+    this.cancelFirstPageCompletionDeadline();
+    this.firstPageCompletionRetryCount = 0;
+    this.cancelPageTurnPreparationRetry();
     if (this.didLayoutListener !== undefined) {
       this.getUIContext().getUIObserver().off('didLayout', this.didLayoutListener);
       this.didLayoutListener = undefined;
@@ -2265,6 +2295,9 @@ export struct ReadingExperience {
     this.phase = 'loading';
     this.cancelMeasurementDeadline();
     this.cancelFirstPageReadyDeadline();
+    this.cancelFirstPageCompletionDeadline();
+    this.firstPageCompletionRetryCount = 0;
+    this.cancelPageTurnPreparationRetry();
   }
 
   private async openChapter(
@@ -3012,6 +3045,7 @@ export struct ReadingExperience {
       this.continuePreviousChapterMeasurement(page, generation, selectionToken, lifecycleToken);
       return;
     }
+    this.armFirstPageCompletionDeadline();
     void this.completeFirstPage(page, generation, selectionToken, lifecycleToken);
   }
 
@@ -3136,6 +3170,7 @@ export struct ReadingExperience {
       return;
     }
     this.previousChapterMeasurement = undefined;
+    this.armFirstPageCompletionDeadline();
     void this.completeFirstPage(measuredPage, generation, selectionToken, lifecycleToken);
   }
 
@@ -3151,7 +3186,7 @@ export struct ReadingExperience {
     this.restoreMaterializedChapterContext(origin, false);
     this.phase = this.visiblePage === undefined ? 'loading' : 'ready';
     if (pending.pageTurnGeneration !== this.pageTurnGeneration || this.phase !== 'ready' ||
-      !this.beginPageTurnPreparation('previous', target)) {
+      this.beginPageTurnPreparation('previous', target) !== 'begun') {
       this.drainPendingManualPageTurn();
       this.drainPageTurnPreparationQueue();
     }
@@ -3357,12 +3392,15 @@ export struct ReadingExperience {
         this.beginReadingRecordClock(lifecycleToken);
         this.measurementCompleting = false;
         this.cancelFirstPageReadyDeadline();
+        this.cancelFirstPageCompletionDeadline();
+        this.firstPageCompletionRetryCount = 0;
         this.chapterTitle = chapter.chapterTitle;
         this.onChapterCommitted(chapter.chapterIndex, chapter.chapterTitle);
         this.onReadingReady(chapter.chapterIndex);
         this.admitCommittedProgress(stored);
         this.prefetchNextChapter(chapter, lifecycleToken, selectionToken);
         this.schedulePageTurnPreparation();
+        this.drainPendingManualPageTurn();
         this.onAutoPagePageCommitted();
         this.resumeDeferredMeasurement(lifecycleToken);
       });
@@ -4251,6 +4289,41 @@ export struct ReadingExperience {
     if (this.firstPageReadyDeadlineTimer >= 0) {
       clearTimeout(this.firstPageReadyDeadlineTimer);
       this.firstPageReadyDeadlineTimer = -1;
+    }
+  }
+
+  private armFirstPageCompletionDeadline(): void {
+    this.cancelFirstPageCompletionDeadline();
+    this.firstPageCompletionGeneration += 1;
+    const generation = this.firstPageCompletionGeneration;
+    this.firstPageCompletionDeadlineTimer = setTimeout((): void => {
+      this.firstPageCompletionDeadlineTimer = -1;
+      if (generation !== this.firstPageCompletionGeneration) return;
+      if (!this.mounted || this.exitRequested) return;
+      if (this.phase !== 'measuring' || !this.measurementCompleting) return;
+      if (this.firstPageCompletionRetryCount >= FIRST_PAGE_COMPLETION_MAX_RETRIES) {
+        this.firstPageCompletionRetryCount = 0;
+        this.fail(new Error('READING_FIRST_PAGE_COMPLETION_TIMEOUT'), this.lifecycleToken);
+        return;
+      }
+      this.firstPageCompletionRetryCount += 1;
+      // Break the suspended completion chain: its isMeasurementCurrent checks
+      // compare against the pre-bump generation, so the pending promise
+      // becomes inert whenever it eventually returns, and re-measure.
+      this.measurementGeneration += 1;
+      this.measurementSelectionToken = -1;
+      this.measurementCompleting = false;
+      this.batchProcessing = false;
+      this.beginMeasurement(this.lifecycleToken);
+      this.armFirstPageCompletionDeadline();
+    }, FIRST_PAGE_COMPLETION_DEADLINE_MS);
+  }
+
+  private cancelFirstPageCompletionDeadline(): void {
+    this.firstPageCompletionGeneration += 1;
+    if (this.firstPageCompletionDeadlineTimer >= 0) {
+      clearTimeout(this.firstPageCompletionDeadlineTimer);
+      this.firstPageCompletionDeadlineTimer = -1;
     }
   }
 
@@ -6855,29 +6928,78 @@ export struct ReadingExperience {
   }
 
   private drainPageTurnPreparationQueue(): void {
-    if (this.pageTurnPreparation !== undefined || this.pageTurnSettlingPrepared !== undefined ||
-      this.pageTurnGestureState.phase !== 'idle' ||
-      !readerPageTransitionUsesPreparedPages(this.readerSettingsSnapshot) || !this.canTurnPage()) {
+    for (;;) {
+      if (this.pageTurnPreparation !== undefined || this.pageTurnSettlingPrepared !== undefined ||
+        this.pageTurnGestureState.phase !== 'idle' ||
+        !readerPageTransitionUsesPreparedPages(this.readerSettingsSnapshot) || !this.canTurnPage()) {
+        return;
+      }
+      const direction = this.pageTurnPreparationQueue.shift();
+      if (direction === undefined) {
+        this.scheduleBookTurnTextureRefresh();
+        return;
+      }
+      if (this.preparedPageTurn(direction) !== undefined) {
+        continue;
+      }
+      const target = this.adjacentPageTurnTarget(direction);
+      if (target === undefined && direction === 'previous' &&
+        this.knownPageTurnBoundary(direction) === undefined &&
+        this.startPreviousPagePreparationDiscovery()) {
+        return;
+      }
+      if (target === undefined) {
+        continue;
+      }
+      const outcome = this.beginPageTurnPreparation(direction, target);
+      if (outcome === 'begun') {
+        this.cancelPageTurnPreparationRetry();
+        return;
+      }
+      if (outcome === 'abandon') {
+        continue;
+      }
+      // Transiently rejected (measurement lane busy or lane not ready yet).
+      // Re-queue at the head so this direction is retried on a backoff timer
+      // instead of being silently dropped — cold entry can pop a direction
+      // while the initial restore still owns the measurement lane.
+      this.pageTurnPreparationQueue.unshift(direction);
+      if (this.pageTurnPreparationRetryTimer >= 0) {
+        return;
+      }
+      const count = this.pageTurnPreparationRetryCount;
+      if (count >= PAGE_TURN_PREPARATION_RETRY_LIMIT) {
+        this.pageTurnPreparationQueue = [];
+        this.pageTurnPreparationRetryCount = 0;
+        return;
+      }
+      const delay = Math.min(
+        PAGE_TURN_PREPARATION_RETRY_MAX_MS,
+        PAGE_TURN_PREPARATION_RETRY_BASE_MS * Math.pow(2, count),
+      );
+      this.pageTurnPreparationRetryCount = count + 1;
+      const generation = this.pageTurnGeneration;
+      const token = this.chapterSelectionToken;
+      this.pageTurnPreparationRetryTimer = setTimeout((): void => {
+        this.pageTurnPreparationRetryTimer = -1;
+        if (this.pageTurnGeneration !== generation || this.chapterSelectionToken !== token) {
+          this.pageTurnPreparationQueue = [];
+          this.pageTurnPreparationRetryCount = 0;
+          return;
+        }
+        this.drainPageTurnPreparationQueue();
+      }, delay);
       return;
     }
-    const direction = this.pageTurnPreparationQueue.shift();
-    if (direction === undefined) {
-      this.scheduleBookTurnTextureRefresh();
+  }
+
+  private cancelPageTurnPreparationRetry(): void {
+    if (this.pageTurnPreparationRetryTimer < 0) {
       return;
     }
-    if (this.preparedPageTurn(direction) !== undefined) {
-      this.drainPageTurnPreparationQueue();
-      return;
-    }
-    const target = this.adjacentPageTurnTarget(direction);
-    if (target === undefined && direction === 'previous' &&
-      this.knownPageTurnBoundary(direction) === undefined &&
-      this.startPreviousPagePreparationDiscovery()) {
-      return;
-    }
-    if (target === undefined || !this.beginPageTurnPreparation(direction, target)) {
-      this.drainPageTurnPreparationQueue();
-    }
+    clearTimeout(this.pageTurnPreparationRetryTimer);
+    this.pageTurnPreparationRetryTimer = -1;
+    this.pageTurnPreparationRetryCount = 0;
   }
 
   private adjacentPageTurnTarget(direction: ReaderPageTurnDirection): ReaderPageTurnTarget | undefined {
@@ -6948,22 +7070,22 @@ export struct ReadingExperience {
   private beginPageTurnPreparation(
     direction: ReaderPageTurnDirection,
     target: ReaderPageTurnTarget,
-  ): boolean {
+  ): ReaderPageTurnPreparationOutcome {
     const visiblePage = this.visiblePage;
     const originChapter = this.chapter;
     if (visiblePage === undefined || originChapter === undefined || !this.canTurnPage()) {
-      return false;
+      return 'retry';
     }
     const targetChapter = target.chapterIndex === originChapter.chapterIndex ?
       originChapter : this.chapterWindow.get(target.chapterIndex);
     if (targetChapter === undefined) {
-      return false;
+      return 'abandon';
     }
     const origin = this.captureMaterializedChapterContext();
     const targetMap = target.chapterIndex === originChapter.chapterIndex ?
       origin.layoutMap : new ReadingSurfaceLayoutMap(targetChapter.content);
     if (targetMap.scalarCount() === 0) {
-      return false;
+      return 'abandon';
     }
     this.admitChapterContentVersion(targetChapter.chapterIndex, targetChapter.contentVersion);
     this.pageTurnPreparation = new ReaderPageTurnPreparation(
@@ -6987,7 +7109,16 @@ export struct ReadingExperience {
     );
     this.restoreMaterializedChapterContext(targetContext, false);
     this.beginMeasurement(this.lifecycleToken);
-    return this.phase === 'measuring';
+    if (this.phase !== 'measuring') {
+      // The lane rejected the measurement (remasurePending, viewport lost,
+      // superseded selection). The materialized context above is now the
+      // target's, not the visible page's — restoring the origin context keeps
+      // later turns from acting on a swapped context the user never saw.
+      this.restoreMaterializedChapterContext(origin, false);
+      this.pageTurnPreparation = undefined;
+      return 'retry';
+    }
+    return 'begun';
   }
 
   private isPreparedPageTurnFresh(prepared: PreparedReaderPageTurn): boolean {
@@ -8043,6 +8174,9 @@ export struct ReadingExperience {
     this.clearAutoPageSessionTimer();
     this.cancelMeasurementDeadline();
     this.cancelFirstPageReadyDeadline();
+    this.cancelFirstPageCompletionDeadline();
+    this.firstPageCompletionRetryCount = 0;
+    this.cancelPageTurnPreparationRetry();
     this.phase = 'failed';
     this.measurementCompleting = false;
     this.remeasurePending = false;
