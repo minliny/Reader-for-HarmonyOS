@@ -140,6 +140,13 @@ void glBlendFunc(GLenum source, GLenum destination)
     Record("glBlendFunc", source, destination);
 }
 
+void glBlendFuncSeparate(GLenum sourceRGB, GLenum destinationRGB, GLenum sourceAlpha,
+    GLenum destinationAlpha)
+{
+    Record("glBlendFuncSeparate", sourceRGB, destinationRGB);
+    Record("glBlendFuncSeparateAlpha", sourceAlpha, destinationAlpha);
+}
+
 void glActiveTexture(GLenum unit)
 {
     Record("glActiveTexture", unit, 0);

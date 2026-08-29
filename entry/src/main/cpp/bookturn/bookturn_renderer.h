@@ -123,6 +123,7 @@ private:
         GLint theta = -1;
         GLint coneTaper = -1;
         GLint sigmaGrip = -1;
+        GLint beta = -1;
         GLint texture = -1;
         GLint highlightPhiWidth = -1;
         GLint paperColor = -1;

@@ -34,6 +34,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <string>
 #include <vector>
 
@@ -789,6 +790,13 @@ std::string BuildManifest(const std::vector<SeqReport>& reports,
 int main(int argc, char* argv[]) {
     const std::string outDir = argc > 1 ? argv[1] : "/tmp/bookturn_replay";
     MakeDirs(outDir);
+
+    // §12 A/B calibration: BOOKTURN_CONE_TAPER=0 renders the A-grade rigid
+    // plate; unset keeps the solver default (B grade, 0.4 full-cone).
+    if (const char* taperEnv = std::getenv("BOOKTURN_CONE_TAPER"); taperEnv && *taperEnv) {
+        reader::bookturn::SetConeTaperCalibration(std::strtof(taperEnv, nullptr));
+        std::printf("cone taper calibration override: %s\n", taperEnv);
+    }
 
     const std::vector<SeqSpec> specs = {
         {SeqId::kSlowDrag, "slow_drag", 240, true, true, false, true, 0.0F},

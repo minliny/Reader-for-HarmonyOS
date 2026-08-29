@@ -124,8 +124,8 @@ assert.doesNotMatch(shaderSource, /gl_FrontFacing/,
   'back-page color cannot switch per triangle or expose the mesh as a jagged boundary');
 assert.doesNotMatch(renderer, /vec3\(0\.96,\s*0\.95,\s*0\.92\)/,
   'the folded page must preserve the active page theme instead of replacing it with fixed beige');
-assert.match(renderer, /backMix = smoothstep\(HALF_PI - 0\.02, HALF_PI \+ 0\.02, vPhi\)/,
-  'front/back material color must cross the analytic fold continuously');
+assert.match(renderer, /backMix = smoothstep\(HALF_PI - 0\.02, HALF_PI \+ 0\.02, abs\(vPhi\)\)/,
+  'front/back material color must cross the analytic fold continuously; the S-arc drape carries a signed facing angle so abs() keeps the switch geometric');
 assert.match(renderer, /glBufferData\([\s\S]*GL_STATIC_DRAW/);
 const draw = method(renderer, 'bool BookTurnRenderer::Draw(');
 assert.doesNotMatch(draw, /eglMakeCurrent|glGetUniformLocation|glGetError|glBufferData|glTexImage2D/,

@@ -660,12 +660,18 @@ void TestMaterialMetric()
     // cannot hold through the deep curl. Split: strict region = phi <= pi/4
     // (|sin(phi)-phi| <= 0.078 there; measured max 0.072% at psi=54deg, far
     // under the 1% single-point gate); tolerance band = phi > pi/4 through
-    // drape, where u-edges stretch up to ~0.5*sin(2*psi)*pi*R*taper/W
-    // (~2.9% saturated at psi>=45deg; 1% breached at phi~=2.0) -> gate 3.5%
-    // = analytic bound + regression margin. The original ruling boundary
-    // (d < pi*r) is refined accordingly; recorded in the contract 6.3
-    // addendum. Readability of the tolerance band (deep-curl tube +
-    // mirror-backface strip) is judged at the stage-4 device A/B.
+    // drape, where u-edges stretch by the sigma-coupling of the cone taper
+    // across the accumulated tangent turn: the S-arc lands with the coupling
+    // (pi-beta-sin(beta))/cos^2(beta/2) <= 2, and the ext-wrap accumulates up
+    // to ~2.4*pi radians of turn, so the analytic band error bound is
+    // ~2.4*pi*|r'| (measured p95 0.0449 / max 0.0566 at psi=54deg,
+    // kSpineTaper=0.6; worst at tau=0.1 kink-adjacent) -> gate 6% = analytic
+    // bound + regression margin [2026-08-30 recalibration with the 6.3
+    // projection amendment; original 3.5% pre-dated the S-drape]. The
+    // original ruling boundary (d < pi*r) is refined accordingly; recorded in
+    // the contract 6.3 addendum. Readability of the tolerance band
+    // (deep-curl tube + mirror-backface strip) is judged at the stage-4
+    // device A/B.
     // A-tier (r'=0) is strictly isometric everywhere (covered by T10a).
     std::vector<float> strictErrors;
     std::vector<float> bandErrors;
@@ -715,11 +721,11 @@ void TestMaterialMetric()
     const float bandMax = bandErrors.empty() ? 0.0F : *std::max_element(bandErrors.begin(), bandErrors.end());
     CheckLE("T10b cone strict p95 (phi<=pi/4)", strictP95, 5e-3);
     CheckLE("T10b cone strict max (phi<=pi/4)", strictMax, 1e-2);
-    CheckLE("T10b cone band p95 (B-tolerance)", bandP95, 3.5e-2);
-    CheckLE("T10b cone band max (B-tolerance)", bandMax, 3.5e-2);
+    CheckLE("T10b cone band p95 (B-tolerance)", bandP95, 6.0e-2);
+    CheckLE("T10b cone band max (B-tolerance)", bandMax, 6.0e-2);
 
     std::printf("T10 developability %s (a: cylinder worst %.2e <= 1e-3; "
-        "b: strict phi<=pi/4 p95 %.3e max %.3e vs 5e-3/1e-2; band p95 %.3e max %.3e vs 3.5e-2 B-tolerance [2026-08-29 ruling])\n",
+        "b: strict phi<=pi/4 p95 %.3e max %.3e vs 5e-3/1e-2; band p95 %.3e max %.3e vs 6e-2 B-tolerance [2026-08-30 recalibration])\n",
         g_fails == before ? "PASS" : "FAIL", worstCylinder, strictP95, strictMax, bandP95, bandMax);
 }
 

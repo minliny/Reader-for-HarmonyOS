@@ -146,6 +146,11 @@ public:
 
     /** Q(tau): canonical schedule evaluation (contract §6.2). */
     static void Schedule(float tau, float& xNorm, float& beta, float& radiusScale);
+    /** §6.3 projection amendment: effective tilt of the post-wrap free part.
+     *  SPINE onward the tilt is pinned at pi (the S5 beta unwind is roll
+     *  bookkeeping, not a physical re-tilt); MapMaterial, the grip fit, and
+     *  the renderer's uBeta upload all consume this one definition. */
+    static float PostWrapTilt(const BookTurnPose& pose);
     /** s^-1: piecewise closed-form inverse of the xNorm schedule. */
     static float ScheduleInverse(float xNorm);
     /** Screen-x of a fold line at material offset `axis` for tilt `theta`. */
@@ -157,6 +162,11 @@ private:
     static float FoldNormal(float distance, float radius);
     static float FoldDepth(float distance, float radius);
 };
+
+/** §12 A/B calibration hook: overrides kConeTaperDefault at runtime
+ *  (BOOKTURN_CONE_TAPER=0 selects the A-grade rigid plate). Stays compiled
+ *  until the stage-4 device A/B freezes one grade. */
+void SetConeTaperCalibration(float m);
 
 }  // namespace reader::bookturn
 

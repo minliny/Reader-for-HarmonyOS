@@ -75,7 +75,11 @@ void AssertFrameState(const char* context)
     Check((prefix + " blend switches == 2").c_str(), CountName("BLEND_SWITCH") == 2);
     Check((prefix + " blend ends off").c_str(), HasPair("BLEND_SWITCH", 0, 0));
     Check((prefix + " blend func src/1m").c_str(),
-        HasPair("glBlendFunc", GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+        HasPair("glBlendFuncSeparate", GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+    // The shadow pass must not scale the destination ALPHA: the composited
+    // EGL surface would let the ArkUI page underneath bleed through the band.
+    Check((prefix + " blend alpha pinned").c_str(),
+        HasPair("glBlendFuncSeparateAlpha", GL_ZERO, GL_ONE));
     Check((prefix + " depth func LEQUAL").c_str(), HasPair("glDepthFunc", GL_LEQUAL, 0));
     Check((prefix + " depth write off once").c_str(), HasPair("DEPTH_MASK_SWITCH", 0, 0));
     Check((prefix + " depth write on once").c_str(), HasPair("DEPTH_MASK_SWITCH", 1, 0));
