@@ -517,4 +517,163 @@ const last = (presentations) => presentations[presentations.length - 1];
   assert.equal(owner.state.calls.length, callsBefore, 'a settled surface issues no requests');
 }
 
+// 16. ACQ-02: stop() during a live loading sweep settles to a stopped empty
+// surface, and the superseded sweep issues no further source requests.
+{
+  const sources = makeSources(6);
+  const owner = fakeOwner({
+    sources,
+    delayForSource: () => 80,
+    resultsFor: () => [],
+  });
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open();
+  search.search('关键字');
+  await waitUntil(owner.state, () => owner.state.calls.length >= 4 && owner.state.inFlight > 0);
+  search.stop();
+
+  const stopped = last(presentations);
+  assert.equal(stopped.kind, 'empty', 'a stop before any results lands settles to empty');
+  assert.equal(stopped.stopped, true, 'the stopped empty verdict is marked as user-stopped');
+  assert.equal(stopped.searchedSourceCount, 0, 'no source had returned when the sweep stopped');
+
+  const callsAtStop = owner.state.calls.length;
+  const presentationsAtStop = presentations.length;
+  await sleep(200); // let every in-flight request unwind
+  assert.equal(owner.state.calls.length, callsAtStop,
+    'a stopped sweep must not issue further source requests');
+  assert.equal(last(presentations), stopped,
+    'the unwinding sweep must not publish anything after the stop');
+  assert.equal(presentations.length, presentationsAtStop);
+
+  // retry re-enters as a fresh full sweep and settles normally.
+  search.retry();
+  await settle(owner.state, callsAtStop + 6);
+  assert.equal(last(presentations).kind, 'empty');
+  assert.equal(last(presentations).stopped, undefined, 'a fresh retry is not marked stopped');
+}
+
+// 17. ACQ-02: stop() during a streaming results sweep keeps the partial
+// results, closes the in-progress slot, and stops issuing requests.
+{
+  const sources = makeSources(4);
+  const owner = fakeOwner({
+    sources,
+    delayForSource: (sourceId) => (sourceId === 'source-0' ? 10 : 120),
+    resultsFor: (sourceId) => [{ bookId: `/b-${sourceId}`, title: '书', author: 'A', variables: {} }],
+  });
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open();
+  search.search('关键字');
+  await waitUntil(owner.state, () =>
+    presentations.some((p) => p.kind === 'results' && p.searching === true));
+  search.stop();
+
+  const stopped = last(presentations);
+  assert.equal(stopped.kind, 'results', 'a stop with partial results stays on results');
+  assert.equal(stopped.searching, false, 'the stop closes the streaming in-progress slot');
+  assert.equal(stopped.stopped, true, 'the partial results are marked as user-stopped');
+  assert.deepEqual(stopped.results.map((r) => r.bookId), ['/b-source-0'],
+    'the partial results stay on the surface');
+
+  const callsAtStop = owner.state.calls.length;
+  await sleep(200);
+  assert.equal(owner.state.calls.length, callsAtStop,
+    'a stopped sweep must not issue further source requests');
+  assert.equal(last(presentations), stopped,
+    'the unwinding sweep must not publish anything after the stop');
+
+  // A stopped (searching:false) surface never re-sweeps on route restore.
+  const presentationsBefore = presentations.length;
+  search.resumeStaleSweep();
+  assert.equal(presentations.length, presentationsBefore,
+    'a user-stopped sweep is not resurrected by resumeStaleSweep');
+}
+
+// 18. ACQ-02: an explicit scope restricts the sweep to the selected subset.
+{
+  const sources = makeSources(4);
+  const owner = fakeOwner({
+    sources,
+    delayForSource: () => 10,
+    resultsFor: (sourceId) => [{ bookId: `/b-${sourceId}`, title: '书', author: 'A', variables: {} }],
+  });
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open();
+  search.search('关键字', ['source-1', 'source-2']);
+  await settle(owner.state, 2);
+
+  const present = last(presentations);
+  assert.equal(present.kind, 'results');
+  assert.equal(present.totalSourceCount, 2, 'the sweep total is the scoped subset size');
+  assert.equal(present.completedSourceCount, 2);
+  assert.equal(owner.state.calls.length, 2, 'only the scoped sources are requested');
+  assert.deepEqual(
+    owner.state.calls.map((c) => c.sourceId).sort(), ['source-1', 'source-2']);
+  assert.deepEqual(
+    present.results.map((r) => r.bookId).sort(), ['/b-source-1', '/b-source-2']);
+}
+
+// 19. ACQ-02: a scope that excludes every usable source is an honest empty
+// verdict with zero attempted sources, not a sourceRequired configuration gap.
+{
+  const sources = makeSources(2);
+  const owner = fakeOwner({ sources, resultsFor: () => [] });
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open();
+  search.search('关键字', ['stale-scope']);
+  await waitUntil(owner.state, () => last(presentations).kind === 'empty');
+
+  const present = last(presentations);
+  assert.equal(present.kind, 'empty', 'an exhausted scope reads as empty, not missing-source');
+  assert.equal(present.searchedSourceCount, 0, 'nothing was searched for an exhausted scope');
+  assert.equal(owner.state.calls.length, 0, 'no book.search fires for an exhausted scope');
+}
+
+// 20. ACQ-02: stop() on a settled surface is a no-op.
+{
+  const owner = fakeOwner({
+    sources: makeSources(2),
+    delayForSource: () => 10,
+    resultsFor: () => [],
+  });
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open();
+  search.search('无结果');
+  await settle(owner.state, 2);
+  assert.equal(last(presentations).kind, 'empty');
+
+  const presentationsBefore = presentations.length;
+  search.stop();
+  assert.equal(presentations.length, presentationsBefore,
+    'stopping a settled sweep publishes nothing');
+}
+
+// 21. ACQ-02: retry() after a scoped search re-runs the same scope subset.
+{
+  const sources = makeSources(3);
+  const owner = fakeOwner({
+    sources,
+    delayForSource: () => 10,
+    resultsFor: () => [],
+  });
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open();
+  search.search('关键字', ['source-1']);
+  await settle(owner.state, 1);
+  assert.equal(last(presentations).kind, 'empty');
+
+  search.retry();
+  await settle(owner.state, 2);
+  assert.equal(owner.state.calls.length, 2, 'the retry re-runs exactly one scoped source');
+  assert.ok(owner.state.calls.every((c) => c.sourceId === 'source-1'),
+    'the retry keeps the retained scope instead of widening to all sources');
+}
+
 console.log('search orchestrator bounded concurrency: PASS');

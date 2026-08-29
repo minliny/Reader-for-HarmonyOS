@@ -529,7 +529,9 @@ struct Index {
           shelfBooks: this.shelfBooks,
           isTablet: deviceInfo.deviceType === 'tablet',
           onBack: (): void => this.returnToBookshelf(),
-          onSearch: (keyword: string): void => this.performSearch(keyword),
+          onSearch: (keyword: string, scopeSourceIds?: string[]): void =>
+            this.performSearch(keyword, scopeSourceIds),
+          onStop: (): void => this.stopSearch(),
           onClearHistory: (): void => this.clearSearchHistory(),
           onSelectResult: (book: SearchBook, variants: SearchBook[]): void =>
             this.onSearchResultSelected(book, variants),
@@ -1941,9 +1943,13 @@ struct Index {
     this.getSearchOrchestrator().open();
   }
 
-  private performSearch(keyword: string): void {
+  private performSearch(keyword: string, scopeSourceIds?: string[]): void {
     this.nextNavigationGeneration();
-    this.getSearchOrchestrator().search(keyword);
+    this.getSearchOrchestrator().search(keyword, scopeSourceIds);
+  }
+
+  private stopSearch(): void {
+    this.getSearchOrchestrator().stop();
   }
 
   private getSearchOrchestrator(): SearchOrchestrator {

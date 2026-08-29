@@ -59,6 +59,13 @@ export class SearchOrchestrator {
    * that residue apart from a genuinely running sweep.
    */
   private sweepAlive: boolean = false;
+  /**
+   * Completed (ok or failed) sources of the live sweep. stop() reads it to
+   * settle an interrupted loading surface with an honest source count.
+   */
+  private sweepCompletedSourceCount: number = 0;
+  /** Scope of the most recent search; retry/resume re-run the same subset. */
+  private lastScope: string[] | undefined = undefined;
 
   constructor(
     emitPresentation: (presentation: SearchPresentation) => void,
@@ -131,23 +138,65 @@ export class SearchOrchestrator {
       });
   }
 
-  /** Begin a real search across enabled sources. */
-  search(keyword: string): void {
+  /**
+   * Begin a real search across enabled sources. An explicit `scopeSourceIds`
+   * subset (ACQ-02) restricts the sweep to those sources; omitted scope means
+   * all enabled sources. The scope is retained so retry/resume re-run the
+   * same subset instead of silently widening it.
+   */
+  search(keyword: string, scopeSourceIds?: string[]): void {
     if (keyword.trim().length === 0) {
       return;
     }
     this.work += 1;
     this.sweepAlive = true;
+    this.lastScope = scopeSourceIds === undefined ? undefined : scopeSourceIds.slice();
+    this.sweepCompletedSourceCount = 0;
     const work = this.work;
     const session = this.session;
     this.present({ kind: 'loading', keyword: keyword });
-    void this.performSearch(work, session, keyword);
+    void this.performSearch(work, session, keyword, this.lastScope);
+  }
+
+  /**
+   * Stop the live sweep (ACQ-02): supersede the workers so no further source
+   * requests are issued and settle the visible surface with what already
+   * landed. Partial results stay; stopping is never destructive.
+   */
+  stop(): void {
+    const presentation = this.presentation;
+    if (presentation.kind === 'loading') {
+      this.work += 1;
+      this.sweepAlive = false;
+      hilog.info(DOMAIN, 'Reader', 'Search sweep stopped by user: %{public}s', presentation.keyword);
+      this.present({
+        kind: 'empty',
+        keyword: presentation.keyword,
+        searchedSourceCount: this.sweepCompletedSourceCount,
+        stopped: true,
+      });
+      return;
+    }
+    if (presentation.kind === 'results' && presentation.searching) {
+      this.work += 1;
+      this.sweepAlive = false;
+      hilog.info(DOMAIN, 'Reader', 'Search sweep stopped by user: %{public}s', presentation.keyword);
+      this.present({
+        kind: 'results',
+        keyword: presentation.keyword,
+        results: presentation.results,
+        searching: false,
+        totalSourceCount: presentation.totalSourceCount,
+        completedSourceCount: presentation.completedSourceCount,
+        stopped: true,
+      });
+    }
   }
 
   /** Re-run the last failed or empty search, or reload sources after a list failure. */
   retry(): void {
     if (this.presentation.kind === 'empty' || this.presentation.kind === 'error') {
-      this.search(this.presentation.keyword);
+      this.search(this.presentation.keyword, this.lastScope);
       return;
     }
     if (this.presentation.kind === 'sourceLoadError') {
@@ -173,7 +222,7 @@ export class SearchOrchestrator {
     if (!presentation.searching || this.sweepAlive) {
       return;
     }
-    this.search(presentation.keyword);
+    this.search(presentation.keyword, this.lastScope);
   }
 
   /**
@@ -237,7 +286,8 @@ export class SearchOrchestrator {
       });
   }
 
-  private async performSearch(work: number, session: number, keyword: string): Promise<void> {
+  private async performSearch(work: number, session: number, keyword: string,
+    scopeSourceIds?: string[]): Promise<void> {
     // Search history is auxiliary. Do not wait for a persistence failure
     // before issuing the user-requested source search.
     void this.gateway.addHistory(keyword)
@@ -253,9 +303,17 @@ export class SearchOrchestrator {
         return;
       }
       this.presentSources(sources);
-      const enabled = sources.filter((source) => source.enabled && source.name.trim().length > 0);
+      const enabled = sources.filter((source) => source.enabled && source.name.trim().length > 0 &&
+        (scopeSourceIds === undefined || scopeSourceIds.indexOf(source.sourceId) >= 0));
       attemptedSourceCount = enabled.length;
       if (enabled.length === 0) {
+        if (scopeSourceIds !== undefined &&
+          sources.some((source) => source.enabled && source.name.trim().length > 0)) {
+          // The scope excluded every usable source: an honest empty verdict for
+          // this attempt, not a missing-source configuration gap.
+          this.present({ kind: 'empty', keyword: keyword, searchedSourceCount: 0 });
+          return;
+        }
         // Zero enabled sources is a configuration gap, not a network failure:
         // route the user to the add/enable-source flow instead of the generic
         // search-error surface.
@@ -270,7 +328,6 @@ export class SearchOrchestrator {
       // sources instead of their sum. Each outcome lands in its registration
       // slot, so streaming partial results share the final stable order.
       const outcomes: Array<SearchOutcome | undefined> = new Array(enabled.length);
-      let completedSourceCount = 0;
       let successfulSourceCount = 0;
       // A broken source is normal in a user-managed Legado source set. Keep
       // its failure isolated so later healthy sources still run and any valid
@@ -307,7 +364,7 @@ export class SearchOrchestrator {
           results: results,
           searching: true,
           totalSourceCount: attemptedSourceCount,
-          completedSourceCount: completedSourceCount,
+          completedSourceCount: this.sweepCompletedSourceCount,
         });
       };
       const worker = async (): Promise<void> => {
@@ -329,7 +386,7 @@ export class SearchOrchestrator {
           if (!this.isCurrentWork(work, session)) {
             return;
           }
-          completedSourceCount += 1;
+          this.sweepCompletedSourceCount += 1;
           if (outcome.ok === false) {
             failures.push({ source: source, error: outcome.error });
             publishPartial();
@@ -368,7 +425,7 @@ export class SearchOrchestrator {
         results: results,
         searching: false,
         totalSourceCount: attemptedSourceCount,
-        completedSourceCount: completedSourceCount,
+        completedSourceCount: this.sweepCompletedSourceCount,
       });
     } catch (error) {
       if (!this.isCurrentWork(work, session)) {

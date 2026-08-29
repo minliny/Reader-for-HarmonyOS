@@ -60,8 +60,18 @@ assert.match(search, /right\.sourceCount - left\.sourceCount/,
   'multi-origin search results must be promoted like Legado');
 assert.match(search, /Text\('已在书架'\)/,
   'grouped search results must expose current shelf membership');
-assert.doesNotMatch(search, /sourceChip/,
-  'P0-DEAD-CONTROL-CLEANUP: source chips must not render as interactive-looking controls without a wired filter intent (deferred to P1 source-scoped search)');
+// ACQ-02 supersedes the P0-DEAD-CONTROL-CLEANUP deferral: scope chips and the
+// stop control are now wired, so the surface must prove the intent exists.
+assert.match(search, /搜索范围/,
+  'ACQ-02: the scope control must be presented on the search surface');
+assert.match(search, /toggleScopeSource/,
+  'ACQ-02: scope chips must toggle real filter state');
+assert.match(search, /onSearch\(keyword, scope\)/,
+  'ACQ-02: submitting must forward the scope subset to the orchestrator');
+assert.match(search, /onStop/,
+  'ACQ-02: the search page must expose a stop intent for the live sweep');
+assert.match(index, /stopSearch\(\)/,
+  'ACQ-02: Index must wire the stop intent into the orchestrator');
 assert.match(shelf, /Text\(`更新 \$\{book\.unreadCount\} 章`\)/);
 assert.match(shelf, /Text\(this\.gridProgressLabel\(book\)\)/,
   'grid progress renders through the basis-point formatter');

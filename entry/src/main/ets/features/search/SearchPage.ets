@@ -67,6 +67,8 @@ export interface SearchResultsPresentation {
   totalSourceCount: number;
   /** Enabled sources finished (ok or failed) so far. */
   completedSourceCount: number;
+  /** True when the user stopped the sweep early (ACQ-02); partial results stay. */
+  stopped?: boolean;
 }
 
 export interface SearchEmptyPresentation {
@@ -74,6 +76,8 @@ export interface SearchEmptyPresentation {
   keyword: string;
   /** Enabled sources the search actually attempted. */
   searchedSourceCount: number;
+  /** True when the sweep was stopped by the user before this verdict (ACQ-02). */
+  stopped?: boolean;
 }
 
 export interface SearchErrorPresentation {
@@ -137,7 +141,15 @@ export struct SearchPage {
   @Prop shelfBooks: ShelfBook[] = [];
   @Prop isTablet: boolean;
   onBack: () => void = (): void => {};
-  onSearch: (keyword: string) => void = (_keyword: string): void => {};
+  /**
+   * `scopeSourceIds` is undefined for the all-sources scope; an explicit array
+   * restricts the sweep to those sources (ACQ-02). Callers forwarding the
+   * intent must pass it through to the orchestrator verbatim.
+   */
+  onSearch: (keyword: string, scopeSourceIds?: string[]) => void =
+    (_keyword: string, _scopeSourceIds?: string[]): void => {};
+  /** Stop the live sweep, keeping whatever partial results already landed. */
+  onStop: () => void = (): void => {};
   onClearHistory: () => void = (): void => {};
   onSelectResult: (book: SearchBook, variants: SearchBook[]) => void =
     (_book: SearchBook, _variants: SearchBook[]): void => {};
@@ -145,6 +157,11 @@ export struct SearchPage {
   onManageSources: () => void = (): void => {};
   @State keyword: string = '';
   @State historyExpanded: boolean = false;
+  // ACQ-02 scope state (product-approved extension, no Figma final frame):
+  // all-sources by default; a custom subset is built from the chip wall.
+  @State scopeAll: boolean = true;
+  @State scopeSelection: string[] = [];
+  @State scopeExpanded: boolean = false;
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -168,14 +185,85 @@ export struct SearchPage {
     .backgroundColor(TOK_PAPER);
   }
 
+  private isSweeping(): boolean {
+    return this.presentation.kind === 'loading' ||
+      (this.presentation.kind === 'results' && this.presentation.searching);
+  }
+
+  /** The pill is the stop control while sweeping and always active there. */
+  private canSubmit(): boolean {
+    if (this.isSweeping()) {
+      return true;
+    }
+    const scope = this.scopeSourceIds();
+    return scope === undefined || scope.length > 0;
+  }
+
+  /** Reads the presentation directly so minimal-update re-render tracks it. */
+  private isStoppedEmpty(): boolean {
+    return this.presentation.kind === 'empty' && this.presentation.stopped === true;
+  }
+
   private submitSearch(): void {
     if (this.presentation.kind === 'loading') {
       return;
     }
     const keyword = this.keyword.trim();
-    if (keyword.length > 0) {
-      this.onSearch(keyword);
+    if (keyword.length === 0) {
+      return;
     }
+    const scope = this.scopeSourceIds();
+    if (scope !== undefined && scope.length === 0) {
+      // A custom scope with zero usable sources cannot be searched; the pill
+      // renders dimmed so the dead submit reads as disabled, not broken.
+      return;
+    }
+    this.onSearch(keyword, scope);
+  }
+
+  /** undefined = all enabled sources; otherwise the usable selected subset. */
+  private scopeSourceIds(): string[] | undefined {
+    if (this.scopeAll) {
+      return undefined;
+    }
+    const selected: string[] = [];
+    for (const source of this.sources) {
+      if (source.enabled && source.name.trim().length > 0 &&
+        this.scopeSelection.indexOf(source.sourceId) >= 0) {
+        selected.push(source.sourceId);
+      }
+    }
+    return selected;
+  }
+
+  private enabledSources(): SearchSource[] {
+    return this.sources.filter((source: SearchSource): boolean =>
+      source.enabled && source.name.trim().length > 0);
+  }
+
+  private toggleScopeSource(sourceId: string): void {
+    if (this.scopeAll) {
+      // Chips start from the all-sources default: the first tap enters the
+      // custom subset with every usable source except the tapped one.
+      this.scopeAll = false;
+      this.scopeSelection = this.enabledSources()
+        .map((source: SearchSource): string => source.sourceId)
+        .filter((id: string): boolean => id !== sourceId);
+      return;
+    }
+    if (this.scopeSelection.indexOf(sourceId) >= 0) {
+      this.scopeSelection = this.scopeSelection.filter((id: string): boolean => id !== sourceId);
+    } else {
+      this.scopeSelection = this.scopeSelection.concat([sourceId]);
+    }
+  }
+
+  private scopeLabel(): string {
+    if (this.scopeAll) {
+      return '全部书源';
+    }
+    const count = this.scopeSourceIds()?.length ?? 0;
+    return count === 0 ? '未选择书源' : `已选 ${count} 个书源`;
   }
 
   @Builder
@@ -209,8 +297,10 @@ export struct SearchPage {
       .height(this.isTablet ? 40 : 36)
       .alignItems(VerticalAlign.Center);
 
-      // The search action stays visually enabled in every state. Loading
-      // additionally inlines a 13px spinner and submitSearch prevents re-entry.
+      // The search action doubles as the ACQ-02 stop control: while a sweep
+      // is live the pill reads 停止 and stops the sweep; otherwise it submits.
+      // Loading additionally inlines a 13px spinner and submitSearch prevents
+      // re-entry.
       Stack({ alignContent: Alignment.Center }) {
         if (this.presentation.kind === 'loading') {
           Row({ space: 6 }) {
@@ -219,7 +309,7 @@ export struct SearchPage {
               .height(13)
               .color(TOK_ON_PRIMARY)
               .enableLoading(true);
-            Text('搜索')
+            Text('停止')
               .fontFamily('ReaderInter')
               .fontWeight(800)
               .fontSize(this.isTablet ? 14 : 13)
@@ -227,6 +317,13 @@ export struct SearchPage {
               .fontColor(TOK_ON_PRIMARY);
           }
           .alignItems(VerticalAlign.Center);
+        } else if (this.presentation.kind === 'results' && this.presentation.searching) {
+          Text('停止')
+            .fontFamily('ReaderInter')
+            .fontWeight(800)
+            .fontSize(this.isTablet ? 14 : 13)
+            .lineHeight(this.isTablet ? 14 : 13)
+            .fontColor(TOK_ON_PRIMARY);
         } else {
           Text('搜索')
             .fontFamily('ReaderInter')
@@ -239,9 +336,15 @@ export struct SearchPage {
       .height(this.isTablet ? 40 : 36)
       .padding({ left: this.isTablet ? 18 : TOK_SPACE_CARD_PADDING, right: this.isTablet ? 18 : TOK_SPACE_CARD_PADDING })
       .backgroundColor(TOK_GREEN)
-      .opacity(1)
+      .opacity(this.canSubmit() ? 1 : 0.4)
       .borderRadius(999)
-      .onClick((): void => this.submitSearch());
+      .onClick((): void => {
+        if (this.isSweeping()) {
+          this.onStop();
+          return;
+        }
+        this.submitSearch();
+      });
     }
     .width(this.contentFrame().width)
     .height(this.isTablet ? 56 : 52)
@@ -310,7 +413,10 @@ export struct SearchPage {
               .border({ width: TOK_BORDER_W, color: TOK_BORDER })
               .borderRadius(999)
               .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
-              .onClick((): void => this.onSearch(keyword));
+              .onClick((): void => {
+                this.keyword = keyword;
+                this.submitSearch();
+              });
           }, (keyword: string): string => `search-history-${keyword}`);
           if (history.length > 4 && !this.historyExpanded) {
             this.moreChip(history.length - 4);
@@ -318,6 +424,13 @@ export struct SearchPage {
         }
         .width('100%')
         .padding({ top: TOK_SPACE_CARD_PADDING });
+      }
+
+      // ACQ-02 scope control (product-approved extension, no Figma final
+      // frame): restrict the next search to selected sources. Wired intent per
+      // P0-DEAD-CONTROL-CLEANUP — these chips toggle real filter state.
+      if (this.enabledSources().length > 0) {
+        this.scopeSection();
       }
     }
     .width('100%')
@@ -327,6 +440,76 @@ export struct SearchPage {
       top: 28,
       bottom: 20,
     });
+  }
+
+  @Builder
+  private scopeSection() {
+    Row() {
+      Text('搜索范围')
+        .fontFamily('ReaderInter')
+        .fontWeight(FontWeight.Bold)
+        .fontSize(13)
+        .lineHeight(19.5)
+        .fontColor(TOK_INK)
+        .layoutWeight(1);
+      Row({ space: 4 }) {
+        Text(this.scopeLabel())
+          .fontFamily('ReaderInter')
+          .fontWeight(FontWeight.Medium)
+          .fontSize(12)
+          .lineHeight(18)
+          .fontColor(TOK_MUTED)
+          .maxLines(1);
+        Image($r('app.media.reader_chevron_right'))
+          .width(12)
+          .height(12)
+          .rotate({ angle: this.scopeExpanded ? 90 : 0 });
+      }
+      .alignItems(VerticalAlign.Center)
+      .onClick((): void => {
+        this.scopeExpanded = !this.scopeExpanded;
+      })
+      .accessibilityText(this.scopeExpanded ? '收起搜索范围' : '展开搜索范围');
+    }
+    .width('100%')
+    .height(26)
+    .alignItems(VerticalAlign.Center)
+    .margin({ top: 18 });
+
+    if (this.scopeExpanded) {
+      Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
+        this.scopeChip('全部', this.scopeAll, (): void => {
+          this.scopeAll = true;
+        });
+        ForEach(this.enabledSources(), (source: SearchSource) => {
+          this.scopeChip(source.name,
+            !this.scopeAll && this.scopeSelection.indexOf(source.sourceId) >= 0,
+            (): void => this.toggleScopeSource(source.sourceId));
+        }, (source: SearchSource): string => `search-scope-${source.sourceId}`);
+      }
+      .width('100%')
+      .padding({ top: TOK_SPACE_CARD_PADDING });
+    }
+  }
+
+  @Builder
+  private scopeChip(label: string, selected: boolean, onToggle: () => void) {
+    Text(label)
+      .fontFamily('ReaderInter')
+      .fontWeight(FontWeight.Medium)
+      .fontSize(13)
+      .lineHeight(19.5)
+      .fontColor(selected ? TOK_GREEN : TOK_INK)
+      .padding({ left: 14.5, right: 14.5, top: 7.5, bottom: 7.5 })
+      .backgroundColor(selected ? TOK_PRIMARY_SOFT : TOK_CARD_BG)
+      .border({ width: TOK_BORDER_W, color: selected ? TOK_GREEN : TOK_BORDER })
+      .borderRadius(999)
+      .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
+      .maxLines(1)
+      .textOverflow({ overflow: TextOverflow.Ellipsis })
+      .constraintSize({ maxWidth: 160 })
+      .onClick((): void => onToggle())
+      .accessibilityText(selected ? `已选入搜索范围:${label}` : `选入搜索范围:${label}`);
   }
 
   @Builder
@@ -404,6 +587,21 @@ export struct SearchPage {
             .fontSize(11)
             .lineHeight(16.5)
             .fontColor(TOK_MUTED);
+          if (this.presentation.kind === 'results' && this.presentation.stopped === true) {
+            // ACQ-02: a stopped sweep keeps its partial results; the header
+            // states how far the interrupted sweep got so partials never read
+            // as a complete verdict. Reads the presentation directly (not a
+            // builder param) so the minimal-update re-render tracks it exactly
+            // like the search/stop pill does.
+            Text(` · 已停止,已搜索 ${this.presentation.completedSourceCount}/${this.presentation.totalSourceCount} 个书源`)
+              .fontFamily('ReaderInter')
+              .fontWeight(FontWeight.Regular)
+              .fontSize(11)
+              .lineHeight(16.5)
+              .fontColor(TOK_MUTED)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis });
+          }
         }
         .width(this.contentFrame().width)
         .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: 6, bottom: 6 })
@@ -633,7 +831,11 @@ export struct SearchPage {
           .fontColor(TOK_INK)
           .textAlign(TextAlign.Center);
 
-        Text(`已搜索 ${searchedSourceCount} 个书源,未找到「${keyword}」的相关结果`)
+        Text(this.isStoppedEmpty()
+          ? (searchedSourceCount > 0
+            ? `已搜索 ${searchedSourceCount} 个书源后停止,未找到「${keyword}」的相关结果`
+            : `已停止搜索,未找到「${keyword}」的相关结果`)
+          : `已搜索 ${searchedSourceCount} 个书源,未找到「${keyword}」的相关结果`)
           .margin({ top: TOK_SPACE_CONTROL_INLINE })
           .width('100%')
           .fontFamily('ReaderInter')
