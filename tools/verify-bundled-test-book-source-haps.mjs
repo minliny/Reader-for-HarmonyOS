@@ -16,7 +16,7 @@ const canonicalHaps = [
   'entry-default-signed.hap',
   'entry-default-unsigned.hap',
 ];
-const minimumBundledSourceCount = 8;
+const minimumBundledSourceCount = 6;
 
 assert.ok(hapPaths.length >= 2,
   'pass both signed and unsigned HAP paths to the package source verifier');

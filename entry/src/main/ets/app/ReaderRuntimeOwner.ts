@@ -30,6 +30,14 @@ import {
 import { canonicalReadingImageBaseUrl } from '../common/ReadingImageIdentity';
 import { ArkWebExecutor } from './ArkWebExecutor';
 import type { SourceHttpDiagnosticRecord } from './HttpExecuteHost';
+import {
+  BundledSourceLedger,
+  canonicalRulePayloadJson,
+  decideBundledUpgrade,
+  hasBuiltinMarker,
+  isUserModifiedBuiltinCopy,
+  sha256Hex,
+} from './BundledBookSourceSupply';
 import { image } from '@kit.ImageKit';
 
 type RuntimeState = 'new' | 'starting' | 'ready' | 'closing' | 'closed';
@@ -41,6 +49,9 @@ const DEFAULT_CORE_REQUEST_TIMEOUT_MS = 30000;
 const LOG_DOMAIN = 0x5244;
 const TEST_BOOK_SOURCE_RAW_FILE = 'reader-test-book-sources.json';
 const TEST_BOOK_SOURCE_VERSION_FIELD = 'readerTestBuiltinVersion';
+// BEGIN bundled-source-integrity (managed by tools/refresh-source-supply-manifest.mjs)
+const BUNDLED_RAW_FILE_SHA256 = '922b29b237138f0d304f27646f6e42afc855d7bd33e0bd4ea307469eb52007d3';
+// END bundled-source-integrity
 
 type CoreBuildIdentity = {
   schemaVersion: number;
@@ -563,40 +574,132 @@ export class ReaderRuntimeOwner {
    * Test builds ship an application-owned source set in raw resources. Seed it
    * before the runtime becomes observable so fresh and update installs cannot
    * reach Search with an empty source database. Matching versions are read-only
-   * on later launches; upgrades preserve the user's enabled/explore choices.
+   * on later launches; upgrades preserve the user's enabled/explore choices;
+   * user-modified builtin copies are never force-overwritten; identities that
+   * disappear from a newer bundle are retired (disabled, never deleted).
    */
   private async installBundledTestBookSources(runtime: ReaderCoreRuntime): Promise<number> {
     const document = await this.host.readBundledRawFileText(TEST_BOOK_SOURCE_RAW_FILE);
+    const fileDigest = await sha256Hex(document);
+    if (fileDigest !== BUNDLED_RAW_FILE_SHA256) {
+      throw new Error(`Bundled test book-source document failed integrity verification: ` +
+        `expected ${BUNDLED_RAW_FILE_SHA256}, got ${fileDigest}`);
+    }
     const bundledSources = this.requireBundledTestBookSources(document);
-    let installedCount = 0;
+    // Per-source integrity: the embedded fingerprint must match the rules it
+    // certifies. A mismatched source is rejected loudly, never silently skipped.
+    const admitted: JsonObject[] = [];
     for (const bundled of bundledSources) {
+      const digest = await sha256Hex(canonicalRulePayloadJson(bundled));
+      if (digest !== bundled['ruleFingerprint']) {
+        hilog.error(LOG_DOMAIN, 'Reader',
+          'Bundled test book source rejected, rule fingerprint mismatch: %{public}s',
+          bundled['bookSourceName'] as string);
+        continue;
+      }
+      admitted.push(bundled);
+    }
+    if (admitted.length === 0) {
+      throw new Error('Bundled test book-source document admitted no sources');
+    }
+    let installedCount = 0;
+    for (const bundled of admitted) {
       const sourceId = bundled['bookSourceUrl'] as string;
-      const version = bundled[TEST_BOOK_SOURCE_VERSION_FIELD] as number;
+      const bundledVersion = bundled['builtinVersion'] as number;
+      const bundledFingerprint = bundled['ruleFingerprint'] as string;
       // Query only the bounded app-owned identities. Loading every raw source here
       // would make cold-start cost scale with a user's imported source corpus.
       const existing = await this.loadExistingBundledTestBookSource(runtime, sourceId);
-      if (existing !== undefined && existing[TEST_BOOK_SOURCE_VERSION_FIELD] === version) {
+      if (existing === undefined) {
+        await this.importBundledSource(runtime, sourceId, bundled);
+        installedCount += 1;
         continue;
       }
-      const importedSource: JsonObject = { ...bundled };
-      if (existing !== undefined) {
+      if (!hasBuiltinMarker(existing)) {
+        // The user imported their own copy over the builtin identity: keep it.
+        hilog.info(LOG_DOMAIN, 'Reader',
+          'Bundled test source preserved as user copy: %{public}s', sourceId);
+        continue;
+      }
+      const storedActualFingerprint = await sha256Hex(canonicalRulePayloadJson(existing));
+      const reBundled = existing['readerTestBuiltinWithdrawn'] === true;
+      if (reBundled && isUserModifiedBuiltinCopy(existing, storedActualFingerprint)) {
+        // User modifications are never touched, not even on re-add.
+        hilog.info(LOG_DOMAIN, 'Reader',
+          'Bundled test source preserved, user-modified rules kept: %{public}s', sourceId);
+        continue;
+      }
+      const decision = decideBundledUpgrade(bundledVersion, bundledFingerprint, existing, storedActualFingerprint);
+      if (decision === 'userCopy') {
+        hilog.info(LOG_DOMAIN, 'Reader',
+          'Bundled test source preserved, user-modified rules kept: %{public}s', sourceId);
+        continue;
+      }
+      if (decision === 'unchanged' && !reBundled) {
+        continue;
+      }
+      if (reBundled) {
+        // A withdrawn identity was re-added to the bundle: restore the clean
+        // certified rules and the bundled default state.
+        hilog.info(LOG_DOMAIN, 'Reader',
+          'Bundled test source re-added after withdrawal, restoring defaults: %{public}s', sourceId);
+        await this.importBundledSource(runtime, sourceId, bundled);
+      } else {
+        const importedSource: JsonObject = { ...bundled };
+        delete importedSource['readerTestBuiltinWithdrawn'];
         if (typeof existing['enabled'] === 'boolean') {
           importedSource['enabled'] = existing['enabled'];
         }
         if (typeof existing['enabledExplore'] === 'boolean') {
           importedSource['enabledExplore'] = existing['enabledExplore'];
         }
-      }
-      const imported = await runtime.request('source.import', {
-        sourceId,
-        bookSource: importedSource,
-      }, { timeoutMs: 30000 });
-      if (imported.data['imported'] !== true || imported.data['sourceId'] !== sourceId) {
-        throw new Error(`source.import did not confirm bundled test source ${sourceId}`);
+        await this.importBundledSource(runtime, sourceId, importedSource);
       }
       installedCount += 1;
     }
+    const ledger = await BundledSourceLedger.load(this.host.getContext());
+    const bundledIds = new Set<string>(admitted.map(source => source['bookSourceUrl'] as string));
+    for (const entry of ledger.all()) {
+      if (bundledIds.has(entry.sourceId)) {
+        continue;
+      }
+      const stored = await this.loadExistingBundledTestBookSource(runtime, entry.sourceId);
+      if (stored === undefined) {
+        ledger.remove(entry.sourceId);
+        continue;
+      }
+      if (stored['readerTestBuiltinWithdrawn'] === true) {
+        continue;
+      }
+      const storedActualFingerprint = await sha256Hex(canonicalRulePayloadJson(stored));
+      const userModified = isUserModifiedBuiltinCopy(stored, storedActualFingerprint);
+      const retired: JsonObject = { ...stored };
+      retired['readerTestBuiltinWithdrawn'] = true;
+      if (!userModified) {
+        retired['enabled'] = false;
+      }
+      await this.importBundledSource(runtime, entry.sourceId, retired);
+      hilog.warn(LOG_DOMAIN, 'Reader',
+        'Bundled test source withdrawn from bundle, marked retired (enabled=%{public}s): %{public}s',
+        String(retired['enabled']), entry.sourceId);
+    }
+    ledger.syncCurrentBundle(admitted);
+    await ledger.save(this.host.getContext());
     return installedCount;
+  }
+
+  private async importBundledSource(
+    runtime: ReaderCoreRuntime,
+    sourceId: string,
+    bookSource: JsonObject,
+  ): Promise<void> {
+    const imported = await runtime.request('source.import', {
+      sourceId,
+      bookSource,
+    }, { timeoutMs: 30000 });
+    if (imported.data['imported'] !== true || imported.data['sourceId'] !== sourceId) {
+      throw new Error(`source.import did not confirm bundled test source ${sourceId}`);
+    }
   }
 
   private async loadExistingBundledTestBookSource(
@@ -655,15 +758,32 @@ export class ReaderRuntimeOwner {
       const sourceId = source['bookSourceUrl'];
       const name = source['bookSourceName'];
       const version = source[TEST_BOOK_SOURCE_VERSION_FIELD];
+      const builtinVersion = source['builtinVersion'];
+      const enabled = source['enabled'];
+      const defaultEnabled = source['defaultEnabled'];
       if (typeof sourceId !== 'string' || !sourceId.startsWith('https://') ||
-        typeof name !== 'string' || name.trim().length === 0 || source['enabled'] !== true ||
-        typeof version !== 'number' || !Number.isSafeInteger(version) || version < 1 ||
+        typeof name !== 'string' || name.trim().length === 0 ||
+        typeof enabled !== 'boolean' || typeof defaultEnabled !== 'boolean' ||
+        enabled !== defaultEnabled ||
+        typeof builtinVersion !== 'number' || !Number.isSafeInteger(builtinVersion) ||
+        builtinVersion < 1 || version !== builtinVersion ||
+        typeof source['builtinId'] !== 'string' ||
+        (source['builtinId'] as string).trim().length === 0 ||
+        typeof source['ruleFingerprint'] !== 'string' ||
+        !/^[0-9a-f]{64}$/.test(source['ruleFingerprint'] as string) ||
+        typeof source['verifiedAt'] !== 'string' ||
+        Number.isNaN(Date.parse(source['verifiedAt'] as string)) ||
+        typeof source['verificationSuiteVersion'] !== 'string' ||
+        (source['verificationSuiteVersion'] as string).trim().length === 0 ||
+        !Array.isArray(source['capabilities']) || (source['capabilities'] as unknown[]).length === 0 ||
+        typeof source['provenance'] !== 'object' || source['provenance'] === null ||
+        typeof (source['provenance'] as JsonObject)['origin'] !== 'string' ||
         typeof source['searchUrl'] !== 'string' ||
         typeof source['ruleSearch'] !== 'object' || source['ruleSearch'] === null ||
         typeof source['ruleBookInfo'] !== 'object' || source['ruleBookInfo'] === null ||
         typeof source['ruleToc'] !== 'object' || source['ruleToc'] === null ||
         typeof source['ruleContent'] !== 'object' || source['ruleContent'] === null) {
-        throw new Error(`Bundled test book source ${index + 1} has an invalid L1-L5 contract`);
+        throw new Error(`Bundled test book source ${index + 1} has an invalid manifest contract`);
       }
       sources.push(source);
     }
