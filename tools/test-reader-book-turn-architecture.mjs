@@ -126,15 +126,19 @@ assert.doesNotMatch(renderer, /vec3\(0\.96,\s*0\.95,\s*0\.92\)/,
   'the folded page must preserve the active page theme instead of replacing it with fixed beige');
 assert.match(renderer, /backMix = smoothstep\(HALF_PI - 0\.02, HALF_PI \+ 0\.02, abs\(vPhi\)\)/,
   'front/back material color must cross the analytic fold continuously; the S-arc drape carries a signed facing angle so abs() keeps the switch geometric');
-// 2026-08-30 user ruling: every painted shading family (valley / back plate /
-// spine pool / curl highlight / physical light rig) is deleted. The only
-// dynamic shadow is the Huawei-measured contact band (Draw 2, uBandWidth/
-// uBandPeak); the deleted names must not zombie back.
+// 2026-08-30 user rulings (final, third supersedes the second): the revealed
+// page keeps only the Huawei contact band (Draw 2, uBandWidth/uBandPeak) and
+// the spine pool (contract 8.4) plus the physical light rig stay deleted; the
+// sheet's OWN curl shading (fold valley / back plate / curvature / curl
+// highlight, contract 8.2) is restored so the wrap stays readable.
 assert.doesNotMatch(renderer + rendererHeader,
-  /uPoolPeak|uPoolWidthStart|uPoolWidthEnd|uValleyGate|uFrontStripWidth|uHighlightPhiWidth|VALLEY_PEAK|BACK_PLATE_DARK|kSpinePool|kCurlHighlight|kFrontStripRatio|bookturn_lighting|CurrentLightRig/,
-  'painted shading families and the light rig were deleted; only the Huawei contact band remains');
+  /uPoolPeak|uPoolWidthStart|uPoolWidthEnd|kSpinePool|bookturn_lighting|CurrentLightRig/,
+  'the spine pool and the light rig were deleted; they must not zombie back');
 assert.match(renderer, /uBandWidth/,
-  'the Huawei contact band (the single remaining dynamic shadow) must stay present');
+  'the Huawei contact band (the only revealed-page shadow) must stay present');
+assert.match(renderer,
+  /uValleyGate[\s\S]*uFrontStripWidth[\s\S]*uHighlightPhiWidth/,
+  'the sheet-self curl shading (valley / front strip / highlight) must stay present');
 assert.match(renderer, /glBufferData\([\s\S]*GL_STATIC_DRAW/);
 const draw = method(renderer, 'bool BookTurnRenderer::Draw(');
 assert.doesNotMatch(draw, /eglMakeCurrent|glGetUniformLocation|glGetError|glBufferData|glTexImage2D/,

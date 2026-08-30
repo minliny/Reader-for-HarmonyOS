@@ -125,6 +125,9 @@ private:
         GLint sigmaGrip = -1;
         GLint cameraDist = -1;
         GLint texture = -1;
+        GLint highlightPhiWidth = -1;
+        GLint frontStripWidth = -1;
+        GLint valleyGate = -1;
         GLint paperColor = -1;
         GLint paperFallback = -1;
     };
