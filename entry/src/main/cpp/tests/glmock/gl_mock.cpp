@@ -6,11 +6,13 @@
 #include "EGL/egl.h"
 #include "GLES3/gl3.h"
 
+#include <mutex>
 #include <string>
 #include <vector>
 
 namespace glmock {
 
+std::mutex g_mutex;
 std::vector<Entry> g_log;
 int g_nextHandle = 1;
 bool g_blendEnabled = false;
@@ -18,19 +20,22 @@ bool g_depthMaskOn = true;
 
 void Reset()
 {
+    std::lock_guard<std::mutex> lock(g_mutex);
     g_log.clear();
     g_nextHandle = 1;
     g_blendEnabled = false;
     g_depthMaskOn = true;
 }
 
-const std::vector<Entry>& Log()
+std::vector<Entry> Log()
 {
+    std::lock_guard<std::mutex> lock(g_mutex);
     return g_log;
 }
 
 void Record(const char* name, int64_t a, int64_t b)
 {
+    std::lock_guard<std::mutex> lock(g_mutex);
     g_log.push_back({ name, a, b });
 }
 
