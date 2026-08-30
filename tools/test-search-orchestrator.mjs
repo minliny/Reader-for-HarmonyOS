@@ -162,6 +162,13 @@ const last = (presentations) => presentations[presentations.length - 1];
   assert.equal(present.searching, false, 'final results close the streaming in-progress slot');
   assert.equal(present.totalSourceCount, 8);
   assert.equal(present.completedSourceCount, 8);
+  assert.equal(present.failedSourceCount, 0, 'a fully healthy sweep reports zero failed sources');
+  assert.ok(present.results.every((r) => r.searchRequestId === present.results[0].searchRequestId),
+    'every result of one sweep carries the same searchRequestId');
+  assert.match(present.results[0].searchRequestId, /^search-/,
+    'the sweep id comes from the gateway format');
+  assert.ok(present.results.every((r) => typeof r.sourceRuleVersion === 'number'),
+    'every result carries its per-source rule version');
   assert.equal(owner.state.calls.length, 8, 'every enabled source was searched');
   const ids = present.results.map((r) => `${r.sourceId}:${r.bookId}`);
   assert.deepEqual(ids, [
@@ -201,6 +208,7 @@ const last = (presentations) => presentations[presentations.length - 1];
   assert.equal(present.kind, 'results', 'one failing source must not hide healthy-source results');
   assert.equal(present.searching, false);
   assert.equal(present.completedSourceCount, 4, 'failures count as completed sources');
+  assert.equal(present.failedSourceCount, 1, 'the isolated failure is reported to the surface');
   assert.equal(owner.state.calls.length, 4, 'a broken source must not cancel later sources');
   assert.deepEqual(
     present.results.map((result) => result.sourceId),
@@ -225,6 +233,7 @@ const last = (presentations) => presentations[presentations.length - 1];
 
   assert.equal(last(presentations).kind, 'error', 'all failing sources yield whole-search error');
   assert.equal(last(presentations).searchedSourceCount, 4, 'error carries the attempted source count');
+  assert.equal(last(presentations).failedSourceCount, 4, 'error carries every failed source count');
   assert.equal(owner.state.calls.length, 4, 'every enabled source is attempted before the error surface');
   assert.ok(
     !presentations.some((p) => p.kind === 'results'),
@@ -275,6 +284,8 @@ const last = (presentations) => presentations[presentations.length - 1];
   assert.ok(
     present.results.every((r) => r.bookId.startsWith('/b-新-')),
     `late older results must not overwrite: ${JSON.stringify(present.results.map((r) => r.bookId))}`);
+  assert.ok(present.results.every((r) => r.searchRequestId === present.results[0].searchRequestId),
+    'the settled list only carries one sweep id: late old-sweep results are rejected');
 }
 
 // 6. P0 add-source flow: a fresh entry with zero sources lands on
@@ -425,6 +436,7 @@ const last = (presentations) => presentations[presentations.length - 1];
   assert.ok(emits.length >= 1, 'the healthy source still streams its results');
   assert.equal(emits[0].searching, true);
   assert.equal(emits[0].completedSourceCount, 2, 'the failure counts as completed');
+  assert.equal(emits[0].failedSourceCount, 1, 'the streamed snapshot carries the failure count');
   assert.deepEqual(emits[0].results.map((r) => r.bookId), ['/b-source-1'],
     'only the healthy source contributes books');
   assert.equal(last(presentations).searching, false, 'the sweep settles to closed');

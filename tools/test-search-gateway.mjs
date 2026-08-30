@@ -65,15 +65,18 @@ const validOutcome = await gatewayReturning({
     token: 'search-token',
     page: '2',
   },
-}).searchBySource(source, '关键字');
+}).searchBySource(source, '关键字', undefined, 'sweep-1');
 
 assert.deepEqual(validOutcome, {
   ok: true,
   results: [{
     sourceId: 'source-a',
     sourceName: '甲书源',
+    bookSourceUrl: 'source-a',
     bookId: '/detail/book-42?from=search',
     detailUrl: '/detail/book-42?from=search',
+    searchRequestId: 'sweep-1',
+    sourceRuleVersion: 1,
     title: '远程书籍',
     author: '作者',
     coverUrl: 'https://example.test/cover.jpg',
@@ -108,18 +111,66 @@ for (const invalidVariables of [
 const legacyOutcome = await gatewayReturning({
   bookId: '/legacy/gateway-book',
   title: '旧网关响应',
-}).searchBySource(source, '关键字');
+}).searchBySource(source, '关键字', undefined, 'sweep-2');
 assert.deepEqual(legacyOutcome, {
   ok: true,
   results: [{
     sourceId: 'source-a',
     sourceName: '甲书源',
+    bookSourceUrl: 'source-a',
     bookId: '/legacy/gateway-book',
     detailUrl: '/legacy/gateway-book',
+    searchRequestId: 'sweep-2',
+    sourceRuleVersion: 1,
     title: '旧网关响应',
     author: '',
     variables: [],
   }],
 });
+
+// Identity: a source.list baseUrl becomes the immutable bookSourceUrl.
+const baseUrlSource = { sourceId: 'source-b', name: '乙书源', enabled: true, baseUrl: 'https://b.example.test' };
+const baseUrlOutcome = await new SearchGateway({
+  request: async (command, params) => {
+    assert.equal(command, 'book.search');
+    return { data: { sourceId: params.sourceId, books: [{ bookId: '/b/book', title: '书' }] } };
+  },
+}).searchBySource(baseUrlSource, '关键字', undefined, 'sweep-3');
+assert.equal(baseUrlOutcome.results[0].bookSourceUrl, 'https://b.example.test',
+  'bookSourceUrl carries the source.list baseUrl identity');
+
+// Identity: the rule version is stable while the baseUrl is unchanged and
+// bumps when the same sourceId reports a different baseUrl.
+let sourceListUrl = 'https://rule-one.example.test';
+const versionGateway = new SearchGateway({
+  request: async (command, params) => {
+    if (command === 'source.list') {
+      return { data: { sources: [
+        { sourceId: 'source-b', name: '乙书源', enabled: true, baseUrl: sourceListUrl },
+      ] } };
+    }
+    assert.equal(command, 'book.search');
+    return { data: { sourceId: params.sourceId, books: [{ bookId: '/v/book', title: '书' }] } };
+  },
+});
+const listOne = await versionGateway.loadSources();
+assert.deepEqual(listOne.map((s) => s.baseUrl), ['https://rule-one.example.test'],
+  'source.list decodes the optional baseUrl field');
+const versionOne = (await versionGateway.searchBySource(listOne[0], '关键字')).results[0].sourceRuleVersion;
+const versionAgain = (await versionGateway.searchBySource(listOne[0], '关键字')).results[0].sourceRuleVersion;
+assert.equal(versionOne, 1);
+assert.equal(versionAgain, 1, 'the rule version is stable for an unchanged baseUrl');
+sourceListUrl = 'https://rule-two.example.test';
+const listTwo = await versionGateway.loadSources();
+const versionTwo = (await versionGateway.searchBySource(listTwo[0], '关键字')).results[0].sourceRuleVersion;
+assert.equal(versionTwo, 2, 'a changed baseUrl bumps the rule version');
+
+// Identity: without an explicit sweep id the gateway generates a stable one
+// shared by every result of the same call.
+const generated = await gatewayReturning({ bookId: '/g/book', title: '书' }).searchBySource(source, '关键字');
+assert.match(generated.results[0].searchRequestId, /^search-[0-9a-z]+-\d+-\d+$/,
+  'the generated searchRequestId has the gateway format');
+assert.equal(generated.results[0].sourceRuleVersion, 1,
+  'a fresh source starts at rule version 1');
 
 console.log('search gateway remote-result contract: PASS');
