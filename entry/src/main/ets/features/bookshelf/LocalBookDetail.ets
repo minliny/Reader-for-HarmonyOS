@@ -61,6 +61,11 @@ export struct LocalBookDetail {
   @Prop book: ReadingBookDetail;
   @Prop toc: LocalReadingTocEntry[] = [];
   @Prop sourceSwitchEnabled: boolean = false;
+  // Remote detail readability verdict: the start-reading action is enabled
+  // only when the leading-chapter probe admits the content. Local books keep
+  // the defaults (enabled, empty reason) and never see the gate.
+  @Prop readingEnabled: boolean = true;
+  @Prop readingBlockedReason: string = '';
   @Prop inBookshelf: boolean = true;
   @Prop removalEnabled: boolean = true;
   @Prop removing: boolean = false;
@@ -400,11 +405,11 @@ export struct LocalBookDetail {
       .backgroundColor(TOK_PRIMARY_DARK)
       .border({ width: TOK_BORDER_W, color: TOK_PRIMARY_DARK })
       .borderRadius(999)
-      .opacity(this.readingActionsReady() && !this.removing ? 1 : 0.5)
-      .enabled(this.readingActionsReady() && !this.removing)
+      .opacity(this.readingActionsReady() && !this.removing && this.readingEnabled ? 1 : 0.5)
+      .enabled(this.readingActionsReady() && !this.removing && this.readingEnabled)
       .accessibilityText(this.readingActionLabel())
       .onClick((): void => {
-        if (this.readingActionsReady() && !this.removing) {
+        if (this.readingActionsReady() && !this.removing && this.readingEnabled) {
           this.onContinue();
         }
       });
@@ -529,6 +534,9 @@ export struct LocalBookDetail {
   private readingActionLabel(): string {
     if (!this.readingActionsReady()) {
       return this.pendingReadingLabel();
+    }
+    if (!this.readingEnabled && this.readingBlockedReason.trim().length > 0) {
+      return this.readingBlockedReason;
     }
     return this.inBookshelf ? '继续阅读' : '开始阅读';
   }

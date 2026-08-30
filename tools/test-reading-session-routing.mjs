@@ -28,6 +28,10 @@ assert.ok(remoteOpen.indexOf("this.route = 'detail'") < remoteOpen.indexOf('gate
   'remote navigation must mount the inert detail shell before serialized Core/network admission completes');
 assert.match(index, /sourceSwitchEnabled: this\.detailBook\.sourceId !== LOCAL_SOURCE_ID &&\s*this\.remoteReadingSession !== undefined && this\.detailToc\.length > 0/,
   'the provisional detail shell must not expose reading/source-switch actions before session and TOC readiness');
+assert.match(index, /readingEnabled: this\.remoteContentVerdict === 'readable'/,
+  'the start-reading action is enabled only after the leading-chapter verdict admits the content');
+assert.match(index, /probeRemoteContentVerdict\(gateway, session, isCurrent\)/,
+  'the verdict probe must reuse the admitted session instead of opening a second one');
 assert.doesNotMatch(remoteOpen, /remoteShelf|remoteBookshelf|shelfBooks\s*=\s*new Map/,
   'remote books must not create a second UI-owned shelf store');
 assert.match(index, /this\.remoteReadingSession = session/);

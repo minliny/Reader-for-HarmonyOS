@@ -33,11 +33,24 @@ assert.match(index, /session\.entries\.length - commit\.chapterIndex - 1 <= CATA
   'reading near the current end must trigger a throttled TOC refresh');
 assert.match(index, /for \(let start = 0; start < books\.length; start \+= 2\)[\s\S]*Promise\.all\(batch\.map/,
   'bookshelf updates must use a bounded two-book batch');
-assert.match(index, /private onReadingFailure\([\s\S]*this\.startSourceDiscovery\(generation, true\)/,
-  'remote read failure must enter the ranked automatic source-recovery seam');
+// 2026-08-31 search handoff §2: automatic source recovery is retired. Reading
+// failures are classified first; book-source failures ask the user to confirm
+// retry-vs-switch, and nothing ever auto-picks a candidate from this path.
+const failureBlock = index.slice(index.indexOf('private onReadingFailure('), index.indexOf('private showReadingFailure('));
+assert.ok(failureBlock.length > 0, 'onReadingFailure must exist ahead of showReadingFailure');
+assert.match(failureBlock, /isRemoteSourceFailureKind\(kind\)/,
+  'read failure must classify book-source vs local failures before any UI');
+assert.match(failureBlock, /value: '重试当前源'/,
+  'book-source failures must offer a user-confirmed retry on the current source');
+assert.match(failureBlock, /value: '选择其他书源'[\s\S]*this\.openSourceSwitch\(\)/,
+  'book-source failures must offer a user-confirmed manual source switch');
+assert.doesNotMatch(failureBlock, /startSourceDiscovery/,
+  'read failure must never auto-open or auto-pick source discovery');
+assert.doesNotMatch(failureBlock, /automaticSourceRecoveryKey/,
+  'the automatic recovery latch is retired together with the auto-switch path');
 assert.match(index,
   /if \(autoPickFirst\) \{[\s\S]*value\.isCurrent !== true[\s\S]*this\.onPickSource\(candidate\);/,
-  'automatic recovery must skip the failed/current identity and use the normal transaction');
+  'the discovery auto-pick branch stays available only to explicit non-failure callers');
 assert.match(index,
   /gateway\.loadCachedCandidates\(query, isCurrent\)[\s\S]*cached\.length > 0[\s\S]*gateway\.refreshCandidates/,
   'opening source switch must admit durable candidates before any remote refresh');

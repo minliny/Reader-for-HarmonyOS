@@ -16,6 +16,10 @@ import {
 } from './ReadingSessionFlowGateway';
 import type { RemoteReadingSession } from './RemoteReadingFlowGateway';
 import {
+  remoteReadingFailureKindOf,
+  type RemoteReadingFailureKind,
+} from './RemoteContentAdmission';
+import {
   contentMetricForChapter,
   validateContentMetricsAgainstToc,
   wholeBookAnchorForPercent,
@@ -740,8 +744,10 @@ export struct ReadingExperience {
   */
   onReadingReady: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   onReadingCommitted: (commit: ReadingCommit) => void = (_commit: ReadingCommit): void => {};
-  onReadingFailure: (sourceId: string, bookId: string, message: string) => void =
-    (_sourceId: string, _bookId: string, _message: string): void => {};
+  onReadingFailure: (sourceId: string, bookId: string, message: string,
+    failureKind?: RemoteReadingFailureKind) => void =
+    (_sourceId: string, _bookId: string, _message: string,
+      _failureKind?: RemoteReadingFailureKind): void => {};
   /**
    * Reports a chapter only after its first physical page has been measured and
    * its Unicode-scalar anchor has been accepted by Core.  Full Directory may
@@ -8311,7 +8317,10 @@ export struct ReadingExperience {
     this.measurementGeneration += 1;
     this.measurementSelectionToken = -1;
     console.error(`ReadingExperience failed: ${this.failureCode}`);
-    this.onReadingFailure(this.sourceId, this.bookId, this.failureCode);
+    // The stable failure taxonomy lets the host separate book-source failures
+    // (user-confirmed switch/retry) from local pagination/layout/storage ones.
+    const failureKind: RemoteReadingFailureKind = remoteReadingFailureKindOf(error);
+    this.onReadingFailure(this.sourceId, this.bookId, this.failureCode, failureKind);
     // Figma has no admitted error surface. Leave via the same serialized exit
     // path instead of retaining a blank/failed page.
     this.beginExit();

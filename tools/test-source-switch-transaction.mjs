@@ -32,7 +32,9 @@ assert.match(index, /pending\.targetSourceId === session\.identity\.sourceId[\s\
   'target admission must enter the normal physical reader at Core matched chapter');
 assert.match(index, /Remote Book Detail state failed to load:[\s\S]*this\.rollbackPendingSourceSwitch\(error\.message\)/);
 assert.match(index, /private onReadingFailure\([\s\S]*this\.rollbackPendingSourceSwitch\(message\)/);
-assert.match(index, /private onReadingFailure\([\s\S]*this\.showReadingFailure\('阅读失败', message\)/,
+assert.match(index, /private onReadingFailure\([\s\S]*isRemoteSourceFailureKind\(kind\)/,
+  'reading failures must be classified before the visible failure surface');
+assert.match(index, /private onReadingFailure\([\s\S]*this\.showReadingFailure\(kind === 'STORAGE_FAILED' \? '本地缓存不可用' : '阅读失败', message\)/,
   'ordinary reading failures must remain visible after source-switch handling is excluded');
 assert.match(index, /gateway\.rollbackSwitch\([\s\S]*pending\.transactionId/);
 assert.match(index, /pending\.targetChapterIndex === commit\.chapterIndex[\s\S]*this\.pendingSourceSwitch = undefined/,
@@ -42,10 +44,10 @@ assert.match(index, /clearBookIdentity\(pending\.fromSourceId, pending\.fromBook
 assert.match(index, /this\.sourceSwitchState\.kind === 'switching'[\s\S]*transactionId !== undefined[\s\S]*return;/,
   'the switch overlay cannot close while Core commit might be publishing its journal');
 
-assert.match(reader, /this\.onReadingFailure\(this\.sourceId, this\.bookId, this\.failureCode\)[\s\S]*this\.beginExit\(\)/,
-  'reader failure must notify the transaction owner before its normal exit seam');
-assert.match(shell, /onReadingFailure: \(sourceId: string, bookId: string, message: string\)/);
-assert.match(shell, /this\.onReadingFailure\(sourceId, bookId, message\)/);
+assert.match(reader, /this\.onReadingFailure\(this\.sourceId, this\.bookId, this\.failureCode, failureKind\)[\s\S]*this\.beginExit\(\)/,
+  'reader failure must notify the transaction owner with the typed kind before its normal exit seam');
+assert.match(shell, /onReadingFailure: \(sourceId: string, bookId: string, message: string,\s*failureKind\?: RemoteReadingFailureKind\)/);
+assert.match(shell, /this\.onReadingFailure\(sourceId, bookId, message, failureKind\)/);
 assert.match(shell, /sourceSwitchTransactionId: this\.sourceSwitchTransactionId/);
 assert.match(reader, /new ReadingSessionFlowGateway\([\s\S]*this\.sourceSwitchTransactionId/);
 

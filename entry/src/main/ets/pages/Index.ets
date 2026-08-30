@@ -54,6 +54,13 @@ import {
 } from '../features/reading/RemoteReadingFlowGateway';
 import { ReadingOfflineGateway } from '../features/reading/ReadingOfflineGateway';
 import {
+  isRemoteSourceFailureKind,
+  remoteReadingFailureKindOf,
+  verdictForFailureKind,
+  type RemoteContentVerdict,
+  type RemoteReadingFailureKind,
+} from '../features/reading/RemoteContentAdmission';
+import {
   isRemoteReadingCacheFallbackEligible,
   type RemoteReadingVariable,
 } from '../features/reading/RemoteReadingContract';
@@ -245,6 +252,26 @@ class RemoteSessionAttemptOutcome {
   }
 }
 
+/** Chinese one-liner for a book-source failure kind (user confirmation UI). */
+function remoteSourceFailureSummary(kind: RemoteReadingFailureKind): string {
+  switch (kind) {
+    case 'SOURCE_HTTP_FAILED':
+      return '网络请求失败';
+    case 'SOURCE_PARSE_FAILED':
+      return '书源解析失败';
+    case 'SOURCE_TOC_EMPTY':
+      return '目录为空';
+    case 'SOURCE_CONTENT_EMPTY':
+      return '正文为空';
+    case 'SOURCE_PAYWALL':
+      return '该章节需要付费';
+    case 'SOURCE_AUTH_REQUIRED':
+      return '该源需要登录或验证';
+    default:
+      return '正文加载失败';
+  }
+}
+
 class LocalImportPresentation {
   state: LocalImportDialogState;
   batch: LocalImportBatch | undefined;
@@ -279,6 +306,8 @@ struct Index {
   @State private detailInBookshelf: boolean = true;
   @State private detailLoadingMessage: string = '';
   @State private remoteReadingSession: RemoteReadingSession | undefined = undefined;
+  /** Readability verdict gating the remote detail "start reading" action. */
+  @State private remoteContentVerdict: RemoteContentVerdict = 'readable';
   @State private requestedChapterIndex: number | undefined = undefined;
   @State private preparedReaderRoute: PreparedReaderRoute = 'reading';
   @State private directoryCurrentChapterIndex: number = -1;
@@ -349,7 +378,6 @@ struct Index {
   private bookshelfLoadGeneration: number = 0;
   private bookshelfBackgroundRefreshRunning: boolean = false;
   private remoteCatalogRefreshAt: Map<string, number> = new Map();
-  private automaticSourceRecoveryKey: string = '';
   private searchOrchestrator: SearchOrchestrator | undefined;
   /** Bounded, process-local single-flight only; Core remains the durable cache. */
   private searchDetailWarmupGeneration: number = 0;
@@ -768,6 +796,8 @@ struct Index {
           sourceSwitchEnabled: this.detailBook.sourceId !== LOCAL_SOURCE_ID &&
             this.remoteReadingSession !== undefined && this.detailToc.length > 0 &&
             this.bookshelfRemovalActiveKey.length === 0,
+          readingEnabled: this.remoteContentVerdict === 'readable',
+          readingBlockedReason: this.remoteContentVerdictLabel(this.remoteContentVerdict),
           inBookshelf: this.detailInBookshelf,
           loadingMessage: this.detailLoadingMessage,
           removalEnabled: !this.readingSessionActive && !this.sourceSwitchVisible &&
@@ -2071,18 +2101,19 @@ struct Index {
   }
 
   private searchWarmupForSeeds(seeds: RemoteReadingBookSeed[]): Promise<RemoteReadingSession> | undefined {
-    for (const seed of seeds) {
-      const key = this.searchDetailKey(seed.sourceId, seed.bookId);
-      const ready = this.searchDetailWarmSessions.get(key);
-      if (ready !== undefined) {
-        return Promise.resolve(ready);
-      }
-      const active = this.searchDetailWarmups.get(key);
-      if (active !== undefined) {
-        return active;
-      }
+    const primary = seeds[0];
+    if (primary === undefined) {
+      return undefined;
     }
-    return undefined;
+    // Only a warm session for the clicked source may serve as the online
+    // attempt. Variant warm sessions stay switch-candidate cache; joining one
+    // would let it win the detail identity over seeds[0].
+    const key = this.searchDetailKey(primary.sourceId, primary.bookId);
+    const ready = this.searchDetailWarmSessions.get(key);
+    if (ready !== undefined) {
+      return Promise.resolve(ready);
+    }
+    return this.searchDetailWarmups.get(key);
   }
 
   private searchDetailKey(sourceId: string, bookId: string): string {
@@ -2280,6 +2311,9 @@ struct Index {
     this.preparedReaderRoute = 'reading';
     this.directoryCurrentChapterIndex = -1;
     this.directoryChapterTitle = '';
+    // Browsing the detail never blocks on the verdict; only the "start
+    // reading" action waits for the leading-chapter readability probe.
+    this.remoteContentVerdict = 'verifying';
     this.route = 'detail';
     if (shelfSnapshot?.lastCheckAt !== undefined) {
       const catalogKey = `${seed.sourceId}\u0000${seed.bookId}`;
@@ -2340,6 +2374,8 @@ struct Index {
         const admittedSourceName = admittedSeedName.trim().length > 0 ?
           admittedSeedName.trim() : session.identity.sourceId;
         this.remoteReadingSession = session;
+        this.remoteContentVerdict = 'verifying';
+        this.probeRemoteContentVerdict(gateway, session, isCurrent);
         this.detailBook = {
           sourceId: session.identity.sourceId,
           sourceName: admittedSourceName.length > 0 ? admittedSourceName : session.identity.sourceId,
@@ -2468,13 +2504,30 @@ struct Index {
     return this.firstSuccessfulDetailAdmission([cacheAttempt, onlineAttempt]);
   }
 
+  /**
+   * Only the clicked source's own identity may win the detail admission. A
+   * same-book variant session is switch-candidate material; it must never
+   * silently replace the primary detail identity (the "search result looks
+   * fake" failure: user picks source A, detail shows source B).
+   */
+  private isPrimarySearchDetailIdentity(
+    primary: RemoteReadingBookSeed,
+    session: RemoteReadingSession,
+  ): boolean {
+    return session.identity.sourceId === primary.sourceId &&
+      session.identity.bookId === primary.bookId;
+  }
+
   private async openCachedSearchCandidate(
     gateway: RemoteReadingFlowGateway,
     seeds: RemoteReadingBookSeed[],
     isCurrent: () => boolean,
   ): Promise<RemoteReadingSession> {
     try {
-      return await gateway.openCachedCatalogSession(seeds[0], isCurrent);
+      const cached = await gateway.openCachedCatalogSession(seeds[0], isCurrent);
+      if (this.isPrimarySearchDetailIdentity(seeds[0], cached)) {
+        return cached;
+      }
     } catch (error) {
       if (!isCurrent()) {
         throw error instanceof Error ? error : new Error(errorMessageOf(error));
@@ -2499,6 +2552,11 @@ struct Index {
       const outcome = await Promise.race(Array.from(active.values()));
       active.delete(outcome.index);
       if (outcome.session !== undefined) {
+        if (!this.isPrimarySearchDetailIdentity(seeds[0], outcome.session)) {
+          // A same-book variant must not win the detail admission; keep
+          // racing so the clicked source's own cache result can still land.
+          continue;
+        }
         for (const activeIndex of active.keys()) {
           cancelled.add(activeIndex);
         }
@@ -2588,6 +2646,17 @@ struct Index {
         }
         active.delete(outcome.index);
         if (outcome.session !== undefined) {
+          if (!this.isPrimarySearchDetailIdentity(seeds[0], outcome.session)) {
+            // A same-book variant must not win the detail identity: the user
+            // clicked seeds[0], so the detail stays seeds[0]. Keep racing and
+            // unlock the hedge so the remaining candidates fill the slots.
+            hilog.info(DOMAIN, 'Reader',
+              'Search detail variant session rejected for %{public}s/%{public}s; winner was %{public}s/%{public}s',
+              seeds[0].sourceId, seeds[0].bookId,
+              outcome.session.identity.sourceId, outcome.session.identity.bookId);
+            hedgeUnlocked = true;
+            continue;
+          }
           for (const activeIndex of active.keys()) {
             cancelled.add(activeIndex);
           }
@@ -4065,29 +4134,119 @@ struct Index {
     this.reopenSwitchedBook(book);
   }
 
-  private onReadingFailure(sourceId: string, bookId: string, message: string): void {
+  private onReadingFailure(sourceId: string, bookId: string, message: string,
+    failureKind?: RemoteReadingFailureKind): void {
     const pending = this.pendingSourceSwitch;
     if (pending !== undefined && pending.targetSourceId === sourceId && pending.targetBookId === bookId) {
       this.rollbackPendingSourceSwitch(message);
       return;
     }
     const detail = this.detailBook;
-    const recoveryKey = `${sourceId}\u0000${bookId}`;
     if (detail === undefined || detail.sourceId === LOCAL_SOURCE_ID || detail.sourceId !== sourceId ||
-      detail.bookId !== bookId || this.sourceSwitchVisible ||
-      this.automaticSourceRecoveryKey === recoveryKey) {
+      detail.bookId !== bookId || this.sourceSwitchVisible) {
       this.showReadingFailure('阅读失败', message);
       return;
     }
-    // Match Legado's missing-source recovery path: discover compatible
-    // sources and try the first ranked candidate through the existing
-    // transactional switch/rollback seam. The panel remains visible if
-    // discovery or the automatic candidate fails, so the user keeps control.
-    this.automaticSourceRecoveryKey = recoveryKey;
-    const generation = this.nextNavigationGeneration();
-    this.sourceSwitchVisible = true;
-    this.sourceSwitchState = { kind: 'discovering' };
-    this.startSourceDiscovery(generation, true);
+    // Callers that predate the typed kind (or unclassifiable errors) land on
+    // the safe non-source branch: they never offer a source switch.
+    const kind: RemoteReadingFailureKind = failureKind ?? 'RENDER_FAILED';
+    if (!isRemoteSourceFailureKind(kind)) {
+      // Local pagination/layout/render/storage failures have no source fix;
+      // switching sources cannot repair them, so only show the typed error.
+      this.showReadingFailure(kind === 'STORAGE_FAILED' ? '本地缓存不可用' : '阅读失败', message);
+      return;
+    }
+    // Book-source failures are the user's call: retry the current source or
+    // manually pick another one through the existing switch panel. No
+    // automatic discovery and no automatic candidate picking.
+    const summary = remoteSourceFailureSummary(kind);
+    this.getUIContext().showAlertDialog({
+      title: '正文加载失败',
+      message: message.trim().length > 0 ? `${summary}：${message}` : summary,
+      autoCancel: false,
+      primaryButton: {
+        value: '重试当前源',
+        action: (): void => this.retryCurrentReadingSource(),
+      },
+      secondaryButton: {
+        value: '选择其他书源',
+        action: (): void => this.openSourceSwitch(),
+      },
+    });
+  }
+
+  private retryCurrentReadingSource(): void {
+    if (this.detailBook === undefined || this.detailBook.sourceId === LOCAL_SOURCE_ID ||
+      this.detailToc.length === 0) {
+      return;
+    }
+    // Re-enter the reading session for the same admitted identity; the reader
+    // reloads the current chapter from the same source.
+    this.openReading(undefined);
+  }
+
+  /**
+   * Reuse the admitted session to probe the leading chapter bodies (no second
+   * openSession). The verdict only gates the "start reading" action: the
+   * detail stays browsable and a failed probe never clears the admitted
+   * detailBook, matching the retain-the-admitted-cache contract.
+   */
+  private probeRemoteContentVerdict(
+    gateway: RemoteReadingFlowGateway,
+    session: RemoteReadingSession,
+    isCurrent: () => boolean,
+  ): void {
+    const limit = Math.min(3, session.entries.length);
+    const probe = (attempt: number): void => {
+      if (!isCurrent()) {
+        return;
+      }
+      if (attempt >= limit) {
+        this.remoteContentVerdict = 'contentUnavailable';
+        return;
+      }
+      void gateway.loadChapter(session, session.entries[attempt].index, isCurrent)
+        .then((): void => {
+          if (isCurrent()) {
+            this.remoteContentVerdict = 'readable';
+          }
+        })
+        .catch((error: Error): void => {
+          if (!isCurrent()) {
+            return;
+          }
+          const kind = remoteReadingFailureKindOf(error);
+          // A blank/placeholder leading chapter (announcement, loading stub)
+          // is not fatal: skip to the next leading chapter like the
+          // admission suite does; paywall/auth/parse failures stop at once.
+          if (kind === 'SOURCE_CONTENT_EMPTY' && attempt + 1 < limit) {
+            probe(attempt + 1);
+            return;
+          }
+          this.remoteContentVerdict = verdictForFailureKind(kind);
+        });
+    };
+    probe(0);
+  }
+
+  private remoteContentVerdictLabel(verdict: RemoteContentVerdict): string {
+    switch (verdict) {
+      case 'verifying':
+        return '正在验证正文…';
+      case 'readable':
+        return '';
+      case 'authRequired':
+        return '该源需要登录或验证';
+      case 'paywalled':
+        return '该章节需要付费';
+      case 'networkFailed':
+        return '网络请求失败';
+      case 'parseFailed':
+        return '书源解析失败';
+      case 'contentUnavailable':
+      default:
+        return '正文暂不可读';
+    }
   }
 
   private showReadingFailure(title: string, message: string): void {
@@ -4280,7 +4439,6 @@ struct Index {
           hilog.warn(DOMAIN, 'Reader', 'Old source book cache cleanup failed: %{public}s', error.message);
         });
     }
-    this.automaticSourceRecoveryKey = '';
     const session = this.remoteReadingSession;
     if (session !== undefined && session.identity.sourceId === commit.sourceId &&
       session.identity.bookId === commit.bookId) {

@@ -8,6 +8,7 @@ import type {
   ReaderPageBookmarkToggleRequest,
 } from '../reading/ReaderDirectoryMarkerState';
 import type { RemoteReadingSession } from '../reading/RemoteReadingFlowGateway';
+import type { RemoteReadingFailureKind } from '../reading/RemoteContentAdmission';
 
 
 // ReaderShell —— 阅读会话的 UI 组合层 (Batch 2, FIGMA_NATIVE_UI_ARCHITECTURE_PLAN §六)。
@@ -58,8 +59,10 @@ export struct ReaderShell {
   onExit: () => void = (): void => {};
   onReadingReady: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   onReadingCommitted: (commit: ReadingCommit) => void = (_commit: ReadingCommit): void => {};
-  onReadingFailure: (sourceId: string, bookId: string, message: string) => void =
-    (_sourceId: string, _bookId: string, _message: string): void => {};
+  onReadingFailure: (sourceId: string, bookId: string, message: string,
+    failureKind?: RemoteReadingFailureKind) => void =
+    (_sourceId: string, _bookId: string, _message: string,
+      _failureKind?: RemoteReadingFailureKind): void => {};
   onChapterCommitted: (chapterIndex: number, chapterTitle: string) => void =
     (_chapterIndex: number, _chapterTitle: string): void => {};
   onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
@@ -112,8 +115,9 @@ export struct ReaderShell {
           onExit: (): void => this.onExit(),
           onReadingReady: (chapterIndex: number): void => this.onReadingReady(chapterIndex),
           onReadingCommitted: (commit: ReadingCommit): void => this.onReadingCommitted(commit),
-          onReadingFailure: (sourceId: string, bookId: string, message: string): void =>
-            this.onReadingFailure(sourceId, bookId, message),
+          onReadingFailure: (sourceId: string, bookId: string, message: string,
+            failureKind?: RemoteReadingFailureKind): void =>
+            this.onReadingFailure(sourceId, bookId, message, failureKind),
           onChapterCommitted: (chapterIndex: number, chapterTitle: string): void =>
             this.onChapterCommitted(chapterIndex, chapterTitle),
           onOpenDirectory: (): void => this.onOpenDirectory(),
