@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <utility>
 #include <vector>
 
@@ -37,6 +38,20 @@ constexpr int kMaxConsecutiveDrawFailures = 8;
 
 constexpr size_t kFrameDiagCapacity = 512;
 
+// ArkUI presented-confirmation watchdog. Diagnostic only: a timeout keeps the
+// terminal frame retained (it can never expose the outgoing page) and logs
+// once. Host tests shrink it via BOOKTURN_RETAIN_TIMEOUT_MS.
+double TerminalRetainTimeoutMs()
+{
+    static const double value = []() {
+        const char* raw = std::getenv("BOOKTURN_RETAIN_TIMEOUT_MS");
+        if (raw == nullptr) return 2000.0;
+        const double parsed = std::atof(raw);
+        return parsed >= 50.0 && parsed <= 60000.0 ? parsed : 2000.0;
+    }();
+    return value;
+}
+
 float Percentile(std::vector<float>& values, float fraction)
 {
     if (values.empty()) return 0.0F;
@@ -50,6 +65,7 @@ float Percentile(std::vector<float>& values, float fraction)
 
 BookTurnHost::BookTurnHost() : renderThread_([this]() { Run(); })
 {
+    (void)TerminalRetainTimeoutMs();
 }
 
 BookTurnHost::~BookTurnHost()
@@ -166,6 +182,38 @@ bool BookTurnHost::CommitSlots(uint64_t generation, Direction direction)
     return true;
 }
 
+bool BookTurnHost::RetainTerminalFrame(uint64_t generation)
+{
+    if (generation == 0) return false;
+    const uint64_t retained = retainedTerminalGenerationAtomic_.load(std::memory_order_acquire);
+    // Synchronous stale gate: a hold request for any generation other than
+    // the currently retained one must not touch the newer hold.
+    if (retained != 0 && retained != generation) return false;
+    std::lock_guard<std::mutex> lock(mutex_);
+    pendingRetain_ = true;
+    pendingRetainGeneration_ = generation;
+    condition_.notify_all();
+    return true;
+}
+
+bool BookTurnHost::ReleaseTerminalFrame(uint64_t generation)
+{
+    if (generation == 0) return false;
+    // Synchronous stale gate: a presented confirmation only clears the exact
+    // generation it confirms (contract: stale confirms never clear).
+    if (retainedTerminalGenerationAtomic_.load(std::memory_order_acquire) != generation) return false;
+    std::lock_guard<std::mutex> lock(mutex_);
+    pendingRelease_ = true;
+    pendingReleaseGeneration_ = generation;
+    condition_.notify_all();
+    return true;
+}
+
+uint64_t BookTurnHost::RetainedTerminalGeneration() const
+{
+    return retainedTerminalGenerationAtomic_.load(std::memory_order_acquire);
+}
+
 bool BookTurnHost::CanStart(Direction direction) const
 {
     return rendererReady_.load(std::memory_order_acquire) && RequiredTexturesReady(direction);
@@ -245,7 +293,13 @@ void BookTurnHost::UpdateFrameLoopWanted()
 
 void BookTurnHost::Run()
 {
+#ifdef __APPLE__
+    // Host-test builds (macOS) take the single-argument pthread_setname_np;
+    // the device build uses the pthread+name form below.
+    (void)pthread_setname_np("reader-bookturn");
+#else
     (void)pthread_setname_np(pthread_self(), "reader-bookturn");
+#endif
     // Real-device pacing (2026-08-30 diagnosis): without an explicit QoS the
     // render thread wakes on a LITTLE core at background priority and the
     // per-frame condvar hop alone costs tens of ms during a turn.
@@ -255,7 +309,8 @@ void BookTurnHost::Run()
         condition_.wait(lock, [this]() {
             return stop_ || attachRequested_ || detachRequested_ || resizeRequested_ ||
                 pendingSample_.has_value() || pendingSettlement_ != Settlement::NONE ||
-                pendingCommitSlots_ || pendingTextures_[0].has_value() ||
+                pendingCommitSlots_ || pendingRetain_ || pendingRelease_ ||
+                pendingTextures_[0].has_value() ||
                 pendingTextures_[1].has_value() || pendingTextures_[2].has_value() ||
                 vsyncTickPending_;
         });
@@ -275,6 +330,8 @@ void BookTurnHost::Run()
             settlement_ = Settlement::NONE;
             settlementSwapped_ = false;
             swappedGeneration_ = 0;
+            settledTerminalGeneration_ = 0;
+            SetRetainedTerminalGeneration(0);
             const uint64_t serial = detachRequestSerial_;
             detachCompleteSerial_ = serial;
             lock.unlock();
@@ -321,6 +378,7 @@ void BookTurnHost::Run()
             for (TexturePayload& payload : uploads) success = renderer_.Upload(std::move(payload)) && success;
             const uint32_t mask = renderer_.ReadyMask();
             readyMask_.store(mask, std::memory_order_release);
+            CheckTerminalRetainTimeout();
             Notify(success ? HostEvent::TEXTURE_READY : HostEvent::RENDER_FAILURE, 0,
                 static_cast<int32_t>(mask));
             lock.lock();
@@ -337,6 +395,15 @@ void BookTurnHost::Run()
                 if (sample.generation != chaseGeneration_) {
                     chaseGeneration_ = sample.generation;
                     fingerDown_ = true;
+                    if (terminalRetainedGeneration_ != 0) {
+                        CheckTerminalRetainTimeout();
+                        // The new gesture takes the surface over: its chase
+                        // draw replaces the held terminal frame, so drop the
+                        // hold without a clear (a late release for the old
+                        // generation is stale-rejected at the barrier).
+                        SetRetainedTerminalGeneration(0);
+                    }
+                    renderer_.SetSheetVisible(true);
                     if (settlementSwapped_) {
                         // A new gesture after an uncommitted early swap: undo
                         // the rotation so the live draw sees its slots again.
@@ -373,6 +440,11 @@ void BookTurnHost::Run()
             pendingSettlement_ = Settlement::NONE;
             pendingSettlementEased_ = false;
             fingerDown_ = false;
+            if (terminalRetainedGeneration_ != 0) {
+                CheckTerminalRetainTimeout();
+                SetRetainedTerminalGeneration(0);
+            }
+            renderer_.SetSheetVisible(true);
             if (settlementEased_ && pendingProgrammaticDirection_.has_value()) {
                 liveInput_ = ProgrammaticInput(pendingSettlementGeneration_,
                     *pendingProgrammaticDirection_);
@@ -418,11 +490,52 @@ void BookTurnHost::Run()
                 renderer_.CommitSlots(direction);
             }
             readyMask_.store(renderer_.ReadyMask(), std::memory_order_release);
-            renderer_.Clear();
+            // ArkUI presentation barrier: no Clear here. The new-page
+            // terminal frame stays presented until the ArkUI presented
+            // confirmation releases it (releaseTerminalFrame(generation));
+            // clearing now would expose the outgoing ArkUI page.
+            CheckTerminalRetainTimeout();
             active_ = false;
             terminalCommit_ = false;
             settlement_ = Settlement::NONE;
             Notify(HostEvent::SLOTS_COMMITTED, generation, static_cast<int32_t>(renderer_.ReadyMask()));
+            lock.lock();
+        }
+
+        if (pendingRetain_ || pendingRelease_) {
+            const uint64_t retainGeneration = pendingRetain_ ? pendingRetainGeneration_ : 0;
+            const uint64_t releaseGeneration = pendingRelease_ ? pendingReleaseGeneration_ : 0;
+            pendingRetain_ = false;
+            pendingRelease_ = false;
+            lock.unlock();
+            if (retainGeneration != 0) {
+                if (terminalRetainedGeneration_ == retainGeneration) {
+                    retainedSince_ = std::chrono::steady_clock::now();
+                } else if (terminalRetainedGeneration_ == 0 &&
+                    settledTerminalGeneration_ == retainGeneration) {
+                    SetRetainedTerminalGeneration(retainGeneration);
+                    retainedSince_ = std::chrono::steady_clock::now();
+                } else {
+                    OH_LOG_WARN(LOG_APP,
+                        "stale terminal retain request gen=%{public}llu retained=%{public}llu; ignored",
+                        static_cast<unsigned long long>(retainGeneration),
+                        static_cast<unsigned long long>(terminalRetainedGeneration_));
+                }
+            }
+            if (releaseGeneration != 0) {
+                if (terminalRetainedGeneration_ == releaseGeneration) {
+                    renderer_.Clear();
+                    SetRetainedTerminalGeneration(0);
+                    Notify(HostEvent::TERMINAL_RELEASED, releaseGeneration, 0);
+                } else {
+                    OH_LOG_WARN(LOG_APP,
+                        "stale arkui presented confirmation gen=%{public}llu retained=%{public}llu; "
+                        "no clear",
+                        static_cast<unsigned long long>(releaseGeneration),
+                        static_cast<unsigned long long>(terminalRetainedGeneration_));
+                }
+            }
+            CheckTerminalRetainTimeout();
             lock.lock();
         }
 
@@ -462,6 +575,30 @@ void BookTurnHost::Run()
     renderer_.Shutdown();
     rendererReady_.store(false, std::memory_order_release);
     readyMask_.store(0, std::memory_order_release);
+}
+
+void BookTurnHost::SetRetainedTerminalGeneration(uint64_t generation)
+{
+    if (terminalRetainedGeneration_ == generation) return;
+    terminalRetainedGeneration_ = generation;
+    retainTimeoutLoggedGeneration_ = 0;
+    retainedTerminalGenerationAtomic_.store(generation, std::memory_order_release);
+}
+
+void BookTurnHost::CheckTerminalRetainTimeout()
+{
+    if (terminalRetainedGeneration_ == 0 ||
+        retainTimeoutLoggedGeneration_ == terminalRetainedGeneration_) {
+        return;
+    }
+    const double elapsedMs = std::chrono::duration<double, std::milli>(
+        std::chrono::steady_clock::now() - retainedSince_).count();
+    if (elapsedMs < TerminalRetainTimeoutMs()) return;
+    retainTimeoutLoggedGeneration_ = terminalRetainedGeneration_;
+    OH_LOG_WARN(LOG_APP,
+        "arkui presented confirmation timeout gen=%{public}llu elapsed=%{public}.0fms; "
+        "terminal frame retained (no outgoing-page exposure)",
+        static_cast<unsigned long long>(terminalRetainedGeneration_), elapsedMs);
 }
 
 void BookTurnHost::Notify(HostEvent event, uint64_t generation, int32_t detail)
@@ -544,6 +681,7 @@ bool BookTurnHost::ProcessChaseFrame(float frameSeconds, int64_t frameTimeNs)
             return true;
         }
         active_ = false;
+        SetRetainedTerminalGeneration(0);
         renderer_.Clear();
         Notify(HostEvent::RENDER_FAILURE, liveInput_.generation,
             static_cast<int32_t>(renderer_.LastDrawRefusal()));
@@ -608,6 +746,7 @@ bool BookTurnHost::ProcessSettlementFrame(float frameSeconds)
         }
         active_ = false;
         settlement_ = Settlement::NONE;
+        SetRetainedTerminalGeneration(0);
         renderer_.Clear();
         Notify(HostEvent::RENDER_FAILURE, liveInput_.generation,
             static_cast<int32_t>(renderer_.LastDrawRefusal()));
@@ -620,10 +759,17 @@ bool BookTurnHost::ProcessSettlementFrame(float frameSeconds)
     if (commit) {
         terminalCommit_ = true;
         settlement_ = Settlement::NONE;
+        settledTerminalGeneration_ = liveInput_.generation;
+        // Presentation barrier opens at the terminal frame: the surface keeps
+        // showing the new page until ArkUI confirms the promoted content
+        // (releaseTerminalFrame) — never the outgoing page.
+        SetRetainedTerminalGeneration(liveInput_.generation);
+        retainedSince_ = std::chrono::steady_clock::now();
         Notify(HostEvent::VISUAL_COMMIT_ENDPOINT, liveInput_.generation, 0);
     } else {
         settlement_ = Settlement::NONE;
         active_ = false;
+        SetRetainedTerminalGeneration(0);
         renderer_.Clear();
         Notify(HostEvent::ROLLBACK_COMPLETE, liveInput_.generation, 0);
     }

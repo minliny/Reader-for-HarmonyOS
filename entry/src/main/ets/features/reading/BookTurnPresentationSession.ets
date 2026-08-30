@@ -14,6 +14,9 @@ export const BOOK_TURN_EVENT_ROLLBACK_COMPLETE = 4;
 export const BOOK_TURN_EVENT_SURFACE_LOST = 5;
 export const BOOK_TURN_EVENT_RENDER_FAILURE = 6;
 export const BOOK_TURN_EVENT_SLOTS_COMMITTED = 7;
+/** The retained terminal frame was cleared after the generation-matched
+ *  ArkUI presented confirmation (barrier closed). */
+export const BOOK_TURN_EVENT_TERMINAL_RELEASED = 8;
 
 export type BookTurnTextureSlot = 0 | 1 | 2;
 
@@ -95,6 +98,23 @@ export class BookTurnPresentationSession {
 
   commitSlots(generation: number, direction: ReaderPageTurnDirection): boolean {
     return bookTurnNative.commitSlots(this.componentId, generation, nativeDirection(direction));
+  }
+
+  /** ArkUI presentation barrier: after promote, hold the new-page terminal
+   *  frame until this page's promoted content is confirmed composited. */
+  retainTerminalFrame(generation: number): boolean {
+    return bookTurnNative.retainTerminalFrame(this.componentId, generation);
+  }
+
+  /** Confirm the promoted content was composited; the native side then clears
+   *  the terminal frame (never before). Returns false for stale generations. */
+  releaseTerminalFrame(generation: number): boolean {
+    return bookTurnNative.releaseTerminalFrame(this.componentId, generation);
+  }
+
+  /** Currently retained terminal generation (0 = none); diagnostics only. */
+  retainedTerminalGeneration(): number {
+    return bookTurnNative.retainedTerminalGeneration(this.componentId);
   }
 }
 

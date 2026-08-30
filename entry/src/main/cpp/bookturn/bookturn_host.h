@@ -28,6 +28,9 @@ enum class HostEvent : int32_t {
     SURFACE_LOST = 5,
     RENDER_FAILURE = 6,
     SLOTS_COMMITTED = 7,
+    /** The retained terminal frame was cleared after the generation-matched
+     *  ArkUI presented confirmation (barrier closed). */
+    TERMINAL_RELEASED = 8,
 };
 
 using HostEventCallback = std::function<void(HostEvent, uint64_t, int32_t)>;
@@ -52,6 +55,18 @@ public:
     bool Settle(uint64_t generation, bool commit);
     bool StartProgrammatic(uint64_t generation, Direction direction);
     bool CommitSlots(uint64_t generation, Direction direction);
+    /** ArkUI presentation barrier (2026-08-31): a commit settlement never
+     *  clears the surface; the new-page terminal frame stays presented until
+     *  ArkUI confirms the promoted content was composited and calls
+     *  ReleaseTerminalFrame with the same settlementGeneration. Retain adopts
+     *  or refreshes the hold (idempotent); a stale confirmation is rejected.
+     *  A missing confirmation keeps the terminal frame retained (it can never
+     *  expose the outgoing page) and only logs a timeout diagnostic. */
+    bool RetainTerminalFrame(uint64_t generation);
+    bool ReleaseTerminalFrame(uint64_t generation);
+    /** Atomic snapshot of the currently retained terminal generation
+     *  (0 = surface follows the live animation / cleared). */
+    uint64_t RetainedTerminalGeneration() const;
     bool CanStart(Direction direction) const;
     bool IsReady() const;
     uint32_t ReadyMask() const;
@@ -62,6 +77,8 @@ private:
 
     void Run();
     void Notify(HostEvent event, uint64_t generation, int32_t detail);
+    void SetRetainedTerminalGeneration(uint64_t generation);
+    void CheckTerminalRetainTimeout();
     static void VsyncEntry(long long timestamp, void* data);
     void OnVsyncFrame(long long timestamp);
     bool ProcessChaseFrame(float frameSeconds, int64_t frameTimeNs);
@@ -99,6 +116,11 @@ private:
     bool pendingCommitSlots_ = false;
     uint64_t pendingCommitGeneration_ = 0;
     Direction pendingCommitDirection_ = Direction::NEXT;
+    // ArkUI presentation barrier requests (queued from the NAPI thread).
+    bool pendingRetain_ = false;
+    uint64_t pendingRetainGeneration_ = 0;
+    bool pendingRelease_ = false;
+    uint64_t pendingReleaseGeneration_ = 0;
     float configuredWidthVp_ = 0.0F;
     float configuredHeightVp_ = 0.0F;
 
@@ -140,6 +162,16 @@ private:
     // ArkTS commitSlots for the same generation is then a no-op rotation.
     bool settlementSwapped_ = false;
     uint64_t swappedGeneration_ = 0;
+    // ArkUI presentation barrier state (render thread only unless noted).
+    // settledTerminalGeneration_: generation of the last commit settlement
+    // that reached its terminal frame. terminalRetainedGeneration_: the
+    // generation whose terminal frame is currently held on the surface; the
+    // atomic mirror published for the NAPI thread gates stale confirmations.
+    uint64_t settledTerminalGeneration_ = 0;
+    uint64_t terminalRetainedGeneration_ = 0;
+    std::atomic<uint64_t> retainedTerminalGenerationAtomic_ { 0 };
+    std::chrono::steady_clock::time_point retainedSince_ {};
+    uint64_t retainTimeoutLoggedGeneration_ = 0;
     // Consecutive Draw() refusals tolerated before the runtime is declared
     // failed. VM/low-end GPU drivers can transiently refuse eglSwapBuffers
     // (fence sync) for the first frames of a surface's life while still
