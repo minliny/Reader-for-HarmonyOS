@@ -1,16 +1,6 @@
 import { registerReaderFonts } from '../common/ReaderFonts';
-import {
-  TOK_BORDER_W,
-  TOK_LINE,
-  TOK_LINE_STRONG,
-  TOK_PRIMARY_SOFT,
-  TOK_READ_ACTIVE_SOFT,
-  TOK_READ_DISABLED_BG,
-  TOK_READ_INK,
-  TOK_READ_MUTED,
-  TOK_READ_PRIMARY,
-  TOK_SURFACE_PANEL,
-} from '../common/ReaderTokens';
+import { TOK_BORDER_W } from '../common/ReaderTokens';
+import { readerThemePalette, type ReaderThemePalette } from './ReaderThemePalettes';
 import {
   createDefaultReaderAppearanceSnapshot,
   isReaderAppearanceFont,
@@ -36,6 +26,10 @@ import {
 export struct ReaderAppearanceModulePanel {
   @Prop isTablet: boolean = false;
   @Prop snapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
+
+  private palette(): ReaderThemePalette {
+    return readerThemePalette(this.snapshot.activeTheme);
+  }
   onThemeChange: (theme: ReaderAppearanceTheme) => void = (_theme: ReaderAppearanceTheme): void => {};
   onFontChange: (font: ReaderAppearanceFont) => void = (_font: ReaderAppearanceFont): void => {};
 
@@ -52,8 +46,8 @@ export struct ReaderAppearanceModulePanel {
     .constraintSize({ maxWidth: this.panelWidth() })
     .height(190)
     .padding({ left: this.sectionX(), right: this.sectionRightGap() })
-    .backgroundColor(TOK_SURFACE_PANEL)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    .backgroundColor(this.palette().surfacePanelSoft)
+    .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
     .borderRadius(8)
     .clip(true);
   }
@@ -70,7 +64,7 @@ export struct ReaderAppearanceModulePanel {
           .fontWeight(FontWeight.Bold)
           .fontSize(9)
           .lineHeight(9.9)
-          .fontColor(TOK_READ_INK);
+          .fontColor(this.palette().ink);
 
         Text(this.themeSummary())
           .width(88)
@@ -80,7 +74,7 @@ export struct ReaderAppearanceModulePanel {
           .fontWeight(FontWeight.Medium)
           .fontSize(this.isTablet ? 8 : 7.5)
           .lineHeight(8)
-          .fontColor(TOK_READ_MUTED)
+          .fontColor(this.palette().inkSecondary)
           .textAlign(TextAlign.End)
           .maxLines(1);
       }
@@ -123,17 +117,17 @@ export struct ReaderAppearanceModulePanel {
         .constraintSize({ maxWidth: 46 })
         .height(18)
         .backgroundColor(this.themeColor(theme))
-        .border({ width: TOK_BORDER_W, color: '#1F5B5046' })
+        .border({ width: TOK_BORDER_W, color: this.palette().hairline })
         .borderRadius(6);
     }
     .layoutWeight(1)
     .constraintSize({ maxWidth: this.cellWidth() })
     .height(24)
-    .backgroundColor(this.snapshot.activeTheme === theme ? TOK_READ_ACTIVE_SOFT :
-      (this.isNightTheme(theme) ? TOK_READ_DISABLED_BG : Color.Transparent))
+    .backgroundColor(this.snapshot.activeTheme === theme ? this.palette().activeSoft :
+      (this.isNightTheme(theme) ? this.palette().disabledBg : Color.Transparent))
     .border({
       width: { top: this.snapshot.activeTheme === theme ? TOK_BORDER_W : 0 },
-      color: TOK_READ_PRIMARY,
+      color: this.palette().primary,
     })
     .opacity(this.snapshot.activeTheme === theme ? 1 : 0.8)
     .accessibilityText(`切换到${this.themeLabel(theme)}主题`)
@@ -146,7 +140,7 @@ export struct ReaderAppearanceModulePanel {
       Row()
         .width(this.sectionWidth())
         .height(1)
-        .backgroundColor(TOK_LINE)
+        .backgroundColor(this.palette().borderSoft)
         .position({ x: 0, y: 0 });
 
       Text('字体库')
@@ -157,7 +151,7 @@ export struct ReaderAppearanceModulePanel {
         .fontWeight(FontWeight.Bold)
         .fontSize(9)
         .lineHeight(9.9)
-        .fontColor(TOK_READ_INK)
+        .fontColor(this.palette().ink)
         .position({ x: 0, y: 4 });
 
       Column({ space: 4 }) {
@@ -193,13 +187,13 @@ export struct ReaderAppearanceModulePanel {
       .constraintSize({ maxWidth: this.cellWidth() })
       .height(27)
       .padding({ left: 4, right: 4 })
-      .backgroundColor(this.isActiveFont(fontId) ? TOK_PRIMARY_SOFT : Color.Transparent)
-      .border({ width: { top: TOK_BORDER_W }, color: TOK_LINE })
+      .backgroundColor(this.isActiveFont(fontId) ? this.palette().activeSoft : Color.Transparent)
+      .border({ width: { top: TOK_BORDER_W }, color: this.palette().borderSoft })
       .fontFamily(readerAppearanceFontSlotFamily(this.snapshot, fontId))
       .fontWeight(FontWeight.Regular)
       .fontSize(8)
       .lineHeight(10)
-      .fontColor(TOK_READ_INK)
+      .fontColor(this.palette().ink)
       .textAlign(TextAlign.Center)
       .maxLines(1)
       .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -306,28 +300,9 @@ export struct ReaderAppearanceModulePanel {
   }
 
   private themeColor(theme: ReaderAppearanceTheme): string {
-    if (theme === 'day') {
-      return '#FFFFFF';
-    }
-    if (theme === 'warm') {
-      return '#FBF0DF';
-    }
-    if (theme === 'night') {
-      return '#26231F';
-    }
-    if (theme === 'warmNight') {
-      return '#302922';
-    }
-    if (theme === 'paper') {
-      return '#F5EAD8';
-    }
-    if (theme === 'green') {
-      return '#E7F0E2';
-    }
-    if (theme === 'paperNight') {
-      return '#34302B';
-    }
-    return '#263129';
+    // Theme swatch preview must show the theme's real paper color; the
+    // palette matrix (ReaderThemePalettes.ts) is the single authority.
+    return readerThemePalette(theme).paperStart;
   }
 
 }

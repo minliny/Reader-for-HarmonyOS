@@ -13,7 +13,7 @@ export struct ReaderBookTurnSurface {
       .width('100%')
       .height('100%')
       .zIndex(0)
-      .backgroundColor('#00000000')
+      .backgroundColor(Color.Transparent)
       .hitTestBehavior(HitTestMode.None)
       .onLoad((): void => this.onSurfaceLoaded());
   }

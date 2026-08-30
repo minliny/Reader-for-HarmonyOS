@@ -1,13 +1,8 @@
 import type { ReaderAutoPageStatus } from './ReaderAutoPageState';
-import {
-  TOK_BORDER_W,
-  TOK_LINE,
-  TOK_READ_INK,
-  TOK_READ_MUTED,
-  TOK_READ_PRIMARY,
-  TOK_SURFACE_PANEL,
-  TOK_SURFACE_PANEL_SOFT,
-} from '../common/ReaderTokens';
+import { TOK_BORDER_W } from '../common/ReaderTokens';
+import type { ReaderAppearanceSnapshot } from './ReaderAppearanceState';
+import { createDefaultReaderAppearanceSnapshot } from './ReaderAppearanceState';
+import { readerThemePalette, type ReaderThemePalette } from './ReaderThemePalettes';
 
 const QUICK_AUTO_PAGE_PANEL_PADDING_X = 11;
 const QUICK_AUTO_PAGE_PANEL_PADDING_Y = 13;
@@ -61,6 +56,11 @@ export struct ReaderAutoPagePanel {
   @Prop speedSeconds: number = 8;
   @Prop canPreviousChapter: boolean = false;
   @Prop canNextChapter: boolean = false;
+  @Prop appearanceSnapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
+
+  private palette(): ReaderThemePalette {
+    return readerThemePalette(this.appearanceSnapshot.activeTheme);
+  }
   onBack: () => void = (): void => {};
   onPreviousChapter: () => void = (): void => {};
   onToggleRunning: () => void = (): void => {};
@@ -85,8 +85,8 @@ export struct ReaderAutoPagePanel {
       bottom: QUICK_AUTO_PAGE_PANEL_PADDING_Y,
     })
     .alignItems(HorizontalAlign.Start)
-    .backgroundColor(TOK_SURFACE_PANEL)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE })
+    .backgroundColor(this.palette().surfacePanelSoft)
+    .border({ width: TOK_BORDER_W, color: this.palette().borderSoft })
     .borderRadius(8)
     .clip(true);
   }
@@ -103,11 +103,11 @@ export struct ReaderAutoPagePanel {
           .fontWeight(FontWeight.Bold)
           .fontSize(10)
           .lineHeight(10)
-          .fontColor(TOK_READ_PRIMARY);
+          .fontColor(this.palette().primary);
       }
       .height(QUICK_AUTO_PAGE_HEADER_HEIGHT)
       .padding({ left: 9, right: 9 })
-      .backgroundColor(TOK_SURFACE_PANEL)
+      .backgroundColor(this.palette().surfacePanelSoft)
       .borderRadius(8)
       .alignItems(VerticalAlign.Center)
       .accessibilityText('返回阅读控制首页')
@@ -127,8 +127,8 @@ export struct ReaderAutoPagePanel {
     .width('100%')
     .height(this.isTablet ? QUICK_AUTO_PAGE_PLAYBACK_HEIGHT_TABLET :
       QUICK_AUTO_PAGE_PLAYBACK_HEIGHT_PHONE)
-    .backgroundColor(TOK_SURFACE_PANEL_SOFT)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE })
+    .backgroundColor(this.palette().surfacePanelSoft)
+    .border({ width: TOK_BORDER_W, color: this.palette().borderSoft })
     .borderRadius(8)
     .clip(true);
   }
@@ -180,8 +180,8 @@ export struct ReaderAutoPagePanel {
       }
       .width(27)
       .height(27)
-      .backgroundColor(TOK_SURFACE_PANEL_SOFT)
-      .border({ width: TOK_BORDER_W, color: TOK_LINE })
+      .backgroundColor(this.palette().surfacePanelSoft)
+      .border({ width: TOK_BORDER_W, color: this.palette().borderSoft })
       .borderRadius(8);
 
       Text(previous ? '上一章' : '下一章')
@@ -192,7 +192,7 @@ export struct ReaderAutoPagePanel {
         .fontWeight(FontWeight.Bold)
         .fontSize(9)
         .lineHeight(9)
-        .fontColor(TOK_READ_INK)
+        .fontColor(this.palette().ink)
         .textAlign(TextAlign.Center)
         .maxLines(1);
     }
@@ -224,7 +224,7 @@ export struct ReaderAutoPagePanel {
       }
       .width(32)
       .height(32)
-      .backgroundColor(TOK_READ_PRIMARY)
+      .backgroundColor(this.palette().primary)
       .borderRadius(16);
 
       Text('自动翻页')
@@ -235,7 +235,7 @@ export struct ReaderAutoPagePanel {
         .fontWeight(FontWeight.Bold)
         .fontSize(9)
         .lineHeight(9)
-        .fontColor(TOK_READ_INK)
+        .fontColor(this.palette().ink)
         .textAlign(TextAlign.Center)
         .maxLines(1);
     }
@@ -269,7 +269,7 @@ export struct ReaderAutoPagePanel {
         .fontWeight(FontWeight.Bold)
         .fontSize(9)
         .lineHeight(9)
-        .fontColor('#8C3D36')
+        .fontColor(this.palette().error)
         .textAlign(TextAlign.Center)
         .maxLines(1);
     }
@@ -295,7 +295,7 @@ export struct ReaderAutoPagePanel {
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
         .fontSize(11)
-        .fontColor(TOK_READ_INK)
+        .fontColor(this.palette().ink)
         .maxLines(1);
 
       this.speedButton('-', '减慢自动翻页', true);
@@ -305,7 +305,7 @@ export struct ReaderAutoPagePanel {
         .fontWeight(900)
         .fontSize(11)
         .lineHeight(11)
-        .fontColor(TOK_READ_PRIMARY)
+        .fontColor(this.palette().primary)
         .textAlign(TextAlign.Center)
         .maxLines(1);
       this.speedButton('+', '加快自动翻页', false);
@@ -316,8 +316,8 @@ export struct ReaderAutoPagePanel {
       left: this.isTablet ? QUICK_AUTO_PAGE_SPEED_PADDING_TABLET : QUICK_AUTO_PAGE_SPEED_PADDING_PHONE,
       right: this.isTablet ? QUICK_AUTO_PAGE_SPEED_PADDING_TABLET : QUICK_AUTO_PAGE_SPEED_PADDING_PHONE,
     })
-    .backgroundColor(TOK_SURFACE_PANEL_SOFT)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE })
+    .backgroundColor(this.palette().surfacePanelSoft)
+    .border({ width: TOK_BORDER_W, color: this.palette().borderSoft })
     .borderRadius(6)
     .alignItems(VerticalAlign.Center);
   }
@@ -330,13 +330,13 @@ export struct ReaderAutoPagePanel {
         .fontWeight(800)
         .fontSize(18)
         .lineHeight(18)
-        .fontColor(TOK_READ_MUTED)
+        .fontColor(this.palette().inkSecondary)
         .textAlign(TextAlign.Center);
     }
     .width(24)
     .height(24)
-    .backgroundColor(TOK_SURFACE_PANEL_SOFT)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE })
+    .backgroundColor(this.palette().surfacePanelSoft)
+    .border({ width: TOK_BORDER_W, color: this.palette().borderSoft })
     .borderRadius(12)
     .accessibilityText(accessibility)
     .onClick((): void => {

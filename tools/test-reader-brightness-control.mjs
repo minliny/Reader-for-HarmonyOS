@@ -22,8 +22,8 @@ assert.match(brightness,
 assert.match(brightness,
   /1 - clampedY \/ READER_CONTROL_BRIGHTNESS_TRACK_HEIGHT/,
   'tap mapping must cover the complete track from maximum to minimum');
-assert.match(brightness, /\.fontColor\(TOK_READ_INK\)/);
-assert.match(brightness, /\.backgroundColor\(TOK_READ_ELEVATED\)/);
+assert.match(brightness, /\.fontColor\(this\.palette\(\)\.ink\)/);
+assert.match(brightness, /\.backgroundColor\(this\.palette\(\)\.surfaceElevated\)/);
 assert.doesNotMatch(brightness, /brightnessAutomatic \? (Color\.White|TOK_READ_PRIMARY)/,
   'Figma does not define an invented cyan automatic-brightness endpoint');
 assert.match(experience, /private brightnessMutationQueue: Promise<void> = Promise\.resolve\(\)/);

@@ -1,24 +1,12 @@
 import { CandidateRow } from './CandidateRow';
 import { sourceSwitchCandidateKey } from './SourceSwitchGateway';
+import type { ReaderAppearanceTheme } from '../reading/ReaderAppearanceState';
+import { readerThemePalette, type ReaderThemePalette } from '../reading/ReaderThemePalettes';
 import type { SourceSwitchCandidate } from './SourceSwitchGateway';
 import {
-  TOK_BORDER,
   TOK_BORDER_W,
-  TOK_CARD_BG,
-  TOK_INK,
-  TOK_LINE,
-  TOK_MUTED,
-  TOK_READ_HANDLE,
-  TOK_READ_INK,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
-  TOK_SS_CLOSE_BG,
-  TOK_SS_COLUMN_HEADER_BG,
-  TOK_SS_FOOTER_TEXT,
-  TOK_SS_MUTED,
-  TOK_SS_SORT_PILL_BG,
-  TOK_SS_WINDOW_BG,
-  TOK_SS_WINDOW_BORDER,
 } from '../common/ReaderTokens';
 
 import { registerReaderFonts } from '../common/ReaderFonts';
@@ -98,6 +86,11 @@ export struct SourceSwitchWindow {
   @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   @Prop state: SourceSwitchPanelState;
   @Prop currentSourceId: string = '';
+  @Prop theme: ReaderAppearanceTheme = 'day';
+
+  private palette(): ReaderThemePalette {
+    return readerThemePalette(this.theme);
+  }
   onClose: () => void = (): void => {};
   onRetry: () => void = (): void => {};
   onRefresh: () => void = (): void => {};
@@ -118,8 +111,8 @@ export struct SourceSwitchWindow {
     }
     .width(this.windowWidth())
     .height(this.windowHeight())
-    .backgroundColor(TOK_SS_WINDOW_BG)
-    .border({ width: TOK_BORDER_W, color: TOK_SS_WINDOW_BORDER })
+    .backgroundColor(this.palette().surface)
+    .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
     .borderRadius(20)
     .translate({ x: this.windowTranslateX(), y: this.windowTranslateY() });
   }
@@ -141,7 +134,7 @@ export struct SourceSwitchWindow {
           .fontWeight(FontWeight.Medium)
           .fontSize(11)
           .lineHeight(12.32)
-          .fontColor(TOK_READ_INK)
+          .fontColor(this.palette().ink)
           .margin({ left: 7 });
 
         this.sortPill();
@@ -157,7 +150,7 @@ export struct SourceSwitchWindow {
           .width(22)
           .height(22)
           .borderRadius(8)
-          .backgroundColor(TOK_SS_CLOSE_BG);
+          .backgroundColor(this.palette().disabledBg);
         }
         .width(44)
         .height(44)
@@ -171,7 +164,7 @@ export struct SourceSwitchWindow {
       Text('')
         .width(Math.max(0, this.windowWidth() - 1))
         .height(1)
-        .backgroundColor(TOK_LINE);
+        .backgroundColor(this.palette().borderSoft);
     }
     .width('100%')
     .height(34);
@@ -187,13 +180,13 @@ export struct SourceSwitchWindow {
         .fontWeight(FontWeight.Regular)
         .fontSize(9)
         .lineHeight(12)
-        .fontColor(TOK_SS_MUTED)
+        .fontColor(this.palette().inkSecondary)
         .textAlign(TextAlign.Center);
     }
     .width(60)
     .height(20)
     .borderRadius(10)
-    .backgroundColor(TOK_SS_SORT_PILL_BG)
+    .backgroundColor(this.palette().surfacePanelSoft)
     .margin({ left: 0 });
   }
 
@@ -206,7 +199,7 @@ export struct SourceSwitchWindow {
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Regular)
         .fontSize(8)
-        .fontColor(TOK_READ_HANDLE)
+        .fontColor(this.palette().handle)
         .margin({ left: 10 });
 
       Text('延迟')
@@ -215,7 +208,7 @@ export struct SourceSwitchWindow {
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Regular)
         .fontSize(8)
-        .fontColor(TOK_READ_HANDLE);
+        .fontColor(this.palette().handle);
 
       Text('当前章节')
         .width(100)
@@ -223,13 +216,13 @@ export struct SourceSwitchWindow {
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Regular)
         .fontSize(8)
-        .fontColor(TOK_READ_HANDLE)
+        .fontColor(this.palette().handle)
         .textAlign(TextAlign.End);
     }
     .width('100%')
     .height(20)
     .alignItems(VerticalAlign.Center)
-    .backgroundColor(TOK_SS_COLUMN_HEADER_BG);
+    .backgroundColor(this.palette().surfacePanelSoft);
   }
 
   @Builder
@@ -256,7 +249,7 @@ export struct SourceSwitchWindow {
       LoadingProgress()
         .width(36)
         .height(36)
-        .color(TOK_READ_INK)
+        .color(this.palette().ink)
         .enableLoading(true);
       Text(isSwitching ? '正在切换书源…' : '正在搜索书源…')
         .margin({ top: 20 })
@@ -264,7 +257,7 @@ export struct SourceSwitchWindow {
         .fontWeight(FontWeight.Regular)
         .fontSize(13)
         .lineHeight(20)
-        .fontColor(TOK_MUTED)
+        .fontColor(this.palette().inkSecondary)
         .textAlign(TextAlign.Center);
       Blank().layoutWeight(1);
     }
@@ -281,7 +274,7 @@ export struct SourceSwitchWindow {
         .fontWeight(FontWeight.Bold)
         .fontSize(15)
         .lineHeight(22)
-        .fontColor(TOK_INK)
+        .fontColor(this.palette().ink)
         .textAlign(TextAlign.Center);
       if (subtitle.length > 0) {
         Text(subtitle)
@@ -290,7 +283,7 @@ export struct SourceSwitchWindow {
           .fontWeight(FontWeight.Regular)
           .fontSize(11)
           .lineHeight(16)
-          .fontColor(TOK_MUTED)
+          .fontColor(this.palette().inkSecondary)
           .textAlign(TextAlign.Center);
       }
       Blank().layoutWeight(1);
@@ -308,7 +301,7 @@ export struct SourceSwitchWindow {
         .fontWeight(FontWeight.Bold)
         .fontSize(15)
         .lineHeight(22)
-        .fontColor(TOK_INK)
+        .fontColor(this.palette().ink)
         .textAlign(TextAlign.Center);
       Text(message)
         .margin({ top: TOK_SPACE_XS })
@@ -317,7 +310,7 @@ export struct SourceSwitchWindow {
         .fontWeight(FontWeight.Regular)
         .fontSize(11)
         .lineHeight(16)
-        .fontColor(TOK_MUTED)
+        .fontColor(this.palette().inkSecondary)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .textAlign(TextAlign.Center);
@@ -327,10 +320,10 @@ export struct SourceSwitchWindow {
         .fontWeight(FontWeight.Bold)
         .fontSize(12)
         .lineHeight(12)
-        .fontColor(TOK_MUTED)
+        .fontColor(this.palette().inkSecondary)
         .padding({ left: 26, right: 26, top: TOK_SPACE_SM, bottom: TOK_SPACE_SM })
-        .backgroundColor(TOK_CARD_BG)
-        .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+        .backgroundColor(this.palette().surfaceElevated)
+        .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
         .borderRadius(999)
         .onClick((): void => this.onRetry());
       Blank().layoutWeight(1);
@@ -348,7 +341,7 @@ export struct SourceSwitchWindow {
         .fontWeight(FontWeight.Bold)
         .fontSize(15)
         .lineHeight(22)
-        .fontColor(TOK_INK)
+        .fontColor(this.palette().ink)
         .textAlign(TextAlign.Center);
       Text(message)
         .margin({ top: TOK_SPACE_XS })
@@ -357,7 +350,7 @@ export struct SourceSwitchWindow {
         .fontWeight(FontWeight.Regular)
         .fontSize(11)
         .lineHeight(16)
-        .fontColor(TOK_MUTED)
+        .fontColor(this.palette().inkSecondary)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .textAlign(TextAlign.Center);
@@ -368,10 +361,10 @@ export struct SourceSwitchWindow {
           .fontWeight(FontWeight.Bold)
           .fontSize(12)
           .lineHeight(12)
-          .fontColor(TOK_MUTED)
+          .fontColor(this.palette().inkSecondary)
           .padding({ left: 26, right: 26, top: TOK_SPACE_SM, bottom: TOK_SPACE_SM })
-          .backgroundColor(TOK_CARD_BG)
-          .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+          .backgroundColor(this.palette().surfaceElevated)
+          .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
           .borderRadius(999)
           .onClick((): void => this.onRollback());
       }
@@ -392,6 +385,7 @@ export struct SourceSwitchWindow {
               sourceId: repeatItem.item.sourceId,
               sourceName: repeatItem.item.sourceName ?? repeatItem.item.sourceId,
               bookName: repeatItem.item.bookName,
+              theme: this.theme,
               currentChapterTitle: repeatItem.item.currentChapterTitle ??
                 repeatItem.item.latestChapterTitle ?? '',
               latencyMs: repeatItem.item.latencyMs,
@@ -429,7 +423,7 @@ export struct SourceSwitchWindow {
       .fontWeight(FontWeight.Regular)
       .fontSize(8)
       .lineHeight(12)
-      .fontColor(TOK_SS_FOOTER_TEXT)
+      .fontColor(this.palette().inkTertiary)
       .textAlign(TextAlign.Center);
   }
 

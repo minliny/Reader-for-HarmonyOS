@@ -30,7 +30,7 @@ assert.match(searchField, /private fixedLineHeightField\(\)[\s\S]*?\.height\(thi
   'search text must use the full field height without ArkUI internal clipping');
 assert.match(searchField, /\.enterKeyType\(EnterKeyType\.Search\)\s*\.onSubmit\(\(_enterKey: EnterKeyType\): void => this\.submit\(\)\)/,
   'the IME search action must use the same search submission path as the button');
-assert.match(search, /\.backgroundColor\(TOK_GREEN\)\s*\.opacity\(1\)[\s\S]*?\.onClick\(\(\): void => this\.submitSearch\(\)\)/,
+assert.match(search, /\.backgroundColor\(TOK_GREEN\)\s*\.opacity\(this\.canSubmit\(\) \? 1 : 0\.4\)[\s\S]*?\.onClick\(\(\): void => \{[\s\S]*?this\.submitSearch\(\);\s*\}\)/,
   'the search action must stay dark and visibly enabled before the first search');
 assert.doesNotMatch(search, /SEARCH_BTN_BG/,
   'the initial search action must not fall back to the misleading pale disabled treatment');

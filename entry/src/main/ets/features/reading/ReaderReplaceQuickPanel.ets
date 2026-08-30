@@ -1,12 +1,8 @@
 import { registerReaderFonts } from '../common/ReaderFonts';
-import {
-  TOK_BORDER_W,
-  TOK_LINE,
-  TOK_LINE_STRONG,
-  TOK_READ_INK,
-  TOK_READ_PRIMARY,
-  TOK_SURFACE_PANEL,
-} from '../common/ReaderTokens';
+import { TOK_BORDER_W } from '../common/ReaderTokens';
+import type { ReaderAppearanceSnapshot } from './ReaderAppearanceState';
+import { createDefaultReaderAppearanceSnapshot } from './ReaderAppearanceState';
+import { readerThemePalette, type ReaderThemePalette } from './ReaderThemePalettes';
 import {
   createHiddenReaderReplaceQuickState,
   type ReaderReplaceQuickState,
@@ -49,6 +45,11 @@ const REPLACE_PANEL_HEIGHT = REPLACE_PANEL_PADDING_Y * 2 + REPLACE_HEADER_HEIGHT
 export struct ReaderReplaceQuickPanel {
   @Prop isTablet: boolean = false;
   @Prop state: ReaderReplaceQuickState = createHiddenReaderReplaceQuickState();
+  @Prop appearanceSnapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
+
+  private palette(): ReaderThemePalette {
+    return readerThemePalette(this.appearanceSnapshot.activeTheme);
+  }
   onClose: () => void = (): void => {};
   onToggleRule: (ruleId: number, isEnabled: boolean) => void =
     (_ruleId: number, _isEnabled: boolean): void => {};
@@ -81,8 +82,8 @@ export struct ReaderReplaceQuickPanel {
       bottom: REPLACE_PANEL_PADDING_Y,
     })
     .alignItems(HorizontalAlign.Start)
-    .backgroundColor(TOK_SURFACE_PANEL)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    .backgroundColor(this.palette().surfacePanelSoft)
+    .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
     .borderRadius(8)
     .clip(true);
   }
@@ -99,7 +100,7 @@ export struct ReaderReplaceQuickPanel {
         .fontWeight(FontWeight.Bold)
         .fontSize(13)
         .lineHeight(14.04)
-        .fontColor(TOK_READ_INK)
+        .fontColor(this.palette().ink)
         .maxLines(1);
 
       Stack({ alignContent: Alignment.Center }) {
@@ -118,7 +119,7 @@ export struct ReaderReplaceQuickPanel {
     .constraintSize({ maxWidth: this.contentWidth() })
     .height(REPLACE_HEADER_HEIGHT)
     .alignItems(VerticalAlign.Center)
-    .border({ width: { bottom: TOK_BORDER_W }, color: TOK_LINE });
+    .border({ width: { bottom: TOK_BORDER_W }, color: this.palette().borderSoft });
   }
 
   @Builder
@@ -133,7 +134,7 @@ export struct ReaderReplaceQuickPanel {
               .fontFamily('ReaderNotoSansSC')
               .fontWeight(FontWeight.Regular)
               .fontSize(9)
-              .fontColor(TOK_READ_INK)
+              .fontColor(this.palette().ink)
               .textAlign(TextAlign.Center);
           } else {
             ForEach(this.state.rules, (rule: ReaderReplaceRule) => {
@@ -168,14 +169,14 @@ export struct ReaderReplaceQuickPanel {
         Row()
           .width(12)
           .height(12)
-          .backgroundColor('#FFFFFF')
+          .backgroundColor(this.palette().knob)
           .borderRadius(6)
           .position({ x: rule.isEnabled ? 13 : 2, y: 2 });
       }
       .width(27)
       .height(16)
       .margin({ left: 5 })
-      .backgroundColor(rule.isEnabled ? TOK_READ_PRIMARY : '#C9C5BE')
+      .backgroundColor(rule.isEnabled ? this.palette().primary : this.palette().handle)
       .borderRadius(999)
       .clip(true);
 
@@ -188,14 +189,14 @@ export struct ReaderReplaceQuickPanel {
         .fontWeight(FontWeight.Medium)
         .fontSize(9)
         .lineHeight(13)
-        .fontColor(TOK_READ_INK)
+        .fontColor(this.palette().ink)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
     }
     .width('100%')
     .height(REPLACE_RULE_ROW_HEIGHT)
     .alignItems(VerticalAlign.Center)
-    .border({ width: { bottom: TOK_BORDER_W }, color: TOK_LINE })
+    .border({ width: { bottom: TOK_BORDER_W }, color: this.palette().borderSoft })
     .accessibilityText(`${rule.name}，${rule.isEnabled ? '已开启' : '已关闭'}`)
     .onClick((): void => this.onToggleRule(rule.id, !rule.isEnabled));
   }
@@ -221,7 +222,7 @@ export struct ReaderReplaceQuickPanel {
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Medium)
         .fontSize(8)
-        .fontColor(kind === 'preview' ? TOK_READ_INK : '#FFFFFF')
+        .fontColor(kind === 'preview' ? this.palette().ink : this.palette().onPrimary)
         .textAlign(TextAlign.Center)
         .maxLines(1);
     }
@@ -233,10 +234,10 @@ export struct ReaderReplaceQuickPanel {
     .height(REPLACE_FOOTER_HEIGHT)
     .justifyContent(FlexAlign.Center)
     .alignItems(VerticalAlign.Center)
-    .backgroundColor(kind === 'preview' ? TOK_SURFACE_PANEL : TOK_READ_PRIMARY)
+    .backgroundColor(kind === 'preview' ? this.palette().surfacePanelSoft : this.palette().primary)
     .border({
       width: TOK_BORDER_W,
-      color: kind === 'preview' ? TOK_LINE_STRONG : Color.Transparent,
+      color: kind === 'preview' ? this.palette().lineStrong : Color.Transparent,
     })
     .borderRadius(8)
     .enabled(kind === 'management' || (this.state.kind === 'ready' && this.state.previewAvailable))

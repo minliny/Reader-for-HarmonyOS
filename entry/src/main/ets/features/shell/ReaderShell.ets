@@ -1,6 +1,8 @@
 import { ReadingExperience, ReadingCommit } from '../reading/LocalReadingExperience';
 import { ReaderFullDirectory } from '../reading/ReaderFullDirectory';
 import { SourceSwitchPanel, SourceSwitchPanelState } from '../reading/SourceSwitchPanel';
+import type { ReaderAppearanceTheme } from '../reading/ReaderAppearanceState';
+import { readerThemePalette } from '../reading/ReaderThemePalettes';
 import type { SourceSwitchCandidate } from '../source/SourceSwitchGateway';
 import type { LocalReadingTocEntry } from '../reading/LocalReadingFlowGateway';
 import type {
@@ -39,6 +41,7 @@ export struct ReaderShell {
   @Prop requestedChapterIndex: number | undefined = undefined;
   @Prop isTablet: boolean = false;
   @Prop reduceMotion: boolean = false;
+  @State private readingTheme: ReaderAppearanceTheme = 'day';
   // 阅读会话可见性: route 决定 ReadingExperience 是否露出版面。
   @Prop visible: boolean = false;
   @Prop route: PreparedReaderRoute = 'reading';
@@ -118,6 +121,9 @@ export struct ReaderShell {
             this.onChapterCommitted(chapterIndex, chapterTitle),
           onOpenDirectory: (): void => this.onOpenDirectory(),
           onSwitchSource: (): void => this.onSwitchSource(),
+          onActiveThemeChange: (theme: ReaderAppearanceTheme): void => {
+            this.readingTheme = theme;
+          },
           onOpenRulesManagement: (): void => this.onOpenRulesManagement(),
           onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
           onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
@@ -146,6 +152,7 @@ export struct ReaderShell {
           entries: this.tocEntries,
           currentChapterIndex: this.directoryCurrentChapterIndex,
           sourceId: this.sourceId,
+          theme: this.readingTheme,
           animateFromControl: this.directoryOpenedFromControl,
           reduceMotion: this.reduceMotion,
           offlineBookOperationActive: this.offlineBookOperationActive,
@@ -167,11 +174,12 @@ export struct ReaderShell {
           Stack()
             .width('100%')
             .height('100%')
-            .backgroundColor('#40FFFFFF')
+            .backgroundColor(readerThemePalette(this.readingTheme).scrim)
             .onClick((): void => this.onCloseSourceSwitch());
           SourceSwitchPanel({
             state: this.sourceSwitchState,
             currentSourceId: this.sourceId,
+            theme: this.readingTheme,
             onClose: (): void => this.onCloseSourceSwitch(),
             onRetry: (): void => this.onRetrySourceSwitch(),
             onRefresh: (): void => this.onRefreshSourceSwitch(),

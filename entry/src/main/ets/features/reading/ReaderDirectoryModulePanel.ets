@@ -13,20 +13,16 @@ import {
   READER_DIRECTORY_VIEWPORT_HEIGHT,
 } from './ReaderDirectoryScrollGeometry';
 import {
-  TOK_ACCENT,
   TOK_BORDER_W,
-  TOK_LINE,
-  TOK_READ_ACTIVE_SOFT,
-  TOK_READ_INK,
-  TOK_READ_MUTED,
-  TOK_READ_PRIMARY,
-  TOK_READ_UNREAD,
   TOK_RADIUS_MD,
   TOK_RADIUS_PILL,
   TOK_RADIUS_SM,
-  TOK_SURFACE_PANEL,
-  TOK_SURFACE_PANEL_SOFT,
 } from '../common/ReaderTokens';
+import {
+  createDefaultReaderAppearanceSnapshot,
+  type ReaderAppearanceSnapshot,
+} from './ReaderAppearanceState';
+import { readerThemePalette, type ReaderThemePalette } from './ReaderThemePalettes';
 
 const DIRECTORY_PANEL_HEIGHT = 190;
 const DIRECTORY_PANEL_PADDING_X = 11;
@@ -43,8 +39,6 @@ const DIRECTORY_CURRENT_BAR_WIDTH = 3;
 const DIRECTORY_MARKER_HIT_SIZE = 26;
 const DIRECTORY_MARKER_ICON_SIZE = 15;
 const DIRECTORY_BOOKMARK_TRAILING_GAP = 3;
-const DIRECTORY_EDGE_FADE_COLOR = '#D9FFFCF8';
-const DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR = '#00FFFCF8';
 
 /**
  * Figma Reader Module Directory / Phone (`943:9888`) content area only.
@@ -69,8 +63,13 @@ export struct ReaderDirectoryModulePanel {
   // Creation stays disabled until the owning reading transaction supplies
   // book identity and refreshes the projection after Core confirmation.
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
+  @Prop appearanceSnapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void =
     (_request: ReaderDirectoryChapterStartBookmarkRequest): void => {};
+
+  private palette(): ReaderThemePalette {
+    return readerThemePalette(this.appearanceSnapshot.activeTheme);
+  }
 
   aboutToAppear(): void {
     this.rebuildProjection();
@@ -122,7 +121,7 @@ export struct ReaderDirectoryModulePanel {
               .height(READER_DIRECTORY_EDGE_FADE_HEIGHT)
               .linearGradient({
                 direction: GradientDirection.Bottom,
-                colors: [[DIRECTORY_EDGE_FADE_COLOR, 0], [DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR, 1]],
+                colors: [[this.palette().surface, 0], [this.palette().surfaceFade, 1]],
               });
             Blank()
               .layoutWeight(1);
@@ -131,7 +130,7 @@ export struct ReaderDirectoryModulePanel {
               .height(READER_DIRECTORY_EDGE_FADE_HEIGHT)
               .linearGradient({
                 direction: GradientDirection.Top,
-                colors: [[DIRECTORY_EDGE_FADE_COLOR, 0], [DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR, 1]],
+                colors: [[this.palette().surface, 0], [this.palette().surfaceFade, 1]],
               });
           }
           .width('100%')
@@ -151,8 +150,8 @@ export struct ReaderDirectoryModulePanel {
       top: DIRECTORY_PANEL_PADDING_TOP,
       bottom: DIRECTORY_PANEL_PADDING_BOTTOM,
     })
-    .backgroundColor(TOK_SURFACE_PANEL)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE })
+    .backgroundColor(this.palette().surfacePanelSoft)
+    .border({ width: TOK_BORDER_W, color: this.palette().borderSoft })
     .borderRadius(TOK_RADIUS_MD)
     .clip(true);
   }
@@ -168,13 +167,13 @@ export struct ReaderDirectoryModulePanel {
             .fontFamily('ReaderInter')
             .fontWeight(500)
             .fontSize(10)
-            .fontColor(this.activeTab === 'directory' ? TOK_READ_PRIMARY : TOK_READ_MUTED)
+            .fontColor(this.activeTab === 'directory' ? this.palette().primary : this.palette().inkSecondary)
             .textAlign(TextAlign.Center);
           if (this.activeTab === 'directory') {
             Row()
               .width(DIRECTORY_TAB_INDICATOR_WIDTH)
               .height(DIRECTORY_TAB_INDICATOR_HEIGHT)
-              .backgroundColor(TOK_READ_PRIMARY)
+              .backgroundColor(this.palette().primary)
               .borderRadius(TOK_RADIUS_PILL);
           }
         }
@@ -194,13 +193,13 @@ export struct ReaderDirectoryModulePanel {
             .fontFamily('ReaderInter')
             .fontWeight(500)
             .fontSize(10)
-            .fontColor(this.activeTab === 'bookmarks' ? TOK_READ_PRIMARY : TOK_READ_MUTED)
+            .fontColor(this.activeTab === 'bookmarks' ? this.palette().primary : this.palette().inkSecondary)
             .textAlign(TextAlign.Center);
           if (this.activeTab === 'bookmarks') {
             Row()
               .width(DIRECTORY_TAB_INDICATOR_WIDTH)
               .height(DIRECTORY_TAB_INDICATOR_HEIGHT)
-              .backgroundColor(TOK_READ_PRIMARY)
+              .backgroundColor(this.palette().primary)
               .borderRadius(TOK_RADIUS_PILL);
           }
         }
@@ -219,7 +218,7 @@ export struct ReaderDirectoryModulePanel {
       Row()
         .width('100%')
         .height(DIRECTORY_TAB_DIVIDER_HEIGHT)
-        .backgroundColor(TOK_LINE);
+        .backgroundColor(this.palette().borderSoft);
     }
     .width('100%')
     .height(DIRECTORY_TABS_HEIGHT);
@@ -233,7 +232,7 @@ export struct ReaderDirectoryModulePanel {
           Row()
             .width(DIRECTORY_CURRENT_BAR_WIDTH)
             .height(READER_DIRECTORY_ROW_HEIGHT)
-            .backgroundColor(TOK_ACCENT)
+            .backgroundColor(this.palette().accent)
             .borderRadius(TOK_RADIUS_PILL);
         }
         Stack({ alignContent: Alignment.Center }) {
@@ -260,8 +259,8 @@ export struct ReaderDirectoryModulePanel {
     }
     .width('100%')
     .height(READER_DIRECTORY_ROW_HEIGHT)
-    .backgroundColor(this.isCurrent(repeatItem.item) ? TOK_READ_ACTIVE_SOFT : Color.Transparent)
-    .border({ width: { top: 1 }, color: TOK_LINE })
+    .backgroundColor(this.isCurrent(repeatItem.item) ? this.palette().activeSoft : Color.Transparent)
+    .border({ width: { top: 1 }, color: this.palette().borderSoft })
     .borderRadius(TOK_RADIUS_SM)
     .alignItems(VerticalAlign.Center);
   }
@@ -275,7 +274,7 @@ export struct ReaderDirectoryModulePanel {
     }
     .width(DIRECTORY_MARKER_HIT_SIZE)
     .height(DIRECTORY_MARKER_HIT_SIZE)
-    .backgroundColor(TOK_SURFACE_PANEL_SOFT)
+    .backgroundColor(this.palette().surfacePanelSoft)
     .borderRadius(TOK_RADIUS_PILL)
     .enabled(this.chapterDownloadEnabled && this.downloadMarkerEnabled(entry))
     .accessibilityText(this.downloadMarkerLabel(entry))
@@ -292,7 +291,7 @@ export struct ReaderDirectoryModulePanel {
       }
       .width(DIRECTORY_MARKER_HIT_SIZE)
       .height(DIRECTORY_MARKER_HIT_SIZE)
-      .backgroundColor('#1A2F6373')
+      .backgroundColor(this.palette().activeSoft)
       .borderRadius(TOK_RADIUS_PILL)
       .accessibilityText('已读');
     } else if (this.chapterDownloadEnabled) {
@@ -396,12 +395,12 @@ export struct ReaderDirectoryModulePanel {
    */
   private titleColor(entry: LocalReadingTocEntry): ResourceColor {
     if (this.isCurrent(entry)) {
-      return TOK_READ_PRIMARY;
+      return this.palette().primary;
     }
     if (this.currentChapterIndex >= 0 && entry.index < this.currentChapterIndex) {
-      return TOK_READ_INK;
+      return this.palette().ink;
     }
-    return TOK_READ_UNREAD;
+    return this.palette().inkTertiary;
   }
 
   private hasBookmark(entry: LocalReadingTocEntry): boolean {

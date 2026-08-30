@@ -1,4 +1,5 @@
 import type { SourceSwitchCandidate } from '../source/SourceSwitchGateway';
+import type { ReaderAppearanceTheme } from './ReaderAppearanceState';
 import {
   SourceSwitchWindow,
   SourceSwitchPanelState,
@@ -34,6 +35,7 @@ export {
 export struct SourceSwitchPanel {
   @Prop state: SourceSwitchPanelState;
   @Prop currentSourceId: string = '';
+  @Prop theme: ReaderAppearanceTheme = 'day';
   onClose: () => void = (): void => {};
   onRetry: () => void = (): void => {};
   onRefresh: () => void = (): void => {};
@@ -45,6 +47,7 @@ export struct SourceSwitchPanel {
     SourceSwitchWindow({
       state: this.state,
       currentSourceId: this.currentSourceId,
+      theme: this.theme,
       onClose: this.onClose,
       onRetry: this.onRetry,
       onRefresh: this.onRefresh,

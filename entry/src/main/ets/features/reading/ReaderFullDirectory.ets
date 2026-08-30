@@ -13,12 +13,10 @@ import {
   resolveHorizontalFrame,
 } from '../common/SurfaceHorizontalGeometry';
 import {
-  TOK_LINE_STRONG,
-  TOK_READ_INK,
-  TOK_READ_MUTED,
-  TOK_READ_SURFACE,
   TOK_BORDER_W,
 } from '../common/ReaderTokens';
+import type { ReaderAppearanceTheme } from './ReaderAppearanceState';
+import { readerThemePalette, type ReaderThemePalette } from './ReaderThemePalettes';
 
 import { FullDirectoryPanel } from './FullDirectoryPanel';
 import { registerReaderFonts } from '../common/ReaderFonts';
@@ -52,6 +50,11 @@ export struct ReaderFullDirectory {
   @Prop animateFromControl: boolean = false;
   @Prop reduceMotion: boolean = false;
   @Prop offlineBookOperationActive: boolean = false;
+  @Prop theme: ReaderAppearanceTheme = 'day';
+
+  private palette(): ReaderThemePalette {
+    return readerThemePalette(this.theme);
+  }
   // R-LOCAL-TOC-01: forward the chapter tap from the panel body to the
   // owning flow so a full-directory tap actually enters that chapter.
   onSelectChapter: (index: number) => void = (_index: number): void => {};
@@ -109,6 +112,7 @@ export struct ReaderFullDirectory {
         FullDirectoryPanel({
           entries: this.entries,
           currentChapterIndex: this.currentChapterIndex,
+          theme: this.theme,
           chapterDownloadEnabled: this.sourceId !== 'local',
           isTablet: this.usesExpandedLayout(),
           panelWidthOverride: this.panelWidth(),
@@ -168,7 +172,7 @@ export struct ReaderFullDirectory {
             .fontFamily('ReaderNotoSerifSCBold')
             .fontWeight(FontWeight.Bold)
             .fontSize(16)
-            .fontColor(TOK_READ_INK)
+            .fontColor(this.palette().ink)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
 
@@ -178,7 +182,7 @@ export struct ReaderFullDirectory {
             .fontFamily('ReaderNotoSerifSCRegular')
             .fontWeight(FontWeight.Regular)
             .fontSize(12)
-            .fontColor(TOK_READ_MUTED)
+            .fontColor(this.palette().inkSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
@@ -198,7 +202,7 @@ export struct ReaderFullDirectory {
             .fontFamily('ReaderInter')
             .fontWeight(800)
             .fontSize(12)
-            .fontColor(TOK_READ_INK)
+            .fontColor(this.palette().ink)
             .textAlign(TextAlign.Center)
             .alignSelf(ItemAlign.Center);
         }
@@ -234,8 +238,8 @@ export struct ReaderFullDirectory {
       .width('100%')
       .height(54)
       .alignItems(VerticalAlign.Center)
-      .backgroundColor(TOK_READ_SURFACE)
-      .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+      .backgroundColor(this.palette().surface)
+      .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
       .borderRadius(24);
     }
     .width('100%')
@@ -255,7 +259,7 @@ export struct ReaderFullDirectory {
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Medium)
           .fontSize(13)
-          .fontColor(TOK_READ_INK)
+          .fontColor(this.palette().ink)
           .textAlign(TextAlign.Start)
           .accessibilityText('下载整书')
           .onClick((): void => {
@@ -263,7 +267,7 @@ export struct ReaderFullDirectory {
             this.onDownloadBook();
           });
         Divider()
-          .color(TOK_LINE_STRONG)
+          .color(this.palette().lineStrong)
           .strokeWidth(TOK_BORDER_W);
         Text('清除本书离线')
           .width('100%')
@@ -272,7 +276,7 @@ export struct ReaderFullDirectory {
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Medium)
           .fontSize(13)
-          .fontColor(TOK_READ_INK)
+          .fontColor(this.palette().ink)
           .textAlign(TextAlign.Start)
           .accessibilityText('清除本书离线内容')
           .onClick((): void => {
@@ -282,8 +286,8 @@ export struct ReaderFullDirectory {
       }
       .width(142)
       .height(85)
-      .backgroundColor(TOK_READ_SURFACE)
-      .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+      .backgroundColor(this.palette().surface)
+      .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
       .borderRadius(12)
       .position({ x: this.offlineMenuLeft(), y: this.topBarTop() + 56 })
       .zIndex(8);

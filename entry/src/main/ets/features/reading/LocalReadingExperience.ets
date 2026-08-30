@@ -225,6 +225,7 @@ import {
   readerAppearanceThemeStyle,
   readerAppearanceUsesJustify,
 } from './ReaderAppearanceRenderStyle';
+import { readerThemePalette } from './ReaderThemePalettes';
 import {
   READER_PHONE_REFERENCE_HEIGHT,
   READER_PHONE_REFERENCE_WIDTH,
@@ -764,6 +765,7 @@ export struct ReadingExperience {
     (_chapterIndex: number, _chapterTitle: string): void => {};
   onOpenDirectory: () => void = (): void => {};
   onSwitchSource: () => void = (): void => {};
+  onActiveThemeChange: (theme: ReaderAppearanceTheme) => void = (_theme: ReaderAppearanceTheme): void => {};
   onOpenRulesManagement: () => void = (): void => {};
   onDeleteBookmarks: (bookmarkTimes: number[]) => void = (_bookmarkTimes: number[]): void => {};
   onDownloadChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
@@ -834,7 +836,8 @@ export struct ReadingExperience {
     createDefaultReaderAutoPageFullConfiguration();
   @State private autoPageSessionRemainingSeconds: number = 15 * 60;
   @State private replaceState: ReaderReplaceQuickState = createHiddenReaderReplaceQuickState();
-  @State private appearanceSnapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
+  @State @Watch('onAppearanceSnapshotChanged') private appearanceSnapshot: ReaderAppearanceSnapshot =
+    createDefaultReaderAppearanceSnapshot();
   @State private chineseConversionMode: ReaderChineseConversionMode = 'none';
   @State private readerSettingsSnapshot: ReaderSettingsSnapshot = createDefaultReaderSettingsSnapshot();
   @State private ttsState: ReaderTtsState = createReaderTtsState(false);
@@ -1436,6 +1439,8 @@ export struct ReadingExperience {
           countdown: this.sessionCapsuleCountdown(),
           surfaceColor: readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).paperStart,
           textColor: readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink,
+          surfaceBorderColor: readerThemePalette(this.appearanceSnapshot.activeTheme).borderSoft,
+          appearanceSnapshot: this.appearanceSnapshot,
           interactionEnabled: !this.pageTurnInputOwned,
           onToggle: (): void => this.toggleSessionCapsule(),
           onMeasured: (width: number, height: number): void =>
@@ -5426,6 +5431,10 @@ export struct ReadingExperience {
     if (resetDeadline) {
       this.autoPageSessionDeadlineMs = 0;
     }
+  }
+
+  private onAppearanceSnapshotChanged(): void {
+    this.onActiveThemeChange(this.appearanceSnapshot.activeTheme);
   }
 
   private onAppForegroundChanged(): void {

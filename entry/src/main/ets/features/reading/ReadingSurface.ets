@@ -1,5 +1,6 @@
 import type { image } from '@kit.ImageKit';
 import { registerReaderFonts } from '../common/ReaderFonts';
+import { readerThemePalette } from './ReaderThemePalettes';
 import { TYPE_READER_CHAPTER_TITLE } from '../common/ReaderTypography';
 import {
   createDefaultReaderAppearanceSnapshot,
@@ -109,7 +110,7 @@ export struct ReaderReadingTextFragment {
             .decoration({ type: TextDecorationType.Underline, color: this.themeStyle().ink });
         } else {
           Span(this.highlightBody())
-            .textBackgroundStyle({ color: '#33594632', radius: 2 });
+            .textBackgroundStyle({ color: readerThemePalette(this.appearance.activeTheme).selection, radius: 2 });
         }
       }
       if (this.highlightSuffix().length > 0) {
@@ -124,7 +125,7 @@ export struct ReaderReadingTextFragment {
       .letterSpacing(this.appearance.letterSpacing)
       .fontColor(this.themeStyle().ink)
       .copyOption(this.longPressSelectText ? CopyOptions.InApp : CopyOptions.None)
-      .selectedBackgroundColor('#33594632')
+      .selectedBackgroundColor(readerThemePalette(this.appearance.activeTheme).selection)
       .textAlign(readerAppearanceUsesJustify(this.appearance.alignment) ? TextAlign.JUSTIFY : TextAlign.Start);
   }
 

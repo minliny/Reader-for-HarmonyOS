@@ -114,11 +114,10 @@ assert.equal(readerDirectoryScrollY(10, -1), 0);
 assert.equal(readerDirectoryScrollY(10, 10), 0);
 assert.match(directory, /constraintSize\(\{ minHeight: READER_DIRECTORY_VIEWPORT_HEIGHT \}\)/);
 assert.match(directory, /return readerDirectoryScrollY\(entries\.length, currentIndex\)/);
-assert.match(directory, /DIRECTORY_EDGE_FADE_COLOR = '#D9FFFCF8'/);
-assert.match(directory, /DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR = '#00FFFCF8'/);
+assert.match(directory, /colors: \[\[this\.palette\(\)\.surface, 0\], \[this\.palette\(\)\.surfaceFade, 1\]\]/);
 assert.match(directory, /return readerDirectoryIsScrollable\(this\.projectedEntries\.length\)/);
-assert.match(directory, /direction: GradientDirection\.Bottom,[\s\S]*colors: \[\[DIRECTORY_EDGE_FADE_COLOR, 0\], \[DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR, 1\]\]/);
-assert.match(directory, /direction: GradientDirection\.Top,[\s\S]*colors: \[\[DIRECTORY_EDGE_FADE_COLOR, 0\], \[DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR, 1\]\]/);
+assert.match(directory, /direction: GradientDirection\.Bottom,[\s\S]*colors: \[\[this\.palette\(\)\.surface, 0\], \[this\.palette\(\)\.surfaceFade, 1\]\]/);
+assert.match(directory, /direction: GradientDirection\.Top,[\s\S]*colors: \[\[this\.palette\(\)\.surface, 0\], \[this\.palette\(\)\.surfaceFade, 1\]\]/);
 assert.equal((directory.match(/\.height\(READER_DIRECTORY_EDGE_FADE_HEIGHT\)/g) ?? []).length, 2,
   'the directory viewport must own one 18vp fade at each edge');
 assert.match(directory, /\.height\(READER_DIRECTORY_VIEWPORT_HEIGHT\)[\s\S]*\.hitTestBehavior\(HitTestMode\.Transparent\)/);

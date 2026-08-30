@@ -5,14 +5,10 @@ import {
   TYPE_READER_IMMERSIVE_TIME,
 } from '../common/ReaderTypography';
 import {
-  TOK_READ_IMMERSIVE_META,
-  TOK_READ_IMMERSIVE_META_NIGHT,
-} from '../common/ReaderTokens';
-import {
   createDefaultReaderAppearanceSnapshot,
   type ReaderAppearanceSnapshot,
 } from './ReaderAppearanceState';
-import { readerAppearanceChromeTone } from './ReaderAppearanceRenderStyle';
+import { readerThemePalette } from './ReaderThemePalettes';
 import {
   createDefaultReaderReadingLayout,
   type ReaderReadingLayoutSnapshot,
@@ -145,8 +141,7 @@ export struct ReaderPageChrome {
   }
 
   private metaColor(): string {
-    return readerAppearanceChromeTone(this.appearance.activeTheme) === 'light' ?
-      TOK_READ_IMMERSIVE_META_NIGHT : TOK_READ_IMMERSIVE_META;
+    return readerThemePalette(this.appearance.activeTheme).chromeMeta;
   }
 
 }

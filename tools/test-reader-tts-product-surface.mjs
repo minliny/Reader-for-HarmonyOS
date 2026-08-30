@@ -59,7 +59,7 @@ assert.match(closedConfig,
   /this\.ttsSelectValueField\(value, fieldWidth, `\$\{label\}：\$\{value\}，暂不可展开`\)/,
   'all four TTS configuration fields must reuse the same value-field presentation');
 assert.match(fullPanel,
-  /private ttsSelectValueField[\s\S]*?Text\(value\)[\s\S]*?app\.media\.reader_chevron_down[\s\S]*?TOK_FIELD_SURFACE[\s\S]*?TOK_BORDER/,
+  /private ttsSelectValueField[\s\S]*?Text\(value\)[\s\S]*?app\.media\.reader_chevron_down[\s\S]*?this\.palette\(\)\.surfacePanelSoft[\s\S]*?this\.palette\(\)\.lineStrong/,
   'the shared TTS field must render its current value, chevron, surface, and border');
 assert.doesNotMatch(fullPanel, /ttsDropdownPortGradient|153\.435|206\.565/,
   'a chevron artwork layer must not be stretched into a hard-stop gradient across TTS fields');

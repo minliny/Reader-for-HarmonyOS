@@ -1,14 +1,12 @@
 import {
-  TOK_LINE,
-  TOK_ON_PRIMARY,
-  TOK_READ_INK,
-  TOK_READ_PRIMARY,
-  TOK_READ_SURFACE,
-} from '../common/ReaderTokens';
-import {
   TYPE_READER_SESSION_COUNTDOWN,
   TYPE_READER_SESSION_LABEL,
 } from '../common/ReaderTypography';
+import {
+  createDefaultReaderAppearanceSnapshot,
+  type ReaderAppearanceSnapshot,
+} from './ReaderAppearanceState';
+import { readerThemePalette, READER_THEME_PALETTES, type ReaderThemePalette } from './ReaderThemePalettes';
 import type {
   ReaderSessionCapsuleState,
   ReaderSessionCapsuleType,
@@ -34,13 +32,18 @@ export struct ReaderSessionCapsule {
   @Prop type: ReaderSessionCapsuleType = 'autoPage';
   @Prop sessionState: ReaderSessionCapsuleState = 'playing';
   @Prop countdown: number = 8;
-  @Prop surfaceColor: string = TOK_READ_SURFACE;
-  @Prop textColor: string = TOK_READ_INK;
-  @Prop surfaceBorderColor: string = TOK_LINE;
+  @Prop surfaceColor: string = READER_THEME_PALETTES.day.surface;
+  @Prop textColor: string = READER_THEME_PALETTES.day.ink;
+  @Prop surfaceBorderColor: string = READER_THEME_PALETTES.day.borderSoft;
+  @Prop appearanceSnapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   @Prop interactionEnabled: boolean = true;
   onToggle: () => void = (): void => {};
   onMeasured: (width: number, height: number) => void =
     (_width: number, _height: number): void => {};
+
+  private palette(): ReaderThemePalette {
+    return readerThemePalette(this.appearanceSnapshot.activeTheme);
+  }
 
   build() {
     Row({ space: 4 }) {
@@ -53,13 +56,13 @@ export struct ReaderSessionCapsule {
             .fontWeight(TYPE_READER_SESSION_COUNTDOWN.fontWeight)
             .fontSize(TYPE_READER_SESSION_COUNTDOWN.fontSizeFp)
             .lineHeight(TYPE_READER_SESSION_COUNTDOWN.lineHeightFp)
-            .fontColor(TOK_ON_PRIMARY)
+            .fontColor(this.palette().onPrimary)
             .textAlign(TextAlign.Center)
             .maxLines(1);
         }
         .width(18)
         .height(16)
-        .backgroundColor(TOK_READ_PRIMARY)
+        .backgroundColor(this.palette().primary)
         .borderRadius(999);
       } else {
         Stack({ alignContent: Alignment.Center }) {
@@ -93,7 +96,7 @@ export struct ReaderSessionCapsule {
       }
       .width(16)
       .height(16)
-      .backgroundColor(TOK_READ_PRIMARY)
+      .backgroundColor(this.palette().primary)
       .borderRadius(999);
     }
     .height(READER_SESSION_CAPSULE_HEIGHT)

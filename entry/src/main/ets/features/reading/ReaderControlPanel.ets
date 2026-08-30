@@ -53,24 +53,11 @@ import {
   type ReaderReplaceQuickState,
 } from './ReaderReplaceQuickState';
 import {
-  TOK_ACCENT,
-  TOK_BORDER,
   TOK_BORDER_W,
-  TOK_LINE_STRONG,
-  TOK_READ_ACTIVE_SOFT,
-  TOK_READ_DISABLED_BG,
-  TOK_READ_ELEVATED,
-  TOK_READ_HANDLE,
-  TOK_READ_ICON,
-  TOK_READ_INK,
-  TOK_READ_MUTED,
-  TOK_READ_PRIMARY,
-  TOK_READ_SURFACE,
   TOK_RADIUS_LG,
   TOK_RADIUS_XL,
-  TOK_SURFACE_PANEL,
-  TOK_SURFACE_SOLID_OPAQUE,
 } from '../common/ReaderTokens';
+import { readerThemePalette, type ReaderThemePalette } from './ReaderThemePalettes';
 import {
   ReaderControlGeometry,
   READER_CONTROL_BRIGHTNESS_AUTO_HIT_WIDTH,
@@ -178,6 +165,10 @@ export struct ReaderControlPanel {
   @Prop autoPageFollowHighlight: boolean = true;
   @Prop replaceState: ReaderReplaceQuickState = createHiddenReaderReplaceQuickState();
   @Prop appearanceSnapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
+
+  private palette(): ReaderThemePalette {
+    return readerThemePalette(this.appearanceSnapshot.activeTheme);
+  }
   @Prop chineseConversionMode: ReaderChineseConversionMode = 'none';
   @Prop settingsSnapshot: ReaderSettingsSnapshot = createDefaultReaderSettingsSnapshot();
   /** Native simulation capability for this mounted reading session. */
@@ -690,14 +681,14 @@ export struct ReaderControlPanel {
           .fontFamily(TYPE_READER_CONTROL_BOOK_TITLE.fontFamily)
           .fontWeight(TYPE_READER_CONTROL_BOOK_TITLE.fontWeight)
           .fontSize(TYPE_READER_CONTROL_BOOK_TITLE.fontSizeFp)
-          .fontColor(TOK_READ_INK)
+          .fontColor(this.palette().ink)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         Text(`${this.chapterTitle} · ${this.sourceLabel()}`)
           .fontFamily(TYPE_READER_CONTROL_CHAPTER_SOURCE.fontFamily)
           .fontWeight(TYPE_READER_CONTROL_CHAPTER_SOURCE.fontWeight)
           .fontSize(TYPE_READER_CONTROL_CHAPTER_SOURCE.fontSizeFp)
-          .fontColor(TOK_READ_MUTED)
+          .fontColor(this.palette().inkSecondary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
       }
@@ -715,7 +706,7 @@ export struct ReaderControlPanel {
           .fontFamily(TYPE_READER_CONTROL_SOURCE_ACTION.fontFamily)
           .fontWeight(TYPE_READER_CONTROL_SOURCE_ACTION.fontWeight)
           .fontSize(TYPE_READER_CONTROL_SOURCE_ACTION.fontSizeFp)
-          .fontColor(TOK_READ_INK)
+          .fontColor(this.palette().ink)
           .maxLines(1);
       }
       .width(62)
@@ -749,8 +740,8 @@ export struct ReaderControlPanel {
     .height(54)
     .padding({ left: 13, right: 13 })
     .alignItems(VerticalAlign.Center)
-    .backgroundColor(TOK_READ_SURFACE)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    .backgroundColor(this.palette().surface)
+    .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
     .borderRadius(24)
     .margin({ top: this.layout.topBarTop });
   }
@@ -775,6 +766,7 @@ export struct ReaderControlPanel {
   @Builder
   private fullSearchDock() {
     ReaderSearchFullPanel({
+      appearanceSnapshot: this.appearanceSnapshot,
       availableWidth: this.fullPanelAvailableWidth(),
       availableHeight: this.layout.fullPanelHeight,
       query: this.searchQuery,
@@ -824,6 +816,7 @@ export struct ReaderControlPanel {
   @Builder
   private fullSettingsDock() {
     ReaderSettingsFullPanel({
+      appearanceSnapshot: this.appearanceSnapshot,
       isTablet: this.isExpanded(),
       availableWidth: this.fullPanelAvailableWidth(),
       availableHeight: this.layout.fullPanelHeight,
@@ -849,6 +842,7 @@ export struct ReaderControlPanel {
   @Builder
   private fullTtsDock() {
     ReaderTtsFullPanel({
+      appearanceSnapshot: this.appearanceSnapshot,
       isTablet: this.isExpanded(),
       availableWidth: this.fullPanelAvailableWidth(),
       availableHeight: this.layout.fullPanelHeight,
@@ -903,6 +897,7 @@ export struct ReaderControlPanel {
     Stack({ alignContent: Alignment.Top }) {
       Stack({ alignContent: Alignment.TopStart }) {
         ReaderAutoPageFullPanel({
+          appearanceSnapshot: this.appearanceSnapshot,
           isTablet: false,
           availableWidth: this.autoPageSurfaceWidth(),
           availableHeight: this.autoPageSurfaceHeight(),
@@ -947,8 +942,8 @@ export struct ReaderControlPanel {
         x: this.autoPageActorExpanded ? 0 : READER_AUTO_PAGE_COLLAPSED_SURFACE_X,
         y: this.autoPageActorExpanded ? 0 : READER_AUTO_PAGE_COLLAPSED_SURFACE_Y,
       })
-      .backgroundColor(TOK_READ_SURFACE)
-      .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+      .backgroundColor(this.palette().surface)
+      .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
       .borderRadius(24)
       .clip(true);
 
@@ -1011,7 +1006,7 @@ export struct ReaderControlPanel {
             Row()
               .width(42)
               .height(4)
-              .backgroundColor(TOK_READ_HANDLE)
+              .backgroundColor(this.palette().handle)
               .borderRadius(999)
               .margin({ top: 9 });
           }
@@ -1052,10 +1047,10 @@ export struct ReaderControlPanel {
     .width('100%')
     .constraintSize({ maxWidth: this.dockWidth() })
     .height(this.geo.sheetH)
-    // ControlSheet 外层背景 = TOK_READ_SURFACE (rgba(255,250,244,0.98) 近不透明暖奶油)。
-    // 勿误用内层 Panel 的 TOK_SURFACE_PANEL (0.62) —— 那会过度透明、正文透入、区块压平发白发虚。
-    .backgroundColor(TOK_READ_SURFACE)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    // ControlSheet 外层背景 = palette.surface (近不透明暖奶油)。
+    // 勿误用内层 Panel 的 this.palette().surfacePanelSoft (0.62) —— 那会过度透明、正文透入、区块压平发白发虚。
+    .backgroundColor(this.palette().surface)
+    .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
     .borderRadius({
       topLeft: TOK_RADIUS_XL,
       topRight: TOK_RADIUS_XL,
@@ -1122,6 +1117,7 @@ export struct ReaderControlPanel {
     Row({ space: READER_CONTROL_TOP_COMPONENT_GAP }) {
       if (this.activePage === 'quickSearch') {
         ReaderQuickSearchPanel({
+          appearanceSnapshot: this.appearanceSnapshot,
           isTablet: this.isExpanded(),
           query: this.searchQuery,
           state: this.searchState,
@@ -1133,6 +1129,7 @@ export struct ReaderControlPanel {
           .layoutWeight(1);
       } else if (this.activePage === 'quickAutoPage') {
         ReaderAutoPagePanel({
+          appearanceSnapshot: this.appearanceSnapshot,
           isTablet: this.isExpanded(),
           status: this.autoPageStatus,
           speedSeconds: this.autoPageSpeedSeconds,
@@ -1149,6 +1146,7 @@ export struct ReaderControlPanel {
           .layoutWeight(1);
       } else if (this.activePage === 'quickReplace') {
         ReaderReplaceQuickPanel({
+          appearanceSnapshot: this.appearanceSnapshot,
           isTablet: this.isExpanded(),
           state: this.replaceState,
           onClose: (): void => this.onPageChange('home'),
@@ -1160,6 +1158,7 @@ export struct ReaderControlPanel {
           .layoutWeight(1);
       } else if (this.activePage === 'moduleDirectory') {
         ReaderDirectoryModulePanel({
+          appearanceSnapshot: this.appearanceSnapshot,
           entries: this.tocEntries,
           currentChapterIndex: this.currentChapterIndex,
           chapterDownloadEnabled: this.chapterDownloadEnabled,
@@ -1173,6 +1172,7 @@ export struct ReaderControlPanel {
           .layoutWeight(1);
       } else if (this.activePage === 'moduleTts') {
         ReaderTtsModulePanel({
+          appearanceSnapshot: this.appearanceSnapshot,
           isTablet: this.isExpanded(),
           state: this.ttsState,
           timerMinutes: this.ttsTimerMinutes,
@@ -1193,6 +1193,7 @@ export struct ReaderControlPanel {
           .layoutWeight(1);
       } else if (this.activePage === 'moduleSettings') {
         ReaderSettingsModulePanel({
+          appearanceSnapshot: this.appearanceSnapshot,
           isTablet: this.isExpanded(),
           snapshot: this.settingsSnapshot,
           pageTurnSimulationAvailable: this.pageTurnSimulationAvailable,
@@ -1231,8 +1232,8 @@ export struct ReaderControlPanel {
     .width('100%')
     .height(READER_CONTROL_HOME_QUICK_ACTION_HEIGHT)
     .padding({ left: 9 })
-    .backgroundColor(TOK_SURFACE_PANEL)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    .backgroundColor(this.palette().surfacePanelSoft)
+    .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
     .borderRadius(8);
   }
 
@@ -1250,7 +1251,7 @@ export struct ReaderControlPanel {
         .fontWeight(800)
         .fontSize(11)
         .lineHeight(13)
-        .fontColor(TOK_READ_INK)
+        .fontColor(this.palette().ink)
         .textAlign(TextAlign.Center)
         .maxLines(1)
         .margin({ top: 5.78   });
@@ -1258,7 +1259,7 @@ export struct ReaderControlPanel {
     .layoutWeight(1)
     .height(55.438)
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor(TOK_READ_ELEVATED)
+    .backgroundColor(this.palette().surfaceElevated)
     .borderRadius(8)
     .accessibilityText(label)
     .onClick((): void => {
@@ -1281,8 +1282,8 @@ export struct ReaderControlPanel {
     .width('100%')
     .height(READER_CONTROL_HOME_CHAPTER_PROGRESS_HEIGHT)
     .alignItems(HorizontalAlign.Start)
-    .backgroundColor(TOK_SURFACE_PANEL)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    .backgroundColor(this.palette().surfacePanelSoft)
+    .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
     .borderRadius(8);
   }
 
@@ -1297,7 +1298,7 @@ export struct ReaderControlPanel {
       }
       .width(34)
       .height(34)
-      .backgroundColor(this.canStepChapter(-1) ? TOK_READ_ELEVATED : TOK_READ_DISABLED_BG)
+      .backgroundColor(this.canStepChapter(-1) ? this.palette().surfaceElevated : this.palette().disabledBg)
       .borderRadius(999)
       .opacity(this.canStepChapter(-1) ? 1 : 0.4)
       .enabled(this.canStepChapter(-1))
@@ -1316,7 +1317,7 @@ export struct ReaderControlPanel {
         .fontWeight(700)
         .fontSize(13)
         .lineHeight(16.25)
-        .fontColor(TOK_READ_INK)
+        .fontColor(this.palette().ink)
         .textAlign(TextAlign.Center)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -1329,7 +1330,7 @@ export struct ReaderControlPanel {
       }
       .width(34)
       .height(34)
-      .backgroundColor(this.canStepChapter(1) ? TOK_READ_ELEVATED : TOK_READ_DISABLED_BG)
+      .backgroundColor(this.canStepChapter(1) ? this.palette().surfaceElevated : this.palette().disabledBg)
       .borderRadius(999)
       .opacity(this.canStepChapter(1) ? 1 : 0.4)
       .enabled(this.canStepChapter(1))
@@ -1356,7 +1357,7 @@ export struct ReaderControlPanel {
         .fontWeight(FontWeight.Regular)
         .fontSize(9)
         .lineHeight(9)
-        .fontColor(TOK_READ_MUTED)
+        .fontColor(this.palette().inkSecondary)
         .maxLines(1);
 
       // Native Slider owns pointer/keyboard semantics; its visual parameters
@@ -1373,11 +1374,11 @@ export struct ReaderControlPanel {
       })
       .trackThickness(5)
       .blockSize({ width: 18, height: 18 })
-      .blockColor(TOK_SURFACE_SOLID_OPAQUE)
-      .blockBorderColor(TOK_ACCENT)
+      .blockColor(this.palette().knob)
+      .blockBorderColor(this.palette().accent)
       .blockBorderWidth(2.778)
-      .selectedColor(TOK_ACCENT)
-      .trackColor(TOK_BORDER)
+      .selectedColor(this.palette().accent)
+      .trackColor(this.palette().handle)
       .showSteps(false)
       .showTips(false)
       .accessibilityText('阅读进度')
@@ -1400,7 +1401,7 @@ export struct ReaderControlPanel {
         .fontWeight(FontWeight.Regular)
         .fontSize(9)
         .lineHeight(9)
-        .fontColor(TOK_READ_MUTED)
+        .fontColor(this.palette().inkSecondary)
         .textAlign(TextAlign.RIGHT)
         .maxLines(1)
         .margin({ left: 5.5   });
@@ -1435,12 +1436,12 @@ export struct ReaderControlPanel {
         Row()
           .width(READER_CONTROL_BRIGHTNESS_TRACK_WIDTH)
           .height('100%')
-          .backgroundColor(TOK_BORDER)
+          .backgroundColor(this.palette().handle)
           .borderRadius(999);
         Row()
           .width(READER_CONTROL_BRIGHTNESS_TRACK_WIDTH)
           .height(`${this.effectiveBrightnessPercent()}%`)
-          .backgroundColor(TOK_READ_PRIMARY)
+          .backgroundColor(this.palette().primary)
           .borderRadius(999);
       }
       .width(READER_CONTROL_BRIGHTNESS_TRACK_HIT_WIDTH)
@@ -1471,13 +1472,13 @@ export struct ReaderControlPanel {
             .fontWeight(500)
             .fontSize(13)
             .lineHeight(13)
-            .fontColor(TOK_READ_INK)
+            .fontColor(this.palette().ink)
             .textAlign(TextAlign.Center);
         }
         .width(READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE)
         .height(READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE)
-        .backgroundColor(TOK_READ_ELEVATED)
-        .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+        .backgroundColor(this.palette().surfaceElevated)
+        .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
         .borderRadius(999);
       }
       .width(READER_CONTROL_BRIGHTNESS_AUTO_HIT_WIDTH)
@@ -1489,8 +1490,8 @@ export struct ReaderControlPanel {
     .width(READER_CONTROL_BRIGHTNESS_RAIL_WIDTH)
     .height(READER_CONTROL_BRIGHTNESS_RAIL_HEIGHT)
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor(TOK_SURFACE_PANEL)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    .backgroundColor(this.palette().surfacePanelSoft)
+    .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
     .borderRadius(999);
   }
 
@@ -1578,8 +1579,8 @@ export struct ReaderControlPanel {
     .width('100%')
     .height(this.geo.moduleNavH)
     .padding({ left: 9, top: 9 })
-    .backgroundColor(TOK_SURFACE_SOLID_OPAQUE)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    .backgroundColor(this.palette().surface)
+    .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
     .borderRadius({
       topLeft: this.geo.moduleNavRadiusTop,
       topRight: this.geo.moduleNavRadiusTop,
@@ -1599,7 +1600,7 @@ export struct ReaderControlPanel {
       }
       .width(42)
       .height(42)
-      .backgroundColor(this.isActiveModule(module) ? TOK_READ_PRIMARY : TOK_READ_ACTIVE_SOFT)
+      .backgroundColor(this.isActiveModule(module) ? this.palette().primary : this.palette().activeSoft)
       .borderRadius(999);
 
       // ModuleLabel Inter EB 10 全宽居中。
@@ -1610,7 +1611,7 @@ export struct ReaderControlPanel {
         .fontWeight(800)
         .fontSize(10)
         .lineHeight(12)
-        .fontColor(this.isActiveModule(module) ? TOK_READ_PRIMARY : TOK_READ_ICON)
+        .fontColor(this.isActiveModule(module) ? this.palette().primary : this.palette().icon)
         .textAlign(TextAlign.Center)
         .maxLines(1)
         .margin({ top: 5   });

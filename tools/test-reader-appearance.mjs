@@ -239,9 +239,9 @@ assert.match(quickPanel, /readerAppearanceFontSlotFamily\(this\.snapshot, fontId
   'quick font previews must use the shared product-facing slot mapping');
 assert.match(quickPanel, /readerAppearanceFontSlotLabel\(this\.snapshot, fontId\)/,
   'quick and full grids must not duplicate or rename the Figma labels');
-assert.match(quickPanel, /TOK_PRIMARY_SOFT : Color\.Transparent/,
+assert.match(quickPanel, /isActiveFont\(fontId\) \? this\.palette\(\)\.activeSoft : Color\.Transparent/,
   'the selected quick font slot must use the Figma green soft fill instead of the blue theme state');
-assert.match(quickPanel, /\.height\(27\)[\s\S]*\.border\(\{ width: \{ top: TOK_BORDER_W \}, color: TOK_LINE \}\)/,
+assert.match(quickPanel, /\.height\(27\)[\s\S]*\.border\(\{ width: \{ top: TOK_BORDER_W \}, color: this\.palette\(\)\.borderSoft \}\)/,
   'the quick font state belongs to the complete 62.5x27 slot');
 assert.doesNotMatch(quickPanel, /fontPillWidth|borderRadius\(11\)|'#FFFAF4'/,
   'the rejected nested font-pill treatment must not return');
@@ -271,13 +271,13 @@ assert.match(fullPanel, /Text\('主题库'\)/);
 assert.match(fullPanel, /Text\('字体库'\)/);
 assert.match(fullPanel, /Text\('排版库'\)/);
 assert.match(quickPanel,
-  /backgroundColor\(this\.snapshot\.activeTheme === theme \? TOK_READ_ACTIVE_SOFT[\s\S]*isNightTheme\(theme\) \? TOK_READ_DISABLED_BG[\s\S]*opacity\(this\.snapshot\.activeTheme === theme \? 1 : 0\.8\)/,
+  /backgroundColor\(this\.snapshot\.activeTheme === theme \? this\.palette\(\)\.activeSoft[\s\S]*isNightTheme\(theme\) \? this\.palette\(\)\.disabledBg[\s\S]*opacity\(this\.snapshot\.activeTheme === theme \? 1 : 0\.8\)/,
   'quick theme cells must use the complete Figma state layer instead of outlining the swatch');
 assert.match(fullPanel,
-  /backgroundColor\(this\.snapshot\.activeTheme === theme \? TOK_READ_ACTIVE_SOFT : TOK_READ_DISABLED_BG\)[\s\S]*opacity\(this\.snapshot\.activeTheme === theme \? 1 : 0\.8\)/,
+  /backgroundColor\(this\.snapshot\.activeTheme === theme \? this\.palette\(\)\.activeSoft : this\.palette\(\)\.disabledBg\)[\s\S]*opacity\(this\.snapshot\.activeTheme === theme \? 1 : 0\.8\)/,
   'full theme cells must preserve the authored selected fill and inactive opacity');
 assert.match(fullPanel,
-  /backgroundColor\(this\.isActiveFont\(fontId\) \? TOK_PRIMARY_SOFT : Color\.Transparent\)[\s\S]*color: this\.isActiveFont\(fontId\) \? TOK_READ_PRIMARY : TOK_LINE/,
+  /backgroundColor\(this\.isActiveFont\(fontId\) \? this\.palette\(\)\.activeSoft : Color\.Transparent\)[\s\S]*color: this\.isActiveFont\(fontId\) \? this\.palette\(\)\.primary : this\.palette\(\)\.borderSoft/,
   'full font cells must use transparent weak-border defaults and the green selected fill');
 assert.match(fullPanel,
   /Text\('即时应用'\)[\s\S]*\.width\(70\)[\s\S]*\.fontWeight\(FontWeight\.Medium\)[\s\S]*\.fontSize\(10\)/,
@@ -295,7 +295,7 @@ assert.match(fullPanel, /ReaderSelectPanel\(\{/);
 assert.equal((fullPanel.match(/variant: 'appearanceCompact'/g) ?? []).length, 2,
   'appearance trigger and overlay must share the page-specific Figma variant');
 assert.match(fullPanel,
-  /private indentRow[\s\S]*?TOK_SURFACE_FIELD[\s\S]*?TOK_BORDER[\s\S]*?this\.indentOption\('不缩进', 'none'\)[\s\S]*?this\.indentOption\('双字缩进', 'firstLine'\)/,
+  /private indentRow[\s\S]*?this\.palette\(\)\.surfacePanelSoft[\s\S]*?this\.palette\(\)\.lineStrong[\s\S]*?this\.indentOption\('不缩进', 'none'\)[\s\S]*?this\.indentOption\('双字缩进', 'firstLine'\)/,
   'the indent segmented field must keep one clean field surface and three interactive options');
 assert.doesNotMatch(fullPanel, /indentPortGradient|linearGradient\(\{[\s\S]*?Color\.Transparent[\s\S]*?'#41484C'/,
   'the dropdown chevron artwork must not be stretched across the indent segmented field');

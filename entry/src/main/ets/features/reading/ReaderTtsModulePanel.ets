@@ -5,18 +5,10 @@ import {
   READER_TTS_RATE_STEP_SCALE,
   type ReaderTtsState,
 } from './ReaderTtsState';
-import {
-  TOK_BORDER,
-  TOK_BORDER_W,
-  TOK_FIELD_SURFACE,
-  TOK_LINE,
-  TOK_LINE_STRONG,
-  TOK_ON_PRIMARY,
-  TOK_READ_INK,
-  TOK_READ_MUTED,
-  TOK_READ_PRIMARY,
-  TOK_SURFACE_PANEL,
-} from '../common/ReaderTokens';
+import { TOK_BORDER_W } from '../common/ReaderTokens';
+import type { ReaderAppearanceSnapshot } from './ReaderAppearanceState';
+import { createDefaultReaderAppearanceSnapshot } from './ReaderAppearanceState';
+import { readerThemePalette, type ReaderThemePalette } from './ReaderThemePalettes';
 
 // Phone and Tablet outer heights are separate Figma surfaces. Their equal
 // inner section geometry does not make either outer height derivable.
@@ -45,6 +37,11 @@ export struct ReaderTtsModulePanel {
   @Prop isTablet: boolean = false;
   @Prop state: ReaderTtsState;
   @Prop timerMinutes: number = 15;
+  @Prop appearanceSnapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
+
+  private palette(): ReaderThemePalette {
+    return readerThemePalette(this.appearanceSnapshot.activeTheme);
+  }
   onToggle: () => void = (): void => {};
   onStop: () => void = (): void => {};
   onPrevious: () => void = (): void => {};
@@ -68,8 +65,8 @@ export struct ReaderTtsModulePanel {
       bottom: TTS_MODULE_PANEL_PADDING_Y,
     })
     .alignItems(HorizontalAlign.Start)
-    .backgroundColor(TOK_SURFACE_PANEL)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    .backgroundColor(this.palette().surfacePanelSoft)
+    .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
     .borderRadius(8)
     .clip(true);
   }
@@ -87,7 +84,7 @@ export struct ReaderTtsModulePanel {
           .fontWeight(FontWeight.Bold)
           .fontSize(12)
           .lineHeight(12)
-          .fontColor(TOK_READ_INK)
+          .fontColor(this.palette().ink)
           .maxLines(1);
       }
       .layoutWeight(1)
@@ -108,7 +105,7 @@ export struct ReaderTtsModulePanel {
     .height(TTS_MODULE_PLAYBACK_HEIGHT)
     .padding({ left: 11, right: 11 })
     .alignItems(VerticalAlign.Center)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
     .borderRadius(6);
   }
 
@@ -133,8 +130,8 @@ export struct ReaderTtsModulePanel {
     Stack({ alignContent: Alignment.Center }) {
       if (this.isActivelySpeaking()) {
         Row({ space: 4 }) {
-          Row().width(3).height(13).backgroundColor(TOK_ON_PRIMARY).borderRadius(1);
-          Row().width(3).height(13).backgroundColor(TOK_ON_PRIMARY).borderRadius(1);
+          Row().width(3).height(13).backgroundColor(this.palette().onPrimary).borderRadius(1);
+          Row().width(3).height(13).backgroundColor(this.palette().onPrimary).borderRadius(1);
         }
       } else {
         Image($r('app.media.reader_tts_play'))
@@ -144,7 +141,7 @@ export struct ReaderTtsModulePanel {
     }
     .width(24)
     .height(24)
-    .backgroundColor(TOK_READ_PRIMARY)
+    .backgroundColor(this.palette().primary)
     .borderRadius(12)
     .position({ x: 36, y: 4 })
     .enabled(this.state.status !== 'unavailable' && this.state.status !== 'stopping')
@@ -162,7 +159,7 @@ export struct ReaderTtsModulePanel {
     }
     .width(22)
     .height(22)
-    .backgroundColor('#D7473E')
+    .backgroundColor(this.palette().error)
     .borderRadius(11)
     .position({ x: 69, y: 5 })
     .enabled(this.hasActiveQueue())
@@ -200,7 +197,7 @@ export struct ReaderTtsModulePanel {
           .fontWeight(FontWeight.Bold)
           .fontSize(12)
           .lineHeight(12)
-          .fontColor(TOK_READ_INK);
+          .fontColor(this.palette().ink);
       }
       .layoutWeight(1)
       .alignItems(VerticalAlign.Center);
@@ -211,7 +208,7 @@ export struct ReaderTtsModulePanel {
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Bold)
           .fontSize(12)
-          .fontColor('#41484C');
+          .fontColor(this.palette().inkSecondary);
         Image($r('app.media.reader_chevron_down'))
           .width(12)
           .height(12);
@@ -220,8 +217,8 @@ export struct ReaderTtsModulePanel {
       .height(30)
       .padding({ left: 9, right: 5 })
       .alignItems(VerticalAlign.Center)
-      .backgroundColor(TOK_FIELD_SURFACE)
-      .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+      .backgroundColor(this.palette().surfacePanelSoft)
+      .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
       .borderRadius(6)
       // Figma has only the closed SelectSmall trigger (`750:1053`) and its
       // 86×44 hit target. No expanded options/reaction exists, so the trigger
@@ -233,7 +230,7 @@ export struct ReaderTtsModulePanel {
     .height(TTS_MODULE_TIMER_HEIGHT)
     .padding({ left: 11, right: 11 })
     .alignItems(VerticalAlign.Center)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
     .borderRadius(6);
   }
 
@@ -249,7 +246,7 @@ export struct ReaderTtsModulePanel {
           .fontWeight(FontWeight.Bold)
           .fontSize(12)
           .lineHeight(12)
-          .fontColor(TOK_READ_INK);
+          .fontColor(this.palette().ink);
       }
       .width(TTS_MODULE_RATE_LABEL_WIDTH)
       .alignItems(VerticalAlign.Center);
@@ -262,14 +259,14 @@ export struct ReaderTtsModulePanel {
         .fontWeight(FontWeight.Bold)
         .fontSize(12)
         .lineHeight(12)
-        .fontColor(TOK_READ_PRIMARY)
+        .fontColor(this.palette().primary)
         .textAlign(TextAlign.End);
     }
     .width('100%')
     .height(TTS_MODULE_RATE_HEIGHT)
     .padding({ left: 11, right: 11 })
     .alignItems(VerticalAlign.Center)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
     .borderRadius(6);
   }
 
@@ -280,13 +277,13 @@ export struct ReaderTtsModulePanel {
       Row()
         .width(TTS_MODULE_RATE_SLIDER_WIDTH)
         .height(TTS_MODULE_RATE_TRACK_HEIGHT)
-        .backgroundColor(TOK_BORDER)
+        .backgroundColor(this.palette().lineStrong)
         .borderRadius(999)
         .position({ x: 0, y: 15 });
       Row()
         .width(this.rateFillWidth())
         .height(TTS_MODULE_RATE_TRACK_HEIGHT)
-        .backgroundColor(TOK_READ_PRIMARY)
+        .backgroundColor(this.palette().primary)
         .borderRadius(999)
         .position({ x: 0, y: 15 });
       Image($r('app.media.reader_tts_speed_thumb'))

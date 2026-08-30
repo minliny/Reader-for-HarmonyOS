@@ -5,22 +5,13 @@ import {
   type ReaderDirectoryChapterStartBookmarkRequest,
 } from './ReaderDirectoryMarkerState';
 import {
-  TOK_ACCENT,
-  TOK_LINE,
-  TOK_LINE_STRONG,
-  TOK_READ_ACTIVE_SOFT,
-  TOK_READ_HANDLE,
-  TOK_READ_INK,
-  TOK_READ_MUTED,
-  TOK_READ_PRIMARY,
-  TOK_READ_SURFACE,
+  TOK_BORDER_W,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
-  TOK_SURFACE_PANEL,
-  TOK_SURFACE_PANEL_SOFT,
-  TOK_BORDER_W,
 } from '../common/ReaderTokens';
+import type { ReaderAppearanceTheme } from './ReaderAppearanceState';
+import { readerThemePalette, type ReaderThemePalette } from './ReaderThemePalettes';
 
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { ReaderSearchField } from '../common/ReaderSearchField';
@@ -30,7 +21,6 @@ import {
 } from './ReaderDirectoryProjection';
 
 const BOOKMARK_ROW_HEIGHT = 74;
-const BOOKMARK_EXCERPT_ACCENT = '#8C9B8466';
 
 /**
  * Source-backed presentation layer for the expanded reader directory panel:
@@ -85,11 +75,16 @@ export struct FullDirectoryPanel {
   // Creation stays disabled until an owner supplies the full book identity
   // required by bookmark.create and reloads the Core-backed projection.
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
+  @Prop theme: ReaderAppearanceTheme = 'day';
   onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void =
     (_request: ReaderDirectoryChapterStartBookmarkRequest): void => {};
   // R-LOCAL-TOC-01: the owner resolves the correct return target. This panel
   // only emits the explicit collapse intent.
   onExit: () => void = (): void => {};
+
+  private palette(): ReaderThemePalette {
+    return readerThemePalette(this.theme);
+  }
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -105,7 +100,7 @@ export struct FullDirectoryPanel {
       Text('')
         .width(42)
         .height(4)
-        .backgroundColor(TOK_READ_HANDLE)
+        .backgroundColor(this.palette().handle)
         .borderRadius(999)
         .margin({ left: this.gripLeft(), top: 9 });
 
@@ -119,8 +114,8 @@ export struct FullDirectoryPanel {
     }
     .width(this.panelWidth())
     .height(this.panelHeight())
-    .backgroundColor(TOK_READ_SURFACE)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    .backgroundColor(this.palette().surface)
+    .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
     .borderRadius(24)
     .clip(true);
   }
@@ -143,7 +138,7 @@ export struct FullDirectoryPanel {
           .fontWeight(FontWeight.Bold)
           .fontSize(14)
           .lineHeight(20)
-          .fontColor(TOK_READ_INK);
+          .fontColor(this.palette().ink);
       }
       .layoutWeight(1)
       .height(30)
@@ -156,12 +151,12 @@ export struct FullDirectoryPanel {
           .fontWeight(FontWeight.Bold)
           .fontSize(10)
           .lineHeight(14)
-          .fontColor(TOK_READ_PRIMARY)
+          .fontColor(this.palette().primary)
           .textAlign(TextAlign.Center);
       }
       .width(40)
       .height(26)
-      .backgroundColor(TOK_SURFACE_PANEL_SOFT)
+      .backgroundColor(this.palette().surfacePanelSoft)
       .borderRadius(8)
       .accessibilityText('收起目录')
       .onClick((): void => this.onExit());
@@ -193,8 +188,8 @@ export struct FullDirectoryPanel {
     }
     .width(this.innerWidth())
     .height(this.bodyContentHeight())
-    .backgroundColor(TOK_SURFACE_PANEL)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE })
+    .backgroundColor(this.palette().surfacePanelSoft)
+    .border({ width: TOK_BORDER_W, color: this.palette().borderSoft })
     .borderRadius(12)
     .clip(true);
   }
@@ -212,7 +207,7 @@ export struct FullDirectoryPanel {
       Text('')
         .width('100%')
         .height(1)
-        .backgroundColor(TOK_LINE);
+        .backgroundColor(this.palette().borderSoft);
     }
     .width('100%')
     .height(42);
@@ -227,7 +222,7 @@ export struct FullDirectoryPanel {
           .fontWeight(600)
           .fontSize(11)
           .lineHeight(16)
-          .fontColor(this.activeTab === 'directory' ? TOK_READ_PRIMARY : TOK_READ_MUTED)
+          .fontColor(this.activeTab === 'directory' ? this.palette().primary : this.palette().inkSecondary)
           .textAlign(TextAlign.Center);
       }
       .width('100%')
@@ -238,7 +233,7 @@ export struct FullDirectoryPanel {
         Text('')
           .width(this.activeTabLineWidth())
           .height(2)
-          .backgroundColor(TOK_READ_PRIMARY)
+          .backgroundColor(this.palette().primary)
           .borderRadius(999);
       }
     }
@@ -275,7 +270,7 @@ export struct FullDirectoryPanel {
           .fontWeight(600)
           .fontSize(11)
           .lineHeight(16)
-          .fontColor(this.activeTab === 'bookmarks' ? TOK_READ_PRIMARY : TOK_READ_MUTED);
+          .fontColor(this.activeTab === 'bookmarks' ? this.palette().primary : this.palette().inkSecondary);
       }
       .width('100%')
       .height(36)
@@ -285,7 +280,7 @@ export struct FullDirectoryPanel {
         Text('')
           .width(this.activeTabLineWidth())
           .height(2)
-          .backgroundColor(TOK_READ_PRIMARY)
+          .backgroundColor(this.palette().primary)
           .borderRadius(999);
       }
     }
@@ -338,7 +333,7 @@ export struct FullDirectoryPanel {
       Text('')
         .width('100%')
         .height(1)
-        .backgroundColor(TOK_LINE);
+        .backgroundColor(this.palette().borderSoft);
     }
     .width('100%')
     .height(51);
@@ -367,7 +362,7 @@ export struct FullDirectoryPanel {
     }
     .width(32)
     .height(32)
-    .backgroundColor(TOK_SURFACE_PANEL_SOFT)
+    .backgroundColor(this.palette().surfacePanelSoft)
     .borderRadius(8)
     .accessibilityText(this.controlButtonLabel(kind))
     .onClick((): void => this.handleControl(kind));
@@ -401,7 +396,7 @@ export struct FullDirectoryPanel {
           Text('')
             .width(3)
             .height(40)
-            .backgroundColor(TOK_ACCENT)
+            .backgroundColor(this.palette().accent)
             .borderRadius(999);
         }
         Stack({ alignContent: Alignment.Center }) {
@@ -411,7 +406,7 @@ export struct FullDirectoryPanel {
             .fontFamily('ReaderInter')
             .fontWeight(500)
             .fontSize(11)
-            .fontColor(TOK_READ_INK)
+            .fontColor(this.palette().ink)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
@@ -431,7 +426,7 @@ export struct FullDirectoryPanel {
     }
     .width('100%')
     .height(40)
-    .backgroundColor(this.isCurrent(repeatItem.item) ? TOK_READ_ACTIVE_SOFT : Color.Transparent)
+    .backgroundColor(this.isCurrent(repeatItem.item) ? this.palette().activeSoft : Color.Transparent)
     .borderRadius(6);
   }
 
@@ -466,14 +461,14 @@ export struct FullDirectoryPanel {
         .fontWeight(500)
         .fontSize(11)
         .lineHeight(14)
-        .fontColor(TOK_READ_INK)
+        .fontColor(this.palette().ink)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       Row({ space: 17 }) {
         Text('')
           .width(1)
           .height(28)
-          .backgroundColor(BOOKMARK_EXCERPT_ACCENT)
+          .backgroundColor(this.palette().borderSoft)
           .borderRadius(1);
         Text(repeatItem.item.content)
           .layoutWeight(1)
@@ -482,7 +477,7 @@ export struct FullDirectoryPanel {
           .fontWeight(FontWeight.Regular)
           .fontSize(9)
           .lineHeight(14)
-          .fontColor(TOK_READ_MUTED)
+          .fontColor(this.palette().inkSecondary)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
       }
@@ -494,7 +489,7 @@ export struct FullDirectoryPanel {
         .width('100%')
         .height(1)
         .margin({ top: 13 })
-        .backgroundColor(TOK_LINE);
+        .backgroundColor(this.palette().borderSoft);
     }
     .width('100%')
     .height(BOOKMARK_ROW_HEIGHT)
@@ -527,7 +522,7 @@ export struct FullDirectoryPanel {
     }
     .width(26)
     .height(26)
-    .backgroundColor(this.hasBookmark(entry) ? TOK_READ_ACTIVE_SOFT : Color.Transparent)
+    .backgroundColor(this.hasBookmark(entry) ? this.palette().activeSoft : Color.Transparent)
     .borderRadius(6)
     .margin({ right: 5 })
     .enabled(this.bookmarkMarkerEnabled(readerDirectoryBookmarkMarkerState(entry)))
@@ -548,7 +543,7 @@ export struct FullDirectoryPanel {
       Text('')
         .width('100%')
         .height(1)
-        .backgroundColor(TOK_LINE);
+        .backgroundColor(this.palette().borderSoft);
       Row({ space: TOK_SPACE_CONTROL_INLINE }) {
         Text(this.currentTitle())
           .layoutWeight(1)
@@ -556,7 +551,7 @@ export struct FullDirectoryPanel {
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Bold)
           .fontSize(11)
-          .fontColor(TOK_READ_INK)
+          .fontColor(this.palette().ink)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
@@ -565,14 +560,14 @@ export struct FullDirectoryPanel {
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Regular)
           .fontSize(9)
-          .fontColor(TOK_READ_MUTED)
+          .fontColor(this.palette().inkSecondary)
           .maxLines(1)
           .textAlign(TextAlign.End);
       }
       .width('100%')
       .height(47)
       .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: 1 })
-      .backgroundColor(TOK_SURFACE_PANEL_SOFT)
+      .backgroundColor(this.palette().surfacePanelSoft)
       .alignItems(VerticalAlign.Center);
     }
     .width('100%')

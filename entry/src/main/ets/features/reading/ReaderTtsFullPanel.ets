@@ -8,22 +8,10 @@ import {
   READER_TTS_TIMER_MIN,
   type ReaderTtsState,
 } from './ReaderTtsState';
-import {
-  TOK_BORDER,
-  TOK_BORDER_W,
-  TOK_FIELD_SURFACE,
-  TOK_LINE,
-  TOK_LINE_STRONG,
-  TOK_ON_PRIMARY,
-  TOK_READ_ELEVATED,
-  TOK_READ_HANDLE,
-  TOK_READ_INK,
-  TOK_READ_MUTED,
-  TOK_READ_PRIMARY,
-  TOK_READ_SURFACE,
-  TOK_SURFACE_PANEL,
-  TOK_SURFACE_PANEL_SOFT,
-} from '../common/ReaderTokens';
+import { TOK_BORDER_W } from '../common/ReaderTokens';
+import type { ReaderAppearanceSnapshot } from './ReaderAppearanceState';
+import { createDefaultReaderAppearanceSnapshot } from './ReaderAppearanceState';
+import { readerThemePalette, type ReaderThemePalette } from './ReaderThemePalettes';
 import {
   READER_FULL_PANEL_HEIGHT_PHONE,
   READER_FULL_PANEL_HEIGHT_TABLET,
@@ -71,6 +59,11 @@ export struct ReaderTtsFullPanel {
   @Prop voiceOptions: ReaderTtsVoiceOption[] = [];
   @Prop language: string = 'zh-CN';
   @Prop person: number = 0;
+  @Prop appearanceSnapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
+
+  private palette(): ReaderThemePalette {
+    return readerThemePalette(this.appearanceSnapshot.activeTheme);
+  }
   onCollapse: () => void = (): void => {};
   onToggle: () => void = (): void => {};
   onStop: () => void = (): void => {};
@@ -97,7 +90,7 @@ export struct ReaderTtsFullPanel {
       Row()
         .width(TTS_FULL_GRABBER_WIDTH)
         .height(TTS_FULL_GRABBER_HEIGHT)
-        .backgroundColor(TOK_READ_HANDLE)
+        .backgroundColor(this.palette().handle)
         .borderRadius(999)
         .position({ x: this.grabberX(), y: TTS_FULL_GRABBER_Y });
 
@@ -128,14 +121,14 @@ export struct ReaderTtsFullPanel {
       .position({ x: TTS_FULL_SCROLL_X, y: TTS_FULL_SCROLL_TOP })
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.None)
-      .backgroundColor(TOK_SURFACE_PANEL)
-      .border({ width: TOK_BORDER_W, color: TOK_LINE })
+      .backgroundColor(this.palette().surfacePanelSoft)
+      .border({ width: TOK_BORDER_W, color: this.palette().borderSoft })
       .borderRadius(12);
     }
     .width(this.panelWidth())
     .height(this.panelHeight())
-    .backgroundColor(TOK_READ_SURFACE)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    .backgroundColor(this.palette().surface)
+    .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
     .borderRadius(24)
     .clip(true);
   }
@@ -152,7 +145,7 @@ export struct ReaderTtsFullPanel {
           .fontWeight(FontWeight.Bold)
           .fontSize(14)
           .lineHeight(17)
-          .fontColor(TOK_READ_INK);
+          .fontColor(this.palette().ink);
       }
       .layoutWeight(1)
       .alignItems(VerticalAlign.Center);
@@ -164,9 +157,9 @@ export struct ReaderTtsFullPanel {
         .fontWeight(FontWeight.Bold)
         .fontSize(10)
         .lineHeight(13)
-        .fontColor(TOK_READ_PRIMARY)
+        .fontColor(this.palette().primary)
         .textAlign(TextAlign.Center)
-        .backgroundColor(TOK_SURFACE_PANEL_SOFT)
+        .backgroundColor(this.palette().surfacePanelSoft)
         .borderRadius(8)
         .accessibilityText('收起朗读完整控制')
         .onClick((): void => this.onCollapse());
@@ -186,12 +179,12 @@ export struct ReaderTtsFullPanel {
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Bold)
           .fontSize(12)
-          .fontColor(TOK_READ_INK);
+          .fontColor(this.palette().ink);
         Text(this.statusText())
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Medium)
           .fontSize(10)
-          .fontColor(TOK_READ_MUTED);
+          .fontColor(this.palette().inkSecondary);
       }
       .width('100%');
 
@@ -211,7 +204,7 @@ export struct ReaderTtsFullPanel {
           .width('100%')
           .fontFamily('ReaderNotoSansSC')
           .fontSize(10)
-          .fontColor('#B93D35')
+          .fontColor(this.palette().error)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
       }
@@ -246,8 +239,8 @@ export struct ReaderTtsFullPanel {
       if (kind === 'toggle') {
         if (this.isActivelySpeaking()) {
           Row({ space: 6 }) {
-            Row().width(4).height(18).backgroundColor(TOK_ON_PRIMARY).borderRadius(1);
-            Row().width(4).height(18).backgroundColor(TOK_ON_PRIMARY).borderRadius(1);
+            Row().width(4).height(18).backgroundColor(this.palette().onPrimary).borderRadius(1);
+            Row().width(4).height(18).backgroundColor(this.palette().onPrimary).borderRadius(1);
           }
         } else {
           Image($r('app.media.reader_tts_play')).width(25).height(25);
@@ -262,8 +255,8 @@ export struct ReaderTtsFullPanel {
     }
     .width(kind === 'toggle' ? 52 : (kind === 'stop' ? 32 : 44))
     .height(kind === 'toggle' ? 52 : (kind === 'stop' ? 32 : 44))
-    .backgroundColor(kind === 'toggle' ? '#254A3D' : (kind === 'stop' ? '#D7473E' : TOK_READ_ELEVATED))
-    .border({ width: kind === 'previous' || kind === 'next' ? TOK_BORDER_W : 0, color: TOK_BORDER })
+    .backgroundColor(kind === 'toggle' ? this.palette().primary : (kind === 'stop' ? this.palette().error : this.palette().surfaceElevated))
+    .border({ width: kind === 'previous' || kind === 'next' ? TOK_BORDER_W : 0, color: this.palette().lineStrong })
     .borderRadius(kind === 'toggle' ? 26 : (kind === 'stop' ? 16 : 22))
     .enabled(kind === 'toggle' ? this.state.status !== 'unavailable' && this.state.status !== 'stopping' :
       this.hasActiveQueue())
@@ -286,12 +279,12 @@ export struct ReaderTtsFullPanel {
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Bold)
           .fontSize(12)
-          .fontColor(TOK_READ_INK);
+          .fontColor(this.palette().ink);
         Text(this.timerSummary())
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Medium)
           .fontSize(10)
-          .fontColor(TOK_READ_MUTED);
+          .fontColor(this.palette().inkSecondary);
       }
       .width('100%');
 
@@ -305,8 +298,8 @@ export struct ReaderTtsFullPanel {
         .padding({ left: 12, right: 12 })
         .justifyContent(FlexAlign.SpaceBetween)
         .alignItems(VerticalAlign.Center)
-        .backgroundColor(TOK_SURFACE_PANEL_SOFT)
-        .border({ width: TOK_BORDER_W, color: TOK_LINE })
+        .backgroundColor(this.palette().surfacePanelSoft)
+        .border({ width: TOK_BORDER_W, color: this.palette().borderSoft })
         .borderRadius(10);
       } else {
         Column({ space: 10 }) {
@@ -316,8 +309,8 @@ export struct ReaderTtsFullPanel {
         .width('100%')
         .height(252)
         .padding({ top: 12, bottom: 12 })
-        .backgroundColor(TOK_SURFACE_PANEL_SOFT)
-        .border({ width: TOK_BORDER_W, color: TOK_LINE })
+        .backgroundColor(this.palette().surfacePanelSoft)
+        .border({ width: TOK_BORDER_W, color: this.palette().borderSoft })
         .borderRadius(10);
       }
     }
@@ -334,20 +327,20 @@ export struct ReaderTtsFullPanel {
       }
       .width(44)
       .height(44)
-      .backgroundColor(TOK_FIELD_SURFACE)
-      .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+      .backgroundColor(this.palette().surfacePanelSoft)
+      .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
       .borderRadius(6);
       Column() {
         Text('朗读后停止')
           .fontFamily('ReaderInter')
           .fontSize(10)
-          .fontColor(TOK_READ_MUTED);
+          .fontColor(this.palette().inkSecondary);
         Text(this.timerSummary())
           .fontFamily('ReaderInter')
           .fontWeight(800)
           .fontSize(20)
           .lineHeight(22)
-          .fontColor(TOK_READ_INK);
+          .fontColor(this.palette().ink);
       }
       .alignItems(HorizontalAlign.Start);
     }
@@ -365,7 +358,7 @@ export struct ReaderTtsFullPanel {
         .fontFamily('ReaderInter')
         .fontWeight(800)
         .fontSize(18)
-        .fontColor(TOK_READ_PRIMARY)
+        .fontColor(this.palette().primary)
         .textAlign(TextAlign.Center);
       this.timerWheel(false);
     }
@@ -384,7 +377,7 @@ export struct ReaderTtsFullPanel {
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Medium)
         .fontSize(12)
-        .fontColor(TOK_READ_MUTED)
+        .fontColor(this.palette().inkSecondary)
         .opacity(0.56)
         .textAlign(TextAlign.Center)
         .onClick((): void => this.stepTimer(minutes, -1));
@@ -394,16 +387,16 @@ export struct ReaderTtsFullPanel {
         .fontFamily('ReaderInter')
         .fontWeight(800)
         .fontSize(17)
-        .fontColor(TOK_READ_INK)
+        .fontColor(this.palette().ink)
         .textAlign(TextAlign.Center)
-        .border({ width: { top: TOK_BORDER_W, bottom: TOK_BORDER_W }, color: TOK_READ_PRIMARY });
+        .border({ width: { top: TOK_BORDER_W, bottom: TOK_BORDER_W }, color: this.palette().primary });
       Text(this.wheelValue(minutes, 1))
         .width(this.timerWheelWidth())
         .height(43)
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Medium)
         .fontSize(12)
-        .fontColor(TOK_READ_MUTED)
+        .fontColor(this.palette().inkSecondary)
         .opacity(0.56)
         .textAlign(TextAlign.Center)
         .onClick((): void => this.stepTimer(minutes, 1));
@@ -412,12 +405,12 @@ export struct ReaderTtsFullPanel {
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Bold)
         .fontSize(9)
-        .fontColor(TOK_READ_MUTED)
+        .fontColor(this.palette().inkSecondary)
         .textAlign(TextAlign.Center);
     }
     .width(this.timerWheelWidth())
     .height(158)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+    .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
     .borderRadius(8)
     .clip(true);
   }
@@ -431,11 +424,11 @@ export struct ReaderTtsFullPanel {
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Bold)
           .fontSize(12)
-          .fontColor(TOK_READ_INK);
+          .fontColor(this.palette().ink);
         Text(`${this.effectiveRate().toFixed(1)}x`)
           .fontFamily('ReaderInter')
           .fontSize(10)
-          .fontColor(TOK_READ_MUTED);
+          .fontColor(this.palette().inkSecondary);
       }
       .width('100%');
       Slider({
@@ -462,9 +455,9 @@ export struct ReaderTtsFullPanel {
         });
       Row() {
         Text(`${READER_TTS_RATE_MIN.toFixed(1)}x`)
-          .layoutWeight(1).fontFamily('ReaderInter').fontSize(9).fontColor(TOK_READ_MUTED);
+          .layoutWeight(1).fontFamily('ReaderInter').fontSize(9).fontColor(this.palette().inkSecondary);
         Text(`${READER_TTS_RATE_MAX.toFixed(1)}x`)
-          .fontFamily('ReaderInter').fontSize(9).fontColor(TOK_READ_MUTED);
+          .fontFamily('ReaderInter').fontSize(9).fontColor(this.palette().inkSecondary);
       }
       .width('100%');
     }
@@ -516,11 +509,11 @@ export struct ReaderTtsFullPanel {
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Bold)
         .fontSize(12)
-        .fontColor(TOK_READ_INK);
+        .fontColor(this.palette().ink);
       Text('设备引擎')
         .fontFamily('ReaderInter')
         .fontSize(10)
-        .fontColor(TOK_READ_MUTED);
+        .fontColor(this.palette().inkSecondary);
     }
     .width('100%')
     .height(28)
@@ -537,8 +530,8 @@ export struct ReaderTtsFullPanel {
     .width('100%')
     .height(116)
     .padding(3)
-    .backgroundColor('#B8FFFCF8')
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+    .backgroundColor(this.palette().surfaceElevated)
+    .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
     .borderRadius(6);
   }
 
@@ -558,7 +551,7 @@ export struct ReaderTtsFullPanel {
       }
       .width(44)
       .height(44)
-      .backgroundColor(this.isTtsServiceTabSelected(http) ? '#B8FFFCF8' : Color.Transparent)
+      .backgroundColor(this.isTtsServiceTabSelected(http) ? this.palette().surfaceElevated : Color.Transparent)
       .borderRadius(6);
 
       Column({ space: 2 }) {
@@ -569,7 +562,7 @@ export struct ReaderTtsFullPanel {
           .fontWeight(900)
           .fontSize(12)
           .lineHeight(15.6)
-          .fontColor(this.isTtsServiceTabSelected(http) ? '#1F3528' : '#756F69')
+          .fontColor(this.isTtsServiceTabSelected(http) ? this.palette().primary : this.palette().inkSecondary)
           .maxLines(1);
         Text(http ? '第三方或自定义服务' : '使用设备内置语音')
           .width('100%')
@@ -578,7 +571,7 @@ export struct ReaderTtsFullPanel {
           .fontWeight(FontWeight.Bold)
           .fontSize(10)
           .lineHeight(13)
-          .fontColor('#756F69')
+          .fontColor(this.palette().inkSecondary)
           .maxLines(1);
       }
       .layoutWeight(1)
@@ -589,10 +582,10 @@ export struct ReaderTtsFullPanel {
     .height(54)
     .padding({ left: 11, right: 11, top: 5, bottom: 5 })
     .alignItems(VerticalAlign.Center)
-    .backgroundColor(this.isTtsServiceTabSelected(http) ? TOK_FIELD_SURFACE : Color.Transparent)
+    .backgroundColor(this.isTtsServiceTabSelected(http) ? this.palette().surfacePanelSoft : Color.Transparent)
     .border({
       width: TOK_BORDER_W,
-      color: this.isTtsServiceTabSelected(http) ? '#2D4A3E' : Color.Transparent,
+      color: this.isTtsServiceTabSelected(http) ? this.palette().primary : Color.Transparent,
     })
     .borderRadius(6)
     .accessibilityText(http ? this.onlineTtsAccessibilityText() : '系统 TTS，使用设备内置语音')
@@ -619,8 +612,8 @@ export struct ReaderTtsFullPanel {
     .width('100%')
     .height(182)
     .padding(1)
-    .backgroundColor('#B8FFFCF8')
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+    .backgroundColor(this.palette().surfaceElevated)
+    .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
     .borderRadius(6)
     .clip(true);
   }
@@ -634,7 +627,7 @@ export struct ReaderTtsFullPanel {
         .fontWeight(FontWeight.Bold)
         .fontSize(12)
         .lineHeight(15.6)
-        .fontColor('#41484C')
+        .fontColor(this.palette().inkSecondary)
         .maxLines(1);
       this.ttsSelectValueField(value, fieldWidth, `${label}：${value}，暂不可展开`);
     }
@@ -642,7 +635,7 @@ export struct ReaderTtsFullPanel {
     .height(45)
     .padding({ left: 10, right: 10 })
     .alignItems(VerticalAlign.Center)
-    .border({ width: { bottom: TOK_BORDER_W }, color: TOK_BORDER });
+    .border({ width: { bottom: TOK_BORDER_W }, color: this.palette().lineStrong });
   }
 
   @Builder
@@ -653,11 +646,11 @@ export struct ReaderTtsFullPanel {
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Bold)
         .fontSize(12)
-        .fontColor(TOK_READ_INK);
+        .fontColor(this.palette().ink);
       Text(meta)
         .fontFamily('ReaderInter')
         .fontSize(10)
-        .fontColor(TOK_READ_MUTED);
+        .fontColor(this.palette().inkSecondary);
     }
     .width('100%')
     .height(34)
@@ -672,14 +665,14 @@ export struct ReaderTtsFullPanel {
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
         .fontSize(12)
-        .fontColor('#41484C');
+        .fontColor(this.palette().inkSecondary);
       this.ttsSelectValueField(value, 70, `${label}：${value}`);
     }
     .width('100%')
     .height(45)
     .padding({ left: 10, right: 10 })
     .alignItems(VerticalAlign.Center)
-    .border({ width: { bottom: TOK_BORDER_W }, color: TOK_BORDER })
+    .border({ width: { bottom: TOK_BORDER_W }, color: this.palette().lineStrong })
     .enabled(enabled)
     .opacity(enabled ? 1 : 0.72)
     .onClick((): void => onSelect());
@@ -694,7 +687,7 @@ export struct ReaderTtsFullPanel {
         .fontWeight(FontWeight.Bold)
         .fontSize(12)
         .lineHeight(14.4)
-        .fontColor('#1F3528')
+        .fontColor(this.palette().ink)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       Image($r('app.media.reader_chevron_down'))
@@ -705,8 +698,8 @@ export struct ReaderTtsFullPanel {
       .height(36)
       .padding({ left: 10, right: 8 })
       .alignItems(VerticalAlign.Center)
-      .backgroundColor(TOK_FIELD_SURFACE)
-      .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+      .backgroundColor(this.palette().surfacePanelSoft)
+      .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
       .borderRadius(6)
       .accessibilityText(accessibilityText);
   }
@@ -719,18 +712,18 @@ export struct ReaderTtsFullPanel {
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
         .fontSize(11)
-        .fontColor(TOK_READ_INK);
+        .fontColor(this.palette().ink);
       Stack({ alignContent: Alignment.TopStart }) {
         Row()
           .width(20)
           .height(20)
-          .backgroundColor(TOK_READ_ELEVATED)
+          .backgroundColor(this.palette().surfaceElevated)
           .borderRadius(10)
           .position({ x: value ? 22 : 2, y: 2 });
       }
       .width(44)
       .height(24)
-      .backgroundColor(value ? TOK_READ_PRIMARY : '#B3ACA4')
+      .backgroundColor(value ? this.palette().primary : this.palette().handle)
       .borderRadius(999)
       .enabled(enabled)
       .opacity(enabled ? 1 : 0.72)
@@ -740,12 +733,12 @@ export struct ReaderTtsFullPanel {
     .height(45)
     .padding({ left: 10, right: 10 })
     .alignItems(VerticalAlign.Center)
-    .border({ width: { bottom: TOK_BORDER_W }, color: TOK_BORDER });
+    .border({ width: { bottom: TOK_BORDER_W }, color: this.palette().lineStrong });
   }
 
   @Builder
   private sectionDivider() {
-    Row().width('100%').height(1).backgroundColor(TOK_LINE);
+    Row().width('100%').height(1).backgroundColor(this.palette().borderSoft);
   }
 
   private timerSummary(): string {

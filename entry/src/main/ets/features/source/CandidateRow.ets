@@ -1,11 +1,7 @@
 import { LatencyBar } from './LatencyBar';
-import {
-  TOK_BORDER_W,
-  TOK_LINE,
-  TOK_READ_BODY_INK,
-  TOK_READ_HANDLE,
-  TOK_READ_MUTED,
-} from '../common/ReaderTokens';
+import { TOK_BORDER_W } from '../common/ReaderTokens';
+import type { ReaderAppearanceTheme } from '../reading/ReaderAppearanceState';
+import { readerThemePalette, type ReaderThemePalette } from '../reading/ReaderThemePalettes';
 
 
 // CandidateRow —— 换源候选行 (Figma SourceSwitch/CandidateRow): 5px 状态点 + 自适应
@@ -27,6 +23,11 @@ export struct CandidateRow {
   @Prop offline: boolean = false;
   @Prop timeout: boolean = false;
   @Prop isCurrent: boolean = false;
+  @Prop theme: ReaderAppearanceTheme = 'day';
+
+  private palette(): ReaderThemePalette {
+    return readerThemePalette(this.theme);
+  }
   onSelect: () => void = (): void => {};
 
   build() {
@@ -53,6 +54,7 @@ export struct CandidateRow {
       LatencyBar({
         fillWidth: this.latencyBarFillWidth(),
         fillColor: this.dotColor(),
+        trackColor: this.palette().borderSoft,
       });
 
       Text(this.latencyText())
@@ -83,7 +85,7 @@ export struct CandidateRow {
     .height(28)
     .alignItems(VerticalAlign.Center)
     .backgroundColor(this.rowBackground())
-    .border({ width: { bottom: TOK_BORDER_W }, color: TOK_LINE })
+    .border({ width: { bottom: TOK_BORDER_W }, color: this.palette().borderSoft })
     .onClick((): void => {
       if (this.kind() === 'available') {
         this.onSelect();
@@ -104,28 +106,28 @@ export struct CandidateRow {
     return 'available';
   }
 
-  private rowBackground(): string {
-    return this.kind() === 'current' ? '#142D4A3E' : '#00000000';
+  private rowBackground(): ResourceColor {
+    return this.kind() === 'current' ? this.palette().activeSoft : Color.Transparent;
   }
 
   private nameColor(): string {
-    // Figma: only the current row is green; every other row (available /
-    // offline / timeout) uses the ink #2B241D.
-    return this.kind() === 'current' ? '#2A7A5A' : TOK_READ_BODY_INK;
+    // Only the current row carries the theme primary; every other row
+    // (available / offline / timeout) uses the body ink.
+    return this.kind() === 'current' ? this.palette().primary : this.palette().bodyInk;
   }
 
   private dotColor(): string {
     const kind = this.kind();
     if (kind === 'current') {
-      return '#2A7A5A';
+      return this.palette().primary;
     }
     if (kind === 'offline') {
-      return '#C8BFB5';
+      return this.palette().inkTertiary;
     }
     if (kind === 'timeout') {
-      return '#B04020';
+      return this.palette().error;
     }
-    return '#C08020';
+    return this.palette().warning;
   }
 
   private latencyText(): string {
@@ -142,15 +144,15 @@ export struct CandidateRow {
   private latencyColor(): string {
     const kind = this.kind();
     if (kind === 'current') {
-      return '#2A7A5A';
+      return this.palette().primary;
     }
     if (kind === 'offline') {
-      return '#C8BFB5';
+      return this.palette().inkTertiary;
     }
     if (kind === 'timeout') {
-      return '#C05030';
+      return this.palette().error;
     }
-    return '#C08020';
+    return this.palette().warning;
   }
 
   private latencyBarFillWidth(): number {
@@ -173,11 +175,11 @@ export struct CandidateRow {
   private chapterColor(): string {
     const kind = this.kind();
     if (kind === 'offline') {
-      return '#C8BFB5';
+      return this.palette().inkTertiary;
     }
     if (kind === 'timeout') {
-      return TOK_READ_HANDLE;
+      return this.palette().handle;
     }
-    return TOK_READ_MUTED;
+    return this.palette().inkSecondary;
   }
 }

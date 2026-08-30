@@ -1,20 +1,19 @@
 import type { ReaderTtsEngineOption } from './ReaderTtsFullPanel';
-import {
-  TOK_BORDER,
-  TOK_BORDER_W,
-  TOK_FIELD_SURFACE,
-  TOK_LINE,
-  TOK_READ_INK,
-  TOK_READ_MUTED,
-  TOK_READ_PRIMARY,
-  TOK_SURFACE_PANEL_SOFT,
-} from '../common/ReaderTokens';
+import { TOK_BORDER_W } from '../common/ReaderTokens';
+import type { ReaderAppearanceSnapshot } from './ReaderAppearanceState';
+import { createDefaultReaderAppearanceSnapshot } from './ReaderAppearanceState';
+import { readerThemePalette, type ReaderThemePalette } from './ReaderThemePalettes';
 
 /** Transient form only. Persisted HttpTTS configuration remains Core-owned. */
 @Component
 export struct ReaderHttpTtsManagerPanel {
   @Prop engines: ReaderTtsEngineOption[] = [];
   @Prop selectedEngine: string = 'system';
+  @Prop appearanceSnapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
+
+  private palette(): ReaderThemePalette {
+    return readerThemePalette(this.appearanceSnapshot.activeTheme);
+  }
   onSelect: (engine: string) => Promise<void> = (_engine: string): Promise<void> => Promise.resolve();
   onPut: (config: ReaderTtsEngineOption) => Promise<void> =
     (_config: ReaderTtsEngineOption): Promise<void> => Promise.resolve();
@@ -34,11 +33,11 @@ export struct ReaderHttpTtsManagerPanel {
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Bold)
           .fontSize(12)
-          .fontColor(TOK_READ_INK);
+          .fontColor(this.palette().ink);
         Text(`${this.engines.length} 项`)
           .fontFamily('ReaderInter')
           .fontSize(10)
-          .fontColor(TOK_READ_MUTED);
+          .fontColor(this.palette().inkSecondary);
       }
       .width('100%')
       .height(30);
@@ -50,7 +49,7 @@ export struct ReaderHttpTtsManagerPanel {
             .fontFamily('ReaderNotoSansSC')
             .fontWeight(FontWeight.Bold)
             .fontSize(11)
-            .fontColor(TOK_READ_INK)
+            .fontColor(this.palette().ink)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
           Text(this.isSelected(engine) ? '当前' : '选择')
@@ -59,10 +58,10 @@ export struct ReaderHttpTtsManagerPanel {
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Bold)
             .fontSize(10)
-            .fontColor(this.isSelected(engine) ? Color.White : TOK_READ_PRIMARY)
+            .fontColor(this.isSelected(engine) ? this.palette().onPrimary : this.palette().primary)
             .textAlign(TextAlign.Center)
-            .backgroundColor(this.isSelected(engine) ? TOK_READ_PRIMARY : TOK_FIELD_SURFACE)
-            .border({ width: TOK_BORDER_W, color: TOK_READ_PRIMARY })
+            .backgroundColor(this.isSelected(engine) ? this.palette().primary : this.palette().surfacePanelSoft)
+            .border({ width: TOK_BORDER_W, color: this.palette().primary })
             .borderRadius(6)
             .enabled(!this.busy)
             .onClick((): void => this.selectEngine(`http-tts:${engine.id}`));
@@ -72,10 +71,10 @@ export struct ReaderHttpTtsManagerPanel {
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Bold)
             .fontSize(10)
-            .fontColor(TOK_READ_INK)
+            .fontColor(this.palette().ink)
             .textAlign(TextAlign.Center)
-            .backgroundColor(TOK_FIELD_SURFACE)
-            .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+            .backgroundColor(this.palette().surfacePanelSoft)
+            .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
             .borderRadius(6)
             .onClick((): void => this.beginEdit(engine));
           Text('删除')
@@ -84,10 +83,10 @@ export struct ReaderHttpTtsManagerPanel {
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Bold)
             .fontSize(10)
-            .fontColor('#B93D35')
+            .fontColor(this.palette().error)
             .textAlign(TextAlign.Center)
-            .backgroundColor(TOK_FIELD_SURFACE)
-            .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+            .backgroundColor(this.palette().surfacePanelSoft)
+            .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
             .borderRadius(6)
             .enabled(!this.busy)
             .onClick((): void => this.deleteEngine(engine.id));
@@ -95,8 +94,8 @@ export struct ReaderHttpTtsManagerPanel {
         .width('100%')
         .height(40)
         .padding({ left: 8, right: 8 })
-        .backgroundColor(TOK_SURFACE_PANEL_SOFT)
-        .border({ width: TOK_BORDER_W, color: TOK_LINE })
+        .backgroundColor(this.palette().surfacePanelSoft)
+        .border({ width: TOK_BORDER_W, color: this.palette().borderSoft })
         .borderRadius(6);
       }, (engine: ReaderTtsEngineOption): string => `${engine.id}:${engine.lastUpdateTime}`);
 
@@ -105,9 +104,9 @@ export struct ReaderHttpTtsManagerPanel {
         .height(38)
         .fontFamily('ReaderNotoSansSC')
         .fontSize(11)
-        .fontColor(TOK_READ_INK)
-        .backgroundColor(TOK_FIELD_SURFACE)
-        .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+        .fontColor(this.palette().ink)
+        .backgroundColor(this.palette().surfacePanelSoft)
+        .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
         .borderRadius(6)
         .onChange((value: string): void => {
           this.draftName = value;
@@ -118,9 +117,9 @@ export struct ReaderHttpTtsManagerPanel {
         .height(38)
         .fontFamily('ReaderInter')
         .fontSize(10)
-        .fontColor(TOK_READ_INK)
-        .backgroundColor(TOK_FIELD_SURFACE)
-        .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+        .fontColor(this.palette().ink)
+        .backgroundColor(this.palette().surfacePanelSoft)
+        .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
         .borderRadius(6)
         .onChange((value: string): void => {
           this.draftUrl = value;
@@ -131,7 +130,7 @@ export struct ReaderHttpTtsManagerPanel {
           .width('100%')
           .fontFamily('ReaderNotoSansSC')
           .fontSize(10)
-          .fontColor('#B93D35')
+          .fontColor(this.palette().error)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .accessibilityText(`在线 TTS 操作失败：${this.errorText}`);
@@ -144,9 +143,9 @@ export struct ReaderHttpTtsManagerPanel {
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Bold)
           .fontSize(11)
-          .fontColor(Color.White)
+          .fontColor(this.palette().onPrimary)
           .textAlign(TextAlign.Center)
-          .backgroundColor(TOK_READ_PRIMARY)
+          .backgroundColor(this.palette().primary)
           .borderRadius(6)
           .enabled(this.canSubmit() && !this.busy)
           .opacity(this.canSubmit() && !this.busy ? 1 : 0.42)
@@ -157,10 +156,10 @@ export struct ReaderHttpTtsManagerPanel {
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Bold)
           .fontSize(11)
-          .fontColor(TOK_READ_INK)
+          .fontColor(this.palette().ink)
           .textAlign(TextAlign.Center)
-          .backgroundColor(TOK_FIELD_SURFACE)
-          .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+          .backgroundColor(this.palette().surfacePanelSoft)
+          .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
           .borderRadius(6)
           .onClick((): void => this.clearDraft());
       }
@@ -169,7 +168,7 @@ export struct ReaderHttpTtsManagerPanel {
     .width('100%')
     .padding({ top: 8, bottom: 12, left: 8, right: 8 })
     .alignItems(HorizontalAlign.Start)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE })
+    .border({ width: TOK_BORDER_W, color: this.palette().borderSoft })
     .borderRadius(8);
   }
 

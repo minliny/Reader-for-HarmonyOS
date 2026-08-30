@@ -90,7 +90,7 @@ export struct ReaderPageInteractionLayer {
       // XComponent composition order is device-dependent; make the sole raw
       // input owner explicitly higher while leaving the capsule at zIndex 8.
       .zIndex(7)
-      .backgroundColor('#00000000')
+      .backgroundColor(Color.Transparent)
       .hitTestBehavior(this.interactionEnabled ?
         (this.allowTextSelection ? HitTestMode.Transparent : HitTestMode.Block) : HitTestMode.None)
       .accessibilityText('阅读翻页区域')

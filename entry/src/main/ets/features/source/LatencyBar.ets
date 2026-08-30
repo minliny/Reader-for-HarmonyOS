@@ -1,4 +1,4 @@
-import { TOK_LINE } from '../common/ReaderTokens';
+import { READER_THEME_PALETTES } from '../reading/ReaderThemePalettes';
 
 
 // LatencyBar —— 换源候选行延迟条 (Figma SourceSwitch/LatencyBar): 36×3 track r1.5。
@@ -7,8 +7,8 @@ import { TOK_LINE } from '../common/ReaderTokens';
 @Component
 export struct LatencyBar {
   @Prop fillWidth: number = 0;
-  @Prop fillColor: string = '#C08020';
-  @Prop trackColor: string = TOK_LINE;
+  @Prop fillColor: string = READER_THEME_PALETTES.day.warning;
+  @Prop trackColor: string = READER_THEME_PALETTES.day.borderSoft;
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {

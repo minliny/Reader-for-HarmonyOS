@@ -1,13 +1,10 @@
 import { registerReaderFonts } from '../common/ReaderFonts';
+import { TOK_BORDER_W } from '../common/ReaderTokens';
 import {
-  TOK_BORDER_W,
-  TOK_LINE_STRONG,
-  TOK_READ_DISABLED_BG,
-  TOK_READ_ELEVATED,
-  TOK_READ_MUTED,
-  TOK_READ_PRIMARY,
-  TOK_SURFACE_PANEL,
-} from '../common/ReaderTokens';
+  createDefaultReaderAppearanceSnapshot,
+  type ReaderAppearanceSnapshot,
+} from './ReaderAppearanceState';
+import { readerThemePalette, type ReaderThemePalette } from './ReaderThemePalettes';
 import {
   createDefaultReaderSettingsSnapshot,
   isReaderPageTurnStyleAvailable,
@@ -35,12 +32,17 @@ export struct ReaderSettingsModulePanel {
   @Prop isTablet: boolean = false;
   @Prop snapshot: ReaderSettingsSnapshot = createDefaultReaderSettingsSnapshot();
   @Prop pageTurnSimulationAvailable: boolean = true;
+  @Prop appearanceSnapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   onScreenDirectionChange: (direction: ReaderScreenDirection) => void =
     (_direction: ReaderScreenDirection): void => {};
   onPageTurnStyleChange: (style: ReaderPageTurnStyle) => void =
     (_style: ReaderPageTurnStyle): void => {};
   onScreenTimeoutChange: (timeout: ReaderScreenTimeout) => void =
     (_timeout: ReaderScreenTimeout): void => {};
+
+  private palette(): ReaderThemePalette {
+    return readerThemePalette(this.appearanceSnapshot.activeTheme);
+  }
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -63,8 +65,8 @@ export struct ReaderSettingsModulePanel {
     .constraintSize({ maxWidth: this.panelWidth() })
     .height(190)
     .padding({ left: 11, right: 11, top: 13, bottom: 17 })
-    .backgroundColor(TOK_SURFACE_PANEL)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    .backgroundColor(this.palette().surfacePanelSoft)
+    .border({ width: TOK_BORDER_W, color: this.palette().lineStrong })
     .borderRadius(8)
     .clip(true);
   }
@@ -79,7 +81,7 @@ export struct ReaderSettingsModulePanel {
         .fontWeight(FontWeight.Medium)
         .fontSize(10)
         .lineHeight(12)
-        .fontColor(TOK_READ_MUTED)
+        .fontColor(this.palette().inkSecondary)
         .maxLines(1)
         .position({ x: 0, y: 0 });
 
@@ -91,7 +93,7 @@ export struct ReaderSettingsModulePanel {
       .width('100%')
       .height(30)
       .padding(3)
-      .backgroundColor(TOK_READ_DISABLED_BG)
+      .backgroundColor(this.palette().disabledBg)
       .borderRadius(8)
       .position({ x: 0, y: 17 });
     }
@@ -105,12 +107,12 @@ export struct ReaderSettingsModulePanel {
       .layoutWeight(1)
       .height(24)
       .padding({ left: 3, right: 3 })
-      .backgroundColor(this.isActive(group, option) ? TOK_READ_ELEVATED : Color.Transparent)
+      .backgroundColor(this.isActive(group, option) ? this.palette().surfaceElevated : Color.Transparent)
       .borderRadius(6)
       .fontFamily('ReaderNotoSansSC')
       .fontWeight(this.isActive(group, option) ? FontWeight.Bold : FontWeight.Medium)
       .fontSize(9)
-      .fontColor(this.isActive(group, option) ? TOK_READ_PRIMARY : TOK_READ_MUTED)
+      .fontColor(this.isActive(group, option) ? this.palette().primary : this.palette().inkSecondary)
       .textAlign(TextAlign.Center)
       .maxLines(1)
       .enabled(this.isAvailable(group, option))

@@ -175,7 +175,7 @@ assert.match(fullPanel, /return Math\.max\(0, this\.sheetHeight\(\) - 70\)/);
 assert.equal((fullPanel.match(/return Math\.max\(0, this\.sheetWidth\(\) - 26\)/g) ?? []).length, 2,
   'settings header and viewport must both derive from the actual sheet width');
 assert.match(fullPanel, /return Math\.max\(0, this\.viewportWidth\(\) - 30\)/);
-assert.match(fullPanel, /Image\(\$r\('app\.media\.rc_settings'\)\)[\s\S]*\.fillColor\(TOK_READ_INK\)/,
+assert.match(fullPanel, /Image\(\$r\('app\.media\.rc_settings'\)\)[\s\S]*\.fillColor\(this\.palette\(\)\.ink\)/,
   'the scaled shared gear glyph must use the Figma full-panel ink color');
 assert.match(fullPanel, /this\.sectionTitle\('屏幕样式', false\)/);
 assert.match(fullPanel, /this\.sectionTitle\('导航状态栏', true\)/);
