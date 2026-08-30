@@ -44,11 +44,26 @@
 | warmNight/paperNight/greenNight 正文+控制层+界面 | 三主题 × body/dock/interface | PASS：三暗变体 primary 分族明确（暖金 #CBA672/褐金 #B99C6B/绿 #8FBC9F），浮层全暗一致 |
 | greenNight 换源窗（候选加载完成态） | greennight-sswindow2 | PASS：4 源候选（酷我 5634ms 当前高亮/小说三千 1314ms/七猫 102ms/企鹅 365ms）、CandidateRow 暗行+状态点、LatencyBar 琥珀警示、页脚 共 4 个书源 |
 
-## 覆盖缺口（非阻塞）
+## 补充验收（2026-08-30 晚，同锁窗口）
 
-- night 自动翻页面板未单独开面板实拍（设置全屏 night-settings-full3 已含自动翻页 toggle 暗态；night-autopage 文件实拍为朗读面板，作 TTS 证据用）。
-- 快速搜索/替换/书籍内搜索三面板未逐主题开面板实拍（与已验面板同链路同矩阵接线，守卫测试覆盖 hex 清零）。
+针对上表两处覆盖缺口的补充实拍（截图均在 artifacts/）：
+
+| 缺口 | 证据 | 结论 |
+|---|---|---|
+| night 自动翻页面板 | night-autopage2.jpeg | PASS：面板暗底、间隔下拉/方向控件、开关均为暗主题值，无日间残留 |
+| night 快速搜索面板 | night-quicksearch.jpeg | PASS：搜索框暗底描边、取消按钮、历史/提示文案全暗 |
+| night 书内搜索结果 | night-searchresults.jpeg | PASS：结果列表暗行（空结果态） |
+| night 替换面板 | night-replace.jpeg（+ lay-replace-night.json） | PASS：输入区/按钮 disabledBg·disabledBorder·primary 角色全走矩阵，无 hex 残留 |
+| night 替换沉浸正文 | night-replacefull.jpeg | 行为发现：点「完整管理」会关闭控制层回到沉浸正文（两次含 dump bounds 精确点击复现）——完整管理页在阅读浮层之外，其主题化不在本矩阵范围 |
+
+程序化补充断言（lay-if-night2.json / lay-dock-night2.json）：night 界面网格与 dock 卡片背景色均为暗值，与 night-dock 截图一致。
+
+补充期间事件：17:23 发现已装 HAP 被 bookturn 会话回装为其 main 版（bundle updateTime 1788081850758 佐证），dock 夜间不暗。用 `install -r`（保留数据）重装本任务 HAP 8d51ef78，重开书即夜间 dock 变暗（lum 52.5）+ 主题持久化（重进阅读页保持 night），矩阵确证生效后继续。
+
+仍存的微小缺口（非阻塞）：
+- 书内搜索结果命中高亮角色未捕获（`uitest uiInput inputText` 报 Set pasteBoard data failed，无法注入查询词；面板底色主题化已验）。
+- 完整管理页（行为上属独立页）未纳入浮层矩阵范围。
 
 ## 收尾状态
 
-应用停在 day 主题、庆余年正文、浮层全关（day-final-body，lum 240.4）。VM 锁已释放（锁文件移除，symlink 保留）。
+补充验收后：应用恢复 paper（书架原主题）、庆余年正文、浮层全关（正文 lum 216.4 / dock 区 203.7，无遮罩残留）。矩阵 HAP 8d51ef78 在装，应用数据完整。VM 锁已释放（锁文件移除，symlink 保留）。
