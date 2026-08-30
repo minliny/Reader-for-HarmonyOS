@@ -48,6 +48,7 @@ import {
   BOOK_TURN_EVENT_SLOTS_COMMITTED,
   BOOK_TURN_EVENT_SURFACE_LOST,
   BOOK_TURN_EVENT_SURFACE_READY,
+  BOOK_TURN_EVENT_TERMINAL_RELEASED,
   BOOK_TURN_EVENT_TEXTURE_READY,
   BOOK_TURN_EVENT_VISUAL_COMMIT_ENDPOINT,
   BOOK_TURN_TEXTURE_CURRENT,
@@ -1585,6 +1586,15 @@ export struct ReadingExperience {
       this.promoteBookTurnCapturedIdentities(this.pageTurnDirection);
       this.finishSuccessfulPageTurnPresentation(event.generation);
       this.scheduleBookTurnTextureRefresh();
+      return;
+    }
+    if (event.event === BOOK_TURN_EVENT_TERMINAL_RELEASED) {
+      // Barrier closed: Native cleared the terminal texture after the promoted
+      // frame was confirmed on screen. Teardown already ran via
+      // SLOTS_COMMITTED; only refresh the texture snapshot here.
+      if (event.generation === this.pageTurnSettlementGeneration) {
+        this.scheduleBookTurnTextureRefresh();
+      }
       return;
     }
     if (event.event === BOOK_TURN_EVENT_SURFACE_LOST || event.event === BOOK_TURN_EVENT_RENDER_FAILURE) {
@@ -7629,12 +7639,25 @@ export struct ReadingExperience {
     this.pageTurnGestureState = completeReaderPageGestureSettlement(this.pageTurnGestureState);
     if (this.usesBookTurnSimulation()) {
       this.bookTurnAwaitingSlotCommit = true;
+      // Presentation barrier: Native auto-retains the terminal frame at the
+      // visual commit endpoint; restate it defensively here (idempotent,
+      // refreshes the retain timestamp).
+      this.bookTurnSession.retainTerminalFrame(settlementGeneration);
       if (!this.bookTurnSession.commitSlots(settlementGeneration, prepared.direction)) {
         this.bookTurnRuntimeFailed = true;
         this.bookTurnAwaitingSlotCommit = false;
         this.finishSuccessfulPageTurnPresentation(settlementGeneration);
       } else {
         this.armPageTurnSettlementDeadline(settlementGeneration);
+        // Confirm presentation only after the promoted frame has actually
+        // been composited: a single postFrameCallback fires before the next
+        // frame is drawn (the promoted frame is not yet on screen), the
+        // double hop guarantees the promoted frame landed.
+        this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
+          this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
+            this.confirmBookTurnPresented(settlementGeneration);
+          }));
+        }));
       }
       return;
     }
@@ -7645,6 +7668,14 @@ export struct ReadingExperience {
     this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
       this.finishSuccessfulPageTurnPresentation(settlementGeneration);
     }));
+  }
+
+  private confirmBookTurnPresented(settlementGeneration: number): void {
+    if (!this.mounted || this.exitRequested) return;
+    if (settlementGeneration !== this.pageTurnSettlementGeneration) return;
+    // A newer page turn may already own the barrier (release returns false in
+    // that case): the new turn manages its own retain, so ignore the outcome.
+    this.bookTurnSession.releaseTerminalFrame(settlementGeneration);
   }
 
   private finishSuccessfulPageTurnPresentation(settlementGeneration: number): void {

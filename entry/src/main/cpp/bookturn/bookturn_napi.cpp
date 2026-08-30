@@ -135,6 +135,13 @@ napi_value Uint32(napi_env env, uint32_t value)
     return result;
 }
 
+napi_value Double(napi_env env, double value)
+{
+    napi_value result = nullptr;
+    napi_create_double(env, value, &result);
+    return result;
+}
+
 Direction DecodeDirection(int32_t value)
 {
     return value < 0 ? Direction::NEXT : Direction::PREVIOUS;
@@ -342,6 +349,41 @@ napi_value CommitSlots(napi_env env, napi_callback_info info)
         host->CommitSlots(static_cast<uint64_t>(generation), DecodeDirection(direction)));
 }
 
+napi_value RetainTerminalFrame(napi_env env, napi_callback_info info)
+{
+    size_t count = 2;
+    napi_value arguments[2] = {};
+    napi_get_cb_info(env, info, &count, arguments, nullptr, nullptr);
+    std::string id;
+    double generation = 0;
+    const std::shared_ptr<BookTurnHost> host = count == 2 && GetString(env, arguments[0], id) &&
+        GetDouble(env, arguments[1], generation) ? HostForId(id) : nullptr;
+    return Boolean(env, host != nullptr && host->RetainTerminalFrame(static_cast<uint64_t>(generation)));
+}
+
+napi_value ReleaseTerminalFrame(napi_env env, napi_callback_info info)
+{
+    size_t count = 2;
+    napi_value arguments[2] = {};
+    napi_get_cb_info(env, info, &count, arguments, nullptr, nullptr);
+    std::string id;
+    double generation = 0;
+    const std::shared_ptr<BookTurnHost> host = count == 2 && GetString(env, arguments[0], id) &&
+        GetDouble(env, arguments[1], generation) ? HostForId(id) : nullptr;
+    return Boolean(env, host != nullptr && host->ReleaseTerminalFrame(static_cast<uint64_t>(generation)));
+}
+
+napi_value RetainedTerminalGeneration(napi_env env, napi_callback_info info)
+{
+    size_t count = 1;
+    napi_value arguments[1] = {};
+    napi_get_cb_info(env, info, &count, arguments, nullptr, nullptr);
+    std::string id;
+    const std::shared_ptr<BookTurnHost> host = count == 1 && GetString(env, arguments[0], id) ? HostForId(id) : nullptr;
+    // Generations stay far below 2^53, so a double carries the uint64 exactly.
+    return Double(env, host != nullptr ? static_cast<double>(host->RetainedTerminalGeneration()) : 0.0);
+}
+
 napi_value SetEventCallback(napi_env env, napi_callback_info info)
 {
     size_t count = 2;
@@ -386,6 +428,9 @@ napi_value Init(napi_env env, napi_value exports)
         { "settle", nullptr, Settle, nullptr, nullptr, nullptr, napi_default, nullptr },
         { "startProgrammatic", nullptr, StartProgrammatic, nullptr, nullptr, nullptr, napi_default, nullptr },
         { "commitSlots", nullptr, CommitSlots, nullptr, nullptr, nullptr, napi_default, nullptr },
+        { "retainTerminalFrame", nullptr, RetainTerminalFrame, nullptr, nullptr, nullptr, napi_default, nullptr },
+        { "releaseTerminalFrame", nullptr, ReleaseTerminalFrame, nullptr, nullptr, nullptr, napi_default, nullptr },
+        { "retainedTerminalGeneration", nullptr, RetainedTerminalGeneration, nullptr, nullptr, nullptr, napi_default, nullptr },
         { "setEventCallback", nullptr, SetEventCallback, nullptr, nullptr, nullptr, napi_default, nullptr },
     };
     napi_define_properties(env, exports, sizeof(descriptors) / sizeof(descriptors[0]), descriptors);
