@@ -69,10 +69,17 @@ class FakeGateway {
 class FakeHost {
   calls = [];
   listener;
+  listenerOwner;
   requests = [];
   speakGate;
-  setEventListener(listener) { this.listener = listener; }
+  setEventListener(listener, owner) { this.listener = listener; this.listenerOwner = owner; }
+  clearEventListener(owner) {
+    if (this.listenerOwner !== owner) return;
+    this.listener = undefined;
+    this.listenerOwner = undefined;
+  }
   async selectEngine(engine) { this.calls.push(`engine:${engine ?? 'system'}`); return true; }
+  async probe() { this.calls.push('available'); return { available: true }; }
   async isAvailable() { this.calls.push('available'); return true; }
   async activateAudioSession(mix) { this.calls.push(`activate:${mix}`); }
   async deactivateAudioSession() { this.calls.push('deactivate'); }

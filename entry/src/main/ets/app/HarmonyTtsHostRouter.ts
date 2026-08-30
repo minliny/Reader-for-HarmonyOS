@@ -1,6 +1,7 @@
 import {
   type ReaderTtsHost,
   type ReaderTtsHostEvent,
+  type ReaderTtsHostProbe,
   type ReaderTtsHostSpeakRequest,
 } from '../features/reading/ReaderTtsSessionCoordinator.ts';
 import type { ReaderTtsVoiceOption } from '../features/reading/ReaderTtsPreferencesState';
@@ -32,6 +33,7 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
   private readonly mediaSession: ReaderTtsMediaSessionBridge;
   private readonly backgroundSession: ReaderTtsBackgroundSessionBridge | undefined;
   private listener: ((event: ReaderTtsHostEvent) => void) | undefined = undefined;
+  private listenerOwner: string | undefined = undefined;
 
   constructor(
     system: ReaderTtsSystemHost,
@@ -44,13 +46,20 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
     this.active = system;
     this.mediaSession = mediaSession;
     this.backgroundSession = backgroundSession;
-    this.system.setEventListener((event: ReaderTtsHostEvent): void => this.forward(this.system, event));
-    this.http.setEventListener((event: ReaderTtsHostEvent): void => this.forward(this.http, event));
+    this.system.setEventListener((event: ReaderTtsHostEvent): void => this.forward(this.system, event), 'router');
+    this.http.setEventListener((event: ReaderTtsHostEvent): void => this.forward(this.http, event), 'router');
     this.mediaSession.setEventListener((event: ReaderTtsHostEvent): void => this.listener?.(event));
   }
 
-  setEventListener(listener: ((event: ReaderTtsHostEvent) => void) | undefined): void {
+  setEventListener(listener: ((event: ReaderTtsHostEvent) => void) | undefined, owner: string): void {
     this.listener = listener;
+    this.listenerOwner = owner;
+  }
+
+  clearEventListener(owner: string): void {
+    if (this.listenerOwner !== owner) return;
+    this.listener = undefined;
+    this.listenerOwner = undefined;
   }
 
   async selectEngine(engine?: string): Promise<boolean> {
@@ -66,6 +75,10 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
 
   isAvailable(): Promise<boolean> {
     return this.active.isAvailable();
+  }
+
+  probe(): Promise<ReaderTtsHostProbe> {
+    return this.active.probe();
   }
 
   async activateAudioSession(allowMixing: boolean): Promise<void> {
@@ -114,6 +127,7 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
 
   async close(): Promise<void> {
     this.listener = undefined;
+    this.listenerOwner = undefined;
     await this.system.close();
     await this.http.close();
     await this.backgroundSession?.close();

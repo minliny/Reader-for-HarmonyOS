@@ -6,6 +6,7 @@ import http from '@ohos.net.http';
 import {
   type ReaderTtsHost,
   type ReaderTtsHostEvent,
+  type ReaderTtsHostProbe,
   type ReaderTtsHostSpeakRequest,
 } from '../features/reading/ReaderTtsSessionCoordinator';
 import {
@@ -28,6 +29,7 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
   private readonly audioSessionStateChangedCallback: (event: audio.AudioSessionStateChangedEvent) => void;
   private readonly outputDeviceChangedCallback: (event: audio.CurrentOutputDeviceChangedEvent) => void;
   private listener: ((event: ReaderTtsHostEvent) => void) | undefined = undefined;
+  private listenerOwner: string | undefined = undefined;
   private player: media.AVPlayer | undefined = undefined;
   private activeRequest: http.HttpRequest | null = null;
   private rejectActiveRequest: ((reason?: Error) => void) | undefined = undefined;
@@ -56,8 +58,15 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
     };
   }
 
-  setEventListener(listener: ((event: ReaderTtsHostEvent) => void) | undefined): void {
+  setEventListener(listener: ((event: ReaderTtsHostEvent) => void) | undefined, owner: string): void {
     this.listener = listener;
+    this.listenerOwner = owner;
+  }
+
+  clearEventListener(owner: string): void {
+    if (this.listenerOwner !== owner) return;
+    this.listener = undefined;
+    this.listenerOwner = undefined;
   }
 
   async selectEngine(engine?: string): Promise<boolean> {
@@ -73,12 +82,21 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
   }
 
   async isAvailable(): Promise<boolean> {
-    if (this.closed || this.configId === undefined) return false;
+    return (await this.probe()).available;
+  }
+
+  async probe(): Promise<ReaderTtsHostProbe> {
+    if (this.closed) return { available: false, reason: '在线朗读服务已关闭' };
+    if (this.configId === undefined) return { available: false, reason: '在线 TTS 引擎未选择有效配置' };
     try {
-      return await this.gateway.get(this.configId) !== undefined;
+      const config = await this.gateway.get(this.configId);
+      if (config === undefined) {
+        return { available: false, reason: `在线 TTS 配置 ${this.configId} 不存在或已删除` };
+      }
+      return { available: true };
     } catch (error) {
       this.logError('HttpTTS config probe failed', error);
-      return false;
+      return { available: false, reason: `在线 TTS 配置探测失败：${errorMessageOf(error)}` };
     }
   }
 
