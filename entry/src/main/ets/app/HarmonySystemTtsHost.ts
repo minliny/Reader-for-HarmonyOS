@@ -5,6 +5,7 @@ import { errorMessageOf } from './ErrorMessage.ts';
 import {
   type ReaderTtsHost,
   type ReaderTtsHostEvent,
+  type ReaderTtsHostProbe,
   type ReaderTtsHostSpeakRequest,
 } from '../features/reading/ReaderTtsSessionCoordinator';
 import type { ReaderTtsVoiceOption } from '../features/reading/ReaderTtsPreferencesState';
@@ -62,6 +63,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
   private engineLanguage: string | undefined = undefined;
   private enginePerson: number | undefined = undefined;
   private listener: ((event: ReaderTtsHostEvent) => void) | undefined = undefined;
+  private listenerOwner: string | undefined = undefined;
   private currentRequestId: string | undefined = undefined;
   private audioListenersInstalled: boolean = false;
   private audioSessionActive: boolean = false;
@@ -82,8 +84,15 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
     };
   }
 
-  setEventListener(listener: ((event: ReaderTtsHostEvent) => void) | undefined): void {
+  setEventListener(listener: ((event: ReaderTtsHostEvent) => void) | undefined, owner: string): void {
     this.listener = listener;
+    this.listenerOwner = owner;
+  }
+
+  clearEventListener(owner: string): void {
+    if (this.listenerOwner !== owner) return;
+    this.listener = undefined;
+    this.listenerOwner = undefined;
   }
 
   async selectEngine(engine?: string): Promise<boolean> {
@@ -91,13 +100,25 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
   }
 
   async isAvailable(): Promise<boolean> {
-    if (this.closed) return false;
+    return (await this.probe()).available;
+  }
+
+  /**
+   * Capability + language + voice check. The reason text is preserved for the
+   * coordinator so an unavailable engine never reports without a cause.
+   */
+  async probe(): Promise<ReaderTtsHostProbe> {
+    if (this.closed) return { available: false, reason: '朗读服务已关闭' };
     try {
       await this.ensureEngine(DEFAULT_LANGUAGE, DEFAULT_PERSON);
-      return true;
+      return { available: true };
     } catch (error) {
-      this.logError('system TTS engine unavailable', error);
-      return false;
+      this.logError('system TTS engine probe failed', error);
+      const detail = errorMessageOf(error);
+      if (/not\s*support|unsupported|不支持/i.test(detail)) {
+        return { available: false, reason: `系统不支持朗读：${detail}` };
+      }
+      return { available: false, reason: `中文离线音色未安装或音色创建失败：${detail}` };
     }
   }
 
@@ -236,7 +257,11 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
       } catch (_) {
         // Replacing the engine is still safe when stop has already completed.
       }
-      previous.shutdown();
+      try {
+        previous.shutdown();
+      } catch (error) {
+        this.logError('system TTS engine shutdown during replacement failed', error);
+      }
     }
     const engine = await textToSpeech.createEngine({
       language,

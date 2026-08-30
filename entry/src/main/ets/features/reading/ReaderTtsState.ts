@@ -1,6 +1,6 @@
 export type ReaderTtsSessionStatus =
-  'unavailable' | 'idle' | 'preparing' | 'playing' | 'paused' | 'resuming' |
-  'interrupted' | 'stopping' | 'completed' | 'failed';
+  'uninitialized' | 'probing' | 'unavailable' | 'idle' | 'preparing' | 'playing' | 'paused' | 'resuming' |
+  'interrupted' | 'stopping' | 'completed' | 'error' | 'failed';
 
 export const READER_TTS_RATE_MIN = 0.5;
 export const READER_TTS_RATE_MAX = 2;
@@ -14,7 +14,8 @@ export type ReaderTtsPauseReason = 'user' | 'systemInterruption' | 'routeBackgro
 
 export type ReaderTtsStopReason =
   'user' | 'timer' | 'completed' | 'lifecycle' | 'contentChanged' | 'screenOff' |
-  'systemInterruption' | 'engineUnavailable' | 'failureLimit';
+  'systemInterruption' | 'engineUnavailable' | 'failureLimit' |
+  'startFailed' | 'startTimeout' | 'utteranceFailed';
 
 export type ReaderTtsContentVersion = number | string;
 
@@ -36,6 +37,8 @@ export type ReaderTtsState = {
   pauseReason?: ReaderTtsPauseReason;
   stopReason?: ReaderTtsStopReason;
   errorMessage?: string;
+  /** True only after a real Host onStart callback was applied in this session. */
+  audioStarted?: boolean;
 };
 
 export type ReaderTtsSessionIdentity = {
@@ -53,7 +56,7 @@ export type ReaderTtsUtteranceToken = ReaderTtsSessionIdentity & {
 
 export function createReaderTtsState(available: boolean = false): ReaderTtsState {
   return {
-    status: available ? 'idle' : 'unavailable',
+    status: available ? 'idle' : 'uninitialized',
     sessionGeneration: 0,
     utteranceGeneration: 0,
     contentVersion: 0,
@@ -74,7 +77,7 @@ export function setReaderTtsAvailability(state: ReaderTtsState, available: boole
       stopReason: 'engineUnavailable',
     };
   }
-  if (state.status !== 'unavailable') {
+  if (state.status !== 'unavailable' && state.status !== 'uninitialized' && state.status !== 'probing') {
     return state;
   }
   return {
@@ -272,9 +275,10 @@ export function failReaderTtsUtterance(
   }
   return {
     ...state,
-    status: 'failed',
+    status: 'error',
     utteranceGeneration: state.utteranceGeneration + 1,
     requestId: undefined,
+    audioStarted: false,
     consecutiveFailures: state.consecutiveFailures + 1,
     errorMessage: message.length > 0 ? message : 'Harmony system TTS failed',
   };

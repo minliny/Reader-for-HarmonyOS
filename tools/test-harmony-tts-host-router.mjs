@@ -7,12 +7,18 @@ class FakeHost {
   constructor(kind) { this.kind = kind; }
   calls = [];
   listener;
-  setEventListener(listener) { this.listener = listener; }
+  listenerOwner;
+  setEventListener(listener, owner) { this.listener = listener; this.listenerOwner = owner; }
+  clearEventListener(owner) {
+    if (this.listenerOwner !== owner) return;
+    this.listener = undefined;
+    this.listenerOwner = undefined;
+  }
   async selectEngine(engine) {
     this.calls.push(`select:${engine ?? 'system'}`);
     return this.kind === 'http' ? engine?.startsWith('http-tts:') === true : !engine?.startsWith('http-tts:');
   }
-  async isAvailable() { this.calls.push('available'); return true; }
+  async probe() { this.calls.push('probe'); return { available: true }; }
   async activateAudioSession(mix) { this.calls.push(`activate:${mix}`); }
   async deactivateAudioSession() { this.calls.push('deactivate'); }
   async speak(request) { this.calls.push(`speak:${request.requestId}`); }
@@ -102,7 +108,29 @@ await resilientRouter.speak({
 });
 assert.ok(resilientSystem.calls.includes('activate:false'));
 assert.ok(resilientSystem.calls.includes('speak:foreground-without-auxiliary-sessions'));
+assert.equal((await resilientRouter.probe()).available, true,
+  'router probe must delegate to the active transport');
 await resilientRouter.close();
+
+// Owner-scoped listener teardown: a torn-down page must not drop a newer
+// page's listener on the shared router.
+const sharedRouter = new HarmonyTtsHostRouter(new FakeHost('system'), new FakeHost('http'), {
+  setEventListener() {},
+  activate: async () => {},
+  publish() {},
+  close: async () => {},
+});
+const pageAEvents = [];
+const pageBEvents = [];
+sharedRouter.setEventListener(event => pageAEvents.push(event), 'coordinator-A');
+sharedRouter.setEventListener(event => pageBEvents.push(event), 'coordinator-B');
+sharedRouter.clearEventListener('coordinator-A');
+sharedRouter.system.emit({ type: 'start', requestId: 'after-teardown' });
+assert.equal(pageAEvents.length, 0, 'stale coordinator must not receive events after replacement');
+assert.equal(pageBEvents.length, 1, 'clearing an old owner must keep the new owner listener');
+sharedRouter.clearEventListener('coordinator-B');
+sharedRouter.system.emit({ type: 'start', requestId: 'after-final-teardown' });
+assert.equal(pageBEvents.length, 1, 'clearing the current owner must detach the listener');
 
 const httpHostSource = await readFile(
   new URL('../entry/src/main/ets/app/HarmonyHttpTtsHost.ts', import.meta.url),

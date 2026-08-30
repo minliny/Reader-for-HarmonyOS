@@ -19,7 +19,7 @@ import {
 } from '../entry/src/main/ets/features/reading/ReaderTtsState.ts';
 
 let state = createReaderTtsState();
-assert.equal(state.status, 'unavailable');
+assert.equal(state.status, 'uninitialized');
 state = setReaderTtsAvailability(state, true);
 assert.equal(state.status, 'idle');
 
@@ -44,8 +44,9 @@ assert.equal(markReaderTtsStarted(state, resumed).status, 'playing');
 const staleFailure = failReaderTtsUtterance(state, first, 'late');
 assert.strictEqual(staleFailure, state);
 state = failReaderTtsUtterance(state, resumed, 'engine failure');
-assert.equal(state.status, 'failed');
+assert.equal(state.status, 'error');
 assert.equal(state.consecutiveFailures, 1);
+assert.equal(state.audioStarted, false);
 
 state = scheduleReaderTtsTimer(state, 1000, 60_000);
 assert.equal(isReaderTtsTimerDue(state, 60_999), false);

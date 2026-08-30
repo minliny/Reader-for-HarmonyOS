@@ -69,10 +69,17 @@ class FakeGateway {
 class FakeHost {
   calls = [];
   listener;
+  listenerOwner;
   requests = [];
   speakGate;
-  setEventListener(listener) { this.listener = listener; }
+  setEventListener(listener, owner) { this.listener = listener; this.listenerOwner = owner; }
+  clearEventListener(owner) {
+    if (this.listenerOwner !== owner) return;
+    this.listener = undefined;
+    this.listenerOwner = undefined;
+  }
   async selectEngine(engine) { this.calls.push(`engine:${engine ?? 'system'}`); return true; }
+  async probe() { this.calls.push('available'); return { available: true }; }
   async isAvailable() { this.calls.push('available'); return true; }
   async activateAudioSession(mix) { this.calls.push(`activate:${mix}`); }
   async deactivateAudioSession() { this.calls.push('deactivate'); }
@@ -187,7 +194,7 @@ await coordinator.whenSettled();
 assert.equal(coordinator.getState().status, 'interrupted');
 host.emit({ type: 'interruption', action: 'resume' });
 await coordinator.whenSettled();
-assert.equal(coordinator.getState().status, 'resuming');
+assert.equal(coordinator.getState().status, 'preparing');
 
 await coordinator.setVoice('en-US', 7);
 assert.equal(host.requests.at(-1).language, 'en-US');
@@ -214,6 +221,7 @@ slowStop.speak.release();
 await slowStop.startTask;
 await slowStopTask;
 assert.equal(slowStop.coordinator.getState().status, 'idle');
+await slowStop.coordinator.dispose();
 
 const immediateTransportIntents = [
   { name: 'pause', invoke: current => current.pause() },
@@ -237,6 +245,7 @@ for (const scenario of immediateTransportIntents) {
   blocked.speak.release();
   await blocked.startTask;
   await intentTask;
+  await blocked.coordinator.dispose();
 }
 
 const immediateHostEvents = [
@@ -261,6 +270,7 @@ for (const scenario of immediateHostEvents) {
   await blocked.startTask;
   await blocked.coordinator.whenSettled();
   await blocked.coordinator.whenSettled();
+  await blocked.coordinator.dispose();
 }
 
 const replacement = await startBlockedSession(blockedContentVersion);
@@ -279,6 +289,7 @@ replacement.speak.release();
 await replacement.startTask;
 await replacementTask;
 assert.equal(replacement.host.requests.length, 2);
+await replacement.coordinator.dispose();
 
 const stopOnCallGateway = new FakeGateway();
 const stopOnCallHost = new FakeHost();
@@ -304,12 +315,20 @@ const coordinatorSource = await readFile(
 assert.match(coordinatorSource, /export type HostTtsTransportState/);
 assert.match(coordinatorSource, /private stopHostTransportImmediately\(\): Promise<Error \| undefined>/);
 assert.match(coordinatorSource, /private routeHostEvent\(event: ReaderTtsHostEvent\): void/);
-assert.match(coordinatorSource, /void this\.pauseForSystem\('systemInterruption'\)/,
+assert.match(coordinatorSource, /this\.voidLogged\(this\.pauseForSystem\('systemInterruption'\)/,
   'system interruption must enter the immediate transport-cancel path before serialization');
+assert.match(coordinatorSource, /terminateToError/,
+  'start and callback failures must land in the transactional retryable error state');
+assert.match(coordinatorSource, /armStartWatchdog/,
+  'a speak accepted without a real onStart callback must be bounded by a watchdog');
+assert.match(coordinatorSource, /clearEventListener\(this\.ownerToken\)/,
+  'dispose must only clear its own owner-scoped listener');
 assert.doesNotMatch(
   coordinatorSource,
   /beginReaderTtsSession|prepareReaderTtsUtterance|advanceReaderTtsChapter|failReaderTtsUtterance/,
   'production coordinator must project Core snapshots instead of running a second queue reducer',
 );
+assert.doesNotMatch(coordinatorSource, /task\.catch\(\(\): void => \{\}\)/,
+  'the operation tail must never swallow rejections silently');
 
 console.log('reader TTS fake-host coordinator: PASS');
