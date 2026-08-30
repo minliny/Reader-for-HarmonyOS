@@ -8,7 +8,6 @@ const search = read('entry/src/main/ets/features/search/SearchPage.ets');
 const searchField = read('entry/src/main/ets/features/common/ReaderSearchField.ets');
 const detail = read('entry/src/main/ets/features/bookshelf/LocalBookDetail.ets');
 const switchWindow = read('entry/src/main/ets/features/source/SourceSwitchWindow.ets');
-const quickDirectory = read('entry/src/main/ets/features/reading/ReaderDirectoryModulePanel.ets');
 const discover = read('entry/src/main/ets/features/discover/DiscoverPage.ets');
 const rss = read('entry/src/main/ets/features/rss/RssPage.ets');
 
@@ -72,10 +71,13 @@ assert.match(switchWindow, /private loadingBody[\s\S]*LoadingProgress\(\)[\s\S]*
 assert.doesNotMatch(switchWindow, /importing_spinner_(track|arc)/,
   'source-switch loading must not stack two spinner circles');
 
-assert.match(quickDirectory,
-  /virtualScroll\(\{ totalCount: this\.projectedEntries\.length, reusable: false \}\)/,
+// The quick directory's List frame moved into the shared ReaderDirectoryList;
+// the no-recycle policy is asserted there.
+const directoryList = read('entry/src/main/ets/features/reading/ReaderDirectoryList.ets');
+assert.match(directoryList,
+  /virtualScroll\(\{ totalCount: this\.entries\.length, reusable: false \}\)/,
   'the quick directory must not recycle a small visible row pool across a long TOC');
-assert.doesNotMatch(quickDirectory, /virtualScroll\(\{ reusable: true \}\)/,
+assert.doesNotMatch(directoryList, /virtualScroll\(\{ reusable: true \}\)/,
   'the phone runtime regression must not be reintroduced');
 
 console.log('reader reported feedback regressions: PASS');

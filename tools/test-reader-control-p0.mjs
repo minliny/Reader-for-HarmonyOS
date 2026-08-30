@@ -280,8 +280,9 @@ assert.match(fullDirectory, /return this\.animateFromControl && !this\.usesExpan
 assert.match(fullDirectory, /\.accessibilityText\('收起目录'\)/);
 
 const fullDirectoryPanel = read('entry/src/main/ets/features/reading/FullDirectoryPanel.ets');
+const directoryList = read('entry/src/main/ets/features/reading/ReaderDirectoryList.ets');
 assert.match(fullDirectoryPanel, /return Math\.max\(117, this\.bodyContentHeight\(\) - 143\)/);
-assert.match(fullDirectoryPanel, /List\(\{ space: 0, scroller: this\.listScroller \}\)[\s\S]*Repeat\(this\.projectedEntries\)[\s\S]*\.virtualScroll\(\{ totalCount: this\.projectedEntries\.length, reusable: false \}\)/);
+assert.match(directoryList, /List\(\{ space: 0, scroller: this\.scroller \}\)[\s\S]*Repeat\(this\.entries\)[\s\S]*\.virtualScroll\(\{ totalCount: this\.entries\.length, reusable: false \}\)/);
 assert.match(fullDirectoryPanel, /this\.listScroller\.scrollEdge\(Edge\.Bottom\)/);
 assert.match(fullDirectoryPanel, /this\.activeTab === 'bookmarks'/);
 assert.match(fullDirectoryPanel, /ReaderSearchField\(\{[\s\S]*variant: 'readerDirectory'/);
