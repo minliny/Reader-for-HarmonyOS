@@ -20,6 +20,11 @@ import {
 import { type ReadingSessionChapter } from './ReadingChapterWindow';
 import { materializeReadingDocument } from './ReadingDocumentProjection';
 import { classifyChapterBody, RemoteReadingSourceError } from './RemoteContentAdmission';
+import type {
+  ChapterBodyReadableVerdict,
+  ChapterBodyRejectedVerdict,
+  ChapterBodyVerdict,
+} from './RemoteContentAdmission';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 
 export type RemoteReadingBookSeed = {
@@ -429,12 +434,14 @@ export class RemoteReadingFlowGateway {
     // login pages, captcha interstitials and blank bodies are typed source
     // failures so the UI can offer a user-confirmed source switch. Image
     // chapters render without text and skip the text-length probe.
-    const bodyVerdict = document.images.length > 0 ?
-      { kind: 'readable' } : classifyChapterBody(document.content);
+    const imageBodyVerdict: ChapterBodyReadableVerdict = { kind: 'readable' };
+    const bodyVerdict: ChapterBodyVerdict = document.images.length > 0 ?
+      imageBodyVerdict : classifyChapterBody(document.content);
     if (bodyVerdict.kind !== 'readable') {
+      const rejected: ChapterBodyRejectedVerdict = bodyVerdict;
       throw new RemoteReadingSourceError(
-        bodyVerdict.kind,
-        `chapter ${chapterIndex} body was rejected: ${bodyVerdict.reason}`,
+        rejected.kind,
+        `chapter ${chapterIndex} body was rejected: ${rejected.reason}`,
         'chapter.content',
       );
     }

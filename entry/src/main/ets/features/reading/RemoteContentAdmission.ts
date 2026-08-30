@@ -3,6 +3,9 @@ import type {
   RemoteReadingOpenOptions,
   RemoteReadingSession,
 } from './RemoteReadingFlowGateway';
+import type {
+  RemoteReadingCommand,
+} from './RemoteReadingContract';
 import { RemoteReadingGatewayError } from './RemoteReadingContract';
 
 /**
@@ -45,7 +48,7 @@ export function isRemoteSourceFailureKind(kind: RemoteReadingFailureKind): boole
 export class RemoteReadingSourceError extends RemoteReadingGatewayError {
   readonly kind: RemoteReadingFailureKind;
 
-  constructor(kind: RemoteReadingFailureKind, message: string, command?: string) {
+  constructor(kind: RemoteReadingFailureKind, message: string, command?: RemoteReadingCommand) {
     super('commandFailed', message, command);
     this.name = 'RemoteReadingSourceError';
     this.kind = kind;
@@ -75,9 +78,18 @@ export type RemoteContentAdmissionOutcome = {
   readableChapterIndex?: number;
 };
 
+export interface ChapterBodyReadableVerdict {
+  kind: 'readable';
+}
+
+export interface ChapterBodyRejectedVerdict {
+  kind: RemoteReadingFailureKind;
+  reason: string;
+}
+
 export type ChapterBodyVerdict =
-  | { kind: 'readable' }
-  | { kind: RemoteReadingFailureKind; reason: string };
+  | ChapterBodyReadableVerdict
+  | ChapterBodyRejectedVerdict;
 
 const MIN_READABLE_BODY_LENGTH = 6;
 /** Placeholder/paywall banners are short; a real chapter mentioning the same
