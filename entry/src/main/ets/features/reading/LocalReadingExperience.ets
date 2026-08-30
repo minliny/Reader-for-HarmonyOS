@@ -19,6 +19,7 @@ import {
   remoteReadingFailureKindOf,
   type RemoteReadingFailureKind,
 } from './RemoteContentAdmission';
+import type { ReaderBookIdentity } from './ReaderBookmarkProjection';
 import {
   contentMetricForChapter,
   validateContentMetricsAgainstToc,
@@ -492,6 +493,23 @@ class ReaderPageTurnTarget {
   }
 }
 
+/**
+ * Host-originated bookmark jump (Full Directory bookmark row). The requestId
+ * bumps on every click so re-selecting the same bookmark still re-syncs the
+ * @Prop and re-fires the anchor seek.
+ */
+export class ReaderBookmarkAnchorRequest {
+  requestId: number;
+  chapterIndex: number;
+  chapterOffset: number;
+
+  constructor(requestId: number, chapterIndex: number, chapterOffset: number) {
+    this.requestId = requestId;
+    this.chapterIndex = chapterIndex;
+    this.chapterOffset = chapterOffset;
+  }
+}
+
 class ReaderDeferredChapterSelection {
   chapterIndex: number;
   chapterOffset: number;
@@ -724,6 +742,13 @@ export struct ReadingExperience {
   @Prop remoteSession: RemoteReadingSession | undefined = undefined;
   @Prop sourceSwitchTransactionId: string | undefined = undefined;
   @Prop @Watch('onRequestedChapterChanged') requestedChapterIndex: number | undefined = undefined;
+  // Full Directory bookmark row: host-originated precise (chapter, offset)
+  // anchor; mirrors the selectSearchResult exact-scalar jump. The requestId
+  // bump makes repeated same-bookmark clicks re-fire the seek.
+  @Prop @Watch('onRequestedBookmarkAnchorChanged') requestedBookmarkAnchor:
+    ReaderBookmarkAnchorRequest | undefined = undefined;
+  // Static per-session book identity for stable bookmark ids.
+  @Prop bookmarkIdentity: ReaderBookIdentity | undefined = undefined;
   @Prop @Watch('onDeviceFormChanged') isTablet: boolean;
   @Prop @Watch('onWindowChromeActiveChanged') windowChromeActive: boolean = false;
   @Prop @Watch('onWindowChromeActiveChanged') windowChromeOverlayActive: boolean = false;
@@ -1333,6 +1358,9 @@ export struct ReadingExperience {
         onPageChange: (page: ReaderControlPage): void => this.setControlPage(page),
         onModuleSelect: (_module: string): void => {},
         onSelectChapter: (chapterIndex: number): void => this.selectControlChapter(chapterIndex),
+        onSelectBookmark: (bookmarkId: string, chapterIndex: number, chapterOffset: number): void =>
+          this.selectBookmarkAnchor(chapterIndex, chapterOffset),
+        bookmarkIdentity: this.bookmarkIdentity,
         onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
         onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
         onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
@@ -2249,6 +2277,16 @@ export struct ReadingExperience {
     this.restoredProgress = undefined;
     this.armFirstPageReadyDeadline(lifecycleToken, selectionToken);
     void this.openChapter(requested, false, lifecycleToken, selectionToken);
+  }
+
+  private onRequestedBookmarkAnchorChanged(): void {
+    const anchor = this.requestedBookmarkAnchor;
+    if (anchor === undefined || !this.mounted) {
+      return;
+    }
+    // The precise (chapter, Unicode-scalar offset) jump is the same capability
+    // the search-result jump uses; the reader owns the exact positioning.
+    this.selectChapterAnchor(anchor.chapterIndex, anchor.chapterOffset, false);
   }
 
   private onDeviceFormChanged(): void {
@@ -6726,6 +6764,10 @@ export struct ReadingExperience {
       return;
     }
     this.selectChapterAnchor(result.chapterIndex, result.chapterOffset, false);
+  }
+
+  private selectBookmarkAnchor(chapterIndex: number, chapterOffset: number): void {
+    this.selectChapterAnchor(chapterIndex, chapterOffset, false);
   }
 
   private selectControlChapter(chapterIndex: number): void {

@@ -1,4 +1,4 @@
-import { ReadingExperience, ReadingCommit } from '../reading/LocalReadingExperience';
+import { ReadingExperience, ReadingCommit, ReaderBookmarkAnchorRequest } from '../reading/LocalReadingExperience';
 import { ReaderFullDirectory } from '../reading/ReaderFullDirectory';
 import { SourceSwitchPanel, SourceSwitchPanelState } from '../reading/SourceSwitchPanel';
 import type { SourceSwitchCandidate } from '../source/SourceSwitchGateway';
@@ -7,6 +7,7 @@ import type {
   ReaderDirectoryChapterStartBookmarkRequest,
   ReaderPageBookmarkToggleRequest,
 } from '../reading/ReaderDirectoryMarkerState';
+import type { ReaderBookIdentity } from '../reading/ReaderBookmarkProjection';
 import type { RemoteReadingSession } from '../reading/RemoteReadingFlowGateway';
 import type { RemoteReadingFailureKind } from '../reading/RemoteContentAdmission';
 
@@ -50,6 +51,11 @@ export struct ReaderShell {
   @Prop directoryOpenedFromControl: boolean = false;
   @Prop offlineBookOperationActive: boolean = false;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
+  // 书签 tab 精确锚点接线: requestedBookmarkAnchor 经 @Prop @Watch 触发阅读会话
+  // 的精确 (章节, Unicode 标量偏移) 跳转; bookmarkIdentity 是会话期静态书籍身份,
+  // 用于稳定书签 id。两者 undefined 时书签 tab 保留面板自身的章首降级。
+  @Prop requestedBookmarkAnchor: ReaderBookmarkAnchorRequest | undefined = undefined;
+  @Prop bookmarkIdentity: ReaderBookIdentity | undefined = undefined;
   // 换源 overlay。
   @Prop sourceSwitchVisible: boolean = false;
   @Prop sourceSwitchState: SourceSwitchPanelState = { kind: 'discovering' };
@@ -66,6 +72,9 @@ export struct ReaderShell {
   onChapterCommitted: (chapterIndex: number, chapterTitle: string) => void =
     (_chapterIndex: number, _chapterTitle: string): void => {};
   onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
+  // undefined = 未接线, 面板走自身的章首降级链 (selectBookmark 降级)。
+  onSelectBookmark: ((bookmarkId: string, chapterIndex: number, chapterOffset: number) => void) | undefined =
+    undefined;
   onDownloadChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   onDownloadBook: () => void = (): void => {};
   onClearBookOffline: () => void = (): void => {};
@@ -100,6 +109,8 @@ export struct ReaderShell {
           remoteSession: this.remoteSession,
           sourceSwitchTransactionId: this.sourceSwitchTransactionId,
           requestedChapterIndex: this.requestedChapterIndex,
+          requestedBookmarkAnchor: this.requestedBookmarkAnchor,
+          bookmarkIdentity: this.bookmarkIdentity,
           isTablet: this.isTablet,
           windowChromeActive: this.visible,
           windowChromeOverlayActive: this.visible &&
@@ -154,6 +165,8 @@ export struct ReaderShell {
           reduceMotion: this.reduceMotion,
           offlineBookOperationActive: this.offlineBookOperationActive,
           onSelectChapter: (chapterIndex: number): void => this.onSelectChapter(chapterIndex),
+          onSelectBookmark: this.onSelectBookmark,
+          bookmarkIdentity: this.bookmarkIdentity,
           onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
           onDownloadBook: (): void => this.onDownloadBook(),
           onClearBookOffline: (): void => this.onClearBookOffline(),

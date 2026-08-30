@@ -1,4 +1,5 @@
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
+import type { ReaderBookIdentity } from './ReaderBookmarkProjection';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from './ReaderDirectoryMarkerState';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
@@ -55,6 +56,13 @@ export struct ReaderFullDirectory {
   // R-LOCAL-TOC-01: forward the chapter tap from the panel body to the
   // owning flow so a full-directory tap actually enters that chapter.
   onSelectChapter: (index: number) => void = (_index: number): void => {};
+  // Bookmark tab precise-anchor wiring: undefined keeps the panel's legacy
+  // chapter-start fallback, so this stays a zero-regression opt-in.
+  onSelectBookmark: ((bookmarkId: string, chapterIndex: number, chapterOffset: number) => void) | undefined =
+    undefined;
+  // Static per-session book identity for stable bookmark ids; plain member by
+  // contract (the identity never changes while the session is mounted).
+  bookmarkIdentity: ReaderBookIdentity | undefined = undefined;
   onDownloadChapter: (index: number) => void = (_index: number): void => {};
   onDownloadBook: () => void = (): void => {};
   onClearBookOffline: () => void = (): void => {};
@@ -114,6 +122,8 @@ export struct ReaderFullDirectory {
           panelWidthOverride: this.panelWidth(),
           panelHeightOverride: this.fullPanelHeight(),
           onSelectChapter: (index: number): void => this.onSelectChapter(index),
+          onSelectBookmark: this.onSelectBookmark,
+          bookmarkIdentity: this.bookmarkIdentity,
           onDownloadChapter: (index: number): void => this.onDownloadChapter(index),
           onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,

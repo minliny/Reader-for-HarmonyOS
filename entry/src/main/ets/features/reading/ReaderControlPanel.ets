@@ -6,6 +6,7 @@ import {
   translateYTransition,
 } from '../common/MotionSpec';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
+import type { ReaderBookIdentity } from './ReaderBookmarkProjection';
 import type { ReadingContentSearchResult } from './ReadingSessionFlowGateway';
 import { ReaderAutoPageFullPanel } from './ReaderAutoPageFullPanel';
 import { ReaderAutoPagePanel } from './ReaderAutoPagePanel';
@@ -202,6 +203,13 @@ export struct ReaderControlPanel {
   onPageChange: (page: ReaderControlPage) => void = (_page: ReaderControlPage): void => {};
   onModuleSelect: (module: string) => void = (_module: string): void => {};
   onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
+  // Bookmark tab precise-anchor wiring: undefined keeps the panel's legacy
+  // chapter-start fallback, so this stays a zero-regression opt-in.
+  onSelectBookmark: ((bookmarkId: string, chapterIndex: number, chapterOffset: number) => void) | undefined =
+    undefined;
+  // Static per-session book identity for stable bookmark ids; plain member by
+  // contract (the identity never changes while the session is mounted).
+  bookmarkIdentity: ReaderBookIdentity | undefined = undefined;
   onDownloadChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   onDeleteBookmarks: (bookmarkTimes: number[]) => void = (_bookmarkTimes: number[]): void => {};
   onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void =
@@ -1165,6 +1173,8 @@ export struct ReaderControlPanel {
           chapterDownloadEnabled: this.chapterDownloadEnabled,
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
           onSelectChapter: (chapterIndex: number): void => this.onSelectChapter(chapterIndex),
+          onSelectBookmark: this.onSelectBookmark,
+          bookmarkIdentity: this.bookmarkIdentity,
           onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
           onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>

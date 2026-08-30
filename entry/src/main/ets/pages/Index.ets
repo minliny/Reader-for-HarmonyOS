@@ -39,6 +39,9 @@ import type {
 import type {
   ReadingCommit,
 } from '../features/reading/LocalReadingExperience';
+import {
+  ReaderBookmarkAnchorRequest,
+} from '../features/reading/LocalReadingExperience';
 import { ReaderShell } from '../features/shell/ReaderShell';
 import {
   LocalReadingFlowGateway,
@@ -60,6 +63,9 @@ import {
   type RemoteContentVerdict,
   type RemoteReadingFailureKind,
 } from '../features/reading/RemoteContentAdmission';
+import type {
+  ReaderBookIdentity,
+} from '../features/reading/ReaderBookmarkProjection';
 import {
   isRemoteReadingCacheFallbackEligible,
   type RemoteReadingVariable,
@@ -309,6 +315,10 @@ struct Index {
   /** Readability verdict gating the remote detail "start reading" action. */
   @State private remoteContentVerdict: RemoteContentVerdict = 'readable';
   @State private requestedChapterIndex: number | undefined = undefined;
+  // 书签 tab 精确锚点: 每次点击递增 requestId, 保证 @Prop @Watch 对连续点击的
+  // 同值/等值请求都能重新触发 (deep-equal 相同的两个对象也会下发新实例)。
+  @State private requestedBookmarkAnchor: ReaderBookmarkAnchorRequest | undefined = undefined;
+  private bookmarkAnchorRequestId: number = 0;
   @State private preparedReaderRoute: PreparedReaderRoute = 'reading';
   @State private directoryCurrentChapterIndex: number = -1;
   @State private directoryChapterTitle: string = '';
@@ -826,6 +836,8 @@ struct Index {
           sourceSwitchTransactionId: this.currentSourceSwitchTransactionId(),
           totalChapters: this.detailToc.length,
           requestedChapterIndex: this.requestedChapterIndex,
+          requestedBookmarkAnchor: this.requestedBookmarkAnchor,
+          bookmarkIdentity: this.detailBookmarkIdentity(),
           isTablet: deviceInfo.deviceType === 'tablet',
           reduceMotion: this.settingsSnapshot.reduceMotion,
           visible: this.route === 'reading' || this.route === 'directory',
@@ -857,12 +869,15 @@ struct Index {
           },
           onReadingReady: (chapterIndex: number): void => this.presentPreparedReading(chapterIndex),
           onReadingCommitted: (commit: ReadingCommit): void => this.applyReadingCommit(commit),
-          onReadingFailure: (sourceId: string, bookId: string, message: string): void =>
-            this.onReadingFailure(sourceId, bookId, message),
+          onReadingFailure: (sourceId: string, bookId: string, message: string,
+            failureKind?: RemoteReadingFailureKind): void =>
+            this.onReadingFailure(sourceId, bookId, message, failureKind),
           onChapterCommitted: (chapterIndex: number, chapterTitle: string): void => {
             this.applyDirectoryChapter(chapterIndex, chapterTitle);
           },
           onSelectChapter: (chapterIndex: number): void => this.onDirectoryChapterSelected(chapterIndex),
+          onSelectBookmark: (bookmarkId: string, chapterIndex: number, chapterOffset: number): void =>
+            this.onReaderBookmarkSelected(bookmarkId, chapterIndex, chapterOffset),
           onDownloadChapter: (chapterIndex: number): void => this.downloadDirectoryChapter(chapterIndex),
           onDownloadBook: (): void => this.downloadDirectoryBook(),
           onClearBookOffline: (): void => this.requestClearDirectoryBookOffline(),
@@ -2958,6 +2973,26 @@ struct Index {
     return `${book.sourceId}\u0000${book.bookId}`;
   }
 
+  /**
+   * 书签 tab 的会话期静态书籍身份。libraryBookId 复用 searchDetailKey 生成的
+   * `sourceId + bookId` 复合键 —— 与 shelfBookKey/searchDetailKey 同一口径,
+   * 保证书签存储键与书架/详情身份对齐 (跨会话稳定, 同一本书两处入口同键)。
+   * 标题为空的 detail 视为尚未投影完成, 不注入身份 (面板走章首降级)。
+   */
+  private detailBookmarkIdentity(): ReaderBookIdentity | undefined {
+    const book = this.detailBook;
+    if (book === undefined || book.title.trim().length === 0) {
+      return undefined;
+    }
+    return {
+      libraryBookId: this.searchDetailKey(book.sourceId, book.bookId),
+      sourceId: book.sourceId,
+      bookId: book.bookId,
+      bookName: book.title,
+      bookAuthor: book.author,
+    };
+  }
+
   private isSameDetailBook(book: ReadingBookDetail): boolean {
     return this.detailBook?.sourceId === book.sourceId && this.detailBook?.bookId === book.bookId;
   }
@@ -3418,6 +3453,27 @@ struct Index {
     // Full Directory has no approved loading/selection variant and its panel
     // is not opaque. Keep the last committed row/header/body snapshot visible
     // until `onChapterCommitted` reports the new chapter.
+  }
+
+  private onReaderBookmarkSelected(bookmarkId: string, chapterIndex: number, chapterOffset: number): void {
+    // 书签 tab 的精确锚点回流, 镜像 onDirectoryChapterSelected 的准入与路由语义。
+    if (!this.isKnownDetailChapter(chapterIndex)) {
+      return;
+    }
+    if (chapterIndex === this.directoryCurrentChapterIndex) {
+      // 已提交章内的书签: 不重复准入, 只露出阅读区。精确偏移完全由下面的
+      // requestedBookmarkAnchor 通道承载 (selectChapterAnchor 处理同章偏移跳转)。
+      this.route = 'reading';
+    } else {
+      // 跨章: 与目录选章同一路由机制。刻意不设置 requestedChapterIndex ——
+      // 两个 @Watch 同批触发会让章首加载与精确偏移竞速; 锚点通道自身的
+      // openChapter(chapterIndex, offset) 就是一次完整的跨章准入。
+      this.nextNavigationGeneration();
+      this.preparedReaderRoute = 'reading';
+    }
+    this.bookmarkAnchorRequestId += 1;
+    this.requestedBookmarkAnchor =
+      new ReaderBookmarkAnchorRequest(this.bookmarkAnchorRequestId, chapterIndex, chapterOffset);
   }
 
   private openFullDirectory(): void {
