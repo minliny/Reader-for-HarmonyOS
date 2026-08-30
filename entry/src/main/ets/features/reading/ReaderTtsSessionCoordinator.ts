@@ -669,7 +669,6 @@ export class ReaderTtsSessionCoordinator {
       stopReason,
       errorMessage: message,
     });
-    this.resolveStartWaiters(false);
     try {
       await this.host.stop();
     } catch (error) {
@@ -687,6 +686,9 @@ export class ReaderTtsSessionCoordinator {
     } catch (error) {
       this.logTtsEvent('error-stop.audio', errorMessageOf(error));
     }
+    // Waiters unblock only after the transport is fully released, so a
+    // `whenStarted(false)` consumer observes the settled error state.
+    this.resolveStartWaiters(false);
   }
 
   /** Leaves the current session without a retryable error (capability gate). */
@@ -815,7 +817,7 @@ export class ReaderTtsSessionCoordinator {
       this.startWatchdogHandle = -1;
       if (this.disposed) return;
       if (this.awaitingStartToken !== token || !this.isUtteranceCurrent(token)) return;
-      void this.onStartCallbackTimeout(token);
+      void this.enqueue((): Promise<void> => this.onStartCallbackTimeout(token));
     }, this.startCallbackTimeoutMs);
   }
 
@@ -840,6 +842,7 @@ export class ReaderTtsSessionCoordinator {
         this.logTtsEvent('startCallbackTimeout.report', errorMessageOf(error));
       }
     }
+    if (!this.isUtteranceCurrent(token)) return;
     await this.terminateToError('语音引擎未在规定时间内开始播放', 'startTimeout');
   }
 
