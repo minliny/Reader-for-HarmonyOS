@@ -1,12 +1,20 @@
 #include "bookturn_host.h"
 
+#include <hilog/log.h>
 #include <native_vsync/native_vsync.h>
+#include <pthread.h>
+#include <qos/qos.h>
 
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <utility>
 #include <vector>
+
+#undef LOG_DOMAIN
+#define LOG_DOMAIN 0x5244
+#undef LOG_TAG
+#define LOG_TAG "BookTurn"
 
 namespace reader::bookturn {
 namespace {
@@ -26,6 +34,17 @@ size_t PayloadIndex(TextureSlot slot)
 // grace (~130ms at 60Hz) ride the glitch out; a truly dead surface keeps
 // refusing past it and fails closed as before.
 constexpr int kMaxConsecutiveDrawFailures = 8;
+
+constexpr size_t kFrameDiagCapacity = 512;
+
+float Percentile(std::vector<float>& values, float fraction)
+{
+    if (values.empty()) return 0.0F;
+    const size_t index = std::min(values.size() - 1,
+        static_cast<size_t>(fraction * static_cast<float>(values.size() - 1) + 0.5F));
+    std::nth_element(values.begin(), values.begin() + static_cast<std::ptrdiff_t>(index), values.end());
+    return values[index];
+}
 
 }  // namespace
 
@@ -181,6 +200,7 @@ void BookTurnHost::OnVsyncFrame(long long timestamp)
         if (!stop_) {
             vsyncTickPending_ = true;
             vsyncTickTimestampNs_ = timestamp;
+            vsyncTickPostedAt_ = std::chrono::steady_clock::now();
             condition_.notify_all();
         }
     }
@@ -208,14 +228,25 @@ void BookTurnHost::RequestFrameIfWanted()
 
 void BookTurnHost::UpdateFrameLoopWanted()
 {
+    const bool was = frameLoopWanted_.load(std::memory_order_acquire);
     const bool wanted = settlement_ != Settlement::NONE || pendingSettlement_ != Settlement::NONE ||
         (fingerDown_ && chaseRunning_);
     frameLoopWanted_.store(wanted, std::memory_order_release);
+    if (wanted && !was) {
+        frameDiag_.clear();
+    } else if (!wanted && was) {
+        EmitFrameDiag();
+    }
     if (wanted) RequestFrameIfWanted();
 }
 
 void BookTurnHost::Run()
 {
+    (void)pthread_setname_np(pthread_self(), "reader-bookturn");
+    // Real-device pacing (2026-08-30 diagnosis): without an explicit QoS the
+    // render thread wakes on a LITTLE core at background priority and the
+    // per-frame condvar hop alone costs tens of ms during a turn.
+    (void)OH_QoS_SetThreadQoS(QOS_USER_INTERACTIVE);
     std::unique_lock<std::mutex> lock(mutex_);
     while (!stop_) {
         condition_.wait(lock, [this]() {
@@ -397,6 +428,9 @@ void BookTurnHost::Run()
 
         if (vsyncTickPending_) {
             vsyncTickPending_ = false;
+            const std::chrono::steady_clock::time_point tickStart = std::chrono::steady_clock::now();
+            currentWakeMs_ = std::max(0.0F,
+                std::chrono::duration<float, std::milli>(tickStart - vsyncTickPostedAt_).count());
             const long long timestamp = vsyncTickTimestampNs_;
             float frameSeconds = 1.0F / 60.0F;
             if (lastFrameTimestampNs_ != 0 && timestamp > lastFrameTimestampNs_) {
@@ -413,6 +447,11 @@ void BookTurnHost::Run()
                 lock.unlock();
                 ProcessChaseFrame(frameSeconds);
                 lock.lock();
+                UpdateFrameLoopWanted();
+            } else {
+                // §11.3: settlement ended (or was torn down) and no gesture is
+                // live — re-evaluate the gate so one-shot re-arms stop here
+                // instead of ticking the worker every VSync at idle.
                 UpdateFrameLoopWanted();
             }
         }
@@ -434,6 +473,35 @@ void BookTurnHost::Notify(HostEvent event, uint64_t generation, int32_t detail)
     if (callback) callback(event, generation, detail);
 }
 
+void BookTurnHost::RecordFrameDiag(float solveMs, float drawMs)
+{
+    if (frameDiag_.size() >= kFrameDiagCapacity) return;
+    frameDiag_.push_back({ currentWakeMs_, solveMs, drawMs });
+}
+
+void BookTurnHost::EmitFrameDiag()
+{
+    if (frameDiag_.empty()) return;
+    std::vector<float> wake;
+    std::vector<float> solve;
+    std::vector<float> draw;
+    wake.reserve(frameDiag_.size());
+    solve.reserve(frameDiag_.size());
+    draw.reserve(frameDiag_.size());
+    for (const FrameDiagSample& sample : frameDiag_) {
+        wake.push_back(sample.wakeMs);
+        solve.push_back(sample.solveMs);
+        draw.push_back(sample.drawMs);
+    }
+    OH_LOG_INFO(LOG_APP,
+        "frames=%{public}zu wake p50=%{public}.2f p95=%{public}.2f max=%{public}.2f | "
+        "solve max=%{public}.2f | draw p50=%{public}.2f p95=%{public}.2f max=%{public}.2f ms",
+        frameDiag_.size(), Percentile(wake, 0.5F), Percentile(wake, 0.95F),
+        Percentile(wake, 1.0F), Percentile(solve, 1.0F), Percentile(draw, 0.5F),
+        Percentile(draw, 0.95F), Percentile(draw, 1.0F));
+    frameDiag_.clear();
+}
+
 void BookTurnHost::ProcessChaseFrame(float frameSeconds)
 {
     const BookTurnSample sample = liveSample_;
@@ -448,8 +516,15 @@ void BookTurnHost::ProcessChaseFrame(float frameSeconds)
     liveInput_.overrideTheta = false;
     liveInput_.settledTheta = 0.0F;
     liveInput_.radiusScale = 1.0F;
+    const std::chrono::steady_clock::time_point solveStart = std::chrono::steady_clock::now();
     pose_ = BookTurnSolver::Solve(liveInput_, &pose_);
-    if (!renderer_.Draw(pose_)) {
+    const float solveMs = std::chrono::duration<float, std::milli>(
+        std::chrono::steady_clock::now() - solveStart).count();
+    const std::chrono::steady_clock::time_point drawStart = std::chrono::steady_clock::now();
+    const bool drew = renderer_.Draw(pose_);
+    RecordFrameDiag(solveMs, std::chrono::duration<float, std::milli>(
+        std::chrono::steady_clock::now() - drawStart).count());
+    if (!drew) {
         if (++consecutiveDrawFailures_ <= kMaxConsecutiveDrawFailures) {
             return;
         }
@@ -488,7 +563,10 @@ bool BookTurnHost::ProcessSettlementFrame(float frameSeconds)
     liveInput_.settledTheta = settlementStartTheta_ *
         (1.0F - Clamp(settlementElapsed_ / kTiltZeroSeconds, 0.0F, 1.0F));
     liveInput_.radiusScale = scale;
+    const std::chrono::steady_clock::time_point solveStart = std::chrono::steady_clock::now();
     pose_ = BookTurnSolver::Solve(liveInput_, &pose_);
+    const float solveMs = std::chrono::duration<float, std::milli>(
+        std::chrono::steady_clock::now() - solveStart).count();
     // §7.3 tau_swap: fire once per settlement. Without this guard the gate
     // stays true on every remaining frame (tau past the spine end and the
     // hidden sheet has near-zero coverage), re-rotating the slots each VSync
@@ -504,7 +582,11 @@ bool BookTurnHost::ProcessSettlementFrame(float frameSeconds)
         swappedGeneration_ = liveInput_.generation;
         readyMask_.store(renderer_.ReadyMask(), std::memory_order_release);
     }
-    if (!renderer_.Draw(pose_)) {
+    const std::chrono::steady_clock::time_point drawStart = std::chrono::steady_clock::now();
+    const bool drew = renderer_.Draw(pose_);
+    RecordFrameDiag(solveMs, std::chrono::duration<float, std::milli>(
+        std::chrono::steady_clock::now() - drawStart).count());
+    if (!drew) {
         if (++consecutiveDrawFailures_ <= kMaxConsecutiveDrawFailures) {
             return true;
         }

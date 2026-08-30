@@ -548,7 +548,13 @@ bool BookTurnRenderer::InitializeEgl(void* nativeWindow)
     surface_ = eglCreateWindowSurface(display_, config_, reinterpret_cast<EGLNativeWindowType>(nativeWindow),
         nullptr);
     if (surface_ == EGL_NO_SURFACE) return false;
-    return eglMakeCurrent(display_, surface_, surface_, context_) == EGL_TRUE;
+    if (eglMakeCurrent(display_, surface_, surface_, context_) != EGL_TRUE) return false;
+    // Present on swap without the driver-side vsync hold: the display
+    // compositor still paces when the frame becomes visible, and holding the
+    // queued buffer for an extra refresh only adds latency (2026-08-30
+    // real-device frame-pacing diagnosis).
+    eglSwapInterval(display_, 0);
+    return true;
 }
 
 bool BookTurnRenderer::InitializePrograms()

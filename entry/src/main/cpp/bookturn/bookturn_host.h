@@ -16,6 +16,7 @@
 #include <mutex>
 #include <optional>
 #include <thread>
+#include <vector>
 
 namespace reader::bookturn {
 
@@ -67,6 +68,8 @@ private:
     bool ProcessSettlementFrame(float frameSeconds);
     void UpdateFrameLoopWanted();
     void RequestFrameIfWanted();
+    void EmitFrameDiag();
+    void RecordFrameDiag(float solveMs, float drawMs);
     BookTurnInput ProgrammaticInput(uint64_t generation, Direction direction) const;
     bool RequiredTexturesReady(Direction direction) const;
 
@@ -112,6 +115,9 @@ private:
     bool vsyncTickPending_ = false;
     long long vsyncTickTimestampNs_ = 0;
     long long lastFrameTimestampNs_ = 0;
+    // Callback-thread steady clock reading taken with the tick flag, so the
+    // worker can measure its own wake latency in one clock domain.
+    std::chrono::steady_clock::time_point vsyncTickPostedAt_ {};
 
     // Render-thread-only state below this line.
     BookTurnRenderer renderer_;
@@ -140,6 +146,17 @@ private:
     // (fence sync) for the first frames of a surface's life while still
     // presenting the frame; one refusal must not kill a committed turn.
     int consecutiveDrawFailures_ = 0;
+
+    // Per-activity-window frame diagnostics (2026-08-30 real-device pacing
+    // diagnosis): one hilog line per gesture/settlement window splits wake
+    // latency from solve/draw cost. Render thread only.
+    struct FrameDiagSample {
+        float wakeMs;
+        float solveMs;
+        float drawMs;
+    };
+    std::vector<FrameDiagSample> frameDiag_;
+    float currentWakeMs_ = 0.0F;
 };
 
 }  // namespace reader::bookturn

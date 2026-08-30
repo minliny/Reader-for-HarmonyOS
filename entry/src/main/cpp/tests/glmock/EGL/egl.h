@@ -49,6 +49,7 @@ EGLSurface eglCreateWindowSurface(EGLDisplay display, EGLConfig config,
     EGLNativeWindowType window, const EGLint* attributes);
 EGLBoolean eglMakeCurrent(EGLDisplay display, EGLSurface draw, EGLSurface read, EGLContext context);
 EGLBoolean eglSwapBuffers(EGLDisplay display, EGLSurface surface);
+EGLBoolean eglSwapInterval(EGLDisplay display, EGLint interval);
 EGLBoolean eglDestroySurface(EGLDisplay display, EGLSurface surface);
 EGLBoolean eglDestroyContext(EGLDisplay display, EGLContext context);
 EGLBoolean eglTerminate(EGLDisplay display);

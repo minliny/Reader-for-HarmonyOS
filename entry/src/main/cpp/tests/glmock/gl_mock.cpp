@@ -78,6 +78,12 @@ EGLBoolean eglSwapBuffers(EGLDisplay, EGLSurface)
     return EGL_TRUE;
 }
 
+EGLBoolean eglSwapInterval(EGLDisplay, EGLint)
+{
+    Record("eglSwapInterval", 0, 0);
+    return EGL_TRUE;
+}
+
 EGLBoolean eglDestroySurface(EGLDisplay, EGLSurface)
 {
     return EGL_TRUE;
