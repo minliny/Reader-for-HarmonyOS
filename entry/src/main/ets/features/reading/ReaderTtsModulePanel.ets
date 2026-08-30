@@ -149,7 +149,8 @@ export struct ReaderTtsModulePanel {
     .position({ x: 36, y: 4 })
     .enabled(this.state.status !== 'unavailable' && this.state.status !== 'stopping')
     .opacity(this.state.status === 'unavailable' ? 0.42 : 1)
-    .accessibilityText(this.isActivelySpeaking() ? '暂停朗读' : '开始或继续朗读')
+    .accessibilityText(this.isActivelySpeaking() ? '暂停朗读' :
+      (this.state.status === 'error' ? '重试朗读' : '开始或继续朗读'))
     .onClick((): void => this.onToggle());
   }
 

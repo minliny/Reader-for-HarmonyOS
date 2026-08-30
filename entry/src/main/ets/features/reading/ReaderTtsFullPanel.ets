@@ -871,9 +871,11 @@ export struct ReaderTtsFullPanel {
     if (this.state.status === 'playing') return '播放中';
     if (this.state.status === 'paused') return '已暂停';
     if (this.state.status === 'interrupted') return '已中断';
+    if (this.state.status === 'probing') return '正在检查朗读可用性';
     if (this.state.status === 'preparing' || this.state.status === 'resuming') return '准备中';
     if (this.state.status === 'completed') return '已完成';
     if (this.state.status === 'stopping') return '停止中';
+    if (this.state.status === 'error') return '播放失败';
     if (this.state.status === 'failed') return '播放失败';
     if (this.state.status === 'unavailable') return '当前引擎不可用';
     return '未开始';
@@ -890,6 +892,7 @@ export struct ReaderTtsFullPanel {
     if (kind === 'previous') return '上一句';
     if (kind === 'next') return '下一句';
     if (kind === 'stop') return '停止朗读';
+    if (kind === 'toggle' && this.state.status === 'error') return '重试朗读';
     return this.isActivelySpeaking() ? '暂停朗读' : '开始或继续朗读';
   }
 
