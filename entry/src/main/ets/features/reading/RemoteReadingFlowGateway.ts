@@ -19,6 +19,7 @@ import {
 } from './RemoteReadingContract';
 import { type ReadingSessionChapter } from './ReadingChapterWindow';
 import { materializeReadingDocument } from './ReadingDocumentProjection';
+import { classifyChapterBody, RemoteReadingSourceError } from './RemoteContentAdmission';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 
 export type RemoteReadingBookSeed = {
@@ -424,6 +425,19 @@ export class RemoteReadingFlowGateway {
       this.runtimeOwner,
       isCurrent,
     );
+    // The projected body must be real chapter text: paywall placeholders,
+    // login pages, captcha interstitials and blank bodies are typed source
+    // failures so the UI can offer a user-confirmed source switch. Image
+    // chapters render without text and skip the text-length probe.
+    const bodyVerdict = document.images.length > 0 ?
+      { kind: 'readable' } : classifyChapterBody(document.content);
+    if (bodyVerdict.kind !== 'readable') {
+      throw new RemoteReadingSourceError(
+        bodyVerdict.kind,
+        `chapter ${chapterIndex} body was rejected: ${bodyVerdict.reason}`,
+        'chapter.content',
+      );
+    }
     return {
       sourceId: identity.sourceId,
       bookId: identity.bookId,
