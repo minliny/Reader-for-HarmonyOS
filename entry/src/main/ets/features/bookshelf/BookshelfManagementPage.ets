@@ -147,7 +147,28 @@ export struct BookshelfManagementPage {
       if (this.snapshot.data.groups.length === 0) {
         Text('暂无分组').fontFamily('ReaderNotoSansSC').fontSize(12).fontColor(TOK_MUTED);
       } else {
-        ForEach(this.snapshot.data.groups, (group: BookGroup) => {
+        List({ space: TOK_SPACE_XS }) {
+          Repeat(this.snapshot.data.groups)
+            .each((repeatItem: RepeatItem<BookGroup>) => {
+            ListItem() {
+              this.groupRow(repeatItem.item);
+            }
+          })
+          .key((group: BookGroup): string => `book-group-${group.groupId}`)
+          .virtualScroll({ reusable: true });
+        }
+        .width('100%')
+        .height(Math.min(320, this.snapshot.data.groups.length * 92))
+        .scrollBar(BarState.Off);
+      }
+    }
+    .width('100%').padding(TOK_SPACE_MD).backgroundColor(TOK_SURFACE_SOLID)
+    .border({ width: TOK_BORDER_W, color: TOK_BORDER }).borderRadius(10)
+    .alignItems(HorizontalAlign.Start);
+  }
+
+  @Builder
+  private groupRow(group: BookGroup) {
           Column({ space: TOK_SPACE_XS }) {
             Row() {
               Column({ space: 2 }) {
@@ -167,12 +188,6 @@ export struct BookshelfManagementPage {
             }
           }
           .width('100%').padding(TOK_SPACE_SM).backgroundColor(TOK_SURFACE_PANEL_SOFT).borderRadius(8);
-        }, (group: BookGroup): string => `book-group-${group.groupId}`);
-      }
-    }
-    .width('100%').padding(TOK_SPACE_MD).backgroundColor(TOK_SURFACE_SOLID)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER }).borderRadius(10)
-    .alignItems(HorizontalAlign.Start);
   }
 
   @Builder
@@ -191,7 +206,28 @@ export struct BookshelfManagementPage {
       .width('100%')
       .scrollable(ScrollDirection.Horizontal)
       .scrollBar(BarState.Off);
-      ForEach(this.snapshot.data.books, (book: ShelfBook) => {
+      List({ space: TOK_SPACE_XS }) {
+        Repeat(this.snapshot.data.books)
+          .each((repeatItem: RepeatItem<ShelfBook>) => {
+          ListItem() {
+            this.assignmentBookRow(repeatItem.item);
+          }
+        })
+        .key((book: ShelfBook): string => `assign-book-${book.sourceId}:${book.bookId}`)
+        .virtualScroll({ reusable: true });
+      }
+      .width('100%')
+      .height(Math.min(360, Math.max(60, this.snapshot.data.books.length * 60)))
+      .scrollBar(BarState.Off);
+      this.actionButton('应用到所选书籍', true, (): void => this.onAssignBook());
+    }
+    .width('100%').padding(TOK_SPACE_MD).backgroundColor(TOK_SURFACE_SOLID)
+    .border({ width: TOK_BORDER_W, color: TOK_BORDER }).borderRadius(10)
+    .alignItems(HorizontalAlign.Start);
+  }
+
+  @Builder
+  private assignmentBookRow(book: ShelfBook) {
         Row() {
           Column({ space: 2 }) {
             Text(book.title).fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Bold).fontSize(12).fontColor(TOK_INK);
@@ -207,12 +243,6 @@ export struct BookshelfManagementPage {
             .onClick((): void => this.onSelectBook(book.sourceId, book.bookId));
         }
         .width('100%').padding(TOK_SPACE_SM).border({ width: TOK_BORDER_W, color: TOK_BORDER }).borderRadius(8);
-      }, (book: ShelfBook): string => `assign-book-${book.sourceId}:${book.bookId}`);
-      this.actionButton('应用到所选书籍', true, (): void => this.onAssignBook());
-    }
-    .width('100%').padding(TOK_SPACE_MD).backgroundColor(TOK_SURFACE_SOLID)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER }).borderRadius(10)
-    .alignItems(HorizontalAlign.Start);
   }
 
   @Builder
@@ -222,19 +252,35 @@ export struct BookshelfManagementPage {
       if (this.snapshot.data.records.length === 0) {
         Text('暂无阅读记录').fontFamily('ReaderNotoSansSC').fontSize(12).fontColor(TOK_MUTED);
       } else {
-        ForEach(this.snapshot.data.records, (record: ShelfReadRecord) => {
-          Row() {
-            Text(record.bookName).layoutWeight(1).fontFamily('ReaderNotoSansSC').fontSize(12).fontColor(TOK_INK);
-            Text(`${this.formatDuration(record.readTime)} · ${this.formatTimestamp(record.lastRead)}`)
-              .fontFamily('ReaderNotoSansSC').fontSize(10).fontColor(TOK_MUTED);
-          }
-          .width('100%');
-        }, (record: ShelfReadRecord): string => `read-record-${record.deviceId}:${record.bookName}`);
+        List() {
+          Repeat(this.snapshot.data.records)
+            .each((repeatItem: RepeatItem<ShelfReadRecord>) => {
+            ListItem() {
+              this.recordRow(repeatItem.item);
+            }
+          })
+          .key((record: ShelfReadRecord): string =>
+            `read-record-${record.deviceId}:${record.bookName}:${record.lastRead}`)
+          .virtualScroll({ reusable: true });
+        }
+        .width('100%')
+        .height(Math.min(320, this.snapshot.data.records.length * 44))
+        .scrollBar(BarState.Off);
       }
     }
     .width('100%').padding(TOK_SPACE_MD).backgroundColor(TOK_SURFACE_SOLID)
     .border({ width: TOK_BORDER_W, color: TOK_BORDER }).borderRadius(10)
     .alignItems(HorizontalAlign.Start);
+  }
+
+  @Builder
+  private recordRow(record: ShelfReadRecord) {
+          Row() {
+            Text(record.bookName).layoutWeight(1).fontFamily('ReaderNotoSansSC').fontSize(12).fontColor(TOK_INK);
+            Text(`${this.formatDuration(record.readTime)} · ${this.formatTimestamp(record.lastRead)}`)
+              .fontFamily('ReaderNotoSansSC').fontSize(10).fontColor(TOK_MUTED);
+          }
+          .width('100%').height(44);
   }
 
   @Builder

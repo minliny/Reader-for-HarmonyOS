@@ -69,6 +69,7 @@ export class ReaderHostRegistry {
   private static readonly JsonDocumentLimitBytes = 16 * 1024 * 1024;
   private static readonly JsonDocumentReadChunkBytes = 64 * 1024;
   private static readonly HashChunkBytes = 1024 * 1024;
+  private static readonly LocalBookStagingConcurrency = 2;
   private readonly context: common.UIAbilityContext;
   private writeTail: Promise<void> = Promise.resolve();
   private stageSequence: number = 0;
@@ -79,6 +80,27 @@ export class ReaderHostRegistry {
 
   getContext(): common.UIAbilityContext {
     return this.context;
+  }
+
+  /** Read one application-owned raw resource as strict UTF-8 text. */
+  async readBundledRawFileText(fileName: string): Promise<string> {
+    if (fileName.trim().length === 0 || fileName.includes('/') || fileName.includes('\\')) {
+      throw new Error('Bundled raw-file name must be a non-empty basename');
+    }
+    let bytes: Uint8Array;
+    try {
+      bytes = await this.context.resourceManager.getRawFileContent(fileName);
+    } catch (error) {
+      throw new Error(`Bundled raw file ${fileName} is unavailable: ${errorMessageOf(error)}`);
+    }
+    if (bytes.byteLength === 0 || bytes.byteLength > ReaderHostRegistry.JsonDocumentLimitBytes) {
+      throw new Error(`Bundled raw file ${fileName} has an invalid size`);
+    }
+    try {
+      return util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(bytes);
+    } catch (error) {
+      throw new Error(`Bundled raw file ${fileName} is not valid UTF-8: ${errorMessageOf(error)}`);
+    }
   }
 
   /** Clear every Host-owned credential for one opaque source/session id. */
@@ -157,24 +179,32 @@ export class ReaderHostRegistry {
     options.maxSelectNumber = ReaderHostRegistry.LocalBookSelectionLimit;
 
     const uris = await new picker.DocumentViewPicker(this.context).select(options);
-    const prepared: LocalBookPreparation[] = [];
-    for (const uri of uris) {
-      const fileName = this.requireSelectedFileName(uri);
-      try {
-        prepared.push({
-          state: 'ready',
-          input: await this.stageLocalBook(uri, fileName),
-        });
-      } catch (error) {
-        // The Figma result state represents per-file failure but does not
-        // define error-copy. Preserve the actual filename and let the gateway
-        // map the item to its designed failure state.
-        const message = errorMessageOf(error);
-        hilog.error(LOG_DOMAIN, 'Reader', 'Local file staging failed for %{public}s: %{public}s',
-          fileName, message);
-        prepared.push({ state: 'failed', fileName });
-      }
+    const prepared: LocalBookPreparation[] = new Array<LocalBookPreparation>(uris.length);
+    let nextIndex = 0;
+    const workers: Promise<void>[] = [];
+    const workerCount = Math.min(ReaderHostRegistry.LocalBookStagingConcurrency, uris.length);
+    for (let worker = 0; worker < workerCount; worker += 1) {
+      workers.push((async (): Promise<void> => {
+        while (nextIndex < uris.length) {
+          const index = nextIndex;
+          nextIndex += 1;
+          const uri = uris[index];
+          const fileName = this.requireSelectedFileName(uri);
+          try {
+            prepared[index] = {
+              state: 'ready',
+              input: await this.stageLocalBook(uri, fileName),
+            };
+          } catch (error) {
+            const message = errorMessageOf(error);
+            hilog.error(LOG_DOMAIN, 'Reader', 'Local file staging failed for %{public}s: %{public}s',
+              fileName, message);
+            prepared[index] = { state: 'failed', fileName };
+          }
+        }
+      })());
     }
+    await Promise.all(workers);
     return prepared;
   }
 
@@ -216,26 +246,25 @@ export class ReaderHostRegistry {
     if (typeof status !== 'number' || !Number.isSafeInteger(status) || status < 200 || status >= 300) {
       throw new Error(`在线 JSON 请求失败：HTTP ${typeof status === 'number' ? status : '未知'}`);
     }
+    const body = response['body'];
     const bodyBase64 = response['bodyBase64'];
-    if (typeof bodyBase64 !== 'string' || bodyBase64.length === 0) {
+    if ((typeof body !== 'string' || body.length === 0) &&
+      (typeof bodyBase64 !== 'string' || bodyBase64.length === 0)) {
       throw new Error('在线 JSON 响应为空');
     }
-    let bytes: Uint8Array;
-    try {
-      bytes = new util.Base64Helper().decodeSync(bodyBase64, util.Type.MIME);
-    } catch (error) {
-      const message = errorMessageOf(error);
-      throw new Error(`在线 JSON 响应无法解码：${message}`);
+    let text = typeof body === 'string' ? body : '';
+    let bytes: Uint8Array = new util.TextEncoder('utf-8').encode(text);
+    if (text.length === 0 && typeof bodyBase64 === 'string') {
+      try {
+        bytes = new util.Base64Helper().decodeSync(bodyBase64, util.Type.MIME);
+        text = util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(bytes);
+      } catch (error) {
+        const message = errorMessageOf(error);
+        throw new Error(`在线 JSON 响应无法解码：${message}`);
+      }
     }
     if (bytes.byteLength === 0 || bytes.byteLength > ReaderHostRegistry.JsonDocumentLimitBytes) {
       throw new Error(`在线 JSON 响应超过 ${ReaderHostRegistry.JsonDocumentLimitBytes} 字节限制`);
-    }
-    let text: string;
-    try {
-      text = util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(bytes);
-    } catch (error) {
-      const message = errorMessageOf(error);
-      throw new Error(`在线 JSON 不是有效 UTF-8：${message}`);
     }
     if (text.trimStart().startsWith('<')) {
       throw new Error('在线地址返回网页而不是 JSON；GitHub 仓库文件请使用 Raw 链接');
@@ -412,11 +441,9 @@ export class ReaderHostRegistry {
 
   private async stageLocalBook(uri: string, fileName: string): Promise<LocalBookInput> {
     const stagePath = this.nextStagePath();
-    const stageUri = fileUri.getUriFromPath(stagePath);
     await this.ensureDirectory(this.localBookStageDirectory());
     try {
-      await fileIo.copy(uri, stageUri);
-      const contentHash = await this.sha256File(stagePath);
+      const contentHash = await this.copyAndHashLocalBook(uri, stagePath);
       return {
         fileName,
         bookId: `local:${contentHash}`,
@@ -429,30 +456,45 @@ export class ReaderHostRegistry {
     }
   }
 
-  private async sha256File(path: string): Promise<string> {
-    const stat = await fileIo.stat(path);
+  private async copyAndHashLocalBook(uri: string, stagePath: string): Promise<string> {
+    const stat = await fileIo.stat(uri);
     if (!Number.isSafeInteger(stat.size) || stat.size <= 0) {
       throw new Error('Selected document has invalid file size');
     }
     const digest = cryptoFramework.createMd('SHA256');
     const buffer = new ArrayBuffer(ReaderHostRegistry.HashChunkBytes);
-    const file = await fileIo.open(path, fileIo.OpenMode.READ_ONLY);
+    const source = await fileIo.open(uri, fileIo.OpenMode.READ_ONLY);
+    const destination = await fileIo.open(
+      stagePath,
+      fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC,
+    );
     try {
       let totalBytes = 0;
       while (true) {
-        const bytesRead = await fileIo.read(file.fd, buffer);
+        const bytesRead = await fileIo.read(source.fd, buffer);
         if (bytesRead === 0) {
           break;
         }
         totalBytes += bytesRead;
         const chunk = new Uint8Array(buffer, 0, bytesRead);
         await digest.update({ data: chunk });
+        let writtenBytes = 0;
+        while (writtenBytes < bytesRead) {
+          const writable = chunk.slice(writtenBytes);
+          const written = await fileIo.write(destination.fd, writable.buffer);
+          if (!Number.isSafeInteger(written) || written <= 0 || written > writable.byteLength) {
+            throw new Error('Selected document staging destination stopped accepting bytes');
+          }
+          writtenBytes += written;
+        }
       }
       if (totalBytes !== stat.size) {
-        throw new Error('Selected document changed while being hashed');
+        throw new Error('Selected document changed while being staged');
       }
+      await fileIo.fsync(destination.fd);
     } finally {
-      await fileIo.close(file);
+      await fileIo.close(source);
+      await fileIo.close(destination);
     }
     const output = await digest.digest();
     const alphabet = '0123456789abcdef';

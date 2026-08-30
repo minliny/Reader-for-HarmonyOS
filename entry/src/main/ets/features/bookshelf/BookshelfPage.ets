@@ -38,6 +38,7 @@ import {
   readerVisualSafeRight,
 } from '../common/ReaderWindowMetrics';
 import { isReaderProductSurfaceEnabled } from '../../app/ReaderProductScope';
+import { motionAnimateParam } from '../common/MotionSpec';
 
 const PHONE_BOOK_WIDTH = 96.656;
 const PHONE_BOOK_HEIGHT_RATIO = 145.443 / PHONE_BOOK_WIDTH;
@@ -55,6 +56,44 @@ const TABLET_CONTENT_RIGHT_GAP = 21;
 
 type BookshelfViewMode = 'cover' | 'list';
 
+class BookshelfBookDataSource implements IDataSource {
+  private items: ShelfBook[] = [];
+  private listeners: DataChangeListener[] = [];
+
+  totalCount(): number { return this.items.length; }
+  getData(index: number): ShelfBook { return this.items[index]; }
+  registerDataChangeListener(listener: DataChangeListener): void {
+    if (this.listeners.indexOf(listener) < 0) this.listeners.push(listener);
+  }
+  unregisterDataChangeListener(listener: DataChangeListener): void {
+    const index = this.listeners.indexOf(listener);
+    if (index >= 0) this.listeners.splice(index, 1);
+  }
+  replace(items: ShelfBook[]): void {
+    this.items = items;
+    for (const listener of this.listeners) listener.onDataReloaded();
+  }
+}
+
+class BookshelfRowDataSource implements IDataSource {
+  private items: ShelfBook[][] = [];
+  private listeners: DataChangeListener[] = [];
+
+  totalCount(): number { return this.items.length; }
+  getData(index: number): ShelfBook[] { return this.items[index]; }
+  registerDataChangeListener(listener: DataChangeListener): void {
+    if (this.listeners.indexOf(listener) < 0) this.listeners.push(listener);
+  }
+  unregisterDataChangeListener(listener: DataChangeListener): void {
+    const index = this.listeners.indexOf(listener);
+    if (index >= 0) this.listeners.splice(index, 1);
+  }
+  replace(items: ShelfBook[][]): void {
+    this.items = items;
+    for (const listener of this.listeners) listener.onDataReloaded();
+  }
+}
+
 /**
  * Figma-backed Bookshelf with the canonical Cover and List projections.
  *
@@ -65,7 +104,7 @@ type BookshelfViewMode = 'cover' | 'list';
 @Component
 export struct BookshelfPage {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
-  @Prop books: ShelfBook[];
+  @Prop @Watch('onBooksChanged') books: ShelfBook[];
   @Prop continueReading: ShelfBook | undefined;
   @Prop reduceMotion: boolean = false;
   onImportRequested: () => void = (): void => {};
@@ -89,7 +128,6 @@ export struct BookshelfPage {
   @Prop updateProgressDone: number = 0;
   @Prop updateProgressTotal: number = 0;
   @State private viewportWidth: number = 0;
-  @State private viewportHeight: number = 0;
   @State private viewMode: BookshelfViewMode = 'cover';
   @State private filterRowVisible: boolean = false;
   @State private selectedGroup: string = '';
@@ -99,9 +137,13 @@ export struct BookshelfPage {
   @State private moreAnchorBottom: number = 0;
   @State private overlayOriginX: number = 0;
   @State private overlayOriginY: number = 0;
+  @State private projectedGroups: string[] = [];
+  private readonly bookDataSource: BookshelfBookDataSource = new BookshelfBookDataSource();
+  private readonly rowDataSource: BookshelfRowDataSource = new BookshelfRowDataSource();
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
+    this.rebuildShelfProjection();
   }
 
   build() {
@@ -131,12 +173,8 @@ export struct BookshelfPage {
         .width('100%')
         .onAreaChange((_oldValue: Area, newValue: Area): void => {
           const width = this.numericAreaLength(newValue.width);
-          const height = this.numericAreaLength(newValue.height);
           if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
             this.viewportWidth = width;
-          }
-          if (height > 0 && Math.abs(height - this.viewportHeight) >= 0.01) {
-            this.viewportHeight = height;
           }
         });
       }
@@ -232,44 +270,22 @@ export struct BookshelfPage {
 
   @Builder
   private phoneContent() {
-    Scroll() {
-      Column({ space: TOK_SPACE_XS }) {
-        if (this.continueReading !== undefined) {
-          this.continueReadingCard(this.continueReading, false);
-        }
-        this.bookshelfSection(false);
-      }
-      .width(this.phoneContentWidth())
-      .constraintSize({ minHeight: this.scrollContentMinHeight() })
-      .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_MD })
-      .alignItems(HorizontalAlign.Start)
-      .align(Alignment.TopStart);
+    Column() {
+      this.bookshelfList(false);
     }
     .width('100%')
     .height('100%')
-    .padding({ left: this.phoneContentFrame().left, right: this.phoneContentFrame().right })
-    .scrollBar(BarState.Off);
+    .padding({ left: this.phoneContentFrame().left, right: this.phoneContentFrame().right });
   }
 
   @Builder
   private tabletContent() {
-    Scroll() {
-      Column({ space: TOK_SPACE_XS }) {
-        if (this.continueReading !== undefined) {
-          this.continueReadingCard(this.continueReading, true);
-        }
-        this.bookshelfSection(true);
-      }
-      .width(this.shelfContentWidth(true))
-      .constraintSize({ minHeight: this.scrollContentMinHeight() })
-      .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_MD })
-      .alignItems(HorizontalAlign.Start)
-      .align(Alignment.TopStart);
+    Column() {
+      this.bookshelfList(true);
     }
     .width('100%')
     .height('100%')
-    .padding({ left: this.tabletContentFrame().left, right: this.tabletContentFrame().right })
-    .scrollBar(BarState.Off);
+    .padding({ left: this.tabletContentFrame().left, right: this.tabletContentFrame().right });
   }
 
   @Builder
@@ -351,49 +367,58 @@ export struct BookshelfPage {
   }
 
   @Builder
-  private bookshelfSection(isTablet: boolean) {
-    Column({ space: TOK_SPACE_CONTROL_INLINE }) {
-      Row() {
-        Text('我的书架')
-          .layoutWeight(1)
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(15)
-          .lineHeight(18)
-          .fontColor(TOK_INK);
-
-        Row({ space: TOK_SPACE_XS }) {
-          this.sectionAction('bookshelf_grid', (): void => {
-            this.viewMode = 'cover';
-          }, this.viewMode === 'cover');
-          this.sectionAction('bookshelf_list', (): void => {
-            this.viewMode = 'list';
-          }, this.viewMode === 'list');
-          this.sectionAction('bookshelf_filter', (): void => {
-            this.filterRowVisible = !this.filterRowVisible;
-          }, this.filterRowVisible);
-          this.sectionAction('bookshelf_settings', (): void => this.onBookshelfSettingsRequested(), false);
+  private bookshelfList(isTablet: boolean) {
+    List({ space: TOK_SPACE_CONTROL_INLINE }) {
+      if (this.continueReading !== undefined) {
+        ListItem() {
+          this.continueReadingCard(this.continueReading, isTablet);
         }
-        .height(34);
       }
-      .width(this.shelfContentWidth(isTablet))
-      .height(38)
-      .alignItems(VerticalAlign.Center);
+      ListItem() {
+        Row() {
+          Text('我的书架')
+            .layoutWeight(1)
+            .fontFamily('ReaderInter')
+            .fontWeight(FontWeight.Bold)
+            .fontSize(15)
+            .lineHeight(18)
+            .fontColor(TOK_INK);
+
+          Row({ space: TOK_SPACE_XS }) {
+            this.sectionAction('bookshelf_grid', (): void => {
+              this.setViewMode('cover');
+            });
+            this.sectionAction('bookshelf_list', (): void => {
+              this.setViewMode('list');
+            });
+            this.sectionAction('bookshelf_filter', (): void => {
+              this.filterRowVisible = !this.filterRowVisible;
+            });
+            this.sectionAction('bookshelf_search', (): void => this.onSearchRequested());
+            this.sectionAction('bookshelf_settings', (): void => this.onManageRequested());
+          }
+          .height(34);
+        }
+        .width(this.shelfContentWidth(isTablet))
+        .height(38)
+        .alignItems(VerticalAlign.Center);
+      }
 
       if (this.filterRowVisible) {
-        this.filterRow();
+        ListItem() {
+          this.filterRow();
+        }
       }
 
       if (this.viewMode === 'list') {
-        Column({ space: TOK_SPACE_CONTROL_INLINE }) {
-          ForEach(this.visibleBooks(), (book: ShelfBook, index: number) => {
+        LazyForEach(this.bookDataSource, (book: ShelfBook) => {
+          ListItem() {
             this.listBookCard(book, isTablet);
-          }, (book: ShelfBook, index: number): string => this.bookListRenderKey(book, index));
-        }
-        .width(this.shelfContentWidth(isTablet));
+          }
+        }, (book: ShelfBook, index: number): string => this.bookListRenderKey(book, index));
       } else {
-        Column({ space: TOK_SPACE_MD }) {
-          ForEach(this.bookRows(this.visibleBooks(), 3), (row: ShelfBook[], rowIndex: number) => {
+        LazyForEach(this.rowDataSource, (row: ShelfBook[], rowIndex: number) => {
+          ListItem() {
             Row({ space: this.bookRowSpace(this.shelfContentWidth(isTablet), isTablet) }) {
               ForEach(row, (book: ShelfBook) => {
                 this.bookCard(book, isTablet);
@@ -401,29 +426,33 @@ export struct BookshelfPage {
             }
             .width(this.shelfContentWidth(isTablet))
             .alignItems(VerticalAlign.Top);
-          }, (row: ShelfBook[], rowIndex: number): string => this.bookRowRenderKey(row, rowIndex));
-        }
-        .width(this.shelfContentWidth(isTablet));
+          }
+        }, (row: ShelfBook[], rowIndex: number): string => this.bookRowRenderKey(row, rowIndex));
       }
     }
-    .width(this.shelfContentWidth(isTablet));
+    .width(this.shelfContentWidth(isTablet))
+    .height('100%')
+    .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_MD })
+    .scrollBar(BarState.Off);
   }
 
   /**
    * SHF-02/03 shelf tools row, raised by the previously dead filter action:
    * group filter chips plus the shelf-wide manual update entry. The row is an
    * approved product extension (no Figma frame) so the resting surface keeps
-   * the canonical four-action toolbar.
+   * the canonical five-action toolbar (Figma SectionHeader 2236:1406).
    */
   @Builder
   private filterRow() {
     Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
       this.filterChip('全部', this.selectedGroup === '', (): void => {
         this.selectedGroup = '';
+        this.rebuildShelfProjection();
       });
-      ForEach(this.groupNames(), (group: string) => {
+      ForEach(this.projectedGroups, (group: string) => {
         this.filterChip(group, this.selectedGroup === group, (): void => {
           this.selectedGroup = this.selectedGroup === group ? '' : group;
+          this.rebuildShelfProjection();
         });
       }, (group: string): string => `shelf-group-${group}`);
       this.checkUpdatesChip();
@@ -473,21 +502,49 @@ export struct BookshelfPage {
       .accessibilityText(this.updateRunning ? '正在检查更新' : '检查书架更新');
   }
 
+  // @Builder value parameters are not observed: the active variant must be
+  // read from view state inside the builder or the icon never swaps.
+  private isSectionActionActive(assetName: string): boolean {
+    if (assetName === 'bookshelf_grid') {
+      return this.viewMode === 'cover';
+    }
+    if (assetName === 'bookshelf_list') {
+      return this.viewMode === 'list';
+    }
+    if (assetName === 'bookshelf_filter') {
+      return this.filterRowVisible;
+    }
+    return false;
+  }
+
+  // A single unconditional Image per action: if/else nodes inside a
+  // multi-instance @Builder get mis-diffed on state change and whole actions
+  // vanish from the tree (observed: search). Only the src attribute swaps.
+  private sectionActionAsset(assetName: string): Resource {
+    if (assetName === 'bookshelf_grid') {
+      return this.viewMode === 'cover'
+        ? $r('app.media.bookshelf_grid') : $r('app.media.bookshelf_grid_outline');
+    }
+    if (assetName === 'bookshelf_list') {
+      return this.viewMode === 'list'
+        ? $r('app.media.bookshelf_list_active') : $r('app.media.bookshelf_list');
+    }
+    if (assetName === 'bookshelf_filter') {
+      return this.filterRowVisible
+        ? $r('app.media.bookshelf_filter_active') : $r('app.media.bookshelf_filter');
+    }
+    if (assetName === 'bookshelf_search') {
+      return $r('app.media.bookshelf_search');
+    }
+    return $r('app.media.bookshelf_settings');
+  }
+
   @Builder
-  private sectionAction(assetName: string, action: () => void, active: boolean) {
+  private sectionAction(assetName: string, action: () => void) {
     Stack({ alignContent: Alignment.Center }) {
-      if (assetName === 'bookshelf_grid') {
-        Image($r('app.media.bookshelf_grid')).width(20).height(20)
-          .fillColor(active ? TOK_GREEN : TOK_MUTED);
-      } else if (assetName === 'bookshelf_list') {
-        Image($r('app.media.bookshelf_list')).width(20).height(20)
-          .fillColor(active ? TOK_GREEN : TOK_MUTED);
-      } else if (assetName === 'bookshelf_filter') {
-        Image($r('app.media.bookshelf_filter')).width(20).height(20)
-          .fillColor(active ? TOK_GREEN : TOK_MUTED);
-      } else {
-        Image($r('app.media.bookshelf_settings')).width(20).height(20).fillColor(TOK_MUTED);
-      }
+      // State color lives in the asset variant (provenance palette):
+      // Image.fillColor refills outline paths even with fill="none".
+      Image(this.sectionActionAsset(assetName)).width(20).height(20);
     }
     .width(34)
     .height(34)
@@ -495,7 +552,7 @@ export struct BookshelfPage {
     // Figma `Library/SectionAction` (`487:40`) keeps a 34×34 visual actor
     // but expands its transparent hit target by 5vp on every side.
     .responseRegion({ x: -5, y: -5, width: 44, height: 44 })
-    .accessibilityText(this.sectionActionLabel(assetName, active))
+    .accessibilityText(this.sectionActionLabel(assetName, this.isSectionActionActive(assetName)))
     .onClick(action);
   }
 
@@ -509,6 +566,7 @@ export struct BookshelfPage {
             .height(this.listCoverHeight(isTablet))
             .objectFit(ImageFit.Cover)
             .borderRadius(6)
+            .geometryTransition(this.coverGeometryId(book))
             .shadow({ radius: 12, color: '#1F34261F', offsetX: 0, offsetY: 6 });
         } else {
           NoCoverCover({
@@ -526,6 +584,7 @@ export struct BookshelfPage {
             .lineHeight(18.3)
             .fontColor(TOK_INK)
             .maxLines(1)
+            .geometryTransition(this.titleGeometryId(book))
             .textOverflow({ overflow: TextOverflow.Ellipsis });
 
           Row({ space: 4 }) {
@@ -621,6 +680,7 @@ export struct BookshelfPage {
             .height(this.bookCardHeight(this.shelfBookCardWidth(isTablet), isTablet))
             .objectFit(ImageFit.Cover)
             .borderRadius(8)
+            .geometryTransition(this.coverGeometryId(book))
             .shadow({ radius: 26, color: '#1A594632', offsetX: 0, offsetY: 8 });
         } else {
           // N-COVER-REMAP-01: Figma `BookCover` NoCover variant (`3612:1796`)
@@ -660,6 +720,7 @@ export struct BookshelfPage {
         .lineHeight(18.3)
         .fontColor(TOK_INK)
         .maxLines(1)
+        .geometryTransition(this.titleGeometryId(book))
         .textOverflow({ overflow: TextOverflow.Ellipsis });
 
       Text(book.author)
@@ -778,7 +839,10 @@ export struct BookshelfPage {
     if (assetName === 'bookshelf_filter') {
       return active ? '筛选书架，当前已选' : '筛选书架';
     }
-    return '书架设置';
+    if (assetName === 'bookshelf_search') {
+      return '搜索书籍';
+    }
+    return '书架管理';
   }
 
   private listCoverWidth(isTablet: boolean): number {
@@ -827,10 +891,6 @@ export struct BookshelfPage {
 
   private shelfBookCardWidth(isTablet: boolean): number {
     return this.bookCardWidth(this.shelfContentWidth(isTablet), isTablet);
-  }
-
-  private scrollContentMinHeight(): number {
-    return Math.max(0, this.viewportHeight);
   }
 
   private bookCardWidth(contentWidth: number, isTablet: boolean): number {
@@ -942,29 +1002,29 @@ export struct BookshelfPage {
     });
   }
 
-  /** '' selects the whole shelf; otherwise books of that group name. */
-  private visibleBooks(): ShelfBook[] {
-    if (this.selectedGroup === '') {
-      return this.books;
-    }
-    const filtered: ShelfBook[] = [];
-    for (const book of this.books) {
-      if (book.group === this.selectedGroup) {
-        filtered.push(book);
-      }
-    }
-    return filtered;
+  private onBooksChanged(): void {
+    this.rebuildShelfProjection();
   }
 
-  private groupNames(): string[] {
-    const names: string[] = [];
+  private rebuildShelfProjection(): void {
+    const visible: ShelfBook[] = [];
+    const groups: string[] = [];
+    const seenGroups: Set<string> = new Set<string>();
     for (const book of this.books) {
+      if (this.selectedGroup === '' || book.group === this.selectedGroup) visible.push(book);
       const group = book.group?.trim() ?? '';
-      if (group.length > 0 && names.indexOf(group) < 0) {
-        names.push(group);
+      if (group.length > 0 && !seenGroups.has(group)) {
+        seenGroups.add(group);
+        groups.push(group);
       }
     }
-    return names;
+    const rows: ShelfBook[][] = [];
+    for (let index = 0; index < visible.length; index += 3) {
+      rows.push(visible.slice(index, index + 3));
+    }
+    this.bookDataSource.replace(visible);
+    this.rowDataSource.replace(rows);
+    this.projectedGroups = groups;
   }
 
   private updateActionLabel(): string {
@@ -972,14 +1032,6 @@ export struct BookshelfPage {
       return `检查中 ${this.updateProgressDone}/${this.updateProgressTotal}`;
     }
     return '检查更新';
-  }
-
-  private bookRows(books: ShelfBook[], columns: number): ShelfBook[][] {
-    const rows: ShelfBook[][] = [];
-    for (let index = 0; index < books.length; index += columns) {
-      rows.push(books.slice(index, index + columns));
-    }
-    return rows;
   }
 
   private bookRowRenderKey(row: ShelfBook[], rowIndex: number): string {
@@ -999,6 +1051,30 @@ export struct BookshelfPage {
     return `bookshelf-list-${index}:${book.sourceId}:${book.bookId}:${book.title}:${book.author}:` +
       `${book.coverUrl ?? ''}:${book.currentChapterTitle ?? ''}:${book.lastChapter ?? ''}:` +
       `${book.unreadCount ?? 0}:${book.readProgress ?? 0}`;
+  }
+
+  // Figma Review G/H (`1497:2`/`1497:811`): the cover/list switch is a 320ms
+  // shared-element reflow — covers fly as entities, no full-page fade. The
+  // geometryTransition ids below pair the cover-mode and list-mode nodes.
+  private setViewMode(mode: BookshelfViewMode): void {
+    if (this.viewMode === mode) {
+      return;
+    }
+    if (this.reduceMotion) {
+      this.viewMode = mode;
+      return;
+    }
+    this.getUIContext().animateTo(motionAnimateParam('bookshelf.view.switch'), (): void => {
+      this.viewMode = mode;
+    });
+  }
+
+  private coverGeometryId(book: ShelfBook): string {
+    return `shelf-cover:${book.sourceId}:${book.bookId}`;
+  }
+
+  private titleGeometryId(book: ShelfBook): string {
+    return `shelf-title:${book.sourceId}:${book.bookId}`;
   }
 
   private hasCover(book: ShelfBook): boolean {

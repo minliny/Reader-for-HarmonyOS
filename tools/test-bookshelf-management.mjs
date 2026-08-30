@@ -36,14 +36,18 @@ assert.match(page, /export struct BookshelfManagementPage/);
 // Legado-parity debug banner became user-facing copy describing the workflow.
 assert.match(page, /在此新建分组、为书籍设置归属；分组会出现在书架的筛选行中/);
 assert.match(shelfPage, /onManageRequested: \(\) => void/);
-assert.doesNotMatch(shelfPage,
-  /this\.sectionAction\('bookshelf_settings', \(\): void => this\.onManageRequested\(\), false\)/,
-  'the shelf gear must not open the unrelated Core group/read-record manager');
+// SHF-02 turned the Core group manager into a user-facing shelf-management
+// page, and the 2026-08-30 product decision points the Figma Settings gear
+// (SectionHeader 2236:1406, fifth action) at that page.
 assert.match(shelfPage,
-  /this\.sectionAction\('bookshelf_settings', \(\): void => this\.onBookshelfSettingsRequested\(\), false\)/);
+  /this\.sectionAction\('bookshelf_settings', \(\): void => this\.onManageRequested\(\)\)/,
+  'the shelf gear must open the shelf management page');
+assert.match(shelfPage,
+  /this\.sectionAction\('bookshelf_search', \(\): void => this\.onSearchRequested\(\)\)/,
+  'the shelf section must expose the Figma Search action before the gear');
 assert.match(index,
   /onBookshelfSettingsRequested: \(\): void => this\.openSettings\(\)/,
-  'bookshelf settings must enter the settings flow instead of Core management');
+  'the more-menu shelf settings entry still enters the settings flow');
 assert.match(index, /'bookshelfManagement'/);
 assert.match(index, /route = 'bookshelfManagement'/);
 assert.match(index, /BookshelfManagementPage\(\{/);

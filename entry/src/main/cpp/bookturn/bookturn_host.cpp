@@ -205,9 +205,10 @@ void BookTurnHost::OnVsyncFrame(long long timestamp)
         }
     }
     vsyncBusy_.store(false, std::memory_order_release);
-    // Re-arm only while the frame loop is wanted: once the chase catches up
-    // with no new samples (or settlement ends) the requests stop and power
-    // returns to the idle baseline (contract §11.3).
+    // Re-arm while a gesture or settlement owns the presentation timeline.
+    // Tracking stays VSync-driven even after the edge catches the latest raw
+    // sample, so sparse MOVE delivery cannot collapse presentation to the
+    // platform input cadence. UP/CANCEL returns the loop to the idle baseline.
     if (frameLoopWanted_.load(std::memory_order_acquire)) {
         RequestFrameIfWanted();
     }
@@ -230,9 +231,11 @@ void BookTurnHost::UpdateFrameLoopWanted()
 {
     const bool was = frameLoopWanted_.load(std::memory_order_acquire);
     const bool wanted = settlement_ != Settlement::NONE || pendingSettlement_ != Settlement::NONE ||
-        (fingerDown_ && chaseRunning_);
+        fingerDown_;
     frameLoopWanted_.store(wanted, std::memory_order_release);
     if (wanted && !was) {
+        // Never integrate the idle interval into the first tracking frame.
+        lastFrameTimestampNs_ = 0;
         frameDiag_.clear();
     } else if (!wanted && was) {
         EmitFrameDiag();
@@ -264,7 +267,6 @@ void BookTurnHost::Run()
             vsyncTickPending_ = false;
             lastFrameTimestampNs_ = 0;
             fingerDown_ = false;
-            chaseRunning_ = false;
             renderer_.Shutdown();
             rendererReady_.store(false, std::memory_order_release);
             readyMask_.store(0, std::memory_order_release);
@@ -360,7 +362,6 @@ void BookTurnHost::Run()
                 liveInput_.settledTheta = 0.0F;
                 liveInput_.radiusScale = 1.0F;
                 active_ = true;
-                chaseRunning_ = std::abs(ChaseGap(chase_, sample)) > kCatchLockVp;
                 UpdateFrameLoopWanted();
             }
         }
@@ -372,7 +373,6 @@ void BookTurnHost::Run()
             pendingSettlement_ = Settlement::NONE;
             pendingSettlementEased_ = false;
             fingerDown_ = false;
-            chaseRunning_ = false;
             if (settlementEased_ && pendingProgrammaticDirection_.has_value()) {
                 liveInput_ = ProgrammaticInput(pendingSettlementGeneration_,
                     *pendingProgrammaticDirection_);
@@ -445,8 +445,9 @@ void BookTurnHost::Run()
                 lock.lock();
             } else if (fingerDown_) {
                 lock.unlock();
-                ProcessChaseFrame(frameSeconds);
+                const bool trackingAlive = ProcessChaseFrame(frameSeconds, timestamp);
                 lock.lock();
+                if (!trackingAlive) fingerDown_ = false;
                 UpdateFrameLoopWanted();
             } else {
                 // §11.3: settlement ended (or was torn down) and no gesture is
@@ -516,9 +517,9 @@ void BookTurnHost::EmitFrameDiag()
     frameDiag_.clear();
 }
 
-void BookTurnHost::ProcessChaseFrame(float frameSeconds)
+bool BookTurnHost::ProcessChaseFrame(float frameSeconds, int64_t frameTimeNs)
 {
-    const BookTurnSample sample = liveSample_;
+    const BookTurnSample sample = PresentChaseSample(chase_, liveSample_, frameTimeNs);
     liveInput_.pointer = { sample.pointerX, sample.pointerY };
     liveInput_.pointerVelocityX = chase_.fingerVelocityX;
     liveInput_.eventTimeNs = sample.eventTimeNs;
@@ -540,17 +541,16 @@ void BookTurnHost::ProcessChaseFrame(float frameSeconds)
         std::chrono::steady_clock::now() - drawStart).count());
     if (!drew) {
         if (++consecutiveDrawFailures_ <= kMaxConsecutiveDrawFailures) {
-            return;
+            return true;
         }
         active_ = false;
-        chaseRunning_ = false;
         renderer_.Clear();
         Notify(HostEvent::RENDER_FAILURE, liveInput_.generation,
             static_cast<int32_t>(renderer_.LastDrawRefusal()));
-        return;
+        return false;
     }
     consecutiveDrawFailures_ = 0;
-    chaseRunning_ = std::abs(ChaseGap(chase_, sample)) > kCatchLockVp;
+    return true;
 }
 
 bool BookTurnHost::ProcessSettlementFrame(float frameSeconds)
@@ -579,8 +579,6 @@ bool BookTurnHost::ProcessSettlementFrame(float frameSeconds)
     liveInput_.radiusScale = scale;
     const std::chrono::steady_clock::time_point solveStart = std::chrono::steady_clock::now();
     pose_ = BookTurnSolver::Solve(liveInput_, &pose_);
-    const float solveMs = std::chrono::duration<float, std::milli>(
-        std::chrono::steady_clock::now() - solveStart).count();
     // §7.3 tau_swap: fire once per settlement. Without this guard the gate
     // stays true on every remaining frame (tau past the spine end and the
     // hidden sheet has near-zero coverage), re-rotating the slots each VSync
@@ -596,6 +594,10 @@ bool BookTurnHost::ProcessSettlementFrame(float frameSeconds)
         swappedGeneration_ = liveInput_.generation;
         readyMask_.store(renderer_.ReadyMask(), std::memory_order_release);
     }
+    // Include the swap-coverage predicate in solve diagnostics. Previously the
+    // only dense geometry probe was invisible in the timing split.
+    const float solveMs = std::chrono::duration<float, std::milli>(
+        std::chrono::steady_clock::now() - solveStart).count();
     const std::chrono::steady_clock::time_point drawStart = std::chrono::steady_clock::now();
     const bool drew = renderer_.Draw(pose_);
     RecordFrameDiag(solveMs, std::chrono::duration<float, std::milli>(

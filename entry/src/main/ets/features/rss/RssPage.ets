@@ -426,12 +426,19 @@ export struct RssPage {
         this.filterExpand();
       }
 
-      Column() {
-        ForEach(this.filteredSubscriptions(subscriptions), (sub: RssSubscription, index: number) => {
-          this.sourceItem(sub, index);
-        }, (sub: RssSubscription): string => `rss-sub-${sub.subscriptionId}`);
+      List() {
+        Repeat(this.filteredSubscriptions(subscriptions))
+          .each((repeatItem: RepeatItem<RssSubscription>) => {
+          ListItem() {
+            this.sourceItem(repeatItem.item, repeatItem.index);
+          }
+        })
+        .key((sub: RssSubscription): string => `rss-sub-${sub.subscriptionId}`)
+        .virtualScroll({ reusable: true });
       }
       .width('100%')
+      .height(Math.min(420, Math.max(62, this.filteredSubscriptions(subscriptions).length * 62)))
+      .scrollBar(BarState.Off)
       .backgroundColor(TOK_CARD_BG_HI)
       .border({ width: TOK_BORDER_W, color: CARD_BORDER })
       .borderRadius(8);
@@ -537,13 +544,20 @@ export struct RssPage {
     Column({ space: 6 }) {
       this.recentUnreadHeader();
 
-      Column() {
-        ForEach(recentUnread, (item: RssItem, index: number) => {
-          this.recentUnreadItem(subscriptions, item, index);
-        }, (item: RssItem): string =>
-          `rss-item-${item.subscriptionId.length}:${item.subscriptionId}-${item.guid.length}:${item.guid}`);
+      List() {
+        Repeat(recentUnread)
+          .each((repeatItem: RepeatItem<RssItem>) => {
+          ListItem() {
+            this.recentUnreadItem(subscriptions, repeatItem.item, repeatItem.index);
+          }
+        })
+        .key((item: RssItem): string =>
+          `rss-item-${item.subscriptionId.length}:${item.subscriptionId}-${item.guid.length}:${item.guid}`)
+        .virtualScroll({ reusable: true });
       }
       .width('100%')
+      .height(Math.min(420, Math.max(72, recentUnread.length * 72)))
+      .scrollBar(BarState.Off)
       .backgroundColor(TOK_CARD_BG_HI)
       .border({ width: TOK_BORDER_W, color: CARD_BORDER })
       .borderRadius(8);

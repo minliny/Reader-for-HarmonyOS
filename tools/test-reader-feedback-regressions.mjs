@@ -30,8 +30,12 @@ assert.match(searchField, /private fixedLineHeightField\(\)[\s\S]*?\.height\(thi
   'search text must use the full field height without ArkUI internal clipping');
 assert.match(searchField, /\.enterKeyType\(EnterKeyType\.Search\)\s*\.onSubmit\(\(_enterKey: EnterKeyType\): void => this\.submit\(\)\)/,
   'the IME search action must use the same search submission path as the button');
-assert.match(search, /\.backgroundColor\(TOK_GREEN\)\s*\.opacity\(1\)[\s\S]*?\.onClick\(\(\): void => this\.submitSearch\(\)\)/,
-  'the search action must stay dark and visibly enabled before the first search');
+assert.match(search,
+  /private canSubmit\(\): boolean \{[\s\S]*return scope === undefined \|\| scope\.length > 0;/,
+  'the default all-source scope must keep the search action enabled before the first search');
+assert.match(search,
+  /\.backgroundColor\(TOK_GREEN\)\s*\.opacity\(this\.canSubmit\(\) \? 1 : 0\.4\)[\s\S]*?if \(this\.isSweeping\(\)\)[\s\S]*this\.onStop\(\);[\s\S]*this\.submitSearch\(\);/,
+  'the search action must stay dark and switch from submit to stop during a live sweep');
 assert.doesNotMatch(search, /SEARCH_BTN_BG/,
   'the initial search action must not fall back to the misleading pale disabled treatment');
 assert.equal((search.match(/LoadingProgress\(\)/g) ?? []).length, 3,
@@ -46,12 +50,12 @@ assert.equal((detail.match(/this\.readingActionLabel\(\)/g) ?? []).length, 2,
 
 assert.match(shelf, /return \/\^\(https\?:\\\/\\\/\|data:image/,
   'bookshelf cards must admit the same remote cover URLs as detail');
-assert.equal((shelf.match(/\.padding\(\{ top: TOK_SPACE_XS, bottom: TOK_SPACE_MD \}\)/g) ?? []).length, 2,
-  'Phone and Tablet shelf content must end at the last book plus one bounded spacing token');
+assert.equal((shelf.match(/\.padding\(\{ top: TOK_SPACE_XS, bottom: TOK_SPACE_MD \}\)/g) ?? []).length, 1,
+  'the shared lazy Phone and Tablet shelf must end at the last book plus one bounded spacing token');
 assert.doesNotMatch(shelf, /bottom: (628|744)/,
   'bookshelf scrolling must not include fixed-canvas blank space below the last book');
-assert.equal((shelf.match(/\.align\(Alignment\.TopStart\)/g) ?? []).length >= 2, true,
-  'short Phone and Tablet shelf content must stay anchored to the top of its scroll viewport');
+assert.equal((shelf.match(/this\.bookshelfList\((false|true)\)/g) ?? []).length, 2,
+  'Phone and Tablet must both use the same top-origin lazy shelf viewport');
 assert.match(shelf,
   /private phoneContentFrame\(\): SurfaceHorizontalFrame[\s\S]*new SurfaceWidthSpec\(TOK_CONTENT_MAX_W_PHONE, TOK_SCREEN_INSET, TOK_SCREEN_INSET\)/,
   'phone shelf width must be derived from the shared live safe frame');

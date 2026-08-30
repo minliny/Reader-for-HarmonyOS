@@ -95,6 +95,12 @@ assert.match(local,
 assert.match(local, /waitUntilRenderFinished: false/,
   'offscreen neighbour snapshots must not wait forever on a newly mounted Image node');
 assert.match(local,
+  /private async captureBookTurnTexture\([\s\S]*generation !== this\.bookTurnTextureCaptureGeneration[\s\S]*this\.pageTurnInputPhase\(\) !== 'idle'[\s\S]*bookTurnCapturedIdentity/,
+  'a stale capture must be rejected before ComponentSnapshot allocates or renders a page tree');
+assert.match(local,
+  /previousPhase === 'idle' && state\.phase !== 'idle'[\s\S]*this\.bookTurnTextureCaptureGeneration \+= 1/,
+  'the first gesture-owned frame must invalidate any idle snapshot already in flight');
+assert.match(local,
   /private failBookTurnTextureCapture\([\s\S]*this\.failBookTurnRuntime\(\);[\s\S]*this\.drainPendingManualPageTurn\(\);/,
   'a texture failure must degrade the mounted Native capability without trapping complete input');
 assert.doesNotMatch(local, /ReaderBookTurn diagnostic/,
@@ -109,6 +115,8 @@ assert.doesNotMatch(textureBuilder, /ttsHighlight|autoPageHighlight/,
   'dynamic highlight state must not be rasterized into reusable page textures');
 assert.doesNotMatch(interaction, /ComponentSnapshot|PixelMap|uploadTexture/,
   'the raw MOVE owner must not touch page rasterization');
+assert.doesNotMatch(interaction, /tapOnlyCancelled|tapOnlyMaxDistance|pointerOrigin/,
+  'deferred input must not retain assignment-only distance state beside the canonical gesture arena');
 
 assert.match(rendererHeader, /kMeshColumns = 64/);
 assert.match(rendererHeader, /kMeshRows = 128/);
@@ -158,6 +166,15 @@ assert.match(host, /pendingSample_/);
 assert.match(host, /OH_NativeVSync/);
 assert.match(host, /UpdateFrameLoopWanted/);
 assert.match(host, /ChaseAdvance/);
+assert.match(host, /PresentChaseSample\(chase_, liveSample_, frameTimeNs\)/,
+  'the VSync frame must consume the bounded causal presentation sample');
+const frameLoopPolicy = method(host, 'void BookTurnHost::UpdateFrameLoopWanted(');
+assert.match(frameLoopPolicy, /fingerDown_/,
+  'a gesture owner must keep the VSync presentation timeline alive until release');
+assert.doesNotMatch(frameLoopPolicy, /fingerDown_\s*&&\s*chaseRunning_/,
+  'tracking must not collapse to one frame whenever chase catches a sparse MOVE sample');
+assert.doesNotMatch(hostHeader, /bool chaseRunning_/,
+  'the obsolete input-cadence frame gate must not return');
 assert.match(hostHeader, /std::optional<BookTurnSample> pendingSample_;/);
 assert.doesNotMatch(host, /kFrameInterval/);
 assert.doesNotMatch(method(host, 'bool BookTurnHost::ProcessSettlementFrame('), /sleep_for|glGetError/);

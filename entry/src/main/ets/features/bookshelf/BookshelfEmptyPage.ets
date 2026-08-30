@@ -174,6 +174,7 @@ export struct BookshelfEmptyPage {
         this.headerAction('bookshelf_grid');
         this.headerAction('bookshelf_list');
         this.headerAction('bookshelf_filter');
+        this.headerAction('bookshelf_search');
         this.headerAction('bookshelf_settings');
       }
       .height(34);
@@ -183,18 +184,28 @@ export struct BookshelfEmptyPage {
     .alignItems(VerticalAlign.Center);
   }
 
+  // Single unconditional Image: conditional nodes inside a multi-instance
+  // @Builder get mis-diffed and whole actions can vanish from the tree.
+  private headerActionAsset(asset: string): Resource {
+    if (asset === 'bookshelf_grid') {
+      return $r('app.media.bookshelf_grid_outline');
+    }
+    if (asset === 'bookshelf_list') {
+      return $r('app.media.bookshelf_list');
+    }
+    if (asset === 'bookshelf_filter') {
+      return $r('app.media.bookshelf_filter');
+    }
+    if (asset === 'bookshelf_search') {
+      return $r('app.media.bookshelf_search');
+    }
+    return $r('app.media.bookshelf_settings');
+  }
+
   @Builder
   private headerAction(asset: string) {
     Stack({ alignContent: Alignment.Center }) {
-      if (asset === 'bookshelf_grid') {
-        Image($r('app.media.bookshelf_grid')).width(20).height(20);
-      } else if (asset === 'bookshelf_list') {
-        Image($r('app.media.bookshelf_list')).width(20).height(20);
-      } else if (asset === 'bookshelf_filter') {
-        Image($r('app.media.bookshelf_filter')).width(20).height(20);
-      } else {
-        Image($r('app.media.bookshelf_settings')).width(20).height(20);
-      }
+      Image(this.headerActionAsset(asset)).width(20).height(20);
     }
     .width(34)
     .height(34)

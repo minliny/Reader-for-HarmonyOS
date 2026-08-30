@@ -116,6 +116,12 @@ export type RemoteReadingResolvedLocation = {
   };
 };
 
+export type RemoteReadingAtomicResolution = {
+  chapterTitle?: string;
+  anchor: RemoteReadingAnchor;
+  layout: RemoteReadingLayout;
+};
+
 export type RemoteReadingOpenOptions = {
   isCurrent?: () => boolean;
   /** Requirements known from source metadata; blocked Host semantics stop before I/O. */
@@ -129,7 +135,9 @@ export type RemoteReadingOpenOptions = {
  * the same ReadingSessionChapter shape consumed by local pagination.
  */
 export class RemoteReadingFlowGateway {
-  private static progressCommitTail: Promise<void> = Promise.resolve();
+  // Keep ordering within one admitted reader while allowing a newly opened
+  // session to proceed independently from stale work owned by an old reader.
+  private progressCommitTail: Promise<void> = Promise.resolve();
   private readonly runtimeOwner: ReadingGatewayRuntime;
   private indexedEntries: RemoteReadingTocEntry[] | undefined = undefined;
   private chapterByIndex: Map<number, RemoteReadingTocEntry> = new Map();
@@ -231,6 +239,8 @@ export class RemoteReadingFlowGateway {
     const result = await this.request('cache.book.status', {
       sourceId: identity.sourceId,
       bookId: identity.bookId,
+      includeGlobalStats: false,
+      includeChapterStates: false,
     }, isCurrent);
     this.assertIdentity(result.data, identity, 'cache.book.status');
     if (result.data['tocAvailable'] !== true) {
@@ -332,6 +342,7 @@ export class RemoteReadingFlowGateway {
     const result = await this.request('cache.book.status', {
       sourceId: identity.sourceId,
       bookId: identity.bookId,
+      includeGlobalStats: false,
     }, isCurrent);
     this.assertIdentity(result.data, identity, 'cache.book.status');
     const rawChapters = result.data['chapters'];
@@ -449,6 +460,7 @@ export class RemoteReadingFlowGateway {
     const result = await this.request('cache.book.status', {
       sourceId: identity.sourceId,
       bookId: identity.bookId,
+      includeGlobalStats: false,
     }, isCurrent);
     this.assertIdentity(result.data, identity, 'cache.book.status');
     const rawChapters = result.data['chapters'];
@@ -617,6 +629,7 @@ export class RemoteReadingFlowGateway {
     update: RemoteReadingProgressUpdate,
     isCurrent?: () => boolean,
     sourceSwitchTransactionId?: string,
+    resolution?: RemoteReadingAtomicResolution,
   ): Promise<RemoteReadingProgress> {
     const identity = createRemoteReadingIdentity(identityValue.sourceId, identityValue.bookId);
     this.assertChapterIndex(update.chapterIndex, 'update.chapterIndex');
@@ -625,9 +638,24 @@ export class RemoteReadingFlowGateway {
     if (update.locationRevision !== undefined) {
       assertRemoteReadingNonBlankString(update.locationRevision, 'update.locationRevision');
     }
+    if (resolution !== undefined) {
+      this.assertChapterIndex(resolution.anchor.chapterIndex, 'resolution.anchor.chapterIndex');
+      this.assertNonNegativeInteger(resolution.anchor.chapterOffset, 'resolution.anchor.chapterOffset');
+      this.assertProgress(resolution.anchor.chapterProgress, 'resolution.anchor.chapterProgress');
+      this.assertLayout(resolution.layout);
+      if (resolution.anchor.chapterIndex !== update.chapterIndex ||
+        resolution.anchor.chapterOffset !== update.chapterOffset ||
+        resolution.anchor.chapterProgress !== update.chapterProgress) {
+        throw new RemoteReadingGatewayError(
+          'invalidInput',
+          'atomic progress resolution must match the progress update anchor',
+          'reading.progress.update',
+        );
+      }
+    }
     if (sourceSwitchTransactionId !== undefined) {
       assertRemoteReadingNonBlankString(sourceSwitchTransactionId, 'sourceSwitchTransactionId');
-      if (update.locationRevision === undefined) {
+      if (update.locationRevision === undefined && resolution === undefined) {
         throw new RemoteReadingGatewayError(
           'invalidResponse',
           'source switch finalization requires canonical locationRevision',
@@ -645,6 +673,16 @@ export class RemoteReadingFlowGateway {
     if (update.locationRevision !== undefined) {
       params['locationRevision'] = update.locationRevision;
     }
+    if (resolution !== undefined) {
+      params['anchor'] = {
+        chapterOffset: resolution.anchor.chapterOffset,
+        chapterProgress: resolution.anchor.chapterProgress,
+      };
+      params['layout'] = this.locationLayoutParams(resolution.layout);
+      if (resolution.chapterTitle !== undefined && resolution.chapterTitle.length > 0) {
+        params['chapterTitle'] = resolution.chapterTitle;
+      }
+    }
     if (sourceSwitchTransactionId !== undefined) {
       params['transactionId'] = sourceSwitchTransactionId;
     }
@@ -657,6 +695,13 @@ export class RemoteReadingFlowGateway {
       );
     }
     const stored = this.decodeProgress(result.data, identity, 'reading.progress.update');
+    if (resolution !== undefined && stored.locationRevision === undefined) {
+      throw new RemoteReadingGatewayError(
+        'invalidResponse',
+        'reading.progress.update did not resolve a canonical location',
+        'reading.progress.update',
+      );
+    }
     if (stored.chapterIndex !== update.chapterIndex || stored.chapterOffset !== update.chapterOffset ||
       (update.locationRevision !== undefined && stored.locationRevision !== update.locationRevision)) {
       throw new RemoteReadingGatewayError(
@@ -678,9 +723,9 @@ export class RemoteReadingFlowGateway {
   }
 
   async runProgressCommitSerial(operation: () => Promise<void>): Promise<void> {
-    const predecessor = RemoteReadingFlowGateway.progressCommitTail;
+    const predecessor = this.progressCommitTail;
     let release: () => void = (): void => {};
-    RemoteReadingFlowGateway.progressCommitTail = new Promise<void>((resolve: () => void): void => {
+    this.progressCommitTail = new Promise<void>((resolve: () => void): void => {
       release = resolve;
     });
     try {

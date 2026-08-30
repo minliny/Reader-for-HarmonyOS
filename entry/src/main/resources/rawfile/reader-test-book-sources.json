@@ -1,0 +1,290 @@
+[
+  {
+    "bookSourceGroup": "Reader 测试内置 · 正版小说",
+    "bookSourceName": "得间小说（测试内置）",
+    "bookSourceType": 0,
+    "bookSourceUrl": "https://m.idejian.com",
+    "enabled": true,
+    "enabledCookieJar": false,
+    "enabledExplore": false,
+    "header": "{\"User-Agent\":\"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Mobile Safari/537.36\"}",
+    "readerTestBuiltinVersion": 1,
+    "ruleBookInfo": {
+      "author": "class.author.0@text",
+      "coverUrl": ".bookcover@src",
+      "intro": "[property=og:description]@content\n<js>result.replace(/(.*)/,' ○○○STORY:\\n$1')</js>",
+      "kind": "class.author.1@text",
+      "lastChapter": "class.title.1@textNodes",
+      "name": ".main dt@text",
+      "tocUrl": "@js:\"https://dj.palmestore.com/zybook/u/p/api.php?Act=getChapterListVersion&bid=\"+java.put('bid',baseUrl.match(/(\\d+)/)[1])+\"&p4=501656\"",
+      "wordCount": ".font_num@text"
+    },
+    "ruleContent": {"content": ".h5_mainbody@p@html"},
+    "ruleSearch": {
+      "author": "class.book_author.0@text",
+      "bookList": ".v_list li",
+      "bookUrl": "tag.a.0@href",
+      "checkKeyWord": "青春",
+      "coverUrl": "img@src",
+      "intro": ".book_info@text\n<js>result.replace(/(.*)/,' ○○○STORY:\\n$1')</js>",
+      "kind": "class.book_author.2@text",
+      "name": ".book_name@text"
+    },
+    "ruleToc": {
+      "chapterList": "cp",
+      "chapterName": "cn@text",
+      "chapterUrl": "https://m.idejian.com/book/@get:{bid}/{{@css:id@text}}.html"
+    },
+    "searchUrl": "/search/do?keyword={{key}}&page={{page}}"
+  },
+  {
+    "bookSourceGroup": "Reader 测试内置 · 正版小说",
+    "bookSourceName": "百度小说（测试内置）",
+    "bookSourceType": 0,
+    "bookSourceUrl": "https://dushu.baidu.com/",
+    "enabled": true,
+    "enabledCookieJar": false,
+    "enabledExplore": false,
+    "readerTestBuiltinVersion": 1,
+    "ruleBookInfo": {
+      "intro": "@js:'<br>'+java.get('intro')",
+      "lastChapter": "共{$.data.chapter.chapterCount}##[\\(（【].*?[求更谢乐发订合补加].*?[】）\\)]"
+    },
+    "ruleContent": {"content": "data.novel.content"},
+    "ruleSearch": {
+      "author": "author",
+      "bookList": "$..novelList[*]",
+      "bookUrl": "https://boxnovel.baidu.com/boxnovel/wiseapi/chapterList?bookid={$.bookId}&pageNum=1&order=asc&site=",
+      "checkKeyWord": "青春",
+      "coverUrl": "cover",
+      "intro": "description@put:{'intro':'description'}",
+      "kind": "{{$.tagList}},{{$.status}}",
+      "name": "title"
+    },
+    "ruleToc": {
+      "chapterList": "data.chapter.chapterInfo",
+      "chapterName": "chapter_title##默认卷.|正文.|[\\(（【].*?[求更谢乐发订合补加].*?[】）\\)]",
+      "chapterUrl": "http://dushu.baidu.com/api/pc/getChapterContent?data=%7B%22book_id%22:%22{$.book_id}%22,%22cid%22:%22{$.book_id}%7C{$.chapter_id}%22,%22need_bookinfo%22:0%7D"
+    },
+    "searchUrl": "/api/getSearchResultData?page={{page}}&count=10&query={{key}}"
+  },
+  {
+    "bookSourceGroup": "Reader 测试内置 · 正版小说",
+    "bookSourceName": "QQ 阅读（测试内置）",
+    "bookSourceType": 0,
+    "bookSourceUrl": "https://ubook.reader.qq.com/",
+    "enabled": true,
+    "enabledCookieJar": false,
+    "enabledExplore": false,
+    "readerTestBuiltinVersion": 1,
+    "ruleBookInfo": {
+      "author": "a.author@text",
+      "coverUrl": "img@src",
+      "intro": "p.detail-x__detail-content@text",
+      "kind": "a.detail-x__header-detail__category@text",
+      "lastChapter": "li.detail-x__catalogue-list@text",
+      "name": "h2@text",
+      "tocUrl": "a.detail-x__catalogue-entry@href##.*/book-chapter/(\\d+)##https://ubook.reader.qq.com/api/book/chapter-list?bid=$1",
+      "wordCount": "p.detail-x__header-detail__line:nth-of-type(1) span@text"
+    },
+    "ruleContent": {"content": ".chapter-content@p@text"},
+    "ruleSearch": {
+      "author": ".author",
+      "bookList": ".books[*]",
+      "bookUrl": "$.id##(\\d+)##https://ubook.reader.qq.com/book-detail/$1##",
+      "checkKeyWord": "青春",
+      "coverUrl": ".cover",
+      "intro": ".intro",
+      "kind": ".shortName",
+      "name": ".title",
+      "wordCount": ".totalWords"
+    },
+    "ruleToc": {
+      "chapterList": "$..chapters[*]",
+      "chapterName": "$.title",
+      "chapterUrl": "@js:var bid = baseUrl.match(/\\d+/);\njava.put('bid', bid);\n'https://ubook.reader.qq.com/book-read/'+bid+'/{{$.seq}}'"
+    },
+    "searchUrl": "https://ubook.reader.qq.com/api/search?keywords={{key}}&pageIndex={{page}}&pageSize=20&bookType=1&categoryid=0&sorted=0"
+  },
+  {
+    "bookSourceGroup": "Reader 测试内置 · 正版小说",
+    "bookSourceName": "晋江文学（测试内置）",
+    "bookSourceType": 0,
+    "bookSourceUrl": "https://www.jjwxc.net/",
+    "enabled": true,
+    "enabledCookieJar": true,
+    "enabledExplore": false,
+    "readerTestBuiltinVersion": 1,
+    "ruleBookInfo": {
+      "coverUrl": "class.noveldefaultimage@src",
+      "intro": "id.novelintro.0@text##手机地址：",
+      "kind": "//*[@itemprop=\"updataStatus\"]/text()&&//*[@itemprop=\"genre\"]/text()&&//*[@itemprop=\"updataStatus\"]/font/text()"
+    },
+    "ruleContent": {"content": ".novelbody .noveltext@textNodes@js:result || '这是 🔒 付费章节 哦！\\n｡◕‿◕｡'"},
+    "ruleSearch": {
+      "author": "tag.a.0@text",
+      "bookList": "tbody@tr!0 ",
+      "bookUrl": "tag.a.1@href",
+      "checkKeyWord": "青春",
+      "intro": "tag.td.2@text",
+      "kind": "font@text&&tag.td.3@text",
+      "name": "tag.a.1@text"
+    },
+    "ruleToc": {
+      "chapterList": "@css:tr[itemprop~=chapter]",
+      "chapterName": "tag.td.0@text&&tag.span.0@text@js:\nresult=result.replace(/,/g,\"\");\nif(result.match(/\\[VIP\\]/)){\nresult=result.replace(/\\[VIP\\]/,\"·☆\")}else{result=result}",
+      "chapterUrl": "tag.a.0@href||tag.a.0@rel"
+    },
+    "searchUrl": "https://www.jjwxc.net/bookbase.php?searchkeywords={{key}},{\n  \"charset\": \"gbk\"\n}"
+  },
+  {
+    "bookSourceGroup": "Reader 测试内置 · 正版小说",
+    "bookSourceName": "起点中文（测试内置）",
+    "bookSourceType": 0,
+    "bookSourceUrl": "https://m.qidian.com#ReaderTestBuiltin",
+    "enabled": true,
+    "enabledCookieJar": true,
+    "enabledExplore": false,
+    "header": "{\"User-Agent\":\"Mozilla/5.0 (Linux; U; Android 13; zh-Hans-CN; PFJM10 Build/TP1A.220905.001) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.4896.58 Quark/6.13.6.581 Mobile Safari/537.36\",\"Accept-Language\":\"zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7\"}",
+    "readerTestBuiltinVersion": 1,
+    "ruleBookInfo": {
+      "author": ".detail__header-detail__author@a@textNodes",
+      "coverUrl": "[property$=image]@content",
+      "intro": "[class=\"detail__summary__content\"]@html",
+      "kind": "[property~=category|status|update_time]@content##\\s.*",
+      "lastChapter": "[property$=chapter_name]@content",
+      "name": ".detail__header-detail__title@text",
+      "tocUrl": "{{baseUrl}}/catalog/",
+      "wordCount": ".detail__header-detail__line@text##.*\\/.*|\\|.*|\\n"
+    },
+    "ruleContent": {"content": ".content@p@html", "imageStyle": "FULL"},
+    "ruleSearch": {
+      "author": "p.-4@text",
+      "bookList": ".y-list__item",
+      "bookUrl": "{{@@a.0@href##chapter##book}}##\\/0\\/\n",
+      "checkKeyWord": "青春",
+      "coverUrl": "img@data-src",
+      "intro": "h2+p@html",
+      "kind": "p[-3:]@text",
+      "name": "h2@text"
+    },
+    "ruleToc": {
+      "chapterList": ".y-list__item@a,._chapterBar_fps9g_592",
+      "chapterName": "h2@text||text",
+      "chapterUrl": "href",
+      "isVip": "span@text\n@js:\nresult=result==\"免费\"?false:true;\nresult;",
+      "isVolume": "textNodes\n@js:\nresult=result?true:false;\nresult;",
+      "preUpdateJs": "java.refreshTocUrl()",
+      "updateTime": "alt\n@js:\nresult=(result.match(/首发时间: (.*)章节字数/) || [\"\",\"\"])[1];\nresult;"
+    },
+    "searchUrl": "/so/{{key}}.html?pageNum={{page}}"
+  },
+  {
+    "bookSourceGroup": "Reader 测试内置 · 正版小说",
+    "bookSourceName": "番茄小说接口（测试内置）",
+    "bookSourceType": 0,
+    "bookSourceUrl": "https://novel.cooks.tw",
+    "enabled": true,
+    "enabledCookieJar": true,
+    "enabledExplore": false,
+    "header": "{\"User-Agent\":\"Mozilla/5.0 (Android 11; Mobile; rv:147.0) Gecko/147.0 Firefox/147.0\",\"Accept-Language\":\"zh-CN,zh-TW;q=0.9,zh;q=0.8,en;q=0.6\",\"Referer\":\"https://novel.cooks.tw/\"}",
+    "jsLib": "function Base(){return 'https://novel.cooks.tw';}function J(s){try{return JSON.parse(String(s||'{}'));}catch(e){return {};}}function T(v){if(v===null||v===undefined)return '';return String(v).replace(/<br\\s*\\/?>/gi,'\\n').replace(/<p[^>]*>/gi,'\\n').replace(/<\\/p>/gi,'\\n').replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&#39;/g,\"'\").replace(/&quot;/g,'\"').trim();}function Cover(id){id=String(id||'').replace(/\\D/g,'');if(!id)return '';return 'https://pic.cooks.tw/'+Math.floor(parseInt(id)/1000)+'/'+id+'/'+id+'s.jpg';}function Clean(c){return String(c||'').replace(/<br\\s*\\/?>/gi,'\\n').replace(/<p[^>]*>/gi,'\\n').replace(/<\\/p>/gi,'\\n').replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&#39;/g,\"'\").replace(/&quot;/g,'\"').replace(/\\r/g,'').replace(/[ \\t]+\\n/g,'\\n').replace(/\\n{3,}/g,'\\n\\n').trim();}",
+    "readerTestBuiltinVersion": 1,
+    "ruleBookInfo": {
+      "author": "$.data.author",
+      "coverUrl": "$.data.articleid\n<js>Cover(result)</js>",
+      "init": "<js>var j=J(result);var d=j.data||j;var id=d.articleid||'';if(!id){var m=String(baseUrl||'').match(/detail\\/(\\d+)/);if(m)id=m[1];}try{cache.putMemory('articleid',String(id));}catch(e){}result;</js>",
+      "intro": "$.data.intro",
+      "lastChapter": "$.data.lastchapter",
+      "name": "$.data.articlename",
+      "tocUrl": "<js>var j=J(result);var d=j.data||j;var id=d.articleid||'';if(!id){var m=String(baseUrl||'').match(/detail\\/(\\d+)/);if(m)id=m[1];}try{cache.putMemory('articleid',String(id));}catch(e){}Base()+'/api/chapter/list/'+id+'?lang=zh-CN'</js>",
+      "wordCount": "$.data.chapters"
+    },
+    "ruleContent": {"content": "$.data.content\n<js>Clean(result)</js>"},
+    "ruleSearch": {
+      "author": "$.author",
+      "bookList": "$.data.items[*]",
+      "bookUrl": "https://novel.cooks.tw/api/novel/detail/{{$.articleid}}?lang=zh-CN",
+      "checkKeyWord": "青春",
+      "coverUrl": "$.articleid\n<js>Cover(result)</js>",
+      "intro": "$.intro",
+      "lastChapter": "$.chapters",
+      "name": "$.articlename"
+    },
+    "ruleToc": {
+      "chapterList": "$.data[*]||$.data.items[*]||$.data.list[*]||$.data.chapterlist[*]||$.data.chapterList[*]||$.data.chapters[*]",
+      "chapterName": "$.chaptername||$.chapter_name||$.chapterName||$.title||$.name",
+      "chapterUrl": "$.chapterid\n<js>var aid='';try{aid=cache.getFromMemory('articleid')||'';}catch(e){}if(!aid){var m=String(baseUrl||'').match(/list\\/(\\d+)/);if(m)aid=m[1];}Base()+'/api/chapter/content/'+aid+'/'+result+'?lang=zh-CN'</js>"
+    },
+    "searchUrl": "https://novel.cooks.tw/api/novel/search?q={{key}}&page={{page}}&limit=20&lang=zh-CN,{\"headers\":{\"User-Agent\":\"Mozilla/5.0 (Android 11; Mobile; rv:147.0) Gecko/147.0 Firefox/147.0\",\"Accept-Language\":\"zh-CN,zh-TW;q=0.9,zh;q=0.8,en;q=0.6\",\"Referer\":\"https://novel.cooks.tw/\"}}"
+  },
+  {
+    "bookSourceGroup": "Reader 测试内置 · 正版小说",
+    "bookSourceName": "疯读小说（测试内置）",
+    "bookSourceType": 0,
+    "bookSourceUrl": "https://fiction.fengduxiaoshuo.com",
+    "enabled": true,
+    "enabledCookieJar": false,
+    "enabledExplore": false,
+    "header": "{\"User-Agent\": \"okhttp/3.12.0\"}",
+    "readerTestBuiltinVersion": 1,
+    "ruleBookInfo": {"lastChapter": "$..detailedBookInfo.bookChapterAllInfo[-1].chapterTitle"},
+    "ruleContent": {"content": "$..chapterContent", "imageStyle": "0"},
+    "ruleSearch": {
+      "author": "$.bookAuthor",
+      "bookList": "$..books[*]",
+      "bookUrl": "https://fiction.fengduxiaoshuo.com/doReader/enter_bookinfo_index?_token=d2a094ff-b75f-4b60-ba2c-19e1cfe6cf73&bookId={{$.bookId}}&_sv=v2",
+      "checkKeyWord": "青春",
+      "coverUrl": "$.bookCoverImage",
+      "intro": "$.bookDesc",
+      "kind": "$.chapters_update_time&&$.c_class_name&&{$.crazy_rating}分",
+      "name": "$.bookTitle##（+.*|.*最新章节|\\(+.*",
+      "wordCount": "$.book_words_num"
+    },
+    "ruleToc": {
+      "chapterList": "$..detailedBookInfo.bookChapterAllInfo[*]",
+      "chapterName": "$.chapterTitle##[\\(（].*[求更谢乐发推].*[）\\)]",
+      "chapterUrl": "https://fiction.fengduxiaoshuo.com/doReader/get_content_by_chapterId?_token=d2a094ff-b75f-4b60-ba2c-19e1cfe6cf73&bookId={{$.bookId}}&chapterId={{$.chapterId}}&chapterCount=1&_sv=v2"
+    },
+    "searchUrl": "https://fiction.fengduxiaoshuo.com/doReader/search/result?_token=d2a094ff-b75f-4b60-ba2c-19e1cfe6cf73&key_words={{key}}&api_version=v6&nid=f0439a4f53b774fa0b4d90b48738e4f1&_sv=v2"
+  },
+  {
+    "bookSourceGroup": "Reader 测试内置 · 正版小说",
+    "bookSourceName": "SF 轻小说（测试内置）",
+    "bookSourceType": 0,
+    "bookSourceUrl": "https://m.sfacg.com",
+    "enabled": true,
+    "enabledCookieJar": false,
+    "enabledExplore": false,
+    "readerTestBuiltinVersion": 1,
+    "ruleBookInfo": {
+      "author": ".book_info3@span@text##\\s.*",
+      "coverUrl": ".book_info@tag.img@src",
+      "intro": ".book_profile@tag.li.1@html",
+      "kind": ".book_info2@span@text&&.book_info3@textNodes",
+      "lastChapter": "",
+      "name": ".book_info@tag.span.0@text",
+      "tocUrl": "text.目录列表@href",
+      "wordCount": ""
+    },
+    "ruleContent": {"content": "div[style=text-indent: 2em;]@html@js:\nresult", "imageStyle": "FULL", "nextContentUrl": ""},
+    "ruleSearch": {
+      "author": "$.AuthorName",
+      "bookList": "$.Novels[0,1]",
+      "bookUrl": "/i/{$.NovelID}/",
+      "checkKeyWord": "青春",
+      "coverUrl": "https://rs.sfacg.com/web/novel/images/NovelCover/Big/{$.NovelCover}",
+      "intro": "",
+      "kind": "",
+      "lastChapter": "",
+      "name": "$.NovelName",
+      "wordCount": ""
+    },
+    "ruleToc": {
+      "chapterList": "+@js:\nvar list=[];\nvar url=result.match(/\\/c\\/\\d+\\//g);\nvar n1=new RegExp(/mulu\">(.+)<\\/d/g);\nvar n3=new RegExp(/href=\"\\/c\\/\\d+\\/\"><li>(.+?)<\\/l/g);\nvar n;var n_pre='';var n_sub;\nvar n_temp;\nvar t=-1;\nvar p=[];var p_tmp;\nvar i=-1;var i_tmp;\nwhile((n_temp=n1.exec(result))!=null){i=i+1;p.push({q:n_temp[1],w:n1.lastIndex});}\ni_tmp=i;\nwhile((n_temp=n3.exec(result))!=null){\nn_sub=n_temp[1];\nif((n_sub.match(/span/))!=null){n_sub=n_sub.match(/span>(.+)<\\/span><spa/)[1];n_sub='🔒'+n_sub;}\nif(p[0]!=null){i=i_tmp;p_tmp=p[i].w;while(p_tmp>n3.lastIndex){i=i-1;p_tmp=p[i].w;}n_pre=p[i].q;n_pre=n_pre+' | ';}\nn=n_pre+n_sub;t=t+1;list.push({k:n,v:url[t]});\n}\nlist;",
+      "chapterName": "k",
+      "chapterUrl": "v"
+    },
+    "searchUrl": "/API/HTML5.ashx?op=search&keyword={{key}}"
+  }
+]

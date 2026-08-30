@@ -14,18 +14,63 @@ const index = await readFile(new URL('../pages/Index.ets', root), 'utf8');
 assert.match(shelf, /type BookshelfViewMode = 'cover' \| 'list'/);
 assert.match(shelf, /@State private viewMode: BookshelfViewMode = 'cover'/);
 assert.match(shelf,
-  /this\.sectionAction\('bookshelf_grid',[\s\S]*this\.viewMode = 'cover'[\s\S]*this\.viewMode === 'cover'/);
+  /this\.sectionAction\('bookshelf_grid', \(\): void => \{[\s\S]*?this\.setViewMode\('cover'\)/,
+  'the grid action must go through the single animated view-switch entry');
 assert.match(shelf,
-  /this\.sectionAction\('bookshelf_list',[\s\S]*this\.viewMode = 'list'[\s\S]*this\.viewMode === 'list'/);
-assert.doesNotMatch(shelf,
-  /this\.sectionAction\('bookshelf_search'/,
-  'the shelf section must not duplicate the top-bar search action');
-assert.doesNotMatch(emptyShelf,
+  /this\.sectionAction\('bookshelf_list', \(\): void => \{[\s\S]*?this\.setViewMode\('list'\)/,
+  'the list action must go through the single animated view-switch entry');
+assert.match(shelf,
+  /this\.viewMode === 'cover'/);
+assert.match(shelf,
+  /this\.viewMode === 'list'/);
+assert.match(shelf, /private setViewMode\(mode: BookshelfViewMode\): void \{/);
+const setViewModeBody = shelf.match(
+  /private setViewMode\(mode: BookshelfViewMode\): void \{([\s\S]*?)\n  \}/);
+assert.ok(setViewModeBody, 'the setViewMode entry must exist');
+assert.match(setViewModeBody[1],
+  /if \(this\.reduceMotion\) \{\s*this\.viewMode = mode;\s*return;/,
+  'reduceMotion must commit the switch directly with no animation');
+assert.match(setViewModeBody[1],
+  /this\.getUIContext\(\)\.animateTo\(motionAnimateParam\('bookshelf\.view\.switch'\), \(\): void => \{\s*this\.viewMode = mode;/,
+  'the animated switch must pull its 320ms token from the MotionSpec registry');
+assert.match(shelf, /import \{ motionAnimateParam \} from '\.\.\/common\/MotionSpec';/);
+const coverTransitionCount = (shelf.match(/\.geometryTransition\(this\.coverGeometryId\(book\)\)/g) ?? []).length;
+assert.equal(coverTransitionCount, 2,
+  'both list-mode and cover-mode cover images must pair via geometryTransition');
+const titleTransitionCount = (shelf.match(/\.geometryTransition\(this\.titleGeometryId\(book\)\)/g) ?? []).length;
+assert.equal(titleTransitionCount, 2,
+  'both list-mode and cover-mode title texts must pair via geometryTransition');
+assert.match(shelf, /private coverGeometryId\(book: ShelfBook\): string \{/);
+assert.match(shelf, /private titleGeometryId\(book: ShelfBook\): string \{/);
+// Figma SectionHeader `2236:1406` defines five actions (Grid/List/Filter/
+// Search/Settings); the top-bar search actor is a separate AppTopBar slot, so
+// the section Search key is Figma-canonical, not a duplicate to guard against.
+assert.match(shelf,
+  /this\.sectionAction\('bookshelf_search', \(\): void => this\.onSearchRequested\(\)\)/,
+  'the shelf section must expose the Figma Search action');
+assert.match(emptyShelf,
   /this\.headerAction\('bookshelf_search'\)/,
-  'the empty shelf section must follow the same no-duplicate-search contract');
+  'the empty shelf section must render the same five-action row');
 assert.match(shelf,
-  /this\.sectionAction\('bookshelf_settings', \(\): void => this\.onBookshelfSettingsRequested\(\), false\)/,
-  'the shelf gear must emit the dedicated settings action');
+  /this\.sectionAction\('bookshelf_settings', \(\): void => this\.onManageRequested\(\)\)/,
+  'the shelf gear opens shelf management per the 2026-08-30 product decision');
+assert.match(shelf, /private sectionAction\(assetName: string, action: \(\) => void\)/,
+  'the action active state must be read from view state, not from a value parameter');
+assert.doesNotMatch(shelf, /sectionAction\([^)]*, active: boolean\)/,
+  '@Builder value parameters are not observed; an active flag parameter never re-renders');
+assert.match(shelf, /Image\(this\.sectionActionAsset\(assetName\)\)/,
+  'each action must be one unconditional Image whose src a plain method picks');
+const sectionActionBody = shelf.match(
+  /private sectionAction\(assetName: string, action: \(\) => void\) \{([\s\S]*?)\n  \}/);
+assert.ok(sectionActionBody, 'the sectionAction builder must exist');
+assert.doesNotMatch(sectionActionBody[1], /\bif \(/,
+  'conditional if/else nodes inside the multi-instance sectionAction builder get mis-diffed and vanish (observed: search)');
+const headerActionBody = emptyShelf.match(/private headerAction\(asset: string\) \{([\s\S]*?)\n  \}/);
+assert.ok(headerActionBody, 'the empty-shelf headerAction builder must exist');
+assert.doesNotMatch(headerActionBody[1], /\bif \(/,
+  'the empty-shelf headerAction must also stay free of conditional nodes');
+assert.match(emptyShelf, /Image\(this\.headerActionAsset\(asset\)\)/,
+  'the empty-shelf actions must be one unconditional Image per action');
 assert.match(shelf, /if \(this\.viewMode === 'list'\) \{[\s\S]*this\.listBookCard\(book, isTablet\)/,
   'the list action must render a real book-row projection');
 assert.match(shelf, /const PHONE_LIST_COVER_WIDTH = 48/);
@@ -135,8 +180,8 @@ assert.match(index, /onBatchManageRequested: \(\): void => this\.openBookshelfMu
 assert.match(index, /initialSelectedKey: this\.bookshelfMultiSelectInitialKey/);
 assert.match(index, /onRemoveSelected: \(keys: string\[\]\): void => this\.requestRemoveShelfBooks\(keys\)/);
 assert.match(shelfGateway,
-  /async removeMany\(targets: BookshelfRemovalTarget\[\]\)[\s\S]*for \(const target of targets\)[\s\S]*shelf: await this\.load\(\)/,
-  'batch removal must commit each Core key then perform one coherent shelf reload');
+  /async removeMany\(targets: BookshelfRemovalTarget\[\]\)[\s\S]*this\.bookshelf\.removeBooks\(targets\)[\s\S]*receipt\.removedTargets\.length[\s\S]*shelf: await this\.load\(\)/,
+  'batch removal must use one atomic Core batch then perform one coherent shelf reload');
 
 assert.doesNotMatch(directory, /Text\('当前章节'\)/,
   'the footer no longer repeats the current-chapter label');

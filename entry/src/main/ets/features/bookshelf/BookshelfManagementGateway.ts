@@ -36,9 +36,11 @@ export class BookshelfManagementGateway {
   }
 
   async load(): Promise<BookshelfManagementData> {
-    const groupResult = await this.owner.request('book-group.list', {});
-    const recordResult = await this.owner.request('read-record.list', {});
-    const shelf = await this.shelf.loadBookshelf({ sortBy: 'manual', sortDirection: 'ascending' });
+    const [groupResult, recordResult, shelf] = await Promise.all([
+      this.owner.request('book-group.list', {}),
+      this.owner.request('read-record.list', {}),
+      this.shelf.loadBookshelf({ sortBy: 'manual', sortDirection: 'ascending' }),
+    ]);
     const groups = this.decodeGroups(groupResult.data['groups']);
     const records = this.decodeRecords(recordResult.data['records']);
     let totalReadTime = 0;

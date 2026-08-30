@@ -291,6 +291,44 @@ export class ReadingSessionFlowGateway {
     };
   }
 
+  async resolveAndUpdateProgress(
+    bookId: string,
+    chapterTitle: string | undefined,
+    anchor: LocalReadingAnchor,
+    layout: LocalReadingLayout,
+    isCurrent?: () => boolean,
+  ): Promise<LocalReadingProgress> {
+    this.assertBook(bookId);
+    const update: LocalReadingProgressUpdate = {
+      chapterIndex: anchor.chapterIndex,
+      chapterOffset: anchor.chapterOffset,
+      chapterProgress: anchor.chapterProgress,
+    };
+    const resolution = { chapterTitle, anchor, layout };
+    if (this.source.kind === 'local') {
+      return this.local.updateProgress(bookId, update, isCurrent, resolution);
+    }
+    const transactionId = this.sourceSwitchTransactionId;
+    const stored = await this.remote.updateProgress(
+      this.source.session.identity,
+      update,
+      isCurrent,
+      transactionId,
+      resolution,
+    );
+    if (transactionId !== undefined) {
+      this.sourceSwitchTransactionId = undefined;
+    }
+    return {
+      bookId: stored.bookId,
+      chapterIndex: stored.chapterIndex,
+      chapterOffset: stored.chapterOffset,
+      chapterProgress: stored.chapterProgress,
+      updatedAt: stored.updatedAt,
+      locationRevision: stored.locationRevision,
+    };
+  }
+
   async searchContent(
     bookId: string,
     keyword: string,

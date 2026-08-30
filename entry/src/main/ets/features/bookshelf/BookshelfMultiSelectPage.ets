@@ -43,24 +43,27 @@ export struct BookshelfMultiSelectPage {
   build() {
     Column() {
       this.selectionTopBar();
-      Scroll() {
-        Column({ space: GRID_ROW_GAP }) {
-          ForEach(this.bookRows(), (row: ShelfBook[], rowIndex: number) => {
+      List({ space: GRID_ROW_GAP }) {
+          Repeat(this.bookRows())
+            .each((repeatItem: RepeatItem<ShelfBook[]>) => {
+            ListItem() {
             Row({ space: GRID_COLUMN_GAP }) {
-              ForEach(row, (book: ShelfBook) => {
+              ForEach(repeatItem.item, (book: ShelfBook) => {
                 this.selectionCard(book);
               }, (book: ShelfBook): string => `bookshelf-multi-${this.bookKey(book)}`);
             }
             .width(this.gridWidth())
             .alignItems(VerticalAlign.Top);
-          }, (row: ShelfBook[], rowIndex: number): string =>
-            `bookshelf-multi-row-${rowIndex}-${row.map((book: ShelfBook): string => this.bookKey(book)).join('|')}`);
-        }
-        .width(this.gridWidth())
-        .padding({ top: 12, bottom: 20 });
+            }
+          })
+          .key((row: ShelfBook[]): string =>
+            `bookshelf-multi-row-${row.map((book: ShelfBook): string => this.bookKey(book)).join('|')}`)
+          .virtualScroll({ reusable: true });
       }
       .layoutWeight(1)
       .width('100%')
+      .padding({ top: 12, bottom: 20 })
+      .alignListItem(ListItemAlign.Center)
       .scrollBar(BarState.Off);
       this.removeBar();
     }

@@ -57,7 +57,7 @@ contract('adjacent preparation stops before the normal Core commit', () => {
 
   const prepare = methodSection(localReading, 'completePreparedPageTurn');
   assert.doesNotMatch(prepare,
-    /completeFirstPage|activeGateway|runProgressCommitSerial|resolveLocation|updateProgress|admitCommittedProgress/,
+    /completeFirstPage|activeGateway|runProgressCommitSerial|resolveLocation|updateProgress|resolveAndUpdateProgress|admitCommittedProgress/,
     'preparation may materialize a page but must not write or admit Core progress');
   assert.match(prepare, /this\.restoreMaterializedChapterContext\(preparation\.origin, false\);/,
     'preparation must restore the still-visible chapter/page context');
@@ -84,8 +84,9 @@ contract('prepared slide waits for both animation and durable progress before pr
     'starting an animation must not switch the pagination fact');
 
   assert.match(persist, /runProgressCommitSerial/);
-  assert.match(persist, /resolveLocation/);
-  assert.match(persist, /updateProgress/);
+  assert.match(persist, /resolveAndUpdateProgress/);
+  assert.doesNotMatch(persist, /\.resolveLocation\(|\.updateProgress\(/,
+    'page-turn persistence must resolve and store the canonical anchor atomically');
   assert.doesNotMatch(persist, /promotePreparedPageTurn|this\.visiblePage\s*=/,
     'finishing Core persistence alone must not switch the pagination fact');
 
@@ -101,6 +102,9 @@ contract('prepared slide waits for both animation and durable progress before pr
 
   assert.match(motionSpec, /'reader\.page\.slide\.commit'/);
   assert.match(motionSpec, /'reader\.page\.slide\.rollback'/);
+  assert.match(motionSpec, /export function motionRemainingDistanceAnimateParam/);
+  assert.match(animate, /this\.pageTurnRemainingDistanceRatio\(targetOffset\)/,
+    'a released drag must settle only the remaining viewport distance');
 });
 
 contract('failed prepared commit rolls the same stage back', () => {
@@ -113,7 +117,8 @@ contract('failed prepared commit rolls the same stage back', () => {
   assert.match(finish,
     /if \(!this\.pageTurnCommitSucceeded[\s\S]*this\.animatePageTurnRollback\(\);\s*return;[\s\S]*this\.promotePreparedPageTurn/,
     'failure must clear the in-flight prepared page and roll back before the success-only promotion');
-  assert.match(rollback, /motionAnimateParam\('reader\.page\.slide\.rollback'/);
+  assert.match(rollback,
+    /motionRemainingDistanceAnimateParam\([\s\S]*'reader\.page\.slide\.rollback'/);
   assert.match(rollback, /this\.pageTurnOffsetX = 0;/);
 });
 

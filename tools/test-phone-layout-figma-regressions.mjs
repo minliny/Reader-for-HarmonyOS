@@ -11,17 +11,19 @@ assert.match(tokens, /TOK_SCREEN_INSET = 19;/,
 assert.match(tokens, /TOK_CONTENT_MAX_W_PHONE = 352;/,
   'Figma 390vp phone content must retain its 352vp maximum width');
 
-assert.match(shelf, /@State private viewportWidth: number = 0;[\s\S]*@State private viewportHeight: number = 0;/,
-  'bookshelf must observe both axes of its real scroll viewport');
-assert.match(shelf, /const width = this\.numericAreaLength\(newValue\.width\);\s*const height = this\.numericAreaLength\(newValue\.height\);/,
-  'bookshelf must use live viewport width and height');
+assert.match(shelf, /@State private viewportWidth: number = 0;/,
+  'bookshelf must observe the width of its real viewport');
+assert.match(shelf, /const width = this\.numericAreaLength\(newValue\.width\);/,
+  'bookshelf must use the live viewport width');
 assert.match(shelf, /private numericAreaLength\(value: Length\): number \{[\s\S]*typeof value === 'string'[\s\S]*Number\.parseFloat\(value\)/,
   'bookshelf must accept the vp string form returned by physical-device Area');
 assert.match(shelf,
   /private phoneContentFrame\(\): SurfaceHorizontalFrame \{[\s\S]*new SurfaceWidthSpec\(TOK_CONTENT_MAX_W_PHONE, TOK_SCREEN_INSET, TOK_SCREEN_INSET\)/,
   'bookshelf content must resolve the 352vp cap and 19vp design gaps through shared geometry');
-assert.equal((shelf.match(/\.constraintSize\(\{ minHeight: this\.scrollContentMinHeight\(\) \}\)/g) ?? []).length, 2,
-  'phone and tablet short shelf content must occupy the viewport and stay top-aligned');
+assert.match(shelf, /private bookshelfList\(isTablet: boolean\)[\s\S]*List\(\{ space: TOK_SPACE_CONTROL_INLINE \}\)[\s\S]*\.height\('100%'\)/,
+  'the lazy shelf list must occupy the viewport and stay top-aligned');
+assert.match(shelf, /LazyForEach\(this\.bookDataSource[\s\S]*LazyForEach\(this\.rowDataSource/,
+  'both shelf projections must remain lazily materialized');
 assert.match(shelf,
   /private phoneContent\(\)[\s\S]*\.padding\(\{ left: this\.phoneContentFrame\(\)\.left, right: this\.phoneContentFrame\(\)\.right \}\)/,
   'phone books must preserve the Figma gaps while honoring asymmetric safe edges');

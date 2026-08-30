@@ -81,10 +81,12 @@ assert.match(shelfFlow, /sortBy: 'lastReadAt', sortDirection: 'descending'/,
   'SHF-02: the shelf load must default to recent-reading order');
 assert.match(shelf, /filterRowVisible = !this\.filterRowVisible/,
   'SHF-02: the filter control must toggle the shelf tools row');
-assert.match(shelf, /ForEach\(this\.visibleBooks\(\)/,
-  'SHF-02: the shelf must project through the group filter');
-assert.match(shelf, /groupNames\(\)/,
-  'SHF-02: group chips must derive from the books Core reports');
+assert.match(shelf, /LazyForEach\(this\.bookDataSource/,
+  'SHF-02: long shelf lists must use a notifying lazy projection');
+assert.match(shelf, /private rebuildShelfProjection\(\)/,
+  'SHF-02: group filtering and row projection must be rebuilt once per input change');
+assert.match(shelf, /const seenGroups: Set<string>/,
+  'SHF-02: group chips must derive from Core books without repeated linear scans');
 assert.match(shelf, /检查更新/,
   'SHF-03: the tools row must present a manual shelf-wide update entry');
 assert.match(shelf, /onCheckUpdatesRequested/,

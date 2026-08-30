@@ -64,7 +64,7 @@ private:
     void Notify(HostEvent event, uint64_t generation, int32_t detail);
     static void VsyncEntry(long long timestamp, void* data);
     void OnVsyncFrame(long long timestamp);
-    void ProcessChaseFrame(float frameSeconds);
+    bool ProcessChaseFrame(float frameSeconds, int64_t frameTimeNs);
     bool ProcessSettlementFrame(float frameSeconds);
     void UpdateFrameLoopWanted();
     void RequestFrameIfWanted();
@@ -127,7 +127,6 @@ private:
     BookTurnSample liveSample_;
     BookTurnChaseState chase_;
     bool fingerDown_ = false;
-    bool chaseRunning_ = false;
     uint64_t chaseGeneration_ = 0;
     BookTurnPose pose_;
     Settlement settlement_ = Settlement::NONE;

@@ -38,25 +38,50 @@ float SourceEdgeX(Direction direction, float width)
 void ResetChase(BookTurnChaseState& state, const BookTurnSample& sample)
 {
     state.edgeX = SourceEdgeX(sample.direction, sample.width);
+    state.previousPointerX = sample.startX;
+    state.previousPointerY = sample.startY;
+    state.previousSampleTimeNs = std::max<int64_t>(0, sample.eventTimeNs - kPresentationDelayNs);
     state.lastPointerX = sample.startX;
-    state.lastSampleTimeNs = sample.eventTimeNs;
+    state.lastPointerY = sample.startY;
+    state.lastSampleTimeNs = state.previousSampleTimeNs;
     state.fingerVelocityX = 0.0F;
+    state.fingerVelocityY = 0.0F;
     state.seeded = false;
 }
 
 void RecordChaseSample(BookTurnChaseState& state, const BookTurnSample& sample)
 {
-    if (state.seeded) {
-        const float elapsedSeconds =
-            static_cast<float>(static_cast<double>(sample.eventTimeNs - state.lastSampleTimeNs) * 1.0e-9);
-        if (elapsedSeconds > 0.0F) {
-            const float velocity = (sample.pointerX - state.lastPointerX) / elapsedSeconds;
-            state.fingerVelocityX = std::isfinite(velocity) ? velocity : 0.0F;
-        }
+    state.previousPointerX = state.lastPointerX;
+    state.previousPointerY = state.lastPointerY;
+    state.previousSampleTimeNs = state.lastSampleTimeNs;
+    const float elapsedSeconds =
+        static_cast<float>(static_cast<double>(sample.eventTimeNs - state.lastSampleTimeNs) * 1.0e-9);
+    if (elapsedSeconds > 0.0F) {
+        const float velocityX = (sample.pointerX - state.lastPointerX) / elapsedSeconds;
+        const float velocityY = (sample.pointerY - state.lastPointerY) / elapsedSeconds;
+        state.fingerVelocityX = std::isfinite(velocityX) ? velocityX : 0.0F;
+        state.fingerVelocityY = std::isfinite(velocityY) ? velocityY : 0.0F;
     }
     state.lastPointerX = sample.pointerX;
+    state.lastPointerY = sample.pointerY;
     state.lastSampleTimeNs = sample.eventTimeNs;
     state.seeded = true;
+}
+
+BookTurnSample PresentChaseSample(const BookTurnChaseState& state, const BookTurnSample& sample,
+    int64_t frameTimeNs)
+{
+    if (!state.seeded || frameTimeNs <= 0 || sample.eventTimeNs <= state.previousSampleTimeNs) {
+        return sample;
+    }
+    const int64_t presentationTimeNs = std::max<int64_t>(0, frameTimeNs - kPresentationDelayNs);
+    const double intervalNs = static_cast<double>(sample.eventTimeNs - state.previousSampleTimeNs);
+    const float phase = Clamp(static_cast<float>(
+        static_cast<double>(presentationTimeNs - state.previousSampleTimeNs) / intervalNs), 0.0F, 1.0F);
+    BookTurnSample presented = sample;
+    presented.pointerX = state.previousPointerX + phase * (sample.pointerX - state.previousPointerX);
+    presented.pointerY = state.previousPointerY + phase * (sample.pointerY - state.previousPointerY);
+    return presented;
 }
 
 float ChaseTargetX(const BookTurnSample& sample)
@@ -159,7 +184,7 @@ bool SettlementSwapShouldFire(bool commit, Direction direction, float tau,
     const BookTurnPose& pose)
 {
     if (!commit || direction != Direction::NEXT || tau < kStageSpineEnd) return false;
-    return BookTurnSolver::SheetCoverage(pose) <= kSwapCoverRatio;
+    return !BookTurnSolver::SheetCoverageExceeds(pose, kSwapCoverRatio);
 }
 
 }  // namespace reader::bookturn

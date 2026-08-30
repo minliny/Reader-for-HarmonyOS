@@ -17,6 +17,32 @@ import {
 
 const CONTINUOUS_TAP_SLOP = 12;
 
+class ContinuousFragmentDataSource implements IDataSource {
+  private items: ReadingSurfacePageFragment[] = [];
+  private listeners: DataChangeListener[] = [];
+
+  totalCount(): number { return this.items.length; }
+  getData(index: number): ReadingSurfacePageFragment { return this.items[index]; }
+  registerDataChangeListener(listener: DataChangeListener): void {
+    if (this.listeners.indexOf(listener) < 0) this.listeners.push(listener);
+  }
+  unregisterDataChangeListener(listener: DataChangeListener): void {
+    const index = this.listeners.indexOf(listener);
+    if (index >= 0) this.listeners.splice(index, 1);
+  }
+  replace(items: ReadingSurfacePageFragment[]): void {
+    this.items = items;
+    for (const listener of this.listeners) listener.onDataReloaded();
+  }
+  update(index: number, item: ReadingSurfacePageFragment): void {
+    if (index < 0 || index >= this.items.length) {
+      return;
+    }
+    this.items[index] = item;
+    for (const listener of this.listeners) listener.onDataChange(index);
+  }
+}
+
 /**
  * A real vertically scrolling reading surface.
  *
@@ -29,13 +55,15 @@ const CONTINUOUS_TAP_SLOP = 12;
 export struct ReaderContinuousReadingStage {
   @Prop @Watch('onChapterIdentityChanged') chapterIdentity: string = '';
   @Prop chapterTitle: string = '';
-  @Prop contentRevision: number = 0;
+  @Prop @Watch('onContentRevisionChanged') contentRevision: number = 0;
+  @Prop changedFragmentIndex: number = -1;
   // Keep chapter content behind a callback. ArkUI V1 may retain the first
   // complex-array value passed through @Prop even while primitive props such
   // as chapterTitle update, producing a mixed new-title/old-body frame.
   fragmentsProvider: () => ReadingSurfacePageFragment[] =
     (): ReadingSurfacePageFragment[] => [];
-  @Prop @Watch('onInitialFragmentIndexChanged') initialFragmentIndex: number = 0;
+  @Prop @Watch('onInitialScrollAnchorChanged') initialFragmentIndex: number = 0;
+  @Prop @Watch('onInitialScrollAnchorChanged') initialFragmentProgress: number = 0;
   @Prop layout: ReaderReadingLayoutSnapshot = createDefaultReaderReadingLayout();
   @Prop appearance: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   @Prop ttsHighlightStart: number | undefined = undefined;
@@ -45,8 +73,8 @@ export struct ReaderContinuousReadingStage {
   @Prop longPressSelectText: boolean = false;
   @Prop interactionEnabled: boolean = true;
 
-  onVisibleRangeChanged: (startFragment: number, endFragment: number) => void =
-    (_startFragment: number, _endFragment: number): void => {};
+  onVisibleRangeChanged: (startFragment: number, endFragment: number, startProgress: number) => void =
+    (_startFragment: number, _endFragment: number, _startProgress: number): void => {};
   onScrollStopped: () => void = (): void => {};
   onReachStart: () => void = (): void => {};
   onReachEnd: () => void = (): void => {};
@@ -58,6 +86,7 @@ export struct ReaderContinuousReadingStage {
     (_scroller: Scroller | undefined): void => {};
 
   private readonly listScroller: Scroller = new Scroller();
+  private readonly fragmentDataSource: ContinuousFragmentDataSource = new ContinuousFragmentDataSource();
   private initialScrollPending: boolean = true;
   private touchActive: boolean = false;
   private touchMoved: boolean = false;
@@ -66,9 +95,11 @@ export struct ReaderContinuousReadingStage {
   private completedStationaryTouch: boolean = false;
   private visibleFragmentStart: number = 0;
   private visibleFragmentEnd: number = 0;
+  private initialScrollGeneration: number = 0;
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
+    this.reloadFragments();
     this.onScrollerReady(this.listScroller);
     this.scheduleInitialScroll();
   }
@@ -107,12 +138,10 @@ export struct ReaderContinuousReadingStage {
           .width('100%');
         }
 
-        // ForEach is deliberate here. ArkUI Repeat can retain the previous
-        // complex item when a one-row short chapter is replaced by another
-        // one-row chapter, even with reusable:false. Chapter identity replaces
-        // cross-chapter rows; stable fragment ids preserve unaffected rows
-        // when an image or progress callback refreshes this same projection.
-        ForEach(this.renderFragments(),
+        // The List owns a notifying data source so only the viewport and its
+        // small cache are materialized for long chapters. Stable fragment ids
+        // preserve unaffected rows when an image refreshes this projection.
+        LazyForEach(this.fragmentDataSource,
           (fragment: ReadingSurfacePageFragment, index: number) => {
           ListItem() {
             Column() {
@@ -187,12 +216,6 @@ export struct ReaderContinuousReadingStage {
     .clip(true);
   }
 
-  private renderFragments(): ReadingSurfacePageFragment[] {
-    // Reading this scalar makes the callback-backed array reactive without
-    // encoding the revision into every row identity or remounting the List.
-    return this.contentRevision >= 0 ? this.fragmentsProvider() : [];
-  }
-
   private hasTitleItem(): boolean {
     return this.chapterTitle.length > 0;
   }
@@ -230,13 +253,27 @@ export struct ReaderContinuousReadingStage {
     this.completedStationaryTouch = event.type === TouchType.Up && !this.touchMoved;
     const boundaryDirection = event.type === TouchType.Up && Math.abs(deltaY) > CONTINUOUS_TAP_SLOP &&
       Math.abs(deltaY) > Math.abs(deltaX) ? (deltaY < 0 ? 'next' : 'previous') : undefined;
-    const fragments = this.fragmentsProvider();
     this.resetTouch();
-    if (boundaryDirection === 'next' &&
-      this.visibleFragmentEnd >= fragments.length - 1) {
+    if (boundaryDirection === 'next' && this.isScrollerAtEnd()) {
       this.onBoundaryDrag('next');
-    } else if (boundaryDirection === 'previous' && this.visibleFragmentStart <= 0) {
+    } else if (boundaryDirection === 'previous' && this.isScrollerAtStart()) {
       this.onBoundaryDrag('previous');
+    }
+  }
+
+  private isScrollerAtStart(): boolean {
+    try {
+      return this.listScroller.currentOffset().yOffset <= 0.5;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  private isScrollerAtEnd(): boolean {
+    try {
+      return this.listScroller.isAtEnd();
+    } catch (_) {
+      return false;
     }
   }
 
@@ -271,24 +308,55 @@ export struct ReaderContinuousReadingStage {
     if (this.initialScrollPending) {
       return;
     }
-    this.onVisibleRangeChanged(startFragment, endFragment);
+    let startProgress = 0;
+    try {
+      if (start >= titleOffset) {
+        const rect = this.listScroller.getItemRect(start);
+        if (rect.height > 0) {
+          startProgress = Math.max(0, Math.min(1, -rect.y / rect.height));
+        }
+      }
+    } catch (_) {
+      // The visible callback can race a List remount. The fragment start is a
+      // safe canonical fallback and the next callback refines the anchor.
+    }
+    this.onVisibleRangeChanged(startFragment, endFragment, startProgress);
   }
 
-  private onInitialFragmentIndexChanged(): void {
+  private onInitialScrollAnchorChanged(): void {
     this.scheduleInitialScroll();
   }
 
   private onChapterIdentityChanged(): void {
+    this.reloadFragments();
     this.scheduleInitialScroll();
   }
 
+  private onContentRevisionChanged(): void {
+    const fragments = this.fragmentsProvider();
+    if (this.changedFragmentIndex >= 0 && this.changedFragmentIndex < fragments.length) {
+      this.fragmentDataSource.update(this.changedFragmentIndex, fragments[this.changedFragmentIndex]);
+      return;
+    }
+    this.fragmentDataSource.replace(fragments);
+  }
+
+  private reloadFragments(): void {
+    this.fragmentDataSource.replace(this.contentRevision >= 0 ? this.fragmentsProvider() : []);
+  }
+
   private scheduleInitialScroll(): void {
+    this.initialScrollGeneration += 1;
+    const generation = this.initialScrollGeneration;
     this.initialScrollPending = true;
     const fragments = this.fragmentsProvider();
     const initial = Math.max(0, Math.min(Math.max(0, fragments.length - 1), this.initialFragmentIndex));
     this.visibleFragmentStart = initial;
     this.visibleFragmentEnd = initial;
     setTimeout((): void => {
+      if (generation !== this.initialScrollGeneration) {
+        return;
+      }
       const currentFragments = this.fragmentsProvider();
       if (currentFragments.length === 0) {
         this.initialScrollPending = false;
@@ -300,9 +368,31 @@ export struct ReaderContinuousReadingStage {
         this.listScroller.scrollToIndex(listIndex, false, ScrollAlign.START);
       } catch (_) {
         // A stale remount can release the old Scroller before this microtask.
-      } finally {
         this.initialScrollPending = false;
+        return;
       }
+      // scrollToIndex makes the target row visible first. Defer one layout so
+      // getItemRect observes its real wrapped height, then restore the scalar's
+      // intra-fragment fraction instead of snapping to the row boundary.
+      setTimeout((): void => {
+        if (generation !== this.initialScrollGeneration) {
+          return;
+        }
+        try {
+          const progress = Math.max(0, Math.min(1, this.initialFragmentProgress));
+          const rect = this.listScroller.getItemRect(listIndex);
+          if (progress > 0 && rect.height > 0) {
+            this.listScroller.scrollBy(0, rect.height * progress);
+          }
+        } catch (_) {
+          // The canonical fragment start remains a bounded fallback if ArkUI
+          // releases the row between the two layout turns.
+        } finally {
+          this.visibleFragmentStart = clamped;
+          this.visibleFragmentEnd = clamped;
+          this.initialScrollPending = false;
+        }
+      }, 0);
     }, 0);
   }
 }

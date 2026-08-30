@@ -2,7 +2,6 @@ import {
   SearchGateway,
   type SearchBook,
   type SearchHistory,
-  type SearchOutcome,
   type SearchSource,
 } from './SearchGateway';
 import type {
@@ -20,6 +19,7 @@ const DOMAIN = 0x5244;
  * source; outcomes are still assembled in source registration order.
  */
 const MAX_SEARCH_CONCURRENCY = 4;
+const SEARCH_PARTIAL_PUBLISH_INTERVAL_MS = 16;
 
 /** One isolated source failure; healthy sources continue in the same search. */
 interface WorkerFailure {
@@ -303,8 +303,9 @@ export class SearchOrchestrator {
         return;
       }
       this.presentSources(sources);
+      const scope = scopeSourceIds === undefined ? undefined : new Set<string>(scopeSourceIds);
       const enabled = sources.filter((source) => source.enabled && source.name.trim().length > 0 &&
-        (scopeSourceIds === undefined || scopeSourceIds.indexOf(source.sourceId) >= 0));
+        (scope === undefined || scope.has(source.sourceId)));
       attemptedSourceCount = enabled.length;
       if (enabled.length === 0) {
         if (scopeSourceIds !== undefined &&
@@ -327,7 +328,10 @@ export class SearchOrchestrator {
       // workers pull the next enabled source, so wall time tracks the longest
       // sources instead of their sum. Each outcome lands in its registration
       // slot, so streaming partial results share the final stable order.
-      const outcomes: Array<SearchOutcome | undefined> = new Array(enabled.length);
+      // Each source is deduped exactly once when it lands. Partial publishes
+      // only concatenate those stable buckets instead of rescanning every
+      // previously collected result after every source completion.
+      const collectedBySource: Array<SearchBook[] | undefined> = new Array(enabled.length);
       let successfulSourceCount = 0;
       // A broken source is normal in a user-managed Legado source set. Keep
       // its failure isolated so later healthy sources still run and any valid
@@ -335,11 +339,13 @@ export class SearchOrchestrator {
       // the case where every enabled source failed.
       const failures: WorkerFailure[] = [];
       let nextSourceIndex = 0;
+      let partialPublishScheduled = false;
+      let finalized = false;
       const flattenCollected = (): SearchBook[] => {
         const collected: SearchBook[] = [];
-        for (const outcome of outcomes) {
-          if (outcome !== undefined && outcome.ok === true) {
-            for (const book of outcome.results) {
+        for (const bucket of collectedBySource) {
+          if (bucket !== undefined) {
+            for (const book of bucket) {
               collected.push(book);
             }
           }
@@ -354,7 +360,7 @@ export class SearchOrchestrator {
         if (!this.isCurrentWork(work, session) || successfulSourceCount === 0) {
           return;
         }
-        const results = this.dedupeSearchResults(flattenCollected());
+        const results = flattenCollected();
         if (results.length === 0) {
           return;
         }
@@ -366,6 +372,18 @@ export class SearchOrchestrator {
           totalSourceCount: attemptedSourceCount,
           completedSourceCount: this.sweepCompletedSourceCount,
         });
+      };
+      const schedulePartialPublish = (): void => {
+        if (partialPublishScheduled || finalized) {
+          return;
+        }
+        partialPublishScheduled = true;
+        setTimeout((): void => {
+          partialPublishScheduled = false;
+          if (!finalized) {
+            publishPartial();
+          }
+        }, SEARCH_PARTIAL_PUBLISH_INTERVAL_MS);
       };
       const worker = async (): Promise<void> => {
         while (true) {
@@ -389,12 +407,12 @@ export class SearchOrchestrator {
           this.sweepCompletedSourceCount += 1;
           if (outcome.ok === false) {
             failures.push({ source: source, error: outcome.error });
-            publishPartial();
+            schedulePartialPublish();
             continue;
           }
-          outcomes[index] = outcome;
+          collectedBySource[index] = this.dedupeSearchResults(outcome.results);
           successfulSourceCount += 1;
-          publishPartial();
+          schedulePartialPublish();
         }
       };
       const workerCount = Math.min(MAX_SEARCH_CONCURRENCY, enabled.length);
@@ -406,6 +424,13 @@ export class SearchOrchestrator {
       if (!this.isCurrentWork(work, session)) {
         return;
       }
+      // Flush one final streaming snapshot before the closed verdict. This
+      // preserves the observable partial-result contract even when every
+      // healthy source completes inside the coalescing interval.
+      if (partialPublishScheduled) {
+        publishPartial();
+      }
+      finalized = true;
       for (const failure of failures) {
         hilog.warn(DOMAIN, 'Reader', 'Search source %{public}s failed: %{public}s',
           failure.source.sourceId, failure.error);
@@ -414,7 +439,7 @@ export class SearchOrchestrator {
         this.present({ kind: 'error', keyword: keyword, searchedSourceCount: attemptedSourceCount });
         return;
       }
-      const results: SearchBook[] = this.dedupeSearchResults(flattenCollected());
+      const results: SearchBook[] = flattenCollected();
       if (results.length === 0) {
         this.present({ kind: 'empty', keyword: keyword, searchedSourceCount: attemptedSourceCount });
         return;
@@ -513,7 +538,7 @@ export class SearchOrchestrator {
     const deduped: SearchBook[] = [];
     const seenKeys = new Set<string>();
     for (const result of results) {
-      const key = `${result.sourceId} ${result.bookId}`;
+      const key = `${result.sourceId}\u0000${result.bookId}`;
       if (!seenKeys.has(key)) {
         seenKeys.add(key);
         deduped.push(result);

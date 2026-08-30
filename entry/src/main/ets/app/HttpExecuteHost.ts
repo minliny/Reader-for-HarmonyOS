@@ -147,7 +147,7 @@ class StopBeforeRedirectInterceptor implements http.HttpInterceptor {
  * Non-UTF-8 request bytes use Core's bounded shared encoder; ArkTS carries no
  * private GBK/Big5 tables. Text responses are decoded using response
  * Content-Type charset, then the Core descriptor charset, then UTF-8. Raw
- * bytes are retained as bodyBase64 for Core.
+ * bytes are retained as bodyBase64 only for binary responses.
  *
  * Fail-closed, never silently substituted: Multipart `filePath` (Core turns a
  * source `@/path` verbatim into
@@ -651,7 +651,10 @@ export class HttpExecuteHost {
       redirects,
       cookies,
     };
-    if (response.bytes.length > 0) {
+    // Text rules consume the already-decoded body. Keeping a second Base64
+    // string for the same payload adds another full encoding pass and roughly
+    // four thirds of the response size. Binary consumers still need it.
+    if (binaryBody && response.bytes.length > 0) {
       result['bodyBase64'] = new util.Base64Helper().encodeToStringSync(response.bytes);
     }
     if (sessionId !== null) {

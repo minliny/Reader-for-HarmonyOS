@@ -37,6 +37,10 @@ function renderIcon(recipe, source) {
   if (recipe.rotation !== 0) {
     result = result.replace(/<g([^>]*)>/, `<g transform="rotate(${recipe.rotation} 24 24)"$1>`);
   }
+  if (recipe.fillNone) {
+    assert.ok(!/<path[^>]*\bfill=/.test(result), `${recipe.sourceFile}: paths already carry a fill attribute`);
+    result = result.replaceAll('<path d=', '<path fill="none" d=');
+  }
   return `${result.trim()}\n`;
 }
 
@@ -68,7 +72,7 @@ async function renderRecipe(recipe) {
         sourceFile: path.relative(ROOT, sourcePath),
         sourceSha256: sha256(source),
         transform: {
-          pathMutation: 'none',
+          pathMutation: recipe.fillNone ? 'fill-none-on-stroke-paths' : 'none',
           recolor: recipe.color,
           rotationDegrees: recipe.rotation,
         },

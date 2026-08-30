@@ -1,13 +1,30 @@
 {
   "app": {
-    "signingConfigs": [],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "/Users/minliny/.ohos/config/default_Reader-for-HarmonyOS_g2wzCxdhuuosQAHMRq5n3M-e6Kwm_JwC4MxeHjSHNMI=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001B9727DD012704CFC759E52C01EDF26612D521596CCDEBB810D64B458ED6DA7C904337CDA24762AD",
+          "profile": "/Users/minliny/.ohos/config/default_Reader-for-HarmonyOS_g2wzCxdhuuosQAHMRq5n3M-e6Kwm_JwC4MxeHjSHNMI=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "/Users/minliny/.ohos/config/default_Reader-for-HarmonyOS_g2wzCxdhuuosQAHMRq5n3M-e6Kwm_JwC4MxeHjSHNMI=.p12",
+          "storePassword": "0000001B0F3837501FABD631599EDFF53234DFD47946F1075947CBB73FA3FEA8A0771686C854526D724958"
+        }
+      }
+    ],
     "products": [
       {
         "name": "default",
         "signingConfig": "default",
         "compatibleSdkVersion": "6.1.0(23)",
         "targetSdkVersion": "6.1.0(23)",
-        "runtimeOS": "HarmonyOS"
+        "runtimeOS": "HarmonyOS",
+        "buildOption": {
+          "nativeCompiler": "BiSheng"
+        }
       }
     ],
     "buildModeSet": [

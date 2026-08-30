@@ -168,12 +168,19 @@ export struct RssSubscriptionManagementPage {
 
   @Builder
   private subscriptionList() {
-    Column() {
-      ForEach(this.items, (item: RssSubscriptionManagementItem, index: number) => {
-        this.subscriptionItem(item, index);
-      }, (item: RssSubscriptionManagementItem): string => `rss-management-${item.subscriptionId}`);
+    List() {
+      Repeat(this.items)
+        .each((repeatItem: RepeatItem<RssSubscriptionManagementItem>) => {
+        ListItem() {
+          this.subscriptionItem(repeatItem.item, repeatItem.index);
+        }
+      })
+      .key((item: RssSubscriptionManagementItem): string => `rss-management-${item.subscriptionId}`)
+      .virtualScroll({ reusable: true });
     }
     .width('100%')
+    .height(Math.min(520, Math.max(72, this.items.length * 92)))
+    .scrollBar(BarState.Off)
     .margin({ top: TOK_SPACE_CONTROL_INLINE })
     .backgroundColor(TOK_CARD_BG_HI)
     .border({ width: TOK_BORDER_W, color: TOK_ROW_DIVIDER })

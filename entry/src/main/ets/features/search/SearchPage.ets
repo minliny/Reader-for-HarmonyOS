@@ -116,12 +116,26 @@ class SearchBookGroup {
   sourceCount: number;
   inBookshelf: boolean;
   sourceIds: string[];
+  variants: SearchBook[];
+  private readonly sourceIdSet: Set<string>;
 
   constructor(book: SearchBook, sourceCount: number, inBookshelf: boolean) {
     this.book = book;
     this.sourceCount = sourceCount;
     this.inBookshelf = inBookshelf;
     this.sourceIds = [book.sourceId];
+    this.variants = [book];
+    this.sourceIdSet = new Set<string>([book.sourceId]);
+  }
+
+  admit(book: SearchBook, inBookshelf: boolean): void {
+    this.variants.push(book);
+    if (!this.sourceIdSet.has(book.sourceId)) {
+      this.sourceIdSet.add(book.sourceId);
+      this.sourceIds.push(book.sourceId);
+      this.sourceCount += 1;
+    }
+    this.inBookshelf = this.inBookshelf || inBookshelf;
   }
 }
 
@@ -162,6 +176,9 @@ export struct SearchPage {
   @State scopeAll: boolean = true;
   @State scopeSelection: string[] = [];
   @State scopeExpanded: boolean = false;
+  private groupedResultsInput: SearchBook[] | undefined = undefined;
+  private groupedShelfInput: ShelfBook[] | undefined = undefined;
+  private groupedResultsCache: SearchBookGroup[] = [];
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -613,7 +630,7 @@ export struct SearchPage {
             .each((repeatItem: RepeatItem<SearchBookGroup>) => {
               ListItem() {
                 this.resultCard(repeatItem.item.book, repeatItem.item.sourceCount,
-                  repeatItem.item.inBookshelf);
+                  repeatItem.item.inBookshelf, repeatItem.item.variants);
               }
             })
             .key((group: SearchBookGroup): string =>
@@ -646,7 +663,12 @@ export struct SearchPage {
   }
 
   @Builder
-  private resultCard(book: SearchBook, sourceCount: number, inBookshelf: boolean) {
+  private resultCard(
+    book: SearchBook,
+    sourceCount: number,
+    inBookshelf: boolean,
+    variants: SearchBook[],
+  ) {
     Row({ space: TOK_SPACE_SM }) {
       Stack({ alignContent: Alignment.Bottom }) {
         if (book.coverUrl !== undefined && book.coverUrl.trim().length > 0) {
@@ -769,48 +791,46 @@ export struct SearchPage {
     .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: TOK_SPACE_CARD_PADDING, bottom: 14.5 })
     .alignItems(VerticalAlign.Top)
     .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: TOK_BORDER } })
-    .onClick((): void => this.onSelectResult(book, this.collectBookVariants(book)));
+    .onClick((): void => this.onSelectResult(book, variants));
   }
 
   private groupResults(results: SearchBook[]): SearchBookGroup[] {
+    if (this.groupedResultsInput === results && this.groupedShelfInput === this.shelfBooks) {
+      return this.groupedResultsCache;
+    }
     const byBook = new Map<string, SearchBookGroup>();
+    // The shelf is stable for this render pass. Build both identity views once
+    // so every streamed search result uses O(1) membership instead of scanning
+    // the full shelf again.
+    const shelfIdentityKeys = new Set<string>();
+    const shelfBookKeys = new Set<string>();
+    for (const shelf of this.shelfBooks) {
+      shelfIdentityKeys.add(`${shelf.sourceId}\u0000${shelf.bookId}`);
+      shelfBookKeys.add(this.normalizedBookKey(shelf.title, shelf.author));
+    }
     for (const book of results) {
       const key = this.normalizedBookKey(book.title, book.author);
+      const inBookshelf = shelfIdentityKeys.has(`${book.sourceId}\u0000${book.bookId}`) ||
+        shelfBookKeys.has(key);
       const existing = byBook.get(key);
       if (existing === undefined) {
-        byBook.set(key, new SearchBookGroup(book, 1, this.isBookOnShelf(book)));
+        byBook.set(key, new SearchBookGroup(book, 1, inBookshelf));
       } else {
-        if (existing.sourceIds.indexOf(book.sourceId) < 0) {
-          existing.sourceIds.push(book.sourceId);
-          existing.sourceCount += 1;
-        }
-        existing.inBookshelf = existing.inBookshelf || this.isBookOnShelf(book);
+        existing.admit(book, inBookshelf);
       }
     }
     // Legado keeps one card per exact title/author and promotes books found
     // by more origins. Preserve discovery order for equal source counts.
-    return Array.from(byBook.values()).sort((left: SearchBookGroup, right: SearchBookGroup): number =>
+    const grouped = Array.from(byBook.values()).sort((left: SearchBookGroup, right: SearchBookGroup): number =>
       right.sourceCount - left.sourceCount);
+    this.groupedResultsInput = results;
+    this.groupedShelfInput = this.shelfBooks;
+    this.groupedResultsCache = grouped;
+    return grouped;
   }
 
   private normalizedBookKey(title: string, author: string): string {
     return `${title.trim().toLocaleLowerCase()}\u0000${author.trim().toLocaleLowerCase()}`;
-  }
-
-  private collectBookVariants(book: SearchBook): SearchBook[] {
-    if (this.presentation.kind !== 'results') {
-      return [book];
-    }
-    const key = this.normalizedBookKey(book.title, book.author);
-    return this.presentation.results.filter((candidate: SearchBook): boolean =>
-      this.normalizedBookKey(candidate.title, candidate.author) === key);
-  }
-
-  private isBookOnShelf(book: SearchBook): boolean {
-    const key = this.normalizedBookKey(book.title, book.author);
-    return this.shelfBooks.some((shelf: ShelfBook): boolean =>
-      (shelf.sourceId === book.sourceId && shelf.bookId === book.bookId) ||
-      this.normalizedBookKey(shelf.title, shelf.author) === key);
   }
 
   @Builder

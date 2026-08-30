@@ -27,8 +27,12 @@ assert.match(registry, /async releaseLocalBookAsset\(bookId: string\)[\s\S]*\$\{
   'a successful Core local-book deletion must have one deterministic Host asset release');
 assert.doesNotMatch(registry, /LocalBookRawImportLimitBytes|bytesBase64: string|encodeToString\(bytes\)/,
   'production local-book import must not retain the Base64 transport limit');
-assert.match(registry, /HashChunkBytes = 1024 \* 1024[\s\S]*sha256File\(stagePath\)/,
-  'Host content identity must be hashed as a bounded stream');
+assert.match(registry,
+  /HashChunkBytes = 1024 \* 1024[\s\S]*copyAndHashLocalBook\(uri, stagePath\)/,
+  'Host staging must hash the selected book during its single bounded copy pass');
+assert.match(registry,
+  /private async copyAndHashLocalBook\([\s\S]*fileIo\.read\([\s\S]*digest\.update\([\s\S]*fileIo\.write\(/,
+  'the one-pass staging stream must read, hash, and write each bounded chunk');
 assert.match(importGateway, /filePath: input\.stagedPath/,
   'the JSON control plane must carry only the Host-authorized staging path');
 assert.doesNotMatch(importGateway, /bytesBase64/,

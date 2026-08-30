@@ -30,11 +30,16 @@ assert.match(remoteDetail,
   /const reusableRemoteSession = shelfSnapshot !== undefined &&[\s\S]*?identity\.sourceId === seed\.sourceId &&[\s\S]*?identity\.bookId === seed\.bookId/,
   'only an exact shelf identity may reuse the already admitted remote session');
 assert.match(remoteDetail,
-  /const sessionAdmission: Promise<RemoteReadingSession> = reusableRemoteSession !== undefined \?[\s\S]*?Promise\.resolve\(reusableRemoteSession\) : shelfSnapshot !== undefined \?[\s\S]*?gateway\.openCachedCatalogSession\(seed, isCurrent\)[\s\S]*?gateway\.openSession\(seed, \{ isCurrent \}\)/,
+  /const sessionAdmission: Promise<RemoteDetailAdmission> = reusableRemoteSession !== undefined \?[\s\S]*?Promise\.resolve\(new RemoteDetailAdmission\(reusableRemoteSession\)\) : shelfSnapshot !== undefined \?[\s\S]*?gateway\.openCachedCatalogSession\(seed, isCurrent\)[\s\S]*?gateway\.openSession\(seed, \{ isCurrent \}\)/,
   'shelf re-entry must reuse a live session or admit the durable Core catalog before any network refresh');
 assert.ok(remoteDetail.indexOf("this.route = 'detail'") < remoteDetail.indexOf('gateway.openCachedCatalogSession(seed, isCurrent)'),
   'remote detail must project its inert shell before network/session admission');
-assert.match(remoteDetail, /const suppliedShelfBook = shelfSnapshot\?\.sourceId === session\.identity\.sourceId/);
+assert.match(remoteDetail, /let suppliedShelfBook = shelfSnapshot\?\.sourceId === session\.identity\.sourceId/);
+assert.doesNotMatch(remoteDetail, /await bookshelf\.loadShelfBook/,
+  'durable shelf membership reconciliation must not gate remote detail publication');
+assert.ok(remoteDetail.indexOf('this.detailToc = session.entries.map') <
+  remoteDetail.indexOf('void bookshelf.loadShelfBook'),
+  'the admitted session and TOC must publish before shelf membership reconciliation');
 assert.doesNotMatch(remoteDetail, /new SourceGateway\(owner\)\.loadSources/,
   'optional source-name lookup must not stay on the route-admission critical path');
 const returnToShelf = method(index, 'private returnToBookshelf(', 'private applyReadingCommit(');
@@ -65,17 +70,21 @@ const controlDirectory = method(reading, 'private controlDirectoryEntries(', 'pr
 assert.ok(controlDirectory.indexOf('this.tocEntries === this.directoryEntries') <
   controlDirectory.indexOf('new Map<number, LocalReadingTocEntry>()'),
   'an identical parent/session TOC must return before building the marker/title projection');
-assert.match(reading, /this\.requestedChapterIndex === undefined && restored !== undefined/);
-assert.match(reading, /stored = await this\.activeGateway\(\)\.updateProgress/,
-  'changed/explicit anchors must retain persistence-before-visibility');
+assert.match(reading, /stored = await this\.activeGateway\(\)\.resolveAndUpdateProgress/,
+  'first-page canonical resolution and persistence must use one Core round trip');
+assert.doesNotMatch(reading, /const resolved = await this\.activeGateway\(\)\.resolveLocation/,
+  'page completion must not serialize location.resolve before progress.update');
 const appear = method(reading, 'aboutToAppear(): void {', 'aboutToDisappear(): void {');
 assert.match(appear, /this\.loadInitialReading\(lifecycleToken\)/);
 assert.doesNotMatch(appear, /initializeTtsSession|loadChineseConversionMode|loadReaderSettingsSnapshot/,
   'optional TTS and control settings must not compete with first-page admission');
 const initialReading = method(reading, 'private async loadInitialReading(', 'private async loadInitialChapter(');
-assert.match(initialReading, /await this\.loadAppearanceSnapshot\(lifecycleToken\)/,
-  'layout-affecting appearance must settle before the first chapter measurement');
+assert.match(initialReading,
+  /const layoutReady = Promise\.all\(\[[\s\S]*?this\.loadAppearanceSnapshot\(lifecycleToken\)[\s\S]*?this\.loadReaderSettingsSnapshot\(lifecycleToken\)[\s\S]*?\]\)[\s\S]*this\.loadInitialChapter\(lifecycleToken, layoutReady\)/,
+  'layout snapshots must start in parallel with initial TOC/progress acquisition');
 const initialChapter = method(reading, 'private async loadInitialChapter(', 'private loadInitialToc(');
+assert.ok(initialChapter.indexOf('this.loadInitialToc(isCurrent)') < initialChapter.indexOf('await layoutReady'),
+  'TOC/progress must start before the layout barrier is awaited');
 assert.doesNotMatch(initialChapter, /loadContentMetrics/,
   'whole-book metrics must not remain on the first-page critical path');
 assert.match(reading, /private lastCommittedProgress: ReadingCommit \| undefined/);
@@ -107,6 +116,11 @@ const search = read('entry/src/main/ets/features/search/SearchPage.ets');
 assert.match(search, /Repeat\(results\)[\s\S]*\.virtualScroll\(\{ reusable: true \}\)/);
 assert.doesNotMatch(search, /countBySource/,
   'raw result cards must not repeat an O(n) source scan for every row');
+const groupResults = method(search, 'private groupResults(', 'private normalizedBookKey(');
+assert.match(groupResults, /const shelfIdentityKeys = new Set<string>\(\)/);
+assert.match(groupResults, /const shelfBookKeys = new Set<string>\(\)/);
+assert.doesNotMatch(groupResults, /this\.shelfBooks\.some/,
+  'search grouping must index the shelf once instead of scanning it for every result');
 
 const sourceManagement = read('entry/src/main/ets/features/source/SourceManagementPage.ets');
 assert.match(sourceManagement, /LazyForEach\(this\.sourceDataSource,/,

@@ -17,6 +17,12 @@ constexpr float kCatchSpeedViewportsPerSecond = 5.0F;
 constexpr float kCatchNearMaxVp = 48.0F;
 constexpr float kCatchNearViewporRatio = 0.12F;
 constexpr float kCatchLockVp = 4.0F;
+// Causal presentation delay for sparse platform MOVE delivery. At 40 Hz this
+// exposes one input segment over three 120 Hz frames; faster input naturally
+// falls back to one-sample latency because only the newest two samples exist.
+// No extrapolation is allowed, so the rendered pointer never runs ahead of
+// the latest physical sample.
+constexpr int64_t kPresentationDelayNs = 24'000'000;
 constexpr float kCompleteSeconds = 0.600F;
 constexpr float kSettleMinSeconds = 0.240F;
 constexpr float kTiltZeroSeconds = 0.080F;
@@ -39,9 +45,14 @@ struct BookTurnSample {
 // edge across frames and derives finger velocity from consecutive samples.
 struct BookTurnChaseState {
     float edgeX = 0.0F;
+    float previousPointerX = 0.0F;
+    float previousPointerY = 0.0F;
+    int64_t previousSampleTimeNs = 0;
     float lastPointerX = 0.0F;
+    float lastPointerY = 0.0F;
     int64_t lastSampleTimeNs = 0;
     float fingerVelocityX = 0.0F;
+    float fingerVelocityY = 0.0F;
     bool seeded = false;
 };
 
@@ -54,6 +65,13 @@ void ResetChase(BookTurnChaseState& state, const BookTurnSample& sample);
 // Feed one mailbox sample: updates the finger velocity only. The edge itself
 // never moves here — advancement happens per VSync frame in ChaseAdvance.
 void RecordChaseSample(BookTurnChaseState& state, const BookTurnSample& sample);
+
+// Present the latest input segment on a bounded delayed timeline. The first
+// sample interpolates from the gesture start; later samples interpolate from
+// the previously consumed mailbox value. The returned point is always inside
+// that segment (never predicted beyond the newest physical sample).
+BookTurnSample PresentChaseSample(const BookTurnChaseState& state, const BookTurnSample& sample,
+    int64_t frameTimeNs);
 
 // x_follow target (V1 §5.3): the gated follow position, not the raw pointer.
 float ChaseTargetX(const BookTurnSample& sample);

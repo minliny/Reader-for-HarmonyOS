@@ -153,7 +153,29 @@ export struct SourceToolsPage {
   private sourceCard(snapshot: SourceToolsSnapshot) {
     Column({ space: TOK_SPACE_XS }) {
       this.heading(`书源编辑（${snapshot.sources.length}）`);
-      ForEach(snapshot.sources, (source: BookSource) => {
+      List() {
+        Repeat(snapshot.sources)
+          .each((repeatItem: RepeatItem<BookSource>) => {
+          ListItem() {
+            this.sourceRow(repeatItem.item, snapshot);
+          }
+        })
+        .key((source: BookSource): string => `source-tool-${source.sourceId}`)
+        .virtualScroll({ reusable: true });
+      }
+      .width('100%')
+      .height(Math.min(420, Math.max(58, snapshot.sources.length * 58)))
+      .scrollBar(BarState.Off);
+    }
+    .width('100%')
+    .padding(TOK_SPACE_SM)
+    .backgroundColor(TOK_CARD_BG)
+    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+    .borderRadius(10);
+  }
+
+  @Builder
+  private sourceRow(source: BookSource, snapshot: SourceToolsSnapshot) {
         Row({ space: TOK_SPACE_XS }) {
           Column({ space: 3 }) {
             Text(source.name)
@@ -184,13 +206,6 @@ export struct SourceToolsPage {
         .height(58)
         .padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS })
         .border({ width: { bottom: TOK_BORDER_W }, color: TOK_BORDER });
-      }, (source: BookSource): string => `source-tool-${source.sourceId}`);
-    }
-    .width('100%')
-    .padding(TOK_SPACE_SM)
-    .backgroundColor(TOK_CARD_BG)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
-    .borderRadius(10);
   }
 
   @Builder
@@ -249,20 +264,36 @@ export struct SourceToolsPage {
           .fontSize(11)
           .fontColor(TOK_MUTED);
       }
-      ForEach(this.snapshot.debugLogs, (log: SourceDebugLog, index: number) => {
-        Text(`${index + 1}. [${log.state}] ${log.message}`)
-          .width('100%')
-          .fontFamily('monospace')
-          .fontSize(10)
-          .lineHeight(16)
-          .fontColor(log.state === -1 ? '#A8584D' : TOK_INK);
-      }, (log: SourceDebugLog, index: number): string => `debug-${index}-${log.timestampMs}-${log.state}`);
+      List() {
+        Repeat(this.snapshot.debugLogs)
+          .each((repeatItem: RepeatItem<SourceDebugLog>) => {
+          ListItem() {
+            this.debugLogRow(repeatItem.item, repeatItem.index);
+          }
+        })
+        .key((log: SourceDebugLog): string =>
+          `debug-${log.timestampMs}-${log.state}-${log.message}`)
+        .virtualScroll({ reusable: true });
+      }
+      .width('100%')
+      .height(Math.min(360, Math.max(32, this.snapshot.debugLogs.length * 32)))
+      .scrollBar(BarState.Off);
     }
     .width('100%')
     .padding(TOK_SPACE_SM)
     .backgroundColor(TOK_CARD_BG)
     .border({ width: TOK_BORDER_W, color: TOK_BORDER })
     .borderRadius(10);
+  }
+
+  @Builder
+  private debugLogRow(log: SourceDebugLog, index: number) {
+        Text(`${index + 1}. [${log.state}] ${log.message}`)
+          .width('100%')
+          .fontFamily('monospace')
+          .fontSize(10)
+          .lineHeight(16)
+          .fontColor(log.state === -1 ? '#A8584D' : TOK_INK);
   }
 
   @Builder

@@ -210,13 +210,20 @@ export struct RssSourceFeedPage {
 
   @Builder
   private entryList() {
-    Column() {
-      ForEach(this.items, (item: RssItem, index: number) => {
-        this.entryRow(item, index);
-      }, (item: RssItem): string =>
-        `rss-source-item-${item.subscriptionId.length}:${item.subscriptionId}-${item.guid.length}:${item.guid}`);
+    List() {
+      Repeat(this.items)
+        .each((repeatItem: RepeatItem<RssItem>) => {
+        ListItem() {
+          this.entryRow(repeatItem.item, repeatItem.index);
+        }
+      })
+      .key((item: RssItem): string =>
+        `rss-source-item-${item.subscriptionId.length}:${item.subscriptionId}-${item.guid.length}:${item.guid}`)
+      .virtualScroll({ reusable: true });
     }
     .width('100%')
+    .height(Math.min(480, this.items.length * 72))
+    .scrollBar(BarState.Off)
     .backgroundColor(TOK_CARD_BG_HI)
     .border({ width: TOK_BORDER_W, color: CARD_BORDER })
     .borderRadius(8);

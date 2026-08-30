@@ -11,8 +11,19 @@ const read = (path) => readFileSync(resolve(repo, path), 'utf8');
 const motion = read('entry/src/main/ets/features/common/MotionSpec.ets');
 assert.match(motion, /reader\.panel\.expand', durationMs: 420, curve: Curve\.EaseOut/);
 assert.match(motion, /reader\.panel\.collapse', durationMs: 360, curve: Curve\.EaseIn/);
+assert.match(motion, /reader\.control\.handle\.snap', durationMs: 120, curve: Curve\.EaseOut/,
+  'the grabber release settle must own its own 120ms snap token, not borrow the 360ms panel collapse');
 
 const control = read('entry/src/main/ets/features/reading/ReaderControlPanel.ets');
+
+const grabberSnap = control.slice(
+  control.indexOf('private resetControlGrabberDrag(): void {'),
+  control.indexOf('private resetControlGrabberDrag(): void {') + 900,
+);
+assert.ok(grabberSnap.includes('motionAnimateParam(\'reader.control.handle.snap\')'),
+  'the grabber rollback must animate with the dedicated handle.snap token');
+assert.ok(!grabberSnap.includes('reader.panel.collapse'),
+  'the grabber settle must not borrow the panel collapse timing');
 assert.match(control,
   /@Prop shellExitArmed: boolean = false;[\s\S]*private fullSearchDock\(\)[\s\S]*?\.transition\(this\.reduceMotion \|\| this\.shellExitArmed \? TransitionEffect\.IDENTITY/,
   'a full-panel child must not run a second exit transition under the control shell');

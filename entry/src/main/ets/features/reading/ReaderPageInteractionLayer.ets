@@ -4,7 +4,6 @@ import {
   createReaderPageGestureState,
   finishReaderPagePan,
   READER_PAGE_GESTURE_LONG_PRESS_MS,
-  READER_PAGE_GESTURE_TOUCH_SLOP,
   readerPageGestureCanTap,
   readerPagePointerCoordinate,
   readerPageTapIntent,
@@ -73,11 +72,7 @@ export struct ReaderPageInteractionLayer {
   private lastLocalY: number = 0;
   private velocityX: number = 0;
   private velocityY: number = 0;
-  private pointerOriginX: number = 0;
-  private pointerOriginY: number = 0;
   private tapOnlyPointer: boolean = false;
-  private tapOnlyCancelled: boolean = false;
-  private tapOnlyMaxDistance: number = 0;
   private pointerRejected: boolean = false;
   private deferredSegmentReserved: boolean = false;
   private pointerWatchdogTimer: number = -1;
@@ -155,13 +150,9 @@ export struct ReaderPageInteractionLayer {
     this.lastSampleTimeMs = this.pointerDownTimeMs;
     this.lastLocalX = localX;
     this.lastLocalY = localY;
-    this.pointerOriginX = localX;
-    this.pointerOriginY = localY;
     this.velocityX = 0;
     this.velocityY = 0;
     this.tapOnlyPointer = this.tapOnly;
-    this.tapOnlyCancelled = false;
-    this.tapOnlyMaxDistance = 0;
     this.pointerRejected = false;
     if (this.tapOnlyPointer) {
       this.onManualInteraction();
@@ -200,13 +191,6 @@ export struct ReaderPageInteractionLayer {
     const localX = this.pageLocalX(event, pointer);
     const localY = this.pageLocalY(event, pointer);
     if (this.tapOnlyPointer) {
-      const distanceX = Math.abs(localX - this.pointerOriginX);
-      const distanceY = Math.abs(localY - this.pointerOriginY);
-      this.tapOnlyMaxDistance = Math.max(this.tapOnlyMaxDistance,
-        Math.sqrt(distanceX * distanceX + distanceY * distanceY));
-      if (this.tapOnlyMaxDistance >= READER_PAGE_GESTURE_TOUCH_SLOP) {
-        this.tapOnlyCancelled = true;
-      }
       const eventTimeMs = this.eventTimeMs(event);
       this.updateVelocity(localX, localY, eventTimeMs);
       this.gestureState = updateReaderPagePanInPlace(
@@ -545,13 +529,9 @@ export struct ReaderPageInteractionLayer {
     this.lastSampleTimeMs = 0;
     this.lastLocalX = 0;
     this.lastLocalY = 0;
-    this.pointerOriginX = 0;
-    this.pointerOriginY = 0;
     this.velocityX = 0;
     this.velocityY = 0;
     this.tapOnlyPointer = false;
-    this.tapOnlyCancelled = false;
-    this.tapOnlyMaxDistance = 0;
     this.pointerRejected = false;
     this.deferredSegmentReserved = false;
   }
@@ -619,10 +599,6 @@ export struct ReaderPageInteractionLayer {
         this.onDeferredSegmentPromote();
       }
       this.tapOnlyPointer = false;
-      this.tapOnlyCancelled = false;
-      this.tapOnlyMaxDistance = 0;
-      this.pointerOriginX = this.lastLocalX;
-      this.pointerOriginY = this.lastLocalY;
       this.gestureState = startReaderPagePan(
         this.viewportWidth,
         this.lastLocalX,

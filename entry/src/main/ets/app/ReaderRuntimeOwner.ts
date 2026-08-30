@@ -5,6 +5,7 @@ import {
   type JsonObject,
   type ReaderCoreResultEvent,
   type ReaderCoreRuntime,
+  ReaderCoreRequestError,
   type RequestOptions,
 } from '@reader/core-harmony';
 import {
@@ -38,6 +39,8 @@ type RuntimeState = 'new' | 'starting' | 'ready' | 'closing' | 'closed';
 // narrower explicit limit.
 const DEFAULT_CORE_REQUEST_TIMEOUT_MS = 30000;
 const LOG_DOMAIN = 0x5244;
+const TEST_BOOK_SOURCE_RAW_FILE = 'reader-test-book-sources.json';
+const TEST_BOOK_SOURCE_VERSION_FIELD = 'readerTestBuiltinVersion';
 
 type CoreBuildIdentity = {
   schemaVersion: number;
@@ -206,14 +209,13 @@ export class ReaderRuntimeOwner {
     const request = await this.resolveReadingImageRequest(sourceId, imageUrl, identity.baseUrl, isCurrent);
     const bytes = await ReadingBodyImageHost.instance.fetchRequestBytes(request, isCurrent);
     const payload = await ReadingBodyImageHost.instance.loadBytes(bytes, isCurrent);
-    try {
-      await this.readingImageDiskCache.storeResource(identity, bytes);
-    } catch (error) {
-      // An ordinary online read remains usable when persistent storage is
-      // full. Explicit offline prefetch uses the strict method below and
-      // surfaces the same write failure instead of publishing completion.
-      console.error(`Reader body image cache write failed: ${(error as Error).message}`);
-    }
+    // The display resource is already decoded and actionable. Persistent
+    // cache maintenance must not keep first paint waiting for a second disk
+    // write; explicit offline prefetch retains its strict awaited path below.
+    void this.readingImageDiskCache.storeResource(identity, bytes)
+      .catch((error: Error): void => {
+        console.error(`Reader body image cache write failed: ${error.message}`);
+      });
     return this.admitReadingImage(payload, isCurrent);
   }
 
@@ -514,10 +516,16 @@ export class ReaderRuntimeOwner {
         ],
         platform: 'harmonyos',
       }, { timeoutMs: 5000 });
-      const coreInfo = await runtime.request('core.info', {}, { timeoutMs: 5000 });
+      // Build identity and the Host migration marker are independent reads.
+      // Settle them together before the optional restore barrier.
+      const startupReads = await Promise.all([
+        runtime.request('core.info', {}, { timeoutMs: 5000 }),
+        this.host.needsLegacySnapshotMigration(),
+      ]);
+      const coreInfo = startupReads[0];
       const buildIdentity = this.requireCoreBuildIdentity(coreInfo.data['buildIdentity']);
       hilog.info(LOG_DOMAIN, 'Reader', 'Core build identity: %{public}s', JSON.stringify(buildIdentity));
-      if (await this.host.needsLegacySnapshotMigration()) {
+      if (startupReads[1]) {
         await runtime.request('runtime.storage.restore', {}, { timeoutMs: 30000 });
         await this.host.markLegacySnapshotMigrated();
       }
@@ -528,6 +536,9 @@ export class ReaderRuntimeOwner {
       const recovery = await runtime.request('source.switch.recover', {}, { timeoutMs: 30000 });
       const recoveredCount = this.requireSourceSwitchRecoveryCount(recovery.data['recovered']);
       hilog.info(LOG_DOMAIN, 'Reader', 'Core source-switch startup recovery count: %{public}d', recoveredCount);
+      const installedTestSourceCount = await this.installBundledTestBookSources(runtime);
+      hilog.info(LOG_DOMAIN, 'Reader',
+        'Bundled test book sources installed or upgraded: %{public}d', installedTestSourceCount);
       // `close()` may have begun while Host capability setup/restore awaited.
       // Never publish a ready runtime after teardown has claimed this owner.
       if (this.state !== 'starting') {
@@ -546,6 +557,117 @@ export class ReaderRuntimeOwner {
       }
       throw error;
     }
+  }
+
+  /**
+   * Test builds ship an application-owned source set in raw resources. Seed it
+   * before the runtime becomes observable so fresh and update installs cannot
+   * reach Search with an empty source database. Matching versions are read-only
+   * on later launches; upgrades preserve the user's enabled/explore choices.
+   */
+  private async installBundledTestBookSources(runtime: ReaderCoreRuntime): Promise<number> {
+    const document = await this.host.readBundledRawFileText(TEST_BOOK_SOURCE_RAW_FILE);
+    const bundledSources = this.requireBundledTestBookSources(document);
+    let installedCount = 0;
+    for (const bundled of bundledSources) {
+      const sourceId = bundled['bookSourceUrl'] as string;
+      const version = bundled[TEST_BOOK_SOURCE_VERSION_FIELD] as number;
+      // Query only the bounded app-owned identities. Loading every raw source here
+      // would make cold-start cost scale with a user's imported source corpus.
+      const existing = await this.loadExistingBundledTestBookSource(runtime, sourceId);
+      if (existing !== undefined && existing[TEST_BOOK_SOURCE_VERSION_FIELD] === version) {
+        continue;
+      }
+      const importedSource: JsonObject = { ...bundled };
+      if (existing !== undefined) {
+        if (typeof existing['enabled'] === 'boolean') {
+          importedSource['enabled'] = existing['enabled'];
+        }
+        if (typeof existing['enabledExplore'] === 'boolean') {
+          importedSource['enabledExplore'] = existing['enabledExplore'];
+        }
+      }
+      const imported = await runtime.request('source.import', {
+        sourceId,
+        bookSource: importedSource,
+      }, { timeoutMs: 30000 });
+      if (imported.data['imported'] !== true || imported.data['sourceId'] !== sourceId) {
+        throw new Error(`source.import did not confirm bundled test source ${sourceId}`);
+      }
+      installedCount += 1;
+    }
+    return installedCount;
+  }
+
+  private async loadExistingBundledTestBookSource(
+    runtime: ReaderCoreRuntime,
+    sourceId: string,
+  ): Promise<JsonObject | undefined> {
+    let exported: ReaderCoreResultEvent;
+    try {
+      exported = await runtime.request('source.export', {
+        sourceIds: [sourceId],
+        format: 'json',
+      }, { timeoutMs: 30000 });
+    } catch (error) {
+      if (error instanceof ReaderCoreRequestError &&
+        error.event.error.code === 'INVALID_PARAMS' &&
+        error.event.error.details?.['sourceId'] === sourceId) {
+        return undefined;
+      }
+      throw error;
+    }
+    const data = exported.data['data'];
+    const count = exported.data['count'];
+    if (typeof data !== 'string' || count !== 1) {
+      throw new Error(`source.export returned invalid bundled source data for ${sourceId}`);
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(data) as unknown;
+    } catch (error) {
+      throw new Error(`source.export returned invalid JSON for ${sourceId}: ${(error as Error).message}`);
+    }
+    if (!Array.isArray(parsed) || parsed.length !== 1 || typeof parsed[0] !== 'object' ||
+      parsed[0] === null || Array.isArray(parsed[0])) {
+      throw new Error(`source.export returned invalid source shape for ${sourceId}`);
+    }
+    return parsed[0] as JsonObject;
+  }
+
+  private requireBundledTestBookSources(document: string): JsonObject[] {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(document) as unknown;
+    } catch (error) {
+      throw new Error(`Bundled test book-source JSON is invalid: ${(error as Error).message}`);
+    }
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      throw new Error('Bundled test book-source JSON must contain at least one source');
+    }
+    const sources: JsonObject[] = [];
+    for (let index = 0; index < parsed.length; index += 1) {
+      const raw = parsed[index];
+      if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+        throw new Error(`Bundled test book source ${index + 1} must be an object`);
+      }
+      const source = raw as JsonObject;
+      const sourceId = source['bookSourceUrl'];
+      const name = source['bookSourceName'];
+      const version = source[TEST_BOOK_SOURCE_VERSION_FIELD];
+      if (typeof sourceId !== 'string' || !sourceId.startsWith('https://') ||
+        typeof name !== 'string' || name.trim().length === 0 || source['enabled'] !== true ||
+        typeof version !== 'number' || !Number.isSafeInteger(version) || version < 1 ||
+        typeof source['searchUrl'] !== 'string' ||
+        typeof source['ruleSearch'] !== 'object' || source['ruleSearch'] === null ||
+        typeof source['ruleBookInfo'] !== 'object' || source['ruleBookInfo'] === null ||
+        typeof source['ruleToc'] !== 'object' || source['ruleToc'] === null ||
+        typeof source['ruleContent'] !== 'object' || source['ruleContent'] === null) {
+        throw new Error(`Bundled test book source ${index + 1} has an invalid L1-L5 contract`);
+      }
+      sources.push(source);
+    }
+    return sources;
   }
 
   private requireCoreBuildIdentity(value: unknown): CoreBuildIdentity {

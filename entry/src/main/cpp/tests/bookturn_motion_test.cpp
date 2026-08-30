@@ -31,6 +31,7 @@ using reader::bookturn::ChaseAdvance;
 using reader::bookturn::ChaseGap;
 using reader::bookturn::ChaseTargetX;
 using reader::bookturn::Direction;
+using reader::bookturn::PresentChaseSample;
 using reader::bookturn::RecordChaseSample;
 using reader::bookturn::ResetChase;
 using reader::bookturn::SettleDurationSeconds;
@@ -291,6 +292,68 @@ void TestSampleVelocity()
     CheckNear("velocity/dt-zero-holds", state.fingerVelocityX, -500.0F, 1e-3);
 }
 
+void TestSparseSamplePresentation()
+{
+    constexpr int64_t kBaseNs = 1'000'000'000;
+    constexpr int64_t kSparseStepNs = 25'000'000;
+    constexpr int64_t kVsyncStepNs = 8'000'000;
+    BookTurnChaseState state;
+
+    // The first owned sample unfolds from the gesture start over the bounded
+    // presentation delay instead of appearing as one large MOVE-time jump.
+    const BookTurnSample first = Sample(Direction::NEXT, kW, kW - 40.0F, kMidY - 24.0F,
+        false, kMidY, kBaseNs);
+    ResetChase(state, first);
+    RecordChaseSample(state, first);
+    const BookTurnSample firstStart = PresentChaseSample(state, first, kBaseNs);
+    const BookTurnSample firstMid = PresentChaseSample(state, first,
+        kBaseNs + reader::bookturn::kPresentationDelayNs / 2);
+    const BookTurnSample firstEnd = PresentChaseSample(state, first,
+        kBaseNs + reader::bookturn::kPresentationDelayNs);
+    CheckNear("present/first-start-x", firstStart.pointerX, kW, 1e-3);
+    CheckNear("present/first-mid-x", firstMid.pointerX, kW - 20.0F, 1e-3);
+    CheckNear("present/first-end-x", firstEnd.pointerX, kW - 40.0F, 1e-3);
+    CheckNear("present/first-mid-y", firstMid.pointerY, kMidY - 12.0F, 1e-3);
+
+    // A 40 Hz input segment must expose motion on every intervening 120 Hz
+    // frame. The presented point stays within the physical segment and lands
+    // exactly on the newest sample after the 24 ms delay.
+    const BookTurnSample second = Sample(Direction::NEXT, kW, kW - 80.0F, kMidY - 48.0F,
+        false, kMidY, kBaseNs + kSparseStepNs);
+    RecordChaseSample(state, second);
+    float previousX = first.pointerX;
+    for (int frame = 1; frame <= 3; ++frame) {
+        const BookTurnSample presented = PresentChaseSample(state, second,
+            second.eventTimeNs + frame * kVsyncStepNs);
+        CheckTrue(presented.pointerX < previousX - 1.0F,
+            ("present/sparse-moves-frame-" + std::to_string(frame)).c_str(),
+            "each VSync between 25ms MOVE samples must advance the sheet");
+        CheckTrue(presented.pointerX >= second.pointerX - 1e-3F,
+            ("present/sparse-no-overshoot-frame-" + std::to_string(frame)).c_str(),
+            "causal interpolation must never pass the newest physical sample");
+        previousX = presented.pointerX;
+    }
+    const BookTurnSample held = PresentChaseSample(state, second,
+        second.eventTimeNs + 100'000'000);
+    CheckNear("present/stationary-holds-x", held.pointerX, second.pointerX, 1e-3);
+    CheckNear("present/stationary-holds-y", held.pointerY, second.pointerY, 1e-3);
+
+    // Reversal is also segment-bounded: interpolation returns toward the new
+    // point without carrying any extrapolated inward momentum.
+    const BookTurnSample reversed = Sample(Direction::NEXT, kW, kW - 60.0F, kMidY - 36.0F,
+        false, kMidY, second.eventTimeNs + kSparseStepNs);
+    RecordChaseSample(state, reversed);
+    const BookTurnSample reverseMid = PresentChaseSample(state, reversed,
+        reversed.eventTimeNs + reader::bookturn::kPresentationDelayNs / 2);
+    const float reversePhase = static_cast<float>(kSparseStepNs -
+        reader::bookturn::kPresentationDelayNs + reader::bookturn::kPresentationDelayNs / 2) /
+        static_cast<float>(kSparseStepNs);
+    CheckNear("present/reverse-mid-x", reverseMid.pointerX,
+        second.pointerX + reversePhase * (reversed.pointerX - second.pointerX), 1e-3);
+    CheckNear("present/reverse-mid-y", reverseMid.pointerY,
+        second.pointerY + reversePhase * (reversed.pointerY - second.pointerY), 1e-3);
+}
+
 void TestSettleTargetsAndDurations()
 {
     CheckNear("target/next-commit", SettleTargetTau(Direction::NEXT, true), 1.0F, 1e-6);
@@ -377,6 +440,14 @@ void TestSwapCoverageGate()
         "coverage/next-end-collapsed", "tau 1 sheet must be within the swap cover band");
     CheckTrue(BookTurnSolver::SheetCoverage(SettlementPose(base, 0.5F)) > 0.3F,
         "coverage/mid-flip-wide", "mid-flip sheet must cover a wide x-range");
+    for (int step = 0; step <= 100; ++step) {
+        const float tau = static_cast<float>(step) / 100.0F;
+        const BookTurnPose pose = SettlementPose(base, tau);
+        const bool exhaustive = BookTurnSolver::SheetCoverage(pose) > reader::bookturn::kSwapCoverRatio;
+        CheckTrue(BookTurnSolver::SheetCoverageExceeds(pose, reader::bookturn::kSwapCoverRatio) == exhaustive,
+            "coverage/fast-predicate-equivalence",
+            "boundary fast-reject must remain exactly equivalent to the renderer-grid coverage gate");
+    }
     base.direction = Direction::PREVIOUS;
     base.start = { 0.0F, kMidY };
     base.pointer = base.start;
@@ -453,6 +524,7 @@ int main()
     TestChaseGap();
     TestEdgeOriginOwnership();
     TestSampleVelocity();
+    TestSparseSamplePresentation();
     TestSettleTargetsAndDurations();
     TestSettleTauAt();
     TestSwapCoverageGate();

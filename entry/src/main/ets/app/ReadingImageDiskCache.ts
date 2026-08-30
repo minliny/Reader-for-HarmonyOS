@@ -64,6 +64,11 @@ type ReadingImageChapterManifest = {
 export class ReadingImageDiskCache {
   private readonly context: common.UIAbilityContext;
   private readonly freeSpaceProbe: ReadingImageFreeSpaceProbe;
+  private readonly inFlightWrites = new Map<string, Promise<void>>();
+  private writeLaneA: Promise<void> = Promise.resolve();
+  private writeLaneB: Promise<void> = Promise.resolve();
+  private nextWriteLane: number = 0;
+  private nextTemporaryFile: number = 0;
 
   constructor(
     context: common.UIAbilityContext,
@@ -236,24 +241,70 @@ export class ReadingImageDiskCache {
   }
 
   private async writeAtomicBytes(path: string, bytes: Uint8Array): Promise<void> {
-    // The fs WriteStream.end rejects a Uint8Array at runtime on this build
-    // ("Invalid argument"), so write the exact backing ArrayBuffer with the
-    // proven writeSync path and commit via an atomic same-directory rename.
-    const tmpPath = `${path}.tmp`;
+    const existing = this.inFlightWrites.get(path);
+    if (existing !== undefined) {
+      return existing;
+    }
+    const operation = this.enqueueWrite(async (): Promise<void> => {
+      await this.performAtomicWrite(path, bytes);
+    });
+    this.inFlightWrites.set(path, operation);
     try {
-      const file = fileIo.openSync(
+      await operation;
+    } finally {
+      if (this.inFlightWrites.get(path) === operation) {
+        this.inFlightWrites.delete(path);
+      }
+    }
+  }
+
+  private async enqueueWrite(operation: () => Promise<void>): Promise<void> {
+    const laneA = this.nextWriteLane % 2 === 0;
+    this.nextWriteLane += 1;
+    const predecessor = laneA ? this.writeLaneA : this.writeLaneB;
+    let release: () => void = (): void => {};
+    const tail = new Promise<void>((resolve): void => {
+      release = resolve;
+    });
+    if (laneA) {
+      this.writeLaneA = tail;
+    } else {
+      this.writeLaneB = tail;
+    }
+    await predecessor;
+    try {
+      await operation();
+    } finally {
+      release();
+    }
+  }
+
+  private async performAtomicWrite(path: string, bytes: Uint8Array): Promise<void> {
+    this.nextTemporaryFile += 1;
+    const tmpPath = `${path}.tmp-${this.nextTemporaryFile}`;
+    try {
+      const file = await fileIo.open(
         tmpPath,
         fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC,
       );
       try {
-        fileIo.writeSync(file.fd, bytes.buffer, { offset: bytes.byteOffset, length: bytes.byteLength });
+        let writtenBytes = 0;
+        while (writtenBytes < bytes.byteLength) {
+          const chunk = bytes.slice(writtenBytes);
+          const written = await fileIo.write(file.fd, chunk.buffer);
+          if (!Number.isSafeInteger(written) || written <= 0 || written > chunk.byteLength) {
+            throw new Error('offline reading image destination stopped accepting bytes');
+          }
+          writtenBytes += written;
+        }
+        await fileIo.fsync(file.fd);
       } finally {
-        fileIo.closeSync(file);
+        await fileIo.close(file);
       }
-      fileIo.renameSync(tmpPath, path);
+      await fileIo.rename(tmpPath, path);
     } catch (error) {
       try {
-        fileIo.unlink(tmpPath);
+        await fileIo.unlink(tmpPath);
       } catch (_) {
       }
       if ((error as BusinessError).code === FILE_SYSTEM_NO_SPACE_ERROR) {

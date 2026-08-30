@@ -346,7 +346,7 @@ export struct ReaderControlPanel {
       this.controlGrabberDragY = 0;
       return;
     }
-    this.getUIContext().animateTo(motionAnimateParam('reader.panel.collapse'), (): void => {
+    this.getUIContext().animateTo(motionAnimateParam('reader.control.handle.snap'), (): void => {
       this.controlGrabberDragY = 0;
     });
   }

@@ -55,10 +55,14 @@ export class BookshelfFlowGateway {
     // SHF-02: the shelf projection defaults to recent-reading order. Core
     // already honors this pair for loadContinueReading; books never opened
     // carry no lastReadAt and sink to the tail like Legado's default sort.
-    const [shelf, continueReading] = await Promise.all([
-      this.bookshelf.loadBookshelf({ sortBy: 'lastReadAt', sortDirection: 'descending' }),
-      this.bookshelf.loadContinueReading(),
-    ]);
+    const shelf = await this.bookshelf.loadBookshelf({ sortBy: 'lastReadAt', sortDirection: 'descending' });
+    let continueReading: ShelfBook | undefined = undefined;
+    for (const book of shelf.books) {
+      if (book.currentChapterIndex !== undefined) {
+        continueReading = book;
+        break;
+      }
+    }
     return this.classify(shelf, continueReading);
   }
 
@@ -76,15 +80,10 @@ export class BookshelfFlowGateway {
   }
 
   async removeMany(targets: BookshelfRemovalTarget[]): Promise<BookshelfRemoveBatchOutcome> {
-    let removedCount = 0;
-    for (const target of targets) {
-      if (await this.bookshelf.removeBook(target.sourceId, target.bookId)) {
-        removedCount += 1;
-      }
-    }
+    const receipt = await this.bookshelf.removeBooks(targets);
     // Re-read once after the batch rather than after every item. Core remains
     // the source of truth and the UI receives one coherent final shelf.
-    return { removedCount, shelf: await this.load() };
+    return { removedCount: receipt.removedTargets.length, shelf: await this.load() };
   }
 
   private classify(shelf: BookshelfState, continueReading: ShelfBook | undefined): BookshelfDataState {

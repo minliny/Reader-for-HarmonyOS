@@ -85,6 +85,8 @@ export class CookieSessionStore {
   private readonly cookies: StoredCookie[] = [];
   private loadPromise: Promise<void> | null = null;
   private writeTail: Promise<void> = Promise.resolve();
+  private persistDirty: boolean = false;
+  private persistDrainActive: boolean = false;
   private creationSequence: number = Date.now();
   private persistedChunkCount: number = 0;
 
@@ -126,7 +128,10 @@ export class CookieSessionStore {
       observed.push(this.toWireCookie(parsed));
     }
     if (persistentChanged) {
-      await this.schedulePersist();
+      // The live in-memory jar is already current. Coalesce secure persistence
+      // behind the response instead of extending request latency with a full
+      // AssetStore rewrite.
+      void this.schedulePersist();
     }
     return observed;
   }
@@ -367,12 +372,27 @@ export class CookieSessionStore {
   }
 
   private schedulePersist(): Promise<void> {
-    const next = this.writeTail.then((): Promise<void> => this.persist()).catch((error: unknown): void => {
+    this.persistDirty = true;
+    if (this.persistDrainActive) {
+      return this.writeTail;
+    }
+    this.persistDrainActive = true;
+    const next = this.writeTail.then(async (): Promise<void> => {
+      while (this.persistDirty) {
+        this.persistDirty = false;
+        await this.persist();
+      }
+    }).catch((error: unknown): void => {
       // Persistence is best-effort: the in-memory jar keeps serving the live
       // session and the next mutation retries the secure write. Failing the
       // caller here would fail an already-successful HTTP response.
       hilog.warn(LOG_DOMAIN, LOG_TAG, 'cookie store persistence degraded, keeping in-memory jar: %{public}s',
         errorMessageOf(error));
+    }).finally((): void => {
+      this.persistDrainActive = false;
+      if (this.persistDirty) {
+        void this.schedulePersist();
+      }
     });
     this.writeTail = next;
     return next;

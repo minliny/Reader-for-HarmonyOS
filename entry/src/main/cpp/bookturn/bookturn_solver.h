@@ -149,6 +149,9 @@ public:
      *  same 65x129 grid the renderer draws; the x-range is a conservative
      *  upper bound of the covered area, so the swap can only fire late. */
     static float SheetCoverage(const BookTurnPose& pose);
+    /** Fast predicate for the swap gate. It first checks the exact boundary
+     *  vertices of that mesh and evaluates the full grid only near the band. */
+    static bool SheetCoverageExceeds(const BookTurnPose& pose, float ratio);
 
     /** Q(tau): canonical schedule evaluation (contract §6.2). */
     static void Schedule(float tau, float& xNorm, float& beta, float& radiusScale);

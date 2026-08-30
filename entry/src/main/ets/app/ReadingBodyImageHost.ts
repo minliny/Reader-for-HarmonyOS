@@ -47,6 +47,8 @@ export class ReadingBodyImageHost {
   static readonly instance: ReadingBodyImageHost = new ReadingBodyImageHost();
   private displayCacheDir: string | undefined = undefined;
   private readonly displayFileReferences: Map<string, number> = new Map<string, number>();
+  private readonly displayFileWrites: Map<string, Promise<void>> = new Map<string, Promise<void>>();
+  private displayCacheCleanupGeneration: number = 0;
   private nextTemporaryFile: number = 0;
 
   /** Configure and crash-clean the app-cache directory used for display files. */
@@ -137,13 +139,13 @@ export class ReadingBodyImageHost {
       return;
     }
     this.displayFileReferences.delete(path);
-    this.unlinkBestEffort(path);
+    void this.unlinkBestEffort(path);
   }
 
   /** Ability teardown fallback for resources whose UI owner was interrupted. */
   releaseAllDisplayFiles(): void {
     for (const path of this.displayFileReferences.keys()) {
-      this.unlinkBestEffort(path);
+      void this.unlinkBestEffort(path);
     }
     this.displayFileReferences.clear();
   }
@@ -274,10 +276,41 @@ export class ReadingBodyImageHost {
     }
     const extension = downsampled ? '.png' : this.imageExtensionFor(bytes);
     const finalPath = `${dir}/reading-body-${width}x${height}-${hash}${extension}`;
+    const existing = this.displayFileWrites.get(finalPath);
+    if (existing !== undefined) {
+      await existing;
+      this.displayFileReferences.set(finalPath, (this.displayFileReferences.get(finalPath) ?? 0) + 1);
+      return `file://${finalPath}`;
+    }
+    // Invalidate startup cleanup before the first temporary file can appear.
+    // Otherwise cleanup and first-use materialization can race in this cache.
+    this.displayCacheCleanupGeneration += 1;
+    const write = this.performDisplayFileWrite(dir, finalPath, bytes, pixelMap, hash, downsampled);
+    this.displayFileWrites.set(finalPath, write);
+    try {
+      await write;
+    } finally {
+      if (this.displayFileWrites.get(finalPath) === write) {
+        this.displayFileWrites.delete(finalPath);
+      }
+    }
+    this.displayFileReferences.set(finalPath, (this.displayFileReferences.get(finalPath) ?? 0) + 1);
+    return `file://${finalPath}`;
+  }
+
+  private async performDisplayFileWrite(
+    dir: string,
+    finalPath: string,
+    bytes: Uint8Array,
+    pixelMap: image.PixelMap,
+    hash: string,
+    downsampled: boolean,
+  ): Promise<void> {
+    await this.ensureDirectory(dir);
     this.nextTemporaryFile += 1;
     const tmpPath = `${dir}/.reading-body-tmp-${hash}-${this.nextTemporaryFile}`;
     try {
-      const file = fs.openSync(tmpPath, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE | fs.OpenMode.TRUNC);
+      const file = await fs.open(tmpPath, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE | fs.OpenMode.TRUNC);
       try {
         if (downsampled) {
           const packer = image.createImagePacker();
@@ -290,26 +323,30 @@ export class ReadingBodyImageHost {
             }
           }
         } else {
-          fs.writeSync(file.fd, bytes.buffer, {
-            offset: bytes.byteOffset,
-            length: bytes.byteLength,
-          });
+          let writtenBytes = 0;
+          while (writtenBytes < bytes.byteLength) {
+            const chunk = bytes.slice(writtenBytes);
+            const written = await fs.write(file.fd, chunk.buffer);
+            if (!Number.isSafeInteger(written) || written <= 0 || written > chunk.byteLength) {
+              throw new Error('reading body image display destination stopped accepting bytes');
+            }
+            writtenBytes += written;
+          }
         }
+        await fs.fsync(file.fd);
       } finally {
-        fs.closeSync(file);
+        await fs.close(file);
       }
-      const displayBytes = fs.statSync(tmpPath).size;
+      const displayBytes = (await fs.stat(tmpPath)).size;
       if (!Number.isSafeInteger(displayBytes) || displayBytes <= 0 ||
         displayBytes > MAX_READING_DISPLAY_FILE_BYTES) {
         throw new Error('reading body image display file exceeds the configured byte budget');
       }
-      fs.renameSync(tmpPath, finalPath);
+      await fs.rename(tmpPath, finalPath);
     } catch (error) {
-      this.unlinkBestEffort(tmpPath);
+      await this.unlinkBestEffort(tmpPath);
       throw error;
     }
-    this.displayFileReferences.set(finalPath, (this.displayFileReferences.get(finalPath) ?? 0) + 1);
-    return `file://${finalPath}`;
   }
 
   private boundedDecodeSize(width: number, height: number): image.Size {
@@ -330,24 +367,39 @@ export class ReadingBodyImageHost {
     if (cacheDir.trim().length === 0) {
       throw new Error('reading body image display cache is not configured');
     }
-    // Older builds materialized display files directly in cacheDir. Reclaim
-    // only their exact prefixes so unrelated app-cache files remain untouched.
-    for (const name of fs.listFileSync(cacheDir)) {
-      if (name.startsWith(LEGACY_DISPLAY_FILE_PREFIX) || name.startsWith(LEGACY_DISPLAY_TEMP_PREFIX)) {
-        this.unlinkBestEffort(`${cacheDir}/${name}`);
-      }
-    }
     const directory = `${cacheDir}/${DISPLAY_CACHE_DIRECTORY}`;
-    if (!fs.accessSync(directory)) {
-      fs.mkdirSync(directory, true);
-    }
-    // Runtime installation happens before a reading session exists. Files
-    // left by a process crash are therefore unreachable and can be reclaimed.
-    for (const name of fs.listFileSync(directory)) {
-      this.unlinkBestEffort(`${directory}/${name}`);
-    }
     this.displayFileReferences.clear();
     this.displayCacheDir = directory;
+    const generation = ++this.displayCacheCleanupGeneration;
+    void this.cleanupDisplayCache(cacheDir, directory, generation);
+  }
+
+  private async cleanupDisplayCache(cacheDir: string, directory: string, generation: number): Promise<void> {
+    if (generation !== this.displayCacheCleanupGeneration || this.displayCacheDir !== directory ||
+      this.displayFileReferences.size > 0) {
+      return;
+    }
+    try {
+      await this.ensureDirectory(directory);
+      // Older builds materialized display files directly in cacheDir. Reclaim
+      // only their exact prefixes so unrelated app-cache files remain untouched.
+      for (const name of await fs.listFile(cacheDir)) {
+        if (name.startsWith(LEGACY_DISPLAY_FILE_PREFIX) || name.startsWith(LEGACY_DISPLAY_TEMP_PREFIX)) {
+          await this.unlinkBestEffort(`${cacheDir}/${name}`);
+        }
+      }
+      // Runtime installation happens before a reading session exists. Files
+      // left by a process crash are therefore unreachable and can be reclaimed.
+      for (const name of await fs.listFile(directory)) {
+        const path = `${directory}/${name}`;
+        if (generation !== this.displayCacheCleanupGeneration || this.displayFileReferences.has(path)) {
+          continue;
+        }
+        await this.unlinkBestEffort(path);
+      }
+    } catch (_) {
+      // Cache cleanup is maintenance-only and must never block app startup.
+    }
   }
 
   private pathFromFileUri(fileUri: string): string | undefined {
@@ -362,12 +414,25 @@ export class ReadingBodyImageHost {
     return path;
   }
 
-  private unlinkBestEffort(path: string): void {
+  private async unlinkBestEffort(path: string): Promise<void> {
     try {
-      if (fs.accessSync(path)) {
-        fs.unlinkSync(path);
+      if (await fs.access(path)) {
+        await fs.unlink(path);
       }
     } catch (_) {
+    }
+  }
+
+  private async ensureDirectory(path: string): Promise<void> {
+    if (await fs.access(path)) {
+      return;
+    }
+    try {
+      await fs.mkdir(path, true);
+    } catch (error) {
+      if (!(await fs.access(path))) {
+        throw error;
+      }
     }
   }
 

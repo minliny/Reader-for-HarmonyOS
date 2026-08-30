@@ -383,8 +383,9 @@ assert.match(readingSurface, /readerAppearanceThemeStyle\(this\.appearance\.acti
 assert.match(readingSurface, /\.fontSize\(this\.appearance\.fontSize\)/);
 assert.match(readingSurface, /\.lineHeight\(readerAppearanceLineHeight\(this\.appearance\)\)/);
 assert.match(readingSurface, /\.letterSpacing\(this\.appearance\.letterSpacing\)/);
-assert.match(experience, /await this\.loadAppearanceSnapshot\(lifecycleToken\)/,
-  'layout-affecting appearance must settle before initial pagination');
+assert.match(experience,
+  /const layoutReady = Promise\.all\(\[[\s\S]*?this\.loadAppearanceSnapshot\(lifecycleToken\)[\s\S]*?\]\)[\s\S]*?this\.loadInitialChapter\(lifecycleToken, layoutReady\)[\s\S]*?await layoutReady;[\s\S]*?await this\.openChapter/,
+  'layout-affecting appearance must settle at the pagination barrier while TOC and progress load concurrently');
 assert.match(experience, /page === 'moduleAppearance' \|\| page === 'fullAppearance'[\s\S]*?loadChineseConversionMode/,
   'conversion controls may load only when the user enters Appearance');
 assert.match(experience, /reloadCurrentChapterAfterContentProjectionChange/);

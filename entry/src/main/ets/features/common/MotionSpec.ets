@@ -21,6 +21,10 @@ const ENTRIES: MotionSpecEntry[] = [
   { id: 'reader.control.show', durationMs: 420, curve: Curve.EaseOut },
   // Figma: 25 · Motion Reference MR1 · reader.control.hide (反向回到原位)
   { id: 'reader.control.hide', durationMs: 360, curve: Curve.EaseIn },
+  // Reader-UI handleSnap token: the grabber release settle is a snap, not a
+  // panel collapse. Figma MR1 authors no curve for it; EaseOut keeps the
+  // rollback/settle family consistent.
+  { id: 'reader.control.handle.snap', durationMs: 120, curve: Curve.EaseOut },
   // Figma: 25 · Motion Reference MR1 · reader.quick.promote (y+12→0)
   { id: 'reader.quick.promote', durationMs: 320, curve: Curve.EaseOut },
   // Figma: 25 · Motion Reference MR1 · reader.module.switch (交叉淡化)
@@ -34,6 +38,11 @@ const ENTRIES: MotionSpecEntry[] = [
   { id: 'reader.panel.expand', durationMs: 420, curve: Curve.EaseOut },
   // Figma: 25 · Motion Reference · Full -> Quick, Phone production contract.
   { id: 'reader.panel.collapse', durationMs: 360, curve: Curve.EaseIn },
+  // Reader-UI tokens (MOTION_SPEC.md §2.5): Figma Review C/D/E/F are
+  // review-only with no authored product timing, so this pair carries the
+  // token source, not the canvas. Fade only — no invented translation.
+  { id: 'reader.session.capsule.enter', durationMs: 160, curve: Curve.EaseOut },
+  { id: 'reader.session.capsule.exit', durationMs: 200, curve: Curve.EaseOut },
   // Reader runtime page slide approved for the native Host implementation.
   // The owner scales this base duration by the remaining live-width distance.
   { id: 'reader.page.slide.commit', durationMs: 240, curve: Curve.EaseOut },
@@ -47,6 +56,11 @@ const ENTRIES: MotionSpecEntry[] = [
   // Figma: Review · J2 `1506:9291`, production dropdown collapse.
   // The same fixed-top panel contracts back to its 36vp selected row.
   { id: 'dropdown.menu.collapse', durationMs: 120, curve: curves.cubicBezierCurve(0.5, 0, 1, 1) },
+  // Figma Review G/H `1497:2`/`1497:811`: product 320ms (the review plays it
+  // at x5). MOTION_SPEC.md's older 160ms token is superseded by the canvas,
+  // this registry's declared sole authority. Shared-element reflow must keep
+  // covers as entities and must not fade the whole page.
+  { id: 'bookshelf.view.switch', durationMs: 320, curve: Curve.EaseOut },
 ];
 
 export function motionSpecGet(id: string): MotionSpecEntry | undefined {
@@ -83,4 +97,24 @@ export function motionAnimateParam(id: string, onFinish?: () => void): AnimatePa
     return { duration: entry.durationMs, curve: entry.curve };
   }
   return { duration: entry.durationMs, curve: entry.curve, onFinish };
+}
+
+/**
+ * Page drags consume part of a motion before release. Scale the registered
+ * full-width duration by only the distance still left to travel, while keeping
+ * a one-third floor so a nearly complete gesture retains a visible settle.
+ */
+export function motionRemainingDistanceAnimateParam(
+  id: string,
+  remainingDistanceRatio: number,
+  onFinish?: () => void,
+): AnimateParam {
+  const entry = requireEntry(id);
+  const finiteRatio = Number.isFinite(remainingDistanceRatio) ? remainingDistanceRatio : 1;
+  const durationScale = Math.max(1 / 3, Math.min(1, finiteRatio));
+  const duration = Math.round(entry.durationMs * durationScale);
+  if (onFinish === undefined) {
+    return { duration, curve: entry.curve };
+  }
+  return { duration, curve: entry.curve, onFinish };
 }

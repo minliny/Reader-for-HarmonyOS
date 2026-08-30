@@ -131,6 +131,12 @@ export type LocalReadingResolvedLocation = {
   };
 };
 
+export type LocalReadingAtomicResolution = {
+  chapterTitle?: string;
+  anchor: LocalReadingAnchor;
+  layout: LocalReadingLayout;
+};
+
 const LOCAL_SOURCE_ID = 'local';
 
 /**
@@ -148,12 +154,13 @@ type LocalReadingRequestGuard = () => boolean;
  */
 export class LocalReadingFlowGateway {
   /**
-   * Progress is current-book, last-write-wins state in Core. Keep the narrow
-   * local-reader resolve/update pair ordered across component remounts in this
-   * app process, so Directory Back followed by a fresh reader cannot overlap
-   * an older instance's pending write.
+   * Progress is current-book, last-write-wins state in Core. The atomic Core
+   * update owns resolve plus persistence; this instance tail only preserves
+   * the ordering of writes within one active reading session.
    */
-  private static progressCommitTail: Promise<void> = Promise.resolve();
+  // Serialization belongs to this reading session. A slow commit from a
+  // closed book must never hold the next session behind a process-global tail.
+  private progressCommitTail: Promise<void> = Promise.resolve();
   private readonly runtimeOwner: ReadingGatewayRuntime;
 
   constructor(runtimeOwner: ReadingGatewayRuntime) {
@@ -212,6 +219,7 @@ export class LocalReadingFlowGateway {
       this.runtimeOwner.request('cache.book.status', {
         sourceId: LOCAL_SOURCE_ID,
         bookId,
+        includeGlobalStats: false,
       }, this.requestOptions(isCurrent)),
       this.loadBookmarkProjection(bookName, bookAuthor, entries, isCurrent),
     ]);
@@ -624,6 +632,7 @@ export class LocalReadingFlowGateway {
     bookId: string,
     update: LocalReadingProgressUpdate,
     isCurrent?: LocalReadingRequestGuard,
+    resolution?: LocalReadingAtomicResolution,
   ): Promise<LocalReadingProgress> {
     this.assertNonBlankString(bookId, 'bookId');
     this.assertChapterIndex(update.chapterIndex, 'chapterIndex');
@@ -631,6 +640,17 @@ export class LocalReadingFlowGateway {
     this.assertProgress(update.chapterProgress, 'chapterProgress');
     if (update.locationRevision !== undefined) {
       this.assertNonBlankString(update.locationRevision, 'locationRevision');
+    }
+    if (resolution !== undefined) {
+      this.assertChapterIndex(resolution.anchor.chapterIndex, 'resolution.anchor.chapterIndex');
+      this.assertNonNegativeInteger(resolution.anchor.chapterOffset, 'resolution.anchor.chapterOffset');
+      this.assertProgress(resolution.anchor.chapterProgress, 'resolution.anchor.chapterProgress');
+      this.assertLayout(resolution.layout);
+      if (resolution.anchor.chapterIndex !== update.chapterIndex ||
+        resolution.anchor.chapterOffset !== update.chapterOffset ||
+        resolution.anchor.chapterProgress !== update.chapterProgress) {
+        throw new Error('atomic progress resolution must match the progress update anchor');
+      }
     }
 
     const params: JsonObject = {
@@ -643,6 +663,16 @@ export class LocalReadingFlowGateway {
     if (update.locationRevision !== undefined) {
       params['locationRevision'] = update.locationRevision;
     }
+    if (resolution !== undefined) {
+      params['anchor'] = {
+        chapterOffset: resolution.anchor.chapterOffset,
+        chapterProgress: resolution.anchor.chapterProgress,
+      };
+      params['layout'] = this.locationLayoutParams(resolution.layout);
+      if (resolution.chapterTitle !== undefined && resolution.chapterTitle.length > 0) {
+        params['chapterTitle'] = resolution.chapterTitle;
+      }
+    }
     const result = await this.runtimeOwner.request(
       'reading.progress.update',
       params,
@@ -652,6 +682,9 @@ export class LocalReadingFlowGateway {
       throw new Error('reading.progress.update did not confirm storage');
     }
     const stored = this.decodeProgress(result.data, bookId, 'reading.progress.update');
+    if (resolution !== undefined && stored.locationRevision === undefined) {
+      throw new Error('reading.progress.update did not resolve a canonical location');
+    }
     // Core storage may retain a newer current row under its timestamp LWW
     // policy. `stored: true` confirms command handling, not that this caller's
     // anchor won; never let the page treat a different retained chapter/offset
@@ -664,9 +697,9 @@ export class LocalReadingFlowGateway {
   }
 
   async runProgressCommitSerial(operation: () => Promise<void>): Promise<void> {
-    const predecessor = LocalReadingFlowGateway.progressCommitTail;
+    const predecessor = this.progressCommitTail;
     let release: () => void = (): void => {};
-    LocalReadingFlowGateway.progressCommitTail = new Promise<void>((resolve: () => void): void => {
+    this.progressCommitTail = new Promise<void>((resolve: () => void): void => {
       release = resolve;
     });
     try {

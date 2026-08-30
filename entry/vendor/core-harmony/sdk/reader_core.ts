@@ -209,12 +209,21 @@ export class CapabilityRouter {
   }
 }
 
+type QueuedReaderCoreEvent = {
+  event: ReaderCoreEvent;
+  consumed: boolean;
+};
+
 export class ReaderCoreRuntime {
   static readonly protocolVersion = 1;
 
   private readonly native: NativeReaderCoreModule;
   private readonly runtime: NativeRuntimeHandle;
-  private readonly pendingEvents: ReaderCoreEvent[] = [];
+  private readonly pendingEvents: QueuedReaderCoreEvent[] = [];
+  private readonly pendingEventsByRequest = new Map<number, QueuedReaderCoreEvent[]>();
+  private pendingEventCountValue = 0;
+  /** One shared native-event poll lane for all concurrent request waiters. */
+  private pollTail: Promise<void> = Promise.resolve();
   /** Requests whose waiter has already returned after timeout/cancellation. */
   private readonly abandonedRequestIds = new Set<number>();
   private nextRequestId = 1;
@@ -241,7 +250,7 @@ export class ReaderCoreRuntime {
 
   get pendingEventCount(): number {
     this.discardAbandonedPendingEvents();
-    return this.pendingEvents.length + this.native.pendingEventCount(this.runtime);
+    return this.pendingEventCountValue + this.native.pendingEventCount(this.runtime);
   }
 
   close(): void {
@@ -253,6 +262,8 @@ export class ReaderCoreRuntime {
     }
     this.native.releaseRuntime(this.runtime);
     this.pendingEvents.length = 0;
+    this.pendingEventsByRequest.clear();
+    this.pendingEventCountValue = 0;
     this.activeHostRequests.clear();
     this.abandonedRequestIds.clear();
     this.closed = true;
@@ -288,7 +299,7 @@ export class ReaderCoreRuntime {
     this.ensureOpen();
     assertNonNegativeSafeInteger(timeoutMs, "timeoutMs");
     this.discardAbandonedPendingEvents();
-    const queued = this.pendingEvents.shift();
+    const queued = this.takeNextPendingEvent();
     if (queued !== undefined) {
       return queued;
     }
@@ -355,17 +366,15 @@ export class ReaderCoreRuntime {
         this.cancelPendingRequest(requestId);
         throw new Error(`Reader-Core request cancelled by caller: ${requestId}`);
       }
-      const event =
-        this.takePendingForRequest(requestId) ??
-        this.readNativeEvent(0);
+      const event = this.takePendingForRequest(requestId);
       if (event === null) {
-        await delay(Math.min(pollMs, Math.max(0, deadline - Date.now())));
+        await this.pollNativeQueue(Math.min(pollMs, Math.max(0, deadline - Date.now())));
         continue;
       }
 
       if (event.type === "host.request") {
         if (event.requestId !== requestId) {
-          this.pendingEvents.push(event);
+          this.enqueuePendingEvent(event);
           await delay(0);
           continue;
         }
@@ -408,7 +417,7 @@ export class ReaderCoreRuntime {
         return event;
       }
 
-      this.pendingEvents.push(event);
+      this.enqueuePendingEvent(event);
       await delay(0);
     }
 
@@ -514,33 +523,107 @@ export class ReaderCoreRuntime {
     return this.discardAbandonedEvent(event) ? null : event;
   }
 
+  /** Serialize only the native non-blocking read. The retry delay deliberately
+   * stays outside this lane so one empty waiter cannot hold every concurrent
+   * request behind its timer. */
+  private async pollNativeQueue(waitMs: number): Promise<void> {
+    if (await this.pollNativeOnce()) {
+      return;
+    }
+    if (waitMs > 0) {
+      await delay(waitMs);
+    }
+    await this.pollNativeOnce();
+  }
+
+  private async pollNativeOnce(): Promise<boolean> {
+    const predecessor = this.pollTail;
+    let release: (() => void) | undefined;
+    this.pollTail = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await predecessor;
+    try {
+      const event = this.readNativeEvent(0);
+      if (event !== null) {
+        this.enqueuePendingEvent(event);
+        return true;
+      }
+      return false;
+    } finally {
+      release?.();
+    }
+  }
+
   private takePendingForRequest(requestId: number): ReaderCoreEvent | null {
     this.discardAbandonedPendingEvents();
-    const index = this.pendingEvents.findIndex((event) => event.requestId === requestId);
-    if (index < 0) {
+    const requestQueue = this.pendingEventsByRequest.get(requestId);
+    if (requestQueue === undefined) {
       return null;
     }
-
-    const event = this.pendingEvents[index] as ReaderCoreEvent;
-    this.pendingEvents.splice(index, 1);
-    return event;
+    while (requestQueue.length > 0) {
+      const queued = requestQueue.shift() as QueuedReaderCoreEvent;
+      if (queued.consumed) {
+        continue;
+      }
+      this.consumePendingEvent(queued);
+      if (requestQueue.length === 0) {
+        this.pendingEventsByRequest.delete(requestId);
+      }
+      return queued.event;
+    }
+    this.pendingEventsByRequest.delete(requestId);
+    return null;
   }
 
   private discardAbandonedPendingEvents(): void {
-    const terminalRequestIds: number[] = [];
-    for (let index = this.pendingEvents.length - 1; index >= 0; index -= 1) {
-      const event = this.pendingEvents[index] as ReaderCoreEvent;
-      if (!this.abandonedRequestIds.has(event.requestId)) {
+    for (const requestId of Array.from(this.abandonedRequestIds)) {
+      const requestQueue = this.pendingEventsByRequest.get(requestId);
+      if (requestQueue === undefined) {
         continue;
       }
-      this.pendingEvents.splice(index, 1);
-      if (this.isTerminalEvent(event)) {
-        terminalRequestIds.push(event.requestId);
+      let terminalSeen = false;
+      for (const queued of requestQueue) {
+        if (queued.consumed) {
+          continue;
+        }
+        this.consumePendingEvent(queued);
+        terminalSeen = terminalSeen || this.isTerminalEvent(queued.event);
+      }
+      this.pendingEventsByRequest.delete(requestId);
+      if (terminalSeen) {
+        this.abandonedRequestIds.delete(requestId);
       }
     }
-    for (const requestId of terminalRequestIds) {
-      this.abandonedRequestIds.delete(requestId);
+  }
+
+  private enqueuePendingEvent(event: ReaderCoreEvent): void {
+    const queued: QueuedReaderCoreEvent = { event, consumed: false };
+    this.pendingEvents.push(queued);
+    const requestQueue = this.pendingEventsByRequest.get(event.requestId) ?? [];
+    requestQueue.push(queued);
+    this.pendingEventsByRequest.set(event.requestId, requestQueue);
+    this.pendingEventCountValue += 1;
+  }
+
+  private takeNextPendingEvent(): ReaderCoreEvent | undefined {
+    while (this.pendingEvents.length > 0) {
+      const queued = this.pendingEvents.shift() as QueuedReaderCoreEvent;
+      if (queued.consumed) {
+        continue;
+      }
+      this.consumePendingEvent(queued);
+      return queued.event;
     }
+    return undefined;
+  }
+
+  private consumePendingEvent(queued: QueuedReaderCoreEvent): void {
+    if (queued.consumed) {
+      return;
+    }
+    queued.consumed = true;
+    this.pendingEventCountValue = Math.max(0, this.pendingEventCountValue - 1);
   }
 
   private discardAbandonedEvent(event: ReaderCoreEvent): boolean {

@@ -437,6 +437,49 @@ float BookTurnSolver::SheetCoverage(const BookTurnPose& pose)
     return Clamp((high - low) / width, 0.0F, 1.0F);
 }
 
+bool BookTurnSolver::SheetCoverageExceeds(const BookTurnPose& pose, float ratio)
+{
+    const float width = std::max(1.0F, pose.width);
+    const float height = std::max(1.0F, pose.height);
+    const float clampedRatio = Clamp(ratio, 0.0F, 1.0F);
+    constexpr int kColumns = 64;
+    constexpr int kRows = 128;
+    float minX = 0.0F;
+    float maxX = 0.0F;
+    bool sampled = false;
+    const auto sample = [&](float u, float v) {
+        const float x = MapMaterial(pose, {u, v}).x;
+        if (!sampled) {
+            minX = x;
+            maxX = x;
+            sampled = true;
+        } else {
+            minX = std::min(minX, x);
+            maxX = std::max(maxX, x);
+        }
+    };
+    // These are vertices of the exact 65x129 renderer mesh, not a geometric
+    // approximation. Their span is therefore a safe lower bound: when the
+    // boundary is already wider than the swap band, no interior probe can
+    // make the complete mesh narrower.
+    for (int column = 0; column <= kColumns; ++column) {
+        const float u = width * static_cast<float>(column) / static_cast<float>(kColumns);
+        sample(u, 0.0F);
+        sample(u, height);
+    }
+    for (int row = 1; row < kRows; ++row) {
+        const float v = height * static_cast<float>(row) / static_cast<float>(kRows);
+        sample(0.0F, v);
+        sample(width, v);
+    }
+    const float boundaryLow = Clamp(minX, 0.0F, width);
+    const float boundaryHigh = Clamp(maxX, 0.0F, width);
+    if ((boundaryHigh - boundaryLow) / width > clampedRatio) {
+        return true;
+    }
+    return SheetCoverage(pose) > clampedRatio;
+}
+
 void BookTurnSolver::Schedule(float tau, float& xNorm, float& beta, float& radiusScale)
 {
     xNorm = 1.0F;

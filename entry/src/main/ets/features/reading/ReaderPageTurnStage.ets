@@ -16,12 +16,22 @@ import {
   type ReadingSurfacePageFragment,
 } from './ReadingSurface';
 import { ReaderPageChromeSnapshot } from './ReaderPageChromeModel';
+import { readerAppearanceChromeTone } from './ReaderAppearanceRenderStyle';
+
+// A cover page casts contact occlusion onto the newly revealed paper directly
+// to the right of its trailing edge. These semantic lighting values are kept
+// together so cover modes do not invent independent direction-specific shade.
+const COVER_OCCLUSION_RADIUS_VP = 16;
+const COVER_OCCLUSION_OFFSET_X_VP = 6;
+const COVER_OCCLUSION_DAY_MAX_ALPHA = 56;
+const COVER_OCCLUSION_NIGHT_MAX_ALPHA = 34;
 
 /**
  * Immutable-by-convention input for one already measured physical page.
  *
  * Pagination and progress remain owned by LocalReadingExperience. The stage
- * only places these presentation models next to one another for a slide.
+ * only places these presentation models next to one another for the selected
+ * flat-page transition.
  */
 export class ReaderPageTurnRenderPage {
   /** Stable mounted ArkUI subtree ID used only by ComponentSnapshot. */
@@ -90,6 +100,7 @@ struct ReaderPageTurnSurface {
   @Prop appearance: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   @Prop translateX: number = 0;
   @Prop shadowStrength: number = 0;
+  @Prop compositorIsolation: boolean = false;
   @Prop ttsHighlightStart: number | undefined = undefined;
   @Prop ttsHighlightEnd: number | undefined = undefined;
   @Prop autoPageHighlightStart: number | undefined = undefined;
@@ -134,24 +145,27 @@ struct ReaderPageTurnSurface {
     .width('100%')
     .height('100%')
     .id(this.pageIdentity)
+    .renderGroup(this.compositorIsolation)
     .translate({ x: this.translateX })
     .shadow({
-      radius: 18 * this.shadowStrength,
+      radius: COVER_OCCLUSION_RADIUS_VP * this.shadowStrength,
       color: this.shadowColor(),
-      offsetX: -8 * this.shadowStrength,
+      offsetX: COVER_OCCLUSION_OFFSET_X_VP * this.shadowStrength,
       offsetY: 0,
     });
   }
 
   private shadowColor(): string {
-    const alpha = Math.round(Math.max(0, Math.min(1, this.shadowStrength)) * 64);
+    const maxAlpha = readerAppearanceChromeTone(this.appearance.activeTheme) === 'light' ?
+      COVER_OCCLUSION_NIGHT_MAX_ALPHA : COVER_OCCLUSION_DAY_MAX_ALPHA;
+    const alpha = Math.round(Math.max(0, Math.min(1, this.shadowStrength)) * maxAlpha);
     return `#${alpha.toString(16).padStart(2, '0')}000000`;
   }
 
 }
 
 /**
- * Presentation-only two-page stage for the admitted horizontal slide mode.
+ * Presentation-only stage for all admitted page-transition modes.
  *
  * The owner supplies both gesture offset and live viewport width. This
  * component deliberately has no gesture, animation, pagination, Core command,
@@ -247,7 +261,8 @@ export struct ReaderPageTurnStage {
           appearance: this.appearance,
           longPressSelectText: this.longPressSelectText,
           translateX: this.previousPageX(),
-          shadowStrength: this.turnProgress(),
+          shadowStrength: this.coverOcclusionStrength(),
+          compositorIsolation: true,
         });
       } else if (this.hasLiveTurnWidth() && this.pageTurnStyle === 'cover' &&
         this.turnDirection === 'next' && this.nextPage !== undefined) {
@@ -286,7 +301,8 @@ export struct ReaderPageTurnStage {
           appearance: this.appearance,
           longPressSelectText: this.longPressSelectText,
           translateX: this.offsetX,
-          shadowStrength: this.turnProgress(),
+          shadowStrength: this.coverOcclusionStrength(),
+          compositorIsolation: true,
           ttsHighlightStart: this.ttsHighlightStart,
           ttsHighlightEnd: this.ttsHighlightEnd,
           autoPageHighlightStart: this.autoPageHighlightStart,
@@ -314,6 +330,7 @@ export struct ReaderPageTurnStage {
           appearance: this.appearance,
           longPressSelectText: this.longPressSelectText,
           translateX: this.previousPageX(),
+          compositorIsolation: true,
         });
         ReaderPageTurnSurface({
           pageIdentity: this.currentPage.identity,
@@ -332,6 +349,7 @@ export struct ReaderPageTurnStage {
           appearance: this.appearance,
           longPressSelectText: this.longPressSelectText,
           translateX: this.offsetX,
+          compositorIsolation: true,
           ttsHighlightStart: this.ttsHighlightStart,
           ttsHighlightEnd: this.ttsHighlightEnd,
           autoPageHighlightStart: this.autoPageHighlightStart,
@@ -356,6 +374,7 @@ export struct ReaderPageTurnStage {
           appearance: this.appearance,
           longPressSelectText: this.longPressSelectText,
           translateX: this.nextPageX(),
+          compositorIsolation: true,
         });
         ReaderPageTurnSurface({
           pageIdentity: this.currentPage.identity,
@@ -374,6 +393,7 @@ export struct ReaderPageTurnStage {
           appearance: this.appearance,
           longPressSelectText: this.longPressSelectText,
           translateX: this.offsetX,
+          compositorIsolation: true,
           ttsHighlightStart: this.ttsHighlightStart,
           ttsHighlightEnd: this.ttsHighlightEnd,
           autoPageHighlightStart: this.autoPageHighlightStart,
@@ -425,6 +445,13 @@ export struct ReaderPageTurnStage {
 
   private turnProgress(): number {
     return Math.max(0, Math.min(1, Math.abs(this.offsetX) / this.viewportWidth));
+  }
+
+  private coverOcclusionStrength(): number {
+    const progress = this.turnProgress();
+    // The moving edge is clipped at both endpoints. Fade the occlusion there
+    // and peak around mid-turn, where the revealed seam is most exposed.
+    return 4 * progress * (1 - progress);
   }
 
 }

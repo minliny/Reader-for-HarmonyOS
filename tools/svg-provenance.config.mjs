@@ -13,6 +13,9 @@ function icon(file, component, color, semanticRole, options = {}) {
     sourceFile: `Icon__${component.replaceAll('/', '__')}.svg`,
     color,
     rotation: options.rotation ?? 0,
+    // HarmonyOS svg parsing does not inherit the root fill="none", so closed
+    // stroke paths render as filled silhouettes once Image.fillColor applies.
+    fillNone: options.fillNone ?? false,
   };
 }
 
@@ -47,19 +50,22 @@ const icons = [
   icon('bookshelf_compass_active', 'Discover', '#FFFAF4', 'bookshelf discover active navigation'),
   icon('bookshelf_compass_outline', 'Discover', '#756F69', 'bookshelf discover inactive navigation'),
   icon('bookshelf_empty_library', 'Bookshelf', '#1F1B17', 'empty bookshelf library'),
-  icon('bookshelf_filter', 'Filter', '#756F69', 'bookshelf filter'),
-  icon('bookshelf_grid', 'Grid', '#2D4A3E', 'bookshelf grid mode active'),
+  icon('bookshelf_filter', 'Filter', '#756F69', 'bookshelf filter', { fillNone: true }),
+  icon('bookshelf_filter_active', 'Filter', '#2D4A3E', 'bookshelf filter active', { fillNone: true }),
+  icon('bookshelf_grid', 'Grid', '#2D4A3E', 'bookshelf grid mode active', { fillNone: true }),
+  icon('bookshelf_grid_outline', 'Grid', '#756F69', 'bookshelf grid mode inactive', { fillNone: true }),
   icon('bookshelf_library', 'Bookshelf', '#FFFAF4', 'bookshelf library active'),
   icon('bookshelf_library_active', 'Bookshelf', '#FFFAF4', 'bookshelf library active navigation'),
   icon('bookshelf_library_outline', 'Bookshelf', '#756F69', 'bookshelf library inactive navigation'),
-  icon('bookshelf_list', 'List', '#756F69', 'bookshelf list mode'),
+  icon('bookshelf_list', 'List', '#756F69', 'bookshelf list mode', { fillNone: true }),
+  icon('bookshelf_list_active', 'List', '#2D4A3E', 'bookshelf list mode active', { fillNone: true }),
   icon('bookshelf_more', 'More', '#1F1B17', 'bookshelf more'),
   icon('bookshelf_multiselect_trash', 'Trash', '#D7473E', 'bookshelf multiselect delete'),
   icon('bookshelf_rss', 'Rss', '#756F69', 'bookshelf rss inactive'),
   icon('bookshelf_rss_active', 'Rss', '#FFFAF4', 'bookshelf rss active navigation'),
   icon('bookshelf_rss_outline', 'Rss', '#756F69', 'bookshelf rss inactive navigation'),
-  icon('bookshelf_search', 'Search', '#1F1B17', 'bookshelf search'),
-  icon('bookshelf_settings', 'Settings', '#756F69', 'bookshelf settings inactive'),
+  icon('bookshelf_search', 'Search', '#1F1B17', 'bookshelf search', { fillNone: true }),
+  icon('bookshelf_settings', 'Settings', '#756F69', 'bookshelf settings inactive', { fillNone: true }),
   icon('bookshelf_settings_active', 'Settings', '#FFFAF4', 'bookshelf settings active navigation'),
   icon('bookshelf_settings_outline', 'Settings', '#756F69', 'bookshelf settings inactive navigation'),
 

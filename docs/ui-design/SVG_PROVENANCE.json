@@ -145,11 +145,31 @@
       "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Filter.svg",
       "sourceSha256": "f2f6af86ab878e9e759e36d4b2bb96a18a81db4ef314a445094a8a40fba2fa3c",
       "transform": {
-        "pathMutation": "none",
+        "pathMutation": "fill-none-on-stroke-paths",
         "recolor": "#756F69",
         "rotationDegrees": 0
       },
-      "sha256": "464e9109d43eec743790f9c463fb73cccdc286bfc98aaf17b14cdeac802fd474"
+      "sha256": "7a6aa2f19feea44e685b21a209894622018e9e19045d75e9689af4d939315362"
+    },
+    {
+      "file": "bookshelf_filter_active.svg",
+      "semanticRole": "bookshelf filter active",
+      "originType": "figma-component-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:220",
+      "componentName": "Icon/Filter",
+      "upstreamName": "Filter",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Filter.svg",
+      "sourceSha256": "f2f6af86ab878e9e759e36d4b2bb96a18a81db4ef314a445094a8a40fba2fa3c",
+      "transform": {
+        "pathMutation": "fill-none-on-stroke-paths",
+        "recolor": "#2D4A3E",
+        "rotationDegrees": 0
+      },
+      "sha256": "282874c97032b2c4f844df29077945c179341974aba5c6454a3776d662ef8581"
     },
     {
       "file": "bookshelf_grid.svg",
@@ -165,11 +185,31 @@
       "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Grid.svg",
       "sourceSha256": "3e94dcb069fe6943e297e8fc3f949feea4c6c5376a13239f60b24607025ccb00",
       "transform": {
-        "pathMutation": "none",
+        "pathMutation": "fill-none-on-stroke-paths",
         "recolor": "#2D4A3E",
         "rotationDegrees": 0
       },
-      "sha256": "5ebaf5b015d8d479037591200bac23e6cd89f90f923474a3959f8863b16d56bc"
+      "sha256": "610f694acb03c1fc7633aff02ef51351474d29d71f66fec46e98ffcbd25165c1"
+    },
+    {
+      "file": "bookshelf_grid_outline.svg",
+      "semanticRole": "bookshelf grid mode inactive",
+      "originType": "figma-component-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:262",
+      "componentName": "Icon/Grid",
+      "upstreamName": "Grid",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Grid.svg",
+      "sourceSha256": "3e94dcb069fe6943e297e8fc3f949feea4c6c5376a13239f60b24607025ccb00",
+      "transform": {
+        "pathMutation": "fill-none-on-stroke-paths",
+        "recolor": "#756F69",
+        "rotationDegrees": 0
+      },
+      "sha256": "cacb654b88613941e104bf28758237b47e5c25f15aa8b84514998d5449441dcc"
     },
     {
       "file": "bookshelf_library.svg",
@@ -245,11 +285,31 @@
       "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__List.svg",
       "sourceSha256": "b79f8493de8051ae9cacd8f1f41a8cbad64385bb6f37c284bb422b42594abce9",
       "transform": {
-        "pathMutation": "none",
+        "pathMutation": "fill-none-on-stroke-paths",
         "recolor": "#756F69",
         "rotationDegrees": 0
       },
-      "sha256": "fad1a0f588a8b361df4970b772275f99b699aac4bc4be7ce892cca5cea01b184"
+      "sha256": "f02bf267147e6ccc706c8795e6384b43bbb47a24504c6d079cbe7c97df4b7658"
+    },
+    {
+      "file": "bookshelf_list_active.svg",
+      "semanticRole": "bookshelf list mode active",
+      "originType": "figma-component-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:303",
+      "componentName": "Icon/List",
+      "upstreamName": "List",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__List.svg",
+      "sourceSha256": "b79f8493de8051ae9cacd8f1f41a8cbad64385bb6f37c284bb422b42594abce9",
+      "transform": {
+        "pathMutation": "fill-none-on-stroke-paths",
+        "recolor": "#2D4A3E",
+        "rotationDegrees": 0
+      },
+      "sha256": "39ef610830c5ffe72f2682a40899841c4f0c7ff7ea7ddb4fd263bc97bec5b8ac"
     },
     {
       "file": "bookshelf_more.svg",
@@ -365,11 +425,11 @@
       "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Search.svg",
       "sourceSha256": "63468f05b1c0575504cc5ec7359d6c1b439de055d279501974ac4eefa7ff2b4e",
       "transform": {
-        "pathMutation": "none",
+        "pathMutation": "fill-none-on-stroke-paths",
         "recolor": "#1F1B17",
         "rotationDegrees": 0
       },
-      "sha256": "63468f05b1c0575504cc5ec7359d6c1b439de055d279501974ac4eefa7ff2b4e"
+      "sha256": "4f01cd169355eb9e5729efc05f0024671e1a9446e30f330fc9bd9dc6b5be7e72"
     },
     {
       "file": "bookshelf_settings.svg",
@@ -385,11 +445,11 @@
       "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Settings.svg",
       "sourceSha256": "991b85162a8e75bda30a062835181fe2c01ba5259744b3c97465796d5148fc90",
       "transform": {
-        "pathMutation": "none",
+        "pathMutation": "fill-none-on-stroke-paths",
         "recolor": "#756F69",
         "rotationDegrees": 0
       },
-      "sha256": "d9e93c48b3e57ed16733197f3d50b311a720e53d864993730f557a91806abbd5"
+      "sha256": "27f938028ce41beac8a6ba5c2f87a3178efba2f6f36a96f44a08a079ef553b38"
     },
     {
       "file": "bookshelf_settings_active.svg",

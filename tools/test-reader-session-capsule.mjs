@@ -65,6 +65,9 @@ assert.match(experience,
   /if \(this\.shouldShowSessionCapsule\(\)\) \{[\s\S]*?ReaderSessionCapsule\(\{[\s\S]*?onToggle: \(\): void => this\.toggleSessionCapsule\(\)/,
   'the reader must mount one state-owned capsule with a real pause/resume callback');
 assert.match(experience,
+  /\.transition\(this\.reduceMotion \? TransitionEffect\.IDENTITY :[\s\S]*?reader\.session\.capsule\.enter[\s\S]*?reader\.session\.capsule\.exit/,
+  'the capsule must fade via the Reader-UI token pair (enter 160ms / exit 200ms); countdown updates mutate the mounted node and never replay this');
+assert.match(experience,
   /return deriveReaderSessionCapsule\(\{/,
   'one pure projection must own visibility, type, state and countdown');
 assert.match(experience, /interactionEnabled: !this\.pageTurnInputOwned/,

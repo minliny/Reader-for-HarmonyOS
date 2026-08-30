@@ -4,7 +4,6 @@ import {
   type LocalReadingContentMetrics,
   type LocalReadingLayout,
   type LocalReadingProgress,
-  type LocalReadingProgressUpdate,
   type LocalReadingProgressState,
   type LocalReadingToc,
   type LocalReadingTocEntry,
@@ -153,7 +152,7 @@ import {
   readingParagraphBoundaryMode,
 } from './ReadingParagraphProjection';
 import { registerReaderFonts } from '../common/ReaderFonts';
-import { motionAnimateParam } from '../common/MotionSpec';
+import { motionAnimateParam, motionRemainingDistanceAnimateParam } from '../common/MotionSpec';
 import { ComponentContent, FrameCallback, window } from '@kit.ArkUI';
 import { image } from '@kit.ImageKit';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
@@ -558,20 +557,6 @@ class CoreReadingAnchor implements LocalReadingAnchor {
   }
 }
 
-class CoreReadingProgressUpdate implements LocalReadingProgressUpdate {
-  chapterIndex: number;
-  chapterOffset: number;
-  chapterProgress: number;
-  locationRevision: string | undefined;
-
-  constructor(chapterIndex: number, chapterOffset: number, chapterProgress: number, locationRevision: string) {
-    this.chapterIndex = chapterIndex;
-    this.chapterOffset = chapterOffset;
-    this.chapterProgress = chapterProgress;
-    this.locationRevision = locationRevision;
-  }
-}
-
 class InitialReadingToc implements LocalReadingToc {
   bookId: string;
   entries: LocalReadingTocEntry[];
@@ -666,7 +651,9 @@ const EMPTY_CONTROL_DIRECTORY_ENTRIES: LocalReadingTocEntry[] = [];
 /** Engineering ceiling only; it has no visual meaning or design authority. */
 const MAX_MEASUREMENT_BATCH_PARAGRAPHS = 8;
 const MAX_MEASUREMENT_BATCH_UTF16 = 12 * 1024;
-const CONTINUOUS_FRAGMENT_MAX_UTF16 = 8 * 1024;
+// Keep one lazy row close to one phone viewport. This bounds the error of the
+// scalar-to-height interpolation used to restore an intra-row reading anchor.
+const CONTINUOUS_FRAGMENT_MAX_UTF16 = 512;
 /** No source-approved loading state exists, so a missing layout must fail closed. */
 const MEASUREMENT_LAYOUT_TIMEOUT_MS = 6000;
 /**
@@ -789,7 +776,9 @@ export struct ReadingExperience {
   private continuousRenderChapterIdentity: string = 'continuous:empty';
   private continuousRenderChapterTitle: string = '';
   @State private continuousRenderRevision: number = 0;
+  @State private continuousChangedFragmentIndex: number = -1;
   @State private continuousInitialFragmentIndex: number = 0;
+  @State private continuousInitialFragmentProgress: number = 0;
   // Visible indices are progress cursors, not render inputs. Keeping them
   // non-reactive prevents every List settle callback from rebuilding the
   // entire reading stage and flashing the already rendered rows.
@@ -889,7 +878,11 @@ export struct ReadingExperience {
   private continuousCommitInFlight: boolean = false;
   private continuousCommitPending: boolean = false;
   private continuousUserInteractionActive: boolean = false;
-  private readonly continuousImageResolutions: number[] = [];
+  private readonly continuousImageResolutions: Set<number> = new Set<number>();
+  private readonly chapterImageByStartScalar: Map<number, ReadingSessionImage> =
+    new Map<number, ReadingSessionImage>();
+  private readonly chapterImagePositionByKey: Map<string, number> = new Map<string, number>();
+  private readonly continuousFragmentIndexByStartScalar: Map<number, number> = new Map<number, number>();
   private preparedPreviousPage: PreparedReaderPageTurn | undefined = undefined;
   private preparedNextPage: PreparedReaderPageTurn | undefined = undefined;
   private pageTurnPreparation: ReaderPageTurnPreparation | undefined = undefined;
@@ -912,6 +905,10 @@ export struct ReadingExperience {
   @State private bookTurnRuntimeFailed: boolean = false;
   private bookTurnAwaitingSlotCommit: boolean = false;
   private pageTurnCommitStarted: boolean = false;
+  private pageTurnPerfStartedAtMs: number = 0;
+  private pageTurnPerfStyle: string = '';
+  private pageTurnPerfPath: string = '';
+  private pageTurnPerfDirection: string = '';
   private pageTurnSettlementGeneration: number = 0;
   /** Immutable geometry shared by animation, freshness, and the Core commit join. */
   private pageTurnSettlementLayout: ReaderReadingLayoutSnapshot | undefined = undefined;
@@ -1075,7 +1072,9 @@ export struct ReadingExperience {
     this.continuousCommitInFlight = false;
     this.continuousCommitPending = false;
     this.continuousUserInteractionActive = false;
-    this.continuousImageResolutions.length = 0;
+    this.continuousImageResolutions.clear();
+    this.chapterImageByStartScalar.clear();
+    this.chapterImagePositionByKey.clear();
     this.measurementCompleting = false;
     this.remeasurePending = false;
     this.cancelPendingAutoPageStart();
@@ -1207,8 +1206,10 @@ export struct ReadingExperience {
           chapterIdentity: this.continuousRenderChapterIdentity,
           chapterTitle: this.continuousRenderChapterTitle,
           contentRevision: this.continuousRenderRevision,
+          changedFragmentIndex: this.continuousChangedFragmentIndex,
           fragmentsProvider: (): ReadingSurfacePageFragment[] => this.continuousFragments,
           initialFragmentIndex: this.continuousInitialFragmentIndex,
+          initialFragmentProgress: this.continuousInitialFragmentProgress,
           layout: this.readingLayout(),
           appearance: this.appearanceSnapshot,
           ttsHighlightStart: this.ttsFollowHighlight ? this.ttsState.charStart : undefined,
@@ -1217,8 +1218,8 @@ export struct ReadingExperience {
           autoPageHighlightEnd: this.autoPageHighlightEnd(),
           longPressSelectText: this.readerSettingsSnapshot.longPressSelectText,
           interactionEnabled: this.isReaderPageInteractionEnabled(),
-          onVisibleRangeChanged: (start: number, end: number): void =>
-            this.onContinuousVisibleRangeChanged(start, end),
+          onVisibleRangeChanged: (start: number, end: number, startProgress: number): void =>
+            this.onContinuousVisibleRangeChanged(start, end, startProgress),
           onScrollStopped: (): void => this.onContinuousScrollStopped(),
           onReachStart: (): void => this.onContinuousReachStart(),
           onReachEnd: (): void => this.onContinuousReachEnd(),
@@ -1445,7 +1446,15 @@ export struct ReadingExperience {
             x: this.sessionCapsuleLayout().sessionX,
             y: this.sessionCapsuleLayout().sessionY,
           })
-          .zIndex(8);
+          .zIndex(8)
+          // Reader-UI tokens: capsuleEnter 160ms / sessionReturn 200ms. Fade
+          // only — countdown and state updates mutate the mounted node and
+          // must never replay this transition.
+          .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
+          TransitionEffect.asymmetric(
+            TransitionEffect.OPACITY.animation(motionAnimateParam('reader.session.capsule.enter')),
+            TransitionEffect.OPACITY.animation(motionAnimateParam('reader.session.capsule.exit')),
+          ));
       }
     }
     .width('100%')
@@ -1640,6 +1649,11 @@ export struct ReadingExperience {
     page: ReaderPageTurnRenderPage,
     generation: number,
   ): Promise<boolean> {
+    if (generation !== this.bookTurnTextureCaptureGeneration || !this.mounted ||
+      !this.usesBookTurnSimulation() || this.bookTurnRuntimeFailed || this.phase !== 'ready' ||
+      this.pageTurnInputPhase() !== 'idle') {
+      return false;
+    }
     if (this.bookTurnCapturedIdentity(slot) === page.textureIdentity) return true;
     let pixelMap: image.PixelMap | undefined = undefined;
     let content: ComponentContent<BookTurnTextureBuildInput> | undefined = undefined;
@@ -1795,7 +1809,7 @@ export struct ReadingExperience {
     this.onReaderManualInteraction();
   }
 
-  private onContinuousVisibleRangeChanged(start: number, end: number): void {
+  private onContinuousVisibleRangeChanged(start: number, end: number, startProgress: number): void {
     if (this.readerSettingsSnapshot.navigationMode !== 'continuous' ||
       this.continuousFragments.length === 0) {
       return;
@@ -1804,7 +1818,11 @@ export struct ReadingExperience {
     const clampedEnd = Math.max(clampedStart, Math.min(this.continuousFragments.length - 1, end));
     this.continuousVisibleFragmentIndex = clampedStart;
     this.continuousVisibleEndFragmentIndex = clampedEnd;
-    this.continuousVisibleScalar = this.continuousFragments[clampedStart].startScalar;
+    const first = this.continuousFragments[clampedStart];
+    const span = Math.max(0, first.endScalar - first.startScalar);
+    const scalarWithinFragment = span === 0 ? 0 : Math.min(span - 1,
+      Math.floor(span * Math.max(0, Math.min(1, startProgress))));
+    this.continuousVisibleScalar = first.startScalar + scalarWithinFragment;
     this.desiredChapterOffset = this.continuousVisibleScalar;
     const scalarCount = this.chapterLayoutMap?.scalarCount() ?? 0;
     this.desiredChapterProgress = scalarCount === 0 ? 0 : this.continuousVisibleScalar / scalarCount;
@@ -1853,6 +1871,10 @@ export struct ReadingExperience {
       !this.continuousUserInteractionActive) {
       return;
     }
+    if ((direction === 'next' && !this.isContinuousScrollerAtEnd()) ||
+      (direction === 'previous' && !this.isContinuousScrollerAtStart())) {
+      return;
+    }
     const chapter = this.chapter;
     if (chapter === undefined) {
       return;
@@ -1893,19 +1915,18 @@ export struct ReadingExperience {
 
   private resolveContinuousImage(startScalar: number): void {
     const chapter = this.chapter;
-    if (chapter === undefined || this.continuousImageResolutions.includes(startScalar)) {
+    if (chapter === undefined || this.continuousImageResolutions.has(startScalar)) {
       return;
     }
-    const image = chapter.images.find((candidate: ReadingSessionImage): boolean =>
-      candidate.startScalar === startScalar && candidate.state === 'pending');
-    if (image === undefined) {
+    const image = this.chapterImageByStartScalar.get(startScalar);
+    if (image === undefined || image.state !== 'pending') {
       return;
     }
     const lifecycleToken = this.lifecycleToken;
     const selectionToken = this.chapterSelectionToken;
     const isCurrent = (): boolean => this.isSelectionActive(lifecycleToken, selectionToken) &&
       this.chapter === chapter && this.readerSettingsSnapshot.navigationMode === 'continuous';
-    this.continuousImageResolutions.push(startScalar);
+    this.continuousImageResolutions.add(startScalar);
     void this.activeGateway().resolveReadingImage(chapter, image, isCurrent)
       .then((resolved: ReadingSessionImage): void => {
         if (!isCurrent()) {
@@ -1914,7 +1935,9 @@ export struct ReadingExperience {
         }
         this.adoptReadingImage(resolved);
         this.replaceResolvedReadingImage(image, resolved);
-        this.rebuildContinuousFragments();
+        if (!this.refreshContinuousImageFragment(resolved)) {
+          this.rebuildContinuousFragments();
+        }
       })
       .catch((error: Error): void => {
         if (isCurrent()) {
@@ -1922,10 +1945,7 @@ export struct ReadingExperience {
         }
       })
       .finally((): void => {
-        const index = this.continuousImageResolutions.indexOf(startScalar);
-        if (index >= 0) {
-          this.continuousImageResolutions.splice(index, 1);
-        }
+        this.continuousImageResolutions.delete(startScalar);
       });
   }
 
@@ -2115,18 +2135,20 @@ export struct ReadingExperience {
   }
 
   private async loadInitialReading(lifecycleToken: number): Promise<void> {
-    await this.loadAppearanceSnapshot(lifecycleToken);
-    if (!this.isSessionActive(lifecycleToken)) {
-      return;
-    }
-    await this.loadReaderSettingsSnapshot(lifecycleToken);
-    if (!this.isSessionActive(lifecycleToken)) {
-      return;
-    }
-    await this.loadInitialChapter(lifecycleToken);
+    // Start layout snapshots and TOC/progress together. Only the final
+    // pagination/open barrier waits for appearance so measurement still uses
+    // the admitted typography without serializing independent Core reads.
+    const layoutReady = Promise.all([
+      this.loadAppearanceSnapshot(lifecycleToken),
+      this.loadReaderSettingsSnapshot(lifecycleToken),
+    ]);
+    await this.loadInitialChapter(lifecycleToken, layoutReady);
   }
 
-  private async loadInitialChapter(lifecycleToken: number): Promise<void> {
+  private async loadInitialChapter(
+    lifecycleToken: number,
+    layoutReady: Promise<void[]>,
+  ): Promise<void> {
     // The initial restore is also a chapter-selection transaction. A manual
     // choice made while these two Core reads are pending must win completely:
     // neither an old progress row nor an old error may mutate/fail the newer
@@ -2154,6 +2176,10 @@ export struct ReadingExperience {
       const target = requested === undefined ? restored?.chapterIndex : requested;
       const chapterIndex = this.requireKnownChapter(target);
       this.restoredProgress = progress;
+      await layoutReady;
+      if (!isCurrent()) {
+        return;
+      }
       await this.openChapter(chapterIndex, true, lifecycleToken, selectionToken);
     } catch (error) {
       if (!isCurrent()) {
@@ -2273,12 +2299,15 @@ export struct ReadingExperience {
     this.paragraphRanges.length = 0;
     this.clearContinuousRenderProjection();
     this.continuousInitialFragmentIndex = 0;
+    this.continuousInitialFragmentProgress = 0;
     this.continuousVisibleFragmentIndex = 0;
     this.continuousVisibleEndFragmentIndex = 0;
     this.continuousVisibleScalar = 0;
     this.continuousProgressRevision += 1;
     this.continuousUserInteractionActive = false;
-    this.continuousImageResolutions.length = 0;
+    this.continuousImageResolutions.clear();
+    this.chapterImageByStartScalar.clear();
+    this.chapterImagePositionByKey.clear();
     this.resetPendingPage();
     this.nextRangeIndex = 0;
     this.firstRangeStartScalar = 0;
@@ -2329,6 +2358,7 @@ export struct ReadingExperience {
       this.chapterWindow.setCurrent(chapter);
       this.retainCurrentChapterWindow();
       this.chapter = chapter;
+      this.rebuildChapterImageIndexes(chapter);
       this.materializedChapterSelectionToken = selectionToken;
       this.configureRestoredAnchor(chapter, chapterMap, isInitial, requestedOffset, requestedProgress);
       // Never lay out against the Phone/Tablet fallback constants. If Area
@@ -2575,12 +2605,8 @@ export struct ReadingExperience {
       this.desiredChapterProgress = scalarCount === 0 ? 0 : this.desiredChapterOffset / scalarCount;
       this.measurementRequestedAnchorScalar = this.desiredChapterOffset;
       if (this.readerSettingsSnapshot.navigationMode === 'continuous') {
-        this.continuousVisibleScalar = this.desiredChapterOffset;
         this.rebuildContinuousFragments();
-        const initialIndex = this.continuousFragmentIndexForScalar(this.desiredChapterOffset);
-        this.continuousInitialFragmentIndex = initialIndex;
-        this.continuousVisibleFragmentIndex = initialIndex;
-        this.continuousVisibleEndFragmentIndex = initialIndex;
+        this.setContinuousInitialAnchor(this.desiredChapterOffset);
       }
       this.nextRangeIndex = this.rangeIndexForOffset(this.desiredChapterOffset);
       this.firstRangeStartScalar = this.desiredChapterOffset;
@@ -2940,41 +2966,39 @@ export struct ReadingExperience {
     resolved: ReadingSessionImage,
   ): void {
     const chapter = this.requireChapter();
-    const images = chapter.images.map((image: ReadingSessionImage): ReadingSessionImage => {
-      if (image.source !== requested.source || image.baseUrl !== requested.baseUrl || image.state !== 'pending') {
-        return image;
-      }
-      return {
-        source: image.source,
-        baseUrl: image.baseUrl,
-        startScalar: image.startScalar,
-        endScalar: image.endScalar,
-        state: resolved.state,
-        pixelMap: resolved.pixelMap,
-        fileUri: resolved.fileUri,
-        intrinsicWidth: resolved.intrinsicWidth,
-        intrinsicHeight: resolved.intrinsicHeight,
-        revision: resolved.revision,
-      };
-    });
-    const updated: ReadingSessionChapter = {
-      sourceId: chapter.sourceId,
-      bookId: chapter.bookId,
-      chapterIndex: chapter.chapterIndex,
-      chapterTitle: chapter.chapterTitle,
-      chapterUrl: chapter.chapterUrl,
-      content: chapter.content,
-      images,
-      contentVersion: chapter.contentVersion,
-      extractionVia: chapter.extractionVia,
-    };
-    this.chapter = updated;
+    const key = this.readingImageKey(requested);
+    let index = this.chapterImagePositionByKey.get(key);
+    if (index === undefined) {
+      this.rebuildChapterImageIndexes(chapter);
+      index = this.chapterImagePositionByKey.get(key);
+    }
+    if (index === undefined || chapter.images[index].state !== 'pending') {
+      return;
+    }
+    chapter.images[index] = resolved;
+    this.chapterImageByStartScalar.set(resolved.startScalar, resolved);
+    this.chapterImagePositionByKey.delete(key);
+    this.chapterImagePositionByKey.set(this.readingImageKey(resolved), index);
     if (this.pageTurnPreparation === undefined) {
-      this.chapterWindow.setCurrent(updated);
+      this.chapterWindow.setCurrent(chapter);
     } else {
-      this.chapterWindow.admitNeighbour(updated);
+      this.chapterWindow.admitNeighbour(chapter);
     }
     this.retainCurrentChapterWindow();
+  }
+
+  private rebuildChapterImageIndexes(chapter: ReadingSessionChapter): void {
+    this.chapterImageByStartScalar.clear();
+    this.chapterImagePositionByKey.clear();
+    for (let index = 0; index < chapter.images.length; index += 1) {
+      const image = chapter.images[index];
+      this.chapterImageByStartScalar.set(image.startScalar, image);
+      this.chapterImagePositionByKey.set(this.readingImageKey(image), index);
+    }
+  }
+
+  private readingImageKey(image: ReadingSessionImage): string {
+    return `${image.source}\u0000${image.baseUrl ?? ''}\u0000${image.startScalar}\u0000${image.endScalar}`;
   }
 
   private measurementNodeText(paragraph: MeasurementParagraph): string {
@@ -3338,36 +3362,13 @@ export struct ReadingExperience {
         const chapter = this.requireChapter();
         const scalarCount = this.requireChapterLayoutMap().scalarCount();
         const visibleProgress = scalarCount === 0 ? 0 : visiblePage.startScalar / scalarCount;
-        const resolved = await this.activeGateway().resolveLocation(
+        const stored = await this.activeGateway().resolveAndUpdateProgress(
           this.bookId,
           chapter.chapterTitle,
           new CoreReadingAnchor(chapter.chapterIndex, visiblePage.startScalar, visibleProgress),
           this.coreLayout(),
           (): boolean => this.isMeasurementCurrent(generation, selectionToken, lifecycleToken),
         );
-        if (!this.isMeasurementCurrent(generation, selectionToken, lifecycleToken)) {
-          return;
-        }
-        // A normal reopen often resolves to the exact already-durable anchor.
-        // Do not rewrite the same row before showing it. Explicit chapter
-        // choices, new books and layout/revision changes still persist before
-        // visibility, preserving the existing restart guarantee.
-        const restored = this.restoredProgress?.kind === 'restored' ? this.restoredProgress.progress : undefined;
-        let stored: LocalReadingProgress;
-        if (this.requestedChapterIndex === undefined && restored !== undefined &&
-          restored.chapterIndex === resolved.chapterIndex &&
-          restored.chapterOffset === resolved.chapterOffset &&
-          restored.chapterProgress === resolved.chapterProgress &&
-          restored.locationRevision === resolved.locationRevision) {
-          stored = restored;
-        } else {
-          stored = await this.activeGateway().updateProgress(this.bookId, new CoreReadingProgressUpdate(
-            resolved.chapterIndex,
-            resolved.chapterOffset,
-            resolved.chapterProgress,
-            resolved.locationRevision,
-          ), (): boolean => this.isMeasurementCurrent(generation, selectionToken, lifecycleToken));
-        }
         if (!this.isMeasurementCurrent(generation, selectionToken, lifecycleToken)) {
           return;
         }
@@ -3380,17 +3381,14 @@ export struct ReadingExperience {
         this.visiblePageSelectionToken = selectionToken;
         this.visibleFragments = visiblePage.fragments;
         if (this.readerSettingsSnapshot.navigationMode === 'continuous') {
-          this.continuousVisibleScalar = visiblePage.startScalar;
           this.rebuildContinuousFragments();
-          const initialIndex = this.continuousFragmentIndexForScalar(visiblePage.startScalar);
-          this.continuousInitialFragmentIndex = initialIndex;
-          this.continuousVisibleFragmentIndex = initialIndex;
-          this.continuousVisibleEndFragmentIndex = initialIndex;
+          this.setContinuousInitialAnchor(visiblePage.startScalar);
         }
         this.releaseUnretainedReadingImages();
         this.showChapterTitle = this.isChapterFirstPageStart(visiblePage.startScalar);
         this.phase = 'ready';
         this.beginReadingRecordClock(lifecycleToken);
+        this.finishPageTurnPerf('committed');
         this.measurementCompleting = false;
         this.cancelFirstPageReadyDeadline();
         this.cancelFirstPageCompletionDeadline();
@@ -3514,22 +3512,13 @@ export struct ReadingExperience {
         }
         const scalarCount = this.requireChapterLayoutMap().scalarCount();
         const chapterProgress = scalarCount === 0 ? 0 : page.startScalar / scalarCount;
-        const resolved = await this.activeGateway().resolveLocation(
+        const stored = await this.activeGateway().resolveAndUpdateProgress(
           this.bookId,
           chapter.chapterTitle,
           new CoreReadingAnchor(chapter.chapterIndex, page.startScalar, chapterProgress),
           this.coreLayout(),
           (): boolean => this.isVisiblePageCurrent(page, chapter, selectionToken, lifecycleToken),
         );
-        if (!this.isVisiblePageCurrent(page, chapter, selectionToken, lifecycleToken)) {
-          return;
-        }
-        const stored = await this.activeGateway().updateProgress(this.bookId, new CoreReadingProgressUpdate(
-          resolved.chapterIndex,
-          resolved.chapterOffset,
-          resolved.chapterProgress,
-          resolved.locationRevision,
-        ), (): boolean => this.isVisiblePageCurrent(page, chapter, selectionToken, lifecycleToken));
         if (!this.isVisiblePageCurrent(page, chapter, selectionToken, lifecycleToken)) {
           return;
         }
@@ -3585,22 +3574,13 @@ export struct ReadingExperience {
           return;
         }
         const chapterProgress = scalarCount === 0 ? 0 : scalar / scalarCount;
-        const resolved = await this.activeGateway().resolveLocation(
+        const stored = await this.activeGateway().resolveAndUpdateProgress(
           this.bookId,
           chapter.chapterTitle,
           new CoreReadingAnchor(chapter.chapterIndex, scalar, chapterProgress),
           this.coreLayout(),
           isCurrent,
         );
-        if (!isCurrent()) {
-          return;
-        }
-        const stored = await this.activeGateway().updateProgress(this.bookId, new CoreReadingProgressUpdate(
-          resolved.chapterIndex,
-          resolved.chapterOffset,
-          resolved.chapterProgress,
-          resolved.locationRevision,
-        ), isCurrent);
         if (!isCurrent()) {
           return;
         }
@@ -3949,16 +3929,51 @@ export struct ReadingExperience {
     fragments: ReadingSurfacePageFragment[],
   ): void {
     this.continuousFragments = fragments;
+    this.rebuildContinuousFragmentIndex();
     this.continuousRenderChapterIdentity =
       `continuous:${chapter.chapterIndex}:${chapter.contentVersion}`;
     this.continuousRenderChapterTitle = chapter.chapterTitle;
+    this.continuousChangedFragmentIndex = -1;
     this.continuousRenderRevision += 1;
+  }
+
+  private rebuildContinuousFragmentIndex(): void {
+    this.continuousFragmentIndexByStartScalar.clear();
+    for (let index = 0; index < this.continuousFragments.length; index += 1) {
+      this.continuousFragmentIndexByStartScalar.set(this.continuousFragments[index].startScalar, index);
+    }
+  }
+
+  private refreshContinuousImageFragment(image: ReadingSessionImage): boolean {
+    const chapter = this.chapter;
+    if (chapter === undefined || image.state !== 'ready') return false;
+    const index = this.continuousFragmentIndexByStartScalar.get(image.startScalar) ?? -1;
+    if (index < 0) return false;
+    const capacity = Math.max(readerAppearanceLineHeight(this.appearanceSnapshot),
+      this.readingLayout().bodyHeight(false));
+    const imageHeight = this.scaledReadingImageHeight(image, capacity);
+    this.continuousFragments.splice(index, 1, new ReadingSurfacePageFragment(
+      `continuous:${chapter.chapterIndex}:image:${image.startScalar}-${image.endScalar}:${image.revision}`,
+      '',
+      true,
+      image.startScalar,
+      image.endScalar,
+      image.pixelMap,
+      imageHeight,
+      image.fileUri,
+      imageHeight,
+    ));
+    this.continuousChangedFragmentIndex = index;
+    this.continuousRenderRevision += 1;
+    return true;
   }
 
   private clearContinuousRenderProjection(): void {
     this.continuousFragments = [];
+    this.continuousFragmentIndexByStartScalar.clear();
     this.continuousRenderChapterIdentity = 'continuous:empty';
     this.continuousRenderChapterTitle = '';
+    this.continuousChangedFragmentIndex = -1;
     this.continuousRenderRevision += 1;
   }
 
@@ -3970,20 +3985,37 @@ export struct ReadingExperience {
       chapter.content.substring(range.startUtf16, range.endUtf16) !== '\uFFFC') {
       return undefined;
     }
-    return chapter.images.find((image: ReadingSessionImage): boolean =>
-      image.startScalar === range.startScalar && image.endScalar === range.endScalar);
+    const image = this.chapterImageByStartScalar.get(range.startScalar);
+    return image?.endScalar === range.endScalar ? image : undefined;
   }
 
   private continuousFragmentIndexForScalar(scalar: number): number {
     if (this.continuousFragments.length === 0) {
       return 0;
     }
-    for (let index = 0; index < this.continuousFragments.length; index += 1) {
-      if (scalar < this.continuousFragments[index].endScalar) {
-        return index;
+    let lower = 0;
+    let upper = this.continuousFragments.length - 1;
+    while (lower < upper) {
+      const middle = Math.floor((lower + upper) / 2);
+      if (scalar < this.continuousFragments[middle].endScalar) {
+        upper = middle;
+      } else {
+        lower = middle + 1;
       }
     }
-    return this.continuousFragments.length - 1;
+    return lower;
+  }
+
+  private setContinuousInitialAnchor(scalar: number): void {
+    this.continuousVisibleScalar = scalar;
+    const index = this.continuousFragmentIndexForScalar(scalar);
+    const fragment = this.continuousFragments[index];
+    const span = fragment === undefined ? 0 : Math.max(0, fragment.endScalar - fragment.startScalar);
+    this.continuousInitialFragmentIndex = index;
+    this.continuousInitialFragmentProgress = span === 0 ? 0 : Math.max(0, Math.min(1,
+      (scalar - fragment.startScalar) / span));
+    this.continuousVisibleFragmentIndex = index;
+    this.continuousVisibleEndFragmentIndex = index;
   }
 
   private appendParagraphRange(
@@ -5032,20 +5064,13 @@ export struct ReadingExperience {
         const offset = Math.max(0, Math.min(scalarCount, progress.charEnd));
         const chapterProgress = scalarCount === 0 ? 0 : offset / scalarCount;
         const isCurrent = (): boolean => this.isSessionActive(lifecycleToken) && this.chapter === chapter;
-        const resolved = await this.activeGateway().resolveLocation(
+        const stored = await this.activeGateway().resolveAndUpdateProgress(
           this.bookId,
           chapter.chapterTitle,
           new CoreReadingAnchor(chapter.chapterIndex, offset, chapterProgress),
           this.coreLayout(),
           isCurrent,
         );
-        if (!isCurrent()) return;
-        const stored = await this.activeGateway().updateProgress(this.bookId, new CoreReadingProgressUpdate(
-          resolved.chapterIndex,
-          resolved.chapterOffset,
-          resolved.chapterProgress,
-          resolved.locationRevision,
-        ), isCurrent);
         if (!isCurrent()) return;
         this.admitCommittedProgress(stored);
       });
@@ -5862,12 +5887,8 @@ export struct ReadingExperience {
     if (navigationChanged && this.hasCurrentMaterializedChapter()) {
       const scalarCount = this.requireChapterLayoutMap().scalarCount();
       if (snapshot.navigationMode === 'continuous') {
-        this.continuousVisibleScalar = this.visiblePage?.startScalar ?? this.desiredChapterOffset;
         this.rebuildContinuousFragments();
-        const initialIndex = this.continuousFragmentIndexForScalar(this.continuousVisibleScalar);
-        this.continuousInitialFragmentIndex = initialIndex;
-        this.continuousVisibleFragmentIndex = initialIndex;
-        this.continuousVisibleEndFragmentIndex = initialIndex;
+        this.setContinuousInitialAnchor(this.visiblePage?.startScalar ?? this.desiredChapterOffset);
         this.continuousProgressRevision += 1;
       } else {
         this.desiredChapterOffset = Math.max(0, Math.min(scalarCount, this.continuousVisibleScalar));
@@ -6787,6 +6808,7 @@ export struct ReadingExperience {
     admitWindowCurrent: boolean,
   ): void {
     this.chapter = context.chapter;
+    this.rebuildChapterImageIndexes(context.chapter);
     this.chapterLayoutMap = context.layoutMap;
     this.materializedContentVersion = context.contentVersion;
     this.paragraphRanges.splice(0, this.paragraphRanges.length, ...this.copyParagraphRanges(context.paragraphRanges));
@@ -6820,6 +6842,7 @@ export struct ReadingExperience {
    * selects another chapter.
    */
   private invalidatePageTurnRuntime(restorePreparation: boolean): void {
+    this.finishPageTurnPerf('invalidated');
     const preparation = this.pageTurnPreparation;
     const discovery = this.previousChapterMeasurement?.prepareOnly ?
       this.previousChapterMeasurement : undefined;
@@ -7168,15 +7191,26 @@ export struct ReadingExperience {
   }
 
   private onReaderPageGestureStateChanged(state: ReaderPageGestureState): void {
+    const previousPhase = this.pageTurnGestureState.phase;
     if (!this.pageTurnSessionCapsuleFrozen &&
       (state.phase === 'tracking' || state.phase === 'dragging')) {
       this.pageTurnSessionCapsuleSnapshot = this.liveSessionCapsuleSnapshot();
       this.pageTurnSessionCapsuleFrozen = true;
     }
     this.pageTurnGestureState = state;
+    if (state.phase === 'dragging' && state.direction !== undefined) {
+      this.beginPageTurnPerf(state.direction, 'gesture');
+    }
     const ownsInput = state.phase !== 'idle';
     if (this.pageTurnInputOwned !== ownsInput) this.pageTurnInputOwned = ownsInput;
     if (this.usesBookTurnSimulation()) {
+      if (previousPhase === 'idle' && state.phase !== 'idle') {
+        // ComponentSnapshot cannot be cancelled after dispatch, but changing
+        // this generation prevents an idle capture from uploading after the
+        // first gesture-owned frame.
+        this.bookTurnTextureCaptureGeneration += 1;
+        this.bookTurnTextureCaptureScheduled = false;
+      }
       this.updateBookTurnGesturePresentation(state);
       return;
     }
@@ -7339,6 +7373,26 @@ export struct ReadingExperience {
     return Math.min(width, Math.max(0, offsetX));
   }
 
+  private beginPageTurnPerf(direction: ReaderPageTurnDirection, path: string): void {
+    if (this.pageTurnPerfStartedAtMs > 0) return;
+    this.pageTurnPerfStartedAtMs = Date.now();
+    this.pageTurnPerfStyle = this.effectivePageTurnStyle();
+    this.pageTurnPerfPath = path;
+    this.pageTurnPerfDirection = direction;
+  }
+
+  private finishPageTurnPerf(outcome: string): void {
+    if (this.pageTurnPerfStartedAtMs <= 0) return;
+    const totalMs = Math.max(0, Date.now() - this.pageTurnPerfStartedAtMs);
+    hilog.info(0x5244, 'Reader',
+      'PAGETURN_PERF style=%{public}s path=%{public}s dir=%{public}s outcome=%{public}s totalMs=%{public}d',
+      this.pageTurnPerfStyle, this.pageTurnPerfPath, this.pageTurnPerfDirection, outcome, totalMs);
+    this.pageTurnPerfStartedAtMs = 0;
+    this.pageTurnPerfStyle = '';
+    this.pageTurnPerfPath = '';
+    this.pageTurnPerfDirection = '';
+  }
+
   private animatePageTurnRollback(): void {
     if (this.pageTurnSettlingPrepared !== undefined) return;
     if (this.pageTurnSettlementLayout === undefined) {
@@ -7367,7 +7421,11 @@ export struct ReadingExperience {
       return;
     }
     this.getUIContext().animateTo(
-      motionAnimateParam('reader.page.slide.rollback', (): void => this.finishPageTurnRollback(generation)),
+      motionRemainingDistanceAnimateParam(
+        'reader.page.slide.rollback',
+        this.pageTurnRemainingDistanceRatio(0),
+        (): void => this.finishPageTurnRollback(generation),
+      ),
       (): void => {
         this.pageTurnOffsetX = 0;
       },
@@ -7376,6 +7434,7 @@ export struct ReadingExperience {
 
   private finishPageTurnRollback(generation: number): void {
     if (generation !== this.pageTurnSettlementGeneration) return;
+    this.finishPageTurnPerf('rollback');
     this.cancelPageTurnSettlementDeadline();
     this.pageTurnAnimationFinished = true;
     this.pageTurnOffsetX = 0;
@@ -7410,11 +7469,14 @@ export struct ReadingExperience {
       this.viewportWidth <= 0) {
       return false;
     }
+    this.bookTurnTextureCaptureGeneration += 1;
+    this.bookTurnTextureCaptureScheduled = false;
     const lifecycleToken = this.lifecycleToken;
     const simulation = this.usesBookTurnSimulation();
     const noAnimation = this.usesNoAnimationPageTurnRuntime();
     const settlementGeneration = simulation && this.bookTurnMotion !== undefined ?
       this.bookTurnMotion.generation : this.pageTurnSettlementGeneration + 1;
+    this.beginPageTurnPerf(direction, 'prepared');
     this.pageTurnSettlementLayout = this.readingLayout();
     this.pageTurnSettlementGeneration = settlementGeneration;
     this.pageTurnSettlementActive = true;
@@ -7470,7 +7532,8 @@ export struct ReadingExperience {
 
   private animatePreparedPageTurnSlide(targetOffset: number, settlementGeneration: number): void {
     this.getUIContext().animateTo(
-      motionAnimateParam('reader.page.slide.commit', (): void => {
+      motionRemainingDistanceAnimateParam('reader.page.slide.commit',
+        this.pageTurnRemainingDistanceRatio(targetOffset), (): void => {
         if (settlementGeneration !== this.pageTurnSettlementGeneration) return;
         this.pageTurnAnimationFinished = true;
         this.finishPreparedPageTurnSettlement(settlementGeneration);
@@ -7479,6 +7542,12 @@ export struct ReadingExperience {
         this.pageTurnOffsetX = targetOffset;
       },
     );
+  }
+
+  private pageTurnRemainingDistanceRatio(targetOffset: number): number {
+    const width = Math.max(1, this.pageTurnPresentationWidth > 0 ?
+      this.pageTurnPresentationWidth : this.viewportWidth);
+    return Math.max(0, Math.min(1, Math.abs(targetOffset - this.pageTurnOffsetX) / width));
   }
 
   private async persistPreparedPageTurn(
@@ -7498,22 +7567,13 @@ export struct ReadingExperience {
         }
         const scalarCount = prepared.context.layoutMap.scalarCount();
         const chapterProgress = scalarCount === 0 ? 0 : prepared.page.startScalar / scalarCount;
-        const resolved = await this.activeGateway().resolveLocation(
+        const stored = await this.activeGateway().resolveAndUpdateProgress(
           this.bookId,
           prepared.context.chapter.chapterTitle,
           new CoreReadingAnchor(prepared.context.chapter.chapterIndex, prepared.page.startScalar, chapterProgress),
           this.coreLayout(),
           (): boolean => this.isPreparedPageTurnCommitCurrent(prepared, lifecycleToken, settlementGeneration),
         );
-        if (!this.isPreparedPageTurnCommitCurrent(prepared, lifecycleToken, settlementGeneration)) {
-          return;
-        }
-        const stored = await this.activeGateway().updateProgress(this.bookId, new CoreReadingProgressUpdate(
-          resolved.chapterIndex,
-          resolved.chapterOffset,
-          resolved.chapterProgress,
-          resolved.locationRevision,
-        ), (): boolean => this.isPreparedPageTurnCommitCurrent(prepared, lifecycleToken, settlementGeneration));
         if (!this.isPreparedPageTurnCommitCurrent(prepared, lifecycleToken, settlementGeneration)) {
           return;
         }
@@ -7589,6 +7649,7 @@ export struct ReadingExperience {
 
   private finishSuccessfulPageTurnPresentation(settlementGeneration: number): void {
     if (settlementGeneration !== this.pageTurnSettlementGeneration) return;
+    this.finishPageTurnPerf('committed');
     this.pageTurnOffsetX = 0;
     this.pageTurnDirection = undefined;
     this.pageTurnCommitStarted = false;
@@ -7799,6 +7860,7 @@ export struct ReadingExperience {
       return this.performContinuousPageTurn(direction);
     }
     if (!this.canTurnPage()) {
+      this.finishPageTurnPerf('busy');
       this.completeDirectPageTurnGesture();
       return { kind: 'busy' };
     }
@@ -7810,6 +7872,7 @@ export struct ReadingExperience {
       if (boundary !== undefined) {
         // A first/last-page gesture must not arm Native or retain an intent
         // that can never acquire an adjacent texture.
+        this.finishPageTurnPerf('boundary');
         this.completeDirectPageTurnGesture();
         return boundary;
       }
@@ -7824,6 +7887,11 @@ export struct ReadingExperience {
       return { kind: 'started' };
     }
     const result = direction === 'previous' ? this.turnPreviousPage() : this.turnNextPage();
+    if (result.kind === 'started') {
+      this.beginPageTurnPerf(direction, 'direct');
+    } else {
+      this.finishPageTurnPerf(result.kind);
+    }
     this.completeDirectPageTurnGesture();
     return result;
   }
@@ -8195,6 +8263,7 @@ export struct ReadingExperience {
       return;
     }
     this.failureCode = this.errorMessage(error);
+    this.finishPageTurnPerf('failed');
     this.autoPageState = stopReaderAutoPage(this.autoPageState, 'lifecycle');
     this.clearAutoPageTimer();
     this.clearAutoPageSessionTimer();

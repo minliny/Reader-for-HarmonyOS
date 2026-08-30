@@ -79,6 +79,7 @@ export class ReaderWindowCoordinator {
   private static windowPolicyTail: Promise<void> = Promise.resolve();
   private static desiredWindowPolicyOwner: 'app' | 'reader' = 'app';
   private static desiredReaderWindowPolicy: ReaderWindowPolicy = new ReaderWindowPolicy();
+  private static appliedPolicyRevision: number = -1;
 
   static async install(win: window.Window): Promise<void> {
     ReaderWindowCoordinator.detach();
@@ -112,6 +113,7 @@ export class ReaderWindowCoordinator {
     ReaderWindowCoordinator.windowPolicyRevision += 1;
     ReaderWindowCoordinator.windowSizeListener = undefined;
     ReaderWindowCoordinator.avoidAreaListener = undefined;
+    ReaderWindowCoordinator.appliedPolicyRevision = -1;
     ReaderWindowCoordinator.appliedChromeRevision = -1;
   }
 
@@ -141,6 +143,12 @@ export class ReaderWindowCoordinator {
    * also the final device state.
    */
   static requestReaderWindowPolicy(policy: ReaderWindowPolicy): Promise<void> {
+    if (ReaderWindowCoordinator.desiredWindowPolicyOwner === 'reader' &&
+      ReaderWindowCoordinator.sameWindowPolicy(
+        ReaderWindowCoordinator.desiredReaderWindowPolicy, policy) &&
+      ReaderWindowCoordinator.appliedPolicyRevision === ReaderWindowCoordinator.windowPolicyRevision) {
+      return Promise.resolve();
+    }
     ReaderWindowCoordinator.desiredWindowPolicyOwner = 'reader';
     ReaderWindowCoordinator.desiredReaderWindowPolicy = policy;
     const revision = ReaderWindowCoordinator.nextWindowPolicyRevision();
@@ -155,6 +163,10 @@ export class ReaderWindowCoordinator {
 
   /** Restore the app policy captured when the Ability installed the window. */
   static requestAppWindowPolicy(): Promise<void> {
+    if (ReaderWindowCoordinator.desiredWindowPolicyOwner === 'app' &&
+      ReaderWindowCoordinator.appliedPolicyRevision === ReaderWindowCoordinator.windowPolicyRevision) {
+      return Promise.resolve();
+    }
     ReaderWindowCoordinator.desiredWindowPolicyOwner = 'app';
     const revision = ReaderWindowCoordinator.nextWindowPolicyRevision();
     AppStorage.setOrCreate<string>('readerWindowOrientation', 'app');
@@ -222,6 +234,7 @@ export class ReaderWindowCoordinator {
           .then((): void => {
             if (win === ReaderWindowCoordinator.mainWindow &&
               revision === ReaderWindowCoordinator.windowPolicyRevision) {
+              ReaderWindowCoordinator.appliedPolicyRevision = revision;
               ReaderWindowCoordinator.refreshMetrics();
             }
           });
@@ -271,22 +284,63 @@ export class ReaderWindowCoordinator {
       displayInfo.scaledDensity : density;
     const properties = win.getWindowProperties();
     const globalRect = properties.globalDisplayRect ?? properties.windowRect;
+    const windowRect = ReaderWindowCoordinator.rectVp(properties.windowRect, density);
+    const globalRectVp = ReaderWindowCoordinator.rectVp(globalRect, density);
+    const systemInsets = ReaderWindowCoordinator.avoidInsetsVp(window.AvoidAreaType.TYPE_SYSTEM, density);
+    const cutoutInsets = ReaderWindowCoordinator.avoidInsetsVp(window.AvoidAreaType.TYPE_CUTOUT, density);
+    const gestureInsets =
+      ReaderWindowCoordinator.avoidInsetsVp(window.AvoidAreaType.TYPE_SYSTEM_GESTURE, density);
+    const navigationInsets =
+      ReaderWindowCoordinator.avoidInsetsVp(window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR, density);
+    const keyboardInsets = ReaderWindowCoordinator.avoidInsetsVp(window.AvoidAreaType.TYPE_KEYBOARD, density);
+    const systemFontScale = scaledDensity / density;
+    const previous = ReaderWindowCoordinator.metricsSnapshot;
+    if (previous.ready &&
+      ReaderWindowCoordinator.sameRectVp(previous.windowRect, windowRect) &&
+      ReaderWindowCoordinator.sameRectVp(previous.globalRect, globalRectVp) &&
+      ReaderWindowCoordinator.sameInsetsVp(previous.systemInsets, systemInsets) &&
+      ReaderWindowCoordinator.sameInsetsVp(previous.cutoutInsets, cutoutInsets) &&
+      ReaderWindowCoordinator.sameInsetsVp(previous.gestureInsets, gestureInsets) &&
+      ReaderWindowCoordinator.sameInsetsVp(previous.navigationInsets, navigationInsets) &&
+      ReaderWindowCoordinator.sameInsetsVp(previous.keyboardInsets, keyboardInsets) &&
+      previous.densityPixels === density &&
+      previous.systemFontScale === systemFontScale) {
+      // The revision broadcast re-renders every @StorageLink consumer including
+      // the Index root; an equal-geometry event must not bump it.
+      return;
+    }
     const revision = ReaderWindowCoordinator.metricsSnapshot.revision >= Number.MAX_SAFE_INTEGER ?
       1 : ReaderWindowCoordinator.metricsSnapshot.revision + 1;
     ReaderWindowCoordinator.metricsSnapshot = new ReaderWindowMetricsSnapshot(
-      ReaderWindowCoordinator.rectVp(properties.windowRect, density),
-      ReaderWindowCoordinator.rectVp(globalRect, density),
-      ReaderWindowCoordinator.avoidInsetsVp(window.AvoidAreaType.TYPE_SYSTEM, density),
-      ReaderWindowCoordinator.avoidInsetsVp(window.AvoidAreaType.TYPE_CUTOUT, density),
-      ReaderWindowCoordinator.avoidInsetsVp(window.AvoidAreaType.TYPE_SYSTEM_GESTURE, density),
-      ReaderWindowCoordinator.avoidInsetsVp(window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR, density),
-      ReaderWindowCoordinator.avoidInsetsVp(window.AvoidAreaType.TYPE_KEYBOARD, density),
+      windowRect,
+      globalRectVp,
+      systemInsets,
+      cutoutInsets,
+      gestureInsets,
+      navigationInsets,
+      keyboardInsets,
       density,
-      scaledDensity / density,
+      systemFontScale,
       revision,
       true,
     );
     AppStorage.setOrCreate<number>('readerWindowMetricsRevision', revision);
+  }
+
+  private static sameRectVp(a: ReaderRectVp, b: ReaderRectVp): boolean {
+    return a.left === b.left && a.top === b.top && a.width === b.width && a.height === b.height;
+  }
+
+  private static sameInsetsVp(a: ReaderInsetsVp, b: ReaderInsetsVp): boolean {
+    return a.left === b.left && a.top === b.top && a.right === b.right && a.bottom === b.bottom;
+  }
+
+  private static sameWindowPolicy(a: ReaderWindowPolicy, b: ReaderWindowPolicy): boolean {
+    return a.orientation === b.orientation &&
+      a.keepScreenOn === b.keepScreenOn &&
+      a.hideStatusBar === b.hideStatusBar &&
+      a.hideNavigationBar === b.hideNavigationBar &&
+      a.extendIntoCutout === b.extendIntoCutout;
   }
 
   private static avoidInsetsVp(type: window.AvoidAreaType, density: number): ReaderInsetsVp {

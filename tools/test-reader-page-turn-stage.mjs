@@ -101,6 +101,12 @@ assert.match(stage, /return this\.offsetX - this\.viewportWidth;/,
   'the previous page must sit exactly one live viewport to the left');
 assert.match(stage, /return this\.viewportWidth \+ this\.offsetX;/,
   'the next page must sit exactly one live viewport to the right');
+assert.match(stage, /\.renderGroup\(this\.compositorIsolation\)/,
+  'moving flat-page surfaces must be isolated as compositor groups');
+assert.match(stage, /offsetX: COVER_OCCLUSION_OFFSET_X_VP \* this\.shadowStrength/,
+  'cover contact occlusion must be cast onto revealed paper to the right of the moving edge');
+assert.match(stage, /return 4 \* progress \* \(1 - progress\);/,
+  'cover occlusion must fade at both clipped endpoints instead of popping at commit');
 
 assert.match(stage,
   /Stack\(\{ alignContent: Alignment\.TopStart \}\)[\s\S]*\.width\('100%'\)\s*\.height\('100%'\)\s*\.translate\(\{ y: this\.translateY \}\)\s*\.clip\(true\);/,

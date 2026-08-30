@@ -14,8 +14,8 @@ assert.match(index, /private onSearchResultSelected\(book: SearchBook, variants:
   'a live remote search result enters the remote open transaction with same-book variants ordered behind it');
 assert.match(index, /gateway\.openSession\(seed, \{ isCurrent \}\)/,
   'remote detail and TOC must retain the route-generation cancellation guard');
-assert.match(index, /await bookshelf\.loadShelfBook\(session\.identity\.sourceId, session\.identity\.bookId\)/,
-  'reopening a shelf book must reuse the existing composite entry without resetting Core metadata');
+assert.match(index, /void bookshelf\.loadShelfBook\(session\.identity\.sourceId, session\.identity\.bookId\)/,
+  'shelf reconciliation must reuse the existing composite entry without resetting Core metadata');
 assert.doesNotMatch(index.slice(index.indexOf('private openRemoteBookDetail('), index.indexOf('private resolveRemoteDetailSourceName(')),
   /await bookshelf\.upsertBook\(/,
   'opening a search result is a preview and must not mutate the bookshelf');
@@ -28,10 +28,13 @@ assert.ok(remoteOpen.indexOf("this.route = 'detail'") < remoteOpen.indexOf('gate
   'remote navigation must mount the inert detail shell before serialized Core/network admission completes');
 assert.match(index, /sourceSwitchEnabled: this\.detailBook\.sourceId !== LOCAL_SOURCE_ID &&\s*this\.remoteReadingSession !== undefined && this\.detailToc\.length > 0/,
   'the provisional detail shell must not expose reading/source-switch actions before session and TOC readiness');
-assert.doesNotMatch(remoteOpen, /remoteShelf|remoteBookshelf|new Map/,
+assert.doesNotMatch(remoteOpen, /remoteShelf|remoteBookshelf|shelfBooks\s*=\s*new Map/,
   'remote books must not create a second UI-owned shelf store');
 assert.match(index, /this\.remoteReadingSession = session/);
 assert.match(index, /this\.detailToc = session\.entries\.map/);
+assert.ok(remoteOpen.indexOf('this.detailToc = session.entries.map') <
+  remoteOpen.indexOf('void bookshelf.loadShelfBook'),
+  'remote detail readiness must not wait for the non-mutating shelf reconciliation');
 assert.match(index, /this\.route = 'detail'/,
   'a validated remote session must enter the shared detail route');
 assert.doesNotMatch(index, /remote search result has no admitted detail flow/);
@@ -50,6 +53,7 @@ assert.match(sessionGateway, /this\.local\.loadChapter/);
 assert.match(sessionGateway, /this\.remote\.loadChapter/);
 assert.match(sessionGateway, /this\.remote\.resolveLocation/);
 assert.match(sessionGateway, /this\.remote\.updateProgress/);
+assert.match(sessionGateway, /async resolveAndUpdateProgress\(/);
 assert.match(sessionGateway, /if \(this\.source\.kind === 'remote'\) \{\s*return undefined;/,
   'remote progress display must not bulk-download unopened bodies to imitate local exact metrics');
 assert.doesNotMatch(sessionGateway, /LRU|cache\.book\.prefetch|Promise\.all\([^)]*loadChapter/,

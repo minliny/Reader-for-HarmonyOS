@@ -190,14 +190,31 @@ export class ReaderCoreGateway {
       missingTargets: this.decodeRemoveTargets(result.data['missingTargets']),
       duplicateTargets: this.decodeRemoveTargets(result.data['duplicateTargets']),
     };
-    const released: string[] = [];
+    const released = new Set<string>();
     for (const target of targets) {
-      if (target.sourceId === 'local' && released.indexOf(target.bookId) < 0) {
-        released.push(target.bookId);
-        await this.runtimeOwner.releaseLocalBookAsset(target.bookId);
+      if (target.sourceId === 'local') {
+        released.add(target.bookId);
       }
     }
+    await this.releaseLocalBookAssets(Array.from(released));
     return receipt;
+  }
+
+  private async releaseLocalBookAssets(bookIds: string[]): Promise<void> {
+    let nextIndex = 0;
+    const worker = async (): Promise<void> => {
+      while (nextIndex < bookIds.length) {
+        const index = nextIndex;
+        nextIndex += 1;
+        await this.runtimeOwner.releaseLocalBookAsset(bookIds[index]);
+      }
+    };
+    const workers: Array<Promise<void>> = [];
+    const count = Math.min(2, bookIds.length);
+    for (let index = 0; index < count; index += 1) {
+      workers.push(worker());
+    }
+    await Promise.all(workers);
   }
 
   private decodeShelfBook(value: unknown): ShelfBook {
