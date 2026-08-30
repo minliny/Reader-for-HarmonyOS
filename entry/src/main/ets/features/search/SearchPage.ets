@@ -67,6 +67,8 @@ export interface SearchResultsPresentation {
   totalSourceCount: number;
   /** Enabled sources finished (ok or failed) so far. */
   completedSourceCount: number;
+  /** Enabled sources whose `book.search` failed so far. */
+  failedSourceCount: number;
   /** True when the user stopped the sweep early (ACQ-02); partial results stay. */
   stopped?: boolean;
 }
@@ -76,6 +78,8 @@ export interface SearchEmptyPresentation {
   keyword: string;
   /** Enabled sources the search actually attempted. */
   searchedSourceCount: number;
+  /** Enabled sources whose `book.search` failed before this verdict. */
+  failedSourceCount?: number;
   /** True when the sweep was stopped by the user before this verdict (ACQ-02). */
   stopped?: boolean;
 }
@@ -85,6 +89,8 @@ export interface SearchErrorPresentation {
   keyword: string;
   /** Enabled sources the search actually attempted. */
   searchedSourceCount: number;
+  /** Enabled sources whose `book.search` failed; every source failed here. */
+  failedSourceCount?: number;
 }
 
 /**
@@ -604,20 +610,42 @@ export struct SearchPage {
             .fontSize(11)
             .lineHeight(16.5)
             .fontColor(TOK_MUTED);
-          if (this.presentation.kind === 'results' && this.presentation.stopped === true) {
-            // ACQ-02: a stopped sweep keeps its partial results; the header
-            // states how far the interrupted sweep got so partials never read
-            // as a complete verdict. Reads the presentation directly (not a
-            // builder param) so the minimal-update re-render tracks it exactly
-            // like the search/stop pill does.
-            Text(` · 已停止,已搜索 ${this.presentation.completedSourceCount}/${this.presentation.totalSourceCount} 个书源`)
-              .fontFamily('ReaderInter')
-              .fontWeight(FontWeight.Regular)
-              .fontSize(11)
-              .lineHeight(16.5)
-              .fontColor(TOK_MUTED)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis });
+          // Reads the presentation directly (not a builder param) so the
+          // minimal-update re-render tracks it exactly like the search/stop
+          // pill does: the sweep counter must update live per source landing.
+          if (this.presentation.kind === 'results') {
+            if (this.presentation.stopped === true) {
+              // ACQ-02: a stopped sweep keeps its partial results; the header
+              // states how far the interrupted sweep got so partials never read
+              // as a complete verdict.
+              Text(` · 已停止,已搜索 ${this.presentation.completedSourceCount}/${this.presentation.totalSourceCount} 个书源`)
+                .fontFamily('ReaderInter')
+                .fontWeight(FontWeight.Regular)
+                .fontSize(11)
+                .lineHeight(16.5)
+                .fontColor(TOK_MUTED)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis });
+            } else if (this.presentation.searching) {
+              Text(` · 正在搜索 ${this.presentation.completedSourceCount}/${this.presentation.totalSourceCount} 个书源,已返回 ${results.length} 个`)
+                .fontFamily('ReaderInter')
+                .fontWeight(FontWeight.Regular)
+                .fontSize(11)
+                .lineHeight(16.5)
+                .fontColor(TOK_MUTED)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis });
+            }
+            if (this.presentation.failedSourceCount > 0) {
+              Text(` · 失败 ${this.presentation.failedSourceCount} 个书源`)
+                .fontFamily('ReaderInter')
+                .fontWeight(FontWeight.Regular)
+                .fontSize(11)
+                .lineHeight(16.5)
+                .fontColor(TOK_MUTED)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis });
+            }
           }
         }
         .width(this.contentFrame().width)

@@ -154,8 +154,9 @@ export class SearchOrchestrator {
     this.sweepCompletedSourceCount = 0;
     const work = this.work;
     const session = this.session;
+    const searchRequestId = this.gateway.generateSearchRequestId(keyword);
     this.present({ kind: 'loading', keyword: keyword });
-    void this.performSearch(work, session, keyword, this.lastScope);
+    void this.performSearch(work, session, keyword, searchRequestId, this.lastScope);
   }
 
   /**
@@ -188,6 +189,7 @@ export class SearchOrchestrator {
         searching: false,
         totalSourceCount: presentation.totalSourceCount,
         completedSourceCount: presentation.completedSourceCount,
+        failedSourceCount: presentation.failedSourceCount,
         stopped: true,
       });
     }
@@ -287,7 +289,7 @@ export class SearchOrchestrator {
   }
 
   private async performSearch(work: number, session: number, keyword: string,
-    scopeSourceIds?: string[]): Promise<void> {
+    searchRequestId: string, scopeSourceIds?: string[]): Promise<void> {
     // Search history is auxiliary. Do not wait for a persistence failure
     // before issuing the user-requested source search.
     void this.gateway.addHistory(keyword)
@@ -312,7 +314,7 @@ export class SearchOrchestrator {
           sources.some((source) => source.enabled && source.name.trim().length > 0)) {
           // The scope excluded every usable source: an honest empty verdict for
           // this attempt, not a missing-source configuration gap.
-          this.present({ kind: 'empty', keyword: keyword, searchedSourceCount: 0 });
+          this.present({ kind: 'empty', keyword: keyword, searchedSourceCount: 0, failedSourceCount: 0 });
           return;
         }
         // Zero enabled sources is a configuration gap, not a network failure:
@@ -341,12 +343,18 @@ export class SearchOrchestrator {
       let nextSourceIndex = 0;
       let partialPublishScheduled = false;
       let finalized = false;
+      // A result may only enter this sweep's surface if it still carries this
+      // sweep's searchRequestId: a superseded request's late payload must never
+      // bleed into the live list.
+      const admitsResult = (book: SearchBook): boolean => book.searchRequestId === searchRequestId;
       const flattenCollected = (): SearchBook[] => {
         const collected: SearchBook[] = [];
         for (const bucket of collectedBySource) {
           if (bucket !== undefined) {
             for (const book of bucket) {
-              collected.push(book);
+              if (admitsResult(book)) {
+                collected.push(book);
+              }
             }
           }
         }
@@ -371,6 +379,7 @@ export class SearchOrchestrator {
           searching: true,
           totalSourceCount: attemptedSourceCount,
           completedSourceCount: this.sweepCompletedSourceCount,
+          failedSourceCount: failures.length,
         });
       };
       const schedulePartialPublish = (): void => {
@@ -400,6 +409,7 @@ export class SearchOrchestrator {
             source,
             keyword,
             (): boolean => this.isCurrentWork(work, session),
+            searchRequestId,
           );
           if (!this.isCurrentWork(work, session)) {
             return;
@@ -436,12 +446,22 @@ export class SearchOrchestrator {
           failure.source.sourceId, failure.error);
       }
       if (successfulSourceCount === 0 && failures.length > 0) {
-        this.present({ kind: 'error', keyword: keyword, searchedSourceCount: attemptedSourceCount });
+        this.present({
+          kind: 'error',
+          keyword: keyword,
+          searchedSourceCount: attemptedSourceCount,
+          failedSourceCount: failures.length,
+        });
         return;
       }
       const results: SearchBook[] = flattenCollected();
       if (results.length === 0) {
-        this.present({ kind: 'empty', keyword: keyword, searchedSourceCount: attemptedSourceCount });
+        this.present({
+          kind: 'empty',
+          keyword: keyword,
+          searchedSourceCount: attemptedSourceCount,
+          failedSourceCount: failures.length,
+        });
         return;
       }
       this.present({
@@ -451,6 +471,7 @@ export class SearchOrchestrator {
         searching: false,
         totalSourceCount: attemptedSourceCount,
         completedSourceCount: this.sweepCompletedSourceCount,
+        failedSourceCount: failures.length,
       });
     } catch (error) {
       if (!this.isCurrentWork(work, session)) {
@@ -458,7 +479,12 @@ export class SearchOrchestrator {
       }
       const message = errorMessageOf(error);
       hilog.error(DOMAIN, 'Reader', 'Search failed: %{public}s', message);
-      this.present({ kind: 'error', keyword: keyword, searchedSourceCount: attemptedSourceCount });
+      this.present({
+        kind: 'error',
+        keyword: keyword,
+        searchedSourceCount: attemptedSourceCount,
+        failedSourceCount: 0,
+      });
     } finally {
       // A sweep ended by route-leave cancellation publishes nothing: workers
       // exit early and the terminal present is dropped. Marking it dead here
