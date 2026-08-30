@@ -476,7 +476,7 @@ void BookTurnHost::Notify(HostEvent event, uint64_t generation, int32_t detail)
 void BookTurnHost::RecordFrameDiag(float solveMs, float drawMs)
 {
     if (frameDiag_.size() >= kFrameDiagCapacity) return;
-    frameDiag_.push_back({ currentWakeMs_, solveMs, drawMs });
+    frameDiag_.push_back({ std::chrono::steady_clock::now(), currentWakeMs_, solveMs, drawMs });
 }
 
 void BookTurnHost::EmitFrameDiag()
@@ -485,18 +485,32 @@ void BookTurnHost::EmitFrameDiag()
     std::vector<float> wake;
     std::vector<float> solve;
     std::vector<float> draw;
+    std::vector<float> gaps;
     wake.reserve(frameDiag_.size());
     solve.reserve(frameDiag_.size());
     draw.reserve(frameDiag_.size());
+    gaps.reserve(frameDiag_.size());
     for (const FrameDiagSample& sample : frameDiag_) {
         wake.push_back(sample.wakeMs);
         solve.push_back(sample.solveMs);
         draw.push_back(sample.drawMs);
     }
+    for (std::size_t index = 1; index < frameDiag_.size(); ++index) {
+        gaps.push_back(std::chrono::duration<float, std::milli>(
+            frameDiag_[index].at - frameDiag_[index - 1].at).count());
+    }
+    const float windowMs = gaps.empty() ? 0.0F :
+        std::chrono::duration<float, std::milli>(
+            frameDiag_.back().at - frameDiag_.front().at).count();
+    // gap percentiles are the rendered frame interval: a healthy loop shows
+    // p50 at one display vsync (8.33 ms @ 120 Hz); anything above is pacing,
+    // not draw cost (draw is reported separately).
     OH_LOG_INFO(LOG_APP,
-        "frames=%{public}zu wake p50=%{public}.2f p95=%{public}.2f max=%{public}.2f | "
+        "frames=%{public}zu dur=%{public}.0fms gap p50=%{public}.2f p95=%{public}.2f max=%{public}.2f | "
+        "wake p50=%{public}.2f p95=%{public}.2f max=%{public}.2f | "
         "solve max=%{public}.2f | draw p50=%{public}.2f p95=%{public}.2f max=%{public}.2f ms",
-        frameDiag_.size(), Percentile(wake, 0.5F), Percentile(wake, 0.95F),
+        frameDiag_.size(), windowMs, Percentile(gaps, 0.5F), Percentile(gaps, 0.95F),
+        Percentile(gaps, 1.0F), Percentile(wake, 0.5F), Percentile(wake, 0.95F),
         Percentile(wake, 1.0F), Percentile(solve, 1.0F), Percentile(draw, 0.5F),
         Percentile(draw, 0.95F), Percentile(draw, 1.0F));
     frameDiag_.clear();

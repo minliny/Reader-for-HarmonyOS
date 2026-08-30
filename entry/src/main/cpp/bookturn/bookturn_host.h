@@ -151,6 +151,7 @@ private:
     // diagnosis): one hilog line per gesture/settlement window splits wake
     // latency from solve/draw cost. Render thread only.
     struct FrameDiagSample {
+        std::chrono::steady_clock::time_point at;
         float wakeMs;
         float solveMs;
         float drawMs;
