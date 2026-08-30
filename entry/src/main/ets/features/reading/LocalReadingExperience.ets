@@ -4810,8 +4810,9 @@ export struct ReadingExperience {
     }
     const coordinator = this.ttsCoordinator;
     if (coordinator === undefined || this.ttsState.status === 'unavailable') return;
-    if (this.ttsState.status === 'playing' || this.ttsState.status === 'preparing' ||
-      this.ttsState.status === 'resuming') {
+    // `resuming` is kept in the state union for compatibility but is no
+    // longer emitted by the coordinator, so the pause branch excludes it.
+    if (this.ttsState.status === 'playing' || this.ttsState.status === 'preparing') {
       void coordinator.pause().catch((error: Error): void => this.logTtsFailure('pause', error));
       return;
     }
@@ -4839,8 +4840,8 @@ export struct ReadingExperience {
       allowMixing: this.ttsAllowMixing,
       failurePolicy: this.ttsFailurePolicy,
       timerDurationMs: this.ttsTimerDurationMs(),
-    }).then((): void => {
-      if (this.mounted && !this.exitRequested && this.ttsCoordinator === coordinator) {
+    }).then((): Promise<boolean> => coordinator.whenStarted()).then((started: boolean): void => {
+      if (started && this.mounted && !this.exitRequested && this.ttsCoordinator === coordinator) {
         this.hideControl();
       }
     }).catch((error: Error): void => this.logTtsFailure('start', error));
