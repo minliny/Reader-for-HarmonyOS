@@ -10,9 +10,15 @@ import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 export type SearchBook = {
   sourceId: string;
   sourceName: string;
+  /** The source's own URL identity (legado `bookSourceUrl`). */
+  bookSourceUrl: string;
   bookId: string;
   /** Exact detail URL/path emitted as Core's non-blank remote `bookId`. */
   detailUrl: string;
+  /** Search sweep that produced this result; stale sweeps are rejected downstream. */
+  searchRequestId: string;
+  /** Bumped whenever the source's baseUrl changes under this gateway. */
+  sourceRuleVersion: number;
   title: string;
   author: string;
   coverUrl?: string;
@@ -42,6 +48,8 @@ export type SearchSource = {
   sourceId: string;
   name: string;
   enabled: boolean;
+  /** Source URL identity from `source.list`; falls back to sourceId when absent. */
+  baseUrl?: string;
 };
 
 export type SearchOutcome =
@@ -58,9 +66,51 @@ type SearchRequestGuard = () => boolean;
  */
 export class SearchGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
+  private readonly sourceRuleVersions: Map<string, number> = new Map();
+  private readonly sourceBaseUrls: Map<string, string> = new Map();
+  private searchRequestCounter: number = 0;
 
   constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
     this.runtimeOwner = runtimeOwner;
+  }
+
+  /**
+   * A stable id for one search sweep. Every result of the sweep carries it, so
+   * callers can reject late async results from an older keyword/scope.
+   */
+  generateSearchRequestId(keyword: string): string {
+    this.searchRequestCounter += 1;
+    return `search-${Date.now().toString(36)}-${this.searchRequestCounter}-${keyword.length}`;
+  }
+
+  /**
+   * Per-source rule version: stable while the source's baseUrl is unchanged,
+   * incremented when Core reports a different baseUrl for the same sourceId.
+   * Part of the immutable result identity consumed by detail admission keys.
+   */
+  private currentSourceRuleVersion(source: SearchSource): number {
+    const baseUrl = source.baseUrl === undefined || source.baseUrl.trim().length === 0 ?
+      source.sourceId : source.baseUrl;
+    const previousBaseUrl = this.sourceBaseUrls.get(source.sourceId);
+    if (previousBaseUrl === undefined) {
+      this.sourceBaseUrls.set(source.sourceId, baseUrl);
+      this.sourceRuleVersions.set(source.sourceId, 1);
+      return 1;
+    }
+    if (previousBaseUrl !== baseUrl) {
+      const next = (this.sourceRuleVersions.get(source.sourceId) ?? 1) + 1;
+      this.sourceBaseUrls.set(source.sourceId, baseUrl);
+      this.sourceRuleVersions.set(source.sourceId, next);
+      return next;
+    }
+    const current = this.sourceRuleVersions.get(source.sourceId) ?? 1;
+    this.sourceRuleVersions.set(source.sourceId, current);
+    return current;
+  }
+
+  private sourceBookUrl(source: SearchSource): string {
+    return source.baseUrl !== undefined && source.baseUrl.trim().length > 0 ?
+      source.baseUrl : source.sourceId;
   }
 
   async loadHistory(): Promise<SearchHistory> {
@@ -102,6 +152,7 @@ export class SearchGateway {
     source: SearchSource,
     keyword: string,
     isCurrent?: SearchRequestGuard,
+    searchRequestId?: string,
   ): Promise<SearchOutcome> {
     if (typeof keyword !== 'string' || keyword.trim().length === 0) {
       return { ok: false, error: 'empty keyword' };
@@ -109,6 +160,13 @@ export class SearchGateway {
     if (typeof source.sourceId !== 'string' || source.sourceId.length === 0) {
       return { ok: false, error: 'empty sourceId' };
     }
+    const requestId = searchRequestId !== undefined && searchRequestId.length > 0 ?
+      searchRequestId : this.generateSearchRequestId(keyword);
+    const identity = {
+      searchRequestId: requestId,
+      bookSourceUrl: this.sourceBookUrl(source),
+      sourceRuleVersion: this.currentSourceRuleVersion(source),
+    };
     try {
       const result = await this.runtimeOwner.request('book.search', {
         sourceId: source.sourceId,
@@ -125,7 +183,7 @@ export class SearchGateway {
       }
       const books: SearchBook[] = [];
       for (const raw of rawBooks) {
-        books.push(decodeBookSearchResult(raw, source));
+        books.push(decodeBookSearchResult(raw, source, identity));
       }
       return { ok: true, results: books };
     } catch (error) {
@@ -149,7 +207,15 @@ export class SearchGateway {
       const sourceId = requiredString(source, 'sourceId');
       const name = requiredString(source, 'name');
       const enabled = requiredBoolean(source, 'enabled');
-      sources.push({ sourceId, name, enabled });
+      const baseUrl = optionalString(source, 'baseUrl');
+      const decoded: SearchSource = { sourceId, name, enabled };
+      if (baseUrl !== undefined) {
+        decoded.baseUrl = baseUrl;
+      }
+      // Register the rule version eagerly so a source-list refresh that swaps a
+      // source's baseUrl bumps the version before the next search runs.
+      this.currentSourceRuleVersion(decoded);
+      sources.push(decoded);
     }
     return sources;
   }
@@ -163,8 +229,14 @@ export class SearchGateway {
  * Decode one live Core search item without deriving a second remote identity.
  * The domain `bookId` is also the exact detail URL/path consumed by
  * `book.detail`, so both fields deliberately retain the same validated value.
+ * Every result carries the full immutable source identity of the request that
+ * produced it: any dedupe or aggregation downstream must keep per-source rows.
  */
-function decodeBookSearchResult(value: unknown, source: SearchSource): SearchBook {
+function decodeBookSearchResult(
+  value: unknown,
+  source: SearchSource,
+  identity: { searchRequestId: string; bookSourceUrl: string; sourceRuleVersion: number },
+): SearchBook {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new Error('book.search returned a non-object book');
   }
@@ -175,8 +247,11 @@ function decodeBookSearchResult(value: unknown, source: SearchSource): SearchBoo
   const decoded: SearchBook = {
     sourceId: source.sourceId,
     sourceName: source.name,
+    bookSourceUrl: identity.bookSourceUrl,
     bookId,
     detailUrl: bookId,
+    searchRequestId: identity.searchRequestId,
+    sourceRuleVersion: identity.sourceRuleVersion,
     title: requiredNonBlankString(book, 'title'),
     author: optionalString(book, 'author') ?? '',
     variables: decodeBookSearchVariables(book['variables']),
