@@ -114,9 +114,6 @@ private:
         GLint sigmaGrip = -1;
         GLint bandWidth = -1;
         GLint bandPeak = -1;
-        GLint poolPeak = -1;
-        GLint poolWidthStart = -1;
-        GLint poolWidthEnd = -1;
     };
 
     struct SheetUniforms {
@@ -128,9 +125,6 @@ private:
         GLint sigmaGrip = -1;
         GLint cameraDist = -1;
         GLint texture = -1;
-        GLint highlightPhiWidth = -1;
-        GLint frontStripWidth = -1;
-        GLint valleyGate = -1;
         GLint paperColor = -1;
         GLint paperFallback = -1;
     };

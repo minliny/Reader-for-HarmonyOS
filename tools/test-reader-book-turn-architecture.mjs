@@ -126,6 +126,15 @@ assert.doesNotMatch(renderer, /vec3\(0\.96,\s*0\.95,\s*0\.92\)/,
   'the folded page must preserve the active page theme instead of replacing it with fixed beige');
 assert.match(renderer, /backMix = smoothstep\(HALF_PI - 0\.02, HALF_PI \+ 0\.02, abs\(vPhi\)\)/,
   'front/back material color must cross the analytic fold continuously; the S-arc drape carries a signed facing angle so abs() keeps the switch geometric');
+// 2026-08-30 user ruling: every painted shading family (valley / back plate /
+// spine pool / curl highlight / physical light rig) is deleted. The only
+// dynamic shadow is the Huawei-measured contact band (Draw 2, uBandWidth/
+// uBandPeak); the deleted names must not zombie back.
+assert.doesNotMatch(renderer + rendererHeader,
+  /uPoolPeak|uPoolWidthStart|uPoolWidthEnd|uValleyGate|uFrontStripWidth|uHighlightPhiWidth|VALLEY_PEAK|BACK_PLATE_DARK|kSpinePool|kCurlHighlight|kFrontStripRatio|bookturn_lighting|CurrentLightRig/,
+  'painted shading families and the light rig were deleted; only the Huawei contact band remains');
+assert.match(renderer, /uBandWidth/,
+  'the Huawei contact band (the single remaining dynamic shadow) must stay present');
 assert.match(renderer, /glBufferData\([\s\S]*GL_STATIC_DRAW/);
 const draw = method(renderer, 'bool BookTurnRenderer::Draw(');
 assert.doesNotMatch(draw, /eglMakeCurrent|glGetUniformLocation|glGetError|glBufferData|glTexImage2D/,
