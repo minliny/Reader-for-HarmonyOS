@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 
 import {
-  projectReaderDirectoryBookmarks,
   projectReaderDirectoryEntries,
 } from '../entry/src/main/ets/features/reading/ReaderDirectoryProjection.ts';
 
@@ -32,7 +31,7 @@ assert.deepEqual(entries.map((entry) => entry.index), originalOrder,
   'projection must not mutate the owner-provided TOC');
 
 assert.deepEqual(projectReaderDirectoryEntries(entries, '第 19 章', false).map((entry) => entry.index), [18]);
-assert.deepEqual(projectReaderDirectoryBookmarks(entries, '十一章').map((bookmark) => bookmark.time), [1011],
-  'bookmark search must include excerpt content');
+// Bookmark-row projection (including excerpt search) moved to
+// test-reader-bookmark-projection.mjs against ReaderBookmarkProjection.ts.
 
 console.log('reader directory projection behavior: PASS');

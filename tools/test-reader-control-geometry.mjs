@@ -112,7 +112,11 @@ assert.equal(readerDirectoryScrollY(10, 9), 154,
   'the last row must clamp to contentHeight - viewportHeight');
 assert.equal(readerDirectoryScrollY(10, -1), 0);
 assert.equal(readerDirectoryScrollY(10, 10), 0);
-assert.match(directory, /constraintSize\(\{ minHeight: READER_DIRECTORY_VIEWPORT_HEIGHT \}\)/);
+const directoryList = await readFile(new URL('ReaderDirectoryList.ets', readingDir), 'utf8');
+// The 142vp min-height lock moved from the in-panel List to the module panel's
+// fixed-height Stack; the shared ReaderDirectoryList fills it at 100%.
+assert.match(directory, /\.height\(READER_DIRECTORY_VIEWPORT_HEIGHT\)\s*\.clip\(true\)/);
+assert.match(directoryList, /\.height\('100%'\)/);
 assert.match(directory, /return readerDirectoryScrollY\(entries\.length, currentIndex\)/);
 assert.match(directory, /DIRECTORY_EDGE_FADE_COLOR = '#D9FFFCF8'/);
 assert.match(directory, /DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR = '#00FFFCF8'/);
