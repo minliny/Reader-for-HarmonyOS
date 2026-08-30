@@ -37,16 +37,18 @@ export function isRemoteSourceFailureKind(kind: RemoteReadingFailureKind): boole
   return SOURCE_FAILURE_KINDS.indexOf(kind) >= 0;
 }
 
-/** A typed source-chain failure carrying its stable taxonomy kind. */
-export class RemoteReadingSourceError extends Error {
+/**
+ * A typed source-chain failure carrying its stable taxonomy kind. Extends
+ * RemoteReadingGatewayError so classifyRemoteReadingCommandFailure passes it
+ * through untouched instead of re-labeling it as commandFailed.
+ */
+export class RemoteReadingSourceError extends RemoteReadingGatewayError {
   readonly kind: RemoteReadingFailureKind;
-  readonly command: string | undefined;
 
   constructor(kind: RemoteReadingFailureKind, message: string, command?: string) {
-    super(message);
+    super('commandFailed', message, command);
     this.name = 'RemoteReadingSourceError';
     this.kind = kind;
-    this.command = command;
   }
 }
 
@@ -117,6 +119,15 @@ function looksLikeHtmlDocument(text: string): boolean {
   return head.indexOf('<!doctype html') >= 0 || head.indexOf('<html') >= 0;
 }
 
+const HTML_LOGIN_MARKERS: string[] = [
+  '登录', 'login', 'log in', 'sign in', 'password', '用户名', 'username',
+];
+
+function containsHtmlLoginMarker(text: string): boolean {
+  const lower = text.toLowerCase();
+  return containsAny(text, HTML_LOGIN_MARKERS) || containsAny(lower, HTML_LOGIN_MARKERS);
+}
+
 /**
  * Content heuristic for a decoded chapter body. Paywall/placeholder/login
  * pages and crawler interstitials are never admitted as readable content.
@@ -129,7 +140,7 @@ export function classifyChapterBody(content: string): ChapterBodyVerdict {
   }
   const lower = trimmed.toLowerCase();
   if (looksLikeHtmlDocument(trimmed)) {
-    if (containsAny(lower, AUTH_BANNER_MARKERS) || containsAny(trimmed, AUTH_BANNER_MARKERS)) {
+    if (containsHtmlLoginMarker(trimmed)) {
       return { kind: 'SOURCE_AUTH_REQUIRED', reason: 'source returned a login page' };
     }
     return { kind: 'SOURCE_PARSE_FAILED', reason: 'source returned an HTML page instead of chapter text' };
@@ -143,10 +154,10 @@ export function classifyChapterBody(content: string): ChapterBodyVerdict {
   if (containsAny(trimmed, CAPTCHA_BANNER_MARKERS) || containsAny(lower, CAPTCHA_BANNER_MARKERS)) {
     return { kind: 'SOURCE_AUTH_REQUIRED', reason: 'source returned a captcha or anti-crawler page' };
   }
-  if (containsAny(trimmed, PAYWALL_BANNER_MARKERS)) {
+  if (containsAny(lower, PAYWALL_BANNER_MARKERS)) {
     return { kind: 'SOURCE_PAYWALL', reason: 'chapter body is a purchase placeholder' };
   }
-  if (containsAny(trimmed, PLACEHOLDER_BANNER_MARKERS)) {
+  if (containsAny(lower, PLACEHOLDER_BANNER_MARKERS)) {
     return { kind: 'SOURCE_CONTENT_EMPTY', reason: 'chapter body is a loading placeholder' };
   }
   return { kind: 'readable' };
