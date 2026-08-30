@@ -8,7 +8,7 @@
     "enabledCookieJar": false,
     "enabledExplore": false,
     "header": "{\"User-Agent\":\"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Mobile Safari/537.36\"}",
-    "readerTestBuiltinVersion": 1,
+    "readerTestBuiltinVersion": 3,
     "ruleBookInfo": {
       "author": "class.author.0@text",
       "coverUrl": ".bookcover@src",
@@ -19,7 +19,9 @@
       "tocUrl": "@js:\"https://dj.palmestore.com/zybook/u/p/api.php?Act=getChapterListVersion&bid=\"+java.put('bid',baseUrl.match(/(\\d+)/)[1])+\"&p4=501656\"",
       "wordCount": ".font_num@text"
     },
-    "ruleContent": {"content": ".h5_mainbody@p@html"},
+    "ruleContent": {
+      "content": ".h5_mainbody@p@html"
+    },
     "ruleSearch": {
       "author": "class.book_author.0@text",
       "bookList": ".v_list li",
@@ -35,7 +37,24 @@
       "chapterName": "cn@text",
       "chapterUrl": "https://m.idejian.com/book/@get:{bid}/{{@css:id@text}}.html"
     },
-    "searchUrl": "/search/do?keyword={{key}}&page={{page}}"
+    "searchUrl": "/search/do?keyword={{key}}&page={{page}}",
+    "builtinId": "reader-builtin-dejian",
+    "builtinVersion": 3,
+    "ruleFingerprint": "b1e1d5c6cbd82fa706395419817a2fbcdec2342c7974c8a220c32ffb44214ca6",
+    "verifiedAt": "2026-08-30T18:33:50.551Z",
+    "verificationSuiteVersion": "reader-source-admission/1",
+    "capabilities": [
+      "search",
+      "detail",
+      "toc",
+      "content"
+    ],
+    "provenance": {
+      "origin": "reader-project-authored",
+      "upstreamSite": "https://m.idejian.com",
+      "notes": "Chapter-list API requires the fixed route param p4 (non-credential app route tag); the API 302-redirects to book.d.ireader.com over http (server-side, https available on target). Recorded as admission warning."
+    },
+    "defaultEnabled": true
   },
   {
     "bookSourceGroup": "Reader 测试内置 · 正版小说",
@@ -45,12 +64,14 @@
     "enabled": true,
     "enabledCookieJar": false,
     "enabledExplore": false,
-    "readerTestBuiltinVersion": 1,
+    "readerTestBuiltinVersion": 3,
     "ruleBookInfo": {
       "intro": "@js:'<br>'+java.get('intro')",
       "lastChapter": "共{$.data.chapter.chapterCount}##[\\(（【].*?[求更谢乐发订合补加].*?[】）\\)]"
     },
-    "ruleContent": {"content": "data.novel.content"},
+    "ruleContent": {
+      "content": "data.novel.content"
+    },
     "ruleSearch": {
       "author": "author",
       "bookList": "$..novelList[*]",
@@ -64,9 +85,26 @@
     "ruleToc": {
       "chapterList": "data.chapter.chapterInfo",
       "chapterName": "chapter_title##默认卷.|正文.|[\\(（【].*?[求更谢乐发订合补加].*?[】）\\)]",
-      "chapterUrl": "http://dushu.baidu.com/api/pc/getChapterContent?data=%7B%22book_id%22:%22{$.book_id}%22,%22cid%22:%22{$.book_id}%7C{$.chapter_id}%22,%22need_bookinfo%22:0%7D"
+      "chapterUrl": "https://dushu.baidu.com/api/pc/getChapterContent?data=%7B%22book_id%22:%22{$.book_id}%22,%22cid%22:%22{$.book_id}%7C{$.chapter_id}%22,%22need_bookinfo%22:0%7D"
     },
-    "searchUrl": "/api/getSearchResultData?page={{page}}&count=10&query={{key}}"
+    "searchUrl": "/api/getSearchResultData?page={{page}}&count=10&query={{key}}",
+    "builtinId": "reader-builtin-baidu",
+    "builtinVersion": 3,
+    "ruleFingerprint": "2269bf303d6613ca873ae5671e47ec34796d9049b40cdba3040ab4485855c1ee",
+    "verifiedAt": "2026-08-30T18:33:50.551Z",
+    "verificationSuiteVersion": "reader-source-admission/1",
+    "capabilities": [
+      "search",
+      "detail",
+      "toc",
+      "content"
+    ],
+    "provenance": {
+      "origin": "reader-project-authored",
+      "upstreamSite": "https://dushu.baidu.com",
+      "notes": "Chapter content API switched from http to https in readerTestBuiltinVersion 2."
+    },
+    "defaultEnabled": true
   },
   {
     "bookSourceGroup": "Reader 测试内置 · 正版小说",
@@ -76,7 +114,7 @@
     "enabled": true,
     "enabledCookieJar": false,
     "enabledExplore": false,
-    "readerTestBuiltinVersion": 1,
+    "readerTestBuiltinVersion": 3,
     "ruleBookInfo": {
       "author": "a.author@text",
       "coverUrl": "img@src",
@@ -87,7 +125,9 @@
       "tocUrl": "a.detail-x__catalogue-entry@href##.*/book-chapter/(\\d+)##https://ubook.reader.qq.com/api/book/chapter-list?bid=$1",
       "wordCount": "p.detail-x__header-detail__line:nth-of-type(1) span@text"
     },
-    "ruleContent": {"content": ".chapter-content@p@text"},
+    "ruleContent": {
+      "content": ".chapter-content@p@text"
+    },
     "ruleSearch": {
       "author": ".author",
       "bookList": ".books[*]",
@@ -104,23 +144,42 @@
       "chapterName": "$.title",
       "chapterUrl": "@js:var bid = baseUrl.match(/\\d+/);\njava.put('bid', bid);\n'https://ubook.reader.qq.com/book-read/'+bid+'/{{$.seq}}'"
     },
-    "searchUrl": "https://ubook.reader.qq.com/api/search?keywords={{key}}&pageIndex={{page}}&pageSize=20&bookType=1&categoryid=0&sorted=0"
+    "searchUrl": "https://ubook.reader.qq.com/api/search?keywords={{key}}&pageIndex={{page}}&pageSize=20&bookType=1&categoryid=0&sorted=0",
+    "builtinId": "reader-builtin-qq",
+    "builtinVersion": 3,
+    "ruleFingerprint": "b5394bbe6a76ed3bb6180e432a066db718edb55ae7b1537b2fd8b9532b792506",
+    "verifiedAt": "2026-08-30T18:33:50.551Z",
+    "verificationSuiteVersion": "reader-source-admission/1",
+    "capabilities": [
+      "search",
+      "detail",
+      "toc",
+      "content"
+    ],
+    "provenance": {
+      "origin": "reader-project-authored",
+      "upstreamSite": "https://ubook.reader.qq.com",
+      "notes": "Toc API returns chapter entries without URLs; chapter URLs are constructed as book-read/{bookId}/{seq} by the ruleContent chapterUrl rule."
+    },
+    "defaultEnabled": true
   },
   {
     "bookSourceGroup": "Reader 测试内置 · 正版小说",
     "bookSourceName": "晋江文学（测试内置）",
     "bookSourceType": 0,
     "bookSourceUrl": "https://www.jjwxc.net/",
-    "enabled": true,
+    "enabled": false,
     "enabledCookieJar": true,
     "enabledExplore": false,
-    "readerTestBuiltinVersion": 1,
+    "readerTestBuiltinVersion": 3,
     "ruleBookInfo": {
       "coverUrl": "class.noveldefaultimage@src",
       "intro": "id.novelintro.0@text##手机地址：",
       "kind": "//*[@itemprop=\"updataStatus\"]/text()&&//*[@itemprop=\"genre\"]/text()&&//*[@itemprop=\"updataStatus\"]/font/text()"
     },
-    "ruleContent": {"content": ".novelbody .noveltext@textNodes@js:result || '这是 🔒 付费章节 哦！\\n｡◕‿◕｡'"},
+    "ruleContent": {
+      "content": ".novelbody .noveltext@textNodes"
+    },
     "ruleSearch": {
       "author": "tag.a.0@text",
       "bookList": "tbody@tr!0 ",
@@ -135,7 +194,23 @@
       "chapterName": "tag.td.0@text&&tag.span.0@text@js:\nresult=result.replace(/,/g,\"\");\nif(result.match(/\\[VIP\\]/)){\nresult=result.replace(/\\[VIP\\]/,\"·☆\")}else{result=result}",
       "chapterUrl": "tag.a.0@href||tag.a.0@rel"
     },
-    "searchUrl": "https://www.jjwxc.net/bookbase.php?searchkeywords={{key}},{\n  \"charset\": \"gbk\"\n}"
+    "searchUrl": "https://www.jjwxc.net/bookbase.php?searchkeywords={{key}},{\n  \"charset\": \"gbk\"\n}",
+    "builtinId": "reader-builtin-jjwxc",
+    "builtinVersion": 3,
+    "ruleFingerprint": "bb1cd2c7e3005e21002f9a452f67a9eb908b58b656c8a61a49248e91d3ab3bce",
+    "verifiedAt": "2026-08-30T18:33:50.551Z",
+    "verificationSuiteVersion": "reader-source-admission/1",
+    "capabilities": [
+      "search",
+      "detail",
+      "toc"
+    ],
+    "provenance": {
+      "origin": "reader-project-authored",
+      "upstreamSite": "https://www.jjwxc.net",
+      "notes": "Synthesized paid-chapter placeholder removed from ruleContent in version 2. Excluded from the default-enabled subset in version 3: the site serves GBK HTML without a charset in Content-Type, and Core has no source-level charset field, so content decodes as mojibake (verified 2026-08-31: GBK decode of onebook body is readable, UTF-8 decode is 99%+ replacement characters). Search/detail/toc are healthy; content capability is withheld until Core supports source-level charset."
+    },
+    "defaultEnabled": false
   },
   {
     "bookSourceGroup": "Reader 测试内置 · 正版小说",
@@ -146,7 +221,7 @@
     "enabledCookieJar": true,
     "enabledExplore": false,
     "header": "{\"User-Agent\":\"Mozilla/5.0 (Linux; U; Android 13; zh-Hans-CN; PFJM10 Build/TP1A.220905.001) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.4896.58 Quark/6.13.6.581 Mobile Safari/537.36\",\"Accept-Language\":\"zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7\"}",
-    "readerTestBuiltinVersion": 1,
+    "readerTestBuiltinVersion": 3,
     "ruleBookInfo": {
       "author": ".detail__header-detail__author@a@textNodes",
       "coverUrl": "[property$=image]@content",
@@ -157,7 +232,10 @@
       "tocUrl": "{{baseUrl}}/catalog/",
       "wordCount": ".detail__header-detail__line@text##.*\\/.*|\\|.*|\\n"
     },
-    "ruleContent": {"content": ".content@p@html", "imageStyle": "FULL"},
+    "ruleContent": {
+      "content": ".content@p@html",
+      "imageStyle": "FULL"
+    },
     "ruleSearch": {
       "author": "p.-4@text",
       "bookList": ".y-list__item",
@@ -177,76 +255,24 @@
       "preUpdateJs": "java.refreshTocUrl()",
       "updateTime": "alt\n@js:\nresult=(result.match(/首发时间: (.*)章节字数/) || [\"\",\"\"])[1];\nresult;"
     },
-    "searchUrl": "/so/{{key}}.html?pageNum={{page}}"
-  },
-  {
-    "bookSourceGroup": "Reader 测试内置 · 正版小说",
-    "bookSourceName": "番茄小说接口（测试内置）",
-    "bookSourceType": 0,
-    "bookSourceUrl": "https://novel.cooks.tw",
-    "enabled": true,
-    "enabledCookieJar": true,
-    "enabledExplore": false,
-    "header": "{\"User-Agent\":\"Mozilla/5.0 (Android 11; Mobile; rv:147.0) Gecko/147.0 Firefox/147.0\",\"Accept-Language\":\"zh-CN,zh-TW;q=0.9,zh;q=0.8,en;q=0.6\",\"Referer\":\"https://novel.cooks.tw/\"}",
-    "jsLib": "function Base(){return 'https://novel.cooks.tw';}function J(s){try{return JSON.parse(String(s||'{}'));}catch(e){return {};}}function T(v){if(v===null||v===undefined)return '';return String(v).replace(/<br\\s*\\/?>/gi,'\\n').replace(/<p[^>]*>/gi,'\\n').replace(/<\\/p>/gi,'\\n').replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&#39;/g,\"'\").replace(/&quot;/g,'\"').trim();}function Cover(id){id=String(id||'').replace(/\\D/g,'');if(!id)return '';return 'https://pic.cooks.tw/'+Math.floor(parseInt(id)/1000)+'/'+id+'/'+id+'s.jpg';}function Clean(c){return String(c||'').replace(/<br\\s*\\/?>/gi,'\\n').replace(/<p[^>]*>/gi,'\\n').replace(/<\\/p>/gi,'\\n').replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&#39;/g,\"'\").replace(/&quot;/g,'\"').replace(/\\r/g,'').replace(/[ \\t]+\\n/g,'\\n').replace(/\\n{3,}/g,'\\n\\n').trim();}",
-    "readerTestBuiltinVersion": 1,
-    "ruleBookInfo": {
-      "author": "$.data.author",
-      "coverUrl": "$.data.articleid\n<js>Cover(result)</js>",
-      "init": "<js>var j=J(result);var d=j.data||j;var id=d.articleid||'';if(!id){var m=String(baseUrl||'').match(/detail\\/(\\d+)/);if(m)id=m[1];}try{cache.putMemory('articleid',String(id));}catch(e){}result;</js>",
-      "intro": "$.data.intro",
-      "lastChapter": "$.data.lastchapter",
-      "name": "$.data.articlename",
-      "tocUrl": "<js>var j=J(result);var d=j.data||j;var id=d.articleid||'';if(!id){var m=String(baseUrl||'').match(/detail\\/(\\d+)/);if(m)id=m[1];}try{cache.putMemory('articleid',String(id));}catch(e){}Base()+'/api/chapter/list/'+id+'?lang=zh-CN'</js>",
-      "wordCount": "$.data.chapters"
+    "searchUrl": "/search?kw={{key}}&pageNum={{page}}",
+    "builtinId": "reader-builtin-qidian",
+    "builtinVersion": 3,
+    "ruleFingerprint": "c57347ba10d8871d94bb2f2f556c3fb5dbede2c2a3b9e45625d62a2871f9cee1",
+    "verifiedAt": "2026-08-30T18:33:50.551Z",
+    "verificationSuiteVersion": "reader-source-admission/1",
+    "capabilities": [
+      "search",
+      "detail",
+      "toc",
+      "content"
+    ],
+    "provenance": {
+      "origin": "reader-project-authored",
+      "upstreamSite": "https://m.qidian.com",
+      "notes": "The #ReaderTestBuiltin fragment is part of the stable unique source identity. In version 3 searchUrl moved from the /so/{{key}}.html path form to the /search?kw= query form: Core expands {{key}} only in the query component (path braces are percent-encoded during URL normalization before template expansion), which made every keyword return the same default ranking page."
     },
-    "ruleContent": {"content": "$.data.content\n<js>Clean(result)</js>"},
-    "ruleSearch": {
-      "author": "$.author",
-      "bookList": "$.data.items[*]",
-      "bookUrl": "https://novel.cooks.tw/api/novel/detail/{{$.articleid}}?lang=zh-CN",
-      "checkKeyWord": "青春",
-      "coverUrl": "$.articleid\n<js>Cover(result)</js>",
-      "intro": "$.intro",
-      "lastChapter": "$.chapters",
-      "name": "$.articlename"
-    },
-    "ruleToc": {
-      "chapterList": "$.data[*]||$.data.items[*]||$.data.list[*]||$.data.chapterlist[*]||$.data.chapterList[*]||$.data.chapters[*]",
-      "chapterName": "$.chaptername||$.chapter_name||$.chapterName||$.title||$.name",
-      "chapterUrl": "$.chapterid\n<js>var aid='';try{aid=cache.getFromMemory('articleid')||'';}catch(e){}if(!aid){var m=String(baseUrl||'').match(/list\\/(\\d+)/);if(m)aid=m[1];}Base()+'/api/chapter/content/'+aid+'/'+result+'?lang=zh-CN'</js>"
-    },
-    "searchUrl": "https://novel.cooks.tw/api/novel/search?q={{key}}&page={{page}}&limit=20&lang=zh-CN,{\"headers\":{\"User-Agent\":\"Mozilla/5.0 (Android 11; Mobile; rv:147.0) Gecko/147.0 Firefox/147.0\",\"Accept-Language\":\"zh-CN,zh-TW;q=0.9,zh;q=0.8,en;q=0.6\",\"Referer\":\"https://novel.cooks.tw/\"}}"
-  },
-  {
-    "bookSourceGroup": "Reader 测试内置 · 正版小说",
-    "bookSourceName": "疯读小说（测试内置）",
-    "bookSourceType": 0,
-    "bookSourceUrl": "https://fiction.fengduxiaoshuo.com",
-    "enabled": true,
-    "enabledCookieJar": false,
-    "enabledExplore": false,
-    "header": "{\"User-Agent\": \"okhttp/3.12.0\"}",
-    "readerTestBuiltinVersion": 1,
-    "ruleBookInfo": {"lastChapter": "$..detailedBookInfo.bookChapterAllInfo[-1].chapterTitle"},
-    "ruleContent": {"content": "$..chapterContent", "imageStyle": "0"},
-    "ruleSearch": {
-      "author": "$.bookAuthor",
-      "bookList": "$..books[*]",
-      "bookUrl": "https://fiction.fengduxiaoshuo.com/doReader/enter_bookinfo_index?_token=d2a094ff-b75f-4b60-ba2c-19e1cfe6cf73&bookId={{$.bookId}}&_sv=v2",
-      "checkKeyWord": "青春",
-      "coverUrl": "$.bookCoverImage",
-      "intro": "$.bookDesc",
-      "kind": "$.chapters_update_time&&$.c_class_name&&{$.crazy_rating}分",
-      "name": "$.bookTitle##（+.*|.*最新章节|\\(+.*",
-      "wordCount": "$.book_words_num"
-    },
-    "ruleToc": {
-      "chapterList": "$..detailedBookInfo.bookChapterAllInfo[*]",
-      "chapterName": "$.chapterTitle##[\\(（].*[求更谢乐发推].*[）\\)]",
-      "chapterUrl": "https://fiction.fengduxiaoshuo.com/doReader/get_content_by_chapterId?_token=d2a094ff-b75f-4b60-ba2c-19e1cfe6cf73&bookId={{$.bookId}}&chapterId={{$.chapterId}}&chapterCount=1&_sv=v2"
-    },
-    "searchUrl": "https://fiction.fengduxiaoshuo.com/doReader/search/result?_token=d2a094ff-b75f-4b60-ba2c-19e1cfe6cf73&key_words={{key}}&api_version=v6&nid=f0439a4f53b774fa0b4d90b48738e4f1&_sv=v2"
+    "defaultEnabled": true
   },
   {
     "bookSourceGroup": "Reader 测试内置 · 正版小说",
@@ -256,7 +282,7 @@
     "enabled": true,
     "enabledCookieJar": false,
     "enabledExplore": false,
-    "readerTestBuiltinVersion": 1,
+    "readerTestBuiltinVersion": 3,
     "ruleBookInfo": {
       "author": ".book_info3@span@text##\\s.*",
       "coverUrl": ".book_info@tag.img@src",
@@ -267,7 +293,11 @@
       "tocUrl": "text.目录列表@href",
       "wordCount": ""
     },
-    "ruleContent": {"content": "div[style=text-indent: 2em;]@html@js:\nresult", "imageStyle": "FULL", "nextContentUrl": ""},
+    "ruleContent": {
+      "content": "div[style=text-indent: 2em;]@html@js:\nresult",
+      "imageStyle": "FULL",
+      "nextContentUrl": ""
+    },
     "ruleSearch": {
       "author": "$.AuthorName",
       "bookList": "$.Novels[0,1]",
@@ -285,6 +315,23 @@
       "chapterName": "k",
       "chapterUrl": "v"
     },
-    "searchUrl": "/API/HTML5.ashx?op=search&keyword={{key}}"
+    "searchUrl": "/API/HTML5.ashx?op=search&keyword={{key}}",
+    "builtinId": "reader-builtin-sfacg",
+    "builtinVersion": 3,
+    "ruleFingerprint": "a764d68af9da21a9cbfbb7b82c51135ad7784d71c3736c279c33263fcb62d2a8",
+    "verifiedAt": "2026-08-30T18:33:50.551Z",
+    "verificationSuiteVersion": "reader-source-admission/1",
+    "capabilities": [
+      "search",
+      "detail",
+      "toc",
+      "content"
+    ],
+    "provenance": {
+      "origin": "reader-project-authored",
+      "upstreamSite": "https://m.sfacg.com",
+      "notes": "VIP chapters carry a display-only lock marker in toc names; content gate still applies to VIP fetches."
+    },
+    "defaultEnabled": true
   }
 ]
