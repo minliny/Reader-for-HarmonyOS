@@ -13,6 +13,17 @@ import {
   READER_DIRECTORY_VIEWPORT_HEIGHT,
 } from './ReaderDirectoryScrollGeometry';
 import {
+  projectReaderBookmarkRows,
+  readerBookmarkLoadState,
+  type ReaderBookIdentity,
+  type ReaderBookmarkRowModel,
+} from './ReaderBookmarkProjection';
+import { ReaderDirectoryList } from './ReaderDirectoryList';
+import { ReaderBookmarkList } from './ReaderBookmarkList';
+import { ReaderBookmarkEmptyState } from './ReaderBookmarkEmptyState';
+import { ReaderBookmarkLoadingState } from './ReaderBookmarkLoadingState';
+import { ReaderBookmarkErrorState } from './ReaderBookmarkErrorState';
+import {
   TOK_ACCENT,
   TOK_BORDER_W,
   TOK_LINE,
@@ -58,8 +69,17 @@ export struct ReaderDirectoryModulePanel {
   @Prop chapterDownloadEnabled: boolean = false;
   @State private activeTab: string = 'directory';
   @State private projectedEntries: LocalReadingTocEntry[] = [];
+  @State private bookmarkRows: ReaderBookmarkRowModel[] = [];
+  @State private bookmarkTabLoading: boolean = false;
   private readonly listScroller: Scroller = new Scroller();
   private scrollReady: boolean = false;
+  // Optional stable book identity supplied by the owner. Undefined keeps the
+  // session-scoped bookmark ids until the host wires full identity hand-off.
+  bookmarkIdentity: ReaderBookIdentity | undefined = undefined;
+  // Exact-offset bookmark selection. Undefined until the owner wires it; the
+  // row tap then degrades to opening the chapter start (legacy behavior).
+  onSelectBookmark: ((bookmarkId: string, chapterIndex: number, chapterOffset: number) => void) | undefined =
+    undefined;
   onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   onDownloadChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   // A filled chapter marker represents every existing Core bookmark projected
@@ -71,50 +91,37 @@ export struct ReaderDirectoryModulePanel {
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void =
     (_request: ReaderDirectoryChapterStartBookmarkRequest): void => {};
+  // Error is owner-driven: the data contract has no bookmark error channel.
+  @Prop bookmarkLoadFailed: boolean = false;
+  onRetryBookmarkLoad: () => void = (): void => {};
 
   aboutToAppear(): void {
-    this.rebuildProjection();
+    this.rebuildProjection(this.activeTab);
   }
 
   build() {
     Column() {
       this.tabs();
       Stack({ alignContent: Alignment.Top }) {
-        List({ space: 0, scroller: this.listScroller }) {
-          Repeat(this.projectedEntries)
-            .each((repeatItem: RepeatItem<LocalReadingTocEntry>) => {
-              ListItem() {
-                this.chapterRow(repeatItem);
-              }
-              .width('100%')
-              .height(READER_DIRECTORY_ROW_HEIGHT);
-            })
-            .key((entry: LocalReadingTocEntry): string => `reader-module-toc-${entry.index}`)
-            // On the current phone runtime, reusable Repeat nodes cycle the
-            // roughly 18 materialized rows through a long TOC without
-            // refreshing their text. Keep lazy creation, but do not reuse
-            // those chapter rows: Core's complete order remains untouched.
-            .virtualScroll({ totalCount: this.projectedEntries.length, reusable: false });
+        if (this.activeTab === 'bookmarks') {
+          this.bookmarkBody();
+        } else {
+          ReaderDirectoryList({
+            entries: this.projectedEntries,
+            rowHeight: READER_DIRECTORY_ROW_HEIGHT,
+            listPaddingX: DIRECTORY_LIST_PADDING_X,
+            listPaddingY: READER_DIRECTORY_LIST_PADDING_Y,
+            edgeEffectMode: EdgeEffect.None,
+            scroller: this.listScroller,
+            onFirstLayout: (): void => {
+              this.scrollReady = true;
+              this.scheduleCenterScroll();
+            },
+            rowBuilder: (repeatItem: RepeatItem<LocalReadingTocEntry>) => {
+              this.chapterRow(repeatItem);
+            },
+          })
         }
-        .width('100%')
-        .height(READER_DIRECTORY_VIEWPORT_HEIGHT)
-        .constraintSize({ minHeight: READER_DIRECTORY_VIEWPORT_HEIGHT })
-        .padding({
-          left: DIRECTORY_LIST_PADDING_X,
-          right: DIRECTORY_LIST_PADDING_X,
-          top: READER_DIRECTORY_LIST_PADDING_Y,
-          bottom: READER_DIRECTORY_LIST_PADDING_Y,
-        })
-        .scrollBar(BarState.Off)
-        .edgeEffect(EdgeEffect.None)
-        .onAreaChange((_oldArea: Area, newArea: Area): void => {
-          // First real layout: reproduce the make's initial scroll so the
-          // current chapter row lands centered (viewport/2 + 3px py padding).
-          if (!this.scrollReady && (newArea.height as number) > 0) {
-            this.scrollReady = true;
-            this.scheduleCenterScroll();
-          }
-        });
         if (this.shouldShowEdgeFade()) {
           Column() {
             Row()
@@ -182,9 +189,7 @@ export struct ReaderDirectoryModulePanel {
         .height(DIRECTORY_TAB_ROW_HEIGHT)
         .accessibilityText('目录')
         .onClick((): void => {
-          this.activeTab = 'directory';
-          this.rebuildProjection();
-          this.scheduleCenterScroll();
+          this.switchTab('directory');
         });
 
         Stack({ alignContent: Alignment.Bottom }) {
@@ -208,9 +213,7 @@ export struct ReaderDirectoryModulePanel {
         .height(DIRECTORY_TAB_ROW_HEIGHT)
         .accessibilityText('书签')
         .onClick((): void => {
-          this.activeTab = 'bookmarks';
-          this.rebuildProjection();
-          this.scheduleCenterScroll();
+          this.switchTab('bookmarks');
         });
       }
       .width('100%')
@@ -325,9 +328,50 @@ export struct ReaderDirectoryModulePanel {
   }
 
   private onInputsChanged(): void {
-    this.rebuildProjection();
+    this.rebuildProjection(this.activeTab);
     if (this.scrollReady) {
       this.scheduleCenterScroll();
+    }
+  }
+
+  /** Explicit tab switch: the projection always receives the next tab value. */
+  private switchTab(nextTab: string): void {
+    this.activeTab = nextTab;
+    this.rebuildProjection(nextTab);
+    this.scheduleCenterScroll();
+  }
+
+  private selectBookmark(bookmarkId: string, chapterIndex: number, chapterOffset: number): void {
+    if (this.onSelectBookmark !== undefined) {
+      this.onSelectBookmark(bookmarkId, chapterIndex, chapterOffset);
+      return;
+    }
+    // Legacy fallback until the owner wires exact-offset selection.
+    this.onSelectChapter(chapterIndex);
+  }
+
+  @Builder
+  private bookmarkBody() {
+    if (this.bookmarkLoadFailed) {
+      ReaderBookmarkErrorState({
+        onRetry: (): void => this.onRetryBookmarkLoad(),
+      });
+    } else if (this.bookmarkTabLoading) {
+      ReaderBookmarkLoadingState();
+    } else if (this.bookmarkRows.length === 0) {
+      ReaderBookmarkEmptyState({
+        onReturnToDirectory: (): void => this.switchTab('directory'),
+      });
+    } else {
+      ReaderBookmarkList({
+        rows: this.bookmarkRows,
+        listPaddingX: DIRECTORY_LIST_PADDING_X,
+        listPaddingY: READER_DIRECTORY_LIST_PADDING_Y,
+        scroller: this.listScroller,
+        onSelectBookmark: (bookmarkId: string, chapterIndex: number, chapterOffset: number): void => {
+          this.selectBookmark(bookmarkId, chapterIndex, chapterOffset);
+        },
+      });
     }
   }
 
@@ -367,18 +411,21 @@ export struct ReaderDirectoryModulePanel {
     return readerDirectoryIsScrollable(this.projectedEntries.length);
   }
 
-  private rebuildProjection(): void {
-    if (this.activeTab === 'directory') {
+  /**
+   * Pure tab-parameterized projection. Never reads the freshly written
+   * `activeTab` back: on the device runtime that read can still expose the
+   * previous value, so callers must pass the tab explicitly.
+   */
+  private rebuildProjection(tab: string): void {
+    if (tab === 'directory') {
       this.projectedEntries = this.entries;
+      this.bookmarkRows = [];
+      this.bookmarkTabLoading = false;
       return;
     }
-    const bookmarkedEntries: LocalReadingTocEntry[] = [];
-    for (const entry of this.entries) {
-      if (this.hasBookmark(entry)) {
-        bookmarkedEntries.push(entry);
-      }
-    }
-    this.projectedEntries = bookmarkedEntries;
+    this.projectedEntries = [];
+    this.bookmarkTabLoading = readerBookmarkLoadState(this.entries) === 'loading';
+    this.bookmarkRows = projectReaderBookmarkRows(this.entries, '', this.bookmarkIdentity);
   }
 
   private isCurrent(entry: LocalReadingTocEntry): boolean {

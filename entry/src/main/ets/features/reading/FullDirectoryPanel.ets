@@ -1,4 +1,4 @@
-import type { LocalReadingBookmark, LocalReadingTocEntry } from './LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import {
   readerDirectoryBookmarkMarkerState,
   type ReaderDirectoryBookmarkMarkerState,
@@ -24,13 +24,18 @@ import {
 
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { ReaderSearchField } from '../common/ReaderSearchField';
+import { projectReaderDirectoryEntries } from './ReaderDirectoryProjection';
 import {
-  projectReaderDirectoryBookmarks,
-  projectReaderDirectoryEntries,
-} from './ReaderDirectoryProjection';
-
-const BOOKMARK_ROW_HEIGHT = 74;
-const BOOKMARK_EXCERPT_ACCENT = '#8C9B8466';
+  projectReaderBookmarkRows,
+  readerBookmarkLoadState,
+  type ReaderBookIdentity,
+  type ReaderBookmarkRowModel,
+} from './ReaderBookmarkProjection';
+import { ReaderDirectoryList } from './ReaderDirectoryList';
+import { ReaderBookmarkList } from './ReaderBookmarkList';
+import { ReaderBookmarkEmptyState } from './ReaderBookmarkEmptyState';
+import { ReaderBookmarkLoadingState } from './ReaderBookmarkLoadingState';
+import { ReaderBookmarkErrorState } from './ReaderBookmarkErrorState';
 
 /**
  * Source-backed presentation layer for the expanded reader directory panel:
@@ -63,7 +68,18 @@ export struct FullDirectoryPanel {
   @State private searchQuery: string = '';
   @State private ascending: boolean = true;
   @State private projectedEntries: LocalReadingTocEntry[] = [];
-  @State private projectedBookmarks: LocalReadingBookmark[] = [];
+  @State private projectedBookmarks: ReaderBookmarkRowModel[] = [];
+  @State private bookmarkTabLoading: boolean = false;
+  // Optional stable book identity supplied by the owner. Undefined keeps the
+  // session-scoped bookmark ids until the host wires full identity hand-off.
+  bookmarkIdentity: ReaderBookIdentity | undefined = undefined;
+  // Exact-offset bookmark selection. Undefined until the owner wires it; the
+  // row tap then degrades to opening the chapter start (legacy behavior).
+  onSelectBookmark: ((bookmarkId: string, chapterIndex: number, chapterOffset: number) => void) | undefined =
+    undefined;
+  // Error is owner-driven: the data contract has no bookmark error channel.
+  @Prop bookmarkLoadFailed: boolean = false;
+  onRetryBookmarkLoad: () => void = (): void => {};
   // The current physical-device Repeat runtime keeps the mounted virtual
   // window when the same business keys are reordered. Alternating the ArkUI
   // conditional branch remounts only the virtual List subtree after a real
@@ -93,7 +109,7 @@ export struct FullDirectoryPanel {
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
-    this.rebuildProjection(this.ascending);
+    this.rebuildProjection(this.activeTab, this.ascending, this.searchQuery);
   }
 
   aboutToDisappear(): void {
@@ -177,11 +193,7 @@ export struct FullDirectoryPanel {
       this.tabs();
       this.searchControls();
       if (this.activeTab === 'bookmarks') {
-        if (this.projectionMountPrimary) {
-          this.bookmarkList();
-        } else {
-          this.bookmarkList();
-        }
+        this.bookmarkBody();
       } else {
         if (this.projectionMountPrimary) {
           this.chapterList();
@@ -251,9 +263,7 @@ export struct FullDirectoryPanel {
         this.listScroller.scrollEdge(Edge.Top);
         return;
       }
-      this.activeTab = 'directory';
-      this.rebuildProjection(this.ascending);
-      this.scheduleProjectionTopScroll();
+      this.switchTab('directory');
     });
   }
 
@@ -298,9 +308,7 @@ export struct FullDirectoryPanel {
         this.listScroller.scrollEdge(Edge.Top);
         return;
       }
-      this.activeTab = 'bookmarks';
-      this.rebuildProjection(this.ascending);
-      this.scheduleProjectionTopScroll();
+      this.switchTab('bookmarks');
     });
   }
 
@@ -375,22 +383,21 @@ export struct FullDirectoryPanel {
 
   @Builder
   private chapterList() {
-    List({ space: 0, scroller: this.listScroller }) {
-      Repeat(this.projectedEntries)
-        .each((repeatItem: RepeatItem<LocalReadingTocEntry>) => {
-          ListItem() {
-            this.chapterRow(repeatItem);
-          }
-          .width('100%')
-          .height(40);
-        })
-        .key((entry: LocalReadingTocEntry): string => `toc-entry-${entry.index}`)
-        .virtualScroll({ totalCount: this.projectedEntries.length, reusable: false });
+    Column() {
+      ReaderDirectoryList({
+        entries: this.projectedEntries,
+        rowHeight: 40,
+        listPaddingX: TOK_SPACE_CONTROL_INLINE,
+        listPaddingY: 5,
+        edgeEffectMode: EdgeEffect.Spring,
+        scroller: this.listScroller,
+        rowBuilder: (repeatItem: RepeatItem<LocalReadingTocEntry>) => {
+          this.chapterRow(repeatItem);
+        },
+      });
     }
     .width('100%')
-    .height(this.chapterListHeight())
-    .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE, top: 5, bottom: 5 })
-    .scrollBar(BarState.Off);
+    .height(this.chapterListHeight());
   }
 
   @Builder
@@ -435,72 +442,51 @@ export struct FullDirectoryPanel {
     .borderRadius(6);
   }
 
-  @Builder
-  private bookmarkList() {
-    List({ space: 0, scroller: this.listScroller }) {
-      Repeat(this.projectedBookmarks)
-        .each((repeatItem: RepeatItem<LocalReadingBookmark>) => {
-          ListItem() {
-            this.bookmarkRow(repeatItem);
-          }
-          .width('100%')
-          .height(BOOKMARK_ROW_HEIGHT);
-        })
-        .key((bookmark: LocalReadingBookmark): string => `bookmark-${bookmark.time}`)
-        .virtualScroll({ totalCount: this.projectedBookmarks.length, reusable: false });
+  /**
+   * Explicit tab switch: the projection always receives the next tab value.
+   * Never reads the freshly written `activeTab` back — on the device runtime
+   * that read can still expose the previous value, keeping the old projection.
+   */
+  private switchTab(nextTab: string): void {
+    this.activeTab = nextTab;
+    this.rebuildProjection(nextTab, this.ascending, this.searchQuery);
+    this.scheduleProjectionTopScroll();
+  }
+
+  private selectBookmark(bookmarkId: string, chapterIndex: number, chapterOffset: number): void {
+    if (this.onSelectBookmark !== undefined) {
+      this.onSelectBookmark(bookmarkId, chapterIndex, chapterOffset);
+      return;
     }
-    .width('100%')
-    .height(this.bookmarkListHeight())
-    .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE, top: 4 })
-    .scrollBar(BarState.Off);
+    // Legacy fallback until the owner wires exact-offset selection.
+    this.onSelectChapter(chapterIndex);
   }
 
   @Builder
-  private bookmarkRow(repeatItem: RepeatItem<LocalReadingBookmark>) {
-    Column({ space: 0 }) {
-      Text(repeatItem.item.chapterTitle)
-        .width('100%')
-        .height(14)
-        .margin({ top: 9 })
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(500)
-        .fontSize(11)
-        .lineHeight(14)
-        .fontColor(TOK_READ_INK)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis });
-      Row({ space: 17 }) {
-        Text('')
-          .width(1)
-          .height(28)
-          .backgroundColor(BOOKMARK_EXCERPT_ACCENT)
-          .borderRadius(1);
-        Text(repeatItem.item.content)
-          .layoutWeight(1)
-          .height(28)
-          .fontFamily('ReaderNotoSerifSCRegular')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(9)
-          .lineHeight(14)
-          .fontColor(TOK_READ_MUTED)
-          .maxLines(2)
-          .textOverflow({ overflow: TextOverflow.Ellipsis });
+  private bookmarkBody() {
+    Column() {
+      if (this.bookmarkLoadFailed) {
+        ReaderBookmarkErrorState({
+          onRetry: (): void => this.onRetryBookmarkLoad(),
+        });
+      } else if (this.bookmarkTabLoading) {
+        ReaderBookmarkLoadingState();
+      } else if (this.projectedBookmarks.length === 0) {
+        ReaderBookmarkEmptyState({
+          onReturnToDirectory: (): void => this.switchTab('directory'),
+        });
+      } else {
+        ReaderBookmarkList({
+          rows: this.projectedBookmarks,
+          scroller: this.listScroller,
+          onSelectBookmark: (bookmarkId: string, chapterIndex: number, chapterOffset: number): void => {
+            this.selectBookmark(bookmarkId, chapterIndex, chapterOffset);
+          },
+        });
       }
-      .width('100%')
-      .height(28)
-      .margin({ top: 9 })
-      .alignItems(VerticalAlign.Center);
-      Text('')
-        .width('100%')
-        .height(1)
-        .margin({ top: 13 })
-        .backgroundColor(TOK_LINE);
     }
     .width('100%')
-    .height(BOOKMARK_ROW_HEIGHT)
-    .padding({ left: 10, right: 10 })
-    .accessibilityText(`打开书签：${repeatItem.item.chapterTitle}`)
-    .onClick((): void => this.onSelectChapter(repeatItem.item.chapterIndex));
+    .height(this.bookmarkListHeight());
   }
 
   @Builder
@@ -580,8 +566,9 @@ export struct FullDirectoryPanel {
   }
 
   private applySearch(): void {
-    this.searchQuery = this.searchDraft.trim();
-    this.rebuildProjection(this.ascending);
+    const nextQuery = this.searchDraft.trim();
+    this.searchQuery = nextQuery;
+    this.rebuildProjection(this.activeTab, this.ascending, nextQuery);
     this.scheduleProjectionTopScroll();
   }
 
@@ -605,7 +592,7 @@ export struct FullDirectoryPanel {
     // making the arrow update while the projected data keeps the old order.
     const nextAscending = !this.ascending;
     this.ascending = nextAscending;
-    this.rebuildProjection(nextAscending);
+    this.rebuildProjection(this.activeTab, nextAscending, this.searchQuery);
     this.scheduleProjectionTopScroll();
   }
 
@@ -623,18 +610,26 @@ export struct FullDirectoryPanel {
   }
 
   private onEntriesChanged(): void {
-    this.rebuildProjection(this.ascending);
+    this.rebuildProjection(this.activeTab, this.ascending, this.searchQuery);
   }
 
-  private rebuildProjection(ascending: boolean): void {
-    if (this.activeTab === 'bookmarks') {
+  /**
+   * Pure parameterized projection: tab, sort direction and search query are
+   * always explicit arguments. Never reads a @State written in the same event
+   * — the device runtime can still expose the previous value there.
+   */
+  private rebuildProjection(tab: string, ascending: boolean, query: string): void {
+    if (tab === 'bookmarks') {
       this.projectedEntries = [];
-      this.projectedBookmarks = projectReaderDirectoryBookmarks(this.entries, this.searchQuery);
+      this.bookmarkTabLoading = readerBookmarkLoadState(this.entries) === 'loading';
+      this.projectedBookmarks = projectReaderBookmarkRows(
+        this.entries, query, this.bookmarkIdentity);
       this.projectionMountPrimary = !this.projectionMountPrimary;
       return;
     }
-    this.projectedEntries = projectReaderDirectoryEntries(this.entries, this.searchQuery, ascending);
+    this.projectedEntries = projectReaderDirectoryEntries(this.entries, query, ascending);
     this.projectedBookmarks = [];
+    this.bookmarkTabLoading = false;
     this.projectionMountPrimary = !this.projectionMountPrimary;
   }
 
