@@ -7,16 +7,18 @@ import {
   isReaderProductSurfaceEnabled,
 } from '../entry/src/main/ets/app/ReaderProductScope.ts';
 
-assert.equal(READER_PRODUCT_PROFILE, 'l0');
-assert.equal(isReaderMainTabEnabled('bookshelf'), true);
-assert.equal(isReaderMainTabEnabled('settings'), true);
-assert.equal(isReaderMainTabEnabled('discover'), false);
-assert.equal(isReaderMainTabEnabled('rss'), false);
+// visual/acceptance branch: product scope intentionally opens every surface
+// for fixture-driven Figma review; the shipping l0 contract lives on main.
+assert.equal(READER_PRODUCT_PROFILE, 'visual-test');
+for (const key of ['bookshelf', 'discover', 'rss', 'settings']) {
+  assert.equal(isReaderMainTabEnabled(key), true,
+    `${key} tab must be admitted on the visual-acceptance branch`);
+}
 assert.equal(isReaderMainTabEnabled('unknown'), false);
 
 for (const surface of ['discover', 'rss', 'sync', 'unimplementedSettings']) {
-  assert.equal(isReaderProductSurfaceEnabled(surface), false,
-    `${surface} must remain outside the default L0 product surface`);
+  assert.equal(isReaderProductSurfaceEnabled(surface), true,
+    `${surface} must be open on the visual-acceptance branch`);
 }
 
 const root = new URL('../entry/src/main/ets/', import.meta.url);

@@ -3,12 +3,14 @@ import { window } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
 import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
+import { installVisualScenario } from '../app/visual/VisualTestConfig';
 
 const DOMAIN = 0x5244;
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     AppStorage.setOrCreate('readerAppForeground', true);
+    installVisualScenario(want);
     const owner = ReaderRuntimeOwner.install(this.context);
     owner.start().catch((error: Error): void => {
       hilog.error(DOMAIN, 'Reader', 'Core startup failed: %{public}s', error.message);

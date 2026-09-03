@@ -6,7 +6,7 @@
  * persisted effect. Extended pages stay in source for follow-up milestones,
  * but cannot become reachable merely because a route or Core command exists.
  */
-export type ReaderProductProfile = 'l0' | 'extended';
+export type ReaderProductProfile = 'l0' | 'extended' | 'visual-test';
 
 export type ReaderProductSurface =
   'discover' |
@@ -15,12 +15,16 @@ export type ReaderProductSurface =
   'unimplementedSettings';
 
 function configuredReaderProductProfile(): ReaderProductProfile {
-  return 'l0';
+  // visual/acceptance branch: every surface is open for Figma review.
+  return 'visual-test';
 }
 
 export const READER_PRODUCT_PROFILE: ReaderProductProfile = configuredReaderProductProfile();
 
 export function isReaderProductSurfaceEnabled(surface: ReaderProductSurface): boolean {
+  if (READER_PRODUCT_PROFILE === 'visual-test') {
+    return true;
+  }
   if (READER_PRODUCT_PROFILE !== 'extended') {
     return false;
   }
@@ -29,6 +33,9 @@ export function isReaderProductSurfaceEnabled(surface: ReaderProductSurface): bo
 }
 
 export function isReaderMainTabEnabled(key: string): boolean {
+  if (READER_PRODUCT_PROFILE === 'visual-test') {
+    return key === 'bookshelf' || key === 'discover' || key === 'rss' || key === 'settings';
+  }
   if (key === 'bookshelf' || key === 'settings') {
     return true;
   }

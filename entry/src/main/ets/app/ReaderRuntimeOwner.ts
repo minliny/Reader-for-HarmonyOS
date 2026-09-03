@@ -29,6 +29,7 @@ import {
 import { canonicalReadingImageBaseUrl } from '../common/ReadingImageIdentity';
 import { ArkWebExecutor } from './ArkWebExecutor';
 import type { SourceHttpDiagnosticRecord } from './HttpExecuteHost';
+import { visualFixtureRespond, visualModeActive } from './visual/VisualTestFixtures';
 import { image } from '@kit.ImageKit';
 
 type RuntimeState = 'new' | 'starting' | 'ready' | 'closing' | 'closed';
@@ -96,6 +97,10 @@ export class ReaderRuntimeOwner {
   }
 
   async start(): Promise<void> {
+    // Visual-acceptance branch: never create the native Core runtime.
+    if (visualModeActive()) {
+      return;
+    }
     if (this.state === 'closing' || this.state === 'closed') {
       throw new Error('Reader Core runtime is no longer available after teardown');
     }
@@ -115,6 +120,11 @@ export class ReaderRuntimeOwner {
   }
 
   async request(method: string, params: JsonObject = {}, options: RequestOptions = {}): Promise<ReaderCoreResultEvent> {
+    // Visual-acceptance branch: answer from fixtures before start(), so the
+    // NAPI runtime is never created and no real data can be reached.
+    if (visualModeActive()) {
+      return visualFixtureRespond(method, params);
+    }
     await this.start();
     const runtime = this.runtime;
     if (runtime === undefined) {
