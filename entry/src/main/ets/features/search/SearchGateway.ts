@@ -50,6 +50,8 @@ export type SearchSource = {
   enabled: boolean;
   /** Source URL identity from `source.list`; falls back to sourceId when absent. */
   baseUrl?: string;
+  /** Legado `bookSourceGroup`, trimmed; undefined when the source declares none. */
+  group?: string;
 };
 
 export type SearchOutcome =
@@ -211,6 +213,13 @@ export class SearchGateway {
       const decoded: SearchSource = { sourceId, name, enabled };
       if (baseUrl !== undefined) {
         decoded.baseUrl = baseUrl;
+      }
+      const rawBookSource = source['bookSource'];
+      if (rawBookSource !== null && typeof rawBookSource === 'object' && !Array.isArray(rawBookSource)) {
+        const group = optionalString(rawBookSource as JsonObject, 'bookSourceGroup');
+        if (group !== undefined && group.trim().length > 0) {
+          decoded.group = group.trim();
+        }
       }
       // Register the rule version eagerly so a source-list refresh that swaps a
       // source's baseUrl bumps the version before the next search runs.

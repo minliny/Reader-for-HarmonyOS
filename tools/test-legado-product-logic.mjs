@@ -75,12 +75,15 @@ assert.match(search, /right\.sourceCount - left\.sourceCount/,
   'multi-origin search results must be promoted like Legado');
 assert.match(search, /Text\('已在书架'\)/,
   'grouped search results must expose current shelf membership');
-// ACQ-02 supersedes the P0-DEAD-CONTROL-CLEANUP deferral: scope chips and the
-// stop control are now wired, so the surface must prove the intent exists.
-assert.match(search, /搜索范围/,
-  'ACQ-02: the scope control must be presented on the search surface');
-assert.match(search, /toggleScopeSource/,
-  'ACQ-02: scope chips must toggle real filter state');
+// ACQ-02 scope control follows the Figma canonical masters: the chip wall is
+// the source-group filter in Results/Empty (never Initial), and tapping a
+// group re-runs the sweep within that group's enabled sources.
+assert.match(search, /groupScopeRow\(\)/,
+  'the search surface must present the source-group chip row under the bar');
+assert.match(search, /selectGroup\(/,
+  'group chips must switch the scope and re-run the current search');
+assert.match(search, /source\.group === this\.selectedGroupName/,
+  'a selected group must restrict the sweep to that group\'s enabled sources');
 assert.match(search, /onSearch\(keyword, scope\)/,
   'ACQ-02: submitting must forward the scope subset to the orchestrator');
 assert.match(search, /onStop/,

@@ -177,11 +177,10 @@ export struct SearchPage {
   onManageSources: () => void = (): void => {};
   @State keyword: string = '';
   @State historyExpanded: boolean = false;
-  // ACQ-02 scope state (product-approved extension, no Figma final frame):
-  // all-sources by default; a custom subset is built from the chip wall.
-  @State scopeAll: boolean = true;
-  @State scopeSelection: string[] = [];
-  @State scopeExpanded: boolean = false;
+  // Figma search scope = source groups: `全部` sweeps every enabled source;
+  // a group chip re-runs the sweep within that group (Figma 2635:58985 /
+  // 2635:59076 place the chip wall in Results/Empty only — never Initial).
+  @State selectedGroupName: string = '全部';
   private groupedResultsInput: SearchBook[] | undefined = undefined;
   private groupedShelfInput: ShelfBook[] | undefined = undefined;
   private groupedResultsCache: SearchBookGroup[] = [];
@@ -200,6 +199,9 @@ export struct SearchPage {
   build() {
     Column() {
       this.searchBar();
+      if (this.presentation.kind === 'results' || this.presentation.kind === 'empty') {
+        this.groupScopeRow();
+      }
       this.stateContent();
     }
     .width('100%')
@@ -244,15 +246,15 @@ export struct SearchPage {
     this.onSearch(keyword, scope);
   }
 
-  /** undefined = all enabled sources; otherwise the usable selected subset. */
+  /** undefined = all enabled sources; otherwise the selected group's usable subset. */
   private scopeSourceIds(): string[] | undefined {
-    if (this.scopeAll) {
+    if (this.selectedGroupName === '全部') {
       return undefined;
     }
     const selected: string[] = [];
     for (const source of this.sources) {
       if (source.enabled && source.name.trim().length > 0 &&
-        this.scopeSelection.indexOf(source.sourceId) >= 0) {
+        source.group === this.selectedGroupName) {
         selected.push(source.sourceId);
       }
     }
@@ -264,29 +266,33 @@ export struct SearchPage {
       source.enabled && source.name.trim().length > 0);
   }
 
-  private toggleScopeSource(sourceId: string): void {
-    if (this.scopeAll) {
-      // Chips start from the all-sources default: the first tap enters the
-      // custom subset with every usable source except the tapped one.
-      this.scopeAll = false;
-      this.scopeSelection = this.enabledSources()
-        .map((source: SearchSource): string => source.sourceId)
-        .filter((id: string): boolean => id !== sourceId);
-      return;
+  /** Distinct groups of the enabled sources, in first-appearance order. */
+  private groupNames(): string[] {
+    const names: string[] = [];
+    for (const source of this.enabledSources()) {
+      const group = source.group;
+      if (group !== undefined && names.indexOf(group) < 0) {
+        names.push(group);
+      }
     }
-    if (this.scopeSelection.indexOf(sourceId) >= 0) {
-      this.scopeSelection = this.scopeSelection.filter((id: string): boolean => id !== sourceId);
-    } else {
-      this.scopeSelection = this.scopeSelection.concat([sourceId]);
-    }
+    return names;
   }
 
-  private scopeLabel(): string {
-    if (this.scopeAll) {
-      return '全部书源';
+  /** Tap a group chip: switch the scope, then re-run the current search within it. */
+  private selectGroup(name: string): void {
+    if (this.isSweeping()) {
+      return;
     }
-    const count = this.scopeSourceIds()?.length ?? 0;
-    return count === 0 ? '未选择书源' : `已选 ${count} 个书源`;
+    this.selectedGroupName = name;
+    const keyword = this.keyword.trim();
+    if (keyword.length === 0) {
+      return;
+    }
+    const scope = this.scopeSourceIds();
+    if (scope !== undefined && scope.length === 0) {
+      return;
+    }
+    this.onSearch(keyword, scope);
   }
 
   @Builder
@@ -379,7 +385,7 @@ export struct SearchPage {
   @Builder
   private stateContent() {
     if (this.presentation.kind === 'initial') {
-      this.initialContent(this.presentation.history);
+      this.initialContent();
     } else if (this.presentation.kind === 'loading') {
       this.loadingContent();
     } else if (this.presentation.kind === 'results') {
@@ -396,10 +402,14 @@ export struct SearchPage {
     }
   }
 
+  // Reads presentation.history directly (never a @Builder value parameter):
+  // loadHistory resolves after presentInitial() with the same presentation
+  // kind, and untracked parameters would keep the stale empty-history
+  // snapshot — the same ACQ-02 @Builder-parameter trap.
   @Builder
-  private initialContent(history: string[]) {
+  private initialContent() {
     Column({ space: 0 }) {
-      if (history.length > 0) {
+      if (this.presentation.kind === 'initial' && this.presentation.history.length > 0) {
         Row() {
           Text('最近搜索')
             .fontFamily('ReaderInter')
@@ -424,7 +434,8 @@ export struct SearchPage {
         // "N 条更多" chip follows (Figma 2635:58745) and expands the rest in
         // place — its wired intent per P0-DEAD-CONTROL-CLEANUP.
         Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
-          ForEach(this.historyExpanded ? history : history.slice(0, 4), (keyword: string) => {
+          ForEach(this.historyExpanded ? this.presentation.history :
+            this.presentation.history.slice(0, 4), (keyword: string) => {
             Text(keyword)
               .fontFamily('ReaderInter')
               .fontWeight(FontWeight.Medium)
@@ -441,19 +452,12 @@ export struct SearchPage {
                 this.submitSearch();
               });
           }, (keyword: string): string => `search-history-${keyword}`);
-          if (history.length > 4 && !this.historyExpanded) {
-            this.moreChip(history.length - 4);
+          if (this.presentation.history.length > 4 && !this.historyExpanded) {
+            this.moreChip(this.presentation.history.length - 4);
           }
         }
         .width('100%')
         .padding({ top: TOK_SPACE_CARD_PADDING });
-      }
-
-      // ACQ-02 scope control (product-approved extension, no Figma final
-      // frame): restrict the next search to selected sources. Wired intent per
-      // P0-DEAD-CONTROL-CLEANUP — these chips toggle real filter state.
-      if (this.enabledSources().length > 0) {
-        this.scopeSection();
       }
     }
     .width('100%')
@@ -465,74 +469,47 @@ export struct SearchPage {
     });
   }
 
+  // Figma 2635:58985 / 2635:59076: the chip wall sits directly under the
+  // search bar in Results/Empty — row 41.5 tall, chips 23 tall, 8px gaps,
+  // horizontally scrollable when the group names overflow.
   @Builder
-  private scopeSection() {
-    Row() {
-      Text('搜索范围')
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(13)
-        .lineHeight(19.5)
-        .fontColor(TOK_INK)
-        .layoutWeight(1);
-      Row({ space: 4 }) {
-        Text(this.scopeLabel())
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Medium)
-          .fontSize(12)
-          .lineHeight(18)
-          .fontColor(TOK_MUTED)
-          .maxLines(1);
-        Image($r('app.media.reader_chevron_right'))
-          .width(12)
-          .height(12)
-          .rotate({ angle: this.scopeExpanded ? 90 : 0 });
+  private groupScopeRow() {
+    if (this.groupNames().length > 0) {
+      Scroll() {
+        Row({ space: TOK_SPACE_XS }) {
+          this.groupScopeChip('全部', this.selectedGroupName === '全部');
+          ForEach(this.groupNames(), (name: string) => {
+            this.groupScopeChip(name, this.selectedGroupName === name);
+          }, (name: string): string => `search-group-${name}`);
+        }
+        .alignItems(VerticalAlign.Center)
+        .padding({ left: this.isTablet ? 20 : 16, right: this.isTablet ? 20 : 16 });
       }
-      .alignItems(VerticalAlign.Center)
-      .onClick((): void => {
-        this.scopeExpanded = !this.scopeExpanded;
-      })
-      .accessibilityText(this.scopeExpanded ? '收起搜索范围' : '展开搜索范围');
-    }
-    .width('100%')
-    .height(26)
-    .alignItems(VerticalAlign.Center)
-    .margin({ top: 18 });
-
-    if (this.scopeExpanded) {
-      Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
-        this.scopeChip('全部', this.scopeAll, (): void => {
-          this.scopeAll = true;
-        });
-        ForEach(this.enabledSources(), (source: SearchSource) => {
-          this.scopeChip(source.name,
-            !this.scopeAll && this.scopeSelection.indexOf(source.sourceId) >= 0,
-            (): void => this.toggleScopeSource(source.sourceId));
-        }, (source: SearchSource): string => `search-scope-${source.sourceId}`);
-      }
+      .scrollable(ScrollDirection.Horizontal)
+      .scrollBar(BarState.Off)
       .width('100%')
-      .padding({ top: TOK_SPACE_CARD_PADDING });
+      .height(41.5)
+      .align(Alignment.Start);
     }
   }
 
   @Builder
-  private scopeChip(label: string, selected: boolean, onToggle: () => void) {
+  private groupScopeChip(label: string, selected: boolean) {
     Text(label)
       .fontFamily('ReaderInter')
-      .fontWeight(FontWeight.Medium)
-      .fontSize(13)
-      .lineHeight(19.5)
-      .fontColor(selected ? TOK_GREEN : TOK_INK)
-      .padding({ left: 14.5, right: 14.5, top: 7.5, bottom: 7.5 })
-      .backgroundColor(selected ? TOK_PRIMARY_SOFT : TOK_CARD_BG)
+      .fontWeight(selected ? FontWeight.Bold : FontWeight.Medium)
+      .fontSize(12)
+      .lineHeight(12)
+      .fontColor(selected ? TOK_ON_PRIMARY : TOK_INK)
+      .padding({ left: 10, right: 10, top: 5.5, bottom: 5.5 })
+      .backgroundColor(selected ? TOK_GREEN : TOK_PAPER)
       .border({ width: TOK_BORDER_W, color: selected ? TOK_GREEN : TOK_BORDER })
       .borderRadius(999)
-      .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
       .maxLines(1)
       .textOverflow({ overflow: TextOverflow.Ellipsis })
       .constraintSize({ maxWidth: 160 })
-      .onClick((): void => onToggle())
-      .accessibilityText(selected ? `已选入搜索范围:${label}` : `选入搜索范围:${label}`);
+      .onClick((): void => this.selectGroup(label))
+      .accessibilityText(selected ? `当前搜索范围:${label}` : `按书源组筛选:${label}`);
   }
 
   @Builder
