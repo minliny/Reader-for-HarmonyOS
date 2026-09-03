@@ -8,9 +8,10 @@ import {
 } from '../common/ReaderTokens';
 import {
   READER_APPEARANCE_FULL_HEIGHT,
+  READER_APPEARANCE_MIN_INTERACTIVE_TRAVEL_VP,
   READER_APPEARANCE_QUICK_HEIGHT,
-  READER_APPEARANCE_SHELL_TRAVEL_VP,
-  readerAppearanceExpansionFromDrag,
+  READER_APPEARANCE_STAGE_WIDTH,
+  type ReaderAppearanceMeasuredAxis,
   type ReaderAppearanceMotionFrame,
 } from './ReaderAppearanceMotionGeometry';
 import {
@@ -21,6 +22,7 @@ import {
   readerAppearanceMotionIsActive,
   releaseReaderAppearanceTracking,
   sampleReaderAppearanceMotionState,
+  setReaderAppearanceMeasuredAxis,
   setReaderAppearanceMotionTimeScale,
   startReaderAppearanceProgrammatic,
   updateReaderAppearanceTracking,
@@ -28,13 +30,13 @@ import {
   type ReaderAppearanceMotionState,
 } from './ReaderAppearanceMotionState';
 
-/** Phone-only Figma N/O stage. Tablet keeps the existing static control path. */
-export const READER_APPEARANCE_MOTION_STAGE_WIDTH = 364;
+/** Phone-only direct-manipulation appearance stage. Tablet keeps the static path. */
+export const READER_APPEARANCE_MOTION_STAGE_WIDTH = READER_APPEARANCE_STAGE_WIDTH;
 export const READER_APPEARANCE_MOTION_STAGE_HEIGHT = READER_APPEARANCE_FULL_HEIGHT;
 export const READER_APPEARANCE_MOTION_QUICK_HEIGHT = READER_APPEARANCE_QUICK_HEIGHT;
-export const READER_APPEARANCE_MOTION_DRAG_TRAVEL = READER_APPEARANCE_SHELL_TRAVEL_VP;
 export const READER_APPEARANCE_MOTION_GRABBER_HIT_WIDTH = 72;
-export const READER_APPEARANCE_MOTION_GRABBER_HIT_HEIGHT = 44;
+export const READER_APPEARANCE_MOTION_GRABBER_HIT_HEIGHT =
+  READER_APPEARANCE_MIN_INTERACTIVE_TRAVEL_VP;
 export const READER_APPEARANCE_MOTION_GRABBER_WIDTH = 42;
 export const READER_APPEARANCE_MOTION_GRABBER_HEIGHT = 4;
 
@@ -45,17 +47,10 @@ const READER_APPEARANCE_MOTION_VELOCITY_IDLE_MS = 100;
 const READER_APPEARANCE_MOTION_MAX_FRAME_DELTA_MS = 100;
 const READER_APPEARANCE_MOTION_POINTER_STALL_MS = 15000;
 
-// N/Appearance Expand `1505:18040`: QuickMorph's full-state base is 13,57.
-// Its frame translation starts at -0.896,-28.007, yielding the authored
-// quick-state placement around 12.1,29 without a second layout coordinate set.
-const READER_APPEARANCE_QUICK_MORPH_BASE_X = 13;
-const READER_APPEARANCE_QUICK_MORPH_BASE_Y = 57;
 const READER_APPEARANCE_BRIGHTNESS_BASE_X = 312.44;
-// BrightnessRail is a fixed-screen sibling of MorphStage in Figma N. Its
-// quick endpoint is shellTop(406) + localY(28), and it never inherits the
-// shell's 406→0 translation; only its own +15 dissolve track may move it.
-const READER_APPEARANCE_BRIGHTNESS_FIXED_Y =
-  READER_APPEARANCE_MOTION_DRAG_TRAVEL + 28;
+// BrightnessRail is a fixed-screen sibling of MorphStage in legacy Figma N.
+// Its quick endpoint is the runtime shell travel + localY(28); it never
+// inherits shell translation, only its own independently sampled exit track.
 const READER_APPEARANCE_BRIGHTNESS_WIDTH = 38;
 const READER_APPEARANCE_BRIGHTNESS_HEIGHT = 190;
 
@@ -83,10 +78,10 @@ class ReaderAppearanceStageFrameCallback extends FrameCallback {
 /**
  * Persistent, interruptible Phone appearance stage.
  *
- * Quick, Full, BrightnessRail and ModuleNav stay mounted for the whole N/O
- * trajectory. The visible grabber is owned only here. Raw touch controls the
- * physical 330↔736 shell range; the pure motion engine inverse-maps that
- * geometry to the authored Figma timeline. No animateTo call owns this clock.
+ * AppearanceContent, BrightnessRail and ModuleNav stay mounted for the whole
+ * master axis. The visible grabber is owned only here. Raw touch measures
+ * the grabber in screen coordinates and produces the one master progress that
+ * every actor samples. No animateTo call owns this clock.
  */
 @Component
 export struct ReaderAppearanceMotionStage {
@@ -96,14 +91,15 @@ export struct ReaderAppearanceMotionStage {
   @Prop @Watch('onVisibleChanged') visible: boolean = true;
   @Prop @Watch('onInteractionEnabledChanged') interactionEnabled: boolean = true;
   @Prop availableWidth: number = READER_APPEARANCE_MOTION_STAGE_WIDTH;
+  @Prop @Watch('onAvailableHeightChanged') availableHeight: number =
+    READER_APPEARANCE_MOTION_STAGE_HEIGHT;
   @Prop @Watch('onMotionTimeScaleChanged') motionTimeScale: number = 1;
 
   onEndpointChange: (endpoint: ReaderAppearanceMotionEndpoint) => void =
     (_endpoint: ReaderAppearanceMotionEndpoint): void => {};
   onMotionActivityChange: (active: boolean) => void = (_active: boolean): void => {};
 
-  @BuilderParam quickMorph: (context: ReaderAppearanceMotionSlotContext) => void;
-  @BuilderParam fullContent: (context: ReaderAppearanceMotionSlotContext) => void;
+  @BuilderParam appearanceContent: (context: ReaderAppearanceMotionSlotContext) => void;
   @BuilderParam brightnessRail: (context: ReaderAppearanceMotionSlotContext) => void;
   @BuilderParam moduleNav: (context: ReaderAppearanceMotionSlotContext) => void;
 
@@ -113,6 +109,8 @@ export struct ReaderAppearanceMotionStage {
     sampleReaderAppearanceMotionState(createReaderAppearanceMotionState('quick'));
 
   private mounted: boolean = false;
+  private stageScreenY: number = Number.NaN;
+  private measuredGrabberScreenY: number = Number.NaN;
   private activePointerId: number = -1;
   private pointerDownTimeMs: number = 0;
   private pointerStartWindowY: number = 0;
@@ -120,7 +118,6 @@ export struct ReaderAppearanceMotionStage {
   private pointerLastTimeMs: number = 0;
   private pointerVelocityY: number = 0;
   private pointerWatchdogTimer: number = -1;
-  private trackingStartRawExpansion: number = 0;
   private pointerDragging: boolean = false;
   private frameCallbackRevision: number = 0;
   private pendingFrameCallbackRevision: number = -1;
@@ -140,7 +137,7 @@ export struct ReaderAppearanceMotionStage {
       this.reduceMotion,
       this.effectiveTimeScale(),
     );
-    this.renderFrame = sampleReaderAppearanceMotionState(this.motionState);
+    this.renderFrame = sampleReaderAppearanceMotionState(this.motionState, this.stageHeight());
     this.lastReportedEndpoint = endpoint;
     this.lastMotionActive = false;
   }
@@ -157,8 +154,6 @@ export struct ReaderAppearanceMotionStage {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      // Real height morph with a fixed bottom edge. scaleY would deform the
-      // border, corner radius and child geometry and is forbidden here.
       Stack()
         .width(this.stageWidth())
         .height(this.renderFrame.shellHeight)
@@ -170,106 +165,45 @@ export struct ReaderAppearanceMotionStage {
         .hitTestBehavior(HitTestMode.None)
         .zIndex(0);
 
-      this.fullMorphStageLayer();
-      this.quickDockLayer();
+      this.appearanceContentLayer();
+      this.brightnessLayer();
+      this.moduleNavLayer();
       this.grabberLayer();
     }
     .width(this.stageWidth())
-    .height(READER_APPEARANCE_MOTION_STAGE_HEIGHT)
-    // The fixed 736vp coordinate canvas must not swallow reading-page taps
-    // above a stable 330vp quick shell. Concrete shell/actor/grabber children
-    // own only their visible regions.
-    .hitTestBehavior(HitTestMode.None);
-  }
-
-  @Builder
-  private fullMorphStageLayer() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      this.fullLayer();
-    }
-    .width(this.stageWidth())
-    .height(this.contentShellHeight())
-    .position({
-      x: this.renderFrame.morphStage.translateX,
-      y: this.contentShellTop(),
-    })
-    .borderRadius(TOK_RADIUS_XL)
-    .clip(true)
-    .hitTestBehavior(HitTestMode.Default)
-    .zIndex(2);
-  }
-
-  @Builder
-  private quickDockLayer() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      this.quickMorphStageLayer();
-      this.brightnessLayer();
-      this.moduleNavLayer();
-    }
-    .width(this.stageWidth())
-    .height(READER_APPEARANCE_MOTION_STAGE_HEIGHT)
-    .enabled(this.quickInteractionEnabled())
+    .height(this.stageHeight())
     .hitTestBehavior(HitTestMode.None)
-    .zIndex(3);
+    .onAreaChange((_oldValue: Area, newValue: Area): void => {
+      this.stageScreenY = Number(newValue.globalPosition.y);
+      this.refreshMeasuredAxisForLayout();
+    });
   }
 
+  /** One persistent content slot, clipped by the p-driven shell. */
   @Builder
-  private quickMorphStageLayer() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      this.quickMorphLayer();
-    }
-    .width(this.stageWidth())
-    .height(this.contentShellHeight())
-    .position({
-      x: this.renderFrame.morphStage.translateX,
-      y: this.contentShellTop(),
-    })
-    .borderRadius(TOK_RADIUS_XL)
-    .clip(true)
-    .hitTestBehavior(this.quickInteractionEnabled() ? HitTestMode.Default : HitTestMode.None)
-    .zIndex(1);
-  }
-
-  @Builder
-  private quickMorphLayer() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      this.quickMorph({
-        frame: this.renderFrame,
-        interactionEnabled: this.quickInteractionEnabled(),
-        requestCollapse: (): void => this.requestCollapse(),
-      });
-    }
-    // The slot consumes quickMorph + element actors itself. This wrapper owns
-    // only the immutable full-state base origin, preventing transforms from
-    // being applied twice when the shared element reflows.
-    .width(READER_APPEARANCE_MOTION_STAGE_WIDTH - READER_APPEARANCE_QUICK_MORPH_BASE_X * 2)
-    .height(READER_APPEARANCE_MOTION_STAGE_HEIGHT - READER_APPEARANCE_QUICK_MORPH_BASE_Y)
-    .position({
-      x: READER_APPEARANCE_QUICK_MORPH_BASE_X,
-      y: READER_APPEARANCE_QUICK_MORPH_BASE_Y,
-    })
-    .enabled(this.quickInteractionEnabled())
-    .hitTestBehavior(this.quickInteractionEnabled() ? HitTestMode.Default : HitTestMode.None)
-    .zIndex(1);
-  }
-
-  @Builder
-  private fullLayer() {
+  private appearanceContentLayer() {
     Stack({ alignContent: Alignment.TopStart }) {
       Stack({ alignContent: Alignment.TopStart }) {
-        this.fullContent({
+        this.appearanceContent({
           frame: this.renderFrame,
-          interactionEnabled: this.fullInteractionEnabled(),
+          interactionEnabled: this.contentInteractionEnabled(),
           requestCollapse: (): void => this.requestCollapse(),
         });
       }
-      .width(READER_APPEARANCE_MOTION_STAGE_WIDTH)
-      .height(READER_APPEARANCE_MOTION_STAGE_HEIGHT);
+      .width(this.stageWidth())
+      .height(this.stageHeight())
+      // The clip starts at shellTop, while every actor keeps its stage-space
+      // coordinate. Moving this canvas back by shellTop avoids a second tree
+      // or a second set of quick/full layout coordinates.
+      .position({ x: 0, y: -this.shellTop() });
     }
-    .width(READER_APPEARANCE_MOTION_STAGE_WIDTH)
-    .height(READER_APPEARANCE_MOTION_STAGE_HEIGHT)
-    .enabled(this.fullInteractionEnabled())
-    .hitTestBehavior(this.fullInteractionEnabled() ? HitTestMode.Default : HitTestMode.None)
+    .width(this.stageWidth())
+    .height(this.renderFrame.shellHeight)
+    .position({ x: 0, y: this.shellTop() })
+    .borderRadius(TOK_RADIUS_XL)
+    .clip(true)
+    .enabled(this.contentInteractionEnabled())
+    .hitTestBehavior(this.contentInteractionEnabled() ? HitTestMode.Default : HitTestMode.None)
     .zIndex(2);
   }
 
@@ -286,17 +220,17 @@ export struct ReaderAppearanceMotionStage {
     .height(READER_APPEARANCE_BRIGHTNESS_HEIGHT)
     .position({
       x: READER_APPEARANCE_BRIGHTNESS_BASE_X,
-      y: READER_APPEARANCE_BRIGHTNESS_FIXED_Y,
+      y: this.stageTravel() + 28,
     })
     .translate({
-      x: this.brightnessTranslateX(),
-      y: this.brightnessTranslateY(),
+      x: this.renderFrame.brightnessRail.translateX,
+      y: this.renderFrame.brightnessRail.translateY,
     })
-    .opacity(this.brightnessOpacity())
-    .blur(this.brightnessBlur())
+    .opacity(this.renderFrame.brightnessRail.opacity)
+    .blur(this.renderFrame.brightnessRail.blurVp)
     .enabled(this.quickInteractionEnabled())
     .hitTestBehavior(this.quickInteractionEnabled() ? HitTestMode.Default : HitTestMode.None)
-    .zIndex(2);
+    .zIndex(3);
   }
 
   @Builder
@@ -309,13 +243,13 @@ export struct ReaderAppearanceMotionStage {
       });
     }
     .width(this.stageWidth())
-    .height(READER_APPEARANCE_MOTION_STAGE_HEIGHT)
+    .height(this.stageHeight())
     .translate({
-      x: this.moduleNavTranslateX(),
-      y: this.moduleNavTranslateY(),
+      x: this.renderFrame.moduleNav.translateX,
+      y: this.renderFrame.moduleNav.translateY,
     })
-    .opacity(this.moduleNavOpacity())
-    .blur(this.moduleNavBlur())
+    .opacity(this.renderFrame.moduleNav.opacity)
+    .blur(this.renderFrame.moduleNav.blurVp)
     .enabled(this.quickInteractionEnabled())
     .hitTestBehavior(this.quickInteractionEnabled() ? HitTestMode.Default : HitTestMode.None)
     .zIndex(3);
@@ -339,10 +273,15 @@ export struct ReaderAppearanceMotionStage {
       y: this.shellTop(),
     })
     .zIndex(10)
-    .enabled(this.visible && this.interactionEnabled)
-    .hitTestBehavior(this.visible && this.interactionEnabled ? HitTestMode.Block : HitTestMode.None)
+    .enabled(this.visible && this.interactionEnabled && this.directManipulationAvailable())
+    .hitTestBehavior(this.visible && this.interactionEnabled && this.directManipulationAvailable() ?
+      HitTestMode.Block : HitTestMode.None)
     .accessibilityText(this.grabberAccessibilityText())
     .accessibilityTextHint('点击切换展开状态，上下拖动可连续调整')
+    .onAreaChange((_oldValue: Area, newValue: Area): void => {
+      this.measuredGrabberScreenY = Number(newValue.globalPosition.y) +
+        READER_APPEARANCE_MOTION_GRABBER_TOP + READER_APPEARANCE_MOTION_GRABBER_HEIGHT / 2;
+    })
     .onTouch((event: TouchEvent): void => this.handleGrabberTouch(event));
   }
 
@@ -387,17 +326,20 @@ export struct ReaderAppearanceMotionStage {
     }
     this.ownPointer(event);
     const eventTimeMs = this.eventTimeMs(event);
-    // Fold shell-only elastic displacement into the physical start coordinate
-    // before the engine cancels it. The first re-grab frame therefore stays at
-    // the already rendered top edge rather than jumping by the rebound amount.
-    this.motionState = beginReaderAppearanceTracking(this.motionState, eventTimeMs);
+    const grabberScreenY = this.currentGrabberScreenY();
+    this.motionState = beginReaderAppearanceTracking(
+      this.motionState,
+      pointer.windowY,
+      grabberScreenY,
+      this.measuredAxis(grabberScreenY),
+      eventTimeMs,
+    );
     this.activePointerId = pointer.id;
     this.pointerDownTimeMs = eventTimeMs;
     this.pointerStartWindowY = pointer.windowY;
     this.pointerLastWindowY = pointer.windowY;
     this.pointerLastTimeMs = eventTimeMs;
     this.pointerVelocityY = 0;
-    this.trackingStartRawExpansion = this.motionState.rawExpansionProgress;
     this.pointerDragging = false;
     this.armPointerWatchdog();
     this.seedFrameClock(event);
@@ -409,19 +351,17 @@ export struct ReaderAppearanceMotionStage {
     const deltaY = pointer.windowY - this.pointerStartWindowY;
     this.armPointerWatchdog();
     this.updatePointerVelocity(pointer.windowY, eventTimeMs);
-    if (!this.pointerDragging && Math.abs(deltaY) < READER_APPEARANCE_MOTION_TAP_SLOP) {
-      return;
-    }
-    this.pointerDragging = true;
-    const rawExpansion = readerAppearanceExpansionFromDrag(this.trackingStartRawExpansion, deltaY);
     this.motionState = updateReaderAppearanceTracking(
       this.motionState,
-      rawExpansion,
+      pointer.windowY,
       eventTimeMs,
       this.pointerVelocityY,
     );
     this.pointerLastWindowY = pointer.windowY;
     this.pointerLastTimeMs = eventTimeMs;
+    if (Math.abs(deltaY) >= READER_APPEARANCE_MOTION_TAP_SLOP) {
+      this.pointerDragging = true;
+    }
     this.publishFrame();
   }
 
@@ -429,15 +369,12 @@ export struct ReaderAppearanceMotionStage {
     const eventTimeMs = this.eventTimeMs(event);
     const deltaY = pointer.windowY - this.pointerStartWindowY;
     this.updatePointerVelocity(pointer.windowY, eventTimeMs);
-    if (this.pointerDragging) {
-      const rawExpansion = readerAppearanceExpansionFromDrag(this.trackingStartRawExpansion, deltaY);
-      this.motionState = updateReaderAppearanceTracking(
-        this.motionState,
-        rawExpansion,
-        eventTimeMs,
-        this.pointerVelocityY,
-      );
-    }
+    this.motionState = updateReaderAppearanceTracking(
+      this.motionState,
+      pointer.windowY,
+      eventTimeMs,
+      this.pointerVelocityY,
+    );
     const elapsedMs = eventTimeMs - this.pointerDownTimeMs;
     const isTap = !this.pointerDragging &&
       Math.abs(deltaY) < READER_APPEARANCE_MOTION_TAP_SLOP &&
@@ -471,6 +408,8 @@ export struct ReaderAppearanceMotionStage {
     this.resetPointer();
     this.resetFrameClock();
     this.publishFrame();
+    this.reportImmediateEndpointIfNeeded();
+    this.scheduleNextFrame();
   }
 
   private requestCollapse(): void {
@@ -554,7 +493,7 @@ export struct ReaderAppearanceMotionStage {
   }
 
   private publishFrame(): void {
-    this.renderFrame = sampleReaderAppearanceMotionState(this.motionState);
+    this.renderFrame = sampleReaderAppearanceMotionState(this.motionState, this.stageHeight());
     this.publishMotionActivity(this.motionActive());
   }
 
@@ -587,13 +526,8 @@ export struct ReaderAppearanceMotionStage {
       return;
     }
     const endpoint: ReaderAppearanceMotionEndpoint = this.expanded ? 'full' : 'quick';
-    // Gesture settlement reports its logical endpoint before the independent
-    // shell-only rebound finishes. The parent then commits activePage and
-    // reflects this prop. Matching that committed stable endpoint must not
-    // restart a second O/N timeline over the live elastic frames.
     if (endpoint === this.motionState.stableEndpoint &&
-      (this.motionState.phase === 'elastic' || this.motionState.phase === 'idleQuick' ||
-        this.motionState.phase === 'idleFull')) {
+      (this.motionState.phase === 'idleQuick' || this.motionState.phase === 'idleFull')) {
       this.lastReportedEndpoint = endpoint;
       return;
     }
@@ -650,7 +584,12 @@ export struct ReaderAppearanceMotionStage {
       return;
     }
     if (!this.visible) {
-      this.motionState = cancelReaderAppearanceMotion(this.motionState);
+      const endpoint: ReaderAppearanceMotionEndpoint = this.expanded ? 'full' : 'quick';
+      this.motionState = createReaderAppearanceMotionState(
+        endpoint,
+        this.reduceMotion,
+        this.effectiveTimeScale(),
+      );
       this.resetPointer();
       this.resetFrameClock();
       this.publishFrame();
@@ -662,8 +601,23 @@ export struct ReaderAppearanceMotionStage {
       this.reduceMotion,
       this.effectiveTimeScale(),
     );
-    this.renderFrame = sampleReaderAppearanceMotionState(this.motionState);
+    this.renderFrame = sampleReaderAppearanceMotionState(this.motionState, this.stageHeight());
     this.lastReportedEndpoint = endpoint;
+  }
+
+  private onAvailableHeightChanged(): void {
+    if (!this.mounted) {
+      return;
+    }
+    // Layout changes resample geometry at the same p. They never choose a new
+    // route endpoint or replace the persistent content tree. Re-anchor an
+    // active pointer segment to the new measured axis so its next MOVE cannot
+    // jump merely because the window changed size.
+    this.renderFrame = sampleReaderAppearanceMotionState(this.motionState, this.stageHeight());
+    this.refreshMeasuredAxisForLayout();
+    this.resetFrameClock();
+    this.publishFrame();
+    this.scheduleNextFrame();
   }
 
   private onInteractionEnabledChanged(): void {
@@ -673,19 +627,20 @@ export struct ReaderAppearanceMotionStage {
   }
 
   private programmaticTarget(): ReaderAppearanceMotionEndpoint {
-    return this.motionState.profile === 'expandN' ? 'full' : 'quick';
+    return this.motionState.stableEndpoint === 'quick' ? 'full' : 'quick';
   }
 
   private nearestEndpoint(): ReaderAppearanceMotionEndpoint {
-    return this.motionState.expansionProgress >= 0.5 ? 'full' : 'quick';
+    return this.motionState.masterProgress >= 0.5 ? 'full' : 'quick';
   }
 
   private quickInteractionEnabled(): boolean {
     return this.visible && this.interactionEnabled && this.motionState.phase === 'idleQuick';
   }
 
-  private fullInteractionEnabled(): boolean {
-    return this.visible && this.interactionEnabled && this.motionState.phase === 'idleFull';
+  private contentInteractionEnabled(): boolean {
+    return this.visible && this.interactionEnabled &&
+      (this.motionState.phase === 'idleQuick' || this.motionState.phase === 'idleFull');
   }
 
   private motionActive(): boolean {
@@ -693,53 +648,57 @@ export struct ReaderAppearanceMotionStage {
   }
 
   private shellTop(): number {
-    // The state sampler already folds raw overflow/elastic into shell geometry
-    // only. Content actors continue to read the clamped authored trajectory.
     return this.renderFrame.shellTranslateY;
   }
 
-  private contentShellHeight(): number {
-    return READER_APPEARANCE_MOTION_QUICK_HEIGHT +
-      this.renderFrame.expansionProgress * READER_APPEARANCE_MOTION_DRAG_TRAVEL;
+  private stageHeight(): number {
+    if (!Number.isFinite(this.availableHeight) || this.availableHeight <= 0) {
+      return READER_APPEARANCE_MOTION_STAGE_HEIGHT;
+    }
+    return Math.max(
+      READER_APPEARANCE_MOTION_QUICK_HEIGHT,
+      Math.min(READER_APPEARANCE_MOTION_STAGE_HEIGHT, this.availableHeight),
+    );
   }
 
-  private contentShellTop(): number {
-    // Raw drag overflow and rebound are shell-only supplements. The content
-    // clip follows the clamped authored MorphStage, so no opacity/blur/shared
-    // actor is displaced by the elastic channel.
-    return READER_APPEARANCE_MOTION_STAGE_HEIGHT - this.contentShellHeight();
+  private stageTravel(): number {
+    return Math.max(0, this.stageHeight() - READER_APPEARANCE_MOTION_QUICK_HEIGHT);
   }
 
-  private brightnessOpacity(): number {
-    return this.motionState.profile === 'expandN' ? this.renderFrame.brightnessRail.opacity : 1;
+  private directManipulationAvailable(): boolean {
+    return this.stageTravel() >= READER_APPEARANCE_MIN_INTERACTIVE_TRAVEL_VP;
   }
 
-  private brightnessTranslateX(): number {
-    return this.motionState.profile === 'expandN' ? this.renderFrame.brightnessRail.translateX : 0;
+  private refreshMeasuredAxisForLayout(): void {
+    if (!this.mounted || !Number.isFinite(this.stageScreenY) || !this.directManipulationAvailable()) {
+      this.measuredGrabberScreenY = Number.NaN;
+      return;
+    }
+    const grabberScreenY = this.stageScreenY + this.shellTop() +
+      READER_APPEARANCE_MOTION_GRABBER_TOP + READER_APPEARANCE_MOTION_GRABBER_HEIGHT / 2;
+    this.measuredGrabberScreenY = grabberScreenY;
+    this.motionState = setReaderAppearanceMeasuredAxis(
+      this.motionState,
+      this.measuredAxis(grabberScreenY),
+    );
   }
 
-  private brightnessTranslateY(): number {
-    return this.motionState.profile === 'expandN' ? this.renderFrame.brightnessRail.translateY : 0;
+  private currentGrabberScreenY(): number {
+    if (Number.isFinite(this.measuredGrabberScreenY)) {
+      return this.measuredGrabberScreenY;
+    }
+    const stageY = Number.isFinite(this.stageScreenY) ? this.stageScreenY : 0;
+    return stageY + this.shellTop() + READER_APPEARANCE_MOTION_GRABBER_TOP +
+      READER_APPEARANCE_MOTION_GRABBER_HEIGHT / 2;
   }
 
-  private brightnessBlur(): number {
-    return this.motionState.profile === 'expandN' ? this.renderFrame.brightnessRail.blurVp : 0;
-  }
-
-  private moduleNavOpacity(): number {
-    return this.motionState.profile === 'expandN' ? this.renderFrame.moduleNav.opacity : 1;
-  }
-
-  private moduleNavTranslateX(): number {
-    return this.motionState.profile === 'expandN' ? this.renderFrame.moduleNav.translateX : 0;
-  }
-
-  private moduleNavTranslateY(): number {
-    return this.motionState.profile === 'expandN' ? this.renderFrame.moduleNav.translateY : 0;
-  }
-
-  private moduleNavBlur(): number {
-    return this.motionState.profile === 'expandN' ? this.renderFrame.moduleNav.blurVp : 0;
+  private measuredAxis(grabberScreenY: number): ReaderAppearanceMeasuredAxis {
+    const progress = Math.max(0, Math.min(1, this.motionState.masterProgress));
+    const travel = this.stageTravel();
+    return {
+      quickGrabberScreenY: grabberScreenY + progress * travel,
+      fullGrabberScreenY: grabberScreenY - (1 - progress) * travel,
+    };
   }
 
   private stageWidth(): number {
@@ -821,7 +780,6 @@ export struct ReaderAppearanceMotionStage {
     this.pointerLastWindowY = 0;
     this.pointerLastTimeMs = 0;
     this.pointerVelocityY = 0;
-    this.trackingStartRawExpansion = 0;
     this.pointerDragging = false;
   }
 

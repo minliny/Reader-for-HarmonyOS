@@ -20,6 +20,7 @@ import {
   ReaderAppearanceMotionStage,
   type ReaderAppearanceMotionSlotContext,
 } from './ReaderAppearanceMotionStage';
+import { readerAppearanceMotionStageSupported } from './ReaderAppearanceMotionGeometry';
 import type { ReaderAppearanceMotionEndpoint } from './ReaderAppearanceMotionState';
 import {
   createDefaultReaderAppearanceSnapshot,
@@ -174,7 +175,7 @@ export struct ReaderControlPanel {
   @Prop @Watch('onLayoutChanged') layout: ReaderControlLayoutSnapshot = createDefaultReaderControlLayout();
   // 控制层可见性。宿主常驻挂载本面板, 内部按 visible 门控各层并做非对称过渡
   // (Figma MR1 reader.control.show/hide)。
-  @Prop visible: boolean = false;
+  @Prop @Watch('onVisibleChanged') visible: boolean = false;
   /** Host arms this one presented frame before removing the whole shell. */
   @Prop shellExitArmed: boolean = false;
   @Prop @Watch('onActivePageChanged') activePage: ReaderControlPage = 'home';
@@ -211,7 +212,7 @@ export struct ReaderControlPanel {
   @Prop ttsLanguage: string = 'zh-CN';
   @Prop ttsPerson: number = 0;
   @Prop reduceMotion: boolean = false;
-  /** Debug/accessibility scale for the whole Phone Appearance N/O timeline. */
+  /** Debug/accessibility scale for the whole Phone Appearance master axis. */
   @Prop appearanceMotionTimeScale: number = 1;
   onBack: () => void = (): void => {};
   onDismiss: () => void = (): void => {};
@@ -264,6 +265,8 @@ export struct ReaderControlPanel {
     (_font: ReaderAppearanceFont): void => {};
   onAppearanceFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]) => void =
     (_fontOrder: ReaderAppearanceFontSlot[]): void => {};
+  onAppearanceFontReorderActivityChange: (active: boolean) => void = (_active: boolean): void => {};
+  onAppearanceMotionActivityChange: (active: boolean) => void = (_active: boolean): void => {};
   onAppearanceCustomFontImport: () => void = (): void => {};
   onAppearanceIndentRequest: (indent: ReaderAppearanceIndent) => void =
     (_indent: ReaderAppearanceIndent): void => {};
@@ -333,6 +336,8 @@ export struct ReaderControlPanel {
   @State private autoPageActorExpanded: boolean = false;
   @State private autoPageActorTransitioning: boolean = false;
   @State private controlGrabberDragY: number = 0;
+  @State private appearanceMotionActive: boolean = false;
+  @State private appearanceFontReorderActive: boolean = false;
   private autoPageActorGeneration: number = 0;
   private autoPageActorHoldTimer: number = -1;
   private brightnessDragStartPercent: number = READER_CONTROL_BRIGHTNESS_MAX;
@@ -628,6 +633,9 @@ export struct ReaderControlPanel {
   }
 
   private onActivePageChanged(): void {
+    if (this.activePage !== 'moduleAppearance' && this.activePage !== 'fullAppearance') {
+      this.clearAppearanceActivity();
+    }
     if (this.activePage === 'fullAutoPage' && !this.isExpanded()) {
       this.autoPageActorRegistryMounted = true;
       this.autoPageActorExpanded = true;
@@ -667,6 +675,13 @@ export struct ReaderControlPanel {
 
   aboutToDisappear(): void {
     this.resetAutoPageActorRegistry();
+    this.clearAppearanceActivity();
+  }
+
+  private onVisibleChanged(): void {
+    if (!this.visible) {
+      this.clearAppearanceActivity();
+    }
   }
 
   build() {
@@ -681,7 +696,11 @@ export struct ReaderControlPanel {
           .width('100%')
           .height('100%')
           .zIndex(0)
-          .onClick((): void => this.onDismiss());
+          .onClick((): void => {
+            if (!this.appearanceInteractionBusy()) {
+              this.onDismiss();
+            }
+          });
         // Anchor wrappers do not participate in hit testing themselves. Their
         // concrete children stay interactive while empty pixels reach the
         // full-screen dismiss backdrop.
@@ -806,6 +825,7 @@ export struct ReaderControlPanel {
     .height(54)
     .padding({ left: 13, right: 13 })
     .alignItems(VerticalAlign.Center)
+    .enabled(!this.appearanceInteractionBusy())
     .backgroundColor(TOK_READ_SURFACE)
     .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
     .borderRadius(24)
@@ -827,11 +847,15 @@ export struct ReaderControlPanel {
 
   private usesPhoneAppearanceMotionStage(): boolean {
     return !this.isExpanded() &&
+      readerAppearanceMotionStageSupported(
+        this.fullPanelAvailableWidth(),
+        this.layout.fullPanelHeight,
+      ) &&
       (this.activePage === 'moduleAppearance' || this.activePage === 'fullAppearance');
   }
 
   /**
-   * Phone 外观页是唯一由 N/O 单树驱动的控制面板。路由只在稳定端点回写，
+   * Phone 外观页由唯一主进度和持久组件树驱动。路由只在稳定端点回写，
    * 中途重抓、反向拖动和回弹都不触发 quick/full 条件卸载。
    */
   @Builder
@@ -842,14 +866,14 @@ export struct ReaderControlPanel {
       visible: this.visible,
       interactionEnabled: !this.shellExitArmed,
       availableWidth: this.fullPanelAvailableWidth(),
+      availableHeight: this.layout.fullPanelHeight,
       motionTimeScale: this.appearanceMotionTimeScale,
       onEndpointChange: (endpoint: ReaderAppearanceMotionEndpoint): void =>
         this.onAppearanceMotionEndpointChange(endpoint),
-      quickMorph: (context: ReaderAppearanceMotionSlotContext): void => {
-        this.appearanceMotionQuickContent(context);
-      },
-      fullContent: (context: ReaderAppearanceMotionSlotContext): void => {
-        this.appearanceMotionFullContent(context);
+      onMotionActivityChange: (active: boolean): void =>
+        this.setAppearanceMotionActivity(active),
+      appearanceContent: (context: ReaderAppearanceMotionSlotContext): void => {
+        this.appearanceMotionContent(context);
       },
       brightnessRail: (context: ReaderAppearanceMotionSlotContext): void => {
         this.appearanceMotionBrightness(context);
@@ -861,27 +885,14 @@ export struct ReaderControlPanel {
   }
 
   @Builder
-  private appearanceMotionQuickContent(context: ReaderAppearanceMotionSlotContext) {
-    ReaderAppearanceModulePanel({
-      isTablet: false,
-      motionFrame: context.frame,
-      interactionEnabled: context.interactionEnabled,
-      snapshot: this.appearanceSnapshot,
-      onThemeChange: (theme: ReaderAppearanceTheme): void => this.onAppearanceThemeChange(theme),
-      onFontChange: (font: ReaderAppearanceFont): void => this.onAppearanceFontChange(font),
-    });
-  }
-
-  @Builder
-  private appearanceMotionFullContent(context: ReaderAppearanceMotionSlotContext) {
+  private appearanceMotionContent(context: ReaderAppearanceMotionSlotContext) {
     ReaderAppearanceFullPanel({
       isTablet: false,
       availableWidth: this.fullPanelAvailableWidth(),
       availableHeight: this.layout.fullPanelHeight,
       reduceMotion: this.reduceMotion,
-      // N supplies element tracks. O supplies identity inner actors while the
-      // Stage owns the single FullOutgoing wrapper; a defined frame also keeps
-      // every legacy TransitionEffect disabled for the persistent tree.
+      // One frame supplies every actor track in both directions; a defined
+      // frame also keeps legacy mount/unmount transitions out of this tree.
       motionFrame: context.frame,
       interactionEnabled: context.interactionEnabled,
       showGrabber: false,
@@ -896,6 +907,8 @@ export struct ReaderControlPanel {
       onFontChange: (font: ReaderAppearanceFont): void => this.onAppearanceFontChange(font),
       onFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]): void =>
         this.onAppearanceFontOrderChange(fontOrder),
+      onFontReorderActivityChange: (active: boolean): void =>
+        this.setAppearanceFontReorderActivity(active),
       onCustomFontImport: (): void => this.onAppearanceCustomFontImport(),
       onIndentRequest: (indent: ReaderAppearanceIndent): void => this.onAppearanceIndentRequest(indent),
       onAlignmentRequest: (current: ReaderAppearanceAlignment): void =>
@@ -924,6 +937,31 @@ export struct ReaderControlPanel {
     if (this.activePage !== page) {
       this.onPageChange(page);
     }
+  }
+
+  private setAppearanceMotionActivity(active: boolean): void {
+    if (this.appearanceMotionActive === active) {
+      return;
+    }
+    this.appearanceMotionActive = active;
+    this.onAppearanceMotionActivityChange(active);
+  }
+
+  private setAppearanceFontReorderActivity(active: boolean): void {
+    if (this.appearanceFontReorderActive === active) {
+      return;
+    }
+    this.appearanceFontReorderActive = active;
+    this.onAppearanceFontReorderActivityChange(active);
+  }
+
+  private clearAppearanceActivity(): void {
+    this.setAppearanceMotionActivity(false);
+    this.setAppearanceFontReorderActivity(false);
+  }
+
+  private appearanceInteractionBusy(): boolean {
+    return this.appearanceMotionActive || this.appearanceFontReorderActive;
   }
 
   private isFullControlPage(page: ReaderControlPage): boolean {
@@ -1051,6 +1089,8 @@ export struct ReaderControlPanel {
       onFontChange: (font: ReaderAppearanceFont): void => this.onAppearanceFontChange(font),
       onFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]): void =>
         this.onAppearanceFontOrderChange(fontOrder),
+      onFontReorderActivityChange: (active: boolean): void =>
+        this.setAppearanceFontReorderActivity(active),
       onCustomFontImport: (): void => this.onAppearanceCustomFontImport(),
       onIndentRequest: (indent: ReaderAppearanceIndent): void => this.onAppearanceIndentRequest(indent),
       onAlignmentRequest: (current: ReaderAppearanceAlignment): void =>

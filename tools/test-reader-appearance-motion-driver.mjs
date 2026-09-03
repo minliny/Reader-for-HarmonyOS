@@ -2,21 +2,23 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 import {
-  READER_APPEARANCE_COLLAPSE_DURATION_MS,
-  READER_APPEARANCE_EXPAND_DURATION_MS,
+  READER_APPEARANCE_FIXED_SCREEN_ACTOR_IDS,
   READER_APPEARANCE_FULL_ONLY_ACTOR_IDS,
+  READER_APPEARANCE_LEGACY_ACTOR_TRACKS,
   READER_APPEARANCE_SHARED_ACTOR_IDS,
-  readerAppearanceTrajectoryFromExpansion,
-  sampleReaderAppearanceExpansion,
-  sampleReaderAppearanceMotion,
+  sampleReaderAppearanceMasterProgress,
 } from '../entry/src/main/ets/features/reading/ReaderAppearanceMotionGeometry.ts';
 
 const fixture = JSON.parse(readFileSync(
   new URL('./fixtures/reader-appearance-motion-figma-n-o.json', import.meta.url),
   'utf8',
 ));
-const contract = fixture.implementationContract;
-const contractById = new Map(contract.sharedActors.map((actor) => [actor.id, actor]));
+const legacyN = fixture.legacyEvidence.N;
+const disposition = fixture.runtimeContract.legacyNTrackDisposition;
+const rawActors = new Map(legacyN.actors.map((actor) => [actor.id, actor]));
+const runtimeTracks = new Map(
+  READER_APPEARANCE_LEGACY_ACTOR_TRACKS.map((actor) => [actor.id, actor]),
+);
 
 function clamp01(value) {
   return Math.max(0, Math.min(1, value));
@@ -28,142 +30,220 @@ function cubicCoordinate(parameter, first, second) {
     3 * inverse * parameter * parameter * second + parameter ** 3;
 }
 
-// Independent CSS/Figma cubic evaluator. Production easing must not be used to
-// manufacture the expected intermediate bounding boxes.
-function easeOut(progress) {
-  const input = clamp01(progress);
-  if (input === 0 || input === 1) return input;
+function bezier(progress, x1, y1, x2, y2) {
+  const x = clamp01(progress);
+  if (x === 0 || x === 1) return x;
   let low = 0;
   let high = 1;
-  for (let index = 0; index < 32; index += 1) {
+  for (let index = 0; index < 52; index += 1) {
     const parameter = (low + high) / 2;
-    if (cubicCoordinate(parameter, 0, 0.58) < input) {
-      low = parameter;
-    } else {
-      high = parameter;
-    }
+    if (cubicCoordinate(parameter, x1, x2) < x) low = parameter;
+    else high = parameter;
   }
-  return cubicCoordinate((low + high) / 2, 0, 1);
+  return cubicCoordinate((low + high) / 2, y1, y2);
 }
 
-function close(actual, expected, message, tolerance = 0.002) {
-  assert.ok(Math.abs(actual - expected) <= tolerance,
-    `${message}: expected ${expected}, got ${actual}`);
+function localProgress(track, master) {
+  if (master <= track.startMasterProgress) return 0;
+  if (master >= track.endMasterProgress ||
+    track.endMasterProgress <= track.startMasterProgress) return 1;
+  const local = (master - track.startMasterProgress) /
+    (track.endMasterProgress - track.startMasterProgress);
+  if (track.easing === 'ease-out') return bezier(local, 0, 0, 0.58, 1);
+  if (track.easing === 'ease-in-out') return bezier(local, 0.42, 0, 0.58, 1);
+  return local;
 }
 
-function actorFrame(sample, actorId) {
-  const matches = sample.actorSamples.filter((candidate) => candidate.id === actorId);
-  assert.equal(matches.length, 1, `sample must contain exactly one ${actorId}`);
+function expected(track, master) {
+  return track.from + (track.to - track.from) * localProgress(track, master);
+}
+
+function close(actual, wanted, message, tolerance = 1e-6) {
+  assert.ok(Math.abs(actual - wanted) <= tolerance,
+    `${message}: expected ${wanted}, got ${actual}`);
+}
+
+function frameFor(sample, id) {
+  const matches = sample.actorSamples.filter((actor) => actor.id === id);
+  assert.equal(matches.length, 1, `expected exactly one ${id}`);
   return matches[0].frame;
 }
 
-function expectedRect(actor, expansion) {
-  const progress = actor.curve === 'linear-in-physical-expansion' ? expansion : easeOut(expansion);
-  const rect = {};
-  for (const field of ['x', 'y', 'width', 'height']) {
-    rect[field] = actor.sourceRectVp[field] +
-      (actor.targetRectVp[field] - actor.sourceRectVp[field]) * progress;
-  }
-  return rect;
+function rawTrack(actorId, property) {
+  const actor = rawActors.get(actorId);
+  assert.ok(actor, `raw Figma N actor missing: ${actorId}`);
+  const matches = actor.tracks.filter((track) => track.property === property);
+  assert.equal(matches.length, 1, `expected one raw Figma N track ${actorId}.${property}`);
+  return matches[0];
 }
 
-function compareRect(frame, expected, label, tolerance = 0.002) {
-  for (const field of ['x', 'y', 'width', 'height']) {
-    close(frame[field], expected[field], `${label}.${field}`, tolerance);
-  }
+function masterProgress(reviewMs) {
+  const [start, end] = legacyN.activeReviewWindowMs;
+  return (reviewMs - start) / (end - start);
 }
 
-function compareActorFrames(actual, expected, label) {
-  for (const field of ['x', 'y', 'width', 'height', 'translateX', 'translateY', 'opacity', 'blurVp']) {
-    close(actual[field], expected[field], `${label}.${field}`, 1e-5);
-  }
+function expectedNumberTrack(raw) {
+  return {
+    startMasterProgress: masterProgress(raw.activeReviewMs[0]),
+    endMasterProgress: masterProgress(raw.activeReviewMs[1]),
+    from: raw.from,
+    to: raw.to,
+    easing: raw.easing,
+  };
 }
 
-assert.equal(READER_APPEARANCE_EXPAND_DURATION_MS, contract.timing.expandFullDistanceMs);
-assert.equal(READER_APPEARANCE_COLLAPSE_DURATION_MS, contract.timing.collapseFullDistanceMs);
-assert.deepEqual(READER_APPEARANCE_SHARED_ACTOR_IDS, contract.actorGroups.shared,
-  'runtime shared registry must exactly match the audited persistent tree');
-assert.deepEqual(READER_APPEARANCE_FULL_ONLY_ACTOR_IDS, contract.actorGroups.fullOnly,
-  'runtime Full-only registry must exactly match the staged reveal contract');
-
-for (const expansion of [0, ...contract.sampleExpansionProgress, 1]) {
-  const sample = sampleReaderAppearanceExpansion(expansion);
-  close(sample.expansionProgress, expansion, `physical expansion @${expansion}`);
-  assert.equal(new Set(sample.actorSamples.map((actor) => actor.id)).size,
-    sample.actorSamples.length, `actor inventory duplicated at e=${expansion}`);
-  for (const forbidden of contract.actorGroups.forbiddenRootCrossfade) {
-    assert.equal(sample.actorSamples.some((actor) => actor.id === forbidden), false,
-      `${forbidden} root crossfade re-entered the V2 tree at e=${expansion}`);
-  }
-  for (const actorId of READER_APPEARANCE_SHARED_ACTOR_IDS) {
-    const frame = actorFrame(sample, actorId);
-    const actorContract = contractById.get(actorId);
-    compareRect(frame, expectedRect(actorContract, expansion), `${actorId}@e=${expansion}`);
-    close(frame.translateX, 0, `${actorId} must expose a direct bbox, not a second x transform`);
-    close(frame.translateY, 0, `${actorId} must expose a direct bbox, not a second y transform`);
-    close(frame.opacity, contract.sharedActorOpacity, `${actorId} must never crossfade`);
-    close(frame.blurVp, contract.sharedActorBlurVp, `${actorId} must never dissolve`);
-  }
+function compareNumberTrack(actual, expectedTrack, label) {
+  close(actual.startMasterProgress, expectedTrack.startMasterProgress, `${label}.start`);
+  close(actual.endMasterProgress, expectedTrack.endMasterProgress, `${label}.end`);
+  close(actual.from, expectedTrack.from, `${label}.from`);
+  close(actual.to, expectedTrack.to, `${label}.to`);
+  assert.equal(actual.easing, expectedTrack.easing, `${label}.easing`);
 }
 
-// The split must continue after the old 183/420 cutoff. At e=.75 every shared
-// actor is still between its endpoints, and e=.75 -> 1 produces another bbox
-// change rather than a frozen root dissolve.
-const threeQuarter = sampleReaderAppearanceExpansion(0.75);
-const full = sampleReaderAppearanceExpansion(1);
-for (const actorId of READER_APPEARANCE_SHARED_ACTOR_IDS) {
-  const actor = contractById.get(actorId);
-  const atThreeQuarter = actorFrame(threeQuarter, actorId);
-  const atFull = actorFrame(full, actorId);
-  assert.notDeepEqual(
-    ['x', 'y', 'width', 'height'].map((field) => atThreeQuarter[field]),
-    ['x', 'y', 'width', 'height'].map((field) => atFull[field]),
-    `${actorId} froze before physical expansion reached 1`,
-  );
-  compareRect(atFull, actor.targetRectVp, `${actorId} Full endpoint`);
+function composedPositionEndpoints(actorId) {
+  const [originX, originY] = fixture.geometry.quickMorph.fullOriginVp;
+  const stageTranslate = rawTrack('morphStage', 'translateY');
+  const quickTranslate = rawTrack('quickMorph', 'translate');
+  if (actorId === 'quickMorph') {
+    return {
+      x: [originX + quickTranslate.from[0], originX + quickTranslate.to[0]],
+      y: [
+        originY + stageTranslate.from + quickTranslate.from[1],
+        originY + stageTranslate.to + quickTranslate.to[1],
+      ],
+    };
+  }
+  const actor = rawActors.get(actorId);
+  assert.ok(actor?.targetGeometryVp, `${actorId} lacks audited target geometry`);
+  const ownTranslate = rawTrack(actorId, 'translate');
+  return {
+    x: [
+      originX + quickTranslate.from[0] + actor.targetGeometryVp.x + ownTranslate.from[0],
+      originX + quickTranslate.to[0] + actor.targetGeometryVp.x + ownTranslate.to[0],
+    ],
+    y: [
+      originY + stageTranslate.from + quickTranslate.from[1] +
+        actor.targetGeometryVp.y + ownTranslate.from[1],
+      originY + stageTranslate.to + quickTranslate.to[1] +
+        actor.targetGeometryVp.y + ownTranslate.to[1],
+    ],
+  };
 }
 
-// Each card owns its own displacement vector. Moving one parent rectangle
-// would make all four first-row x deltas equal and fails this check.
-const themeXTravel = ['ThemeDay', 'ThemeWarm', 'ThemeNight', 'ThemeWarmNight']
-  .map((id) => contractById.get(id).targetRectVp.x - contractById.get(id).sourceRectVp.x);
-assert.equal(new Set(themeXTravel.map((value) => value.toFixed(3))).size, 4,
-  'theme cards must fan out with four independent horizontal trajectories');
-const fontXTravel = ['Font0', 'Font1', 'Font2', 'Font3']
-  .map((id) => contractById.get(id).targetRectVp.x - contractById.get(id).sourceRectVp.x);
-assert.equal(new Set(fontXTravel.map((value) => value.toFixed(3))).size, 4,
-  'font cards must redistribute independently into the corrected Full grid');
+const rawTrackKeys = legacyN.actors.flatMap((actor) =>
+  actor.tracks.map((track) => `${actor.id}.${track.property}`));
+const dispositionTrackKeys = [
+  ...disposition.mapped.flatMap((mapping) => [
+    ...Object.keys(mapping.direct ?? {}),
+    ...Object.keys(mapping.composed ?? {}),
+  ].map((property) => `${mapping.sourceActorId}.${property}`)),
+  ...disposition.intentionallyIgnored.flatMap((entry) =>
+    entry.properties.map((property) => `${entry.sourceActorId}.${property}`)),
+];
+assert.equal(new Set(dispositionTrackKeys).size, dispositionTrackKeys.length,
+  'legacy N track disposition is not exactly-once');
+assert.deepEqual(new Set(dispositionTrackKeys), new Set(rawTrackKeys),
+  'driver evidence does not cover every raw legacy N track');
 
-// Compatibility N/O clocks may have different temporal easing, but at the
-// same physical e they must evaluate the exact same persistent tree and
-// Full-only reveal. Collapse retraces Expand instead of crossfading roots.
-for (const expansion of contract.sampleExpansionProgress) {
-  const canonical = sampleReaderAppearanceExpansion(expansion);
-  for (const profile of ['expandN', 'collapseO']) {
-    const trajectory = readerAppearanceTrajectoryFromExpansion(profile, expansion);
-    const sampled = sampleReaderAppearanceMotion(profile, trajectory);
-    close(sampled.expansionProgress, expansion, `${profile} recovered e=${expansion}`, 1e-5);
-    for (const actorId of [...READER_APPEARANCE_SHARED_ACTOR_IDS,
-      ...READER_APPEARANCE_FULL_ONLY_ACTOR_IDS]) {
-      compareActorFrames(actorFrame(sampled, actorId), actorFrame(canonical, actorId),
-        `${profile}/${actorId}@e=${expansion}`);
+const expectedIds = [
+  ...fixture.runtimeContract.actorGroups.fixedScreen,
+  ...fixture.runtimeContract.actorGroups.shared,
+  ...fixture.runtimeContract.actorGroups.fullOnly,
+];
+assert.equal(new Set(expectedIds).size, expectedIds.length, 'actor groups overlap');
+assert.deepEqual(READER_APPEARANCE_FIXED_SCREEN_ACTOR_IDS,
+  fixture.runtimeContract.actorGroups.fixedScreen);
+assert.deepEqual(READER_APPEARANCE_SHARED_ACTOR_IDS,
+  fixture.runtimeContract.actorGroups.shared);
+assert.deepEqual(READER_APPEARANCE_FULL_ONLY_ACTOR_IDS,
+  fixture.runtimeContract.actorGroups.fullOnly);
+assert.deepEqual(
+  new Set(READER_APPEARANCE_LEGACY_ACTOR_TRACKS.map((actor) => actor.id)),
+  new Set(expectedIds),
+  'every runtime actor must own one independent track set',
+);
+
+// Direct legacy mappings are checked against the fixture, never against values
+// manufactured from the production registry under test.
+const samples = new Map([0, 0.25, 10 / 23, 0.5, 0.75, 1]
+  .map((p) => [p, sampleReaderAppearanceMasterProgress(p)]));
+for (const mapping of disposition.mapped) {
+  const productionActor = runtimeTracks.get(mapping.runtimeActorId);
+  assert.ok(productionActor, `runtime actor missing: ${mapping.runtimeActorId}`);
+  if (mapping.mappingAuthority === 'product-mapping-alias') {
+    assert.equal(productionActor.authority, 'product-mapping-alias',
+      `${mapping.runtimeActorId} must not claim direct Figma actor authority`);
+  }
+  for (const [sourceProperty, runtimeProperty] of Object.entries(mapping.direct ?? {})) {
+    const expectedTrack = expectedNumberTrack(rawTrack(mapping.sourceActorId, sourceProperty));
+    compareNumberTrack(productionActor[runtimeProperty], expectedTrack,
+      `${mapping.sourceActorId}.${sourceProperty}->${mapping.runtimeActorId}.${runtimeProperty}`);
+    for (const [p, sample] of samples) {
+      close(
+        frameFor(sample, mapping.runtimeActorId)[runtimeProperty],
+        expected(expectedTrack, p),
+        `${mapping.runtimeActorId}.${runtimeProperty}@${p} from fixture`,
+      );
+    }
+  }
+  for (const [sourceProperty, runtimeProperties] of Object.entries(mapping.composed ?? {})) {
+    assert.deepEqual(runtimeProperties, ['x', 'y']);
+    const raw = rawTrack(mapping.sourceActorId, sourceProperty);
+    const expectedWindow = expectedNumberTrack({ ...raw, from: 0, to: 1 });
+    const endpoints = composedPositionEndpoints(mapping.sourceActorId);
+    for (const runtimeProperty of runtimeProperties) {
+      const expectedTrack = {
+        ...expectedWindow,
+        from: endpoints[runtimeProperty][0],
+        to: endpoints[runtimeProperty][1],
+      };
+      compareNumberTrack(productionActor[runtimeProperty], expectedTrack,
+        `${mapping.sourceActorId}.${sourceProperty}->${mapping.runtimeActorId}.${runtimeProperty}`);
+      for (const [p, sample] of samples) {
+        close(
+          frameFor(sample, mapping.runtimeActorId)[runtimeProperty],
+          expected(expectedTrack, p),
+          `${mapping.runtimeActorId}.${runtimeProperty}@${p} from composed fixture`,
+        );
+      }
     }
   }
 }
 
-// Full-only content reveals after geometry creates room. It is absent at
-// Quick, monotonic inside its phase, and complete at Full. Shared actors above
-// remain opaque throughout, so this is not a disguised root fade.
-for (const reveal of contract.fullOnlyReveal) {
-  const before = sampleReaderAppearanceExpansion(Math.max(0, reveal.startExpansion - 0.01));
-  const start = sampleReaderAppearanceExpansion(reveal.startExpansion);
-  const middle = sampleReaderAppearanceExpansion((reveal.startExpansion + reveal.endExpansion) / 2);
-  const end = sampleReaderAppearanceExpansion(reveal.endExpansion);
-  close(actorFrame(before, reveal.id).opacity, 0, `${reveal.id} revealed before its phase`);
-  close(actorFrame(start, reveal.id).opacity, 0, `${reveal.id} phase start`);
-  assert.ok(actorFrame(middle, reveal.id).opacity > 0 && actorFrame(middle, reveal.id).opacity < 1,
-    `${reveal.id} must have an independently observable reveal midpoint`);
-  close(actorFrame(end, reveal.id).opacity, 1, `${reveal.id} phase end`);
+// Actor-local windows must be observably different at one master p. This
+// catches any future return of one global easing applied before sampling.
+const quarter = sampleReaderAppearanceMasterProgress(0.25);
+assert.ok(quarter.quickMorph.trackProgress > 0 && quarter.quickMorph.trackProgress < 1);
+close(quarter.brightnessRail.trackProgress, 0, 'brightness starts on its own later track');
+close(quarter.themeActions.trackProgress, 0, 'theme actions use their own later track');
+
+const half = sampleReaderAppearanceMasterProgress(0.5);
+close(half.quickMorph.trackProgress, 1, 'legacy QuickMorph geometry has ended');
+assert.ok(half.brightnessRail.trackProgress > 0 && half.brightnessRail.trackProgress < 1);
+assert.ok(half.themeActions.trackProgress > 0 && half.themeActions.trackProgress < 1);
+assert.notEqual(half.brightnessRail.trackProgress, half.themeActions.trackProgress,
+  'independent tracks collapsed into one global progress');
+
+// Runtime keeps one persistent surface even though the immutable legacy
+// fixture contains a raw QuickMorph/root opacity track.
+for (const p of [0, 0.25, 0.5, 0.75, 1]) {
+  const sample = sampleReaderAppearanceMasterProgress(p);
+  close(sample.quickMorph.opacity, 1, `persistent surface opacity at p=${p}`);
+  close(sample.quickMorph.blurVp, 0, `persistent surface blur at p=${p}`);
+  assert.equal(Object.hasOwn(sample, 'contentSurface'), false);
+  assert.equal(Object.hasOwn(sample, 'appearanceContent'), false);
+  assert.equal(Object.hasOwn(sample, 'themeLibrary'), false);
+  assert.equal(Object.hasOwn(sample, 'fontLibrary'), false);
 }
 
-console.log('reader appearance Motion V2 driver: PASS');
+// Reversing traversal order cannot change any frame value.
+const ascending = new Map();
+for (const p of [0, 0.25, 0.5, 0.75, 1]) {
+  ascending.set(p, sampleReaderAppearanceMasterProgress(p));
+}
+for (const p of [1, 0.75, 0.5, 0.25, 0]) {
+  assert.deepEqual(sampleReaderAppearanceMasterProgress(p), ascending.get(p),
+    `reverse sampling changed p=${p}`);
+}
+
+console.log('reader appearance per-actor master driver: PASS');

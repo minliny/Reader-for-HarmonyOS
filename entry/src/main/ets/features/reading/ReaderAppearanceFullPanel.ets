@@ -5,6 +5,7 @@ import {
   TOK_BORDER,
   TOK_BORDER_W,
   TOK_LINE,
+  TOK_LINE_STRONG,
   TOK_PRIMARY_SOFT,
   TOK_READ_ACTIVE_SOFT,
   TOK_READ_BODY_INK,
@@ -39,7 +40,13 @@ import {
 import type { ReaderChineseConversionMode } from './ReaderChineseConversionGateway';
 import type { ReaderPageTurnStyle } from './ReaderSettingsState';
 import { motionAnimateParam, panelActorTransition } from '../common/MotionSpec';
-import type { ReaderAppearanceMotionFrame } from './ReaderAppearanceMotionGeometry';
+import {
+  readerAppearanceMotionViewportHeight,
+  readerAppearanceMotionViewportWidth,
+  readerAppearanceScrollCompensationVp,
+  type ReaderAppearanceMotionFrame,
+} from './ReaderAppearanceMotionGeometry';
+import { ReaderAppearanceSharedActors } from './ReaderAppearanceSharedActors';
 import {
   READER_FULL_PANEL_HEIGHT_TABLET,
   READER_FULL_PANEL_MAX_WIDTH_PHONE,
@@ -66,7 +73,6 @@ export struct ReaderAppearanceFullPanel {
   @Prop reduceMotion: boolean = false;
   @Prop motionFrame: ReaderAppearanceMotionFrame | undefined = undefined;
   @Prop @Watch('onInteractionEnabledChanged') interactionEnabled: boolean = true;
-  @Prop fontReorderActive: boolean = false;
   @Prop showGrabber: boolean = true;
   @Prop snapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   @Prop chineseConversionMode: ReaderChineseConversionMode = 'none';
@@ -89,7 +95,7 @@ export struct ReaderAppearanceFullPanel {
     (_mode: ReaderChineseConversionMode): void => {};
   onPageTurnStyleChange: (style: ReaderPageTurnStyle) => void =
     (_style: ReaderPageTurnStyle): void => {};
-  onContentScroll: (offsetY: number) => void = (_offsetY: number): void => {};
+  onFontReorderActivityChange: (active: boolean) => void = (_active: boolean): void => {};
   @State private openSelect: string = '';
   @State private selectClosing: boolean = false;
   @State private selectAnchorX: number = 0;
@@ -103,6 +109,8 @@ export struct ReaderAppearanceFullPanel {
   @State private draggedFontOffsetY: number = 0;
   @State private previewFontOrder: ReaderAppearanceFontSlot[] = [];
   @State private fontDragSettling: boolean = false;
+  @State private motionFontReorderActive: boolean = false;
+  @State private motionScrollOffsetY: number = 0;
   private readonly contentScroller: Scroller = new Scroller();
   private fontDragGeneration: number = 0;
   private fontTouchStartX: number = 0;
@@ -123,6 +131,7 @@ export struct ReaderAppearanceFullPanel {
     this.selectClosing = false;
     this.fontDragGeneration += 1;
     this.clearFontDragState();
+    this.motionFontReorderActive = false;
   }
 
   build() {
@@ -142,10 +151,9 @@ export struct ReaderAppearanceFullPanel {
         this.staticContentSurface();
         this.staticAppearanceContent();
       } else {
-        // The shared surface/header/cards/divider/font cells are mounted once
-        // by ReaderAppearanceSharedActors. This branch contains only actors
-        // which do not exist at the Quick endpoint.
-        this.motionFullOnlyContent();
+        // Phone motion has one surface owner and one Scroll. Shared and
+        // Full-only actors are siblings inside that persistent scrolling tree.
+        this.motionAppearanceContent();
       }
 
       this.selectOverlay();
@@ -195,8 +203,6 @@ export struct ReaderAppearanceFullPanel {
     .scrollBar(BarState.Off)
     .enableScrollInteraction(this.interactionEnabled && this.draggedFontId === '' && !this.fontDragSettling)
     .onScrollStart((): void => this.onAppearanceScrollStart())
-    .onDidScroll((_xOffset: number, _yOffset: number, _scrollState: ScrollState): void =>
-      this.publishContentScroll(this.contentScroller.currentOffset().yOffset))
     .position({ x: 13, y: 57 })
     .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
       TransitionEffect.asymmetric(
@@ -206,41 +212,105 @@ export struct ReaderAppearanceFullPanel {
   }
 
   @Builder
-  private motionFullOnlyContent() {
-    Scroll(this.contentScroller) {
-      Stack({ alignContent: Alignment.TopStart }) {
+  private motionAppearanceContent() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Scroll(this.contentScroller) {
         Stack({ alignContent: Alignment.TopStart }) {
-          this.themeAction(true);
-          this.themeAction(false);
+          ReaderAppearanceSharedActors({
+            frame: this.currentMotionFrame(),
+            interactionEnabled: this.interactionEnabled,
+            reduceMotion: this.reduceMotion,
+            snapshot: this.snapshot,
+            onThemeChange: (theme: ReaderAppearanceTheme): void => this.onThemeChange(theme),
+            onFontChange: (font: ReaderAppearanceFont): void => this.onFontChange(font),
+            onFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]): void =>
+              this.onFontOrderChange(fontOrder),
+            onFontReorderActivityChange: (active: boolean): void =>
+              this.onMotionFontReorderActivityChange(active),
+            onCustomFontImport: (): void => this.onCustomFontImport(),
+          });
+          this.motionFullOnlyActors();
         }
-        .width(this.sectionWidth())
-        .height(210)
-        .position({ x: 10, y: 11 })
-        .opacity(this.motionFrame?.themeActions.opacity ?? 0)
-        .translate({
-          x: this.motionFrame?.themeActions.translateX ?? 0,
-          y: this.motionFrame?.themeActions.translateY ?? 0,
-        })
-        .blur(this.motionFrame?.themeActions.blurVp ?? 0);
-
-        this.motionFontReorderHint();
-        this.typographyLibrary();
+        .width(this.motionViewportWidth())
+        .height(this.contentHeight())
+        // A full panel may already be scrolled when the user grabs the bar to
+        // collapse it. Cancel that retained offset continuously as p approaches
+        // Quick, while preserving the exact Full offset at p=1.
+        .translate({ y: this.motionScrollCompensationY() });
       }
-      .width(this.viewportWidth())
-      .height(this.contentHeight());
+      .width(this.motionViewportWidth())
+      .height(this.motionViewportHeight())
+      .scrollBar(BarState.Off)
+      .enableScrollInteraction(this.fullEndpointInteractionEnabled() && !this.motionFontReorderActive)
+      .hitTestBehavior(HitTestMode.Transparent)
+      .onScrollStart((): void => this.onAppearanceScrollStart())
+      // ScrollOnScrollCallback reports this frame's delta, not the accumulated
+      // position. Read the Scroller snapshot so collapse compensation uses the
+      // actual retained offset after any number of scroll frames.
+      .onDidScroll((_xOffset: number, _yOffset: number, _state: ScrollState): void =>
+        this.captureMotionScrollOffset())
+      .onScrollStop((): void => this.captureMotionScrollOffset());
+
+      // Endpoint border styles come from the two already-authored components.
+      // Cross-fading only these border layers keeps both endpoints exact without
+      // claiming that the unpublished N2 supplies a colour trajectory.
+      Row()
+        .width(this.motionViewportWidth())
+        .height(this.motionViewportHeight())
+        .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+        .borderRadius(this.motionSurfaceRadius())
+        .opacity(1 - this.motionSurfaceStyleProgress())
+        .hitTestBehavior(HitTestMode.None);
+      Row()
+        .width(this.motionViewportWidth())
+        .height(this.motionViewportHeight())
+        .border({ width: TOK_BORDER_W, color: TOK_LINE })
+        .borderRadius(this.motionSurfaceRadius())
+        .opacity(this.motionSurfaceStyleProgress())
+        .hitTestBehavior(HitTestMode.None);
     }
-    .width(this.viewportWidth())
-    .height(this.scrollViewportHeight())
-    .scrollBar(BarState.Off)
-    .enableScrollInteraction(this.interactionEnabled && !this.fontReorderActive)
-    // The shared cards sit in the persistent sibling layer below. This Scroll
-    // still receives drag gestures, while taps/long-presses can reach those
-    // cards instead of being consumed by an empty Full-only overlay.
+    .width(this.motionViewportWidth())
+    .height(this.motionViewportHeight())
+    .backgroundColor(TOK_SURFACE_PANEL)
+    .borderRadius(this.motionSurfaceRadius())
+    .clip(true)
     .hitTestBehavior(HitTestMode.Transparent)
-    .onScrollStart((): void => this.onAppearanceScrollStart())
-    .onDidScroll((_xOffset: number, _yOffset: number, _scrollState: ScrollState): void =>
-      this.publishContentScroll(this.contentScroller.currentOffset().yOffset))
-    .position({ x: 13, y: 57 });
+    .position({
+      x: this.currentMotionFrame().quickMorph.x,
+      y: this.currentMotionFrame().quickMorph.y,
+    })
+    .translate({
+      x: this.currentMotionFrame().quickMorph.translateX,
+      y: this.currentMotionFrame().quickMorph.translateY,
+    })
+    .opacity(this.currentMotionFrame().quickMorph.opacity)
+    .blur(this.currentMotionFrame().quickMorph.blurVp);
+  }
+
+  @Builder
+  private motionFullOnlyActors() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Stack({ alignContent: Alignment.TopStart }) {
+        this.themeAction(true);
+        this.themeAction(false);
+      }
+      .width(this.sectionWidth())
+      .height(210)
+      .position({ x: 10, y: 11 })
+      .opacity(this.motionFrame?.themeActions.opacity ?? 0)
+      .translate({
+        x: this.motionFrame?.themeActions.translateX ?? 0,
+        y: this.motionFrame?.themeActions.translateY ?? 0,
+      })
+      .blur(this.motionFrame?.themeActions.blurVp ?? 0);
+
+      this.motionFontReorderHint();
+      this.typographyLibrary();
+    }
+    .width(this.motionViewportWidth())
+    .height(this.contentHeight())
+    .enabled(this.fullEndpointInteractionEnabled())
+    .hitTestBehavior(this.fullEndpointInteractionEnabled() ? HitTestMode.Transparent : HitTestMode.None);
   }
 
   private onAppearanceScrollStart(): void {
@@ -251,11 +321,9 @@ export struct ReaderAppearanceFullPanel {
     }
   }
 
-  private publishContentScroll(offsetY: number): void {
-    if (this.motionFrame === undefined || !Number.isFinite(offsetY)) {
-      return;
-    }
-    this.onContentScroll(Math.max(0, offsetY));
+  private captureMotionScrollOffset(): void {
+    const offset = this.contentScroller.currentOffset();
+    this.motionScrollOffsetY = Math.max(0, offset.yOffset);
   }
 
   @Builder
@@ -302,6 +370,8 @@ export struct ReaderAppearanceFullPanel {
         .lineHeight(13)
         .fontColor(TOK_READ_PRIMARY)
         .textAlign(TextAlign.Center)
+        .enabled(this.motionFrame === undefined ? this.interactionEnabled :
+          this.fullEndpointInteractionEnabled())
         .accessibilityText('收起界面设置')
         .onClick((): void => this.onCollapse());
     }
@@ -870,6 +940,46 @@ export struct ReaderAppearanceFullPanel {
     return Math.max(0, this.sheetWidth() - 26);
   }
 
+  private currentMotionFrame(): ReaderAppearanceMotionFrame {
+    if (this.motionFrame === undefined) {
+      throw new Error('ReaderAppearanceFullPanel: motion frame is required by the Phone motion owner');
+    }
+    return this.motionFrame;
+  }
+
+  private motionViewportWidth(): number {
+    return readerAppearanceMotionViewportWidth(this.currentMotionFrame(), this.sheetWidth());
+  }
+
+  private motionViewportHeight(): number {
+    return readerAppearanceMotionViewportHeight(this.currentMotionFrame());
+  }
+
+  private motionSurfaceRadius(): number {
+    const progress = this.motionSurfaceStyleProgress();
+    return 8 + 4 * progress;
+  }
+
+  private motionSurfaceStyleProgress(): number {
+    return Math.max(0, Math.min(1, this.currentMotionFrame().quickMorph.trackProgress));
+  }
+
+  private motionScrollCompensationY(): number {
+    return readerAppearanceScrollCompensationVp(
+      this.motionScrollOffsetY,
+      this.currentMotionFrame().masterProgress,
+    );
+  }
+
+  private fullEndpointInteractionEnabled(): boolean {
+    return this.interactionEnabled && this.currentMotionFrame().masterProgress >= 0.999;
+  }
+
+  private onMotionFontReorderActivityChange(active: boolean): void {
+    this.motionFontReorderActive = active;
+    this.onFontReorderActivityChange(active);
+  }
+
   private viewportHeight(): number {
     return Math.max(0, this.sheetHeight() - 68);
   }
@@ -968,6 +1078,7 @@ export struct ReaderAppearanceFullPanel {
       this.draggedFontOffsetY = 0;
       this.previewFontOrder = this.snapshot.fontOrder.slice();
       this.fontDragSettling = false;
+      this.onFontReorderActivityChange(true);
     };
     if (this.reduceMotion) {
       applyLift();
@@ -1111,6 +1222,7 @@ export struct ReaderAppearanceFullPanel {
   }
 
   private clearFontDragState(): void {
+    const wasActive = this.draggedFontId !== '' || this.fontDragSettling;
     this.draggedFontId = '';
     this.draggedFontIndex = -1;
     this.draggedFontHoverIndex = -1;
@@ -1119,6 +1231,9 @@ export struct ReaderAppearanceFullPanel {
     this.previewFontOrder = [];
     this.fontDragSettling = false;
     this.clearFontTouchState();
+    if (wasActive) {
+      this.onFontReorderActivityChange(false);
+    }
   }
 
   private clearFontTouchState(): void {

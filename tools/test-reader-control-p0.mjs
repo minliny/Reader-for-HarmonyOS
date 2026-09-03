@@ -79,8 +79,11 @@ assert.match(control,
   /private controlDock\(\) \{\s*if \(this\.usesPhoneAppearanceMotionStage\(\)\) \{\s*this\.appearanceMotionDock\(\);/,
   'Phone Appearance must bypass the generic conditional-mount shell and enter its persistent N/O stage');
 assert.match(control,
-  /return !this\.isExpanded\(\) &&\s*\(this\.activePage === 'moduleAppearance' \|\| this\.activePage === 'fullAppearance'\)/,
-  'both Appearance route endpoints must preserve the same Phone stage instance');
+  /return !this\.isExpanded\(\) &&\s*readerAppearanceMotionStageSupported\(\s*this\.fullPanelAvailableWidth\(\),\s*this\.layout\.fullPanelHeight,\s*\) &&\s*\(this\.activePage === 'moduleAppearance' \|\| this\.activePage === 'fullAppearance'\)/,
+  'both Appearance endpoints must preserve one Phone stage where the authored fixed coordinate space fits');
+assert.match(control,
+  /import \{ readerAppearanceMotionStageSupported \} from '\.\/ReaderAppearanceMotionGeometry'/,
+  'unsupported narrow or zero-travel windows must fall back instead of clipping fixed N evidence');
 assert.match(control,
   /ReaderAppearanceMotionStage\(\{[\s\S]*?expanded: this\.activePage === 'fullAppearance'[\s\S]*?onEndpointChange:/,
   'route state may follow only the motion stage stable endpoint callback');
@@ -102,26 +105,35 @@ assert.doesNotMatch(appearanceStage, /animateTo\s*\(/,
 assert.match(appearanceStage, /expectedEpoch !== this\.motionState\.epoch/,
   're-grab must invalidate already posted settlement frames');
 assert.match(appearanceStage,
-  /private fullMorphStageLayer\(\)[\s\S]*?this\.fullLayer\(\)[\s\S]*?\.height\(this\.contentShellHeight\(\)\)[\s\S]*?y: this\.contentShellTop\(\)[\s\S]*?\.clip\(true\)/,
-  'Full content must inherit the bottom-anchored MorphStage coordinate and clip');
-assert.match(appearanceStage,
-  /private quickMorphStageLayer\(\)[\s\S]*?this\.quickMorphLayer\(\)[\s\S]*?\.height\(this\.contentShellHeight\(\)\)[\s\S]*?y: this\.contentShellTop\(\)[\s\S]*?\.clip\(true\)/,
-  'only the shared QuickMorph subtree may inherit MorphStage inside QuickDock');
+  /private appearanceContentLayer\(\)[\s\S]*?this\.appearanceContent\(\{[\s\S]*?\.height\(this\.renderFrame\.shellHeight\)[\s\S]*?y: this\.shellTop\(\)[\s\S]*?\.clip\(true\)/,
+  'one persistent Appearance content tree must be clipped by the p-driven shell');
+assert.equal((appearanceStage.match(/@BuilderParam appearanceContent:/g) ?? []).length, 1,
+  'Phone Appearance must expose exactly one persistent content Builder');
 assert.doesNotMatch(appearanceStage,
-  /private quickMorphLayer\(\)[\s\S]*?\.opacity\(this\.renderFrame\.quickMorph\.opacity\)/,
-  'the persistent Stage must not revive a QuickMorph root dissolve');
-assert.doesNotMatch(appearanceQuick,
-  /\.opacity\(frame\.quickMorph\.opacity\)/,
-  'QuickMorph root dissolve must not be duplicated inside the module panel');
+  /@BuilderParam quickMorph:|@BuilderParam fullContent:|fullMorphStageLayer|quickDockLayer|quickMorphStageLayer/,
+  'Quick and Full must never return as parallel presentation trees');
+assert.doesNotMatch(appearanceStage, /motionState\.profile|rawExpansion|elastic/,
+  'presentation must be a direction-independent function of master progress');
+assert.doesNotMatch(appearanceQuick, /motionFrame|ReaderAppearanceSharedActors|motionPanel/,
+  'ReaderAppearanceModulePanel is static-only; Phone motion has one FullPanel owner');
 assert.match(appearanceStage,
-  /private quickDockLayer\(\)[\s\S]*?this\.quickMorphStageLayer\(\);[\s\S]*?this\.brightnessLayer\(\);[\s\S]*?this\.moduleNavLayer\(\);[\s\S]*?\.height\(READER_APPEARANCE_MOTION_STAGE_HEIGHT\)/,
-  'O QuickIncoming must own one fixed 736vp QuickDock wrapper');
+  /private brightnessLayer\(\)[\s\S]*?y: this\.stageTravel\(\) \+ 28[\s\S]*?renderFrame\.brightnessRail\.translateY[\s\S]*?renderFrame\.brightnessRail\.opacity[\s\S]*?renderFrame\.brightnessRail\.blurVp/,
+  'BrightnessRail must stay screen-fixed and sample its own track from the common frame');
 assert.match(appearanceStage,
-  /private brightnessLayer\(\)[\s\S]*?y: READER_APPEARANCE_BRIGHTNESS_FIXED_Y/,
-  'N BrightnessRail must remain at its fixed screen y rather than inherit MorphStage travel');
+  /private moduleNavLayer\(\)[\s\S]*?\.height\(this\.stageHeight\(\)\)[\s\S]*?renderFrame\.moduleNav\.translateY[\s\S]*?renderFrame\.moduleNav\.opacity[\s\S]*?renderFrame\.moduleNav\.blurVp/,
+  'ModuleNav must remain bottom-aligned and sample its own common-frame track');
 assert.match(appearanceStage,
-  /private moduleNavLayer\(\)[\s\S]*?\.height\(READER_APPEARANCE_MOTION_STAGE_HEIGHT\)/,
-  'N ModuleNav must remain bottom-aligned in the fixed 736vp stage');
+  /@Prop @Watch\('onAvailableHeightChanged'\) availableHeight: number/,
+  'the measured master axis must use the runtime Phone stage height');
+assert.match(appearanceStage,
+  /private stageTravel\(\): number \{\s*return Math\.max\(0,/,
+  'a zero-height axis must stay zero rather than becoming an artificial 1vp full gesture');
+assert.match(appearanceStage,
+  /private directManipulationAvailable\(\): boolean \{\s*return this\.stageTravel\(\) >= READER_APPEARANCE_MIN_INTERACTIVE_TRAVEL_VP;/,
+  'a sub-touch-target travel must use the responsive fallback instead of amplifying touch noise');
+assert.match(appearanceStage,
+  /onAvailableHeightChanged\(\)[\s\S]*refreshMeasuredAxisForLayout\(\)[\s\S]*scheduleNextFrame\(\)/,
+  'a live height change must re-anchor an active gesture or settlement at the same frame');
 assert.match(appearanceStage,
   /@Prop @Watch\('onMotionTimeScaleChanged'\) motionTimeScale: number = 1/,
   'whole-timeline time scaling must be live rather than mount-only');
@@ -132,17 +144,11 @@ assert.match(appearanceMotionState, /export function setReaderAppearanceMotionTi
 for (const actorAccess of [
   'this.frame.quickMorph',
   'this.frame.themeItems[index]',
-  'this.frame.fontItems[safeIndex]',
+  'this.frame.fontItems',
 ]) {
   assert.ok(appearanceSharedActors.includes(actorAccess),
     `QuickMorph shared tree omitted sampled actor access ${actorAccess}`);
 }
-assert.match(appearanceQuick,
-  /if \(!this\.isTablet && this\.motionFrame !== undefined\) \{\s*this\.motionPanel\(\);/,
-  'the QuickMorph Builder must read the live @Prop directly instead of freezing a frame argument');
-assert.doesNotMatch(appearanceQuick,
-  /private motion(?:Panel|ThemeHeader|Divider|FontHeader)\([^)]*(?:frame|actor|reflow)/,
-  'reactive QuickMorph values must not cross an ArkUI @Builder ordinary-parameter boundary');
 assert.match(control,
   /\.scale\(\{ y: this\.shellBoardScaleY\(\), centerY: this\.shellBoardHeight\(\) \}\)/,
   'the shell board must bottom-anchor its scaleY morph (330<->736 with no translate drift)');
@@ -223,7 +229,18 @@ assert.match(control, /const destination: ReaderControlPage = this\.isActiveModu
 assert.match(control, /if \(this\.reduceMotion\) \{\s*this\.onPageChange\(destination\)/);
 assert.match(control, /if \(this\.reduceMotion\) \{\s*this\.onPageChange\('quickSearch'\)/);
 assert.match(control, /this\.reduceMotion \|\| this\.shellExitArmed \? TransitionEffect\.IDENTITY/);
-assert.match(control, /\.height\('100%'\)\s+\.zIndex\(0\)\s+\.onClick\(\(\): void => this\.onDismiss\(\)\)/);
+assert.match(control,
+  /\.height\('100%'\)\s+\.zIndex\(0\)\s+\.onClick\(\(\): void => \{\s*if \(!this\.appearanceInteractionBusy\(\)\) \{\s*this\.onDismiss\(\)/,
+  'the backdrop must not dismiss the panel during a grabber drag or font reorder');
+assert.match(control,
+  /private appearanceInteractionBusy\(\): boolean \{\s*return this\.appearanceMotionActive \|\| this\.appearanceFontReorderActive;/);
+assert.match(control, /@Prop @Watch\('onVisibleChanged'\) visible: boolean = false/,
+  'hiding a persistently mounted control panel must clear transient Appearance activity');
+assert.match(control,
+  /private onVisibleChanged\(\): void \{\s*if \(!this\.visible\) \{\s*this\.clearAppearanceActivity\(\)/);
+assert.match(control,
+  /private clearAppearanceActivity\(\): void \{\s*this\.setAppearanceMotionActivity\(false\);\s*this\.setAppearanceFontReorderActivity\(false\);/,
+  'all disappearance and route-exit paths must release both busy flags');
 assert.equal((control.match(/\.height\('100%'\)\s+\.zIndex\(1\)\s+\.hitTestBehavior\(HitTestMode\.None\)/g) ?? []).length, 2);
 assert.match(control, /\.accessibilityText\('阅读进度'\)/);
 assert.match(control, /\.accessibilityText\('阅读亮度'\)/);
@@ -231,7 +248,7 @@ assert.doesNotMatch(control, /真面板\(目录\/朗读\/界面\/设置\)后续�
 
 for (const [file, importsLineStrong] of [
   ['ReaderSearchFullPanel.ets', true],
-  ['ReaderAppearanceFullPanel.ets', false],
+  ['ReaderAppearanceFullPanel.ets', true],
   ['ReaderSettingsFullPanel.ets', false],
   ['ReaderTtsFullPanel.ets', false],
 ]) {
