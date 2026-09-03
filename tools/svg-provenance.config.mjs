@@ -29,6 +29,17 @@ function exact(file, sourceNodeId, semanticRole) {
   };
 }
 
+function adaptedPopover(file, sourceNodeId, semanticRole, sourceFile) {
+  return {
+    file,
+    semanticRole,
+    originType: 'figma-node-adapted',
+    sourceNodeId,
+    sourceFile,
+    bodyExtension: 50,
+  };
+}
+
 function paper(file, sourceNodeId, semanticRole, width, height, gradientTransform, stops) {
   return {
     file,
@@ -59,7 +70,7 @@ const icons = [
   icon('bookshelf_library_outline', 'Bookshelf', '#756F69', 'bookshelf library inactive navigation'),
   icon('bookshelf_list', 'List', '#756F69', 'bookshelf list mode', { fillNone: true }),
   icon('bookshelf_list_active', 'List', '#2D4A3E', 'bookshelf list mode active', { fillNone: true }),
-  icon('bookshelf_more', 'More', '#1F1B17', 'bookshelf more'),
+  icon('bookshelf_more_group', 'Folder', '#1F1B17', 'bookshelf more group', { fillNone: true }),
   icon('bookshelf_multiselect_trash', 'Trash', '#D7473E', 'bookshelf multiselect delete'),
   icon('bookshelf_rss', 'Rss', '#756F69', 'bookshelf rss inactive'),
   icon('bookshelf_rss_active', 'Rss', '#FFFAF4', 'bookshelf rss active navigation'),
@@ -69,9 +80,12 @@ const icons = [
   icon('bookshelf_settings_active', 'Settings', '#FFFAF4', 'bookshelf settings active navigation'),
   icon('bookshelf_settings_outline', 'Settings', '#756F69', 'bookshelf settings inactive navigation'),
 
-  icon('directory_bookmark', 'Bookmark', '#5B5046', 'directory bookmark inactive'),
-  icon('directory_bookmark_on', 'Bookmark', '#2F6373', 'directory bookmark active'),
-  icon('directory_directory', 'Directory', '#332C25', 'directory list'),
+  icon('discover_apply', 'Check', '#FFFFFF', 'discover apply filters', { fillNone: true }),
+  icon('discover_filter', 'Filter', '#3F372F', 'discover filter', { fillNone: true }),
+  icon('discover_filter_chevron', 'ChevronRight', '#3F372F', 'discover filter disclosure', { fillNone: true }),
+  icon('discover_refresh', 'Refresh', '#1F1B17', 'discover refresh', { fillNone: true }),
+  icon('discover_source_chevron', 'ChevronRight', '#1F1B17', 'discover source disclosure', { fillNone: true }),
+  icon('discover_source_stack', 'SourceStack', '#1F3528', 'discover current source', { fillNone: true }),
 
   icon('rc_arrow_left', 'Back', '#1F1B17', 'reader control back'),
   icon('rc_autopage', 'ReaderAutoPage', '#332C25', 'reader quick auto page'),
@@ -96,16 +110,19 @@ const icons = [
   icon('reader_auto_full_stop', 'Stop', '#2F6373', 'full auto page stop'),
   icon('reader_auto_play', 'Play', '#FFFAF4', 'quick auto page play'),
   icon('reader_auto_stop', 'Stop', '#8C3D36', 'quick auto page stop'),
-  icon('reader_appearance_nav_active', 'Filled/ReaderModuleAppearance', '#FFFAF4',
-    'reader appearance module active'),
+  icon('reader_appearance_nav_active', 'ReaderModuleAppearance', '#FFFAF4',
+    'reader appearance module active outline', { fillNone: true }),
   icon('reader_chevron_down', 'Chevron', '#41484C', 'select chevron down', { rotation: 90 }),
+  icon('reader_chevron_down_primary', 'Chevron', '#2F6373', 'disabled select chevron down',
+    { rotation: 90, fillNone: true }),
   icon('reader_chevron_right', 'Chevron', '#756F69', 'disclosure chevron'),
 
   icon('reader_directory_back', 'Back', '#332C25', 'full directory back'),
   icon('reader_directory_bottom', 'Bottom', '#2F6373', 'full directory bottom'),
   icon('reader_directory_directory', 'Directory', '#332C25', 'full directory list'),
   icon('reader_directory_input_search', 'Search', '#5B5046', 'full directory input search'),
-  icon('reader_directory_list_active', 'Filled/ReaderModuleDirectory', '#FFFAF4', 'reader directory module active'),
+  icon('reader_directory_list_active', 'ReaderModuleDirectory', '#FFFAF4',
+    'reader directory module active outline', { fillNone: true }),
   icon('reader_directory_marker_bookmark', 'Bookmark', '#5B5046', 'reader directory bookmark marker'),
   icon('reader_directory_marker_bookmark_active', 'Bookmark', '#2F6373', 'reader directory bookmark marker active'),
   icon('reader_directory_marker_check', 'Check', '#2F6373', 'reader directory downloaded marker'),
@@ -121,20 +138,23 @@ const icons = [
   icon('reader_replace_close', 'Close', '#2F6373', 'reader replace close'),
   icon('reader_replace_manage', 'Settings', '#FFFAF4', 'reader replace manage'),
   icon('reader_replace_preview', 'Eye', '#332C25', 'reader replace preview'),
-  icon('reader_session_pause', 'Pause', '#FFFAF4', 'reader session capsule pause'),
+  icon('reader_settings_header', 'ReaderModuleSettings', '#332C25', 'full settings header', { fillNone: true }),
   icon('reader_tts_clock', 'Clock', '#2F6373', 'reader tts timer'),
   icon('reader_tts_headphones', 'Tts', '#2F6373', 'reader tts heading'),
-  icon('reader_tts_nav_active', 'Filled/ReaderModuleTts', '#FFFAF4', 'reader tts module active'),
+  icon('reader_tts_header', 'Tts', '#332C25', 'full tts header', { fillNone: true }),
+  icon('reader_tts_nav_active', 'ReaderModuleTts', '#FFFAF4',
+    'reader tts module active outline', { fillNone: true }),
   icon('reader_tts_next', 'ChevronRight', '#332C25', 'reader tts next'),
   icon('reader_tts_play', 'Play', '#FFFAF4', 'reader tts play'),
   icon('reader_tts_previous', 'ChevronLeft', '#332C25', 'reader tts previous'),
   icon('reader_tts_rate', 'Motion', '#2F6373', 'reader tts speed'),
   icon('reader_tts_stop', 'Stop', '#FFFAF4', 'reader tts stop'),
-  icon('reader_settings_nav_active', 'Filled/ReaderModuleSettings', '#FFFAF4',
-    'reader settings module active'),
+  icon('reader_settings_nav_active', 'ReaderModuleSettings', '#FFFAF4',
+    'reader settings module active outline', { fillNone: true }),
 
   icon('rss_add', 'Plus', '#2D4A3E', 'rss add subscription'),
-  icon('rss_bookmark', 'Bookmark', '#3F372F', 'rss bookmark'),
+  icon('rss_bookmark', 'Bookmark', '#756F69', 'rss bookmark inactive', { fillNone: true }),
+  icon('rss_bookmark_active', 'Bookmark', '#1F3528', 'rss bookmark active', { fillNone: true }),
   icon('rss_edit', 'Edit', '#3F372F', 'rss edit'),
   icon('rss_empty', 'Rss', '#1F1B17', 'rss empty state'),
   icon('rss_error', 'Warning', '#1F1B17', 'rss error state'),
@@ -144,6 +164,10 @@ const icons = [
   icon('rss_item_chevron', 'Chevron', '#1F1B17', 'rss item disclosure'),
   icon('rss_link', 'Link', '#3F372F', 'rss link'),
   icon('rss_manage', 'Settings', '#756F69', 'rss manage'),
+  icon('rss_manage_delete', 'Trash', '#AB2E28', 'rss management delete', { fillNone: true }),
+  icon('rss_manage_edit', 'Edit', '#1F1B17', 'rss management edit', { fillNone: true }),
+  icon('rss_manage_refresh', 'Refresh', '#1F1B17', 'rss management refresh', { fillNone: true }),
+  icon('rss_manage_view_all', 'List', '#1F1B17', 'rss management view all', { fillNone: true }),
   icon('rss_refresh', 'Refresh', '#1F3528', 'rss refresh'),
   icon('rss_source', 'Rss', '#1F3528', 'rss source'),
   icon('rss_view_all', 'List', '#1F3528', 'rss view all'),
@@ -171,11 +195,24 @@ const icons = [
   icon('settings_row_sync', 'Sync', '#2D4A3E', 'settings sync'),
   icon('settings_select_check', 'Check', '#2D4A3E', 'settings select check'),
   icon('source_add', 'Plus', '#FFFAF4', 'source management add'),
+  icon('source_group_folder', 'Folder', '#2D4A3E', 'source management group', { fillNone: true }),
   icon('source_group_chevron', 'Chevron', '#5B5046', 'source group select chevron', { rotation: 90 }),
   icon('source_switch_close', 'Close', '#332C25', 'source switch close'),
+
+  icon('sync_account', 'People', '#2D4A3E', 'webdav account', { fillNone: true }),
+  icon('sync_backup_password', 'Lock', '#2D4A3E', 'webdav backup encryption password', { fillNone: true }),
+  icon('sync_folder', 'Folder', '#2D4A3E', 'webdav sync folder', { fillNone: true }),
+  icon('sync_password', 'Shield', '#2D4A3E', 'webdav password', { fillNone: true }),
+  icon('sync_scope_chevron', 'Chevron', '#41484C', 'webdav backup scope chevron',
+    { rotation: 90, fillNone: true }),
+  icon('sync_server', 'Link', '#2D4A3E', 'webdav server address', { fillNone: true }),
 ];
 
 const exactExports = [
+  exact('bookshelf_more', '4578:583', 'bookshelf more vertical override'),
+  exact('bookshelf_more_batch', '4575:5', 'bookshelf more batch action'),
+  exact('bookshelf_more_import', '4575:14', 'bookshelf more local import action'),
+  exact('bookshelf_more_settings', '4575:24', 'bookshelf more settings action'),
   exact('import_cancel', '2657:797', 'local import cancel'),
   exact('import_choose_file', '2657:791', 'local import choose file'),
   exact('import_doc', '2657:825', 'local import document row'),
@@ -193,8 +230,15 @@ const exactExports = [
   exact('search_empty', '2635:59036', 'search empty illustration'),
   exact('search_error', '2635:59126', 'search error illustration'),
   exact('reader_tts_online_engine', '930:948', 'reader online TTS service'),
+  exact('reader_session_pause', '4624:26', 'reader session solid pause'),
+  exact('reader_session_play', '4624:29', 'reader session solid play'),
   exact('reader_tts_speed_thumb', '750:1059', 'reader quick TTS speed thumb'),
   exact('reader_tts_system_engine', '930:936', 'reader system TTS service'),
+];
+
+const adaptedExports = [
+  adaptedPopover('bookshelf_more_menu_surface', '4582:2',
+    'bookshelf more integrated pointer surface', 'bookshelf_more_menu_surface_reference.svg'),
 ];
 
 const paperPrimitives = [
@@ -226,5 +270,5 @@ const paperPrimitives = [
     ]),
 ];
 
-export const svgAssetRecipes = [...icons, ...exactExports, ...paperPrimitives]
+export const svgAssetRecipes = [...icons, ...exactExports, ...adaptedExports, ...paperPrimitives]
   .sort((left, right) => left.file.localeCompare(right.file));

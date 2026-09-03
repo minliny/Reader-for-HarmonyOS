@@ -97,6 +97,35 @@ async function renderRecipe(recipe) {
       },
     };
   }
+  if (recipe.originType === 'figma-node-adapted') {
+    const sourcePath = path.join(PAGE_SOURCE_DIR, recipe.sourceFile);
+    const source = await readFile(sourcePath, 'utf8');
+    assert.equal(recipe.bodyExtension, 50, `${recipe.file}: unsupported popover body extension`);
+    const content = source
+      .replace('height="218" viewBox="0 0 232 218"', 'height="268" viewBox="0 0 232 268"')
+      .replace('V164C203.5 172.56 196.56 179.5 188 179.5H44C35.44 179.5 28.5 172.56 28.5 164V46',
+        'V214C203.5 222.56 196.56 229.5 188 229.5H44C35.44 229.5 28.5 222.56 28.5 214V46')
+      .replace('width="232" height="218" filterUnits', 'width="232" height="268" filterUnits');
+    assert.notEqual(content, source, `${recipe.file}: Figma reference did not accept the approved body extension`);
+    return {
+      content: `${content.trim()}\n`,
+      manifest: {
+        file: `${recipe.file}.svg`,
+        semanticRole: recipe.semanticRole,
+        originType: recipe.originType,
+        figmaFileKey: SVG_FIGMA_FILE_KEY,
+        figmaNodeId: recipe.sourceNodeId,
+        license: 'Reader project design',
+        sourceFile: path.relative(ROOT, sourcePath),
+        sourceSha256: sha256(source),
+        transform: {
+          pathMutation: 'extend-straight-body-only',
+          bodyExtensionVp: recipe.bodyExtension,
+          pointerAndCornerGeometry: 'preserved',
+        },
+      },
+    };
+  }
   assert.equal(recipe.originType, 'figma-css-primitive', `${recipe.file}: unsupported provenance type`);
   return {
     content: renderPaperPrimitive(recipe),
@@ -198,7 +227,7 @@ export async function syncSvgAssets({ check = false } = {}) {
     schemaVersion: SVG_PROVENANCE_SCHEMA_VERSION,
     generatedBy: 'tools/sync-svg-assets.mjs',
     policy: {
-      allowedOrigins: ['figma-component-derived', 'figma-node-export', 'figma-css-primitive'],
+      allowedOrigins: ['figma-component-derived', 'figma-node-export', 'figma-node-adapted', 'figma-css-primitive'],
       unknownAllowed: false,
       manualPathMutationAllowed: false,
     },

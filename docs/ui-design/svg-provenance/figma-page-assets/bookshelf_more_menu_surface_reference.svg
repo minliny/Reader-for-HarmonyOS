@@ -1,0 +1,16 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="232" height="218" viewBox="0 0 232 218" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Popover Background &#194;&#183; Integrated Pointer" filter="url(#filter0_d_0_728)">
+<path id="Vector" d="M44 30.5H159L171 18.5L183 30.5H188C196.56 30.5 203.5 37.44 203.5 46V164C203.5 172.56 196.56 179.5 188 179.5H44C35.44 179.5 28.5 172.56 28.5 164V46C28.5 37.44 35.44 30.5 44 30.5Z" fill="#FFFCF8" stroke="#E3DED6" stroke-linejoin="round"/>
+</g>
+<defs>
+<filter id="filter0_d_0_728" x="0" y="-7.45058e-09" width="232" height="218" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="10"/>
+<feGaussianBlur stdDeviation="14"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0.18 0 0 0 0 0.15 0 0 0 0 0.12 0 0 0 0.16 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_728"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_728" result="shape"/>
+</filter>
+</defs>
+</svg>
