@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "Reader for HarmonyOS"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "Reader application"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "Reader"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+.hvigor/
+node_modules/
+oh_modules/
+build/
+entry/build/
+entry/.cxx/
+.idea/
+*.bak
+entry/vendor/core-harmony/libs/
