@@ -14,6 +14,10 @@ import {
   ReadingSurface,
   type ReadingSurfacePageFragment,
 } from './ReadingSurface';
+import {
+  type ReaderPageTurnDirection,
+  type ReaderPageTurnOutcome,
+} from './ReaderPageGestureState';
 
 const CONTINUOUS_TAP_SLOP = 12;
 
@@ -80,6 +84,8 @@ export struct ReaderContinuousReadingStage {
   onReachEnd: () => void = (): void => {};
   onBoundaryDrag: (direction: 'previous' | 'next') => void =
     (_direction: 'previous' | 'next'): void => {};
+  onTurn: (direction: ReaderPageTurnDirection) => ReaderPageTurnOutcome =
+    (_direction: ReaderPageTurnDirection): ReaderPageTurnOutcome => ({ kind: 'busy' });
   onOpenControl: () => void = (): void => {};
   onManualInteraction: () => void = (): void => {};
   onScrollerReady: (scroller: Scroller | undefined) => void =
@@ -93,6 +99,7 @@ export struct ReaderContinuousReadingStage {
   private touchStartX: number = 0;
   private touchStartY: number = 0;
   private completedStationaryTouch: boolean = false;
+  private manualInteractionReported: boolean = false;
   private visibleFragmentStart: number = 0;
   private visibleFragmentEnd: number = 0;
   private initialScrollGeneration: number = 0;
@@ -131,8 +138,7 @@ export struct ReaderContinuousReadingStage {
               .lineHeight(this.layout.titleLineHeightFp)
               .fontColor(readerAppearanceThemeStyle(this.appearance.activeTheme).ink)
               .textAlign(TextAlign.Center)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .wordBreak(WordBreak.BREAK_ALL)
               .margin({ bottom: this.layout.titleToBodySpacingVp });
           }
           .width('100%');
@@ -206,7 +212,10 @@ export struct ReaderContinuousReadingStage {
       // first; the tap recognizer is admitted only when that sequence did not
       // move, while vertical boundary intent remains owned by onTouch.
       .onTouch((event: TouchEvent): void => this.handleTouch(event))
-      .gesture(
+      // Observe taps alongside List's built-in vertical pan recognizer. An
+      // exclusive gesture here prevents the live List from scrolling on the
+      // VM and can also starve native long-press text selection.
+      .parallelGesture(
         TapGesture({ fingers: 1, count: 1 })
           .onAction((event: GestureEvent): void => this.handleStationaryTap(event)),
       );
@@ -227,8 +236,8 @@ export struct ReaderContinuousReadingStage {
     }
     const touch = event.changedTouches.length > 0 ? event.changedTouches[0] : event.touches[0];
     if (event.type === TouchType.Down) {
-      this.onManualInteraction();
       this.completedStationaryTouch = false;
+      this.manualInteractionReported = false;
       if (touch === undefined) {
         this.resetTouch();
         return;
@@ -246,6 +255,9 @@ export struct ReaderContinuousReadingStage {
       Math.abs(touch.y - this.touchStartY) > CONTINUOUS_TAP_SLOP;
     this.touchMoved = this.touchMoved || moved;
     if (event.type === TouchType.Move) {
+      if (this.touchMoved) {
+        this.reportManualInteraction();
+      }
       return;
     }
     const deltaX = touch.x - this.touchStartX;
@@ -286,7 +298,16 @@ export struct ReaderContinuousReadingStage {
     if (localX >= this.layout.viewportWidth / 3 &&
       localX <= this.layout.viewportWidth * 2 / 3) {
       this.onOpenControl();
+      return;
     }
+    this.reportManualInteraction();
+    this.onTurn(localX < this.layout.viewportWidth / 3 ? 'previous' : 'next');
+  }
+
+  private reportManualInteraction(): void {
+    if (this.manualInteractionReported) return;
+    this.manualInteractionReported = true;
+    this.onManualInteraction();
   }
 
   private resetTouch(): void {

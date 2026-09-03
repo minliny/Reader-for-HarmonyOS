@@ -5,6 +5,7 @@ const readingDir = new URL('../entry/src/main/ets/features/reading/', import.met
 const localReading = readFileSync(new URL('LocalReadingExperience.ets', readingDir), 'utf8');
 const stage = readFileSync(new URL('ReaderPageTurnStage.ets', readingDir), 'utf8');
 const interaction = readFileSync(new URL('ReaderPageInteractionLayer.ets', readingDir), 'utf8');
+const rapidState = readFileSync(new URL('ReaderRapidPageTurnState.ts', readingDir), 'utf8');
 const settingsState = readFileSync(new URL('ReaderSettingsState.ts', readingDir), 'utf8');
 const controlPanel = readFileSync(new URL('ReaderControlPanel.ets', readingDir), 'utf8');
 const appearancePanel = readFileSync(new URL('ReaderAppearanceFullPanel.ets', readingDir), 'utf8');
@@ -125,10 +126,13 @@ contract('failed prepared commit rolls the same stage back', () => {
 contract('manual, gesture, and auto page turns converge before choosing slide or direct mode', () => {
   const perform = methodSection(localReading, 'performPageTurn');
   const manual = methodSection(localReading, 'requestPageTurn');
+  const rapid = methodSection(localReading, 'drainRapidPageTurn');
   const automatic = methodSection(localReading, 'requestAutoPageTurn');
 
-  assert.match(manual, /const result = this\.performPageTurn\(direction\);[\s\S]*return result;/,
-    'manual taps and committed gestures must enter the shared page-turn dispatcher');
+  assert.match(manual, /enqueueReaderRapidPageTurn[\s\S]*return this\.drainRapidPageTurn\(\);/,
+    'manual taps and committed gestures must first enter the rapid target dispatcher');
+  assert.match(rapid, /const result = this\.performPageTurn\(direction\);[\s\S]*return result;/,
+    'the rapid dispatcher must converge on the shared page-turn implementation');
   assert.doesNotMatch(manual, /this\.turnPreviousPage\(|this\.turnNextPage\(/);
   assert.match(automatic, /this\.performPageTurn\('next'\)/,
     'automatic paging must enter the same dispatcher as manual input');
@@ -151,30 +155,38 @@ contract('manual, gesture, and auto page turns converge before choosing slide or
     'a committed pan must use the same page-turn command as a tap');
 });
 
-contract('rapid input is bounded to one first-pending manual or pointer intent', () => {
+contract('rapid input updates an unbounded net target without allocating a page queue', () => {
   const manual = methodSection(localReading, 'requestPageTurn');
-  const drain = methodSection(localReading, 'drainPendingManualPageTurn');
+  const drain = methodSection(localReading, 'drainRapidPageTurn');
   const reserve = methodSection(localReading, 'reserveDeferredPointerSegment');
   const resolve = methodSection(localReading, 'resolveDeferredPointerSegment');
 
   assert.match(localReading,
-    /private pendingManualPageTurnIntent: ReaderPageTapIntent \| undefined/);
+    /private rapidPageTurnState: ReaderRapidPageTurnState = createReaderRapidPageTurnState\(\)/);
   assert.match(localReading, /private pendingPointerSegmentReserved: boolean = false/);
-  assert.doesNotMatch(localReading, /pendingManualPageTurn(?:Queue|Directions):/,
-    'rapid input must not grow an animation or pagination work queue');
+  assert.doesNotMatch(localReading, /rapidPageTurn(?:Queue|Directions):/,
+    'rapid input must remain a scalar target rather than an animation or pagination work queue');
   assert.match(manual,
-    /this\.pendingManualPageTurnIntent === undefined && !this\.pendingPointerSegmentReserved\) \{[\s\S]*this\.pendingManualPageTurnIntent = direction;/,
-    'only the first busy manual direction may claim the retained intent slot');
-  assert.doesNotMatch(manual, /else[\s\S]*this\.pendingManualPageTurnIntent = direction/,
-    'a later direction must not overwrite the first pending intent');
+    /enqueueReaderRapidPageTurn\(this\.rapidPageTurnState, direction\)[\s\S]*this\.drainRapidPageTurn\(\)/,
+    'every admitted manual direction must update and then drain the dynamic target');
+  assert.match(rapidState, /pendingDelta: number/);
+  assert.match(rapidState, /safeAdd\(state\.pendingDelta, step\)/,
+    'same-direction input accumulates and opposite input cancels through one signed scalar');
+  assert.doesNotMatch(rapidState, /\b16\b|MAX_(?:PENDING|PAGES)|Array<ReaderPageTurnDirection>/,
+    'the product contract must not contain a fixed rapid-page total');
   assert.match(drain, /this\.preparedPageTurn\(direction\) === undefined[\s\S]*queuePageTurnPreparation/,
-    'the retained intent waits for the existing three-page window instead of expanding prefetch');
+    'the dynamic target waits for the existing three-page window instead of expanding prefetch');
+  assert.match(drain,
+    /const result = this\.performPageTurn\(direction\);[\s\S]*result\.kind === 'started'[\s\S]*beginReaderRapidPageTurn/,
+    'the dispatcher may admit only one visual/Core transaction at a time');
+  assert.match(drain, /result\.kind === 'boundary'[\s\S]*reachReaderRapidPageBoundary/,
+    'a physical book boundary must terminate impossible remaining work');
   assert.match(reserve,
-    /if \(this\.pendingPointerSegmentReserved\) return false;[\s\S]*if \(this\.pendingManualPageTurnIntent !== undefined &&[\s\S]*this\.pageTurnSettlementActive[\s\S]*return false;[\s\S]*this\.pendingManualPageTurnIntent = undefined;[\s\S]*this\.pendingPointerSegmentReserved = true/,
-    'the first pointer-down during settlement reserves the same bounded slot; a stale intent with no settlement in flight is superseded');
+    /if \(this\.pendingPointerSegmentReserved\) return false;[\s\S]*this\.pendingPointerSegmentReserved = true/,
+    'one complete pointer segment retains ownership while the current page is non-interruptible');
   assert.match(resolve,
-    /if \(intent !== undefined && this\.pendingManualPageTurnIntent === undefined\) \{[\s\S]*this\.pendingManualPageTurnIntent = intent;/,
-    'a reserved pointer publishes its parsed intent without replacing an existing owner');
+    /intent === 'control'[\s\S]*requestReaderRapidPageControl[\s\S]*if \(intent !== undefined\)[\s\S]*this\.requestPageTurn\(intent\)/,
+    'a reserved segment must preserve centre-control priority and publish directional input to the target');
   assert.match(interaction, /@Prop @Watch\('onInteractionModeChanged'\) tapOnly: boolean = false/);
   assert.match(interaction, /onDeferredSegmentStart: \(\) => boolean/);
   assert.match(interaction, /onDeferredSegmentResolve: \(intent: ReaderPageTapIntent \| undefined\) => void/);

@@ -22,7 +22,6 @@ export class BookTurnTextureBuildInput {
   viewportHeight: number;
   layout: ReaderReadingLayoutSnapshot;
   appearance: ReaderAppearanceSnapshot;
-  longPressSelectText: boolean;
 
   constructor(
     page: ReaderPageTurnRenderPage,
@@ -30,14 +29,12 @@ export class BookTurnTextureBuildInput {
     viewportHeight: number,
     layout: ReaderReadingLayoutSnapshot = createDefaultReaderReadingLayout(),
     appearance: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot(),
-    longPressSelectText: boolean = false,
   ) {
     this.page = page;
     this.viewportWidth = viewportWidth;
     this.viewportHeight = viewportHeight;
     this.layout = layout;
     this.appearance = appearance;
-    this.longPressSelectText = longPressSelectText;
   }
 }
 
@@ -52,7 +49,6 @@ export function BookTurnTextureBuilder(input: BookTurnTextureBuildInput) {
       layout: input.layout,
       appearance: input.appearance,
       bottomJustifyGap: input.page.bottomJustifyGap,
-      longPressSelectText: input.longPressSelectText,
       chromeTopStartText: input.page.chromeTopStartText,
       chromeTopEndText: input.page.chromeTopEndText,
       chromeBottomStartText: input.page.chromeBottomStartText,

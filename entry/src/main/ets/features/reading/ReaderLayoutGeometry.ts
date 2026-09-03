@@ -145,7 +145,18 @@ export class ReaderReadingLayoutSnapshot {
   }
 
   bodyHeight(showChapterTitle: boolean): number {
-    const titleTrack = showChapterTitle ? this.titleTrackHeightVp : 0;
+    return this.bodyHeightAfterTitle(showChapterTitle ?
+      this.titleLineHeightFp * this.systemFontScale : 0);
+  }
+
+  /**
+   * The chapter heading is laid out before body pagination. Callers that own
+   * the real ArkUI title measurement pass its wrapped height here; only the
+   * remaining page track is available to body lines.
+   */
+  bodyHeightAfterTitle(titleHeightVp: number): number {
+    const measuredTitleHeight = Number.isFinite(titleHeightVp) ? Math.max(0, titleHeightVp) : 0;
+    const titleTrack = measuredTitleHeight > 0 ? measuredTitleHeight + this.titleToBodySpacingVp : 0;
     return Math.max(1, this.viewportHeight - this.contentTop - this.contentBottom - titleTrack);
   }
 }

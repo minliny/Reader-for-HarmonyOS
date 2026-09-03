@@ -41,8 +41,8 @@ assert.doesNotMatch(sync, /this\.autoRow\('备份范围'/);
 assert.doesNotMatch(sync, /this\.openSelect === 'scope'/);
 assert.doesNotMatch(sync, /this\.openSelect === 'location'|this\.openSelect === 'frequency'/,
   'disabled automatic-backup rows must not retain selectable state');
-assert.match(sync, /private scopeRow[\s\S]*?TextAlign\.Start[\s\S]*?app\.media\.reader_chevron_down/,
-  'the disabled multi-select trigger must retain the shared left-aligned field presentation');
+assert.match(sync, /private scopeRow[\s\S]*?TextAlign\.Start[\s\S]*?app\.media\.sync_scope_chevron/,
+  'the disabled multi-select trigger must retain the WebDAV-specific left-aligned field presentation');
 assert.match(sync, /this\.gatedRow\('保存位置'/);
 assert.match(sync, /this\.gatedRow\('备份频率'/);
 

@@ -39,6 +39,20 @@ import {
   type ReaderPageTurnOutcome,
 } from './ReaderPageGestureState';
 import {
+  beginReaderRapidPageTurn,
+  cancelReaderRapidPageTurn,
+  completeReaderRapidPageTurn,
+  createReaderRapidPageTurnState,
+  enqueueReaderRapidPageTurn,
+  reachReaderRapidPageBoundary,
+  readerRapidPageTurnDirection,
+  readerRapidPageTurnHasWork,
+  readerRapidPageTurnRetryExhausted,
+  requestReaderRapidPageControl,
+  retryReaderRapidPageTurn,
+  type ReaderRapidPageTurnState,
+} from './ReaderRapidPageTurnState';
+import {
   ReaderPageTurnRenderPage,
   ReaderPageTurnStage,
 } from './ReaderPageTurnStage';
@@ -71,9 +85,11 @@ import {
   type BookTurnMotionState,
 } from './BookTurnMotionState';
 import { ReaderContinuousReadingStage } from './ReaderContinuousReadingStage';
+import { readerTextSelectionEnabled } from './ReaderTextSelectionPolicy';
 import { ReaderControlPanel, type ReaderControlPage } from './ReaderControlPanel';
 import {
   READER_SESSION_CAPSULE_HEIGHT,
+  READER_SESSION_CAPSULE_SHADOW,
   ReaderSessionCapsule,
   readerSessionCapsuleMinimumWidth,
 } from './ReaderSessionCapsule';
@@ -101,6 +117,7 @@ import {
   READER_CONTROL_PROGRESS_MAX,
   READER_CONTROL_PROGRESS_MIN,
 } from './ReaderControlGeometry';
+import { TOK_LINE } from '../common/ReaderTokens';
 import {
   commitReaderAutoPageTurn,
   createReaderAutoPageState,
@@ -158,9 +175,17 @@ import {
   readingParagraphBoundaryMode,
 } from './ReadingParagraphProjection';
 import { registerReaderFonts } from '../common/ReaderFonts';
+import { TYPE_READER_CHAPTER_TITLE } from '../common/ReaderTypography';
 import { motionAnimateParam, motionRemainingDistanceAnimateParam } from '../common/MotionSpec';
 import { ComponentContent, FrameCallback, window } from '@kit.ArkUI';
 import { image } from '@kit.ImageKit';
+import {
+  createReaderSessionMorphGeometry,
+  readerSessionMorphSourceKindForPage,
+  type ReaderSessionMorphPhase,
+  type ReaderSessionMorphSourceKind,
+  ReaderSessionMorphSourceMeasurement,
+} from './ReaderSessionMorphState';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { ReaderReadingSystemEventHost } from '../../app/ReaderReadingSystemEventHost';
 import {
@@ -690,6 +715,14 @@ const MEASUREMENT_LAYOUT_TIMEOUT_MS = 6000;
  */
 const UNICODE_PROBE_EMPTY_ATTEMPT_LIMIT = 5;
 /**
+ * Same fail-closed discipline as the probe, for the chapter title gate: a
+ * controller/Text binding mismatch (or a title that never lays out) must not
+ * silently retry until the 6s deadline. Generous for the same reason: once
+ * the title Text is bound to the current epoch's controller, its line count
+ * settles within the first didLayout or two.
+ */
+const CHAPTER_TITLE_GATE_ATTEMPT_LIMIT = 8;
+/**
  * The hidden-layout deadline stops at the first Core persistence boundary.
  * Keep a separate, non-visual upper bound for an initial page that still has
  * no visible body while its chapter read, location resolution, or first
@@ -873,6 +906,31 @@ export struct ReadingExperience {
   @State private pageChromeClockText: string = formatReaderPageClock(Date.now());
   @State private sessionCapsuleMeasuredWidth: number = 0;
   @State private sessionCapsuleMeasuredHeight: number = READER_SESSION_CAPSULE_HEIGHT;
+  // Figma Review C/D/E/F capsule morph state machine. The flight proxy and
+  // the expand/reveal shell overrides live in the host so the capsule
+  // component itself stays a static actor (no transition/animation inside it).
+  @State private sessionMorphPhase: ReaderSessionMorphPhase = 'none';
+  @State private sessionMorphProxyCenterX: number = 0;
+  @State private sessionMorphProxyCenterY: number = 0;
+  @State private sessionMorphProxyWidth: number = 0;
+  @State private sessionMorphProxyHeight: number = 0;
+  @State private sessionMorphSourceContentScale: number = 1;
+  @State private sessionMorphSourceContentOpacity: number = 1;
+  @State private sessionMorphGhostOpacity: number = 0;
+  @State private sessionMorphCanonicalShellOpacity: number = 0;
+  @State private sessionMorphHoldProgress: number = 0;
+  @State private sessionMorphSourceImage: image.PixelMap | undefined = undefined;
+  @State private sessionMorphShellWidth: number = 0;
+  @State private sessionMorphContentOffsetX: number = 0;
+  private sessionMorphGeneration: number = 0;
+  private sessionMorphSourceLeft: number = 0;
+  private sessionMorphSourceTop: number = 0;
+  private sessionMorphSourceWidth: number = 0;
+  private sessionMorphSourceHeight: number = 0;
+  private quickAutoPageMorphSource: ReaderSessionMorphSourceMeasurement | undefined = undefined;
+  private quickTtsMorphSource: ReaderSessionMorphSourceMeasurement | undefined = undefined;
+  private fullAutoPageMorphSource: ReaderSessionMorphSourceMeasurement | undefined = undefined;
+  private fullTtsMorphSource: ReaderSessionMorphSourceMeasurement | undefined = undefined;
 
   private sessionGateway: ReadingSessionFlowGateway | undefined = undefined;
   private readonly replaceGateway: ReaderReplaceQuickGateway =
@@ -895,6 +953,8 @@ export struct ReadingExperience {
   private ttsCoordinator: ReaderTtsSessionCoordinator | undefined = undefined;
   private ttsConfig: ReaderTtsConfig | undefined = undefined;
   private readonly unicodeProbeController: TextController = new TextController();
+  private chapterTitleMeasurementController: TextController = new TextController();
+  private measuredChapterTitleHeightVp: number = 0;
   private readonly paragraphRanges: ParagraphRange[] = [];
   private readonly measurementBatch: MeasurementParagraph[] = [];
   private readonly paginationIndex: ReadingPaginationIndex = new ReadingPaginationIndex();
@@ -919,8 +979,8 @@ export struct ReadingExperience {
   private preparedNextPage: PreparedReaderPageTurn | undefined = undefined;
   private pageTurnPreparation: ReaderPageTurnPreparation | undefined = undefined;
   private pageTurnPreparationQueue: ReaderPageTurnDirection[] = [];
-  /** Latest manual request only; bounds rapid input without growing a work queue. */
-  private pendingManualPageTurnIntent: ReaderPageTapIntent | undefined = undefined;
+  /** Dynamic net target; every manual page request is retained without allocating a work queue. */
+  private rapidPageTurnState: ReaderRapidPageTurnState = createReaderRapidPageTurnState();
   private pendingPointerSegmentReserved: boolean = false;
   private pageTurnGeneration: number = 0;
   private controlShellExitGeneration: number = 0;
@@ -1023,6 +1083,12 @@ export struct ReadingExperience {
   private unicodeProbeVerified: boolean = false;
   /** Consecutive zero-line probe observations within the current generation. */
   private unicodeProbeEmptyAttempts: number = 0;
+  /** Regression diagnostics: gate retry counter and per-gate last observation. */
+  private measurementGateAttempts: number = 0;
+  private measurementTitleLineCount: number = 0;
+  private chapterTitleGateAttempts: number = 0;
+  private measurementBatchPendingParagraph: number = -1;
+  private measurementBatchPendingLineCount: number = -1;
   private didLayoutListener: (() => void) | undefined = undefined;
   /** Invalidates every continuation captured by a prior mounted instance. */
   private lifecycleToken: number = 0;
@@ -1248,7 +1314,7 @@ export struct ReadingExperience {
           ttsHighlightEnd: this.ttsFollowHighlight ? this.ttsState.charEnd : undefined,
           autoPageHighlightStart: this.autoPageHighlightStart(),
           autoPageHighlightEnd: this.autoPageHighlightEnd(),
-          longPressSelectText: this.readerSettingsSnapshot.longPressSelectText,
+          longPressSelectText: this.readerTextSelectionEnabled(),
           interactionEnabled: this.isReaderPageInteractionEnabled(),
           onVisibleRangeChanged: (start: number, end: number, startProgress: number): void =>
             this.onContinuousVisibleRangeChanged(start, end, startProgress),
@@ -1257,6 +1323,8 @@ export struct ReadingExperience {
           onReachEnd: (): void => this.onContinuousReachEnd(),
           onBoundaryDrag: (direction: 'previous' | 'next'): void =>
             this.onContinuousBoundaryDrag(direction),
+          onTurn: (direction: ReaderPageTurnDirection): ReaderPageTurnOutcome =>
+            this.requestPageTurn(direction),
           onOpenControl: (): void => this.openReaderControl(),
           onManualInteraction: (): void => this.onContinuousManualInteraction(),
           onScrollerReady: (scroller: Scroller | undefined): void => {
@@ -1280,7 +1348,7 @@ export struct ReadingExperience {
           ttsHighlightEnd: this.ttsFollowHighlight ? this.ttsState.charEnd : undefined,
           autoPageHighlightStart: this.autoPageHighlightStart(),
           autoPageHighlightEnd: this.autoPageHighlightEnd(),
-          longPressSelectText: this.readerSettingsSnapshot.longPressSelectText,
+          longPressSelectText: this.readerTextSelectionEnabled(),
           translateY: this.bookmarkPageOffsetY,
         });
         if (this.usesBookTurnSimulation()) {
@@ -1344,6 +1412,8 @@ export struct ReadingExperience {
         ttsLanguage: this.ttsLanguage,
         ttsPerson: this.ttsPerson,
         reduceMotion: this.reduceMotion,
+        onSessionMorphSourceMeasured: (measurement: ReaderSessionMorphSourceMeasurement): void =>
+          this.admitSessionMorphSourceMeasurement(measurement),
         onBack: (): void => {
           this.hideControl();
           this.beginExit();
@@ -1441,7 +1511,7 @@ export struct ReadingExperience {
           tapOnly: this.pageTurnTapOnlyInput(),
           viewportWidth: this.viewportWidth,
           viewportHeight: this.viewportHeight,
-          allowTextSelection: this.readerSettingsSnapshot.longPressSelectText,
+          allowTextSelection: this.readerTextSelectionEnabled(),
           systemGestureLeftInset: this.readerSystemGestureLeftInset(),
           systemGestureRightInset: this.readerSystemGestureRightInset(),
           systemGestureBottomInset: this.readerSystemGestureBottomInset(),
@@ -1473,23 +1543,88 @@ export struct ReadingExperience {
           surfaceColor: readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).paperStart,
           textColor: readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink,
           interactionEnabled: !this.pageTurnInputOwned,
+          morphShellWidth: this.sessionCapsuleMorphShellWidth(),
+          morphContentOffsetX: this.sessionCapsuleMorphContentOffsetX(),
           onToggle: (): void => this.toggleSessionCapsule(),
           onMeasured: (width: number, height: number): void =>
             this.onSessionCapsuleMeasured(this.sessionCapsuleType(), width, height),
         })
           .position({
-            x: this.sessionCapsuleLayout().sessionX,
+            x: this.sessionCapsuleLayout().sessionX + this.sessionCapsuleMorphLeftAdjust(),
             y: this.sessionCapsuleLayout().sessionY,
           })
           .zIndex(8)
           // Reader-UI tokens: capsuleEnter 160ms / sessionReturn 200ms. Fade
           // only — countdown and state updates mutate the mounted node and
-          // must never replay this transition.
-          .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
+          // must never replay this transition. While the host-owned morph
+          // timeline runs, the flight-proxy handoff must stay seamless, so
+          // the fade is suppressed until the morph window closes.
+          .transition(this.sessionMorphPhase !== 'none' || this.reduceMotion ?
+          TransitionEffect.IDENTITY :
           TransitionEffect.asymmetric(
             TransitionEffect.OPACITY.animation(motionAnimateParam('reader.session.capsule.enter')),
             TransitionEffect.OPACITY.animation(motionAnimateParam('reader.session.capsule.exit')),
           ));
+      }
+      if (this.sessionMorphPhase === 'flight' && this.sessionMorphSourceImage !== undefined) {
+        // Figma Review C/D/E/F: fly a captured copy of the exact source actor,
+        // not an invented blank rectangle. The duplicate blur image is the
+        // authored motion-blur ghost; the canonical shell cross-fades in at
+        // the 24vp handoff so the following expansion is pixel-continuous.
+        Stack({ alignContent: Alignment.Center }) {
+          Image(this.sessionMorphSourceImage)
+            .width(this.sessionMorphSourceWidth)
+            .height(this.sessionMorphSourceHeight)
+            .objectFit(ImageFit.Fill)
+            .scale({
+              x: this.sessionMorphSourceContentScale,
+              y: this.sessionMorphSourceContentScale,
+            })
+            .opacity(this.sessionMorphSourceContentOpacity);
+          Image(this.sessionMorphSourceImage)
+            .width(this.sessionMorphSourceWidth)
+            .height(this.sessionMorphSourceHeight)
+            .objectFit(ImageFit.Fill)
+            .scale({
+              x: this.sessionMorphSourceContentScale,
+              y: this.sessionMorphSourceContentScale,
+            })
+            .blur(12)
+            .opacity(this.sessionMorphGhostOpacity);
+          Row()
+            .width('100%')
+            .height('100%')
+            .backgroundColor(readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).paperStart)
+            .border({ width: 1, color: TOK_LINE })
+            .borderRadius(12)
+            .shadow(READER_SESSION_CAPSULE_SHADOW)
+            .opacity(this.sessionMorphCanonicalShellOpacity);
+        }
+          .width(this.sessionMorphProxyWidth)
+          .height(this.sessionMorphProxyHeight)
+          .borderRadius(12)
+          .clip(true)
+          .position({
+            x: this.sessionMorphProxyCenterX - this.sessionMorphProxyWidth / 2,
+            y: this.sessionMorphProxyCenterY - this.sessionMorphProxyHeight / 2,
+          })
+          .zIndex(9)
+          .hitTestBehavior(HitTestMode.None);
+      }
+      if (this.sessionMorphPhase === 'handoff' || this.sessionMorphPhase === 'dotHold') {
+        Row()
+          .width(24)
+          .height(24)
+          .backgroundColor(readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).paperStart)
+          .border({ width: 1, color: TOK_LINE })
+          .borderRadius(12)
+          .shadow(READER_SESSION_CAPSULE_SHADOW)
+          .position({
+            x: this.sessionMorphProxyCenterX - 12,
+            y: this.sessionMorphProxyCenterY - 12,
+          })
+          .zIndex(9)
+          .hitTestBehavior(HitTestMode.None);
       }
     }
     .width('100%')
@@ -1596,7 +1731,7 @@ export struct ReadingExperience {
       return;
     }
     if (event.event === BOOK_TURN_EVENT_TEXTURE_READY) {
-      this.drainPendingManualPageTurn();
+      this.drainRapidPageTurn();
       this.resumePendingAutoPageTurn();
       return;
     }
@@ -1719,7 +1854,6 @@ export struct ReadingExperience {
           this.viewportHeight,
           this.readingLayout(),
           this.appearanceSnapshot,
-          this.readerSettingsSnapshot.longPressSelectText,
         );
         content = new ComponentContent<BookTurnTextureBuildInput>(
           uiContext,
@@ -1770,7 +1904,7 @@ export struct ReadingExperience {
     // and immediately drain any complete user intent through the admitted
     // no-animation path.
     this.failBookTurnRuntime();
-    this.drainPendingManualPageTurn();
+    this.drainRapidPageTurn();
   }
 
   private bookTurnTextureSnapshotScale(): number {
@@ -1876,7 +2010,14 @@ export struct ReadingExperience {
 
   private onContinuousScrollStopped(): void {
     this.continuousUserInteractionActive = false;
-    void this.commitContinuousProgress(this.lifecycleToken);
+    const direction = this.rapidPageTurnState.inFlightDirection;
+    void this.commitContinuousProgress(this.lifecycleToken)
+      .then((): void => {
+        if (direction !== undefined) {
+          this.completeRapidPageTurnTransaction(direction);
+          this.drainRapidPageTurn();
+        }
+      });
   }
 
   private onContinuousReachStart(): void {
@@ -2147,6 +2288,26 @@ export struct ReadingExperience {
     // would make TextController's LayoutManager unavailable and a timer would
     // race layout; UIObserver.didLayout below is therefore the only read point.
     Column() {
+      // The title Text must be rebuilt on every measurement epoch: a plain
+      // `if` branch whose condition does not flip across re-begins keeps the
+      // Text bound to the *first* TextController while beginMeasurement has
+      // already swapped in a new one, so getLayoutManager() throws until the
+      // 6s deadline. The epoch key applies the same rebuild discipline the
+      // batch ForEach below already relies on.
+      ForEach([this.measurementEpoch], (_epoch: number) => {
+        if (this.measurementIncludesChapterTitle()) {
+          Text(this.requireChapter().chapterTitle, { controller: this.chapterTitleMeasurementController })
+            .width(this.measurementTextWidth())
+            .fontFamily(TYPE_READER_CHAPTER_TITLE.fontFamily)
+            .fontWeight(TYPE_READER_CHAPTER_TITLE.fontWeight)
+            .fontSize(TYPE_READER_CHAPTER_TITLE.fontSizeFp)
+            .lineHeight(this.readingLayout().titleLineHeightFp)
+            .fontColor(readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink)
+            .textAlign(TextAlign.Center)
+            .wordBreak(WordBreak.BREAK_ALL);
+        }
+      }, (_epoch: number): string => `chapterTitle:${this.measurementEpoch}`);
+
       if (!this.unicodeProbeVerified) {
         Text(UNICODE_PROBE, { controller: this.unicodeProbeController })
           .width(this.measurementTextWidth())
@@ -2340,8 +2501,8 @@ export struct ReadingExperience {
    * transaction emits a persisted first page, so this creates no new loading
    * screen or title-only PaperLayer.
    */
-  private resetForChapterSelection(): void {
-    this.invalidatePageTurnRuntime(true);
+  private resetForChapterSelection(preserveRapidPageTarget: boolean = false): void {
+    this.invalidatePageTurnRuntime(true, preserveRapidPageTarget);
     this.previousChapterMeasurement = undefined;
     this.measurementGeneration += 1;
     this.measurementSelectionToken = -1;
@@ -2658,6 +2819,16 @@ export struct ReadingExperience {
       ));
       this.desiredChapterProgress = scalarCount === 0 ? 0 : this.desiredChapterOffset / scalarCount;
       this.measurementRequestedAnchorScalar = this.desiredChapterOffset;
+      // A controller is bound to one exact title/layout observation. Recreate
+      // it before mounting the new hidden tree so an adjacent chapter cannot
+      // reuse the previous title's line count.
+      this.chapterTitleMeasurementController = new TextController();
+      this.measuredChapterTitleHeightVp = 0;
+      this.measurementGateAttempts = 0;
+      this.measurementTitleLineCount = 0;
+      this.chapterTitleGateAttempts = 0;
+      this.measurementBatchPendingParagraph = -1;
+      this.measurementBatchPendingLineCount = -1;
       if (this.readerSettingsSnapshot.navigationMode === 'continuous') {
         this.rebuildContinuousFragments();
         this.setContinuousInitialAnchor(this.desiredChapterOffset);
@@ -2705,11 +2876,38 @@ export struct ReadingExperience {
       this.measurementCompleting || this.batchProcessing) {
       return;
     }
-    if (!this.hasValidUnicodeProbe(lifecycleToken) || !this.allBatchParagraphsHaveLayout()) {
+    if (!this.hasValidUnicodeProbe(lifecycleToken)) {
+      this.reportMeasurementGatePending(lifecycleToken, false, true, true);
+      return;
+    }
+    const titleResult = this.captureChapterTitleMeasurementAfterLayout(lifecycleToken);
+    if (!titleResult) {
+      this.reportMeasurementGatePending(lifecycleToken, true, false, true);
+      return;
+    }
+    if (!this.allBatchParagraphsHaveLayout()) {
+      this.reportMeasurementGatePending(lifecycleToken, true, true, false);
       return;
     }
     this.batchProcessing = true;
     this.consumeMeasuredBatch(generation, selectionToken, lifecycleToken);
+  }
+
+  private reportMeasurementGatePending(
+    lifecycleToken: number,
+    probeOk: boolean,
+    titleOk: boolean,
+    batchOk: boolean,
+  ): void {
+    this.measurementGateAttempts += 1;
+    if (this.measurementGateAttempts !== 1 && this.measurementGateAttempts !== 3 &&
+      this.measurementGateAttempts !== 10 && this.measurementGateAttempts % 30 !== 0) {
+      return;
+    }
+    console.info(`ReadingExperience measurement gate pending: attempt=${this.measurementGateAttempts} ` +
+      `probe=${probeOk} title=${titleOk} titleLines=${this.measurementTitleLineCount} ` +
+      `batch=${batchOk} batchPendingParagraph=${this.measurementBatchPendingParagraph} ` +
+      `batchPendingLines=${this.measurementBatchPendingLineCount}`);
   }
 
   private consumeMeasuredBatch(generation: number, selectionToken: number, lifecycleToken: number): void {
@@ -2912,8 +3110,12 @@ export struct ReadingExperience {
       if (this.measurementBatch.length === 0) {
         return false;
       }
-      for (const paragraph of this.measurementBatch) {
-        if (paragraph.controller.getLayoutManager().getLineCount() <= 0) {
+      for (let paragraphIndex = 0; paragraphIndex < this.measurementBatch.length; paragraphIndex += 1) {
+        const paragraph = this.measurementBatch[paragraphIndex];
+        const lineCount = paragraph.controller.getLayoutManager().getLineCount();
+        if (lineCount <= 0) {
+          this.measurementBatchPendingParagraph = paragraphIndex;
+          this.measurementBatchPendingLineCount = lineCount;
           return false;
         }
       }
@@ -2921,6 +3123,66 @@ export struct ReadingExperience {
     } catch (_) {
       return false;
     }
+  }
+
+  private measurementIncludesChapterTitle(): boolean {
+    return this.chapter !== undefined && this.chapter.chapterTitle.length > 0 &&
+      this.isChapterFirstPageStart(this.measurementRequestedAnchorScalar);
+  }
+
+  /** Captures the wrapped title before any body line is admitted to page one. */
+  private captureChapterTitleMeasurementAfterLayout(lifecycleToken: number): boolean {
+    if (!this.measurementIncludesChapterTitle()) {
+      this.measuredChapterTitleHeightVp = 0;
+      this.measurementTitleLineCount = 0;
+      this.chapterTitleGateAttempts = 0;
+      return true;
+    }
+    let manager: LayoutManager;
+    let lineCount: number;
+    try {
+      manager = this.chapterTitleMeasurementController.getLayoutManager();
+      lineCount = manager.getLineCount();
+    } catch (_) {
+      this.measurementTitleLineCount = -2;
+      return this.retryOrFailingTitleGate(lifecycleToken);
+    }
+    if (lineCount <= 0) {
+      this.measurementTitleLineCount = -1;
+      return this.retryOrFailingTitleGate(lifecycleToken);
+    }
+    try {
+      const context = this.getUIContext();
+      let heightVp = 0;
+      for (let lineIndex = 0; lineIndex < lineCount; lineIndex += 1) {
+        const lineHeightVp = context.px2vp(manager.getLineMetrics(lineIndex).height);
+        if (!Number.isFinite(lineHeightVp) || lineHeightVp <= 0) {
+          throw new Error('PAGINATION_CHAPTER_TITLE_GEOMETRY_INVALID');
+        }
+        heightVp += lineHeightVp;
+      }
+      this.measuredChapterTitleHeightVp = heightVp;
+      this.measurementTitleLineCount = lineCount;
+      this.chapterTitleGateAttempts = 0;
+      return true;
+    } catch (error) {
+      this.fail(error instanceof Error ? error :
+        new Error('PAGINATION_CHAPTER_TITLE_GEOMETRY_INVALID'), lifecycleToken);
+      return false;
+    }
+  }
+
+  /**
+   * A transiently unbound/unlaid-out title Text retries with the next
+   * didLayout; a stably failing one must not stall until the 6s deadline.
+   */
+  private retryOrFailingTitleGate(lifecycleToken: number): boolean {
+    this.chapterTitleGateAttempts += 1;
+    if (this.chapterTitleGateAttempts < CHAPTER_TITLE_GATE_ATTEMPT_LIMIT) {
+      return false;
+    }
+    this.fail(new Error('PAGINATION_CHAPTER_TITLE_METRICS_UNAVAILABLE'), lifecycleToken);
+    return false;
   }
 
   private measuredLines(paragraph: MeasurementParagraph): MeasuredReadingLine[] {
@@ -3266,7 +3528,7 @@ export struct ReadingExperience {
     this.phase = this.visiblePage === undefined ? 'loading' : 'ready';
     if (pending.pageTurnGeneration !== this.pageTurnGeneration || this.phase !== 'ready' ||
       this.beginPageTurnPreparation('previous', target) !== 'begun') {
-      this.drainPendingManualPageTurn();
+      this.drainRapidPageTurn();
       this.drainPageTurnPreparationQueue();
     }
   }
@@ -3343,7 +3605,7 @@ export struct ReadingExperience {
       this.pageTurnRenderRevision += 1;
     }
     this.releaseUnretainedReadingImages();
-    this.drainPendingManualPageTurn();
+    this.drainRapidPageTurn();
     this.resumePendingAutoPageTurn();
     this.drainPageTurnPreparationQueue();
     this.scheduleBookTurnTextureRefresh();
@@ -3357,7 +3619,7 @@ export struct ReadingExperience {
     if (origin !== undefined) this.restoreMaterializedChapterContext(origin, false);
     this.phase = this.visiblePage === undefined ? 'loading' : 'ready';
     this.releaseUnretainedReadingImages();
-    this.drainPendingManualPageTurn();
+    this.drainRapidPageTurn();
     this.drainPageTurnPreparationQueue();
     this.scheduleBookTurnTextureRefresh();
   }
@@ -3396,7 +3658,7 @@ export struct ReadingExperience {
     this.phase = 'ready';
     this.pageTurnRenderRevision += 1;
     this.releaseUnretainedReadingImages();
-    this.drainPendingManualPageTurn();
+    this.drainRapidPageTurn();
     this.resumePendingAutoPageTurn();
     this.drainPageTurnPreparationQueue();
     this.scheduleBookTurnTextureRefresh();
@@ -3453,7 +3715,8 @@ export struct ReadingExperience {
         this.admitCommittedProgress(stored);
         this.prefetchNextChapter(chapter, lifecycleToken, selectionToken);
         this.schedulePageTurnPreparation();
-        this.drainPendingManualPageTurn();
+        this.completeRapidPageTurnTransaction();
+        this.drainRapidPageTurn();
         this.onAutoPagePageCommitted();
         this.resumeDeferredMeasurement(lifecycleToken);
       });
@@ -3486,7 +3749,7 @@ export struct ReadingExperience {
     if (!this.isSessionActive(lifecycleToken) || this.exitRequested) {
       return;
     }
-    this.pendingManualPageTurnIntent = undefined;
+    this.rapidPageTurnState = cancelReaderRapidPageTurn(this.rapidPageTurnState);
     this.pendingPointerSegmentReserved = false;
     this.autoPageTurnPending = false;
     const inputPhase = this.pageTurnInputPhase();
@@ -3649,6 +3912,7 @@ export struct ReadingExperience {
         this.continuousCommitPending = false;
         void this.commitContinuousProgress(lifecycleToken);
       }
+      this.drainRapidPageTurn();
     }
   }
 
@@ -4295,7 +4559,13 @@ export struct ReadingExperience {
   private pendingPageBodyCapacity(): number {
     const pageStartScalar = this.pendingPageStartScalar >= 0 ?
       this.pendingPageStartScalar : this.measurementRequestedAnchorScalar;
-    return this.readingLayout().bodyHeight(this.isChapterFirstPageStart(pageStartScalar));
+    if (!this.isChapterFirstPageStart(pageStartScalar)) {
+      return this.readingLayout().bodyHeightAfterTitle(0);
+    }
+    if (!Number.isFinite(this.measuredChapterTitleHeightVp) || this.measuredChapterTitleHeightVp <= 0) {
+      throw new Error('PAGINATION_CHAPTER_TITLE_MEASUREMENT_INVALID');
+    }
+    return this.readingLayout().bodyHeightAfterTitle(this.measuredChapterTitleHeightVp);
   }
 
   private measurementTextWidth(): number {
@@ -4886,7 +5156,7 @@ export struct ReadingExperience {
       timerDurationMs: this.ttsTimerDurationMs(),
     }).then((): Promise<boolean> => coordinator.whenStarted()).then((started: boolean): void => {
       if (started && this.mounted && !this.exitRequested && this.ttsCoordinator === coordinator) {
-        this.hideControl();
+        this.beginSessionCapsuleMorph();
       }
     }).catch((error: Error): void => this.logTtsFailure('start', error));
   }
@@ -5225,7 +5495,7 @@ export struct ReadingExperience {
       return;
     }
     this.autoPageState = startReaderAutoPage(this.autoPageState);
-    this.hideControl();
+    this.beginSessionCapsuleMorph();
     this.armAutoPageTimer(true);
     this.armAutoPageSessionTimer(true);
   }
@@ -5906,7 +6176,7 @@ export struct ReadingExperience {
 
   private safeWindowSettingsFallback(snapshot: ReaderSettingsSnapshot): ReaderSettingsSnapshot {
     return normalizeReaderSettingsSnapshot({
-      version: 3,
+      version: 4,
       screenDirection: 'system',
       navigationMode: snapshot.navigationMode,
       pageTransition: snapshot.pageTransition,
@@ -6099,6 +6369,12 @@ export struct ReadingExperience {
   }
 
   private shouldShowSessionCapsule(): boolean {
+    // The flight proxy owns the capsule anchor until it lands; the real
+    // capsule mounts at the expand beat and stays through reveal.
+    if (this.sessionMorphPhase === 'capture' || this.sessionMorphPhase === 'flight' ||
+      this.sessionMorphPhase === 'handoff' || this.sessionMorphPhase === 'dotHold') {
+      return false;
+    }
     return this.sessionCapsuleSnapshot() !== undefined;
   }
 
@@ -6136,6 +6412,11 @@ export struct ReadingExperience {
   }
 
   private toggleSessionCapsule(): void {
+    if (this.sessionMorphPhase !== 'none') {
+      // Interrupt = jump straight to the settled capsule (Figma authors no
+      // reverse morph frames).
+      this.finishSessionCapsuleMorph();
+    }
     if (this.pageTurnInputPhase() !== 'idle') return;
     const snapshot = this.sessionCapsuleSnapshot();
     if (snapshot === undefined) return;
@@ -6197,6 +6478,11 @@ export struct ReadingExperience {
     width: number,
     height: number,
   ): void {
+    // Morph frames report transient shell widths; they must not overwrite
+    // the settled measurement that anchors the capsule layout.
+    if (this.sessionMorphPhase !== 'none') {
+      return;
+    }
     if (this.measuredSessionCapsuleType === type &&
       Math.abs(this.sessionCapsuleMeasuredWidth - width) < 0.01 &&
       Math.abs(this.sessionCapsuleMeasuredHeight - height) < 0.01) {
@@ -6206,6 +6492,255 @@ export struct ReadingExperience {
     this.sessionCapsuleMeasuredWidth = width;
     this.sessionCapsuleMeasuredHeight = height;
     this.pageTurnRenderRevision += 1;
+  }
+
+  private sessionCapsuleMorphShellWidth(): number {
+    return this.sessionMorphPhase === 'expand' || this.sessionMorphPhase === 'reveal' ?
+      this.sessionMorphShellWidth : 0;
+  }
+
+  private sessionCapsuleMorphContentOffsetX(): number {
+    return this.sessionMorphPhase === 'expand' || this.sessionMorphPhase === 'reveal' ?
+      this.sessionMorphContentOffsetX : 0;
+  }
+
+  // Right-edge anchoring (Figma expand beat): the shell's right edge stays
+  // on the capsule anchor while the width reopens from the 24vp dot.
+  private sessionCapsuleMorphLeftAdjust(): number {
+    if (this.sessionMorphPhase !== 'expand' && this.sessionMorphPhase !== 'reveal') {
+      return 0;
+    }
+    return this.activeSessionCapsuleWidth() - this.sessionMorphShellWidth;
+  }
+
+  private admitSessionMorphSourceMeasurement(measurement: ReaderSessionMorphSourceMeasurement): void {
+    if (measurement.kind === 'quickAutoPage') this.quickAutoPageMorphSource = measurement;
+    else if (measurement.kind === 'quickTts') this.quickTtsMorphSource = measurement;
+    else if (measurement.kind === 'fullAutoPagePlayback') this.fullAutoPageMorphSource = measurement;
+    else this.fullTtsMorphSource = measurement;
+  }
+
+  private sessionMorphSourceMeasurement(
+    kind: ReaderSessionMorphSourceKind,
+  ): ReaderSessionMorphSourceMeasurement | undefined {
+    if (kind === 'quickAutoPage') return this.quickAutoPageMorphSource;
+    if (kind === 'quickTts') return this.quickTtsMorphSource;
+    if (kind === 'fullAutoPagePlayback') return this.fullAutoPageMorphSource;
+    return this.fullTtsMorphSource;
+  }
+
+  /**
+   * Figma Review C/D/E/F: a session start morphs the control actor into the
+   * session capsule (flight -> shell expand -> content reveal). Runs only
+   * when the control layer is actually on screen and motion is allowed;
+   * otherwise the capsule keeps its registered fade enter.
+   */
+  private beginSessionCapsuleMorph(): void {
+    if (this.reduceMotion || this.sessionMorphPhase !== 'none' ||
+      !this.controlVisible || this.controlObscured) {
+      this.hideControl();
+      return;
+    }
+    const sourceKind = readerSessionMorphSourceKindForPage(this.controlPage);
+    const source = sourceKind === undefined ? undefined : this.sessionMorphSourceMeasurement(sourceKind);
+    const capsuleWidth = this.activeSessionCapsuleWidth();
+    if (capsuleWidth <= 0 || sourceKind === undefined || source === undefined) {
+      this.hideControl();
+      return;
+    }
+    const capsuleLayout = this.sessionCapsuleLayout();
+    const dotCenterX = capsuleLayout.sessionX + capsuleWidth - 12;
+    const dotCenterY = capsuleLayout.sessionY + 12;
+    const geometry = createReaderSessionMorphGeometry(source, dotCenterX, dotCenterY, capsuleWidth);
+    if (geometry === undefined) {
+      this.hideControl();
+      return;
+    }
+    this.sessionMorphGeneration += 1;
+    const generation = this.sessionMorphGeneration;
+    this.sessionMorphPhase = 'capture';
+    void this.getUIContext().getComponentSnapshot().get(source.actorId, {
+      waitUntilRenderFinished: true,
+    }).then((pixelMap: image.PixelMap): void => {
+      if (generation !== this.sessionMorphGeneration || this.sessionMorphPhase !== 'capture' ||
+        readerSessionMorphSourceKindForPage(this.controlPage) !== sourceKind) {
+        pixelMap.release();
+        return;
+      }
+      this.sessionMorphSourceLeft = geometry.sourceLeft;
+      this.sessionMorphSourceTop = geometry.sourceTop;
+      this.sessionMorphSourceWidth = geometry.sourceWidth;
+      this.sessionMorphSourceHeight = geometry.sourceHeight;
+      this.sessionMorphProxyCenterX = geometry.sourceCenterX;
+      this.sessionMorphProxyCenterY = geometry.sourceCenterY;
+      this.sessionMorphProxyWidth = geometry.sourceWidth;
+      this.sessionMorphProxyHeight = geometry.sourceHeight;
+      this.sessionMorphSourceContentScale = 1;
+      this.sessionMorphSourceContentOpacity = 1;
+      this.sessionMorphGhostOpacity = 0;
+      this.sessionMorphCanonicalShellOpacity = 0;
+      this.sessionMorphSourceImage = pixelMap;
+      this.sessionMorphPhase = 'flight';
+      this.beginSessionCapsuleMorphFlight(
+        generation,
+        geometry.dotCenterX,
+        geometry.dotCenterY,
+        geometry.capsuleWidth,
+      );
+    }).catch((_error: Error): void => {
+      if (generation !== this.sessionMorphGeneration) return;
+      this.finishSessionCapsuleMorph();
+      this.hideControl();
+    });
+  }
+
+  private beginSessionCapsuleMorphFlight(
+    generation: number,
+    dotCenterX: number,
+    dotCenterY: number,
+    capsuleWidth: number,
+  ): void {
+    // Present the proxy at the source rect for one frame, then fly it into
+    // the dot; each later beat also renders its start state for one frame
+    // before animating.
+    this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
+      if (generation !== this.sessionMorphGeneration || this.sessionMorphPhase !== 'flight') {
+        return;
+      }
+      this.hideControl();
+      this.getUIContext().animateTo(
+        motionAnimateParam('reader.session.capsule.morph.flight', (): void => {
+          if (generation !== this.sessionMorphGeneration) {
+            return;
+          }
+          this.beginSessionCapsuleMorphDotHold(generation, capsuleWidth);
+        }),
+        (): void => {
+          this.sessionMorphProxyCenterX = dotCenterX;
+          this.sessionMorphProxyCenterY = dotCenterY;
+          this.sessionMorphProxyWidth = 24;
+          this.sessionMorphProxyHeight = 24;
+          this.sessionMorphSourceContentScale = Math.max(24 / this.sessionMorphSourceWidth, 0.05);
+        },
+      );
+      this.scheduleSessionMorphFlightLayers(generation);
+    }));
+  }
+
+  private scheduleSessionMorphFlightLayers(generation: number): void {
+    setTimeout((): void => {
+      if (generation !== this.sessionMorphGeneration || this.sessionMorphPhase !== 'flight') return;
+      this.getUIContext().animateTo(
+        motionAnimateParam('reader.session.capsule.morph.ghost.in'),
+        (): void => {
+          this.sessionMorphGhostOpacity = 0.55;
+        },
+      );
+    }, 80);
+    setTimeout((): void => {
+      if (generation !== this.sessionMorphGeneration || this.sessionMorphPhase !== 'flight') return;
+      this.getUIContext().animateTo(
+        motionAnimateParam('reader.session.capsule.morph.source.fade'),
+        (): void => {
+          this.sessionMorphSourceContentOpacity = 0;
+          this.sessionMorphGhostOpacity = 0;
+        },
+      );
+    }, 200);
+    setTimeout((): void => {
+      if (generation !== this.sessionMorphGeneration || this.sessionMorphPhase !== 'flight') return;
+      this.getUIContext().animateTo(
+        motionAnimateParam('reader.session.capsule.morph.shell.handoff'),
+        (): void => {
+          this.sessionMorphCanonicalShellOpacity = 1;
+        },
+      );
+    }, 320);
+  }
+
+  private beginSessionCapsuleMorphDotHold(generation: number, capsuleWidth: number): void {
+    if (generation !== this.sessionMorphGeneration) return;
+    this.sessionMorphPhase = 'handoff';
+    this.sessionMorphSourceImage?.release();
+    this.sessionMorphSourceImage = undefined;
+    this.sessionMorphHoldProgress = 0;
+    this.sessionMorphPhase = 'dotHold';
+    this.getUIContext().animateTo(
+      motionAnimateParam('reader.session.capsule.morph.dot.hold', (): void => {
+        if (generation !== this.sessionMorphGeneration) return;
+        this.beginSessionCapsuleMorphExpand(generation, capsuleWidth);
+      }),
+      (): void => {
+        this.sessionMorphHoldProgress = 1;
+      },
+    );
+  }
+
+  private beginSessionCapsuleMorphExpand(generation: number, capsuleWidth: number): void {
+    if (generation !== this.sessionMorphGeneration) {
+      return;
+    }
+    // Hand the anchor to the real capsule: identical shell styling at the
+    // same 24vp dot geometry, then reopen the width right-edge anchored.
+    this.sessionMorphShellWidth = 24;
+    this.sessionMorphContentOffsetX = -(capsuleWidth - 24);
+    this.sessionMorphPhase = 'expand';
+    this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
+      if (generation !== this.sessionMorphGeneration || this.sessionMorphPhase !== 'expand') {
+        return;
+      }
+      this.getUIContext().animateTo(
+        motionAnimateParam('reader.session.capsule.morph.expand', (): void => {
+          if (generation !== this.sessionMorphGeneration) {
+            return;
+          }
+          this.beginSessionCapsuleMorphReveal(generation);
+        }),
+        (): void => {
+          this.sessionMorphShellWidth = capsuleWidth;
+        },
+      );
+    }));
+  }
+
+  private beginSessionCapsuleMorphReveal(generation: number): void {
+    if (generation !== this.sessionMorphGeneration) {
+      return;
+    }
+    this.sessionMorphPhase = 'reveal';
+    this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
+      if (generation !== this.sessionMorphGeneration || this.sessionMorphPhase !== 'reveal') {
+        return;
+      }
+      this.getUIContext().animateTo(
+        motionAnimateParam('reader.session.capsule.morph.reveal', (): void => {
+          if (generation !== this.sessionMorphGeneration) {
+            return;
+          }
+          this.finishSessionCapsuleMorph();
+        }),
+        (): void => {
+          this.sessionMorphContentOffsetX = 0;
+        },
+      );
+    }));
+  }
+
+  private finishSessionCapsuleMorph(): void {
+    // Also invalidates any still-pending morph frame callback.
+    this.sessionMorphGeneration += 1;
+    this.sessionMorphPhase = 'none';
+    this.sessionMorphSourceImage?.release();
+    this.sessionMorphSourceImage = undefined;
+    this.sessionMorphProxyWidth = 0;
+    this.sessionMorphProxyHeight = 0;
+    this.sessionMorphSourceContentScale = 1;
+    this.sessionMorphSourceContentOpacity = 1;
+    this.sessionMorphGhostOpacity = 0;
+    this.sessionMorphCanonicalShellOpacity = 0;
+    this.sessionMorphHoldProgress = 0;
+    this.sessionMorphShellWidth = 0;
+    this.sessionMorphContentOffsetX = 0;
   }
 
   private refreshPageChromeClock(lifecycleToken: number): void {
@@ -6337,10 +6872,33 @@ export struct ReadingExperience {
     return this.pageTurnInputPhase() !== 'idle';
   }
 
+  /**
+   * Native Text selection is valid only while the body is the sole stable
+   * interaction owner. Control/full-screen overlays, page movement and
+   * automatic sessions invalidate the system overlay instead of letting its
+   * handles leak above a different reader mode.
+   */
+  private readerTextSelectionEnabled(): boolean {
+    return readerTextSelectionEnabled({
+      configured: this.readerSettingsSnapshot.longPressSelectText,
+      mounted: this.mounted,
+      exitRequested: this.exitRequested,
+      pageReady: this.phase === 'ready',
+      controlVisible: this.controlVisible,
+      controlObscured: this.controlObscured,
+      interactionBlocked: this.interactionBlocked,
+      pageTurnActive: this.pageTurnOwnsReaderInput() ||
+        readerRapidPageTurnHasWork(this.rapidPageTurnState),
+      autoPageActive: this.autoPageState.status !== 'stopped',
+      ttsActive: readerTtsSessionBlocksAutoPageStart(this.ttsState.status),
+    });
+  }
+
   private openReaderControl(): void {
     if (!this.isReaderPageInteractionEnabled() || this.pageTurnOwnsReaderInput()) {
       return;
     }
+    this.rapidPageTurnState = cancelReaderRapidPageTurn(this.rapidPageTurnState);
     this.controlShellExitGeneration += 1;
     this.controlShellExitArmed = false;
     this.controlPage = 'home';
@@ -6900,7 +7458,10 @@ export struct ReadingExperience {
    * measurement lane, restore its captured origin before the caller reflows or
    * selects another chapter.
    */
-  private invalidatePageTurnRuntime(restorePreparation: boolean): void {
+  private invalidatePageTurnRuntime(
+    restorePreparation: boolean,
+    preserveRapidPageTarget: boolean = false,
+  ): void {
     this.finishPageTurnPerf('invalidated');
     const preparation = this.pageTurnPreparation;
     const discovery = this.previousChapterMeasurement?.prepareOnly ?
@@ -6910,7 +7471,9 @@ export struct ReadingExperience {
     this.pageTurnPreparation = undefined;
     if (discovery !== undefined) this.previousChapterMeasurement = undefined;
     this.pageTurnPreparationQueue = [];
-    this.pendingManualPageTurnIntent = undefined;
+    if (!preserveRapidPageTarget) {
+      this.rapidPageTurnState = cancelReaderRapidPageTurn(this.rapidPageTurnState);
+    }
     this.pendingPointerSegmentReserved = false;
     this.autoPageTurnPending = false;
     this.preparedPreviousPage = undefined;
@@ -7509,8 +8072,9 @@ export struct ReadingExperience {
     this.bookmarkPageOffsetY = 0;
     this.bookmarkPreviewChanged = false;
     this.flushDeferredPageChromeState();
+    this.retryRapidPageTurnTransaction();
     this.resumeDeferredPageTurnWork();
-    this.drainPendingManualPageTurn();
+    this.drainRapidPageTurn();
     this.resumePendingAutoPageTurn();
     this.drainPageTurnPreparationQueue();
     if (this.isSessionActive(this.lifecycleToken) && this.autoPageState.status === 'running' &&
@@ -7740,8 +8304,9 @@ export struct ReadingExperience {
     this.bookTurnMotion = undefined;
     this.pageTurnInputOwned = false;
     this.flushDeferredPageChromeState();
+    this.completeRapidPageTurnTransaction();
     this.resumeDeferredPageTurnWork();
-    this.drainPendingManualPageTurn();
+    this.drainRapidPageTurn();
     this.resumePendingAutoPageTurn();
     this.drainPageTurnPreparationQueue();
   }
@@ -7855,68 +8420,77 @@ export struct ReadingExperience {
     if (this.controlVisible) {
       return { kind: 'blocked', reason: 'control' };
     }
-    const result = this.performPageTurn(direction);
-    if ((result.kind === 'busy' || result.kind === 'preparing') && this.canRetainManualPageTurnIntent() &&
-      this.pendingManualPageTurnIntent === undefined && !this.pendingPointerSegmentReserved) {
-      // The first complete pending intent owns the bounded slot; later taps,
-      // keys and session events cannot overwrite it.
-      this.pendingManualPageTurnIntent = direction;
+    this.rapidPageTurnState = enqueueReaderRapidPageTurn(this.rapidPageTurnState, direction);
+    return this.drainRapidPageTurn();
+  }
+
+  private completeRapidPageTurnTransaction(
+    expectedDirection?: ReaderPageTurnDirection,
+  ): void {
+    const direction = this.rapidPageTurnState.inFlightDirection;
+    if (direction === undefined || (expectedDirection !== undefined && expectedDirection !== direction)) return;
+    this.rapidPageTurnState = completeReaderRapidPageTurn(this.rapidPageTurnState, direction);
+  }
+
+  private retryRapidPageTurnTransaction(): void {
+    const direction = this.rapidPageTurnState.inFlightDirection;
+    if (direction === undefined) return;
+    this.rapidPageTurnState = retryReaderRapidPageTurn(this.rapidPageTurnState, direction);
+    if (readerRapidPageTurnRetryExhausted(this.rapidPageTurnState)) {
+      console.error('ReadingExperience rapid page turn stopped after repeated single-page failures');
+      this.rapidPageTurnState = cancelReaderRapidPageTurn(this.rapidPageTurnState);
     }
-    return result;
   }
 
-  private canRetainManualPageTurnIntent(): boolean {
-    return this.readerSettingsSnapshot.navigationMode === 'paged' && this.visiblePage !== undefined &&
-      (this.pageTurnPreparation !== undefined || this.pageTurnSettlementActive ||
-        this.pageTurnSettlingPrepared !== undefined || this.commitInFlight || this.usesBookTurnSimulation());
-  }
-
-  private drainPendingManualPageTurn(): void {
-    const intent = this.pendingManualPageTurnIntent;
-    if (intent === undefined || this.pendingPointerSegmentReserved) return;
+  private drainRapidPageTurn(): ReaderPageTurnOutcome {
     if (!this.mounted || this.exitRequested || this.controlVisible || this.controlObscured ||
       this.interactionBlocked) {
-      this.pendingManualPageTurnIntent = undefined;
-      return;
+      this.rapidPageTurnState = cancelReaderRapidPageTurn(this.rapidPageTurnState);
+      return { kind: 'blocked', reason: !this.mounted || this.exitRequested ? 'lifecycle' :
+        (this.controlVisible ? 'control' : 'overlay') };
     }
+    if (this.pendingPointerSegmentReserved) return { kind: 'busy' };
+    if (this.rapidPageTurnState.inFlightDirection !== undefined) return { kind: 'busy' };
     if (this.pageTurnSettlementActive || this.pageTurnSettlingPrepared !== undefined ||
-      this.pageTurnPreparation !== undefined) return;
-    if (intent === 'control') {
+      this.pageTurnPreparation !== undefined || this.commitInFlight || this.continuousCommitInFlight) {
+      return { kind: 'busy' };
+    }
+    if (this.rapidPageTurnState.controlRequested) {
       // Control must not be held hostage by page-turn readiness (commit
       // backlogs, stale selection tokens); openReaderControl re-checks its
       // own interaction and gesture-ownership gates.
-      this.pendingManualPageTurnIntent = undefined;
       this.openReaderControl();
-      return;
+      return { kind: 'blocked', reason: 'control' };
     }
-    if (!this.canTurnPage()) return;
-    const direction = intent;
-    if (readerPageTransitionUsesPreparedPages(this.readerSettingsSnapshot) &&
+    const direction = readerRapidPageTurnDirection(this.rapidPageTurnState);
+    if (direction === undefined) return { kind: 'busy' };
+    if (!this.canTurnPage() && this.readerSettingsSnapshot.navigationMode !== 'continuous') {
+      return { kind: 'busy' };
+    }
+    // Continuous navigation owns a live List/Scroller and never consumes the
+    // adjacent-page snapshots used by paged animations. Keep it out of the
+    // preparation gate so its shared rapid target can reach scrollPage().
+    if (this.readerSettingsSnapshot.navigationMode !== 'continuous' &&
+      readerPageTransitionUsesPreparedPages(this.readerSettingsSnapshot) &&
       !this.usesNoAnimationPageTurnRuntime() &&
       this.preparedPageTurn(direction) === undefined) {
       this.queuePageTurnPreparation(direction);
-      return;
+      return { kind: 'preparing' };
     }
-    this.pendingManualPageTurnIntent = undefined;
     const result = this.performPageTurn(direction);
-    if ((result.kind === 'busy' || result.kind === 'preparing') && this.canRetainManualPageTurnIntent() &&
-      this.pendingManualPageTurnIntent === undefined && !this.pendingPointerSegmentReserved) {
-      this.pendingManualPageTurnIntent = direction;
+    if (result.kind === 'started') {
+      this.rapidPageTurnState = beginReaderRapidPageTurn(this.rapidPageTurnState, direction);
+    } else if (result.kind === 'boundary') {
+      this.rapidPageTurnState = reachReaderRapidPageBoundary(this.rapidPageTurnState, direction);
+    } else if (result.kind === 'blocked') {
+      this.rapidPageTurnState = cancelReaderRapidPageTurn(this.rapidPageTurnState);
     }
+    return result;
   }
 
   private reserveDeferredPointerSegment(): boolean {
     this.autoPageTurnPending = false;
     if (this.pendingPointerSegmentReserved) return false;
-    if (this.pendingManualPageTurnIntent !== undefined &&
-      (this.pageTurnSettlementActive || this.pageTurnSettlingPrepared !== undefined ||
-        this.pageTurnPreparation !== undefined)) {
-      return false;
-    }
-    // A retained intent with no settlement in flight is stale; the newest
-    // pointer segment supersedes it so a degraded canTurnPage state cannot
-    // brick reader input behind an intent that can never drain.
-    this.pendingManualPageTurnIntent = undefined;
     this.pendingPointerSegmentReserved = true;
     return true;
   }
@@ -7924,10 +8498,16 @@ export struct ReadingExperience {
   private resolveDeferredPointerSegment(intent: ReaderPageTapIntent | undefined): void {
     if (!this.pendingPointerSegmentReserved) return;
     this.pendingPointerSegmentReserved = false;
-    if (intent !== undefined && this.pendingManualPageTurnIntent === undefined) {
-      this.pendingManualPageTurnIntent = intent;
+    if (intent === 'control') {
+      this.rapidPageTurnState = requestReaderRapidPageControl(this.rapidPageTurnState);
+      this.drainRapidPageTurn();
+      return;
     }
-    this.drainPendingManualPageTurn();
+    if (intent !== undefined) {
+      this.requestPageTurn(intent);
+      return;
+    }
+    this.drainRapidPageTurn();
   }
 
   private promoteDeferredPointerSegment(): void {
@@ -8160,7 +8740,7 @@ export struct ReadingExperience {
     const lifecycleToken = this.lifecycleToken;
     this.chapterSelectionToken += 1;
     const selectionToken = this.chapterSelectionToken;
-    this.resetForChapterSelection();
+    this.resetForChapterSelection(true);
     this.previousChapterMeasurement = new PreviousChapterMeasurement(
       originalChapterIndex,
       originalChapterOffset,
@@ -8221,7 +8801,7 @@ export struct ReadingExperience {
     const lifecycleToken = this.lifecycleToken;
     this.chapterSelectionToken += 1;
     const selectionToken = this.chapterSelectionToken;
-    this.resetForChapterSelection();
+    this.resetForChapterSelection(true);
     this.restoredProgress = undefined;
     this.armFirstPageReadyDeadline(lifecycleToken, selectionToken);
     void this.openChapter(chapterIndex, false, lifecycleToken, selectionToken, chapterOffset);
@@ -8305,7 +8885,7 @@ export struct ReadingExperience {
       this.measurementEpoch += 1;
       if (pending.origin !== undefined) this.restoreMaterializedChapterContext(pending.origin, false);
       this.phase = this.visiblePage === undefined ? 'loading' : 'ready';
-      if (this.pendingManualPageTurnIntent === 'previous') this.pendingManualPageTurnIntent = undefined;
+      this.rapidPageTurnState = reachReaderRapidPageBoundary(this.rapidPageTurnState, 'previous');
       this.pageTurnPreparationQueue = this.pageTurnPreparationQueue.filter(
         (direction: ReaderPageTurnDirection): boolean => direction !== 'previous',
       );
@@ -8317,7 +8897,7 @@ export struct ReadingExperience {
     this.previousChapterMeasurement = undefined;
     this.chapterSelectionToken += 1;
     const selectionToken = this.chapterSelectionToken;
-    this.resetForChapterSelection();
+    this.resetForChapterSelection(true);
     this.restoredProgress = undefined;
     // Re-establish the materialized owner behind the unchanged visible page.
     // Its previously committed Core anchor remains valid throughout recovery.

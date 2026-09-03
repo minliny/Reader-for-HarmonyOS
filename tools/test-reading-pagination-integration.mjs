@@ -64,12 +64,32 @@ const pageTurnStage = readFileSync(
   new URL('../entry/src/main/ets/features/reading/ReaderPageTurnStage.ets', import.meta.url),
   'utf8',
 );
+const continuousStage = readFileSync(
+  new URL('../entry/src/main/ets/features/reading/ReaderContinuousReadingStage.ets', import.meta.url),
+  'utf8',
+);
 assert.match(surface, /Image\(fragment\.fileUri\)/,
   'the reading surface must render file-backed image fragments from the same measured page list');
 assert.match(surface, /else if \(fragment\.imageHeight > 0\)[\s\S]*Blank\(\)\.height\(fragment\.imageHeight\)/,
   'one image failure must retain a stable measurable block instead of aborting the chapter');
 assert.match(surface, /if \(this\.showChapterTitle\) \{[\s\S]*Text\(this\.chapterTitle\)/,
   'the presentation surface must mount the semantic chapter heading only when admitted by the paginator');
+const pagedTitle = surface.match(
+  /if \(this\.showChapterTitle\) \{\s*Text\(this\.chapterTitle\)([\s\S]*?)\n\s*\}/,
+);
+assert.ok(pagedTitle, 'the paged chapter-title block must exist');
+assert.match(pagedTitle[1], /\.wordBreak\(WordBreak\.BREAK_ALL\)/,
+  'paged chapter titles must wrap at the measured reading width');
+assert.doesNotMatch(pagedTitle[1], /\.maxLines\(1\)|TextOverflow\.Ellipsis/,
+  'paged chapter titles must never collapse to a one-line ellipsis');
+const continuousTitle = continuousStage.match(
+  /if \(this\.chapterTitle\.length > 0\) \{[\s\S]*?Text\(this\.chapterTitle\)([\s\S]*?)\n\s*\}/,
+);
+assert.ok(continuousTitle, 'the continuous chapter-title block must exist');
+assert.match(continuousTitle[1], /\.wordBreak\(WordBreak\.BREAK_ALL\)/,
+  'continuous chapter titles must use the same wrapping contract');
+assert.doesNotMatch(continuousTitle[1], /\.maxLines\(1\)|TextOverflow\.Ellipsis/,
+  'continuous chapter titles must never collapse to a one-line ellipsis');
 assert.match(source,
   /new ReaderPageTurnRenderPage\([\s\S]*this\.chapterTitle,[\s\S]*this\.showChapterTitle,[\s\S]*this\.visibleFragments/,
   'the reading session must pass its physical-page title decision into the page-turn render model');
@@ -83,8 +103,32 @@ for (const page of ['currentPage', 'previousPage', 'nextPage']) {
 assert.match(source, /this\.showChapterTitle = this\.isChapterFirstPageStart\(visiblePage\.startScalar\)/,
   'only the physical page beginning at the chapter head may expose the chapter heading');
 assert.match(source,
-  /return this\.readingLayout\(\)\.bodyHeight\(this\.isChapterFirstPageStart\(pageStartScalar\)\)/,
-  'the shared layout snapshot must reserve its scaled title track only on the chapter-first page');
+  /captureChapterTitleMeasurementAfterLayout\(lifecycleToken\)[\s\S]*allBatchParagraphsHaveLayout\(\)/,
+  'the wrapped title must be measured before body lines can be consumed');
+assert.match(source,
+  /Text\(this\.requireChapter\(\)\.chapterTitle, \{ controller: this\.chapterTitleMeasurementController \}\)[\s\S]*?\.fontFamily\(TYPE_READER_CHAPTER_TITLE\.fontFamily\)[\s\S]*?\.fontWeight\(TYPE_READER_CHAPTER_TITLE\.fontWeight\)[\s\S]*?\.fontSize\(TYPE_READER_CHAPTER_TITLE\.fontSizeFp\)[\s\S]*?\.lineHeight\(this\.readingLayout\(\)\.titleLineHeightFp\)[\s\S]*?\.wordBreak\(WordBreak\.BREAK_ALL\)/,
+  'the hidden title measurement must use the same typography and wrapping as the visible title');
+assert.match(source,
+  /ForEach\(\[this\.measurementEpoch\], \(_epoch: number\) => \{\s*if \(this\.measurementIncludesChapterTitle\(\)\) \{\s*Text\(this\.requireChapter\(\)\.chapterTitle, \{ controller: this\.chapterTitleMeasurementController \}\)/,
+  'the hidden title Text must be rebuilt per measurement epoch: a plain if branch keeps its first ' +
+  'TextController binding across re-begins while beginMeasurement swaps in a new controller, so ' +
+  'getLayoutManager() throws until the 6s deadline (regression: restore/directory chapter-head ' +
+  'open stalled PAGINATION_LAYOUT_METRICS_UNAVAILABLE)');
+assert.match(source,
+  /\}, \(_epoch: number\): string => `chapterTitle:\$\{this\.measurementEpoch\}`\)/,
+  'the title rebuild key must track the same measurement epoch the batch ForEach keys on');
+assert.match(source,
+  /const CHAPTER_TITLE_GATE_ATTEMPT_LIMIT = \d+;/,
+  'the title gate must declare its fail-closed retry bound');
+assert.match(source,
+  /private retryOrFailingTitleGate\(lifecycleToken: number\): boolean \{[\s\S]*?this\.chapterTitleGateAttempts \+= 1;[\s\S]*?this\.fail\(new Error\('PAGINATION_CHAPTER_TITLE_METRICS_UNAVAILABLE'\), lifecycleToken\)/,
+  'a stably unbindable title gate must fail closed with a specific reason instead of stalling');
+assert.match(source,
+  /return this\.readingLayout\(\)\.bodyHeightAfterTitle\(this\.measuredChapterTitleHeightVp\)/,
+  'chapter-first body pagination must consume only the space left by the measured wrapped title');
+assert.match(source,
+  /if \(!this\.isChapterFirstPageStart\(pageStartScalar\)\) \{\s*return this\.readingLayout\(\)\.bodyHeightAfterTitle\(0\)/,
+  'later physical pages must retain the full body track');
 assert.match(source, /ReaderPageTurnStage\(\{[\s\S]*layout: this\.readingLayout\(\)/,
   'the page-turn stage must consume the same owner-resolved layout as pagination');
 assert.match(pageTurnStage, /ReadingSurface\(\{[\s\S]*layout: this\.layout/,

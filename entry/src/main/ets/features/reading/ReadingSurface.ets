@@ -93,10 +93,15 @@ export struct ReaderReadingTextFragment {
   @Prop ttsHighlightEnd: number | undefined = undefined;
   @Prop autoPageHighlightStart: number | undefined = undefined;
   @Prop autoPageHighlightEnd: number | undefined = undefined;
-  @Prop longPressSelectText: boolean = false;
+  @Prop @Watch('onTextSelectionEnabledChanged') longPressSelectText: boolean = false;
+  private readonly textController: TextController = new TextController();
+
+  aboutToDisappear(): void {
+    this.textController.closeSelectionMenu();
+  }
 
   build() {
-    Text() {
+    Text(undefined, { controller: this.textController }) {
       if (this.indentPrefix().length > 0) {
         Span(this.indentPrefix());
       }
@@ -126,6 +131,12 @@ export struct ReaderReadingTextFragment {
       .copyOption(this.longPressSelectText ? CopyOptions.InApp : CopyOptions.None)
       .selectedBackgroundColor('#33594632')
       .textAlign(readerAppearanceUsesJustify(this.appearance.alignment) ? TextAlign.JUSTIFY : TextAlign.Start);
+  }
+
+  private onTextSelectionEnabledChanged(): void {
+    if (!this.longPressSelectText) {
+      this.textController.closeSelectionMenu();
+    }
   }
 
   private indentPrefix(): string {
@@ -281,10 +292,7 @@ export struct ReadingSurface {
             .lineHeight(this.layout.titleLineHeightFp)
             .fontColor(this.themeStyle().ink)
             .textAlign(TextAlign.Center)
-            // The static ReadingSurface title track is exactly one Figma
-            // line; wrapping would change the measured body origin.
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis });
+            .wordBreak(WordBreak.BREAK_ALL);
         }
 
         Column() {

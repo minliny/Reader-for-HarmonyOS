@@ -59,19 +59,21 @@ contract('a transiently rejected drain entry is re-queued with bounded backoff, 
   assert.match(localReading, /private cancelPageTurnPreparationRetry\(\): void/);
 });
 
-contract('a retained manual intent is re-drained at every completion hook', () => {
+contract('the dynamic rapid target is re-drained at every completion hook', () => {
   const request = methodSection(localReading, 'requestPageTurn');
-  assert.match(request, /this\.performPageTurn\(direction\);[\s\S]*result\.kind === 'busy' \|\| result\.kind === 'preparing'[\s\S]*this\.pendingManualPageTurnIntent = direction;/,
-    'the busy/preparing outcome must retain the intent (first-pending-wins)');
+  assert.match(request,
+    /enqueueReaderRapidPageTurn\(this\.rapidPageTurnState, direction\)[\s\S]*this\.drainRapidPageTurn\(\)/,
+    'busy/preparing work must remain represented by the dynamic target');
 
   const preparedComplete = methodSection(localReading, 'completePreparedPageTurn');
   assert.match(preparedComplete,
-    /this\.drainPendingManualPageTurn\(\);[\s\S]*this\.drainPageTurnPreparationQueue\(\);/,
-    'a finished preparation must re-drain both the retained intent and the queue');
+    /this\.drainRapidPageTurn\(\);[\s\S]*this\.drainPageTurnPreparationQueue\(\);/,
+    'a finished preparation must re-drain both the dynamic target and the preparation queue');
 
   const complete = methodSection(localReading, 'completeFirstPage');
-  assert.match(complete, /this\.schedulePageTurnPreparation\(\);\s*this\.drainPendingManualPageTurn\(\);/,
-    'first-page completion must re-drain a tap retained while the restore was measuring');
+  assert.match(complete,
+    /this\.schedulePageTurnPreparation\(\);[\s\S]*this\.completeRapidPageTurnTransaction\(\);[\s\S]*this\.drainRapidPageTurn\(\);/,
+    'first-page completion must consume one admitted turn and continue toward the target');
 });
 
 contract('the first-page completion lane has a watchdog with bounded re-measurement', () => {

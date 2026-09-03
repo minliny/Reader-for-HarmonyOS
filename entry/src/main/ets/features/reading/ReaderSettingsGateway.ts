@@ -7,6 +7,7 @@ import {
   type ReaderSettingsSnapshot,
   type ReaderSettingsSnapshotV1,
   type ReaderSettingsSnapshotV2,
+  type ReaderSettingsSnapshotV3,
 } from './ReaderSettingsState';
 
 const READER_SETTINGS_PREFERENCES_NAME = 'reader_reading_settings_v1';
@@ -64,15 +65,15 @@ export class ReaderSettingsGateway {
     }
     try {
       const decoded = JSON.parse(raw) as
-        ReaderSettingsSnapshot | ReaderSettingsSnapshotV2 | ReaderSettingsSnapshotV1;
+        ReaderSettingsSnapshot | ReaderSettingsSnapshotV3 | ReaderSettingsSnapshotV2 | ReaderSettingsSnapshotV1;
       const normalized = normalizeReaderSettingsSnapshot(decoded);
-      if (decoded.version !== 3) {
+      if (decoded.version !== 4) {
         try {
           await store.put(READER_SETTINGS_SNAPSHOT_KEY, JSON.stringify(normalized));
           await store.flush();
         } catch (_) {
           // A valid migrated snapshot remains usable for this session. A later
-          // load/update retries persistence without exposing mixed V2/V3 state.
+          // load/update retries persistence without exposing mixed legacy/V4 state.
         }
       }
       return normalized;

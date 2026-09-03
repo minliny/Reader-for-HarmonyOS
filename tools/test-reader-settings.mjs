@@ -19,7 +19,7 @@ import {
 
 const initial = createDefaultReaderSettingsSnapshot();
 assert.deepEqual(initial, {
-  version: 3,
+  version: 4,
   screenDirection: 'system',
   navigationMode: 'paged',
   pageTransition: 'slide',
@@ -31,7 +31,7 @@ assert.deepEqual(initial, {
   alignPageBottom: false,
   volumeKeysTurnPage: false,
   stopTtsOnScreenOff: false,
-  longPressSelectText: false,
+  longPressSelectText: true,
 });
 
 const normalized = normalizeReaderSettingsSnapshot({
@@ -52,7 +52,7 @@ const normalized = normalizeReaderSettingsSnapshot({
 assert.equal(normalized.screenDirection, 'landscape');
 assert.equal(readerPageTurnStyle(normalized), 'cover');
 assert.equal(normalized.screenTimeout, 'alwaysOn');
-assert.equal(normalized.hideStatusBar, false, 'V3 must preserve the explicit user choice');
+assert.equal(normalized.hideStatusBar, false, 'V4 must preserve the explicit user choice');
 assert.equal(normalized.hideNavigationBar, true);
 assert.equal(normalized.extendIntoCutout, true);
 assert.equal(normalized.volumeKeysTurnPage, true);
@@ -75,7 +75,7 @@ const migratedV1 = normalizeReaderSettingsSnapshot({
   stopTtsOnScreenOff: true,
   longPressSelectText: true,
 });
-assert.equal(migratedV1.version, 3);
+assert.equal(migratedV1.version, 4);
 assert.equal(migratedV1.navigationMode, 'continuous');
 assert.equal(migratedV1.pageTransition, 'slide');
 assert.equal(readerPageTurnStyle(migratedV1), 'scroll');
@@ -97,10 +97,21 @@ const migratedV2 = normalizeReaderSettingsSnapshot({
   stopTtsOnScreenOff: false,
   longPressSelectText: false,
 });
-assert.equal(migratedV2.version, 3);
+assert.equal(migratedV2.version, 4);
 assert.equal(migratedV2.hideStatusBar, true,
   'V2 false was the old product default and must migrate once rather than override V3');
 assert.equal(migratedV2.hideNavigationBar, true, 'unrelated legacy choices must survive migration');
+assert.equal(migratedV2.longPressSelectText, true,
+  'legacy installs must receive the now-functional native text-selection path once');
+
+const migratedV3 = normalizeReaderSettingsSnapshot({
+  ...initial,
+  version: 3,
+  longPressSelectText: false,
+});
+assert.equal(migratedV3.version, 4);
+assert.equal(migratedV3.longPressSelectText, true,
+  'the old disabled-by-default V3 value must migrate to enabled once');
 
 assert.notStrictEqual(copyReaderSettingsSnapshot(initial), initial);
 const noAnimation = setReaderPageTurnStyle(initial, 'none');
@@ -175,8 +186,10 @@ assert.match(fullPanel, /return Math\.max\(0, this\.sheetHeight\(\) - 70\)/);
 assert.equal((fullPanel.match(/return Math\.max\(0, this\.sheetWidth\(\) - 26\)/g) ?? []).length, 2,
   'settings header and viewport must both derive from the actual sheet width');
 assert.match(fullPanel, /return Math\.max\(0, this\.viewportWidth\(\) - 30\)/);
-assert.match(fullPanel, /Image\(\$r\('app\.media\.rc_settings'\)\)[\s\S]*\.fillColor\(TOK_READ_INK\)/,
-  'the scaled shared gear glyph must use the Figma full-panel ink color');
+assert.match(fullPanel, /Image\(\$r\('app\.media\.reader_settings_header'\)\)[\s\S]*?\.width\(20\)[\s\S]*?\.height\(20\)/,
+  'the full settings header must use its dedicated 20px Figma outline glyph');
+assert.doesNotMatch(fullPanel, /\.fillColor\(/,
+  'runtime tinting must not turn the outline settings glyph into a filled silhouette');
 assert.match(fullPanel, /this\.sectionTitle\('屏幕样式', false\)/);
 assert.match(fullPanel, /this\.sectionTitle\('导航状态栏', true\)/);
 assert.match(fullPanel, /this\.sectionTitle\('排版', true\)/);
@@ -193,8 +206,8 @@ assert.match(fullPanel, /与阅读样式同步/);
 assert.match(gateway, /ReaderRuntimeOwner/);
 assert.match(gateway, /getUIAbilityContext\(\)/);
 assert.match(gateway, /reader_reading_settings_v1/);
-assert.match(gateway, /decoded\.version !== 3[\s\S]*?store\.put\(READER_SETTINGS_SNAPSHOT_KEY, JSON\.stringify\(normalized\)\)/,
-  'legacy settings migration must be persisted so V3 owns subsequent explicit choices');
+assert.match(gateway, /decoded\.version !== 4[\s\S]*?store\.put\(READER_SETTINGS_SNAPSHOT_KEY, JSON\.stringify\(normalized\)\)/,
+  'legacy settings migration must be persisted so V4 owns subsequent explicit choices');
 assert.doesNotMatch(gateway, /\.request\(/,
   'Reader Settings must not misuse Reader Core or invent a Host command');
 
@@ -223,7 +236,7 @@ assert.match(experience,
   /private applyWindowPolicyForChromeOwner\(\): void \{[\s\S]*?if \(this\.windowChromeActive\)[\s\S]*?this\.applyReaderWindowPolicy\(this\.readerSettingsSnapshot\)[\s\S]*?ReaderWindowCoordinator\.requestAppWindowPolicy\(\)/,
   'a hidden warm reader must preserve the app policy until it owns the screen');
 assert.match(experience,
-  /safeWindowSettingsFallback\([\s\S]*?version: 3[\s\S]*?hideStatusBar: true/,
+  /safeWindowSettingsFallback\([\s\S]*?version: 4[\s\S]*?hideStatusBar: true/,
   'a Host failure must keep the requested immersive status-bar default');
 assert.match(experience, /ReaderScreenAwakeLease/);
 assert.match(experience, /this\.screenAwakeLease\?\.configure\(snapshot\.screenTimeout, this\.appForeground\)/);

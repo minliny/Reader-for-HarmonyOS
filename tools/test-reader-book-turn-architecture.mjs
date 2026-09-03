@@ -101,7 +101,7 @@ assert.match(local,
   /previousPhase === 'idle' && state\.phase !== 'idle'[\s\S]*this\.bookTurnTextureCaptureGeneration \+= 1/,
   'the first gesture-owned frame must invalidate any idle snapshot already in flight');
 assert.match(local,
-  /private failBookTurnTextureCapture\([\s\S]*this\.failBookTurnRuntime\(\);[\s\S]*this\.drainPendingManualPageTurn\(\);/,
+  /private failBookTurnTextureCapture\([\s\S]*this\.failBookTurnRuntime\(\);[\s\S]*this\.drainRapidPageTurn\(\);/,
   'a texture failure must degrade the mounted Native capability without trapping complete input');
 assert.doesNotMatch(local, /ReaderBookTurn diagnostic/,
   'temporary VM tracing must not remain in the frame or input path');
@@ -178,6 +178,12 @@ assert.doesNotMatch(hostHeader, /bool chaseRunning_/,
 assert.match(hostHeader, /std::optional<BookTurnSample> pendingSample_;/);
 assert.doesNotMatch(host, /kFrameInterval/);
 assert.doesNotMatch(method(host, 'bool BookTurnHost::ProcessSettlementFrame('), /sleep_for|glGetError/);
+const settlementFrame = method(host, 'bool BookTurnHost::ProcessSettlementFrame(');
+assert.match(settlementFrame,
+  /SettleThetaAt\(settlementStartTheta_,\s*settlementElapsed_,\s*settlementDuration_\)/,
+  'gesture release must preserve the live tilt and phase its decay over the full settlement');
+assert.doesNotMatch(motionHeader + settlementFrame, /kTiltZeroSeconds|0\.080F/,
+  'the former fixed 80ms posture snap must not return');
 assert.match(napi, /kMaximumTexturePixels = 3'000'000ULL/);
 assert.doesNotMatch(method(napi, 'bool ReadPixelMap('), /for \(/,
   'PixelMap conversion must run on the native render thread, not block ArkTS/NAPI');
@@ -193,9 +199,10 @@ assert.match(local,
   'durable progress may start only after the native visual endpoint');
 assert.match(local,
   /BOOK_TURN_EVENT_SLOTS_COMMITTED[\s\S]*finishSuccessfulPageTurnPresentation/);
-assert.match(local, /private pendingManualPageTurnIntent: ReaderPageTapIntent \| undefined/);
+assert.match(local,
+  /private rapidPageTurnState: ReaderRapidPageTurnState = createReaderRapidPageTurnState\(\)/);
 assert.match(local, /private pendingPointerSegmentReserved: boolean = false/);
-assert.doesNotMatch(local, /pendingManualPageTurn(?:Queue|Directions):/);
+assert.doesNotMatch(local, /rapidPageTurn(?:Queue|Directions):/);
 
 // A failed native probe is a session capability result, not permission to
 // switch the same gesture to a flat renderer or to wait on a hidden slide.
@@ -208,8 +215,8 @@ assert.match(local,
   /const noAnimation = this\.usesNoAnimationPageTurnRuntime\(\);[\s\S]*else if \(noAnimation\) \{[\s\S]*beginPreparedPageTurnPersistence/);
 assert.match(local, /pageTurnSimulationAvailable: !this\.bookTurnRuntimeFailed/);
 assert.match(control, /@Prop pageTurnSimulationAvailable: boolean = true/);
-assert.equal((control.match(/pageTurnSimulationAvailable: this\.pageTurnSimulationAvailable/g) ?? []).length, 3,
-  'full Appearance and both Settings surfaces must receive the same session capability');
+assert.equal((control.match(/pageTurnSimulationAvailable: this\.pageTurnSimulationAvailable/g) ?? []).length, 4,
+  'Phone staged Appearance, Tablet fallback Appearance, and both Settings surfaces must share capability');
 assert.match(settingsFull,
   /option === 'simulation' && !this\.pageTurnSimulationAvailable[\s\S]*return false;/);
 assert.match(settingsModule,

@@ -54,7 +54,7 @@ export struct ReaderPageInteractionLayer {
   onBookmarkRelease: (changed: boolean) => void = (_changed: boolean): void => {};
   onOpenControl: () => void = (): void => {};
   onManualInteraction: () => void = (): void => {};
-  /** Reserves the single first-pending-wins pointer segment during settlement. */
+  /** Reserves one complete pointer segment while the current settlement is non-interruptible. */
   onDeferredSegmentStart: () => boolean = (): boolean => true;
   onDeferredSegmentResolve: (intent: ReaderPageTapIntent | undefined) => void =
     (_intent: ReaderPageTapIntent | undefined): void => {};
@@ -75,6 +75,7 @@ export struct ReaderPageInteractionLayer {
   private tapOnlyPointer: boolean = false;
   private pointerRejected: boolean = false;
   private deferredSegmentReserved: boolean = false;
+  private manualInteractionReported: boolean = false;
   private pointerWatchdogTimer: number = -1;
   private longPressTimer: number = -1;
 
@@ -155,7 +156,6 @@ export struct ReaderPageInteractionLayer {
     this.tapOnlyPointer = this.tapOnly;
     this.pointerRejected = false;
     if (this.tapOnlyPointer) {
-      this.onManualInteraction();
       this.deferredSegmentReserved = this.onDeferredSegmentStart();
       if (!this.deferredSegmentReserved) {
         this.resetRawPointer();
@@ -182,7 +182,6 @@ export struct ReaderPageInteractionLayer {
       this.pageViewportHeight(event),
     );
     this.onGestureStateChange(this.gestureState);
-    this.onManualInteraction();
     this.armPointerWatchdog();
     this.armLongPressTimer();
   }
@@ -244,6 +243,9 @@ export struct ReaderPageInteractionLayer {
     const pageOwnerBlocked = this.isPageOwner(this.gestureState) &&
       this.gestureState.direction !== undefined && !this.canStartTurn(this.gestureState.direction);
     const bookmarkBlocked = this.gestureState.owner === 'bookmark' && !this.canStartBookmark();
+    if (priorOwner === 'undecided' && this.gestureState.owner !== 'undecided') {
+      this.reportManualInteraction();
+    }
     if (priorOwner === 'undecided' && (pageOwnerBlocked || bookmarkBlocked)) {
       this.pointerRejected = true;
       this.clearLongPressTimer();
@@ -293,6 +295,9 @@ export struct ReaderPageInteractionLayer {
         ).direction;
       }
       this.gestureState = createReaderPageGestureState();
+      if (intent !== undefined && intent !== 'control') {
+        this.reportManualInteraction();
+      }
       this.resolveDeferredSegment(intent);
       this.resetRawPointer();
       return;
@@ -319,6 +324,7 @@ export struct ReaderPageInteractionLayer {
         // A page whose texture was not ready remains presentation-silent, but
         // the final relative position still produces one observable preparing
         // intent instead of silently dropping the complete pointer segment.
+        this.reportManualInteraction();
         this.onTurn(decision.direction);
       }
       return;
@@ -392,6 +398,7 @@ export struct ReaderPageInteractionLayer {
       this.onOpenControl();
       return;
     }
+    this.reportManualInteraction();
     this.onTurn(intent);
   }
 
@@ -534,6 +541,13 @@ export struct ReaderPageInteractionLayer {
     this.tapOnlyPointer = false;
     this.pointerRejected = false;
     this.deferredSegmentReserved = false;
+    this.manualInteractionReported = false;
+  }
+
+  private reportManualInteraction(): void {
+    if (this.manualInteractionReported) return;
+    this.manualInteractionReported = true;
+    this.onManualInteraction();
   }
 
   private isPageOwner(state: ReaderPageGestureState): boolean {
@@ -556,6 +570,7 @@ export struct ReaderPageInteractionLayer {
         0,
         this.pointerDownTimeMs + READER_PAGE_GESTURE_LONG_PRESS_MS,
       );
+      this.reportManualInteraction();
       this.onGestureStateChange(this.gestureState);
     }, READER_PAGE_GESTURE_LONG_PRESS_MS);
   }

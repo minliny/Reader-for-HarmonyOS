@@ -58,8 +58,8 @@ assert.match(experience, /onAreaChange\([\s\S]*?previousLayoutSignature[\s\S]*?i
 assert.match(experience, /this\.showChapterTitle = this\.isChapterFirstPageStart\(visiblePage\.startScalar\)/,
   'chapter-title visibility must be derived from the measured page start on both device forms');
 assert.match(experience,
-  /readingLayout\(\)\.bodyHeight\(this\.isChapterFirstPageStart\(pageStartScalar\)\)/,
-  'only the chapter-first page may reserve the shared title track on either width class');
+  /isChapterFirstPageStart\(pageStartScalar\)[\s\S]*bodyHeightAfterTitle\(this\.measuredChapterTitleHeightVp\)/,
+  'only the chapter-first page may reserve its measured wrapped title track on either width class');
 assert.match(surface, /if \(this\.showChapterTitle\) \{[\s\S]*?Text\(this\.chapterTitle\)/,
   'the presentation layer must not independently repeat the chapter heading');
 assert.match(surface, /@Prop layout: ReaderReadingLayoutSnapshot/,

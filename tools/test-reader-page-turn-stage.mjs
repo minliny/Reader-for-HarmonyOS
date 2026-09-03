@@ -66,6 +66,8 @@ assert.match(textureBuilder, /chromeSessionVisible:\s*false/,
   'the session capsule must stay out of the reusable native texture');
 assert.doesNotMatch(textureBuilder, /ttsHighlight|autoPageHighlight/,
   'dynamic highlights must stay out of the reusable native texture');
+assert.doesNotMatch(textureBuilder, /longPressSelectText|CopyOptions/,
+  'native text selection must stay out of reusable offscreen textures');
 assert.match(stage,
   /else \{\s*ReaderPageTurnSurface\(\{[\s\S]*?pageIdentity: this\.currentPage\.identity,[\s\S]*?translateX: 0,/,
   'stationary and missing-target states must keep a single current page');

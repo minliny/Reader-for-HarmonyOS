@@ -42,15 +42,27 @@ assert.match(stage, /this\.onBoundaryDrag\('next'\)/,
   'a chapter shorter than the viewport must still expose a next-chapter drag intent');
 assert.doesNotMatch(stage, /\.onClick\(/,
   'List click events can be synthesized after an edge drag and must not open reader controls');
-assert.match(stage, /TapGesture\(\{ fingers: 1, count: 1 \}\)/);
+assert.match(stage, /\.parallelGesture\(\s*TapGesture\(\{ fingers: 1, count: 1 \}\)/,
+  'tap observation must run in parallel with the List native vertical pan recognizer');
+assert.doesNotMatch(stage, /\n\s*\.gesture\(/,
+  'an exclusive tap recognizer blocks continuous vertical scrolling and long-press selection');
 assert.match(stage, /!this\.completedStationaryTouch/,
   'ArkUI tap recognition must be gated by the raw no-movement decision');
+assert.match(stage,
+  /localX >= this\.layout\.viewportWidth \/ 3[\s\S]*this\.onOpenControl\(\);[\s\S]*return;[\s\S]*this\.onTurn\(localX < this\.layout\.viewportWidth \/ 3 \? 'previous' : 'next'\)/,
+  'stationary taps must share the paged left/control/right contract');
 assert.match(surface, /export struct ReaderReadingTextFragment/);
 
 assert.match(experience,
   /this\.readerSettingsSnapshot\.navigationMode === 'continuous'[\s\S]*?ReaderContinuousReadingStage\(\{/);
 assert.match(experience,
   /fragmentsProvider: \(\): ReadingSurfacePageFragment\[\] => this\.continuousFragments/);
+assert.match(experience,
+  /ReaderContinuousReadingStage\(\{[\s\S]*onTurn: \(direction: ReaderPageTurnDirection\): ReaderPageTurnOutcome =>[\s\S]*this\.requestPageTurn\(direction\)/,
+  'continuous edge taps must enter the same dynamic rapid target as paged modes');
+assert.match(experience,
+  /if \(this\.readerSettingsSnapshot\.navigationMode !== 'continuous' &&\s*readerPageTransitionUsesPreparedPages\(this\.readerSettingsSnapshot\)/,
+  'continuous rapid turns must bypass paged snapshot preparation and reach the live Scroller');
 assert.match(experience, /@State private continuousRenderRevision: number = 0/);
 assert.match(experience, /continuousImageResolutions: Set<number>/);
 assert.match(experience, /chapterImageByStartScalar: Map<number, ReadingSessionImage>/);

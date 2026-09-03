@@ -28,7 +28,7 @@ export type ReaderSettingsToggleKey =
   | 'longPressSelectText';
 
 export type ReaderSettingsSnapshot = {
-  version: 3;
+  version: 4;
   screenDirection: ReaderScreenDirection;
   navigationMode: ReaderNavigationMode;
   pageTransition: ReaderPageTransition;
@@ -37,6 +37,23 @@ export type ReaderSettingsSnapshot = {
   hideNavigationBar: boolean;
   extendIntoCutout: boolean;
   /** Compatibility field only; ReaderAppearance remains the single owner. */
+  justifyText: boolean;
+  alignPageBottom: boolean;
+  volumeKeysTurnPage: boolean;
+  stopTtsOnScreenOff: boolean;
+  longPressSelectText: boolean;
+};
+
+/** On-disk shape written while text selection still defaulted to disabled. */
+export type ReaderSettingsSnapshotV3 = {
+  version: 3;
+  screenDirection: ReaderScreenDirection;
+  navigationMode: ReaderNavigationMode;
+  pageTransition: ReaderPageTransition;
+  screenTimeout: ReaderScreenTimeout;
+  hideStatusBar: boolean;
+  hideNavigationBar: boolean;
+  extendIntoCutout: boolean;
   justifyText: boolean;
   alignPageBottom: boolean;
   volumeKeysTurnPage: boolean;
@@ -89,7 +106,7 @@ class ReaderPageTurnContract {
 
 export function createDefaultReaderSettingsSnapshot(): ReaderSettingsSnapshot {
   return {
-    version: 3,
+    version: 4,
     screenDirection: 'system',
     navigationMode: 'paged',
     pageTransition: 'slide',
@@ -101,19 +118,22 @@ export function createDefaultReaderSettingsSnapshot(): ReaderSettingsSnapshot {
     alignPageBottom: false,
     volumeKeysTurnPage: false,
     stopTtsOnScreenOff: false,
-    longPressSelectText: false,
+    longPressSelectText: true,
   };
 }
 
 /**
- * Decoded preferences are not trusted. V1/V2 are migrated at this boundary;
+ * Decoded preferences are not trusted. V1/V2/V3 are migrated at this boundary;
  * every field then validates independently and malformed values fail back to
  * the safe default without erasing valid siblings. V3 is the first version in
  * which `hideStatusBar` represents an explicit user choice: older snapshots
- * are moved to the new immersive default once by ReaderSettingsGateway.
+ * are moved to the new immersive default once by ReaderSettingsGateway. V4
+ * enables the now-functional native text-selection path once for existing
+ * installs; subsequent explicit V4 choices remain stable.
  */
 export function normalizeReaderSettingsSnapshot(
-  candidate: ReaderSettingsSnapshot | ReaderSettingsSnapshotV2 | ReaderSettingsSnapshotV1 | undefined | null,
+  candidate: ReaderSettingsSnapshot | ReaderSettingsSnapshotV3 | ReaderSettingsSnapshotV2 |
+    ReaderSettingsSnapshotV1 | undefined | null,
 ): ReaderSettingsSnapshot {
   const fallback = createDefaultReaderSettingsSnapshot();
   if (candidate === undefined || candidate === null) {
@@ -126,13 +146,13 @@ export function normalizeReaderSettingsSnapshot(
       isReaderPageTransition(candidate.pageTransition) ? candidate.pageTransition : fallback.pageTransition,
     );
   return {
-    version: 3,
+    version: 4,
     screenDirection: candidate.screenDirection === 'portrait' || candidate.screenDirection === 'landscape' ?
       candidate.screenDirection : 'system',
     navigationMode: pageTurn.navigationMode,
     pageTransition: pageTurn.pageTransition,
     screenTimeout: isReaderScreenTimeout(candidate.screenTimeout) ? candidate.screenTimeout : fallback.screenTimeout,
-    hideStatusBar: candidate.version === 3 ? candidate.hideStatusBar === true : true,
+    hideStatusBar: candidate.version === 3 || candidate.version === 4 ? candidate.hideStatusBar === true : true,
     hideNavigationBar: candidate.hideNavigationBar === true,
     extendIntoCutout: candidate.extendIntoCutout === true,
     // ReaderAppearance owns justification; never recreate a second truth from
@@ -141,7 +161,7 @@ export function normalizeReaderSettingsSnapshot(
     alignPageBottom: candidate.alignPageBottom === true,
     volumeKeysTurnPage: candidate.volumeKeysTurnPage === true,
     stopTtsOnScreenOff: candidate.stopTtsOnScreenOff === true,
-    longPressSelectText: candidate.longPressSelectText === true,
+    longPressSelectText: candidate.version === 4 ? candidate.longPressSelectText === true : true,
   };
 }
 

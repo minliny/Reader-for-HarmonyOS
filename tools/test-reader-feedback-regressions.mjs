@@ -58,8 +58,9 @@ assert.equal((shelf.match(/this\.bookshelfList\((false|true)\)/g) ?? []).length,
 assert.match(shelf,
   /private phoneContentFrame\(\): SurfaceHorizontalFrame[\s\S]*new SurfaceWidthSpec\(TOK_CONTENT_MAX_W_PHONE, TOK_SCREEN_INSET, TOK_SCREEN_INSET\)/,
   'phone shelf width must be derived from the shared live safe frame');
-assert.match(shelf, /Row\(\{ space: this\.bookRowSpace\(this\.shelfContentWidth\(isTablet\), isTablet\) \}\)/,
-  'the three-column shelf grid must shrink its gap or cards on a narrow physical screen');
+assert.match(shelf,
+  /private projectionBookTranslateX[\s\S]*this\.bookRowSpace\(this\.shelfContentWidth\(isTablet\), isTablet\)/,
+  'the persistent three-column shelf projection must shrink its gap or cards on a narrow physical screen');
 assert.match(discover, /private discoverContent\(\)[\s\S]*\.width\('100%'\)\s*\.constraintSize\(\{ maxWidth: this\.contentFrame\(\)\.width \}\)/,
   'Discover content must fill a narrow viewport and only cap its width on larger screens');
 assert.match(rss,

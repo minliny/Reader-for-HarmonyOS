@@ -46,6 +46,17 @@ assert.equal(phoneReading.bodyWidth(), 326);
 const scaledTitle = resolveReaderReadingLayout(390, 844, false, metrics({ systemFontScale: 1.2 }));
 assert.equal(scaledTitle.titleTrackHeightVp, 28.75 * 1.2 + 18);
 assert.equal(scaledTitle.bodyHeight(true), 844 - 72 - 47.99 - scaledTitle.titleTrackHeightVp);
+const twoLineTitleHeight = 28.75 * 1.2 * 2;
+assert.equal(
+  scaledTitle.bodyHeightAfterTitle(twoLineTitleHeight),
+  844 - 72 - 47.99 - twoLineTitleHeight - 18,
+  'a wrapped title must consume every measured title line before body pagination',
+);
+assert.equal(
+  scaledTitle.bodyHeightAfterTitle(0),
+  844 - 72 - 47.99,
+  'non-title pages must retain the full body track',
+);
 
 const cutoutReading = resolveReaderReadingLayout(390, 844, false, metrics({ cutoutLeft: 40 }));
 assert.equal(cutoutReading.contentLeft, 40);
