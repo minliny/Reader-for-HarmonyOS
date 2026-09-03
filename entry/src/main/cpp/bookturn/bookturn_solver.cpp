@@ -1,0 +1,545 @@
+#include "bookturn_solver.h"
+
+#include <algorithm>
+#include <cmath>
+
+namespace reader::bookturn {
+namespace {
+
+// §12 A/B fixture override; negative = kConeApexDistRatioDefault (host never
+// sets it), 0 = A-grade cylinder, >0 = apex distance as a width ratio.
+float g_coneApexDistCalibration = -1.0F;
+
+constexpr float kPi = 3.14159265358979323846F;
+constexpr float kHalfPi = 0.5F * kPi;
+constexpr float kEpsilon = 1.0e-5F;
+constexpr int kRootIterations = 32;
+
+struct ScheduleSegment {
+    float tauStart;
+    float tauEnd;
+    float xStart;
+    float xEnd;
+    float betaStart;
+    float betaEnd;
+    float scaleStart;
+    float scaleEnd;
+};
+
+// Q(tau) stages S1-S5 (V2 contract §6.2, R column recalibrated 2026-08-30).
+// xNorm decreases monotonically from 1 (flat, fold at the free edge) to 0
+// (fold at the binding edge); every column is smoothstep-eased inside its
+// segment so tau<->xNorm is a bijection. The radius scale ramps up through
+// S1/S2 (Huawei: the roll visibly widens during the lift/flip) and holds
+// through S3, tapering into the spine.
+constexpr ScheduleSegment kSegments[5] = {
+    { 0.0F, kStageLiftEnd, 1.0F, kFoldXLiftEnd, 0.0F, kHalfPi, 0.55F, 0.85F },
+    { kStageLiftEnd, kStageFlipEnd, kFoldXLiftEnd, kFoldXFlipEnd, kHalfPi, kPi, 0.85F, 1.0F },
+    { kStageFlipEnd, kStageRollEnd, kFoldXFlipEnd, kFoldXRollEnd, kPi, kPi, 1.0F, 1.0F },
+    { kStageRollEnd, kStageSpineEnd, kFoldXRollEnd, kFoldXSpineEnd, kPi, kPi, 1.0F, kSpineTaper },
+    { kStageSpineEnd, 1.0F, kFoldXSpineEnd, 0.0F, kPi, 0.0F, kSpineTaper, 0.0F },
+};
+
+float Clamp(float value, float low, float high)
+{
+    return std::max(low, std::min(high, value));
+}
+
+float SmoothStep(float low, float high, float value)
+{
+    if (high <= low) {
+        return value >= high ? 1.0F : 0.0F;
+    }
+    const float ratio = Clamp((value - low) / (high - low), 0.0F, 1.0F);
+    return ratio * ratio * (3.0F - 2.0F * ratio);
+}
+
+float Dot(const Vec2& left, const Vec2& right)
+{
+    return left.x * right.x + left.y * right.y;
+}
+
+float Distance(const Vec3& left, const Vec2& right)
+{
+    const float dx = left.x - right.x;
+    const float dy = left.y - right.y;
+    return std::sqrt(dx * dx + dy * dy + left.z * left.z);
+}
+
+float DegreesToRadians(float degrees)
+{
+    return degrees * kPi / 180.0F;
+}
+
+float LimitTheta(float theta, float hardLimit = DegreesToRadians(kThetaCapDegrees))
+{
+    const float sign = theta < 0.0F ? -1.0F : 1.0F;
+    const float magnitude = std::abs(theta);
+    const float limit = Clamp(hardLimit, 0.0F, DegreesToRadians(kThetaCapDegrees));
+    if (limit <= kEpsilon) {
+        return std::copysign(0.0F, theta);
+    }
+    const float soft = std::min(DegreesToRadians(kThetaSoftDegrees), 0.8F * limit);
+    if (magnitude <= soft) {
+        return theta;
+    }
+    const float band = limit - soft;
+    const float resisted = soft + band * (magnitude - soft) / (magnitude - soft + band);
+    return sign * std::min(resisted, limit);
+}
+
+// Inverse of N(d) = d - f_n(d) for the grip landing equation with the strict
+// three-branch mapping (see MapMaterial). On the wrap branch N = r*(phi -
+// sin(phi)) is continuous and monotone (N' = 1 - cos(phi) >= 0); past the
+// seam the sheet lies flat mirrored at height 2r, so N = 2d - pi*r is linear
+// with slope 2. Both branches meet C1 at d = pi*r (N = pi*r, N' = 2), so a
+// unique solution always exists: bisection on the wrap, closed form beyond.
+float SolveGripDistance(float delta, float radius)
+{
+    if (delta <= kEpsilon) {
+        return 0.0F;
+    }
+    if (radius <= kEpsilon) {
+        // r -> 0 collapses the wrap to the fold line: f_n = -d, N = 2d.
+        return 0.5F * delta;
+    }
+    if (delta < kPi * radius) {
+        // On [0, pi], phi - sin(phi) is continuous and monotone. A fixed
+        // iteration budget keeps the hot path deterministic.
+        float low = 0.0F;
+        float high = kPi;
+        const float normalizedDelta = delta / radius;
+        for (int iteration = 0; iteration < kRootIterations; ++iteration) {
+            const float mid = 0.5F * (low + high);
+            if (mid - std::sin(mid) < normalizedDelta) {
+                low = mid;
+            } else {
+                high = mid;
+            }
+        }
+        return radius * 0.5F * (low + high);
+    }
+    return 0.5F * (delta + kPi * radius);
+}
+
+float FoldNormalFor(float distance, float radius)
+{
+    if (distance <= 0.0F) {
+        return distance;
+    }
+    if (radius <= kEpsilon) {
+        return -distance;
+    }
+    if (distance < kPi * radius) {
+        return radius * std::sin(distance / radius);
+    }
+    return -(distance - kPi * radius);
+}
+
+float FoldDepthFor(float distance, float radius)
+{
+    if (distance <= 0.0F || radius <= kEpsilon) {
+        return 0.0F;
+    }
+    if (distance < kPi * radius) {
+        return radius * (1.0F - std::cos(distance / radius));
+    }
+    return 2.0F * radius;
+}
+
+// Closed-form inverse of s(r) = 3r^2 - 2r^3 on [0,1]: substituting u = 2r - 1
+// gives u^3 - 3u + (4y - 2) = 0, i.e. cos(3a) = 1 - 2y with u = 2cos(a).
+// The branch a in [4pi/3, 5pi/3] is the monotone one.
+float SmoothStepInverse(float y)
+{
+    y = Clamp(y, 0.0F, 1.0F);
+    const float angle = std::acos(1.0F - 2.0F * y);
+    const float u = 2.0F * std::cos((angle + 4.0F * kPi) / 3.0F);
+    return 0.5F * (u + 1.0F);
+}
+
+// Developable cone radius law (V2 contract §6.3, 2026-08-30 rework): the
+// apex sits on the fold axis at sigmaApex = sigmaGrip - apexDist, so
+// r(sigma) = R * (sigma - sigmaApex) / apexDist is linear in sigma, equals R
+// exactly at the grip, and varies monotonically along the fold (Huawei
+// measured ~1.4:1 across a full-height fold = ~8W apex distance). No clamp:
+// the law is the isometry reference the T10 gates are derived from.
+// apexDist <= 0 selects the A-grade cylinder (r constant = R).
+float ConeRadius(const BookTurnPose& pose, float sigma)
+{
+    if (pose.radius <= kEpsilon || pose.apexDist <= kEpsilon) {
+        return pose.radius;
+    }
+    const float sigmaApex = pose.sigmaGrip - pose.apexDist;
+    return pose.radius * (sigma - sigmaApex) / pose.apexDist;
+}
+
+CurlStage StageFromTau(float tau)
+{
+    if (tau <= kEpsilon) {
+        return CurlStage::FLAT;
+    }
+    if (tau <= kStageLiftEnd) {
+        return CurlStage::LIFT;
+    }
+    if (tau <= kStageFlipEnd) {
+        return CurlStage::FLIP;
+    }
+    if (tau <= kStageRollEnd) {
+        return CurlStage::ROLL;
+    }
+    if (tau <= kStageSpineEnd) {
+        return CurlStage::SPINE;
+    }
+    return CurlStage::COLLAPSE;
+}
+
+bool FiniteInput(const BookTurnInput& input)
+{
+    return std::isfinite(input.width) && input.width > 0.0F &&
+        std::isfinite(input.height) && input.height > 0.0F &&
+        std::isfinite(input.start.x) && std::isfinite(input.start.y) &&
+        std::isfinite(input.pointer.x) && std::isfinite(input.pointer.y) &&
+        std::isfinite(input.edge.x) && std::isfinite(input.edge.y);
+}
+
+// Fold-line placement shared by both regimes. NEXT: in S0-S2 the fold follows
+// the chased target through the grip equation (V1 §6.2), in S3-S5 the
+// schedule owns the fold line and the fit solve is blended out smoothly so
+// the takeover frame is position-continuous (contract §6.4 seam rule).
+// PREVIOUS: the chased target IS the fold (the unroll front follows the
+// finger 1:1), so the schedule owns the axis across the whole gesture and the
+// grip-equation fit — a NEXT free-edge device — must never lag the fold.
+void ResolveSheet(BookTurnPose& pose, const BookTurnInput& input, float xNorm)
+{
+    pose.tangent = { std::sin(pose.theta), std::cos(pose.theta) };
+    pose.normal = { std::cos(pose.theta), -std::sin(pose.theta) };
+
+    const float tangentY = std::max(0.5F, pose.tangent.y);
+    const float vStar = (Dot(pose.target, pose.tangent) - input.width * pose.tangent.x) / tangentY;
+    pose.gripMaterial = { input.width, Clamp(vStar, 0.0F, input.height) };
+
+    pose.sigmaGrip = Dot(pose.gripMaterial, pose.tangent);
+    if (pose.direction == Direction::PREVIOUS) {
+        const float foldX = xNorm * input.width;
+        pose.axis = BookTurnSolver::AxisFromFoldX(foldX, pose.theta, input.height);
+        pose.gripDistance = pose.beta * pose.radius;
+        pose.gripPhi = Clamp(pose.beta, 0.0F, kPi);
+    } else {
+        const float gripNormal = Dot(pose.gripMaterial, pose.normal);
+        const float targetNormal = Dot(pose.target, pose.normal);
+        const float delta = std::max(0.0F, gripNormal - targetNormal);
+        const float gripDistance = SolveGripDistance(delta, pose.radius);
+        const float catchAxis = gripNormal - gripDistance;
+
+        if (pose.tau < kStageFlipEnd) {
+            pose.axis = catchAxis;
+            pose.gripDistance = gripDistance;
+            pose.gripPhi = pose.radius <= kEpsilon ? kPi :
+                Clamp(gripDistance / pose.radius, 0.0F, kPi);
+        } else {
+            const float foldX = xNorm * input.width;
+            const float scheduledAxis = BookTurnSolver::AxisFromFoldX(foldX, pose.theta, input.height);
+            const float blend = SmoothStep(kStageFlipEnd, 1.0F, pose.tau);
+            pose.axis = blend * scheduledAxis + (1.0F - blend) * catchAxis;
+            pose.gripDistance = pose.beta * pose.radius;
+            pose.gripPhi = Clamp(pose.beta, 0.0F, kPi);
+        }
+    }
+
+    // Contract §6.4 legal-domain projection (binding-edge fixed is priority 1):
+    // p(0,v)=(0,v,0) for all v requires axis >= max(0, -H*sin(theta)); below
+    // that floor the fold line passes the binding edge in material space and
+    // tears the binding off the spine. Project continuously when the grip
+    // solve (or a low-blend schedule seam) asks for a fold beyond the spine;
+    // the grip then lags the target (priority 4: closest reachable pose).
+    const float axisFloor = std::max(0.0F, -input.height * std::sin(pose.theta));
+    if (pose.axis < axisFloor) {
+        pose.axis = axisFloor;
+        if (pose.direction == Direction::NEXT && pose.tau < kStageFlipEnd) {
+            pose.gripDistance = std::max(0.0F, Dot(pose.gripMaterial, pose.normal) - axisFloor);
+            pose.gripPhi = pose.radius <= kEpsilon ? kPi :
+                Clamp(pose.gripDistance / pose.radius, 0.0F, kPi);
+        }
+    }
+
+    pose.projectedGrip = BookTurnSolver::MapMaterial(pose, pose.gripMaterial);
+    if (pose.direction == Direction::PREVIOUS) {
+        // The target is the fold itself; report the perpendicular distance of
+        // the target from the fold line as the follow-error diagnostic.
+        pose.targetError = std::abs(Dot(pose.target, pose.normal) - pose.axis);
+    } else {
+        pose.targetError = Distance(pose.projectedGrip, pose.target);
+    }
+}
+
+}  // namespace
+
+void SetConeApexDist(float ratio)
+{
+    g_coneApexDistCalibration = ratio;
+}
+
+BookTurnPose BookTurnSolver::Solve(const BookTurnInput& input, const BookTurnPose* previous)
+{
+    BookTurnPose pose;
+    pose.generation = input.generation;
+    pose.direction = input.direction;
+    pose.verticalPrevious = input.verticalPrevious;
+    if (!FiniteInput(input)) {
+        return pose;
+    }
+
+    // PREVIOUS is the strict time reversal of the same canonical trajectory
+    // (contract §6.2: same Q(tau) states played backward, front/back and
+    // occlusion order swapped, NO screen mirroring). The raw real-screen
+    // inputs therefore drive the canonical solve directly: tau =
+    // s^-1(edge.x/W) runs 1 -> 0 over the gesture, the schedule fold sweeps
+    // 0 -> W, and the emitted pose IS the real screen pose (the flat branch
+    // of p(q) is the identity map, so material u lands at screen x=u and the
+    // page content stays unmirrored with no texture flip). At gesture start
+    // (edge 0, tau 1, radius 0) the sheet is the flat flip about the fold
+    // line and lies at [-W, 0] — invisible, which is the V2 fix for the V1
+    // previous-start drape defect.
+    const BookTurnInput& canonical = input;
+
+    pose.width = input.width;
+    pose.height = input.height;
+    pose.rollRadius = RollRadius(input.width);
+    pose.target = {
+        Clamp(canonical.edge.x, 0.0F, input.width),
+        Clamp(canonical.edge.y, 0.0F, input.height),
+    };
+
+    const float direction = canonical.direction == Direction::NEXT ? -1.0F : 1.0F;
+    const float dx = canonical.pointer.x - canonical.start.x;
+    const float dy = canonical.pointer.y - canonical.start.y;
+    const float horizontal = std::max(0.0F, direction * dx);
+    // The exposure lever measures how far the moving edge has travelled from
+    // its rest position: NEXT rests at the free edge (W), PREVIOUS at the
+    // spine (0).
+    const float sourceX = canonical.direction == Direction::NEXT ? canonical.width : 0.0F;
+    const float exposed = std::abs(pose.target.x - sourceX);
+    float thetaVector = 0.0F;
+    float intentGate = 0.0F;
+    if (input.verticalPrevious) {
+        const float upward = std::max(0.0F, canonical.start.y - canonical.pointer.y);
+        thetaVector = std::atan2(upward, std::max(canonical.pointer.x, 1.0F));
+        intentGate = SmoothStep(0.0F, kVerticalPreviousStartVp, upward);
+    } else {
+        thetaVector = std::atan2(-direction * dy, std::max(horizontal, kEpsilon));
+        // Ownership still locks at the 8vp gesture threshold. Inclination
+        // needs a physical lever long enough to avoid amplifying sub-vp
+        // pointer jitter while the sheet is only being lifted.
+        intentGate = SmoothStep(0.0F, kHalfPi * pose.rollRadius, horizontal);
+    }
+    const float exposureGate = SmoothStep(0.0F, kHalfPi * pose.rollRadius, exposed);
+    const float visibleGate = input.overrideTheta ? 1.0F : intentGate * exposureGate;
+    const float thetaSource = input.overrideTheta ? input.settledTheta : thetaVector;
+    pose.theta = LimitTheta(thetaSource) * visibleGate;
+
+    // Preserve the current signed branch at the singular zero crossing. This
+    // only resolves an exact floating-point tie and never filters a sample.
+    if (previous != nullptr && std::abs(pose.theta) <= kEpsilon &&
+        std::abs(thetaVector) <= kEpsilon && previous->generation == input.generation) {
+        pose.theta = std::copysign(0.0F, previous->theta);
+    }
+
+    // tau derives from the chased free-edge target (V1 §5.3 x_follow), so
+    // commit and rollback traverse Q(tau) forward and backward for free.
+    const float edgeNorm = pose.target.x / input.width;
+    pose.tau = ScheduleInverse(edgeNorm);
+
+    float xNorm = 1.0F;
+    float beta = 0.0F;
+    float scale = 1.0F;
+    Schedule(pose.tau, xNorm, beta, scale);
+    pose.beta = beta;
+    pose.radius = pose.rollRadius * scale;
+    pose.stage = StageFromTau(pose.tau);
+    const float apexRatio = g_coneApexDistCalibration >= 0.0F ?
+        g_coneApexDistCalibration : kConeApexDistRatioDefault;
+    pose.apexDist = apexRatio > kEpsilon ? apexRatio * input.width : 0.0F;
+
+    ResolveSheet(pose, canonical, xNorm);
+    return pose;
+}
+
+Vec3 BookTurnSolver::MapMaterial(const BookTurnPose& pose, const Vec2& material)
+{
+    // Strict three-branch cone binding (harism-model, 2026-08-30 rework):
+    // every material point is either flat (d <= 0), wrapped on the cone
+    // (0 < d < pi*r, constant-radius half-cylinder cross-section — the
+    // silhouette is a clean C at any tilt), or flat mirrored continuation at
+    // height 2r (d >= pi*r, exactly the flipped-over plate). One curvature
+    // everywhere past the fold kills the M silhouette and the wavy back; phi
+    // stays in [0, pi] and is continuous across the seam.
+    const float sigma = Dot(material, pose.tangent);
+    const float distance = Dot(material, pose.normal) - pose.axis;
+    const float radius = ConeRadius(pose, sigma);
+    const float foldedNormal = FoldNormal(distance, radius);
+    const float depth = FoldDepth(distance, radius);
+    return {
+        sigma * pose.tangent.x + (pose.axis + foldedNormal) * pose.normal.x,
+        sigma * pose.tangent.y + (pose.axis + foldedNormal) * pose.normal.y,
+        depth,
+    };
+}
+
+Vec3 BookTurnSolver::SurfaceNormal(const BookTurnPose& pose, const Vec2& material)
+{
+    const float sigma = Dot(material, pose.tangent);
+    const float distance = Dot(material, pose.normal) - pose.axis;
+    float phi = 0.0F;
+    if (distance > 0.0F) {
+        const float radius = ConeRadius(pose, sigma);
+        phi = radius <= kEpsilon ? kPi : Clamp(distance / radius, 0.0F, kPi);
+    }
+    return {
+        -std::sin(phi) * pose.normal.x,
+        -std::sin(phi) * pose.normal.y,
+        std::cos(phi),
+    };
+}
+
+float BookTurnSolver::RollRadius(float width)
+{
+    return Clamp(kRollRadiusRatio * std::max(0.0F, width), kRollRadiusMinVp, kRollRadiusMaxVp);
+}
+
+float BookTurnSolver::SheetCoverage(const BookTurnPose& pose)
+{
+    const float width = std::max(1.0F, pose.width);
+    const float height = std::max(1.0F, pose.height);
+    constexpr int kColumns = 64;
+    constexpr int kRows = 128;
+    float minX = 0.0F;
+    float maxX = 0.0F;
+    bool sampled = false;
+    for (int row = 0; row <= kRows; ++row) {
+        const float v = static_cast<float>(row) / static_cast<float>(kRows);
+        for (int column = 0; column <= kColumns; ++column) {
+            const float u = static_cast<float>(column) / static_cast<float>(kColumns);
+            const Vec3 projected = MapMaterial(pose, {u * width, v * height});
+            if (!sampled) {
+                minX = projected.x;
+                maxX = projected.x;
+                sampled = true;
+            } else {
+                minX = std::min(minX, projected.x);
+                maxX = std::max(maxX, projected.x);
+            }
+        }
+    }
+    if (!sampled) return 0.0F;
+    const float low = Clamp(minX, 0.0F, width);
+    const float high = Clamp(maxX, 0.0F, width);
+    return Clamp((high - low) / width, 0.0F, 1.0F);
+}
+
+bool BookTurnSolver::SheetCoverageExceeds(const BookTurnPose& pose, float ratio)
+{
+    const float width = std::max(1.0F, pose.width);
+    const float height = std::max(1.0F, pose.height);
+    const float clampedRatio = Clamp(ratio, 0.0F, 1.0F);
+    constexpr int kColumns = 64;
+    constexpr int kRows = 128;
+    float minX = 0.0F;
+    float maxX = 0.0F;
+    bool sampled = false;
+    const auto sample = [&](float u, float v) {
+        const float x = MapMaterial(pose, {u, v}).x;
+        if (!sampled) {
+            minX = x;
+            maxX = x;
+            sampled = true;
+        } else {
+            minX = std::min(minX, x);
+            maxX = std::max(maxX, x);
+        }
+    };
+    // These are vertices of the exact 65x129 renderer mesh, not a geometric
+    // approximation. Their span is therefore a safe lower bound: when the
+    // boundary is already wider than the swap band, no interior probe can
+    // make the complete mesh narrower.
+    for (int column = 0; column <= kColumns; ++column) {
+        const float u = width * static_cast<float>(column) / static_cast<float>(kColumns);
+        sample(u, 0.0F);
+        sample(u, height);
+    }
+    for (int row = 1; row < kRows; ++row) {
+        const float v = height * static_cast<float>(row) / static_cast<float>(kRows);
+        sample(0.0F, v);
+        sample(width, v);
+    }
+    const float boundaryLow = Clamp(minX, 0.0F, width);
+    const float boundaryHigh = Clamp(maxX, 0.0F, width);
+    if ((boundaryHigh - boundaryLow) / width > clampedRatio) {
+        return true;
+    }
+    return SheetCoverage(pose) > clampedRatio;
+}
+
+void BookTurnSolver::Schedule(float tau, float& xNorm, float& beta, float& radiusScale)
+{
+    xNorm = 1.0F;
+    beta = 0.0F;
+    radiusScale = 1.0F;
+    tau = Clamp(tau, 0.0F, 1.0F);
+    for (const ScheduleSegment& segment : kSegments) {
+        if (tau <= segment.tauEnd) {
+            const float span = segment.tauEnd - segment.tauStart;
+            const float ratio = span > kEpsilon ?
+                Clamp((tau - segment.tauStart) / span, 0.0F, 1.0F) : 1.0F;
+            const float eased = ratio * ratio * (3.0F - 2.0F * ratio);
+            xNorm = segment.xStart + (segment.xEnd - segment.xStart) * eased;
+            beta = segment.betaStart + (segment.betaEnd - segment.betaStart) * eased;
+            radiusScale = segment.scaleStart + (segment.scaleEnd - segment.scaleStart) * eased;
+            return;
+        }
+    }
+    xNorm = 0.0F;
+    beta = 0.0F;
+    radiusScale = 0.0F;
+}
+
+float BookTurnSolver::ScheduleInverse(float xNorm)
+{
+    xNorm = Clamp(xNorm, 0.0F, 1.0F);
+    if (xNorm >= 1.0F) {
+        return 0.0F;
+    }
+    for (const ScheduleSegment& segment : kSegments) {
+        if (xNorm >= segment.xEnd) {
+            const float span = segment.xStart - segment.xEnd;
+            const float ratio = span > kEpsilon ?
+                Clamp((segment.xStart - xNorm) / span, 0.0F, 1.0F) : 0.0F;
+            return segment.tauStart + (segment.tauEnd - segment.tauStart) * SmoothStepInverse(ratio);
+        }
+    }
+    return 1.0F;
+}
+
+float BookTurnSolver::FoldScreenX(float axis, float theta, float height)
+{
+    const float cosine = std::max(0.5F, std::cos(theta));
+    return (axis + std::min(0.0F, height * std::sin(theta))) / cosine;
+}
+
+float BookTurnSolver::AxisFromFoldX(float foldX, float theta, float height)
+{
+    const float cosine = std::max(0.5F, std::cos(theta));
+    return foldX * cosine - std::min(0.0F, height * std::sin(theta));
+}
+
+float BookTurnSolver::FoldNormal(float distance, float radius)
+{
+    return FoldNormalFor(distance, radius);
+}
+
+float BookTurnSolver::FoldDepth(float distance, float radius)
+{
+    return FoldDepthFor(distance, radius);
+}
+
+}  // namespace reader::bookturn

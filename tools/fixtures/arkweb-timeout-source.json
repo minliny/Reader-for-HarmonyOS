@@ -1,0 +1,30 @@
+{
+  "bookSourceUrl": "http://127.0.0.1:18082#arkweb-timeout-source",
+  "bookSourceName": "ArkWeb 超时源",
+  "bookSourceGroup": "Reader Acceptance",
+  "bookSourceType": 0,
+  "enabled": true,
+  "enabledExplore": false,
+  "enabledCookieJar": true,
+  "loginUrl": "",
+  "searchUrl": "@js:java.webView(null, \"http://127.0.0.1:18082/timeout\", \"document.title\"); \"http://127.0.0.1:18082/search?key=\" + encodeURIComponent(key)",
+  "ruleSearch": {
+    "bookList": "li.book",
+    "name": ".name@text",
+    "author": ".author@text",
+    "bookUrl": ".detail@href",
+    "checkKeyWord": "ArkWeb"
+  },
+  "ruleBookInfo": {
+    "name": "h1@text",
+    "tocUrl": ""
+  },
+  "ruleToc": {
+    "chapterList": "ol.toc li",
+    "chapterName": "a@text",
+    "chapterUrl": "a@href"
+  },
+  "ruleContent": {
+    "content": ".content@html"
+  }
+}

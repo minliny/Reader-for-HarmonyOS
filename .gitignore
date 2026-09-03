@@ -1,0 +1,11 @@
+.hvigor/
+node_modules/
+oh_modules/
+build/
+entry/build/
+entry/.cxx/
+.idea/
+.reader-artifacts/
+.reader-local/
+*.bak
+entry/vendor/core-harmony/libs/

@@ -1,0 +1,190 @@
+import { motionAnimateParam } from '../common/MotionSpec';
+import { registerReaderFonts } from '../common/ReaderFonts';
+
+const MENU_WIDTH = 176;
+const POINTER_HEIGHT = 12;
+const ACTION_HEIGHT = 50;
+const ACTION_COUNT = 4;
+const ACTIONS_HEIGHT = ACTION_HEIGHT * ACTION_COUNT;
+const MENU_HEIGHT = POINTER_HEIGHT + ACTIONS_HEIGHT;
+const MENU_COLLAPSED_HEIGHT = POINTER_HEIGHT + ACTION_HEIGHT;
+const MENU_TRAILING_EXTENSION = 11;
+const MENU_ANCHOR_OVERLAP = 5;
+const SURFACE_ASSET_WIDTH = 232;
+const SURFACE_ASSET_HEIGHT = 268;
+const SURFACE_SHADOW_INSET_X = 28;
+const SURFACE_SHADOW_INSET_TOP = 18;
+const POINTER_POINTS: Array<Array<number>> = [[0, 12], [12, 0], [24, 12]];
+
+/**
+ * Bookshelf top-bar More overlay.
+ *
+ * Figma interaction registry `1982:313` declares nav.more -> Menu overlay ->
+ * dropdown.expand. The approved phone style reference `4572:1796` supplies
+ * the integrated-pointer surface and row geometry. Existing product actions
+ * remain wired here; `2236:547` stays an outside-dismiss semantic.
+ */
+@Component
+export struct BookshelfMoreMenu {
+  @Prop anchorRight: number = 0;
+  @Prop anchorBottom: number = 0;
+  @Prop reduceMotion: boolean = false;
+  onBatchManage: () => void = (): void => {};
+  onManageGroups: () => void = (): void => {};
+  onLocalImport: () => void = (): void => {};
+  onBookshelfSettings: () => void = (): void => {};
+  onDismiss: () => void = (): void => {};
+  @State private panelHeight: number = MENU_COLLAPSED_HEIGHT;
+  @State private closeInFlight: boolean = false;
+
+  aboutToAppear(): void {
+    registerReaderFonts(this.getUIContext().getFont());
+  }
+
+  build() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Row()
+        .width('100%')
+        .height('100%')
+        .backgroundColor(Color.Transparent)
+        .accessibilityText('关闭更多')
+        .onClick((): void => this.collapseMenu((): void => this.onDismiss()));
+
+      Stack({ alignContent: Alignment.TopStart }) {
+        if (this.reduceMotion) {
+          Image($r('app.media.bookshelf_more_menu_surface'))
+            .width(SURFACE_ASSET_WIDTH)
+            .height(SURFACE_ASSET_HEIGHT)
+            .position({ x: -SURFACE_SHADOW_INSET_X, y: -SURFACE_SHADOW_INSET_TOP });
+        } else {
+          Row()
+            .width(MENU_WIDTH)
+            .height(this.panelHeight - POINTER_HEIGHT)
+            .backgroundColor('#FFFCF8')
+            .border({ width: 1, color: '#E3DED6' })
+            .borderRadius(16)
+            .shadow({ radius: 28, color: '#292E261F', offsetX: 0, offsetY: 10 })
+            .position({ x: 0, y: POINTER_HEIGHT });
+
+          Polygon({ width: 24, height: POINTER_HEIGHT + 1 })
+            .points(POINTER_POINTS)
+            .fill('#FFFCF8')
+            .stroke(Color.Transparent)
+            .position({ x: 131, y: 0.5 });
+
+          // Cover the rounded body's top border beneath the pointer so the
+          // pointer and body keep the reference asset's continuous outline.
+          Row()
+            .width(24)
+            .height(2)
+            .backgroundColor('#FFFCF8')
+            .position({ x: 131, y: 11.5 });
+
+          Polyline({ width: 24, height: POINTER_HEIGHT + 1 })
+            .points(POINTER_POINTS)
+            .fill(Color.Transparent)
+            .stroke('#E3DED6')
+            .strokeWidth(1)
+            .strokeLineJoin(LineJoinStyle.Round)
+            .position({ x: 131, y: 0.5 });
+        }
+
+        Stack({ alignContent: Alignment.TopStart }) {
+          Column() {
+            this.action($r('app.media.bookshelf_more_batch'), '批量管理', true,
+              (): void => this.onBatchManage());
+            this.action($r('app.media.bookshelf_more_group'), '分组管理', true,
+              (): void => this.onManageGroups());
+            this.action($r('app.media.bookshelf_more_import'), '本地导入', true,
+              (): void => this.onLocalImport());
+            this.action($r('app.media.bookshelf_more_settings'), '书架设置', false,
+              (): void => this.onBookshelfSettings());
+          }
+          .width(MENU_WIDTH)
+          .height(ACTIONS_HEIGHT);
+        }
+        .width(MENU_WIDTH)
+        .height(Math.max(0, this.panelHeight - POINTER_HEIGHT))
+        .clip(true)
+        .position({ x: 0, y: POINTER_HEIGHT });
+      }
+      .width(MENU_WIDTH)
+      .height(MENU_HEIGHT)
+      .clip(false)
+      .position({
+        x: this.anchorRight + MENU_TRAILING_EXTENSION - MENU_WIDTH,
+        y: this.anchorBottom - MENU_ANCHOR_OVERLAP,
+      })
+      .onAppear((): void => this.expandMenu());
+    }
+    .width('100%')
+    .height('100%')
+    .zIndex(20);
+  }
+
+  @Builder
+  private action(icon: Resource, label: string, showDivider: boolean, action: () => void) {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Row({ space: 16 }) {
+        Image(icon)
+          .width(24)
+          .height(24);
+
+        Text(label)
+          .fontFamily('ReaderNotoSansSC')
+          .fontWeight(FontWeight.Medium)
+          .fontSize(15)
+          .lineHeight(22)
+          .fontColor('#1F1B17')
+          .maxLines(1);
+      }
+      .width(MENU_WIDTH)
+      .height(ACTION_HEIGHT)
+      .padding({ left: 18, right: 16 });
+
+      if (showDivider) {
+        Divider()
+          .width(144)
+          .height(1)
+          .color('#E8E2DA')
+          .position({ x: 16, y: ACTION_HEIGHT - 1 });
+      }
+    }
+    .width(MENU_WIDTH)
+    .height(ACTION_HEIGHT)
+    .backgroundColor(Color.Transparent)
+    .onClick((): void => this.collapseMenu(action));
+  }
+
+  private expandMenu(): void {
+    if (this.reduceMotion) {
+      this.panelHeight = MENU_HEIGHT;
+      return;
+    }
+    this.getUIContext().animateTo(motionAnimateParam('dropdown.menu.expand'), (): void => {
+      this.panelHeight = MENU_HEIGHT;
+    });
+  }
+
+  private collapseMenu(onFinish: () => void): void {
+    if (this.closeInFlight) {
+      return;
+    }
+    this.closeInFlight = true;
+    if (this.reduceMotion) {
+      this.panelHeight = MENU_COLLAPSED_HEIGHT;
+      this.closeInFlight = false;
+      onFinish();
+      return;
+    }
+    this.getUIContext().animateTo(
+      motionAnimateParam('dropdown.menu.collapse', (): void => {
+        this.closeInFlight = false;
+        onFinish();
+      }),
+      (): void => {
+        this.panelHeight = MENU_COLLAPSED_HEIGHT;
+      },
+    );
+  }
+}

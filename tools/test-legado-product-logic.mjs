@@ -1,0 +1,129 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8');
+const index = read('entry/src/main/ets/pages/Index.ets');
+const search = read('entry/src/main/ets/features/search/SearchPage.ets');
+const shelf = read('entry/src/main/ets/features/bookshelf/BookshelfPage.ets');
+const shelfFlow = read('entry/src/main/ets/features/bookshelf/BookshelfFlowGateway.ts');
+const shelfMoreMenu = read('entry/src/main/ets/features/bookshelf/BookshelfMoreMenu.ets');
+const remote = read('entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
+const sourceSwitchGateway = read('entry/src/main/ets/features/source/SourceSwitchGateway.ts');
+const sourceSwitchWindow = read('entry/src/main/ets/features/source/SourceSwitchWindow.ets');
+const sourceSwitchRow = read('entry/src/main/ets/features/source/CandidateRow.ets');
+
+for (const declaration of [
+  /const READING_CACHE_BEFORE = 2;/,
+  /const READING_CACHE_AFTER = 2;/,
+  /const CATALOG_REFRESH_NEAR_END = 3;/,
+  /const CATALOG_REFRESH_INTERVAL_MS = 10 \* 60 \* 1000;/,
+]) {
+  assert.match(index, declaration);
+}
+
+assert.match(index, /private openShelfBook\([\s\S]*openRemoteBookDetail\([\s\S]*selection, true\);/,
+  'a shelf tap must resume instead of stopping at detail');
+assert.match(index, /gateway\.openCachedCatalogSession\(seed, isCurrent\)[\s\S]*\.catch\(\(\): Promise<RemoteReadingSession> => gateway\.openSession/,
+  'a shelf cold start must admit the durable TOC before online recovery');
+assert.match(index, /private addDetailBook\([\s\S]*\.upsertBook\([\s\S]*void this\.prefetchReadingWindow\(session\)/,
+  'an explicit shelf join must immediately start the rolling cache window');
+assert.match(index, /private applyReadingCommit\([\s\S]*this\.prefetchReadingWindow\(session, commit\.chapterIndex\)/,
+  'each durable reading commit must maintain the rolling cache window');
+assert.match(index, /session\.entries\.length - commit\.chapterIndex - 1 <= CATALOG_REFRESH_NEAR_END/,
+  'reading near the current end must trigger a throttled TOC refresh');
+assert.match(index, /for \(let start = 0; start < books\.length; start \+= 2\)[\s\S]*Promise\.all\(batch\.map/,
+  'bookshelf updates must use a bounded two-book batch');
+// 2026-08-31 search handoff §2: automatic source recovery is retired. Reading
+// failures are classified first; book-source failures ask the user to confirm
+// retry-vs-switch, and nothing ever auto-picks a candidate from this path.
+const failureBlock = index.slice(index.indexOf('private onReadingFailure('), index.indexOf('private showReadingFailure('));
+assert.ok(failureBlock.length > 0, 'onReadingFailure must exist ahead of showReadingFailure');
+assert.match(failureBlock, /isRemoteSourceFailureKind\(kind\)/,
+  'read failure must classify book-source vs local failures before any UI');
+assert.match(failureBlock, /value: '重试当前源'/,
+  'book-source failures must offer a user-confirmed retry on the current source');
+assert.match(failureBlock, /value: '选择其他书源'[\s\S]*this\.openSourceSwitch\(\)/,
+  'book-source failures must offer a user-confirmed manual source switch');
+assert.doesNotMatch(failureBlock, /startSourceDiscovery/,
+  'read failure must never auto-open or auto-pick source discovery');
+assert.doesNotMatch(failureBlock, /automaticSourceRecoveryKey/,
+  'the automatic recovery latch is retired together with the auto-switch path');
+assert.match(index,
+  /if \(autoPickFirst\) \{[\s\S]*value\.isCurrent !== true[\s\S]*this\.onPickSource\(candidate\);/,
+  'the discovery auto-pick branch stays available only to explicit non-failure callers');
+assert.match(index,
+  /gateway\.loadCachedCandidates\(query, isCurrent\)[\s\S]*cached\.length > 0[\s\S]*gateway\.refreshCandidates/,
+  'opening source switch must admit durable candidates before any remote refresh');
+assert.match(sourceSwitchGateway, /const SOURCE_SWITCH_CACHE_TTL_MS = 24 \* 60 \* 60 \* 1000;/);
+assert.match(sourceSwitchGateway,
+  /'chapter\.content',[\s\S]*const latencyMs = Math\.max\(0, Date\.now\(\) - startedAt\)/,
+  'response time must measure the mapped chapter body probe instead of a source ping');
+assert.match(sourceSwitchGateway,
+  /chapterWordCountText,[\s\S]*respondTime:[\s\S]*'search-book\.put'/,
+  'chapter and response-time projections must be persisted through Core SearchBook storage');
+assert.match(sourceSwitchWindow, /Refresh\(\{ refreshing: this\.isRefreshing\(\)/);
+assert.match(sourceSwitchWindow, /\.onRefreshing\([\s\S]*this\.onRefresh\(\)/,
+  'the candidate list pull gesture must own the explicit full refresh');
+assert.match(sourceSwitchRow, /return this\.currentChapterTitle\.trim\(\)\.length > 0/,
+  'the current-chapter column must render the persisted probe result');
+
+assert.match(remote, /async openCachedCatalogSession\([\s\S]*acquisitionMode: 'online'/,
+  'a cached catalog must retain online body fallback semantics');
+assert.match(search, /this\.normalizedBookKey\(book\.title, book\.author\)/,
+  'search results must group the same title and author across origins');
+assert.match(search, /right\.sourceCount - left\.sourceCount/,
+  'multi-origin search results must be promoted like Legado');
+assert.match(search, /Text\('已在书架'\)/,
+  'grouped search results must expose current shelf membership');
+// ACQ-02 scope control follows the Figma canonical masters: the chip wall is
+// the source-group filter in Results/Empty (never Initial), and tapping a
+// group re-runs the sweep within that group's enabled sources.
+assert.match(search, /groupScopeRow\(\)/,
+  'the search surface must present the source-group chip row under the bar');
+assert.match(search, /selectGroup\(/,
+  'group chips must switch the scope and re-run the current search');
+assert.match(search, /source\.group === this\.selectedGroupName/,
+  'a selected group must restrict the sweep to that group\'s enabled sources');
+assert.match(search, /onSearch\(keyword, scope\)/,
+  'ACQ-02: submitting must forward the scope subset to the orchestrator');
+assert.match(search, /onStop/,
+  'ACQ-02: the search page must expose a stop intent for the live sweep');
+assert.match(index, /stopSearch\(\)/,
+  'ACQ-02: Index must wire the stop intent into the orchestrator');
+// SHF-02/03: the main shelf projects recent-reading order, group filtering,
+// and a foreground shelf-wide update queue; the previously dead filter control
+// now owns the tools row, so the deferral is superseded by wired intent.
+assert.match(shelfFlow, /sortBy: 'lastReadAt', sortDirection: 'descending'/,
+  'SHF-02: the shelf load must default to recent-reading order');
+assert.match(shelf, /filterRowVisible = !this\.filterRowVisible/,
+  'SHF-02: the filter control must toggle the shelf tools row');
+assert.match(shelf, /LazyForEach\(this\.rowDataSource/,
+  'SHF-02: long shelf lists must use one notifying lazy projection shared by both modes');
+assert.doesNotMatch(shelf, /bookDataSource/,
+  'SHF-02: cover/list switching must not duplicate the lazy data source');
+assert.match(shelf, /private rebuildShelfProjection\(\)/,
+  'SHF-02: group filtering and row projection must be rebuilt once per input change');
+assert.match(shelf, /const seenGroups: Set<string>/,
+  'SHF-02: group chips must derive from Core books without repeated linear scans');
+assert.match(shelf, /检查更新/,
+  'SHF-03: the tools row must present a manual shelf-wide update entry');
+assert.match(shelf, /onCheckUpdatesRequested/,
+  'SHF-03: the update chip must emit an intent, not run the sweep itself');
+assert.match(index, /private startManualBookshelfUpdate\(\)/,
+  'SHF-03: Index must own the foreground update queue');
+assert.match(index, /onProgress\(completed, books\.length\)/,
+  'SHF-03: the sweep must report chunk progress for the page');
+assert.match(index, /bookshelfBackgroundRefreshRunning \|\| this\.bookshelfUpdateRunning/,
+  'SHF-03: manual and background sweeps must stay mutually exclusive');
+assert.match(shelf, /onManageGroups/,
+  'SHF-02: the shelf more-menu must reach group management');
+assert.match(shelfMoreMenu, /分组管理/,
+  'SHF-02: the more-menu must present the group management entry');
+
+assert.match(shelf, /Text\(`更新 \$\{book\.unreadCount\} 章`\)/);
+assert.match(shelf, /Text\(this\.gridProgressLabel\(book\)\)/,
+  'grid progress renders through the basis-point formatter');
+assert.match(shelf, /已读 <1%/,
+  'sub-1% progress stays visible instead of collapsing to 0%');
+
+console.log('Legado product behavior contract: PASS');

@@ -1,0 +1,664 @@
+{
+  "schemaVersion": 2,
+  "contractId": "reader.appearance.phone.quick-full.n-o",
+  "scope": {
+    "platform": "HarmonyOS",
+    "viewport": "Phone",
+    "referenceViewportVp": {
+      "width": 390,
+      "height": 844
+    },
+    "tabletParity": "open"
+  },
+  "source": {
+    "authority": "figma-get-motion-context",
+    "fileKey": "klhs2jMM4MncaJFqZMfqEK",
+    "pageNodeId": "1246:26829",
+    "pageName": "25 · Motion Reference",
+    "profiles": {
+      "N": {
+        "nodeId": "1505:18040",
+        "name": "Appearance Expand",
+        "direction": "quick-to-full"
+      },
+      "O": {
+        "nodeId": "1505:18349",
+        "name": "Appearance Collapse",
+        "direction": "full-to-quick"
+      }
+    }
+  },
+  "geometry": {
+    "shell": {
+      "quickHeightVp": 330,
+      "fullHeightVp": 736,
+      "travelVp": 406,
+      "bottomAnchored": true
+    },
+    "quickMorph": {
+      "quickSizeVp": [286, 190],
+      "fullSizeVp": [338, 666]
+    },
+    "themeCell": {
+      "quickSizeVp": [62.5, 24],
+      "fullSizeVp": [73.5, 58.8]
+    },
+    "fontCell": {
+      "sizeVp": [62.5, 27]
+    }
+  },
+  "implementationContract": {
+    "authority": "reader-motion-v2-correction",
+    "notAuthoredByFigma": true,
+    "reason": "Figma N stops shared geometry at 183ms and Figma O crossfades roots; Motion V2 preserves the audited endpoints while extending one reversible shared geometry function across physical expansion 0..1.",
+    "spatialDriver": "physicalExpansionProgress",
+    "sampleExpansionProgress": [0.25, 0.5, 0.75],
+    "singlePersistentTree": true,
+    "reverseUsesSameSpatialFunction": true,
+    "sharedActorOpacity": 1,
+    "sharedActorBlurVp": 0,
+    "timing": {
+      "expandFullDistanceMs": 420,
+      "collapseFullDistanceMs": 360,
+      "settlementScalesByRemainingDistance": true,
+      "timeScaleAppliesAfterRemainingDistance": true
+    },
+    "actorGroups": {
+      "fixedScreen": ["BrightnessRail", "ModuleNav"],
+      "shared": [
+        "MorphStage",
+        "QuickMorph",
+        "ThemeHeader",
+        "ThemeDay",
+        "ThemeWarm",
+        "ThemeNight",
+        "ThemeWarmNight",
+        "ThemePaper",
+        "ThemeGreen",
+        "ThemePaperNight",
+        "ThemeGreenNight",
+        "QuickDivider",
+        "FontHeader",
+        "Font0",
+        "Font1",
+        "Font2",
+        "Font3",
+        "Font4",
+        "Font5",
+        "Font6",
+        "Font7"
+      ],
+      "fullOnly": ["ContentSurface", "Header", "ThemeActions", "FontImport", "Typography"],
+      "forbiddenRootCrossfade": ["FullOutgoing", "QuickIncoming"]
+    },
+    "sharedActors": [
+      {
+        "id": "MorphStage",
+        "endpointAuthority": "figma-n-shell",
+        "curve": "linear-in-physical-expansion",
+        "sourceRectVp": { "x": 0, "y": 406, "width": 364, "height": 330 },
+        "targetRectVp": { "x": 0, "y": 0, "width": 364, "height": 736 }
+      },
+      {
+        "id": "QuickMorph",
+        "endpointAuthority": "figma-n",
+        "curve": "shared-actor-ease-out",
+        "sourceRectVp": { "x": 12.104, "y": 434.993, "width": 286, "height": 190 },
+        "targetRectVp": { "x": 13, "y": 57, "width": 338, "height": 666 }
+      },
+      {
+        "id": "ThemeHeader",
+        "endpointAuthority": "figma-n",
+        "curve": "shared-actor-ease-out",
+        "sourceRectVp": { "x": 23.104, "y": 449.993, "width": 262, "height": 15.898 },
+        "targetRectVp": { "x": 25, "y": 77, "width": 312, "height": 20 }
+      },
+      {
+        "id": "ThemeDay",
+        "endpointAuthority": "figma-n",
+        "curve": "shared-actor-ease-out",
+        "sourceRectVp": { "x": 23.104, "y": 468.891, "width": 62.5, "height": 24 },
+        "targetRectVp": { "x": 25, "y": 99.39, "width": 73.5, "height": 58.8 }
+      },
+      {
+        "id": "ThemeWarm",
+        "endpointAuthority": "figma-n",
+        "curve": "shared-actor-ease-out",
+        "sourceRectVp": { "x": 89.604, "y": 468.891, "width": 62.5, "height": 24 },
+        "targetRectVp": { "x": 104.5, "y": 99.39, "width": 73.5, "height": 58.8 }
+      },
+      {
+        "id": "ThemeNight",
+        "endpointAuthority": "figma-n",
+        "curve": "shared-actor-ease-out",
+        "sourceRectVp": { "x": 156.104, "y": 468.891, "width": 62.5, "height": 24 },
+        "targetRectVp": { "x": 184, "y": 99.39, "width": 73.5, "height": 58.8 }
+      },
+      {
+        "id": "ThemeWarmNight",
+        "endpointAuthority": "figma-n",
+        "curve": "shared-actor-ease-out",
+        "sourceRectVp": { "x": 222.604, "y": 468.891, "width": 62.5, "height": 24 },
+        "targetRectVp": { "x": 263.5, "y": 99.39, "width": 73.5, "height": 58.8 }
+      },
+      {
+        "id": "ThemePaper",
+        "endpointAuthority": "figma-n",
+        "curve": "shared-actor-ease-out",
+        "sourceRectVp": { "x": 23.104, "y": 496.891, "width": 62.5, "height": 24 },
+        "targetRectVp": { "x": 25, "y": 164.19, "width": 73.5, "height": 58.8 }
+      },
+      {
+        "id": "ThemeGreen",
+        "endpointAuthority": "figma-n",
+        "curve": "shared-actor-ease-out",
+        "sourceRectVp": { "x": 89.604, "y": 496.891, "width": 62.5, "height": 24 },
+        "targetRectVp": { "x": 104.5, "y": 164.19, "width": 73.5, "height": 58.8 }
+      },
+      {
+        "id": "ThemePaperNight",
+        "endpointAuthority": "figma-n",
+        "curve": "shared-actor-ease-out",
+        "sourceRectVp": { "x": 156.104, "y": 496.891, "width": 62.5, "height": 24 },
+        "targetRectVp": { "x": 184, "y": 164.19, "width": 73.5, "height": 58.8 }
+      },
+      {
+        "id": "ThemeGreenNight",
+        "endpointAuthority": "figma-n",
+        "curve": "shared-actor-ease-out",
+        "sourceRectVp": { "x": 222.604, "y": 496.891, "width": 62.5, "height": 24 },
+        "targetRectVp": { "x": 263.5, "y": 164.19, "width": 73.5, "height": 58.8 }
+      },
+      {
+        "id": "QuickDivider",
+        "endpointAuthority": "figma-n",
+        "curve": "shared-actor-ease-out",
+        "sourceRectVp": { "x": 23.104, "y": 532.891, "width": 262, "height": 1 },
+        "targetRectVp": { "x": 23, "y": 276.98, "width": 316, "height": 1 }
+      },
+      {
+        "id": "FontHeader",
+        "endpointAuthority": "figma-n",
+        "curve": "shared-actor-ease-out",
+        "sourceRectVp": { "x": 23.104, "y": 536.891, "width": 262, "height": 10 },
+        "targetRectVp": { "x": 25, "y": 287.98, "width": 312, "height": 20 }
+      },
+      {
+        "id": "Font0",
+        "endpointAuthority": "full-static-design-correction",
+        "curve": "shared-actor-ease-out",
+        "sourceRectVp": { "x": 23.104, "y": 549.891, "width": 62.5, "height": 27 },
+        "targetRectVp": { "x": 24, "y": 307.98, "width": 73, "height": 30 }
+      },
+      {
+        "id": "Font1",
+        "endpointAuthority": "full-static-design-correction",
+        "curve": "shared-actor-ease-out",
+        "sourceRectVp": { "x": 89.604, "y": 549.891, "width": 62.5, "height": 27 },
+        "targetRectVp": { "x": 105, "y": 307.98, "width": 73, "height": 30 }
+      },
+      {
+        "id": "Font2",
+        "endpointAuthority": "full-static-design-correction",
+        "curve": "shared-actor-ease-out",
+        "sourceRectVp": { "x": 156.104, "y": 549.891, "width": 62.5, "height": 27 },
+        "targetRectVp": { "x": 186, "y": 307.98, "width": 73, "height": 30 }
+      },
+      {
+        "id": "Font3",
+        "endpointAuthority": "full-static-design-correction",
+        "curve": "shared-actor-ease-out",
+        "sourceRectVp": { "x": 222.604, "y": 549.891, "width": 62.5, "height": 27 },
+        "targetRectVp": { "x": 267, "y": 307.98, "width": 73, "height": 30 }
+      },
+      {
+        "id": "Font4",
+        "endpointAuthority": "full-static-design-correction",
+        "curve": "shared-actor-ease-out",
+        "sourceRectVp": { "x": 23.104, "y": 580.891, "width": 62.5, "height": 27 },
+        "targetRectVp": { "x": 24, "y": 345.98, "width": 73, "height": 30 }
+      },
+      {
+        "id": "Font5",
+        "endpointAuthority": "full-static-design-correction",
+        "curve": "shared-actor-ease-out",
+        "sourceRectVp": { "x": 89.604, "y": 580.891, "width": 62.5, "height": 27 },
+        "targetRectVp": { "x": 105, "y": 345.98, "width": 73, "height": 30 }
+      },
+      {
+        "id": "Font6",
+        "endpointAuthority": "full-static-design-correction",
+        "curve": "shared-actor-ease-out",
+        "sourceRectVp": { "x": 156.104, "y": 580.891, "width": 62.5, "height": 27 },
+        "targetRectVp": { "x": 186, "y": 345.98, "width": 73, "height": 30 }
+      },
+      {
+        "id": "Font7",
+        "endpointAuthority": "full-static-design-correction",
+        "curve": "shared-actor-ease-out",
+        "sourceRectVp": { "x": 222.604, "y": 580.891, "width": 62.5, "height": 27 },
+        "targetRectVp": { "x": 267, "y": 345.98, "width": 73, "height": 30 }
+      }
+    ],
+    "fullOnlyReveal": [
+      { "id": "ContentSurface", "startExpansion": 0.304762, "endExpansion": 0.609524 },
+      { "id": "Header", "startExpansion": 0.347619, "endExpansion": 0.738095 },
+      { "id": "ThemeActions", "startExpansion": 0.347619, "endExpansion": 0.652381 },
+      { "id": "FontImport", "startExpansion": 0.416667, "endExpansion": 0.738095 },
+      { "id": "Typography", "startExpansion": 0.609524, "endExpansion": 1 }
+    ]
+  },
+  "profiles": {
+    "N": {
+      "authority": "figma-tracks-with-product-time-normalization",
+      "reviewDurationMs": 1800,
+      "reviewLoopMode": "loop",
+      "activeReviewWindowMs": [200, 1350],
+      "productDurationMs": 420,
+      "actorCount": 29,
+      "mandatoryProductSamplesMs": [0, 128, 146, 175, 183, 256, 274, 310, 329, 420],
+      "actors": [
+        {
+          "id": "brightnessRail",
+          "nodeId": "1532:1312",
+          "fallbackNodeId": "1023:18606",
+          "figmaName": "BrightnessRail · fixed screen position",
+          "tracks": [
+            { "property": "opacity", "activeReviewMs": [700, 1350], "productMs": [183, 420], "from": 1, "to": 0, "easing": "ease-out" },
+            { "property": "blur", "unit": "px", "activeReviewMs": [700, 1350], "productMs": [183, 420], "from": 0, "to": 12, "easing": "ease-out" },
+            { "property": "translateY", "unit": "px", "activeReviewMs": [700, 1350], "productMs": [183, 420], "from": 0, "to": 15, "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "moduleNav",
+          "nodeId": "1532:1313",
+          "fallbackNodeId": "1023:17734",
+          "figmaName": "ModuleNav · fixed screen position",
+          "tracks": [
+            { "property": "opacity", "activeReviewMs": [700, 1350], "productMs": [183, 420], "from": 1, "to": 0, "easing": "ease-out" },
+            { "property": "blur", "unit": "px", "activeReviewMs": [700, 1350], "productMs": [183, 420], "from": 0, "to": 12, "easing": "ease-out" },
+            { "property": "translateY", "unit": "px", "activeReviewMs": [700, 1350], "productMs": [183, 420], "from": 0, "to": 20, "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "morphStage",
+          "nodeId": "1532:1049",
+          "figmaName": "MorphStage · Appearance · expand + same-position blur",
+          "tracks": [
+            { "property": "height", "unit": "px", "activeReviewMs": [200, 1350], "productMs": [0, 420], "from": 330, "to": 736, "easing": "ease-out" },
+            { "property": "translateY", "unit": "px", "activeReviewMs": [200, 1350], "productMs": [0, 420], "from": 406, "to": 0, "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "contentSurface",
+          "nodeId": "1532:1051",
+          "fallbackNodeId": "772:2083",
+          "figmaName": "Reader/Full/ContentSurface",
+          "tracks": [
+            { "property": "opacity", "activeReviewMs": [550, 900], "productMs": [128, 256], "from": 0, "to": 1, "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "appearanceContent",
+          "nodeId": "1561:9622",
+          "fallbackNodeId": "1082:235",
+          "figmaName": "Reader 2/Full/AppearanceContent",
+          "tracks": [
+            { "property": "opacity", "activeReviewMs": [600, 900], "productMs": [146, 256], "from": 0, "to": 1, "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "themeLibrary",
+          "nodeId": "I1561:9622;1082:236",
+          "fallbackNodeId": "1050:10522",
+          "figmaName": "Reader 2/Full/Appearance/ThemeLibrary",
+          "tracks": [
+            { "property": "opacity", "activeReviewMs": [600, 950], "productMs": [146, 274], "from": 0, "to": 1, "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "fontLibrary",
+          "nodeId": "I1561:9622;1082:238",
+          "fallbackNodeId": "1081:13",
+          "figmaName": "Reader 2/Full/Appearance/FontLibrary",
+          "tracks": [
+            { "property": "opacity", "activeReviewMs": [680, 1050], "productMs": [175, 310], "from": 0, "to": 1, "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "typography",
+          "nodeId": "I1561:9622;1082:237",
+          "fallbackNodeId": "1150:10317",
+          "figmaName": "Reader/Full/Appearance/Typography",
+          "tracks": [
+            { "property": "opacity", "activeReviewMs": [900, 1350], "productMs": [256, 420], "from": 0, "to": 1, "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "fullHeader",
+          "nodeId": "1532:1053",
+          "fallbackNodeId": "772:2075",
+          "figmaName": "Reader/Full/Header",
+          "tracks": [
+            { "property": "opacity", "activeReviewMs": [600, 1050], "productMs": [146, 310], "from": 0, "to": 1, "easing": "ease-out" },
+            { "property": "blur", "unit": "px", "activeReviewMs": [600, 1050], "productMs": [146, 310], "from": 8, "to": 0, "easing": "ease-out" },
+            { "property": "translateY", "unit": "px", "activeReviewMs": [600, 1050], "productMs": [146, 310], "from": -12, "to": 0, "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "quickMorph",
+          "nodeId": "1539:702",
+          "figmaName": "QuickMorph · element-level expansion",
+          "tracks": [
+            { "property": "height", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": 190, "to": 666, "easing": "ease-out" },
+            { "property": "width", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": 286, "to": 338, "easing": "ease-out" },
+            { "property": "translate", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": [-0.896, -28.007], "to": [0, 0], "easing": "ease-out" },
+            { "property": "opacity", "activeReviewMs": [600, 1100], "productMs": [146, 329], "from": 1, "to": 0, "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "themeHeader",
+          "nodeId": "1539:754",
+          "fallbackNodeId": "1023:17951",
+          "figmaName": "Header",
+          "targetGeometryVp": { "x": 12, "y": 20, "width": 312, "height": 20 },
+          "tracks": [
+            { "property": "height", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": 15.898, "to": 20, "easing": "ease-out" },
+            { "property": "width", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": 262, "to": 312, "easing": "ease-out" },
+            { "property": "translate", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": [-1, -5], "to": [0, 0], "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "themeDay",
+          "nodeId": "1539:775",
+          "fallbackNodeId": "1023:17825",
+          "figmaName": "Day",
+          "targetGeometryVp": { "x": 12, "y": 42.39, "width": 73.5, "height": 58.8 },
+          "tracks": [
+            { "property": "height", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": 24, "to": 58.8, "easing": "ease-out" },
+            { "property": "width", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": 62.5, "to": 73.5, "easing": "ease-out" },
+            { "property": "translate", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": [-1, -8.492], "to": [0, 0], "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "themeWarm",
+          "nodeId": "1539:776",
+          "fallbackNodeId": "1023:17829",
+          "figmaName": "Warm",
+          "targetGeometryVp": { "x": 91.5, "y": 42.39, "width": 73.5, "height": 58.8 },
+          "tracks": [
+            { "property": "height", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": 24, "to": 58.8, "easing": "ease-out" },
+            { "property": "width", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": 62.5, "to": 73.5, "easing": "ease-out" },
+            { "property": "translate", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": [-14, -8.492], "to": [0, 0], "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "themeNight",
+          "nodeId": "1539:777",
+          "fallbackNodeId": "1023:17835",
+          "figmaName": "Night",
+          "targetGeometryVp": { "x": 171, "y": 42.39, "width": 73.5, "height": 58.8 },
+          "tracks": [
+            { "property": "height", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": 24, "to": 58.8, "easing": "ease-out" },
+            { "property": "width", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": 62.5, "to": 73.5, "easing": "ease-out" },
+            { "property": "translate", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": [-27, -8.492], "to": [0, 0], "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "themeWarmNight",
+          "nodeId": "1539:778",
+          "fallbackNodeId": "1023:17841",
+          "figmaName": "WarmNight",
+          "targetGeometryVp": { "x": 250.5, "y": 42.39, "width": 73.5, "height": 58.8 },
+          "tracks": [
+            { "property": "height", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": 24, "to": 58.8, "easing": "ease-out" },
+            { "property": "width", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": 62.5, "to": 73.5, "easing": "ease-out" },
+            { "property": "translate", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": [-40, -8.492], "to": [0, 0], "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "themePaperActive",
+          "nodeId": "1539:779",
+          "fallbackNodeId": "1023:17854",
+          "figmaName": "Paper / Active",
+          "targetGeometryVp": { "x": 12, "y": 107.19, "width": 73.5, "height": 58.8 },
+          "tracks": [
+            { "property": "height", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": 24, "to": 58.8, "easing": "ease-out" },
+            { "property": "width", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": 62.5, "to": 73.5, "easing": "ease-out" },
+            { "property": "translate", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": [-1, -45.292], "to": [0, 0], "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "themeGreen",
+          "nodeId": "1539:780",
+          "fallbackNodeId": "1023:17861",
+          "figmaName": "Green",
+          "targetGeometryVp": { "x": 91.5, "y": 107.19, "width": 73.5, "height": 58.8 },
+          "tracks": [
+            { "property": "height", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": 24, "to": 58.8, "easing": "ease-out" },
+            { "property": "width", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": 62.5, "to": 73.5, "easing": "ease-out" },
+            { "property": "translate", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": [-14, -45.292], "to": [0, 0], "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "themePaperNight",
+          "nodeId": "1539:781",
+          "fallbackNodeId": "1023:17875",
+          "figmaName": "PaperNight",
+          "targetGeometryVp": { "x": 171, "y": 107.19, "width": 73.5, "height": 58.8 },
+          "tracks": [
+            { "property": "height", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": 24, "to": 58.8, "easing": "ease-out" },
+            { "property": "width", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": 62.5, "to": 73.5, "easing": "ease-out" },
+            { "property": "translate", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": [-27, -45.292], "to": [0, 0], "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "themeGreenNight",
+          "nodeId": "1539:782",
+          "fallbackNodeId": "1023:17889",
+          "figmaName": "GreenNight",
+          "targetGeometryVp": { "x": 250.5, "y": 107.19, "width": 73.5, "height": 58.8 },
+          "tracks": [
+            { "property": "height", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": 24, "to": 58.8, "easing": "ease-out" },
+            { "property": "width", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": 62.5, "to": 73.5, "easing": "ease-out" },
+            { "property": "translate", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": [-40, -45.292], "to": [0, 0], "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "sectionDivider",
+          "nodeId": "1539:792",
+          "figmaName": "Section divider",
+          "targetGeometryVp": { "x": 10, "y": 219.98, "width": 316, "height": 1 },
+          "tracks": [
+            { "property": "width", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": 262, "to": 316, "easing": "ease-out" },
+            { "property": "translate", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": [1, -122.082], "to": [0, 0], "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "fontHeader",
+          "nodeId": "1539:793",
+          "fallbackNodeId": "1023:17954",
+          "figmaName": "Header",
+          "targetGeometryVp": { "x": 12, "y": 230.98, "width": 312, "height": 20 },
+          "tracks": [
+            { "property": "height", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": 10, "to": 20, "easing": "ease-out" },
+            { "property": "width", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": 262, "to": 312, "easing": "ease-out" },
+            { "property": "translate", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": [-1, -129.082], "to": [0, 0], "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "fontSystem",
+          "nodeId": "1539:821",
+          "fallbackNodeId": "1023:17904",
+          "figmaName": "System",
+          "targetGeometryVp": { "x": 37, "y": 253.38, "width": 62.5, "height": 27 },
+          "staticSizeVp": [62.5, 27],
+          "tracks": [
+            { "property": "translate", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": [-26, -138.482], "to": [0, 0], "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "fontSerifActive",
+          "nodeId": "1539:822",
+          "fallbackNodeId": "1023:17911",
+          "figmaName": "Serif / Active",
+          "targetGeometryVp": { "x": 103.5, "y": 253.38, "width": 62.5, "height": 27 },
+          "staticSizeVp": [62.5, 27],
+          "tracks": [
+            { "property": "translate", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": [-26, -138.482], "to": [0, 0], "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "fontSans",
+          "nodeId": "1539:823",
+          "fallbackNodeId": "1023:17914",
+          "figmaName": "Sans",
+          "targetGeometryVp": { "x": 170, "y": 253.38, "width": 62.5, "height": 27 },
+          "staticSizeVp": [62.5, 27],
+          "tracks": [
+            { "property": "translate", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": [-26, -138.482], "to": [0, 0], "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "fontKai",
+          "nodeId": "1539:824",
+          "fallbackNodeId": "1023:17920",
+          "figmaName": "Kai",
+          "targetGeometryVp": { "x": 236.5, "y": 253.38, "width": 62.5, "height": 27 },
+          "staticSizeVp": [62.5, 27],
+          "tracks": [
+            { "property": "translate", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": [-26, -138.482], "to": [0, 0], "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "fontFangSong",
+          "nodeId": "1539:825",
+          "fallbackNodeId": "1023:17926",
+          "figmaName": "FangSong",
+          "targetGeometryVp": { "x": 37, "y": 284.38, "width": 62.5, "height": 27 },
+          "staticSizeVp": [62.5, 27],
+          "tracks": [
+            { "property": "translate", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": [-26, -138.482], "to": [0, 0], "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "fontMono",
+          "nodeId": "1539:826",
+          "fallbackNodeId": "1023:17932",
+          "figmaName": "Mono",
+          "targetGeometryVp": { "x": 103.5, "y": 284.38, "width": 62.5, "height": 27 },
+          "staticSizeVp": [62.5, 27],
+          "tracks": [
+            { "property": "translate", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": [-26, -138.482], "to": [0, 0], "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "fontSourceHanSerif",
+          "nodeId": "1539:827",
+          "fallbackNodeId": "1023:17938",
+          "figmaName": "SourceHanSerif",
+          "targetGeometryVp": { "x": 170, "y": 284.38, "width": 62.5, "height": 27 },
+          "staticSizeVp": [62.5, 27],
+          "tracks": [
+            { "property": "translate", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": [-26, -138.482], "to": [0, 0], "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "fontLXGWWenKai",
+          "nodeId": "1539:828",
+          "fallbackNodeId": "1023:17944",
+          "figmaName": "LXGWWenKai",
+          "targetGeometryVp": { "x": 236.5, "y": 284.38, "width": 62.5, "height": 27 },
+          "staticSizeVp": [62.5, 27],
+          "tracks": [
+            { "property": "translate", "unit": "px", "activeReviewMs": [200, 700], "productMs": [0, 183], "from": [-26, -138.482], "to": [0, 0], "easing": "ease-out" }
+          ]
+        }
+      ]
+    },
+    "O": {
+      "authority": "figma-tracks-with-product-time-normalization",
+      "reviewDurationMs": 4000,
+      "reviewLoopMode": "loop",
+      "activeReviewWindowMs": [600, 2400],
+      "productDurationMs": 360,
+      "actorCount": 3,
+      "mandatoryProductSamplesMs": [0, 10, 150, 160, 300, 360],
+      "actors": [
+        {
+          "id": "morphShell",
+          "nodeId": "1505:18390",
+          "fallbackNodeId": "770:5329",
+          "figmaName": "MorphShell · 界面 · 330↔736 · bottom anchored",
+          "tracks": [
+            { "property": "translateY", "unit": "px", "activeReviewMs": [600, 2400], "productMs": [0, 360], "from": 0, "to": 203, "easing": "ease-in-out" },
+            { "property": "scaleY", "activeReviewMs": [600, 2400], "productMs": [0, 360], "from": 1, "to": 0.448, "easing": "ease-in-out" }
+          ]
+        },
+        {
+          "id": "quickDock",
+          "nodeId": "1505:18392",
+          "fallbackNodeId": "1023:17973",
+          "figmaName": "QuickDock · incoming",
+          "tracks": [
+            { "property": "opacity", "activeReviewMs": [1350, 2100], "productMs": [150, 300], "from": 0, "to": 1, "easing": "ease-out" },
+            { "property": "translateY", "unit": "px", "activeReviewMs": [1350, 2100], "productMs": [150, 300], "from": 18, "to": 0, "easing": "ease-out" }
+          ]
+        },
+        {
+          "id": "fullPanel",
+          "nodeId": "1505:18497",
+          "fallbackNodeId": "1023:18284",
+          "figmaName": "FullPanel · outgoing",
+          "tracks": [
+            { "property": "opacity", "activeReviewMs": [650, 1400], "productMs": [10, 160], "from": 1, "to": 0, "easing": "ease-in-out" },
+            { "property": "translateY", "unit": "px", "activeReviewMs": [650, 1400], "productMs": [10, 160], "from": 0, "to": 18, "easing": "ease-in-out" }
+          ]
+        }
+      ]
+    }
+  },
+  "productSupplement": {
+    "authority": "reader-product-contract",
+    "notAuthoredByFigma": true,
+    "directManipulation": {
+      "input": "persistent-grabber-raw-touch",
+      "dragSlopVp": 8,
+      "hitTargetVp": [72, 44],
+      "visibleGrabberVp": [42, 4],
+      "physicalTravelVp": 406,
+      "contentProgressClamped": true,
+      "trajectoryRecoveredByInverseShellCurve": false,
+      "actorSamplingUsesPhysicalExpansion": true
+    },
+    "release": {
+      "velocityThresholdVpPerSecond": 400,
+      "projectionHorizonMs": 120,
+      "projectedExpansionThreshold": 0.5,
+      "settleDurationRangeMs": [90, 420],
+      "mainProgressOvershoot": false
+    },
+    "interrupt": {
+      "settleAndElasticRegrabbable": true,
+      "staleFrameInvalidation": "epoch",
+      "commitStableEndpointOnly": true,
+      "targetDirectionSelectsClock": true
+    },
+    "elastic": {
+      "enabledForGestureReleaseOnly": true,
+      "maxOffsetVp": 4,
+      "appliesTo": ["shell", "grabber"],
+      "neverAppliesToFigmaActors": true
+    },
+    "timeScale": {
+      "appliesToWholeProfile": true,
+      "preservesNormalizedActorBoundaries": true,
+      "verificationValues": [0.75, 1, 1.25, 1.5]
+    },
+    "reducedMotion": {
+      "directDragStillFollowsFinger": true,
+      "releaseSnapsToEndpoint": true,
+      "secondaryBlurStaggerElasticDisabled": true
+    }
+  }
+}
