@@ -712,8 +712,8 @@ bool BookTurnHost::ProcessSettlementFrame(float frameSeconds)
     const float width = std::max(1.0F, liveInput_.width);
     liveInput_.edge.x = width * xNorm;
     liveInput_.overrideTheta = true;
-    liveInput_.settledTheta = settlementStartTheta_ *
-        (1.0F - Clamp(settlementElapsed_ / kTiltZeroSeconds, 0.0F, 1.0F));
+    liveInput_.settledTheta = SettleThetaAt(settlementStartTheta_, settlementElapsed_,
+        settlementDuration_);
     liveInput_.radiusScale = scale;
     const std::chrono::steady_clock::time_point solveStart = std::chrono::steady_clock::now();
     pose_ = BookTurnSolver::Solve(liveInput_, &pose_);

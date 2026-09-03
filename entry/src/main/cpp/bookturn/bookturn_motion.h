@@ -25,7 +25,6 @@ constexpr float kCatchLockVp = 4.0F;
 constexpr int64_t kPresentationDelayNs = 24'000'000;
 constexpr float kCompleteSeconds = 0.600F;
 constexpr float kSettleMinSeconds = 0.240F;
-constexpr float kTiltZeroSeconds = 0.080F;
 
 // Raw gesture sample. No edge fields: the edge is native-owned state.
 struct BookTurnSample {
@@ -97,6 +96,12 @@ float SettleDurationSeconds(float tau0, Direction direction, bool commit);
 // reversal); ease-out tail for the click/auto path.
 float SettleTauAt(float tau0, float targetTau, float elapsedSeconds, float durationSeconds,
     bool easeOut);
+
+// Release takeover keeps the exact gesture-end tilt on its first frame, then
+// removes it over the same duration as the remaining tau settlement. A cubic
+// smoothstep gives zero angular velocity at both boundaries, avoiding the old
+// 80ms posture snap without changing the horizontal settlement schedule.
+float SettleThetaAt(float theta0, float elapsedSeconds, float durationSeconds);
 
 // §7.3 tau_swap decision (shared by the host and the 13.1 INV-2 gate scan):
 // only a NEXT commit may swap early — the sheet passes through a thin spine

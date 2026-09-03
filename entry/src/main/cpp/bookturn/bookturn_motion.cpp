@@ -180,6 +180,14 @@ float SettleTauAt(float tau0, float targetTau, float elapsedSeconds, float durat
     return tau0 + (targetTau - tau0) * shaped;
 }
 
+float SettleThetaAt(float theta0, float elapsedSeconds, float durationSeconds)
+{
+    const float progress = durationSeconds > 0.0F ?
+        Clamp(elapsedSeconds / durationSeconds, 0.0F, 1.0F) : 1.0F;
+    const float shaped = progress * progress * (3.0F - 2.0F * progress);
+    return theta0 * (1.0F - shaped);
+}
+
 bool SettlementSwapShouldFire(bool commit, Direction direction, float tau,
     const BookTurnPose& pose)
 {

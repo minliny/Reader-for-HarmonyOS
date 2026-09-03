@@ -36,6 +36,7 @@ using reader::bookturn::RecordChaseSample;
 using reader::bookturn::ResetChase;
 using reader::bookturn::SettleDurationSeconds;
 using reader::bookturn::SettleTauAt;
+using reader::bookturn::SettleThetaAt;
 using reader::bookturn::SettleTargetTau;
 using reader::bookturn::SettlementSwapShouldFire;
 
@@ -420,6 +421,32 @@ void TestSettleTauAt()
     CheckNear("tau/zero-duration", SettleTauAt(0.3F, 0.0F, 0.0F, 0.0F, false), 0.0F, 1e-6);
 }
 
+void TestSettleThetaAt()
+{
+    constexpr float theta0 = 1.0F;
+    constexpr float duration = 0.240F;
+    CheckNear("theta/start-continuous", SettleThetaAt(theta0, 0.0F, duration), theta0, 1e-6);
+    CheckNear("theta/smooth-mid", SettleThetaAt(theta0, 0.120F, duration), 0.5F, 1e-6);
+    CheckNear("theta/end-zero", SettleThetaAt(theta0, duration, duration), 0.0F, 1e-6);
+    CheckNear("theta/past-end-zero", SettleThetaAt(theta0, 1.0F, duration), 0.0F, 1e-6);
+    CheckNear("theta/zero-duration", SettleThetaAt(theta0, 0.0F, 0.0F), 0.0F, 1e-6);
+
+    // Regression: the former fixed 80ms window had already flattened the
+    // page here. At the shortest legal settlement, most of the release angle
+    // must still remain after 80ms so takeover reads as continuous.
+    CheckNear("theta/old-80ms-retains-posture", SettleThetaAt(theta0, 0.080F, duration),
+        20.0F / 27.0F, 1e-6);
+
+    float previousMagnitude = std::abs(theta0);
+    for (int frame = 1; frame <= 24; ++frame) {
+        const float theta = SettleThetaAt(-theta0, duration * frame / 24.0F, duration);
+        CheckTrue(theta <= 1e-6F, "theta/sign-preserved", "negative tilt must not flip sign");
+        CheckTrue(std::abs(theta) <= previousMagnitude + 1e-6F, "theta/monotone-magnitude",
+            "settlement tilt magnitude must decrease monotonically");
+        previousMagnitude = std::abs(theta);
+    }
+}
+
 void TestSwapCoverageGate()
 {
     // Stage-geometry sanity for SheetCoverage itself: the canonical stage
@@ -527,6 +554,7 @@ int main()
     TestSparseSamplePresentation();
     TestSettleTargetsAndDurations();
     TestSettleTauAt();
+    TestSettleThetaAt();
     TestSwapCoverageGate();
     std::printf("bookturn_motion_test: %d checks, %d failures\n", g_checks, g_fails);
     return g_fails == 0 ? 0 : 1;
