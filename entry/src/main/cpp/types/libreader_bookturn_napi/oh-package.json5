@@ -1,0 +1,6 @@
+{
+  "name": "libreader_bookturn_napi.so",
+  "types": "./Index.d.ts",
+  "version": "1.0.0",
+  "description": "Reader book-turn presentation-only native bridge"
+}

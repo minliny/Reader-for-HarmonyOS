@@ -1,0 +1,33 @@
+{
+  "bookSourceUrl": "http://127.0.0.1:18083#reading-image-source",
+  "bookSourceName": "Reader 正文图片验收源",
+  "bookSourceGroup": "Reader Acceptance",
+  "bookSourceType": 0,
+  "enabled": true,
+  "enabledExplore": false,
+  "enabledCookieJar": true,
+  "header": {
+    "Referer": "http://127.0.0.1:18083/reader",
+    "X-Reader-Image": "allowed"
+  },
+  "searchUrl": "http://127.0.0.1:18083/search?key={{key}}",
+  "ruleSearch": {
+    "bookList": "li.book",
+    "name": ".name@text",
+    "author": ".author@text",
+    "bookUrl": ".detail@href",
+    "checkKeyWord": "图片验收"
+  },
+  "ruleBookInfo": {
+    "name": "h1@text",
+    "tocUrl": ".toc@href"
+  },
+  "ruleToc": {
+    "chapterList": "ol.toc li",
+    "chapterName": "a@text",
+    "chapterUrl": "a@href"
+  },
+  "ruleContent": {
+    "content": ".content@html"
+  }
+}
