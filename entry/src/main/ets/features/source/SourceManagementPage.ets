@@ -319,7 +319,7 @@ export struct SourceManagementPage {
   @Builder
   private groupFilter() {
     Row() {
-      Image($r('app.media.directory_directory')).width(15).height(15);
+      Image($r('app.media.source_group_folder')).width(15).height(15);
       Text('分组')
         .margin({ left: 12 })
         .fontFamily('ReaderNotoSansSC')

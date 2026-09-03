@@ -32,6 +32,19 @@ assert.match(page, /onPreviousPage: \(\) => void/);
 assert.match(page, /onNextPage: \(\) => void/);
 assert.match(page, /onTap: \(\): void => this\.onRefresh\(\)/);
 assert.match(page, /点击切换书源/);
+for (const asset of [
+  'discover_refresh',
+  'discover_source_stack',
+  'discover_source_chevron',
+  'discover_filter',
+  'discover_filter_chevron',
+  'discover_apply',
+]) {
+  assert.ok(page.includes(`app.media.${asset}`), `Discover must use Figma-specific icon ${asset}`);
+}
+for (const alias of ['rss_refresh', 'rss_source', 'bookshelf_filter', 'reader_chevron_right', 'import_success']) {
+  assert.ok(!page.includes(`app.media.${alias}`), `Discover must not reuse unrelated icon ${alias}`);
+}
 assert.match(index, /getDiscoverOrchestrator\(\)\.open\(\)/);
 assert.match(index, /getDiscoverOrchestrator\(\)\.selectKind\(index\)/);
 assert.doesNotMatch(index, /private async loadDiscover/);

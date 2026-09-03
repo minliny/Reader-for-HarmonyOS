@@ -265,13 +265,13 @@ export struct RssSubscriptionManagementPage {
   @Builder
   private actionBar(subscriptionId: string) {
     Row() {
-      this.actionTarget('查看文章', $r('app.media.rss_view_all'), false, false,
+      this.actionTarget('查看文章', $r('app.media.rss_manage_view_all'), false, false,
         (): void => this.onViewArticles(subscriptionId));
-      this.actionTarget('编辑来源', $r('app.media.rss_edit'), false, true,
+      this.actionTarget('编辑来源', $r('app.media.rss_manage_edit'), false, true,
         (): void => this.onEditSource(subscriptionId));
-      this.actionTarget('立即刷新', $r('app.media.rss_refresh'), false, true,
+      this.actionTarget('立即刷新', $r('app.media.rss_manage_refresh'), false, true,
         (): void => this.onRefresh(subscriptionId));
-      this.actionTarget('删除', $r('app.media.settings_gen_cache'), true, true,
+      this.actionTarget('删除', $r('app.media.rss_manage_delete'), true, true,
         (): void => this.onDelete(subscriptionId));
     }
     .width('100%')
@@ -292,8 +292,7 @@ export struct RssSubscriptionManagementPage {
     Row({ space: 5 }) {
       Image(icon)
         .width(16)
-        .height(16)
-        .fillColor(danger ? TOK_DANGER : TOK_PRIMARY_DARK);
+        .height(16);
       Text(label)
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)

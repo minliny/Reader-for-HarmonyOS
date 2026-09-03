@@ -62,6 +62,13 @@ assert.match(page, /return this\.webdavUrlEdited \? this\.webdavUrl : this\.snap
 assert.match(page, /return this\.webdavUserEdited \? this\.webdavUser : this\.snapshot\.webdavUser/);
 assert.match(page, /return this\.webdavPathEdited \? this\.webdavPath : this\.snapshot\.webdavPath/);
 assert.match(page, /备份加密密码/);
+for (const asset of ['sync_server', 'sync_account', 'sync_password', 'sync_backup_password', 'sync_folder']) {
+  assert.ok(page.includes(`app.media.${asset}`), `WebDAV field must use semantic icon ${asset}`);
+}
+for (const alias of ['bookshelf_rss', 'directory_bookmark', 'directory_bookmark_on',
+  'reader_directory_directory']) {
+  assert.ok(!page.includes(`app.media.${alias}`), `WebDAV must not reuse unrelated icon ${alias}`);
+}
 assert.match(page, /恢复最新备份/);
 assert.match(page, /覆盖本机/);
 assert.match(page, /自动备份（尚未启用）/);

@@ -108,10 +108,10 @@ export struct RssEntryDetailPage {
     }) {
       Row({ space: 6 }) {
         Stack({ alignContent: Alignment.Center }) {
-          Image($r('app.media.rss_bookmark'))
+          Image(this.favoriteState === 'favorited' ?
+            $r('app.media.rss_bookmark_active') : $r('app.media.rss_bookmark'))
             .width(20)
-            .height(20)
-            .fillColor(this.favoriteState === 'favorited' ? TOK_PRIMARY_DARK : TOK_MUTED);
+            .height(20);
         }
         .width(32)
         .height(44)

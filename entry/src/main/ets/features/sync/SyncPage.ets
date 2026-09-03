@@ -178,25 +178,25 @@ export struct SyncPage {
             .fontSize(13)
             .lineHeight(15.6)
             .fontColor(TOK_INK);
-          this.webdavInputRow($r('app.media.bookshelf_rss'), '服务器地址', this.effectiveWebdavUrl(),
+          this.webdavInputRow($r('app.media.sync_server'), '服务器地址', this.effectiveWebdavUrl(),
             'https://dav.example.com/reader/backup', false, (value: string): void => {
               this.webdavUrlEdited = true;
               this.webdavUrl = value;
             });
-          this.webdavInputRow($r('app.media.directory_bookmark'), '账号', this.effectiveWebdavUser(),
+          this.webdavInputRow($r('app.media.sync_account'), '账号', this.effectiveWebdavUser(),
             'reader@example.com', false, (value: string): void => {
               this.webdavUserEdited = true;
               this.webdavUser = value;
             });
-          this.webdavInputRow($r('app.media.directory_bookmark_on'), '密码', this.webdavPass,
+          this.webdavInputRow($r('app.media.sync_password'), '密码', this.webdavPass,
             '••••••••••••', true, (value: string): void => {
               this.webdavPass = value;
             });
-          this.webdavInputRow($r('app.media.directory_bookmark_on'), '备份加密密码', this.backupPass,
+          this.webdavInputRow($r('app.media.sync_backup_password'), '备份加密密码', this.backupPass,
             '与 WebDAV 登录密码分开保存', true, (value: string): void => {
               this.backupPass = value;
             });
-          this.webdavInputRow($r('app.media.reader_directory_directory'), '同步目录', this.effectiveWebdavPath(),
+          this.webdavInputRow($r('app.media.sync_folder'), '同步目录', this.effectiveWebdavPath(),
             '/ReaderBackup/ReaderAndroid', false, (value: string): void => {
               this.webdavPathEdited = true;
               this.webdavPath = value;
@@ -451,7 +451,7 @@ export struct SyncPage {
           .fontColor(TOK_PRIMARY_DARK)
           .textAlign(TextAlign.Start)
           .maxLines(1);
-        Image($r('app.media.reader_chevron_down')).width(12).height(8);
+        Image($r('app.media.sync_scope_chevron')).width(12).height(8);
       }
       .width(86)
       .height(36)

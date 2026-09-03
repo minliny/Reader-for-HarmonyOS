@@ -49,14 +49,17 @@ assert.match(page, /this\.actionTarget\('删除'/);
 assert.match(page, /this\.sourceDocumentAction\('导入 RSS 源'/);
 assert.match(page, /this\.sourceDocumentAction\('导出全部'/);
 
-// Reuse supplied assets; deletion is danger-colored but has no danger background.
+// Each Figma action owns a fixed-color outline asset; runtime tinting is forbidden.
 assert.match(page, /app\.media\.rss_source/);
 assert.match(page, /app\.media\.rss_filter_chevron/);
-assert.match(page, /app\.media\.rss_view_all/);
-assert.match(page, /app\.media\.rss_edit/);
-assert.match(page, /app\.media\.rss_refresh/);
-assert.match(page, /app\.media\.settings_gen_cache/);
-assert.match(page, /danger \? TOK_DANGER : TOK_PRIMARY_DARK/);
+assert.match(page, /app\.media\.rss_manage_view_all/);
+assert.match(page, /app\.media\.rss_manage_edit/);
+assert.match(page, /app\.media\.rss_manage_refresh/);
+assert.match(page, /app\.media\.rss_manage_delete/);
+assert.doesNotMatch(page, /app\.media\.settings_gen_cache/,
+  'the delete action must never regress to the Settings storage glyph');
+assert.doesNotMatch(page, /\.fillColor\(/,
+  'stroke-only RSS actions must use fixed asset variants rather than Image.fillColor');
 assert.doesNotMatch(page, /backgroundColor\(TOK_DANGER\)/);
 assert.doesNotMatch(page, /\.svg['"]/);
 

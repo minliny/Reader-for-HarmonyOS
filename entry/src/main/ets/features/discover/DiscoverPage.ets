@@ -91,7 +91,7 @@ export struct DiscoverPage {
   private homeTopBar() {
     AppTopBar({ title: '发现' }) {
       ReaderIconButton({
-        icon: $r('app.media.rss_refresh'),
+        icon: $r('app.media.discover_refresh'),
         boxSize: 44,
         iconSize: 24,
         radius: 22,
@@ -125,7 +125,7 @@ export struct DiscoverPage {
   private currentSourceCard() {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
       Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.rss_source')).width(20).height(20);
+        Image($r('app.media.discover_source_stack')).width(20).height(20);
       }
       .width(34)
       .height(34)
@@ -158,7 +158,7 @@ export struct DiscoverPage {
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start);
 
-      Image($r('app.media.reader_chevron_right')).width(20).height(20);
+      Image($r('app.media.discover_source_chevron')).width(20).height(20);
     }
     .width('100%')
     .height(58)
@@ -207,7 +207,7 @@ export struct DiscoverPage {
   private filterRow() {
     Row({ space: 7 }) {
       Row() {
-        Image($r('app.media.bookshelf_filter')).width(20).height(20);
+        Image($r('app.media.discover_filter')).width(20).height(20);
         Text('筛选')
           .fontFamily('ReaderInter')
           .fontWeight(900)
@@ -227,7 +227,7 @@ export struct DiscoverPage {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .padding({ left: 7 });
-        Image($r('app.media.reader_chevron_right')).width(20).height(20);
+        Image($r('app.media.discover_filter_chevron')).width(20).height(20);
       }
       .layoutWeight(1)
       .height(34)
@@ -238,7 +238,7 @@ export struct DiscoverPage {
       .borderRadius(8);
 
       Row() {
-        Image($r('app.media.import_success')).width(20).height(20);
+        Image($r('app.media.discover_apply')).width(20).height(20);
         Text('应用')
           .fontFamily('ReaderInter')
           .fontWeight(900)
