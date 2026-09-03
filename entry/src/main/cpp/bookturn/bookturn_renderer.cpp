@@ -41,13 +41,12 @@ void main() {
 }
 )glsl";
 
-// Draw 2: contact shadow (contract 8.3, HUAWEI-measured re-spec 2026-08-30)
-// + dynamic spine shadow pool (contract 8.4), two independent gradients
-// composited per fragment. The contact shadow is a narrow (~3.7%W, peak
+// Draw 2: contact shadow (contract 8.3, HUAWEI-measured re-spec 2026-08-30),
+// the single dynamic shadow (2026-08-30 ruling): a narrow (~3.7%W, peak
 // ~0.11) cast shadow hugging the moving sheet's silhouette on the revealed
 // side; the old page-wide 0.05W/0.42 band (whose d<=0 side painted the whole
-// revealed page at peak) is abolished. The pool anchors at the binding edge
-// and is forbidden from merging with the contact shadow.
+// revealed page at peak) is abolished. The dynamic spine shadow pool
+// (contract 8.4) is abolished in place and must not return.
 constexpr char kBandFragmentShader[] = R"glsl(#version 300 es
 precision highp float;
 in vec2 vUv;
@@ -63,13 +62,8 @@ uniform float uApexDist;
 uniform float uSigmaGrip;
 uniform float uBandWidth;
 uniform float uBandPeak;
-uniform float uPoolPeak;
-uniform float uPoolWidthStart;
-uniform float uPoolWidthEnd;
 // Frozen schedule boundaries from bookturn_solver.h; keep in sync.
 const float HALF_PI = 1.57079632679;
-const float STAGE_FLIP_END = 0.50;
-const float STAGE_ROLL_END = 0.75;
 // Cone radius law, formula-identical to solver ConeRadius: the contact
 // shadow's inner edge must track the curved silhouette of the sheet.
 float coneRadius(vec2 page) {
@@ -92,14 +86,7 @@ void main() {
         float edge = radius * sin(clamp(dFree / max(radius, 0.0001), 0.0, HALF_PI));
         contact = uBandPeak * gate * (1.0 - smoothstep(edge, edge + uBandWidth, d));
     }
-    float pool = 0.0;
-    if (uTau > STAGE_FLIP_END) {
-        float gate = smoothstep(STAGE_FLIP_END, STAGE_FLIP_END + 0.02, uTau);
-        float width = mix(uPoolWidthStart, uPoolWidthEnd, smoothstep(STAGE_ROLL_END, 1.0, uTau));
-        pool = uPoolPeak * gate * (1.0 - smoothstep(0.0, width, vPage.x));
-    }
-    float alpha = 1.0 - (1.0 - contact) * (1.0 - pool);
-    outColor = vec4(0.0, 0.0, 0.0, alpha);
+    outColor = vec4(0.0, 0.0, 0.0, contact);
 }
 )glsl";
 
@@ -281,14 +268,8 @@ constexpr float kFrontStripRatio = 0.035F;
 // the mirrored plate (z=2r) offsets ~5-8%W at mid-screen -- the flipped part
 // reads as a parallel sheet hovering above the page instead of coinciding.
 constexpr float kSheetCameraDistRatio = 4.0F;
-constexpr float kSpinePoolWidthStartRatio = 0.04F;
-constexpr float kSpinePoolWidthEndRatio = 0.10F;
-constexpr float kSpinePoolPeakA = 0.10F;
-constexpr float kSpinePoolPeakB = 0.16F;
-constexpr float kSpinePoolPeakDefault = kSpinePoolPeakB;
 constexpr float kCurlHighlightWidthMinVp = 5.0F;
 constexpr float kCurlHighlightWidthMaxVp = 10.0F;
-static_assert(kSpinePoolPeakA < kSpinePoolPeakB, "A/B pool pair must stay ordered");
 
 uint32_t SourceBytesPerPixel(TextureSourceFormat format)
 {
@@ -567,7 +548,13 @@ bool BookTurnRenderer::InitializeEgl(void* nativeWindow)
     surface_ = eglCreateWindowSurface(display_, config_, reinterpret_cast<EGLNativeWindowType>(nativeWindow),
         nullptr);
     if (surface_ == EGL_NO_SURFACE) return false;
-    return eglMakeCurrent(display_, surface_, surface_, context_) == EGL_TRUE;
+    if (eglMakeCurrent(display_, surface_, surface_, context_) != EGL_TRUE) return false;
+    // Present on swap without the driver-side vsync hold: the display
+    // compositor still paces when the frame becomes visible, and holding the
+    // queued buffer for an extra refresh only adds latency (2026-08-30
+    // real-device frame-pacing diagnosis).
+    eglSwapInterval(display_, 0);
+    return true;
 }
 
 bool BookTurnRenderer::InitializePrograms()
@@ -604,9 +591,6 @@ bool BookTurnRenderer::InitializePrograms()
     bandUniforms_.sigmaGrip = glGetUniformLocation(bandProgram_, "uSigmaGrip");
     bandUniforms_.bandWidth = glGetUniformLocation(bandProgram_, "uBandWidth");
     bandUniforms_.bandPeak = glGetUniformLocation(bandProgram_, "uBandPeak");
-    bandUniforms_.poolPeak = glGetUniformLocation(bandProgram_, "uPoolPeak");
-    bandUniforms_.poolWidthStart = glGetUniformLocation(bandProgram_, "uPoolWidthStart");
-    bandUniforms_.poolWidthEnd = glGetUniformLocation(bandProgram_, "uPoolWidthEnd");
 
     sheetUniforms_.pageSize = glGetUniformLocation(sheetProgram_, "uPageSize");
     sheetUniforms_.axis = glGetUniformLocation(sheetProgram_, "uAxis");
@@ -628,8 +612,7 @@ bool BookTurnRenderer::InitializePrograms()
         bandUniforms_.axis >= 0 && bandUniforms_.tau >= 0 && bandUniforms_.radius >= 0 &&
         bandUniforms_.apexDist >= 0 && bandUniforms_.sigmaGrip >= 0 &&
         bandUniforms_.bandWidth >= 0 &&
-        bandUniforms_.bandPeak >= 0 && bandUniforms_.poolPeak >= 0 &&
-        bandUniforms_.poolWidthStart >= 0 && bandUniforms_.poolWidthEnd >= 0 &&
+        bandUniforms_.bandPeak >= 0 &&
         sheetUniforms_.pageSize >= 0 && sheetUniforms_.axis >= 0 && sheetUniforms_.radius >= 0 &&
         sheetUniforms_.theta >= 0 && sheetUniforms_.apexDist >= 0 && sheetUniforms_.sigmaGrip >= 0 &&
         sheetUniforms_.cameraDist >= 0 &&
@@ -751,8 +734,7 @@ void BookTurnRenderer::DrawBottom(const BookTurnPose& pose, TextureSlot slot)
 void BookTurnRenderer::DrawShadowBand(const BookTurnPose& pose)
 {
     // Contact shadow on the revealed side hugs the sheet's curved silhouette
-    // (per-fragment cone law in the shader); the pool anchors at the binding
-    // edge from STAGE_FLIP_END onward.
+    // (per-fragment cone law in the shader); the sole dynamic shadow.
     glUseProgram(bandProgram_);
     glUniform2f(bandUniforms_.pageSize, pose.width, pose.height);
     glUniform2f(bandUniforms_.normal, pose.normal.x, pose.normal.y);
@@ -764,9 +746,6 @@ void BookTurnRenderer::DrawShadowBand(const BookTurnPose& pose)
     glUniform1f(bandUniforms_.sigmaGrip, pose.sigmaGrip);
     glUniform1f(bandUniforms_.bandWidth, kContactWidthRatio * pose.width);
     glUniform1f(bandUniforms_.bandPeak, kContactPeakAlpha);
-    glUniform1f(bandUniforms_.poolPeak, kSpinePoolPeakDefault);
-    glUniform1f(bandUniforms_.poolWidthStart, kSpinePoolWidthStartRatio * pose.width);
-    glUniform1f(bandUniforms_.poolWidthEnd, kSpinePoolWidthEndRatio * pose.width);
     glBindVertexArray(bottomVao_);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }

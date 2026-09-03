@@ -660,6 +660,11 @@ const READER_BOOK_TURN_COMPONENT_ID = 'reader-book-turn-surface';
 const READER_BOOK_TURN_CURRENT_PAGE_SNAPSHOT_ID = 'reader-book-turn-current-page';
 /** Contract ceiling for one prepared page texture before RGB8 upload. */
 const READER_BOOK_TURN_TEXTURE_MAX_PIXELS = 3_000_000;
+/** Defer for offscreen PREVIOUS/NEXT captures after a commit: just enough to
+ *  move the offscreen builds off the commit frame (~2 display frames). Longer
+ *  defers widen the texture-not-ready window where the next flip is queued
+ *  and then plays on its own after the finger lifts. */
+const READER_BOOK_TURN_SECONDARY_CAPTURE_DELAY_MS = 34;
 const UNICODE_PROBE = 'A😀B';
 /** Stable empty input for the mounted-but-hidden Reader Control shell. */
 const EMPTY_CONTROL_DIRECTORY_ENTRIES: LocalReadingTocEntry[] = [];
@@ -904,7 +909,8 @@ export struct ReadingExperience {
     new BookTurnPresentationSession(READER_BOOK_TURN_COMPONENT_ID);
   private bookTurnMotion: BookTurnMotionState | undefined = undefined;
   private bookTurnTextureCaptureGeneration: number = 0;
-  private bookTurnTextureCaptureScheduled: boolean = false;
+  private bookTurnSecondaryCaptureScheduled: boolean = false;
+  private bookTurnSecondaryCaptureTimer: number = -1;
   private bookTurnCapturedPreviousIdentity: string = '';
   private bookTurnCapturedCurrentIdentity: string = '';
   private bookTurnCapturedNextIdentity: string = '';
@@ -1048,7 +1054,11 @@ export struct ReadingExperience {
     this.bookTurnRuntimeFailed = false;
     this.bookTurnAwaitingSlotCommit = false;
     this.bookTurnTextureCaptureGeneration += 1;
-    this.bookTurnTextureCaptureScheduled = false;
+    if (this.bookTurnSecondaryCaptureTimer >= 0) {
+      clearTimeout(this.bookTurnSecondaryCaptureTimer);
+      this.bookTurnSecondaryCaptureTimer = -1;
+    }
+    this.bookTurnSecondaryCaptureScheduled = false;
     this.clearBookTurnCapturedIdentities();
     this.bookTurnSession.setEventListener((event: BookTurnNativeEvent): void =>
       this.onBookTurnNativeEvent(event));
@@ -1121,7 +1131,6 @@ export struct ReadingExperience {
     this.invalidatePageTurnRuntime(true);
     this.bookTurnSession.setEventListener((_event: BookTurnNativeEvent): void => {});
     this.bookTurnTextureCaptureGeneration += 1;
-    this.bookTurnTextureCaptureScheduled = false;
     this.bookTurnMotion = undefined;
     this.clearDeferredPageTurnWork();
     this.restoreInitialWindowBrightness();
@@ -1605,19 +1614,46 @@ export struct ReadingExperience {
     this.finishPageTurnRollback(generation);
   }
 
-  private scheduleBookTurnTextureRefresh(): void {
+  private scheduleBookTurnTextureRefresh(immediate: boolean = false): void {
     if (!this.mounted || !this.usesBookTurnSimulation()) return;
     this.bookTurnTextureCaptureGeneration += 1;
-    if (this.bookTurnTextureCaptureScheduled) return;
-    this.bookTurnTextureCaptureScheduled = true;
-    this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
-      this.bookTurnTextureCaptureScheduled = false;
-      const generation = this.bookTurnTextureCaptureGeneration;
-      void this.refreshBookTurnTextures(generation);
-    }));
+    this.scheduleBookTurnSecondaryTextureRefresh(immediate);
   }
 
-  private async refreshBookTurnTextures(generation: number): Promise<void> {
+  // All three captures — CURRENT first, then PREVIOUS/NEXT — run on this short
+  // timeout, never synchronously with a commit. A CURRENT capture racing the
+  // promote would snapshot the last rendered frame and pair the OLD page
+  // pixels with the NEW page identity: the upload flashes the GL surface back
+  // to the previous page until the next identity change. By the timeout fires
+  // the committed page has painted, so the snapshot is always the new page.
+  // The timer reads the capture generation at fire time, so a re-armed bump
+  // always wins and a stale timer can never upload for an older generation.
+  // The immediate channel is for the just-released-gesture path: the capture
+  // can only start after the finger lifts anyway (the idle-input guard), so
+  // waiting another timer tick there just widens the texture-not-ready window
+  // that turns the next swipe into a queued, later auto-played turn.
+  private scheduleBookTurnSecondaryTextureRefresh(immediate: boolean = false): void {
+    if (!this.mounted || !this.usesBookTurnSimulation()) return;
+    if (immediate) {
+      if (this.bookTurnSecondaryCaptureTimer >= 0) {
+        clearTimeout(this.bookTurnSecondaryCaptureTimer);
+        this.bookTurnSecondaryCaptureTimer = -1;
+      }
+      this.bookTurnSecondaryCaptureScheduled = false;
+      void this.refreshBookTurnSecondaryTextures(this.bookTurnTextureCaptureGeneration);
+      return;
+    }
+    if (this.bookTurnSecondaryCaptureScheduled) return;
+    this.bookTurnSecondaryCaptureScheduled = true;
+    this.bookTurnSecondaryCaptureTimer = setTimeout((): void => {
+      this.bookTurnSecondaryCaptureTimer = -1;
+      this.bookTurnSecondaryCaptureScheduled = false;
+      if (!this.mounted) return;
+      void this.refreshBookTurnSecondaryTextures(this.bookTurnTextureCaptureGeneration);
+    }, READER_BOOK_TURN_SECONDARY_CAPTURE_DELAY_MS);
+  }
+
+  private async refreshBookTurnSecondaryTextures(generation: number): Promise<void> {
     if (generation !== this.bookTurnTextureCaptureGeneration || !this.mounted ||
       !this.usesBookTurnSimulation() || this.bookTurnRuntimeFailed || !this.bookTurnSession.isReady() ||
       this.phase !== 'ready' || this.pageTurnPreparation !== undefined ||
@@ -1625,9 +1661,9 @@ export struct ReadingExperience {
       return;
     }
     const current = this.currentPageTurnRenderPage();
+    if (!await this.captureBookTurnTexture(BOOK_TURN_TEXTURE_CURRENT, current, generation)) return;
     const previous = this.preparedPageTurnRenderPage('previous');
     const next = this.preparedPageTurnRenderPage('next');
-    if (!await this.captureBookTurnTexture(BOOK_TURN_TEXTURE_CURRENT, current, generation)) return;
     if (previous !== undefined &&
       !await this.captureBookTurnTexture(BOOK_TURN_TEXTURE_PREVIOUS, previous, generation)) return;
     if (next !== undefined) {
@@ -1640,7 +1676,12 @@ export struct ReadingExperience {
     page: ReaderPageTurnRenderPage,
     generation: number,
   ): Promise<boolean> {
-    if (this.bookTurnCapturedIdentity(slot) === page.textureIdentity) return true;
+    if (this.bookTurnCapturedIdentity(slot) === page.textureIdentity) {
+      hilog.info(0x5244, 'Reader', 'bt-skip slot=%{public}s',
+        slot === BOOK_TURN_TEXTURE_PREVIOUS ? 'prev'
+          : slot === BOOK_TURN_TEXTURE_CURRENT ? 'cur' : 'next');
+      return true;
+    }
     let pixelMap: image.PixelMap | undefined = undefined;
     let content: ComponentContent<BookTurnTextureBuildInput> | undefined = undefined;
     try {
@@ -1650,6 +1691,10 @@ export struct ReadingExperience {
         // The committed page is already mounted with every body image decoded.
         // Capturing that exact node avoids rebuilding a second image tree and
         // avoids the offscreen 160001 readiness trap on image-bearing pages.
+        // Keep waitUntilRenderFinished false: on a quiet UI it can stall the
+        // capture for seconds and widen the texture-not-ready input window.
+        // The identity short-circuit below is the real guard — after a commit
+        // the promoted identity already matches and this capture is skipped.
         pixelMap = await snapshot.get(READER_BOOK_TURN_CURRENT_PAGE_SNAPSHOT_ID, {
           scale: this.bookTurnTextureSnapshotScale(),
           waitUntilRenderFinished: false,
@@ -1687,6 +1732,9 @@ export struct ReadingExperience {
         this.failBookTurnTextureCapture(slot, generation, 'Native rejected the PixelMap');
         return false;
       }
+      hilog.info(0x5244, 'Reader', 'bt-upload slot=%{public}s',
+        slot === BOOK_TURN_TEXTURE_PREVIOUS ? 'prev'
+          : slot === BOOK_TURN_TEXTURE_CURRENT ? 'cur' : 'next');
       this.setBookTurnCapturedIdentity(slot, page.textureIdentity);
       return true;
     } catch (error) {
@@ -1750,6 +1798,7 @@ export struct ReadingExperience {
   }
 
   private promoteBookTurnCapturedIdentities(direction: ReaderPageTurnDirection | undefined): void {
+    hilog.info(0x5244, 'Reader', 'bt-promote dir=%{public}s', direction ?? 'none');
     if (direction === 'next') {
       this.bookTurnCapturedPreviousIdentity = this.bookTurnCapturedCurrentIdentity;
       this.bookTurnCapturedCurrentIdentity = this.bookTurnCapturedNextIdentity;
@@ -6854,7 +6903,11 @@ export struct ReadingExperience {
     this.bookmarkPageOffsetY = 0;
     this.bookmarkPreviewChanged = false;
     this.bookTurnTextureCaptureGeneration += 1;
-    this.bookTurnTextureCaptureScheduled = false;
+    if (this.bookTurnSecondaryCaptureTimer >= 0) {
+      clearTimeout(this.bookTurnSecondaryCaptureTimer);
+      this.bookTurnSecondaryCaptureTimer = -1;
+    }
+    this.bookTurnSecondaryCaptureScheduled = false;
     this.clearBookTurnCapturedIdentities();
     this.pageTurnRenderRevision += 1;
     if (preparation === undefined && discovery === undefined) {
@@ -7817,7 +7870,7 @@ export struct ReadingExperience {
     if (this.usesBookTurnSimulation() &&
       (prepared === undefined || !this.canStartReaderPageTurn(direction))) {
       this.queuePageTurnPreparation(direction);
-      this.scheduleBookTurnTextureRefresh();
+      this.scheduleBookTurnTextureRefresh(true);
       return { kind: 'preparing' };
     }
     if (prepared !== undefined && this.startPreparedPageTurnSettlement(direction, prepared)) {
