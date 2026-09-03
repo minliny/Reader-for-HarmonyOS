@@ -1,0 +1,48 @@
+[
+  {
+    "bookSourceUrl": "http://10.0.2.2:18084#reading-text-a",
+    "bookSourceName": "Reader 纯文字验收源 A",
+    "bookSourceGroup": "Reader Acceptance",
+    "bookSourceType": 0,
+    "enabled": true,
+    "enabledExplore": false,
+    "searchUrl": "http://10.0.2.2:18084/text/search?key={{key}}",
+    "header": { "X-Reader-Source": "a" },
+    "ruleSearch": {
+      "bookList": "li.book",
+      "name": ".name@text",
+      "author": ".author@text",
+      "bookUrl": ".detail@href"
+    },
+    "ruleBookInfo": { "name": "h1@text", "tocUrl": ".toc@href" },
+    "ruleToc": {
+      "chapterList": "ol.toc li",
+      "chapterName": "a@text",
+      "chapterUrl": "a@href"
+    },
+    "ruleContent": { "content": ".content@html" }
+  },
+  {
+    "bookSourceUrl": "http://10.0.2.2:18084#reading-text-b",
+    "bookSourceName": "Reader 纯文字验收源 B",
+    "bookSourceGroup": "Reader Acceptance",
+    "bookSourceType": 0,
+    "enabled": true,
+    "enabledExplore": false,
+    "searchUrl": "http://10.0.2.2:18084/text/search?key={{key}}",
+    "header": { "X-Reader-Source": "b" },
+    "ruleSearch": {
+      "bookList": "li.book",
+      "name": ".name@text",
+      "author": ".author@text",
+      "bookUrl": ".detail@href"
+    },
+    "ruleBookInfo": { "name": "h1@text", "tocUrl": ".toc@href" },
+    "ruleToc": {
+      "chapterList": "ol.toc li",
+      "chapterName": "a@text",
+      "chapterUrl": "a@href"
+    },
+    "ruleContent": { "content": ".content@html" }
+  }
+]

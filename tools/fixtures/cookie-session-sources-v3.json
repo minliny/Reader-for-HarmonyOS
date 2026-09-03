@@ -1,0 +1,42 @@
+[
+  {
+    "bookSourceName": "VM Cookie 会话 C session-v3",
+    "bookSourceUrl": "http://10.0.2.2:18081#cookie-c-session-v3",
+    "enabledCookieJar": true,
+    "searchUrl": "http://10.0.2.2:18081/c/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "ul.results li.book",
+      "name": "span.name@text",
+      "author": "span.author@text",
+      "bookUrl": "a.detail@href",
+      "checkKeyWord": "Cookie"
+    },
+    "ruleBookInfo": { "name": "h1@text" },
+    "ruleToc": {
+      "chapterList": "ol.toc li",
+      "chapterName": "a@text",
+      "chapterUrl": "a@href"
+    },
+    "ruleContent": { "content": "div.content@html" }
+  },
+  {
+    "bookSourceName": "VM Cookie 隔离 D session-v3",
+    "bookSourceUrl": "http://10.0.2.2:18081#cookie-d-isolation-v3",
+    "enabledCookieJar": true,
+    "searchUrl": "http://10.0.2.2:18081/d/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "ul.results li.book",
+      "name": "span.name@text",
+      "author": "span.author@text",
+      "bookUrl": "a.detail@href",
+      "checkKeyWord": "Cookie"
+    },
+    "ruleBookInfo": { "name": "h1@text" },
+    "ruleToc": {
+      "chapterList": "ol.toc li",
+      "chapterName": "a@text",
+      "chapterUrl": "a@href"
+    },
+    "ruleContent": { "content": "div.content@html" }
+  }
+]

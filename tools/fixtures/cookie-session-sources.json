@@ -1,0 +1,52 @@
+[
+  {
+    "bookSourceName": "Cookie 会话 A",
+    "bookSourceUrl": "http://127.0.0.1:18081#cookie-a",
+    "enabled": true,
+    "enabledCookieJar": true,
+    "searchUrl": "http://127.0.0.1:18081/a/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "ul.results li.book",
+      "name": "span.name@text",
+      "author": "span.author@text",
+      "bookUrl": "a.detail@href",
+      "checkKeyWord": "Cookie"
+    },
+    "ruleBookInfo": {
+      "name": "h1@text"
+    },
+    "ruleToc": {
+      "chapterList": "ol.toc li",
+      "chapterName": "a@text",
+      "chapterUrl": "a@href"
+    },
+    "ruleContent": {
+      "content": "div.content@html"
+    }
+  },
+  {
+    "bookSourceName": "Cookie 隔离 B",
+    "bookSourceUrl": "http://127.0.0.1:18081#cookie-b",
+    "enabled": true,
+    "enabledCookieJar": true,
+    "searchUrl": "http://127.0.0.1:18081/b/search?q={{key}}",
+    "ruleSearch": {
+      "bookList": "ul.results li.book",
+      "name": "span.name@text",
+      "author": "span.author@text",
+      "bookUrl": "a.detail@href",
+      "checkKeyWord": "Cookie"
+    },
+    "ruleBookInfo": {
+      "name": "h1@text"
+    },
+    "ruleToc": {
+      "chapterList": "ol.toc li",
+      "chapterName": "a@text",
+      "chapterUrl": "a@href"
+    },
+    "ruleContent": {
+      "content": "div.content@html"
+    }
+  }
+]
