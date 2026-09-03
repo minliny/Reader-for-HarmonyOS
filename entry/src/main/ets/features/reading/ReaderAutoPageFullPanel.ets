@@ -94,6 +94,7 @@ import {
  */
 @Component
 export struct ReaderAutoPageFullPanel {
+  @Prop morphActorId: string = 'reader-session-morph-fullAutoPagePlayback';
   @Prop isTablet: boolean = false;
   @Prop availableWidth: number = 0;
   @Prop availableHeight: number = 0;
@@ -119,6 +120,8 @@ export struct ReaderAutoPageFullPanel {
     (_minutes: number, _seconds: number): void => {};
   onSpeedChange: (seconds: number) => void = (_seconds: number): void => {};
   onFollowHighlightChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
+  onMorphActorMeasured: (left: number, top: number, width: number, height: number) => void =
+    (_left: number, _top: number, _width: number, _height: number): void => {};
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -305,7 +308,16 @@ export struct ReaderAutoPageFullPanel {
     }
     .width(this.contentWidth())
     .height(READER_AUTO_PAGE_CONTROL_SECTION_HEIGHT)
-    .position({ x: 0, y: 0 });
+    .position({ x: 0, y: 0 })
+    .id(this.morphActorId)
+    .onAreaChange((_oldValue: Area, newValue: Area): void => {
+      this.onMorphActorMeasured(
+        Number(newValue.globalPosition.x),
+        Number(newValue.globalPosition.y),
+        Number(newValue.width),
+        Number(newValue.height),
+      );
+    });
   }
 
   @Builder
@@ -363,7 +375,8 @@ export struct ReaderAutoPageFullPanel {
   private runningButton() {
     Column() {
       Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.reader_auto_full_play'))
+        Image($r(this.status === 'running' ?
+          'app.media.reader_session_pause' : 'app.media.reader_auto_full_play'))
           .width(20)
           .height(20);
       }

@@ -25,6 +25,15 @@ assert.match(fullPanel, /this\.onSeek\(Math\.round\(value\)\)/);
 assert.match(quickPanel, /TTS_MODULE_RATE_SLIDER_WIDTH = 116/);
 assert.match(quickPanel, /TTS_MODULE_RATE_TRACK_HEIGHT = 2/);
 assert.match(quickPanel, /TTS_MODULE_RATE_THUMB_SIZE = 18/);
+assert.match(quickPanel, /Text\(this\.playbackLabel\(\)\)/);
+assert.match(quickPanel,
+  /if \(this\.isActivelySpeaking\(\)\) \{[\s\S]*?Row\(\)\.width\(3\)\.height\(13\)[\s\S]*?reader_tts_play/,
+  'quick TTS control must replace play with pause bars while speaking');
+assert.match(fullPanel,
+  /if \(this\.isActivelySpeaking\(\)\) \{[\s\S]*?Row\(\)\.width\(4\)\.height\(18\)[\s\S]*?reader_tts_play/,
+  'full TTS control must replace play with pause bars while speaking');
+assert.match(quickPanel, /this\.state\.status === 'error'.*return '失败·重试'/,
+  'quick TTS must expose a retryable failure instead of continuing to look idle');
 assert.match(quickPanel,
   /Figma `750:1056`:[\s\S]*?reader_tts_speed_thumb[\s\S]*?responseRegion\(\{ x: 0, y: -6, width: '100%', height: 44 \}\)/,
   'Quick TTS must render the Figma rail/thumb while preserving its 116x44 hit target');

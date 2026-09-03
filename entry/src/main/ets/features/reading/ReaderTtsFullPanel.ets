@@ -13,14 +13,12 @@ import {
   TOK_BORDER_W,
   TOK_FIELD_SURFACE,
   TOK_LINE,
-  TOK_LINE_STRONG,
   TOK_ON_PRIMARY,
   TOK_READ_ELEVATED,
   TOK_READ_HANDLE,
   TOK_READ_INK,
   TOK_READ_MUTED,
   TOK_READ_PRIMARY,
-  TOK_READ_SURFACE,
   TOK_SURFACE_PANEL,
   TOK_SURFACE_PANEL_SOFT,
 } from '../common/ReaderTokens';
@@ -56,6 +54,7 @@ export interface ReaderTtsEngineOption {
 /** Figma full TTS sheets: Phone `942:78`, Tablet `942:80`. */
 @Component
 export struct ReaderTtsFullPanel {
+  @Prop morphActorId: string = 'reader-session-morph-fullTtsPlayback';
   @Prop isTablet: boolean = false;
   @Prop availableWidth: number = 0;
   @Prop availableHeight: number = 0;
@@ -90,6 +89,8 @@ export struct ReaderTtsFullPanel {
   onHttpEnginePut: (config: ReaderTtsEngineOption) => Promise<void> =
     (_config: ReaderTtsEngineOption): Promise<void> => Promise.resolve();
   onHttpEngineDelete: (id: number) => Promise<void> = (_id: number): Promise<void> => Promise.resolve();
+  onMorphActorMeasured: (left: number, top: number, width: number, height: number) => void =
+    (_left: number, _top: number, _width: number, _height: number): void => {};
   @State private ratePreview: number = -1;
 
   build() {
@@ -134,9 +135,8 @@ export struct ReaderTtsFullPanel {
     }
     .width(this.panelWidth())
     .height(this.panelHeight())
-    .backgroundColor(TOK_READ_SURFACE)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
-    .borderRadius(24)
+    // MorphShell 壳板（ReaderControlPanel）统一提供 surface/边框/圆角；
+    // 此处仅保留内容裁剪（Figma Review J~Q 壳体 morph 单一背景来源）。
     .clip(true);
   }
 
@@ -144,9 +144,9 @@ export struct ReaderTtsFullPanel {
   private header() {
     Row() {
       Row({ space: 8 }) {
-        Image($r('app.media.reader_tts_headphones'))
-          .width(16)
-          .height(16);
+        Image($r('app.media.reader_tts_header'))
+          .width(20)
+          .height(20);
         Text('朗读')
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Bold)
@@ -237,7 +237,16 @@ export struct ReaderTtsFullPanel {
     .width('100%')
     .height(this.state.totalSlices > 1 ? 160 : 128)
     .padding({ top: 28, left: 4, right: 4 })
-    .alignItems(HorizontalAlign.Start);
+    .alignItems(HorizontalAlign.Start)
+    .id(this.morphActorId)
+    .onAreaChange((_oldValue: Area, newValue: Area): void => {
+      this.onMorphActorMeasured(
+        Number(newValue.globalPosition.x),
+        Number(newValue.globalPosition.y),
+        Number(newValue.width),
+        Number(newValue.height),
+      );
+    });
   }
 
   @Builder

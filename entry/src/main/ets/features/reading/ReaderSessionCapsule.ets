@@ -17,6 +17,12 @@ import type {
 const AUTO_PAGE_CAPSULE_MIN_WIDTH = 96;
 const TTS_CAPSULE_MIN_WIDTH = 94;
 export const READER_SESSION_CAPSULE_HEIGHT = 24;
+export const READER_SESSION_CAPSULE_SHADOW: ShadowOptions = {
+  radius: 8,
+  color: '#12463423',
+  offsetX: 0,
+  offsetY: 3,
+};
 
 export function readerSessionCapsuleMinimumWidth(type: ReaderSessionCapsuleType): number {
   return type === 'autoPage' ? AUTO_PAGE_CAPSULE_MIN_WIDTH : TTS_CAPSULE_MIN_WIDTH;
@@ -26,8 +32,11 @@ export function readerSessionCapsuleMinimumWidth(type: ReaderSessionCapsuleType)
  * Figma `Reader/SessionCapsule` (`1164:10275`).
  *
  * This component implements the four confirmed static variants and their
- * primary pause/resume actor. The separate panel-to-capsule flight review has
- * no production timeline, so the parent owns only stable placement here.
+ * primary pause/resume actor. The Review C/D/E/F panel-to-capsule flight is
+ * host-owned (`reader.session.capsule.morph.*` in MotionSpec): while that
+ * timeline runs, the host drives this component through morphShellWidth /
+ * morphContentOffsetX; outside the morph window the static shell is the
+ * production actor.
  */
 @Component
 export struct ReaderSessionCapsule {
@@ -38,63 +47,80 @@ export struct ReaderSessionCapsule {
   @Prop textColor: string = TOK_READ_INK;
   @Prop surfaceBorderColor: string = TOK_LINE;
   @Prop interactionEnabled: boolean = true;
+  // Host-driven morph window (Figma Review C/D/E/F). 0 = static shell.
+  @Prop morphShellWidth: number = 0;
+  @Prop morphContentOffsetX: number = 0;
   onToggle: () => void = (): void => {};
   onMeasured: (width: number, height: number) => void =
     (_width: number, _height: number): void => {};
 
   build() {
-    Row({ space: 4 }) {
-      if (this.type === 'autoPage') {
-        Stack({ alignContent: Alignment.Center }) {
-          Text(`${Math.max(0, Math.trunc(this.countdown))}`)
-            .width(18)
-            .height(8)
-            .fontFamily(TYPE_READER_SESSION_COUNTDOWN.fontFamily)
-            .fontWeight(TYPE_READER_SESSION_COUNTDOWN.fontWeight)
-            .fontSize(TYPE_READER_SESSION_COUNTDOWN.fontSizeFp)
-            .lineHeight(TYPE_READER_SESSION_COUNTDOWN.lineHeightFp)
-            .fontColor(TOK_ON_PRIMARY)
-            .textAlign(TextAlign.Center)
-            .maxLines(1);
-        }
-        .width(18)
-        .height(16)
-        .backgroundColor(TOK_READ_PRIMARY)
-        .borderRadius(999);
-      } else {
-        Stack({ alignContent: Alignment.Center }) {
-          Image($r('app.media.reader_tts_headphones'))
-            .width(11)
-            .height(11);
-        }
-        .width(16)
-        .height(16);
-      }
+    if (this.morphShellWidth > 0) {
+      this.morphShell();
+    } else {
+      this.staticShell();
+    }
+  }
 
-      Text(this.type === 'autoPage' ? '自动翻页' : '朗读')
-        .fontFamily(TYPE_READER_SESSION_LABEL.fontFamily)
-        .fontWeight(TYPE_READER_SESSION_LABEL.fontWeight)
-        .fontSize(TYPE_READER_SESSION_LABEL.fontSizeFp)
-        .lineHeight(TYPE_READER_SESSION_LABEL.lineHeightFp)
-        .fontColor(this.textColor)
-        .textAlign(TextAlign.Center)
-        .maxLines(1);
-
+  @Builder
+  private capsuleContent() {
+    if (this.type === 'autoPage') {
       Stack({ alignContent: Alignment.Center }) {
-        if (this.sessionState === 'playing') {
-          Image($r('app.media.reader_session_pause'))
-            .width(8)
-            .height(8);
-        } else {
-          Image($r('app.media.reader_tts_play'))
-            .width(8)
-            .height(8);
-        }
+        Text(`${Math.max(0, Math.trunc(this.countdown))}`)
+          .width(18)
+          .height(8)
+          .fontFamily(TYPE_READER_SESSION_COUNTDOWN.fontFamily)
+          .fontWeight(TYPE_READER_SESSION_COUNTDOWN.fontWeight)
+          .fontSize(TYPE_READER_SESSION_COUNTDOWN.fontSizeFp)
+          .lineHeight(TYPE_READER_SESSION_COUNTDOWN.lineHeightFp)
+          .fontColor(TOK_ON_PRIMARY)
+          .textAlign(TextAlign.Center)
+          .maxLines(1);
       }
-      .width(16)
+      .width(18)
       .height(16)
       .backgroundColor(TOK_READ_PRIMARY)
       .borderRadius(999);
+    } else {
+      Stack({ alignContent: Alignment.Center }) {
+        Image($r('app.media.reader_tts_headphones'))
+          .width(11)
+          .height(11);
+      }
+      .width(16)
+      .height(16);
+    }
+
+    Text(this.type === 'autoPage' ? '自动翻页' : '朗读')
+      .fontFamily(TYPE_READER_SESSION_LABEL.fontFamily)
+      .fontWeight(TYPE_READER_SESSION_LABEL.fontWeight)
+      .fontSize(TYPE_READER_SESSION_LABEL.fontSizeFp)
+      .lineHeight(TYPE_READER_SESSION_LABEL.lineHeightFp)
+      .fontColor(this.textColor)
+      .textAlign(TextAlign.Center)
+      .maxLines(1);
+
+    Stack({ alignContent: Alignment.Center }) {
+      if (this.sessionState === 'playing') {
+        Image($r('app.media.reader_session_pause'))
+          .width(8)
+          .height(8);
+      } else {
+        Image($r('app.media.reader_session_play'))
+          .width(8)
+          .height(8);
+      }
+    }
+    .width(16)
+    .height(16)
+    .backgroundColor(TOK_READ_PRIMARY)
+    .borderRadius(999);
+  }
+
+  @Builder
+  private staticShell() {
+    Row({ space: 4 }) {
+      this.capsuleContent();
     }
     .height(READER_SESSION_CAPSULE_HEIGHT)
     .constraintSize({ minWidth: this.capsuleMinimumWidth() })
@@ -104,9 +130,43 @@ export struct ReaderSessionCapsule {
     .backgroundColor(this.surfaceColor)
     .border({ width: 1, color: this.surfaceBorderColor })
     .borderRadius(999)
-    .shadow({ radius: 8, color: '#12463423', offsetX: 0, offsetY: 3 })
+    .shadow(READER_SESSION_CAPSULE_SHADOW)
     // Keep the Figma-authored 24vp visual footprint while admitting a 44vp
     // vertical touch target above the full-screen page gesture layer.
+    .responseRegion({ x: 0, y: -10, width: '100%', height: 44 })
+    .hitTestBehavior(this.interactionEnabled ? HitTestMode.Block : HitTestMode.None)
+    .accessibilityText(this.accessibilityLabel())
+    .onClick((): void => {
+      if (this.interactionEnabled) this.onToggle();
+    })
+    .onAreaChange((_oldValue: Area, newValue: Area): void => {
+      this.onMeasured(this.numericAreaLength(newValue.width), this.numericAreaLength(newValue.height));
+    });
+  }
+
+  // Morph variant (Figma Review C/D/E/F): the host owns the flight/expand/
+  // reveal timeline and feeds this shell its animated width plus the content
+  // slide-in offset. Clipping hides the translated content outside the shell.
+  @Builder
+  private morphShell() {
+    Stack() {
+      Row({ space: 4 }) {
+        this.capsuleContent();
+      }
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+      .padding({ left: 6, right: 6 })
+      .width('100%')
+      .height('100%')
+      .translate({ x: this.morphContentOffsetX });
+    }
+    .width(this.morphShellWidth)
+    .height(READER_SESSION_CAPSULE_HEIGHT)
+    .clip(true)
+    .backgroundColor(this.surfaceColor)
+    .border({ width: 1, color: this.surfaceBorderColor })
+    .borderRadius(999)
+    .shadow(READER_SESSION_CAPSULE_SHADOW)
     .responseRegion({ x: 0, y: -10, width: '100%', height: 44 })
     .hitTestBehavior(this.interactionEnabled ? HitTestMode.Block : HitTestMode.None)
     .accessibilityText(this.accessibilityLabel())

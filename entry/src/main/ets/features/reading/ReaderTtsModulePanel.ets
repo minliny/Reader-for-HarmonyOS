@@ -42,6 +42,7 @@ const TTS_MODULE_RATE_VALUE_WIDTH_TABLET = 30;
 /** Figma quick TTS panel: Phone `942:62`, Tablet `942:64`. */
 @Component
 export struct ReaderTtsModulePanel {
+  @Prop morphActorId: string = 'reader-session-morph-quickTts';
   @Prop isTablet: boolean = false;
   @Prop state: ReaderTtsState;
   @Prop timerMinutes: number = 15;
@@ -50,6 +51,8 @@ export struct ReaderTtsModulePanel {
   onPrevious: () => void = (): void => {};
   onNext: () => void = (): void => {};
   onRateChange: (rate: number) => void = (_rate: number): void => {};
+  onMorphActorMeasured: (left: number, top: number, width: number, height: number) => void =
+    (_left: number, _top: number, _width: number, _height: number): void => {};
   @State private ratePreview: number = -1;
 
   build() {
@@ -71,7 +74,16 @@ export struct ReaderTtsModulePanel {
     .backgroundColor(TOK_SURFACE_PANEL)
     .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
     .borderRadius(8)
-    .clip(true);
+    .clip(true)
+    .id(this.morphActorId)
+    .onAreaChange((_oldValue: Area, newValue: Area): void => {
+      this.onMorphActorMeasured(
+        Number(newValue.globalPosition.x),
+        Number(newValue.globalPosition.y),
+        Number(newValue.width),
+        Number(newValue.height),
+      );
+    });
   }
 
   @Builder
@@ -81,7 +93,7 @@ export struct ReaderTtsModulePanel {
         Image($r('app.media.reader_tts_headphones'))
           .width(20)
           .height(20);
-        Text('播放')
+        Text(this.playbackLabel())
           .layoutWeight(1)
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Bold)
@@ -152,6 +164,15 @@ export struct ReaderTtsModulePanel {
     .accessibilityText(this.isActivelySpeaking() ? '暂停朗读' :
       (this.state.status === 'error' ? '重试朗读' : '开始或继续朗读'))
     .onClick((): void => this.onToggle());
+  }
+
+  private playbackLabel(): string {
+    if (this.state.status === 'playing') return '朗读中';
+    if (this.state.status === 'preparing' || this.state.status === 'resuming') return '准备中';
+    if (this.state.status === 'paused' || this.state.status === 'interrupted') return '继续';
+    if (this.state.status === 'error' || this.state.status === 'failed') return '失败·重试';
+    if (this.state.status === 'unavailable') return '不可用';
+    return '播放';
   }
 
   @Builder

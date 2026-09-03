@@ -170,10 +170,10 @@ assert.match(control, /@Prop @Watch\('onLayoutChanged'\) layout: ReaderControlLa
 assert.match(control,
   /private dockWidth\(\): number \{\s*return this\.layout\.dockWidth;/,
   'all seven regular reader-control states must clamp their dock');
-assert.equal((control.match(/availableWidth: this\.fullPanelAvailableWidth\(\)/g) ?? []).length, 4,
-  'search, appearance, settings, and TTS full sheets must receive the same measured width');
-assert.equal((control.match(/availableHeight: this\.layout\.fullPanelHeight/g) ?? []).length, 4,
-  'search, appearance, settings, and TTS full sheets must receive the same live height budget');
+assert.equal((control.match(/availableWidth: this\.fullPanelAvailableWidth\(\)/g) ?? []).length, 6,
+  'four fallback full sheets plus the Phone Appearance stage/content must share measured width');
+assert.equal((control.match(/availableHeight: this\.layout\.fullPanelHeight/g) ?? []).length, 5,
+  'four fallback full sheets plus staged Appearance content must share the live height budget');
 assert.match(readerLayout, /const fullPanelHeight = Math\.max\(0, height - fullPanelTop - fullPanelBottom\)/,
   'the full-panel height budget must be derived once from the live viewport and safe bottom');
 

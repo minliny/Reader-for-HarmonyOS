@@ -47,7 +47,9 @@ assert.match(capsule, /AUTO_PAGE_CAPSULE_MIN_WIDTH = 96/);
 assert.match(capsule, /TTS_CAPSULE_MIN_WIDTH = 94/);
 assert.match(capsule, /READER_SESSION_CAPSULE_HEIGHT = 24/);
 assert.match(capsule, /Text\(this\.type === 'autoPage' \? '自动翻页' : '朗读'\)/);
-assert.match(capsule, /reader_session_pause[\s\S]*?reader_tts_play/);
+assert.match(capsule, /reader_session_pause[\s\S]*?reader_session_play/);
+assert.doesNotMatch(capsule, /reader_session_pause[\s\S]*?reader_tts_play/,
+  'capsule playback actors must use the dedicated solid Figma glyph pair');
 assert.match(capsule, /\.onClick\(\(\): void => \{[\s\S]*if \(this\.interactionEnabled\) this\.onToggle\(\);/);
 assert.match(capsule, /\.responseRegion\(\{ x: 0, y: -10, width: '100%', height: 44 \}\)/,
   'the 24vp visual capsule must expose a practical 44vp touch target');
@@ -59,14 +61,25 @@ assert.match(capsule, /\.constraintSize\(\{ minWidth: this\.capsuleMinimumWidth\
 assert.match(capsule, /\.onAreaChange\([\s\S]*?this\.onMeasured\(/,
   'the live component must report its actual footprint to the page footer layout');
 assert.doesNotMatch(capsule, /animateTo|\.transition\(/,
-  'the static capsule must not invent the unapproved panel-to-capsule flight timeline');
+  'the capsule stays a pure actor; the approved Review C/D/E/F flight choreography lives in the host');
+assert.match(capsule, /@Prop morphShellWidth: number = 0;/,
+  'the morph window is host-driven; 0 means the static production shell');
+assert.match(capsule, /@Prop morphContentOffsetX: number = 0;/,
+  'the morph content slide-in offset is fed by the host reveal beat');
+assert.match(capsule,
+  /if \(this\.morphShellWidth > 0\) \{\s*this\.morphShell\(\);\s*\} else \{\s*this\.staticShell\(\);\s*\}/,
+  'the morph shell must be a separate builder so the production path never changes shape');
+assert.match(capsule, /private morphShell\(\)[\s\S]*?\.clip\(true\)/,
+  'the morph shell must clip the sliding content inside the pill');
+assert.match(capsule, /READER_SESSION_CAPSULE_SHADOW: ShadowOptions = \{[\s\S]*?radius: 8,[\s\S]*?offsetY: 3/,
+  'the shared shadow constant keeps the flight-proxy handoff pixel-continuous');
 
 assert.match(experience,
   /if \(this\.shouldShowSessionCapsule\(\)\) \{[\s\S]*?ReaderSessionCapsule\(\{[\s\S]*?onToggle: \(\): void => this\.toggleSessionCapsule\(\)/,
   'the reader must mount one state-owned capsule with a real pause/resume callback');
 assert.match(experience,
-  /\.transition\(this\.reduceMotion \? TransitionEffect\.IDENTITY :[\s\S]*?reader\.session\.capsule\.enter[\s\S]*?reader\.session\.capsule\.exit/,
-  'the capsule must fade via the Reader-UI token pair (enter 160ms / exit 200ms); countdown updates mutate the mounted node and never replay this');
+  /\.transition\(this\.sessionMorphPhase !== 'none' \|\| this\.reduceMotion \?\s*TransitionEffect\.IDENTITY :\s*TransitionEffect\.asymmetric\(\s*TransitionEffect\.OPACITY\.animation\(motionAnimateParam\('reader\.session\.capsule\.enter'\)\),\s*TransitionEffect\.OPACITY\.animation\(motionAnimateParam\('reader\.session\.capsule\.exit'\)\)/,
+  'the capsule must fade via the Reader-UI token pair (enter 160ms / exit 200ms); countdown updates mutate the mounted node and never replay this, and the morph handoff suppresses the fade until the window closes');
 assert.match(experience,
   /return deriveReaderSessionCapsule\(\{/,
   'one pure projection must own visibility, type, state and countdown');
@@ -98,7 +111,32 @@ assert.ok(toggleAutoPage.indexOf('this.startAutoPageSession()') > toggleAutoPage
 assert.match(toggleAutoPage, /\.catch\([\s\S]*?this\.logTtsFailure\('stop before auto-page', error\)/,
   'a failed TTS stop must fail closed instead of overlapping both runtimes');
 assert.match(experience,
-  /coordinator\.start\(\{[\s\S]*?\.then\(\(\): void => \{[\s\S]*?this\.hideControl\(\)/,
-  'a successful TTS start must return to immersive reading where the capsule is visible');
+  /coordinator\.start\(\{[\s\S]*?\.then\(\(\): Promise<boolean> => coordinator\.whenStarted\(\)\)[\s\S]*?this\.beginSessionCapsuleMorph\(\)/,
+  'a successful TTS start must enter the capsule morph only after runtime start resolves');
+
+assert.match(experience,
+  /private shouldShowSessionCapsule\(\): boolean \{[\s\S]*?sessionMorphPhase === 'capture'[\s\S]*?sessionMorphPhase === 'dotHold'[\s\S]*?return false;/,
+  'capture, flight, handoff and dot hold own the capsule anchor before expansion');
+assert.match(experience,
+  /private toggleSessionCapsule\(\): void \{\s*if \(this\.sessionMorphPhase !== 'none'\) \{[\s\S]*?this\.finishSessionCapsuleMorph\(\);/,
+  'an interrupt during the morph jumps straight to the settled capsule');
+assert.match(experience,
+  /private admitSessionCapsuleMeasurement\([\s\S]*?if \(this\.sessionMorphPhase !== 'none'\) \{\s*return;\s*\}/,
+  'transient morph shell widths must not overwrite the settled capsule measurement');
+assert.match(experience,
+  /if \(this\.sessionMorphPhase === 'flight' && this\.sessionMorphSourceImage !== undefined\) \{[\s\S]*?Image\(this\.sessionMorphSourceImage\)[\s\S]*?\.blur\(12\)[\s\S]*?\.zIndex\(9\)\s*\.hitTestBehavior\(HitTestMode\.None\);/,
+  'the exact captured source and authored blur ghost must be non-interactive above the capsule');
+assert.match(experience,
+  /private beginSessionCapsuleMorph\(\): void \{\s*if \(this\.reduceMotion \|\| this\.sessionMorphPhase !== 'none' \|\|\s*!this\.controlVisible \|\| this\.controlObscured\) \{\s*this\.hideControl\(\);\s*return;/,
+  'Reduce Motion and hidden-control paths settle immediately without a blank proxy');
+assert.match(experience,
+  /getComponentSnapshot\(\)\.get\(source\.actorId,[\s\S]*?motionAnimateParam\('reader\.session\.capsule\.morph\.flight'[\s\S]*?motionAnimateParam\('reader\.session\.capsule\.morph\.dot\.hold'[\s\S]*?motionAnimateParam\('reader\.session\.capsule\.morph\.expand'[\s\S]*?motionAnimateParam\('reader\.session\.capsule\.morph\.reveal'/,
+  'the source snapshot and all authored beats must use the registered choreography');
+assert.match(experience,
+  /this\.autoPageState = startReaderAutoPage\(this\.autoPageState\);\s*this\.beginSessionCapsuleMorph\(\);\s*this\.armAutoPageTimer/,
+  'auto-page start leaves the source mounted until snapshot capture owns the hide');
+assert.match(experience,
+  /this\.beginSessionCapsuleMorph\(\);\s*\}\s*\}\)\.catch\(\(error: Error\): void => this\.logTtsFailure\('start', error\)\);/,
+  'TTS source also remains mounted until capture succeeds');
 
 console.log('reader session capsule: PASS');

@@ -61,9 +61,9 @@ contract('the gesture return-to-idle hook re-drains a queued preparation', () =>
 });
 
 contract('the tap path keeps its preparation queue fallback (asymmetry fixed from both sides)', () => {
-  const drainPending = methodSection(localReading, 'drainPendingManualPageTurn');
+  const drainPending = methodSection(localReading, 'drainRapidPageTurn');
   assert.match(drainPending, /preparedPageTurn\(direction\) === undefined[\s\S]{0,120}queuePageTurnPreparation\(direction\)/,
-    'the retained tap intent must keep queueing a missing preparation');
+    'the retained dynamic target must keep queueing a missing preparation');
 });
 
 if (failures.length > 0) {

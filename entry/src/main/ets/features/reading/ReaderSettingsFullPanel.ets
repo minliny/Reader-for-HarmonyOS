@@ -2,12 +2,10 @@ import { registerReaderFonts } from '../common/ReaderFonts';
 import {
   TOK_BORDER_W,
   TOK_LINE,
-  TOK_LINE_STRONG,
   TOK_READ_ELEVATED,
   TOK_READ_HANDLE,
   TOK_READ_INK,
   TOK_READ_PRIMARY,
-  TOK_READ_SURFACE,
   TOK_SURFACE_PANEL,
   TOK_SURFACE_PANEL_SOFT,
 } from '../common/ReaderTokens';
@@ -100,19 +98,17 @@ export struct ReaderSettingsFullPanel {
     }
     .width(this.sheetWidth())
     .height(this.sheetHeight())
-    .backgroundColor(TOK_READ_SURFACE)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
-    .borderRadius(24)
+    // MorphShell 壳板（ReaderControlPanel）统一提供 surface/边框/圆角；
+    // 此处仅保留内容裁剪（Figma Review J~Q 壳体 morph 单一背景来源）。
     .clip(true);
   }
 
   @Builder
   private header() {
     Row() {
-      Image($r('app.media.rc_settings'))
+      Image($r('app.media.reader_settings_header'))
         .width(20)
-        .height(20)
-        .fillColor(TOK_READ_INK);
+        .height(20);
       Text('设置')
         .width(28)
         .height(17)

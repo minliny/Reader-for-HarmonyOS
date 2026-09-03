@@ -22,17 +22,19 @@ assert.match(shelf,
   'bookshelf content must resolve the 352vp cap and 19vp design gaps through shared geometry');
 assert.match(shelf, /private bookshelfList\(isTablet: boolean\)[\s\S]*List\(\{ space: TOK_SPACE_CONTROL_INLINE \}\)[\s\S]*\.height\('100%'\)/,
   'the lazy shelf list must occupy the viewport and stay top-aligned');
-assert.match(shelf, /LazyForEach\(this\.bookDataSource[\s\S]*LazyForEach\(this\.rowDataSource/,
-  'both shelf projections must remain lazily materialized');
+assert.equal((shelf.match(/LazyForEach\(this\.rowDataSource/g) ?? []).length, 1,
+  'both projections must share one lazily materialized stable row tree');
 assert.match(shelf,
   /private phoneContent\(\)[\s\S]*\.padding\(\{ left: this\.phoneContentFrame\(\)\.left, right: this\.phoneContentFrame\(\)\.right \}\)/,
   'phone books must preserve the Figma gaps while honoring asymmetric safe edges');
 assert.match(shelf, /private continueReadingCard\(book: ShelfBook, isTablet: boolean\)[\s\S]*\.width\(this\.shelfContentWidth\(isTablet\)\)/,
   'the continue-reading card must consume the reactive shelf width instead of a frozen Builder argument');
-assert.match(shelf, /Row\(\{ space: this\.bookRowSpace\(this\.shelfContentWidth\(isTablet\), isTablet\) \}\)[\s\S]*this\.bookCard\(book, isTablet\)/,
-  'the three-column book grid must consume the reactive measured content width');
-assert.match(shelf, /private bookCard\(book: ShelfBook, isTablet: boolean\)[\s\S]*\.width\(this\.shelfBookCardWidth\(isTablet\)\)/,
-  'book cards must not retain the 352vp first-layout fallback after a physical Area update');
+assert.match(shelf,
+  /private projectionBookTranslateX[\s\S]*this\.bookRowSpace\(this\.shelfContentWidth\(isTablet\), isTablet\)/,
+  'the persistent three-column projection must consume the reactive measured content width');
+assert.match(shelf,
+  /private projectionBookCard[\s\S]*\.width\(this\.projectionBookWidth\(isTablet\)\)/,
+  'persistent book actors must not retain the 352vp first-layout fallback after a physical Area update');
 assert.match(shelf, /return Math\.min\(30,[\s\S]*Math\.max\(TOK_SPACE_XS,/,
   'the adaptive shelf grid must retain the Figma 30vp gap as its maximum');
 

@@ -56,6 +56,7 @@ const QUICK_AUTO_PAGE_SPEED_PADDING_TABLET = 8;
  */
 @Component
 export struct ReaderAutoPagePanel {
+  @Prop morphActorId: string = 'reader-session-morph-quickAutoPage';
   @Prop isTablet: boolean = false;
   @Prop status: ReaderAutoPageStatus = 'stopped';
   @Prop speedSeconds: number = 8;
@@ -68,6 +69,8 @@ export struct ReaderAutoPagePanel {
   onNextChapter: () => void = (): void => {};
   onSlowDown: () => void = (): void => {};
   onSpeedUp: () => void = (): void => {};
+  onMorphActorMeasured: (left: number, top: number, width: number, height: number) => void =
+    (_left: number, _top: number, _width: number, _height: number): void => {};
 
   build() {
     Column({ space: this.isTablet ? QUICK_AUTO_PAGE_GAP_TABLET : QUICK_AUTO_PAGE_GAP_PHONE }) {
@@ -88,7 +91,16 @@ export struct ReaderAutoPagePanel {
     .backgroundColor(TOK_SURFACE_PANEL)
     .border({ width: TOK_BORDER_W, color: TOK_LINE })
     .borderRadius(8)
-    .clip(true);
+    .clip(true)
+    .id(this.morphActorId)
+    .onAreaChange((_oldValue: Area, newValue: Area): void => {
+      this.onMorphActorMeasured(
+        Number(newValue.globalPosition.x),
+        Number(newValue.globalPosition.y),
+        Number(newValue.width),
+        Number(newValue.height),
+      );
+    });
   }
 
   @Builder
@@ -218,7 +230,8 @@ export struct ReaderAutoPagePanel {
   private runningControl() {
     Column() {
       Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.reader_auto_play'))
+        Image($r(this.status === 'running' ?
+          'app.media.reader_session_pause' : 'app.media.reader_auto_play'))
           .width(20)
           .height(20);
       }

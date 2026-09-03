@@ -1,9 +1,10 @@
 import { registerReaderFonts } from '../common/ReaderFonts';
 import {
+  fadeSlideTransition,
   motionAnimateParam,
   motionSpecGet,
+  panelActorTransition,
   showHideTransition,
-  translateYTransition,
 } from '../common/MotionSpec';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import type { ReaderBookIdentity } from './ReaderBookmarkProjection';
@@ -15,6 +16,11 @@ import { ReaderDirectoryModulePanel } from './ReaderDirectoryModulePanel';
 import { ReaderAppearanceFullPanel } from './ReaderAppearanceFullPanel';
 import type { ReaderChineseConversionMode } from './ReaderChineseConversionGateway';
 import { ReaderAppearanceModulePanel } from './ReaderAppearanceModulePanel';
+import {
+  ReaderAppearanceMotionStage,
+  type ReaderAppearanceMotionSlotContext,
+} from './ReaderAppearanceMotionStage';
+import type { ReaderAppearanceMotionEndpoint } from './ReaderAppearanceMotionState';
 import {
   createDefaultReaderAppearanceSnapshot,
   type ReaderAppearanceAlignment,
@@ -40,6 +46,11 @@ import {
 import { ReaderTtsFullPanel, type ReaderTtsEngineOption } from './ReaderTtsFullPanel';
 import type { ReaderTtsVoiceOption } from './ReaderTtsPreferencesState';
 import { ReaderTtsModulePanel } from './ReaderTtsModulePanel';
+import {
+  ReaderSessionMorphSourceMeasurement,
+  readerSessionMorphActorId,
+  type ReaderSessionMorphSourceKind,
+} from './ReaderSessionMorphState';
 import { createReaderTtsState, type ReaderTtsState } from './ReaderTtsState';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from './ReaderDirectoryMarkerState';
 import { ReaderQuickSearchPanel, type ReaderQuickSearchState } from './ReaderQuickSearchPanel';
@@ -105,6 +116,10 @@ import {
 import {
   ReaderControlLayoutSnapshot,
   createDefaultReaderControlLayout,
+  READER_FULL_PANEL_HEIGHT_PHONE,
+  READER_FULL_PANEL_HEIGHT_TABLET,
+  READER_FULL_PANEL_MAX_WIDTH_PHONE,
+  READER_FULL_PANEL_MAX_WIDTH_TABLET,
 } from './ReaderLayoutGeometry';
 import {
   READER_AUTO_PAGE_ACTOR_HOLD_RATIO,
@@ -196,6 +211,8 @@ export struct ReaderControlPanel {
   @Prop ttsLanguage: string = 'zh-CN';
   @Prop ttsPerson: number = 0;
   @Prop reduceMotion: boolean = false;
+  /** Debug/accessibility scale for the whole Phone Appearance N/O timeline. */
+  @Prop appearanceMotionTimeScale: number = 1;
   onBack: () => void = (): void => {};
   onDismiss: () => void = (): void => {};
   onSourceSwitch: () => void = (): void => {};
@@ -283,6 +300,32 @@ export struct ReaderControlPanel {
   onTtsHttpEnginePut: (config: ReaderTtsEngineOption) => Promise<void> =
     (_config: ReaderTtsEngineOption): Promise<void> => Promise.resolve();
   onTtsHttpEngineDelete: (id: number) => Promise<void> = (_id: number): Promise<void> => Promise.resolve();
+  onSessionMorphSourceMeasured: (measurement: ReaderSessionMorphSourceMeasurement) => void =
+    (_measurement: ReaderSessionMorphSourceMeasurement): void => {};
+  private sessionMorphMeasurementRevision: number = 0;
+
+  private reportSessionMorphSource(
+    kind: ReaderSessionMorphSourceKind,
+    left: number,
+    top: number,
+    width: number,
+    height: number,
+  ): void {
+    if (!Number.isFinite(left) || !Number.isFinite(top) || !Number.isFinite(width) ||
+      !Number.isFinite(height) || width <= 0 || height <= 0) {
+      return;
+    }
+    this.sessionMorphMeasurementRevision += 1;
+    this.onSessionMorphSourceMeasured(new ReaderSessionMorphSourceMeasurement(
+      kind,
+      readerSessionMorphActorId(kind),
+      left,
+      top,
+      width,
+      height,
+      this.sessionMorphMeasurementRevision,
+    ));
+  }
 
   @State private progressPreviewPercent: number = -1;
   @State private brightnessPreviewPercent: number = -1;
@@ -365,7 +408,7 @@ export struct ReaderControlPanel {
       this.onPageChange('fullAppearance');
       return;
     }
-    this.getUIContext().animateTo(motionAnimateParam('reader.panel.expand'), (): void => {
+    this.getUIContext().animateTo(motionAnimateParam('reader.panel.shell.expand'), (): void => {
       this.onPageChange('fullAppearance');
     });
   }
@@ -376,7 +419,7 @@ export struct ReaderControlPanel {
       this.onPageChange('moduleAppearance');
       return;
     }
-    this.getUIContext().animateTo(motionAnimateParam('reader.panel.collapse'), (): void => {
+    this.getUIContext().animateTo(motionAnimateParam('reader.panel.shell.collapse'), (): void => {
       this.onPageChange('moduleAppearance');
     });
   }
@@ -387,7 +430,7 @@ export struct ReaderControlPanel {
       this.onPageChange('fullSettings');
       return;
     }
-    this.getUIContext().animateTo(motionAnimateParam('reader.panel.expand'), (): void => {
+    this.getUIContext().animateTo(motionAnimateParam('reader.panel.shell.expand'), (): void => {
       this.onPageChange('fullSettings');
     });
   }
@@ -398,7 +441,7 @@ export struct ReaderControlPanel {
       this.onPageChange('moduleSettings');
       return;
     }
-    this.getUIContext().animateTo(motionAnimateParam('reader.panel.collapse'), (): void => {
+    this.getUIContext().animateTo(motionAnimateParam('reader.panel.shell.collapse'), (): void => {
       this.onPageChange('moduleSettings');
     });
   }
@@ -409,7 +452,7 @@ export struct ReaderControlPanel {
       this.onPageChange('fullTts');
       return;
     }
-    this.getUIContext().animateTo(motionAnimateParam('reader.panel.expand'), (): void => {
+    this.getUIContext().animateTo(motionAnimateParam('reader.panel.shell.expand'), (): void => {
       this.onPageChange('fullTts');
     });
   }
@@ -420,7 +463,7 @@ export struct ReaderControlPanel {
       this.onPageChange('fullSearch');
       return;
     }
-    this.getUIContext().animateTo(motionAnimateParam('reader.panel.expand'), (): void => {
+    this.getUIContext().animateTo(motionAnimateParam('reader.panel.shell.expand'), (): void => {
       this.onPageChange('fullSearch');
     });
   }
@@ -431,7 +474,7 @@ export struct ReaderControlPanel {
       this.onPageChange('quickSearch');
       return;
     }
-    this.getUIContext().animateTo(motionAnimateParam('reader.panel.collapse'), (): void => {
+    this.getUIContext().animateTo(motionAnimateParam('reader.panel.shell.collapse'), (): void => {
       this.onPageChange('quickSearch');
     });
   }
@@ -461,7 +504,7 @@ export struct ReaderControlPanel {
       this.onPageChange('moduleTts');
       return;
     }
-    this.getUIContext().animateTo(motionAnimateParam('reader.panel.collapse'), (): void => {
+    this.getUIContext().animateTo(motionAnimateParam('reader.panel.shell.collapse'), (): void => {
       this.onPageChange('moduleTts');
     });
   }
@@ -650,7 +693,10 @@ export struct ReaderControlPanel {
         .zIndex(1)
         .hitTestBehavior(HitTestMode.None)
         // Figma MR1: TopBar y -8→0 (show) / 0→-8 (hide)。
-        .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
+        // Session morph owns the only visible actor after its source snapshot
+        // is ready. Suppress the ordinary control-layer exit in that handoff
+        // frame so TopBar cannot ghost behind the flying source proxy.
+        .transition(this.reduceMotion || this.shellExitArmed ? TransitionEffect.IDENTITY :
           showHideTransition('reader.control.show', 'reader.control.hide', -8));
         Stack({
           alignContent: this.usesTopAnchoredFullPanel() ?
@@ -669,7 +715,10 @@ export struct ReaderControlPanel {
             (this.usesTopAnchoredFullPanel() ? this.layout.fullPanelRightGap : this.layout.dockRightGap) : 0,
         })
         // Figma MR1: ControlDock y +18→0 (show) / 0→+18 (hide)。
-        .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
+        // Keep ControlDock on the same single-actor handoff contract as the
+        // nested panel content. Otherwise its 360 ms hide transition remains
+        // visible underneath the captured actor and creates double exposure.
+        .transition(this.reduceMotion || this.shellExitArmed ? TransitionEffect.IDENTITY :
           showHideTransition('reader.control.show', 'reader.control.hide', 18));
       }
     }
@@ -765,19 +814,204 @@ export struct ReaderControlPanel {
 
   @Builder
   private controlDock() {
-    if (this.activePage === 'fullSearch') {
-      this.fullSearchDock();
-    } else if (this.activePage === 'fullAppearance') {
-      this.fullAppearanceDock();
-    } else if (this.activePage === 'fullSettings') {
-      this.fullSettingsDock();
-    } else if (this.activePage === 'fullTts') {
-      this.fullTtsDock();
+    if (this.usesPhoneAppearanceMotionStage()) {
+      this.appearanceMotionDock();
     } else if (this.usesAutoPageActorRegistry()) {
+      // 自动翻页是独立 actor 体系（OutgoingActor/亮度轨原地编排，J 帧注记之外的
+      // 专属帧组），不进壳体 morph。
       this.autoPageActorDock();
     } else {
-      this.regularControlDock();
+      this.morphShellControlDock();
     }
+  }
+
+  private usesPhoneAppearanceMotionStage(): boolean {
+    return !this.isExpanded() &&
+      (this.activePage === 'moduleAppearance' || this.activePage === 'fullAppearance');
+  }
+
+  /**
+   * Phone 外观页是唯一由 N/O 单树驱动的控制面板。路由只在稳定端点回写，
+   * 中途重抓、反向拖动和回弹都不触发 quick/full 条件卸载。
+   */
+  @Builder
+  private appearanceMotionDock() {
+    ReaderAppearanceMotionStage({
+      expanded: this.activePage === 'fullAppearance',
+      reduceMotion: this.reduceMotion,
+      visible: this.visible,
+      interactionEnabled: !this.shellExitArmed,
+      availableWidth: this.fullPanelAvailableWidth(),
+      motionTimeScale: this.appearanceMotionTimeScale,
+      onEndpointChange: (endpoint: ReaderAppearanceMotionEndpoint): void =>
+        this.onAppearanceMotionEndpointChange(endpoint),
+      quickMorph: (context: ReaderAppearanceMotionSlotContext): void => {
+        this.appearanceMotionQuickContent(context);
+      },
+      fullContent: (context: ReaderAppearanceMotionSlotContext): void => {
+        this.appearanceMotionFullContent(context);
+      },
+      brightnessRail: (context: ReaderAppearanceMotionSlotContext): void => {
+        this.appearanceMotionBrightness(context);
+      },
+      moduleNav: (context: ReaderAppearanceMotionSlotContext): void => {
+        this.appearanceMotionModuleNav(context);
+      },
+    });
+  }
+
+  @Builder
+  private appearanceMotionQuickContent(context: ReaderAppearanceMotionSlotContext) {
+    ReaderAppearanceModulePanel({
+      isTablet: false,
+      motionFrame: context.frame,
+      interactionEnabled: context.interactionEnabled,
+      snapshot: this.appearanceSnapshot,
+      onThemeChange: (theme: ReaderAppearanceTheme): void => this.onAppearanceThemeChange(theme),
+      onFontChange: (font: ReaderAppearanceFont): void => this.onAppearanceFontChange(font),
+    });
+  }
+
+  @Builder
+  private appearanceMotionFullContent(context: ReaderAppearanceMotionSlotContext) {
+    ReaderAppearanceFullPanel({
+      isTablet: false,
+      availableWidth: this.fullPanelAvailableWidth(),
+      availableHeight: this.layout.fullPanelHeight,
+      reduceMotion: this.reduceMotion,
+      // N supplies element tracks. O supplies identity inner actors while the
+      // Stage owns the single FullOutgoing wrapper; a defined frame also keeps
+      // every legacy TransitionEffect disabled for the persistent tree.
+      motionFrame: context.frame,
+      interactionEnabled: context.interactionEnabled,
+      showGrabber: false,
+      snapshot: this.appearanceSnapshot,
+      chineseConversionMode: this.chineseConversionMode,
+      pageTurnStyle: readerPageTurnStyle(this.settingsSnapshot),
+      pageTurnSimulationAvailable: this.pageTurnSimulationAvailable,
+      onCollapse: context.requestCollapse,
+      onThemeChange: (theme: ReaderAppearanceTheme): void => this.onAppearanceThemeChange(theme),
+      onSetDayTheme: (theme: ReaderAppearanceTheme): void => this.onAppearanceDayThemeChange(theme),
+      onSetNightTheme: (theme: ReaderAppearanceTheme): void => this.onAppearanceNightThemeChange(theme),
+      onFontChange: (font: ReaderAppearanceFont): void => this.onAppearanceFontChange(font),
+      onFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]): void =>
+        this.onAppearanceFontOrderChange(fontOrder),
+      onCustomFontImport: (): void => this.onAppearanceCustomFontImport(),
+      onIndentRequest: (indent: ReaderAppearanceIndent): void => this.onAppearanceIndentRequest(indent),
+      onAlignmentRequest: (current: ReaderAppearanceAlignment): void =>
+        this.onAppearanceAlignmentRequest(current),
+      onMetricStep: (metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection): void =>
+        this.onAppearanceMetricStep(metric, direction),
+      onChineseConversionChange: (mode: ReaderChineseConversionMode): void =>
+        this.onChineseConversionChange(mode),
+      onPageTurnStyleChange: (style: ReaderPageTurnStyle): void =>
+        this.onPageTurnStyleChange(style),
+    });
+  }
+
+  @Builder
+  private appearanceMotionBrightness(_context: ReaderAppearanceMotionSlotContext) {
+    this.brightnessRail();
+  }
+
+  @Builder
+  private appearanceMotionModuleNav(_context: ReaderAppearanceMotionSlotContext) {
+    this.moduleNav();
+  }
+
+  private onAppearanceMotionEndpointChange(endpoint: ReaderAppearanceMotionEndpoint): void {
+    const page: ReaderControlPage = endpoint === 'full' ? 'fullAppearance' : 'moduleAppearance';
+    if (this.activePage !== page) {
+      this.onPageChange(page);
+    }
+  }
+
+  private isFullControlPage(page: ReaderControlPage): boolean {
+    return page === 'fullSearch' || page === 'fullAppearance' ||
+      page === 'fullSettings' || page === 'fullTts';
+  }
+
+  private shellBoardWidth(): number {
+    const designWidth = this.isExpanded() ?
+      READER_FULL_PANEL_MAX_WIDTH_TABLET : READER_FULL_PANEL_MAX_WIDTH_PHONE;
+    return Math.min(designWidth, this.layout.fullPanelWidth);
+  }
+
+  private shellBoardHeight(): number {
+    const designHeight = this.isExpanded() ?
+      READER_FULL_PANEL_HEIGHT_TABLET : READER_FULL_PANEL_HEIGHT_PHONE;
+    return Math.min(designHeight, this.layout.fullPanelHeight);
+  }
+
+  /**
+   * 壳板压扁比：quick 态 = geo.sheetH / 全高（Phone 330/736 = 0.448，即 Figma
+   * J~Q 帧 scaleY 起点）。full 态 = 1。Tablet quick 态同公式（252/板高）。
+   */
+  private shellBoardScaleY(): number {
+    return this.isFullControlPage(this.activePage) ? 1 : this.geo.sheetH / this.shellBoardHeight();
+  }
+
+  /**
+   * Figma Review J~Q（1505:16662..18899）quick<->full 壳体 morph，Phone 生产
+   * 合同三 actor 编排：
+   * ①MorphShell 板 scaleY 0.448<->1（centerY=板高，底边锚定，330<->736 同底
+   *   边）——板 surface 从 controlSheet 与四个 FullPanel 组件迁入此处统一提供；
+   * ②QuickDock 内容 outgoing 下移 18+淡出（230 ease-in）/ incoming 上滑 18+
+   *   淡入（150 ease-out，delay 150）；
+   * ③FullPanel 内容 incoming 上滑 18+淡入（330 ease-out，delay 140 晚启动）/
+   *   outgoing 下移 18+淡出（150 ease-in-out，delay 10）。
+   * 三 actor 由 requestExpand 系列与 requestCollapse 系列的同一个 animateTo
+   * 闭包驱动，各自的 duration/curve/delay 由 panelActorTransition 独立携带。
+   */
+  @Builder
+  private morphShellControlDock() {
+    Stack({ alignContent: Alignment.Bottom }) {
+      // ①壳板（hitTest None：仅作背景，交互全部由内容层承担）。
+      Stack()
+        .width(this.shellBoardWidth())
+        .height(this.shellBoardHeight())
+        .backgroundColor(TOK_READ_SURFACE)
+        .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+        .borderRadius({
+          topLeft: TOK_RADIUS_XL,
+          topRight: TOK_RADIUS_XL,
+          bottomLeft: this.isFullControlPage(this.activePage) ?
+            TOK_RADIUS_XL : this.geo.sheetRadiusBottom,
+          bottomRight: this.isFullControlPage(this.activePage) ?
+            TOK_RADIUS_XL : this.geo.sheetRadiusBottom,
+        })
+        .clip(true)
+        .hitTestBehavior(HitTestMode.None)
+        .scale({ y: this.shellBoardScaleY(), centerY: this.shellBoardHeight() });
+      // ③FullPanel 内容（full 态挂载）。
+      if (this.activePage === 'fullSearch') {
+        this.fullSearchDock();
+      } else if (this.activePage === 'fullAppearance') {
+        this.fullAppearanceDock();
+      } else if (this.activePage === 'fullSettings') {
+        this.fullSettingsDock();
+      } else if (this.activePage === 'fullTts') {
+        this.fullTtsDock();
+      }
+      // ②QuickDock 内容（quick 态挂载；grabber 拖拽跟手位移与挂载转场并存）。
+      if (!this.isFullControlPage(this.activePage)) {
+        Stack({ alignContent: Alignment.Bottom }) {
+          this.controlSheet();
+          this.moduleNav();
+        }
+        .width(this.dockWidth())
+        .height(READER_CONTROL_REGULAR_DOCK_HEIGHT)
+        .translate({ y: this.controlGrabberDragY })
+        .transition(this.reduceMotion || this.shellExitArmed ? TransitionEffect.IDENTITY :
+          TransitionEffect.asymmetric(
+            panelActorTransition('reader.panel.dock.incoming', 18, 150),
+            panelActorTransition('reader.panel.dock.outgoing', 18),
+          ));
+      }
+    }
+    .width('100%')
+    .height(this.shellBoardHeight())
+    .margin({ bottom: this.usesTopAnchoredFullPanel() ? 0 : this.layout.dockBottomGap });
   }
 
   @Builder
@@ -793,7 +1027,10 @@ export struct ReaderControlPanel {
       onSelectResult: (result: ReadingContentSearchResult): void => this.onSearchResultSelect(result),
     })
       .transition(this.reduceMotion || this.shellExitArmed ? TransitionEffect.IDENTITY :
-        translateYTransition('reader.panel.expand', 18));
+        TransitionEffect.asymmetric(
+          panelActorTransition('reader.panel.full.incoming', 18, 140),
+          panelActorTransition('reader.panel.full.outgoing', 18, 10),
+        ));
   }
 
   @Builder
@@ -825,8 +1062,13 @@ export struct ReaderControlPanel {
       onPageTurnStyleChange: (style: ReaderPageTurnStyle): void =>
         this.onPageTurnStyleChange(style),
     })
+      // 外观面板是 N 帧 element-level 专属：入场由面板内部元素各自承担
+      // （header 落下 + 内容溶解 + 三卡 stagger），挂载点仅保留整板退场。
       .transition(this.reduceMotion || this.shellExitArmed ? TransitionEffect.IDENTITY :
-        translateYTransition('reader.panel.expand', 18));
+        TransitionEffect.asymmetric(
+          TransitionEffect.IDENTITY,
+          panelActorTransition('reader.panel.full.outgoing', 18, 10),
+        ));
   }
 
   @Builder
@@ -851,12 +1093,16 @@ export struct ReaderControlPanel {
         this.onSettingsToggleChange(key, value),
     })
       .transition(this.reduceMotion || this.shellExitArmed ? TransitionEffect.IDENTITY :
-        translateYTransition('reader.panel.expand', 18));
+        TransitionEffect.asymmetric(
+          panelActorTransition('reader.panel.full.incoming', 18, 140),
+          panelActorTransition('reader.panel.full.outgoing', 18, 10),
+        ));
   }
 
   @Builder
   private fullTtsDock() {
     ReaderTtsFullPanel({
+      morphActorId: readerSessionMorphActorId('fullTtsPlayback'),
       isTablet: this.isExpanded(),
       availableWidth: this.fullPanelAvailableWidth(),
       availableHeight: this.layout.fullPanelHeight,
@@ -889,21 +1135,14 @@ export struct ReaderControlPanel {
       onEngineChange: (engine: string): Promise<void> => this.onTtsEngineChange(engine),
       onHttpEnginePut: (config: ReaderTtsEngineOption): Promise<void> => this.onTtsHttpEnginePut(config),
       onHttpEngineDelete: (id: number): Promise<void> => this.onTtsHttpEngineDelete(id),
+      onMorphActorMeasured: (left: number, top: number, width: number, height: number): void =>
+        this.reportSessionMorphSource('fullTtsPlayback', left, top, width, height),
     })
       .transition(this.reduceMotion || this.shellExitArmed ? TransitionEffect.IDENTITY :
-        translateYTransition('reader.panel.expand', 18));
-  }
-
-  @Builder
-  private regularControlDock() {
-    Stack({ alignContent: Alignment.Bottom }) {
-      this.controlSheet();
-      this.moduleNav();
-    }
-    .width(this.dockWidth())
-    .height(READER_CONTROL_REGULAR_DOCK_HEIGHT)
-    .translate({ y: this.controlGrabberDragY })
-    .margin({ bottom: this.layout.dockBottomGap });
+        TransitionEffect.asymmetric(
+          panelActorTransition('reader.panel.full.incoming', 18, 140),
+          panelActorTransition('reader.panel.full.outgoing', 18, 10),
+        ));
   }
 
   @Builder
@@ -911,6 +1150,7 @@ export struct ReaderControlPanel {
     Stack({ alignContent: Alignment.Top }) {
       Stack({ alignContent: Alignment.TopStart }) {
         ReaderAutoPageFullPanel({
+          morphActorId: readerSessionMorphActorId('fullAutoPagePlayback'),
           isTablet: false,
           availableWidth: this.autoPageSurfaceWidth(),
           availableHeight: this.autoPageSurfaceHeight(),
@@ -933,6 +1173,8 @@ export struct ReaderControlPanel {
           onSpeedChange: (seconds: number): void => this.onAutoPageFullSpeedChange(seconds),
           onFollowHighlightChange: (enabled: boolean): void =>
             this.onAutoPageFollowHighlightChange(enabled),
+          onMorphActorMeasured: (left: number, top: number, width: number, height: number): void =>
+            this.reportSessionMorphSource('fullAutoPagePlayback', left, top, width, height),
         });
 
         // OutgoingActor/BrightnessRail: opacity 1→0 and y 0→18.
@@ -982,7 +1224,8 @@ export struct ReaderControlPanel {
   }
 
   private usesTopAnchoredFullPanel(): boolean {
-    return this.activePage === 'fullSearch' || this.activePage === 'fullAppearance' ||
+    return this.usesPhoneAppearanceMotionStage() ||
+      this.activePage === 'fullSearch' || this.activePage === 'fullAppearance' ||
       this.activePage === 'fullTts' || this.activePage === 'fullSettings';
   }
 
@@ -1060,16 +1303,10 @@ export struct ReaderControlPanel {
     .width('100%')
     .constraintSize({ maxWidth: this.dockWidth() })
     .height(this.geo.sheetH)
-    // ControlSheet 外层背景 = TOK_READ_SURFACE (rgba(255,250,244,0.98) 近不透明暖奶油)。
-    // 勿误用内层 Panel 的 TOK_SURFACE_PANEL (0.62) —— 那会过度透明、正文透入、区块压平发白发虚。
-    .backgroundColor(TOK_READ_SURFACE)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
-    .borderRadius({
-      topLeft: TOK_RADIUS_XL,
-      topRight: TOK_RADIUS_XL,
-      bottomLeft: this.geo.sheetRadiusBottom,
-      bottomRight: this.geo.sheetRadiusBottom,
-    })
+    // ControlSheet 的 surface（TOK_READ_SURFACE 近不透明暖奶油 + 边框 + 圆角）
+    // 已迁入 morphShellControlDock 的壳板（Figma Review J~Q MorphShell 单一背
+    // 景来源）。勿在此处再画背景，否则压扁态会出现双层板；内层 Panel 仍用
+    // TOK_SURFACE_PANEL (0.62) 区块底色。
     .clip(true);
   }
 
@@ -1141,6 +1378,7 @@ export struct ReaderControlPanel {
           .layoutWeight(1);
       } else if (this.activePage === 'quickAutoPage') {
         ReaderAutoPagePanel({
+          morphActorId: readerSessionMorphActorId('quickAutoPage'),
           isTablet: this.isExpanded(),
           status: this.autoPageStatus,
           speedSeconds: this.autoPageSpeedSeconds,
@@ -1153,6 +1391,8 @@ export struct ReaderControlPanel {
           onNextChapter: (): void => this.onNextChapter(),
           onSlowDown: (): void => this.onAutoPageSlowDown(),
           onSpeedUp: (): void => this.onAutoPageSpeedUp(),
+          onMorphActorMeasured: (left: number, top: number, width: number, height: number): void =>
+            this.reportSessionMorphSource('quickAutoPage', left, top, width, height),
         })
           .layoutWeight(1);
       } else if (this.activePage === 'quickReplace') {
@@ -1183,6 +1423,7 @@ export struct ReaderControlPanel {
           .layoutWeight(1);
       } else if (this.activePage === 'moduleTts') {
         ReaderTtsModulePanel({
+          morphActorId: readerSessionMorphActorId('quickTts'),
           isTablet: this.isExpanded(),
           state: this.ttsState,
           timerMinutes: this.ttsTimerMinutes,
@@ -1191,6 +1432,8 @@ export struct ReaderControlPanel {
           onPrevious: (): void => this.onTtsPrevious(),
           onNext: (): void => this.onTtsNext(),
           onRateChange: (rate: number): void => this.onTtsRateChange(rate),
+          onMorphActorMeasured: (left: number, top: number, width: number, height: number): void =>
+            this.reportSessionMorphSource('quickTts', left, top, width, height),
         })
           .layoutWeight(1);
       } else if (this.activePage === 'moduleAppearance') {
@@ -1227,7 +1470,8 @@ export struct ReaderControlPanel {
     .transition(this.reduceMotion || this.shellExitArmed ? TransitionEffect.IDENTITY :
       ((this.activePage === 'quickSearch' || this.activePage === 'quickAutoPage' ||
         this.activePage === 'quickReplace') ?
-        translateYTransition('reader.quick.promote', 12) :
+        // MR1/C authors quick.promote as opacity + translate dual components.
+        fadeSlideTransition('reader.quick.promote', 12) :
         TransitionEffect.OPACITY.animation(motionAnimateParam('reader.module.switch'))));
   }
 

@@ -80,6 +80,14 @@ assert.equal(READER_AUTO_PAGE_COLLAPSED_SURFACE_Y, 406.443);
 
 const root = new URL('../entry/src/main/', import.meta.url);
 const panel = await readFile(new URL('ets/features/reading/ReaderAutoPageFullPanel.ets', root), 'utf8');
+const quickPanel = await readFile(new URL('ets/features/reading/ReaderAutoPagePanel.ets', root), 'utf8');
+
+assert.match(quickPanel,
+  /this\.status === 'running' \?\s*'app\.media\.reader_session_pause' : 'app\.media\.reader_auto_play'/,
+  'quick auto-page control must replace play with pause while running');
+assert.match(panel,
+  /this\.status === 'running' \?\s*'app\.media\.reader_session_pause' : 'app\.media\.reader_auto_full_play'/,
+  'full auto-page control must replace play with pause while running');
 
 assert.match(panel, /Phone final page `1771:10277`/);
 assert.match(panel, /Full panel instance `1771:10280`/);

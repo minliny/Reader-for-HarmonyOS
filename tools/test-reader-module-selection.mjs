@@ -21,8 +21,18 @@ for (const [module, asset] of [
 }
 assert.doesNotMatch(control, /module === 'appearance'[\s\S]*?\.fillColor\('#FFFAF4'\)/,
   'module selection must not depend on runtime tinting of hard-coded SVG strokes');
-assert.match(provenance, /reader_appearance_nav_active[\s\S]*?Filled\/ReaderModuleAppearance/);
-assert.match(provenance, /reader_settings_nav_active[\s\S]*?Filled\/ReaderModuleSettings/);
+for (const [asset, component] of [
+  ['reader_directory_list_active', 'ReaderModuleDirectory'],
+  ['reader_tts_nav_active', 'ReaderModuleTts'],
+  ['reader_appearance_nav_active', 'ReaderModuleAppearance'],
+  ['reader_settings_nav_active', 'ReaderModuleSettings'],
+]) {
+  assert.match(provenance,
+    new RegExp(`${asset}[\\s\\S]*?'${component}'[\\s\\S]*?#FFFAF4`),
+    `${component} active navigation must use the Figma white outline component`);
+}
+assert.doesNotMatch(provenance, /reader_(?:directory_list|tts_nav|appearance_nav|settings_nav)_active[\s\S]*?Filled\/ReaderModule/,
+  'Figma final Reader module navigation never uses filled active glyphs');
 
 const directoryTab = directory.match(/private directoryTab\(\)[\s\S]*?private bookmarkTab\(\)/)?.[0] ?? '';
 assert.ok(directoryTab.length > 0, 'directory tab builder must remain present');

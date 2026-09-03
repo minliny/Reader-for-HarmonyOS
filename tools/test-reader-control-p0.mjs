@@ -13,8 +13,148 @@ assert.match(motion, /reader\.panel\.expand', durationMs: 420, curve: Curve\.Eas
 assert.match(motion, /reader\.panel\.collapse', durationMs: 360, curve: Curve\.EaseIn/);
 assert.match(motion, /reader\.control\.handle\.snap', durationMs: 120, curve: Curve\.EaseOut/,
   'the grabber release settle must own its own 120ms snap token, not borrow the 360ms panel collapse');
+assert.match(motion,
+  /function fadeSlideTransition[\s\S]*?TransitionEffect\.OPACITY\s*\.combine\(TransitionEffect\.translate\(\{ y: fromY \}\)\)/,
+  'MR1 authors control show/hide as opacity + translate; the pure-translate version left the hide beat invisible');
+assert.match(motion,
+  /export function showHideTransition\(showId: string, hideId: string, fromY: number\): TransitionEffect \{\s*return TransitionEffect\.asymmetric\(/,
+  'show and hide must resolve through the asymmetric pair so the exit uses the hide token');
+assert.match(motion,
+  /export function panelActorTransition\(id: string, fromY: number, delayMs: number = 0\): TransitionEffect \{\s*const entry = requireEntry\(id\);\s*const anim: AnimateParam = delayMs > 0 \?/,
+  'the J~Q shell-morph actors resolve through one registry-backed transition factory');
+assert.match(motion,
+  /export function panelActorTransition\([\s\S]*?TransitionEffect\.OPACITY\s*\.combine\(TransitionEffect\.translate\(\{ y: fromY \}\)\)/,
+  'J~Q authors every shell-morph actor as opacity + 18px translate, never translate-only');
+assert.match(motion,
+  /reader\.panel\.shell\.expand', durationMs: 420, curve: curves\.cubicBezierCurve\(0\.2, 0, 0, 1\)/,
+  'the shell board expands on the J/L cubic(0.2,0,0,1) beat at 420ms');
+assert.match(motion,
+  /reader\.panel\.shell\.collapse', durationMs: 360, curve: curves\.cubicBezierCurve\(0\.45, 0, 0\.55, 1\)/,
+  'the shell board collapses on the K/M/O/Q ease-in-out beat at 360ms');
+assert.match(motion,
+  /reader\.panel\.dock\.outgoing', durationMs: 230, curve: Curve\.EaseIn/,
+  'the quick dock leaves on the J~Q ease-out keyframe pair scaled to 420ms');
+assert.match(motion,
+  /reader\.panel\.dock\.incoming', durationMs: 150, curve: Curve\.EaseOut/,
+  'the quick dock returns with the late ease-out beat at 150ms');
+assert.match(motion,
+  /reader\.panel\.full\.incoming', durationMs: 330, curve: Curve\.EaseOut/,
+  'full panel content fades in late (delay 140) on the J~Q ease-out window');
+assert.match(motion,
+  /reader\.panel\.full\.outgoing', durationMs: 150, curve: curves\.cubicBezierCurve\(0\.45, 0, 0\.55, 1\)/,
+  'full panel content leaves first on the collapse ease-in-out beat (delay 10)');
+assert.match(motion,
+  /reader\.session\.capsule\.morph\.flight',\s*\n\s*durationMs: 480, curve: curves\.cubicBezierCurve\(0\.4, 0, 0\.2, 1\)/,
+  'the Review C/D/E/F flight beat is the 2026-09-02 product supplement at 480ms');
+assert.match(motion,
+  /reader\.session\.capsule\.morph\.expand',\s*\n\s*durationMs: 240, curve: curves\.cubicBezierCurve\(0\.2, 0, 0, 1\)/,
+  'the right-edge shell expand is the 2026-09-02 product supplement at 240ms');
+assert.match(motion,
+  /reader\.session\.capsule\.morph\.reveal', durationMs: 160, curve: Curve\.EaseOut/,
+  'the content reveal is the 2026-09-02 product supplement at 160ms');
+assert.match(motion,
+  /reader\.session\.capsule\.morph\.dot\.hold', durationMs: 120, curve: Curve\.Linear/,
+  'the canonical 24vp shell holds before it expands');
 
 const control = read('entry/src/main/ets/features/reading/ReaderControlPanel.ets');
+const appearanceStage = read('entry/src/main/ets/features/reading/ReaderAppearanceMotionStage.ets');
+const appearanceMotionState = read('entry/src/main/ets/features/reading/ReaderAppearanceMotionState.ts');
+const appearanceQuick = read('entry/src/main/ets/features/reading/ReaderAppearanceModulePanel.ets');
+const appearanceSharedActors = read('entry/src/main/ets/features/reading/ReaderAppearanceSharedActors.ets');
+
+assert.equal((control.match(/panelActorTransition\('reader\.panel\.full\.incoming', 18, 140\)/g) ?? []).length, 3,
+  'Search/Settings/Tts enter with the delayed J~Q fade+slide; Appearance is element-level (N frame)');
+assert.equal((control.match(/panelActorTransition\('reader\.panel\.full\.outgoing', 18, 10\)/g) ?? []).length, 4,
+  'all four full panels leave on the collapse ease-in-out beat while the shell board shrinks');
+assert.match(control,
+  /private fullAppearanceDock\(\)[\s\S]*?TransitionEffect\.asymmetric\(\s*TransitionEffect\.IDENTITY,\s*panelActorTransition\('reader\.panel\.full\.outgoing', 18, 10\)/,
+  'the Appearance dock must hand its entrance to the element-level children (N frame) and keep only the board exit');
+assert.equal((control.match(/panelActorTransition\('reader\.panel\.dock\.incoming', 18, 150\)/g) ?? []).length, 1,
+  'the quick dock returns through the single morph-shell B layer, once');
+assert.equal((control.match(/panelActorTransition\('reader\.panel\.dock\.outgoing', 18\)/g) ?? []).length, 1,
+  'the quick dock leaves through the single morph-shell B layer, once');
+assert.match(control, /private morphShellControlDock\(\)/,
+  'quick and full control pages must share one morph-shell board (J~Q MorphStage)');
+assert.match(control,
+  /private controlDock\(\) \{\s*if \(this\.usesPhoneAppearanceMotionStage\(\)\) \{\s*this\.appearanceMotionDock\(\);/,
+  'Phone Appearance must bypass the generic conditional-mount shell and enter its persistent N/O stage');
+assert.match(control,
+  /return !this\.isExpanded\(\) &&\s*\(this\.activePage === 'moduleAppearance' \|\| this\.activePage === 'fullAppearance'\)/,
+  'both Appearance route endpoints must preserve the same Phone stage instance');
+assert.match(control,
+  /ReaderAppearanceMotionStage\(\{[\s\S]*?expanded: this\.activePage === 'fullAppearance'[\s\S]*?onEndpointChange:/,
+  'route state may follow only the motion stage stable endpoint callback');
+assert.match(control,
+  /motionFrame: context\.frame/,
+  'the persistent FullPanel must keep legacy TransitionEffects disabled for both N and O');
+assert.match(control, /showGrabber: false/,
+  'the persistent appearance stage must own the only visible and interactive grabber');
+assert.match(control, /return this\.usesPhoneAppearanceMotionStage\(\) \|\|/,
+  'quick Appearance must use the same top-anchored 736vp stage as full Appearance');
+assert.match(appearanceStage, /class ReaderAppearanceStageFrameCallback extends FrameCallback/);
+assert.match(appearanceStage,
+  /\.onTouch\(\(event: TouchEvent\): void => this\.handleGrabberTouch\(event\)\)/,
+  'appearance grabber must directly sample raw touch for one-to-one follow');
+assert.doesNotMatch(appearanceStage, /PanGesture\s*\(/,
+  'appearance follow must not return to the old release-only PanGesture path');
+assert.doesNotMatch(appearanceStage, /animateTo\s*\(/,
+  'appearance stage must have one interruptible frame clock, not competing animateTo owners');
+assert.match(appearanceStage, /expectedEpoch !== this\.motionState\.epoch/,
+  're-grab must invalidate already posted settlement frames');
+assert.match(appearanceStage,
+  /private fullMorphStageLayer\(\)[\s\S]*?this\.fullLayer\(\)[\s\S]*?\.height\(this\.contentShellHeight\(\)\)[\s\S]*?y: this\.contentShellTop\(\)[\s\S]*?\.clip\(true\)/,
+  'Full content must inherit the bottom-anchored MorphStage coordinate and clip');
+assert.match(appearanceStage,
+  /private quickMorphStageLayer\(\)[\s\S]*?this\.quickMorphLayer\(\)[\s\S]*?\.height\(this\.contentShellHeight\(\)\)[\s\S]*?y: this\.contentShellTop\(\)[\s\S]*?\.clip\(true\)/,
+  'only the shared QuickMorph subtree may inherit MorphStage inside QuickDock');
+assert.doesNotMatch(appearanceStage,
+  /private quickMorphLayer\(\)[\s\S]*?\.opacity\(this\.renderFrame\.quickMorph\.opacity\)/,
+  'the persistent Stage must not revive a QuickMorph root dissolve');
+assert.doesNotMatch(appearanceQuick,
+  /\.opacity\(frame\.quickMorph\.opacity\)/,
+  'QuickMorph root dissolve must not be duplicated inside the module panel');
+assert.match(appearanceStage,
+  /private quickDockLayer\(\)[\s\S]*?this\.quickMorphStageLayer\(\);[\s\S]*?this\.brightnessLayer\(\);[\s\S]*?this\.moduleNavLayer\(\);[\s\S]*?\.height\(READER_APPEARANCE_MOTION_STAGE_HEIGHT\)/,
+  'O QuickIncoming must own one fixed 736vp QuickDock wrapper');
+assert.match(appearanceStage,
+  /private brightnessLayer\(\)[\s\S]*?y: READER_APPEARANCE_BRIGHTNESS_FIXED_Y/,
+  'N BrightnessRail must remain at its fixed screen y rather than inherit MorphStage travel');
+assert.match(appearanceStage,
+  /private moduleNavLayer\(\)[\s\S]*?\.height\(READER_APPEARANCE_MOTION_STAGE_HEIGHT\)/,
+  'N ModuleNav must remain bottom-aligned in the fixed 736vp stage');
+assert.match(appearanceStage,
+  /@Prop @Watch\('onMotionTimeScaleChanged'\) motionTimeScale: number = 1/,
+  'whole-timeline time scaling must be live rather than mount-only');
+assert.match(appearanceMotionState, /export function readerAppearanceMotionIsActive/,
+  'the pure state driver must expose its active lifecycle to the Stage');
+assert.match(appearanceMotionState, /export function setReaderAppearanceMotionTimeScale/,
+  'retiming must preserve the current sampled frame while scaling the remaining clock');
+for (const actorAccess of [
+  'this.frame.quickMorph',
+  'this.frame.themeItems[index]',
+  'this.frame.fontItems[safeIndex]',
+]) {
+  assert.ok(appearanceSharedActors.includes(actorAccess),
+    `QuickMorph shared tree omitted sampled actor access ${actorAccess}`);
+}
+assert.match(appearanceQuick,
+  /if \(!this\.isTablet && this\.motionFrame !== undefined\) \{\s*this\.motionPanel\(\);/,
+  'the QuickMorph Builder must read the live @Prop directly instead of freezing a frame argument');
+assert.doesNotMatch(appearanceQuick,
+  /private motion(?:Panel|ThemeHeader|Divider|FontHeader)\([^)]*(?:frame|actor|reflow)/,
+  'reactive QuickMorph values must not cross an ArkUI @Builder ordinary-parameter boundary');
+assert.match(control,
+  /\.scale\(\{ y: this\.shellBoardScaleY\(\), centerY: this\.shellBoardHeight\(\) \}\)/,
+  'the shell board must bottom-anchor its scaleY morph (330<->736 with no translate drift)');
+assert.match(control,
+  /if \(!this\.isFullControlPage\(this\.activePage\)\) \{[\s\S]*?this\.controlSheet\(\);[\s\S]*?this\.moduleNav\(\);/,
+  'quick dock content lives outside the scaled shell board so it is never squashed');
+assert.equal((control.match(/showHideTransition\('reader\.control\.show', 'reader\.control\.hide',/g) ?? []).length, 2,
+  'TopBar and Dock must keep the MR1 show/hide pair (now with the authored opacity component)');
+assert.equal((control.match(/\.transition\(this\.reduceMotion \|\| this\.shellExitArmed \? TransitionEffect\.IDENTITY :\s*showHideTransition\('reader\.control\.show', 'reader\.control\.hide',/g) ?? []).length, 2,
+  'session morph handoff must suppress both root control-layer exits to prevent double exposure');
+assert.match(control, /fadeSlideTransition\('reader\.quick\.promote', 12\)/,
+  'quick.promote keeps its own 320ms token and carries the MR1/C opacity+12px pair');
 
 const grabberSnap = control.slice(
   control.indexOf('private resetControlGrabberDrag(): void {'),
@@ -82,12 +222,46 @@ assert.match(control, /const destination: ReaderControlPage = this\.isActiveModu
   'tapping the active main tab must return to the control home page');
 assert.match(control, /if \(this\.reduceMotion\) \{\s*this\.onPageChange\(destination\)/);
 assert.match(control, /if \(this\.reduceMotion\) \{\s*this\.onPageChange\('quickSearch'\)/);
-assert.match(control, /this\.reduceMotion \? TransitionEffect\.IDENTITY/);
+assert.match(control, /this\.reduceMotion \|\| this\.shellExitArmed \? TransitionEffect\.IDENTITY/);
 assert.match(control, /\.height\('100%'\)\s+\.zIndex\(0\)\s+\.onClick\(\(\): void => this\.onDismiss\(\)\)/);
 assert.equal((control.match(/\.height\('100%'\)\s+\.zIndex\(1\)\s+\.hitTestBehavior\(HitTestMode\.None\)/g) ?? []).length, 2);
 assert.match(control, /\.accessibilityText\('阅读进度'\)/);
 assert.match(control, /\.accessibilityText\('阅读亮度'\)/);
 assert.doesNotMatch(control, /真面板\(目录\/朗读\/界面\/设置\)后续挂入本层/);
+
+for (const [file, importsLineStrong] of [
+  ['ReaderSearchFullPanel.ets', true],
+  ['ReaderAppearanceFullPanel.ets', false],
+  ['ReaderSettingsFullPanel.ets', false],
+  ['ReaderTtsFullPanel.ets', false],
+]) {
+  const panel = read(`entry/src/main/ets/features/reading/${file}`);
+  assert.doesNotMatch(panel, /TOK_READ_SURFACE/,
+    `${file} must not draw its own surface — the morph-shell board is the single background source`);
+  if (!importsLineStrong) {
+    assert.doesNotMatch(panel, /TOK_LINE_STRONG/,
+      `${file} no longer needs the shell-border token after de-boarding`);
+  }
+  assert.match(panel, /\.clip\(true\)/,
+    `${file} must keep content clipping so the shell board radius bounds its content`);
+}
+
+const appearance = read('entry/src/main/ets/features/reading/ReaderAppearanceFullPanel.ets');
+for (const [id, delay] of [
+  ['surface.in', 128],
+  ['content.in', 146],
+  ['header.in', 146],
+  ['theme.in', 146],
+  ['font.in', 175],
+  ['typography.in', 256],
+]) {
+  assert.match(appearance,
+    new RegExp(`panelActorTransition\\('reader\\.panel\\.appearance\\.${id}', (?:0|-12), ${delay}\\)`),
+    `N-frame element entrance ${id} must run through the registry factory at delay ${delay}`);
+}
+assert.match(motion,
+  /reader\.panel\.appearance\.typography\.in', durationMs: 164, curve: Curve\.EaseOut/,
+  'the N-frame stagger table is mirrored in the motion registry, not hardcoded at call sites');
 
 const gateway = read('entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
 const sessionGateway = read('entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
@@ -179,6 +353,19 @@ assert.match(pageInteraction,
   'a declarative 100% target length must fall back to the measured viewport instead of becoming 100vp');
 assert.match(pageInteraction,
   /READER_PAGE_TAP_MAX_DURATION_MS = READER_PAGE_GESTURE_LONG_PRESS_MS/);
+assert.doesNotMatch(pageInteraction,
+  /if \(event\.type === TouchType\.Down\)[\s\S]{0,500}this\.onManualInteraction\(\)/,
+  'pointer DOWN must not pause Auto Page before a center control tap is distinguished');
+assert.match(pageInteraction,
+  /if \(intent === 'control'\) \{[\s\S]*?this\.onOpenControl\(\);[\s\S]*?return;[\s\S]*?\}\s*this\.reportManualInteraction\(\);\s*this\.onTurn\(intent\)/,
+  'opening controls must preserve a running session while side taps still report manual page turns');
+const continuousStage = read('entry/src/main/ets/features/reading/ReaderContinuousReadingStage.ets');
+assert.doesNotMatch(continuousStage,
+  /if \(event\.type === TouchType\.Down\)[\s\S]{0,300}this\.onManualInteraction\(\)/,
+  'continuous reading DOWN must not pause Auto Page before tap-versus-scroll is known');
+assert.match(continuousStage,
+  /this\.touchMoved = this\.touchMoved \|\| moved;[\s\S]*?if \(event\.type === TouchType\.Move\)[\s\S]*?this\.reportManualInteraction\(\)/,
+  'continuous scrolling must still pause Auto Page once movement is established');
 assert.match(pageGestureState, /READER_PAGE_GESTURE_LONG_PRESS_MS = 500/,
   'a stationary long press belongs to text selection and must not open controls on release');
 assert.match(pageInteraction,

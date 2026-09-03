@@ -8,7 +8,6 @@ import {
   TOK_READ_INK,
   TOK_READ_MUTED,
   TOK_READ_PRIMARY,
-  TOK_READ_SURFACE,
   TOK_SURFACE_PANEL,
   TOK_SURFACE_PANEL_SOFT,
 } from '../common/ReaderTokens';
@@ -75,9 +74,8 @@ export struct ReaderSearchFullPanel {
     }
     .width(this.sheetWidth())
     .height(this.sheetHeight())
-    .backgroundColor(TOK_READ_SURFACE)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
-    .borderRadius(24)
+    // MorphShell 壳板（ReaderControlPanel）统一提供 surface/边框/圆角；
+    // 此处仅保留内容裁剪（Figma Review J~Q 壳体 morph 单一背景来源）。
     .clip(true);
   }
 
