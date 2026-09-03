@@ -38,7 +38,12 @@ import {
   readerVisualSafeRight,
 } from '../common/ReaderWindowMetrics';
 import { isReaderProductSurfaceEnabled } from '../../app/ReaderProductScope';
-import { motionAnimateParam } from '../common/MotionSpec';
+import {
+  BookshelfViewMotionContract,
+  bookshelfViewCoverMoveAnimation,
+  bookshelfViewCoverScaleAnimation,
+  bookshelfViewMotionContract,
+} from '../common/MotionSpec';
 
 const PHONE_BOOK_WIDTH = 96.656;
 const PHONE_BOOK_HEIGHT_RATIO = 145.443 / PHONE_BOOK_WIDTH;
@@ -55,25 +60,6 @@ const TABLET_RAIL_CONTENT_GAP = 20;
 const TABLET_CONTENT_RIGHT_GAP = 21;
 
 type BookshelfViewMode = 'cover' | 'list';
-
-class BookshelfBookDataSource implements IDataSource {
-  private items: ShelfBook[] = [];
-  private listeners: DataChangeListener[] = [];
-
-  totalCount(): number { return this.items.length; }
-  getData(index: number): ShelfBook { return this.items[index]; }
-  registerDataChangeListener(listener: DataChangeListener): void {
-    if (this.listeners.indexOf(listener) < 0) this.listeners.push(listener);
-  }
-  unregisterDataChangeListener(listener: DataChangeListener): void {
-    const index = this.listeners.indexOf(listener);
-    if (index >= 0) this.listeners.splice(index, 1);
-  }
-  replace(items: ShelfBook[]): void {
-    this.items = items;
-    for (const listener of this.listeners) listener.onDataReloaded();
-  }
-}
 
 class BookshelfRowDataSource implements IDataSource {
   private items: ShelfBook[][] = [];
@@ -129,6 +115,12 @@ export struct BookshelfPage {
   @Prop updateProgressTotal: number = 0;
   @State private viewportWidth: number = 0;
   @State private viewMode: BookshelfViewMode = 'cover';
+  @State private viewSwitchRunning: boolean = false;
+  @State private viewSwitchHeaderOpacity: number = 1;
+  @State private viewSwitchGridContentOpacity: number = 1;
+  @State private viewSwitchListContentOpacity: number = 0;
+  @State private viewSwitchDestinationCoverOpacity: number = 1;
+  @State private viewSwitchMorphCoverOpacity: number = 0;
   @State private filterRowVisible: boolean = false;
   @State private selectedGroup: string = '';
   @State private actionBook: ShelfBook | undefined = undefined;
@@ -138,12 +130,19 @@ export struct BookshelfPage {
   @State private overlayOriginX: number = 0;
   @State private overlayOriginY: number = 0;
   @State private projectedGroups: string[] = [];
-  private readonly bookDataSource: BookshelfBookDataSource = new BookshelfBookDataSource();
+  private readonly viewMotion: BookshelfViewMotionContract = bookshelfViewMotionContract();
+  private pendingViewMode: BookshelfViewMode = 'cover';
+  private viewSwitchToken: number = 0;
+  private viewSwitchCommitTimer: number = -1;
   private readonly rowDataSource: BookshelfRowDataSource = new BookshelfRowDataSource();
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
     this.rebuildShelfProjection();
+  }
+
+  aboutToDisappear(): void {
+    this.resetViewSwitchMotion();
   }
 
   build() {
@@ -253,7 +252,7 @@ export struct BookshelfPage {
         ReaderIconButton({
           icon: $r('app.media.bookshelf_more'),
           boxSize: 44,
-          iconSize: 24,
+          iconSize: 44,
           radius: 22,
           onTap: (): void => {
             this.moreMenuVisible = true;
@@ -394,14 +393,14 @@ export struct BookshelfPage {
             this.sectionAction('bookshelf_filter', (): void => {
               this.filterRowVisible = !this.filterRowVisible;
             });
-            this.sectionAction('bookshelf_search', (): void => this.onSearchRequested());
             this.sectionAction('bookshelf_settings', (): void => this.onManageRequested());
           }
           .height(34);
         }
         .width(this.shelfContentWidth(isTablet))
         .height(38)
-        .alignItems(VerticalAlign.Center);
+        .alignItems(VerticalAlign.Center)
+        .opacity(this.viewSwitchHeaderOpacity);
       }
 
       if (this.filterRowVisible) {
@@ -410,25 +409,14 @@ export struct BookshelfPage {
         }
       }
 
-      if (this.viewMode === 'list') {
-        LazyForEach(this.bookDataSource, (book: ShelfBook) => {
-          ListItem() {
-            this.listBookCard(book, isTablet);
-          }
-        }, (book: ShelfBook, index: number): string => this.bookListRenderKey(book, index));
-      } else {
-        LazyForEach(this.rowDataSource, (row: ShelfBook[], rowIndex: number) => {
-          ListItem() {
-            Row({ space: this.bookRowSpace(this.shelfContentWidth(isTablet), isTablet) }) {
-              ForEach(row, (book: ShelfBook) => {
-                this.bookCard(book, isTablet);
-              }, (book: ShelfBook): string => `${book.sourceId}:${book.bookId}`);
-            }
-            .width(this.shelfContentWidth(isTablet))
-            .alignItems(VerticalAlign.Top);
-          }
-        }, (row: ShelfBook[], rowIndex: number): string => this.bookRowRenderKey(row, rowIndex));
-      }
+      // One stable row/card tree owns both projections. Replacing the list and
+      // grid subtrees made ArkUI mount the target at its final geometry, so the
+      // Figma shared-cover motion had no persistent actor to interpolate.
+      LazyForEach(this.rowDataSource, (row: ShelfBook[], rowIndex: number) => {
+        ListItem() {
+          this.projectionRow(row, isTablet, rowIndex);
+        }
+      }, (row: ShelfBook[], rowIndex: number): string => this.bookRowRenderKey(row, rowIndex));
     }
     .width(this.shelfContentWidth(isTablet))
     .height('100%')
@@ -439,8 +427,9 @@ export struct BookshelfPage {
   /**
    * SHF-02/03 shelf tools row, raised by the previously dead filter action:
    * group filter chips plus the shelf-wide manual update entry. The row is an
-   * approved product extension (no Figma frame) so the resting surface keeps
-   * the canonical five-action toolbar (Figma SectionHeader 2236:1406).
+   * approved product extension (no Figma frame). The resting surface follows
+   * the current four-action product decision: Cover/List/Filter/Management;
+   * search remains solely in the AppTopBar.
    */
   @Builder
   private filterRow() {
@@ -519,7 +508,7 @@ export struct BookshelfPage {
 
   // A single unconditional Image per action: if/else nodes inside a
   // multi-instance @Builder get mis-diffed on state change and whole actions
-  // vanish from the tree (observed: search). Only the src attribute swaps.
+  // vanish from the tree. Only the src attribute swaps.
   private sectionActionAsset(assetName: string): Resource {
     if (assetName === 'bookshelf_grid') {
       return this.viewMode === 'cover'
@@ -532,9 +521,6 @@ export struct BookshelfPage {
     if (assetName === 'bookshelf_filter') {
       return this.filterRowVisible
         ? $r('app.media.bookshelf_filter_active') : $r('app.media.bookshelf_filter');
-    }
-    if (assetName === 'bookshelf_search') {
-      return $r('app.media.bookshelf_search');
     }
     return $r('app.media.bookshelf_settings');
   }
@@ -557,86 +543,212 @@ export struct BookshelfPage {
   }
 
   @Builder
-  private listBookCard(book: ShelfBook, isTablet: boolean) {
+  private projectionRow(row: ShelfBook[], isTablet: boolean, rowIndex: number) {
+    Stack({ alignContent: Alignment.TopStart }) {
+      ForEach(row, (book: ShelfBook, columnIndex: number) => {
+        this.projectionBookCard(book, isTablet, (rowIndex * 3) + columnIndex, columnIndex);
+      }, (book: ShelfBook): string => `${book.sourceId}:${book.bookId}`);
+    }
+    .width(this.shelfContentWidth(isTablet))
+    .height(this.projectionRowHeight(row, isTablet))
+    .animation(bookshelfViewCoverMoveAnimation(rowIndex * 3));
+  }
+
+  /**
+   * A book card is mounted once and survives both projections. The outer actor
+   * owns the grid/list position; the cover child owns scale and corner radius.
+   * Only the local text layers cross-fade. This is the Figma G/H shared-element
+   * contract and avoids ArkUI's non-animated conditional-subtree replacement.
+   */
+  @Builder
+  private projectionBookCard(
+    book: ShelfBook,
+    isTablet: boolean,
+    index: number,
+    columnIndex: number,
+  ) {
+    Stack({ alignContent: Alignment.TopStart }) {
+      this.projectionBookCover(book, isTablet, index);
+      this.projectionGridDetails(book, isTablet);
+      this.projectionListDetails(book, isTablet);
+    }
+    .width(this.projectionBookWidth(isTablet))
+    .height(this.projectionBookHeight(book, isTablet))
+    .translate({
+      x: this.projectionBookTranslateX(columnIndex, isTablet),
+      y: this.projectionBookTranslateY(columnIndex, isTablet),
+    })
+    .animation(bookshelfViewCoverMoveAnimation(index))
+    .onClick((): void => this.onBookSelected(book))
+    .gesture(
+      LongPressGesture({ fingers: 1, repeat: false, duration: 500 })
+        .onAction((_event: GestureEvent): void => this.presentBookActionSheet(book)),
+    );
+  }
+
+  @Builder
+  private projectionBookCover(book: ShelfBook, isTablet: boolean, index: number) {
+    Stack({ alignContent: Alignment.TopStart }) {
+      this.projectionBookCoverLayer(book, isTablet, false);
+      this.projectionBookCoverLayer(book, isTablet, true);
+    }
+    .width(this.shelfBookCardWidth(isTablet))
+    .height(this.bookCardHeight(this.shelfBookCardWidth(isTablet), isTablet))
+    .borderRadius(this.projectionCoverRadius(isTablet))
+    .clip(true)
+    .scale({
+      x: this.projectionCoverScale(isTablet),
+      y: this.projectionCoverScale(isTablet),
+      centerX: '50%',
+      centerY: '50%',
+    })
+    .translate({
+      x: this.projectionCoverCompensationX(isTablet),
+      y: this.projectionCoverCompensationY(isTablet),
+    })
+    .animation(bookshelfViewCoverScaleAnimation(index))
+    .zIndex(4)
+    .hitTestBehavior(HitTestMode.Transparent);
+  }
+
+  /**
+   * Figma renders a shared morph cover above a separately fading destination
+   * collection. Keeping both actors avoids the old jump where one cover had to
+   * be both the moving layer and the final static layer at the same instant.
+   */
+  @Builder
+  private projectionBookCoverLayer(book: ShelfBook, isTablet: boolean, morphLayer: boolean) {
+    Stack({ alignContent: Alignment.Bottom }) {
+      if (this.hasCover(book)) {
+        Image(book.coverUrl as string)
+          .width(this.shelfBookCardWidth(isTablet))
+          .height(this.bookCardHeight(this.shelfBookCardWidth(isTablet), isTablet))
+          .objectFit(ImageFit.Cover)
+          .borderRadius(this.projectionCoverRadius(isTablet))
+          .shadow({ radius: 26, color: '#1A594632', offsetX: 0, offsetY: 8 });
+      } else {
+        NoCoverCover({
+          coverWidth: this.shelfBookCardWidth(isTablet),
+          coverHeight: this.bookCardHeight(this.shelfBookCardWidth(isTablet), isTablet),
+        });
+      }
+      if ((book.unreadCount ?? 0) > 0) {
+        Text(`更新 ${book.unreadCount} 章`)
+          .fontFamily('ReaderInter')
+          .fontWeight(FontWeight.Bold)
+          .fontSize(10)
+          .fontColor(TOK_ON_PRIMARY)
+          .padding({ left: 7, right: 7, top: 3, bottom: 3 })
+          .backgroundColor(TOK_GREEN)
+          .borderRadius(999)
+          .align(Alignment.TopEnd)
+          .margin({ top: 7, right: 7 })
+          .opacity(this.viewSwitchGridContentOpacity);
+      }
+    }
+    .width(this.shelfBookCardWidth(isTablet))
+    .height(this.bookCardHeight(this.shelfBookCardWidth(isTablet), isTablet))
+    .linearGradient({
+      angle: 141.7,
+      colors: [[TOK_PRIMARY_GRADIENT_START, 0.077], [TOK_PRIMARY_DARK, 0.923]],
+    })
+    .borderRadius(this.projectionCoverRadius(isTablet))
+    .clip(true)
+    .opacity(this.projectionCoverLayerOpacity(morphLayer))
+    .hitTestBehavior(HitTestMode.Transparent);
+  }
+
+  @Builder
+  private projectionGridDetails(book: ShelfBook, isTablet: boolean) {
+    Column({ space: 6 }) {
+      Text(book.title)
+        .width(this.shelfBookCardWidth(isTablet))
+        .fontFamily('ReaderNotoSerifSCBold')
+        .fontWeight(FontWeight.Bold)
+        .fontSize(15)
+        .lineHeight(18.3)
+        .fontColor(TOK_INK)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis });
+      Text(book.author)
+        .width(this.shelfBookCardWidth(isTablet))
+        .fontFamily('ReaderInter')
+        .fontWeight(FontWeight.Regular)
+        .fontSize(12)
+        .lineHeight(15)
+        .fontColor(TOK_MUTED)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis });
+      if ((book.readProgress ?? 0) > 0) {
+        Text(this.gridProgressLabel(book))
+          .width(this.shelfBookCardWidth(isTablet))
+          .fontFamily('ReaderInter')
+          .fontSize(10)
+          .fontColor(TOK_GREEN)
+          .maxLines(1);
+      }
+    }
+    .width(this.shelfBookCardWidth(isTablet))
+    .alignItems(HorizontalAlign.Start)
+    .translate({ y: this.bookCardHeight(this.shelfBookCardWidth(isTablet), isTablet) + 6 })
+    .opacity(this.viewSwitchGridContentOpacity)
+    .hitTestBehavior(this.viewMode === 'cover' ? HitTestMode.Default : HitTestMode.None);
+  }
+
+  @Builder
+  private projectionListDetails(book: ShelfBook, isTablet: boolean) {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
-      Row({ space: TOK_SPACE_CONTROL_INLINE }) {
-        if (this.hasCover(book)) {
-          Image(book.coverUrl as string)
-            .width(this.listCoverWidth(isTablet))
-            .height(this.listCoverHeight(isTablet))
-            .objectFit(ImageFit.Cover)
-            .borderRadius(6)
-            .geometryTransition(this.coverGeometryId(book))
-            .shadow({ radius: 12, color: '#1F34261F', offsetX: 0, offsetY: 6 });
-        } else {
-          NoCoverCover({
-            coverWidth: this.listCoverWidth(isTablet),
-            coverHeight: this.listCoverHeight(isTablet),
-          });
-        }
-
-        Column({ space: 3 }) {
-          Text(book.title)
-            .width('100%')
-            .fontFamily('ReaderNotoSerifSCBold')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(15)
-            .lineHeight(18.3)
-            .fontColor(TOK_INK)
-            .maxLines(1)
-            .geometryTransition(this.titleGeometryId(book))
-            .textOverflow({ overflow: TextOverflow.Ellipsis });
-
-          Row({ space: 4 }) {
-            Text(book.author)
-              .fontFamily('ReaderNotoSansSC')
-              .fontWeight(FontWeight.Regular)
-              .fontSize(12)
-              .lineHeight(15)
-              .fontColor(TOK_MUTED)
-              .maxLines(1);
-            Text('·')
-              .fontFamily('ReaderNotoSansSC')
-              .fontWeight(FontWeight.Regular)
-              .fontSize(11)
-              .lineHeight(13.75)
-              .fontColor(TOK_MUTED);
-            Text(this.listChapter(book))
-              .layoutWeight(1)
-              .constraintSize({ minWidth: 0 })
-              .fontFamily('ReaderNotoSansSC')
-              .fontWeight(FontWeight.Regular)
-              .fontSize(11)
-              .lineHeight(13.75)
-              .fontColor(TOK_MUTED)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis });
-          }
+      Column({ space: 3 }) {
+        Text(book.title)
           .width('100%')
-          .height(15)
-          .alignItems(VerticalAlign.Center);
-
-          Row({ space: 6 }) {
-            this.listStatusPill(this.listSourceLabel(book), false);
-            this.listStatusPill(this.listProgressLabel(book), true);
-          }
-          .height(18);
+          .fontFamily('ReaderNotoSerifSCBold')
+          .fontWeight(FontWeight.Bold)
+          .fontSize(15)
+          .lineHeight(18.3)
+          .fontColor(TOK_INK)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis });
+        Row({ space: 4 }) {
+          Text(book.author)
+            .fontFamily('ReaderNotoSansSC')
+            .fontWeight(FontWeight.Regular)
+            .fontSize(12)
+            .lineHeight(15)
+            .fontColor(TOK_MUTED)
+            .maxLines(1);
+          Text('·')
+            .fontFamily('ReaderNotoSansSC')
+            .fontWeight(FontWeight.Regular)
+            .fontSize(11)
+            .lineHeight(13.75)
+            .fontColor(TOK_MUTED);
+          Text(this.listChapter(book))
+            .layoutWeight(1)
+            .constraintSize({ minWidth: 0 })
+            .fontFamily('ReaderNotoSansSC')
+            .fontWeight(FontWeight.Regular)
+            .fontSize(11)
+            .lineHeight(13.75)
+            .fontColor(TOK_MUTED)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
-        .layoutWeight(1)
-        .constraintSize({ minWidth: 0 })
-        .height(58.3)
-        .alignItems(HorizontalAlign.Start);
+        .width('100%')
+        .height(15)
+        .alignItems(VerticalAlign.Center);
+        Row({ space: 6 }) {
+          this.listStatusPill(this.listSourceLabel(book), false);
+          this.listStatusPill(this.listProgressLabel(book), true);
+        }
+        .height(18);
       }
       .layoutWeight(1)
       .constraintSize({ minWidth: 0 })
-      .height(this.listCoverHeight(isTablet))
-      .alignItems(VerticalAlign.Center)
-      .onClick((): void => this.onBookSelected(book));
+      .height(58.3)
+      .alignItems(HorizontalAlign.Start);
 
       Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.bookshelf_more'))
-          .width(20)
-          .height(20);
+        Image($r('app.media.bookshelf_more')).width(20).height(20);
       }
       .width(isTablet ? 44 : 34)
       .height(isTablet ? 44 : 34)
@@ -644,13 +756,12 @@ export struct BookshelfPage {
       .accessibilityText(`${book.title}更多操作`)
       .onClick((): void => this.presentBookActionSheet(book));
     }
-    .width(this.shelfContentWidth(isTablet))
+    .width(this.projectionListDetailsWidth(isTablet))
     .height(this.listCoverHeight(isTablet))
     .alignItems(VerticalAlign.Center)
-    .gesture(
-      LongPressGesture({ fingers: 1, repeat: false, duration: 500 })
-        .onAction((_event: GestureEvent): void => this.presentBookActionSheet(book)),
-    );
+    .translate({ x: this.listCoverWidth(isTablet) + TOK_SPACE_CONTROL_INLINE })
+    .opacity(this.viewSwitchListContentOpacity)
+    .hitTestBehavior(this.viewMode === 'list' ? HitTestMode.Default : HitTestMode.None);
   }
 
   @Builder
@@ -668,88 +779,6 @@ export struct BookshelfPage {
       .fontColor(primary ? TOK_GREEN : TOK_MUTED)
       .maxLines(1)
       .textOverflow({ overflow: TextOverflow.Ellipsis });
-  }
-
-  @Builder
-  private bookCard(book: ShelfBook, isTablet: boolean) {
-    Column({ space: 6 }) {
-      Stack({ alignContent: Alignment.Bottom }) {
-        if (this.hasCover(book)) {
-          Image(book.coverUrl as string)
-            .width(this.shelfBookCardWidth(isTablet))
-            .height(this.bookCardHeight(this.shelfBookCardWidth(isTablet), isTablet))
-            .objectFit(ImageFit.Cover)
-            .borderRadius(8)
-            .geometryTransition(this.coverGeometryId(book))
-            .shadow({ radius: 26, color: '#1A594632', offsetX: 0, offsetY: 8 });
-        } else {
-          // N-COVER-REMAP-01: Figma `BookCover` NoCover variant (`3612:1796`)
-          // — cream + rules + "暂无封面". Not a green gradient.
-          NoCoverCover({
-            coverWidth: this.shelfBookCardWidth(isTablet),
-            coverHeight: this.bookCardHeight(this.shelfBookCardWidth(isTablet), isTablet),
-          });
-        }
-        if ((book.unreadCount ?? 0) > 0) {
-          Text(`更新 ${book.unreadCount} 章`)
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(10)
-            .fontColor(TOK_ON_PRIMARY)
-            .padding({ left: 7, right: 7, top: 3, bottom: 3 })
-            .backgroundColor(TOK_GREEN)
-            .borderRadius(999)
-            .align(Alignment.TopEnd)
-            .margin({ top: 7, right: 7 });
-        }
-      }
-      .width(this.shelfBookCardWidth(isTablet))
-      .height(this.bookCardHeight(this.shelfBookCardWidth(isTablet), isTablet))
-      .linearGradient({
-        angle: 141.7,
-        colors: [[TOK_PRIMARY_GRADIENT_START, 0.077], [TOK_PRIMARY_DARK, 0.923]],
-      })
-      .borderRadius(8)
-      .clip(true);
-
-      Text(book.title)
-        .width(this.shelfBookCardWidth(isTablet))
-        .fontFamily('ReaderNotoSerifSCBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(15)
-        .lineHeight(18.3)
-        .fontColor(TOK_INK)
-        .maxLines(1)
-        .geometryTransition(this.titleGeometryId(book))
-        .textOverflow({ overflow: TextOverflow.Ellipsis });
-
-      Text(book.author)
-        .width(this.shelfBookCardWidth(isTablet))
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(12)
-        .lineHeight(15)
-        .fontColor(TOK_MUTED)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis });
-
-      if ((book.readProgress ?? 0) > 0) {
-        Text(this.gridProgressLabel(book))
-          .width(this.shelfBookCardWidth(isTablet))
-          .width(this.shelfBookCardWidth(isTablet))
-          .fontFamily('ReaderInter')
-          .fontSize(10)
-          .fontColor(TOK_GREEN)
-          .maxLines(1);
-      }
-    }
-    .width(this.shelfBookCardWidth(isTablet))
-    .alignItems(HorizontalAlign.Start)
-    .onClick((): void => this.onBookSelected(book))
-    .gesture(
-      LongPressGesture({ fingers: 1, repeat: false, duration: 500 })
-        .onAction((_event: GestureEvent): void => this.presentBookActionSheet(book)),
-    );
   }
 
   private presentBookActionSheet(book: ShelfBook): void {
@@ -838,9 +867,6 @@ export struct BookshelfPage {
     }
     if (assetName === 'bookshelf_filter') {
       return active ? '筛选书架，当前已选' : '筛选书架';
-    }
-    if (assetName === 'bookshelf_search') {
-      return '搜索书籍';
     }
     return '书架管理';
   }
@@ -1022,7 +1048,6 @@ export struct BookshelfPage {
     for (let index = 0; index < visible.length; index += 3) {
       rows.push(visible.slice(index, index + 3));
     }
-    this.bookDataSource.replace(visible);
     this.rowDataSource.replace(rows);
     this.projectedGroups = groups;
   }
@@ -1042,39 +1067,415 @@ export struct BookshelfPage {
     let key = `bookshelf-row-${rowIndex}`;
     for (const book of row) {
       key += `|${book.sourceId}:${book.bookId}:${book.title}:${book.author}:` +
-        `${book.coverUrl ?? ''}:${book.unreadCount ?? 0}:${book.readProgress ?? 0}`;
+        `${book.coverUrl ?? ''}:${book.currentChapterTitle ?? ''}:${book.lastChapter ?? ''}:` +
+        `${book.unreadCount ?? 0}:${book.readProgress ?? 0}`;
     }
     return key;
   }
 
-  private bookListRenderKey(book: ShelfBook, index: number): string {
-    return `bookshelf-list-${index}:${book.sourceId}:${book.bookId}:${book.title}:${book.author}:` +
-      `${book.coverUrl ?? ''}:${book.currentChapterTitle ?? ''}:${book.lastChapter ?? ''}:` +
-      `${book.unreadCount ?? 0}:${book.readProgress ?? 0}`;
-  }
-
-  // Figma Review G/H (`1497:2`/`1497:811`): the cover/list switch is a 320ms
-  // shared-element reflow — covers fly as entities, no full-page fade. The
-  // geometryTransition ids below pair the cover-mode and list-mode nodes.
   private setViewMode(mode: BookshelfViewMode): void {
-    if (this.viewMode === mode) {
+    if (this.viewMode === mode || this.viewSwitchRunning) {
       return;
     }
     if (this.reduceMotion) {
+      this.resetViewSwitchMotion();
       this.viewMode = mode;
+      this.setRestingProjectionOpacity(mode);
       return;
     }
-    this.getUIContext().animateTo(motionAnimateParam('bookshelf.view.switch'), (): void => {
-      this.viewMode = mode;
-    });
+    this.startViewSwitch(mode);
   }
 
-  private coverGeometryId(book: ShelfBook): string {
-    return `shelf-cover:${book.sourceId}:${book.bookId}`;
+  private startViewSwitch(mode: BookshelfViewMode): void {
+    this.cancelViewSwitchTimers();
+    const token = this.viewSwitchToken + 1;
+    this.viewSwitchToken = token;
+    this.pendingViewMode = mode;
+    this.viewSwitchRunning = true;
+    this.viewSwitchHeaderOpacity = 1;
+    this.setRestingProjectionOpacity(this.viewMode);
+
+    this.runViewSwitchHeaderTimeline(token);
+    this.runViewSwitchOutgoingContentTimeline(token, this.viewMode);
+    this.runViewSwitchIncomingContentTimeline(token, mode);
+    this.prepareViewSwitchCoverLayers(mode);
+    this.runViewSwitchDestinationCoverTimeline(token, mode);
+    this.runViewSwitchMorphCoverTimeline(token, mode);
+    this.viewSwitchCommitTimer = setTimeout((): void => {
+      this.commitViewSwitchTarget(token);
+    }, this.viewMotion.layoutCommitMs);
   }
 
-  private titleGeometryId(book: ShelfBook): string {
-    return `shelf-title:${book.sourceId}:${book.bookId}`;
+  private commitViewSwitchTarget(token: number): void {
+    if (token !== this.viewSwitchToken || !this.viewSwitchRunning) {
+      return;
+    }
+    // `projectionRow` and every `projectionBookCard` remain mounted. Updating
+    // only the projection state lets their per-property animation modifiers
+    // interpolate from the geometry already on screen.
+    this.viewMode = this.pendingViewMode;
+  }
+
+  private runViewSwitchHeaderTimeline(token: number): void {
+    const gapBeforeIncoming = this.viewMotion.headerIncomingStartMs -
+      this.viewMotion.layoutCommitMs - this.viewMotion.outgoingDurationMs;
+    const tail = this.viewMotion.totalMs - this.viewMotion.headerIncomingStartMs -
+      this.viewMotion.headerIncomingDurationMs;
+    this.getUIContext().keyframeAnimateTo({
+      onFinish: (): void => this.finishViewSwitch(token),
+    }, [
+      {
+        duration: this.viewMotion.layoutCommitMs,
+        curve: this.viewMotion.holdCurve,
+        event: (): void => this.setViewSwitchHeaderOpacity(token, 1),
+      },
+      {
+        duration: this.viewMotion.outgoingDurationMs,
+        curve: this.viewMotion.contentCurve,
+        event: (): void => this.setViewSwitchHeaderOpacity(token, 0),
+      },
+      {
+        duration: gapBeforeIncoming,
+        curve: this.viewMotion.holdCurve,
+        event: (): void => this.setViewSwitchHeaderOpacity(token, 0),
+      },
+      {
+        duration: this.viewMotion.headerIncomingDurationMs,
+        curve: this.viewMotion.contentCurve,
+        event: (): void => this.setViewSwitchHeaderOpacity(token, 1),
+      },
+      {
+        duration: tail,
+        curve: this.viewMotion.holdCurve,
+        event: (): void => this.setViewSwitchHeaderOpacity(token, 1),
+      },
+    ]);
+  }
+
+  private runViewSwitchOutgoingContentTimeline(token: number, source: BookshelfViewMode): void {
+    const tail = this.viewMotion.totalMs - this.viewMotion.layoutCommitMs -
+      this.viewMotion.outgoingDurationMs;
+    this.getUIContext().keyframeAnimateTo({}, [
+      {
+        duration: this.viewMotion.layoutCommitMs,
+        curve: this.viewMotion.holdCurve,
+        event: (): void => this.setProjectionContentOpacity(token, source, 1),
+      },
+      {
+        duration: this.viewMotion.outgoingDurationMs,
+        curve: this.viewMotion.contentCurve,
+        event: (): void => this.setProjectionContentOpacity(token, source, 0),
+      },
+      {
+        duration: tail,
+        curve: this.viewMotion.holdCurve,
+        event: (): void => this.setProjectionContentOpacity(token, source, 0),
+      },
+    ]);
+  }
+
+  private runViewSwitchIncomingContentTimeline(token: number, target: BookshelfViewMode): void {
+    const tail = this.viewMotion.totalMs - this.viewMotion.contentIncomingStartMs -
+      this.viewMotion.contentIncomingDurationMs;
+    this.getUIContext().keyframeAnimateTo({}, [
+      {
+        duration: this.viewMotion.contentIncomingStartMs,
+        curve: this.viewMotion.holdCurve,
+        event: (): void => this.setProjectionContentOpacity(token, target, 0),
+      },
+      {
+        duration: this.viewMotion.contentIncomingDurationMs,
+        curve: this.viewMotion.contentCurve,
+        event: (): void => this.setProjectionContentOpacity(token, target, 1),
+      },
+      {
+        duration: tail,
+        curve: this.viewMotion.holdCurve,
+        event: (): void => this.setProjectionContentOpacity(token, target, 1),
+      },
+    ]);
+  }
+
+  private prepareViewSwitchCoverLayers(target: BookshelfViewMode): void {
+    if (target === 'list') {
+      // Cover -> List: the source cover is already the morph actor.
+      this.viewSwitchDestinationCoverOpacity = 0;
+      this.viewSwitchMorphCoverOpacity = 1;
+      return;
+    }
+    // List -> Cover: preserve the list cover until the morph actor enters at
+    // the authored 15% -> 18% handoff.
+    this.viewSwitchDestinationCoverOpacity = 1;
+    this.viewSwitchMorphCoverOpacity = 0;
+  }
+
+  private runViewSwitchDestinationCoverTimeline(token: number, target: BookshelfViewMode): void {
+    if (target === 'list') {
+      const tail = this.viewMotion.totalMs - this.viewMotion.contentIncomingStartMs -
+        this.viewMotion.contentIncomingDurationMs;
+      this.getUIContext().keyframeAnimateTo({}, [
+        {
+          duration: this.viewMotion.contentIncomingStartMs,
+          curve: this.viewMotion.holdCurve,
+          event: (): void => this.setDestinationCoverOpacity(token, 0),
+        },
+        {
+          duration: this.viewMotion.contentIncomingDurationMs,
+          curve: this.viewMotion.contentCurve,
+          event: (): void => this.setDestinationCoverOpacity(token, 1),
+        },
+        {
+          duration: tail,
+          curve: this.viewMotion.holdCurve,
+          event: (): void => this.setDestinationCoverOpacity(token, 1),
+        },
+      ]);
+      return;
+    }
+
+    const sourceFadeEndMs = this.viewMotion.morphCoverIncomingStartMs +
+      this.viewMotion.morphCoverIncomingDurationMs;
+    const holdBeforeTargetMs = this.viewMotion.contentIncomingStartMs - sourceFadeEndMs;
+    const tail = this.viewMotion.totalMs - this.viewMotion.contentIncomingStartMs -
+      this.viewMotion.contentIncomingDurationMs;
+    this.getUIContext().keyframeAnimateTo({}, [
+      {
+        duration: this.viewMotion.morphCoverIncomingStartMs,
+        curve: this.viewMotion.holdCurve,
+        event: (): void => this.setDestinationCoverOpacity(token, 1),
+      },
+      {
+        duration: this.viewMotion.morphCoverIncomingDurationMs,
+        curve: this.viewMotion.coverFadeCurve,
+        event: (): void => this.setDestinationCoverOpacity(token, 0),
+      },
+      {
+        duration: holdBeforeTargetMs,
+        curve: this.viewMotion.holdCurve,
+        event: (): void => this.setDestinationCoverOpacity(token, 0),
+      },
+      {
+        duration: this.viewMotion.contentIncomingDurationMs,
+        curve: this.viewMotion.contentCurve,
+        event: (): void => this.setDestinationCoverOpacity(token, 1),
+      },
+      {
+        duration: tail,
+        curve: this.viewMotion.holdCurve,
+        event: (): void => this.setDestinationCoverOpacity(token, 1),
+      },
+    ]);
+  }
+
+  private runViewSwitchMorphCoverTimeline(token: number, target: BookshelfViewMode): void {
+    if (target === 'cover') {
+      const tail = this.viewMotion.totalMs - this.viewMotion.morphCoverIncomingStartMs -
+        this.viewMotion.morphCoverIncomingDurationMs;
+      this.getUIContext().keyframeAnimateTo({}, [
+        {
+          duration: this.viewMotion.morphCoverIncomingStartMs,
+          curve: this.viewMotion.holdCurve,
+          event: (): void => this.setMorphCoverOpacity(token, 0),
+        },
+        {
+          duration: this.viewMotion.morphCoverIncomingDurationMs,
+          curve: this.viewMotion.coverFadeCurve,
+          event: (): void => this.setMorphCoverOpacity(token, 1),
+        },
+        {
+          duration: tail,
+          curve: this.viewMotion.holdCurve,
+          event: (): void => this.setMorphCoverOpacity(token, 1),
+        },
+      ]);
+      return;
+    }
+
+    const tail = this.viewMotion.totalMs - this.viewMotion.movingCoverFadeStartMs -
+      this.viewMotion.movingCoverFadeDurationMs;
+    this.getUIContext().keyframeAnimateTo({}, [
+      {
+        duration: this.viewMotion.movingCoverFadeStartMs,
+        curve: this.viewMotion.holdCurve,
+        event: (): void => this.setMorphCoverOpacity(token, 1),
+      },
+      {
+        duration: this.viewMotion.movingCoverFadeDurationMs,
+        curve: this.viewMotion.coverFadeCurve,
+        event: (): void => this.setMorphCoverOpacity(token, 0),
+      },
+      {
+        duration: tail,
+        curve: this.viewMotion.holdCurve,
+        event: (): void => this.setMorphCoverOpacity(token, 0),
+      },
+    ]);
+  }
+
+  private setDestinationCoverOpacity(token: number, opacity: number): void {
+    if (token === this.viewSwitchToken && this.viewSwitchRunning) {
+      this.viewSwitchDestinationCoverOpacity = opacity;
+    }
+  }
+
+  private setMorphCoverOpacity(token: number, opacity: number): void {
+    if (token === this.viewSwitchToken && this.viewSwitchRunning) {
+      this.viewSwitchMorphCoverOpacity = opacity;
+    }
+  }
+
+  private setViewSwitchHeaderOpacity(token: number, opacity: number): void {
+    if (token === this.viewSwitchToken && this.viewSwitchRunning) {
+      this.viewSwitchHeaderOpacity = opacity;
+    }
+  }
+
+  private setProjectionContentOpacity(
+    token: number,
+    mode: BookshelfViewMode,
+    opacity: number,
+  ): void {
+    if (token !== this.viewSwitchToken || !this.viewSwitchRunning) {
+      return;
+    }
+    if (mode === 'cover') {
+      this.viewSwitchGridContentOpacity = opacity;
+    } else {
+      this.viewSwitchListContentOpacity = opacity;
+    }
+  }
+
+  private finishViewSwitch(token: number): void {
+    if (token !== this.viewSwitchToken) {
+      return;
+    }
+    this.cancelViewSwitchTimers();
+    this.viewSwitchRunning = false;
+    this.viewSwitchHeaderOpacity = 1;
+    this.setRestingProjectionOpacity(this.viewMode);
+  }
+
+  private resetViewSwitchMotion(): void {
+    this.viewSwitchToken += 1;
+    this.cancelViewSwitchTimers();
+    this.viewSwitchRunning = false;
+    this.viewSwitchHeaderOpacity = 1;
+    this.setRestingProjectionOpacity(this.viewMode);
+  }
+
+  private cancelViewSwitchTimers(): void {
+    if (this.viewSwitchCommitTimer >= 0) {
+      clearTimeout(this.viewSwitchCommitTimer);
+      this.viewSwitchCommitTimer = -1;
+    }
+  }
+
+  private setRestingProjectionOpacity(mode: BookshelfViewMode): void {
+    this.viewSwitchGridContentOpacity = mode === 'cover' ? 1 : 0;
+    this.viewSwitchListContentOpacity = mode === 'list' ? 1 : 0;
+    this.viewSwitchDestinationCoverOpacity = 1;
+    this.viewSwitchMorphCoverOpacity = 0;
+  }
+
+  private projectionRowHeight(row: ShelfBook[], isTablet: boolean): number {
+    if (this.viewMode === 'list') {
+      return (row.length * this.listCoverHeight(isTablet)) +
+        (Math.max(0, row.length - 1) * TOK_SPACE_CONTROL_INLINE);
+    }
+    let height = 0;
+    for (const book of row) {
+      height = Math.max(height, this.gridBookCardHeight(book, isTablet));
+    }
+    return height;
+  }
+
+  private projectionBookWidth(isTablet: boolean): number {
+    return this.viewMode === 'list'
+      ? this.shelfContentWidth(isTablet)
+      : this.shelfBookCardWidth(isTablet);
+  }
+
+  private projectionBookHeight(book: ShelfBook, isTablet: boolean): number {
+    return this.viewMode === 'list'
+      ? this.listCoverHeight(isTablet)
+      : this.gridBookCardHeight(book, isTablet);
+  }
+
+  private projectionBookTranslateX(columnIndex: number, isTablet: boolean): number {
+    if (this.viewMode === 'list') {
+      return 0;
+    }
+    return columnIndex * (
+      this.shelfBookCardWidth(isTablet) +
+      this.bookRowSpace(this.shelfContentWidth(isTablet), isTablet)
+    );
+  }
+
+  private projectionBookTranslateY(columnIndex: number, isTablet: boolean): number {
+    if (this.viewMode === 'cover') {
+      return 0;
+    }
+    return columnIndex * (this.listCoverHeight(isTablet) + TOK_SPACE_CONTROL_INLINE);
+  }
+
+  private projectionCoverScale(isTablet: boolean): number {
+    if (this.viewMode === 'cover') {
+      return 1;
+    }
+    if (!isTablet) {
+      return 0.495;
+    }
+    const listScale = this.listCoverWidth(isTablet) / this.shelfBookCardWidth(isTablet);
+    return listScale;
+  }
+
+  private projectionCoverRadius(isTablet: boolean): number {
+    if (this.viewMode === 'cover') {
+      return 8;
+    }
+    const listScale = this.listCoverWidth(isTablet) / this.shelfBookCardWidth(isTablet);
+    return 6 / listScale;
+  }
+
+  private projectionCoverCompensationX(isTablet: boolean): number {
+    if (this.viewMode === 'cover') {
+      return 0;
+    }
+    return -(this.shelfBookCardWidth(isTablet) - this.listCoverWidth(isTablet)) / 2;
+  }
+
+  private projectionCoverCompensationY(isTablet: boolean): number {
+    if (this.viewMode === 'cover') {
+      return 0;
+    }
+    // Figma authors the morph dy (−21.727) in screen space; this slot needs the
+    // card-local centering compensation. Hardcoding −21.727 here rendered list
+    // thumbnails ~15vp low (VM-verified 2026-09-02).
+    return -(
+      this.bookCardHeight(this.shelfBookCardWidth(isTablet), isTablet) -
+      this.listCoverHeight(isTablet)
+    ) / 2;
+  }
+
+  private projectionListDetailsWidth(isTablet: boolean): number {
+    return Math.max(
+      0,
+      this.shelfContentWidth(isTablet) -
+        this.listCoverWidth(isTablet) - TOK_SPACE_CONTROL_INLINE,
+    );
+  }
+
+  private projectionCoverLayerOpacity(morphLayer: boolean): number {
+    return morphLayer
+      ? this.viewSwitchMorphCoverOpacity
+      : this.viewSwitchDestinationCoverOpacity;
+  }
+
+  private gridBookCardHeight(book: ShelfBook, isTablet: boolean): number {
+    const coverHeight = this.bookCardHeight(this.shelfBookCardWidth(isTablet), isTablet);
+    const titleAndAuthor = 6 + 18.3 + 6 + 15;
+    const progress = (book.readProgress ?? 0) > 0 ? 6 + 12 : 0;
+    return coverHeight + titleAndAuthor + progress;
   }
 
   private hasCover(book: ShelfBook): boolean {

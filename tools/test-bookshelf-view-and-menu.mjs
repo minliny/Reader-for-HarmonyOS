@@ -10,6 +10,10 @@ const multiSelect = await readFile(new URL('bookshelf/BookshelfMultiSelectPage.e
 const shelfGateway = await readFile(new URL('bookshelf/BookshelfFlowGateway.ts', root), 'utf8');
 const directory = await readFile(new URL('reading/FullDirectoryPanel.ets', root), 'utf8');
 const index = await readFile(new URL('../pages/Index.ets', root), 'utf8');
+const motionSpec = await readFile(new URL('common/MotionSpec.ets', root), 'utf8');
+const mediaRoot = new URL('../entry/src/main/resources/base/media/', import.meta.url);
+const moreIcon = await readFile(new URL('bookshelf_more.svg', mediaRoot), 'utf8');
+const moreSurface = await readFile(new URL('bookshelf_more_menu_surface.svg', mediaRoot), 'utf8');
 
 assert.match(shelf, /type BookshelfViewMode = 'cover' \| 'list'/);
 assert.match(shelf, /@State private viewMode: BookshelfViewMode = 'cover'/);
@@ -28,29 +32,97 @@ const setViewModeBody = shelf.match(
   /private setViewMode\(mode: BookshelfViewMode\): void \{([\s\S]*?)\n  \}/);
 assert.ok(setViewModeBody, 'the setViewMode entry must exist');
 assert.match(setViewModeBody[1],
-  /if \(this\.reduceMotion\) \{\s*this\.viewMode = mode;\s*return;/,
+  /if \(this\.reduceMotion\) \{\s*this\.resetViewSwitchMotion\(\);\s*this\.viewMode = mode;\s*this\.setRestingProjectionOpacity\(mode\);\s*return;/,
   'reduceMotion must commit the switch directly with no animation');
 assert.match(setViewModeBody[1],
-  /this\.getUIContext\(\)\.animateTo\(motionAnimateParam\('bookshelf\.view\.switch'\), \(\): void => \{\s*this\.viewMode = mode;/,
-  'the animated switch must pull its 320ms token from the MotionSpec registry');
-assert.match(shelf, /import \{ motionAnimateParam \} from '\.\.\/common\/MotionSpec';/);
-const coverTransitionCount = (shelf.match(/\.geometryTransition\(this\.coverGeometryId\(book\)\)/g) ?? []).length;
-assert.equal(coverTransitionCount, 2,
-  'both list-mode and cover-mode cover images must pair via geometryTransition');
-const titleTransitionCount = (shelf.match(/\.geometryTransition\(this\.titleGeometryId\(book\)\)/g) ?? []).length;
-assert.equal(titleTransitionCount, 2,
-  'both list-mode and cover-mode title texts must pair via geometryTransition');
-assert.match(shelf, /private coverGeometryId\(book: ShelfBook\): string \{/);
-assert.match(shelf, /private titleGeometryId\(book: ShelfBook\): string \{/);
-// Figma SectionHeader `2236:1406` defines five actions (Grid/List/Filter/
-// Search/Settings); the top-bar search actor is a separate AppTopBar slot, so
-// the section Search key is Figma-canonical, not a duplicate to guard against.
+  /this\.startViewSwitch\(mode\)/,
+  'the animated switch must enter the Figma keyframe coordinator');
+assert.match(shelf, /bookshelfViewCoverMoveAnimation/);
+assert.match(shelf, /bookshelfViewCoverScaleAnimation/);
+assert.equal((shelf.match(/\.keyframeAnimateTo\(/g) ?? []).length, 7,
+  'header, local content, and both cover layers need independent Figma timelines');
+assert.doesNotMatch(shelf, /\.geometryTransition\(/,
+  'the one-curve geometryTransition approximation must not return');
+assert.doesNotMatch(shelf, /titleGeometryId|coverGeometryId/,
+  'text is a local handoff in Figma and covers stay in one persistent actor');
 assert.match(shelf,
-  /this\.sectionAction\('bookshelf_search', \(\): void => this\.onSearchRequested\(\)\)/,
-  'the shelf section must expose the Figma Search action');
-assert.match(emptyShelf,
-  /this\.headerAction\('bookshelf_search'\)/,
-  'the empty shelf section must render the same five-action row');
+  /LazyForEach\(this\.rowDataSource[\s\S]*?this\.projectionRow\(row, isTablet, rowIndex\)/,
+  'cover and list projections must share one stable row tree');
+assert.doesNotMatch(shelf,
+  /if \(this\.viewMode === 'list'\) \{[\s\S]{0,500}?LazyForEach/,
+  'view switching must not replace the rendered collection subtree');
+assert.match(shelf,
+  /private projectionBookCard[\s\S]*?this\.projectionBookCover\(book, isTablet, index\)[\s\S]*?\.translate\([\s\S]*?\.animation\(bookshelfViewCoverMoveAnimation\(index\)\)/,
+  'the persistent card actor must own the Figma translation track');
+assert.match(shelf,
+  /private projectionBookCover[\s\S]*?\.scale\([\s\S]*?\.translate\([\s\S]*?\.animation\(bookshelfViewCoverScaleAnimation\(index\)\)/,
+  'the persistent cover child must own the separate Figma scale track');
+assert.equal((shelf.match(/this\.projectionBookCover\(book, isTablet, index\)/g) ?? []).length, 1,
+  'each book must render exactly one shared cover actor across both modes');
+assert.match(shelf,
+  /this\.viewSwitchCommitTimer = setTimeout\([\s\S]*?this\.viewMotion\.layoutCommitMs/,
+  'the old layout must hold until the Figma 15% boundary');
+assert.match(shelf,
+  /\.opacity\(this\.viewSwitchHeaderOpacity\)/,
+  'the SectionHeader must use its own outgoing/incoming handoff');
+assert.match(shelf,
+  /\.opacity\(this\.viewSwitchGridContentOpacity\)[\s\S]*?\.opacity\(this\.viewSwitchListContentOpacity\)/,
+  'grid and list local content must cross-fade independently of the shared cover');
+assert.match(shelf,
+  /this\.projectionBookCoverLayer\(book, isTablet, false\)[\s\S]*?this\.projectionBookCoverLayer\(book, isTablet, true\)/,
+  'the destination and shared morph covers must remain separate Figma actors');
+assert.match(shelf,
+  /private runViewSwitchDestinationCoverTimeline[\s\S]*?private runViewSwitchMorphCoverTimeline/,
+  'both Figma cover-opacity tracks must be coordinated explicitly');
+assert.match(shelf,
+  /private runViewSwitchOutgoingContentTimeline[\s\S]*?this\.viewMotion\.layoutCommitMs[\s\S]*?this\.viewMotion\.outgoingDurationMs/,
+  'outgoing local text must stay mounted through the Figma 15% -> 27% fade');
+assert.match(shelf,
+  /private commitViewSwitchTarget[\s\S]*?this\.viewMode = this\.pendingViewMode/,
+  'the layout commit must update the geometry of the already-mounted actors');
+assert.doesNotMatch(shelf,
+  /FrameCallback|postFrameCallback|viewSwitchSettled|movingBookCover/,
+  'the failed inserted-target/frame-hop animation path must not return');
+assert.match(motionSpec, /totalMs: 1000/);
+assert.match(motionSpec, /layoutCommitMs: 150/);
+assert.match(motionSpec, /outgoingDurationMs: 120/);
+assert.match(motionSpec, /headerIncomingStartMs: 500/);
+assert.match(motionSpec, /contentIncomingStartMs: 600/);
+assert.match(motionSpec, /contentIncomingDurationMs: 220/);
+assert.match(motionSpec, /morphCoverIncomingStartMs: 150/);
+assert.match(motionSpec, /morphCoverIncomingDurationMs: 30/);
+assert.match(motionSpec, /movingCoverFadeStartMs: 690/);
+assert.match(motionSpec, /coverMoveDurationMs: 420/);
+assert.match(motionSpec, /coverScaleDurationMs: 250/);
+assert.match(motionSpec, /coverStaggerMs: 30/);
+assert.match(shelf,
+  /projectionCoverCompensationX[\s\S]*?return -\(this\.shelfBookCardWidth\(isTablet\) - this\.listCoverWidth\(isTablet\)\) \/ 2/,
+  'the cover x endpoint must derive from the card/list width pair, not a screen-space hardcode');
+assert.match(shelf,
+  /projectionCoverCompensationY[\s\S]*?return -\(\s*this\.bookCardHeight\(this\.shelfBookCardWidth\(isTablet\), isTablet\) -\s*this\.listCoverHeight\(isTablet\)\s*\) \/ 2/,
+  'the cover y endpoint must derive from the card/list height pair; Figma authors the morph dy in screen space, not card-local space');
+assert.doesNotMatch(shelf, /return -21\.727/,
+  'the Figma screen-space morph dy must never be hardcoded as card-local compensation (VM-verified 15.36vp list-thumbnail regression)');
+assert.match(shelf, /return 0\.495/,
+  'the phone cover scale endpoint must match the Figma shared-cover track');
+assert.match(motionSpec, /cubicBezierCurve\(0\.2, 0, 0, 1\)/,
+  'cover translation must preserve the Figma curve');
+assert.match(motionSpec, /cubicBezierCurve\(0\.25, 0\.1, 0, 1\)/,
+  'cover scale must preserve the separate Figma curve');
+assert.match(motionSpec,
+  /const rowBand = Math\.min\(1, Math\.floor\(safeIndex \/ 3\)\)[\s\S]*BOOKSHELF_VIEW_MOTION\.coverStaggerMs/,
+  'the per-book cadence must match both shared and extra-cover rows');
+// The current product decision supersedes the stale five-action SectionHeader
+// instance: search has one global AppTopBar entry, never a duplicate shelf-row
+// entry. Both populated and empty shelf surfaces must obey the same contract.
+assert.doesNotMatch(shelf, /this\.sectionAction\('bookshelf_search'/,
+  'the populated shelf section must not duplicate the global search entry');
+assert.doesNotMatch(emptyShelf, /this\.headerAction\('bookshelf_search'\)/,
+  'the empty shelf section must not duplicate the global search entry');
+assert.equal((shelf.match(/icon: \$r\('app\.media\.bookshelf_search'\)/g) ?? []).length, 1,
+  'the populated shelf must keep exactly one AppTopBar search entry');
+assert.equal((emptyShelf.match(/Image\(\$r\('app\.media\.bookshelf_search'\)\)/g) ?? []).length, 1,
+  'the empty shelf must keep exactly one AppTopBar search entry');
 assert.match(shelf,
   /this\.sectionAction\('bookshelf_settings', \(\): void => this\.onManageRequested\(\)\)/,
   'the shelf gear opens shelf management per the 2026-08-30 product decision');
@@ -71,13 +143,13 @@ assert.doesNotMatch(headerActionBody[1], /\bif \(/,
   'the empty-shelf headerAction must also stay free of conditional nodes');
 assert.match(emptyShelf, /Image\(this\.headerActionAsset\(asset\)\)/,
   'the empty-shelf actions must be one unconditional Image per action');
-assert.match(shelf, /if \(this\.viewMode === 'list'\) \{[\s\S]*this\.listBookCard\(book, isTablet\)/,
-  'the list action must render a real book-row projection');
+assert.match(shelf, /private projectionListDetails\(book: ShelfBook, isTablet: boolean\)/,
+  'the stable book actor must retain the real list-row content projection');
 assert.match(shelf, /const PHONE_LIST_COVER_WIDTH = 48/);
 assert.match(shelf, /const PHONE_LIST_COVER_HEIGHT = 72/);
 assert.match(shelf, /const TABLET_LIST_COVER_WIDTH = 64/);
 assert.match(shelf, /const TABLET_LIST_COVER_HEIGHT = 96/);
-assert.match(shelf, /private listBookCard\(book: ShelfBook, isTablet: boolean\)/);
+assert.match(shelf, /private projectionBookCard\([\s\S]*?book: ShelfBook,[\s\S]*?index: number/);
 assert.match(shelf, /this\.onBookSelected\(book\)/);
 assert.match(shelf,
   /private sectionAction[\s\S]*?\.width\(34\)[\s\S]*?\.height\(34\)[\s\S]*?\.responseRegion\(\{ x: -5, y: -5, width: 44, height: 44 \}\)/,
@@ -87,8 +159,9 @@ assert.match(shelf,
   'list author, separator, and chapter must preserve their distinct Figma text roles');
 assert.match(shelf, /private listStatusPill[\s\S]*?\.width\(64\)[\s\S]*?\.height\(18\)/,
   'list status pills must keep the Figma 64×18 geometry');
-assert.match(shelf, /private bookListRenderKey\(book: ShelfBook, index: number\)/,
-  'mutable list rows must not reuse a stale cover-mode identity');
+assert.match(shelf,
+  /private bookRowRenderKey[\s\S]*?book\.currentChapterTitle[\s\S]*?book\.lastChapter/,
+  'the shared mutable row identity must include fields rendered by either projection');
 assert.match(shelf,
   /private tabletNavigation\(\)[\s\S]*?Alignment\.Start[\s\S]*?\.width\(82\)[\s\S]*?\.height\(332\)[\s\S]*?\.padding\(\{ left: this\.tabletRailLeft\(\) \}\)/,
   'the private Tablet rail must use the Final 82×332 actor and clear the live left safe edge');
@@ -99,8 +172,8 @@ assert.match(shelf, /@State private actionBook: ShelfBook \| undefined = undefin
 assert.match(shelf,
   /\.bindSheet\(this\.actionBook !== undefined, this\.bookActionSheetContent,[\s\S]*?height: 224,[\s\S]*?preferType: SheetType\.BOTTOM,[\s\S]*?dragBar: false/,
   'per-book actions must use the canonical bottom sheet instead of an invented popup menu');
-assert.equal((shelf.match(/LongPressGesture\(\{ fingers: 1, repeat: false, duration: 500 \}\)/g) ?? []).length, 2,
-  'both list and cover shelf items must expose the documented long-press entry');
+assert.equal((shelf.match(/LongPressGesture\(\{ fingers: 1, repeat: false, duration: 500 \}\)/g) ?? []).length, 1,
+  'the persistent book actor must expose one long-press entry shared by both projections');
 assert.match(shelf,
   /accessibilityText\(`\$\{book\.title\}更多操作`\)[\s\S]*?\.onClick\(\(\): void => this\.presentBookActionSheet\(book\)\)/,
   'the per-book More actor must open the same Figma action sheet');
@@ -150,22 +223,60 @@ assert.doesNotMatch(emptyShelf,
   'the empty-shelf More actor must not bypass the same menu contract');
 
 assert.match(moreMenu, /interaction registry `1982:313`/);
-assert.match(moreMenu, /`2236:545`, `2236:551`, `2236:553`/);
+assert.match(moreMenu, /style reference `4572:1796`/);
 assert.match(moreMenu, /const MENU_WIDTH = 176/);
+assert.match(moreMenu, /const POINTER_HEIGHT = 12/);
+assert.match(moreMenu, /const ACTION_HEIGHT = 50/);
+assert.match(moreMenu, /const MENU_TRAILING_EXTENSION = 11/);
+assert.match(moreMenu, /const MENU_ANCHOR_OVERLAP = 5/);
 // SHF-02 supersedes the three-action frame: the approved extension adds the
 // group-management row so the shelf filter chips have a reachable source of
 // groups (the previously dead onManageRequested intent is now wired).
-assert.equal((moreMenu.match(/this\.action\('/g) ?? []).length, 4,
+assert.equal((moreMenu.match(/this\.action\(\$r/g) ?? []).length, 4,
   'the three Figma actions plus the SHF-02 group management row belong in the menu');
-assert.match(moreMenu, /this\.action\('批量管理'/);
-assert.match(moreMenu, /this\.action\('分组管理'/);
-assert.match(moreMenu, /this\.action\('本地导入'/);
-assert.match(moreMenu, /this\.action\('书架设置'/);
-assert.doesNotMatch(moreMenu, /this\.action\('关闭更多'/,
+assert.match(moreMenu, /'app\.media\.bookshelf_more_batch'\), '批量管理'/);
+assert.match(moreMenu, /'app\.media\.bookshelf_more_group'\), '分组管理'/);
+assert.match(moreMenu, /'app\.media\.bookshelf_more_import'\), '本地导入'/);
+assert.match(moreMenu, /'app\.media\.bookshelf_more_settings'\), '书架设置'/);
+assert.doesNotMatch(moreMenu, /this\.action\([^\n]*'关闭更多'/,
   'close-more is an outside-dismiss semantic, never a menu row');
+assert.match(moreMenu,
+  /if \(this\.reduceMotion\) \{[\s\S]*?Image\(\$r\('app\.media\.bookshelf_more_menu_surface'\)\)/,
+  'reduce-motion must retain the exact approved static Figma surface');
+assert.match(moreMenu,
+  /Row\(\)[\s\S]*?\.height\(this\.panelHeight - POINTER_HEIGHT\)[\s\S]*?\.backgroundColor\('#FFFCF8'\)[\s\S]*?\.border\(\{ width: 1, color: '#E3DED6' \}\)[\s\S]*?\.borderRadius\(16\)[\s\S]*?\.shadow\(\{ radius: 28, color: '#292E261F', offsetX: 0, offsetY: 10 \}\)/,
+  'the full surface body must grow with the animated height, including fill, border, corners, and shadow');
+assert.match(moreMenu,
+  /const POINTER_POINTS: Array<Array<number>> = \[\[0, 12\], \[12, 0\], \[24, 12\]\]/,
+  'the fixed pointer must preserve the approved Figma coordinates');
+assert.match(moreMenu,
+  /Polygon\(\{ width: 24, height: POINTER_HEIGHT \+ 1 \}\)[\s\S]*?\.position\(\{ x: 131, y: 0\.5 \}\)[\s\S]*?\.position\(\{ x: 131, y: 11\.5 \}\)[\s\S]*?Polyline\(\{ width: 24, height: POINTER_HEIGHT \+ 1 \}\)/,
+  'the body seam must be covered before the pointer outline is drawn');
+assert.match(moreMenu,
+  /const MENU_COLLAPSED_HEIGHT = POINTER_HEIGHT \+ ACTION_HEIGHT/,
+  'the fixed top anchor must retain one stable row at the collapsed endpoint');
+assert.match(moreMenu,
+  /\.height\(Math\.max\(0, this\.panelHeight - POINTER_HEIGHT\)\)[\s\S]*?\.clip\(true\)/,
+  'the content viewport must grow and contract with the complete surface');
+assert.match(moreMenu,
+  /this\.anchorRight \+ MENU_TRAILING_EXTENSION - MENU_WIDTH[\s\S]*?this\.anchorBottom - MENU_ANCHOR_OVERLAP/,
+  'the pointer must remain centered under the More actor while the surface clears the right edge');
+assert.match(moreMenu,
+  /\.fontWeight\(FontWeight\.Medium\)[\s\S]*?\.fontSize\(15\)[\s\S]*?\.lineHeight\(22\)/,
+  'menu labels must match the approved Noto Sans SC Medium 15/22 role');
+assert.match(moreMenu, /\.width\(144\)[\s\S]*?\.color\('#E8E2DA'\)/,
+  'menu rows must use the approved inset divider');
+assert.equal((moreIcon.match(/<circle/g) ?? []).length, 4,
+  'the More asset must be the approved vertical-dots override, including its cover circle');
+assert.match(moreIcon, /cx="22" cy="15"[\s\S]*cx="22" cy="22"[\s\S]*cx="22" cy="29"/,
+  'the top-bar More icon must be vertical, not a rotated or legacy horizontal asset');
+assert.match(moreSurface, /L171 18\.5L183 30\.5/,
+  'the popover pointer must be integrated into the surface silhouette');
 assert.match(moreMenu,
   /motionAnimateParam\('dropdown\.menu\.expand'\)[\s\S]*motionAnimateParam\('dropdown\.menu\.collapse'/,
   'the menu must use the interaction-registry motion pair');
+assert.doesNotMatch(moreMenu, /@State private expandedHeight: number = ACTION_HEIGHT/,
+  'the old content-only animation must not return');
 
 assert.match(multiSelect, /Figma `Bookshelf\/MultiSelect` \(`2956:1266`\)/);
 assert.match(multiSelect, /initialSelectedKey/);

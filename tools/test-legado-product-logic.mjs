@@ -97,8 +97,10 @@ assert.match(shelfFlow, /sortBy: 'lastReadAt', sortDirection: 'descending'/,
   'SHF-02: the shelf load must default to recent-reading order');
 assert.match(shelf, /filterRowVisible = !this\.filterRowVisible/,
   'SHF-02: the filter control must toggle the shelf tools row');
-assert.match(shelf, /LazyForEach\(this\.bookDataSource/,
-  'SHF-02: long shelf lists must use a notifying lazy projection');
+assert.match(shelf, /LazyForEach\(this\.rowDataSource/,
+  'SHF-02: long shelf lists must use one notifying lazy projection shared by both modes');
+assert.doesNotMatch(shelf, /bookDataSource/,
+  'SHF-02: cover/list switching must not duplicate the lazy data source');
 assert.match(shelf, /private rebuildShelfProjection\(\)/,
   'SHF-02: group filtering and row projection must be rebuilt once per input change');
 assert.match(shelf, /const seenGroups: Set<string>/,

@@ -174,7 +174,6 @@ export struct BookshelfEmptyPage {
         this.headerAction('bookshelf_grid');
         this.headerAction('bookshelf_list');
         this.headerAction('bookshelf_filter');
-        this.headerAction('bookshelf_search');
         this.headerAction('bookshelf_settings');
       }
       .height(34);
@@ -195,9 +194,6 @@ export struct BookshelfEmptyPage {
     }
     if (asset === 'bookshelf_filter') {
       return $r('app.media.bookshelf_filter');
-    }
-    if (asset === 'bookshelf_search') {
-      return $r('app.media.bookshelf_search');
     }
     return $r('app.media.bookshelf_settings');
   }

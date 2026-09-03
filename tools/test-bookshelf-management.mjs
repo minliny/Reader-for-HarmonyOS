@@ -37,14 +37,12 @@ assert.match(page, /export struct BookshelfManagementPage/);
 assert.match(page, /在此新建分组、为书籍设置归属；分组会出现在书架的筛选行中/);
 assert.match(shelfPage, /onManageRequested: \(\) => void/);
 // SHF-02 turned the Core group manager into a user-facing shelf-management
-// page, and the 2026-08-30 product decision points the Figma Settings gear
-// (SectionHeader 2236:1406, fifth action) at that page.
+// page, and the product decision points the remaining Settings gear at it.
 assert.match(shelfPage,
   /this\.sectionAction\('bookshelf_settings', \(\): void => this\.onManageRequested\(\)\)/,
   'the shelf gear must open the shelf management page');
-assert.match(shelfPage,
-  /this\.sectionAction\('bookshelf_search', \(\): void => this\.onSearchRequested\(\)\)/,
-  'the shelf section must expose the Figma Search action before the gear');
+assert.doesNotMatch(shelfPage, /this\.sectionAction\('bookshelf_search'/,
+  'the shelf section must not duplicate the AppTopBar search entry');
 assert.match(index,
   /onBookshelfSettingsRequested: \(\): void => this\.openSettings\(\)/,
   'the more-menu shelf settings entry still enters the settings flow');
