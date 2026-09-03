@@ -8,7 +8,10 @@ import {
   type ReaderTtsHostProbe,
   type ReaderTtsHostSpeakRequest,
 } from '../features/reading/ReaderTtsSessionCoordinator';
-import type { ReaderTtsVoiceOption } from '../features/reading/ReaderTtsPreferencesState';
+import {
+  isReaderTtsVoiceInstalled,
+  type ReaderTtsVoiceOption,
+} from '../features/reading/ReaderTtsPreferencesState';
 
 const LOG_DOMAIN = 0x5244;
 const DEFAULT_LANGUAGE = 'zh-CN';
@@ -60,6 +63,8 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
   private readonly audioSessionStateChangedCallback: (event: audio.AudioSessionStateChangedEvent) => void;
   private readonly outputDeviceChangedCallback: (event: audio.CurrentOutputDeviceChangedEvent) => void;
   private engine: textToSpeech.TextToSpeechEngine | undefined = undefined;
+  private engineRequestedLanguage: string | undefined = undefined;
+  private engineRequestedPerson: number | undefined = undefined;
   private engineLanguage: string | undefined = undefined;
   private enginePerson: number | undefined = undefined;
   private listener: ((event: ReaderTtsHostEvent) => void) | undefined = undefined;
@@ -154,7 +159,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
         'queueMode': 0,
         'speed': request.rate,
         'pitch': request.pitch,
-        'languageContext': request.language,
+        'languageContext': this.engineLanguage ?? request.language,
         'audioType': 'pcm',
         'soundChannel': 3,
         'playType': 1,
@@ -180,6 +185,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
     });
     const options: ReaderTtsVoiceOption[] = [];
     for (const voice of voices) {
+      if (!isReaderTtsVoiceInstalled(voice.status)) continue;
       if (voice.language.trim().length === 0 || !Number.isSafeInteger(voice.person) || voice.person < 0) continue;
       if (options.some((option: ReaderTtsVoiceOption): boolean =>
         option.language === voice.language && option.person === voice.person)) continue;
@@ -219,6 +225,8 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
     this.listener = undefined;
     const engine = this.engine;
     this.engine = undefined;
+    this.engineRequestedLanguage = undefined;
+    this.engineRequestedPerson = undefined;
     this.engineLanguage = undefined;
     this.enginePerson = undefined;
     if (engine !== undefined) {
@@ -243,11 +251,14 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
 
   private async ensureEngine(language: string, person: number): Promise<textToSpeech.TextToSpeechEngine> {
     this.assertOpen();
-    if (this.engine !== undefined && this.engineLanguage === language && this.enginePerson === person) {
+    if (this.engine !== undefined && this.engineRequestedLanguage === language &&
+      this.engineRequestedPerson === person) {
       return this.engine;
     }
     const previous = this.engine;
     this.engine = undefined;
+    this.engineRequestedLanguage = undefined;
+    this.engineRequestedPerson = undefined;
     this.engineLanguage = undefined;
     this.enginePerson = undefined;
     this.currentRequestId = undefined;
@@ -263,7 +274,33 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
         this.logError('system TTS engine shutdown during replacement failed', error);
       }
     }
-    const engine = await textToSpeech.createEngine({
+    let effectiveLanguage = language;
+    let effectivePerson = person;
+    let engine: textToSpeech.TextToSpeechEngine;
+    try {
+      engine = await this.createEngine(language, person);
+    } catch (error) {
+      if (language === DEFAULT_LANGUAGE && person === DEFAULT_PERSON) throw error;
+      this.logError('requested system TTS voice failed; falling back to default', error);
+      effectiveLanguage = DEFAULT_LANGUAGE;
+      effectivePerson = DEFAULT_PERSON;
+      engine = await this.createEngine(effectiveLanguage, effectivePerson);
+    }
+    engine.setListener(new EngineSpeakListener((event: ReaderTtsHostEvent): void => this.emit(event)));
+    if (this.closed) {
+      engine.shutdown();
+      throw new Error('Reader system TTS Host closed during engine initialization');
+    }
+    this.engine = engine;
+    this.engineRequestedLanguage = language;
+    this.engineRequestedPerson = person;
+    this.engineLanguage = effectiveLanguage;
+    this.enginePerson = effectivePerson;
+    return engine;
+  }
+
+  private createEngine(language: string, person: number): Promise<textToSpeech.TextToSpeechEngine> {
+    return textToSpeech.createEngine({
       language,
       person,
       online: OFFLINE_ENGINE,
@@ -273,15 +310,6 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
         'name': 'ReaderInAppTts',
       },
     });
-    engine.setListener(new EngineSpeakListener((event: ReaderTtsHostEvent): void => this.emit(event)));
-    if (this.closed) {
-      engine.shutdown();
-      throw new Error('Reader system TTS Host closed during engine initialization');
-    }
-    this.engine = engine;
-    this.engineLanguage = language;
-    this.enginePerson = person;
-    return engine;
   }
 
   private emit(event: ReaderTtsHostEvent): void {

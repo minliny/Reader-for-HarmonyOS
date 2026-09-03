@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 
 import {
   createDefaultReaderTtsPreferencesSnapshot,
+  isReaderTtsVoiceInstalled,
   normalizeReaderTtsPreferencesSnapshot,
 } from '../entry/src/main/ets/features/reading/ReaderTtsPreferencesState.ts';
 
@@ -45,6 +46,11 @@ assert.deepEqual(normalizeReaderTtsPreferencesSnapshot({
   followHighlight: 'invalid',
 }), fallback, 'invalid fields must fall back independently instead of entering Host state');
 
+assert.equal(isReaderTtsVoiceInstalled('INSTALLED'), true);
+assert.equal(isReaderTtsVoiceInstalled(' installed '), true);
+assert.equal(isReaderTtsVoiceInstalled(undefined), true, 'older system images omit voice status');
+assert.equal(isReaderTtsVoiceInstalled('GA'), false, 'downloadable catalogue voices are not immediately playable');
+
 const appDir = new URL('../entry/src/main/ets/app/', import.meta.url);
 const readingDir = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
 const systemHost = await readFile(new URL('HarmonySystemTtsHost.ts', appDir), 'utf8');
@@ -55,7 +61,13 @@ const panel = await readFile(new URL('ReaderTtsFullPanel.ets', readingDir), 'utf
 const experience = await readFile(new URL('LocalReadingExperience.ets', readingDir), 'utf8');
 
 assert.match(systemHost, /textToSpeech\.listVoices\(\{/);
+assert.match(systemHost, /isReaderTtsVoiceInstalled\(voice\.status\)/,
+  'only voices that can be created immediately may enter persisted choices');
 assert.match(systemHost, /ensureEngine\(request\.language, request\.person\)/);
+assert.match(systemHost, /requested system TTS voice failed; falling back to default/,
+  'a stale persisted voice must fall back to the already-probed system default');
+assert.match(systemHost, /'languageContext': this\.engineLanguage \?\? request\.language/,
+  'fallback speech must use the effective engine language');
 assert.match(systemHost, /person,/);
 assert.match(router, /listSystemVoices\(\): Promise<ReaderTtsVoiceOption\[\]>/);
 assert.match(coordinator, /setVoice\(language: string, person: number\): Promise<void>/);
