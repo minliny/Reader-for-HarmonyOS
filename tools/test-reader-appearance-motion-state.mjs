@@ -8,250 +8,236 @@ import {
   readerAppearanceMotionIsActive,
   releaseReaderAppearanceTracking,
   sampleReaderAppearanceMotionState,
+  setReaderAppearanceMeasuredAxis,
   setReaderAppearanceMotionTimeScale,
   startReaderAppearanceProgrammatic,
   updateReaderAppearanceTracking,
 } from '../entry/src/main/ets/features/reading/ReaderAppearanceMotionState.ts';
 
-function close(actual, expected, epsilon = 1e-5, message = '') {
-  assert.ok(Math.abs(actual - expected) <= epsilon,
-    `${message} expected ${expected}, received ${actual}`);
+const axis = { quickGrabberScreenY: 740, fullGrabberScreenY: 340 };
+
+function yFor(p, measuredAxis = axis) {
+  return measuredAxis.quickGrabberScreenY +
+    (measuredAxis.fullGrabberScreenY - measuredAxis.quickGrabberScreenY) * p;
+}
+
+function close(actual, expected, message, tolerance = 1e-6) {
+  assert.ok(Math.abs(actual - expected) <= tolerance,
+    `${message}: expected ${expected}, got ${actual}`);
+}
+
+function beginAt(state, p, eventTimeMs = 0, measuredAxis = axis) {
+  const pointerY = yFor(p, measuredAxis);
+  return beginReaderAppearanceTracking(state, pointerY, pointerY, measuredAxis, eventTimeMs);
+}
+
+function finish(initial, deltas = [8.33, 16.67, 33, 50]) {
+  let state = initial;
+  const completed = [];
+  for (let index = 0; index < 1000 && state.phase === 'settling'; index += 1) {
+    const result = advanceReaderAppearanceMotion(
+      state,
+      deltas[index % deltas.length],
+      state.epoch,
+    );
+    state = result.state;
+    if (result.completedEndpoint !== undefined) completed.push(result.completedEndpoint);
+  }
+  assert.notEqual(state.phase, 'settling', 'motion failed to finish');
+  return { state, completed };
 }
 
 let state = createReaderAppearanceMotionState('quick');
 assert.equal(state.phase, 'idleQuick');
-assert.equal(state.profile, 'expandN');
-assert.equal(state.epoch, 0);
-assert.equal(state.expansionProgress, 0);
+assert.equal(state.masterProgress, 0);
 assert.equal(readerAppearanceMotionIsActive(state), false);
+assert.equal(Object.hasOwn(state, 'profile'), false);
+assert.equal(Object.hasOwn(state, 'rawExpansionProgress'), false);
+assert.equal(Object.hasOwn(state, 'elasticOffsetVp'), false);
 
-// Full-distance clicks retain the product timing while every spatial actor is
-// sampled from physical expansion rather than a root handoff timeline.
+// Programmatic expand/collapse traverses one symmetric p axis.
 state = startReaderAppearanceProgrammatic(state, 'full');
 assert.equal(state.phase, 'settling');
-assert.equal(state.profile, 'expandN');
-assert.equal(state.settleMode, 'programmatic');
-close(state.settleDurationMs, 420);
-const nEpoch = state.epoch;
-let advanced = advanceReaderAppearanceMotion(state, 128, nEpoch);
-state = advanced.state;
-assert.ok(state.expansionProgress > 0 && state.expansionProgress < 1,
-  'the 128ms frame must stay inside the physical expansion interval');
-assert.equal(advanced.shouldContinue, true);
-advanced = advanceReaderAppearanceMotion(state, 292, nEpoch);
-state = advanced.state;
-assert.equal(advanced.completedEndpoint, 'full');
-assert.equal(advanced.shouldContinue, false);
+assert.equal(state.settleDurationMs, 420);
+const expandEpoch = state.epoch;
+state = advanceReaderAppearanceMotion(state, 210, expandEpoch).state;
+close(state.masterProgress, 0.5, 'expand half-time p');
+state = advanceReaderAppearanceMotion(state, 210, expandEpoch).state;
 assert.equal(state.phase, 'idleFull');
 assert.equal(state.stableEndpoint, 'full');
-assert.equal(state.completionRevision, 1);
-close(state.expansionProgress, 1);
-close(state.elasticOffsetVp, 0);
+close(state.masterProgress, 1, 'expanded endpoint');
 
-// Stable Full keeps the 360ms collapse clock, but its geometry is the exact
-// reverse of the same persistent actor tree.
 state = startReaderAppearanceProgrammatic(state, 'quick');
-assert.equal(state.profile, 'collapseO');
-close(state.settleDurationMs, 360);
-const oEpoch = state.epoch;
-advanced = advanceReaderAppearanceMotion(state, 360, oEpoch);
-state = advanced.state;
-assert.equal(advanced.completedEndpoint, 'quick');
+assert.equal(state.settleDurationMs, 420, 'collapse cannot select a second profile duration');
+const collapseEpoch = state.epoch;
+state = advanceReaderAppearanceMotion(state, 210, collapseEpoch).state;
+close(state.masterProgress, 0.5, 'collapse half-time p');
+assert.deepEqual(
+  sampleReaderAppearanceMotionState(state),
+  sampleReaderAppearanceMotionState({ ...state, masterProgress: 0.5 }),
+  'the same p must have one frame',
+);
+state = advanceReaderAppearanceMotion(state, 210, collapseEpoch).state;
 assert.equal(state.phase, 'idleQuick');
-assert.equal(state.completionRevision, 2);
 
-// One global time scale changes total time without altering normalized tracks.
-let scaled = createReaderAppearanceMotionState('quick', false, 0.75);
-scaled = startReaderAppearanceProgrammatic(scaled, 'full');
-close(scaled.settleDurationMs, 315);
-let scaledHalf = advanceReaderAppearanceMotion(scaled, 157.5, scaled.epoch).state;
-assert.ok(scaledHalf.expansionProgress > 0 && scaledHalf.expansionProgress < 1);
+// Time scale changes time only, preserving the exact current p/frame.
+let scaled = startReaderAppearanceProgrammatic(
+  createReaderAppearanceMotionState('quick', false, 0.75),
+  'full',
+);
+close(scaled.settleDurationMs, 315, 'scaled full duration');
+scaled = advanceReaderAppearanceMotion(scaled, 157.5, scaled.epoch).state;
+const scaledFrame = sampleReaderAppearanceMotionState(scaled);
+const oldEpoch = scaled.epoch;
+scaled = setReaderAppearanceMotionTimeScale(scaled, 1.5);
+assert.ok(scaled.epoch > oldEpoch);
+assert.deepEqual(sampleReaderAppearanceMotionState(scaled), scaledFrame);
+close(scaled.settleElapsedMs / scaled.settleDurationMs, 0.5, 'clock fraction preserved');
 
-// Live time-scale changes preserve the rendered frame and only change the
-// rate at which the remaining shared timeline is traversed.
-const scaledBeforeChange = sampleReaderAppearanceMotionState(scaledHalf);
-const scaledOldEpoch = scaledHalf.epoch;
-scaledHalf = setReaderAppearanceMotionTimeScale(scaledHalf, 1.5);
-assert.ok(scaledHalf.epoch > scaledOldEpoch);
-close(scaledHalf.expansionProgress, scaledBeforeChange.expansionProgress);
-close(sampleReaderAppearanceMotionState(scaledHalf).shellHeight, scaledBeforeChange.shellHeight);
-close(scaledHalf.settleElapsedMs / scaledHalf.settleDurationMs, 0.5);
-close(scaledHalf.settleDurationMs, 630);
+// Measured-axis refresh cannot move visual p.
+const resizedAxis = { quickGrabberScreenY: 1010, fullGrabberScreenY: 510 };
+const beforeAxisRefresh = sampleReaderAppearanceMotionState(scaled);
+const settlingProgressBeforeAxisRefresh = scaled.masterProgress;
+const settlingPointerBeforeAxisRefresh = scaled.lastPointerScreenY;
+scaled = setReaderAppearanceMeasuredAxis(scaled, resizedAxis);
+assert.deepEqual(sampleReaderAppearanceMotionState(scaled), beforeAxisRefresh);
+close(scaled.masterProgress, settlingProgressBeforeAxisRefresh,
+  'settling axis refresh preserves master p');
+close(scaled.trackingPointerStartScreenY, settlingPointerBeforeAxisRefresh,
+  'settling axis refresh rebases the pointer anchor');
+close(scaled.trackingGrabberStartScreenY,
+  yFor(settlingProgressBeforeAxisRefresh, resizedAxis),
+  'settling axis refresh rebases the grabber anchor');
 
-// A programmatic redirect from an interrupted frame starts at the currently
-// rendered physical expansion. Duration is target-direction base time times
-// remaining physical distance, never the old origin profile/timeline span.
-let redirected = createReaderAppearanceMotionState('quick');
-redirected = startReaderAppearanceProgrammatic(redirected, 'full');
-redirected = advanceReaderAppearanceMotion(redirected, 126, redirected.epoch).state;
-const redirectStartExpansion = redirected.expansionProgress;
-const redirectStartFrame = sampleReaderAppearanceMotionState(redirected);
-redirected = startReaderAppearanceProgrammatic(redirected, 'quick');
-close(redirected.expansionProgress, redirectStartExpansion);
-close(sampleReaderAppearanceMotionState(redirected).quickMorph.y, redirectStartFrame.quickMorph.y,
-  1e-5, 'programmatic redirect jumped the persistent surface');
-close(redirected.settleDurationMs, 360 * redirectStartExpansion, 1e-4);
-const redirectedNext = advanceReaderAppearanceMotion(redirected, 1, redirected.epoch).state;
-assert.ok(redirectedNext.expansionProgress < redirectStartExpansion,
-  'redirected programmatic motion must continue from the current frame toward source');
+// DOWN preserves p; actual grabber screenY + pointer delta produces p.
+let drag = beginAt(createReaderAppearanceMotionState('quick'), 0);
+const trackingEpoch = drag.epoch;
+drag = updateReaderAppearanceTracking(drag, 640, 16, -625);
+close(drag.masterProgress, 0.25, '100vp upward over measured 400vp');
+drag = updateReaderAppearanceTracking(drag, 540, 32, -625);
+close(drag.masterProgress, 0.5, '200vp upward over measured 400vp');
+drag = updateReaderAppearanceTracking(drag, 620, 48, 500);
+close(drag.masterProgress, 0.3, 'reverse drag follows same screen axis');
+assert.equal(drag.epoch, trackingEpoch, 'MOVE cannot create a competing epoch');
 
-// Half-distance settlement is deterministic in physical space: 210ms upward,
-// 180ms downward. Both source endpoints and an in-flight redirect use the same
-// rule, and timeScale applies only after the remaining-distance calculation.
-for (const source of ['quick', 'full']) {
-  let half = beginReaderAppearanceTracking(createReaderAppearanceMotionState(source), 0);
-  half = updateReaderAppearanceTracking(half, 0.5, 16, 0);
-  const halfFrame = sampleReaderAppearanceMotionState(half);
-  const toFull = startReaderAppearanceProgrammatic(half, 'full');
-  close(toFull.expansionProgress, 0.5);
-  close(toFull.settleDurationMs, 210, 1e-5, `${source} half -> Full duration`);
-  close(sampleReaderAppearanceMotionState(toFull).fontItems[0].y, halfFrame.fontItems[0].y,
-    1e-5, `${source} half -> Full jumped Font0`);
-  const toQuick = startReaderAppearanceProgrammatic(half, 'quick');
-  close(toQuick.expansionProgress, 0.5);
-  close(toQuick.settleDurationMs, 180, 1e-5, `${source} half -> Quick duration`);
-  close(sampleReaderAppearanceMotionState(toQuick).fontItems[0].y, halfFrame.fontItems[0].y,
-    1e-5, `${source} half -> Quick jumped Font0`);
+// A different measured travel changes only the screenY-to-p scale.
+let resizedDrag = beginReaderAppearanceTracking(
+  createReaderAppearanceMotionState('quick'),
+  1010,
+  1010,
+  resizedAxis,
+  0,
+);
+resizedDrag = updateReaderAppearanceTracking(resizedDrag, 885, 16, 0);
+close(resizedDrag.masterProgress, 0.25, '125vp over measured 500vp');
 
-  let scaledHalf = beginReaderAppearanceTracking(
-    createReaderAppearanceMotionState(source, false, 1.5),
-    0,
-  );
-  scaledHalf = updateReaderAppearanceTracking(scaledHalf, 0.5, 16, 0);
-  close(startReaderAppearanceProgrammatic(scaledHalf, 'full').settleDurationMs, 315,
-    1e-5, `${source} scaled half -> Full duration`);
-  close(startReaderAppearanceProgrammatic(scaledHalf, 'quick').settleDurationMs, 270,
-    1e-5, `${source} scaled half -> Quick duration`);
+// If the measured axis changes during a drag, preserve the current frame and
+// rebase both anchors. The very next MOVE continues from that exact p using
+// the new measured travel instead of stale pre-resize screen coordinates.
+let resizedMidDrag = beginAt(createReaderAppearanceMotionState('quick'), 0);
+resizedMidDrag = updateReaderAppearanceTracking(resizedMidDrag, 540, 16, 0);
+close(resizedMidDrag.masterProgress, 0.5, 'pre-resize tracking p');
+const frameBeforeTrackingAxisRefresh = sampleReaderAppearanceMotionState(resizedMidDrag);
+const pointerBeforeTrackingAxisRefresh = resizedMidDrag.lastPointerScreenY;
+resizedMidDrag = setReaderAppearanceMeasuredAxis(resizedMidDrag, resizedAxis);
+assert.deepEqual(
+  sampleReaderAppearanceMotionState(resizedMidDrag),
+  frameBeforeTrackingAxisRefresh,
+  'tracking axis refresh changed the current frame',
+);
+close(resizedMidDrag.trackingPointerStartScreenY, pointerBeforeTrackingAxisRefresh,
+  'tracking axis refresh pointer anchor');
+close(resizedMidDrag.trackingGrabberStartScreenY, yFor(0.5, resizedAxis),
+  'tracking axis refresh grabber anchor');
+resizedMidDrag = updateReaderAppearanceTracking(
+  resizedMidDrag,
+  pointerBeforeTrackingAxisRefresh - 25,
+  32,
+  0,
+);
+close(resizedMidDrag.masterProgress, 0.55,
+  'first MOVE after resize uses new 500vp axis without a jump');
+
+// Release begins at the exact current p/frame and settles monotonically.
+drag = updateReaderAppearanceTracking(drag, 500, 64, 0);
+close(drag.masterProgress, 0.6, 'release start p');
+const releaseFrame = sampleReaderAppearanceMotionState(drag);
+drag = releaseReaderAppearanceTracking(drag, 0, 64);
+assert.equal(drag.target, 'full');
+assert.equal(drag.phase, 'settling');
+close(drag.masterProgress, 0.6, 'release changed p synchronously');
+assert.deepEqual(sampleReaderAppearanceMotionState(drag), releaseFrame,
+  'release must not jump any actor');
+let previous = drag.masterProgress;
+while (drag.phase === 'settling') {
+  const result = advanceReaderAppearanceMotion(drag, 16.67, drag.epoch);
+  drag = result.state;
+  assert.ok(drag.masterProgress >= previous - 1e-9);
+  previous = drag.masterProgress;
 }
+assert.equal(drag.phase, 'idleFull');
 
-// Reduced motion snaps programmatic and release paths to their endpoint.
-let reduced = createReaderAppearanceMotionState('quick', true);
-reduced = startReaderAppearanceProgrammatic(reduced, 'full');
-assert.equal(reduced.phase, 'idleFull');
-assert.equal(reduced.stableEndpoint, 'full');
-assert.equal(reduced.completionRevision, 1);
-reduced = beginReaderAppearanceTracking(reduced, 0);
-reduced = updateReaderAppearanceTracking(reduced, 0.35, 16, 0);
-reduced = releaseReaderAppearanceTracking(reduced, 0, 16);
-assert.equal(reduced.phase, 'idleQuick');
-assert.equal(reduced.stableEndpoint, 'quick');
+// Velocity can select the endpoint, but never a different sampler/profile.
+let fling = beginAt(createReaderAppearanceMotionState('quick'), 0);
+fling = updateReaderAppearanceTracking(fling, 660, 16, -500);
+close(fling.masterProgress, 0.2, 'fling position');
+fling = releaseReaderAppearanceTracking(fling, -500, 16);
+assert.equal(fling.target, 'full');
 
-// Direct manipulation is genuinely bidirectional on one physical expansion
-// coordinate; the compatibility profile cannot alter actor geometry.
-state = createReaderAppearanceMotionState('quick');
-state = beginReaderAppearanceTracking(state, 0);
-assert.equal(state.phase, 'tracking');
-assert.equal(state.epoch, 1);
-state = updateReaderAppearanceTracking(state, 0.65, 100, -1200);
-const forwardExpansion = state.expansionProgress;
-close(state.expansionProgress, 0.65);
-state = updateReaderAppearanceTracking(state, 0.35, 200, 1200);
-assert.ok(state.expansionProgress < forwardExpansion,
-  'reverse drag must reverse the physical shared-actor coordinate');
-assert.equal(state.profile, 'expandN', 'branch cannot switch in the middle of an interaction');
+fling = beginAt(createReaderAppearanceMotionState('full'), 1);
+fling = updateReaderAppearanceTracking(fling, 420, 16, 500);
+close(fling.masterProgress, 0.8, 'reverse fling position');
+fling = releaseReaderAppearanceTracking(fling, 500, 16);
+assert.equal(fling.target, 'quick');
 
-// A low-speed release over halfway settles monotonically to Full.
-state = updateReaderAppearanceTracking(state, 0.6, 240, 0);
-state = releaseReaderAppearanceTracking(state, 0, 240);
-assert.equal(state.target, 'full');
-assert.equal(state.phase, 'settling');
-assert.equal(state.settleMode, 'gesture');
-const settleEpoch = state.epoch;
-let previousExpansion = state.expansionProgress;
-const irregularFrames = [8.33, 16.67, 33, 50, 100, 250];
-let completed = undefined;
-for (const delta of irregularFrames) {
-  advanced = advanceReaderAppearanceMotion(state, delta, settleEpoch);
-  state = advanced.state;
-  assert.ok(state.expansionProgress + 1e-9 >= previousExpansion,
-    'gesture settlement must be monotonic even across long frames');
-  previousExpansion = state.expansionProgress;
-  if (advanced.completedEndpoint !== undefined) {
-    completed = advanced.completedEndpoint;
-  }
-  if (!advanced.shouldContinue) {
-    break;
-  }
-}
-assert.equal(completed, 'full');
-assert.equal(state.stableEndpoint, 'full');
-
-// A decisive downward fling overrides an 80% position and keeps the O branch.
-state = beginReaderAppearanceTracking(state, 1000);
-assert.equal(state.profile, 'collapseO');
-state = updateReaderAppearanceTracking(state, 0.8, 1016, 1000);
-state = releaseReaderAppearanceTracking(state, 1000, 1016);
-assert.equal(state.target, 'quick');
-assert.equal(state.profile, 'collapseO');
-const reverseEpoch = state.epoch;
-previousExpansion = state.expansionProgress;
-while (state.phase === 'settling') {
-  advanced = advanceReaderAppearanceMotion(state, 33, reverseEpoch);
-  state = advanced.state;
-  assert.ok(state.expansionProgress <= previousExpansion + 1e-9,
-    'reverse settlement must remain monotonic toward Quick');
-  previousExpansion = state.expansionProgress;
-}
-
-// Stale frame callbacks are rejected after a re-grab.
-let interruptible = createReaderAppearanceMotionState('quick');
-interruptible = startReaderAppearanceProgrammatic(interruptible, 'full');
+// Settlement can be re-grabbed without a frame change. The next 1vp movement
+// changes p by exactly 1 / measuredTravel.
+let interruptible = startReaderAppearanceProgrammatic(
+  createReaderAppearanceMotionState('quick'),
+  'full',
+);
 const staleEpoch = interruptible.epoch;
 interruptible = advanceReaderAppearanceMotion(interruptible, 120, staleEpoch).state;
-const actorsBeforeSettleRegrab = sampleReaderAppearanceMotionState(interruptible).actorSamples;
-interruptible = beginReaderAppearanceTracking(interruptible, 120);
-const regrabEpoch = interruptible.epoch;
-assert.ok(regrabEpoch > staleEpoch);
-assert.deepEqual(sampleReaderAppearanceMotionState(interruptible).actorSamples,
-  actorsBeforeSettleRegrab,
-  're-grabbing a settlement must preserve every shared/reveal actor bbox and alpha');
-const stale = advanceReaderAppearanceMotion(interruptible, 200, staleEpoch);
+const pBeforeRegrab = interruptible.masterProgress;
+const frameBeforeRegrab = sampleReaderAppearanceMotionState(interruptible);
+const currentY = yFor(pBeforeRegrab);
+interruptible = beginReaderAppearanceTracking(
+  interruptible,
+  currentY,
+  currentY,
+  axis,
+  120,
+);
+assert.deepEqual(sampleReaderAppearanceMotionState(interruptible), frameBeforeRegrab);
+const stale = advanceReaderAppearanceMotion(interruptible, 100, staleEpoch);
 assert.equal(stale.state, interruptible);
 assert.equal(stale.shouldContinue, false);
-assert.equal(interruptible.phase, 'tracking');
+interruptible = updateReaderAppearanceTracking(interruptible, currentY - 1, 136, 0);
+close(interruptible.masterProgress, pBeforeRegrab + 1 / 400,
+  'one vp re-grab movement');
 
-// CANCEL returns to the interaction source without producing a new commit.
+// CANCEL starts a continuous settlement to the source; it cannot snap.
+const cancelStartFrame = sampleReaderAppearanceMotionState(interruptible);
 const revisionBeforeCancel = interruptible.completionRevision;
-interruptible = updateReaderAppearanceTracking(interruptible, 0.75, 160, 0);
 interruptible = cancelReaderAppearanceMotion(interruptible);
+assert.equal(interruptible.phase, 'settling');
+assert.equal(interruptible.target, 'quick');
+assert.deepEqual(sampleReaderAppearanceMotionState(interruptible), cancelStartFrame);
+interruptible = finish(interruptible).state;
 assert.equal(interruptible.phase, 'idleQuick');
-assert.equal(interruptible.stableEndpoint, 'quick');
-assert.equal(interruptible.completionRevision, revisionBeforeCancel);
+assert.equal(interruptible.completionRevision, revisionBeforeCancel,
+  'returning to the stable source is not a route commit');
 
-// Gesture overscroll is shell-only; actor progress remains clamped.
-let overflow = createReaderAppearanceMotionState('quick');
-overflow = beginReaderAppearanceTracking(overflow, 0);
-overflow = updateReaderAppearanceTracking(overflow, -1, 16, 500);
-const overflowFrame = sampleReaderAppearanceMotionState(overflow);
-assert.ok(overflowFrame.shellHeight >= 326 && overflowFrame.shellHeight < 330);
-close(overflowFrame.expansionProgress, 0);
-close(overflowFrame.header.opacity, 0);
+// Reduced motion still follows screenY directly, then snaps on release.
+let reduced = beginAt(createReaderAppearanceMotionState('quick', true), 0);
+reduced = updateReaderAppearanceTracking(reduced, 460, 16, 0);
+close(reduced.masterProgress, 0.7, 'reduced-motion direct drag');
+reduced = releaseReaderAppearanceTracking(reduced, 0, 16);
+assert.equal(reduced.phase, 'idleFull');
 
-// Fast release creates at most 4vp shell-only elastic and remains re-grabbable.
-let elastic = createReaderAppearanceMotionState('quick');
-elastic = beginReaderAppearanceTracking(elastic, 0);
-elastic = updateReaderAppearanceTracking(elastic, 0.7, 16, -1000);
-elastic = releaseReaderAppearanceTracking(elastic, -1000, 16);
-assert.equal(elastic.target, 'full');
-assert.ok(Math.abs(elastic.elasticAmplitudeVp) <= 4);
-const elasticEpoch = elastic.epoch;
-advanced = advanceReaderAppearanceMotion(elastic, elastic.settleDurationMs, elasticEpoch);
-elastic = advanced.state;
-assert.equal(advanced.completedEndpoint, 'full');
-assert.equal(elastic.phase, 'elastic');
-elastic = advanceReaderAppearanceMotion(elastic, 45, elasticEpoch).state;
-const beforeRegrab = sampleReaderAppearanceMotionState(elastic);
-assert.ok(beforeRegrab.shellHeight >= 732 && beforeRegrab.shellHeight <= 740);
-close(beforeRegrab.header.opacity, 1, 1e-4, 'content stays at the clamped endpoint');
-elastic = beginReaderAppearanceTracking(elastic, 100);
-const afterRegrab = sampleReaderAppearanceMotionState(elastic);
-close(afterRegrab.shellHeight, beforeRegrab.shellHeight, 1e-5,
-  're-grab must preserve the rendered shell top');
-assert.deepEqual(afterRegrab.actorSamples, beforeRegrab.actorSamples,
-  're-grabbing rebound must not jump any persistent actor');
-close(elastic.elasticOffsetVp, 0);
-assert.equal(elastic.phase, 'tracking');
-assert.equal(elastic.profile, 'collapseO',
-  'the endpoint is committed before elastic, so a re-grab starts the next O branch');
+// Runtime full height is supplied at sampling and remains driven by the same p.
+const tallFrame = sampleReaderAppearanceMotionState({ ...reduced, masterProgress: 0.5 }, 900);
+close(tallFrame.shellHeight, 615, 'runtime-height shell midpoint');
+close(tallFrame.shellTranslateY, 285, 'runtime-height shell top');
 
-console.log('reader appearance motion state: PASS');
+console.log('reader appearance master motion state: PASS');

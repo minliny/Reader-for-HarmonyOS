@@ -172,8 +172,8 @@ assert.match(control,
   'all seven regular reader-control states must clamp their dock');
 assert.equal((control.match(/availableWidth: this\.fullPanelAvailableWidth\(\)/g) ?? []).length, 6,
   'four fallback full sheets plus the Phone Appearance stage/content must share measured width');
-assert.equal((control.match(/availableHeight: this\.layout\.fullPanelHeight/g) ?? []).length, 5,
-  'four fallback full sheets plus staged Appearance content must share the live height budget');
+assert.equal((control.match(/availableHeight: this\.layout\.fullPanelHeight/g) ?? []).length, 6,
+  'four fallback full sheets plus the Phone Appearance stage/content must share the live height budget');
 assert.match(readerLayout, /const fullPanelHeight = Math\.max\(0, height - fullPanelTop - fullPanelBottom\)/,
   'the full-panel height budget must be derived once from the live viewport and safe bottom');
 
@@ -199,6 +199,15 @@ assert.match(appearance, /Math\.min\([^\n]+, this\.availableWidth\)/,
 assert.match(appearance,
   /private scrollViewportHeight\(\): number[\s\S]*Math\.min\(this\.viewportHeight\(\), this\.availableHeight - 68\)/,
   'appearance must preserve its authored full-sheet frame while clamping the interactive scroll viewport');
+assert.match(control,
+  /readerAppearanceMotionStageSupported\(\s*this\.fullPanelAvailableWidth\(\),\s*this\.layout\.fullPanelHeight/,
+  'fixed-coordinate legacy N motion must fall back on viewports narrower than its authored stage');
+assert.match(appearance,
+  /readerAppearanceMotionViewportWidth\(this\.currentMotionFrame\(\), this\.sheetWidth\(\)\)/,
+  'motion surface width must also clamp to the live sheet edge');
+assert.match(appearance,
+  /readerAppearanceMotionViewportHeight\(this\.currentMotionFrame\(\)\)/,
+  'motion scroll viewport must remain reachable inside the live shell');
 
 // Geometry sanity for the explicit regression matrix used by this audit.
 for (const viewport of [320, 360, 365.71, 390, 600, 720, 760, 840]) {

@@ -1,29 +1,23 @@
 /**
  * Phone appearance Quick <-> Full motion geometry.
  *
- * Motion V2 has one spatial source of truth: physical expansion `e` in [0, 1].
- * Click, drag, release settlement and reverse playback only decide how `e`
- * changes. Every visible actor is sampled from this file, so changing drivers
- * can never switch trees or jump to a second set of keyframes.
+ * `masterProgress` is the only spatial coordinate. It is produced from the
+ * grabber's measured screen-space position and is then used, unchanged, to
+ * sample every actor/property track. Expand and collapse are therefore the
+ * same function traversed in opposite directions.
  *
- * Figma sources of record:
- * - N / Appearance Expand: `1505:18040` (authored displacement evidence).
- * - Full static AppearanceContent: `1082:235` (corrected terminal layout).
- *
- * N's exported shared reflow ended at product 183ms and then handed off to a
- * root dissolve. That handoff is deliberately not a runtime contract: shared
- * actors retain N's source/direction and corrected Full endpoints, but their
- * rects remain continuous for the complete physical range e=0 -> 1.
+ * The published Figma N export (`1505:18040`) remains legacy evidence only.
+ * Its effective review window is 11.111% -> 75% of the review timeline. A
+ * final N2 node has not been published, so the legacy shared geometry is held
+ * at its last evidenced keyframe (p=10/23 ~= .4348); it is never extrapolated
+ * to p=1 and never represented as an N2-authored trajectory.
  */
-
-export type ReaderAppearanceMotionProfile = 'expandN' | 'collapseO';
 
 export type ReaderAppearanceMotionActorId =
   'BrightnessRail' |
   'ModuleNav' |
   'MorphStage' |
   'QuickMorph' |
-  'ContentSurface' |
   'ThemeHeader' |
   'ThemeDay' |
   'ThemeWarm' |
@@ -48,6 +42,20 @@ export type ReaderAppearanceMotionActorId =
   'FontImport' |
   'Typography';
 
+export type ReaderAppearanceTrackEasing = 'linear' | 'ease-out' | 'ease-in-out';
+export type ReaderAppearanceTrackAuthority =
+  'interaction-axis' |
+  'legacy-figma-n' |
+  'legacy-static-endpoint' |
+  'product-mapping-alias';
+
+export interface ReaderAppearanceMeasuredAxis {
+  /** Resting grabber center in the compact control bar, in screen coordinates. */
+  quickGrabberScreenY: number;
+  /** Resting grabber center in the full control bar, in screen coordinates. */
+  fullGrabberScreenY: number;
+}
+
 export interface ReaderAppearanceMotionRect {
   x: number;
   y: number;
@@ -56,8 +64,9 @@ export interface ReaderAppearanceMotionRect {
 }
 
 export interface ReaderAppearanceMotionActorFrame extends ReaderAppearanceMotionRect {
+  /** Local progress of this actor's primary changing track. */
+  trackProgress: number;
   opacity: number;
-  /** Compatibility fields for existing ArkUI views. Shared actors keep these at zero. */
   translateX: number;
   translateY: number;
   blurVp: number;
@@ -69,46 +78,64 @@ export interface ReaderAppearanceMotionActorSample {
 }
 
 export interface ReaderAppearanceMotionFrame {
-  /** The only spatial progress. It is always Quick=0 -> Full=1. */
-  expansionProgress: number;
+  /** The sole clamped Quick=0 -> Full=1 spatial coordinate. */
+  masterProgress: number;
+  /** Corresponding position on the legacy N review timeline, for provenance. */
+  figmaFramePercent: number;
   shellHeight: number;
   shellTranslateY: number;
   brightnessRail: ReaderAppearanceMotionActorFrame;
   moduleNav: ReaderAppearanceMotionActorFrame;
   morphStage: ReaderAppearanceMotionActorFrame;
-
-  /** Persistent shared surface and its independently positioned descendants. */
   quickMorph: ReaderAppearanceMotionActorFrame;
   themeHeader: ReaderAppearanceMotionActorFrame;
   themeItems: ReaderAppearanceMotionActorFrame[];
   quickDivider: ReaderAppearanceMotionActorFrame;
   fontHeader: ReaderAppearanceMotionActorFrame;
   fontItems: ReaderAppearanceMotionActorFrame[];
-
-  /** Full-only actors. These never fade an entire Full root over the shared tree. */
   header: ReaderAppearanceMotionActorFrame;
   themeActions: ReaderAppearanceMotionActorFrame;
   fontImport: ReaderAppearanceMotionActorFrame;
   typography: ReaderAppearanceMotionActorFrame;
-
-  /** Compatibility aliases used by the presentation-only Full panel. */
-  contentSurface: ReaderAppearanceMotionActorFrame;
-  appearanceContent: ReaderAppearanceMotionActorFrame;
-  themeLibrary: ReaderAppearanceMotionActorFrame;
-  fontLibrary: ReaderAppearanceMotionActorFrame;
-
   actorSamples: ReaderAppearanceMotionActorSample[];
 }
 
-export const READER_APPEARANCE_EXPAND_DURATION_MS = 420;
-export const READER_APPEARANCE_COLLAPSE_DURATION_MS = 360;
+export interface ReaderAppearanceNumberTrack {
+  startMasterProgress: number;
+  endMasterProgress: number;
+  from: number;
+  to: number;
+  easing: ReaderAppearanceTrackEasing;
+}
+
+export interface ReaderAppearanceActorTracks {
+  id: ReaderAppearanceMotionActorId;
+  authority: ReaderAppearanceTrackAuthority;
+  x: ReaderAppearanceNumberTrack;
+  y: ReaderAppearanceNumberTrack;
+  width: ReaderAppearanceNumberTrack;
+  height: ReaderAppearanceNumberTrack;
+  opacity: ReaderAppearanceNumberTrack;
+  translateX: ReaderAppearanceNumberTrack;
+  translateY: ReaderAppearanceNumberTrack;
+  blurVp: ReaderAppearanceNumberTrack;
+}
+
+export const READER_APPEARANCE_SETTLE_FULL_DISTANCE_MS = 420;
 export const READER_APPEARANCE_QUICK_HEIGHT = 330;
 export const READER_APPEARANCE_FULL_HEIGHT = 736;
 export const READER_APPEARANCE_STAGE_WIDTH = 364;
-export const READER_APPEARANCE_SHELL_TRAVEL_VP =
+/** Smallest useful direct-manipulation axis; matches the grabber touch target. */
+export const READER_APPEARANCE_MIN_INTERACTIVE_TRAVEL_VP = 44;
+/** Design-space endpoint delta only. It must never normalize a screen gesture. */
+export const READER_APPEARANCE_DESIGN_TRAVEL_VP =
   READER_APPEARANCE_FULL_HEIGHT - READER_APPEARANCE_QUICK_HEIGHT;
 
-/** Actors whose identity and geometry persist from Quick through Full. */
+export const READER_APPEARANCE_FIGMA_N_REVIEW_START_PERCENT = 1 / 9;
+export const READER_APPEARANCE_FIGMA_N_REVIEW_END_PERCENT = 3 / 4;
+export const READER_APPEARANCE_FINAL_N2_PUBLISHED = false;
+export const READER_APPEARANCE_LEGACY_SHARED_GEOMETRY_END_PROGRESS = 10 / 23;
+
 export const READER_APPEARANCE_SHARED_ACTOR_IDS: ReaderAppearanceMotionActorId[] = [
   'MorphStage',
   'QuickMorph',
@@ -133,91 +160,17 @@ export const READER_APPEARANCE_SHARED_ACTOR_IDS: ReaderAppearanceMotionActorId[]
   'Font7',
 ];
 
-/** Full-only content reveals around, never on top of, the shared actors. */
 export const READER_APPEARANCE_FULL_ONLY_ACTOR_IDS: ReaderAppearanceMotionActorId[] = [
-  'ContentSurface',
   'Header',
   'ThemeActions',
   'FontImport',
   'Typography',
 ];
 
-/** Fixed-screen Quick chrome is not a child of the moving/clipped shell tree. */
 export const READER_APPEARANCE_FIXED_SCREEN_ACTOR_IDS: ReaderAppearanceMotionActorId[] = [
   'BrightnessRail',
   'ModuleNav',
 ];
-
-export const READER_APPEARANCE_QUICK_MORPH_SOURCE_RECT: ReaderAppearanceMotionRect = {
-  x: 12.104,
-  y: 434.993,
-  width: 286,
-  height: 190,
-};
-
-export const READER_APPEARANCE_QUICK_MORPH_TARGET_RECT: ReaderAppearanceMotionRect = {
-  x: 13,
-  y: 57,
-  width: 338,
-  height: 666,
-};
-
-export const READER_APPEARANCE_THEME_HEADER_SOURCE_RECT: ReaderAppearanceMotionRect = {
-  x: 23.104,
-  y: 449.993,
-  width: 262,
-  height: 15.898,
-};
-
-export const READER_APPEARANCE_THEME_HEADER_TARGET_RECT: ReaderAppearanceMotionRect = {
-  x: 25,
-  y: 77,
-  width: 312,
-  height: 20,
-};
-
-export const READER_APPEARANCE_DIVIDER_SOURCE_RECT: ReaderAppearanceMotionRect = {
-  x: 23.104,
-  y: 532.891,
-  width: 262,
-  height: 1,
-};
-
-export const READER_APPEARANCE_DIVIDER_TARGET_RECT: ReaderAppearanceMotionRect = {
-  x: 23,
-  y: 276.98,
-  width: 316,
-  height: 1,
-};
-
-export const READER_APPEARANCE_FONT_HEADER_SOURCE_RECT: ReaderAppearanceMotionRect = {
-  x: 23.104,
-  y: 536.891,
-  width: 262,
-  height: 10,
-};
-
-export const READER_APPEARANCE_FONT_HEADER_TARGET_RECT: ReaderAppearanceMotionRect = {
-  x: 25,
-  y: 287.98,
-  width: 312,
-  height: 20,
-};
-
-export const READER_APPEARANCE_FONT_TARGET_X: number[] = [24, 105, 186, 267];
-export const READER_APPEARANCE_FONT_TARGET_Y: number[] = [307.98, 345.98];
-
-const READER_APPEARANCE_THEME_SOURCE_X: number[] = [23.104, 89.604, 156.104, 222.604];
-const READER_APPEARANCE_THEME_SOURCE_Y: number[] = [468.891, 496.891];
-const READER_APPEARANCE_THEME_TARGET_X: number[] = [25, 104.5, 184, 263.5];
-const READER_APPEARANCE_THEME_TARGET_Y: number[] = [99.39, 164.19];
-const READER_APPEARANCE_FONT_SOURCE_X: number[] = [23.104, 89.604, 156.104, 222.604];
-const READER_APPEARANCE_FONT_SOURCE_Y: number[] = [549.891, 580.891];
-
-const EASE_OUT_X1 = 0;
-const EASE_OUT_Y1 = 0;
-const EASE_OUT_X2 = 0.58;
-const EASE_OUT_Y2 = 1;
 
 function clamp01(value: number): number {
   if (!Number.isFinite(value)) {
@@ -230,13 +183,51 @@ function finiteOr(value: number, fallback: number): number {
   return Number.isFinite(value) ? value : fallback;
 }
 
+/** Product guard while legacy N remains a fixed 364vp coordinate space. */
+export function readerAppearanceMotionStageSupported(
+  availableWidth: number,
+  availableHeight: number,
+): boolean {
+  return Number.isFinite(availableWidth) &&
+    Number.isFinite(availableHeight) &&
+    availableWidth >= READER_APPEARANCE_STAGE_WIDTH &&
+    availableHeight - READER_APPEARANCE_QUICK_HEIGHT >=
+      READER_APPEARANCE_MIN_INTERACTIVE_TRAVEL_VP;
+}
+
+/** Cancel retained Full scrolling continuously as the same tree returns to Quick. */
+export function readerAppearanceScrollCompensationVp(
+  scrollOffsetY: number,
+  masterProgress: number,
+): number {
+  const offset = Math.max(0, finiteOr(scrollOffsetY, 0));
+  return offset * (1 - clamp01(masterProgress));
+}
+
+export function readerAppearanceMotionViewportWidth(
+  frame: ReaderAppearanceMotionFrame,
+  sheetWidth: number,
+): number {
+  const surfaceLeft = frame.quickMorph.x + frame.quickMorph.translateX;
+  const available = Math.max(0, finiteOr(sheetWidth, 0) - surfaceLeft);
+  return Math.max(0, Math.min(frame.quickMorph.width, available));
+}
+
+export function readerAppearanceMotionViewportHeight(
+  frame: ReaderAppearanceMotionFrame,
+): number {
+  const surfaceTop = frame.quickMorph.y + frame.quickMorph.translateY;
+  const shellBottom = frame.shellTranslateY + frame.shellHeight;
+  const available = Math.max(0, shellBottom - surfaceTop);
+  return Math.max(0, Math.min(frame.quickMorph.height, available));
+}
+
 function cubicCoordinate(parameter: number, first: number, second: number): number {
   const inverse = 1 - parameter;
   return 3 * inverse * inverse * parameter * first +
     3 * inverse * parameter * parameter * second + parameter * parameter * parameter;
 }
 
-/** CSS/Figma cubic-bezier evaluation: input is timeline x, output is eased y. */
 export function readerAppearanceCubicBezierProgress(
   progress: number,
   x1: number,
@@ -261,332 +252,445 @@ export function readerAppearanceCubicBezierProgress(
   return clamp01(cubicCoordinate((low + high) / 2, y1, y2));
 }
 
-function easeOut(progress: number): number {
-  return readerAppearanceCubicBezierProgress(
-    progress,
-    EASE_OUT_X1,
-    EASE_OUT_Y1,
-    EASE_OUT_X2,
-    EASE_OUT_Y2,
-  );
-}
-
-function easeInOut(progress: number): number {
-  return readerAppearanceCubicBezierProgress(progress, 0.42, 0, 0.58, 1);
+function applyTrackEasing(progress: number, easing: ReaderAppearanceTrackEasing): number {
+  if (easing === 'ease-out') {
+    return readerAppearanceCubicBezierProgress(progress, 0, 0, 0.58, 1);
+  }
+  if (easing === 'ease-in-out') {
+    return readerAppearanceCubicBezierProgress(progress, 0.42, 0, 0.58, 1);
+  }
+  return clamp01(progress);
 }
 
 /**
- * Shared actor geometry consumes physical expansion directly. The exported N
- * direction is retained by endpoint rects; no 183ms sub-timeline is allowed
- * to finish early and leave a frozen shared tree behind.
+ * Local progress for one property track. The master axis is never eased or
+ * rewritten before this function is called.
  */
-export function readerAppearanceSharedActorProgress(expansionProgress: number): number {
-  return easeOut(clamp01(expansionProgress));
-}
-
-function segmentProgress(
-  expansionProgress: number,
-  startExpansion: number,
-  endExpansion: number,
+export function readerAppearanceTrackProgress(
+  masterProgress: number,
+  track: ReaderAppearanceNumberTrack,
 ): number {
-  const expansion = clamp01(expansionProgress);
-  if (expansion <= startExpansion) {
+  const master = clamp01(masterProgress);
+  if (master <= track.startMasterProgress) {
     return 0;
   }
-  if (expansion >= endExpansion || endExpansion <= startExpansion) {
+  if (master >= track.endMasterProgress ||
+    track.endMasterProgress <= track.startMasterProgress) {
     return 1;
   }
-  return (expansion - startExpansion) / (endExpansion - startExpansion);
+  const local = (master - track.startMasterProgress) /
+    (track.endMasterProgress - track.startMasterProgress);
+  return applyTrackEasing(local, track.easing);
 }
 
-/** Reversible reveal progress for a Full-only actor. */
-export function readerAppearanceFullOnlyProgress(
-  expansionProgress: number,
-  startExpansion: number,
-  endExpansion: number,
+export function sampleReaderAppearanceNumberTrack(
+  masterProgress: number,
+  track: ReaderAppearanceNumberTrack,
 ): number {
-  return easeOut(segmentProgress(expansionProgress, startExpansion, endExpansion));
+  const local = readerAppearanceTrackProgress(masterProgress, track);
+  return track.from + (track.to - track.from) * local;
 }
 
-function lerp(start: number, end: number, progress: number): number {
-  const safeProgress = clamp01(progress);
-  return start + (end - start) * safeProgress;
+export function readerAppearanceMeasuredTravelVp(axis: ReaderAppearanceMeasuredAxis): number {
+  if (!Number.isFinite(axis.quickGrabberScreenY) ||
+    !Number.isFinite(axis.fullGrabberScreenY)) {
+    return 0;
+  }
+  return Math.abs(axis.quickGrabberScreenY - axis.fullGrabberScreenY);
 }
 
-function interpolateRect(
+/** Convert the grabber's actual screen Y into the sole spatial progress. */
+export function readerAppearanceMasterProgressFromScreenY(
+  grabberScreenY: number,
+  axis: ReaderAppearanceMeasuredAxis,
+): number {
+  const signedTravel = axis.quickGrabberScreenY - axis.fullGrabberScreenY;
+  if (!Number.isFinite(grabberScreenY) || !Number.isFinite(signedTravel) ||
+    Math.abs(signedTravel) <= Number.EPSILON) {
+    return 0;
+  }
+  return clamp01((axis.quickGrabberScreenY - grabberScreenY) / signedTravel);
+}
+
+export function readerAppearanceGrabberScreenYFromMasterProgress(
+  masterProgress: number,
+  axis: ReaderAppearanceMeasuredAxis,
+): number {
+  const master = clamp01(masterProgress);
+  if (!Number.isFinite(axis.quickGrabberScreenY) ||
+    !Number.isFinite(axis.fullGrabberScreenY)) {
+    return 0;
+  }
+  return axis.quickGrabberScreenY +
+    (axis.fullGrabberScreenY - axis.quickGrabberScreenY) * master;
+}
+
+/** Map p=0..1 directly onto Figma N's evidenced 11.111%..75% window. */
+export function readerAppearanceFigmaFramePercent(masterProgress: number): number {
+  const master = clamp01(masterProgress);
+  return READER_APPEARANCE_FIGMA_N_REVIEW_START_PERCENT +
+    (READER_APPEARANCE_FIGMA_N_REVIEW_END_PERCENT -
+      READER_APPEARANCE_FIGMA_N_REVIEW_START_PERCENT) * master;
+}
+
+function track(
+  from: number,
+  to: number,
+  startMasterProgress: number = 0,
+  endMasterProgress: number = 1,
+  easing: ReaderAppearanceTrackEasing = 'linear',
+): ReaderAppearanceNumberTrack {
+  return { startMasterProgress, endMasterProgress, from, to, easing };
+}
+
+function constantTrack(value: number): ReaderAppearanceNumberTrack {
+  return track(value, value, 0, 1, 'linear');
+}
+
+function actorTracks(
+  id: ReaderAppearanceMotionActorId,
+  authority: ReaderAppearanceTrackAuthority,
   source: ReaderAppearanceMotionRect,
   target: ReaderAppearanceMotionRect,
-  progress: number,
-): ReaderAppearanceMotionRect {
+  start: number,
+  end: number,
+  easing: ReaderAppearanceTrackEasing,
+  opacity: ReaderAppearanceNumberTrack = constantTrack(1),
+  translateX: ReaderAppearanceNumberTrack = constantTrack(0),
+  translateY: ReaderAppearanceNumberTrack = constantTrack(0),
+  blurVp: ReaderAppearanceNumberTrack = constantTrack(0),
+): ReaderAppearanceActorTracks {
   return {
-    x: lerp(source.x, target.x, progress),
-    y: lerp(source.y, target.y, progress),
-    width: lerp(source.width, target.width, progress),
-    height: lerp(source.height, target.height, progress),
+    id,
+    authority,
+    x: track(source.x, target.x, start, end, easing),
+    y: track(source.y, target.y, start, end, easing),
+    width: track(source.width, target.width, start, end, easing),
+    height: track(source.height, target.height, start, end, easing),
+    opacity,
+    translateX,
+    translateY,
+    blurVp,
   };
 }
 
-function actorFromRect(
-  rect: ReaderAppearanceMotionRect,
-  opacity: number = 1,
-  blurVp: number = 0,
-): ReaderAppearanceMotionActorFrame {
-  return {
-    opacity: clamp01(opacity),
-    x: finiteOr(rect.x, 0),
-    y: finiteOr(rect.y, 0),
-    translateX: 0,
-    translateY: 0,
-    blurVp: Math.max(0, finiteOr(blurVp, 0)),
-    width: Math.max(0, finiteOr(rect.width, 0)),
-    height: Math.max(0, finiteOr(rect.height, 0)),
-  };
-}
-
-function effectActor(
-  opacity: number,
-  translateY: number = 0,
-  blurVp: number = 0,
-): ReaderAppearanceMotionActorFrame {
-  return {
-    opacity: clamp01(opacity),
-    x: 0,
-    y: 0,
-    translateX: 0,
-    translateY: finiteOr(translateY, 0),
-    blurVp: Math.max(0, finiteOr(blurVp, 0)),
-    width: 0,
-    height: 0,
-  };
-}
-
-function themeSourceRect(index: number): ReaderAppearanceMotionRect {
-  const column = index % 4;
-  const row = Math.floor(index / 4);
-  return {
-    x: READER_APPEARANCE_THEME_SOURCE_X[column],
-    y: READER_APPEARANCE_THEME_SOURCE_Y[row],
-    width: 62.5,
-    height: 24,
-  };
-}
-
-function themeTargetRect(index: number): ReaderAppearanceMotionRect {
-  const column = index % 4;
-  const row = Math.floor(index / 4);
-  return {
-    x: READER_APPEARANCE_THEME_TARGET_X[column],
-    y: READER_APPEARANCE_THEME_TARGET_Y[row],
-    width: 73.5,
-    height: 58.8,
-  };
-}
-
-function fontSourceRect(index: number): ReaderAppearanceMotionRect {
-  const column = index % 4;
-  const row = Math.floor(index / 4);
-  return {
-    x: READER_APPEARANCE_FONT_SOURCE_X[column],
-    y: READER_APPEARANCE_FONT_SOURCE_Y[row],
-    width: 62.5,
-    height: 27,
-  };
-}
-
-function fontTargetRect(index: number): ReaderAppearanceMotionRect {
-  const column = index % 4;
-  const row = Math.floor(index / 4);
-  return {
-    x: READER_APPEARANCE_FONT_TARGET_X[column],
-    y: READER_APPEARANCE_FONT_TARGET_Y[row],
-    width: 73,
-    height: 30,
-  };
-}
-
-function addSample(
-  samples: ReaderAppearanceMotionActorSample[],
+function effectTracks(
   id: ReaderAppearanceMotionActorId,
-  frame: ReaderAppearanceMotionActorFrame,
-): void {
-  samples.push({ id, frame });
+  opacity: ReaderAppearanceNumberTrack,
+  translateY: ReaderAppearanceNumberTrack = constantTrack(0),
+  blurVp: ReaderAppearanceNumberTrack = constantTrack(0),
+): ReaderAppearanceActorTracks {
+  return actorTracks(
+    id,
+    'legacy-figma-n',
+    { x: 0, y: 0, width: 0, height: 0 },
+    { x: 0, y: 0, width: 0, height: 0 },
+    0,
+    1,
+    'linear',
+    opacity,
+    constantTrack(0),
+    translateY,
+    blurVp,
+  );
 }
 
-/** Physical Quick->Full completion for a direction-specific click clock. */
-export function readerAppearanceExpansionFromTrajectory(
-  profile: ReaderAppearanceMotionProfile,
-  trajectoryProgress: number,
-): number {
-  const progress = clamp01(trajectoryProgress);
-  if (profile === 'collapseO') {
-    return 1 - easeInOut(progress);
-  }
-  return easeOut(progress);
+function productMappedEffectTracks(
+  id: ReaderAppearanceMotionActorId,
+  opacity: ReaderAppearanceNumberTrack,
+): ReaderAppearanceActorTracks {
+  return actorTracks(
+    id,
+    'product-mapping-alias',
+    { x: 0, y: 0, width: 0, height: 0 },
+    { x: 0, y: 0, width: 0, height: 0 },
+    0,
+    1,
+    'linear',
+    opacity,
+  );
 }
 
-/** Inverse of the monotonic direction-specific click clock. */
-export function readerAppearanceTrajectoryFromExpansion(
-  profile: ReaderAppearanceMotionProfile,
-  expansionProgress: number,
-): number {
-  const target = clamp01(expansionProgress);
-  if (profile === 'expandN' && (target === 0 || target === 1)) {
-    return target;
-  }
-  if (profile === 'collapseO' && target === 1) {
-    return 0;
-  }
-  if (profile === 'collapseO' && target === 0) {
-    return 1;
-  }
-  let low = 0;
-  let high = 1;
-  for (let index = 0; index < 80; index += 1) {
-    const middle = (low + high) / 2;
-    const candidate = readerAppearanceExpansionFromTrajectory(profile, middle);
-    if ((profile === 'expandN' && candidate < target) ||
-      (profile === 'collapseO' && candidate > target)) {
-      low = middle;
-    } else {
-      high = middle;
+const LEGACY_GEOMETRY_START = 0;
+const LEGACY_GEOMETRY_END = READER_APPEARANCE_LEGACY_SHARED_GEOMETRY_END_PROGRESS;
+const LEGACY_APPEARANCE_START = 8 / 23;
+const LEGACY_CONTENT_END = 14 / 23;
+const LEGACY_THEME_LIBRARY_END = 15 / 23;
+const LEGACY_FONT_LIBRARY_START = 48 / 115;
+const LEGACY_HEADER_FONT_END = 17 / 23;
+
+const THEME_SOURCE_X: number[] = [23.104, 89.604, 156.104, 222.604];
+const THEME_SOURCE_Y: number[] = [468.891, 496.891];
+const THEME_TARGET_X: number[] = [25, 104.5, 184, 263.5];
+const THEME_TARGET_Y: number[] = [99.39, 164.19];
+const FONT_SOURCE_X: number[] = [23.104, 89.604, 156.104, 222.604];
+const FONT_SOURCE_Y: number[] = [549.891, 580.891];
+const FONT_TARGET_X: number[] = [24, 105, 186, 267];
+const FONT_TARGET_Y: number[] = [307.98, 345.98];
+
+function themeRect(index: number, target: boolean): ReaderAppearanceMotionRect {
+  const column = index % 4;
+  const row = Math.floor(index / 4);
+  return target ? {
+    x: THEME_TARGET_X[column], y: THEME_TARGET_Y[row], width: 73.5, height: 58.8,
+  } : {
+    x: THEME_SOURCE_X[column], y: THEME_SOURCE_Y[row], width: 62.5, height: 24,
+  };
+}
+
+function fontRect(index: number, target: boolean): ReaderAppearanceMotionRect {
+  const column = index % 4;
+  const row = Math.floor(index / 4);
+  return target ? {
+    x: FONT_TARGET_X[column], y: FONT_TARGET_Y[row], width: 73, height: 30,
+  } : {
+    x: FONT_SOURCE_X[column], y: FONT_SOURCE_Y[row], width: 62.5, height: 27,
+  };
+}
+
+const themeIds: ReaderAppearanceMotionActorId[] = [
+  'ThemeDay', 'ThemeWarm', 'ThemeNight', 'ThemeWarmNight',
+  'ThemePaper', 'ThemeGreen', 'ThemePaperNight', 'ThemeGreenNight',
+];
+const fontIds: ReaderAppearanceMotionActorId[] = [
+  'Font0', 'Font1', 'Font2', 'Font3', 'Font4', 'Font5', 'Font6', 'Font7',
+];
+
+const legacyTracks: ReaderAppearanceActorTracks[] = [
+  effectTracks(
+    'BrightnessRail',
+    track(1, 0, LEGACY_GEOMETRY_END, 1, 'ease-out'),
+    track(0, 15, LEGACY_GEOMETRY_END, 1, 'ease-out'),
+    track(0, 12, LEGACY_GEOMETRY_END, 1, 'ease-out'),
+  ),
+  effectTracks(
+    'ModuleNav',
+    track(1, 0, LEGACY_GEOMETRY_END, 1, 'ease-out'),
+    track(0, 20, LEGACY_GEOMETRY_END, 1, 'ease-out'),
+    track(0, 12, LEGACY_GEOMETRY_END, 1, 'ease-out'),
+  ),
+  actorTracks(
+    'MorphStage',
+    'interaction-axis',
+    { x: 0, y: READER_APPEARANCE_DESIGN_TRAVEL_VP, width: READER_APPEARANCE_STAGE_WIDTH,
+      height: READER_APPEARANCE_QUICK_HEIGHT },
+    { x: 0, y: 0, width: READER_APPEARANCE_STAGE_WIDTH,
+      height: READER_APPEARANCE_FULL_HEIGHT },
+    0,
+    1,
+    'linear',
+  ),
+  actorTracks(
+    'QuickMorph',
+    'legacy-figma-n',
+    { x: 12.104, y: 434.993, width: 286, height: 190 },
+    { x: 13, y: 57, width: 338, height: 666 },
+    LEGACY_GEOMETRY_START,
+    LEGACY_GEOMETRY_END,
+    'ease-out',
+  ),
+  actorTracks(
+    'ThemeHeader',
+    'legacy-figma-n',
+    { x: 23.104, y: 449.993, width: 262, height: 15.898 },
+    { x: 25, y: 77, width: 312, height: 20 },
+    LEGACY_GEOMETRY_START,
+    LEGACY_GEOMETRY_END,
+    'ease-out',
+  ),
+  actorTracks(
+    'QuickDivider',
+    'legacy-figma-n',
+    { x: 23.104, y: 532.891, width: 262, height: 1 },
+    { x: 23, y: 276.98, width: 316, height: 1 },
+    LEGACY_GEOMETRY_START,
+    LEGACY_GEOMETRY_END,
+    'ease-out',
+  ),
+  actorTracks(
+    'FontHeader',
+    'legacy-figma-n',
+    { x: 23.104, y: 536.891, width: 262, height: 10 },
+    { x: 25, y: 287.98, width: 312, height: 20 },
+    LEGACY_GEOMETRY_START,
+    LEGACY_GEOMETRY_END,
+    'ease-out',
+  ),
+  effectTracks(
+    'Header',
+    track(0, 1, LEGACY_APPEARANCE_START, LEGACY_HEADER_FONT_END, 'ease-out'),
+    track(-12, 0, LEGACY_APPEARANCE_START, LEGACY_HEADER_FONT_END, 'ease-out'),
+    track(8, 0, LEGACY_APPEARANCE_START, LEGACY_HEADER_FONT_END, 'ease-out'),
+  ),
+  productMappedEffectTracks('ThemeActions',
+    track(0, 1, LEGACY_APPEARANCE_START, LEGACY_THEME_LIBRARY_END, 'ease-out')),
+  productMappedEffectTracks('FontImport',
+    track(0, 1, LEGACY_FONT_LIBRARY_START, LEGACY_HEADER_FONT_END, 'ease-out')),
+  effectTracks('Typography',
+    track(0, 1, LEGACY_CONTENT_END, 1, 'ease-out')),
+];
+
+for (let index = 0; index < themeIds.length; index += 1) {
+  legacyTracks.push(actorTracks(
+    themeIds[index],
+    'legacy-figma-n',
+    themeRect(index, false),
+    themeRect(index, true),
+    LEGACY_GEOMETRY_START,
+    LEGACY_GEOMETRY_END,
+    'ease-out',
+  ));
+}
+
+for (let index = 0; index < fontIds.length; index += 1) {
+  legacyTracks.push(actorTracks(
+    fontIds[index],
+    'legacy-static-endpoint',
+    fontRect(index, false),
+    fontRect(index, true),
+    LEGACY_GEOMETRY_START,
+    LEGACY_GEOMETRY_END,
+    'ease-out',
+  ));
+}
+
+/** Auditable fallback tracks while final N2 remains unpublished. */
+export const READER_APPEARANCE_LEGACY_ACTOR_TRACKS: ReaderAppearanceActorTracks[] = legacyTracks;
+
+function tracksFor(id: ReaderAppearanceMotionActorId): ReaderAppearanceActorTracks {
+  for (let index = 0; index < READER_APPEARANCE_LEGACY_ACTOR_TRACKS.length; index += 1) {
+    const candidate = READER_APPEARANCE_LEGACY_ACTOR_TRACKS[index];
+    if (candidate.id === id) {
+      return candidate;
     }
   }
-  return (low + high) / 2;
+  throw new Error(`Missing appearance actor tracks: ${id}`);
 }
 
-/** Helper for the Stage: upward finger travel increases physical expansion. */
-export function readerAppearanceExpansionFromDrag(
-  startRawExpansion: number,
-  deltaYVp: number,
-): number {
-  return finiteOr(startRawExpansion, 0) -
-    finiteOr(deltaYVp, 0) / READER_APPEARANCE_SHELL_TRAVEL_VP;
+function isBottomAnchoredSharedActor(id: ReaderAppearanceMotionActorId): boolean {
+  if (id === 'MorphStage') {
+    return false;
+  }
+  for (let index = 0; index < READER_APPEARANCE_SHARED_ACTOR_IDS.length; index += 1) {
+    if (READER_APPEARANCE_SHARED_ACTOR_IDS[index] === id) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function sampleActor(
+  id: ReaderAppearanceMotionActorId,
+  masterProgress: number,
+  fullHeight: number,
+): ReaderAppearanceMotionActorFrame {
+  const actor = tracksFor(id);
+  const candidateTracks: ReaderAppearanceNumberTrack[] = [
+    actor.x, actor.y, actor.width, actor.height,
+    actor.opacity, actor.translateX, actor.translateY, actor.blurVp,
+  ];
+  let primaryTrack = actor.x;
+  for (let index = 0; index < candidateTracks.length; index += 1) {
+    if (candidateTracks[index].from !== candidateTracks[index].to) {
+      primaryTrack = candidateTracks[index];
+      break;
+    }
+  }
+  const safeFullHeight = Math.max(READER_APPEARANCE_QUICK_HEIGHT, finiteOr(
+    fullHeight,
+    READER_APPEARANCE_FULL_HEIGHT,
+  ));
+  if (id === 'MorphStage') {
+    const shellHeight = READER_APPEARANCE_QUICK_HEIGHT +
+      (safeFullHeight - READER_APPEARANCE_QUICK_HEIGHT) * clamp01(masterProgress);
+    return {
+      trackProgress: clamp01(masterProgress),
+      x: 0,
+      y: safeFullHeight - shellHeight,
+      width: READER_APPEARANCE_STAGE_WIDTH,
+      height: shellHeight,
+      opacity: 1,
+      translateX: 0,
+      translateY: 0,
+      blurVp: 0,
+    };
+  }
+  const sourceYOffset = isBottomAnchoredSharedActor(id) ?
+    safeFullHeight - READER_APPEARANCE_FULL_HEIGHT : 0;
+  const yProgress = readerAppearanceTrackProgress(masterProgress, actor.y);
+  const sampledY = actor.y.from + sourceYOffset +
+    (actor.y.to - actor.y.from - sourceYOffset) * yProgress;
+  return {
+    trackProgress: readerAppearanceTrackProgress(masterProgress, primaryTrack),
+    x: finiteOr(sampleReaderAppearanceNumberTrack(masterProgress, actor.x), 0),
+    y: finiteOr(sampledY, 0),
+    width: Math.max(0, finiteOr(sampleReaderAppearanceNumberTrack(masterProgress, actor.width), 0)),
+    height: Math.max(0, finiteOr(sampleReaderAppearanceNumberTrack(masterProgress, actor.height), 0)),
+    opacity: clamp01(sampleReaderAppearanceNumberTrack(masterProgress, actor.opacity)),
+    translateX: finiteOr(sampleReaderAppearanceNumberTrack(masterProgress, actor.translateX), 0),
+    translateY: finiteOr(sampleReaderAppearanceNumberTrack(masterProgress, actor.translateY), 0),
+    blurVp: Math.max(0, finiteOr(sampleReaderAppearanceNumberTrack(masterProgress, actor.blurVp), 0)),
+  };
 }
 
 /**
- * Canonical Motion V2 sampler. Calling it twice with the same `e` returns the
- * same complete visual frame regardless of how that progress was reached.
+ * Sample the one persistent visual tree. Calling this with the same p always
+ * returns the same frame, regardless of direction, gesture history or clock.
  */
-export function sampleReaderAppearanceExpansion(
-  expansionProgress: number,
+export function sampleReaderAppearanceMasterProgress(
+  masterProgress: number,
+  fullHeight: number = READER_APPEARANCE_FULL_HEIGHT,
 ): ReaderAppearanceMotionFrame {
-  const expansion = clamp01(expansionProgress);
-  const sharedProgress = readerAppearanceSharedActorProgress(expansion);
-  const shellHeight = lerp(READER_APPEARANCE_QUICK_HEIGHT, READER_APPEARANCE_FULL_HEIGHT, expansion);
-  const shellTranslateY = READER_APPEARANCE_FULL_HEIGHT - shellHeight;
-
-  const chromeProgress = readerAppearanceFullOnlyProgress(expansion, 0.45, 1);
-  const brightnessRail = effectActor(
-    1 - chromeProgress,
-    lerp(0, 15, chromeProgress),
-    lerp(0, 12, chromeProgress),
-  );
-  const moduleNav = effectActor(
-    1 - chromeProgress,
-    lerp(0, 20, chromeProgress),
-    lerp(0, 12, chromeProgress),
-  );
-  const morphStage = actorFromRect({
-    x: 0,
-    y: shellTranslateY,
-    width: READER_APPEARANCE_STAGE_WIDTH,
-    height: shellHeight,
-  });
-
-  const quickMorph = actorFromRect(interpolateRect(
-    READER_APPEARANCE_QUICK_MORPH_SOURCE_RECT,
-    READER_APPEARANCE_QUICK_MORPH_TARGET_RECT,
-    sharedProgress,
+  const master = clamp01(masterProgress);
+  const safeFullHeight = Math.max(READER_APPEARANCE_QUICK_HEIGHT, finiteOr(
+    fullHeight,
+    READER_APPEARANCE_FULL_HEIGHT,
   ));
-  const themeHeader = actorFromRect(interpolateRect(
-    READER_APPEARANCE_THEME_HEADER_SOURCE_RECT,
-    READER_APPEARANCE_THEME_HEADER_TARGET_RECT,
-    sharedProgress,
-  ));
-  const quickDivider = actorFromRect(interpolateRect(
-    READER_APPEARANCE_DIVIDER_SOURCE_RECT,
-    READER_APPEARANCE_DIVIDER_TARGET_RECT,
-    sharedProgress,
-  ));
-  const fontHeader = actorFromRect(interpolateRect(
-    READER_APPEARANCE_FONT_HEADER_SOURCE_RECT,
-    READER_APPEARANCE_FONT_HEADER_TARGET_RECT,
-    sharedProgress,
-  ));
-
+  const brightnessRail = sampleActor('BrightnessRail', master, safeFullHeight);
+  const moduleNav = sampleActor('ModuleNav', master, safeFullHeight);
+  const morphStage = sampleActor('MorphStage', master, safeFullHeight);
+  const quickMorph = sampleActor('QuickMorph', master, safeFullHeight);
+  const themeHeader = sampleActor('ThemeHeader', master, safeFullHeight);
+  const quickDivider = sampleActor('QuickDivider', master, safeFullHeight);
+  const fontHeader = sampleActor('FontHeader', master, safeFullHeight);
+  const header = sampleActor('Header', master, safeFullHeight);
+  const themeActions = sampleActor('ThemeActions', master, safeFullHeight);
+  const fontImport = sampleActor('FontImport', master, safeFullHeight);
+  const typography = sampleActor('Typography', master, safeFullHeight);
   const themeItems: ReaderAppearanceMotionActorFrame[] = [];
   const fontItems: ReaderAppearanceMotionActorFrame[] = [];
-  for (let index = 0; index < 8; index += 1) {
-    themeItems.push(actorFromRect(interpolateRect(
-      themeSourceRect(index),
-      themeTargetRect(index),
-      sharedProgress,
-    )));
-    fontItems.push(actorFromRect(interpolateRect(
-      fontSourceRect(index),
-      fontTargetRect(index),
-      sharedProgress,
-    )));
-  }
-
-  const contentSurfaceProgress = readerAppearanceFullOnlyProgress(expansion, 0.304762, 0.609524);
-  const contentSurface = effectActor(contentSurfaceProgress);
-  const headerProgress = readerAppearanceFullOnlyProgress(expansion, 0.347619, 0.738095);
-  const themeActionsProgress = readerAppearanceFullOnlyProgress(expansion, 0.347619, 0.652381);
-  const fontImportProgress = readerAppearanceFullOnlyProgress(expansion, 0.416667, 0.738095);
-  const typographyProgress = readerAppearanceFullOnlyProgress(expansion, 0.609524, 1);
-  const header = effectActor(headerProgress, lerp(-12, 0, headerProgress), lerp(8, 0, headerProgress));
-  const themeActions = effectActor(
-    themeActionsProgress,
-    lerp(10, 0, themeActionsProgress),
-    lerp(5, 0, themeActionsProgress),
-  );
-  const fontImport = effectActor(
-    fontImportProgress,
-    lerp(12, 0, fontImportProgress),
-    lerp(5, 0, fontImportProgress),
-  );
-  const typography = effectActor(
-    typographyProgress,
-    lerp(24, 0, typographyProgress),
-    lerp(8, 0, typographyProgress),
-  );
-
-  // These aliases intentionally cannot hide a shared actor subtree. They let
-  // legacy Full presentation code migrate one leaf at a time without reviving
-  // Quick/Full root crossfades.
-  const identity = effectActor(1);
   const samples: ReaderAppearanceMotionActorSample[] = [];
-  addSample(samples, 'BrightnessRail', brightnessRail);
-  addSample(samples, 'ModuleNav', moduleNav);
-  addSample(samples, 'MorphStage', morphStage);
-  addSample(samples, 'QuickMorph', quickMorph);
-  addSample(samples, 'ContentSurface', contentSurface);
-  addSample(samples, 'ThemeHeader', themeHeader);
-  const themeIds: ReaderAppearanceMotionActorId[] = [
-    'ThemeDay', 'ThemeWarm', 'ThemeNight', 'ThemeWarmNight',
-    'ThemePaper', 'ThemeGreen', 'ThemePaperNight', 'ThemeGreenNight',
-  ];
+
+  const add = (id: ReaderAppearanceMotionActorId, frame: ReaderAppearanceMotionActorFrame): void => {
+    samples.push({ id, frame });
+  };
+  add('BrightnessRail', brightnessRail);
+  add('ModuleNav', moduleNav);
+  add('MorphStage', morphStage);
+  add('QuickMorph', quickMorph);
+  add('ThemeHeader', themeHeader);
   for (let index = 0; index < themeIds.length; index += 1) {
-    addSample(samples, themeIds[index], themeItems[index]);
+    const frame = sampleActor(themeIds[index], master, safeFullHeight);
+    themeItems.push(frame);
+    add(themeIds[index], frame);
   }
-  addSample(samples, 'QuickDivider', quickDivider);
-  addSample(samples, 'FontHeader', fontHeader);
-  const fontIds: ReaderAppearanceMotionActorId[] = [
-    'Font0', 'Font1', 'Font2', 'Font3', 'Font4', 'Font5', 'Font6', 'Font7',
-  ];
+  add('QuickDivider', quickDivider);
+  add('FontHeader', fontHeader);
   for (let index = 0; index < fontIds.length; index += 1) {
-    addSample(samples, fontIds[index], fontItems[index]);
+    const frame = sampleActor(fontIds[index], master, safeFullHeight);
+    fontItems.push(frame);
+    add(fontIds[index], frame);
   }
-  addSample(samples, 'Header', header);
-  addSample(samples, 'ThemeActions', themeActions);
-  addSample(samples, 'FontImport', fontImport);
-  addSample(samples, 'Typography', typography);
+  add('Header', header);
+  add('ThemeActions', themeActions);
+  add('FontImport', fontImport);
+  add('Typography', typography);
 
   return {
-    expansionProgress: expansion,
-    shellHeight,
-    shellTranslateY,
+    masterProgress: master,
+    figmaFramePercent: readerAppearanceFigmaFramePercent(master),
+    shellHeight: morphStage.height,
+    shellTranslateY: morphStage.y,
     brightnessRail,
     moduleNav,
     morphStage,
@@ -600,23 +704,6 @@ export function sampleReaderAppearanceExpansion(
     themeActions,
     fontImport,
     typography,
-    contentSurface,
-    appearanceContent: identity,
-    themeLibrary: themeActions,
-    fontLibrary: fontImport,
     actorSamples: samples,
   };
-}
-
-/**
- * Compatibility clock sampler. It immediately converts direction/timeline to
- * physical expansion, then delegates every actor to the canonical sampler.
- */
-export function sampleReaderAppearanceMotion(
-  profile: ReaderAppearanceMotionProfile,
-  trajectoryProgress: number,
-): ReaderAppearanceMotionFrame {
-  return sampleReaderAppearanceExpansion(
-    readerAppearanceExpansionFromTrajectory(profile, trajectoryProgress),
-  );
 }

@@ -23,12 +23,6 @@ import {
   readerAppearanceFontSlotFamily,
   readerAppearanceFontSlotLabel,
 } from './ReaderAppearanceRenderStyle';
-import {
-  sampleReaderAppearanceExpansion,
-  type ReaderAppearanceMotionFrame,
-} from './ReaderAppearanceMotionGeometry';
-import { ReaderAppearanceSharedActors } from './ReaderAppearanceSharedActors';
-
 /**
  * Figma Reader Quick Appearance content: Phone `942:66`, Tablet `942:68`.
  *
@@ -40,28 +34,16 @@ import { ReaderAppearanceSharedActors } from './ReaderAppearanceSharedActors';
 @Component
 export struct ReaderAppearanceModulePanel {
   @Prop isTablet: boolean = false;
-  @Prop motionFrame: ReaderAppearanceMotionFrame | undefined = undefined;
-  @Prop interactionEnabled: boolean = true;
-  @Prop reduceMotion: boolean = false;
-  @Prop contentScrollOffsetY: number = 0;
   @Prop snapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   onThemeChange: (theme: ReaderAppearanceTheme) => void = (_theme: ReaderAppearanceTheme): void => {};
   onFontChange: (font: ReaderAppearanceFont) => void = (_font: ReaderAppearanceFont): void => {};
-  onFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]) => void =
-    (_fontOrder: ReaderAppearanceFontSlot[]): void => {};
-  onFontReorderActivityChange: (active: boolean) => void = (_active: boolean): void => {};
-  onCustomFontImport: () => void = (): void => {};
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
   }
 
   build() {
-    if (!this.isTablet && this.motionFrame !== undefined) {
-      this.motionPanel();
-    } else {
-      this.staticPanel();
-    }
+    this.staticPanel();
   }
 
   @Builder
@@ -78,25 +60,6 @@ export struct ReaderAppearanceModulePanel {
     .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
     .borderRadius(8)
     .clip(true);
-  }
-
-  /** One persistent Phone tree owns the shared surface and all 19 shared actors. */
-  @Builder
-  private motionPanel() {
-    ReaderAppearanceSharedActors({
-      frame: this.currentMotionFrame(),
-      interactionEnabled: this.interactionEnabled,
-      reduceMotion: this.reduceMotion,
-      contentScrollOffsetY: this.contentScrollOffsetY,
-      snapshot: this.snapshot,
-      onThemeChange: (theme: ReaderAppearanceTheme): void => this.onThemeChange(theme),
-      onFontChange: (font: ReaderAppearanceFont): void => this.onFontChange(font),
-      onFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]): void =>
-        this.onFontOrderChange(fontOrder),
-      onFontReorderActivityChange: (active: boolean): void =>
-        this.onFontReorderActivityChange(active),
-      onCustomFontImport: (): void => this.onCustomFontImport(),
-    });
   }
 
   @Builder
@@ -255,10 +218,6 @@ export struct ReaderAppearanceModulePanel {
           this.onFontChange(fontId);
         }
       });
-  }
-
-  private currentMotionFrame(): ReaderAppearanceMotionFrame {
-    return this.motionFrame ?? sampleReaderAppearanceExpansion(0);
   }
 
   private themeIds(): ReaderAppearanceTheme[] {

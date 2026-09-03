@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 2,
-  "contractId": "reader.appearance.phone.quick-full.n-o",
+  "schemaVersion": 3,
+  "contractId": "reader.appearance.phone.master-axis.n2-pending",
   "scope": {
     "platform": "HarmonyOS",
     "viewport": "Phone",
@@ -26,18 +26,319 @@
         "name": "Appearance Collapse",
         "direction": "full-to-quick"
       }
+    },
+    "auditedStaticEndpoint": {
+      "nodeId": "1082:235",
+      "name": "Reader 2/Full/AppearanceContent",
+      "authority": "figma-get-design-context",
+      "usage": "full-endpoint-metadata-only",
+      "trajectoryAuthority": false
+    }
+  },
+  "finalN2": {
+    "status": "unpublished",
+    "nodeId": null,
+    "authorityAvailable": false,
+    "visualParityBlocked": true,
+    "requiredEvidence": [
+      "one persistent component tree",
+      "every actor/property keyframe over the full effective axis",
+      "per-track easing and start/end percentages",
+      "scroll-offset behavior during collapse and re-expand",
+      "responsive width/height support or an explicit static fallback boundary",
+      "runtime frame captures at p=0,.25,.5,.75,1"
+    ],
+    "prohibition": "Legacy N/O values must not be represented as final N2-authored motion."
+  },
+  "masterAxis": {
+    "spatialDriver": "measured-grabber-screen-y",
+    "formula": "(quickGrabberScreenY-currentGrabberScreenY)/(quickGrabberScreenY-fullGrabberScreenY)",
+    "runtimeTravel": "measured",
+    "figmaEffectiveReviewPercent": [0.1111111111111111, 0.75],
+    "directionIndependentSampler": true,
+    "globalEasing": false,
+    "shellAndGrabberLinear": true
+  },
+  "runtimeContract": {
+    "authority": "interaction-architecture-only",
+    "notFinalFigmaParity": true,
+    "singleMasterProgress": true,
+    "singlePersistentTree": true,
+    "reverseUsesSameSampler": true,
+    "rootCrossfadeForbidden": true,
+    "quickMorphRuntimeOpacity": 1,
+    "quickMorphRuntimeBlurVp": 0,
+    "unrenderedLegacyActorsExcluded": ["contentSurface", "appearanceContent"],
+    "runtimeFrameAliases": [
+      {
+        "runtimeActorId": "ThemeActions",
+        "sourceActorId": "themeLibrary",
+        "sourceProperty": "opacity",
+        "authority": "product-mapping-alias",
+        "notDirectFigmaActor": true
+      },
+      {
+        "runtimeActorId": "FontImport",
+        "sourceActorId": "fontLibrary",
+        "sourceProperty": "opacity",
+        "authority": "product-mapping-alias",
+        "notDirectFigmaActor": true
+      }
+    ],
+    "legacyFallback": {
+      "authority": "legacy-evidence-only",
+      "sharedGeometryEndMasterProgress": 0.43478260869565216,
+      "behaviorAfterEnd": "hold-last-evidenced-value",
+      "mayExtrapolateToOne": false
+    },
+    "actorGroups": {
+      "fixedScreen": ["BrightnessRail", "ModuleNav"],
+      "shared": [
+        "MorphStage",
+        "QuickMorph",
+        "ThemeHeader",
+        "ThemeDay",
+        "ThemeWarm",
+        "ThemeNight",
+        "ThemeWarmNight",
+        "ThemePaper",
+        "ThemeGreen",
+        "ThemePaperNight",
+        "ThemeGreenNight",
+        "QuickDivider",
+        "FontHeader",
+        "Font0",
+        "Font1",
+        "Font2",
+        "Font3",
+        "Font4",
+        "Font5",
+        "Font6",
+        "Font7"
+      ],
+      "fullOnly": ["Header", "ThemeActions", "FontImport", "Typography"]
+    },
+    "legacyNTrackDisposition": {
+      "coverage": "every-raw-track-exactly-once",
+      "mapped": [
+        {
+          "sourceActorId": "brightnessRail",
+          "runtimeActorId": "BrightnessRail",
+          "mappingAuthority": "direct-legacy-figma-n",
+          "direct": { "opacity": "opacity", "blur": "blurVp", "translateY": "translateY" }
+        },
+        {
+          "sourceActorId": "moduleNav",
+          "runtimeActorId": "ModuleNav",
+          "mappingAuthority": "direct-legacy-figma-n",
+          "direct": { "opacity": "opacity", "blur": "blurVp", "translateY": "translateY" }
+        },
+        {
+          "sourceActorId": "themeLibrary",
+          "runtimeActorId": "ThemeActions",
+          "mappingAuthority": "product-mapping-alias",
+          "direct": { "opacity": "opacity" }
+        },
+        {
+          "sourceActorId": "fontLibrary",
+          "runtimeActorId": "FontImport",
+          "mappingAuthority": "product-mapping-alias",
+          "direct": { "opacity": "opacity" }
+        },
+        {
+          "sourceActorId": "typography",
+          "runtimeActorId": "Typography",
+          "mappingAuthority": "direct-legacy-figma-n",
+          "direct": { "opacity": "opacity" }
+        },
+        {
+          "sourceActorId": "fullHeader",
+          "runtimeActorId": "Header",
+          "mappingAuthority": "direct-legacy-figma-n",
+          "direct": { "opacity": "opacity", "blur": "blurVp", "translateY": "translateY" }
+        },
+        {
+          "sourceActorId": "quickMorph",
+          "runtimeActorId": "QuickMorph",
+          "mappingAuthority": "product-composed-legacy-fallback",
+          "direct": { "height": "height", "width": "width" },
+          "composed": { "translate": ["x", "y"] }
+        },
+        {
+          "sourceActorId": "themeHeader",
+          "runtimeActorId": "ThemeHeader",
+          "mappingAuthority": "product-composed-legacy-fallback",
+          "direct": { "height": "height", "width": "width" },
+          "composed": { "translate": ["x", "y"] }
+        },
+        {
+          "sourceActorId": "themeDay",
+          "runtimeActorId": "ThemeDay",
+          "mappingAuthority": "product-composed-legacy-fallback",
+          "direct": { "height": "height", "width": "width" },
+          "composed": { "translate": ["x", "y"] }
+        },
+        {
+          "sourceActorId": "themeWarm",
+          "runtimeActorId": "ThemeWarm",
+          "mappingAuthority": "product-composed-legacy-fallback",
+          "direct": { "height": "height", "width": "width" },
+          "composed": { "translate": ["x", "y"] }
+        },
+        {
+          "sourceActorId": "themeNight",
+          "runtimeActorId": "ThemeNight",
+          "mappingAuthority": "product-composed-legacy-fallback",
+          "direct": { "height": "height", "width": "width" },
+          "composed": { "translate": ["x", "y"] }
+        },
+        {
+          "sourceActorId": "themeWarmNight",
+          "runtimeActorId": "ThemeWarmNight",
+          "mappingAuthority": "product-composed-legacy-fallback",
+          "direct": { "height": "height", "width": "width" },
+          "composed": { "translate": ["x", "y"] }
+        },
+        {
+          "sourceActorId": "themePaperActive",
+          "runtimeActorId": "ThemePaper",
+          "mappingAuthority": "product-composed-legacy-fallback",
+          "direct": { "height": "height", "width": "width" },
+          "composed": { "translate": ["x", "y"] }
+        },
+        {
+          "sourceActorId": "themeGreen",
+          "runtimeActorId": "ThemeGreen",
+          "mappingAuthority": "product-composed-legacy-fallback",
+          "direct": { "height": "height", "width": "width" },
+          "composed": { "translate": ["x", "y"] }
+        },
+        {
+          "sourceActorId": "themePaperNight",
+          "runtimeActorId": "ThemePaperNight",
+          "mappingAuthority": "product-composed-legacy-fallback",
+          "direct": { "height": "height", "width": "width" },
+          "composed": { "translate": ["x", "y"] }
+        },
+        {
+          "sourceActorId": "themeGreenNight",
+          "runtimeActorId": "ThemeGreenNight",
+          "mappingAuthority": "product-composed-legacy-fallback",
+          "direct": { "height": "height", "width": "width" },
+          "composed": { "translate": ["x", "y"] }
+        },
+        {
+          "sourceActorId": "sectionDivider",
+          "runtimeActorId": "QuickDivider",
+          "mappingAuthority": "product-composed-legacy-fallback",
+          "direct": { "width": "width" },
+          "composed": { "translate": ["x", "y"] }
+        },
+        {
+          "sourceActorId": "fontHeader",
+          "runtimeActorId": "FontHeader",
+          "mappingAuthority": "product-composed-legacy-fallback",
+          "direct": { "height": "height", "width": "width" },
+          "composed": { "translate": ["x", "y"] }
+        }
+      ],
+      "intentionallyIgnored": [
+        {
+          "sourceActorId": "morphStage",
+          "properties": ["height", "translateY"],
+          "reason": "measured-grabber-interaction-axis"
+        },
+        {
+          "sourceActorId": "contentSurface",
+          "properties": ["opacity"],
+          "reason": "persistent-root-product-contract"
+        },
+        {
+          "sourceActorId": "appearanceContent",
+          "properties": ["opacity"],
+          "reason": "persistent-root-product-contract"
+        },
+        {
+          "sourceActorId": "quickMorph",
+          "properties": ["opacity"],
+          "reason": "persistent-root-product-contract"
+        },
+        {
+          "sourceActorId": "fontSystem",
+          "properties": ["translate"],
+          "reason": "audited-static-endpoint-product-mapping"
+        },
+        {
+          "sourceActorId": "fontSerifActive",
+          "properties": ["translate"],
+          "reason": "audited-static-endpoint-product-mapping"
+        },
+        {
+          "sourceActorId": "fontSans",
+          "properties": ["translate"],
+          "reason": "audited-static-endpoint-product-mapping"
+        },
+        {
+          "sourceActorId": "fontKai",
+          "properties": ["translate"],
+          "reason": "audited-static-endpoint-product-mapping"
+        },
+        {
+          "sourceActorId": "fontFangSong",
+          "properties": ["translate"],
+          "reason": "audited-static-endpoint-product-mapping"
+        },
+        {
+          "sourceActorId": "fontMono",
+          "properties": ["translate"],
+          "reason": "audited-static-endpoint-product-mapping"
+        },
+        {
+          "sourceActorId": "fontSourceHanSerif",
+          "properties": ["translate"],
+          "reason": "audited-static-endpoint-product-mapping"
+        },
+        {
+          "sourceActorId": "fontLXGWWenKai",
+          "properties": ["translate"],
+          "reason": "audited-static-endpoint-product-mapping"
+        }
+      ]
+    },
+    "legacyOTrackDisposition": {
+      "coverage": "every-raw-track-intentionally-ignored",
+      "intentionallyIgnored": [
+        {
+          "sourceActorId": "morphShell",
+          "properties": ["translateY", "scaleY"],
+          "reason": "directional-profile-rejected-same-sampler-product-contract"
+        },
+        {
+          "sourceActorId": "quickDock",
+          "properties": ["opacity", "translateY"],
+          "reason": "directional-profile-rejected-same-sampler-product-contract"
+        },
+        {
+          "sourceActorId": "fullPanel",
+          "properties": ["opacity", "translateY"],
+          "reason": "directional-profile-rejected-same-sampler-product-contract"
+        }
+      ]
     }
   },
   "geometry": {
+    "authority": "legacy-evidence-only",
     "shell": {
       "quickHeightVp": 330,
       "fullHeightVp": 736,
-      "travelVp": 406,
+      "referenceTravelVp": 406,
+      "runtimeTravel": "measured",
       "bottomAnchored": true
     },
     "quickMorph": {
       "quickSizeVp": [286, 190],
-      "fullSizeVp": [338, 666]
+      "fullSizeVp": [338, 666],
+      "fullOriginVp": [13, 57]
     },
     "themeCell": {
       "quickSizeVp": [62.5, 24],
@@ -47,7 +348,8 @@
       "sizeVp": [62.5, 27]
     }
   },
-  "implementationContract": {
+  "legacyRejectedImplementationContract": {
+    "status": "rejected",
     "authority": "reader-motion-v2-correction",
     "notAuthoredByFigma": true,
     "reason": "Figma N stops shared geometry at 183ms and Figma O crossfades roots; Motion V2 preserves the audited endpoints while extending one reversible shared geometry function across physical expansion 0..1.",
@@ -248,9 +550,9 @@
       { "id": "Typography", "startExpansion": 0.609524, "endExpansion": 1 }
     ]
   },
-  "profiles": {
+  "legacyEvidence": {
     "N": {
-      "authority": "figma-tracks-with-product-time-normalization",
+      "authority": "legacy-figma-evidence-only",
       "reviewDurationMs": 1800,
       "reviewLoopMode": "loop",
       "activeReviewWindowMs": [200, 1350],
@@ -577,7 +879,7 @@
       ]
     },
     "O": {
-      "authority": "figma-tracks-with-product-time-normalization",
+      "authority": "legacy-figma-evidence-only-not-runtime",
       "reviewDurationMs": 4000,
       "reviewLoopMode": "loop",
       "activeReviewWindowMs": [600, 2400],
@@ -618,7 +920,7 @@
       ]
     }
   },
-  "productSupplement": {
+  "legacyRejectedProductSupplement": {
     "authority": "reader-product-contract",
     "notAuthoredByFigma": true,
     "directManipulation": {

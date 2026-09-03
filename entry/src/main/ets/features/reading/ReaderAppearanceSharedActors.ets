@@ -2,14 +2,12 @@ import { registerReaderFonts } from '../common/ReaderFonts';
 import {
   TOK_BORDER_W,
   TOK_LINE,
-  TOK_LINE_STRONG,
   TOK_PRIMARY_SOFT,
   TOK_READ_ACTIVE_SOFT,
   TOK_READ_DISABLED_BG,
   TOK_READ_INK,
   TOK_READ_MUTED,
   TOK_READ_PRIMARY,
-  TOK_SURFACE_PANEL,
 } from '../common/ReaderTokens';
 import { motionAnimateParam } from '../common/MotionSpec';
 import {
@@ -43,20 +41,19 @@ interface ReaderAppearanceActorPosition {
 }
 
 /**
- * The one persistent Quick -> Full actor tree for Phone Appearance.
+ * The persistent Quick -> Full shared-actor group for Phone Appearance.
  *
  * Every child owns a stable semantic key and reads its global bounding box
- * from the same sampled motion frame. The surface is the only parent box;
- * child positions subtract the sampled surface origin solely to convert the
- * Stage-space bbox into that box's local coordinate system. No parent scale,
- * root opacity handoff, or second Full copy participates in the morph.
+ * from the same sampled motion frame. ReaderAppearanceFullPanel owns the only
+ * surface and Scroll; this component renders directly inside that Scroll and
+ * subtracts the sampled surface origin solely to convert Stage-space bboxes to
+ * local coordinates. No mirrored scroll offset or second Full copy exists.
  */
 @Component
 export struct ReaderAppearanceSharedActors {
   @Prop frame: ReaderAppearanceMotionFrame;
   @Prop @Watch('onInteractionEnabledChanged') interactionEnabled: boolean = true;
   @Prop reduceMotion: boolean = false;
-  @Prop contentScrollOffsetY: number = 0;
   @Prop snapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   onThemeChange: (theme: ReaderAppearanceTheme) => void = (_theme: ReaderAppearanceTheme): void => {};
   onFontChange: (font: ReaderAppearanceFont) => void = (_font: ReaderAppearanceFont): void => {};
@@ -93,39 +90,23 @@ export struct ReaderAppearanceSharedActors {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Stack({ alignContent: Alignment.TopStart }) {
-        this.sharedThemeHeader();
-        ForEach(this.themeIds(), (theme: ReaderAppearanceTheme, index: number) => {
-          this.sharedThemeCard(theme, index);
-        }, (theme: ReaderAppearanceTheme): string => `reader-appearance-shared-theme-${theme}`);
-        this.sharedDivider();
-        this.sharedFontHeader();
-        if (this.draggedFontId !== '') {
-          this.fontDragPlaceholder();
-        }
-        ForEach(this.sharedFontIds(), (fontId: ReaderAppearanceFontSlot) => {
-          this.sharedFontCell(fontId);
-        }, (fontId: ReaderAppearanceFontSlot): string => `reader-appearance-shared-font-${fontId}`);
-        this.fullOnlyFontImport();
+      this.sharedThemeHeader();
+      ForEach(this.themeIds(), (theme: ReaderAppearanceTheme, index: number) => {
+        this.sharedThemeCard(theme, index);
+      }, (theme: ReaderAppearanceTheme): string => `reader-appearance-shared-theme-${theme}`);
+      this.sharedDivider();
+      this.sharedFontHeader();
+      if (this.draggedFontId !== '') {
+        this.fontDragPlaceholder();
       }
-      .width(this.frame.quickMorph.width)
-      .height(READER_APPEARANCE_CONTENT_HEIGHT)
-      .translate({ y: -this.safeContentScrollOffsetY() });
+      ForEach(this.sharedFontIds(), (fontId: ReaderAppearanceFontSlot) => {
+        this.sharedFontCell(fontId);
+      }, (fontId: ReaderAppearanceFontSlot): string => `reader-appearance-shared-font-${fontId}`);
+      this.fullOnlyFontImport();
     }
     .width(this.frame.quickMorph.width)
-    .height(this.frame.quickMorph.height)
-    .backgroundColor(TOK_SURFACE_PANEL)
-    .border({
-      width: TOK_BORDER_W,
-      color: TOK_LINE_STRONG,
-    })
-    .borderRadius(this.lerp(8, 12, this.expansionProgress()))
-    .clip(true)
-    .position({ x: this.frame.quickMorph.x, y: this.frame.quickMorph.y })
+    .height(READER_APPEARANCE_CONTENT_HEIGHT)
     .enabled(this.interactionEnabled)
-    // Full-only controls/scroll live in a sibling presentation layer. Keep
-    // this surface and its children interactive without turning the empty
-    // parts of the shared box into an input shield over that layer.
     .hitTestBehavior(HitTestMode.Transparent);
   }
 
@@ -137,16 +118,16 @@ export struct ReaderAppearanceSharedActors {
         .height(this.frame.themeHeader.height)
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
-        .fontSize(this.lerp(9, 12, this.expansionProgress()))
-        .lineHeight(this.lerp(9.9, 17, this.expansionProgress()))
+        .fontSize(this.lerp(9, 12, this.actorProgress(this.frame.themeHeader.trackProgress)))
+        .lineHeight(this.lerp(9.9, 17, this.actorProgress(this.frame.themeHeader.trackProgress)))
         .fontColor(TOK_READ_INK);
       Text(this.themeSummary())
-        .width(this.lerp(88, 122, this.expansionProgress()))
+        .width(this.lerp(88, 122, this.actorProgress(this.frame.themeHeader.trackProgress)))
         .height(this.frame.themeHeader.height)
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Medium)
-        .fontSize(this.lerp(7.5, 10, this.expansionProgress()))
-        .lineHeight(this.lerp(8, 13, this.expansionProgress()))
+        .fontSize(this.lerp(7.5, 10, this.actorProgress(this.frame.themeHeader.trackProgress)))
+        .lineHeight(this.lerp(8, 13, this.actorProgress(this.frame.themeHeader.trackProgress)))
         .fontColor(TOK_READ_MUTED)
         .textAlign(TextAlign.End)
         .maxLines(1);
@@ -154,22 +135,39 @@ export struct ReaderAppearanceSharedActors {
     .width(this.frame.themeHeader.width)
     .height(this.frame.themeHeader.height)
     .alignItems(VerticalAlign.Top)
-    .position(this.localPosition(this.frame.themeHeader));
+    .position(this.localPosition(this.frame.themeHeader))
+    .translate({
+      x: this.frame.themeHeader.translateX,
+      y: this.frame.themeHeader.translateY,
+    })
+    .opacity(this.frame.themeHeader.opacity)
+    .blur(this.frame.themeHeader.blurVp);
   }
 
   @Builder
   private sharedThemeCard(theme: ReaderAppearanceTheme, index: number) {
     Stack({ alignContent: Alignment.TopStart }) {
+      if (this.snapshot.activeTheme !== theme && !this.isNightTheme(theme)) {
+        // The Quick day cards are transparent while the Full component uses
+        // its disabled surface. Interpolate those known endpoint styles with
+        // this card's own track; this is an endpoint bridge, not an N2 claim.
+        Row()
+          .width('100%')
+          .height('100%')
+          .backgroundColor(TOK_READ_DISABLED_BG)
+          .opacity(this.themeActorProgress(index))
+          .hitTestBehavior(HitTestMode.None);
+      }
       Row()
-        .width(this.lerp(46, 63.5, this.expansionProgress()))
-        .height(this.lerp(18, 24, this.expansionProgress()))
+        .width(this.lerp(46, 63.5, this.themeActorProgress(index)))
+        .height(this.lerp(18, 24, this.themeActorProgress(index)))
         .backgroundColor(this.themeColor(theme))
         .border({ width: TOK_BORDER_W, color: '#1F5B5046' })
         .borderRadius(6)
         .position({
           x: (this.frame.themeItems[index].width -
-            this.lerp(46, 63.5, this.expansionProgress())) / 2,
-          y: this.lerp(3, 10, this.expansionProgress()),
+            this.lerp(46, 63.5, this.themeActorProgress(index))) / 2,
+          y: this.lerp(3, 10, this.themeActorProgress(index)),
         });
       Text(this.themeLabel(theme))
         .width(Math.max(0, this.frame.themeItems[index].width - 10))
@@ -188,14 +186,22 @@ export struct ReaderAppearanceSharedActors {
     .backgroundColor(this.snapshot.activeTheme === theme ? TOK_READ_ACTIVE_SOFT :
       (this.isNightTheme(theme) ? TOK_READ_DISABLED_BG : Color.Transparent))
     .border({
-      width: { top: this.snapshot.activeTheme === theme ? TOK_BORDER_W : 0 },
+      width: {
+        top: this.snapshot.activeTheme === theme ?
+          TOK_BORDER_W * (1 - this.themeActorProgress(index)) : 0,
+      },
       color: TOK_READ_PRIMARY,
     })
-    .borderRadius(this.lerp(0, 8, this.expansionProgress()))
+    .borderRadius(this.lerp(0, 8, this.themeActorProgress(index)))
     .clip(true)
-    // 0.8 is the stable inactive style, not a motion cross-fade.
-    .opacity(this.snapshot.activeTheme === theme ? 1 : 0.8)
+    // 0.8 is the stable inactive style; multiply it by this actor's own track.
+    .opacity((this.snapshot.activeTheme === theme ? 1 : 0.8) * this.frame.themeItems[index].opacity)
     .position(this.localPosition(this.frame.themeItems[index]))
+    .translate({
+      x: this.frame.themeItems[index].translateX,
+      y: this.frame.themeItems[index].translateY,
+    })
+    .blur(this.frame.themeItems[index].blurVp)
     .enabled(this.interactionEnabled)
     .accessibilityText(`切换到${this.themeLabel(theme)}主题`)
     .onClick((): void => this.onThemeChange(theme));
@@ -207,7 +213,13 @@ export struct ReaderAppearanceSharedActors {
       .width(this.frame.quickDivider.width)
       .height(this.frame.quickDivider.height)
       .backgroundColor(TOK_LINE)
-      .position(this.localPosition(this.frame.quickDivider));
+      .position(this.localPosition(this.frame.quickDivider))
+      .translate({
+        x: this.frame.quickDivider.translateX,
+        y: this.frame.quickDivider.translateY,
+      })
+      .opacity(this.frame.quickDivider.opacity)
+      .blur(this.frame.quickDivider.blurVp);
   }
 
   @Builder
@@ -217,10 +229,16 @@ export struct ReaderAppearanceSharedActors {
       .height(this.frame.fontHeader.height)
       .fontFamily('ReaderNotoSansSC')
       .fontWeight(FontWeight.Bold)
-      .fontSize(this.lerp(9, 12, this.expansionProgress()))
-      .lineHeight(this.lerp(9.9, 14.4, this.expansionProgress()))
+      .fontSize(this.lerp(9, 12, this.actorProgress(this.frame.fontHeader.trackProgress)))
+      .lineHeight(this.lerp(9.9, 14.4, this.actorProgress(this.frame.fontHeader.trackProgress)))
       .fontColor(TOK_READ_INK)
-      .position(this.localPosition(this.frame.fontHeader));
+      .position(this.localPosition(this.frame.fontHeader))
+      .translate({
+        x: this.frame.fontHeader.translateX,
+        y: this.frame.fontHeader.translateY,
+      })
+      .opacity(this.frame.fontHeader.opacity)
+      .blur(this.frame.fontHeader.blurVp);
   }
 
   @Builder
@@ -233,25 +251,25 @@ export struct ReaderAppearanceSharedActors {
       .border({
         width: {
           top: TOK_BORDER_W,
-          right: this.lerp(0, TOK_BORDER_W, this.expansionProgress()),
-          bottom: this.lerp(0, TOK_BORDER_W, this.expansionProgress()),
-          left: this.lerp(0, TOK_BORDER_W, this.expansionProgress()),
+          right: this.lerp(0, TOK_BORDER_W, this.fontActorProgress(fontId)),
+          bottom: this.lerp(0, TOK_BORDER_W, this.fontActorProgress(fontId)),
+          left: this.lerp(0, TOK_BORDER_W, this.fontActorProgress(fontId)),
         },
         color: this.isActiveFont(fontId) ? TOK_READ_PRIMARY : TOK_LINE,
       })
-      .borderRadius(this.lerp(0, 6, this.expansionProgress()))
+      .borderRadius(this.lerp(0, 6, this.fontActorProgress(fontId)))
       .fontFamily(readerAppearanceFontSlotFamily(this.snapshot, fontId))
       .fontWeight(FontWeight.Regular)
-      .fontSize(this.lerp(8, 10, this.expansionProgress()))
-      .lineHeight(this.lerp(10, 14, this.expansionProgress()))
+      .fontSize(this.lerp(8, 10, this.fontActorProgress(fontId)))
+      .lineHeight(this.lerp(10, 14, this.fontActorProgress(fontId)))
       .fontColor(TOK_READ_INK)
       .textAlign(TextAlign.Center)
       .maxLines(1)
       .textOverflow({ overflow: TextOverflow.Ellipsis })
       .position(this.localPosition(this.fontActorFrame(fontId)))
       .translate({
-        x: this.fontDragTranslateX(fontId),
-        y: this.fontDragTranslateY(fontId),
+        x: this.fontActorFrame(fontId).translateX + this.fontDragTranslateX(fontId),
+        y: this.fontActorFrame(fontId).translateY + this.fontDragTranslateY(fontId),
       })
       .scale({
         x: this.draggedFontId === fontId ? 1.035 : 1,
@@ -260,7 +278,8 @@ export struct ReaderAppearanceSharedActors {
       .shadow(this.draggedFontId === fontId ?
         { radius: 12, color: '#2B332C25', offsetX: 0, offsetY: 5 } :
         { radius: 0, color: Color.Transparent, offsetX: 0, offsetY: 0 })
-      .opacity(this.draggedFontId === fontId ? 0.96 : 1)
+      .opacity((this.draggedFontId === fontId ? 0.96 : 1) * this.fontActorFrame(fontId).opacity)
+      .blur(this.fontActorFrame(fontId).blurVp)
       .zIndex(this.draggedFontId === fontId ? 3 : 1)
       .enabled(this.interactionEnabled && this.isSelectableFont(fontId))
       .accessibilityText(this.isSelectableFont(fontId) ?
@@ -338,19 +357,25 @@ export struct ReaderAppearanceSharedActors {
       .onClick((): void => this.onCustomFontImport());
   }
 
-  private expansionProgress(): number {
-    return Math.max(0, Math.min(1, this.frame.expansionProgress));
+  private masterProgress(): number {
+    return Math.max(0, Math.min(1, this.frame.masterProgress));
   }
 
-  private safeContentScrollOffsetY(): number {
-    if (!Number.isFinite(this.contentScrollOffsetY)) {
-      return 0;
-    }
-    return Math.max(0, this.contentScrollOffsetY);
+  private actorProgress(trackProgress: number): number {
+    return Math.max(0, Math.min(1, trackProgress));
+  }
+
+  private themeActorProgress(index: number): number {
+    const safeIndex = Math.max(0, Math.min(this.frame.themeItems.length - 1, index));
+    return this.actorProgress(this.frame.themeItems[safeIndex].trackProgress);
+  }
+
+  private fontActorProgress(fontId: ReaderAppearanceFontSlot): number {
+    return this.actorProgress(this.fontActorFrame(fontId).trackProgress);
   }
 
   private atFullEndpoint(): boolean {
-    return this.expansionProgress() >= 0.999;
+    return this.masterProgress() >= 0.999;
   }
 
   private localPosition(actor: ReaderAppearanceMotionActorFrame): ReaderAppearanceActorPosition {
