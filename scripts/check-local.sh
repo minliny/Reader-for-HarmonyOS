@@ -4,8 +4,11 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$repo_root"
 
-if [[ "$#" -gt 1 ]] || [[ "$#" -eq 1 && "$1" != "--hap" ]]; then
-  echo "Usage: $0 [--hap]" >&2
+if [[ "$#" -ne 0 ]]; then
+  if [[ "$#" -eq 1 && "$1" == "--hap" ]]; then
+    echo "--hap moved to: node scripts/hap-pipeline.mjs build --class iteration" >&2
+  fi
+  echo "Usage: $0" >&2
   exit 2
 fi
 
@@ -21,20 +24,3 @@ if [[ "$test_count" -eq 0 ]]; then
 fi
 
 echo "Harmony contract tests passed: $test_count"
-
-if [[ "${1:-}" == "--hap" ]]; then
-  # A test HAP is distributable only while every packaged source still passes
-  # the real Core import/search/detail/toc/content chain.
-  node tools/verify-bundled-test-book-sources-live.mjs
-  hvigorw="${HVIGORW:-/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw}"
-  if [[ ! -x "$hvigorw" ]]; then
-    echo "Hvigor executable not found: $hvigorw" >&2
-    exit 1
-  fi
-  "$hvigorw" assembleHap --mode module \
-    -p product=default -p module=entry@default -p buildMode=debug \
-    --no-daemon --no-incremental
-  node tools/verify-bundled-test-book-source-haps.mjs \
-    entry/build/default/outputs/default/entry-default-signed.hap \
-    entry/build/default/outputs/default/entry-default-unsigned.hap
-fi
