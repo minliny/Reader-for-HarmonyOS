@@ -1,5 +1,9 @@
 # Figma Final 静态出版覆盖矩阵
 
+> **历史覆盖矩阵，不是当前待开发清单。** 本文保留当时的视觉/Core/VM 分层证据；其中阻塞项、
+> 实施顺序和已知限制不得直接作为当前任务。唯一待开发清单见
+> [`../../DEVELOPMENT_BACKLOG.md`](../../DEVELOPMENT_BACKLOG.md)，禁止在本文追加当前待办。
+
 记录日期：2026-08-10（审计纠正后；A 组真实书源 Phone VM 回归）
 唯一视觉来源：[Reader UI - Phase 2 Design System](https://www.figma.com/design/klhs2jMM4MncaJFqZMfqEK)（file key `klhs2jMM4MncaJFqZMfqEK`）
 本表只记录来源与实施状态，不是设计稿、导出物、Token 或生成输入。所有坐标以实时 Figma 节点为准。

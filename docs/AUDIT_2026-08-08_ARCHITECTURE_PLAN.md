@@ -1,5 +1,9 @@
 # 架构方案全量审计报告 — 2026-08-08（含同日复核）
 
+> **历史架构审计，不是当前待开发清单。** 本文保留当时缺陷、偏差和验证边界；其中建议和 OPEN 项
+> 不得直接作为当前任务。唯一待开发清单见
+> [`../../DEVELOPMENT_BACKLOG.md`](../../DEVELOPMENT_BACKLOG.md)，禁止在本文追加当前待办。
+
 上游: `Reader-UI/docs/FIGMA_NATIVE_UI_ARCHITECTURE_PLAN.md`（四层架构方案）
 对照: `Reader-UI/docs/FIGMA_NATIVE_UI_EXECUTION_PLAN.md`（执行方案）
 对象: `Reader-for-HarmonyOS/entry/src/main/ets`（代码）+ Figma 文件 `klhs2jMM4MncaJFqZMfqEK`（设计）

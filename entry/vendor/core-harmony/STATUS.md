@@ -1,7 +1,11 @@
 # Harmony NAPI 状态
 
-> 当前最高优先级文档是 `docs/LOCAL_REPO_MIGRATION_DIRECTIVE.md`。本文只记录 NAPI
-> wrapper 状态，不代表 HarmonyOS App/HAP/device 迁移完成。
+> **组件状态快照，不是当前待开发清单。** 本文可以记录 wrapper 证据，但未完成项不得在此形成
+> 平行排期；唯一待开发清单见
+> [`../../../../DEVELOPMENT_BACKLOG.md`](../../../../DEVELOPMENT_BACKLOG.md)。
+
+> 本文只记录当时的 NAPI wrapper 状态，不代表 HarmonyOS App/HAP/device 迁移完成，
+> 也不声明当前开发优先级。
 
 ## 范围
 

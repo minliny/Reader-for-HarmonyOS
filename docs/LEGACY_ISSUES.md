@@ -1,11 +1,14 @@
 # Legacy / 遗留问题文档 (Legacy Issues)
 
-Documented known-open issues, deferred decisions, and blocked verification items for
-the Reader HarmonyOS surface. Each entry records: 状态、根因、决策、解锁条件。
+> **已冻结，不再是当前遗留问题清单。** 本文保留 2026-08 时点的决策和阻塞证据，现有
+> `OPEN / DEFERRED / BLOCKED` 不代表当前任务状态，也禁止继续追加条目。唯一待开发清单见
+> [`../../DEVELOPMENT_BACKLOG.md`](../../DEVELOPMENT_BACKLOG.md)；旧条目如需继续，必须先按当前源码复核后迁入该文件。
+
+Historically documented open issues, deferred decisions, and blocked verification items for
+the Reader HarmonyOS surface. Each entry records its original 状态、根因、决策、解锁条件。
 配套 `PRODUCTION_SURFACE_LEDGER.md` (冻结基线 + 批次日志)。
 
-更新规则: 每条写明日期 + 状态 (OPEN / DEFERRED / BLOCKED / CLOSED)。关闭时在条目末尾注明关闭原因，
-不删除历史。
+冻结规则：不再更新状态，不删除历史；当前变化只写入唯一待开发清单。
 
 ---
 
