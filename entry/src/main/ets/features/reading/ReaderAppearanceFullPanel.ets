@@ -5,7 +5,6 @@ import {
   TOK_BORDER,
   TOK_BORDER_W,
   TOK_LINE,
-  TOK_LINE_STRONG,
   TOK_PRIMARY_SOFT,
   TOK_READ_ACTIVE_SOFT,
   TOK_READ_BODY_INK,
@@ -15,7 +14,6 @@ import {
   TOK_READ_INK,
   TOK_READ_MUTED,
   TOK_READ_PRIMARY,
-  TOK_READ_SURFACE,
   TOK_SURFACE_PANEL,
   TOK_SURFACE_PANEL_SOFT,
   TOK_SURFACE_FIELD,
@@ -40,7 +38,8 @@ import {
 } from './ReaderAppearanceRenderStyle';
 import type { ReaderChineseConversionMode } from './ReaderChineseConversionGateway';
 import type { ReaderPageTurnStyle } from './ReaderSettingsState';
-import { motionAnimateParam } from '../common/MotionSpec';
+import { motionAnimateParam, panelActorTransition } from '../common/MotionSpec';
+import type { ReaderAppearanceMotionFrame } from './ReaderAppearanceMotionGeometry';
 import {
   READER_FULL_PANEL_HEIGHT_TABLET,
   READER_FULL_PANEL_MAX_WIDTH_PHONE,
@@ -49,7 +48,7 @@ import {
 
 const READER_APPEARANCE_FULL_PANEL_HEIGHT_PHONE = 840;
 const READER_FONT_REORDER_HOLD_MS = 160;
-const READER_FONT_REORDER_ROW_STRIDE = 44;
+const READER_FONT_REORDER_ROW_STRIDE = 38;
 
 /**
  * Figma Reader Full Appearance sheet: Phone `942:82`, Tablet `942:84`.
@@ -65,6 +64,10 @@ export struct ReaderAppearanceFullPanel {
   @Prop availableWidth: number = 0;
   @Prop availableHeight: number = 0;
   @Prop reduceMotion: boolean = false;
+  @Prop motionFrame: ReaderAppearanceMotionFrame | undefined = undefined;
+  @Prop @Watch('onInteractionEnabledChanged') interactionEnabled: boolean = true;
+  @Prop fontReorderActive: boolean = false;
+  @Prop showGrabber: boolean = true;
   @Prop snapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   @Prop chineseConversionMode: ReaderChineseConversionMode = 'none';
   @Prop pageTurnStyle: ReaderPageTurnStyle = 'slide';
@@ -86,6 +89,7 @@ export struct ReaderAppearanceFullPanel {
     (_mode: ReaderChineseConversionMode): void => {};
   onPageTurnStyleChange: (style: ReaderPageTurnStyle) => void =
     (_style: ReaderPageTurnStyle): void => {};
+  onContentScroll: (offsetY: number) => void = (_offsetY: number): void => {};
   @State private openSelect: string = '';
   @State private selectClosing: boolean = false;
   @State private selectAnchorX: number = 0;
@@ -99,6 +103,7 @@ export struct ReaderAppearanceFullPanel {
   @State private draggedFontOffsetY: number = 0;
   @State private previewFontOrder: ReaderAppearanceFontSlot[] = [];
   @State private fontDragSettling: boolean = false;
+  private readonly contentScroller: Scroller = new Scroller();
   private fontDragGeneration: number = 0;
   private fontTouchStartX: number = 0;
   private fontTouchStartY: number = 0;
@@ -110,59 +115,166 @@ export struct ReaderAppearanceFullPanel {
     registerReaderFonts(this.getUIContext().getFont());
   }
 
+  private onInteractionEnabledChanged(): void {
+    if (this.interactionEnabled) {
+      return;
+    }
+    this.openSelect = '';
+    this.selectClosing = false;
+    this.fontDragGeneration += 1;
+    this.clearFontDragState();
+  }
+
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Row()
-        .width(42)
-        .height(4)
-        .backgroundColor(TOK_READ_HANDLE)
-        .borderRadius(999)
-        .position({ x: this.handleX(), y: 9 });
+      if (this.showGrabber) {
+        Row()
+          .width(42)
+          .height(4)
+          .backgroundColor(TOK_READ_HANDLE)
+          .borderRadius(999)
+          .position({ x: this.handleX(), y: 9 });
+      }
 
       this.header();
 
-      Row()
-        .width(this.viewportWidth())
-        .height(this.viewportHeight())
-        .backgroundColor(TOK_SURFACE_PANEL)
-        .border({ width: TOK_BORDER_W, color: TOK_LINE })
-        .borderRadius(12)
-        .position({ x: 13, y: 57 });
-
-      Scroll() {
-        Stack({ alignContent: Alignment.TopStart }) {
-          this.themeLibrary();
-          this.typographyLibrary();
-          this.fontLibrary();
-        }
-        .width(this.viewportWidth())
-        .height(this.contentHeight());
+      if (this.motionFrame === undefined) {
+        this.staticContentSurface();
+        this.staticAppearanceContent();
+      } else {
+        // The shared surface/header/cards/divider/font cells are mounted once
+        // by ReaderAppearanceSharedActors. This branch contains only actors
+        // which do not exist at the Quick endpoint.
+        this.motionFullOnlyContent();
       }
-      .width(this.viewportWidth())
-      .height(this.scrollViewportHeight())
-      .scrollBar(BarState.Off)
-      .enableScrollInteraction(this.draggedFontId === '' && !this.fontDragSettling)
-      .onScrollStart((): void => {
-        this.openSelect = '';
-        this.selectClosing = false;
-        if (this.draggedFontId !== '' && !this.fontDragSettling) {
-          this.cancelFontDrag();
-        }
-      })
-      .position({ x: 13, y: 57 });
 
       this.selectOverlay();
     }
     .width(this.sheetWidth())
     .height(this.sheetHeight())
-    .backgroundColor(TOK_READ_SURFACE)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
-    .borderRadius(24)
+    .enabled(this.interactionEnabled)
+    // MorphShell 壳板（ReaderControlPanel）统一提供 surface/边框/圆角；
+    // 此处仅保留内容裁剪与量测（Figma Review J~Q 壳体 morph 单一背景来源）。
     .clip(true)
+    .hitTestBehavior(this.motionFrame === undefined ? HitTestMode.Default : HitTestMode.Transparent)
     .onAreaChange((_oldValue: Area, newValue: Area): void => {
       this.panelOriginX = Number(newValue.globalPosition.x);
       this.panelOriginY = Number(newValue.globalPosition.y);
     });
+  }
+
+  @Builder
+  private staticContentSurface() {
+    Row()
+      .width(this.viewportWidth())
+      .height(this.viewportHeight())
+      .backgroundColor(TOK_SURFACE_PANEL)
+      .border({ width: TOK_BORDER_W, color: TOK_LINE })
+      .borderRadius(12)
+      .position({ x: 13, y: 57 })
+      .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
+        TransitionEffect.asymmetric(
+          panelActorTransition('reader.panel.appearance.surface.in', 0, 128),
+          TransitionEffect.IDENTITY,
+        ));
+  }
+
+  @Builder
+  private staticAppearanceContent() {
+    Scroll(this.contentScroller) {
+      Stack({ alignContent: Alignment.TopStart }) {
+        this.themeLibrary();
+        this.typographyLibrary();
+        this.fontLibrary();
+      }
+      .width(this.viewportWidth())
+      .height(this.contentHeight());
+    }
+    .width(this.viewportWidth())
+    .height(this.scrollViewportHeight())
+    .scrollBar(BarState.Off)
+    .enableScrollInteraction(this.interactionEnabled && this.draggedFontId === '' && !this.fontDragSettling)
+    .onScrollStart((): void => this.onAppearanceScrollStart())
+    .onDidScroll((_xOffset: number, _yOffset: number, _scrollState: ScrollState): void =>
+      this.publishContentScroll(this.contentScroller.currentOffset().yOffset))
+    .position({ x: 13, y: 57 })
+    .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
+      TransitionEffect.asymmetric(
+        panelActorTransition('reader.panel.appearance.content.in', 0, 146),
+        TransitionEffect.IDENTITY,
+      ));
+  }
+
+  @Builder
+  private motionFullOnlyContent() {
+    Scroll(this.contentScroller) {
+      Stack({ alignContent: Alignment.TopStart }) {
+        Stack({ alignContent: Alignment.TopStart }) {
+          this.themeAction(true);
+          this.themeAction(false);
+        }
+        .width(this.sectionWidth())
+        .height(210)
+        .position({ x: 10, y: 11 })
+        .opacity(this.motionFrame?.themeActions.opacity ?? 0)
+        .translate({
+          x: this.motionFrame?.themeActions.translateX ?? 0,
+          y: this.motionFrame?.themeActions.translateY ?? 0,
+        })
+        .blur(this.motionFrame?.themeActions.blurVp ?? 0);
+
+        this.motionFontReorderHint();
+        this.typographyLibrary();
+      }
+      .width(this.viewportWidth())
+      .height(this.contentHeight());
+    }
+    .width(this.viewportWidth())
+    .height(this.scrollViewportHeight())
+    .scrollBar(BarState.Off)
+    .enableScrollInteraction(this.interactionEnabled && !this.fontReorderActive)
+    // The shared cards sit in the persistent sibling layer below. This Scroll
+    // still receives drag gestures, while taps/long-presses can reach those
+    // cards instead of being consumed by an empty Full-only overlay.
+    .hitTestBehavior(HitTestMode.Transparent)
+    .onScrollStart((): void => this.onAppearanceScrollStart())
+    .onDidScroll((_xOffset: number, _yOffset: number, _scrollState: ScrollState): void =>
+      this.publishContentScroll(this.contentScroller.currentOffset().yOffset))
+    .position({ x: 13, y: 57 });
+  }
+
+  private onAppearanceScrollStart(): void {
+    this.openSelect = '';
+    this.selectClosing = false;
+    if (this.draggedFontId !== '' && !this.fontDragSettling) {
+      this.cancelFontDrag();
+    }
+  }
+
+  private publishContentScroll(offsetY: number): void {
+    if (this.motionFrame === undefined || !Number.isFinite(offsetY)) {
+      return;
+    }
+    this.onContentScroll(Math.max(0, offsetY));
+  }
+
+  @Builder
+  private motionFontReorderHint() {
+    Text('可拖动调整位置')
+      .width(70)
+      .height(14)
+      .fontFamily('ReaderNotoSansSC')
+      .fontWeight(FontWeight.Medium)
+      .fontSize(10)
+      .fontColor(TOK_READ_MUTED)
+      .textAlign(TextAlign.End)
+      .position({ x: 11 + this.sectionWidth() - 72, y: 230.98 })
+      .opacity(this.motionFrame?.fontImport.opacity ?? 0)
+      .translate({
+        x: this.motionFrame?.fontImport.translateX ?? 0,
+        y: this.motionFrame?.fontImport.translateY ?? 0,
+      })
+      .blur(this.motionFrame?.fontImport.blurVp ?? 0);
   }
 
   @Builder
@@ -196,7 +308,20 @@ export struct ReaderAppearanceFullPanel {
     .width(this.headerWidth())
     .height(30)
     .alignItems(VerticalAlign.Center)
-    .position({ x: 13, y: 19 });
+    .position({ x: 13, y: 19 })
+    // N 帧 Header 全分量由共享 frame 同步采样：opacity 0→1、y -12→0、
+    // blur 8→0。TransitionEffect 没有 blur 分量，所以 motion stage 走属性通道。
+    .opacity(this.motionFrame?.header.opacity ?? 1)
+    .translate({
+      x: this.motionFrame?.header.translateX ?? 0,
+      y: this.motionFrame?.header.translateY ?? 0,
+    })
+    .blur(this.motionFrame?.header.blurVp ?? 0)
+    .transition(this.reduceMotion || this.motionFrame !== undefined ? TransitionEffect.IDENTITY :
+      TransitionEffect.asymmetric(
+        panelActorTransition('reader.panel.appearance.header.in', -12, 146),
+        TransitionEffect.IDENTITY,
+      ));
   }
 
   @Builder
@@ -210,7 +335,7 @@ export struct ReaderAppearanceFullPanel {
         .fontSize(12)
         .lineHeight(17)
         .fontColor(TOK_READ_INK)
-        .position({ x: 2, y: 11 });
+        .position({ x: 2, y: 9 });
       Text(this.themeSummary())
         .width(122)
         .height(20)
@@ -221,7 +346,7 @@ export struct ReaderAppearanceFullPanel {
         .fontColor(TOK_READ_MUTED)
         .textAlign(TextAlign.End)
         .maxLines(1)
-        .position({ x: this.sectionInnerWidth() - 120, y: 13 });
+        .position({ x: this.sectionInnerWidth() - 120, y: 9 });
 
       ForEach(this.themeIds(), (theme: ReaderAppearanceTheme, index: number) => {
         this.fullThemeCard(theme, index);
@@ -234,11 +359,16 @@ export struct ReaderAppearanceFullPanel {
         .width(this.sectionWidth())
         .height(1)
         .backgroundColor(TOK_LINE)
-        .position({ x: 0, y: 209 });
+        .position({ x: 0, y: 208.98 });
     }
     .width(this.sectionWidth())
     .height(210)
-    .position({ x: 11, y: 11 });
+    .position({ x: 10, y: 11 })
+    .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
+      TransitionEffect.asymmetric(
+        panelActorTransition('reader.panel.appearance.theme.in', 0, 146),
+        TransitionEffect.IDENTITY,
+      ));
   }
 
   @Builder
@@ -270,7 +400,7 @@ export struct ReaderAppearanceFullPanel {
     .borderRadius(8)
     .position({
       x: 2 + (index % 4) * this.fullCardStride(),
-      y: 32.4 + Math.floor(index / 4) * 64.8,
+      y: 31.39 + Math.floor(index / 4) * 64.8,
     })
     .accessibilityText(`切换到${this.themeLabel(theme)}主题`)
     .onClick((): void => this.onThemeChange(theme));
@@ -305,13 +435,13 @@ export struct ReaderAppearanceFullPanel {
     Stack({ alignContent: Alignment.TopStart }) {
       Text('字体库')
         .width(this.sectionInnerWidth() - 78)
-        .height(14)
+        .height(20)
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
         .fontSize(12)
         .lineHeight(14.4)
         .fontColor(TOK_READ_INK)
-        .position({ x: 2, y: 11 });
+        .position({ x: 1, y: 10 });
       Text('可拖动调整位置')
         .width(70)
         .height(14)
@@ -320,7 +450,7 @@ export struct ReaderAppearanceFullPanel {
         .fontSize(10)
         .fontColor(TOK_READ_MUTED)
         .textAlign(TextAlign.End)
-        .position({ x: this.sectionWidth() - 72, y: 11 });
+        .position({ x: this.sectionWidth() - 72, y: 10 });
 
       Stack({ alignContent: Alignment.TopStart }) {
         if (this.draggedFontId !== '') {
@@ -330,21 +460,26 @@ export struct ReaderAppearanceFullPanel {
           this.fullFontCell(fontId);
         }, (fontId: ReaderAppearanceFontSlot): string => `reader-appearance-full-font-${fontId}`);
       }
-      .width(this.sectionInnerWidth())
-      .height(126)
-      .position({ x: 2, y: 33.39 });
+      .width(this.sectionWidth())
+      .height(106)
+      .position({ x: 0, y: 30 });
     }
     .width(this.sectionWidth())
-    .height(169.39)
+    .height(146)
     .border({ width: { top: TOK_BORDER_W }, color: TOK_LINE })
-    .position({ x: 11, y: 600.98 });
+    .position({ x: 11, y: 220.98 })
+    .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
+      TransitionEffect.asymmetric(
+        panelActorTransition('reader.panel.appearance.font.in', 0, 175),
+        TransitionEffect.IDENTITY,
+      ));
   }
 
   @Builder
   private fontDragPlaceholder() {
     Row()
-      .width(this.fullCardWidth())
-      .height(38)
+      .width(this.fullFontCardWidth())
+      .height(30)
       .backgroundColor(TOK_READ_ACTIVE_SOFT)
       .border({ width: TOK_BORDER_W, color: TOK_READ_PRIMARY, style: BorderStyle.Dashed })
       .borderRadius(6)
@@ -359,8 +494,8 @@ export struct ReaderAppearanceFullPanel {
   @Builder
   private fullFontCell(fontId: ReaderAppearanceFontSlot) {
     Text(readerAppearanceFontSlotLabel(this.snapshot, fontId))
-      .width(this.fullCardWidth())
-      .height(38)
+      .width(this.fullFontCardWidth())
+      .height(30)
       .backgroundColor(this.isActiveFont(fontId) ? TOK_PRIMARY_SOFT : Color.Transparent)
       .border({
         width: TOK_BORDER_W,
@@ -465,7 +600,19 @@ export struct ReaderAppearanceFullPanel {
     .width(this.sectionWidth())
     .height(380)
     .border({ width: { top: TOK_BORDER_W }, color: TOK_LINE })
-    .position({ x: 11, y: 220.98 });
+    .position({ x: 11, y: 366.98 })
+    .opacity(this.motionFrame?.typography.opacity ?? 1)
+    .translate({
+      x: this.motionFrame?.typography.translateX ?? 0,
+      y: this.motionFrame?.typography.translateY ?? 0,
+    })
+    .blur(this.motionFrame?.typography.blurVp ?? 0)
+    // N 帧 Typography 卡: opacity 0->1 @ 164ms (delay 256)。
+    .transition(this.reduceMotion || this.motionFrame !== undefined ? TransitionEffect.IDENTITY :
+      TransitionEffect.asymmetric(
+        panelActorTransition('reader.panel.appearance.typography.in', 0, 256),
+        TransitionEffect.IDENTITY,
+      ));
   }
 
   @Builder
@@ -571,10 +718,9 @@ export struct ReaderAppearanceFullPanel {
             .fontSize(10)
             .fontColor(TOK_READ_INK);
           Blank();
-          Image($r('app.media.reader_chevron_down'))
+          Image($r('app.media.reader_chevron_down_primary'))
             .width(8)
-            .height(4)
-            .fillColor(TOK_READ_PRIMARY);
+            .height(4);
         }
         .width(this.selectControlWidth(kind))
         .height(36)
@@ -736,7 +882,7 @@ export struct ReaderAppearanceFullPanel {
   }
 
   private contentHeight(): number {
-    return this.isTablet ? 832 : 769.375;
+    return this.isTablet ? 832 : 989;
   }
 
   private handleX(): number {
@@ -758,6 +904,20 @@ export struct ReaderAppearanceFullPanel {
 
   private fullCardStride(): number {
     return this.fullCardWidth() + 6;
+  }
+
+  private fullFontCardWidth(): number {
+    if (!this.isTablet) {
+      return 73;
+    }
+    return this.fullCardWidth();
+  }
+
+  private fullFontCardStride(): number {
+    if (!this.isTablet) {
+      return 81;
+    }
+    return this.fullFontCardWidth() + 6;
   }
 
   private indentRowWidth(): number {
@@ -975,7 +1135,7 @@ export struct ReaderAppearanceFullPanel {
   }
 
   private fontSlotX(index: number): number {
-    return Math.max(0, index % 4) * this.fullCardStride();
+    return Math.max(0, index % 4) * this.fullFontCardStride();
   }
 
   private fontSlotY(index: number): number {
@@ -1001,9 +1161,9 @@ export struct ReaderAppearanceFullPanel {
   private fontDragTargetIndex(offsetX: number, offsetY: number): number {
     const originColumn = this.draggedFontIndex % 4;
     const originRow = Math.floor(this.draggedFontIndex / 4);
-    const centerX = originColumn * this.fullCardStride() + this.fullCardWidth() / 2 + offsetX;
-    const centerY = originRow * READER_FONT_REORDER_ROW_STRIDE + 19 + offsetY;
-    const column = Math.max(0, Math.min(3, Math.floor(centerX / this.fullCardStride())));
+    const centerX = originColumn * this.fullFontCardStride() + this.fullFontCardWidth() / 2 + offsetX;
+    const centerY = originRow * READER_FONT_REORDER_ROW_STRIDE + 15 + offsetY;
+    const column = Math.max(0, Math.min(3, Math.floor(centerX / this.fullFontCardStride())));
     const row = Math.max(0, Math.min(2, Math.floor(centerY / READER_FONT_REORDER_ROW_STRIDE)));
     return Math.max(0, Math.min(this.snapshot.fontOrder.length - 1, row * 4 + column));
   }

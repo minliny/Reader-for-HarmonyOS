@@ -265,7 +265,7 @@ assert.match(fullPanel, /return Math\.max\(0, this\.sheetWidth\(\) - 26\)/);
 assert.match(fullPanel, /return Math\.max\(0, \(this\.sectionInnerWidth\(\) - 18\) \/ 4\)/,
   'four-column appearance cards must reflow inside a narrowed sheet');
 assert.match(fullPanel, /this\.themeLibrary\(\);\s*this\.typographyLibrary\(\);\s*this\.fontLibrary\(\);/);
-assert.match(fullPanel, /Scroll\(\)[\s\S]*this\.themeLibrary\(\);[\s\S]*\.height\(this\.scrollViewportHeight\(\)\)/,
+assert.match(fullPanel, /Scroll\(this\.contentScroller\)[\s\S]*this\.themeLibrary\(\);[\s\S]*\.height\(this\.scrollViewportHeight\(\)\)/,
   'the full appearance content must scroll inside the live height budget');
 assert.match(fullPanel, /Text\('主题库'\)/);
 assert.match(fullPanel, /Text\('字体库'\)/);
@@ -329,8 +329,9 @@ assert.doesNotMatch(fullPanel, /GestureMode\.Sequence/,
 assert.match(fullPanel,
   /event\.type === TouchType\.Move[\s\S]*event\.stopPropagation\(\)[\s\S]*this\.updateFontDrag\([\s\S]*this\.fontTouchCurrentX - this\.fontTouchStartX/,
   'after the hold wins, the same touch stream must drive the lifted card and stop parent scrolling');
-assert.match(fullPanel, /enableScrollInteraction\(this\.draggedFontId === '' && !this\.fontDragSettling\)/,
-  'the parent Scroll must stop moving after the reorder gesture has taken ownership');
+assert.match(fullPanel,
+  /enableScrollInteraction\(this\.interactionEnabled && this\.draggedFontId === '' && !this\.fontDragSettling\)/,
+  'the parent Scroll must stop for either motion ownership or a font reorder gesture');
 assert.match(fullPanel, /this\.fontDragPlaceholder\(\)/,
   'dragging must expose an insertion target instead of leaving an unexplained hole');
 assert.match(fullPanel,
