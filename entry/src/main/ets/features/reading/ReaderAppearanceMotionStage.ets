@@ -1,11 +1,5 @@
 import { FrameCallback } from '@kit.ArkUI';
-import {
-  TOK_BORDER_W,
-  TOK_LINE_STRONG,
-  TOK_READ_HANDLE,
-  TOK_READ_SURFACE,
-  TOK_RADIUS_XL,
-} from '../common/ReaderTokens';
+import { TOK_READ_HANDLE } from '../common/ReaderTokens';
 import {
   READER_APPEARANCE_FULL_HEIGHT,
   READER_APPEARANCE_MIN_INTERACTIVE_TRAVEL_VP,
@@ -47,17 +41,9 @@ const READER_APPEARANCE_MOTION_VELOCITY_IDLE_MS = 100;
 const READER_APPEARANCE_MOTION_MAX_FRAME_DELTA_MS = 100;
 const READER_APPEARANCE_MOTION_POINTER_STALL_MS = 15000;
 
-const READER_APPEARANCE_BRIGHTNESS_BASE_X = 312.44;
-// BrightnessRail is a fixed-screen sibling of MorphStage in legacy Figma N.
-// Its quick endpoint is the runtime shell travel + localY(28); it never
-// inherits shell translation, only its own independently sampled exit track.
-const READER_APPEARANCE_BRIGHTNESS_WIDTH = 38;
-const READER_APPEARANCE_BRIGHTNESS_HEIGHT = 190;
-
-export interface ReaderAppearanceMotionSlotContext {
-  interactionEnabled: boolean;
-  requestCollapse: () => void;
-}
+export const READER_APPEARANCE_MOTION_BRIGHTNESS_X = 312.44;
+export const READER_APPEARANCE_MOTION_BRIGHTNESS_WIDTH = 38;
+export const READER_APPEARANCE_MOTION_BRIGHTNESS_HEIGHT = 190;
 
 class ReaderAppearanceStageFrameCallback extends FrameCallback {
   private readonly callback: (frameTimeInNano: number) => void;
@@ -89,6 +75,7 @@ export struct ReaderAppearanceMotionStage {
   @Prop @Watch('onReduceMotionChanged') reduceMotion: boolean = false;
   @Prop @Watch('onVisibleChanged') visible: boolean = true;
   @Prop @Watch('onInteractionEnabledChanged') interactionEnabled: boolean = true;
+  @Prop @Watch('onCollapseRequestRevisionChanged') collapseRequestRevision: number = 0;
   @Prop availableWidth: number = READER_APPEARANCE_MOTION_STAGE_WIDTH;
   @Prop @Watch('onAvailableHeightChanged') availableHeight: number =
     READER_APPEARANCE_MOTION_STAGE_HEIGHT;
@@ -97,17 +84,8 @@ export struct ReaderAppearanceMotionStage {
   onEndpointChange: (endpoint: ReaderAppearanceMotionEndpoint) => void =
     (_endpoint: ReaderAppearanceMotionEndpoint): void => {};
   onMotionActivityChange: (active: boolean) => void = (_active: boolean): void => {};
-  /**
-   * Publish the one primitive spatial coordinate to the slot owner. ArkUI does
-   * not reliably invalidate a parent-owned @Builder subtree when a nested
-   * frame object is passed through @BuilderParam, so the owner resamples its
-   * actor frame directly from this observable progress value.
-   */
+  /** Publish the one primitive spatial coordinate to the visual owner. */
   onMasterProgressChange: (progress: number) => void = (_progress: number): void => {};
-
-  @BuilderParam appearanceContent: (context: ReaderAppearanceMotionSlotContext) => void;
-  @BuilderParam brightnessRail: (context: ReaderAppearanceMotionSlotContext) => void;
-  @BuilderParam moduleNav: (context: ReaderAppearanceMotionSlotContext) => void;
 
   private motionState: ReaderAppearanceMotionState =
     createReaderAppearanceMotionState('quick');
@@ -161,20 +139,6 @@ export struct ReaderAppearanceMotionStage {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Stack()
-        .width(this.stageWidth())
-        .height(this.renderFrame.shellHeight)
-        .position({ x: 0, y: this.shellTop() })
-        .backgroundColor(TOK_READ_SURFACE)
-        .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
-        .borderRadius(TOK_RADIUS_XL)
-        .clip(true)
-        .hitTestBehavior(HitTestMode.None)
-        .zIndex(0);
-
-      this.appearanceContentLayer();
-      this.brightnessLayer();
-      this.moduleNavLayer();
       this.grabberLayer();
     }
     .width(this.stageWidth())
@@ -184,79 +148,6 @@ export struct ReaderAppearanceMotionStage {
       this.stageScreenY = Number(newValue.globalPosition.y);
       this.refreshMeasuredAxisForLayout();
     });
-  }
-
-  /** One persistent content slot, clipped by the p-driven shell. */
-  @Builder
-  private appearanceContentLayer() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Stack({ alignContent: Alignment.TopStart }) {
-        this.appearanceContent({
-          interactionEnabled: this.contentInteractionEnabled(),
-          requestCollapse: (): void => this.requestCollapse(),
-        });
-      }
-      .width(this.stageWidth())
-      .height(this.stageHeight())
-      // The clip starts at shellTop, while every actor keeps its stage-space
-      // coordinate. Moving this canvas back by shellTop avoids a second tree
-      // or a second set of quick/full layout coordinates.
-      .position({ x: 0, y: -this.shellTop() });
-    }
-    .width(this.stageWidth())
-    .height(this.renderFrame.shellHeight)
-    .position({ x: 0, y: this.shellTop() })
-    .borderRadius(TOK_RADIUS_XL)
-    .clip(true)
-    .enabled(this.contentInteractionEnabled())
-    .hitTestBehavior(this.contentInteractionEnabled() ? HitTestMode.Default : HitTestMode.None)
-    .zIndex(2);
-  }
-
-  @Builder
-  private brightnessLayer() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      this.brightnessRail({
-        interactionEnabled: this.quickInteractionEnabled(),
-        requestCollapse: (): void => this.requestCollapse(),
-      });
-    }
-    .width(READER_APPEARANCE_BRIGHTNESS_WIDTH)
-    .height(READER_APPEARANCE_BRIGHTNESS_HEIGHT)
-    .position({
-      x: READER_APPEARANCE_BRIGHTNESS_BASE_X,
-      y: this.stageTravel() + 28,
-    })
-    .translate({
-      x: this.renderFrame.brightnessRail.translateX,
-      y: this.renderFrame.brightnessRail.translateY,
-    })
-    .opacity(this.renderFrame.brightnessRail.opacity)
-    .blur(this.renderFrame.brightnessRail.blurVp)
-    .enabled(this.quickInteractionEnabled())
-    .hitTestBehavior(this.quickInteractionEnabled() ? HitTestMode.Default : HitTestMode.None)
-    .zIndex(3);
-  }
-
-  @Builder
-  private moduleNavLayer() {
-    Stack({ alignContent: Alignment.Bottom }) {
-      this.moduleNav({
-        interactionEnabled: this.quickInteractionEnabled(),
-        requestCollapse: (): void => this.requestCollapse(),
-      });
-    }
-    .width(this.stageWidth())
-    .height(this.stageHeight())
-    .translate({
-      x: this.renderFrame.moduleNav.translateX,
-      y: this.renderFrame.moduleNav.translateY,
-    })
-    .opacity(this.renderFrame.moduleNav.opacity)
-    .blur(this.renderFrame.moduleNav.blurVp)
-    .enabled(this.quickInteractionEnabled())
-    .hitTestBehavior(this.quickInteractionEnabled() ? HitTestMode.Default : HitTestMode.None)
-    .zIndex(3);
   }
 
   @Builder
@@ -630,21 +521,18 @@ export struct ReaderAppearanceMotionStage {
     }
   }
 
+  private onCollapseRequestRevisionChanged(): void {
+    if (this.mounted) {
+      this.requestCollapse();
+    }
+  }
+
   private programmaticTarget(): ReaderAppearanceMotionEndpoint {
     return this.motionState.stableEndpoint === 'quick' ? 'full' : 'quick';
   }
 
   private nearestEndpoint(): ReaderAppearanceMotionEndpoint {
     return this.motionState.masterProgress >= 0.5 ? 'full' : 'quick';
-  }
-
-  private quickInteractionEnabled(): boolean {
-    return this.visible && this.interactionEnabled && this.motionState.phase === 'idleQuick';
-  }
-
-  private contentInteractionEnabled(): boolean {
-    return this.visible && this.interactionEnabled &&
-      (this.motionState.phase === 'idleQuick' || this.motionState.phase === 'idleFull');
   }
 
   private motionActive(): boolean {

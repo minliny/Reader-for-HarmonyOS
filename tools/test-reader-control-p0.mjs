@@ -106,11 +106,11 @@ assert.doesNotMatch(appearanceStage, /animateTo\s*\(/,
   'appearance stage must have one interruptible frame clock, not competing animateTo owners');
 assert.match(appearanceStage, /expectedEpoch !== this\.motionState\.epoch/,
   're-grab must invalidate already posted settlement frames');
-assert.match(appearanceStage,
-  /private appearanceContentLayer\(\)[\s\S]*?this\.appearanceContent\(\{[\s\S]*?\.height\(this\.renderFrame\.shellHeight\)[\s\S]*?y: this\.shellTop\(\)[\s\S]*?\.clip\(true\)/,
+assert.match(control,
+  /private appearanceMotionContentLayer\(\)[\s\S]*?this\.appearanceMotionContent\(\)[\s\S]*?\.height\(this\.currentAppearanceMotionFrame\(\)\.shellHeight\)[\s\S]*?shellTranslateY[\s\S]*?\.clip\(true\)/,
   'one persistent Appearance content tree must be clipped by the p-driven shell');
-assert.equal((appearanceStage.match(/@BuilderParam appearanceContent:/g) ?? []).length, 1,
-  'Phone Appearance must expose exactly one persistent content Builder');
+assert.doesNotMatch(appearanceStage, /@BuilderParam/,
+  'the gesture Stage must not cache dynamic visual content through a Builder slot');
 assert.doesNotMatch(appearanceStage,
   /@BuilderParam quickMorph:|@BuilderParam fullContent:|fullMorphStageLayer|quickDockLayer|quickMorphStageLayer/,
   'Quick and Full must never return as parallel presentation trees');
@@ -118,11 +118,11 @@ assert.doesNotMatch(appearanceStage, /motionState\.profile|rawExpansion|elastic/
   'presentation must be a direction-independent function of master progress');
 assert.doesNotMatch(appearanceQuick, /motionFrame|ReaderAppearanceSharedActors|motionPanel/,
   'ReaderAppearanceModulePanel is static-only; Phone motion has one FullPanel owner');
-assert.match(appearanceStage,
-  /private brightnessLayer\(\)[\s\S]*?y: this\.stageTravel\(\) \+ 28[\s\S]*?renderFrame\.brightnessRail\.translateY[\s\S]*?renderFrame\.brightnessRail\.opacity[\s\S]*?renderFrame\.brightnessRail\.blurVp/,
+assert.match(control,
+  /private appearanceMotionBrightnessLayer\(\)[\s\S]*?y: this\.appearanceMotionStageTravel\(\) \+ 28[\s\S]*?currentAppearanceMotionFrame\(\)\.brightnessRail\.translateY[\s\S]*?currentAppearanceMotionFrame\(\)\.brightnessRail\.opacity[\s\S]*?currentAppearanceMotionFrame\(\)\.brightnessRail\.blurVp/,
   'BrightnessRail must stay screen-fixed and sample its own track from the common frame');
-assert.match(appearanceStage,
-  /private moduleNavLayer\(\)[\s\S]*?\.height\(this\.stageHeight\(\)\)[\s\S]*?renderFrame\.moduleNav\.translateY[\s\S]*?renderFrame\.moduleNav\.opacity[\s\S]*?renderFrame\.moduleNav\.blurVp/,
+assert.match(control,
+  /private appearanceMotionModuleNavLayer\(\)[\s\S]*?\.height\(this\.appearanceMotionStageHeight\(\)\)[\s\S]*?currentAppearanceMotionFrame\(\)\.moduleNav\.translateY[\s\S]*?currentAppearanceMotionFrame\(\)\.moduleNav\.opacity[\s\S]*?currentAppearanceMotionFrame\(\)\.moduleNav\.blurVp/,
   'ModuleNav must remain bottom-aligned and sample its own common-frame track');
 assert.match(appearanceStage,
   /@Prop @Watch\('onAvailableHeightChanged'\) availableHeight: number/,

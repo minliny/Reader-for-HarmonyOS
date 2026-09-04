@@ -17,12 +17,15 @@ import { ReaderAppearanceFullPanel } from './ReaderAppearanceFullPanel';
 import type { ReaderChineseConversionMode } from './ReaderChineseConversionGateway';
 import { ReaderAppearanceModulePanel } from './ReaderAppearanceModulePanel';
 import {
+  READER_APPEARANCE_MOTION_BRIGHTNESS_HEIGHT,
+  READER_APPEARANCE_MOTION_BRIGHTNESS_WIDTH,
+  READER_APPEARANCE_MOTION_BRIGHTNESS_X,
   ReaderAppearanceMotionStage,
-  type ReaderAppearanceMotionSlotContext,
 } from './ReaderAppearanceMotionStage';
 import {
   READER_APPEARANCE_FULL_HEIGHT,
   READER_APPEARANCE_QUICK_HEIGHT,
+  READER_APPEARANCE_STAGE_WIDTH,
   readerAppearanceMotionStageSupported,
   sampleReaderAppearanceMasterProgress,
   type ReaderAppearanceMotionFrame,
@@ -344,6 +347,7 @@ export struct ReaderControlPanel {
   @State private controlGrabberDragY: number = 0;
   @State private appearanceMotionActive: boolean = false;
   @State private appearanceMotionMasterProgress: number = 0;
+  @State private appearanceMotionCollapseRequestRevision: number = 0;
   @State private appearanceFontReorderActive: boolean = false;
   private autoPageActorGeneration: number = 0;
   private autoPageActorHoldTimer: number = -1;
@@ -642,6 +646,8 @@ export struct ReaderControlPanel {
   private onActivePageChanged(): void {
     if (this.activePage !== 'moduleAppearance' && this.activePage !== 'fullAppearance') {
       this.clearAppearanceActivity();
+    } else {
+      this.appearanceMotionMasterProgress = this.activePage === 'fullAppearance' ? 1 : 0;
     }
     if (this.activePage === 'fullAutoPage' && !this.isExpanded()) {
       this.autoPageActorRegistryMounted = true;
@@ -867,50 +873,92 @@ export struct ReaderControlPanel {
    */
   @Builder
   private appearanceMotionDock() {
-    ReaderAppearanceMotionStage({
-      expanded: this.activePage === 'fullAppearance',
-      reduceMotion: this.reduceMotion,
-      visible: this.visible,
-      interactionEnabled: !this.shellExitArmed,
-      availableWidth: this.fullPanelAvailableWidth(),
-      availableHeight: this.layout.fullPanelHeight,
-      motionTimeScale: this.appearanceMotionTimeScale,
-      onEndpointChange: (endpoint: ReaderAppearanceMotionEndpoint): void =>
-        this.onAppearanceMotionEndpointChange(endpoint),
-      onMotionActivityChange: (active: boolean): void =>
-        this.setAppearanceMotionActivity(active),
-      onMasterProgressChange: (progress: number): void =>
-        this.setAppearanceMotionMasterProgress(progress),
-      appearanceContent: (context: ReaderAppearanceMotionSlotContext): void => {
-        this.appearanceMotionContent(context);
-      },
-      brightnessRail: (context: ReaderAppearanceMotionSlotContext): void => {
-        this.appearanceMotionBrightness(context);
-      },
-      moduleNav: (context: ReaderAppearanceMotionSlotContext): void => {
-        this.appearanceMotionModuleNav(context);
-      },
-    });
+    Stack({ alignContent: Alignment.TopStart }) {
+      this.appearanceMotionShellLayer();
+      this.appearanceMotionContentLayer();
+      this.appearanceMotionBrightnessLayer();
+      this.appearanceMotionModuleNavLayer();
+
+      Stack({ alignContent: Alignment.TopStart }) {
+        ReaderAppearanceMotionStage({
+          expanded: this.activePage === 'fullAppearance',
+          reduceMotion: this.reduceMotion,
+          visible: this.visible,
+          interactionEnabled: !this.shellExitArmed,
+          collapseRequestRevision: this.appearanceMotionCollapseRequestRevision,
+          availableWidth: this.fullPanelAvailableWidth(),
+          availableHeight: this.layout.fullPanelHeight,
+          motionTimeScale: this.appearanceMotionTimeScale,
+          onEndpointChange: (endpoint: ReaderAppearanceMotionEndpoint): void =>
+            this.onAppearanceMotionEndpointChange(endpoint),
+          onMotionActivityChange: (active: boolean): void =>
+            this.setAppearanceMotionActivity(active),
+          onMasterProgressChange: (progress: number): void =>
+            this.setAppearanceMotionMasterProgress(progress),
+        });
+      }
+      .width(this.appearanceMotionStageWidth())
+      .height(this.appearanceMotionStageHeight())
+      .hitTestBehavior(HitTestMode.None)
+      .zIndex(10);
+    }
+    .width(this.appearanceMotionStageWidth())
+    .height(this.appearanceMotionStageHeight())
+    .hitTestBehavior(HitTestMode.None);
   }
 
   @Builder
-  private appearanceMotionContent(context: ReaderAppearanceMotionSlotContext) {
+  private appearanceMotionShellLayer() {
+    Stack()
+      .width(this.appearanceMotionStageWidth())
+      .height(this.currentAppearanceMotionFrame().shellHeight)
+      .position({ x: 0, y: this.currentAppearanceMotionFrame().shellTranslateY })
+      .backgroundColor(TOK_READ_SURFACE)
+      .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+      .borderRadius(TOK_RADIUS_XL)
+      .clip(true)
+      .hitTestBehavior(HitTestMode.None)
+      .zIndex(0);
+  }
+
+  @Builder
+  private appearanceMotionContentLayer() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Stack({ alignContent: Alignment.TopStart }) {
+        this.appearanceMotionContent();
+      }
+      .width(this.appearanceMotionStageWidth())
+      .height(this.appearanceMotionStageHeight())
+      .position({ x: 0, y: -this.currentAppearanceMotionFrame().shellTranslateY });
+    }
+    .width(this.appearanceMotionStageWidth())
+    .height(this.currentAppearanceMotionFrame().shellHeight)
+    .position({ x: 0, y: this.currentAppearanceMotionFrame().shellTranslateY })
+    .borderRadius(TOK_RADIUS_XL)
+    .clip(true)
+    .enabled(this.appearanceMotionContentInteractionEnabled())
+    .hitTestBehavior(this.appearanceMotionContentInteractionEnabled() ?
+      HitTestMode.Default : HitTestMode.None)
+    .zIndex(2);
+  }
+
+  @Builder
+  private appearanceMotionContent() {
     ReaderAppearanceFullPanel({
       isTablet: false,
       availableWidth: this.fullPanelAvailableWidth(),
       availableHeight: this.layout.fullPanelHeight,
       reduceMotion: this.reduceMotion,
-      // Sample inside the parent-owned Builder from an observable primitive.
-      // Passing Stage.renderFrame through BuilderParam leaves this subtree at
-      // its first frame on ArkUI even while the outer shell keeps moving.
+      // The visual tree is a direct child of this @State owner. Dynamic frames
+      // never cross ReaderAppearanceMotionStage's BuilderParam boundary.
       motionFrame: this.currentAppearanceMotionFrame(),
-      interactionEnabled: context.interactionEnabled,
+      interactionEnabled: this.appearanceMotionContentInteractionEnabled(),
       showGrabber: false,
       snapshot: this.appearanceSnapshot,
       chineseConversionMode: this.chineseConversionMode,
       pageTurnStyle: readerPageTurnStyle(this.settingsSnapshot),
       pageTurnSimulationAvailable: this.pageTurnSimulationAvailable,
-      onCollapse: context.requestCollapse,
+      onCollapse: (): void => this.requestAppearanceMotionCollapse(),
       onThemeChange: (theme: ReaderAppearanceTheme): void => this.onAppearanceThemeChange(theme),
       onSetDayTheme: (theme: ReaderAppearanceTheme): void => this.onAppearanceDayThemeChange(theme),
       onSetNightTheme: (theme: ReaderAppearanceTheme): void => this.onAppearanceNightThemeChange(theme),
@@ -933,13 +981,45 @@ export struct ReaderControlPanel {
   }
 
   @Builder
-  private appearanceMotionBrightness(_context: ReaderAppearanceMotionSlotContext) {
-    this.brightnessRail();
+  private appearanceMotionBrightnessLayer() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      this.brightnessRail();
+    }
+    .width(READER_APPEARANCE_MOTION_BRIGHTNESS_WIDTH)
+    .height(READER_APPEARANCE_MOTION_BRIGHTNESS_HEIGHT)
+    .position({
+      x: READER_APPEARANCE_MOTION_BRIGHTNESS_X,
+      y: this.appearanceMotionStageTravel() + 28,
+    })
+    .translate({
+      x: this.currentAppearanceMotionFrame().brightnessRail.translateX,
+      y: this.currentAppearanceMotionFrame().brightnessRail.translateY,
+    })
+    .opacity(this.currentAppearanceMotionFrame().brightnessRail.opacity)
+    .blur(this.currentAppearanceMotionFrame().brightnessRail.blurVp)
+    .enabled(this.appearanceMotionQuickInteractionEnabled())
+    .hitTestBehavior(this.appearanceMotionQuickInteractionEnabled() ?
+      HitTestMode.Default : HitTestMode.None)
+    .zIndex(3);
   }
 
   @Builder
-  private appearanceMotionModuleNav(_context: ReaderAppearanceMotionSlotContext) {
-    this.moduleNav();
+  private appearanceMotionModuleNavLayer() {
+    Stack({ alignContent: Alignment.Bottom }) {
+      this.moduleNav();
+    }
+    .width(this.appearanceMotionStageWidth())
+    .height(this.appearanceMotionStageHeight())
+    .translate({
+      x: this.currentAppearanceMotionFrame().moduleNav.translateX,
+      y: this.currentAppearanceMotionFrame().moduleNav.translateY,
+    })
+    .opacity(this.currentAppearanceMotionFrame().moduleNav.opacity)
+    .blur(this.currentAppearanceMotionFrame().moduleNav.blurVp)
+    .enabled(this.appearanceMotionQuickInteractionEnabled())
+    .hitTestBehavior(this.appearanceMotionQuickInteractionEnabled() ?
+      HitTestMode.Default : HitTestMode.None)
+    .zIndex(3);
   }
 
   private onAppearanceMotionEndpointChange(endpoint: ReaderAppearanceMotionEndpoint): void {
@@ -980,6 +1060,31 @@ export struct ReaderControlPanel {
       READER_APPEARANCE_QUICK_HEIGHT,
       Math.min(READER_APPEARANCE_FULL_HEIGHT, this.layout.fullPanelHeight),
     );
+  }
+
+  private appearanceMotionStageWidth(): number {
+    return Math.min(READER_APPEARANCE_STAGE_WIDTH, this.fullPanelAvailableWidth());
+  }
+
+  private appearanceMotionStageTravel(): number {
+    return Math.max(0, this.appearanceMotionStageHeight() - READER_APPEARANCE_QUICK_HEIGHT);
+  }
+
+  private appearanceMotionContentInteractionEnabled(): boolean {
+    return this.visible && !this.shellExitArmed && !this.appearanceMotionActive;
+  }
+
+  private appearanceMotionQuickInteractionEnabled(): boolean {
+    return this.appearanceMotionContentInteractionEnabled() &&
+      this.activePage === 'moduleAppearance';
+  }
+
+  private requestAppearanceMotionCollapse(): void {
+    if (!this.visible || this.shellExitArmed || this.appearanceMotionActive ||
+      this.activePage !== 'fullAppearance') {
+      return;
+    }
+    this.appearanceMotionCollapseRequestRevision += 1;
   }
 
   private setAppearanceFontReorderActivity(active: boolean): void {

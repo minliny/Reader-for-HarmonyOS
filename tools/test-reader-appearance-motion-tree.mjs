@@ -16,16 +16,13 @@ function methodBody(source, name, nextName) {
   return source.slice(start, end);
 }
 
-// Stage owns one persistent appearance content entry. Fixed-screen chrome may
-// remain sibling slots, but Quick and Full can never be separate content slots.
-assert.equal((stage.match(/@BuilderParam appearanceContent:/g) ?? []).length, 1);
-assert.doesNotMatch(stage, /@BuilderParam quickMorph:|@BuilderParam fullContent:/);
+// Stage owns only the gesture clock and grabber. Dynamic visual content must
+// be a direct child of the @State owner; any BuilderParam path can freeze it.
+assert.doesNotMatch(stage, /@BuilderParam/);
 assert.doesNotMatch(stage, /fullMorphStageLayer|quickDockLayer|quickMorphStageLayer/);
 assert.doesNotMatch(stage, /motionState\.profile/,
   'presentation must never branch on expand/collapse direction');
 assert.match(stage, /@Prop(?: @Watch\('[^']+'\))? availableHeight: number/);
-assert.doesNotMatch(stage, /frame: ReaderAppearanceMotionFrame;/,
-  'a dynamic frame object must not cross the BuilderParam slot boundary');
 assert.match(stage,
   /onMasterProgressChange: \(progress: number\) => void/,
   'Stage must publish the primitive master progress to the slot owner');
@@ -33,19 +30,24 @@ assert.match(methodBody(stage, 'publishFrame()', 'publishMotionActivity('),
   /onMasterProgressChange\(this\.renderFrame\.masterProgress\)/,
   'every rendered Stage frame must invalidate the owner with the same p');
 
-const brightnessLayer = methodBody(stage, 'brightnessLayer()', 'moduleNavLayer()');
+const brightnessLayer = methodBody(control,
+  'appearanceMotionBrightnessLayer()', 'appearanceMotionModuleNavLayer()');
 for (const property of ['opacity', 'translateX', 'translateY', 'blurVp']) {
-  assert.match(brightnessLayer, new RegExp(`renderFrame\\.brightnessRail\\.${property}`));
+  assert.match(brightnessLayer,
+    new RegExp(`currentAppearanceMotionFrame\\(\\)\\.brightnessRail\\.${property}`));
 }
-const moduleNavLayer = methodBody(stage, 'moduleNavLayer()', 'grabberLayer()');
+const moduleNavLayer = methodBody(control,
+  'appearanceMotionModuleNavLayer()', 'onAppearanceMotionEndpointChange(');
 for (const property of ['opacity', 'translateX', 'translateY', 'blurVp']) {
-  assert.match(moduleNavLayer, new RegExp(`renderFrame\\.moduleNav\\.${property}`));
+  assert.match(moduleNavLayer,
+    new RegExp(`currentAppearanceMotionFrame\\(\\)\\.moduleNav\\.${property}`));
 }
 
 // The old Quick component is static-only. Phone motion has exactly one owner:
 // ReaderAppearanceFullPanel's motion branch.
 assert.doesNotMatch(modulePanel, /motionFrame|ReaderAppearanceSharedActors|motionPanel/);
-const phoneContent = methodBody(control, 'appearanceMotionContent(', 'appearanceMotionBrightness(');
+const phoneContent = methodBody(control,
+  'appearanceMotionContent()', 'appearanceMotionBrightnessLayer()');
 assert.equal((phoneContent.match(/ReaderAppearanceFullPanel\(\{/g) ?? []).length, 1);
 assert.doesNotMatch(phoneContent, /ReaderAppearanceModulePanel/);
 assert.match(control, /@State private appearanceMotionMasterProgress: number/,
@@ -54,6 +56,11 @@ assert.match(phoneContent, /motionFrame: this\.currentAppearanceMotionFrame\(\)/
   'the parent Builder must resample actor tracks from its observable p');
 assert.doesNotMatch(control, /motionFrame: context\.frame/,
   'the stale BuilderParam frame regression returned');
+const phoneDock = methodBody(control, 'appearanceMotionDock()', 'appearanceMotionShellLayer()');
+assert.doesNotMatch(phoneDock, /appearanceContent:|brightnessRail:|moduleNav:/,
+  'dynamic visual slots must not return to the gesture Stage');
+assert.match(phoneDock, /this\.appearanceMotionContentLayer\(\)/,
+  'the visual tree must be a direct sibling owned by ReaderControlPanel');
 
 for (const callback of [
   'onThemeChange',
