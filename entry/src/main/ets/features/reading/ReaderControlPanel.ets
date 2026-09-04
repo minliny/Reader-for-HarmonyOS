@@ -879,8 +879,16 @@ export struct ReaderControlPanel {
   }
 
   private usesPhoneAppearanceMotionStage(): boolean {
-    return this.appearanceMotionStageMounted &&
-      (this.activePage === 'moduleAppearance' || this.activePage === 'fullAppearance');
+    if (this.isExpanded()) {
+      return false;
+    }
+    // Once the Phone route reaches Full, it must never fall back to the legacy
+    // conditional static panel. The Stage itself clamps short axes and disables
+    // direct manipulation where needed; preserving actor identity wins here.
+    if (this.activePage === 'fullAppearance') {
+      return true;
+    }
+    return this.appearanceMotionStageMounted && this.activePage === 'moduleAppearance';
   }
 
   private appearanceMotionStageCanMount(): boolean {

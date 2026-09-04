@@ -55,8 +55,9 @@ assert.match(control, /@State private appearanceMotionMasterProgress: number/,
 assert.match(control, /@State private appearanceMotionStageMounted: boolean/,
   'the persistent Phone actor registry needs an explicit mounted latch');
 assert.match(methodBody(control, 'usesPhoneAppearanceMotionStage()',
-  'appearanceMotionStageCanMount()'), /return this\.appearanceMotionStageMounted/,
-  'Quick/Full route write-back must not re-evaluate the responsive mount guard');
+  'appearanceMotionStageCanMount()'),
+  /if \(this\.activePage === 'fullAppearance'\) \{\s*return true;/,
+  'the stable Full route must never fall back to the legacy static panel');
 assert.match(methodBody(control, 'onActivePageChanged()', 'geo:'),
   /if \(!this\.appearanceMotionStageMounted && this\.appearanceMotionStageCanMount\(\)\)/,
   'the actor registry may mount on Appearance entry but must survive its endpoint route');

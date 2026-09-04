@@ -112,8 +112,8 @@ assert.match(control,
 assert.doesNotMatch(appearanceStage, /@BuilderParam/,
   'the gesture Stage must not cache dynamic visual content through a Builder slot');
 assert.match(control,
-  /private usesPhoneAppearanceMotionStage\(\)[\s\S]*?return this\.appearanceMotionStageMounted/,
-  'Appearance Quick and Full endpoints must keep the same latched actor tree mounted');
+  /private usesPhoneAppearanceMotionStage\(\)[\s\S]*?activePage === 'fullAppearance'[\s\S]*?return true/,
+  'Appearance Full must never fall back to the legacy static panel');
 assert.doesNotMatch(appearanceStage,
   /@BuilderParam quickMorph:|@BuilderParam fullContent:|fullMorphStageLayer|quickDockLayer|quickMorphStageLayer/,
   'Quick and Full must never return as parallel presentation trees');
