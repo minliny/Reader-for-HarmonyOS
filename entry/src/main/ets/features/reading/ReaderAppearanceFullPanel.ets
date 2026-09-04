@@ -73,8 +73,9 @@ export struct ReaderAppearanceFullPanel {
   @Prop availableWidth: number = 0;
   @Prop availableHeight: number = 0;
   @Prop reduceMotion: boolean = false;
-  /** Primitive p is intentionally the only cross-component motion value. */
-  @Prop motionProgress: number | undefined = undefined;
+  /** Shared primitive progress from the immediate frame-clock owner. */
+  @Prop motionProgress: number = 1;
+  @Prop motionEnabled: boolean = false;
   @Prop motionFullHeight: number = READER_APPEARANCE_FULL_HEIGHT;
   @Prop @Watch('onInteractionEnabledChanged') interactionEnabled: boolean = true;
   @Prop showGrabber: boolean = true;
@@ -151,7 +152,7 @@ export struct ReaderAppearanceFullPanel {
 
       this.header();
 
-      if (this.motionProgress === undefined) {
+      if (!this.motionEnabled) {
         this.staticContentSurface();
         this.staticAppearanceContent();
       } else {
@@ -164,11 +165,10 @@ export struct ReaderAppearanceFullPanel {
     }
     .width(this.sheetWidth())
     .height(this.sheetHeight())
-    .enabled(this.interactionEnabled)
     // MorphShell 壳板（ReaderControlPanel）统一提供 surface/边框/圆角；
     // 此处仅保留内容裁剪与量测（Figma Review J~Q 壳体 morph 单一背景来源）。
     .clip(true)
-    .hitTestBehavior(this.motionProgress === undefined ? HitTestMode.Default : HitTestMode.Transparent)
+    .hitTestBehavior(this.motionEnabled ? HitTestMode.Transparent : HitTestMode.Default)
     .onAreaChange((_oldValue: Area, newValue: Area): void => {
       this.panelOriginX = Number(newValue.globalPosition.x);
       this.panelOriginY = Number(newValue.globalPosition.y);
@@ -221,7 +221,7 @@ export struct ReaderAppearanceFullPanel {
       Scroll(this.contentScroller) {
         Stack({ alignContent: Alignment.TopStart }) {
           ReaderAppearanceSharedActors({
-            motionProgress: this.motionProgress ?? 0,
+            motionProgress: this.motionProgress,
             fullHeight: this.motionFullHeight,
             interactionEnabled: this.interactionEnabled,
             reduceMotion: this.reduceMotion,
@@ -375,8 +375,8 @@ export struct ReaderAppearanceFullPanel {
         .lineHeight(13)
         .fontColor(TOK_READ_PRIMARY)
         .textAlign(TextAlign.Center)
-        .enabled(this.motionProgress === undefined ? this.interactionEnabled :
-          this.fullEndpointInteractionEnabled())
+        .enabled(this.motionEnabled ? this.fullEndpointInteractionEnabled() :
+          this.interactionEnabled)
         .accessibilityText('收起界面设置')
         .onClick((): void => this.onCollapse());
     }
@@ -392,7 +392,7 @@ export struct ReaderAppearanceFullPanel {
       y: this.motionFrameOrUndefined()?.header.translateY ?? 0,
     })
     .blur(this.motionFrameOrUndefined()?.header.blurVp ?? 0)
-    .transition(this.reduceMotion || this.motionProgress !== undefined ? TransitionEffect.IDENTITY :
+    .transition(this.reduceMotion || this.motionEnabled ? TransitionEffect.IDENTITY :
       TransitionEffect.asymmetric(
         panelActorTransition('reader.panel.appearance.header.in', -12, 146),
         TransitionEffect.IDENTITY,
@@ -683,7 +683,7 @@ export struct ReaderAppearanceFullPanel {
     })
     .blur(this.motionFrameOrUndefined()?.typography.blurVp ?? 0)
     // N 帧 Typography 卡: opacity 0->1 @ 164ms (delay 256)。
-    .transition(this.reduceMotion || this.motionProgress !== undefined ? TransitionEffect.IDENTITY :
+    .transition(this.reduceMotion || this.motionEnabled ? TransitionEffect.IDENTITY :
       TransitionEffect.asymmetric(
         panelActorTransition('reader.panel.appearance.typography.in', 0, 256),
         TransitionEffect.IDENTITY,
@@ -946,14 +946,14 @@ export struct ReaderAppearanceFullPanel {
   }
 
   private currentMotionFrame(): ReaderAppearanceMotionFrame {
-    if (this.motionProgress === undefined) {
+    if (!this.motionEnabled) {
       throw new Error('ReaderAppearanceFullPanel: motion frame is required by the Phone motion owner');
     }
     return sampleReaderAppearanceMasterProgress(this.motionProgress, this.motionFullHeight);
   }
 
   private motionFrameOrUndefined(): ReaderAppearanceMotionFrame | undefined {
-    if (this.motionProgress === undefined) {
+    if (!this.motionEnabled) {
       return undefined;
     }
     return sampleReaderAppearanceMasterProgress(this.motionProgress, this.motionFullHeight);

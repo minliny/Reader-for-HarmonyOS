@@ -1,5 +1,11 @@
 import { FrameCallback } from '@kit.ArkUI';
-import { TOK_READ_HANDLE } from '../common/ReaderTokens';
+import {
+  TOK_BORDER_W,
+  TOK_LINE_STRONG,
+  TOK_RADIUS_XL,
+  TOK_READ_HANDLE,
+  TOK_READ_SURFACE,
+} from '../common/ReaderTokens';
 import {
   READER_APPEARANCE_FULL_HEIGHT,
   READER_APPEARANCE_MIN_INTERACTIVE_TRAVEL_VP,
@@ -23,6 +29,20 @@ import {
   type ReaderAppearanceMotionEndpoint,
   type ReaderAppearanceMotionState,
 } from './ReaderAppearanceMotionState';
+import { ReaderAppearanceFullPanel } from './ReaderAppearanceFullPanel';
+import type { ReaderChineseConversionMode } from './ReaderChineseConversionGateway';
+import {
+  createDefaultReaderAppearanceSnapshot,
+  type ReaderAppearanceAlignment,
+  type ReaderAppearanceFont,
+  type ReaderAppearanceFontSlot,
+  type ReaderAppearanceIndent,
+  type ReaderAppearanceMetric,
+  type ReaderAppearanceSnapshot,
+  type ReaderAppearanceStepDirection,
+  type ReaderAppearanceTheme,
+} from './ReaderAppearanceState';
+import type { ReaderPageTurnStyle } from './ReaderSettingsState';
 
 /** Phone-only direct-manipulation appearance stage. Tablet keeps the static path. */
 export const READER_APPEARANCE_MOTION_STAGE_WIDTH = READER_APPEARANCE_STAGE_WIDTH;
@@ -81,11 +101,41 @@ export struct ReaderAppearanceMotionStage {
     READER_APPEARANCE_MOTION_STAGE_HEIGHT;
   @Prop @Watch('onMotionTimeScaleChanged') motionTimeScale: number = 1;
 
+  /** Static business builders; every animated wrapper is owned by this clock. */
+  @BuilderParam brightnessContent: () => void;
+  @BuilderParam moduleNavContent: () => void;
+
+  @Prop snapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
+  @Prop chineseConversionMode: ReaderChineseConversionMode = 'none';
+  @Prop pageTurnStyle: ReaderPageTurnStyle = 'slide';
+  @Prop pageTurnSimulationAvailable: boolean = true;
+  onCollapse: () => void = (): void => {};
+  onThemeChange: (theme: ReaderAppearanceTheme) => void = (_theme: ReaderAppearanceTheme): void => {};
+  onSetDayTheme: (theme: ReaderAppearanceTheme) => void = (_theme: ReaderAppearanceTheme): void => {};
+  onSetNightTheme: (theme: ReaderAppearanceTheme) => void = (_theme: ReaderAppearanceTheme): void => {};
+  onFontChange: (font: ReaderAppearanceFont) => void = (_font: ReaderAppearanceFont): void => {};
+  onFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]) => void =
+    (_fontOrder: ReaderAppearanceFontSlot[]): void => {};
+  onFontReorderActivityChange: (active: boolean) => void = (_active: boolean): void => {};
+  onCustomFontImport: () => void = (): void => {};
+  onIndentRequest: (indent: ReaderAppearanceIndent) => void = (_indent: ReaderAppearanceIndent): void => {};
+  onAlignmentRequest: (current: ReaderAppearanceAlignment) => void =
+    (_current: ReaderAppearanceAlignment): void => {};
+  onMetricStep: (metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection) => void =
+    (_metric: ReaderAppearanceMetric, _direction: ReaderAppearanceStepDirection): void => {};
+  onChineseConversionChange: (mode: ReaderChineseConversionMode) => void =
+    (_mode: ReaderChineseConversionMode): void => {};
+  onPageTurnStyleChange: (style: ReaderPageTurnStyle) => void =
+    (_style: ReaderPageTurnStyle): void => {};
+
   onEndpointChange: (endpoint: ReaderAppearanceMotionEndpoint) => void =
     (_endpoint: ReaderAppearanceMotionEndpoint): void => {};
   onMotionActivityChange: (active: boolean) => void = (_active: boolean): void => {};
   /** Publish the one primitive spatial coordinate to the visual owner. */
   onMasterProgressChange: (progress: number) => void = (_progress: number): void => {};
+
+  /** One primitive progress coordinate is retained across the complete gesture axis. */
+  @State private masterProgress: number = 0;
 
   private motionState: ReaderAppearanceMotionState =
     createReaderAppearanceMotionState('quick');
@@ -122,6 +172,7 @@ export struct ReaderAppearanceMotionStage {
       this.effectiveTimeScale(),
     );
     this.renderFrame = sampleReaderAppearanceMotionState(this.motionState, this.stageHeight());
+    this.masterProgress = this.renderFrame.masterProgress;
     this.onMasterProgressChange(this.renderFrame.masterProgress);
     this.lastReportedEndpoint = endpoint;
     this.lastMotionActive = false;
@@ -139,6 +190,10 @@ export struct ReaderAppearanceMotionStage {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
+      this.shellLayer();
+      this.contentLayer();
+      this.brightnessLayer();
+      this.moduleNavLayer();
       this.grabberLayer();
     }
     .width(this.stageWidth())
@@ -148,6 +203,118 @@ export struct ReaderAppearanceMotionStage {
       this.stageScreenY = Number(newValue.globalPosition.y);
       this.refreshMeasuredAxisForLayout();
     });
+  }
+
+  @Builder
+  private shellLayer() {
+    Stack()
+      .width(this.stageWidth())
+      .height(this.renderFrame.shellHeight)
+      .position({ x: 0, y: this.renderFrame.shellTranslateY })
+      .backgroundColor(TOK_READ_SURFACE)
+      .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+      .borderRadius(TOK_RADIUS_XL)
+      .clip(true)
+      .hitTestBehavior(HitTestMode.None)
+      .zIndex(0);
+  }
+
+  @Builder
+  private contentLayer() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Stack({ alignContent: Alignment.TopStart }) {
+        this.appearancePanel();
+      }
+      .width(this.stageWidth())
+      .height(this.stageHeight())
+      .position({ x: 0, y: -this.renderFrame.shellTranslateY });
+    }
+    .width(this.stageWidth())
+    .height(this.renderFrame.shellHeight)
+    .position({ x: 0, y: this.renderFrame.shellTranslateY })
+    .borderRadius(TOK_RADIUS_XL)
+    .clip(true)
+    .hitTestBehavior(this.contentInteractionEnabled() ? HitTestMode.Default : HitTestMode.None)
+    .zIndex(2);
+  }
+
+  @Builder
+  private appearancePanel() {
+    ReaderAppearanceFullPanel({
+      isTablet: false,
+      availableWidth: this.availableWidth,
+      availableHeight: this.availableHeight,
+      reduceMotion: this.reduceMotion,
+      motionProgress: this.masterProgress,
+      motionEnabled: true,
+      motionFullHeight: this.stageHeight(),
+      interactionEnabled: this.contentInteractionEnabled(),
+      showGrabber: false,
+      snapshot: this.snapshot,
+      chineseConversionMode: this.chineseConversionMode,
+      pageTurnStyle: this.pageTurnStyle,
+      pageTurnSimulationAvailable: this.pageTurnSimulationAvailable,
+      onCollapse: (): void => this.onCollapse(),
+      onThemeChange: (theme: ReaderAppearanceTheme): void => this.onThemeChange(theme),
+      onSetDayTheme: (theme: ReaderAppearanceTheme): void => this.onSetDayTheme(theme),
+      onSetNightTheme: (theme: ReaderAppearanceTheme): void => this.onSetNightTheme(theme),
+      onFontChange: (font: ReaderAppearanceFont): void => this.onFontChange(font),
+      onFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]): void =>
+        this.onFontOrderChange(fontOrder),
+      onFontReorderActivityChange: (active: boolean): void =>
+        this.onFontReorderActivityChange(active),
+      onCustomFontImport: (): void => this.onCustomFontImport(),
+      onIndentRequest: (indent: ReaderAppearanceIndent): void => this.onIndentRequest(indent),
+      onAlignmentRequest: (current: ReaderAppearanceAlignment): void =>
+        this.onAlignmentRequest(current),
+      onMetricStep: (metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection): void =>
+        this.onMetricStep(metric, direction),
+      onChineseConversionChange: (mode: ReaderChineseConversionMode): void =>
+        this.onChineseConversionChange(mode),
+      onPageTurnStyleChange: (style: ReaderPageTurnStyle): void =>
+        this.onPageTurnStyleChange(style),
+    });
+  }
+
+
+  @Builder
+  private brightnessLayer() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      this.brightnessContent();
+    }
+    .width(READER_APPEARANCE_MOTION_BRIGHTNESS_WIDTH)
+    .height(READER_APPEARANCE_MOTION_BRIGHTNESS_HEIGHT)
+    .position({
+      x: READER_APPEARANCE_MOTION_BRIGHTNESS_X,
+      y: this.stageTravel() + 28,
+    })
+    .translate({
+      x: this.renderFrame.brightnessRail.translateX,
+      y: this.renderFrame.brightnessRail.translateY,
+    })
+    .opacity(this.renderFrame.brightnessRail.opacity)
+    .blur(this.renderFrame.brightnessRail.blurVp)
+    .enabled(this.quickInteractionEnabled())
+    .hitTestBehavior(this.quickInteractionEnabled() ? HitTestMode.Default : HitTestMode.None)
+    .zIndex(3);
+  }
+
+  @Builder
+  private moduleNavLayer() {
+    Stack({ alignContent: Alignment.Bottom }) {
+      this.moduleNavContent();
+    }
+    .width(this.stageWidth())
+    .height(this.stageHeight())
+    .translate({
+      x: this.renderFrame.moduleNav.translateX,
+      y: this.renderFrame.moduleNav.translateY,
+    })
+    .opacity(this.renderFrame.moduleNav.opacity)
+    .blur(this.renderFrame.moduleNav.blurVp)
+    .enabled(this.quickInteractionEnabled())
+    .hitTestBehavior(this.quickInteractionEnabled() ? HitTestMode.Default : HitTestMode.None)
+    .zIndex(3);
   }
 
   @Builder
@@ -389,8 +556,17 @@ export struct ReaderAppearanceMotionStage {
 
   private publishFrame(): void {
     this.renderFrame = sampleReaderAppearanceMotionState(this.motionState, this.stageHeight());
+    this.masterProgress = this.renderFrame.masterProgress;
     this.onMasterProgressChange(this.renderFrame.masterProgress);
     this.publishMotionActivity(this.motionActive());
+  }
+
+  private contentInteractionEnabled(): boolean {
+    return this.visible && this.interactionEnabled && !this.motionActive();
+  }
+
+  private quickInteractionEnabled(): boolean {
+    return this.contentInteractionEnabled() && !this.expanded;
   }
 
   private publishMotionActivity(active: boolean): void {

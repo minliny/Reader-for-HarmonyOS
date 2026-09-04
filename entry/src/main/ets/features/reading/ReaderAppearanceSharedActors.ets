@@ -53,6 +53,7 @@ interface ReaderAppearanceActorPosition {
  */
 @Component
 export struct ReaderAppearanceSharedActors {
+  /** Same primitive progress coordinate as the surface and gesture owner. */
   @Prop motionProgress: number = 0;
   @Prop fullHeight: number = READER_APPEARANCE_FULL_HEIGHT;
   @Prop @Watch('onInteractionEnabledChanged') interactionEnabled: boolean = true;
@@ -109,7 +110,6 @@ export struct ReaderAppearanceSharedActors {
     }
     .width(this.currentFrame().quickMorph.width)
     .height(READER_APPEARANCE_CONTENT_HEIGHT)
-    .enabled(this.interactionEnabled)
     .hitTestBehavior(HitTestMode.Transparent);
   }
 
