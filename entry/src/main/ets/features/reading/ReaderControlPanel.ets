@@ -684,15 +684,22 @@ export struct ReaderControlPanel {
 
   private onLayoutChanged(): void {
     const nextExpanded = this.isExpanded();
-    if (this.expandedLayout === nextExpanded) {
-      return;
+    const widthClassChanged = this.expandedLayout !== nextExpanded;
+    if (widthClassChanged) {
+      this.expandedLayout = nextExpanded;
+      this.geo = new ReaderControlGeometry(nextExpanded);
     }
-    this.expandedLayout = nextExpanded;
-    this.geo = new ReaderControlGeometry(nextExpanded);
     if (nextExpanded) {
       this.appearanceMotionStageMounted = false;
+    } else if (!this.appearanceMotionStageMounted && this.appearanceMotionStageCanMount()) {
+      // Props can arrive after aboutToAppear on a freshly reconstructed host.
+      // Re-evaluate the full geometry guard even when the width class itself
+      // stayed compact, otherwise Full falls back to the legacy static tree.
+      this.appearanceMotionStageMounted = true;
     }
-    this.onActivePageChanged();
+    if (widthClassChanged) {
+      this.onActivePageChanged();
+    }
   }
 
   private isExpanded(): boolean {

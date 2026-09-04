@@ -60,6 +60,9 @@ assert.match(methodBody(control, 'usesPhoneAppearanceMotionStage()',
 assert.match(methodBody(control, 'onActivePageChanged()', 'geo:'),
   /if \(!this\.appearanceMotionStageMounted && this\.appearanceMotionStageCanMount\(\)\)/,
   'the actor registry may mount on Appearance entry but must survive its endpoint route');
+assert.match(methodBody(control, 'onLayoutChanged()', 'isExpanded()'),
+  /else if \(!this\.appearanceMotionStageMounted && this\.appearanceMotionStageCanMount\(\)\)/,
+  'late compact layout props must mount the registry even without a width-class change');
 assert.match(phoneContent, /motionProgress: this\.appearanceMotionMasterProgress/,
   'the FullPanel boundary must receive observable primitive p');
 assert.match(phoneContent, /motionFullHeight: this\.appearanceMotionStageHeight\(\)/,
