@@ -82,14 +82,16 @@ assert.match(control,
   /return !this\.isExpanded\(\) &&\s*readerAppearanceMotionStageSupported\(\s*this\.fullPanelAvailableWidth\(\),\s*this\.layout\.fullPanelHeight,\s*\) &&\s*\(this\.activePage === 'moduleAppearance' \|\| this\.activePage === 'fullAppearance'\)/,
   'both Appearance endpoints must preserve one Phone stage where the authored fixed coordinate space fits');
 assert.match(control,
-  /import \{ readerAppearanceMotionStageSupported \} from '\.\/ReaderAppearanceMotionGeometry'/,
+  /import \{[\s\S]*?readerAppearanceMotionStageSupported,[\s\S]*?\} from '\.\/ReaderAppearanceMotionGeometry'/,
   'unsupported narrow or zero-travel windows must fall back instead of clipping fixed N evidence');
 assert.match(control,
   /ReaderAppearanceMotionStage\(\{[\s\S]*?expanded: this\.activePage === 'fullAppearance'[\s\S]*?onEndpointChange:/,
   'route state may follow only the motion stage stable endpoint callback');
 assert.match(control,
-  /motionFrame: context\.frame/,
-  'the persistent FullPanel must keep legacy TransitionEffects disabled for both N and O');
+  /motionFrame: this\.currentAppearanceMotionFrame\(\)/,
+  'the persistent FullPanel must resample from the observable parent progress for both directions');
+assert.doesNotMatch(control, /motionFrame: context\.frame/,
+  'a BuilderParam frame snapshot must not freeze the FullPanel children');
 assert.match(control, /showGrabber: false/,
   'the persistent appearance stage must own the only visible and interactive grabber');
 assert.match(control, /return this\.usesPhoneAppearanceMotionStage\(\) \|\|/,

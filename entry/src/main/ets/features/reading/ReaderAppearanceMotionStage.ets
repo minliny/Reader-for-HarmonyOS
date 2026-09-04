@@ -55,7 +55,6 @@ const READER_APPEARANCE_BRIGHTNESS_WIDTH = 38;
 const READER_APPEARANCE_BRIGHTNESS_HEIGHT = 190;
 
 export interface ReaderAppearanceMotionSlotContext {
-  frame: ReaderAppearanceMotionFrame;
   interactionEnabled: boolean;
   requestCollapse: () => void;
 }
@@ -98,6 +97,13 @@ export struct ReaderAppearanceMotionStage {
   onEndpointChange: (endpoint: ReaderAppearanceMotionEndpoint) => void =
     (_endpoint: ReaderAppearanceMotionEndpoint): void => {};
   onMotionActivityChange: (active: boolean) => void = (_active: boolean): void => {};
+  /**
+   * Publish the one primitive spatial coordinate to the slot owner. ArkUI does
+   * not reliably invalidate a parent-owned @Builder subtree when a nested
+   * frame object is passed through @BuilderParam, so the owner resamples its
+   * actor frame directly from this observable progress value.
+   */
+  onMasterProgressChange: (progress: number) => void = (_progress: number): void => {};
 
   @BuilderParam appearanceContent: (context: ReaderAppearanceMotionSlotContext) => void;
   @BuilderParam brightnessRail: (context: ReaderAppearanceMotionSlotContext) => void;
@@ -138,6 +144,7 @@ export struct ReaderAppearanceMotionStage {
       this.effectiveTimeScale(),
     );
     this.renderFrame = sampleReaderAppearanceMotionState(this.motionState, this.stageHeight());
+    this.onMasterProgressChange(this.renderFrame.masterProgress);
     this.lastReportedEndpoint = endpoint;
     this.lastMotionActive = false;
   }
@@ -185,7 +192,6 @@ export struct ReaderAppearanceMotionStage {
     Stack({ alignContent: Alignment.TopStart }) {
       Stack({ alignContent: Alignment.TopStart }) {
         this.appearanceContent({
-          frame: this.renderFrame,
           interactionEnabled: this.contentInteractionEnabled(),
           requestCollapse: (): void => this.requestCollapse(),
         });
@@ -211,7 +217,6 @@ export struct ReaderAppearanceMotionStage {
   private brightnessLayer() {
     Stack({ alignContent: Alignment.TopStart }) {
       this.brightnessRail({
-        frame: this.renderFrame,
         interactionEnabled: this.quickInteractionEnabled(),
         requestCollapse: (): void => this.requestCollapse(),
       });
@@ -237,7 +242,6 @@ export struct ReaderAppearanceMotionStage {
   private moduleNavLayer() {
     Stack({ alignContent: Alignment.Bottom }) {
       this.moduleNav({
-        frame: this.renderFrame,
         interactionEnabled: this.quickInteractionEnabled(),
         requestCollapse: (): void => this.requestCollapse(),
       });
@@ -494,6 +498,7 @@ export struct ReaderAppearanceMotionStage {
 
   private publishFrame(): void {
     this.renderFrame = sampleReaderAppearanceMotionState(this.motionState, this.stageHeight());
+    this.onMasterProgressChange(this.renderFrame.masterProgress);
     this.publishMotionActivity(this.motionActive());
   }
 
@@ -601,7 +606,7 @@ export struct ReaderAppearanceMotionStage {
       this.reduceMotion,
       this.effectiveTimeScale(),
     );
-    this.renderFrame = sampleReaderAppearanceMotionState(this.motionState, this.stageHeight());
+    this.publishFrame();
     this.lastReportedEndpoint = endpoint;
   }
 
@@ -613,10 +618,9 @@ export struct ReaderAppearanceMotionStage {
     // route endpoint or replace the persistent content tree. Re-anchor an
     // active pointer segment to the new measured axis so its next MOVE cannot
     // jump merely because the window changed size.
-    this.renderFrame = sampleReaderAppearanceMotionState(this.motionState, this.stageHeight());
+    this.publishFrame();
     this.refreshMeasuredAxisForLayout();
     this.resetFrameClock();
-    this.publishFrame();
     this.scheduleNextFrame();
   }
 

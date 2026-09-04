@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs';
 
 import {
   READER_APPEARANCE_FINAL_N2_PUBLISHED,
-  READER_APPEARANCE_LEGACY_ACTOR_TRACKS,
-  READER_APPEARANCE_LEGACY_SHARED_GEOMETRY_END_PROGRESS,
+  READER_APPEARANCE_ACTOR_TRACKS,
+  READER_APPEARANCE_SHARED_GEOMETRY_END_PROGRESS,
   READER_APPEARANCE_QUICK_HEIGHT,
   readerAppearanceFigmaFramePercent,
   readerAppearanceGrabberScreenYFromMasterProgress,
@@ -99,7 +99,7 @@ for (const fullHeight of [620, 736, 900]) {
   }
 }
 
-// Bottom-anchored source positions move with runtime height; full/held target
+// Bottom-anchored source positions move with runtime height; Full target
 // positions stay in full-panel design coordinates.
 const referenceQuick = sampleReaderAppearanceMasterProgress(0, 736);
 const tallQuick = sampleReaderAppearanceMasterProgress(0, 900);
@@ -115,26 +115,24 @@ close(readerAppearanceMotionViewportHeight(shortFull), 443,
 close(tallQuick.quickMorph.y - referenceQuick.quickMorph.y, 164,
   'QuickMorph source y follows runtime bottom edge');
 const legacyEnd = fixtureMasterProgress(fixtureTrack('quickMorph', 'height').activeReviewMs[1]);
-close(READER_APPEARANCE_LEGACY_SHARED_GEOMETRY_END_PROGRESS, legacyEnd,
-  'runtime legacy boundary comes from fixture evidence');
+close(READER_APPEARANCE_SHARED_GEOMETRY_END_PROGRESS, 1,
+  'shared spatial tracks must use the complete grabber axis');
 close(
-  sampleReaderAppearanceMasterProgress(legacyEnd, 900).quickMorph.y,
-  sampleReaderAppearanceMasterProgress(legacyEnd, 736).quickMorph.y,
-  'QuickMorph evidenced target y is not runtime-offset',
+  sampleReaderAppearanceMasterProgress(1, 900).quickMorph.y,
+  sampleReaderAppearanceMasterProgress(1, 736).quickMorph.y,
+  'QuickMorph Full target y is not runtime-offset',
 );
 
-// Each actor/property owns local timing. QuickMorph geometry ends at 10/23;
-// brightness starts there. No global easing or invented .4348 -> 1 geometry.
-const quickTracks = READER_APPEARANCE_LEGACY_ACTOR_TRACKS
+// Every shared spatial actor consumes the full p=0..1 axis. Fixed chrome and
+// Full-only actors retain their own independently sampled reveal/fade windows.
+const quickTracks = READER_APPEARANCE_ACTOR_TRACKS
   .find((actor) => actor.id === 'QuickMorph');
-const brightnessTracks = READER_APPEARANCE_LEGACY_ACTOR_TRACKS
+const brightnessTracks = READER_APPEARANCE_ACTOR_TRACKS
   .find((actor) => actor.id === 'BrightnessRail');
 const rawQuickWidth = fixtureTrack('quickMorph', 'width');
 const rawBrightnessOpacity = fixtureTrack('brightnessRail', 'opacity');
-close(quickTracks.width.startMasterProgress,
-  fixtureMasterProgress(rawQuickWidth.activeReviewMs[0]), 'QuickMorph fixture start');
-close(quickTracks.width.endMasterProgress,
-  fixtureMasterProgress(rawQuickWidth.activeReviewMs[1]), 'QuickMorph fixture end');
+close(quickTracks.width.startMasterProgress, 0, 'QuickMorph starts with grabber');
+close(quickTracks.width.endMasterProgress, 1, 'QuickMorph reaches target only at Full');
 close(quickTracks.width.from, rawQuickWidth.from, 'QuickMorph fixture from');
 close(quickTracks.width.to, rawQuickWidth.to, 'QuickMorph fixture to');
 assert.equal(quickTracks.width.easing, rawQuickWidth.easing);
@@ -155,13 +153,19 @@ const atLegacyEnd = sampleReaderAppearanceMasterProgress(legacyEnd);
 const afterLegacyEnd = sampleReaderAppearanceMasterProgress(0.75);
 const full = sampleReaderAppearanceMasterProgress(1);
 for (const field of ['x', 'y', 'width', 'height']) {
-  close(afterLegacyEnd.quickMorph[field], atLegacyEnd.quickMorph[field],
-    `QuickMorph ${field} held after legacy evidence`);
-  close(full.quickMorph[field], atLegacyEnd.quickMorph[field],
-    `QuickMorph ${field} not extrapolated to p=1`);
+  assert.notEqual(afterLegacyEnd.quickMorph[field], atLegacyEnd.quickMorph[field],
+    `QuickMorph ${field} froze before Full`);
 }
-close(atLegacyEnd.quickMorph.trackProgress, 1, 'QuickMorph local track ends at 10/23');
-close(afterLegacyEnd.quickMorph.trackProgress, 1, 'QuickMorph local track stays held');
+assert.ok(atLegacyEnd.quickMorph.trackProgress > 0 && atLegacyEnd.quickMorph.trackProgress < 1,
+  'QuickMorph must still be moving at the old 10/23 cutoff');
+assert.ok(afterLegacyEnd.quickMorph.trackProgress > atLegacyEnd.quickMorph.trackProgress &&
+  afterLegacyEnd.quickMorph.trackProgress < 1,
+  'QuickMorph must keep moving through p=.75');
+close(full.quickMorph.trackProgress, 1, 'QuickMorph reaches its endpoint at Full');
+close(full.quickMorph.x, 13, 'QuickMorph Full x');
+close(full.quickMorph.y, 57, 'QuickMorph Full y');
+close(full.quickMorph.width, 338, 'QuickMorph Full width');
+close(full.quickMorph.height, 666, 'QuickMorph Full height');
 close(full.quickMorph.opacity, 1, 'persistent surface cannot use legacy root fade');
 close(full.quickMorph.blurVp, 0, 'persistent surface cannot root blur');
 assert.equal(Object.hasOwn(full, 'contentSurface'), false,
@@ -173,7 +177,20 @@ assert.equal(Object.hasOwn(full, 'themeLibrary'), false,
 assert.equal(Object.hasOwn(full, 'fontLibrary'), false,
   'unused FontLibrary alias leaked into the runtime frame');
 assert.ok(afterLegacyEnd.brightnessRail.opacity < 1,
-  'brightness must independently fade after shared geometry finishes');
+  'brightness must independently fade while shared geometry continues');
+
+// Components do not move as one rigid block. Their own endpoint deltas produce
+// visibly different displacement and deformation at the same master p.
+const half = sampleReaderAppearanceMasterProgress(0.5);
+assert.notEqual(half.themeItems[0].x - referenceQuick.themeItems[0].x,
+  half.themeItems[3].x - referenceQuick.themeItems[3].x,
+  'theme cards must separate horizontally along their own paths');
+assert.ok(half.themeItems[0].height > referenceQuick.themeItems[0].height &&
+  half.themeItems[0].height < full.themeItems[0].height,
+  'theme card deformation must remain in flight at p=.5');
+assert.ok(half.fontItems[7].x > referenceQuick.fontItems[7].x &&
+  half.fontItems[7].x < full.fontItems[7].x,
+  'font cards must independently spread until Full');
 
 // Sampling history and direction cannot alter a frame at the same p.
 for (const p of [0, 0.25, 0.5, 0.75, 1]) {

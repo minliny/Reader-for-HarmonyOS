@@ -20,7 +20,13 @@ import {
   ReaderAppearanceMotionStage,
   type ReaderAppearanceMotionSlotContext,
 } from './ReaderAppearanceMotionStage';
-import { readerAppearanceMotionStageSupported } from './ReaderAppearanceMotionGeometry';
+import {
+  READER_APPEARANCE_FULL_HEIGHT,
+  READER_APPEARANCE_QUICK_HEIGHT,
+  readerAppearanceMotionStageSupported,
+  sampleReaderAppearanceMasterProgress,
+  type ReaderAppearanceMotionFrame,
+} from './ReaderAppearanceMotionGeometry';
 import type { ReaderAppearanceMotionEndpoint } from './ReaderAppearanceMotionState';
 import {
   createDefaultReaderAppearanceSnapshot,
@@ -337,6 +343,7 @@ export struct ReaderControlPanel {
   @State private autoPageActorTransitioning: boolean = false;
   @State private controlGrabberDragY: number = 0;
   @State private appearanceMotionActive: boolean = false;
+  @State private appearanceMotionMasterProgress: number = 0;
   @State private appearanceFontReorderActive: boolean = false;
   private autoPageActorGeneration: number = 0;
   private autoPageActorHoldTimer: number = -1;
@@ -872,6 +879,8 @@ export struct ReaderControlPanel {
         this.onAppearanceMotionEndpointChange(endpoint),
       onMotionActivityChange: (active: boolean): void =>
         this.setAppearanceMotionActivity(active),
+      onMasterProgressChange: (progress: number): void =>
+        this.setAppearanceMotionMasterProgress(progress),
       appearanceContent: (context: ReaderAppearanceMotionSlotContext): void => {
         this.appearanceMotionContent(context);
       },
@@ -891,9 +900,10 @@ export struct ReaderControlPanel {
       availableWidth: this.fullPanelAvailableWidth(),
       availableHeight: this.layout.fullPanelHeight,
       reduceMotion: this.reduceMotion,
-      // One frame supplies every actor track in both directions; a defined
-      // frame also keeps legacy mount/unmount transitions out of this tree.
-      motionFrame: context.frame,
+      // Sample inside the parent-owned Builder from an observable primitive.
+      // Passing Stage.renderFrame through BuilderParam leaves this subtree at
+      // its first frame on ArkUI even while the outer shell keeps moving.
+      motionFrame: this.currentAppearanceMotionFrame(),
       interactionEnabled: context.interactionEnabled,
       showGrabber: false,
       snapshot: this.appearanceSnapshot,
@@ -945,6 +955,31 @@ export struct ReaderControlPanel {
     }
     this.appearanceMotionActive = active;
     this.onAppearanceMotionActivityChange(active);
+  }
+
+  private setAppearanceMotionMasterProgress(progress: number): void {
+    const next = Number.isFinite(progress) ? Math.max(0, Math.min(1, progress)) : 0;
+    if (Math.abs(this.appearanceMotionMasterProgress - next) <= Number.EPSILON) {
+      return;
+    }
+    this.appearanceMotionMasterProgress = next;
+  }
+
+  private currentAppearanceMotionFrame(): ReaderAppearanceMotionFrame {
+    return sampleReaderAppearanceMasterProgress(
+      this.appearanceMotionMasterProgress,
+      this.appearanceMotionStageHeight(),
+    );
+  }
+
+  private appearanceMotionStageHeight(): number {
+    if (!Number.isFinite(this.layout.fullPanelHeight) || this.layout.fullPanelHeight <= 0) {
+      return READER_APPEARANCE_FULL_HEIGHT;
+    }
+    return Math.max(
+      READER_APPEARANCE_QUICK_HEIGHT,
+      Math.min(READER_APPEARANCE_FULL_HEIGHT, this.layout.fullPanelHeight),
+    );
   }
 
   private setAppearanceFontReorderActivity(active: boolean): void {

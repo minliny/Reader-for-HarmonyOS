@@ -24,6 +24,14 @@ assert.doesNotMatch(stage, /fullMorphStageLayer|quickDockLayer|quickMorphStageLa
 assert.doesNotMatch(stage, /motionState\.profile/,
   'presentation must never branch on expand/collapse direction');
 assert.match(stage, /@Prop(?: @Watch\('[^']+'\))? availableHeight: number/);
+assert.doesNotMatch(stage, /frame: ReaderAppearanceMotionFrame;/,
+  'a dynamic frame object must not cross the BuilderParam slot boundary');
+assert.match(stage,
+  /onMasterProgressChange: \(progress: number\) => void/,
+  'Stage must publish the primitive master progress to the slot owner');
+assert.match(methodBody(stage, 'publishFrame()', 'publishMotionActivity('),
+  /onMasterProgressChange\(this\.renderFrame\.masterProgress\)/,
+  'every rendered Stage frame must invalidate the owner with the same p');
 
 const brightnessLayer = methodBody(stage, 'brightnessLayer()', 'moduleNavLayer()');
 for (const property of ['opacity', 'translateX', 'translateY', 'blurVp']) {
@@ -40,6 +48,12 @@ assert.doesNotMatch(modulePanel, /motionFrame|ReaderAppearanceSharedActors|motio
 const phoneContent = methodBody(control, 'appearanceMotionContent(', 'appearanceMotionBrightness(');
 assert.equal((phoneContent.match(/ReaderAppearanceFullPanel\(\{/g) ?? []).length, 1);
 assert.doesNotMatch(phoneContent, /ReaderAppearanceModulePanel/);
+assert.match(control, /@State private appearanceMotionMasterProgress: number/,
+  'the parent must own an observable primitive progress');
+assert.match(phoneContent, /motionFrame: this\.currentAppearanceMotionFrame\(\)/,
+  'the parent Builder must resample actor tracks from its observable p');
+assert.doesNotMatch(control, /motionFrame: context\.frame/,
+  'the stale BuilderParam frame regression returned');
 
 for (const callback of [
   'onThemeChange',

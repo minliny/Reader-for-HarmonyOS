@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import {
   READER_APPEARANCE_FIXED_SCREEN_ACTOR_IDS,
   READER_APPEARANCE_FULL_ONLY_ACTOR_IDS,
-  READER_APPEARANCE_LEGACY_ACTOR_TRACKS,
+  READER_APPEARANCE_ACTOR_TRACKS,
   READER_APPEARANCE_SHARED_ACTOR_IDS,
   sampleReaderAppearanceMasterProgress,
 } from '../entry/src/main/ets/features/reading/ReaderAppearanceMotionGeometry.ts';
@@ -17,7 +17,7 @@ const legacyN = fixture.legacyEvidence.N;
 const disposition = fixture.runtimeContract.legacyNTrackDisposition;
 const rawActors = new Map(legacyN.actors.map((actor) => [actor.id, actor]));
 const runtimeTracks = new Map(
-  READER_APPEARANCE_LEGACY_ACTOR_TRACKS.map((actor) => [actor.id, actor]),
+  READER_APPEARANCE_ACTOR_TRACKS.map((actor) => [actor.id, actor]),
 );
 
 function clamp01(value) {
@@ -92,6 +92,18 @@ function expectedNumberTrack(raw) {
   };
 }
 
+function expectedMappedTrack(raw, mappingAuthority) {
+  const mapped = expectedNumberTrack(raw);
+  if (mappingAuthority !== 'product-direct-manipulation') {
+    return mapped;
+  }
+  return {
+    ...mapped,
+    startMasterProgress: 0,
+    endMasterProgress: 1,
+  };
+}
+
 function compareNumberTrack(actual, expectedTrack, label) {
   close(actual.startMasterProgress, expectedTrack.startMasterProgress, `${label}.start`);
   close(actual.endMasterProgress, expectedTrack.endMasterProgress, `${label}.end`);
@@ -158,7 +170,7 @@ assert.deepEqual(READER_APPEARANCE_SHARED_ACTOR_IDS,
 assert.deepEqual(READER_APPEARANCE_FULL_ONLY_ACTOR_IDS,
   fixture.runtimeContract.actorGroups.fullOnly);
 assert.deepEqual(
-  new Set(READER_APPEARANCE_LEGACY_ACTOR_TRACKS.map((actor) => actor.id)),
+  new Set(READER_APPEARANCE_ACTOR_TRACKS.map((actor) => actor.id)),
   new Set(expectedIds),
   'every runtime actor must own one independent track set',
 );
@@ -174,8 +186,15 @@ for (const mapping of disposition.mapped) {
     assert.equal(productionActor.authority, 'product-mapping-alias',
       `${mapping.runtimeActorId} must not claim direct Figma actor authority`);
   }
+  if (mapping.mappingAuthority === 'product-direct-manipulation') {
+    assert.equal(productionActor.authority, 'product-direct-manipulation',
+      `${mapping.runtimeActorId} must declare the user-corrected spatial authority`);
+  }
   for (const [sourceProperty, runtimeProperty] of Object.entries(mapping.direct ?? {})) {
-    const expectedTrack = expectedNumberTrack(rawTrack(mapping.sourceActorId, sourceProperty));
+    const expectedTrack = expectedMappedTrack(
+      rawTrack(mapping.sourceActorId, sourceProperty),
+      mapping.mappingAuthority,
+    );
     compareNumberTrack(productionActor[runtimeProperty], expectedTrack,
       `${mapping.sourceActorId}.${sourceProperty}->${mapping.runtimeActorId}.${runtimeProperty}`);
     for (const [p, sample] of samples) {
@@ -189,7 +208,10 @@ for (const mapping of disposition.mapped) {
   for (const [sourceProperty, runtimeProperties] of Object.entries(mapping.composed ?? {})) {
     assert.deepEqual(runtimeProperties, ['x', 'y']);
     const raw = rawTrack(mapping.sourceActorId, sourceProperty);
-    const expectedWindow = expectedNumberTrack({ ...raw, from: 0, to: 1 });
+    const expectedWindow = expectedMappedTrack(
+      { ...raw, from: 0, to: 1 },
+      mapping.mappingAuthority,
+    );
     const endpoints = composedPositionEndpoints(mapping.sourceActorId);
     for (const runtimeProperty of runtimeProperties) {
       const expectedTrack = {
@@ -218,11 +240,40 @@ close(quarter.brightnessRail.trackProgress, 0, 'brightness starts on its own lat
 close(quarter.themeActions.trackProgress, 0, 'theme actions use their own later track');
 
 const half = sampleReaderAppearanceMasterProgress(0.5);
-close(half.quickMorph.trackProgress, 1, 'legacy QuickMorph geometry has ended');
+assert.ok(half.quickMorph.trackProgress > 0 && half.quickMorph.trackProgress < 1,
+  'QuickMorph geometry must remain in flight at half grabber travel');
 assert.ok(half.brightnessRail.trackProgress > 0 && half.brightnessRail.trackProgress < 1);
 assert.ok(half.themeActions.trackProgress > 0 && half.themeActions.trackProgress < 1);
 assert.notEqual(half.brightnessRail.trackProgress, half.themeActions.trackProgress,
   'independent tracks collapsed into one global progress');
+
+// The approved product contract covers every shared actor, including font
+// cells whose Full endpoints come from the audited static design.
+const productSharedActors = fixture.productDirectManipulationContract.sharedActors;
+assert.deepEqual(
+  new Set(productSharedActors.map((actor) => actor.id)),
+  new Set(READER_APPEARANCE_SHARED_ACTOR_IDS),
+  'approved product contract must cover every shared actor',
+);
+for (const actorContract of productSharedActors) {
+  const runtimeActor = runtimeTracks.get(actorContract.id);
+  assert.ok(runtimeActor, `approved runtime actor missing: ${actorContract.id}`);
+  if (actorContract.id === 'MorphStage') {
+    assert.equal(runtimeActor.authority, 'interaction-axis');
+  } else {
+    assert.equal(runtimeActor.authority, 'product-direct-manipulation');
+  }
+  for (const property of ['x', 'y', 'width', 'height']) {
+    close(runtimeActor[property].startMasterProgress, 0,
+      `${actorContract.id}.${property} full-axis start`);
+    close(runtimeActor[property].endMasterProgress, 1,
+      `${actorContract.id}.${property} full-axis end`);
+    close(runtimeActor[property].from, actorContract.sourceRectVp[property],
+      `${actorContract.id}.${property} source endpoint`);
+    close(runtimeActor[property].to, actorContract.targetRectVp[property],
+      `${actorContract.id}.${property} target endpoint`);
+  }
+}
 
 // Runtime keeps one persistent surface even though the immutable legacy
 // fixture contains a raw QuickMorph/root opacity track.

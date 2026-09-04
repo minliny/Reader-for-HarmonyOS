@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 3,
-  "contractId": "reader.appearance.phone.master-axis.n2-pending",
+  "schemaVersion": 4,
+  "contractId": "reader.appearance.phone.master-axis.direct-manipulation",
   "scope": {
     "platform": "HarmonyOS",
     "viewport": "Phone",
@@ -60,7 +60,7 @@
     "shellAndGrabberLinear": true
   },
   "runtimeContract": {
-    "authority": "interaction-architecture-only",
+    "authority": "user-approved-product-direct-manipulation",
     "notFinalFigmaParity": true,
     "singleMasterProgress": true,
     "singlePersistentTree": true,
@@ -85,11 +85,12 @@
         "notDirectFigmaActor": true
       }
     ],
-    "legacyFallback": {
-      "authority": "legacy-evidence-only",
-      "sharedGeometryEndMasterProgress": 0.43478260869565216,
-      "behaviorAfterEnd": "hold-last-evidenced-value",
-      "mayExtrapolateToOne": false
+    "directManipulation": {
+      "authority": "user-approved-product-correction",
+      "sharedGeometryMasterProgress": [0, 1],
+      "behavior": "move-and-deform-until-fully-expanded",
+      "samplesEachActorFromSameMasterProgress": true,
+      "notAuthoredByFinalFigmaN2": true
     },
     "actorGroups": {
       "fixedScreen": ["BrightnessRail", "ModuleNav"],
@@ -160,84 +161,84 @@
         {
           "sourceActorId": "quickMorph",
           "runtimeActorId": "QuickMorph",
-          "mappingAuthority": "product-composed-legacy-fallback",
+          "mappingAuthority": "product-direct-manipulation",
           "direct": { "height": "height", "width": "width" },
           "composed": { "translate": ["x", "y"] }
         },
         {
           "sourceActorId": "themeHeader",
           "runtimeActorId": "ThemeHeader",
-          "mappingAuthority": "product-composed-legacy-fallback",
+          "mappingAuthority": "product-direct-manipulation",
           "direct": { "height": "height", "width": "width" },
           "composed": { "translate": ["x", "y"] }
         },
         {
           "sourceActorId": "themeDay",
           "runtimeActorId": "ThemeDay",
-          "mappingAuthority": "product-composed-legacy-fallback",
+          "mappingAuthority": "product-direct-manipulation",
           "direct": { "height": "height", "width": "width" },
           "composed": { "translate": ["x", "y"] }
         },
         {
           "sourceActorId": "themeWarm",
           "runtimeActorId": "ThemeWarm",
-          "mappingAuthority": "product-composed-legacy-fallback",
+          "mappingAuthority": "product-direct-manipulation",
           "direct": { "height": "height", "width": "width" },
           "composed": { "translate": ["x", "y"] }
         },
         {
           "sourceActorId": "themeNight",
           "runtimeActorId": "ThemeNight",
-          "mappingAuthority": "product-composed-legacy-fallback",
+          "mappingAuthority": "product-direct-manipulation",
           "direct": { "height": "height", "width": "width" },
           "composed": { "translate": ["x", "y"] }
         },
         {
           "sourceActorId": "themeWarmNight",
           "runtimeActorId": "ThemeWarmNight",
-          "mappingAuthority": "product-composed-legacy-fallback",
+          "mappingAuthority": "product-direct-manipulation",
           "direct": { "height": "height", "width": "width" },
           "composed": { "translate": ["x", "y"] }
         },
         {
           "sourceActorId": "themePaperActive",
           "runtimeActorId": "ThemePaper",
-          "mappingAuthority": "product-composed-legacy-fallback",
+          "mappingAuthority": "product-direct-manipulation",
           "direct": { "height": "height", "width": "width" },
           "composed": { "translate": ["x", "y"] }
         },
         {
           "sourceActorId": "themeGreen",
           "runtimeActorId": "ThemeGreen",
-          "mappingAuthority": "product-composed-legacy-fallback",
+          "mappingAuthority": "product-direct-manipulation",
           "direct": { "height": "height", "width": "width" },
           "composed": { "translate": ["x", "y"] }
         },
         {
           "sourceActorId": "themePaperNight",
           "runtimeActorId": "ThemePaperNight",
-          "mappingAuthority": "product-composed-legacy-fallback",
+          "mappingAuthority": "product-direct-manipulation",
           "direct": { "height": "height", "width": "width" },
           "composed": { "translate": ["x", "y"] }
         },
         {
           "sourceActorId": "themeGreenNight",
           "runtimeActorId": "ThemeGreenNight",
-          "mappingAuthority": "product-composed-legacy-fallback",
+          "mappingAuthority": "product-direct-manipulation",
           "direct": { "height": "height", "width": "width" },
           "composed": { "translate": ["x", "y"] }
         },
         {
           "sourceActorId": "sectionDivider",
           "runtimeActorId": "QuickDivider",
-          "mappingAuthority": "product-composed-legacy-fallback",
+          "mappingAuthority": "product-direct-manipulation",
           "direct": { "width": "width" },
           "composed": { "translate": ["x", "y"] }
         },
         {
           "sourceActorId": "fontHeader",
           "runtimeActorId": "FontHeader",
-          "mappingAuthority": "product-composed-legacy-fallback",
+          "mappingAuthority": "product-direct-manipulation",
           "direct": { "height": "height", "width": "width" },
           "composed": { "translate": ["x", "y"] }
         }
@@ -348,12 +349,12 @@
       "sizeVp": [62.5, 27]
     }
   },
-  "legacyRejectedImplementationContract": {
-    "status": "rejected",
-    "authority": "reader-motion-v2-correction",
+  "productDirectManipulationContract": {
+    "status": "approved",
+    "authority": "user-corrected-motion-model",
     "notAuthoredByFigma": true,
-    "reason": "Figma N stops shared geometry at 183ms and Figma O crossfades roots; Motion V2 preserves the audited endpoints while extending one reversible shared geometry function across physical expansion 0..1.",
-    "spatialDriver": "physicalExpansionProgress",
+    "reason": "The grabber displacement percentage is the complete motion-axis progress. Every shared component independently samples that same percentage and keeps moving and deforming until Full.",
+    "spatialDriver": "measuredGrabberDisplacementProgress",
     "sampleExpansionProgress": [0.25, 0.5, 0.75],
     "singlePersistentTree": true,
     "reverseUsesSameSpatialFunction": true,

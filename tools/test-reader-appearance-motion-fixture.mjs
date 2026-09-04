@@ -6,8 +6,8 @@ const fixture = JSON.parse(readFileSync(
   'utf8',
 ));
 
-assert.equal(fixture.schemaVersion, 3);
-assert.equal(fixture.contractId, 'reader.appearance.phone.master-axis.n2-pending');
+assert.equal(fixture.schemaVersion, 4);
+assert.equal(fixture.contractId, 'reader.appearance.phone.master-axis.direct-manipulation');
 assert.equal(fixture.source.fileKey, 'klhs2jMM4MncaJFqZMfqEK');
 assert.equal(fixture.source.profiles.N.nodeId, '1505:18040');
 assert.equal(fixture.source.profiles.O.nodeId, '1505:18349');
@@ -43,7 +43,7 @@ assert.equal(fixture.masterAxis.globalEasing, false);
 assert.equal(fixture.masterAxis.shellAndGrabberLinear, true);
 
 const runtime = fixture.runtimeContract;
-assert.equal(runtime.authority, 'interaction-architecture-only');
+assert.equal(runtime.authority, 'user-approved-product-direct-manipulation');
 assert.equal(runtime.notFinalFigmaParity, true);
 assert.equal(runtime.singleMasterProgress, true);
 assert.equal(runtime.singlePersistentTree, true);
@@ -71,11 +71,12 @@ assert.deepEqual(runtime.runtimeFrameAliases, [
 ]);
 assert.deepEqual(runtime.actorGroups.fullOnly,
   ['Header', 'ThemeActions', 'FontImport', 'Typography']);
-assert.deepEqual(runtime.legacyFallback, {
-  authority: 'legacy-evidence-only',
-  sharedGeometryEndMasterProgress: 10 / 23,
-  behaviorAfterEnd: 'hold-last-evidenced-value',
-  mayExtrapolateToOne: false,
+assert.deepEqual(runtime.directManipulation, {
+  authority: 'user-approved-product-correction',
+  sharedGeometryMasterProgress: [0, 1],
+  behavior: 'move-and-deform-until-fully-expanded',
+  samplesEachActorFromSameMasterProgress: true,
+  notAuthoredByFinalFigmaN2: true,
 });
 
 assert.equal(fixture.geometry.authority, 'legacy-evidence-only');
@@ -87,10 +88,10 @@ assert.deepEqual(fixture.geometry.shell, {
   bottomAnchored: true,
 });
 
-// The rejected contracts remain only so reviewers can see exactly what must
-// not silently regain authority.
-assert.equal(fixture.legacyRejectedImplementationContract.status, 'rejected');
-assert.equal(fixture.legacyRejectedImplementationContract.notAuthoredByFigma, true);
+assert.equal(fixture.productDirectManipulationContract.status, 'approved');
+assert.equal(fixture.productDirectManipulationContract.authority,
+  'user-corrected-motion-model');
+assert.equal(fixture.productDirectManipulationContract.notAuthoredByFigma, true);
 assert.equal(fixture.legacyRejectedProductSupplement.notAuthoredByFigma, true);
 assert.equal(Object.hasOwn(fixture, 'implementationContract'), false);
 assert.equal(Object.hasOwn(fixture, 'productSupplement'), false);
@@ -216,4 +217,4 @@ assert.equal(legacyO.actors.some((actor) => actor.id === 'quickDock'), true);
 assert.equal(runtime.actorGroups.shared.includes('QuickIncoming'), false);
 assert.equal(runtime.actorGroups.shared.includes('FullOutgoing'), false);
 
-console.log('reader appearance N2-pending fixture: PASS');
+console.log('reader appearance direct-manipulation fixture: PASS');

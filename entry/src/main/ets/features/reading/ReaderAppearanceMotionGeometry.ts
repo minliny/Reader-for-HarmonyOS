@@ -6,11 +6,12 @@
  * sample every actor/property track. Expand and collapse are therefore the
  * same function traversed in opposite directions.
  *
- * The published Figma N export (`1505:18040`) remains legacy evidence only.
- * Its effective review window is 11.111% -> 75% of the review timeline. A
- * final N2 node has not been published, so the legacy shared geometry is held
- * at its last evidenced keyframe (p=10/23 ~= .4348); it is never extrapolated
- * to p=1 and never represented as an N2-authored trajectory.
+ * The published Figma N export (`1505:18040`) supplies actor endpoints and
+ * independent reveal/fade tracks. Product direct-manipulation extends every
+ * shared actor's spatial interpolation across p=0 -> 1: the components keep
+ * separating, moving and resizing until the grabber reaches Full. This timing
+ * correction is explicit product authority, not a claim that final N2 motion
+ * has been published in Figma.
  */
 
 export type ReaderAppearanceMotionActorId =
@@ -47,6 +48,7 @@ export type ReaderAppearanceTrackAuthority =
   'interaction-axis' |
   'legacy-figma-n' |
   'legacy-static-endpoint' |
+  'product-direct-manipulation' |
   'product-mapping-alias';
 
 export interface ReaderAppearanceMeasuredAxis {
@@ -134,7 +136,8 @@ export const READER_APPEARANCE_DESIGN_TRAVEL_VP =
 export const READER_APPEARANCE_FIGMA_N_REVIEW_START_PERCENT = 1 / 9;
 export const READER_APPEARANCE_FIGMA_N_REVIEW_END_PERCENT = 3 / 4;
 export const READER_APPEARANCE_FINAL_N2_PUBLISHED = false;
-export const READER_APPEARANCE_LEGACY_SHARED_GEOMETRY_END_PROGRESS = 10 / 23;
+/** User-approved runtime timing correction while final N2 remains unpublished. */
+export const READER_APPEARANCE_SHARED_GEOMETRY_END_PROGRESS = 1;
 
 export const READER_APPEARANCE_SHARED_ACTOR_IDS: ReaderAppearanceMotionActorId[] = [
   'MorphStage',
@@ -411,8 +414,9 @@ function productMappedEffectTracks(
   );
 }
 
-const LEGACY_GEOMETRY_START = 0;
-const LEGACY_GEOMETRY_END = READER_APPEARANCE_LEGACY_SHARED_GEOMETRY_END_PROGRESS;
+const SHARED_GEOMETRY_START = 0;
+const SHARED_GEOMETRY_END = READER_APPEARANCE_SHARED_GEOMETRY_END_PROGRESS;
+const LEGACY_FIXED_CHROME_START = 10 / 23;
 const LEGACY_APPEARANCE_START = 8 / 23;
 const LEGACY_CONTENT_END = 14 / 23;
 const LEGACY_THEME_LIBRARY_END = 15 / 23;
@@ -456,18 +460,18 @@ const fontIds: ReaderAppearanceMotionActorId[] = [
   'Font0', 'Font1', 'Font2', 'Font3', 'Font4', 'Font5', 'Font6', 'Font7',
 ];
 
-const legacyTracks: ReaderAppearanceActorTracks[] = [
+const appearanceTracks: ReaderAppearanceActorTracks[] = [
   effectTracks(
     'BrightnessRail',
-    track(1, 0, LEGACY_GEOMETRY_END, 1, 'ease-out'),
-    track(0, 15, LEGACY_GEOMETRY_END, 1, 'ease-out'),
-    track(0, 12, LEGACY_GEOMETRY_END, 1, 'ease-out'),
+    track(1, 0, LEGACY_FIXED_CHROME_START, 1, 'ease-out'),
+    track(0, 15, LEGACY_FIXED_CHROME_START, 1, 'ease-out'),
+    track(0, 12, LEGACY_FIXED_CHROME_START, 1, 'ease-out'),
   ),
   effectTracks(
     'ModuleNav',
-    track(1, 0, LEGACY_GEOMETRY_END, 1, 'ease-out'),
-    track(0, 20, LEGACY_GEOMETRY_END, 1, 'ease-out'),
-    track(0, 12, LEGACY_GEOMETRY_END, 1, 'ease-out'),
+    track(1, 0, LEGACY_FIXED_CHROME_START, 1, 'ease-out'),
+    track(0, 20, LEGACY_FIXED_CHROME_START, 1, 'ease-out'),
+    track(0, 12, LEGACY_FIXED_CHROME_START, 1, 'ease-out'),
   ),
   actorTracks(
     'MorphStage',
@@ -482,38 +486,38 @@ const legacyTracks: ReaderAppearanceActorTracks[] = [
   ),
   actorTracks(
     'QuickMorph',
-    'legacy-figma-n',
+    'product-direct-manipulation',
     { x: 12.104, y: 434.993, width: 286, height: 190 },
     { x: 13, y: 57, width: 338, height: 666 },
-    LEGACY_GEOMETRY_START,
-    LEGACY_GEOMETRY_END,
+    SHARED_GEOMETRY_START,
+    SHARED_GEOMETRY_END,
     'ease-out',
   ),
   actorTracks(
     'ThemeHeader',
-    'legacy-figma-n',
+    'product-direct-manipulation',
     { x: 23.104, y: 449.993, width: 262, height: 15.898 },
     { x: 25, y: 77, width: 312, height: 20 },
-    LEGACY_GEOMETRY_START,
-    LEGACY_GEOMETRY_END,
+    SHARED_GEOMETRY_START,
+    SHARED_GEOMETRY_END,
     'ease-out',
   ),
   actorTracks(
     'QuickDivider',
-    'legacy-figma-n',
+    'product-direct-manipulation',
     { x: 23.104, y: 532.891, width: 262, height: 1 },
     { x: 23, y: 276.98, width: 316, height: 1 },
-    LEGACY_GEOMETRY_START,
-    LEGACY_GEOMETRY_END,
+    SHARED_GEOMETRY_START,
+    SHARED_GEOMETRY_END,
     'ease-out',
   ),
   actorTracks(
     'FontHeader',
-    'legacy-figma-n',
+    'product-direct-manipulation',
     { x: 23.104, y: 536.891, width: 262, height: 10 },
     { x: 25, y: 287.98, width: 312, height: 20 },
-    LEGACY_GEOMETRY_START,
-    LEGACY_GEOMETRY_END,
+    SHARED_GEOMETRY_START,
+    SHARED_GEOMETRY_END,
     'ease-out',
   ),
   effectTracks(
@@ -531,35 +535,35 @@ const legacyTracks: ReaderAppearanceActorTracks[] = [
 ];
 
 for (let index = 0; index < themeIds.length; index += 1) {
-  legacyTracks.push(actorTracks(
+  appearanceTracks.push(actorTracks(
     themeIds[index],
-    'legacy-figma-n',
+    'product-direct-manipulation',
     themeRect(index, false),
     themeRect(index, true),
-    LEGACY_GEOMETRY_START,
-    LEGACY_GEOMETRY_END,
+    SHARED_GEOMETRY_START,
+    SHARED_GEOMETRY_END,
     'ease-out',
   ));
 }
 
 for (let index = 0; index < fontIds.length; index += 1) {
-  legacyTracks.push(actorTracks(
+  appearanceTracks.push(actorTracks(
     fontIds[index],
-    'legacy-static-endpoint',
+    'product-direct-manipulation',
     fontRect(index, false),
     fontRect(index, true),
-    LEGACY_GEOMETRY_START,
-    LEGACY_GEOMETRY_END,
+    SHARED_GEOMETRY_START,
+    SHARED_GEOMETRY_END,
     'ease-out',
   ));
 }
 
-/** Auditable fallback tracks while final N2 remains unpublished. */
-export const READER_APPEARANCE_LEGACY_ACTOR_TRACKS: ReaderAppearanceActorTracks[] = legacyTracks;
+/** Runtime actor tracks driven by the one measured grabber progress. */
+export const READER_APPEARANCE_ACTOR_TRACKS: ReaderAppearanceActorTracks[] = appearanceTracks;
 
 function tracksFor(id: ReaderAppearanceMotionActorId): ReaderAppearanceActorTracks {
-  for (let index = 0; index < READER_APPEARANCE_LEGACY_ACTOR_TRACKS.length; index += 1) {
-    const candidate = READER_APPEARANCE_LEGACY_ACTOR_TRACKS[index];
+  for (let index = 0; index < READER_APPEARANCE_ACTOR_TRACKS.length; index += 1) {
+    const candidate = READER_APPEARANCE_ACTOR_TRACKS[index];
     if (candidate.id === id) {
       return candidate;
     }
