@@ -60,10 +60,19 @@ assert.match(methodBody(control, 'usesPhoneAppearanceMotionStage()',
 assert.match(methodBody(control, 'onActivePageChanged()', 'geo:'),
   /if \(!this\.appearanceMotionStageMounted && this\.appearanceMotionStageCanMount\(\)\)/,
   'the actor registry may mount on Appearance entry but must survive its endpoint route');
-assert.match(phoneContent, /motionFrame: this\.currentAppearanceMotionFrame\(\)/,
-  'the parent Builder must resample actor tracks from its observable p');
-assert.doesNotMatch(control, /motionFrame: context\.frame/,
-  'the stale BuilderParam frame regression returned');
+assert.match(phoneContent, /motionProgress: this\.appearanceMotionMasterProgress/,
+  'the FullPanel boundary must receive observable primitive p');
+assert.match(phoneContent, /motionFullHeight: this\.appearanceMotionStageHeight\(\)/,
+  'the FullPanel boundary must receive the primitive runtime axis height');
+assert.doesNotMatch(phoneContent, /motionFrame:/,
+  'a complex frame object must not cross the FullPanel boundary');
+assert.match(full, /@Prop motionProgress: number \| undefined/,
+  'FullPanel motion invalidation must be driven by primitive p');
+assert.match(shared,
+  /@Prop motionProgress: number[\s\S]*?sampleReaderAppearanceMasterProgress\(this\.motionProgress, this\.fullHeight\)/,
+  'shared actors must sample their own frame from primitive p');
+assert.doesNotMatch(shared, /@Prop frame:/,
+  'a cached complex frame must not cross into the shared actor component');
 const phoneDock = methodBody(control, 'appearanceMotionDock()', 'appearanceMotionShellLayer()');
 assert.doesNotMatch(phoneDock, /appearanceContent:|brightnessRail:|moduleNav:/,
   'dynamic visual slots must not return to the gesture Stage');
@@ -116,7 +125,7 @@ assert.match(full,
 
 // Master progress is only an endpoint/input coordinate. Local visual changes
 // must consume each actor's independently sampled trackProgress.
-assert.match(shared, /frame\.themeHeader\.trackProgress/);
+assert.match(shared, /currentFrame\(\)\.themeHeader\.trackProgress/);
 assert.match(shared, /frame\.themeItems\[safeIndex\]/);
 assert.match(shared, /this\.fontActorFrame\(fontId\)/);
 assert.doesNotMatch(shared, /this\.lerp\([^\n]*this\.masterProgress\(\)/);

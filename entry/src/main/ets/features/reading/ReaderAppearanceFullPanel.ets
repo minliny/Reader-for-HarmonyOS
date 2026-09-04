@@ -41,9 +41,11 @@ import type { ReaderChineseConversionMode } from './ReaderChineseConversionGatew
 import type { ReaderPageTurnStyle } from './ReaderSettingsState';
 import { motionAnimateParam, panelActorTransition } from '../common/MotionSpec';
 import {
+  READER_APPEARANCE_FULL_HEIGHT,
   readerAppearanceMotionViewportHeight,
   readerAppearanceMotionViewportWidth,
   readerAppearanceScrollCompensationVp,
+  sampleReaderAppearanceMasterProgress,
   type ReaderAppearanceMotionFrame,
 } from './ReaderAppearanceMotionGeometry';
 import { ReaderAppearanceSharedActors } from './ReaderAppearanceSharedActors';
@@ -71,7 +73,9 @@ export struct ReaderAppearanceFullPanel {
   @Prop availableWidth: number = 0;
   @Prop availableHeight: number = 0;
   @Prop reduceMotion: boolean = false;
-  @Prop motionFrame: ReaderAppearanceMotionFrame | undefined = undefined;
+  /** Primitive p is intentionally the only cross-component motion value. */
+  @Prop motionProgress: number | undefined = undefined;
+  @Prop motionFullHeight: number = READER_APPEARANCE_FULL_HEIGHT;
   @Prop @Watch('onInteractionEnabledChanged') interactionEnabled: boolean = true;
   @Prop showGrabber: boolean = true;
   @Prop snapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
@@ -147,7 +151,7 @@ export struct ReaderAppearanceFullPanel {
 
       this.header();
 
-      if (this.motionFrame === undefined) {
+      if (this.motionProgress === undefined) {
         this.staticContentSurface();
         this.staticAppearanceContent();
       } else {
@@ -164,7 +168,7 @@ export struct ReaderAppearanceFullPanel {
     // MorphShell 壳板（ReaderControlPanel）统一提供 surface/边框/圆角；
     // 此处仅保留内容裁剪与量测（Figma Review J~Q 壳体 morph 单一背景来源）。
     .clip(true)
-    .hitTestBehavior(this.motionFrame === undefined ? HitTestMode.Default : HitTestMode.Transparent)
+    .hitTestBehavior(this.motionProgress === undefined ? HitTestMode.Default : HitTestMode.Transparent)
     .onAreaChange((_oldValue: Area, newValue: Area): void => {
       this.panelOriginX = Number(newValue.globalPosition.x);
       this.panelOriginY = Number(newValue.globalPosition.y);
@@ -217,7 +221,8 @@ export struct ReaderAppearanceFullPanel {
       Scroll(this.contentScroller) {
         Stack({ alignContent: Alignment.TopStart }) {
           ReaderAppearanceSharedActors({
-            frame: this.currentMotionFrame(),
+            motionProgress: this.motionProgress ?? 0,
+            fullHeight: this.motionFullHeight,
             interactionEnabled: this.interactionEnabled,
             reduceMotion: this.reduceMotion,
             snapshot: this.snapshot,
@@ -297,12 +302,12 @@ export struct ReaderAppearanceFullPanel {
       .width(this.sectionWidth())
       .height(210)
       .position({ x: 10, y: 11 })
-      .opacity(this.motionFrame?.themeActions.opacity ?? 0)
+      .opacity(this.motionFrameOrUndefined()?.themeActions.opacity ?? 0)
       .translate({
-        x: this.motionFrame?.themeActions.translateX ?? 0,
-        y: this.motionFrame?.themeActions.translateY ?? 0,
+        x: this.motionFrameOrUndefined()?.themeActions.translateX ?? 0,
+        y: this.motionFrameOrUndefined()?.themeActions.translateY ?? 0,
       })
-      .blur(this.motionFrame?.themeActions.blurVp ?? 0);
+      .blur(this.motionFrameOrUndefined()?.themeActions.blurVp ?? 0);
 
       this.motionFontReorderHint();
       this.typographyLibrary();
@@ -337,12 +342,12 @@ export struct ReaderAppearanceFullPanel {
       .fontColor(TOK_READ_MUTED)
       .textAlign(TextAlign.End)
       .position({ x: 11 + this.sectionWidth() - 72, y: 230.98 })
-      .opacity(this.motionFrame?.fontImport.opacity ?? 0)
+      .opacity(this.motionFrameOrUndefined()?.fontImport.opacity ?? 0)
       .translate({
-        x: this.motionFrame?.fontImport.translateX ?? 0,
-        y: this.motionFrame?.fontImport.translateY ?? 0,
+        x: this.motionFrameOrUndefined()?.fontImport.translateX ?? 0,
+        y: this.motionFrameOrUndefined()?.fontImport.translateY ?? 0,
       })
-      .blur(this.motionFrame?.fontImport.blurVp ?? 0);
+      .blur(this.motionFrameOrUndefined()?.fontImport.blurVp ?? 0);
   }
 
   @Builder
@@ -370,7 +375,7 @@ export struct ReaderAppearanceFullPanel {
         .lineHeight(13)
         .fontColor(TOK_READ_PRIMARY)
         .textAlign(TextAlign.Center)
-        .enabled(this.motionFrame === undefined ? this.interactionEnabled :
+        .enabled(this.motionProgress === undefined ? this.interactionEnabled :
           this.fullEndpointInteractionEnabled())
         .accessibilityText('收起界面设置')
         .onClick((): void => this.onCollapse());
@@ -381,13 +386,13 @@ export struct ReaderAppearanceFullPanel {
     .position({ x: 13, y: 19 })
     // N 帧 Header 全分量由共享 frame 同步采样：opacity 0→1、y -12→0、
     // blur 8→0。TransitionEffect 没有 blur 分量，所以 motion stage 走属性通道。
-    .opacity(this.motionFrame?.header.opacity ?? 1)
+    .opacity(this.motionFrameOrUndefined()?.header.opacity ?? 1)
     .translate({
-      x: this.motionFrame?.header.translateX ?? 0,
-      y: this.motionFrame?.header.translateY ?? 0,
+      x: this.motionFrameOrUndefined()?.header.translateX ?? 0,
+      y: this.motionFrameOrUndefined()?.header.translateY ?? 0,
     })
-    .blur(this.motionFrame?.header.blurVp ?? 0)
-    .transition(this.reduceMotion || this.motionFrame !== undefined ? TransitionEffect.IDENTITY :
+    .blur(this.motionFrameOrUndefined()?.header.blurVp ?? 0)
+    .transition(this.reduceMotion || this.motionProgress !== undefined ? TransitionEffect.IDENTITY :
       TransitionEffect.asymmetric(
         panelActorTransition('reader.panel.appearance.header.in', -12, 146),
         TransitionEffect.IDENTITY,
@@ -671,14 +676,14 @@ export struct ReaderAppearanceFullPanel {
     .height(380)
     .border({ width: { top: TOK_BORDER_W }, color: TOK_LINE })
     .position({ x: 11, y: 366.98 })
-    .opacity(this.motionFrame?.typography.opacity ?? 1)
+    .opacity(this.motionFrameOrUndefined()?.typography.opacity ?? 1)
     .translate({
-      x: this.motionFrame?.typography.translateX ?? 0,
-      y: this.motionFrame?.typography.translateY ?? 0,
+      x: this.motionFrameOrUndefined()?.typography.translateX ?? 0,
+      y: this.motionFrameOrUndefined()?.typography.translateY ?? 0,
     })
-    .blur(this.motionFrame?.typography.blurVp ?? 0)
+    .blur(this.motionFrameOrUndefined()?.typography.blurVp ?? 0)
     // N 帧 Typography 卡: opacity 0->1 @ 164ms (delay 256)。
-    .transition(this.reduceMotion || this.motionFrame !== undefined ? TransitionEffect.IDENTITY :
+    .transition(this.reduceMotion || this.motionProgress !== undefined ? TransitionEffect.IDENTITY :
       TransitionEffect.asymmetric(
         panelActorTransition('reader.panel.appearance.typography.in', 0, 256),
         TransitionEffect.IDENTITY,
@@ -941,10 +946,17 @@ export struct ReaderAppearanceFullPanel {
   }
 
   private currentMotionFrame(): ReaderAppearanceMotionFrame {
-    if (this.motionFrame === undefined) {
+    if (this.motionProgress === undefined) {
       throw new Error('ReaderAppearanceFullPanel: motion frame is required by the Phone motion owner');
     }
-    return this.motionFrame;
+    return sampleReaderAppearanceMasterProgress(this.motionProgress, this.motionFullHeight);
+  }
+
+  private motionFrameOrUndefined(): ReaderAppearanceMotionFrame | undefined {
+    if (this.motionProgress === undefined) {
+      return undefined;
+    }
+    return sampleReaderAppearanceMasterProgress(this.motionProgress, this.motionFullHeight);
   }
 
   private motionViewportWidth(): number {

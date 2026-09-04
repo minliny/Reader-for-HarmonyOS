@@ -23,9 +23,11 @@ import {
   readerAppearanceFontSlotFamily,
   readerAppearanceFontSlotLabel,
 } from './ReaderAppearanceRenderStyle';
-import type {
-  ReaderAppearanceMotionActorFrame,
-  ReaderAppearanceMotionFrame,
+import {
+  READER_APPEARANCE_FULL_HEIGHT,
+  sampleReaderAppearanceMasterProgress,
+  type ReaderAppearanceMotionActorFrame,
+  type ReaderAppearanceMotionFrame,
 } from './ReaderAppearanceMotionGeometry';
 
 const READER_APPEARANCE_FONT_REORDER_HOLD_MS = 160;
@@ -51,7 +53,8 @@ interface ReaderAppearanceActorPosition {
  */
 @Component
 export struct ReaderAppearanceSharedActors {
-  @Prop frame: ReaderAppearanceMotionFrame;
+  @Prop motionProgress: number = 0;
+  @Prop fullHeight: number = READER_APPEARANCE_FULL_HEIGHT;
   @Prop @Watch('onInteractionEnabledChanged') interactionEnabled: boolean = true;
   @Prop reduceMotion: boolean = false;
   @Prop snapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
@@ -104,7 +107,7 @@ export struct ReaderAppearanceSharedActors {
       }, (fontId: ReaderAppearanceFontSlot): string => `reader-appearance-shared-font-${fontId}`);
       this.fullOnlyFontImport();
     }
-    .width(this.frame.quickMorph.width)
+    .width(this.currentFrame().quickMorph.width)
     .height(READER_APPEARANCE_CONTENT_HEIGHT)
     .enabled(this.interactionEnabled)
     .hitTestBehavior(HitTestMode.Transparent);
@@ -115,33 +118,33 @@ export struct ReaderAppearanceSharedActors {
     Row() {
       Text('主题库')
         .layoutWeight(1)
-        .height(this.frame.themeHeader.height)
+        .height(this.currentFrame().themeHeader.height)
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
-        .fontSize(this.lerp(9, 12, this.actorProgress(this.frame.themeHeader.trackProgress)))
-        .lineHeight(this.lerp(9.9, 17, this.actorProgress(this.frame.themeHeader.trackProgress)))
+        .fontSize(this.lerp(9, 12, this.actorProgress(this.currentFrame().themeHeader.trackProgress)))
+        .lineHeight(this.lerp(9.9, 17, this.actorProgress(this.currentFrame().themeHeader.trackProgress)))
         .fontColor(TOK_READ_INK);
       Text(this.themeSummary())
-        .width(this.lerp(88, 122, this.actorProgress(this.frame.themeHeader.trackProgress)))
-        .height(this.frame.themeHeader.height)
+        .width(this.lerp(88, 122, this.actorProgress(this.currentFrame().themeHeader.trackProgress)))
+        .height(this.currentFrame().themeHeader.height)
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Medium)
-        .fontSize(this.lerp(7.5, 10, this.actorProgress(this.frame.themeHeader.trackProgress)))
-        .lineHeight(this.lerp(8, 13, this.actorProgress(this.frame.themeHeader.trackProgress)))
+        .fontSize(this.lerp(7.5, 10, this.actorProgress(this.currentFrame().themeHeader.trackProgress)))
+        .lineHeight(this.lerp(8, 13, this.actorProgress(this.currentFrame().themeHeader.trackProgress)))
         .fontColor(TOK_READ_MUTED)
         .textAlign(TextAlign.End)
         .maxLines(1);
     }
-    .width(this.frame.themeHeader.width)
-    .height(this.frame.themeHeader.height)
+    .width(this.currentFrame().themeHeader.width)
+    .height(this.currentFrame().themeHeader.height)
     .alignItems(VerticalAlign.Top)
-    .position(this.localPosition(this.frame.themeHeader))
+    .position(this.localPosition(this.currentFrame().themeHeader))
     .translate({
-      x: this.frame.themeHeader.translateX,
-      y: this.frame.themeHeader.translateY,
+      x: this.currentFrame().themeHeader.translateX,
+      y: this.currentFrame().themeHeader.translateY,
     })
-    .opacity(this.frame.themeHeader.opacity)
-    .blur(this.frame.themeHeader.blurVp);
+    .opacity(this.currentFrame().themeHeader.opacity)
+    .blur(this.currentFrame().themeHeader.blurVp);
   }
 
   @Builder
@@ -165,12 +168,12 @@ export struct ReaderAppearanceSharedActors {
         .border({ width: TOK_BORDER_W, color: '#1F5B5046' })
         .borderRadius(6)
         .position({
-          x: (this.frame.themeItems[index].width -
+          x: (this.currentFrame().themeItems[index].width -
             this.lerp(46, 63.5, this.themeActorProgress(index))) / 2,
           y: this.lerp(3, 10, this.themeActorProgress(index)),
         });
       Text(this.themeLabel(theme))
-        .width(Math.max(0, this.frame.themeItems[index].width - 10))
+        .width(Math.max(0, this.currentFrame().themeItems[index].width - 10))
         .height(11)
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Regular)
@@ -181,8 +184,8 @@ export struct ReaderAppearanceSharedActors {
         .maxLines(1)
         .position({ x: 5, y: 42.9 });
     }
-    .width(this.frame.themeItems[index].width)
-    .height(this.frame.themeItems[index].height)
+    .width(this.currentFrame().themeItems[index].width)
+    .height(this.currentFrame().themeItems[index].height)
     .backgroundColor(this.snapshot.activeTheme === theme ? TOK_READ_ACTIVE_SOFT :
       (this.isNightTheme(theme) ? TOK_READ_DISABLED_BG : Color.Transparent))
     .border({
@@ -195,13 +198,14 @@ export struct ReaderAppearanceSharedActors {
     .borderRadius(this.lerp(0, 8, this.themeActorProgress(index)))
     .clip(true)
     // 0.8 is the stable inactive style; multiply it by this actor's own track.
-    .opacity((this.snapshot.activeTheme === theme ? 1 : 0.8) * this.frame.themeItems[index].opacity)
-    .position(this.localPosition(this.frame.themeItems[index]))
+    .opacity((this.snapshot.activeTheme === theme ? 1 : 0.8) *
+      this.currentFrame().themeItems[index].opacity)
+    .position(this.localPosition(this.currentFrame().themeItems[index]))
     .translate({
-      x: this.frame.themeItems[index].translateX,
-      y: this.frame.themeItems[index].translateY,
+      x: this.currentFrame().themeItems[index].translateX,
+      y: this.currentFrame().themeItems[index].translateY,
     })
-    .blur(this.frame.themeItems[index].blurVp)
+    .blur(this.currentFrame().themeItems[index].blurVp)
     .enabled(this.interactionEnabled)
     .accessibilityText(`切换到${this.themeLabel(theme)}主题`)
     .onClick((): void => this.onThemeChange(theme));
@@ -210,35 +214,36 @@ export struct ReaderAppearanceSharedActors {
   @Builder
   private sharedDivider() {
     Row()
-      .width(this.frame.quickDivider.width)
-      .height(this.frame.quickDivider.height)
+      .width(this.currentFrame().quickDivider.width)
+      .height(this.currentFrame().quickDivider.height)
       .backgroundColor(TOK_LINE)
-      .position(this.localPosition(this.frame.quickDivider))
+      .position(this.localPosition(this.currentFrame().quickDivider))
       .translate({
-        x: this.frame.quickDivider.translateX,
-        y: this.frame.quickDivider.translateY,
+        x: this.currentFrame().quickDivider.translateX,
+        y: this.currentFrame().quickDivider.translateY,
       })
-      .opacity(this.frame.quickDivider.opacity)
-      .blur(this.frame.quickDivider.blurVp);
+      .opacity(this.currentFrame().quickDivider.opacity)
+      .blur(this.currentFrame().quickDivider.blurVp);
   }
 
   @Builder
   private sharedFontHeader() {
     Text('字体库')
-      .width(this.frame.fontHeader.width)
-      .height(this.frame.fontHeader.height)
+      .width(this.currentFrame().fontHeader.width)
+      .height(this.currentFrame().fontHeader.height)
       .fontFamily('ReaderNotoSansSC')
       .fontWeight(FontWeight.Bold)
-      .fontSize(this.lerp(9, 12, this.actorProgress(this.frame.fontHeader.trackProgress)))
-      .lineHeight(this.lerp(9.9, 14.4, this.actorProgress(this.frame.fontHeader.trackProgress)))
+      .fontSize(this.lerp(9, 12, this.actorProgress(this.currentFrame().fontHeader.trackProgress)))
+      .lineHeight(this.lerp(9.9, 14.4,
+        this.actorProgress(this.currentFrame().fontHeader.trackProgress)))
       .fontColor(TOK_READ_INK)
-      .position(this.localPosition(this.frame.fontHeader))
+      .position(this.localPosition(this.currentFrame().fontHeader))
       .translate({
-        x: this.frame.fontHeader.translateX,
-        y: this.frame.fontHeader.translateY,
+        x: this.currentFrame().fontHeader.translateX,
+        y: this.currentFrame().fontHeader.translateY,
       })
-      .opacity(this.frame.fontHeader.opacity)
-      .blur(this.frame.fontHeader.blurVp);
+      .opacity(this.currentFrame().fontHeader.opacity)
+      .blur(this.currentFrame().fontHeader.blurVp);
   }
 
   @Builder
@@ -315,8 +320,8 @@ export struct ReaderAppearanceSharedActors {
       .borderRadius(6)
       .opacity(0.58)
       .position({
-        x: this.fontSlotX(this.draggedFontHoverIndex) - this.frame.quickMorph.x,
-        y: this.fontSlotY(this.draggedFontHoverIndex) - this.frame.quickMorph.y,
+        x: this.fontSlotX(this.draggedFontHoverIndex) - this.currentFrame().quickMorph.x,
+        y: this.fontSlotY(this.draggedFontHoverIndex) - this.currentFrame().quickMorph.y,
       })
       .zIndex(0);
   }
@@ -343,22 +348,26 @@ export struct ReaderAppearanceSharedActors {
       .maxLines(1)
       .textOverflow({ overflow: TextOverflow.Ellipsis })
       .position({
-        x: READER_APPEARANCE_FONT_IMPORT_STAGE_X - this.frame.quickMorph.x,
-        y: READER_APPEARANCE_FONT_IMPORT_STAGE_Y - this.frame.quickMorph.y,
+        x: READER_APPEARANCE_FONT_IMPORT_STAGE_X - this.currentFrame().quickMorph.x,
+        y: READER_APPEARANCE_FONT_IMPORT_STAGE_Y - this.currentFrame().quickMorph.y,
       })
-      .opacity(this.frame.fontImport.opacity)
+      .opacity(this.currentFrame().fontImport.opacity)
       .translate({
-        x: this.frame.fontImport.translateX,
-        y: this.frame.fontImport.translateY,
+        x: this.currentFrame().fontImport.translateX,
+        y: this.currentFrame().fontImport.translateY,
       })
-      .blur(this.frame.fontImport.blurVp)
+      .blur(this.currentFrame().fontImport.blurVp)
       .enabled(this.interactionEnabled && this.atFullEndpoint())
       .accessibilityText('导入自定义字体')
       .onClick((): void => this.onCustomFontImport());
   }
 
+  private currentFrame(): ReaderAppearanceMotionFrame {
+    return sampleReaderAppearanceMasterProgress(this.motionProgress, this.fullHeight);
+  }
+
   private masterProgress(): number {
-    return Math.max(0, Math.min(1, this.frame.masterProgress));
+    return Math.max(0, Math.min(1, this.motionProgress));
   }
 
   private actorProgress(trackProgress: number): number {
@@ -366,8 +375,9 @@ export struct ReaderAppearanceSharedActors {
   }
 
   private themeActorProgress(index: number): number {
-    const safeIndex = Math.max(0, Math.min(this.frame.themeItems.length - 1, index));
-    return this.actorProgress(this.frame.themeItems[safeIndex].trackProgress);
+    const frame = this.currentFrame();
+    const safeIndex = Math.max(0, Math.min(frame.themeItems.length - 1, index));
+    return this.actorProgress(frame.themeItems[safeIndex].trackProgress);
   }
 
   private fontActorProgress(fontId: ReaderAppearanceFontSlot): number {
@@ -380,14 +390,15 @@ export struct ReaderAppearanceSharedActors {
 
   private localPosition(actor: ReaderAppearanceMotionActorFrame): ReaderAppearanceActorPosition {
     return {
-      x: actor.x - this.frame.quickMorph.x,
-      y: actor.y - this.frame.quickMorph.y,
+      x: actor.x - this.currentFrame().quickMorph.x,
+      y: actor.y - this.currentFrame().quickMorph.y,
     };
   }
 
   private fontActorFrame(fontId: ReaderAppearanceFontSlot): ReaderAppearanceMotionActorFrame {
     const index = this.fontDisplayIndex(fontId);
-    return this.frame.fontItems[Math.max(0, Math.min(this.frame.fontItems.length - 1, index))];
+    const frame = this.currentFrame();
+    return frame.fontItems[Math.max(0, Math.min(frame.fontItems.length - 1, index))];
   }
 
   private sharedFontIds(): ReaderAppearanceFontSlot[] {
@@ -617,7 +628,8 @@ export struct ReaderAppearanceSharedActors {
     const originCenterY = this.fontSlotY(this.draggedFontIndex) + this.fontSlotHeight() / 2;
     let bestIndex = 0;
     let bestDistance = Number.MAX_VALUE;
-    for (let index = 0; index < this.frame.fontItems.length; index += 1) {
+    const frame = this.currentFrame();
+    for (let index = 0; index < frame.fontItems.length; index += 1) {
       const deltaX = this.fontSlotX(index) + this.fontSlotWidth() / 2 - (originCenterX + offsetX);
       const deltaY = this.fontSlotY(index) + this.fontSlotHeight() / 2 - (originCenterY + offsetY);
       const distance = deltaX * deltaX + deltaY * deltaY;
@@ -630,21 +642,25 @@ export struct ReaderAppearanceSharedActors {
   }
 
   private fontSlotX(index: number): number {
-    const safeIndex = Math.max(0, Math.min(this.frame.fontItems.length - 1, index));
-    return this.frame.fontItems[safeIndex].x;
+    const frame = this.currentFrame();
+    const safeIndex = Math.max(0, Math.min(frame.fontItems.length - 1, index));
+    return frame.fontItems[safeIndex].x;
   }
 
   private fontSlotY(index: number): number {
-    const safeIndex = Math.max(0, Math.min(this.frame.fontItems.length - 1, index));
-    return this.frame.fontItems[safeIndex].y;
+    const frame = this.currentFrame();
+    const safeIndex = Math.max(0, Math.min(frame.fontItems.length - 1, index));
+    return frame.fontItems[safeIndex].y;
   }
 
   private fontSlotWidth(): number {
-    return this.frame.fontItems.length > 0 ? this.frame.fontItems[0].width : 0;
+    const frame = this.currentFrame();
+    return frame.fontItems.length > 0 ? frame.fontItems[0].width : 0;
   }
 
   private fontSlotHeight(): number {
-    return this.frame.fontItems.length > 0 ? this.frame.fontItems[0].height : 0;
+    const frame = this.currentFrame();
+    return frame.fontItems.length > 0 ? frame.fontItems[0].height : 0;
   }
 
   private lerp(start: number, end: number, progress: number): number {

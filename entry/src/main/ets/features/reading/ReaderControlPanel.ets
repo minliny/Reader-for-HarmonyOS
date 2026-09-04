@@ -967,9 +967,11 @@ export struct ReaderControlPanel {
       availableWidth: this.fullPanelAvailableWidth(),
       availableHeight: this.layout.fullPanelHeight,
       reduceMotion: this.reduceMotion,
-      // The visual tree is a direct child of this @State owner. Dynamic frames
-      // never cross ReaderAppearanceMotionStage's BuilderParam boundary.
-      motionFrame: this.currentAppearanceMotionFrame(),
+      // Only primitive motion inputs cross the component boundary. ArkUI can
+      // cache a complex frame object even while p changes, freezing every
+      // child actor at Quick and making the whole group look translated.
+      motionProgress: this.appearanceMotionMasterProgress,
+      motionFullHeight: this.appearanceMotionStageHeight(),
       interactionEnabled: this.appearanceMotionContentInteractionEnabled(),
       showGrabber: false,
       snapshot: this.appearanceSnapshot,

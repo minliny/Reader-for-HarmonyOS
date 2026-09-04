@@ -88,10 +88,10 @@ assert.match(control,
   /ReaderAppearanceMotionStage\(\{[\s\S]*?expanded: this\.activePage === 'fullAppearance'[\s\S]*?onEndpointChange:/,
   'route state may follow only the motion stage stable endpoint callback');
 assert.match(control,
-  /motionFrame: this\.currentAppearanceMotionFrame\(\)/,
-  'the persistent FullPanel must resample from the observable parent progress for both directions');
-assert.doesNotMatch(control, /motionFrame: context\.frame/,
-  'a BuilderParam frame snapshot must not freeze the FullPanel children');
+  /motionProgress: this\.appearanceMotionMasterProgress[\s\S]*?motionFullHeight: this\.appearanceMotionStageHeight\(\)/,
+  'the persistent FullPanel must receive primitive p and axis height for both directions');
+assert.doesNotMatch(control, /motionFrame:/,
+  'a complex frame snapshot must not freeze the FullPanel children');
 assert.match(control, /showGrabber: false/,
   'the persistent appearance stage must own the only visible and interactive grabber');
 assert.match(control, /return this\.usesPhoneAppearanceMotionStage\(\) \|\|/,
@@ -147,9 +147,9 @@ assert.match(appearanceMotionState, /export function readerAppearanceMotionIsAct
 assert.match(appearanceMotionState, /export function setReaderAppearanceMotionTimeScale/,
   'retiming must preserve the current sampled frame while scaling the remaining clock');
 for (const actorAccess of [
-  'this.frame.quickMorph',
-  'this.frame.themeItems[index]',
-  'this.frame.fontItems',
+  'this.currentFrame().quickMorph',
+  'this.currentFrame().themeItems[index]',
+  'frame.fontItems',
 ]) {
   assert.ok(appearanceSharedActors.includes(actorAccess),
     `QuickMorph shared tree omitted sampled actor access ${actorAccess}`);
