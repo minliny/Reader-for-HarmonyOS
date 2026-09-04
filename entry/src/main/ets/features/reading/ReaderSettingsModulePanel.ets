@@ -131,7 +131,8 @@ export struct ReaderSettingsModulePanel {
       return ['system', 'portrait', 'landscape'];
     }
     if (group === 'pageTurn') {
-      return ['simulation', 'cover', 'slide', 'scroll', 'none'];
+      // Figma Phone 924:89: Cover, Slide, Simulation, Scroll, None.
+      return ['cover', 'slide', 'simulation', 'scroll', 'none'];
     }
     return ['system', 'oneMinute', 'fiveMinutes', 'tenMinutes', 'alwaysOn'];
   }

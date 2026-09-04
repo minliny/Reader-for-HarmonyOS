@@ -176,7 +176,11 @@ import {
 } from './ReadingParagraphProjection';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { TYPE_READER_CHAPTER_TITLE } from '../common/ReaderTypography';
-import { motionAnimateParam, motionRemainingDistanceAnimateParam } from '../common/MotionSpec';
+import {
+  motionAnimateParam,
+  motionRemainingDistanceAnimateParam,
+  motionSpecGet,
+} from '../common/MotionSpec';
 import { ComponentContent, FrameCallback, window } from '@kit.ArkUI';
 import { image } from '@kit.ImageKit';
 import {
@@ -984,6 +988,7 @@ export struct ReadingExperience {
   private pendingPointerSegmentReserved: boolean = false;
   private pageTurnGeneration: number = 0;
   private controlShellExitGeneration: number = 0;
+  private controlRouteResetTimer: number = -1;
   private pageTurnGestureState: ReaderPageGestureState = createReaderPageGestureState();
   private readonly bookTurnSession: BookTurnPresentationSession =
     new BookTurnPresentationSession(READER_BOOK_TURN_COMPONENT_ID);
@@ -1242,6 +1247,7 @@ export struct ReadingExperience {
     this.clearAutoPageTimer();
     this.clearAutoPageSessionTimer();
     this.clearPageChromeStatusTimer();
+    this.clearControlRouteResetTimer();
     this.pendingPageChromeClockText = undefined;
     this.pendingSessionCapsuleType = undefined;
     this.clearReadingRecordTimer();
@@ -1500,7 +1506,10 @@ export struct ReadingExperience {
         onTtsEngineChange: (engine: string): Promise<void> => this.changeTtsEngine(engine),
         onTtsHttpEnginePut: (config: ReaderHttpTtsConfig): Promise<void> => this.saveHttpTtsEngine(config),
         onTtsHttpEngineDelete: (id: number): Promise<void> => this.deleteHttpTtsEngine(id),
-      });
+      })
+        // The control overlay, including its transparent outside-tap owner,
+        // must sit above selectable reading Text nodes on every control route.
+        .zIndex(7);
       if (!this.controlVisible && (this.readerSettingsSnapshot.navigationMode === 'paged' ||
         this.continuousFragments.length === 0)) {
         // Tap and horizontal pan share one pointer owner and one previous/next
@@ -3734,11 +3743,10 @@ export struct ReadingExperience {
    */
   private requestExit(): void {
     if (this.controlVisible) {
-      if (this.controlPage !== 'home') {
-        this.setControlPage('home');
-      } else {
-        this.hideControl();
-      }
+      // System back follows the same overlay-dismiss contract as tapping the
+      // exposed reading body. Child Back/Close and FullPanel Collapse remain
+      // explicit in-panel navigation actions.
+      this.hideControl();
       return;
     }
     this.beginExit();
@@ -6899,6 +6907,7 @@ export struct ReadingExperience {
       return;
     }
     this.rapidPageTurnState = cancelReaderRapidPageTurn(this.rapidPageTurnState);
+    this.clearControlRouteResetTimer();
     this.controlShellExitGeneration += 1;
     this.controlShellExitArmed = false;
     this.controlPage = 'home';
@@ -6926,10 +6935,36 @@ export struct ReadingExperience {
         return;
       }
       this.controlVisible = false;
+      this.scheduleControlRouteReset(exitGeneration);
       if (pageTurnGeneration === this.pageTurnGeneration) {
         this.drainPageTurnPreparationQueue();
       }
     }));
+  }
+
+  private scheduleControlRouteReset(exitGeneration: number): void {
+    this.clearControlRouteResetTimer();
+    const hideSpec = motionSpecGet('reader.control.hide');
+    const delayMs = hideSpec === undefined ? 360 : hideSpec.durationMs;
+    this.controlRouteResetTimer = setTimeout((): void => {
+      this.controlRouteResetTimer = -1;
+      if (exitGeneration !== this.controlShellExitGeneration || this.controlVisible) {
+        return;
+      }
+      // Reset only after the outgoing shell has finished. This keeps its actor
+      // tree intact during exit while guaranteeing the next open starts from
+      // the canonical Home route instead of a stale module/full-page frame.
+      this.controlPage = 'home';
+      this.controlShellExitArmed = false;
+    }, delayMs);
+  }
+
+  private clearControlRouteResetTimer(): void {
+    if (this.controlRouteResetTimer < 0) {
+      return;
+    }
+    clearTimeout(this.controlRouteResetTimer);
+    this.controlRouteResetTimer = -1;
   }
 
   private reloadCurrentChapterAfterContentProjectionChange(

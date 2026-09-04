@@ -158,8 +158,8 @@ const READER_CONTROL_GRABBER_EXPAND_THRESHOLD = 24;
 // MIN/MIN 绝对定位, 无响应式约束 —— 我们把 Figma 坐标当作设计值, 用响应式手段实现:
 //   1. 高度: TopBar 锚定窗口顶部(状态栏下方安全区) + 19dp; ControlDock 锚定窗口底部
 //      (手势条上方安全区) + 19dp(Phone)/33dp(Tablet)。任意窗口高度都完整显示, 不超出。
-//   2. 宽度: 移除固定画布宽字段 (dockW/sheetW/mainW/progressW/chapterRowW/sliderW),
-//      改用 Fill + layoutWeight + constraintSize + padding 自适应 (§八):
+//   2. 宽度: 移除固定画布宽字段 (dockW/sheetW/progressW/chapterRowW/sliderW),
+//      改用 Fill + 确定性 mainW + constraintSize + padding 自适应 (§八):
 //        Dock width    = available - 2×inline inset, ≤ max dock width
 //        Main width    = Dock - padding - brightness width - gap
 //        Progress width = Main width
@@ -377,7 +377,12 @@ export struct ReaderControlPanel {
       page = 'moduleSettings';
     }
     const destination: ReaderControlPage = this.isActiveModule(module) ? 'home' : page;
-    if (this.reduceMotion) {
+    // Phone Appearance owns a persistent full-height actor tree. Crossing that
+    // tree boundary inside animateTo leaves its outgoing actors composited over
+    // the incoming quick module for the first module-switch frame. Keep this
+    // route handoff atomic; Appearance's grabber motion remains independently
+    // animated inside its own stage.
+    if (this.reduceMotion || this.requiresAtomicModuleTreeHandoff(destination)) {
       this.onPageChange(destination);
       this.onModuleSelect(destination === 'home' ? 'home' : module);
       return;
@@ -386,6 +391,14 @@ export struct ReaderControlPanel {
       this.onPageChange(destination);
     });
     this.onModuleSelect(destination === 'home' ? 'home' : module);
+  }
+
+  private requiresAtomicModuleTreeHandoff(destination: ReaderControlPage): boolean {
+    if (this.isExpanded()) {
+      return false;
+    }
+    return this.activePage === 'moduleAppearance' || this.activePage === 'fullAppearance' ||
+      destination === 'moduleAppearance' || destination === 'fullAppearance';
   }
 
   private updateControlGrabberDrag(offsetY: number): void {
@@ -725,21 +738,24 @@ export struct ReaderControlPanel {
           .width('100%')
           .height('100%')
           .zIndex(0)
+          .hitTestBehavior(HitTestMode.Block)
           .onClick((): void => {
             if (!this.appearanceInteractionBusy()) {
               this.onDismiss();
             }
           });
-        // Anchor wrappers do not participate in hit testing themselves. Their
-        // concrete children stay interactive while empty pixels reach the
-        // full-screen dismiss backdrop.
+        // Anchor wrappers stay transparent to sibling hit testing. Their
+        // concrete children remain interactive, while empty pixels continue
+        // through to the full-screen dismiss backdrop below. HitTestMode.None
+        // skips only the wrapper itself and still lets its full-screen bounds
+        // mask lower-priority siblings.
         Stack({ alignContent: Alignment.Top }) {
           this.topBar();
         }
         .width('100%')
         .height('100%')
         .zIndex(1)
-        .hitTestBehavior(HitTestMode.None)
+        .hitTestBehavior(HitTestMode.Transparent)
         // Figma MR1: TopBar y -8→0 (show) / 0→-8 (hide)。
         // Session morph owns the only visible actor after its source snapshot
         // is ready. Suppress the ordinary control-layer exit in that handoff
@@ -756,7 +772,7 @@ export struct ReaderControlPanel {
         .width('100%')
         .height('100%')
         .zIndex(1)
-        .hitTestBehavior(HitTestMode.None)
+        .hitTestBehavior(HitTestMode.Transparent)
         .padding({
           top: this.usesTopAnchoredFullPanel() ? this.layout.fullPanelTop : 0,
           right: this.isExpanded() ?
@@ -1439,7 +1455,7 @@ export struct ReaderControlPanel {
         this.quickActionPanel();
         this.chapterProgress();
       }
-      .layoutWeight(1)
+      .width(this.quickMainContentWidth())
       .height(READER_CONTROL_HOME_TOP_ROW_HEIGHT)
       .alignItems(HorizontalAlign.Start);
       this.brightnessRail();
@@ -1472,7 +1488,7 @@ export struct ReaderControlPanel {
           onSearch: (): void => this.onSearch(),
           onSelectResult: (result: ReadingContentSearchResult): void => this.onSearchResultSelect(result),
         })
-          .layoutWeight(1);
+          .width(this.quickMainContentWidth());
       } else if (this.activePage === 'quickAutoPage') {
         ReaderAutoPagePanel({
           morphActorId: readerSessionMorphActorId('quickAutoPage'),
@@ -1491,7 +1507,7 @@ export struct ReaderControlPanel {
           onMorphActorMeasured: (left: number, top: number, width: number, height: number): void =>
             this.reportSessionMorphSource('quickAutoPage', left, top, width, height),
         })
-          .layoutWeight(1);
+          .width(this.quickMainContentWidth());
       } else if (this.activePage === 'quickReplace') {
         ReaderReplaceQuickPanel({
           isTablet: this.isExpanded(),
@@ -1502,7 +1518,7 @@ export struct ReaderControlPanel {
           onPreview: (): void => this.onPreviewReplace(),
           onOpenManagement: (): void => this.onOpenRulesManagement(),
         })
-          .layoutWeight(1);
+          .width(this.quickMainContentWidth());
       } else if (this.activePage === 'moduleDirectory') {
         ReaderDirectoryModulePanel({
           entries: this.tocEntries,
@@ -1517,7 +1533,7 @@ export struct ReaderControlPanel {
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
             this.onCreateChapterStartBookmark(request),
         })
-          .layoutWeight(1);
+          .width(this.quickMainContentWidth());
       } else if (this.activePage === 'moduleTts') {
         ReaderTtsModulePanel({
           morphActorId: readerSessionMorphActorId('quickTts'),
@@ -1532,7 +1548,7 @@ export struct ReaderControlPanel {
           onMorphActorMeasured: (left: number, top: number, width: number, height: number): void =>
             this.reportSessionMorphSource('quickTts', left, top, width, height),
         })
-          .layoutWeight(1);
+          .width(this.quickMainContentWidth());
       } else if (this.activePage === 'moduleAppearance') {
         ReaderAppearanceModulePanel({
           isTablet: this.isExpanded(),
@@ -1540,7 +1556,7 @@ export struct ReaderControlPanel {
           onThemeChange: (theme: ReaderAppearanceTheme): void => this.onAppearanceThemeChange(theme),
           onFontChange: (font: ReaderAppearanceFont): void => this.onAppearanceFontChange(font),
         })
-          .layoutWeight(1);
+          .width(this.quickMainContentWidth());
       } else if (this.activePage === 'moduleSettings') {
         ReaderSettingsModulePanel({
           isTablet: this.isExpanded(),
@@ -1553,7 +1569,7 @@ export struct ReaderControlPanel {
           onScreenTimeoutChange: (timeout: ReaderScreenTimeout): void =>
             this.onScreenTimeoutChange(timeout),
         })
-          .layoutWeight(1);
+          .width(this.quickMainContentWidth());
       }
       this.brightnessRail();
     }
@@ -1570,6 +1586,12 @@ export struct ReaderControlPanel {
         // MR1/C authors quick.promote as opacity + translate dual components.
         fadeSlideTransition('reader.quick.promote', 12) :
         TransitionEffect.OPACITY.animation(motionAnimateParam('reader.module.switch'))));
+  }
+
+  private quickMainContentWidth(): number {
+    return Math.max(0, this.dockWidth() - READER_CONTROL_CONTENT_PADDING_LEFT -
+      READER_CONTROL_CONTENT_PADDING_RIGHT - READER_CONTROL_TOP_COMPONENT_GAP -
+      READER_CONTROL_BRIGHTNESS_RAIL_WIDTH);
   }
 
   @Builder

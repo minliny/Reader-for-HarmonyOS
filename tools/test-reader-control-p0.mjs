@@ -242,12 +242,20 @@ for (const page of ['moduleDirectory', 'moduleTts', 'moduleAppearance', 'moduleS
 assert.match(control, /module !== 'directory'[\s\S]*module !== 'settings'/);
 assert.match(control, /const destination: ReaderControlPage = this\.isActiveModule\(module\) \? 'home' : page/,
   'tapping the active main tab must return to the control home page');
-assert.match(control, /if \(this\.reduceMotion\) \{\s*this\.onPageChange\(destination\)/);
+assert.match(control,
+  /if \(this\.reduceMotion \|\| this\.requiresAtomicModuleTreeHandoff\(destination\)\) \{\s*this\.onPageChange\(destination\)/,
+  'crossing the Phone Appearance actor tree boundary must not composite two quick modules');
+assert.match(control,
+  /private requiresAtomicModuleTreeHandoff\(destination: ReaderControlPage\): boolean \{[\s\S]*?this\.activePage === 'moduleAppearance'[\s\S]*?destination === 'moduleAppearance'/,
+  'the special Appearance tree must hand off atomically in both directions');
 assert.match(control, /if \(this\.reduceMotion\) \{\s*this\.onPageChange\('quickSearch'\)/);
 assert.match(control, /this\.reduceMotion \|\| this\.shellExitArmed \? TransitionEffect\.IDENTITY/);
 assert.match(control,
-  /\.height\('100%'\)\s+\.zIndex\(0\)\s+\.onClick\(\(\): void => \{\s*if \(!this\.appearanceInteractionBusy\(\)\) \{\s*this\.onDismiss\(\)/,
+  /\.height\('100%'\)\s+\.zIndex\(0\)\s+\.hitTestBehavior\(HitTestMode\.Block\)\s+\.onClick\(\(\): void => \{\s*if \(!this\.appearanceInteractionBusy\(\)\) \{\s*this\.onDismiss\(\)/,
   'the backdrop must not dismiss the panel during a grabber drag or font reorder');
+assert.match(control,
+  /private quickMainContentWidth\(\): number \{\s*return Math\.max\(0, this\.dockWidth\(\) - READER_CONTROL_CONTENT_PADDING_LEFT -\s*READER_CONTROL_CONTENT_PADDING_RIGHT - READER_CONTROL_TOP_COMPONENT_GAP -\s*READER_CONTROL_BRIGHTNESS_RAIL_WIDTH\);/,
+  'every quick module must receive the same deterministic Figma main-column width');
 assert.match(control,
   /private appearanceInteractionBusy\(\): boolean \{\s*return this\.appearanceMotionActive \|\| this\.appearanceFontReorderActive;/);
 assert.match(control, /@Prop @Watch\('onVisibleChanged'\) visible: boolean = false/,
@@ -257,7 +265,8 @@ assert.match(control,
 assert.match(control,
   /private clearAppearanceActivity\(\): void \{\s*this\.setAppearanceMotionActivity\(false\);\s*this\.setAppearanceFontReorderActivity\(false\);/,
   'all disappearance and route-exit paths must release both busy flags');
-assert.equal((control.match(/\.height\('100%'\)\s+\.zIndex\(1\)\s+\.hitTestBehavior\(HitTestMode\.None\)/g) ?? []).length, 2);
+assert.equal((control.match(/\.height\('100%'\)\s+\.zIndex\(1\)\s+\.hitTestBehavior\(HitTestMode\.Transparent\)/g) ?? []).length, 2,
+  'both full-screen anchor wrappers must pass empty pixels to the dismiss backdrop');
 assert.match(control, /\.accessibilityText\('阅读进度'\)/);
 assert.match(control, /\.accessibilityText\('阅读亮度'\)/);
 assert.doesNotMatch(control, /真面板\(目录\/朗读\/界面\/设置\)后续挂入本层/);
@@ -309,7 +318,7 @@ assert.match(gateway, /request\('bookmark\.list'/);
 assert.match(gateway, /downloadState: LocalReadingDownloadState/);
 
 const experience = read('entry/src/main/ets/features/reading/LocalReadingExperience.ets');
-const hideControl = experience.match(/private hideControl\(\): void \{([\s\S]*?)\n  private reloadCurrentChapterAfterContentProjectionChange/);
+const hideControl = experience.match(/private hideControl\(\): void \{([\s\S]*?)\n  private scheduleControlRouteReset/);
 assert.ok(hideControl, 'control hide lifecycle owner must exist');
 assert.match(hideControl[1], /this\.controlVisible = false/);
 assert.doesNotMatch(hideControl[1], /this\.controlPage = 'home'/,
@@ -317,11 +326,23 @@ assert.doesNotMatch(hideControl[1], /this\.controlPage = 'home'/,
 assert.match(hideControl[1],
   /this\.controlShellExitArmed = true;[\s\S]*postFrameCallback[\s\S]*this\.controlVisible = false/,
   'the host must present nested-transition suppression before removing the unified shell');
+assert.match(hideControl[1], /this\.scheduleControlRouteReset\(exitGeneration\)/,
+  'the hidden shell must schedule canonical route cleanup after its visual exit');
 assert.match(experience,
   /private openReaderControl\(\): void \{[\s\S]*?this\.controlPage = 'home';[\s\S]*?this\.controlVisible = true/,
-  'the next presentation, not the previous exit, owns the Home reset');
-assert.match(experience, /if \(this\.controlVisible\) \{/);
-assert.match(experience, /if \(this\.controlPage !== 'home'\) \{/);
+  'every presentation must synchronously select the canonical Home route before showing');
+assert.match(experience,
+  /private scheduleControlRouteReset[\s\S]*?motionSpecGet\('reader\.control\.hide'\)[\s\S]*?this\.controlPage = 'home';[\s\S]*?this\.controlShellExitArmed = false/,
+  'route cleanup must wait for the registered hide duration before unmounting the outgoing page');
+assert.match(experience,
+  /private requestExit\(\): void \{\s*if \(this\.controlVisible\) \{[\s\S]*?this\.hideControl\(\);\s*return;/,
+  'system back must dismiss the control overlay from every child route');
+assert.doesNotMatch(experience,
+  /private requestExit\(\): void \{[\s\S]{0,500}?controlPage !== 'home'/,
+  'dismissing the overlay must never require a detour through Home');
+assert.match(experience,
+  /ReaderControlPanel\(\{[\s\S]*?onDismiss: \(\): void => this\.hideControl\(\)[\s\S]*?\}\)\s*\/\/ The control overlay,[\s\S]*?\.zIndex\(7\);/,
+  'the outside-tap owner must sit above selectable reading text on every route');
 assert.match(experience, /this\.activeGateway\(\)\.searchContent\(this\.bookId, keyword, 50, isCurrent\)/);
 assert.match(experience,
   /this\.controlPage === 'quickSearch' \|\| this\.controlPage === 'fullSearch'/,

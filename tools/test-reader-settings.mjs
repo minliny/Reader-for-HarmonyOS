@@ -172,6 +172,9 @@ assert.match(quickPanel, /Text\(this\.groupLabel\(group\)\)/);
 assert.match(quickPanel, /isReaderPageTurnStyleAvailable/);
 assert.match(quickPanel, /isReaderScreenDirectionAvailable/);
 assert.match(quickPanel, /isReaderScreenTimeoutAvailable/);
+assert.match(quickPanel,
+  /group === 'pageTurn'[\s\S]*?return \['cover', 'slide', 'simulation', 'scroll', 'none'\]/,
+  'quick Settings must preserve Figma 924:89 page-turn option order');
 
 assert.match(fullPanel, /Phone `942:86` \/ `936:66`; Tablet `942:88` \/ `938:62`/);
 assert.match(fullPanel, /@Prop availableWidth: number = 0/);
