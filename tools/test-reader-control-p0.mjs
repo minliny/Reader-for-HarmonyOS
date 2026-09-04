@@ -111,6 +111,9 @@ assert.match(control,
   'one persistent Appearance content tree must be clipped by the p-driven shell');
 assert.doesNotMatch(appearanceStage, /@BuilderParam/,
   'the gesture Stage must not cache dynamic visual content through a Builder slot');
+assert.match(control,
+  /private usesPhoneAppearanceMotionStage\(\)[\s\S]*?return this\.appearanceMotionStageMounted/,
+  'Appearance Quick and Full endpoints must keep the same latched actor tree mounted');
 assert.doesNotMatch(appearanceStage,
   /@BuilderParam quickMorph:|@BuilderParam fullContent:|fullMorphStageLayer|quickDockLayer|quickMorphStageLayer/,
   'Quick and Full must never return as parallel presentation trees');

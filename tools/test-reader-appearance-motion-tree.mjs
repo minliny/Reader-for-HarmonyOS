@@ -52,6 +52,14 @@ assert.equal((phoneContent.match(/ReaderAppearanceFullPanel\(\{/g) ?? []).length
 assert.doesNotMatch(phoneContent, /ReaderAppearanceModulePanel/);
 assert.match(control, /@State private appearanceMotionMasterProgress: number/,
   'the parent must own an observable primitive progress');
+assert.match(control, /@State private appearanceMotionStageMounted: boolean/,
+  'the persistent Phone actor registry needs an explicit mounted latch');
+assert.match(methodBody(control, 'usesPhoneAppearanceMotionStage()',
+  'appearanceMotionStageCanMount()'), /return this\.appearanceMotionStageMounted/,
+  'Quick/Full route write-back must not re-evaluate the responsive mount guard');
+assert.match(methodBody(control, 'onActivePageChanged()', 'geo:'),
+  /if \(!this\.appearanceMotionStageMounted && this\.appearanceMotionStageCanMount\(\)\)/,
+  'the actor registry may mount on Appearance entry but must survive its endpoint route');
 assert.match(phoneContent, /motionFrame: this\.currentAppearanceMotionFrame\(\)/,
   'the parent Builder must resample actor tracks from its observable p');
 assert.doesNotMatch(control, /motionFrame: context\.frame/,

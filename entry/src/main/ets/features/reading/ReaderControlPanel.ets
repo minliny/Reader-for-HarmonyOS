@@ -347,6 +347,7 @@ export struct ReaderControlPanel {
   @State private controlGrabberDragY: number = 0;
   @State private appearanceMotionActive: boolean = false;
   @State private appearanceMotionMasterProgress: number = 0;
+  @State private appearanceMotionStageMounted: boolean = false;
   @State private appearanceMotionCollapseRequestRevision: number = 0;
   @State private appearanceFontReorderActive: boolean = false;
   private autoPageActorGeneration: number = 0;
@@ -645,8 +646,16 @@ export struct ReaderControlPanel {
 
   private onActivePageChanged(): void {
     if (this.activePage !== 'moduleAppearance' && this.activePage !== 'fullAppearance') {
+      this.appearanceMotionStageMounted = false;
       this.clearAppearanceActivity();
     } else {
+      // Keep the same visual actor tree mounted across the stable Quick/Full
+      // route write-back. Re-evaluating the responsive guard at that boundary
+      // can transiently select the legacy static Full panel and destroys both
+      // the reverse drag and every in-flight actor identity.
+      if (!this.appearanceMotionStageMounted && this.appearanceMotionStageCanMount()) {
+        this.appearanceMotionStageMounted = true;
+      }
       this.appearanceMotionMasterProgress = this.activePage === 'fullAppearance' ? 1 : 0;
     }
     if (this.activePage === 'fullAutoPage' && !this.isExpanded()) {
@@ -666,6 +675,7 @@ export struct ReaderControlPanel {
     registerReaderFonts(this.getUIContext().getFont());
     this.expandedLayout = this.isExpanded();
     this.geo = new ReaderControlGeometry(this.expandedLayout);
+    this.appearanceMotionStageMounted = this.appearanceMotionStageCanMount();
     if (this.activePage === 'fullAutoPage' && !this.isExpanded()) {
       this.autoPageActorRegistryMounted = true;
       this.autoPageActorExpanded = true;
@@ -679,6 +689,9 @@ export struct ReaderControlPanel {
     }
     this.expandedLayout = nextExpanded;
     this.geo = new ReaderControlGeometry(nextExpanded);
+    if (nextExpanded) {
+      this.appearanceMotionStageMounted = false;
+    }
     this.onActivePageChanged();
   }
 
@@ -859,6 +872,11 @@ export struct ReaderControlPanel {
   }
 
   private usesPhoneAppearanceMotionStage(): boolean {
+    return this.appearanceMotionStageMounted &&
+      (this.activePage === 'moduleAppearance' || this.activePage === 'fullAppearance');
+  }
+
+  private appearanceMotionStageCanMount(): boolean {
     return !this.isExpanded() &&
       readerAppearanceMotionStageSupported(
         this.fullPanelAvailableWidth(),
